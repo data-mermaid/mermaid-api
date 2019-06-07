@@ -1,0 +1,29 @@
+version: '2'
+
+services:
+
+  api_db:
+    container_name: api_db
+    image: mdillon/postgis:10
+    environment:
+      - POSTGRES_PASSWORD=postgres
+      - POSTGRES_USER=postgres
+    ports:
+      - 5432:5432
+
+  api_service:
+    container_name: api_service
+    build:
+        context: .
+        dockerfile: Dockerfile
+    image: wcs/mermaid-api:latest
+    volumes:
+      - $PWD/src:/var/projects/webapp
+    ports:
+      - 8080:8080
+      - 80:80
+    env_file:
+      - .env
+
+    links:
+      - api_db

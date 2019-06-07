@@ -1,0 +1,12 @@
+branch-defaults:
+  dev:
+    environment: mermaid-dev-api
+  master:
+    environment: mermaid-prod-api
+global:
+  application_name: Mermaid-API
+  default_ec2_keyname: mpacollab.pem
+  default_platform: Docker 17.09.1-ce
+  default_region: us-east-1
+  profile: null
+  sc: git

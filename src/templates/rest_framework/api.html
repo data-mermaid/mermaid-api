@@ -1,0 +1,22 @@
+{% extends "rest_framework/base.html" %}
+
+{% block style %}
+{{ block.super }}
+<style>
+  .navbar-brand a {
+    color: #9d9d9d;
+  }
+  .navbar-brand:hover {
+    color: #9d9d9d !important;
+  }
+  .navbar-brand a:hover {
+    color: #fff;
+  }
+</style>
+{% endblock %}
+
+{% block branding %}
+  <span class="navbar-brand">
+    {{ nav_name }} (<a rel="nofollow" href="http://www.django-rest-framework.org" target="_blank">MERMAID API {{ version }}</a>)
+  </span>
+{% endblock %}

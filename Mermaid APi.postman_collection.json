@@ -1,0 +1,598 @@
+{
+	"info": {
+		"_postman_id": "5f2147cd-f0c9-4bcb-8f6e-f10eb5b989cd",
+		"name": "Mermaid APi",
+		"schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+	},
+	"item": [
+		{
+			"name": "Nested Project",
+			"item": [
+				{
+					"name": "Project Sites",
+					"request": {
+						"method": "GET",
+						"url": {
+							"raw": "{{api_url}}/projects/{{project}}/sites/",
+							"host": [
+								"{{api_url}}"
+							],
+							"path": [
+								"projects",
+								"{{project}}",
+								"sites",
+								""
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Project Observers",
+					"request": {
+						"method": "GET",
+						"url": {
+							"raw": "{{api_url}}/projects/{{project}}/observers/",
+							"host": [
+								"{{api_url}}"
+							],
+							"path": [
+								"projects",
+								"{{project}}",
+								"observers",
+								""
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Project Sample Events",
+					"request": {
+						"method": "GET",
+						"url": {
+							"raw": "{{api_url}}/projects/{{project}}/sampleevents/",
+							"host": [
+								"{{api_url}}"
+							],
+							"path": [
+								"projects",
+								"{{project}}",
+								"sampleevents",
+								""
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Project Benthic PITS",
+					"request": {
+						"method": "GET",
+						"url": {
+							"raw": "{{api_url}}/projects/{{project}}/benthicpits/",
+							"host": [
+								"{{api_url}}"
+							],
+							"path": [
+								"projects",
+								"{{project}}",
+								"benthicpits",
+								""
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Project Project Profiles",
+					"request": {
+						"method": "GET",
+						"url": {
+							"raw": "{{api_url}}/projects/{{project}}/project_profiles/",
+							"host": [
+								"{{api_url}}"
+							],
+							"path": [
+								"projects",
+								"{{project}}",
+								"project_profiles",
+								""
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Project Benthic LITS",
+					"request": {
+						"method": "GET",
+						"url": {
+							"raw": "{{api_url}}/projects/{{project}}/benthiclits/",
+							"host": [
+								"{{api_url}}"
+							],
+							"path": [
+								"projects",
+								"{{project}}",
+								"benthiclits",
+								""
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Project Managements",
+					"request": {
+						"method": "GET",
+						"url": {
+							"raw": "{{api_url}}/projects/{{project}}/managements/",
+							"host": [
+								"{{api_url}}"
+							],
+							"path": [
+								"projects",
+								"{{project}}",
+								"managements",
+								""
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Project Profiles",
+					"request": {
+						"method": "GET",
+						"url": {
+							"raw": "{{api_url}}/projects/{{project}}/profiles/",
+							"host": [
+								"{{api_url}}"
+							],
+							"path": [
+								"projects",
+								"{{project}}",
+								"profiles",
+								""
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Projects Habitat Complexities",
+					"request": {
+						"method": "GET",
+						"url": {
+							"raw": "{{api_url}}/projects/{{project}}/habitatcomplexities/",
+							"host": [
+								"{{api_url}}"
+							],
+							"path": [
+								"projects",
+								"{{project}}",
+								"habitatcomplexities",
+								""
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Projects Benthic Transects",
+					"request": {
+						"method": "GET",
+						"url": {
+							"raw": "{{api_url}}/projects/{{project}}/benthictransects/",
+							"host": [
+								"{{api_url}}"
+							],
+							"path": [
+								"projects",
+								"{{project}}",
+								"benthictransects",
+								""
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Projects Obs Transect Belt Fishs",
+					"request": {
+						"method": "GET",
+						"url": {
+							"raw": "{{api_url}}/projects/{{project}}/obstransectbeltfishs/",
+							"host": [
+								"{{api_url}}"
+							],
+							"path": [
+								"projects",
+								"{{project}}",
+								"obstransectbeltfishs",
+								""
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Projects Obs Benthic LITS",
+					"request": {
+						"method": "GET",
+						"url": {
+							"raw": "{{api_url}}/projects/{{project}}/obsbenthiclits/",
+							"host": [
+								"{{api_url}}"
+							],
+							"path": [
+								"projects",
+								"{{project}}",
+								"obsbenthiclits",
+								""
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Projects Obs Benthic PITS",
+					"request": {
+						"method": "GET",
+						"url": {
+							"raw": "{{api_url}}/projects/{{project}}/obsbenthicpits/",
+							"host": [
+								"{{api_url}}"
+							],
+							"path": [
+								"projects",
+								"{{project}}",
+								"obsbenthicpits",
+								""
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Projects Obs Habitat Complexities",
+					"request": {
+						"method": "GET",
+						"url": {
+							"raw": "{{api_url}}/projects/{{project}}/obshabitatcomplexities/",
+							"host": [
+								"{{api_url}}"
+							],
+							"path": [
+								"projects",
+								"{{project}}",
+								"obshabitatcomplexities",
+								""
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Project Collect Records",
+					"request": {
+						"method": "GET",
+						"url": {
+							"raw": "{{api_url}}/projects/{{project}}/collectrecords/",
+							"host": [
+								"{{api_url}}"
+							],
+							"path": [
+								"projects",
+								"{{project}}",
+								"collectrecords",
+								""
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Project Belt Fish Transect Methods",
+					"request": {
+						"method": "GET",
+						"url": {
+							"raw": "{{api_url}}/projects/{{project}}/beltfishtransectmethods/",
+							"host": [
+								"{{api_url}}"
+							],
+							"path": [
+								"projects",
+								"{{project}}",
+								"beltfishtransectmethods",
+								""
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Projects Benthic LIT Transect Methods",
+					"request": {
+						"method": "GET",
+						"url": {
+							"raw": "{{api_url}}/projects/{{project}}/benthiclittransectmethods/",
+							"host": [
+								"{{api_url}}"
+							],
+							"path": [
+								"projects",
+								"{{project}}",
+								"benthiclittransectmethods",
+								""
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Project Belt Fishes",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{api_url}}/projects/{{project}}/beltfishes/",
+							"host": [
+								"{{api_url}}"
+							],
+							"path": [
+								"projects",
+								"{{project}}",
+								"beltfishes",
+								""
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Project Benthic PIT Transect Methods",
+					"request": {
+						"method": "GET",
+						"url": {
+							"raw": "{{api_url}}/projects/{{project}}/benthicpittransectmethods/",
+							"host": [
+								"{{api_url}}"
+							],
+							"path": [
+								"projects",
+								"{{project}}",
+								"benthicpittransectmethods",
+								""
+							]
+						}
+					},
+					"response": []
+				}
+			]
+		},
+		{
+			"name": "Me",
+			"request": {
+				"method": "GET",
+				"url": {
+					"raw": "{{api_url}}/me/",
+					"host": [
+						"{{api_url}}"
+					],
+					"path": [
+						"me",
+						""
+					]
+				}
+			},
+			"response": []
+		},
+		{
+			"name": "Organization Profiles",
+			"request": {
+				"method": "GET",
+				"url": {
+					"raw": "{{api_url}}/organization_profiles/",
+					"host": [
+						"{{api_url}}"
+					],
+					"path": [
+						"organization_profiles",
+						""
+					]
+				}
+			},
+			"response": []
+		},
+		{
+			"name": "Profiles",
+			"request": {
+				"method": "GET",
+				"url": {
+					"raw": "{{api_url}}/profiles/",
+					"host": [
+						"{{api_url}}"
+					],
+					"path": [
+						"profiles",
+						""
+					]
+				}
+			},
+			"response": []
+		},
+		{
+			"name": "Sites",
+			"request": {
+				"method": "GET",
+				"url": {
+					"raw": "{{api_url}}/sites/",
+					"host": [
+						"{{api_url}}"
+					],
+					"path": [
+						"sites",
+						""
+					]
+				}
+			},
+			"response": []
+		},
+		{
+			"name": "Managements",
+			"request": {
+				"method": "GET",
+				"url": {
+					"raw": "{{api_url}}/managements/",
+					"host": [
+						"{{api_url}}"
+					],
+					"path": [
+						"managements",
+						""
+					]
+				}
+			},
+			"response": []
+		},
+		{
+			"name": "Organizations",
+			"request": {
+				"method": "GET",
+				"url": {
+					"raw": "{{api_url}}/organizations/",
+					"host": [
+						"{{api_url}}"
+					],
+					"path": [
+						"organizations",
+						""
+					]
+				}
+			},
+			"response": []
+		},
+		{
+			"name": "Benthic Attributes",
+			"request": {
+				"method": "GET",
+				"url": {
+					"raw": "{{api_url}}/benthicattributes/",
+					"host": [
+						"{{api_url}}"
+					],
+					"path": [
+						"benthicattributes",
+						""
+					]
+				}
+			},
+			"response": []
+		},
+		{
+			"name": "Fish Attributes",
+			"request": {
+				"method": "GET",
+				"url": {
+					"raw": "{{api_url}}/fishattributes/",
+					"host": [
+						"{{api_url}}"
+					],
+					"path": [
+						"fishattributes",
+						""
+					]
+				}
+			},
+			"response": []
+		},
+		{
+			"name": "Choices",
+			"request": {
+				"method": "GET",
+				"url": {
+					"raw": "{{api_url}}/choices/",
+					"host": [
+						"{{api_url}}"
+					],
+					"path": [
+						"choices",
+						""
+					]
+				}
+			},
+			"response": []
+		},
+		{
+			"name": "Fish Families",
+			"request": {
+				"method": "GET",
+				"url": {
+					"raw": "{{api_url}}/fishfamilies/",
+					"host": [
+						"{{api_url}}"
+					],
+					"path": [
+						"fishfamilies",
+						""
+					]
+				}
+			},
+			"response": []
+		},
+		{
+			"name": "Fish Genera",
+			"request": {
+				"method": "GET",
+				"url": {
+					"raw": "{{api_url}}/fishgenera/",
+					"host": [
+						"{{api_url}}"
+					],
+					"path": [
+						"fishgenera",
+						""
+					]
+				}
+			},
+			"response": []
+		},
+		{
+			"name": "Fish Species",
+			"request": {
+				"method": "GET",
+				"header": [],
+				"url": {
+					"raw": "{{api_url}}/fishspecies/",
+					"host": [
+						"{{api_url}}"
+					],
+					"path": [
+						"fishspecies",
+						""
+					]
+				}
+			},
+			"response": []
+		},
+		{
+			"name": "Projects",
+			"request": {
+				"method": "GET",
+				"url": {
+					"raw": "{{api_url}}/projects/",
+					"host": [
+						"{{api_url}}"
+					],
+					"path": [
+						"projects",
+						""
+					]
+				}
+			},
+			"response": []
+		}
+	]
+}
