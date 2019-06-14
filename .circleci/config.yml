@@ -1,0 +1,101 @@
+version: 2
+
+default: &default
+  docker:
+    - image: circleci/python:2.7.15
+  environment:
+    AWS_DEFAULT_REGION: us-east-1
+
+install_dependencies: &install_dependencies
+  run:
+    name: Load Dependencies
+    command: sudo pip install awscli==1.16.96 boto3==1.9.86 awsebcli==3.14.10 requests==2.20.0
+
+build: &build
+  run:
+    name: Build
+    command: ./ci_cd/build.sh ${CIRCLE_SHA1:0:7}
+jobs:
+  build_and_test:
+    docker:
+      - image: circleci/python:2.7.15
+    environment:
+      AWS_DEFAULT_REGION: us-east-1
+    steps:
+      - checkout
+      - setup_remote_docker
+      - run:
+          name: Test
+          command: echo "no test"
+
+  deploy_dev:
+    <<: *default
+    steps:
+      - checkout
+      - setup_remote_docker
+      - *install_dependencies
+      - *build
+      - run:
+          name: Docker image update
+          command: |
+              docker login -u $DOCKER_USER -p $DOCKER_PASS
+              docker tag honeycrisp/mermaid-api:${CIRCLE_SHA1:0:7} honeycrisp/mermaid-api:mermaid-dev-api
+              docker push honeycrisp/mermaid-api:mermaid-dev-api
+      - run:
+          name: Deploy
+          command: |
+              ./ci_cd/deploy.sh mermaid-dev-api ${CIRCLE_SHA1:0:7} Mermaid-API
+              python ci_cd/wait_for_ok.py mermaid-dev-api ${CIRCLE_SHA1:0:7}
+      - run:
+          name: Update version
+          command: |
+              python ci_cd/update_version.py dev api "${CIRCLE_BRANCH}-${CIRCLE_SHA1:0:7}"
+  deploy_prod:
+    <<: *default
+    steps:
+      - checkout
+      - setup_remote_docker
+      - *install_dependencies
+      - *build
+      - run:
+          name: Docker image update
+          command: |
+              docker login -u $DOCKER_EMAIL -u $DOCKER_USER -p $DOCKER_PASS
+              docker tag honeycrisp/mermaid-api:${CIRCLE_SHA1:0:7} honeycrisp/mermaid-api:mermaid-prod-api
+              docker push honeycrisp/mermaid-api:mermaid-prod-api
+      - run:
+          name: Deploy
+          command: |
+              ./ci_cd/deploy.sh mermaid-prod-api ${CIRCLE_SHA1:0:7} Mermaid-API
+              python ci_cd/wait_for_ok.py mermaid-prod-api ${CIRCLE_SHA1:0:7}
+      - run:
+          name: Update version
+          command: |
+              python ci_cd/update_version.py prod api ${CIRCLE_TAG}
+workflows:
+  version: 2
+  build_test_deploy:
+    jobs:
+      - build_and_test:
+          context: org-global
+          filters:
+            tags:
+              only: /.*/
+      # branch: develop
+      - deploy_dev:
+          context: org-global
+          filters:
+            branches:
+              only: dev
+          requires:
+            - build_and_test
+      # tag: v1.2.3
+      - deploy_prod:
+          context: org-global
+          filters:
+            branches:
+              ignore: /.*/  # IMPORTANT!
+            tags:
+              only: /v[0-9]+(\.[0-9]+)+/ # v1.2.3
+          requires:
+            - build_and_test
