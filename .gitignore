@@ -93,3 +93,4 @@ local/
 src/script_examples/settings.py
 .vscode
 src/app/maintenance_mode_state.txt
+.DS_Store
