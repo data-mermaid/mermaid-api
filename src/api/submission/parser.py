@@ -16,7 +16,7 @@ __all__ = (
 
 def _cast_decimal_to_str(val):
     if val is None:
-        return
+        return None
     
     return str(val)
 
