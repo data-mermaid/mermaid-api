@@ -14,6 +14,12 @@ __all__ = (
     "get_site_id",
 )
 
+def _cast_decimal_to_str(val):
+    if val is None:
+        return None
+    
+    return str(val)
+
 
 def _extract_sample_event(collect_record):
     data = collect_record.data or dict()
@@ -38,7 +44,7 @@ def get_sample_event_data(collect_record, site_id=None, management_id=None):
         management=management_id or data.get("management") or None,
         sample_date=data.get("sample_date") or None,
         sample_time=data.get("sample_time") or None,
-        depth=data.get("depth"),
+        depth=_cast_decimal_to_str(data.get("depth")),
         visibility=data.get("visibility") or None,
         current=data.get("current") or None,
         relative_depth=data.get("relative_depth") or None,
@@ -98,7 +104,7 @@ def get_obsbeltfish_data(collect_record, belt_fish_id=None):
                 beltfish=belt_fish_id,
                 fish_attribute=observation.get("fish_attribute"),
                 count=observation.get("count"),
-                size=observation.get("size"),
+                size=_cast_decimal_to_str(observation.get("size")),
                 size_bin=observation.get("size_bin"),
                 notes=observation.get("notes", ""),
             )
@@ -148,7 +154,7 @@ def get_obsbenthicpit_data(collect_record, benthic_pit_id=None):
                 benthicpit=benthic_pit_id,
                 attribute=observation.get("attribute"),
                 growth_form=observation.get("growth_form"),
-                interval=observation.get("interval"),
+                interval=_cast_decimal_to_str(observation.get("interval")),
                 notes=observation.get("notes", ""),
             )
         )
@@ -165,7 +171,7 @@ def get_obshabitatcomplexity_data(collect_record, habitatcomplexity_id=None):
             dict(
                 habitatcomplexity=habitatcomplexity_id,
                 score=observation.get("score"),
-                interval=observation.get("interval"),
+                interval=_cast_decimal_to_str(observation.get("interval")),
                 notes=observation.get("notes", ""),
             )
         )
@@ -178,7 +184,7 @@ def get_quadrat_collection_data(collect_record, sample_event_id=None):
     quadrat_collection_data = data.get("quadrat_collection") or dict()
     return dict(
         sample_event=sample_event_id,
-        quadrat_size= quadrat_collection_data.get("quadrat_size"),
+        quadrat_size= _cast_decimal_to_str(quadrat_collection_data.get("quadrat_size")),
         collect_record_id=collect_record.id
     )
 
