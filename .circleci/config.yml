@@ -62,7 +62,7 @@ jobs:
       - run:
           name: Docker image update
           command: |
-              docker login -u $DOCKER_EMAIL -u $DOCKER_USER -p $DOCKER_PASS
+              docker login -u $DOCKER_USER -p $DOCKER_PASS
               docker tag honeycrisp/mermaid-api:${CIRCLE_SHA1:0:7} honeycrisp/mermaid-api:mermaid-prod-api
               docker push honeycrisp/mermaid-api:mermaid-prod-api
       - run:
