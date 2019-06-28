@@ -166,8 +166,8 @@ class SiteInline(admin.StackedInline):
 
 @admin.register(Project)
 class ProjectAdmin(BaseAdmin):
-    list_display = ('name', 'status', 'admin_list', 'country_list')
-    exportable_fields = ('name', 'status', 'admin_list', 'country_list',
+    list_display = ('name', 'status', 'admin_list', 'country_list', 'tag_list')
+    exportable_fields = ('name', 'status', 'admin_list', 'country_list', 'tag_list',
                          'data_policy_beltfish', 'data_policy_benthiclit',
                          'data_policy_benthicpit', 'data_policy_habitatcomplexity',
                          'data_policy_bleachingqc', 'notes')
@@ -186,6 +186,10 @@ class ProjectAdmin(BaseAdmin):
             if s.country not in countries:
                 countries.append(s.country)
         return ", ".join([c.name for c in countries])
+
+    def tag_list(self, obj):
+        return ", ".join(u"{}".format(t.name) for t in obj.tags.all())
+    tag_list.short_description = _(u"organizations")
 
 
 @admin.register(ProjectProfile)

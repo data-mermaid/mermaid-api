@@ -7,6 +7,18 @@ from django.http import HttpResponse
 from ..models.base import *
 
 
+def lookup_field_from_choices(field_obj, value):
+    choices = getattr(field_obj, 'choices')
+    if choices is not None and len(choices) > 0:
+        choices_dict = dict(choices)
+        try:
+            value = choices_dict[value]
+        except KeyError:
+            pass
+
+    return value
+
+
 def export_model_as_csv(modeladmin, request, queryset, field_list):
     response = HttpResponse(content_type='text/csv')
     response['Content-Disposition'] = 'attachment; filename=%s-%s-export_%s.csv' % (
@@ -24,6 +36,8 @@ def export_model_as_csv(modeladmin, request, queryset, field_list):
         csv_line_values = []
         for field in field_list:
             field_obj, attr, value = admin.utils.lookup_field(field, obj, modeladmin)
+            if field_obj is not None and hasattr(field_obj, 'choices'):
+                value = lookup_field_from_choices(field_obj, value)
             csv_line_values.append(unicode(value).encode('utf-8').strip())
 
         writer.writerow(csv_line_values)
@@ -51,6 +65,9 @@ def export_model_all_as_csv(modeladmin, request, queryset):
                 or (f.many_to_one and f.related_model)
         )
     ]
+    if hasattr(modeladmin, 'exportable_fields'):
+        added_fields = [f for f in modeladmin.exportable_fields if f not in field_list]
+        field_list = field_list + added_fields
 
     return export_model_as_csv(modeladmin, request, queryset, field_list)
 
