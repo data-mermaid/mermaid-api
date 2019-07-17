@@ -1000,7 +1000,7 @@ class ObsColoniesBleachedValidation(DataValidation, ObsBleachingMixin):
         return self.ok(self.identifier)
 
     def validate_duplicate_genus_growth(self):
-         # ERROR
+        # ERROR
         obs = self.get_observations(self.data) or []
 
         dup_obs = [ob for n, ob in enumerate(obs) if ob in obs[:n]]
