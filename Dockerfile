@@ -1,4 +1,4 @@
-FROM honeycrisp/django2:latest
+FROM honeycrisp/docker:django2
 
 ADD ./requirements.txt requirements.txt
 RUN pip install --upgrade -r requirements.txt
