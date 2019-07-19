@@ -191,6 +191,15 @@ class ProjectAdmin(BaseAdmin):
         return ", ".join(u"{}".format(t.name) for t in obj.tags.all())
     tag_list.short_description = _(u"organizations")
 
+    def delete_view(self, request, object_id, extra_context=None):
+        # Delete any (protected) related SampleEvents before deleting project.
+        # If any other protected FKs get added to project, this will need to be updated.
+        if request.method == 'POST':
+            sus = SampleEvent.objects.filter(site__project=object_id)
+            for su in sus:
+                su.delete()
+        return super(ProjectAdmin, self).delete_view(request, object_id, extra_context)
+
 
 @admin.register(ProjectProfile)
 class ProjectProfileAdmin(BaseAdmin):
