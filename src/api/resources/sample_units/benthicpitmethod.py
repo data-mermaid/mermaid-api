@@ -1,9 +1,9 @@
 from django.db import transaction
 from rest_framework import status
-from rest_framework.decorators import list_route
+from rest_framework.decorators import action
 from rest_framework.response import Response
 
-from api.models.mermaid import BenthicPIT, ObsBenthicPIT, BenthicAttribute
+from ...models.mermaid import BenthicPIT, ObsBenthicPIT, BenthicAttribute
 
 from . import *
 from ..sample_event import SampleEventSerializer
@@ -195,7 +195,7 @@ class BenthicPITMethodView(BaseProjectApiViewSet):
             transaction.savepoint_rollback(sid)
             raise
 
-    @list_route(methods=['get'])
+    @action(detail=False, methods=['get'])
     def fieldreport(self, request, *args, **kwargs):
         return fieldreport(
             self, request, *args,

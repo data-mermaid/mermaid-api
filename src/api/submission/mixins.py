@@ -1,6 +1,6 @@
 from django.db import transaction
 from django.utils import timezone
-from rest_framework.decorators import list_route
+from rest_framework.decorators import action
 from rest_framework.response import Response
 
 
@@ -14,7 +14,7 @@ class ValidateMixin(object):
         validations = dict(
             status=result,
             results=validator.logs,
-            last_validated=unicode(validation_timestamp),
+            last_validated=str(validation_timestamp),
         )
         qry = model.objects.filter(pk=record_id)
         qry.update(
@@ -24,7 +24,7 @@ class ValidateMixin(object):
 
         return result, record
 
-    @list_route(methods=["post"])
+    @action(detail=False, methods=["post"])
     def validate(self, request, project_pk):
         output = dict()
         record_ids = request.data.get("ids") or []

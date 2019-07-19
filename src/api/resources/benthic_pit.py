@@ -1,6 +1,6 @@
 import django_filters
 from rest_framework import serializers
-from base import (
+from .base import (
     BaseAPIFilterSet,
     BaseProjectApiViewSet,
     BaseAPISerializer,
@@ -20,7 +20,7 @@ class BenthicPITSerializer(BaseAPISerializer):
 
 
 class BenthicPITFilterSet(BaseAPIFilterSet):
-    interval_size = django_filters.NumericRangeFilter(name='interval_size')
+    interval_size = django_filters.NumericRangeFilter(field_name='interval_size')
 
     class Meta:
         model = BenthicPIT

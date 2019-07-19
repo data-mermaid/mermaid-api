@@ -20,7 +20,7 @@ def _run(command, std_input=None, to_file=None):
             stderr=subprocess.PIPE
         )
     except Exception as e:
-        print command
+        print(command)
         raise e
 
     data, err = proc.communicate(input=std_input)
@@ -32,8 +32,8 @@ def _run(command, std_input=None, to_file=None):
             f.write('ERR: \n')
             f.write(err)
     else:
-        print data
-        print err
+        print(data)
+        print(err)
 
 
 def view_pickle(view_name):

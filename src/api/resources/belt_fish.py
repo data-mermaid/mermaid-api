@@ -1,4 +1,4 @@
-from base import BaseAPIFilterSet, BaseProjectApiViewSet, BaseAPISerializer
+from .base import BaseAPIFilterSet, BaseProjectApiViewSet, BaseAPISerializer
 from ..models import BeltFish
 
 

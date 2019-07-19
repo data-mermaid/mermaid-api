@@ -1,9 +1,9 @@
 import pytz
-from base import BaseChoiceApiViewSet
+from .base import BaseChoiceApiViewSet
 from django.http.response import HttpResponseBadRequest
 from django.utils.dateparse import parse_datetime
+from rest_framework.decorators import action
 from rest_framework.response import Response
-from rest_framework.decorators import list_route
 
 from ..models import (BeltTransectWidth, BenthicLifeHistory, CollectRecord,
                       Country, Current, FishGroupFunction, FishGroupSize,
@@ -69,7 +69,7 @@ class ChoiceViewSet(BaseChoiceApiViewSet):
     def _get_newest_timestamp(self, choices):
         return max([c["updated_on"] for c in choices.get("data") if c.get("updated_on")])
 
-    @list_route(methods=["GET"])
+    @action(detail=False, methods=["GET"])
     def updates(self, request, *args, **kwargs):
         added = []
         modified = []

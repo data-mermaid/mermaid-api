@@ -2,12 +2,12 @@ from api.models.mermaid import BleachingQuadratCollection
 from api import utils
 from django.db import transaction
 from rest_framework import status
-from rest_framework.decorators import list_route
 from rest_framework.response import Response
+from rest_framework.decorators import action
 
 from . import *
 from ..base import BaseAPIFilterSet, BaseAPISerializer, BaseProjectApiViewSet
-from api.models.mermaid import ObsColoniesBleached, ObsQuadratBenthicPercent
+from ...models.mermaid import ObsColoniesBleached, ObsQuadratBenthicPercent
 from ..bleaching_quadrat_collection import BleachingQuadratCollectionSerializer
 from ..obs_colonies_bleached import ObsColoniesBleachedSerializer
 from ..obs_quadrat_benthic_percent import ObsQuadratBenthicPercentSerializer
@@ -304,7 +304,7 @@ class BleachingQuadratCollectionMethodView(BaseProjectApiViewSet):
             transaction.savepoint_rollback(sid)
             raise
 
-    @list_route(methods=["get"])
+    @action(detail=False, methods=["get"])
     def fieldreport(self, request, *args, **kwargs):
         return fieldreport(
             self,

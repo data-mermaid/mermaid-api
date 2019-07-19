@@ -92,6 +92,8 @@ class BenthicAttributeMixin(ObservationsMixin):
         benthic_attrs = BenthicAttribute.objects.filter(id__in=benthic_attr_ids)
 
         origin_parents = [ba.origin.name for ba in benthic_attrs]
+        print('origin_parents: {}'.format(origin_parents))
+        print('origin_name: {}'.format(origin_name))
         if origin_name in origin_parents and len(set(origin_parents)) == 1:
             return WARN, warn_message
 
@@ -554,7 +556,7 @@ class BenthicObservationCountMixin(ObservationsMixin):
 
 class ObsBenthicLITValidation(DataValidation, BenthicAttributeMixin):
     identifier = "obs_benthic_lits"
-    TOTAL_LENGTH_ERROR = unicode(
+    TOTAL_LENGTH_ERROR = str(
         _("Total length of observations must equal transect length")
     )
 
@@ -671,19 +673,19 @@ class ObsFishBeltValidation(DataValidation, FishAttributeMixin):
             data, previous_validations=previous_validations
         )
 
-        self.MIN_OBS_COUNT_MSG = unicode(
+        self.MIN_OBS_COUNT_MSG = str(
             _(self.MIN_OBS_COUNT_TMPL.format(self.MIN_OBS_COUNT_WARN))
         )
-        self.MAX_OBS_COUNT_MSG = unicode(
+        self.MAX_OBS_COUNT_MSG = str(
             _(self.MAX_OBS_COUNT_TMPL.format(self.MAX_OBS_COUNT_WARN))
         )
-        self.DENSITY_GT_MSG = unicode(
+        self.DENSITY_GT_MSG = str(
             _(self.DENSITY_GT_TMPL.format(self.OBS_GT_DENSITY))
         )
-        self.DENSITY_LT_MSG = unicode(
+        self.DENSITY_LT_MSG = str(
             _(self.DENSITY_LT_TMPL.format(self.OBS_LT_DENSITY))
         )
-        self.FISH_COUNT_MIN_MSG = unicode(
+        self.FISH_COUNT_MIN_MSG = str(
             _(self.FISH_COUNT_MIN_TMPL.format(self.FISH_COUNT_MIN))
         )
 

@@ -19,7 +19,7 @@ class AppVersionPermission(permissions.BasePermission):
         write_methods = ('PUT', 'POST',)
         user = request.user
         method = request.method
-        if not user and not user.is_authenticated():
+        if not user and not user.is_authenticated:
             return False
 
         if method in permissions.SAFE_METHODS:

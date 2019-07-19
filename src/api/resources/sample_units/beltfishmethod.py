@@ -1,12 +1,12 @@
 from django.db import transaction
 from rest_framework import status
-from rest_framework.decorators import list_route
 from rest_framework.response import Response
+from rest_framework.decorators import action
 
-from api.models.mermaid import (
+from ...models.mermaid import (
     BeltFish, FishAttributeView, ObsBeltFish, FishFamily, FishGenus, FishSpecies
 )
-from api.utils import calc_biomass_density
+from ...utils import calc_biomass_density
 
 from . import *
 from ..base import BaseProjectApiViewSet
@@ -370,7 +370,7 @@ class BeltFishMethodView(BaseProjectApiViewSet):
             transaction.savepoint_rollback(sid)
             raise
 
-    @list_route(methods=["get"])
+    @action(detail=False, methods=["get"])
     def fieldreport(self, request, *args, **kwargs):
         return fieldreport(
             self,

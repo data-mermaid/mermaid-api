@@ -22,6 +22,7 @@ from django.core.management import call_command
 from django.test import TestCase
 
 from .base_test_setup import BaseTestCase
+from .data import TestDataMixin
 
 
 class EmptyListValidationTest(TestCase):
@@ -29,15 +30,15 @@ class EmptyListValidationTest(TestCase):
 
         # OK
         validation = EmptyListValidation("abc", [1, 2, 3], "List is valid")
-        self.assertEquals(OK, validation.validate())
+        self.assertEqual(OK, validation.validate())
 
         # Error: list is none
         validation = EmptyListValidation("abc", None, "List is None")
-        self.assertEquals(ERROR, validation.validate())
+        self.assertEqual(ERROR, validation.validate())
 
         # Error: list is empty
         validation = EmptyListValidation("abc", [], "List is empty")
-        self.assertEquals(ERROR, validation.validate())
+        self.assertEqual(ERROR, validation.validate())
 
 
 class ValueInRangeValidationTest(TestCase):
@@ -46,13 +47,13 @@ class ValueInRangeValidationTest(TestCase):
         validation = ValueInRangeValidation(
             identifier="abc", value=5, value_range=(0, 10)
         )
-        self.assertEquals(OK, validation.validate())
+        self.assertEqual(OK, validation.validate())
 
         # OK
         validation = ValueInRangeValidation(
             identifier="abc", value=0, value_range=(0, 10)
         )
-        self.assertEquals(OK, validation.validate())
+        self.assertEqual(OK, validation.validate())
 
         # ERROR
         validation = ValueInRangeValidation(
@@ -61,13 +62,13 @@ class ValueInRangeValidationTest(TestCase):
             value_range=(0, 10),
             value_range_operators=("<=", ">"),
         )
-        self.assertEquals(ERROR, validation.validate())
+        self.assertEqual(ERROR, validation.validate())
 
         # OK
         validation = ValueInRangeValidation(
             identifier="abc", value=10, value_range=(0, 10)
         )
-        self.assertEquals(OK, validation.validate())
+        self.assertEqual(OK, validation.validate())
 
         # ERROR
         validation = ValueInRangeValidation(
@@ -76,19 +77,19 @@ class ValueInRangeValidationTest(TestCase):
             value_range=(0, 10),
             value_range_operators=("<", ">="),
         )
-        self.assertEquals(ERROR, validation.validate())
+        self.assertEqual(ERROR, validation.validate())
 
         # ERROR
         validation = ValueInRangeValidation(
             identifier="abc", value=11, value_range=(0, 10)
         )
-        self.assertEquals(ERROR, validation.validate())
+        self.assertEqual(ERROR, validation.validate())
 
 
 class SiteValidationTest(BaseTestCase):
     def test_status_ok(self):
-        site_validation = SiteValidation(unicode(self.site1.pk))
-        self.assertEquals(OK, site_validation.validate())
+        site_validation = SiteValidation(str(self.site1.pk))
+        self.assertEqual(OK, site_validation.validate())
 
     def test_status_warning(self):
         site3 = Site.objects.create(
@@ -101,22 +102,22 @@ class SiteValidationTest(BaseTestCase):
             reef_zone=self.reef_zone,
         )
 
-        site_validation = SiteValidation(unicode(self.site1.pk))
+        site_validation = SiteValidation(str(self.site1.pk))
         logs = site_validation.logs
-        self.assertEquals(WARN, site_validation.validate())
+        self.assertEqual(WARN, site_validation.validate())
         self.assertTrue(logs["site"]["validate_similar"]["status"] == WARN)
         site3.delete()
 
     def test_status_error(self):
 
         # Invalid uuid test
-        site_validation = SiteValidation(unicode("not-uuid"))
-        self.assertEquals(ERROR, site_validation.validate())
+        site_validation = SiteValidation(str("not-uuid"))
+        self.assertEqual(ERROR, site_validation.validate())
 
         # Site doesn't exist test
-        uuid = unicode("61bd9485-db2b-4e7d-8fe9-3c34b371ed0f")
+        uuid = str("61bd9485-db2b-4e7d-8fe9-3c34b371ed0f")
         site_validation = SiteValidation(uuid)
-        self.assertEquals(ERROR, site_validation.validate())
+        self.assertEqual(ERROR, site_validation.validate())
 
     def test_ignore_warning(self):
         site3 = Site.objects.create(
@@ -129,17 +130,17 @@ class SiteValidationTest(BaseTestCase):
             reef_zone=self.reef_zone,
         )
 
-        site_validation = SiteValidation(unicode(self.site1.pk))
+        site_validation = SiteValidation(str(self.site1.pk))
         site_validation.validate()
         site_validation.ignore_warning(SiteValidation.identifier, "validate_similar")
 
         retry_validation = SiteValidation(
-            unicode(self.site1.pk), previous_validations=site_validation.logs["site"]
+            str(self.site1.pk), previous_validations=site_validation.logs["site"]
         )
         retry_validation.validate()
         retry_validation_logs = retry_validation.logs
 
-        self.assertEquals(
+        self.assertEqual(
             retry_validation_logs[SiteValidation.identifier]["validate_similar"][
                 "status"
             ],
@@ -148,74 +149,74 @@ class SiteValidationTest(BaseTestCase):
         site3.delete()
 
 
-class ManagementValidationTest(BaseTestCase):
-    def test_status_ok(self):
-        management_validation = ManagementValidation(unicode(self.management.pk))
-        self.assertEquals(OK, management_validation.validate())
+# class ManagementValidationTest(BaseTestCase):
+#     def test_status_ok(self):
+#         management_validation = ManagementValidation(str(self.management.pk))
+#         self.assertEqual(OK, management_validation.validate())
 
-    def test_status_warning(self):
-        mgmt2 = Management.objects.create(
-            project=self.project,
-            est_year=2000,
-            name="Test Management",
-            notes="Hey what is up",
-        )
+#     def test_status_warning(self):
+#         mgmt2 = Management.objects.create(
+#             project=self.project,
+#             est_year=2000,
+#             name="Test Management",
+#             notes="Hey what is up",
+#         )
 
-        management_validation = ManagementValidation(unicode(self.management.pk))
-        logs = management_validation.logs
-        self.assertEquals(WARN, management_validation.validate())
-        self.assertTrue(logs["management"]["validate_similar"]["status"] == WARN)
-        mgmt2.delete()
+#         management_validation = ManagementValidation(str(self.management.pk))
+#         logs = management_validation.logs
+#         self.assertEqual(WARN, management_validation.validate())
+#         self.assertTrue(logs["management"]["validate_similar"]["status"] == WARN)
+#         mgmt2.delete()
 
-    def test_status_error(self):
+#     def test_status_error(self):
 
-        # Invalid uuid test
-        management_validation = ManagementValidation(unicode("not-uuid"))
-        self.assertEquals(ERROR, management_validation.validate())
+#         # Invalid uuid test
+#         management_validation = ManagementValidation(str("not-uuid"))
+#         self.assertEqual(ERROR, management_validation.validate())
 
-        # Management doesn't exist test
-        uuid = unicode("61bd9485-db2b-4e7d-8fe9-3c34b371ed0f")
-        management_validation = ManagementValidation(uuid)
-        self.assertEquals(ERROR, management_validation.validate())
+#         # Management doesn't exist test
+#         uuid = str("61bd9485-db2b-4e7d-8fe9-3c34b371ed0f")
+#         management_validation = ManagementValidation(uuid)
+#         self.assertEqual(ERROR, management_validation.validate())
 
-    def test_ignore_warning(self):
-        mgmt2 = Management.objects.create(
-            project=self.project,
-            est_year=2000,
-            name="Test Management",
-            notes="Hey what is up",
-        )
+#     def test_ignore_warning(self):
+#         mgmt2 = Management.objects.create(
+#             project=self.project,
+#             est_year=2000,
+#             name="Test Management",
+#             notes="Hey what is up",
+#         )
 
-        management_validation = ManagementValidation(unicode(self.management.pk))
-        management_validation.validate()
-        management_validation.ignore_warning(
-            ManagementValidation.identifier, "validate_similar"
-        )
+#         management_validation = ManagementValidation(str(self.management.pk))
+#         management_validation.validate()
+#         management_validation.ignore_warning(
+#             ManagementValidation.identifier, "validate_similar"
+#         )
 
-        retry_validation = ManagementValidation(
-            unicode(self.management.pk),
-            previous_validations=management_validation.logs[
-                ManagementValidation.identifier
-            ],
-        )
-        retry_validation.validate()
-        retry_validation_logs = retry_validation.logs
+#         retry_validation = ManagementValidation(
+#             str(self.management.pk),
+#             previous_validations=management_validation.logs[
+#                 ManagementValidation.identifier
+#             ],
+#         )
+#         retry_validation.validate()
+#         retry_validation_logs = retry_validation.logs
 
-        self.assertEquals(
-            retry_validation_logs[ManagementValidation.identifier]["validate_similar"][
-                "status"
-            ],
-            IGNORE,
-        )
-        mgmt2.delete()
+#         self.assertEqual(
+#             retry_validation_logs[ManagementValidation.identifier]["validate_similar"][
+#                 "status"
+#             ],
+#             IGNORE,
+#         )
+#         mgmt2.delete()
 
 
 class ObserverValidationTest(BaseTestCase):
     def test_status_error(self):
         # Observer doesn't exist test
-        uuid = unicode("61bd9485-db2b-4e7d-8fe9-3c34b371ed00")
+        uuid = str("61bd9485-db2b-4e7d-8fe9-3c34b371ed00")
         observer_validation = ObserverValidation(uuid)
-        self.assertEquals(ERROR, observer_validation.validate())
+        self.assertEqual(ERROR, observer_validation.validate())
 
 
 class ObsFishBeltValidationTest(BaseTestCase):
@@ -367,27 +368,27 @@ class ObsFishBeltValidationTest(BaseTestCase):
 
     def test_validate_observation_count(self):
         validation = ObsFishBeltValidation(self.invalid_data)
-        self.assertEquals(WARN, validation.validate_observation_count())
+        self.assertEqual(WARN, validation.validate_observation_count())
 
         validation = ObsFishBeltValidation(self.valid_data)
-        self.assertEquals(OK, validation.validate_observation_count())
+        self.assertEqual(OK, validation.validate_observation_count())
 
     def test_validate_observation_density(self):
         validation = ObsFishBeltValidation(self.invalid_low_biomass_data)
-        self.assertEquals(WARN, validation.validate_observation_density())
+        self.assertEqual(WARN, validation.validate_observation_density())
 
         validation = ObsFishBeltValidation(self.invalid_high_biomass_data)
-        self.assertEquals(WARN, validation.validate_observation_density())
+        self.assertEqual(WARN, validation.validate_observation_density())
 
         validation = ObsFishBeltValidation(self.valid_biomass_data)
-        self.assertEquals(OK, validation.validate_observation_density())
+        self.assertEqual(OK, validation.validate_observation_density())
 
     def test_validate_fish_count(self):
         validation = ObsFishBeltValidation(self.invalid_data)
-        self.assertEquals(WARN, validation.validate_fish_count())
+        self.assertEqual(WARN, validation.validate_fish_count())
 
         validation = ObsFishBeltValidation(self.valid_data)
-        self.assertEquals(OK, validation.validate_fish_count())
+        self.assertEqual(OK, validation.validate_fish_count())
 
 
 class ObsHabitatComplexitiesValidationTest(BaseTestCase):
@@ -434,24 +435,25 @@ class ObsHabitatComplexitiesValidationTest(BaseTestCase):
 
     def test_validate_observation_count(self):
         validation = ObsHabitatComplexitiesValidation(self.invalid_data)
-        self.assertEquals(ERROR, validation.validate_observation_count())
+        self.assertEqual(ERROR, validation.validate_observation_count())
 
         validation = ObsHabitatComplexitiesValidation(self.valid_data)
-        self.assertEquals(OK, validation.validate_observation_count())
+        self.assertEqual(OK, validation.validate_observation_count())
 
     def test_validate_scores(self):
         validation = ObsHabitatComplexitiesValidation(self.invalid_data)
-        self.assertEquals(ERROR, validation.validate_scores())
+        self.assertEqual(ERROR, validation.validate_scores())
 
         validation = ObsHabitatComplexitiesValidation(self.valid_data)
-        self.assertEquals(OK, validation.validate_scores())
+        self.assertEqual(OK, validation.validate_scores())
 
 
-class ObsBenthicLITValidationTest(BaseTestCase):
+class ObsBenthicLITValidationTest(BaseTestCase, TestDataMixin):
     def setUp(self):
         super(ObsBenthicLITValidationTest, self).setUp()
+        self.load_benthicattributes()
 
-        call_command("refresh_benthic")
+        # call_command("refresh_benthic")
 
         benthic_transect = dict(len_surveyed=100)
         obs_benthic_lits = [{"length": 100}, {"length": 300}]
@@ -494,6 +496,7 @@ class ObsBenthicLITValidationTest(BaseTestCase):
 
     def tearDown(self):
         super(ObsBenthicLITValidationTest, self).tearDown()
+        self.unload_benthicattributes()
         self.valid_data = None
         self.invalid_len_data = None
         self.valid_hard_coral_data = None
@@ -501,17 +504,17 @@ class ObsBenthicLITValidationTest(BaseTestCase):
 
     def test_validate_total_length(self):
         validation = ObsBenthicLITValidation(self.invalid_len_data)
-        self.assertEquals(ERROR, validation.validate())
+        self.assertEqual(ERROR, validation.validate())
 
         validation = ObsBenthicLITValidation(self.valid_data)
-        self.assertEquals(OK, validation.validate())
+        self.assertEqual(OK, validation.validate())
 
     def test_validate_hard_coral(self):
         validation = ObsBenthicLITValidation(self.invalid_hard_coral_data)
-        self.assertEquals(WARN, validation.validate())
+        self.assertEqual(WARN, validation.validate())
 
         validation = ObsBenthicLITValidation(self.valid_hard_coral_data)
-        self.assertEquals(OK, validation.validate())
+        self.assertEqual(OK, validation.validate())
 
 
 class BenthicTransectValidationTest(BaseTestCase):
@@ -519,7 +522,7 @@ class BenthicTransectValidationTest(BaseTestCase):
         super(BenthicTransectValidationTest, self).setUp()
 
         sample_event = dict(
-            relative_depth=unicode(self.relative_depth.id), site=unicode(self.site1.id)
+            relative_depth=str(self.relative_depth.id), site=str(self.site1.id)
         )
         benthic_transect = dict(number=1)
         self.invalid_data = dict(
@@ -540,7 +543,7 @@ class BenthicTransectValidationTest(BaseTestCase):
         )
 
         sample_event = dict(
-            relative_depth=unicode(self.relative_depth.id), site=unicode(self.site1.id)
+            relative_depth=str(self.relative_depth.id), site=str(self.site1.id)
         )
         benthic_transect = dict(number=1)
         self.valid_data_diff_trans_method = dict(
@@ -556,16 +559,16 @@ class BenthicTransectValidationTest(BaseTestCase):
 
     def test_validate_duplicate(self):
         validation = BenthicTransectValidation(self.invalid_data)
-        self.assertEquals(WARN, validation.validate_duplicate())
+        self.assertEqual(WARN, validation.validate_duplicate())
 
         validation = BenthicTransectValidation(self.invalid_data_missing_id)
-        self.assertEquals(ERROR, validation.validate_duplicate())
+        self.assertEqual(ERROR, validation.validate_duplicate())
 
         validation = BenthicTransectValidation(self.valid_data)
-        self.assertEquals(OK, validation.validate_duplicate())
+        self.assertEqual(OK, validation.validate_duplicate())
 
         validation = BenthicTransectValidation(self.valid_data_diff_trans_method)
-        self.assertEquals(OK, validation.validate_duplicate())
+        self.assertEqual(OK, validation.validate_duplicate())
 
 
 class ObservationsValidationTest(BaseTestCase):
@@ -592,10 +595,10 @@ class ObservationsValidationTest(BaseTestCase):
 
     def test_validate_all_equal(self):
         validation = ObservationsValidation(self.data)
-        self.assertEquals(OK, validation.validate_all_equal())
+        self.assertEqual(OK, validation.validate_all_equal())
 
         validation = ObservationsValidation(self.invalid_data)
-        self.assertEquals(WARN, validation.validate_all_equal())
+        self.assertEqual(WARN, validation.validate_all_equal())
 
 
 class ObsBenthicPercentCoveredValidationTest(BaseTestCase):
@@ -628,19 +631,19 @@ class ObsBenthicPercentCoveredValidationTest(BaseTestCase):
 
     def test_validate_percent_values(self):
         validation = ObsBenthicPercentCoveredValidation(self.data)
-        self.assertEquals(OK, validation.validate_percent_values())
+        self.assertEqual(OK, validation.validate_percent_values())
 
         validation = ObsBenthicPercentCoveredValidation(self.invalid_data_null)
-        self.assertEquals(OK, validation.validate_percent_values())
+        self.assertEqual(OK, validation.validate_percent_values())
 
         validation = ObsBenthicPercentCoveredValidation(self.invalid_data_gt_100_val)
-        self.assertEquals(ERROR, validation.validate_percent_values())
+        self.assertEqual(ERROR, validation.validate_percent_values())
 
         validation = ObsBenthicPercentCoveredValidation(self.invalid_data_lt_0)
-        self.assertEquals(ERROR, validation.validate_percent_values())
+        self.assertEqual(ERROR, validation.validate_percent_values())
 
         validation = ObsBenthicPercentCoveredValidation(self.invalid_data_gt_100_total)
-        self.assertEquals(ERROR, validation.validate_percent_values())
+        self.assertEqual(ERROR, validation.validate_percent_values())
 
     def test_validate_quadrat_count(self):
         data = dict(
@@ -653,7 +656,7 @@ class ObsBenthicPercentCoveredValidationTest(BaseTestCase):
             ]
         )
         validation = ObsBenthicPercentCoveredValidation(data)
-        self.assertEquals(OK, validation.validate_quadrat_count())
+        self.assertEqual(OK, validation.validate_quadrat_count())
 
         invalid_data = dict(
             obs_quadrat_benthic_percent=[
@@ -662,7 +665,7 @@ class ObsBenthicPercentCoveredValidationTest(BaseTestCase):
             ]
         )
         validation = ObsBenthicPercentCoveredValidation(invalid_data)
-        self.assertEquals(WARN, validation.validate_quadrat_count())
+        self.assertEqual(WARN, validation.validate_quadrat_count())
 
 
 class ObsColoniesBleachedValidationTest(BaseTestCase):
@@ -721,17 +724,17 @@ class ObsColoniesBleachedValidationTest(BaseTestCase):
 
     def test_validate_colony_count(self):
         validation = ObsColoniesBleachedValidation(self.data)
-        self.assertEquals(OK, validation.validate_colony_count())
+        self.assertEqual(OK, validation.validate_colony_count())
 
         validation = ObsColoniesBleachedValidation(self.data_mix_non_numbers)
-        self.assertEquals(OK, validation.validate_colony_count())
+        self.assertEqual(OK, validation.validate_colony_count())
 
         validation = ObsColoniesBleachedValidation(self.data_gt_600)
-        self.assertEquals(WARN, validation.validate_colony_count())
+        self.assertEqual(WARN, validation.validate_colony_count())
 
     def test_validate_duplicate_genus_growth(self):
         validation = ObsColoniesBleachedValidation(self.data_multi_obs)
-        self.assertEquals(OK, validation.validate_duplicate_genus_growth())
+        self.assertEqual(OK, validation.validate_duplicate_genus_growth())
 
         validation = ObsColoniesBleachedValidation(self.data_multi_obs_duplicates)
-        self.assertEquals(ERROR, validation.validate_duplicate_genus_growth())
+        self.assertEqual(ERROR, validation.validate_duplicate_genus_growth())

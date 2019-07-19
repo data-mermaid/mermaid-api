@@ -99,7 +99,7 @@ class ProtocolWriter(BaseWriter):
         observers = []
         observers_data = get_observers_data(self.collect_record, transect_method_id)
         if not observers_data:
-            raise ValidationError({"observers": [unicode(_(u"Must have at least 1 observer."))]})
+            raise ValidationError({"observers": [str(_(u"Must have at least 1 observer."))]})
 
         for observer_data in observers_data:
             try:

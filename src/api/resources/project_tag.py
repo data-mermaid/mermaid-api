@@ -1,4 +1,4 @@
-from base import BaseApiViewSet, BaseAPISerializer, BaseAPIFilterSet
+from .base import BaseApiViewSet, BaseAPISerializer, BaseAPIFilterSet
 from django.contrib.contenttypes.models import ContentType
 from ..models import Tag
 from ..permissions import UnauthenticatedReadOnlyPermission

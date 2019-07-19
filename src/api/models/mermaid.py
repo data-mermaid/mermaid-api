@@ -597,7 +597,7 @@ class TransectMethod(BaseModel):
             return _(u'bleaching quadrat collection %s') % \
                    self.bleachingquadratcollection.quadrat.__unicode__()
 
-        return unicode(_(u'transect method'))
+        return str(_(u'transect method'))
 
 
 class Observer(BaseModel):
@@ -823,7 +823,7 @@ class BleachingQuadratCollection(TransectMethod):
 
 
 class ObsColoniesBleached(BaseModel, JSONMixin):
-    project_lookup = 'bleachingquadratcollection__transect__sample_event__site__project'
+    project_lookup = 'bleachingquadratcollection__quadrat__sample_event__site__project'
 
     bleachingquadratcollection = models.ForeignKey(BleachingQuadratCollection,
                                                          on_delete=models.CASCADE)
@@ -849,7 +849,7 @@ class ObsColoniesBleached(BaseModel, JSONMixin):
 
 
 class ObsQuadratBenthicPercent(BaseModel, JSONMixin):
-    project_lookup = 'bleachingquadratcollection__transect__sample_event__site__project'
+    project_lookup = 'bleachingquadratcollection__quadrat__sample_event__site__project'
 
     bleachingquadratcollection = models.ForeignKey(BleachingQuadratCollection,
                                                          on_delete=models.CASCADE)
@@ -941,7 +941,7 @@ class FishFamily(FishAttribute):
         if hasattr(self, '_biomass_a'):
             return self._biomass_a
 
-        avebiomass = self.fishgenus_set.aggregate(Avg('fishspecies__biomass_constant_a')).values()[0] or 0
+        avebiomass = list(self.fishgenus_set.aggregate(Avg('fishspecies__biomass_constant_a')).values())[0] or 0
         self._biomass_a = round(avebiomass, 6)
         return self._biomass_a
 
@@ -950,7 +950,7 @@ class FishFamily(FishAttribute):
         if hasattr(self, '_biomass_b'):
             return self._biomass_b
 
-        avebiomass = self.fishgenus_set.aggregate(Avg('fishspecies__biomass_constant_b')).values()[0] or 0
+        avebiomass = list(self.fishgenus_set.aggregate(Avg('fishspecies__biomass_constant_b')).values())[0] or 0
         self._biomass_b = round(avebiomass, 6)
         return self._biomass_b
 
@@ -959,7 +959,7 @@ class FishFamily(FishAttribute):
         if hasattr(self, '_biomass_c'):
             return self._biomass_c
 
-        avebiomass = self.fishgenus_set.aggregate(Avg('fishspecies__biomass_constant_c')).values()[0] or 0
+        avebiomass = list(self.fishgenus_set.aggregate(Avg('fishspecies__biomass_constant_c')).values())[0] or 0
         self._biomass_c = round(avebiomass, 6)
         return self._biomass_c
 
@@ -1004,7 +1004,8 @@ class FishGenus(FishAttribute):
         if hasattr(self, '_biomass_a'):
             return self._biomass_a
 
-        avebiomass = self.fishspecies_set.aggregate(Avg('biomass_constant_a')).values()[0] or 0
+        avebiomass =  0
+        avebiomass = list(self.fishspecies_set.aggregate(Avg('biomass_constant_a')).values())[0] or 0
         self._biomass_a = round(avebiomass, 6)
         return self._biomass_a
         # a_sum = 0
@@ -1024,7 +1025,7 @@ class FishGenus(FishAttribute):
         if hasattr(self, '_biomass_b'):
             return self._biomass_b
 
-        avebiomass = self.fishspecies_set.aggregate(Avg('biomass_constant_b')).values()[0] or 0
+        avebiomass = list(self.fishspecies_set.aggregate(Avg('biomass_constant_b')).values())[0] or 0
         self._biomass_b = round(avebiomass, 6)
         return self._biomass_b
 
@@ -1033,7 +1034,7 @@ class FishGenus(FishAttribute):
         if hasattr(self, '_biomass_c'):
             return self._biomass_c
 
-        avebiomass = self.fishspecies_set.aggregate(Avg('biomass_constant_c')).values()[0] or 0
+        avebiomass = list(self.fishspecies_set.aggregate(Avg('biomass_constant_c')).values())[0] or 0
         self._biomass_c = round(avebiomass, 6)
         return self._biomass_c
 
@@ -1158,7 +1159,7 @@ class FishSizeBin(BaseChoiceModel):
 
 
 class FishSize(BaseModel):
-    fish_bin_size = models.ForeignKey(FishSizeBin)
+    fish_bin_size = models.ForeignKey(FishSizeBin, on_delete=models.CASCADE)
     name = models.CharField(max_length=50)
     val = models.FloatField()
 

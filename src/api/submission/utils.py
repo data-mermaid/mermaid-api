@@ -102,7 +102,7 @@ def validate(validator_cls, model_cls, qry_params=None):
         validations = dict(
             status=result,
             results=validator.logs,
-            last_validated=unicode(validation_timestamp),
+            last_validated=str(validation_timestamp),
         )
         record.validations = validations
         model_cls.objects.filter(id=record.id).update(

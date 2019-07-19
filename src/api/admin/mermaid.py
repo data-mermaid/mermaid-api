@@ -1,4 +1,3 @@
-from django.core import urlresolvers
 from django.contrib import admin
 from django.contrib import messages
 from django.utils.html import format_html
@@ -435,7 +434,7 @@ class BenthicAttributeAdmin(AttributeAdmin):
 
     def fk_link(self, obj):
         if obj.parent:
-            link = urlresolvers.reverse("admin:api_benthicattribute_change", args=[obj.parent.pk])
+            link = reverse("admin:api_benthicattribute_change", args=[obj.parent.pk])
             return u'<a href="%s">%s</a>' % (link, obj.parent.name)
         else:
             return ''
@@ -650,7 +649,7 @@ class FishGenusAdmin(FishAttributeAdmin):
     exportable_fields = ('name', 'genus')
 
     def fk_link(self, obj):
-        link = urlresolvers.reverse("admin:api_fishfamily_change", args=[obj.family.pk])
+        link = reverse("admin:api_fishfamily_change", args=[obj.family.pk])
         return u'<a href="%s">%s</a>' % (link, obj.family.name)
 
     fk_link.allow_tags = True
@@ -668,7 +667,7 @@ class FishSpeciesAdmin(FishAttributeAdmin):
                          'max_length', 'trophic_level', 'vulnerability')
 
     def fk_link(self, obj):
-        link = urlresolvers.reverse("admin:api_fishgenus_change", args=[obj.genus.pk])
+        link = reverse("admin:api_fishgenus_change", args=[obj.genus.pk])
         return u'<a href="%s">%s</a>' % (link, obj.genus.name)
 
     fk_link.allow_tags = True

@@ -4,6 +4,7 @@ from django.utils.decorators import method_decorator
 from django.views.decorators.cache import cache_page
 from django.utils.translation import ugettext_lazy as _
 from rest_framework import serializers, viewsets
+from rest_framework.decorators import action
 from rest_framework.serializers import (
     UUIDField,
     PrimaryKeyRelatedField,
@@ -13,8 +14,6 @@ from rest_framework.pagination import PageNumberPagination
 from rest_framework.filters import OrderingFilter, SearchFilter
 from rest_framework.response import Response
 from rest_framework.fields import empty
-from rest_framework.compat import unicode_to_repr
-from rest_framework.decorators import list_route
 from rest_condition import Or
 from django.core.exceptions import FieldDoesNotExist
 
@@ -120,7 +119,7 @@ class CurrentProfileDefault(object):
         return self.profile
 
     def __repr__(self):
-        return unicode_to_repr('%s()' % self.__class__.__name__)
+        return '%s()' % self.__class__.__name__
 
 
 class BaseAPISerializer(serializers.ModelSerializer):
@@ -236,6 +235,8 @@ class ExtendedSerializer(serializers.ModelSerializer):
 
 class ListFilter(Filter):
     def filter(self, qs, value):
+        if value is None:
+            return qs
         value_list = [v.strip() for v in value.split(u',')]
         return super(ListFilter, self).filter(qs, Lookup(value_list, 'in'))
 
@@ -419,7 +420,7 @@ class BaseProjectApiViewSet(BaseApiViewSet):
         self.limit_to_project(request, *args, **kwargs)
         return super(BaseProjectApiViewSet, self).destroy(request, *args, **kwargs)
 
-    @list_route(methods=['POST'])
+    @action(detail=False, methods=['POST'])
     def missing(self, request, *args, **kwargs):
         self.limit_to_project(request, *args, **kwargs)
         return super(BaseProjectApiViewSet, self).missing(

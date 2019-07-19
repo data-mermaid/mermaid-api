@@ -48,7 +48,7 @@ class RawCSVReport(BaseReport):
                 if isinstance(flat_record[k][0], Mapping):
                     continue
 
-                flat_record[k] = ','.join([unicode(e) for e in v])
+                flat_record[k] = ','.join([str(e) for e in v])
             else:
                 flat_record[k] = v
 

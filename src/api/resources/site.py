@@ -1,7 +1,7 @@
 import django_filters
 from rest_framework import serializers
 
-from base import (
+from .base import (
     BaseAPIFilterSet,
     BaseApiViewSet,
     BaseAPISerializer,
@@ -9,7 +9,7 @@ from base import (
     ModelNameReadOnlyField,
     ListFilter,
 )
-from mixins import ProtectedResourceMixin
+from .mixins import ProtectedResourceMixin
 from ..models import Site
 from ..permissions import *
 
@@ -75,7 +75,7 @@ class SiteSerializer(BaseAPISerializer):
 
 
 class SiteFilterSet(BaseAPIFilterSet):
-    project = django_filters.UUIDFilter(name='project', distinct=True,
+    project = django_filters.UUIDFilter(field_name='project', distinct=True,
                                         label='Associated with project')
 
     country = ListFilter()

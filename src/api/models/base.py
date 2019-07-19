@@ -149,7 +149,7 @@ class Country(BaseChoiceModel):
 
 
 class AuthUser(BaseModel):
-    profile = models.ForeignKey(Profile, related_name='authusers')
+    profile = models.ForeignKey(Profile, related_name='authusers', on_delete=models.CASCADE)
     user_id = models.CharField(unique=True, max_length=255)
 
     class Meta:
