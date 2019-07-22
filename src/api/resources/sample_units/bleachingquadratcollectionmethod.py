@@ -69,9 +69,7 @@ class BleachingQuadratCollectionMethodSerializer(BleachingQuadratCollectionSeria
         exclude = []
 
 
-class ObsColoniesBleachedReportSerializer(SampleEventReportSerializer):
-    __metaclass__ = SampleEventReportSerializerMeta
-
+class ObsColoniesBleachedReportSerializer(SampleEventReportSerializer, metaclass=SampleEventReportSerializerMeta):
     transect_method = "bleachingquadratcollection"
     sample_event_path = "{}__quadrat__sample_event".format(transect_method)
     obs_fields = [
@@ -118,9 +116,7 @@ class ObsColoniesBleachedReportSerializer(SampleEventReportSerializer):
         super(ObsColoniesBleachedReportSerializer, self).preserialize(queryset=queryset)
 
 
-class ObsQuadratBenthicPercentReportSerializer(SampleEventReportSerializer):
-    __metaclass__ = SampleEventReportSerializerMeta
-
+class ObsQuadratBenthicPercentReportSerializer(SampleEventReportSerializer, metaclass=SampleEventReportSerializerMeta):
     transect_method = "bleachingquadratcollection"
     sample_event_path = "{}__quadrat__sample_event".format(transect_method)
     obs_fields = [

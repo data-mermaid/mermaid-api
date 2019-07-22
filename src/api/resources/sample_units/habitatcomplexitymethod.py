@@ -26,9 +26,7 @@ class HabitatComplexityMethodSerializer(HabitatComplexitySerializer):
         exclude = []
 
 
-class ObsHabitatComplexityReportSerializer(SampleEventReportSerializer):
-    __metaclass__ = SampleEventReportSerializerMeta
-
+class ObsHabitatComplexityReportSerializer(SampleEventReportSerializer, metaclass=SampleEventReportSerializerMeta):
     transect_method = 'habitatcomplexity'
     sample_event_path = '{}__transect__sample_event'.format(transect_method)
 

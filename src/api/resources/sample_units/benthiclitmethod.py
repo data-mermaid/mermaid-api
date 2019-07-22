@@ -63,12 +63,10 @@ def to_benthic_attribute_category(field, row, serializer_instance):
     elif isinstance(bc, dict):
         return bc.get("name") or ""
 
-    return bc.__unicode__()
+    return str(bc)
 
 
-class ObsBenthicLITReportSerializer(SampleEventReportSerializer):
-    __metaclass__ = SampleEventReportSerializerMeta
-
+class ObsBenthicLITReportSerializer(SampleEventReportSerializer, metaclass=SampleEventReportSerializerMeta):
     transect_method = 'benthiclit'
     sample_event_path = '{}__transect__sample_event'.format(transect_method)
 

@@ -162,9 +162,7 @@ def to_fish_genus_name(field, row, serializer_instance):
     return str(fg)
 
 
-class ObsBeltFishReportSerializer(SampleEventReportSerializer):
-    __metaclass__ = SampleEventReportSerializerMeta
-
+class ObsBeltFishReportSerializer(SampleEventReportSerializer, metaclass=SampleEventReportSerializerMeta):
     transect_method = 'beltfish'
     sample_event_path = '{}__transect__sample_event'.format(transect_method)
     obs_fields = [
