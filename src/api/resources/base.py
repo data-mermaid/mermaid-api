@@ -271,12 +271,12 @@ class RelatedOrderingFilter(OrderingFilter):
     https://github.com/tomchristie/django-rest-framework/issues/1005
     """
 
-    def is_valid_field(self, model, field):
+    def is_valid_field(self, model, field_name):
         """
         Return true if the field exists within the model (or in the related
         model specified using the Django ORM __ notation)
         """
-        components = field.split('__', 1)
+        components = field_name.split('__', 1)
         try:
             field = model._meta.get_field(components[0])
 
@@ -285,8 +285,8 @@ class RelatedOrderingFilter(OrderingFilter):
                 return self.is_valid_field(field.related_model, components[1])
 
             # foreign key
-            if field.rel and len(components) == 2:
-                return self.is_valid_field(field.rel.to, components[1])
+            if field.related_model and len(components) == 2:
+                return self.is_valid_field(field.related_model, components[1])
             return True
         except FieldDoesNotExist:
             return False
