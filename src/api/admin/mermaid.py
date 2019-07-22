@@ -330,7 +330,7 @@ class BenthicTransectAdmin(BaseAdmin):
                      'sample_event__sample_date', ]
 
     def name(self, obj):
-        return obj.__unicode__()
+        return str(obj)
 
     name.admin_order_field = 'sample_event'
 
@@ -343,7 +343,7 @@ class FishTransectAdmin(BaseAdmin):
     readonly_fields = ('cr_id',)
 
     def name(self, obj):
-        return obj.__unicode__()
+        return str(obj)
 
     name.admin_order_field = 'sample_event'
 
@@ -360,7 +360,7 @@ class QuadratCollectionAdmin(BaseAdmin):
                      'sample_event__sample_date', ]
 
     def name(self, obj):
-        return obj.__unicode__()
+        return str(obj)
 
     name.admin_order_field = 'sample_event'
 
@@ -500,7 +500,7 @@ class BenthicLITAdmin(BaseAdmin):
     readonly_fields = ('cr_id',)
 
     def name(self, obj):
-        return obj.__unicode__()
+        return str(obj)
 
     name.admin_order_field = 'transect'
 
@@ -524,7 +524,7 @@ class BenthicPITAdmin(BaseAdmin):
     readonly_fields = ('cr_id',)
 
     def name(self, obj):
-        return obj.__unicode__()
+        return str(obj)
 
     name.admin_order_field = 'transect'
 
@@ -553,7 +553,7 @@ class HabitatComplexityAdmin(BaseAdmin):
     readonly_fields = ('cr_id',)
 
     def name(self, obj):
-        return obj.__unicode__()
+        return str(obj)
 
     name.admin_order_field = 'transect'
 
@@ -586,7 +586,7 @@ class BleachingQuadratCollectionAdmin(BaseAdmin):
     readonly_fields = ('cr_id',)
 
     def name(self, obj):
-        return obj.__unicode__()
+        return str(obj)
 
     def cr_id(self, obj):
         return obj.transect.collect_record_id
@@ -692,7 +692,7 @@ class BeltFishAdmin(BaseAdmin):
                      'transect__sample_event__sample_date', ]
 
     def name(self, obj):
-        return obj.__unicode__()
+        return str(obj)
 
     name.admin_order_field = 'transect'
 

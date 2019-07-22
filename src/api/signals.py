@@ -97,7 +97,7 @@ def email_superadmin_on_new(sender, instance, created, **kwargs):
             subheading='MERMAID SuperAdmin Communication',
             body=html_content.format(
                 from_name=from_name,
-                attrib_name=instance.__unicode__(),
+                attrib_name=str(instance),
                 admin_link=admin_link,
                 from_email=from_email,
                 instance_label=instance_label,

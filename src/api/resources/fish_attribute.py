@@ -28,7 +28,7 @@ class FishAttributeExtendedSerializer(FishAttributeSerializer):
         exclude = ['updated_on', 'created_on', 'updated_by', 'id']
 
     def get_name(self, obj):
-        return obj.__unicode__()
+        return str(obj)
 
 
 class FishAttributePermission(permissions.BasePermission):

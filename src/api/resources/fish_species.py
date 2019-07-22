@@ -34,7 +34,7 @@ class FishSpeciesSerializer(BaseAPISerializer):
         exclude = []
 
     def get_display_name(self, obj):
-        return obj.__unicode__()
+        return str(obj)
 
 
 class FishSpeciesFilterSet(BaseAPIFilterSet):

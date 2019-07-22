@@ -48,7 +48,7 @@ def to_fish_attribute_name(field, row, serializer_instance):
     elif isinstance(fa, dict):
         return fa.get("name") or ""
 
-    return fa.__unicode__()
+    return str(fa)
 
 
 def _to_fa_attribute(field, row, serializer_instance):
@@ -135,7 +135,7 @@ def to_fish_family_name(field, row, serializer_instance):
     elif isinstance(ff, dict):
         return ff.get("name") or ""
 
-    return ff.__unicode__()
+    return str(ff)
 
 
 def _get_fish_genus(row, serializer_instance):
@@ -159,7 +159,7 @@ def to_fish_genus_name(field, row, serializer_instance):
     elif isinstance(fg, dict):
         return fg.get("name") or ""
 
-    return fg.__unicode__()
+    return str(fg)
 
 
 class ObsBeltFishReportSerializer(SampleEventReportSerializer):
