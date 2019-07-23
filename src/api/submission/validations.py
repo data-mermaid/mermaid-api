@@ -92,8 +92,6 @@ class BenthicAttributeMixin(ObservationsMixin):
         benthic_attrs = BenthicAttribute.objects.filter(id__in=benthic_attr_ids)
 
         origin_parents = [ba.origin.name for ba in benthic_attrs]
-        print('origin_parents: {}'.format(origin_parents))
-        print('origin_name: {}'.format(origin_name))
         if origin_name in origin_parents and len(set(origin_parents)) == 1:
             return WARN, warn_message
 
