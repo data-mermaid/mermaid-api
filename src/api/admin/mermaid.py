@@ -732,3 +732,37 @@ class ArchivedRecordAdmin(BaseAdmin):
 @admin.register(Tag)
 class TagAdmin(BaseAdmin):
     list_display = ('name', 'status', 'updated_by')
+
+    def delete_view(self, request, object_id, extra_context=None):
+        obj = Tag.objects.get(pk=object_id)
+        extra_context = extra_context or {}
+
+        # dropdown of other tags to assign to existing projects before deleting
+        other_objs = Tag.objects.exclude(id=object_id).order_by('name')
+        if other_objs.count() > 0:
+            extra_context.update({'other_objs': other_objs})
+
+        # Projects that use this tag
+        projects = []
+        ps = Project.objects.filter(tags=obj)
+        for p in ps:
+            admin_url = reverse(
+                'admin:{}_{}_change'.format(Project._meta.app_label, Project._meta.model_name),
+                args=(p.pk,))
+            app_url = '{}/#/projects/{}/details'.format(settings.DEFAULT_DOMAIN_COLLECT, p.pk)
+            pstr = format_html('<a href="{}">{}</a> [<a href="{}" target="_blank">{}</a>]', admin_url, p, app_url,
+                               app_url)
+            projects.append(pstr)
+
+        if projects:
+            extra_context.update({'projects': projects})
+
+        # process reassignment, then hand back to django for deletion
+        if request.method == 'POST':
+            replacement_obj = request.POST.get('replacement_obj')
+            if replacement_obj is not None:
+                for p in ps:
+                    p.tags.remove(obj)
+                    p.tags.add(replacement_obj)
+
+        return super(TagAdmin, self).delete_view(request, object_id, extra_context)
