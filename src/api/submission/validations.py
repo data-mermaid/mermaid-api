@@ -1,4 +1,5 @@
 import functools
+import itertools
 import inspect
 import json
 import math
@@ -1002,22 +1003,28 @@ class ObsColoniesBleachedValidation(DataValidation, ObsBleachingMixin):
     def validate_duplicate_genus_growth(self):
         # ERROR
         obs = self.get_observations(self.data) or []
-
-        dup_obs = [ob for n, ob in enumerate(obs) if ob in obs[:n]]
-        dup_obs_genus_growth = [
-            dict(
-                attribute=dup_ob.get("attribute"), growth_form=dup_ob.get("growth_form")
-            )
-            for dup_ob in dup_obs
-        ]
-
-        uniq_set = set(
-            [
-                "{}:{}".format(ob.get("attribute"), str(ob.get("growth_form")))
-                for ob in obs
-            ]
+        # Obs need to be sorted before grouped
+        obs.sort(key=lambda e: "{}_{}".format(e.get("attribute"), e.get("growth_form")))
+        grouped_obs = itertools.groupby(
+            obs,
+            key=lambda ob: "{}_{}".format(ob.get("attribute"), ob.get("growth_form")),
         )
-        if len(obs) > len(uniq_set):
+
+        dup_obs_genus_growth = []
+        for ignore, dup_obs in grouped_obs:
+            records = list(dup_obs)
+            if len(records) < 2:
+                continue
+
+            record = records[0]
+            dup_obs_genus_growth.append(
+                dict(
+                    attribute=record.get("attribute"),
+                    growth_form=record.get("growth_form"),
+                )
+            )
+
+        if dup_obs_genus_growth:
             return self.error(
                 self.identifier,
                 _("Duplicate genus and growth form"),
