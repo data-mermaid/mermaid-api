@@ -1,4 +1,5 @@
 import functools
+import itertools
 import inspect
 import json
 import math
@@ -640,7 +641,9 @@ class ValueInRangeValidation(BaseValidation):
                 self.value, self.value_range_operators[0], self.value_range[0]
             ):
                 is_valid = False
-            if len(self.value_range) > 1 and self._op(self.value, self.value_range_operators[1], self.value_range[1]):
+            if len(self.value_range) > 1 and self._op(
+                self.value, self.value_range_operators[1], self.value_range[1]
+            ):
                 is_valid = False
 
         if is_valid is False:
@@ -945,10 +948,16 @@ class ObsBenthicPercentCoveredValidation(DataValidation, ObsBleachingMixin):
             percent_soft = ob.get("percent_soft") or 0
             percent_algae = ob.get("percent_algae") or 0
             values = [percent_hard, percent_soft, percent_algae]
-            if self._validate_percent_values(values, "validate_percent_values") == ERROR:
+            if (
+                self._validate_percent_values(values, "validate_percent_values")
+                == ERROR
+            ):
                 return ERROR
 
-            if self._validate_percent_value_total(values, "validate_percent_values") == ERROR:
+            if (
+                self._validate_percent_value_total(values, "validate_percent_values")
+                == ERROR
+            ):
                 return ERROR
 
         return self.ok(self.identifier)
@@ -956,7 +965,10 @@ class ObsBenthicPercentCoveredValidation(DataValidation, ObsBleachingMixin):
     def validate_quadrat_count(self):
         obs = self.get_observations(self.data)
         if len(obs) < 5:
-            return self.warning(self.identifier, _("Observations - Percent Cover: Fewer than 5 observations"))
+            return self.warning(
+                self.identifier,
+                _("Observations - Percent Cover: Fewer than 5 observations"),
+            )
         return self.ok(self.identifier)
 
 
@@ -991,14 +1003,34 @@ class ObsColoniesBleachedValidation(DataValidation, ObsBleachingMixin):
     def validate_duplicate_genus_growth(self):
         # ERROR
         obs = self.get_observations(self.data) or []
-        uniq_set = set(
-            [
-                "{}:{}".format(ob.get("attribute"), str(ob.get("growth_form")))
-                for ob in obs
-            ]
+        # Obs need to be sorted before grouped
+        obs.sort(key=lambda e: "{}_{}".format(e.get("attribute"), e.get("growth_form")))
+        grouped_obs = itertools.groupby(
+            obs,
+            key=lambda ob: "{}_{}".format(ob.get("attribute"), ob.get("growth_form")),
         )
-        if len(obs) > len(uniq_set):
-            return self.error(self.identifier, _("Duplicate genus and growth form"))
+
+        dup_obs_genus_growth = []
+        for ignore, dup_obs in grouped_obs:
+            records = list(dup_obs)
+            if len(records) < 2:
+                continue
+
+            record = records[0]
+            dup_obs_genus_growth.append(
+                dict(
+                    attribute=record.get("attribute"),
+                    growth_form=record.get("growth_form"),
+                )
+            )
+
+        if dup_obs_genus_growth:
+            return self.error(
+                self.identifier,
+                _("Duplicate genus and growth form"),
+                data=dup_obs_genus_growth,
+            )
+
         return self.ok(self.identifier)
 
 
@@ -1043,11 +1075,13 @@ class QuadratCollectionValidation(DataValidation):
             "label": label,
             "sample_event__site": site,
             "sample_event__sample_time": sample_time,
-            "sample_event__sample_date": sample_date
+            "sample_event__sample_date": sample_date,
         }
         queryset = QuadratCollection.objects.filter(**qry)
         for profile in profiles:
-            queryset = queryset.filter(bleaching_quadrat_collection__observers__profile_id=profile)
+            queryset = queryset.filter(
+                bleaching_quadrat_collection__observers__profile_id=profile
+            )
 
         for result in queryset:
             transect_methods = get_related_transect_methods(result)
