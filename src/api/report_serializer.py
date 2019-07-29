@@ -35,6 +35,20 @@ def to_latitude(value, field, row, serializer_instance):
 def to_longitude(value, field, row, serializer_instance):
     return value.x
 
+@handle_none()
+def to_year(value, field, row, serializer_instance):
+    return value.year
+
+
+@handle_none()
+def to_month(value, field, row, serializer_instance):
+    return value.month
+
+
+@handle_none()
+def to_day(value, field, row, serializer_instance):
+    return value.day
+
 
 class ReportField(object):
     __slots__ = ("column_path", "display", "formatter", "_display")

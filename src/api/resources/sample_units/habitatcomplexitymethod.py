@@ -31,15 +31,16 @@ class ObsHabitatComplexityReportSerializer(SampleEventReportSerializer):
 
     transect_method = 'habitatcomplexity'
     sample_event_path = '{}__transect__sample_event'.format(transect_method)
-
+    
+    idx = 24
     obs_fields = [
         (6, ReportField("habitatcomplexity__transect__reef_slope__name", "Reef slope")),
-        (22, ReportField("habitatcomplexity__transect__number", "Transect number")),
-        (23, ReportField("habitatcomplexity__transect__label", "Transect label")),
-        (24, ReportField("habitatcomplexity__transect__len_surveyed", "Transect length surveyed")),
-        (26, ReportField('interval', 'Interval (m)')),
-        (27, ReportField('score__name', 'Habitat complexity')),
-        (31, ReportField("habitatcomplexity__transect__notes", "Observation notes"))
+        (idx, ReportField("habitatcomplexity__transect__number", "Transect number")),
+        (idx + 1, ReportField("habitatcomplexity__transect__label", "Transect label")),
+        (idx + 2, ReportField("habitatcomplexity__transect__len_surveyed", "Transect length surveyed")),
+        (idx + 4, ReportField('interval', 'Interval (m)')),
+        (idx + 5, ReportField('score__name', 'Habitat complexity')),
+        (idx + 9, ReportField("habitatcomplexity__transect__notes", "Observation notes"))
     ]
 
     non_field_columns = (

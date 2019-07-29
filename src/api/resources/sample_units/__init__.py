@@ -105,7 +105,13 @@ class SampleEventReportSerializerMeta(type):
                 "{}__site__reef_zone__name".format(sample_event_path), "Reef zone"
             ),
             ReportField(
-                "{}__sample_date".format(sample_event_path), "Date", to_unicode
+                "{}__sample_date".format(sample_event_path), "Year", to_year
+            ),
+            ReportField(
+                "{}__sample_date".format(sample_event_path), "Month", to_month
+            ),
+            ReportField(
+                "{}__sample_date".format(sample_event_path), "Day", to_day
             ),
             ReportField(
                 "{}__sample_time".format(sample_event_path), "Start time", to_unicode

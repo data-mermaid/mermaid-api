@@ -56,16 +56,17 @@ class ObsBenthicPITReportSerializer(SampleEventReportSerializer):
     transect_method = 'benthicpit'
     sample_event_path = '{}__transect__sample_event'.format(transect_method)
 
+    idx = 24
     obs_fields = [
         (6, ReportField("benthicpit__transect__reef_slope__name", "Reef slope")),
-        (22, ReportField("benthicpit__transect__number", "Transect number")),
-        (23, ReportField("benthicpit__transect__label", "Transect label")),
-        (24, ReportField("benthicpit__transect__len_surveyed", "Transect length surveyed")),
-        (26, ReportField('interval', 'PIT interval (m)')),
-        (27, ReportMethodField('Benthic category', to_benthic_attribute_category)),
-        (28, ReportField('attribute__name', 'Benthic attribute')),
-        (29, ReportField('growth_form__name', 'Growth form')),
-        (33, ReportField("benthicpit__transect__notes", "Observation notes"))
+        (idx, ReportField("benthicpit__transect__number", "Transect number")),
+        (idx + 1, ReportField("benthicpit__transect__label", "Transect label")),
+        (idx + 2, ReportField("benthicpit__transect__len_surveyed", "Transect length surveyed")),
+        (idx + 4, ReportField('interval', 'PIT interval (m)')),
+        (idx + 5, ReportMethodField('Benthic category', to_benthic_attribute_category)),
+        (idx + 6, ReportField('attribute__name', 'Benthic attribute')),
+        (idx + 7, ReportField('growth_form__name', 'Growth form')),
+        (idx + 11, ReportField("benthicpit__transect__notes", "Observation notes"))
     ]
 
     non_field_columns = (
