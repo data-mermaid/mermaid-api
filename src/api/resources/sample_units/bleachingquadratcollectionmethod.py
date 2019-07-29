@@ -74,6 +74,7 @@ class ObsColoniesBleachedReportSerializer(SampleEventReportSerializer):
 
     transect_method = "bleachingquadratcollection"
     sample_event_path = "{}__quadrat__sample_event".format(transect_method)
+    idx = 25
     obs_fields = [
         (
             6,
@@ -82,22 +83,22 @@ class ObsColoniesBleachedReportSerializer(SampleEventReportSerializer):
             ),
         ),
         (
-            23,
+            idx,
             ReportField(
                 "bleachingquadratcollection__quadrat__label", "Quadrat collection label"
             ),
         ),
-        (28, ReportField("attribute__name", "Benthic attribute")),
-        (29, ReportField("growth_form__name", "Growth form")),
-        (30, ReportField("count_normal", "Normal count")),
-        (31, ReportField("count_pale", "Pale count")),
-        (32, ReportField("count_20", "0-20% bleached count")),
-        (33, ReportField("count_50", "20-50% bleached count")),
-        (34, ReportField("count_80", "50-80% bleached count")),
-        (35, ReportField("count_100", "80-100% bleached count")),
-        (36, ReportField("count_dead", "Recently dead count")),
+        (idx + 5, ReportField("attribute__name", "Benthic attribute")),
+        (idx + 6, ReportField("growth_form__name", "Growth form")),
+        (idx + 7, ReportField("count_normal", "Normal count")),
+        (idx + 8, ReportField("count_pale", "Pale count")),
+        (idx + 9, ReportField("count_20", "0-20% bleached count")),
+        (idx + 10, ReportField("count_50", "20-50% bleached count")),
+        (idx + 11, ReportField("count_80", "50-80% bleached count")),
+        (idx + 12, ReportField("count_100", "80-100% bleached count")),
+        (idx + 13, ReportField("count_dead", "Recently dead count")),
         (
-            37,
+            idx + 14,
             ReportField(
                 "bleachingquadratcollection__quadrat__notes", "Observation notes"
             ),
@@ -123,6 +124,7 @@ class ObsQuadratBenthicPercentReportSerializer(SampleEventReportSerializer):
 
     transect_method = "bleachingquadratcollection"
     sample_event_path = "{}__quadrat__sample_event".format(transect_method)
+    idx = 25
     obs_fields = [
         (
             6,
@@ -131,25 +133,25 @@ class ObsQuadratBenthicPercentReportSerializer(SampleEventReportSerializer):
             ),
         ),
         (
-            23,
+            idx,
             ReportField(
                 "bleachingquadratcollection__quadrat__label", "Quadrat collection label"
             ),
         ),
-        (28, ReportField("quadrat_number", "Quadrat number")),
-        (29, ReportField("percent_hard", "Hard coral (% cover)")),
-        (30, ReportField("percent_soft", "Soft coral (% cover)")),
-        (31, ReportField("percent_algae", "Macroalgae (% cover)")),
+        (idx + 5, ReportField("quadrat_number", "Quadrat number")),
+        (idx + 6, ReportField("percent_hard", "Hard coral (% cover)")),
+        (idx + 7, ReportField("percent_soft", "Soft coral (% cover)")),
+        (idx + 8, ReportField("percent_algae", "Macroalgae (% cover)")),
         (
-            32,
+            idx + 9,
             ReportField(
                 "bleachingquadratcollection__quadrat__notes", "Observation notes"
             ),
         ),
-        (32, ReportMethodField("Number of quadrats", quadrat_count)),
-        (33, ReportMethodField("Average Hard Coral (% cover)", avg_hard_coral)),
-        (34, ReportMethodField("Average Soft Coral (% cover)", avg_soft_coral)),
-        (35, ReportMethodField("Average Macroalgae (% cover)", avg_macroalgae)),
+        (idx + 10, ReportMethodField("Number of quadrats", quadrat_count)),
+        (idx + 11, ReportMethodField("Average Hard Coral (% cover)", avg_hard_coral)),
+        (idx + 12, ReportMethodField("Average Soft Coral (% cover)", avg_soft_coral)),
+        (idx + 13, ReportMethodField("Average Macroalgae (% cover)", avg_macroalgae)),
     ]
 
     non_field_columns = (
