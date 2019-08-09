@@ -1,5 +1,5 @@
 import django_filters
-from base import BaseAPIFilterSet, BaseAPISerializer, BaseProjectApiViewSet
+from .base import BaseAPIFilterSet, BaseAPISerializer, BaseProjectApiViewSet
 
 from ..models import BleachingQuadratCollection
 

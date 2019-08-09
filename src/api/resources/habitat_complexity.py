@@ -1,5 +1,5 @@
 from rest_framework import serializers
-from base import BaseAPIFilterSet, BaseProjectApiViewSet, BaseAPISerializer
+from .base import BaseAPIFilterSet, BaseProjectApiViewSet, BaseAPISerializer
 from ..models import HabitatComplexity
 
 

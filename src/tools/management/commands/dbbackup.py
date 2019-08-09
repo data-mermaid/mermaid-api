@@ -26,8 +26,8 @@ class Command(BaseCommand):
         super(Command, self).__init__()
         self.backup = os.environ.get('BACKUP', 'false').lower()
         self.env = os.environ.get('ENV', 'none').lower()
-        print 'ENV: %s' % self.env
-        print 'BACKUP: %s' % self.backup
+        print('ENV: %s' % self.env)
+        print('BACKUP: %s' % self.backup)
         self.local_file_location = os.path.join(os.path.sep, 'tmp', 'mermaid')
         try:
             os.mkdir(self.local_file_location)
@@ -51,12 +51,12 @@ class Command(BaseCommand):
 
         if backup_name:
             if not isinstance(backup_name, str):
-                print 'Incorrect argument type'
+                print('Incorrect argument type')
                 return None
             self.backup = backup_name
 
         if self.backup in ["False", "false"]:
-            print 'Skipping Backup'
+            print('Skipping Backup')
             return None
 
         new_aws_key_name = '%s/mermaid_backup_%s.%s' % (self.backup, simpleflake(), BACKUP_EXTENSION)
@@ -67,9 +67,9 @@ class Command(BaseCommand):
         # TODO Compress file before uploading.
 
         if options.get('no_upload', False) is False:
-            print 'Uploading {0} to S3 bucket {1}'.format(new_aws_key_name, AWS_BACKUP_BUCKET)
+            print('Uploading {0} to S3 bucket {1}'.format(new_aws_key_name, AWS_BACKUP_BUCKET))
             self.s3.upload_file(new_backup_path, AWS_BACKUP_BUCKET, new_aws_key_name)
-            print 'Backup Complete'
+            print('Backup Complete')
 
     def _pg_dump(self, filename):
         params = {
@@ -82,7 +82,7 @@ class Command(BaseCommand):
         dump_command_str = 'pg_dump -U {db_user} -h {db_host} -d {db_name} -f {dump_file} -v'
         dump_command = shlex.split(dump_command_str.format(**params))
         self._run(dump_command, to_file='/tmp/mermaid/std_out_backup.log')
-        print 'Dump Complete!'
+        print('Dump Complete!')
 
     def _run(self, command, std_input=None, to_file=None):
         if to_file is not None:
@@ -99,4 +99,4 @@ class Command(BaseCommand):
         data = proc.communicate(input=std_input)[0]
 
         if to_file is None:
-            print data
+            print(data)

@@ -60,7 +60,7 @@ class Tag(TagBase, BaseModel):
         verbose_name = _("Tag")
         verbose_name_plural = _("Tags")
 
-    def __unicode__(self):
+    def __str__(self):
         return _(u'%s') % self.name
 
 
@@ -151,7 +151,7 @@ class Project(BaseModel):
         db_table = 'project'
         ordering = ['name']
 
-    def __unicode__(self):
+    def __str__(self):
         return _(u'%s') % self.name
 
 
@@ -162,7 +162,7 @@ class Region(BaseChoiceModel):
         db_table = 'region'
         ordering = ('name',)
 
-    def __unicode__(self):
+    def __str__(self):
         return _(u'%s') % self.name
 
 
@@ -175,7 +175,7 @@ class ManagementParty(BaseChoiceModel):
         verbose_name_plural = _(u'management parties')
         ordering = ('name',)
 
-    def __unicode__(self):
+    def __str__(self):
         return _(u'%s') % self.name
 
 
@@ -187,7 +187,7 @@ class ManagementCompliance(BaseChoiceModel):
         verbose_name = _(u'management compliance')
         ordering = ('name',)
 
-    def __unicode__(self):
+    def __str__(self):
         return _(u'%s') % self.name
 
 
@@ -227,7 +227,7 @@ class Management(BaseModel, JSONMixin, AreaMixin):
         verbose_name = _(u'management regime')
         ordering = ('name',)
 
-    def __unicode__(self):
+    def __str__(self):
         fullname = self.name
         if self.name_secondary != '':
             fullname = _(u'%s (%s)') % (fullname, self.name_secondary)
@@ -252,7 +252,7 @@ class MPA(BaseModel, AreaMixin):
         verbose_name_plural = _(u'MPAs')
         ordering = ('name', 'est_year')
 
-    def __unicode__(self):
+    def __str__(self):
         return _(u'%s') % self.name
 
 
@@ -266,14 +266,14 @@ class MPAZone(Management):
 class ReefType(BaseChoiceModel):
     name = models.CharField(max_length=50)
 
-    def __unicode__(self):
+    def __str__(self):
         return _(u'%s') % self.name
 
 
 class ReefZone(BaseChoiceModel):
     name = models.CharField(max_length=50)
 
-    def __unicode__(self):
+    def __str__(self):
         return _(u'%s') % self.name
 
 
@@ -281,7 +281,7 @@ class ReefExposure(BaseChoiceModel):
     name = models.CharField(max_length=50)
     val = models.PositiveSmallIntegerField()
 
-    def __unicode__(self):
+    def __str__(self):
         return _(u'%s') % self.name
 
 
@@ -289,7 +289,7 @@ class ReefSlope(BaseChoiceModel):
     name = models.CharField(max_length=50)
     val = models.PositiveSmallIntegerField()
 
-    def __unicode__(self):
+    def __str__(self):
         return _(u'%s') % self.name
 
 
@@ -315,7 +315,7 @@ class Site(BaseModel, JSONMixin):
         db_table = 'site'
         ordering = ('name',)
 
-    def __unicode__(self):
+    def __str__(self):
         return _(u'%s') % self.name
 
 
@@ -374,7 +374,7 @@ class Visibility(BaseChoiceModel):
     class Meta:
         verbose_name_plural = u'visibilities'
 
-    def __unicode__(self):
+    def __str__(self):
         return _(u'%s') % self.name
 
 
@@ -382,21 +382,21 @@ class Current(BaseChoiceModel):
     name = models.CharField(max_length=50)
     val = models.PositiveSmallIntegerField()
 
-    def __unicode__(self):
+    def __str__(self):
         return _(u'%s') % self.name
 
 
 class RelativeDepth(BaseChoiceModel):
     name = models.CharField(max_length=50)
 
-    def __unicode__(self):
+    def __str__(self):
         return _(u'%s') % self.name
 
 
 class Tide(BaseChoiceModel):
     name = models.CharField(max_length=50)
 
-    def __unicode__(self):
+    def __str__(self):
         return _(u'%s') % self.name
 
 
@@ -433,8 +433,8 @@ class SampleEvent(BaseModel, JSONMixin):
         unique_together = ('site', 'management', 'sample_date', 'sample_time', 'depth', 'visibility', 'current',
                            'relative_depth', 'tide')
 
-    def __unicode__(self):
-        return '%s %s' % (self.site.__unicode__(), self.sample_date)
+    def __str__(self):
+        return '%s %s' % (self.site.__str__(), self.sample_date)
 
 
 class SampleUnit(BaseModel):
@@ -446,9 +446,9 @@ class SampleUnit(BaseModel):
         db_table = 'sample_unit'
         abstract = True
 
-    def __unicode__(self):
+    def __str__(self):
         if hasattr(self, 'transect') or hasattr(self, 'quadrat'):
-            return _(u'%s') % self.__unicode__()
+            return _(u'%s') % self.__str__()
 
         return _(u'sample unit')
 
@@ -464,12 +464,12 @@ class Transect(SampleUnit):
         abstract = True
         ordering = ('sample_event', )
 
-    def __unicode__(self):
+    def __str__(self):
         su_number = get_sample_unit_number(self)
         if su_number != '':
             su_number = ' {}'.format(su_number)
         return _(u'%s%s') % (
-            self.sample_event.__unicode__(),
+            self.sample_event.__str__(),
             su_number
         )
 
@@ -486,7 +486,7 @@ class BenthicTransect(Transect):
 class BeltTransectWidth(BaseChoiceModel):
     val = models.PositiveSmallIntegerField()
 
-    def __unicode__(self):
+    def __str__(self):
         return _(u'%sm') % self.val
 
 
@@ -515,12 +515,12 @@ class BaseQuadrat(SampleUnit):
         abstract = True
         ordering = ('sample_event',)
 
-    def __unicode__(self):
+    def __str__(self):
         su_number = get_sample_unit_number(self)
         if su_number != '':
             su_number = ' {}'.format(su_number)
         return _(u'%s%s') % (
-            self.sample_event.__unicode__(),
+            self.sample_event.__str__(),
             su_number
         )
 
@@ -583,21 +583,21 @@ class TransectMethod(BaseModel):
 
         raise NameError("Sample unit field can't be found")
 
-    def __unicode__(self):
+    def __str__(self):
         protocol = self.protocol
         if protocol == BENTHICLIT_PROTOCOL:
-            return _(u'benthic LIT %s') % self.benthiclit.transect.__unicode__()
+            return _(u'benthic LIT %s') % self.benthiclit.transect.__str__()
         elif protocol == BENTHICPIT_PROTOCOL:
-            return _(u'benthic PIT %s') % self.benthicpit.transect.__unicode__()
+            return _(u'benthic PIT %s') % self.benthicpit.transect.__str__()
         elif protocol == FISHBELT_PROTOCOL:
-            return _(u'fish belt transect %s') % self.beltfish.transect.__unicode__()
+            return _(u'fish belt transect %s') % self.beltfish.transect.__str__()
         elif protocol == HABITATCOMPLEXITY_PROTOCOL:
-            return _(u'habitat complexity %s') % self.habitatcomplexity.transect.__unicode__()
+            return _(u'habitat complexity %s') % self.habitatcomplexity.transect.__str__()
         elif protocol == BLEACHINGQC_PROTOCOL:
             return _(u'bleaching quadrat collection %s') % \
-                   self.bleachingquadratcollection.quadrat.__unicode__()
+                   self.bleachingquadratcollection.quadrat.__str__()
 
-        return unicode(_(u'transect method'))
+        return str(_(u'transect method'))
 
 
 class Observer(BaseModel):
@@ -613,7 +613,7 @@ class Observer(BaseModel):
         db_table = 'observer'
         unique_together = ('transectmethod', 'profile')
 
-    def __unicode__(self):
+    def __str__(self):
         return _(u'%s - %s') % (self.transectmethod, self.profile)
 
     @property
@@ -629,7 +629,7 @@ class BenthicLifeHistory(BaseChoiceModel):
         verbose_name_plural = _(u'benthic life histories')
         ordering = ['name']
 
-    def __unicode__(self):
+    def __str__(self):
         return _(u'%s') % self.name
 
 
@@ -641,7 +641,7 @@ class GrowthForm(BaseChoiceModel):
         verbose_name_plural = _(u'growth forms')
         ordering = ['name']
 
-    def __unicode__(self):
+    def __str__(self):
         return _(u'%s') % self.name
 
 
@@ -691,7 +691,7 @@ class BenthicAttribute(BaseAttributeModel):
         db_table = 'benthic_attribute'
         ordering = ['name']
 
-    def __unicode__(self):
+    def __str__(self):
         return _(u'%s') % self.name
         # return u'%s' % str(self.name)
 
@@ -723,8 +723,8 @@ class ObsBenthicLIT(BaseModel, JSONMixin):
         db_table = 'obs_benthiclit'
         verbose_name = _(u'benthic LIT observation')
 
-    def __unicode__(self):
-        return _(u'%s %s') % (self.attribute.__unicode__(), self.length)
+    def __str__(self):
+        return _(u'%s %s') % (self.attribute.__str__(), self.length)
 
 
 class BenthicPIT(TransectMethod):
@@ -759,9 +759,9 @@ class ObsBenthicPIT(BaseModel, JSONMixin):
         unique_together = ('benthicpit', 'interval')
         verbose_name = _(u'benthic PIT observation')
 
-    def __unicode__(self):
+    def __str__(self):
         return _(u'%s') % self.interval
-        # return _(u'%s %s') % (self.benthicpitgenus.__unicode__(), self.interval)
+        # return _(u'%s %s') % (self.benthicpitgenus.__str__(), self.interval)
 
 
 class HabitatComplexity(TransectMethod):
@@ -785,7 +785,7 @@ class HabitatComplexityScore(BaseChoiceModel):
     name = models.CharField(max_length=100)
     val = models.PositiveSmallIntegerField()
 
-    def __unicode__(self):
+    def __str__(self):
         return _(u'%s %s') % (self.val, self.name)
 
 
@@ -804,7 +804,7 @@ class ObsHabitatComplexity(BaseModel, JSONMixin):
         unique_together = ('habitatcomplexity', 'interval')
         verbose_name = _(u'habitat complexity transect observation')
 
-    def __unicode__(self):
+    def __str__(self):
         return _(u'%s') % self.interval
 
 
@@ -823,7 +823,7 @@ class BleachingQuadratCollection(TransectMethod):
 
 
 class ObsColoniesBleached(BaseModel, JSONMixin):
-    project_lookup = 'bleachingquadratcollection__transect__sample_event__site__project'
+    project_lookup = 'bleachingquadratcollection__quadrat__sample_event__site__project'
 
     bleachingquadratcollection = models.ForeignKey(BleachingQuadratCollection,
                                                          on_delete=models.CASCADE)
@@ -841,15 +841,15 @@ class ObsColoniesBleached(BaseModel, JSONMixin):
         db_table = 'obs_colonies_bleached'
         verbose_name = _(u'bleaching quadrat collection colonies bleached observation')
 
-    def __unicode__(self):
+    def __str__(self):
         gf = ''
         if self.growth_form is not None:
             gf = ' {}'.format(self.growth_form)
-        return _(u'%s%s') % (self.attribute.__unicode__(), gf)
+        return _(u'%s%s') % (self.attribute.__str__(), gf)
 
 
 class ObsQuadratBenthicPercent(BaseModel, JSONMixin):
-    project_lookup = 'bleachingquadratcollection__transect__sample_event__site__project'
+    project_lookup = 'bleachingquadratcollection__quadrat__sample_event__site__project'
 
     bleachingquadratcollection = models.ForeignKey(BleachingQuadratCollection,
                                                          on_delete=models.CASCADE)
@@ -863,7 +863,7 @@ class ObsQuadratBenthicPercent(BaseModel, JSONMixin):
         verbose_name = _(u'bleaching quadrat collection percent benthic cover observation')
         unique_together = ('bleachingquadratcollection', 'quadrat_number')
 
-    def __unicode__(self):
+    def __str__(self):
         return _(u'%s') % self.quadrat_number
 
 
@@ -877,7 +877,7 @@ class FishAttribute(BaseAttributeModel):
         db_table = 'fish_attribute'
         # ordering = ('fishfamily', 'fishgenus', 'fishspecies',)
 
-    def __unicode__(self):
+    def __str__(self):
         if hasattr(self, 'fishfamily'):
             return _(u'%s') % self.fishfamily.name
         elif hasattr(self, 'fishgenus'):
@@ -941,7 +941,7 @@ class FishFamily(FishAttribute):
         if hasattr(self, '_biomass_a'):
             return self._biomass_a
 
-        avebiomass = self.fishgenus_set.aggregate(Avg('fishspecies__biomass_constant_a')).values()[0] or 0
+        avebiomass = list(self.fishgenus_set.aggregate(Avg('fishspecies__biomass_constant_a')).values())[0] or 0
         self._biomass_a = round(avebiomass, 6)
         return self._biomass_a
 
@@ -950,7 +950,7 @@ class FishFamily(FishAttribute):
         if hasattr(self, '_biomass_b'):
             return self._biomass_b
 
-        avebiomass = self.fishgenus_set.aggregate(Avg('fishspecies__biomass_constant_b')).values()[0] or 0
+        avebiomass = list(self.fishgenus_set.aggregate(Avg('fishspecies__biomass_constant_b')).values())[0] or 0
         self._biomass_b = round(avebiomass, 6)
         return self._biomass_b
 
@@ -959,7 +959,7 @@ class FishFamily(FishAttribute):
         if hasattr(self, '_biomass_c'):
             return self._biomass_c
 
-        avebiomass = self.fishgenus_set.aggregate(Avg('fishspecies__biomass_constant_c')).values()[0] or 0
+        avebiomass = list(self.fishgenus_set.aggregate(Avg('fishspecies__biomass_constant_c')).values())[0] or 0
         self._biomass_c = round(avebiomass, 6)
         return self._biomass_c
 
@@ -979,7 +979,7 @@ class FishFamily(FishAttribute):
         ordering = ('name',)
         verbose_name_plural = _(u'fish families')
 
-    def __unicode__(self):
+    def __str__(self):
         return _(u'%s') % self.name
 
 
@@ -1004,7 +1004,8 @@ class FishGenus(FishAttribute):
         if hasattr(self, '_biomass_a'):
             return self._biomass_a
 
-        avebiomass = self.fishspecies_set.aggregate(Avg('biomass_constant_a')).values()[0] or 0
+        avebiomass =  0
+        avebiomass = list(self.fishspecies_set.aggregate(Avg('biomass_constant_a')).values())[0] or 0
         self._biomass_a = round(avebiomass, 6)
         return self._biomass_a
         # a_sum = 0
@@ -1024,7 +1025,7 @@ class FishGenus(FishAttribute):
         if hasattr(self, '_biomass_b'):
             return self._biomass_b
 
-        avebiomass = self.fishspecies_set.aggregate(Avg('biomass_constant_b')).values()[0] or 0
+        avebiomass = list(self.fishspecies_set.aggregate(Avg('biomass_constant_b')).values())[0] or 0
         self._biomass_b = round(avebiomass, 6)
         return self._biomass_b
 
@@ -1033,7 +1034,7 @@ class FishGenus(FishAttribute):
         if hasattr(self, '_biomass_c'):
             return self._biomass_c
 
-        avebiomass = self.fishspecies_set.aggregate(Avg('biomass_constant_c')).values()[0] or 0
+        avebiomass = list(self.fishspecies_set.aggregate(Avg('biomass_constant_c')).values())[0] or 0
         self._biomass_c = round(avebiomass, 6)
         return self._biomass_c
 
@@ -1044,7 +1045,7 @@ class FishGenus(FishAttribute):
         ordering = ('name',)
         verbose_name_plural = _(u'fish genera')
 
-    def __unicode__(self):
+    def __str__(self):
         return _(u'%s') % self.name
 
 
@@ -1057,7 +1058,7 @@ class FishGroupSize(BaseChoiceModel):
         ordering = ('name',)
         verbose_name = _(u'fish group size')
 
-    def __unicode__(self):
+    def __str__(self):
         return _(u'%s') % self.name
 
 
@@ -1070,7 +1071,7 @@ class FishGroupTrophic(BaseChoiceModel):
         ordering = ('name',)
         verbose_name = _(u'fish trophic group')
 
-    def __unicode__(self):
+    def __str__(self):
         return _(u'%s') % self.name
 
 
@@ -1083,7 +1084,7 @@ class FishGroupFunction(BaseChoiceModel):
         ordering = ('name',)
         verbose_name = _(u'fish functional group')
 
-    def __unicode__(self):
+    def __str__(self):
         return _(u'%s') % self.name
 
 
@@ -1133,7 +1134,7 @@ class FishSpecies(FishAttribute):
         ordering = ('genus', 'name',)
         verbose_name_plural = _(u'fish species')
 
-    def __unicode__(self):
+    def __str__(self):
         return _(u'%s %s') % (self.genus.name, self.name)
 
 
@@ -1153,12 +1154,12 @@ class BeltFish(TransectMethod):
 class FishSizeBin(BaseChoiceModel):
     val = models.PositiveSmallIntegerField()
 
-    def __unicode__(self):
+    def __str__(self):
         return _(u'%scm') % self.val
 
 
 class FishSize(BaseModel):
-    fish_bin_size = models.ForeignKey(FishSizeBin)
+    fish_bin_size = models.ForeignKey(FishSizeBin, on_delete=models.CASCADE)
     name = models.CharField(max_length=50)
     val = models.FloatField()
 
@@ -1184,8 +1185,8 @@ class ObsBeltFish(BaseModel, JSONMixin):
         db_table = 'obs_transectbeltfish'
         verbose_name = _(u'fish belt transect observation')
 
-    def __unicode__(self):
-        return _(u'%s %s x %scm') % (self.fish_attribute.__unicode__(), self.count, self.size)
+    def __str__(self):
+        return _(u'%s %s x %scm') % (self.fish_attribute.__str__(), self.count, self.size)
 
 
 class CollectRecord(BaseModel):

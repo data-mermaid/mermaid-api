@@ -6,10 +6,10 @@ from django_filters import rest_framework as filters
 from rest_framework import serializers
 from rest_framework import exceptions
 
-from api.exceptions import check_uuid
-from api.models import mermaid
-from api.models.mermaid import TransectMethod
-from api.resources.base import (
+from ...exceptions import check_uuid
+from ...models import mermaid
+from ...models.mermaid import TransectMethod
+from ..base import (
     BaseAPIFilterSet,
     BaseAPISerializer,
     BaseProjectApiViewSet,
@@ -21,7 +21,7 @@ class ListFilter(django_filters.Filter):
         value = value or ""
         values = [v.strip() for v in value.split(",")]
         if values:
-            qry_args = {"{}__in".format(self.name): values}
+            qry_args = {"{}__in".format(self.field_name): values}
             qs = qs.filter(**qry_args)
         return qs
 

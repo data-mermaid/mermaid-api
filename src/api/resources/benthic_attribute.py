@@ -2,7 +2,7 @@ from django.utils.decorators import method_decorator
 from django.views.decorators.cache import cache_page
 from rest_framework import serializers
 from django_filters import ModelMultipleChoiceFilter
-from base import BaseAPIFilterSet, NullableUUIDFilter, BaseAPISerializer, BaseAttributeApiViewSet
+from .base import BaseAPIFilterSet, NullableUUIDFilter, BaseAPISerializer, BaseAttributeApiViewSet
 from ..models import BenthicAttribute, Region
 
 
@@ -15,8 +15,8 @@ class BenthicAttributeSerializer(BaseAPISerializer):
 
 
 class BenthicAttributeFilterSet(BaseAPIFilterSet):
-    parent = NullableUUIDFilter(name='parent')
-    life_history = NullableUUIDFilter(name='life_history')
+    parent = NullableUUIDFilter(field_name='parent')
+    life_history = NullableUUIDFilter(field_name='life_history')
     regions = ModelMultipleChoiceFilter(queryset=Region.objects.all())
 
     class Meta:

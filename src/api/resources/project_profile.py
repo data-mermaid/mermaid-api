@@ -1,7 +1,7 @@
 from rest_framework import serializers
 from rest_framework.exceptions import ValidationError
 from rest_condition import Or
-from base import BaseAPIFilterSet, BaseProjectApiViewSet, BaseAPISerializer
+from .base import BaseAPIFilterSet, BaseProjectApiViewSet, BaseAPISerializer
 from ..models import ProjectProfile
 from ..permissions import *
 
@@ -26,7 +26,7 @@ class ProjectProfileFilterSet(BaseAPIFilterSet):
 class ProjectProfileCollectorPermission(permissions.BasePermission):
     def has_permission(self, request, view):
         user = request.user
-        if not user.is_authenticated():
+        if not user.is_authenticated:
             return False
         if request.method != 'DELETE':
             return False

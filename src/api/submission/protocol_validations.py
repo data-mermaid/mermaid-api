@@ -24,7 +24,7 @@ from .validations import (
 
 class ProtocolValidation(object):
     DEPTH_RANGE = (1, 30)
-    DEPTH_MSG = unicode(
+    DEPTH_MSG = str(
         _("Depth value outside range of {} and {}".format(*DEPTH_RANGE))
     )
 
@@ -75,7 +75,7 @@ class ProtocolValidation(object):
                 EmptyListValidation,
                 "observers",
                 observers,
-                unicode(_("Must have at least 1 observer")),
+                str(_("Must have at least 1 observer")),
             )
         )
 
@@ -111,7 +111,7 @@ class ProtocolValidation(object):
         elif len(results) == results.count(OK):
             return OK
 
-        raise ValueError(unicode(_("Validation result can not be determined.")))
+        raise ValueError(str(_("Validation result can not be determined.")))
 
 
 class TransectValidation(ProtocolValidation):
@@ -137,7 +137,7 @@ class TransectValidation(ProtocolValidation):
                     len_surveyed,
                     self.LENGTH_RANGE,
                     WARN,
-                    unicode(_(self.LENGTH_RANGE_WARN_MSG_TMPL.format(*self.LENGTH_RANGE))),
+                    str(_(self.LENGTH_RANGE_WARN_MSG_TMPL.format(*self.LENGTH_RANGE))),
                 )
             )
 

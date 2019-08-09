@@ -18,7 +18,7 @@ def handle_none(default_val=None):
 
 @handle_none()
 def to_unicode(value, field, row, serializer_instance):
-    return unicode(value)
+    return str(value)
 
 
 @handle_none()
@@ -51,7 +51,7 @@ def to_day(value, field, row, serializer_instance):
 
 
 class ReportField(object):
-    __slots__ = ("column_path", "display", "formatter", "_display")
+    __slots__ = ("column_path", "formatter", "_display")
 
     def __init__(self, column_path, display=None, formatter=None):
         self._display = None

@@ -1,9 +1,9 @@
 from api.auth0_management import Auth0DatabaseAuthenticationAPI, Auth0Users
-from base import BaseAPISerializer
+from .base import BaseAPISerializer
 from rest_framework import permissions, viewsets
-from rest_framework.decorators import list_route
 from rest_framework.exceptions import MethodNotAllowed, NotFound, ValidationError
 from rest_framework.response import Response
+from rest_framework.decorators import action
 
 from ..models import Profile
 
@@ -25,7 +25,7 @@ class MeSerializer(BaseAPISerializer):
 class AuthenticatedMePermission(permissions.BasePermission):
     def has_permission(self, request, view):
         user = request.user
-        return user.is_authenticated()
+        return user.is_authenticated
 
 
 class MeViewSet(viewsets.ModelViewSet):
@@ -89,7 +89,7 @@ class MeViewSet(viewsets.ModelViewSet):
                 return user_info.get('email')
         return None
 
-    @list_route(methods=['post'])
+    @action(detail=False, methods=['post'])
     def change_password(self, request, *args, **kwargs):
         user = self.request.user
         profile = user.profile

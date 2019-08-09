@@ -1,10 +1,10 @@
 from django.db import transaction
 from django.db.models import Sum
 from rest_framework import status
-from rest_framework.decorators import list_route
 from rest_framework.response import Response
+from rest_framework.decorators import action
 
-from api.models.mermaid import BenthicLIT, ObsBenthicLIT, BenthicAttribute
+from ...models.mermaid import BenthicLIT, ObsBenthicLIT, BenthicAttribute
 
 from . import *
 from ..sample_event import SampleEventSerializer
@@ -63,12 +63,10 @@ def to_benthic_attribute_category(field, row, serializer_instance):
     elif isinstance(bc, dict):
         return bc.get("name") or ""
 
-    return bc.__unicode__()
+    return str(bc)
 
 
-class ObsBenthicLITReportSerializer(SampleEventReportSerializer):
-    __metaclass__ = SampleEventReportSerializerMeta
-
+class ObsBenthicLITReportSerializer(SampleEventReportSerializer, metaclass=SampleEventReportSerializerMeta):
     transect_method = 'benthiclit'
     sample_event_path = '{}__transect__sample_event'.format(transect_method)
 
@@ -226,7 +224,7 @@ class BenthicLITMethodView(BaseProjectApiViewSet):
             transaction.savepoint_rollback(sid)
             raise
 
-    @list_route(methods=['get'])
+    @action(detail=False, methods=['get'])
     def fieldreport(self, request, *args, **kwargs):
         return fieldreport(
             self, request, *args,

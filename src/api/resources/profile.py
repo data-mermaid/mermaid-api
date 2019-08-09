@@ -1,6 +1,6 @@
 import django_filters
 from rest_framework import serializers, exceptions
-from base import BaseAPIFilterSet, BaseApiViewSet, BaseAPISerializer
+from .base import BaseAPIFilterSet, BaseApiViewSet, BaseAPISerializer
 from ..models import Profile
 from django.contrib.auth import get_user_model
 from ..permissions import *
@@ -77,10 +77,10 @@ class FullProfileSerializer(BaseAPISerializer):
 
 
 class ProfileFilterSet(BaseAPIFilterSet):
-    organization = django_filters.UUIDFilter(name='projects__project__tagged_items__tag_id', distinct=True,
+    organization = django_filters.UUIDFilter(field_name='projects__project__tagged_items__tag_id', distinct=True,
                                              label='Associated with organization associated with at least one project '
                                                    'associated with profile')
-    project = django_filters.UUIDFilter(name='projects__project', distinct=True,
+    project = django_filters.UUIDFilter(field_name='projects__project', distinct=True,
                                         label='Associated with project')
 
     class Meta:
@@ -90,7 +90,7 @@ class ProfileFilterSet(BaseAPIFilterSet):
 
 class UnauthenticatedProfileCreatePermission(permissions.BasePermission):
     def has_permission(self, request, view):
-        if request.user.is_authenticated():
+        if request.user.is_authenticated:
             return False
         else:
             return request.method == 'POST'
@@ -98,7 +98,7 @@ class UnauthenticatedProfileCreatePermission(permissions.BasePermission):
 
 class AuthenticatedProfilePermission(permissions.BasePermission):
     def has_permission(self, request, view):
-        if request.user.is_authenticated():
+        if request.user.is_authenticated:
             return request.method != 'POST'
         return False
 

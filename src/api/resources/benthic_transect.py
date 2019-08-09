@@ -1,5 +1,5 @@
 import django_filters
-from base import BaseAPIFilterSet, BaseProjectApiViewSet, BaseAPISerializer
+from .base import BaseAPIFilterSet, BaseProjectApiViewSet, BaseAPISerializer
 from ..models import BenthicTransect
 
 
