@@ -1,11 +1,8 @@
-from datetime import date
-
 import dateutil
 import pytz
 
 from django.core.management.base import BaseCommand, CommandError
 from django.contrib.contenttypes.models import ContentType
-from django.utils.encoding import force_bytes
 
 
 class Command(BaseCommand):
