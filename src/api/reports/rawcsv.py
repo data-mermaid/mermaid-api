@@ -43,12 +43,12 @@ class RawCSVReport(BaseReport):
         )
 
     def _concat_lists(self, flat_record):
-        for k, v in flat_record.iteritems():
+        for k, v in flat_record.items():
             if isinstance(flat_record[k], (list, set, tuple,)) and len(flat_record[k]) > 0:
                 if isinstance(flat_record[k][0], Mapping):
                     continue
 
-                flat_record[k] = ','.join([unicode(e) for e in v])
+                flat_record[k] = ','.join([str(e) for e in v])
             else:
                 flat_record[k] = v
 

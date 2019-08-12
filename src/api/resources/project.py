@@ -1,6 +1,6 @@
 import logging
 import django_filters
-from base import BaseAPIFilterSet, BaseAPISerializer, BaseApiViewSet, TagField, to_tag_model_instances
+from .base import BaseAPIFilterSet, BaseAPISerializer, BaseApiViewSet, TagField, to_tag_model_instances
 from django.db import transaction
 from rest_condition import Or
 from rest_framework import exceptions, permissions
@@ -8,6 +8,7 @@ from rest_framework.decorators import action
 from rest_framework.relations import HyperlinkedIdentityField
 from rest_framework.response import Response
 from rest_framework import serializers
+from rest_framework.decorators import action
 
 from ..models import Project, Site, Management
 from ..permissions import *
@@ -99,7 +100,7 @@ class ProjectSerializer(BaseAPISerializer):
 
 class ProjectFilterSet(BaseAPIFilterSet):
     profile = django_filters.UUIDFilter(
-        name="profiles__profile", distinct=True, label="Associated with profile"
+        field_name="profiles__profile", distinct=True, label="Associated with profile"
     )
 
     class Meta:
@@ -114,7 +115,7 @@ class ProjectAuthenticatedUserPermission(permissions.BasePermission):
             if (view.action_map['put'] == 'find_and_replace_sites' or
                     view.action_map['put'] == 'find_and_replace_managements'):
                 doing_site_mr_replace = True
-        return (request.user.is_authenticated() and
+        return (request.user.is_authenticated and
                 (request.method in permissions.SAFE_METHODS or
                  request.method == 'POST' or
                  doing_site_mr_replace))

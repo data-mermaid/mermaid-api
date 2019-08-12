@@ -1,4 +1,4 @@
-from base import BaseApiViewSet, BaseAPISerializer, BaseAPIFilterSet
+from .base import BaseApiViewSet, BaseAPISerializer, BaseAPIFilterSet
 from ..models import FishSize
 from ..permissions import UnauthenticatedReadOnlyPermission
 

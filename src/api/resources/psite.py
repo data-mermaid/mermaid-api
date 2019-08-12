@@ -2,13 +2,13 @@ from datetime import datetime
 from django.core.exceptions import ObjectDoesNotExist
 from django.http import HttpResponseBadRequest, StreamingHttpResponse
 from django.utils.text import get_valid_filename
-from rest_framework.decorators import list_route
-from base import (
+from rest_framework.decorators import action
+from .base import (
     BaseAPIFilterSet,
     BaseProjectApiViewSet,
     BaseAPISerializer,
 )
-from mixins import ProtectedResourceMixin
+from .mixins import ProtectedResourceMixin
 from ..models import Site, Project
 from ..reports import RawCSVReport
 from ..report_serializer import *
@@ -52,7 +52,7 @@ class PSiteViewSet(ProtectedResourceMixin, BaseProjectApiViewSet):
     filter_class = PSiteFilterSet
     search_fields = ["name"]
 
-    @list_route(methods=["get"])
+    @action(detail=False, methods=["get"])
     def fieldreport(self, request, *args, **kwargs):
         try:
             project = Project.objects.get(pk=kwargs['project_pk'])

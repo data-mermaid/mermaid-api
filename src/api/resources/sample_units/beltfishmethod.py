@@ -1,12 +1,12 @@
 from django.db import transaction
 from rest_framework import status
-from rest_framework.decorators import list_route
 from rest_framework.response import Response
+from rest_framework.decorators import action
 
-from api.models.mermaid import (
+from ...models.mermaid import (
     BeltFish, FishAttributeView, ObsBeltFish, FishFamily, FishGenus, FishSpecies
 )
-from api.utils import calc_biomass_density
+from ...utils import calc_biomass_density
 
 from . import *
 from ..base import BaseProjectApiViewSet
@@ -48,7 +48,7 @@ def to_fish_attribute_name(field, row, serializer_instance):
     elif isinstance(fa, dict):
         return fa.get("name") or ""
 
-    return fa.__unicode__()
+    return str(fa)
 
 
 def _to_fa_attribute(field, row, serializer_instance):
@@ -135,7 +135,7 @@ def to_fish_family_name(field, row, serializer_instance):
     elif isinstance(ff, dict):
         return ff.get("name") or ""
 
-    return ff.__unicode__()
+    return str(ff)
 
 
 def _get_fish_genus(row, serializer_instance):
@@ -159,12 +159,10 @@ def to_fish_genus_name(field, row, serializer_instance):
     elif isinstance(fg, dict):
         return fg.get("name") or ""
 
-    return fg.__unicode__()
+    return str(fg)
 
 
-class ObsBeltFishReportSerializer(SampleEventReportSerializer):
-    __metaclass__ = SampleEventReportSerializerMeta
-
+class ObsBeltFishReportSerializer(SampleEventReportSerializer, metaclass=SampleEventReportSerializerMeta):
     transect_method = 'beltfish'
     sample_event_path = '{}__transect__sample_event'.format(transect_method)
     idx = 24
@@ -371,7 +369,7 @@ class BeltFishMethodView(BaseProjectApiViewSet):
             transaction.savepoint_rollback(sid)
             raise
 
-    @list_route(methods=["get"])
+    @action(detail=False, methods=["get"])
     def fieldreport(self, request, *args, **kwargs):
         return fieldreport(
             self,

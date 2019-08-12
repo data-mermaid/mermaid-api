@@ -1,2 +1,2 @@
-from base import *
-from mermaid import *
+from .base import *
+from .mermaid import *

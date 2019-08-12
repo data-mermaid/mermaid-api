@@ -1,6 +1,6 @@
 import django_filters
 from rest_framework import serializers
-from base import (
+from .base import (
     BaseAPIFilterSet,
     BaseApiViewSet,
     BaseAPISerializer,
@@ -8,7 +8,7 @@ from base import (
     ExtendedSerializer,
     ModelNameReadOnlyField,
 )
-from mixins import ProtectedResourceMixin
+from .mixins import ProtectedResourceMixin
 from ..models import Management
 from ..permissions import UnauthenticatedReadOnlyPermission
 
@@ -69,11 +69,11 @@ class ManagementSerializer(BaseAPISerializer):
 
 
 class ManagementFilterSet(BaseAPIFilterSet):
-    project = django_filters.UUIDFilter(name='sampleevent__site__project', distinct=True,
+    project = django_filters.UUIDFilter(field_name='sampleevent__site__project', distinct=True,
                                         label='Associated with project')
-    predecessor = NullableUUIDFilter(name='predecessor')
-    compliance = NullableUUIDFilter(name='compliance')
-    est_year = django_filters.NumericRangeFilter(name='est_year')
+    predecessor = NullableUUIDFilter(field_name='predecessor')
+    compliance = NullableUUIDFilter(field_name='compliance')
+    est_year = django_filters.NumericRangeFilter(field_name='est_year')
 
     unique = django_filters.CharFilter(method='filter_unique')
     exclude_projects = django_filters.CharFilter(method='filter_not_projects')

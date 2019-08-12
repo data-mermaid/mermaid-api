@@ -12,7 +12,7 @@ from jose import jws
 from jose import jwt
 from rest_framework import exceptions
 from rest_framework.authentication import get_authorization_header
-from urllib import urlopen
+from urllib.request import urlopen
 from api.models import Application
 from api.models import AuthUser
 

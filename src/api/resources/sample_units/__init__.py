@@ -1,6 +1,6 @@
 import uuid
 from datetime import datetime
-import StringIO
+from io import StringIO
 import zipfile
 
 

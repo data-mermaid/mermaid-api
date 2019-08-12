@@ -1,6 +1,6 @@
 from rest_framework import serializers
 
-from base import (
+from .base import (
     BaseAPIFilterSet,
     BaseProjectApiViewSet,
     BaseAPISerializer,

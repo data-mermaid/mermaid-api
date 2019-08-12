@@ -141,7 +141,7 @@ class TestDataMixin(object):
         )
 
         self.benthic_attribute2a, _ = BenthicAttribute.objects.get_or_create(
-            name="Hard Coral"
+            name="Hard coral"
         )
 
         self.benthic_attribute2b, _ = BenthicAttribute.objects.get_or_create(
@@ -152,18 +152,29 @@ class TestDataMixin(object):
             name="Astreopora", parent=self.benthic_attribute2b
         )
 
+        self.benthic_attribute2d, _ = BenthicAttribute.objects.get_or_create(
+            name="Faviidae", parent=self.benthic_attribute2a
+        )
+        self.benthic_attribute2e, _ = BenthicAttribute.objects.get_or_create(
+            name="Erythrastrea", parent=self.benthic_attribute2d
+        )
+
     def unload_benthicattributes(self):
         self.benthic_attribute1a.delete()
         self.benthic_attribute1b.delete()
         self.benthic_attribute2a.delete()
         self.benthic_attribute2b.delete()
         self.benthic_attribute2c.delete()
+        self.benthic_attribute2d.delete()
+        self.benthic_attribute2e.delete()
 
         self.benthic_attribute1a = None
         self.benthic_attribute1b = None
         self.benthic_attribute2a = None
         self.benthic_attribute2b = None
         self.benthic_attribute2c = None
+        self.benthic_attribute2d = None
+        self.benthic_attribute2e = None
 
     def load_choices(self):
         self.country1, _ = Country.objects.get_or_create(iso="AL", name="Atlantis")

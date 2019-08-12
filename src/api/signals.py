@@ -1,11 +1,12 @@
+import uuid
 from django.dispatch import receiver
 from django.db.models.signals import post_delete, post_save, pre_save
 from django import urls
 from django.conf import settings
-from models import *
-from utils.email import email_project_admins, mermaid_email
-from submission.utils import validate
-from submission.validations import SiteValidation, ManagementValidation
+from .models import *
+from .utils.email import email_project_admins, mermaid_email
+from .submission.utils import validate
+from .submission.validations import SiteValidation, ManagementValidation
 
 
 def get_subclasses(cls):
@@ -96,7 +97,7 @@ def email_superadmin_on_new(sender, instance, created, **kwargs):
             subheading='MERMAID SuperAdmin Communication',
             body=html_content.format(
                 from_name=from_name,
-                attrib_name=instance.__unicode__(),
+                attrib_name=str(instance),
                 admin_link=admin_link,
                 from_email=from_email,
                 instance_label=instance_label,

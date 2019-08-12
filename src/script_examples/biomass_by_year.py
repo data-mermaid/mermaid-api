@@ -46,7 +46,7 @@ if headers:
         p = np.poly1d(z)
         plt.plot(x, p(x), "r--")
         # the line equation:
-        print "y=%.6fx+(%.6f)" % (z[0], z[1])
+        print("y=%.6fx+(%.6f)" % (z[0], z[1]))
         plt.show()
 
     else:
