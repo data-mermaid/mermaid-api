@@ -1,6 +1,6 @@
 import uuid
 from datetime import datetime
-from io import StringIO
+from io import BytesIO, StringIO
 import zipfile
 
 
@@ -321,7 +321,7 @@ def fieldreport(obj, request, *args, **kwargs):
             ts,
         )
     else:
-        inmem_file = StringIO.StringIO()
+        inmem_file = StringIO()
         zipped_reports = zipfile.ZipFile(
             inmem_file, "w", compression=zipfile.ZIP_DEFLATED
         )
