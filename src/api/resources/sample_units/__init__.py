@@ -1,6 +1,6 @@
 import uuid
 from datetime import datetime
-from io import BytesIO, StringIO
+from io import BytesIO
 import zipfile
 
 
@@ -321,7 +321,7 @@ def fieldreport(obj, request, *args, **kwargs):
             ts,
         )
     else:
-        inmem_file = StringIO()
+        inmem_file = BytesIO()
         zipped_reports = zipfile.ZipFile(
             inmem_file, "w", compression=zipfile.ZIP_DEFLATED
         )
@@ -330,8 +330,7 @@ def fieldreport(obj, request, *args, **kwargs):
             file_name = "{}-{}-{}.csv".format(
                 projname, mdl.__name__.lower(), ts
             )
-            content = "".join(list(stream))
-            zipped_reports.writestr(file_name, content)
+            zipped_reports.writestr(file_name, stream)
         zipped_reports.close()
         inmem_file.seek(0)
         response = HttpResponse(
