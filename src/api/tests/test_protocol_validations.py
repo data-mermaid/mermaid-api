@@ -125,34 +125,34 @@ class FishBeltProtocolValidationTest(TestCase, TestDataMixin):
 
     def test_validate_ok(self):
         validation = FishBeltProtocolValidation(self.collect_record_ok, request=self.request)
-        self.assertEquals(OK, validation.validate())
+        self.assertEqual(OK, validation.validate())
 
     def test_validate_warn(self):
         validation = FishBeltProtocolValidation(self.collect_record_warn, request=self.request)
         result = validation.validate()
-        self.assertEquals(WARN, result)
-        self.assertEquals(
+        self.assertEqual(WARN, result)
+        self.assertEqual(
             WARN, validation.validations["len_surveyed"]["validate_range"]["status"]
         )
-        self.assertEquals(
+        self.assertEqual(
             WARN,
             validation.validations["obs_belt_fishes"]["validate_observation_density"][
                 "status"
             ],
         )
-        self.assertEquals(
+        self.assertEqual(
             WARN,
             validation.validations["obs_belt_fishes"]["validate_observation_count"][
                 "status"
             ],
         )
-        self.assertEquals(
+        self.assertEqual(
             WARN, validation.validations["depth"]["validate_range"]["status"]
         )
 
     def test_validate_error(self):
         validation = FishBeltProtocolValidation(self.collect_record_error, request=self.request)
-        self.assertEquals(ERROR, validation.validate())
+        self.assertEqual(ERROR, validation.validate())
 
 
 class BenthicPITProtocolValidationTest(TestCase, TestDataMixin):
@@ -220,12 +220,12 @@ class BenthicPITProtocolValidationTest(TestCase, TestDataMixin):
     def test_validate_ok(self):
         validation = BenthicPITProtocolValidation(self.collect_record_ok, request=self.request)
         result = validation.validate()
-        self.assertEquals(OK, result)
+        self.assertEqual(OK, result)
 
     def test_validate_error(self):
         validation = BenthicPITProtocolValidation(self.collect_record_error, request=self.request)
-        self.assertEquals(ERROR, validation.validate())
-        self.assertEquals(
+        self.assertEqual(ERROR, validation.validate())
+        self.assertEqual(
             ERROR,
             validation.validations["obs_benthic_pits"]["validate_observation_count"][
                 "status"
@@ -295,12 +295,12 @@ class BenthicLITProtocolValidationTest(TestCase, TestDataMixin):
     def test_validate_ok(self):
         validation = BenthicLITProtocolValidation(self.collect_record_ok, request=self.request)
         result = validation.validate()
-        self.assertEquals(OK, result)
+        self.assertEqual(OK, result)
 
     def test_validate_error(self):
         validation = BenthicLITProtocolValidation(self.collect_record_error, request=self.request)
-        self.assertEquals(ERROR, validation.validate())
-        self.assertEquals(
+        self.assertEqual(ERROR, validation.validate())
+        self.assertEqual(
             ERROR,
             validation.validations["obs_benthic_lits"]["validate_total_length"][
                 "status"
@@ -373,15 +373,15 @@ class HabitatComplexityProtocolValidationTest(TestCase, TestDataMixin):
             self.collect_record_ok,
             request=self.request
         )
-        self.assertEquals(OK, validation.validate())
+        self.assertEqual(OK, validation.validate())
 
     def test_validate_error(self):
         validation = HabitatComplexityProtocolValidation(
             self.collect_record_error,
             request=self.request
         )
-        self.assertEquals(ERROR, validation.validate())
-        self.assertEquals(
+        self.assertEqual(ERROR, validation.validate())
+        self.assertEqual(
             ERROR,
             validation.validations["obs_habitat_complexities"]["validate_scores"][
                 "status"

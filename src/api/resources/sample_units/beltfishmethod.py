@@ -1,12 +1,12 @@
 from django.db import transaction
 from rest_framework import status
-from rest_framework.decorators import list_route
 from rest_framework.response import Response
+from rest_framework.decorators import action
 
-from api.models.mermaid import (
+from ...models.mermaid import (
     BeltFish, FishAttributeView, ObsBeltFish, FishFamily, FishGenus, FishSpecies
 )
-from api.utils import calc_biomass_density
+from ...utils import calc_biomass_density
 
 from . import *
 from ..base import BaseProjectApiViewSet
@@ -48,7 +48,7 @@ def to_fish_attribute_name(field, row, serializer_instance):
     elif isinstance(fa, dict):
         return fa.get("name") or ""
 
-    return fa.__unicode__()
+    return str(fa)
 
 
 def _to_fa_attribute(field, row, serializer_instance):
@@ -135,7 +135,7 @@ def to_fish_family_name(field, row, serializer_instance):
     elif isinstance(ff, dict):
         return ff.get("name") or ""
 
-    return ff.__unicode__()
+    return str(ff)
 
 
 def _get_fish_genus(row, serializer_instance):
@@ -159,35 +159,34 @@ def to_fish_genus_name(field, row, serializer_instance):
     elif isinstance(fg, dict):
         return fg.get("name") or ""
 
-    return fg.__unicode__()
+    return str(fg)
 
 
-class ObsBeltFishReportSerializer(SampleEventReportSerializer):
-    __metaclass__ = SampleEventReportSerializerMeta
-
+class ObsBeltFishReportSerializer(SampleEventReportSerializer, metaclass=SampleEventReportSerializerMeta):
     transect_method = 'beltfish'
     sample_event_path = '{}__transect__sample_event'.format(transect_method)
+    idx = 24
     obs_fields = [
         (6, ReportField("beltfish__transect__reef_slope__name", "Reef slope")),
-        (22, ReportField("beltfish__transect__number", "Transect number")),
-        (23, ReportField("beltfish__transect__label", "Transect label")),
-        (24, ReportField("beltfish__transect__len_surveyed", "Transect length surveyed")),
-        (25, ReportField("beltfish__transect__width__val", "Transect width")),
-        (27, ReportMethodField("Fish family", to_fish_family_name)),
-        (28, ReportMethodField("Fish genus", to_fish_genus_name)),
-        (29, ReportMethodField("Fish taxon", to_fish_attribute_name)),
-        (30, ReportField("size_bin__val", "Size bin")),
-        (31, ReportField("size", "Size", to_float)),
-        (32, ReportField("count", "Count")),
-        (33, ReportMethodField("a", to_constant_a)),
-        (34, ReportMethodField("b", to_constant_b)),
-        (35, ReportMethodField("c", to_constant_c)),
-        (36, ReportMethodField("Biomass_kgha", to_biomass_kgha)),
-        (40, ReportMethodField("Trophic group", to_fish_attribute_trophic_group)),
-        (41, ReportMethodField("Trophic level", to_fish_attribute_trophic_level)),
-        (42, ReportMethodField("Functional group", to_fish_attribute_functional_group)),
-        (43, ReportMethodField("Vulnerability", to_fish_attribute_vulnerability)),
-        (44, ReportField("beltfish__transect__notes", "Observation notes"))
+        (idx, ReportField("beltfish__transect__number", "Transect number")),
+        (idx + 1, ReportField("beltfish__transect__label", "Transect label")),
+        (idx + 2, ReportField("beltfish__transect__len_surveyed", "Transect length surveyed")),
+        (idx + 3, ReportField("beltfish__transect__width__val", "Transect width")),
+        (idx + 5, ReportMethodField("Fish family", to_fish_family_name)),
+        (idx + 6, ReportMethodField("Fish genus", to_fish_genus_name)),
+        (idx + 7, ReportMethodField("Fish taxon", to_fish_attribute_name)),
+        (idx + 8, ReportField("size_bin__val", "Size bin")),
+        (idx + 9, ReportField("size", "Size", to_float)),
+        (idx + 10, ReportField("count", "Count")),
+        (idx + 11, ReportMethodField("a", to_constant_a)),
+        (idx + 12, ReportMethodField("b", to_constant_b)),
+        (idx + 13, ReportMethodField("c", to_constant_c)),
+        (idx + 14, ReportMethodField("Biomass_kgha", to_biomass_kgha)),
+        (idx + 18, ReportMethodField("Trophic group", to_fish_attribute_trophic_group)),
+        (idx + 19, ReportMethodField("Trophic level", to_fish_attribute_trophic_level)),
+        (idx + 20, ReportMethodField("Functional group", to_fish_attribute_functional_group)),
+        (idx + 21, ReportMethodField("Vulnerability", to_fish_attribute_vulnerability)),
+        (idx + 22, ReportField("beltfish__transect__notes", "Observation notes"))
     ]
 
     non_field_columns = (
@@ -370,7 +369,7 @@ class BeltFishMethodView(BaseProjectApiViewSet):
             transaction.savepoint_rollback(sid)
             raise
 
-    @list_route(methods=["get"])
+    @action(detail=False, methods=["get"])
     def fieldreport(self, request, *args, **kwargs):
         return fieldreport(
             self,

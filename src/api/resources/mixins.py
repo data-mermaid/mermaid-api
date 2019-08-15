@@ -4,9 +4,9 @@ from django.http.response import HttpResponseBadRequest
 from django.template.defaultfilters import pluralize
 from django.utils.dateparse import parse_datetime
 from rest_framework import status
-from rest_framework.decorators import list_route
 from rest_framework.request import Request
 from rest_framework.response import Response
+from rest_framework.decorators import action
 
 from ..models import ArchivedRecord
 from ..utils import get_protected_related_objects
@@ -21,7 +21,7 @@ class ProtectedResourceMixin(object):
         except ProtectedError as pe:
             protected_instances = list(get_protected_related_objects(instance))
             num_protected_instances = len(protected_instances)
-            protected_instance_displays = [unicode(pi) for pi in protected_instances]
+            protected_instance_displays = [str(pi) for pi in protected_instances]
 
             model_name = (
                 self.model_display_name or self.queryset.model.__class__.__name__
@@ -73,7 +73,7 @@ class UpdatesMixin(object):
         if value is not None:
             query_params[key] = value
 
-    @list_route(methods=["GET"])
+    @action(detail=False, methods=["GET"])
     def updates(self, request, *args, **kwargs):
         added = []
         modified = []

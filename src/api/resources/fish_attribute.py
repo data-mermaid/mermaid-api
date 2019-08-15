@@ -1,11 +1,12 @@
 from django.utils.decorators import method_decorator
 from django.views.decorators.cache import cache_page
 from rest_framework import permissions, serializers
-from base import BaseAttributeApiViewSet, BaseAPISerializer
 from ..models import FishAttributeView
-from base import (
+from .base import (
     StandardResultPagination,
-    BaseAPIFilterSet
+    BaseAPIFilterSet,
+    BaseAttributeApiViewSet,
+    BaseAPISerializer
 )
 
 
@@ -27,7 +28,7 @@ class FishAttributeExtendedSerializer(FishAttributeSerializer):
         exclude = ['updated_on', 'created_on', 'updated_by', 'id']
 
     def get_name(self, obj):
-        return obj.__unicode__()
+        return str(obj)
 
 
 class FishAttributePermission(permissions.BasePermission):

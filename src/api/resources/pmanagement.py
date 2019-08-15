@@ -2,16 +2,16 @@ from datetime import datetime
 from django.core.exceptions import ObjectDoesNotExist
 from django.http import HttpResponseBadRequest, StreamingHttpResponse
 from django.utils.text import get_valid_filename
-from rest_framework.decorators import list_route
 from rest_framework.serializers import DecimalField
+from rest_framework.decorators import action
 import django_filters
-from base import (
+from .base import (
     BaseAPIFilterSet,
     BaseProjectApiViewSet,
     BaseAPISerializer,
     NullableUUIDFilter,
 )
-from mixins import ProtectedResourceMixin
+from .mixins import ProtectedResourceMixin
 from .management import get_rules
 from ..models import Management, Project
 from ..reports import RawCSVReport
@@ -103,9 +103,9 @@ class PManagementReportSerializer(ReportSerializer):
 
 
 class PManagementFilterSet(BaseAPIFilterSet):
-    predecessor = NullableUUIDFilter(name='predecessor')
-    compliance = NullableUUIDFilter(name='compliance')
-    est_year = django_filters.NumericRangeFilter(name='est_year')
+    predecessor = NullableUUIDFilter(field_name='predecessor')
+    compliance = NullableUUIDFilter(field_name='compliance')
+    est_year = django_filters.NumericRangeFilter(field_name='est_year')
 
     class Meta:
         model = Management
@@ -120,7 +120,7 @@ class PManagementViewSet(ProtectedResourceMixin, BaseProjectApiViewSet):
     filter_class = PManagementFilterSet
     search_fields = ['name', 'name_secondary', ]
 
-    @list_route(methods=["get"])
+    @action(detail=False, methods=["get"])
     def fieldreport(self, request, *args, **kwargs):
         try:
             project = Project.objects.get(pk=kwargs['project_pk'])

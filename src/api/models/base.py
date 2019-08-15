@@ -44,7 +44,7 @@ class Profile(models.Model):
     class Meta:
         db_table = 'profile'
 
-    def __unicode__(self):
+    def __str__(self):
         return u'{} [{}]'.format(self.full_name, self.pk)
 
     @property
@@ -126,7 +126,7 @@ class BaseAttributeModel(BaseModel):
 class BaseChoiceModel(BaseModel):
     @property
     def choice(self):
-        ret = {'id': self.pk, 'name': self.__unicode__(), 'updated_on': self.updated_on}
+        ret = {'id': self.pk, 'name': self.__str__(), 'updated_on': self.updated_on}
         if hasattr(self, 'val'):
             ret['val'] = self.val
         return ret
@@ -144,19 +144,19 @@ class Country(BaseChoiceModel):
         verbose_name_plural = u'countries'
         ordering = ('name',)
 
-    def __unicode__(self):
+    def __str__(self):
         return _(u'%s') % self.name
 
 
 class AuthUser(BaseModel):
-    profile = models.ForeignKey(Profile, related_name='authusers')
+    profile = models.ForeignKey(Profile, related_name='authusers', on_delete=models.CASCADE)
     user_id = models.CharField(unique=True, max_length=255)
 
     class Meta:
         db_table = 'authuser'
         unique_together = ('profile', 'user_id',)
 
-    def __unicode__(self):
+    def __str__(self):
         return _(u'%s') % self.profile.full_name
 
 

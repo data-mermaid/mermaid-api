@@ -1,7 +1,7 @@
 from django.utils.decorators import method_decorator
 from django.views.decorators.cache import cache_page
 from rest_framework import serializers
-from base import BaseAPIFilterSet, BaseAttributeApiViewSet, BaseAPISerializer
+from .base import BaseAPIFilterSet, BaseAttributeApiViewSet, BaseAPISerializer
 from ..models import FishFamily
 
 

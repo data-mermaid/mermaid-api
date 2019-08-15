@@ -54,7 +54,7 @@ def get_project_pk(request, view):
 class ProjectDataPermission(permissions.BasePermission):
     def has_permission(self, request, view):
         user = request.user
-        if not user.is_authenticated():
+        if not user.is_authenticated:
             return False
         pk = get_project_pk(request, view)
 
@@ -77,7 +77,7 @@ class ProjectDataReadOnlyPermission(ProjectDataPermission):
 class ProjectDataCollectorPermission(permissions.BasePermission):
     def has_permission(self, request, view):
         user = request.user
-        if not user.is_authenticated():
+        if not user.is_authenticated:
             return False
         if request.method == 'DELETE':
             return False
@@ -94,7 +94,7 @@ class ProjectDataCollectorPermission(permissions.BasePermission):
 class ProjectDataAdminPermission(permissions.BasePermission):
     def has_permission(self, request, view):
         user = request.user
-        if not user.is_authenticated():
+        if not user.is_authenticated:
             return False
         pk = get_project_pk(request, view)
 
@@ -106,7 +106,7 @@ class ProjectDataAdminPermission(permissions.BasePermission):
 class AttributeAuthenticatedUserPermission(permissions.BasePermission):
     def has_permission(self, request, view):
 
-        if request.user.is_authenticated() is False:
+        if request.user.is_authenticated is False:
             return False
 
         if (request.method in permissions.SAFE_METHODS or

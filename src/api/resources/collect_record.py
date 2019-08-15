@@ -3,7 +3,7 @@ import logging
 import uuid
 
 from django.db import connection
-from api.submission.protocol_validations import (
+from ..submission.protocol_validations import (
     BenthicLITProtocolValidation,
     BenthicPITProtocolValidation,
     BleachingQuadratCollectionProtocolValidation,
@@ -17,9 +17,9 @@ from django.utils.translation import ugettext_lazy
 from django.utils import timezone
 from rest_framework import permissions
 from rest_framework import status as drf_status
-from rest_framework.decorators import list_route
 from rest_framework.exceptions import NotFound, ParseError, ValidationError
 from rest_framework.response import Response
+from rest_framework.decorators import action
 
 from ..submission import utils
 from ..submission.utils import (
@@ -101,7 +101,8 @@ class CollectRecordViewSet(BaseProjectApiViewSet):
 
         return result, validations
 
-    @list_route(
+    @action(
+        detail=False,
         methods=["post"],
         permission_classes=BaseProjectApiViewSet.permission_classes + [CollectRecordOwner]
     )
@@ -119,7 +120,7 @@ class CollectRecordViewSet(BaseProjectApiViewSet):
             validations = dict(
                 status=result,
                 results=validation_output,
-                last_validated=unicode(validation_timestamp)
+                last_validated=str(validation_timestamp)
             )
 
             record = None
@@ -152,7 +153,8 @@ class CollectRecordViewSet(BaseProjectApiViewSet):
 
         return Response(output)
 
-    @list_route(
+    @action(
+        detail=False,
         methods=["post"],
         permission_classes=BaseProjectApiViewSet.permission_classes + [CollectRecordOwner]
     )
@@ -191,7 +193,8 @@ class CollectRecordViewSet(BaseProjectApiViewSet):
 
         return Response(output)
 
-    @list_route(
+    @action(
+        detail=False,
         methods=['POST'],
         permission_classes=[ProjectDataPermission]
     )

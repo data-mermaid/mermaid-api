@@ -1,5 +1,5 @@
 import django_filters
-from base import (
+from .base import (
     BaseAPIFilterSet,
     BaseProjectApiViewSet,
     BaseAPISerializer,

@@ -1,13 +1,15 @@
+import csv
 import json
 import re
-import unicodecsv as csv
-from operator import itemgetter
-from rest_framework.utils import encoders
 from collections import Mapping
+from io import StringIO
+from operator import itemgetter
+
+from rest_framework.utils import encoders
 
 from . import BaseReport
-from ..utils.flatten_dict import flatten
 from ..utils import is_match
+from ..utils.flatten_dict import flatten
 
 
 class Echo(object):
@@ -43,12 +45,11 @@ class RawCSVReport(BaseReport):
         )
 
     def _concat_lists(self, flat_record):
-        for k, v in flat_record.iteritems():
+        for k, v in flat_record.items():
             if isinstance(flat_record[k], (list, set, tuple,)) and len(flat_record[k]) > 0:
                 if isinstance(flat_record[k][0], Mapping):
                     continue
-
-                flat_record[k] = ','.join([unicode(e) for e in v])
+                flat_record[k] = ','.join([str(e) for e in v])
             else:
                 flat_record[k] = v
 
@@ -69,13 +70,15 @@ class RawCSVReport(BaseReport):
             *args,
             **kwargs
         )
-        csv_buffer = Echo()
+        csv_buffer = StringIO()
         csv_writer = csv.DictWriter(csv_buffer,
                                     fieldnames=header,
                                     extrasaction='ignore')
-        yield csv_buffer.write('{}\n'.format(','.join(header)))
+
+        csv_writer.writeheader()
         for flat_record in flat_data:
-            yield csv_writer.writerow(self._apply_formatters(flat_record))
+            csv_writer.writerow(self._apply_formatters(flat_record))
+        return csv_buffer.getvalue().strip("\r\n")
 
     def generate(self, path, data, serializer_class, *args, **kwargs):
         header, flat_data = self._get_table_data(
@@ -85,7 +88,7 @@ class RawCSVReport(BaseReport):
             **kwargs
         )
 
-        with file(path, 'wb') as csvfile:
+        with open(path, 'wb') as csvfile:
             csv_writer = csv.DictWriter(csvfile,
                                         fieldnames=header,
                                         extrasaction='ignore')

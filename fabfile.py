@@ -164,7 +164,7 @@ def fresh_install(key_name=None):
     key_name = key_name or 'local'
 
     down()
-    build()
+    build_nocache()
     if os.name == 'nt':
         winup()
     else:

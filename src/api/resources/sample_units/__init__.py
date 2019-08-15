@@ -1,6 +1,6 @@
 import uuid
 from datetime import datetime
-import StringIO
+from io import BytesIO
 import zipfile
 
 
@@ -105,7 +105,13 @@ class SampleEventReportSerializerMeta(type):
                 "{}__site__reef_zone__name".format(sample_event_path), "Reef zone"
             ),
             ReportField(
-                "{}__sample_date".format(sample_event_path), "Date", to_unicode
+                "{}__sample_date".format(sample_event_path), "Year", to_year
+            ),
+            ReportField(
+                "{}__sample_date".format(sample_event_path), "Month", to_month
+            ),
+            ReportField(
+                "{}__sample_date".format(sample_event_path), "Day", to_day
             ),
             ReportField(
                 "{}__sample_time".format(sample_event_path), "Start time", to_unicode
@@ -315,7 +321,7 @@ def fieldreport(obj, request, *args, **kwargs):
             ts,
         )
     else:
-        inmem_file = StringIO.StringIO()
+        inmem_file = BytesIO()
         zipped_reports = zipfile.ZipFile(
             inmem_file, "w", compression=zipfile.ZIP_DEFLATED
         )
@@ -324,8 +330,7 @@ def fieldreport(obj, request, *args, **kwargs):
             file_name = "{}-{}-{}.csv".format(
                 projname, mdl.__name__.lower(), ts
             )
-            content = "".join(list(stream))
-            zipped_reports.writestr(file_name, content)
+            zipped_reports.writestr(file_name, stream)
         zipped_reports.close()
         inmem_file.seek(0)
         response = HttpResponse(

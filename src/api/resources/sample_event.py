@@ -3,15 +3,15 @@ import django_filters
 from rest_framework.exceptions import ValidationError
 from django.core.exceptions import ValidationError as DjangoValidationError
 from rest_framework import serializers
-from base import (
+from .base import (
     BaseAPIFilterSet,
     BaseProjectApiViewSet,
     BaseAPISerializer,
     ExtendedSerializer,
     ModelNameReadOnlyField,
 )
-from site import SiteExtendedSerializer
-from management import ManagementExtendedSerializer
+from .site import SiteExtendedSerializer
+from .management import ManagementExtendedSerializer
 from ..models import SampleEvent
 
 
@@ -54,8 +54,8 @@ class SampleEventSerializer(BaseAPISerializer):
 
 
 class SampleEventFilterSet(BaseAPIFilterSet):
-    sample_date = django_filters.DateTimeFromToRangeFilter(name='sample_date')
-    depth = django_filters.NumericRangeFilter(name='depth')
+    sample_date = django_filters.DateTimeFromToRangeFilter(field_name='sample_date')
+    depth = django_filters.NumericRangeFilter(field_name='depth')
 
     class Meta:
         model = SampleEvent

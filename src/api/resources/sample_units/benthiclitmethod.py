@@ -1,10 +1,10 @@
 from django.db import transaction
 from django.db.models import Sum
 from rest_framework import status
-from rest_framework.decorators import list_route
 from rest_framework.response import Response
+from rest_framework.decorators import action
 
-from api.models.mermaid import BenthicLIT, ObsBenthicLIT, BenthicAttribute
+from ...models.mermaid import BenthicLIT, ObsBenthicLIT, BenthicAttribute
 
 from . import *
 from ..sample_event import SampleEventSerializer
@@ -63,26 +63,25 @@ def to_benthic_attribute_category(field, row, serializer_instance):
     elif isinstance(bc, dict):
         return bc.get("name") or ""
 
-    return bc.__unicode__()
+    return str(bc)
 
 
-class ObsBenthicLITReportSerializer(SampleEventReportSerializer):
-    __metaclass__ = SampleEventReportSerializerMeta
-
+class ObsBenthicLITReportSerializer(SampleEventReportSerializer, metaclass=SampleEventReportSerializerMeta):
     transect_method = 'benthiclit'
     sample_event_path = '{}__transect__sample_event'.format(transect_method)
 
+    idx = 24
     obs_fields = [
         (6, ReportField("benthiclit__transect__reef_slope__name", "Reef slope")),
-        (22, ReportField("benthiclit__transect__number", "Transect number")),
-        (23, ReportField("benthiclit__transect__label", "Transect label")),
-        (24, ReportField("benthiclit__transect__len_surveyed", "Transect length surveyed")),
-        (26, ReportMethodField('Benthic category', to_benthic_attribute_category)),
-        (27, ReportField('attribute__name', 'Benthic attribute')),
-        (28, ReportField('growth_form__name', 'Growth form')),
-        (29, ReportField('length', 'LIT (cm)')),
-        (30, ReportMethodField('Total transect cm', to_total_lit)),
-        (34, ReportField("benthiclit__transect__notes", "Observation notes"))
+        (idx, ReportField("benthiclit__transect__number", "Transect number")),
+        (idx + 1, ReportField("benthiclit__transect__label", "Transect label")),
+        (idx + 2, ReportField("benthiclit__transect__len_surveyed", "Transect length surveyed")),
+        (idx + 4, ReportMethodField('Benthic category', to_benthic_attribute_category)),
+        (idx + 5, ReportField('attribute__name', 'Benthic attribute')),
+        (idx + 6, ReportField('growth_form__name', 'Growth form')),
+        (idx + 7, ReportField('length', 'LIT (cm)')),
+        (idx + 8, ReportMethodField('Total transect cm', to_total_lit)),
+        (idx + 12, ReportField("benthiclit__transect__notes", "Observation notes"))
     ]
 
     non_field_columns = (
@@ -225,7 +224,7 @@ class BenthicLITMethodView(BaseProjectApiViewSet):
             transaction.savepoint_rollback(sid)
             raise
 
-    @list_route(methods=['get'])
+    @action(detail=False, methods=['get'])
     def fieldreport(self, request, *args, **kwargs):
         return fieldreport(
             self, request, *args,
