@@ -38,7 +38,7 @@ def export_model_as_csv(modeladmin, request, queryset, field_list):
             field_obj, attr, value = admin.utils.lookup_field(field, obj, modeladmin)
             if field_obj is not None and hasattr(field_obj, 'choices'):
                 value = lookup_field_from_choices(field_obj, value)
-            csv_line_values.append(str(value).encode('utf-8').strip())
+            csv_line_values.append(str(value).strip())
 
         writer.writerow(csv_line_values)
 
