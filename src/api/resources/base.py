@@ -182,7 +182,11 @@ class BaseAPISerializer(serializers.ModelSerializer):
         return value
 
     def save(self, **kwargs):
-        token = get_jwt_token(self.context['request'])
+        request = self.context.get('request')
+        if request is None:
+            return
+
+        token = get_jwt_token(request)
         kwargs["updated_by"] = get_unverified_profile(token)
         return super(BaseAPISerializer, self).save(**kwargs)
 
