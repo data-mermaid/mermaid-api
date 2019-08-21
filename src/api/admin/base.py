@@ -87,7 +87,7 @@ class ApplicationAdmin(BaseAdmin):
 
 @admin.register(AuthUser)
 class AuthUserAdmin(BaseAdmin):
-    pass
+    search_fields = ['user_id', 'profile__first_name', 'profile__last_name', 'profile__email', ]
 
 
 @admin.register(Profile)
