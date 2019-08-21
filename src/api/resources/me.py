@@ -53,7 +53,7 @@ class MeViewSet(viewsets.ModelViewSet):
             raise NotFound()
 
         me_serializer = MeSerializer(
-            data=request.data, instance=profile)
+            data=request.data, instance=profile, context={'request': request})
 
         if me_serializer.is_valid() is False:
             errors = {'Profile': me_serializer.errors}
