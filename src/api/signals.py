@@ -136,7 +136,7 @@ def notify_admins_project_change(instance, text_changes):
     Because you are an administrator of this project, we are letting you know that the changes listed below were
     just made by:<br>
     {}<br>
-    If thse changes were made by a co-administrator, contact that person to discuss any possible revisions.
+    If these changes were made by a co-administrator, contact that person to discuss any possible revisions.
     If neither you nor a co-administrator made the changes, make sure all project user roles are set
     appropriately, and all project administrators should immediately change passwords by navigating to 'Your
     profile' in the MERMAID menu and then clicking the 'Send Change Password Email' button.
