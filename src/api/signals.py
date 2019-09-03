@@ -1,6 +1,6 @@
 import uuid
 from django.dispatch import receiver
-from django.db.models.signals import post_delete, post_save, pre_save
+from django.db.models.signals import post_delete, post_save, pre_save, m2m_changed
 from django import urls
 from django.conf import settings
 from .models import *
@@ -63,6 +63,7 @@ def set_created_by(sender, instance, **kwargs):
     if instance.updated_on is None and hasattr(instance, "updated_by") and getattr(instance, "updated_by") is not None:
         instance.created_by = instance.updated_by
 
+
 # send email if a new attribute/tag/etc. is created (not updated), AND it was created by a user (not via ingestion),
 # AND it was not created by an admin
 def email_superadmin_on_new(sender, instance, created, **kwargs):
@@ -119,17 +120,45 @@ for c in get_subclasses(BaseAttributeModel):
 post_save.connect(email_superadmin_on_new, sender=Tag, dispatch_uid='{}_save'.format(Tag._meta.object_name))
 
 
+def notify_admins_project_change(instance, text_changes):
+    subject = u'Changes to {}'.format(instance.name)
+    collect_project_url = '{}/#/projects/{}/details'.format(settings.DEFAULT_DOMAIN_COLLECT, instance.pk)
+    collect_project_link = '<a href="{}">{}</a>'.format(collect_project_url, collect_project_url)
+
+    updated_by = u''
+    email = u''
+    if instance.updated_by is not None:
+        updated_by = instance.updated_by.full_name
+        email = instance.updated_by.email
+    editor = u'{} &lt;{}&gt;'.format(updated_by, email)
+    body = u"""
+    <p>
+    Because you are an administrator of this project, we are letting you know that the changes listed below were
+    just made by:<br>
+    {}<br>
+    If these changes were made by a co-administrator, contact that person to discuss any possible revisions.
+    If neither you nor a co-administrator made the changes, make sure all project user roles are set
+    appropriately, and all project administrators should immediately change passwords by navigating to 'Your
+    profile' in the MERMAID menu and then clicking the 'Send Change Password Email' button.
+    </p>
+    <p>
+    To view your project settings, click or point your browser to:<br>
+    {}
+    </p>
+    <h4>Summary of changes:</h4>
+    {}
+    """.format(editor, collect_project_link, u'\n'.join(text_changes))
+
+    email_project_admins(instance, subject, body)
+
+
 @receiver(post_save, sender=Project)
-def notify_admins_project_change(sender, instance, created, **kwargs):
+def notify_admins_project_instance_change(sender, instance, created, **kwargs):
     if not created:
         old_values = instance._old_values
         new_values = instance._new_values
         diffs = [(k, (v, new_values[k])) for k, v in old_values.items() if v != new_values[k]]
         if diffs:
-            subject = u'Changes to {}'.format(old_values['name'])
-            collect_project_url = '{}/#/projects/{}/details'.format(settings.DEFAULT_DOMAIN_COLLECT, instance.pk)
-            collect_project_link = '<a href="{}">{}</a>'.format(collect_project_url, collect_project_url)
-
             text_changes = []
             for diff in diffs:
                 field = sender._meta.get_field(diff[0])
@@ -141,31 +170,25 @@ def notify_admins_project_change(sender, instance, created, **kwargs):
                     newval = dict(field.choices)[diff[1][1]]
                 text_changes.append(u'<p>Old {}: {}<br>\nNew {}: {}</p>'.format(fname, oldval, fname, newval))
 
-            updated_by = u''
-            email = u''
-            if instance.updated_by is not None:
-                updated_by = instance.updated_by.full_name
-                email = instance.updated_by.email
-            editor = u'{} &lt;{}&gt;'.format(updated_by, email)
-            body = u"""
-            <p>
-            Because you are an administrator of this project, we are letting you know that the changes listed below were
-            just made by:<br>
-            {}<br>
-            If these changes were made by a co-administrator, contact that person to discuss any possible revisions.
-            If neither you nor a co-administrator made the changes, make sure all project user roles are set
-            appropriately, and all project administrators should immediately change passwords by navigating to 'Your
-            profile' in the MERMAID menu and then clicking the 'Send Change Password Email' button.
-            </p>
-            <p>
-            To view your project settings, click or point your browser to:<br>
-            {}
-            </p>
-            <h4>Summary of changes:</h4>
-            {}
-            """.format(editor, collect_project_link, u'\n'.join(text_changes))
+            notify_admins_project_change(instance, text_changes)
 
-            email_project_admins(instance, subject, body)
+
+@receiver(m2m_changed, sender=Project.tags.through)
+def notify_admins_project_tags_change(sender, instance, action, reverse, model, pk_set, **kwargs):
+    if action == "post_add" or action == "post_remove":
+        text_changes = []
+        verb = ""
+        if action == "post_add":
+            verb = "Added"
+        elif action == "post_remove":
+            verb = "Removed"
+
+        altered_tags = Tag.objects.filter(pk__in=pk_set)
+        if altered_tags.count() > 0:
+            for t in altered_tags:
+                text_changes.append(u"<p>{} organization: {}</p>".format(verb, t.name))
+
+            notify_admins_project_change(instance, text_changes)
 
 
 def notify_admins_change(instance, changetype):
