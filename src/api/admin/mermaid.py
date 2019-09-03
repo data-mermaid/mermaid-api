@@ -444,7 +444,7 @@ class BenthicAttributeAdmin(AttributeAdmin):
     def fk_link(self, obj):
         if obj.parent:
             link = reverse("admin:api_benthicattribute_change", args=[obj.parent.pk])
-            return u'<a href="%s">%s</a>' % (link, obj.parent.name)
+            return format_html(u'<a href="{}">{}</a>', link, obj.parent.name)
         else:
             return ''
 
@@ -659,7 +659,7 @@ class FishGenusAdmin(FishAttributeAdmin):
 
     def fk_link(self, obj):
         link = reverse("admin:api_fishfamily_change", args=[obj.family.pk])
-        return u'<a href="%s">%s</a>' % (link, obj.family.name)
+        return format_html(u'<a href="{}">{}</a>', link, obj.family.name)
 
     fk_link.allow_tags = True
     fk_link.admin_order_field = 'family'
@@ -677,7 +677,7 @@ class FishSpeciesAdmin(FishAttributeAdmin):
 
     def fk_link(self, obj):
         link = reverse("admin:api_fishgenus_change", args=[obj.genus.pk])
-        return u'<a href="%s">%s</a>' % (link, obj.genus.name)
+        return format_html(u'<a href="{}">{}</a>', link, obj.genus.name)
 
     fk_link.allow_tags = True
     fk_link.admin_order_field = 'genus'
