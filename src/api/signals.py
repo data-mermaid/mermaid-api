@@ -184,7 +184,6 @@ def notify_admins_project_tags_change(sender, instance, action, reverse, model, 
             verb = "Removed"
 
         altered_tags = Tag.objects.filter(pk__in=pk_set)
-        print(altered_tags)
         if altered_tags.count() > 0:
             for t in altered_tags:
                 text_changes.append(u"<p>{} organization: {}</p>".format(verb, t.name))
