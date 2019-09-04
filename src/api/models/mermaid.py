@@ -601,7 +601,7 @@ class TransectMethod(BaseModel):
 
 
 class Observer(BaseModel):
-    project_lookup = 'profile__projects__project'
+    project_lookup = 'transectmethod__subclass__transect__sample_event__site__project'
 
     transectmethod = models.ForeignKey(TransectMethod, on_delete=models.CASCADE,
                                        verbose_name=_(u'transect method'),
