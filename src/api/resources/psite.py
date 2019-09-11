@@ -30,7 +30,6 @@ class PSiteReportSerializer(ReportSerializer):
         ReportField("reef_type__name", "Reef type"),
         ReportField("reef_zone__name", "Reef zone"),
         ReportField("exposure__name", "Reef exposure"),
-        ReportField("exposure__val", "Reef exposure value"),
         ReportField("notes", "Notes"),
     ]
 
