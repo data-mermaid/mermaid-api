@@ -4,30 +4,11 @@ from django.db.models.signals import post_delete, post_save, pre_save, m2m_chang
 from django import urls
 from django.conf import settings
 from .models import *
+from .utils import get_subclasses
 from .utils.email import email_project_admins, mermaid_email
+from .utils.sample_units import delete_orphaned_sample_unit, delete_orphaned_sample_event
 from .submission.utils import validate
 from .submission.validations import SiteValidation, ManagementValidation
-
-
-def get_subclasses(cls):
-    result = []
-    classes_to_inspect = [cls]
-    while classes_to_inspect:
-        class_to_inspect = classes_to_inspect.pop()
-        for subclass in class_to_inspect.__subclasses__():
-            if subclass not in result:
-                result.append(subclass)
-                classes_to_inspect.append(subclass)
-    return result
-
-
-def reverse_onetoone_delete(sender, instance, *args, **kwargs):
-    for f in sender._meta.get_fields():
-        if f.one_to_one and not f.auto_created:
-            # print(sender, instance, f.name, f.is_relation, f.auto_created)
-            reverse_instance = getattr(instance, f.name, None)
-            if reverse_instance:
-                reverse_instance.delete()
 
 
 def backup_model_record(sender, instance, using, **kwargs):
@@ -108,12 +89,9 @@ def email_superadmin_on_new(sender, instance, created, **kwargs):
         )
 
 
-# Attach post-delete signal on every model with a OneToOneField to delete its reverse relation instance.
-# Auto-created OneToOnes from inheritance get deleted automatically.
 for c in get_subclasses(BaseModel):
-    post_delete.connect(reverse_onetoone_delete, sender=c, dispatch_uid='{}_delete'.format(c._meta.object_name))
-    post_delete.connect(backup_model_record, sender=c, dispatch_uid='{}_delete_archive'.format(c._meta.object_name))
     pre_save.connect(set_created_by, sender=c, dispatch_uid='{}_set_created_by'.format(c._meta.object_name))
+    post_delete.connect(backup_model_record, sender=c, dispatch_uid='{}_delete_archive'.format(c._meta.object_name))
 
 for c in get_subclasses(BaseAttributeModel):
     post_save.connect(email_superadmin_on_new, sender=c, dispatch_uid='{}_save'.format(c._meta.object_name))
@@ -246,6 +224,21 @@ def notify_admins_new_admin(sender, instance, created, **kwargs):
 def notify_admins_dropped_admin(sender, instance, **kwargs):
     if instance.role >= ProjectProfile.ADMIN:
         notify_admins_change(instance, 'remove')
+
+
+# Don't need to iterate over TransectMethod subclasses because TransectMethod is not abstract
+@receiver(post_delete, sender=TransectMethod, dispatch_uid='TransectMethod_delete_su')
+def del_orphaned_su(sender, instance, *args, **kwargs):
+    if instance.sample_unit is not None:
+        delete_orphaned_sample_unit(instance.sample_unit, instance)
+
+
+def del_orphaned_se(sender, instance, *args, **kwargs):
+    delete_orphaned_sample_event(instance.sample_event, instance)
+
+
+for suclass in get_subclasses(SampleUnit):
+    post_delete.connect(del_orphaned_se, sender=suclass, dispatch_uid='{}_delete_se'.format(suclass._meta.object_name))
 
 
 @receiver(post_delete, sender=Site)
