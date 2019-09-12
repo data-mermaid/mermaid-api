@@ -43,7 +43,7 @@ class FishBeltTransectFilterSet(BaseAPIFilterSet):
 
     class Meta:
         model = FishBeltTransect
-        fields = ['transectbeltfish_method', 'sample_event', 'len_surveyed', 'width', ]
+        fields = ['beltfish_method', 'sample_event', 'len_surveyed', 'width', ]
 
 
 class FishBeltTransectViewSet(BaseProjectApiViewSet):

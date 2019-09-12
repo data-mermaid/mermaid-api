@@ -438,7 +438,7 @@ class SampleEvent(BaseModel, JSONMixin):
 
 
 class SampleUnit(BaseModel):
-    sample_event = models.ForeignKey(SampleEvent, on_delete=models.CASCADE)
+    sample_event = models.ForeignKey(SampleEvent, on_delete=models.PROTECT)
     notes = models.TextField(blank=True)
     collect_record_id = models.UUIDField(null=True, blank=True)
 
@@ -601,7 +601,7 @@ class TransectMethod(BaseModel):
 
 
 class Observer(BaseModel):
-    project_lookup = 'profile__projects__project'
+    project_lookup = 'transectmethod__subclass__transect__sample_event__site__project'
 
     transectmethod = models.ForeignKey(TransectMethod, on_delete=models.CASCADE,
                                        verbose_name=_(u'transect method'),
@@ -813,7 +813,7 @@ class BleachingQuadratCollection(TransectMethod):
 
     quadrat = models.OneToOneField(QuadratCollection,
                                    on_delete=models.CASCADE,
-                                   related_name='bleaching_quadrat_collection',
+                                   related_name='bleachingquadratcollection_method',
                                    verbose_name=_(u'bleaching quadrat collection'))
 
     class Meta:
@@ -1142,7 +1142,7 @@ class BeltFish(TransectMethod):
     project_lookup = 'transect__sample_event__site__project'
 
     transect = models.OneToOneField(FishBeltTransect, on_delete=models.CASCADE,
-                                    related_name='transectbeltfish_method',
+                                    related_name='beltfish_method',
                                     verbose_name=_(u'fish belt transect'))
 
     class Meta:

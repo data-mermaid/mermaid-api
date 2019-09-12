@@ -50,6 +50,19 @@ def calc_biomass_density(count, size, transect_len_surveyed,
     return biomass / area  # kg/ha
 
 
+def get_subclasses(cls):
+    result = []
+    classes_to_inspect = [cls]
+    while classes_to_inspect:
+        class_to_inspect = classes_to_inspect.pop()
+        for subclass in class_to_inspect.__subclasses__():
+            if subclass not in result:
+                classes_to_inspect.append(subclass)
+                if not subclass._meta.abstract:
+                    result.append(subclass)
+    return result
+
+
 def get_related_transect_methods(model):
     related_objects = [
         f for f in model._meta.get_fields()
