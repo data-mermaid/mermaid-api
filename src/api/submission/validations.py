@@ -1080,7 +1080,7 @@ class QuadratCollectionValidation(DataValidation):
         queryset = QuadratCollection.objects.filter(**qry)
         for profile in profiles:
             queryset = queryset.filter(
-                bleaching_quadrat_collection__observers__profile_id=profile
+                bleachingquadratcollection_method__observers__profile_id=profile
             )
 
         for result in queryset:

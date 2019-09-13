@@ -344,7 +344,6 @@ class BleachingQuadratCollectionProtocolWriter(ProtocolWriter):
 
         return observation_benthic_percent_covered_data
 
-
     def write(self):
         sample_event = self.get_or_create_sample_event()
         quadrat_collection = self.get_or_create_quadrat_collection(sample_event.id)

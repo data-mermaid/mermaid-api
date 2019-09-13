@@ -153,7 +153,6 @@ class TransectValidation(ProtocolValidation):
 
 class QuadratValidation(ProtocolValidation):
 
-
     def validate(self):
         results = []
         results.append(super(QuadratValidation, self).validate())
