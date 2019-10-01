@@ -1,5 +1,6 @@
 from collections import defaultdict
 
+import re
 import django_filters
 from django.db.models import Case, CharField, Q, Value, When
 from django_filters import rest_framework as filters
@@ -48,6 +49,7 @@ class SearchNonFieldFilter(django_filters.Filter):
         qry = Q()
         for field in self.SEARCH_FIELDS:
             for param in params:
+                param = re.escape(param).replace(r"\.", ".").replace(r"\*", "*")
                 qry |= Q(**{"{}__iregex".format(field): param})
         return qs.filter(qry).distinct()
 
