@@ -292,9 +292,12 @@ class VisibilityAdmin(BaseAdmin):
 
 @admin.register(Management)
 class ManagementAdmin(BaseAdmin):
-    list_display = ('name', 'name_secondary', 'project', 'est_year')
+    list_display = ('name', 'name_secondary', 'project', 'est_year',
+                    'open_access', 'periodic_closure', 'size_limits',
+                    'gear_restriction', 'species_restriction', 'no_take')
     readonly_fields = ('area',)
     search_fields = ['name', 'name_secondary', 'project__name', 'est_year']
+    # list_filter = ('project',)
 
 
 @admin.register(ManagementCompliance)
