@@ -101,3 +101,19 @@ def safe_division(numerator, denominator):
     if isinstance(numerator, numbers.Number) and isinstance(denominator, numbers.Number):
         return numerator * 1.0 / denominator
     return None
+
+def get_value(dictionary, keys, delimiter="__"):
+    if isinstance(keys, str):
+        keys = keys.split(delimiter)
+    if not keys or dictionary is None:
+        return dictionary
+    return get_value(dictionary.get(keys[0]), keys[1:])
+
+
+def set_value(dic, keys, value, delimiter="__"):
+    if isinstance(keys, str):
+        keys = keys.split(delimiter)
+
+    for key in keys[:-1]:
+        dic = dic.setdefault(key, {})
+    dic[keys[-1]] = value
