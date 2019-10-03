@@ -37,8 +37,9 @@ class ObsHabitatComplexityReportSerializer(SampleEventReportSerializer, metaclas
         (idx + 1, ReportField("habitatcomplexity__transect__label", "Transect label")),
         (idx + 2, ReportField("habitatcomplexity__transect__len_surveyed", "Transect length surveyed")),
         (idx + 4, ReportField('interval', 'Interval (m)')),
-        (idx + 5, ReportField('score__name', 'Habitat complexity')),
-        (idx + 9, ReportField("habitatcomplexity__transect__notes", "Observation notes"))
+        (idx + 5, ReportField('score__val', 'Habitat complexity value')),
+        (idx + 6, ReportField('score__name', 'Habitat complexity name')),
+        (idx + 10, ReportField("habitatcomplexity__transect__notes", "Observation notes"))
     ]
 
     non_field_columns = (
