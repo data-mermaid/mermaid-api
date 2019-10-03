@@ -556,7 +556,7 @@ class BenthicObservationCountMixin(ObservationsMixin):
 class ObsBenthicLITValidation(DataValidation, BenthicAttributeMixin):
     identifier = "obs_benthic_lits"
     TOTAL_LENGTH_WARN = str(
-        _("Total length of observations must equal transect length")
+        _("Total length of observations should be within 50% of transect length")
     )
 
     def validate_total_length(self):
@@ -565,7 +565,7 @@ class ObsBenthicLITValidation(DataValidation, BenthicAttributeMixin):
         # Convert to cm
         transect_length = (benthic_transect.get("len_surveyed") or 0.0) * 100
         obs_len = sum([ob.get("length") or 0.0 for ob in obs])
-        if obs_len != transect_length:
+        if obs_len > transect_length * 1.5 or obs_len < transect_length * .5:
             return self.warning(self.identifier, self.TOTAL_LENGTH_WARN)
 
         return self.ok(self.identifier)

@@ -203,7 +203,7 @@ class ProjectAdmin(BaseAdmin):
 @admin.register(ProjectProfile)
 class ProjectProfileAdmin(BaseAdmin):
     list_display = ('project', 'profile', 'role')
-    search_fields = ['project__name', 'profile__first_name', 'profile__last_name', 'profile__email', ]
+    search_fields = ['id', 'project__name', 'profile__first_name', 'profile__last_name', 'profile__email', ]
     list_filter = ('role',)
 
 
@@ -712,7 +712,7 @@ class BeltFishAdmin(BaseAdmin):
 @admin.register(Observer)
 class ObserverAdmin(BaseAdmin):
     list_display = ('profile', 'transectmethod')
-    search_fields = ['profile__first_name', 'profile__last_name', 'profile__email', ]
+    search_fields = ['id', 'profile__first_name', 'profile__last_name', 'profile__email', ]
 
 
 @admin.register(CollectRecord)
