@@ -771,8 +771,10 @@ class ObsHabitatComplexitiesValidation(DataValidation, BenthicObservationCountMi
 
 class BenthicTransectValidation(DataValidation):
     DUPLICATE_MSG = _("Transect already exists")
+    NUMBER_MSG = _("Transect number is not valid")
     RELATIVE_DEPTH_MSG = _("Relative depth not valid")
     SITE_MSG = _("Benthic Transect is not valid")
+    WIDTH_MSG = _("Width is not valid")
     identifier = "benthic_transect"
 
     def validate_duplicate(self):
@@ -780,22 +782,30 @@ class BenthicTransectValidation(DataValidation):
         sample_event = self.data.get("sample_event") or {}
         benthic_transect = self.data.get("benthic_transect") or {}
 
-        number = benthic_transect.get("number")
+        number = benthic_transect.get("number") or None
+        try:
+            int(number)
+        except (ValueError, TypeError):
+            return self.error(self.identifier, self.NUMBER_MSG)
+
         label = benthic_transect.get("label") or ""
+
+        width = benthic_transect.get("width") or None
+        try:
+            _ = check_uuid(width)
+        except ParseError:
+            return self.error(self.identifier, self.WIDTH_MSG)
+
         relative_depth = sample_event.get("relative_depth")
         if relative_depth == "":
             relative_depth = None
-
-        site = sample_event.get("site") or None
-        if site == "":
-            site = None
-
         if relative_depth is not None:
             try:
                 _ = check_uuid(relative_depth)
             except ParseError:
                 return self.error(self.identifier, self.RELATIVE_DEPTH_MSG)
 
+        site = sample_event.get("site") or None
         try:
             _ = check_uuid(site)
         except ParseError:
@@ -819,8 +829,10 @@ class BenthicTransectValidation(DataValidation):
 
 class FishBeltTransectValidation(DataValidation):
     DUPLICATE_MSG = _("Transect already exists")
+    NUMBER_MSG = _("Transect number is not valid")
     RELATIVE_DEPTH_MSG = _("Relative depth not valid")
     SITE_MSG = _("Fish Belt Transect is not valid")
+    WIDTH_MSG = _("Width is not valid")
     identifier = "fishbelt_transect"
 
     def validate_duplicate(self):
@@ -828,23 +840,30 @@ class FishBeltTransectValidation(DataValidation):
         sample_event = self.data.get("sample_event") or {}
         fishbelt_transect = self.data.get("fishbelt_transect") or {}
 
-        number = fishbelt_transect.get("number")
+        number = fishbelt_transect.get("number") or None
+        try:
+            int(number)
+        except (ValueError, TypeError):
+            return self.error(self.identifier, self.NUMBER_MSG)
+
         label = fishbelt_transect.get("label") or ""
-        width = fishbelt_transect.get("width")
+
+        width = fishbelt_transect.get("width") or None
+        try:
+            _ = check_uuid(width)
+        except ParseError:
+            return self.error(self.identifier, self.WIDTH_MSG)
+
         relative_depth = sample_event.get("relative_depth")
         if relative_depth == "":
             relative_depth = None
-
-        site = sample_event.get("site") or None
-        if site == "":
-            site = None
-
         if relative_depth is not None:
             try:
                 _ = check_uuid(relative_depth)
             except ParseError:
                 return self.error(self.identifier, self.RELATIVE_DEPTH_MSG)
 
+        site = sample_event.get("site") or None
         try:
             _ = check_uuid(site)
         except ParseError:

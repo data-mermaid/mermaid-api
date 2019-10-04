@@ -77,7 +77,12 @@ def write_collect_record(collect_record, request, dry_run=False):
             status = VALIDATION_ERROR_STATUS
         except Exception as err:
             logger.exception("write_collect_record: {}".format(getattr(collect_record, 'id')))
-            result = "{}: {}".format(str(type(err).__name__), err.message)
+            msg = ''
+            if hasattr(err, 'message'):
+                msg = err.message
+            elif err.args:
+                msg = '; '.join(err.args)
+            result = {'{}'.format(str(type(err).__name__)): '{}'.format(msg)}
             status = ERROR_STATUS
         finally:
             if dry_run is True or status != SUCCESS_STATUS:
