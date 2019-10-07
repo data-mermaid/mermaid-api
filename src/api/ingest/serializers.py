@@ -8,8 +8,8 @@
 # 7. Error reporting
 # x Mock request
 # 9. Validate all records (interval)
-# 10. Caching
-# x Sorting observations by interval
+# x Sorting observations by interval (SORTING MESSES UP ERROR ROW REPORTING)
+# 11. Add asserts to child serializer
 
 import uuid
 from collections import OrderedDict
@@ -26,7 +26,6 @@ from ..exceptions import check_uuid
 from ..models import BenthicAttribute, Management, Site
 from ..resources.choices import ChoiceViewSet
 from ..resources.collect_record import CollectRecordSerializer
-from ..utils import tokenutils
 
 
 def build_choices(key, choices):
@@ -35,6 +34,9 @@ def build_choices(key, choices):
 
 class CollectRecordCSVListSerializer(ListSerializer):
     obs_field_identifier = "data__obs_"
+
+    # Track original record order
+    _row_index = None
 
     def split_list_fields(self, field_name, data, choices=None):
         val = data.get(field_name, empty)
@@ -129,8 +131,15 @@ class CollectRecordCSVListSerializer(ListSerializer):
         fmt_rows = []
         choices_sets = self.get_choices_sets()
         protocol = self.child.protocol
-        for row in data:
+        self._row_index = dict()
+        for n, row in enumerate(data):
             fmt_row = self.map_column_names(row)
+            fmt_row["id"] = self.get_sample_event_date(
+                fmt_row
+            )
+            pk = str(uuid.uuid4())
+            self._row_index[pk] = n + 2
+            fmt_row["id"] = pk
             fmt_row["data__sample_event__sample_date"] = self.get_sample_event_date(
                 fmt_row
             )
@@ -146,7 +155,12 @@ class CollectRecordCSVListSerializer(ListSerializer):
             fmt_rows.append(fmt_row)
 
         sorted_fmt_rows = self.sort_records(fmt_rows)
+        self._formatted_records = sorted_fmt_rows
         return sorted_fmt_rows
+
+    def validate(self, data):
+        # Validate common Transect level fields
+        return data
 
     def run_validation(self, data=empty):
         return super().run_validation(data=self.format_data(data))
@@ -199,6 +213,20 @@ class CollectRecordCSVListSerializer(ListSerializer):
         else:
             return crs.save()
 
+    @property
+    def formatted_errors(self):
+        errors = self.errors
+        format_error = self.child.format_error
+
+        fmt_errors = []
+        for error, rec in zip(errors, self._formatted_records):
+            if bool(error) is True:
+                fmt_error = format_error(error)
+                fmt_error["$row_number"] = self._row_index[rec["id"]]
+                fmt_errors.append(fmt_error)
+
+        return fmt_errors
+
 
 class CollectRecordCSVSerializer(Serializer):
     protocol = None
@@ -239,6 +267,7 @@ class CollectRecordCSVSerializer(Serializer):
     }
 
     # FIELDS
+    id = serializers.UUIDField(format="hex_verbose")
     project = serializers.UUIDField(format="hex_verbose")
     profile = serializers.UUIDField(format="hex_verbose")
     data__protocol = serializers.CharField(required=True, allow_blank=False)
@@ -329,7 +358,7 @@ class CollectRecordCSVSerializer(Serializer):
             field_path = field.field_name.split("__")
             val = validated_data.get(name)
             output = self.create_path(field_path, output, val)
-        output["id"] = str(uuid.uuid4())
+        # output["id"] = str(uuid.uuid4())
 
         # Need to serialize observers after validation to avoid
         # unique id errors
@@ -340,6 +369,19 @@ class CollectRecordCSVSerializer(Serializer):
         ]
 
         return output
+
+    def format_error(self, record_errors):
+        fmt_errs = dict()
+        field_map = dict(zip(self.header_map.values(), self.header_map.keys()))
+        for k, v in record_errors.items():
+            display = field_map.get(k) or k
+            fmt_errs[display] = {"description": v}
+        return fmt_errs
+
+    @property
+    def formatted_errors(self):
+        errors = self.errors
+        return self.format_error(errors)
 
 
 class BenthicPITCSVSerializer(CollectRecordCSVSerializer):
@@ -385,11 +427,6 @@ class BenthicPITCSVSerializer(CollectRecordCSVSerializer):
         choices=growth_form_choices, required=False, allow_null=True, allow_blank=True
     )
 
-    # def sort_observations(self, data):
-    #     f = itemgetter('data__obs_benthic_pits__interval')
-    #     data.sort(key=f)
-
-    # def format_data(self, data):
-    #     data = super().format_data()
-    #     self.sort_observations(data)
-    #     return data
+    def validate(self, data):
+        data = super().validate(data)
+        return data
