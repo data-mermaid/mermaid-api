@@ -7,28 +7,25 @@
 # x write records to db
 # 7. Error reporting
 # x Mock request
-# 9. Validate all records
+# 9. Validate all records (interval)
 # 10. Caching
+# x Sorting observations by interval
 
-
-import json
 import uuid
-from collections import OrderedDict, defaultdict
+from collections import OrderedDict
 from collections.abc import Iterable, Mapping
+from operator import itemgetter
 
 from rest_framework import serializers
-from rest_framework.exceptions import ParseError
 from rest_framework.fields import empty
 from rest_framework.serializers import ListSerializer, Serializer
-from rest_framework.utils import encoders
 
 from .. import utils
+from ..decorators import timeit
 from ..exceptions import check_uuid
 from ..models import BenthicAttribute, Management, Site
 from ..resources.choices import ChoiceViewSet
 from ..resources.collect_record import CollectRecordSerializer
-
-# from ..resources.project_profile import ProjectProfileSerializer
 from ..utils import tokenutils
 
 
@@ -38,6 +35,121 @@ def build_choices(key, choices):
 
 class CollectRecordCSVListSerializer(ListSerializer):
     obs_field_identifier = "data__obs_"
+
+    def split_list_fields(self, field_name, data, choices=None):
+        val = data.get(field_name, empty)
+        if val == empty:
+            return
+
+        if choices:
+            data[field_name] = [choices.get(s.strip().lower()) for s in val.split(",")]
+        else:
+            data[field_name] = [s.strip() for s in val.split(",")]
+
+    def map_column_names(self, row):
+        header_map = self.child.header_map
+        return {
+            (header_map[k.strip()] if k.strip() in header_map else k): v
+            for k, v in row.items()
+        }
+
+    def assign_choices(self, row, choices_sets):
+        for name, field in self.child.fields.items():
+            val = field.get_value(row)
+            choices = choices_sets.get(name)
+            if choices is None:
+                continue
+            try:
+                val = self._lower(val)
+                row[name] = choices.get(val)
+            except (ValueError, TypeError):
+                row[name] = None
+
+    def get_sample_event_date(self, row):
+        return "{}-{}-{}".format(
+            row["data__sample_event__sample_date__year"],
+            row["data__sample_event__sample_date__month"],
+            row["data__sample_event__sample_date__day"],
+        )
+
+    def get_sample_event_time(self, row):
+        return row.get("data__sample_event__sample_time") or "00:00:00"
+
+    def remove_extra_data(self, row):
+        field_names = set(self.child.fields.keys())
+        row_keys = set(row.keys())
+        diff_keys = row_keys.difference(field_names)
+
+        for name in diff_keys:
+            del row[name]
+
+    def _lower(self, val):
+        if isinstance(val, str):
+            return val.lower()
+        return val
+
+    def _get_reverse_choices(self, field):
+        return dict((self._lower(v), k) for k, v in field.choices.items())
+
+    def get_choices_sets(self):
+        choices = dict()
+        for name, field in self.child.fields.items():
+            if hasattr(field, "choices"):
+                choices[name] = self._get_reverse_choices(field)
+            elif (
+                hasattr(self.child, "project_choices")
+                and name in self.child.project_choices
+            ):
+                choices[name] = self.child.project_choices[name]
+
+        return choices
+
+    def sort_records(self, data):
+        if (
+            hasattr(self.child, "ordering_field") is False
+            or self.child.ordering_field is None
+        ):
+            return data
+
+        group_fields = self.get_group_by_fields()
+        group_fields.append(self.child.ordering_field)
+
+        return sorted(data, key=itemgetter(*group_fields))
+
+    def format_data(self, data):
+        assert (
+            hasattr(self.child, "protocol") and self.child.protocol is not None
+        ), "protocol is required serializer property"
+
+        assert (
+            hasattr(self.child, "header_map") is True
+            or self.child.header_map is not None
+        ), "header_map is a required serializer property"
+
+        fmt_rows = []
+        choices_sets = self.get_choices_sets()
+        protocol = self.child.protocol
+        for row in data:
+            fmt_row = self.map_column_names(row)
+            fmt_row["data__sample_event__sample_date"] = self.get_sample_event_date(
+                fmt_row
+            )
+            fmt_row["data__sample_event__sample_time"] = self.get_sample_event_time(
+                fmt_row
+            )
+            fmt_row["data__protocol"] = protocol
+
+            self.remove_extra_data(fmt_row)
+            self.assign_choices(fmt_row, choices_sets)
+            self.split_list_fields("data__observers", fmt_row)
+
+            fmt_rows.append(fmt_row)
+
+        sorted_fmt_rows = self.sort_records(fmt_rows)
+        return sorted_fmt_rows
+
+    def run_validation(self, data=empty):
+        return super().run_validation(data=self.format_data(data))
 
     @classmethod
     def create_key(cls, record, keys):
@@ -65,7 +177,6 @@ class CollectRecordCSVListSerializer(ListSerializer):
 
     def group_records(self, records):
         group_fields = self.get_group_by_fields()
-        data = self.data
         groups = OrderedDict()
         for record in records:
             key = self.create_key(record, group_fields)
@@ -178,21 +289,6 @@ class CollectRecordCSVSerializer(Serializer):
 
         super().__init__(instance=None, data=data, **kwargs)
 
-    def map_column_names(self, data):
-        if self.header_map is None:
-            return data
-
-        mapped_col_data = OrderedDict()
-        for k, v in data.items():
-            display_name = k.strip()
-            if display_name in self.header_map:
-                field_name = self.header_map[display_name]
-            else:
-                field_name = display_name
-            mapped_col_data[field_name] = v
-
-        return mapped_col_data
-
     def get_initial(self):
         if not isinstance(self._original_data, Mapping):
             return OrderedDict()
@@ -209,93 +305,6 @@ class CollectRecordCSVSerializer(Serializer):
     def validate(self, data):
         # Validate common Transect level fields
         return data
-
-    def remove_extra_data(self, data):
-        field_names = set(self.fields.keys())
-        data_keys = set(data.keys())
-        diff_keys = data_keys.difference(field_names)
-
-        for name in diff_keys:
-            del data[name]
-
-    def _lower(self, val):
-        if isinstance(val, str):
-            return val.lower()
-        return val
-
-    def _get_reverse_choices(self, field):
-        field_name = field.field_name
-        if field_name not in self._reverse_choices:
-            self._reverse_choices[field_name] = dict(
-                (self._lower(v), k) for k, v in field.choices.items()
-            )
-        return self._reverse_choices[field_name]
-
-    def _get_field_choices(self, field, data):
-        name = field.field_name
-        choices = None
-        if hasattr(field, "choices"):
-            choices = self._get_reverse_choices(field)
-        elif name in self.project_choices:
-            choices = self.project_choices[name]
-
-        return choices
-
-    def split_list_fields(self, field_name, data, choices=None):
-        fields = self.get_fields()
-        field = fields.get(field_name)
-        if field is None:
-            raise ValueError("{} field doesn't exist".format(field_name))
-
-        val = data.get(field_name, empty)
-        if val == empty:
-            return
-            # return data
-        if isinstance(field, serializers.ListField) is False:
-            raise ValueError("{} is not a ListField".format(field_name))
-        elif val == empty:
-            return
-            # return data
-
-        if choices:
-            data[field_name] = [choices.get(s.strip().lower()) for s in val.split(",")]
-        else:
-            data[field_name] = [s.strip() for s in val.split(",")]
-        # return data
-
-    def assign_choices(self, data):
-        for name, field in self.fields.items():
-            val = field.get_value(data)
-            choices = self._get_field_choices(field, data)
-            if choices is None:
-                continue
-            try:
-                val = self._lower(val)
-                data[name] = choices.get(val)
-            except (ValueError, TypeError):
-                data[name] = None
-
-    def get_sample_event_date(self, data):
-        return "{}-{}-{}".format(
-            data["data__sample_event__sample_date__year"],
-            data["data__sample_event__sample_date__month"],
-            data["data__sample_event__sample_date__day"],
-        )
-
-    def format_data(self, data):
-        data = self.map_column_names(data)
-
-        data["data__sample_event__sample_date"] = self.get_sample_event_date(data)
-
-        self.remove_extra_data(data)
-        self.assign_choices(data)
-
-        self.split_list_fields("data__observers", data)
-        data["data__protocol"] = self.protocol
-        return data
-
-    def run_validation(self, data=empty):
-        return super().run_validation(data=self.format_data(data))
 
     def create_path(self, field_path, node, val):
         path = field_path.pop(0)
@@ -336,6 +345,7 @@ class CollectRecordCSVSerializer(Serializer):
 class BenthicPITCSVSerializer(CollectRecordCSVSerializer):
     protocol = "benthicpit"
     observations_field = "data__obs_benthic_pits"
+    ordering_field = "data__obs_benthic_pits__interval"
     header_map = CollectRecordCSVSerializer.header_map
     header_map.update(
         {
@@ -374,3 +384,12 @@ class BenthicPITCSVSerializer(CollectRecordCSVSerializer):
     data__obs_benthic_pits__growth_form = serializers.ChoiceField(
         choices=growth_form_choices, required=False, allow_null=True, allow_blank=True
     )
+
+    # def sort_observations(self, data):
+    #     f = itemgetter('data__obs_benthic_pits__interval')
+    #     data.sort(key=f)
+
+    # def format_data(self, data):
+    #     data = super().format_data()
+    #     self.sort_observations(data)
+    #     return data
