@@ -8,8 +8,9 @@
 # 7. Error reporting
 # x Mock request
 # 9. Validate all records (interval)
-# x Sorting observations by interval (SORTING MESSES UP ERROR ROW REPORTING)
+# 10. Sorting observations by interval (SORTING MESSES UP ERROR ROW REPORTING)
 # 11. Add asserts to child serializer
+# 12. Use email instead of name for matching project profile
 
 import uuid
 from collections import OrderedDict
@@ -23,7 +24,7 @@ from rest_framework.serializers import ListSerializer, Serializer
 from .. import utils
 from ..decorators import timeit
 from ..exceptions import check_uuid
-from ..models import BenthicAttribute, Management, Site
+from ..models import BenthicAttribute, CollectRecord, Management, Site
 from ..resources.choices import ChoiceViewSet
 from ..resources.collect_record import CollectRecordSerializer
 
@@ -107,6 +108,7 @@ class CollectRecordCSVListSerializer(ListSerializer):
         return choices
 
     def sort_records(self, data):
+        return data
         if (
             hasattr(self.child, "ordering_field") is False
             or self.child.ordering_field is None
@@ -134,12 +136,10 @@ class CollectRecordCSVListSerializer(ListSerializer):
         self._row_index = dict()
         for n, row in enumerate(data):
             fmt_row = self.map_column_names(row)
-            fmt_row["id"] = self.get_sample_event_date(
-                fmt_row
-            )
             pk = str(uuid.uuid4())
             self._row_index[pk] = n + 2
             fmt_row["id"] = pk
+            fmt_row["stage"] = CollectRecord.SAVED_STAGE
             fmt_row["data__sample_event__sample_date"] = self.get_sample_event_date(
                 fmt_row
             )
@@ -185,6 +185,7 @@ class CollectRecordCSVListSerializer(ListSerializer):
             if (
                 field.required is True
                 and name.startswith(self.obs_field_identifier) is False
+                and name.lower() != "id"
             ):
                 group_fields.append(name)
         return group_fields
@@ -207,11 +208,24 @@ class CollectRecordCSVListSerializer(ListSerializer):
         records = super().create(validated_data)
         output = self.group_records(records)
 
-        crs = CollectRecordSerializer(data=output, context=self.context, many=True)
-        if crs.is_valid() is False:
-            return None
-        else:
-            return crs.save()
+        objs = [
+            CollectRecord(
+                id=rec["id"],
+                stage=rec["stage"],
+                project_id=rec["project"],
+                profile_id=rec["profile"],
+                data=rec["data"],
+            )
+            for rec in output
+        ]
+
+        return CollectRecord.objects.bulk_create(objs)
+
+        # crs = CollectRecordSerializer(data=output, context=self.context, many=True)
+        # if crs.is_valid() is False:
+        #     return None
+        # else:
+        #     return crs.save()
 
     @property
     def formatted_errors(self):
@@ -225,7 +239,7 @@ class CollectRecordCSVListSerializer(ListSerializer):
                 fmt_error["$row_number"] = self._row_index[rec["id"]]
                 fmt_errors.append(fmt_error)
 
-        return fmt_errors
+        return sorted(fmt_errors, key=itemgetter("$row_number"))
 
 
 class CollectRecordCSVSerializer(Serializer):
@@ -268,6 +282,7 @@ class CollectRecordCSVSerializer(Serializer):
 
     # FIELDS
     id = serializers.UUIDField(format="hex_verbose")
+    stage = serializers.IntegerField()
     project = serializers.UUIDField(format="hex_verbose")
     profile = serializers.UUIDField(format="hex_verbose")
     data__protocol = serializers.CharField(required=True, allow_blank=False)
