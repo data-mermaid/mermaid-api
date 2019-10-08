@@ -495,11 +495,15 @@ class FishBeltCSVSerializer(CollectRecordCSVSerializer):
     data__fishbelt_transect__width = serializers.ChoiceField(
         choices=belt_transect_widths_choices
     )
-    data__fishbelt_transect__size_bin = serializers.ChoiceField(choices=fish_size_bins_choices)
+    data__fishbelt_transect__size_bin = serializers.ChoiceField(
+        choices=fish_size_bins_choices
+    )
     data__obs_belt_fishes__fish_attribute = serializers.ChoiceField(
         choices=fish_attributes_choices
     )
-    data__obs_belt_fishes__size = serializers.DecimalField(max_digits=5, decimal_places=1)
+    data__obs_belt_fishes__size = serializers.DecimalField(
+        max_digits=5, decimal_places=1
+    )
     data__obs_belt_fishes__count = serializers.IntegerField(min_value=0)
 
     def validate(self, data):
