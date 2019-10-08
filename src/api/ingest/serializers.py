@@ -111,6 +111,16 @@ class CollectRecordCSVListSerializer(ListSerializer):
             hasattr(self.child, "header_map") is True
             or self.child.header_map is not None
         ), "header_map is a required serializer property"
+        
+        assert (
+            hasattr(self.child, "error_row_offset") is True
+            or isinstance(self.child.error_row_offset, int) is False
+        ), "error_row_offset is must be an int"
+
+        if hasattr(self.child, "error_row_offset"):
+            error_row_offset = self.child.error_row_offset
+        else:
+            error_row_offset = 1
 
         fmt_rows = []
         choices_sets = self.get_choices_sets()
@@ -119,7 +129,7 @@ class CollectRecordCSVListSerializer(ListSerializer):
         for n, row in enumerate(data):
             fmt_row = self.map_column_names(row)
             pk = str(uuid.uuid4())
-            self._row_index[pk] = n + 2
+            self._row_index[pk] = n + 1 + error_row_offset
             fmt_row["id"] = pk
             fmt_row["stage"] = CollectRecord.SAVED_STAGE
             fmt_row["data__sample_event__sample_date"] = self.get_sample_event_date(
@@ -220,6 +230,7 @@ class CollectRecordCSVListSerializer(ListSerializer):
 class CollectRecordCSVSerializer(Serializer):
     protocol = None
     observations_field = None
+    error_row_offset = 1
     header_map = {
         "Site *": "data__sample_event__site",
         "Management *": "data__sample_event__management",
@@ -425,3 +436,5 @@ class BenthicPITCSVSerializer(CollectRecordCSVSerializer):
     def validate(self, data):
         data = super().validate(data)
         return data
+
+# class Fish
