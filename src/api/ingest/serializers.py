@@ -8,7 +8,7 @@ from rest_framework.fields import empty
 from rest_framework.serializers import ListSerializer, Serializer
 
 from .. import utils
-from ..models import BenthicAttribute, CollectRecord
+from ..models import BenthicAttribute, CollectRecord, FishAttributeView
 from ..resources.choices import ChoiceViewSet
 
 
@@ -52,6 +52,17 @@ class CollectRecordCSVListSerializer(ListSerializer):
                 row[name] = None
 
     def get_sample_event_date(self, row):
+        missing_fields = []
+        if "data__sample_event__sample_date__year" not in row:
+            missing_fields.append("data__sample_event__sample_date__year")
+        if "data__sample_event__sample_date__month" not in row:
+            missing_fields.append("data__sample_event__sample_date__month")
+        if "data__sample_event__sample_date__day" not in row:
+            missing_fields.append("data__sample_event__sample_date__day")
+
+        if missing_fields:
+            raise ValueError("{} missing".format(", ".join(missing_fields)))
+
         return "{}-{}-{}".format(
             row["data__sample_event__sample_date__year"],
             row["data__sample_event__sample_date__month"],
@@ -111,7 +122,7 @@ class CollectRecordCSVListSerializer(ListSerializer):
             hasattr(self.child, "header_map") is True
             or self.child.header_map is not None
         ), "header_map is a required serializer property"
-        
+
         assert (
             hasattr(self.child, "error_row_offset") is True
             or isinstance(self.child.error_row_offset, int) is False
@@ -245,10 +256,8 @@ class CollectRecordCSVSerializer(Serializer):
         "Relative depth": "data__sample_event__relative_depth",
         "Tide": "data__sample_event__tide",
         "Notes": "data__sample_event__notes",
-        "Observer name *": "data__observers",
+        "Observer emails *": "data__observers",
         "Observation interval *": "data__obs_benthic_pits__interval",
-        "Benthic attribute *": "data__obs_benthic_pits__attribute",
-        "Growth form *": "data__obs_benthic_pits__growth_form",
     }
 
     # CHOICES
@@ -402,6 +411,8 @@ class BenthicPITCSVSerializer(CollectRecordCSVSerializer):
             "Transect number *": "data__benthic_transect__number",
             "Transect label": "data__benthic_transect__label",
             "Reef Slope": "data__benthic_transect__reef_slope",
+            "Benthic attribute *": "data__obs_benthic_pits__attribute",
+            "Growth form *": "data__obs_benthic_pits__growth_form",
         }
     )
     _choices = ChoiceViewSet().get_choices()
@@ -437,4 +448,60 @@ class BenthicPITCSVSerializer(CollectRecordCSVSerializer):
         data = super().validate(data)
         return data
 
-# class Fish
+
+class FishBeltCSVSerializer(CollectRecordCSVSerializer):
+    protocol = "fishbelt"
+    observations_field = "data__obs_belt_fishes"
+    header_map = CollectRecordCSVSerializer.header_map
+    header_map.update(
+        {
+            "Transect length surveyed *": "data__fishbelt_transect__len_surveyed",
+            "Transect number *": "data__fishbelt_transect__number",
+            "Transect label": "data__fishbelt_transect__label",
+            "Width *": "data__fishbelt_transect__width",
+            "Fish size bin *": "data__fishbelt_transect__size_bin",
+            "Reef Slope": "data__fishbelt_transect__reef_slope",
+            "Fish name *": "data__obs_belt_fishes__fish_attribute",
+            "Size *": "data__obs_belt_fishes__size",
+            "Count *": "data__obs_belt_fishes__count",
+        }
+    )
+
+    _choices = ChoiceViewSet().get_choices()
+    reef_slopes_choices = [
+        (str(c["id"]), c["val"]) for c in _choices["reefslopes"]["data"]
+    ]
+
+    belt_transect_widths_choices = [
+        (str(c["id"]), str(c["val"])) for c in _choices["belttransectwidths"]["data"]
+    ]
+
+    fish_size_bins_choices = [
+        (str(c["id"]), str(c["val"])) for c in _choices["fishsizebins"]["data"]
+    ]
+
+    fish_attributes_choices = [
+        (str(ba.id), ba.name) for ba in FishAttributeView.objects.all().order_by("name")
+    ]
+
+    data__fishbelt_transect__len_surveyed = serializers.IntegerField(min_value=0)
+    data__fishbelt_transect__number = serializers.IntegerField(min_value=0)
+    data__fishbelt_transect__label = serializers.CharField(
+        allow_blank=True, required=False
+    )
+    data__fishbelt_transect__reef_slope = serializers.ChoiceField(
+        choices=reef_slopes_choices, required=False, allow_null=True, allow_blank=True
+    )
+    data__fishbelt_transect__width = serializers.ChoiceField(
+        choices=belt_transect_widths_choices
+    )
+    data__fishbelt_transect__size_bin = serializers.ChoiceField(choices=fish_size_bins_choices)
+    data__obs_belt_fishes__fish_attribute = serializers.ChoiceField(
+        choices=fish_attributes_choices
+    )
+    data__obs_belt_fishes__size = serializers.DecimalField(max_digits=5, decimal_places=1)
+    data__obs_belt_fishes__count = serializers.IntegerField(min_value=0)
+
+    def validate(self, data):
+        data = super().validate(data)
+        return data

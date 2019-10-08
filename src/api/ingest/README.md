@@ -5,6 +5,7 @@
 - `many`: is always True and if a dictionary is passed to `data`, it will be wrapped in a list.
 - `instance`: is not implemented.
 - `project_choices`: pre-fetched choices that require a project id, example: ProjectProfile choices.
+- `error_row_offset`: An offset to add to $row_number value in formatted validation errors.  Default: 1
 
 
 ### Other
