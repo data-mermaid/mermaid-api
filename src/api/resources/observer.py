@@ -1,12 +1,13 @@
 from rest_framework import serializers
+from django.db.models import Q
 
 from .base import (
     BaseAPIFilterSet,
     BaseProjectApiViewSet,
     BaseAPISerializer,
     ExtendedSerializer,
-    ModelNameReadOnlyField,
 )
+from ..exceptions import check_uuid
 from ..models import Observer
 
 
@@ -38,3 +39,17 @@ class ObserverViewSet(BaseProjectApiViewSet):
     queryset = Observer.objects.all()
     filter_class = ObserverFilterSet
     search_fields = ['profile__first_name', 'profile__last_name']
+
+    def perform_update(self, serializer):
+        serializer.save()
+
+    def limit_to_project(self, request, *args, **kwargs):
+        prj_pk = check_uuid(kwargs["project_pk"])
+        self.queryset = self.get_queryset().filter(
+            Q(transectmethod__benthiclit__transect__sample_event__site__project=prj_pk)
+            | Q(transectmethod__benthicpit__transect__sample_event__site__project=prj_pk)
+            | Q(transectmethod__habitatcomplexity__transect__sample_event__site__project=prj_pk)
+            | Q(transectmethod__beltfish__transect__sample_event__site__project=prj_pk)
+            | Q(transectmethod__bleachingquadratcollection__quadrat__sample_event__site__project=prj_pk)
+        )
+        return self.queryset

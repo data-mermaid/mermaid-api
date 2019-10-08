@@ -175,7 +175,7 @@ class ObsBeltFishReportSerializer(SampleEventReportSerializer, metaclass=SampleE
         (idx + 5, ReportMethodField("Fish family", to_fish_family_name)),
         (idx + 6, ReportMethodField("Fish genus", to_fish_genus_name)),
         (idx + 7, ReportMethodField("Fish taxon", to_fish_attribute_name)),
-        (idx + 8, ReportField("size_bin__val", "Size bin")),
+        (idx + 8, ReportField("beltfish__transect__size_bin__val", "Size bin")),
         (idx + 9, ReportField("size", "Size", to_float)),
         (idx + 10, ReportField("count", "Count")),
         (idx + 11, ReportMethodField("a", to_constant_a)),

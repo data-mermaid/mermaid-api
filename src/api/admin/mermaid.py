@@ -203,7 +203,7 @@ class ProjectAdmin(BaseAdmin):
 @admin.register(ProjectProfile)
 class ProjectProfileAdmin(BaseAdmin):
     list_display = ('project', 'profile', 'role')
-    search_fields = ['project__name', 'profile__first_name', 'profile__last_name', 'profile__email', ]
+    search_fields = ['id', 'project__name', 'profile__first_name', 'profile__last_name', 'profile__email', ]
     list_filter = ('role',)
 
 
@@ -292,9 +292,12 @@ class VisibilityAdmin(BaseAdmin):
 
 @admin.register(Management)
 class ManagementAdmin(BaseAdmin):
-    list_display = ('name', 'name_secondary', 'project', 'est_year')
+    list_display = ('name', 'name_secondary', 'project', 'est_year',
+                    'open_access', 'periodic_closure', 'size_limits',
+                    'gear_restriction', 'species_restriction', 'no_take')
     readonly_fields = ('area',)
     search_fields = ['name', 'name_secondary', 'project__name', 'est_year']
+    # list_filter = ('project',)
 
 
 @admin.register(ManagementCompliance)
@@ -709,7 +712,7 @@ class BeltFishAdmin(BaseAdmin):
 @admin.register(Observer)
 class ObserverAdmin(BaseAdmin):
     list_display = ('profile', 'transectmethod')
-    search_fields = ['profile__first_name', 'profile__last_name', 'profile__email', ]
+    search_fields = ['id', 'profile__first_name', 'profile__last_name', 'profile__email', ]
 
 
 @admin.register(CollectRecord)
