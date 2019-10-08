@@ -1,20 +1,6 @@
-# TODO:
-# x parse observations
-# x parse transect
-# x group observations by sample event
-# x Serialize observers
-# 5. dry up code for other observations
-# x write records to db
-# 7. Error reporting
-# x Mock request
-# 9. Validate all records (interval)
-# 10. Sorting observations by interval (SORTING MESSES UP ERROR ROW REPORTING)
-# 11. Add asserts to child serializer
-# 12. Use email instead of name for matching project profile
-
 import uuid
 from collections import OrderedDict
-from collections.abc import Iterable, Mapping
+from collections.abc import Mapping, Sequence
 from operator import itemgetter
 
 from rest_framework import serializers
@@ -22,11 +8,8 @@ from rest_framework.fields import empty
 from rest_framework.serializers import ListSerializer, Serializer
 
 from .. import utils
-from ..decorators import timeit
-from ..exceptions import check_uuid
-from ..models import BenthicAttribute, CollectRecord, Management, Site
+from ..models import BenthicAttribute, CollectRecord
 from ..resources.choices import ChoiceViewSet
-from ..resources.collect_record import CollectRecordSerializer
 
 
 def build_choices(key, choices):
@@ -108,7 +91,6 @@ class CollectRecordCSVListSerializer(ListSerializer):
         return choices
 
     def sort_records(self, data):
-        return data
         if (
             hasattr(self.child, "ordering_field") is False
             or self.child.ordering_field is None
@@ -218,14 +200,7 @@ class CollectRecordCSVListSerializer(ListSerializer):
             )
             for rec in output
         ]
-
         return CollectRecord.objects.bulk_create(objs)
-
-        # crs = CollectRecordSerializer(data=output, context=self.context, many=True)
-        # if crs.is_valid() is False:
-        #     return None
-        # else:
-        #     return crs.save()
 
     @property
     def formatted_errors(self):
@@ -323,7 +298,7 @@ class CollectRecordCSVSerializer(Serializer):
             raise NotImplementedError("instance argument not implemented")
         if isinstance(data, Mapping):
             self.original_data = data.copy()
-        elif isinstance(data, Iterable) and isinstance(data, str) is False:
+        elif isinstance(data, Sequence) and isinstance(data, str) is False:
             self.original_data = [d for d in data]
         else:
             self.original_data = None
@@ -332,6 +307,12 @@ class CollectRecordCSVSerializer(Serializer):
             self.project_choices = project_choices
 
         super().__init__(instance=None, data=data, **kwargs)
+
+    @classmethod
+    def many_init(cls, *args, **kwargs):
+        if "data" in kwargs and isinstance(kwargs["data"], (dict, OrderedDict)):
+            kwargs["data"] = [kwargs["data"]]
+        return super(CollectRecordCSVSerializer, cls).many_init(*args, **kwargs)
 
     def get_initial(self):
         if not isinstance(self._original_data, Mapping):
@@ -373,7 +354,6 @@ class CollectRecordCSVSerializer(Serializer):
             field_path = field.field_name.split("__")
             val = validated_data.get(name)
             output = self.create_path(field_path, output, val)
-        # output["id"] = str(uuid.uuid4())
 
         # Need to serialize observers after validation to avoid
         # unique id errors
