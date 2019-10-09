@@ -26,7 +26,7 @@ BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 LOGIN_REDIRECT_URL = 'api-root'
 
 # SECURITY WARNING: keep the secret key used in production secret!
-SECRET_KEY = '4yhv_l#x)d7%_vkt%hefm-n@k+u9de^msrnt^_dhuix3g7d)cg'
+SECRET_KEY = os.environ.get('SECRET_KEY')
 
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = ENVIRONMENT not in ('prod',)
