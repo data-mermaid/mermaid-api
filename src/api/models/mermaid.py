@@ -720,6 +720,7 @@ class ObsBenthicLIT(BaseModel, JSONMixin):
     class Meta:
         db_table = 'obs_benthiclit'
         verbose_name = _(u'benthic LIT observation')
+        ordering = ["created_on"]
 
     def __str__(self):
         return _(u'%s %s') % (self.attribute.__str__(), self.length)
@@ -756,6 +757,7 @@ class ObsBenthicPIT(BaseModel, JSONMixin):
         db_table = 'obs_benthicpit'
         unique_together = ('benthicpit', 'interval')
         verbose_name = _(u'benthic PIT observation')
+        ordering = ["interval"]
 
     def __str__(self):
         return _(u'%s') % self.interval
@@ -801,6 +803,7 @@ class ObsHabitatComplexity(BaseModel, JSONMixin):
         db_table = 'obs_habitatcomplexity'
         unique_together = ('habitatcomplexity', 'interval')
         verbose_name = _(u'habitat complexity transect observation')
+        ordering = ["interval"]
 
     def __str__(self):
         return _(u'%s') % self.interval
@@ -838,6 +841,7 @@ class ObsColoniesBleached(BaseModel, JSONMixin):
     class Meta:
         db_table = 'obs_colonies_bleached'
         verbose_name = _(u'bleaching quadrat collection colonies bleached observation')
+        ordering = ["created_on"]
 
     def __str__(self):
         gf = ''
@@ -860,6 +864,7 @@ class ObsQuadratBenthicPercent(BaseModel, JSONMixin):
         db_table = 'obs_quadrat_benthic_percent'
         verbose_name = _(u'bleaching quadrat collection percent benthic cover observation')
         unique_together = ('bleachingquadratcollection', 'quadrat_number')
+        ordering = ["created_on"]
 
     def __str__(self):
         return _(u'%s') % self.quadrat_number
@@ -1182,6 +1187,7 @@ class ObsBeltFish(BaseModel, JSONMixin):
     class Meta:
         db_table = 'obs_transectbeltfish'
         verbose_name = _(u'fish belt transect observation')
+        ordering = ["created_on"]
 
     def __str__(self):
         return _(u'%s %s x %scm') % (self.fish_attribute.__str__(), self.count, self.size)
