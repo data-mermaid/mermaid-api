@@ -1,4 +1,4 @@
-FROM honeycrisp/docker:django2
+FROM honeycrisp/docker:django-geo-api
 
 ADD ./requirements.txt requirements.txt
 RUN pip install --upgrade -r requirements.txt
