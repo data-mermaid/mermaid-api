@@ -326,7 +326,7 @@ class CollectRecordCSVSerializer(Serializer):
             self.project_choices = project_choices
 
         super().__init__(instance=None, data=data, **kwargs)
-
+    
     @classmethod
     def many_init(cls, *args, **kwargs):
         if "data" in kwargs and isinstance(kwargs["data"], (dict, OrderedDict)):
@@ -396,4 +396,3 @@ class CollectRecordCSVSerializer(Serializer):
     def formatted_errors(self):
         errors = self.errors
         return self.format_error(errors)
-
