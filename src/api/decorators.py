@@ -14,3 +14,20 @@ def timeit(method):
         return result
 
     return timed
+
+
+def needs_instance(message):
+    def _needs_instance(func):
+        @functools.wraps(func)
+        def wrapped(*args, **kwargs):
+
+            # Assume it's a method.
+            self = args[0]
+            if self.instance is None:
+                return self.error(self.identifier, _(message.format(self.name)))
+
+            return func(*args, **kwargs)
+
+        return wrapped
+
+    return _needs_instance
