@@ -305,7 +305,6 @@ class CollectRecordCSVSerializer(Serializer):
     )
     data__sample_event__notes = serializers.CharField(required=False, allow_blank=True)
 
-    # data__observers = ProjectProfileSerializer(many=True)
     data__observers = serializers.ListField(
         child=serializers.CharField(), allow_empty=False
     )
@@ -349,7 +348,7 @@ class CollectRecordCSVSerializer(Serializer):
 
     def validate(self, data):
         # Validate common Transect level fields
-        return data
+        return super().validate(data)
 
     def create_path(self, field_path, node, val):
         path = field_path.pop(0)
