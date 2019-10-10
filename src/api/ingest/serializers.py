@@ -188,9 +188,11 @@ class CollectRecordCSVListSerializer(ListSerializer):
             if (
                 field.required is True
                 and name.startswith(self.obs_field_identifier) is False
-                and name.lower() != "id"
+                and name.lower() not in self.child.excluded_group_fields
             ):
                 group_fields.append(name)
+        if self.child.additional_group_fields:
+            group_fields.extend(self.child.additional_group_fields)
         return group_fields
 
     def group_records(self, records):
@@ -259,6 +261,13 @@ class CollectRecordCSVSerializer(Serializer):
         "Observer emails *": "data__observers",
         "Observation interval *": "data__obs_benthic_pits__interval",
     }
+
+    # By Default:
+    # - required fields are used
+    # - "id" is excluded
+    # - "observations_field" fields are ignored
+    additional_group_fields = []
+    excluded_group_fields = ["id"]
 
     # CHOICES
     _choices = ChoiceViewSet().get_choices()
