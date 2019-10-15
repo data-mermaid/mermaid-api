@@ -88,7 +88,7 @@ class SampleUnitMethodSerializer(BaseAPISerializer):
     def get_site(self, o):
         sample_unit = o.sample_unit
         return sample_unit.sample_event.site.id
-    
+
     def get_management(self, o):
         sample_unit = o.sample_unit
         return sample_unit.sample_event.management.id
@@ -147,6 +147,7 @@ class SampleUnitMethodView(BaseProjectApiViewSet):
     http_method_names = ["get", "head"]
 
     ordering_fields = (
+        "management_name",
         "site_name",
         "protocol_name",
         "sample_unit_number",
