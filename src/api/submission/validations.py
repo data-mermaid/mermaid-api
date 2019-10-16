@@ -1,9 +1,7 @@
-import functools
 import itertools
 import inspect
 import json
 import math
-import datetime
 
 from . import utils
 
@@ -23,6 +21,7 @@ from api.models import (
 )
 from api.utils import calc_biomass_density
 from api.utils import get_related_transect_methods
+from api.decorators import needs_instance
 from django.contrib.gis.geos import Polygon
 from django.contrib.gis.measure import Distance
 from django.contrib.postgres.search import TrigramSimilarity
@@ -40,23 +39,6 @@ STATUSES = (ERROR, IGNORE, OK, WARN)
 LikeMatchWarning = "{}: Similar records detected"
 RecordDoesntExist = "{}: Record doesn't exist"
 MissingRecordSimilarity = "{} record not available for similarity validation"
-
-
-def needs_instance(message):
-    def _needs_instance(func):
-        @functools.wraps(func)
-        def wrapped(*args, **kwargs):
-
-            # Assume it's a method.
-            self = args[0]
-            if self.instance is None:
-                return self.error(self.identifier, _(message.format(self.name)))
-
-            return func(*args, **kwargs)
-
-        return wrapped
-
-    return _needs_instance
 
 
 class ObservationsMixin(object):
@@ -565,7 +547,7 @@ class ObsBenthicLITValidation(DataValidation, BenthicAttributeMixin):
         # Convert to cm
         transect_length = (benthic_transect.get("len_surveyed") or 0.0) * 100
         obs_len = sum([ob.get("length") or 0.0 for ob in obs])
-        if obs_len > transect_length * 1.5 or obs_len < transect_length * .5:
+        if obs_len > transect_length * 1.5 or obs_len < transect_length * 0.5:
             return self.warning(self.identifier, self.TOTAL_LENGTH_WARN)
 
         return self.ok(self.identifier)
@@ -678,12 +660,8 @@ class ObsFishBeltValidation(DataValidation, FishAttributeMixin):
         self.MAX_OBS_COUNT_MSG = str(
             _(self.MAX_OBS_COUNT_TMPL.format(self.MAX_OBS_COUNT_WARN))
         )
-        self.DENSITY_GT_MSG = str(
-            _(self.DENSITY_GT_TMPL.format(self.OBS_GT_DENSITY))
-        )
-        self.DENSITY_LT_MSG = str(
-            _(self.DENSITY_LT_TMPL.format(self.OBS_LT_DENSITY))
-        )
+        self.DENSITY_GT_MSG = str(_(self.DENSITY_GT_TMPL.format(self.OBS_GT_DENSITY)))
+        self.DENSITY_LT_MSG = str(_(self.DENSITY_LT_TMPL.format(self.OBS_LT_DENSITY)))
         self.FISH_COUNT_MIN_MSG = str(
             _(self.FISH_COUNT_MIN_TMPL.format(self.FISH_COUNT_MIN))
         )
