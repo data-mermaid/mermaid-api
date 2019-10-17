@@ -11,9 +11,9 @@ __all__ = ["FishBeltCSVSerializer"]
 class FishBeltCSVSerializer(CollectRecordCSVSerializer):
     protocol = "fishbelt"
     observations_field = "data__obs_belt_fishes"
-    header_map = CollectRecordCSVSerializer.header_map
-    additional_group_fields = CollectRecordCSVSerializer.additional_group_fields
+    additional_group_fields = CollectRecordCSVSerializer.additional_group_fields.copy()
     additional_group_fields.append("data__fishbelt_transect__label")
+    header_map = CollectRecordCSVSerializer.header_map.copy()
     header_map.update(
         {
             "Transect length surveyed *": "data__fishbelt_transect__len_surveyed",
