@@ -12,6 +12,12 @@ from ..models import BenthicAttribute, CollectRecord, FishAttributeView
 from ..resources.choices import ChoiceViewSet
 
 
+__all__ = [
+    "CollectRecordCSVListSerializer",
+    "CollectRecordCSVSerializer",
+    "build_choices",
+]
+
 def build_choices(key, choices):
     return [(str(c["id"]), str(c["name"])) for c in choices[key]["data"]]
 

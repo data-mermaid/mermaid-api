@@ -5,6 +5,9 @@ from ..resources.choices import ChoiceViewSet
 from .serializers import CollectRecordCSVSerializer, build_choices
 
 
+__all__ = ["FishBeltCSVSerializer"]
+
+
 class FishBeltCSVSerializer(CollectRecordCSVSerializer):
     protocol = "fishbelt"
     observations_field = "data__obs_belt_fishes"

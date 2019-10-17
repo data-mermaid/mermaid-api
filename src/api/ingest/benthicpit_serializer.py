@@ -5,6 +5,9 @@ from ..resources.choices import ChoiceViewSet
 from .serializers import CollectRecordCSVSerializer, build_choices
 
 
+__all__ = ["BenthicPITCSVSerializer"]
+
+
 class BenthicPITCSVSerializer(CollectRecordCSVSerializer):
     protocol = "benthicpit"
     observations_field = "data__obs_benthic_pits"
