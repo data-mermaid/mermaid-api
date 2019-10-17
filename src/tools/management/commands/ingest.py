@@ -48,7 +48,11 @@ class Command(BaseCommand):
         if _ingest is None:
             raise NotImplementedError()
 
-        records, errors = _ingest(datafile, project, profile, protocol, dry_run)
+        try:
+            records, errors = _ingest(datafile, project, profile, protocol, dry_run)
+        except ValueError as err:
+            self.stderr.write(str(err))
+            sys.exit(1)
 
         if errors:
             if verbosity > 0:
