@@ -4,7 +4,7 @@ import uuid
 
 from django.core.management.base import BaseCommand, CommandError
 from django.template.defaultfilters import pluralize
-from django.db import connection
+from django.db import connection, transaction
 
 
 from api.models import CollectRecord
@@ -81,12 +81,15 @@ class Command(BaseCommand):
         if _ingest is None:
             raise NotImplementedError()
 
-        if clear_existing:
-            self.clear_collect_records(project, protocol)
-
         try:
-            records, errors = _ingest(datafile, project, profile, protocol, dry_run)
-        except ValueError as err:
+            with transaction.atomic():
+                sid = transaction.savepoint()
+                if clear_existing:
+                    self.clear_collect_records(project, protocol)
+                records, errors = _ingest(datafile, project, profile, protocol, dry_run)
+                transaction.savepoint_commit(sid)
+        except Exception as err:
+            transaction.savepoint_rollback(sid)
             self.stderr.write(str(err))
             sys.exit(1)
 
