@@ -4,7 +4,10 @@ import uuid
 
 from django.core.management.base import BaseCommand, CommandError
 from django.template.defaultfilters import pluralize
+from django.db import connection
 
+
+from api.models import CollectRecord
 from api.ingest.utils import ingest_benthicpit, ingest_fishbelt
 from api.models import (
     BENTHICLIT_PROTOCOL,
@@ -24,7 +27,7 @@ protocol_ingests = {
 
 
 class Command(BaseCommand):
-    help = "Ingest collect records from CSV file."
+    help = "Ingest collect records from a CSV file."
 
     def add_arguments(self, parser):
         parser.add_argument("datafile", nargs=1, type=argparse.FileType("r"))
@@ -36,8 +39,38 @@ class Command(BaseCommand):
             action="store_true",
             help="Runs ingest in a database transaction, then does a rollback.",
         )
+        parser.add_argument(
+            "--clear-existing",
+            action="store_true",
+            help="Remove existing collect records for protocol before ingesting file",
+        )
 
-    def handle(self, datafile, project, profile, protocol, dry_run, *args, **options):
+    def clear_collect_records(self, project, protocol):
+        sql = """
+            DELETE FROM {table_name}
+            WHERE 
+                project_id='{project}' AND 
+                data->>'protocol' = '{protocol}';
+            """.format(
+            table_name=CollectRecord.objects.model._meta.db_table,
+            project=project,
+            protocol=protocol,
+        )
+        with connection.cursor() as cursor:
+            cursor.execute(sql)
+            return cursor.rowcount
+
+    def handle(
+        self,
+        datafile,
+        project,
+        profile,
+        protocol,
+        dry_run,
+        clear_existing,
+        *args,
+        **options
+    ):
         datafile = datafile[0]
         project = project[0]
         profile = profile[0]
@@ -47,6 +80,9 @@ class Command(BaseCommand):
 
         if _ingest is None:
             raise NotImplementedError()
+
+        if clear_existing:
+            self.clear_collect_records(project, protocol)
 
         try:
             records, errors = _ingest(datafile, project, profile, protocol, dry_run)
