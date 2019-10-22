@@ -65,7 +65,7 @@ def _ingest(serializer, datafile, project_id, profile_id, request=None, dry_run=
     errors = s.formatted_errors
 
     if is_valid is False:
-        return None, [json.dumps(e) for e in errors]
+        return None, errors
 
     with transaction.atomic():
         sid = transaction.savepoint()

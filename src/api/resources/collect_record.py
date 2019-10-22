@@ -10,6 +10,7 @@ from rest_framework.decorators import action
 from rest_framework.exceptions import NotFound, ParseError, ValidationError
 from rest_framework.response import Response
 
+from ..ingest.utils import ingest_benthicpit, ingest_fishbelt
 from ..models import CollectRecord
 from ..permissions import ProjectDataPermission
 from ..submission import utils
@@ -228,3 +229,26 @@ class CollectRecordViewSet(BaseProjectApiViewSet):
             missing_ids = [row[0] for row in cursor.fetchall()]
 
         return Response(dict(missing_ids=missing_ids))
+
+    @action(detail=False, methods=["POST"], permission_classes=[ProjectDataPermission])
+    def ingest(self, request, project_pk, *args, **kwargs):
+
+        # TODO: PERMISSIONS
+        # TODO: dryrun query parameter
+        
+        protocol = request.data.get("protocol")
+        uploaded_file = request.FILES.get("file")
+        profile = request.user.profile
+        # print("uploaded_file: {}".format(type(uploaded_file)))
+        # print("protocol: {}".format(protocol))
+        # print("project_pk: {}".format(project_pk))
+        # print(request.user.profile)
+
+        decoded_file = uploaded_file.read().decode("utf-8").splitlines()
+        records, errors = ingest_fishbelt(
+            decoded_file, project_pk, profile.id, protocol, False
+        )
+
+        if errors:
+            return Response(errors, status=400)
+        return Response(CollectRecordSerializer(records, many=True).data)
