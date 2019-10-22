@@ -1,4 +1,5 @@
 import argparse
+import json
 import sys
 import uuid
 
@@ -96,7 +97,7 @@ class Command(BaseCommand):
         if errors:
             if verbosity > 0:
                 for err in errors:
-                    self.stdout.write(err)
+                    self.stdout.write(json.dumps(err))
 
             if verbosity > 1:
                 num_errors = len(errors)
