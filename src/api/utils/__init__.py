@@ -117,3 +117,8 @@ def set_value(dic, keys, value, delimiter="__"):
     for key in keys[:-1]:
         dic = dic.setdefault(key, {})
     dic[keys[-1]] = value
+
+
+def truthy(val):
+    return val in ("t", "T", "true", "True", True, 1)
+
