@@ -12,7 +12,7 @@ from rest_framework.response import Response
 
 from ..ingest.utils import ingest_benthicpit, ingest_fishbelt
 from ..models import CollectRecord
-from ..permissions import ProjectDataPermission
+from ..permissions import ProjectDataAdminPermission, ProjectDataPermission
 from ..submission import utils
 from ..submission.protocol_validations import (
     BenthicLITProtocolValidation,
@@ -37,6 +37,7 @@ from ..submission.writer import (
     FishbeltProtocolWriter,
     HabitatComplexityProtocolWriter,
 )
+from ..utils import truthy
 from .base import BaseAPIFilterSet, BaseAPISerializer, BaseProjectApiViewSet
 
 logger = logging.getLogger(__name__)
@@ -230,23 +231,33 @@ class CollectRecordViewSet(BaseProjectApiViewSet):
 
         return Response(dict(missing_ids=missing_ids))
 
-    @action(detail=False, methods=["POST"], permission_classes=[ProjectDataPermission])
+    @action(
+        detail=False, methods=["POST"], permission_classes=[ProjectDataAdminPermission]
+    )
     def ingest(self, request, project_pk, *args, **kwargs):
 
         # TODO: PERMISSIONS
-        # TODO: dryrun query parameter
-        
+        supported_content_types = (
+            "application/csv",
+            "application/x-csv",
+            "text/csv",
+            "text/comma-separated-values",
+            "text/x-comma-separated-values",
+            "text/tab-separated-values",
+        )
+
         protocol = request.data.get("protocol")
         uploaded_file = request.FILES.get("file")
         profile = request.user.profile
-        # print("uploaded_file: {}".format(type(uploaded_file)))
-        # print("protocol: {}".format(protocol))
-        # print("project_pk: {}".format(project_pk))
-        # print(request.user.profile)
+        content_type = uploaded_file.content_type
+        dryrun = truthy(request.data.get("dryrun"))
+
+        if content_type not in supported_content_types:
+            return Response("File type not supported", status=400)
 
         decoded_file = uploaded_file.read().decode("utf-8").splitlines()
         records, errors = ingest_fishbelt(
-            decoded_file, project_pk, profile.id, protocol, False
+            decoded_file, project_pk, profile.id, protocol, dryrun
         )
 
         if errors:
