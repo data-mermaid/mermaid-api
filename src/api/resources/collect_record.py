@@ -247,9 +247,15 @@ class CollectRecordViewSet(BaseProjectApiViewSet):
         protocol = request.data.get("protocol")
         uploaded_file = request.FILES.get("file")
         profile = request.user.profile
-        content_type = uploaded_file.content_type
         dryrun = truthy(request.data.get("dryrun"))
 
+        if protocol is None:
+            return Response("Missing protocol", status=400)
+
+        if uploaded_file is None:
+            return Response("Missing file", status=400)
+
+        content_type = uploaded_file.content_type
         if content_type not in supported_content_types:
             return Response("File type not supported", status=400)
 
