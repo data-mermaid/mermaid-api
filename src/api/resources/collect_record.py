@@ -235,8 +235,6 @@ class CollectRecordViewSet(BaseProjectApiViewSet):
         detail=False, methods=["POST"], permission_classes=[ProjectDataAdminPermission]
     )
     def ingest(self, request, project_pk, *args, **kwargs):
-
-        # TODO: PERMISSIONS
         supported_content_types = (
             "application/csv",
             "application/x-csv",
