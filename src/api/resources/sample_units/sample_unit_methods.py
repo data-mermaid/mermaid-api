@@ -2,7 +2,8 @@ from collections import defaultdict
 
 import re
 import django_filters
-from django.db.models import Case, CharField, Q, Value, When
+from django.db.models import Case, CharField, Q, Value, When, CharField
+from django.db.models.functions import Concat, Cast
 from django_filters import rest_framework as filters
 from rest_framework import serializers
 from rest_framework import exceptions
@@ -74,6 +75,7 @@ class SampleUnitMethodSerializer(BaseAPISerializer):
     sample_date = serializers.SerializerMethodField()
     sample_unit_number = serializers.SerializerMethodField()
     size = serializers.SerializerMethodField()
+    size_display = serializers.ReadOnlyField()
     observers = serializers.SerializerMethodField()
 
     def get_protocol(self, o):
@@ -153,6 +155,7 @@ class SampleUnitMethodView(BaseProjectApiViewSet):
         "sample_unit_number",
         "depth",
         "sample_date",
+        "size_display",
     )
 
     def get_queryset(self):
@@ -284,6 +287,34 @@ class SampleUnitMethodView(BaseProjectApiViewSet):
             ),
         )
 
+        size_condition = Case(
+            When(
+                benthiclit__id__isnull=False,
+                then=Concat(Cast("benthiclit__transect__len_surveyed", CharField()), Value("m"))
+            ),
+            When(
+                benthicpit__id__isnull=False,
+                then=Concat(Cast("benthicpit__transect__len_surveyed", CharField()), Value("m"))
+            ),
+            When(
+                habitatcomplexity__id__isnull=False,
+                then=Concat(Cast("habitatcomplexity__transect__len_surveyed", CharField()), Value("m"))
+            ),
+            When(
+                beltfish__id__isnull=False,
+                then=Concat(
+                    Cast("beltfish__transect__len_surveyed", CharField()),
+                    Value("m x "),
+                    Cast("beltfish__transect__width__val", CharField()),
+                    Value("m")
+                )
+            ),
+            When(
+                bleachingquadratcollection__id__isnull=False,
+                then=Concat(Cast("bleachingquadratcollection__quadrat__quadrat_size", CharField()), Value("m"))
+            ),
+        )
+
         qs = qs.annotate(
             protocol_name=protocol_condition,
             site_name=site_name_condition,
@@ -291,6 +322,7 @@ class SampleUnitMethodView(BaseProjectApiViewSet):
             sample_unit_number=sample_unit_number_condition,
             depth=depth_condition,
             sample_date=sample_date_condition,
+            size_display=size_condition,
         )
 
         return qs
