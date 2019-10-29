@@ -3,6 +3,7 @@ from collections import defaultdict
 import re
 import django_filters
 from django.db.models import Case, CharField, Q, Value, When
+from django.db.models.functions import Concat, Cast
 from django_filters import rest_framework as filters
 from rest_framework import serializers
 from rest_framework import exceptions
@@ -31,6 +32,7 @@ class SearchNonFieldFilter(django_filters.Filter):
     SEARCH_FIELDS = [
         "protocol_name",
         "site_name",
+        "management_name",
         "benthiclit__observers__profile__first_name",
         "benthiclit__observers__profile__last_name",
         "benthicpit__observers__profile__first_name",
@@ -67,10 +69,13 @@ class SampleUnitMethodSerializer(BaseAPISerializer):
     protocol = serializers.SerializerMethodField()
     site_name = serializers.ReadOnlyField()
     site = serializers.SerializerMethodField()
+    management_name = serializers.ReadOnlyField()
+    management = serializers.SerializerMethodField()
     depth = serializers.ReadOnlyField()
     sample_date = serializers.SerializerMethodField()
     sample_unit_number = serializers.SerializerMethodField()
     size = serializers.SerializerMethodField()
+    size_display = serializers.ReadOnlyField()
     observers = serializers.SerializerMethodField()
 
     def get_protocol(self, o):
@@ -85,6 +90,10 @@ class SampleUnitMethodSerializer(BaseAPISerializer):
     def get_site(self, o):
         sample_unit = o.sample_unit
         return sample_unit.sample_event.site.id
+
+    def get_management(self, o):
+        sample_unit = o.sample_unit
+        return sample_unit.sample_event.management.id
 
     def get_sample_date(self, o):
         sample_unit = o.sample_unit
@@ -140,11 +149,13 @@ class SampleUnitMethodView(BaseProjectApiViewSet):
     http_method_names = ["get", "head"]
 
     ordering_fields = (
+        "management_name",
         "site_name",
         "protocol_name",
         "sample_unit_number",
         "depth",
         "sample_date",
+        "size_display",
     )
 
     def get_queryset(self):
@@ -185,6 +196,29 @@ class SampleUnitMethodView(BaseProjectApiViewSet):
             When(
                 beltfish__transect__sample_event__site__name__isnull=False,
                 then="beltfish__transect__sample_event__site__name",
+            ),
+        )
+
+        management_name_condition = Case(
+            When(
+                benthiclit__transect__sample_event__management__name__isnull=False,
+                then="benthiclit__transect__sample_event__management__name",
+            ),
+            When(
+                benthicpit__transect__sample_event__management__name__isnull=False,
+                then="benthicpit__transect__sample_event__management__name",
+            ),
+            When(
+                habitatcomplexity__transect__sample_event__management__name__isnull=False,
+                then="habitatcomplexity__transect__sample_event__management__name",
+            ),
+            When(
+                bleachingquadratcollection__quadrat__sample_event__management__name__isnull=False,
+                then="bleachingquadratcollection__quadrat__sample_event__management__name",
+            ),
+            When(
+                beltfish__transect__sample_event__management__name__isnull=False,
+                then="beltfish__transect__sample_event__management__name",
             ),
         )
 
@@ -253,12 +287,42 @@ class SampleUnitMethodView(BaseProjectApiViewSet):
             ),
         )
 
+        size_condition = Case(
+            When(
+                benthiclit__id__isnull=False,
+                then=Concat(Cast("benthiclit__transect__len_surveyed", CharField()), Value("m"))
+            ),
+            When(
+                benthicpit__id__isnull=False,
+                then=Concat(Cast("benthicpit__transect__len_surveyed", CharField()), Value("m"))
+            ),
+            When(
+                habitatcomplexity__id__isnull=False,
+                then=Concat(Cast("habitatcomplexity__transect__len_surveyed", CharField()), Value("m"))
+            ),
+            When(
+                beltfish__id__isnull=False,
+                then=Concat(
+                    Cast("beltfish__transect__len_surveyed", CharField()),
+                    Value("m x "),
+                    Cast("beltfish__transect__width__val", CharField()),
+                    Value("m")
+                )
+            ),
+            When(
+                bleachingquadratcollection__id__isnull=False,
+                then=Concat(Cast("bleachingquadratcollection__quadrat__quadrat_size", CharField()), Value("m"))
+            ),
+        )
+
         qs = qs.annotate(
             protocol_name=protocol_condition,
             site_name=site_name_condition,
+            management_name=management_name_condition,
             sample_unit_number=sample_unit_number_condition,
             depth=depth_condition,
             sample_date=sample_date_condition,
+            size_display=size_condition,
         )
 
         return qs
