@@ -2,7 +2,7 @@ from collections import defaultdict
 
 import re
 import django_filters
-from django.db.models import Case, CharField, Q, Value, When, CharField
+from django.db.models import Case, CharField, Q, Value, When
 from django.db.models.functions import Concat, Cast
 from django_filters import rest_framework as filters
 from rest_framework import serializers
