@@ -12,6 +12,12 @@ from ..models import BenthicAttribute, CollectRecord, FishAttributeView
 from ..resources.choices import ChoiceViewSet
 
 
+__all__ = [
+    "CollectRecordCSVListSerializer",
+    "CollectRecordCSVSerializer",
+    "build_choices",
+]
+
 def build_choices(key, choices):
     return [(str(c["id"]), str(c["name"])) for c in choices[key]["data"]]
 
@@ -61,7 +67,9 @@ class CollectRecordCSVListSerializer(ListSerializer):
             missing_fields.append("data__sample_event__sample_date__day")
 
         if missing_fields:
-            raise ValueError("{} missing".format(", ".join(missing_fields)))
+            field_map = self.child.reverse_kv_lookup(self.child.header_map)
+            _field_names = [field_map.get(mf) for mf in missing_fields]
+            raise ValueError("{} missing".format(", ".join(_field_names)))
 
         return "{}-{}-{}".format(
             row["data__sample_event__sample_date__year"],
@@ -111,7 +119,11 @@ class CollectRecordCSVListSerializer(ListSerializer):
         group_fields = self.get_group_by_fields()
         group_fields.append(self.child.ordering_field)
 
-        return sorted(data, key=itemgetter(*group_fields))
+        def sort_func(val):
+            key = self.create_key(val, group_fields, delimiter=None)
+            return key
+
+        return sorted(data, key=lambda x: sort_func(x))
 
     def format_data(self, data):
         assert (
@@ -169,10 +181,10 @@ class CollectRecordCSVListSerializer(ListSerializer):
         return super().run_validation(data=self.format_data(data))
 
     @classmethod
-    def create_key(cls, record, keys):
+    def create_key(cls, record, keys, delimiter="__"):
         hash = []
         for k in sorted(keys):
-            v = utils.get_value(record, k)
+            v = utils.get_value(record, k, delimiter=delimiter)
             if isinstance(v, list):
                 v = ",".join([str(s) for s in sorted(v)])
             elif isinstance(v, dict):
@@ -393,9 +405,12 @@ class CollectRecordCSVSerializer(Serializer):
 
         return output
 
+    def reverse_kv_lookup(self, lookup):
+        return dict(zip(lookup.values(), lookup.keys()))
+
     def format_error(self, record_errors):
         fmt_errs = dict()
-        field_map = dict(zip(self.header_map.values(), self.header_map.keys()))
+        field_map = self.reverse_kv_lookup(self.header_map)
         for k, v in record_errors.items():
             display = field_map.get(k) or k
             fmt_errs[display] = {"description": v}

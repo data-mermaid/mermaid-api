@@ -2,7 +2,18 @@ import json
 import logging
 import uuid
 
-from django.db import connection
+from django.db import connection, transaction
+from django.utils import timezone
+from django.utils.translation import ugettext_lazy
+from rest_framework import permissions, status as drf_status
+from rest_framework.decorators import action
+from rest_framework.exceptions import NotFound, ParseError, ValidationError
+from rest_framework.response import Response
+
+from ..ingest.utils import get_protocol_ingest
+from ..models import CollectRecord
+from ..permissions import ProjectDataAdminPermission, ProjectDataPermission
+from ..submission import utils
 from ..submission.protocol_validations import (
     BenthicLITProtocolValidation,
     BenthicPITProtocolValidation,
@@ -10,18 +21,6 @@ from ..submission.protocol_validations import (
     FishBeltProtocolValidation,
     HabitatComplexityProtocolValidation,
 )
-
-from .base import BaseAPISerializer, BaseProjectApiViewSet, BaseAPIFilterSet
-from django.db import transaction
-from django.utils.translation import ugettext_lazy
-from django.utils import timezone
-from rest_framework import permissions
-from rest_framework import status as drf_status
-from rest_framework.exceptions import NotFound, ParseError, ValidationError
-from rest_framework.response import Response
-from rest_framework.decorators import action
-
-from ..submission import utils
 from ..submission.utils import (
     BENTHICLIT_PROTOCOL,
     BENTHICPIT_PROTOCOL,
@@ -30,8 +29,6 @@ from ..submission.utils import (
     HABITATCOMPLEXITY_PROTOCOL,
     PROTOCOLS,
 )
-from ..models import CollectRecord
-from ..permissions import ProjectDataPermission
 from ..submission.validations import ERROR, OK, WARN
 from ..submission.writer import (
     BenthicLITProtocolWriter,
@@ -40,6 +37,8 @@ from ..submission.writer import (
     FishbeltProtocolWriter,
     HabitatComplexityProtocolWriter,
 )
+from ..utils import truthy
+from .base import BaseAPIFilterSet, BaseAPISerializer, BaseProjectApiViewSet
 
 logger = logging.getLogger(__name__)
 
@@ -57,17 +56,15 @@ class CollectRecordOwner(permissions.BasePermission):
 
 
 class CollectRecordSerializer(BaseAPISerializer):
-
     class Meta:
         model = CollectRecord
         exclude = []
 
 
 class CollectRecordFilterSet(BaseAPIFilterSet):
-
     class Meta:
         model = CollectRecord
-        fields = ['stage', ]
+        fields = ["stage"]
 
 
 class CollectRecordViewSet(BaseProjectApiViewSet):
@@ -104,7 +101,8 @@ class CollectRecordViewSet(BaseProjectApiViewSet):
     @action(
         detail=False,
         methods=["post"],
-        permission_classes=BaseProjectApiViewSet.permission_classes + [CollectRecordOwner]
+        permission_classes=BaseProjectApiViewSet.permission_classes
+        + [CollectRecordOwner],
     )
     def validate(self, request, project_pk):
         output = dict()
@@ -120,7 +118,7 @@ class CollectRecordViewSet(BaseProjectApiViewSet):
             validations = dict(
                 status=result,
                 results=validation_output,
-                last_validated=str(validation_timestamp)
+                last_validated=str(validation_timestamp),
             )
 
             record = None
@@ -128,7 +126,7 @@ class CollectRecordViewSet(BaseProjectApiViewSet):
             try:
                 qry = self.queryset.filter(id=record_id)
                 profile = None
-                if hasattr(request, 'user') and hasattr(request.user, 'profile'):
+                if hasattr(request, "user") and hasattr(request.user, "profile"):
                     profile = request.user.profile
 
                 # Using update so updated_on and validation_timestamp matches
@@ -136,7 +134,7 @@ class CollectRecordViewSet(BaseProjectApiViewSet):
                     stage=stage,
                     validations=validations,
                     updated_on=validation_timestamp,
-                    updated_by=profile
+                    updated_by=profile,
                 )
                 if qry.count() > 0:
                     collect_record = qry[0]
@@ -146,17 +144,15 @@ class CollectRecordViewSet(BaseProjectApiViewSet):
             if collect_record:
                 record = self.serializer_class(collect_record).data
 
-            output[record_id] = dict(
-                status=result,
-                record=record
-            )
+            output[record_id] = dict(status=result, record=record)
 
         return Response(output)
 
     @action(
         detail=False,
         methods=["post"],
-        permission_classes=BaseProjectApiViewSet.permission_classes + [CollectRecordOwner]
+        permission_classes=BaseProjectApiViewSet.permission_classes
+        + [CollectRecordOwner],
     )
     def submit(self, request, project_pk):
         output = {}
@@ -184,7 +180,9 @@ class CollectRecordViewSet(BaseProjectApiViewSet):
                 output[record_id] = dict(status=ERROR, message=result)
                 continue
             elif status == utils.ERROR_STATUS:
-                logger.error(json.dumps(dict(id=record_id, data=collect_record.data)), result)
+                logger.error(
+                    json.dumps(dict(id=record_id, data=collect_record.data)), result
+                )
                 output[record_id] = dict(
                     status=ERROR, message=ugettext_lazy("System failure")
                 )
@@ -193,18 +191,13 @@ class CollectRecordViewSet(BaseProjectApiViewSet):
 
         return Response(output)
 
-    @action(
-        detail=False,
-        methods=['POST'],
-        permission_classes=[ProjectDataPermission]
-    )
+    @action(detail=False, methods=["POST"], permission_classes=[ProjectDataPermission])
     def missing(self, request, *args, **kwargs):
         ids = request.data.get("id")
 
         if ids is None or isinstance(ids, list) is False:
             return Response(
-                "Invalid 'id' value.",
-                status=drf_status.HTTP_400_BAD_REQUEST
+                "Invalid 'id' value.", status=drf_status.HTTP_400_BAD_REQUEST
             )
 
         if len(ids) == 0:
@@ -213,23 +206,22 @@ class CollectRecordViewSet(BaseProjectApiViewSet):
         try:
             uuids = [uuid.UUID(pk) for pk in ids]
         except (ValueError, TypeError):
-            return Response(
-                "Invalid uuid", status=drf_status.HTTP_400_BAD_REQUEST)
+            return Response("Invalid uuid", status=drf_status.HTTP_400_BAD_REQUEST)
 
         qs = self.get_queryset()
 
         table_name = qs.model._meta.db_table
         pk_name = qs.model._meta.pk.get_attname_column()[1]
 
-        qs = qs.extra(select={
-            "_pk_": "\"{}\".\"{}\"".format(table_name, pk_name)
-        })
+        qs = qs.extra(select={"_pk_": '"{}"."{}"'.format(table_name, pk_name)})
 
         sql, params = qs.query.get_compiler(using=qs.db).as_sql()
 
-        query_sql = "SELECT * FROM unnest(%s) _pk_ " \
-            "EXCEPT ALL " \
+        query_sql = (
+            "SELECT * FROM unnest(%s) _pk_ "
+            "EXCEPT ALL "
             "SELECT _pk_ FROM (" + sql + ") as foo"
+        )
 
         query_params = [uuids]
         query_params.extend(list(params))
@@ -238,3 +230,42 @@ class CollectRecordViewSet(BaseProjectApiViewSet):
             missing_ids = [row[0] for row in cursor.fetchall()]
 
         return Response(dict(missing_ids=missing_ids))
+
+    @action(
+        detail=False, methods=["POST"], permission_classes=[ProjectDataAdminPermission]
+    )
+    def ingest(self, request, project_pk, *args, **kwargs):
+        supported_content_types = (
+            "application/csv",
+            "application/x-csv",
+            "text/csv",
+            "text/comma-separated-values",
+            "text/x-comma-separated-values",
+        )
+
+        protocol = request.data.get("protocol")
+        uploaded_file = request.FILES.get("file")
+        profile = request.user.profile
+        dryrun = truthy(request.data.get("dryrun"))
+
+        if protocol is None:
+            return Response("Missing protocol", status=400)
+
+        if uploaded_file is None:
+            return Response("Missing file", status=400)
+
+        _ingest = get_protocol_ingest(protocol)
+
+        if protocol is None:
+            return Response("Protocol not supported", status=400)
+
+        content_type = uploaded_file.content_type
+        if content_type not in supported_content_types:
+            return Response("File type not supported", status=400)
+
+        decoded_file = uploaded_file.read().decode("utf-8").splitlines()
+        records, errors = _ingest(decoded_file, project_pk, profile.id, dryrun)
+
+        if errors:
+            return Response(errors, status=400)
+        return Response(CollectRecordSerializer(records, many=True).data)

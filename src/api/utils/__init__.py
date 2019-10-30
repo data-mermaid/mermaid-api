@@ -26,11 +26,24 @@ def get_or_create_safeish(model_cls, **kwargs):
             return get_or_create_safeish(model_cls, **kwargs)
 
 
-def calc_biomass_density(count, size, transect_len_surveyed,
-                         transect_width, constant_a, constant_b, constant_c):
-    if (count is None or size is None or transect_len_surveyed is None or
-            transect_width is None or
-            constant_a is None or constant_b is None or constant_c is None):
+def calc_biomass_density(
+    count,
+    size,
+    transect_len_surveyed,
+    transect_width,
+    constant_a,
+    constant_b,
+    constant_c,
+):
+    if (
+        count is None
+        or size is None
+        or transect_len_surveyed is None
+        or transect_width is None
+        or constant_a is None
+        or constant_b is None
+        or constant_c is None
+    ):
         return None
 
     constant_a = float(constant_a)
@@ -65,10 +78,14 @@ def get_subclasses(cls):
 
 def get_related_transect_methods(model):
     related_objects = [
-        f for f in model._meta.get_fields()
-        if isinstance(f, OneToOneRel)]
+        f for f in model._meta.get_fields() if isinstance(f, OneToOneRel)
+    ]
 
-    return [getattr(model, ro.related_name) for ro in related_objects if hasattr(model, ro.name or "")]
+    return [
+        getattr(model, ro.related_name)
+        for ro in related_objects
+        if hasattr(model, ro.name or "")
+    ]
 
 
 def get_protected_related_objects(instance):
@@ -79,16 +96,16 @@ def get_protected_related_objects(instance):
 
 
 def get_sample_unit_number(instance):
-    self_number = ''
-    self_label = ''
-    if hasattr(instance, 'number'):
-        self_number = instance.number or ''
-    if hasattr(instance, 'label'):
-        self_label = instance.label or ''
-    if self_number == '':
+    self_number = ""
+    self_label = ""
+    if hasattr(instance, "number"):
+        self_number = instance.number or ""
+    if hasattr(instance, "label"):
+        self_label = instance.label or ""
+    if self_number == "":
         self_number = self_label
-    elif self_label != '':
-        self_number = '{} {}'.format(self_number, self_label)
+    elif self_label != "":
+        self_number = "{} {}".format(self_number, self_label)
 
     return self_number
 
@@ -98,9 +115,12 @@ def safe_sum(*args):
 
 
 def safe_division(numerator, denominator):
-    if isinstance(numerator, numbers.Number) and isinstance(denominator, numbers.Number):
+    if isinstance(numerator, numbers.Number) and isinstance(
+        denominator, numbers.Number
+    ):
         return numerator * 1.0 / denominator
     return None
+
 
 def get_value(dictionary, keys, delimiter="__"):
     if isinstance(keys, str):
@@ -117,3 +137,8 @@ def set_value(dic, keys, value, delimiter="__"):
     for key in keys[:-1]:
         dic = dic.setdefault(key, {})
     dic[keys[-1]] = value
+
+
+def truthy(val):
+    return val in ("t", "T", "true", "True", True, 1)
+

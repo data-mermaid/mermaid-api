@@ -5,13 +5,17 @@ from ..resources.choices import ChoiceViewSet
 from .serializers import CollectRecordCSVSerializer, build_choices
 
 
+__all__ = ["BenthicPITCSVSerializer"]
+
+
 class BenthicPITCSVSerializer(CollectRecordCSVSerializer):
     protocol = "benthicpit"
     observations_field = "data__obs_benthic_pits"
     ordering_field = "data__obs_benthic_pits__interval"
-    additional_group_fields = CollectRecordCSVSerializer.additional_group_fields
+    additional_group_fields = CollectRecordCSVSerializer.additional_group_fields.copy()
     additional_group_fields.append("data__benthic_transect__label")
-    header_map = CollectRecordCSVSerializer.header_map
+
+    header_map = CollectRecordCSVSerializer.header_map.copy()
     header_map.update(
         {
             "Interval size *": "data__interval_size",
