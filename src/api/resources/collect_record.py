@@ -10,7 +10,7 @@ from rest_framework.decorators import action
 from rest_framework.exceptions import NotFound, ParseError, ValidationError
 from rest_framework.response import Response
 
-from ..ingest.utils import ingest_benthicpit, ingest_fishbelt
+from ..ingest.utils import get_protocol_ingest
 from ..models import CollectRecord
 from ..permissions import ProjectDataAdminPermission, ProjectDataPermission
 from ..submission import utils
@@ -241,7 +241,6 @@ class CollectRecordViewSet(BaseProjectApiViewSet):
             "text/csv",
             "text/comma-separated-values",
             "text/x-comma-separated-values",
-            "text/tab-separated-values",
         )
 
         protocol = request.data.get("protocol")
@@ -255,14 +254,17 @@ class CollectRecordViewSet(BaseProjectApiViewSet):
         if uploaded_file is None:
             return Response("Missing file", status=400)
 
+        _ingest = get_protocol_ingest(protocol)
+
+        if protocol is None:
+            return Response("Protocol not supported", status=400)
+
         content_type = uploaded_file.content_type
         if content_type not in supported_content_types:
             return Response("File type not supported", status=400)
 
         decoded_file = uploaded_file.read().decode("utf-8").splitlines()
-        records, errors = ingest_fishbelt(
-            decoded_file, project_pk, profile.id, protocol, dryrun
-        )
+        records, errors = _ingest(decoded_file, project_pk, profile.id, dryrun)
 
         if errors:
             return Response(errors, status=400)

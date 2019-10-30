@@ -4,37 +4,30 @@ import sys
 import uuid
 
 from django.core.management.base import BaseCommand, CommandError
-from django.template.defaultfilters import pluralize
 from django.db import connection, transaction
+from django.template.defaultfilters import pluralize
 
-
-from api.models import CollectRecord
-from api.ingest.utils import ingest_benthicpit, ingest_fishbelt
+from api.ingest.utils import get_protocol_ingest
 from api.models import (
     BENTHICLIT_PROTOCOL,
     BENTHICPIT_PROTOCOL,
     BLEACHINGQC_PROTOCOL,
     FISHBELT_PROTOCOL,
     HABITATCOMPLEXITY_PROTOCOL,
+    CollectRecord,
 )
-
-protocol_ingests = {
-    BENTHICLIT_PROTOCOL: None,
-    BENTHICPIT_PROTOCOL: ingest_benthicpit,
-    FISHBELT_PROTOCOL: ingest_fishbelt,
-    HABITATCOMPLEXITY_PROTOCOL: None,
-    BLEACHINGQC_PROTOCOL: None,
-}
 
 
 class Command(BaseCommand):
     help = "Ingest collect records from a CSV file."
 
+    protocol_choices = (BENTHICPIT_PROTOCOL, FISHBELT_PROTOCOL)
+
     def add_arguments(self, parser):
         parser.add_argument("datafile", nargs=1, type=argparse.FileType("r"))
         parser.add_argument("project", nargs=1, type=uuid.UUID)
         parser.add_argument("profile", nargs=1, type=uuid.UUID)
-        parser.add_argument("--protocol", choices=protocol_ingests.keys())
+        parser.add_argument("--protocol", choices=self.protocol_choices)
         parser.add_argument(
             "--dry-run",
             action="store_true",
@@ -77,7 +70,7 @@ class Command(BaseCommand):
         profile = profile[0]
         verbosity = options["verbosity"]
 
-        _ingest = protocol_ingests.get(protocol)
+        _ingest = get_protocol_ingest(protocol)
 
         if _ingest is None:
             raise NotImplementedError()
@@ -87,7 +80,7 @@ class Command(BaseCommand):
                 sid = transaction.savepoint()
                 if clear_existing:
                     self.clear_collect_records(project, protocol)
-                records, errors = _ingest(datafile, project, profile, protocol, dry_run)
+                records, errors = _ingest(datafile, project, profile, dry_run)
                 transaction.savepoint_commit(sid)
         except Exception as err:
             transaction.savepoint_rollback(sid)

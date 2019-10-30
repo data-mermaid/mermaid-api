@@ -1,12 +1,23 @@
 import csv
 import json
 
+from django.db import transaction
+
 from api import mocks
 from api.ingest import BenthicPITCSVSerializer, FishBeltCSVSerializer
-from api.models import Management, ProjectProfile, Site, Profile
+from api.models import (
+    BENTHICLIT_PROTOCOL,
+    BENTHICPIT_PROTOCOL,
+    BLEACHINGQC_PROTOCOL,
+    FISHBELT_PROTOCOL,
+    HABITATCOMPLEXITY_PROTOCOL,
+    Management,
+    Profile,
+    ProjectProfile,
+    Site,
+)
 from api.resources.project_profile import ProjectProfileSerializer
 from api.utils import tokenutils
-from django.db import transaction
 
 
 def get_ingest_project_choices(project_id):
@@ -36,7 +47,12 @@ def _create_context(profile_id, request=None):
         profile = Profile.objects.get_or_none(id=profile_id)
         if profile is None:
             raise ValueError("[{}] Profile does not exist.".format(profile_id))
-        token = tokenutils.create_token("google-oauth2|109519544860798433542")
+
+        try:
+            auth_user = profile.authusers.all()[0]
+        except IndexError:
+            raise ValueError("AuthUser does not exist.")
+        token = tokenutils.create_token(auth_user.user_id)
         request = mocks.MockRequest(token=token)
 
     return {"request": request}
@@ -103,3 +119,11 @@ def ingest_benthicpit(datafile, project_id, profile_id, request=None, dry_run=Fa
         request=request,
         dry_run=dry_run,
     )
+
+
+def get_protocol_ingest(protocol):
+    if protocol == BENTHICPIT_PROTOCOL:
+        return ingest_benthicpit
+    elif protocol == FISHBELT_PROTOCOL:
+        return ingest_fishbelt
+    return None
