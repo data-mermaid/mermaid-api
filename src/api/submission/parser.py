@@ -121,7 +121,7 @@ def get_benthic_transect_data(collect_record, sample_event_id=None):
         number=benthic_transect_data.get("number"),
         label= benthic_transect_data.get("label") or "",
         len_surveyed=benthic_transect_data.get("len_surveyed"),
-        reef_slope=benthic_transect_data.get("reef_slope"),
+        reef_slope=benthic_transect_data.get("reef_slope") or None,
         collect_record_id=collect_record.id
     )
 
