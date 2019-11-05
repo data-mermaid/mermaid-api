@@ -39,13 +39,18 @@ class ProtectedResourceMixin(object):
 class UpdatesMixin(object):
     def compress(self, added, modified, removed):
         added_lookup = {str(a["id"]): parse_datetime(a["updated_on"]) for a in added}
-        modified_lookup = {str(m["id"]): parse_datetime(m["updated_on"]) for m in modified}
+        modified_lookup = {
+            str(m["id"]): parse_datetime(m["updated_on"]) for m in modified
+        }
         removed_lookup = {str(r["id"]): r["timestamp"] for r in removed}
 
         compressed_added = []
         for rec in added:
             pk = str(rec["id"])
-            if pk in removed_lookup and parse_datetime(rec["updated_on"]) <= removed_lookup[pk]:
+            if (
+                pk in removed_lookup
+                and parse_datetime(rec["updated_on"]) <= removed_lookup[pk]
+            ):
                 continue
             compressed_added.append(rec)
 
@@ -53,7 +58,8 @@ class UpdatesMixin(object):
         for rec in modified:
             pk = str(rec["id"])
             if pk in added_lookup or (
-                pk in removed_lookup and parse_datetime(rec["updated_on"]) <= removed_lookup[pk]
+                pk in removed_lookup
+                and parse_datetime(rec["updated_on"]) <= removed_lookup[pk]
             ):
                 continue
             compressed_modified.append(rec)
@@ -63,7 +69,7 @@ class UpdatesMixin(object):
             pk = str(rec["id"])
             if (pk in added_lookup and rec["timestamp"] < added_lookup[pk]) or (
                 pk in modified_lookup and rec["timestamp"] < modified_lookup[pk]
-               ):
+            ):
                 continue
             compressed_removed.append(rec)
 
@@ -112,7 +118,7 @@ class UpdatesMixin(object):
         if hasattr(self, "limit_to_project"):
             qry = self.limit_to_project(request, *args, **kwargs)
         else:
-            qry = self.get_queryset()
+            qry = self.filter_queryset(self.get_queryset())
 
         if hasattr(qry, "model"):
             removed_filter["model"] = qry.model._meta.model_name
@@ -151,9 +157,9 @@ class MethodAuthenticationMixin(object):
         parser_context = self.get_parser_context(request)
 
         method = request.method.upper()
-        if hasattr(
-            self, "method_authentication_classes"
-        ) and isinstance(self.method_authentication_classes.get(method), (list, tuple)):
+        if hasattr(self, "method_authentication_classes") and isinstance(
+            self.method_authentication_classes.get(method), (list, tuple)
+        ):
             authenticators = [
                 auth() for auth in self.method_authentication_classes[method]
             ]
