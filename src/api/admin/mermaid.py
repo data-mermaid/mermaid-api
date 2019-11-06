@@ -5,6 +5,7 @@ from django.utils.translation import ugettext_lazy as _
 from django.urls import reverse
 
 from .base import BaseAdmin
+from ..utils import get_subclasses
 from ..models.base import *
 from ..models.mermaid import *
 
@@ -194,9 +195,13 @@ class ProjectAdmin(BaseAdmin):
         # Delete any (protected) related SampleEvents before deleting project.
         # If any other protected FKs get added to project, this will need to be updated.
         if request.method == 'POST':
-            sus = SampleEvent.objects.filter(site__project=object_id)
-            for su in sus:
-                su.delete()
+            ses = SampleEvent.objects.filter(site__project=object_id)
+            for se in ses:
+                for suclass in get_subclasses(SampleUnit):
+                    sus = '{}_set'.format(suclass._meta.model_name)
+                    su_set = operator.attrgetter(sus)(se)
+                    su_set.all().delete()
+                # Actual SE gets deleted via SU signal
         return super(ProjectAdmin, self).delete_view(request, object_id, extra_context)
 
 
@@ -658,7 +663,7 @@ class FishGenusAdmin(FishAttributeAdmin):
     readonly_fields = ('biomass_constant_a', 'biomass_constant_b',)
     inlines = (FishSpeciesInline,)
     search_fields = ['name', 'family__name', ]
-    exportable_fields = ('name', 'genus')
+    exportable_fields = ('name', 'family')
 
     def fk_link(self, obj):
         link = reverse("admin:api_fishfamily_change", args=[obj.family.pk])
