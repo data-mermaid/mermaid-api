@@ -76,7 +76,7 @@ def get_fishbelt_transect_data(collect_record, sample_event_id=None):
         label=fishbelt_transect_data.get("label") or "",
         width=fishbelt_transect_data.get("width"),
         len_surveyed=fishbelt_transect_data.get("len_surveyed"),
-        reef_slope=fishbelt_transect_data.get("reef_slope"),
+        reef_slope=fishbelt_transect_data.get("reef_slope") or None,
         size_bin=size_bin,
         collect_record_id=collect_record.id
     )
