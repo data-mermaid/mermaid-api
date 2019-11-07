@@ -4,6 +4,7 @@ from collections.abc import Mapping, Sequence
 from operator import itemgetter
 
 from rest_framework import serializers
+from rest_framework.exceptions import ValidationError
 from rest_framework.fields import empty
 from rest_framework.serializers import ListSerializer, Serializer
 
@@ -17,6 +18,7 @@ __all__ = [
     "CollectRecordCSVSerializer",
     "build_choices",
 ]
+
 
 def build_choices(key, choices):
     return [(str(c["id"]), str(c["name"])) for c in choices[key]["data"]]
@@ -347,7 +349,7 @@ class CollectRecordCSVSerializer(Serializer):
             self.project_choices = project_choices
 
         super().__init__(instance=None, data=data, **kwargs)
-    
+
     @classmethod
     def many_init(cls, *args, **kwargs):
         if "data" in kwargs and isinstance(kwargs["data"], (dict, OrderedDict)):
@@ -366,6 +368,13 @@ class CollectRecordCSVSerializer(Serializer):
                 and not field.read_only
             ]
         )
+    
+    def validate_data__observers(self, val):
+        project_profiles = self.project_choices.get("project_profiles")
+        val = val or []
+        for email in val:
+            if email.lower() not in project_profiles:
+                raise ValidationError("{} doesn't exist".format(email))
 
     def validate(self, data):
         # Validate common Transect level fields
@@ -398,9 +407,11 @@ class CollectRecordCSVSerializer(Serializer):
         # Need to serialize observers after validation to avoid
         # unique id errors
         project_profiles = self.project_choices.get("project_profiles")
-        ob_names = output["data"]["observers"]
+        ob_emails = output["data"]["observers"]
         output["data"]["observers"] = [
-            project_profiles.get(ob_name.lower()) for ob_name in ob_names
+            project_profiles[ob_email.lower()]
+            for ob_email in ob_emails
+            if ob_email.lower() in project_profiles
         ]
 
         return output
