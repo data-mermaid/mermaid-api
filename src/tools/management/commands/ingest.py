@@ -80,7 +80,7 @@ class Command(BaseCommand):
                 sid = transaction.savepoint()
                 if clear_existing:
                     self.clear_collect_records(project, protocol)
-                records, errors = _ingest(datafile, project, profile, dry_run)
+                records, errors = _ingest(datafile, project, profile, None, dry_run)
                 transaction.savepoint_commit(sid)
         except Exception as err:
             transaction.savepoint_rollback(sid)
