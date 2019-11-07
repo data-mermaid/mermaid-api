@@ -1,6 +1,8 @@
 import functools
 import time
 
+from django.utils.translation import ugettext as _
+
 
 def timeit(method):
     def timed(*args, **kw):
