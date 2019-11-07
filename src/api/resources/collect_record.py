@@ -30,13 +30,6 @@ from ..submission.utils import (
     PROTOCOLS,
 )
 from ..submission.validations import ERROR, OK, WARN
-from ..submission.writer import (
-    BenthicLITProtocolWriter,
-    BenthicPITProtocolWriter,
-    BleachingQuadratCollectionProtocolWriter,
-    FishbeltProtocolWriter,
-    HabitatComplexityProtocolWriter,
-)
 from ..utils import truthy
 from .base import BaseAPIFilterSet, BaseAPISerializer, BaseProjectApiViewSet
 
@@ -45,7 +38,6 @@ logger = logging.getLogger(__name__)
 
 class CollectRecordOwner(permissions.BasePermission):
     def has_permission(self, request, view):
-
         record_ids = request.data.get("ids") or []
         if not record_ids:
             return True

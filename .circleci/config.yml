@@ -79,7 +79,7 @@ jobs:
       - run:
           name: Update changelog
           command: |
-              chlog -v ${CIRCLE_TAG}
+              chlog
             
 workflows:
   version: 2
