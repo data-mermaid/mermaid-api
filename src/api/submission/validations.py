@@ -752,7 +752,6 @@ class BenthicTransectValidation(DataValidation):
     NUMBER_MSG = _("Transect number is not valid")
     RELATIVE_DEPTH_MSG = _("Relative depth not valid")
     SITE_MSG = _("Benthic Transect is not valid")
-    WIDTH_MSG = _("Width is not valid")
     identifier = "benthic_transect"
 
     def validate_duplicate(self):
@@ -767,12 +766,6 @@ class BenthicTransectValidation(DataValidation):
             return self.error(self.identifier, self.NUMBER_MSG)
 
         label = benthic_transect.get("label") or ""
-
-        width = benthic_transect.get("width") or None
-        try:
-            _ = check_uuid(width)
-        except ParseError:
-            return self.error(self.identifier, self.WIDTH_MSG)
 
         relative_depth = sample_event.get("relative_depth")
         if relative_depth == "":
