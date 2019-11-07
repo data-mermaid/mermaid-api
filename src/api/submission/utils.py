@@ -2,6 +2,7 @@ import logging
 from django.db import transaction
 from django.utils import timezone
 from rest_framework.exceptions import ValidationError
+from django.core.exceptions import ValidationError as DJValidationError
 from .writer import (
     BenthicLITProtocolWriter,
     BenthicPITProtocolWriter,
@@ -53,12 +54,24 @@ def get_writer(collect_record, context):
 
 
 def format_serializer_errors(validationerror):
-    details = validationerror.get_full_details()
     output = dict()
-    for identifier, record in details.items():
-        output[identifier] = [r.get("message") for r in record]
-
+    if hasattr(validationerror, "get_full_details"):
+        details = validationerror.get_full_details()
+        for identifier, record in details.items():
+            output[identifier] = [r.get("message") for r in record]
+    else:
+        output["exception"] = validationerror.messages
     return output
+
+
+def format_exception_errors(err):
+    identifier = '{}'.format(str(type(err).__name__))
+    msg = ''
+    if hasattr(err, 'message'):
+        msg = err.message
+    elif err.args:
+        msg = ['; '.join(err.args)]
+    return {identifier: [msg]}
 
 
 def write_collect_record(collect_record, request, dry_run=False):
@@ -72,17 +85,12 @@ def write_collect_record(collect_record, request, dry_run=False):
         try:
             writer.write()
             status = SUCCESS_STATUS
-        except ValidationError as ve:
+        except (ValidationError, DJValidationError) as ve:
             result = format_serializer_errors(ve)
             status = VALIDATION_ERROR_STATUS
         except Exception as err:
             logger.exception("write_collect_record: {}".format(getattr(collect_record, 'id')))
-            msg = ''
-            if hasattr(err, 'message'):
-                msg = err.message
-            elif err.args:
-                msg = '; '.join(err.args)
-            result = {'{}'.format(str(type(err).__name__)): '{}'.format(msg)}
+            result = format_exception_errors(err)
             status = ERROR_STATUS
         finally:
             if dry_run is True or status != SUCCESS_STATUS:
