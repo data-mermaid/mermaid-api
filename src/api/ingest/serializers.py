@@ -375,6 +375,7 @@ class CollectRecordCSVSerializer(Serializer):
         for email in val:
             if email.lower() not in project_profiles:
                 raise ValidationError("{} doesn't exist".format(email))
+        return val
 
     def validate(self, data):
         # Validate common Transect level fields

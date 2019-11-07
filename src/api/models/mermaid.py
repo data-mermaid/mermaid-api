@@ -35,8 +35,6 @@ INCLUDE_OBS_TEXT = _(u'include observation in aggregations/analyses?')
 
 logger = logging.getLogger(__name__)
 
-
-
 BENTHICLIT_PROTOCOL = "benthiclit"
 BENTHICPIT_PROTOCOL = "benthicpit"
 FISHBELT_PROTOCOL = "fishbelt"
@@ -44,11 +42,11 @@ HABITATCOMPLEXITY_PROTOCOL = "habitatcomplexity"
 BLEACHINGQC_PROTOCOL = "bleachingqc"
 
 PROTOCOL_MAP = {
-    BENTHICLIT_PROTOCOL:"Benthic LIT",
-    BENTHICPIT_PROTOCOL:"Benthic PIT",
-    FISHBELT_PROTOCOL:"Fish Belt",
-    HABITATCOMPLEXITY_PROTOCOL:"Habitat Complexity",
-    BLEACHINGQC_PROTOCOL:"Bleaching Quadrat Collection",
+    BENTHICLIT_PROTOCOL: "Benthic LIT",
+    BENTHICPIT_PROTOCOL: "Benthic PIT",
+    FISHBELT_PROTOCOL: "Fish Belt",
+    HABITATCOMPLEXITY_PROTOCOL: "Habitat Complexity",
+    BLEACHINGQC_PROTOCOL: "Bleaching Quadrat Collection",
 }
 
 
