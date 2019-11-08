@@ -1,22 +1,28 @@
 import logging
+
 import django_filters
-from .base import BaseAPIFilterSet, BaseAPISerializer, BaseApiViewSet, TagField, to_tag_model_instances
+from django.contrib.auth.models import AnonymousUser
 from django.db import transaction
-from rest_condition import Or
-from rest_framework import exceptions, permissions
+from rest_framework import exceptions, permissions, serializers
 from rest_framework.decorators import action
 from rest_framework.relations import HyperlinkedIdentityField
 from rest_framework.response import Response
-from rest_framework import serializers
-from rest_framework.decorators import action
 
-from ..models import Project, Site, Management
+from rest_condition import Or
+from ..auth_backends import AnonymousJWTAuthentication
+from ..models import Management, Project, Site
 from ..permissions import *
-from ..utils.replace import replace_sampleunit_objs, replace_collect_record_owner
+from ..utils.replace import replace_collect_record_owner, replace_sampleunit_objs
+from .base import (
+    BaseAPIFilterSet,
+    BaseAPISerializer,
+    BaseApiViewSet,
+    TagField,
+    to_tag_model_instances,
+)
+from .management import ManagementSerializer
 from .project_profile import ProjectProfileSerializer
 from .site import SiteSerializer
-from .management import ManagementSerializer
-
 
 logger = logging.getLogger(__name__)
 
@@ -47,7 +53,7 @@ class ProjectSerializer(BaseAPISerializer):
 
     countries = serializers.SerializerMethodField()
     num_sites = serializers.SerializerMethodField()
-    tags = serializers.ListField(source='tags.all', child=TagField(), required=False)
+    tags = serializers.ListField(source="tags.all", child=TagField(), required=False)
 
     def __init__(self, *args, **kwargs):
         for field in self.project_specific_fields:
@@ -72,9 +78,9 @@ class ProjectSerializer(BaseAPISerializer):
 
     def update(self, instance, validated_data):
         tags_data = []
-        if 'tags' in validated_data:
-            tags_data = validated_data['tags'].get('all') or []
-            del validated_data['tags']
+        if "tags" in validated_data:
+            tags_data = validated_data["tags"].get("all") or []
+            del validated_data["tags"]
         instance = super(ProjectSerializer, self).update(instance, validated_data)
 
         tags = to_tag_model_instances([t.name for t in tags_data], instance.updated_by)
@@ -97,33 +103,36 @@ class ProjectSerializer(BaseAPISerializer):
         return len(site)
 
 
-
 class ProjectFilterSet(BaseAPIFilterSet):
-    profile = django_filters.UUIDFilter(
-        field_name="profiles__profile", distinct=True, label="Associated with profile"
-    )
+    tags = django_filters.CharFilter(distinct=True, method="filter_tags")
 
     class Meta:
         model = Project
-        fields = ["profile"]
+        exclude = []
+
+    def filter_tags(self, queryset, name, value):
+        values = [v.strip() for v in value.split(",")]
+        return queryset.filter(tags__name__in=values)
 
 
 class ProjectAuthenticatedUserPermission(permissions.BasePermission):
     def has_permission(self, request, view):
         doing_site_mr_replace = False
-        if hasattr(view, 'action_map') and 'put' in view.action_map:
-            if (view.action_map['put'] == 'find_and_replace_sites' or
-                    view.action_map['put'] == 'find_and_replace_managements'):
+        if hasattr(view, "action_map") and "put" in view.action_map:
+            if (
+                view.action_map["put"] == "find_and_replace_sites"
+                or view.action_map["put"] == "find_and_replace_managements"
+            ):
                 doing_site_mr_replace = True
-        return (request.user.is_authenticated and
-                (request.method in permissions.SAFE_METHODS or
-                 request.method == 'POST' or
-                 doing_site_mr_replace))
+        return request.user.is_authenticated and (
+            request.method in permissions.SAFE_METHODS
+            or request.method == "POST"
+            or doing_site_mr_replace
+        )
 
 
 class ProjectViewSet(BaseApiViewSet):
     serializer_class = ProjectSerializer
-    queryset = Project.objects.all()
     permission_classes = [
         Or(
             UnauthenticatedReadOnlyPermission,
@@ -131,16 +140,28 @@ class ProjectViewSet(BaseApiViewSet):
             ProjectDataAdminPermission,
         )
     ]
-    method_authentication_classes = {
-        "GET": []
-    }
+    method_authentication_classes = {"GET": [AnonymousJWTAuthentication]}
     filter_class = ProjectFilterSet
     search_fields = ["$name", "$sites__country__name"]
+
+    def get_queryset(self):
+        qs = Project.objects.all().order_by("name")
+        user = self.request.user
+        show_all = "showall" in self.request.query_params
+
+        if show_all is True:
+            return qs.all()
+
+        if user is None or user.is_authenticated is False:
+            return qs.none()
+        else:
+            profile = user.profile
+            return qs.filter(profiles__profile=profile)
 
     @action(
         detail=False,
         methods=["post"],
-        permission_classes=[ProjectAuthenticatedUserPermission]
+        permission_classes=[ProjectAuthenticatedUserPermission],
     )
     def create_project(self, request):
         has_validation_errors = False
@@ -153,7 +174,7 @@ class ProjectViewSet(BaseApiViewSet):
         profiles_data = data.get("profiles") or []
         sites_data = data.get("sites") or []
         managements_data = data.get("managements") or []
-        tags_data = data.get('tags') or []
+        tags_data = data.get("tags") or []
 
         # Save Project
         project_data["id"] = None
@@ -234,7 +255,9 @@ class ProjectViewSet(BaseApiViewSet):
                 find_objs = obj_cls.objects.filter(
                     id__in=qp_find_obj_ids, project__id=project_id
                 )
-                results = replace_sampleunit_objs(find_objs, replace_obj, field, profile)
+                results = replace_sampleunit_objs(
+                    find_objs, replace_obj, field, profile
+                )
                 transaction.savepoint_commit(sid)
             except obj_cls.DoesNotExist:
                 msg = "Replace {} {} does not exist".format(field, qp_replace_obj_id)
@@ -244,13 +267,17 @@ class ProjectViewSet(BaseApiViewSet):
             except Exception as err:
                 logger.error(err)
                 transaction.savepoint_rollback(sid)
-                return Response("Unknown error while replacing {}s".format(field), status=500)
+                return Response(
+                    "Unknown error while replacing {}s".format(field), status=500
+                )
 
         return Response(results)
 
     @action(detail=True, methods=["put"])
     def find_and_replace_managements(self, request, pk, *args, **kwargs):
-        return self._find_and_replace_objs(request, pk, Management, "management", *args, **kwargs)
+        return self._find_and_replace_objs(
+            request, pk, Management, "management", *args, **kwargs
+        )
 
     @action(detail=True, methods=["put"])
     def find_and_replace_sites(self, request, pk, *args, **kwargs):
@@ -263,7 +290,9 @@ class ProjectViewSet(BaseApiViewSet):
             ).profile
         except ProjectProfile.DoesNotExist:
             msg = "Profile does not exist in project".format(profile_id)
-            logger.error("Profile {} does not exist in project {}".format(profile_id, project_id))
+            logger.error(
+                "Profile {} does not exist in project {}".format(profile_id, project_id)
+            )
             raise exceptions.ValidationError(msg, code=400)
 
     @action(detail=True, methods=["put"])
