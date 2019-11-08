@@ -146,9 +146,6 @@ class AnonymousJWTAuthentication(JWTAuthentication):
     else user is set to AnonymousUser
     """
 
-    def authenticate_header(self, request):
-        pass
-
     def authenticate(self, request, *args, **kwargs):
         jwt_token = None
         try:

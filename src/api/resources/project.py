@@ -1,5 +1,18 @@
 import logging
+
 import django_filters
+from django.contrib.auth.models import AnonymousUser
+from django.db import transaction
+from rest_framework import exceptions, permissions, serializers
+from rest_framework.decorators import action
+from rest_framework.relations import HyperlinkedIdentityField
+from rest_framework.response import Response
+
+from rest_condition import Or
+from ..auth_backends import AnonymousJWTAuthentication
+from ..models import Management, Project, Site
+from ..permissions import *
+from ..utils.replace import replace_collect_record_owner, replace_sampleunit_objs
 from .base import (
     BaseAPIFilterSet,
     BaseAPISerializer,
@@ -7,22 +20,9 @@ from .base import (
     TagField,
     to_tag_model_instances,
 )
-from django.db import transaction
-from rest_condition import Or
-from rest_framework import exceptions, permissions
-from rest_framework.decorators import action
-from rest_framework.relations import HyperlinkedIdentityField
-from rest_framework.response import Response
-from rest_framework import serializers
-from rest_framework.decorators import action
-
-from ..models import Project, Site, Management
-from ..permissions import *
-from ..utils.replace import replace_sampleunit_objs, replace_collect_record_owner
+from .management import ManagementSerializer
 from .project_profile import ProjectProfileSerializer
 from .site import SiteSerializer
-from .management import ManagementSerializer
-
 
 logger = logging.getLogger(__name__)
 
@@ -140,7 +140,7 @@ class ProjectViewSet(BaseApiViewSet):
             ProjectDataAdminPermission,
         )
     ]
-    method_authentication_classes = {"GET": []}
+    method_authentication_classes = {"GET": [AnonymousJWTAuthentication]}
     filter_class = ProjectFilterSet
     search_fields = ["$name", "$sites__country__name"]
 
@@ -152,7 +152,7 @@ class ProjectViewSet(BaseApiViewSet):
         if show_all is True:
             return qs.all()
 
-        if user is None or user.is_anonymous:
+        if user is None or user.is_authenticated is False:
             return qs.none()
         else:
             profile = user.profile
