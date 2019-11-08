@@ -142,8 +142,8 @@ class JWTAuthentication(BaseAuthentication):
 
 class AnonymousJWTAuthentication(JWTAuthentication):
     """
-    If token has been passed it, JWT Authentication is used
-    else user is Anonymous
+    If token has been passed provided, JWT Authentication is used
+    else user is set to AnonymousUser
     """
 
     def authenticate_header(self, request):
