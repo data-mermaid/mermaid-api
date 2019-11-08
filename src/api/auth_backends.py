@@ -142,7 +142,7 @@ class JWTAuthentication(BaseAuthentication):
 
 class AnonymousJWTAuthentication(JWTAuthentication):
     """
-    If token has been passed provided, JWT Authentication is used
+    If token has been provided, JWT Authentication is used
     else user is set to AnonymousUser
     """
 
