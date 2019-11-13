@@ -188,7 +188,11 @@ class CollectRecordCSVListSerializer(ListSerializer):
         for k in sorted(keys):
             v = utils.get_value(record, k, delimiter=delimiter)
             if isinstance(v, list):
-                v = ",".join([str(s) for s in sorted(v)])
+                if isinstance(v[0], dict):
+                    dictkeys = [cls.create_key(skey, skey.keys()) for skey in v]
+                    v = ",".join(sorted(dictkeys))
+                else:
+                    v = ",".join([str(s) for s in sorted(v)])
             elif isinstance(v, dict):
                 v = ",".join([str(v[i]) for i in sorted(v)])
             else:
