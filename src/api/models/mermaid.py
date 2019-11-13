@@ -482,10 +482,58 @@ class BenthicTransect(Transect):
 
 
 class BeltTransectWidth(BaseChoiceModel):
+    # TODO: make name unique, null=False, blank=False
+    # TODO: remove val field
+    name = models.CharField(max_length=100, null=True, blank=True)
+    val = models.PositiveSmallIntegerField(null=True, blank=True)
+
+    def __str__(self):
+        return _('%s') % self.name
+
+
+class BeltTransectWidthCondition(BaseModel):
+    OPERATOR_EQ = "=="
+    OPERATOR_LT = "<"
+    OPERATOR_LTE = "<="
+    OPERATOR_GT = ">"
+    OPERATOR_GTE = ">="
+    OPERATOR_CHOICES = (
+        (OPERATOR_EQ, OPERATOR_EQ),
+        (OPERATOR_LT, OPERATOR_LT),
+        (OPERATOR_LTE, OPERATOR_LTE),
+        (OPERATOR_GT, OPERATOR_GT),
+        (OPERATOR_GTE, OPERATOR_GTE),
+    )
+
+    belttransectwidth = models.ForeignKey(
+        "BeltTransectWidth",
+        on_delete=models.PROTECT,
+        related_name="width_conditions"
+    )
+    operator = models.CharField(
+        max_length=2,
+        choices=OPERATOR_CHOICES,
+        null=True,
+        blank=True
+    )
+    fish_length = models.DecimalField(
+        decimal_places=1,
+        max_digits=5,
+        null=True,
+        blank=True,
+        verbose_name=_(u'fish length (cm)')
+    )
     val = models.PositiveSmallIntegerField()
 
     def __str__(self):
-        return _(u'%sm') % self.val
+        if self.operator or self.fish_length is None:
+            return str(self.belttransectwidth)
+
+        return _("{} {}cm @ {}".format(
+            self.operator or "",
+            self.fish_length or "",
+            str(self.belttransectwidth),
+        ))
 
 
 class FishBeltTransect(Transect):
