@@ -16,30 +16,26 @@ from ..models import (BeltTransectWidth, BenthicLifeHistory, CollectRecord,
 
 class ChoiceViewSet(BaseChoiceApiViewSet):
 
-    def get_model_choices(self, model, order_by):
-        choices = [c.choice for c in model.objects.all().order_by(order_by)]
-        return {'data': choices}
-
     def get_choices(self):
-        belttransectwidths = self.get_model_choices(BeltTransectWidth, 'val')
-        benthiclifehistories = self.get_model_choices(BenthicLifeHistory, 'name')
-        growthforms = self.get_model_choices(GrowthForm, 'name')
-        countries = self.get_model_choices(Country, 'name')
-        currents = self.get_model_choices(Current, 'name')
-        fishgroupfunctions = self.get_model_choices(FishGroupFunction, 'name')
-        fishgrouptrophics = self.get_model_choices(FishGroupTrophic, 'name')
-        fishsizebins = self.get_model_choices(FishSizeBin, 'val')
-        habitatcomplexityscores = self.get_model_choices(HabitatComplexityScore, 'val')
-        managementcompliances = self.get_model_choices(ManagementCompliance, 'name')
-        managementparties = self.get_model_choices(ManagementParty, 'name')
-        reefexposures = self.get_model_choices(ReefExposure, 'val')
-        reefslopes = self.get_model_choices(ReefSlope, 'val')
-        reeftypes = self.get_model_choices(ReefType, 'name')
-        reefzones = self.get_model_choices(ReefZone, 'name')
-        regions = self.get_model_choices(Region, 'name')
-        relativedepths = self.get_model_choices(RelativeDepth, 'name')
-        tides = self.get_model_choices(Tide, 'name')
-        visibilities = self.get_model_choices(Visibility, 'val')
+        belttransectwidths = dict(data=BeltTransectWidth.objects.choices(order_by="val"))
+        benthiclifehistories = dict(data=BenthicLifeHistory.objects.choices(order_by="name"))
+        growthforms = dict(data=GrowthForm.objects.choices(order_by="name"))
+        countries = dict(data=Country.objects.choices(order_by="name"))
+        currents = dict(data=Current.objects.choices(order_by="name"))
+        fishgroupfunctions = dict(data=FishGroupFunction.objects.choices(order_by="name"))
+        fishgrouptrophics = dict(data=FishGroupTrophic.objects.choices(order_by="name"))
+        fishsizebins = dict(data=FishSizeBin.objects.choices(order_by="val"))
+        habitatcomplexityscores = dict(data=HabitatComplexityScore.objects.choices(order_by="val"))
+        managementcompliances = dict(data=ManagementCompliance.objects.choices(order_by="name"))
+        managementparties = dict(data=ManagementParty.objects.choices(order_by="name"))
+        reefexposures = dict(data=ReefExposure.objects.choices(order_by="val"))
+        reefslopes = dict(data=ReefSlope.objects.choices(order_by="val"))
+        reeftypes = dict(data=ReefType.objects.choices(order_by="name"))
+        reefzones = dict(data=ReefZone.objects.choices(order_by="name"))
+        regions = dict(data=Region.objects.choices(order_by="name"))
+        relativedepths = dict(data=RelativeDepth.objects.choices(order_by="name"))
+        tides = dict(data=Tide.objects.choices(order_by="name"))
+        visibilities = dict(data=Visibility.objects.choices(order_by="val"))
 
         return {
             'belttransectwidths': belttransectwidths,
