@@ -1,9 +1,11 @@
 from __future__ import unicode_literals
+import itertools
 import json
 import logging
 import datetime
 import pytz
-import operator
+import operator as pyoperator
+from decimal import Decimal
 
 from django.db.models import Avg
 from django.db.models.signals import post_delete
@@ -490,15 +492,40 @@ class BeltTransectWidth(BaseChoiceModel):
     def __str__(self):
         return _('%s') % self.name
 
+    def get_condition(self, fish_length):
+        conditions = list(self.conditions.all().order_by("fish_length"))
+        default_condition = None
+        for i, condition in enumerate(conditions):
+            if condition.operator is None or condition.fish_length is None:
+                default_condition = conditions.pop(i)
+                break
+
+        if isinstance(fish_length, (int, float, Decimal)) is False or fish_length < 0:
+            return default_condition
+
+        num_conditions = len(conditions)
+        combos = []
+        for n in range(num_conditions):
+            combos.extend(list(itertools.combinations(conditions, n + 1)))
+
+        for combo in combos:
+            check = all([cnd.op(fish_length, cnd.fish_length) for cnd in combo])
+            if check:
+                return combo[0]
+
+        return default_condition
+
 
 class BeltTransectWidthCondition(BaseModel):
     OPERATOR_EQ = "=="
+    OPERATOR_NE = "!="
     OPERATOR_LT = "<"
     OPERATOR_LTE = "<="
     OPERATOR_GT = ">"
     OPERATOR_GTE = ">="
     OPERATOR_CHOICES = (
         (OPERATOR_EQ, OPERATOR_EQ),
+        (OPERATOR_NE, OPERATOR_NE),
         (OPERATOR_LT, OPERATOR_LT),
         (OPERATOR_LTE, OPERATOR_LTE),
         (OPERATOR_GT, OPERATOR_GT),
@@ -508,7 +535,7 @@ class BeltTransectWidthCondition(BaseModel):
     belttransectwidth = models.ForeignKey(
         "BeltTransectWidth",
         on_delete=models.PROTECT,
-        related_name="width_conditions"
+        related_name="conditions"
     )
     operator = models.CharField(
         max_length=2,
@@ -525,15 +552,34 @@ class BeltTransectWidthCondition(BaseModel):
     )
     val = models.PositiveSmallIntegerField()
 
-    def __str__(self):
-        if self.operator or self.fish_length is None:
-            return str(self.belttransectwidth)
+    class Meta:
+        unique_together = ("belttransectwidth", "operator", "fish_length")
 
-        return _("{} {}cm @ {}".format(
-            self.operator or "",
-            self.fish_length or "",
-            str(self.belttransectwidth),
-        ))
+    def __str__(self):
+        # if self.operator is None or self.fish_length is None:
+        #     return str(self.belttransectwidth)
+        return str(self.fish_length)
+        # return _("{} {}cm @ {}".format(
+        #     str(self.operator or ""),
+        #     str(self.fish_length or ""),
+        #     str(self.belttransectwidth)
+        # ))
+
+    @property
+    def op(self):
+        if self.operator == self.OPERATOR_EQ:
+            return pyoperator.eq
+        elif self.operator == self.OPERATOR_EQ:
+            return pyoperator.ne
+        elif self.operator == self.OPERATOR_LT:
+            return pyoperator.lt
+        elif self.operator == self.OPERATOR_LTE:
+            return pyoperator.le
+        elif self.operator == self.OPERATOR_GT:
+            return pyoperator.gt
+        elif self.operator == self.OPERATOR_GTE:
+            return pyoperator.ge
+        return None
 
 
 class FishBeltTransect(Transect):

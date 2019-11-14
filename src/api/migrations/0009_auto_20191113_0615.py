@@ -55,6 +55,7 @@ class Migration(migrations.Migration):
                         blank=True,
                         choices=[
                             ("==", "=="),
+                            ("!=", "!="),
                             ("<", "<"),
                             ("<=", "<="),
                             (">", ">"),
@@ -79,7 +80,7 @@ class Migration(migrations.Migration):
                     "belttransectwidth",
                     models.ForeignKey(
                         on_delete=django.db.models.deletion.PROTECT,
-                        related_name="width_conditions",
+                        related_name="conditions",
                         to="api.BeltTransectWidth",
                     ),
                 ),
@@ -105,5 +106,9 @@ class Migration(migrations.Migration):
                 ),
             ],
             options={"abstract": False},
+        ),
+        migrations.AlterUniqueTogether(
+            name='belttransectwidthcondition',
+            unique_together={('belttransectwidth', 'operator', 'fish_length')},
         ),
     ]
