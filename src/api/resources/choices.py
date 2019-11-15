@@ -6,16 +6,13 @@ from rest_framework.response import Response
 
 from ..models import (
     BeltTransectWidth,
-    BeltTransectWidthCondition,
     BenthicLifeHistory,
     CollectRecord,
     Country,
     Current,
     FishGroupFunction,
-    FishGroupSize,
     FishGroupTrophic,
     FishSizeBin,
-    FishSpecies,
     GrowthForm,
     HabitatComplexityScore,
     ManagementCompliance,
@@ -38,9 +35,6 @@ class ChoiceViewSet(BaseChoiceApiViewSet):
     def get_choices(self):
         belttransectwidths = dict(
             data=BeltTransectWidth.objects.choices(order_by="val")
-        )
-        belttransectwidthconditions = dict(
-            data=BeltTransectWidthCondition.objects.choices(order_by="val")
         )
         benthiclifehistories = dict(
             data=BenthicLifeHistory.objects.choices(order_by="name")
@@ -71,7 +65,6 @@ class ChoiceViewSet(BaseChoiceApiViewSet):
 
         return {
             "belttransectwidths": belttransectwidths,
-            "belttransectwidthconditions": belttransectwidthconditions,
             "benthiclifehistories": benthiclifehistories,
             "growthforms": growthforms,
             "countries": countries,

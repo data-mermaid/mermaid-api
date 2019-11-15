@@ -491,16 +491,28 @@ class BeltTransectWidth(BaseChoiceModel):
 
     def __str__(self):
         return _('%s') % self.name
+    
+    @property
+    def choice(self):
+        ret = {
+            'id': self.pk,
+            'name': self.__str__(),
+            'updated_on': self.updated_on,
+            'conditions': [cnd.choice for cnd in self.conditions.all().order_by("val")]
+        }
+        if hasattr(self, 'val'):
+            ret['val'] = self.val
+        return ret
 
-    def get_condition(self, fish_length):
-        conditions = list(self.conditions.all().order_by("fish_length"))
+    def get_condition(self, size):
+        conditions = list(self.conditions.all().order_by("size"))
         default_condition = None
         for i, condition in enumerate(conditions):
-            if condition.operator is None or condition.fish_length is None:
+            if condition.operator is None or condition.size is None:
                 default_condition = conditions.pop(i)
                 break
 
-        if isinstance(fish_length, (int, float, Decimal)) is False or fish_length < 0:
+        if isinstance(size, (int, float, Decimal)) is False or size < 0:
             return None
 
         num_conditions = len(conditions)
@@ -509,7 +521,7 @@ class BeltTransectWidth(BaseChoiceModel):
             combos.extend(list(itertools.combinations(conditions, n + 1)))
 
         for combo in combos:
-            check = all([cnd.op(fish_length, cnd.fish_length) for cnd in combo])
+            check = all([cnd.op(size, cnd.size) for cnd in combo])
             if check:
                 return combo[0]
 
@@ -543,24 +555,24 @@ class BeltTransectWidthCondition(BaseChoiceModel):
         null=True,
         blank=True
     )
-    fish_length = models.DecimalField(
+    size = models.DecimalField(
         decimal_places=1,
         max_digits=5,
         null=True,
         blank=True,
-        verbose_name=_(u'fish length (cm)')
+        verbose_name=_(u'fish size (cm)')
     )
     val = models.PositiveSmallIntegerField()
 
     class Meta:
-        unique_together = ("belttransectwidth", "operator", "fish_length")
+        unique_together = ("belttransectwidth", "operator", "size")
 
     def __str__(self):
-        if self.operator is None or self.fish_length is None:
+        if self.operator is None or self.size is None:
             return str(self.belttransectwidth)
         return str(_("{} {}cm @ {}".format(
             str(self.operator or ""),
-            str(self.fish_length or ""),
+            str(self.size or ""),
             str(self.belttransectwidth)
         )))
 
@@ -579,6 +591,20 @@ class BeltTransectWidthCondition(BaseChoiceModel):
         elif self.operator == self.OPERATOR_GTE:
             return pyoperator.ge
         return None
+
+    @property
+    def choice(self):
+        ret = {
+            'id': self.pk,
+            'name': self.__str__(),
+            'updated_on': self.updated_on,
+            'size': self.size,
+            'operator': self.operator,
+            'val': self.val,
+        }
+        if hasattr(self, 'val'):
+            ret['val'] = self.val
+        return ret
 
 
 class FishBeltTransect(Transect):

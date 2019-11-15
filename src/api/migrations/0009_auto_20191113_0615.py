@@ -66,7 +66,7 @@ class Migration(migrations.Migration):
                     ),
                 ),
                 (
-                    "fish_length",
+                    "size",
                     models.DecimalField(
                         blank=True,
                         decimal_places=1,
@@ -109,6 +109,6 @@ class Migration(migrations.Migration):
         ),
         migrations.AlterUniqueTogether(
             name='belttransectwidthcondition',
-            unique_together={('belttransectwidth', 'operator', 'fish_length')},
+            unique_together={('belttransectwidth', 'operator', 'size')},
         ),
     ]

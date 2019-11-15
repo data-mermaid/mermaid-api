@@ -14,14 +14,14 @@ class BeltTransectWidthNoGapsTest(TestCase):
         self.btw_cond_lte_10 = BeltTransectWidthCondition.objects.create(
             belttransectwidth=self.belt_transect_width,
             operator=BeltTransectWidthCondition.OPERATOR_LTE,
-            fish_length=10,
+            size=10,
             val=1,
         )
 
         self.btw_cond_gt_10 = BeltTransectWidthCondition.objects.create(
             belttransectwidth=self.belt_transect_width,
             operator=BeltTransectWidthCondition.OPERATOR_GT,
-            fish_length=10,
+            size=10,
             val=2,
         )
 
@@ -63,14 +63,14 @@ class BeltTransectWidthGapsTest(TestCase):
         self.btw_cond_lte_8 = BeltTransectWidthCondition.objects.create(
             belttransectwidth=self.belt_transect_width,
             operator=BeltTransectWidthCondition.OPERATOR_LTE,
-            fish_length=8,
+            size=8,
             val=1,
         )
 
         self.btw_cond_gt_10 = BeltTransectWidthCondition.objects.create(
             belttransectwidth=self.belt_transect_width,
             operator=BeltTransectWidthCondition.OPERATOR_GT,
-            fish_length=10,
+            size=10,
             val=2,
         )
 
