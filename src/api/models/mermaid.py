@@ -501,7 +501,7 @@ class BeltTransectWidth(BaseChoiceModel):
                 break
 
         if isinstance(fish_length, (int, float, Decimal)) is False or fish_length < 0:
-            return default_condition
+            return None
 
         num_conditions = len(conditions)
         combos = []
@@ -516,7 +516,7 @@ class BeltTransectWidth(BaseChoiceModel):
         return default_condition
 
 
-class BeltTransectWidthCondition(BaseModel):
+class BeltTransectWidthCondition(BaseChoiceModel):
     OPERATOR_EQ = "=="
     OPERATOR_NE = "!="
     OPERATOR_LT = "<"
@@ -556,14 +556,13 @@ class BeltTransectWidthCondition(BaseModel):
         unique_together = ("belttransectwidth", "operator", "fish_length")
 
     def __str__(self):
-        # if self.operator is None or self.fish_length is None:
-        #     return str(self.belttransectwidth)
-        return str(self.fish_length)
-        # return _("{} {}cm @ {}".format(
-        #     str(self.operator or ""),
-        #     str(self.fish_length or ""),
-        #     str(self.belttransectwidth)
-        # ))
+        if self.operator is None or self.fish_length is None:
+            return str(self.belttransectwidth)
+        return str(_("{} {}cm @ {}".format(
+            str(self.operator or ""),
+            str(self.fish_length or ""),
+            str(self.belttransectwidth)
+        )))
 
     @property
     def op(self):
