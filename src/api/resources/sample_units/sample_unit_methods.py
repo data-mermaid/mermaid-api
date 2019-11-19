@@ -305,8 +305,7 @@ class SampleUnitMethodView(BaseProjectApiViewSet):
                 then=Concat(
                     Cast("beltfish__transect__len_surveyed", CharField()),
                     Value("m x "),
-                    Cast("beltfish__transect__width__val", CharField()),
-                    Value("m")
+                    Cast("beltfish__transect__width__name", CharField())
                 )
             ),
             When(
