@@ -308,13 +308,6 @@ class CollectRecordCSVSerializer(Serializer):
     additional_group_fields = []
     excluded_group_fields = ["id"]
 
-    # CHOICES
-    # _choices = ChoiceViewSet().get_choices()
-    # visibility_choices = build_choices("visibilities", _choices)
-    # current_choices = build_choices("currents", _choices)
-    # relative_depth_choices = build_choices("relativedepths", _choices)
-    # tide_choices = build_choices("tides", _choices)
-
     _reverse_choices = {}
 
     # PROJECT RELATED CHOICES

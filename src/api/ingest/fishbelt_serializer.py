@@ -46,23 +46,6 @@ class FishBeltCSVSerializer(CollectRecordCSVSerializer):
         }
     )
 
-    # _choices = ChoiceViewSet().get_choices()
-    # reef_slopes_choices = [
-    #     (str(c["id"]), c["val"]) for c in _choices["reefslopes"]["data"]
-    # ]
-
-    # belt_transect_widths_choices = [
-    #     (str(c["id"]), str(c["val"])) for c in _choices["belttransectwidths"]["data"]
-    # ]
-
-    # fish_size_bins_choices = [
-    #     (str(c["id"]), str(c["val"])) for c in _choices["fishsizebins"]["data"]
-    # ]
-
-    # fish_attributes_choices = [
-    #     (str(ba.id), ba.name) for ba in FishAttributeView.objects.all().order_by("name")
-    # ]
-
     data__fishbelt_transect__len_surveyed = serializers.IntegerField(min_value=0)
     data__fishbelt_transect__number = serializers.IntegerField(min_value=0)
     data__fishbelt_transect__label = serializers.CharField(
