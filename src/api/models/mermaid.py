@@ -491,7 +491,7 @@ class BeltTransectWidth(BaseChoiceModel):
 
     def __str__(self):
         return _('%s') % self.name
-    
+
     @property
     def choice(self):
         ret = {
@@ -504,21 +504,27 @@ class BeltTransectWidth(BaseChoiceModel):
             ret['val'] = self.val
         return ret
 
-    def get_condition(self, size):
-        conditions = list(self.conditions.all().order_by("size"))
-        default_condition = None
+    def _get_default_condition(self, conditions):
         for i, condition in enumerate(conditions):
             if condition.operator is None or condition.size is None:
-                default_condition = conditions.pop(i)
+                return conditions.pop(i)
                 break
+        return None
 
-        if isinstance(size, (int, float, Decimal)) is False or size < 0:
-            return None
-
+    def _get_conditions_combinations(self, conditions):
         num_conditions = len(conditions)
         combos = []
         for n in range(num_conditions):
             combos.extend(list(itertools.combinations(conditions, n + 1)))
+        return combos
+
+    def get_condition(self, size):
+        if isinstance(size, (int, float, Decimal)) is False or size < 0:
+            return None
+
+        conditions = list(self.conditions.all().order_by("size"))
+        default_condition = self._get_default_condition(conditions)
+        combos = self._get_conditions_combinations(conditions)
 
         for combo in combos:
             check = all([cnd.op(size, cnd.size) for cnd in combo])
