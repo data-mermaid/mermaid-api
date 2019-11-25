@@ -95,12 +95,12 @@ def to_transect_width_value(field, row, serializer_instance):
     lookup_val = row.get("beltfish__transect__width_id")
     transect_width = lookup.get(lookup_val)
     if transect_width is None:
-        return ""
+        return None
     size = row.get("size")
 
     condition = transect_width.get_condition(size)
     if condition is None:
-        return ""
+        return None
 
     return condition.val
 

@@ -17,7 +17,6 @@ def reef_slopes_choices():
 
 
 def benthic_attributes_choices():
-    print("benthic_attributes_choices")
     return [
         (str(c.id), str(c.name))
         for c in BenthicAttribute.objects.all().order_by("name")
