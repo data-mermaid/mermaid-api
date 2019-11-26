@@ -9,9 +9,14 @@ from rest_framework.fields import empty
 from rest_framework.serializers import ListSerializer, Serializer
 
 from .. import utils
-from ..models import BenthicAttribute, CollectRecord, FishAttributeView
-from ..resources.choices import ChoiceViewSet
-
+from ..fields import LazyChoiceField
+from ..models import (
+    CollectRecord,
+    Current,
+    RelativeDepth,
+    Tide,
+    Visibility,
+)
 
 __all__ = [
     "CollectRecordCSVListSerializer",
@@ -20,8 +25,24 @@ __all__ = [
 ]
 
 
-def build_choices(key, choices):
-    return [(str(c["id"]), str(c["name"])) for c in choices[key]["data"]]
+def build_choices(choices, val_key="name"):
+    return [(str(c["id"]), str(c[val_key])) for c in choices]
+
+
+def visibility_choices():
+    return build_choices(Visibility.objects.choices(order_by="val"))
+
+
+def current_choices():
+    return build_choices(Current.objects.choices(order_by="name"))
+
+
+def relative_depth_choices():
+    return build_choices(RelativeDepth.objects.choices(order_by="name"))
+
+
+def tide_choices():
+    return build_choices(Tide.objects.choices(order_by="name"))
 
 
 class CollectRecordCSVListSerializer(ListSerializer):
@@ -287,13 +308,6 @@ class CollectRecordCSVSerializer(Serializer):
     additional_group_fields = []
     excluded_group_fields = ["id"]
 
-    # CHOICES
-    _choices = ChoiceViewSet().get_choices()
-    visibility_choices = build_choices("visibilities", _choices)
-    current_choices = build_choices("currents", _choices)
-    relative_depth_choices = build_choices("relativedepths", _choices)
-    tide_choices = build_choices("tides", _choices)
-
     _reverse_choices = {}
 
     # PROJECT RELATED CHOICES
@@ -315,19 +329,19 @@ class CollectRecordCSVSerializer(Serializer):
     data__sample_event__sample_time = serializers.TimeField(default="00:00:00")
     data__sample_event__depth = serializers.DecimalField(max_digits=3, decimal_places=1)
 
-    data__sample_event__visibility = serializers.ChoiceField(
+    data__sample_event__visibility = LazyChoiceField(
         choices=visibility_choices, required=False, allow_null=True, allow_blank=True
     )
-    data__sample_event__current = serializers.ChoiceField(
+    data__sample_event__current = LazyChoiceField(
         choices=current_choices, required=False, allow_null=True, allow_blank=True
     )
-    data__sample_event__relative_depth = serializers.ChoiceField(
+    data__sample_event__relative_depth = LazyChoiceField(
         choices=relative_depth_choices,
         required=False,
         allow_null=True,
         allow_blank=True,
     )
-    data__sample_event__tide = serializers.ChoiceField(
+    data__sample_event__tide = LazyChoiceField(
         choices=tide_choices, required=False, allow_null=True, allow_blank=True
     )
     data__sample_event__notes = serializers.CharField(required=False, allow_blank=True)
@@ -372,7 +386,7 @@ class CollectRecordCSVSerializer(Serializer):
                 and not field.read_only
             ]
         )
-    
+
     def validate_data__observers(self, val):
         project_profiles = self.project_choices.get("project_profiles")
         val = val or []

@@ -20,9 +20,15 @@ class ExtendedManager(models.Manager):
 
     def get_or_none(self, *args, **kwargs):
         try:
-            return super(ExtendedManager, self).get(*args, **kwargs)
+            return super().get(*args, **kwargs)
         except ObjectDoesNotExist:
             return None
+
+
+class ChoicesManager(ExtendedManager):
+
+    def choices(self, order_by, *args, **kwargs):
+        return [c.choice for c in super().all().order_by(order_by)]
 
 
 class Profile(models.Model):
@@ -133,6 +139,8 @@ class BaseChoiceModel(BaseModel):
 
     class Meta:
         abstract = True
+
+    objects = ChoicesManager()
 
 
 class Country(BaseChoiceModel):

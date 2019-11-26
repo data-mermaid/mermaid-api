@@ -4,7 +4,7 @@ from rest_framework.response import Response
 from rest_framework.decorators import action
 
 from ...models.mermaid import (
-    BeltFish, FishAttributeView, ObsBeltFish, FishFamily, FishGenus, FishSpecies
+    BeltFish, BeltTransectWidth, FishAttributeView, ObsBeltFish, FishFamily, FishGenus, FishSpecies
 )
 from ...utils import calc_biomass_density
 
@@ -90,21 +90,36 @@ def to_constant_c(field, row, serializer_instance):
     return _to_fa_attribute('biomass_constant_c', row, serializer_instance)
 
 
+def to_transect_width_value(field, row, serializer_instance):
+    lookup = serializer_instance.serializer_cache["beltfish_lookups-belt_transect_widths"]
+    lookup_val = row.get("beltfish__transect__width_id")
+    transect_width = lookup.get(lookup_val)
+    if transect_width is None:
+        return None
+    size = row.get("size")
+
+    condition = transect_width.get_condition(size)
+    if condition is None:
+        return None
+
+    return condition.val
+
+
 def to_biomass_kgha(field, row, serializer_instance):
     count = row.get("count")
     size = row.get("size")
     transect_len_surveyed = row.get("beltfish__transect__len_surveyed")
-    transect_width = row.get("beltfish__transect__width__val")
     fa = _get_fish_attribute(row, serializer_instance)
     constant_a = fa.get("biomass_constant_a")
     constant_b = fa.get("biomass_constant_b")
     constant_c = fa.get("biomass_constant_c")
+    width_val = to_transect_width_value(field, row, serializer_instance)
 
     density = calc_biomass_density(
         count,
         size,
         transect_len_surveyed,
-        transect_width,
+        width_val,
         constant_a,
         constant_b,
         constant_c,
@@ -171,7 +186,7 @@ class ObsBeltFishReportSerializer(SampleEventReportSerializer, metaclass=SampleE
         (idx, ReportField("beltfish__transect__number", "Transect number")),
         (idx + 1, ReportField("beltfish__transect__label", "Transect label")),
         (idx + 2, ReportField("beltfish__transect__len_surveyed", "Transect length surveyed")),
-        (idx + 3, ReportField("beltfish__transect__width__val", "Transect width")),
+        (idx + 3, ReportMethodField("Transect width", to_transect_width_value)),
         (idx + 5, ReportMethodField("Fish family", to_fish_family_name)),
         (idx + 6, ReportMethodField("Fish genus", to_fish_genus_name)),
         (idx + 7, ReportMethodField("Fish taxon", to_fish_attribute_name)),
@@ -194,6 +209,7 @@ class ObsBeltFishReportSerializer(SampleEventReportSerializer, metaclass=SampleE
         "beltfish_id",
         "beltfish__transect__sample_event__site__project_id",
         "beltfish__transect__sample_event__management_id",
+        "beltfish__transect__width_id",
     )
 
     class Meta:
@@ -271,6 +287,14 @@ class ObsBeltFishReportSerializer(SampleEventReportSerializer, metaclass=SampleE
             self.serializer_cache[
                 "beltfish_lookups-fish_attributes"
             ] = fish_attribute_lookup
+
+        widths = BeltTransectWidth.objects.prefetch_related("conditions").all()
+        self.serializer_cache[
+            "beltfish_lookups-belt_transect_widths"
+        ] = {
+            btw.id: btw 
+            for btw in widths
+        }
 
 
 class BeltFishMethodView(BaseProjectApiViewSet):
