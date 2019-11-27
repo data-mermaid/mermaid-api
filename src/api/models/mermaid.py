@@ -212,14 +212,12 @@ class Management(BaseModel, JSONMixin, AreaMixin):
                                null=True, blank=True,
                                validators=[MinValueValidator(0)])
     # These might be abstracted into separate model detailing all choices
-    no_take = models.NullBooleanField(verbose_name=_(u'no-take zone'), )
-    # help_text=_(u'Total extraction ban'))
-    periodic_closure = models.NullBooleanField(verbose_name=_(u'periodic closure'))
-    open_access = models.NullBooleanField(verbose_name=_(u'open access'))
-    size_limits = models.NullBooleanField(u'size limits')
-    gear_restriction = models.NullBooleanField(verbose_name=_(u'partial gear restriction'), )
-    # help_text=_(u'Full gear restriction = no-take'))
-    species_restriction = models.NullBooleanField(verbose_name=_(u'partial species restriction'))
+    no_take = models.BooleanField(verbose_name=_(u'no-take zone'), default=False)
+    periodic_closure = models.BooleanField(verbose_name=_(u'periodic closure'), default=False)
+    open_access = models.BooleanField(verbose_name=_(u'open access'), default=False)
+    size_limits = models.BooleanField(verbose_name=_(u'size limits'), default=False)
+    gear_restriction = models.BooleanField(verbose_name=_(u'partial gear restriction'), default=False)
+    species_restriction = models.BooleanField(verbose_name=_(u'partial species restriction'), default=False)
     validations = JSONField(encoder=JSONEncoder, null=True, blank=True)
 
     class Meta:
