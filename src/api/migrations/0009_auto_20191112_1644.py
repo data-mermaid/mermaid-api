@@ -18,7 +18,7 @@ def migrate_nulls(apps, schema_editor):
 class Migration(migrations.Migration):
 
     dependencies = [
-        ('api', '0008_auto_20191022_0555'),
+        ('api', '0010_auto_20191113_0627'),
     ]
 
     operations = [
