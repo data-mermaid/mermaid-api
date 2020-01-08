@@ -1,3 +1,4 @@
+import operator
 import uuid
 from django.dispatch import receiver
 from django.db.models.signals import post_delete, post_save, pre_save, m2m_changed
