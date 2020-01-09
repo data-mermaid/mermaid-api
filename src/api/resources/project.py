@@ -10,7 +10,7 @@ from rest_framework.response import Response
 
 from rest_condition import Or
 from ..auth_backends import AnonymousJWTAuthentication
-from ..models import Management, Project, Site
+from ..models import Management, Project, Site, ProjectProfile, ArchivedRecord
 from ..permissions import *
 from ..utils.replace import replace_collect_record_owner, replace_sampleunit_objs
 from .base import (
@@ -235,6 +235,35 @@ class ProjectViewSet(BaseApiViewSet):
 
         transaction.savepoint_commit(save_point_id)
         return Response(project_serializer.data)
+
+    def get_updates(self, request, *args, **kwargs):
+        added, updated, deleted = super().get_updates(request, *args, **kwargs)
+
+        # Need to track changes to Project profile to decide if projects should be
+        # added or removed from list
+        serializer = self.get_serializer_class()
+        context = {"request": self.request}
+        timestamp = self.get_update_timestamp(request)
+        added_filter = dict()
+        removed_filter = dict(app_label="api", model="projectprofile")
+
+        # Additions
+        self.apply_query_param(added_filter, "created_on__gte", timestamp)
+        added_filter["profile"] = request.user.profile
+        project_profiles = ProjectProfile.objects.filter(**added_filter)
+        additions = serializer(
+            [pp.project for pp in project_profiles], many=True, context=context
+        ).data
+        added.extend(additions)
+
+        # Deletions
+        removed = [
+            dict(id=ar.project_pk, timestamp=ar.created_on)
+            for ar in ArchivedRecord.objects.filter(**removed_filter)
+        ]
+        deleted.extend(removed)
+
+        return self.compress(added, updated, deleted)
 
     def _find_and_replace_objs(self, request, pk, obj_cls, field, *args, **kwargs):
         project_id = pk

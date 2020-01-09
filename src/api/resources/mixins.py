@@ -78,13 +78,8 @@ class UpdatesMixin(object):
     def apply_query_param(self, query_params, key, value):
         if value is not None:
             query_params[key] = value
-
-    @action(detail=False, methods=["GET"])
-    def updates(self, request, *args, **kwargs):
-        added = []
-        modified = []
-        removed = []
-
+    
+    def get_update_timestamp(self, request):
         qp_timestamp = request.query_params.get("timestamp")
         if qp_timestamp is None:
             return HttpResponseBadRequest()
@@ -96,7 +91,15 @@ class UpdatesMixin(object):
 
         if timestamp:
             timestamp = timestamp.replace(tzinfo=pytz.utc)
+        
+        return timestamp
 
+    def get_updates(self, request, *args, **kwargs):
+        added = []
+        modified = []
+        removed = []
+
+        timestamp = self.get_update_timestamp(request)
         pk = request.query_params.get("pk")
 
         serializer = self.get_serializer_class()
@@ -133,8 +136,11 @@ class UpdatesMixin(object):
             for ar in ArchivedRecord.objects.filter(**removed_filter)
         ]
 
-        added, modified, removed = self.compress(added, modified, removed)
+        return self.compress(added, modified, removed)
 
+    @action(detail=False, methods=["GET"])
+    def updates(self, request, *args, **kwargs):
+        added, modified, removed = self.get_updates(request, *args, **kwargs)
         return Response(dict(added=added, modified=modified, removed=removed))
 
 
