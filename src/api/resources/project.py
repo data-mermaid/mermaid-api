@@ -242,7 +242,7 @@ class ProjectViewSet(BaseApiViewSet):
         # Need to track changes to Project profile to decide if projects should be
         # added or removed from list
         serializer = self.get_serializer_class()
-        context = {"request": self.request}
+        context = {"request": request}
         timestamp = self.get_update_timestamp(request)
         added_filter = dict()
         removed_filter = dict(app_label="api", model="projectprofile")
@@ -257,6 +257,7 @@ class ProjectViewSet(BaseApiViewSet):
         added.extend(additions)
 
         # Deletions
+        self.apply_query_param(removed_filter, "created_on__gte", timestamp)
         removed = [
             dict(id=ar.project_pk, timestamp=ar.created_on)
             for ar in ArchivedRecord.objects.filter(**removed_filter)

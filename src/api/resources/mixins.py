@@ -78,7 +78,7 @@ class UpdatesMixin(object):
     def apply_query_param(self, query_params, key, value):
         if value is not None:
             query_params[key] = value
-    
+
     def get_update_timestamp(self, request):
         qp_timestamp = request.query_params.get("timestamp")
         if qp_timestamp is None:
@@ -91,7 +91,7 @@ class UpdatesMixin(object):
 
         if timestamp:
             timestamp = timestamp.replace(tzinfo=pytz.utc)
-        
+
         return timestamp
 
     def get_updates(self, request, *args, **kwargs):
