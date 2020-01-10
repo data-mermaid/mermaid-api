@@ -1,9 +1,11 @@
 from __future__ import unicode_literals
+import itertools
 import json
 import logging
 import datetime
 import pytz
-import operator
+import operator as pyoperator
+from decimal import Decimal
 
 from django.db.models import Avg
 from django.db.models.signals import post_delete
@@ -210,14 +212,12 @@ class Management(BaseModel, JSONMixin, AreaMixin):
                                null=True, blank=True,
                                validators=[MinValueValidator(0)])
     # These might be abstracted into separate model detailing all choices
-    no_take = models.NullBooleanField(verbose_name=_(u'no-take zone'), )
-    # help_text=_(u'Total extraction ban'))
-    periodic_closure = models.NullBooleanField(verbose_name=_(u'periodic closure'))
-    open_access = models.NullBooleanField(verbose_name=_(u'open access'))
-    size_limits = models.NullBooleanField(u'size limits')
-    gear_restriction = models.NullBooleanField(verbose_name=_(u'partial gear restriction'), )
-    # help_text=_(u'Full gear restriction = no-take'))
-    species_restriction = models.NullBooleanField(verbose_name=_(u'partial species restriction'))
+    no_take = models.BooleanField(verbose_name=_(u'no-take zone'), default=False)
+    periodic_closure = models.BooleanField(verbose_name=_(u'periodic closure'), default=False)
+    open_access = models.BooleanField(verbose_name=_(u'open access'), default=False)
+    size_limits = models.BooleanField(verbose_name=_(u'size limits'), default=False)
+    gear_restriction = models.BooleanField(verbose_name=_(u'partial gear restriction'), default=False)
+    species_restriction = models.BooleanField(verbose_name=_(u'partial species restriction'), default=False)
     validations = JSONField(encoder=JSONEncoder, null=True, blank=True)
 
     class Meta:
@@ -482,10 +482,133 @@ class BenthicTransect(Transect):
 
 
 class BeltTransectWidth(BaseChoiceModel):
-    val = models.PositiveSmallIntegerField()
+    # TODO: make name unique, null=False, blank=False
+    # TODO: remove val field
+    name = models.CharField(max_length=100, null=True, blank=True)
+    val = models.PositiveSmallIntegerField(null=True, blank=True)
 
     def __str__(self):
-        return _(u'%sm') % self.val
+        return _('%s') % self.name
+
+    @property
+    def choice(self):
+        ret = {
+            'id': self.pk,
+            'name': self.__str__(),
+            'updated_on': self.updated_on,
+            'conditions': [cnd.choice for cnd in self.conditions.all().order_by("val")]
+        }
+        if hasattr(self, 'val'):
+            ret['val'] = self.val
+        return ret
+
+    def _get_default_condition(self, conditions):
+        for i, condition in enumerate(conditions):
+            if condition.operator is None or condition.size is None:
+                return conditions.pop(i)
+                break
+        return None
+
+    def _get_conditions_combinations(self, conditions):
+        num_conditions = len(conditions)
+        combos = []
+        for n in range(num_conditions):
+            combos.extend(list(itertools.combinations(conditions, n + 1)))
+        return combos
+
+    def get_condition(self, size):
+        if isinstance(size, (int, float, Decimal)) is False or size < 0:
+            return None
+
+        conditions = list(self.conditions.all().order_by("size"))
+        default_condition = self._get_default_condition(conditions)
+        combos = self._get_conditions_combinations(conditions)
+
+        for combo in combos:
+            check = all([cnd.op(size, cnd.size) for cnd in combo])
+            if check:
+                return combo[0]
+
+        return default_condition
+
+
+class BeltTransectWidthCondition(BaseChoiceModel):
+    OPERATOR_EQ = "=="
+    OPERATOR_NE = "!="
+    OPERATOR_LT = "<"
+    OPERATOR_LTE = "<="
+    OPERATOR_GT = ">"
+    OPERATOR_GTE = ">="
+    OPERATOR_CHOICES = (
+        (OPERATOR_EQ, OPERATOR_EQ),
+        (OPERATOR_NE, OPERATOR_NE),
+        (OPERATOR_LT, OPERATOR_LT),
+        (OPERATOR_LTE, OPERATOR_LTE),
+        (OPERATOR_GT, OPERATOR_GT),
+        (OPERATOR_GTE, OPERATOR_GTE),
+    )
+
+    belttransectwidth = models.ForeignKey(
+        "BeltTransectWidth",
+        on_delete=models.PROTECT,
+        related_name="conditions"
+    )
+    operator = models.CharField(
+        max_length=2,
+        choices=OPERATOR_CHOICES,
+        null=True,
+        blank=True
+    )
+    size = models.DecimalField(
+        decimal_places=1,
+        max_digits=5,
+        null=True,
+        blank=True,
+        verbose_name=_(u'fish size (cm)')
+    )
+    val = models.PositiveSmallIntegerField()
+
+    class Meta:
+        unique_together = ("belttransectwidth", "operator", "size")
+
+    def __str__(self):
+        if self.operator is None or self.size is None:
+            return str(self.belttransectwidth)
+        return str(_("{} {}cm @ {}".format(
+            str(self.operator or ""),
+            str(self.size or ""),
+            str(self.belttransectwidth)
+        )))
+
+    @property
+    def op(self):
+        if self.operator == self.OPERATOR_EQ:
+            return pyoperator.eq
+        elif self.operator == self.OPERATOR_EQ:
+            return pyoperator.ne
+        elif self.operator == self.OPERATOR_LT:
+            return pyoperator.lt
+        elif self.operator == self.OPERATOR_LTE:
+            return pyoperator.le
+        elif self.operator == self.OPERATOR_GT:
+            return pyoperator.gt
+        elif self.operator == self.OPERATOR_GTE:
+            return pyoperator.ge
+        return None
+
+    @property
+    def choice(self):
+        ret = {
+            'id': self.pk,
+            'name': self.__str__(),
+            'updated_on': self.updated_on,
+            'size': self.size,
+            'operator': self.operator,
+            'val': self.val,
+        }
+        if hasattr(self, 'val'):
+            ret['val'] = self.val
+        return ret
 
 
 class FishBeltTransect(Transect):

@@ -225,9 +225,15 @@ class SiteAdmin(BaseAdmin):
     list_filter = ('reef_type', 'reef_zone', 'exposure',)
 
 
+class BeltTransectWidthConditionInline(admin.StackedInline):
+    model = BeltTransectWidthCondition
+    extra = 0
+
+
 @admin.register(BeltTransectWidth)
 class BeltTransectWidthAdmin(BaseAdmin):
-    list_display = ('val',)
+    list_display = ('name',)
+    inlines = [BeltTransectWidthConditionInline, ]
 
 
 @admin.register(Country)

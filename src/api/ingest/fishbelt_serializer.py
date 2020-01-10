@@ -1,11 +1,29 @@
 from rest_framework import serializers
 
-from ..models import FishAttributeView
-from ..resources.choices import ChoiceViewSet
+from ..fields import LazyChoiceField
+from ..models import BeltTransectWidth, FishAttributeView, FishSizeBin, ReefSlope
 from .serializers import CollectRecordCSVSerializer, build_choices
 
-
 __all__ = ["FishBeltCSVSerializer"]
+
+
+def reef_slopes_choices():
+    return build_choices(ReefSlope.objects.choices(order_by="val"), "val")
+
+
+def belt_transect_widths_choices():
+    return build_choices(BeltTransectWidth.objects.choices(order_by="val"), "val")
+
+
+def fish_size_bins_choices():
+    return build_choices(FishSizeBin.objects.choices(order_by="val"), "val")
+
+
+def fish_attributes_choices():
+    return [
+        (str(c.id), str(c.name))
+        for c in FishAttributeView.objects.all().order_by("name")
+    ]
 
 
 class FishBeltCSVSerializer(CollectRecordCSVSerializer):
@@ -28,38 +46,19 @@ class FishBeltCSVSerializer(CollectRecordCSVSerializer):
         }
     )
 
-    _choices = ChoiceViewSet().get_choices()
-    reef_slopes_choices = [
-        (str(c["id"]), c["val"]) for c in _choices["reefslopes"]["data"]
-    ]
-
-    belt_transect_widths_choices = [
-        (str(c["id"]), str(c["val"])) for c in _choices["belttransectwidths"]["data"]
-    ]
-
-    fish_size_bins_choices = [
-        (str(c["id"]), str(c["val"])) for c in _choices["fishsizebins"]["data"]
-    ]
-
-    fish_attributes_choices = [
-        (str(ba.id), ba.name) for ba in FishAttributeView.objects.all().order_by("name")
-    ]
-
     data__fishbelt_transect__len_surveyed = serializers.IntegerField(min_value=0)
     data__fishbelt_transect__number = serializers.IntegerField(min_value=0)
     data__fishbelt_transect__label = serializers.CharField(
         allow_blank=True, required=False
     )
-    data__fishbelt_transect__reef_slope = serializers.ChoiceField(
+    data__fishbelt_transect__reef_slope = LazyChoiceField(
         choices=reef_slopes_choices, required=False, allow_null=True, allow_blank=True
     )
-    data__fishbelt_transect__width = serializers.ChoiceField(
+    data__fishbelt_transect__width = LazyChoiceField(
         choices=belt_transect_widths_choices
     )
-    data__fishbelt_transect__size_bin = serializers.ChoiceField(
-        choices=fish_size_bins_choices
-    )
-    data__obs_belt_fishes__fish_attribute = serializers.ChoiceField(
+    data__fishbelt_transect__size_bin = LazyChoiceField(choices=fish_size_bins_choices)
+    data__obs_belt_fishes__fish_attribute = LazyChoiceField(
         choices=fish_attributes_choices
     )
     data__obs_belt_fishes__size = serializers.DecimalField(
