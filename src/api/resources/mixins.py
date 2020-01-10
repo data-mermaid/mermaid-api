@@ -38,37 +38,31 @@ class ProtectedResourceMixin(object):
 
 class UpdatesMixin(object):
     def compress(self, added, modified, removed):
-        added_lookup = {str(a["id"]): parse_datetime(a["updated_on"]) for a in added}
-        modified_lookup = {
-            str(m["id"]): parse_datetime(m["updated_on"]) for m in modified
-        }
-        removed_lookup = {str(r["id"]): r["timestamp"] for r in removed}
+        added_lookup = {str(a["id"]): ts for ts, a in added}
+        modified_lookup = {str(m["id"]): ts for ts, m in modified}
+        removed_lookup = {str(r["id"]): ts for ts, r in removed}
 
         compressed_added = []
-        for rec in added:
+        for rec_timestamp, rec in added:
             pk = str(rec["id"])
-            if (
-                pk in removed_lookup
-                and parse_datetime(rec["updated_on"]) <= removed_lookup[pk]
-            ):
+            if pk in removed_lookup and rec_timestamp <= removed_lookup[pk]:
                 continue
             compressed_added.append(rec)
 
         compressed_modified = []
-        for rec in modified:
+        for rec_timestamp, rec in modified:
             pk = str(rec["id"])
             if pk in added_lookup or (
-                pk in removed_lookup
-                and parse_datetime(rec["updated_on"]) <= removed_lookup[pk]
+                pk in removed_lookup and rec_timestamp <= removed_lookup[pk]
             ):
                 continue
             compressed_modified.append(rec)
 
         compressed_removed = []
-        for rec in removed:
+        for rec_timestamp, rec in removed:
             pk = str(rec["id"])
-            if (pk in added_lookup and rec["timestamp"] < added_lookup[pk]) or (
-                pk in modified_lookup and rec["timestamp"] < modified_lookup[pk]
+            if (pk in added_lookup and rec_timestamp < added_lookup[pk]) or (
+                pk in modified_lookup and rec_timestamp < modified_lookup[pk]
             ):
                 continue
             compressed_removed.append(rec)
@@ -127,20 +121,31 @@ class UpdatesMixin(object):
             removed_filter["model"] = qry.model._meta.model_name
 
         context = {"request": self.request}
-        added = serializer(qry.filter(**added_filter), many=True, context=context).data
-        modified = serializer(
-            qry.filter(**updated_filter), many=True, context=context
-        ).data
+        added = []
+        added_records = qry.filter(**added_filter)
+        for added_record in added_records:
+            timestamp = added_record.updated_on
+            serialized_rec = serializer(added_record, context=context).data
+            added.append((timestamp, serialized_rec))
+
+        modified = []
+        modified_recs = qry.filter(**added_filter)
+        for modified_rec in modified_recs:
+            timestamp = modified_rec.updated_on
+            serialized_rec = serializer(modified_rec, context=context).data
+            modified.append((timestamp, serialized_rec))
+
         removed = [
-            dict(id=ar.record_pk, timestamp=ar.created_on)
+            (ar.created_on, dict(id=ar.record_pk, timestamp=ar.created_on))
             for ar in ArchivedRecord.objects.filter(**removed_filter)
         ]
 
-        return self.compress(added, modified, removed)
+        return added, modified, removed
 
     @action(detail=False, methods=["GET"])
     def updates(self, request, *args, **kwargs):
         added, modified, removed = self.get_updates(request, *args, **kwargs)
+        added, modified, removed = self.compress(added, modified, removed)
         return Response(dict(added=added, modified=modified, removed=removed))
 
 

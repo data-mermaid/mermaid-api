@@ -251,20 +251,23 @@ class ProjectViewSet(BaseApiViewSet):
         self.apply_query_param(added_filter, "created_on__gte", timestamp)
         added_filter["profile"] = request.user.profile
         project_profiles = ProjectProfile.objects.filter(**added_filter)
-        additions = serializer(
-            [pp.project for pp in project_profiles], many=True, context=context
-        ).data
+
+        additions = [
+            (pp.updated_on, serializer(pp.project, context=context).data)
+            for pp in project_profiles
+        ]
+
         added.extend(additions)
 
         # Deletions
         self.apply_query_param(removed_filter, "created_on__gte", timestamp)
         removed = [
-            dict(id=ar.project_pk, timestamp=ar.created_on)
+            (ar.created_on, dict(id=ar.project_pk, timestamp=ar.created_on))
             for ar in ArchivedRecord.objects.filter(**removed_filter)
         ]
         deleted.extend(removed)
 
-        return self.compress(added, updated, deleted)
+        return added, updated, deleted
 
     def _find_and_replace_objs(self, request, pk, obj_cls, field, *args, **kwargs):
         project_id = pk
