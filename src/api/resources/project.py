@@ -246,6 +246,7 @@ class ProjectViewSet(BaseApiViewSet):
         timestamp = self.get_update_timestamp(request)
         added_filter = dict()
         removed_filter = dict(app_label="api", model="projectprofile")
+        removed_filter["record__fields__profile"] = str(request.user.profile.id)
 
         # Additions
         self.apply_query_param(added_filter, "created_on__gte", timestamp)
