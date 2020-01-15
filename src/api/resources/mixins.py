@@ -129,7 +129,7 @@ class UpdatesMixin(object):
             added.append((timestamp, serialized_rec))
 
         modified = []
-        modified_recs = qry.filter(**added_filter)
+        modified_recs = qry.filter(**updated_filter)
         for modified_rec in modified_recs:
             timestamp = modified_rec.updated_on
             serialized_rec = serializer(modified_rec, context=context).data
