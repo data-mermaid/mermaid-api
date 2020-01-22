@@ -1219,6 +1219,7 @@ class FishSpecies(FishAttribute):
         ('total length', 'total length'),
         ('wing diameter', 'wing diameter')
     )
+    LENGTH_TYPES_CHOICES_UPDATED_ON = datetime.datetime(2020, 1, 21, 0, 0, 0, 0, pytz.UTC)
 
     name = models.CharField(max_length=100)
     genus = models.ForeignKey(FishGenus, on_delete=models.CASCADE)

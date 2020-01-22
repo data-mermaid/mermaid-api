@@ -11,8 +11,10 @@ from ..models import (
     Country,
     Current,
     FishGroupFunction,
+    FishGroupSize,
     FishGroupTrophic,
     FishSizeBin,
+    FishSpecies,
     GrowthForm,
     HabitatComplexityScore,
     ManagementCompliance,
@@ -46,6 +48,7 @@ class ChoiceViewSet(BaseChoiceApiViewSet):
             data=FishGroupFunction.objects.choices(order_by="name")
         )
         fishgrouptrophics = dict(data=FishGroupTrophic.objects.choices(order_by="name"))
+        fishgroupsizes = dict(data=FishGroupSize.objects.choices(order_by="name"))
         fishsizebins = dict(data=FishSizeBin.objects.choices(order_by="val"))
         habitatcomplexityscores = dict(
             data=HabitatComplexityScore.objects.choices(order_by="val")
@@ -76,9 +79,20 @@ class ChoiceViewSet(BaseChoiceApiViewSet):
                 ]
             },
             "fishgroupfunctions": fishgroupfunctions,
+            "fishgroupsizes": fishgroupsizes,
             "fishgrouptrophics": fishgrouptrophics,
             "fishsizebins": fishsizebins,
             "habitatcomplexityscores": habitatcomplexityscores,
+            "lengthtypes": {
+                "data": [
+                    {
+                        "id": c[0],
+                        "name": c[1],
+                        "updated_on": FishSpecies.LENGTH_TYPES_CHOICES_UPDATED_ON
+                    }
+                    for c in FishSpecies.LENGTH_TYPES
+                ]
+            },
             "managementcompliances": managementcompliances,
             "managementparties": managementparties,
             "reefexposures": reefexposures,
