@@ -106,11 +106,11 @@ def dbbackup(c, key_name="local"):
 
 
 @task(aliases=["fresh-install"])
-def freshinstall(c, key_name="local"):
-    down()
-    buildnocache()
-    up()
+def freshinstall(c, keyname="local"):
+    down(c)
+    buildnocache(c)
+    up(c)
 
     time.sleep(20)
-    dbrestore(key_name)
-    migrate()
+    dbrestore(c, keyname)
+    migrate(c)
