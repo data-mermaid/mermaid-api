@@ -1,34 +1,37 @@
-import itertools
 import inspect
+import itertools
 import json
 import math
 
-from . import utils
+from dateutil import tz
+from django.contrib.gis.geos import Polygon
+from django.contrib.gis.measure import Distance
+from django.contrib.postgres.search import TrigramSimilarity
+from django.core.exceptions import ObjectDoesNotExist
+from django.db.models import Q
+from django.utils import timezone
+from django.utils.dateparse import parse_datetime
+from django.utils.translation import ugettext as _
+from rest_framework.exceptions import ParseError
 
+from api.decorators import needs_instance
 from api.exceptions import check_uuid
 from api.models import (
     BeltTransectWidth,
     BenthicAttribute,
     BenthicTransect,
     FishAttribute,
-    FishSpecies,
     FishBeltTransect,
+    FishSpecies,
     HabitatComplexityScore,
     Management,
     Observer,
     QuadratCollection,
     Site,
 )
-from api.utils import calc_biomass_density
-from api.utils import get_related_transect_methods
-from api.decorators import needs_instance
-from django.contrib.gis.geos import Polygon
-from django.contrib.gis.measure import Distance
-from django.contrib.postgres.search import TrigramSimilarity
-from django.core.exceptions import ObjectDoesNotExist
-from django.db.models import Q
-from django.utils.translation import ugettext as _
-from rest_framework.exceptions import ParseError
+from api.utils import calc_biomass_density, get_related_transect_methods
+from timezonefinder import TimezoneFinder
+from . import utils
 
 IGNORE = "ignore"
 ERROR = "error"
@@ -267,6 +270,54 @@ class ModelValidation(BaseValidation):
     def validate_exists(self):
         if self.instance is None:
             return self.error(self.identifier, _(RecordDoesntExist.format(self.name)))
+
+        return self.ok(self.identifier)
+
+
+class SampleEventValidation(DataValidation):
+    identifier = "sample_event"
+
+    FUTURE_DATE = _("Sample date is in the future")
+
+    def is_future_sample_date(self, date_str, time_str, site_id):
+        site = Site.objects.get_or_none(id=site_id)
+
+        if site is None or site.location is None:
+            return False
+
+        x = site.location.x
+        y = site.location.y
+
+        tf = TimezoneFinder()
+        tz_str = tf.timezone_at(lng=x, lat=y) or "UTC"
+        tzinfo = tz.gettz(tz_str)
+        sample_date = parse_datetime("{} {}".format(date_str, time_str))
+
+        if sample_date is None:
+            return False
+
+        sample_date = sample_date.replace(tzinfo=tzinfo)
+        todays_date = timezone.now().astimezone(tzinfo)
+        delta = todays_date - sample_date
+
+        return delta.days < 0
+
+    def validate_sample_date(self):
+        sample_event = self.data.get("sample_event") or {}
+        sample_date_str = sample_event.get("sample_date")
+        sample_time_str = sample_event.get("sample_time")
+        site_id = sample_event.get("site")
+        if sample_date_str.strip() == "":
+            sample_date_str = None
+
+        if sample_time_str.strip() == "":
+            sample_time_str = None
+
+        if (
+            self.is_future_sample_date(sample_date_str, sample_time_str, site_id)
+            is True
+        ):
+            return self.warning(self.identifier, self.FUTURE_DATE)
 
         return self.ok(self.identifier)
 
