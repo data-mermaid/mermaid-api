@@ -14,6 +14,7 @@ from rest_framework.pagination import PageNumberPagination
 from rest_framework.filters import OrderingFilter, SearchFilter
 from rest_framework.response import Response
 from rest_framework.fields import empty
+from rest_framework_gis.serializers import GeoFeatureModelSerializer
 from rest_condition import Or
 from django.core.exceptions import FieldDoesNotExist
 
@@ -122,7 +123,7 @@ class CurrentProfileDefault(object):
         return '%s()' % self.__class__.__name__
 
 
-class BaseAPISerializer(serializers.ModelSerializer):
+class BaseAPISerializerMixin(object):
     id = UUIDField(allow_null=True)
     updated_by = PrimaryKeyRelatedField(read_only=True,
                                         default=CurrentProfileDefault())
@@ -132,7 +133,7 @@ class BaseAPISerializer(serializers.ModelSerializer):
         model = None
 
     def __init__(self, *args, **kwargs):
-        super(BaseAPISerializer, self).__init__(*args, **kwargs)
+        super().__init__(*args, **kwargs)
 
         request = self.context.get('request')
         if request is None:
@@ -188,7 +189,15 @@ class BaseAPISerializer(serializers.ModelSerializer):
 
         token = get_jwt_token(request)
         kwargs["updated_by"] = get_unverified_profile(token)
-        return super(BaseAPISerializer, self).save(**kwargs)
+        return super().save(**kwargs)
+
+
+class BaseAPISerializer(BaseAPISerializerMixin, serializers.ModelSerializer):
+    pass
+
+
+class BaseAPIGeoSerializer(BaseAPISerializerMixin, GeoFeatureModelSerializer):
+    pass
 
 
 class SampleEventExtendedSerializer(BaseAPISerializer):

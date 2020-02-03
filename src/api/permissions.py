@@ -33,6 +33,21 @@ def get_project_profile(project, profile):
         raise PermissionDenied('You are not part of this project.')
 
 
+def data_policy_permission(request, view, project_policy):
+    if request.method not in permissions.SAFE_METHODS or not hasattr(
+            view, "project_policy"
+    ):
+        return False
+
+    pk = get_project_pk(request, view)
+    project = get_project(pk)
+
+    policy = getattr(project, view.project_policy, None)
+    if policy and policy >= project_policy:
+        return True
+    return False
+
+
 # get the project pk for use in determining
 # user permissions for project-related ata
 def get_project_pk(request, view):
@@ -120,3 +135,13 @@ class AttributeAuthenticatedUserPermission(permissions.BasePermission):
             except ObjectDoesNotExist:
                 pass
         return False
+
+
+class ProjectPublicPermission(permissions.BasePermission):
+    def has_permission(self, request, view):
+        return data_policy_permission(request, view, Project.PUBLIC)
+
+
+class ProjectPublicSummaryPermission(permissions.BasePermission):
+    def has_permission(self, request, view):
+        return data_policy_permission(request, view, Project.PUBLIC_SUMMARY)

@@ -2,14 +2,21 @@ from django.db import transaction
 from rest_framework import status
 from rest_framework.response import Response
 from rest_framework.decorators import action
+from django.contrib.gis.geos import Point
+from rest_framework_gis.serializers import GeometrySerializerMethodField
+from rest_framework_gis.pagination import GeoJsonPagination
+from rest_condition import Or
+from ...auth_backends import AnonymousJWTAuthentication
+from ...permissions import *
 
 from ...models.mermaid import (
     BeltFish, BeltTransectWidth, FishAttributeView, ObsBeltFish, FishFamily, FishGenus, FishSpecies
 )
+from ...models.view_models import BeltFishObsView
 from ...utils import calc_biomass_density
 
 from . import *
-from ..base import BaseProjectApiViewSet
+from ..base import BaseProjectApiViewSet, BaseAPISerializer, BaseAPIGeoSerializer
 from ..belt_fish import BeltFishSerializer
 from ..fish_belt_transect import FishBeltTransectSerializer
 from ..obs_belt_fish import ObsBeltFishSerializer
@@ -297,6 +304,26 @@ class ObsBeltFishReportSerializer(SampleEventReportSerializer, metaclass=SampleE
         }
 
 
+class BeltFishMethodObsSerializer(BaseAPISerializer):
+
+    class Meta:
+        model = BeltFishObsView
+        exclude = []  # TODO
+
+
+# TODO: inherit BeltFishMethodObsSerializer
+class BeltFishMethodObsGeoSerializer(BaseAPIGeoSerializer):
+    point = GeometrySerializerMethodField()
+
+    def get_point(self, obj):
+        return Point(obj.lat, obj.lon)
+
+    class Meta:
+        model = BeltFishObsView
+        exclude = []  # TODO
+        geo_field = "point"
+
+
 class BeltFishMethodView(BaseProjectApiViewSet):
     queryset = BeltFish.objects.select_related(
         "transect", "transect__sample_event"
@@ -413,3 +440,58 @@ class BeltFishMethodView(BaseProjectApiViewSet):
             ),
             **kwargs
         )
+
+    # @action(detail=False, methods=["get"], serializer_class=BeltFishMethodObsSerializer)
+    # def obstransectbeltfishes(self, request, *args, **kwargs):
+    #     # obs = BeltFishObsView.objects.filter(project_id="9de82789-c38e-462e-a1a8-e02c020c7a35")
+    #     qs = BeltFishObsView.objects.filter(project_id="2c56b92b-ba1c-491f-8b62-23b1dc728890")
+    #     # self.limit_to_project(request, *args, **kwargs)
+    #     # page = self.paginate_queryset(recent_users)
+    #     # if page is not None:
+    #     #     serializer = self.get_serializer(page, many=True)
+    #     #     return self.get_paginated_response(serializer.data)
+    #
+    #     serializer = self.get_serializer(qs, many=True)
+    #     print(serializer)
+    #     return Response(serializer.data)
+
+
+class BaseGeoJsonPagination(GeoJsonPagination):
+    page_size = 100
+    page_size_query_param = 'limit'
+    max_page_size = 1000
+
+
+class BeltFishMethodObsView(BaseProjectApiViewSet):
+    project_policy = 'data_policy_beltfish'
+    serializer_class = BeltFishMethodObsSerializer
+    authentication_classes = [AnonymousJWTAuthentication, ]
+    permission_classes = [Or(
+        ProjectDataReadOnlyPermission,
+        ProjectPublicPermission
+    )]
+    queryset = BeltFishObsView.objects.all()  # TODO: order_by, select_related
+    http_method_names = ["get"]
+
+    @action(detail=False, methods=["get"])
+    def json(self, request, *args, **kwargs):  # default, for completeness
+        return self.list(request, *args, **kwargs)
+
+    @action(detail=False, methods=["get"])
+    def geojson(self, request, *args, **kwargs):
+        self.serializer_class = BeltFishMethodObsGeoSerializer
+        self.pagination_class = BaseGeoJsonPagination
+        return self.list(request, *args, **kwargs)
+
+    @action(detail=False, methods=["get"])
+    def csv(self, request, *args, **kwargs):
+        # don't worry about pagination
+        return self.list(request, *args, **kwargs)
+
+
+class BeltFishMethodSUView(BaseProjectApiViewSet):
+    pass
+
+
+class BeltFishMethodSEView(BaseProjectApiViewSet):
+    pass
