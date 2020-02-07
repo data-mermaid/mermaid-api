@@ -1,22 +1,33 @@
+from django.conf import settings
 from django.db import transaction
 from rest_framework import status
 from rest_framework.response import Response
+from rest_framework.serializers import SerializerMethodField
 from rest_framework.decorators import action
-from django.contrib.gis.geos import Point
-from rest_framework_gis.serializers import GeometrySerializerMethodField
-from rest_framework_gis.pagination import GeoJsonPagination
-from rest_condition import Or
-from ...auth_backends import AnonymousJWTAuthentication
-from ...permissions import *
+from rest_framework_gis.fields import GeometryField
+from rest_framework_gis.filterset import GeoFilterSet
+from rest_framework_gis.filters import GeometryFilter
+from django_filters import DateFromToRangeFilter, BaseInFilter, RangeFilter
 
 from ...models.mermaid import (
-    BeltFish, BeltTransectWidth, FishAttributeView, ObsBeltFish, FishFamily, FishGenus, FishSpecies
+    BeltFish,
+    BeltTransectWidth,
+    ObsBeltFish,
+    FishFamily,
+    FishGenus,
+    FishSpecies,
 )
-from ...models.view_models import BeltFishObsView
+from ..mixins import OrFilterSetMixin
+from ...models.view_models import BeltFishObsView, BeltFishSUView, FishAttributeView
 from ...utils import calc_biomass_density
 
 from . import *
-from ..base import BaseProjectApiViewSet, BaseAPISerializer, BaseAPIGeoSerializer
+from ..base import (
+    BaseProjectApiViewSet,
+    BaseViewAPISerializer,
+    BaseViewAPIGeoSerializer,
+    BaseTransectFilterSet
+)
 from ..belt_fish import BeltFishSerializer
 from ..fish_belt_transect import FishBeltTransectSerializer
 from ..obs_belt_fish import ObsBeltFishSerializer
@@ -40,7 +51,9 @@ def _get_fish_attribute(row, serializer_instance):
     if fish_attribute_id is None:
         return None
 
-    lookup = serializer_instance.serializer_cache.get("beltfish_lookups-fish_attributes")
+    lookup = serializer_instance.serializer_cache.get(
+        "beltfish_lookups-fish_attributes"
+    )
     if lookup:
         return lookup.get(str(fish_attribute_id)) or dict()
     else:
@@ -70,35 +83,37 @@ def _to_fa_attribute(field, row, serializer_instance):
 
 
 def to_fish_attribute_trophic_group(field, row, serializer_instance):
-    return _to_fa_attribute('trophic_group', row, serializer_instance)
+    return _to_fa_attribute("trophic_group", row, serializer_instance)
 
 
 def to_fish_attribute_trophic_level(field, row, serializer_instance):
-    return _to_fa_attribute('trophic_level', row, serializer_instance)
+    return _to_fa_attribute("trophic_level", row, serializer_instance)
 
 
 def to_fish_attribute_functional_group(field, row, serializer_instance):
-    return _to_fa_attribute('functional_group', row, serializer_instance)
+    return _to_fa_attribute("functional_group", row, serializer_instance)
 
 
 def to_fish_attribute_vulnerability(field, row, serializer_instance):
-    return _to_fa_attribute('vulnerability', row, serializer_instance)
+    return _to_fa_attribute("vulnerability", row, serializer_instance)
 
 
 def to_constant_a(field, row, serializer_instance):
-    return _to_fa_attribute('biomass_constant_a', row, serializer_instance)
+    return _to_fa_attribute("biomass_constant_a", row, serializer_instance)
 
 
 def to_constant_b(field, row, serializer_instance):
-    return _to_fa_attribute('biomass_constant_b', row, serializer_instance)
+    return _to_fa_attribute("biomass_constant_b", row, serializer_instance)
 
 
 def to_constant_c(field, row, serializer_instance):
-    return _to_fa_attribute('biomass_constant_c', row, serializer_instance)
+    return _to_fa_attribute("biomass_constant_c", row, serializer_instance)
 
 
 def to_transect_width_value(field, row, serializer_instance):
-    lookup = serializer_instance.serializer_cache["beltfish_lookups-belt_transect_widths"]
+    lookup = serializer_instance.serializer_cache[
+        "beltfish_lookups-belt_transect_widths"
+    ]
     lookup_val = row.get("beltfish__transect__width_id")
     transect_width = lookup.get(lookup_val)
     if transect_width is None:
@@ -132,7 +147,7 @@ def to_biomass_kgha(field, row, serializer_instance):
         constant_c,
     )
     if density is None:
-        return ''
+        return ""
     return round(density, 2)
 
 
@@ -184,15 +199,20 @@ def to_fish_genus_name(field, row, serializer_instance):
     return str(fg)
 
 
-class ObsBeltFishReportSerializer(SampleEventReportSerializer, metaclass=SampleEventReportSerializerMeta):
-    transect_method = 'beltfish'
-    sample_event_path = '{}__transect__sample_event'.format(transect_method)
+class ObsBeltFishReportSerializer(
+    SampleEventReportSerializer, metaclass=SampleEventReportSerializerMeta
+):
+    transect_method = "beltfish"
+    sample_event_path = "{}__transect__sample_event".format(transect_method)
     idx = 24
     obs_fields = [
         (6, ReportField("beltfish__transect__reef_slope__name", "Reef slope")),
         (idx, ReportField("beltfish__transect__number", "Transect number")),
         (idx + 1, ReportField("beltfish__transect__label", "Transect label")),
-        (idx + 2, ReportField("beltfish__transect__len_surveyed", "Transect length surveyed")),
+        (
+            idx + 2,
+            ReportField("beltfish__transect__len_surveyed", "Transect length surveyed"),
+        ),
         (idx + 3, ReportMethodField("Transect width", to_transect_width_value)),
         (idx + 5, ReportMethodField("Fish family", to_fish_family_name)),
         (idx + 6, ReportMethodField("Fish genus", to_fish_genus_name)),
@@ -206,9 +226,12 @@ class ObsBeltFishReportSerializer(SampleEventReportSerializer, metaclass=SampleE
         (idx + 14, ReportMethodField("Biomass_kgha", to_biomass_kgha)),
         (idx + 18, ReportMethodField("Trophic group", to_fish_attribute_trophic_group)),
         (idx + 19, ReportMethodField("Trophic level", to_fish_attribute_trophic_level)),
-        (idx + 20, ReportMethodField("Functional group", to_fish_attribute_functional_group)),
+        (
+            idx + 20,
+            ReportMethodField("Functional group", to_fish_attribute_functional_group),
+        ),
         (idx + 21, ReportMethodField("Vulnerability", to_fish_attribute_vulnerability)),
-        (idx + 22, ReportField("beltfish__transect__notes", "Observation notes"))
+        (idx + 22, ReportField("beltfish__transect__notes", "Observation notes")),
     ]
 
     non_field_columns = (
@@ -219,9 +242,6 @@ class ObsBeltFishReportSerializer(SampleEventReportSerializer, metaclass=SampleE
         "beltfish__transect__width_id",
     )
 
-    class Meta:
-        model = BeltFish
-
     def preserialize(self, queryset=None):
         super(ObsBeltFishReportSerializer, self).preserialize(queryset=queryset)
 
@@ -229,41 +249,24 @@ class ObsBeltFishReportSerializer(SampleEventReportSerializer, metaclass=SampleE
         fish_attributes = FishAttributeView.objects.all()
         fish_families = FishFamily.objects.all()
         fish_genera = FishGenus.objects.select_related("family").all()
-        fish_species = FishSpecies.objects.select_related("genus", "genus__family").all()
+        fish_species = FishSpecies.objects.select_related(
+            "genus", "genus__family"
+        ).all()
 
         # Fish Family Lookup
-        fish_family_lookup = {
-            str(ff.id): dict(
-                name = ff.name
-            )
-            for ff in fish_families
-        }
-        fish_family_lookup.update({
-            str(fg.id): dict(
-                name = fg.family.name
-            )
-            for fg in fish_genera
-        })
-        fish_family_lookup.update({
-            str(fs.id): dict(
-                name = fs.genus.family.name
-            )
-            for fs in fish_species
-        })
+        fish_family_lookup = {str(ff.id): dict(name=ff.name) for ff in fish_families}
+        fish_family_lookup.update(
+            {str(fg.id): dict(name=fg.family.name) for fg in fish_genera}
+        )
+        fish_family_lookup.update(
+            {str(fs.id): dict(name=fs.genus.family.name) for fs in fish_species}
+        )
 
         # Fish Genus Lookup
-        fish_genus_lookup = {
-            str(fg.id): dict(
-                name = fg.name
-            )
-            for fg in fish_genera
-        }
-        fish_genus_lookup.update({
-            str(fs.id): dict(
-                name = fs.genus.name
-            )
-            for fs in fish_species
-        })
+        fish_genus_lookup = {str(fg.id): dict(name=fg.name) for fg in fish_genera}
+        fish_genus_lookup.update(
+            {str(fs.id): dict(name=fs.genus.name) for fs in fish_species}
+        )
 
         # Fish Attribute Lookup
         fish_attribute_lookup = {
@@ -281,14 +284,10 @@ class ObsBeltFishReportSerializer(SampleEventReportSerializer, metaclass=SampleE
         }
 
         if len(fish_family_lookup.keys()) > 0:
-            self.serializer_cache[
-                "beltfish_lookups-fish_families"
-            ] = fish_family_lookup
+            self.serializer_cache["beltfish_lookups-fish_families"] = fish_family_lookup
 
         if len(fish_genus_lookup.keys()) > 0:
-            self.serializer_cache[
-                "beltfish_lookups-fish_genera"
-            ] = fish_genus_lookup
+            self.serializer_cache["beltfish_lookups-fish_genera"] = fish_genus_lookup
 
         if len(fish_attribute_lookup.keys()) > 0:
             self.serializer_cache[
@@ -296,38 +295,18 @@ class ObsBeltFishReportSerializer(SampleEventReportSerializer, metaclass=SampleE
             ] = fish_attribute_lookup
 
         widths = BeltTransectWidth.objects.prefetch_related("conditions").all()
-        self.serializer_cache[
-            "beltfish_lookups-belt_transect_widths"
-        ] = {
-            btw.id: btw 
-            for btw in widths
+        self.serializer_cache["beltfish_lookups-belt_transect_widths"] = {
+            btw.id: btw for btw in widths
         }
 
 
-class BeltFishMethodObsSerializer(BaseAPISerializer):
-
-    class Meta:
-        model = BeltFishObsView
-        exclude = []  # TODO
-
-
-# TODO: inherit BeltFishMethodObsSerializer
-class BeltFishMethodObsGeoSerializer(BaseAPIGeoSerializer):
-    point = GeometrySerializerMethodField()
-
-    def get_point(self, obj):
-        return Point(obj.lat, obj.lon)
-
-    class Meta:
-        model = BeltFishObsView
-        exclude = []  # TODO
-        geo_field = "point"
-
-
 class BeltFishMethodView(BaseProjectApiViewSet):
-    queryset = BeltFish.objects.select_related(
-        "transect", "transect__sample_event"
-    ).all().order_by("updated_on", "id")
+    project_policy = "data_policy_beltfish"
+    queryset = (
+        BeltFish.objects.select_related("transect", "transect__sample_event")
+        .all()
+        .order_by("updated_on", "id")
+    )
     serializer_class = BeltFishMethodSerializer
     http_method_names = ["get", "put", "head", "delete"]
 
@@ -420,7 +399,11 @@ class BeltFishMethodView(BaseProjectApiViewSet):
             transaction.savepoint_rollback(sid)
             raise
 
-    @action(detail=False, methods=["get"])
+    @action(
+        detail=False,
+        methods=["get"],
+        permission_classes=[Or(ProjectDataReadOnlyPermission, ProjectPublicPermission)],
+    )
     def fieldreport(self, request, *args, **kwargs):
         return fieldreport(
             self,
@@ -436,7 +419,7 @@ class BeltFishMethodView(BaseProjectApiViewSet):
                 "Fish family",
                 "Fish genus",
                 "Fish taxon",
-                "Size"
+                "Size",
             ),
             **kwargs
         )
@@ -456,42 +439,101 @@ class BeltFishMethodView(BaseProjectApiViewSet):
     #     return Response(serializer.data)
 
 
-class BaseGeoJsonPagination(GeoJsonPagination):
-    page_size = 100
-    page_size_query_param = 'limit'
-    max_page_size = 1000
+class BeltFishMethodObsSerializer(BaseViewAPISerializer):
+
+    class Meta:
+        model = BeltFishObsView
+        exclude = ["location"]  # TODO
 
 
-class BeltFishMethodObsView(BaseProjectApiViewSet):
-    project_policy = 'data_policy_beltfish'
+class BeltFishMethodObsCSVSerializer(BeltFishMethodObsSerializer):
+    observers = SerializerMethodField()
+
+
+class BeltFishMethodObsGeoSerializer(BaseViewAPIGeoSerializer):
+
+    class Meta:
+        model = BeltFishObsView
+        exclude = []  # TODO
+        geo_field = "location"
+
+
+class BeltFishMethodSUSerializer(BaseViewAPISerializer):
+
+    class Meta:
+        model = BeltFishSUView
+        exclude = ["location"]  # TODO
+
+
+class BeltFishMethodSUCSVSerializer(BeltFishMethodSUSerializer):
+    observers = SerializerMethodField()
+
+
+class BeltFishMethodSUGeoSerializer(BaseViewAPIGeoSerializer):
+
+    class Meta:
+        model = BeltFishSUView
+        exclude = []  # TODO
+        geo_field = "location"
+
+
+class BeltFishMethodObsFilterSet(BaseTransectFilterSet):
+    fish_family = BaseInFilter(method="id_lookup")
+    fish_genus = BaseInFilter(method="id_lookup")
+    fish_taxon = BaseInFilter(method="id_lookup")
+    trophic_group = BaseInFilter(method="id_lookup")
+    trophic_level = RangeFilter()
+    functional_group = BaseInFilter(method="id_lookup")
+    vulnerability = RangeFilter()
+    size = RangeFilter()
+    count = RangeFilter()
+    biomass_kgha = RangeFilter()
+
+    class Meta:
+        model = BeltFishObsView
+        fields = [
+            "fish_taxon",
+            "fish_family",
+            "fish_genus",
+            "trophic_group",
+            "trophic_level",
+            "functional_group",
+            "vulnerability",
+            "size",
+            "count",
+            "size_bin",
+            "biomass_kgha",
+            "data_policy_beltfish",
+        ]
+
+
+class BeltFishMethodSUFilterSet(BaseTransectFilterSet):
+    biomass_kgha = RangeFilter()
+
+    class Meta:
+        model = BeltFishSUView
+        fields = [
+            "size_bin",
+            "biomass_kgha",
+            "data_policy_beltfish",
+        ]
+
+
+class BeltFishMethodObsView(BaseMethodView):
+    drf_label = "beltfish"
+    project_policy = "data_policy_beltfish"
     serializer_class = BeltFishMethodObsSerializer
-    authentication_classes = [AnonymousJWTAuthentication, ]
-    permission_classes = [Or(
-        ProjectDataReadOnlyPermission,
-        ProjectPublicPermission
-    )]
+    serializer_class_geojson = BeltFishMethodObsGeoSerializer
+    serializer_class_csv = BeltFishMethodObsCSVSerializer
+    filterset_class = BeltFishMethodObsFilterSet
     queryset = BeltFishObsView.objects.all()  # TODO: order_by, select_related
-    http_method_names = ["get"]
-
-    @action(detail=False, methods=["get"])
-    def json(self, request, *args, **kwargs):  # default, for completeness
-        return self.list(request, *args, **kwargs)
-
-    @action(detail=False, methods=["get"])
-    def geojson(self, request, *args, **kwargs):
-        self.serializer_class = BeltFishMethodObsGeoSerializer
-        self.pagination_class = BaseGeoJsonPagination
-        return self.list(request, *args, **kwargs)
-
-    @action(detail=False, methods=["get"])
-    def csv(self, request, *args, **kwargs):
-        # don't worry about pagination
-        return self.list(request, *args, **kwargs)
 
 
-class BeltFishMethodSUView(BaseProjectApiViewSet):
-    pass
-
-
-class BeltFishMethodSEView(BaseProjectApiViewSet):
-    pass
+class BeltFishMethodSUView(BaseMethodView):
+    drf_label = "beltfish"
+    project_policy = "data_policy_beltfish"
+    serializer_class = BeltFishMethodSUSerializer
+    serializer_class_geojson = BeltFishMethodSUGeoSerializer
+    serializer_class_csv = BeltFishMethodSUCSVSerializer
+    filterset_class = BeltFishMethodSUFilterSet
+    queryset = BeltFishSUView.objects.all()  # TODO: order_by, select_related

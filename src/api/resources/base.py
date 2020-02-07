@@ -8,6 +8,7 @@ from rest_framework.decorators import action
 from rest_framework.serializers import (
     UUIDField,
     PrimaryKeyRelatedField,
+    SerializerMethodField,
 )
 from rest_framework.exceptions import MethodNotAllowed, ValidationError
 from rest_framework.pagination import PageNumberPagination
@@ -15,21 +16,25 @@ from rest_framework.filters import OrderingFilter, SearchFilter
 from rest_framework.response import Response
 from rest_framework.fields import empty
 from rest_framework_gis.serializers import GeoFeatureModelSerializer
+from rest_framework_gis.filterset import GeoFilterSet
+from rest_framework_gis.filters import GeometryFilter
+from rest_framework_gis.fields import GeometryField
 from rest_condition import Or
 from django.core.exceptions import FieldDoesNotExist
 
 from django.db.models.fields.related import ForeignObjectRel
 from rest_framework.validators import qs_exists
-import django_filters
-from django_filters import Filter
+from django_filters.rest_framework import DjangoFilterBackend
+from django_filters import (Filter, BaseInFilter, CharFilter, FilterSet, DateFromToRangeFilter,
+                            DateTimeFromToRangeFilter, RangeFilter)
 from django_filters.fields import Lookup
 from django.conf import settings
-from ..models import BaseAttributeModel, Tag, APPROVAL_STATUSES
+from ..models import Tag, APPROVAL_STATUSES
 from ..exceptions import check_uuid
 from ..permissions import *
 from ..utils.auth0utils import get_jwt_token
 from ..utils.auth0utils import get_unverified_profile
-from .mixins import MethodAuthenticationMixin, UpdatesMixin
+from .mixins import MethodAuthenticationMixin, UpdatesMixin, OrFilterSetMixin
 
 
 def to_tag_model_instances(tags, updated_by):
@@ -196,8 +201,28 @@ class BaseAPISerializer(BaseAPISerializerMixin, serializers.ModelSerializer):
     pass
 
 
-class BaseAPIGeoSerializer(BaseAPISerializerMixin, GeoFeatureModelSerializer):
-    pass
+class BaseViewAPISerializer(BaseAPISerializer):
+    latitude = SerializerMethodField()
+    longitude = SerializerMethodField()
+
+    def get_latitude(self, obj):
+        if obj.location is not None:
+            return round(obj.location.y, settings.GEO_PRECISION)
+        return None
+
+    def get_longitude(self, obj):
+        if obj.location is not None:
+            return round(obj.location.x, settings.GEO_PRECISION)
+        return None
+
+    def get_observers(self, obj):
+        if obj.observers is not None and isinstance(obj.observers, list):
+            return ", ".join(o["name"] for o in obj.observers)
+        return None
+
+
+class BaseViewAPIGeoSerializer(BaseAPISerializerMixin, GeoFeatureModelSerializer):
+    location = GeometryField(precision=settings.GEO_PRECISION)
 
 
 class SampleEventExtendedSerializer(BaseAPISerializer):
@@ -256,7 +281,7 @@ class ListFilter(Filter):
 
 # Return objects that actually are null when user asks for them with 'null'
 # Note this can't subclass UUIDFilter because of the additional pattern check (?)
-class NullableUUIDFilter(django_filters.CharFilter):
+class NullableUUIDFilter(CharFilter):
 
     def filter(self, qs, value):
         if value != settings.API_NULLQUERY:
@@ -268,13 +293,14 @@ class NullableUUIDFilter(django_filters.CharFilter):
         return qs.distinct() if self.distinct else qs
 
 
-class BaseAPIFilterSet(django_filters.FilterSet):
-    created_on = django_filters.DateTimeFromToRangeFilter()
-    updated_on = django_filters.DateTimeFromToRangeFilter()
-    updated_by = django_filters.NumberFilter()
+class BaseAPIFilterSet(FilterSet):
+    created_on = DateTimeFromToRangeFilter()
+    updated_on = DateTimeFromToRangeFilter()
+    created_by = NullableUUIDFilter()
+    updated_by = NullableUUIDFilter()
 
     class Meta:
-        fields = ['created_on', 'updated_on', 'updated_by', ]
+        fields = ['created_on', 'updated_on', 'created_by', 'updated_by', ]
 
 
 class RelatedOrderingFilter(OrderingFilter):
@@ -309,13 +335,77 @@ class RelatedOrderingFilter(OrderingFilter):
                 if self.is_valid_field(queryset.model, term.lstrip('-'))]
 
 
+class BaseTransectFilterSet(OrFilterSetMixin, GeoFilterSet):
+    site_id = BaseInFilter(method="id_lookup")
+    site_name = BaseInFilter(method="char_lookup")
+    site_within = GeometryFilter(field_name="location", lookup_expr='within')
+    country_id = BaseInFilter(method='id_lookup')
+    country_name = BaseInFilter(method="char_lookup")
+    sample_date = DateFromToRangeFilter()
+    tag_id = BaseInFilter(field_name='tags', method='json_id_lookup')
+    tag_name = BaseInFilter(field_name='tags', method='json_name_lookup')
+    management_id = BaseInFilter(method="id_lookup")
+    management_name = BaseInFilter(method="full_management_name")
+    management_est_year = DateFromToRangeFilter()
+    management_size = RangeFilter()
+    management_party = BaseInFilter(field_name="management_parties", method="char_lookup")
+    management_compliance = BaseInFilter(method="char_lookup")
+    management_rule = BaseInFilter(field_name="management_rules", method="char_lookup")
+    current_name = BaseInFilter(method="char_lookup")
+    tide_name = BaseInFilter(method="char_lookup")
+    visibility_name = BaseInFilter(method="char_lookup")
+    depth = RangeFilter()
+    sample_unit_id = BaseInFilter("id_lookup")
+    transect_len_surveyed = RangeFilter()
+    reef_slope = BaseInFilter(method="char_lookup")
+    transect_width = RangeFilter()
+    observers = BaseInFilter(method="json_name_lookup")
+
+    class Meta:
+        fields = [
+            "site_id",
+            "site_name",
+            "site_within",
+            "country_id",
+            "country_name",
+            "sample_date",
+            "reef_type",
+            "reef_zone",
+            "reef_exposure",
+            "tag_id",
+            "tag_name",
+            "management_id",
+            "management_name",
+            "management_est_year",
+            "management_size",
+            "management_party",
+            "management_compliance",
+            "management_rule",
+            "current_name",
+            "tide_name",
+            "visibility_name",
+            "depth",
+            "sample_unit_id",
+            "number",
+            "label",
+            "transect_len_surveyed",
+            "reef_slope",
+            "transect_width",
+            "observers",
+        ]
+
+    def full_management_name(self, queryset, name, value):
+        fields = ["management_name", "management_name_secondary"]
+        return self.str_or_lookup(queryset, fields, value, lookup_expr="icontains")
+
+
 class BaseApiViewSet(MethodAuthenticationMixin, viewsets.ModelViewSet, UpdatesMixin):
     """
     Include this as mixin to make your ListAPIView paginated & give it the ability to order by field name
     """
     pagination_class = StandardResultPagination
 
-    filter_backends = (django_filters.rest_framework.DjangoFilterBackend,
+    filter_backends = (DjangoFilterBackend,
                        RelatedOrderingFilter,
                        SearchFilter,
                        )

@@ -1,4 +1,7 @@
+import re
 from collections import OrderedDict
+from operator import itemgetter
+from .utils import is_match
 
 
 def handle_none(default_val=None):
@@ -92,6 +95,7 @@ class ReportMethodField(object):
 class ReportSerializer(object):
     fields = None
     non_field_columns = None
+    serializer_cache = dict()
 
     def __init__(self, queryset, ignore_select_related=False):
         self.queryset = queryset
@@ -102,7 +106,12 @@ class ReportSerializer(object):
         if cls.fields is None:
             raise ValueError("fields not defined")
 
-        return cls.fields
+        fields = cls.fields
+        if hasattr(cls, "excluded_fields"):
+            patterns = [re.compile(c) for c in cls.excluded_fields]
+            return [c for c in fields
+                    if is_match(c.display, patterns) is False]
+        return fields
 
     def _get_column_paths(self):
         return [f.column_path for f in self.get_fields() if hasattr(f, "column_path")]
@@ -131,3 +140,9 @@ class ReportSerializer(object):
         self.preserialize(qs)
         for row in qs:
             yield self._prepare_row(row, fields)
+
+    def get_serialized_data(self, *args, **kwargs):
+        serialized_data = list(self.data)
+        if 'order_by' in kwargs:
+            serialized_data = sorted(serialized_data, key=itemgetter(*kwargs['order_by']))
+        return serialized_data

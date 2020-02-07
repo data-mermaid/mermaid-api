@@ -5,6 +5,7 @@ from django.utils.translation import ugettext_lazy as _
 from django.urls import reverse
 
 from .base import BaseAdmin
+from ..models.view_models import FishAttributeView
 from ..utils import get_subclasses
 from ..models.base import *
 from ..models.mermaid import *

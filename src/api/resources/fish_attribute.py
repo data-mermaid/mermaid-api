@@ -1,7 +1,7 @@
 from django.utils.decorators import method_decorator
 from django.views.decorators.cache import cache_page
 from rest_framework import permissions, serializers
-from ..models import FishAttributeView
+from ..models.view_models import FishAttributeView
 from .base import (
     StandardResultPagination,
     BaseAPIFilterSet,

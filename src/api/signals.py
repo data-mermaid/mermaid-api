@@ -1,9 +1,11 @@
 import operator
 import uuid
+import json
 from django.dispatch import receiver
 from django.db.models.signals import post_delete, post_save, pre_save, m2m_changed
 from django import urls
 from django.conf import settings
+from django.core import serializers
 from .models import *
 from .utils import get_subclasses
 from .utils.email import email_project_admins, mermaid_email
