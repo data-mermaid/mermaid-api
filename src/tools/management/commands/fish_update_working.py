@@ -49,6 +49,10 @@ class Command(BaseCommand):
         self.mode = 'f'
 
     def add_arguments(self, parser):
+        # f = family
+        # g = genus
+        # s = species
+        # d = delete
         parser.add_argument('mode', type=str, nargs='?', choices=['f', 'g', 's', 'd'], default='f')
 
     def handle(self, *args, **options):

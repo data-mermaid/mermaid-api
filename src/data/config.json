@@ -1,0 +1,21 @@
+{
+    "fish_family_field_map": {
+        "Family": "name"
+    },
+    "fish_genus_field_map": {
+        "Genus": "name"
+    },
+    "fish_species_field_map" :{
+        "Species": "name",
+        "a": "biomass_constant_a",
+        "b": "biomass_constant_b",
+        "c": "biomass_constant_c",
+        "Vulnerability": "vulnerability",
+        "Maxlength": "max_length",
+        "Max_length_type": "max_length_type",
+        "Trophic_group": "trophic_group",
+        "Primary_functional_group": "functional_group",
+        "Group_size": "group_size",
+        "Trophic_level": "trophic_level"
+    }
+}
