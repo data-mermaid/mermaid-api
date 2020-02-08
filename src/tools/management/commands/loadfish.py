@@ -19,7 +19,6 @@ from api.models import (
     FishGroupTrophic,
     FishGroupFunction,
     Region,
-    BaseAttributeModel,
     APPROVAL_STATUSES,
 )
 
@@ -145,6 +144,7 @@ class FishIngester(object):
         fish_family = None
         try:
             fish_family = FishFamily.objects.get(name__iexact=family_name)
+            self.write_log(self.EXISTING_FAMILY, family_name)
         except FishFamily.DoesNotExist:
             fish_family = FishFamily.objects.create(**family_row)
             self.write_log(self.NEW_FAMILY, family_name)
@@ -160,6 +160,7 @@ class FishIngester(object):
         genus_name = genus_row["name"]
         try:
             genus = FishGenus.objects.get(name__iexact=genus_name, family=fish_family)
+            self.write_log(self.EXISTING_GENUS, genus_name)
         except FishGenus.DoesNotExist:
             genus = FishGenus.objects.create(family=fish_family, **genus_row)
             self.write_log(self.NEW_GENUS, genus_name)
@@ -214,8 +215,9 @@ class FishIngester(object):
 
 
 class Command(BaseCommand):
-    help = """Version of refresh_fish meant for ad hoc db querying/editing.
-    Just uses names for determining new/update status; migrations for schema changes unnecessary."""
+    help = """
+    
+    """
 
     FISH_FAMILY_FIELD_MAP = {"Family": "name"}
     FISH_GENUS_FIELD_MAP = {"Genus": "name"}
@@ -248,25 +250,6 @@ class Command(BaseCommand):
             type=argparse.FileType("r", encoding="windows-1252"),
             nargs="?",
             help="Fish species data CSV file",
-        )
-
-    def create_lookups(self):
-        fish_group_sizes = {
-            fg.pk: fg.name.lower() for fg in FishGroupSize.objects.all()
-        }
-        fish_group_trophics = {
-            fgt.pk: fgt.name.lower() for fgt in FishGroupTrophic.objects.all()
-        }
-        fish_group_functions = {
-            fgf.pk: fgf.name.lower() for fgf in FishGroupFunction.objects.all()
-        }
-        regions = {r.pk: r.name.lower() for r in Region.objects.all()}
-
-        return dict(
-            group_size=fish_group_sizes,
-            trophic_group=fish_group_trophics,
-            functional_group=fish_group_functions,
-            region=regions,
         )
 
     def handle(self, fishdata, dry_run, **options):
