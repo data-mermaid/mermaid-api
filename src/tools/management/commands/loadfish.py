@@ -28,17 +28,15 @@ class FishIngester(object):
     ERROR = "ERROR"
     EXISTING_FAMILY = "EXISTING_FAMILY"
     NEW_FAMILY = "NEW_FAMILY"
-    DUPLICATE_FAMILY = "DUPLICATE_FAMILY"
 
     EXISTING_GENUS = "EXISTING_GENUS"
     NEW_GENUS = "NEW_GENUS"
     DUPLICATE_GENUS = "DUPLICATE_GENUS"
-    MOVED_GENUS = "MOVED_GENUS"
 
     EXISTING_SPECIES = "EXISTING_SPECIES"
     NEW_SPECIES = "NEW_SPECIES"
     DUPLICATE_SPECIES = "DUPLICATE_SPECIES"
-    MOVED_SPECIES = "MOVED_SPECIES"
+    UPDATE_SPECIES = "UPDATE_SPECIES"
 
     approval_status = APPROVAL_STATUSES[0][0]
 
@@ -58,6 +56,7 @@ class FishIngester(object):
         "Primary_functional_group": "functional_group",
         "Group_size": "group_size",
         "Trophic_level": "trophic_level",
+        "regions": "regions",
     }
 
     def __init__(self, file_obj):
@@ -68,6 +67,7 @@ class FishIngester(object):
         self.fish_genus_lookups = dict()
 
         self.fish_species_lookups = self._create_fish_species_lookups()
+        self.regions = {r.name.lower(): r for r in Region.objects.all()}
 
         self._file = file_obj
 
@@ -81,13 +81,10 @@ class FishIngester(object):
         fish_group_functions = {
             fgf.pk: fgf.name.lower() for fgf in FishGroupFunction.objects.all()
         }
-        regions = {r.pk: r.name.lower() for r in Region.objects.all()}
-
         return dict(
             group_size=fish_group_sizes,
             trophic_group=fish_group_trophics,
             functional_group=fish_group_functions,
-            region=regions,
         )
 
     def _map_fields(self, record, field_map, lookups=None):
@@ -97,6 +94,7 @@ class FishIngester(object):
         for k, v in record.items():
             if k not in field_map:
                 continue
+
             elif field_map[k] in lookups:
                 mapped_rec[field_map[k]] = lookups[field_map[k]].get(v)
             else:
@@ -170,6 +168,19 @@ class FishIngester(object):
 
         return genus
 
+    def _update_regions(self, species, region_names):
+        new_regions = [
+            self.regions.get(region.strip().lower())
+            for region in region_names.split(",")
+        ]
+
+        if set(species.regions.all()) == set(new_regions):
+            return False
+
+        species.regions.clear()
+        species.regions.set(new_regions)
+        return True
+
     def _ingest_fish_species(self, row, fish_genus):
         species_row = self._map_fields(
             row, self.fish_species_field_map, self.fish_species_lookups
@@ -177,31 +188,29 @@ class FishIngester(object):
         species_name = species_row["name"]
         genus_name = fish_genus.name
         try:
-            species = FishSpecies.objects.get(name__iexact=species_name, genus=fish_genus)
+            species = FishSpecies.objects.get(
+                name__iexact=species_name, genus=fish_genus
+            )
             has_edits = False
+            region_names = species_row.pop("regions")
             for k, v in species_row.items():
                 if hasattr(species, k) and getattr(species, k) != v:
                     setattr(species, k, v)
                     has_edits = True
 
-            if has_edits:
+            has_region_edits = self._update_regions(species, region_names)
+            if has_edits or has_region_edits:
                 species.save()
+                self.write_log(self.UPDATE_SPECIES, f"{genus_name}-{species_name}")
 
         except FishSpecies.DoesNotExist:
+            region_names = species_row.pop("regions")
             species = FishSpecies.objects.create(genus=fish_genus, **species_row)
+            self._update_regions(species, region_names)
+
             self.write_log(self.NEW_SPECIES, f"{genus_name}-{species_name}")
         except FishSpecies.MultipleObjectsReturned:
             self.write_log(self.DUPLICATE_SPECIES, species_name)
-
-
-class JSONFileAction(argparse.Action):
-    def __call__(self, parser, namespace, values, option_string=None):
-        try:
-            dict_ = json.loads(values.read())
-        except json.decoder.JSONDecodeError:
-            dict_ = dict()
-
-        setattr(namespace, self.dest, dict_)
 
 
 class Command(BaseCommand):
@@ -228,13 +237,6 @@ class Command(BaseCommand):
         super(Command, self).__init__()
 
     def add_arguments(self, parser):
-        # f = family
-        # g = genus
-        # s = species
-        # d = delete
-        # parser.add_argument(
-        #     "--mode", type=str, nargs="?", choices=["f", "g", "s", "d"], default="f"
-        # )
         parser.add_argument(
             "--dry-run",
             action="store_true",
@@ -242,16 +244,8 @@ class Command(BaseCommand):
         )
 
         parser.add_argument(
-            "--config",
-            type=argparse.FileType("r"),
-            nargs="?",
-            dest="config",
-            action=JSONFileAction,
-        )
-
-        parser.add_argument(
             "fishdata",
-            type=argparse.FileType("r"),
+            type=argparse.FileType("r", encoding="windows-1252"),
             nargs="?",
             help="Fish species data CSV file",
         )
@@ -283,20 +277,3 @@ class Command(BaseCommand):
                 print(f"{log}")
         finally:
             fishdata.close()
-        #     with transaction.atomic():
-        #         sid = transaction.savepoint()
-        #         try:
-        #             ingester = FishIngester(fishdata)
-        #             is_successful, logs = ingester.ingest()
-        #             for log in logs:
-        #                 print(f"{log}")
-        #             if dry_run or is_successful is False:
-        #                 transaction.savepoint_rollback(sid)
-        #             else:
-        #                 transaction.savepoint_commit(sid)
-        #         except Exception as err:
-        #             transaction.savepoint_rollback(sid)
-        #             self.stderr.write(str(err))
-        #             sys.exit(1)
-        # finally:
-        #     fishdata.close()
