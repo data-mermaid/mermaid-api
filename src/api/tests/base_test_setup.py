@@ -145,7 +145,6 @@ class BaseTestCase(TestCase):
         self.collector_project_profile.delete()
         self.admin_profile.delete()
         self.collector_profile.delete()
-        self.sample_event.delete()
         self.benthic_transect.delete()
         self.site1.delete()
         self.site2.delete()
