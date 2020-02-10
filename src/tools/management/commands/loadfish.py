@@ -10,6 +10,7 @@ from contextlib import closing
 from django.conf import settings
 from django.core.management.base import BaseCommand
 from django.db import connection, transaction
+from django.db.models import fields
 
 from api.models import (
     FishFamily,
@@ -21,6 +22,7 @@ from api.models import (
     Region,
     APPROVAL_STATUSES,
 )
+from api.utils import castutils
 
 
 class FishIngester(object):
@@ -67,8 +69,23 @@ class FishIngester(object):
 
         self.fish_species_lookups = self._create_fish_species_lookups()
         self.regions = {r.name.lower(): r for r in Region.objects.all()}
+        self.fish_species_casts = self._get_model_casts(FishSpecies)
 
         self._file = file_obj
+
+    def _get_model_casts(self, model_cls):
+        fields = model_cls._meta.get_fields()
+        casts = dict()
+
+        for field in fields:
+
+            if field.get_internal_type() == "DecimalField":
+                kwargs = dict(max_digits=field.max_digits, precision=field.decimal_places)
+                casts[field.name.lower()] = dict(
+                    fx=castutils.to_decimal, kwargs=kwargs
+                )
+
+        return casts
 
     def _create_fish_species_lookups(self):
         fish_group_sizes = {
@@ -86,18 +103,26 @@ class FishIngester(object):
             functional_group=fish_group_functions,
         )
 
-    def _map_fields(self, record, field_map, lookups=None):
+    def _map_fields(self, record, field_map, lookups=None, casts=None):
         lookups = lookups or dict()
+        casts = casts or dict()
         mapped_rec = {}
 
         for k, v in record.items():
-            if k not in field_map:
+            mapped_key = field_map.get(k)
+            if mapped_key is None:
                 continue
-
-            elif field_map[k] in lookups:
-                mapped_rec[field_map[k]] = lookups[field_map[k]].get(v)
+            elif mapped_key in lookups:
+                val = lookups[field_map[k]].get(v)
             else:
-                mapped_rec[field_map[k]] = v
+                val = v
+
+            if mapped_key in casts:
+                cast = casts.get(mapped_key)
+                kwargs = cast.get("kwargs") or dict()
+                val = cast["fx"](val, **kwargs)
+
+            mapped_rec[field_map[k]] = val
 
         mapped_rec["status"] = self.approval_status
         return mapped_rec
@@ -184,7 +209,10 @@ class FishIngester(object):
 
     def _ingest_fish_species(self, row, fish_genus):
         species_row = self._map_fields(
-            row, self.fish_species_field_map, self.fish_species_lookups
+            row,
+            self.fish_species_field_map,
+            lookups=self.fish_species_lookups,
+            casts=self.fish_species_casts,
         )
         species_name = species_row["name"]
         genus_name = fish_genus.name
@@ -194,15 +222,20 @@ class FishIngester(object):
             )
             has_edits = False
             region_names = species_row.pop("regions")
+            updates = []
             for k, v in species_row.items():
-                if hasattr(species, k) and getattr(species, k) != v:
+                original_val = getattr(species, k)
+                if hasattr(species, k) and original_val != v:
                     setattr(species, k, v)
+                    updates.append(f"{k}: {original_val} -> {v}")
                     has_edits = True
 
             has_region_edits = self._update_regions(species, region_names)
             if has_edits or has_region_edits:
                 species.save()
-                self.write_log(self.UPDATE_SPECIES, f"{genus_name}-{species_name}")
+                self.write_log(self.UPDATE_SPECIES, f"{genus_name}-{species_name}: {', '.join(updates)}")
+            else:
+                self.write_log(self.EXISTING_SPECIES, f"{genus_name}-{species_name}")
 
         except FishSpecies.DoesNotExist:
             region_names = species_row.pop("regions")
