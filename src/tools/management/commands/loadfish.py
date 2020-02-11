@@ -89,14 +89,15 @@ class FishIngester(object):
 
     def _create_fish_species_lookups(self):
         fish_group_sizes = {
-            fg.pk: fg.name.lower() for fg in FishGroupSize.objects.all()
+            fg.name.lower(): fg for fg in FishGroupSize.objects.all()
         }
         fish_group_trophics = {
-            fgt.pk: fgt.name.lower() for fgt in FishGroupTrophic.objects.all()
+            fgt.name.lower(): fgt for fgt in FishGroupTrophic.objects.all()
         }
         fish_group_functions = {
-            fgf.pk: fgf.name.lower() for fgf in FishGroupFunction.objects.all()
+            fgf.name.lower(): fgf for fgf in FishGroupFunction.objects.all()
         }
+
         return dict(
             group_size=fish_group_sizes,
             trophic_group=fish_group_trophics,
@@ -113,7 +114,10 @@ class FishIngester(object):
             if mapped_key is None:
                 continue
             elif mapped_key in lookups:
-                val = lookups[field_map[k]].get(v)
+                if v:
+                    val = lookups[field_map[k]][v]
+                else:
+                    val = v
             else:
                 val = v
 
