@@ -19,7 +19,7 @@ class Command(BaseCommand):
 
         parser.add_argument(
             "benthicdata",
-            type=argparse.FileType("r", encoding="windows-1252"),
+            type=argparse.FileType("r"),
             nargs="?",
             help="Fish species data CSV file",
         )
