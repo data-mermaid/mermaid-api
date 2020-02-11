@@ -1087,6 +1087,11 @@ class FishFamily(FishAttribute):
         avebiomass = list(self.fishgenus_set.aggregate(Avg('fishspecies__biomass_constant_c')).values())[0] or 0
         self._biomass_c = round(avebiomass, 6)
         return self._biomass_c
+    
+
+    @property
+    def regions(self):
+        return Region.objects.filter(fishspecies__genus__family=self).distinct()
 
     # This doesn't work: average of averages != average of original values
     # @property
@@ -1164,6 +1169,10 @@ class FishGenus(FishAttribute):
         return self._biomass_c
 
     # biomass_constant_a.fget.help_text = _(u'Average of biomass constant b for all species in this genus')
+
+    @property
+    def regions(self):
+        return Region.objects.filter(fishspecies__genus=self).distinct()
 
     class Meta:
         db_table = 'fish_genus'
