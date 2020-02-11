@@ -227,6 +227,10 @@ class BaseViewAPISerializer(BaseAPISerializer):
 class BaseViewAPIGeoSerializer(BaseAPISerializerMixin, GeoFeatureModelSerializer):
     location = GeometryField(precision=settings.GEO_PRECISION)
 
+    class Meta:
+        exclude = ["project_status"]
+        geo_field = "location"
+
 
 class SampleEventExtendedSerializer(BaseAPISerializer):
     _sample_event = None

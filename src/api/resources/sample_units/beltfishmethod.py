@@ -426,7 +426,7 @@ class BeltFishMethodView(BaseProjectApiViewSet):
 
 
 class BeltFishMethodObsSerializer(BaseViewAPISerializer):
-    class Meta:
+    class Meta(BaseViewAPISerializer.Meta):
         model = BeltFishObsView
         exclude = BaseViewAPISerializer.Meta.exclude.copy()
         exclude.append("location")
@@ -437,14 +437,12 @@ class BeltFishMethodObsCSVSerializer(BeltFishMethodObsSerializer):
 
 
 class BeltFishMethodObsGeoSerializer(BaseViewAPIGeoSerializer):
-    class Meta:
+    class Meta(BaseViewAPIGeoSerializer.Meta):
         model = BeltFishObsView
-        exclude = BaseViewAPISerializer.Meta.exclude.copy()
-        geo_field = "location"
 
 
 class BeltFishMethodSUSerializer(BaseViewAPISerializer):
-    class Meta:
+    class Meta(BaseViewAPISerializer.Meta):
         model = BeltFishSUView
         exclude = BaseViewAPISerializer.Meta.exclude.copy()
         exclude.append("location")
@@ -455,10 +453,8 @@ class BeltFishMethodSUCSVSerializer(BeltFishMethodSUSerializer):
 
 
 class BeltFishMethodSUGeoSerializer(BaseViewAPIGeoSerializer):
-    class Meta:
+    class Meta(BaseViewAPIGeoSerializer.Meta):
         model = BeltFishSUView
-        exclude = BaseViewAPISerializer.Meta.exclude.copy()
-        geo_field = "location"
 
 
 class BeltFishMethodObsFilterSet(BaseTransectFilterSet):
