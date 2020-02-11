@@ -17,6 +17,9 @@ class ProjectTagFilterSet(BaseAPIFilterSet):
 
 
 class ProjectTagViewSet(BaseApiViewSet):
+    method_authentication_classes = {
+        "GET": []
+    }
     permission_classes = [UnauthenticatedReadOnlyPermission]
     filter_class = ProjectTagFilterSet
     serializer_class = ProjectTagSerializer
