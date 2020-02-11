@@ -321,8 +321,11 @@ SELECT project.id AS project_id,
              JOIN management_party mp ON mps.managementparty_id = mp.id
           GROUP BY mps.management_id) parties ON m.id = parties.management_id
      JOIN ( SELECT tt_1.transect_id,
-            jsonb_agg(jsonb_build_object('name', (COALESCE(p.first_name, ''::character varying)::text || ' '::text) 
-            || COALESCE(p.last_name, ''::character varying)::text)) AS observers
+            jsonb_agg(jsonb_build_object(
+                'id', p.id,
+                'name', (COALESCE(p.first_name, ''::character varying)::text || ' '::text) 
+                || COALESCE(p.last_name, ''::character varying)::text)
+            ) AS observers
            FROM observer o1
              JOIN profile p ON o1.profile_id = p.id
              JOIN transectmethod tm ON o1.transectmethod_id = tm.id

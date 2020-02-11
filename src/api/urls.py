@@ -33,7 +33,7 @@ from .resources.obs_habitat_complexity import ObsHabitatComplexityViewSet
 from .resources.obs_colonies_bleached import ObsColoniesBleachedViewSet
 from .resources.obs_quadrat_benthic_percent import ObsQuadratBenthicPercentViewSet
 
-from .resources.sample_units.beltfishmethod import BeltFishMethodView, BeltFishMethodObsView, BeltFishMethodSUView
+from .resources.sample_units.beltfishmethod import BeltFishMethodView, BeltFishProjectMethodObsView, BeltFishProjectMethodSUView
 from .resources.sample_units.benthiclitmethod import BenthicLITMethodView
 from .resources.sample_units.benthicpitmethod import BenthicPITMethodView
 from .resources.sample_units.habitatcomplexitymethod import HabitatComplexityMethodView
@@ -93,8 +93,8 @@ project_router.register(r'fishbelttransects', FishBeltTransectViewSet, 'fishbelt
 project_router.register(r'quadratcollections', QuadratCollectionViewSet, 'quadratcollection')
 
 # multi model sample unit method views
-project_router.register(r'beltfishes/obstransectbeltfishes', BeltFishMethodObsView, 'obstransectbeltfish')
-project_router.register(r'beltfishes/sampleunits', BeltFishMethodSUView, 'sampleunit')
+project_router.register(r'beltfishes/obstransectbeltfishes', BeltFishProjectMethodObsView, 'obstransectbeltfish')
+project_router.register(r'beltfishes/sampleunits', BeltFishProjectMethodSUView, 'sampleunit')
 
 # multi model sample unit method reports
 project_router.register(r'beltfishtransectmethods', BeltFishMethodView, 'beltfishtransectmethod')

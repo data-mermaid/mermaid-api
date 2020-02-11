@@ -26,7 +26,7 @@ from ..base import (
     BaseProjectApiViewSet,
     BaseViewAPISerializer,
     BaseViewAPIGeoSerializer,
-    BaseTransectFilterSet
+    BaseTransectFilterSet,
 )
 from ..belt_fish import BeltFishSerializer
 from ..fish_belt_transect import FishBeltTransectSerializer
@@ -424,26 +424,12 @@ class BeltFishMethodView(BaseProjectApiViewSet):
             **kwargs
         )
 
-    # @action(detail=False, methods=["get"], serializer_class=BeltFishMethodObsSerializer)
-    # def obstransectbeltfishes(self, request, *args, **kwargs):
-    #     # obs = BeltFishObsView.objects.filter(project_id="9de82789-c38e-462e-a1a8-e02c020c7a35")
-    #     qs = BeltFishObsView.objects.filter(project_id="2c56b92b-ba1c-491f-8b62-23b1dc728890")
-    #     # self.limit_to_project(request, *args, **kwargs)
-    #     # page = self.paginate_queryset(recent_users)
-    #     # if page is not None:
-    #     #     serializer = self.get_serializer(page, many=True)
-    #     #     return self.get_paginated_response(serializer.data)
-    #
-    #     serializer = self.get_serializer(qs, many=True)
-    #     print(serializer)
-    #     return Response(serializer.data)
-
 
 class BeltFishMethodObsSerializer(BaseViewAPISerializer):
-
     class Meta:
         model = BeltFishObsView
-        exclude = ["location"]  # TODO
+        exclude = BaseViewAPISerializer.Meta.exclude.copy()
+        exclude.append("location")
 
 
 class BeltFishMethodObsCSVSerializer(BeltFishMethodObsSerializer):
@@ -451,18 +437,17 @@ class BeltFishMethodObsCSVSerializer(BeltFishMethodObsSerializer):
 
 
 class BeltFishMethodObsGeoSerializer(BaseViewAPIGeoSerializer):
-
     class Meta:
         model = BeltFishObsView
-        exclude = []  # TODO
+        exclude = BaseViewAPISerializer.Meta.exclude.copy()
         geo_field = "location"
 
 
 class BeltFishMethodSUSerializer(BaseViewAPISerializer):
-
     class Meta:
         model = BeltFishSUView
-        exclude = ["location"]  # TODO
+        exclude = BaseViewAPISerializer.Meta.exclude.copy()
+        exclude.append("location")
 
 
 class BeltFishMethodSUCSVSerializer(BeltFishMethodSUSerializer):
@@ -470,10 +455,9 @@ class BeltFishMethodSUCSVSerializer(BeltFishMethodSUSerializer):
 
 
 class BeltFishMethodSUGeoSerializer(BaseViewAPIGeoSerializer):
-
     class Meta:
         model = BeltFishSUView
-        exclude = []  # TODO
+        exclude = BaseViewAPISerializer.Meta.exclude.copy()
         geo_field = "location"
 
 
@@ -512,28 +496,38 @@ class BeltFishMethodSUFilterSet(BaseTransectFilterSet):
 
     class Meta:
         model = BeltFishSUView
-        fields = [
-            "size_bin",
-            "biomass_kgha",
-            "data_policy_beltfish",
-        ]
+        fields = ["size_bin", "biomass_kgha", "data_policy_beltfish"]
 
 
-class BeltFishMethodObsView(BaseMethodView):
+class BeltFishProjectMethodObsView(BaseProjectMethodView):
     drf_label = "beltfish"
     project_policy = "data_policy_beltfish"
     serializer_class = BeltFishMethodObsSerializer
     serializer_class_geojson = BeltFishMethodObsGeoSerializer
     serializer_class_csv = BeltFishMethodObsCSVSerializer
     filterset_class = BeltFishMethodObsFilterSet
-    queryset = BeltFishObsView.objects.all()  # TODO: order_by, select_related
+    queryset = BeltFishObsView.objects.exclude(project_status=Project.TEST).order_by(
+        "site_name",
+        "sample_date",
+        "number",
+        "label",
+        "fish_family",
+        "fish_genus",
+        "fish_taxon",
+        "size",
+    )
 
 
-class BeltFishMethodSUView(BaseMethodView):
+class BeltFishProjectMethodSUView(BaseProjectMethodView):
     drf_label = "beltfish"
     project_policy = "data_policy_beltfish"
     serializer_class = BeltFishMethodSUSerializer
     serializer_class_geojson = BeltFishMethodSUGeoSerializer
     serializer_class_csv = BeltFishMethodSUCSVSerializer
     filterset_class = BeltFishMethodSUFilterSet
-    queryset = BeltFishSUView.objects.all()  # TODO: order_by, select_related
+    queryset = BeltFishSUView.objects.exclude(project_status=Project.TEST).order_by(
+        "site_name",
+        "sample_date",
+        "number",
+        "label",
+    )

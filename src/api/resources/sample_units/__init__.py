@@ -358,7 +358,7 @@ class BaseGeoJsonPagination(GeoJsonPagination):
     max_page_size = 1000
 
 
-class BaseMethodView(BaseProjectApiViewSet):
+class BaseProjectMethodView(BaseProjectApiViewSet):
     drf_label = ""
     project_policy = None
     serializer_class_geojson = None

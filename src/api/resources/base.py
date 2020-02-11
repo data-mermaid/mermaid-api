@@ -205,6 +205,9 @@ class BaseViewAPISerializer(BaseAPISerializer):
     latitude = SerializerMethodField()
     longitude = SerializerMethodField()
 
+    class Meta:
+        exclude = ["project_status"]
+
     def get_latitude(self, obj):
         if obj.location is not None:
             return round(obj.location.y, settings.GEO_PRECISION)
