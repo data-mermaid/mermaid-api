@@ -3,6 +3,7 @@
 import django.contrib.gis.db.models.fields
 import django.core.validators
 from django.db import migrations, models
+from django.contrib.gis.geos import GEOSGeometry
 
 
 class Migration(migrations.Migration):
@@ -15,7 +16,7 @@ class Migration(migrations.Migration):
         migrations.AddField(
             model_name='region',
             name='area_of_interest',
-            field=django.contrib.gis.db.models.fields.MultiPolygonField(default='MULTIPOLYGON(((0 0,0 0,0 0,0 0,0 0)))', srid=4326),
+            field=django.contrib.gis.db.models.fields.MultiPolygonField(default=GEOSGeometry('MULTIPOLYGON(((0 0,0 0,0 0,0 0,0 0)))'), srid=4326),
             preserve_default=False,
         ),
         migrations.AlterField(
