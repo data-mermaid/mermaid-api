@@ -21,6 +21,8 @@ def get_features():
 def load_regions(apps, *args, **kwargs):
     Region = apps.get_model("api", "Region")
 
+    Region.objects.filter(name__in=["Caribbean", "Indo-Pacific"]).delete()
+
     for region_name, area_of_interest in get_features():
         Region.objects.get_or_create(
             name=region_name,

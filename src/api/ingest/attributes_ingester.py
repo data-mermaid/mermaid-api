@@ -26,6 +26,7 @@ class BaseAttributeIngester(object):
         self._file = file_obj
 
     def _map_field(self, key, val, field_map, lookups, casts):
+        val = val.strip()
         mapped_key = field_map.get(key)
 
         if mapped_key in lookups:
@@ -64,18 +65,23 @@ class BaseAttributeIngester(object):
         log_msg = f"{action} [{timestamp}] {message}"
         self.log.append(log_msg)
 
-    def _update_regions(self, instance, region_names):
+    def _update_regions(self, species, region_names):
         new_regions = [
             self.regions.get(region.strip().lower())
             for region in region_names.split(",")
         ]
 
-        if set(instance.regions.all()) == set(new_regions):
-            return False
+        existing_regions = set(species.regions.all())
+        if existing_regions == set(new_regions):
+            return False, None
 
-        instance.regions.clear()
-        instance.regions.set(new_regions)
-        return True
+        existing_region_names = ",".join([er.name for er in existing_regions])
+        updates = f"regions: {existing_region_names} -> {region_names}"
+
+        species.regions.clear()
+        species.regions.set(new_regions)
+
+        return True, updates
 
 
 class BenthicIngester(BaseAttributeIngester):
@@ -114,36 +120,74 @@ class BenthicIngester(BaseAttributeIngester):
 
         try:
             parent1 = BenthicAttribute.objects.get(name__iexact=level1)
-            self.write_log(self.EXISTING_BENTHIC, f"Parent level 1 - {parent1}")
+
+            self._update_regions(parent1, region_names)
+            has_region_edits, region_updates = self._update_regions(
+                parent1, region_names
+            )
+
+            if has_region_edits:
+                self.write_log(
+                    self.UPDATE_BENTHIC, f"Level 1 - {parent1.name}: {region_updates}"
+                )
+            else:
+                self.write_log(self.EXISTING_BENTHIC, f"Level 1 - {parent1.name}")
         except BenthicAttribute.DoesNotExist:
             parent1 = BenthicAttribute.objects.create(name=level1)
-            self.write_log(self.NEW_BENTHIC, f"Parent level 1 - {parent1}")
-
-        self._update_regions(parent1, region_names)
+            self._update_regions(parent1, region_names)
+            self.write_log(self.NEW_BENTHIC, f"Level 1 - {parent1.name}")
 
         if not level2:
             return
 
         try:
             parent2 = BenthicAttribute.objects.get(name__iexact=level2, parent=parent1)
-            self.write_log(self.EXISTING_BENTHIC, f"Parent level 2 - {parent2}")
+            has_region_edits, region_updates = self._update_regions(
+                parent2, region_names
+            )
+            if has_region_edits:
+                self.write_log(
+                    self.UPDATE_BENTHIC,
+                    f"Level 1 - {parent1.name} - Level 2 - {parent2.name}: {region_updates}",
+                )
+            else:
+                self.write_log(
+                    self.EXISTING_BENTHIC,
+                    f"Level 1 - {parent1.name} - Level 2 - {parent2.name2}",
+                )
         except BenthicAttribute.DoesNotExist:
             parent2 = BenthicAttribute.objects.create(name=level2, parent=parent1)
-            self.write_log(self.NEW_BENTHIC, f"Parent level 2 - {parent2}")
-
-        self._update_regions(parent2, region_names)
+            self._update_regions(parent2, region_names)
+            self.write_log(
+                self.EXISTING_BENTHIC,
+                f"Level 1 - {parent1.name} - Level 2 - {parent2.name2}",
+            )
 
         if not level3:
             return
 
         try:
             parent3 = BenthicAttribute.objects.get(name__iexact=level3, parent=parent2)
-            self.write_log(self.EXISTING_BENTHIC, f"Parent level 3 - {parent3}")
+            has_region_edits, region_updates = self._update_regions(
+                parent3, region_names
+            )
+            if has_region_edits:
+                self.write_log(
+                    self.UPDATE_BENTHIC,
+                    f"Level 1 - {parent1.name} - Level 2 - {parent2.name} - Level 3 - {parent3.name}: {region_updates}",
+                )
+            else:
+                self.write_log(
+                    self.EXISTING_BENTHIC,
+                    f"Level 1 - {parent1.name} - Level 2 - {parent2.name} - Level 3 - {parent3.name}",
+                )
         except BenthicAttribute.DoesNotExist:
             parent3 = BenthicAttribute.objects.create(name=level3, parent=parent2)
-            self.write_log(self.NEW_BENTHIC, f"Parent level 3 - {parent3}")
-
-        self._update_regions(parent3, region_names)
+            self._update_regions(parent3, region_names)
+            self.write_log(
+                self.NEW_BENTHIC,
+                f"Level 1 - {parent1.name} - Level 2 - {parent2.name} - Level 3 - {parent3.name}",
+            )
 
     def ingest(self, dry_run=False):
         self.log = []
@@ -172,7 +216,7 @@ class BenthicIngester(BaseAttributeIngester):
         return is_successful, self.log
 
 
-class FishIngester(object):
+class FishIngester(BaseAttributeIngester):
     ERROR = "ERROR"
     EXISTING_FAMILY = "EXISTING_FAMILY"
     NEW_FAMILY = "NEW_FAMILY"
@@ -208,17 +252,14 @@ class FishIngester(object):
     }
 
     def __init__(self, file_obj):
-        self.log = []
+        super().__init__(file_obj)
 
         # Placeholders until needed
         self.fish_family_lookups = dict()
         self.fish_genus_lookups = dict()
 
         self.fish_species_lookups = self._create_fish_species_lookups()
-        self.regions = {r.name.lower(): r for r in Region.objects.all()}
         self.fish_species_casts = self._get_model_casts(FishSpecies)
-
-        self._file = file_obj
 
     def _get_model_casts(self, model_cls):
         fields = model_cls._meta.get_fields()
@@ -248,38 +289,6 @@ class FishIngester(object):
             trophic_group=fish_group_trophics,
             functional_group=fish_group_functions,
         )
-
-    def _map_fields(self, record, field_map, lookups=None, casts=None):
-        lookups = lookups or dict()
-        casts = casts or dict()
-        mapped_rec = {}
-
-        for k, v in record.items():
-            mapped_key = field_map.get(k)
-            if mapped_key is None:
-                continue
-            elif mapped_key in lookups:
-                if v:
-                    val = lookups[field_map[k]][v]
-                else:
-                    val = v
-            else:
-                val = v
-
-            if mapped_key in casts:
-                cast = casts.get(mapped_key)
-                kwargs = cast.get("kwargs") or dict()
-                val = cast["fx"](val, **kwargs)
-
-            mapped_rec[field_map[k]] = val
-
-        mapped_rec["status"] = self.approval_status
-        return mapped_rec
-
-    def write_log(self, action, message):
-        timestamp = datetime.datetime.now().isoformat()
-        log_msg = f"{action} [{timestamp}] {message}"
-        self.log.append(log_msg)
 
     def ingest(self, dry_run=False):
         self.log = []
@@ -343,19 +352,6 @@ class FishIngester(object):
 
         return genus
 
-    def _update_regions(self, species, region_names):
-        new_regions = [
-            self.regions.get(region.strip().lower())
-            for region in region_names.split(",")
-        ]
-
-        if set(species.regions.all()) == set(new_regions):
-            return False
-
-        species.regions.clear()
-        species.regions.set(new_regions)
-        return True
-
     def _ingest_fish_species(self, row, fish_genus):
         species_row = self._map_fields(
             row,
@@ -379,7 +375,12 @@ class FishIngester(object):
                     updates.append(f"{k}: {original_val} -> {v}")
                     has_edits = True
 
-            has_region_edits = self._update_regions(species, region_names)
+            has_region_edits, region_updates = self._update_regions(
+                species, region_names
+            )
+            if has_region_edits:
+                updates.append(region_updates)
+
             if has_edits or has_region_edits:
                 species.save()
                 self.write_log(
