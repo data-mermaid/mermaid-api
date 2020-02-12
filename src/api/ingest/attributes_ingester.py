@@ -95,6 +95,7 @@ class BenthicIngester(BaseAttributeIngester):
         "level1": "level1",
         "level2": "level2",
         "level3": "level3",
+        "level4": "level4",
         "regions": "regions",
     }
 
@@ -114,6 +115,7 @@ class BenthicIngester(BaseAttributeIngester):
         level1 = benthic_row.get("level1")
         level2 = benthic_row.get("level2")
         level3 = benthic_row.get("level3")
+        level4 = benthic_row.get("level4")
 
         if not level1:
             return
@@ -153,14 +155,14 @@ class BenthicIngester(BaseAttributeIngester):
             else:
                 self.write_log(
                     self.EXISTING_BENTHIC,
-                    f"Level 1 - {parent1.name} - Level 2 - {parent2.name2}",
+                    f"Level 1 - {parent1.name} - Level 2 - {parent2.name}",
                 )
         except BenthicAttribute.DoesNotExist:
             parent2 = BenthicAttribute.objects.create(name=level2, parent=parent1)
             self._update_regions(parent2, region_names)
             self.write_log(
                 self.EXISTING_BENTHIC,
-                f"Level 1 - {parent1.name} - Level 2 - {parent2.name2}",
+                f"Level 1 - {parent1.name} - Level 2 - {parent2.name}",
             )
 
         if not level3:
@@ -187,6 +189,33 @@ class BenthicIngester(BaseAttributeIngester):
             self.write_log(
                 self.NEW_BENTHIC,
                 f"Level 1 - {parent1.name} - Level 2 - {parent2.name} - Level 3 - {parent3.name}",
+            )
+
+        if not level4:
+            return
+
+        try:
+            parent4 = BenthicAttribute.objects.get(name__iexact=level4, parent=parent3)
+            has_region_edits, region_updates = self._update_regions(
+                parent4, region_names
+            )
+            if has_region_edits:
+                self.write_log(
+                    self.UPDATE_BENTHIC,
+                    f"Level 1 - {parent1.name} - Level 2 - {parent2.name} - Level 3 - {parent3.name} - Level 4 - {parent4.name}: {region_updates}",
+                )
+            else:
+                self.write_log(
+                    self.EXISTING_BENTHIC,
+                    f"Level 1 - {parent1.name} - Level 2 - {parent2.name} - Level 3 - {parent3.name} - Level 4 - {parent4.name}",
+                )
+        except BenthicAttribute.DoesNotExist:
+            
+            parent4 = BenthicAttribute.objects.create(name=level4, parent=parent3)
+            self._update_regions(parent3, region_names)
+            self.write_log(
+                self.NEW_BENTHIC,
+                f"Level 1 - {parent1.name} - Level 2 - {parent2.name} - Level 3 - {parent3.name} - Level 4 - {parent4.name}",
             )
 
     def ingest(self, dry_run=False):
