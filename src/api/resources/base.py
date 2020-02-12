@@ -128,7 +128,7 @@ class CurrentProfileDefault(object):
         return '%s()' % self.__class__.__name__
 
 
-class BaseAPISerializerMixin(object):
+class BaseAPISerializer(serializers.ModelSerializer):
     id = UUIDField(allow_null=True)
     updated_by = PrimaryKeyRelatedField(read_only=True,
                                         default=CurrentProfileDefault())
@@ -197,8 +197,8 @@ class BaseAPISerializerMixin(object):
         return super().save(**kwargs)
 
 
-class BaseAPISerializer(BaseAPISerializerMixin, serializers.ModelSerializer):
-    pass
+# class BaseAPISerializer(BaseAPISerializerMixin, serializers.ModelSerializer):
+#     pass
 
 
 class BaseViewAPISerializer(BaseAPISerializer):
@@ -224,7 +224,7 @@ class BaseViewAPISerializer(BaseAPISerializer):
         return None
 
 
-class BaseViewAPIGeoSerializer(BaseAPISerializerMixin, GeoFeatureModelSerializer):
+class BaseViewAPIGeoSerializer(GeoFeatureModelSerializer):
     location = GeometryField(precision=settings.GEO_PRECISION)
 
     class Meta:
@@ -544,7 +544,6 @@ class BaseChoiceApiViewSet(MethodAuthenticationMixin, viewsets.ViewSet):
     method_authentication_classes = {
         "GET": []
     }
-
 
     # If we need to filter according to project role, we do this here
     def _filter(self, keys=None):

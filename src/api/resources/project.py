@@ -239,35 +239,34 @@ class ProjectViewSet(BaseApiViewSet):
     def get_updates(self, request, *args, **kwargs):
         added, updated, deleted = super().get_updates(request, *args, **kwargs)
 
-        if hasattr(request.user, "profile"):
-            # Need to track changes to Project profile to decide if projects should be
-            # added or removed from list
-            serializer = self.get_serializer_class()
-            context = {"request": request}
-            timestamp = self.get_update_timestamp(request)
-            added_filter = dict()
-            removed_filter = dict(app_label="api", model="projectprofile")
-            removed_filter["record__fields__profile"] = str(request.user.profile.id)
+        # Need to track changes to Project profile to decide if projects should be
+        # added or removed from list
+        serializer = self.get_serializer_class()
+        context = {"request": request}
+        timestamp = self.get_update_timestamp(request)
+        added_filter = dict()
+        removed_filter = dict(app_label="api", model="projectprofile")
+        removed_filter["record__fields__profile"] = str(request.user.profile.id)
 
-            # Additions
-            self.apply_query_param(added_filter, "created_on__gte", timestamp)
-            added_filter["profile"] = request.user.profile
-            project_profiles = ProjectProfile.objects.filter(**added_filter)
+        # Additions
+        self.apply_query_param(added_filter, "created_on__gte", timestamp)
+        added_filter["profile"] = request.user.profile
+        project_profiles = ProjectProfile.objects.filter(**added_filter)
 
-            additions = [
-                (pp.updated_on, serializer(pp.project, context=context).data)
-                for pp in project_profiles
-            ]
+        additions = [
+            (pp.updated_on, serializer(pp.project, context=context).data)
+            for pp in project_profiles
+        ]
 
-            added.extend(additions)
+        added.extend(additions)
 
-            # Deletions
-            self.apply_query_param(removed_filter, "created_on__gte", timestamp)
-            removed = [
-                (ar.created_on, dict(id=ar.project_pk, timestamp=ar.created_on))
-                for ar in ArchivedRecord.objects.filter(**removed_filter)
-            ]
-            deleted.extend(removed)
+        # Deletions
+        self.apply_query_param(removed_filter, "created_on__gte", timestamp)
+        removed = [
+            (ar.created_on, dict(id=ar.project_pk, timestamp=ar.created_on))
+            for ar in ArchivedRecord.objects.filter(**removed_filter)
+        ]
+        deleted.extend(removed)
 
         return added, updated, deleted
 

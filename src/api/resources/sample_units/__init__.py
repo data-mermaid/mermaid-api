@@ -363,7 +363,7 @@ class BaseProjectMethodView(BaseProjectApiViewSet):
     project_policy = None
     serializer_class_geojson = None
     serializer_class_csv = None
-    authentication_classes = [AnonymousJWTAuthentication]
+    method_authentication_classes = {"GET": [AnonymousJWTAuthentication]}
     permission_classes = [Or(ProjectDataReadOnlyPermission, ProjectPublicPermission)]
     http_method_names = ["get"]
 
@@ -379,6 +379,7 @@ class BaseProjectMethodView(BaseProjectApiViewSet):
 
     @action(detail=False, methods=["get"])
     def json(self, request, *args, **kwargs):  # default, for completeness
+        print(request.user)
         return self.list(request, *args, **kwargs)
 
     @action(detail=False, methods=["get"])
