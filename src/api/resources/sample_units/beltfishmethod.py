@@ -430,6 +430,9 @@ class BeltFishMethodObsSerializer(BaseViewAPISerializer):
         model = BeltFishObsView
         exclude = BaseViewAPISerializer.Meta.exclude.copy()
         exclude.append("location")
+        order_by = [
+
+        ]
 
 
 class BeltFishMethodObsCSVSerializer(BeltFishMethodObsSerializer):

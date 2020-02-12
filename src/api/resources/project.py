@@ -268,8 +268,6 @@ class ProjectViewSet(BaseApiViewSet):
                 for ar in ArchivedRecord.objects.filter(**removed_filter)
             ]
             deleted.extend(removed)
-        else:
-            print(request.user)
 
         return added, updated, deleted
 

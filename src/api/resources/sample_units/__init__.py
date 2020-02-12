@@ -400,6 +400,8 @@ class BaseProjectMethodView(BaseProjectApiViewSet):
         serializer = self.get_serializer(self.get_queryset(), many=True)
         # TODO: put header in order
         fields = serializer.child.get_fields()
+        # sorted(serialized_data, key=itemgetter(*kwargs['order_by']))
+        print(fields)
         serialized_data = self.csv_data(fields, serializer)
         report = RawCSVReport()
         stream = report.stream(list(fields), serialized_data)
