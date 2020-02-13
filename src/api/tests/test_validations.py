@@ -504,7 +504,7 @@ class ObsBenthicLITValidationTest(BaseTestCase, TestDataMixin):
 
     def test_validate_total_length(self):
         validation = ObsBenthicLITValidation(self.invalid_len_data)
-        self.assertEqual(ERROR, validation.validate())
+        self.assertEqual(WARN, validation.validate())
 
         validation = ObsBenthicLITValidation(self.valid_data)
         self.assertEqual(OK, validation.validate())

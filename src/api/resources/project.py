@@ -239,6 +239,9 @@ class ProjectViewSet(BaseApiViewSet):
     def get_updates(self, request, *args, **kwargs):
         added, updated, deleted = super().get_updates(request, *args, **kwargs)
 
+        if request.user is None or hasattr(request.user, "profile") is False:
+            return added, updated, deleted
+
         # Need to track changes to Project profile to decide if projects should be
         # added or removed from list
         serializer = self.get_serializer_class()

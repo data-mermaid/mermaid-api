@@ -297,11 +297,11 @@ class BenthicLITProtocolValidationTest(TestCase, TestDataMixin):
         result = validation.validate()
         self.assertEqual(OK, result)
 
-    def test_validate_error(self):
+    def test_validate_warning(self):
         validation = BenthicLITProtocolValidation(self.collect_record_error, request=self.request)
-        self.assertEqual(ERROR, validation.validate())
+        self.assertEqual(WARN, validation.validate())
         self.assertEqual(
-            ERROR,
+            WARN,
             validation.validations["obs_benthic_lits"]["validate_total_length"][
                 "status"
             ],
