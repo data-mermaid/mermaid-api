@@ -65,21 +65,21 @@ class BaseAttributeIngester(object):
         log_msg = f"{action} [{timestamp}] {message}"
         self.log.append(log_msg)
 
-    def _update_regions(self, species, region_names):
+    def _update_regions(self, attribute, region_names):
         new_regions = [
             self.regions.get(region.strip().lower())
             for region in region_names.split(",")
         ]
 
-        existing_regions = set(species.regions.all())
+        existing_regions = set(attribute.regions.all())
         if existing_regions == set(new_regions):
             return False, None
 
         existing_region_names = ",".join([er.name for er in existing_regions])
         updates = f"regions: {existing_region_names} -> {region_names}"
 
-        species.regions.clear()
-        species.regions.set(new_regions)
+        attribute.regions.clear()
+        attribute.regions.set(new_regions)
 
         return True, updates
 
@@ -210,7 +210,6 @@ class BenthicIngester(BaseAttributeIngester):
                     f"Level 1 - {parent1.name} - Level 2 - {parent2.name} - Level 3 - {parent3.name} - Level 4 - {parent4.name}",
                 )
         except BenthicAttribute.DoesNotExist:
-            
             parent4 = BenthicAttribute.objects.create(name=level4, parent=parent3)
             self._update_regions(parent3, region_names)
             self.write_log(
