@@ -19,7 +19,5 @@ urlpatterns = [
 
 
 urlpatterns += [
-    url(r'^api-auth/', include('rest_framework.urls',
-                               namespace='rest_framework')),
-    # url(r'^auth/', include('oauth2_package.urls')),
+    path('api-auth/', include('rest_framework.urls', namespace='rest_framework')),
 ]
