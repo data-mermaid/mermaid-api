@@ -367,6 +367,14 @@ class BaseProjectMethodView(BaseProjectApiViewSet):
     permission_classes = [Or(ProjectDataReadOnlyPermission, ProjectPublicPermission)]
     http_method_names = ["get"]
 
+    def _get_fields(self, serializer):
+        fields = serializer.child.get_fields()
+        ordered_fields = fields
+        if hasattr(serializer.child.Meta, "header_order"):
+            header_order = serializer.child.Meta.header_order
+            ordered_fields = OrderedDict((f, fields[f]) for f in header_order)
+        return ordered_fields
+
     def csv_data(self, fields, serializer):
         for row in serializer.data:
             prepared_row = OrderedDict()
@@ -379,7 +387,6 @@ class BaseProjectMethodView(BaseProjectApiViewSet):
 
     @action(detail=False, methods=["get"])
     def json(self, request, *args, **kwargs):  # default, for completeness
-        print(request.user)
         return self.list(request, *args, **kwargs)
 
     @action(detail=False, methods=["get"])
@@ -399,13 +406,11 @@ class BaseProjectMethodView(BaseProjectApiViewSet):
 
         self.queryset = self.filter_queryset(self.get_queryset())
         serializer = self.get_serializer(self.get_queryset(), many=True)
-        # TODO: put header in order
-        fields = serializer.child.get_fields()
-        # sorted(serialized_data, key=itemgetter(*kwargs['order_by']))
-        print(fields)
+        fields = self._get_fields(serializer)
         serialized_data = self.csv_data(fields, serializer)
         report = RawCSVReport()
         stream = report.stream(list(fields), serialized_data)
+
         response = StreamingHttpResponse(stream, content_type="text/csv")
         ts = datetime.utcnow().strftime("%Y%m%d")
         projname = get_valid_filename(project.name)[:100]

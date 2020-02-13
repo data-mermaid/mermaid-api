@@ -5,6 +5,7 @@ from django.views.decorators.cache import cache_page
 from django.utils.translation import ugettext_lazy as _
 from rest_framework import serializers, viewsets
 from rest_framework.decorators import action
+from rest_framework import exceptions
 from rest_framework.serializers import (
     UUIDField,
     PrimaryKeyRelatedField,
@@ -118,8 +119,11 @@ class StandardResultPagination(PageNumberPagination):
 
 class CurrentProfileDefault(object):
     def set_context(self, serializer_field):
-        token = get_jwt_token(serializer_field.context['request'])
-        self.profile = get_unverified_profile(token)
+        try:
+            token = get_jwt_token(serializer_field.context['request'])
+            self.profile = get_unverified_profile(token)
+        except exceptions.AuthenticationFailed:
+            self.profile = None
 
     def __call__(self):
         return self.profile
@@ -197,16 +201,24 @@ class BaseAPISerializer(serializers.ModelSerializer):
         return super().save(**kwargs)
 
 
-# class BaseAPISerializer(BaseAPISerializerMixin, serializers.ModelSerializer):
-#     pass
-
-
 class BaseViewAPISerializer(BaseAPISerializer):
+    updated_by = None
     latitude = SerializerMethodField()
     longitude = SerializerMethodField()
 
     class Meta:
         exclude = ["project_status"]
+        header_order = [
+            'id',
+            "latitude", "longitude", 'site_id', 'site_name', 'site_notes',
+            'project_id', 'project_name', 'project_notes', 'contact_link', 'tags',
+            'country_id', 'country_name',
+            'reef_type', 'reef_zone', 'reef_exposure',
+            'management_id', 'management_name', 'management_name_secondary', 'management_est_year',
+            'management_size', 'management_parties', 'management_compliance', 'management_rules', 'management_notes',
+            'sample_event_id', 'sample_date', 'sample_time',
+            'current_name', 'tide_name', 'visibility_name', 'depth', 'sample_event_notes',
+        ]
 
     def get_latitude(self, obj):
         if obj.location is not None:
@@ -224,7 +236,7 @@ class BaseViewAPISerializer(BaseAPISerializer):
         return None
 
 
-class BaseViewAPIGeoSerializer(GeoFeatureModelSerializer):
+class BaseViewAPIGeoSerializer(GeoFeatureModelSerializer, BaseAPISerializer):
     location = GeometryField(precision=settings.GEO_PRECISION)
 
     class Meta:
@@ -416,7 +428,7 @@ class BaseApiViewSet(MethodAuthenticationMixin, viewsets.ModelViewSet, UpdatesMi
                        RelatedOrderingFilter,
                        SearchFilter,
                        )
-    # renderers = settings.REST_FRAMEWORK['DEFAULT_RENDERER_CLASSES']
+
     _serializer_class_for_fields = {}
 
     permission_classes = [DefaultPermission, ]

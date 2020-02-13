@@ -430,9 +430,34 @@ class BeltFishMethodObsSerializer(BaseViewAPISerializer):
         model = BeltFishObsView
         exclude = BaseViewAPISerializer.Meta.exclude.copy()
         exclude.append("location")
-        order_by = [
-
-        ]
+        header_order = BaseViewAPISerializer.Meta.header_order.copy()
+        header_order.extend(
+            [
+                "sample_unit_id",
+                "number",
+                "label",
+                "transect_len_surveyed",
+                "transect_width",
+                "reef_slope",
+                "size_bin",
+                "observers",
+                "data_policy_beltfish",
+                "fish_family",
+                "fish_genus",
+                "fish_taxon",
+                "trophic_group",
+                "trophic_level",
+                "functional_group",
+                "vulnerability",
+                "biomass_constant_a",
+                "biomass_constant_b",
+                "biomass_constant_c",
+                "size",
+                "count",
+                "biomass_kgha",
+                "observation_notes",
+            ]
+        )
 
 
 class BeltFishMethodObsCSVSerializer(BeltFishMethodObsSerializer):
@@ -449,6 +474,20 @@ class BeltFishMethodSUSerializer(BaseViewAPISerializer):
         model = BeltFishSUView
         exclude = BaseViewAPISerializer.Meta.exclude.copy()
         exclude.append("location")
+        header_order = BaseViewAPISerializer.Meta.header_order.copy()
+        header_order.extend(
+            [
+                "number",
+                "transect_len_surveyed",
+                "transect_width",
+                "reef_slope",
+                "size_bin",
+                "observers",
+                "data_policy_beltfish",
+                "biomass_kgha",
+                "biomass_kgha_by_trophic_group",
+            ]
+        )
 
 
 class BeltFishMethodSUCSVSerializer(BeltFishMethodSUSerializer):
@@ -525,8 +564,5 @@ class BeltFishProjectMethodSUView(BaseProjectMethodView):
     serializer_class_csv = BeltFishMethodSUCSVSerializer
     filterset_class = BeltFishMethodSUFilterSet
     queryset = BeltFishSUView.objects.exclude(project_status=Project.TEST).order_by(
-        "site_name",
-        "sample_date",
-        "number",
-        "label",
+        "site_name", "sample_date", "number"
     )
