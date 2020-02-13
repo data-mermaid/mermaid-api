@@ -157,7 +157,7 @@ class Project(BaseModel):
 
 class Region(BaseChoiceModel):
     name = models.CharField(max_length=100)
-    area_of_interest = models.MultiPolygonField(srid=4326)
+    geom = models.MultiPolygonField(geography=True)
 
     class Meta:
         db_table = 'region'

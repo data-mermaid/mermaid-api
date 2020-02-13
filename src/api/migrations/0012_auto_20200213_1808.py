@@ -23,11 +23,17 @@ def load_regions(apps, *args, **kwargs):
 
     Region.objects.filter(name__in=["Caribbean", "Indo-Pacific"]).delete()
 
-    for region_name, area_of_interest in get_features():
-        Region.objects.get_or_create(
-            name=region_name,
-            area_of_interest=GEOSGeometry(json.dumps(area_of_interest)),
-        )
+    for region_name, geom in get_features():
+        _geom = GEOSGeometry(json.dumps(geom))
+        try:
+            region = Region.objects.get(name__iexact=region_name)
+            if region.geom.wkt != _geom.wkt:
+                raise region.DoesNotExist
+        except Region.DoesNotExist:
+            Region.objects.create(
+                name=region_name,
+                geom=_geom
+            )
 
 
 def unload_regions(apps, *args, **kwargs):
@@ -38,6 +44,6 @@ def unload_regions(apps, *args, **kwargs):
 
 class Migration(migrations.Migration):
 
-    dependencies = [("api", "0011_auto_20200211_0428")]
+    dependencies = [("api", "0011_auto_20200213_1807")]
 
     operations = [migrations.RunPython(load_regions, unload_regions)]

@@ -22,7 +22,7 @@ def update_functional_groups(apps, *args, **kwargs):
 
 class Migration(migrations.Migration):
 
-    dependencies = [("api", "0012_auto_20200211_0428")]
+    dependencies = [("api", "0012_auto_20200213_1808")]
 
     operations = [
         migrations.RunPython(update_functional_groups, migrations.RunPython.noop)
