@@ -65,7 +65,7 @@ class BaseAttributeIngester(object):
         log_msg = f"{action} [{timestamp}] {message}"
         self.log.append(log_msg)
 
-    def _update_regions(self, attribute, region_names):
+    def _update_regions(self, attribute, region_names, is_combined=True):
         new_regions = [
             self.regions.get(region.strip().lower())
             for region in region_names.split(",")
@@ -76,10 +76,17 @@ class BaseAttributeIngester(object):
             return False, None
 
         existing_region_names = ",".join([er.name for er in existing_regions])
-        updates = f"regions: {existing_region_names} -> {region_names}"
+        if is_combined:
+            combined_regions = set(existing_regions).union(new_regions)
+        else:
+            combined_regions = new_regions
+
+        updates = (
+            f"regions: {existing_region_names} -> {[f.name for f in combined_regions]}"
+        )
 
         attribute.regions.clear()
-        attribute.regions.set(new_regions)
+        attribute.regions.set(combined_regions)
 
         return True, updates
 
@@ -404,7 +411,7 @@ class FishIngester(BaseAttributeIngester):
                     has_edits = True
 
             has_region_edits, region_updates = self._update_regions(
-                species, region_names
+                species, region_names, is_combined=False
             )
             if has_region_edits:
                 updates.append(region_updates)
@@ -421,7 +428,7 @@ class FishIngester(BaseAttributeIngester):
         except FishSpecies.DoesNotExist:
             region_names = species_row.pop("regions")
             species = FishSpecies.objects.create(genus=fish_genus, **species_row)
-            self._update_regions(species, region_names)
+            self._update_regions(species, region_names, is_combined=False)
 
             self.write_log(self.NEW_SPECIES, f"{genus_name}-{species_name}")
         except FishSpecies.MultipleObjectsReturned:
