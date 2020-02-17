@@ -683,11 +683,11 @@ class FishGenusAdmin(FishAttributeAdmin):
 @admin.register(FishSpecies)
 class FishSpeciesAdmin(FishAttributeAdmin):
     list_display = ('name', 'fk_link', 'biomass_constant_a', 'biomass_constant_b', 'biomass_constant_c',
-                    'max_length', 'trophic_level', 'vulnerability')
+                    'max_length', 'trophic_level', 'vulnerability', 'region_list')
     search_fields = ['name', 'genus__name', ]
     list_filter = ('status', 'group_size', 'trophic_group', 'functional_group')
     exportable_fields = ('name', 'genus', 'biomass_constant_a', 'biomass_constant_b', 'biomass_constant_c',
-                         'max_length', 'trophic_level', 'vulnerability')
+                         'max_length', 'trophic_level', 'vulnerability', 'region_list')
 
     def fk_link(self, obj):
         link = reverse("admin:api_fishgenus_change", args=[obj.genus.pk])

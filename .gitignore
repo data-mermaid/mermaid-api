@@ -95,3 +95,5 @@ src/script_examples/settings.py
 src/app/maintenance_mode_state.txt
 .DS_Store
 .devcontainer.json
+
+scratch/
