@@ -153,6 +153,7 @@ class Project(BaseModel):
 
 class Region(BaseChoiceModel):
     name = models.CharField(max_length=100)
+    geom = models.MultiPolygonField(geography=True)
 
     class Meta:
         db_table = 'region'
@@ -1062,6 +1063,11 @@ class FishFamily(FishAttribute):
         avebiomass = list(self.fishgenus_set.aggregate(Avg('fishspecies__biomass_constant_c')).values())[0] or 0
         self._biomass_c = round(avebiomass, 6)
         return self._biomass_c
+    
+
+    @property
+    def regions(self):
+        return Region.objects.filter(fishspecies__genus__family=self).distinct()
 
     # This doesn't work: average of averages != average of original values
     # @property
@@ -1140,6 +1146,10 @@ class FishGenus(FishAttribute):
 
     # biomass_constant_a.fget.help_text = _(u'Average of biomass constant b for all species in this genus')
 
+    @property
+    def regions(self):
+        return Region.objects.filter(fishspecies__genus=self).distinct()
+
     class Meta:
         db_table = 'fish_genus'
         ordering = ('name',)
@@ -1195,6 +1205,7 @@ class FishSpecies(FishAttribute):
         ('total length', 'total length'),
         ('wing diameter', 'wing diameter')
     )
+    LENGTH_TYPES_CHOICES_UPDATED_ON = datetime.datetime(2020, 1, 21, 0, 0, 0, 0, pytz.UTC)
 
     name = models.CharField(max_length=100)
     genus = models.ForeignKey(FishGenus, on_delete=models.CASCADE)
