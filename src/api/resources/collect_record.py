@@ -256,7 +256,7 @@ class CollectRecordViewSet(BaseProjectApiViewSet):
             return Response("File type not supported", status=400)
 
         decoded_file = uploaded_file.read().decode("utf-8").splitlines()
-        records, errors = _ingest(decoded_file, project_pk, profile.id, dryrun)
+        records, errors = _ingest(decoded_file, project_pk, profile.id, dry_run=dryrun)
 
         if errors:
             return Response(errors, status=400)
