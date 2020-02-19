@@ -23,10 +23,10 @@ class PSiteSerializer(BaseAPISerializer):
 
 class PSiteReportSerializer(ReportSerializer):
     fields = [
+        ReportField("country__name", "Country"),
         ReportField("name", "Name"),
         ReportField("location", "Latitude", to_latitude),
         ReportField("location", "Longitude", to_longitude),
-        ReportField("country__name", "Country"),
         ReportField("reef_type__name", "Reef type"),
         ReportField("reef_zone__name", "Reef zone"),
         ReportField("exposure__name", "Reef exposure"),

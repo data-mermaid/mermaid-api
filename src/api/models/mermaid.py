@@ -165,6 +165,13 @@ class Region(BaseChoiceModel):
 
     def __str__(self):
         return _(u'%s') % self.name
+    
+    @property
+    def choice(self):
+        ret = {'id': self.pk, 'name': self.__str__(), 'geom': json.loads(self.geom.json), 'updated_on': self.updated_on}
+        if hasattr(self, 'val'):
+            ret['val'] = self.val
+        return ret
 
 
 class ManagementParty(BaseChoiceModel):
@@ -1229,6 +1236,7 @@ class FishSpecies(FishAttribute):
         ('total length', 'total length'),
         ('wing diameter', 'wing diameter')
     )
+    LENGTH_TYPES_CHOICES_UPDATED_ON = datetime.datetime(2020, 1, 21, 0, 0, 0, 0, pytz.UTC)
 
     name = models.CharField(max_length=100)
     genus = models.ForeignKey(FishGenus, on_delete=models.CASCADE)

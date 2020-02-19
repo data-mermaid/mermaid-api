@@ -4,29 +4,28 @@ from .validations import (
     ERROR,
     OK,
     WARN,
-    EmptyListValidation,
-    ManagementValidation,
-    ObservationsValidation,
-    SiteValidation,
-    ValueInRangeValidation,
-    ObsFishBeltValidation,
-    FishBeltTransectValidation,
     BenthicTransectValidation,
-    ObsBenthicPITValidation,
+    EmptyListValidation,
+    FishBeltTransectValidation,
+    ManagementValidation,
     ObsBenthicLITValidation,
     ObsBenthicPercentCoveredValidation,
+    ObsBenthicPITValidation,
     ObsColoniesBleachedValidation,
+    ObservationsValidation,
+    ObsFishBeltValidation,
     ObsHabitatComplexitiesValidation,
     QuadratCollectionValidation,
+    SampleEventValidation,
     SerializerValidation,
+    SiteValidation,
+    ValueInRangeValidation,
 )
 
 
 class ProtocolValidation(object):
     DEPTH_RANGE = (1, 30)
-    DEPTH_MSG = str(
-        _("Depth value outside range of {} and {}".format(*DEPTH_RANGE))
-    )
+    DEPTH_MSG = str(_("Depth value outside range of {} and {}".format(*DEPTH_RANGE)))
 
     def __init__(self, collect_record, request=None):
         self.status = None
@@ -66,6 +65,7 @@ class ProtocolValidation(object):
         management_id = sample_event_data.get("management")
         depth = sample_event_data.get("depth")
 
+        results.append(self._run_validation(SampleEventValidation, data))
         results.append(self._run_validation(SiteValidation, site_id))
 
         results.append(self._run_validation(ManagementValidation, management_id))
@@ -89,7 +89,7 @@ class ProtocolValidation(object):
                 self.DEPTH_RANGE,
                 status=WARN,
                 message=self.DEPTH_MSG,
-                value_range_operators=('<', '>')
+                value_range_operators=("<", ">"),
             )
         )
 
@@ -117,7 +117,7 @@ class ProtocolValidation(object):
 class TransectValidation(ProtocolValidation):
     LENGTH_RANGE = (25, 100)
     LENGTH_RANGE_WARN_MSG_TMPL = (
-            "Transect length surveyed value " + "outside range of {} and {}"
+        "Transect length surveyed value " + "outside range of {} and {}"
     )
     TRANSECT_METHOD = None
 
@@ -152,7 +152,6 @@ class TransectValidation(ProtocolValidation):
 
 
 class QuadratValidation(ProtocolValidation):
-
     def validate(self):
         results = []
         results.append(super(QuadratValidation, self).validate())
@@ -168,7 +167,7 @@ class QuadratValidation(ProtocolValidation):
                 quadrat_size,
                 value_range=(0,),
                 value_range_operators=("<=",),
-                message=_("Quadrat size must be greater than 0")
+                message=_("Quadrat size must be greater than 0"),
             )
         )
 
@@ -187,7 +186,7 @@ class FishBeltProtocolValidation(TransectValidation):
     LENGTH_RANGE_WARN_MSG_TMPL = (
         "Transect length surveyed value " + "outside range of {} and {}"
     )
-    TRANSECT_METHOD = 'fishbelt_transect'
+    TRANSECT_METHOD = "fishbelt_transect"
 
     def validate(self):
         results = []
@@ -209,7 +208,7 @@ class FishBeltProtocolValidation(TransectValidation):
 
 
 class BenthicPITProtocolValidation(TransectValidation):
-    TRANSECT_METHOD = 'benthic_transect'
+    TRANSECT_METHOD = "benthic_transect"
 
     def validate(self):
         results = []
@@ -230,7 +229,7 @@ class BenthicPITProtocolValidation(TransectValidation):
 
 
 class BenthicLITProtocolValidation(TransectValidation):
-    TRANSECT_METHOD = 'benthic_transect'
+    TRANSECT_METHOD = "benthic_transect"
     LENGTH_RANGE = (10, 100)
 
     def validate(self):
@@ -252,7 +251,7 @@ class BenthicLITProtocolValidation(TransectValidation):
 
 
 class HabitatComplexityProtocolValidation(TransectValidation):
-    TRANSECT_METHOD = 'benthic_transect'
+    TRANSECT_METHOD = "benthic_transect"
 
     def validate(self):
         results = []
@@ -273,10 +272,11 @@ class HabitatComplexityProtocolValidation(TransectValidation):
 
 
 class BleachingQuadratCollectionProtocolValidation(QuadratValidation):
-
     def validate(self):
         results = []
-        results.append(super(BleachingQuadratCollectionProtocolValidation, self).validate())
+        results.append(
+            super(BleachingQuadratCollectionProtocolValidation, self).validate()
+        )
 
         data = self.collect_record.data or dict()
 
