@@ -1,7 +1,7 @@
 import csv
 import json
 
-from django.db import transaction
+from django.db import connection, transaction
 
 from api import mocks
 from api.ingest import BenthicPITCSVSerializer, FishBeltCSVSerializer
@@ -15,6 +15,7 @@ from api.models import (
     Profile,
     ProjectProfile,
     Site,
+    CollectRecord,
 )
 from api.resources.project_profile import ProjectProfileSerializer
 from api.utils import tokenutils
@@ -67,7 +68,38 @@ def _append_required_columns(rows, project_id, profile_id):
     return _rows
 
 
-def _ingest(serializer, datafile, project_id, profile_id, request=None, dry_run=False):
+def clear_collect_records(project, protocol):
+    sql = """
+        DELETE FROM {table_name}
+        WHERE 
+            project_id='{project}' AND 
+            data->>'protocol' = '{protocol}';
+        """.format(
+        table_name=CollectRecord.objects.model._meta.db_table,
+        project=project,
+        protocol=protocol,
+    )
+    with connection.cursor() as cursor:
+        cursor.execute(sql)
+        return cursor.rowcount
+
+
+def ingest(
+    protocol,
+    datafile,
+    project_id,
+    profile_id,
+    request=None,
+    dry_run=False,
+    clear_existing=False,
+):
+    if protocol == BENTHICPIT_PROTOCOL:
+        serializer = BenthicPITCSVSerializer
+    elif protocol == FISHBELT_PROTOCOL:
+        serializer = FishBeltCSVSerializer
+    else:
+        return None, None
+
     reader = csv.DictReader(datafile)
     context = _create_context(request, profile_id)
     rows = _append_required_columns(reader, project_id, profile_id)
@@ -88,6 +120,8 @@ def _ingest(serializer, datafile, project_id, profile_id, request=None, dry_run=
         new_records = None
         successful_save = False
         try:
+            if clear_existing:
+                clear_collect_records(project_id, protocol)
             new_records = s.save()
             successful_save = True
         finally:
@@ -97,33 +131,3 @@ def _ingest(serializer, datafile, project_id, profile_id, request=None, dry_run=
                 transaction.savepoint_commit(sid)
 
     return new_records, None
-
-
-def ingest_fishbelt(datafile, project_id, profile_id, request=None, dry_run=False):
-    return _ingest(
-        FishBeltCSVSerializer,
-        datafile,
-        project_id,
-        profile_id,
-        request=request,
-        dry_run=dry_run,
-    )
-
-
-def ingest_benthicpit(datafile, project_id, profile_id, request=None, dry_run=False):
-    return _ingest(
-        BenthicPITCSVSerializer,
-        datafile,
-        project_id,
-        profile_id,
-        request=request,
-        dry_run=dry_run,
-    )
-
-
-def get_protocol_ingest(protocol):
-    if protocol == BENTHICPIT_PROTOCOL:
-        return ingest_benthicpit
-    elif protocol == FISHBELT_PROTOCOL:
-        return ingest_fishbelt
-    return None
