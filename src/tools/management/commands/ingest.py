@@ -7,7 +7,7 @@ from django.core.management.base import BaseCommand, CommandError
 from django.db import connection, transaction
 from django.template.defaultfilters import pluralize
 
-from api.ingest.utils import get_protocol_ingest
+from api.ingest.utils import ingest
 from api.models import (
     BENTHICLIT_PROTOCOL,
     BENTHICPIT_PROTOCOL,
@@ -39,21 +39,6 @@ class Command(BaseCommand):
             help="Remove existing collect records for protocol before ingesting file",
         )
 
-    def clear_collect_records(self, project, protocol):
-        sql = """
-            DELETE FROM {table_name}
-            WHERE 
-                project_id='{project}' AND 
-                data->>'protocol' = '{protocol}';
-            """.format(
-            table_name=CollectRecord.objects.model._meta.db_table,
-            project=project,
-            protocol=protocol,
-        )
-        with connection.cursor() as cursor:
-            cursor.execute(sql)
-            return cursor.rowcount
-
     def handle(
         self,
         datafile,
@@ -70,17 +55,15 @@ class Command(BaseCommand):
         profile = profile[0]
         verbosity = options["verbosity"]
 
-        _ingest = get_protocol_ingest(protocol)
-
-        if _ingest is None:
+        if protocol is None:
             raise NotImplementedError()
 
         try:
             with transaction.atomic():
                 sid = transaction.savepoint()
-                if clear_existing:
-                    self.clear_collect_records(project, protocol)
-                records, errors = _ingest(datafile, project, profile, None, dry_run)
+                records, errors = ingest(
+                    protocol, datafile, project, profile, None, dry_run, clear_existing
+                )
                 transaction.savepoint_commit(sid)
         except Exception as err:
             transaction.savepoint_rollback(sid)
