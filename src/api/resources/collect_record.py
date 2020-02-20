@@ -10,7 +10,7 @@ from rest_framework.decorators import action
 from rest_framework.exceptions import NotFound, ParseError, ValidationError
 from rest_framework.response import Response
 
-from ..ingest.utils import get_protocol_ingest
+from ..ingest.utils import ingest
 from ..models import CollectRecord
 from ..permissions import ProjectDataAdminPermission, ProjectDataPermission
 from ..submission import utils
@@ -239,14 +239,13 @@ class CollectRecordViewSet(BaseProjectApiViewSet):
         uploaded_file = request.FILES.get("file")
         profile = request.user.profile
         dryrun = truthy(request.data.get("dryrun"))
+        clearexisting = truthy(request.data.get("clearexisting"))
 
         if protocol is None:
             return Response("Missing protocol", status=400)
 
         if uploaded_file is None:
             return Response("Missing file", status=400)
-
-        _ingest = get_protocol_ingest(protocol)
 
         if protocol is None:
             return Response("Protocol not supported", status=400)
@@ -256,7 +255,15 @@ class CollectRecordViewSet(BaseProjectApiViewSet):
             return Response("File type not supported", status=400)
 
         decoded_file = uploaded_file.read().decode("utf-8").splitlines()
-        records, errors = _ingest(decoded_file, project_pk, profile.id, dry_run=dryrun)
+        records, errors = ingest(
+            protocol,
+            decoded_file,
+            project_pk,
+            profile.id,
+            None,
+            dry_run=dryrun,
+            clear_existing=clearexisting,
+        )
 
         if errors:
             return Response(errors, status=400)
