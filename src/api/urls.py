@@ -33,11 +33,18 @@ from .resources.obs_habitat_complexity import ObsHabitatComplexityViewSet
 from .resources.obs_colonies_bleached import ObsColoniesBleachedViewSet
 from .resources.obs_quadrat_benthic_percent import ObsQuadratBenthicPercentViewSet
 
-from .resources.sample_units.beltfishmethod import BeltFishMethodView, BeltFishProjectMethodObsView, BeltFishProjectMethodSUView
+from .resources.sample_units.beltfishmethod import (
+    BeltFishMethodView,
+    BeltFishProjectMethodObsView,
+    BeltFishProjectMethodSUView,
+    BeltFishProjectMethodSEView,
+)
 from .resources.sample_units.benthiclitmethod import BenthicLITMethodView
 from .resources.sample_units.benthicpitmethod import BenthicPITMethodView
 from .resources.sample_units.habitatcomplexitymethod import HabitatComplexityMethodView
-from .resources.sample_units.bleachingquadratcollectionmethod import BleachingQuadratCollectionMethodView
+from .resources.sample_units.bleachingquadratcollectionmethod import (
+    BleachingQuadratCollectionMethodView,
+)
 from .resources.sample_units.sample_unit_methods import SampleUnitMethodView
 
 from .resources.fish_size import FishSizeViewSet
@@ -49,78 +56,119 @@ from .resources.project_tag import ProjectTagViewSet
 # APP-WIDE - BASE
 router = routers.DefaultRouter()
 
-router.register(r'me', MeViewSet, 'me')
-router.register(r'profiles', ProfileViewSet, 'profile')
-router.register(r'version', AppVersionViewSet, 'app_version')
+router.register(r"me", MeViewSet, "me")
+router.register(r"profiles", ProfileViewSet, "profile")
+router.register(r"version", AppVersionViewSet, "app_version")
 
 
 # APP-WIDE - MERMAID
 
 # management
-router.register(r'projects', ProjectViewSet, 'project')
-router.register(r'sites', SiteViewSet, 'site')
-router.register(r'managements', ManagementViewSet, 'management')
-router.register(r'projecttags', ProjectTagViewSet, 'projecttag')
+router.register(r"projects", ProjectViewSet, "project")
+router.register(r"sites", SiteViewSet, "site")
+router.register(r"managements", ManagementViewSet, "management")
+router.register(r"projecttags", ProjectTagViewSet, "projecttag")
 
 # observation attributes
-router.register(r'benthicattributes', BenthicAttributeViewSet, 'benthicattribute')
-router.register(r'fishattributes', FishAttributeViewSet, 'fishattribute')
-router.register(r'fishfamilies', FishFamilyViewSet, 'fishfamily')
-router.register(r'fishgenera', FishGenusViewSet, 'fishgenus')
-router.register(r'fishspecies', FishSpeciesViewSet, 'fishspecies')
-router.register(r'fishsizes', FishSizeViewSet, 'fishsizes')
+router.register(r"benthicattributes", BenthicAttributeViewSet, "benthicattribute")
+router.register(r"fishattributes", FishAttributeViewSet, "fishattribute")
+router.register(r"fishfamilies", FishFamilyViewSet, "fishfamily")
+router.register(r"fishgenera", FishGenusViewSet, "fishgenus")
+router.register(r"fishspecies", FishSpeciesViewSet, "fishspecies")
+router.register(r"fishsizes", FishSizeViewSet, "fishsizes")
 
 # choices
-router.register(r'choices', ChoiceViewSet, 'choice')
+router.register(r"choices", ChoiceViewSet, "choice")
 
 # PROJECT-SPECIFIC - MERMAID
-project_router = routers.NestedSimpleRouter(router, r'projects', lookup='project')
+project_router = routers.NestedSimpleRouter(router, r"projects", lookup="project")
 # Note there's nothing stopping us from creating additional versions of these endpoints that do not
 # depend on project pk if we want to enable some kind of access for superusers or (limited-field) public users
 
 # collect
-project_router.register(r'collectrecords', CollectRecordViewSet, 'collectrecords')
+project_router.register(r"collectrecords", CollectRecordViewSet, "collectrecords")
 
-project_router.register(r'observers', ObserverViewSet, 'observer')
-project_router.register(r'project_profiles', ProjectProfileViewSet, 'project_profile')
-project_router.register(r'sites', PSiteViewSet, 'psite')
-project_router.register(r'managements', PManagementViewSet, 'pmanagement')
-project_router.register(r'sampleevents', SampleEventViewSet, 'sampleevent')
+project_router.register(r"observers", ObserverViewSet, "observer")
+project_router.register(r"project_profiles", ProjectProfileViewSet, "project_profile")
+project_router.register(r"sites", PSiteViewSet, "psite")
+project_router.register(r"managements", PManagementViewSet, "pmanagement")
+project_router.register(r"sampleevents", SampleEventViewSet, "sampleevent")
 
 # transects
-project_router.register(r'benthictransects', BenthicTransectViewSet, 'benthictransect')
-project_router.register(r'fishbelttransects', FishBeltTransectViewSet, 'fishbelttransect')
-project_router.register(r'quadratcollections', QuadratCollectionViewSet, 'quadratcollection')
+project_router.register(r"benthictransects", BenthicTransectViewSet, "benthictransect")
+project_router.register(
+    r"fishbelttransects", FishBeltTransectViewSet, "fishbelttransect"
+)
+project_router.register(
+    r"quadratcollections", QuadratCollectionViewSet, "quadratcollection"
+)
 
 # multi model sample unit method views
-project_router.register(r'beltfishes/obstransectbeltfishes', BeltFishProjectMethodObsView, 'obstransectbeltfish')
-project_router.register(r'beltfishes/sampleunits', BeltFishProjectMethodSUView, 'sampleunit')
+project_router.register(
+    r"beltfishes/obstransectbeltfishes",
+    BeltFishProjectMethodObsView,
+    "obstransectbeltfish",
+)
+project_router.register(
+    r"beltfishes/sampleunits", BeltFishProjectMethodSUView, "sampleunit"
+)
+project_router.register(
+   r"beltfishes/sampleevents", BeltFishProjectMethodSEView, "sampleevent"
+)
 
 # multi model sample unit method reports
-project_router.register(r'beltfishtransectmethods', BeltFishMethodView, 'beltfishtransectmethod')
-project_router.register(r'benthiclittransectmethods', BenthicLITMethodView, 'benthiclittransectmethod')
-project_router.register(r'benthicpittransectmethods', BenthicPITMethodView, 'benthicpittransectmethod')
-project_router.register(r'habitatcomplexitytransectmethods', HabitatComplexityMethodView, 'habitatcomplexitytransectmethod')
-project_router.register(r'bleachingquadratcollectionmethods', BleachingQuadratCollectionMethodView, 'bleachingquadratcollectionmethod')
-project_router.register(r'sampleunitmethods', SampleUnitMethodView, 'sampleunitmethod')
+project_router.register(
+    r"beltfishtransectmethods", BeltFishMethodView, "beltfishtransectmethod"
+)
+project_router.register(
+    r"benthiclittransectmethods", BenthicLITMethodView, "benthiclittransectmethod"
+)
+project_router.register(
+    r"benthicpittransectmethods", BenthicPITMethodView, "benthicpittransectmethod"
+)
+project_router.register(
+    r"habitatcomplexitytransectmethods",
+    HabitatComplexityMethodView,
+    "habitatcomplexitytransectmethod",
+)
+project_router.register(
+    r"bleachingquadratcollectionmethods",
+    BleachingQuadratCollectionMethodView,
+    "bleachingquadratcollectionmethod",
+)
+project_router.register(r"sampleunitmethods", SampleUnitMethodView, "sampleunitmethod")
 
 # straight-up sample unit methods (not typically used on their own)
-project_router.register(r'benthiclits', BenthicLITViewSet, 'benthiclit')
-project_router.register(r'benthicpits', BenthicPITViewSet, 'benthicpit')
-project_router.register(r'habitatcomplexities', HabitatComplexityViewSet, 'habitatcomplexity')
-project_router.register(r'beltfishes', BeltFishViewSet, 'beltfish')
-project_router.register(r'bleachingquadratcollections', BleachingQuadratCollectionViewSet, 'bleachingquadratcollection')
+project_router.register(r"benthiclits", BenthicLITViewSet, "benthiclit")
+project_router.register(r"benthicpits", BenthicPITViewSet, "benthicpit")
+project_router.register(
+    r"habitatcomplexities", HabitatComplexityViewSet, "habitatcomplexity"
+)
+project_router.register(r"beltfishes", BeltFishViewSet, "beltfish")
+project_router.register(
+    r"bleachingquadratcollections",
+    BleachingQuadratCollectionViewSet,
+    "bleachingquadratcollection",
+)
 
 # observations
-project_router.register(r'obsbenthiclits', ObsBenthicLITViewSet, 'obsbenthiclit')
-project_router.register(r'obsbenthicpits', ObsBenthicPITViewSet, 'obsbenthicpit')
-project_router.register(r'obscoloniesbleached', ObsColoniesBleachedViewSet, 'obscoloniesbleached')
-project_router.register(r'obshabitatcomplexities', ObsHabitatComplexityViewSet, 'obshabitatcomplexity')
-project_router.register(r'obsquadratbenthicpercent', ObsQuadratBenthicPercentViewSet, 'obsquadratbenthicpercent')
-project_router.register(r'obstransectbeltfishs', ObsBeltFishViewSet, 'obstransectbeltfish')
+project_router.register(r"obsbenthiclits", ObsBenthicLITViewSet, "obsbenthiclit")
+project_router.register(r"obsbenthicpits", ObsBenthicPITViewSet, "obsbenthicpit")
+project_router.register(
+    r"obscoloniesbleached", ObsColoniesBleachedViewSet, "obscoloniesbleached"
+)
+project_router.register(
+    r"obshabitatcomplexities", ObsHabitatComplexityViewSet, "obshabitatcomplexity"
+)
+project_router.register(
+    r"obsquadratbenthicpercent",
+    ObsQuadratBenthicPercentViewSet,
+    "obsquadratbenthicpercent",
+)
+project_router.register(
+    r"obstransectbeltfishs", ObsBeltFishViewSet, "obstransectbeltfish"
+)
 
 
 api_urls = router.urls + project_router.urls
-api_urls += (
-   url(r'^health/$', health),
-)
+api_urls += (url(r"^health/$", health),)

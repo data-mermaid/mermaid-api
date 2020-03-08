@@ -17,8 +17,7 @@ from ...models.mermaid import (
     FishGenus,
     FishSpecies,
 )
-from ..mixins import OrFilterSetMixin
-from ...models.view_models import BeltFishObsView, BeltFishSUView, FishAttributeView
+from ...models.view_models import FishAttributeView, BeltFishObsView, BeltFishSUView, BeltFishSEView
 from ...utils import calc_biomass_density
 
 from . import *
@@ -499,6 +498,26 @@ class BeltFishMethodSUGeoSerializer(BaseViewAPIGeoSerializer):
         model = BeltFishSUView
 
 
+class BeltFishMethodSESerializer(BaseViewAPISerializer):
+    class Meta(BaseViewAPISerializer.Meta):
+        model = BeltFishSEView
+        exclude = BaseViewAPISerializer.Meta.exclude.copy()
+        exclude.append("location")
+        header_order = BaseViewAPISerializer.Meta.header_order.copy()
+        header_order.extend(
+            [
+                "data_policy_beltfish",
+                "biomass_kgha_avg",
+                "biomass_kgha_by_trophic_group_avg",
+            ]
+        )
+
+
+class BeltFishMethodSEGeoSerializer(BaseViewAPIGeoSerializer):
+    class Meta(BaseViewAPIGeoSerializer.Meta):
+        model = BeltFishSEView
+
+
 class BeltFishMethodObsFilterSet(BaseTransectFilterSet):
     fish_family = BaseInFilter(method="id_lookup")
     fish_genus = BaseInFilter(method="id_lookup")
@@ -537,6 +556,14 @@ class BeltFishMethodSUFilterSet(BaseTransectFilterSet):
         fields = ["size_bin", "biomass_kgha", "data_policy_beltfish"]
 
 
+class BeltFishMethodSEFilterSet(BaseTransectFilterSet):
+    biomass_kgha_avg = RangeFilter()
+
+    class Meta:
+        model = BeltFishSEView
+        fields = ["biomass_kgha_avg", "data_policy_beltfish"]
+
+
 class BeltFishProjectMethodObsView(BaseProjectMethodView):
     drf_label = "beltfish"
     project_policy = "data_policy_beltfish"
@@ -565,4 +592,16 @@ class BeltFishProjectMethodSUView(BaseProjectMethodView):
     filterset_class = BeltFishMethodSUFilterSet
     queryset = BeltFishSUView.objects.exclude(project_status=Project.TEST).order_by(
         "site_name", "sample_date", "number"
+    )
+
+
+class BeltFishProjectMethodSEView(BaseProjectMethodView):
+    drf_label = "beltfish"
+    project_policy = "data_policy_beltfish"
+    serializer_class = BeltFishMethodSESerializer
+    serializer_class_geojson = BeltFishMethodSEGeoSerializer
+    serializer_class_csv = BeltFishMethodSESerializer
+    filterset_class = BeltFishMethodSEFilterSet
+    queryset = BeltFishSEView.objects.exclude(project_status=Project.TEST).order_by(
+        "site_name", "sample_date"
     )

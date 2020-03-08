@@ -275,8 +275,11 @@ SELECT project.id AS project_id,
     o.id,
     o.size,
     o.count,
-    round((10 * o.count)::numeric * f.biomass_constant_a * ((o.size * f.biomass_constant_c) ^ f.biomass_constant_b) / 
-    (tbf.len_surveyed * w.val)::numeric, 2)::numeric(6,2) AS biomass_kgha,
+    ROUND(
+        (10 * o.count)::numeric * f.biomass_constant_a * ((o.size * f.biomass_constant_c) ^ f.biomass_constant_b) / 
+        (tbf.len_surveyed * w.val)::numeric, 
+        2
+    )::numeric(7,2) AS biomass_kgha,
     o.notes AS observation_notes,
         CASE
             WHEN project.data_policy_beltfish = 10 THEN 'private'::text
@@ -443,11 +446,11 @@ management_rules, management_notes, sample_event_id, sample_date, sample_time, c
 visibility_name, depth, sample_event_notes, sample_unit_id AS id, "number", transect_len_surveyed, 
 reef_slope, transect_width, observers, size_bin, data_policy_beltfish, 
 
-jsonb_agg(
-    jsonb_build_object((CASE WHEN trophic_group IS NULL THEN 'other' ELSE trophic_group END), 
-    ROUND(biomass_kgha, 3))
-) AS biomass_kgha_by_trophic_group,
-SUM(biomass_kgha) AS biomass_kgha
+SUM(biomass_kgha) AS biomass_kgha,
+jsonb_object_agg(
+    (CASE WHEN trophic_group IS NULL THEN 'other' ELSE trophic_group END), 
+    ROUND(biomass_kgha, 2)
+) AS biomass_kgha_by_trophic_group
  
 FROM (
     SELECT project_id, project_name, project_status, project_notes, contact_link, tags, site_id, site_name, location, 
@@ -455,7 +458,8 @@ FROM (
     management_name_secondary, management_est_year, management_size, management_parties, management_compliance, 
     management_rules, management_notes, sample_event_id, sample_date, sample_time, current_name, tide_name, 
     visibility_name, depth, sample_event_notes, sample_unit_id, "number", transect_len_surveyed, reef_slope, 
-    transect_width, observers, size_bin, trophic_group, data_policy_beltfish,
+    transect_width, observers, size_bin, data_policy_beltfish, 
+    trophic_group, 
 
     SUM(biomass_kgha) AS biomass_kgha
     
@@ -465,15 +469,16 @@ FROM (
     management_name_secondary, management_est_year, management_size, management_parties, management_compliance, 
     management_rules, management_notes, sample_event_id, sample_date, sample_time, current_name, tide_name, 
     visibility_name, depth, sample_event_notes, sample_unit_id, "number", transect_len_surveyed, reef_slope, 
-    transect_width, observers, size_bin, trophic_group, data_policy_beltfish
+    transect_width, observers, size_bin, data_policy_beltfish, 
+    trophic_group
 ) AS beltfish_obs_tg
 
-    GROUP BY project_id, project_name, project_status, project_notes, contact_link, tags, site_id, site_name, location, 
-    site_notes, country_id, country_name, reef_type, reef_zone, reef_exposure, management_id, management_name, 
-    management_name_secondary, management_est_year, management_size, management_parties, management_compliance, 
-    management_rules, management_notes, sample_event_id, sample_date, sample_time, current_name, tide_name, 
-    visibility_name, depth, sample_event_notes, sample_unit_id, "number", transect_len_surveyed, reef_slope, 
-    transect_width, observers, size_bin, data_policy_beltfish;
+GROUP BY project_id, project_name, project_status, project_notes, contact_link, tags, site_id, site_name, location, 
+site_notes, country_id, country_name, reef_type, reef_zone, reef_exposure, management_id, management_name, 
+management_name_secondary, management_est_year, management_size, management_parties, management_compliance, 
+management_rules, management_notes, sample_event_id, sample_date, sample_time, current_name, tide_name, 
+visibility_name, depth, sample_event_notes, sample_unit_id, "number", transect_len_surveyed, reef_slope, 
+transect_width, observers, size_bin, data_policy_beltfish;
     
 ALTER TABLE public.vw_beltfish_su
     OWNER TO postgres;
@@ -543,4 +548,119 @@ ALTER TABLE public.vw_beltfish_su
 
     class Meta:
         db_table = "vw_beltfish_su"
+        managed = False
+
+
+class BeltFishSEView(BaseViewModel):
+    project_lookup = "project_id"
+
+    sql = """
+DROP VIEW IF EXISTS public.vw_beltfish_se;
+CREATE OR REPLACE VIEW public.vw_beltfish_se
+ AS
+-- For each SE, summarize biomass by 1) avg of transects and 2) avg of transects' trophic groups
+SELECT 
+vw_beltfish_su.sample_event_id AS id, 
+project_id, project_name, project_status, project_notes, contact_link, tags, site_id, site_name, location, site_notes, 
+country_id, country_name, reef_type, reef_zone, reef_exposure, 
+management_id, management_name, management_name_secondary, management_est_year, management_size, 
+management_parties, management_compliance, management_rules, management_notes, 
+vw_beltfish_su.sample_event_id, sample_date, sample_time, current_name, tide_name, visibility_name, depth, 
+sample_event_notes, 
+-- transect_len_surveyed, reef_slope, transect_width, observers, size_bin, -- useful to summarize somehow?
+data_policy_beltfish,
+biomass_kgha_avg,
+biomass_kgha_by_trophic_group_avg
+FROM public.vw_beltfish_su
+INNER JOIN (
+    SELECT sample_event_id, ROUND(AVG(biomass_kgha), 2) AS biomass_kgha_avg
+    FROM public.vw_beltfish_su
+    GROUP BY sample_event_id
+) AS beltfish_se 
+ON (vw_beltfish_su.sample_event_id = beltfish_se.sample_event_id)
+INNER JOIN (
+    SELECT sample_event_id, 
+    jsonb_object_agg(tg, ROUND(biomass_kgha::numeric, 2)) AS biomass_kgha_by_trophic_group_avg
+    FROM (
+        SELECT sample_event_id, 
+        tgdata.key AS tg, AVG(tgdata.value::float) AS biomass_kgha
+        FROM public.vw_beltfish_su,
+        jsonb_each_text(biomass_kgha_by_trophic_group) AS tgdata
+        GROUP BY 
+        sample_event_id, tgdata.key
+    ) AS beltfish_su_tg
+    GROUP BY sample_event_id
+) AS beltfish_se_tg
+ON (vw_beltfish_su.sample_event_id = beltfish_se_tg.sample_event_id)
+GROUP BY 
+project_id, project_name, project_status, project_notes, contact_link, tags, site_id, site_name, location, site_notes, 
+country_id, country_name, reef_type, reef_zone, reef_exposure, 
+management_id, management_name, management_name_secondary, management_est_year, management_size, 
+management_parties, management_compliance, management_rules, management_notes, 
+vw_beltfish_su.sample_event_id, sample_date, sample_time, current_name, tide_name, visibility_name, depth, 
+sample_event_notes, 
+data_policy_beltfish,
+biomass_kgha_avg,
+biomass_kgha_by_trophic_group_avg;
+
+ALTER TABLE public.vw_beltfish_se
+    OWNER TO postgres;
+    """
+
+    project_id = models.UUIDField()
+    project_name = models.CharField(max_length=255)
+    project_status = models.PositiveSmallIntegerField(
+        choices=Project.STATUSES, default=Project.OPEN
+    )
+    project_notes = models.TextField(blank=True)
+    contact_link = models.CharField(max_length=255)
+    tags = JSONField(null=True, blank=True)
+    site_id = models.UUIDField()
+    site_name = models.CharField(max_length=255)
+    location = models.PointField(srid=4326)
+    site_notes = models.TextField(blank=True)
+    country_id = models.UUIDField()
+    country_name = models.CharField(max_length=50)
+    reef_type = models.CharField(max_length=50)
+    reef_zone = models.CharField(max_length=50)
+    reef_exposure = models.CharField(max_length=50)
+    management_id = models.UUIDField()
+    management_name = models.CharField(max_length=255)
+    management_name_secondary = models.CharField(max_length=255)
+    management_est_year = models.PositiveSmallIntegerField()
+    management_size = models.DecimalField(
+        max_digits=12,
+        decimal_places=3,
+        verbose_name=_(u"Size (ha)"),
+        null=True,
+        blank=True,
+    )
+    management_parties = JSONField(null=True, blank=True)
+    management_compliance = models.CharField(max_length=100)
+    management_rules = JSONField(null=True, blank=True)
+    management_notes = models.TextField(blank=True)
+    sample_event_id = models.UUIDField()
+    sample_date = models.DateField()
+    sample_time = models.TimeField()
+    current_name = models.CharField(max_length=50)
+    tide_name = models.CharField(max_length=50)
+    visibility_name = models.CharField(max_length=50)
+    depth = models.DecimalField(
+        max_digits=3, decimal_places=1, verbose_name=_(u"depth (m)")
+    )
+    sample_event_notes = models.TextField(blank=True)
+    biomass_kgha_avg = models.DecimalField(
+        max_digits=8,
+        decimal_places=2,
+        verbose_name=_(u"biomass (kg/ha)"),
+        null=True,
+        blank=True,
+    )
+    biomass_kgha_by_trophic_group_avg = JSONField(null=True, blank=True)
+    data_policy_beltfish = models.CharField(max_length=50)
+
+    objects = ExtendedManager()
+
+    class Meta:
+        db_table = "vw_beltfish_se"
         managed = False

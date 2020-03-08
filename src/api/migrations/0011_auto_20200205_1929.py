@@ -428,7 +428,7 @@ CREATE UNIQUE INDEX ON vw_summary_site (site_id);
 class Migration(migrations.Migration):
 
     dependencies = [
-        ('api', '0014_merge_20200217_1952'),
+        ('api', '0015__auto_20200218_1122'),
     ]
 
     operations = [
