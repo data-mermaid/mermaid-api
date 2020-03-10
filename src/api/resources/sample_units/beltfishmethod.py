@@ -429,12 +429,14 @@ class BeltFishMethodObsSerializer(BaseViewAPISerializer):
         model = BeltFishObsView
         exclude = BaseViewAPISerializer.Meta.exclude.copy()
         exclude.append("location")
-        header_order = BaseViewAPISerializer.Meta.header_order.copy()
+        header_order = ['id'] + BaseViewAPISerializer.Meta.header_order.copy()
         header_order.extend(
             [
                 "sample_unit_id",
+                'sample_time',
                 "number",
                 "label",
+                'depth',
                 "transect_len_surveyed",
                 "transect_width",
                 "reef_slope",
@@ -478,10 +480,8 @@ class BeltFishMethodSUSerializer(BaseViewAPISerializer):
             [
                 "number",
                 "transect_len_surveyed",
-                "transect_width",
                 "reef_slope",
                 "size_bin",
-                "observers",
                 "data_policy_beltfish",
                 "biomass_kgha",
                 "biomass_kgha_by_trophic_group",
@@ -519,6 +519,15 @@ class BeltFishMethodSEGeoSerializer(BaseViewAPIGeoSerializer):
 
 
 class BeltFishMethodObsFilterSet(BaseTransectFilterSet):
+    depth = RangeFilter()
+    sample_unit_id = BaseInFilter("id_lookup")
+    transect_width = RangeFilter()
+    observers = BaseInFilter(method="json_name_lookup")
+    current_name = BaseInFilter(method="char_lookup")
+    tide_name = BaseInFilter(method="char_lookup")
+    visibility_name = BaseInFilter(method="char_lookup")
+    transect_len_surveyed = RangeFilter()
+    reef_slope = BaseInFilter(method="char_lookup")
     fish_family = BaseInFilter(method="id_lookup")
     fish_genus = BaseInFilter(method="id_lookup")
     fish_taxon = BaseInFilter(method="id_lookup")
@@ -533,6 +542,20 @@ class BeltFishMethodObsFilterSet(BaseTransectFilterSet):
     class Meta:
         model = BeltFishObsView
         fields = [
+            "depth",
+            "sample_unit_id",
+            "transect_width",
+            "observers",
+            "reef_type",
+            "reef_zone",
+            "reef_exposure",
+            "current_name",
+            "tide_name",
+            "visibility_name",
+            "transect_len_surveyed",
+            "reef_slope",
+            "number",
+            "label",
             "fish_taxon",
             "fish_family",
             "fish_genus",
@@ -549,11 +572,19 @@ class BeltFishMethodObsFilterSet(BaseTransectFilterSet):
 
 
 class BeltFishMethodSUFilterSet(BaseTransectFilterSet):
+    transect_len_surveyed = RangeFilter()
+    reef_slope = BaseInFilter(method="char_lookup")
     biomass_kgha = RangeFilter()
 
     class Meta:
         model = BeltFishSUView
-        fields = ["size_bin", "biomass_kgha", "data_policy_beltfish"]
+        fields = [
+            "transect_len_surveyed",
+            "reef_slope",
+            "size_bin",
+            "biomass_kgha",
+            "data_policy_beltfish",
+        ]
 
 
 class BeltFishMethodSEFilterSet(BaseTransectFilterSet):
@@ -598,6 +629,7 @@ class BeltFishProjectMethodSUView(BaseProjectMethodView):
 class BeltFishProjectMethodSEView(BaseProjectMethodView):
     drf_label = "beltfish"
     project_policy = "data_policy_beltfish"
+    permission_classes = [Or(ProjectDataReadOnlyPermission, ProjectPublicSummaryPermission)]
     serializer_class = BeltFishMethodSESerializer
     serializer_class_geojson = BeltFishMethodSEGeoSerializer
     serializer_class_csv = BeltFishMethodSESerializer

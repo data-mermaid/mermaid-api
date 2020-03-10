@@ -200,7 +200,7 @@ class OrFilterSetMixin(object):
                     if key is not None:
                         predicate = {fieldname: [{key: str(v).strip()}]}
                     q |= Q(**predicate)
-        print(q)
+        # print(q)
         return queryset.filter(q).distinct()
 
     def id_lookup(self, queryset, name, value):

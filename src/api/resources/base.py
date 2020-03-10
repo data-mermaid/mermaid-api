@@ -209,15 +209,13 @@ class BaseViewAPISerializer(BaseAPISerializer):
     class Meta:
         exclude = ["project_status"]
         header_order = [
-            'id',
             "latitude", "longitude", 'site_id', 'site_name', 'site_notes',
             'project_id', 'project_name', 'project_notes', 'contact_link', 'tags',
             'country_id', 'country_name',
             'reef_type', 'reef_zone', 'reef_exposure',
             'management_id', 'management_name', 'management_name_secondary', 'management_est_year',
             'management_size', 'management_parties', 'management_compliance', 'management_rules', 'management_notes',
-            'sample_event_id', 'sample_date', 'sample_time',
-            'current_name', 'tide_name', 'visibility_name', 'depth', 'sample_event_notes',
+            'sample_date', 'sample_event_notes',
         ]
 
     def get_latitude(self, obj):
@@ -370,15 +368,6 @@ class BaseTransectFilterSet(OrFilterSetMixin, GeoFilterSet):
     management_party = BaseInFilter(field_name="management_parties", method="char_lookup")
     management_compliance = BaseInFilter(method="char_lookup")
     management_rule = BaseInFilter(field_name="management_rules", method="char_lookup")
-    current_name = BaseInFilter(method="char_lookup")
-    tide_name = BaseInFilter(method="char_lookup")
-    visibility_name = BaseInFilter(method="char_lookup")
-    depth = RangeFilter()
-    sample_unit_id = BaseInFilter("id_lookup")
-    transect_len_surveyed = RangeFilter()
-    reef_slope = BaseInFilter(method="char_lookup")
-    transect_width = RangeFilter()
-    observers = BaseInFilter(method="json_name_lookup")
 
     class Meta:
         fields = [
@@ -388,11 +377,11 @@ class BaseTransectFilterSet(OrFilterSetMixin, GeoFilterSet):
             "country_id",
             "country_name",
             "sample_date",
+            "tag_id",
+            "tag_name",
             "reef_type",
             "reef_zone",
             "reef_exposure",
-            "tag_id",
-            "tag_name",
             "management_id",
             "management_name",
             "management_est_year",
@@ -400,17 +389,6 @@ class BaseTransectFilterSet(OrFilterSetMixin, GeoFilterSet):
             "management_party",
             "management_compliance",
             "management_rule",
-            "current_name",
-            "tide_name",
-            "visibility_name",
-            "depth",
-            "sample_unit_id",
-            "number",
-            "label",
-            "transect_len_surveyed",
-            "reef_slope",
-            "transect_width",
-            "observers",
         ]
 
     def full_management_name(self, queryset, name, value):
