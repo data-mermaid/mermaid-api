@@ -115,7 +115,7 @@ class ProtocolValidation(object):
 
 
 class TransectValidation(ProtocolValidation):
-    LENGTH_RANGE = (25, 100)
+    LENGTH_RANGE = (10, 100)
     LENGTH_RANGE_WARN_MSG_TMPL = (
         "Transect length surveyed value " + "outside range of {} and {}"
     )
@@ -183,9 +183,6 @@ class QuadratValidation(ProtocolValidation):
 
 class FishBeltProtocolValidation(TransectValidation):
     LENGTH_RANGE = (25, 100)
-    LENGTH_RANGE_WARN_MSG_TMPL = (
-        "Transect length surveyed value " + "outside range of {} and {}"
-    )
     TRANSECT_METHOD = "fishbelt_transect"
 
     def validate(self):
