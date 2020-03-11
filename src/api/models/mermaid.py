@@ -864,7 +864,12 @@ class BenthicPIT(TransectMethod):
     interval_size = models.DecimalField(max_digits=4, decimal_places=2,
                                         default=0.5,
                                         validators=[MinValueValidator(0), MaxValueValidator(10)],
-                                        verbose_name=_(u'interval size (m)'))
+                                        verbose_name=_('interval size (m)'))
+
+    interval_start = models.DecimalField(max_digits=4,
+                                         decimal_places=2,
+                                         default=1.0,
+                                         verbose_name=_('interval start (m)'))
 
     class Meta:
         db_table = 'transectmethod_benthicpit'
