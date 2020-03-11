@@ -181,6 +181,7 @@ class BenthicPITProtocolWriter(BenthicProtocolWriter):
         benthic_pit_data = {
             "transect": benthic_transect_id,
             "interval_size": self.collect_record.data.get("interval_size"),
+            "interval_start": self.collect_record.data.get("interval_start"),
         }
         return self.get_or_create(BenthicPIT, BenthicPITSerializer, benthic_pit_data)
 
