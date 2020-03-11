@@ -254,7 +254,7 @@ class CollectRecordViewSet(BaseProjectApiViewSet):
         if content_type not in supported_content_types:
             return Response("File type not supported", status=400)
 
-        decoded_file = uploaded_file.read().decode("utf-8").splitlines()
+        decoded_file = uploaded_file.read().decode("utf-8-sig").splitlines()
         records, errors = ingest(
             protocol,
             decoded_file,
