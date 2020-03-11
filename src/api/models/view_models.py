@@ -157,9 +157,6 @@ ORDER BY (
         WHEN fish_family.name IS NOT NULL THEN fish_family.name::text
         ELSE NULL::text
     END);
-
-ALTER TABLE public.vw_fish_attributes
-    OWNER TO postgres;
     """
 
     name_family = models.CharField(max_length=100)
@@ -334,9 +331,6 @@ SELECT project.id AS project_id,
              JOIN transectmethod tm ON o1.transectmethod_id = tm.id
              JOIN transectmethod_transectbeltfish tt_1 ON tm.id = tt_1.transectmethod_ptr_id
           GROUP BY tt_1.transect_id) observers ON tbf.id = observers.transect_id;
-
-ALTER TABLE public.vw_beltfish_obs
-    OWNER TO postgres;
     """
 
     project_id = models.UUIDField()
@@ -482,9 +476,6 @@ management_name_secondary, management_est_year, management_size, management_part
 management_rules, management_notes, sample_date, 
 sample_event_notes, "number", transect_len_surveyed, reef_slope, 
 size_bin, data_policy_beltfish;
-    
-ALTER TABLE public.vw_beltfish_su
-    OWNER TO postgres;
     """
 
     project_id = models.UUIDField()
@@ -608,9 +599,6 @@ management_parties, management_compliance, management_rules, management_notes,
 vw_beltfish_su.sample_date, sample_event_notes, data_policy_beltfish,
 biomass_kgha_avg,
 biomass_kgha_by_trophic_group_avg;
-
-ALTER TABLE public.vw_beltfish_se
-    OWNER TO postgres;
     """
 
     project_id = models.UUIDField()
