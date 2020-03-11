@@ -365,6 +365,6 @@ class SampleUnitMethodView(BaseProjectApiViewSet):
 
     def retrieve(self, request, pk=None, **kwargs):
 
-        # Disable the detail fetch - the subclass endpoints
+        # Disable the detail fetch - the method-specific endpoints
         # should be used for SampleUnitMethod details
         raise exceptions.NotFound(code=404)

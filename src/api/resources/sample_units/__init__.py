@@ -8,13 +8,15 @@ from collections import defaultdict, Iterable
 from django.core.exceptions import ObjectDoesNotExist
 from django.utils.translation import ugettext_lazy as _
 from django.utils.text import get_valid_filename
-from django.http import (
-    HttpResponse,
-    StreamingHttpResponse,
-    HttpResponseBadRequest,
-)
+from django.http import HttpResponse, StreamingHttpResponse, HttpResponseBadRequest
 from ...models import Project, Management, Observer
+from ...resources.base import BaseProjectApiViewSet
 from ...resources.management import get_rules
+from rest_framework.decorators import action
+from rest_framework_gis.pagination import GeoJsonPagination
+from rest_condition import Or
+from ...auth_backends import AnonymousJWTAuthentication
+from ...permissions import *
 from ...reports import RawCSVReport
 from ...report_serializer import *
 
@@ -295,51 +297,124 @@ def fieldreport(obj, request, *args, **kwargs):
     except ObjectDoesNotExist:
         return HttpResponseBadRequest("Project doesn't exist")
 
-    serializer_class = _set_to_list(serializer_class)
-    model_cls = _set_to_list(model_cls)
-
-    if len(serializer_class) != len(model_cls):
+    serializer_classes = _set_to_list(serializer_class)
+    model_classes = _set_to_list(model_cls)
+    if len(serializer_classes) != len(model_classes):
         raise ValueError("Number of serializer_class and model_cls do not match")
 
     obj.limit_to_project(request, *args, **kwargs)
     qs = obj.get_queryset()
-
-    streams = []
-    for sc, mdl in zip(serializer_class, model_cls):
-        transect_ids = [rec.id for rec in obj.filter_queryset(qs).iterator()]
-        obls = mdl.objects.filter(**{"%s__in" % fk: transect_ids})
-        report = RawCSVReport()
-        streams.append(report.stream(obls, serializer_class=sc, order_by=order_by))
-
+    transect_ids = [rec.id for rec in obj.filter_queryset(qs).iterator()]
     ts = datetime.utcnow().strftime("%Y%m%d")
     projname = get_valid_filename(project.name)[:100]
-    if len(streams) == 1:
-        response = StreamingHttpResponse(streams[0], content_type="text/csv")
-        response["Content-Disposition"] = 'attachment; filename="%s-%s-%s.csv"' % (
-            fk,
-            projname,
-            ts,
-        )
+
+    if len(serializer_classes) == 1:
+        ext = "csv"
+        obls = model_cls.objects.filter(**{"%s__in" % fk: transect_ids})
+        fields = [f.display for f in serializer_class.get_fields()]
+        serialized_data = serializer_class(obls).get_serialized_data(order_by=order_by)
+        report = RawCSVReport()
+        stream = report.stream(fields, serialized_data)
+        response = StreamingHttpResponse(stream, content_type="text/csv")
+
     else:
+        ext = "zip"
+        streams = []
+        for sc, mdl in zip(serializer_classes, model_classes):
+            obls = mdl.objects.filter(**{"%s__in" % fk: transect_ids})
+            fields = [f.display for f in sc.get_fields()]
+            serialized_data = sc(obls).get_serialized_data(order_by=order_by)
+            report = RawCSVReport()
+            streams.append(report.stream(fields, serialized_data))
+
         inmem_file = BytesIO()
         zipped_reports = zipfile.ZipFile(
             inmem_file, "w", compression=zipfile.ZIP_DEFLATED
         )
 
-        for mdl, stream in zip(model_cls, streams):
+        for mdl, stream in zip(model_classes, streams):
             file_name = "{}-{}-{}.csv".format(
                 projname, mdl.__name__.lower(), ts
             )
-            zipped_reports.writestr(file_name, stream)
+            content = "\n".join(list(stream))
+            zipped_reports.writestr(file_name, content)
         zipped_reports.close()
         inmem_file.seek(0)
+
         response = HttpResponse(
             inmem_file.read(), content_type="application/octet-stream"
         )
-        response["Content-Disposition"] = 'attachment; filename="%s-%s-%s.zip"' % (
-            fk,
-            projname,
-            ts,
-        )
+
+    response["Content-Disposition"] = 'attachment; filename="{}-{}-{}.{}"'.format(
+        fk, projname, ts, ext
+    )
 
     return response
+
+
+class BaseGeoJsonPagination(GeoJsonPagination):
+    page_size = 100
+    page_size_query_param = "limit"
+    max_page_size = 1000
+
+
+class BaseProjectMethodView(BaseProjectApiViewSet):
+    drf_label = ""
+    project_policy = None
+    serializer_class_geojson = None
+    serializer_class_csv = None
+    method_authentication_classes = {"GET": [AnonymousJWTAuthentication]}
+    permission_classes = [Or(ProjectDataReadOnlyPermission, ProjectPublicPermission)]
+    http_method_names = ["get"]
+
+    def _get_fields(self, serializer):
+        fields = serializer.child.get_fields()
+        ordered_fields = fields
+        if hasattr(serializer.child.Meta, "header_order"):
+            header_order = serializer.child.Meta.header_order
+            ordered_fields = OrderedDict((f, fields[f]) for f in header_order)
+        return ordered_fields
+
+    def csv_data(self, fields, serializer):
+        for row in serializer.data:
+            prepared_row = OrderedDict()
+            for fieldname, field in fields.items():
+                value = row.get(fieldname, None)
+                if isinstance(value, (list, set, tuple)):
+                    value = ", ".join(str(v) for v in value)
+                prepared_row[fieldname] = value
+            yield prepared_row
+
+    @action(detail=False, methods=["get"])
+    def json(self, request, *args, **kwargs):  # default, for completeness
+        return self.list(request, *args, **kwargs)
+
+    @action(detail=False, methods=["get"])
+    def geojson(self, request, *args, **kwargs):
+        self.serializer_class = self.serializer_class_geojson
+        self.pagination_class = BaseGeoJsonPagination
+        return self.list(request, *args, **kwargs)
+
+    @action(detail=False, methods=["get"])
+    def csv(self, request, *args, **kwargs):
+        try:
+            project = Project.objects.get(pk=kwargs["project_pk"])
+        except ObjectDoesNotExist:
+            return HttpResponseBadRequest("Project doesn't exist")
+        self.limit_to_project(request, *args, **kwargs)
+        self.serializer_class = self.serializer_class_csv
+
+        self.queryset = self.filter_queryset(self.get_queryset())
+        serializer = self.get_serializer(self.get_queryset(), many=True)
+        fields = self._get_fields(serializer)
+        serialized_data = self.csv_data(fields, serializer)
+        report = RawCSVReport()
+        stream = report.stream(list(fields), serialized_data)
+
+        response = StreamingHttpResponse(stream, content_type="text/csv")
+        ts = datetime.utcnow().strftime("%Y%m%d")
+        projname = get_valid_filename(project.name)[:100]
+        response["Content-Disposition"] = 'attachment; filename="{}-{}-{}.csv"'.format(
+            self.drf_label, projname, ts
+        )
+        return response

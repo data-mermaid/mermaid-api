@@ -40,7 +40,7 @@ class PSiteReportSerializer(ReportSerializer):
 class PSiteFilterSet(BaseAPIFilterSet):
     class Meta:
         model = Site
-        fields = ["public", "country", "reef_type", "reef_zone", "exposure"]
+        fields = ["country", "reef_type", "reef_zone", "exposure"]
 
 
 class PSiteViewSet(ProtectedResourceMixin, BaseProjectApiViewSet):

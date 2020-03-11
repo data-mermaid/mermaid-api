@@ -11,3 +11,4 @@ from .base import (
     Application,
 )
 from .mermaid import *
+from .view_models import *

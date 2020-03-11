@@ -1,7 +1,8 @@
 from rest_framework import serializers
 
 from ..fields import LazyChoiceField
-from ..models import BeltTransectWidth, FishAttributeView, FishSizeBin, ReefSlope
+from ..models import BeltTransectWidth, FishSizeBin, ReefSlope
+from ..models.view_models import FishAttributeView
 from .serializers import CollectRecordCSVSerializer, build_choices
 
 __all__ = ["FishBeltCSVSerializer"]

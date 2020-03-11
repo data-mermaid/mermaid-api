@@ -39,7 +39,7 @@ class FishBeltTransectSerializer(BaseAPISerializer):
 
 
 class FishBeltTransectFilterSet(BaseAPIFilterSet):
-    len_surveyed = django_filters.NumericRangeFilter(name='len_surveyed')
+    len_surveyed = django_filters.NumericRangeFilter(field_name='len_surveyed')
 
     class Meta:
         model = FishBeltTransect
