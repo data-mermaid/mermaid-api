@@ -310,7 +310,6 @@ class Site(BaseModel, JSONMixin):
     reef_zone = models.ForeignKey(ReefZone, on_delete=models.PROTECT)
     exposure = models.ForeignKey(ReefExposure, on_delete=models.PROTECT)
     location = models.PointField(srid=4326)
-    public = models.BooleanField(default=True)
     notes = models.TextField(blank=True)
     predecessor = models.ForeignKey(
         'self', on_delete=models.SET_NULL, null=True, blank=True)
