@@ -1,4 +1,6 @@
 import pytz
+from operator import itemgetter
+from natsort import natsorted
 from django.http.response import HttpResponseBadRequest
 from django.utils.dateparse import parse_datetime
 from rest_framework.decorators import action
@@ -50,6 +52,7 @@ class ChoiceViewSet(BaseChoiceApiViewSet):
         fishgrouptrophics = dict(data=FishGroupTrophic.objects.choices(order_by="name"))
         fishgroupsizes = dict(data=FishGroupSize.objects.choices(order_by="name"))
         fishsizebins = dict(data=FishSizeBin.objects.choices(order_by="val"))
+        fishsizebins["data"] = natsorted(fishsizebins["data"], key=itemgetter(*['name']))
         habitatcomplexityscores = dict(
             data=HabitatComplexityScore.objects.choices(order_by="val")
         )
