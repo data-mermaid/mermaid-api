@@ -7,7 +7,6 @@ from .resources.project import ProjectViewSet
 from .resources.site import SiteViewSet
 from .resources.management import ManagementViewSet
 from .resources.benthic_attribute import BenthicAttributeViewSet
-from .resources.fish_attribute import FishAttributeViewSet
 from .resources.fish_family import FishFamilyViewSet
 from .resources.fish_genus import FishGenusViewSet
 from .resources.fish_species import FishSpeciesViewSet
@@ -71,7 +70,6 @@ router.register(r"projecttags", ProjectTagViewSet, "projecttag")
 
 # observation attributes
 router.register(r"benthicattributes", BenthicAttributeViewSet, "benthicattribute")
-router.register(r"fishattributes", FishAttributeViewSet, "fishattribute")
 router.register(r"fishfamilies", FishFamilyViewSet, "fishfamily")
 router.register(r"fishgenera", FishGenusViewSet, "fishgenus")
 router.register(r"fishspecies", FishSpeciesViewSet, "fishspecies")
@@ -94,7 +92,7 @@ project_router.register(r"sites", PSiteViewSet, "psite")
 project_router.register(r"managements", PManagementViewSet, "pmanagement")
 project_router.register(r"sampleevents", SampleEventViewSet, "sampleevent")
 
-# transects
+# sample units
 project_router.register(r"benthictransects", BenthicTransectViewSet, "benthictransect")
 project_router.register(
     r"fishbelttransects", FishBeltTransectViewSet, "fishbelttransect"
