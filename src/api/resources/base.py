@@ -5,30 +5,37 @@ from django.views.decorators.cache import cache_page
 from django.utils.translation import ugettext_lazy as _
 from rest_framework import serializers, viewsets
 from rest_framework.decorators import action
+from rest_framework import exceptions
 from rest_framework.serializers import (
     UUIDField,
     PrimaryKeyRelatedField,
+    SerializerMethodField,
 )
 from rest_framework.exceptions import MethodNotAllowed, ValidationError
 from rest_framework.pagination import PageNumberPagination
 from rest_framework.filters import OrderingFilter, SearchFilter
 from rest_framework.response import Response
 from rest_framework.fields import empty
+from rest_framework_gis.serializers import GeoFeatureModelSerializer
+from rest_framework_gis.filterset import GeoFilterSet
+from rest_framework_gis.filters import GeometryFilter
+from rest_framework_gis.fields import GeometryField
 from rest_condition import Or
 from django.core.exceptions import FieldDoesNotExist
 
 from django.db.models.fields.related import ForeignObjectRel
 from rest_framework.validators import qs_exists
-import django_filters
-from django_filters import Filter
+from django_filters.rest_framework import DjangoFilterBackend
+from django_filters import (Filter, BaseInFilter, CharFilter, FilterSet, DateFromToRangeFilter,
+                            DateTimeFromToRangeFilter, RangeFilter)
 from django_filters.fields import Lookup
 from django.conf import settings
-from ..models import BaseAttributeModel, Tag, APPROVAL_STATUSES
+from ..models import Tag, APPROVAL_STATUSES
 from ..exceptions import check_uuid
 from ..permissions import *
 from ..utils.auth0utils import get_jwt_token
 from ..utils.auth0utils import get_unverified_profile
-from .mixins import MethodAuthenticationMixin, UpdatesMixin
+from .mixins import MethodAuthenticationMixin, UpdatesMixin, OrFilterSetMixin
 
 
 def to_tag_model_instances(tags, updated_by):
@@ -112,8 +119,11 @@ class StandardResultPagination(PageNumberPagination):
 
 class CurrentProfileDefault(object):
     def set_context(self, serializer_field):
-        token = get_jwt_token(serializer_field.context['request'])
-        self.profile = get_unverified_profile(token)
+        try:
+            token = get_jwt_token(serializer_field.context['request'])
+            self.profile = get_unverified_profile(token)
+        except exceptions.AuthenticationFailed:
+            self.profile = None
 
     def __call__(self):
         return self.profile
@@ -132,7 +142,7 @@ class BaseAPISerializer(serializers.ModelSerializer):
         model = None
 
     def __init__(self, *args, **kwargs):
-        super(BaseAPISerializer, self).__init__(*args, **kwargs)
+        super().__init__(*args, **kwargs)
 
         request = self.context.get('request')
         if request is None:
@@ -188,7 +198,48 @@ class BaseAPISerializer(serializers.ModelSerializer):
 
         token = get_jwt_token(request)
         kwargs["updated_by"] = get_unverified_profile(token)
-        return super(BaseAPISerializer, self).save(**kwargs)
+        return super().save(**kwargs)
+
+
+class BaseViewAPISerializer(BaseAPISerializer):
+    updated_by = None
+    latitude = SerializerMethodField()
+    longitude = SerializerMethodField()
+
+    class Meta:
+        exclude = ["project_status"]
+        header_order = [
+            "latitude", "longitude", 'site_id', 'site_name', 'site_notes',
+            'project_id', 'project_name', 'project_notes', 'contact_link', 'tags',
+            'country_id', 'country_name',
+            'reef_type', 'reef_zone', 'reef_exposure',
+            'management_id', 'management_name', 'management_name_secondary', 'management_est_year',
+            'management_size', 'management_parties', 'management_compliance', 'management_rules', 'management_notes',
+            'sample_date', 'sample_event_notes',
+        ]
+
+    def get_latitude(self, obj):
+        if obj.location is not None:
+            return round(obj.location.y, settings.GEO_PRECISION)
+        return None
+
+    def get_longitude(self, obj):
+        if obj.location is not None:
+            return round(obj.location.x, settings.GEO_PRECISION)
+        return None
+
+    def get_observers(self, obj):
+        if obj.observers is not None and isinstance(obj.observers, list):
+            return ", ".join(o["name"] for o in obj.observers)
+        return None
+
+
+class BaseViewAPIGeoSerializer(GeoFeatureModelSerializer, BaseAPISerializer):
+    location = GeometryField(precision=settings.GEO_PRECISION)
+
+    class Meta:
+        exclude = ["project_status"]
+        geo_field = "location"
 
 
 class SampleEventExtendedSerializer(BaseAPISerializer):
@@ -247,7 +298,7 @@ class ListFilter(Filter):
 
 # Return objects that actually are null when user asks for them with 'null'
 # Note this can't subclass UUIDFilter because of the additional pattern check (?)
-class NullableUUIDFilter(django_filters.CharFilter):
+class NullableUUIDFilter(CharFilter):
 
     def filter(self, qs, value):
         if value != settings.API_NULLQUERY:
@@ -259,13 +310,14 @@ class NullableUUIDFilter(django_filters.CharFilter):
         return qs.distinct() if self.distinct else qs
 
 
-class BaseAPIFilterSet(django_filters.FilterSet):
-    created_on = django_filters.DateTimeFromToRangeFilter()
-    updated_on = django_filters.DateTimeFromToRangeFilter()
-    updated_by = django_filters.NumberFilter()
+class BaseAPIFilterSet(FilterSet):
+    created_on = DateTimeFromToRangeFilter()
+    updated_on = DateTimeFromToRangeFilter()
+    created_by = NullableUUIDFilter()
+    updated_by = NullableUUIDFilter()
 
     class Meta:
-        fields = ['created_on', 'updated_on', 'updated_by', ]
+        fields = ['created_on', 'updated_on', 'created_by', 'updated_by', ]
 
 
 class RelatedOrderingFilter(OrderingFilter):
@@ -300,17 +352,61 @@ class RelatedOrderingFilter(OrderingFilter):
                 if self.is_valid_field(queryset.model, term.lstrip('-'))]
 
 
+class BaseTransectFilterSet(OrFilterSetMixin, GeoFilterSet):
+    site_id = BaseInFilter(method="id_lookup")
+    site_name = BaseInFilter(method="char_lookup")
+    site_within = GeometryFilter(field_name="location", lookup_expr='within')
+    country_id = BaseInFilter(method='id_lookup')
+    country_name = BaseInFilter(method="char_lookup")
+    sample_date = DateFromToRangeFilter()
+    tag_id = BaseInFilter(field_name='tags', method='json_id_lookup')
+    tag_name = BaseInFilter(field_name='tags', method='json_name_lookup')
+    management_id = BaseInFilter(method="id_lookup")
+    management_name = BaseInFilter(method="full_management_name")
+    management_est_year = DateFromToRangeFilter()
+    management_size = RangeFilter()
+    management_party = BaseInFilter(field_name="management_parties", method="char_lookup")
+    management_compliance = BaseInFilter(method="char_lookup")
+    management_rule = BaseInFilter(field_name="management_rules", method="char_lookup")
+
+    class Meta:
+        fields = [
+            "site_id",
+            "site_name",
+            "site_within",
+            "country_id",
+            "country_name",
+            "sample_date",
+            "tag_id",
+            "tag_name",
+            "reef_type",
+            "reef_zone",
+            "reef_exposure",
+            "management_id",
+            "management_name",
+            "management_est_year",
+            "management_size",
+            "management_party",
+            "management_compliance",
+            "management_rule",
+        ]
+
+    def full_management_name(self, queryset, name, value):
+        fields = ["management_name", "management_name_secondary"]
+        return self.str_or_lookup(queryset, fields, value, lookup_expr="icontains")
+
+
 class BaseApiViewSet(MethodAuthenticationMixin, viewsets.ModelViewSet, UpdatesMixin):
     """
     Include this as mixin to make your ListAPIView paginated & give it the ability to order by field name
     """
     pagination_class = StandardResultPagination
 
-    filter_backends = (django_filters.rest_framework.DjangoFilterBackend,
+    filter_backends = (DjangoFilterBackend,
                        RelatedOrderingFilter,
                        SearchFilter,
                        )
-    # renderers = settings.REST_FRAMEWORK['DEFAULT_RENDERER_CLASSES']
+
     _serializer_class_for_fields = {}
 
     permission_classes = [DefaultPermission, ]
@@ -438,7 +534,6 @@ class BaseChoiceApiViewSet(MethodAuthenticationMixin, viewsets.ViewSet):
     method_authentication_classes = {
         "GET": []
     }
-
 
     # If we need to filter according to project role, we do this here
     def _filter(self, keys=None):

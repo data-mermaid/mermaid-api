@@ -1,5 +1,5 @@
 import pytz
-from django.db.models import ProtectedError
+from django.db.models import ProtectedError, Q
 from django.http.response import HttpResponseBadRequest
 from django.template.defaultfilters import pluralize
 from django.utils.dateparse import parse_datetime
@@ -184,3 +184,33 @@ class MethodAuthenticationMixin(object):
             negotiator=self.get_content_negotiator(),
             parser_context=parser_context,
         )
+
+
+class OrFilterSetMixin(object):
+
+    def str_or_lookup(self, queryset, name, value, key=None, lookup_expr="iexact"):
+        if not isinstance(name, (list, set, tuple)):
+            name = [name]
+        q = Q()
+        for n in name:
+            fieldname = "{}__{}".format(n, lookup_expr)
+            for v in set(value):
+                if v is not None and v != "":
+                    predicate = {fieldname: str(v).strip()}
+                    if key is not None:
+                        predicate = {fieldname: [{key: str(v).strip()}]}
+                    q |= Q(**predicate)
+        # print(q)
+        return queryset.filter(q).distinct()
+
+    def id_lookup(self, queryset, name, value):
+        return self.str_or_lookup(queryset, name, value)
+
+    def char_lookup(self, queryset, name, value):
+        return self.str_or_lookup(queryset, name, value, lookup_expr="icontains")
+
+    def json_id_lookup(self, queryset, name, value):
+        return self.str_or_lookup(queryset, name, value, "id", "contains")
+
+    def json_name_lookup(self, queryset, name, value):
+        return self.str_or_lookup(queryset, name, value, "name", "contains")

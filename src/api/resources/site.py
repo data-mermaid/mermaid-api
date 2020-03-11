@@ -78,7 +78,7 @@ class SiteFilterSet(BaseAPIFilterSet):
     project = django_filters.UUIDFilter(field_name='project', distinct=True,
                                         label='Associated with project')
 
-    country = ListFilter()
+    country_id = ListFilter()
     unique = django_filters.CharFilter(method='filter_unique')
     exclude_projects = django_filters.CharFilter(method='filter_not_projects')
 
