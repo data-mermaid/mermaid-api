@@ -1276,10 +1276,10 @@ class BeltFish(TransectMethod):
 
 
 class FishSizeBin(BaseChoiceModel):
-    val = models.PositiveSmallIntegerField()
+    val = models.CharField(max_length=100)
 
     def __str__(self):
-        return _(u'%scm') % self.val
+        return self.val
 
 
 class FishSize(BaseModel):

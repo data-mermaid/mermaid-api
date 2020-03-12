@@ -32,11 +32,11 @@ class Command(BaseCommand):
 
     def handle(self, *args, **options):
         count = 0
-        fish_bin_5 = FishSizeBin.objects.get(val=5)
+        fish_bin_5 = FishSizeBin.objects.get(val="5")
         ranges_5, medians_5 = intervals(200, 5)
         count += create_records(ranges_5, medians_5, fish_bin_5)
 
-        fish_bin_10 = FishSizeBin.objects.get(val=10)
+        fish_bin_10 = FishSizeBin.objects.get(val="10")
         ranges_10, medians_10 = intervals(200, 10)
         count += create_records(ranges_10, medians_10, fish_bin_10)
 

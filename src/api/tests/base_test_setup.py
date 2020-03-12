@@ -109,7 +109,7 @@ class BaseTestCase(TestCase):
         )
         self.management.parties.add(self.management_party)
 
-        self.fish_size_bin = FishSizeBin.objects.create(val=7.5)
+        self.fish_size_bin = FishSizeBin.objects.create(val="7.5")
         self.fish_family = FishFamily.objects.create(name='Clown Fish Family')
         self.fish_genus = FishGenus.objects.create(family=self.fish_family, name='Clown Fish Genus')
         self.fish_species = FishSpecies.objects.create(
