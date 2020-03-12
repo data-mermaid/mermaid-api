@@ -19,7 +19,7 @@ class Command(BaseCommand):
 
         parser.add_argument(
             "fishdata",
-            type=argparse.FileType("r"),
+            type=argparse.FileType("r", encoding="utf-8-sig"),
             nargs="?",
             help="Fish species data CSV file",
         )
