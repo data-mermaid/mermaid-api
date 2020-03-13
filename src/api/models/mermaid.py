@@ -863,7 +863,7 @@ class BenthicPIT(TransectMethod):
 
     interval_start = models.DecimalField(max_digits=4,
                                          decimal_places=2,
-                                         default=1.0,
+                                         default=0.5,
                                          verbose_name=_('interval start (m)'))
 
     class Meta:

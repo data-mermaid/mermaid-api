@@ -3,6 +3,20 @@
 from django.db import migrations, models
 
 
+def set_interval_start_for_existing(apps, schema_editor):
+    BenthicPIT = apps.get_model('api', 'BenthicPIT')
+    for b in BenthicPIT.objects.all():
+        b.interval_start = b.interval_size
+        b.save()
+
+
+def reverse_interval_start_for_existing(apps, schema_editor):
+    BenthicPIT = apps.get_model('api', 'BenthicPIT')
+    for b in BenthicPIT.objects.all():
+        b.interval_start = 0.5
+        b.save()
+
+
 class Migration(migrations.Migration):
 
     dependencies = [
@@ -13,6 +27,7 @@ class Migration(migrations.Migration):
         migrations.AddField(
             model_name='benthicpit',
             name='interval_start',
-            field=models.DecimalField(decimal_places=2, default=1.0, max_digits=4, verbose_name='interval start (m)'),
+            field=models.DecimalField(decimal_places=2, default=0.5, max_digits=4, verbose_name='interval start (m)'),
         ),
+        migrations.RunPython(set_interval_start_for_existing, reverse_interval_start_for_existing)
     ]
