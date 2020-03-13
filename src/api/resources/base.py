@@ -215,7 +215,7 @@ class BaseViewAPISerializer(BaseAPISerializer):
             'reef_type', 'reef_zone', 'reef_exposure',
             'management_id', 'management_name', 'management_name_secondary', 'management_est_year',
             'management_size', 'management_parties', 'management_compliance', 'management_rules', 'management_notes',
-            'sample_date', 'sample_event_notes',
+            'sample_date',
         ]
 
     def get_latitude(self, obj):

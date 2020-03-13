@@ -440,7 +440,7 @@ project_id, project_name, project_status, project_notes, contact_link, tags, sit
 site_notes, country_id, country_name, reef_type, reef_zone, reef_exposure, management_id, management_name, 
 management_name_secondary, management_est_year, management_size, management_parties, management_compliance, 
 management_rules, management_notes, sample_date,  
-sample_event_notes, "number", transect_len_surveyed, 
+"number", transect_len_surveyed, 
 reef_slope, size_bin, data_policy_beltfish, 
 
 SUM(biomass_kgha) AS biomass_kgha,
@@ -454,7 +454,7 @@ FROM (
     site_notes, country_id, country_name, reef_type, reef_zone, reef_exposure, management_id, management_name, 
     management_name_secondary, management_est_year, management_size, management_parties, management_compliance, 
     management_rules, management_notes, sample_date,  
-    sample_event_notes, "number", transect_len_surveyed, reef_slope, 
+    "number", transect_len_surveyed, reef_slope, 
     size_bin, data_policy_beltfish, 
     trophic_group, 
 
@@ -465,7 +465,7 @@ FROM (
     site_notes, country_id, country_name, reef_type, reef_zone, reef_exposure, management_id, management_name, 
     management_name_secondary, management_est_year, management_size, management_parties, management_compliance, 
     management_rules, management_notes, sample_date,  
-    sample_event_notes, "number", transect_len_surveyed, reef_slope, 
+    "number", transect_len_surveyed, reef_slope, 
     size_bin, data_policy_beltfish, 
     trophic_group
 ) AS beltfish_obs_tg
@@ -474,7 +474,7 @@ GROUP BY project_id, project_name, project_status, project_notes, contact_link, 
 site_notes, country_id, country_name, reef_type, reef_zone, reef_exposure, management_id, management_name, 
 management_name_secondary, management_est_year, management_size, management_parties, management_compliance, 
 management_rules, management_notes, sample_date, 
-sample_event_notes, "number", transect_len_surveyed, reef_slope, 
+"number", transect_len_surveyed, reef_slope, 
 size_bin, data_policy_beltfish;
     """
 
@@ -511,7 +511,6 @@ size_bin, data_policy_beltfish;
     management_rules = JSONField(null=True, blank=True)
     management_notes = models.TextField(blank=True)
     sample_date = models.DateField()
-    sample_event_notes = models.TextField(blank=True)
     number = models.PositiveSmallIntegerField()
     transect_len_surveyed = models.PositiveSmallIntegerField(
         verbose_name=_(u"transect length surveyed (m)")
@@ -551,7 +550,7 @@ country_id, country_name,
 reef_type, reef_zone, reef_exposure, 
 vw_beltfish_su.management_id, management_name, management_name_secondary, management_est_year, management_size, 
 management_parties, management_compliance, management_rules, management_notes, 
-vw_beltfish_su.sample_date, sample_event_notes, data_policy_beltfish,
+vw_beltfish_su.sample_date, data_policy_beltfish,
 biomass_kgha_avg,
 biomass_kgha_by_trophic_group_avg
 
@@ -596,7 +595,7 @@ country_id, country_name,
 reef_type, reef_zone, reef_exposure, 
 vw_beltfish_su.management_id, management_name, management_name_secondary, management_est_year, management_size, 
 management_parties, management_compliance, management_rules, management_notes, 
-vw_beltfish_su.sample_date, sample_event_notes, data_policy_beltfish,
+vw_beltfish_su.sample_date, data_policy_beltfish,
 biomass_kgha_avg,
 biomass_kgha_by_trophic_group_avg;
     """
@@ -634,7 +633,6 @@ biomass_kgha_by_trophic_group_avg;
     management_rules = JSONField(null=True, blank=True)
     management_notes = models.TextField(blank=True)
     sample_date = models.DateField()
-    sample_event_notes = models.TextField(blank=True)
     biomass_kgha_avg = models.DecimalField(
         max_digits=8,
         decimal_places=2,
