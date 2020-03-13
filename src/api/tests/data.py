@@ -238,9 +238,9 @@ class TestDataMixin(object):
             name="Private Sector"
         )
 
-        self.fish_size_bin1, _ = FishSizeBin.objects.get_or_create(val=1)
-        self.fish_size_bin2, _ = FishSizeBin.objects.get_or_create(val=5)
-        self.fish_size_bin3, _ = FishSizeBin.objects.get_or_create(val=10)
+        self.fish_size_bin1, _ = FishSizeBin.objects.get_or_create(val="1")
+        self.fish_size_bin2, _ = FishSizeBin.objects.get_or_create(val="5")
+        self.fish_size_bin3, _ = FishSizeBin.objects.get_or_create(val="10")
 
     def unload_choices(self):
         self.country1.delete()

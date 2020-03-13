@@ -8,12 +8,9 @@ import operator as pyoperator
 from decimal import Decimal
 
 from django.db.models import Avg
-from django.db.models.signals import post_delete
 from django.contrib.gis.db import models
 from django.contrib.postgres.fields import JSONField
-from django.core import serializers
 from django.forms.models import model_to_dict
-from django.dispatch import receiver
 from django.core.validators import MinValueValidator, MaxValueValidator
 from django.utils import timezone
 from django.utils.translation import ugettext_lazy as _
@@ -310,12 +307,10 @@ class Site(BaseModel, JSONMixin):
     reef_zone = models.ForeignKey(ReefZone, on_delete=models.PROTECT)
     exposure = models.ForeignKey(ReefExposure, on_delete=models.PROTECT)
     location = models.PointField(srid=4326)
-    public = models.BooleanField(default=True)
     notes = models.TextField(blank=True)
     predecessor = models.ForeignKey(
         'self', on_delete=models.SET_NULL, null=True, blank=True)
     validations = JSONField(encoder=JSONEncoder, null=True, blank=True)
-
 
     class Meta:
         db_table = 'site'
@@ -864,7 +859,12 @@ class BenthicPIT(TransectMethod):
     interval_size = models.DecimalField(max_digits=4, decimal_places=2,
                                         default=0.5,
                                         validators=[MinValueValidator(0), MaxValueValidator(10)],
-                                        verbose_name=_(u'interval size (m)'))
+                                        verbose_name=_('interval size (m)'))
+
+    interval_start = models.DecimalField(max_digits=4,
+                                         decimal_places=2,
+                                         default=0.5,
+                                         verbose_name=_('interval start (m)'))
 
     class Meta:
         db_table = 'transectmethod_benthicpit'
@@ -1045,24 +1045,6 @@ class FishAttribute(BaseAttributeModel):
         if taxon is None:
             return None, None, None
         return taxon.biomass_constant_a, taxon.biomass_constant_b, taxon.biomass_constant_c
-
-
-class FishAttributeView(FishAttribute):
-    name = models.CharField(max_length=100)
-    biomass_constant_a = models.DecimalField(max_digits=7, decimal_places=6,
-                                             null=True, blank=True)
-    biomass_constant_b = models.DecimalField(max_digits=7, decimal_places=6,
-                                             null=True, blank=True)
-    biomass_constant_c = models.DecimalField(max_digits=7, decimal_places=6, default=1,
-                                             null=True, blank=True)
-    trophic_group = models.CharField(max_length=100, blank=True)
-    trophic_level = models.DecimalField(max_digits=3, decimal_places=2, null=True, blank=True)
-    functional_group = models.CharField(max_length=100, blank=True)
-    vulnerability = models.DecimalField(max_digits=4, decimal_places=2, null=True, blank=True)
-
-    class Meta:
-        db_table = 'vw_fish_attributes'
-        managed = False
 
 
 class FishFamily(FishAttribute):
@@ -1294,10 +1276,10 @@ class BeltFish(TransectMethod):
 
 
 class FishSizeBin(BaseChoiceModel):
-    val = models.PositiveSmallIntegerField()
+    val = models.CharField(max_length=100)
 
     def __str__(self):
-        return _(u'%scm') % self.val
+        return self.val
 
 
 class FishSize(BaseModel):

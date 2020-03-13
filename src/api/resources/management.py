@@ -9,7 +9,7 @@ from .base import (
     ModelNameReadOnlyField,
 )
 from .mixins import ProtectedResourceMixin
-from ..models import Management
+from ..models import Management, Project
 from ..permissions import UnauthenticatedReadOnlyPermission
 
 
@@ -163,7 +163,7 @@ class ManagementViewSet(ProtectedResourceMixin, BaseApiViewSet):
 
     model_display_name = "Management Regime"
     serializer_class = ManagementSerializer
-    queryset = Management.objects.filter()
+    queryset = Management.objects.exclude(project__status=Project.TEST)
     permission_classes = [UnauthenticatedReadOnlyPermission, ]
     filter_class = ManagementFilterSet
     search_fields = ['$name', '$name_secondary', '$project__name', '$est_year']

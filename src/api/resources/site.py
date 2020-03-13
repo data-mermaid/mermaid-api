@@ -10,7 +10,7 @@ from .base import (
     ListFilter,
 )
 from .mixins import ProtectedResourceMixin
-from ..models import Site
+from ..models import Site, Project
 from ..permissions import *
 
 
@@ -78,7 +78,7 @@ class SiteFilterSet(BaseAPIFilterSet):
     project = django_filters.UUIDFilter(field_name='project', distinct=True,
                                         label='Associated with project')
 
-    country = ListFilter()
+    country_id = ListFilter()
     unique = django_filters.CharFilter(method='filter_unique')
     exclude_projects = django_filters.CharFilter(method='filter_not_projects')
 
@@ -139,7 +139,7 @@ class SiteViewSet(ProtectedResourceMixin, BaseApiViewSet):
 
     model_display_name = "Site"
     serializer_class = SiteSerializer
-    queryset = Site.objects.filter(public=True)
+    queryset = Site.objects.exclude(project__status=Project.TEST)
     permission_classes = [UnauthenticatedReadOnlyPermission, ]
     filter_class = SiteFilterSet
     search_fields = ['$name', '$project__name', '$country__name',]

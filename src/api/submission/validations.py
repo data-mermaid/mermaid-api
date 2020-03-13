@@ -304,8 +304,8 @@ class SampleEventValidation(DataValidation):
 
     def validate_sample_date(self):
         sample_event = self.data.get("sample_event") or {}
-        sample_date_str = sample_event.get("sample_date")
-        sample_time_str = sample_event.get("sample_time")
+        sample_date_str = sample_event.get("sample_date", "")
+        sample_time_str = sample_event.get("sample_time", "")
         site_id = sample_event.get("site")
         if sample_date_str.strip() == "":
             sample_date_str = None
