@@ -828,16 +828,26 @@ class BenthicTransectValidation(DataValidation):
                 return self.error(self.identifier, self.RELATIVE_DEPTH_MSG)
 
         site = sample_event.get("site") or None
+        if site == "":
+            site = None
+        management = sample_event.get("management") or None
+        if management == "":
+            management = None
+        sample_date = sample_event.get("sample_date") or None
+        if sample_date == "":
+            sample_date = None
         try:
             _ = check_uuid(site)
         except ParseError:
             return self.error(self.identifier, self.SITE_MSG)
 
         qry = {
+            "sample_event__site": site,
+            "sample_event__management": management,
+            "sample_event__sample_date": sample_date,
             "number": number,
             "label": label,
             "sample_event__relative_depth": relative_depth,
-            "sample_event__site": site,
         }
 
         results = BenthicTransect.objects.select_related().filter(**qry)
@@ -886,16 +896,26 @@ class FishBeltTransectValidation(DataValidation):
                 return self.error(self.identifier, self.RELATIVE_DEPTH_MSG)
 
         site = sample_event.get("site") or None
+        if site == "":
+            site = None
+        management = sample_event.get("management") or None
+        if management == "":
+            management = None
+        sample_date = sample_event.get("sample_date") or None
+        if sample_date == "":
+            sample_date = None
         try:
             _ = check_uuid(site)
         except ParseError:
             return self.error(self.identifier, self.SITE_MSG)
 
         qry = {
+            "sample_event__site": site,
+            "sample_event__management": management,
+            "sample_event__sample_date": sample_date,
             "number": number,
             "label": label,
             "sample_event__relative_depth": relative_depth,
-            "sample_event__site": site,
             "width_id": width,
         }
 
@@ -1087,17 +1107,15 @@ class QuadratCollectionValidation(DataValidation):
 
         label = quadrat_collection.get("label") or ""
 
-        sample_date = sample_event.get("sample_date")
-        if sample_date == "":
-            sample_date = None
-
-        sample_time = sample_event.get("sample_time")
-        if sample_time == "":
-            sample_time = None
-
         site = sample_event.get("site") or None
         if site == "":
             site = None
+        management = sample_event.get("management") or None
+        if management == "":
+            management = None
+        sample_date = sample_event.get("sample_date") or None
+        if sample_date == "":
+            sample_date = None
 
         profiles = [o.get("profile") for o in self.data.get("observers") or []]
 
@@ -1113,10 +1131,10 @@ class QuadratCollectionValidation(DataValidation):
             return self.error(self.identifier, self.INVALID_MSG)
 
         qry = {
-            "label": label,
             "sample_event__site": site,
-            "sample_event__sample_time": sample_time,
+            "sample_event__management": management,
             "sample_event__sample_date": sample_date,
+            "label": label,
         }
         queryset = QuadratCollection.objects.filter(**qry)
         for profile in profiles:
