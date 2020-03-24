@@ -374,6 +374,15 @@ class CollectRecordCSVSerializer(Serializer):
             ]
         )
 
+    def clean(self, data):
+        return data
+
+    def run_validation(self, data=empty):
+        if data is not empty:
+            data = self.clean(data)
+
+        return super().run_validation(data)
+
     def validate_data__observers(self, val):
         project_profiles = self.project_choices.get("project_profiles")
         val = val or []
