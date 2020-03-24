@@ -8,15 +8,10 @@ from rest_framework.exceptions import ValidationError
 from rest_framework.fields import empty
 from rest_framework.serializers import ListSerializer, Serializer
 
+from api.decorators import timeit
 from .. import utils
 from ..fields import LazyChoiceField
-from ..models import (
-    CollectRecord,
-    Current,
-    RelativeDepth,
-    Tide,
-    Visibility,
-)
+from ..models import CollectRecord, Current, RelativeDepth, Tide, Visibility
 
 __all__ = [
     "CollectRecordCSVListSerializer",
@@ -139,14 +134,7 @@ class CollectRecordCSVListSerializer(ListSerializer):
         ):
             return data
 
-        group_fields = self.get_group_by_fields()
-        group_fields.append(self.child.ordering_field)
-
-        def sort_func(val):
-            key = self.create_key(val, group_fields, delimiter=None)
-            return key
-
-        return sorted(data, key=lambda x: sort_func(x))
+        return sorted(data, key=lambda item: item.get(self.child.ordering_field))
 
     def format_data(self, data):
         assert (
@@ -192,9 +180,8 @@ class CollectRecordCSVListSerializer(ListSerializer):
 
             fmt_rows.append(fmt_row)
 
-        sorted_fmt_rows = self.sort_records(fmt_rows)
-        self._formatted_records = sorted_fmt_rows
-        return sorted_fmt_rows
+        self._formatted_records = fmt_rows
+        return fmt_rows
 
     def validate(self, data):
         # Validate common Transect level fields
@@ -246,7 +233,7 @@ class CollectRecordCSVListSerializer(ListSerializer):
             else:
                 utils.get_value(groups[key], self.child.observations_field).append(obs)
 
-        return list(groups.values())
+        return self.sort_records(groups.values())
 
     def create(self, validated_data):
         records = super().create(validated_data)
