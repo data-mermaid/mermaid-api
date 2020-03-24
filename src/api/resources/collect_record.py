@@ -61,7 +61,7 @@ class CollectRecordFilterSet(BaseAPIFilterSet):
 
 class CollectRecordViewSet(BaseProjectApiViewSet):
     serializer_class = CollectRecordSerializer
-    queryset = CollectRecord.objects.all().order_by("-updated_by")
+    queryset = CollectRecord.objects.all().order_by("id")
     filter_class = CollectRecordFilterSet
 
     def _validate(self, record_id, request):
