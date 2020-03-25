@@ -4,7 +4,7 @@ from django.contrib import admin
 from django.contrib.gis.admin import OSMGeoAdmin
 from django.http import HttpResponse
 
-from ..models.base import *
+from ..models import Application, AuthUser, Profile, AppVersion
 
 
 def lookup_field_from_choices(field_obj, value):
