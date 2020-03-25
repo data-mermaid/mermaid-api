@@ -11,7 +11,7 @@ drop_se_view = "DROP VIEW IF EXISTS public.vw_beltfish_se;"
 class Migration(migrations.Migration):
 
     dependencies = [
-        ('api', '0018_auto_20200311_2122'),
+        ('api', '0019_auto_20200325_1744'),
     ]
 
     operations = [
