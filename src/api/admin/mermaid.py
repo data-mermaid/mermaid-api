@@ -1,3 +1,5 @@
+import operator
+from django.conf import settings
 from django.contrib import admin
 from django.contrib import messages
 from django.utils.html import format_html
@@ -5,10 +7,8 @@ from django.utils.translation import ugettext_lazy as _
 from django.urls import reverse
 
 from .base import BaseAdmin
-from ..models.view_models import FishAttributeView
 from ..utils import get_subclasses
-from ..models.base import *
-from ..models.mermaid import *
+from ..models import *
 
 
 def get_crs_with_attrib(query, attrib_val):
