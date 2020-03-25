@@ -434,7 +434,7 @@ class BeltFishMethodObsSerializer(BaseViewAPISerializer):
             [
                 "sample_unit_id",
                 'sample_time',
-                "number",
+                "transect_number",
                 "label",
                 'depth',
                 "transect_len_surveyed",
@@ -478,8 +478,9 @@ class BeltFishMethodSUSerializer(BaseViewAPISerializer):
         header_order = BaseViewAPISerializer.Meta.header_order.copy()
         header_order.extend(
             [
-                "number",
+                "transect_number",
                 "transect_len_surveyed",
+                "transect_width",
                 "reef_slope",
                 "size_bin",
                 "data_policy_beltfish",
@@ -523,9 +524,6 @@ class BeltFishMethodObsFilterSet(BaseTransectFilterSet):
     sample_unit_id = BaseInFilter("id_lookup")
     transect_width = RangeFilter()
     observers = BaseInFilter(method="json_name_lookup")
-    current_name = BaseInFilter(method="char_lookup")
-    tide_name = BaseInFilter(method="char_lookup")
-    visibility_name = BaseInFilter(method="char_lookup")
     transect_len_surveyed = RangeFilter()
     reef_slope = BaseInFilter(method="char_lookup")
     fish_family = BaseInFilter(method="id_lookup")
@@ -549,12 +547,9 @@ class BeltFishMethodObsFilterSet(BaseTransectFilterSet):
             "reef_type",
             "reef_zone",
             "reef_exposure",
-            "current_name",
-            "tide_name",
-            "visibility_name",
             "transect_len_surveyed",
             "reef_slope",
-            "number",
+            "transect_number",
             "label",
             "fish_taxon",
             "fish_family",
@@ -580,6 +575,7 @@ class BeltFishMethodSUFilterSet(BaseTransectFilterSet):
         model = BeltFishSUView
         fields = [
             "transect_len_surveyed",
+            "transect_width",
             "reef_slope",
             "size_bin",
             "biomass_kgha",
@@ -605,7 +601,7 @@ class BeltFishProjectMethodObsView(BaseProjectMethodView):
     queryset = BeltFishObsView.objects.exclude(project_status=Project.TEST).order_by(
         "site_name",
         "sample_date",
-        "number",
+        "transect_number",
         "label",
         "fish_family",
         "fish_genus",
@@ -622,7 +618,7 @@ class BeltFishProjectMethodSUView(BaseProjectMethodView):
     serializer_class_csv = BeltFishMethodSUCSVSerializer
     filterset_class = BeltFishMethodSUFilterSet
     queryset = BeltFishSUView.objects.exclude(project_status=Project.TEST).order_by(
-        "site_name", "sample_date", "number"
+        "site_name", "sample_date", "transect_number"
     )
 
 
