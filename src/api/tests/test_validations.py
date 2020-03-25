@@ -1,3 +1,4 @@
+import datetime
 from api.models import BenthicAttribute, HabitatComplexityScore, Management, Site
 from api.submission.validations import (
     ERROR,
@@ -522,7 +523,11 @@ class BenthicTransectValidationTest(BaseTestCase):
         super(BenthicTransectValidationTest, self).setUp()
 
         sample_event = dict(
-            relative_depth=str(self.relative_depth.id), site=str(self.site1.id)
+            site=str(self.site1.id),
+            management=str(self.management.id),
+            sample_date=datetime.date(2018, 7, 13),
+            depth=1.1,
+            relative_depth=str(self.relative_depth.id),
         )
         benthic_transect = dict(number=1)
         self.invalid_data = dict(
@@ -542,10 +547,6 @@ class BenthicTransectValidationTest(BaseTestCase):
             sample_event=sample_event, benthic_transect=benthic_transect2
         )
 
-        sample_event = dict(
-            relative_depth=str(self.relative_depth.id), site=str(self.site1.id)
-        )
-        benthic_transect = dict(number=1)
         self.valid_data_diff_trans_method = dict(
             protocol="benthiclit",
             sample_event=sample_event,

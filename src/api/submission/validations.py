@@ -802,7 +802,7 @@ class BenthicTransectValidation(DataValidation):
     DUPLICATE_MSG = _("Transect already exists")
     NUMBER_MSG = _("Transect number is not valid")
     RELATIVE_DEPTH_MSG = _("Relative depth not valid")
-    SITE_MSG = _("Benthic Transect is not valid")
+    INVALID_MSG = _("Benthic Transect is not valid")
     identifier = "benthic_transect"
 
     def validate_duplicate(self):
@@ -818,26 +818,31 @@ class BenthicTransectValidation(DataValidation):
 
         label = benthic_transect.get("label") or ""
 
-        relative_depth = sample_event.get("relative_depth")
-        if relative_depth == "":
-            relative_depth = None
+        relative_depth = sample_event.get("relative_depth", None) or None
         if relative_depth is not None:
             try:
                 _ = check_uuid(relative_depth)
             except ParseError:
                 return self.error(self.identifier, self.RELATIVE_DEPTH_MSG)
 
-        site = sample_event.get("site") or None
+        site = sample_event.get("site", None) or None
+        management = sample_event.get("management", None) or None
+        sample_date = sample_event.get("sample_date", None) or None
+        depth = sample_event.get("depth", None) or None
         try:
             _ = check_uuid(site)
+            _ = check_uuid(management)
         except ParseError:
-            return self.error(self.identifier, self.SITE_MSG)
+            return self.error(self.identifier, self.INVALID_MSG)
 
         qry = {
+            "sample_event__site": site,
+            "sample_event__management": management,
+            "sample_event__sample_date": sample_date,
             "number": number,
             "label": label,
+            "sample_event__depth": depth,
             "sample_event__relative_depth": relative_depth,
-            "sample_event__site": site,
         }
 
         results = BenthicTransect.objects.select_related().filter(**qry)
@@ -853,7 +858,7 @@ class FishBeltTransectValidation(DataValidation):
     DUPLICATE_MSG = _("Transect already exists")
     NUMBER_MSG = _("Transect number is not valid")
     RELATIVE_DEPTH_MSG = _("Relative depth not valid")
-    SITE_MSG = _("Fish Belt Transect is not valid")
+    INVALID_MSG = _("Fish Belt Transect is not valid")
     WIDTH_MSG = _("Width is not valid")
     identifier = "fishbelt_transect"
 
@@ -876,26 +881,31 @@ class FishBeltTransectValidation(DataValidation):
         except ParseError:
             return self.error(self.identifier, self.WIDTH_MSG)
 
-        relative_depth = sample_event.get("relative_depth")
-        if relative_depth == "":
-            relative_depth = None
+        relative_depth = sample_event.get("relative_depth", None) or None
         if relative_depth is not None:
             try:
                 _ = check_uuid(relative_depth)
             except ParseError:
                 return self.error(self.identifier, self.RELATIVE_DEPTH_MSG)
 
-        site = sample_event.get("site") or None
+        site = sample_event.get("site", None) or None
+        management = sample_event.get("management", None) or None
+        sample_date = sample_event.get("sample_date", None) or None
+        depth = sample_event.get("depth", None) or None
         try:
             _ = check_uuid(site)
+            _ = check_uuid(management)
         except ParseError:
-            return self.error(self.identifier, self.SITE_MSG)
+            return self.error(self.identifier, self.INVALID_MSG)
 
         qry = {
+            "sample_event__site": site,
+            "sample_event__management": management,
+            "sample_event__sample_date": sample_date,
             "number": number,
             "label": label,
+            "sample_event__depth": depth,
             "sample_event__relative_depth": relative_depth,
-            "sample_event__site": site,
             "width_id": width,
         }
 
@@ -1087,17 +1097,17 @@ class QuadratCollectionValidation(DataValidation):
 
         label = quadrat_collection.get("label") or ""
 
-        sample_date = sample_event.get("sample_date")
-        if sample_date == "":
-            sample_date = None
+        relative_depth = sample_event.get("relative_depth", None) or None
+        if relative_depth is not None:
+            try:
+                _ = check_uuid(relative_depth)
+            except ParseError:
+                return self.error(self.identifier, self.RELATIVE_DEPTH_MSG)
 
-        sample_time = sample_event.get("sample_time")
-        if sample_time == "":
-            sample_time = None
-
-        site = sample_event.get("site") or None
-        if site == "":
-            site = None
+        site = sample_event.get("site", None) or None
+        management = sample_event.get("management", None) or None
+        sample_date = sample_event.get("sample_date", None) or None
+        depth = sample_event.get("depth", None) or None
 
         profiles = [o.get("profile") for o in self.data.get("observers") or []]
 
@@ -1109,14 +1119,16 @@ class QuadratCollectionValidation(DataValidation):
 
         try:
             _ = check_uuid(site)
+            _ = check_uuid(management)
         except ParseError:
             return self.error(self.identifier, self.INVALID_MSG)
 
         qry = {
-            "label": label,
             "sample_event__site": site,
-            "sample_event__sample_time": sample_time,
+            "sample_event__management": management,
             "sample_event__sample_date": sample_date,
+            "label": label,
+            "sample_event__depth": depth,
         }
         queryset = QuadratCollection.objects.filter(**qry)
         for profile in profiles:

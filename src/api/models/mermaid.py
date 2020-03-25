@@ -431,8 +431,6 @@ class SampleEvent(BaseModel, JSONMixin):
     class Meta:
         db_table = 'sample_event'
         ordering = ('site', 'sample_date')
-        unique_together = ('site', 'management', 'sample_date', 'sample_time', 'depth', 'visibility', 'current',
-                           'relative_depth', 'tide')
 
     def __str__(self):
         return '%s %s' % (self.site.__str__(), self.sample_date)

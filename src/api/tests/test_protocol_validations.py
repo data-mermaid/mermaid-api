@@ -176,6 +176,7 @@ class BenthicPITProtocolValidationTest(TestCase, TestDataMixin):
             obs_benthic_pits=observations,
             benthic_transect=dict(number=1, len_surveyed=30),
             interval_size=5,
+            interval_start=5,
             sample_event=dict(
                 management=str(self.sample_event1.management.id),
                 site=str(self.sample_event1.site.id),
