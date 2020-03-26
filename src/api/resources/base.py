@@ -215,7 +215,7 @@ class BaseViewAPISerializer(BaseAPISerializer):
             'reef_type', 'reef_zone', 'reef_exposure',
             'management_id', 'management_name', 'management_name_secondary', 'management_est_year',
             'management_size', 'management_parties', 'management_compliance', 'management_rules', 'management_notes',
-            'sample_date',
+            'sample_date', "current_name", "tide_name", "visibility_name",
         ]
 
     def get_latitude(self, obj):
@@ -368,6 +368,9 @@ class BaseTransectFilterSet(OrFilterSetMixin, GeoFilterSet):
     management_party = BaseInFilter(field_name="management_parties", method="char_lookup")
     management_compliance = BaseInFilter(method="char_lookup")
     management_rule = BaseInFilter(field_name="management_rules", method="char_lookup")
+    current_name = BaseInFilter(method="char_lookup")
+    tide_name = BaseInFilter(method="char_lookup")
+    visibility_name = BaseInFilter(method="char_lookup")
 
     class Meta:
         fields = [
@@ -389,6 +392,9 @@ class BaseTransectFilterSet(OrFilterSetMixin, GeoFilterSet):
             "management_party",
             "management_compliance",
             "management_rule",
+            "current_name",
+            "tide_name",
+            "visibility_name",
         ]
 
     def full_management_name(self, queryset, name, value):

@@ -252,7 +252,7 @@ SELECT project.id AS project_id,
     se.depth,
     se.notes AS sample_event_notes,
     tt.transectmethod_ptr_id AS sample_unit_id,
-    tbf.number,
+    tbf.number AS transect_number,
     tbf.label,
     tbf.len_surveyed AS transect_len_surveyed,
     rs.name AS reef_slope,
@@ -376,7 +376,7 @@ SELECT project.id AS project_id,
     )
     sample_event_notes = models.TextField(blank=True)
     sample_unit_id = models.UUIDField()
-    number = models.PositiveSmallIntegerField()
+    transect_number = models.PositiveSmallIntegerField()
     label = models.CharField(max_length=50, blank=True)
     transect_len_surveyed = models.PositiveSmallIntegerField(
         verbose_name=_(u"transect length surveyed (m)")
@@ -429,7 +429,7 @@ SELECT project.id AS project_id,
 class BeltFishSUView(BaseViewModel):
     project_lookup = "project_id"
 
-    # NOT grouping by sample_event_id, sample_time, depth, sample_unit_id, transect_width, observers
+    # NOT grouping by sample_event_id, sample_time, depth, sample_unit_id
     sql = """
 DROP VIEW IF EXISTS public.vw_beltfish_su;
 CREATE OR REPLACE VIEW public.vw_beltfish_su
@@ -439,8 +439,9 @@ NULL AS id,
 project_id, project_name, project_status, project_notes, contact_link, tags, site_id, site_name, location, 
 site_notes, country_id, country_name, reef_type, reef_zone, reef_exposure, management_id, management_name, 
 management_name_secondary, management_est_year, management_size, management_parties, management_compliance, 
-management_rules, management_notes, sample_date,  
-"number", transect_len_surveyed, 
+management_rules, management_notes, sample_date, 
+current_name, tide_name, visibility_name, 
+transect_number, transect_len_surveyed, transect_width, observers, 
 reef_slope, size_bin, data_policy_beltfish, 
 
 SUM(biomass_kgha) AS biomass_kgha,
@@ -453,9 +454,12 @@ FROM (
     SELECT project_id, project_name, project_status, project_notes, contact_link, tags, site_id, site_name, location, 
     site_notes, country_id, country_name, reef_type, reef_zone, reef_exposure, management_id, management_name, 
     management_name_secondary, management_est_year, management_size, management_parties, management_compliance, 
-    management_rules, management_notes, sample_date,  
-    "number", transect_len_surveyed, reef_slope, 
-    size_bin, data_policy_beltfish, 
+    management_rules, management_notes, sample_date,
+    string_agg(DISTINCT current_name, ', ' ORDER BY current_name) AS current_name,
+    string_agg(DISTINCT tide_name, ', ' ORDER BY tide_name) AS tide_name,
+    string_agg(DISTINCT visibility_name, ', ' ORDER BY visibility_name) AS visibility_name,
+    transect_number, transect_len_surveyed, transect_width, observers,  
+    reef_slope, size_bin, data_policy_beltfish, 
     trophic_group, 
 
     SUM(biomass_kgha) AS biomass_kgha
@@ -465,8 +469,8 @@ FROM (
     site_notes, country_id, country_name, reef_type, reef_zone, reef_exposure, management_id, management_name, 
     management_name_secondary, management_est_year, management_size, management_parties, management_compliance, 
     management_rules, management_notes, sample_date,  
-    "number", transect_len_surveyed, reef_slope, 
-    size_bin, data_policy_beltfish, 
+    transect_number, transect_len_surveyed, transect_width, observers,  
+    reef_slope, size_bin, data_policy_beltfish, 
     trophic_group
 ) AS beltfish_obs_tg
 
@@ -474,8 +478,9 @@ GROUP BY project_id, project_name, project_status, project_notes, contact_link, 
 site_notes, country_id, country_name, reef_type, reef_zone, reef_exposure, management_id, management_name, 
 management_name_secondary, management_est_year, management_size, management_parties, management_compliance, 
 management_rules, management_notes, sample_date, 
-"number", transect_len_surveyed, reef_slope, 
-size_bin, data_policy_beltfish;
+current_name, tide_name, visibility_name, 
+transect_number, transect_len_surveyed, transect_width, observers,  
+reef_slope, size_bin, data_policy_beltfish
     """
 
     project_id = models.UUIDField()
@@ -511,10 +516,15 @@ size_bin, data_policy_beltfish;
     management_rules = JSONField(null=True, blank=True)
     management_notes = models.TextField(blank=True)
     sample_date = models.DateField()
-    number = models.PositiveSmallIntegerField()
+    current_name = models.CharField(max_length=255)
+    tide_name = models.CharField(max_length=255)
+    visibility_name = models.CharField(max_length=255)
+    transect_number = models.PositiveSmallIntegerField()
     transect_len_surveyed = models.PositiveSmallIntegerField(
         verbose_name=_(u"transect length surveyed (m)")
     )
+    transect_width = models.PositiveSmallIntegerField(null=True, blank=True)
+    observers = JSONField(null=True, blank=True)
     reef_slope = models.CharField(max_length=50)
     size_bin = models.PositiveSmallIntegerField()
     biomass_kgha = models.DecimalField(
