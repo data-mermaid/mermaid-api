@@ -1,9 +1,9 @@
 from rest_framework import serializers
+from rest_framework.fields import empty
 
+from ..fields import LazyChoiceField
 from ..models import BenthicAttribute, GrowthForm, ReefSlope
 from .serializers import CollectRecordCSVSerializer, build_choices
-from ..fields import LazyChoiceField
-
 
 __all__ = ["BenthicPITCSVSerializer"]
 
@@ -34,6 +34,7 @@ class BenthicPITCSVSerializer(CollectRecordCSVSerializer):
     header_map.update(
         {
             "Interval size *": "data__interval_size",
+            "Interval start": "data__interval_start",
             "Transect length surveyed *": "data__benthic_transect__len_surveyed",
             "Transect number *": "data__benthic_transect__number",
             "Transect label": "data__benthic_transect__label",
@@ -44,6 +45,7 @@ class BenthicPITCSVSerializer(CollectRecordCSVSerializer):
     )
 
     data__interval_size = serializers.DecimalField(max_digits=4, decimal_places=2)
+    data__interval_start = serializers.DecimalField(max_digits=4, decimal_places=2)
     data__benthic_transect__len_surveyed = serializers.IntegerField(min_value=0)
     data__benthic_transect__number = serializers.IntegerField(min_value=0)
     data__benthic_transect__label = serializers.CharField(
@@ -62,6 +64,13 @@ class BenthicPITCSVSerializer(CollectRecordCSVSerializer):
     data__obs_benthic_pits__growth_form = LazyChoiceField(
         choices=growth_form_choices, required=False, allow_null=True, allow_blank=True
     )
+
+    def clean(self, data):
+        data = super().clean(data)
+        interval_start = data.get("data__interval_start")
+        if interval_start is None or interval_start.strip() == "":
+            data["data__interval_start"] = data.get("data__interval_size")
+        return data
 
     def validate(self, data):
         data = super().validate(data)
