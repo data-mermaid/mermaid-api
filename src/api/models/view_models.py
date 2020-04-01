@@ -452,7 +452,7 @@ site_notes, country_id, country_name, reef_type, reef_zone, reef_exposure, manag
 management_name_secondary, management_est_year, management_size, management_parties, management_compliance, 
 management_rules, management_notes, sample_date, 
 current_name, tide_name, visibility_name, 
-transect_number, transect_len_surveyed, transect_width, "depth", observers, 
+transect_number, transect_len_surveyed, transect_width_name, "depth", observers, 
 reef_slope, size_bin, data_policy_beltfish, 
 
 SUM(biomass_kgha) AS biomass_kgha,
@@ -470,7 +470,7 @@ FROM (
     string_agg(DISTINCT current_name, ', ' ORDER BY current_name) AS current_name,
     string_agg(DISTINCT tide_name, ', ' ORDER BY tide_name) AS tide_name,
     string_agg(DISTINCT visibility_name, ', ' ORDER BY visibility_name) AS visibility_name,
-    transect_number, transect_len_surveyed, transect_width, "depth", observers,  
+    transect_number, transect_len_surveyed, transect_width_name, "depth", observers,  
     reef_slope, size_bin, data_policy_beltfish, 
     trophic_group, 
 
@@ -482,7 +482,7 @@ FROM (
     site_notes, country_id, country_name, reef_type, reef_zone, reef_exposure, management_id, management_name, 
     management_name_secondary, management_est_year, management_size, management_parties, management_compliance, 
     management_rules, management_notes, sample_date,  
-    transect_number, transect_len_surveyed, transect_width, "depth", observers,  
+    transect_number, transect_len_surveyed, transect_width_name, "depth", observers,  
     reef_slope, size_bin, data_policy_beltfish, 
     trophic_group
 ) AS beltfish_obs_tg
@@ -492,7 +492,7 @@ site_notes, country_id, country_name, reef_type, reef_zone, reef_exposure, manag
 management_name_secondary, management_est_year, management_size, management_parties, management_compliance, 
 management_rules, management_notes, sample_date, 
 current_name, tide_name, visibility_name, 
-transect_number, transect_len_surveyed, transect_width, "depth", observers,  
+transect_number, transect_len_surveyed, transect_width_name, "depth", observers,  
 reef_slope, size_bin, data_policy_beltfish
     """
 
@@ -536,7 +536,7 @@ reef_slope, size_bin, data_policy_beltfish
     transect_len_surveyed = models.PositiveSmallIntegerField(
         verbose_name=_(u"transect length surveyed (m)")
     )
-    transect_width = models.PositiveSmallIntegerField(null=True, blank=True)
+    transect_width_name = models.CharField(max_length=100, null=True, blank=True)
     depth = models.DecimalField(
         max_digits=3, decimal_places=1, verbose_name=_(u"depth (m)")
     )
