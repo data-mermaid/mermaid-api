@@ -17,7 +17,12 @@ from ...models.mermaid import (
     FishGenus,
     FishSpecies,
 )
-from ...models.view_models import FishAttributeView, BeltFishObsView, BeltFishSUView, BeltFishSEView
+from ...models.view_models import (
+    FishAttributeView,
+    BeltFishObsView,
+    BeltFishSUView,
+    BeltFishSEView,
+)
 from ...utils import calc_biomass_density
 
 from . import *
@@ -433,12 +438,12 @@ class BeltFishMethodObsSerializer(BaseViewAPISerializer):
         header_order.extend(
             [
                 "sample_unit_id",
-                'sample_time',
+                "sample_time",
                 "transect_number",
                 "label",
-                'depth',
+                "depth",
                 "transect_len_surveyed",
-                "transect_width",
+                "transect_width_name",
                 "reef_slope",
                 "size_bin",
                 "observers",
@@ -480,7 +485,8 @@ class BeltFishMethodSUSerializer(BaseViewAPISerializer):
             [
                 "transect_number",
                 "transect_len_surveyed",
-                "transect_width",
+                "transect_width_name",
+                "depth",
                 "reef_slope",
                 "size_bin",
                 "data_policy_beltfish",
@@ -508,6 +514,8 @@ class BeltFishMethodSESerializer(BaseViewAPISerializer):
         header_order.extend(
             [
                 "data_policy_beltfish",
+                "sample_unit_count",
+                "depth_avg",
                 "biomass_kgha_avg",
                 "biomass_kgha_by_trophic_group_avg",
             ]
@@ -522,7 +530,6 @@ class BeltFishMethodSEGeoSerializer(BaseViewAPIGeoSerializer):
 class BeltFishMethodObsFilterSet(BaseTransectFilterSet):
     depth = RangeFilter()
     sample_unit_id = BaseInFilter("id_lookup")
-    transect_width = RangeFilter()
     observers = BaseInFilter(method="json_name_lookup")
     transect_len_surveyed = RangeFilter()
     reef_slope = BaseInFilter(method="char_lookup")
@@ -542,7 +549,6 @@ class BeltFishMethodObsFilterSet(BaseTransectFilterSet):
         fields = [
             "depth",
             "sample_unit_id",
-            "transect_width",
             "observers",
             "reef_type",
             "reef_zone",
@@ -568,6 +574,7 @@ class BeltFishMethodObsFilterSet(BaseTransectFilterSet):
 
 class BeltFishMethodSUFilterSet(BaseTransectFilterSet):
     transect_len_surveyed = RangeFilter()
+    depth = RangeFilter()
     reef_slope = BaseInFilter(method="char_lookup")
     biomass_kgha = RangeFilter()
 
@@ -575,7 +582,7 @@ class BeltFishMethodSUFilterSet(BaseTransectFilterSet):
         model = BeltFishSUView
         fields = [
             "transect_len_surveyed",
-            "transect_width",
+            "depth",
             "reef_slope",
             "size_bin",
             "biomass_kgha",
@@ -585,10 +592,12 @@ class BeltFishMethodSUFilterSet(BaseTransectFilterSet):
 
 class BeltFishMethodSEFilterSet(BaseTransectFilterSet):
     biomass_kgha_avg = RangeFilter()
+    sample_unit_count = RangeFilter()
+    depth_avg = RangeFilter()
 
     class Meta:
         model = BeltFishSEView
-        fields = ["biomass_kgha_avg", "data_policy_beltfish"]
+        fields = ["biomass_kgha_avg", "sample_unit_count", "depth_avg", "data_policy_beltfish"]
 
 
 class BeltFishProjectMethodObsView(BaseProjectMethodView):
@@ -625,7 +634,9 @@ class BeltFishProjectMethodSUView(BaseProjectMethodView):
 class BeltFishProjectMethodSEView(BaseProjectMethodView):
     drf_label = "beltfish"
     project_policy = "data_policy_beltfish"
-    permission_classes = [Or(ProjectDataReadOnlyPermission, ProjectPublicSummaryPermission)]
+    permission_classes = [
+        Or(ProjectDataReadOnlyPermission, ProjectPublicSummaryPermission)
+    ]
     serializer_class = BeltFishMethodSESerializer
     serializer_class_geojson = BeltFishMethodSEGeoSerializer
     serializer_class_csv = BeltFishMethodSESerializer

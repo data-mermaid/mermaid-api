@@ -256,7 +256,7 @@ SELECT project.id AS project_id,
     tbf.label,
     tbf.len_surveyed AS transect_len_surveyed,
     rs.name AS reef_slope,
-    w.val AS transect_width,
+    w.name AS transect_width_name,
     observers.observers,
     f.name_family AS fish_family,
     f.name_genus AS fish_genus,
@@ -274,7 +274,7 @@ SELECT project.id AS project_id,
     o.count,
     ROUND(
         (10 * o.count)::numeric * f.biomass_constant_a * ((o.size * f.biomass_constant_c) ^ f.biomass_constant_b) / 
-        (tbf.len_surveyed * w.val)::numeric, 
+        (tbf.len_surveyed * wc.val)::numeric, 
         2
     )::numeric(7,2) AS biomass_kgha,
     o.notes AS observation_notes,
@@ -291,6 +291,17 @@ SELECT project.id AS project_id,
      LEFT JOIN api_fishsizebin sb ON tbf.size_bin_id = sb.id
      LEFT JOIN api_reefslope rs ON tbf.reef_slope_id = rs.id
      JOIN api_belttransectwidth w ON tbf.width_id = w.id
+     INNER JOIN api_belttransectwidthcondition wc ON (
+         w.id = wc.belttransectwidth_id 
+         AND (
+             ((wc.operator = '<' AND o.size < wc.size) OR (wc.operator IS NULL AND wc.size IS NULL))
+             OR ((wc.operator = '<=' AND o.size <= wc.size) OR (wc.operator IS NULL AND wc.size IS NULL))
+             OR ((wc.operator = '>' AND o.size > wc.size) OR (wc.operator IS NULL AND wc.size IS NULL))
+             OR ((wc.operator = '>=' AND o.size >= wc.size) OR (wc.operator IS NULL AND wc.size IS NULL))
+             OR ((wc.operator = '==' AND o.size = wc.size) OR (wc.operator IS NULL AND wc.size IS NULL))
+             OR ((wc.operator = '!=' AND o.size != wc.size) OR (wc.operator IS NULL AND wc.size IS NULL))
+         )
+     )
      JOIN sample_event se ON tbf.sample_event_id = se.id
      LEFT JOIN api_current c ON se.current_id = c.id
      LEFT JOIN api_tide t ON se.tide_id = t.id
@@ -382,7 +393,7 @@ SELECT project.id AS project_id,
         verbose_name=_(u"transect length surveyed (m)")
     )
     reef_slope = models.CharField(max_length=50)
-    transect_width = models.PositiveSmallIntegerField(null=True, blank=True)
+    transect_width_name = models.CharField(max_length=100, null=True, blank=True)
     observers = JSONField(null=True, blank=True)
     fish_family = models.CharField(max_length=100)
     fish_genus = models.CharField(max_length=100)
@@ -429,19 +440,19 @@ SELECT project.id AS project_id,
 class BeltFishSUView(BaseViewModel):
     project_lookup = "project_id"
 
-    # NOT grouping by sample_event_id, sample_time, depth, sample_unit_id
+    # NOT grouping by sample_time
     sql = """
 DROP VIEW IF EXISTS public.vw_beltfish_su;
 CREATE OR REPLACE VIEW public.vw_beltfish_su
  AS
 SELECT 
-NULL AS id,
+id,
 project_id, project_name, project_status, project_notes, contact_link, tags, site_id, site_name, location, 
 site_notes, country_id, country_name, reef_type, reef_zone, reef_exposure, management_id, management_name, 
 management_name_secondary, management_est_year, management_size, management_parties, management_compliance, 
 management_rules, management_notes, sample_date, 
 current_name, tide_name, visibility_name, 
-transect_number, transect_len_surveyed, transect_width, observers, 
+transect_number, transect_len_surveyed, transect_width, "depth", observers, 
 reef_slope, size_bin, data_policy_beltfish, 
 
 SUM(biomass_kgha) AS biomass_kgha,
@@ -451,35 +462,37 @@ jsonb_object_agg(
 ) AS biomass_kgha_by_trophic_group
  
 FROM (
-    SELECT project_id, project_name, project_status, project_notes, contact_link, tags, site_id, site_name, location, 
+    SELECT sample_unit_id AS id, project_id, project_name, project_status, project_notes, contact_link, tags, 
+    site_id, site_name, location, 
     site_notes, country_id, country_name, reef_type, reef_zone, reef_exposure, management_id, management_name, 
     management_name_secondary, management_est_year, management_size, management_parties, management_compliance, 
     management_rules, management_notes, sample_date,
     string_agg(DISTINCT current_name, ', ' ORDER BY current_name) AS current_name,
     string_agg(DISTINCT tide_name, ', ' ORDER BY tide_name) AS tide_name,
     string_agg(DISTINCT visibility_name, ', ' ORDER BY visibility_name) AS visibility_name,
-    transect_number, transect_len_surveyed, transect_width, observers,  
+    transect_number, transect_len_surveyed, transect_width, "depth", observers,  
     reef_slope, size_bin, data_policy_beltfish, 
     trophic_group, 
 
     SUM(biomass_kgha) AS biomass_kgha
     
     FROM vw_beltfish_obs
-    GROUP BY project_id, project_name, project_status, project_notes, contact_link, tags, site_id, site_name, location, 
+    GROUP BY sample_unit_id, project_id, project_name, project_status, project_notes, contact_link, tags, site_id, 
+    site_name, location, 
     site_notes, country_id, country_name, reef_type, reef_zone, reef_exposure, management_id, management_name, 
     management_name_secondary, management_est_year, management_size, management_parties, management_compliance, 
     management_rules, management_notes, sample_date,  
-    transect_number, transect_len_surveyed, transect_width, observers,  
+    transect_number, transect_len_surveyed, transect_width, "depth", observers,  
     reef_slope, size_bin, data_policy_beltfish, 
     trophic_group
 ) AS beltfish_obs_tg
 
-GROUP BY project_id, project_name, project_status, project_notes, contact_link, tags, site_id, site_name, location, 
+GROUP BY id, project_id, project_name, project_status, project_notes, contact_link, tags, site_id, site_name, location, 
 site_notes, country_id, country_name, reef_type, reef_zone, reef_exposure, management_id, management_name, 
 management_name_secondary, management_est_year, management_size, management_parties, management_compliance, 
 management_rules, management_notes, sample_date, 
 current_name, tide_name, visibility_name, 
-transect_number, transect_len_surveyed, transect_width, observers,  
+transect_number, transect_len_surveyed, transect_width, "depth", observers,  
 reef_slope, size_bin, data_policy_beltfish
     """
 
@@ -524,6 +537,9 @@ reef_slope, size_bin, data_policy_beltfish
         verbose_name=_(u"transect length surveyed (m)")
     )
     transect_width = models.PositiveSmallIntegerField(null=True, blank=True)
+    depth = models.DecimalField(
+        max_digits=3, decimal_places=1, verbose_name=_(u"depth (m)")
+    )
     observers = JSONField(null=True, blank=True)
     reef_slope = models.CharField(max_length=50)
     size_bin = models.PositiveSmallIntegerField()
@@ -560,7 +576,9 @@ country_id, country_name,
 reef_type, reef_zone, reef_exposure, 
 vw_beltfish_su.management_id, management_name, management_name_secondary, management_est_year, management_size, 
 management_parties, management_compliance, management_rules, management_notes, 
-vw_beltfish_su.sample_date, data_policy_beltfish,
+vw_beltfish_su.sample_date, data_policy_beltfish, 
+COUNT(vw_beltfish_su.id) AS sample_unit_count,
+ROUND(AVG("depth"), 2) as depth_avg,
 biomass_kgha_avg,
 biomass_kgha_by_trophic_group_avg
 
@@ -649,6 +667,10 @@ biomass_kgha_by_trophic_group_avg;
         verbose_name=_(u"biomass (kg/ha)"),
         null=True,
         blank=True,
+    )
+    sample_unit_count = models.PositiveSmallIntegerField()
+    depth_avg = models.DecimalField(
+        max_digits=4, decimal_places=2, verbose_name=_(u"depth (m)")
     )
     biomass_kgha_by_trophic_group_avg = JSONField(null=True, blank=True)
     data_policy_beltfish = models.CharField(max_length=50)
