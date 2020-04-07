@@ -353,6 +353,7 @@ class RelatedOrderingFilter(OrderingFilter):
 
 
 class BaseTransectFilterSet(OrFilterSetMixin, GeoFilterSet):
+    id = BaseInFilter(method="id_lookup")
     site_id = BaseInFilter(method="id_lookup")
     site_name = BaseInFilter(method="char_lookup")
     site_within = GeometryFilter(field_name="location", lookup_expr='within')

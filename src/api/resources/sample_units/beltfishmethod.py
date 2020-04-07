@@ -1,13 +1,9 @@
-from django.conf import settings
 from django.db import transaction
 from rest_framework import status
+from rest_framework.decorators import action
 from rest_framework.response import Response
 from rest_framework.serializers import SerializerMethodField
-from rest_framework.decorators import action
-from rest_framework_gis.fields import GeometryField
-from rest_framework_gis.filterset import GeoFilterSet
-from rest_framework_gis.filters import GeometryFilter
-from django_filters import DateFromToRangeFilter, BaseInFilter, RangeFilter
+from django_filters import BaseInFilter, RangeFilter
 
 from ...models.mermaid import (
     BeltFish,
@@ -550,9 +546,6 @@ class BeltFishMethodObsFilterSet(BaseTransectFilterSet):
             "depth",
             "sample_unit_id",
             "observers",
-            "reef_type",
-            "reef_zone",
-            "reef_exposure",
             "transect_len_surveyed",
             "reef_slope",
             "transect_number",
@@ -575,15 +568,18 @@ class BeltFishMethodObsFilterSet(BaseTransectFilterSet):
 class BeltFishMethodSUFilterSet(BaseTransectFilterSet):
     transect_len_surveyed = RangeFilter()
     depth = RangeFilter()
+    observers = BaseInFilter(method="json_name_lookup")
     reef_slope = BaseInFilter(method="char_lookup")
     biomass_kgha = RangeFilter()
 
     class Meta:
         model = BeltFishSUView
         fields = [
-            "transect_len_surveyed",
             "depth",
+            "observers",
+            "transect_len_surveyed",
             "reef_slope",
+            "transect_number",
             "size_bin",
             "biomass_kgha",
             "data_policy_beltfish",

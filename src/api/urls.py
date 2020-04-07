@@ -39,7 +39,12 @@ from .resources.sample_units.beltfishmethod import (
     BeltFishProjectMethodSEView,
 )
 from .resources.sample_units.benthiclitmethod import BenthicLITMethodView
-from .resources.sample_units.benthicpitmethod import BenthicPITMethodView
+from .resources.sample_units.benthicpitmethod import (
+    BenthicPITMethodView,
+    BenthicPITProjectMethodObsView,
+    BenthicPITProjectMethodSUView,
+    BenthicPITProjectMethodSEView,
+)
 from .resources.sample_units.habitatcomplexitymethod import HabitatComplexityMethodView
 from .resources.sample_units.bleachingquadratcollectionmethod import (
     BleachingQuadratCollectionMethodView,
@@ -113,6 +118,13 @@ project_router.register(
 project_router.register(
    r"beltfishes/sampleevents", BeltFishProjectMethodSEView, "sampleevent"
 )
+project_router.register(
+    r"benthicpits/obstransectbenthicpits",
+    BenthicPITProjectMethodObsView,
+    "obstransectbenthicpit",
+)
+project_router.register(r"benthicpits/sampleunits", BenthicPITProjectMethodSUView, "sampleunit")
+project_router.register(r"benthicpits/sampleevents", BenthicPITProjectMethodSEView, "sampleevent")
 
 # multi model sample unit method reports
 project_router.register(
