@@ -2,16 +2,28 @@ from django.db import transaction
 from rest_framework import status
 from rest_framework.decorators import action
 from rest_framework.response import Response
+from rest_framework.serializers import SerializerMethodField
+from django_filters import BaseInFilter, RangeFilter
 
 from ...models.mermaid import BenthicPIT, ObsBenthicPIT, BenthicAttribute
+from ...models.view_models import (
+    BenthicPITObsView,
+    BenthicPITSUView,
+    BenthicPITSEView,
+)
 
 from . import *
-from ..sample_event import SampleEventSerializer
-from ..benthic_transect import BenthicTransectSerializer
+from ..base import (
+    BaseProjectApiViewSet,
+    BaseViewAPISerializer,
+    BaseViewAPIGeoSerializer,
+    BaseTransectFilterSet,
+)
 from ..benthic_pit import BenthicPITSerializer
-from ..observer import ObserverSerializer
+from ..benthic_transect import BenthicTransectSerializer
 from ..obs_benthic_pit import ObsBenthicPITSerializer
-from ..base import BaseProjectApiViewSet
+from ..observer import ObserverSerializer
+from ..sample_event import SampleEventSerializer
 
 
 class BenthicPITMethodSerializer(BenthicPITSerializer):
@@ -208,3 +220,189 @@ class BenthicPITMethodView(BaseProjectApiViewSet):
             ),
             **kwargs
         )
+
+
+class BenthicPITMethodObsSerializer(BaseViewAPISerializer):
+    class Meta(BaseViewAPISerializer.Meta):
+        model = BenthicPITObsView
+        exclude = BaseViewAPISerializer.Meta.exclude.copy()
+        exclude.append("location")
+        header_order = ['id'] + BaseViewAPISerializer.Meta.header_order.copy()
+        header_order.extend(
+            [
+                "sample_unit_id",
+                "sample_time",
+                "transect_number",
+                "label",
+                "depth",
+                "transect_len_surveyed",
+                "reef_slope",
+                "observers",
+                "data_policy_benthicpit",
+                "interval_size",
+                "interval_start",
+                "interval",
+                "benthic_category",
+                "benthic_attribute",
+                "growth_form",
+                "observation_notes",
+            ]
+        )
+
+
+class BenthicPITMethodObsCSVSerializer(BenthicPITMethodObsSerializer):
+    observers = SerializerMethodField()
+
+
+class BenthicPITMethodObsGeoSerializer(BaseViewAPIGeoSerializer):
+    class Meta(BaseViewAPIGeoSerializer.Meta):
+        model = BenthicPITObsView
+
+
+class BenthicPITMethodSUSerializer(BaseViewAPISerializer):
+    class Meta(BaseViewAPISerializer.Meta):
+        model = BenthicPITSUView
+        exclude = BaseViewAPISerializer.Meta.exclude.copy()
+        exclude.append("location")
+        header_order = BaseViewAPISerializer.Meta.header_order.copy()
+        header_order.extend(
+            [
+                "transect_number",
+                "transect_len_surveyed",
+                "depth",
+                "reef_slope",
+                "interval_size",
+                "interval_start",
+                "percent_avgs",
+                "data_policy_benthicpit",
+            ]
+        )
+
+
+class BenthicPITMethodSUCSVSerializer(BenthicPITMethodSUSerializer):
+    observers = SerializerMethodField()
+
+
+class BenthicPITMethodSUGeoSerializer(BaseViewAPIGeoSerializer):
+    class Meta(BaseViewAPIGeoSerializer.Meta):
+        model = BenthicPITSUView
+
+
+class BenthicPITMethodSESerializer(BaseViewAPISerializer):
+    class Meta(BaseViewAPISerializer.Meta):
+        model = BenthicPITSEView
+        exclude = BaseViewAPISerializer.Meta.exclude.copy()
+        exclude.append("location")
+        header_order = BaseViewAPISerializer.Meta.header_order.copy()
+        header_order.extend(
+            [
+                "data_policy_benthicpit",
+                "sample_unit_count",
+                "depth_avg",
+                "benthicpit_by_cat_avg",
+            ]
+        )
+
+
+class BenthicPITMethodSEGeoSerializer(BaseViewAPIGeoSerializer):
+    class Meta(BaseViewAPIGeoSerializer.Meta):
+        model = BenthicPITSEView
+
+
+class BenthicPITMethodObsFilterSet(BaseTransectFilterSet):
+    depth = RangeFilter()
+    sample_unit_id = BaseInFilter("id_lookup")
+    observers = BaseInFilter(method="json_name_lookup")
+    transect_len_surveyed = RangeFilter()
+    reef_slope = BaseInFilter(method="char_lookup")
+    interval_size = RangeFilter()
+    interval = RangeFilter()
+
+    class Meta:
+        model = BenthicPITObsView
+        fields = [
+            "depth",
+            "sample_unit_id",
+            "observers",
+            "transect_len_surveyed",
+            "reef_slope",
+            "transect_number",
+            "interval_size",
+            "interval",
+            "benthic_category",
+            "benthic_attribute",
+            "growth_form",
+            "data_policy_benthicpit",
+        ]
+
+
+class BenthicPITMethodSUFilterSet(BaseTransectFilterSet):
+    transect_len_surveyed = RangeFilter()
+    depth = RangeFilter()
+    observers = BaseInFilter(method="json_name_lookup")
+    reef_slope = BaseInFilter(method="char_lookup")
+    interval_size = RangeFilter()
+
+    class Meta:
+        model = BenthicPITSUView
+        fields = [
+            "depth",
+            "observers",
+            "transect_len_surveyed",
+            "reef_slope",
+            "transect_number",
+            "interval_size",
+            "data_policy_benthicpit",
+        ]
+
+
+class BenthicPITMethodSEFilterSet(BaseTransectFilterSet):
+    sample_unit_count = RangeFilter()
+    depth_avg = RangeFilter()
+
+    class Meta:
+        model = BenthicPITSEView
+        fields = ["sample_unit_count", "depth_avg", "data_policy_benthicpit"]
+
+
+class BenthicPITProjectMethodObsView(BaseProjectMethodView):
+    drf_label = "benthicpit"
+    project_policy = "data_policy_benthicpit"
+    serializer_class = BenthicPITMethodObsSerializer
+    serializer_class_geojson = BenthicPITMethodObsGeoSerializer
+    serializer_class_csv = BenthicPITMethodObsCSVSerializer
+    filterset_class = BenthicPITMethodObsFilterSet
+    queryset = BenthicPITObsView.objects.exclude(project_status=Project.TEST).order_by(
+        "site_name",
+        "sample_date",
+        "transect_number",
+        "label",
+        "interval",
+    )
+
+
+class BenthicPITProjectMethodSUView(BaseProjectMethodView):
+    drf_label = "benthicpit"
+    project_policy = "data_policy_benthicpit"
+    serializer_class = BenthicPITMethodSUSerializer
+    serializer_class_geojson = BenthicPITMethodSUGeoSerializer
+    serializer_class_csv = BenthicPITMethodSUCSVSerializer
+    filterset_class = BenthicPITMethodSUFilterSet
+    queryset = BenthicPITSUView.objects.exclude(project_status=Project.TEST).order_by(
+        "site_name", "sample_date", "transect_number"
+    )
+
+
+class BenthicPITProjectMethodSEView(BaseProjectMethodView):
+    drf_label = "benthicpit"
+    project_policy = "data_policy_benthicpit"
+    permission_classes = [
+        Or(ProjectDataReadOnlyPermission, ProjectPublicSummaryPermission)
+    ]
+    serializer_class = BenthicPITMethodSESerializer
+    serializer_class_geojson = BenthicPITMethodSEGeoSerializer
+    serializer_class_csv = BenthicPITMethodSESerializer
+    filterset_class = BenthicPITMethodSEFilterSet
+    queryset = BenthicPITSEView.objects.exclude(project_status=Project.TEST).order_by(
+        "site_name", "sample_date"
+    )
