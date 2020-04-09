@@ -5,6 +5,122 @@ from .base import *
 
 class BeltFishObsView(BaseViewModel):
     sql = """
+CREATE OR REPLACE VIEW public.vw_sample_events
+ AS
+ SELECT project.id AS project_id,
+    project.name AS project_name,
+    project.status AS project_status,
+    project.notes AS project_notes,
+    'https://datamermaid.org/contact-project/?project_id='::text || COALESCE(project.id::text, ''::text) AS 
+    contact_link,
+    tags.tags,
+    se.site_id,
+    site.name AS site_name,
+    site.location,
+    site.notes AS site_notes,
+    country.id AS country_id,
+    country.name AS country_name,
+    rt.name AS reef_type,
+    rz.name AS reef_zone,
+    re.name AS reef_exposure,
+    m.id AS management_id,
+    m.name AS management_name,
+    m.name_secondary AS management_name_secondary,
+    m.est_year AS management_est_year,
+    m.size AS management_size,
+    parties.parties AS management_parties,
+    mc.name AS management_compliance,
+    array_to_json(array_remove(ARRAY[
+        CASE
+            WHEN m.no_take THEN 'no take'::text
+            ELSE NULL::text
+        END,
+        CASE
+            WHEN m.open_access THEN 'open access'::text
+            ELSE NULL::text
+        END,
+        CASE
+            WHEN m.gear_restriction THEN 'gear restriction'::text
+            ELSE NULL::text
+        END,
+        CASE
+            WHEN m.periodic_closure THEN 'periodic closure'::text
+            ELSE NULL::text
+        END,
+        CASE
+            WHEN m.size_limits THEN 'size limits'::text
+            ELSE NULL::text
+        END,
+        CASE
+            WHEN m.species_restriction THEN 'species restriction'::text
+            ELSE NULL::text
+        END], NULL::text))::jsonb AS management_rules,
+    m.notes AS management_notes,
+    se.id AS sample_event_id,
+    se.sample_date,
+    se.sample_time,
+    c.name AS current_name,
+    t.name AS tide_name,
+    v.name AS visibility_name,
+    se.depth,
+    se.notes AS sample_event_notes,
+    CASE
+        WHEN project.data_policy_beltfish = 10 THEN 'private'::text
+        WHEN project.data_policy_beltfish = 50 THEN 'public summary'::text
+        WHEN project.data_policy_beltfish = 100 THEN 'public'::text
+        ELSE ''::text
+    END AS data_policy_beltfish,
+    CASE
+        WHEN project.data_policy_benthiclit = 10 THEN 'private'::text
+        WHEN project.data_policy_benthiclit = 50 THEN 'public summary'::text
+        WHEN project.data_policy_benthiclit = 100 THEN 'public'::text
+        ELSE ''::text
+    END AS data_policy_benthiclit,
+    CASE
+        WHEN project.data_policy_benthicpit = 10 THEN 'private'::text
+        WHEN project.data_policy_benthicpit = 50 THEN 'public summary'::text
+        WHEN project.data_policy_benthicpit = 100 THEN 'public'::text
+        ELSE ''::text
+    END AS data_policy_benthicpit,
+    CASE
+        WHEN project.data_policy_habitatcomplexity = 10 THEN 'private'::text
+        WHEN project.data_policy_habitatcomplexity = 50 THEN 'public summary'::text
+        WHEN project.data_policy_habitatcomplexity = 100 THEN 'public'::text
+        ELSE ''::text
+    END AS data_policy_habitatcomplexity,
+    CASE
+        WHEN project.data_policy_bleachingqc = 10 THEN 'private'::text
+        WHEN project.data_policy_bleachingqc = 50 THEN 'public summary'::text
+        WHEN project.data_policy_bleachingqc = 100 THEN 'public'::text
+        ELSE ''::text
+    END AS data_policy_bleachingqc
+
+    FROM sample_event se
+     LEFT JOIN api_current c ON se.current_id = c.id
+     LEFT JOIN api_tide t ON se.tide_id = t.id
+     LEFT JOIN api_visibility v ON se.visibility_id = v.id
+     JOIN site ON se.site_id = site.id
+     JOIN project ON site.project_id = project.id
+     LEFT JOIN ( SELECT project_1.id,
+            jsonb_agg(jsonb_build_object('id', t_1.id, 'name', t_1.name)) AS tags
+           FROM api_uuidtaggeditem ti
+             JOIN django_content_type ct ON ti.content_type_id = ct.id
+             JOIN project project_1 ON ti.object_id = project_1.id
+             JOIN api_tag t_1 ON ti.tag_id = t_1.id
+          WHERE ct.app_label::text = 'api'::text AND ct.model::text = 'project'::text
+          GROUP BY project_1.id) tags ON project.id = tags.id
+     JOIN country ON site.country_id = country.id
+     LEFT JOIN api_reeftype rt ON site.reef_type_id = rt.id
+     LEFT JOIN api_reefzone rz ON site.reef_zone_id = rz.id
+     LEFT JOIN api_reefexposure re ON site.exposure_id = re.id
+     JOIN management m ON se.management_id = m.id
+     LEFT JOIN management_compliance mc ON m.compliance_id = mc.id
+     LEFT JOIN ( SELECT mps.management_id,
+            jsonb_agg(mp.name ORDER BY mp.name) AS parties
+           FROM management_parties mps
+             JOIN management_party mp ON mps.managementparty_id = mp.id
+          GROUP BY mps.management_id) parties ON m.id = parties.management_id;
+
 CREATE OR REPLACE VIEW public.vw_beltfish_obs
  AS
  SELECT 

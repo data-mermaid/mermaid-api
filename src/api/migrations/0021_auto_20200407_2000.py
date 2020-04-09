@@ -11,7 +11,7 @@ from ..models.view_models import (
     BenthicPITSEView,
 )
 
-drop_se_view = "DROP VIEW IF EXISTS public.vw_sample_events;"
+drop_se_view = "DROP VIEW IF EXISTS public.vw_sample_events CASCADE;"
 drop_fb_obs_view = "DROP VIEW IF EXISTS public.vw_beltfish_obs CASCADE;"
 drop_fb_su_view = "DROP VIEW IF EXISTS public.vw_beltfish_su;"
 drop_fb_se_view = "DROP VIEW IF EXISTS public.vw_beltfish_se;"

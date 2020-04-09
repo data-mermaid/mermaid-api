@@ -273,7 +273,7 @@ class BenthicPITMethodSUSerializer(BaseViewAPISerializer):
                 "reef_slope",
                 "interval_size",
                 "interval_start",
-                "percent_avgs",
+                "percent_cover_by_benthic_category",
                 "data_policy_benthicpit",
             ]
         )
@@ -299,7 +299,7 @@ class BenthicPITMethodSESerializer(BaseViewAPISerializer):
                 "data_policy_benthicpit",
                 "sample_unit_count",
                 "depth_avg",
-                "benthicpit_by_cat_avg",
+                "percent_cover_by_benthic_category_avg",
             ]
         )
 

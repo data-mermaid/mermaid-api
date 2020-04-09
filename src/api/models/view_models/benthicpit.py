@@ -111,7 +111,7 @@ su.sample_unit_id AS id, {se_fields},
 current_name, tide_name, visibility_name, data_policy_benthicpit,
 transect_number, transect_len_surveyed, observers,
 reef_slope, interval_size, interval_start,
-percent_avgs
+percent_cover_by_benthic_category
 FROM (
     SELECT 
     sample_unit_id, {se_fields},
@@ -139,7 +139,7 @@ INNER JOIN (
     jsonb_object_agg(
         cps.benthic_category, 
         ROUND(100 * cps.category_length / cat_totals.su_length, 2)
-    ) AS percent_avgs
+    ) AS percent_cover_by_benthic_category
     FROM cps
     INNER JOIN (
         SELECT 
@@ -172,7 +172,7 @@ INNER JOIN (
         default=0.5,
         verbose_name=_("interval start (m)"),
     )
-    percent_avgs = JSONField(null=True, blank=True)
+    percent_cover_by_benthic_category = JSONField(null=True, blank=True)
     data_policy_benthicpit = models.CharField(max_length=50)
 
     objects = ExtendedManager()
@@ -201,18 +201,18 @@ string_agg(DISTINCT tide_name, ', ' ORDER BY tide_name) AS tide_name,
 string_agg(DISTINCT visibility_name, ', ' ORDER BY visibility_name) AS visibility_name,
 COUNT(vw_benthicpit_su.id) AS sample_unit_count,
 ROUND(AVG("depth"), 2) as depth_avg,
-benthicpit_by_cat_avg
+percent_cover_by_benthic_category_avg
 
 FROM public.vw_benthicpit_su
 
 INNER JOIN (
     SELECT project_id, site_id, management_id, sample_date, 
-    jsonb_object_agg(cat, ROUND(cat_percent::numeric, 2)) AS benthicpit_by_cat_avg
+    jsonb_object_agg(cat, ROUND(cat_percent::numeric, 2)) AS percent_cover_by_benthic_category_avg
     FROM (
         SELECT project_id, site_id, management_id, sample_date, 
         cpdata.key AS cat, AVG(cpdata.value::float) AS cat_percent
         FROM public.vw_benthicpit_su,
-        jsonb_each_text(percent_avgs) AS cpdata
+        jsonb_each_text(percent_cover_by_benthic_category) AS cpdata
         GROUP BY 
         project_id, site_id, management_id, sample_date, cpdata.key
     ) AS benthicpit_su_cp
@@ -232,14 +232,14 @@ reef_exposure, vw_benthicpit_su.management_id, management_name, management_name_
 management_size, management_parties, management_compliance, management_rules, management_notes, 
 vw_benthicpit_su.sample_date, 
 data_policy_benthicpit,
-benthicpit_by_cat_avg
+percent_cover_by_benthic_category_avg
     """
 
     sample_unit_count = models.PositiveSmallIntegerField()
     depth_avg = models.DecimalField(
         max_digits=4, decimal_places=2, verbose_name=_("depth (m)")
     )
-    benthicpit_by_cat_avg = JSONField(null=True, blank=True)
+    percent_cover_by_benthic_category_avg = JSONField(null=True, blank=True)
     data_policy_benthicpit = models.CharField(max_length=50)
 
     objects = ExtendedManager()

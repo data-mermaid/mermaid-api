@@ -7,7 +7,7 @@ import pytz
 import operator as pyoperator
 from decimal import Decimal
 
-from django.db.models import Avg
+from django.db.models import Avg, Q
 from django.contrib.gis.db import models
 from django.contrib.postgres.fields import JSONField
 from django.forms.models import model_to_dict
@@ -999,43 +999,46 @@ class ObsQuadratBenthicPercent(BaseModel, JSONMixin):
 
 class FishAttribute(BaseAttributeModel):
 
+    GROUPING_RANK = 'grouping'
     FAMILY_RANK = 'family'
     GENUS_RANK = 'genus'
     SPECIES_RANK = 'species'
 
     class Meta:
         db_table = 'fish_attribute'
-        # ordering = ('fishfamily', 'fishgenus', 'fishspecies',)
 
     def __str__(self):
-        if hasattr(self, 'fishfamily'):
+        if hasattr(self, 'fishgrouping'):
+            return _(u'%s') % self.fishgrouping.name
+        elif hasattr(self, 'fishfamily'):
             return _(u'%s') % self.fishfamily.name
         elif hasattr(self, 'fishgenus'):
             return _(u'%s') % self.fishgenus.name
         elif hasattr(self, 'fishspecies'):
             return _(u'%s %s') % (self.fishspecies.genus.name, self.fishspecies.name)
+        return "no-name attribute"
 
     @property
     def taxonomic_rank(self):
-        if hasattr(self, 'fishfamily'):
+        if hasattr(self, 'fishgrouping'):
+            return self.GROUPING_RANK
+        elif hasattr(self, 'fishfamily'):
             return self.FAMILY_RANK
-
         elif hasattr(self, 'fishgenus'):
             return self.GENUS_RANK
-
         elif hasattr(self, 'fishspecies'):
             return self.SPECIES_RANK
+        return None
 
     def _get_taxon(self):
-        if hasattr(self, 'fishfamily'):
+        if hasattr(self, 'fishgrouping'):
+            return self.fishgrouping
+        elif hasattr(self, 'fishfamily'):
             return self.fishfamily
-
         elif hasattr(self, 'fishgenus'):
             return self.fishgenus
-
         elif hasattr(self, 'fishspecies'):
             return self.fishspecies
-
         return None
 
     def get_biomass_constants(self):
@@ -1043,6 +1046,80 @@ class FishAttribute(BaseAttributeModel):
         if taxon is None:
             return None, None, None
         return taxon.biomass_constant_a, taxon.biomass_constant_b, taxon.biomass_constant_c
+
+
+class FishGrouping(FishAttribute):
+    name = models.CharField(max_length=100)
+
+    # fish attribute view
+    # serializers: make sure beltfishmethod doesn't error with fas, create new fish_grouping with child fas
+    # ingestion
+    # frontend
+
+    def _get_attribute_constants(self):
+        if hasattr(self, "_attribute_constants"):
+            return self._attribute_constants
+
+        q = Q()
+        for a in self.attribute_grouping.all():
+            q |= Q(pk=a.attribute.pk)
+            q |= Q(genus=a.attribute)
+            q |= Q(genus__family=a.attribute)
+        species = FishSpecies.objects.filter(q).distinct()
+        print(species.count())
+
+        avebiomass = list(species.aggregate(
+            Avg('biomass_constant_a'),
+            Avg('biomass_constant_b'),
+            Avg('biomass_constant_c'),
+        ).values())
+        biomass_constant_a = round(avebiomass[0] or 0, 6)
+        biomass_constant_b = round(avebiomass[1] or 0, 6)
+        biomass_constant_c = round(avebiomass[2] or 0, 6)
+
+        self._attribute_constants = biomass_constant_a, biomass_constant_b, biomass_constant_c
+        return self._attribute_constants
+
+    @property
+    def biomass_constant_a(self):
+        return self._get_attribute_constants()[0]
+
+    @property
+    def biomass_constant_b(self):
+        return self._get_attribute_constants()[1]
+
+    @property
+    def biomass_constant_c(self):
+        return self._get_attribute_constants()[2]
+
+    @property
+    def regions(self):
+        if hasattr(self, "_regions"):
+            return self._regions
+
+        q = Q()
+        for a in self.attribute_grouping.all():
+            q |= Q(fishspecies__genus__family=a.attribute)
+            q |= Q(fishspecies__genus=a.attribute)
+            q |= Q(fishspecies=a.attribute)
+
+        self._regions = Region.objects.filter(q).distinct()
+        return self._regions
+
+    class Meta:
+        db_table = "fish_grouping"
+        ordering = ("name",)
+
+    def __str__(self):
+        return _(u'%s') % self.name or ""
+
+
+class FishGroupingRelationship(models.Model):
+    grouping = models.ForeignKey(FishGrouping, related_name="attribute_grouping", on_delete=models.CASCADE)
+    attribute = models.ForeignKey(FishAttribute, related_name="grouping_attribute", on_delete=models.CASCADE)
+
+    def __str__(self):
+        return u"%s > %s" % (self.grouping, self.attribute)
 
 
 class FishFamily(FishAttribute):
@@ -1075,21 +1152,9 @@ class FishFamily(FishAttribute):
         self._biomass_c = round(avebiomass, 6)
         return self._biomass_c
     
-
     @property
     def regions(self):
         return Region.objects.filter(fishspecies__genus__family=self).distinct()
-
-    # This doesn't work: average of averages != average of original values
-    # @property
-    # def biomass_constant_a(self):
-    #     if hasattr(self, '_biomass_a'):
-    #         return self._biomass_a
-    #
-    #     genus_averages = [g.biomass_constant_a for g in self.fishgenus_set.all()]
-    #     genus_count = len(genus_averages) or 1
-    #     self._biomass_a = round(sum(genus_averages) / genus_count, 6)
-    #     return self._biomass_a
 
     class Meta:
         db_table = 'fish_family'
@@ -1104,38 +1169,14 @@ class FishGenus(FishAttribute):
     name = models.CharField(max_length=100)
     family = models.ForeignKey(FishFamily, on_delete=models.CASCADE)
 
-    # @property
-    # def species(self):
-    #     if hasattr(self, '_species'):
-    #         return self._species
-    #     else:
-    #         return self.fishspecies_set.all()
-
-    # calc average of all species' a for this genus
-    # options for dealing with generating a separate query for each fishgenus in a long list:
-    # use django_postgres view, and don't define this at model level
-    # caching - maintain list of species in memory?
-    # use raw(), maybe with custom Manager
     @property
     def biomass_constant_a(self):
         if hasattr(self, '_biomass_a'):
             return self._biomass_a
 
-        avebiomass =  0
         avebiomass = list(self.fishspecies_set.aggregate(Avg('biomass_constant_a')).values())[0] or 0
         self._biomass_a = round(avebiomass, 6)
         return self._biomass_a
-        # a_sum = 0
-        # a_count = len(self.species)
-        # if a_count > 0:
-        #     for s in self.species:
-        #         a_sum += s.biomass_constant_a
-        #     self._biomass_a = round(a_sum / a_count, 6)
-        #     return self._biomass_a
-        # else:
-        #     return 0
-
-    # biomass_constant_a.fget.help_text = _(u'Average of biomass constant a for all species in this genus')
 
     @property
     def biomass_constant_b(self):
@@ -1154,8 +1195,6 @@ class FishGenus(FishAttribute):
         avebiomass = list(self.fishspecies_set.aggregate(Avg('biomass_constant_c')).values())[0] or 0
         self._biomass_c = round(avebiomass, 6)
         return self._biomass_c
-
-    # biomass_constant_a.fget.help_text = _(u'Average of biomass constant b for all species in this genus')
 
     @property
     def regions(self):
