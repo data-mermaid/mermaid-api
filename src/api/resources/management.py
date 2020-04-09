@@ -128,7 +128,7 @@ class ManagementFilterSet(BaseAPIFilterSet):
                             ARRAY_AGG(project_id::text) AS project_ids
                         FROM
                             management
-                        INNER JOIN
+                        LEFT JOIN
                             (
                                 SELECT array_to_string(ARRAY_AGG(management_party.name ORDER BY management_party.name), ',') AS parties, management_parties.management_id
                                 FROM
