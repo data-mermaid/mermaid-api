@@ -1,0 +1,41 @@
+from django.utils.decorators import method_decorator
+from django.views.decorators.cache import cache_page
+from rest_framework import serializers
+from .base import BaseAPIFilterSet, BaseAttributeApiViewSet, BaseAPISerializer
+from ..models import FishGrouping
+
+
+class FishGroupingSerializer(BaseAPISerializer):
+    status = serializers.ReadOnlyField()
+    biomass_constant_a = serializers.ReadOnlyField()
+    biomass_constant_b = serializers.ReadOnlyField()
+    biomass_constant_c = serializers.ReadOnlyField()
+    regions = serializers.SerializerMethodField()
+    fish_attributes = serializers.SerializerMethodField()
+
+    class Meta:
+        model = FishGrouping
+        exclude = []
+
+    def get_regions(self, obj):
+        return [r.pk for r in obj.regions]
+
+    def get_fish_attributes(self, obj):
+        return [a.attribute_id for a in obj.attribute_grouping.all()]
+
+
+class FishGroupingFilterSet(BaseAPIFilterSet):
+    class Meta:
+        model = FishGrouping
+        fields = ["status"]
+
+
+class FishGroupingViewSet(BaseAttributeApiViewSet):
+    serializer_class = FishGroupingSerializer
+    queryset = FishGrouping.objects.select_related()
+    filter_class = FishGroupingFilterSet
+    search_fields = ["name"]
+
+    @method_decorator(cache_page(60 * 60))
+    def list(self, request, *args, **kwargs):
+        return super(FishGroupingViewSet, self).list(request, *args, **kwargs)

@@ -1051,11 +1051,6 @@ class FishAttribute(BaseAttributeModel):
 class FishGrouping(FishAttribute):
     name = models.CharField(max_length=100)
 
-    # fish attribute view
-    # serializers: make sure beltfishmethod doesn't error with fas, create new fish_grouping with child fas
-    # ingestion
-    # frontend
-
     def _get_attribute_constants(self):
         if hasattr(self, "_attribute_constants"):
             return self._attribute_constants
@@ -1066,7 +1061,6 @@ class FishGrouping(FishAttribute):
             q |= Q(genus=a.attribute)
             q |= Q(genus__family=a.attribute)
         species = FishSpecies.objects.filter(q).distinct()
-        print(species.count())
 
         avebiomass = list(species.aggregate(
             Avg('biomass_constant_a'),
