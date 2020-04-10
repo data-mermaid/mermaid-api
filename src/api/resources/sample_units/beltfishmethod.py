@@ -430,7 +430,7 @@ class BeltFishMethodObsSerializer(BaseViewAPISerializer):
         model = BeltFishObsView
         exclude = BaseViewAPISerializer.Meta.exclude.copy()
         exclude.append("location")
-        header_order = ['id'] + BaseViewAPISerializer.Meta.header_order.copy()
+        header_order = ["id"] + BaseViewAPISerializer.Meta.header_order.copy()
         header_order.extend(
             [
                 "sample_unit_id",
@@ -593,7 +593,12 @@ class BeltFishMethodSEFilterSet(BaseTransectFilterSet):
 
     class Meta:
         model = BeltFishSEView
-        fields = ["biomass_kgha_avg", "sample_unit_count", "depth_avg", "data_policy_beltfish"]
+        fields = [
+            "biomass_kgha_avg",
+            "sample_unit_count",
+            "depth_avg",
+            "data_policy_beltfish",
+        ]
 
 
 class BeltFishProjectMethodObsView(BaseProjectMethodView):

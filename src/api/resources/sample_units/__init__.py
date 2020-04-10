@@ -106,15 +106,9 @@ class SampleEventReportSerializerMeta(type):
             ReportField(
                 "{}__site__reef_zone__name".format(sample_event_path), "Reef zone"
             ),
-            ReportField(
-                "{}__sample_date".format(sample_event_path), "Year", to_year
-            ),
-            ReportField(
-                "{}__sample_date".format(sample_event_path), "Month", to_month
-            ),
-            ReportField(
-                "{}__sample_date".format(sample_event_path), "Day", to_day
-            ),
+            ReportField("{}__sample_date".format(sample_event_path), "Year", to_year),
+            ReportField("{}__sample_date".format(sample_event_path), "Month", to_month),
+            ReportField("{}__sample_date".format(sample_event_path), "Day", to_day),
             ReportField(
                 "{}__sample_time".format(sample_event_path), "Start time", to_unicode
             ),
@@ -333,9 +327,7 @@ def fieldreport(obj, request, *args, **kwargs):
         )
 
         for mdl, stream in zip(model_classes, streams):
-            file_name = "{}-{}-{}.csv".format(
-                projname, mdl.__name__.lower(), ts
-            )
+            file_name = "{}-{}-{}.csv".format(projname, mdl.__name__.lower(), ts)
             content = "\n".join(list(stream))
             zipped_reports.writestr(file_name, content)
         zipped_reports.close()
