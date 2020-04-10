@@ -5,6 +5,13 @@ import django.contrib.postgres.fields.jsonb
 from django.db import migrations, models
 import django.db.models.deletion
 import uuid
+from ..models.view_models import *
+
+
+drop_fa_view = "DROP VIEW IF EXISTS public.vw_fish_attributes CASCADE;"
+drop_fb_obs_view = "DROP VIEW IF EXISTS public.vw_beltfish_obs;"
+drop_fb_su_view = "DROP VIEW IF EXISTS public.vw_beltfish_su;"
+drop_fb_se_view = "DROP VIEW IF EXISTS public.vw_beltfish_se;"
 
 
 class Migration(migrations.Migration):
@@ -104,7 +111,7 @@ class Migration(migrations.Migration):
                 ('visibility_name', models.CharField(max_length=50)),
                 ('sample_unit_count', models.PositiveSmallIntegerField()),
                 ('depth_avg', models.DecimalField(decimal_places=2, max_digits=4, verbose_name='depth (m)')),
-                ('benthicpit_by_cat_avg', django.contrib.postgres.fields.jsonb.JSONField(blank=True, null=True)),
+                ('percent_cover_by_benthic_category_avg', django.contrib.postgres.fields.jsonb.JSONField(blank=True, null=True)),
                 ('data_policy_benthicpit', models.CharField(max_length=50)),
             ],
             options={
@@ -151,7 +158,7 @@ class Migration(migrations.Migration):
                 ('reef_slope', models.CharField(max_length=50)),
                 ('interval_size', models.DecimalField(decimal_places=2, default=0.5, max_digits=4, verbose_name='interval size (m)')),
                 ('interval_start', models.DecimalField(decimal_places=2, default=0.5, max_digits=4, verbose_name='interval start (m)')),
-                ('percent_avgs', django.contrib.postgres.fields.jsonb.JSONField(blank=True, null=True)),
+                ('percent_cover_by_benthic_category', django.contrib.postgres.fields.jsonb.JSONField(blank=True, null=True)),
                 ('data_policy_benthicpit', models.CharField(max_length=50)),
             ],
             options={
@@ -177,12 +184,26 @@ class Migration(migrations.Migration):
             ],
             options={
                 'abstract': False,
+                'ordering': ('name',),
+                'db_table': 'fish_grouping',
             },
             bases=('api.fishattribute',),
         ),
-        migrations.AddField(
-            model_name='fishfamily',
-            name='grouping',
-            field=models.ForeignKey(blank=True, null=True, on_delete=django.db.models.deletion.CASCADE, to='api.FishGrouping'),
+        migrations.CreateModel(
+            name='FishGroupingRelationship',
+            fields=[
+                ('id', models.AutoField(auto_created=True, primary_key=True, serialize=False, verbose_name='ID')),
+                ('attribute',
+                 models.ForeignKey(on_delete=django.db.models.deletion.CASCADE, related_name='grouping_attribute',
+                                   to='api.FishAttribute')),
+                ('grouping',
+                 models.ForeignKey(on_delete=django.db.models.deletion.CASCADE, related_name='attribute_grouping',
+                                   to='api.FishGrouping')),
+            ],
         ),
+        migrations.RunSQL(drop_fa_view, FishAttributeView.sql),
+        migrations.RunSQL(FishAttributeView.sql, drop_fa_view),
+        migrations.RunSQL(BeltFishObsView.sql, drop_fb_obs_view),
+        migrations.RunSQL(BeltFishSUView.sql, drop_fb_su_view),
+        migrations.RunSQL(BeltFishSEView.sql, drop_fb_se_view),
     ]
