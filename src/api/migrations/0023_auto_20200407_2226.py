@@ -2,7 +2,7 @@ from django.db import migrations
 from ..models.base import SUPERUSER_APPROVED
 
 
-othercrcp_name = "Others CRCP 2"
+othercrcp_name = "Others CRCP"
 othercrcp_attributes = [
     "53eedd3c-6538-4e93-9f37-54dbda94802c",
     "67230a45-2ca5-400c-95f9-1a4a4ff376f3",
