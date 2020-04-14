@@ -640,6 +640,43 @@ class FishGroupSizeAdmin(BaseAdmin):
     list_display = ('name',)
 
 
+class FishAttributeGroupingAdmin(FishAttributeAdmin):
+    def region_list(self, obj):
+        if not hasattr(obj, "regions"):
+            return []
+        return ", ".join([r.name for r in obj.regions.order_by("name")])
+
+    def get_readonly_fields(self, request, obj=None):
+        if obj:  # editing an existing object
+            return 'biomass_constant_a', 'biomass_constant_b', 'biomass_constant_c', 'region_list'
+        return ()
+
+
+class FishAttributeInline(admin.StackedInline):
+    model = FishGroupingRelationship
+    fk_name = 'grouping'
+    extra = 0
+
+    def formfield_for_foreignkey(self, db_field, request, **kwargs):
+        field = super().formfield_for_foreignkey(db_field, request, **kwargs)
+        if db_field.name == "attribute" and hasattr(self, "cached_fish_attributes"):
+            field.choices = self.cached_fish_attributes
+        return field
+
+
+@admin.register(FishGrouping)
+class FishGroupingAdmin(FishAttributeGroupingAdmin):
+    list_display = ('name',)
+    inlines = (FishAttributeInline,)
+    search_fields = ['name', ]
+
+    def get_formsets_with_inlines(self, request, obj=None):
+        fish_attributes = FishAttributeView.objects.all().order_by("name")
+        for inline in self.get_inline_instances(request, obj):
+            inline.cached_fish_attributes = [(fa.pk, fa.name) for fa in fish_attributes]
+            yield inline.get_formset(request, obj), inline
+
+
 class FishGenusInline(admin.StackedInline):
     model = FishGenus
     fk_name = 'family'
@@ -647,15 +684,10 @@ class FishGenusInline(admin.StackedInline):
 
 
 @admin.register(FishFamily)
-class FishFamilyAdmin(FishAttributeAdmin):
+class FishFamilyAdmin(FishAttributeGroupingAdmin):
     list_display = ('name',)
     inlines = (FishGenusInline,)
     search_fields = ['name', ]
-
-    def get_readonly_fields(self, request, obj=None):
-        if obj:  # editing an existing object
-            return ('biomass_constant_a', 'biomass_constant_b',)
-        return ()
 
 
 class FishSpeciesInline(admin.StackedInline):
@@ -665,9 +697,9 @@ class FishSpeciesInline(admin.StackedInline):
 
 
 @admin.register(FishGenus)
-class FishGenusAdmin(FishAttributeAdmin):
+class FishGenusAdmin(FishAttributeGroupingAdmin):
     list_display = ('name', 'fk_link')
-    readonly_fields = ('biomass_constant_a', 'biomass_constant_b',)
+    readonly_fields = ('biomass_constant_a', 'biomass_constant_b', 'biomass_constant_c',)
     inlines = (FishSpeciesInline,)
     search_fields = ['name', 'family__name', ]
     exportable_fields = ('name', 'family')
@@ -699,7 +731,7 @@ class FishSpeciesAdmin(FishAttributeAdmin):
     fk_link.short_description = _(u'Genus')
 
     def region_list(self, obj):
-        return ",".join([r.name for r in obj.regions.all()])
+        return ", ".join([r.name for r in obj.regions.all()])
 
 
 class ObsTransectBeltFishInline(admin.StackedInline):

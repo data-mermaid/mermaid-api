@@ -10,6 +10,7 @@ from .resources.benthic_attribute import BenthicAttributeViewSet
 from .resources.fish_family import FishFamilyViewSet
 from .resources.fish_genus import FishGenusViewSet
 from .resources.fish_species import FishSpeciesViewSet
+from .resources.fish_grouping import FishGroupingViewSet
 from .resources.choices import ChoiceViewSet
 from .resources.collect_record import CollectRecordViewSet
 from .resources.observer import ObserverViewSet
@@ -79,6 +80,7 @@ router.register(r"fishfamilies", FishFamilyViewSet, "fishfamily")
 router.register(r"fishgenera", FishGenusViewSet, "fishgenus")
 router.register(r"fishspecies", FishSpeciesViewSet, "fishspecies")
 router.register(r"fishsizes", FishSizeViewSet, "fishsizes")
+router.register(r"fishgroupings", FishGroupingViewSet, "fishgrouping")
 
 # choices
 router.register(r"choices", ChoiceViewSet, "choice")

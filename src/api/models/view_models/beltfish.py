@@ -5,6 +5,8 @@ from .base import *
 
 class BeltFishObsView(BaseViewModel):
     sql = """
+{sample_event_view}
+
 CREATE OR REPLACE VIEW public.vw_beltfish_obs
  AS
  SELECT 
@@ -74,7 +76,8 @@ CREATE OR REPLACE VIEW public.vw_beltfish_obs
           GROUP BY tt_1.transect_id) observers ON tbf.id = observers.transect_id
      JOIN vw_sample_events se ON tbf.sample_event_id = se.sample_event_id;
     """.format(
-        se_fields=", ".join([f"se.{f}" for f in BaseViewModel.se_fields])
+        sample_event_view=SampleEventViewModel.sql,
+        se_fields=", ".join([f"se.{f}" for f in BaseViewModel.se_fields]),
     )
 
     sample_event_id = models.UUIDField()
