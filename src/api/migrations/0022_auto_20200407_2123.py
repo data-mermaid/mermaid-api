@@ -11,8 +11,11 @@ from ..models.view_models import *
 drop_fa_view = "DROP VIEW IF EXISTS public.vw_fish_attributes CASCADE;"
 drop_se_view = "DROP VIEW IF EXISTS public.vw_sample_events CASCADE;"
 drop_fb_obs_view = "DROP VIEW IF EXISTS public.vw_beltfish_obs CASCADE;"
-drop_fb_su_view = "DROP VIEW IF EXISTS public.vw_beltfish_su;"
+drop_fb_su_view = "DROP VIEW IF EXISTS public.vw_beltfish_su CASCADE;"
 drop_fb_se_view = "DROP VIEW IF EXISTS public.vw_beltfish_se;"
+drop_bp_obs_view = "DROP VIEW IF EXISTS public.vw_benthicpit_obs CASCADE;"
+drop_bp_su_view = "DROP VIEW IF EXISTS public.vw_benthicpit_su CASCADE;"
+drop_bp_se_view = "DROP VIEW IF EXISTS public.vw_benthicpit_se;"
 
 
 class Migration(migrations.Migration):
@@ -208,4 +211,8 @@ class Migration(migrations.Migration):
         migrations.RunSQL(BeltFishObsView.sql, drop_fb_obs_view),
         migrations.RunSQL(BeltFishSUView.sql, drop_fb_su_view),
         migrations.RunSQL(BeltFishSEView.sql, drop_fb_se_view),
+        migrations.RunSQL(drop_bp_obs_view, BenthicPITObsView.sql),
+        migrations.RunSQL(BenthicPITObsView.sql, drop_bp_obs_view),
+        migrations.RunSQL(BenthicPITSUView.sql, drop_bp_su_view),
+        migrations.RunSQL(BenthicPITSEView.sql, drop_bp_se_view),
     ]
