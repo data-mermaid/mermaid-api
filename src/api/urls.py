@@ -10,6 +10,7 @@ from .resources.benthic_attribute import BenthicAttributeViewSet
 from .resources.fish_family import FishFamilyViewSet
 from .resources.fish_genus import FishGenusViewSet
 from .resources.fish_species import FishSpeciesViewSet
+from .resources.fish_grouping import FishGroupingViewSet
 from .resources.choices import ChoiceViewSet
 from .resources.collect_record import CollectRecordViewSet
 from .resources.observer import ObserverViewSet
@@ -39,7 +40,12 @@ from .resources.sample_units.beltfishmethod import (
     BeltFishProjectMethodSEView,
 )
 from .resources.sample_units.benthiclitmethod import BenthicLITMethodView
-from .resources.sample_units.benthicpitmethod import BenthicPITMethodView
+from .resources.sample_units.benthicpitmethod import (
+    BenthicPITMethodView,
+    BenthicPITProjectMethodObsView,
+    BenthicPITProjectMethodSUView,
+    BenthicPITProjectMethodSEView,
+)
 from .resources.sample_units.habitatcomplexitymethod import HabitatComplexityMethodView
 from .resources.sample_units.bleachingquadratcollectionmethod import (
     BleachingQuadratCollectionMethodView,
@@ -74,6 +80,7 @@ router.register(r"fishfamilies", FishFamilyViewSet, "fishfamily")
 router.register(r"fishgenera", FishGenusViewSet, "fishgenus")
 router.register(r"fishspecies", FishSpeciesViewSet, "fishspecies")
 router.register(r"fishsizes", FishSizeViewSet, "fishsizes")
+router.register(r"fishgroupings", FishGroupingViewSet, "fishgrouping")
 
 # choices
 router.register(r"choices", ChoiceViewSet, "choice")
@@ -113,6 +120,13 @@ project_router.register(
 project_router.register(
    r"beltfishes/sampleevents", BeltFishProjectMethodSEView, "sampleevent"
 )
+project_router.register(
+    r"benthicpits/obstransectbenthicpits",
+    BenthicPITProjectMethodObsView,
+    "obstransectbenthicpit",
+)
+project_router.register(r"benthicpits/sampleunits", BenthicPITProjectMethodSUView, "sampleunit")
+project_router.register(r"benthicpits/sampleevents", BenthicPITProjectMethodSEView, "sampleevent")
 
 # multi model sample unit method reports
 project_router.register(
