@@ -327,8 +327,10 @@ def fieldreport(obj, request, *args, **kwargs):
         )
 
         for mdl, stream in zip(model_classes, streams):
-            file_name = "{}-{}-{}.csv".format(projname, mdl.__name__.lower(), ts)
-            content = "\n".join(list(stream))
+            file_name = "{}-{}-{}.csv".format(
+                projname, mdl.__name__.lower(), ts
+            )
+            content = "".join(list(stream))
             zipped_reports.writestr(file_name, content)
         zipped_reports.close()
         inmem_file.seek(0)
