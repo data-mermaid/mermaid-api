@@ -7,7 +7,6 @@ from ..mermaid import Project, FishAttribute
 
 class FishAttributeView(FishAttribute):
     sql = """
-DROP VIEW IF EXISTS public.vw_fish_attributes;
 CREATE OR REPLACE VIEW public.vw_fish_attributes
  AS
 SELECT fish_attribute.id,
@@ -56,7 +55,14 @@ CASE
                 OR fish_species.genus_id = r.attribute_id
                 OR fish_genus.family_id = r.attribute_id
             )
+            INNER JOIN fish_species_regions sr ON (fish_species.fishattribute_ptr_id = sr.fishspecies_id) 
             WHERE r.grouping_id = fish_grouping.fishattribute_ptr_id
+            AND sr.region_id IN (
+                SELECT region.id 
+                FROM region 
+                INNER JOIN fish_grouping_regions sr2 ON (region.id = sr2.region_id) 
+                WHERE sr2.fishgrouping_id = fish_grouping.fishattribute_ptr_id
+            )
         ) AS species_constant_as
     ), 6)
     ELSE NULL::numeric
@@ -83,7 +89,14 @@ CASE
                 OR fish_species.genus_id = r.attribute_id
                 OR fish_genus.family_id = r.attribute_id
             )
+            INNER JOIN fish_species_regions sr ON (fish_species.fishattribute_ptr_id = sr.fishspecies_id) 
             WHERE r.grouping_id = fish_grouping.fishattribute_ptr_id
+            AND sr.region_id IN (
+                SELECT region.id 
+                FROM region 
+                INNER JOIN fish_grouping_regions sr2 ON (region.id = sr2.region_id) 
+                WHERE sr2.fishgrouping_id = fish_grouping.fishattribute_ptr_id
+            )
         ) AS species_constant_bs
     ), 6)
     ELSE NULL::numeric
@@ -110,7 +123,14 @@ CASE
                 OR fish_species.genus_id = r.attribute_id
                 OR fish_genus.family_id = r.attribute_id
             )
+            INNER JOIN fish_species_regions sr ON (fish_species.fishattribute_ptr_id = sr.fishspecies_id) 
             WHERE r.grouping_id = fish_grouping.fishattribute_ptr_id
+            AND sr.region_id IN (
+                SELECT region.id 
+                FROM region 
+                INNER JOIN fish_grouping_regions sr2 ON (region.id = sr2.region_id) 
+                WHERE sr2.fishgrouping_id = fish_grouping.fishattribute_ptr_id
+            )
         ) AS species_constant_cs
     ), 6)
     ELSE NULL::numeric
@@ -151,7 +171,14 @@ CASE
                 OR fish_species.genus_id = r.attribute_id
                 OR fish_genus.family_id = r.attribute_id
             )
+            INNER JOIN fish_species_regions sr ON (fish_species.fishattribute_ptr_id = sr.fishspecies_id) 
             WHERE r.grouping_id = fish_grouping.fishattribute_ptr_id
+            AND sr.region_id IN (
+                SELECT region.id 
+                FROM region 
+                INNER JOIN fish_grouping_regions sr2 ON (region.id = sr2.region_id) 
+                WHERE sr2.fishgrouping_id = fish_grouping.fishattribute_ptr_id
+            )
             GROUP BY fish_group_trophic.name
             ORDER BY (COUNT(*)) DESC, fish_group_trophic.name
             LIMIT 1
@@ -195,7 +222,14 @@ CASE
                 OR fish_species.genus_id = r.attribute_id
                 OR fish_genus.family_id = r.attribute_id
             )
+            INNER JOIN fish_species_regions sr ON (fish_species.fishattribute_ptr_id = sr.fishspecies_id) 
             WHERE r.grouping_id = fish_grouping.fishattribute_ptr_id
+            AND sr.region_id IN (
+                SELECT region.id 
+                FROM region 
+                INNER JOIN fish_grouping_regions sr2 ON (region.id = sr2.region_id) 
+                WHERE sr2.fishgrouping_id = fish_grouping.fishattribute_ptr_id
+            )
             GROUP BY fish_group_function.name
             ORDER BY (COUNT(*)) DESC, fish_group_function.name
             LIMIT 1
@@ -225,7 +259,14 @@ CASE
                 OR fish_species.genus_id = r.attribute_id
                 OR fish_genus.family_id = r.attribute_id
             )
+            INNER JOIN fish_species_regions sr ON (fish_species.fishattribute_ptr_id = sr.fishspecies_id) 
             WHERE r.grouping_id = fish_grouping.fishattribute_ptr_id
+            AND sr.region_id IN (
+                SELECT region.id 
+                FROM region 
+                INNER JOIN fish_grouping_regions sr2 ON (region.id = sr2.region_id) 
+                WHERE sr2.fishgrouping_id = fish_grouping.fishattribute_ptr_id
+            )
         ) AS species_trophic_levels
     ), 2)
     ELSE NULL::numeric
@@ -252,7 +293,14 @@ CASE
                 OR fish_species.genus_id = r.attribute_id
                 OR fish_genus.family_id = r.attribute_id
             )
+            INNER JOIN fish_species_regions sr ON (fish_species.fishattribute_ptr_id = sr.fishspecies_id) 
             WHERE r.grouping_id = fish_grouping.fishattribute_ptr_id
+            AND sr.region_id IN (
+                SELECT region.id 
+                FROM region 
+                INNER JOIN fish_grouping_regions sr2 ON (region.id = sr2.region_id) 
+                WHERE sr2.fishgrouping_id = fish_grouping.fishattribute_ptr_id
+            )
         ) AS species_vulnerabilities
     ), 2)
     ELSE NULL::numeric
