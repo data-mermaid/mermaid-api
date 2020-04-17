@@ -7,9 +7,75 @@ from ..mermaid import Project, FishAttribute
 
 class FishAttributeView(FishAttribute):
     sql = """
-DROP VIEW IF EXISTS public.vw_fish_attributes;
 CREATE OR REPLACE VIEW public.vw_fish_attributes
  AS
+WITH fish_grouping_aggregates AS (
+    WITH species_groupings AS (
+        SELECT DISTINCT fish_species.fishattribute_ptr_id AS species_id,
+        r.grouping_id,
+        fish_grouping.name,
+        biomass_constant_a, biomass_constant_b, biomass_constant_c,
+        fish_group_trophic.name AS trophic_group_name,
+        fish_group_function.name AS trophic_function_name,
+        trophic_level, vulnerability
+        FROM fish_species
+        LEFT JOIN fish_group_trophic ON (fish_species.trophic_group_id = fish_group_trophic.id)
+        LEFT JOIN fish_group_function ON (fish_species.functional_group_id = fish_group_function.id)
+        INNER JOIN fish_genus ON (fish_species.genus_id = fish_genus.fishattribute_ptr_id) 
+        INNER JOIN api_fishgroupingrelationship r ON (
+            fish_species.fishattribute_ptr_id = r.attribute_id
+            OR fish_species.genus_id = r.attribute_id
+            OR fish_genus.family_id = r.attribute_id
+        )
+        INNER JOIN fish_species_regions sr ON (fish_species.fishattribute_ptr_id = sr.fishspecies_id) 
+        INNER JOIN fish_grouping ON (r.grouping_id = fish_grouping.fishattribute_ptr_id)
+        WHERE sr.region_id IN (
+            SELECT region.id 
+            FROM region 
+            INNER JOIN fish_grouping_regions sr2 ON (region.id = sr2.region_id) 
+            WHERE sr2.fishgrouping_id = fish_grouping.fishattribute_ptr_id
+        )
+    )
+    SELECT species_groupings.grouping_id,
+    species_groupings.name,
+    AVG(biomass_constant_a) AS biomass_constant_a,
+    AVG(biomass_constant_b) AS biomass_constant_b,
+    AVG(biomass_constant_c) AS biomass_constant_c,
+    tg_groupings.trophic_group_name,
+    fg_groupings.trophic_function_name,
+    AVG(trophic_level) AS trophic_level,
+    AVG(vulnerability) AS vulnerability
+    FROM species_groupings
+    LEFT JOIN (
+        SELECT grouping_id, trophic_group_name, cnt
+        FROM (
+            SELECT grouping_id, trophic_group_name, cnt,
+            RANK() OVER (PARTITION BY grouping_id ORDER BY cnt DESC) AS rnk
+            FROM (
+                SELECT grouping_id, trophic_group_name, COUNT(*) AS cnt
+                FROM species_groupings
+                GROUP BY grouping_id, trophic_group_name
+            ) AS tgg
+        ) AS tg_groupings_ranked
+        WHERE tg_groupings_ranked.rnk = 1
+    ) AS tg_groupings ON (species_groupings.grouping_id = tg_groupings.grouping_id)
+    LEFT JOIN (
+        SELECT grouping_id, trophic_function_name, cnt
+        FROM (
+            SELECT grouping_id, trophic_function_name, cnt,
+            RANK() OVER (PARTITION BY grouping_id ORDER BY cnt DESC) AS rnk
+            FROM (
+                SELECT grouping_id, trophic_function_name, COUNT(*) AS cnt
+                FROM species_groupings
+                GROUP BY grouping_id, trophic_function_name
+            ) AS tfg
+        ) AS fg_groupings_ranked
+        WHERE fg_groupings_ranked.rnk = 1
+    ) AS fg_groupings ON (species_groupings.grouping_id = fg_groupings.grouping_id)
+    GROUP BY species_groupings.grouping_id, species_groupings.name, tg_groupings.trophic_group_name, 
+    fg_groupings.trophic_function_name
+)
+
 SELECT fish_attribute.id,
 fish_attribute.id AS fishattribute_ptr_id,
 fish_attribute.created_on,
@@ -31,7 +97,7 @@ CASE
     WHEN fish_species.name IS NOT NULL THEN concat(species_genus.name, ' ', fish_species.name)
     WHEN fish_genus.name IS NOT NULL THEN fish_genus.name::text
     WHEN fish_family.name IS NOT NULL THEN fish_family.name::text
-    WHEN fish_grouping IS NOT NULL THEN fish_grouping.name::text
+    WHEN fish_grouping_aggregates.name IS NOT NULL THEN fish_grouping_aggregates.name::text
     ELSE NULL::text
 END AS name,
 
@@ -44,21 +110,7 @@ CASE
        FROM fish_species fish_species_1
          JOIN fish_genus fish_genus_1 ON fish_species_1.genus_id = fish_genus_1.fishattribute_ptr_id
       WHERE fish_genus_1.family_id = fish_attribute.id), 6)
-    WHEN fish_grouping.name IS NOT NULL THEN ROUND((
-        SELECT
-        AVG(biomass_constant_a) AS biomass_constant_a
-        FROM (
-            SELECT DISTINCT fish_species.fishattribute_ptr_id, biomass_constant_a
-            FROM fish_species
-            INNER JOIN fish_genus ON (fish_species.genus_id = fish_genus.fishattribute_ptr_id) 
-            INNER JOIN api_fishgroupingrelationship r ON (
-                fish_species.fishattribute_ptr_id = r.attribute_id
-                OR fish_species.genus_id = r.attribute_id
-                OR fish_genus.family_id = r.attribute_id
-            )
-            WHERE r.grouping_id = fish_grouping.fishattribute_ptr_id
-        ) AS species_constant_as
-    ), 6)
+    WHEN fish_grouping_aggregates.name IS NOT NULL THEN ROUND(fish_grouping_aggregates.biomass_constant_a, 6)
     ELSE NULL::numeric
 END AS biomass_constant_a,
 
@@ -71,21 +123,7 @@ CASE
        FROM fish_species fish_species_1
          JOIN fish_genus fish_genus_1 ON fish_species_1.genus_id = fish_genus_1.fishattribute_ptr_id
       WHERE fish_genus_1.family_id = fish_attribute.id), 6)
-    WHEN fish_grouping.name IS NOT NULL THEN ROUND((
-        SELECT
-        AVG(biomass_constant_b) AS biomass_constant_b
-        FROM (
-            SELECT DISTINCT fish_species.fishattribute_ptr_id, biomass_constant_b
-            FROM fish_species
-            INNER JOIN fish_genus ON (fish_species.genus_id = fish_genus.fishattribute_ptr_id) 
-            INNER JOIN api_fishgroupingrelationship r ON (
-                fish_species.fishattribute_ptr_id = r.attribute_id
-                OR fish_species.genus_id = r.attribute_id
-                OR fish_genus.family_id = r.attribute_id
-            )
-            WHERE r.grouping_id = fish_grouping.fishattribute_ptr_id
-        ) AS species_constant_bs
-    ), 6)
+    WHEN fish_grouping_aggregates.name IS NOT NULL THEN ROUND(fish_grouping_aggregates.biomass_constant_b, 6)
     ELSE NULL::numeric
 END AS biomass_constant_b,
 
@@ -98,21 +136,7 @@ CASE
        FROM fish_species fish_species_1
          JOIN fish_genus fish_genus_1 ON fish_species_1.genus_id = fish_genus_1.fishattribute_ptr_id
       WHERE fish_genus_1.family_id = fish_attribute.id), 6)
-    WHEN fish_grouping.name IS NOT NULL THEN ROUND((
-        SELECT
-        AVG(biomass_constant_c) AS biomass_constant_c
-        FROM (
-            SELECT DISTINCT fish_species.fishattribute_ptr_id, biomass_constant_c
-            FROM fish_species
-            INNER JOIN fish_genus ON (fish_species.genus_id = fish_genus.fishattribute_ptr_id) 
-            INNER JOIN api_fishgroupingrelationship r ON (
-                fish_species.fishattribute_ptr_id = r.attribute_id
-                OR fish_species.genus_id = r.attribute_id
-                OR fish_genus.family_id = r.attribute_id
-            )
-            WHERE r.grouping_id = fish_grouping.fishattribute_ptr_id
-        ) AS species_constant_cs
-    ), 6)
+    WHEN fish_grouping_aggregates.name IS NOT NULL THEN ROUND(fish_grouping_aggregates.biomass_constant_c, 6)
     ELSE NULL::numeric
 END AS biomass_constant_c,
 
@@ -139,24 +163,7 @@ CASE
               GROUP BY fish_group_trophic_1.name
               ORDER BY (count(*)) DESC, fish_group_trophic_1.name
              LIMIT 1) fft)
-    WHEN fish_grouping.name IS NOT NULL THEN (
-        SELECT "name"
-        FROM (
-            SELECT fish_group_trophic.name, COUNT(*) AS freq
-            FROM fish_species
-            INNER JOIN fish_group_trophic ON (fish_species.trophic_group_id = fish_group_trophic.id)
-            INNER JOIN fish_genus ON (fish_species.genus_id = fish_genus.fishattribute_ptr_id) 
-            INNER JOIN api_fishgroupingrelationship r ON (
-                fish_species.fishattribute_ptr_id = r.attribute_id
-                OR fish_species.genus_id = r.attribute_id
-                OR fish_genus.family_id = r.attribute_id
-            )
-            WHERE r.grouping_id = fish_grouping.fishattribute_ptr_id
-            GROUP BY fish_group_trophic.name
-            ORDER BY (COUNT(*)) DESC, fish_group_trophic.name
-            LIMIT 1
-        ) AS species_trophic_groups
-    )
+    WHEN fish_grouping_aggregates.name IS NOT NULL THEN fish_grouping_aggregates.trophic_group_name
     ELSE NULL::character varying
 END AS trophic_group,
 
@@ -183,24 +190,7 @@ CASE
               GROUP BY fish_group_function_1.name
               ORDER BY (count(*)) DESC, fish_group_function_1.name
              LIMIT 1) fff)
-    WHEN fish_grouping.name IS NOT NULL THEN (
-        SELECT "name"
-        FROM (
-            SELECT fish_group_function.name, COUNT(*) AS freq
-            FROM fish_species
-            INNER JOIN fish_group_function ON (fish_species.functional_group_id = fish_group_function.id)
-            INNER JOIN fish_genus ON (fish_species.genus_id = fish_genus.fishattribute_ptr_id) 
-            INNER JOIN api_fishgroupingrelationship r ON (
-                fish_species.fishattribute_ptr_id = r.attribute_id
-                OR fish_species.genus_id = r.attribute_id
-                OR fish_genus.family_id = r.attribute_id
-            )
-            WHERE r.grouping_id = fish_grouping.fishattribute_ptr_id
-            GROUP BY fish_group_function.name
-            ORDER BY (COUNT(*)) DESC, fish_group_function.name
-            LIMIT 1
-        ) AS species_functional_groups
-    )
+    WHEN fish_grouping_aggregates.name IS NOT NULL THEN fish_grouping_aggregates.trophic_function_name
     ELSE NULL::character varying
 END AS functional_group,
 
@@ -213,21 +203,7 @@ CASE
        FROM fish_species fish_species_1
          JOIN fish_genus fish_genus_1 ON fish_species_1.genus_id = fish_genus_1.fishattribute_ptr_id
       WHERE fish_genus_1.family_id = fish_attribute.id), 2)
-    WHEN fish_grouping.name IS NOT NULL THEN ROUND((
-        SELECT
-        AVG(trophic_level) AS trophic_level
-        FROM (
-            SELECT DISTINCT fish_species.fishattribute_ptr_id, trophic_level
-            FROM fish_species
-            INNER JOIN fish_genus ON (fish_species.genus_id = fish_genus.fishattribute_ptr_id) 
-            INNER JOIN api_fishgroupingrelationship r ON (
-                fish_species.fishattribute_ptr_id = r.attribute_id
-                OR fish_species.genus_id = r.attribute_id
-                OR fish_genus.family_id = r.attribute_id
-            )
-            WHERE r.grouping_id = fish_grouping.fishattribute_ptr_id
-        ) AS species_trophic_levels
-    ), 2)
+    WHEN fish_grouping_aggregates.name IS NOT NULL THEN ROUND(fish_grouping_aggregates.trophic_level, 2)
     ELSE NULL::numeric
 END AS trophic_level,
 
@@ -240,21 +216,7 @@ CASE
        FROM fish_species fish_species_1
          JOIN fish_genus fish_genus_1 ON fish_species_1.genus_id = fish_genus_1.fishattribute_ptr_id
       WHERE fish_genus_1.family_id = fish_attribute.id), 2)
-    WHEN fish_grouping.name IS NOT NULL THEN ROUND((
-        SELECT
-        AVG(vulnerability) AS vulnerability
-        FROM (
-            SELECT DISTINCT fish_species.fishattribute_ptr_id, vulnerability
-            FROM fish_species
-            INNER JOIN fish_genus ON (fish_species.genus_id = fish_genus.fishattribute_ptr_id) 
-            INNER JOIN api_fishgroupingrelationship r ON (
-                fish_species.fishattribute_ptr_id = r.attribute_id
-                OR fish_species.genus_id = r.attribute_id
-                OR fish_genus.family_id = r.attribute_id
-            )
-            WHERE r.grouping_id = fish_grouping.fishattribute_ptr_id
-        ) AS species_vulnerabilities
-    ), 2)
+    WHEN fish_grouping_aggregates.name IS NOT NULL THEN ROUND(fish_grouping_aggregates.vulnerability, 2)
     ELSE NULL::numeric
 END AS vulnerability
 
@@ -265,7 +227,7 @@ LEFT JOIN fish_family species_genus_family ON species_genus.family_id = species_
 LEFT JOIN fish_genus ON fish_attribute.id = fish_genus.fishattribute_ptr_id
 LEFT JOIN fish_family genus_family ON fish_genus.family_id = genus_family.fishattribute_ptr_id
 LEFT JOIN fish_family ON fish_attribute.id = fish_family.fishattribute_ptr_id
-LEFT JOIN fish_grouping ON (fish_attribute.id = fish_grouping.fishattribute_ptr_id)
+LEFT JOIN fish_grouping_aggregates ON (fish_attribute.id = fish_grouping_aggregates.grouping_id)
 LEFT JOIN fish_group_trophic ON fish_species.trophic_group_id = fish_group_trophic.id
 LEFT JOIN fish_group_function ON fish_species.functional_group_id = fish_group_function.id
 
@@ -274,6 +236,7 @@ ORDER BY (
         WHEN fish_species.name IS NOT NULL THEN concat(species_genus.name, ' ', fish_species.name)
         WHEN fish_genus.name IS NOT NULL THEN fish_genus.name::text
         WHEN fish_family.name IS NOT NULL THEN fish_family.name::text
+        WHEN fish_grouping_aggregates.name IS NOT NULL THEN fish_grouping_aggregates.name::text
         ELSE NULL::text
     END);
 

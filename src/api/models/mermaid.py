@@ -1050,6 +1050,7 @@ class FishAttribute(BaseAttributeModel):
 
 class FishGrouping(FishAttribute):
     name = models.CharField(max_length=100)
+    regions = models.ManyToManyField(Region, blank=True)
 
     def _get_attribute_constants(self):
         if hasattr(self, "_attribute_constants"):
@@ -1060,6 +1061,8 @@ class FishGrouping(FishAttribute):
             q |= Q(pk=a.attribute.pk)
             q |= Q(genus=a.attribute)
             q |= Q(genus__family=a.attribute)
+        # only use species in one of the regions assigned this grouping to calculate constants
+        q &= Q(regions__in=self.regions.all())
         species = FishSpecies.objects.filter(q).distinct()
 
         avebiomass = list(species.aggregate(
@@ -1085,20 +1088,6 @@ class FishGrouping(FishAttribute):
     @property
     def biomass_constant_c(self):
         return self._get_attribute_constants()[2]
-
-    @property
-    def regions(self):
-        if hasattr(self, "_regions"):
-            return self._regions
-
-        q = Q()
-        for a in self.attribute_grouping.all():
-            q |= Q(fishspecies__genus__family=a.attribute)
-            q |= Q(fishspecies__genus=a.attribute)
-            q |= Q(fishspecies=a.attribute)
-
-        self._regions = Region.objects.filter(q).distinct()
-        return self._regions
 
     class Meta:
         db_table = "fish_grouping"
