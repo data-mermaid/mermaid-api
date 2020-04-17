@@ -696,7 +696,7 @@ class ObsFishBeltValidation(DataValidation, FishAttributeMixin):
 
     MIN_OBS_COUNT_WARN = 5
     MAX_OBS_COUNT_WARN = 200
-    OBS_GT_DENSITY = 2000  # kg/ha
+    OBS_GT_DENSITY = 5000  # kg/ha
     OBS_LT_DENSITY = 50  # kg/ha
     FISH_COUNT_MIN = 10
 
