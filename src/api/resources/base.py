@@ -3,6 +3,7 @@ import six
 from django.utils.decorators import method_decorator
 from django.views.decorators.cache import cache_page
 from django.utils.translation import ugettext_lazy as _
+from django.db.models.sql.constants import ORDER_PATTERN
 from rest_framework import serializers, viewsets
 from rest_framework.decorators import action
 from rest_framework import exceptions
@@ -327,6 +328,13 @@ class RelatedOrderingFilter(OrderingFilter):
     https://github.com/tomchristie/django-rest-framework/issues/1005
     """
 
+    # ensure unique pagination when not enough ordering fields are specified; requires "id" field
+    def get_ordering(self, request, queryset, view):
+        ordering = super().get_ordering(request, queryset, view) or []
+        if "id" not in ordering:
+            ordering.append("id")
+        return ordering
+
     def is_valid_field(self, model, field_name):
         """
         Return true if the field exists within the model (or in the related
@@ -347,9 +355,12 @@ class RelatedOrderingFilter(OrderingFilter):
         except FieldDoesNotExist:
             return False
 
-    def remove_invalid_fields(self, queryset, ordering, view, request):
-        return [term for term in ordering
-                if self.is_valid_field(queryset.model, term.lstrip('-'))]
+    def remove_invalid_fields(self, queryset, fields, view, request):
+        valid_fields = [item[0] for item in self.get_valid_fields(queryset, view, {'request': request})]
+        valid_model_fields = [term for term in fields
+                              if self.is_valid_field(queryset.model, term.lstrip('-'))]
+        valid_fields = set(valid_fields + valid_model_fields)
+        return [term for term in fields if term.lstrip('-') in valid_fields and ORDER_PATTERN.match(term)]
 
 
 class BaseTransectFilterSet(OrFilterSetMixin, GeoFilterSet):

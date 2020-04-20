@@ -140,10 +140,8 @@ class SampleUnitMethodView(BaseProjectApiViewSet):
             "bleachingquadratcollection",
         )
         .all()
-        .order_by("id")
     )
 
-    filter_backends = (filters.DjangoFilterBackend,)
     filter_class = SampleUnitMethodFilterSet
     serializer_class = SampleUnitMethodSerializer
     http_method_names = ["get", "head"]
@@ -326,19 +324,6 @@ class SampleUnitMethodView(BaseProjectApiViewSet):
 
         return qs
 
-    def filter_queryset(self, queryset):
-        qs = super(SampleUnitMethodView, self).filter_queryset(queryset)
-        if "ordering" in self.request.query_params:
-            order_by = []
-            for s in self.request.query_params["ordering"].split(","):
-                s = s.strip()
-                field = s[1:] if s.startswith("-") else s
-                if field in self.ordering_fields:
-                    order_by.append(s)
-            if order_by:
-                qs = qs.order_by(*order_by)
-        return qs
-
     def limit_to_project(self, request, *args, **kwargs):
         prj_pk = check_uuid(kwargs["project_pk"])
         self.queryset = self.get_queryset().filter(
@@ -364,7 +349,6 @@ class SampleUnitMethodView(BaseProjectApiViewSet):
         return context
 
     def retrieve(self, request, pk=None, **kwargs):
-
         # Disable the detail fetch - the method-specific endpoints
         # should be used for SampleUnitMethod details
         raise exceptions.NotFound(code=404)
