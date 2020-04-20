@@ -1,10 +1,10 @@
 from django.db import transaction
 from rest_framework import status
-from rest_framework.decorators import action
 from rest_framework.response import Response
 from rest_framework.serializers import SerializerMethodField
 from django_filters import BaseInFilter, RangeFilter
 
+from .. import fieldreport
 from ...models.mermaid import BenthicPIT, ObsBenthicPIT, BenthicAttribute
 from ...models.view_models import BenthicPITObsView, BenthicPITSUView, BenthicPITSEView
 
