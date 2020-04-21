@@ -1,7 +1,4 @@
-from datetime import datetime
 from django.core.exceptions import ObjectDoesNotExist
-from django.http import HttpResponseBadRequest, StreamingHttpResponse
-from django.utils.text import get_valid_filename
 from rest_framework.serializers import DecimalField
 from rest_framework.decorators import action
 import django_filters
@@ -13,9 +10,9 @@ from .base import (
 )
 from .mixins import ProtectedResourceMixin
 from .management import get_rules
-from ..models import Management, Project
-from ..reports import RawCSVReport
+from ..models import Management
 from ..report_serializer import *
+from . import fieldreport
 
 
 class PManagementSerializer(BaseAPISerializer):
@@ -117,24 +114,19 @@ class PManagementViewSet(ProtectedResourceMixin, BaseProjectApiViewSet):
     model_display_name = "Management Regime"
     serializer_class = PManagementSerializer
     queryset = Management.objects.all()
+    project_lookup = "project"
     filter_class = PManagementFilterSet
     search_fields = ['name', 'name_secondary', ]
 
     @action(detail=False, methods=["get"])
     def fieldreport(self, request, *args, **kwargs):
-        try:
-            project = Project.objects.get(pk=kwargs['project_pk'])
-        except ObjectDoesNotExist:
-            return HttpResponseBadRequest('Project doesn\'t exist')
-        self.limit_to_project(self, request, *args, **kwargs)
-
-        report = RawCSVReport()
-        stream = report.stream(
-            self.get_queryset(),
-            serializer_class=PManagementReportSerializer)
-        response = StreamingHttpResponse(stream, content_type='text/csv')
-        ts = datetime.utcnow().strftime("%Y%m%d")
-        projname = get_valid_filename(project.name)[:100]
-        response['Content-Disposition'] = \
-            'attachment; filename="management_regimes-%s-%s.csv"' % (projname, ts)
-        return response
+        return fieldreport(
+            self,
+            request,
+            *args,
+            model_cls=Management,
+            serializer_class=PManagementReportSerializer,
+            fk="id",
+            order_by=("Name", "Secondary name", "Year established"),
+            **kwargs
+        )

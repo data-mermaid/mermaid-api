@@ -2,8 +2,8 @@ from django.db import transaction
 from django.db.models import Sum
 from rest_framework import status
 from rest_framework.response import Response
-from rest_framework.decorators import action
 
+from .. import fieldreport
 from ...models.mermaid import BenthicLIT, ObsBenthicLIT, BenthicAttribute
 
 from . import *

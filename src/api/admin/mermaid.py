@@ -754,9 +754,31 @@ class FishAttributeInline(admin.StackedInline):
 
 @admin.register(FishGrouping)
 class FishGroupingAdmin(FishAttributeGroupingAdmin):
-    list_display = ("name",)
+    list_display = (
+        "name",
+        "biomass_constant_a",
+        "biomass_constant_b",
+        "biomass_constant_c",
+        "region_list",
+    )
+    search_fields = ["name", ]
+    exportable_fields = (
+        "name",
+        "biomass_constant_a",
+        "biomass_constant_b",
+        "biomass_constant_c",
+        "region_list",
+    )
     inlines = (FishAttributeInline,)
-    search_fields = ["name"]
+
+    def get_readonly_fields(self, request, obj=None):
+        if obj:  # editing an existing object
+            return (
+                "biomass_constant_a",
+                "biomass_constant_b",
+                "biomass_constant_c",
+            )
+        return ()
 
     def get_formsets_with_inlines(self, request, obj=None):
         fish_attributes = FishAttributeView.objects.all().order_by("name")

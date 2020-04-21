@@ -3,10 +3,10 @@ from api import utils
 from django.db import transaction
 from rest_framework import status
 from rest_framework.response import Response
-from rest_framework.decorators import action
 
 from . import *
-from ..base import BaseAPIFilterSet, BaseAPISerializer, BaseProjectApiViewSet
+from .. import fieldreport
+from ..base import BaseProjectApiViewSet
 from ...models.mermaid import ObsColoniesBleached, ObsQuadratBenthicPercent
 from ..bleaching_quadrat_collection import BleachingQuadratCollectionSerializer
 from ..obs_colonies_bleached import ObsColoniesBleachedSerializer

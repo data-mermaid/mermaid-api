@@ -10,15 +10,11 @@ class FishGroupingSerializer(BaseAPISerializer):
     biomass_constant_a = serializers.ReadOnlyField()
     biomass_constant_b = serializers.ReadOnlyField()
     biomass_constant_c = serializers.ReadOnlyField()
-    regions = serializers.SerializerMethodField()
     fish_attributes = serializers.SerializerMethodField()
 
     class Meta:
         model = FishGrouping
         exclude = []
-
-    def get_regions(self, obj):
-        return [r.pk for r in obj.regions]
 
     def get_fish_attributes(self, obj):
         return [a.attribute_id for a in obj.attribute_grouping.all()]
