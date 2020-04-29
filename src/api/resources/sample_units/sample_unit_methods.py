@@ -51,7 +51,6 @@ class SearchNonFieldFilter(django_filters.Filter):
         qry = Q()
         for field in self.SEARCH_FIELDS:
             for param in params:
-                param = re.escape(param).replace(r"\.", ".").replace(r"\*", "*")
                 qry |= Q(**{"{}__iregex".format(field): param})
         return qs.filter(qry).distinct()
 
