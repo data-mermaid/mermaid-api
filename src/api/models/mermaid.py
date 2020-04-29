@@ -1007,6 +1007,17 @@ class FishAttribute(BaseAttributeModel):
     class Meta:
         db_table = 'fish_attribute'
 
+    def _get_subclass(self):
+        if hasattr(self, 'fishgrouping'):
+            return self.fishgrouping
+        elif hasattr(self, 'fishfamily'):
+            return self.fishfamily
+        elif hasattr(self, 'fishgenus'):
+            return self.fishgenus
+        elif hasattr(self, 'fishspecies'):
+            return self.fishspecies
+        return None
+
     def __str__(self):
         if hasattr(self, 'fishgrouping'):
             return _(u'%s') % self.fishgrouping.name
@@ -1047,6 +1058,9 @@ class FishAttribute(BaseAttributeModel):
             return None, None, None
         return taxon.biomass_constant_a, taxon.biomass_constant_b, taxon.biomass_constant_c
 
+    @property
+    def regions(self):
+        return self._get_subclass().regions
 
 class FishGrouping(FishAttribute):
     name = models.CharField(max_length=100)
