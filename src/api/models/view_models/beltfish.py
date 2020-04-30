@@ -266,7 +266,7 @@ ON (
 
 INNER JOIN (
     SELECT project_id, site_id, management_id, sample_date,
-    jsonb_object_agg(tg, round(biomass_kgha::numeric, 2)) AS biomass_kgha_by_trophic_group_avg
+    jsonb_object_agg(tg, ROUND(biomass_kgha::numeric, 2)) AS biomass_kgha_by_trophic_group_avg
     FROM (
         SELECT meta_su_tgs.project_id, meta_su_tgs.site_id, meta_su_tgs.management_id, meta_su_tgs.sample_date,
         tg,
