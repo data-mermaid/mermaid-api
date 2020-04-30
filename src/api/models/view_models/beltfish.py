@@ -43,11 +43,11 @@ CREATE OR REPLACE VIEW public.vw_beltfish_obs
         (10 * o.count)::numeric * f.biomass_constant_a * ((o.size * f.biomass_constant_c) ^ f.biomass_constant_b) / 
         (tbf.len_surveyed * wc.val)::numeric, 
         2
-    )::numeric(7,2) AS biomass_kgha,
+    )::numeric AS biomass_kgha,
     o.notes AS observation_notes
    FROM obs_transectbeltfish o
      JOIN vw_fish_attributes f ON o.fish_attribute_id = f.id
-     JOIN transectmethod_transectbeltfish tt ON o.beltfish_id = tt.transectmethod_ptr_id
+     RIGHT JOIN transectmethod_transectbeltfish tt ON o.beltfish_id = tt.transectmethod_ptr_id
      JOIN transect_belt_fish tbf ON tt.transect_id = tbf.id
      LEFT JOIN api_fishsizebin sb ON tbf.size_bin_id = sb.id
      LEFT JOIN api_reefslope rs ON tbf.reef_slope_id = rs.id
@@ -95,9 +95,9 @@ CREATE OR REPLACE VIEW public.vw_beltfish_obs
         max_digits=3, decimal_places=1, verbose_name=_("depth (m)")
     )
     reef_slope = models.CharField(max_length=50)
-    fish_family = models.CharField(max_length=100)
-    fish_genus = models.CharField(max_length=100)
-    fish_taxon = models.CharField(max_length=100)
+    fish_family = models.CharField(max_length=100, null=True, blank=True)
+    fish_genus = models.CharField(max_length=100, null=True, blank=True)
+    fish_taxon = models.CharField(max_length=100, null=True, blank=True)
     trophic_group = models.CharField(max_length=100, blank=True)
     trophic_level = models.DecimalField(
         max_digits=3, decimal_places=2, null=True, blank=True
@@ -115,13 +115,14 @@ CREATE OR REPLACE VIEW public.vw_beltfish_obs
     biomass_constant_c = models.DecimalField(
         max_digits=7, decimal_places=6, default=1, null=True, blank=True
     )
-    size_bin = models.PositiveSmallIntegerField()
+    size_bin = models.PositiveSmallIntegerField(null=True, blank=True)
     size = models.DecimalField(
-        max_digits=5, decimal_places=1, verbose_name=_("size (cm)")
+        max_digits=5, decimal_places=1, verbose_name=_("size (cm)",),
+        null=True, blank=True
     )
-    count = models.PositiveIntegerField(default=1)
+    count = models.PositiveIntegerField(default=1, null=True, blank=True)
     biomass_kgha = models.DecimalField(
-        max_digits=7,
+        max_digits=9,
         decimal_places=2,
         verbose_name=_("biomass (kg/ha)"),
         null=True,
@@ -163,7 +164,7 @@ FROM (
     reef_slope, size_bin, data_policy_beltfish, 
     trophic_group, 
 
-    SUM(biomass_kgha) AS biomass_kgha
+    COALESCE(SUM(biomass_kgha), 0) AS biomass_kgha
     
     FROM vw_beltfish_obs
     GROUP BY sample_unit_id, 
@@ -216,6 +217,21 @@ class BeltFishSEView(BaseViewModel):
 CREATE OR REPLACE VIEW public.vw_beltfish_se
  AS
 -- For each SE, summarize biomass by 1) avg of transects and 2) avg of transects' trophic groups
+WITH meta_sus AS (
+    SELECT project_id, site_id, management_id, sample_date,
+    SUM(biomass_kgha) AS biomass_kgha
+    FROM vw_beltfish_su
+    GROUP BY project_id, site_id, management_id, sample_date, transect_number, depth
+),
+meta_su_tgs AS (
+    SELECT project_id, site_id, management_id, sample_date, transect_number, depth,
+    tgdata.key AS tg,
+    SUM(tgdata.value::double precision) AS biomass_kgha
+    FROM vw_beltfish_su,
+    LATERAL jsonb_each_text(biomass_kgha_by_trophic_group) tgdata(key, value)
+    GROUP BY project_id, site_id, management_id, sample_date, transect_number, depth, tgdata.key
+)
+
 SELECT 
 NULL AS id,
 vw_beltfish_su.project_id, project_name, project_status, project_notes, contact_link, tags, 
@@ -236,9 +252,10 @@ biomass_kgha_by_trophic_group_avg
 FROM public.vw_beltfish_su
 
 INNER JOIN (
-    SELECT project_id, site_id, management_id, sample_date, ROUND(AVG(biomass_kgha), 2) AS biomass_kgha_avg
-    FROM public.vw_beltfish_su
-    GROUP BY project_id, site_id, management_id, sample_date
+    SELECT meta_sus.project_id, meta_sus.site_id, meta_sus.management_id, meta_sus.sample_date,
+    ROUND(AVG(meta_sus.biomass_kgha), 2) AS biomass_kgha_avg
+    FROM meta_sus
+    GROUP BY meta_sus.project_id, meta_sus.site_id, meta_sus.management_id, meta_sus.sample_date
 ) AS beltfish_se 
 ON (
     vw_beltfish_su.project_id = beltfish_se.project_id
@@ -248,16 +265,16 @@ ON (
 )
 
 INNER JOIN (
-    SELECT project_id, site_id, management_id, sample_date, 
-    jsonb_object_agg(tg, ROUND(biomass_kgha::numeric, 2)) AS biomass_kgha_by_trophic_group_avg
+    SELECT project_id, site_id, management_id, sample_date,
+    jsonb_object_agg(tg, round(biomass_kgha::numeric, 2)) AS biomass_kgha_by_trophic_group_avg
     FROM (
-        SELECT project_id, site_id, management_id, sample_date, 
-        tgdata.key AS tg, AVG(tgdata.value::float) AS biomass_kgha
-        FROM public.vw_beltfish_su,
-        jsonb_each_text(biomass_kgha_by_trophic_group) AS tgdata
-        GROUP BY 
-        project_id, site_id, management_id, sample_date, tgdata.key
-    ) AS beltfish_su_tg
+        SELECT meta_su_tgs.project_id, meta_su_tgs.site_id, meta_su_tgs.management_id, meta_su_tgs.sample_date,
+        tg,
+        AVG(biomass_kgha) AS biomass_kgha
+        FROM meta_su_tgs
+        GROUP BY meta_su_tgs.project_id, meta_su_tgs.site_id, meta_su_tgs.management_id, meta_su_tgs.sample_date,
+        tg
+    ) beltfish_su_tg
     GROUP BY project_id, site_id, management_id, sample_date
 ) AS beltfish_se_tg
 ON (
