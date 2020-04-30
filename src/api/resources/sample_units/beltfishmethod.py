@@ -1,4 +1,5 @@
 from django.db import transaction
+from django.db.models import Q
 from rest_framework import status
 from rest_framework.response import Response
 from rest_framework.serializers import SerializerMethodField
@@ -525,7 +526,7 @@ class BeltFishMethodSEGeoSerializer(BaseViewAPIGeoSerializer):
 
 class BeltFishMethodObsFilterSet(BaseTransectFilterSet):
     depth = RangeFilter()
-    sample_unit_id = BaseInFilter("id_lookup")
+    sample_unit_id = BaseInFilter(method="id_lookup")
     observers = BaseInFilter(method="json_name_lookup")
     transect_len_surveyed = RangeFilter()
     reef_slope = BaseInFilter(method="char_lookup")
@@ -608,7 +609,12 @@ class BeltFishProjectMethodObsView(BaseProjectMethodView):
     serializer_class_geojson = BeltFishMethodObsGeoSerializer
     serializer_class_csv = BeltFishMethodObsCSVSerializer
     filterset_class = BeltFishMethodObsFilterSet
-    queryset = BeltFishObsView.objects.exclude(project_status=Project.TEST).order_by(
+    queryset = BeltFishObsView.objects.exclude(
+        Q(project_status=Project.TEST)
+        | Q(size__isnull=True)
+        | Q(count__isnull=True)
+        | Q(biomass_kgha__isnull=True)
+    ).order_by(
         "site_name",
         "sample_date",
         "transect_number",
