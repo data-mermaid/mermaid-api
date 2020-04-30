@@ -343,6 +343,8 @@ class SampleUnitMethodView(BaseProjectApiViewSet):
         observer_lookup = defaultdict(list)
         for obs in observers:
             observer_lookup[str(obs.transectmethod_id)].append(obs.profile_name)
+        for transect_method_id, observers in observer_lookup.items():
+            observer_lookup[transect_method_id] = sorted(observers)
 
         context["observers"] = observer_lookup
         return context
