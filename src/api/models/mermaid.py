@@ -1047,6 +1047,9 @@ class FishAttribute(BaseAttributeModel):
             return None, None, None
         return taxon.biomass_constant_a, taxon.biomass_constant_b, taxon.biomass_constant_c
 
+    @property
+    def regions(self):
+        return self._get_taxon().regions
 
 class FishGrouping(FishAttribute):
     name = models.CharField(max_length=100)

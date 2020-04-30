@@ -27,6 +27,7 @@ from api.models import (
     Management,
     Observer,
     QuadratCollection,
+    Region,
     Site,
 )
 from api.utils import calc_biomass_density, get_related_transect_methods
@@ -46,8 +47,9 @@ MissingRecordSimilarity = "{} record not available for similarity validation"
 
 class ObservationsMixin(object):
     @classmethod
-    def get_observation_key(cls, data):
+    def get_observation_key(cls, data, key=None):
         data = data or dict()
+        key = key or "obs_"
         for key in data:
             if "obs_" in key and isinstance(data[key], list):
                 return key
@@ -55,16 +57,65 @@ class ObservationsMixin(object):
         return None
 
     @classmethod
-    def get_observations(cls, data):
-        key = cls.get_observation_key(data)
+    def get_observations(cls, data, key=None):
+        key = cls.get_observation_key(data, key)
         if key is not None:
             return data[key]
 
         return []
 
 
-class BenthicAttributeMixin(ObservationsMixin):
+class RegionalAttributesMixin(ObservationsMixin):
+    NO_REGION_MATCH = _("Attributes outside of site region.")
+
+    AttributeModelClass = None  # BenthicAttribute or FishAttribute
+    attribute_key = None  # "attribute", "fish_attribute"
+    observations_key = None
+
+    def validate_region(self):
+        sample_event = self.data.get("sample_event") or {}
+        site_id = sample_event.get("site")
+        site = Site.objects.get_or_none(id=site_id)
+        if site is None:
+            return self.ok(self.identifier)
+
+        regions = Region.objects.filter(geom__intersects=site.location)
+        if regions.count() == 0:
+            return self.ok(self.identifier)
+
+        region = str(regions[0].pk)
+
+        observations = self.get_observations(self.data, key=self.observations_key)
+        attribute_ids = list(set([obs.get(self.attribute_key) for obs in observations]))
+        attr_lookup = dict()
+        for attr in self.AttributeModelClass.objects.filter(id__in=attribute_ids):
+            attr_lookup[str(attr.id)] = [str(r.id) for r in attr.regions.all()]
+
+        no_matches = []
+        for attribute_id in attribute_ids:
+            if attribute_id is None:
+                continue
+
+            attribute_regions = attr_lookup.get(attribute_id) or []
+            if not attribute_regions:
+                continue
+            if region not in attribute_regions:
+                no_matches.append(attribute_id)
+
+        if no_matches:
+            return self.warning(
+                self.identifier,
+                self.NO_REGION_MATCH,
+                data=dict(no_region_matches=list(set(no_matches))),
+            )
+        return self.ok(self.identifier)
+
+
+class BenthicAttributeMixin(RegionalAttributesMixin):
     ALL_HARD_CORAL_MSG = _("All observations are Hard coral")
+    NO_REGION_MATCH = _("Benthic attributes outside of site region.")
+    AttributeModelClass = BenthicAttribute
+    attribute_key = "attribute"
 
     def _validate_by_origin(self, origin_name, warn_message):
         obs = self.get_observations(self.data)
@@ -90,8 +141,11 @@ class BenthicAttributeMixin(ObservationsMixin):
         return self.log(self.identifier, result, message)
 
 
-class FishAttributeMixin(ObservationsMixin):
+class FishAttributeMixin(RegionalAttributesMixin):
     MAX_SPECIES_SIZE_TMPL = "Fish size greater than {} maximum: {}"
+    NO_REGION_MATCH = _("Fish attributes outside of site region.")
+    AttributeModelClass = FishAttribute
+    attribute_key = "fish_attribute"
 
     def validate_fish_lengths(self):
         obs = self.get_observations(self.data)
@@ -960,8 +1014,9 @@ class SerializerValidation(BaseValidation):
 
 class ObsBleachingMixin(object):
     @classmethod
-    def get_observations(cls, data):
-        return data.get(cls.identifier) or []
+    def get_observations(cls, data, key=None):
+        key = key or cls.identifier
+        return data.get(key) or []
 
 
 class ObsBenthicPercentCoveredValidation(DataValidation, ObsBleachingMixin):
@@ -1023,8 +1078,14 @@ class ObsBenthicPercentCoveredValidation(DataValidation, ObsBleachingMixin):
         return self.ok(self.identifier)
 
 
-class ObsColoniesBleachedValidation(DataValidation, ObsBleachingMixin):
+class ObsColoniesBleachedValidation(
+    DataValidation, ObsBleachingMixin, RegionalAttributesMixin
+):
     identifier = "obs_colonies_bleached"
+    AttributeModelClass = BenthicAttribute
+    attribute_key = "attribute"
+    observations_key = "obs_colonies_bleached"
+    NO_REGION_MATCH = _("Benthic attributes outside of site region.")
 
     def _cast_integer(self, val):
         try:
