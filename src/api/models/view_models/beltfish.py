@@ -117,8 +117,11 @@ CREATE OR REPLACE VIEW public.vw_beltfish_obs
     )
     size_bin = models.PositiveSmallIntegerField(null=True, blank=True)
     size = models.DecimalField(
-        max_digits=5, decimal_places=1, verbose_name=_("size (cm)",),
-        null=True, blank=True
+        max_digits=5,
+        decimal_places=1,
+        verbose_name=_("size (cm)"),
+        null=True,
+        blank=True,
     )
     count = models.PositiveIntegerField(default=1, null=True, blank=True)
     biomass_kgha = models.DecimalField(

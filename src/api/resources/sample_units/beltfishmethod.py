@@ -610,10 +610,10 @@ class BeltFishProjectMethodObsView(BaseProjectMethodView):
     serializer_class_csv = BeltFishMethodObsCSVSerializer
     filterset_class = BeltFishMethodObsFilterSet
     queryset = BeltFishObsView.objects.exclude(
-        Q(project_status=Project.TEST) |
-        Q(size__isnull=True) |
-        Q(count__isnull=True) |
-        Q(biomass_kgha__isnull=True)
+        Q(project_status=Project.TEST)
+        | Q(size__isnull=True)
+        | Q(count__isnull=True)
+        | Q(biomass_kgha__isnull=True)
     ).order_by(
         "site_name",
         "sample_date",
