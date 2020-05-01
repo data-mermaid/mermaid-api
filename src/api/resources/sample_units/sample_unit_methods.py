@@ -47,7 +47,7 @@ class SearchNonFieldFilter(django_filters.Filter):
 
     def filter(self, qs, value):
         value = value or ""
-        params = value.replace(",", " ").split()
+        params = value.replace(",", "--*--").split("--*--")
         qry = Q()
         for field in self.SEARCH_FIELDS:
             for param in params:
