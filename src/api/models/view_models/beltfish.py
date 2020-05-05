@@ -220,21 +220,6 @@ class BeltFishSEView(BaseViewModel):
 CREATE OR REPLACE VIEW public.vw_beltfish_se
  AS
 -- For each SE, summarize biomass by 1) avg of transects and 2) avg of transects' trophic groups
-WITH meta_sus AS (
-    SELECT project_id, site_id, management_id, sample_date,
-    SUM(biomass_kgha) AS biomass_kgha
-    FROM vw_beltfish_su
-    GROUP BY project_id, site_id, management_id, sample_date, transect_number, depth
-),
-meta_su_tgs AS (
-    SELECT project_id, site_id, management_id, sample_date, transect_number, depth,
-    tgdata.key AS tg,
-    SUM(tgdata.value::double precision) AS biomass_kgha
-    FROM vw_beltfish_su,
-    LATERAL jsonb_each_text(biomass_kgha_by_trophic_group) tgdata(key, value)
-    GROUP BY project_id, site_id, management_id, sample_date, transect_number, depth, tgdata.key
-)
-
 SELECT 
 NULL AS id,
 vw_beltfish_su.project_id, project_name, project_status, project_notes, contact_link, tags, 
@@ -257,7 +242,12 @@ FROM public.vw_beltfish_su
 INNER JOIN (
     SELECT meta_sus.project_id, meta_sus.site_id, meta_sus.management_id, meta_sus.sample_date,
     ROUND(AVG(meta_sus.biomass_kgha), 2) AS biomass_kgha_avg
-    FROM meta_sus
+    FROM (
+        SELECT project_id, site_id, management_id, sample_date,
+        SUM(biomass_kgha) AS biomass_kgha
+        FROM vw_beltfish_su
+        GROUP BY project_id, site_id, management_id, sample_date, transect_number, depth
+    ) meta_sus
     GROUP BY meta_sus.project_id, meta_sus.site_id, meta_sus.management_id, meta_sus.sample_date
 ) AS beltfish_se 
 ON (
@@ -274,7 +264,14 @@ INNER JOIN (
         SELECT meta_su_tgs.project_id, meta_su_tgs.site_id, meta_su_tgs.management_id, meta_su_tgs.sample_date,
         tg,
         AVG(biomass_kgha) AS biomass_kgha
-        FROM meta_su_tgs
+        FROM (
+            SELECT project_id, site_id, management_id, sample_date, transect_number, depth,
+            tgdata.key AS tg,
+            SUM(tgdata.value::double precision) AS biomass_kgha
+            FROM vw_beltfish_su,
+            LATERAL jsonb_each_text(biomass_kgha_by_trophic_group) tgdata(key, value)
+            GROUP BY project_id, site_id, management_id, sample_date, transect_number, depth, tgdata.key
+        ) meta_su_tgs
         GROUP BY meta_su_tgs.project_id, meta_su_tgs.site_id, meta_su_tgs.management_id, meta_su_tgs.sample_date,
         tg
     ) beltfish_su_tg

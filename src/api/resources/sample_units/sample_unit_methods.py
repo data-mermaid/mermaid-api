@@ -47,11 +47,10 @@ class SearchNonFieldFilter(django_filters.Filter):
 
     def filter(self, qs, value):
         value = value or ""
-        params = value.replace(",", " ").split()
+        params = value.replace(",", "--*--").split("--*--")
         qry = Q()
         for field in self.SEARCH_FIELDS:
             for param in params:
-                param = re.escape(param).replace(r"\.", ".").replace(r"\*", "*")
                 qry |= Q(**{"{}__iregex".format(field): param})
         return qs.filter(qry).distinct()
 
@@ -344,6 +343,8 @@ class SampleUnitMethodView(BaseProjectApiViewSet):
         observer_lookup = defaultdict(list)
         for obs in observers:
             observer_lookup[str(obs.transectmethod_id)].append(obs.profile_name)
+        for transect_method_id, observers in observer_lookup.items():
+            observer_lookup[transect_method_id] = sorted(observers)
 
         context["observers"] = observer_lookup
         return context

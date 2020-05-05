@@ -72,7 +72,7 @@ def to_observers(field, row, serializer_instance):
         if transect is None:
             return ""
 
-        observers = [o.profile_name for o in transect.observers.all().iterator()]
+        observers = sorted([o.profile_name for o in transect.observers.all().iterator()])
     return ",".join(observers)
 
 
@@ -186,6 +186,8 @@ class SampleEventReportSerializer(ReportSerializer):
         observer_lookup = defaultdict(list)
         for o in observers:
             observer_lookup[str(o.transectmethod.id)].append(o.profile.full_name)
+        for transect_method_id, observers in observer_lookup.items():
+            observer_lookup[transect_method_id] = sorted(observers)
         if len(observer_lookup.keys()) > 0:
             self.serializer_cache[
                 "{}_lookups-observers-{}".format(self.transect_method, project_pk)
