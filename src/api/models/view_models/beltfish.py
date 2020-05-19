@@ -115,7 +115,7 @@ CREATE OR REPLACE VIEW public.vw_beltfish_obs
     biomass_constant_c = models.DecimalField(
         max_digits=7, decimal_places=6, default=1, null=True, blank=True
     )
-    size_bin = models.PositiveSmallIntegerField(null=True, blank=True)
+    size_bin = models.CharField(max_length=100)
     size = models.DecimalField(
         max_digits=5,
         decimal_places=1,

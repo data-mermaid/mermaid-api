@@ -97,3 +97,4 @@ src/app/maintenance_mode_state.txt
 .devcontainer.json
 
 scratch/
+/src/static/
