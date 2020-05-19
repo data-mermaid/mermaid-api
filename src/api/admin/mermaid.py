@@ -588,6 +588,7 @@ class BenthicAttributeAdmin(AttributeAdmin):
 class ObserverInline(admin.StackedInline):
     model = Observer
     extra = 0
+    autocomplete_fields = ["created_by", "updated_by", ]
 
 
 class ObsBenthicLITInline(admin.StackedInline):
@@ -762,6 +763,7 @@ class FishGroupingAdmin(FishAttributeGroupingAdmin):
         "region_list",
     )
     search_fields = ["name", ]
+    autocomplete_fields = ["created_by", "updated_by", ]
     exportable_fields = (
         "name",
         "biomass_constant_a",
@@ -881,20 +883,44 @@ class ObsTransectBeltFishInline(admin.StackedInline):
     fk_name = "beltfish"
     extra = 0
 
+    def formfield_for_foreignkey(self, db_field, request, **kwargs):
+        field = super().formfield_for_foreignkey(db_field, request, **kwargs)
+        if db_field.name == "fish_attribute" and hasattr(self, "cached_fish_attributes"):
+            field.choices = self.cached_fish_attributes
+        elif (
+                db_field.name == "created_by" and hasattr(self, "cached_profiles")
+                or db_field.name == "updated_by" and hasattr(self, "cached_profiles")
+        ):
+            field.choices = self.cached_profiles
+        return field
+
 
 @admin.register(BeltFish)
 class BeltFishAdmin(BaseAdmin):
     list_display = ("name",)
-    inlines = (ObserverInline, ObsTransectBeltFishInline)
+    # inlines = (ObserverInline, ObsTransectBeltFishInline)
     search_fields = [
         "transect__sample_event__site__name",
         "transect__sample_event__sample_date",
     ]
+    autocomplete_fields = ["created_by", "updated_by", ]
 
     def name(self, obj):
         return str(obj)
-
     name.admin_order_field = "transect"
+
+    def get_formsets_with_inlines(self, request, obj=None):
+        fish_attributes = FishAttributeView.objects.none()
+        profiles = []
+        if obj is not None:
+            fish_attributes = FishAttributeView.objects.all().order_by("name")
+            # pprofiles = ProjectProfile.objects.filter(project=obj.transect.sample_event.site.project)
+            # profiles = [(p.profile.pk, p.profile) for p in pprofiles]
+
+        for inline in self.get_inline_instances(request, obj):
+            inline.cached_fish_attributes = [(fa.pk, fa.name) for fa in fish_attributes]
+            inline.cached_profiles = profiles
+            yield inline.get_formset(request, obj), inline
 
 
 @admin.register(Observer)

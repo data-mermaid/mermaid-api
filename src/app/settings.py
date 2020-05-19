@@ -69,6 +69,18 @@ INSTALLED_APPS = [
     'tools',
     'taggit',
 ]
+if ENVIRONMENT in ("local", ):
+    INSTALLED_APPS.append("debug_toolbar")
+
+
+def show_toolbar(request):
+    return True
+
+
+DEBUG_TOOLBAR_CONFIG = {
+}
+if ENVIRONMENT in ("local",):
+    DEBUG_TOOLBAR_CONFIG["SHOW_TOOLBAR_CALLBACK"] = show_toolbar
 
 MIDDLEWARE = [
     'django.middleware.security.SecurityMiddleware',
@@ -81,6 +93,8 @@ MIDDLEWARE = [
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
     'maintenance_mode.middleware.MaintenanceModeMiddleware',
 ]
+if ENVIRONMENT in ("local", ):
+    MIDDLEWARE = ['debug_toolbar.middleware.DebugToolbarMiddleware'] + MIDDLEWARE
 
 if ENVIRONMENT in ('dev', 'prod'):
     CONN_MAX_AGE = None

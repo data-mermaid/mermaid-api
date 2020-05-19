@@ -1051,6 +1051,7 @@ class FishAttribute(BaseAttributeModel):
     def regions(self):
         return self._get_taxon().regions
 
+
 class FishGrouping(FishAttribute):
     name = models.CharField(max_length=100)
     regions = models.ManyToManyField(Region, blank=True)
