@@ -7,8 +7,6 @@ import pytz
 import operator as pyoperator
 from decimal import Decimal
 
-from django.db.models.constants import LOOKUP_SEP
-from django.db.models.fields.related import OneToOneField, ManyToOneRel
 from django.db.models import Avg, Q
 from django.contrib.gis.db import models
 from django.contrib.postgres.fields import JSONField
