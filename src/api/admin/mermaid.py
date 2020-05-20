@@ -321,7 +321,7 @@ class FishSizeBinAdmin(BaseAdmin):
 
 
 @admin.register(FishSize)
-class FishSizenAdmin(BaseAdmin):
+class FishSizeAdmin(BaseAdmin):
     list_display = ("fish_bin_size", "name", "val")
 
 
@@ -588,7 +588,18 @@ class BenthicAttributeAdmin(AttributeAdmin):
 class ObserverInline(admin.StackedInline):
     model = Observer
     extra = 0
-    autocomplete_fields = ["created_by", "updated_by", ]
+    readonly_fields = ["created_by", "updated_by", ]
+
+    def get_queryset(self, request):
+        return super().get_queryset(request).select_related(
+            "created_by", "updated_by", "profile"
+        )
+
+    def formfield_for_foreignkey(self, db_field, request, **kwargs):
+        field = super().formfield_for_foreignkey(db_field, request, **kwargs)
+        if db_field.name == "profile" and hasattr(self, "cached_profiles"):
+            field.choices = self.cached_profiles
+        return field
 
 
 class ObsBenthicLITInline(admin.StackedInline):
@@ -882,44 +893,65 @@ class ObsTransectBeltFishInline(admin.StackedInline):
     model = ObsBeltFish
     fk_name = "beltfish"
     extra = 0
+    exclude = ("include",)
+    readonly_fields = ["created_by", "updated_by", ]
+
+    def get_queryset(self, request):
+        return super().get_queryset(request).select_related(
+            "created_by", "updated_by",
+        )
 
     def formfield_for_foreignkey(self, db_field, request, **kwargs):
         field = super().formfield_for_foreignkey(db_field, request, **kwargs)
         if db_field.name == "fish_attribute" and hasattr(self, "cached_fish_attributes"):
             field.choices = self.cached_fish_attributes
-        elif (
-                db_field.name == "created_by" and hasattr(self, "cached_profiles")
-                or db_field.name == "updated_by" and hasattr(self, "cached_profiles")
-        ):
-            field.choices = self.cached_profiles
+        elif db_field.name == "size_bin" and hasattr(self, "cached_size_bins"):
+            field.choices = self.cached_size_bins
         return field
 
 
 @admin.register(BeltFish)
 class BeltFishAdmin(BaseAdmin):
     list_display = ("name",)
-    # inlines = (ObserverInline, ObsTransectBeltFishInline)
+    list_select_related = ("transect",
+                           "transect__sample_event", "transect__sample_event__site",
+                           )
+    readonly_fields = ["created_by", "updated_by", "transect", ]
+    inlines = (ObserverInline, ObsTransectBeltFishInline)
     search_fields = [
         "transect__sample_event__site__name",
         "transect__sample_event__sample_date",
     ]
-    autocomplete_fields = ["created_by", "updated_by", ]
 
     def name(self, obj):
         return str(obj)
+
     name.admin_order_field = "transect"
+
+    def get_queryset(self, request):
+        return super().get_queryset(request).select_related(
+            "created_by", "updated_by", "transect",
+            "transect__sample_event", "transect__sample_event__site",
+        )
+
+    def render_change_form(self, request, context, *args, **kwargs):
+        for formset in context['inline_admin_formsets']:
+            qs = formset.formset.queryset
+            for model_obj in qs:
+                model_obj._hide_fish_in_repr = True
+
+        return super().render_change_form(request, context, *args, **kwargs)
 
     def get_formsets_with_inlines(self, request, obj=None):
         fish_attributes = FishAttributeView.objects.none()
-        profiles = []
+        size_bins = FishSizeBin.objects.none()
         if obj is not None:
-            fish_attributes = FishAttributeView.objects.all().order_by("name")
-            # pprofiles = ProjectProfile.objects.filter(project=obj.transect.sample_event.site.project)
-            # profiles = [(p.profile.pk, p.profile) for p in pprofiles]
+            fish_attributes = FishAttributeView.objects.only("pk", "name").order_by("name")
+            size_bins = FishSizeBin.objects.order_by("val")
 
         for inline in self.get_inline_instances(request, obj):
             inline.cached_fish_attributes = [(fa.pk, fa.name) for fa in fish_attributes]
-            inline.cached_profiles = profiles
+            inline.cached_size_bins = [(sb.pk, sb.val) for sb in size_bins]
             yield inline.get_formset(request, obj), inline
 
 
