@@ -64,6 +64,16 @@ class CollectRecordViewSet(BaseProjectApiViewSet):
     queryset = CollectRecord.objects.all().order_by("id")
     filter_class = CollectRecordFilterSet
 
+    def filter_queryset(self, queryset):
+        user = self.request.user
+        show_all = "showall" in self.request.query_params
+
+        if show_all is True:
+            return queryset
+
+        profile = user.profile
+        return queryset.filter(profile=profile)
+
     def _validate(self, record_id, request):
         try:
             record = self.queryset.get(id=record_id)
