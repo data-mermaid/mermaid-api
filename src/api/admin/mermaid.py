@@ -464,7 +464,7 @@ class QuadratCollectionAdmin(BaseAdmin):
 
 @admin.register(SampleEvent)
 class SampleEventAdmin(BaseAdmin):
-    list_display = ("site", "sample_date", "depth")
+    list_display = ("site", "management", "sample_date", "depth")
     list_display_links = ("site", "sample_date")
     search_fields = ["site__name", "sample_date"]
 
