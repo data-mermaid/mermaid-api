@@ -1,5 +1,7 @@
 from rest_framework import fields
 from rest_framework import serializers
+from rest_framework.exceptions import ValidationError
+
 
 from ..fields import LazyChoiceField
 from ..models import BLEACHINGQC_PROTOCOL, GrowthForm, BenthicAttribute
@@ -119,13 +121,17 @@ class BleachingCSVSerializer(CollectRecordCSVSerializer):
         empty_fields = []
         if (data.get("data__obs_colonies_bleached__attribute") or "").strip() == "":
             empty_fields = "obs_colonies_bleached_fields"
-        elif (data.get("data__obs_quadrat_benthic_percent__quadrat_number") or "").strip() == "":
+        elif (
+            data.get("data__obs_quadrat_benthic_percent__quadrat_number") or ""
+        ).strip() == "":
             empty_fields = "obs_quadrat_benthic_percent_fields"
 
         return field in getattr(self, empty_fields)
 
-    # TODO: Add validation to check required fields for obs have been filled in (one or the other)
-
-    # def validate(self, data):
-    #     data = super().validate(data)
-    #     return data
+    def validate(self, data):
+        data = super().validate(data)
+        if not data.get("data__obs_colonies_bleached__attribute") and not data.get("data__obs_quadrat_benthic_percent__quadrat_number"):
+            raise ValidationError(
+                "One of obs_colonies_bleached or obs_quadrat_benthic_percent is required."
+            )
+        return data
