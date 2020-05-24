@@ -224,6 +224,7 @@ class CollectRecordCSVListSerializer(ListSerializer):
     def group_records(self, records):
         group_fields = self.get_group_by_fields()
         groups = OrderedDict()
+        records = self.sort_records(records)
         for record in records:
             key = self.create_key(record, group_fields)
             obs_list = [
@@ -244,7 +245,7 @@ class CollectRecordCSVListSerializer(ListSerializer):
                         continue
                     utils.get_value(groups[key], obs_field).append(obs)
 
-        return self.sort_records(groups.values())
+        return groups.values()
 
     def create(self, validated_data):
         records = super().create(validated_data)

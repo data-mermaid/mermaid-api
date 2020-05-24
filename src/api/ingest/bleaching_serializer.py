@@ -47,6 +47,7 @@ class BleachingCSVSerializer(CollectRecordCSVSerializer):
         "data__obs_colonies_bleached",
         "data__obs_quadrat_benthic_percent",
     ]
+    ordering_field = "data__obs_quadrat_benthic_percent__quadrat_number"
     additional_group_fields = CollectRecordCSVSerializer.additional_group_fields.copy()
     additional_group_fields.append("data__quadrat_collection__label")
     header_map = CollectRecordCSVSerializer.header_map.copy()
@@ -134,4 +135,10 @@ class BleachingCSVSerializer(CollectRecordCSVSerializer):
             raise ValidationError(
                 "One of obs_colonies_bleached or obs_quadrat_benthic_percent is required."
             )
+        
+        if data.get("data__obs_colonies_bleached__attribute") and data.get("data__obs_quadrat_benthic_percent__quadrat_number"):
+            raise ValidationError(
+                "Only one of obs_colonies_bleached or obs_quadrat_benthic_percent should be defined."
+            )
+
         return data
