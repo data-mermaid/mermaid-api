@@ -1,16 +1,19 @@
-from rest_framework import fields
-from rest_framework import serializers
+from django.utils.translation import gettext_lazy as _
+from rest_framework import fields, serializers
 from rest_framework.exceptions import ValidationError
 
-
 from ..fields import LazyChoiceField
-from ..models import BLEACHINGQC_PROTOCOL, GrowthForm, BenthicAttribute
+from ..models import BLEACHINGQC_PROTOCOL, BenthicAttribute, GrowthForm
 from .serializers import CollectRecordCSVSerializer, build_choices
 
 __all__ = ["BleachingCSVSerializer"]
 
 
 class PositiveIntegerField(fields.Field):
+    default_error_messages = {
+        "min_value": _("Ensure this value is greater than or equal to 0.")
+    }
+
     def __init__(self, **kwargs):
         super().__init__(**kwargs)
         self.allow_null = True
@@ -19,9 +22,14 @@ class PositiveIntegerField(fields.Field):
 
     def to_internal_value(self, value):
         try:
-            return int(value)
+            val = int(value)
         except (TypeError, ValueError):
-            return 0
+            val = 0
+
+        if val < 0:
+            self.fail("min_value")
+
+        return val
 
     def to_representation(self, value):
         try:
@@ -131,12 +139,16 @@ class BleachingCSVSerializer(CollectRecordCSVSerializer):
 
     def validate(self, data):
         data = super().validate(data)
-        if not data.get("data__obs_colonies_bleached__attribute") and not data.get("data__obs_quadrat_benthic_percent__quadrat_number"):
+        if not data.get("data__obs_colonies_bleached__attribute") and not data.get(
+            "data__obs_quadrat_benthic_percent__quadrat_number"
+        ):
             raise ValidationError(
                 "One of obs_colonies_bleached or obs_quadrat_benthic_percent is required."
             )
-        
-        if data.get("data__obs_colonies_bleached__attribute") and data.get("data__obs_quadrat_benthic_percent__quadrat_number"):
+
+        if data.get("data__obs_colonies_bleached__attribute") and data.get(
+            "data__obs_quadrat_benthic_percent__quadrat_number"
+        ):
             raise ValidationError(
                 "Only one of obs_colonies_bleached or obs_quadrat_benthic_percent should be defined."
             )
