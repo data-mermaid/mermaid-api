@@ -112,6 +112,14 @@ def validate(validator_cls, model_cls, qry_params=None):
         validator.identifier = validator_identifier
         validator.instance = record
         result = validator.validate()
+
+        existing_validations = record.validations or dict()
+        existing_status = existing_validations.get("status")
+        existing_logs = existing_validations.get("results")
+        has_updates = existing_status != result or existing_logs != validator.logs
+        if has_updates is False:
+            continue
+
         validations = dict(
             status=result,
             results=validator.logs,
