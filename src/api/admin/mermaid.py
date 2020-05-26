@@ -59,14 +59,14 @@ class FishAttributeAdmin(AttributeAdmin):
 
 class SiteInline(CachedFKInline):
     model = Site
-    readonly_fields = ["created_by", "updated_by", ]
-    cache_fields = ["country", "reef_type", "reef_zone", "exposure", "predecessor", ]
+    readonly_fields = ["created_by", "updated_by"]
+    cache_fields = ["country", "reef_type", "reef_zone", "exposure", "predecessor"]
 
 
 @admin.register(Project)
 class ProjectAdmin(BaseAdmin):
     list_display = ("name", "status", "admin_list", "country_list", "tag_list")
-    readonly_fields = ["created_by", "updated_by", ]
+    readonly_fields = ["created_by", "updated_by"]
     exportable_fields = (
         "name",
         "status",
@@ -82,20 +82,26 @@ class ProjectAdmin(BaseAdmin):
     )
     inlines = [SiteInline]
     search_fields = ["name", "pk"]
-    list_filter = ("status", "tags",)
+    list_filter = ("status", "tags")
     _admins = None
     _sites = None
 
     def _get_admins(self):
         if self._admins:
             return self._admins
-        self._admins = ProjectProfile.objects.filter(role=ProjectProfile.ADMIN).select_related()
+        self._admins = ProjectProfile.objects.filter(
+            role=ProjectProfile.ADMIN
+        ).select_related()
         return self._admins
 
     def admin_list(self, obj):
         pps = self._get_admins()
         return ", ".join(
-            [u"{} <{}>".format(p.profile.full_name, p.profile.email) for p in pps if p.project == obj]
+            [
+                u"{} <{}>".format(p.profile.full_name, p.profile.email)
+                for p in pps
+                if p.project == obj
+            ]
         )
 
     def _get_sites(self):
@@ -120,9 +126,7 @@ class ProjectAdmin(BaseAdmin):
     tag_list.short_description = _(u"organizations")
 
     def get_queryset(self, request):
-        return super().get_queryset(request).select_related(
-            "created_by", "updated_by",
-        )
+        return super().get_queryset(request).select_related("created_by", "updated_by")
 
     def delete_view(self, request, object_id, extra_context=None):
         # Delete any (protected) related SampleEvents before deleting project.
@@ -454,18 +458,25 @@ class BenthicAttributeAdmin(AttributeAdmin):
 
 class ObsBenthicLITInline(ObservationInline):
     model = ObsBenthicLIT
-    cache_fields = ["attribute", "growth_form", ]
+    cache_fields = ["attribute", "growth_form"]
 
 
 @admin.register(BenthicLIT)
 class BenthicLITAdmin(TransectMethodAdmin):
-    list_display = ("name", "len_surveyed",)
+    list_display = ("name", "len_surveyed")
     inlines = (ObserverInline, ObsBenthicLITInline)
 
     def get_queryset(self, request):
-        return super().get_queryset(request).select_related(
-            "created_by", "updated_by", "transect",
-            "transect__sample_event", "transect__sample_event__site",
+        return (
+            super()
+            .get_queryset(request)
+            .select_related(
+                "created_by",
+                "updated_by",
+                "transect",
+                "transect__sample_event",
+                "transect__sample_event__site",
+            )
         )
 
     def get_formsets_with_inlines(self, request, obj=None):
@@ -483,18 +494,25 @@ class BenthicLITAdmin(TransectMethodAdmin):
 
 class ObsBenthicPITInline(ObservationInline):
     model = ObsBenthicPIT
-    cache_fields = ["attribute", "growth_form", ]
+    cache_fields = ["attribute", "growth_form"]
 
 
 @admin.register(BenthicPIT)
 class BenthicPITAdmin(TransectMethodAdmin):
-    list_display = ("name", "len_surveyed", "interval_size",)
+    list_display = ("name", "len_surveyed", "interval_size")
     inlines = (ObserverInline, ObsBenthicPITInline)
 
     def get_queryset(self, request):
-        return super().get_queryset(request).select_related(
-            "created_by", "updated_by", "transect",
-            "transect__sample_event", "transect__sample_event__site",
+        return (
+            super()
+            .get_queryset(request)
+            .select_related(
+                "created_by",
+                "updated_by",
+                "transect",
+                "transect__sample_event",
+                "transect__sample_event__site",
+            )
         )
 
     def get_formsets_with_inlines(self, request, obj=None):
@@ -512,18 +530,25 @@ class BenthicPITAdmin(TransectMethodAdmin):
 
 class ObsHabitatComplexityInline(ObservationInline):
     model = ObsHabitatComplexity
-    cache_fields = ["score", ]
+    cache_fields = ["score"]
 
 
 @admin.register(HabitatComplexity)
 class HabitatComplexityAdmin(TransectMethodAdmin):
-    list_display = ("name", "len_surveyed", "interval_size",)
+    list_display = ("name", "len_surveyed", "interval_size")
     inlines = (ObserverInline, ObsHabitatComplexityInline)
 
     def get_queryset(self, request):
-        return super().get_queryset(request).select_related(
-            "created_by", "updated_by", "transect",
-            "transect__sample_event", "transect__sample_event__site",
+        return (
+            super()
+            .get_queryset(request)
+            .select_related(
+                "created_by",
+                "updated_by",
+                "transect",
+                "transect__sample_event",
+                "transect__sample_event__site",
+            )
         )
 
     def get_formsets_with_inlines(self, request, obj=None):
@@ -538,7 +563,7 @@ class HabitatComplexityAdmin(TransectMethodAdmin):
 
 class ObsColoniesBleachedInline(ObservationInline):
     model = ObsColoniesBleached
-    cache_fields = ["attribute", "growth_form", ]
+    cache_fields = ["attribute", "growth_form"]
 
 
 class ObsQuadratBenthicPercentInline(ObservationInline):
@@ -547,16 +572,20 @@ class ObsQuadratBenthicPercentInline(ObservationInline):
 
 @admin.register(BleachingQuadratCollection)
 class BleachingQuadratCollectionAdmin(BaseAdmin):
-    list_display = ("name", "quadrat_size",)
-    inlines = (ObserverInline, ObsColoniesBleachedInline, ObsQuadratBenthicPercentInline)
+    list_display = ("name", "quadrat_size")
+    inlines = (
+        ObserverInline,
+        ObsColoniesBleachedInline,
+        ObsQuadratBenthicPercentInline,
+    )
     autocomplete_fields = ("quadrat",)
-    readonly_fields = ["created_by", "updated_by", "cr_id", ]
+    readonly_fields = ["created_by", "updated_by", "cr_id"]
     search_fields = [
         "quadrat__sample_event__site__name",
         "quadrat__sample_event__sample_date",
         "quadrat__sample_event__site__project__name",
     ]
-    ordering = ["quadrat__sample_event__site__name", ]
+    ordering = ["quadrat__sample_event__site__name"]
 
     def name(self, obj):
         return str(obj.quadrat)
@@ -574,9 +603,16 @@ class BleachingQuadratCollectionAdmin(BaseAdmin):
     cr_id.short_description = "CollectRecord ID"
 
     def get_queryset(self, request):
-        return super().get_queryset(request).select_related(
-            "created_by", "updated_by", "quadrat",
-            "quadrat__sample_event", "quadrat__sample_event__site",
+        return (
+            super()
+            .get_queryset(request)
+            .select_related(
+                "created_by",
+                "updated_by",
+                "quadrat",
+                "quadrat__sample_event",
+                "quadrat__sample_event__site",
+            )
         )
 
     def get_formsets_with_inlines(self, request, obj=None):
@@ -645,8 +681,8 @@ class FishGroupingAdmin(FishAttributeGroupingAdmin):
         "biomass_constant_c",
         "region_list",
     )
-    search_fields = ["name", ]
-    autocomplete_fields = ["created_by", "updated_by", ]
+    search_fields = ["name"]
+    autocomplete_fields = ["created_by", "updated_by"]
     exportable_fields = (
         "name",
         "biomass_constant_a",
@@ -658,11 +694,7 @@ class FishGroupingAdmin(FishAttributeGroupingAdmin):
 
     def get_readonly_fields(self, request, obj=None):
         if obj:  # editing an existing object
-            return (
-                "biomass_constant_a",
-                "biomass_constant_b",
-                "biomass_constant_c",
-            )
+            return ("biomass_constant_a", "biomass_constant_b", "biomass_constant_c")
         return ()
 
     def get_formsets_with_inlines(self, request, obj=None):
@@ -763,12 +795,12 @@ class FishSpeciesAdmin(FishAttributeAdmin):
 
 class ObsTransectBeltFishInline(ObservationInline):
     model = ObsBeltFish
-    cache_fields = ["fish_attribute", "size_bin", ]
+    cache_fields = ["fish_attribute", "size_bin"]
 
 
 @admin.register(BeltFish)
 class BeltFishAdmin(TransectMethodAdmin):
-    list_display = ("name", "len_surveyed", "width",)
+    list_display = ("name", "len_surveyed", "width")
     inlines = (ObserverInline, ObsTransectBeltFishInline)
 
     def width(self, obj):
@@ -777,14 +809,21 @@ class BeltFishAdmin(TransectMethodAdmin):
     width.admin_order_field = "transect__width"
 
     def get_queryset(self, request):
-        return super().get_queryset(request).select_related(
-            "created_by", "updated_by", "transect",
-            "transect__sample_event", "transect__sample_event__site",
-            "transect__width",
+        return (
+            super()
+            .get_queryset(request)
+            .select_related(
+                "created_by",
+                "updated_by",
+                "transect",
+                "transect__sample_event",
+                "transect__sample_event__site",
+                "transect__width",
+            )
         )
 
     def render_change_form(self, request, context, *args, **kwargs):
-        for formset in context['inline_admin_formsets']:
+        for formset in context["inline_admin_formsets"]:
             qs = formset.formset.queryset
             for model_obj in qs:
                 model_obj._hide_fish_in_repr = True
@@ -795,7 +834,9 @@ class BeltFishAdmin(TransectMethodAdmin):
         fish_attributes = FishAttributeView.objects.none()
         size_bins = FishSizeBin.objects.none()
         if obj is not None:
-            fish_attributes = FishAttributeView.objects.only("pk", "name").order_by("name")
+            fish_attributes = FishAttributeView.objects.only("pk", "name").order_by(
+                "name"
+            )
             size_bins = FishSizeBin.objects.order_by("val")
 
         for inline in self.get_inline_instances(request, obj):
