@@ -29,7 +29,7 @@ def fish_attributes_choices():
 
 class FishBeltCSVSerializer(CollectRecordCSVSerializer):
     protocol = "fishbelt"
-    observations_field = "data__obs_belt_fishes"
+    observations_fields = ["data__obs_belt_fishes"]
     additional_group_fields = CollectRecordCSVSerializer.additional_group_fields.copy()
     additional_group_fields.append("data__fishbelt_transect__label")
     header_map = CollectRecordCSVSerializer.header_map.copy()

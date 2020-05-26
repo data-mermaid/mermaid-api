@@ -21,7 +21,7 @@ from api.models import (
 class Command(BaseCommand):
     help = "Ingest collect records from a CSV file."
 
-    protocol_choices = (BENTHICPIT_PROTOCOL, FISHBELT_PROTOCOL)
+    protocol_choices = (BENTHICPIT_PROTOCOL, BLEACHINGQC_PROTOCOL, FISHBELT_PROTOCOL)
 
     def add_arguments(self, parser):
         parser.add_argument("datafile", nargs=1, type=argparse.FileType("r"))

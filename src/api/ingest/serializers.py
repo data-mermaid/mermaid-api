@@ -224,16 +224,28 @@ class CollectRecordCSVListSerializer(ListSerializer):
     def group_records(self, records):
         group_fields = self.get_group_by_fields()
         groups = OrderedDict()
+        records = self.sort_records(records)
         for record in records:
             key = self.create_key(record, group_fields)
-            obs = utils.get_value(record, self.child.observations_field)
+            obs_list = [
+                utils.get_value(record, obs_field)
+                for obs_field in self.child.observations_fields
+            ]
+
             if key not in groups:
-                utils.set_value(record, self.child.observations_field, value=[obs])
+                for obs_field, obs in zip(self.child.observations_fields, obs_list):
+                    if obs is None:
+                        utils.set_value(record, obs_field, value=[])
+                        continue
+                    utils.set_value(record, obs_field, value=[obs])
                 groups[key] = record
             else:
-                utils.get_value(groups[key], self.child.observations_field).append(obs)
+                for obs_field, obs in zip(self.child.observations_fields, obs_list):
+                    if obs is None:
+                        continue
+                    utils.get_value(groups[key], obs_field).append(obs)
 
-        return self.sort_records(groups.values())
+        return groups.values()
 
     def create(self, validated_data):
         records = super().create(validated_data)
@@ -268,7 +280,7 @@ class CollectRecordCSVListSerializer(ListSerializer):
 
 class CollectRecordCSVSerializer(Serializer):
     protocol = None
-    observations_field = None
+    observations_fields = None
     error_row_offset = 1
     header_map = {
         "Site *": "data__sample_event__site",
@@ -285,13 +297,12 @@ class CollectRecordCSVSerializer(Serializer):
         "Tide": "data__sample_event__tide",
         "Notes": "data__sample_event__notes",
         "Observer emails *": "data__observers",
-        "Observation interval *": "data__obs_benthic_pits__interval",
     }
 
     # By Default:
     # - required fields are used
     # - "id" is excluded
-    # - "observations_field" fields are ignored
+    # - "observations_fields" fields are ignored
     additional_group_fields = []
     excluded_group_fields = ["id"]
 
@@ -380,7 +391,6 @@ class CollectRecordCSVSerializer(Serializer):
     def run_validation(self, data=empty):
         if data is not empty:
             data = self.clean(data)
-
         return super().run_validation(data)
 
     def validate_data__observers(self, val):
@@ -413,8 +423,9 @@ class CollectRecordCSVSerializer(Serializer):
 
     def create(self, validated_data):
         output = validated_data.copy()
-
         for name, field in self.fields.items():
+            if self.skip_field(output, name) is True:
+                continue
             field_path = field.field_name.split("__")
             val = validated_data.get(name)
             output = self.create_path(field_path, output, val)
@@ -446,3 +457,6 @@ class CollectRecordCSVSerializer(Serializer):
     def formatted_errors(self):
         errors = self.errors
         return self.format_error(errors)
+
+    def skip_field(self, data, field):
+        return False

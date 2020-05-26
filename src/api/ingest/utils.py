@@ -4,18 +4,22 @@ import json
 from django.db import connection, transaction
 
 from api import mocks
-from api.ingest import BenthicPITCSVSerializer, FishBeltCSVSerializer
+from api.ingest import (
+    BenthicPITCSVSerializer,
+    BleachingCSVSerializer,
+    FishBeltCSVSerializer,
+)
 from api.models import (
     BENTHICLIT_PROTOCOL,
     BENTHICPIT_PROTOCOL,
     BLEACHINGQC_PROTOCOL,
     FISHBELT_PROTOCOL,
     HABITATCOMPLEXITY_PROTOCOL,
+    CollectRecord,
     Management,
     Profile,
     ProjectProfile,
     Site,
-    CollectRecord,
 )
 from api.resources.project_profile import ProjectProfileSerializer
 from api.utils import tokenutils
@@ -97,6 +101,8 @@ def ingest(
         serializer = BenthicPITCSVSerializer
     elif protocol == FISHBELT_PROTOCOL:
         serializer = FishBeltCSVSerializer
+    elif protocol == BLEACHINGQC_PROTOCOL:
+        serializer = BleachingCSVSerializer
     else:
         return None, None
 
