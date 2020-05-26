@@ -56,6 +56,7 @@ class Tag(TagBase, BaseModel):
     class Meta:
         verbose_name = _("Tag")
         verbose_name_plural = _("Tags")
+        ordering = ["name", ]
 
     def __str__(self):
         return _(u'%s') % self.name
@@ -721,7 +722,7 @@ class Observer(BaseModel):
         unique_together = ('transectmethod', 'profile')
 
     def __str__(self):
-        return _(u'%s - %s') % (self.transectmethod, self.profile)
+        return _(u'%s') % (self.profile)
 
     @property
     def profile_name(self):
@@ -835,7 +836,7 @@ class ObsBenthicLIT(BaseModel, JSONMixin):
         ordering = ["created_on"]
 
     def __str__(self):
-        return _(u'%s %s') % (self.attribute.__str__(), self.length)
+        return _(u'%s') % (self.length)
 
 
 class BenthicPIT(TransectMethod):
@@ -881,7 +882,6 @@ class ObsBenthicPIT(BaseModel, JSONMixin):
 
     def __str__(self):
         return _(u'%s') % self.interval
-        # return _(u'%s %s') % (self.benthicpitgenus.__str__(), self.interval)
 
 
 class HabitatComplexity(TransectMethod):
@@ -946,7 +946,7 @@ class BleachingQuadratCollection(TransectMethod):
         verbose_name_plural = _(u'bleaching quadrat collection observations')
 
     def __str__(self):
-        return _(u'bleaching quadrat collection %s') % self.transect.__str__()
+        return _(u'bleaching quadrat collection %s') % self.quadrat.__str__()
 
 
 class ObsColoniesBleached(BaseModel, JSONMixin):

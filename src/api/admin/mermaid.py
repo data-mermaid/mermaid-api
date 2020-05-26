@@ -1,164 +1,13 @@
 import operator
 from django.conf import settings
 from django.contrib import admin
-from django.contrib import messages
 from django.utils.html import format_html
 from django.utils.translation import ugettext_lazy as _
 from django.urls import reverse
 
-from .base import BaseAdmin
+from .base import *
 from ..utils import get_subclasses
 from ..models import *
-
-
-def get_crs_with_attrib(query, attrib_val):
-    cr_filter = {query: [attrib_val]}
-    return CollectRecord.objects.filter(**cr_filter)
-
-
-def get_sus_with_attrib(model_su, query, attrib_id):
-    su_filter = {query: attrib_id}
-    return model_su.objects.filter(**su_filter).distinct()
-
-
-class AttributeAdmin(BaseAdmin):
-
-    # For any (protected) attribute assigned to mermaid observations, override
-    # default "can't delete" admin behavior with form allowing user to
-    # reassign existing observations using this attribute to use another attribute.
-    # Requires these definitions on the inherited class:
-    # model_attrib =
-    # attrib = ''
-    # protocols = [
-    #     {'model_su': ,
-    #      'model_obs': ,
-    #      'cr_obs': '',
-    #      'cr_sampleunit': '',
-    #      'su_obs': '',
-    #      'su_sampleunit': ''},
-    # ]
-    def delete_view(self, request, object_id, extra_context=None):
-        extra_context = extra_context or {}
-
-        if not extra_context.get("protected_descendants"):
-            # dropdown of other attributes to assign to existing observations before deleting
-            other_objs = self.model_attrib.objects.exclude(id=object_id).order_by(
-                "name"
-            )
-            if other_objs.count() > 0:
-                extra_context.update({"other_objs": other_objs})
-
-            protocol_crs = CollectRecord.objects.none()
-            atleast_one_su = False
-            collect_records = []
-            sample_units = []
-            for p in self.protocols:
-
-                # Collect records that use this attribute, about to be deleted
-                crs = get_crs_with_attrib(
-                    "data__{}__contains".format(p.get("cr_obs")),
-                    {self.attrib: object_id},
-                )
-                if crs.count() > 0:
-                    if not protocol_crs:
-                        protocol_crs = crs
-                    else:
-                        protocol_crs = protocol_crs.union(crs)
-
-                    for cr in crs:
-                        project_id = cr.project.id
-                        admin_url = reverse(
-                            "admin:{}_collectrecord_change".format(
-                                p.get("model_su")._meta.app_label
-                            ),
-                            args=(cr.pk,),
-                        )
-                        crstr = format_html('<a href="{}">{}</a>', admin_url, cr)
-                        if project_id is not None:
-                            app_url = "{}/#/projects/{}/collect/{}/{}".format(
-                                settings.DEFAULT_DOMAIN_COLLECT,
-                                project_id,
-                                p.get("cr_sampleunit"),
-                                cr.pk,
-                            )
-                            crstr = format_html(
-                                '<a href="{}">{}</a> [<a href="{}">{}</a>]',
-                                admin_url,
-                                cr,
-                                app_url,
-                                app_url,
-                            )
-                        collect_records.append(crstr)
-
-                # Sample units that use this attribute, about to be deleted
-                sus = get_sus_with_attrib(
-                    p.get("model_su"),
-                    "{}__{}".format(p.get("su_obs"), self.attrib),
-                    object_id,
-                )
-                if sus.count() > 0:
-                    atleast_one_su = True
-                    for su in sus:
-                        project_id = su.transect.sample_event.site.project.pk
-                        admin_url = reverse(
-                            "admin:{}_{}_change".format(
-                                p.get("model_su")._meta.app_label,
-                                p.get("model_su")._meta.model_name,
-                            ),
-                            args=(su.pk,),
-                        )
-                        app_url = "{}/#/projects/{}/{}/{}".format(
-                            settings.DEFAULT_DOMAIN_COLLECT,
-                            project_id,
-                            p.get("su_sampleunit"),
-                            su.pk,
-                        )
-                        sustr = format_html(
-                            '<a href="{}">{}</a> [<a href="{}">{}</a>]',
-                            admin_url,
-                            su,
-                            app_url,
-                            app_url,
-                        )
-                        sample_units.append(sustr)
-
-            if collect_records:
-                extra_context.update({"collect_records": collect_records})
-            if sample_units:
-                extra_context.update({"sample_units": sample_units})
-
-            # process reassignment, then hand back to django for deletion
-            if request.method == "POST":
-                replacement_obj = request.POST.get("replacement_obj")
-                if (
-                    replacement_obj is None or replacement_obj == ""
-                ) and atleast_one_su:
-                    self.message_user(
-                        request,
-                        "To delete, you must select a replacement object to assign to all items "
-                        "using this object.",
-                        level=messages.ERROR,
-                    )
-                    return super(AttributeAdmin, self).delete_view(
-                        request, object_id, extra_context
-                    )
-
-                for cr in protocol_crs:
-                    for p in self.protocols:
-                        observations = cr.data.get(p.get("cr_obs")) or []
-                        for obs in observations:
-                            if self.attrib in obs and obs[self.attrib] == object_id:
-                                obs[self.attrib] = replacement_obj
-                    cr.save()
-
-                for p in self.protocols:
-                    p.get("model_obs").objects.filter(
-                        **{self.attrib: object_id}
-                    ).update(**{self.attrib: replacement_obj})
-
-        return super(AttributeAdmin, self).delete_view(
-            request, object_id, extra_context
-        )
 
 
 class FishAttributeAdmin(AttributeAdmin):
@@ -208,14 +57,16 @@ class FishAttributeAdmin(AttributeAdmin):
         )
 
 
-class SiteInline(admin.StackedInline):
+class SiteInline(CachedFKInline):
     model = Site
-    extra = 0
+    readonly_fields = ["created_by", "updated_by", ]
+    cache_fields = ["country", "reef_type", "reef_zone", "exposure", "predecessor", ]
 
 
 @admin.register(Project)
 class ProjectAdmin(BaseAdmin):
     list_display = ("name", "status", "admin_list", "country_list", "tag_list")
+    readonly_fields = ["created_by", "updated_by", ]
     exportable_fields = (
         "name",
         "status",
@@ -231,18 +82,31 @@ class ProjectAdmin(BaseAdmin):
     )
     inlines = [SiteInline]
     search_fields = ["name", "pk"]
-    list_filter = ("status",)
+    list_filter = ("status", "tags",)
+    _admins = None
+    _sites = None
+
+    def _get_admins(self):
+        if self._admins:
+            return self._admins
+        self._admins = ProjectProfile.objects.filter(role=ProjectProfile.ADMIN).select_related()
+        return self._admins
 
     def admin_list(self, obj):
-        pps = ProjectProfile.objects.filter(
-            project=obj, role=ProjectProfile.ADMIN
-        ).select_related("profile")
+        pps = self._get_admins()
         return ", ".join(
-            [u"{} <{}>".format(p.profile.full_name, p.profile.email) for p in pps]
+            [u"{} <{}>".format(p.profile.full_name, p.profile.email) for p in pps if p.project == obj]
         )
 
+    def _get_sites(self):
+        if self._sites:
+            return self._sites
+        self._sites = Site.objects.select_related()
+        return self._sites
+
     def country_list(self, obj):
-        sites = Site.objects.filter(project=obj).select_related("country")
+        all_sites = self._get_sites()
+        sites = [s for s in all_sites if s.project == obj]
         countries = []
         for s in sites:
             if s.country not in countries:
@@ -250,9 +114,15 @@ class ProjectAdmin(BaseAdmin):
         return ", ".join([c.name for c in countries])
 
     def tag_list(self, obj):
+        # TODO: cache this
         return ", ".join(u"{}".format(t.name) for t in obj.tags.all())
 
     tag_list.short_description = _(u"organizations")
+
+    def get_queryset(self, request):
+        return super().get_queryset(request).select_related(
+            "created_by", "updated_by",
+        )
 
     def delete_view(self, request, object_id, extra_context=None):
         # Delete any (protected) related SampleEvents before deleting project.
@@ -266,6 +136,27 @@ class ProjectAdmin(BaseAdmin):
                     su_set.all().delete()
                 # Actual SE gets deleted via SU signal
         return super(ProjectAdmin, self).delete_view(request, object_id, extra_context)
+
+    def get_formsets_with_inlines(self, request, obj=None):
+        countries = Country.objects.none()
+        reef_types = ReefType.objects.none()
+        reef_zones = ReefZone.objects.none()
+        exposures = ReefExposure.objects.none()
+        projects = Project.objects.none()
+        if obj is not None:
+            countries = Country.objects.all()
+            reef_types = ReefType.objects.all()
+            reef_zones = ReefZone.objects.all()
+            exposures = ReefExposure.objects.all()
+            projects = Project.objects.all()
+
+        for inline in self.get_inline_instances(request, obj):
+            inline.cached_countrys = [(c.pk, c.name) for c in countries]
+            inline.cached_reef_types = [(rt.pk, rt.name) for rt in reef_types]
+            inline.cached_reef_zones = [(rz.pk, rz.name) for rz in reef_zones]
+            inline.cached_exposures = [(e.pk, e.name) for e in exposures]
+            inline.cached_predecessors = [(p.pk, p.name) for p in projects]
+            yield inline.get_formset(request, obj), inline
 
 
 @admin.register(ProjectProfile)
@@ -424,42 +315,18 @@ class MPAAdmin(BaseAdmin):
 
 
 @admin.register(BenthicTransect)
-class BenthicTransectAdmin(BaseAdmin):
+class BenthicTransectAdmin(SampleUnitAdmin):
     list_display = ("name", "len_surveyed")
-    search_fields = ["sample_event__site__name", "sample_event__sample_date"]
-
-    def name(self, obj):
-        return str(obj)
-
-    name.admin_order_field = "sample_event"
 
 
 @admin.register(FishBeltTransect)
-class FishTransectAdmin(BaseAdmin):
+class FishTransectAdmin(SampleUnitAdmin):
     list_display = ("name", "len_surveyed", "width")
-    search_fields = ["sample_event__site__name", "sample_event__sample_date"]
-    readonly_fields = ("cr_id",)
-
-    def name(self, obj):
-        return str(obj)
-
-    name.admin_order_field = "sample_event"
-
-    def cr_id(self, obj):
-        return obj.transect.collect_record_id
-
-    cr_id.short_description = "CollectRecord ID"
 
 
 @admin.register(QuadratCollection)
-class QuadratCollectionAdmin(BaseAdmin):
+class QuadratCollectionAdmin(SampleUnitAdmin):
     list_display = ("name", "quadrat_size")
-    search_fields = ["sample_event__site__name", "sample_event__sample_date"]
-
-    def name(self, obj):
-        return str(obj)
-
-    name.admin_order_field = "sample_event"
 
 
 @admin.register(SampleEvent)
@@ -585,139 +452,144 @@ class BenthicAttributeAdmin(AttributeAdmin):
         return proportions
 
 
-class ObserverInline(admin.StackedInline):
-    model = Observer
-    extra = 0
-    readonly_fields = ["created_by", "updated_by", ]
-
-    def get_queryset(self, request):
-        return super().get_queryset(request).select_related(
-            "created_by", "updated_by", "profile"
-        )
-
-    def formfield_for_foreignkey(self, db_field, request, **kwargs):
-        field = super().formfield_for_foreignkey(db_field, request, **kwargs)
-        if db_field.name == "profile" and hasattr(self, "cached_profiles"):
-            field.choices = self.cached_profiles
-        return field
-
-
-class ObsBenthicLITInline(admin.StackedInline):
+class ObsBenthicLITInline(ObservationInline):
     model = ObsBenthicLIT
-    extra = 0
+    cache_fields = ["attribute", "growth_form", ]
 
 
 @admin.register(BenthicLIT)
-class BenthicLITAdmin(BaseAdmin):
-    list_display = ("name",)
+class BenthicLITAdmin(TransectMethodAdmin):
+    list_display = ("name", "len_surveyed",)
     inlines = (ObserverInline, ObsBenthicLITInline)
-    search_fields = [
-        "transect__sample_event__site__name",
-        "transect__sample_event__sample_date",
-    ]
-    readonly_fields = ("cr_id",)
 
-    def name(self, obj):
-        return str(obj)
+    def get_queryset(self, request):
+        return super().get_queryset(request).select_related(
+            "created_by", "updated_by", "transect",
+            "transect__sample_event", "transect__sample_event__site",
+        )
 
-    name.admin_order_field = "transect"
+    def get_formsets_with_inlines(self, request, obj=None):
+        attributes = BenthicAttribute.objects.none()
+        growth_forms = GrowthForm.objects.none()
+        if obj is not None:
+            attributes = BenthicAttribute.objects.only("pk", "name").order_by("name")
+            growth_forms = GrowthForm.objects.all()
 
-    def cr_id(self, obj):
-        return obj.transect.collect_record_id
+        for inline in self.get_inline_instances(request, obj):
+            inline.cached_attributes = [(a.pk, a.name) for a in attributes]
+            inline.cached_growth_forms = [(gf.pk, gf.name) for gf in growth_forms]
+            yield inline.get_formset(request, obj), inline
 
-    cr_id.short_description = "CollectRecord ID"
 
-
-class ObsBenthicPITInline(admin.StackedInline):
+class ObsBenthicPITInline(ObservationInline):
     model = ObsBenthicPIT
-    extra = 0
+    cache_fields = ["attribute", "growth_form", ]
 
 
 @admin.register(BenthicPIT)
-class BenthicPITAdmin(BaseAdmin):
-    list_display = ("name",)
+class BenthicPITAdmin(TransectMethodAdmin):
+    list_display = ("name", "len_surveyed", "interval_size",)
     inlines = (ObserverInline, ObsBenthicPITInline)
-    search_fields = [
-        "transect__sample_event__site__name",
-        "transect__sample_event__sample_date",
-    ]
-    readonly_fields = ("cr_id",)
 
-    def name(self, obj):
-        return str(obj)
+    def get_queryset(self, request):
+        return super().get_queryset(request).select_related(
+            "created_by", "updated_by", "transect",
+            "transect__sample_event", "transect__sample_event__site",
+        )
 
-    name.admin_order_field = "transect"
+    def get_formsets_with_inlines(self, request, obj=None):
+        attributes = BenthicAttribute.objects.none()
+        growth_forms = GrowthForm.objects.none()
+        if obj is not None:
+            attributes = BenthicAttribute.objects.only("pk", "name").order_by("name")
+            growth_forms = GrowthForm.objects.all()
 
-    def cr_id(self, obj):
-        return obj.transect.collect_record_id
-
-    cr_id.short_description = "CollectRecord ID"
-
-    class Media:
-        js = ("js/admin/admin.js",)  # app static folder
+        for inline in self.get_inline_instances(request, obj):
+            inline.cached_attributes = [(a.pk, a.name) for a in attributes]
+            inline.cached_growth_forms = [(gf.pk, gf.name) for gf in growth_forms]
+            yield inline.get_formset(request, obj), inline
 
 
-class ObsHabitatComplexityInline(admin.StackedInline):
+class ObsHabitatComplexityInline(ObservationInline):
     model = ObsHabitatComplexity
-    extra = 0
+    cache_fields = ["score", ]
 
 
 @admin.register(HabitatComplexity)
-class HabitatComplexityAdmin(BaseAdmin):
-    list_display = ("name",)
+class HabitatComplexityAdmin(TransectMethodAdmin):
+    list_display = ("name", "len_surveyed", "interval_size",)
     inlines = (ObserverInline, ObsHabitatComplexityInline)
-    search_fields = [
-        "transect__sample_event__site__name",
-        "transect__sample_event__sample_date",
-    ]
-    readonly_fields = ("cr_id",)
 
-    def name(self, obj):
-        return str(obj)
+    def get_queryset(self, request):
+        return super().get_queryset(request).select_related(
+            "created_by", "updated_by", "transect",
+            "transect__sample_event", "transect__sample_event__site",
+        )
 
-    name.admin_order_field = "transect"
+    def get_formsets_with_inlines(self, request, obj=None):
+        scores = HabitatComplexityScore.objects.none()
+        if obj is not None:
+            scores = HabitatComplexityScore.objects.all()
 
-    def cr_id(self, obj):
-        return obj.transect.collect_record_id
-
-    cr_id.short_description = "CollectRecord ID"
-
-    class Media:
-        js = ("js/admin/admin.js",)  # app static folder
+        for inline in self.get_inline_instances(request, obj):
+            inline.cached_scores = [(s.pk, str(s)) for s in scores]
+            yield inline.get_formset(request, obj), inline
 
 
-class ObsColoniesBleachedInline(admin.StackedInline):
+class ObsColoniesBleachedInline(ObservationInline):
     model = ObsColoniesBleached
-    extra = 0
+    cache_fields = ["attribute", "growth_form", ]
 
 
-class ObsQuadratBenthicPercentInline(admin.StackedInline):
+class ObsQuadratBenthicPercentInline(ObservationInline):
     model = ObsQuadratBenthicPercent
-    extra = 0
 
 
 @admin.register(BleachingQuadratCollection)
 class BleachingQuadratCollectionAdmin(BaseAdmin):
-    list_display = ("name",)
-    inlines = (ObsColoniesBleachedInline, ObsQuadratBenthicPercentInline)
+    list_display = ("name", "quadrat_size",)
+    inlines = (ObserverInline, ObsColoniesBleachedInline, ObsQuadratBenthicPercentInline)
+    autocomplete_fields = ("quadrat",)
+    readonly_fields = ["created_by", "updated_by", "cr_id", ]
     search_fields = [
         "quadrat__sample_event__site__name",
         "quadrat__sample_event__sample_date",
+        "quadrat__sample_event__site__project__name",
     ]
-    readonly_fields = ("cr_id",)
+    ordering = ["quadrat__sample_event__site__name", ]
 
     def name(self, obj):
-        return str(obj)
+        return str(obj.quadrat)
+
+    name.admin_order_field = "quadrat__sample_event__site__name"
+
+    def quadrat_size(self, obj):
+        return obj.quadrat.quadrat_size
+
+    quadrat_size.admin_order_field = "quadrat__quadrat_size"
 
     def cr_id(self, obj):
-        return obj.transect.collect_record_id
+        return obj.quadrat.collect_record_id
 
     cr_id.short_description = "CollectRecord ID"
 
-    name.admin_order_field = "quadrat"
+    def get_queryset(self, request):
+        return super().get_queryset(request).select_related(
+            "created_by", "updated_by", "quadrat",
+            "quadrat__sample_event", "quadrat__sample_event__site",
+        )
 
-    class Media:
-        js = ("js/admin/admin.js",)  # app static folder
+    def get_formsets_with_inlines(self, request, obj=None):
+        attributes = BenthicAttribute.objects.none()
+        growth_forms = GrowthForm.objects.none()
+        if obj is not None:
+            attributes = BenthicAttribute.objects.only("pk", "name").order_by("name")
+            growth_forms = GrowthForm.objects.all()
+
+        for inline in self.get_inline_instances(request, obj):
+            inline.cached_attributes = [(a.pk, a.name) for a in attributes]
+            inline.cached_growth_forms = [(gf.pk, gf.name) for gf in growth_forms]
+            yield inline.get_formset(request, obj), inline
 
 
 @admin.register(FishGroupFunction)
@@ -889,49 +761,26 @@ class FishSpeciesAdmin(FishAttributeAdmin):
         return ", ".join([r.name for r in obj.regions.all()])
 
 
-class ObsTransectBeltFishInline(admin.StackedInline):
+class ObsTransectBeltFishInline(ObservationInline):
     model = ObsBeltFish
-    fk_name = "beltfish"
-    extra = 0
-    exclude = ("include",)
-    readonly_fields = ["created_by", "updated_by", ]
-
-    def get_queryset(self, request):
-        return super().get_queryset(request).select_related(
-            "created_by", "updated_by",
-        )
-
-    def formfield_for_foreignkey(self, db_field, request, **kwargs):
-        field = super().formfield_for_foreignkey(db_field, request, **kwargs)
-        if db_field.name == "fish_attribute" and hasattr(self, "cached_fish_attributes"):
-            field.choices = self.cached_fish_attributes
-        elif db_field.name == "size_bin" and hasattr(self, "cached_size_bins"):
-            field.choices = self.cached_size_bins
-        return field
+    cache_fields = ["fish_attribute", "size_bin", ]
 
 
 @admin.register(BeltFish)
-class BeltFishAdmin(BaseAdmin):
-    list_display = ("name",)
-    list_select_related = ("transect",
-                           "transect__sample_event", "transect__sample_event__site",
-                           )
-    readonly_fields = ["created_by", "updated_by", "transect", ]
+class BeltFishAdmin(TransectMethodAdmin):
+    list_display = ("name", "len_surveyed", "width",)
     inlines = (ObserverInline, ObsTransectBeltFishInline)
-    search_fields = [
-        "transect__sample_event__site__name",
-        "transect__sample_event__sample_date",
-    ]
 
-    def name(self, obj):
-        return str(obj)
+    def width(self, obj):
+        return obj.transect.width
 
-    name.admin_order_field = "transect"
+    width.admin_order_field = "transect__width"
 
     def get_queryset(self, request):
         return super().get_queryset(request).select_related(
             "created_by", "updated_by", "transect",
             "transect__sample_event", "transect__sample_event__site",
+            "transect__width",
         )
 
     def render_change_form(self, request, context, *args, **kwargs):
