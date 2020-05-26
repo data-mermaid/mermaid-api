@@ -25,7 +25,7 @@ BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 
 try:
     with open(os.path.join(BASE_DIR, "VERSION.txt")) as f:
-        API_VERSION = f.readline()
+        API_VERSION = f.read().replace("\n", "")
 except:
     API_VERSION = "NA"
 
