@@ -196,6 +196,10 @@ EMAIL_USE_TLS = True
 DEFAULT_FROM_EMAIL = 'MERMAID System <{}>'.format(EMAIL_HOST_USER)
 EMAIL_BACKEND = 'django.core.mail.backends.smtp.EmailBackend'
 CORS_ORIGIN_ALLOW_ALL = True
+CORS_EXPOSE_HEADERS = [
+    "HTTP_API_VERSION"
+]
+
 
 # *****************
 # **    Auth0    **
