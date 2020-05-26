@@ -1,13 +1,25 @@
-from api.models.mermaid import BleachingQuadratCollection
 from api import utils
 from django.db import transaction
 from rest_framework import status
 from rest_framework.response import Response
+from rest_framework.serializers import SerializerMethodField
 
 from . import *
 from .. import fieldreport
-from ..base import BaseProjectApiViewSet
-from ...models.mermaid import ObsColoniesBleached, ObsQuadratBenthicPercent
+from ...models.mermaid import BleachingQuadratCollection, ObsColoniesBleached, ObsQuadratBenthicPercent
+from ...models.view_models import (
+    BleachingQCColoniesBleachedObsView,
+    BleachingQCQuadratBenthicPercentObsView,
+    BleachingQCSUView,
+    BleachingQCSEView
+)
+
+from ..base import (
+    BaseProjectApiViewSet,
+    BaseViewAPISerializer,
+    BaseViewAPIGeoSerializer,
+    BaseTransectFilterSet,
+)
 from ..bleaching_quadrat_collection import BleachingQuadratCollectionSerializer
 from ..obs_colonies_bleached import ObsColoniesBleachedSerializer
 from ..obs_quadrat_benthic_percent import ObsQuadratBenthicPercentSerializer
@@ -317,3 +329,101 @@ class BleachingQuadratCollectionMethodView(BaseProjectApiViewSet):
             order_by=("Site", "Quadrat collection label"),
             **kwargs
         )
+
+
+class BleachingQCMethodObsColoniesBleachedSerializer(BaseViewAPISerializer):
+    class Meta(BaseViewAPISerializer.Meta):
+        model = BleachingQCColoniesBleachedObsView
+        exclude = BaseViewAPISerializer.Meta.exclude.copy()
+        exclude.append("location")
+        header_order = ["id"] + BaseViewAPISerializer.Meta.header_order.copy()
+        header_order.extend(
+            [
+                "sample_unit_id",
+                "sample_time",
+                "label",
+                "depth",
+                "observers",
+                "data_policy_bleachingqc",
+                "quadrat_size",
+                "benthic_attribute",
+                "growth_form",
+                "count_normal",
+                "count_pale",
+                "count_20",
+                "count_50",
+                "count_80",
+                "count_100",
+                "count_dead",
+            ]
+        )
+
+
+class BleachingQCMethodObsColoniesBleachedCSVSerializer(BleachingQCMethodObsColoniesBleachedSerializer):
+    observers = SerializerMethodField()
+
+
+class BleachingQCMethodObsColoniesBleachedGeoSerializer(BaseViewAPIGeoSerializer):
+    class Meta(BaseViewAPIGeoSerializer.Meta):
+        model = BleachingQCColoniesBleachedObsView
+
+
+class BleachingQCMethodColoniesBleachedObsFilterSet(BaseTransectFilterSet):
+
+    class Meta:
+        model = BleachingQCColoniesBleachedObsView
+
+
+class BleachingQCProjectMethodObsColoniesBleachedView(BaseProjectMethodView):
+    drf_label = "bleachingqc-coloniesbleached"
+    project_policy = "data_policy_bleachingqc"
+    serializer_class = BleachingQCMethodObsColoniesBleachedSerializer
+    serializer_class_geojson = BleachingQCMethodObsColoniesBleachedGeoSerializer
+    serializer_class_csv = BleachingQCMethodObsColoniesBleachedCSVSerializer
+    filterset_class = BleachingQCMethodColoniesBleachedObsFilterSet
+    queryset = BleachingQCColoniesBleachedObsView.objects.exclude(project_status=Project.TEST).order_by(
+        "site_name", "sample_date", "label", "benthic_attribute", "growth_form"
+    )
+
+
+# class BleachingQCMethodObsQuadratBenthicPercentSerializer(BaseViewAPISerializer):
+
+
+# class BleachingQCMethodObsQuadratBenthicPercentCSVSerializer(BaseViewAPISerializer):
+
+
+# class BleachingQCMethodObsQuadratBenthicPercentGeoSerializer(BaseViewAPISerializer):
+
+
+# class BleachingQCMethodQuadratBenthicPercentObsFilterSet(BaseTransectFilterSet):
+
+
+# class BleachingQCMethodObsQuadratBenthicPercentView(BaseProjectMethodView):
+
+
+# class BleachingQCMethodSUSerializer(BaseViewAPISerializer):
+
+
+# class BleachingQCMethodSUCSVSerializer(BaseViewAPISerializer):
+
+
+# class BleachingQCMethodSUGeoSerializer(BaseViewAPISerializer):
+
+
+# class BleachingQCMethodSESerializer(BaseViewAPISerializer):
+
+
+# class BleachingQCMethodSEGeoSerializer(BaseViewAPISerializer):
+
+
+# class BleachingQCMethodSUFilterSet(BaseTransectFilterSet):
+
+
+# class BleachingQCMethodSEFilterSet(BaseTransectFilterSet):
+
+
+# class BleachingQCProjectMethodSUView(BaseProjectMethodView):
+
+
+# class BleachingQCProjectMethodSEView(BaseProjectMethodView):
+
