@@ -98,3 +98,4 @@ src/app/maintenance_mode_state.txt
 
 scratch/
 /src/static/
+ci_cd/VERSION.txt
