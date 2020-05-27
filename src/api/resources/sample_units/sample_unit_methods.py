@@ -4,7 +4,7 @@ import re
 import django_filters
 from django.db.models import Case, CharField, Q, Value, When
 from django.db.models.functions import Concat, Cast
-from django_filters import rest_framework as filters
+from django.contrib.postgres.aggregates import StringAgg
 from rest_framework import serializers
 from rest_framework import exceptions
 
@@ -153,6 +153,7 @@ class SampleUnitMethodView(BaseProjectApiViewSet):
         "depth",
         "sample_date",
         "size_display",
+        "observers_display",
     )
 
     def get_queryset(self):
@@ -311,6 +312,13 @@ class SampleUnitMethodView(BaseProjectApiViewSet):
             ),
         )
 
+        observers = StringAgg(
+            Concat(Cast("observers__profile__first_name", CharField()), Value(" "),
+                   Cast("observers__profile__last_name", CharField())),
+            delimiter=", ",
+            distinct=True
+        )
+
         qs = qs.annotate(
             protocol_name=protocol_condition,
             site_name=site_name_condition,
@@ -319,6 +327,7 @@ class SampleUnitMethodView(BaseProjectApiViewSet):
             depth=depth_condition,
             sample_date=sample_date_condition,
             size_display=size_condition,
+            observers_display=observers,
         )
 
         return qs
