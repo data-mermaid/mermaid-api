@@ -978,23 +978,36 @@ class ObsColoniesBleached(BaseModel, JSONMixin):
 
 
 class ObsQuadratBenthicPercent(BaseModel, JSONMixin):
-    project_lookup = 'bleachingquadratcollection__quadrat__sample_event__site__project'
+    project_lookup = "bleachingquadratcollection__quadrat__sample_event__site__project"
 
-    bleachingquadratcollection = models.ForeignKey(BleachingQuadratCollection,
-                                                         on_delete=models.CASCADE)
-    quadrat_number = models.PositiveSmallIntegerField(verbose_name=u'quadrat number')
-    percent_hard = models.PositiveSmallIntegerField(verbose_name=u'hard coral, % cover', default=0)
-    percent_soft = models.PositiveSmallIntegerField(verbose_name=u'soft coral, % cover', default=0)
-    percent_algae = models.PositiveSmallIntegerField(verbose_name=u'macroalgae, % cover', default=0)
+    bleachingquadratcollection = models.ForeignKey(
+        BleachingQuadratCollection, on_delete=models.CASCADE
+    )
+    quadrat_number = models.PositiveSmallIntegerField(
+        verbose_name=u"quadrat number"
+    )
+    percent_hard = models.PositiveSmallIntegerField(
+        verbose_name=u"hard coral, % cover", null=True, blank=True
+    )
+    percent_soft = models.PositiveSmallIntegerField(
+        verbose_name=u"soft coral, % cover", null=True, blank=True
+    )
+    percent_algae = models.PositiveSmallIntegerField(
+        verbose_name=u"macroalgae, % cover", null=True, blank=True
+    )
 
     class Meta:
-        db_table = 'obs_quadrat_benthic_percent'
-        verbose_name = _(u'bleaching quadrat collection percent benthic cover observation')
-        unique_together = ('bleachingquadratcollection', 'quadrat_number')
+        db_table = "obs_quadrat_benthic_percent"
+        verbose_name = _(
+            u"bleaching quadrat collection percent benthic cover observation"
+        )
+        unique_together = ("bleachingquadratcollection", "quadrat_number")
         ordering = ["created_on"]
 
     def __str__(self):
-        return _(u'%s') % self.quadrat_number
+        return _(u"%s") % self.quadrat_number
+
+
 
 
 class FishAttribute(BaseAttributeModel):
