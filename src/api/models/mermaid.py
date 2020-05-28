@@ -56,6 +56,7 @@ class Tag(TagBase, BaseModel):
     class Meta:
         verbose_name = _("Tag")
         verbose_name_plural = _("Tags")
+        ordering = ["name", ]
 
     def __str__(self):
         return _(u'%s') % self.name
@@ -706,19 +707,6 @@ class TransectMethod(BaseModel):
         raise NameError("Sample unit field can't be found")
 
     def __str__(self):
-        protocol = self.protocol
-        if protocol == BENTHICLIT_PROTOCOL:
-            return _(u'benthic LIT %s') % self.benthiclit.transect.__str__()
-        elif protocol == BENTHICPIT_PROTOCOL:
-            return _(u'benthic PIT %s') % self.benthicpit.transect.__str__()
-        elif protocol == FISHBELT_PROTOCOL:
-            return _(u'fish belt transect %s') % self.beltfish.transect.__str__()
-        elif protocol == HABITATCOMPLEXITY_PROTOCOL:
-            return _(u'habitat complexity %s') % self.habitatcomplexity.transect.__str__()
-        elif protocol == BLEACHINGQC_PROTOCOL:
-            return _(u'bleaching quadrat collection %s') % \
-                   self.bleachingquadratcollection.quadrat.__str__()
-
         return str(_(u'transect method'))
 
 
@@ -734,7 +722,7 @@ class Observer(BaseModel):
         unique_together = ('transectmethod', 'profile')
 
     def __str__(self):
-        return _(u'%s - %s') % (self.transectmethod, self.profile)
+        return _(u'%s') % (self.profile)
 
     @property
     def profile_name(self):
@@ -828,6 +816,9 @@ class BenthicLIT(TransectMethod):
         verbose_name = _(u'benthic LIT')
         verbose_name_plural = _(u'benthic LIT observations')
 
+    def __str__(self):
+        return _(u'benthic LIT %s') % self.transect.__str__()
+
 
 class ObsBenthicLIT(BaseModel, JSONMixin):
     project_lookup = 'benthiclit__transect__sample_event__site__project'
@@ -845,7 +836,7 @@ class ObsBenthicLIT(BaseModel, JSONMixin):
         ordering = ["created_on"]
 
     def __str__(self):
-        return _(u'%s %s') % (self.attribute.__str__(), self.length)
+        return _(u'%s') % (self.length)
 
 
 class BenthicPIT(TransectMethod):
@@ -869,6 +860,9 @@ class BenthicPIT(TransectMethod):
         verbose_name = _(u'benthic PIT')
         verbose_name_plural = _(u'benthic PIT observations')
 
+    def __str__(self):
+        return _(u'benthic PIT %s') % self.transect.__str__()
+
 
 class ObsBenthicPIT(BaseModel, JSONMixin):
     project_lookup = 'benthicpit__transect__sample_event__site__project'
@@ -888,7 +882,6 @@ class ObsBenthicPIT(BaseModel, JSONMixin):
 
     def __str__(self):
         return _(u'%s') % self.interval
-        # return _(u'%s %s') % (self.benthicpitgenus.__str__(), self.interval)
 
 
 class HabitatComplexity(TransectMethod):
@@ -906,6 +899,9 @@ class HabitatComplexity(TransectMethod):
         db_table = 'transectmethod_habitatcomplexity'
         verbose_name = _(u'habitat complexity transect')
         verbose_name_plural = _(u'habitat complexity transect observations')
+
+    def __str__(self):
+        return _(u'habitat complexity %s') % self.transect.__str__()
 
 
 class HabitatComplexityScore(BaseChoiceModel):
@@ -948,6 +944,9 @@ class BleachingQuadratCollection(TransectMethod):
         db_table = 'transectmethod_bleaching_quadrat_collection'
         verbose_name = _(u'bleaching quadrat collection')
         verbose_name_plural = _(u'bleaching quadrat collection observations')
+
+    def __str__(self):
+        return _(u'bleaching quadrat collection %s') % self.quadrat.__str__()
 
 
 class ObsColoniesBleached(BaseModel, JSONMixin):
@@ -1050,6 +1049,7 @@ class FishAttribute(BaseAttributeModel):
     @property
     def regions(self):
         return self._get_taxon().regions
+
 
 class FishGrouping(FishAttribute):
     name = models.CharField(max_length=100)
@@ -1297,6 +1297,9 @@ class BeltFish(TransectMethod):
         verbose_name = _(u'fish belt transect')
         verbose_name_plural = _(u'fish belt transect observations')
 
+    def __str__(self):
+        return _(u'fish belt transect %s') % self.transect.__str__()
+
 
 class FishSizeBin(BaseChoiceModel):
     val = models.CharField(max_length=100)
@@ -1328,12 +1331,16 @@ class ObsBeltFish(BaseModel, JSONMixin):
     include = models.BooleanField(default=True, verbose_name=INCLUDE_OBS_TEXT)
     notes = models.TextField(blank=True)
 
+    _hide_fish_in_repr = False
+
     class Meta:
         db_table = 'obs_transectbeltfish'
         verbose_name = _(u'fish belt transect observation')
         ordering = ["created_on"]
 
     def __str__(self):
+        if self._hide_fish_in_repr:
+            return ""
         return _(u'%s %s x %scm') % (self.fish_attribute.__str__(), self.count, self.size)
 
 
