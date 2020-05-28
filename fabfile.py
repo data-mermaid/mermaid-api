@@ -15,16 +15,20 @@ def local(command):
 
 # FABRIC COMMANDS ###
 
+def create_version_file():
+    local("./ci_cd/version.sh")
 
 @task
 def build(c):
     """Run to build a new image prior to fab up"""
+    create_version_file()
     local("docker-compose build")
 
 
 @task(aliases=["build-nocache"])
 def buildnocache(c):
     """Run to build a new image prior fab up"""
+    create_version_file()
     local("docker-compose build --no-cache --pull")
 
 
