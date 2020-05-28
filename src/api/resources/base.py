@@ -345,7 +345,7 @@ class RelatedOrderingFilter(OrderingFilter):
             field = model._meta.get_field(components[0])
 
             # reverse relation
-            if isinstance(field, ForeignObjectRel):
+            if isinstance(field, ForeignObjectRel) and len(components) == 2:
                 return self.is_valid_field(field.related_model, components[1])
 
             # foreign key
