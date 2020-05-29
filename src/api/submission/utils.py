@@ -16,7 +16,7 @@ from .protocol_validations import (
     FishBeltProtocolValidation,
     HabitatComplexityProtocolValidation,
 )
-from .validations import ERROR, OK
+from .validations import ERROR, IGNORE, OK, WARN
 from .writer import (
     BenthicLITProtocolWriter,
     BenthicPITProtocolWriter,
@@ -72,7 +72,7 @@ def format_serializer_errors(validationerror):
     if hasattr(validationerror, "get_full_details"):
         details = validationerror.get_full_details()
         for identifier, record in details.items():
-            output[identifier] = [r.get("message") for r in record]
+            output[identifier] = [str(r.get("message")) for r in record]
     else:
         output["exception"] = validationerror.messages
     return output
@@ -168,20 +168,50 @@ def _validate_collect_record(record, request):
     return result, validations
 
 
-def validate_collect_records(profile, record_ids, serializer_class):
+def _apply_validation_suppressants(results, validation_suppressants):
+    for identifier, validation_keys in validation_suppressants.items():
+        results[identifier] = results.get(identifier) or dict()
+        for validation_key in validation_keys:
+            results[identifier][validation_key] = {"status": IGNORE, "messages": ""}
+
+    return results
+
+
+def check_validation_status(results):
+    status = OK
+    for validations in results.values():
+        for check in validations.values():
+            check_status = check.get("status")
+            if check_status == ERROR:
+                return ERROR
+            elif check_status == WARN:
+                status = WARN
+
+    return status
+
+
+def validate_collect_records(
+    profile, record_ids, serializer_class, validation_suppressants=None
+):
     output = dict()
     records = CollectRecord.objects.filter(id__in=record_ids)
     request = MockRequest(profile=profile)
     for record in records.iterator():
-        result, validation_output = _validate_collect_record(record, request)
+        status, validation_output = _validate_collect_record(record, request)
+
+        if validation_suppressants:
+            validation_output = _apply_validation_suppressants(
+                validation_output, validation_suppressants
+            )
+            status = check_validation_status(validation_output)
 
         stage = CollectRecord.SAVED_STAGE
-        if result == OK:
+        if status == OK:
             stage = CollectRecord.VALIDATED_STAGE
 
         validation_timestamp = timezone.now()
         validations = dict(
-            status=result,
+            status=status,
             results=validation_output,
             last_validated=str(validation_timestamp),
         )
@@ -206,12 +236,12 @@ def validate_collect_records(profile, record_ids, serializer_class):
         if collect_record:
             serialized_collect_record = serializer_class(collect_record).data
 
-        output[str(record.pk)] = dict(status=result, record=serialized_collect_record)
+        output[str(record.pk)] = dict(status=status, record=serialized_collect_record)
 
     return output
 
 
-def submit_collect_records(profile, record_ids):
+def submit_collect_records(profile, record_ids, validation_suppressants=None):
     output = {}
     request = MockRequest(profile=profile)
     for record_id in record_ids:
@@ -220,10 +250,16 @@ def submit_collect_records(profile, record_ids):
             output[record_id] = dict(status=ERROR, message=ugettext_lazy("Not found"))
             continue
 
-        result, _ = _validate_collect_record(collect_record, request)
-        if result != OK:
+        status, validation_output = _validate_collect_record(collect_record, request)
+        if validation_suppressants:
+            validation_output = _apply_validation_suppressants(
+                validation_output, validation_suppressants
+            )
+            status = check_validation_status(validation_output)
+
+        if status != OK:
             output[record_id] = dict(
-                status=result, message=ugettext_lazy("Invalid collect record")
+                status=status, message=ugettext_lazy("Invalid collect record")
             )
             continue
 
