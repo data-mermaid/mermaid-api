@@ -312,7 +312,7 @@ class BenthicPITMethodSEGeoSerializer(BaseViewAPIGeoSerializer):
 
 class BenthicPITMethodObsFilterSet(BaseTransectFilterSet):
     depth = RangeFilter()
-    sample_unit_id = BaseInFilter("id_lookup")
+    sample_unit_id = BaseInFilter(method="id_lookup")
     observers = BaseInFilter(method="json_name_lookup")
     transect_len_surveyed = RangeFilter()
     reef_slope = BaseInFilter(method="char_lookup")
@@ -367,7 +367,7 @@ class BenthicPITMethodSEFilterSet(BaseTransectFilterSet):
 
 
 class BenthicPITProjectMethodObsView(BaseProjectMethodView):
-    drf_label = "benthicpit"
+    drf_label = "benthicpit-obs"
     project_policy = "data_policy_benthicpit"
     serializer_class = BenthicPITMethodObsSerializer
     serializer_class_geojson = BenthicPITMethodObsGeoSerializer
@@ -379,7 +379,7 @@ class BenthicPITProjectMethodObsView(BaseProjectMethodView):
 
 
 class BenthicPITProjectMethodSUView(BaseProjectMethodView):
-    drf_label = "benthicpit"
+    drf_label = "benthicpit-su"
     project_policy = "data_policy_benthicpit"
     serializer_class = BenthicPITMethodSUSerializer
     serializer_class_geojson = BenthicPITMethodSUGeoSerializer
@@ -391,7 +391,7 @@ class BenthicPITProjectMethodSUView(BaseProjectMethodView):
 
 
 class BenthicPITProjectMethodSEView(BaseProjectMethodView):
-    drf_label = "benthicpit"
+    drf_label = "benthicpit-se"
     project_policy = "data_policy_benthicpit"
     permission_classes = [
         Or(ProjectDataReadOnlyPermission, ProjectPublicSummaryPermission)

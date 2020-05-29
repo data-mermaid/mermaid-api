@@ -603,7 +603,7 @@ class BeltFishMethodSEFilterSet(BaseTransectFilterSet):
 
 
 class BeltFishProjectMethodObsView(BaseProjectMethodView):
-    drf_label = "beltfish"
+    drf_label = "beltfish-obs"
     project_policy = "data_policy_beltfish"
     serializer_class = BeltFishMethodObsSerializer
     serializer_class_geojson = BeltFishMethodObsGeoSerializer
@@ -627,7 +627,7 @@ class BeltFishProjectMethodObsView(BaseProjectMethodView):
 
 
 class BeltFishProjectMethodSUView(BaseProjectMethodView):
-    drf_label = "beltfish"
+    drf_label = "beltfish-su"
     project_policy = "data_policy_beltfish"
     serializer_class = BeltFishMethodSUSerializer
     serializer_class_geojson = BeltFishMethodSUGeoSerializer
@@ -639,7 +639,7 @@ class BeltFishProjectMethodSUView(BaseProjectMethodView):
 
 
 class BeltFishProjectMethodSEView(BaseProjectMethodView):
-    drf_label = "beltfish"
+    drf_label = "beltfish-se"
     project_policy = "data_policy_beltfish"
     permission_classes = [
         Or(ProjectDataReadOnlyPermission, ProjectPublicSummaryPermission)

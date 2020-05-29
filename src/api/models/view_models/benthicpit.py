@@ -203,7 +203,7 @@ COUNT(vw_benthicpit_su.id) AS sample_unit_count,
 ROUND(AVG("depth"), 2) as depth_avg,
 percent_cover_by_benthic_category_avg
 
-FROM public.vw_benthicpit_su
+FROM vw_benthicpit_su
 
 INNER JOIN (
     SELECT project_id, site_id, management_id, sample_date, 

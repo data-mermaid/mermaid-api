@@ -50,6 +50,9 @@ from .resources.sample_units.habitatcomplexitymethod import HabitatComplexityMet
 from .resources.sample_units.bleachingquadratcollectionmethod import (
     BleachingQuadratCollectionMethodView,
     BleachingQCProjectMethodObsColoniesBleachedView,
+    BleachingQCProjectMethodObsQuadratBenthicPercentView,
+    BleachingQCProjectMethodSUView,
+    BleachingQCProjectMethodSEView,
 )
 from .resources.sample_units.sample_unit_methods import SampleUnitMethodView
 
@@ -135,6 +138,13 @@ project_router.register(
     BleachingQCProjectMethodObsColoniesBleachedView,
     "obscoloniesbleached",
 )
+project_router.register(
+    r"bleachingqcs/obsquadratbenthicpercents",
+    BleachingQCProjectMethodObsQuadratBenthicPercentView,
+    "obsquadratbenthicpercent",
+)
+project_router.register(r"bleachingqcs/sampleunits", BleachingQCProjectMethodSUView, "sampleunit")
+project_router.register(r"bleachingqcs/sampleevents", BleachingQCProjectMethodSEView, "sampleevent")
 
 # multi model sample unit method reports
 project_router.register(
