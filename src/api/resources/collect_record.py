@@ -28,6 +28,7 @@ from ..submission.utils import (
     FISHBELT_PROTOCOL,
     HABITATCOMPLEXITY_PROTOCOL,
     PROTOCOLS,
+    validate_collect_records,
 )
 from ..submission.validations import ERROR, OK, WARN
 from ..utils import truthy
@@ -74,32 +75,6 @@ class CollectRecordViewSet(BaseProjectApiViewSet):
         profile = user.profile
         return queryset.filter(profile=profile)
 
-    def _validate(self, record_id, request):
-        try:
-            record = self.queryset.get(id=record_id)
-        except CollectRecord.DoesNotExist:
-            raise NotFound()
-
-        protocol = record.data.get("protocol")
-        if protocol not in PROTOCOLS:
-            raise ParseError(ugettext_lazy("{} not supported".format(protocol)))
-
-        if protocol == BENTHICLIT_PROTOCOL:
-            validator = BenthicLITProtocolValidation(record, request)
-        elif protocol == BENTHICPIT_PROTOCOL:
-            validator = BenthicPITProtocolValidation(record, request)
-        elif protocol == FISHBELT_PROTOCOL:
-            validator = FishBeltProtocolValidation(record, request)
-        elif protocol == HABITATCOMPLEXITY_PROTOCOL:
-            validator = HabitatComplexityProtocolValidation(record, request)
-        elif protocol == BLEACHING_QC_PROTOCOL:
-            validator = BleachingQuadratCollectionProtocolValidation(record, request)
-
-        result = validator.validate()
-        validations = validator.validations
-
-        return result, validations
-
     @action(
         detail=False,
         methods=["post"],
@@ -109,44 +84,12 @@ class CollectRecordViewSet(BaseProjectApiViewSet):
     def validate(self, request, project_pk):
         output = dict()
         record_ids = request.data.get("ids") or []
-
-        for record_id in record_ids:
-            result, validation_output = self._validate(record_id, request)
-            stage = CollectRecord.SAVED_STAGE
-            if result == OK:
-                stage = CollectRecord.VALIDATED_STAGE
-
-            validation_timestamp = timezone.now()
-            validations = dict(
-                status=result,
-                results=validation_output,
-                last_validated=str(validation_timestamp),
-            )
-
-            record = None
-            collect_record = None
-            try:
-                qry = self.queryset.filter(id=record_id)
-                profile = None
-                if hasattr(request, "user") and hasattr(request.user, "profile"):
-                    profile = request.user.profile
-
-                # Using update so updated_on and validation_timestamp matches
-                qry.update(
-                    stage=stage,
-                    validations=validations,
-                    updated_on=validation_timestamp,
-                    updated_by=profile,
-                )
-                if qry.count() > 0:
-                    collect_record = qry[0]
-            except CollectRecord.DoesNotExist:
-                pass
-
-            if collect_record:
-                record = self.serializer_class(collect_record).data
-
-            output[record_id] = dict(status=result, record=record)
+        if hasattr(request, "user") and hasattr(request.user, "profile"):
+            profile = request.user.profile
+        try:
+            output = validate_collect_records(profile, record_ids, CollectRecordSerializer)
+        except ValueError as err:
+            raise ParseError(err.message)
 
         return Response(output)
 
