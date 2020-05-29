@@ -28,6 +28,7 @@ from ..submission.utils import (
     FISHBELT_PROTOCOL,
     HABITATCOMPLEXITY_PROTOCOL,
     PROTOCOLS,
+    submit_collect_records,
     validate_collect_records,
 )
 from ..submission.validations import ERROR, OK, WARN
@@ -84,8 +85,7 @@ class CollectRecordViewSet(BaseProjectApiViewSet):
     def validate(self, request, project_pk):
         output = dict()
         record_ids = request.data.get("ids") or []
-        if hasattr(request, "user") and hasattr(request.user, "profile"):
-            profile = request.user.profile
+        profile = request.user.profile
         try:
             output = validate_collect_records(profile, record_ids, CollectRecordSerializer)
         except ValueError as err:
@@ -100,40 +100,9 @@ class CollectRecordViewSet(BaseProjectApiViewSet):
         + [CollectRecordOwner],
     )
     def submit(self, request, project_pk):
-        output = {}
         record_ids = request.data.get("ids")
-        for record_id in record_ids:
-            collect_record = CollectRecord.objects.get_or_none(id=record_id)
-            if collect_record is None:
-                output[record_id] = dict(
-                    status=ERROR, message=ugettext_lazy("Not found")
-                )
-                continue
-
-            result, _ = self._validate(record_id, request)
-            if result != OK:
-                output[record_id] = dict(
-                    status=result, message=ugettext_lazy("Invalid collect record")
-                )
-                continue
-
-            # If validate comes out all good (status == OK) then
-            # try parsing and saving the collect record into its
-            # components.
-            status, result = utils.write_collect_record(collect_record, request)
-            if status == utils.VALIDATION_ERROR_STATUS:
-                output[record_id] = dict(status=ERROR, message=result)
-                continue
-            elif status == utils.ERROR_STATUS:
-                logger.error(
-                    json.dumps(dict(id=record_id, data=collect_record.data)), result
-                )
-                output[record_id] = dict(
-                    status=ERROR, message=ugettext_lazy("System failure")
-                )
-                continue
-            output[record_id] = dict(status=OK, message=ugettext_lazy("Success"))
-
+        profile = request.user.profile
+        output = submit_collect_records(profile, record_ids)
         return Response(output)
 
     @action(detail=False, methods=["POST"], permission_classes=[ProjectDataPermission])

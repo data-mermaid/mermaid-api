@@ -1,3 +1,4 @@
+import json
 import logging
 
 from django.core.exceptions import ValidationError as DJValidationError
@@ -15,7 +16,7 @@ from .protocol_validations import (
     FishBeltProtocolValidation,
     HabitatComplexityProtocolValidation,
 )
-from .validations import OK
+from .validations import ERROR, OK
 from .writer import (
     BenthicLITProtocolWriter,
     BenthicPITProtocolWriter,
@@ -168,9 +169,9 @@ def _validate_collect_record(record, request):
 
 
 def validate_collect_records(profile, record_ids, serializer_class):
+    output = dict()
     records = CollectRecord.objects.filter(id__in=record_ids)
     request = MockRequest(profile=profile)
-    output = dict()
     for record in records.iterator():
         result, validation_output = _validate_collect_record(record, request)
 
@@ -206,5 +207,41 @@ def validate_collect_records(profile, record_ids, serializer_class):
             serialized_collect_record = serializer_class(collect_record).data
 
         output[str(record.pk)] = dict(status=result, record=serialized_collect_record)
+
+    return output
+
+
+def submit_collect_records(profile, record_ids):
+    output = {}
+    request = MockRequest(profile=profile)
+    for record_id in record_ids:
+        collect_record = CollectRecord.objects.get_or_none(id=record_id)
+        if collect_record is None:
+            output[record_id] = dict(status=ERROR, message=ugettext_lazy("Not found"))
+            continue
+
+        result, _ = _validate_collect_record(collect_record, request)
+        if result != OK:
+            output[record_id] = dict(
+                status=result, message=ugettext_lazy("Invalid collect record")
+            )
+            continue
+
+        # If validate comes out all good (status == OK) then
+        # try parsing and saving the collect record into its
+        # components.
+        status, result = write_collect_record(collect_record, request)
+        if status == VALIDATION_ERROR_STATUS:
+            output[record_id] = dict(status=ERROR, message=result)
+            continue
+        elif status == ERROR_STATUS:
+            logger.error(
+                json.dumps(dict(id=record_id, data=collect_record.data)), result
+            )
+            output[record_id] = dict(
+                status=ERROR, message=ugettext_lazy("System failure")
+            )
+            continue
+        output[record_id] = dict(status=OK, message=ugettext_lazy("Success"))
 
     return output
