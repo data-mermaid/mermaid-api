@@ -630,6 +630,9 @@ class BleachingQCProjectMethodSUView(BaseProjectMethodView):
 class BleachingQCProjectMethodSEView(BaseProjectMethodView):
     drf_label = "bleachingqc-se"
     project_policy = "data_policy_bleachingqc"
+    permission_classes = [
+        Or(ProjectDataReadOnlyPermission, ProjectPublicSummaryPermission)
+    ]
     serializer_class = BleachingQCMethodSESerializer
     serializer_class_geojson = BleachingQCMethodSEGeoSerializer
     serializer_class_csv = BleachingQCMethodSESerializer
