@@ -1023,8 +1023,14 @@ class ObsBenthicPercentCoveredValidation(DataValidation, ObsBleachingMixin):
     identifier = "obs_quadrat_benthic_percent"
     LESS_EQUAL_0_MSG = "Percent cover {} is less than or equal to 0"
     GREATER_100_MSG = "Percent cover {} is greater than 100"
+    VALID_NUMBER_MSG = "Percent cover value not between 0 and 100"
 
     def _check_percent_value(self, value, msg_param):
+        try:
+            _ = int(value)
+        except (TypeError, ValueError):
+            return ERROR, self.VALID_NUMBER_MSG
+
         if value < 0:
             return ERROR, self.LESS_EQUAL_0_MSG.format(msg_param)
         elif value > 100:
@@ -1050,9 +1056,9 @@ class ObsBenthicPercentCoveredValidation(DataValidation, ObsBleachingMixin):
     def validate_percent_values(self):
         obs = self.get_observations(self.data)
         for ob in obs:
-            percent_hard = ob.get("percent_hard") or 0
-            percent_soft = ob.get("percent_soft") or 0
-            percent_algae = ob.get("percent_algae") or 0
+            percent_hard = ob.get("percent_hard")
+            percent_soft = ob.get("percent_soft")
+            percent_algae = ob.get("percent_algae")
             values = [percent_hard, percent_soft, percent_algae]
             if (
                 self._validate_percent_values(values, "validate_percent_values")
