@@ -6,7 +6,11 @@ from django_filters import BaseInFilter, RangeFilter
 
 from .. import fieldreport
 from ...models.mermaid import HabitatComplexity, ObsHabitatComplexity
-from ...models.view_models import HabitatComplexityObsView, HabitatComplexitySUView, HabitatComplexitySEView
+from ...models.view_models import (
+    HabitatComplexityObsView,
+    HabitatComplexitySUView,
+    HabitatComplexitySEView,
+)
 
 from . import *
 from ..base import (
@@ -23,37 +27,48 @@ from ..sample_event import SampleEventSerializer
 
 
 class HabitatComplexityMethodSerializer(HabitatComplexitySerializer):
-    sample_event = SampleEventSerializer(source='transect.sample_event')
-    benthic_transect = BenthicTransectSerializer(source='transect')
+    sample_event = SampleEventSerializer(source="transect.sample_event")
+    benthic_transect = BenthicTransectSerializer(source="transect")
     observers = ObserverSerializer(many=True)
     obs_habitat_complexities = ObsHabitatComplexitySerializer(
-        many=True, source='habitatcomplexity_set')
+        many=True, source="habitatcomplexity_set"
+    )
 
     class Meta:
         model = HabitatComplexity
         exclude = []
 
 
-class ObsHabitatComplexityReportSerializer(SampleEventReportSerializer, metaclass=SampleEventReportSerializerMeta):
-    transect_method = 'habitatcomplexity'
-    sample_event_path = '{}__transect__sample_event'.format(transect_method)
-    
+class ObsHabitatComplexityReportSerializer(
+    SampleEventReportSerializer, metaclass=SampleEventReportSerializerMeta
+):
+    transect_method = "habitatcomplexity"
+    sample_event_path = "{}__transect__sample_event".format(transect_method)
+
     idx = 24
     obs_fields = [
         (6, ReportField("habitatcomplexity__transect__reef_slope__name", "Reef slope")),
         (idx, ReportField("habitatcomplexity__transect__number", "Transect number")),
         (idx + 1, ReportField("habitatcomplexity__transect__label", "Transect label")),
-        (idx + 2, ReportField("habitatcomplexity__transect__len_surveyed", "Transect length surveyed")),
-        (idx + 4, ReportField('interval', 'Interval (m)')),
-        (idx + 5, ReportField('score__val', 'Habitat complexity value')),
-        (idx + 6, ReportField('score__name', 'Habitat complexity name')),
-        (idx + 10, ReportField("habitatcomplexity__transect__notes", "Observation notes"))
+        (
+            idx + 2,
+            ReportField(
+                "habitatcomplexity__transect__len_surveyed", "Transect length surveyed"
+            ),
+        ),
+        (idx + 4, ReportField("interval", "Interval (m)")),
+        (idx + 5, ReportField("score__val", "Habitat complexity value")),
+        (idx + 6, ReportField("score__name", "Habitat complexity name")),
+        (
+            idx + 10,
+            ReportField("habitatcomplexity__transect__notes", "Observation notes"),
+        ),
     ]
 
     non_field_columns = (
-        'habitatcomplexity_id',
-        'habitatcomplexity__transect__sample_event__site__project_id',
-        'habitatcomplexity__transect__sample_event__management_id'
+        "habitatcomplexity_id",
+        "habitatcomplexity__transect__sample_event__site__project_id",
+        "habitatcomplexity__transect__sample_event__management_id",
     )
 
     class Meta:
@@ -61,24 +76,28 @@ class ObsHabitatComplexityReportSerializer(SampleEventReportSerializer, metaclas
 
 
 class HabitatComplexityMethodView(BaseProjectApiViewSet):
-    queryset = HabitatComplexity.objects.select_related(
-        'transect', 'transect__sample_event').all().order_by("updated_on", "id")
+    queryset = (
+        HabitatComplexity.objects.select_related("transect", "transect__sample_event")
+        .all()
+        .order_by("updated_on", "id")
+    )
     serializer_class = HabitatComplexityMethodSerializer
-    http_method_names = ['get', 'put', 'head', 'delete']
+    http_method_names = ["get", "put", "head", "delete"]
 
     @transaction.atomic
     def update(self, request, project_pk, pk=None):
         errors = {}
         is_valid = True
         nested_data = dict(
-            sample_event=request.data.get('sample_event'),
-            benthic_transect=request.data.get('benthic_transect'),
-            observers=request.data.get('observers'),
-            obs_habitat_complexities=request.data.get('obs_habitat_complexities')
+            sample_event=request.data.get("sample_event"),
+            benthic_transect=request.data.get("benthic_transect"),
+            observers=request.data.get("observers"),
+            obs_habitat_complexities=request.data.get("obs_habitat_complexities"),
         )
-        habitat_complexity_data = {k: v for k, v in request.data.items()
-                                   if k not in nested_data}
-        habitat_complexity_id = habitat_complexity_data['id']
+        habitat_complexity_data = {
+            k: v for k, v in request.data.items() if k not in nested_data
+        }
+        habitat_complexity_id = habitat_complexity_data["id"]
 
         context = dict(request=request)
 
@@ -89,87 +108,84 @@ class HabitatComplexityMethodView(BaseProjectApiViewSet):
 
             # Observers
             check, errs = save_one_to_many(
-                foreign_key=('transectmethod', habitat_complexity_id),
+                foreign_key=("transectmethod", habitat_complexity_id),
                 database_records=habitat_complexity.observers.all(),
-                data=request.data.get('observers') or [],
+                data=request.data.get("observers") or [],
                 serializer_class=ObserverSerializer,
-                context=context)
+                context=context,
+            )
             if check is False:
                 is_valid = False
-                errors['observers'] = errs
+                errors["observers"] = errs
 
             # Observations
             check, errs = save_one_to_many(
-                foreign_key=('habitatcomplexity', habitat_complexity_id),
+                foreign_key=("habitatcomplexity", habitat_complexity_id),
                 database_records=habitat_complexity.habitatcomplexity_set.all(),
-                data=request.data.get('obs_habitat_complexities') or [],
+                data=request.data.get("obs_habitat_complexities") or [],
                 serializer_class=ObsHabitatComplexitySerializer,
-                context=context)
+                context=context,
+            )
             if check is False:
                 is_valid = False
-                errors['obs_habitat_complexities'] = errs
+                errors["obs_habitat_complexities"] = errs
 
             # Sample Event
             check, errs = save_model(
-                data=nested_data['sample_event'],
+                data=nested_data["sample_event"],
                 serializer_class=SampleEventSerializer,
-                context=context
+                context=context,
             )
             if check is False:
                 is_valid = False
-                errors['sample_event'] = errs
+                errors["sample_event"] = errs
 
             # Benthic Transect
             check, errs = save_model(
-                data=nested_data['benthic_transect'],
+                data=nested_data["benthic_transect"],
                 serializer_class=BenthicTransectSerializer,
-                context=context
+                context=context,
             )
             if check is False:
                 is_valid = False
-                errors['benthic_transect'] = errs
+                errors["benthic_transect"] = errs
 
             # Habitat Complexity
             check, errs = save_model(
                 data=habitat_complexity_data,
                 serializer_class=HabitatComplexitySerializer,
-                context=context
+                context=context,
             )
             if check is False:
                 is_valid = False
-                errors['habitat_complexity'] = errs
+                errors["habitat_complexity"] = errs
 
             if is_valid is False:
                 transaction.savepoint_rollback(sid)
-                return Response(
-                    data=errors,
-                    status=status.HTTP_400_BAD_REQUEST
-                )
+                return Response(data=errors, status=status.HTTP_400_BAD_REQUEST)
 
             transaction.savepoint_commit(sid)
 
             habitat_complexity = HabitatComplexity.objects.get(id=habitat_complexity_id)
             return Response(
                 HabitatComplexityMethodSerializer(habitat_complexity).data,
-                status=status.HTTP_200_OK
+                status=status.HTTP_200_OK,
             )
 
         except:
             transaction.savepoint_rollback(sid)
             raise
 
-    @action(detail=False, methods=['get'])
+    @action(detail=False, methods=["get"])
     def fieldreport(self, request, *args, **kwargs):
         return fieldreport(
-            self, request, *args,
+            self,
+            request,
+            *args,
             model_cls=ObsHabitatComplexity,
             serializer_class=ObsHabitatComplexityReportSerializer,
-            fk='habitatcomplexity',
-            order_by=(
-                "Site",
-                "Transect number",
-                "Transect label",
-            ),
+            fk="habitatcomplexity",
+            order_by=("Site", "Transect number", "Transect label"),
             **kwargs
         )
 
@@ -305,7 +321,12 @@ class HabitatComplexityMethodSEFilterSet(BaseTransectFilterSet):
 
     class Meta:
         model = HabitatComplexitySEView
-        fields = ["sample_unit_count", "depth_avg", "data_policy_habitatcomplexity", "score_avg_avg"]
+        fields = [
+            "sample_unit_count",
+            "depth_avg",
+            "data_policy_habitatcomplexity",
+            "score_avg_avg",
+        ]
 
 
 class HabitatComplexityProjectMethodObsView(BaseProjectMethodView):
@@ -315,9 +336,9 @@ class HabitatComplexityProjectMethodObsView(BaseProjectMethodView):
     serializer_class_geojson = HabitatComplexityMethodObsGeoSerializer
     serializer_class_csv = HabitatComplexityMethodObsCSVSerializer
     filterset_class = HabitatComplexityMethodObsFilterSet
-    queryset = HabitatComplexityObsView.objects.exclude(project_status=Project.TEST).order_by(
-        "site_name", "sample_date", "transect_number", "label", "interval"
-    )
+    queryset = HabitatComplexityObsView.objects.exclude(
+        project_status=Project.TEST
+    ).order_by("site_name", "sample_date", "transect_number", "label", "interval")
 
 
 class HabitatComplexityProjectMethodSUView(BaseProjectMethodView):
@@ -327,9 +348,9 @@ class HabitatComplexityProjectMethodSUView(BaseProjectMethodView):
     serializer_class_geojson = HabitatComplexityMethodSUGeoSerializer
     serializer_class_csv = HabitatComplexityMethodSUCSVSerializer
     filterset_class = HabitatComplexityMethodSUFilterSet
-    queryset = HabitatComplexitySUView.objects.exclude(project_status=Project.TEST).order_by(
-        "site_name", "sample_date", "transect_number"
-    )
+    queryset = HabitatComplexitySUView.objects.exclude(
+        project_status=Project.TEST
+    ).order_by("site_name", "sample_date", "transect_number")
 
 
 class HabitatComplexityProjectMethodSEView(BaseProjectMethodView):
@@ -342,7 +363,6 @@ class HabitatComplexityProjectMethodSEView(BaseProjectMethodView):
     serializer_class_geojson = HabitatComplexityMethodSEGeoSerializer
     serializer_class_csv = HabitatComplexityMethodSESerializer
     filterset_class = HabitatComplexityMethodSEFilterSet
-    queryset = HabitatComplexitySEView.objects.exclude(project_status=Project.TEST).order_by(
-        "site_name", "sample_date"
-    )
-
+    queryset = HabitatComplexitySEView.objects.exclude(
+        project_status=Project.TEST
+    ).order_by("site_name", "sample_date")

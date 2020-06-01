@@ -132,7 +132,7 @@ project_router.register(
     r"beltfishes/sampleunits", BeltFishProjectMethodSUView, "sampleunit"
 )
 project_router.register(
-   r"beltfishes/sampleevents", BeltFishProjectMethodSEView, "sampleevent"
+    r"beltfishes/sampleevents", BeltFishProjectMethodSEView, "sampleevent"
 )
 
 project_router.register(
@@ -140,16 +140,24 @@ project_router.register(
     BenthicLITProjectMethodObsView,
     "obstransectbenthiclit",
 )
-project_router.register(r"benthiclits/sampleunits", BenthicLITProjectMethodSUView, "sampleunit")
-project_router.register(r"benthiclits/sampleevents", BenthicLITProjectMethodSEView, "sampleevent")
+project_router.register(
+    r"benthiclits/sampleunits", BenthicLITProjectMethodSUView, "sampleunit"
+)
+project_router.register(
+    r"benthiclits/sampleevents", BenthicLITProjectMethodSEView, "sampleevent"
+)
 
 project_router.register(
     r"benthicpits/obstransectbenthicpits",
     BenthicPITProjectMethodObsView,
     "obstransectbenthicpit",
 )
-project_router.register(r"benthicpits/sampleunits", BenthicPITProjectMethodSUView, "sampleunit")
-project_router.register(r"benthicpits/sampleevents", BenthicPITProjectMethodSEView, "sampleevent")
+project_router.register(
+    r"benthicpits/sampleunits", BenthicPITProjectMethodSUView, "sampleunit"
+)
+project_router.register(
+    r"benthicpits/sampleevents", BenthicPITProjectMethodSEView, "sampleevent"
+)
 
 project_router.register(
     r"bleachingqcs/obscoloniesbleacheds",
@@ -161,16 +169,28 @@ project_router.register(
     BleachingQCProjectMethodObsQuadratBenthicPercentView,
     "obsquadratbenthicpercent",
 )
-project_router.register(r"bleachingqcs/sampleunits", BleachingQCProjectMethodSUView, "sampleunit")
-project_router.register(r"bleachingqcs/sampleevents", BleachingQCProjectMethodSEView, "sampleevent")
+project_router.register(
+    r"bleachingqcs/sampleunits", BleachingQCProjectMethodSUView, "sampleunit"
+)
+project_router.register(
+    r"bleachingqcs/sampleevents", BleachingQCProjectMethodSEView, "sampleevent"
+)
 
 project_router.register(
     r"habitatcomplexities/obshabitatcomplexities",
     HabitatComplexityProjectMethodObsView,
-    "obshabitatcomplexity"
+    "obshabitatcomplexity",
 )
-project_router.register(r"habitatcomplexities/sampleunits", HabitatComplexityProjectMethodSUView, "sampleunit")
-project_router.register(r"habitatcomplexities/sampleevents", HabitatComplexityProjectMethodSEView, "sampleevent")
+project_router.register(
+    r"habitatcomplexities/sampleunits",
+    HabitatComplexityProjectMethodSUView,
+    "sampleunit",
+)
+project_router.register(
+    r"habitatcomplexities/sampleevents",
+    HabitatComplexityProjectMethodSEView,
+    "sampleevent",
+)
 
 # multi model sample unit method reports
 project_router.register(

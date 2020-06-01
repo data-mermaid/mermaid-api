@@ -11,11 +11,7 @@ from rest_framework import exceptions
 from ...exceptions import check_uuid
 from ...models import mermaid
 from ...models.mermaid import TransectMethod
-from ..base import (
-    BaseAPIFilterSet,
-    BaseAPISerializer,
-    BaseProjectApiViewSet,
-)
+from ..base import BaseAPIFilterSet, BaseAPISerializer, BaseProjectApiViewSet
 
 
 class ListFilter(django_filters.Filter):
@@ -130,16 +126,13 @@ class SampleUnitMethodSerializer(BaseAPISerializer):
 
 
 class SampleUnitMethodView(BaseProjectApiViewSet):
-    queryset = (
-        TransectMethod.objects.select_related(
-            "benthiclit",
-            "benthicpit",
-            "habitatcomplexity",
-            "beltfish",
-            "bleachingquadratcollection",
-        )
-        .all()
-    )
+    queryset = TransectMethod.objects.select_related(
+        "benthiclit",
+        "benthicpit",
+        "habitatcomplexity",
+        "beltfish",
+        "bleachingquadratcollection",
+    ).all()
 
     filter_class = SampleUnitMethodFilterSet
     serializer_class = SampleUnitMethodSerializer
@@ -288,35 +281,50 @@ class SampleUnitMethodView(BaseProjectApiViewSet):
         size_condition = Case(
             When(
                 benthiclit__id__isnull=False,
-                then=Concat(Cast("benthiclit__transect__len_surveyed", CharField()), Value("m"))
+                then=Concat(
+                    Cast("benthiclit__transect__len_surveyed", CharField()), Value("m")
+                ),
             ),
             When(
                 benthicpit__id__isnull=False,
-                then=Concat(Cast("benthicpit__transect__len_surveyed", CharField()), Value("m"))
+                then=Concat(
+                    Cast("benthicpit__transect__len_surveyed", CharField()), Value("m")
+                ),
             ),
             When(
                 habitatcomplexity__id__isnull=False,
-                then=Concat(Cast("habitatcomplexity__transect__len_surveyed", CharField()), Value("m"))
+                then=Concat(
+                    Cast("habitatcomplexity__transect__len_surveyed", CharField()),
+                    Value("m"),
+                ),
             ),
             When(
                 beltfish__id__isnull=False,
                 then=Concat(
                     Cast("beltfish__transect__len_surveyed", CharField()),
                     Value("m x "),
-                    Cast("beltfish__transect__width__name", CharField())
-                )
+                    Cast("beltfish__transect__width__name", CharField()),
+                ),
             ),
             When(
                 bleachingquadratcollection__id__isnull=False,
-                then=Concat(Cast("bleachingquadratcollection__quadrat__quadrat_size", CharField()), Value("m"))
+                then=Concat(
+                    Cast(
+                        "bleachingquadratcollection__quadrat__quadrat_size", CharField()
+                    ),
+                    Value("m"),
+                ),
             ),
         )
 
         observers = StringAgg(
-            Concat(Cast("observers__profile__first_name", CharField()), Value(" "),
-                   Cast("observers__profile__last_name", CharField())),
+            Concat(
+                Cast("observers__profile__first_name", CharField()),
+                Value(" "),
+                Cast("observers__profile__last_name", CharField()),
+            ),
             delimiter=", ",
-            distinct=True
+            distinct=True,
         )
 
         qs = qs.annotate(

@@ -24,11 +24,10 @@ from ..sample_event import SampleEventSerializer
 
 
 class BenthicLITMethodSerializer(BenthicLITSerializer):
-    sample_event = SampleEventSerializer(source='transect.sample_event')
-    benthic_transect = BenthicTransectSerializer(source='transect')
+    sample_event = SampleEventSerializer(source="transect.sample_event")
+    benthic_transect = BenthicTransectSerializer(source="transect")
     observers = ObserverSerializer(many=True)
-    obs_benthic_lits = ObsBenthicLITSerializer(
-        many=True, source='obsbenthiclit_set')
+    obs_benthic_lits = ObsBenthicLITSerializer(many=True, source="obsbenthiclit_set")
 
     class Meta:
         model = BenthicLIT
@@ -36,18 +35,21 @@ class BenthicLITMethodSerializer(BenthicLITSerializer):
 
 
 def to_total_lit(field, row, serializer_instance):
-    benthiclit_id = row.get('benthiclit_id')
+    benthiclit_id = row.get("benthiclit_id")
     if benthiclit_id is None:
-        return ''
+        return ""
 
     lookup = serializer_instance.serializer_cache.get("benthiclit_lookups-totals")
     if lookup:
         total = lookup.get(str(benthiclit_id)) or dict()
-        return total.get("total_lit") or ''
+        return total.get("total_lit") or ""
     else:
-        total = ObsBenthicLIT.objects.filter(benthiclit=benthiclit_id)\
-            .values('benthiclit_id').annotate(total_lit=Sum('length'))
-        return total.total_lit or ''
+        total = (
+            ObsBenthicLIT.objects.filter(benthiclit=benthiclit_id)
+            .values("benthiclit_id")
+            .annotate(total_lit=Sum("length"))
+        )
+        return total.total_lit or ""
 
 
 def _get_benthic_attribute_category(row, serializer_instance):
@@ -55,7 +57,9 @@ def _get_benthic_attribute_category(row, serializer_instance):
     if benthic_attribute_id is None:
         return None
 
-    lookup = serializer_instance.serializer_cache.get("benthic-attribute_lookups-categories")
+    lookup = serializer_instance.serializer_cache.get(
+        "benthic-attribute_lookups-categories"
+    )
     if lookup:
         return lookup.get(str(benthic_attribute_id)) or dict()
     else:
@@ -74,29 +78,36 @@ def to_benthic_attribute_category(field, row, serializer_instance):
     return str(bc)
 
 
-class ObsBenthicLITReportSerializer(SampleEventReportSerializer, metaclass=SampleEventReportSerializerMeta):
-    transect_method = 'benthiclit'
-    sample_event_path = '{}__transect__sample_event'.format(transect_method)
+class ObsBenthicLITReportSerializer(
+    SampleEventReportSerializer, metaclass=SampleEventReportSerializerMeta
+):
+    transect_method = "benthiclit"
+    sample_event_path = "{}__transect__sample_event".format(transect_method)
 
     idx = 24
     obs_fields = [
         (6, ReportField("benthiclit__transect__reef_slope__name", "Reef slope")),
         (idx, ReportField("benthiclit__transect__number", "Transect number")),
         (idx + 1, ReportField("benthiclit__transect__label", "Transect label")),
-        (idx + 2, ReportField("benthiclit__transect__len_surveyed", "Transect length surveyed")),
-        (idx + 4, ReportMethodField('Benthic category', to_benthic_attribute_category)),
-        (idx + 5, ReportField('attribute__name', 'Benthic attribute')),
-        (idx + 6, ReportField('growth_form__name', 'Growth form')),
-        (idx + 7, ReportField('length', 'LIT (cm)')),
-        (idx + 8, ReportMethodField('Total transect cm', to_total_lit)),
-        (idx + 12, ReportField("benthiclit__transect__notes", "Observation notes"))
+        (
+            idx + 2,
+            ReportField(
+                "benthiclit__transect__len_surveyed", "Transect length surveyed"
+            ),
+        ),
+        (idx + 4, ReportMethodField("Benthic category", to_benthic_attribute_category)),
+        (idx + 5, ReportField("attribute__name", "Benthic attribute")),
+        (idx + 6, ReportField("growth_form__name", "Growth form")),
+        (idx + 7, ReportField("length", "LIT (cm)")),
+        (idx + 8, ReportMethodField("Total transect cm", to_total_lit)),
+        (idx + 12, ReportField("benthiclit__transect__notes", "Observation notes")),
     ]
 
     non_field_columns = (
-        'benthiclit_id',
-        'benthiclit__transect__sample_event__site__project_id',
-        'benthiclit__transect__sample_event__management_id',
-        'attribute'
+        "benthiclit_id",
+        "benthiclit__transect__sample_event__site__project_id",
+        "benthiclit__transect__sample_event__management_id",
+        "attribute",
     )
 
     class Meta:
@@ -106,20 +117,17 @@ class ObsBenthicLITReportSerializer(SampleEventReportSerializer, metaclass=Sampl
         super(ObsBenthicLITReportSerializer, self).preserialize(queryset=queryset)
 
         # Transect total lengths
-        transect_totals = queryset.values('benthiclit_id').annotate(total_lit=Sum('length'))
+        transect_totals = queryset.values("benthiclit_id").annotate(
+            total_lit=Sum("length")
+        )
         benthic_categories = BenthicAttribute.objects.all()
 
         benthic_category_lookup = {
-            str(bc.id): dict(
-                name = bc.origin.name
-            )
-            for bc in benthic_categories
+            str(bc.id): dict(name=bc.origin.name) for bc in benthic_categories
         }
 
         transect_total_lookup = {
-            str(tt['benthiclit_id']): dict(
-                total_lit=tt['total_lit']
-            )
+            str(tt["benthiclit_id"]): dict(total_lit=tt["total_lit"])
             for tt in transect_totals
         }
 
@@ -129,30 +137,32 @@ class ObsBenthicLITReportSerializer(SampleEventReportSerializer, metaclass=Sampl
             ] = benthic_category_lookup
 
         if len(transect_total_lookup.keys()) > 0:
-            self.serializer_cache[
-                "benthiclit_lookups-totals"
-            ] = transect_total_lookup
+            self.serializer_cache["benthiclit_lookups-totals"] = transect_total_lookup
 
 
 class BenthicLITMethodView(BaseProjectApiViewSet):
-    queryset = BenthicLIT.objects.select_related(
-        'transect', 'transect__sample_event').all().order_by("updated_on", "id")
+    queryset = (
+        BenthicLIT.objects.select_related("transect", "transect__sample_event")
+        .all()
+        .order_by("updated_on", "id")
+    )
     serializer_class = BenthicLITMethodSerializer
-    http_method_names = ['get', 'put', 'head', 'delete']
+    http_method_names = ["get", "put", "head", "delete"]
 
     @transaction.atomic
     def update(self, request, project_pk, pk=None):
         errors = {}
         is_valid = True
         nested_data = dict(
-            sample_event=request.data.get('sample_event'),
-            benthic_transect=request.data.get('benthic_transect'),
-            observers=request.data.get('observers'),
-            obs_benthic_lits=request.data.get('obs_benthic_lits')
+            sample_event=request.data.get("sample_event"),
+            benthic_transect=request.data.get("benthic_transect"),
+            observers=request.data.get("observers"),
+            obs_benthic_lits=request.data.get("obs_benthic_lits"),
         )
-        benthic_lit_data = {k: v for k, v in request.data.items()
-                            if k not in nested_data}
-        benthic_lit_id = benthic_lit_data['id']
+        benthic_lit_data = {
+            k: v for k, v in request.data.items() if k not in nested_data
+        }
+        benthic_lit_id = benthic_lit_data["id"]
 
         context = dict(request=request)
 
@@ -163,87 +173,83 @@ class BenthicLITMethodView(BaseProjectApiViewSet):
 
             # Observers
             check, errs = save_one_to_many(
-                foreign_key=('transectmethod', benthic_lit_id),
+                foreign_key=("transectmethod", benthic_lit_id),
                 database_records=benthic_lit.observers.all(),
-                data=request.data.get('observers') or [],
+                data=request.data.get("observers") or [],
                 serializer_class=ObserverSerializer,
-                context=context)
+                context=context,
+            )
             if check is False:
                 is_valid = False
-                errors['observers'] = errs
+                errors["observers"] = errs
 
             # Observations
             check, errs = save_one_to_many(
-                foreign_key=('benthiclit', benthic_lit_id),
+                foreign_key=("benthiclit", benthic_lit_id),
                 database_records=benthic_lit.obsbenthiclit_set.all(),
-                data=request.data.get('obs_benthic_lits') or [],
+                data=request.data.get("obs_benthic_lits") or [],
                 serializer_class=ObsBenthicLITSerializer,
-                context=context)
+                context=context,
+            )
             if check is False:
                 is_valid = False
-                errors['obs_benthic_lits'] = errs
+                errors["obs_benthic_lits"] = errs
 
             # Sample Event
             check, errs = save_model(
-                data=nested_data['sample_event'],
+                data=nested_data["sample_event"],
                 serializer_class=SampleEventSerializer,
-                context=context
+                context=context,
             )
             if check is False:
                 is_valid = False
-                errors['sample_event'] = errs
+                errors["sample_event"] = errs
 
             # Benthic Transect
             check, errs = save_model(
-                data=nested_data['benthic_transect'],
+                data=nested_data["benthic_transect"],
                 serializer_class=BenthicTransectSerializer,
-                context=context
+                context=context,
             )
             if check is False:
                 is_valid = False
-                errors['benthic_transect'] = errs
+                errors["benthic_transect"] = errs
 
             # Benthic LIT
             check, errs = save_model(
                 data=benthic_lit_data,
                 serializer_class=BenthicLITSerializer,
-                context=context
+                context=context,
             )
             if check is False:
                 is_valid = False
-                errors['benthic_lit'] = errs
+                errors["benthic_lit"] = errs
 
             if is_valid is False:
                 transaction.savepoint_rollback(sid)
-                return Response(
-                    data=errors,
-                    status=status.HTTP_400_BAD_REQUEST
-                )
+                return Response(data=errors, status=status.HTTP_400_BAD_REQUEST)
 
             transaction.savepoint_commit(sid)
 
             benthic_lit = BenthicLIT.objects.get(id=benthic_lit_id)
             return Response(
-                BenthicLITMethodSerializer(benthic_lit).data,
-                status=status.HTTP_200_OK
+                BenthicLITMethodSerializer(benthic_lit).data, status=status.HTTP_200_OK
             )
 
         except:
             transaction.savepoint_rollback(sid)
             raise
 
-    @action(detail=False, methods=['get'])
+    @action(detail=False, methods=["get"])
     def fieldreport(self, request, *args, **kwargs):
         return fieldreport(
-            self, request, *args,
+            self,
+            request,
+            *args,
             model_cls=ObsBenthicLIT,
             serializer_class=ObsBenthicLITReportSerializer,
-            fk='benthiclit',
-            order_by=(
-                "Site",
-                "Transect number",
-                "Transect label",
-            ),
+            fk="benthiclit",
+            order_by=("Site", "Transect number", "Transect label"),
             **kwargs
         )
 

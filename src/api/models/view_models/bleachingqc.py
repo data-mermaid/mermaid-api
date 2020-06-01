@@ -69,13 +69,23 @@ FROM
     )
     benthic_attribute = models.CharField(max_length=100)
     growth_form = models.CharField(max_length=100)
-    count_normal = models.PositiveSmallIntegerField(verbose_name=u'normal', default=0)
-    count_pale = models.PositiveSmallIntegerField(verbose_name=u'pale', default=0)
-    count_20 = models.PositiveSmallIntegerField(verbose_name=u'0-20% bleached', default=0)
-    count_50 = models.PositiveSmallIntegerField(verbose_name=u'20-50% bleached', default=0)
-    count_80 = models.PositiveSmallIntegerField(verbose_name=u'50-80% bleached', default=0)
-    count_100 = models.PositiveSmallIntegerField(verbose_name=u'80-100% bleached', default=0)
-    count_dead = models.PositiveSmallIntegerField(verbose_name=u'recently dead', default=0)
+    count_normal = models.PositiveSmallIntegerField(verbose_name="normal", default=0)
+    count_pale = models.PositiveSmallIntegerField(verbose_name="pale", default=0)
+    count_20 = models.PositiveSmallIntegerField(
+        verbose_name="0-20% bleached", default=0
+    )
+    count_50 = models.PositiveSmallIntegerField(
+        verbose_name="20-50% bleached", default=0
+    )
+    count_80 = models.PositiveSmallIntegerField(
+        verbose_name="50-80% bleached", default=0
+    )
+    count_100 = models.PositiveSmallIntegerField(
+        verbose_name="80-100% bleached", default=0
+    )
+    count_dead = models.PositiveSmallIntegerField(
+        verbose_name="recently dead", default=0
+    )
     data_policy_bleachingqc = models.CharField(max_length=50)
 
     class Meta:
@@ -140,10 +150,16 @@ FROM
     depth = models.DecimalField(
         max_digits=3, decimal_places=1, verbose_name=_("depth (m)")
     )
-    quadrat_number = models.PositiveSmallIntegerField(verbose_name=u'quadrat number')
-    percent_hard = models.PositiveSmallIntegerField(verbose_name=u'hard coral, % cover', default=0)
-    percent_soft = models.PositiveSmallIntegerField(verbose_name=u'soft coral, % cover', default=0)
-    percent_algae = models.PositiveSmallIntegerField(verbose_name=u'macroalgae, % cover', default=0)
+    quadrat_number = models.PositiveSmallIntegerField(verbose_name="quadrat number")
+    percent_hard = models.PositiveSmallIntegerField(
+        verbose_name="hard coral, % cover", default=0
+    )
+    percent_soft = models.PositiveSmallIntegerField(
+        verbose_name="soft coral, % cover", default=0
+    )
+    percent_algae = models.PositiveSmallIntegerField(
+        verbose_name="macroalgae, % cover", default=0
+    )
     data_policy_bleachingqc = models.CharField(max_length=50)
 
     class Meta:
@@ -271,7 +287,7 @@ class BleachingQCSEView(BaseViewModel):
         "management_rules",
         "management_notes",
         "sample_date",
-        "data_policy_bleachingqc"
+        "data_policy_bleachingqc",
     ]
     sql = """
 CREATE OR REPLACE VIEW vw_bleachingqc_se AS
@@ -296,7 +312,9 @@ ROUND(AVG(percent_algae_avg), 1) AS percent_algae_avg_avg
 
 FROM vw_bleachingqc_su
 GROUP BY {se_fields}
-    """.format(se_fields=", ".join(sefields_minus_depth))
+    """.format(
+        se_fields=", ".join(sefields_minus_depth)
+    )
 
     sample_unit_count = models.PositiveSmallIntegerField()
     depth_avg = models.DecimalField(

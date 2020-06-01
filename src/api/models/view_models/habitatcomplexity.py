@@ -38,7 +38,7 @@ FROM
       FROM observer o1
          JOIN profile p ON o1.profile_id = p.id
          JOIN transectmethod tm ON o1.transectmethod_id = tm.id
-         JOIN transectmethod_benthicpit tt_1 ON tm.id = tt_1.transectmethod_ptr_id
+         JOIN transectmethod_habitatcomplexity tt_1 ON tm.id = tt_1.transectmethod_ptr_id
       GROUP BY tt_1.transect_id
   ) observers ON tb.id = observers.transect_id
   JOIN vw_sample_events se ON tb.sample_event_id = se.sample_event_id
@@ -157,9 +157,10 @@ SELECT
   string_agg(DISTINCT current_name, ', ' ORDER BY current_name) AS current_name,
   string_agg(DISTINCT tide_name, ', ' ORDER BY tide_name) AS tide_name,
   string_agg(DISTINCT visibility_name, ', ' ORDER BY visibility_name) AS visibility_name,
-  ROUND(AVG(score_avg), 2) AS score_avg_avg
+  ROUND(AVG(score_avg), 2) AS score_avg_avg,
+  data_policy_habitatcomplexity
 FROM vw_habitatcomplexity_su
-GROUP BY {se_fields}
+GROUP BY {se_fields}, data_policy_habitatcomplexity
       """.format(
         se_fields=", ".join(BaseViewModel.se_fields)
     )
