@@ -39,7 +39,12 @@ from .resources.sample_units.beltfishmethod import (
     BeltFishProjectMethodSUView,
     BeltFishProjectMethodSEView,
 )
-from .resources.sample_units.benthiclitmethod import BenthicLITMethodView
+from .resources.sample_units.benthiclitmethod import (
+    BenthicLITMethodView,
+    BenthicLITProjectMethodObsView,
+    BenthicLITProjectMethodSUView,
+    BenthicLITProjectMethodSEView,
+)
 from .resources.sample_units.benthicpitmethod import (
     BenthicPITMethodView,
     BenthicPITProjectMethodObsView,
@@ -129,6 +134,14 @@ project_router.register(
 project_router.register(
    r"beltfishes/sampleevents", BeltFishProjectMethodSEView, "sampleevent"
 )
+
+project_router.register(
+    r"benthiclits/obstransectbenthiclits",
+    BenthicLITProjectMethodObsView,
+    "obstransectbenthiclit",
+)
+project_router.register(r"benthiclits/sampleunits", BenthicLITProjectMethodSUView, "sampleunit")
+project_router.register(r"benthiclits/sampleevents", BenthicLITProjectMethodSEView, "sampleevent")
 
 project_router.register(
     r"benthicpits/obstransectbenthicpits",
