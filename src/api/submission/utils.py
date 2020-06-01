@@ -215,27 +215,20 @@ def validate_collect_records(
             results=validation_output,
             last_validated=str(validation_timestamp),
         )
-
         serialized_collect_record = None
         collect_record = None
-        try:
-            qry = CollectRecord.objects.filter(id=record.pk)
 
-            # Using update so updated_on and validation_timestamp matches
-            qry.update(
-                stage=stage,
-                validations=validations,
-                updated_on=validation_timestamp,
-                updated_by=profile,
-            )
-            if qry.count() > 0:
-                collect_record = qry[0]
-        except CollectRecord.DoesNotExist:
-            pass
-
-        if collect_record:
+        qry = CollectRecord.objects.filter(id=record.pk)
+        # Using update so updated_on and validation_timestamp matches
+        qry.update(
+            stage=stage,
+            validations=validations,
+            updated_on=validation_timestamp,
+            updated_by=profile,
+        )
+        if qry.count() > 0:
+            collect_record = qry[0]
             serialized_collect_record = serializer_class(collect_record).data
-
         output[str(record.pk)] = dict(status=status, record=serialized_collect_record)
 
     return output

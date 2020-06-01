@@ -23,6 +23,8 @@ from api.models import (
 )
 from api.resources.project_profile import ProjectProfileSerializer
 from api.utils import tokenutils
+from api.submission.utils import submit_collect_records, validate_collect_records
+from api.submission.validations import ERROR, WARN
 
 
 def get_ingest_project_choices(project_id):
@@ -96,7 +98,18 @@ def ingest(
     request=None,
     dry_run=False,
     clear_existing=False,
+    bulk_validation=False,
+    bulk_submission=False,
+    validation_suppressants=None,
+    serializer_class=None,
 ):
+
+    output = dict()
+    if dry_run and bulk_validation:
+        raise ValueError("bulk_validation not allowed with dry_run.")
+    if dry_run and bulk_submission:
+        raise ValueError("bulk_submission not allowed with dry_run.")
+
     if protocol == BENTHICPIT_PROTOCOL:
         serializer = BenthicPITCSVSerializer
     elif protocol == FISHBELT_PROTOCOL:
@@ -104,7 +117,7 @@ def ingest(
     elif protocol == BLEACHINGQC_PROTOCOL:
         serializer = BleachingCSVSerializer
     else:
-        return None, None
+        return None, None, output
 
     reader = csv.DictReader(datafile)
     context = _create_context(request, profile_id)
@@ -119,7 +132,8 @@ def ingest(
     errors = s.formatted_errors
 
     if is_valid is False:
-        return None, errors
+        output["errors"] = errors
+        return None, output
 
     with transaction.atomic():
         sid = transaction.savepoint()
@@ -136,4 +150,26 @@ def ingest(
             else:
                 transaction.savepoint_commit(sid)
 
-    return new_records, None
+    profile = None
+    is_bulk_invalid = False
+    if bulk_validation or bulk_submission:
+        profile = Profile.objects.get_or_none(id=profile_id)
+        if profile is None:
+            raise ValueError("Profile does not exist")
+
+        record_ids = [str(r.pk) for r in new_records]
+        validation_output = validate_collect_records(
+            profile, record_ids, serializer_class, validation_suppressants
+        )
+        output["validation"] = validation_output
+        statuses = [v.get("status") for v in validation_output.values()]
+        if WARN in statuses or ERROR in statuses:
+            is_bulk_invalid = True
+
+    if bulk_submission and not is_bulk_invalid:
+        submit_output = submit_collect_records(
+            profile, record_ids, validation_suppressants
+        )
+        output["submit"] = submit_output
+
+    return new_records, output
