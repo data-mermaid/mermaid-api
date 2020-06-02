@@ -72,7 +72,9 @@ def to_observers(field, row, serializer_instance):
         if transect is None:
             return ""
 
-        observers = sorted([o.profile_name for o in transect.observers.all().iterator()])
+        observers = sorted(
+            [o.profile_name for o in transect.observers.all().iterator()]
+        )
     return ",".join(observers)
 
 

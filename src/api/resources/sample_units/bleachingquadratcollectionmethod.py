@@ -1,13 +1,30 @@
-from api.models.mermaid import BleachingQuadratCollection
 from api import utils
 from django.db import transaction
 from rest_framework import status
 from rest_framework.response import Response
+from rest_framework.serializers import SerializerMethodField
+from django_filters import BaseInFilter, RangeFilter
 
 from . import *
 from .. import fieldreport
-from ..base import BaseProjectApiViewSet
-from ...models.mermaid import ObsColoniesBleached, ObsQuadratBenthicPercent
+from ...models.mermaid import (
+    BleachingQuadratCollection,
+    ObsColoniesBleached,
+    ObsQuadratBenthicPercent,
+)
+from ...models.view_models import (
+    BleachingQCColoniesBleachedObsView,
+    BleachingQCQuadratBenthicPercentObsView,
+    BleachingQCSUView,
+    BleachingQCSEView,
+)
+
+from ..base import (
+    BaseProjectApiViewSet,
+    BaseViewAPISerializer,
+    BaseViewAPIGeoSerializer,
+    BaseTransectFilterSet,
+)
 from ..bleaching_quadrat_collection import BleachingQuadratCollectionSerializer
 from ..obs_colonies_bleached import ObsColoniesBleachedSerializer
 from ..obs_quadrat_benthic_percent import ObsQuadratBenthicPercentSerializer
@@ -22,8 +39,8 @@ def avg_hard_coral(field, row, serializer_instance):
         "avg_hard_coral"
     ]
     if val is None:
-        return ''
-    return '{0:.1f}'.format(val)
+        return ""
+    return "{0:.1f}".format(val)
 
 
 def avg_soft_coral(field, row, serializer_instance):
@@ -32,8 +49,8 @@ def avg_soft_coral(field, row, serializer_instance):
         "avg_soft_coral"
     ]
     if val is None:
-        return ''
-    return '{0:.1f}'.format(val)
+        return ""
+    return "{0:.1f}".format(val)
 
 
 def avg_macroalgae(field, row, serializer_instance):
@@ -42,8 +59,8 @@ def avg_macroalgae(field, row, serializer_instance):
         "avg_macroalgae"
     ]
     if val is None:
-        return ''
-    return '{0:.1f}'.format(val)
+        return ""
+    return "{0:.1f}".format(val)
 
 
 def quadrat_count(field, row, serializer_instance):
@@ -69,7 +86,9 @@ class BleachingQuadratCollectionMethodSerializer(BleachingQuadratCollectionSeria
         exclude = []
 
 
-class ObsColoniesBleachedReportSerializer(SampleEventReportSerializer, metaclass=SampleEventReportSerializerMeta):
+class ObsColoniesBleachedReportSerializer(
+    SampleEventReportSerializer, metaclass=SampleEventReportSerializerMeta
+):
     transect_method = "bleachingquadratcollection"
     sample_event_path = "{}__quadrat__sample_event".format(transect_method)
     idx = 25
@@ -117,7 +136,9 @@ class ObsColoniesBleachedReportSerializer(SampleEventReportSerializer, metaclass
         super(ObsColoniesBleachedReportSerializer, self).preserialize(queryset=queryset)
 
 
-class ObsQuadratBenthicPercentReportSerializer(SampleEventReportSerializer, metaclass=SampleEventReportSerializerMeta):
+class ObsQuadratBenthicPercentReportSerializer(
+    SampleEventReportSerializer, metaclass=SampleEventReportSerializerMeta
+):
     transect_method = "bleachingquadratcollection"
     sample_event_path = "{}__quadrat__sample_event".format(transect_method)
     idx = 25
@@ -172,7 +193,7 @@ class ObsQuadratBenthicPercentReportSerializer(SampleEventReportSerializer, meta
                     quadrat_count=0,
                     percent_hards=[],
                     percent_softs=[],
-                    percent_algaes=[]
+                    percent_algaes=[],
                 )
             stats[pk]["quadrat_count"] += 1
             stats[pk]["percent_hards"].append(rec.get("percent_hard"))
@@ -184,12 +205,20 @@ class ObsQuadratBenthicPercentReportSerializer(SampleEventReportSerializer, meta
             cnt = s.get("quadrat_count")
             quadrat_percent_summary_stats[pk] = dict(
                 quadrat_count=cnt,
-                avg_hard_coral=utils.safe_division(utils.safe_sum(*s["percent_hards"]), cnt),
-                avg_soft_coral=utils.safe_division(utils.safe_sum(*s["percent_softs"]), cnt),
-                avg_macroalgae=utils.safe_division(utils.safe_sum(*s["percent_algaes"]), cnt),
+                avg_hard_coral=utils.safe_division(
+                    utils.safe_sum(*s["percent_hards"]), cnt
+                ),
+                avg_soft_coral=utils.safe_division(
+                    utils.safe_sum(*s["percent_softs"]), cnt
+                ),
+                avg_macroalgae=utils.safe_division(
+                    utils.safe_sum(*s["percent_algaes"]), cnt
+                ),
             )
 
-        self.serializer_cache["quadrat_percent_summary_stats"] = quadrat_percent_summary_stats
+        self.serializer_cache[
+            "quadrat_percent_summary_stats"
+        ] = quadrat_percent_summary_stats
 
 
 class BleachingQuadratCollectionMethodView(BaseProjectApiViewSet):
@@ -317,3 +346,317 @@ class BleachingQuadratCollectionMethodView(BaseProjectApiViewSet):
             order_by=("Site", "Quadrat collection label"),
             **kwargs
         )
+
+
+class BleachingQCMethodObsColoniesBleachedSerializer(BaseViewAPISerializer):
+    class Meta(BaseViewAPISerializer.Meta):
+        model = BleachingQCColoniesBleachedObsView
+        exclude = BaseViewAPISerializer.Meta.exclude.copy()
+        exclude.append("location")
+        header_order = ["id"] + BaseViewAPISerializer.Meta.header_order.copy()
+        header_order.extend(
+            [
+                "sample_unit_id",
+                "sample_time",
+                "label",
+                "quadrat_size",
+                "depth",
+                "observers",
+                "benthic_attribute",
+                "growth_form",
+                "count_normal",
+                "count_pale",
+                "count_20",
+                "count_50",
+                "count_80",
+                "count_100",
+                "count_dead",
+                "data_policy_bleachingqc",
+            ]
+        )
+
+
+class BleachingQCMethodObsColoniesBleachedCSVSerializer(
+    BleachingQCMethodObsColoniesBleachedSerializer
+):
+    observers = SerializerMethodField()
+
+
+class BleachingQCMethodObsColoniesBleachedGeoSerializer(BaseViewAPIGeoSerializer):
+    class Meta(BaseViewAPIGeoSerializer.Meta):
+        model = BleachingQCColoniesBleachedObsView
+
+
+class BleachingQCMethodObsQuadratBenthicPercentSerializer(BaseViewAPISerializer):
+    class Meta(BaseViewAPISerializer.Meta):
+        model = BleachingQCQuadratBenthicPercentObsView
+        exclude = BaseViewAPISerializer.Meta.exclude.copy()
+        exclude.append("location")
+        header_order = ["id"] + BaseViewAPISerializer.Meta.header_order.copy()
+        header_order.extend(
+            [
+                "sample_unit_id",
+                "sample_time",
+                "label",
+                "quadrat_size",
+                "depth",
+                "observers",
+                "quadrat_number",
+                "percent_hard",
+                "percent_soft",
+                "percent_algae",
+                "data_policy_bleachingqc",
+            ]
+        )
+
+
+class BleachingQCMethodObsQuadratBenthicPercentCSVSerializer(
+    BleachingQCMethodObsQuadratBenthicPercentSerializer
+):
+    observers = SerializerMethodField()
+
+
+class BleachingQCMethodObsQuadratBenthicPercentGeoSerializer(BaseViewAPIGeoSerializer):
+    class Meta(BaseViewAPIGeoSerializer.Meta):
+        model = BleachingQCQuadratBenthicPercentObsView
+
+
+class BleachingQCMethodSUSerializer(BaseViewAPISerializer):
+    class Meta(BaseViewAPISerializer.Meta):
+        model = BleachingQCSUView
+        exclude = BaseViewAPISerializer.Meta.exclude.copy()
+        exclude.append("location")
+        header_order = BaseViewAPISerializer.Meta.header_order.copy()
+        header_order.extend(
+            [
+                "label",
+                "quadrat_size",
+                "depth",
+                "observers",
+                "count_genera",
+                "count_total",
+                "percent_normal",
+                "percent_pale",
+                "percent_bleached",
+                "quadrat_count",
+                "percent_hard_avg",
+                "percent_soft_avg",
+                "percent_algae_avg",
+                "data_policy_bleachingqc",
+            ]
+        )
+
+
+class BleachingQCMethodSUCSVSerializer(BleachingQCMethodSUSerializer):
+    observers = SerializerMethodField()
+
+
+class BleachingQCMethodSUGeoSerializer(BaseViewAPIGeoSerializer):
+    class Meta(BaseViewAPIGeoSerializer.Meta):
+        model = BleachingQCSUView
+
+
+class BleachingQCMethodSESerializer(BaseViewAPISerializer):
+    class Meta(BaseViewAPISerializer.Meta):
+        model = BleachingQCSEView
+        exclude = BaseViewAPISerializer.Meta.exclude.copy()
+        exclude.append("location")
+        header_order = BaseViewAPISerializer.Meta.header_order.copy()
+        header_order.extend(
+            [
+                "sample_unit_count",
+                "depth_avg",
+                "quadrat_size_avg",
+                "count_genera_avg",
+                "count_total_avg",
+                "percent_normal_avg",
+                "percent_pale_avg",
+                "percent_bleached_avg",
+                "quadrat_count_avg",
+                "percent_hard_avg_avg",
+                "percent_soft_avg_avg",
+                "percent_algae_avg_avg",
+                "data_policy_bleachingqc",
+            ]
+        )
+
+
+class BleachingQCMethodSEGeoSerializer(BaseViewAPIGeoSerializer):
+    class Meta(BaseViewAPIGeoSerializer.Meta):
+        model = BleachingQCSEView
+
+
+class BleachingQCMethodColoniesBleachedObsFilterSet(BaseTransectFilterSet):
+    sample_unit_id = BaseInFilter(method="id_lookup")
+    depth = RangeFilter()
+    observers = BaseInFilter(method="json_name_lookup")
+    count_normal = RangeFilter()
+    count_pale = RangeFilter()
+    count_20 = RangeFilter()
+    count_50 = RangeFilter()
+    count_80 = RangeFilter()
+    count_100 = RangeFilter()
+    count_dead = RangeFilter()
+
+    class Meta:
+        model = BleachingQCColoniesBleachedObsView
+        fields = [
+            "depth",
+            "sample_unit_id",
+            "observers",
+            "label",
+            "quadrat_size",
+            "benthic_attribute",
+            "growth_form",
+            "data_policy_bleachingqc",
+            "count_normal",
+            "count_pale",
+            "count_20",
+            "count_50",
+            "count_80",
+            "count_100",
+            "count_dead",
+        ]
+
+
+class BleachingQCMethodQuadratBenthicPercentObsFilterSet(BaseTransectFilterSet):
+    sample_unit_id = BaseInFilter(method="id_lookup")
+    depth = RangeFilter()
+    observers = BaseInFilter(method="json_name_lookup")
+    percent_hard = RangeFilter()
+    percent_soft = RangeFilter()
+    percent_algae = RangeFilter()
+
+    class Meta:
+        model = BleachingQCQuadratBenthicPercentObsView
+        fields = [
+            "depth",
+            "sample_unit_id",
+            "observers",
+            "label",
+            "quadrat_size",
+            "data_policy_bleachingqc",
+            "quadrat_number",
+            "percent_hard",
+            "percent_soft",
+            "percent_algae",
+        ]
+
+
+class BleachingQCMethodSUFilterSet(BaseTransectFilterSet):
+    sample_unit_id = BaseInFilter(method="id_lookup")
+    depth = RangeFilter()
+    observers = BaseInFilter(method="json_name_lookup")
+    count_genera = RangeFilter()
+    count_total = RangeFilter()
+    percent_normal = RangeFilter()
+    percent_pale = RangeFilter()
+    percent_bleached = RangeFilter()
+    quadrat_count = RangeFilter()
+    percent_hard_avg = RangeFilter()
+    percent_soft_avg = RangeFilter()
+    percent_algae_avg = RangeFilter()
+
+    class Meta:
+        model = BleachingQCSUView
+        fields = [
+            "depth",
+            "sample_unit_id",
+            "observers",
+            "label",
+            "quadrat_size",
+            "data_policy_bleachingqc",
+            "count_genera",
+            "count_total",
+            "percent_normal",
+            "percent_pale",
+            "percent_bleached",
+            "quadrat_count",
+            "percent_hard_avg",
+            "percent_soft_avg",
+            "percent_algae_avg",
+        ]
+
+
+class BleachingQCMethodSEFilterSet(BaseTransectFilterSet):
+    sample_unit_count = RangeFilter()
+    depth_avg = RangeFilter()
+    quadrat_size_avg = RangeFilter()
+    count_total_avg = RangeFilter()
+    count_genera_avg = RangeFilter()
+    percent_normal_avg = RangeFilter()
+    percent_pale_avg = RangeFilter()
+    percent_bleached_avg = RangeFilter()
+    quadrat_count_avg = RangeFilter()
+    percent_hard_avg_avg = RangeFilter()
+    percent_soft_avg_avg = RangeFilter()
+    percent_algae_avg_avg = RangeFilter()
+
+    class Meta:
+        model = BleachingQCSEView
+        fields = [
+            "sample_unit_count",
+            "depth_avg",
+            "data_policy_bleachingqc",
+            "quadrat_size_avg",
+            "count_total_avg",
+            "count_genera_avg",
+            "percent_normal_avg",
+            "percent_pale_avg",
+            "percent_bleached_avg",
+            "quadrat_count_avg",
+            "percent_hard_avg_avg",
+            "percent_soft_avg_avg",
+            "percent_algae_avg_avg",
+        ]
+
+
+class BleachingQCProjectMethodObsColoniesBleachedView(BaseProjectMethodView):
+    drf_label = "bleachingqc-obscoloniesbleached"
+    project_policy = "data_policy_bleachingqc"
+    serializer_class = BleachingQCMethodObsColoniesBleachedSerializer
+    serializer_class_geojson = BleachingQCMethodObsColoniesBleachedGeoSerializer
+    serializer_class_csv = BleachingQCMethodObsColoniesBleachedCSVSerializer
+    filterset_class = BleachingQCMethodColoniesBleachedObsFilterSet
+    queryset = BleachingQCColoniesBleachedObsView.objects.exclude(
+        project_status=Project.TEST
+    ).order_by("site_name", "sample_date", "label", "benthic_attribute", "growth_form")
+
+
+class BleachingQCProjectMethodObsQuadratBenthicPercentView(BaseProjectMethodView):
+    drf_label = "bleachingqc-obsquadratbenthicpercent"
+    project_policy = "data_policy_bleachingqc"
+    serializer_class = BleachingQCMethodObsQuadratBenthicPercentSerializer
+    serializer_class_geojson = BleachingQCMethodObsQuadratBenthicPercentGeoSerializer
+    serializer_class_csv = BleachingQCMethodObsQuadratBenthicPercentCSVSerializer
+    filterset_class = BleachingQCMethodQuadratBenthicPercentObsFilterSet
+    queryset = BleachingQCQuadratBenthicPercentObsView.objects.exclude(
+        project_status=Project.TEST
+    ).order_by("site_name", "sample_date", "label", "quadrat_number")
+
+
+class BleachingQCProjectMethodSUView(BaseProjectMethodView):
+    drf_label = "bleachingqc-su"
+    project_policy = "data_policy_bleachingqc"
+    serializer_class = BleachingQCMethodSUSerializer
+    serializer_class_geojson = BleachingQCMethodSUGeoSerializer
+    serializer_class_csv = BleachingQCMethodSUCSVSerializer
+    filterset_class = BleachingQCMethodSUFilterSet
+    queryset = BleachingQCSUView.objects.exclude(project_status=Project.TEST).order_by(
+        "site_name", "sample_date", "label"
+    )
+
+
+class BleachingQCProjectMethodSEView(BaseProjectMethodView):
+    drf_label = "bleachingqc-se"
+    project_policy = "data_policy_bleachingqc"
+    permission_classes = [
+        Or(ProjectDataReadOnlyPermission, ProjectPublicSummaryPermission)
+    ]
+    serializer_class = BleachingQCMethodSESerializer
+    serializer_class_geojson = BleachingQCMethodSEGeoSerializer
+    serializer_class_csv = BleachingQCMethodSESerializer
+    filterset_class = BleachingQCMethodSEFilterSet
+    queryset = BleachingQCSEView.objects.exclude(project_status=Project.TEST).order_by(
+        "site_name", "sample_date"
+    )

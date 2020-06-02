@@ -363,6 +363,7 @@ class RelatedOrderingFilter(OrderingFilter):
         return [term for term in fields if term.lstrip('-') in valid_fields and ORDER_PATTERN.match(term)]
 
 
+# TODO: after SE/SU refactor, create BaseSEFilterSet, BaseSUFilterSet, etc.
 class BaseTransectFilterSet(OrFilterSetMixin, GeoFilterSet):
     id = BaseInFilter(method="id_lookup")
     site_id = BaseInFilter(method="id_lookup")
