@@ -22,9 +22,9 @@ from api.models import (
     Site,
 )
 from api.resources.project_profile import ProjectProfileSerializer
-from api.utils import tokenutils
 from api.submission.utils import submit_collect_records, validate_collect_records
 from api.submission.validations import ERROR, WARN
+from api.utils import tokenutils
 
 
 def get_ingest_project_choices(project_id):
@@ -85,6 +85,7 @@ def clear_collect_records(project, protocol):
         project=project,
         protocol=protocol,
     )
+    print("sql: {}".format(sql))
     with connection.cursor() as cursor:
         cursor.execute(sql)
         return cursor.rowcount
@@ -161,7 +162,7 @@ def ingest(
         validation_output = validate_collect_records(
             profile, record_ids, serializer_class, validation_suppressants
         )
-        output["validation"] = validation_output
+        output["validate"] = validation_output
         statuses = [v.get("status") for v in validation_output.values()]
         if WARN in statuses or ERROR in statuses:
             is_bulk_invalid = True

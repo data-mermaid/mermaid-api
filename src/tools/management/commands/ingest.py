@@ -149,8 +149,8 @@ class Command(BaseCommand):
         if verbosity > 1:
             self.stdout.write(self.style.SUCCESS(msg))
 
-        if "validation" in ingest_output:
-            validation_results = ingest_output["validation"]
+        if "validate" in ingest_output:
+            validation_results = ingest_output["validate"]
             validation_oks, validation_warns, validation_errors = self._validation_summary(validation_results.values())
 
             if verbosity > 0:

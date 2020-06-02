@@ -87,7 +87,9 @@ class CollectRecordViewSet(BaseProjectApiViewSet):
         record_ids = request.data.get("ids") or []
         profile = request.user.profile
         try:
-            output = validate_collect_records(profile, record_ids, CollectRecordSerializer)
+            output = validate_collect_records(
+                profile, record_ids, CollectRecordSerializer
+            )
         except ValueError as err:
             raise ParseError(err.message)
 
@@ -163,6 +165,14 @@ class CollectRecordViewSet(BaseProjectApiViewSet):
         dryrun = truthy(request.data.get("dryrun"))
         clearexisting = truthy(request.data.get("clearexisting"))
 
+        validate_config = None
+        try:
+            config = request.data.get("validate_config")
+            if config:
+                validate_config = json.loads(config)
+        except (ValueError, TypeError):
+            return Response("Invalid validate_config", status=400)
+
         if protocol is None:
             return Response("Missing protocol", status=400)
 
@@ -177,7 +187,7 @@ class CollectRecordViewSet(BaseProjectApiViewSet):
             return Response("File type not supported", status=400)
 
         decoded_file = uploaded_file.read().decode("utf-8-sig").splitlines()
-        records, errors = ingest(
+        records, ingest_output = ingest(
             protocol,
             decoded_file,
             project_pk,
@@ -185,8 +195,15 @@ class CollectRecordViewSet(BaseProjectApiViewSet):
             None,
             dry_run=dryrun,
             clear_existing=clearexisting,
+            bulk_validation=True,
+            bulk_submission=False,
+            validation_suppressants=validate_config,
+            serializer_class=CollectRecordSerializer,
         )
 
-        if errors:
+        if "errors" in ingest_output:
+            errors = ingest_output["errors"]
             return Response(errors, status=400)
-        return Response(CollectRecordSerializer(records, many=True).data)
+
+        records = ingest_output.get("validate")
+        return Response(records)
