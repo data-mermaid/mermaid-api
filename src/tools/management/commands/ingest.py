@@ -16,6 +16,8 @@ from api.models import (
     HABITATCOMPLEXITY_PROTOCOL,
     CollectRecord,
 )
+from api.resources.collect_record import CollectRecordSerializer
+from api.submission.validations import ERROR, OK, WARN
 
 
 class Command(BaseCommand):
@@ -39,6 +41,39 @@ class Command(BaseCommand):
             help="Remove existing collect records for protocol before ingesting file",
         )
 
+        parser.add_argument(
+            "--validate",
+            action="store_true",
+            help="Validate ingested collect records",
+        )
+
+        parser.add_argument(
+            "--validate-config",
+            action="store",
+            type=str,
+            help="Validation config",
+        )
+
+        parser.add_argument(
+            "--submit",
+            action="store_true",
+            help="Submit valid ingested collect records",
+        )
+
+    def _validation_summary(self, results):
+        oks = 0
+        warns = 0
+        errors = 0
+        for result in results:
+            if result.get("status") == OK:
+                oks += 1
+            elif result.get("status") == WARN:
+                warns += 1
+            elif result.get("status") == ERROR:
+                errors += 1
+
+        return oks, warns, errors
+
     def handle(
         self,
         datafile,
@@ -55,14 +90,36 @@ class Command(BaseCommand):
         profile = profile[0]
         verbosity = options["verbosity"]
 
+        is_validate = options.get("validate")
+        validate_config = None
+        try:
+            config = options.get("validate_config")
+            if config:
+                validate_config = json.loads(config)
+        except (ValueError, TypeError):
+            self.stderr.write("validate_config is invalid")
+            sys.exit(1)
+
+        is_submit = options.get("submit")
+
         if protocol is None:
             raise NotImplementedError()
 
         try:
             with transaction.atomic():
                 sid = transaction.savepoint()
-                records, errors = ingest(
-                    protocol, datafile, project, profile, None, dry_run, clear_existing
+                records, ingest_output = ingest(
+                    protocol=protocol,
+                    datafile=datafile,
+                    project_id=project,
+                    profile_id=profile,
+                    request=None,
+                    dry_run=dry_run,
+                    clear_existing=clear_existing,
+                    bulk_validation=is_validate,
+                    bulk_submission=is_submit,
+                    validation_suppressants=validate_config,
+                    serializer_class=CollectRecordSerializer
                 )
                 transaction.savepoint_commit(sid)
         except Exception as err:
@@ -70,7 +127,8 @@ class Command(BaseCommand):
             self.stderr.write(str(err))
             sys.exit(1)
 
-        if errors:
+        if "errors" in ingest_output:
+            errors = ingest_output["errors"]
             if verbosity > 0:
                 for err in errors:
                     self.stdout.write(json.dumps(err))
@@ -90,5 +148,31 @@ class Command(BaseCommand):
 
         if verbosity > 1:
             self.stdout.write(self.style.SUCCESS(msg))
+
+        if "validate" in ingest_output:
+            validation_results = ingest_output["validate"]
+            validation_oks, validation_warns, validation_errors = self._validation_summary(validation_results.values())
+
+            if verbosity > 0:
+                pass
+
+            if verbosity > 1:
+                self.stdout.write("\nCollect record validation results:")
+                self.stdout.write(self.style.SUCCESS(f"Valid: {validation_oks}"))
+                self.stdout.write(self.style.WARNING(f"Warnings: {validation_warns}"))
+                self.stdout.write(self.style.ERROR(f"Errors: {validation_errors}"))
+
+        if "submit" in ingest_output:
+            submission_results = ingest_output["submit"]
+            submission_oks, submission_warns, submission_errors = self._validation_summary(submission_results.values())
+
+            if verbosity > 0:
+                pass
+
+            if verbosity > 1:
+                self.stdout.write("\nCollect record submission results:")
+                self.stdout.write(self.style.SUCCESS(f"Submitted: {validation_oks}"))
+                self.stdout.write(self.style.WARNING(f"Warnings: {validation_warns}"))
+                self.stdout.write(self.style.ERROR(f"Errors: {validation_errors}"))
 
         sys.exit(0)
