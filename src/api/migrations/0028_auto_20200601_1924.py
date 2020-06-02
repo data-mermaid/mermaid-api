@@ -29,7 +29,7 @@ drop_se_hab = "DROP VIEW IF EXISTS vw_habitatcomplexity_se;"
 class Migration(migrations.Migration):
 
     dependencies = [
-        ('api', '0027_auto_20200526_1409'),
+        ('api', '0028_merge_20200601_1732'),
     ]
 
     operations = [
