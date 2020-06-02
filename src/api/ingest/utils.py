@@ -85,7 +85,7 @@ def clear_collect_records(project, protocol):
         project=project,
         protocol=protocol,
     )
-    print("sql: {}".format(sql))
+
     with connection.cursor() as cursor:
         cursor.execute(sql)
         return cursor.rowcount
@@ -118,7 +118,7 @@ def ingest(
     elif protocol == BLEACHINGQC_PROTOCOL:
         serializer = BleachingCSVSerializer
     else:
-        return None, None, output
+        return None, output
 
     reader = csv.DictReader(datafile)
     context = _create_context(request, profile_id)
