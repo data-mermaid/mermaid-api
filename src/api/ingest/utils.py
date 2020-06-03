@@ -4,20 +4,27 @@ import json
 from django.db import connection, transaction
 
 from api import mocks
-from api.ingest import BenthicPITCSVSerializer, FishBeltCSVSerializer
+from api.decorators import run_in_thread
+from api.ingest import (
+    BenthicPITCSVSerializer,
+    BleachingCSVSerializer,
+    FishBeltCSVSerializer,
+)
 from api.models import (
     BENTHICLIT_PROTOCOL,
     BENTHICPIT_PROTOCOL,
     BLEACHINGQC_PROTOCOL,
     FISHBELT_PROTOCOL,
     HABITATCOMPLEXITY_PROTOCOL,
+    CollectRecord,
     Management,
     Profile,
     ProjectProfile,
     Site,
-    CollectRecord,
 )
 from api.resources.project_profile import ProjectProfileSerializer
+from api.submission.utils import submit_collect_records, validate_collect_records
+from api.submission.validations import ERROR, WARN
 from api.utils import tokenutils
 
 
@@ -68,20 +75,12 @@ def _append_required_columns(rows, project_id, profile_id):
     return _rows
 
 
-def clear_collect_records(project, protocol):
-    sql = """
-        DELETE FROM {table_name}
-        WHERE 
-            project_id='{project}' AND 
-            data->>'protocol' = '{protocol}';
-        """.format(
-        table_name=CollectRecord.objects.model._meta.db_table,
-        project=project,
-        protocol=protocol,
-    )
-    with connection.cursor() as cursor:
-        cursor.execute(sql)
-        return cursor.rowcount
+@run_in_thread
+def clear_collect_records(collect_record_ids):
+    CollectRecord.objects.filter(
+        id__in=collect_record_ids
+    ).delete()
+    print("deleted old records")
 
 
 def ingest(
@@ -92,18 +91,31 @@ def ingest(
     request=None,
     dry_run=False,
     clear_existing=False,
+    bulk_validation=False,
+    bulk_submission=False,
+    validation_suppressants=None,
+    serializer_class=None,
 ):
+
+    output = dict()
+
     if protocol == BENTHICPIT_PROTOCOL:
         serializer = BenthicPITCSVSerializer
     elif protocol == FISHBELT_PROTOCOL:
         serializer = FishBeltCSVSerializer
+    elif protocol == BLEACHINGQC_PROTOCOL:
+        serializer = BleachingCSVSerializer
     else:
-        return None, None
+        return None, output
 
     reader = csv.DictReader(datafile)
     context = _create_context(request, profile_id)
     rows = _append_required_columns(reader, project_id, profile_id)
     project_choices = get_ingest_project_choices(project_id)
+
+    profile = Profile.objects.get_or_none(id=profile_id)
+    if profile is None:
+        raise ValueError("Profile does not exist")
 
     s = serializer(
         data=rows, many=True, project_choices=project_choices, context=context
@@ -113,7 +125,8 @@ def ingest(
     errors = s.formatted_errors
 
     if is_valid is False:
-        return None, errors
+        output["errors"] = errors
+        return None, output
 
     with transaction.atomic():
         sid = transaction.savepoint()
@@ -121,7 +134,15 @@ def ingest(
         successful_save = False
         try:
             if clear_existing:
-                clear_collect_records(project_id, protocol)
+                # Fetch ids to be deleted before deleting
+                # because it's being done in a thread and
+                # we want to avoid deleting new collect records.
+                delete_ids = [cr.id for cr in CollectRecord.objects.filter(
+                    project_id=project_id,
+                    profile=profile,
+                    data__protocol=protocol
+                )]
+                clear_collect_records(delete_ids)
             new_records = s.save()
             successful_save = True
         finally:
@@ -130,4 +151,21 @@ def ingest(
             else:
                 transaction.savepoint_commit(sid)
 
-    return new_records, None
+    is_bulk_invalid = False
+    if dry_run is False and bulk_validation or bulk_submission:
+        record_ids = [str(r.pk) for r in new_records]
+        validation_output = validate_collect_records(
+            profile, record_ids, serializer_class, validation_suppressants
+        )
+        output["validate"] = validation_output
+        statuses = [v.get("status") for v in validation_output.values()]
+        if WARN in statuses or ERROR in statuses:
+            is_bulk_invalid = True
+
+    if dry_run is False and bulk_submission and not is_bulk_invalid:
+        submit_output = submit_collect_records(
+            profile, record_ids, validation_suppressants
+        )
+        output["submit"] = submit_output
+
+    return new_records, output

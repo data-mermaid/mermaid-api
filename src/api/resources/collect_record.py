@@ -28,6 +28,8 @@ from ..submission.utils import (
     FISHBELT_PROTOCOL,
     HABITATCOMPLEXITY_PROTOCOL,
     PROTOCOLS,
+    submit_collect_records,
+    validate_collect_records,
 )
 from ..submission.validations import ERROR, OK, WARN
 from ..utils import truthy
@@ -64,31 +66,15 @@ class CollectRecordViewSet(BaseProjectApiViewSet):
     queryset = CollectRecord.objects.all().order_by("id")
     filter_class = CollectRecordFilterSet
 
-    def _validate(self, record_id, request):
-        try:
-            record = self.queryset.get(id=record_id)
-        except CollectRecord.DoesNotExist:
-            raise NotFound()
+    def filter_queryset(self, queryset):
+        user = self.request.user
+        show_all = "showall" in self.request.query_params
 
-        protocol = record.data.get("protocol")
-        if protocol not in PROTOCOLS:
-            raise ParseError(ugettext_lazy("{} not supported".format(protocol)))
+        if show_all is True:
+            return queryset
 
-        if protocol == BENTHICLIT_PROTOCOL:
-            validator = BenthicLITProtocolValidation(record, request)
-        elif protocol == BENTHICPIT_PROTOCOL:
-            validator = BenthicPITProtocolValidation(record, request)
-        elif protocol == FISHBELT_PROTOCOL:
-            validator = FishBeltProtocolValidation(record, request)
-        elif protocol == HABITATCOMPLEXITY_PROTOCOL:
-            validator = HabitatComplexityProtocolValidation(record, request)
-        elif protocol == BLEACHING_QC_PROTOCOL:
-            validator = BleachingQuadratCollectionProtocolValidation(record, request)
-
-        result = validator.validate()
-        validations = validator.validations
-
-        return result, validations
+        profile = user.profile
+        return queryset.filter(profile=profile)
 
     @action(
         detail=False,
@@ -99,44 +85,13 @@ class CollectRecordViewSet(BaseProjectApiViewSet):
     def validate(self, request, project_pk):
         output = dict()
         record_ids = request.data.get("ids") or []
-
-        for record_id in record_ids:
-            result, validation_output = self._validate(record_id, request)
-            stage = CollectRecord.SAVED_STAGE
-            if result == OK:
-                stage = CollectRecord.VALIDATED_STAGE
-
-            validation_timestamp = timezone.now()
-            validations = dict(
-                status=result,
-                results=validation_output,
-                last_validated=str(validation_timestamp),
+        profile = request.user.profile
+        try:
+            output = validate_collect_records(
+                profile, record_ids, CollectRecordSerializer
             )
-
-            record = None
-            collect_record = None
-            try:
-                qry = self.queryset.filter(id=record_id)
-                profile = None
-                if hasattr(request, "user") and hasattr(request.user, "profile"):
-                    profile = request.user.profile
-
-                # Using update so updated_on and validation_timestamp matches
-                qry.update(
-                    stage=stage,
-                    validations=validations,
-                    updated_on=validation_timestamp,
-                    updated_by=profile,
-                )
-                if qry.count() > 0:
-                    collect_record = qry[0]
-            except CollectRecord.DoesNotExist:
-                pass
-
-            if collect_record:
-                record = self.serializer_class(collect_record).data
-
-            output[record_id] = dict(status=result, record=record)
+        except ValueError as err:
+            raise ParseError(err.message)
 
         return Response(output)
 
@@ -147,40 +102,9 @@ class CollectRecordViewSet(BaseProjectApiViewSet):
         + [CollectRecordOwner],
     )
     def submit(self, request, project_pk):
-        output = {}
         record_ids = request.data.get("ids")
-        for record_id in record_ids:
-            collect_record = CollectRecord.objects.get_or_none(id=record_id)
-            if collect_record is None:
-                output[record_id] = dict(
-                    status=ERROR, message=ugettext_lazy("Not found")
-                )
-                continue
-
-            result, _ = self._validate(record_id, request)
-            if result != OK:
-                output[record_id] = dict(
-                    status=result, message=ugettext_lazy("Invalid collect record")
-                )
-                continue
-
-            # If validate comes out all good (status == OK) then
-            # try parsing and saving the collect record into its
-            # components.
-            status, result = utils.write_collect_record(collect_record, request)
-            if status == utils.VALIDATION_ERROR_STATUS:
-                output[record_id] = dict(status=ERROR, message=result)
-                continue
-            elif status == utils.ERROR_STATUS:
-                logger.error(
-                    json.dumps(dict(id=record_id, data=collect_record.data)), result
-                )
-                output[record_id] = dict(
-                    status=ERROR, message=ugettext_lazy("System failure")
-                )
-                continue
-            output[record_id] = dict(status=OK, message=ugettext_lazy("Success"))
-
+        profile = request.user.profile
+        output = submit_collect_records(profile, record_ids)
         return Response(output)
 
     @action(detail=False, methods=["POST"], permission_classes=[ProjectDataPermission])
@@ -241,6 +165,14 @@ class CollectRecordViewSet(BaseProjectApiViewSet):
         dryrun = truthy(request.data.get("dryrun"))
         clearexisting = truthy(request.data.get("clearexisting"))
 
+        validate_config = None
+        try:
+            config = request.data.get("validate_config")
+            if config:
+                validate_config = json.loads(config)
+        except (ValueError, TypeError):
+            return Response("Invalid validate_config", status=400)
+
         if protocol is None:
             return Response("Missing protocol", status=400)
 
@@ -255,7 +187,7 @@ class CollectRecordViewSet(BaseProjectApiViewSet):
             return Response("File type not supported", status=400)
 
         decoded_file = uploaded_file.read().decode("utf-8-sig").splitlines()
-        records, errors = ingest(
+        records, ingest_output = ingest(
             protocol,
             decoded_file,
             project_pk,
@@ -263,8 +195,15 @@ class CollectRecordViewSet(BaseProjectApiViewSet):
             None,
             dry_run=dryrun,
             clear_existing=clearexisting,
+            bulk_validation=True,
+            bulk_submission=False,
+            validation_suppressants=validate_config,
+            serializer_class=CollectRecordSerializer,
         )
 
-        if errors:
+        if "errors" in ingest_output:
+            errors = ingest_output["errors"]
             return Response(errors, status=400)
-        return Response(CollectRecordSerializer(records, many=True).data)
+
+        records = ingest_output.get("validate")
+        return Response(records)

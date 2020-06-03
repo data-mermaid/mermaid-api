@@ -23,6 +23,12 @@ PROJECT_NAME = 'MERMAID API'
 # Build paths inside the project like this: os.path.join(BASE_DIR, ...)
 BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 
+try:
+    with open(os.path.join(BASE_DIR, "VERSION.txt")) as f:
+        API_VERSION = f.read().replace("\n", "")
+except:
+    API_VERSION = "NA"
+
 LOGIN_REDIRECT_URL = 'api-root'
 
 # SECURITY WARNING: keep the secret key used in production secret!
@@ -69,6 +75,18 @@ INSTALLED_APPS = [
     'tools',
     'taggit',
 ]
+if ENVIRONMENT in ("local", ):
+    INSTALLED_APPS.append("debug_toolbar")
+
+
+def show_toolbar(request):
+    return True
+
+
+DEBUG_TOOLBAR_CONFIG = {
+}
+if ENVIRONMENT in ("local",):
+    DEBUG_TOOLBAR_CONFIG["SHOW_TOOLBAR_CALLBACK"] = show_toolbar
 
 MIDDLEWARE = [
     'django.middleware.security.SecurityMiddleware',
@@ -80,7 +98,10 @@ MIDDLEWARE = [
     'django.contrib.messages.middleware.MessageMiddleware',
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
     'maintenance_mode.middleware.MaintenanceModeMiddleware',
+    "api.middleware.APIVersionMiddleware",
 ]
+if ENVIRONMENT in ("local", ):
+    MIDDLEWARE = ['debug_toolbar.middleware.DebugToolbarMiddleware'] + MIDDLEWARE
 
 if ENVIRONMENT in ('dev', 'prod'):
     CONN_MAX_AGE = None
@@ -189,6 +210,10 @@ EMAIL_USE_TLS = True
 DEFAULT_FROM_EMAIL = 'MERMAID System <{}>'.format(EMAIL_HOST_USER)
 EMAIL_BACKEND = 'django.core.mail.backends.smtp.EmailBackend'
 CORS_ORIGIN_ALLOW_ALL = True
+CORS_EXPOSE_HEADERS = [
+    "HTTP_API_VERSION"
+]
+
 
 # *****************
 # **    Auth0    **

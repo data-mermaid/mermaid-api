@@ -25,7 +25,7 @@ def benthic_attributes_choices():
 
 class BenthicPITCSVSerializer(CollectRecordCSVSerializer):
     protocol = "benthicpit"
-    observations_field = "data__obs_benthic_pits"
+    observations_fields = ["data__obs_benthic_pits"]
     ordering_field = "data__obs_benthic_pits__interval"
     additional_group_fields = CollectRecordCSVSerializer.additional_group_fields.copy()
     additional_group_fields.append("data__benthic_transect__label")
@@ -33,6 +33,7 @@ class BenthicPITCSVSerializer(CollectRecordCSVSerializer):
     header_map = CollectRecordCSVSerializer.header_map.copy()
     header_map.update(
         {
+            "Observation interval *": "data__obs_benthic_pits__interval",
             "Interval size *": "data__interval_size",
             "Interval start": "data__interval_start",
             "Transect length surveyed *": "data__benthic_transect__len_surveyed",

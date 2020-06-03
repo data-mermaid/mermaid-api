@@ -345,7 +345,7 @@ class RelatedOrderingFilter(OrderingFilter):
             field = model._meta.get_field(components[0])
 
             # reverse relation
-            if isinstance(field, ForeignObjectRel):
+            if isinstance(field, ForeignObjectRel) and len(components) == 2:
                 return self.is_valid_field(field.related_model, components[1])
 
             # foreign key
@@ -363,6 +363,7 @@ class RelatedOrderingFilter(OrderingFilter):
         return [term for term in fields if term.lstrip('-') in valid_fields and ORDER_PATTERN.match(term)]
 
 
+# TODO: after SE/SU refactor, create BaseSEFilterSet, BaseSUFilterSet, etc.
 class BaseTransectFilterSet(OrFilterSetMixin, GeoFilterSet):
     id = BaseInFilter(method="id_lookup")
     site_id = BaseInFilter(method="id_lookup")
