@@ -42,6 +42,7 @@ def tide_choices():
 
 class CollectRecordCSVListSerializer(ListSerializer):
     obs_field_identifier = "data__obs_"
+    _formatted_records = None
 
     # Track original record order
     _row_index = None
@@ -76,18 +77,12 @@ class CollectRecordCSVListSerializer(ListSerializer):
                 row[name] = None
 
     def get_sample_event_date(self, row):
-        missing_fields = []
         if "data__sample_event__sample_date__year" not in row:
-            missing_fields.append("data__sample_event__sample_date__year")
+            return None
         if "data__sample_event__sample_date__month" not in row:
-            missing_fields.append("data__sample_event__sample_date__month")
+            return None
         if "data__sample_event__sample_date__day" not in row:
-            missing_fields.append("data__sample_event__sample_date__day")
-
-        if missing_fields:
-            field_map = self.child.reverse_kv_lookup(self.child.header_map)
-            _field_names = [field_map.get(mf) for mf in missing_fields]
-            raise ValueError("{} missing".format(", ".join(_field_names)))
+            return None
 
         return "{}-{}-{}".format(
             row["data__sample_event__sample_date__year"],
@@ -269,6 +264,7 @@ class CollectRecordCSVListSerializer(ListSerializer):
         format_error = self.child.format_error
 
         fmt_errors = []
+        self._formatted_records = self._formatted_records or []
         for error, rec in zip(errors, self._formatted_records):
             if bool(error) is True:
                 fmt_error = format_error(error)
@@ -299,14 +295,18 @@ class CollectRecordCSVSerializer(Serializer):
         "Observer emails *": "data__observers",
     }
 
+    reverse_header_map = {
+        "data__sample_event__sample_date": "Sample date: Year *, Sample date: Month *, Sample date: Day *",
+    }
+
+    
+
     # By Default:
     # - required fields are used
     # - "id" is excluded
     # - "observations_fields" fields are ignored
     additional_group_fields = []
     excluded_group_fields = ["id"]
-
-    _reverse_choices = {}
 
     # PROJECT RELATED CHOICES
     project_choices = {
@@ -443,7 +443,9 @@ class CollectRecordCSVSerializer(Serializer):
         return output
 
     def reverse_kv_lookup(self, lookup):
-        return dict(zip(lookup.values(), lookup.keys()))
+        lookup = dict(zip(lookup.values(), lookup.keys()))
+        lookup.update(self.reverse_header_map or dict())
+        return lookup
 
     def format_error(self, record_errors):
         fmt_errs = dict()
