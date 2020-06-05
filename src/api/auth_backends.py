@@ -111,6 +111,7 @@ class JWTAuthentication(BaseAuthentication):
                                 "merge_fields": {
                                     "FNAME": profile.first_name,
                                     "LNAME": profile.last_name,
+                                    "API": "yes",
                                 },
                             },
                         )
