@@ -153,12 +153,15 @@ class FishAttributeMixin(RegionalAttributesMixin):
         obs = [o for o in obs if o.get("fish_attribute") is not None]
         fish_attr_ids = [o.get("fish_attribute") for o in obs]
         fish_attr_ids = list(set(fish_attr_ids))
+        size_bin_id = (self.data.get("fishbelt_transect") or {}).get("size_bin")
 
-        fish_size_bin_lookup = dict()
-        for fsb in FishSizeBin.objects.all():
-            fish_size_bin_lookup[str(fsb.pk)] = {
-                fs.val: [fs.min_val, fs.max_val] for fs in fsb.fishsize_set.all()
+        try:
+            size_bin = FishSizeBin.objects.get(pk=size_bin_id)
+            fish_size_bin_lookup = {
+                fs.val: [fs.min_val, fs.max_val] for fs in size_bin.fishsize_set.all()
             }
+        except FishSizeBin.DoesNotExist:
+            fish_size_bin_lookup = dict()
 
         # only validate lengths at species level until we know how to aggregate to genus
         fish_attrs = (
@@ -175,14 +178,15 @@ class FishAttributeMixin(RegionalAttributesMixin):
                 ][0]
                 max_length = fish.get("max_length")
                 obs_size = ob.get("size")
-                size_bin = ob.get("size_bin")
-                min_max_vals = (fish_size_bin_lookup.get(size_bin) or {}).get(obs_size)
+
+                min_max_vals = fish_size_bin_lookup.get(obs_size)
 
                 if max_length is None or obs_size is None:
                     continue
 
                 fish_name = "{} {}".format(fish.get("genus__name"), fish.get("name"))
                 warn_message = self.MAX_SPECIES_SIZE_TMPL.format(fish_name, max_length)
+
                 if (
                     min_max_vals
                     and min_max_vals[0] is not None
