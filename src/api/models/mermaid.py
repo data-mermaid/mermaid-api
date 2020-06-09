@@ -7,8 +7,9 @@ import pytz
 import operator as pyoperator
 from decimal import Decimal
 
-from django.db.models import Avg, Q
+from django.db.models import Avg, F, Q
 from django.contrib.gis.db import models
+from django.contrib.postgres.aggregates import ArrayAgg
 from django.contrib.postgres.fields import JSONField
 from django.forms.models import model_to_dict
 from django.core.validators import MinValueValidator, MaxValueValidator
@@ -17,7 +18,7 @@ from django.utils.translation import ugettext_lazy as _
 from taggit.managers import TaggableManager
 from taggit.models import GenericUUIDTaggedItemBase, TagBase
 from rest_framework.utils.encoders import JSONEncoder
-from ..utils import get_sample_unit_number
+from ..utils import get_sample_unit_number, create_timestamp, expired_timestamp
 
 from .base import (
     BaseModel,
@@ -1122,15 +1123,42 @@ class FishGroupingRelationship(models.Model):
 
 
 class FishFamily(FishAttribute):
+    # Caching at the class level
+    species_agg = None
+    species_agg_timestamp = None
+
     name = models.CharField(max_length=100)
+
+    def _set_species_agg_vals(self):
+        if (not FishFamily.species_agg or
+           expired_timestamp(FishFamily.species_agg_timestamp)):
+
+            species_agg_qs = FishSpecies.objects \
+                .select_related("genus__family") \
+                .values(family=F("genus__family")).annotate(
+                    biomass_constant_a=Avg('biomass_constant_a'),
+                    biomass_constant_b=Avg('biomass_constant_b'),
+                    biomass_constant_c=Avg('biomass_constant_c'),
+                    regions=ArrayAgg("regions", distinct=True),
+                )
+
+            FishFamily.species_agg = {str(bc["family"]): bc for bc in species_agg_qs}
+            FishFamily.species_agg_timestamp = create_timestamp(ttl=30)
+
+        species = FishFamily.species_agg.get(str(self.pk))
+        self._biomass_a = round(species.get("biomass_constant_a"), 6)
+        self._biomass_b = round(species.get("biomass_constant_b"), 6)
+        self._biomass_c = round(species.get("biomass_constant_c"), 6)
+        self._regions = species.get("regions")
+
+        return FishFamily.species_agg
 
     @property
     def biomass_constant_a(self):
         if hasattr(self, '_biomass_a'):
             return self._biomass_a
 
-        avebiomass = list(self.fishgenus_set.aggregate(Avg('fishspecies__biomass_constant_a')).values())[0] or 0
-        self._biomass_a = round(avebiomass, 6)
+        self._set_species_agg_vals()
         return self._biomass_a
 
     @property
@@ -1138,8 +1166,7 @@ class FishFamily(FishAttribute):
         if hasattr(self, '_biomass_b'):
             return self._biomass_b
 
-        avebiomass = list(self.fishgenus_set.aggregate(Avg('fishspecies__biomass_constant_b')).values())[0] or 0
-        self._biomass_b = round(avebiomass, 6)
+        self._set_species_agg_vals()
         return self._biomass_b
 
     @property
@@ -1147,13 +1174,16 @@ class FishFamily(FishAttribute):
         if hasattr(self, '_biomass_c'):
             return self._biomass_c
 
-        avebiomass = list(self.fishgenus_set.aggregate(Avg('fishspecies__biomass_constant_c')).values())[0] or 0
-        self._biomass_c = round(avebiomass, 6)
+        self._set_species_agg_vals()
         return self._biomass_c
-    
+
     @property
     def regions(self):
-        return Region.objects.filter(fishspecies__genus__family=self).distinct()
+        if hasattr(self, '_regions'):
+            return self._regions
+
+        self._set_species_agg_vals()
+        return self._regions
 
     class Meta:
         db_table = 'fish_family'
@@ -1165,16 +1195,40 @@ class FishFamily(FishAttribute):
 
 
 class FishGenus(FishAttribute):
+
+    # Caching at the class level
+    species_agg = None
+    species_agg_timestamp = None
+
     name = models.CharField(max_length=100)
     family = models.ForeignKey(FishFamily, on_delete=models.CASCADE)
+
+    def _set_species_agg_vals(self):
+        if not FishGenus.species_agg or expired_timestamp(FishGenus.species_agg_timestamp):
+            species_agg_qs = FishSpecies.objects.values("genus").annotate(
+                biomass_constant_a=Avg('biomass_constant_a'),
+                biomass_constant_b=Avg('biomass_constant_b'),
+                biomass_constant_c=Avg('biomass_constant_c'),
+                regions=ArrayAgg("regions", distinct=True),
+            )
+
+            FishGenus.species_agg = {str(bc["genus"]): bc for bc in species_agg_qs}
+            FishGenus.species_agg_timestamp = create_timestamp(ttl=30)
+
+        species = FishGenus.species_agg.get(str(self.pk))
+        self._biomass_a = round(species.get("biomass_constant_a"), 6)
+        self._biomass_b = round(species.get("biomass_constant_b"), 6)
+        self._biomass_c = round(species.get("biomass_constant_c"), 6)
+        self._regions = species.get("regions")
+
+        return FishGenus.species_agg
 
     @property
     def biomass_constant_a(self):
         if hasattr(self, '_biomass_a'):
             return self._biomass_a
 
-        avebiomass = list(self.fishspecies_set.aggregate(Avg('biomass_constant_a')).values())[0] or 0
-        self._biomass_a = round(avebiomass, 6)
+        self._set_species_agg_vals()
         return self._biomass_a
 
     @property
@@ -1182,8 +1236,7 @@ class FishGenus(FishAttribute):
         if hasattr(self, '_biomass_b'):
             return self._biomass_b
 
-        avebiomass = list(self.fishspecies_set.aggregate(Avg('biomass_constant_b')).values())[0] or 0
-        self._biomass_b = round(avebiomass, 6)
+        self._set_species_agg_vals()
         return self._biomass_b
 
     @property
@@ -1191,13 +1244,16 @@ class FishGenus(FishAttribute):
         if hasattr(self, '_biomass_c'):
             return self._biomass_c
 
-        avebiomass = list(self.fishspecies_set.aggregate(Avg('biomass_constant_c')).values())[0] or 0
-        self._biomass_c = round(avebiomass, 6)
+        self._set_species_agg_vals()
         return self._biomass_c
 
     @property
     def regions(self):
-        return Region.objects.filter(fishspecies__genus=self).distinct()
+        if hasattr(self, '_regions'):
+            return self._regions
+
+        self._set_species_agg_vals()
+        return self._regions
 
     class Meta:
         db_table = 'fish_genus'

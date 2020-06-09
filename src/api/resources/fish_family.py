@@ -10,14 +10,14 @@ class FishFamilySerializer(BaseAPISerializer):
     biomass_constant_a = serializers.ReadOnlyField()
     biomass_constant_b = serializers.ReadOnlyField()
     biomass_constant_c = serializers.ReadOnlyField()
-    regions = serializers.SerializerMethodField()
+    regions = serializers.ReadOnlyField()
 
     class Meta:
         model = FishFamily
         exclude = []
 
-    def get_regions(self, obj):
-        return [r.pk for r in obj.regions]
+    # def get_regions(self, obj):
+    #     return [r.pk for r in obj.regions]
 
 
 class FishFamilyFilterSet(BaseAPIFilterSet):
