@@ -1,4 +1,4 @@
-import logging
+import logging, hashlib
 
 from django.conf import settings
 from django.contrib.auth import get_user_model
@@ -103,11 +103,12 @@ class JWTAuthentication(BaseAuthentication):
                         client = MailChimp(
                             mc_api=settings.MC_API_KEY, mc_user=settings.MC_USER
                         )
-                        client.lists.members.create(
+                        client.lists.members.create_or_update(
                             settings.MC_LIST_ID,
+                            hashlib.md5(profile.email.encode("utf-8")).hexdigest(),
                             {
                                 "email_address": profile.email,
-                                "status": "pending",
+                                "status_if_new": "pending",
                                 "merge_fields": {
                                     "FNAME": profile.first_name,
                                     "LNAME": profile.last_name,
