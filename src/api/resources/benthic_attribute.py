@@ -26,7 +26,7 @@ class BenthicAttributeFilterSet(BaseAPIFilterSet):
 
 class BenthicAttributeViewSet(BaseAttributeApiViewSet):
     serializer_class = BenthicAttributeSerializer
-    queryset = BenthicAttribute.objects.prefetch_related('regions')
+    queryset = BenthicAttribute.objects.select_related().prefetch_related('regions')
     filter_class = BenthicAttributeFilterSet
     search_fields = ['name', ]
 

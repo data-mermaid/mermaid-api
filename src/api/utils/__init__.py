@@ -1,6 +1,7 @@
 import math
 import re
 import numbers
+from datetime import datetime
 
 from django.core.exceptions import ObjectDoesNotExist
 from django.db import IntegrityError
@@ -142,3 +143,10 @@ def set_value(dic, keys, value, delimiter="__"):
 def truthy(val):
     return val in ("t", "T", "true", "True", True, 1)
 
+
+def create_timestamp(ttl=0):
+    return datetime.utcnow().timestamp() + ttl
+
+
+def expired_timestamp(timestamp):
+    return create_timestamp() >= timestamp
