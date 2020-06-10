@@ -118,9 +118,7 @@ class JWTAuthentication(BaseAuthentication):
                                 },
                             },
                         )
-                    except Exception as err:  # Don't ever fail because subscription didn't work
-
-                        print(str(err))
+                    except:
                         logger.error(
                             "Unable to create mailchimp member {} {} <{}>".format(
                                 profile.first_name, profile.last_name, profile.email
