@@ -1,4 +1,4 @@
-import logging, hashlib
+import logging
 
 from django.conf import settings
 from django.contrib.auth import get_user_model
@@ -96,6 +96,7 @@ class JWTAuthentication(BaseAuthentication):
                     and settings.MC_LIST_ID is not None
                 ):
                     from mailchimp3 import MailChimp
+                    from mailchimp3.helpers import get_subscriber_hash
 
                     # https://developer.mailchimp.com/documentation/mailchimp/guides/manage-subscribers-with-the
                     # -mailchimp-api/
@@ -103,9 +104,10 @@ class JWTAuthentication(BaseAuthentication):
                         client = MailChimp(
                             mc_api=settings.MC_API_KEY, mc_user=settings.MC_USER
                         )
+
                         client.lists.members.create_or_update(
                             settings.MC_LIST_ID,
-                            hashlib.md5(profile.email.encode("utf-8")).hexdigest(),
+                            get_subscriber_hash(profile.email),
                             {
                                 "email_address": profile.email,
                                 "status_if_new": "pending",
@@ -116,7 +118,9 @@ class JWTAuthentication(BaseAuthentication):
                                 },
                             },
                         )
-                    except:  # Don't ever fail because subscription didn't work
+                    except Exception as err:  # Don't ever fail because subscription didn't work
+
+                        print(str(err))
                         logger.error(
                             "Unable to create mailchimp member {} {} <{}>".format(
                                 profile.first_name, profile.last_name, profile.email
