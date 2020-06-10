@@ -121,19 +121,13 @@ class UpdatesMixin(object):
             removed_filter["model"] = qry.model._meta.model_name
 
         context = {"request": self.request}
-        added = []
         added_records = qry.filter(**added_filter)
-        for added_record in added_records:
-            timestamp = added_record.updated_on
-            serialized_rec = serializer(added_record, context=context).data
-            added.append((timestamp, serialized_rec))
+        serialized_recs = serializer(added_records, many=True, context=context).data
+        added = [(parse_datetime(sr["updated_on"]), sr) for sr in serialized_recs]
 
-        modified = []
         modified_recs = qry.filter(**updated_filter)
-        for modified_rec in modified_recs:
-            timestamp = modified_rec.updated_on
-            serialized_rec = serializer(modified_rec, context=context).data
-            modified.append((timestamp, serialized_rec))
+        serialized_recs = serializer(modified_recs, many=True, context=context).data
+        modified = [(parse_datetime(sr["updated_on"]), sr) for sr in serialized_recs]
 
         removed = [
             (ar.created_on, dict(id=ar.record_pk, timestamp=ar.created_on))
