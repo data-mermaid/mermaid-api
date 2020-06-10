@@ -258,7 +258,7 @@ class ProjectViewSet(BaseApiViewSet):
         added_filter["profile"] = request.user.profile
         updated_ons = []
         projects = []
-        project_profiles = ProjectProfile.objects.select_related("project", "project")
+        project_profiles = ProjectProfile.objects.select_related("project")
         project_profiles = project_profiles.prefetch_related("project__sites", "project__sites__country")
         project_profiles = project_profiles.filter(**added_filter)
         for pp in project_profiles:

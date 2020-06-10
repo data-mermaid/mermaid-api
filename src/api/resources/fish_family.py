@@ -16,9 +16,6 @@ class FishFamilySerializer(BaseAPISerializer):
         model = FishFamily
         exclude = []
 
-    # def get_regions(self, obj):
-    #     return [r.pk for r in obj.regions]
-
 
 class FishFamilyFilterSet(BaseAPIFilterSet):
     class Meta:
