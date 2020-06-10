@@ -1325,6 +1325,8 @@ class FishSize(BaseModel):
     fish_bin_size = models.ForeignKey(FishSizeBin, on_delete=models.CASCADE)
     name = models.CharField(max_length=50)
     val = models.FloatField()
+    min_val = models.FloatField(null=True, blank=True)
+    max_val = models.FloatField(null=True, blank=True)
 
     @property
     def choice(self):
