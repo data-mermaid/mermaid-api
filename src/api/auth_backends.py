@@ -96,6 +96,7 @@ class JWTAuthentication(BaseAuthentication):
                     and settings.MC_LIST_ID is not None
                 ):
                     from mailchimp3 import MailChimp
+                    from mailchimp3.helpers import get_subscriber_hash
 
                     # https://developer.mailchimp.com/documentation/mailchimp/guides/manage-subscribers-with-the
                     # -mailchimp-api/
@@ -103,11 +104,13 @@ class JWTAuthentication(BaseAuthentication):
                         client = MailChimp(
                             mc_api=settings.MC_API_KEY, mc_user=settings.MC_USER
                         )
-                        client.lists.members.create(
+
+                        client.lists.members.create_or_update(
                             settings.MC_LIST_ID,
+                            get_subscriber_hash(profile.email),
                             {
                                 "email_address": profile.email,
-                                "status": "pending",
+                                "status_if_new": "pending",
                                 "merge_fields": {
                                     "FNAME": profile.first_name,
                                     "LNAME": profile.last_name,
