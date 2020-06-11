@@ -102,7 +102,7 @@ class PManagementReportSerializer(ReportSerializer):
 class PManagementFilterSet(BaseAPIFilterSet):
     predecessor = NullableUUIDFilter(field_name='predecessor')
     compliance = NullableUUIDFilter(field_name='compliance')
-    est_year = django_filters.NumericRangeFilter(field_name='est_year')
+    est_year = django_filters.RangeFilter(field_name='est_year')
 
     class Meta:
         model = Management
