@@ -276,23 +276,14 @@ def run_management_validation(sender, instance, *args, **kwargs):
         instance.updated_on = mgmt.updated_on
 
 
-@receiver(post_delete, sender=CollectRecord)
-@receiver(post_save, sender=CollectRecord)
-def run_cr_management_validation(sender, instance, *args, **kwargs):
-    if instance.project is None:
-        return
-
-    data = instance.data or {}
-    if 'sample_event' in data:
-        mrid = data['sample_event'].get('management')
-        if mrid is not None:
-            validate(ManagementValidation, Management, {"project_id": instance.project_id})
-
-
 @receiver(pre_save, sender=CollectRecord)
 def migrate_sample_event_sample_unit(sender, instance, *args, **kwargs):
 
     sample_event = instance.data.get("sample_event") or dict()
+
+    if isinstance(sample_event, str):
+        return
+
     protocol = instance.data.get("protocol")
 
     migration_fields = [
@@ -318,7 +309,6 @@ def migrate_sample_event_sample_unit(sender, instance, *args, **kwargs):
     else:
         return
 
-    # sample_unit = instance.data.get(sample_unit_attribute) or dict()
     sample_event = instance.data.get("sample_event") or dict()
 
     migrated_data = dict()

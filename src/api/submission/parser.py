@@ -11,13 +11,15 @@ __all__ = (
     "get_obshabitatcomplexity_data",
     "get_quadrat_collection_data",
     "get_sample_event_data",
+    "get_sample_event_id",
     "get_site_id",
 )
+
 
 def _cast_decimal_to_str(val):
     if val is None:
         return None
-    
+
     return str(val)
 
 
@@ -45,6 +47,11 @@ def get_sample_event_data(collect_record, site_id=None, management_id=None):
         sample_date=data.get("sample_date") or None,
         notes=data.get("notes", ""),
     )
+
+
+def get_sample_event_id(collect_record):
+    data = collect_record.data or dict()
+    return data.get("sample_event")
 
 
 def get_fishbelt_transect_data(collect_record, sample_event_id=None):

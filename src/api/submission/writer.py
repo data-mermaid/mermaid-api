@@ -43,6 +43,7 @@ from .parser import (
     get_obshabitatcomplexity_data,
     get_quadrat_collection_data,
     get_sample_event_data,
+    get_sample_event_id,
 )
 
 
@@ -79,21 +80,12 @@ class ProtocolWriter(BaseWriter):
 
         return serializer.save()
 
-    def get_or_create_sample_event(self):
-        sample_event_data = get_sample_event_data(self.collect_record)
-        try:
-            query_params = {k: v for k, v in sample_event_data.items() if k != "notes"}
-            se = SampleEvent.objects.filter(**query_params)
-            if se.exists():
-                sample_event = se[0]
-                notes = sample_event_data.get("notes") or ""
-                if notes.strip():
-                    sample_event.notes += "\n\n{}".format(notes)
-                    sample_event.save()
-                return sample_event
-            return self._create_sample_event(sample_event_data)
-        except SampleEvent.DoesNotExist:
-            return self._create_sample_event(sample_event_data)
+    def get_sample_event(self):
+        sample_event_id = get_sample_event_id(self.collect_record)
+        if not sample_event_id:
+            return None
+        return SampleEvent.objects.get_or_none(id=sample_event_id)
+
 
     def create_observers(self, transect_method_id):
         observers = []
@@ -168,7 +160,7 @@ class FishbeltProtocolWriter(ProtocolWriter):
         return observation_beltfishes
 
     def write(self):
-        sample_event = self.get_or_create_sample_event()
+        sample_event = self.get_sample_event()
         fishbelt_transect = self.get_or_create_fishbelt_transect(sample_event.id)
         belt_fish = self.get_or_create_beltfish(fishbelt_transect.id)
         _ = self.create_observers(belt_fish.id)
@@ -204,7 +196,7 @@ class BenthicPITProtocolWriter(BenthicProtocolWriter):
         return observation_benthicpits
 
     def write(self):
-        sample_event = self.get_or_create_sample_event()
+        sample_event = self.get_sample_event()
         benthic_transect = self.get_or_create_benthic_transect(sample_event.id)
         benthic_pit = self.get_or_create_benthicpit(benthic_transect.id)
         _ = self.create_observers(benthic_pit.id)
@@ -236,7 +228,7 @@ class BenthicLITProtocolWriter(BenthicProtocolWriter):
         return observation_benthiclits
 
     def write(self):
-        sample_event = self.get_or_create_sample_event()
+        sample_event = self.get_sample_event()
         benthic_transect = self.get_or_create_benthic_transect(sample_event.id)
         benthic_lit = self.get_or_create_benthiclit(benthic_transect.id)
         _ = self.create_observers(benthic_lit.id)
@@ -275,7 +267,7 @@ class HabitatComplexityProtocolWriter(BenthicProtocolWriter):
         return observation_habitatcomplexities
 
     def write(self):
-        sample_event = self.get_or_create_sample_event()
+        sample_event = self.get_sample_event()
         benthic_transect = self.get_or_create_benthic_transect(sample_event.id)
         habitat_complexity = self.get_or_create_habitatcomplexity(benthic_transect.id)
         _ = self.create_observers(habitat_complexity.id)
@@ -346,7 +338,7 @@ class BleachingQuadratCollectionProtocolWriter(ProtocolWriter):
         return observation_benthic_percent_covered_data
 
     def write(self):
-        sample_event = self.get_or_create_sample_event()
+        sample_event = self.get_sample_event()
         quadrat_collection = self.get_or_create_quadrat_collection(sample_event.id)
         bleaching_quadrat_collection = self.get_or_create_bleaching_quadrat_collection(quadrat_collection.id)
         _ = self.create_observers(bleaching_quadrat_collection.id)
