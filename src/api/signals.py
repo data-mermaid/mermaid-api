@@ -287,3 +287,49 @@ def run_cr_management_validation(sender, instance, *args, **kwargs):
         mrid = data['sample_event'].get('management')
         if mrid is not None:
             validate(ManagementValidation, Management, {"project_id": instance.project_id})
+
+
+@receiver(pre_save, sender=CollectRecord)
+def migrate_sample_event_sample_unit(sender, instance, *args, **kwargs):
+
+    sample_event = instance.data.get("sample_event") or dict()
+    protocol = instance.data.get("protocol")
+
+    migration_fields = [
+        "sample_time",
+        "depth",
+        "visibility",
+        "current",
+        "relative_depth",
+        "tide"
+    ]
+
+    if protocol in (
+        BENTHICLIT_PROTOCOL,
+        BENTHICPIT_PROTOCOL,
+        HABITATCOMPLEXITY_PROTOCOL,
+    ):
+        sample_unit_attribute = "benthic_transect"
+    elif protocol == FISHBELT_PROTOCOL:
+        sample_unit_attribute = "fishbelt_transect"
+        pass
+    elif protocol == BLEACHINGQC_PROTOCOL:
+        sample_unit_attribute = "quadrat_collection"
+    else:
+        return
+
+    # sample_unit = instance.data.get(sample_unit_attribute) or dict()
+    sample_event = instance.data.get("sample_event") or dict()
+
+    migrated_data = dict()
+    for migration_field in migration_fields:
+        migrated_data["migration_field"] = sample_event.get(migration_field)
+        try:
+            sample_event.pop(migration_field)
+        except KeyError:
+            pass
+
+    instance.data[sample_unit_attribute] = (
+        instance.data.get(sample_unit_attribute) or dict()
+    )
+    instance.data[sample_unit_attribute].update(migrated_data)
