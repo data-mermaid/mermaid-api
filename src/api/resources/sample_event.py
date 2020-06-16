@@ -23,7 +23,14 @@ class SampleEventExtendedSerializer(ExtendedSerializer):
 class SampleEventSerializer(BaseAPISerializer):
     class Meta:
         model = SampleEvent
-        exclude = []
+        exclude = [
+            "current",
+            "depth",
+            "relative_depth",
+            "sample_time",
+            "tide",
+            "visibility",
+        ]
         extra_kwargs = {
             "sample_date": {"error_messages": {"null": "Sample date is required"}},
             "site": {"error_messages": {"null": "Site is required"}},

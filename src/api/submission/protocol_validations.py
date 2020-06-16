@@ -60,10 +60,11 @@ class ProtocolValidation(object):
 
         data = self.collect_record.data or dict()
         sample_event_data = data.get("sample_event") or dict()
+        sample_unit_data = data.get(self.SAMPLE_UNIT) or dict()
         observers = data.get("observers") or []
         site_id = sample_event_data.get("site")
         management_id = sample_event_data.get("management")
-        depth = sample_event_data.get("depth")
+        depth = sample_unit_data.get("depth")
 
         results.append(self._run_validation(SampleEventValidation, data))
         results.append(self._run_validation(SiteValidation, site_id))
@@ -114,22 +115,22 @@ class ProtocolValidation(object):
         raise ValueError(str(_("Validation result can not be determined.")))
 
 
-class TransectValidation(ProtocolValidation):
+class SampleUnitValidation(ProtocolValidation):
     LENGTH_RANGE = (10, 100)
     LENGTH_RANGE_WARN_MSG_TMPL = (
         "Transect length surveyed value " + "outside range of {} and {}"
     )
-    TRANSECT_METHOD = None
+    SAMPLE_UNIT = None
 
     def validate(self):
         results = []
-        results.append(super(TransectValidation, self).validate())
+        results.append(super(SampleUnitValidation, self).validate())
 
         data = self.collect_record.data or dict()
 
-        if self.TRANSECT_METHOD is not None:
-            transect = data.get(self.TRANSECT_METHOD) or dict()
-            len_surveyed = transect.get("len_surveyed")
+        if self.SAMPLE_UNIT is not None:
+            sample_unit = data.get(self.SAMPLE_UNIT) or dict()
+            len_surveyed = sample_unit.get("len_surveyed")
             results.append(
                 self._run_validation(
                     ValueInRangeValidation,
@@ -181,9 +182,9 @@ class QuadratValidation(ProtocolValidation):
             return OK
 
 
-class FishBeltProtocolValidation(TransectValidation):
+class FishBeltProtocolValidation(SampleUnitValidation):
     LENGTH_RANGE = (25, 100)
-    TRANSECT_METHOD = "fishbelt_transect"
+    SAMPLE_UNIT = "fishbelt_transect"
 
     def validate(self):
         results = []
@@ -204,8 +205,8 @@ class FishBeltProtocolValidation(TransectValidation):
             return OK
 
 
-class BenthicPITProtocolValidation(TransectValidation):
-    TRANSECT_METHOD = "benthic_transect"
+class BenthicPITProtocolValidation(SampleUnitValidation):
+    SAMPLE_UNIT = "benthic_transect"
 
     def validate(self):
         results = []
@@ -225,8 +226,8 @@ class BenthicPITProtocolValidation(TransectValidation):
             return OK
 
 
-class BenthicLITProtocolValidation(TransectValidation):
-    TRANSECT_METHOD = "benthic_transect"
+class BenthicLITProtocolValidation(SampleUnitValidation):
+    SAMPLE_UNIT = "benthic_transect"
     LENGTH_RANGE = (10, 100)
 
     def validate(self):
@@ -247,8 +248,8 @@ class BenthicLITProtocolValidation(TransectValidation):
             return OK
 
 
-class HabitatComplexityProtocolValidation(TransectValidation):
-    TRANSECT_METHOD = "benthic_transect"
+class HabitatComplexityProtocolValidation(SampleUnitValidation):
+    SAMPLE_UNIT = "benthic_transect"
 
     def validate(self):
         results = []

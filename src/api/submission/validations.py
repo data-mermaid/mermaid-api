@@ -348,7 +348,7 @@ class SampleEventValidation(DataValidation):
 
     FUTURE_DATE = _("Sample date is in the future")
 
-    def is_future_sample_date(self, date_str, time_str, site_id):
+    def is_future_sample_date(self, date_str, site_id):
         site = Site.objects.get_or_none(id=site_id)
 
         if site is None or site.location is None:
@@ -358,9 +358,14 @@ class SampleEventValidation(DataValidation):
         y = site.location.y
 
         tf = TimezoneFinder()
-        tz_str = tf.timezone_at(lng=x, lat=y) or "UTC"
+        tz_str = tf.timezone_at(lng=x, lat=y)
+        if not tz_str:
+            # Can't determine timezone
+            # so passing validation test.
+            return False
+
         tzinfo = tz.gettz(tz_str)
-        sample_date = parse_datetime("{} {}".format(date_str, time_str))
+        sample_date = parse_datetime("{} {}".format(date_str, "00:00:00"))
 
         if sample_date is None:
             return False
@@ -374,22 +379,36 @@ class SampleEventValidation(DataValidation):
     def validate_sample_date(self):
         sample_event = self.data.get("sample_event") or {}
         sample_date_str = sample_event.get("sample_date", "")
-        sample_time_str = sample_event.get("sample_time", "")
         site_id = sample_event.get("site")
         if sample_date_str.strip() == "":
             sample_date_str = None
 
-        if sample_time_str.strip() == "":
-            sample_time_str = None
-
         if (
-            self.is_future_sample_date(sample_date_str, sample_time_str, site_id)
+            self.is_future_sample_date(sample_date_str, site_id)
             is True
         ):
             return self.warning(self.identifier, self.FUTURE_DATE)
 
         return self.ok(self.identifier)
 
+    def validate_duplicate(self):
+        sample_event = self.data.get("sample_event") or {}
+
+        site = sample_event.get("site", None) or None
+        management = sample_event.get("management", None) or None
+        sample_date = sample_event.get("sample_date", None) or None
+
+        try:
+            _ = check_uuid(site)
+            _ = check_uuid(management)
+        except ParseError:
+            return self.error(self.identifier, self.INVALID_MSG)
+
+        qry = {
+            "site": site,
+            "management": management,
+            "sample_date": sample_date,
+        }
 
 class SiteValidation(ModelValidation):
 
@@ -869,35 +888,16 @@ class ObsHabitatComplexitiesValidation(DataValidation, BenthicObservationCountMi
 
 class BenthicTransectValidation(DataValidation):
     DUPLICATE_MSG = _("Transect already exists")
-    NUMBER_MSG = _("Transect number is not valid")
-    RELATIVE_DEPTH_MSG = _("Relative depth not valid")
     INVALID_MSG = _("Benthic Transect is not valid")
     identifier = "benthic_transect"
 
     def validate_duplicate(self):
-        protocol = self.data.get("protocol")
         sample_event = self.data.get("sample_event") or {}
-        benthic_transect = self.data.get("benthic_transect") or {}
-
-        number = benthic_transect.get("number") or None
-        try:
-            int(number)
-        except (ValueError, TypeError):
-            return self.error(self.identifier, self.NUMBER_MSG)
-
-        label = benthic_transect.get("label") or ""
-
-        relative_depth = sample_event.get("relative_depth", None) or None
-        if relative_depth is not None:
-            try:
-                _ = check_uuid(relative_depth)
-            except ParseError:
-                return self.error(self.identifier, self.RELATIVE_DEPTH_MSG)
 
         site = sample_event.get("site", None) or None
         management = sample_event.get("management", None) or None
         sample_date = sample_event.get("sample_date", None) or None
-        depth = sample_event.get("depth", None) or None
+
         try:
             _ = check_uuid(site)
             _ = check_uuid(management)
@@ -905,21 +905,13 @@ class BenthicTransectValidation(DataValidation):
             return self.error(self.identifier, self.INVALID_MSG)
 
         qry = {
-            "sample_event__site": site,
-            "sample_event__management": management,
-            "sample_event__sample_date": sample_date,
-            "number": number,
-            "label": label,
-            "sample_event__depth": depth,
-            "sample_event__relative_depth": relative_depth,
+            "site": site,
+            "management": management,
+            "sample_date": sample_date,
         }
 
-        results = BenthicTransect.objects.select_related().filter(**qry)
-        for result in results:
-            transect_methods = get_related_transect_methods(result)
-            for transect_method in transect_methods:
-                if transect_method.protocol == protocol:
-                    return self.warning(self.identifier, self.DUPLICATE_MSG)
+        if SampleEvent.objects.select_related().filter(**qry).count() > 0:
+            return self.warning(self.identifier, self.DUPLICATE_MSG)
         return self.ok(self.identifier)
 
 
@@ -950,7 +942,7 @@ class FishBeltTransectValidation(DataValidation):
         except ParseError:
             return self.error(self.identifier, self.WIDTH_MSG)
 
-        relative_depth = sample_event.get("relative_depth", None) or None
+        relative_depth = fishbelt_transect.get("relative_depth", None) or None
         if relative_depth is not None:
             try:
                 _ = check_uuid(relative_depth)
@@ -960,7 +952,7 @@ class FishBeltTransectValidation(DataValidation):
         site = sample_event.get("site", None) or None
         management = sample_event.get("management", None) or None
         sample_date = sample_event.get("sample_date", None) or None
-        depth = sample_event.get("depth", None) or None
+        depth = fishbelt_transect.get("depth", None) or None
         try:
             _ = check_uuid(site)
             _ = check_uuid(management)
@@ -973,8 +965,8 @@ class FishBeltTransectValidation(DataValidation):
             "sample_event__sample_date": sample_date,
             "number": number,
             "label": label,
-            "sample_event__depth": depth,
-            "sample_event__relative_depth": relative_depth,
+            "depth": depth,
+            "relative_depth": relative_depth,
             "width_id": width,
         }
 
@@ -1179,7 +1171,7 @@ class QuadratCollectionValidation(DataValidation):
 
         label = quadrat_collection.get("label") or ""
 
-        relative_depth = sample_event.get("relative_depth", None) or None
+        relative_depth = quadrat_collection.get("relative_depth", None) or None
         if relative_depth is not None:
             try:
                 _ = check_uuid(relative_depth)
@@ -1189,7 +1181,7 @@ class QuadratCollectionValidation(DataValidation):
         site = sample_event.get("site", None) or None
         management = sample_event.get("management", None) or None
         sample_date = sample_event.get("sample_date", None) or None
-        depth = sample_event.get("depth", None) or None
+        depth = quadrat_collection.get("depth", None) or None
 
         profiles = [o.get("profile") for o in self.data.get("observers") or []]
 
@@ -1210,7 +1202,7 @@ class QuadratCollectionValidation(DataValidation):
             "sample_event__management": management,
             "sample_event__sample_date": sample_date,
             "label": label,
-            "sample_event__depth": depth,
+            "depth": depth,
         }
         queryset = QuadratCollection.objects.filter(**qry)
         for profile in profiles:
