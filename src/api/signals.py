@@ -1,17 +1,23 @@
+import json
 import operator
 import uuid
-import json
-from django.dispatch import receiver
-from django.db.models.signals import post_delete, post_save, pre_save, m2m_changed
+
 from django import urls
 from django.conf import settings
 from django.core import serializers
+from django.db.models.signals import m2m_changed, post_delete, post_save, pre_save
+from django.dispatch import receiver
+
 from .models import *
+from .submission.utils import validate
+from .submission.validations import ManagementValidation, SiteValidation
 from .utils import get_subclasses
 from .utils.email import email_project_admins, mermaid_email
-from .utils.sample_units import delete_orphaned_sample_unit, delete_orphaned_sample_event
-from .submission.utils import validate
-from .submission.validations import SiteValidation, ManagementValidation
+from .utils.sample_units import (
+    delete_orphaned_sample_event,
+    delete_orphaned_sample_unit,
+    migrate_collect_record_sample_event,
+)
 
 
 def backup_model_record(sender, instance, using, **kwargs):
@@ -279,54 +285,4 @@ def run_management_validation(sender, instance, *args, **kwargs):
 
 @receiver(pre_save, sender=CollectRecord)
 def migrate_sample_event_sample_unit(sender, instance, *args, **kwargs):
-
-    sample_event = instance.data.get("sample_event") or dict()
-
-    if isinstance(sample_event, str):
-        return
-
-    protocol = instance.data.get("protocol")
-
-    migration_fields = [
-        "sample_time",
-        "depth",
-        "visibility",
-        "current",
-        "relative_depth",
-        "tide"
-    ]
-
-    if protocol in (
-        BENTHICLIT_PROTOCOL,
-        BENTHICPIT_PROTOCOL,
-        HABITATCOMPLEXITY_PROTOCOL,
-    ):
-        sample_unit_attribute = "benthic_transect"
-    elif protocol == FISHBELT_PROTOCOL:
-        sample_unit_attribute = "fishbelt_transect"
-        pass
-    elif protocol == BLEACHINGQC_PROTOCOL:
-        sample_unit_attribute = "quadrat_collection"
-    else:
-        return
-
-    sample_event_data = instance.data.get("sample_event") or dict()
-
-    migrated_data = dict()
-    for migration_field in migration_fields:
-        migrated_data["migration_field"] = sample_event_data.get(migration_field)
-
-    instance.data[sample_unit_attribute] = (
-        instance.data.get(sample_unit_attribute) or dict()
-    )
-    instance.data[sample_unit_attribute].update(migrated_data)
-
-    se_data = dict(
-        management_id=sample_event_data.get("management"),
-        site_id=sample_event_data.get("site"),
-        sample_date=sample_event_data.get("sample_date"),
-        notes=sample_event_data.get("notes"),
-    )
-
-    se, _= SampleEvent.objects.get_or_create(**se_data)
-    instance.data["sample_event"] = str(se.pk)
+    migrate_collect_record_sample_event(instance)

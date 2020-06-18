@@ -1,34 +1,35 @@
 from __future__ import unicode_literals
+
+import datetime
 import itertools
 import json
 import logging
-import datetime
-import pytz
 import operator as pyoperator
 from decimal import Decimal
 
-from django.db.models import Avg, F, Q
 from django.contrib.gis.db import models
 from django.contrib.postgres.aggregates import ArrayAgg
 from django.contrib.postgres.fields import JSONField
+from django.core.validators import MaxValueValidator, MinValueValidator
+from django.db.models import Avg, F, Q
 from django.forms.models import model_to_dict
-from django.core.validators import MinValueValidator, MaxValueValidator
 from django.utils import timezone
 from django.utils.translation import ugettext_lazy as _
+from rest_framework.utils.encoders import JSONEncoder
+
+import pytz
 from taggit.managers import TaggableManager
 from taggit.models import GenericUUIDTaggedItemBase, TagBase
-from rest_framework.utils.encoders import JSONEncoder
-from ..utils import get_sample_unit_number, create_timestamp, expired_timestamp
-
+from ..utils import create_timestamp, expired_timestamp, get_sample_unit_number
 from .base import (
-    BaseModel,
+    APPROVAL_STATUSES,
+    AreaMixin,
     BaseAttributeModel,
     BaseChoiceModel,
+    BaseModel,
     Country,
-    Profile,
     JSONMixin,
-    AreaMixin,
-    APPROVAL_STATUSES
+    Profile,
 )
 
 INCLUDE_OBS_TEXT = _(u'include observation in aggregations/analyses?')
@@ -416,9 +417,9 @@ class SampleEvent(BaseModel, JSONMixin):
     project_lookup = "site__project"
 
     # Required
-    site = models.ForeignKey(Site, on_delete=models.PROTECT, related_name='sample_events')
-    management = models.ForeignKey(Management, on_delete=models.PROTECT)
-    sample_date = models.DateField(default=default_date)
+    site = models.ForeignKey(Site, on_delete=models.PROTECT, related_name='sample_events', null=True, blank=True)
+    management = models.ForeignKey(Management, on_delete=models.PROTECT, null=True, blank=True)
+    sample_date = models.DateField(default=default_date, null=True, blank=True)
     notes = models.TextField(blank=True)
 
     # Will be removed in a future version
