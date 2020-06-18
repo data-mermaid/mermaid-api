@@ -276,6 +276,7 @@ def run_management_validation(sender, instance, *args, **kwargs):
         instance.updated_on = mgmt.updated_on
 
 
+
 @receiver(pre_save, sender=CollectRecord)
 def migrate_sample_event_sample_unit(sender, instance, *args, **kwargs):
 
@@ -309,17 +310,23 @@ def migrate_sample_event_sample_unit(sender, instance, *args, **kwargs):
     else:
         return
 
-    sample_event = instance.data.get("sample_event") or dict()
+    sample_event_data = instance.data.get("sample_event") or dict()
 
     migrated_data = dict()
     for migration_field in migration_fields:
-        migrated_data["migration_field"] = sample_event.get(migration_field)
-        try:
-            sample_event.pop(migration_field)
-        except KeyError:
-            pass
+        migrated_data["migration_field"] = sample_event_data.get(migration_field)
 
     instance.data[sample_unit_attribute] = (
         instance.data.get(sample_unit_attribute) or dict()
     )
     instance.data[sample_unit_attribute].update(migrated_data)
+
+    se_data = dict(
+        management_id=sample_event_data.get("management"),
+        site_id=sample_event_data.get("site"),
+        sample_date=sample_event_data.get("sample_date"),
+        notes=sample_event_data.get("notes"),
+    )
+
+    se, _= SampleEvent.objects.get_or_create(**se_data)
+    instance.data["sample_event"] = str(se.pk)
