@@ -1,33 +1,31 @@
 from django.db import transaction
+from django_filters import BaseInFilter, RangeFilter
 from rest_framework import status
 from rest_framework.response import Response
-from rest_framework.serializers import SerializerMethodField
-from django_filters import BaseInFilter, RangeFilter
+from rest_framework.serializers import SerializerMethodField, UUIDField
 
-from .. import fieldreport
 from ...models.mermaid import HabitatComplexity, ObsHabitatComplexity
 from ...models.view_models import (
     HabitatComplexityObsView,
-    HabitatComplexitySUView,
     HabitatComplexitySEView,
+    HabitatComplexitySUView,
 )
-
-from . import *
+from .. import fieldreport
 from ..base import (
     BaseProjectApiViewSet,
-    BaseViewAPISerializer,
-    BaseViewAPIGeoSerializer,
     BaseTransectFilterSet,
+    BaseViewAPIGeoSerializer,
+    BaseViewAPISerializer,
 )
-from ..habitat_complexity import HabitatComplexitySerializer
 from ..benthic_transect import BenthicTransectSerializer
+from ..habitat_complexity import HabitatComplexitySerializer
 from ..obs_habitat_complexity import ObsHabitatComplexitySerializer
 from ..observer import ObserverSerializer
-from ..sample_event import SampleEventSerializer
+from . import *
 
 
 class HabitatComplexityMethodSerializer(HabitatComplexitySerializer):
-    sample_event = SampleEventSerializer(source="transect.sample_event")
+    sample_event = UUIDField(source="transect.sample_event.pk")
     benthic_transect = BenthicTransectSerializer(source="transect")
     observers = ObserverSerializer(many=True)
     obs_habitat_complexities = ObsHabitatComplexitySerializer(

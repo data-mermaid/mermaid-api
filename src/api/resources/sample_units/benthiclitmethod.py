@@ -1,30 +1,28 @@
 from django.db import transaction
 from django.db.models import Sum
+from django_filters import BaseInFilter, RangeFilter
 from rest_framework import status
 from rest_framework.response import Response
-from rest_framework.serializers import SerializerMethodField
-from django_filters import BaseInFilter, RangeFilter
+from rest_framework.serializers import SerializerMethodField, UUIDField
 
+from ...models.mermaid import BenthicAttribute, BenthicLIT, ObsBenthicLIT
+from ...models.view_models import BenthicLITObsView, BenthicLITSEView, BenthicLITSUView
 from .. import fieldreport
-from ...models.mermaid import BenthicLIT, ObsBenthicLIT, BenthicAttribute
-from ...models.view_models import BenthicLITObsView, BenthicLITSUView, BenthicLITSEView
-
-from . import *
 from ..base import (
     BaseProjectApiViewSet,
-    BaseViewAPISerializer,
-    BaseViewAPIGeoSerializer,
     BaseTransectFilterSet,
+    BaseViewAPIGeoSerializer,
+    BaseViewAPISerializer,
 )
 from ..benthic_lit import BenthicLITSerializer
 from ..benthic_transect import BenthicTransectSerializer
 from ..obs_benthic_lit import ObsBenthicLITSerializer
 from ..observer import ObserverSerializer
-from ..sample_event import SampleEventSerializer
+from . import *
 
 
 class BenthicLITMethodSerializer(BenthicLITSerializer):
-    sample_event = SampleEventSerializer(source="transect.sample_event")
+    sample_event = UUIDField(source="transect.sample_event.pk")
     benthic_transect = BenthicTransectSerializer(source="transect")
     observers = ObserverSerializer(many=True)
     obs_benthic_lits = ObsBenthicLITSerializer(many=True, source="obsbenthiclit_set")

@@ -1,43 +1,41 @@
 from django.db import transaction
 from django.db.models import Q
+from django_filters import BaseInFilter, RangeFilter
 from rest_framework import status
 from rest_framework.response import Response
-from rest_framework.serializers import SerializerMethodField
-from django_filters import BaseInFilter, RangeFilter
+from rest_framework.serializers import SerializerMethodField, UUIDField
 
-from .. import fieldreport
 from ...models.mermaid import (
     BeltFish,
     BeltTransectWidth,
-    ObsBeltFish,
     FishFamily,
     FishGenus,
     FishSpecies,
+    ObsBeltFish,
 )
 from ...models.view_models import (
-    FishAttributeView,
     BeltFishObsView,
-    BeltFishSUView,
     BeltFishSEView,
+    BeltFishSUView,
+    FishAttributeView,
 )
 from ...utils import calc_biomass_density
-
-from . import *
+from .. import fieldreport
 from ..base import (
     BaseProjectApiViewSet,
-    BaseViewAPISerializer,
-    BaseViewAPIGeoSerializer,
     BaseTransectFilterSet,
+    BaseViewAPIGeoSerializer,
+    BaseViewAPISerializer,
 )
 from ..belt_fish import BeltFishSerializer
 from ..fish_belt_transect import FishBeltTransectSerializer
 from ..obs_belt_fish import ObsBeltFishSerializer
 from ..observer import ObserverSerializer
-from ..sample_event import SampleEventSerializer
+from . import *
 
 
 class BeltFishMethodSerializer(BeltFishSerializer):
-    sample_event = SampleEventSerializer(source="transect.sample_event")
+    sample_event = UUIDField(source="transect.sample_event.pk")
     fishbelt_transect = FishBeltTransectSerializer(source="transect")
     observers = ObserverSerializer(many=True)
     obs_belt_fishes = ObsBeltFishSerializer(many=True, source="beltfish_observations")

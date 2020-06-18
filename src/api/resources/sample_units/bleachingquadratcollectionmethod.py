@@ -1,12 +1,10 @@
-from api import utils
 from django.db import transaction
+from django_filters import BaseInFilter, RangeFilter
 from rest_framework import status
 from rest_framework.response import Response
-from rest_framework.serializers import SerializerMethodField
-from django_filters import BaseInFilter, RangeFilter
+from rest_framework.serializers import SerializerMethodField, UUIDField
 
-from . import *
-from .. import fieldreport
+from api import utils
 from ...models.mermaid import (
     BleachingQuadratCollection,
     ObsColoniesBleached,
@@ -15,22 +13,22 @@ from ...models.mermaid import (
 from ...models.view_models import (
     BleachingQCColoniesBleachedObsView,
     BleachingQCQuadratBenthicPercentObsView,
-    BleachingQCSUView,
     BleachingQCSEView,
+    BleachingQCSUView,
 )
-
+from .. import fieldreport
 from ..base import (
     BaseProjectApiViewSet,
-    BaseViewAPISerializer,
-    BaseViewAPIGeoSerializer,
     BaseTransectFilterSet,
+    BaseViewAPIGeoSerializer,
+    BaseViewAPISerializer,
 )
 from ..bleaching_quadrat_collection import BleachingQuadratCollectionSerializer
 from ..obs_colonies_bleached import ObsColoniesBleachedSerializer
 from ..obs_quadrat_benthic_percent import ObsQuadratBenthicPercentSerializer
 from ..observer import ObserverSerializer
 from ..quadrat_collection import QuadratCollectionSerializer
-from ..sample_event import SampleEventSerializer
+from . import *
 
 
 def avg_hard_coral(field, row, serializer_instance):
@@ -71,7 +69,7 @@ def quadrat_count(field, row, serializer_instance):
 
 
 class BleachingQuadratCollectionMethodSerializer(BleachingQuadratCollectionSerializer):
-    sample_event = SampleEventSerializer(source="quadrat.sample_event")
+    sample_event = UUIDField(source="quadrat.sample_event.pk")
     quadrat_collection = QuadratCollectionSerializer(source="quadrat")
     observers = ObserverSerializer(many=True)
     obs_quadrat_benthic_percent = ObsQuadratBenthicPercentSerializer(

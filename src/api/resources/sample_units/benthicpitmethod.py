@@ -1,29 +1,27 @@
 from django.db import transaction
+from django_filters import BaseInFilter, RangeFilter
 from rest_framework import status
 from rest_framework.response import Response
-from rest_framework.serializers import SerializerMethodField
-from django_filters import BaseInFilter, RangeFilter
+from rest_framework.serializers import SerializerMethodField, UUIDField
 
+from ...models.mermaid import BenthicAttribute, BenthicPIT, ObsBenthicPIT
+from ...models.view_models import BenthicPITObsView, BenthicPITSEView, BenthicPITSUView
 from .. import fieldreport
-from ...models.mermaid import BenthicPIT, ObsBenthicPIT, BenthicAttribute
-from ...models.view_models import BenthicPITObsView, BenthicPITSUView, BenthicPITSEView
-
-from . import *
 from ..base import (
     BaseProjectApiViewSet,
-    BaseViewAPISerializer,
-    BaseViewAPIGeoSerializer,
     BaseTransectFilterSet,
+    BaseViewAPIGeoSerializer,
+    BaseViewAPISerializer,
 )
 from ..benthic_pit import BenthicPITSerializer
 from ..benthic_transect import BenthicTransectSerializer
 from ..obs_benthic_pit import ObsBenthicPITSerializer
 from ..observer import ObserverSerializer
-from ..sample_event import SampleEventSerializer
+from . import *
 
 
 class BenthicPITMethodSerializer(BenthicPITSerializer):
-    sample_event = SampleEventSerializer(source="transect.sample_event")
+    sample_event = UUIDField(source="transect.sample_event.pk")
     benthic_transect = BenthicTransectSerializer(source="transect")
     observers = ObserverSerializer(many=True)
     obs_benthic_pits = ObsBenthicPITSerializer(many=True, source="obsbenthicpit_set")
