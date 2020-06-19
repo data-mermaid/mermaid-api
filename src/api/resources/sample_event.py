@@ -1,14 +1,14 @@
 import django_filters
 
+from ..models import SampleEvent
 from .base import (
     BaseAPIFilterSet,
-    BaseProjectApiViewSet,
     BaseAPISerializer,
+    BaseProjectApiViewSet,
     ExtendedSerializer,
 )
-from .site import SiteExtendedSerializer
 from .management import ManagementExtendedSerializer
-from ..models import SampleEvent
+from .site import SiteExtendedSerializer
 
 
 class SampleEventExtendedSerializer(ExtendedSerializer):
@@ -50,3 +50,7 @@ class SampleEventViewSet(BaseProjectApiViewSet):
     serializer_class = SampleEventSerializer
     queryset = SampleEvent.objects.all()
     filter_class = SampleEventFilterSet
+
+
+    def perform_update(self, serializer):
+        serializer.save()
