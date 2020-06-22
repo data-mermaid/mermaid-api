@@ -109,7 +109,7 @@ def ingest(
         return None, output
 
     reader = csv.DictReader(datafile)
-    context = _create_context(request, profile_id)
+    context = _create_context(profile_id, request)
     rows = _append_required_columns(reader, project_id, profile_id)
     project_choices = get_ingest_project_choices(project_id)
 

@@ -59,17 +59,6 @@ def get_fishbelt_transect_data(collect_record, sample_event_id=None):
     fishbelt_transect_data = data.get("fishbelt_transect") or dict()
     size_bin = fishbelt_transect_data.get("size_bin")
 
-    # If size_bin isn't in the fishbelt_transect
-    # check the legacy location in observations
-    # TODO: This should be removed in a future
-    # iteration
-    if size_bin is None:
-        obs = get_obsbeltfish_data(collect_record)
-        for ob in obs:
-            ob_size_bin = ob.get("size_bin")
-            if ob_size_bin is not None:
-                size_bin = ob_size_bin
-                break
 
     return dict(
         sample_event=sample_event_id,
@@ -87,6 +76,7 @@ def get_fishbelt_transect_data(collect_record, sample_event_id=None):
         relative_depth=fishbelt_transect_data.get("relative_depth") or None,
         tide=fishbelt_transect_data.get("tide") or None,
     )
+
 
 
 def get_observers_data(collect_record, transect_method_id=None):

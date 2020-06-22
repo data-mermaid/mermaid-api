@@ -11,38 +11,20 @@ from rest_framework.serializers import ListSerializer, Serializer
 from api.decorators import timeit
 from .. import utils
 from ..fields import LazyChoiceField
-from ..models import CollectRecord, Current, RelativeDepth, Tide, Visibility
+from ..models import CollectRecord, SampleEvent
+from ..resources.sample_event import SampleEventSerializer
+
 
 __all__ = [
     "CollectRecordCSVListSerializer",
-    "CollectRecordCSVSerializer",
-    "build_choices",
+    "CollectRecordCSVSerializer"
 ]
-
-
-def build_choices(choices, val_key="name"):
-    return [(str(c["id"]), str(c[val_key])) for c in choices]
-
-
-def visibility_choices():
-    return build_choices(Visibility.objects.choices(order_by="val"))
-
-
-def current_choices():
-    return build_choices(Current.objects.choices(order_by="name"))
-
-
-def relative_depth_choices():
-    return build_choices(RelativeDepth.objects.choices(order_by="name"))
-
-
-def tide_choices():
-    return build_choices(Tide.objects.choices(order_by="name"))
 
 
 class CollectRecordCSVListSerializer(ListSerializer):
     obs_field_identifier = "data__obs_"
     _formatted_records = None
+    _sample_events = dict()
 
     # Track original record order
     _row_index = None
@@ -76,7 +58,7 @@ class CollectRecordCSVListSerializer(ListSerializer):
             except (ValueError, TypeError):
                 row[name] = None
 
-    def get_sample_event_date(self, row):
+    def _extract_sample_event_date(self, row):
         if "data__sample_event__sample_date__year" not in row:
             return None
         if "data__sample_event__sample_date__month" not in row:
@@ -84,14 +66,16 @@ class CollectRecordCSVListSerializer(ListSerializer):
         if "data__sample_event__sample_date__day" not in row:
             return None
 
-        return "{}-{}-{}".format(
-            row["data__sample_event__sample_date__year"],
-            row["data__sample_event__sample_date__month"],
-            row["data__sample_event__sample_date__day"],
-        )
+        y = row.pop("data__sample_event__sample_date__year")
+        m = row.pop("data__sample_event__sample_date__month")
+        d = row.pop("data__sample_event__sample_date__day")
+
+        return f"{y}-{m}-{d}"
 
     def get_sample_event_time(self, row):
-        return row.get("data__sample_event__sample_time") or "00:00:00"
+        if hasattr(self.child, "get_sample_event_time") is False:
+            raise NotImplementedError("get_sample_event_time not defined")
+        return self.child.get_sample_event_time(row)
 
     def remove_extra_data(self, row):
         field_names = set(self.child.fields.keys())
@@ -161,14 +145,13 @@ class CollectRecordCSVListSerializer(ListSerializer):
             self._row_index[pk] = n + 1 + error_row_offset
             fmt_row["id"] = pk
             fmt_row["stage"] = CollectRecord.SAVED_STAGE
-            fmt_row["data__sample_event__sample_date"] = self.get_sample_event_date(
-                fmt_row
-            )
+
             fmt_row["data__sample_event__sample_time"] = self.get_sample_event_time(
                 fmt_row
             )
             fmt_row["data__protocol"] = protocol
 
+            self._extract_and_set_sample_event(fmt_row)
             self.remove_extra_data(fmt_row)
             self.assign_choices(fmt_row, choices_sets)
             self.split_list_fields("data__observers", fmt_row)
@@ -256,6 +239,10 @@ class CollectRecordCSVListSerializer(ListSerializer):
             )
             for rec in output
         ]
+
+
+        self._create_sample_events()
+
         return CollectRecord.objects.bulk_create(objs)
 
     @property
@@ -274,6 +261,79 @@ class CollectRecordCSVListSerializer(ListSerializer):
         return sorted(fmt_errors, key=itemgetter("$row_number"))
 
 
+    def _extract_and_set_sample_event(self, row):
+        """
+        Creates a dict for sample event and removes those
+        fields from row.
+        """
+
+        sample_event = dict()
+        fields = list(row.keys())
+        choices_sets = self.child.project_choices
+        sample_date = self._extract_sample_event_date(row)
+        for field in fields:
+            if "data__sample_event__" not in field:
+                continue
+
+            try:
+                v = row.pop(field)
+            except KeyError:
+                pass
+
+            if field in choices_sets:
+                v = choices_sets[field][(v).lower()]
+            sample_event[field] = v
+        
+        sample_event["data__sample_event__sample_date"] = sample_date
+
+        qry_args = dict(
+            management=sample_event.get("data__sample_event__management"),
+            site=sample_event.get("data__sample_event__site"),
+            sample_date=sample_date
+        )
+
+        se_qry = SampleEvent.objects.filter(**qry_args)[:1]
+
+        sample_event_key = self.create_key(sample_event, sample_event.keys(), " ")
+
+        if sample_event_key in self._sample_events:
+            sample_event = self._sample_events[sample_event_key]
+            if isinstance(sample_event, dict):
+                pk = sample_event["id"]
+            else:
+                pk = str(sample_event.pk)
+        elif se_qry.count() > 0:
+            se = se_qry[0]
+            pk = str(se.pk)
+            self._sample_events[sample_event_key] = se
+        else:
+            pk = str(uuid.uuid4())
+            sample_event["id"] = pk    
+            self._sample_events[sample_event_key] = sample_event
+
+        row["data__sample_event"] = pk
+
+    def _create_sample_events(self):
+        for se in self._sample_events.values():
+
+            if not isinstance(se, dict):
+                continue
+
+            sample_event_data = dict()
+            for k, v in se.items():
+                if "data__sample_event" in k:
+                    k = k[20:]
+
+                sample_event_data[k] = v
+
+            serializer = SampleEventSerializer(data=sample_event_data, context=self.child.context)
+            if serializer.is_valid() is False:
+                # print(serializer.errors)
+                raise Exception("here")
+
+            instance = serializer.save()
+
+
 class CollectRecordCSVSerializer(Serializer):
     protocol = None
     observations_fields = None
@@ -284,14 +344,8 @@ class CollectRecordCSVSerializer(Serializer):
         "Sample date: Year *": "data__sample_event__sample_date__year",
         "Sample date: Month *": "data__sample_event__sample_date__month",
         "Sample date: Day *": "data__sample_event__sample_date__day",
-        "Sample time": "data__sample_event__sample_time",
-        "Depth *": "data__sample_event__depth",
-        "Interval size": "data__interval_size",
-        "Visibility": "data__sample_event__visibility",
-        "Current": "data__sample_event__current",
-        "Relative depth": "data__sample_event__relative_depth",
-        "Tide": "data__sample_event__tide",
         "Notes": "data__sample_event__notes",
+        "Interval size": "data__interval_size",
         "Observer emails *": "data__observers",
     }
 
@@ -299,7 +353,6 @@ class CollectRecordCSVSerializer(Serializer):
         "data__sample_event__sample_date": "Sample date: Year *, Sample date: Month *, Sample date: Day *",
     }
 
-    
 
     # By Default:
     # - required fields are used
@@ -320,30 +373,7 @@ class CollectRecordCSVSerializer(Serializer):
     project = serializers.UUIDField(format="hex_verbose")
     profile = serializers.UUIDField(format="hex_verbose")
     data__protocol = serializers.CharField(required=True, allow_blank=False)
-
-    data__sample_event__site = serializers.CharField()
-    data__sample_event__management = serializers.CharField()
-    data__sample_event__sample_date = serializers.DateField()
-    data__sample_event__sample_time = serializers.TimeField(default="00:00:00")
-    data__sample_event__depth = serializers.DecimalField(max_digits=3, decimal_places=1)
-
-    data__sample_event__visibility = LazyChoiceField(
-        choices=visibility_choices, required=False, allow_null=True, allow_blank=True
-    )
-    data__sample_event__current = LazyChoiceField(
-        choices=current_choices, required=False, allow_null=True, allow_blank=True
-    )
-    data__sample_event__relative_depth = LazyChoiceField(
-        choices=relative_depth_choices,
-        required=False,
-        allow_null=True,
-        allow_blank=True,
-    )
-    data__sample_event__tide = LazyChoiceField(
-        choices=tide_choices, required=False, allow_null=True, allow_blank=True
-    )
-    data__sample_event__notes = serializers.CharField(required=False, allow_blank=True)
-
+    data__sample_event = serializers.UUIDField(format="hex_verbose")
     data__observers = serializers.ListField(
         child=serializers.CharField(), allow_empty=False
     )
@@ -384,6 +414,7 @@ class CollectRecordCSVSerializer(Serializer):
                 and not field.read_only
             ]
         )
+    
 
     def clean(self, data):
         return data
