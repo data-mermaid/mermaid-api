@@ -911,7 +911,7 @@ class BenthicTransectValidation(DataValidation):
             return self.error(self.identifier, self.NUMBER_MSG)
 
         
-        relative_depth = sample_event.get("relative_depth", None) or None
+        relative_depth = benthic_transect.get("relative_depth") or None
         if relative_depth is not None:
             try:
                 _ = check_uuid(relative_depth)
@@ -965,7 +965,7 @@ class FishBeltTransectValidation(DataValidation):
             return self.error(self.identifier, self.NUMBER_MSG)
 
         
-        relative_depth = sample_event.get("relative_depth", None) or None
+        relative_depth = fishbelt_transect.get("relative_depth") or None
         if relative_depth is not None:
             try:
                 _ = check_uuid(relative_depth)
@@ -980,7 +980,7 @@ class FishBeltTransectValidation(DataValidation):
             "relative_depth": relative_depth,
         }
 
-        results = FishBeltTransectTransect.objects.select_related().filter(**qry)
+        results = FishBeltTransect.objects.select_related().filter(**qry)
         for result in results:
             transect_methods = get_related_transect_methods(result)
             for transect_method in transect_methods:
@@ -1189,7 +1189,7 @@ class QuadratCollectionValidation(DataValidation):
             return self.ok(self.identifier)
 
 
-        relative_depth = quadrat_collection.get("relative_depth", None) or None
+        relative_depth = quadrat_collection.get("relative_depth") or None
         if relative_depth is not None:
             try:
                 _ = check_uuid(relative_depth)
