@@ -59,17 +59,9 @@ class ProtocolValidation(object):
         self.validations = dict()
 
         data = self.collect_record.data or dict()
-        sample_event_data = data.get("sample_event") or dict()
         sample_unit_data = data.get(self.SAMPLE_UNIT) or dict()
         observers = data.get("observers") or []
-        site_id = sample_event_data.get("site")
-        management_id = sample_event_data.get("management")
         depth = sample_unit_data.get("depth")
-
-        results.append(self._run_validation(SampleEventValidation, data))
-        results.append(self._run_validation(SiteValidation, site_id))
-
-        results.append(self._run_validation(ManagementValidation, management_id))
 
         results.append(
             self._run_validation(
