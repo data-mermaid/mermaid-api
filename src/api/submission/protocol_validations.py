@@ -262,6 +262,8 @@ class HabitatComplexityProtocolValidation(SampleUnitValidation):
 
 
 class BleachingQuadratCollectionProtocolValidation(QuadratValidation):
+    SAMPLE_UNIT = "quadrat_collection"
+
     def validate(self):
         results = []
         results.append(
