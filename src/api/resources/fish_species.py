@@ -46,7 +46,7 @@ class FishSpeciesFilterSet(BaseAPIFilterSet):
 
 class FishSpeciesViewSet(BaseAttributeApiViewSet):
     serializer_class = FishSpeciesSerializer
-    queryset = FishSpecies.objects.select_related()
+    queryset = FishSpecies.objects.select_related().prefetch_related("regions")
     filter_class = FishSpeciesFilterSet
     search_fields = ['name', 'genus__name', ]
 

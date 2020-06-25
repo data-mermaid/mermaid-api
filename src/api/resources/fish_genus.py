@@ -2,7 +2,7 @@ from django.utils.decorators import method_decorator
 from django.views.decorators.cache import cache_page
 from rest_framework import serializers
 from .base import BaseAPIFilterSet, BaseAttributeApiViewSet, BaseAPISerializer
-from ..models import FishGenus
+from ..models import FishGenus, FishSpecies
 
 
 class FishGenusSerializer(BaseAPISerializer):
@@ -10,14 +10,12 @@ class FishGenusSerializer(BaseAPISerializer):
     biomass_constant_a = serializers.ReadOnlyField()
     biomass_constant_b = serializers.ReadOnlyField()
     biomass_constant_c = serializers.ReadOnlyField()
-    regions = serializers.SerializerMethodField()
+    regions = serializers.ReadOnlyField()
 
     class Meta:
         model = FishGenus
         exclude = []
 
-    def get_regions(self, obj):
-        return [r.pk for r in obj.regions]
 
 class FishGenusFilterSet(BaseAPIFilterSet):
 
@@ -31,6 +29,11 @@ class FishGenusViewSet(BaseAttributeApiViewSet):
     queryset = FishGenus.objects.select_related()
     filter_class = FishGenusFilterSet
     search_fields = ['name', ]
+
+    def stringify_instance(self, v):
+        if v is None:
+            return None
+        return str(v.pk)
 
     @method_decorator(cache_page(60*60))
     def list(self, request, *args, **kwargs):
