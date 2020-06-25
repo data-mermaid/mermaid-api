@@ -113,7 +113,7 @@ class Project(BaseModel):
         },
     )
 
-    name = models.CharField(max_length=255)
+    name = models.CharField(max_length=255, unique=True)
     notes = models.TextField(blank=True)
     status = models.PositiveSmallIntegerField(choices=STATUSES, default=OPEN)
     data_policy_beltfish = models.PositiveSmallIntegerField(choices=DATA_POLICIES, default=PUBLIC_SUMMARY)
