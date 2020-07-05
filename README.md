@@ -80,11 +80,11 @@ Then the containers will be started.
 
 With a database already created and persisted in an S3 bucket via 
 ```sh
-$ fab db_backup
+$ fab dbbackup
 ``` 
 ,
 ```sh
-$ fab db_restore
+$ fab dbrestore
 ``` 
 will recreate and populate the local database with the latest dump. Without the S3 dump (i.e. running for the first time),
  you'll need to create a local database and then run 
@@ -96,7 +96,7 @@ to create its schema.
 A shortcut for the above steps, once S3 is set up, is available via:
 
 ```
-$ fab fresh_install:[env]
+$ fab fresh-install:[env]
 
 env: local (default), dev, prod
 ```
@@ -128,7 +128,7 @@ $ fab up
 ### Database commands
 
 ```
-$ fab db_backup:<env>
+$ fab dbbackup:<env>
 
 env: local, dev, prod
 ```
@@ -136,7 +136,7 @@ env: local, dev, prod
 Backup the database from a named S3 key
 
 ```
-$ fab db_restore:<env>
+$ fab dbrestore:<env>
 
 env: local, dev, prod
 ```
