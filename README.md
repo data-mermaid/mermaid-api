@@ -96,7 +96,7 @@ to create its schema.
 A shortcut for the above steps, once S3 is set up, is available via:
 
 ```
-$ fab fresh-install:[env]
+$ fab freshinstall:[env]
 
 env: local (default), dev, prod
 ```
