@@ -115,7 +115,7 @@ def dbbackup(c, key_name="local"):
     local(_api_cmd("python manage.py dbbackup {}".format(key_name)))
 
 
-@task(aliases=["fresh-install"])
+@task
 def freshinstall(c, keyname="local"):
     down(c)
     buildnocache(c)
