@@ -158,5 +158,5 @@ class AnonymousJWTAuthentication(JWTAuthentication):
             pass
 
         if jwt_token:
-            return super().authenticate(request, *args, **kwargs)
+            return super().authenticate(request)
         return AnonymousUser(), None
