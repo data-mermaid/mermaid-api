@@ -1,7 +1,4 @@
 import csv
-import json
-
-from django.db import connection, transaction
 
 from api import mocks
 from api.decorators import run_in_thread
@@ -11,11 +8,9 @@ from api.ingest import (
     FishBeltCSVSerializer,
 )
 from api.models import (
-    BENTHICLIT_PROTOCOL,
     BENTHICPIT_PROTOCOL,
     BLEACHINGQC_PROTOCOL,
     FISHBELT_PROTOCOL,
-    HABITATCOMPLEXITY_PROTOCOL,
     CollectRecord,
     Management,
     Profile,
@@ -26,6 +21,7 @@ from api.resources.project_profile import ProjectProfileSerializer
 from api.submission.utils import submit_collect_records, validate_collect_records
 from api.submission.validations import ERROR, WARN
 from api.utils import tokenutils
+from django.db import transaction
 
 
 def get_ingest_project_choices(project_id):

@@ -1,9 +1,8 @@
 from rest_framework import serializers
-from rest_framework.fields import empty
 
+from .serializers import CollectRecordCSVSerializer, build_choices
 from ..fields import LazyChoiceField
 from ..models import BenthicAttribute, GrowthForm, ReefSlope
-from .serializers import CollectRecordCSVSerializer, build_choices
 
 __all__ = ["BenthicPITCSVSerializer"]
 
