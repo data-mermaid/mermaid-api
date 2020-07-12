@@ -40,13 +40,13 @@ class ValidateMixin(object):
         if hasattr(request, "user") and hasattr(request.user, "profile"):
             profile = request.user.profile
 
-        intances = {
+        instances = {
             str(s.pk): s
             for s in model_class.objects.filter(project=project_pk, pk__in=record_ids)
         }
 
         for record_id in record_ids:
-            instance = intances.get(record_id)
+            instance = instances.get(record_id)
             validator = self.validator_class(pk=None)
             validator.identifier = self.validator_identifier
 
