@@ -114,7 +114,7 @@ class Project(BaseModel):
         },
     )
 
-    name = models.CharField(max_length=255)
+    name = models.CharField(max_length=255, unique=True)
     notes = models.TextField(blank=True)
     status = models.PositiveSmallIntegerField(choices=STATUSES, default=OPEN)
     data_policy_beltfish = models.PositiveSmallIntegerField(choices=DATA_POLICIES, default=PUBLIC_SUMMARY)
@@ -1029,8 +1029,6 @@ class ObsQuadratBenthicPercent(BaseModel, JSONMixin):
         return _(u"%s") % self.quadrat_number
 
 
-
-
 class FishAttribute(BaseAttributeModel):
 
     GROUPING_RANK = 'grouping'
@@ -1156,7 +1154,7 @@ class FishFamily(FishAttribute):
 
             species_agg_qs = FishSpecies.objects \
                 .select_related("genus__family") \
-                .values(family=F("genus__family")).annotate(
+                .order_by().values(family=F("genus__family")).annotate(
                     biomass_constant_a=Avg('biomass_constant_a'),
                     biomass_constant_b=Avg('biomass_constant_b'),
                     biomass_constant_c=Avg('biomass_constant_c'),
@@ -1167,9 +1165,15 @@ class FishFamily(FishAttribute):
             FishFamily.species_agg_timestamp = create_timestamp(ttl=30)
 
         species = FishFamily.species_agg.get(str(self.pk))
-        self._biomass_a = round(species.get("biomass_constant_a"), 6)
-        self._biomass_b = round(species.get("biomass_constant_b"), 6)
-        self._biomass_c = round(species.get("biomass_constant_c"), 6)
+        self._biomass_a = None
+        self._biomass_b = None
+        self._biomass_c = None
+        if species.get("biomass_constant_a") is not None:
+            self._biomass_a = round(species.get("biomass_constant_a"), 6)
+        if species.get("biomass_constant_b") is not None:
+            self._biomass_b = round(species.get("biomass_constant_b"), 6)
+        if species.get("biomass_constant_c") is not None:
+            self._biomass_c = round(species.get("biomass_constant_c"), 6)
         self._regions = species.get("regions")
 
         return FishFamily.species_agg
@@ -1226,7 +1230,7 @@ class FishGenus(FishAttribute):
 
     def _set_species_agg_vals(self):
         if not FishGenus.species_agg or expired_timestamp(FishGenus.species_agg_timestamp):
-            species_agg_qs = FishSpecies.objects.values("genus").annotate(
+            species_agg_qs = FishSpecies.objects.order_by().values("genus").annotate(
                 biomass_constant_a=Avg('biomass_constant_a'),
                 biomass_constant_b=Avg('biomass_constant_b'),
                 biomass_constant_c=Avg('biomass_constant_c'),
@@ -1237,9 +1241,15 @@ class FishGenus(FishAttribute):
             FishGenus.species_agg_timestamp = create_timestamp(ttl=30)
 
         species = FishGenus.species_agg.get(str(self.pk))
-        self._biomass_a = round(species.get("biomass_constant_a"), 6)
-        self._biomass_b = round(species.get("biomass_constant_b"), 6)
-        self._biomass_c = round(species.get("biomass_constant_c"), 6)
+        self._biomass_a = None
+        self._biomass_b = None
+        self._biomass_c = None
+        if species.get("biomass_constant_a") is not None:
+            self._biomass_a = round(species.get("biomass_constant_a"), 6)
+        if species.get("biomass_constant_b") is not None:
+            self._biomass_b = round(species.get("biomass_constant_b"), 6)
+        if species.get("biomass_constant_c") is not None:
+            self._biomass_c = round(species.get("biomass_constant_c"), 6)
         self._regions = species.get("regions")
 
         return FishGenus.species_agg
