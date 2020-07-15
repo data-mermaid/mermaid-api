@@ -26,7 +26,8 @@ class Command(BaseCommand):
         self.outpath = ''
         self.header = ['name', 'secondary name', 'project', 'project admins', 'year est',
                        'open_access', 'periodic_closure', 'size_limits',
-                       'gear_restriction', 'species_restriction', 'no_take'
+                       'gear_restriction', 'species_restriction', 'no_take',
+                       'access_restriction'
                        ]
 
     def add_arguments(self, parser):
@@ -74,7 +75,8 @@ class Command(BaseCommand):
             Q(open_access=False) |
             Q(size_limits=False) |
             Q(gear_restriction=False) |
-            Q(species_restriction=False)
+            Q(species_restriction=False) |
+            Q(access_restriction=False)
         )
 
         # no-take = True and anything else also = True
@@ -85,7 +87,8 @@ class Command(BaseCommand):
                     Q(open_access=True) |
                     Q(size_limits=True) |
                     Q(gear_restriction=True) |
-                    Q(species_restriction=True)
+                    Q(species_restriction=True) |
+                    Q(access_restriction=True)
             )
         )
 
@@ -97,7 +100,8 @@ class Command(BaseCommand):
                     Q(no_take=True) |
                     Q(size_limits=True) |
                     Q(gear_restriction=True) |
-                    Q(species_restriction=True)
+                    Q(species_restriction=True) |
+                    Q(access_restriction=False)
             )
         )
 

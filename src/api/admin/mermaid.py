@@ -277,6 +277,7 @@ class ManagementAdmin(BaseAdmin):
         "size_limits",
         "gear_restriction",
         "species_restriction",
+        "access_restriction",
         "no_take",
     )
     readonly_fields = ("area",)
