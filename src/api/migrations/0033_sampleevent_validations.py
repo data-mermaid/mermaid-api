@@ -8,7 +8,7 @@ import rest_framework.utils.encoders
 class Migration(migrations.Migration):
 
     dependencies = [
-        ('api', '0034_merge_20200714_2103'),
+        ('api', '0032_auto_20200618_1448'),
     ]
 
     operations = [

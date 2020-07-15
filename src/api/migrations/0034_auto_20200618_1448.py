@@ -40,7 +40,7 @@ def migrate_collect_record(apps, schema_editor):
 
 class Migration(migrations.Migration):
 
-    dependencies = [("api", "0032_auto_20200618_1448")]
+    dependencies = [("api", "0033_sampleevent_validations")]
 
     operations = [
         migrations.RunPython(
