@@ -22,6 +22,7 @@ def get_rules(obj):
         ('periodic_closure', 'Periodic Closure'),
         ('size_limits', 'Size Limits'),
         ('species_restriction', 'Species Restriction'),
+        ('access_restriction', 'Access Restriction'),
     )
 
     for field, display in rules_map:
@@ -92,6 +93,7 @@ class ManagementFilterSet(BaseAPIFilterSet):
             'size_limits',
             'gear_restriction',
             'species_restriction',
+            'access_restriction',
             'unique',
             'exclude_projects',
         ]
@@ -112,6 +114,7 @@ class ManagementFilterSet(BaseAPIFilterSet):
             'size_limits',
             'gear_restriction',
             'species_restriction',
+            'access_restriction',
         )
         project_id = value
         group_by = ','.join(['"{}"'.format(uf) for uf in unique_fields])

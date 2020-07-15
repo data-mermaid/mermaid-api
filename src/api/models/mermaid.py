@@ -225,6 +225,7 @@ class Management(BaseModel, JSONMixin, AreaMixin):
     size_limits = models.BooleanField(verbose_name=_(u'size limits'), default=False)
     gear_restriction = models.BooleanField(verbose_name=_(u'partial gear restriction'), default=False)
     species_restriction = models.BooleanField(verbose_name=_(u'partial species restriction'), default=False)
+    access_restriction = models.BooleanField(verbose_name=_(u'access restriction'), default=False)
     validations = JSONField(encoder=JSONEncoder, null=True, blank=True)
 
     class Meta:
