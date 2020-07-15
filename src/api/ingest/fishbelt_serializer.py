@@ -13,7 +13,7 @@ def reef_slopes_choices():
 
 
 def belt_transect_widths_choices():
-    return build_choices(BeltTransectWidth.objects.choices(order_by="val"), "val")
+    return build_choices(BeltTransectWidth.objects.choices(order_by="val"), "name")
 
 
 def fish_size_bins_choices():
