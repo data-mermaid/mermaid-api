@@ -567,7 +567,6 @@ class BaseChoiceApiViewSet(MethodAuthenticationMixin, viewsets.ViewSet):
             })
         return choices
 
-    @method_decorator(cache_page(60*60))
     def list(self, request):
         choices = self._filter()
         return Response(choices)

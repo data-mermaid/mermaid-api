@@ -30,6 +30,5 @@ class BenthicAttributeViewSet(BaseAttributeApiViewSet):
     filter_class = BenthicAttributeFilterSet
     search_fields = ['name', ]
 
-    @method_decorator(cache_page(60*60))
     def list(self, request, *args, **kwargs):
         return super(BenthicAttributeViewSet, self).list(request, *args, **kwargs)
