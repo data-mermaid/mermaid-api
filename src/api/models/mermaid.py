@@ -436,6 +436,7 @@ class SampleEvent(BaseModel, JSONMixin):
     current = models.ForeignKey(Current, on_delete=models.SET_NULL, null=True, blank=True)
     relative_depth = models.ForeignKey(RelativeDepth, on_delete=models.SET_NULL, null=True, blank=True)
     tide = models.ForeignKey(Tide, on_delete=models.SET_NULL, null=True, blank=True)
+    validations = JSONField(encoder=JSONEncoder, null=True, blank=True)
 
     class Meta:
         db_table = 'sample_event'

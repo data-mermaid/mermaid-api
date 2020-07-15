@@ -10,7 +10,7 @@ from django.dispatch import receiver
 
 from .models import *
 from .submission.utils import validate
-from .submission.validations import ManagementValidation, SiteValidation
+from .submission.validations import ManagementValidation, SampleEventValidation, SiteValidation
 from .utils import get_subclasses
 from .utils.email import email_project_admins, mermaid_email
 from .utils.sample_units import (
@@ -286,3 +286,16 @@ def run_management_validation(sender, instance, *args, **kwargs):
 @receiver(pre_save, sender=CollectRecord)
 def migrate_sample_event_sample_unit(sender, instance, *args, **kwargs):
     migrate_collect_record_sample_event(instance)
+
+
+@receiver(post_delete, sender=SampleEvent)
+@receiver(post_save, sender=SampleEvent)
+def run_sample_event_validation(sender, instance, *args, **kwargs):
+    validate(SampleEventValidation, SampleEvent, {"pk": instance.pk})
+
+    if 'created' in kwargs:
+        # Need to update cached instance to keep
+        # PUT/POST responses up to date.
+        sample_event = SampleEvent.objects.get(id=instance.id)
+        instance.validations = sample_event.validations
+        instance.updated_on = sample_event.updated_on

@@ -2,6 +2,7 @@ import inspect
 import itertools
 import json
 import math
+from datetime import datetime
 
 from dateutil import tz
 from django.contrib.gis.geos import Polygon
@@ -349,7 +350,7 @@ class SampleEventValidation(ModelValidation):
 
     FUTURE_DATE = _("Sample date is in the future")
 
-    def is_future_sample_date(self, date, site):
+    def is_future_sample_date(self, sample_date, site):
         if site is None or site.location is None or sample_date is None:
             return False
 
@@ -364,7 +365,7 @@ class SampleEventValidation(ModelValidation):
             return False
 
         tzinfo = tz.gettz(tz_str)
-
+        sample_date = datetime.combine(sample_date, datetime.min.time())
         sample_date = sample_date.replace(tzinfo=tzinfo)
         todays_date = timezone.now().astimezone(tzinfo)
         delta = todays_date - sample_date
