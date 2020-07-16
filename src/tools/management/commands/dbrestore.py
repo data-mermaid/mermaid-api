@@ -23,8 +23,6 @@ class Command(BaseCommand):
         super(Command, self).__init__()
         self.restore = os.environ.get("RESTORE", "false").lower()
         self.env = os.environ.get("ENV", "none").lower()
-        print("ENV: %s" % self.env)
-        print("RESTORE: %s" % self.restore)
         self.local_file_location = os.path.join(os.path.sep, "tmp", "mermaid")
         try:
             os.mkdir(self.local_file_location)
@@ -69,6 +67,9 @@ class Command(BaseCommand):
         if self.restore in ["False", "false"]:
             print("Skipping Restore")
             return None
+
+        print("ENV: %s" % self.env)
+        print("RESTORE: %s" % self.restore)
 
         if self.env == "prod" and options.get("force") is not True:
             raise Exception("Restoring production database needs to be forced.")
