@@ -90,7 +90,10 @@ class RegionalAttributesMixin(ObservationsMixin):
         attribute_ids = list(set([obs.get(self.attribute_key) for obs in observations]))
         attr_lookup = dict()
         for attr in self.AttributeModelClass.objects.filter(id__in=attribute_ids):
-            attr_lookup[str(attr.id)] = [str(r.id) for r in attr.regions.all()]
+            if isinstance(attr.regions, list):
+                attr_lookup[str(attr.id)] = [str(r) for r in attr.regions]
+            else:
+                attr_lookup[str(attr.id)] = [str(r.id) for r in attr.regions.all()]
 
         no_matches = []
         for attribute_id in attribute_ids:
