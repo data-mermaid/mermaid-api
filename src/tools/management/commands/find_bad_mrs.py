@@ -57,6 +57,7 @@ class Command(BaseCommand):
                     m.size_limits,
                     m.gear_restriction,
                     m.species_restriction,
+                    m.access_restriction,
                     m.no_take]
                 )
 
@@ -101,7 +102,7 @@ class Command(BaseCommand):
                     Q(size_limits=True) |
                     Q(gear_restriction=True) |
                     Q(species_restriction=True) |
-                    Q(access_restriction=False)
+                    Q(access_restriction=True)
             )
         )
 
