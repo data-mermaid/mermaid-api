@@ -35,6 +35,5 @@ class FishGenusViewSet(BaseAttributeApiViewSet):
             return None
         return str(v.pk)
 
-    @method_decorator(cache_page(60*60))
     def list(self, request, *args, **kwargs):
         return super(FishGenusViewSet, self).list(request, *args, **kwargs)

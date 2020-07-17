@@ -50,6 +50,5 @@ class FishSpeciesViewSet(BaseAttributeApiViewSet):
     filter_class = FishSpeciesFilterSet
     search_fields = ['name', 'genus__name', ]
 
-    @method_decorator(cache_page(60*60))
     def list(self, request, *args, **kwargs):
         return super(FishSpeciesViewSet, self).list(request, *args, **kwargs)
