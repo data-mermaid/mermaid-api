@@ -196,7 +196,7 @@ class CollectRecordViewSet(BaseProjectApiViewSet):
                 None,
                 dry_run=dryrun,
                 clear_existing=clearexisting,
-                bulk_validation=True,
+                bulk_validation=False,
                 bulk_submission=False,
                 validation_suppressants=validate_config,
                 serializer_class=CollectRecordSerializer,
