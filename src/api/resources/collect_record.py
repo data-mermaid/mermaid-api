@@ -209,5 +209,4 @@ class CollectRecordViewSet(BaseProjectApiViewSet):
             errors = ingest_output["errors"]
             return Response(errors, status=400)
 
-        records = ingest_output.get("validate")
-        return Response(records)
+        return Response(CollectRecordSerializer(records, many=True).data)
