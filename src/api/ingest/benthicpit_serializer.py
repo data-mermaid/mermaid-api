@@ -35,13 +35,13 @@ class BenthicPITCSVSerializer(CollectRecordCSVSerializer):
         {
             "Observation interval *": "data__obs_benthic_pits__interval",
             "Interval size *": "data__interval_size",
-            "Interval start": "data__interval_start",
+            "Interval start *": "data__interval_start",
             "Transect length surveyed *": "data__benthic_transect__len_surveyed",
             "Transect number *": "data__benthic_transect__number",
             "Transect label": "data__benthic_transect__label",
             "Reef Slope": "data__benthic_transect__reef_slope",
             "Benthic attribute *": "data__obs_benthic_pits__attribute",
-            "Growth form *": "data__obs_benthic_pits__growth_form",
+            "Growth form": "data__obs_benthic_pits__growth_form",
         }
     )
 
@@ -50,7 +50,7 @@ class BenthicPITCSVSerializer(CollectRecordCSVSerializer):
     data__benthic_transect__len_surveyed = serializers.IntegerField(min_value=0)
     data__benthic_transect__number = serializers.IntegerField(min_value=0)
     data__benthic_transect__label = serializers.CharField(
-        allow_blank=True, required=False
+        allow_blank=True, required=False, default=""
     )
     data__benthic_transect__reef_slope = LazyChoiceField(
         choices=reef_slopes_choices, required=False, allow_null=True, allow_blank=True

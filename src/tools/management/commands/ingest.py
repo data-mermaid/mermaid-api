@@ -108,19 +108,26 @@ class Command(BaseCommand):
         try:
             with transaction.atomic():
                 sid = transaction.savepoint()
-                records, ingest_output = ingest(
-                    protocol=protocol,
-                    datafile=datafile,
-                    project_id=project,
-                    profile_id=profile,
-                    request=None,
-                    dry_run=dry_run,
-                    clear_existing=clear_existing,
-                    bulk_validation=is_validate,
-                    bulk_submission=is_submit,
-                    validation_suppressants=validate_config,
-                    serializer_class=CollectRecordSerializer
-                )
+                try:
+                    records, ingest_output = ingest(
+                        protocol=protocol,
+                        datafile=datafile,
+                        project_id=project,
+                        profile_id=profile,
+                        request=None,
+                        dry_run=dry_run,
+                        clear_existing=clear_existing,
+                        bulk_validation=is_validate,
+                        bulk_submission=is_submit,
+                        validation_suppressants=validate_config,
+                        serializer_class=CollectRecordSerializer
+                    )
+                except InvalidSchema as schema_error:
+                    missing_required_fields = schema_error.errors
+                    transaction.savepoint_rollback(sid)
+                    self.stderr.write(f"Missing required fields: {', '.join(missing_required_fields)}")
+                    sys.exit(1)
+
                 transaction.savepoint_commit(sid)
         except Exception as err:
             transaction.savepoint_rollback(sid)
