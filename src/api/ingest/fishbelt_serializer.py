@@ -50,7 +50,7 @@ class FishBeltCSVSerializer(CollectRecordCSVSerializer):
     data__fishbelt_transect__len_surveyed = serializers.IntegerField(min_value=0)
     data__fishbelt_transect__number = serializers.IntegerField(min_value=0)
     data__fishbelt_transect__label = serializers.CharField(
-        allow_blank=True, required=False
+        allow_blank=True, required=False, default=""
     )
     data__fishbelt_transect__reef_slope = LazyChoiceField(
         choices=reef_slopes_choices, required=False, allow_null=True, allow_blank=True
