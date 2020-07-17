@@ -82,16 +82,11 @@ def _add_extra_fields(rows, project_id, profile_id):
 
 
 def _schema_check(csv_headers, serializer_headers):
-    required_headers = []
+    missing_required_headers = []
 
     for h in serializer_headers:
-        if "*" in h:
-            required_headers.append(h)
-
-    missing_required_headers = []
-    for required_header in required_headers:
-        if required_header not in csv_headers:
-            missing_required_headers.append(required_header)
+        if "*" in h and h not in csv_headers:
+            missing_required_headers.append(h)
 
     if missing_required_headers:
         raise InvalidSchema(errors=missing_required_headers)
