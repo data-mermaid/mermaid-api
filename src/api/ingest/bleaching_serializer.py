@@ -103,7 +103,7 @@ class BleachingCSVSerializer(CollectRecordCSVSerializer):
         max_digits=4, decimal_places=2
     )
     data__quadrat_collection__label = serializers.CharField(
-        allow_blank=True, required=False
+        allow_blank=True, required=False, default=""
     )
     data__obs_colonies_bleached__attribute = LazyChoiceField(
         choices=benthic_attributes_choices,
