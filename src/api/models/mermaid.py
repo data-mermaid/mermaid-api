@@ -486,10 +486,7 @@ class BenthicTransect(Transect):
 
 
 class BeltTransectWidth(BaseChoiceModel):
-    # TODO: make name unique, null=False, blank=False
-    # TODO: remove val field
-    name = models.CharField(max_length=100, null=True, blank=True)
-    val = models.PositiveSmallIntegerField(null=True, blank=True)
+    name = models.CharField(unique=True, max_length=100, null=True, blank=True)
 
     def __str__(self):
         return _('%s') % self.name
@@ -502,8 +499,7 @@ class BeltTransectWidth(BaseChoiceModel):
             'updated_on': self.updated_on,
             'conditions': [cnd.choice for cnd in self.conditions.all().order_by("val")]
         }
-        if hasattr(self, 'val'):
-            ret['val'] = self.val
+
         return ret
 
     def _get_default_condition(self, conditions):
