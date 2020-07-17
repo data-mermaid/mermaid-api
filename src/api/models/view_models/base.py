@@ -736,7 +736,12 @@ CREATE OR REPLACE VIEW public.vw_sample_events
         CASE
             WHEN m.species_restriction THEN 'species restriction'::text
             ELSE NULL::text
-        END], NULL::text))::jsonb AS management_rules,
+        END,
+        CASE
+            WHEN m.access_restriction THEN 'access restriction'::text
+            ELSE NULL::text
+        END
+        ], NULL::text))::jsonb AS management_rules,
     m.notes AS management_notes,
     se.id AS sample_event_id,
     se.sample_date,
