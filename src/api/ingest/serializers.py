@@ -286,7 +286,6 @@ class CollectRecordCSVSerializer(Serializer):
         "Sample date: Day *": "data__sample_event__sample_date__day",
         "Sample time": "data__sample_event__sample_time",
         "Depth *": "data__sample_event__depth",
-        "Interval size": "data__interval_size",
         "Visibility": "data__sample_event__visibility",
         "Current": "data__sample_event__current",
         "Relative depth": "data__sample_event__relative_depth",
@@ -342,7 +341,7 @@ class CollectRecordCSVSerializer(Serializer):
     data__sample_event__tide = LazyChoiceField(
         choices=tide_choices, required=False, allow_null=True, allow_blank=True
     )
-    data__sample_event__notes = serializers.CharField(required=False, allow_blank=True)
+    data__sample_event__notes = serializers.CharField(required=False, allow_blank=True, default="")
 
     data__observers = serializers.ListField(
         child=serializers.CharField(), allow_empty=False
