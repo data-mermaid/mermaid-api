@@ -38,7 +38,7 @@ from .base import BaseChoiceApiViewSet
 class ChoiceViewSet(BaseChoiceApiViewSet):
     def get_choices(self):
         belttransectwidths = dict(
-            data=BeltTransectWidth.objects.choices(order_by="val")
+            data=BeltTransectWidth.objects.choices(order_by="name")
         )
         benthiclifehistories = dict(
             data=BenthicLifeHistory.objects.choices(order_by="name")
