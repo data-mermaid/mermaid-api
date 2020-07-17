@@ -28,6 +28,12 @@ from api.submission.validations import ERROR, WARN
 from api.utils import tokenutils
 
 
+class InvalidSchema(Exception):
+    def __init__(self, message="Invalid Schema", errors=None):
+        super().__init__(message)
+        self.errors = errors
+
+
 def get_ingest_project_choices(project_id):
     project_choices = dict()
     project_choices["data__sample_event__site"] = {
@@ -66,7 +72,7 @@ def _create_context(profile_id, request=None):
     return {"request": request}
 
 
-def _append_required_columns(rows, project_id, profile_id):
+def _add_extra_fields(rows, project_id, profile_id):
     _rows = []
     for row in rows:
         row["project"] = project_id
@@ -75,12 +81,27 @@ def _append_required_columns(rows, project_id, profile_id):
     return _rows
 
 
+def _schema_check(csv_headers, serializer_headers):
+    required_headers = []
+
+    for h in serializer_headers:
+        if "*" in h:
+            required_headers.append(h)
+
+    missing_required_headers = []
+    for required_header in required_headers:
+        if required_header not in csv_headers:
+            missing_required_headers.append(required_header)
+
+    if missing_required_headers:
+        raise InvalidSchema(errors=missing_required_headers)
+
+
 @run_in_thread
 def clear_collect_records(collect_record_ids):
     CollectRecord.objects.filter(
         id__in=collect_record_ids
     ).delete()
-    print("deleted old records")
 
 
 def ingest(
@@ -109,10 +130,12 @@ def ingest(
         return None, output
 
     reader = csv.DictReader(datafile)
-    context = _create_context(request, profile_id)
-    rows = _append_required_columns(reader, project_id, profile_id)
-    project_choices = get_ingest_project_choices(project_id)
 
+    _schema_check(reader.fieldnames, list(serializer.header_map.keys()))
+
+    context = _create_context(request, profile_id)
+    rows = _add_extra_fields(reader, project_id, profile_id)
+    project_choices = get_ingest_project_choices(project_id)
     profile = Profile.objects.get_or_none(id=profile_id)
     if profile is None:
         raise ValueError("Profile does not exist")
@@ -143,6 +166,7 @@ def ingest(
                     data__protocol=protocol
                 )]
                 clear_collect_records(delete_ids)
+
             new_records = s.save()
             successful_save = True
         finally:
