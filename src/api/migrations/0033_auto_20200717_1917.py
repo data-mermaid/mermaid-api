@@ -32,6 +32,15 @@ def migrate_sample_event_to_sample_unit(apps, schema_editor):
             update_record(se, qc)
 
 
+def migrate_collect_record(apps, schema_editor):
+    CollectRecord = apps.get_model("api", "CollectRecord")
+    for cr in CollectRecord.objects.all():
+        if isinstance(cr.data.get("sample_event"), str):
+            continue
+        migrate_collect_record_sample_event(cr)
+        cr.save()
+
+
 class Migration(migrations.Migration):
 
     dependencies = [("api", "0032_auto_20200717_1919")]
@@ -39,6 +48,10 @@ class Migration(migrations.Migration):
     operations = [
         migrations.RunPython(
             migrate_sample_event_to_sample_unit, migrations.RunPython.noop
+        ),
+        migrations.RunPython(
+
+            migrate_collect_record, migrations.RunPython.noop
         ),
         migrations.RunSQL(SampleEventViewModel.sql, drop_se_view),
     ]

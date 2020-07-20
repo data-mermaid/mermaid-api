@@ -11,7 +11,7 @@ import rest_framework.utils.encoders
 class Migration(migrations.Migration):
 
     dependencies = [
-        ('api', '0031_auto_20200608_1427'),
+        ('api', '0032_auto_20200623_1311'),
     ]
 
     operations = [
@@ -109,11 +109,6 @@ class Migration(migrations.Migration):
             model_name='sampleevent',
             name='validations',
             field=django.contrib.postgres.fields.jsonb.JSONField(blank=True, encoder=rest_framework.utils.encoders.JSONEncoder, null=True),
-        ),
-        migrations.AlterField(
-            model_name='project',
-            name='name',
-            field=models.CharField(max_length=255, unique=True),
         ),
         migrations.AlterField(
             model_name='sampleevent',
