@@ -3,6 +3,10 @@
 from django.db import migrations
 
 from api.utils.sample_units import migrate_collect_record_sample_event
+from ..models.view_models import SampleEventViewModel
+
+
+drop_se_view = "DROP VIEW IF EXISTS public.vw_sample_events CASCADE;"
 
 
 def update_record(sample_event, sample_unit):
@@ -30,10 +34,11 @@ def migrate_sample_event_to_sample_unit(apps, schema_editor):
 
 class Migration(migrations.Migration):
 
-    dependencies = [("api", "0032_auto_20200623_1311")]
+    dependencies = [("api", "0032_auto_20200717_1919")]
 
     operations = [
         migrations.RunPython(
             migrate_sample_event_to_sample_unit, migrations.RunPython.noop
-        )
+        ),
+        migrations.RunSQL(SampleEventViewModel.sql, drop_se_view),
     ]
