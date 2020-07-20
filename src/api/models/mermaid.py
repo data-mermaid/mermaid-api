@@ -416,19 +416,26 @@ class SampleEvent(BaseModel, JSONMixin):
     project_lookup = "site__project"
 
     # Required
-    site = models.ForeignKey(Site, on_delete=models.PROTECT, related_name='sample_events')
-    management = models.ForeignKey(Management, on_delete=models.PROTECT)
-    sample_date = models.DateField(default=default_date)
-    sample_time = models.TimeField(default=default_time)
-    depth = models.DecimalField(max_digits=3, decimal_places=1, verbose_name=_(u'depth (m)'),
-                                validators=[MinValueValidator(0), MaxValueValidator(40)])
+    site = models.ForeignKey(Site, on_delete=models.PROTECT, related_name='sample_events', null=True, blank=True)
+    management = models.ForeignKey(Management, on_delete=models.PROTECT, null=True, blank=True)
+    sample_date = models.DateField(default=default_date, null=True, blank=True)
+    notes = models.TextField(blank=True)
 
-    # Optional
+    # Will be removed in a future version
+    sample_time = models.TimeField(default=default_time, null=True, blank=True)
+    depth = models.DecimalField(
+        max_digits=3,
+        decimal_places=1,
+        verbose_name=_(u'depth (m)'),
+        validators=[MinValueValidator(0), MaxValueValidator(40)],
+        null=True,
+        blank=True
+    )
     visibility = models.ForeignKey(Visibility, on_delete=models.SET_NULL, null=True, blank=True)
     current = models.ForeignKey(Current, on_delete=models.SET_NULL, null=True, blank=True)
     relative_depth = models.ForeignKey(RelativeDepth, on_delete=models.SET_NULL, null=True, blank=True)
     tide = models.ForeignKey(Tide, on_delete=models.SET_NULL, null=True, blank=True)
-    notes = models.TextField(blank=True)
+    validations = JSONField(encoder=JSONEncoder, null=True, blank=True)
 
     class Meta:
         db_table = 'sample_event'
@@ -442,6 +449,20 @@ class SampleUnit(BaseModel):
     sample_event = models.ForeignKey(SampleEvent, on_delete=models.PROTECT)
     notes = models.TextField(blank=True)
     collect_record_id = models.UUIDField(null=True, blank=True)
+    sample_time = models.TimeField(default=default_time, null=True, blank=True)
+
+    depth = models.DecimalField(
+        max_digits=3,
+        decimal_places=1,
+        verbose_name=_(u'depth (m)'),
+        validators=[MinValueValidator(0), MaxValueValidator(40)],
+        null=True,
+        blank=True
+    )
+    visibility = models.ForeignKey(Visibility, on_delete=models.SET_NULL, null=True, blank=True)
+    current = models.ForeignKey(Current, on_delete=models.SET_NULL, null=True, blank=True)
+    relative_depth = models.ForeignKey(RelativeDepth, on_delete=models.SET_NULL, null=True, blank=True)
+    tide = models.ForeignKey(Tide, on_delete=models.SET_NULL, null=True, blank=True)
 
     class Meta:
         db_table = 'sample_unit'

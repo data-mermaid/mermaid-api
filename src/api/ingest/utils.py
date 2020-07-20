@@ -128,7 +128,7 @@ def ingest(
 
     _schema_check(reader.fieldnames, list(serializer.header_map.keys()))
 
-    context = _create_context(request, profile_id)
+    context = _create_context(profile_id, request)
     rows = _add_extra_fields(reader, project_id, profile_id)
     project_choices = get_ingest_project_choices(project_id)
     profile = Profile.objects.get_or_none(id=profile_id)
