@@ -1,15 +1,11 @@
 import os
 import shlex
 import subprocess
-import traceback
-from datetime import datetime
 
 import boto3
-from simpleflake import simpleflake
-
-from django.core.management.base import BaseCommand
 from django.conf import settings
-
+from django.core.management.base import BaseCommand
+from simpleflake import simpleflake
 
 AWS_ACCESS_KEY_ID = settings.AWS_ACCESS_KEY_ID
 AWS_SECRET_ACCESS_KEY = settings.AWS_SECRET_ACCESS_KEY

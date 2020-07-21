@@ -2,12 +2,10 @@ import os
 import shlex
 import subprocess
 import traceback
-import zipfile
-from django.core.management.base import BaseCommand
-from django.conf import settings
+
 import boto3
-from boto3.s3.transfer import S3Transfer
-from optparse import make_option
+from django.conf import settings
+from django.core.management.base import BaseCommand
 
 AWS_ACCESS_KEY_ID = settings.AWS_ACCESS_KEY_ID
 AWS_SECRET_ACCESS_KEY = settings.AWS_SECRET_ACCESS_KEY
