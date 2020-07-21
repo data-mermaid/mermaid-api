@@ -193,7 +193,7 @@ class Command(BaseCommand):
             "db_name": settings.DATABASES["default"]["NAME"],
         }
 
-        cmd_str = "psql -U {db_user} -h {db_host} -d {db_name} -q -f {sql_loc}".format(
+        cmd_str = "pg_restore  -F c --jobs=4 -U {db_user} -h {db_host} -d {db_name} {sql_loc}".format(
             **params
         )
         print("$> %s" % cmd_str)

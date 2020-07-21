@@ -64,8 +64,6 @@ class Command(BaseCommand):
         new_backup_path = os.path.join(self.local_file_location, new_backup_filename)
         self._pg_dump(new_backup_path)
 
-        # TODO Compress file before uploading.
-
         if options.get('no_upload', False) is False:
             print('Uploading {0} to S3 bucket {1}'.format(new_aws_key_name, AWS_BACKUP_BUCKET))
             self.s3.upload_file(new_backup_path, AWS_BACKUP_BUCKET, new_aws_key_name)
@@ -79,7 +77,7 @@ class Command(BaseCommand):
             'dump_file': filename
         }
 
-        dump_command_str = 'pg_dump -U {db_user} -h {db_host} -d {db_name} -f {dump_file} -v'
+        dump_command_str = 'pg_dump -F c -v -U {db_user} -h {db_host} -d {db_name} -f {dump_file}'
         dump_command = shlex.split(dump_command_str.format(**params))
         self._run(dump_command, to_file='/tmp/mermaid/std_out_backup.log')
         print('Dump Complete!')
