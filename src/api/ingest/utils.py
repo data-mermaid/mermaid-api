@@ -8,9 +8,11 @@ from api.ingest import (
     FishBeltCSVSerializer,
 )
 from api.models import (
+    BENTHICLIT_PROTOCOL,
     BENTHICPIT_PROTOCOL,
     BLEACHINGQC_PROTOCOL,
     FISHBELT_PROTOCOL,
+    HABITATCOMPLEXITY_PROTOCOL,
     CollectRecord,
     Management,
     Profile,
