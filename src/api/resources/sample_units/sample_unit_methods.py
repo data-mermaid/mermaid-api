@@ -98,8 +98,9 @@ class SampleUnitMethodSerializer(BaseAPISerializer):
         protocol = o.protocol
         if protocol == mermaid.FISHBELT_PROTOCOL:
             sample_unit = o.sample_unit
+
             return dict(
-                width=sample_unit.width.val,
+                width=sample_unit.width.id,
                 width_units="m",
                 len_surveyed=sample_unit.len_surveyed,
                 len_surveyed_units="m",
