@@ -255,7 +255,7 @@ WITH fb_se_trophic_groups AS (
         10000 * -- m2 to ha: * here instead of / in denominator to avoid divide by 0 errors
         -- mass (kg)
         (o.count * f.biomass_constant_a * ((o.size * f.biomass_constant_c) ^ f.biomass_constant_b) / 1000)
-        / (transect_belt_fish.len_surveyed * w.val) -- area (m2)
+        / (transect_belt_fish.len_surveyed * wc.val) -- area (m2)
     ) AS biomass_kgha
     FROM obs_transectbeltfish o
     JOIN vw_fish_attributes f ON o.fish_attribute_id = f.id
@@ -263,6 +263,17 @@ WITH fb_se_trophic_groups AS (
     INNER JOIN transect_belt_fish ON (t.transect_id = transect_belt_fish.id)
     INNER JOIN sample_event ON transect_belt_fish.sample_event_id = sample_event.id
     INNER JOIN api_belttransectwidth w ON (transect_belt_fish.width_id = w.id)
+    INNER JOIN api_belttransectwidthcondition wc ON (
+       w.id = wc.belttransectwidth_id 
+       AND (
+           ((wc.operator = '<' AND o.size < wc.size) OR (wc.operator IS NULL AND wc.size IS NULL))
+           OR ((wc.operator = '<=' AND o.size <= wc.size) OR (wc.operator IS NULL AND wc.size IS NULL))
+           OR ((wc.operator = '>' AND o.size > wc.size) OR (wc.operator IS NULL AND wc.size IS NULL))
+           OR ((wc.operator = '>=' AND o.size >= wc.size) OR (wc.operator IS NULL AND wc.size IS NULL))
+           OR ((wc.operator = '==' AND o.size = wc.size) OR (wc.operator IS NULL AND wc.size IS NULL))
+           OR ((wc.operator = '!=' AND o.size != wc.size) OR (wc.operator IS NULL AND wc.size IS NULL))
+       )
+    )
     GROUP BY sample_event.site_id, sample_event.management_id, sample_event.sample_date, transect_belt_fish.number, 
     f.trophic_group
 )
