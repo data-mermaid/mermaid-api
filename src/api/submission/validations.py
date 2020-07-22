@@ -807,7 +807,7 @@ class ObsFishBeltValidation(DataValidation, FishAttributeMixin):
         width_id = transect.get("width")
         try:
             _ = check_uuid(width_id)
-            width = BeltTransectWidth.objects.get(id=width_id).val
+            width = BeltTransectWidth.objects.get(id=width_id)
         except (BeltTransectWidth.DoesNotExist, ParseError):
             width = None
 
@@ -828,9 +828,14 @@ class ObsFishBeltValidation(DataValidation, FishAttributeMixin):
         for obs in observations:
             count = obs.get("count")
             size = obs.get("size")
+            try:
+                width_val = width.get_condition(size).val
+            except AttributeError:
+                width_val = None
+
             fish_attribute = obs.get("fish_attribute")
             constants = fish_attr_lookup.get(fish_attribute) or [None, None, None]
-            density = calc_biomass_density(count, size, len_surveyed, width, *constants)
+            density = calc_biomass_density(count, size, len_surveyed, width_val, *constants)
             densities.append(density)
 
         total_density = sum([d for d in densities if d is not None])
