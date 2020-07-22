@@ -1,17 +1,17 @@
 import operator
-import uuid
-import json
-from django.dispatch import receiver
-from django.db.models.signals import post_delete, post_save, pre_save, m2m_changed
+
 from django import urls
 from django.conf import settings
 from django.core import serializers
+from django.db.models.signals import post_delete, post_save, pre_save, m2m_changed
+from django.dispatch import receiver
+
 from .models import *
+from .submission.utils import validate
+from .submission.validations import SiteValidation, ManagementValidation
 from .utils import get_subclasses
 from .utils.email import email_project_admins, mermaid_email
 from .utils.sample_units import delete_orphaned_sample_unit, delete_orphaned_sample_event
-from .submission.utils import validate
-from .submission.validations import SiteValidation, ManagementValidation
 
 
 def backup_model_record(sender, instance, using, **kwargs):

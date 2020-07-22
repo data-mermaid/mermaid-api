@@ -8,7 +8,6 @@ from rest_framework.exceptions import ValidationError
 from rest_framework.fields import empty
 from rest_framework.serializers import ListSerializer, Serializer
 
-from api.decorators import timeit
 from .. import utils
 from ..fields import LazyChoiceField
 from ..models import CollectRecord, Current, RelativeDepth, Tide, Visibility
