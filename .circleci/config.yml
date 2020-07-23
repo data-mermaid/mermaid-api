@@ -47,8 +47,8 @@ jobs:
       - run:
           name: Deploy
           command: |
-              ./ci_cd/deploy.sh mermaid-dev-api ${CIRCLE_SHA1:0:7} Mermaid-API
-              python ci_cd/wait_for_ok.py mermaid-dev-api ${CIRCLE_SHA1:0:7}
+              ./ci_cd/deploy.sh mermaid-dev-api2 ${CIRCLE_SHA1:0:7} Mermaid-API
+              python ci_cd/wait_for_ok.py mermaid-dev-api2 ${CIRCLE_SHA1:0:7}
       - run:
           name: Update version
           command: |
@@ -70,8 +70,8 @@ jobs:
       - run:
           name: Deploy
           command: |
-              ./ci_cd/deploy.sh mermaid-prod-api ${CIRCLE_SHA1:0:7} Mermaid-API
-              python ci_cd/wait_for_ok.py mermaid-prod-api ${CIRCLE_SHA1:0:7}
+              ./ci_cd/deploy.sh mermaid-prod-api2 ${CIRCLE_SHA1:0:7} Mermaid-API
+              python ci_cd/wait_for_ok.py mermaid-prod-api2 ${CIRCLE_SHA1:0:7}
       - run:
           name: Update version
           command: |
