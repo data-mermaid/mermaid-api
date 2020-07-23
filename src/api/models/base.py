@@ -1,11 +1,10 @@
 import uuid
 
-from django.db import models
-from django.contrib.postgres.fields import JSONField
 from django.contrib.gis.db.models.fields import PolygonField, MultiPolygonField
-from django.conf import settings
-from django.utils.translation import ugettext_lazy as _
+from django.contrib.postgres.fields import JSONField
 from django.core.exceptions import ObjectDoesNotExist
+from django.db import models
+from django.utils.translation import ugettext_lazy as _
 
 PROPOSED = 10
 SUPERUSER_APPROVED = 90
