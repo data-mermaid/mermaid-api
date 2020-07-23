@@ -4,8 +4,8 @@ ENV=$1
 SHA1=$2
 APPLICATION=$3
 
-if [[ $ENV != "mermaid-dev-api" ]] && [[ $ENV != "mermaid-prod-api" ]]; then
-    echo "Valid environments are 'mermaid-dev-api' or 'mermaid-prod-api'"
+if [[ $ENV != "mermaid-dev-api2" ]] && [[ $ENV != "mermaid-prod-api2" ]]; then
+    echo "Valid environments are 'mermaid-dev-api2' or 'mermaid-prod-api2'"
     exit
 fi
 
