@@ -2,7 +2,7 @@
   "AWSEBDockerrunVersion": "1",
   "Authentication": {
     "Bucket": "index.docker.io",
-    "Key": "dockercfg"
+    "Key": "config.json"
   },
   "Image": {
     "Name": "honeycrisp/mermaid-api:<TAG>",
