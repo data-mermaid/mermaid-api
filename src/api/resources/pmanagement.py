@@ -107,7 +107,8 @@ class PManagementFilterSet(BaseAPIFilterSet):
     class Meta:
         model = Management
         fields = ['predecessor', 'parties', 'compliance', 'est_year', 'no_take', 'periodic_closure',
-                  'open_access', 'size_limits', 'gear_restriction', 'species_restriction', ]
+                  'open_access', 'size_limits', 'gear_restriction', 'species_restriction', 
+                  'access_restriction',]
 
 
 class PManagementViewSet(ProtectedResourceMixin, BaseProjectApiViewSet):

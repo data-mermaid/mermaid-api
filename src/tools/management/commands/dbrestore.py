@@ -2,12 +2,10 @@ import os
 import shlex
 import subprocess
 import traceback
-import zipfile
-from django.core.management.base import BaseCommand
-from django.conf import settings
+
 import boto3
-from boto3.s3.transfer import S3Transfer
-from optparse import make_option
+from django.conf import settings
+from django.core.management.base import BaseCommand
 
 AWS_ACCESS_KEY_ID = settings.AWS_ACCESS_KEY_ID
 AWS_SECRET_ACCESS_KEY = settings.AWS_SECRET_ACCESS_KEY
@@ -193,7 +191,7 @@ class Command(BaseCommand):
             "db_name": settings.DATABASES["default"]["NAME"],
         }
 
-        cmd_str = "psql -U {db_user} -h {db_host} -d {db_name} -q -f {sql_loc}".format(
+        cmd_str = "pg_restore  -F c --jobs=4 -U {db_user} -h {db_host} -d {db_name} {sql_loc}".format(
             **params
         )
         print("$> %s" % cmd_str)

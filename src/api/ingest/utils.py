@@ -1,7 +1,4 @@
 import csv
-import json
-
-from django.db import connection, transaction
 
 from api import mocks
 from api.decorators import run_in_thread
@@ -26,6 +23,7 @@ from api.resources.project_profile import ProjectProfileSerializer
 from api.submission.utils import submit_collect_records, validate_collect_records
 from api.submission.validations import ERROR, WARN
 from api.utils import tokenutils
+from django.db import transaction
 
 
 class InvalidSchema(Exception):

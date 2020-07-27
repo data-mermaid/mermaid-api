@@ -29,6 +29,5 @@ class FishFamilyViewSet(BaseAttributeApiViewSet):
     filter_class = FishFamilyFilterSet
     search_fields = ["name"]
 
-    @method_decorator(cache_page(60 * 60))
     def list(self, request, *args, **kwargs):
         return super(FishFamilyViewSet, self).list(request, *args, **kwargs)

@@ -42,13 +42,13 @@ jobs:
           name: Docker image update
           command: |
               docker login -u $DOCKER_USER -p $DOCKER_PASS
-              docker tag honeycrisp/mermaid-api:${CIRCLE_SHA1:0:7} honeycrisp/mermaid-api:mermaid-dev-api
-              docker push honeycrisp/mermaid-api:mermaid-dev-api
+              docker tag honeycrisp/mermaid-api:${CIRCLE_SHA1:0:7} honeycrisp/mermaid-api:mermaid-dev-api2
+              docker push honeycrisp/mermaid-api:mermaid-dev-api2
       - run:
           name: Deploy
           command: |
-              ./ci_cd/deploy.sh mermaid-dev-api ${CIRCLE_SHA1:0:7} Mermaid-API
-              python ci_cd/wait_for_ok.py mermaid-dev-api ${CIRCLE_SHA1:0:7}
+              ./ci_cd/deploy.sh mermaid-dev-api2 ${CIRCLE_SHA1:0:7} Mermaid-API
+              python ci_cd/wait_for_ok.py mermaid-dev-api2 ${CIRCLE_SHA1:0:7}
       - run:
           name: Update version
           command: |
@@ -65,13 +65,13 @@ jobs:
           name: Docker image update
           command: |
               docker login -u $DOCKER_USER -p $DOCKER_PASS
-              docker tag honeycrisp/mermaid-api:${CIRCLE_SHA1:0:7} honeycrisp/mermaid-api:mermaid-prod-api
-              docker push honeycrisp/mermaid-api:mermaid-prod-api
+              docker tag honeycrisp/mermaid-api:${CIRCLE_SHA1:0:7} honeycrisp/mermaid-api:mermaid-prod-api2
+              docker push honeycrisp/mermaid-api:mermaid-prod-api2
       - run:
           name: Deploy
           command: |
-              ./ci_cd/deploy.sh mermaid-prod-api ${CIRCLE_SHA1:0:7} Mermaid-API
-              python ci_cd/wait_for_ok.py mermaid-prod-api ${CIRCLE_SHA1:0:7}
+              ./ci_cd/deploy.sh mermaid-prod-api2 ${CIRCLE_SHA1:0:7} Mermaid-API
+              python ci_cd/wait_for_ok.py mermaid-prod-api2 ${CIRCLE_SHA1:0:7}
       - run:
           name: Update version
           command: |
