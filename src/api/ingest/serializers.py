@@ -10,12 +10,13 @@ from rest_framework.serializers import ListSerializer, Serializer
 
 from .. import utils
 from ..fields import LazyChoiceField
-from ..models import CollectRecord, Current, RelativeDepth, Tide, Visibility
+from ..models import CollectRecord, SampleEvent
+from ..resources.sample_event import SampleEventSerializer
+
 
 __all__ = [
     "CollectRecordCSVListSerializer",
-    "CollectRecordCSVSerializer",
-    "build_choices",
+    "CollectRecordCSVSerializer"
 ]
 
 
@@ -42,6 +43,7 @@ def tide_choices():
 class CollectRecordCSVListSerializer(ListSerializer):
     obs_field_identifier = "data__obs_"
     _formatted_records = None
+    _sample_events = dict()
 
     # Track original record order
     _row_index = None
