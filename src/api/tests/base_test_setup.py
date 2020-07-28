@@ -1,33 +1,37 @@
 import datetime
 from datetime import datetime as dt
-from jose import jwt
-from django.conf import settings
-from django.test import TestCase
-from django.contrib.gis.geos import Point
 
-from api.models import BenthicPIT
-from api.models import BenthicTransect
-from api.models import Site
-from api.models import ReefType
-from api.models import ReefExposure
-from api.models import ReefZone
-from api.models import Country
-from api.models import Project
-from api.models import Profile
-from api.models import AuthUser
-from api.models import ProjectProfile
-from api.models import ManagementParty
-from api.models import FishFamily
-from api.models import FishGenus
-from api.models import FishSpecies
-from api.models import FishSizeBin
-from api.models import Visibility
-from api.models import Current
-from api.models import RelativeDepth
-from api.models import SampleEvent
-from api.models import Tide
-from api.models import BeltTransectWidth
-from api.models import Management
+from django.conf import settings
+from django.contrib.gis.geos import Point
+from django.test import TestCase
+
+from api.models import (
+    AuthUser,
+    BeltTransectWidth,
+    BeltTransectWidthCondition,
+    BenthicPIT,
+    BenthicTransect,
+    Country,
+    Current,
+    FishFamily,
+    FishGenus,
+    FishSizeBin,
+    FishSpecies,
+    Management,
+    ManagementParty,
+    Profile,
+    Project,
+    ProjectProfile,
+    ReefExposure,
+    ReefType,
+    ReefZone,
+    RelativeDepth,
+    SampleEvent,
+    Site,
+    Tide,
+    Visibility,
+)
+from jose import jwt
 
 
 class BaseTestCase(TestCase):
@@ -82,7 +86,11 @@ class BaseTestCase(TestCase):
         self.current = Current.objects.create(name='Strong', val=5)
         self.relative_depth = RelativeDepth.objects.create(name='Very Deep')
         self.tide = Tide.objects.create(name='Is High')
-        self.belt_transect_width = BeltTransectWidth.objects.create(val=2)
+        self.belt_transect_width = BeltTransectWidth.objects.create(name=2)
+        self.belt_transect_width_condition = BeltTransectWidthCondition.objects.create(
+            belttransectwidth=self.belt_transect_width,
+            val=2
+        )
 
         self.site1 = Site.objects.create(project=self.project,
                                          name='Site ABC',

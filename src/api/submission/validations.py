@@ -3,7 +3,6 @@ import itertools
 import json
 import math
 
-from dateutil import tz
 from django.contrib.gis.geos import Polygon
 from django.contrib.gis.measure import Distance
 from django.contrib.postgres.search import TrigramSimilarity
@@ -32,6 +31,7 @@ from api.models import (
     Site,
 )
 from api.utils import calc_biomass_density, get_related_transect_methods
+from dateutil import tz
 from timezonefinder import TimezoneFinder
 from . import utils
 
@@ -895,7 +895,7 @@ class BenthicTransectValidation(DataValidation):
 
         label = benthic_transect.get("label") or ""
 
-        relative_depth = sample_event.get("relative_depth", None) or None
+        relative_depth = benthic_transect.get("relative_depth", None) or None
         if relative_depth is not None:
             try:
                 _ = check_uuid(relative_depth)
@@ -905,7 +905,7 @@ class BenthicTransectValidation(DataValidation):
         site = sample_event.get("site", None) or None
         management = sample_event.get("management", None) or None
         sample_date = sample_event.get("sample_date", None) or None
-        depth = sample_event.get("depth", None) or None
+        depth = benthic_transect.get("depth", None) or None
         try:
             _ = check_uuid(site)
             _ = check_uuid(management)
@@ -918,8 +918,8 @@ class BenthicTransectValidation(DataValidation):
             "sample_event__sample_date": sample_date,
             "number": number,
             "label": label,
-            "sample_event__depth": depth,
-            "sample_event__relative_depth": relative_depth,
+            "depth": depth,
+            "relative_depth": relative_depth,
         }
 
         results = BenthicTransect.objects.select_related().filter(**qry)
@@ -958,7 +958,7 @@ class FishBeltTransectValidation(DataValidation):
         except ParseError:
             return self.error(self.identifier, self.WIDTH_MSG)
 
-        relative_depth = sample_event.get("relative_depth", None) or None
+        relative_depth = fishbelt_transect.get("relative_depth", None) or None
         if relative_depth is not None:
             try:
                 _ = check_uuid(relative_depth)
@@ -968,7 +968,7 @@ class FishBeltTransectValidation(DataValidation):
         site = sample_event.get("site", None) or None
         management = sample_event.get("management", None) or None
         sample_date = sample_event.get("sample_date", None) or None
-        depth = sample_event.get("depth", None) or None
+        depth = fishbelt_transect.get("depth", None) or None
         try:
             _ = check_uuid(site)
             _ = check_uuid(management)
@@ -981,8 +981,8 @@ class FishBeltTransectValidation(DataValidation):
             "sample_event__sample_date": sample_date,
             "number": number,
             "label": label,
-            "sample_event__depth": depth,
-            "sample_event__relative_depth": relative_depth,
+            "depth": depth,
+            "relative_depth": relative_depth,
             "width_id": width,
         }
 
@@ -1187,7 +1187,7 @@ class QuadratCollectionValidation(DataValidation):
 
         label = quadrat_collection.get("label") or ""
 
-        relative_depth = sample_event.get("relative_depth", None) or None
+        relative_depth = quadrat_collection.get("relative_depth", None) or None
         if relative_depth is not None:
             try:
                 _ = check_uuid(relative_depth)
@@ -1197,7 +1197,7 @@ class QuadratCollectionValidation(DataValidation):
         site = sample_event.get("site", None) or None
         management = sample_event.get("management", None) or None
         sample_date = sample_event.get("sample_date", None) or None
-        depth = sample_event.get("depth", None) or None
+        depth = quadrat_collection.get("depth", None) or None
 
         profiles = [o.get("profile") for o in self.data.get("observers") or []]
 
@@ -1218,7 +1218,7 @@ class QuadratCollectionValidation(DataValidation):
             "sample_event__management": management,
             "sample_event__sample_date": sample_date,
             "label": label,
-            "sample_event__depth": depth,
+            "depth": depth,
         }
         queryset = QuadratCollection.objects.filter(**qry)
         for profile in profiles:

@@ -1,41 +1,43 @@
 import uuid
 
+from django.utils.translation import ugettext_lazy as _
+from rest_framework.exceptions import ValidationError
+
 from api.models import (
     BeltFish,
     BenthicLIT,
     BenthicPIT,
     BenthicTransect,
     BleachingQuadratCollection,
-    QuadratCollection,
     FishBeltTransect,
     HabitatComplexity,
     Observer,
+    QuadratCollection,
     SampleEvent,
 )
 from api.resources.belt_fish import BeltFishSerializer
 from api.resources.benthic_lit import BenthicLITSerializer
 from api.resources.benthic_pit import BenthicPITSerializer
 from api.resources.benthic_transect import BenthicTransectSerializer
-from api.resources.bleaching_quadrat_collection import BleachingQuadratCollectionSerializer
-from api.resources.quadrat_collection import QuadratCollectionSerializer
+from api.resources.bleaching_quadrat_collection import (
+    BleachingQuadratCollectionSerializer,
+)
 from api.resources.fish_belt_transect import FishBeltTransectSerializer
 from api.resources.habitat_complexity import HabitatComplexitySerializer
 from api.resources.obs_belt_fish import ObsBeltFishSerializer
 from api.resources.obs_benthic_lit import ObsBenthicLITSerializer
 from api.resources.obs_benthic_pit import ObsBenthicPITSerializer
+from api.resources.obs_colonies_bleached import ObsColoniesBleachedSerializer
 from api.resources.obs_habitat_complexity import ObsHabitatComplexitySerializer
 from api.resources.obs_quadrat_benthic_percent import ObsQuadratBenthicPercentSerializer
-from api.resources.obs_colonies_bleached import ObsColoniesBleachedSerializer
 from api.resources.observer import ObserverSerializer
+from api.resources.quadrat_collection import QuadratCollectionSerializer
 from api.resources.sample_event import SampleEventSerializer
-from django.utils.translation import ugettext_lazy as _
-from rest_framework.exceptions import ValidationError
-
 from .parser import (
     get_benthic_transect_data,
     get_fishbelt_transect_data,
-    get_obs_quadrat_benthic_percent_data,
     get_obs_colonies_bleached_data,
+    get_obs_quadrat_benthic_percent_data,
     get_obsbeltfish_data,
     get_obsbenthiclit_data,
     get_obsbenthicpit_data,
@@ -69,7 +71,6 @@ class BaseWriter(object):
 
 
 class ProtocolWriter(BaseWriter):
-
     def _create_sample_event(self, sample_event_data):
         sample_event_data['id'] = uuid.uuid4()
         serializer = SampleEventSerializer(data=sample_event_data,
@@ -79,10 +80,11 @@ class ProtocolWriter(BaseWriter):
 
         return serializer.save()
 
+
     def get_or_create_sample_event(self):
         sample_event_data = get_sample_event_data(self.collect_record)
         try:
-            query_params = {k: v for k, v in sample_event_data.items() if k != "notes"}
+            query_params = {k: v for k, v in sample_event_data.items() if k not in ("id", "notes",)}
             se = SampleEvent.objects.filter(**query_params)
             if se.exists():
                 sample_event = se[0]
