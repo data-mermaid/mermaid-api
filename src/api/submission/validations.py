@@ -565,7 +565,7 @@ class ManagementValidation(ModelValidation):
                 self.identifier, _(LikeMatchWarning.format(self.name)), data=data
             )
 
-        return True
+        return self.ok(self.identifier)
 
 
 class ObserverValidation(ModelValidation):
