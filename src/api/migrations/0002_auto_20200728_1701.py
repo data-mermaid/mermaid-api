@@ -4,7 +4,6 @@ from __future__ import unicode_literals
 
 from django.db import migrations
 
-
 add_extension = "CREATE EXTENSION IF NOT EXISTS pg_trgm;"
 drop_extension = "DROP EXTENSION IF EXISTS pg_trgm;"
 

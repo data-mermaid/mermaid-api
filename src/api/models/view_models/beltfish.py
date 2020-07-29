@@ -80,6 +80,8 @@ CREATE OR REPLACE VIEW public.vw_beltfish_obs
         se_fields=", ".join([f"se.{f}" for f in BaseViewModel.se_fields]),
     )
 
+    reverse_sql = "DROP VIEW IF EXISTS public.vw_beltfish_obs CASCADE;"
+
     sample_event_id = models.UUIDField()
     sample_event_notes = models.TextField(blank=True)
     sample_unit_id = models.UUIDField()
@@ -184,6 +186,8 @@ reef_slope, size_bin, data_policy_beltfish
     """.format(
         se_fields=", ".join(BaseViewModel.se_fields)
     )
+
+    reverse_sql = "DROP VIEW IF EXISTS public.vw_beltfish_su CASCADE;"
 
     observers = JSONField(null=True, blank=True)
     transect_number = models.PositiveSmallIntegerField()
@@ -295,6 +299,8 @@ vw_beltfish_su.sample_date, data_policy_beltfish,
 biomass_kgha_avg,
 biomass_kgha_by_trophic_group_avg;
     """
+
+    reverse_sql = "DROP VIEW IF EXISTS public.vw_beltfish_se CASCADE;"
 
     sample_unit_count = models.PositiveSmallIntegerField()
     depth_avg = models.DecimalField(

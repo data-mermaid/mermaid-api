@@ -57,6 +57,8 @@ FROM
         se_fields=", ".join([f"se.{f}" for f in BaseViewModel.se_fields])
     )
 
+    reverse_sql = "DROP VIEW IF EXISTS public.vw_bleachingqc_colonies_bleached_obs CASCADE;"
+
     sample_event_id = models.UUIDField()
     sample_event_notes = models.TextField(blank=True)
     sample_unit_id = models.UUIDField()
@@ -139,6 +141,8 @@ FROM
     """.format(
         se_fields=", ".join([f"se.{f}" for f in BaseViewModel.se_fields])
     )
+
+    reverse_sql = "DROP VIEW IF EXISTS public.vw_bleachingqc_quadrat_benthic_percent_obs CASCADE;"
 
     sample_event_id = models.UUIDField()
     sample_event_notes = models.TextField(blank=True)
@@ -234,6 +238,8 @@ INNER JOIN (
         se_fields=", ".join(BaseViewModel.se_fields)
     )
 
+    reverse_sql = "DROP VIEW IF EXISTS public.vw_bleachingqc_su CASCADE;"
+
     label = models.CharField(max_length=50, blank=True)
     observers = JSONField(null=True, blank=True)
     depth = models.DecimalField(
@@ -315,6 +321,8 @@ GROUP BY {se_fields}
     """.format(
         se_fields=", ".join(sefields_minus_depth)
     )
+
+    reverse_sql = "DROP VIEW IF EXISTS public.vw_bleachingqc_se CASCADE;"
 
     sample_unit_count = models.PositiveSmallIntegerField()
     depth_avg = models.DecimalField(

@@ -1,8 +1,10 @@
 import uuid
+
 from django.contrib.gis.db import models
 from django.contrib.postgres.fields import JSONField
 from django.utils.translation import ugettext_lazy as _
-from ..mermaid import Project, FishAttribute
+
+from ..mermaid import FishAttribute, Project
 
 
 class FishAttributeView(FishAttribute):
@@ -670,6 +672,11 @@ LEFT JOIN (
 CREATE UNIQUE INDEX ON vw_summary_site (site_id);
     """
 
+    reverse_sql = """
+      DROP MATERIALIZED VIEW IF EXISTS vw_summary_site;
+      DROP VIEW IF EXISTS public.vw_fish_attributes CASCADE;
+    """
+
     name_family = models.CharField(max_length=100)
     name_genus = models.CharField(max_length=100)
     name = models.CharField(max_length=100)
@@ -819,6 +826,8 @@ CREATE OR REPLACE VIEW public.vw_sample_events
              JOIN management_party mp ON mps.managementparty_id = mp.id
           GROUP BY mps.management_id) parties ON m.id = parties.management_id;
     """
+
+    reverse_sql = "DROP VIEW IF EXISTS public.vw_sample_events CASCADE;"
 
     class Meta:
         db_table = "vw_sample_events"

@@ -86,11 +86,8 @@ class BaseTestCase(TestCase):
         self.current = Current.objects.create(name='Strong', val=5)
         self.relative_depth = RelativeDepth.objects.create(name='Very Deep')
         self.tide = Tide.objects.create(name='Is High')
-        self.belt_transect_width = BeltTransectWidth.objects.create(name=2)
-        self.belt_transect_width_condition = BeltTransectWidthCondition.objects.create(
-            belttransectwidth=self.belt_transect_width,
-            val=2
-        )
+        self.belt_transect_width = BeltTransectWidth.objects.create(name="2m")
+        self.belt_transect_width_condition = BeltTransectWidthCondition.objects.create(belttransectwidth=self.belt_transect_width, val=2)
 
         self.site1 = Site.objects.create(project=self.project,
                                          name='Site ABC',
@@ -163,6 +160,7 @@ class BaseTestCase(TestCase):
         self.current.delete()
         self.relative_depth.delete()
         self.tide.delete()
+        self.belt_transect_width_condition.delete()
         self.belt_transect_width.delete()
         self.reef_type.delete()
         self.reef_zone.delete()

@@ -46,6 +46,8 @@ FROM
         se_fields=", ".join([f"se.{f}" for f in BaseViewModel.se_fields])
     )
 
+    reverse_sql = "DROP VIEW IF EXISTS public.vw_habitatcomplexity_obs CASCADE;"
+
     sample_event_id = models.UUIDField()
     sample_event_notes = models.TextField(blank=True)
     sample_unit_id = models.UUIDField()
@@ -95,6 +97,8 @@ GROUP BY
     """.format(
         se_fields=", ".join(BaseViewModel.se_fields)
     )
+
+    reverse_sql = "DROP VIEW IF EXISTS public.vw_habitatcomplexity_su CASCADE;"
 
     observers = JSONField(null=True, blank=True)
     transect_number = models.PositiveSmallIntegerField()
@@ -164,6 +168,8 @@ GROUP BY {se_fields}, data_policy_habitatcomplexity
       """.format(
         se_fields=", ".join(BaseViewModel.se_fields)
     )
+
+    reverse_sql = "DROP VIEW IF EXISTS public.vw_habitatcomplexity_se CASCADE;"
 
     sample_unit_count = models.PositiveSmallIntegerField()
     depth_avg = models.DecimalField(

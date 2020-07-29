@@ -275,38 +275,38 @@ class SiteValidationTest(BaseTestCase):
 #             fishbelt_transect=fishbelt_transect,
 #         )
 
-#         obs_belt_fishes_high_biomass_invalid = [
-#             dict(
-#                 count=2403,
-#                 fish_attribute=fish_species_id,
-#                 size_bin=str(self.fish_size_bin.id),
-#                 size=7.5,
-#             ),
-#             dict(
-#                 count=3200,
-#                 fish_attribute=fish_species_id,
-#                 size_bin=str(self.fish_size_bin.id),
-#                 size=7.5,
-#             ),
-#             dict(
-#                 count=445,
-#                 fish_attribute=fish_species_id,
-#                 size_bin=str(self.fish_size_bin.id),
-#                 size=7.5,
-#             ),
-#             dict(
-#                 count=1100,
-#                 fish_attribute=fish_species_id,
-#                 size_bin=str(self.fish_size_bin.id),
-#                 size=7.5,
-#             ),
-#             dict(
-#                 count=3000,
-#                 fish_attribute=fish_species_id,
-#                 size_bin=str(self.fish_size_bin.id),
-#                 size=7.5,
-#             ),
-#         ]
+        obs_belt_fishes_high_biomass_invalid = [
+            dict(
+                count=2403,
+                fish_attribute=fish_species_id,
+                size_bin=str(self.fish_size_bin.id),
+                size=7.5,
+            ),
+            dict(
+                count=3200,
+                fish_attribute=fish_species_id,
+                size_bin=str(self.fish_size_bin.id),
+                size=7.5,
+            ),
+            dict(
+                count=4455,
+                fish_attribute=fish_species_id,
+                size_bin=str(self.fish_size_bin.id),
+                size=7.5,
+            ),
+            dict(
+                count=1100,
+                fish_attribute=fish_species_id,
+                size_bin=str(self.fish_size_bin.id),
+                size=7.5,
+            ),
+            dict(
+                count=3000,
+                fish_attribute=fish_species_id,
+                size_bin=str(self.fish_size_bin.id),
+                size=7.5,
+            ),
+        ]
 
 #         self.invalid_high_biomass_data = dict(
 #             obs_belt_fishes=obs_belt_fishes_high_biomass_invalid,
@@ -635,8 +635,8 @@ class SiteValidationTest(BaseTestCase):
 #         validation = ObsBenthicPercentCoveredValidation(self.data)
 #         self.assertEqual(OK, validation.validate_percent_values())
 
-#         validation = ObsBenthicPercentCoveredValidation(self.invalid_data_null)
-#         self.assertEqual(OK, validation.validate_percent_values())
+        validation = ObsBenthicPercentCoveredValidation(self.invalid_data_null)
+        self.assertEqual(ERROR, validation.validate_percent_values())
 
 #         validation = ObsBenthicPercentCoveredValidation(self.invalid_data_gt_100_val)
 #         self.assertEqual(ERROR, validation.validate_percent_values())

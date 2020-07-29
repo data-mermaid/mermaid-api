@@ -63,6 +63,8 @@ CREATE OR REPLACE VIEW public.vw_benthiclit_obs
         se_fields=", ".join([f"se.{f}" for f in BaseViewModel.se_fields])
     )
 
+    reverse_sql = "DROP VIEW IF EXISTS public.vw_benthiclit_obs CASCADE;"
+
     sample_event_id = models.UUIDField()
     sample_event_notes = models.TextField(blank=True)
     sample_unit_id = models.UUIDField()
@@ -140,6 +142,8 @@ INNER JOIN (
         se_fields=", ".join(BaseViewModel.se_fields)
     )
 
+    reverse_sql = "DROP VIEW IF EXISTS public.vw_benthiclit_su CASCADE;"
+
     observers = JSONField(null=True, blank=True)
     transect_number = models.PositiveSmallIntegerField()
     transect_len_surveyed = models.PositiveSmallIntegerField(
@@ -211,6 +215,8 @@ vw_benthiclit_su.sample_date,
 data_policy_benthiclit,
 percent_cover_by_benthic_category_avg
     """
+
+    reverse_sql = "DROP VIEW IF EXISTS public.vw_benthiclit_se CASCADE;"
 
     sample_unit_count = models.PositiveSmallIntegerField()
     depth_avg = models.DecimalField(

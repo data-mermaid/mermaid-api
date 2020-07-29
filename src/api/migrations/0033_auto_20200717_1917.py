@@ -5,7 +5,6 @@ from django.db import migrations
 from api.utils.sample_units import migrate_collect_record_sample_event
 from ..models.view_models import SampleEventViewModel
 
-
 drop_se_view = "DROP VIEW IF EXISTS public.vw_sample_events CASCADE;"
 
 
