@@ -111,14 +111,17 @@ class ProtocolValidation(object):
         raise ValueError(str(_("Validation result can not be determined.")))
 
 
-class SampleUnitMixin:
+class SampleUnitValidation(ProtocolValidation):
     DEPTH_RANGE = (1, 30)
     DEPTH_MSG = str(_("Depth value outside range of {} and {}".format(*DEPTH_RANGE)))
 
     def validate(self):
+        results = []
+        results.append(super(SampleUnitValidation, self).validate())
+
+        data = self.collect_record.data or dict()
         sample_unit = data.get(self.SAMPLE_UNIT) or dict()
         depth = sample_unit.get("depth")
-        results = []
 
         results.append(
             self._run_validation(
@@ -142,7 +145,7 @@ class SampleUnitMixin:
             return OK
 
 
-class TransectValidation(ProtocolValidation, SampleUnitMixin):
+class TransectValidation(SampleUnitValidation):
     LENGTH_RANGE = (10, 100)
     LENGTH_RANGE_WARN_MSG_TMPL = (
         "Transect length surveyed value " + "outside range of {} and {}"
@@ -181,12 +184,14 @@ class TransectValidation(ProtocolValidation, SampleUnitMixin):
             return OK
 
 
-class QuadratValidation(ProtocolValidation, SampleUnitMixin):
+class QuadratValidation(SampleUnitValidation):
     SAMPLE_UNIT = "quadrat_collection"
 
     def validate(self):
         results = []
         results.append(super(QuadratValidation, self).validate())
+        results.extend(super(SampleUnitValidation, self).validate())
+
         data = self.collect_record.data
 
         quadrat_collection = data.get("quadrat_collection") or dict()

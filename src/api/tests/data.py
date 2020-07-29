@@ -1,9 +1,13 @@
 import datetime
 from datetime import datetime as dt
 
+from django.conf import settings
+from django.contrib.gis.geos import Point
+
 from api.models.base import AuthUser, Profile
 from api.models.mermaid import (
     BeltTransectWidth,
+    BeltTransectWidthCondition,
     BenthicAttribute,
     Country,
     Current,
@@ -26,8 +30,6 @@ from api.models.mermaid import (
     Tide,
     Visibility,
 )
-from django.conf import settings
-from django.contrib.gis.geos import Point
 from jose import jwt
 
 
@@ -213,8 +215,13 @@ class TestDataMixin(object):
         self.tide1, _ = Tide.objects.get_or_create(name="Low")
         self.tide2, _ = Tide.objects.get_or_create(name="High")
 
-        self.belt_transect_width1, _ = BeltTransectWidth.objects.get_or_create(val=2)
-        self.belt_transect_width2, _ = BeltTransectWidth.objects.get_or_create(val=5)
+        self.belt_transect_width1, _ = BeltTransectWidth.objects.get_or_create(name="2m")
+        self.belt_transect_width2, _ = BeltTransectWidth.objects.get_or_create(name="5m")
+
+        self.belt_transect_width1_condition, _ = BeltTransectWidthCondition.objects.get_or_create(
+            belttransectwidth=self.belt_transect_width1, val=2)
+        self.belt_transect_width2_condition, _ = BeltTransectWidthCondition.objects.get_or_create(
+            belttransectwidth=self.belt_transect_width2, val=5)
 
         self.reef_slope1, _ = ReefSlope.objects.get_or_create(name="flat", val=1)
         self.reef_slope2, _ = ReefSlope.objects.get_or_create(name="slope", val=2)
@@ -468,40 +475,26 @@ class TestDataMixin(object):
             self.sample_event1 = SampleEvent.objects.get(
                 site=self.site1,
                 management=self.management1,
-                sample_date=datetime.date(2018, 7, 13),
-                sample_time=datetime.time(12, 0, 0),
-                relative_depth=self.relative_depth1,
-                visibility=self.visibility1,
+                sample_date=datetime.date(2018, 7, 13)
             )
         except SampleEvent.DoesNotExist:
             self.sample_event1 = SampleEvent.objects.create(
                 site=self.site1,
                 management=self.management1,
                 sample_date=datetime.date(2018, 7, 13),
-                sample_time=datetime.time(12, 0, 0),
-                relative_depth=self.relative_depth1,
-                visibility=self.visibility1,
-                depth=1.1,
             )
 
         try:
             self.sample_event2 = SampleEvent.objects.get(
                 site=self.site2,
                 management=self.management2,
-                sample_date=datetime.date(2018, 7, 14),
-                sample_time=datetime.time(12, 0, 12),
-                visibility=self.visibility2,
-                relative_depth=self.relative_depth2,
+                sample_date=datetime.date(2018, 7, 14)
             )
         except SampleEvent.DoesNotExist:
             self.sample_event2 = SampleEvent.objects.create(
                 site=self.site2,
                 management=self.management2,
-                sample_date=datetime.date(2018, 7, 14),
-                sample_time=datetime.time(12, 0, 12),
-                relative_depth=self.relative_depth2,
-                visibility=self.visibility2,
-                depth=1.2,
+                sample_date=datetime.date(2018, 7, 14)
             )
 
     def unload_sample_events(self):
