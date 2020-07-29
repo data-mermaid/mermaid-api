@@ -42,7 +42,7 @@ def migrate_collect_record(apps, schema_editor):
 
 class Migration(migrations.Migration):
 
-    dependencies = [("api", "0032_auto_20200717_1919")]
+    dependencies = [("api", "0004_auto_20200717_1919")]
 
     operations = [
         migrations.RunPython(
