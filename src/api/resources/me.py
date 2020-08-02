@@ -44,9 +44,9 @@ class MeViewSet(viewsets.ModelViewSet):
         return Response(self.serializer_class(profile).data)
 
     def put(self, request, *args, **kwargs):
-        '''
+        """
         Used for updating a user's own profile details
-        '''
+        """
         user = self.request.user
         profile = user.profile
         if profile is None:
