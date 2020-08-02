@@ -36,7 +36,7 @@ def replace_sampleunit_objs(find_objs, replace_obj, field, profile):
         collect_record.data["sample_event"][field] = replace_obj.id
         collect_record.save()
 
-    # Before sites are removed, their notes are transfered to the
+    # Before sites are removed, their notes are transferred to the
     # site that is being kept.
     notes = [replace_obj.notes] if replace_obj.notes else []
     for obj in find_objs:
