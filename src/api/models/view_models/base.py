@@ -758,16 +758,10 @@ CREATE OR REPLACE VIEW public.vw_sample_events
         CASE
             WHEN m.access_restriction THEN 'access restriction'::text
             ELSE NULL::text
-        END
-        ], NULL::text))::jsonb AS management_rules,
+        END], NULL::text))::jsonb AS management_rules,
     m.notes AS management_notes,
     se.id AS sample_event_id,
     se.sample_date,
-    se.sample_time,
-    c.name AS current_name,
-    t.name AS tide_name,
-    v.name AS visibility_name,
-    se.depth,
     se.notes AS sample_event_notes,
     CASE
         WHEN project.data_policy_beltfish = 10 THEN 'private'::text
@@ -801,9 +795,6 @@ CREATE OR REPLACE VIEW public.vw_sample_events
     END AS data_policy_bleachingqc
 
     FROM sample_event se
-     LEFT JOIN api_current c ON se.current_id = c.id
-     LEFT JOIN api_tide t ON se.tide_id = t.id
-     LEFT JOIN api_visibility v ON se.visibility_id = v.id
      JOIN site ON se.site_id = site.id
      JOIN project ON site.project_id = project.id
      LEFT JOIN ( SELECT project_1.id,
@@ -836,6 +827,7 @@ CREATE OR REPLACE VIEW public.vw_sample_events
 
 class BaseViewModel(models.Model):
     project_lookup = "project_id"
+    # fields that are part of vw_sample_events
     se_fields = [
         "project_id",
         "project_name",
@@ -861,10 +853,12 @@ class BaseViewModel(models.Model):
         "management_compliance",
         "management_rules",
         "management_notes",
+        "sample_event_id",
         "sample_date",
-        "depth",
+        "sample_event_notes",
     ]
 
+    # model fields to be inherited by every obs/su/se view
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
     project_id = models.UUIDField()
     project_name = models.CharField(max_length=255)
@@ -899,6 +893,43 @@ class BaseViewModel(models.Model):
     management_rules = JSONField(null=True, blank=True)
     management_notes = models.TextField(blank=True)
     sample_date = models.DateField()
+    sample_event_id = models.UUIDField()
+    sample_event_notes = models.TextField(blank=True)
+
+    class Meta:
+        abstract = True
+
+
+class BaseSUViewModel(BaseViewModel):
+    su_fields = [
+        "sample_unit_id",
+        "sample_time",
+        "observers",
+        "depth",
+        "relative_depth",
+        "current_name",
+        "tide_name",
+        "visibility_name",
+    ]
+
+    su_fields_sql = """
+    tt.transectmethod_ptr_id AS sample_unit_id,
+    tm.sample_time, 
+    observers.observers, 
+    tm.depth,
+    r.name AS relative_depth,
+    c.name AS current_name,
+    t.name AS tide_name,
+    v.name AS visibility_name,
+    """
+
+    sample_unit_id = models.UUIDField()
+    sample_time = models.TimeField()
+    observers = JSONField(null=True, blank=True)
+    depth = models.DecimalField(
+        max_digits=3, decimal_places=1, verbose_name=_("depth (m)")
+    )
+    relative_depth = models.CharField(max_length=50)
     current_name = models.CharField(max_length=50)
     tide_name = models.CharField(max_length=50)
     visibility_name = models.CharField(max_length=50)
