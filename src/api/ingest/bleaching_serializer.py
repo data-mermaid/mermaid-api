@@ -13,7 +13,6 @@ from .choices import (
 )
 from .serializers import CollectRecordCSVSerializer
 
-
 __all__ = ["BleachingCSVSerializer"]
 
 
@@ -59,6 +58,7 @@ def benthic_attributes_choices():
 
 class BleachingCSVSerializer(CollectRecordCSVSerializer):
     protocol = BLEACHINGQC_PROTOCOL
+    sample_unit = "quadrat_collection"
     observations_fields = [
         "data__obs_colonies_bleached",
         "data__obs_quadrat_benthic_percent",
@@ -192,4 +192,3 @@ class BleachingCSVSerializer(CollectRecordCSVSerializer):
 
     def get_sample_event_time(self, row):
         return row.get("data__quadrat_collection__sample_time") or "00:00:00"
-
