@@ -1,0 +1,7 @@
+Site *,Management *,Observer emails *,Sample date: Year *,Sample date: Month *,Sample date: Day *,Depth *,Transect number *,Transect label,Transect length surveyed *,Width *,Fish size bin *,Current,Tide,Notes,Fish name *,Size *,Count *
+Site 1,Management 1,profile1@mermaidcollect.org,2015,12,3,10,4,,50,"5m",1,Moderate,High,,Fish Genus 1 Fish Species 1,25,1
+Site 1,Management 1,profile1@mermaidcollect.org,2015,12,3,10,4,,50,"5m",1,Moderate,High,,Fish Genus 2 Fish Species 2,25,1
+Site 1,Management 1,profile1@mermaidcollect.org,2015,12,3,10,4,,50,"5m",1,Moderate,High,,Fish Genus 3 Fish Species 3,20,1
+Site 1,Management 1,profile1@mermaidcollect.org,2015,12,3,10,4,,50,"5m",1,Moderate,High,,Fish Genus 1 Fish Species 1,27,1
+Site 1,Management 1,profile1@mermaidcollect.org,2015,12,3,10,4,,50,"5m",1,Moderate,High,,Fish Genus 3 Fish Species 3,10,1
+Site 1,Management 1,profile1@mermaidcollect.org,2015,12,3,10,4,,50,"5m",1,Moderate,High,,Fish Genus 2 Fish Species 2,30,1
