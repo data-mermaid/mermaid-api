@@ -1,7 +1,6 @@
 import csv
 
 from api import mocks
-from api.decorators import run_in_thread
 from api.ingest import (
     BenthicPITCSVSerializer,
     BleachingCSVSerializer,
@@ -23,7 +22,7 @@ from api.resources.project_profile import ProjectProfileSerializer
 from api.submission.utils import submit_collect_records, validate_collect_records
 from api.submission.validations import ERROR, WARN
 from api.utils import tokenutils
-from django.db import transaction
+from django.db import connection, transaction
 
 
 class InvalidSchema(Exception):
@@ -90,11 +89,22 @@ def _schema_check(csv_headers, serializer_headers):
         raise InvalidSchema(errors=missing_required_headers)
 
 
-@run_in_thread
-def clear_collect_records(collect_record_ids):
-    CollectRecord.objects.filter(
-        id__in=collect_record_ids
-    ).delete()
+def clear_collect_records(project, profile, protocol):
+    sql = """
+        DELETE FROM {table_name}
+        WHERE 
+            project_id='{project}' AND 
+            profile_id='{profile}' AND 
+            data->>'protocol' = '{protocol}';
+        """.format(
+        table_name=CollectRecord.objects.model._meta.db_table,
+        project=project,
+        profile=profile,
+        protocol=protocol,
+    )
+    with connection.cursor() as cursor:
+        cursor.execute(sql)
+        return cursor.rowcount
 
 
 def ingest(
@@ -153,12 +163,7 @@ def ingest(
                 # Fetch ids to be deleted before deleting
                 # because it's being done in a thread and
                 # we want to avoid deleting new collect records.
-                delete_ids = [cr.id for cr in CollectRecord.objects.filter(
-                    project_id=project_id,
-                    profile=profile,
-                    data__protocol=protocol
-                )]
-                clear_collect_records(delete_ids)
+                clear_collect_records(project_id, profile_id, protocol)
 
             new_records = s.save()
             successful_save = True
