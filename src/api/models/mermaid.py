@@ -478,8 +478,10 @@ class SampleUnit(BaseModel):
 
 
 class Transect(SampleUnit):
-    len_surveyed = models.PositiveSmallIntegerField(
-        verbose_name=_(u'transect length surveyed (m)'))
+    len_surveyed = models.DecimalField(max_digits=3, decimal_places=1,
+                                    validators=[MinValueValidator(10), MaxValueValidator(100)],
+                                    verbose_name=_(u'transect length surveyed (m)'))
+
     reef_slope = models.ForeignKey(
         ReefSlope, on_delete=models.SET_NULL, null=True, blank=True)
 

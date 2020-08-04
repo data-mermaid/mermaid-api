@@ -80,7 +80,7 @@ class BenthicPITCSVSerializer(CollectRecordCSVSerializer):
 
     data__interval_size = serializers.DecimalField(max_digits=4, decimal_places=2)
     data__interval_start = serializers.DecimalField(max_digits=4, decimal_places=2)
-    data__benthic_transect__len_surveyed = serializers.IntegerField(min_value=0)
+    data__benthic_transect__len_surveyed = serializers.DecimalField(max_digits=3, decimal_places=1)
     data__benthic_transect__number = serializers.IntegerField(min_value=0)
     data__benthic_transect__label = serializers.CharField(
         allow_blank=True, required=False, default=""
