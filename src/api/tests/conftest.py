@@ -29,12 +29,14 @@ from api.models import (
     Tide,
     Visibility,
 )
+from api.models.view_models import model_view_migrations
 
 
 @pytest.fixture
 def db_setup(db):
     with connection.cursor() as cursor:
         cursor.execute("CREATE EXTENSION IF NOT EXISTS pg_trgm;")
+        cursor.execute(model_view_migrations.forward_sql())
 
 
 # PROJECT

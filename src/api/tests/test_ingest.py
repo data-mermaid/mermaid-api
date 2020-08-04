@@ -32,6 +32,7 @@ def bleaching_file(db):
 
 
 def test_fishbelt_ingest(
+    db_setup,
     fishbelt_file,
     project1,
     profile1,
@@ -71,6 +72,7 @@ def test_fishbelt_ingest(
 
 
 def test_benthicpit_ingest(
+    db_setup,
     benthicpit_file,
     project1,
     profile1,
@@ -111,6 +113,7 @@ def test_benthicpit_ingest(
 
 
 def test_bleaching_ingest(
+    db_setup,
     bleaching_file,
     project1,
     profile1,
