@@ -81,7 +81,7 @@ class FishBeltCSVSerializer(CollectRecordCSVSerializer):
         choices=tide_choices, required=False, allow_null=True, allow_blank=True
     )
 
-    data__fishbelt_transect__len_surveyed = serializers.IntegerField(min_value=0)
+    data__fishbelt_transect__len_surveyed = serializers.DecimalField(max_digits=4, decimal_places=1)
     data__fishbelt_transect__number = serializers.IntegerField(min_value=0)
     data__fishbelt_transect__label = serializers.CharField(
         allow_blank=True, required=False, default=""

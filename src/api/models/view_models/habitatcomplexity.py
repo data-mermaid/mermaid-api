@@ -55,8 +55,8 @@ FROM
     observers = JSONField(null=True, blank=True)
     transect_number = models.PositiveSmallIntegerField()
     label = models.CharField(max_length=50, blank=True)
-    transect_len_surveyed = models.PositiveSmallIntegerField(
-        verbose_name=_("transect length surveyed (m)")
+    transect_len_surveyed = models.DecimalField(
+        max_digits=4, decimal_places=1, verbose_name=_("transect length surveyed (m)")
     )
     depth = models.DecimalField(
         max_digits=3, decimal_places=1, verbose_name=_("depth (m)")
@@ -102,8 +102,8 @@ GROUP BY
 
     observers = JSONField(null=True, blank=True)
     transect_number = models.PositiveSmallIntegerField()
-    transect_len_surveyed = models.PositiveSmallIntegerField(
-        verbose_name=_("transect length surveyed (m)")
+    transect_len_surveyed = models.DecimalField(
+        max_digits=4, decimal_places=1, verbose_name=_("transect length surveyed (m)")
     )
     depth = models.DecimalField(
         max_digits=3, decimal_places=1, verbose_name=_("depth (m)")
