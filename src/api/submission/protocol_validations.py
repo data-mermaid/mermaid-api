@@ -258,7 +258,6 @@ class BenthicPITProtocolValidation(TransectValidation):
 
 class BenthicLITProtocolValidation(TransectValidation):
     SAMPLE_UNIT = "benthic_transect"
-    LENGTH_RANGE = (10, 100)
 
     def validate(self):
         results = [super(BenthicLITProtocolValidation, self).validate()]

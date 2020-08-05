@@ -19,13 +19,6 @@ class BenthicPITSerializer(BaseAPISerializer):
         error_messages={"null": "Interval start is required"},
     )
 
-    transect_len_surveyed = serializers.DecimalField(
-        max_digits=4,
-        decimal_places=1,
-        coerce_to_string=False,
-        error_messages={"null": "Transect length is required"},
-    )
-
     class Meta:
         model = BenthicPIT
         exclude = []
@@ -34,7 +27,6 @@ class BenthicPITSerializer(BaseAPISerializer):
 class BenthicPITFilterSet(BaseAPIFilterSet):
     interval_size = django_filters.RangeFilter(field_name="interval_size")
     interval_start = django_filters.RangeFilter(field_name="interval_start")
-    transect_len_surveyed = django_filters.RangeFilter(field_name="transect_len_surveyed")
 
     class Meta:
         model = BenthicPIT
@@ -43,7 +35,6 @@ class BenthicPITFilterSet(BaseAPIFilterSet):
             "transect__sample_event",
             "interval_size",
             "interval_start",
-            "transect_len_surveyed",
         ]
 
 
