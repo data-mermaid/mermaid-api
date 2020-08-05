@@ -122,8 +122,7 @@ class TransectValidation(ProtocolValidation):
     TRANSECT_METHOD = None
 
     def validate(self):
-        results = []
-        results.append(super(TransectValidation, self).validate())
+        results = [super(TransectValidation, self).validate()]
 
         data = self.collect_record.data or dict()
 
@@ -153,8 +152,7 @@ class TransectValidation(ProtocolValidation):
 
 class QuadratValidation(ProtocolValidation):
     def validate(self):
-        results = []
-        results.append(super(QuadratValidation, self).validate())
+        results = [super(QuadratValidation, self).validate()]
         data = self.collect_record.data
 
         quadrat_collection = data.get("quadrat_collection") or dict()
@@ -186,8 +184,7 @@ class FishBeltProtocolValidation(TransectValidation):
     TRANSECT_METHOD = "fishbelt_transect"
 
     def validate(self):
-        results = []
-        results.append(super(FishBeltProtocolValidation, self).validate())
+        results = [super(FishBeltProtocolValidation, self).validate()]
 
         data = self.collect_record.data or dict()
 
@@ -208,8 +205,7 @@ class BenthicPITProtocolValidation(TransectValidation):
     TRANSECT_METHOD = "benthic_transect"
 
     def validate(self):
-        results = []
-        results.append(super(BenthicPITProtocolValidation, self).validate())
+        results = [super(BenthicPITProtocolValidation, self).validate()]
 
         data = self.collect_record.data or dict()
         results.append(self._run_validation(BenthicTransectValidation, data))
@@ -230,8 +226,7 @@ class BenthicLITProtocolValidation(TransectValidation):
     LENGTH_RANGE = (10, 100)
 
     def validate(self):
-        results = []
-        results.append(super(BenthicLITProtocolValidation, self).validate())
+        results = [super(BenthicLITProtocolValidation, self).validate()]
 
         data = self.collect_record.data or dict()
         results.append(self._run_validation(BenthicTransectValidation, data))
@@ -251,8 +246,7 @@ class HabitatComplexityProtocolValidation(TransectValidation):
     TRANSECT_METHOD = "benthic_transect"
 
     def validate(self):
-        results = []
-        results.append(super(HabitatComplexityProtocolValidation, self).validate())
+        results = [super(HabitatComplexityProtocolValidation, self).validate()]
 
         data = self.collect_record.data or dict()
         results.append(self._run_validation(BenthicTransectValidation, data))
@@ -270,10 +264,7 @@ class HabitatComplexityProtocolValidation(TransectValidation):
 
 class BleachingQuadratCollectionProtocolValidation(QuadratValidation):
     def validate(self):
-        results = []
-        results.append(
-            super(BleachingQuadratCollectionProtocolValidation, self).validate()
-        )
+        results = [super(BleachingQuadratCollectionProtocolValidation, self).validate()]
 
         data = self.collect_record.data or dict()
 
