@@ -12,7 +12,6 @@ from .choices import (
 )
 from .serializers import CollectRecordCSVSerializer
 
-
 __all__ = ["FishBeltCSVSerializer"]
 
 
@@ -37,6 +36,7 @@ def fish_attributes_choices():
 
 class FishBeltCSVSerializer(CollectRecordCSVSerializer):
     protocol = "fishbelt"
+    sample_unit = "fishbelt_transect"
     observations_fields = ["data__obs_belt_fishes"]
     additional_group_fields = CollectRecordCSVSerializer.additional_group_fields.copy()
     additional_group_fields.append("data__fishbelt_transect__label")

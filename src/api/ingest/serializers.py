@@ -13,31 +13,10 @@ from ..fields import LazyChoiceField
 from ..models import CollectRecord, SampleEvent
 from ..resources.sample_event import SampleEventSerializer
 
-
 __all__ = [
     "CollectRecordCSVListSerializer",
     "CollectRecordCSVSerializer"
 ]
-
-
-def build_choices(choices, val_key="name"):
-    return [(str(c["id"]), str(c[val_key])) for c in choices]
-
-
-def visibility_choices():
-    return build_choices(Visibility.objects.choices(order_by="val"))
-
-
-def current_choices():
-    return build_choices(Current.objects.choices(order_by="name"))
-
-
-def relative_depth_choices():
-    return build_choices(RelativeDepth.objects.choices(order_by="name"))
-
-
-def tide_choices():
-    return build_choices(Tide.objects.choices(order_by="name"))
 
 
 class CollectRecordCSVListSerializer(ListSerializer):
@@ -92,7 +71,7 @@ class CollectRecordCSVListSerializer(ListSerializer):
         )
 
     def get_sample_event_time(self, row):
-        return row.get("data__sample_event__sample_time") or "00:00:00"
+        return row.get(f"data__{self.child.sample_unit}__sample_time") or "00:00:00"
 
     def remove_extra_data(self, row):
         field_names = set(self.child.fields.keys())
@@ -165,7 +144,7 @@ class CollectRecordCSVListSerializer(ListSerializer):
             fmt_row["data__sample_event__sample_date"] = self.get_sample_event_date(
                 fmt_row
             )
-            fmt_row["data__sample_event__sample_time"] = self.get_sample_event_time(
+            fmt_row[f"data__{self.child.sample_unit}__sample_time"] = self.get_sample_event_time(
                 fmt_row
             )
             fmt_row["data__protocol"] = protocol
@@ -277,6 +256,7 @@ class CollectRecordCSVListSerializer(ListSerializer):
 
 class CollectRecordCSVSerializer(Serializer):
     protocol = None
+    sample_unit = None
     observations_fields = None
     error_row_offset = 1
     header_map = {
@@ -285,12 +265,6 @@ class CollectRecordCSVSerializer(Serializer):
         "Sample date: Year *": "data__sample_event__sample_date__year",
         "Sample date: Month *": "data__sample_event__sample_date__month",
         "Sample date: Day *": "data__sample_event__sample_date__day",
-        "Sample time": "data__sample_event__sample_time",
-        "Depth *": "data__sample_event__depth",
-        "Visibility": "data__sample_event__visibility",
-        "Current": "data__sample_event__current",
-        "Relative depth": "data__sample_event__relative_depth",
-        "Tide": "data__sample_event__tide",
         "Notes": "data__sample_event__notes",
         "Observer emails *": "data__observers",
     }
@@ -324,24 +298,6 @@ class CollectRecordCSVSerializer(Serializer):
     data__sample_event__site = serializers.CharField()
     data__sample_event__management = serializers.CharField()
     data__sample_event__sample_date = serializers.DateField()
-    data__sample_event__sample_time = serializers.TimeField(default="00:00:00")
-    data__sample_event__depth = serializers.DecimalField(max_digits=3, decimal_places=1)
-
-    data__sample_event__visibility = LazyChoiceField(
-        choices=visibility_choices, required=False, allow_null=True, allow_blank=True
-    )
-    data__sample_event__current = LazyChoiceField(
-        choices=current_choices, required=False, allow_null=True, allow_blank=True
-    )
-    data__sample_event__relative_depth = LazyChoiceField(
-        choices=relative_depth_choices,
-        required=False,
-        allow_null=True,
-        allow_blank=True,
-    )
-    data__sample_event__tide = LazyChoiceField(
-        choices=tide_choices, required=False, allow_null=True, allow_blank=True
-    )
     data__sample_event__notes = serializers.CharField(required=False, allow_blank=True, default="")
 
     data__observers = serializers.ListField(

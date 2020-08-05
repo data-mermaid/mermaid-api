@@ -1,6 +1,5 @@
 from rest_framework import serializers
 
-from .serializers import CollectRecordCSVSerializer, build_choices
 from ..fields import LazyChoiceField
 from ..models import BenthicAttribute, GrowthForm, ReefSlope
 from .choices import (
@@ -32,6 +31,7 @@ def benthic_attributes_choices():
 
 class BenthicPITCSVSerializer(CollectRecordCSVSerializer):
     protocol = "benthicpit"
+    sample_unit = "benthic_transect"
     observations_fields = ["data__obs_benthic_pits"]
     ordering_field = "data__obs_benthic_pits__interval"
     additional_group_fields = CollectRecordCSVSerializer.additional_group_fields.copy()
