@@ -44,7 +44,7 @@ def forward_sql():
 
         output.append(s)
 
-    return "".join(output)
+    return reverse_sql() + "".join(output)
 
 
 
