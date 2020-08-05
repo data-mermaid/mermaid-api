@@ -38,6 +38,7 @@ def to_latitude(value, field, row, serializer_instance):
 def to_longitude(value, field, row, serializer_instance):
     return value.x
 
+
 @handle_none()
 def to_year(value, field, row, serializer_instance):
     return value.year

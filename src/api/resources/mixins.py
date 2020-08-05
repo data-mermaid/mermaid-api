@@ -89,16 +89,11 @@ class UpdatesMixin(object):
         return timestamp
 
     def get_updates(self, request, *args, **kwargs):
-        added = []
-        modified = []
-        removed = []
-
         timestamp = self.get_update_timestamp(request)
         pk = request.query_params.get("pk")
 
         serializer = self.get_serializer_class()
 
-        qry = None
         added_filter = dict()
         updated_filter = dict()
         removed_filter = dict(app_label="api")
