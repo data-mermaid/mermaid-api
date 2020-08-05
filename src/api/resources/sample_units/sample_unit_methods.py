@@ -1,12 +1,11 @@
+import re
 from collections import defaultdict
 
-import re
 import django_filters
-from django.db.models import Case, CharField, Q, Value, When
-from django.db.models.functions import Concat, Cast
 from django.contrib.postgres.aggregates import StringAgg
-from rest_framework import serializers
-from rest_framework import exceptions
+from django.db.models import Case, CharField, Q, Value, When
+from django.db.models.functions import Cast, Concat
+from rest_framework import exceptions, serializers
 
 from ...exceptions import check_uuid
 from ...models import mermaid
@@ -235,24 +234,24 @@ class SampleUnitMethodView(BaseProjectApiViewSet):
 
         depth_condition = Case(
             When(
-                benthiclit__transect__sample_event__depth__isnull=False,
-                then="benthiclit__transect__sample_event__depth",
+                benthiclit__transect__depth__isnull=False,
+                then="benthiclit__transect__depth",
             ),
             When(
-                benthicpit__transect__sample_event__depth__isnull=False,
-                then="benthicpit__transect__sample_event__depth",
+                benthicpit__transect__depth__isnull=False,
+                then="benthicpit__transect__depth",
             ),
             When(
-                habitatcomplexity__transect__sample_event__depth__isnull=False,
-                then="habitatcomplexity__transect__sample_event__depth",
+                habitatcomplexity__transect__depth__isnull=False,
+                then="habitatcomplexity__transect__depth",
             ),
             When(
-                bleachingquadratcollection__quadrat__sample_event__depth__isnull=False,
-                then="bleachingquadratcollection__quadrat__sample_event__depth",
+                bleachingquadratcollection__quadrat__depth__isnull=False,
+                then="bleachingquadratcollection__quadrat__depth",
             ),
             When(
-                beltfish__transect__sample_event__depth__isnull=False,
-                then="beltfish__transect__sample_event__depth",
+                beltfish__transect__depth__isnull=False,
+                then="beltfish__transect__depth",
             ),
         )
 
