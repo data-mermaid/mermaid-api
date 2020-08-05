@@ -2,7 +2,16 @@
 
 import django.core.validators
 from django.db import migrations, models
+from ..models.view_models import model_view_migrations
+# from ..models.view_models import (
+#     HabitatComplexityObsView,
+#     HabitatComplexitySUView,
+#     HabitatComplexitySEView,
+# )
 
+# drop_hc_obs_view = "DROP VIEW IF EXISTS public.vw_habitatcomplexity_obs CASCADE;"
+# drop_hc_su_view = "DROP VIEW IF EXISTS public.vw_habitatcomplexity_su CASCADE;"
+# drop_hc_se_view = "DROP VIEW IF EXISTS public.vw_habitatcomplexity_se;"
 class Migration(migrations.Migration):
 
     dependencies = [
@@ -10,6 +19,10 @@ class Migration(migrations.Migration):
     ]
 
     operations = [
+        # migrations.RunSQL(HabitatComplexityObsView.sql, drop_hc_obs_view),
+        # migrations.RunSQL(HabitatComplexitySUView.sql, drop_hc_su_view),
+        # migrations.RunSQL(HabitatComplexitySEView.sql, drop_hc_se_view),
+        migrations.RunSQL(model_view_migrations.forward_sql(), model_view_migrations.reverse_sql()),
         migrations.AlterField(
             model_name='benthictransect',
             name='len_surveyed',
@@ -20,4 +33,5 @@ class Migration(migrations.Migration):
             name='len_surveyed',
             field=models.DecimalField(decimal_places=1, max_digits=3, validators=[django.core.validators.MinValueValidator(10), django.core.validators.MaxValueValidator(100)], verbose_name='transect length surveyed (m)'),
         ),
+        migrations.RunSQL(model_view_migrations.forward_sql(), model_view_migrations.reverse_sql())
     ]
