@@ -20,7 +20,7 @@ class BenthicPITSerializer(BaseAPISerializer):
     )
 
     transect_len_surveyed = serializers.DecimalField(
-        max_digits=3,
+        max_digits=4,
         decimal_places=1,
         coerce_to_string=False,
         error_messages={"null": "Transect length is required"},
