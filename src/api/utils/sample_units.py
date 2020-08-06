@@ -1,4 +1,5 @@
 import operator
+from django.db import transaction
 from . import get_subclasses
 from ..models import (
     BENTHICLIT_PROTOCOL,
@@ -104,3 +105,52 @@ def migrate_collect_record_sample_event(collect_record):
         collect_record.data.get(sample_unit_attribute) or dict()
     )
     collect_record.data[sample_unit_attribute].update(migrated_data)
+
+
+def consolidate_sample_events(dryrun=False):
+    suclasses = get_subclasses(SampleUnit)
+
+    with transaction.atomic():
+        sid = transaction.savepoint()
+
+        for se in SampleEvent.objects.all():
+            se_pk = se.pk
+            orphaned = delete_orphaned_sample_event(se)
+            if orphaned:
+                print('Deleted orphaned SE {}'.format(se_pk))
+                continue
+
+            dups = SampleEvent.objects.filter(
+                site=se.site_id,
+                management=se.management_id,
+                sample_date=se.sample_date,
+            ).exclude(pk=se_pk)
+
+            if dups.count() > 0:
+                print('Removing dups for {}'.format(se_pk))
+                for d in dups:
+                    try:
+                        se2 = SampleEvent.objects.get(pk=se_pk)
+
+                        for suclass in suclasses:
+                            sus = suclass.objects.filter(sample_event=d.pk)
+                            for su in sus:
+                                notes = d.notes or ""
+                                if notes.strip():
+                                    se.notes += "\n\n{}".format(notes)
+                                    se.save()
+                                su.sample_event = se
+                                su.save()
+                                print('Changed SE from {} to {} for {} {}'.format(d.pk, se_pk, su._meta.verbose_name,
+                                                                                  su.pk))
+
+                        print('Deleting SE {}'.format(d.pk))
+                        d.delete()
+
+                    except SampleEvent.DoesNotExist:
+                        print('{} already deleted'.format(se_pk))
+
+        if dryrun:
+            transaction.savepoint_rollback(sid)
+        else:
+            transaction.savepoint_commit(sid)

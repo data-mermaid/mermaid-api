@@ -12,6 +12,9 @@ CREATE OR REPLACE VIEW public.vw_beltfish_obs
     {se_fields},
     se.data_policy_beltfish,
     {su_fields},
+    tt.transectmethod_ptr_id AS sample_unit_id,
+    tm.sample_time,
+    r.name AS relative_depth,
     tm.number AS transect_number,
     tm.label,
     tm.len_surveyed AS transect_len_surveyed,
@@ -79,6 +82,9 @@ CREATE OR REPLACE VIEW public.vw_beltfish_obs
 
     transect_number = models.PositiveSmallIntegerField()
     label = models.CharField(max_length=50, blank=True)
+    sample_unit_id = models.UUIDField()
+    sample_time = models.TimeField()
+    relative_depth = models.CharField(max_length=50)
     transect_len_surveyed = models.PositiveSmallIntegerField(
         verbose_name=_("transect length surveyed (m)")
     )
@@ -149,7 +155,7 @@ jsonb_object_agg(
 FROM (
     SELECT sample_unit_id AS id, 
     {se_fields},
-    sample_unit_id, depth, relative_depth, sample_time, observers, 
+    depth, observers, 
     string_agg(DISTINCT current_name, ', ' ORDER BY current_name) AS current_name,
     string_agg(DISTINCT tide_name, ', ' ORDER BY tide_name) AS tide_name,
     string_agg(DISTINCT visibility_name, ', ' ORDER BY visibility_name) AS visibility_name,
@@ -162,7 +168,7 @@ FROM (
     FROM vw_beltfish_obs
     GROUP BY sample_unit_id, 
     {se_fields}, 
-    sample_unit_id, depth, relative_depth, sample_time, observers, 
+    depth, observers, 
     transect_number, transect_len_surveyed, transect_width_name, 
     reef_slope, size_bin, data_policy_beltfish, 
     trophic_group
