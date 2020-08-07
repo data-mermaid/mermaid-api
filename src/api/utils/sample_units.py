@@ -107,7 +107,7 @@ def migrate_collect_record_sample_event(collect_record):
     collect_record.data[sample_unit_attribute].update(migrated_data)
 
 
-def consolidate_sample_events(dryrun=False):
+def consolidate_sample_events(*args, dryrun=False):
     suclasses = get_subclasses(SampleUnit)
 
     with transaction.atomic():

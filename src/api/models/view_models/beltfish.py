@@ -7,8 +7,7 @@ class BeltFishObsView(BaseSUViewModel):
     sql = """
 CREATE OR REPLACE VIEW public.vw_beltfish_obs
  AS
- SELECT 
-    o.id,
+ SELECT o.id,
     {se_fields},
     se.data_policy_beltfish,
     {su_fields},
@@ -80,10 +79,10 @@ CREATE OR REPLACE VIEW public.vw_beltfish_obs
 
     reverse_sql = "DROP VIEW IF EXISTS public.vw_beltfish_obs CASCADE;"
 
-    transect_number = models.PositiveSmallIntegerField()
-    label = models.CharField(max_length=50, blank=True)
     sample_unit_id = models.UUIDField()
     sample_time = models.TimeField()
+    transect_number = models.PositiveSmallIntegerField()
+    label = models.CharField(max_length=50, blank=True)
     relative_depth = models.CharField(max_length=50)
     transect_len_surveyed = models.PositiveSmallIntegerField(
         verbose_name=_("transect length surveyed (m)")
@@ -181,7 +180,7 @@ transect_number, transect_len_surveyed, transect_width_name,
 reef_slope, size_bin, data_policy_beltfish
     """.format(
         se_fields=", ".join(BaseSUViewModel.se_fields),
-        su_fields=", ".join(BaseSUViewModel.su_fields)
+        su_fields=", ".join(BaseSUViewModel.su_fields),
     )
 
     reverse_sql = "DROP VIEW IF EXISTS public.vw_beltfish_su CASCADE;"
@@ -217,8 +216,7 @@ class BeltFishSEView(BaseViewModel):
 CREATE OR REPLACE VIEW public.vw_beltfish_se
  AS
 -- For each SE, summarize biomass by 1) avg of transects and 2) avg of transects' trophic groups
-SELECT 
-vw_beltfish_su.sample_event_id AS id,
+SELECT vw_beltfish_su.sample_event_id AS id,
 {se_fields},
 data_policy_beltfish, 
 string_agg(DISTINCT current_name, ', ' ORDER BY current_name) AS current_name,
@@ -269,8 +267,7 @@ data_policy_beltfish,
 biomass_kgha_avg,
 biomass_kgha_by_trophic_group_avg;
     """.format(
-        se_fields=", ".join([f"vw_beltfish_su.{f}" for f in BaseSUViewModel.se_fields]),
-        su_fields=", ".join([f for f in BaseSUViewModel.su_fields])
+        se_fields=", ".join([f"vw_beltfish_su.{f}" for f in BaseViewModel.se_fields]),
     )
 
     reverse_sql = "DROP VIEW IF EXISTS public.vw_beltfish_se CASCADE;"

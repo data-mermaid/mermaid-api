@@ -3,23 +3,18 @@ from ..base import ExtendedManager
 from .base import *
 
 
-class BleachingQCColoniesBleachedObsView(BaseViewModel):
+class BleachingQCColoniesBleachedObsView(BaseSUViewModel):
     sql = """
 CREATE OR REPLACE VIEW vw_bleachingqc_colonies_bleached_obs AS
-SELECT
-  o.id,
+SELECT o.id,
   {se_fields},
-  se.sample_event_id,
-  se.current_name,
-  se.tide_name,
-  se.visibility_name,
-  se.sample_time,
-  se.sample_event_notes,
   se.data_policy_bleachingqc,
-  observers.observers,
+  {su_fields},
   tt.transectmethod_ptr_id AS sample_unit_id,
-  qc.label,
-  qc.quadrat_size,
+  tm.sample_time,
+  r.name AS relative_depth,  
+  tm.label,
+  tm.quadrat_size,
   b.name AS benthic_attribute,
   gf.name AS growth_form,
   o.count_normal,
@@ -34,7 +29,11 @@ FROM
   JOIN benthic_attribute b ON o.attribute_id = b.id
   LEFT JOIN growth_form gf ON o.growth_form_id = gf.id
   JOIN transectmethod_bleaching_quadrat_collection tt ON o.bleachingquadratcollection_id = tt.transectmethod_ptr_id
-  JOIN quadrat_collection qc ON tt.quadrat_id = qc.id
+  JOIN quadrat_collection tm ON tt.quadrat_id = tm.id
+  LEFT JOIN api_current c ON tm.current_id = c.id
+  LEFT JOIN api_tide t ON tm.tide_id = t.id
+  LEFT JOIN api_visibility v ON tm.visibility_id = v.id
+  LEFT JOIN api_relativedepth r ON tm.relative_depth_id = r.id
   JOIN (
     SELECT tt_1.quadrat_id,
     jsonb_agg(
@@ -51,24 +50,19 @@ FROM
       JOIN transectmethod tm ON o1.transectmethod_id = tm.id
       JOIN transectmethod_bleaching_quadrat_collection tt_1 ON tm.id = tt_1.transectmethod_ptr_id
     GROUP BY tt_1.quadrat_id
-  ) observers ON qc.id = observers.quadrat_id
-  JOIN vw_sample_events se ON qc.sample_event_id = se.sample_event_id
+  ) observers ON tm.id = observers.quadrat_id
+  JOIN vw_sample_events se ON tm.sample_event_id = se.sample_event_id
     """.format(
-        se_fields=", ".join([f"se.{f}" for f in BaseViewModel.se_fields])
+        se_fields=", ".join([f"se.{f}" for f in BaseSUViewModel.se_fields]),
+        su_fields=BaseSUViewModel.su_fields_sql,
     )
 
     reverse_sql = "DROP VIEW IF EXISTS public.vw_bleachingqc_colonies_bleached_obs CASCADE;"
 
-    sample_event_id = models.UUIDField()
-    sample_event_notes = models.TextField(blank=True)
     sample_unit_id = models.UUIDField()
     sample_time = models.TimeField()
-    observers = JSONField(null=True, blank=True)
     label = models.CharField(max_length=50, blank=True)
     quadrat_size = models.DecimalField(decimal_places=2, max_digits=6)
-    depth = models.DecimalField(
-        max_digits=3, decimal_places=1, verbose_name=_("depth (m)")
-    )
     benthic_attribute = models.CharField(max_length=100)
     growth_form = models.CharField(max_length=100)
     count_normal = models.PositiveSmallIntegerField(verbose_name="normal", default=0)
@@ -95,23 +89,18 @@ FROM
         managed = False
 
 
-class BleachingQCQuadratBenthicPercentObsView(BaseViewModel):
+class BleachingQCQuadratBenthicPercentObsView(BaseSUViewModel):
     sql = """
 CREATE OR REPLACE VIEW vw_bleachingqc_quadrat_benthic_percent_obs AS
-SELECT
-  o.id,
+SELECT o.id,
   {se_fields},
-  se.sample_event_id,
-  se.current_name,
-  se.tide_name,
-  se.visibility_name,
-  se.sample_time,
-  se.sample_event_notes,
   se.data_policy_bleachingqc,
-  observers.observers,
+  {su_fields},
   tt.transectmethod_ptr_id AS sample_unit_id,
-  qc.label,
-  qc.quadrat_size,
+  tm.sample_time,
+  r.name AS relative_depth, 
+  tm.label,
+  tm.quadrat_size,
   o.quadrat_number,
   o.percent_hard,
   o.percent_soft,
@@ -119,7 +108,11 @@ SELECT
 FROM
   obs_quadrat_benthic_percent o
   JOIN transectmethod_bleaching_quadrat_collection tt ON o.bleachingquadratcollection_id = tt.transectmethod_ptr_id
-  JOIN quadrat_collection qc ON tt.quadrat_id = qc.id
+  JOIN quadrat_collection tm ON tt.quadrat_id = tm.id
+  LEFT JOIN api_current c ON tm.current_id = c.id
+  LEFT JOIN api_tide t ON tm.tide_id = t.id
+  LEFT JOIN api_visibility v ON tm.visibility_id = v.id
+  LEFT JOIN api_relativedepth r ON tm.relative_depth_id = r.id
   JOIN (
     SELECT tt_1.quadrat_id,
     jsonb_agg(
@@ -136,24 +129,19 @@ FROM
       JOIN transectmethod tm ON o1.transectmethod_id = tm.id
       JOIN transectmethod_bleaching_quadrat_collection tt_1 ON tm.id = tt_1.transectmethod_ptr_id
     GROUP BY tt_1.quadrat_id
-  ) observers ON qc.id = observers.quadrat_id
-  JOIN vw_sample_events se ON qc.sample_event_id = se.sample_event_id
+  ) observers ON tm.id = observers.quadrat_id
+  JOIN vw_sample_events se ON tm.sample_event_id = se.sample_event_id
     """.format(
-        se_fields=", ".join([f"se.{f}" for f in BaseViewModel.se_fields])
+        se_fields=", ".join([f"se.{f}" for f in BaseSUViewModel.se_fields]),
+        su_fields=BaseSUViewModel.su_fields_sql,
     )
 
     reverse_sql = "DROP VIEW IF EXISTS public.vw_bleachingqc_quadrat_benthic_percent_obs CASCADE;"
 
-    sample_event_id = models.UUIDField()
-    sample_event_notes = models.TextField(blank=True)
     sample_unit_id = models.UUIDField()
     sample_time = models.TimeField()
-    observers = JSONField(null=True, blank=True)
     label = models.CharField(max_length=50, blank=True)
     quadrat_size = models.DecimalField(decimal_places=2, max_digits=6)
-    depth = models.DecimalField(
-        max_digits=3, decimal_places=1, verbose_name=_("depth (m)")
-    )
     quadrat_number = models.PositiveSmallIntegerField(verbose_name="quadrat number")
     percent_hard = models.PositiveSmallIntegerField(
         verbose_name="hard coral, % cover", default=0
@@ -171,13 +159,15 @@ FROM
         managed = False
 
 
-class BleachingQCSUView(BaseViewModel):
+class BleachingQCSUView(BaseSUViewModel):
     project_lookup = "project_id"
     sql = """
 CREATE OR REPLACE VIEW vw_bleachingqc_su AS
 SELECT id,
 {se_fields},
-label, current_name, tide_name, visibility_name, data_policy_bleachingqc, observers, quadrat_size,
+{su_fields},
+data_policy_bleachingqc, 
+quadrat_size,
 count_genera,
 count_total,
 percent_normal,
@@ -188,19 +178,20 @@ percent_hard_avg,
 percent_soft_avg,
 percent_algae_avg
 FROM (
-    SELECT
-    sample_unit_id AS id,
+    SELECT sample_unit_id AS id,
     {se_fields},
-    label, current_name, tide_name, visibility_name, data_policy_bleachingqc, observers, quadrat_size
+    {su_fields},
+    data_policy_bleachingqc, 
+    quadrat_size
   FROM vw_bleachingqc_colonies_bleached_obs 
-  GROUP BY
-    sample_unit_id,
+  GROUP BY sample_unit_id,
     {se_fields},
-    label, current_name, tide_name, visibility_name, data_policy_bleachingqc, observers, quadrat_size
+    {su_fields},
+    data_policy_bleachingqc, 
+    quadrat_size
 ) su 
 INNER JOIN (
-    SELECT
-    sample_unit_id,
+    SELECT sample_unit_id,
     COUNT(DISTINCT benthic_attribute) AS count_genera,
     SUM(count_normal + count_pale + count_20 + count_50 + count_80 + count_100 + count_dead) AS count_total,
     ROUND(
@@ -225,8 +216,7 @@ INNER JOIN (
     GROUP BY sample_unit_id 
 ) cb ON su.id = cb.sample_unit_id 
 INNER JOIN (
-    SELECT
-    sample_unit_id,
+    SELECT sample_unit_id,
     COUNT(quadrat_number) AS quadrat_count,
     round(AVG(percent_hard), 1) AS percent_hard_avg,
     round(AVG(percent_soft), 1) AS percent_soft_avg,
@@ -235,16 +225,12 @@ INNER JOIN (
     GROUP BY sample_unit_id 
 ) bp ON su.id = bp.sample_unit_id
     """.format(
-        se_fields=", ".join(BaseViewModel.se_fields)
+        se_fields=", ".join(BaseSUViewModel.se_fields),
+        su_fields=", ".join(BaseSUViewModel.su_fields),
     )
 
     reverse_sql = "DROP VIEW IF EXISTS public.vw_bleachingqc_su CASCADE;"
 
-    label = models.CharField(max_length=50, blank=True)
-    observers = JSONField(null=True, blank=True)
-    depth = models.DecimalField(
-        max_digits=3, decimal_places=1, verbose_name=_("depth (m)")
-    )
     quadrat_size = models.DecimalField(decimal_places=2, max_digits=6)
     count_genera = models.PositiveSmallIntegerField(default=0)
     count_total = models.PositiveSmallIntegerField(default=0)
@@ -266,40 +252,12 @@ INNER JOIN (
 
 class BleachingQCSEView(BaseViewModel):
     project_lookup = "project_id"
-    # TODO: refactor once SE/SU refactoring is done
-    sefields_minus_depth = [
-        "project_id",
-        "project_name",
-        "project_status",
-        "project_notes",
-        "contact_link",
-        "tags",
-        "site_id",
-        "site_name",
-        "location",
-        "site_notes",
-        "country_id",
-        "country_name",
-        "reef_type",
-        "reef_zone",
-        "reef_exposure",
-        "management_id",
-        "management_name",
-        "management_name_secondary",
-        "management_est_year",
-        "management_size",
-        "management_parties",
-        "management_compliance",
-        "management_rules",
-        "management_notes",
-        "sample_date",
-        "data_policy_bleachingqc",
-    ]
+
     sql = """
 CREATE OR REPLACE VIEW vw_bleachingqc_se AS
-SELECT 
-NULL AS id, 
+SELECT sample_event_id AS id, 
 {se_fields},
+data_policy_bleachingqc,
 COUNT(id) AS sample_unit_count,
 ROUND(AVG("depth"), 2) as depth_avg,
 string_agg(DISTINCT current_name, ', ' ORDER BY current_name) AS current_name,
@@ -317,9 +275,11 @@ ROUND(AVG(percent_soft_avg), 1) AS percent_soft_avg_avg,
 ROUND(AVG(percent_algae_avg), 1) AS percent_algae_avg_avg
 
 FROM vw_bleachingqc_su
-GROUP BY {se_fields}
+GROUP BY 
+{se_fields},
+data_policy_bleachingqc
     """.format(
-        se_fields=", ".join(sefields_minus_depth)
+        se_fields=", ".join([f"vw_bleachingqc_su.{f}" for f in BaseViewModel.se_fields])
     )
 
     reverse_sql = "DROP VIEW IF EXISTS public.vw_bleachingqc_se CASCADE;"
