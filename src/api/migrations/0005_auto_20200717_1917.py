@@ -48,9 +48,6 @@ class Migration(migrations.Migration):
         migrations.RunPython(
             migrate_sample_event_to_sample_unit, migrations.RunPython.noop
         ),
-        migrations.RunPython(
-
-            migrate_collect_record, migrations.RunPython.noop
-        ),
+        migrations.RunPython(migrate_collect_record, migrations.RunPython.noop),
         migrations.RunSQL(SampleEventViewModel.sql, drop_se_view),
     ]
