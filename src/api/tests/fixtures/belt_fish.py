@@ -68,12 +68,12 @@ def belt_fish2(db, fishbelt_transect2):
 
 
 @pytest.fixture
-def observer1(db, belt_fish1, profile1):
+def observer_belt_fish1(db, belt_fish1, profile1):
     return Observer.objects.create(transectmethod=belt_fish1, profile=profile1)
 
 
 @pytest.fixture
-def observer2(db, belt_fish2, profile2):
+def observer_belt_fish2(db, belt_fish2, profile2):
     return Observer.objects.create(transectmethod=belt_fish2, profile=profile2)
 
 
@@ -128,8 +128,8 @@ def belt_fish_project(
     obs_belt_fish2_1,
     obs_belt_fish2_2,
     obs_belt_fish2_3,
-    observer1,
-    observer2,
+    observer_belt_fish1,
+    observer_belt_fish2,
     project_profile1,
     project_profile2,
 ):

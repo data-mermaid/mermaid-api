@@ -117,3 +117,18 @@ def sample_event2(db, management2, site2):
         sample_date=timezone.now(),
         notes="Some sample event notes for sample_event2",
     )
+
+
+@pytest.fixture
+def base_project(
+    db,
+    management1,
+    site1,
+    management2,
+    site2,
+    profile1,
+    profile2,
+    project_profile1,
+    project_profile2,
+):
+    pass
