@@ -1,6 +1,53 @@
 import pytest
 
-from api.models import BeltFish, FishBeltTransect, ObsBeltFish, Observer
+from api.models import (
+    BeltFish,
+    BeltTransectWidth,
+    BeltTransectWidthCondition,
+    FishBeltTransect,
+    FishSizeBin,
+    ObsBeltFish,
+    Observer,
+)
+
+
+@pytest.fixture
+def fish_size_bin_1(db):
+    return FishSizeBin.objects.create(val="1")
+
+
+@pytest.fixture
+def fish_size_bin_5(db):
+    return FishSizeBin.objects.create(val="5")
+
+
+@pytest.fixture
+def fish_size_bin_10(db):
+    return FishSizeBin.objects.create(val="10")
+
+
+@pytest.fixture
+def belt_transect_width_2m(db):
+    return BeltTransectWidth.objects.create(name="2m")
+
+
+@pytest.fixture
+def belt_transect_width_5m(db):
+    return BeltTransectWidth.objects.create(name="5m")
+
+
+@pytest.fixture
+def belt_transect_width_condition1(db, belt_transect_width_2m):
+    return BeltTransectWidthCondition.objects.create(
+        belttransectwidth=belt_transect_width_2m, val=2
+    )
+
+
+@pytest.fixture
+def belt_transect_width_condition2(db, belt_transect_width_5m):
+    return BeltTransectWidthCondition.objects.create(
+        belttransectwidth=belt_transect_width_5m, val=5
+    )
 
 
 @pytest.fixture
@@ -122,6 +169,13 @@ def obs_belt_fish2_3(db, belt_fish2, fish_species1):
 @pytest.fixture
 def belt_fish_project(
     db,
+    belt_transect_width_2m,
+    belt_transect_width_5m,
+    belt_transect_width_condition1,
+    belt_transect_width_condition2,
+    fish_size_bin_1,
+    fish_size_bin_10,
+    fish_size_bin_5,
     obs_belt_fish1_1,
     obs_belt_fish1_2,
     obs_belt_fish1_3,

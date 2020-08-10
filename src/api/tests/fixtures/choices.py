@@ -1,12 +1,8 @@
 import pytest
 
 from api.models import (
-    BeltTransectWidth,
-    BeltTransectWidthCondition,
     Country,
     Current,
-    FishSizeBin,
-    HabitatComplexityScore,
     ManagementParty,
     ReefExposure,
     ReefSlope,
@@ -119,60 +115,6 @@ def reef_slope3(db):
 
 
 @pytest.fixture
-def belt_transect_width_2m(db):
-    return BeltTransectWidth.objects.create(name="2m")
-
-
-@pytest.fixture
-def belt_transect_width_5m(db):
-    return BeltTransectWidth.objects.create(name="5m")
-
-
-@pytest.fixture
-def belt_transect_width_condition1(db, belt_transect_width_2m):
-    return BeltTransectWidthCondition.objects.create(
-        belttransectwidth=belt_transect_width_2m, val=2
-    )
-
-
-@pytest.fixture
-def belt_transect_width_condition2(db, belt_transect_width_5m):
-    return BeltTransectWidthCondition.objects.create(
-        belttransectwidth=belt_transect_width_5m, val=5
-    )
-
-
-@pytest.fixture
-def fish_size_bin_1(db):
-    return FishSizeBin.objects.create(val="1")
-
-
-@pytest.fixture
-def fish_size_bin_5(db):
-    return FishSizeBin.objects.create(val="5")
-
-
-@pytest.fixture
-def fish_size_bin_10(db):
-    return FishSizeBin.objects.create(val="10")
-
-
-@pytest.fixture
-def habitat_complexity_score1(db):
-    return HabitatComplexityScore.objects.create(name="no vertical relief", val=1)
-
-
-@pytest.fixture
-def habitat_complexity_score2(db):
-    return HabitatComplexityScore.objects.create(name="low", val=2)
-
-
-@pytest.fixture
-def habitat_complexity_score3(db):
-    return HabitatComplexityScore.objects.create(name="exceptionally complex", val=3)
-
-
-@pytest.fixture
 def managment_party1(db):
     return ManagementParty.objects.create(name="Government")
 
@@ -215,22 +157,12 @@ def relative_depth2(db):
 @pytest.fixture
 def all_choices(
     db,
-    belt_transect_width_2m,
-    belt_transect_width_5m,
-    belt_transect_width_condition1,
-    belt_transect_width_condition2,
     country1,
     country2,
     country3,
     current1,
     current2,
     current3,
-    fish_size_bin_1,
-    fish_size_bin_10,
-    fish_size_bin_5,
-    habitat_complexity_score1,
-    habitat_complexity_score2,
-    habitat_complexity_score3,
     managment_party1,
     managment_party2,
     managment_party3,
