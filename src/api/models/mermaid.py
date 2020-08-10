@@ -242,6 +242,27 @@ class Management(BaseModel, JSONMixin, AreaMixin):
             fullname = _(u'%s [%s]') % (fullname, self.est_year)
         return fullname
 
+    @property
+    def rules(self):
+        rules = []
+        
+        if self.no_take:
+            rules.append('No Take')
+        if self.periodic_closure:
+            rules.append('Periodic Closure')
+        if self.open_access:
+            rules.append('Open Access')
+        if self.size_limits:
+            rules.append('Size Limits')
+        if self.gear_restriction:
+            rules.append('Gear Restriction')
+        if self.species_restriction:
+            rules.append('Species Restriction')
+        if self.access_restriction:
+            rules.append('Access Restriction')
+
+        return rules
+
 
 class MPA(BaseModel, AreaMixin):
     name = models.CharField(max_length=255)
@@ -1442,6 +1463,13 @@ class ObsBeltFish(BaseModel, JSONMixin):
         if self._hide_fish_in_repr:
             return ""
         return _(u'%s %s x %scm') % (self.fish_attribute.__str__(), self.count, self.size)
+
+    @property
+    def observers(self):
+        if self.beltfish_id is None:
+            return Observer.objects.none()
+
+        return self.beltfish.observers.all()
 
 
 class CollectRecord(BaseModel):

@@ -1,7 +1,6 @@
 import datetime
 
 from django.contrib.gis.geos import Point
-from django.core.management import call_command
 from django.test import TestCase
 
 from api.models import (
@@ -172,9 +171,7 @@ class ManagementValidationTest(BaseTestCase):
         )
 
         se2 = SampleEvent.objects.create(
-            site=self.site1,
-            management=mgmt2,
-            sample_date=datetime.date(2018, 7, 13),
+            site=self.site1, management=mgmt2, sample_date=datetime.date(2018, 7, 13),
         )
 
         benthic_transect = BenthicTransect.objects.create(
@@ -210,9 +207,7 @@ class ManagementValidationTest(BaseTestCase):
         )
 
         se2 = SampleEvent.objects.create(
-            site=self.site1,
-            management=mgmt2,
-            sample_date=datetime.date(2018, 7, 13),
+            site=self.site1, management=mgmt2, sample_date=datetime.date(2018, 7, 13),
         )
 
         benthic_transect = BenthicTransect.objects.create(
