@@ -1,6 +1,6 @@
 import pytest
 
-from api.models import BenthicPIT, Observer, ObsBenthicPIT
+from api.models import BenthicPIT, ObsBenthicPIT, Observer
 
 
 @pytest.fixture

@@ -5,13 +5,7 @@ from api.models import BenthicTransect
 
 @pytest.fixture
 def benthic_transect1(
-    db,
-    sample_event1,
-    current1,
-    reef_slope1,
-    relative_depth1,
-    tide1,
-    visibility1,
+    db, sample_event1, current1, reef_slope1, relative_depth1, tide1, visibility1,
 ):
     return BenthicTransect.objects.create(
         sample_event=sample_event1,
@@ -28,13 +22,7 @@ def benthic_transect1(
 
 @pytest.fixture
 def benthic_transect2(
-    db,
-    sample_event2,
-    current2,
-    reef_slope2,
-    relative_depth2,
-    tide2,
-    visibility2
+    db, sample_event2, current2, reef_slope2, relative_depth2, tide2, visibility2
 ):
     return BenthicTransect.objects.create(
         sample_event=sample_event2,
