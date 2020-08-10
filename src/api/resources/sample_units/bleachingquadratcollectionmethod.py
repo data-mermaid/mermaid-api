@@ -563,7 +563,6 @@ class BleachingQCMethodSUFilterSet(BaseTransectFilterSet):
             "depth",
             "sample_unit_id",
             "observers",
-            "label",
             "quadrat_size",
             "data_policy_bleachingqc",
             "count_genera",

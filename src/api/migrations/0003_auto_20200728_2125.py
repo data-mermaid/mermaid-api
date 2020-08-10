@@ -12,5 +12,5 @@ class Migration(migrations.Migration):
     ]
 
     operations = [
-        migrations.RunSQL(model_view_migrations.forward_sql(), model_view_migrations.reverse_sql()),
+        migrations.RunSQL(model_view_migrations.reverse_sql(), model_view_migrations.forward_sql()),
     ]
