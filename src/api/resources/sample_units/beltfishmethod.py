@@ -439,6 +439,7 @@ class BeltFishMethodObsSerializer(BaseViewAPISerializer):
                 "transect_number",
                 "label",
                 "depth",
+                "relative_depth",
                 "transect_len_surveyed",
                 "transect_width_name",
                 "reef_slope",

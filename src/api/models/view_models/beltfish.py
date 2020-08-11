@@ -9,8 +9,8 @@ CREATE OR REPLACE VIEW public.vw_beltfish_obs
  AS
  SELECT o.id,
     {se_fields},
-    se.data_policy_beltfish,
     {su_fields},
+    se.data_policy_beltfish,
     tt.transectmethod_ptr_id AS sample_unit_id,
     tm.sample_time,
     r.name AS relative_depth,
@@ -139,7 +139,7 @@ class BeltFishSUView(BaseSUViewModel):
     sql = """
 CREATE OR REPLACE VIEW public.vw_beltfish_su
  AS
-SELECT id,
+SELECT NULL AS id,
 {se_fields},
 {su_fields}, 
 transect_number, transect_len_surveyed, transect_width_name,
@@ -152,28 +152,28 @@ jsonb_object_agg(
 ) AS biomass_kgha_by_trophic_group
  
 FROM (
-    SELECT sample_unit_id AS id, 
+    SELECT  
     {se_fields},
-    depth, observers, 
-    string_agg(DISTINCT current_name, ', ' ORDER BY current_name) AS current_name,
-    string_agg(DISTINCT tide_name, ', ' ORDER BY tide_name) AS tide_name,
-    string_agg(DISTINCT visibility_name, ', ' ORDER BY visibility_name) AS visibility_name,
+    depth, relative_depth, observers, 
     transect_number, transect_len_surveyed, transect_width_name, 
     reef_slope, size_bin, data_policy_beltfish, 
     trophic_group, 
 
+    string_agg(DISTINCT current_name, ', ' ORDER BY current_name) AS current_name,
+    string_agg(DISTINCT tide_name, ', ' ORDER BY tide_name) AS tide_name,
+    string_agg(DISTINCT visibility_name, ', ' ORDER BY visibility_name) AS visibility_name,
     COALESCE(SUM(biomass_kgha), 0) AS biomass_kgha
     
     FROM vw_beltfish_obs
-    GROUP BY sample_unit_id, 
+    GROUP BY  
     {se_fields}, 
-    depth, observers, 
+    depth, relative_depth, observers, 
     transect_number, transect_len_surveyed, transect_width_name, 
     reef_slope, size_bin, data_policy_beltfish, 
     trophic_group
 ) AS beltfish_obs_tg
 
-GROUP BY id, 
+GROUP BY 
 {se_fields}, 
 {su_fields}, 
 transect_number, transect_len_surveyed, transect_width_name, 
@@ -219,6 +219,7 @@ CREATE OR REPLACE VIEW public.vw_beltfish_se
 SELECT vw_beltfish_su.sample_event_id AS id,
 {se_fields},
 data_policy_beltfish, 
+
 string_agg(DISTINCT current_name, ', ' ORDER BY current_name) AS current_name,
 string_agg(DISTINCT tide_name, ', ' ORDER BY tide_name) AS tide_name,
 string_agg(DISTINCT visibility_name, ', ' ORDER BY visibility_name) AS visibility_name,

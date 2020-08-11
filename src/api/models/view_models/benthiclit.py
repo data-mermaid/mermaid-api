@@ -7,11 +7,10 @@ class BenthicLITObsView(BaseSUViewModel):
     sql = """
 CREATE OR REPLACE VIEW public.vw_benthiclit_obs
  AS
- SELECT 
-    o.id,
+ SELECT o.id,
     {se_fields},
-    se.data_policy_benthiclit,
     {su_fields},
+    se.data_policy_benthiclit,
     tt.transectmethod_ptr_id AS sample_unit_id,
     tm.sample_time,
     r.name AS relative_depth,
@@ -89,23 +88,34 @@ CREATE OR REPLACE VIEW public.vw_benthiclit_obs
 class BenthicLITSUView(BaseSUViewModel):
     project_lookup = "project_id"
 
+    cat_totals_join = " AND ".join([
+        f"cps.{f} = cat_totals.{f}" for f in
+        BaseSUViewModel.se_fields +
+        BaseSUViewModel.su_fields
+    ])
+
+    cat_percents_join = " AND ".join([
+        f"su.{f} = cat_percents.{f}" for f in
+        BaseSUViewModel.se_fields +
+        BaseSUViewModel.su_fields
+    ])
+
     sql = """
 CREATE OR REPLACE VIEW public.vw_benthiclit_su
  AS
-SELECT su.sample_unit_id AS id, 
-{se_fields},
-{su_fields},
-data_policy_benthiclit,
-transect_number, transect_len_surveyed, reef_slope,
+SELECT NULL AS id, 
+{su_fields_all},
+su.data_policy_benthiclit,
+su.transect_number, su.transect_len_surveyed, su.reef_slope,
 percent_cover_by_benthic_category
 FROM (
-    SELECT sample_unit_id, 
+    SELECT  
     {se_fields},
     {su_fields}, 
     data_policy_benthiclit,
     transect_number, transect_len_surveyed, reef_slope
     FROM vw_benthiclit_obs obs
-    GROUP BY sample_unit_id, 
+    GROUP BY  
     {se_fields},
     {su_fields}, 
     data_policy_benthiclit,
@@ -113,29 +123,46 @@ FROM (
 ) su
 INNER JOIN (
     WITH cps AS (
-        SELECT sample_unit_id,
+        SELECT 
+        {se_fields},
+        {su_fields}, 
         benthic_category,
         SUM(length) AS category_length
         FROM vw_benthiclit_obs
-        GROUP BY sample_unit_id, benthic_category
+        GROUP BY 
+        {se_fields},
+        {su_fields}, 
+        benthic_category
     )
-    SELECT cps.sample_unit_id,
+    SELECT {cps_fields},
     jsonb_object_agg(
         cps.benthic_category, 
         ROUND(100 * cps.category_length / cat_totals.su_length, 2)
     ) AS percent_cover_by_benthic_category
     FROM cps
     INNER JOIN (
-        SELECT sample_unit_id,
+        SELECT 
+        {se_fields},
+        {su_fields}, 
         SUM(category_length) AS su_length
         FROM cps
-        GROUP BY sample_unit_id
-    ) cat_totals ON (cps.sample_unit_id = cat_totals.sample_unit_id)
-    GROUP BY cps.sample_unit_id
-) cat_percents ON (su.sample_unit_id = cat_percents.sample_unit_id)
+        GROUP BY 
+        {se_fields},
+        {su_fields}
+    ) cat_totals ON (
+        {cat_totals_join}
+    )
+    GROUP BY {cps_fields}
+) cat_percents ON (
+    {cat_percents_join}
+)
     """.format(
         se_fields=", ".join(BaseSUViewModel.se_fields),
         su_fields=", ".join(BaseSUViewModel.su_fields),
+        su_fields_all=", ".join([f"su.{f}" for f in BaseSUViewModel.se_fields + BaseSUViewModel.su_fields]),
+        cps_fields=", ".join([f"cps.{f}" for f in BaseSUViewModel.se_fields + BaseSUViewModel.su_fields]),
+        cat_totals_join=cat_totals_join,
+        cat_percents_join=cat_percents_join
     )
 
     reverse_sql = "DROP VIEW IF EXISTS public.vw_benthiclit_su CASCADE;"

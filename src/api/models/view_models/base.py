@@ -902,12 +902,13 @@ class BaseViewModel(models.Model):
 
 class BaseSUViewModel(BaseViewModel):
     # Properly, SU should include sample_unit_id and sample_time. But to aid in
-    # Collect input and management, SUs with different times (and for transects,
-    # relative_depth and label) are combined into one pseudo-SU, represented here.
-    su_fields = ["depth", "observers", "current_name", "tide_name", "visibility_name"]
+    # Collect input and management, SUs with different times (and for transects, label)
+    # are combined into one pseudo-SU, represented here.
+    su_fields = ["depth", "relative_depth", "observers", "current_name", "tide_name", "visibility_name"]
 
     su_fields_sql = """
     tm.depth,
+    tm.relative_depth,
     observers.observers, 
     c.name AS current_name,
     t.name AS tide_name,
