@@ -41,13 +41,9 @@ class ProtectedResourceMixin(object):
 class CreateOrUpdateSerializerMixin(object):
     def create(self, validated_data):
         try:
-            import time
-            time.sleep(5)
-            validated_data["id"] = "590677f0-272b-4ce9-a802-5f3f877f34fe"
             return super().create(validated_data)
         except IntegrityError as err:
             if "violates unique constraint" in str(err).lower():
-                print("Integrity")
                 ModelClass = self.Meta.model
                 instance = ModelClass.objects.get(id=validated_data["id"])
                 return self.update(instance, validated_data)
