@@ -5,7 +5,7 @@ from rest_framework.response import Response
 from rest_framework.serializers import SerializerMethodField
 from django_filters import BaseInFilter, RangeFilter
 
-from .. import fieldreport
+# from .. import fieldreport
 from ...models.mermaid import BenthicLIT, ObsBenthicLIT, BenthicAttribute
 from ...models.view_models import BenthicLITObsView, BenthicLITSUView, BenthicLITSEView
 
@@ -78,66 +78,66 @@ def to_benthic_attribute_category(field, row, serializer_instance):
     return str(bc)
 
 
-class ObsBenthicLITReportSerializer(
-    SampleEventReportSerializer, metaclass=SampleEventReportSerializerMeta
-):
-    transect_method = "benthiclit"
-    sample_event_path = "{}__transect__sample_event".format(transect_method)
+# class ObsBenthicLITReportSerializer(
+#     SampleEventReportSerializer, metaclass=SampleEventReportSerializerMeta
+# ):
+#     transect_method = "benthiclit"
+#     sample_event_path = "{}__transect__sample_event".format(transect_method)
 
-    idx = 24
-    obs_fields = [
-        (6, ReportField("benthiclit__transect__reef_slope__name", "Reef slope")),
-        (idx, ReportField("benthiclit__transect__number", "Transect number")),
-        (idx + 1, ReportField("benthiclit__transect__label", "Transect label")),
-        (
-            idx + 2,
-            ReportField(
-                "benthiclit__transect__len_surveyed", "Transect length surveyed"
-            ),
-        ),
-        (idx + 4, ReportMethodField("Benthic category", to_benthic_attribute_category)),
-        (idx + 5, ReportField("attribute__name", "Benthic attribute")),
-        (idx + 6, ReportField("growth_form__name", "Growth form")),
-        (idx + 7, ReportField("length", "LIT (cm)")),
-        (idx + 8, ReportMethodField("Total transect cm", to_total_lit)),
-        (idx + 12, ReportField("benthiclit__transect__notes", "Observation notes")),
-    ]
+#     idx = 24
+#     obs_fields = [
+#         (6, ReportField("benthiclit__transect__reef_slope__name", "Reef slope")),
+#         (idx, ReportField("benthiclit__transect__number", "Transect number")),
+#         (idx + 1, ReportField("benthiclit__transect__label", "Transect label")),
+#         (
+#             idx + 2,
+#             ReportField(
+#                 "benthiclit__transect__len_surveyed", "Transect length surveyed"
+#             ),
+#         ),
+#         (idx + 4, ReportMethodField("Benthic category", to_benthic_attribute_category)),
+#         (idx + 5, ReportField("attribute__name", "Benthic attribute")),
+#         (idx + 6, ReportField("growth_form__name", "Growth form")),
+#         (idx + 7, ReportField("length", "LIT (cm)")),
+#         (idx + 8, ReportMethodField("Total transect cm", to_total_lit)),
+#         (idx + 12, ReportField("benthiclit__transect__notes", "Observation notes")),
+#     ]
 
-    non_field_columns = (
-        "benthiclit_id",
-        "benthiclit__transect__sample_event__site__project_id",
-        "benthiclit__transect__sample_event__management_id",
-        "attribute",
-    )
+#     non_field_columns = (
+#         "benthiclit_id",
+#         "benthiclit__transect__sample_event__site__project_id",
+#         "benthiclit__transect__sample_event__management_id",
+#         "attribute",
+#     )
 
-    class Meta:
-        model = BenthicLIT
+#     class Meta:
+#         model = BenthicLIT
 
-    def preserialize(self, queryset=None):
-        super(ObsBenthicLITReportSerializer, self).preserialize(queryset=queryset)
+#     def preserialize(self, queryset=None):
+#         super(ObsBenthicLITReportSerializer, self).preserialize(queryset=queryset)
 
-        # Transect total lengths
-        transect_totals = queryset.values("benthiclit_id").annotate(
-            total_lit=Sum("length")
-        )
-        benthic_categories = BenthicAttribute.objects.all()
+#         # Transect total lengths
+#         transect_totals = queryset.values("benthiclit_id").annotate(
+#             total_lit=Sum("length")
+#         )
+#         benthic_categories = BenthicAttribute.objects.all()
 
-        benthic_category_lookup = {
-            str(bc.id): dict(name=bc.origin.name) for bc in benthic_categories
-        }
+#         benthic_category_lookup = {
+#             str(bc.id): dict(name=bc.origin.name) for bc in benthic_categories
+#         }
 
-        transect_total_lookup = {
-            str(tt["benthiclit_id"]): dict(total_lit=tt["total_lit"])
-            for tt in transect_totals
-        }
+#         transect_total_lookup = {
+#             str(tt["benthiclit_id"]): dict(total_lit=tt["total_lit"])
+#             for tt in transect_totals
+#         }
 
-        if len(benthic_category_lookup.keys()) > 0:
-            self.serializer_cache[
-                "benthic-attribute_lookups-categories"
-            ] = benthic_category_lookup
+#         if len(benthic_category_lookup.keys()) > 0:
+#             self.serializer_cache[
+#                 "benthic-attribute_lookups-categories"
+#             ] = benthic_category_lookup
 
-        if len(transect_total_lookup.keys()) > 0:
-            self.serializer_cache["benthiclit_lookups-totals"] = transect_total_lookup
+#         if len(transect_total_lookup.keys()) > 0:
+#             self.serializer_cache["benthiclit_lookups-totals"] = transect_total_lookup
 
 
 class BenthicLITMethodView(BaseProjectApiViewSet):
@@ -240,18 +240,18 @@ class BenthicLITMethodView(BaseProjectApiViewSet):
             transaction.savepoint_rollback(sid)
             raise
 
-    @action(detail=False, methods=["get"])
-    def fieldreport(self, request, *args, **kwargs):
-        return fieldreport(
-            self,
-            request,
-            *args,
-            model_cls=ObsBenthicLIT,
-            serializer_class=ObsBenthicLITReportSerializer,
-            fk="benthiclit",
-            order_by=("Site", "Transect number", "Transect label"),
-            **kwargs
-        )
+    # @action(detail=False, methods=["get"])
+    # def fieldreport(self, request, *args, **kwargs):
+    #     return fieldreport(
+    #         self,
+    #         request,
+    #         *args,
+    #         model_cls=ObsBenthicLIT,
+    #         serializer_class=ObsBenthicLITReportSerializer,
+    #         fk="benthiclit",
+    #         order_by=("Site", "Transect number", "Transect label"),
+    #         **kwargs
+    #     )
 
 
 class BenthicLITMethodObsSerializer(BaseViewAPISerializer):

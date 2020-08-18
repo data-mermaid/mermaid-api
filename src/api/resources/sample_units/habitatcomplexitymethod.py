@@ -4,7 +4,7 @@ from rest_framework.response import Response
 from rest_framework.serializers import SerializerMethodField
 from django_filters import BaseInFilter, RangeFilter
 
-from .. import fieldreport
+# from .. import fieldreport
 from ...models.mermaid import HabitatComplexity, ObsHabitatComplexity
 from ...models.view_models import (
     HabitatComplexityObsView,
@@ -39,40 +39,40 @@ class HabitatComplexityMethodSerializer(HabitatComplexitySerializer):
         exclude = []
 
 
-class ObsHabitatComplexityReportSerializer(
-    SampleEventReportSerializer, metaclass=SampleEventReportSerializerMeta
-):
-    transect_method = "habitatcomplexity"
-    sample_event_path = "{}__transect__sample_event".format(transect_method)
+# class ObsHabitatComplexityReportSerializer(
+#     SampleEventReportSerializer, metaclass=SampleEventReportSerializerMeta
+# ):
+#     transect_method = "habitatcomplexity"
+#     sample_event_path = "{}__transect__sample_event".format(transect_method)
 
-    idx = 24
-    obs_fields = [
-        (6, ReportField("habitatcomplexity__transect__reef_slope__name", "Reef slope")),
-        (idx, ReportField("habitatcomplexity__transect__number", "Transect number")),
-        (idx + 1, ReportField("habitatcomplexity__transect__label", "Transect label")),
-        (
-            idx + 2,
-            ReportField(
-                "habitatcomplexity__transect__len_surveyed", "Transect length surveyed"
-            ),
-        ),
-        (idx + 4, ReportField("interval", "Interval (m)")),
-        (idx + 5, ReportField("score__val", "Habitat complexity value")),
-        (idx + 6, ReportField("score__name", "Habitat complexity name")),
-        (
-            idx + 10,
-            ReportField("habitatcomplexity__transect__notes", "Observation notes"),
-        ),
-    ]
+#     idx = 24
+#     obs_fields = [
+#         (6, ReportField("habitatcomplexity__transect__reef_slope__name", "Reef slope")),
+#         (idx, ReportField("habitatcomplexity__transect__number", "Transect number")),
+#         (idx + 1, ReportField("habitatcomplexity__transect__label", "Transect label")),
+#         (
+#             idx + 2,
+#             ReportField(
+#                 "habitatcomplexity__transect__len_surveyed", "Transect length surveyed"
+#             ),
+#         ),
+#         (idx + 4, ReportField("interval", "Interval (m)")),
+#         (idx + 5, ReportField("score__val", "Habitat complexity value")),
+#         (idx + 6, ReportField("score__name", "Habitat complexity name")),
+#         (
+#             idx + 10,
+#             ReportField("habitatcomplexity__transect__notes", "Observation notes"),
+#         ),
+#     ]
 
-    non_field_columns = (
-        "habitatcomplexity_id",
-        "habitatcomplexity__transect__sample_event__site__project_id",
-        "habitatcomplexity__transect__sample_event__management_id",
-    )
+#     non_field_columns = (
+#         "habitatcomplexity_id",
+#         "habitatcomplexity__transect__sample_event__site__project_id",
+#         "habitatcomplexity__transect__sample_event__management_id",
+#     )
 
-    class Meta:
-        model = HabitatComplexity
+#     class Meta:
+#         model = HabitatComplexity
 
 
 class HabitatComplexityMethodView(BaseProjectApiViewSet):
@@ -176,18 +176,18 @@ class HabitatComplexityMethodView(BaseProjectApiViewSet):
             transaction.savepoint_rollback(sid)
             raise
 
-    @action(detail=False, methods=["get"])
-    def fieldreport(self, request, *args, **kwargs):
-        return fieldreport(
-            self,
-            request,
-            *args,
-            model_cls=ObsHabitatComplexity,
-            serializer_class=ObsHabitatComplexityReportSerializer,
-            fk="habitatcomplexity",
-            order_by=("Site", "Transect number", "Transect label"),
-            **kwargs
-        )
+    # @action(detail=False, methods=["get"])
+    # def fieldreport(self, request, *args, **kwargs):
+    #     return fieldreport(
+    #         self,
+    #         request,
+    #         *args,
+    #         model_cls=ObsHabitatComplexity,
+    #         serializer_class=ObsHabitatComplexityReportSerializer,
+    #         fk="habitatcomplexity",
+    #         order_by=("Site", "Transect number", "Transect label"),
+    #         **kwargs
+    #     )
 
 
 class HabitatComplexityMethodObsSerializer(BaseViewAPISerializer):

@@ -62,6 +62,4 @@ class ReportSerializer(object):
 
     def get_serialized_data(self, *args, **kwargs):
         serialized_data = self.data
-        if 'order_by' in kwargs:
-            serialized_data = sorted(serialized_data, key=itemgetter(*kwargs['order_by']))
         return serialized_data

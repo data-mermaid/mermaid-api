@@ -16,6 +16,8 @@ from ...permissions import *
 from ...reports import RawCSVReport
 from ...report_serializer import *
 
+from ...reports import csv_report
+
 
 def to_governance(field, row, serializer_instance):
     transect_method = serializer_instance.transect_method or None
@@ -78,142 +80,142 @@ def to_observers(field, row, serializer_instance):
     return ",".join(observers)
 
 
-class SampleEventReportSerializerMeta(type):
-    def __new__(mcs, clsname, bases, dct):
-        sample_event_path = dct.get("sample_event_path")
-        dct["fields"] = [
-            ReportField(
-                "{}__site__project__name".format(sample_event_path), "Project name"
-            ),
-            ReportField("{}__site__country__name".format(sample_event_path), "Country"),
-            ReportField("{}__site__name".format(sample_event_path), "Site"),
-            ReportField(
-                "{}__site__location".format(sample_event_path), "Latitude", to_latitude
-            ),
-            ReportField(
-                "{}__site__location".format(sample_event_path),
-                "Longitude",
-                to_longitude,
-            ),
-            ReportField(
-                "{}__site__exposure__name".format(sample_event_path), "Exposure"
-            ),
-            ReportField(
-                "{}__site__reef_type__name".format(sample_event_path), "Reef type"
-            ),
-            ReportField(
-                "{}__site__reef_zone__name".format(sample_event_path), "Reef zone"
-            ),
-            ReportField("{}__sample_date".format(sample_event_path), "Year", to_year),
-            ReportField("{}__sample_date".format(sample_event_path), "Month", to_month),
-            ReportField("{}__sample_date".format(sample_event_path), "Day", to_day),
-            ReportField(
-                "{}__sample_time".format(sample_event_path), "Start time", to_unicode
-            ),
-            ReportField("{}__tide__name".format(sample_event_path), "Tide"),
-            ReportField("{}__visibility__name".format(sample_event_path), "Visibility"),
-            ReportField("{}__current__name".format(sample_event_path), "Current"),
-            ReportField("{}__depth".format(sample_event_path), "Depth", to_float),
-            ReportField(
-                "{}__management__name".format(sample_event_path), "Management name"
-            ),
-            ReportField(
-                "{}__management__name_secondary".format(sample_event_path),
-                "Management secondary name",
-            ),
-            ReportField(
-                "{}__management__est_year".format(sample_event_path),
-                "Management year established",
-            ),
-            ReportField(
-                "{}__management__size".format(sample_event_path),
-                "Management size",
-                to_float,
-            ),
-            ReportMethodField("Governance", to_governance),
-            ReportField(
-                "{}__management__compliance__name".format(sample_event_path),
-                "Estimated compliance",
-            ),
-            ReportMethodField("Management rules", to_management_rules),
-            ReportMethodField("Observer", to_observers),
-            ReportField("{}__site__notes".format(sample_event_path), "Site notes"),
-            ReportField("{}__notes".format(sample_event_path), "Sampling event notes"),
-            ReportField(
-                "{}__management__notes".format(sample_event_path), "Management notes"
-            ),
-        ]
+# class SampleEventReportSerializerMeta(type):
+#     def __new__(mcs, clsname, bases, dct):
+#         sample_event_path = dct.get("sample_event_path")
+#         dct["fields"] = [
+#             ReportField(
+#                 "{}__site__project__name".format(sample_event_path), "Project name"
+#             ),
+#             ReportField("{}__site__country__name".format(sample_event_path), "Country"),
+#             ReportField("{}__site__name".format(sample_event_path), "Site"),
+#             ReportField(
+#                 "{}__site__location".format(sample_event_path), "Latitude", to_latitude
+#             ),
+#             ReportField(
+#                 "{}__site__location".format(sample_event_path),
+#                 "Longitude",
+#                 to_longitude,
+#             ),
+#             ReportField(
+#                 "{}__site__exposure__name".format(sample_event_path), "Exposure"
+#             ),
+#             ReportField(
+#                 "{}__site__reef_type__name".format(sample_event_path), "Reef type"
+#             ),
+#             ReportField(
+#                 "{}__site__reef_zone__name".format(sample_event_path), "Reef zone"
+#             ),
+#             ReportField("{}__sample_date".format(sample_event_path), "Year", to_year),
+#             ReportField("{}__sample_date".format(sample_event_path), "Month", to_month),
+#             ReportField("{}__sample_date".format(sample_event_path), "Day", to_day),
+#             ReportField(
+#                 "{}__sample_time".format(sample_event_path), "Start time", to_unicode
+#             ),
+#             ReportField("{}__tide__name".format(sample_event_path), "Tide"),
+#             ReportField("{}__visibility__name".format(sample_event_path), "Visibility"),
+#             ReportField("{}__current__name".format(sample_event_path), "Current"),
+#             ReportField("{}__depth".format(sample_event_path), "Depth", to_float),
+#             ReportField(
+#                 "{}__management__name".format(sample_event_path), "Management name"
+#             ),
+#             ReportField(
+#                 "{}__management__name_secondary".format(sample_event_path),
+#                 "Management secondary name",
+#             ),
+#             ReportField(
+#                 "{}__management__est_year".format(sample_event_path),
+#                 "Management year established",
+#             ),
+#             ReportField(
+#                 "{}__management__size".format(sample_event_path),
+#                 "Management size",
+#                 to_float,
+#             ),
+#             ReportMethodField("Governance", to_governance),
+#             ReportField(
+#                 "{}__management__compliance__name".format(sample_event_path),
+#                 "Estimated compliance",
+#             ),
+#             ReportMethodField("Management rules", to_management_rules),
+#             ReportMethodField("Observer", to_observers),
+#             ReportField("{}__site__notes".format(sample_event_path), "Site notes"),
+#             ReportField("{}__notes".format(sample_event_path), "Sampling event notes"),
+#             ReportField(
+#                 "{}__management__notes".format(sample_event_path), "Management notes"
+#             ),
+#         ]
 
-        obs_fields = dct.get("obs_fields")
-        if obs_fields:
-            for f in obs_fields:
-                dct["fields"].insert(f[0], f[1])
+#         obs_fields = dct.get("obs_fields")
+#         if obs_fields:
+#             for f in obs_fields:
+#                 dct["fields"].insert(f[0], f[1])
 
-        return super(SampleEventReportSerializerMeta, mcs).__new__(
-            mcs, clsname, bases, dct
-        )
+#         return super(SampleEventReportSerializerMeta, mcs).__new__(
+#             mcs, clsname, bases, dct
+#         )
 
 
-class SampleEventReportSerializer(ReportSerializer):
-    serializer_cache = dict()
-    transect_method = None
-    sample_event_path = None
+# class SampleEventReportSerializer(ReportSerializer):
+#     serializer_cache = dict()
+#     transect_method = None
+#     sample_event_path = None
 
-    def preserialize(self, queryset=None):
-        self.serializer_cache = dict()
-        try:
-            values = (
-                queryset.values_list(
-                    "{}__site__project_id".format(self.sample_event_path), flat=True
-                )
-                or []
-            )
-            if not values:
-                raise ObjectDoesNotExist
-            project_pk = values[0]
-        except ObjectDoesNotExist:
-            return
+#     def preserialize(self, queryset=None):
+#         self.serializer_cache = dict()
+#         try:
+#             values = (
+#                 queryset.values_list(
+#                     "{}__site__project_id".format(self.sample_event_path), flat=True
+#                 )
+#                 or []
+#             )
+#             if not values:
+#                 raise ObjectDoesNotExist
+#             project_pk = values[0]
+#         except ObjectDoesNotExist:
+#             return
 
-        # Observers
-        kwargs = {
-            "transectmethod__{}__site__project_id".format(
-                self.sample_event_path
-            ): project_pk
-        }
-        observers = (
-            Observer.objects.select_related("transectmethod")
-            .filter(**kwargs)
-            .iterator()
-        )
-        observer_lookup = defaultdict(list)
-        for o in observers:
-            observer_lookup[str(o.transectmethod.id)].append(o.profile.full_name)
-        for transect_method_id, observers in observer_lookup.items():
-            observer_lookup[transect_method_id] = sorted(observers)
-        if len(observer_lookup.keys()) > 0:
-            self.serializer_cache[
-                "{}_lookups-observers-{}".format(self.transect_method, project_pk)
-            ] = observer_lookup
+#         # Observers
+#         kwargs = {
+#             "transectmethod__{}__site__project_id".format(
+#                 self.sample_event_path
+#             ): project_pk
+#         }
+#         observers = (
+#             Observer.objects.select_related("transectmethod")
+#             .filter(**kwargs)
+#             .iterator()
+#         )
+#         observer_lookup = defaultdict(list)
+#         for o in observers:
+#             observer_lookup[str(o.transectmethod.id)].append(o.profile.full_name)
+#         for transect_method_id, observers in observer_lookup.items():
+#             observer_lookup[transect_method_id] = sorted(observers)
+#         if len(observer_lookup.keys()) > 0:
+#             self.serializer_cache[
+#                 "{}_lookups-observers-{}".format(self.transect_method, project_pk)
+#             ] = observer_lookup
 
-        # Management Parties and Rules
-        management_parties_lookup = dict()
-        management_rules_lookup = dict()
-        for m in Management.objects.filter(project_id=project_pk):
-            parties = m.parties.all().order_by("name").values_list("name", flat=True)
-            management_parties_lookup[str(m.id)] = ",".join(parties)
-            management_rules_lookup[str(m.id)] = get_rules(m)
+#         # Management Parties and Rules
+#         management_parties_lookup = dict()
+#         management_rules_lookup = dict()
+#         for m in Management.objects.filter(project_id=project_pk):
+#             parties = m.parties.all().order_by("name").values_list("name", flat=True)
+#             management_parties_lookup[str(m.id)] = ",".join(parties)
+#             management_rules_lookup[str(m.id)] = get_rules(m)
 
-        if len(management_parties_lookup.keys()) > 0:
-            self.serializer_cache[
-                "{}_lookups-management_parties-{}".format(
-                    self.transect_method, project_pk
-                )
-            ] = management_parties_lookup
-            self.serializer_cache[
-                "{}_lookups-management_rules-{}".format(
-                    self.transect_method, project_pk
-                )
-            ] = management_rules_lookup
+#         if len(management_parties_lookup.keys()) > 0:
+#             self.serializer_cache[
+#                 "{}_lookups-management_parties-{}".format(
+#                     self.transect_method, project_pk
+#                 )
+#             ] = management_parties_lookup
+#             self.serializer_cache[
+#                 "{}_lookups-management_rules-{}".format(
+#                     self.transect_method, project_pk
+#                 )
+#             ] = management_rules_lookup
 
 
 def save_one_to_many(foreign_key, database_records, data, serializer_class, context):
@@ -289,23 +291,14 @@ class BaseProjectMethodView(BaseProjectApiViewSet):
     permission_classes = [Or(ProjectDataReadOnlyPermission, ProjectPublicPermission)]
     http_method_names = ["get"]
 
-    def _get_fields(self, serializer):
-        fields = serializer.child.get_fields()
-        ordered_fields = fields
-        if hasattr(serializer.child.Meta, "header_order"):
-            header_order = serializer.child.Meta.header_order
-            ordered_fields = OrderedDict((f, fields[f]) for f in header_order)
-        return ordered_fields
+    def filter_queryset(self, queryset):
+        qs = super().filter_queryset(queryset)
+        order_by = getattr(self, "order_by")
+        if qs.query.order_by and qs.query.order_by[0] == "id" and order_by:
+            qs = qs.order_by(*order_by)
 
-    def csv_data(self, fields, serializer):
-        for row in serializer.data:
-            prepared_row = OrderedDict()
-            for fieldname, field in fields.items():
-                value = row.get(fieldname, None)
-                if isinstance(value, (list, set, tuple)):
-                    value = ", ".join(str(v) for v in value)
-                prepared_row[fieldname] = value
-            yield prepared_row
+        return qs
+
 
     @action(detail=False, methods=["get"])
     def json(self, request, *args, **kwargs):  # default, for completeness
@@ -319,24 +312,34 @@ class BaseProjectMethodView(BaseProjectApiViewSet):
 
     @action(detail=False, methods=["get"])
     def csv(self, request, *args, **kwargs):
-        try:
-            project = Project.objects.get(pk=kwargs["project_pk"])
-        except ObjectDoesNotExist:
-            return HttpResponseBadRequest("Project doesn't exist")
         self.limit_to_project(request, *args, **kwargs)
-        self.serializer_class = self.serializer_class_csv
+        queryset = self.filter_queryset(self.get_queryset())
 
-        self.queryset = self.filter_queryset(self.get_queryset())
-        serializer = self.get_serializer(self.get_queryset(), many=True)
-        fields = self._get_fields(serializer)
-        serialized_data = self.csv_data(fields, serializer)
-        report = RawCSVReport()
-        stream = report.stream(list(fields), serialized_data)
-
-        response = StreamingHttpResponse(stream, content_type="text/csv")
-        ts = datetime.utcnow().strftime("%Y%m%d")
-        projname = get_valid_filename(project.name)[:100]
-        response["Content-Disposition"] = 'attachment; filename="{}-{}-{}.csv"'.format(
-            self.drf_label, projname, ts
+        print(queryset.query.where)
+        return csv_report.get_csv_response(
+            queryset, self.serializer_class_csv
         )
-        return response
+
+
+
+        # try:
+        #     project = Project.objects.get(pk=kwargs["project_pk"])
+        # except ObjectDoesNotExist:
+        #     return HttpResponseBadRequest("Project doesn't exist")
+        # self.limit_to_project(request, *args, **kwargs)
+        # self.serializer_class = self.serializer_class_csv
+
+        # self.queryset = self.filter_queryset(self.get_queryset())
+        # serializer = self.get_serializer(self.get_queryset(), many=True)
+        # fields = self._get_fields(serializer)
+        # serialized_data = self.csv_data(fields, serializer)
+        # report = RawCSVReport()
+        # stream = report.stream(list(fields), serialized_data)
+
+        # response = StreamingHttpResponse(stream, content_type="text/csv")
+        # ts = datetime.utcnow().strftime("%Y%m%d")
+        # projname = get_valid_filename(project.name)[:100]
+        # response["Content-Disposition"] = 'attachment; filename="{}-{}-{}.csv"'.format(
+        #     self.drf_label, projname, ts
+        # )
+        # return response

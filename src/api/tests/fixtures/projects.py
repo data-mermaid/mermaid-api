@@ -11,6 +11,7 @@ from api.models import (
     SampleEvent,
     Site,
 )
+from api.utils import tokenutils
 
 # PROJECT
 
@@ -40,6 +41,18 @@ def profile2(db):
     AuthUser.objects.create(profile=profile, user_id=f"test|{email}")
 
     return profile
+
+
+@pytest.fixture
+def token1(db, profile1):
+    auth_user = profile1.authusers.first()
+    return tokenutils.create_token(auth_user.user_id)
+
+
+@pytest.fixture
+def token2(db, profile2):
+    auth_user = profile2.authusers.first()
+    return tokenutils.create_token(auth_user.user_id)
 
 
 @pytest.fixture

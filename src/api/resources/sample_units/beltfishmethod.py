@@ -422,14 +422,9 @@ class BeltFishProjectMethodObsView(BaseProjectMethodView):
     project_policy = "data_policy_beltfish"
     serializer_class = BeltFishMethodObsSerializer
     serializer_class_geojson = BeltFishMethodObsGeoSerializer
-    serializer_class_csv = BeltFishMethodObsCSVSerializer
+    serializer_class_csv = ObsBeltFishFieldReportSerializer
     filterset_class = BeltFishMethodObsFilterSet
-    queryset = BeltFishObsView.objects.exclude(
-        Q(project_status=Project.TEST)
-        | Q(size__isnull=True)
-        | Q(count__isnull=True)
-        | Q(biomass_kgha__isnull=True)
-    ).order_by(
+    order_by = (
         "site_name",
         "sample_date",
         "transect_number",
@@ -439,6 +434,15 @@ class BeltFishProjectMethodObsView(BaseProjectMethodView):
         "fish_taxon",
         "size",
     )
+
+    queryset = BeltFishObsView.objects.filter(
+        # Q(project_status=Project.TEST) |
+        Q(size__isnull=False)
+        | Q(count__isnull=False)
+        | Q(biomass_kgha__isnull=False)
+       
+    )
+
 
 
 class BeltFishProjectMethodSUView(BaseProjectMethodView):
