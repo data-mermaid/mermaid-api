@@ -1,4 +1,5 @@
 import pytz
+from django.db import IntegrityError
 from django.db.models import ProtectedError, Q
 from django.http.response import HttpResponseBadRequest
 from django.template.defaultfilters import pluralize
@@ -7,6 +8,7 @@ from rest_framework import status
 from rest_framework.request import Request
 from rest_framework.response import Response
 from rest_framework.decorators import action
+from rest_framework.serializers import raise_errors_on_nested_writes
 
 from ..models import ArchivedRecord
 from ..utils import get_protected_related_objects
@@ -34,6 +36,22 @@ class ProtectedResourceMixin(object):
 
             msg += " [" + ", ".join(protected_instance_displays) + "]"
             return Response(msg, status=status.HTTP_403_FORBIDDEN)
+
+
+class CreateOrUpdateSerializerMixin(object):
+    def create(self, validated_data):
+        try:
+            import time
+            time.sleep(5)
+            validated_data["id"] = "590677f0-272b-4ce9-a802-5f3f877f34fe"
+            return super().create(validated_data)
+        except IntegrityError as err:
+            if "violates unique constraint" in str(err).lower():
+                print("Integrity")
+                ModelClass = self.Meta.model
+                instance = ModelClass.objects.get(id=validated_data["id"])
+                return self.update(instance, validated_data)
+            raise
 
 
 class UpdatesMixin(object):
@@ -176,7 +194,6 @@ class MethodAuthenticationMixin(object):
 
 
 class OrFilterSetMixin(object):
-
     def str_or_lookup(self, queryset, name, value, key=None, lookup_expr="iexact"):
         if not isinstance(name, (list, set, tuple)):
             name = [name]

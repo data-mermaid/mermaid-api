@@ -2,10 +2,11 @@ from django.utils.decorators import method_decorator
 from django.views.decorators.cache import cache_page
 from rest_framework import serializers
 from .base import BaseAPIFilterSet, BaseAttributeApiViewSet, BaseAPISerializer
+from .mixins import CreateOrUpdateSerializerMixin
 from ..models import FishSpecies
 
 
-class FishSpeciesSerializer(BaseAPISerializer):
+class FishSpeciesSerializer(CreateOrUpdateSerializerMixin, BaseAPISerializer):
     status = serializers.ReadOnlyField()
     display_name = serializers.SerializerMethodField()
     biomass_constant_a = serializers.DecimalField(max_digits=7,
