@@ -29,22 +29,56 @@ def _get_rows(client, token, url):
     f = StringIO(b"".join(response.streaming_content).decode("utf-8"))
     reader = csv.DictReader(f, delimiter=",")
     fieldnames = reader.fieldnames
-    return fieldnames, list(reader)
+    return fieldnames, list(reader), response
 
 
 def test_beltfish_csv_view(
+    client,
+    db_setup,
+    project1,
+    token1,
+    belt_fish_project,
+    all_choices,
+    site2,
+    management2,
+    profile2,
+):
+    url = reverse("obstransectbeltfish-csv", kwargs=dict(project_pk=project1.pk))
+    fieldnames, rows, response = _get_rows(client, token1, url)
+
+    assert response.has_header("Content-Disposition")
+    assert (
+        "test_project_1-beltfish-obs-"
+        in response._headers.get("content-disposition")[1]
+    )
+    assert len(rows) == 6
+    assert "country_name" in fieldnames
+    assert len(rows[3].keys()) == 57
+    assert rows[3]["site_name"] == site2.name
+    assert float(rows[3]["latitude"]) == site2.location.y
+    assert float(rows[3]["longitude"]) == site2.location.x
+    assert rows[3]["observers"] == profile2.full_name
+    assert rows[3]["management_id"] == str(management2.id)
+
+
+def test_beltfish_field_report(
     client, db_setup, project1, token1, belt_fish_project, all_choices, site2, profile2
 ):
     url = reverse("obstransectbeltfish-csv", kwargs=dict(project_pk=project1.pk))
-    fieldnames, rows = _get_rows(client, token1, url)
+    fieldnames, rows, response = _get_rows(client, token1, f"{url}?field_report=true")
 
+    assert response.has_header("Content-Disposition")
+    assert (
+        "test_project_1-beltfish-obs-"
+        in response._headers.get("content-disposition")[1]
+    )
     assert len(rows) == 6
     assert "Country" in fieldnames
-
+    assert len(rows[3].keys()) == 47
     assert rows[3]["Site"] == site2.name
     assert float(rows[3]["Latitude"]) == site2.location.y
     assert float(rows[3]["Longitude"]) == site2.location.x
-    assert rows[3]["Observer"] == profile2.full_name
+    assert rows[3]["Observers"] == profile2.full_name
 
 
 def test_benthicpit_csv_view(

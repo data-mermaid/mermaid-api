@@ -293,8 +293,8 @@ class BaseProjectMethodView(BaseProjectApiViewSet):
 
     def filter_queryset(self, queryset):
         qs = super().filter_queryset(queryset)
-        order_by = getattr(self, "order_by")
-        if qs.query.order_by and qs.query.order_by[0] == "id" and order_by:
+        order_by = getattr(self, "order_by") if hasattr(self, "order_by") else None
+        if order_by and qs.query.order_by and qs.query.order_by[0] == "id":
             qs = qs.order_by(*order_by)
 
         return qs
@@ -312,12 +312,26 @@ class BaseProjectMethodView(BaseProjectApiViewSet):
 
     @action(detail=False, methods=["get"])
     def csv(self, request, *args, **kwargs):
+        is_report_field = truthy(request.query_params.get("field_report"))
+        show_display_fields = is_report_field
+        include_additional_fields = not is_report_field
+
+        try:
+            project = Project.objects.get(pk=kwargs["project_pk"])
+        except ObjectDoesNotExist:
+            return HttpResponseBadRequest("Project doesn't exist")
+
+        project_name = get_valid_filename(project.name)[:100]
+        file_name_prefix = f"{project_name}-{self.drf_label}"
+
         self.limit_to_project(request, *args, **kwargs)
         queryset = self.filter_queryset(self.get_queryset())
-
-        print(queryset.query.where)
         return csv_report.get_csv_response(
-            queryset, self.serializer_class_csv
+            queryset,
+            self.serializer_class_csv,
+            file_name_prefix=file_name_prefix,
+            include_additional_fields=include_additional_fields,
+            show_display_fields=show_display_fields,
         )
 
 

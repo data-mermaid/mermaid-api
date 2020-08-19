@@ -59,15 +59,15 @@ class ObsBeltFishFieldReportSerializer(ObservationsFieldReportSerializer):
         ReportField("project_name", "Project name"),
         ReportField("country_name", "Country"),
         ReportField("site_name", "Site"),
-        ReportField("location", "Latitude", to_latitude),
-        ReportField("location", "Longitude", to_longitude,),
+        ReportField("location", "Latitude", to_latitude, alias="latitude"),
+        ReportField("location", "Longitude", to_longitude, alias="longitude"),
         ReportField("reef_exposure", "Exposure"),
         ReportField("reef_slope", "Reef slope"),
         ReportField("reef_type", "Reef type"),
         ReportField("reef_zone", "Reef zone"),
-        ReportField("sample_date", "Year", to_year),
-        ReportField("sample_date", "Month", to_month),
-        ReportField("sample_date", "Day", to_day),
+        ReportField("sample_date", "Year", to_year, "sample_date_year"),
+        ReportField("sample_date", "Month", to_month, "sample_date_month"),
+        ReportField("sample_date", "Day", to_day, "sample_date_day"),
         ReportField("sample_time", "Start time", to_str),
         ReportField("tide_name", "Tide"),
         ReportField("visibility_name", "Visibility"),
@@ -84,7 +84,7 @@ class ObsBeltFishFieldReportSerializer(ObservationsFieldReportSerializer):
         ReportField("label", "Transect label"),
         ReportField("transect_len_surveyed", "Transect length surveyed"),
         ReportField("transect_width_name", "Transect width"),
-        ReportField("observers", "Observer", to_observers),
+        ReportField("observers", "Observers", to_observers),
         ReportField("fish_family", "Fish family"),
         ReportField("fish_genus", "Fish genus"),
         ReportField("fish_taxon", "Fish taxon"),
@@ -100,9 +100,22 @@ class ObsBeltFishFieldReportSerializer(ObservationsFieldReportSerializer):
         ReportField("management_notes", "Management notes"),
         ReportField("trophic_group", "Trophic group"),
         ReportField("trophic_level", "Trophic level"),
-        ReportField("trophic_group", "Functional group"),
+        ReportField("functional_group", "Functional group"),
         ReportField("vulnerability", "Vulnerability"),
         ReportField("observation_notes", "Observation notes"),
+    ]
+
+    additional_fields = [
+        ReportField("id"),
+        ReportField("site_id"),
+        ReportField("project_id"),
+        ReportField("project_notes"),
+        ReportField("contact_link"),
+        ReportField("tags"),
+        ReportField("country_id"),
+        ReportField("management_id"),
+        ReportField("sample_unit_id"),
+        ReportField("data_policy_beltfish"),
     ]
 
 
@@ -216,29 +229,29 @@ class BeltFishMethodView(BaseProjectApiViewSet):
             transaction.savepoint_rollback(sid)
             raise
 
-    @action(
-        detail=False,
-        methods=["get"],
-        permission_classes=[Or(ProjectDataReadOnlyPermission, ProjectPublicPermission)],
-    )
-    def fieldreport(self, request, *args, **kwargs):
-        return field_reports.get_csv_response(
-            project_api_viewset=self,
-            serializer_class=ObsBeltFishFieldReportSerializer,
-            report_model_cls=BeltFishObsView,
-            project_pk=kwargs["project_pk"],
-            relationship=("id" ", sample_unit_id",),
-            order_by=(
-                "Site",
-                "Transect number",
-                "Transect label",
-                "Fish family",
-                "Fish genus",
-                "Fish taxon",
-                "Size",
-            ),
-            file_name_prefix="beltfish",
-        )
+    # @action(
+    #     detail=False,
+    #     methods=["get"],
+    #     permission_classes=[Or(ProjectDataReadOnlyPermission, ProjectPublicPermission)],
+    # )
+    # def fieldreport(self, request, *args, **kwargs):
+    #     return field_reports.get_csv_response(
+    #         project_api_viewset=self,
+    #         serializer_class=ObsBeltFishFieldReportSerializer,
+    #         report_model_cls=BeltFishObsView,
+    #         project_pk=kwargs["project_pk"],
+    #         relationship=("id" ", sample_unit_id",),
+    #         order_by=(
+    #             "Site",
+    #             "Transect number",
+    #             "Transect label",
+    #             "Fish family",
+    #             "Fish genus",
+    #             "Fish taxon",
+    #             "Size",
+    #         ),
+    #         file_name_prefix="beltfish",
+    #     )
 
 
 class BeltFishMethodObsSerializer(BaseViewAPISerializer):

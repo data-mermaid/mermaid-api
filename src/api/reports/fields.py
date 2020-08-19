@@ -1,13 +1,10 @@
-
-
 class ReportField(object):
-    __slots__ = ("column_path", "formatter", "_display")
-
-    def __init__(self, column_path, display=None, formatter=None):
+    def __init__(self, column_path, display=None, formatter=None, alias=None):
         self._display = None
         self.column_path = column_path
         self.display = display
         self.formatter = formatter
+        self.alias = alias
 
     @property
     def display(self):
@@ -29,9 +26,7 @@ class ReportField(object):
 
 
 class ReportMethodField(object):
-    __slots__ = ("method", "display")
-
-    def __init__(self, display, method):
+    def __init__(self, display, method, alias=None):
         self.display = display
         self.method = method
 

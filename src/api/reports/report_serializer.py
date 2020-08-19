@@ -10,22 +10,34 @@ from api.utils.timer import Timer
 class ReportSerializer(object):
     fields = None
     non_field_columns = None
+    include_additional_fields = False
+    show_display_fields = False
 
-    def __init__(self, queryset, ignore_select_related=False):
+    def __init__(
+        self,
+        queryset=None,
+        ignore_select_related=False,
+        include_additional_fields=False,
+        show_display_fields=False,
+    ):
         self.queryset = queryset
         self.ignore_select_related = ignore_select_related
+        self.include_additional_fields = include_additional_fields
+        self.show_display_fields = show_display_fields
         self.cache = dict()
 
-    @classmethod
-    def get_fields(cls):
-        if cls.fields is None:
+    def get_fields(self):
+        if self.fields is None:
             raise ValueError("fields not defined")
 
-        fields = cls.fields
-        if hasattr(cls, "excluded_fields"):
-            patterns = [re.compile(c) for c in cls.excluded_fields]
-            return [c for c in fields
-                    if is_match(c.display, patterns) is False]
+        fields = list(self.fields)
+        if self.include_additional_fields is True:
+            fields += getattr(self, "additional_fields", [])
+
+        if hasattr(self, "excluded_fields"):
+            patterns = [re.compile(c) for c in self.excluded_fields]
+            return [c for c in fields if is_match(c.display, patterns) is False]
+
         return fields
 
     def _get_column_paths(self):
@@ -42,7 +54,13 @@ class ReportSerializer(object):
     def _prepare_row(self, row, fields):
         prepared_row = OrderedDict()
         for field in fields:
-            prepared_row[field.display] = field.to_representation(row, self)
+            if getattr(self, "show_display_fields", False) is True:
+                prepared_row[field.display] = field.to_representation(row, self)
+            else:
+                prepared_row[
+                    field.alias or field.column_path
+                ] = field.to_representation(row, self)
+
         return prepared_row
 
     def preserialize(self, queryset=None):
@@ -54,6 +72,9 @@ class ReportSerializer(object):
 
     @property
     def data(self):
+        if self.queryset is None:
+            return []
+
         fields = self.get_fields()
         qs = self._get_prepared_queryset(self.queryset)
         self.preserialize(qs)
