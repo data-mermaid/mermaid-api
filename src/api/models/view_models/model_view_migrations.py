@@ -22,24 +22,24 @@ def forward_sql():
 
         BeltFishObsView.sql,
         BeltFishSUView.sql,
-        BeltFishSEView.sql,
-
-        BenthicPITObsView.sql,
-        BenthicPITSUView.sql,
-        BenthicPITSEView.sql,
-
-        BenthicLITObsView.sql,
-        BenthicLITSUView.sql,
-        BenthicLITSEView.sql,
-
-        BleachingQCColoniesBleachedObsView.sql,
-        BleachingQCQuadratBenthicPercentObsView.sql,
-        BleachingQCSUView.sql,
-        BleachingQCSEView.sql,
-
-        HabitatComplexityObsView.sql,
-        HabitatComplexitySUView.sql,
-        HabitatComplexitySEView.sql,
+        # BeltFishSEView.sql,
+        #
+        # BenthicPITObsView.sql,
+        # BenthicPITSUView.sql,
+        # BenthicPITSEView.sql,
+        #
+        # BenthicLITObsView.sql,
+        # BenthicLITSUView.sql,
+        # BenthicLITSEView.sql,
+        #
+        # BleachingQCColoniesBleachedObsView.sql,
+        # BleachingQCQuadratBenthicPercentObsView.sql,
+        # BleachingQCSUView.sql,
+        # BleachingQCSEView.sql,
+        #
+        # HabitatComplexityObsView.sql,
+        # HabitatComplexitySUView.sql,
+        # HabitatComplexitySEView.sql,
     ]
     output = []
     for s in sql:
@@ -49,6 +49,8 @@ def forward_sql():
 
         output.append(s)
 
+    # with open("forward.sql", "w") as fh:
+    #     fh.write("\n".join(output))
     return reverse_sql() + "\n".join(output)
 
 

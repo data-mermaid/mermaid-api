@@ -234,6 +234,9 @@ def notify_admins_dropped_admin(sender, instance, **kwargs):
 def del_orphaned_su(sender, instance, *args, **kwargs):
     if instance.sample_unit is not None:
         delete_orphaned_sample_unit(instance.sample_unit, instance)
+    # post_save and post_delete to update_pseudosu:
+    #  1. delete all records from sample_unit_cache
+    #  2. run cache population for that SE, using su_fields from agg view corresponding to TransectMethod.protocol
 
 
 def del_orphaned_se(sender, instance, *args, **kwargs):

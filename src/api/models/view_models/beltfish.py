@@ -133,7 +133,7 @@ CREATE OR REPLACE VIEW public.vw_beltfish_obs
 class BeltFishSUView(BaseSUViewModel):
     project_lookup = "project_id"
 
-    # Unique combination of these fields defines a single sample unit. All other fields are aggregated.
+    # Unique combination of these fields defines a single (pseudo) sample unit. All other fields are aggregated.
     su_fields = BaseSUViewModel.se_fields + ["depth", "transect_number", "transect_len_surveyed", "data_policy_beltfish"]
     su_tg_join = " AND ".join([
         f"(beltfish_su.{f} = beltfish_tg.{f} OR (beltfish_su.{f} IS NULL AND beltfish_tg.{f} IS NULL))"
