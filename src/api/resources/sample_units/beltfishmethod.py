@@ -1,20 +1,22 @@
 from django.db import transaction
 from django.db.models import Q
 from django_filters import BaseInFilter, RangeFilter
+from rest_condition import Or
 from rest_framework import status
 from rest_framework.response import Response
 from rest_framework.serializers import SerializerMethodField
 
-from ...models.mermaid import BeltFish
+from ...models.mermaid import BeltFish, Project
 from ...models.view_models import BeltFishObsView, BeltFishSEView, BeltFishSUView
-from ...reports import field_reports
+from ...permissions import ProjectDataReadOnlyPermission, ProjectPublicSummaryPermission
 from ...reports.fields import ReportField
 from ...reports.formatters import (
-    handle_none,
     to_day,
+    to_governance,
     to_latitude,
     to_longitude,
     to_month,
+    to_observers,
     to_str,
     to_year,
 )
@@ -30,31 +32,10 @@ from ..fish_belt_transect import FishBeltTransectSerializer
 from ..obs_belt_fish import ObsBeltFishSerializer
 from ..observer import ObserverSerializer
 from ..sample_event import SampleEventSerializer
-from . import *
+from . import BaseProjectMethodView, save_model, save_one_to_many
 
 
-@handle_none()
-def to_governance(value, field, row, serializer_instance):
-    vals = []
-    for v in value:
-        vals.extend(v.split("/"))
-
-    return ",".join(vals)
-
-
-@handle_none()
-def to_observers(value, field, row, serializer_instance):
-    vals = [v["name"] for v in value]
-    return ",".join(vals)
-
-
-class ObservationsFieldReportSerializer(ReportSerializer):
-    sample_unit_method = ""
-    observation_fields = []
-    non_field_columns = []
-
-
-class ObsBeltFishFieldReportSerializer(ObservationsFieldReportSerializer):
+class ObsBeltFishCSVSerializer(ReportSerializer):
     fields = [
         ReportField("project_name", "Project name"),
         ReportField("country_name", "Country"),
@@ -228,30 +209,6 @@ class BeltFishMethodView(BaseProjectApiViewSet):
         except:
             transaction.savepoint_rollback(sid)
             raise
-
-    # @action(
-    #     detail=False,
-    #     methods=["get"],
-    #     permission_classes=[Or(ProjectDataReadOnlyPermission, ProjectPublicPermission)],
-    # )
-    # def fieldreport(self, request, *args, **kwargs):
-    #     return field_reports.get_csv_response(
-    #         project_api_viewset=self,
-    #         serializer_class=ObsBeltFishFieldReportSerializer,
-    #         report_model_cls=BeltFishObsView,
-    #         project_pk=kwargs["project_pk"],
-    #         relationship=("id" ", sample_unit_id",),
-    #         order_by=(
-    #             "Site",
-    #             "Transect number",
-    #             "Transect label",
-    #             "Fish family",
-    #             "Fish genus",
-    #             "Fish taxon",
-    #             "Size",
-    #         ),
-    #         file_name_prefix="beltfish",
-    #     )
 
 
 class BeltFishMethodObsSerializer(BaseViewAPISerializer):
@@ -435,7 +392,7 @@ class BeltFishProjectMethodObsView(BaseProjectMethodView):
     project_policy = "data_policy_beltfish"
     serializer_class = BeltFishMethodObsSerializer
     serializer_class_geojson = BeltFishMethodObsGeoSerializer
-    serializer_class_csv = ObsBeltFishFieldReportSerializer
+    serializer_class_csv = ObsBeltFishCSVSerializer
     filterset_class = BeltFishMethodObsFilterSet
     order_by = (
         "site_name",
@@ -453,9 +410,7 @@ class BeltFishProjectMethodObsView(BaseProjectMethodView):
         Q(size__isnull=False)
         | Q(count__isnull=False)
         | Q(biomass_kgha__isnull=False)
-       
     )
-
 
 
 class BeltFishProjectMethodSUView(BaseProjectMethodView):

@@ -130,5 +130,7 @@ def benthic_pit_project(
     obs_benthic_pit2_5,
     observer_benthic_pit1,
     observer_benthic_pit2,
+    project_profile1,
+    project_profile2
 ):
     pass
