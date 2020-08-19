@@ -3,10 +3,11 @@ from django.views.decorators.cache import cache_page
 from rest_framework import serializers
 from django_filters import ModelMultipleChoiceFilter
 from .base import BaseAPIFilterSet, NullableUUIDFilter, BaseAPISerializer, BaseAttributeApiViewSet
+from .mixins import CreateOrUpdateSerializerMixin
 from ..models import BenthicAttribute, Region
 
 
-class BenthicAttributeSerializer(BaseAPISerializer):
+class BenthicAttributeSerializer(CreateOrUpdateSerializerMixin, BaseAPISerializer):
     status = serializers.ReadOnlyField()
 
     class Meta:
