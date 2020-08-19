@@ -1,8 +1,10 @@
 import operator
+import sys
 
 from django import urls
 from django.conf import settings
 from django.core import serializers
+from django.db import connection
 from django.db.models.signals import post_delete, post_save, pre_save, m2m_changed
 from django.dispatch import receiver
 
@@ -234,17 +236,32 @@ def notify_admins_dropped_admin(sender, instance, **kwargs):
 def del_orphaned_su(sender, instance, *args, **kwargs):
     if instance.sample_unit is not None:
         delete_orphaned_sample_unit(instance.sample_unit, instance)
-    # post_save and post_delete to update_pseudosu:
-    #  1. delete all records from sample_unit_cache
-    #  2. run cache population for that SE, using su_fields from agg view corresponding to TransectMethod.protocol
 
 
 def del_orphaned_se(sender, instance, *args, **kwargs):
     delete_orphaned_sample_event(instance.sample_event, instance)
 
 
+def refresh_pseudosu_cache(sender, instance, *args, **kwargs):
+    if not hasattr(sender, "suview") or not hasattr(sys.modules[__name__], sender.suview):
+        return
+    suview = getattr(sys.modules[__name__], sender.suview)
+    if not hasattr(suview, "su_fields"):
+        return
+
+    sql = SampleUnitCache.refresh_cache_sql.format(su_fields=", ".join(suview.su_fields))
+    with connection.cursor() as cursor:
+        cursor.execute(sql, params={"sample_event_id": instance.sample_event_id})
+
+
 for suclass in get_subclasses(SampleUnit):
-    post_delete.connect(del_orphaned_se, sender=suclass, dispatch_uid='{}_delete_se'.format(suclass._meta.object_name))
+    classname = suclass._meta.object_name
+
+    post_delete.connect(del_orphaned_se, sender=suclass, dispatch_uid='{}_delete_se'.format(classname))
+    post_save.connect(refresh_pseudosu_cache, sender=suclass,
+                      dispatch_uid='{}_refresh_pseudosu_cache_save'.format(classname))
+    post_delete.connect(refresh_pseudosu_cache, sender=suclass,
+                        dispatch_uid='{}_refresh_pseudosu_cache_delete'.format(classname))
 
 
 @receiver(post_delete, sender=Site)

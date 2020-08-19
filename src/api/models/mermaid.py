@@ -635,6 +635,8 @@ class BeltTransectWidthCondition(BaseChoiceModel):
 
 class FishBeltTransect(Transect):
     project_lookup = 'sample_event__site__project'
+    suview = "BeltFishSUView"
+
     number = models.PositiveSmallIntegerField(default=1)
     label = models.CharField(max_length=50, blank=True)
     width = models.ForeignKey(BeltTransectWidth, verbose_name=_(u'width (m)'), on_delete=models.PROTECT)

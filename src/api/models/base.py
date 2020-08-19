@@ -184,16 +184,3 @@ class Application(BaseModel):
 class AppVersion(models.Model):
     application = models.CharField(unique=True, max_length=25)
     version = models.CharField(max_length=25)
-
-
-class SampleUnitCache(models.Model):
-    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
-    # obs_id null=True because an agg obs can exist without values if a fish belt transect has no observations
-    obs_id = models.UUIDField(db_index=True, default=uuid.uuid4, editable=False, null=True)
-    pseudosu_id = models.UUIDField(db_index=True, default=uuid.uuid4, editable=False)
-    sample_event_id = models.UUIDField(default=uuid.uuid4, editable=False)
-
-    objects = ExtendedManager()
-
-    class Meta:
-        db_table = "sample_unit_cache"
