@@ -139,6 +139,7 @@ class BeltFishSUView(BaseSUViewModel):
 CREATE OR REPLACE VIEW public.vw_beltfish_su
 AS
 SELECT NULL AS id,
+beltfish_su.pseudosu_id,
 {su_fields},
 {agg_su_fields},
 "label", 
@@ -255,23 +256,10 @@ string_agg(DISTINCT tide_name, ', ' ORDER BY tide_name) AS tide_name,
 string_agg(DISTINCT visibility_name, ', ' ORDER BY visibility_name) AS visibility_name,
 COUNT(vw_beltfish_su.id) AS sample_unit_count,
 ROUND(AVG("depth"), 2) as depth_avg,
-biomass_kgha_avg,
+ROUND(AVG(vw_beltfish_su.biomass_kgha), 2) AS biomass_kgha_avg,
 biomass_kgha_by_trophic_group_avg
 
 FROM vw_beltfish_su
-
-INNER JOIN (
-    SELECT meta_sus.sample_event_id, 
-    ROUND(AVG(meta_sus.biomass_kgha), 2) AS biomass_kgha_avg
-    FROM (
-        SELECT sample_event_id, 
-        SUM(biomass_kgha) AS biomass_kgha
-        FROM vw_beltfish_su
-        GROUP BY sample_event_id
-    ) meta_sus
-    GROUP BY meta_sus.sample_event_id
-) AS beltfish_se 
-ON vw_beltfish_su.sample_event_id = beltfish_se.sample_event_id
 
 INNER JOIN (
     SELECT sample_event_id,
@@ -280,11 +268,11 @@ INNER JOIN (
         SELECT meta_su_tgs.sample_event_id, tg,
         AVG(biomass_kgha) AS biomass_kgha
         FROM (
-            SELECT sample_event_id, transect_number, depth, tgdata.key AS tg,
+            SELECT sample_event_id, pseudosu_id, tgdata.key AS tg,
             SUM(tgdata.value::double precision) AS biomass_kgha
             FROM vw_beltfish_su,
             LATERAL jsonb_each_text(biomass_kgha_by_trophic_group) tgdata(key, value)
-            GROUP BY sample_event_id, transect_number, depth, tgdata.key
+            GROUP BY sample_event_id, pseudosu_id, tgdata.key
         ) meta_su_tgs
         GROUP BY meta_su_tgs.sample_event_id, tg
     ) beltfish_su_tg
@@ -295,7 +283,6 @@ ON vw_beltfish_su.sample_event_id = beltfish_se_tg.sample_event_id
 GROUP BY 
 {se_fields},
 data_policy_beltfish,
-biomass_kgha_avg,
 biomass_kgha_by_trophic_group_avg;
     """.format(
         se_fields=", ".join([f"vw_beltfish_su.{f}" for f in BaseViewModel.se_fields]),

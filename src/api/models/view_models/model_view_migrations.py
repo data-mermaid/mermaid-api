@@ -22,8 +22,8 @@ def forward_sql():
 
         BeltFishObsView.sql,
         BeltFishSUView.sql,
-        # BeltFishSEView.sql,
-        #
+        BeltFishSEView.sql,
+
         # BenthicPITObsView.sql,
         # BenthicPITSUView.sql,
         # BenthicPITSEView.sql,
