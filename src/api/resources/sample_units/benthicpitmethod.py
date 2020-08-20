@@ -46,32 +46,6 @@ class BenthicPITMethodSerializer(BenthicPITSerializer):
         exclude = []
 
 
-def _get_benthic_attribute_category(row, serializer_instance):
-    benthic_attribute_id = row.get("attribute")
-    if benthic_attribute_id is None:
-        return None
-
-    lookup = serializer_instance.serializer_cache.get(
-        "benthic-attribute_lookups-categories"
-    )
-    if lookup:
-        return lookup.get(str(benthic_attribute_id)) or dict()
-    else:
-        return BenthicAttribute.objects.get(id=benthic_attribute_id)
-
-
-def to_benthic_attribute_category(field, row, serializer_instance):
-    bc = _get_benthic_attribute_category(row, serializer_instance)
-
-    if bc is None:
-        return ""
-
-    elif isinstance(bc, dict):
-        return bc.get("name") or ""
-
-    return str(bc)
-
-
 class BenthicPITMethodView(BaseProjectApiViewSet):
     queryset = (
         BenthicPIT.objects.select_related("transect", "transect__sample_event")
@@ -260,10 +234,6 @@ class BenthicPITMethodObsSerializer(BaseViewAPISerializer):
 
 class BenthicPITMethodObsCSVSerializer(BenthicPITMethodObsSerializer):
     observers = SerializerMethodField()
-
-
-# class BenthicPITMethodObsCSVSerializer(BenthicPITMethodObsSerializer):
-#     observers = SerializerMethodField()
 
 
 class BenthicPITMethodObsGeoSerializer(BaseViewAPIGeoSerializer):

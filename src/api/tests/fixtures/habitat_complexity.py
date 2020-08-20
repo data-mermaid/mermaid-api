@@ -110,5 +110,7 @@ def habitat_complexity_project(
     obs_habitat_complexity2_3,
     observer_habitat_complexity1,
     observer_habitat_complexity2,
+    project_profile1,
+    project_profile2,
 ):
     pass
