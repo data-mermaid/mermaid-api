@@ -1,5 +1,4 @@
 import csv
-
 # import os
 from io import StringIO
 
@@ -119,6 +118,68 @@ def test_benthicpit_field_report(
     assert float(rows[6]["Latitude"]) == site2.location.y
     assert float(rows[6]["Longitude"]) == site2.location.x
     assert rows[6]["Observers"] == profile2.full_name
+
+
+def test_benthiclit_csv_view(
+    client,
+    db_setup,
+    project1,
+    token1,
+    benthic_lit_project,
+    all_choices,
+    site2,
+    profile1,
+    profile2,
+    management2,
+    obs_benthic_lit2_4,
+):
+    url = reverse("obstransectbenthiclit-csv", kwargs=dict(project_pk=project1.pk))
+    fieldnames, rows, response = _get_rows(client, token1, url)
+
+    assert response.has_header("Content-Disposition")
+    assert (
+        "test_project_1-benthiclit-obs-"
+        in response._headers.get("content-disposition")[1]
+    )
+
+    assert len(rows) == 10
+    assert "country_name" in fieldnames
+    assert len(rows[6].keys()) == 47
+    assert rows[6]["site_name"] == site2.name
+    assert float(rows[6]["latitude"]) == site2.location.y
+    assert float(rows[6]["longitude"]) == site2.location.x
+    assert rows[6]["observers"] == profile2.full_name
+    assert rows[6]["management_id"] == str(management2.id)
+    assert rows[6]["length"] == str(obs_benthic_lit2_4.length)
+
+
+def test_benthiclit_field_report(
+    client,
+    db_setup,
+    project1,
+    token1,
+    benthic_lit_project,
+    all_choices,
+    site2,
+    profile2,
+    obs_benthic_lit2_4,
+):
+    url = reverse("obstransectbenthiclit-csv", kwargs=dict(project_pk=project1.pk))
+    fieldnames, rows, response = _get_rows(client, token1, f"{url}?field_report=true")
+
+    assert response.has_header("Content-Disposition")
+    assert (
+        "test_project_1-benthiclit-obs-"
+        in response._headers.get("content-disposition")[1]
+    )
+    assert len(rows) == 10
+    assert "Country" in fieldnames
+    assert len(rows[6].keys()) == 37
+    assert rows[6]["Site"] == site2.name
+    assert float(rows[6]["Latitude"]) == site2.location.y
+    assert float(rows[6]["Longitude"]) == site2.location.x
+    assert rows[6]["Observers"] == profile2.full_name
+    assert rows[6]["LIT (cm)"] == str(obs_benthic_lit2_4.length)
 
 
 # def test_benthiclit_csv_view(

@@ -126,5 +126,7 @@ def benthic_lit_project(
     obs_benthic_lit2_5,
     observer_benthic_lit1,
     observer_benthic_lit2,
+    project_profile1,
+    project_profile2,
 ):
     pass
