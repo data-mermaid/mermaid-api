@@ -1476,7 +1476,7 @@ class CollectRecord(BaseModel):
     def save(self, ignore_stage=False, **kwargs):
         if ignore_stage is False:
             self.stage = self.SAVED_STAGE
-        super(CollectRecord, self).save()
+        super(CollectRecord, self).save(**kwargs)
 
 
 class ArchivedRecord(models.Model):

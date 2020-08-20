@@ -8,14 +8,14 @@ from .base import (
     BaseAPISerializer,
     NullableUUIDFilter,
 )
-from .mixins import ProtectedResourceMixin
+from .mixins import CreateOrUpdateSerializerMixin, ProtectedResourceMixin
 from .management import get_rules
 from ..models import Management
 from ..report_serializer import *
 from . import fieldreport
 
 
-class PManagementSerializer(BaseAPISerializer):
+class PManagementSerializer(CreateOrUpdateSerializerMixin, BaseAPISerializer):
     size = DecimalField(max_digits=12,
                         decimal_places=3,
                         coerce_to_string=False,
