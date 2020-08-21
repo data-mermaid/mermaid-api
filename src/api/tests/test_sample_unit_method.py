@@ -199,16 +199,15 @@ def test_habitatcomplexity_csv_view(
 
     assert len(rows) == 6
     assert "country_name" in fieldnames
-
-    assert rows[3]["site"] == site2.name
+    assert len(rows[3].keys()) == 46
+    assert rows[3]["site_name"] == site2.name
     assert float(rows[3]["latitude"]) == site2.location.y
     assert float(rows[3]["longitude"]) == site2.location.x
     assert rows[3]["observers"] == profile2.full_name
-    assert int(rows[3]["interval"]) == int(obs_habitat_complexity1_1.interval)
     assert int(float(rows[3]["interval"])) == int(float(obs_habitat_complexity1_1.interval))
 
 
-def test_habitatcomplexity_csv_view(
+def test_habitatcomplexity_field_report(
     client,
     db_setup,
     project1,
@@ -224,7 +223,7 @@ def test_habitatcomplexity_csv_view(
 
     assert len(rows) == 6
     assert "Country" in fieldnames
-
+    assert len(rows[3].keys()) == 35
     assert rows[3]["Site"] == site2.name
     assert float(rows[3]["Latitude"]) == site2.location.y
     assert float(rows[3]["Longitude"]) == site2.location.x
@@ -232,45 +231,96 @@ def test_habitatcomplexity_csv_view(
     assert int(float(rows[3]["Interval (m)"])) == int(float(obs_habitat_complexity1_1.interval))
 
 
-# def test_bleaching_colonies_bleached_csv_view(
-#     client,
-#     db_setup,
-#     project1,
-#     token1,
-#     bleaching_project,
-#     all_choices,
-#     site2,
-#     profile2,
-# ):
-#     url = reverse("obscoloniesbleached-csv", kwargs=dict(project_pk=project1.pk))
-#     fieldnames, rows = _get_rows(client, token1, url)
-
-#     assert len(rows) == 6
-#     assert "Country" in fieldnames
-
-#     assert rows[3]["Site"] == site2.name
-#     assert float(rows[3]["Latitude"]) == site2.location.y
-#     assert float(rows[3]["Longitude"]) == site2.location.x
-#     assert rows[3]["Observer"] == profile2.full_name
+def test_bleaching_colonies_bleached_csv_view(
+    client,
+    db_setup,
+    project1,
+    token1,
+    bleaching_project,
+    all_choices,
+    site1,
+    profile1,
+    obs_colonies_bleached1_4,
+):
+    url = reverse("obscoloniesbleached-csv", kwargs=dict(project_pk=project1.pk))
+    fieldnames, rows, response = _get_rows(client, token1, url)
 
 
-# def test_bleaching_quadrat_benthic_percent_csv_view(
-#     client,
-#     db_setup,
-#     project1,
-#     token1,
-#     bleaching_project,
-#     all_choices,
-#     site2,
-#     profile2,
-# ):
-#     url = reverse("obsquadratbenthicpercent-csv", kwargs=dict(project_pk=project1.pk))
-#     fieldnames, rows = _get_rows(client, token1, url)
+    assert len(rows) == 5
+    assert "country_name" in fieldnames
+    assert len(rows[3].keys()) == 49
+    assert rows[3]["site_name"] == site1.name
+    assert float(rows[3]["latitude"]) == site1.location.y
+    assert float(rows[3]["longitude"]) == site1.location.x
+    assert rows[3]["observers"] == profile1.full_name
+    assert rows[3]["id"] == str(obs_colonies_bleached1_4.id)
 
-#     assert len(rows) == 6
-#     assert "Country" in fieldnames
+def test_bleaching_colonies_bleached_field_report(
+    client,
+    db_setup,
+    project1,
+    token1,
+    bleaching_project,
+    all_choices,
+    site1,
+    profile1,
+    obs_colonies_bleached1_4,
+):
+    url = reverse("obscoloniesbleached-csv", kwargs=dict(project_pk=project1.pk))
+    fieldnames, rows, response = _get_rows(client, token1, f"{url}?field_report=true")
 
-#     assert rows[3]["Site"] == site2.name
-#     assert float(rows[3]["Latitude"]) == site2.location.y
-#     assert float(rows[3]["Longitude"]) == site2.location.x
-#     assert rows[3]["Observer"] == profile2.full_name
+    assert len(rows) == 5
+    assert "Country" in fieldnames
+    assert len(rows[3].keys()) == 39
+    assert rows[3]["Site"] == site1.name
+    assert float(rows[3]["Latitude"]) == site1.location.y
+    assert float(rows[3]["Longitude"]) == site1.location.x
+    assert rows[3]["Observers"] == profile1.full_name
+    assert rows[3]["20-50% bleached count"] == str(obs_colonies_bleached1_4.count_50)
+
+
+def test_bleaching_quadrat_benthic_percent_csv_view(
+    client,
+    db_setup,
+    project1,
+    token1,
+    bleaching_project,
+    all_choices,
+    site1,
+    profile1,
+    obs_quadrat_benthic_percent1_4,
+):
+    url = reverse("obsquadratbenthicpercent-csv", kwargs=dict(project_pk=project1.pk))
+    fieldnames, rows, response = _get_rows(client, token1, url)
+
+    assert len(rows) == 5
+    assert "country_name" in fieldnames
+    assert len(rows[3].keys()) == 48
+    assert rows[3]["site_name"] == site1.name
+    assert float(rows[3]["latitude"]) == site1.location.y
+    assert float(rows[3]["longitude"]) == site1.location.x
+    assert rows[3]["observers"] == profile1.full_name
+    assert rows[3]["id"] == str(obs_quadrat_benthic_percent1_4.id)
+
+def test_bleaching_quadrat_benthic_percent_field_report(
+    client,
+    db_setup,
+    project1,
+    token1,
+    bleaching_project,
+    all_choices,
+    site1,
+    profile1,
+    obs_quadrat_benthic_percent1_4
+):
+    url = reverse("obsquadratbenthicpercent-csv", kwargs=dict(project_pk=project1.pk))
+    fieldnames, rows, response = _get_rows(client, token1, f"{url}?field_report=true")
+
+    assert len(rows) == 5
+    assert "Country" in fieldnames
+    assert len(rows[3].keys()) == 38
+    assert rows[3]["Site"] == site1.name
+    assert float(rows[3]["Latitude"]) == site1.location.y
+    assert float(rows[3]["Longitude"]) == site1.location.x
+    assert rows[3]["Observers"] == profile1.full_name
+    assert rows[3]["Soft coral (% cover)"] == str(obs_quadrat_benthic_percent1_4.percent_soft)

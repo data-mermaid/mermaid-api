@@ -212,5 +212,7 @@ def bleaching_project(
     obs_quadrat_benthic_percent1_5,
     observer_bleaching_quadrat_collection1,
     observer_bleaching_quadrat_collection2,
+    project_profile1,
+    project_profile2,
 ):
     pass
