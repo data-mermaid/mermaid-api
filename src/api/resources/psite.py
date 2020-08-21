@@ -1,13 +1,8 @@
 from rest_framework.decorators import action
-from .base import (
-    BaseAPIFilterSet,
-    BaseProjectApiViewSet,
-    BaseAPISerializer,
-)
-from .mixins import CreateOrUpdateSerializerMixin, ProtectedResourceMixin
+
 from ..models import Site
-# from ..report_serializer import *
-# from . import fieldreport
+from .base import BaseAPIFilterSet, BaseAPISerializer, BaseProjectApiViewSet
+from .mixins import CreateOrUpdateSerializerMixin, ProtectedResourceMixin
 
 
 class PSiteSerializer(CreateOrUpdateSerializerMixin, BaseAPISerializer):
@@ -15,22 +10,6 @@ class PSiteSerializer(CreateOrUpdateSerializerMixin, BaseAPISerializer):
         geo_field = "location"
         model = Site
         exclude = []
-
-
-# class PSiteReportSerializer(ReportSerializer):
-#     fields = [
-#         ReportField("country__name", "Country"),
-#         ReportField("name", "Name"),
-#         ReportField("location", "Latitude", to_latitude),
-#         ReportField("location", "Longitude", to_longitude),
-#         ReportField("reef_type__name", "Reef type"),
-#         ReportField("reef_zone__name", "Reef zone"),
-#         ReportField("exposure__name", "Reef exposure"),
-#         ReportField("notes", "Notes"),
-#     ]
-
-#     class Meta:
-#         model = Site
 
 
 class PSiteFilterSet(BaseAPIFilterSet):
@@ -46,18 +25,3 @@ class PSiteViewSet(ProtectedResourceMixin, BaseProjectApiViewSet):
     project_lookup = "project"
     filter_class = PSiteFilterSet
     search_fields = ["name"]
-
-    # TODO: Site field report
-
-    # @action(detail=False, methods=["get"])
-    # def fieldreport(self, request, *args, **kwargs):
-    #     return fieldreport(
-    #         self,
-    #         request,
-    #         *args,
-    #         model_cls=Site,
-    #         serializer_class=PSiteReportSerializer,
-    #         fk="id",
-    #         order_by=("Country", "Name", ),
-    #         **kwargs
-    #     )
