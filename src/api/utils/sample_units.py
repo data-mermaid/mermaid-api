@@ -134,15 +134,12 @@ def consolidate_sample_events(*args, dryrun=False):
 
                         for suclass in suclasses:
                             sus = suclass.objects.filter(sample_event=d.pk)
-                            for su in sus:
-                                notes = d.notes or ""
-                                if notes.strip():
-                                    se.notes += "\n\n{}".format(notes)
-                                    se.save()
-                                su.sample_event = se
-                                su.save()
-                                print('Changed SE from {} to {} for {} {}'.format(d.pk, se_pk, su._meta.verbose_name,
-                                                                                  su.pk))
+                            notes = d.notes or ""
+                            if notes.strip():
+                                se.notes += "\n\n{}".format(notes)
+                                se.save()
+                            sus.update(sample_event=se)  # no signals fired
+                            print('Changed SE from {} to {}'.format(d.pk, se_pk))
 
                         print('Deleting SE {}'.format(d.pk))
                         d.delete()

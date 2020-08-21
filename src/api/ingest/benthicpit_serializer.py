@@ -19,7 +19,7 @@ def growth_form_choices():
 
 
 def reef_slopes_choices():
-    return build_choices(ReefSlope.objects.choices(order_by="val"), "val")
+    return build_choices(ReefSlope.objects.choices(order_by="name"))
 
 
 def benthic_attributes_choices():
@@ -53,7 +53,7 @@ class BenthicPITCSVSerializer(CollectRecordCSVSerializer):
             "Transect length surveyed *": "data__benthic_transect__len_surveyed",
             "Transect number *": "data__benthic_transect__number",
             "Transect label": "data__benthic_transect__label",
-            "Reef Slope": "data__benthic_transect__reef_slope",
+            "Reef slope": "data__benthic_transect__reef_slope",
             "Benthic attribute *": "data__obs_benthic_pits__attribute",
             "Growth form": "data__obs_benthic_pits__growth_form",
         }

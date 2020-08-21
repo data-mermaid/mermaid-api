@@ -16,7 +16,7 @@ __all__ = ["FishBeltCSVSerializer"]
 
 
 def reef_slopes_choices():
-    return build_choices(ReefSlope.objects.choices(order_by="val"), "val")
+    return build_choices(ReefSlope.objects.choices(order_by="name"))
 
 
 def belt_transect_widths_choices():
@@ -55,7 +55,7 @@ class FishBeltCSVSerializer(CollectRecordCSVSerializer):
             "Transect label": "data__fishbelt_transect__label",
             "Width *": "data__fishbelt_transect__width",
             "Fish size bin *": "data__fishbelt_transect__size_bin",
-            "Reef Slope": "data__fishbelt_transect__reef_slope",
+            "Reef slope": "data__fishbelt_transect__reef_slope",
             "Fish name *": "data__obs_belt_fishes__fish_attribute",
             "Size *": "data__obs_belt_fishes__size",
             "Count *": "data__obs_belt_fishes__count",

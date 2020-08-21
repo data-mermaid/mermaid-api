@@ -656,6 +656,8 @@ class BeltTransectWidthCondition(BaseChoiceModel):
 
 class FishBeltTransect(Transect):
     project_lookup = 'sample_event__site__project'
+    suview = "BeltFishSUView"
+
     number = models.PositiveSmallIntegerField(default=1)
     label = models.CharField(max_length=50, blank=True)
     width = models.ForeignKey(BeltTransectWidth, verbose_name=_(u'width (m)'), on_delete=models.PROTECT)
@@ -1502,7 +1504,7 @@ class CollectRecord(BaseModel):
     def save(self, ignore_stage=False, **kwargs):
         if ignore_stage is False:
             self.stage = self.SAVED_STAGE
-        super(CollectRecord, self).save()
+        super(CollectRecord, self).save(**kwargs)
 
 
 class ArchivedRecord(models.Model):

@@ -4,13 +4,13 @@ from .base import (
     BaseProjectApiViewSet,
     BaseAPISerializer,
 )
-from .mixins import ProtectedResourceMixin
+from .mixins import CreateOrUpdateSerializerMixin, ProtectedResourceMixin
 from ..models import Site
 # from ..report_serializer import *
 # from . import fieldreport
 
 
-class PSiteSerializer(BaseAPISerializer):
+class PSiteSerializer(CreateOrUpdateSerializerMixin, BaseAPISerializer):
     class Meta:
         geo_field = "location"
         model = Site

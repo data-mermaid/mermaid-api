@@ -5,6 +5,7 @@ from django.contrib.postgres.fields import JSONField
 from django.utils.translation import ugettext_lazy as _
 
 from ..mermaid import FishAttribute, Project
+from ..base import ExtendedManager
 
 
 class FishAttributeView(FishAttribute):
@@ -901,22 +902,28 @@ class BaseViewModel(models.Model):
 
 
 class BaseSUViewModel(BaseViewModel):
-    # Properly, SU should include sample_unit_id and sample_time. But to aid in
-    # Collect input and management, SUs with different times (and for transects,
-    # relative_depth and label) are combined into one pseudo-SU, represented here.
-    su_fields = ["depth", "observers", "current_name", "tide_name", "visibility_name"]
-
+    # SU sql common to all obs-level views
     su_fields_sql = """
-    tm.depth,
+    su.depth,
+    r.name AS relative_depth,
+    su.sample_time,
     observers.observers, 
     c.name AS current_name,
     t.name AS tide_name,
     v.name AS visibility_name
     """
 
+    # Fields common to all SUs that are aggregated from actual SUs into pseudo-SUs
+    agg_su_fields = ["relative_depth", "sample_time", "observers", "current_name", "tide_name", "visibility_name"]
+    su_fields = []  # to be deleted
+
+    # Fields common to all SUs that are actually SU properties (that make SUs distinct)
     depth = models.DecimalField(
         max_digits=3, decimal_places=1, verbose_name=_("depth (m)")
     )
+    # Fields common to all SUs that are aggregated from actual SUs into pseudo-SUs
+    relative_depth = models.CharField(max_length=50)
+    sample_time = models.TimeField()
     observers = JSONField(null=True, blank=True)
     current_name = models.CharField(max_length=50)
     tide_name = models.CharField(max_length=50)
@@ -924,3 +931,35 @@ class BaseSUViewModel(BaseViewModel):
 
     class Meta:
         abstract = True
+
+
+class SampleUnitCache(models.Model):
+    sample_unit_id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+    pseudosu_id = models.UUIDField(db_index=True, default=uuid.uuid4, editable=False)
+    sample_event_id = models.UUIDField(db_index=True, default=uuid.uuid4, editable=False)
+
+    objects = ExtendedManager()
+
+    class Meta:
+        db_table = "sample_unit_cache"
+
+    refresh_cache_sql = """
+DELETE FROM sample_unit_cache
+WHERE sample_event_id = %(sample_event_id)s;
+
+INSERT INTO sample_unit_cache
+WITH se_pseudosu_ids AS (
+    SELECT
+    uuid_generate_v4() AS pseudosu_id,
+    array_agg(DISTINCT sample_unit_id) AS sample_unit_ids,
+    sample_event_id
+    FROM vw_beltfish_obs
+    WHERE sample_event_id = %(sample_event_id)s
+    GROUP BY {su_fields}
+)
+SELECT 
+UNNEST(sample_unit_ids) AS sample_unit_id,
+pseudosu_id,
+sample_event_id
+FROM se_pseudosu_ids
+        """

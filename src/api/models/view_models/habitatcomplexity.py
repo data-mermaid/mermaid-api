@@ -71,7 +71,7 @@ class HabitatComplexitySUView(BaseSUViewModel):
 
     sql = """
 CREATE OR REPLACE VIEW vw_habitatcomplexity_su AS 
-SELECT sample_unit_id AS id,
+SELECT NULL AS id,
 {se_fields},
 {su_fields},
 data_policy_habitatcomplexity,
@@ -79,7 +79,7 @@ transect_number, transect_len_surveyed, reef_slope,
 ROUND(AVG(score), 2) AS score_avg
 FROM
   vw_habitatcomplexity_obs
-GROUP BY sample_unit_id,
+GROUP BY 
 {se_fields},
 {su_fields},
 data_policy_habitatcomplexity,
