@@ -246,10 +246,10 @@ def refresh_pseudosu_cache(sender, instance, *args, **kwargs):
     if not hasattr(sender, "suview") or not hasattr(sys.modules[__name__], sender.suview):
         return
     suview = getattr(sys.modules[__name__], sender.suview)
-    if not hasattr(suview, "su_fields"):
+    if not hasattr(suview, "su_fields") or not hasattr(suview, "Meta") or not hasattr(suview.Meta, "db_table"):
         return
 
-    sql = SampleUnitCache.refresh_cache_sql.format(su_fields=", ".join(suview.su_fields))
+    sql = SampleUnitCache.refresh_cache_sql.format(su_fields=", ".join(suview.su_fields), view=suview.Meta.db_table)
     with connection.cursor() as cursor:
         cursor.execute(sql, params={"sample_event_id": instance.sample_event_id})
 

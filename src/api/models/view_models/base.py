@@ -953,7 +953,7 @@ WITH se_pseudosu_ids AS (
     uuid_generate_v4() AS pseudosu_id,
     array_agg(DISTINCT sample_unit_id) AS sample_unit_ids,
     sample_event_id
-    FROM vw_beltfish_obs
+    FROM {view}
     WHERE sample_event_id = %(sample_event_id)s
     GROUP BY {su_fields}
 )

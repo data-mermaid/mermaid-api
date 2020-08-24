@@ -143,8 +143,8 @@ beltfish_su.pseudosu_id,
 {su_fields},
 {agg_su_fields},
 "label", 
-transect_width_name, 
 reef_slope, 
+transect_width_name, 
 size_bin, 
 biomass_kgha,
 biomass_kgha_by_trophic_group
@@ -152,16 +152,16 @@ biomass_kgha_by_trophic_group
 FROM (
     SELECT pseudosu_id,
     {su_fields_qualified},
-    string_agg(DISTINCT label::text, ', '::text ORDER BY (label::text)) AS label,
     string_agg(DISTINCT relative_depth::text, ', '::text ORDER BY (relative_depth::text)) AS relative_depth,
     string_agg(DISTINCT sample_time::text, ', '::text ORDER BY (sample_time::text)) AS sample_time,
-    string_agg(DISTINCT transect_width_name::text, ', '::text ORDER BY (transect_width_name::text)) AS 
-    transect_width_name,
-    string_agg(DISTINCT reef_slope::text, ', '::text ORDER BY (reef_slope::text)) AS reef_slope,
-    string_agg(DISTINCT size_bin::text, ', '::text ORDER BY (size_bin::text)) AS size_bin,
     string_agg(DISTINCT current_name::text, ', '::text ORDER BY (current_name::text)) AS current_name,
     string_agg(DISTINCT tide_name::text, ', '::text ORDER BY (tide_name::text)) AS tide_name,
-    string_agg(DISTINCT visibility_name::text, ', '::text ORDER BY (visibility_name::text)) AS visibility_name
+    string_agg(DISTINCT visibility_name::text, ', '::text ORDER BY (visibility_name::text)) AS visibility_name,
+    string_agg(DISTINCT label::text, ', '::text ORDER BY (label::text)) AS label,
+    string_agg(DISTINCT reef_slope::text, ', '::text ORDER BY (reef_slope::text)) AS reef_slope,
+    string_agg(DISTINCT transect_width_name::text, ', '::text ORDER BY (transect_width_name::text)) AS 
+    transect_width_name,
+    string_agg(DISTINCT size_bin::text, ', '::text ORDER BY (size_bin::text)) AS size_bin
 
     FROM vw_beltfish_obs
     INNER JOIN sample_unit_cache su ON (vw_beltfish_obs.sample_unit_id = su.sample_unit_id)

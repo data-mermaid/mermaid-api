@@ -4,19 +4,22 @@ from .base import *
 
 
 class BenthicLITObsView(BaseSUViewModel):
+    # Unique combination of these fields defines a single (pseudo) sample unit. All other fields are aggregated.
+    su_fields = BaseSUViewModel.se_fields + ["depth", "transect_number", "transect_len_surveyed",
+                                             "data_policy_benthiclit"]
+
     sql = """
 CREATE OR REPLACE VIEW public.vw_benthiclit_obs
  AS
+WITH benthiclit_obs AS (
  SELECT o.id,
     {se_fields},
     {su_fields},
     se.data_policy_benthiclit,
-    tt.transectmethod_ptr_id AS sample_unit_id,
-    tm.sample_time,
-    r.name AS relative_depth,
-    tm.number AS transect_number,
-    tm.label,
-    tm.len_surveyed AS transect_len_surveyed,
+    su.id AS sample_unit_id,
+    su.number AS transect_number,
+    su.label,
+    su.len_surveyed AS transect_len_surveyed,
     rs.name AS reef_slope,
     o.length,
     cat.name AS benthic_category,
@@ -43,12 +46,12 @@ CREATE OR REPLACE VIEW public.vw_benthiclit_obs
      JOIN benthic_attribute b ON o.attribute_id = b.id
      LEFT JOIN growth_form gf ON o.growth_form_id = gf.id
      JOIN transectmethod_benthiclit tt ON o.benthiclit_id = tt.transectmethod_ptr_id
-     JOIN transect_benthic tm ON tt.transect_id = tm.id
-     LEFT JOIN api_current c ON tm.current_id = c.id
-     LEFT JOIN api_tide t ON tm.tide_id = t.id
-     LEFT JOIN api_visibility v ON tm.visibility_id = v.id
-     LEFT JOIN api_relativedepth r ON tm.relative_depth_id = r.id
-     LEFT JOIN api_reefslope rs ON tm.reef_slope_id = rs.id
+     JOIN transect_benthic su ON tt.transect_id = su.id
+     LEFT JOIN api_current c ON su.current_id = c.id
+     LEFT JOIN api_tide t ON su.tide_id = t.id
+     LEFT JOIN api_visibility v ON su.visibility_id = v.id
+     LEFT JOIN api_relativedepth r ON su.relative_depth_id = r.id
+     LEFT JOIN api_reefslope rs ON su.reef_slope_id = rs.id
      JOIN ( SELECT tt_1.transect_id,
             jsonb_agg(jsonb_build_object('id', p.id, 'name', (COALESCE(p.first_name, ''::character varying)::text || 
             ' '::text) || COALESCE(p.last_name, ''::character varying)::text)) AS observers
@@ -56,24 +59,39 @@ CREATE OR REPLACE VIEW public.vw_benthiclit_obs
              JOIN profile p ON o1.profile_id = p.id
              JOIN transectmethod tm ON o1.transectmethod_id = tm.id
              JOIN transectmethod_benthiclit tt_1 ON tm.id = tt_1.transectmethod_ptr_id
-          GROUP BY tt_1.transect_id) observers ON tm.id = observers.transect_id
-     JOIN vw_sample_events se ON tm.sample_event_id = se.sample_event_id;
+          GROUP BY tt_1.transect_id) observers ON su.id = observers.transect_id
+     JOIN vw_sample_events se ON su.sample_event_id = se.sample_event_id
+)
+
+SELECT benthiclit_obs.*, benthiclit_su.total_length
+FROM benthiclit_obs
+INNER JOIN (
+    SELECT {su_fields_grouping}, 
+    SUM(length) AS total_length
+    FROM benthiclit_obs
+    GROUP BY {su_fields_grouping}
+) benthiclit_su
+ON ({su_fields_join});
     """.format(
         se_fields=", ".join([f"se.{f}" for f in BaseSUViewModel.se_fields]),
         su_fields=BaseSUViewModel.su_fields_sql,
+        su_fields_grouping=", ".join(su_fields),
+        su_fields_join=" AND ".join([f"(benthiclit_obs.{f} = benthiclit_su.{f} OR (benthiclit_obs.{f} "
+                                     f"IS NULL AND benthiclit_su.{f} IS NULL))" for f in su_fields]),
     )
 
     reverse_sql = "DROP VIEW IF EXISTS public.vw_benthiclit_obs CASCADE;"
 
     sample_unit_id = models.UUIDField()
-    sample_time = models.TimeField()
     transect_number = models.PositiveSmallIntegerField()
     label = models.CharField(max_length=50, blank=True)
+    relative_depth = models.CharField(max_length=50)
     transect_len_surveyed = models.PositiveSmallIntegerField(
         verbose_name=_("transect length surveyed (m)")
     )
     reef_slope = models.CharField(max_length=50)
     length = models.PositiveSmallIntegerField()
+    total_length = models.PositiveIntegerField()
     benthic_category = models.CharField(max_length=100)
     benthic_attribute = models.CharField(max_length=100)
     growth_form = models.CharField(max_length=100)
@@ -88,86 +106,88 @@ CREATE OR REPLACE VIEW public.vw_benthiclit_obs
 class BenthicLITSUView(BaseSUViewModel):
     project_lookup = "project_id"
 
-    cat_totals_join = " AND ".join([
-        f"cps.{f} = cat_totals.{f}" for f in
-        BaseSUViewModel.se_fields +
-        BaseSUViewModel.su_fields
-    ])
-
-    cat_percents_join = " AND ".join([
-        f"su.{f} = cat_percents.{f}" for f in
-        BaseSUViewModel.se_fields +
-        BaseSUViewModel.su_fields
-    ])
+    # Unique combination of these fields defines a single (pseudo) sample unit. All other fields are aggregated.
+    su_fields = BaseSUViewModel.se_fields + ["depth", "transect_number", "transect_len_surveyed",
+                                             "data_policy_benthiclit"]
 
     sql = """
 CREATE OR REPLACE VIEW public.vw_benthiclit_su
  AS
 SELECT NULL AS id, 
-{su_fields_all},
-su.data_policy_benthiclit,
-su.transect_number, su.transect_len_surveyed, su.reef_slope,
+benthiclit_su.pseudosu_id, 
+{su_fields},
+{agg_su_fields},
+"label", 
+reef_slope, 
 percent_cover_by_benthic_category
 FROM (
-    SELECT  
-    {se_fields},
-    {su_fields}, 
-    data_policy_benthiclit,
-    transect_number, transect_len_surveyed, reef_slope
-    FROM vw_benthiclit_obs obs
-    GROUP BY  
-    {se_fields},
-    {su_fields}, 
-    data_policy_benthiclit,
-    transect_number, transect_len_surveyed, reef_slope
-) su
+    SELECT su.pseudosu_id,
+    {su_fields_qualified},
+    string_agg(DISTINCT relative_depth::text, ', '::text ORDER BY (relative_depth::text)) AS relative_depth,
+    string_agg(DISTINCT sample_time::text, ', '::text ORDER BY (sample_time::text)) AS sample_time,
+    string_agg(DISTINCT current_name::text, ', '::text ORDER BY (current_name::text)) AS current_name,
+    string_agg(DISTINCT tide_name::text, ', '::text ORDER BY (tide_name::text)) AS tide_name,
+    string_agg(DISTINCT visibility_name::text, ', '::text ORDER BY (visibility_name::text)) AS visibility_name,
+    string_agg(DISTINCT label::text, ', '::text ORDER BY (label::text)) AS label,
+    string_agg(DISTINCT reef_slope::text, ', '::text ORDER BY (reef_slope::text)) AS reef_slope
+
+    FROM vw_benthiclit_obs
+    INNER JOIN sample_unit_cache su ON (vw_benthiclit_obs.sample_unit_id = su.sample_unit_id)
+    GROUP BY su.pseudosu_id,
+    {su_fields_qualified}
+) benthiclit_su
+
 INNER JOIN (
     WITH cps AS (
-        SELECT 
-        {se_fields},
-        {su_fields}, 
+        SELECT su.pseudosu_id, 
         benthic_category,
         SUM(length) AS category_length
         FROM vw_benthiclit_obs
-        GROUP BY 
-        {se_fields},
-        {su_fields}, 
+        INNER JOIN sample_unit_cache su ON (vw_benthiclit_obs.sample_unit_id = su.sample_unit_id)
+        GROUP BY su.pseudosu_id, 
         benthic_category
     )
-    SELECT {cps_fields},
+    SELECT cps.pseudosu_id, 
     jsonb_object_agg(
         cps.benthic_category, 
         ROUND(100 * cps.category_length / cat_totals.su_length, 2)
     ) AS percent_cover_by_benthic_category
     FROM cps
     INNER JOIN (
-        SELECT 
-        {se_fields},
-        {su_fields}, 
+        SELECT pseudosu_id, 
         SUM(category_length) AS su_length
         FROM cps
-        GROUP BY 
-        {se_fields},
-        {su_fields}
-    ) cat_totals ON (
-        {cat_totals_join}
-    )
-    GROUP BY {cps_fields}
-) cat_percents ON (
-    {cat_percents_join}
-)
+        GROUP BY pseudosu_id
+    ) cat_totals ON (cps.pseudosu_id = cat_totals.pseudosu_id)
+    GROUP BY cps.pseudosu_id
+) cat_percents 
+ON (benthiclit_su.pseudosu_id = cat_percents.pseudosu_id)
+
+INNER JOIN (
+    SELECT pseudosu_id,
+    jsonb_agg(DISTINCT observer) AS observers
+
+    FROM (
+        SELECT su.pseudosu_id,
+        jsonb_array_elements(observers) AS observer
+        FROM vw_benthiclit_obs
+        INNER JOIN sample_unit_cache su ON (vw_benthiclit_obs.sample_unit_id = su.sample_unit_id)
+        GROUP BY su.pseudosu_id, 
+        observers
+    ) benthiclit_obs_obs
+    GROUP BY pseudosu_id
+) benthiclit_obs
+ON (benthiclit_su.pseudosu_id = benthiclit_obs.pseudosu_id)
     """.format(
-        se_fields=", ".join(BaseSUViewModel.se_fields),
-        su_fields=", ".join(BaseSUViewModel.su_fields),
-        su_fields_all=", ".join([f"su.{f}" for f in BaseSUViewModel.se_fields + BaseSUViewModel.su_fields]),
-        cps_fields=", ".join([f"cps.{f}" for f in BaseSUViewModel.se_fields + BaseSUViewModel.su_fields]),
-        cat_totals_join=cat_totals_join,
-        cat_percents_join=cat_percents_join
+        su_fields=", ".join(su_fields),
+        su_fields_qualified=", ".join([f"vw_benthiclit_obs.{f}" for f in su_fields]),
+        agg_su_fields=", ".join(BaseSUViewModel.agg_su_fields),
     )
 
     reverse_sql = "DROP VIEW IF EXISTS public.vw_benthiclit_su CASCADE;"
 
     transect_number = models.PositiveSmallIntegerField()
+    label = models.CharField(max_length=50, blank=True)
     transect_len_surveyed = models.PositiveSmallIntegerField(
         verbose_name=_("transect length surveyed (m)")
     )
@@ -188,8 +208,7 @@ class BenthicLITSEView(BaseViewModel):
     sql = """
 CREATE OR REPLACE VIEW public.vw_benthiclit_se
  AS
-SELECT 
-vw_benthiclit_su.sample_event_id AS id,
+SELECT vw_benthiclit_su.sample_event_id AS id,
 {se_fields},
 data_policy_benthiclit, 
 string_agg(DISTINCT current_name, ', ' ORDER BY current_name) AS current_name,
@@ -219,7 +238,7 @@ ON vw_benthiclit_su.sample_event_id = benthiclit_se_cat_percents.sample_event_id
 GROUP BY 
 {se_fields},
 data_policy_benthiclit,
-percent_cover_by_benthic_category_avg
+percent_cover_by_benthic_category_avg;
     """.format(
         se_fields=", ".join([f"vw_benthiclit_su.{f}" for f in BaseViewModel.se_fields]),
     )
