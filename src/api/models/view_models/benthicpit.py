@@ -179,6 +179,7 @@ ON (benthicpit_su.pseudosu_id = benthicpit_obs.pseudosu_id);
 
     sample_unit_ids = JSONField()
     transect_number = models.PositiveSmallIntegerField()
+    label = models.CharField(max_length=50, blank=True)
     transect_len_surveyed = models.PositiveSmallIntegerField(
         verbose_name=_("transect length surveyed (m)")
     )

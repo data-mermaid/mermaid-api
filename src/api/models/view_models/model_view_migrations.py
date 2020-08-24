@@ -36,10 +36,10 @@ def forward_sql():
         # BleachingQCQuadratBenthicPercentObsView.sql,
         # BleachingQCSUView.sql,
         # BleachingQCSEView.sql,
-        #
-        # HabitatComplexityObsView.sql,
-        # HabitatComplexitySUView.sql,
-        # HabitatComplexitySEView.sql,
+
+        HabitatComplexityObsView.sql,
+        HabitatComplexitySUView.sql,
+        HabitatComplexitySEView.sql,
     ]
     output = []
     for s in sql:
