@@ -10,7 +10,6 @@ CREATE OR REPLACE VIEW public.vw_beltfish_obs
     {se_fields},
     {su_fields},
     se.data_policy_beltfish,
-    su.id AS sample_unit_id,
     su.number AS transect_number,
     su.label,
     su.len_surveyed AS transect_len_surveyed,
@@ -140,6 +139,7 @@ CREATE OR REPLACE VIEW public.vw_beltfish_su
 AS
 SELECT NULL AS id,
 beltfish_su.pseudosu_id,
+sample_unit_ids,
 {su_fields},
 {agg_su_fields},
 "label", 
@@ -151,6 +151,7 @@ biomass_kgha_by_trophic_group
 
 FROM (
     SELECT pseudosu_id,
+    json_agg(DISTINCT su.sample_unit_id) AS sample_unit_ids,
     {su_fields_qualified},
     string_agg(DISTINCT relative_depth::text, ', '::text ORDER BY (relative_depth::text)) AS relative_depth,
     string_agg(DISTINCT sample_time::text, ', '::text ORDER BY (sample_time::text)) AS sample_time,
@@ -215,6 +216,7 @@ ON (beltfish_su.pseudosu_id = beltfish_obs.pseudosu_id)
 
     reverse_sql = "DROP VIEW IF EXISTS public.vw_beltfish_su CASCADE;"
 
+    sample_unit_ids = JSONField()
     transect_number = models.PositiveSmallIntegerField()
     label = models.CharField(max_length=50, blank=True)
     transect_len_surveyed = models.PositiveSmallIntegerField(
