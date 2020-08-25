@@ -141,10 +141,10 @@ project_router.register(
     "obstransectbenthiclit",
 )
 project_router.register(
-    r"benthiclits/sampleunits", BenthicLITProjectMethodSUView, "sampleunit"
+    r"benthiclits/sampleunits", BenthicLITProjectMethodSUView, "benthiclit-sampleunit"
 )
 project_router.register(
-    r"benthiclits/sampleevents", BenthicLITProjectMethodSEView, "sampleevent"
+    r"benthiclits/sampleevents", BenthicLITProjectMethodSEView, "benthiclit-sampleevent"
 )
 
 project_router.register(
@@ -153,10 +153,10 @@ project_router.register(
     "obstransectbenthicpit",
 )
 project_router.register(
-    r"benthicpits/sampleunits", BenthicPITProjectMethodSUView, "sampleunit"
+    r"benthicpits/sampleunits", BenthicPITProjectMethodSUView, "benthicpit-sampleunit"
 )
 project_router.register(
-    r"benthicpits/sampleevents", BenthicPITProjectMethodSEView, "sampleevent"
+    r"benthicpits/sampleevents", BenthicPITProjectMethodSEView, "benthicpit-sampleevent"
 )
 
 project_router.register(
