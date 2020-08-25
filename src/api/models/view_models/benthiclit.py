@@ -16,7 +16,6 @@ WITH benthiclit_obs AS (
     {se_fields},
     {su_fields},
     se.data_policy_benthiclit,
-    su.id AS sample_unit_id,
     su.number AS transect_number,
     su.label,
     su.len_surveyed AS transect_len_surveyed,
@@ -114,7 +113,8 @@ class BenthicLITSUView(BaseSUViewModel):
 CREATE OR REPLACE VIEW public.vw_benthiclit_su
  AS
 SELECT NULL AS id, 
-benthiclit_su.pseudosu_id, 
+benthiclit_su.pseudosu_id,
+sample_unit_ids, 
 {su_fields},
 {agg_su_fields},
 "label", 
@@ -122,6 +122,7 @@ reef_slope,
 percent_cover_by_benthic_category
 FROM (
     SELECT su.pseudosu_id,
+    json_agg(DISTINCT su.sample_unit_id) AS sample_unit_ids,
     {su_fields_qualified},
     string_agg(DISTINCT relative_depth::text, ', '::text ORDER BY (relative_depth::text)) AS relative_depth,
     string_agg(DISTINCT sample_time::text, ', '::text ORDER BY (sample_time::text)) AS sample_time,
@@ -177,7 +178,7 @@ INNER JOIN (
     ) benthiclit_obs_obs
     GROUP BY pseudosu_id
 ) benthiclit_obs
-ON (benthiclit_su.pseudosu_id = benthiclit_obs.pseudosu_id)
+ON (benthiclit_su.pseudosu_id = benthiclit_obs.pseudosu_id);
     """.format(
         su_fields=", ".join(su_fields),
         su_fields_qualified=", ".join([f"vw_benthiclit_obs.{f}" for f in su_fields]),
@@ -186,6 +187,7 @@ ON (benthiclit_su.pseudosu_id = benthiclit_obs.pseudosu_id)
 
     reverse_sql = "DROP VIEW IF EXISTS public.vw_benthiclit_su CASCADE;"
 
+    sample_unit_ids = JSONField()
     transect_number = models.PositiveSmallIntegerField()
     label = models.CharField(max_length=50, blank=True)
     transect_len_surveyed = models.PositiveSmallIntegerField(

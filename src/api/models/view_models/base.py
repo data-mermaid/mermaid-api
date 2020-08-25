@@ -905,6 +905,7 @@ class BaseViewModel(models.Model):
 class BaseSUViewModel(BaseViewModel):
     # SU sql common to all obs-level views
     su_fields_sql = """
+    su.id AS sample_unit_id,
     su.depth,
     r.name AS relative_depth,
     su.sample_time,
