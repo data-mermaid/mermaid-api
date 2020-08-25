@@ -860,6 +860,14 @@ class BaseViewModel(models.Model):
         "sample_event_notes",
     ]
 
+    # SU aggregation SQL common to all SEs
+    su_aggfields_sql = """
+ROUND(AVG("depth"), 2) as depth_avg,
+string_agg(DISTINCT current_name, ', ' ORDER BY current_name) AS current_name,
+string_agg(DISTINCT tide_name, ', ' ORDER BY tide_name) AS tide_name,
+string_agg(DISTINCT visibility_name, ', ' ORDER BY visibility_name) AS visibility_name
+    """
+
     # model fields to be inherited by every obs/su/se view
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
     project_id = models.UUIDField()
@@ -886,7 +894,7 @@ class BaseViewModel(models.Model):
     management_size = models.DecimalField(
         max_digits=12,
         decimal_places=3,
-        verbose_name=_(u"Size (ha)"),
+        verbose_name=_("Size (ha)"),
         null=True,
         blank=True,
     )
@@ -907,6 +915,7 @@ class BaseSUViewModel(BaseViewModel):
     su_fields_sql = """
     su.id AS sample_unit_id,
     su.depth,
+    su.label, 
     r.name AS relative_depth,
     su.sample_time,
     observers.observers, 
@@ -915,15 +924,32 @@ class BaseSUViewModel(BaseViewModel):
     v.name AS visibility_name
     """
 
-    # Fields common to all SUs that are aggregated from actual SUs into pseudo-SUs
-    agg_su_fields = ["relative_depth", "sample_time", "observers", "current_name", "tide_name", "visibility_name"]
-    su_fields = []  # to be deleted
+    # SU aggregation SQL common to all SU-level views
+    su_aggfields_sql = """
+    string_agg(DISTINCT label::text, ', '::text ORDER BY (label::text)) AS label,
+    string_agg(DISTINCT relative_depth::text, ', '::text ORDER BY (relative_depth::text)) AS relative_depth,
+    string_agg(DISTINCT sample_time::text, ', '::text ORDER BY (sample_time::text)) AS sample_time,
+    string_agg(DISTINCT current_name::text, ', '::text ORDER BY (current_name::text)) AS current_name,
+    string_agg(DISTINCT tide_name::text, ', '::text ORDER BY (tide_name::text)) AS tide_name,
+    string_agg(DISTINCT visibility_name::text, ', '::text ORDER BY (visibility_name::text)) AS visibility_name
+    """
 
     # Fields common to all SUs that are actually SU properties (that make SUs distinct)
     depth = models.DecimalField(
         max_digits=3, decimal_places=1, verbose_name=_("depth (m)")
     )
     # Fields common to all SUs that are aggregated from actual SUs into pseudo-SUs
+    agg_su_fields = [
+        "sample_unit_ids",
+        "label",
+        "relative_depth",
+        "sample_time",
+        "observers",
+        "current_name",
+        "tide_name",
+        "visibility_name",
+    ]
+    label = models.CharField(max_length=50, blank=True)
     relative_depth = models.CharField(max_length=50)
     sample_time = models.TimeField()
     observers = JSONField(null=True, blank=True)
@@ -936,9 +962,13 @@ class BaseSUViewModel(BaseViewModel):
 
 
 class SampleUnitCache(models.Model):
-    sample_unit_id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+    sample_unit_id = models.UUIDField(
+        primary_key=True, default=uuid.uuid4, editable=False
+    )
     pseudosu_id = models.UUIDField(db_index=True, default=uuid.uuid4, editable=False)
-    sample_event_id = models.UUIDField(db_index=True, default=uuid.uuid4, editable=False)
+    sample_event_id = models.UUIDField(
+        db_index=True, default=uuid.uuid4, editable=False
+    )
 
     objects = ExtendedManager()
 
