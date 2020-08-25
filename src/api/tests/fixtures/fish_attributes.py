@@ -1,6 +1,11 @@
 import pytest
 
-from api.models import FishFamily, FishGenus, FishSpecies
+from api.models import FishFamily, FishGenus, FishGroupTrophic, FishSpecies
+
+
+@pytest.fixture
+def fish_group_trophic_1(db):
+    return FishGroupTrophic.objects.create(name="omnivore")
 
 
 @pytest.fixture
@@ -34,13 +39,14 @@ def fish_genus3(db, fish_family3):
 
 
 @pytest.fixture
-def fish_species1(db, fish_genus1):
+def fish_species1(db, fish_genus1, fish_group_trophic_1):
     return FishSpecies.objects.create(
         name="Fish Species 1",
         genus=fish_genus1,
         biomass_constant_a=0.010000,
         biomass_constant_b=3.010000,
         biomass_constant_c=1.0,
+        trophic_group = fish_group_trophic_1
     )
 
 

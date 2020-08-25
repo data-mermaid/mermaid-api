@@ -243,25 +243,29 @@ def del_orphaned_se(sender, instance, *args, **kwargs):
 
 
 def refresh_pseudosu_cache(sender, instance, *args, **kwargs):
-    if not hasattr(sender, "suview") or not hasattr(sys.modules[__name__], sender.suview):
-        return
-    suview = getattr(sys.modules[__name__], sender.suview)
-    if not hasattr(suview, "su_fields") or not hasattr(suview, "Meta") or not hasattr(suview.Meta, "db_table"):
+    if hasattr(instance, "cache_sql") is False:
         return
 
-    sql = SampleUnitCache.refresh_cache_sql.format(su_fields=", ".join(suview.su_fields), view=suview.Meta.db_table)
-    with connection.cursor() as cursor:
-        cursor.execute(sql, params={"sample_event_id": instance.sample_event_id})
-
+    SampleUnitCache.refresh_cache(instance)
 
 for suclass in get_subclasses(SampleUnit):
     classname = suclass._meta.object_name
 
-    post_delete.connect(del_orphaned_se, sender=suclass, dispatch_uid='{}_delete_se'.format(classname))
-    post_save.connect(refresh_pseudosu_cache, sender=suclass,
-                      dispatch_uid='{}_refresh_pseudosu_cache_save'.format(classname))
-    post_delete.connect(refresh_pseudosu_cache, sender=suclass,
-                        dispatch_uid='{}_refresh_pseudosu_cache_delete'.format(classname))
+    post_delete.connect(
+        del_orphaned_se,
+        sender=suclass,
+        dispatch_uid=f"{classname}_delete_se"
+    )
+    post_save.connect(
+        refresh_pseudosu_cache,
+        sender=suclass,
+        dispatch_uid=f"{classname}_refresh_pseudosu_cache_save"
+    )
+    post_delete.connect(
+        refresh_pseudosu_cache,
+        sender=suclass,
+        dispatch_uid="{classname}_refresh_pseudosu_cache_delete"
+    )
 
 
 @receiver(post_delete, sender=Site)

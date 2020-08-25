@@ -421,7 +421,10 @@ class BeltFishProjectMethodSUView(BaseProjectMethodView):
     serializer_class_geojson = BeltFishMethodSUGeoSerializer
     serializer_class_csv = BeltFishMethodSUCSVSerializer
     filterset_class = BeltFishMethodSUFilterSet
-    queryset = BeltFishSUView.objects.exclude(project_status=Project.TEST).order_by(
+    queryset = BeltFishSUView.objects.exclude(
+        # project_status=Project.TEST
+    )
+    order_by = (
         "site_name", "sample_date", "transect_number"
     )
 

@@ -129,10 +129,10 @@ project_router.register(
     "obstransectbeltfish",
 )
 project_router.register(
-    r"beltfishes/sampleunits", BeltFishProjectMethodSUView, "sampleunit"
+    r"beltfishes/sampleunits", BeltFishProjectMethodSUView, "beltfish-sampleunit"
 )
 project_router.register(
-    r"beltfishes/sampleevents", BeltFishProjectMethodSEView, "sampleevent"
+    r"beltfishes/sampleevents", BeltFishProjectMethodSEView, "beltfish-sampleevent"
 )
 
 project_router.register(
