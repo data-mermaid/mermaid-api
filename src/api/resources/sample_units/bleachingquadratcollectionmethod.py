@@ -234,10 +234,7 @@ class ObsBleachingQCColoniesBleachedCSVSerializer(ReportSerializer):
         ReportField("count_50", "20-50% bleached count"),
         ReportField("count_80", "50-80% bleached count"),
         ReportField("count_100", "80-100% bleached count"),
-        ReportField("count_dead", "Recently dead count"),
-        # TODO: Swap when observation_notes is available in view
-        # ReportField("observation_notes", "Observation notes"),
-        ReportField("count_dead", "Observation notes", alias="observation_notes"),
+        ReportField("count_dead", "Recently dead count")
     ]
 
     additional_fields = [
@@ -289,19 +286,15 @@ class ObsQuadratBenthicPercentCSVSerializer(ReportSerializer):
         ReportField("percent_hard", "Hard coral (% cover)"),
         ReportField("percent_soft", "Soft coral (% cover)"),
         ReportField("percent_algae", "Macroalgae (% cover)"),
-        # TODO: Swap when observation_notes is available in view
-        # ReportField("observation_notes", "Observation notes"),
-        ReportField("percent_algae", "Observation notes", alias="observation_notes"),
-        # TODO: Swap when aggregations when available in view
         ReportField("percent_algae", "Number of quadrats", alias="num_quadrats"),
         ReportField(
-            "percent_algae", "Average Hard Coral (% cover)", alias="avg_hard_coral"
+            "percent_hard_avg", "Average Hard Coral (% cover)", alias="avg_hard_coral"
         ),
         ReportField(
-            "percent_algae", "Average Soft Coral (% cover)", alias="avg_soft_coral"
+            "percent_soft_avg", "Average Soft Coral (% cover)", alias="avg_soft_coral"
         ),
         ReportField(
-            "percent_algae", "Average Macroalgae (% cover)", alias="avg_macroalgae"
+            "percent_algae_avg", "Average Macroalgae (% cover)", alias="avg_macroalgae"
         ),
     ]
 
@@ -575,7 +568,10 @@ class BleachingQCProjectMethodSUView(BaseProjectMethodView):
     serializer_class_geojson = BleachingQCMethodSUGeoSerializer
     serializer_class_csv = BleachingQCMethodSUCSVSerializer
     filterset_class = BleachingQCMethodSUFilterSet
-    queryset = BleachingQCSUView.objects.exclude(project_status=Project.TEST).order_by(
+    queryset = BleachingQCSUView.objects.exclude(
+        # project_status=Project.TEST
+    )
+    order_by = (
         "site_name", "sample_date", "label"
     )
 
@@ -590,6 +586,9 @@ class BleachingQCProjectMethodSEView(BaseProjectMethodView):
     serializer_class_geojson = BleachingQCMethodSEGeoSerializer
     serializer_class_csv = BleachingQCMethodSESerializer
     filterset_class = BleachingQCMethodSEFilterSet
-    queryset = BleachingQCSEView.objects.exclude(project_status=Project.TEST).order_by(
+    queryset = BleachingQCSEView.objects.exclude(
+        # project_status=Project.TEST
+    )
+    order_by = (
         "site_name", "sample_date"
     )

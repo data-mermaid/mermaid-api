@@ -147,19 +147,6 @@ class BenthicLITMethodView(BaseProjectApiViewSet):
             transaction.savepoint_rollback(sid)
             raise
 
-    # @action(detail=False, methods=["get"])
-    # def fieldreport(self, request, *args, **kwargs):
-    #     return fieldreport(
-    #         self,
-    #         request,
-    #         *args,
-    #         model_cls=ObsBenthicLIT,
-    #         serializer_class=ObsBenthicLITReportSerializer,
-    #         fk="benthiclit",
-    #         order_by=("Site", "Transect number", "Transect label"),
-    #         **kwargs
-    #     )
-
 
 class BenthicLITMethodObsSerializer(BaseViewAPISerializer):
     class Meta(BaseViewAPISerializer.Meta):
@@ -221,9 +208,7 @@ class ObsBenthicLITCSVSerializer(ReportSerializer):
         ReportField("benthic_attribute", "Benthic attribute"),
         ReportField("growth_form", "Growth form"),
         ReportField("length", "LIT (cm)"),
-        # TODO: Uncomment when view is updated
-        ReportField("length", "Total transect cm", alias="total_length"),
-        # ReportField("total_length", "Total transect cm"),
+        ReportField("total_length", "Total transect cm"),
         ReportField("site_notes", "Site notes"),
         ReportField("sample_event_notes", "Sampling event notes"),
         ReportField("management_notes", "Management notes"),

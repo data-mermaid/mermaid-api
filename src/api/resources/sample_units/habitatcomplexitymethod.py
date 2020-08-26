@@ -83,9 +83,7 @@ class ObsHabitatComplexityCSVSerializer(ReportSerializer):
         ReportField("observers", "Observers", to_observers),
         ReportField("interval", "Interval (m)"),
         ReportField("score", "Habitat complexity value"),
-        # TODO: Swap when score_name is available in view
-        ReportField("score", "Habitat complexity name", alias="score_name"),
-        # ReportField("score_name", "Habitat complexity name"),
+        ReportField("score_name", "Habitat complexity name"),
         ReportField("site_notes", "Site notes"),
         ReportField("sample_event_notes", "Sampling event notes"),
         ReportField("management_notes", "Management notes"),
@@ -102,9 +100,7 @@ class ObsHabitatComplexityCSVSerializer(ReportSerializer):
         ReportField("country_id"),
         ReportField("management_id"),
         ReportField("sample_unit_id"),
-        # TODO Swap when interval_siz is available in view
-        ReportField("data_policy_habitatcomplexity", alias="interval_size"),
-        # ReportField("interval_size"),
+        ReportField("interval_size"),
         ReportField("data_policy_habitatcomplexity"),
     ]
 

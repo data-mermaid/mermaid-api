@@ -179,7 +179,7 @@ project_router.register(
 project_router.register(
     r"habitatcomplexities/obshabitatcomplexities",
     HabitatComplexityProjectMethodObsView,
-    "obshabitatcomplexity",
+    "obshabitatcomplexitymethod",
 )
 project_router.register(
     r"habitatcomplexities/sampleunits",

@@ -194,7 +194,7 @@ def test_habitatcomplexity_csv_view(
     profile2,
     obs_habitat_complexity1_1,
 ):
-    url = reverse("obshabitatcomplexity-csv", kwargs=dict(project_pk=project1.pk))
+    url = reverse("obshabitatcomplexitymethod-csv", kwargs=dict(project_pk=project1.pk))
     fieldnames, rows, response = _get_rows(client, token1, url)
 
     assert len(rows) == 6
@@ -218,7 +218,7 @@ def test_habitatcomplexity_field_report(
     profile2,
     obs_habitat_complexity1_1,
 ):
-    url = reverse("obshabitatcomplexity-csv", kwargs=dict(project_pk=project1.pk))
+    url = reverse("obshabitatcomplexitymethod-csv", kwargs=dict(project_pk=project1.pk))
     fieldnames, rows, response = _get_rows(client, token1, f"{url}?field_report=true")
 
     assert len(rows) == 6
@@ -248,7 +248,7 @@ def test_bleaching_colonies_bleached_csv_view(
 
     assert len(rows) == 5
     assert "country_name" in fieldnames
-    assert len(rows[3].keys()) == 49
+    assert len(rows[3].keys()) == 48
     assert rows[3]["site_name"] == site1.name
     assert float(rows[3]["latitude"]) == site1.location.y
     assert float(rows[3]["longitude"]) == site1.location.x
@@ -271,7 +271,7 @@ def test_bleaching_colonies_bleached_field_report(
 
     assert len(rows) == 5
     assert "Country" in fieldnames
-    assert len(rows[3].keys()) == 39
+    assert len(rows[3].keys()) == 38
     assert rows[3]["Site"] == site1.name
     assert float(rows[3]["Latitude"]) == site1.location.y
     assert float(rows[3]["Longitude"]) == site1.location.x
@@ -295,7 +295,7 @@ def test_bleaching_quadrat_benthic_percent_csv_view(
 
     assert len(rows) == 5
     assert "country_name" in fieldnames
-    assert len(rows[3].keys()) == 48
+    assert len(rows[3].keys()) == 47
     assert rows[3]["site_name"] == site1.name
     assert float(rows[3]["latitude"]) == site1.location.y
     assert float(rows[3]["longitude"]) == site1.location.x
@@ -318,7 +318,7 @@ def test_bleaching_quadrat_benthic_percent_field_report(
 
     assert len(rows) == 5
     assert "Country" in fieldnames
-    assert len(rows[3].keys()) == 38
+    assert len(rows[3].keys()) == 37
     assert rows[3]["Site"] == site1.name
     assert float(rows[3]["Latitude"]) == site1.location.y
     assert float(rows[3]["Longitude"]) == site1.location.x
