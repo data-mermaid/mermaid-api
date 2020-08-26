@@ -2,14 +2,10 @@ import os
 
 import pytest
 from api.ingest import utils
-from api.models import (  # CollectRecord,
-    BENTHICLIT_PROTOCOL,
+from api.models import (
     BENTHICPIT_PROTOCOL,
     BLEACHINGQC_PROTOCOL,
     FISHBELT_PROTOCOL,
-    HABITATCOMPLEXITY_PROTOCOL,
-    Profile,
-    Project,
 )
 
 BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
@@ -36,8 +32,8 @@ def test_fishbelt_ingest(
     fishbelt_file,
     project1,
     profile1,
-    all_project1,
-    all_test_fish,
+    base_project,
+    all_test_fish_attributes,
     belt_transect_width_5m,
     fish_size_bin_1,
     tide2,
@@ -76,11 +72,11 @@ def test_benthicpit_ingest(
     benthicpit_file,
     project1,
     profile1,
-    all_project1,
+    base_project,
     all_test_benthic_attributes,
     tide1,
     tide2,
-    relative_depth_1,
+    relative_depth1,
     benthic_attribute_2a,
     growth_form4,
 ):
@@ -104,7 +100,6 @@ def test_benthicpit_ingest(
     benthic_transect = new_record.data.get("benthic_transect")
     observations = new_record.data["obs_benthic_pits"]
 
-    print(benthic_transect)
     assert benthic_transect.get("tide") == str(tide2.id)
 
     assert len(observations) == 24
@@ -117,12 +112,12 @@ def test_bleaching_ingest(
     bleaching_file,
     project1,
     profile1,
-    all_project1,
+    base_project,
     all_test_benthic_attributes,
     tide1,
     visibility1,
     current3,
-    relative_depth_1,
+    relative_depth1,
     benthic_attribute_2,
     benthic_attribute_2a1,
     growth_form4,

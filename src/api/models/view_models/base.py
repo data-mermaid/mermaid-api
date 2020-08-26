@@ -2,6 +2,7 @@ import uuid
 
 from django.contrib.gis.db import models
 from django.contrib.postgres.fields import JSONField
+from django.db import connection, transaction
 from django.utils.translation import ugettext_lazy as _
 
 from ..mermaid import FishAttribute, Project
@@ -944,23 +945,26 @@ class SampleUnitCache(models.Model):
     class Meta:
         db_table = "sample_unit_cache"
 
-    refresh_cache_sql = """
-DELETE FROM sample_unit_cache
-WHERE sample_event_id = %(sample_event_id)s;
+    @classmethod
+    def refresh_cache(cls, sample_unit):
+        with transaction.atomic():
+            with connection.cursor() as cursor:
+                sample_event_id = str(sample_unit.sample_event.id)
 
-INSERT INTO sample_unit_cache
-WITH se_pseudosu_ids AS (
-    SELECT
-    uuid_generate_v4() AS pseudosu_id,
-    array_agg(DISTINCT sample_unit_id) AS sample_unit_ids,
-    sample_event_id
-    FROM {view}
-    WHERE sample_event_id = %(sample_event_id)s
-    GROUP BY {su_fields}
-)
-SELECT 
-UNNEST(sample_unit_ids) AS sample_unit_id,
-pseudosu_id,
-sample_event_id
-FROM se_pseudosu_ids
-        """
+                del_sql = f"DELETE FROM sample_unit_cache WHERE sample_event_id = %(sample_event_id)s;"
+                cursor.execute(del_sql, params={"sample_event_id": sample_event_id})
+
+                insert_sql = f"""
+                INSERT INTO
+                    sample_unit_cache
+                WITH se_pseudosu_ids AS (
+                    {sample_unit.cache_sql}
+                )
+                SELECT 
+                    UNNEST(sample_unit_ids) AS sample_unit_id,
+                    pseudosu_id,
+                    sample_event_id
+                FROM se_pseudosu_ids
+                """
+
+                cursor.execute(insert_sql)

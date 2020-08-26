@@ -33,22 +33,18 @@ from api.models.mermaid import (
 from jose import jwt
 
 
-class MockRequest():
-
+class MockRequest:
     def __init__(self, user=None, token=None):
         self.user = user
         self.GET = {}
         self.query_params = {}
         if token:
-            self.META = {
-                'HTTP_AUTHORIZATION': 'Bearer {}'.format(token)
-            }
+            self.META = {"HTTP_AUTHORIZATION": "Bearer {}".format(token)}
         else:
             self.META = {}
 
 
 class TestDataMixin(object):
-
     def timestamp(self):
         return (dt.utcnow() - dt(1970, 1, 1)).total_seconds()
 
@@ -215,25 +211,44 @@ class TestDataMixin(object):
         self.tide1, _ = Tide.objects.get_or_create(name="Low")
         self.tide2, _ = Tide.objects.get_or_create(name="High")
 
-        self.belt_transect_width1, _ = BeltTransectWidth.objects.get_or_create(name="2m")
-        self.belt_transect_width2, _ = BeltTransectWidth.objects.get_or_create(name="5m")
+        self.belt_transect_width1, _ = BeltTransectWidth.objects.get_or_create(
+            name="2m"
+        )
+        self.belt_transect_width2, _ = BeltTransectWidth.objects.get_or_create(
+            name="5m"
+        )
 
-        self.belt_transect_width1_condition, _ = BeltTransectWidthCondition.objects.get_or_create(
-            belttransectwidth=self.belt_transect_width1, val=2)
-        self.belt_transect_width2_condition, _ = BeltTransectWidthCondition.objects.get_or_create(
-            belttransectwidth=self.belt_transect_width2, val=5)
+        (
+            self.belt_transect_width1_condition,
+            _,
+        ) = BeltTransectWidthCondition.objects.get_or_create(
+            belttransectwidth=self.belt_transect_width1, val=2
+        )
+        (
+            self.belt_transect_width2_condition,
+            _,
+        ) = BeltTransectWidthCondition.objects.get_or_create(
+            belttransectwidth=self.belt_transect_width2, val=5
+        )
 
         self.reef_slope1, _ = ReefSlope.objects.get_or_create(name="flat", val=1)
         self.reef_slope2, _ = ReefSlope.objects.get_or_create(name="slope", val=2)
         self.reef_slope3, _ = ReefSlope.objects.get_or_create(name="wall", val=3)
 
-        self.habitat_complexity_score1, _ = HabitatComplexityScore.objects.get_or_create(
+        (
+            self.habitat_complexity_score1,
+            _,
+        ) = HabitatComplexityScore.objects.get_or_create(
             name="no vertical relief", val=1
         )
-        self.habitat_complexity_score2, _ = HabitatComplexityScore.objects.get_or_create(
-            name="low", val=2
-        )
-        self.habitat_complexity_score3, _ = HabitatComplexityScore.objects.get_or_create(
+        (
+            self.habitat_complexity_score2,
+            _,
+        ) = HabitatComplexityScore.objects.get_or_create(name="low", val=2)
+        (
+            self.habitat_complexity_score3,
+            _,
+        ) = HabitatComplexityScore.objects.get_or_create(
             name="exceptionally complex", val=3
         )
 
@@ -475,7 +490,7 @@ class TestDataMixin(object):
             self.sample_event1 = SampleEvent.objects.get(
                 site=self.site1,
                 management=self.management1,
-                sample_date=datetime.date(2018, 7, 13)
+                sample_date=datetime.date(2018, 7, 13),
             )
         except SampleEvent.DoesNotExist:
             self.sample_event1 = SampleEvent.objects.create(
@@ -488,13 +503,13 @@ class TestDataMixin(object):
             self.sample_event2 = SampleEvent.objects.get(
                 site=self.site2,
                 management=self.management2,
-                sample_date=datetime.date(2018, 7, 14)
+                sample_date=datetime.date(2018, 7, 14),
             )
         except SampleEvent.DoesNotExist:
             self.sample_event2 = SampleEvent.objects.create(
                 site=self.site2,
                 management=self.management2,
-                sample_date=datetime.date(2018, 7, 14)
+                sample_date=datetime.date(2018, 7, 14),
             )
 
     def unload_sample_events(self):

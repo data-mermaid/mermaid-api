@@ -242,6 +242,27 @@ class Management(BaseModel, JSONMixin, AreaMixin):
             fullname = _(u'%s [%s]') % (fullname, self.est_year)
         return fullname
 
+    @property
+    def rules(self):
+        rules = []
+        
+        if self.no_take:
+            rules.append('No Take')
+        if self.periodic_closure:
+            rules.append('Periodic Closure')
+        if self.open_access:
+            rules.append('Open Access')
+        if self.size_limits:
+            rules.append('Size Limits')
+        if self.gear_restriction:
+            rules.append('Gear Restriction')
+        if self.species_restriction:
+            rules.append('Species Restriction')
+        if self.access_restriction:
+            rules.append('Access Restriction')
+
+        return rules
+
 
 class MPA(BaseModel, AreaMixin):
     name = models.CharField(max_length=255)
@@ -496,6 +517,29 @@ class Transect(SampleUnit):
             self.sample_event.__str__(),
             su_number
         )
+
+    @property
+    def cache_sql(self):
+        return f"""
+            SELECT 
+                uuid_generate_v4() AS pseudosu_id,
+                array_agg(DISTINCT su.id) AS sample_unit_ids,
+                vse.sample_event_id
+            FROM
+                {self._meta.db_table} as su
+            INNER JOIN
+                vw_sample_events as vse
+            ON
+                su.sample_event_id = vse.sample_event_id
+            WHERE vse.sample_event_id = '{self.sample_event.id}'
+            GROUP BY
+                "depth",
+                "number",
+                "len_surveyed",
+                "site_id",
+                "management_id",
+                vse."sample_event_id"
+        """
 
 
 class BenthicTransect(Transect):
@@ -1444,6 +1488,13 @@ class ObsBeltFish(BaseModel, JSONMixin):
         if self._hide_fish_in_repr:
             return ""
         return _(u'%s %s x %scm') % (self.fish_attribute.__str__(), self.count, self.size)
+
+    @property
+    def observers(self):
+        if self.beltfish_id is None:
+            return Observer.objects.none()
+
+        return self.beltfish.observers.all()
 
 
 class CollectRecord(BaseModel):
