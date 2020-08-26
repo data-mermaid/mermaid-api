@@ -6,7 +6,8 @@ from ..models.view_models import (
     BeltFishSUView,
     BenthicLITSUView,
     BenthicPITSUView,
-    HabitatComplexitySUView
+    HabitatComplexitySUView,
+    BleachingQCSUView,
 )
 
 
@@ -74,11 +75,44 @@ pseudosu_id,
 sample_event_id
 FROM se_pseudosu_ids_hc
 ON CONFLICT DO NOTHING;
+
+INSERT INTO sample_unit_cache
+WITH se_pseudosu_ids_qccb AS (
+    SELECT
+    uuid_generate_v4() AS pseudosu_id,
+    array_agg(DISTINCT sample_unit_id) AS sample_unit_ids,
+    sample_event_id
+    FROM vw_bleachingqc_colonies_bleached_obs
+    GROUP BY {bleachingqc_fields}
+)
+SELECT 
+UNNEST(sample_unit_ids) AS sample_unit_id,
+pseudosu_id,
+sample_event_id
+FROM se_pseudosu_ids_qccb
+ON CONFLICT DO NOTHING;
+
+INSERT INTO sample_unit_cache
+WITH se_pseudosu_ids_qcbp AS (
+    SELECT
+    uuid_generate_v4() AS pseudosu_id,
+    array_agg(DISTINCT sample_unit_id) AS sample_unit_ids,
+    sample_event_id
+    FROM vw_bleachingqc_quadrat_benthic_percent_obs
+    GROUP BY {bleachingqc_fields}
+)
+SELECT 
+UNNEST(sample_unit_ids) AS sample_unit_id,
+pseudosu_id,
+sample_event_id
+FROM se_pseudosu_ids_qcbp
+ON CONFLICT DO NOTHING;
 """.format(
     beltfish_fields=", ".join(BeltFishSUView.su_fields),
     benthiclit_fields=", ".join(BenthicLITSUView.su_fields),
     benthicpit_fields=", ".join(BenthicPITSUView.su_fields),
     habcomp_fields=", ".join(HabitatComplexitySUView.su_fields),
+    bleachingqc_fields=", ".join(BleachingQCSUView.su_fields),
 )
 
 clear_su_cache = """

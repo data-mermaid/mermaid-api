@@ -11,12 +11,12 @@ SELECT o.id,
   {su_fields},
   se.data_policy_habitatcomplexity,
   su.number AS transect_number,
-  su.label,
   su.len_surveyed AS transect_len_surveyed,
   rs.name AS reef_slope,
   tt.interval_size,
   o."interval",
   s.val AS score,
+  s.name AS score_name,
   o.notes AS observation_notes
 FROM
   obs_habitatcomplexity o
@@ -49,7 +49,6 @@ FROM
     sample_unit_id = models.UUIDField()
     sample_time = models.TimeField()
     transect_number = models.PositiveSmallIntegerField()
-    label = models.CharField(max_length=50, blank=True)
     transect_len_surveyed = models.PositiveSmallIntegerField(
         verbose_name=_("transect length surveyed (m)")
     )
@@ -60,6 +59,7 @@ FROM
     interval = models.DecimalField(max_digits=7, decimal_places=2)
     observation_notes = models.TextField(blank=True)
     score = models.PositiveSmallIntegerField()
+    name = models.CharField(max_length=100)
     data_policy_habitatcomplexity = models.CharField(max_length=50)
 
     class Meta:
@@ -71,31 +71,29 @@ class HabitatComplexitySUView(BaseSUViewModel):
     project_lookup = "project_id"
 
     # Unique combination of these fields defines a single (pseudo) sample unit. All other fields are aggregated.
-    su_fields = BaseSUViewModel.se_fields + ["depth", "transect_number", "transect_len_surveyed",
-                                             "interval_size", "data_policy_habitatcomplexity"]
+    su_fields = BaseSUViewModel.se_fields + [
+        "depth",
+        "transect_number",
+        "transect_len_surveyed",
+        "interval_size",
+        "data_policy_habitatcomplexity",
+    ]
 
     sql = """
 CREATE OR REPLACE VIEW vw_habitatcomplexity_su AS 
 SELECT NULL AS id,
 habcomp_su.pseudosu_id, 
-sample_unit_ids, 
 {su_fields},
 {agg_su_fields},
-"label", 
 reef_slope, 
 score_avg
 FROM (
     SELECT su.pseudosu_id,
     json_agg(DISTINCT su.sample_unit_id) AS sample_unit_ids,
     {su_fields_qualified},
-    ROUND(AVG(score), 2) AS score_avg,
-    string_agg(DISTINCT relative_depth::text, ', '::text ORDER BY (relative_depth::text)) AS relative_depth,
-    string_agg(DISTINCT sample_time::text, ', '::text ORDER BY (sample_time::text)) AS sample_time,
-    string_agg(DISTINCT current_name::text, ', '::text ORDER BY (current_name::text)) AS current_name,
-    string_agg(DISTINCT tide_name::text, ', '::text ORDER BY (tide_name::text)) AS tide_name,
-    string_agg(DISTINCT visibility_name::text, ', '::text ORDER BY (visibility_name::text)) AS visibility_name,
-    string_agg(DISTINCT label::text, ', '::text ORDER BY (label::text)) AS label,
-    string_agg(DISTINCT reef_slope::text, ', '::text ORDER BY (reef_slope::text)) AS reef_slope
+    {su_aggfields_sql},
+    string_agg(DISTINCT reef_slope::text, ', '::text ORDER BY (reef_slope::text)) AS reef_slope,
+    ROUND(AVG(score), 2) AS score_avg
 
     FROM vw_habitatcomplexity_obs
     INNER JOIN sample_unit_cache su ON (vw_habitatcomplexity_obs.sample_unit_id = su.sample_unit_id)
@@ -120,14 +118,17 @@ INNER JOIN (
 ON (habcomp_su.pseudosu_id = habcomp_obs.pseudosu_id);
     """.format(
         su_fields=", ".join(su_fields),
-        su_fields_qualified=", ".join([f"vw_habitatcomplexity_obs.{f}" for f in su_fields]),
+        su_fields_qualified=", ".join(
+            [f"vw_habitatcomplexity_obs.{f}" for f in su_fields]
+        ),
         agg_su_fields=", ".join(BaseSUViewModel.agg_su_fields),
+        su_aggfields_sql=BaseSUViewModel.su_aggfields_sql,
     )
 
     reverse_sql = "DROP VIEW IF EXISTS public.vw_habitatcomplexity_su CASCADE;"
 
+    sample_unit_ids = JSONField()
     transect_number = models.PositiveSmallIntegerField()
-    label = models.CharField(max_length=50, blank=True)
     transect_len_surveyed = models.PositiveSmallIntegerField(
         verbose_name=_("transect length surveyed (m)")
     )
@@ -150,18 +151,18 @@ CREATE OR REPLACE VIEW vw_habitatcomplexity_se AS
 SELECT sample_event_id AS id,
 {se_fields},
 data_policy_habitatcomplexity,
-string_agg(DISTINCT current_name, ', ' ORDER BY current_name) AS current_name,
-string_agg(DISTINCT tide_name, ', ' ORDER BY tide_name) AS tide_name,
-string_agg(DISTINCT visibility_name, ', ' ORDER BY visibility_name) AS visibility_name,
-COUNT(id) AS sample_unit_count,
-ROUND(AVG("depth"), 2) as depth_avg,
+{su_aggfields_sql},
+COUNT(pseudosu_id) AS sample_unit_count,
 ROUND(AVG(score_avg), 2) AS score_avg_avg
 FROM vw_habitatcomplexity_su
 GROUP BY 
 {se_fields}, 
 data_policy_habitatcomplexity
     """.format(
-        se_fields=", ".join([f"vw_habitatcomplexity_su.{f}" for f in BaseViewModel.se_fields])
+        se_fields=", ".join(
+            [f"vw_habitatcomplexity_su.{f}" for f in BaseViewModel.se_fields]
+        ),
+        su_aggfields_sql=BaseViewModel.su_aggfields_sql,
     )
 
     reverse_sql = "DROP VIEW IF EXISTS public.vw_habitatcomplexity_se CASCADE;"

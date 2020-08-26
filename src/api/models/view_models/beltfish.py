@@ -11,7 +11,6 @@ CREATE OR REPLACE VIEW public.vw_beltfish_obs
     {su_fields},
     se.data_policy_beltfish,
     su.number AS transect_number,
-    su.label,
     su.len_surveyed AS transect_len_surveyed,
     rs.name AS reef_slope,
     w.name AS transect_width_name,
@@ -77,8 +76,6 @@ CREATE OR REPLACE VIEW public.vw_beltfish_obs
 
     sample_unit_id = models.UUIDField()
     transect_number = models.PositiveSmallIntegerField()
-    label = models.CharField(max_length=50, blank=True)
-    relative_depth = models.CharField(max_length=50)
     transect_len_surveyed = models.PositiveSmallIntegerField(
         verbose_name=_("transect length surveyed (m)")
     )
@@ -132,17 +129,20 @@ class BeltFishSUView(BaseSUViewModel):
     project_lookup = "project_id"
 
     # Unique combination of these fields defines a single (pseudo) sample unit. All other fields are aggregated.
-    su_fields = BaseSUViewModel.se_fields + ["depth", "transect_number", "transect_len_surveyed", "data_policy_beltfish"]
+    su_fields = BaseSUViewModel.se_fields + [
+        "depth",
+        "transect_number",
+        "transect_len_surveyed",
+        "data_policy_beltfish",
+    ]
 
     sql = """
 CREATE OR REPLACE VIEW public.vw_beltfish_su
 AS
 SELECT NULL AS id,
 beltfish_su.pseudosu_id,
-sample_unit_ids,
 {su_fields},
 {agg_su_fields},
-"label", 
 reef_slope, 
 transect_width_name, 
 size_bin, 
@@ -153,12 +153,7 @@ FROM (
     SELECT pseudosu_id,
     json_agg(DISTINCT su.sample_unit_id) AS sample_unit_ids,
     {su_fields_qualified},
-    string_agg(DISTINCT relative_depth::text, ', '::text ORDER BY (relative_depth::text)) AS relative_depth,
-    string_agg(DISTINCT sample_time::text, ', '::text ORDER BY (sample_time::text)) AS sample_time,
-    string_agg(DISTINCT current_name::text, ', '::text ORDER BY (current_name::text)) AS current_name,
-    string_agg(DISTINCT tide_name::text, ', '::text ORDER BY (tide_name::text)) AS tide_name,
-    string_agg(DISTINCT visibility_name::text, ', '::text ORDER BY (visibility_name::text)) AS visibility_name,
-    string_agg(DISTINCT label::text, ', '::text ORDER BY (label::text)) AS label,
+    {su_aggfields_sql},
     string_agg(DISTINCT reef_slope::text, ', '::text ORDER BY (reef_slope::text)) AS reef_slope,
     string_agg(DISTINCT transect_width_name::text, ', '::text ORDER BY (transect_width_name::text)) AS 
     transect_width_name,
@@ -212,13 +207,13 @@ ON (beltfish_su.pseudosu_id = beltfish_obs.pseudosu_id)
         su_fields=", ".join(su_fields),
         su_fields_qualified=", ".join([f"vw_beltfish_obs.{f}" for f in su_fields]),
         agg_su_fields=", ".join(BaseSUViewModel.agg_su_fields),
+        su_aggfields_sql=BaseSUViewModel.su_aggfields_sql,
     )
 
     reverse_sql = "DROP VIEW IF EXISTS public.vw_beltfish_su CASCADE;"
 
     sample_unit_ids = JSONField()
     transect_number = models.PositiveSmallIntegerField()
-    label = models.CharField(max_length=50, blank=True)
     transect_len_surveyed = models.PositiveSmallIntegerField(
         verbose_name=_("transect length surveyed (m)")
     )
@@ -252,12 +247,8 @@ CREATE OR REPLACE VIEW public.vw_beltfish_se
 SELECT vw_beltfish_su.sample_event_id AS id,
 {se_fields},
 data_policy_beltfish, 
-
-string_agg(DISTINCT current_name, ', ' ORDER BY current_name) AS current_name,
-string_agg(DISTINCT tide_name, ', ' ORDER BY tide_name) AS tide_name,
-string_agg(DISTINCT visibility_name, ', ' ORDER BY visibility_name) AS visibility_name,
-COUNT(vw_beltfish_su.id) AS sample_unit_count,
-ROUND(AVG("depth"), 2) as depth_avg,
+{su_aggfields_sql},
+COUNT(vw_beltfish_su.pseudosu_id) AS sample_unit_count,
 ROUND(AVG(vw_beltfish_su.biomass_kgha), 2) AS biomass_kgha_avg,
 biomass_kgha_by_trophic_group_avg
 
@@ -288,6 +279,7 @@ data_policy_beltfish,
 biomass_kgha_by_trophic_group_avg;
     """.format(
         se_fields=", ".join([f"vw_beltfish_su.{f}" for f in BaseViewModel.se_fields]),
+        su_aggfields_sql=BaseViewModel.su_aggfields_sql,
     )
 
     reverse_sql = "DROP VIEW IF EXISTS public.vw_beltfish_se CASCADE;"

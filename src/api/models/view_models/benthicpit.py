@@ -12,7 +12,6 @@ CREATE OR REPLACE VIEW public.vw_benthicpit_obs
     {su_fields},
     se.data_policy_benthicpit,
     su.number AS transect_number,
-    su.label,
     su.len_surveyed AS transect_len_surveyed,
     rs.name AS reef_slope,
     tt.interval_size,
@@ -65,9 +64,7 @@ CREATE OR REPLACE VIEW public.vw_benthicpit_obs
     reverse_sql = "DROP VIEW IF EXISTS public.vw_benthicpit_obs CASCADE;"
 
     sample_unit_id = models.UUIDField()
-    sample_time = models.TimeField()
     transect_number = models.PositiveSmallIntegerField()
-    label = models.CharField(max_length=50, blank=True)
     transect_len_surveyed = models.PositiveSmallIntegerField(
         verbose_name=_("transect length surveyed (m)")
     )
@@ -97,30 +94,29 @@ class BenthicPITSUView(BaseSUViewModel):
     project_lookup = "project_id"
 
     # Unique combination of these fields defines a single (pseudo) sample unit. All other fields are aggregated.
-    su_fields = BaseSUViewModel.se_fields + ["depth", "transect_number", "transect_len_surveyed",
-                                             "interval_size", "interval_start", "data_policy_benthicpit"]
+    su_fields = BaseSUViewModel.se_fields + [
+        "depth",
+        "transect_number",
+        "transect_len_surveyed",
+        "interval_size",
+        "interval_start",
+        "data_policy_benthicpit",
+    ]
 
     sql = """
 CREATE OR REPLACE VIEW public.vw_benthicpit_su
  AS
 SELECT NULL AS id, 
 benthicpit_su.pseudosu_id, 
-sample_unit_ids, 
 {su_fields},
 {agg_su_fields},
-"label", 
 reef_slope, 
 percent_cover_by_benthic_category
 FROM (
     SELECT su.pseudosu_id,
     json_agg(DISTINCT su.sample_unit_id) AS sample_unit_ids,
     {su_fields_qualified},
-    string_agg(DISTINCT relative_depth::text, ', '::text ORDER BY (relative_depth::text)) AS relative_depth,
-    string_agg(DISTINCT sample_time::text, ', '::text ORDER BY (sample_time::text)) AS sample_time,
-    string_agg(DISTINCT current_name::text, ', '::text ORDER BY (current_name::text)) AS current_name,
-    string_agg(DISTINCT tide_name::text, ', '::text ORDER BY (tide_name::text)) AS tide_name,
-    string_agg(DISTINCT visibility_name::text, ', '::text ORDER BY (visibility_name::text)) AS visibility_name,
-    string_agg(DISTINCT label::text, ', '::text ORDER BY (label::text)) AS label,
+    {su_aggfields_sql},
     string_agg(DISTINCT reef_slope::text, ', '::text ORDER BY (reef_slope::text)) AS reef_slope
 
     FROM vw_benthicpit_obs
@@ -174,12 +170,12 @@ ON (benthicpit_su.pseudosu_id = benthicpit_obs.pseudosu_id);
         su_fields=", ".join(su_fields),
         su_fields_qualified=", ".join([f"vw_benthicpit_obs.{f}" for f in su_fields]),
         agg_su_fields=", ".join(BaseSUViewModel.agg_su_fields),
+        su_aggfields_sql=BaseSUViewModel.su_aggfields_sql,
     )
     reverse_sql = "DROP VIEW IF EXISTS public.vw_benthicpit_su CASCADE;"
 
     sample_unit_ids = JSONField()
     transect_number = models.PositiveSmallIntegerField()
-    label = models.CharField(max_length=50, blank=True)
     transect_len_surveyed = models.PositiveSmallIntegerField(
         verbose_name=_("transect length surveyed (m)")
     )
@@ -212,11 +208,8 @@ CREATE OR REPLACE VIEW public.vw_benthicpit_se
 SELECT vw_benthicpit_su.sample_event_id AS id,
 {se_fields},
 data_policy_benthicpit, 
-string_agg(DISTINCT current_name, ', ' ORDER BY current_name) AS current_name,
-string_agg(DISTINCT tide_name, ', ' ORDER BY tide_name) AS tide_name,
-string_agg(DISTINCT visibility_name, ', ' ORDER BY visibility_name) AS visibility_name,
-COUNT(vw_benthicpit_su.id) AS sample_unit_count,
-ROUND(AVG("depth"), 2) as depth_avg,
+{su_aggfields_sql},
+COUNT(vw_benthicpit_su.pseudosu_id) AS sample_unit_count,
 percent_cover_by_benthic_category_avg
 
 FROM vw_benthicpit_su
@@ -242,6 +235,7 @@ data_policy_benthicpit,
 percent_cover_by_benthic_category_avg
     """.format(
         se_fields=", ".join([f"vw_benthicpit_su.{f}" for f in BaseViewModel.se_fields]),
+        su_aggfields_sql=BaseViewModel.su_aggfields_sql,
     )
     reverse_sql = "DROP VIEW IF EXISTS public.vw_benthicpit_se CASCADE;"
 
