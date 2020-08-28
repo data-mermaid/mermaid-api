@@ -19,16 +19,17 @@ from ...reports.formatters import (
     to_latitude,
     to_longitude,
     to_month,
-    to_observers,
+    to_names,
     to_str,
     to_year,
 )
 from ...reports.report_serializer import ReportSerializer
 from ..base import (
     BaseProjectApiViewSet,
-    BaseTransectFilterSet,
+    BaseSEFilterSet,
+    BaseSUObsFilterSet,
     BaseViewAPIGeoSerializer,
-    BaseViewAPISerializer,
+    BaseSUViewAPISerializer,
 )
 from ..benthic_transect import BenthicTransectSerializer
 from ..habitat_complexity import HabitatComplexitySerializer
@@ -80,7 +81,7 @@ class ObsHabitatComplexityCSVSerializer(ReportSerializer):
         ReportField("transect_number", "Transect number"),
         ReportField("label", "Transect label"),
         ReportField("transect_len_surveyed", "Transect length surveyed"),
-        ReportField("observers", "Observers", to_observers),
+        ReportField("observers", "Observers", to_names),
         ReportField("interval", "Interval (m)"),
         ReportField("score", "Habitat complexity value"),
         ReportField("score_name", "Habitat complexity name"),
@@ -207,12 +208,12 @@ class HabitatComplexityMethodView(BaseProjectApiViewSet):
             raise
 
 
-class HabitatComplexityMethodObsSerializer(BaseViewAPISerializer):
-    class Meta(BaseViewAPISerializer.Meta):
+class HabitatComplexityMethodObsSerializer(BaseSUViewAPISerializer):
+    class Meta(BaseSUViewAPISerializer.Meta):
         model = HabitatComplexityObsView
-        exclude = BaseViewAPISerializer.Meta.exclude.copy()
+        exclude = BaseSUViewAPISerializer.Meta.exclude.copy()
         exclude.append("location")
-        header_order = ["id"] + BaseViewAPISerializer.Meta.header_order.copy()
+        header_order = ["id"] + BaseSUViewAPISerializer.Meta.header_order.copy()
         header_order.extend(
             [
                 "sample_unit_id",
@@ -236,12 +237,12 @@ class HabitatComplexityMethodObsGeoSerializer(BaseViewAPIGeoSerializer):
         model = HabitatComplexityObsView
 
 
-class HabitatComplexityMethodSUSerializer(BaseViewAPISerializer):
-    class Meta(BaseViewAPISerializer.Meta):
+class HabitatComplexityMethodSUSerializer(BaseSUViewAPISerializer):
+    class Meta(BaseSUViewAPISerializer.Meta):
         model = HabitatComplexitySUView
-        exclude = BaseViewAPISerializer.Meta.exclude.copy()
+        exclude = BaseSUViewAPISerializer.Meta.exclude.copy()
         exclude.append("location")
-        header_order = BaseViewAPISerializer.Meta.header_order.copy()
+        header_order = BaseSUViewAPISerializer.Meta.header_order.copy()
         header_order.extend(
             [
                 "transect_number",
@@ -263,12 +264,12 @@ class HabitatComplexityMethodSUGeoSerializer(BaseViewAPIGeoSerializer):
         model = HabitatComplexitySUView
 
 
-class HabitatComplexityMethodSESerializer(BaseViewAPISerializer):
-    class Meta(BaseViewAPISerializer.Meta):
+class HabitatComplexityMethodSESerializer(BaseSUViewAPISerializer):
+    class Meta(BaseSUViewAPISerializer.Meta):
         model = HabitatComplexitySEView
-        exclude = BaseViewAPISerializer.Meta.exclude.copy()
+        exclude = BaseSUViewAPISerializer.Meta.exclude.copy()
         exclude.append("location")
-        header_order = BaseViewAPISerializer.Meta.header_order.copy()
+        header_order = BaseSUViewAPISerializer.Meta.header_order.copy()
         header_order.extend(
             [
                 "data_policy_habitatcomplexity",
@@ -284,10 +285,7 @@ class HabitatComplexityMethodSEGeoSerializer(BaseViewAPIGeoSerializer):
         model = HabitatComplexitySEView
 
 
-class HabitatComplexityMethodObsFilterSet(BaseTransectFilterSet):
-    depth = RangeFilter()
-    sample_unit_id = BaseInFilter(method="id_lookup")
-    observers = BaseInFilter(method="json_name_lookup")
+class HabitatComplexityMethodObsFilterSet(BaseSUObsFilterSet):
     transect_len_surveyed = RangeFilter()
     reef_slope = BaseInFilter(method="char_lookup")
     interval = RangeFilter()
@@ -307,18 +305,14 @@ class HabitatComplexityMethodObsFilterSet(BaseTransectFilterSet):
         ]
 
 
-class HabitatComplexityMethodSUFilterSet(BaseTransectFilterSet):
+class HabitatComplexityMethodSUFilterSet(BaseSUObsFilterSet):
     transect_len_surveyed = RangeFilter()
-    depth = RangeFilter()
-    observers = BaseInFilter(method="json_name_lookup")
     reef_slope = BaseInFilter(method="char_lookup")
     interval_size = RangeFilter()
 
     class Meta:
         model = HabitatComplexitySUView
         fields = [
-            "depth",
-            "observers",
             "transect_len_surveyed",
             "reef_slope",
             "transect_number",
@@ -327,7 +321,7 @@ class HabitatComplexityMethodSUFilterSet(BaseTransectFilterSet):
         ]
 
 
-class HabitatComplexityMethodSEFilterSet(BaseTransectFilterSet):
+class HabitatComplexityMethodSEFilterSet(BaseSEFilterSet):
     sample_unit_count = RangeFilter()
     depth_avg = RangeFilter()
     score_avg_avg = RangeFilter()

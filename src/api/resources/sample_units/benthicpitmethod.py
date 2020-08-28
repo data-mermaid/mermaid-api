@@ -16,16 +16,17 @@ from ...reports.formatters import (
     to_latitude,
     to_longitude,
     to_month,
-    to_observers,
+    to_names,
     to_str,
     to_year,
 )
 from ...reports.report_serializer import ReportSerializer
 from ..base import (
     BaseProjectApiViewSet,
-    BaseTransectFilterSet,
+    BaseSEFilterSet,
+    BaseSUObsFilterSet,
     BaseViewAPIGeoSerializer,
-    BaseViewAPISerializer,
+    BaseSUViewAPISerializer,
 )
 from ..benthic_pit import BenthicPITSerializer
 from ..benthic_transect import BenthicTransectSerializer
@@ -176,7 +177,7 @@ class ObsBenthicPITCSVSerializer(ReportSerializer):
         ReportField("transect_number", "Transect number"),
         ReportField("label", "Transect label"),
         ReportField("transect_len_surveyed", "Transect length surveyed"),
-        ReportField("observers", "Observers", to_observers),
+        ReportField("observers", "Observers", to_names),
         ReportField("interval", "PIT interval (m)"),
         ReportField("benthic_category", "Benthic category"),
         ReportField("benthic_attribute", "Benthic attribute"),
@@ -192,7 +193,6 @@ class ObsBenthicPITCSVSerializer(ReportSerializer):
         ReportField("project_id"),
         ReportField("project_notes"),
         ReportField("site_id"),
-        ReportField("project_notes"),
         ReportField("contact_link"),
         ReportField("tags"),
         ReportField("country_id"),
@@ -204,12 +204,12 @@ class ObsBenthicPITCSVSerializer(ReportSerializer):
     ]
 
 
-class BenthicPITMethodObsSerializer(BaseViewAPISerializer):
-    class Meta(BaseViewAPISerializer.Meta):
+class BenthicPITMethodObsSerializer(BaseSUViewAPISerializer):
+    class Meta(BaseSUViewAPISerializer.Meta):
         model = BenthicPITObsView
-        exclude = BaseViewAPISerializer.Meta.exclude.copy()
+        exclude = BaseSUViewAPISerializer.Meta.exclude.copy()
         exclude.append("location")
-        header_order = ["id"] + BaseViewAPISerializer.Meta.header_order.copy()
+        header_order = ["id"] + BaseSUViewAPISerializer.Meta.header_order.copy()
         header_order.extend(
             [
                 "sample_unit_id",
@@ -241,12 +241,12 @@ class BenthicPITMethodObsGeoSerializer(BaseViewAPIGeoSerializer):
         model = BenthicPITObsView
 
 
-class BenthicPITMethodSUSerializer(BaseViewAPISerializer):
-    class Meta(BaseViewAPISerializer.Meta):
+class BenthicPITMethodSUSerializer(BaseSUViewAPISerializer):
+    class Meta(BaseSUViewAPISerializer.Meta):
         model = BenthicPITSUView
-        exclude = BaseViewAPISerializer.Meta.exclude.copy()
+        exclude = BaseSUViewAPISerializer.Meta.exclude.copy()
         exclude.append("location")
-        header_order = BaseViewAPISerializer.Meta.header_order.copy()
+        header_order = BaseSUViewAPISerializer.Meta.header_order.copy()
         header_order.extend(
             [
                 "transect_number",
@@ -270,12 +270,12 @@ class BenthicPITMethodSUGeoSerializer(BaseViewAPIGeoSerializer):
         model = BenthicPITSUView
 
 
-class BenthicPITMethodSESerializer(BaseViewAPISerializer):
-    class Meta(BaseViewAPISerializer.Meta):
+class BenthicPITMethodSESerializer(BaseSUViewAPISerializer):
+    class Meta(BaseSUViewAPISerializer.Meta):
         model = BenthicPITSEView
-        exclude = BaseViewAPISerializer.Meta.exclude.copy()
+        exclude = BaseSUViewAPISerializer.Meta.exclude.copy()
         exclude.append("location")
-        header_order = BaseViewAPISerializer.Meta.header_order.copy()
+        header_order = BaseSUViewAPISerializer.Meta.header_order.copy()
         header_order.extend(
             [
                 "data_policy_benthicpit",
@@ -291,10 +291,7 @@ class BenthicPITMethodSEGeoSerializer(BaseViewAPIGeoSerializer):
         model = BenthicPITSEView
 
 
-class BenthicPITMethodObsFilterSet(BaseTransectFilterSet):
-    depth = RangeFilter()
-    sample_unit_id = BaseInFilter(method="id_lookup")
-    observers = BaseInFilter(method="json_name_lookup")
+class BenthicPITMethodObsFilterSet(BaseSUObsFilterSet):
     transect_len_surveyed = RangeFilter()
     reef_slope = BaseInFilter(method="char_lookup")
     interval_size = RangeFilter()
@@ -303,9 +300,6 @@ class BenthicPITMethodObsFilterSet(BaseTransectFilterSet):
     class Meta:
         model = BenthicPITObsView
         fields = [
-            "depth",
-            "sample_unit_id",
-            "observers",
             "transect_len_surveyed",
             "reef_slope",
             "transect_number",
@@ -318,18 +312,14 @@ class BenthicPITMethodObsFilterSet(BaseTransectFilterSet):
         ]
 
 
-class BenthicPITMethodSUFilterSet(BaseTransectFilterSet):
+class BenthicPITMethodSUFilterSet(BaseSUObsFilterSet):
     transect_len_surveyed = RangeFilter()
-    depth = RangeFilter()
-    observers = BaseInFilter(method="json_name_lookup")
     reef_slope = BaseInFilter(method="char_lookup")
     interval_size = RangeFilter()
 
     class Meta:
         model = BenthicPITSUView
         fields = [
-            "depth",
-            "observers",
             "transect_len_surveyed",
             "reef_slope",
             "transect_number",
@@ -338,7 +328,7 @@ class BenthicPITMethodSUFilterSet(BaseTransectFilterSet):
         ]
 
 
-class BenthicPITMethodSEFilterSet(BaseTransectFilterSet):
+class BenthicPITMethodSEFilterSet(BaseSEFilterSet):
     sample_unit_count = RangeFilter()
     depth_avg = RangeFilter()
 

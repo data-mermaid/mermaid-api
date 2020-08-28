@@ -20,16 +20,17 @@ from ...reports.formatters import (
     to_latitude,
     to_longitude,
     to_month,
-    to_observers,
+    to_names,
     to_str,
     to_year,
 )
 from ...reports.report_serializer import ReportSerializer
 from ..base import (
     BaseProjectApiViewSet,
-    BaseTransectFilterSet,
+    BaseSEFilterSet,
+    BaseSUObsFilterSet,
     BaseViewAPIGeoSerializer,
-    BaseViewAPISerializer,
+    BaseSUViewAPISerializer,
 )
 from ..bleaching_quadrat_collection import BleachingQuadratCollectionSerializer
 from ..obs_colonies_bleached import ObsColoniesBleachedSerializer
@@ -167,12 +168,12 @@ class BleachingQuadratCollectionMethodView(BaseProjectApiViewSet):
             raise
 
 
-class BleachingQCMethodObsColoniesBleachedSerializer(BaseViewAPISerializer):
-    class Meta(BaseViewAPISerializer.Meta):
+class BleachingQCMethodObsColoniesBleachedSerializer(BaseSUViewAPISerializer):
+    class Meta(BaseSUViewAPISerializer.Meta):
         model = BleachingQCColoniesBleachedObsView
-        exclude = BaseViewAPISerializer.Meta.exclude.copy()
+        exclude = BaseSUViewAPISerializer.Meta.exclude.copy()
         exclude.append("location")
-        header_order = ["id"] + BaseViewAPISerializer.Meta.header_order.copy()
+        header_order = ["id"] + BaseSUViewAPISerializer.Meta.header_order.copy()
         header_order.extend(
             [
                 "sample_unit_id",
@@ -221,7 +222,7 @@ class ObsBleachingQCColoniesBleachedCSVSerializer(ReportSerializer):
         ReportField("management_parties", "Governance", to_governance),
         ReportField("management_compliance", "Estimated compliance",),
         ReportField("management_rules", "Management rules"),
-        ReportField("observers", "Observers", to_observers),
+        ReportField("observers", "Observers", to_names),
         ReportField("label", "Quadrat collection label"),
         ReportField("site_notes", "Site notes"),
         ReportField("sample_event_notes", "Sampling event notes"),
@@ -277,7 +278,7 @@ class ObsQuadratBenthicPercentCSVSerializer(ReportSerializer):
         ReportField("management_parties", "Governance", to_governance),
         ReportField("management_compliance", "Estimated compliance",),
         ReportField("management_rules", "Management rules"),
-        ReportField("observers", "Observers", to_observers),
+        ReportField("observers", "Observers", to_names),
         ReportField("label", "Quadrat collection label"),
         ReportField("site_notes", "Site notes"),
         ReportField("sample_event_notes", "Sampling event notes"),
@@ -317,12 +318,12 @@ class BleachingQCMethodObsColoniesBleachedGeoSerializer(BaseViewAPIGeoSerializer
         model = BleachingQCColoniesBleachedObsView
 
 
-class BleachingQCMethodObsQuadratBenthicPercentSerializer(BaseViewAPISerializer):
-    class Meta(BaseViewAPISerializer.Meta):
+class BleachingQCMethodObsQuadratBenthicPercentSerializer(BaseSUViewAPISerializer):
+    class Meta(BaseSUViewAPISerializer.Meta):
         model = BleachingQCQuadratBenthicPercentObsView
-        exclude = BaseViewAPISerializer.Meta.exclude.copy()
+        exclude = BaseSUViewAPISerializer.Meta.exclude.copy()
         exclude.append("location")
-        header_order = ["id"] + BaseViewAPISerializer.Meta.header_order.copy()
+        header_order = ["id"] + BaseSUViewAPISerializer.Meta.header_order.copy()
         header_order.extend(
             [
                 "sample_unit_id",
@@ -345,12 +346,12 @@ class BleachingQCMethodObsQuadratBenthicPercentGeoSerializer(BaseViewAPIGeoSeria
         model = BleachingQCQuadratBenthicPercentObsView
 
 
-class BleachingQCMethodSUSerializer(BaseViewAPISerializer):
-    class Meta(BaseViewAPISerializer.Meta):
+class BleachingQCMethodSUSerializer(BaseSUViewAPISerializer):
+    class Meta(BaseSUViewAPISerializer.Meta):
         model = BleachingQCSUView
-        exclude = BaseViewAPISerializer.Meta.exclude.copy()
+        exclude = BaseSUViewAPISerializer.Meta.exclude.copy()
         exclude.append("location")
-        header_order = BaseViewAPISerializer.Meta.header_order.copy()
+        header_order = BaseSUViewAPISerializer.Meta.header_order.copy()
         header_order.extend(
             [
                 "label",
@@ -380,12 +381,12 @@ class BleachingQCMethodSUGeoSerializer(BaseViewAPIGeoSerializer):
         model = BleachingQCSUView
 
 
-class BleachingQCMethodSESerializer(BaseViewAPISerializer):
-    class Meta(BaseViewAPISerializer.Meta):
+class BleachingQCMethodSESerializer(BaseSUViewAPISerializer):
+    class Meta(BaseSUViewAPISerializer.Meta):
         model = BleachingQCSEView
-        exclude = BaseViewAPISerializer.Meta.exclude.copy()
+        exclude = BaseSUViewAPISerializer.Meta.exclude.copy()
         exclude.append("location")
-        header_order = BaseViewAPISerializer.Meta.header_order.copy()
+        header_order = BaseSUViewAPISerializer.Meta.header_order.copy()
         header_order.extend(
             [
                 "sample_unit_count",
@@ -410,10 +411,7 @@ class BleachingQCMethodSEGeoSerializer(BaseViewAPIGeoSerializer):
         model = BleachingQCSEView
 
 
-class BleachingQCMethodColoniesBleachedObsFilterSet(BaseTransectFilterSet):
-    sample_unit_id = BaseInFilter(method="id_lookup")
-    depth = RangeFilter()
-    observers = BaseInFilter(method="json_name_lookup")
+class BleachingQCMethodColoniesBleachedObsFilterSet(BaseSUObsFilterSet):
     count_normal = RangeFilter()
     count_pale = RangeFilter()
     count_20 = RangeFilter()
@@ -425,10 +423,6 @@ class BleachingQCMethodColoniesBleachedObsFilterSet(BaseTransectFilterSet):
     class Meta:
         model = BleachingQCColoniesBleachedObsView
         fields = [
-            "depth",
-            "sample_unit_id",
-            "observers",
-            "label",
             "quadrat_size",
             "benthic_attribute",
             "growth_form",
@@ -443,10 +437,7 @@ class BleachingQCMethodColoniesBleachedObsFilterSet(BaseTransectFilterSet):
         ]
 
 
-class BleachingQCMethodQuadratBenthicPercentObsFilterSet(BaseTransectFilterSet):
-    sample_unit_id = BaseInFilter(method="id_lookup")
-    depth = RangeFilter()
-    observers = BaseInFilter(method="json_name_lookup")
+class BleachingQCMethodQuadratBenthicPercentObsFilterSet(BaseSUObsFilterSet):
     percent_hard = RangeFilter()
     percent_soft = RangeFilter()
     percent_algae = RangeFilter()
@@ -454,10 +445,6 @@ class BleachingQCMethodQuadratBenthicPercentObsFilterSet(BaseTransectFilterSet):
     class Meta:
         model = BleachingQCQuadratBenthicPercentObsView
         fields = [
-            "depth",
-            "sample_unit_id",
-            "observers",
-            "label",
             "quadrat_size",
             "data_policy_bleachingqc",
             "quadrat_number",
@@ -467,10 +454,7 @@ class BleachingQCMethodQuadratBenthicPercentObsFilterSet(BaseTransectFilterSet):
         ]
 
 
-class BleachingQCMethodSUFilterSet(BaseTransectFilterSet):
-    sample_unit_id = BaseInFilter(method="id_lookup")
-    depth = RangeFilter()
-    observers = BaseInFilter(method="json_name_lookup")
+class BleachingQCMethodSUFilterSet(BaseSUObsFilterSet):
     count_genera = RangeFilter()
     count_total = RangeFilter()
     percent_normal = RangeFilter()
@@ -484,9 +468,6 @@ class BleachingQCMethodSUFilterSet(BaseTransectFilterSet):
     class Meta:
         model = BleachingQCSUView
         fields = [
-            "depth",
-            "sample_unit_id",
-            "observers",
             "quadrat_size",
             "data_policy_bleachingqc",
             "count_genera",
@@ -501,7 +482,7 @@ class BleachingQCMethodSUFilterSet(BaseTransectFilterSet):
         ]
 
 
-class BleachingQCMethodSEFilterSet(BaseTransectFilterSet):
+class BleachingQCMethodSEFilterSet(BaseSEFilterSet):
     sample_unit_count = RangeFilter()
     depth_avg = RangeFilter()
     quadrat_size_avg = RangeFilter()

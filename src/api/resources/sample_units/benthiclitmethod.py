@@ -17,16 +17,17 @@ from ...reports.formatters import (
     to_latitude,
     to_longitude,
     to_month,
-    to_observers,
+    to_names,
     to_str,
     to_year,
 )
 from ...reports.report_serializer import ReportSerializer
 from ..base import (
     BaseProjectApiViewSet,
-    BaseTransectFilterSet,
+    BaseSEFilterSet,
+    BaseSUObsFilterSet,
     BaseViewAPIGeoSerializer,
-    BaseViewAPISerializer,
+    BaseSUViewAPISerializer,
 )
 from ..benthic_lit import BenthicLITSerializer
 from ..benthic_transect import BenthicTransectSerializer
@@ -148,12 +149,12 @@ class BenthicLITMethodView(BaseProjectApiViewSet):
             raise
 
 
-class BenthicLITMethodObsSerializer(BaseViewAPISerializer):
-    class Meta(BaseViewAPISerializer.Meta):
+class BenthicLITMethodObsSerializer(BaseSUViewAPISerializer):
+    class Meta(BaseSUViewAPISerializer.Meta):
         model = BenthicLITObsView
-        exclude = BaseViewAPISerializer.Meta.exclude.copy()
+        exclude = BaseSUViewAPISerializer.Meta.exclude.copy()
         exclude.append("location")
-        header_order = ["id"] + BaseViewAPISerializer.Meta.header_order.copy()
+        header_order = ["id"] + BaseSUViewAPISerializer.Meta.header_order.copy()
         header_order.extend(
             [
                 "sample_unit_id",
@@ -203,7 +204,7 @@ class ObsBenthicLITCSVSerializer(ReportSerializer):
         ReportField("transect_number", "Transect number"),
         ReportField("label", "Transect label"),
         ReportField("transect_len_surveyed", "Transect length surveyed"),
-        ReportField("observers", "Observers", to_observers),
+        ReportField("observers", "Observers", to_names),
         ReportField("benthic_category", "Benthic category"),
         ReportField("benthic_attribute", "Benthic attribute"),
         ReportField("growth_form", "Growth form"),
@@ -234,12 +235,12 @@ class BenthicLITMethodObsGeoSerializer(BaseViewAPIGeoSerializer):
         model = BenthicLITObsView
 
 
-class BenthicLITMethodSUSerializer(BaseViewAPISerializer):
-    class Meta(BaseViewAPISerializer.Meta):
+class BenthicLITMethodSUSerializer(BaseSUViewAPISerializer):
+    class Meta(BaseSUViewAPISerializer.Meta):
         model = BenthicLITSUView
-        exclude = BaseViewAPISerializer.Meta.exclude.copy()
+        exclude = BaseSUViewAPISerializer.Meta.exclude.copy()
         exclude.append("location")
-        header_order = BaseViewAPISerializer.Meta.header_order.copy()
+        header_order = BaseSUViewAPISerializer.Meta.header_order.copy()
         header_order.extend(
             [
                 "transect_number",
@@ -261,12 +262,12 @@ class BenthicLITMethodSUGeoSerializer(BaseViewAPIGeoSerializer):
         model = BenthicLITSUView
 
 
-class BenthicLITMethodSESerializer(BaseViewAPISerializer):
-    class Meta(BaseViewAPISerializer.Meta):
+class BenthicLITMethodSESerializer(BaseSUViewAPISerializer):
+    class Meta(BaseSUViewAPISerializer.Meta):
         model = BenthicLITSEView
-        exclude = BaseViewAPISerializer.Meta.exclude.copy()
+        exclude = BaseSUViewAPISerializer.Meta.exclude.copy()
         exclude.append("location")
-        header_order = BaseViewAPISerializer.Meta.header_order.copy()
+        header_order = BaseSUViewAPISerializer.Meta.header_order.copy()
         header_order.extend(
             [
                 "data_policy_benthiclit",
@@ -282,10 +283,7 @@ class BenthicLITMethodSEGeoSerializer(BaseViewAPIGeoSerializer):
         model = BenthicLITSEView
 
 
-class BenthicLITMethodObsFilterSet(BaseTransectFilterSet):
-    depth = RangeFilter()
-    sample_unit_id = BaseInFilter(method="id_lookup")
-    observers = BaseInFilter(method="json_name_lookup")
+class BenthicLITMethodObsFilterSet(BaseSUObsFilterSet):
     transect_len_surveyed = RangeFilter()
     reef_slope = BaseInFilter(method="char_lookup")
     length = RangeFilter()
@@ -293,9 +291,6 @@ class BenthicLITMethodObsFilterSet(BaseTransectFilterSet):
     class Meta:
         model = BenthicLITObsView
         fields = [
-            "depth",
-            "sample_unit_id",
-            "observers",
             "transect_len_surveyed",
             "reef_slope",
             "transect_number",
@@ -307,17 +302,13 @@ class BenthicLITMethodObsFilterSet(BaseTransectFilterSet):
         ]
 
 
-class BenthicLITMethodSUFilterSet(BaseTransectFilterSet):
+class BenthicLITMethodSUFilterSet(BaseSUObsFilterSet):
     transect_len_surveyed = RangeFilter()
-    depth = RangeFilter()
-    observers = BaseInFilter(method="json_name_lookup")
     reef_slope = BaseInFilter(method="char_lookup")
 
     class Meta:
         model = BenthicLITSUView
         fields = [
-            "depth",
-            "observers",
             "transect_len_surveyed",
             "reef_slope",
             "transect_number",
@@ -325,7 +316,7 @@ class BenthicLITMethodSUFilterSet(BaseTransectFilterSet):
         ]
 
 
-class BenthicLITMethodSEFilterSet(BaseTransectFilterSet):
+class BenthicLITMethodSEFilterSet(BaseSEFilterSet):
     sample_unit_count = RangeFilter()
     depth_avg = RangeFilter()
 
