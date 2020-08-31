@@ -248,6 +248,7 @@ class ObsBleachingQCColoniesBleachedCSVSerializer(ReportSerializer):
         ReportField("management_id"),
         ReportField("sample_unit_id"),
         ReportField("data_policy_bleachingqc"),
+        ReportField("relative_depth"),
     ]
 
 
@@ -286,16 +287,10 @@ class ObsQuadratBenthicPercentCSVSerializer(ReportSerializer):
         ReportField("percent_hard", "Hard coral (% cover)"),
         ReportField("percent_soft", "Soft coral (% cover)"),
         ReportField("percent_algae", "Macroalgae (% cover)"),
-        ReportField("percent_algae", "Number of quadrats", alias="num_quadrats"),
-        ReportField(
-            "percent_hard_avg", "Average Hard Coral (% cover)", alias="avg_hard_coral"
-        ),
-        ReportField(
-            "percent_soft_avg", "Average Soft Coral (% cover)", alias="avg_soft_coral"
-        ),
-        ReportField(
-            "percent_algae_avg", "Average Macroalgae (% cover)", alias="avg_macroalgae"
-        ),
+        ReportField("quadrat_count", "Number of quadrats"),
+        ReportField("percent_hard_avg", "Average Hard Coral (% cover)"),
+        ReportField("percent_soft_avg", "Average Soft Coral (% cover)"),
+        ReportField("percent_algae_avg", "Average Macroalgae (% cover)"),
     ]
 
     additional_fields = [
@@ -309,6 +304,7 @@ class ObsQuadratBenthicPercentCSVSerializer(ReportSerializer):
         ReportField("management_id"),
         ReportField("sample_unit_id"),
         ReportField("data_policy_bleachingqc"),
+        ReportField("relative_depth")
     ]
 
 

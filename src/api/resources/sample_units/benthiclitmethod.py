@@ -226,6 +226,7 @@ class ObsBenthicLITCSVSerializer(ReportSerializer):
         ReportField("management_id"),
         ReportField("sample_unit_id"),
         ReportField("data_policy_benthiclit"),
+        ReportField("relative_depth"),
     ]
 
 

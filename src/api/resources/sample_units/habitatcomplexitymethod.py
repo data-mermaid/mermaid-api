@@ -102,6 +102,7 @@ class ObsHabitatComplexityCSVSerializer(ReportSerializer):
         ReportField("sample_unit_id"),
         ReportField("interval_size"),
         ReportField("data_policy_habitatcomplexity"),
+        ReportField("relative_depth"),
     ]
 
 
