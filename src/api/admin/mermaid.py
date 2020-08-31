@@ -52,7 +52,7 @@ class FishAttributeAdmin(AttributeAdmin):
 
             extra_context.update({"protected_descendants": protected_descendants})
 
-        return super(FishAttributeAdmin, self).delete_view(
+        return super().delete_view(
             request, object_id, extra_context
         )
 
@@ -321,22 +321,22 @@ class MPAAdmin(BaseAdmin):
 
 @admin.register(BenthicTransect)
 class BenthicTransectAdmin(SampleUnitAdmin):
-    list_display = ("name", "len_surveyed")
+    list_display = ("name", "len_surveyed", "depth")
 
 
 @admin.register(FishBeltTransect)
 class FishTransectAdmin(SampleUnitAdmin):
-    list_display = ("name", "len_surveyed", "width")
+    list_display = ("name", "len_surveyed", "width", "depth")
 
 
 @admin.register(QuadratCollection)
 class QuadratCollectionAdmin(SampleUnitAdmin):
-    list_display = ("name", "quadrat_size")
+    list_display = ("name", "quadrat_size", "depth")
 
 
 @admin.register(SampleEvent)
 class SampleEventAdmin(BaseAdmin):
-    list_display = ("site", "management", "sample_date", "depth")
+    list_display = ("site", "management", "sample_date")
     list_display_links = ("site", "sample_date")
     search_fields = ["site__name", "sample_date"]
 
@@ -398,7 +398,7 @@ class BenthicAttributeAdmin(AttributeAdmin):
 
             extra_context.update({"protected_descendants": protected_descendants})
 
-        return super(BenthicAttributeAdmin, self).delete_view(
+        return super().delete_view(
             request, object_id, extra_context
         )
 
@@ -464,7 +464,7 @@ class ObsBenthicLITInline(ObservationInline):
 
 @admin.register(BenthicLIT)
 class BenthicLITAdmin(TransectMethodAdmin):
-    list_display = ("name", "len_surveyed")
+    list_display = ("name", "len_surveyed", "depth")
     inlines = (ObserverInline, ObsBenthicLITInline)
 
     def get_queryset(self, request):
@@ -500,7 +500,7 @@ class ObsBenthicPITInline(ObservationInline):
 
 @admin.register(BenthicPIT)
 class BenthicPITAdmin(TransectMethodAdmin):
-    list_display = ("name", "len_surveyed", "interval_size")
+    list_display = ("name", "len_surveyed", "interval_size", "depth")
     inlines = (ObserverInline, ObsBenthicPITInline)
 
     def get_queryset(self, request):
@@ -536,7 +536,7 @@ class ObsHabitatComplexityInline(ObservationInline):
 
 @admin.register(HabitatComplexity)
 class HabitatComplexityAdmin(TransectMethodAdmin):
-    list_display = ("name", "len_surveyed", "interval_size")
+    list_display = ("name", "len_surveyed", "interval_size", "depth")
     inlines = (ObserverInline, ObsHabitatComplexityInline)
 
     def get_queryset(self, request):
@@ -573,7 +573,7 @@ class ObsQuadratBenthicPercentInline(ObservationInline):
 
 @admin.register(BleachingQuadratCollection)
 class BleachingQuadratCollectionAdmin(BaseAdmin):
-    list_display = ("name", "quadrat_size")
+    list_display = ("name", "quadrat_size", "depth")
     inlines = (
         ObserverInline,
         ObsColoniesBleachedInline,
@@ -595,6 +595,9 @@ class BleachingQuadratCollectionAdmin(BaseAdmin):
 
     def quadrat_size(self, obj):
         return obj.quadrat.quadrat_size
+
+    def depth(self, obj):
+        return obj.transect.depth
 
     quadrat_size.admin_order_field = "quadrat__quadrat_size"
 
@@ -801,7 +804,7 @@ class ObsTransectBeltFishInline(ObservationInline):
 
 @admin.register(BeltFish)
 class BeltFishAdmin(TransectMethodAdmin):
-    list_display = ("name", "len_surveyed", "width")
+    list_display = ("name", "len_surveyed", "width", "depth")
     inlines = (ObserverInline, ObsTransectBeltFishInline)
 
     def width(self, obj):
