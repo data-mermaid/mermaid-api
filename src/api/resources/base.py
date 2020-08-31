@@ -245,6 +245,9 @@ class BaseViewAPISerializer(BaseAPISerializer):
             "tide_name",
             "visibility_name",
             "sample_event_notes",
+            "relative_depth",
+            "sample_time",
+            "sample_unit_ids",
         ]
 
     def get_latitude(self, obj):
