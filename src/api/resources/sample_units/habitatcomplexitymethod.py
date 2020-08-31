@@ -245,6 +245,7 @@ class HabitatComplexityMethodSUSerializer(BaseViewAPISerializer):
         header_order = BaseViewAPISerializer.Meta.header_order.copy()
         header_order.extend(
             [
+                "label",
                 "transect_number",
                 "transect_len_surveyed",
                 "depth",
