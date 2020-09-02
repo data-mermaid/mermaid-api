@@ -1,5 +1,16 @@
 import datetime
-from api.models import BenthicAttribute, HabitatComplexityScore, Management, Site
+
+from django.contrib.gis.geos import Point
+from django.test import TestCase
+
+from api.models import (
+    BenthicAttribute,
+    BenthicTransect,
+    HabitatComplexityScore,
+    Management,
+    SampleEvent,
+    Site,
+)
 from api.submission.validations import (
     ERROR,
     IGNORE,
@@ -18,10 +29,6 @@ from api.submission.validations import (
     SiteValidation,
     ValueInRangeValidation,
 )
-from django.contrib.gis.geos import Point
-from django.core.management import call_command
-from django.test import TestCase
-
 from .base_test_setup import BaseTestCase
 from .data import TestDataMixin
 
@@ -150,66 +157,88 @@ class SiteValidationTest(BaseTestCase):
         site3.delete()
 
 
-# class ManagementValidationTest(BaseTestCase):
-#     def test_status_ok(self):
-#         management_validation = ManagementValidation(str(self.management.pk))
-#         self.assertEqual(OK, management_validation.validate())
+class ManagementValidationTest(BaseTestCase):
+    def test_status_ok(self):
+        management_validation = ManagementValidation(str(self.management.pk))
+        self.assertEqual(OK, management_validation.validate())
 
-#     def test_status_warning(self):
-#         mgmt2 = Management.objects.create(
-#             project=self.project,
-#             est_year=2000,
-#             name="Test Management",
-#             notes="Hey what is up",
-#         )
+    def test_status_warning(self):
+        mgmt2 = Management.objects.create(
+            project=self.project,
+            est_year=2000,
+            name="Test Management2",
+            notes="Hey what's up!!",
+        )
 
-#         management_validation = ManagementValidation(str(self.management.pk))
-#         logs = management_validation.logs
-#         self.assertEqual(WARN, management_validation.validate())
-#         self.assertTrue(logs["management"]["validate_similar"]["status"] == WARN)
-#         mgmt2.delete()
+        se2 = SampleEvent.objects.create(
+            site=self.site1, management=mgmt2, sample_date=datetime.date(2018, 7, 13),
+        )
 
-#     def test_status_error(self):
+        benthic_transect = BenthicTransect.objects.create(
+            number=1, len_surveyed=100, sample_event=se2
+        )
 
-#         # Invalid uuid test
-#         management_validation = ManagementValidation(str("not-uuid"))
-#         self.assertEqual(ERROR, management_validation.validate())
+        management_validation = ManagementValidation(str(self.management.pk))
+        logs = management_validation.logs
+        self.assertEqual(WARN, management_validation.validate())
+        self.assertTrue(logs["management"]["validate_similar"]["status"] == WARN)
 
-#         # Management doesn't exist test
-#         uuid = str("61bd9485-db2b-4e7d-8fe9-3c34b371ed0f")
-#         management_validation = ManagementValidation(uuid)
-#         self.assertEqual(ERROR, management_validation.validate())
+        benthic_transect.delete()
+        # se2.delete()
+        mgmt2.delete()
 
-#     def test_ignore_warning(self):
-#         mgmt2 = Management.objects.create(
-#             project=self.project,
-#             est_year=2000,
-#             name="Test Management",
-#             notes="Hey what is up",
-#         )
+    def test_status_error(self):
 
-#         management_validation = ManagementValidation(str(self.management.pk))
-#         management_validation.validate()
-#         management_validation.ignore_warning(
-#             ManagementValidation.identifier, "validate_similar"
-#         )
+        # Invalid uuid test
+        management_validation = ManagementValidation(str("not-uuid"))
+        self.assertEqual(ERROR, management_validation.validate())
 
-#         retry_validation = ManagementValidation(
-#             str(self.management.pk),
-#             previous_validations=management_validation.logs[
-#                 ManagementValidation.identifier
-#             ],
-#         )
-#         retry_validation.validate()
-#         retry_validation_logs = retry_validation.logs
+        # Management doesn't exist test
+        uuid = str("61bd9485-db2b-4e7d-8fe9-3c34b371ed0f")
+        management_validation = ManagementValidation(uuid)
+        self.assertEqual(ERROR, management_validation.validate())
 
-#         self.assertEqual(
-#             retry_validation_logs[ManagementValidation.identifier]["validate_similar"][
-#                 "status"
-#             ],
-#             IGNORE,
-#         )
-#         mgmt2.delete()
+    def test_ignore_warning(self):
+        mgmt2 = Management.objects.create(
+            project=self.project,
+            est_year=2000,
+            name="Test Management",
+            notes="Hey what is up",
+        )
+
+        se2 = SampleEvent.objects.create(
+            site=self.site1, management=mgmt2, sample_date=datetime.date(2018, 7, 13),
+        )
+
+        benthic_transect = BenthicTransect.objects.create(
+            number=1, len_surveyed=100, sample_event=se2
+        )
+
+        management_validation = ManagementValidation(str(self.management.pk))
+        management_validation.validate()
+
+        management_validation.ignore_warning(
+            ManagementValidation.identifier, "validate_similar"
+        )
+
+        retry_validation = ManagementValidation(
+            str(self.management.pk),
+            previous_validations=management_validation.logs[
+                ManagementValidation.identifier
+            ],
+        )
+        retry_validation.validate()
+        retry_validation_logs = retry_validation.logs
+
+        self.assertEqual(
+            retry_validation_logs[ManagementValidation.identifier]["validate_similar"][
+                "status"
+            ],
+            IGNORE,
+        )
+
+        benthic_transect.delete()
+        mgmt2.delete()
 
 
 class ObserverValidationTest(BaseTestCase):
@@ -238,7 +267,7 @@ class ObsFishBeltValidationTest(BaseTestCase):
         fish_species_id = str(self.fish_species.id)
         obs_belt_fishes_low_biomass_invalid = [
             dict(
-                count=24,
+                count=1,
                 fish_attribute=fish_species_id,
                 size_bin=str(self.fish_size_bin.id),
                 size=7.5,
@@ -276,7 +305,7 @@ class ObsFishBeltValidationTest(BaseTestCase):
 
         obs_belt_fishes_high_biomass_invalid = [
             dict(
-                count=2403,
+                count=7003,
                 fish_attribute=fish_species_id,
                 size_bin=str(self.fish_size_bin.id),
                 size=7.5,
@@ -288,13 +317,13 @@ class ObsFishBeltValidationTest(BaseTestCase):
                 size=7.5,
             ),
             dict(
-                count=445,
+                count=4455,
                 fish_attribute=fish_species_id,
                 size_bin=str(self.fish_size_bin.id),
                 size=7.5,
             ),
             dict(
-                count=1100,
+                count=4100,
                 fish_attribute=fish_species_id,
                 size_bin=str(self.fish_size_bin.id),
                 size=7.5,
@@ -635,7 +664,7 @@ class ObsBenthicPercentCoveredValidationTest(BaseTestCase):
         self.assertEqual(OK, validation.validate_percent_values())
 
         validation = ObsBenthicPercentCoveredValidation(self.invalid_data_null)
-        self.assertEqual(OK, validation.validate_percent_values())
+        self.assertEqual(ERROR, validation.validate_percent_values())
 
         validation = ObsBenthicPercentCoveredValidation(self.invalid_data_gt_100_val)
         self.assertEqual(ERROR, validation.validate_percent_values())

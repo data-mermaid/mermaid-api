@@ -10,6 +10,7 @@ from rest_framework.decorators import action
 from rest_framework.exceptions import NotFound, ParseError, ValidationError
 from rest_framework.response import Response
 
+from .mixins import CreateOrUpdateSerializerMixin
 from ..ingest.utils import InvalidSchema, ingest
 from ..models import CollectRecord
 from ..permissions import ProjectDataAdminPermission, ProjectDataPermission
@@ -49,7 +50,7 @@ class CollectRecordOwner(permissions.BasePermission):
         return count == len(record_ids)
 
 
-class CollectRecordSerializer(BaseAPISerializer):
+class CollectRecordSerializer(CreateOrUpdateSerializerMixin, BaseAPISerializer):
     class Meta:
         model = CollectRecord
         exclude = []

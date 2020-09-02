@@ -1,25 +1,38 @@
 from django.db import transaction
+from django_filters import BaseInFilter, RangeFilter
+from rest_condition import Or
 from rest_framework import status
 from rest_framework.response import Response
 from rest_framework.serializers import SerializerMethodField
-from django_filters import BaseInFilter, RangeFilter
 
-from .. import fieldreport
-from ...models.mermaid import BenthicPIT, ObsBenthicPIT, BenthicAttribute
-from ...models.view_models import BenthicPITObsView, BenthicPITSUView, BenthicPITSEView
-
-from . import *
+# from .. import fieldreport
+from ...models.mermaid import BenthicAttribute, BenthicPIT, Project
+from ...models.view_models import BenthicPITObsView, BenthicPITSEView, BenthicPITSUView
+from ...permissions import ProjectDataReadOnlyPermission, ProjectPublicSummaryPermission
+from ...reports.fields import ReportField
+from ...reports.formatters import (
+    to_day,
+    to_governance,
+    to_latitude,
+    to_longitude,
+    to_month,
+    to_observers,
+    to_str,
+    to_year,
+)
+from ...reports.report_serializer import ReportSerializer
 from ..base import (
     BaseProjectApiViewSet,
-    BaseViewAPISerializer,
-    BaseViewAPIGeoSerializer,
     BaseTransectFilterSet,
+    BaseViewAPIGeoSerializer,
+    BaseViewAPISerializer,
 )
 from ..benthic_pit import BenthicPITSerializer
 from ..benthic_transect import BenthicTransectSerializer
 from ..obs_benthic_pit import ObsBenthicPITSerializer
 from ..observer import ObserverSerializer
 from ..sample_event import SampleEventSerializer
+from . import BaseProjectMethodView, save_model, save_one_to_many
 
 
 class BenthicPITMethodSerializer(BenthicPITSerializer):
@@ -31,82 +44,6 @@ class BenthicPITMethodSerializer(BenthicPITSerializer):
     class Meta:
         model = BenthicPIT
         exclude = []
-
-
-def _get_benthic_attribute_category(row, serializer_instance):
-    benthic_attribute_id = row.get("attribute")
-    if benthic_attribute_id is None:
-        return None
-
-    lookup = serializer_instance.serializer_cache.get(
-        "benthic-attribute_lookups-categories"
-    )
-    if lookup:
-        return lookup.get(str(benthic_attribute_id)) or dict()
-    else:
-        return BenthicAttribute.objects.get(id=benthic_attribute_id)
-
-
-def to_benthic_attribute_category(field, row, serializer_instance):
-    bc = _get_benthic_attribute_category(row, serializer_instance)
-
-    if bc is None:
-        return ""
-
-    elif isinstance(bc, dict):
-        return bc.get("name") or ""
-
-    return str(bc)
-
-
-class ObsBenthicPITReportSerializer(
-    SampleEventReportSerializer, metaclass=SampleEventReportSerializerMeta
-):
-    transect_method = "benthicpit"
-    sample_event_path = "{}__transect__sample_event".format(transect_method)
-
-    idx = 24
-    obs_fields = [
-        (6, ReportField("benthicpit__transect__reef_slope__name", "Reef slope")),
-        (idx, ReportField("benthicpit__transect__number", "Transect number")),
-        (idx + 1, ReportField("benthicpit__transect__label", "Transect label")),
-        (
-            idx + 2,
-            ReportField(
-                "benthicpit__transect__len_surveyed", "Transect length surveyed"
-            ),
-        ),
-        (idx + 4, ReportField("interval", "PIT interval (m)")),
-        (idx + 5, ReportMethodField("Benthic category", to_benthic_attribute_category)),
-        (idx + 6, ReportField("attribute__name", "Benthic attribute")),
-        (idx + 7, ReportField("growth_form__name", "Growth form")),
-        (idx + 11, ReportField("benthicpit__transect__notes", "Observation notes")),
-    ]
-
-    non_field_columns = (
-        "benthicpit_id",
-        "benthicpit__transect__sample_event__site__project_id",
-        "benthicpit__transect__sample_event__management_id",
-        "attribute",
-    )
-
-    class Meta:
-        model = BenthicPIT
-
-    def preserialize(self, queryset=None):
-        super(ObsBenthicPITReportSerializer, self).preserialize(queryset=queryset)
-
-        # Transect total lengths
-        benthic_categories = BenthicAttribute.objects.all()
-
-        benthic_category_lookup = {
-            str(bc.id): dict(name=bc.origin.name) for bc in benthic_categories
-        }
-
-        if len(benthic_category_lookup.keys()) > 0:
-            self.serializer_cache[
-                "benthic-attribute_lookups-categories"
-            ] = benthic_category_lookup
 
 
 class BenthicPITMethodView(BaseProjectApiViewSet):
@@ -209,18 +146,63 @@ class BenthicPITMethodView(BaseProjectApiViewSet):
             transaction.savepoint_rollback(sid)
             raise
 
-    @action(detail=False, methods=["get"])
-    def fieldreport(self, request, *args, **kwargs):
-        return fieldreport(
-            self,
-            request,
-            *args,
-            model_cls=ObsBenthicPIT,
-            serializer_class=ObsBenthicPITReportSerializer,
-            fk="benthicpit",
-            order_by=("Site", "Transect number", "Transect label"),
-            **kwargs
-        )
+
+class ObsBenthicPITCSVSerializer(ReportSerializer):
+    fields = [
+        ReportField("project_name", "Project name"),
+        ReportField("country_name", "Country"),
+        ReportField("site_name", "Site"),
+        ReportField("location", "Latitude", to_latitude, alias="latitude"),
+        ReportField("location", "Longitude", to_longitude, alias="longitude"),
+        ReportField("reef_exposure", "Exposure"),
+        ReportField("reef_slope", "Reef slope"),
+        ReportField("reef_type", "Reef type"),
+        ReportField("reef_zone", "Reef zone"),
+        ReportField("sample_date", "Year", to_year, "sample_date_year"),
+        ReportField("sample_date", "Month", to_month, "sample_date_month"),
+        ReportField("sample_date", "Day", to_day, "sample_date_day"),
+        ReportField("sample_time", "Start time", to_str),
+        ReportField("tide_name", "Tide"),
+        ReportField("visibility_name", "Visibility"),
+        ReportField("current_name", "Current"),
+        ReportField("depth", "Depth"),
+        ReportField("management_name", "Management name"),
+        ReportField("management_name_secondary", "Management secondary name"),
+        ReportField("management_est_year", "Management year established"),
+        ReportField("management_size", "Management size"),
+        ReportField("management_parties", "Governance", to_governance),
+        ReportField("management_compliance", "Estimated compliance",),
+        ReportField("management_rules", "Management rules"),
+        ReportField("transect_number", "Transect number"),
+        ReportField("label", "Transect label"),
+        ReportField("transect_len_surveyed", "Transect length surveyed"),
+        ReportField("observers", "Observers", to_observers),
+        ReportField("interval", "PIT interval (m)"),
+        ReportField("benthic_category", "Benthic category"),
+        ReportField("benthic_attribute", "Benthic attribute"),
+        ReportField("growth_form", "Growth form"),
+        ReportField("site_notes", "Site notes"),
+        ReportField("sample_event_notes", "Sampling event notes"),
+        ReportField("management_notes", "Management notes"),
+        ReportField("observation_notes", "Observation notes"),
+    ]
+
+    additional_fields = [
+        ReportField("id"),
+        ReportField("project_id"),
+        ReportField("project_notes"),
+        ReportField("site_id"),
+        ReportField("project_notes"),
+        ReportField("contact_link"),
+        ReportField("tags"),
+        ReportField("country_id"),
+        ReportField("management_id"),
+        ReportField("sample_unit_id"),
+        ReportField("interval_size"),
+        ReportField("interval_start"),
+        ReportField("data_policy_benthicpit"),
+        ReportField("relative_depth"),
+    ]
 
 
 class BenthicPITMethodObsSerializer(BaseViewAPISerializer):
@@ -268,6 +250,7 @@ class BenthicPITMethodSUSerializer(BaseViewAPISerializer):
         header_order = BaseViewAPISerializer.Meta.header_order.copy()
         header_order.extend(
             [
+                "label",
                 "transect_number",
                 "transect_len_surveyed",
                 "depth",
@@ -369,13 +352,14 @@ class BenthicPITMethodSEFilterSet(BaseTransectFilterSet):
 class BenthicPITProjectMethodObsView(BaseProjectMethodView):
     drf_label = "benthicpit-obs"
     project_policy = "data_policy_benthicpit"
-    serializer_class = BenthicPITMethodObsSerializer
+    serializer_class = BenthicPITMethodObsCSVSerializer
     serializer_class_geojson = BenthicPITMethodObsGeoSerializer
-    serializer_class_csv = BenthicPITMethodObsCSVSerializer
+    serializer_class_csv = ObsBenthicPITCSVSerializer
     filterset_class = BenthicPITMethodObsFilterSet
-    queryset = BenthicPITObsView.objects.exclude(project_status=Project.TEST).order_by(
-        "site_name", "sample_date", "transect_number", "label", "interval"
+    queryset = BenthicPITObsView.objects.filter(
+        # project_status=Project.TEST
     )
+    order_by = ("site_name", "sample_date", "transect_number", "label", "interval")
 
 
 class BenthicPITProjectMethodSUView(BaseProjectMethodView):

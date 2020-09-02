@@ -1,15 +1,23 @@
 import django_filters
+from rest_framework import serializers
+
 from .base import (
     BaseAPIFilterSet,
     BaseProjectApiViewSet,
     BaseAPISerializer,
     ExtendedSerializer,
     ModelValReadOnlyField,
+    ModelNameReadOnlyField,
+)
+from .sample_units_base import (
+    SampleUnitExtendedSerializer,
+    SampleUnitFilterSet,
+    SampleUnitSerializer,
 )
 from ..models import FishBeltTransect
 
 
-class FishBeltTransectExtendedSerializer(ExtendedSerializer):
+class FishBeltTransectExtendedSerializer(SampleUnitExtendedSerializer):
     width = ModelValReadOnlyField()
 
     class Meta:
@@ -17,33 +25,33 @@ class FishBeltTransectExtendedSerializer(ExtendedSerializer):
         exclude = []
 
 
-class FishBeltTransectSerializer(BaseAPISerializer):
-
+class FishBeltTransectSerializer(SampleUnitSerializer):
     class Meta:
         model = FishBeltTransect
         exclude = []
         extra_kwargs = {
-            "number": {
-                "error_messages": {"null": "Transect number is required"}
-            },
+            "number": {"error_messages": {"null": "Transect number is required"}},
             "len_surveyed": {
                 "error_messages": {"null": "Transect length surveyed is required"}
             },
-            "width": {
-                "error_messages": {"null": "Width is required"}
-            },
-            "size_bin": {
-                "error_messages": {"null": "Fish size bin is required"}
-            },
+            "width": {"error_messages": {"null": "Width is required"}},
+            "size_bin": {"error_messages": {"null": "Fish size bin is required"}},
         }
+        extra_kwargs.update(SampleUnitSerializer.extra_kwargs)
 
 
-class FishBeltTransectFilterSet(BaseAPIFilterSet):
-    len_surveyed = django_filters.NumericRangeFilter(field_name='len_surveyed')
+class FishBeltTransectFilterSet(SampleUnitFilterSet):
+    len_surveyed = django_filters.RangeFilter(field_name="len_surveyed")
 
     class Meta:
         model = FishBeltTransect
-        fields = ['beltfish_method', 'sample_event', 'len_surveyed', 'width', ]
+        fields = [
+            "beltfish_method",
+            "sample_event",
+            "len_surveyed",
+            "width",
+            "depth",
+        ] + SampleUnitFilterSet.fields
 
 
 class FishBeltTransectViewSet(BaseProjectApiViewSet):

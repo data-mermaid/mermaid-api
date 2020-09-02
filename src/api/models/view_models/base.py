@@ -1,8 +1,12 @@
 import uuid
+
 from django.contrib.gis.db import models
 from django.contrib.postgres.fields import JSONField
+from django.db import connection, transaction
 from django.utils.translation import ugettext_lazy as _
-from ..mermaid import Project, FishAttribute
+
+from ..mermaid import FishAttribute, Project
+from ..base import ExtendedManager
 
 
 class FishAttributeView(FishAttribute):
@@ -670,6 +674,11 @@ LEFT JOIN (
 CREATE UNIQUE INDEX ON vw_summary_site (site_id);
     """
 
+    reverse_sql = """
+      DROP MATERIALIZED VIEW IF EXISTS vw_summary_site;
+      DROP VIEW IF EXISTS public.vw_fish_attributes CASCADE;
+    """
+
     name_family = models.CharField(max_length=100)
     name_genus = models.CharField(max_length=100)
     name = models.CharField(max_length=100)
@@ -751,16 +760,10 @@ CREATE OR REPLACE VIEW public.vw_sample_events
         CASE
             WHEN m.access_restriction THEN 'access restriction'::text
             ELSE NULL::text
-        END
-        ], NULL::text))::jsonb AS management_rules,
+        END], NULL::text))::jsonb AS management_rules,
     m.notes AS management_notes,
     se.id AS sample_event_id,
     se.sample_date,
-    se.sample_time,
-    c.name AS current_name,
-    t.name AS tide_name,
-    v.name AS visibility_name,
-    se.depth,
     se.notes AS sample_event_notes,
     CASE
         WHEN project.data_policy_beltfish = 10 THEN 'private'::text
@@ -794,9 +797,6 @@ CREATE OR REPLACE VIEW public.vw_sample_events
     END AS data_policy_bleachingqc
 
     FROM sample_event se
-     LEFT JOIN api_current c ON se.current_id = c.id
-     LEFT JOIN api_tide t ON se.tide_id = t.id
-     LEFT JOIN api_visibility v ON se.visibility_id = v.id
      JOIN site ON se.site_id = site.id
      JOIN project ON site.project_id = project.id
      LEFT JOIN ( SELECT project_1.id,
@@ -820,6 +820,8 @@ CREATE OR REPLACE VIEW public.vw_sample_events
           GROUP BY mps.management_id) parties ON m.id = parties.management_id;
     """
 
+    reverse_sql = "DROP VIEW IF EXISTS public.vw_sample_events CASCADE;"
+
     class Meta:
         db_table = "vw_sample_events"
         managed = False
@@ -827,6 +829,7 @@ CREATE OR REPLACE VIEW public.vw_sample_events
 
 class BaseViewModel(models.Model):
     project_lookup = "project_id"
+    # fields that are part of vw_sample_events
     se_fields = [
         "project_id",
         "project_name",
@@ -852,10 +855,20 @@ class BaseViewModel(models.Model):
         "management_compliance",
         "management_rules",
         "management_notes",
+        "sample_event_id",
         "sample_date",
-        "depth",
+        "sample_event_notes",
     ]
 
+    # SU aggregation SQL common to all SEs
+    su_aggfields_sql = """
+ROUND(AVG("depth"), 2) as depth_avg,
+string_agg(DISTINCT current_name, ', ' ORDER BY current_name) AS current_name,
+string_agg(DISTINCT tide_name, ', ' ORDER BY tide_name) AS tide_name,
+string_agg(DISTINCT visibility_name, ', ' ORDER BY visibility_name) AS visibility_name
+    """
+
+    # model fields to be inherited by every obs/su/se view
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
     project_id = models.UUIDField()
     project_name = models.CharField(max_length=255)
@@ -881,7 +894,7 @@ class BaseViewModel(models.Model):
     management_size = models.DecimalField(
         max_digits=12,
         decimal_places=3,
-        verbose_name=_(u"Size (ha)"),
+        verbose_name=_("Size (ha)"),
         null=True,
         blank=True,
     )
@@ -890,9 +903,98 @@ class BaseViewModel(models.Model):
     management_rules = JSONField(null=True, blank=True)
     management_notes = models.TextField(blank=True)
     sample_date = models.DateField()
+    sample_event_id = models.UUIDField()
+    sample_event_notes = models.TextField(blank=True)
+
+    class Meta:
+        abstract = True
+
+
+class BaseSUViewModel(BaseViewModel):
+    # SU sql common to all obs-level views
+    su_fields_sql = """
+    su.id AS sample_unit_id,
+    su.depth,
+    su.label, 
+    r.name AS relative_depth,
+    su.sample_time,
+    observers.observers, 
+    c.name AS current_name,
+    t.name AS tide_name,
+    v.name AS visibility_name
+    """
+
+    # SU aggregation SQL common to all SU-level views
+    su_aggfields_sql = """
+    string_agg(DISTINCT label::text, ', '::text ORDER BY (label::text)) AS label,
+    string_agg(DISTINCT relative_depth::text, ', '::text ORDER BY (relative_depth::text)) AS relative_depth,
+    string_agg(DISTINCT sample_time::text, ', '::text ORDER BY (sample_time::text)) AS sample_time,
+    string_agg(DISTINCT current_name::text, ', '::text ORDER BY (current_name::text)) AS current_name,
+    string_agg(DISTINCT tide_name::text, ', '::text ORDER BY (tide_name::text)) AS tide_name,
+    string_agg(DISTINCT visibility_name::text, ', '::text ORDER BY (visibility_name::text)) AS visibility_name
+    """
+
+    # Fields common to all SUs that are actually SU properties (that make SUs distinct)
+    depth = models.DecimalField(
+        max_digits=3, decimal_places=1, verbose_name=_("depth (m)")
+    )
+    # Fields common to all SUs that are aggregated from actual SUs into pseudo-SUs
+    agg_su_fields = [
+        "sample_unit_ids",
+        "label",
+        "relative_depth",
+        "sample_time",
+        "observers",
+        "current_name",
+        "tide_name",
+        "visibility_name",
+    ]
+    label = models.CharField(max_length=50, blank=True)
+    relative_depth = models.CharField(max_length=50)
+    sample_time = models.TimeField()
+    observers = JSONField(null=True, blank=True)
     current_name = models.CharField(max_length=50)
     tide_name = models.CharField(max_length=50)
     visibility_name = models.CharField(max_length=50)
 
     class Meta:
         abstract = True
+
+
+class SampleUnitCache(models.Model):
+    sample_unit_id = models.UUIDField(
+        primary_key=True, default=uuid.uuid4, editable=False
+    )
+    pseudosu_id = models.UUIDField(db_index=True, default=uuid.uuid4, editable=False)
+    sample_event_id = models.UUIDField(
+        db_index=True, default=uuid.uuid4, editable=False
+    )
+
+    objects = ExtendedManager()
+
+    class Meta:
+        db_table = "sample_unit_cache"
+
+    @classmethod
+    def refresh_cache(cls, sample_unit):
+        with transaction.atomic():
+            with connection.cursor() as cursor:
+                sample_event_id = str(sample_unit.sample_event.id)
+
+                del_sql = f"DELETE FROM sample_unit_cache WHERE sample_event_id = %(sample_event_id)s;"
+                cursor.execute(del_sql, params={"sample_event_id": sample_event_id})
+
+                insert_sql = f"""
+                INSERT INTO
+                    sample_unit_cache
+                WITH se_pseudosu_ids AS (
+                    {sample_unit.cache_sql}
+                )
+                SELECT 
+                    UNNEST(sample_unit_ids) AS sample_unit_id,
+                    pseudosu_id,
+                    sample_event_id
+                FROM se_pseudosu_ids
+                """
+
+                cursor.execute(insert_sql)

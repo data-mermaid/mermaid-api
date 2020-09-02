@@ -1,29 +1,41 @@
 from django.db import transaction
+from django_filters import BaseInFilter, RangeFilter
+from rest_condition import Or
 from rest_framework import status
 from rest_framework.response import Response
 from rest_framework.serializers import SerializerMethodField
-from django_filters import BaseInFilter, RangeFilter
 
-from .. import fieldreport
-from ...models.mermaid import HabitatComplexity, ObsHabitatComplexity
+from ...models.mermaid import HabitatComplexity, Project
 from ...models.view_models import (
     HabitatComplexityObsView,
-    HabitatComplexitySUView,
     HabitatComplexitySEView,
+    HabitatComplexitySUView,
 )
-
-from . import *
+from ...permissions import ProjectDataReadOnlyPermission, ProjectPublicSummaryPermission
+from ...reports.fields import ReportField
+from ...reports.formatters import (
+    to_day,
+    to_governance,
+    to_latitude,
+    to_longitude,
+    to_month,
+    to_observers,
+    to_str,
+    to_year,
+)
+from ...reports.report_serializer import ReportSerializer
 from ..base import (
     BaseProjectApiViewSet,
-    BaseViewAPISerializer,
-    BaseViewAPIGeoSerializer,
     BaseTransectFilterSet,
+    BaseViewAPIGeoSerializer,
+    BaseViewAPISerializer,
 )
-from ..habitat_complexity import HabitatComplexitySerializer
 from ..benthic_transect import BenthicTransectSerializer
+from ..habitat_complexity import HabitatComplexitySerializer
 from ..obs_habitat_complexity import ObsHabitatComplexitySerializer
 from ..observer import ObserverSerializer
 from ..sample_event import SampleEventSerializer
+from . import BaseProjectMethodView, save_model, save_one_to_many
 
 
 class HabitatComplexityMethodSerializer(HabitatComplexitySerializer):
@@ -39,40 +51,59 @@ class HabitatComplexityMethodSerializer(HabitatComplexitySerializer):
         exclude = []
 
 
-class ObsHabitatComplexityReportSerializer(
-    SampleEventReportSerializer, metaclass=SampleEventReportSerializerMeta
-):
-    transect_method = "habitatcomplexity"
-    sample_event_path = "{}__transect__sample_event".format(transect_method)
-
-    idx = 24
-    obs_fields = [
-        (6, ReportField("habitatcomplexity__transect__reef_slope__name", "Reef slope")),
-        (idx, ReportField("habitatcomplexity__transect__number", "Transect number")),
-        (idx + 1, ReportField("habitatcomplexity__transect__label", "Transect label")),
-        (
-            idx + 2,
-            ReportField(
-                "habitatcomplexity__transect__len_surveyed", "Transect length surveyed"
-            ),
-        ),
-        (idx + 4, ReportField("interval", "Interval (m)")),
-        (idx + 5, ReportField("score__val", "Habitat complexity value")),
-        (idx + 6, ReportField("score__name", "Habitat complexity name")),
-        (
-            idx + 10,
-            ReportField("habitatcomplexity__transect__notes", "Observation notes"),
-        ),
+class ObsHabitatComplexityCSVSerializer(ReportSerializer):
+    fields = [
+        ReportField("project_name", "Project name"),
+        ReportField("country_name", "Country"),
+        ReportField("site_name", "Site"),
+        ReportField("location", "Latitude", to_latitude, alias="latitude"),
+        ReportField("location", "Longitude", to_longitude, alias="longitude"),
+        ReportField("reef_exposure", "Exposure"),
+        ReportField("reef_slope", "Reef slope"),
+        ReportField("reef_type", "Reef type"),
+        ReportField("reef_zone", "Reef zone"),
+        ReportField("sample_date", "Year", to_year, "sample_date_year"),
+        ReportField("sample_date", "Month", to_month, "sample_date_month"),
+        ReportField("sample_date", "Day", to_day, "sample_date_day"),
+        ReportField("sample_time", "Start time", to_str),
+        ReportField("tide_name", "Tide"),
+        ReportField("visibility_name", "Visibility"),
+        ReportField("current_name", "Current"),
+        ReportField("depth", "Depth"),
+        ReportField("management_name", "Management name"),
+        ReportField("management_name_secondary", "Management secondary name"),
+        ReportField("management_est_year", "Management year established"),
+        ReportField("management_size", "Management size"),
+        ReportField("management_parties", "Governance", to_governance),
+        ReportField("management_compliance", "Estimated compliance",),
+        ReportField("management_rules", "Management rules"),
+        ReportField("transect_number", "Transect number"),
+        ReportField("label", "Transect label"),
+        ReportField("transect_len_surveyed", "Transect length surveyed"),
+        ReportField("observers", "Observers", to_observers),
+        ReportField("interval", "Interval (m)"),
+        ReportField("score", "Habitat complexity value"),
+        ReportField("score_name", "Habitat complexity name"),
+        ReportField("site_notes", "Site notes"),
+        ReportField("sample_event_notes", "Sampling event notes"),
+        ReportField("management_notes", "Management notes"),
+        ReportField("observation_notes", "Observation notes"),
     ]
 
-    non_field_columns = (
-        "habitatcomplexity_id",
-        "habitatcomplexity__transect__sample_event__site__project_id",
-        "habitatcomplexity__transect__sample_event__management_id",
-    )
-
-    class Meta:
-        model = HabitatComplexity
+    additional_fields = [
+        ReportField("id"),
+        ReportField("project_id"),
+        ReportField("project_notes"),
+        ReportField("site_id"),
+        ReportField("contact_link"),
+        ReportField("tags"),
+        ReportField("country_id"),
+        ReportField("management_id"),
+        ReportField("sample_unit_id"),
+        ReportField("interval_size"),
+        ReportField("data_policy_habitatcomplexity"),
+        ReportField("relative_depth"),
+    ]
 
 
 class HabitatComplexityMethodView(BaseProjectApiViewSet):
@@ -176,19 +207,6 @@ class HabitatComplexityMethodView(BaseProjectApiViewSet):
             transaction.savepoint_rollback(sid)
             raise
 
-    @action(detail=False, methods=["get"])
-    def fieldreport(self, request, *args, **kwargs):
-        return fieldreport(
-            self,
-            request,
-            *args,
-            model_cls=ObsHabitatComplexity,
-            serializer_class=ObsHabitatComplexityReportSerializer,
-            fk="habitatcomplexity",
-            order_by=("Site", "Transect number", "Transect label"),
-            **kwargs
-        )
-
 
 class HabitatComplexityMethodObsSerializer(BaseViewAPISerializer):
     class Meta(BaseViewAPISerializer.Meta):
@@ -214,10 +232,6 @@ class HabitatComplexityMethodObsSerializer(BaseViewAPISerializer):
         )
 
 
-class HabitatComplexityMethodObsCSVSerializer(HabitatComplexityMethodObsSerializer):
-    observers = SerializerMethodField()
-
-
 class HabitatComplexityMethodObsGeoSerializer(BaseViewAPIGeoSerializer):
     class Meta(BaseViewAPIGeoSerializer.Meta):
         model = HabitatComplexityObsView
@@ -231,6 +245,7 @@ class HabitatComplexityMethodSUSerializer(BaseViewAPISerializer):
         header_order = BaseViewAPISerializer.Meta.header_order.copy()
         header_order.extend(
             [
+                "label",
                 "transect_number",
                 "transect_len_surveyed",
                 "depth",
@@ -334,11 +349,12 @@ class HabitatComplexityProjectMethodObsView(BaseProjectMethodView):
     project_policy = "data_policy_habitatcomplexity"
     serializer_class = HabitatComplexityMethodObsSerializer
     serializer_class_geojson = HabitatComplexityMethodObsGeoSerializer
-    serializer_class_csv = HabitatComplexityMethodObsCSVSerializer
+    serializer_class_csv = ObsHabitatComplexityCSVSerializer
     filterset_class = HabitatComplexityMethodObsFilterSet
     queryset = HabitatComplexityObsView.objects.exclude(
-        project_status=Project.TEST
-    ).order_by("site_name", "sample_date", "transect_number", "label", "interval")
+        # project_status=Project.TEST
+    )
+    order_by = ("site_name", "sample_date", "transect_number", "label", "interval")
 
 
 class HabitatComplexityProjectMethodSUView(BaseProjectMethodView):

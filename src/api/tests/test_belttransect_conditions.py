@@ -51,6 +51,7 @@ class BeltTransectWidthNoGapsTest(TestCase):
         condition = self.belt_transect_width.get_condition(None)
         assert condition is None
 
+
 class BeltTransectWidthGapsTest(TestCase):
     """
     val <= 8
@@ -75,8 +76,7 @@ class BeltTransectWidthGapsTest(TestCase):
         )
 
         self.btw_cond_default = BeltTransectWidthCondition.objects.create(
-            belttransectwidth=self.belt_transect_width,
-            val=3,
+            belttransectwidth=self.belt_transect_width, val=3,
         )
 
     def tearDown(self):

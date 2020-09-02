@@ -24,9 +24,6 @@ from .validations import (
 
 
 class ProtocolValidation(object):
-    DEPTH_RANGE = (1, 30)
-    DEPTH_MSG = str(_("Depth value outside range of {} and {}".format(*DEPTH_RANGE)))
-
     def __init__(self, collect_record, request=None):
         self.status = None
         self.collect_record = collect_record
@@ -63,7 +60,7 @@ class ProtocolValidation(object):
         observers = data.get("observers") or []
         site_id = sample_event_data.get("site")
         management_id = sample_event_data.get("management")
-        depth = sample_event_data.get("depth")
+        # depth = sample_event_data.get("depth")
 
         results.append(self._run_validation(SampleEventValidation, data))
         results.append(self._run_validation(SiteValidation, site_id))
@@ -81,17 +78,17 @@ class ProtocolValidation(object):
 
         results.append(self._run_validation(ObservationsValidation, data))
 
-        results.append(
-            self._run_validation(
-                ValueInRangeValidation,
-                "depth",
-                depth,
-                self.DEPTH_RANGE,
-                status=WARN,
-                message=self.DEPTH_MSG,
-                value_range_operators=("<", ">"),
-            )
-        )
+        # results.append(
+        #     self._run_validation(
+        #         ValueInRangeValidation,
+        #         "depth",
+        #         depth,
+        #         self.DEPTH_RANGE,
+        #         status=WARN,
+        #         message=self.DEPTH_MSG,
+        #         value_range_operators=("<", ">"),
+        #     )
+        # )
 
         serializer_validation = SerializerValidation(self.collect_record, self.request)
         serializer_validation.previous_validations = dict()
@@ -114,31 +111,29 @@ class ProtocolValidation(object):
         raise ValueError(str(_("Validation result can not be determined.")))
 
 
-class TransectValidation(ProtocolValidation):
-    LENGTH_RANGE = (10, 100)
-    LENGTH_RANGE_WARN_MSG_TMPL = (
-        "Transect length surveyed value " + "outside range of {} and {}"
-    )
-    TRANSECT_METHOD = None
+class SampleUnitValidation(ProtocolValidation):
+    DEPTH_RANGE = (1, 30)
+    DEPTH_MSG = str(_("Depth value outside range of {} and {}".format(*DEPTH_RANGE)))
 
     def validate(self):
-        results = [super(TransectValidation, self).validate()]
+        results = []
+        results.append(super(SampleUnitValidation, self).validate())
 
         data = self.collect_record.data or dict()
+        sample_unit = data.get(self.SAMPLE_UNIT) or dict()
+        depth = sample_unit.get("depth")
 
-        if self.TRANSECT_METHOD is not None:
-            transect = data.get(self.TRANSECT_METHOD) or dict()
-            len_surveyed = transect.get("len_surveyed")
-            results.append(
-                self._run_validation(
-                    ValueInRangeValidation,
-                    "len_surveyed",
-                    len_surveyed,
-                    self.LENGTH_RANGE,
-                    WARN,
-                    str(_(self.LENGTH_RANGE_WARN_MSG_TMPL.format(*self.LENGTH_RANGE))),
-                )
+        results.append(
+            self._run_validation(
+                ValueInRangeValidation,
+                "depth",
+                depth,
+                self.DEPTH_RANGE,
+                status=WARN,
+                message=self.DEPTH_MSG,
+                value_range_operators=("<", ">"),
             )
+        )
 
         if ERROR in results:
             return ERROR
@@ -150,7 +145,47 @@ class TransectValidation(ProtocolValidation):
             return OK
 
 
-class QuadratValidation(ProtocolValidation):
+class TransectValidation(SampleUnitValidation):
+    LENGTH_RANGE = (10, 100)
+    LENGTH_RANGE_WARN_MSG_TMPL = (
+        "Transect length surveyed value " + "outside range of {} and {}"
+    )
+    SAMPLE_UNIT = None
+
+    def validate(self):
+        results = [super(TransectValidation, self).validate()]
+
+        data = self.collect_record.data or dict()
+
+        if self.SAMPLE_UNIT is None:
+            raise NotImplementedError(f"{SAMPLE_UNIT} not defined")
+
+        sample_unit = data.get(self.SAMPLE_UNIT) or dict()
+        len_surveyed = sample_unit.get("len_surveyed")
+        results.append(
+            self._run_validation(
+                ValueInRangeValidation,
+                "len_surveyed",
+                len_surveyed,
+                self.LENGTH_RANGE,
+                WARN,
+                str(_(self.LENGTH_RANGE_WARN_MSG_TMPL.format(*self.LENGTH_RANGE))),
+            )
+        )
+
+        if ERROR in results:
+            return ERROR
+
+        elif WARN in results:
+            return WARN
+
+        elif len(results) == results.count(OK):
+            return OK
+
+
+class QuadratValidation(SampleUnitValidation):
+    SAMPLE_UNIT = "quadrat_collection"
+
     def validate(self):
         results = [super(QuadratValidation, self).validate()]
         data = self.collect_record.data
@@ -181,7 +216,7 @@ class QuadratValidation(ProtocolValidation):
 
 class FishBeltProtocolValidation(TransectValidation):
     LENGTH_RANGE = (25, 100)
-    TRANSECT_METHOD = "fishbelt_transect"
+    SAMPLE_UNIT = "fishbelt_transect"
 
     def validate(self):
         results = [super(FishBeltProtocolValidation, self).validate()]
@@ -202,7 +237,7 @@ class FishBeltProtocolValidation(TransectValidation):
 
 
 class BenthicPITProtocolValidation(TransectValidation):
-    TRANSECT_METHOD = "benthic_transect"
+    SAMPLE_UNIT = "benthic_transect"
 
     def validate(self):
         results = [super(BenthicPITProtocolValidation, self).validate()]
@@ -222,7 +257,7 @@ class BenthicPITProtocolValidation(TransectValidation):
 
 
 class BenthicLITProtocolValidation(TransectValidation):
-    TRANSECT_METHOD = "benthic_transect"
+    SAMPLE_UNIT = "benthic_transect"
     LENGTH_RANGE = (10, 100)
 
     def validate(self):
@@ -243,7 +278,7 @@ class BenthicLITProtocolValidation(TransectValidation):
 
 
 class HabitatComplexityProtocolValidation(TransectValidation):
-    TRANSECT_METHOD = "benthic_transect"
+    SAMPLE_UNIT = "benthic_transect"
 
     def validate(self):
         results = [super(HabitatComplexityProtocolValidation, self).validate()]

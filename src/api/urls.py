@@ -129,10 +129,10 @@ project_router.register(
     "obstransectbeltfish",
 )
 project_router.register(
-    r"beltfishes/sampleunits", BeltFishProjectMethodSUView, "sampleunit"
+    r"beltfishes/sampleunits", BeltFishProjectMethodSUView, "beltfish-sampleunit"
 )
 project_router.register(
-    r"beltfishes/sampleevents", BeltFishProjectMethodSEView, "sampleevent"
+    r"beltfishes/sampleevents", BeltFishProjectMethodSEView, "beltfish-sampleevent"
 )
 
 project_router.register(
@@ -141,10 +141,10 @@ project_router.register(
     "obstransectbenthiclit",
 )
 project_router.register(
-    r"benthiclits/sampleunits", BenthicLITProjectMethodSUView, "sampleunit"
+    r"benthiclits/sampleunits", BenthicLITProjectMethodSUView, "benthiclit-sampleunit"
 )
 project_router.register(
-    r"benthiclits/sampleevents", BenthicLITProjectMethodSEView, "sampleevent"
+    r"benthiclits/sampleevents", BenthicLITProjectMethodSEView, "benthiclit-sampleevent"
 )
 
 project_router.register(
@@ -153,10 +153,10 @@ project_router.register(
     "obstransectbenthicpit",
 )
 project_router.register(
-    r"benthicpits/sampleunits", BenthicPITProjectMethodSUView, "sampleunit"
+    r"benthicpits/sampleunits", BenthicPITProjectMethodSUView, "benthicpit-sampleunit"
 )
 project_router.register(
-    r"benthicpits/sampleevents", BenthicPITProjectMethodSEView, "sampleevent"
+    r"benthicpits/sampleevents", BenthicPITProjectMethodSEView, "benthicpit-sampleevent"
 )
 
 project_router.register(
@@ -179,7 +179,7 @@ project_router.register(
 project_router.register(
     r"habitatcomplexities/obshabitatcomplexities",
     HabitatComplexityProjectMethodObsView,
-    "obshabitatcomplexity",
+    "obshabitatcomplexitymethod",
 )
 project_router.register(
     r"habitatcomplexities/sampleunits",
