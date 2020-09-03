@@ -92,9 +92,7 @@ ON ({su_fields_join});
     sample_unit_id = models.UUIDField()
     transect_number = models.PositiveSmallIntegerField()
     relative_depth = models.CharField(max_length=50)
-    transect_len_surveyed = models.PositiveSmallIntegerField(
-        verbose_name=_("transect length surveyed (m)")
-    )
+    transect_len_surveyed = models.DecimalField(max_digits=4, decimal_places=1, verbose_name=_("transect length surveyed (m)"))
     reef_slope = models.CharField(max_length=50)
     length = models.PositiveSmallIntegerField()
     total_length = models.PositiveIntegerField()
@@ -194,9 +192,7 @@ ON (benthiclit_su.pseudosu_id = benthiclit_obs.pseudosu_id);
 
     sample_unit_ids = JSONField()
     transect_number = models.PositiveSmallIntegerField()
-    transect_len_surveyed = models.PositiveSmallIntegerField(
-        verbose_name=_("transect length surveyed (m)")
-    )
+    transect_len_surveyed = models.DecimalField(max_digits=4, decimal_places=1, verbose_name=_("transect length surveyed (m)"))
     reef_slope = models.CharField(max_length=50)
     percent_cover_by_benthic_category = JSONField(null=True, blank=True)
     data_policy_benthiclit = models.CharField(max_length=50)
