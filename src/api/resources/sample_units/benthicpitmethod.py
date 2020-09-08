@@ -347,9 +347,7 @@ class BenthicPITProjectMethodObsView(BaseProjectMethodView):
     serializer_class_geojson = BenthicPITMethodObsGeoSerializer
     serializer_class_csv = ObsBenthicPITCSVSerializer
     filterset_class = BenthicPITMethodObsFilterSet
-    queryset = BenthicPITObsView.objects.filter(
-        # project_status=Project.TEST
-    )
+    queryset = BenthicPITObsView.objects.all()
     order_by = ("site_name", "sample_date", "transect_number", "label", "interval")
 
 
@@ -360,9 +358,7 @@ class BenthicPITProjectMethodSUView(BaseProjectMethodView):
     serializer_class_geojson = BenthicPITMethodSUGeoSerializer
     serializer_class_csv = BenthicPITMethodSUCSVSerializer
     filterset_class = BenthicPITMethodSUFilterSet
-    queryset = BenthicPITSUView.objects.exclude(
-        # project_status=Project.TEST
-    )
+    queryset = BenthicPITSUView.objects.all()
     order_by = (
         "site_name", "sample_date", "transect_number"
     )
@@ -378,6 +374,7 @@ class BenthicPITProjectMethodSEView(BaseProjectMethodView):
     serializer_class_geojson = BenthicPITMethodSEGeoSerializer
     serializer_class_csv = BenthicPITMethodSESerializer
     filterset_class = BenthicPITMethodSEFilterSet
-    queryset = BenthicPITSEView.objects.exclude(project_status=Project.TEST).order_by(
+    queryset = BenthicPITSEView.objects.all()
+    order_by = (
         "site_name", "sample_date"
     )

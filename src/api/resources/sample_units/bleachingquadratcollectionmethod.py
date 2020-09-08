@@ -518,10 +518,7 @@ class BleachingQCProjectMethodObsColoniesBleachedView(BaseProjectMethodView):
     serializer_class_geojson = BleachingQCMethodObsColoniesBleachedGeoSerializer
     serializer_class_csv = ObsBleachingQCColoniesBleachedCSVSerializer
     filterset_class = BleachingQCMethodColoniesBleachedObsFilterSet
-    queryset = BleachingQCColoniesBleachedObsView.objects.exclude(
-        # project_status=Project.TEST
-    )
-
+    queryset = BleachingQCColoniesBleachedObsView.objects.all()
     order_by = ("site_name", "sample_date", "label", "benthic_attribute", "growth_form")
 
 
@@ -532,9 +529,7 @@ class BleachingQCProjectMethodObsQuadratBenthicPercentView(BaseProjectMethodView
     serializer_class_geojson = BleachingQCMethodObsQuadratBenthicPercentGeoSerializer
     serializer_class_csv = ObsQuadratBenthicPercentCSVSerializer
     filterset_class = BleachingQCMethodQuadratBenthicPercentObsFilterSet
-    queryset = BleachingQCQuadratBenthicPercentObsView.objects.exclude(
-        # project_status=Project.TEST
-    )
+    queryset = BleachingQCQuadratBenthicPercentObsView.objects.all()
     order_by = ("site_name", "sample_date", "label", "quadrat_number")
 
 
@@ -545,9 +540,7 @@ class BleachingQCProjectMethodSUView(BaseProjectMethodView):
     serializer_class_geojson = BleachingQCMethodSUGeoSerializer
     serializer_class_csv = BleachingQCMethodSUCSVSerializer
     filterset_class = BleachingQCMethodSUFilterSet
-    queryset = BleachingQCSUView.objects.exclude(
-        # project_status=Project.TEST
-    )
+    queryset = BleachingQCSUView.objects.all()
     order_by = (
         "site_name", "sample_date", "label"
     )
@@ -563,9 +556,7 @@ class BleachingQCProjectMethodSEView(BaseProjectMethodView):
     serializer_class_geojson = BleachingQCMethodSEGeoSerializer
     serializer_class_csv = BleachingQCMethodSESerializer
     filterset_class = BleachingQCMethodSEFilterSet
-    queryset = BleachingQCSEView.objects.exclude(
-        # project_status=Project.TEST
-    )
+    queryset = BleachingQCSEView.objects.all()
     order_by = (
         "site_name", "sample_date"
     )

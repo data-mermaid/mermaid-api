@@ -257,7 +257,7 @@ LEFT JOIN (
 CREATE UNIQUE INDEX ON vw_summary_site (site_id);
     """
 
-    reverse_sql = "DROP VIEW IF EXISTS vw_summary_site CASCADE;"
+    reverse_sql = "DROP MATERIALIZED VIEW IF EXISTS vw_summary_site CASCADE;"
 
     site_id = models.UUIDField(primary_key=True)
     site_name = models.CharField(max_length=255)

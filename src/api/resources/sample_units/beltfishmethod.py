@@ -399,7 +399,6 @@ class BeltFishProjectMethodObsView(BaseProjectMethodView):
     )
 
     queryset = BeltFishObsView.objects.filter(
-        # Q(project_status=Project.TEST) |
         Q(size__isnull=False)
         | Q(count__isnull=False)
         | Q(biomass_kgha__isnull=False)
@@ -413,9 +412,7 @@ class BeltFishProjectMethodSUView(BaseProjectMethodView):
     serializer_class_geojson = BeltFishMethodSUGeoSerializer
     serializer_class_csv = BeltFishMethodSUCSVSerializer
     filterset_class = BeltFishMethodSUFilterSet
-    queryset = BeltFishSUView.objects.exclude(
-        # project_status=Project.TEST
-    )
+    queryset = BeltFishSUView.objects.all()
     order_by = (
         "site_name", "sample_date", "transect_number"
     )
@@ -431,9 +428,7 @@ class BeltFishProjectMethodSEView(BaseProjectMethodView):
     serializer_class_geojson = BeltFishMethodSEGeoSerializer
     serializer_class_csv = BeltFishMethodSESerializer
     filterset_class = BeltFishMethodSEFilterSet
-    queryset = BeltFishSEView.objects.filter(
-        # Q(project_status=Project.TEST)
-    )
+    queryset = BeltFishSEView.objects.all()
     order_by = (
         "site_name", "sample_date"
     )
