@@ -229,6 +229,7 @@ class BenthicPITMethodObsSerializer(BaseViewAPISerializer):
                 "benthic_attribute",
                 "growth_form",
                 "observation_notes",
+                "percent_cover_by_benthic_category",
             ]
         )
 
@@ -369,7 +370,10 @@ class BenthicPITProjectMethodSUView(BaseProjectMethodView):
     serializer_class_geojson = BenthicPITMethodSUGeoSerializer
     serializer_class_csv = BenthicPITMethodSUCSVSerializer
     filterset_class = BenthicPITMethodSUFilterSet
-    queryset = BenthicPITSUView.objects.exclude(project_status=Project.TEST).order_by(
+    queryset = BenthicPITSUView.objects.exclude(
+        # project_status=Project.TEST
+    )
+    order_by = (
         "site_name", "sample_date", "transect_number"
     )
 
