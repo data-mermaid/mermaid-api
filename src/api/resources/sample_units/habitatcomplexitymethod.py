@@ -103,6 +103,7 @@ class ObsHabitatComplexityCSVSerializer(ReportSerializer):
         ReportField("sample_unit_id"),
         ReportField("interval_size"),
         ReportField("data_policy_habitatcomplexity"),
+        ReportField("relative_depth"),
     ]
 
 
@@ -245,6 +246,7 @@ class HabitatComplexityMethodSUSerializer(BaseSUViewAPISerializer):
         header_order = BaseSUViewAPISerializer.Meta.header_order.copy()
         header_order.extend(
             [
+                "label",
                 "transect_number",
                 "transect_len_surveyed",
                 "depth",

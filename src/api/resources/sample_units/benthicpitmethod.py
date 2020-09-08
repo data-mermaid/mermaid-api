@@ -201,6 +201,7 @@ class ObsBenthicPITCSVSerializer(ReportSerializer):
         ReportField("interval_size"),
         ReportField("interval_start"),
         ReportField("data_policy_benthicpit"),
+        ReportField("relative_depth"),
     ]
 
 
@@ -228,6 +229,7 @@ class BenthicPITMethodObsSerializer(BaseSUViewAPISerializer):
                 "benthic_attribute",
                 "growth_form",
                 "observation_notes",
+                "percent_cover_by_benthic_category",
             ]
         )
 
@@ -249,6 +251,7 @@ class BenthicPITMethodSUSerializer(BaseSUViewAPISerializer):
         header_order = BaseSUViewAPISerializer.Meta.header_order.copy()
         header_order.extend(
             [
+                "label",
                 "transect_number",
                 "transect_len_surveyed",
                 "depth",
@@ -357,7 +360,10 @@ class BenthicPITProjectMethodSUView(BaseProjectMethodView):
     serializer_class_geojson = BenthicPITMethodSUGeoSerializer
     serializer_class_csv = BenthicPITMethodSUCSVSerializer
     filterset_class = BenthicPITMethodSUFilterSet
-    queryset = BenthicPITSUView.objects.exclude(project_status=Project.TEST).order_by(
+    queryset = BenthicPITSUView.objects.exclude(
+        # project_status=Project.TEST
+    )
+    order_by = (
         "site_name", "sample_date", "transect_number"
     )
 

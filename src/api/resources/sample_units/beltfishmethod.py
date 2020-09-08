@@ -267,6 +267,7 @@ class BeltFishMethodSUSerializer(BaseSUViewAPISerializer):
         header_order = BaseSUViewAPISerializer.Meta.header_order.copy()
         header_order.extend(
             [
+                "label",
                 "transect_number",
                 "transect_len_surveyed",
                 "transect_width_name",

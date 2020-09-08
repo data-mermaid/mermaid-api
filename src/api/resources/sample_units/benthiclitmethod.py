@@ -227,6 +227,7 @@ class ObsBenthicLITCSVSerializer(ReportSerializer):
         ReportField("management_id"),
         ReportField("sample_unit_id"),
         ReportField("data_policy_benthiclit"),
+        ReportField("relative_depth"),
     ]
 
 
@@ -243,6 +244,7 @@ class BenthicLITMethodSUSerializer(BaseSUViewAPISerializer):
         header_order = BaseSUViewAPISerializer.Meta.header_order.copy()
         header_order.extend(
             [
+                "label",
                 "transect_number",
                 "transect_len_surveyed",
                 "depth",
@@ -346,7 +348,11 @@ class BenthicLITProjectMethodSUView(BaseProjectMethodView):
     serializer_class_geojson = BenthicLITMethodSUGeoSerializer
     serializer_class_csv = BenthicLITMethodSUCSVSerializer
     filterset_class = BenthicLITMethodSUFilterSet
-    queryset = BenthicLITSUView.objects.exclude(project_status=Project.TEST).order_by(
+    queryset = BenthicLITSUView.objects.exclude(
+        # project_status=Project.TEST
+    )
+
+    order_by = (
         "site_name", "sample_date", "transect_number"
     )
 
