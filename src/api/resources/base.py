@@ -214,6 +214,20 @@ class BaseViewAPISerializer(BaseAPISerializer):
 
     class Meta:
         exclude = ["project_status"]
+
+    def get_latitude(self, obj):
+        if obj.location is not None:
+            return obj.location.y
+        return None
+
+    def get_longitude(self, obj):
+        if obj.location is not None:
+            return obj.location.x
+        return None
+
+
+class BaseSUViewAPISerializer(BaseViewAPISerializer):
+    class Meta(BaseViewAPISerializer.Meta):
         header_order = [
             "latitude",
             "longitude",
@@ -249,16 +263,6 @@ class BaseViewAPISerializer(BaseAPISerializer):
             "sample_time",
             "sample_unit_ids",
         ]
-
-    def get_latitude(self, obj):
-        if obj.location is not None:
-            return round(obj.location.y, settings.GEO_PRECISION)
-        return None
-
-    def get_longitude(self, obj):
-        if obj.location is not None:
-            return round(obj.location.x, settings.GEO_PRECISION)
-        return None
 
     def get_observers(self, obj):
         if obj.observers is not None and isinstance(obj.observers, list):
@@ -447,20 +451,42 @@ class RelatedOrderingFilter(OrderingFilter):
         ]
 
 
-# TODO: after SE/SU refactor, create BaseSEFilterSet, BaseSUFilterSet, etc.
-class BaseTransectFilterSet(OrFilterSetMixin, GeoFilterSet):
-    id = BaseInFilter(method="id_lookup")
+class AggregatedViewFilterSet(OrFilterSetMixin, GeoFilterSet):
     site_id = BaseInFilter(method="id_lookup")
     site_name = BaseInFilter(method="char_lookup")
     site_within = GeometryFilter(field_name="location", lookup_expr="within")
     country_id = BaseInFilter(method="id_lookup")
     country_name = BaseInFilter(method="char_lookup")
-    sample_date = DateFromToRangeFilter()
     tag_id = BaseInFilter(field_name="tags", method="json_id_lookup")
     tag_name = BaseInFilter(field_name="tags", method="json_name_lookup")
     management_id = BaseInFilter(method="id_lookup")
     management_name = BaseInFilter(method="full_management_name")
-    management_est_year = DateFromToRangeFilter()
+
+    class Meta:
+        fields = [
+            "site_id",
+            "site_name",
+            "site_within",
+            "country_id",
+            "country_name",
+            "tag_id",
+            "tag_name",
+            "reef_type",
+            "reef_zone",
+            "reef_exposure",
+            "management_id",
+            "management_name",
+        ]
+
+    def full_management_name(self, queryset, name, value):
+        fields = ["management_name", "management_name_secondary"]
+        return self.str_or_lookup(queryset, fields, value, lookup_expr="icontains")
+
+
+class BaseSEFilterSet(AggregatedViewFilterSet):
+    id = BaseInFilter(method="id_lookup")
+    sample_date = DateFromToRangeFilter()
+    management_est_year = RangeFilter()
     management_size = RangeFilter()
     management_party = BaseInFilter(
         field_name="management_parties", method="char_lookup"
@@ -473,19 +499,7 @@ class BaseTransectFilterSet(OrFilterSetMixin, GeoFilterSet):
 
     class Meta:
         fields = [
-            "site_id",
-            "site_name",
-            "site_within",
-            "country_id",
-            "country_name",
             "sample_date",
-            "tag_id",
-            "tag_name",
-            "reef_type",
-            "reef_zone",
-            "reef_exposure",
-            "management_id",
-            "management_name",
             "management_est_year",
             "management_size",
             "management_party",
@@ -496,9 +510,20 @@ class BaseTransectFilterSet(OrFilterSetMixin, GeoFilterSet):
             "visibility_name",
         ]
 
-    def full_management_name(self, queryset, name, value):
-        fields = ["management_name", "management_name_secondary"]
-        return self.str_or_lookup(queryset, fields, value, lookup_expr="icontains")
+
+class BaseSUObsFilterSet(BaseSEFilterSet):
+    label = BaseInFilter(method="char_lookup")
+    depth = RangeFilter()
+    relative_depth = BaseInFilter(method="char_lookup")
+    observers = BaseInFilter(method="json_name_lookup")
+
+    class Meta:
+        fields = [
+            "label",
+            "depth",
+            "relative_depth",
+            "observers",
+        ]
 
 
 class BaseApiViewSet(MethodAuthenticationMixin, viewsets.ModelViewSet, UpdatesMixin):
