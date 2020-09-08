@@ -69,11 +69,34 @@ def test_benthicpit_su_view(
     assert count == 2
     assert data[1]["site_name"] == site2.name
     
-    assert int(data[0]["percent_cover_by_benthic_category"]["Macroalgae"]) == 20
-    assert int(data[0]["percent_cover_by_benthic_category"]["Hard coral"]) == 60
-    assert int(data[0]["percent_cover_by_benthic_category"]["Rock"]) == 20
+    assert data[0]["percent_cover_by_benthic_category"]["Macroalgae"] == 20.0
+    assert data[0]["percent_cover_by_benthic_category"]["Hard coral"] == 60.0
+    assert data[0]["percent_cover_by_benthic_category"]["Rock"] == 20.0
 
-    assert int(data[1]["percent_cover_by_benthic_category"]["Hard coral"]) == 60
-    assert int(data[1]["percent_cover_by_benthic_category"]["Rock"]) == 40
+    assert data[1]["percent_cover_by_benthic_category"]["Hard coral"] == 60.0
+    assert data[1]["percent_cover_by_benthic_category"]["Rock"] == 40.0
 
-    
+
+def test_benthiclit_su_view(
+    client,
+    db_setup,
+    project1,
+    token1,
+    benthic_lit_project,
+    all_choices,
+    site2,
+    management2,
+    profile2,
+):
+    url = reverse("benthiclitmethod-sampleunit-list", kwargs=dict(project_pk=project1.pk))
+    count, data, response = _call(client, token1, url)
+
+    assert count == 2
+    assert data[1]["site_name"] == site2.name
+
+    assert data[0]["percent_cover_by_benthic_category"]["Macroalgae"] == 16.92
+    assert data[0]["percent_cover_by_benthic_category"]["Hard coral"] == 60.0
+    assert data[0]["percent_cover_by_benthic_category"]["Rock"] == 23.08
+
+    assert data[1]["percent_cover_by_benthic_category"]["Hard coral"] == 58.46
+    assert data[1]["percent_cover_by_benthic_category"]["Rock"] == 41.54
