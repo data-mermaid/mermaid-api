@@ -268,7 +268,7 @@ class BaseSUViewAPISerializer(BaseViewAPISerializer):
 
 
 class BaseViewAPIGeoSerializer(GeoFeatureModelSerializer, BaseAPISerializer):
-    location = GeometryField()  # precision=settings.GEO_PRECISION
+    location = GeometryField(precision=settings.GEO_PRECISION)
 
     class Meta:
         exclude = ["project_status"]
@@ -483,7 +483,7 @@ class AggregatedViewFilterSet(OrFilterSetMixin, GeoFilterSet):
 class BaseSEFilterSet(AggregatedViewFilterSet):
     id = BaseInFilter(method="id_lookup")
     sample_date = DateFromToRangeFilter()
-    management_est_year = DateFromToRangeFilter()
+    management_est_year = RangeFilter()
     management_size = RangeFilter()
     management_party = BaseInFilter(
         field_name="management_parties", method="char_lookup"
