@@ -1,41 +1,43 @@
 import uuid
 
+from django.utils.translation import ugettext_lazy as _
+from rest_framework.exceptions import ValidationError
+
 from api.models import (
     BeltFish,
     BenthicLIT,
     BenthicPIT,
     BenthicTransect,
     BleachingQuadratCollection,
-    QuadratCollection,
     FishBeltTransect,
     HabitatComplexity,
     Observer,
+    QuadratCollection,
     SampleEvent,
 )
 from api.resources.belt_fish import BeltFishSerializer
 from api.resources.benthic_lit import BenthicLITSerializer
 from api.resources.benthic_pit import BenthicPITSerializer
 from api.resources.benthic_transect import BenthicTransectSerializer
-from api.resources.bleaching_quadrat_collection import BleachingQuadratCollectionSerializer
-from api.resources.quadrat_collection import QuadratCollectionSerializer
+from api.resources.bleaching_quadrat_collection import (
+    BleachingQuadratCollectionSerializer,
+)
 from api.resources.fish_belt_transect import FishBeltTransectSerializer
 from api.resources.habitat_complexity import HabitatComplexitySerializer
 from api.resources.obs_belt_fish import ObsBeltFishSerializer
 from api.resources.obs_benthic_lit import ObsBenthicLITSerializer
 from api.resources.obs_benthic_pit import ObsBenthicPITSerializer
+from api.resources.obs_colonies_bleached import ObsColoniesBleachedSerializer
 from api.resources.obs_habitat_complexity import ObsHabitatComplexitySerializer
 from api.resources.obs_quadrat_benthic_percent import ObsQuadratBenthicPercentSerializer
-from api.resources.obs_colonies_bleached import ObsColoniesBleachedSerializer
 from api.resources.observer import ObserverSerializer
+from api.resources.quadrat_collection import QuadratCollectionSerializer
 from api.resources.sample_event import SampleEventSerializer
-from django.utils.translation import ugettext_lazy as _
-from rest_framework.exceptions import ValidationError
-
 from .parser import (
     get_benthic_transect_data,
     get_fishbelt_transect_data,
-    get_obs_quadrat_benthic_percent_data,
     get_obs_colonies_bleached_data,
+    get_obs_quadrat_benthic_percent_data,
     get_obsbeltfish_data,
     get_obsbenthiclit_data,
     get_obsbenthicpit_data,
@@ -47,7 +49,6 @@ from .parser import (
 
 
 class BaseWriter(object):
-
     def __init__(self, collect_record, context):
         self.collect_record = collect_record
         self.context = context
@@ -69,11 +70,9 @@ class BaseWriter(object):
 
 
 class ProtocolWriter(BaseWriter):
-
     def _create_sample_event(self, sample_event_data):
-        sample_event_data['id'] = uuid.uuid4()
-        serializer = SampleEventSerializer(data=sample_event_data,
-                                           context=self.context)
+        sample_event_data["id"] = uuid.uuid4()
+        serializer = SampleEventSerializer(data=sample_event_data, context=self.context)
         if serializer.is_valid() is False:
             raise ValidationError(serializer.errors)
 
@@ -82,7 +81,9 @@ class ProtocolWriter(BaseWriter):
     def get_or_create_sample_event(self):
         sample_event_data = get_sample_event_data(self.collect_record)
         try:
-            query_params = {k: v for k, v in sample_event_data.items() if k != "notes"}
+            query_params = {
+                k: v for k, v in sample_event_data.items() if k not in ("id", "notes")
+            }
             se = SampleEvent.objects.filter(**query_params)
             if se.exists():
                 sample_event = se[0]
@@ -99,7 +100,9 @@ class ProtocolWriter(BaseWriter):
         observers = []
         observers_data = get_observers_data(self.collect_record, transect_method_id)
         if not observers_data:
-            raise ValidationError({"observers": [str(_(u"Must have at least 1 observer."))]})
+            raise ValidationError(
+                {"observers": [str(_(u"Must have at least 1 observer."))]}
+            )
 
         for observer_data in observers_data:
             try:
@@ -118,7 +121,6 @@ class ProtocolWriter(BaseWriter):
 
 
 class BenthicProtocolWriter(ProtocolWriter):
-
     def get_or_create_benthic_transect(self, sample_event_id):
         benthic_transect_data = get_benthic_transect_data(
             self.collect_record, sample_event_id
@@ -138,7 +140,6 @@ class BenthicProtocolWriter(ProtocolWriter):
 
 
 class FishbeltProtocolWriter(ProtocolWriter):
-
     def get_or_create_fishbelt_transect(self, sample_event_id):
         fishbelt_transect_data = get_fishbelt_transect_data(
             self.collect_record, sample_event_id
@@ -176,7 +177,6 @@ class FishbeltProtocolWriter(ProtocolWriter):
 
 
 class BenthicPITProtocolWriter(BenthicProtocolWriter):
-
     def get_or_create_benthicpit(self, benthic_transect_id):
         benthic_pit_data = {
             "transect": benthic_transect_id,
@@ -189,7 +189,9 @@ class BenthicPITProtocolWriter(BenthicProtocolWriter):
         observation_benthicpits = []
         observations_data = get_obsbenthicpit_data(self.collect_record, benthic_pit_id)
         if not observations_data:
-            raise ValidationError({"obs_benthic_pits": [_(u"Benthic PIT observations are required.")]})
+            raise ValidationError(
+                {"obs_benthic_pits": [_(u"Benthic PIT observations are required.")]}
+            )
 
         for observation_data in observations_data:
             observation_data["id"] = uuid.uuid4()
@@ -212,7 +214,6 @@ class BenthicPITProtocolWriter(BenthicProtocolWriter):
 
 
 class BenthicLITProtocolWriter(BenthicProtocolWriter):
-
     def get_or_create_benthiclit(self, benthic_transect_id):
         benthic_lit_data = {"transect": benthic_transect_id}
         return self.get_or_create(BenthicLIT, BenthicLITSerializer, benthic_lit_data)
@@ -221,7 +222,9 @@ class BenthicLITProtocolWriter(BenthicProtocolWriter):
         observation_benthiclits = []
         observations_data = get_obsbenthiclit_data(self.collect_record, benthic_lit_id)
         if not observations_data:
-            raise ValidationError({"obs_benthic_lits": [_(u"Benthic LIT observations are required.")]})
+            raise ValidationError(
+                {"obs_benthic_lits": [_(u"Benthic LIT observations are required.")]}
+            )
 
         for observation_data in observations_data:
             observation_data["id"] = uuid.uuid4()
@@ -244,7 +247,6 @@ class BenthicLITProtocolWriter(BenthicProtocolWriter):
 
 
 class HabitatComplexityProtocolWriter(BenthicProtocolWriter):
-
     def get_or_create_habitatcomplexity(self, benthic_transect_id):
         habitat_complexity_data = {
             "transect": benthic_transect_id,
@@ -260,7 +262,13 @@ class HabitatComplexityProtocolWriter(BenthicProtocolWriter):
             self.collect_record, habitatcomplexity_id
         )
         if not observations_data:
-            raise ValidationError({"obs_habitat_complexities": [_(u"Habitat complexity observations are required.")]})
+            raise ValidationError(
+                {
+                    "obs_habitat_complexities": [
+                        _(u"Habitat complexity observations are required.")
+                    ]
+                }
+            )
 
         for observation_data in observations_data:
             observation_data["id"] = uuid.uuid4()
@@ -283,7 +291,6 @@ class HabitatComplexityProtocolWriter(BenthicProtocolWriter):
 
 
 class BleachingQuadratCollectionProtocolWriter(ProtocolWriter):
-
     def get_or_create_quadrat_collection(self, sample_event_id):
         quadrat_collection_data = get_quadrat_collection_data(
             self.collect_record, sample_event_id
@@ -303,7 +310,11 @@ class BleachingQuadratCollectionProtocolWriter(ProtocolWriter):
 
     def get_or_create_bleaching_quadrat_collection(self, quadrat_collection_id):
         bleaching_quadrat_collection_data = {"quadrat": quadrat_collection_id}
-        return self.get_or_create(BleachingQuadratCollection, BleachingQuadratCollectionSerializer, bleaching_quadrat_collection_data)
+        return self.get_or_create(
+            BleachingQuadratCollection,
+            BleachingQuadratCollectionSerializer,
+            bleaching_quadrat_collection_data,
+        )
 
     def create_obs_quadrat_benthic_percent(self, bleaching_quadrat_collection_id):
         observation_benthic_percent_covered_data = []
@@ -311,7 +322,13 @@ class BleachingQuadratCollectionProtocolWriter(ProtocolWriter):
             self.collect_record, bleaching_quadrat_collection_id
         )
         if not observations_data:
-            raise ValidationError({"obs_quadrat_benthic_percent": [_(u"Benthic percent cover observations are required.")]})
+            raise ValidationError(
+                {
+                    "obs_quadrat_benthic_percent": [
+                        _(u"Benthic percent cover observations are required.")
+                    ]
+                }
+            )
 
         for observation_data in observations_data:
             observation_data["id"] = uuid.uuid4()
@@ -331,7 +348,13 @@ class BleachingQuadratCollectionProtocolWriter(ProtocolWriter):
             self.collect_record, bleaching_quadrat_collection_id
         )
         if not observations_data:
-            raise ValidationError({"obs_colonies_bleached": [_(u"Colonies bleached observations are required.")]})
+            raise ValidationError(
+                {
+                    "obs_colonies_bleached": [
+                        _(u"Colonies bleached observations are required.")
+                    ]
+                }
+            )
 
         for observation_data in observations_data:
             observation_data["id"] = uuid.uuid4()
@@ -348,7 +371,9 @@ class BleachingQuadratCollectionProtocolWriter(ProtocolWriter):
     def write(self):
         sample_event = self.get_or_create_sample_event()
         quadrat_collection = self.get_or_create_quadrat_collection(sample_event.id)
-        bleaching_quadrat_collection = self.get_or_create_bleaching_quadrat_collection(quadrat_collection.id)
+        bleaching_quadrat_collection = self.get_or_create_bleaching_quadrat_collection(
+            quadrat_collection.id
+        )
         _ = self.create_observers(bleaching_quadrat_collection.id)
         _ = self.create_obs_quadrat_benthic_percent(bleaching_quadrat_collection.id)
         _ = self.create_obs_colonies_bleached(bleaching_quadrat_collection.id)

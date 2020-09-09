@@ -20,7 +20,7 @@ class ObsBenthicLITSerializer(BaseAPISerializer):
 
 
 class ObsBenthicLITFilterSet(BaseAPIFilterSet):
-    length = django_filters.NumericRangeFilter(field_name='length')
+    length = django_filters.RangeFilter(field_name='length')
 
     class Meta:
         model = ObsBenthicLIT

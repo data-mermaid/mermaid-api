@@ -1,26 +1,40 @@
 from django.db import transaction
 from django.db.models import Sum
+from django_filters import BaseInFilter, RangeFilter
+from rest_condition import Or
 from rest_framework import status
 from rest_framework.response import Response
 from rest_framework.serializers import SerializerMethodField
-from django_filters import BaseInFilter, RangeFilter
 
-from .. import fieldreport
-from ...models.mermaid import BenthicLIT, ObsBenthicLIT, BenthicAttribute
-from ...models.view_models import BenthicLITObsView, BenthicLITSUView, BenthicLITSEView
-
-from . import *
+# from .. import fieldreport
+from ...models.mermaid import BenthicAttribute, BenthicLIT, ObsBenthicLIT, Project
+from ...models.view_models import BenthicLITObsView, BenthicLITSEView, BenthicLITSUView
+from ...permissions import ProjectDataReadOnlyPermission, ProjectPublicSummaryPermission
+from ...reports.fields import ReportField
+from ...reports.formatters import (
+    to_day,
+    to_governance,
+    to_latitude,
+    to_longitude,
+    to_month,
+    to_names,
+    to_str,
+    to_year,
+)
+from ...reports.report_serializer import ReportSerializer
 from ..base import (
     BaseProjectApiViewSet,
-    BaseViewAPISerializer,
+    BaseSEFilterSet,
+    BaseSUObsFilterSet,
     BaseViewAPIGeoSerializer,
-    BaseTransectFilterSet,
+    BaseSUViewAPISerializer,
 )
 from ..benthic_lit import BenthicLITSerializer
 from ..benthic_transect import BenthicTransectSerializer
 from ..obs_benthic_lit import ObsBenthicLITSerializer
 from ..observer import ObserverSerializer
 from ..sample_event import SampleEventSerializer
+from . import BaseProjectMethodView, save_model, save_one_to_many
 
 
 class BenthicLITMethodSerializer(BenthicLITSerializer):
@@ -32,112 +46,6 @@ class BenthicLITMethodSerializer(BenthicLITSerializer):
     class Meta:
         model = BenthicLIT
         exclude = []
-
-
-def to_total_lit(field, row, serializer_instance):
-    benthiclit_id = row.get("benthiclit_id")
-    if benthiclit_id is None:
-        return ""
-
-    lookup = serializer_instance.serializer_cache.get("benthiclit_lookups-totals")
-    if lookup:
-        total = lookup.get(str(benthiclit_id)) or dict()
-        return total.get("total_lit") or ""
-    else:
-        total = (
-            ObsBenthicLIT.objects.filter(benthiclit=benthiclit_id)
-            .values("benthiclit_id")
-            .annotate(total_lit=Sum("length"))
-        )
-        return total.total_lit or ""
-
-
-def _get_benthic_attribute_category(row, serializer_instance):
-    benthic_attribute_id = row.get("attribute")
-    if benthic_attribute_id is None:
-        return None
-
-    lookup = serializer_instance.serializer_cache.get(
-        "benthic-attribute_lookups-categories"
-    )
-    if lookup:
-        return lookup.get(str(benthic_attribute_id)) or dict()
-    else:
-        return BenthicAttribute.objects.get(id=benthic_attribute_id)
-
-
-def to_benthic_attribute_category(field, row, serializer_instance):
-    bc = _get_benthic_attribute_category(row, serializer_instance)
-
-    if bc is None:
-        return ""
-
-    elif isinstance(bc, dict):
-        return bc.get("name") or ""
-
-    return str(bc)
-
-
-class ObsBenthicLITReportSerializer(
-    SampleEventReportSerializer, metaclass=SampleEventReportSerializerMeta
-):
-    transect_method = "benthiclit"
-    sample_event_path = "{}__transect__sample_event".format(transect_method)
-
-    idx = 24
-    obs_fields = [
-        (6, ReportField("benthiclit__transect__reef_slope__name", "Reef slope")),
-        (idx, ReportField("benthiclit__transect__number", "Transect number")),
-        (idx + 1, ReportField("benthiclit__transect__label", "Transect label")),
-        (
-            idx + 2,
-            ReportField(
-                "benthiclit__transect__len_surveyed", "Transect length surveyed"
-            ),
-        ),
-        (idx + 4, ReportMethodField("Benthic category", to_benthic_attribute_category)),
-        (idx + 5, ReportField("attribute__name", "Benthic attribute")),
-        (idx + 6, ReportField("growth_form__name", "Growth form")),
-        (idx + 7, ReportField("length", "LIT (cm)")),
-        (idx + 8, ReportMethodField("Total transect cm", to_total_lit)),
-        (idx + 12, ReportField("benthiclit__transect__notes", "Observation notes")),
-    ]
-
-    non_field_columns = (
-        "benthiclit_id",
-        "benthiclit__transect__sample_event__site__project_id",
-        "benthiclit__transect__sample_event__management_id",
-        "attribute",
-    )
-
-    class Meta:
-        model = BenthicLIT
-
-    def preserialize(self, queryset=None):
-        super(ObsBenthicLITReportSerializer, self).preserialize(queryset=queryset)
-
-        # Transect total lengths
-        transect_totals = queryset.values("benthiclit_id").annotate(
-            total_lit=Sum("length")
-        )
-        benthic_categories = BenthicAttribute.objects.all()
-
-        benthic_category_lookup = {
-            str(bc.id): dict(name=bc.origin.name) for bc in benthic_categories
-        }
-
-        transect_total_lookup = {
-            str(tt["benthiclit_id"]): dict(total_lit=tt["total_lit"])
-            for tt in transect_totals
-        }
-
-        if len(benthic_category_lookup.keys()) > 0:
-            self.serializer_cache[
-                "benthic-attribute_lookups-categories"
-            ] = benthic_category_lookup
-
-        if len(transect_total_lookup.keys()) > 0:
-            self.serializer_cache["benthiclit_lookups-totals"] = transect_total_lookup
 
 
 class BenthicLITMethodView(BaseProjectApiViewSet):
@@ -240,26 +148,13 @@ class BenthicLITMethodView(BaseProjectApiViewSet):
             transaction.savepoint_rollback(sid)
             raise
 
-    @action(detail=False, methods=["get"])
-    def fieldreport(self, request, *args, **kwargs):
-        return fieldreport(
-            self,
-            request,
-            *args,
-            model_cls=ObsBenthicLIT,
-            serializer_class=ObsBenthicLITReportSerializer,
-            fk="benthiclit",
-            order_by=("Site", "Transect number", "Transect label"),
-            **kwargs
-        )
 
-
-class BenthicLITMethodObsSerializer(BaseViewAPISerializer):
-    class Meta(BaseViewAPISerializer.Meta):
+class BenthicLITMethodObsSerializer(BaseSUViewAPISerializer):
+    class Meta(BaseSUViewAPISerializer.Meta):
         model = BenthicLITObsView
-        exclude = BaseViewAPISerializer.Meta.exclude.copy()
+        exclude = BaseSUViewAPISerializer.Meta.exclude.copy()
         exclude.append("location")
-        header_order = ["id"] + BaseViewAPISerializer.Meta.header_order.copy()
+        header_order = ["id"] + BaseSUViewAPISerializer.Meta.header_order.copy()
         header_order.extend(
             [
                 "sample_unit_id",
@@ -280,8 +175,60 @@ class BenthicLITMethodObsSerializer(BaseViewAPISerializer):
         )
 
 
-class BenthicLITMethodObsCSVSerializer(BenthicLITMethodObsSerializer):
-    observers = SerializerMethodField()
+class ObsBenthicLITCSVSerializer(ReportSerializer):
+    fields = [
+        ReportField("project_name", "Project name"),
+        ReportField("country_name", "Country"),
+        ReportField("site_name", "Site"),
+        ReportField("location", "Latitude", to_latitude, alias="latitude"),
+        ReportField("location", "Longitude", to_longitude, alias="longitude"),
+        ReportField("reef_exposure", "Exposure"),
+        ReportField("reef_slope", "Reef slope"),
+        ReportField("reef_type", "Reef type"),
+        ReportField("reef_zone", "Reef zone"),
+        ReportField("sample_date", "Year", to_year, "sample_date_year"),
+        ReportField("sample_date", "Month", to_month, "sample_date_month"),
+        ReportField("sample_date", "Day", to_day, "sample_date_day"),
+        ReportField("sample_time", "Start time", to_str),
+        ReportField("tide_name", "Tide"),
+        ReportField("visibility_name", "Visibility"),
+        ReportField("current_name", "Current"),
+        ReportField("depth", "Depth"),
+        ReportField("management_name", "Management name"),
+        ReportField("management_name_secondary", "Management secondary name"),
+        ReportField("management_est_year", "Management year established"),
+        ReportField("management_size", "Management size"),
+        ReportField("management_parties", "Governance", to_governance),
+        ReportField("management_compliance", "Estimated compliance",),
+        ReportField("management_rules", "Management rules"),
+        ReportField("transect_number", "Transect number"),
+        ReportField("label", "Transect label"),
+        ReportField("transect_len_surveyed", "Transect length surveyed"),
+        ReportField("observers", "Observers", to_names),
+        ReportField("benthic_category", "Benthic category"),
+        ReportField("benthic_attribute", "Benthic attribute"),
+        ReportField("growth_form", "Growth form"),
+        ReportField("length", "LIT (cm)"),
+        ReportField("total_length", "Total transect cm"),
+        ReportField("site_notes", "Site notes"),
+        ReportField("sample_event_notes", "Sampling event notes"),
+        ReportField("management_notes", "Management notes"),
+        ReportField("observation_notes", "Observation notes"),
+    ]
+
+    additional_fields = [
+        ReportField("id"),
+        ReportField("project_id"),
+        ReportField("project_notes"),
+        ReportField("site_id"),
+        ReportField("contact_link"),
+        ReportField("tags"),
+        ReportField("country_id"),
+        ReportField("management_id"),
+        ReportField("sample_unit_id"),
+        ReportField("data_policy_benthiclit"),
+        ReportField("relative_depth"),
+    ]
 
 
 class BenthicLITMethodObsGeoSerializer(BaseViewAPIGeoSerializer):
@@ -289,14 +236,15 @@ class BenthicLITMethodObsGeoSerializer(BaseViewAPIGeoSerializer):
         model = BenthicLITObsView
 
 
-class BenthicLITMethodSUSerializer(BaseViewAPISerializer):
-    class Meta(BaseViewAPISerializer.Meta):
+class BenthicLITMethodSUSerializer(BaseSUViewAPISerializer):
+    class Meta(BaseSUViewAPISerializer.Meta):
         model = BenthicLITSUView
-        exclude = BaseViewAPISerializer.Meta.exclude.copy()
+        exclude = BaseSUViewAPISerializer.Meta.exclude.copy()
         exclude.append("location")
-        header_order = BaseViewAPISerializer.Meta.header_order.copy()
+        header_order = BaseSUViewAPISerializer.Meta.header_order.copy()
         header_order.extend(
             [
+                "label",
                 "transect_number",
                 "transect_len_surveyed",
                 "depth",
@@ -316,12 +264,12 @@ class BenthicLITMethodSUGeoSerializer(BaseViewAPIGeoSerializer):
         model = BenthicLITSUView
 
 
-class BenthicLITMethodSESerializer(BaseViewAPISerializer):
-    class Meta(BaseViewAPISerializer.Meta):
+class BenthicLITMethodSESerializer(BaseSUViewAPISerializer):
+    class Meta(BaseSUViewAPISerializer.Meta):
         model = BenthicLITSEView
-        exclude = BaseViewAPISerializer.Meta.exclude.copy()
+        exclude = BaseSUViewAPISerializer.Meta.exclude.copy()
         exclude.append("location")
-        header_order = BaseViewAPISerializer.Meta.header_order.copy()
+        header_order = BaseSUViewAPISerializer.Meta.header_order.copy()
         header_order.extend(
             [
                 "data_policy_benthiclit",
@@ -337,10 +285,7 @@ class BenthicLITMethodSEGeoSerializer(BaseViewAPIGeoSerializer):
         model = BenthicLITSEView
 
 
-class BenthicLITMethodObsFilterSet(BaseTransectFilterSet):
-    depth = RangeFilter()
-    sample_unit_id = BaseInFilter(method="id_lookup")
-    observers = BaseInFilter(method="json_name_lookup")
+class BenthicLITMethodObsFilterSet(BaseSUObsFilterSet):
     transect_len_surveyed = RangeFilter()
     reef_slope = BaseInFilter(method="char_lookup")
     length = RangeFilter()
@@ -348,9 +293,6 @@ class BenthicLITMethodObsFilterSet(BaseTransectFilterSet):
     class Meta:
         model = BenthicLITObsView
         fields = [
-            "depth",
-            "sample_unit_id",
-            "observers",
             "transect_len_surveyed",
             "reef_slope",
             "transect_number",
@@ -362,17 +304,13 @@ class BenthicLITMethodObsFilterSet(BaseTransectFilterSet):
         ]
 
 
-class BenthicLITMethodSUFilterSet(BaseTransectFilterSet):
+class BenthicLITMethodSUFilterSet(BaseSUObsFilterSet):
     transect_len_surveyed = RangeFilter()
-    depth = RangeFilter()
-    observers = BaseInFilter(method="json_name_lookup")
     reef_slope = BaseInFilter(method="char_lookup")
 
     class Meta:
         model = BenthicLITSUView
         fields = [
-            "depth",
-            "observers",
             "transect_len_surveyed",
             "reef_slope",
             "transect_number",
@@ -380,7 +318,7 @@ class BenthicLITMethodSUFilterSet(BaseTransectFilterSet):
         ]
 
 
-class BenthicLITMethodSEFilterSet(BaseTransectFilterSet):
+class BenthicLITMethodSEFilterSet(BaseSEFilterSet):
     sample_unit_count = RangeFilter()
     depth_avg = RangeFilter()
 
@@ -394,11 +332,10 @@ class BenthicLITProjectMethodObsView(BaseProjectMethodView):
     project_policy = "data_policy_benthiclit"
     serializer_class = BenthicLITMethodObsSerializer
     serializer_class_geojson = BenthicLITMethodObsGeoSerializer
-    serializer_class_csv = BenthicLITMethodObsCSVSerializer
+    serializer_class_csv = ObsBenthicLITCSVSerializer
     filterset_class = BenthicLITMethodObsFilterSet
-    queryset = BenthicLITObsView.objects.exclude(project_status=Project.TEST).order_by(
-        "site_name", "sample_date", "transect_number", "label"
-    )
+    queryset = BenthicLITObsView.objects.all()
+    order_by = ("site_name", "sample_date", "transect_number", "label")
 
 
 class BenthicLITProjectMethodSUView(BaseProjectMethodView):
@@ -408,7 +345,8 @@ class BenthicLITProjectMethodSUView(BaseProjectMethodView):
     serializer_class_geojson = BenthicLITMethodSUGeoSerializer
     serializer_class_csv = BenthicLITMethodSUCSVSerializer
     filterset_class = BenthicLITMethodSUFilterSet
-    queryset = BenthicLITSUView.objects.exclude(project_status=Project.TEST).order_by(
+    queryset = BenthicLITSUView.objects.all()
+    order_by = (
         "site_name", "sample_date", "transect_number"
     )
 
@@ -423,6 +361,7 @@ class BenthicLITProjectMethodSEView(BaseProjectMethodView):
     serializer_class_geojson = BenthicLITMethodSEGeoSerializer
     serializer_class_csv = BenthicLITMethodSESerializer
     filterset_class = BenthicLITMethodSEFilterSet
-    queryset = BenthicLITSEView.objects.exclude(project_status=Project.TEST).order_by(
+    queryset = BenthicLITSEView.objects.all()
+    order_by = (
         "site_name", "sample_date"
     )

@@ -3,7 +3,14 @@ from rest_framework import serializers
 from ..fields import LazyChoiceField
 from ..models import BeltTransectWidth, FishSizeBin, ReefSlope
 from ..models.view_models import FishAttributeView
-from .serializers import CollectRecordCSVSerializer, build_choices
+from .choices import (
+    build_choices,
+    current_choices,
+    relative_depth_choices,
+    tide_choices,
+    visibility_choices,
+)
+from .serializers import CollectRecordCSVSerializer
 
 __all__ = ["FishBeltCSVSerializer"]
 
@@ -29,12 +36,20 @@ def fish_attributes_choices():
 
 class FishBeltCSVSerializer(CollectRecordCSVSerializer):
     protocol = "fishbelt"
+    sample_unit = "fishbelt_transect"
     observations_fields = ["data__obs_belt_fishes"]
     additional_group_fields = CollectRecordCSVSerializer.additional_group_fields.copy()
     additional_group_fields.append("data__fishbelt_transect__label")
     header_map = CollectRecordCSVSerializer.header_map.copy()
     header_map.update(
         {
+            "Sample time": "data__fishbelt_transect__sample_time",
+            "Depth *": "data__fishbelt_transect__depth",
+            "Visibility": "data__fishbelt_transect__visibility",
+            "Current": "data__fishbelt_transect__current",
+            "Relative depth": "data__fishbelt_transect__relative_depth",
+            "Tide": "data__fishbelt_transect__tide",
+
             "Transect length surveyed *": "data__fishbelt_transect__len_surveyed",
             "Transect number *": "data__fishbelt_transect__number",
             "Transect label": "data__fishbelt_transect__label",
@@ -45,6 +60,25 @@ class FishBeltCSVSerializer(CollectRecordCSVSerializer):
             "Size *": "data__obs_belt_fishes__size",
             "Count *": "data__obs_belt_fishes__count",
         }
+    )
+
+    data__fishbelt_transect__sample_time = serializers.TimeField(default="00:00:00")
+    data__fishbelt_transect__depth = serializers.DecimalField(max_digits=3, decimal_places=1)
+
+    data__fishbelt_transect__visibility = LazyChoiceField(
+        choices=visibility_choices, required=False, allow_null=True, allow_blank=True
+    )
+    data__fishbelt_transect__current = LazyChoiceField(
+        choices=current_choices, required=False, allow_null=True, allow_blank=True
+    )
+    data__fishbelt_transect__relative_depth = LazyChoiceField(
+        choices=relative_depth_choices,
+        required=False,
+        allow_null=True,
+        allow_blank=True,
+    )
+    data__fishbelt_transect__tide = LazyChoiceField(
+        choices=tide_choices, required=False, allow_null=True, allow_blank=True
     )
 
     data__fishbelt_transect__len_surveyed = serializers.IntegerField(min_value=0)
@@ -70,3 +104,6 @@ class FishBeltCSVSerializer(CollectRecordCSVSerializer):
     def validate(self, data):
         data = super().validate(data)
         return data
+
+    def get_sample_event_time(self, row):
+        return row.get("data__fishbelt_transect__sample_time") or "00:00:00"

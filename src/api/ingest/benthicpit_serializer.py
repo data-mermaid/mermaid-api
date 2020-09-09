@@ -1,8 +1,15 @@
 from rest_framework import serializers
 
-from .serializers import CollectRecordCSVSerializer, build_choices
 from ..fields import LazyChoiceField
 from ..models import BenthicAttribute, GrowthForm, ReefSlope
+from .choices import (
+    build_choices,
+    current_choices,
+    relative_depth_choices,
+    tide_choices,
+    visibility_choices,
+)
+from .serializers import CollectRecordCSVSerializer
 
 __all__ = ["BenthicPITCSVSerializer"]
 
@@ -24,6 +31,7 @@ def benthic_attributes_choices():
 
 class BenthicPITCSVSerializer(CollectRecordCSVSerializer):
     protocol = "benthicpit"
+    sample_unit = "benthic_transect"
     observations_fields = ["data__obs_benthic_pits"]
     ordering_field = "data__obs_benthic_pits__interval"
     additional_group_fields = CollectRecordCSVSerializer.additional_group_fields.copy()
@@ -32,6 +40,13 @@ class BenthicPITCSVSerializer(CollectRecordCSVSerializer):
     header_map = CollectRecordCSVSerializer.header_map.copy()
     header_map.update(
         {
+            "Sample time": "data__benthic_transect__sample_time",
+            "Depth *": "data__benthic_transect__depth",
+            "Visibility": "data__benthic_transect__visibility",
+            "Current": "data__benthic_transect__current",
+            "Relative depth": "data__benthic_transect__relative_depth",
+            "Tide": "data__benthic_transect__tide",
+
             "Observation interval *": "data__obs_benthic_pits__interval",
             "Interval size *": "data__interval_size",
             "Interval start *": "data__interval_start",
@@ -42,6 +57,25 @@ class BenthicPITCSVSerializer(CollectRecordCSVSerializer):
             "Benthic attribute *": "data__obs_benthic_pits__attribute",
             "Growth form": "data__obs_benthic_pits__growth_form",
         }
+    )
+
+    data__benthic_transect__sample_time = serializers.TimeField(default="00:00:00")
+    data__benthic_transect__depth = serializers.DecimalField(max_digits=3, decimal_places=1)
+
+    data__benthic_transect__visibility = LazyChoiceField(
+        choices=visibility_choices, required=False, allow_null=True, allow_blank=True
+    )
+    data__benthic_transect__current = LazyChoiceField(
+        choices=current_choices, required=False, allow_null=True, allow_blank=True
+    )
+    data__benthic_transect__relative_depth = LazyChoiceField(
+        choices=relative_depth_choices,
+        required=False,
+        allow_null=True,
+        allow_blank=True,
+    )
+    data__benthic_transect__tide = LazyChoiceField(
+        choices=tide_choices, required=False, allow_null=True, allow_blank=True
     )
 
     data__interval_size = serializers.DecimalField(max_digits=4, decimal_places=2)
@@ -64,6 +98,9 @@ class BenthicPITCSVSerializer(CollectRecordCSVSerializer):
     data__obs_benthic_pits__growth_form = LazyChoiceField(
         choices=growth_form_choices, required=False, allow_null=True, allow_blank=True
     )
+
+    def get_sample_event_time(self, row):
+        return row.get("data__benthic_transect__sample_time") or "00:00:00"
 
     def clean(self, data):
         data = super().clean(data)
