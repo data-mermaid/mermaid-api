@@ -1,5 +1,7 @@
 import os
 
+from datetime import datetime
+
 import pytest
 from api.ingest import utils
 from api.models import (
@@ -38,6 +40,9 @@ def test_fishbelt_ingest(
     fish_size_bin_1,
     tide2,
     current2,
+    site1,
+    management1,
+    fish_species3,
 ):
     new_records, output = utils.ingest(
         protocol=FISHBELT_PROTOCOL,
@@ -56,15 +61,27 @@ def test_fishbelt_ingest(
     assert new_records is not None and len(new_records) == 1
 
     new_record = new_records[0]
+    sample_event = new_record.data.get("sample_event")
     fishbelt_transect = new_record.data.get("fishbelt_transect")
     observations = new_record.data["obs_belt_fishes"]
 
+    assert new_record.project == project1
+    assert new_record.profile == profile1
+
     assert fishbelt_transect.get("current") == str(current2.id)
     assert fishbelt_transect.get("tide") == str(tide2.id)
+    assert fishbelt_transect.get("width") == str(belt_transect_width_5m.id)
+    assert fishbelt_transect.get("depth") == 10
+
+    assert sample_event.get("site") == str(site1.id)
+    assert sample_event.get("management") == str(management1.id)
+    assert str(sample_event.get("sample_date")) == "2015-12-03"
 
     assert len(observations) == 6
     assert observations[2].get("size") == 20
     assert observations[2].get("count") == 1
+    assert observations[2].get("fish_attribute") == str(fish_species3.id)
+    
 
 
 def test_benthicpit_ingest(
