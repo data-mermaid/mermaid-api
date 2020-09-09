@@ -979,11 +979,7 @@ class SampleUnitCache(models.Model):
     def refresh_cache(cls, sample_unit):
         with transaction.atomic():
             with connection.cursor() as cursor:
-                sample_event_id = sample_unit.sample_event.id
-                if sample_event_id is None:
-                  return
-
-                sample_event_id = str(sample_event_id)
+                sample_event_id = str(sample_unit.sample_event.id)
                 del_sql = f"DELETE FROM sample_unit_cache WHERE sample_event_id = %(sample_event_id)s;"
                 cursor.execute(del_sql, params={"sample_event_id": sample_event_id})
 
