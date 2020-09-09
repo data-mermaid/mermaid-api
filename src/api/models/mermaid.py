@@ -536,8 +536,6 @@ class Transect(SampleUnit):
                 "depth",
                 "number",
                 "len_surveyed",
-                "site_id",
-                "management_id",
                 vse."sample_event_id"
         """
 
@@ -730,8 +728,6 @@ class BaseQuadrat(SampleUnit):
             GROUP BY
                 "depth",
                 "quadrat_size",
-                "site_id",
-                "management_id",
                 vse."sample_event_id"
         """
 
