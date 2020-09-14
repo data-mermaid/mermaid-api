@@ -100,3 +100,45 @@ def test_benthiclit_su_view(
 
     assert data[1]["percent_cover_by_benthic_category"]["Hard coral"] == 58.46
     assert data[1]["percent_cover_by_benthic_category"]["Rock"] == 41.54
+
+
+def test_habitatcomplexity_su_view(
+    client,
+    db_setup,
+    project1,
+    token1,
+    habitat_complexity_project,
+    all_choices,
+    site1,
+):
+    url = reverse("habitatcomplexitymethod-sampleunit-list", kwargs=dict(project_pk=project1.pk))
+    count, data, response = _call(client, token1, url)
+
+    assert count == 2
+    assert data[0]["site_name"] == site1.name
+    assert data[0]["score_avg"] == 2.0
+
+
+def test_bleachingqc_su_view(
+    client,
+    db_setup,
+    project1,
+    token1,
+    bleaching_project,
+    all_choices,
+    site1,
+):
+    url = reverse("bleachingqcsmethod-sampleunit-list", kwargs=dict(project_pk=project1.pk))
+    count, data, response = _call(client, token1, url)
+
+    assert count == 1
+    assert data[0]["site_name"] == site1.name
+    assert data[0]["count_total"] == 500
+    assert data[0]["count_genera"] == 4
+    assert data[0]["percent_normal"] == 5.0
+    assert data[0]["percent_pale"] == 24.0
+    assert data[0]["percent_bleached"] == 71.0
+    assert data[0]["quadrat_count"] == 5
+    assert data[0]["percent_hard_avg"] == 59.0
+    assert data[0]["percent_soft_avg"] == 19.6
+    assert data[0]["percent_algae_avg"] == 20.4
