@@ -41,6 +41,9 @@ def test_fishbelt_ingest(
     site1,
     management1,
     fish_species3,
+    reef_slope1,
+    relative_depth1,
+    visibility1
 ):
     new_records, output = utils.ingest(
         protocol=FISHBELT_PROTOCOL,
@@ -66,10 +69,15 @@ def test_fishbelt_ingest(
     assert new_record.project == project1
     assert new_record.profile == profile1
 
+    print(fishbelt_transect)
+    print(new_record)
     assert fishbelt_transect.get("current") == str(current2.id)
     assert fishbelt_transect.get("tide") == str(tide2.id)
     assert fishbelt_transect.get("width") == str(belt_transect_width_5m.id)
     assert fishbelt_transect.get("depth") == 10
+    assert fishbelt_transect.get("reef_slope") == str(reef_slope1.id)
+    assert fishbelt_transect.get("visibility") == str(visibility1.id)
+    assert fishbelt_transect.get("relative_depth") == str(relative_depth1.id)
 
     assert sample_event.get("site") == str(site1.id)
     assert sample_event.get("management") == str(management1.id)
