@@ -31,10 +31,10 @@ def test_beltfish_su_view(
     assert data[1]["site_name"] == site2.name
 
     biomass_kgha_1 = sum(
-        [obs_belt_fish1_1_biomass, obs_belt_fish1_2_biomass, obs_belt_fish1_3_biomass,]
+        [obs_belt_fish1_1_biomass, obs_belt_fish1_2_biomass, obs_belt_fish1_3_biomass]
     )
 
-    biomass_kgha_1_other = sum([obs_belt_fish1_2_biomass, obs_belt_fish1_3_biomass,])
+    biomass_kgha_1_other = sum([obs_belt_fish1_2_biomass, obs_belt_fish1_3_biomass])
 
     assert round(data[0]["biomass_kgha"], 1) == round(biomass_kgha_1, 1)
     assert round(data[0]["biomass_kgha_by_trophic_group"]["other"], 1) == round(
@@ -45,7 +45,7 @@ def test_beltfish_su_view(
     )
 
     biomass_kgha_2 = sum(
-        [obs_belt_fish2_1_biomass, obs_belt_fish2_2_biomass, obs_belt_fish2_3_biomass,]
+        [obs_belt_fish2_1_biomass, obs_belt_fish2_2_biomass, obs_belt_fish2_3_biomass]
     )
 
     transect_2_biomass = round(biomass_kgha_2, 1)
@@ -63,12 +63,14 @@ def test_benthicpit_su_view(
     management2,
     profile2,
 ):
-    url = reverse("benthicpitmethod-sampleunit-list", kwargs=dict(project_pk=project1.pk))
+    url = reverse(
+        "benthicpitmethod-sampleunit-list", kwargs=dict(project_pk=project1.pk)
+    )
     count, data, response = _call(client, token1, url)
 
     assert count == 2
     assert data[1]["site_name"] == site2.name
-    
+
     assert data[0]["percent_cover_by_benthic_category"]["Macroalgae"] == 20.0
     assert data[0]["percent_cover_by_benthic_category"]["Hard coral"] == 60.0
     assert data[0]["percent_cover_by_benthic_category"]["Rock"] == 20.0
@@ -88,7 +90,9 @@ def test_benthiclit_su_view(
     management2,
     profile2,
 ):
-    url = reverse("benthiclitmethod-sampleunit-list", kwargs=dict(project_pk=project1.pk))
+    url = reverse(
+        "benthiclitmethod-sampleunit-list", kwargs=dict(project_pk=project1.pk)
+    )
     count, data, response = _call(client, token1, url)
 
     assert count == 2
@@ -103,15 +107,11 @@ def test_benthiclit_su_view(
 
 
 def test_habitatcomplexity_su_view(
-    client,
-    db_setup,
-    project1,
-    token1,
-    habitat_complexity_project,
-    all_choices,
-    site1,
+    client, db_setup, project1, token1, habitat_complexity_project, all_choices, site1,
 ):
-    url = reverse("habitatcomplexitymethod-sampleunit-list", kwargs=dict(project_pk=project1.pk))
+    url = reverse(
+        "habitatcomplexitymethod-sampleunit-list", kwargs=dict(project_pk=project1.pk)
+    )
     count, data, response = _call(client, token1, url)
 
     assert count == 2
@@ -120,15 +120,11 @@ def test_habitatcomplexity_su_view(
 
 
 def test_bleachingqc_su_view(
-    client,
-    db_setup,
-    project1,
-    token1,
-    bleaching_project,
-    all_choices,
-    site1,
+    client, db_setup, project1, token1, bleaching_project, all_choices, site1,
 ):
-    url = reverse("bleachingqcsmethod-sampleunit-list", kwargs=dict(project_pk=project1.pk))
+    url = reverse(
+        "bleachingqcsmethod-sampleunit-list", kwargs=dict(project_pk=project1.pk)
+    )
     count, data, response = _call(client, token1, url)
 
     assert count == 1
