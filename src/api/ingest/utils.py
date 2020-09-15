@@ -2,6 +2,7 @@ import csv
 
 from api import mocks
 from api.ingest import (
+    BenthicLITCSVSerializer,
     BenthicPITCSVSerializer,
     BleachingCSVSerializer,
     FishBeltCSVSerializer,
@@ -123,7 +124,9 @@ def ingest(
 
     output = dict()
 
-    if protocol == BENTHICPIT_PROTOCOL:
+    if protocol == BENTHICLIT_PROTOCOL:
+        serializer = BenthicLITCSVSerializer
+    elif protocol == BENTHICPIT_PROTOCOL:
         serializer = BenthicPITCSVSerializer
     elif protocol == FISHBELT_PROTOCOL:
         serializer = FishBeltCSVSerializer
