@@ -6,6 +6,7 @@ from api.ingest import (
     BenthicPITCSVSerializer,
     BleachingCSVSerializer,
     FishBeltCSVSerializer,
+    HabitatComplexityCSVSerializer,
 )
 from api.models import (
     BENTHICLIT_PROTOCOL,
@@ -87,6 +88,7 @@ def _schema_check(csv_headers, serializer_headers):
             missing_required_headers.append(h)
 
     if missing_required_headers:
+        print(missing_required_headers)
         raise InvalidSchema(errors=missing_required_headers)
 
 
@@ -130,6 +132,8 @@ def ingest(
         serializer = BenthicPITCSVSerializer
     elif protocol == FISHBELT_PROTOCOL:
         serializer = FishBeltCSVSerializer
+    elif protocol == HABITATCOMPLEXITY_PROTOCOL:
+        serializer = HabitatComplexityCSVSerializer
     elif protocol == BLEACHINGQC_PROTOCOL:
         serializer = BleachingCSVSerializer
     else:
