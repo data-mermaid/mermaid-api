@@ -91,6 +91,7 @@ class FishBeltProtocolValidationTest(TestCase, TestDataMixin):
         data_warn["sample_event"]["depth"] = 50.0
         data_warn["fishbelt_transect"]["len_surveyed"] = 101
         data_warn["fishbelt_transect"]["depth"] = 31
+        data_warn["fishbelt_transect"]["sample_time"] = "5:00"
         self.collect_record_warn = CollectRecord.objects.create(
             project=self.project1,
             profile=self.profile1,
@@ -153,6 +154,10 @@ class FishBeltProtocolValidationTest(TestCase, TestDataMixin):
         )
         self.assertEqual(
             WARN, validation.validations["depth"]["validate_range"]["status"]
+        )
+
+        self.assertEqual(
+            WARN, validation.validations["sample_time"]["validate_range"]["status"]
         )
 
     def test_validate_error(self):
