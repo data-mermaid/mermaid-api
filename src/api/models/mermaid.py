@@ -72,7 +72,7 @@ class UUIDTaggedItem(GenericUUIDTaggedItemBase):
     )
 
 
-class Project(BaseModel):
+class Project(BaseModel, JSONMixin):
     OPEN = 90
     TEST = 80
     LOCKED = 10
