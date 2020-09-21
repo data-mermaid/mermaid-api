@@ -87,16 +87,31 @@ fish_attribute.updated_on,
 fish_attribute.updated_by_id,
 fish_attribute.status,
 CASE
+    WHEN fish_species.fishattribute_ptr_id IS NOT NULL THEN species_genus_family.fishattribute_ptr_id
+    WHEN fish_genus.fishattribute_ptr_id IS NOT NULL THEN genus_family.fishattribute_ptr_id
+    WHEN fish_family.fishattribute_ptr_id IS NOT NULL THEN fish_family.fishattribute_ptr_id
+    ELSE NULL
+END AS id_family,
+CASE
     WHEN fish_species.name IS NOT NULL THEN species_genus_family.name
     WHEN fish_genus.name IS NOT NULL THEN genus_family.name
     WHEN fish_family.name IS NOT NULL THEN fish_family.name::text
     ELSE NULL::text
 END AS name_family,
 CASE
+    WHEN fish_species.fishattribute_ptr_id IS NOT NULL THEN species_genus.fishattribute_ptr_id
+    WHEN fish_genus.fishattribute_ptr_id IS NOT NULL THEN fish_genus.fishattribute_ptr_id
+    ELSE NULL
+END AS id_genus,
+CASE
     WHEN fish_species.name IS NOT NULL THEN species_genus.name
     WHEN fish_genus.name IS NOT NULL THEN fish_genus.name::text
     ELSE NULL::text
 END AS name_genus,
+CASE
+    WHEN fish_species.fishattribute_ptr_id IS NOT NULL THEN fish_species.fishattribute_ptr_id
+    ELSE NULL
+END AS id_species,
 CASE
     WHEN fish_species.name IS NOT NULL THEN concat(species_genus.name, ' ', fish_species.name)
     WHEN fish_genus.name IS NOT NULL THEN fish_genus.name::text
@@ -104,7 +119,6 @@ CASE
     WHEN fish_grouping_aggregates.name IS NOT NULL THEN fish_grouping_aggregates.name::text
     ELSE NULL::text
 END AS name,
-
 CASE
     WHEN fish_species.biomass_constant_a IS NOT NULL THEN fish_species.biomass_constant_a
     WHEN fish_genus.name IS NOT NULL THEN round(( SELECT avg(fish_species_1.biomass_constant_a) AS avg
@@ -249,6 +263,9 @@ ORDER BY (
       DROP VIEW IF EXISTS public.vw_fish_attributes CASCADE;
     """
 
+    id_family = models.UUIDField()
+    id_genus = models.UUIDField()
+    id_species = models.UUIDField()
     name_family = models.CharField(max_length=100)
     name_genus = models.CharField(max_length=100)
     name = models.CharField(max_length=100)
