@@ -20,6 +20,7 @@ from api.models import (
     BenthicAttribute,
     BenthicTransect,
     FishAttribute,
+    FishAttributeView,
     FishBeltTransect,
     FishSizeBin,
     FishSpecies,
@@ -765,6 +766,7 @@ class ObsFishBeltValidation(DataValidation, FishAttributeMixin):
     DENSITY_GT_TMPL = "Fish biomass greater than {} kg/ha"
     DENSITY_LT_TMPL = "Fish biomass less than {} kg/ha"
     FISH_COUNT_MIN_TMPL = "Total fish count less than {}"
+    FISH_FAMILY_SUBSET_TMPL = "There are fish that are not part of project defined fish familes"
 
     MIN_OBS_COUNT_WARN = 5
     MAX_OBS_COUNT_WARN = 200
@@ -835,7 +837,9 @@ class ObsFishBeltValidation(DataValidation, FishAttributeMixin):
 
             fish_attribute = obs.get("fish_attribute")
             constants = fish_attr_lookup.get(fish_attribute) or [None, None, None]
-            density = calc_biomass_density(count, size, len_surveyed, width_val, *constants)
+            density = calc_biomass_density(
+                count, size, len_surveyed, width_val, *constants
+            )
             densities.append(density)
 
         total_density = sum([d for d in densities if d is not None])
@@ -854,6 +858,32 @@ class ObsFishBeltValidation(DataValidation, FishAttributeMixin):
             return self.warning(self.identifier, self.FISH_COUNT_MIN_MSG)
 
         return self.ok(self.identifier)
+
+    def validate_fish_family_subset(self):
+        obs = self.data.get("obs_belt_fishes") or []
+        sample_event = self.data.get("sample_event") or {}
+        site_id = sample_event.get("site", None) or None
+        site = Site.objects.get_or_none(id=site_id)
+        if site is None:
+            return self.ok(self.identifier)
+
+        project = site.project
+        fish_family_subset = (project.data.get("settings") or dict()).get(
+            "fishFamilySubset"
+        )
+        if isinstance(fish_family_subset, list) is False:
+            return self.ok(self.identifier)
+
+        fish_attribute_ids = set([ob.get("fish_attribute") for ob in obs])
+        invalid_fish_attributes = FishAttributeView.objects.filter(
+            Q(id__in=fish_attribute_ids) & ~Q(id_family__in=fish_family_subset)
+        )
+
+        if invalid_fish_attributes.count() == 0:
+            return self.ok(self.identifier)
+
+        data = {str(fa.id): fa.name for fa in invalid_fish_attributes}
+        return self.warning(self.identifier, _(self.FISH_FAMILY_SUBSET_TMPL), data=data)
 
 
 class ObsHabitatComplexitiesValidation(DataValidation, BenthicObservationCountMixin):
