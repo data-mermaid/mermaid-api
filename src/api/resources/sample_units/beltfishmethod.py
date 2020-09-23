@@ -277,6 +277,7 @@ class BeltFishMethodSUSerializer(BaseSUViewAPISerializer):
                 "data_policy_beltfish",
                 "biomass_kgha",
                 "biomass_kgha_by_trophic_group",
+                "biomass_kgha_by_fish_family",
             ]
         )
 

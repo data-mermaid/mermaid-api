@@ -168,80 +168,99 @@ def obs_belt_fish2_3(db, belt_fish2, fish_species1):
 
 
 @pytest.fixture
-def obs_belt_fish1_1_biomass(db, obs_belt_fish1_1, belt_fish1, fish_species1):
+def obs_belt_fish2_4(db, belt_fish2, fish_species2):
+    return ObsBeltFish.objects.create(
+        beltfish=belt_fish2, fish_attribute=fish_species2, size=10.0, count=5
+    )
+
+
+@pytest.fixture
+def obs_belt_fish1_1_biomass(db, obs_belt_fish1_1, belt_fish1):
     return calc_biomass_density(
         count=obs_belt_fish1_1.count,
         size=obs_belt_fish1_1.size,
         transect_len_surveyed=belt_fish1.transect.len_surveyed,
         transect_width=belt_fish1.transect.width.get_condition(obs_belt_fish1_1.size).val,
-        constant_a=fish_species1.biomass_constant_a,
-        constant_b=fish_species1.biomass_constant_b,
-        constant_c=fish_species1.biomass_constant_c,
+        constant_a=obs_belt_fish1_1.fish_attribute.biomass_constant_a,
+        constant_b=obs_belt_fish1_1.fish_attribute.biomass_constant_b,
+        constant_c=obs_belt_fish1_1.fish_attribute.biomass_constant_c,
     )
 
 
 @pytest.fixture
-def obs_belt_fish1_2_biomass(db, obs_belt_fish1_2, belt_fish1, fish_species2):
+def obs_belt_fish1_2_biomass(db, obs_belt_fish1_2, belt_fish1):
     return calc_biomass_density(
         count=obs_belt_fish1_2.count,
         size=obs_belt_fish1_2.size,
         transect_len_surveyed=belt_fish1.transect.len_surveyed,
         transect_width=belt_fish1.transect.width.get_condition(obs_belt_fish1_2.size).val,
-        constant_a=fish_species2.biomass_constant_a,
-        constant_b=fish_species2.biomass_constant_b,
-        constant_c=fish_species2.biomass_constant_c,
+        constant_a=obs_belt_fish1_2.fish_attribute.biomass_constant_a,
+        constant_b=obs_belt_fish1_2.fish_attribute.biomass_constant_b,
+        constant_c=obs_belt_fish1_2.fish_attribute.biomass_constant_c,
     )
 
 
 @pytest.fixture
-def obs_belt_fish1_3_biomass(db, obs_belt_fish1_3, belt_fish1, fish_species3):
+def obs_belt_fish1_3_biomass(db, obs_belt_fish1_3, belt_fish1):
     return calc_biomass_density(
         count=obs_belt_fish1_3.count,
         size=obs_belt_fish1_3.size,
         transect_len_surveyed=belt_fish1.transect.len_surveyed,
         transect_width=belt_fish1.transect.width.get_condition(obs_belt_fish1_3.size).val,
-        constant_a=fish_species3.biomass_constant_a,
-        constant_b=fish_species3.biomass_constant_b,
-        constant_c=fish_species3.biomass_constant_c,
+        constant_a=obs_belt_fish1_3.fish_attribute.biomass_constant_a,
+        constant_b=obs_belt_fish1_3.fish_attribute.biomass_constant_b,
+        constant_c=obs_belt_fish1_3.fish_attribute.biomass_constant_c,
     )
 
 
 @pytest.fixture
-def obs_belt_fish2_1_biomass(db, obs_belt_fish2_1, belt_fish2, fish_species2):
+def obs_belt_fish2_1_biomass(db, obs_belt_fish2_1, belt_fish2):
     return calc_biomass_density(
         count=obs_belt_fish2_1.count,
         size=obs_belt_fish2_1.size,
         transect_len_surveyed=belt_fish2.transect.len_surveyed,
         transect_width=belt_fish2.transect.width.get_condition(obs_belt_fish2_1.size).val,
-        constant_a=fish_species2.biomass_constant_a,
-        constant_b=fish_species2.biomass_constant_b,
-        constant_c=fish_species2.biomass_constant_c,
+        constant_a=obs_belt_fish2_1.fish_attribute.biomass_constant_a,
+        constant_b=obs_belt_fish2_1.fish_attribute.biomass_constant_b,
+        constant_c=obs_belt_fish2_1.fish_attribute.biomass_constant_c,
     )
 
 
 @pytest.fixture
-def obs_belt_fish2_2_biomass(db, obs_belt_fish2_2, belt_fish2, fish_species3):
+def obs_belt_fish2_2_biomass(db, obs_belt_fish2_2, belt_fish2):
     return calc_biomass_density(
         count=obs_belt_fish2_2.count,
         size=obs_belt_fish2_2.size,
         transect_len_surveyed=belt_fish2.transect.len_surveyed,
         transect_width=belt_fish2.transect.width.get_condition(obs_belt_fish2_2.size).val,
-        constant_a=fish_species3.biomass_constant_a,
-        constant_b=fish_species3.biomass_constant_b,
-        constant_c=fish_species3.biomass_constant_c,
+        constant_a=obs_belt_fish2_2.fish_attribute.biomass_constant_a,
+        constant_b=obs_belt_fish2_2.fish_attribute.biomass_constant_b,
+        constant_c=obs_belt_fish2_2.fish_attribute.biomass_constant_c,
     )
 
 
 @pytest.fixture
-def obs_belt_fish2_3_biomass(db, obs_belt_fish2_3, belt_fish2, fish_species1):
+def obs_belt_fish2_3_biomass(db, obs_belt_fish2_3, belt_fish2):
     return calc_biomass_density(
         count=obs_belt_fish2_3.count,
         size=obs_belt_fish2_3.size,
         transect_len_surveyed=belt_fish2.transect.len_surveyed,
         transect_width=belt_fish2.transect.width.get_condition(obs_belt_fish2_3.size).val,
-        constant_a=fish_species1.biomass_constant_a,
-        constant_b=fish_species1.biomass_constant_b,
-        constant_c=fish_species1.biomass_constant_c,
+        constant_a=obs_belt_fish2_3.fish_attribute.biomass_constant_a,
+        constant_b=obs_belt_fish2_3.fish_attribute.biomass_constant_b,
+        constant_c=obs_belt_fish2_3.fish_attribute.biomass_constant_c,
+    )
+
+@pytest.fixture
+def obs_belt_fish2_4_biomass(db, obs_belt_fish2_4, belt_fish2):
+    return calc_biomass_density(
+        count=obs_belt_fish2_4.count,
+        size=obs_belt_fish2_4.size,
+        transect_len_surveyed=belt_fish2.transect.len_surveyed,
+        transect_width=belt_fish2.transect.width.get_condition(obs_belt_fish2_4.size).val,
+        constant_a=obs_belt_fish2_4.fish_attribute.biomass_constant_a,
+        constant_b=obs_belt_fish2_4.fish_attribute.biomass_constant_b,
+        constant_c=obs_belt_fish2_4.fish_attribute.biomass_constant_c,
     )
     
 
@@ -262,6 +281,7 @@ def belt_fish_project(
     obs_belt_fish2_1,
     obs_belt_fish2_2,
     obs_belt_fish2_3,
+    obs_belt_fish2_4,
     observer_belt_fish1,
     observer_belt_fish2,
     project_profile1,
