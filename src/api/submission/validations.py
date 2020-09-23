@@ -868,7 +868,8 @@ class ObsFishBeltValidation(DataValidation, FishAttributeMixin):
             return self.ok(self.identifier)
 
         project = site.project
-        fish_family_subset = (project.data.get("settings") or dict()).get(
+        project_data = project.data or dict()
+        fish_family_subset = (project_data.get("settings") or dict()).get(
             "fishFamilySubset"
         )
         if isinstance(fish_family_subset, list) is False:
