@@ -322,7 +322,8 @@ ON vw_beltfish_su.sample_event_id = beltfish_se_fish_families.sample_event_id
 GROUP BY 
 {se_fields},
 data_policy_beltfish,
-biomass_kgha_by_trophic_group_avg;
+biomass_kgha_by_trophic_group_avg,
+biomass_kgha_by_fish_family_avg;
     """.format(
         se_fields=", ".join([f"vw_beltfish_su.{f}" for f in BaseViewModel.se_fields]),
         su_aggfields_sql=BaseViewModel.su_aggfields_sql,
