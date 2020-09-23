@@ -884,7 +884,7 @@ class ObsFishBeltValidation(DataValidation, FishAttributeMixin):
             return self.ok(self.identifier)
 
         data = {str(fa.id): fa.name for fa in invalid_fish_attributes}
-        return self.warning(self.identifier, _(self.FISH_FAMILY_SUBSET_TMPL), data=data)
+        return self.warning(self.identifier, _(self.FISH_FAMILY_SUBSET_TMPL), data=data.values())
 
 
 class ObsHabitatComplexitiesValidation(DataValidation, BenthicObservationCountMixin):
