@@ -60,7 +60,6 @@ FROM
     observation_notes = models.TextField(blank=True)
     score = models.PositiveSmallIntegerField()
     score_name = models.CharField(max_length=100)
-    name = models.CharField(max_length=100)
     data_policy_habitatcomplexity = models.CharField(max_length=50)
 
     class Meta:
