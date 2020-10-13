@@ -268,6 +268,7 @@ ON (bleachingqc_su.pseudosu_id = bleachingqc_obs.pseudosu_id);
 
     reverse_sql = "DROP VIEW IF EXISTS public.vw_bleachingqc_su CASCADE;"
 
+    sample_unit_ids = JSONField()
     quadrat_size = models.DecimalField(decimal_places=2, max_digits=6)
     count_genera = models.PositiveSmallIntegerField(default=0)
     count_total = models.PositiveSmallIntegerField(default=0)
