@@ -324,6 +324,9 @@ data_policy_bleachingqc
     depth_avg = models.DecimalField(
         max_digits=4, decimal_places=2, verbose_name=_("depth (m)")
     )
+    current_name = models.CharField(max_length=100)
+    tide_name = models.CharField(max_length=100)
+    visibility_name = models.CharField(max_length=100)
     quadrat_size_avg = models.DecimalField(decimal_places=2, max_digits=6)
     count_total_avg = models.DecimalField(max_digits=5, decimal_places=1)
     count_genera_avg = models.DecimalField(max_digits=4, decimal_places=1)

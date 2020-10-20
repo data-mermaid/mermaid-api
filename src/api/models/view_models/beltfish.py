@@ -288,6 +288,9 @@ biomass_kgha_by_trophic_group_avg;
     depth_avg = models.DecimalField(
         max_digits=4, decimal_places=2, verbose_name=_("depth (m)")
     )
+    current_name = models.CharField(max_length=100)
+    tide_name = models.CharField(max_length=100)
+    visibility_name = models.CharField(max_length=100)
     biomass_kgha_avg = models.DecimalField(
         max_digits=8,
         decimal_places=2,
