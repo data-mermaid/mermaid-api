@@ -219,7 +219,7 @@ ON (beltfish_su.pseudosu_id = beltfish_obs.pseudosu_id)
     )
     transect_width_name = models.CharField(max_length=100, null=True, blank=True)
     reef_slope = models.CharField(max_length=50)
-    size_bin = models.PositiveSmallIntegerField()
+    size_bin = models.CharField(max_length=100)
     biomass_kgha = models.DecimalField(
         max_digits=8,
         decimal_places=2,
