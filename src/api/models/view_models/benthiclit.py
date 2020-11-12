@@ -131,7 +131,7 @@ reef_slope,
 percent_cover_by_benthic_category
 FROM (
     SELECT su.pseudosu_id,
-    json_agg(DISTINCT su.sample_unit_id) AS sample_unit_ids,
+    jsonb_agg(DISTINCT su.sample_unit_id) AS sample_unit_ids,
     {su_fields_qualified},
     {su_aggfields_sql},
     string_agg(DISTINCT reef_slope::text, ', '::text ORDER BY (reef_slope::text)) AS reef_slope

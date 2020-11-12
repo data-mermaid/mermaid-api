@@ -203,7 +203,7 @@ percent_soft_avg,
 percent_algae_avg
 FROM (
     SELECT su.pseudosu_id,
-    json_agg(DISTINCT su.sample_unit_id) AS sample_unit_ids,
+    jsonb_agg(DISTINCT su.sample_unit_id) AS sample_unit_ids,
     {su_fields_qualified},
     {su_aggfields_sql},
     COUNT(DISTINCT benthic_attribute) AS count_genera,

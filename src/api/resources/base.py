@@ -485,6 +485,7 @@ class AggregatedViewFilterSet(OrFilterSetMixin, GeoFilterSet):
 
 class BaseSEFilterSet(AggregatedViewFilterSet):
     id = BaseInFilter(method="id_lookup")
+    sample_event_id = BaseInFilter(method="id_lookup")
     sample_date = DateFromToRangeFilter()
     management_est_year = RangeFilter()
     management_size = RangeFilter()
@@ -499,6 +500,7 @@ class BaseSEFilterSet(AggregatedViewFilterSet):
 
     class Meta:
         fields = [
+            "sample_event_id",
             "sample_date",
             "management_est_year",
             "management_size",

@@ -651,7 +651,7 @@ class FishAttributeGroupingAdmin(FishAttributeAdmin):
     def region_list(self, obj):
         if not hasattr(obj, "regions"):
             return []
-        return ", ".join([r.name for r in obj.regions.order_by("name")])
+        return ", ".join([r.name for r in Region.objects.filter(pk__in=obj.regions).order_by("name")])
 
     def get_readonly_fields(self, request, obj=None):
         if obj:  # editing an existing object
@@ -730,7 +730,6 @@ class FishSpeciesInline(admin.StackedInline):
 @admin.register(FishGenus)
 class FishGenusAdmin(FishAttributeGroupingAdmin):
     list_display = ("name", "fk_link")
-    readonly_fields = ("biomass_constant_a", "biomass_constant_b", "biomass_constant_c")
     inlines = (FishSpeciesInline,)
     search_fields = ["name", "family__name"]
     exportable_fields = ("name", "family")
