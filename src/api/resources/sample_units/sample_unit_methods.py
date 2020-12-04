@@ -1,3 +1,4 @@
+from logging import logProcesses
 import re
 from collections import defaultdict
 
@@ -42,11 +43,10 @@ class SearchNonFieldFilter(django_filters.Filter):
 
     def filter(self, qs, value):
         value = value or ""
-        params = value.replace(",", "--*--").split("--*--")
+
         qry = Q()
         for field in self.SEARCH_FIELDS:
-            for param in params:
-                qry |= Q(**{"{}__iregex".format(field): param})
+            qry |= Q(**{"{}__iregex".format(field): value})        
         return qs.filter(qry).distinct()
 
 
