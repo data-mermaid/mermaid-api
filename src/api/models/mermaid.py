@@ -430,7 +430,7 @@ def default_date():
     return timezone.now().date()
 
 
-def default_time():
+def default_time():  # no longer used; remove once migrations are squashed
     return timezone.now().time()
 
 
@@ -445,7 +445,7 @@ class SampleEvent(BaseModel, JSONMixin):
     notes = models.TextField(blank=True)
 
     # Will be removed in a future version
-    sample_time = models.TimeField(default=default_time, null=True, blank=True)
+    sample_time = models.TimeField(null=True, blank=True)
     depth = models.DecimalField(
         max_digits=3,
         decimal_places=1,
@@ -472,7 +472,7 @@ class SampleUnit(BaseModel):
     sample_event = models.ForeignKey(SampleEvent, on_delete=models.PROTECT)
     notes = models.TextField(blank=True)
     collect_record_id = models.UUIDField(null=True, blank=True)
-    sample_time = models.TimeField(default=default_time, null=True, blank=True)
+    sample_time = models.TimeField(null=True, blank=True)
 
     depth = models.DecimalField(
         max_digits=3,
