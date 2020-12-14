@@ -195,6 +195,5 @@ class SummarySiteView(AggregatedViewMixin, BaseApiViewSet):
         & Q(management_regimes__isnull=False)
     )
     order_by = ("project_name", "site_name")
-    # TODO: cron: `./manage.py refresh_view vw_summary_site` (every 30 mins? Query currently takes ~1min20sec)
     # TODO: POST/create complex geometry filters? Too much of a pain to deal with pagination? Nobody currently uses...
     # TODO: documentation
