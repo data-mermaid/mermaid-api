@@ -273,6 +273,7 @@ class BeltFishMethodSUSerializer(BaseSUViewAPISerializer):
                 "reef_slope",
                 "size_bin",
                 "data_policy_beltfish",
+                "total_abundance",
                 "biomass_kgha",
                 "biomass_kgha_by_trophic_group",
             ]
@@ -312,6 +313,7 @@ class BeltFishMethodSUCSVSerializer(ReportSerializer):
         ReportField("transect_width_name", "Transect width"),
         ReportField("observers", "Observers", to_names),
         ReportField("size_bin", "Size bin"),
+        ReportField("total_abundance", "Total abundance"),
         ReportField("biomass_kgha", "Biomass_kgha"),
         ReportField("biomass_kgha_by_trophic_group", "Biomass kgha by trophic group"),
         ReportField("site_notes", "Site notes"),
