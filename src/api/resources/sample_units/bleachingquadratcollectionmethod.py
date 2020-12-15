@@ -215,6 +215,7 @@ class ObsBleachingQCColoniesBleachedCSVSerializer(ReportSerializer):
         ReportField("visibility_name", "Visibility"),
         ReportField("current_name", "Current"),
         ReportField("depth", "Depth"),
+        ReportField("relative_depth", "Relative depth"),
         ReportField("management_name", "Management name"),
         ReportField("management_name_secondary", "Management secondary name"),
         ReportField("management_est_year", "Management year established"),
@@ -272,6 +273,7 @@ class ObsQuadratBenthicPercentCSVSerializer(ReportSerializer):
         ReportField("visibility_name", "Visibility"),
         ReportField("current_name", "Current"),
         ReportField("depth", "Depth"),
+        ReportField("relative_depth", "Relative depth"),
         ReportField("management_name", "Management name"),
         ReportField("management_name_secondary", "Management secondary name"),
         ReportField("management_est_year", "Management year established"),
@@ -368,8 +370,116 @@ class BleachingQCMethodSUSerializer(BaseSUViewAPISerializer):
         )
 
 
-class BleachingQCMethodSUCSVSerializer(BleachingQCMethodSUSerializer):
-    observers = SerializerMethodField()
+class BleachingQCMethodSUCSVSerializer(ReportSerializer):
+    fields = [
+        ReportField("project_name", "Project name"),
+        ReportField("country_name", "Country"),
+        ReportField("site_name", "Site"),
+        ReportField("location", "Latitude", to_latitude, alias="latitude"),
+        ReportField("location", "Longitude", to_longitude, alias="longitude"),
+        ReportField("reef_exposure", "Exposure"),
+        ReportField("quadrat_size", "Quadrat size"),
+        ReportField("reef_type", "Reef type"),
+        ReportField("reef_zone", "Reef zone"),
+        ReportField("sample_date", "Year", to_year, "sample_date_year"),
+        ReportField("sample_date", "Month", to_month, "sample_date_month"),
+        ReportField("sample_date", "Day", to_day, "sample_date_day"),
+        ReportField("sample_time", "Start time", to_str),
+        ReportField("tide_name", "Tide"),
+        ReportField("visibility_name", "Visibility"),
+        ReportField("current_name", "Current"),
+        ReportField("depth", "Depth"),
+        ReportField("relative_depth", "Relative depth"),
+        ReportField("management_name", "Management name"),
+        ReportField("management_name_secondary", "Management secondary name"),
+        ReportField("management_est_year", "Management year established"),
+        ReportField("management_size", "Management size"),
+        ReportField("management_parties", "Governance", to_governance),
+        ReportField("management_compliance", "Estimated compliance", ),
+        ReportField("management_rules", "Management rules"),
+        ReportField("observers", "Observers", to_names),
+        ReportField("label", "Transect label"),
+        ReportField("count_genera", "Genera count"),
+        ReportField("count_total", "Total count"),
+        ReportField("percent_normal", "Percent normal"),
+        ReportField("percent_pale", "Percent pale"),
+        ReportField("percent_bleached", "Percent bleached"),
+        ReportField("quadrat_count", "Number of quadrats"),
+        ReportField("percent_hard_avg", "Average Hard Coral (% cover)"),
+        ReportField("percent_soft_avg", "Average Soft Coral (% cover)"),
+        ReportField("percent_algae_avg", "Average Macroalgae (% cover)"),
+        ReportField("site_notes", "Site notes"),
+        ReportField("sample_event_notes", "Sampling event notes"),
+        ReportField("management_notes", "Management notes"),
+    ]
+
+    additional_fields = [
+        ReportField("id"),
+        ReportField("site_id"),
+        ReportField("project_id"),
+        ReportField("project_notes"),
+        ReportField("contact_link"),
+        ReportField("tags"),
+        ReportField("country_id"),
+        ReportField("management_id"),
+        ReportField("sample_event_id"),
+        ReportField("sample_unit_ids"),
+        ReportField("data_policy_bleachingqc"),
+    ]
+
+
+class BleachingQCMethodSECSVSerializer(ReportSerializer):
+    fields = [
+        ReportField("project_name", "Project name"),
+        ReportField("country_name", "Country"),
+        ReportField("site_name", "Site"),
+        ReportField("location", "Latitude", to_latitude, alias="latitude"),
+        ReportField("location", "Longitude", to_longitude, alias="longitude"),
+        ReportField("reef_exposure", "Exposure"),
+        ReportField("quadrat_size_avg", "Quadrat size average"),
+        ReportField("reef_type", "Reef type"),
+        ReportField("reef_zone", "Reef zone"),
+        ReportField("sample_date", "Year", to_year, "sample_date_year"),
+        ReportField("sample_date", "Month", to_month, "sample_date_month"),
+        ReportField("sample_date", "Day", to_day, "sample_date_day"),
+        ReportField("tide_name", "Tide"),
+        ReportField("visibility_name", "Visibility"),
+        ReportField("current_name", "Current"),
+        ReportField("depth_avg", "Depth average"),
+        ReportField("management_name", "Management name"),
+        ReportField("management_name_secondary", "Management secondary name"),
+        ReportField("management_est_year", "Management year established"),
+        ReportField("management_size", "Management size"),
+        ReportField("management_parties", "Governance", to_governance),
+        ReportField("management_compliance", "Estimated compliance", ),
+        ReportField("management_rules", "Management rules"),
+        ReportField("sample_unit_count", "Sample unit count"),
+        ReportField("count_genera_avg", "Genera count average"),
+        ReportField("count_total_avg", "Total count average"),
+        ReportField("percent_normal_avg", "Percent normal average"),
+        ReportField("percent_pale_avg", "Percent pale average"),
+        ReportField("percent_bleached_avg", "Percent bleached average"),
+        ReportField("quadrat_count_avg", "Number of quadrats average"),
+        ReportField("percent_hard_avg_avg", "Average Hard Coral (% cover) average"),
+        ReportField("percent_soft_avg_avg", "Average Soft Coral (% cover) average"),
+        ReportField("percent_algae_avg_avg", "Average Macroalgae (% cover) average"),
+        ReportField("site_notes", "Site notes"),
+        ReportField("sample_event_notes", "Sampling event notes"),
+        ReportField("management_notes", "Management notes"),
+    ]
+
+    additional_fields = [
+        ReportField("id"),
+        ReportField("site_id"),
+        ReportField("project_id"),
+        ReportField("project_notes"),
+        ReportField("contact_link"),
+        ReportField("tags"),
+        ReportField("country_id"),
+        ReportField("management_id"),
+        ReportField("sample_event_id"),
+        ReportField("data_policy_bleachingqc"),
+    ]
 
 
 class BleachingQCMethodSUGeoSerializer(BaseViewAPIGeoSerializer):
@@ -554,7 +664,7 @@ class BleachingQCProjectMethodSEView(BaseProjectMethodView):
     ]
     serializer_class = BleachingQCMethodSESerializer
     serializer_class_geojson = BleachingQCMethodSEGeoSerializer
-    serializer_class_csv = BleachingQCMethodSESerializer
+    serializer_class_csv = BleachingQCMethodSECSVSerializer
     filterset_class = BleachingQCMethodSEFilterSet
     queryset = BleachingQCSEView.objects.all()
     order_by = (

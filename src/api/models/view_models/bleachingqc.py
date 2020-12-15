@@ -208,20 +208,20 @@ FROM (
     {su_aggfields_sql},
     COUNT(DISTINCT benthic_attribute) AS count_genera,
     SUM(count_normal + count_pale + count_20 + count_50 + count_80 + count_100 + count_dead) AS count_total,
-    ROUND(
-        (100 * SUM(count_normal) / 
+    ROUND(100 * 
+        (SUM(count_normal)::decimal / 
          CASE WHEN SUM(count_normal + count_pale + count_20 + count_50 + count_80 + count_100 + count_dead) = 0 THEN 1 
          ELSE SUM(count_normal + count_pale + count_20 + count_50 + count_80 + count_100 + count_dead) END
         )
     , 1) AS percent_normal,
-    ROUND(
-        (100 * SUM(count_pale) / 
+    ROUND(100 * 
+        (SUM(count_pale)::decimal / 
          CASE WHEN SUM(count_normal + count_pale + count_20 + count_50 + count_80 + count_100 + count_dead) = 0 THEN 1 
          ELSE SUM(count_normal + count_pale + count_20 + count_50 + count_80 + count_100 + count_dead) END
         )
     , 1) AS percent_pale,
-    ROUND(
-        (100 * SUM(count_20 + count_50 + count_80 + count_100 + count_dead) / 
+    ROUND(100 * 
+        (SUM(count_20 + count_50 + count_80 + count_100 + count_dead)::decimal / 
          CASE WHEN SUM(count_normal + count_pale + count_20 + count_50 + count_80 + count_100 + count_dead) = 0 THEN 1 
          ELSE SUM(count_normal + count_pale + count_20 + count_50 + count_80 + count_100 + count_dead) END
         )
