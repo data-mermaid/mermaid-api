@@ -146,12 +146,14 @@ beltfish_su.pseudosu_id,
 reef_slope, 
 transect_width_name, 
 size_bin, 
+total_abundance,
 biomass_kgha,
 biomass_kgha_by_trophic_group
 
 FROM (
     SELECT pseudosu_id,
     jsonb_agg(DISTINCT su.sample_unit_id) AS sample_unit_ids,
+    SUM(vw_beltfish_obs.count) AS total_abundance,
     {su_fields_qualified},
     {su_aggfields_sql},
     string_agg(DISTINCT reef_slope::text, ', '::text ORDER BY (reef_slope::text)) AS reef_slope,
@@ -213,6 +215,7 @@ ON (beltfish_su.pseudosu_id = beltfish_obs.pseudosu_id)
     reverse_sql = "DROP VIEW IF EXISTS public.vw_beltfish_su CASCADE;"
 
     sample_unit_ids = JSONField()
+    total_abundance = models.PositiveIntegerField()
     transect_number = models.PositiveSmallIntegerField()
     transect_len_surveyed = models.PositiveSmallIntegerField(
         verbose_name=_("transect length surveyed (m)")

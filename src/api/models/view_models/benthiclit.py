@@ -127,11 +127,13 @@ SELECT NULL AS id,
 benthiclit_su.pseudosu_id,
 {su_fields},
 {agg_su_fields},
+benthiclit_su.total_length,
 reef_slope, 
 percent_cover_by_benthic_category
 FROM (
     SELECT su.pseudosu_id,
     jsonb_agg(DISTINCT su.sample_unit_id) AS sample_unit_ids,
+    SUM(vw_benthiclit_obs.length) AS total_length,
     {su_fields_qualified},
     {su_aggfields_sql},
     string_agg(DISTINCT reef_slope::text, ', '::text ORDER BY (reef_slope::text)) AS reef_slope
@@ -197,6 +199,7 @@ ON (benthiclit_su.pseudosu_id = benthiclit_obs.pseudosu_id);
     transect_len_surveyed = models.PositiveSmallIntegerField(
         verbose_name=_("transect length surveyed (m)")
     )
+    total_length = models.PositiveIntegerField()
     reef_slope = models.CharField(max_length=50)
     percent_cover_by_benthic_category = JSONField(null=True, blank=True)
     data_policy_benthiclit = models.CharField(max_length=50)
