@@ -290,10 +290,6 @@ class ObsQuadratBenthicPercentCSVSerializer(ReportSerializer):
         ReportField("percent_hard", "Hard coral (% cover)"),
         ReportField("percent_soft", "Soft coral (% cover)"),
         ReportField("percent_algae", "Macroalgae (% cover)"),
-        ReportField("quadrat_count", "Number of quadrats"),
-        ReportField("percent_hard_avg", "Average Hard Coral (% cover)"),
-        ReportField("percent_soft_avg", "Average Soft Coral (% cover)"),
-        ReportField("percent_algae_avg", "Average Macroalgae (% cover)"),
     ]
 
     additional_fields = [
