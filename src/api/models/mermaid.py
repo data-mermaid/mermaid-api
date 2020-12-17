@@ -1,34 +1,35 @@
 from __future__ import unicode_literals
+
+import datetime
 import itertools
 import json
 import logging
-import datetime
-import pytz
 import operator as pyoperator
 from decimal import Decimal
 
-from django.db.models import Avg, F, Q
 from django.contrib.gis.db import models
 from django.contrib.postgres.aggregates import ArrayAgg
 from django.contrib.postgres.fields import JSONField
+from django.core.validators import MaxValueValidator, MinValueValidator
+from django.db.models import Avg, F, Q
 from django.forms.models import model_to_dict
-from django.core.validators import MinValueValidator, MaxValueValidator
 from django.utils import timezone
 from django.utils.translation import ugettext_lazy as _
+from rest_framework.utils.encoders import JSONEncoder
+
+import pytz
 from taggit.managers import TaggableManager
 from taggit.models import GenericUUIDTaggedItemBase, TagBase
-from rest_framework.utils.encoders import JSONEncoder
-from ..utils import get_sample_unit_number, create_timestamp, expired_timestamp
-
+from ..utils import create_timestamp, expired_timestamp, get_sample_unit_number
 from .base import (
-    BaseModel,
+    APPROVAL_STATUSES,
+    AreaMixin,
     BaseAttributeModel,
     BaseChoiceModel,
+    BaseModel,
     Country,
-    Profile,
     JSONMixin,
-    AreaMixin,
-    APPROVAL_STATUSES
+    Profile,
 )
 
 INCLUDE_OBS_TEXT = _(u'include observation in aggregations/analyses?')
@@ -241,6 +242,27 @@ class Management(BaseModel, JSONMixin, AreaMixin):
             fullname = _(u'%s [%s]') % (fullname, self.est_year)
         return fullname
 
+    @property
+    def rules(self):
+        rules = []
+        
+        if self.no_take:
+            rules.append('No Take')
+        if self.periodic_closure:
+            rules.append('Periodic Closure')
+        if self.open_access:
+            rules.append('Open Access')
+        if self.size_limits:
+            rules.append('Size Limits')
+        if self.gear_restriction:
+            rules.append('Gear Restriction')
+        if self.species_restriction:
+            rules.append('Species Restriction')
+        if self.access_restriction:
+            rules.append('Access Restriction')
+
+        return rules
+
 
 class MPA(BaseModel, AreaMixin):
     name = models.CharField(max_length=255)
@@ -408,7 +430,7 @@ def default_date():
     return timezone.now().date()
 
 
-def default_time():
+def default_time():  # no longer used; remove once migrations are squashed
     return timezone.now().time()
 
 
@@ -417,19 +439,26 @@ class SampleEvent(BaseModel, JSONMixin):
     project_lookup = "site__project"
 
     # Required
-    site = models.ForeignKey(Site, on_delete=models.PROTECT, related_name='sample_events')
-    management = models.ForeignKey(Management, on_delete=models.PROTECT)
-    sample_date = models.DateField(default=default_date)
-    sample_time = models.TimeField(default=default_time)
-    depth = models.DecimalField(max_digits=3, decimal_places=1, verbose_name=_(u'depth (m)'),
-                                validators=[MinValueValidator(0), MaxValueValidator(40)])
+    site = models.ForeignKey(Site, on_delete=models.PROTECT, related_name='sample_events', null=True, blank=True)
+    management = models.ForeignKey(Management, on_delete=models.PROTECT, null=True, blank=True)
+    sample_date = models.DateField(default=default_date, null=True, blank=True)
+    notes = models.TextField(blank=True)
 
-    # Optional
+    # Will be removed in a future version
+    sample_time = models.TimeField(null=True, blank=True)
+    depth = models.DecimalField(
+        max_digits=3,
+        decimal_places=1,
+        verbose_name=_(u'depth (m)'),
+        validators=[MinValueValidator(0), MaxValueValidator(40)],
+        null=True,
+        blank=True
+    )
     visibility = models.ForeignKey(Visibility, on_delete=models.SET_NULL, null=True, blank=True)
     current = models.ForeignKey(Current, on_delete=models.SET_NULL, null=True, blank=True)
     relative_depth = models.ForeignKey(RelativeDepth, on_delete=models.SET_NULL, null=True, blank=True)
     tide = models.ForeignKey(Tide, on_delete=models.SET_NULL, null=True, blank=True)
-    notes = models.TextField(blank=True)
+    validations = JSONField(encoder=JSONEncoder, null=True, blank=True)
 
     class Meta:
         db_table = 'sample_event'
@@ -443,6 +472,20 @@ class SampleUnit(BaseModel):
     sample_event = models.ForeignKey(SampleEvent, on_delete=models.PROTECT)
     notes = models.TextField(blank=True)
     collect_record_id = models.UUIDField(null=True, blank=True)
+    sample_time = models.TimeField(null=True, blank=True)
+
+    depth = models.DecimalField(
+        max_digits=3,
+        decimal_places=1,
+        verbose_name=_(u'depth (m)'),
+        validators=[MinValueValidator(0), MaxValueValidator(40)],
+        null=True,
+        blank=True
+    )
+    visibility = models.ForeignKey(Visibility, on_delete=models.SET_NULL, null=True, blank=True)
+    current = models.ForeignKey(Current, on_delete=models.SET_NULL, null=True, blank=True)
+    relative_depth = models.ForeignKey(RelativeDepth, on_delete=models.SET_NULL, null=True, blank=True)
+    tide = models.ForeignKey(Tide, on_delete=models.SET_NULL, null=True, blank=True)
 
     class Meta:
         db_table = 'sample_unit'
@@ -474,6 +517,27 @@ class Transect(SampleUnit):
             self.sample_event.__str__(),
             su_number
         )
+
+    @property
+    def cache_sql(self):
+        return f"""
+            SELECT 
+                uuid_generate_v4() AS pseudosu_id,
+                array_agg(DISTINCT su.id) AS sample_unit_ids,
+                vse.sample_event_id
+            FROM
+                {self._meta.db_table} as su
+            INNER JOIN
+                vw_sample_events as vse
+            ON
+                su.sample_event_id = vse.sample_event_id
+            WHERE vse.sample_event_id = '{self.sample_event.id}'
+            GROUP BY
+                "depth",
+                "number",
+                "len_surveyed",
+                vse."sample_event_id"
+        """
 
 
 class BenthicTransect(Transect):
@@ -613,6 +677,8 @@ class BeltTransectWidthCondition(BaseChoiceModel):
 
 class FishBeltTransect(Transect):
     project_lookup = 'sample_event__site__project'
+    suview = "BeltFishSUView"
+
     number = models.PositiveSmallIntegerField(default=1)
     label = models.CharField(max_length=50, blank=True)
     width = models.ForeignKey(BeltTransectWidth, verbose_name=_(u'width (m)'), on_delete=models.PROTECT)
@@ -644,6 +710,26 @@ class BaseQuadrat(SampleUnit):
             self.sample_event.__str__(),
             su_number
         )
+
+    @property
+    def cache_sql(self):
+        return f"""
+            SELECT 
+                uuid_generate_v4() AS pseudosu_id,
+                array_agg(DISTINCT su.id) AS sample_unit_ids,
+                vse.sample_event_id
+            FROM
+                {self._meta.db_table} as su
+            INNER JOIN
+                vw_sample_events as vse
+            ON
+                su.sample_event_id = vse.sample_event_id
+            WHERE vse.sample_event_id = '{self.sample_event.id}'
+            GROUP BY
+                "depth",
+                "quadrat_size",
+                vse."sample_event_id"
+        """
 
 
 class QuadratCollection(BaseQuadrat):
@@ -1121,6 +1207,7 @@ class FishFamily(FishAttribute):
     # Caching at the class level
     species_agg = None
     species_agg_timestamp = None
+    regions_agg = None
 
     name = models.CharField(max_length=100)
 
@@ -1134,23 +1221,29 @@ class FishFamily(FishAttribute):
                     biomass_constant_a=Avg('biomass_constant_a'),
                     biomass_constant_b=Avg('biomass_constant_b'),
                     biomass_constant_c=Avg('biomass_constant_c'),
+                )
+
+            regions_agg_qs = FishSpecies.objects \
+                .select_related("genus__family") \
+                .order_by().values(family=F("genus__family")).annotate(
                     regions=ArrayAgg("regions", distinct=True),
                 )
 
             FishFamily.species_agg = {str(bc["family"]): bc for bc in species_agg_qs}
+            FishFamily.regions_agg = {str(fr["family"]): fr["regions"] for fr in regions_agg_qs}
             FishFamily.species_agg_timestamp = create_timestamp(ttl=30)
 
-        species = FishFamily.species_agg.get(str(self.pk))
+        family = FishFamily.species_agg.get(str(self.pk))
         self._biomass_a = None
         self._biomass_b = None
         self._biomass_c = None
-        if species.get("biomass_constant_a") is not None:
-            self._biomass_a = round(species.get("biomass_constant_a"), 6)
-        if species.get("biomass_constant_b") is not None:
-            self._biomass_b = round(species.get("biomass_constant_b"), 6)
-        if species.get("biomass_constant_c") is not None:
-            self._biomass_c = round(species.get("biomass_constant_c"), 6)
-        self._regions = species.get("regions")
+        if family.get("biomass_constant_a") is not None:
+            self._biomass_a = round(family.get("biomass_constant_a"), 6)
+        if family.get("biomass_constant_b") is not None:
+            self._biomass_b = round(family.get("biomass_constant_b"), 6)
+        if family.get("biomass_constant_c") is not None:
+            self._biomass_c = round(family.get("biomass_constant_c"), 6)
+        self._regions = FishFamily.regions_agg.get(str(self.pk))
 
         return FishFamily.species_agg
 
@@ -1200,6 +1293,7 @@ class FishGenus(FishAttribute):
     # Caching at the class level
     species_agg = None
     species_agg_timestamp = None
+    regions_agg = None
 
     name = models.CharField(max_length=100)
     family = models.ForeignKey(FishFamily, on_delete=models.CASCADE)
@@ -1210,23 +1304,27 @@ class FishGenus(FishAttribute):
                 biomass_constant_a=Avg('biomass_constant_a'),
                 biomass_constant_b=Avg('biomass_constant_b'),
                 biomass_constant_c=Avg('biomass_constant_c'),
+            )
+
+            regions_agg_qs = FishSpecies.objects.order_by().values("genus").annotate(
                 regions=ArrayAgg("regions", distinct=True),
             )
 
             FishGenus.species_agg = {str(bc["genus"]): bc for bc in species_agg_qs}
+            FishGenus.regions_agg = {str(gr["genus"]): gr["regions"] for gr in regions_agg_qs}
             FishGenus.species_agg_timestamp = create_timestamp(ttl=30)
 
-        species = FishGenus.species_agg.get(str(self.pk))
+        genus = FishGenus.species_agg.get(str(self.pk))
         self._biomass_a = None
         self._biomass_b = None
         self._biomass_c = None
-        if species.get("biomass_constant_a") is not None:
-            self._biomass_a = round(species.get("biomass_constant_a"), 6)
-        if species.get("biomass_constant_b") is not None:
-            self._biomass_b = round(species.get("biomass_constant_b"), 6)
-        if species.get("biomass_constant_c") is not None:
-            self._biomass_c = round(species.get("biomass_constant_c"), 6)
-        self._regions = species.get("regions")
+        if genus.get("biomass_constant_a") is not None:
+            self._biomass_a = round(genus.get("biomass_constant_a"), 6)
+        if genus.get("biomass_constant_b") is not None:
+            self._biomass_b = round(genus.get("biomass_constant_b"), 6)
+        if genus.get("biomass_constant_c") is not None:
+            self._biomass_c = round(genus.get("biomass_constant_c"), 6)
+        self._regions = FishGenus.regions_agg.get(str(self.pk))
 
         return FishGenus.species_agg
 
@@ -1420,6 +1518,13 @@ class ObsBeltFish(BaseModel, JSONMixin):
         if self._hide_fish_in_repr:
             return ""
         return _(u'%s %s x %scm') % (self.fish_attribute.__str__(), self.count, self.size)
+
+    @property
+    def observers(self):
+        if self.beltfish_id is None:
+            return Observer.objects.none()
+
+        return self.beltfish.observers.all()
 
 
 class CollectRecord(BaseModel):

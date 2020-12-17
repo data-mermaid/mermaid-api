@@ -74,7 +74,7 @@ class ManagementFilterSet(BaseAPIFilterSet):
                                         label='Associated with project')
     predecessor = NullableUUIDFilter(field_name='predecessor')
     compliance = NullableUUIDFilter(field_name='compliance')
-    est_year = django_filters.NumericRangeFilter(field_name='est_year')
+    est_year = django_filters.RangeFilter(field_name='est_year')
 
     unique = django_filters.CharFilter(method='filter_unique')
     exclude_projects = django_filters.CharFilter(method='filter_not_projects')
