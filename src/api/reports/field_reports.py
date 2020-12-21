@@ -8,7 +8,7 @@ from api.models import Project
 from api.reports import RawCSVReport
 
 
-def _get_related_records(queryset, report_model_cls, relationship):
+def _get_related_records(qs, report_model_cls, relationship):
     assert report_model_cls is not None
     assert relationship is not None
 

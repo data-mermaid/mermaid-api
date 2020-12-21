@@ -149,13 +149,15 @@ beltfish_su.pseudosu_id,
 reef_slope, 
 transect_width_name, 
 size_bin, 
+total_abundance,
 biomass_kgha,
 biomass_kgha_by_trophic_group,
 biomass_kgha_by_fish_family
 
 FROM (
     SELECT pseudosu_id,
-    json_agg(DISTINCT su.sample_unit_id) AS sample_unit_ids,
+    jsonb_agg(DISTINCT su.sample_unit_id) AS sample_unit_ids,
+    SUM(vw_beltfish_obs.count) AS total_abundance,
     {su_fields_qualified},
     {su_aggfields_sql},
     string_agg(DISTINCT reef_slope::text, ', '::text ORDER BY (reef_slope::text)) AS reef_slope,
@@ -238,13 +240,14 @@ ON (beltfish_su.pseudosu_id = beltfish_obs.pseudosu_id)
     reverse_sql = "DROP VIEW IF EXISTS public.vw_beltfish_su CASCADE;"
 
     sample_unit_ids = JSONField()
+    total_abundance = models.PositiveIntegerField()
     transect_number = models.PositiveSmallIntegerField()
     transect_len_surveyed = models.PositiveSmallIntegerField(
         verbose_name=_("transect length surveyed (m)")
     )
     transect_width_name = models.CharField(max_length=100, null=True, blank=True)
     reef_slope = models.CharField(max_length=50)
-    size_bin = models.PositiveSmallIntegerField()
+    size_bin = models.CharField(max_length=100)
     biomass_kgha = models.DecimalField(
         max_digits=8,
         decimal_places=2,
@@ -335,6 +338,9 @@ biomass_kgha_by_fish_family_avg;
     depth_avg = models.DecimalField(
         max_digits=4, decimal_places=2, verbose_name=_("depth (m)")
     )
+    current_name = models.CharField(max_length=100)
+    tide_name = models.CharField(max_length=100)
+    visibility_name = models.CharField(max_length=100)
     biomass_kgha_avg = models.DecimalField(
         max_digits=8,
         decimal_places=2,
