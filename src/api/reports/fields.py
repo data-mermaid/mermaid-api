@@ -1,10 +1,12 @@
 class ReportField(object):
-    def __init__(self, column_path, display=None, formatter=None, alias=None):
+    def __init__(self, column_path, display=None, formatter=None, alias=None, **kwargs):
         self._display = None
         self.column_path = column_path
         self.display = display
         self.formatter = formatter
         self.alias = alias
+        for key in kwargs:
+            setattr(self, key, kwargs[key])
 
     @property
     def display(self):
@@ -23,12 +25,3 @@ class ReportField(object):
             return value
 
         return self.formatter(value, self, row, serializer_instance)
-
-
-class ReportMethodField(object):
-    def __init__(self, display, method, alias=None):
-        self.display = display
-        self.method = method
-
-    def to_representation(self, row, serializer_instance):
-        return self.method(self, row, serializer_instance)

@@ -13,6 +13,7 @@ from .habitatcomplexity import (
     HabitatComplexitySEView,
     HabitatComplexitySUView,
 )
+from .summary_site import SummarySiteViewModel
 
 
 def forward_sql():
@@ -35,6 +36,7 @@ def forward_sql():
         HabitatComplexityObsView.sql,
         HabitatComplexitySUView.sql,
         HabitatComplexitySEView.sql,
+        SummarySiteViewModel.sql,
     ]
     output = []
     for s in sql:
@@ -49,6 +51,7 @@ def forward_sql():
 
 def reverse_sql():
     sql = [
+        SummarySiteViewModel.reverse_sql,
         BeltFishSEView.reverse_sql,
         BeltFishSUView.reverse_sql,
         BeltFishObsView.reverse_sql,

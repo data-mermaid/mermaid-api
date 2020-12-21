@@ -19,16 +19,17 @@ from ...reports.formatters import (
     to_latitude,
     to_longitude,
     to_month,
-    to_observers,
+    to_names,
     to_str,
     to_year,
 )
 from ...reports.report_serializer import ReportSerializer
 from ..base import (
     BaseProjectApiViewSet,
-    BaseTransectFilterSet,
+    BaseSEFilterSet,
+    BaseSUObsFilterSet,
     BaseViewAPIGeoSerializer,
-    BaseViewAPISerializer,
+    BaseSUViewAPISerializer,
 )
 from ..benthic_transect import BenthicTransectSerializer
 from ..habitat_complexity import HabitatComplexitySerializer
@@ -70,6 +71,7 @@ class ObsHabitatComplexityCSVSerializer(ReportSerializer):
         ReportField("visibility_name", "Visibility"),
         ReportField("current_name", "Current"),
         ReportField("depth", "Depth"),
+        ReportField("relative_depth", "Relative depth"),
         ReportField("management_name", "Management name"),
         ReportField("management_name_secondary", "Management secondary name"),
         ReportField("management_est_year", "Management year established"),
@@ -80,7 +82,7 @@ class ObsHabitatComplexityCSVSerializer(ReportSerializer):
         ReportField("transect_number", "Transect number"),
         ReportField("label", "Transect label"),
         ReportField("transect_len_surveyed", "Transect length surveyed"),
-        ReportField("observers", "Observers", to_observers),
+        ReportField("observers", "Observers", to_names),
         ReportField("interval", "Interval (m)"),
         ReportField("score", "Habitat complexity value"),
         ReportField("score_name", "Habitat complexity name"),
@@ -208,12 +210,12 @@ class HabitatComplexityMethodView(BaseProjectApiViewSet):
             raise
 
 
-class HabitatComplexityMethodObsSerializer(BaseViewAPISerializer):
-    class Meta(BaseViewAPISerializer.Meta):
+class HabitatComplexityMethodObsSerializer(BaseSUViewAPISerializer):
+    class Meta(BaseSUViewAPISerializer.Meta):
         model = HabitatComplexityObsView
-        exclude = BaseViewAPISerializer.Meta.exclude.copy()
+        exclude = BaseSUViewAPISerializer.Meta.exclude.copy()
         exclude.append("location")
-        header_order = ["id"] + BaseViewAPISerializer.Meta.header_order.copy()
+        header_order = ["id"] + BaseSUViewAPISerializer.Meta.header_order.copy()
         header_order.extend(
             [
                 "sample_unit_id",
@@ -237,12 +239,12 @@ class HabitatComplexityMethodObsGeoSerializer(BaseViewAPIGeoSerializer):
         model = HabitatComplexityObsView
 
 
-class HabitatComplexityMethodSUSerializer(BaseViewAPISerializer):
-    class Meta(BaseViewAPISerializer.Meta):
+class HabitatComplexityMethodSUSerializer(BaseSUViewAPISerializer):
+    class Meta(BaseSUViewAPISerializer.Meta):
         model = HabitatComplexitySUView
-        exclude = BaseViewAPISerializer.Meta.exclude.copy()
+        exclude = BaseSUViewAPISerializer.Meta.exclude.copy()
         exclude.append("location")
-        header_order = BaseViewAPISerializer.Meta.header_order.copy()
+        header_order = BaseSUViewAPISerializer.Meta.header_order.copy()
         header_order.extend(
             [
                 "label",
@@ -256,8 +258,101 @@ class HabitatComplexityMethodSUSerializer(BaseViewAPISerializer):
         )
 
 
-class HabitatComplexityMethodSUCSVSerializer(HabitatComplexityMethodSUSerializer):
-    observers = SerializerMethodField()
+class HabitatComplexityMethodSUCSVSerializer(ReportSerializer):
+    fields = [
+        ReportField("project_name", "Project name"),
+        ReportField("country_name", "Country"),
+        ReportField("site_name", "Site"),
+        ReportField("location", "Latitude", to_latitude, alias="latitude"),
+        ReportField("location", "Longitude", to_longitude, alias="longitude"),
+        ReportField("reef_exposure", "Exposure"),
+        ReportField("reef_slope", "Reef slope"),
+        ReportField("reef_type", "Reef type"),
+        ReportField("reef_zone", "Reef zone"),
+        ReportField("sample_date", "Year", to_year, "sample_date_year"),
+        ReportField("sample_date", "Month", to_month, "sample_date_month"),
+        ReportField("sample_date", "Day", to_day, "sample_date_day"),
+        ReportField("sample_time", "Start time", to_str),
+        ReportField("tide_name", "Tide"),
+        ReportField("visibility_name", "Visibility"),
+        ReportField("current_name", "Current"),
+        ReportField("depth", "Depth"),
+        ReportField("relative_depth", "Relative depth"),
+        ReportField("management_name", "Management name"),
+        ReportField("management_name_secondary", "Management secondary name"),
+        ReportField("management_est_year", "Management year established"),
+        ReportField("management_size", "Management size"),
+        ReportField("management_parties", "Governance", to_governance),
+        ReportField("management_compliance", "Estimated compliance", ),
+        ReportField("management_rules", "Management rules"),
+        ReportField("transect_number", "Transect number"),
+        ReportField("label", "Transect label"),
+        ReportField("transect_len_surveyed", "Transect length surveyed"),
+        ReportField("observers", "Observers", to_names),
+        ReportField("score_avg", "Score average"),
+        ReportField("site_notes", "Site notes"),
+        ReportField("sample_event_notes", "Sampling event notes"),
+        ReportField("management_notes", "Management notes"),
+    ]
+
+    additional_fields = [
+        ReportField("id"),
+        ReportField("site_id"),
+        ReportField("project_id"),
+        ReportField("project_notes"),
+        ReportField("contact_link"),
+        ReportField("tags"),
+        ReportField("country_id"),
+        ReportField("management_id"),
+        ReportField("sample_event_id"),
+        ReportField("sample_unit_ids"),
+        ReportField("data_policy_habitatcomplexity"),
+    ]
+
+
+class HabitatComplexityMethodSECSVSerializer(ReportSerializer):
+    fields = [
+        ReportField("project_name", "Project name"),
+        ReportField("country_name", "Country"),
+        ReportField("site_name", "Site"),
+        ReportField("location", "Latitude", to_latitude, alias="latitude"),
+        ReportField("location", "Longitude", to_longitude, alias="longitude"),
+        ReportField("reef_exposure", "Exposure"),
+        ReportField("reef_type", "Reef type"),
+        ReportField("reef_zone", "Reef zone"),
+        ReportField("sample_date", "Year", to_year, "sample_date_year"),
+        ReportField("sample_date", "Month", to_month, "sample_date_month"),
+        ReportField("sample_date", "Day", to_day, "sample_date_day"),
+        ReportField("tide_name", "Tide"),
+        ReportField("visibility_name", "Visibility"),
+        ReportField("current_name", "Current"),
+        ReportField("depth_avg", "Depth average"),
+        ReportField("management_name", "Management name"),
+        ReportField("management_name_secondary", "Management secondary name"),
+        ReportField("management_est_year", "Management year established"),
+        ReportField("management_size", "Management size"),
+        ReportField("management_parties", "Governance", to_governance),
+        ReportField("management_compliance", "Estimated compliance", ),
+        ReportField("management_rules", "Management rules"),
+        ReportField("sample_unit_count", "Sample unit count"),
+        ReportField("score_avg_avg", "Score average"),
+        ReportField("site_notes", "Site notes"),
+        ReportField("sample_event_notes", "Sampling event notes"),
+        ReportField("management_notes", "Management notes"),
+    ]
+
+    additional_fields = [
+        ReportField("id"),
+        ReportField("site_id"),
+        ReportField("project_id"),
+        ReportField("project_notes"),
+        ReportField("contact_link"),
+        ReportField("tags"),
+        ReportField("country_id"),
+        ReportField("management_id"),
+        ReportField("sample_event_id"),
+        ReportField("data_policy_habitatcomplexity"),
+    ]
 
 
 class HabitatComplexityMethodSUGeoSerializer(BaseViewAPIGeoSerializer):
@@ -265,12 +360,12 @@ class HabitatComplexityMethodSUGeoSerializer(BaseViewAPIGeoSerializer):
         model = HabitatComplexitySUView
 
 
-class HabitatComplexityMethodSESerializer(BaseViewAPISerializer):
-    class Meta(BaseViewAPISerializer.Meta):
+class HabitatComplexityMethodSESerializer(BaseSUViewAPISerializer):
+    class Meta(BaseSUViewAPISerializer.Meta):
         model = HabitatComplexitySEView
-        exclude = BaseViewAPISerializer.Meta.exclude.copy()
+        exclude = BaseSUViewAPISerializer.Meta.exclude.copy()
         exclude.append("location")
-        header_order = BaseViewAPISerializer.Meta.header_order.copy()
+        header_order = BaseSUViewAPISerializer.Meta.header_order.copy()
         header_order.extend(
             [
                 "data_policy_habitatcomplexity",
@@ -286,10 +381,7 @@ class HabitatComplexityMethodSEGeoSerializer(BaseViewAPIGeoSerializer):
         model = HabitatComplexitySEView
 
 
-class HabitatComplexityMethodObsFilterSet(BaseTransectFilterSet):
-    depth = RangeFilter()
-    sample_unit_id = BaseInFilter(method="id_lookup")
-    observers = BaseInFilter(method="json_name_lookup")
+class HabitatComplexityMethodObsFilterSet(BaseSUObsFilterSet):
     transect_len_surveyed = RangeFilter()
     reef_slope = BaseInFilter(method="char_lookup")
     interval = RangeFilter()
@@ -309,18 +401,14 @@ class HabitatComplexityMethodObsFilterSet(BaseTransectFilterSet):
         ]
 
 
-class HabitatComplexityMethodSUFilterSet(BaseTransectFilterSet):
+class HabitatComplexityMethodSUFilterSet(BaseSUObsFilterSet):
     transect_len_surveyed = RangeFilter()
-    depth = RangeFilter()
-    observers = BaseInFilter(method="json_name_lookup")
     reef_slope = BaseInFilter(method="char_lookup")
     interval_size = RangeFilter()
 
     class Meta:
         model = HabitatComplexitySUView
         fields = [
-            "depth",
-            "observers",
             "transect_len_surveyed",
             "reef_slope",
             "transect_number",
@@ -329,7 +417,7 @@ class HabitatComplexityMethodSUFilterSet(BaseTransectFilterSet):
         ]
 
 
-class HabitatComplexityMethodSEFilterSet(BaseTransectFilterSet):
+class HabitatComplexityMethodSEFilterSet(BaseSEFilterSet):
     sample_unit_count = RangeFilter()
     depth_avg = RangeFilter()
     score_avg_avg = RangeFilter()
@@ -351,9 +439,7 @@ class HabitatComplexityProjectMethodObsView(BaseProjectMethodView):
     serializer_class_geojson = HabitatComplexityMethodObsGeoSerializer
     serializer_class_csv = ObsHabitatComplexityCSVSerializer
     filterset_class = HabitatComplexityMethodObsFilterSet
-    queryset = HabitatComplexityObsView.objects.exclude(
-        # project_status=Project.TEST
-    )
+    queryset = HabitatComplexityObsView.objects.all()
     order_by = ("site_name", "sample_date", "transect_number", "label", "interval")
 
 
@@ -364,9 +450,8 @@ class HabitatComplexityProjectMethodSUView(BaseProjectMethodView):
     serializer_class_geojson = HabitatComplexityMethodSUGeoSerializer
     serializer_class_csv = HabitatComplexityMethodSUCSVSerializer
     filterset_class = HabitatComplexityMethodSUFilterSet
-    queryset = HabitatComplexitySUView.objects.exclude(
-        project_status=Project.TEST
-    ).order_by("site_name", "sample_date", "transect_number")
+    queryset = HabitatComplexitySUView.objects.all()
+    order_by = ("site_name", "sample_date", "transect_number")
 
 
 class HabitatComplexityProjectMethodSEView(BaseProjectMethodView):
@@ -377,8 +462,7 @@ class HabitatComplexityProjectMethodSEView(BaseProjectMethodView):
     ]
     serializer_class = HabitatComplexityMethodSESerializer
     serializer_class_geojson = HabitatComplexityMethodSEGeoSerializer
-    serializer_class_csv = HabitatComplexityMethodSESerializer
+    serializer_class_csv = HabitatComplexityMethodSECSVSerializer
     filterset_class = HabitatComplexityMethodSEFilterSet
-    queryset = HabitatComplexitySEView.objects.exclude(
-        project_status=Project.TEST
-    ).order_by("site_name", "sample_date")
+    queryset = HabitatComplexitySEView.objects.all()
+    order_by = ("site_name", "sample_date")

@@ -11,68 +11,8 @@ from ...auth_backends import AnonymousJWTAuthentication
 from ...permissions import *
 from ...report_serializer import *
 from ...reports import csv_report
-from ...resources.base import BaseProjectApiViewSet
+from ...resources.base import BaseApiViewSet, BaseProjectApiViewSet
 from ...utils import truthy
-
-# def to_governance(field, row, serializer_instance):
-#     transect_method = serializer_instance.transect_method or None
-#     sample_event_path = serializer_instance.sample_event_path or None
-#     if transect_method is None or sample_event_path is None:
-#         return ""
-#     parties = ""
-#     project_pk = row.get("{}__site__project_id".format(sample_event_path))
-#     management_id = row.get("{}__management_id".format(sample_event_path))
-#     lookup = serializer_instance.serializer_cache.get(
-#         "{}_lookups-management_parties-{}".format(transect_method, project_pk)
-#     )
-#     if lookup:
-#         parties = lookup.get(str(management_id))
-#     else:
-#         management = Management.objects.get_or_none(id=management_id)
-#         if management is not None:
-#             mps = management.parties.all().iterator()
-#             parties = ",".join([mp.name for mp in mps])
-#     return parties
-
-
-# def to_management_rules(field, row, serializer_instance):
-#     transect_method = serializer_instance.transect_method or None
-#     sample_event_path = serializer_instance.sample_event_path or None
-#     if transect_method is None or sample_event_path is None:
-#         return ""
-#     project_pk = row.get("{}__site__project_id".format(sample_event_path))
-#     management_id = row.get("{}__management_id".format(sample_event_path))
-#     lookup = serializer_instance.serializer_cache.get(
-#         "{}_lookups-management_rules-{}".format(transect_method, project_pk)
-#     )
-#     if lookup:
-#         return lookup.get(str(management_id))
-
-#     return get_rules(Management.objects.get_or_none(id=management_id))
-
-
-# def to_observers(field, row, serializer_instance):
-#     transect_method = serializer_instance.transect_method or None
-#     sample_event_path = serializer_instance.sample_event_path or None
-#     tid = row.get("{}_id".format(transect_method))
-#     if tid is None or transect_method is None or sample_event_path is None:
-#         return ""
-
-#     project_pk = row.get("{}__site__project_id".format(sample_event_path))
-#     lookup = serializer_instance.serializer_cache.get(
-#         "{}_lookups-observers-{}".format(transect_method, project_pk)
-#     )
-#     if lookup:
-#         observers = lookup.get(str(tid))
-#     else:
-#         transect = serializer_instance.Meta.model.objects.get_or_none(id=tid)
-#         if transect is None:
-#             return ""
-
-#         observers = sorted(
-#             [o.profile_name for o in transect.observers.all().iterator()]
-#         )
-#     return ",".join(observers)
 
 
 def save_one_to_many(foreign_key, database_records, data, serializer_class, context):
@@ -139,13 +79,12 @@ class BaseGeoJsonPagination(GeoJsonPagination):
     max_page_size = 1000
 
 
-class BaseProjectMethodView(BaseProjectApiViewSet):
+class AggregatedViewMixin(BaseApiViewSet):
     drf_label = ""
     project_policy = None
     serializer_class_geojson = None
     serializer_class_csv = None
     method_authentication_classes = {"GET": [AnonymousJWTAuthentication]}
-    permission_classes = [Or(ProjectDataReadOnlyPermission, ProjectPublicPermission)]
     http_method_names = ["get"]
 
     def filter_queryset(self, queryset):
@@ -168,10 +107,28 @@ class BaseProjectMethodView(BaseProjectApiViewSet):
 
     @action(detail=False, methods=["get"])
     def csv(self, request, *args, **kwargs):
-        is_report_field = truthy(request.query_params.get("field_report"))
-        show_display_fields = is_report_field
-        include_additional_fields = not is_report_field
+        is_field_report = truthy(request.query_params.get("field_report"))
+        show_display_fields = is_field_report
+        include_additional_fields = not is_field_report
+        file_name_prefix = f"{self.drf_label}"
+        if "file_name_prefix" in kwargs:
+            file_name_prefix = kwargs["file_name_prefix"]
 
+        queryset = self.filter_queryset(self.get_queryset())
+        return csv_report.get_csv_response(
+            queryset,
+            self.serializer_class_csv,
+            file_name_prefix=file_name_prefix,
+            include_additional_fields=include_additional_fields,
+            show_display_fields=show_display_fields,
+        )
+
+
+class BaseProjectMethodView(AggregatedViewMixin, BaseProjectApiViewSet):
+    permission_classes = [Or(ProjectDataReadOnlyPermission, ProjectPublicPermission)]
+
+    @action(detail=False, methods=["get"])
+    def csv(self, request, *args, **kwargs):
         try:
             project = Project.objects.get(pk=kwargs["project_pk"])
         except ObjectDoesNotExist:
@@ -181,11 +138,5 @@ class BaseProjectMethodView(BaseProjectApiViewSet):
         file_name_prefix = f"{project_name}-{self.drf_label}"
 
         self.limit_to_project(request, *args, **kwargs)
-        queryset = self.filter_queryset(self.get_queryset())
-        return csv_report.get_csv_response(
-            queryset,
-            self.serializer_class_csv,
-            file_name_prefix=file_name_prefix,
-            include_additional_fields=include_additional_fields,
-            show_display_fields=show_display_fields,
-        )
+        kwargs["file_name_prefix"] = file_name_prefix
+        return super().csv(request, *args, **kwargs)
