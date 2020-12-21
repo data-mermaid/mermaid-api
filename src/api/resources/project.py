@@ -2,6 +2,7 @@ import logging
 
 import django_filters
 from django.contrib.auth.models import AnonymousUser
+from django.contrib.postgres.fields import JSONField
 from django.db import transaction
 from rest_framework import exceptions, permissions, serializers
 from rest_framework.decorators import action
@@ -113,6 +114,14 @@ class ProjectFilterSet(BaseAPIFilterSet):
     class Meta:
         model = Project
         exclude = []
+        filter_overrides = {
+             JSONField: {
+                 "filter_class": django_filters.CharFilter,
+                 "extra": lambda f: {
+                     "lookup_expr": "icontains",
+                 }
+             }
+        }
 
     def filter_tags(self, queryset, name, value):
         values = [v.strip() for v in value.split(",")]

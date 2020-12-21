@@ -128,6 +128,7 @@ class FishBeltProtocolValidationTest(TestCase, TestDataMixin):
             self.collect_record_ok, request=self.request
         )
         results = validation.validate()
+        print(results)
         self.assertEqual(OK, results)
 
     def test_validate_warn(self):

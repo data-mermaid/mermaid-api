@@ -276,6 +276,7 @@ class BeltFishMethodSUSerializer(BaseSUViewAPISerializer):
                 "total_abundance",
                 "biomass_kgha",
                 "biomass_kgha_by_trophic_group",
+                "biomass_kgha_by_fish_family",
             ]
         )
 
@@ -400,6 +401,7 @@ class BeltFishMethodSESerializer(BaseSUViewAPISerializer):
                 "depth_avg",
                 "biomass_kgha_avg",
                 "biomass_kgha_by_trophic_group_avg",
+                "biomass_kgha_by_fish_family_avg",
             ]
         )
 

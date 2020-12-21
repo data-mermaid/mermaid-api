@@ -1,3 +1,4 @@
+import pytest
 from django.urls import reverse
 
 
@@ -23,6 +24,7 @@ def test_beltfish_su_view(
     obs_belt_fish2_1_biomass,
     obs_belt_fish2_2_biomass,
     obs_belt_fish2_3_biomass,
+    obs_belt_fish2_4_biomass,
 ):
     url = reverse("beltfishmethod-sampleunit-list", kwargs=dict(project_pk=project1.pk))
     count, data, response = _call(client, token1, url)
@@ -36,20 +38,29 @@ def test_beltfish_su_view(
 
     biomass_kgha_1_other = sum([obs_belt_fish1_2_biomass, obs_belt_fish1_3_biomass])
 
-    assert round(data[0]["biomass_kgha"], 1) == round(biomass_kgha_1, 1)
-    assert round(data[0]["biomass_kgha_by_trophic_group"]["other"], 1) == round(
-        biomass_kgha_1_other, 1
-    )
-    assert round(data[0]["biomass_kgha_by_trophic_group"]["omnivore"], 1) == round(
-        obs_belt_fish1_1_biomass, 1
-    )
+    assert data[0]["biomass_kgha"] == pytest.approx(biomass_kgha_1, 0.1)
 
-    biomass_kgha_2 = sum(
-        [obs_belt_fish2_1_biomass, obs_belt_fish2_2_biomass, obs_belt_fish2_3_biomass]
-    )
+    assert data[0]["biomass_kgha_by_trophic_group"]["other"] == pytest.approx(biomass_kgha_1_other, 0.1)
+    assert data[0]["biomass_kgha_by_trophic_group"]["omnivore"] == pytest.approx(obs_belt_fish1_1_biomass, 0.1)
 
-    transect_2_biomass = round(biomass_kgha_2, 1)
-    assert round(data[1]["biomass_kgha"], 1) == transect_2_biomass
+    biomass_kgha_2 = sum([
+        obs_belt_fish2_1_biomass,
+        obs_belt_fish2_2_biomass,
+        obs_belt_fish2_3_biomass
+    ])
+
+    assert data[1]["biomass_kgha"] == pytest.approx(biomass_kgha_2, 0.1)
+
+    fish_family_biomass_0 = data[0]["biomass_kgha_by_fish_family"]
+    assert fish_family_biomass_0["Fish Family 1"] == pytest.approx(obs_belt_fish1_1_biomass, 0.1)
+    assert fish_family_biomass_0["Fish Family 2"] == pytest.approx(obs_belt_fish1_2_biomass, 0.1)
+    assert fish_family_biomass_0["Fish Family 3"] == pytest.approx(obs_belt_fish1_3_biomass, 0.1)
+
+    fish_family_biomass_1 = data[1]["biomass_kgha_by_fish_family"]
+    fish_family_2_biomass = sum([obs_belt_fish2_1_biomass, obs_belt_fish2_4_biomass])
+    assert fish_family_biomass_1["Fish Family 1"] == pytest.approx(obs_belt_fish2_3_biomass, 0.1)
+    assert fish_family_biomass_1["Fish Family 2"] == pytest.approx(fish_family_2_biomass, 0.1)
+    assert fish_family_biomass_1["Fish Family 3"] == pytest.approx(obs_belt_fish2_2_biomass, 0.1)
 
 
 def test_benthicpit_su_view(
