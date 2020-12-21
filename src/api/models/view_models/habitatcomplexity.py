@@ -60,7 +60,6 @@ FROM
     observation_notes = models.TextField(blank=True)
     score = models.PositiveSmallIntegerField()
     score_name = models.CharField(max_length=100)
-    name = models.CharField(max_length=100)
     data_policy_habitatcomplexity = models.CharField(max_length=50)
 
     class Meta:
@@ -90,7 +89,7 @@ reef_slope,
 score_avg
 FROM (
     SELECT su.pseudosu_id,
-    json_agg(DISTINCT su.sample_unit_id) AS sample_unit_ids,
+    jsonb_agg(DISTINCT su.sample_unit_id) AS sample_unit_ids,
     {su_fields_qualified},
     {su_aggfields_sql},
     string_agg(DISTINCT reef_slope::text, ', '::text ORDER BY (reef_slope::text)) AS reef_slope,
@@ -172,6 +171,9 @@ data_policy_habitatcomplexity
     depth_avg = models.DecimalField(
         max_digits=4, decimal_places=2, verbose_name=_("depth (m)")
     )
+    current_name = models.CharField(max_length=100)
+    tide_name = models.CharField(max_length=100)
+    visibility_name = models.CharField(max_length=100)
     score_avg_avg = models.DecimalField(decimal_places=2, max_digits=3)
     data_policy_habitatcomplexity = models.CharField(max_length=50)
 
