@@ -64,7 +64,7 @@ class SampleUnitMethodSerializer(BaseAPISerializer):
     site = serializers.SerializerMethodField()
     management_name = serializers.ReadOnlyField()
     management = serializers.SerializerMethodField()
-    depth = serializers.ReadOnlyField()
+    depth = serializers.SerializerMethodField(method_name="get_sample_unit_depth")
     sample_date = serializers.SerializerMethodField()
     sample_unit_number = serializers.SerializerMethodField()
     size = serializers.SerializerMethodField()
@@ -125,6 +125,9 @@ class SampleUnitMethodSerializer(BaseAPISerializer):
         context = self.context
         return context["observers"].get(str(o.id))
 
+    def get_sample_unit_depth(self, o):
+        return o.sample_unit_method_depth
+
     class Meta:
         model = TransectMethod
         exclude = []
@@ -153,7 +156,7 @@ class SampleUnitMethodView(BaseProjectApiViewSet):
         "site_name",
         "protocol_name",
         "sample_unit_number",
-        "depth",
+        "sample_unit_method_depth",
         "sample_date",
         "size_display",
         "observers_display",
@@ -342,7 +345,7 @@ class SampleUnitMethodView(BaseProjectApiViewSet):
             site_name=site_name_condition,
             management_name=management_name_condition,
             sample_unit_number=sample_unit_number_condition,
-            depth=depth_condition,
+            sample_unit_method_depth=depth_condition,
             sample_date=sample_date_condition,
             size_display=size_condition,
             observers_display=observers,
