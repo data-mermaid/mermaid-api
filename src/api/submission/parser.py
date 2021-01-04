@@ -43,13 +43,7 @@ def get_sample_event_data(collect_record, site_id=None, management_id=None):
         site=site_id or data.get("site") or None,
         management=management_id or data.get("management") or None,
         sample_date=data.get("sample_date") or None,
-        sample_time=data.get("sample_time") or None,
-        depth=_cast_decimal_to_str(data.get("depth")),
-        visibility=data.get("visibility") or None,
-        current=data.get("current") or None,
-        relative_depth=data.get("relative_depth") or None,
-        tide=data.get("tide") or None,
-        notes=data.get("notes", ""),
+        notes=data.get("notes", "")   
     )
 
 
@@ -78,7 +72,13 @@ def get_fishbelt_transect_data(collect_record, sample_event_id=None):
         len_surveyed=fishbelt_transect_data.get("len_surveyed"),
         reef_slope=fishbelt_transect_data.get("reef_slope") or None,
         size_bin=size_bin,
-        collect_record_id=collect_record.id
+        collect_record_id=collect_record.id,
+        sample_time=fishbelt_transect_data.get("sample_time") or None,
+        depth=_cast_decimal_to_str(fishbelt_transect_data.get("depth")),
+        visibility=fishbelt_transect_data.get("visibility") or None,
+        current=fishbelt_transect_data.get("current") or None,
+        relative_depth=fishbelt_transect_data.get("relative_depth") or None,
+        tide=fishbelt_transect_data.get("tide") or None,
     )
 
 
@@ -122,7 +122,14 @@ def get_benthic_transect_data(collect_record, sample_event_id=None):
         label= benthic_transect_data.get("label") or "",
         len_surveyed=benthic_transect_data.get("len_surveyed"),
         reef_slope=benthic_transect_data.get("reef_slope") or None,
-        collect_record_id=collect_record.id
+        collect_record_id=collect_record.id,
+        sample_time=benthic_transect_data.get("sample_time") or None,
+        depth=_cast_decimal_to_str(benthic_transect_data.get("depth")),
+        visibility=benthic_transect_data.get("visibility") or None,
+        current=benthic_transect_data.get("current") or None,
+        relative_depth=benthic_transect_data.get("relative_depth") or None,
+        tide=benthic_transect_data.get("tide") or None,
+        
     )
 
 
@@ -185,7 +192,14 @@ def get_quadrat_collection_data(collect_record, sample_event_id=None):
     return dict(
         sample_event=sample_event_id,
         quadrat_size= _cast_decimal_to_str(quadrat_collection_data.get("quadrat_size")),
-        collect_record_id=collect_record.id
+        collect_record_id=collect_record.id,
+        sample_time=quadrat_collection_data.get("sample_time") or None,
+        depth=_cast_decimal_to_str(quadrat_collection_data.get("depth")),
+        visibility=quadrat_collection_data.get("visibility") or None,
+        current=quadrat_collection_data.get("current") or None,
+        relative_depth=quadrat_collection_data.get("relative_depth") or None,
+        tide=quadrat_collection_data.get("tide") or None
+        
     )
 
 

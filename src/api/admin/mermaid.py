@@ -52,7 +52,7 @@ class FishAttributeAdmin(AttributeAdmin):
 
             extra_context.update({"protected_descendants": protected_descendants})
 
-        return super(FishAttributeAdmin, self).delete_view(
+        return super().delete_view(
             request, object_id, extra_context
         )
 
@@ -277,6 +277,7 @@ class ManagementAdmin(BaseAdmin):
         "size_limits",
         "gear_restriction",
         "species_restriction",
+        "access_restriction",
         "no_take",
     )
     readonly_fields = ("area",)
@@ -320,22 +321,22 @@ class MPAAdmin(BaseAdmin):
 
 @admin.register(BenthicTransect)
 class BenthicTransectAdmin(SampleUnitAdmin):
-    list_display = ("name", "len_surveyed")
+    list_display = ("name", "len_surveyed", "depth")
 
 
 @admin.register(FishBeltTransect)
 class FishTransectAdmin(SampleUnitAdmin):
-    list_display = ("name", "len_surveyed", "width")
+    list_display = ("name", "len_surveyed", "width", "depth")
 
 
 @admin.register(QuadratCollection)
 class QuadratCollectionAdmin(SampleUnitAdmin):
-    list_display = ("name", "quadrat_size")
+    list_display = ("name", "quadrat_size", "depth")
 
 
 @admin.register(SampleEvent)
 class SampleEventAdmin(BaseAdmin):
-    list_display = ("site", "management", "sample_date", "depth")
+    list_display = ("site", "management", "sample_date")
     list_display_links = ("site", "sample_date")
     search_fields = ["site__name", "sample_date"]
 
@@ -397,7 +398,7 @@ class BenthicAttributeAdmin(AttributeAdmin):
 
             extra_context.update({"protected_descendants": protected_descendants})
 
-        return super(BenthicAttributeAdmin, self).delete_view(
+        return super().delete_view(
             request, object_id, extra_context
         )
 
@@ -463,7 +464,7 @@ class ObsBenthicLITInline(ObservationInline):
 
 @admin.register(BenthicLIT)
 class BenthicLITAdmin(TransectMethodAdmin):
-    list_display = ("name", "len_surveyed")
+    list_display = ("name", "len_surveyed", "depth")
     inlines = (ObserverInline, ObsBenthicLITInline)
 
     def get_queryset(self, request):
@@ -499,7 +500,7 @@ class ObsBenthicPITInline(ObservationInline):
 
 @admin.register(BenthicPIT)
 class BenthicPITAdmin(TransectMethodAdmin):
-    list_display = ("name", "len_surveyed", "interval_size")
+    list_display = ("name", "len_surveyed", "interval_size", "depth")
     inlines = (ObserverInline, ObsBenthicPITInline)
 
     def get_queryset(self, request):
@@ -535,7 +536,7 @@ class ObsHabitatComplexityInline(ObservationInline):
 
 @admin.register(HabitatComplexity)
 class HabitatComplexityAdmin(TransectMethodAdmin):
-    list_display = ("name", "len_surveyed", "interval_size")
+    list_display = ("name", "len_surveyed", "interval_size", "depth")
     inlines = (ObserverInline, ObsHabitatComplexityInline)
 
     def get_queryset(self, request):
@@ -572,7 +573,7 @@ class ObsQuadratBenthicPercentInline(ObservationInline):
 
 @admin.register(BleachingQuadratCollection)
 class BleachingQuadratCollectionAdmin(BaseAdmin):
-    list_display = ("name", "quadrat_size")
+    list_display = ("name", "quadrat_size", "depth")
     inlines = (
         ObserverInline,
         ObsColoniesBleachedInline,
@@ -594,6 +595,9 @@ class BleachingQuadratCollectionAdmin(BaseAdmin):
 
     def quadrat_size(self, obj):
         return obj.quadrat.quadrat_size
+
+    def depth(self, obj):
+        return obj.transect.depth
 
     quadrat_size.admin_order_field = "quadrat__quadrat_size"
 
@@ -647,7 +651,7 @@ class FishAttributeGroupingAdmin(FishAttributeAdmin):
     def region_list(self, obj):
         if not hasattr(obj, "regions"):
             return []
-        return ", ".join([r.name for r in obj.regions.order_by("name")])
+        return ", ".join([r.name for r in Region.objects.filter(pk__in=obj.regions).order_by("name")])
 
     def get_readonly_fields(self, request, obj=None):
         if obj:  # editing an existing object
@@ -726,7 +730,6 @@ class FishSpeciesInline(admin.StackedInline):
 @admin.register(FishGenus)
 class FishGenusAdmin(FishAttributeGroupingAdmin):
     list_display = ("name", "fk_link")
-    readonly_fields = ("biomass_constant_a", "biomass_constant_b", "biomass_constant_c")
     inlines = (FishSpeciesInline,)
     search_fields = ["name", "family__name"]
     exportable_fields = ("name", "family")
@@ -800,7 +803,7 @@ class ObsTransectBeltFishInline(ObservationInline):
 
 @admin.register(BeltFish)
 class BeltFishAdmin(TransectMethodAdmin):
-    list_display = ("name", "len_surveyed", "width")
+    list_display = ("name", "len_surveyed", "width", "depth")
     inlines = (ObserverInline, ObsTransectBeltFishInline)
 
     def width(self, obj):

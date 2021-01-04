@@ -4,7 +4,14 @@ from rest_framework.exceptions import ValidationError
 
 from ..fields import LazyChoiceField
 from ..models import BLEACHINGQC_PROTOCOL, BenthicAttribute, GrowthForm
-from .serializers import CollectRecordCSVSerializer, build_choices
+from .choices import (
+    build_choices,
+    current_choices,
+    relative_depth_choices,
+    tide_choices,
+    visibility_choices,
+)
+from .serializers import CollectRecordCSVSerializer
 
 __all__ = ["BleachingCSVSerializer"]
 
@@ -51,6 +58,7 @@ def benthic_attributes_choices():
 
 class BleachingCSVSerializer(CollectRecordCSVSerializer):
     protocol = BLEACHINGQC_PROTOCOL
+    sample_unit = "quadrat_collection"
     observations_fields = [
         "data__obs_colonies_bleached",
         "data__obs_quadrat_benthic_percent",
@@ -62,6 +70,13 @@ class BleachingCSVSerializer(CollectRecordCSVSerializer):
 
     header_map.update(
         {
+            "Sample time": "data__quadrat_collection__sample_time",
+            "Depth *": "data__quadrat_collection__depth",
+            "Visibility": "data__quadrat_collection__visibility",
+            "Current": "data__quadrat_collection__current",
+            "Relative depth": "data__quadrat_collection__relative_depth",
+            "Tide": "data__quadrat_collection__tide",
+
             "Quadrat size *": "data__quadrat_collection__quadrat_size",
             "Label": "data__quadrat_collection__label",
             "Benthic attribute": "data__obs_colonies_bleached__attribute",
@@ -99,11 +114,31 @@ class BleachingCSVSerializer(CollectRecordCSVSerializer):
         "data__obs_quadrat_benthic_percent__percent_algae",
     )
 
+    data__quadrat_collection__sample_time = serializers.TimeField(default="00:00:00")
+    data__quadrat_collection__depth = serializers.DecimalField(max_digits=3, decimal_places=1)
+
+    data__quadrat_collection__visibility = LazyChoiceField(
+        choices=visibility_choices, required=False, allow_null=True, allow_blank=True
+    )
+    data__quadrat_collection__current = LazyChoiceField(
+        choices=current_choices, required=False, allow_null=True, allow_blank=True
+    )
+    data__quadrat_collection__relative_depth = LazyChoiceField(
+        choices=relative_depth_choices,
+        required=False,
+        allow_null=True,
+        allow_blank=True,
+    )
+    data__quadrat_collection__tide = LazyChoiceField(
+        choices=tide_choices, required=False, allow_null=True, allow_blank=True
+    )
+
+
     data__quadrat_collection__quadrat_size = serializers.DecimalField(
         max_digits=4, decimal_places=2
     )
     data__quadrat_collection__label = serializers.CharField(
-        allow_blank=True, required=False
+        allow_blank=True, required=False, default=""
     )
     data__obs_colonies_bleached__attribute = LazyChoiceField(
         choices=benthic_attributes_choices,
@@ -154,3 +189,6 @@ class BleachingCSVSerializer(CollectRecordCSVSerializer):
             )
 
         return data
+
+    def get_sample_event_time(self, row):
+        return row.get("data__quadrat_collection__sample_time") or "00:00:00"

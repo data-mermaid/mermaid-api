@@ -22,6 +22,7 @@ def get_rules(obj):
         ('periodic_closure', 'Periodic Closure'),
         ('size_limits', 'Size Limits'),
         ('species_restriction', 'Species Restriction'),
+        ('access_restriction', 'Access Restriction'),
     )
 
     for field, display in rules_map:
@@ -73,7 +74,7 @@ class ManagementFilterSet(BaseAPIFilterSet):
                                         label='Associated with project')
     predecessor = NullableUUIDFilter(field_name='predecessor')
     compliance = NullableUUIDFilter(field_name='compliance')
-    est_year = django_filters.NumericRangeFilter(field_name='est_year')
+    est_year = django_filters.RangeFilter(field_name='est_year')
 
     unique = django_filters.CharFilter(method='filter_unique')
     exclude_projects = django_filters.CharFilter(method='filter_not_projects')
@@ -92,6 +93,7 @@ class ManagementFilterSet(BaseAPIFilterSet):
             'size_limits',
             'gear_restriction',
             'species_restriction',
+            'access_restriction',
             'unique',
             'exclude_projects',
         ]
@@ -112,6 +114,7 @@ class ManagementFilterSet(BaseAPIFilterSet):
             'size_limits',
             'gear_restriction',
             'species_restriction',
+            'access_restriction',
         )
         project_id = value
         group_by = ','.join(['"{}"'.format(uf) for uf in unique_fields])

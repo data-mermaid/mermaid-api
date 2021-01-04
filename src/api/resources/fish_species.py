@@ -2,10 +2,11 @@ from django.utils.decorators import method_decorator
 from django.views.decorators.cache import cache_page
 from rest_framework import serializers
 from .base import BaseAPIFilterSet, BaseAttributeApiViewSet, BaseAPISerializer
+from .mixins import CreateOrUpdateSerializerMixin
 from ..models import FishSpecies
 
 
-class FishSpeciesSerializer(BaseAPISerializer):
+class FishSpeciesSerializer(CreateOrUpdateSerializerMixin, BaseAPISerializer):
     status = serializers.ReadOnlyField()
     display_name = serializers.SerializerMethodField()
     biomass_constant_a = serializers.DecimalField(max_digits=7,
@@ -46,10 +47,9 @@ class FishSpeciesFilterSet(BaseAPIFilterSet):
 
 class FishSpeciesViewSet(BaseAttributeApiViewSet):
     serializer_class = FishSpeciesSerializer
-    queryset = FishSpecies.objects.select_related()
+    queryset = FishSpecies.objects.select_related().prefetch_related("regions")
     filter_class = FishSpeciesFilterSet
     search_fields = ['name', 'genus__name', ]
 
-    @method_decorator(cache_page(60*60))
     def list(self, request, *args, **kwargs):
         return super(FishSpeciesViewSet, self).list(request, *args, **kwargs)

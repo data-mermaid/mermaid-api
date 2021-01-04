@@ -1,5 +1,7 @@
 import copy
 
+from django.test import TestCase
+
 from api.models.mermaid import CollectRecord
 from api.submission.protocol_validations import (
     BenthicLITProtocolValidation,
@@ -7,14 +9,11 @@ from api.submission.protocol_validations import (
     FishBeltProtocolValidation,
     HabitatComplexityProtocolValidation,
 )
-from api.submission.validations import ERROR, IGNORE, OK, WARN
-from django.test import TestCase
-
-from .data import TestDataMixin, MockRequest
+from api.submission.validations import ERROR, OK, WARN
+from .data import MockRequest, TestDataMixin
 
 
 class FishBeltProtocolValidationTest(TestCase, TestDataMixin):
-
     def setUp(self):
         self.load_projects()
         self.load_project_profiles()
@@ -63,14 +62,14 @@ class FishBeltProtocolValidationTest(TestCase, TestDataMixin):
             protocol="fishbelt",
             obs_belt_fishes=observations,
             fishbelt_transect=dict(
-                width=str(self.belt_transect_width2.id), number=1, len_surveyed=100
+                width=str(self.belt_transect_width2.id),
+                number=1,
+                len_surveyed=100,
+                depth=1,
             ),
             sample_event=dict(
                 management=str(self.sample_event1.management.id),
                 site=str(self.sample_event1.site.id),
-                sample_time=str(self.sample_event1.sample_time),
-                visibility=str(self.sample_event1.visibility.id),
-                depth=self.sample_event1.depth,
                 sample_date=str(self.sample_event1.sample_date),
             ),
             observers=[{"profile": str(self.project1_admin.profile.id)}],
@@ -91,6 +90,7 @@ class FishBeltProtocolValidationTest(TestCase, TestDataMixin):
         data_warn["obs_belt_fishes"] = observations_warn
         data_warn["sample_event"]["depth"] = 50.0
         data_warn["fishbelt_transect"]["len_surveyed"] = 101
+        data_warn["fishbelt_transect"]["depth"] = 31
         self.collect_record_warn = CollectRecord.objects.create(
             project=self.project1,
             profile=self.profile1,
@@ -124,11 +124,17 @@ class FishBeltProtocolValidationTest(TestCase, TestDataMixin):
         self.request = None
 
     def test_validate_ok(self):
-        validation = FishBeltProtocolValidation(self.collect_record_ok, request=self.request)
-        self.assertEqual(OK, validation.validate())
+        validation = FishBeltProtocolValidation(
+            self.collect_record_ok, request=self.request
+        )
+        results = validation.validate()
+        print(results)
+        self.assertEqual(OK, results)
 
     def test_validate_warn(self):
-        validation = FishBeltProtocolValidation(self.collect_record_warn, request=self.request)
+        validation = FishBeltProtocolValidation(
+            self.collect_record_warn, request=self.request
+        )
         result = validation.validate()
         self.assertEqual(WARN, result)
         self.assertEqual(
@@ -151,12 +157,13 @@ class FishBeltProtocolValidationTest(TestCase, TestDataMixin):
         )
 
     def test_validate_error(self):
-        validation = FishBeltProtocolValidation(self.collect_record_error, request=self.request)
+        validation = FishBeltProtocolValidation(
+            self.collect_record_error, request=self.request
+        )
         self.assertEqual(ERROR, validation.validate())
 
 
 class BenthicPITProtocolValidationTest(TestCase, TestDataMixin):
-
     def setUp(self):
         self.load_projects()
         self.load_project_profiles()
@@ -174,15 +181,12 @@ class BenthicPITProtocolValidationTest(TestCase, TestDataMixin):
         data_ok = dict(
             protocol="benthicpit",
             obs_benthic_pits=observations,
-            benthic_transect=dict(number=1, len_surveyed=30),
+            benthic_transect=dict(depth=1, number=1, len_surveyed=30),
             interval_size=5,
             interval_start=5,
             sample_event=dict(
                 management=str(self.sample_event1.management.id),
                 site=str(self.sample_event1.site.id),
-                sample_time=str(self.sample_event1.sample_time),
-                visibility=str(self.sample_event1.visibility.id),
-                depth=self.sample_event1.depth,
                 sample_date=str(self.sample_event1.sample_date),
             ),
             observers=[{"profile": str(self.project1_admin.profile.id)}],
@@ -219,12 +223,16 @@ class BenthicPITProtocolValidationTest(TestCase, TestDataMixin):
         self.request = None
 
     def test_validate_ok(self):
-        validation = BenthicPITProtocolValidation(self.collect_record_ok, request=self.request)
+        validation = BenthicPITProtocolValidation(
+            self.collect_record_ok, request=self.request
+        )
         result = validation.validate()
         self.assertEqual(OK, result)
 
     def test_validate_error(self):
-        validation = BenthicPITProtocolValidation(self.collect_record_error, request=self.request)
+        validation = BenthicPITProtocolValidation(
+            self.collect_record_error, request=self.request
+        )
         self.assertEqual(ERROR, validation.validate())
         self.assertEqual(
             ERROR,
@@ -235,7 +243,6 @@ class BenthicPITProtocolValidationTest(TestCase, TestDataMixin):
 
 
 class BenthicLITProtocolValidationTest(TestCase, TestDataMixin):
-
     def setUp(self):
         self.load_sample_events()
         self.load_project_profiles()
@@ -252,13 +259,10 @@ class BenthicLITProtocolValidationTest(TestCase, TestDataMixin):
         data_ok = dict(
             protocol="benthiclit",
             obs_benthic_lits=observations,
-            benthic_transect=dict(number=2, len_surveyed=100),
+            benthic_transect=dict(depth=1, number=2, len_surveyed=100),
             sample_event=dict(
                 management=str(self.sample_event1.management.id),
                 site=str(self.sample_event1.site.id),
-                sample_time=str(self.sample_event1.sample_time),
-                visibility=str(self.sample_event1.visibility.id),
-                depth=self.sample_event1.depth,
                 sample_date=str(self.sample_event1.sample_date),
             ),
             observers=[{"profile": str(self.project1_admin.profile.id)}],
@@ -294,12 +298,16 @@ class BenthicLITProtocolValidationTest(TestCase, TestDataMixin):
         self.request = None
 
     def test_validate_ok(self):
-        validation = BenthicLITProtocolValidation(self.collect_record_ok, request=self.request)
+        validation = BenthicLITProtocolValidation(
+            self.collect_record_ok, request=self.request
+        )
         result = validation.validate()
         self.assertEqual(OK, result)
 
     def test_validate_warning(self):
-        validation = BenthicLITProtocolValidation(self.collect_record_error, request=self.request)
+        validation = BenthicLITProtocolValidation(
+            self.collect_record_error, request=self.request
+        )
         self.assertEqual(WARN, validation.validate())
         self.assertEqual(
             WARN,
@@ -310,7 +318,6 @@ class BenthicLITProtocolValidationTest(TestCase, TestDataMixin):
 
 
 class HabitatComplexityProtocolValidationTest(TestCase, TestDataMixin):
-
     def setUp(self):
         self.load_projects()
         self.load_project_profiles()
@@ -327,14 +334,11 @@ class HabitatComplexityProtocolValidationTest(TestCase, TestDataMixin):
         data_ok = dict(
             protocol="habitatcomplexity",
             obs_habitat_complexities=observations,
-            benthic_transect=dict(number=2, len_surveyed=30),
+            benthic_transect=dict(depth=1, number=2, len_surveyed=30),
             interval_size=5,
             sample_event=dict(
                 management=str(self.sample_event1.management.id),
                 site=str(self.sample_event1.site.id),
-                sample_time=str(self.sample_event1.sample_time),
-                visibility=str(self.sample_event1.visibility.id),
-                depth=self.sample_event1.depth,
                 sample_date=str(self.sample_event1.sample_date),
             ),
             observers=[{"profile": str(self.project1_admin.profile.id)}],
@@ -371,15 +375,13 @@ class HabitatComplexityProtocolValidationTest(TestCase, TestDataMixin):
 
     def test_validate_ok(self):
         validation = HabitatComplexityProtocolValidation(
-            self.collect_record_ok,
-            request=self.request
+            self.collect_record_ok, request=self.request
         )
         self.assertEqual(OK, validation.validate())
 
     def test_validate_error(self):
         validation = HabitatComplexityProtocolValidation(
-            self.collect_record_error,
-            request=self.request
+            self.collect_record_error, request=self.request
         )
         self.assertEqual(ERROR, validation.validate())
         self.assertEqual(

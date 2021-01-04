@@ -10,7 +10,8 @@ from rest_framework.decorators import action
 from rest_framework.exceptions import NotFound, ParseError, ValidationError
 from rest_framework.response import Response
 
-from ..ingest.utils import ingest
+from .mixins import CreateOrUpdateSerializerMixin
+from ..ingest.utils import InvalidSchema, ingest
 from ..models import CollectRecord
 from ..permissions import ProjectDataAdminPermission, ProjectDataPermission
 from ..submission import utils
@@ -49,7 +50,7 @@ class CollectRecordOwner(permissions.BasePermission):
         return count == len(record_ids)
 
 
-class CollectRecordSerializer(BaseAPISerializer):
+class CollectRecordSerializer(CreateOrUpdateSerializerMixin, BaseAPISerializer):
     class Meta:
         model = CollectRecord
         exclude = []
@@ -187,23 +188,26 @@ class CollectRecordViewSet(BaseProjectApiViewSet):
             return Response("File type not supported", status=400)
 
         decoded_file = uploaded_file.read().decode("utf-8-sig").splitlines()
-        records, ingest_output = ingest(
-            protocol,
-            decoded_file,
-            project_pk,
-            profile.id,
-            None,
-            dry_run=dryrun,
-            clear_existing=clearexisting,
-            bulk_validation=True,
-            bulk_submission=False,
-            validation_suppressants=validate_config,
-            serializer_class=CollectRecordSerializer,
-        )
+        try:
+            records, ingest_output = ingest(
+                protocol,
+                decoded_file,
+                project_pk,
+                profile.id,
+                None,
+                dry_run=dryrun,
+                clear_existing=clearexisting,
+                bulk_validation=False,
+                bulk_submission=False,
+                validation_suppressants=validate_config,
+                serializer_class=CollectRecordSerializer,
+            )
+        except InvalidSchema as schema_error:
+            missing_required_fields = schema_error.errors
+            return Response(f"Missing required fields: {', '.join(missing_required_fields)}", status=400)
 
         if "errors" in ingest_output:
             errors = ingest_output["errors"]
             return Response(errors, status=400)
 
-        records = ingest_output.get("validate")
-        return Response(records)
+        return Response(CollectRecordSerializer(records, many=True).data)

@@ -1,29 +1,36 @@
-from api import utils
 from django.db import transaction
+from django_filters import BaseInFilter, RangeFilter
+from rest_condition import Or
 from rest_framework import status
 from rest_framework.response import Response
 from rest_framework.serializers import SerializerMethodField
-from django_filters import BaseInFilter, RangeFilter
 
-from . import *
-from .. import fieldreport
-from ...models.mermaid import (
-    BleachingQuadratCollection,
-    ObsColoniesBleached,
-    ObsQuadratBenthicPercent,
-)
+from ...models.mermaid import BleachingQuadratCollection, Project
 from ...models.view_models import (
     BleachingQCColoniesBleachedObsView,
     BleachingQCQuadratBenthicPercentObsView,
-    BleachingQCSUView,
     BleachingQCSEView,
+    BleachingQCSUView,
 )
-
+from ...permissions import ProjectDataReadOnlyPermission, ProjectPublicSummaryPermission
+from ...reports.fields import ReportField
+from ...reports.formatters import (
+    to_day,
+    to_governance,
+    to_latitude,
+    to_longitude,
+    to_month,
+    to_names,
+    to_str,
+    to_year,
+)
+from ...reports.report_serializer import ReportSerializer
 from ..base import (
     BaseProjectApiViewSet,
-    BaseViewAPISerializer,
+    BaseSEFilterSet,
+    BaseSUObsFilterSet,
     BaseViewAPIGeoSerializer,
-    BaseTransectFilterSet,
+    BaseSUViewAPISerializer,
 )
 from ..bleaching_quadrat_collection import BleachingQuadratCollectionSerializer
 from ..obs_colonies_bleached import ObsColoniesBleachedSerializer
@@ -31,43 +38,7 @@ from ..obs_quadrat_benthic_percent import ObsQuadratBenthicPercentSerializer
 from ..observer import ObserverSerializer
 from ..quadrat_collection import QuadratCollectionSerializer
 from ..sample_event import SampleEventSerializer
-
-
-def avg_hard_coral(field, row, serializer_instance):
-    pk = str(row["bleachingquadratcollection_id"])
-    val = serializer_instance.serializer_cache["quadrat_percent_summary_stats"][pk][
-        "avg_hard_coral"
-    ]
-    if val is None:
-        return ""
-    return "{0:.1f}".format(val)
-
-
-def avg_soft_coral(field, row, serializer_instance):
-    pk = str(row["bleachingquadratcollection_id"])
-    val = serializer_instance.serializer_cache["quadrat_percent_summary_stats"][pk][
-        "avg_soft_coral"
-    ]
-    if val is None:
-        return ""
-    return "{0:.1f}".format(val)
-
-
-def avg_macroalgae(field, row, serializer_instance):
-    pk = str(row["bleachingquadratcollection_id"])
-    val = serializer_instance.serializer_cache["quadrat_percent_summary_stats"][pk][
-        "avg_macroalgae"
-    ]
-    if val is None:
-        return ""
-    return "{0:.1f}".format(val)
-
-
-def quadrat_count(field, row, serializer_instance):
-    pk = str(row["bleachingquadratcollection_id"])
-    return serializer_instance.serializer_cache["quadrat_percent_summary_stats"][pk][
-        "quadrat_count"
-    ]
+from . import BaseProjectMethodView, save_model, save_one_to_many
 
 
 class BleachingQuadratCollectionMethodSerializer(BleachingQuadratCollectionSerializer):
@@ -84,141 +55,6 @@ class BleachingQuadratCollectionMethodSerializer(BleachingQuadratCollectionSeria
     class Meta:
         model = BleachingQuadratCollection
         exclude = []
-
-
-class ObsColoniesBleachedReportSerializer(
-    SampleEventReportSerializer, metaclass=SampleEventReportSerializerMeta
-):
-    transect_method = "bleachingquadratcollection"
-    sample_event_path = "{}__quadrat__sample_event".format(transect_method)
-    idx = 25
-    obs_fields = [
-        (
-            6,
-            ReportField(
-                "bleachingquadratcollection__quadrat__quadrat_size", "Quadrat size"
-            ),
-        ),
-        (
-            idx,
-            ReportField(
-                "bleachingquadratcollection__quadrat__label", "Quadrat collection label"
-            ),
-        ),
-        (idx + 5, ReportField("attribute__name", "Benthic attribute")),
-        (idx + 6, ReportField("growth_form__name", "Growth form")),
-        (idx + 7, ReportField("count_normal", "Normal count")),
-        (idx + 8, ReportField("count_pale", "Pale count")),
-        (idx + 9, ReportField("count_20", "0-20% bleached count")),
-        (idx + 10, ReportField("count_50", "20-50% bleached count")),
-        (idx + 11, ReportField("count_80", "50-80% bleached count")),
-        (idx + 12, ReportField("count_100", "80-100% bleached count")),
-        (idx + 13, ReportField("count_dead", "Recently dead count")),
-        (
-            idx + 14,
-            ReportField(
-                "bleachingquadratcollection__quadrat__notes", "Observation notes"
-            ),
-        ),
-    ]
-
-    non_field_columns = (
-        "bleachingquadratcollection_id",
-        "bleachingquadratcollection__quadrat__sample_event__site__project_id",
-        "bleachingquadratcollection__quadrat__sample_event__management_id",
-        "attribute",
-    )
-
-    class Meta:
-        model = ObsColoniesBleached
-
-    def preserialize(self, queryset=None):
-        super(ObsColoniesBleachedReportSerializer, self).preserialize(queryset=queryset)
-
-
-class ObsQuadratBenthicPercentReportSerializer(
-    SampleEventReportSerializer, metaclass=SampleEventReportSerializerMeta
-):
-    transect_method = "bleachingquadratcollection"
-    sample_event_path = "{}__quadrat__sample_event".format(transect_method)
-    idx = 25
-    obs_fields = [
-        (
-            6,
-            ReportField(
-                "bleachingquadratcollection__quadrat__quadrat_size", "Quadrat size"
-            ),
-        ),
-        (
-            idx,
-            ReportField(
-                "bleachingquadratcollection__quadrat__label", "Quadrat collection label"
-            ),
-        ),
-        (idx + 5, ReportField("quadrat_number", "Quadrat number")),
-        (idx + 6, ReportField("percent_hard", "Hard coral (% cover)")),
-        (idx + 7, ReportField("percent_soft", "Soft coral (% cover)")),
-        (idx + 8, ReportField("percent_algae", "Macroalgae (% cover)")),
-        (
-            idx + 9,
-            ReportField(
-                "bleachingquadratcollection__quadrat__notes", "Observation notes"
-            ),
-        ),
-        (idx + 10, ReportMethodField("Number of quadrats", quadrat_count)),
-        (idx + 11, ReportMethodField("Average Hard Coral (% cover)", avg_hard_coral)),
-        (idx + 12, ReportMethodField("Average Soft Coral (% cover)", avg_soft_coral)),
-        (idx + 13, ReportMethodField("Average Macroalgae (% cover)", avg_macroalgae)),
-    ]
-
-    non_field_columns = (
-        "bleachingquadratcollection_id",
-        "bleachingquadratcollection__quadrat__sample_event__site__project_id",
-        "bleachingquadratcollection__quadrat__sample_event__management_id",
-    )
-
-    class Meta:
-        model = ObsQuadratBenthicPercent
-
-    def preserialize(self, queryset=None):
-        super(ObsQuadratBenthicPercentReportSerializer, self).preserialize(
-            queryset=queryset
-        )
-
-        stats = dict()
-        for rec in queryset:
-            pk = str(rec.get("bleachingquadratcollection_id"))
-            if pk not in stats:
-                stats[pk] = dict(
-                    quadrat_count=0,
-                    percent_hards=[],
-                    percent_softs=[],
-                    percent_algaes=[],
-                )
-            stats[pk]["quadrat_count"] += 1
-            stats[pk]["percent_hards"].append(rec.get("percent_hard"))
-            stats[pk]["percent_softs"].append(rec.get("percent_soft"))
-            stats[pk]["percent_algaes"].append(rec.get("percent_algae"))
-
-        quadrat_percent_summary_stats = dict()
-        for pk, s in stats.items():
-            cnt = s.get("quadrat_count")
-            quadrat_percent_summary_stats[pk] = dict(
-                quadrat_count=cnt,
-                avg_hard_coral=utils.safe_division(
-                    utils.safe_sum(*s["percent_hards"]), cnt
-                ),
-                avg_soft_coral=utils.safe_division(
-                    utils.safe_sum(*s["percent_softs"]), cnt
-                ),
-                avg_macroalgae=utils.safe_division(
-                    utils.safe_sum(*s["percent_algaes"]), cnt
-                ),
-            )
-
-        self.serializer_cache[
-            "quadrat_percent_summary_stats"
-        ] = quadrat_percent_summary_stats
 
 
 class BleachingQuadratCollectionMethodView(BaseProjectApiViewSet):
@@ -331,29 +167,13 @@ class BleachingQuadratCollectionMethodView(BaseProjectApiViewSet):
             transaction.savepoint_rollback(sid)
             raise
 
-    @action(detail=False, methods=["get"])
-    def fieldreport(self, request, *args, **kwargs):
-        return fieldreport(
-            self,
-            request,
-            *args,
-            model_cls=[ObsColoniesBleached, ObsQuadratBenthicPercent],
-            serializer_class=[
-                ObsColoniesBleachedReportSerializer,
-                ObsQuadratBenthicPercentReportSerializer,
-            ],
-            fk="bleachingquadratcollection",
-            order_by=("Site", "Quadrat collection label"),
-            **kwargs
-        )
 
-
-class BleachingQCMethodObsColoniesBleachedSerializer(BaseViewAPISerializer):
-    class Meta(BaseViewAPISerializer.Meta):
+class BleachingQCMethodObsColoniesBleachedSerializer(BaseSUViewAPISerializer):
+    class Meta(BaseSUViewAPISerializer.Meta):
         model = BleachingQCColoniesBleachedObsView
-        exclude = BaseViewAPISerializer.Meta.exclude.copy()
+        exclude = BaseSUViewAPISerializer.Meta.exclude.copy()
         exclude.append("location")
-        header_order = ["id"] + BaseViewAPISerializer.Meta.header_order.copy()
+        header_order = ["id"] + BaseSUViewAPISerializer.Meta.header_order.copy()
         header_order.extend(
             [
                 "sample_unit_id",
@@ -376,10 +196,115 @@ class BleachingQCMethodObsColoniesBleachedSerializer(BaseViewAPISerializer):
         )
 
 
-class BleachingQCMethodObsColoniesBleachedCSVSerializer(
-    BleachingQCMethodObsColoniesBleachedSerializer
-):
-    observers = SerializerMethodField()
+class ObsBleachingQCColoniesBleachedCSVSerializer(ReportSerializer):
+    fields = [
+        ReportField("project_name", "Project name"),
+        ReportField("country_name", "Country"),
+        ReportField("site_name", "Site"),
+        ReportField("location", "Latitude", to_latitude, alias="latitude"),
+        ReportField("location", "Longitude", to_longitude, alias="longitude"),
+        ReportField("reef_exposure", "Exposure"),
+        ReportField("quadrat_size", "Quadrat size"),
+        ReportField("reef_type", "Reef type"),
+        ReportField("reef_zone", "Reef zone"),
+        ReportField("sample_date", "Year", to_year, "sample_date_year"),
+        ReportField("sample_date", "Month", to_month, "sample_date_month"),
+        ReportField("sample_date", "Day", to_day, "sample_date_day"),
+        ReportField("sample_time", "Start time", to_str),
+        ReportField("tide_name", "Tide"),
+        ReportField("visibility_name", "Visibility"),
+        ReportField("current_name", "Current"),
+        ReportField("depth", "Depth"),
+        ReportField("relative_depth", "Relative depth"),
+        ReportField("management_name", "Management name"),
+        ReportField("management_name_secondary", "Management secondary name"),
+        ReportField("management_est_year", "Management year established"),
+        ReportField("management_size", "Management size"),
+        ReportField("management_parties", "Governance", to_governance),
+        ReportField("management_compliance", "Estimated compliance",),
+        ReportField("management_rules", "Management rules"),
+        ReportField("observers", "Observers", to_names),
+        ReportField("label", "Quadrat collection label"),
+        ReportField("site_notes", "Site notes"),
+        ReportField("sample_event_notes", "Sampling event notes"),
+        ReportField("management_notes", "Management notes"),
+        ReportField("benthic_attribute", "Benthic attribute"),
+        ReportField("growth_form", "Growth form"),
+        ReportField("count_normal", "Normal count"),
+        ReportField("count_pale", "Pale count"),
+        ReportField("count_20", "0-20% bleached count"),
+        ReportField("count_50", "20-50% bleached count"),
+        ReportField("count_80", "50-80% bleached count"),
+        ReportField("count_100", "80-100% bleached count"),
+        ReportField("count_dead", "Recently dead count")
+    ]
+
+    additional_fields = [
+        ReportField("id"),
+        ReportField("project_id"),
+        ReportField("project_notes"),
+        ReportField("site_id"),
+        ReportField("contact_link"),
+        ReportField("tags"),
+        ReportField("country_id"),
+        ReportField("management_id"),
+        ReportField("sample_unit_id"),
+        ReportField("data_policy_bleachingqc"),
+        ReportField("relative_depth"),
+    ]
+
+
+class ObsQuadratBenthicPercentCSVSerializer(ReportSerializer):
+    fields = [
+        ReportField("project_name", "Project name"),
+        ReportField("country_name", "Country"),
+        ReportField("site_name", "Site"),
+        ReportField("location", "Latitude", to_latitude, alias="latitude"),
+        ReportField("location", "Longitude", to_longitude, alias="longitude"),
+        ReportField("reef_exposure", "Exposure"),
+        ReportField("quadrat_size", "Quadrat size"),
+        ReportField("reef_type", "Reef type"),
+        ReportField("reef_zone", "Reef zone"),
+        ReportField("sample_date", "Year", to_year, "sample_date_year"),
+        ReportField("sample_date", "Month", to_month, "sample_date_month"),
+        ReportField("sample_date", "Day", to_day, "sample_date_day"),
+        ReportField("sample_time", "Start time", to_str),
+        ReportField("tide_name", "Tide"),
+        ReportField("visibility_name", "Visibility"),
+        ReportField("current_name", "Current"),
+        ReportField("depth", "Depth"),
+        ReportField("relative_depth", "Relative depth"),
+        ReportField("management_name", "Management name"),
+        ReportField("management_name_secondary", "Management secondary name"),
+        ReportField("management_est_year", "Management year established"),
+        ReportField("management_size", "Management size"),
+        ReportField("management_parties", "Governance", to_governance),
+        ReportField("management_compliance", "Estimated compliance",),
+        ReportField("management_rules", "Management rules"),
+        ReportField("observers", "Observers", to_names),
+        ReportField("label", "Quadrat collection label"),
+        ReportField("site_notes", "Site notes"),
+        ReportField("sample_event_notes", "Sampling event notes"),
+        ReportField("management_notes", "Management notes"),
+        ReportField("quadrat_number", "Quadrat number"),
+        ReportField("percent_hard", "Hard coral (% cover)"),
+        ReportField("percent_soft", "Soft coral (% cover)"),
+        ReportField("percent_algae", "Macroalgae (% cover)"),
+    ]
+
+    additional_fields = [
+        ReportField("id"),
+        ReportField("project_id"),
+        ReportField("project_notes"),
+        ReportField("site_id"),
+        ReportField("contact_link"),
+        ReportField("tags"),
+        ReportField("country_id"),
+        ReportField("management_id"),
+        ReportField("sample_unit_id"),
+        ReportField("data_policy_bleachingqc"),
+        ReportField("relative_depth")
+    ]
 
 
 class BleachingQCMethodObsColoniesBleachedGeoSerializer(BaseViewAPIGeoSerializer):
@@ -387,12 +312,12 @@ class BleachingQCMethodObsColoniesBleachedGeoSerializer(BaseViewAPIGeoSerializer
         model = BleachingQCColoniesBleachedObsView
 
 
-class BleachingQCMethodObsQuadratBenthicPercentSerializer(BaseViewAPISerializer):
-    class Meta(BaseViewAPISerializer.Meta):
+class BleachingQCMethodObsQuadratBenthicPercentSerializer(BaseSUViewAPISerializer):
+    class Meta(BaseSUViewAPISerializer.Meta):
         model = BleachingQCQuadratBenthicPercentObsView
-        exclude = BaseViewAPISerializer.Meta.exclude.copy()
+        exclude = BaseSUViewAPISerializer.Meta.exclude.copy()
         exclude.append("location")
-        header_order = ["id"] + BaseViewAPISerializer.Meta.header_order.copy()
+        header_order = ["id"] + BaseSUViewAPISerializer.Meta.header_order.copy()
         header_order.extend(
             [
                 "sample_unit_id",
@@ -410,23 +335,17 @@ class BleachingQCMethodObsQuadratBenthicPercentSerializer(BaseViewAPISerializer)
         )
 
 
-class BleachingQCMethodObsQuadratBenthicPercentCSVSerializer(
-    BleachingQCMethodObsQuadratBenthicPercentSerializer
-):
-    observers = SerializerMethodField()
-
-
 class BleachingQCMethodObsQuadratBenthicPercentGeoSerializer(BaseViewAPIGeoSerializer):
     class Meta(BaseViewAPIGeoSerializer.Meta):
         model = BleachingQCQuadratBenthicPercentObsView
 
 
-class BleachingQCMethodSUSerializer(BaseViewAPISerializer):
-    class Meta(BaseViewAPISerializer.Meta):
+class BleachingQCMethodSUSerializer(BaseSUViewAPISerializer):
+    class Meta(BaseSUViewAPISerializer.Meta):
         model = BleachingQCSUView
-        exclude = BaseViewAPISerializer.Meta.exclude.copy()
+        exclude = BaseSUViewAPISerializer.Meta.exclude.copy()
         exclude.append("location")
-        header_order = BaseViewAPISerializer.Meta.header_order.copy()
+        header_order = BaseSUViewAPISerializer.Meta.header_order.copy()
         header_order.extend(
             [
                 "label",
@@ -447,8 +366,116 @@ class BleachingQCMethodSUSerializer(BaseViewAPISerializer):
         )
 
 
-class BleachingQCMethodSUCSVSerializer(BleachingQCMethodSUSerializer):
-    observers = SerializerMethodField()
+class BleachingQCMethodSUCSVSerializer(ReportSerializer):
+    fields = [
+        ReportField("project_name", "Project name"),
+        ReportField("country_name", "Country"),
+        ReportField("site_name", "Site"),
+        ReportField("location", "Latitude", to_latitude, alias="latitude"),
+        ReportField("location", "Longitude", to_longitude, alias="longitude"),
+        ReportField("reef_exposure", "Exposure"),
+        ReportField("quadrat_size", "Quadrat size"),
+        ReportField("reef_type", "Reef type"),
+        ReportField("reef_zone", "Reef zone"),
+        ReportField("sample_date", "Year", to_year, "sample_date_year"),
+        ReportField("sample_date", "Month", to_month, "sample_date_month"),
+        ReportField("sample_date", "Day", to_day, "sample_date_day"),
+        ReportField("sample_time", "Start time", to_str),
+        ReportField("tide_name", "Tide"),
+        ReportField("visibility_name", "Visibility"),
+        ReportField("current_name", "Current"),
+        ReportField("depth", "Depth"),
+        ReportField("relative_depth", "Relative depth"),
+        ReportField("management_name", "Management name"),
+        ReportField("management_name_secondary", "Management secondary name"),
+        ReportField("management_est_year", "Management year established"),
+        ReportField("management_size", "Management size"),
+        ReportField("management_parties", "Governance", to_governance),
+        ReportField("management_compliance", "Estimated compliance", ),
+        ReportField("management_rules", "Management rules"),
+        ReportField("observers", "Observers", to_names),
+        ReportField("label", "Transect label"),
+        ReportField("count_genera", "Genera count"),
+        ReportField("count_total", "Total count"),
+        ReportField("percent_normal", "Percent normal"),
+        ReportField("percent_pale", "Percent pale"),
+        ReportField("percent_bleached", "Percent bleached"),
+        ReportField("quadrat_count", "Number of quadrats"),
+        ReportField("percent_hard_avg", "Average Hard Coral (% cover)"),
+        ReportField("percent_soft_avg", "Average Soft Coral (% cover)"),
+        ReportField("percent_algae_avg", "Average Macroalgae (% cover)"),
+        ReportField("site_notes", "Site notes"),
+        ReportField("sample_event_notes", "Sampling event notes"),
+        ReportField("management_notes", "Management notes"),
+    ]
+
+    additional_fields = [
+        ReportField("id"),
+        ReportField("site_id"),
+        ReportField("project_id"),
+        ReportField("project_notes"),
+        ReportField("contact_link"),
+        ReportField("tags"),
+        ReportField("country_id"),
+        ReportField("management_id"),
+        ReportField("sample_event_id"),
+        ReportField("sample_unit_ids"),
+        ReportField("data_policy_bleachingqc"),
+    ]
+
+
+class BleachingQCMethodSECSVSerializer(ReportSerializer):
+    fields = [
+        ReportField("project_name", "Project name"),
+        ReportField("country_name", "Country"),
+        ReportField("site_name", "Site"),
+        ReportField("location", "Latitude", to_latitude, alias="latitude"),
+        ReportField("location", "Longitude", to_longitude, alias="longitude"),
+        ReportField("reef_exposure", "Exposure"),
+        ReportField("quadrat_size_avg", "Quadrat size average"),
+        ReportField("reef_type", "Reef type"),
+        ReportField("reef_zone", "Reef zone"),
+        ReportField("sample_date", "Year", to_year, "sample_date_year"),
+        ReportField("sample_date", "Month", to_month, "sample_date_month"),
+        ReportField("sample_date", "Day", to_day, "sample_date_day"),
+        ReportField("tide_name", "Tide"),
+        ReportField("visibility_name", "Visibility"),
+        ReportField("current_name", "Current"),
+        ReportField("depth_avg", "Depth average"),
+        ReportField("management_name", "Management name"),
+        ReportField("management_name_secondary", "Management secondary name"),
+        ReportField("management_est_year", "Management year established"),
+        ReportField("management_size", "Management size"),
+        ReportField("management_parties", "Governance", to_governance),
+        ReportField("management_compliance", "Estimated compliance", ),
+        ReportField("management_rules", "Management rules"),
+        ReportField("sample_unit_count", "Sample unit count"),
+        ReportField("count_genera_avg", "Genera count average"),
+        ReportField("count_total_avg", "Total count average"),
+        ReportField("percent_normal_avg", "Percent normal average"),
+        ReportField("percent_pale_avg", "Percent pale average"),
+        ReportField("percent_bleached_avg", "Percent bleached average"),
+        ReportField("quadrat_count_avg", "Number of quadrats average"),
+        ReportField("percent_hard_avg_avg", "Average Hard Coral (% cover) average"),
+        ReportField("percent_soft_avg_avg", "Average Soft Coral (% cover) average"),
+        ReportField("percent_algae_avg_avg", "Average Macroalgae (% cover) average"),
+        ReportField("site_notes", "Site notes"),
+        ReportField("sample_event_notes", "Sampling event notes"),
+        ReportField("management_notes", "Management notes"),
+    ]
+
+    additional_fields = [
+        ReportField("id"),
+        ReportField("site_id"),
+        ReportField("project_id"),
+        ReportField("project_notes"),
+        ReportField("contact_link"),
+        ReportField("tags"),
+        ReportField("country_id"),
+        ReportField("management_id"),
+        ReportField("sample_event_id"),
+        ReportField("data_policy_bleachingqc"),
+    ]
 
 
 class BleachingQCMethodSUGeoSerializer(BaseViewAPIGeoSerializer):
@@ -456,12 +483,12 @@ class BleachingQCMethodSUGeoSerializer(BaseViewAPIGeoSerializer):
         model = BleachingQCSUView
 
 
-class BleachingQCMethodSESerializer(BaseViewAPISerializer):
-    class Meta(BaseViewAPISerializer.Meta):
+class BleachingQCMethodSESerializer(BaseSUViewAPISerializer):
+    class Meta(BaseSUViewAPISerializer.Meta):
         model = BleachingQCSEView
-        exclude = BaseViewAPISerializer.Meta.exclude.copy()
+        exclude = BaseSUViewAPISerializer.Meta.exclude.copy()
         exclude.append("location")
-        header_order = BaseViewAPISerializer.Meta.header_order.copy()
+        header_order = BaseSUViewAPISerializer.Meta.header_order.copy()
         header_order.extend(
             [
                 "sample_unit_count",
@@ -486,10 +513,7 @@ class BleachingQCMethodSEGeoSerializer(BaseViewAPIGeoSerializer):
         model = BleachingQCSEView
 
 
-class BleachingQCMethodColoniesBleachedObsFilterSet(BaseTransectFilterSet):
-    sample_unit_id = BaseInFilter(method="id_lookup")
-    depth = RangeFilter()
-    observers = BaseInFilter(method="json_name_lookup")
+class BleachingQCMethodColoniesBleachedObsFilterSet(BaseSUObsFilterSet):
     count_normal = RangeFilter()
     count_pale = RangeFilter()
     count_20 = RangeFilter()
@@ -501,10 +525,6 @@ class BleachingQCMethodColoniesBleachedObsFilterSet(BaseTransectFilterSet):
     class Meta:
         model = BleachingQCColoniesBleachedObsView
         fields = [
-            "depth",
-            "sample_unit_id",
-            "observers",
-            "label",
             "quadrat_size",
             "benthic_attribute",
             "growth_form",
@@ -519,10 +539,7 @@ class BleachingQCMethodColoniesBleachedObsFilterSet(BaseTransectFilterSet):
         ]
 
 
-class BleachingQCMethodQuadratBenthicPercentObsFilterSet(BaseTransectFilterSet):
-    sample_unit_id = BaseInFilter(method="id_lookup")
-    depth = RangeFilter()
-    observers = BaseInFilter(method="json_name_lookup")
+class BleachingQCMethodQuadratBenthicPercentObsFilterSet(BaseSUObsFilterSet):
     percent_hard = RangeFilter()
     percent_soft = RangeFilter()
     percent_algae = RangeFilter()
@@ -530,10 +547,6 @@ class BleachingQCMethodQuadratBenthicPercentObsFilterSet(BaseTransectFilterSet):
     class Meta:
         model = BleachingQCQuadratBenthicPercentObsView
         fields = [
-            "depth",
-            "sample_unit_id",
-            "observers",
-            "label",
             "quadrat_size",
             "data_policy_bleachingqc",
             "quadrat_number",
@@ -543,10 +556,7 @@ class BleachingQCMethodQuadratBenthicPercentObsFilterSet(BaseTransectFilterSet):
         ]
 
 
-class BleachingQCMethodSUFilterSet(BaseTransectFilterSet):
-    sample_unit_id = BaseInFilter(method="id_lookup")
-    depth = RangeFilter()
-    observers = BaseInFilter(method="json_name_lookup")
+class BleachingQCMethodSUFilterSet(BaseSUObsFilterSet):
     count_genera = RangeFilter()
     count_total = RangeFilter()
     percent_normal = RangeFilter()
@@ -560,10 +570,6 @@ class BleachingQCMethodSUFilterSet(BaseTransectFilterSet):
     class Meta:
         model = BleachingQCSUView
         fields = [
-            "depth",
-            "sample_unit_id",
-            "observers",
-            "label",
             "quadrat_size",
             "data_policy_bleachingqc",
             "count_genera",
@@ -578,7 +584,7 @@ class BleachingQCMethodSUFilterSet(BaseTransectFilterSet):
         ]
 
 
-class BleachingQCMethodSEFilterSet(BaseTransectFilterSet):
+class BleachingQCMethodSEFilterSet(BaseSEFilterSet):
     sample_unit_count = RangeFilter()
     depth_avg = RangeFilter()
     quadrat_size_avg = RangeFilter()
@@ -616,11 +622,10 @@ class BleachingQCProjectMethodObsColoniesBleachedView(BaseProjectMethodView):
     project_policy = "data_policy_bleachingqc"
     serializer_class = BleachingQCMethodObsColoniesBleachedSerializer
     serializer_class_geojson = BleachingQCMethodObsColoniesBleachedGeoSerializer
-    serializer_class_csv = BleachingQCMethodObsColoniesBleachedCSVSerializer
+    serializer_class_csv = ObsBleachingQCColoniesBleachedCSVSerializer
     filterset_class = BleachingQCMethodColoniesBleachedObsFilterSet
-    queryset = BleachingQCColoniesBleachedObsView.objects.exclude(
-        project_status=Project.TEST
-    ).order_by("site_name", "sample_date", "label", "benthic_attribute", "growth_form")
+    queryset = BleachingQCColoniesBleachedObsView.objects.all()
+    order_by = ("site_name", "sample_date", "label", "benthic_attribute", "growth_form")
 
 
 class BleachingQCProjectMethodObsQuadratBenthicPercentView(BaseProjectMethodView):
@@ -628,11 +633,10 @@ class BleachingQCProjectMethodObsQuadratBenthicPercentView(BaseProjectMethodView
     project_policy = "data_policy_bleachingqc"
     serializer_class = BleachingQCMethodObsQuadratBenthicPercentSerializer
     serializer_class_geojson = BleachingQCMethodObsQuadratBenthicPercentGeoSerializer
-    serializer_class_csv = BleachingQCMethodObsQuadratBenthicPercentCSVSerializer
+    serializer_class_csv = ObsQuadratBenthicPercentCSVSerializer
     filterset_class = BleachingQCMethodQuadratBenthicPercentObsFilterSet
-    queryset = BleachingQCQuadratBenthicPercentObsView.objects.exclude(
-        project_status=Project.TEST
-    ).order_by("site_name", "sample_date", "label", "quadrat_number")
+    queryset = BleachingQCQuadratBenthicPercentObsView.objects.all()
+    order_by = ("site_name", "sample_date", "label", "quadrat_number")
 
 
 class BleachingQCProjectMethodSUView(BaseProjectMethodView):
@@ -642,7 +646,8 @@ class BleachingQCProjectMethodSUView(BaseProjectMethodView):
     serializer_class_geojson = BleachingQCMethodSUGeoSerializer
     serializer_class_csv = BleachingQCMethodSUCSVSerializer
     filterset_class = BleachingQCMethodSUFilterSet
-    queryset = BleachingQCSUView.objects.exclude(project_status=Project.TEST).order_by(
+    queryset = BleachingQCSUView.objects.all()
+    order_by = (
         "site_name", "sample_date", "label"
     )
 
@@ -655,8 +660,9 @@ class BleachingQCProjectMethodSEView(BaseProjectMethodView):
     ]
     serializer_class = BleachingQCMethodSESerializer
     serializer_class_geojson = BleachingQCMethodSEGeoSerializer
-    serializer_class_csv = BleachingQCMethodSESerializer
+    serializer_class_csv = BleachingQCMethodSECSVSerializer
     filterset_class = BleachingQCMethodSEFilterSet
-    queryset = BleachingQCSEView.objects.exclude(project_status=Project.TEST).order_by(
+    queryset = BleachingQCSEView.objects.all()
+    order_by = (
         "site_name", "sample_date"
     )

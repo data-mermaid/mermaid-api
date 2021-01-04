@@ -1,4 +1,5 @@
 import pytz
+from django.db import IntegrityError
 from django.db.models import ProtectedError, Q
 from django.http.response import HttpResponseBadRequest
 from django.template.defaultfilters import pluralize
@@ -7,6 +8,7 @@ from rest_framework import status
 from rest_framework.request import Request
 from rest_framework.response import Response
 from rest_framework.decorators import action
+from rest_framework.serializers import raise_errors_on_nested_writes
 
 from ..models import ArchivedRecord
 from ..utils import get_protected_related_objects
@@ -34,6 +36,18 @@ class ProtectedResourceMixin(object):
 
             msg += " [" + ", ".join(protected_instance_displays) + "]"
             return Response(msg, status=status.HTTP_403_FORBIDDEN)
+
+
+class CreateOrUpdateSerializerMixin(object):
+    def create(self, validated_data):
+        try:
+            return super().create(validated_data)
+        except IntegrityError as err:
+            if "violates unique constraint" in str(err).lower():
+                ModelClass = self.Meta.model
+                instance = ModelClass.objects.get(id=validated_data["id"])
+                return self.update(instance, validated_data)
+            raise
 
 
 class UpdatesMixin(object):
@@ -89,16 +103,11 @@ class UpdatesMixin(object):
         return timestamp
 
     def get_updates(self, request, *args, **kwargs):
-        added = []
-        modified = []
-        removed = []
-
         timestamp = self.get_update_timestamp(request)
         pk = request.query_params.get("pk")
 
         serializer = self.get_serializer_class()
 
-        qry = None
         added_filter = dict()
         updated_filter = dict()
         removed_filter = dict(app_label="api")
@@ -121,19 +130,13 @@ class UpdatesMixin(object):
             removed_filter["model"] = qry.model._meta.model_name
 
         context = {"request": self.request}
-        added = []
         added_records = qry.filter(**added_filter)
-        for added_record in added_records:
-            timestamp = added_record.updated_on
-            serialized_rec = serializer(added_record, context=context).data
-            added.append((timestamp, serialized_rec))
+        serialized_recs = serializer(added_records, many=True, context=context).data
+        added = [(parse_datetime(sr["updated_on"]), sr) for sr in serialized_recs]
 
-        modified = []
         modified_recs = qry.filter(**updated_filter)
-        for modified_rec in modified_recs:
-            timestamp = modified_rec.updated_on
-            serialized_rec = serializer(modified_rec, context=context).data
-            modified.append((timestamp, serialized_rec))
+        serialized_recs = serializer(modified_recs, many=True, context=context).data
+        modified = [(parse_datetime(sr["updated_on"]), sr) for sr in serialized_recs]
 
         removed = [
             (ar.created_on, dict(id=ar.record_pk, timestamp=ar.created_on))
@@ -187,7 +190,6 @@ class MethodAuthenticationMixin(object):
 
 
 class OrFilterSetMixin(object):
-
     def str_or_lookup(self, queryset, name, value, key=None, lookup_expr="iexact"):
         if not isinstance(name, (list, set, tuple)):
             name = [name]
@@ -200,7 +202,7 @@ class OrFilterSetMixin(object):
                     if key is not None:
                         predicate = {fieldname: [{key: str(v).strip()}]}
                     q |= Q(**predicate)
-        # print(q)
+
         return queryset.filter(q).distinct()
 
     def id_lookup(self, queryset, name, value):

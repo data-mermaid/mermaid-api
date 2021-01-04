@@ -11,4 +11,3 @@ class BaseBrowsableAPIRenderer(BrowsableAPIRenderer):
         context = super(BaseBrowsableAPIRenderer, self).get_context(data, accepted_media_type, renderer_context)
         context['nav_name'] = '%s [%s]' % (settings.PROJECT_NAME, settings.ENVIRONMENT)
         return context
-

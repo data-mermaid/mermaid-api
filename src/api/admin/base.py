@@ -239,7 +239,7 @@ class AttributeAdmin(BaseAdmin):
                         "using this object.",
                         level=messages.ERROR,
                     )
-                    return super(AttributeAdmin, self).delete_view(
+                    return super().delete_view(
                         request, object_id, extra_context
                     )
 
@@ -256,7 +256,7 @@ class AttributeAdmin(BaseAdmin):
                         **{self.attrib: object_id}
                     ).update(**{self.attrib: replacement_obj})
 
-        return super(AttributeAdmin, self).delete_view(
+        return super().delete_view(
             request, object_id, extra_context
         )
 
@@ -349,5 +349,8 @@ class TransectMethodAdmin(BaseAdmin):
 
     def len_surveyed(self, obj):
         return obj.transect.len_surveyed
+
+    def depth(self, obj):
+        return obj.transect.depth
 
     len_surveyed.admin_order_field = "transect__len_surveyed"

@@ -2,7 +2,8 @@ from django.core.exceptions import ObjectDoesNotExist
 from rest_framework import permissions
 from rest_framework.exceptions import NotFound, PermissionDenied
 from .exceptions import check_uuid
-from .models import Project, ProjectProfile, BaseAttributeModel
+from .models import Project, ProjectProfile
+from .models.base import PROPOSED
 
 
 class DefaultPermission(permissions.BasePermission):
@@ -123,7 +124,7 @@ class AttributeAuthenticatedUserPermission(permissions.BasePermission):
             pk = check_uuid(view.kwargs.get("pk"))
             try:
                 qs = view.get_queryset()
-                return qs.get(id=pk).status == BaseAttributeModel.PROPOSED
+                return qs.get(id=pk).status == PROPOSED
             except ObjectDoesNotExist:
                 pass
         return False

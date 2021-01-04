@@ -1,10 +1,6 @@
 import csv
-import json
-
-from django.db import connection, transaction
 
 from api import mocks
-from api.decorators import run_in_thread
 from api.ingest import (
     BenthicPITCSVSerializer,
     BleachingCSVSerializer,
@@ -26,6 +22,13 @@ from api.resources.project_profile import ProjectProfileSerializer
 from api.submission.utils import submit_collect_records, validate_collect_records
 from api.submission.validations import ERROR, WARN
 from api.utils import tokenutils
+from django.db import connection, transaction
+
+
+class InvalidSchema(Exception):
+    def __init__(self, message="Invalid Schema", errors=None):
+        super().__init__(message)
+        self.errors = errors
 
 
 def get_ingest_project_choices(project_id):
@@ -66,7 +69,7 @@ def _create_context(profile_id, request=None):
     return {"request": request}
 
 
-def _append_required_columns(rows, project_id, profile_id):
+def _add_extra_fields(rows, project_id, profile_id):
     _rows = []
     for row in rows:
         row["project"] = project_id
@@ -75,12 +78,33 @@ def _append_required_columns(rows, project_id, profile_id):
     return _rows
 
 
-@run_in_thread
-def clear_collect_records(collect_record_ids):
-    CollectRecord.objects.filter(
-        id__in=collect_record_ids
-    ).delete()
-    print("deleted old records")
+def _schema_check(csv_headers, serializer_headers):
+    missing_required_headers = []
+
+    for h in serializer_headers:
+        if "*" in h and h not in csv_headers:
+            missing_required_headers.append(h)
+
+    if missing_required_headers:
+        raise InvalidSchema(errors=missing_required_headers)
+
+
+def clear_collect_records(project, profile, protocol):
+    sql = """
+        DELETE FROM {table_name}
+        WHERE 
+            project_id='{project}' AND 
+            profile_id='{profile}' AND 
+            data->>'protocol' = '{protocol}';
+        """.format(
+        table_name=CollectRecord.objects.model._meta.db_table,
+        project=project,
+        profile=profile,
+        protocol=protocol,
+    )
+    with connection.cursor() as cursor:
+        cursor.execute(sql)
+        return cursor.rowcount
 
 
 def ingest(
@@ -109,10 +133,12 @@ def ingest(
         return None, output
 
     reader = csv.DictReader(datafile)
-    context = _create_context(request, profile_id)
-    rows = _append_required_columns(reader, project_id, profile_id)
-    project_choices = get_ingest_project_choices(project_id)
 
+    _schema_check(reader.fieldnames, list(serializer.header_map.keys()))
+
+    context = _create_context(profile_id, request)
+    rows = _add_extra_fields(reader, project_id, profile_id)
+    project_choices = get_ingest_project_choices(project_id)
     profile = Profile.objects.get_or_none(id=profile_id)
     if profile is None:
         raise ValueError("Profile does not exist")
@@ -137,12 +163,8 @@ def ingest(
                 # Fetch ids to be deleted before deleting
                 # because it's being done in a thread and
                 # we want to avoid deleting new collect records.
-                delete_ids = [cr.id for cr in CollectRecord.objects.filter(
-                    project_id=project_id,
-                    profile=profile,
-                    data__protocol=protocol
-                )]
-                clear_collect_records(delete_ids)
+                clear_collect_records(project_id, profile_id, protocol)
+
             new_records = s.save()
             successful_save = True
         finally:

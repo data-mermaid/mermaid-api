@@ -1,5 +1,6 @@
 import time
-from invoke import task, run
+
+from invoke import run, task
 
 # HELPER FUNCTIONS ###
 
@@ -50,6 +51,12 @@ def down(c):
 def runserver(c):
     """Enter Django's runserver on 0.0.0.0:8080"""
     local(_api_cmd("python manage.py runserver 0.0.0.0:8080"))
+
+
+@task
+def runserverplus(c):
+    """Enter gunicorn runserver on 0.0.0.0:8080"""
+    local(_api_cmd("gunicorn --reload -c runserverplus.conf app.wsgi:application"))
 
 
 @task
@@ -109,7 +116,7 @@ def dbbackup(c, key_name="local"):
     local(_api_cmd("python manage.py dbbackup {}".format(key_name)))
 
 
-@task(aliases=["fresh-install"])
+@task
 def freshinstall(c, keyname="local"):
     down(c)
     buildnocache(c)

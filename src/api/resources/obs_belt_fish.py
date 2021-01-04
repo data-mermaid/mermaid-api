@@ -22,8 +22,8 @@ class ObsBeltFishSerializer(BaseAPISerializer):
 
 
 class ObsBeltFishFilterSet(BaseAPIFilterSet):
-    size = django_filters.NumericRangeFilter(field_name="size")
-    count = django_filters.NumericRangeFilter(field_name="count")
+    size = django_filters.RangeFilter(field_name="size")
+    count = django_filters.RangeFilter(field_name="count")
 
     class Meta:
         model = ObsBeltFish

@@ -3,10 +3,11 @@ from django.views.decorators.cache import cache_page
 from rest_framework import serializers
 from django_filters import ModelMultipleChoiceFilter
 from .base import BaseAPIFilterSet, NullableUUIDFilter, BaseAPISerializer, BaseAttributeApiViewSet
+from .mixins import CreateOrUpdateSerializerMixin
 from ..models import BenthicAttribute, Region
 
 
-class BenthicAttributeSerializer(BaseAPISerializer):
+class BenthicAttributeSerializer(CreateOrUpdateSerializerMixin, BaseAPISerializer):
     status = serializers.ReadOnlyField()
 
     class Meta:
@@ -26,10 +27,9 @@ class BenthicAttributeFilterSet(BaseAPIFilterSet):
 
 class BenthicAttributeViewSet(BaseAttributeApiViewSet):
     serializer_class = BenthicAttributeSerializer
-    queryset = BenthicAttribute.objects.prefetch_related('regions')
+    queryset = BenthicAttribute.objects.select_related().prefetch_related('regions')
     filter_class = BenthicAttributeFilterSet
     search_fields = ['name', ]
 
-    @method_decorator(cache_page(60*60))
     def list(self, request, *args, **kwargs):
         return super(BenthicAttributeViewSet, self).list(request, *args, **kwargs)

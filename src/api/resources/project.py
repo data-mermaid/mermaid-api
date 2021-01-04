@@ -2,6 +2,7 @@ import logging
 
 import django_filters
 from django.contrib.auth.models import AnonymousUser
+from django.contrib.postgres.fields import JSONField
 from django.db import transaction
 from rest_framework import exceptions, permissions, serializers
 from rest_framework.decorators import action
@@ -54,6 +55,7 @@ class ProjectSerializer(BaseAPISerializer):
     countries = serializers.SerializerMethodField()
     num_sites = serializers.SerializerMethodField()
     tags = serializers.ListField(source="tags.all", child=TagField(), required=False)
+    members = serializers.SerializerMethodField()
 
     def __init__(self, *args, **kwargs):
         for field in self.project_specific_fields:
@@ -93,14 +95,17 @@ class ProjectSerializer(BaseAPISerializer):
         additional_fields = ["countries", "num_sites"]
 
     def get_countries(self, obj):
-        sites = Site.objects.filter(project=obj)
+        sites = obj.sites.all()
         return sorted(
             list(set([s.country.name for s in sites if s.country is not None]))
         )
 
     def get_num_sites(self, obj):
-        site = Site.objects.filter(project=obj)
-        return len(site)
+        sites = obj.sites.all()
+        return sites.count()
+
+    def get_members(self, obj):
+        return [pp.profile_id for pp in obj.profiles.all()]
 
 
 class ProjectFilterSet(BaseAPIFilterSet):
@@ -109,6 +114,14 @@ class ProjectFilterSet(BaseAPIFilterSet):
     class Meta:
         model = Project
         exclude = []
+        filter_overrides = {
+             JSONField: {
+                 "filter_class": django_filters.CharFilter,
+                 "extra": lambda f: {
+                     "lookup_expr": "icontains",
+                 }
+             }
+        }
 
     def filter_tags(self, queryset, name, value):
         values = [v.strip() for v in value.split(",")]
@@ -145,7 +158,9 @@ class ProjectViewSet(BaseApiViewSet):
     search_fields = ["$name", "$sites__country__name"]
 
     def get_queryset(self):
-        qs = Project.objects.all().order_by("name")
+        qs = Project.objects.select_related("created_by", "updated_by")
+        qs = qs.prefetch_related("profiles", "sites", "sites__country")
+        qs = qs.all().order_by("name")
         user = self.request.user
         show_all = "showall" in self.request.query_params
 
@@ -254,12 +269,17 @@ class ProjectViewSet(BaseApiViewSet):
         # Additions
         self.apply_query_param(added_filter, "created_on__gte", timestamp)
         added_filter["profile"] = request.user.profile
-        project_profiles = ProjectProfile.objects.filter(**added_filter)
+        updated_ons = []
+        projects = []
+        project_profiles = ProjectProfile.objects.select_related("project")
+        project_profiles = project_profiles.prefetch_related("project__sites", "project__sites__country")
+        project_profiles = project_profiles.filter(**added_filter)
+        for pp in project_profiles:
+            updated_ons.append(pp.updated_on)
+            projects.append(pp.project)
 
-        additions = [
-            (pp.updated_on, serializer(pp.project, context=context).data)
-            for pp in project_profiles
-        ]
+        serialized_recs = serializer(projects, many=True, context=context).data
+        additions = list(zip(updated_ons, serialized_recs))
 
         added.extend(additions)
 

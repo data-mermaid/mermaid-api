@@ -1,16 +1,15 @@
+import re
 from collections import defaultdict
 
-import re
 import django_filters
-from django.db.models import Case, CharField, Q, Value, When
-from django.db.models.functions import Concat, Cast
 from django.contrib.postgres.aggregates import StringAgg
-from rest_framework import serializers
-from rest_framework import exceptions
+from django.db.models import Case, CharField, Q, Value, When
+from django.db.models.functions import Cast, Concat
+from rest_framework import exceptions, serializers
 
 from ...exceptions import check_uuid
 from ...models import mermaid
-from ...models.mermaid import TransectMethod
+from ...models.mermaid import SampleEvent, TransectMethod
 from ..base import BaseAPIFilterSet, BaseAPISerializer, BaseProjectApiViewSet
 
 
@@ -43,11 +42,10 @@ class SearchNonFieldFilter(django_filters.Filter):
 
     def filter(self, qs, value):
         value = value or ""
-        params = value.replace(",", "--*--").split("--*--")
+
         qry = Q()
         for field in self.SEARCH_FIELDS:
-            for param in params:
-                qry |= Q(**{"{}__iregex".format(field): param})
+            qry |= Q(**{"{}__iregex".format(field): value})
         return qs.filter(qry).distinct()
 
 
@@ -83,23 +81,30 @@ class SampleUnitMethodSerializer(BaseAPISerializer):
         return None
 
     def get_site(self, o):
-        sample_unit = o.sample_unit
-        return sample_unit.sample_event.site.id
+        se = self.context["sample_events"].get(str(o.sample_unit.sample_event_id))
+        if se is None:
+            return
+        return se.site_id
 
     def get_management(self, o):
-        sample_unit = o.sample_unit
-        return sample_unit.sample_event.management.id
+        se = self.context["sample_events"].get(str(o.sample_unit.sample_event_id))
+        if se is None:
+            return
+        return se.management_id
 
     def get_sample_date(self, o):
-        sample_unit = o.sample_unit
-        return sample_unit.sample_event.sample_date
+        se = self.context["sample_events"].get(str(o.sample_unit.sample_event_id))
+        if se is None:
+            return
+        return se.sample_date
 
     def get_size(self, o):
         protocol = o.protocol
         if protocol == mermaid.FISHBELT_PROTOCOL:
             sample_unit = o.sample_unit
+
             return dict(
-                width=sample_unit.width.val,
+                width=sample_unit.width.id,
                 width_units="m",
                 len_surveyed=sample_unit.len_surveyed,
                 len_surveyed_units="m",
@@ -132,6 +137,11 @@ class SampleUnitMethodView(BaseProjectApiViewSet):
         "habitatcomplexity",
         "beltfish",
         "bleachingquadratcollection",
+        "benthicpit__transect",
+        "benthiclit__transect",
+        "beltfish__transect",
+        "habitatcomplexity__transect",
+        "bleachingquadratcollection__quadrat",
     ).all()
 
     filter_class = SampleUnitMethodFilterSet
@@ -234,24 +244,24 @@ class SampleUnitMethodView(BaseProjectApiViewSet):
 
         depth_condition = Case(
             When(
-                benthiclit__transect__sample_event__depth__isnull=False,
-                then="benthiclit__transect__sample_event__depth",
+                benthiclit__transect__depth__isnull=False,
+                then="benthiclit__transect__depth",
             ),
             When(
-                benthicpit__transect__sample_event__depth__isnull=False,
-                then="benthicpit__transect__sample_event__depth",
+                benthicpit__transect__depth__isnull=False,
+                then="benthicpit__transect__depth",
             ),
             When(
-                habitatcomplexity__transect__sample_event__depth__isnull=False,
-                then="habitatcomplexity__transect__sample_event__depth",
+                habitatcomplexity__transect__depth__isnull=False,
+                then="habitatcomplexity__transect__depth",
             ),
             When(
-                bleachingquadratcollection__quadrat__sample_event__depth__isnull=False,
-                then="bleachingquadratcollection__quadrat__sample_event__depth",
+                bleachingquadratcollection__quadrat__depth__isnull=False,
+                then="bleachingquadratcollection__quadrat__depth",
             ),
             When(
-                beltfish__transect__sample_event__depth__isnull=False,
-                then="beltfish__transect__sample_event__depth",
+                beltfish__transect__depth__isnull=False,
+                then="beltfish__transect__depth",
             ),
         )
 
@@ -353,8 +363,20 @@ class SampleUnitMethodView(BaseProjectApiViewSet):
 
     def get_serializer_context(self):
         context = super(SampleUnitMethodView, self).get_serializer_context()
-        transect_method_ids = [r.id for r in self.get_queryset()]
-        observers = mermaid.Observer.objects.filter(
+        transect_method_ids = []
+        sample_event_ids = []
+        for r in self.get_queryset():
+            transect_method_ids.append(r.id)
+            sample_event_ids.append(r.sample_unit.sample_event_id)
+
+        context["sample_events"] = {
+            str(se.id): se
+            for se in SampleEvent.objects.select_related("site", "management").filter(
+                id__in=set(sample_event_ids)
+            )
+        }
+
+        observers = mermaid.Observer.objects.select_related("profile").filter(
             transectmethod_id__in=transect_method_ids
         )
         observer_lookup = defaultdict(list)

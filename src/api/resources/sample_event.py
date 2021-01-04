@@ -18,10 +18,6 @@ from ..models import SampleEvent
 class SampleEventExtendedSerializer(ExtendedSerializer):
     site = SiteExtendedSerializer()
     management = ManagementExtendedSerializer(exclude=['project'])
-    visibility = ModelNameReadOnlyField()
-    relative_depth = ModelNameReadOnlyField()
-    tide = ModelNameReadOnlyField()
-    current = ModelNameReadOnlyField()
 
     class Meta:
         model = SampleEvent
@@ -29,20 +25,20 @@ class SampleEventExtendedSerializer(ExtendedSerializer):
 
 
 class SampleEventSerializer(BaseAPISerializer):
-    depth = serializers.DecimalField(max_digits=3,
-                                     decimal_places=1,
-                                     coerce_to_string=False,
-                                     error_messages={"null": "Depth is required"})
 
     class Meta:
         model = SampleEvent
-        exclude = []
+        exclude = [
+            "current",
+            "depth",
+            "relative_depth",
+            "sample_time",
+            "tide",
+            "visibility",
+        ]
         extra_kwargs = {
             "sample_date": {
                 "error_messages": {"null": "Sample date is required"}
-            },
-            "sample_time": {
-                "error_messages": {"null": "Sample time is required"}
             },
             "site": {
                 "error_messages": {"null": "Site is required"}
@@ -54,16 +50,17 @@ class SampleEventSerializer(BaseAPISerializer):
 
 
 class SampleEventFilterSet(BaseAPIFilterSet):
-    sample_date = django_filters.DateTimeFromToRangeFilter(field_name='sample_date')
-    depth = django_filters.NumericRangeFilter(field_name='depth')
+    sample_date = django_filters.DateTimeFromToRangeFilter(field_name="sample_date")
 
     class Meta:
         model = SampleEvent
-        fields = ['site', 'management', 'sample_date', 'sample_time', 'depth', 'visibility', 'current',
-                  'relative_depth', 'tide', ]
+        fields = ['site', 'management', 'sample_date']
 
 
 class SampleEventViewSet(BaseProjectApiViewSet):
     serializer_class = SampleEventSerializer
     queryset = SampleEvent.objects.all()
     filter_class = SampleEventFilterSet
+
+    def perform_update(self, serializer):
+        serializer.save()

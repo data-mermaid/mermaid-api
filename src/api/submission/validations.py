@@ -3,7 +3,6 @@ import itertools
 import json
 import math
 
-from dateutil import tz
 from django.contrib.gis.geos import Polygon
 from django.contrib.gis.measure import Distance
 from django.contrib.postgres.search import TrigramSimilarity
@@ -21,7 +20,9 @@ from api.models import (
     BenthicAttribute,
     BenthicTransect,
     FishAttribute,
+    FishAttributeView,
     FishBeltTransect,
+    FishSizeBin,
     FishSpecies,
     HabitatComplexityScore,
     Management,
@@ -31,6 +32,7 @@ from api.models import (
     Site,
 )
 from api.utils import calc_biomass_density, get_related_transect_methods
+from dateutil import tz
 from timezonefinder import TimezoneFinder
 from . import utils
 
@@ -89,7 +91,10 @@ class RegionalAttributesMixin(ObservationsMixin):
         attribute_ids = list(set([obs.get(self.attribute_key) for obs in observations]))
         attr_lookup = dict()
         for attr in self.AttributeModelClass.objects.filter(id__in=attribute_ids):
-            attr_lookup[str(attr.id)] = [str(r.id) for r in attr.regions.all()]
+            if isinstance(attr.regions, list):
+                attr_lookup[str(attr.id)] = [str(r) for r in attr.regions]
+            else:
+                attr_lookup[str(attr.id)] = [str(r.id) for r in attr.regions.all()]
 
         no_matches = []
         for attribute_id in attribute_ids:
@@ -152,6 +157,15 @@ class FishAttributeMixin(RegionalAttributesMixin):
         obs = [o for o in obs if o.get("fish_attribute") is not None]
         fish_attr_ids = [o.get("fish_attribute") for o in obs]
         fish_attr_ids = list(set(fish_attr_ids))
+        size_bin_id = (self.data.get("fishbelt_transect") or {}).get("size_bin")
+
+        try:
+            size_bin = FishSizeBin.objects.get(pk=size_bin_id)
+            fish_size_bin_lookup = {
+                fs.val: [fs.min_val, fs.max_val] for fs in size_bin.fishsize_set.all()
+            }
+        except FishSizeBin.DoesNotExist:
+            fish_size_bin_lookup = dict()
 
         # only validate lengths at species level until we know how to aggregate to genus
         fish_attrs = (
@@ -168,17 +182,22 @@ class FishAttributeMixin(RegionalAttributesMixin):
                 ][0]
                 max_length = fish.get("max_length")
                 obs_size = ob.get("size")
+
+                min_max_vals = fish_size_bin_lookup.get(obs_size)
+
+                if max_length is None or obs_size is None:
+                    continue
+
+                fish_name = "{} {}".format(fish.get("genus__name"), fish.get("name"))
+                warn_message = self.MAX_SPECIES_SIZE_TMPL.format(fish_name, max_length)
+
                 if (
-                    max_length is not None
-                    and obs_size is not None
-                    and obs_size > max_length
+                    min_max_vals
+                    and min_max_vals[0] is not None
+                    and min_max_vals[0] > max_length
                 ):
-                    fish_name = "{} {}".format(
-                        fish.get("genus__name"), fish.get("name")
-                    )
-                    warn_message = self.MAX_SPECIES_SIZE_TMPL.format(
-                        fish_name, max_length
-                    )
+                    return self.log(self.identifier, WARN, warn_message)
+                elif not min_max_vals and obs_size > max_length:
                     return self.log(self.identifier, WARN, warn_message)
             except IndexError:
                 pass
@@ -547,7 +566,7 @@ class ManagementValidation(ModelValidation):
                 self.identifier, _(LikeMatchWarning.format(self.name)), data=data
             )
 
-        return True
+        return self.ok(self.identifier)
 
 
 class ObserverValidation(ModelValidation):
@@ -747,6 +766,7 @@ class ObsFishBeltValidation(DataValidation, FishAttributeMixin):
     DENSITY_GT_TMPL = "Fish biomass greater than {} kg/ha"
     DENSITY_LT_TMPL = "Fish biomass less than {} kg/ha"
     FISH_COUNT_MIN_TMPL = "Total fish count less than {}"
+    FISH_FAMILY_SUBSET_TMPL = "There are fish that are not part of project defined fish familes"
 
     MIN_OBS_COUNT_WARN = 5
     MAX_OBS_COUNT_WARN = 200
@@ -789,7 +809,7 @@ class ObsFishBeltValidation(DataValidation, FishAttributeMixin):
         width_id = transect.get("width")
         try:
             _ = check_uuid(width_id)
-            width = BeltTransectWidth.objects.get(id=width_id).val
+            width = BeltTransectWidth.objects.get(id=width_id)
         except (BeltTransectWidth.DoesNotExist, ParseError):
             width = None
 
@@ -810,9 +830,16 @@ class ObsFishBeltValidation(DataValidation, FishAttributeMixin):
         for obs in observations:
             count = obs.get("count")
             size = obs.get("size")
+            try:
+                width_val = width.get_condition(size).val
+            except AttributeError:
+                width_val = None
+
             fish_attribute = obs.get("fish_attribute")
             constants = fish_attr_lookup.get(fish_attribute) or [None, None, None]
-            density = calc_biomass_density(count, size, len_surveyed, width, *constants)
+            density = calc_biomass_density(
+                count, size, len_surveyed, width_val, *constants
+            )
             densities.append(density)
 
         total_density = sum([d for d in densities if d is not None])
@@ -831,6 +858,33 @@ class ObsFishBeltValidation(DataValidation, FishAttributeMixin):
             return self.warning(self.identifier, self.FISH_COUNT_MIN_MSG)
 
         return self.ok(self.identifier)
+
+    def validate_fish_family_subset(self):
+        obs = self.data.get("obs_belt_fishes") or []
+        sample_event = self.data.get("sample_event") or {}
+        site_id = sample_event.get("site", None) or None
+        site = Site.objects.get_or_none(id=site_id)
+        if site is None:
+            return self.ok(self.identifier)
+
+        project = site.project
+        project_data = project.data or dict()
+        fish_family_subset = (project_data.get("settings") or dict()).get(
+            "fishFamilySubset"
+        )
+        if isinstance(fish_family_subset, list) is False:
+            return self.ok(self.identifier)
+
+        fish_attribute_ids = set([ob.get("fish_attribute") for ob in obs])
+        invalid_fish_attributes = FishAttributeView.objects.filter(
+            Q(id__in=fish_attribute_ids) & ~Q(id_family__in=fish_family_subset)
+        )
+
+        if invalid_fish_attributes.count() == 0:
+            return self.ok(self.identifier)
+
+        data = {str(fa.id): fa.name for fa in invalid_fish_attributes}
+        return self.warning(self.identifier, _(self.FISH_FAMILY_SUBSET_TMPL), data=data.values())
 
 
 class ObsHabitatComplexitiesValidation(DataValidation, BenthicObservationCountMixin):
@@ -872,7 +926,7 @@ class BenthicTransectValidation(DataValidation):
 
         label = benthic_transect.get("label") or ""
 
-        relative_depth = sample_event.get("relative_depth", None) or None
+        relative_depth = benthic_transect.get("relative_depth", None) or None
         if relative_depth is not None:
             try:
                 _ = check_uuid(relative_depth)
@@ -882,7 +936,7 @@ class BenthicTransectValidation(DataValidation):
         site = sample_event.get("site", None) or None
         management = sample_event.get("management", None) or None
         sample_date = sample_event.get("sample_date", None) or None
-        depth = sample_event.get("depth", None) or None
+        depth = benthic_transect.get("depth", None) or None
         try:
             _ = check_uuid(site)
             _ = check_uuid(management)
@@ -895,8 +949,8 @@ class BenthicTransectValidation(DataValidation):
             "sample_event__sample_date": sample_date,
             "number": number,
             "label": label,
-            "sample_event__depth": depth,
-            "sample_event__relative_depth": relative_depth,
+            "depth": depth,
+            "relative_depth": relative_depth,
         }
 
         results = BenthicTransect.objects.select_related().filter(**qry)
@@ -935,7 +989,7 @@ class FishBeltTransectValidation(DataValidation):
         except ParseError:
             return self.error(self.identifier, self.WIDTH_MSG)
 
-        relative_depth = sample_event.get("relative_depth", None) or None
+        relative_depth = fishbelt_transect.get("relative_depth", None) or None
         if relative_depth is not None:
             try:
                 _ = check_uuid(relative_depth)
@@ -945,7 +999,7 @@ class FishBeltTransectValidation(DataValidation):
         site = sample_event.get("site", None) or None
         management = sample_event.get("management", None) or None
         sample_date = sample_event.get("sample_date", None) or None
-        depth = sample_event.get("depth", None) or None
+        depth = fishbelt_transect.get("depth", None) or None
         try:
             _ = check_uuid(site)
             _ = check_uuid(management)
@@ -958,8 +1012,8 @@ class FishBeltTransectValidation(DataValidation):
             "sample_event__sample_date": sample_date,
             "number": number,
             "label": label,
-            "sample_event__depth": depth,
-            "sample_event__relative_depth": relative_depth,
+            "depth": depth,
+            "relative_depth": relative_depth,
             "width_id": width,
         }
 
@@ -1164,7 +1218,7 @@ class QuadratCollectionValidation(DataValidation):
 
         label = quadrat_collection.get("label") or ""
 
-        relative_depth = sample_event.get("relative_depth", None) or None
+        relative_depth = quadrat_collection.get("relative_depth", None) or None
         if relative_depth is not None:
             try:
                 _ = check_uuid(relative_depth)
@@ -1174,7 +1228,7 @@ class QuadratCollectionValidation(DataValidation):
         site = sample_event.get("site", None) or None
         management = sample_event.get("management", None) or None
         sample_date = sample_event.get("sample_date", None) or None
-        depth = sample_event.get("depth", None) or None
+        depth = quadrat_collection.get("depth", None) or None
 
         profiles = [o.get("profile") for o in self.data.get("observers") or []]
 
@@ -1195,7 +1249,7 @@ class QuadratCollectionValidation(DataValidation):
             "sample_event__management": management,
             "sample_event__sample_date": sample_date,
             "label": label,
-            "sample_event__depth": depth,
+            "depth": depth,
         }
         queryset = QuadratCollection.objects.filter(**qry)
         for profile in profiles:

@@ -27,8 +27,15 @@ from django.core.exceptions import FieldDoesNotExist
 from django.db.models.fields.related import ForeignObjectRel
 from rest_framework.validators import qs_exists
 from django_filters.rest_framework import DjangoFilterBackend
-from django_filters import (Filter, BaseInFilter, CharFilter, FilterSet, DateFromToRangeFilter,
-                            DateTimeFromToRangeFilter, RangeFilter)
+from django_filters import (
+    Filter,
+    BaseInFilter,
+    CharFilter,
+    FilterSet,
+    DateFromToRangeFilter,
+    DateTimeFromToRangeFilter,
+    RangeFilter,
+)
 from django_filters.fields import Lookup
 from django.conf import settings
 from ..models import Tag, APPROVAL_STATUSES
@@ -55,10 +62,10 @@ def to_tag_model_instances(tags, updated_by):
             str_tags.add(t)
         else:
             raise ValueError(
-                "Cannot add {0} ({1}). Expected {2} or str.".format(
-                    t, type(t), Tag))
+                "Cannot add {0} ({1}). Expected {2} or str.".format(t, type(t), Tag)
+            )
 
-    case_insensitive = getattr(settings, 'TAGGIT_CASE_INSENSITIVE', False)
+    case_insensitive = getattr(settings, "TAGGIT_CASE_INSENSITIVE", False)
 
     if case_insensitive:
         existing = []
@@ -92,36 +99,35 @@ def to_tag_model_instances(tags, updated_by):
 
 class ModelNameReadOnlyField(serializers.Field):
     def to_representation(self, obj):
-        return u'{}'.format(obj.name)
+        return u"{}".format(obj.name)
 
 
 class ModelValReadOnlyField(serializers.Field):
     def to_representation(self, obj):
-        return u'{}'.format(obj.val)
+        return u"{}".format(obj.val)
 
 
 class TagField(serializers.Field):
-
     def to_representation(self, obj):
-        return u'{}'.format(obj.name)
+        return u"{}".format(obj.name)
 
     def to_internal_value(self, data):
         if not isinstance(data, six.text_type):
-            msg = 'Incorrect type. Expected a string, but got %s'
+            msg = "Incorrect type. Expected a string, but got %s"
             raise ValidationError(msg % type(data).__name__)
         return Tag(name=data)
 
 
 class StandardResultPagination(PageNumberPagination):
     page_size = 50
-    page_size_query_param = 'limit'
+    page_size_query_param = "limit"
     max_page_size = 5000
 
 
 class CurrentProfileDefault(object):
     def set_context(self, serializer_field):
         try:
-            token = get_jwt_token(serializer_field.context['request'])
+            token = get_jwt_token(serializer_field.context["request"])
             self.profile = get_unverified_profile(token)
         except exceptions.AuthenticationFailed:
             self.profile = None
@@ -130,13 +136,12 @@ class CurrentProfileDefault(object):
         return self.profile
 
     def __repr__(self):
-        return '%s()' % self.__class__.__name__
+        return "%s()" % self.__class__.__name__
 
 
 class BaseAPISerializer(serializers.ModelSerializer):
     id = UUIDField(allow_null=True)
-    updated_by = PrimaryKeyRelatedField(read_only=True,
-                                        default=CurrentProfileDefault())
+    updated_by = PrimaryKeyRelatedField(read_only=True, default=CurrentProfileDefault())
 
     class Meta:
         available_fields = []
@@ -145,16 +150,16 @@ class BaseAPISerializer(serializers.ModelSerializer):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
 
-        request = self.context.get('request')
+        request = self.context.get("request")
         if request is None:
             return
 
-        available_fields = getattr(self.Meta, 'available_fields', []) or []
+        available_fields = getattr(self.Meta, "available_fields", []) or []
         fields = self.get_fields()
-        include_fields_param = request.GET.get('include_fields') or ''
-        include_fields = [f.strip() for f in include_fields_param.split(',')]
+        include_fields_param = request.GET.get("include_fields") or ""
+        include_fields = [f.strip() for f in include_fields_param.split(",")]
         exclude_fields = []
-        if '__all__' in include_fields_param:
+        if "__all__" in include_fields_param:
             valid_include_fields = available_fields
         else:
             available_field_set = set(available_fields)
@@ -176,24 +181,24 @@ class BaseAPISerializer(serializers.ModelSerializer):
                 self.fields.pop(field)
 
     def validate_id(self, value):
-        message = _('This field must be unique.')
+        message = _("This field must be unique.")
 
         if value is None:
             return value
 
         ModelClass = self.Meta.model
         queryset = ModelClass.objects.filter(pk=check_uuid(value))
-        existing_instance = getattr(self.fields['id'].parent, 'instance', None)
+        existing_instance = getattr(self.fields["id"].parent, "instance", None)
         if existing_instance is not None:
             queryset = queryset.exclude(pk=self.instance.pk)
 
         if qs_exists(queryset):
-            raise ValidationError(message, code='unique')
+            raise ValidationError(message, code="unique")
 
         return value
 
     def save(self, **kwargs):
-        request = self.context.get('request')
+        request = self.context.get("request")
         if request is None:
             return
 
@@ -209,25 +214,55 @@ class BaseViewAPISerializer(BaseAPISerializer):
 
     class Meta:
         exclude = ["project_status"]
-        header_order = [
-            "latitude", "longitude", 'site_id', 'site_name', 'site_notes',
-            'project_id', 'project_name', 'project_notes', 'contact_link', 'tags',
-            'country_id', 'country_name',
-            'reef_type', 'reef_zone', 'reef_exposure',
-            'management_id', 'management_name', 'management_name_secondary', 'management_est_year',
-            'management_size', 'management_parties', 'management_compliance', 'management_rules', 'management_notes',
-            'sample_date', "current_name", "tide_name", "visibility_name",
-        ]
 
     def get_latitude(self, obj):
         if obj.location is not None:
-            return round(obj.location.y, settings.GEO_PRECISION)
+            return obj.location.y
         return None
 
     def get_longitude(self, obj):
         if obj.location is not None:
-            return round(obj.location.x, settings.GEO_PRECISION)
+            return obj.location.x
         return None
+
+
+class BaseSUViewAPISerializer(BaseViewAPISerializer):
+    class Meta(BaseViewAPISerializer.Meta):
+        header_order = [
+            "latitude",
+            "longitude",
+            "site_id",
+            "site_name",
+            "site_notes",
+            "project_id",
+            "project_name",
+            "project_notes",
+            "contact_link",
+            "tags",
+            "country_id",
+            "country_name",
+            "reef_type",
+            "reef_zone",
+            "reef_exposure",
+            "management_id",
+            "management_name",
+            "management_name_secondary",
+            "management_est_year",
+            "management_size",
+            "management_parties",
+            "management_compliance",
+            "management_rules",
+            "management_notes",
+            "sample_event_id",
+            "sample_date",
+            "current_name",
+            "tide_name",
+            "visibility_name",
+            "sample_event_notes",
+            "relative_depth",
+            "sample_time",
+            "sample_unit_ids",
+        ]
 
     def get_observers(self, obj):
         if obj.observers is not None and isinstance(obj.observers, list):
@@ -248,34 +283,78 @@ class SampleEventExtendedSerializer(BaseAPISerializer):
 
     def __init__(self, *args, **kwargs):
         if self._sample_event is None:
-            raise Exception('SampleEventExtendedSerializer must be given a _sample_event string')
+            raise Exception(
+                "SampleEventExtendedSerializer must be given a _sample_event string"
+            )
 
-        self.fields['project_name'] = serializers.ReadOnlyField(source='{}.site.project.name'.format(self._sample_event))
-        self.fields['country_name'] = serializers.ReadOnlyField(source='{}.site.country.name'.format(self._sample_event))
-        self.fields['site_name'] = serializers.ReadOnlyField(source='{}.site.name'.format(self._sample_event))
-        self.fields['latitude'] = serializers.SerializerMethodField()
-        self.fields['longitude'] = serializers.SerializerMethodField()
-        self.fields['exposure_name'] = serializers.ReadOnlyField(source='{}.site.exposure.name'.format(self._sample_event))
-        self.fields['reef_slope_name'] = serializers.ReadOnlyField(source='{}.reef_slope.name'.format(self._sample_event))
-        self.fields['reef_type_name'] = serializers.ReadOnlyField(source='{}.site.reef_type.name'.format(self._sample_event))
-        self.fields['reef_zone_name'] = serializers.ReadOnlyField(source='{}.site.reef_zone.name'.format(self._sample_event))
-        self.fields['sample_date'] = serializers.ReadOnlyField(source='{}.sample_date'.format(self._sample_event))
-        self.fields['sample_time'] = serializers.ReadOnlyField(source='{}.sample_time'.format(self._sample_event))
-        self.fields['tide_name'] = serializers.ReadOnlyField(source='{}.tide.name'.format(self._sample_event))
-        self.fields['visibility_name'] = serializers.ReadOnlyField(source='{}.visibility.name'.format(self._sample_event))
-        self.fields['current_name'] = serializers.ReadOnlyField(source='{}.current.name'.format(self._sample_event))
-        self.fields['depth'] = serializers.ReadOnlyField(source='{}.depth'.format(self._sample_event))
-        self.fields['management_name'] = serializers.ReadOnlyField(source='{}.management.name'.format(self._sample_event))
-        self.fields['management_name_secondary'] = serializers.ReadOnlyField(source='{}.management.name_secondary'.format(self._sample_event))
-        self.fields['management_est_year'] = serializers.ReadOnlyField(source='{}.management.est_year'.format(self._sample_event))
-        self.fields['management_size'] = serializers.ReadOnlyField(source='{}.management.size'.format(self._sample_event))
-        self.fields['management_compliance'] = serializers.ReadOnlyField(source='{}.management.compliance.name'.format(self._sample_event))
-        self.fields['management_parties'] = serializers.SerializerMethodField()
-        self.fields['management_rules'] = serializers.SerializerMethodField()
-        self.fields['observers'] = serializers.SerializerMethodField()
-        self.fields['site_notes'] = serializers.ReadOnlyField(source='{}.site.notes'.format(self._sample_event))
-        self.fields['sample_event_notes'] = serializers.ReadOnlyField(source='{}.notes'.format(self._sample_event))
-        self.fields['management_notes'] = serializers.ReadOnlyField(source='{}.management.notes'.format(self._sample_event))
+        self.fields["project_name"] = serializers.ReadOnlyField(
+            source="{}.site.project.name".format(self._sample_event)
+        )
+        self.fields["country_name"] = serializers.ReadOnlyField(
+            source="{}.site.country.name".format(self._sample_event)
+        )
+        self.fields["site_name"] = serializers.ReadOnlyField(
+            source="{}.site.name".format(self._sample_event)
+        )
+        self.fields["latitude"] = serializers.SerializerMethodField()
+        self.fields["longitude"] = serializers.SerializerMethodField()
+        self.fields["exposure_name"] = serializers.ReadOnlyField(
+            source="{}.site.exposure.name".format(self._sample_event)
+        )
+        self.fields["reef_slope_name"] = serializers.ReadOnlyField(
+            source="{}.reef_slope.name".format(self._sample_event)
+        )
+        self.fields["reef_type_name"] = serializers.ReadOnlyField(
+            source="{}.site.reef_type.name".format(self._sample_event)
+        )
+        self.fields["reef_zone_name"] = serializers.ReadOnlyField(
+            source="{}.site.reef_zone.name".format(self._sample_event)
+        )
+        self.fields["sample_date"] = serializers.ReadOnlyField(
+            source="{}.sample_date".format(self._sample_event)
+        )
+        self.fields["sample_time"] = serializers.ReadOnlyField(
+            source="{}.sample_time".format(self._sample_event)
+        )
+        self.fields["tide_name"] = serializers.ReadOnlyField(
+            source="{}.tide.name".format(self._sample_event)
+        )
+        self.fields["visibility_name"] = serializers.ReadOnlyField(
+            source="{}.visibility.name".format(self._sample_event)
+        )
+        self.fields["current_name"] = serializers.ReadOnlyField(
+            source="{}.current.name".format(self._sample_event)
+        )
+        self.fields["depth"] = serializers.ReadOnlyField(
+            source="{}.depth".format(self._sample_event)
+        )
+        self.fields["management_name"] = serializers.ReadOnlyField(
+            source="{}.management.name".format(self._sample_event)
+        )
+        self.fields["management_name_secondary"] = serializers.ReadOnlyField(
+            source="{}.management.name_secondary".format(self._sample_event)
+        )
+        self.fields["management_est_year"] = serializers.ReadOnlyField(
+            source="{}.management.est_year".format(self._sample_event)
+        )
+        self.fields["management_size"] = serializers.ReadOnlyField(
+            source="{}.management.size".format(self._sample_event)
+        )
+        self.fields["management_compliance"] = serializers.ReadOnlyField(
+            source="{}.management.compliance.name".format(self._sample_event)
+        )
+        self.fields["management_parties"] = serializers.SerializerMethodField()
+        self.fields["management_rules"] = serializers.SerializerMethodField()
+        self.fields["observers"] = serializers.SerializerMethodField()
+        self.fields["site_notes"] = serializers.ReadOnlyField(
+            source="{}.site.notes".format(self._sample_event)
+        )
+        self.fields["sample_event_notes"] = serializers.ReadOnlyField(
+            source="{}.notes".format(self._sample_event)
+        )
+        self.fields["management_notes"] = serializers.ReadOnlyField(
+            source="{}.management.notes".format(self._sample_event)
+        )
 
         super(SampleEventExtendedSerializer, self).__init__(*args, **kwargs)
 
@@ -293,21 +372,20 @@ class ListFilter(Filter):
     def filter(self, qs, value):
         if value is None:
             return qs
-        value_list = [v.strip() for v in value.split(u',')]
-        return super(ListFilter, self).filter(qs, Lookup(value_list, 'in'))
+        value_list = [v.strip() for v in value.split(u",")]
+        return super(ListFilter, self).filter(qs, Lookup(value_list, "in"))
 
 
 # Return objects that actually are null when user asks for them with 'null'
 # Note this can't subclass UUIDFilter because of the additional pattern check (?)
 class NullableUUIDFilter(CharFilter):
-
     def filter(self, qs, value):
         if value != settings.API_NULLQUERY:
             if isinstance(value, uuid.UUID):
                 return value.hex
             return super(NullableUUIDFilter, self).filter(qs, value)
 
-        qs = self.get_method(qs)(**{'%s__isnull' % self.name: True})
+        qs = self.get_method(qs)(**{"%s__isnull" % self.name: True})
         return qs.distinct() if self.distinct else qs
 
 
@@ -318,7 +396,7 @@ class BaseAPIFilterSet(FilterSet):
     updated_by = NullableUUIDFilter()
 
     class Meta:
-        fields = ['created_on', 'updated_on', 'created_by', 'updated_by', ]
+        fields = ["created_on", "updated_on", "created_by", "updated_by"]
 
 
 class RelatedOrderingFilter(OrderingFilter):
@@ -340,7 +418,7 @@ class RelatedOrderingFilter(OrderingFilter):
         Return true if the field exists within the model (or in the related
         model specified using the Django ORM __ notation)
         """
-        components = field_name.split('__', 1)
+        components = field_name.split("__", 1)
         try:
             field = model._meta.get_field(components[0])
 
@@ -356,34 +434,33 @@ class RelatedOrderingFilter(OrderingFilter):
             return False
 
     def remove_invalid_fields(self, queryset, fields, view, request):
-        valid_fields = [item[0] for item in self.get_valid_fields(queryset, view, {'request': request})]
-        valid_model_fields = [term for term in fields
-                              if self.is_valid_field(queryset.model, term.lstrip('-'))]
+        valid_fields = [
+            item[0]
+            for item in self.get_valid_fields(queryset, view, {"request": request})
+        ]
+        valid_model_fields = [
+            term
+            for term in fields
+            if self.is_valid_field(queryset.model, term.lstrip("-"))
+        ]
         valid_fields = set(valid_fields + valid_model_fields)
-        return [term for term in fields if term.lstrip('-') in valid_fields and ORDER_PATTERN.match(term)]
+        return [
+            term
+            for term in fields
+            if term.lstrip("-") in valid_fields and ORDER_PATTERN.match(term)
+        ]
 
 
-# TODO: after SE/SU refactor, create BaseSEFilterSet, BaseSUFilterSet, etc.
-class BaseTransectFilterSet(OrFilterSetMixin, GeoFilterSet):
-    id = BaseInFilter(method="id_lookup")
+class AggregatedViewFilterSet(OrFilterSetMixin, GeoFilterSet):
     site_id = BaseInFilter(method="id_lookup")
     site_name = BaseInFilter(method="char_lookup")
-    site_within = GeometryFilter(field_name="location", lookup_expr='within')
-    country_id = BaseInFilter(method='id_lookup')
+    site_within = GeometryFilter(field_name="location", lookup_expr="within")
+    country_id = BaseInFilter(method="id_lookup")
     country_name = BaseInFilter(method="char_lookup")
-    sample_date = DateFromToRangeFilter()
-    tag_id = BaseInFilter(field_name='tags', method='json_id_lookup')
-    tag_name = BaseInFilter(field_name='tags', method='json_name_lookup')
+    tag_id = BaseInFilter(field_name="tags", method="json_id_lookup")
+    tag_name = BaseInFilter(field_name="tags", method="json_name_lookup")
     management_id = BaseInFilter(method="id_lookup")
     management_name = BaseInFilter(method="full_management_name")
-    management_est_year = DateFromToRangeFilter()
-    management_size = RangeFilter()
-    management_party = BaseInFilter(field_name="management_parties", method="char_lookup")
-    management_compliance = BaseInFilter(method="char_lookup")
-    management_rule = BaseInFilter(field_name="management_rules", method="char_lookup")
-    current_name = BaseInFilter(method="char_lookup")
-    tide_name = BaseInFilter(method="char_lookup")
-    visibility_name = BaseInFilter(method="char_lookup")
 
     class Meta:
         fields = [
@@ -392,7 +469,6 @@ class BaseTransectFilterSet(OrFilterSetMixin, GeoFilterSet):
             "site_within",
             "country_id",
             "country_name",
-            "sample_date",
             "tag_id",
             "tag_name",
             "reef_type",
@@ -400,6 +476,32 @@ class BaseTransectFilterSet(OrFilterSetMixin, GeoFilterSet):
             "reef_exposure",
             "management_id",
             "management_name",
+        ]
+
+    def full_management_name(self, queryset, name, value):
+        fields = ["management_name", "management_name_secondary"]
+        return self.str_or_lookup(queryset, fields, value, lookup_expr="icontains")
+
+
+class BaseSEFilterSet(AggregatedViewFilterSet):
+    id = BaseInFilter(method="id_lookup")
+    sample_event_id = BaseInFilter(method="id_lookup")
+    sample_date = DateFromToRangeFilter()
+    management_est_year = RangeFilter()
+    management_size = RangeFilter()
+    management_party = BaseInFilter(
+        field_name="management_parties", method="char_lookup"
+    )
+    management_compliance = BaseInFilter(method="char_lookup")
+    management_rule = BaseInFilter(field_name="management_rules", method="char_lookup")
+    current_name = BaseInFilter(method="char_lookup")
+    tide_name = BaseInFilter(method="char_lookup")
+    visibility_name = BaseInFilter(method="char_lookup")
+
+    class Meta:
+        fields = [
+            "sample_event_id",
+            "sample_date",
             "management_est_year",
             "management_size",
             "management_party",
@@ -410,37 +512,47 @@ class BaseTransectFilterSet(OrFilterSetMixin, GeoFilterSet):
             "visibility_name",
         ]
 
-    def full_management_name(self, queryset, name, value):
-        fields = ["management_name", "management_name_secondary"]
-        return self.str_or_lookup(queryset, fields, value, lookup_expr="icontains")
+
+class BaseSUObsFilterSet(BaseSEFilterSet):
+    label = BaseInFilter(method="char_lookup")
+    depth = RangeFilter()
+    relative_depth = BaseInFilter(method="char_lookup")
+    observers = BaseInFilter(method="json_name_lookup")
+
+    class Meta:
+        fields = [
+            "label",
+            "depth",
+            "relative_depth",
+            "observers",
+        ]
 
 
 class BaseApiViewSet(MethodAuthenticationMixin, viewsets.ModelViewSet, UpdatesMixin):
     """
     Include this as mixin to make your ListAPIView paginated & give it the ability to order by field name
     """
+
     pagination_class = StandardResultPagination
 
-    filter_backends = (DjangoFilterBackend,
-                       RelatedOrderingFilter,
-                       SearchFilter,
-                       )
+    filter_backends = (DjangoFilterBackend, RelatedOrderingFilter, SearchFilter)
 
     _serializer_class_for_fields = {}
 
-    permission_classes = [DefaultPermission, ]
+    permission_classes = [DefaultPermission]
 
     def get_serializer_class_for_fields(self, serializer_class, fields):
-        fields = fields.strip().split(',')
+        fields = fields.strip().split(",")
         fields.sort()
         fields = tuple(fields)
         if fields in self._serializer_class_for_fields:
             return self._serializer_class_for_fields[fields]
 
         # Doing this because a simple copy.copy() doesn't work here.
-        meta = type('Meta', (serializer_class.Meta, object), {'fields': fields})
-        limited_fields_serializer = type('LimitedFieldsSerializer', (serializer_class,),
-                                         {'Meta': meta})
+        meta = type("Meta", (serializer_class.Meta, object), {"fields": fields})
+        limited_fields_serializer = type(
+            "LimitedFieldsSerializer", (serializer_class,), {"Meta": meta}
+        )
         self._serializer_class_for_fields[fields] = limited_fields_serializer
         return limited_fields_serializer
 
@@ -451,8 +563,8 @@ class BaseApiViewSet(MethodAuthenticationMixin, viewsets.ModelViewSet, UpdatesMi
         fields.
         """
         serializer_class = super(BaseApiViewSet, self).get_serializer_class()
-        fields = self.request.query_params.get('fields')
-        if self.request.method == 'GET' and fields:
+        fields = self.request.query_params.get("fields")
+        if self.request.method == "GET" and fields:
             return self.get_serializer_class_for_fields(serializer_class, fields)
         return serializer_class
 
@@ -475,13 +587,10 @@ class BaseApiViewSet(MethodAuthenticationMixin, viewsets.ModelViewSet, UpdatesMi
 
 class BaseAttributeApiViewSet(BaseApiViewSet):
     permission_classes = [
-        Or(UnauthenticatedReadOnlyPermission,
-           AttributeAuthenticatedUserPermission)
+        Or(UnauthenticatedReadOnlyPermission, AttributeAuthenticatedUserPermission)
     ]
 
-    method_authentication_classes = {
-        "GET": []
-    }
+    method_authentication_classes = {"GET": []}
 
     def perform_create(self, serializer):
         # Here is where we could set status based on user role
@@ -496,16 +605,20 @@ class BaseProjectApiViewSet(BaseApiViewSet):
     project_lookup = None
 
     permission_classes = [
-        Or(ProjectDataReadOnlyPermission,
-           ProjectDataCollectorPermission,
-           ProjectDataAdminPermission)
+        Or(
+            ProjectDataReadOnlyPermission,
+            ProjectDataCollectorPermission,
+            ProjectDataAdminPermission,
+        )
     ]
 
     def perform_update(self, serializer):
-        requested_project = uuid.UUID(check_uuid(self.request.data.get('project')))
+        requested_project = uuid.UUID(check_uuid(self.request.data.get("project")))
         existing_project = self.get_object().project.pk
         if requested_project != existing_project:
-            raise ValidationError('Reassigning project data to another project not currently supported.')
+            raise ValidationError(
+                "Reassigning project data to another project not currently supported."
+            )
         serializer.save()
 
     def limit_to_project(self, request, *args, **kwargs):
@@ -533,26 +646,24 @@ class BaseProjectApiViewSet(BaseApiViewSet):
 
     def partial_update(self, request, *args, **kwargs):
         self.limit_to_project(request, *args, **kwargs)
-        return super(BaseProjectApiViewSet, self).partial_update(request, *args, **kwargs)
+        return super(BaseProjectApiViewSet, self).partial_update(
+            request, *args, **kwargs
+        )
 
     def destroy(self, request, *args, **kwargs):
         self.limit_to_project(request, *args, **kwargs)
         return super(BaseProjectApiViewSet, self).destroy(request, *args, **kwargs)
 
-    @action(detail=False, methods=['POST'])
+    @action(detail=False, methods=["POST"])
     def missing(self, request, *args, **kwargs):
         self.limit_to_project(request, *args, **kwargs)
-        return super(BaseProjectApiViewSet, self).missing(
-            request, *args, **kwargs
-        )
+        return super(BaseProjectApiViewSet, self).missing(request, *args, **kwargs)
 
 
 class BaseChoiceApiViewSet(MethodAuthenticationMixin, viewsets.ViewSet):
-    permission_classes = [UnauthenticatedReadOnlyPermission, ]
+    permission_classes = [UnauthenticatedReadOnlyPermission]
 
-    method_authentication_classes = {
-        "GET": []
-    }
+    method_authentication_classes = {"GET": []}
 
     # If we need to filter according to project role, we do this here
     def _filter(self, keys=None):
@@ -561,13 +672,9 @@ class BaseChoiceApiViewSet(MethodAuthenticationMixin, viewsets.ViewSet):
         for key, chc in model_choices.items():
             if keys is not None and key not in keys:
                 continue
-            choices.append({
-                'name': key,
-                'data': chc['data']
-            })
+            choices.append({"name": key, "data": chc["data"]})
         return choices
 
-    @method_decorator(cache_page(60*60))
     def list(self, request):
         choices = self._filter()
         return Response(choices)
@@ -577,16 +684,16 @@ class BaseChoiceApiViewSet(MethodAuthenticationMixin, viewsets.ViewSet):
         try:
             return Response(choices[0])
         except IndexError:
-            raise NotFound('{} choice not found.'.format(pk))
+            raise NotFound("{} choice not found.".format(pk))
 
     def create(self, request):
-        raise MethodNotAllowed('POST')
+        raise MethodNotAllowed("POST")
 
     def update(self, request, pk=None):
-        raise MethodNotAllowed('PUT')
+        raise MethodNotAllowed("PUT")
 
     def partial_update(self, request, pk=None):
-        raise MethodNotAllowed('PATCH')
+        raise MethodNotAllowed("PATCH")
 
     def destroy(self, request, pk=None):
-        raise MethodNotAllowed('DELETE')
+        raise MethodNotAllowed("DELETE")

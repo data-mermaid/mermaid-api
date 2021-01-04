@@ -10,14 +10,11 @@ class FishFamilySerializer(BaseAPISerializer):
     biomass_constant_a = serializers.ReadOnlyField()
     biomass_constant_b = serializers.ReadOnlyField()
     biomass_constant_c = serializers.ReadOnlyField()
-    regions = serializers.SerializerMethodField()
+    regions = serializers.ReadOnlyField()
 
     class Meta:
         model = FishFamily
         exclude = []
-
-    def get_regions(self, obj):
-        return [r.pk for r in obj.regions]
 
 
 class FishFamilyFilterSet(BaseAPIFilterSet):
@@ -32,6 +29,5 @@ class FishFamilyViewSet(BaseAttributeApiViewSet):
     filter_class = FishFamilyFilterSet
     search_fields = ["name"]
 
-    @method_decorator(cache_page(60 * 60))
     def list(self, request, *args, **kwargs):
         return super(FishFamilyViewSet, self).list(request, *args, **kwargs)

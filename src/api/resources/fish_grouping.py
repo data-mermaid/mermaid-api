@@ -28,10 +28,9 @@ class FishGroupingFilterSet(BaseAPIFilterSet):
 
 class FishGroupingViewSet(BaseAttributeApiViewSet):
     serializer_class = FishGroupingSerializer
-    queryset = FishGrouping.objects.select_related()
+    queryset = FishGrouping.objects.select_related().prefetch_related("regions")
     filter_class = FishGroupingFilterSet
     search_fields = ["name"]
 
-    @method_decorator(cache_page(60 * 60))
     def list(self, request, *args, **kwargs):
         return super(FishGroupingViewSet, self).list(request, *args, **kwargs)
