@@ -55,7 +55,7 @@ class BenthicLITCSVSerializer(CollectRecordCSVSerializer):
         }
     )
 
-    data__benthic_transect__sample_time = serializers.TimeField(default="00:00:00")
+    data__benthic_transect__sample_time = serializers.TimeField()
     data__benthic_transect__depth = serializers.DecimalField(
         max_digits=3, decimal_places=1
     )
@@ -93,7 +93,7 @@ class BenthicLITCSVSerializer(CollectRecordCSVSerializer):
     data__obs_benthic_lits__length = serializers.IntegerField()
 
     def get_sample_event_time(self, row):
-        return row.get("data__benthic_transect__sample_time") or "00:00:00"
+        return row.get("data__benthic_transect__sample_time")
 
     def validate(self, data):
         data = super().validate(data)

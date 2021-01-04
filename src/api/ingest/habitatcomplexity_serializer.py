@@ -50,7 +50,7 @@ class HabitatComplexityCSVSerializer(CollectRecordCSVSerializer):
         }
     )
 
-    data__benthic_transect__sample_time = serializers.TimeField(default="00:00:00")
+    data__benthic_transect__sample_time = serializers.TimeField()
     data__benthic_transect__depth = serializers.DecimalField(
         max_digits=3, decimal_places=1
     )
@@ -87,7 +87,7 @@ class HabitatComplexityCSVSerializer(CollectRecordCSVSerializer):
     data__obs_habitat_complexities__score = LazyChoiceField(choices=score_choices)
 
     def get_sample_event_time(self, row):
-        return row.get("data__benthic_transect__sample_time") or "00:00:00"
+        return row.get("data__benthic_transect__sample_time")
 
     def clean(self, data):
         data = super().clean(data)
