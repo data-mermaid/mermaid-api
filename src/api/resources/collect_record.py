@@ -180,7 +180,7 @@ class CollectRecordViewSet(BaseProjectApiViewSet):
         if uploaded_file is None:
             return Response("Missing file", status=400)
 
-        if protocol is None:
+        if protocol not in PROTOCOLS:
             return Response("Protocol not supported", status=400)
 
         content_type = uploaded_file.content_type

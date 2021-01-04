@@ -1,0 +1,11 @@
+Site *,Management *,Sample date: Year *,Sample date: Month *,Sample date: Day *,Sample time,Depth *,Transect length surveyed *,Interval size *,Transect number *,Transect label,Reef slope,Visibility,Current,Relative depth,Tide,Notes,Observer emails *,Observation interval *,Habitat complexity score *
+Site 1,Management 1,2020,2,21,13:00:00,3,50,1,1,Small fish,slope,Near,Weak,Shallow,Low,It was cold,profile1@mermaidcollect.org,1,1 no vertical relief
+Site 1,Management 1,2020,2,21,13:00:00,3,50,1,1,Small fish,slope,Near,Weak,Shallow,Low,It was cold,profile1@mermaidcollect.org,2,1 no vertical relief
+Site 1,Management 1,2020,2,21,13:00:00,3,50,1,1,Small fish,slope,Near,Weak,Shallow,Low,It was cold,profile1@mermaidcollect.org,3,2 low
+Site 1,Management 1,2020,2,21,13:00:00,3,50,1,1,Small fish,slope,Near,Weak,Shallow,Low,It was cold,profile1@mermaidcollect.org,4,2 low
+Site 1,Management 1,2020,2,21,13:00:00,3,50,1,1,Small fish,slope,Near,Weak,Shallow,Low,It was cold,profile1@mermaidcollect.org,5,3 exceptionally complex
+Site 2,Management 2,2020,2,22,08:00:00,5,100,0.5,2,,wall,Mid,Moderate,Deep,High,,profile1@mermaidcollect.org,0.5,3 exceptionally complex
+Site 2,Management 2,2020,2,22,08:00:00,5,100,0.5,2,,wall,Mid,Moderate,Deep,High,,profile1@mermaidcollect.org,1,3 exceptionally complex
+Site 2,Management 2,2020,2,22,08:00:00,5,100,0.5,2,,wall,Mid,Moderate,Deep,High,,profile1@mermaidcollect.org,1.5,2 low
+Site 2,Management 2,2020,2,22,08:00:00,5,100,0.5,2,,wall,Mid,Moderate,Deep,High,,profile1@mermaidcollect.org,2,1 no vertical relief
+Site 2,Management 2,2020,2,22,08:00:00,5,100,0.5,2,,wall,Mid,Moderate,Deep,High,,profile1@mermaidcollect.org,2.5,1 no vertical relief

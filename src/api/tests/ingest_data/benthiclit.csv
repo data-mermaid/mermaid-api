@@ -1,0 +1,11 @@
+Site *,Management *,Sample date: Year *,Sample date: Month *,Sample date: Day *,Sample time,Depth *,Transect length surveyed *,Transect number *,Transect label,Reef slope,Visibility,Current,Relative depth,Tide,Notes,Observer emails *,Benthic attribute *,Growth form,Observation length *
+Site 1,Management 1,2020,2,21,13:00:00,3,50,1,Small fish,slope,Near,Weak,Shallow,Low,It was cold,profile1@mermaidcollect.org,Astreopora,branching,200
+Site 1,Management 1,2020,2,21,13:00:00,3,50,1,Small fish,slope,Near,Weak,Shallow,Low,It was cold,profile1@mermaidcollect.org,Red Fleshy Algae,,350
+Site 1,Management 1,2020,2,21,13:00:00,3,50,1,Small fish,slope,Near,Weak,Shallow,Low,It was cold,profile1@mermaidcollect.org,Erythrastrea,digitate,47
+Site 1,Management 1,2020,2,21,13:00:00,3,50,1,Small fish,slope,Near,Weak,Shallow,Low,It was cold,profile1@mermaidcollect.org,Sand,,503
+Site 1,Management 1,2020,2,21,13:00:00,3,50,1,Small fish,slope,Near,Weak,Shallow,Low,It was cold,profile1@mermaidcollect.org,Rock,,3000
+Site 2,Management 2,2020,2,22,08:00:00,5,100,2,,wall,Mid,Moderate,Deep,High,,profile1@mermaidcollect.org,Rock,,322
+Site 2,Management 2,2020,2,22,08:00:00,5,100,2,,wall,Mid,Moderate,Deep,High,,profile1@mermaidcollect.org,Red Fleshy Algae,,876
+Site 2,Management 2,2020,2,22,08:00:00,5,100,2,,wall,Mid,Moderate,Deep,High,,profile1@mermaidcollect.org,Faviidae,branching,45
+Site 2,Management 2,2020,2,22,08:00:00,5,100,2,,wall,Mid,Moderate,Deep,High,,profile1@mermaidcollect.org,Astreopora,digitate,5445
+Site 2,Management 2,2020,2,22,08:00:00,5,100,2,,wall,Mid,Moderate,Deep,High,,profile1@mermaidcollect.org,Erythrastrea,,43

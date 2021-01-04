@@ -102,6 +102,9 @@ def obs_habitat_complexity2_3(db, habitat_complexity2, habitat_complexity_score1
 @pytest.fixture
 def habitat_complexity_project(
     db,
+    habitat_complexity_score1,
+    habitat_complexity_score2,
+    habitat_complexity_score3,
     obs_habitat_complexity1_1,
     obs_habitat_complexity1_2,
     obs_habitat_complexity1_3,
