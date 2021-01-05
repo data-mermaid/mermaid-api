@@ -72,7 +72,7 @@ class UUIDTaggedItem(GenericUUIDTaggedItemBase):
     )
 
 
-class Project(BaseModel):
+class Project(BaseModel, JSONMixin):
     OPEN = 90
     TEST = 80
     LOCKED = 10
@@ -430,7 +430,7 @@ def default_date():
     return timezone.now().date()
 
 
-def default_time():
+def default_time():  # no longer used; remove once migrations are squashed
     return timezone.now().time()
 
 
@@ -445,7 +445,7 @@ class SampleEvent(BaseModel, JSONMixin):
     notes = models.TextField(blank=True)
 
     # Will be removed in a future version
-    sample_time = models.TimeField(default=default_time, null=True, blank=True)
+    sample_time = models.TimeField(null=True, blank=True)
     depth = models.DecimalField(
         max_digits=3,
         decimal_places=1,
@@ -472,7 +472,7 @@ class SampleUnit(BaseModel):
     sample_event = models.ForeignKey(SampleEvent, on_delete=models.PROTECT)
     notes = models.TextField(blank=True)
     collect_record_id = models.UUIDField(null=True, blank=True)
-    sample_time = models.TimeField(default=default_time, null=True, blank=True)
+    sample_time = models.TimeField(null=True, blank=True)
 
     depth = models.DecimalField(
         max_digits=3,
@@ -537,8 +537,6 @@ class Transect(SampleUnit):
                 "depth",
                 "number",
                 "len_surveyed",
-                "site_id",
-                "management_id",
                 vse."sample_event_id"
         """
 
@@ -713,6 +711,26 @@ class BaseQuadrat(SampleUnit):
             self.sample_event.__str__(),
             su_number
         )
+
+    @property
+    def cache_sql(self):
+        return f"""
+            SELECT 
+                uuid_generate_v4() AS pseudosu_id,
+                array_agg(DISTINCT su.id) AS sample_unit_ids,
+                vse.sample_event_id
+            FROM
+                {self._meta.db_table} as su
+            INNER JOIN
+                vw_sample_events as vse
+            ON
+                su.sample_event_id = vse.sample_event_id
+            WHERE vse.sample_event_id = '{self.sample_event.id}'
+            GROUP BY
+                "depth",
+                "quadrat_size",
+                vse."sample_event_id"
+        """
 
 
 class QuadratCollection(BaseQuadrat):
@@ -1190,6 +1208,7 @@ class FishFamily(FishAttribute):
     # Caching at the class level
     species_agg = None
     species_agg_timestamp = None
+    regions_agg = None
 
     name = models.CharField(max_length=100)
 
@@ -1203,23 +1222,29 @@ class FishFamily(FishAttribute):
                     biomass_constant_a=Avg('biomass_constant_a'),
                     biomass_constant_b=Avg('biomass_constant_b'),
                     biomass_constant_c=Avg('biomass_constant_c'),
+                )
+
+            regions_agg_qs = FishSpecies.objects \
+                .select_related("genus__family") \
+                .order_by().values(family=F("genus__family")).annotate(
                     regions=ArrayAgg("regions", distinct=True),
                 )
 
             FishFamily.species_agg = {str(bc["family"]): bc for bc in species_agg_qs}
+            FishFamily.regions_agg = {str(fr["family"]): fr["regions"] for fr in regions_agg_qs}
             FishFamily.species_agg_timestamp = create_timestamp(ttl=30)
 
-        species = FishFamily.species_agg.get(str(self.pk))
+        family = FishFamily.species_agg.get(str(self.pk))
         self._biomass_a = None
         self._biomass_b = None
         self._biomass_c = None
-        if species.get("biomass_constant_a") is not None:
-            self._biomass_a = round(species.get("biomass_constant_a"), 6)
-        if species.get("biomass_constant_b") is not None:
-            self._biomass_b = round(species.get("biomass_constant_b"), 6)
-        if species.get("biomass_constant_c") is not None:
-            self._biomass_c = round(species.get("biomass_constant_c"), 6)
-        self._regions = species.get("regions")
+        if family.get("biomass_constant_a") is not None:
+            self._biomass_a = round(family.get("biomass_constant_a"), 6)
+        if family.get("biomass_constant_b") is not None:
+            self._biomass_b = round(family.get("biomass_constant_b"), 6)
+        if family.get("biomass_constant_c") is not None:
+            self._biomass_c = round(family.get("biomass_constant_c"), 6)
+        self._regions = FishFamily.regions_agg.get(str(self.pk))
 
         return FishFamily.species_agg
 
@@ -1269,6 +1294,7 @@ class FishGenus(FishAttribute):
     # Caching at the class level
     species_agg = None
     species_agg_timestamp = None
+    regions_agg = None
 
     name = models.CharField(max_length=100)
     family = models.ForeignKey(FishFamily, on_delete=models.CASCADE)
@@ -1279,23 +1305,27 @@ class FishGenus(FishAttribute):
                 biomass_constant_a=Avg('biomass_constant_a'),
                 biomass_constant_b=Avg('biomass_constant_b'),
                 biomass_constant_c=Avg('biomass_constant_c'),
+            )
+
+            regions_agg_qs = FishSpecies.objects.order_by().values("genus").annotate(
                 regions=ArrayAgg("regions", distinct=True),
             )
 
             FishGenus.species_agg = {str(bc["genus"]): bc for bc in species_agg_qs}
+            FishGenus.regions_agg = {str(gr["genus"]): gr["regions"] for gr in regions_agg_qs}
             FishGenus.species_agg_timestamp = create_timestamp(ttl=30)
 
-        species = FishGenus.species_agg.get(str(self.pk))
+        genus = FishGenus.species_agg.get(str(self.pk))
         self._biomass_a = None
         self._biomass_b = None
         self._biomass_c = None
-        if species.get("biomass_constant_a") is not None:
-            self._biomass_a = round(species.get("biomass_constant_a"), 6)
-        if species.get("biomass_constant_b") is not None:
-            self._biomass_b = round(species.get("biomass_constant_b"), 6)
-        if species.get("biomass_constant_c") is not None:
-            self._biomass_c = round(species.get("biomass_constant_c"), 6)
-        self._regions = species.get("regions")
+        if genus.get("biomass_constant_a") is not None:
+            self._biomass_a = round(genus.get("biomass_constant_a"), 6)
+        if genus.get("biomass_constant_b") is not None:
+            self._biomass_b = round(genus.get("biomass_constant_b"), 6)
+        if genus.get("biomass_constant_c") is not None:
+            self._biomass_c = round(genus.get("biomass_constant_c"), 6)
+        self._regions = FishGenus.regions_agg.get(str(self.pk))
 
         return FishGenus.species_agg
 

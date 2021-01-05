@@ -32,7 +32,7 @@ def test_beltfish_csv_view(
         "test_project_1-beltfish-obs-"
         in response._headers.get("content-disposition")[1]
     )
-    assert len(rows) == 6
+    assert len(rows) == 7
     assert "country_name" in fieldnames
     assert len(rows[3].keys()) == 57
     assert rows[3]["site_name"] == site2.name
@@ -53,7 +53,7 @@ def test_beltfish_field_report(
         "test_project_1-beltfish-obs-"
         in response._headers.get("content-disposition")[1]
     )
-    assert len(rows) == 6
+    assert len(rows) == 7
     assert "Country" in fieldnames
     assert len(rows[3].keys()) == 47
     assert rows[3]["Site"] == site2.name

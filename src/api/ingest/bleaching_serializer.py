@@ -114,7 +114,7 @@ class BleachingCSVSerializer(CollectRecordCSVSerializer):
         "data__obs_quadrat_benthic_percent__percent_algae",
     )
 
-    data__quadrat_collection__sample_time = serializers.TimeField(default="00:00:00")
+    data__quadrat_collection__sample_time = serializers.TimeField()
     data__quadrat_collection__depth = serializers.DecimalField(max_digits=3, decimal_places=1)
 
     data__quadrat_collection__visibility = LazyChoiceField(
@@ -191,4 +191,4 @@ class BleachingCSVSerializer(CollectRecordCSVSerializer):
         return data
 
     def get_sample_event_time(self, row):
-        return row.get("data__quadrat_collection__sample_time") or "00:00:00"
+        return row.get("data__quadrat_collection__sample_time")
