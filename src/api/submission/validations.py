@@ -647,7 +647,7 @@ class BenthicObservationCountMixin(ObservationsMixin):
         if calc_obs_count is None:
             msg = self.CALC_ERROR_TMPL
             return self.error(self.identifier, msg)
-        elif calc_obs_count != obs_count and not (obs_count <= calc_obs_count + 2 and obs_count >= calc_obs_count - 2):
+        elif obs_count > calc_obs_count + 1 or obs_count < calc_obs_count - 1:
             plural = ""
             if obs_count != 1:
                 plural = "s"
