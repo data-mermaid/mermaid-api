@@ -26,7 +26,7 @@ class CoralAtlasCovariate:
             cover_m2 = self._sqkm_to_sqm(_class["cover_sqkm"])
             _classes.append(dict(name=_class["class_name"], area=cover_m2))
 
-        return _classes
+        return sorted(_classes, key=lambda x: (x["area"], x["name"]), reverse=True)
 
     def _fetch(
         self, x: float, y: float, radius: float, request_datetime: datetime
