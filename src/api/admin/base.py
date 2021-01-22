@@ -139,6 +139,7 @@ class AttributeAdmin(BaseAdmin):
     # ]
     def delete_view(self, request, object_id, extra_context=None):
         extra_context = extra_context or {}
+        extra_context.update({"objects_that_use_label": "sample units"})
 
         if not extra_context.get("protected_descendants"):
             # dropdown of other attributes to assign to existing observations before deleting
@@ -225,7 +226,7 @@ class AttributeAdmin(BaseAdmin):
             if collect_records:
                 extra_context.update({"collect_records": collect_records})
             if sample_units:
-                extra_context.update({"sample_units": sample_units})
+                extra_context.update({"objects_that_use": sample_units})
 
             # process reassignment, then hand back to django for deletion
             if request.method == "POST":
