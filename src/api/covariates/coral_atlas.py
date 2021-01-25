@@ -40,10 +40,7 @@ class CoralAtlasCovariate:
         data = (resp.json() or {}).get("data")
         stats = (data or {}).get("stats")
         map_assets = (stats or {}).get("map_assets") or []
-        output = {
-            "aca_benthic": [],
-            "aca_geomorphic": []
-        }
+        output = {"aca_benthic": [], "aca_geomorphic": []}
         for map_asset in map_assets:
             class_type = (map_asset.get("class_type") or "").lower()
             if not class_type or class_type not in (
@@ -55,11 +52,9 @@ class CoralAtlasCovariate:
             output[f"aca_{class_type}"].extend(classes)
 
         return dict(
-            x=x,
-            y=y,
             date=request_datetime,
             requested_date=request_datetime,
-            covariates=output
+            covariates=output,
         )
 
     def fetch(self, points: List[Tuple[float, float]]) -> List[dict]:

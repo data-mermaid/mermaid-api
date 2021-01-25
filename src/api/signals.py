@@ -4,11 +4,10 @@ import sys
 from django import urls
 from django.conf import settings
 from django.core import serializers
-from django.db import connection
 from django.db.models.signals import post_delete, post_save, pre_save, m2m_changed
 from django.dispatch import receiver
 
-from .covariates.coral_atlas import CoralAtlasCovariate
+from .covariates import update_site_covariates
 from .models import *
 from .submission.utils import validate
 from .submission.validations import SiteValidation, ManagementValidation
@@ -322,15 +321,4 @@ def run_cr_management_validation(sender, instance, *args, **kwargs):
 
 @receiver(pre_save, sender=Site)
 def update_with_covariates(sender, instance, *args, **kwargs):
-    point = instance.location
-    data = instance.data or dict()
-    covariates = data.get("covariates") or dict()
-    cov_point = covariates.get("location")
-
-    if cov_point and point.x == cov_point.get("x") and point.y == cov_point.get("y"):
-        return
-
-    coral_atlas = CoralAtlasCovariate()
-    result = coral_atlas.fetch([(point.x, point.y)])
-    #[{'x': -123.5, 'y': 49.2, 'date': datetime.datetime(2021, 1, 8, 16, 28, 1, 490305), 'requested_date': datetime.datetime(2021, 1, 8, 16, 28, 1, 490305), 'covariates': {'aca_benthic': [], 'aca_geomorphic': []}}]
-    print(f"result: {result}")
+    update_site_covariates(instance)
