@@ -1567,3 +1567,27 @@ class ArchivedRecord(models.Model):
     project_pk = models.UUIDField(db_index=True, null=True, blank=True)
     record_pk = models.UUIDField(db_index=True, null=True, blank=True)
     record = JSONField(null=True, blank=True)
+
+
+class Covariate(BaseModel, JSONMixin):
+    SUPPORTED_COVARIATES = (
+        "aca_benthic",
+        "aca_geomorphic",
+    )
+
+    site = models.ForeignKey(
+        "Site",
+        related_name="covariates",
+        on_delete=models.CASCADE
+    )
+    name = models.CharField(max_length=100)
+    display = models.CharField(max_length=100)
+    datestamp = models.DateField()
+    requested_datestamp = models.DateField()
+    value = JSONField(default=dict)
+
+    class Meta:
+        unique_together = ("site", "name",)
+
+    def __str__(self):
+        return f"{self.site.name} - {self.display}"
