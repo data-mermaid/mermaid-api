@@ -118,3 +118,25 @@ def to_percent_cover(value, field, row, serializer_instance):
 
     return f"Average quadrat count: {quadrat_count_avg}, Average hard coral %: {percent_hard_avg_avg}, " \
            f"Average soft coral %: {percent_soft_avg_avg}, Average macroalgae %: {percent_algae_avg_avg}"
+
+
+def _to_aca_covariate(value, covariate_key):
+    if not value:
+        return ""
+
+    for covariate in value:
+        if covariate["name"] != covariate_key:
+            continue
+        values = covariate["value"]
+        sorted(values, key=lambda x: (x["area"]), reverse=True)
+        return values[0]["name"]
+
+    return ""
+
+
+def to_aca_benthic_covarite(value, field, row, serializer_instance):
+    return _to_aca_covariate(value, "aca_benthic")
+
+
+def to_aca_geomorphic_covarite(value, field, row, serializer_instance):
+    return _to_aca_covariate(value, "aca_geomorphic")

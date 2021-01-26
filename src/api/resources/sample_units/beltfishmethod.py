@@ -11,6 +11,8 @@ from ...models.view_models import BeltFishObsView, BeltFishSEView, BeltFishSUVie
 from ...permissions import ProjectDataReadOnlyPermission, ProjectPublicSummaryPermission
 from ...reports.fields import ReportField
 from ...reports.formatters import (
+    to_aca_benthic_covarite,
+    to_aca_geomorphic_covarite,
     to_day,
     to_governance,
     to_latitude,
@@ -86,6 +88,18 @@ class ObsBeltFishCSVSerializer(ReportSerializer):
         ReportField("functional_group", "Functional group"),
         ReportField("vulnerability", "Vulnerability"),
         ReportField("observation_notes", "Observation notes"),
+        ReportField(
+            "covariates",
+            "ACA benthic class",
+            to_aca_benthic_covarite,
+            alias="aca_benthic"
+        ),
+        ReportField(
+            "covariates",
+            "ACA geomorphic class",
+            to_aca_geomorphic_covarite,
+            alias="aca_geomorphic"
+        ),
     ]
 
     additional_fields = [
@@ -320,6 +334,18 @@ class BeltFishMethodSUCSVSerializer(ReportSerializer):
         ReportField("site_notes", "Site notes"),
         ReportField("sample_event_notes", "Sampling event notes"),
         ReportField("management_notes", "Management notes"),
+        ReportField(
+            "covariates",
+            "ACA benthic class",
+            to_aca_benthic_covarite,
+            alias="aca_benthic"
+        ),
+        ReportField(
+            "covariates",
+            "ACA geomorphic class",
+            to_aca_geomorphic_covarite,
+            alias="aca_geomorphic"
+        ),
     ]
 
     additional_fields = [
@@ -367,6 +393,18 @@ class BeltFishMethodSECSVSerializer(ReportSerializer):
         ReportField("site_notes", "Site notes"),
         ReportField("sample_event_notes", "Sampling event notes"),
         ReportField("management_notes", "Management notes"),
+        ReportField(
+            "covariates",
+            "ACA benthic class",
+            to_aca_benthic_covarite,
+            alias="aca_benthic"
+        ),
+        ReportField(
+            "covariates",
+            "ACA geomorphic class",
+            to_aca_geomorphic_covarite,
+            alias="aca_geomorphic"
+        ),
     ]
 
     additional_fields = [
