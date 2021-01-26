@@ -12,16 +12,20 @@ class Migration(migrations.Migration):
     ]
 
     operations = [
-        migrations.RunSQL(model_view_migrations.reverse_sql(), model_view_migrations.forward_sql()),
+        migrations.RunSQL(model_view_migrations.reverse_sql(),
+                          model_view_migrations.forward_sql()),
         migrations.AlterField(
             model_name='benthictransect',
             name='len_surveyed',
-            field=models.DecimalField(decimal_places=1, max_digits=4, validators=[django.core.validators.MinValueValidator(10), django.core.validators.MaxValueValidator(100)], verbose_name='transect length surveyed (m)'),
+            field=models.DecimalField(decimal_places=1, max_digits=4,
+                                      verbose_name='transect length surveyed (m)'),
         ),
         migrations.AlterField(
             model_name='fishbelttransect',
             name='len_surveyed',
-            field=models.DecimalField(decimal_places=1, max_digits=4, validators=[django.core.validators.MinValueValidator(10), django.core.validators.MaxValueValidator(100)], verbose_name='transect length surveyed (m)'),
+            field=models.DecimalField(decimal_places=1, max_digits=4,
+                                      verbose_name='transect length surveyed (m)'),
         ),
-        migrations.RunSQL(model_view_migrations.forward_sql(), model_view_migrations.reverse_sql()),
+        migrations.RunSQL(model_view_migrations.forward_sql(),
+                          model_view_migrations.reverse_sql()),
     ]
