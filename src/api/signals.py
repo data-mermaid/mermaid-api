@@ -7,7 +7,7 @@ from django.core import serializers
 from django.db.models.signals import post_delete, post_save, pre_save, m2m_changed
 from django.dispatch import receiver
 
-from .covariates import update_site_covariates
+from .covariates import update_site_covariates_in_thread
 from .models import *
 from .submission.utils import validate
 from .submission.validations import SiteValidation, ManagementValidation
@@ -321,4 +321,4 @@ def run_cr_management_validation(sender, instance, *args, **kwargs):
 
 @receiver(pre_save, sender=Site)
 def update_with_covariates(sender, instance, *args, **kwargs):
-    update_site_covariates(instance)
+    update_site_covariates_in_thread(instance)

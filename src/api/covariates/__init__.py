@@ -3,7 +3,6 @@ from api.models import Covariate, Site
 from .coral_atlas import CoralAtlasCovariate
 
 
-@run_in_thread
 def update_site_covariates(site):
     site_pk = site.pk
 
@@ -50,3 +49,8 @@ def update_site_covariates(site):
     aca_geomorphic_covariate.requested_datestamp = requested_date
     aca_geomorphic_covariate.value = aca_geomorphic
     aca_geomorphic_covariate.save()
+
+
+@run_in_thread
+def update_site_covariates_in_thread(site):
+    update_site_covariates(site)
