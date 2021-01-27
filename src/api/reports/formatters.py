@@ -129,7 +129,7 @@ def _to_aca_covariate(value, covariate_key):
             continue
         values = covariate["value"]
         sorted(values, key=lambda x: (x["area"]), reverse=True)
-        return values[0]["name"]
+        return values[0]["name"] if values else ""
 
     return ""
 
