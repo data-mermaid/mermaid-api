@@ -15,6 +15,8 @@ from ...models.view_models import (
 from ...permissions import ProjectDataReadOnlyPermission, ProjectPublicSummaryPermission
 from ...reports.fields import ReportField
 from ...reports.formatters import (
+    to_aca_benthic_covarite,
+    to_aca_geomorphic_covarite,
     to_day,
     to_governance,
     to_latitude,
@@ -236,7 +238,19 @@ class ObsBleachingQCColoniesBleachedCSVSerializer(ReportSerializer):
         ReportField("count_50", "20-50% bleached count"),
         ReportField("count_80", "50-80% bleached count"),
         ReportField("count_100", "80-100% bleached count"),
-        ReportField("count_dead", "Recently dead count")
+        ReportField("count_dead", "Recently dead count"),
+        ReportField(
+            "covariates",
+            "ACA benthic class",
+            to_aca_benthic_covarite,
+            alias="aca_benthic"
+        ),
+        ReportField(
+            "covariates",
+            "ACA geomorphic class",
+            to_aca_geomorphic_covarite,
+            alias="aca_geomorphic"
+        ),
     ]
 
     additional_fields = [
@@ -290,6 +304,18 @@ class ObsQuadratBenthicPercentCSVSerializer(ReportSerializer):
         ReportField("percent_hard", "Hard coral (% cover)"),
         ReportField("percent_soft", "Soft coral (% cover)"),
         ReportField("percent_algae", "Macroalgae (% cover)"),
+        ReportField(
+            "covariates",
+            "ACA benthic class",
+            to_aca_benthic_covarite,
+            alias="aca_benthic"
+        ),
+        ReportField(
+            "covariates",
+            "ACA geomorphic class",
+            to_aca_geomorphic_covarite,
+            alias="aca_geomorphic"
+        ),
     ]
 
     additional_fields = [
@@ -407,6 +433,18 @@ class BleachingQCMethodSUCSVSerializer(ReportSerializer):
         ReportField("site_notes", "Site notes"),
         ReportField("sample_event_notes", "Sampling event notes"),
         ReportField("management_notes", "Management notes"),
+        ReportField(
+            "covariates",
+            "ACA benthic class",
+            to_aca_benthic_covarite,
+            alias="aca_benthic"
+        ),
+        ReportField(
+            "covariates",
+            "ACA geomorphic class",
+            to_aca_geomorphic_covarite,
+            alias="aca_geomorphic"
+        ),
     ]
 
     additional_fields = [
@@ -462,6 +500,18 @@ class BleachingQCMethodSECSVSerializer(ReportSerializer):
         ReportField("site_notes", "Site notes"),
         ReportField("sample_event_notes", "Sampling event notes"),
         ReportField("management_notes", "Management notes"),
+        ReportField(
+            "covariates",
+            "ACA benthic class",
+            to_aca_benthic_covarite,
+            alias="aca_benthic"
+        ),
+        ReportField(
+            "covariates",
+            "ACA geomorphic class",
+            to_aca_geomorphic_covarite,
+            alias="aca_geomorphic"
+        ),
     ]
 
     additional_fields = [

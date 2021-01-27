@@ -4,7 +4,6 @@ from django_filters import BaseInFilter, RangeFilter
 from rest_condition import Or
 from rest_framework import status
 from rest_framework.response import Response
-from rest_framework.serializers import SerializerMethodField
 
 from ...models.mermaid import BeltFish, Project
 from ...models.view_models import BeltFishObsView, BeltFishSEView, BeltFishSUView
