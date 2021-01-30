@@ -8,7 +8,7 @@ def update_site_covariates(site):
 
     point = site.location
     existing_covariates = set(site.covariates.all().values_list("name", flat=True))
-    supported_covariates = set(Covariate.SUPPORTED_COVARIATES)
+    supported_covariates = set([c for c, _ in Covariate.SUPPORTED_COVARIATES])
 
     if (
         site_pk
@@ -28,8 +28,8 @@ def update_site_covariates(site):
     data_date = result["date"]
     requested_date = result["requested_date"]
     aca_covariates = result.get("covariates") or dict()
-    aca_benthic = aca_covariates["aca_benthic"]
-    aca_geomorphic = aca_covariates["aca_geomorphic"]
+    aca_benthic = aca_covariates.get("aca_benthic") or []
+    aca_geomorphic = aca_covariates.get("aca_geomorphic") or []
 
     aca_benthic_covariate = Covariate.objects.get_or_none(
         name="aca_benthic", site_id=site_pk

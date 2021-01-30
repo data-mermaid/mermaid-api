@@ -1571,8 +1571,8 @@ class ArchivedRecord(models.Model):
 
 class Covariate(BaseModel, JSONMixin):
     SUPPORTED_COVARIATES = (
-        "aca_benthic",
-        "aca_geomorphic",
+        ("aca_benthic", "aca_benthic",),
+        ("aca_geomorphic", "aca_geomorphic",),
     )
 
     site = models.ForeignKey(
@@ -1580,7 +1580,7 @@ class Covariate(BaseModel, JSONMixin):
         related_name="covariates",
         on_delete=models.CASCADE
     )
-    name = models.CharField(max_length=100)
+    name = models.CharField(max_length=100, choices=SUPPORTED_COVARIATES)
     display = models.CharField(max_length=100)
     datestamp = models.DateField()
     requested_datestamp = models.DateField()

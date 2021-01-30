@@ -18,6 +18,12 @@ class Command(BaseCommand):
             help="Number of sites to fetch before sleeping 1 second.",
         )
 
+        parser.add_argument(
+            "--project_id",
+            type=str,
+            help="Only update sites related to this project id",
+        )
+
     def draw_progress_bar(self, percent, bar_len=20):
         # percent float from 0 to 1.s
         sys.stdout.write("\r")
@@ -30,10 +36,16 @@ class Command(BaseCommand):
 
     def handle(self, *args, **options):
         throttle = options["throttle"]
+        project_id = options["project_id"]
 
-        num_sites = Site.objects.all().count()
+        if project_id:
+            qry = Site.objects.filter(project_id=project_id)
+        else:
+            qry = Site.objects.all()
+
+        num_sites = qry.count()
         self.draw_progress_bar(0)
-        for n, site in enumerate(Site.objects.all()):
+        for n, site in enumerate(qry):
             self.draw_progress_bar(float(n) / num_sites)
             update_site_covariates(site)
             if n % throttle == 0:

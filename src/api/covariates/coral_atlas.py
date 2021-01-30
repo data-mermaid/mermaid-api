@@ -78,17 +78,3 @@ class CoralAtlasCovariate:
                 response.append(future.result())
 
         return response
-
-
-if __name__ == "__main__":
-    covar = CoralAtlasCovariate()
-    r = covar.fetch(
-        [
-            (163, -19),
-            (162, -19),
-            (161, -19),
-            (160, -19),
-            (178.65, -17.98),
-        ]
-    )
-    print(f"r: {r}")
