@@ -381,8 +381,8 @@ CREATE OR REPLACE VIEW public.vw_sample_events
         WHEN project.data_policy_bleachingqc = 50 THEN 'public summary'::text
         WHEN project.data_policy_bleachingqc = 100 THEN 'public'::text
         ELSE ''::text
-    END AS data_policy_bleachingqc
-
+    END AS data_policy_bleachingqc,
+    site_covariates.covariates
     FROM sample_event se
      JOIN site ON se.site_id = site.id
      JOIN project ON site.project_id = project.id
@@ -404,7 +404,23 @@ CREATE OR REPLACE VIEW public.vw_sample_events
             jsonb_agg(mp.name ORDER BY mp.name) AS parties
            FROM management_parties mps
              JOIN management_party mp ON mps.managementparty_id = mp.id
-          GROUP BY mps.management_id) parties ON m.id = parties.management_id;
+          GROUP BY mps.management_id) parties ON m.id = parties.management_id
+    LEFT JOIN
+     (
+		SELECT 
+			cov.site_id,
+			jsonb_agg(jsonb_build_object(
+				'id', cov.id,
+				'name', cov.name,
+				'value', cov.value,
+				'datestamp', cov.datestamp,
+				'display', cov.display,
+				'requested_datestamp', cov.requested_datestamp
+			)) AS covariates
+		FROM api_covariate as cov
+		GROUP BY cov.site_id
+	 ) AS site_covariates
+	 ON site.id = site_covariates.site_id;
     """
 
     reverse_sql = "DROP VIEW IF EXISTS public.vw_sample_events CASCADE;"
@@ -426,6 +442,7 @@ class BaseViewModel(models.Model):
         "tags",
         "site_id",
         "site_name",
+        "covariates",
         "location",
         "site_notes",
         "country_id",
@@ -492,6 +509,7 @@ string_agg(DISTINCT visibility_name, ', ' ORDER BY visibility_name) AS visibilit
     sample_date = models.DateField()
     sample_event_id = models.UUIDField()
     sample_event_notes = models.TextField(blank=True)
+    covariates = JSONField(null=True, blank=True)
 
     class Meta:
         abstract = True
