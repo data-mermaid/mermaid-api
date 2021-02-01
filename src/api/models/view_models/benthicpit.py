@@ -65,9 +65,7 @@ CREATE OR REPLACE VIEW public.vw_benthicpit_obs
 
     sample_unit_id = models.UUIDField()
     transect_number = models.PositiveSmallIntegerField()
-    transect_len_surveyed = models.PositiveSmallIntegerField(
-        verbose_name=_("transect length surveyed (m)")
-    )
+    transect_len_surveyed = models.DecimalField(max_digits=4, decimal_places=1, verbose_name=_("transect length surveyed (m)"))
     reef_slope = models.CharField(max_length=50)
     interval_size = models.DecimalField(
         max_digits=4, decimal_places=2, default=0.5, verbose_name=_("interval size (m)")
@@ -176,9 +174,7 @@ ON (benthicpit_su.pseudosu_id = benthicpit_obs.pseudosu_id);
 
     sample_unit_ids = JSONField()
     transect_number = models.PositiveSmallIntegerField()
-    transect_len_surveyed = models.PositiveSmallIntegerField(
-        verbose_name=_("transect length surveyed (m)")
-    )
+    transect_len_surveyed = models.DecimalField(max_digits=4, decimal_places=1, verbose_name=_("transect length surveyed (m)"))
     reef_slope = models.CharField(max_length=50)
     interval_size = models.DecimalField(
         max_digits=4, decimal_places=2, default=0.5, verbose_name=_("interval size (m)")
