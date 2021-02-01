@@ -15,7 +15,7 @@ def run():
         uid = str(uuid.uuid4())
         print("Creating queue")
         q = Queue("simpleq_test")
-        job = Job(job_id, log_stuff, uid)
+        job = Job(job_id, None, log_stuff, uid)
         print(f"job_id: {job_id}")
         print(f"uid: {uid}")
 

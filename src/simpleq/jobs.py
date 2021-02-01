@@ -7,13 +7,14 @@ from pickle import dumps, loads
 class Job:
     """An abstraction for a single unit of work (a job!)."""
 
-    def __init__(self, job_id, callable, *args, **kwargs):
+    def __init__(self, job_id, group, callable, *args, **kwargs):
         """
         Create a new Job,
 
         :param obj callable: [optional] A callable to run.
         """
         self._id = job_id if job_id is not None else str(uuid.uuid4())
+        self.group = group if group else "mermaid"
         self.start_time = None
         self.stop_time = None
         self.run_time = None
@@ -46,7 +47,7 @@ class Job:
                     "DataType": "String"
                 }
             },
-            MessageGroupId="mermaid",
+            MessageGroupId=self.group,
             MessageBody=codecs.encode(
                 dumps({
                     "callable": self.callable,
@@ -65,10 +66,12 @@ class Job:
         :param obj message: The boto Message object to use.
         """
         data = loads(codecs.decode(message.body.encode(), "base64"))
-        message_attributes = message.message_attributes or dict()
 
+        message_attributes = message.message_attributes or dict()
+        group = (message.attributes or dict()).get("MessageGroupId")
         job_id = (message_attributes.get("id") or dict()).get("StringValue")
-        job = cls(job_id, data["callable"], *data["args"], **data["kwargs"])
+
+        job = cls(job_id, group, data["callable"], *data["args"], **data["kwargs"])
         job._sqs_message_id = message.message_id
         job._sqs_receipt_handle = message.receipt_handle
 

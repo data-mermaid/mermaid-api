@@ -200,6 +200,7 @@ class Queue:
         """
 
         messages = self.queue.receive_messages(
+            AttributeNames=["All"],
             MaxNumberOfMessages=self.BATCH_SIZE,
             WaitTimeSeconds=self.WAIT_SECONDS,
             MessageAttributeNames=["id"],
