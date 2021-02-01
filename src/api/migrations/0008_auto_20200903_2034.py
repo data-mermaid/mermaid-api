@@ -8,7 +8,7 @@ from ..models.view_models import model_view_migrations
 class Migration(migrations.Migration):
 
     dependencies = [
-        ('api', '0007_auto_20200819_2130'),
+        ('api', '0015_auto_20210130_1617'),
     ]
 
     operations = [

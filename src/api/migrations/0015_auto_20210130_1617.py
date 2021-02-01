@@ -10,7 +10,7 @@ import uuid
 class Migration(migrations.Migration):
 
     dependencies = [
-        ('api', '0010_auto_20200921_1527'),
+        ('api', '0009_project_data'),
     ]
 
     operations = [
