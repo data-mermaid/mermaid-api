@@ -719,8 +719,9 @@ class FishAttributeGroupingAdmin(FishAttributeAdmin):
     def region_list(self, obj):
         if not hasattr(obj, "regions"):
             return []
+        region_ids = obj.regions.values_list("pk", flat=True)
         return ", ".join(
-            [r.name for r in Region.objects.filter(pk__in=obj.regions).order_by("name")]
+            [r.name for r in Region.objects.filter(pk__in=region_ids).order_by("name")]
         )
 
     def get_readonly_fields(self, request, obj=None):
