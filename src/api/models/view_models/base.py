@@ -550,9 +550,11 @@ class SampleUnitCache(models.Model):
     def refresh_cache(cls, sample_unit):
         with transaction.atomic():
             with connection.cursor() as cursor:
+                sample_unit_id = str(sample_unit.id)
                 sample_event_id = str(sample_unit.sample_event.id)
-                del_sql = f"DELETE FROM sample_unit_cache WHERE sample_event_id = %(sample_event_id)s;"
-                cursor.execute(del_sql, params={"sample_event_id": sample_event_id})
+                del_sql = f"DELETE FROM sample_unit_cache WHERE sample_event_id = %(sample_event_id)s OR " \
+                          f"sample_unit_id = %(sample_unit_id)s;"
+                cursor.execute(del_sql, params={"sample_event_id": sample_event_id, "sample_unit_id": sample_unit_id})
 
                 insert_sql = f"""
                 INSERT INTO
