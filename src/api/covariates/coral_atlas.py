@@ -30,11 +30,12 @@ class CoralAtlasCovariate:
 
     def _fetch(
         self, x: float, y: float, radius: float, request_datetime: datetime
-    ) -> List[dict]:
+    ) -> dict:
         url = f"{self.api_url}/mapping/querypoint/{y}/{x}?radius={radius}"
         resp = requests.get(url)
         status_code = resp.status_code
         if status_code != 200:
+            print(f"url={url}")
             raise CovariateRequestError(resp.text)
 
         data = (resp.json() or {}).get("data")
