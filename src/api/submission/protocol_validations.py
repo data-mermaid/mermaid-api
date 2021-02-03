@@ -1,3 +1,6 @@
+import datetime
+
+import dateutil
 from django.utils.translation import ugettext_lazy as _
 
 from .validations import (
@@ -113,7 +116,9 @@ class ProtocolValidation(object):
 
 class SampleUnitValidation(ProtocolValidation):
     DEPTH_RANGE = (1, 30)
+    DATE_TIME_RANGE = (datetime.time(6,0), datetime.time(19,0))
     DEPTH_MSG = str(_("Depth value outside range of {} and {}".format(*DEPTH_RANGE)))
+    DATE_TIME_MSG = str(_("Sample time outside of range {} and {}".format(*DATE_TIME_RANGE)))
 
     def validate(self):
         results = []
@@ -122,6 +127,11 @@ class SampleUnitValidation(ProtocolValidation):
         data = self.collect_record.data or dict()
         sample_unit = data.get(self.SAMPLE_UNIT) or dict()
         depth = sample_unit.get("depth")
+
+        try:
+            sample_time = dateutil.parser.parse(sample_unit.get("sample_time")).time()
+        except (TypeError, ValueError) as err:
+            sample_time = None
 
         results.append(
             self._run_validation(
@@ -134,6 +144,20 @@ class SampleUnitValidation(ProtocolValidation):
                 value_range_operators=("<", ">"),
             )
         )
+
+        if sample_time:
+            results.append(
+                self._run_validation(
+                    ValueInRangeValidation,
+                    "sample_time",
+                    sample_time,
+                    self.DATE_TIME_RANGE,
+                    status=WARN,
+                    message=self.DATE_TIME_MSG,
+                    value_range_operators=("<", ">"),
+                )
+            )
+            print(f"results: {results}")
 
         if ERROR in results:
             return ERROR

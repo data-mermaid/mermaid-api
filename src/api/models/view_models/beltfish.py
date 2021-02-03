@@ -14,6 +14,9 @@ CREATE OR REPLACE VIEW public.vw_beltfish_obs
     su.len_surveyed AS transect_len_surveyed,
     rs.name AS reef_slope,
     w.name AS transect_width_name,
+    f.id_family AS id_family,
+    f.id_genus AS id_genus,
+    f.id_species AS id_species,
     f.name_family AS fish_family,
     f.name_genus AS fish_genus,
     f.name AS fish_taxon,
@@ -76,9 +79,7 @@ CREATE OR REPLACE VIEW public.vw_beltfish_obs
 
     sample_unit_id = models.UUIDField()
     transect_number = models.PositiveSmallIntegerField()
-    transect_len_surveyed = models.PositiveSmallIntegerField(
-        verbose_name=_("transect length surveyed (m)")
-    )
+    transect_len_surveyed = models.DecimalField(max_digits=4, decimal_places=1, verbose_name=_("transect length surveyed (m)"))
     transect_width_name = models.CharField(max_length=100, null=True, blank=True)
     reef_slope = models.CharField(max_length=50)
     fish_family = models.CharField(max_length=100, null=True, blank=True)
@@ -148,7 +149,8 @@ transect_width_name,
 size_bin, 
 total_abundance,
 biomass_kgha,
-biomass_kgha_by_trophic_group
+biomass_kgha_by_trophic_group,
+biomass_kgha_by_fish_family
 
 FROM (
     SELECT pseudosu_id,
@@ -191,6 +193,27 @@ INNER JOIN (
 ON (beltfish_su.pseudosu_id = beltfish_tg.pseudosu_id)
 
 INNER JOIN (
+SELECT pseudosu_id,
+jsonb_object_agg(
+    CASE
+        WHEN fish_family IS NULL THEN 'other'::character varying
+        ELSE fish_family
+    END, ROUND(biomass_kgha, 2)
+) AS biomass_kgha_by_fish_family
+
+FROM (
+    SELECT pseudosu_id,
+    COALESCE(SUM(biomass_kgha), 0::numeric) AS biomass_kgha,
+    fish_family
+    FROM vw_beltfish_obs
+    INNER JOIN sample_unit_cache su ON (vw_beltfish_obs.sample_unit_id = su.sample_unit_id)
+    GROUP BY pseudosu_id, fish_family
+) beltfish_obs_tg
+GROUP BY pseudosu_id
+) beltfish_families
+ON (beltfish_su.pseudosu_id = beltfish_families.pseudosu_id)
+
+INNER JOIN (
     SELECT pseudosu_id,
     jsonb_agg(DISTINCT observer) AS observers
 
@@ -217,9 +240,7 @@ ON (beltfish_su.pseudosu_id = beltfish_obs.pseudosu_id)
     sample_unit_ids = JSONField()
     total_abundance = models.PositiveIntegerField()
     transect_number = models.PositiveSmallIntegerField()
-    transect_len_surveyed = models.PositiveSmallIntegerField(
-        verbose_name=_("transect length surveyed (m)")
-    )
+    transect_len_surveyed = models.DecimalField(max_digits=4, decimal_places=1, verbose_name=_("transect length surveyed (m)"))
     transect_width_name = models.CharField(max_length=100, null=True, blank=True)
     reef_slope = models.CharField(max_length=50)
     size_bin = models.CharField(max_length=100)
@@ -231,6 +252,7 @@ ON (beltfish_su.pseudosu_id = beltfish_obs.pseudosu_id)
         blank=True,
     )
     biomass_kgha_by_trophic_group = JSONField(null=True, blank=True)
+    biomass_kgha_by_fish_family = JSONField(null=True, blank=True)
     data_policy_beltfish = models.CharField(max_length=50)
 
     objects = ExtendedManager()
@@ -253,7 +275,8 @@ data_policy_beltfish,
 {su_aggfields_sql},
 COUNT(vw_beltfish_su.pseudosu_id) AS sample_unit_count,
 ROUND(AVG(vw_beltfish_su.biomass_kgha), 2) AS biomass_kgha_avg,
-biomass_kgha_by_trophic_group_avg
+biomass_kgha_by_trophic_group_avg,
+biomass_kgha_by_fish_family_avg
 
 FROM vw_beltfish_su
 
@@ -276,10 +299,30 @@ INNER JOIN (
 ) AS beltfish_se_tg
 ON vw_beltfish_su.sample_event_id = beltfish_se_tg.sample_event_id
 
+INNER JOIN (
+    SELECT sample_event_id,
+    jsonb_object_agg(ff, ROUND(biomass_kgha::numeric, 2)) AS biomass_kgha_by_fish_family_avg
+    FROM (
+        SELECT meta_su_ffs.sample_event_id, ff,
+        AVG(biomass_kgha) AS biomass_kgha
+        FROM (
+            SELECT sample_event_id, pseudosu_id, ffdata.key AS ff,
+            SUM(ffdata.value::double precision) AS biomass_kgha
+            FROM vw_beltfish_su,
+            LATERAL jsonb_each_text(biomass_kgha_by_fish_family) ffdata(key, value)
+            GROUP BY sample_event_id, pseudosu_id, ffdata.key
+        ) meta_su_ffs
+        GROUP BY meta_su_ffs.sample_event_id, ff
+    ) beltfish_su_ff
+    GROUP BY sample_event_id
+) AS beltfish_se_fish_families
+ON vw_beltfish_su.sample_event_id = beltfish_se_fish_families.sample_event_id
+
 GROUP BY 
 {se_fields},
 data_policy_beltfish,
-biomass_kgha_by_trophic_group_avg;
+biomass_kgha_by_trophic_group_avg,
+biomass_kgha_by_fish_family_avg;
     """.format(
         se_fields=", ".join([f"vw_beltfish_su.{f}" for f in BaseViewModel.se_fields]),
         su_aggfields_sql=BaseViewModel.su_aggfields_sql,
@@ -302,6 +345,7 @@ biomass_kgha_by_trophic_group_avg;
         blank=True,
     )
     biomass_kgha_by_trophic_group_avg = JSONField(null=True, blank=True)
+    biomass_kgha_by_fish_family_avg = JSONField(null=True, blank=True)
     data_policy_beltfish = models.CharField(max_length=50)
 
     objects = ExtendedManager()

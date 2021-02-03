@@ -1,6 +1,8 @@
 import operator
 from django.conf import settings
 from django.contrib import admin
+from django.contrib.admin.utils import unquote
+from django.db.models import Q
 from django.utils.html import format_html
 from django.utils.translation import ugettext_lazy as _
 from django.urls import reverse
@@ -52,9 +54,7 @@ class FishAttributeAdmin(AttributeAdmin):
 
             extra_context.update({"protected_descendants": protected_descendants})
 
-        return super().delete_view(
-            request, object_id, extra_context
-        )
+        return super().delete_view(request, object_id, extra_context)
 
 
 class SiteInline(CachedFKInline):
@@ -282,7 +282,77 @@ class ManagementAdmin(BaseAdmin):
     )
     readonly_fields = ("area",)
     search_fields = ["name", "name_secondary", "project__name", "est_year"]
-    # list_filter = ('project',)
+
+    def delete_view(self, request, object_id, extra_context=None):
+        extra_context = extra_context or {}
+        extra_context.update({"objects_that_use_label": "sample events"})
+
+        obj = self.get_object(request, unquote(object_id))
+        other_objs = Management.objects.filter(~Q(pk=obj.pk), project=obj.project)
+        if other_objs.count() > 0:
+            extra_context.update({"other_objs": other_objs})
+
+        atleast_one_se = False
+        collect_records = []
+        sample_events = []
+
+        # Collect records that use this attribute, about to be deleted
+        crs = CollectRecord.objects.filter(data__sample_event__management=obj.pk)
+        if crs.count() > 0:
+            for cr in crs:
+                project_id = cr.project.id
+                admin_url = reverse(
+                    "admin:{}_collectrecord_change".format(SampleEvent._meta.app_label),
+                    args=(cr.pk,),
+                )
+                crstr = format_html('<a href="{}">{}</a>', admin_url, cr)
+                if project_id is not None:
+                    crstr = format_html('<a href="{}">{}</a>', admin_url, cr)
+                collect_records.append(crstr)
+
+        # Sample events that use this MR, about to be deleted
+        ses = SampleEvent.objects.filter(management=obj).distinct()
+        if ses.count() > 0:
+            atleast_one_se = True
+            for se in ses:
+                project_id = se.site.project.pk
+                admin_url = reverse(
+                    "admin:{}_{}_change".format(
+                        SampleEvent._meta.app_label, SampleEvent._meta.model_name
+                    ),
+                    args=(se.pk,),
+                )
+                sestr = format_html('<a href="{}">{}</a>', admin_url, se)
+                sample_events.append(sestr)
+
+        if collect_records:
+            extra_context.update({"collect_records": collect_records})
+        if sample_events:
+            extra_context.update({"objects_that_use": sample_events})
+
+        # process reassignment, then hand back to django for deletion
+        if request.method == "POST":
+            replacement_obj = request.POST.get("replacement_obj")
+            if (replacement_obj is None or replacement_obj == "") and atleast_one_se:
+                self.message_user(
+                    request,
+                    "To delete, you must select a replacement object to assign to all items "
+                    "using this object.",
+                    level=messages.ERROR,
+                )
+                return super().delete_view(request, object_id, extra_context)
+
+            for cr in crs:
+                if (
+                    "sample_event" in cr.data
+                    and "management" in cr.data["sample_event"]
+                ):
+                    cr.data["sample_event"]["management"] = replacement_obj
+                cr.save()
+
+            ses.update(management=replacement_obj)
+
+        return super().delete_view(request, object_id, extra_context)
 
 
 @admin.register(ManagementCompliance)
@@ -398,9 +468,7 @@ class BenthicAttributeAdmin(AttributeAdmin):
 
             extra_context.update({"protected_descendants": protected_descendants})
 
-        return super().delete_view(
-            request, object_id, extra_context
-        )
+        return super().delete_view(request, object_id, extra_context)
 
     list_display = ("name", "fk_link", "life_history", "region_list")
     exportable_fields = ("name", "parent", "life_history", "region_list")
@@ -651,7 +719,10 @@ class FishAttributeGroupingAdmin(FishAttributeAdmin):
     def region_list(self, obj):
         if not hasattr(obj, "regions"):
             return []
-        return ", ".join([r.name for r in Region.objects.filter(pk__in=obj.regions).order_by("name")])
+        region_ids = obj.regions.values_list("pk", flat=True)
+        return ", ".join(
+            [r.name for r in Region.objects.filter(pk__in=region_ids).order_by("name")]
+        )
 
     def get_readonly_fields(self, request, obj=None):
         if obj:  # editing an existing object
@@ -928,3 +999,8 @@ class TagAdmin(BaseAdmin):
                     p.tags.add(replacement_obj)
 
         return super(TagAdmin, self).delete_view(request, object_id, extra_context)
+
+
+@admin.register(Covariate)
+class CovariateAdmin(BaseAdmin):
+    pass

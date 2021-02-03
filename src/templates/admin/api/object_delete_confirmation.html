@@ -43,7 +43,7 @@
         <li>{{ obj }}</li>
       {% endfor %}
     </ul>
-  {% elif collect_records or sample_units %}
+  {% elif collect_records or objects_that_use %}
     <p>{% blocktrans with escaped_object=object %}Are you sure you want to delete the {{ object_name }} "
       {{ escaped_object }}"? All of the following related items will be deleted:{% endblocktrans %}</p>
     {% include "admin/includes/object_delete_summary.html" %}
@@ -51,7 +51,8 @@
     <ul>{{ deleted_objects|unordered_list }}</ul>
     <form method="post">{% csrf_token %}
       <p>&nbsp;</p>
-      <p>{% blocktrans with escaped_object=object %}In addition, all of the following collect records and sample units
+      <p>{% blocktrans with escaped_object=object %}In addition, all of the following collect records and
+        {{ objects_that_use_label }}
         will be reassigned the attribute you select. Before doing this, please communicate
         with the users who are using this {{ object_name }}.{% endblocktrans %}</p>
       Replace with <select name="replacement_obj" title="replacement_obj">
@@ -59,7 +60,7 @@
         {% for obj in other_objs %}
         <option value="{{ obj.pk }}">{{ obj.name }}</option>
         {% endfor %}
-      </select> in the collect records and sample units below.
+      </select> in the collect records and {{ objects_that_use_label }} below.
     {% if collect_records %}
       <h2>{% trans "Collect records using this" %} {{ object_name }}</h2>
       <ul>
@@ -68,11 +69,11 @@
         {% endfor %}
       </ul>
     {% endif %}
-    {% if sample_units %}
-      <h2>{% trans "Sample units using this" %} {{ object_name }}</h2>
+    {% if objects_that_use %}
+      <h2>{{ objects_that_use_label|capfirst }} using this {{ object_name }}</h2>
       <ul>
-        {% for su in sample_units %}
-          <li>{{ su }}</li>
+        {% for uo in objects_that_use %}
+          <li>{{ uo }}</li>
         {% endfor %}
       </ul>
     {% endif %}

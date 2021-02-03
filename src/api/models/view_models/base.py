@@ -87,16 +87,31 @@ fish_attribute.updated_on,
 fish_attribute.updated_by_id,
 fish_attribute.status,
 CASE
+    WHEN fish_species.fishattribute_ptr_id IS NOT NULL THEN species_genus_family.fishattribute_ptr_id
+    WHEN fish_genus.fishattribute_ptr_id IS NOT NULL THEN genus_family.fishattribute_ptr_id
+    WHEN fish_family.fishattribute_ptr_id IS NOT NULL THEN fish_family.fishattribute_ptr_id
+    ELSE NULL
+END AS id_family,
+CASE
     WHEN fish_species.name IS NOT NULL THEN species_genus_family.name
     WHEN fish_genus.name IS NOT NULL THEN genus_family.name
     WHEN fish_family.name IS NOT NULL THEN fish_family.name::text
     ELSE NULL::text
 END AS name_family,
 CASE
+    WHEN fish_species.fishattribute_ptr_id IS NOT NULL THEN species_genus.fishattribute_ptr_id
+    WHEN fish_genus.fishattribute_ptr_id IS NOT NULL THEN fish_genus.fishattribute_ptr_id
+    ELSE NULL
+END AS id_genus,
+CASE
     WHEN fish_species.name IS NOT NULL THEN species_genus.name
     WHEN fish_genus.name IS NOT NULL THEN fish_genus.name::text
     ELSE NULL::text
 END AS name_genus,
+CASE
+    WHEN fish_species.fishattribute_ptr_id IS NOT NULL THEN fish_species.fishattribute_ptr_id
+    ELSE NULL
+END AS id_species,
 CASE
     WHEN fish_species.name IS NOT NULL THEN concat(species_genus.name, ' ', fish_species.name)
     WHEN fish_genus.name IS NOT NULL THEN fish_genus.name::text
@@ -104,7 +119,6 @@ CASE
     WHEN fish_grouping_aggregates.name IS NOT NULL THEN fish_grouping_aggregates.name::text
     ELSE NULL::text
 END AS name,
-
 CASE
     WHEN fish_species.biomass_constant_a IS NOT NULL THEN fish_species.biomass_constant_a
     WHEN fish_genus.name IS NOT NULL THEN round(( SELECT avg(fish_species_1.biomass_constant_a) AS avg
@@ -249,6 +263,9 @@ ORDER BY (
       DROP VIEW IF EXISTS public.vw_fish_attributes CASCADE;
     """
 
+    id_family = models.UUIDField()
+    id_genus = models.UUIDField()
+    id_species = models.UUIDField()
     name_family = models.CharField(max_length=100)
     name_genus = models.CharField(max_length=100)
     name = models.CharField(max_length=100)
@@ -364,8 +381,8 @@ CREATE OR REPLACE VIEW public.vw_sample_events
         WHEN project.data_policy_bleachingqc = 50 THEN 'public summary'::text
         WHEN project.data_policy_bleachingqc = 100 THEN 'public'::text
         ELSE ''::text
-    END AS data_policy_bleachingqc
-
+    END AS data_policy_bleachingqc,
+    site_covariates.covariates
     FROM sample_event se
      JOIN site ON se.site_id = site.id
      JOIN project ON site.project_id = project.id
@@ -387,7 +404,23 @@ CREATE OR REPLACE VIEW public.vw_sample_events
             jsonb_agg(mp.name ORDER BY mp.name) AS parties
            FROM management_parties mps
              JOIN management_party mp ON mps.managementparty_id = mp.id
-          GROUP BY mps.management_id) parties ON m.id = parties.management_id;
+          GROUP BY mps.management_id) parties ON m.id = parties.management_id
+    LEFT JOIN
+     (
+		SELECT 
+			cov.site_id,
+			jsonb_agg(jsonb_build_object(
+				'id', cov.id,
+				'name', cov.name,
+				'value', cov.value,
+				'datestamp', cov.datestamp,
+				'display', cov.display,
+				'requested_datestamp', cov.requested_datestamp
+			)) AS covariates
+		FROM api_covariate as cov
+		GROUP BY cov.site_id
+	 ) AS site_covariates
+	 ON site.id = site_covariates.site_id;
     """
 
     reverse_sql = "DROP VIEW IF EXISTS public.vw_sample_events CASCADE;"
@@ -409,6 +442,7 @@ class BaseViewModel(models.Model):
         "tags",
         "site_id",
         "site_name",
+        "covariates",
         "location",
         "site_notes",
         "country_id",
@@ -475,6 +509,7 @@ string_agg(DISTINCT visibility_name, ', ' ORDER BY visibility_name) AS visibilit
     sample_date = models.DateField()
     sample_event_id = models.UUIDField()
     sample_event_notes = models.TextField(blank=True)
+    covariates = JSONField(null=True, blank=True)
 
     class Meta:
         abstract = True

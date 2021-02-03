@@ -62,7 +62,7 @@ class FishBeltCSVSerializer(CollectRecordCSVSerializer):
         }
     )
 
-    data__fishbelt_transect__sample_time = serializers.TimeField(default="00:00:00")
+    data__fishbelt_transect__sample_time = serializers.TimeField()
     data__fishbelt_transect__depth = serializers.DecimalField(max_digits=3, decimal_places=1)
 
     data__fishbelt_transect__visibility = LazyChoiceField(
@@ -81,7 +81,7 @@ class FishBeltCSVSerializer(CollectRecordCSVSerializer):
         choices=tide_choices, required=False, allow_null=True, allow_blank=True
     )
 
-    data__fishbelt_transect__len_surveyed = serializers.IntegerField(min_value=0)
+    data__fishbelt_transect__len_surveyed = serializers.DecimalField(max_digits=4, decimal_places=1)
     data__fishbelt_transect__number = serializers.IntegerField(min_value=0)
     data__fishbelt_transect__label = serializers.CharField(
         allow_blank=True, required=False, default=""
@@ -106,4 +106,4 @@ class FishBeltCSVSerializer(CollectRecordCSVSerializer):
         return data
 
     def get_sample_event_time(self, row):
-        return row.get("data__fishbelt_transect__sample_time") or "00:00:00"
+        return row.get("data__fishbelt_transect__sample_time")
