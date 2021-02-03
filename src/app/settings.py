@@ -74,6 +74,8 @@ INSTALLED_APPS = [
     'api.apps.ApiConfig',
     'tools',
     'taggit',
+    'simpleq',
+
 ]
 if ENVIRONMENT in ("local", ):
     INSTALLED_APPS.append("debug_toolbar")
@@ -316,3 +318,21 @@ if ENVIRONMENT in ("dev", "prod"):
         'boto3_session': boto3_session
     }
     LOGGING["loggers"][""]["handlers"].append("watchtower")
+
+
+## SIMPLEQ SETTINGS
+
+# Max number of messages to fetch in one call.
+SQS_BATCH_SIZE = 10
+
+# Number of seconds to wait in seconds for new messages.
+SQS_WAIT_SECONDS = 20
+
+# Number of seconds before the message is visible again
+# in SQS for other tasks to pull.
+SQS_MESSAGE_VISIBILITY = 300
+
+# Name of queue, if it doesn't exist it will be created.
+QUEUE_NAME = f"mermaid-{ENVIRONMENT}"  # required
+
+## -SIMPLEQ SETTINGS-

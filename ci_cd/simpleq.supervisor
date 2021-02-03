@@ -1,0 +1,9 @@
+[program:simpleq_worker]
+directory=/var/projects/webapp/
+environment=DJANGO_SETTINGS_MODULE="app.settings",PYTHONPATH="/var/projects/webapp"
+command=/usr/local/bin/python manage.py simpleq_worker
+user=webapp
+autostart=true
+autorestart=true
+stdout_logfile = /var/log/webapp/simpleq.log
+redirect_stderr=True
