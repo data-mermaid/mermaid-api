@@ -55,7 +55,7 @@ class BenthicLITCSVSerializer(CollectRecordCSVSerializer):
         }
     )
 
-    data__benthic_transect__sample_time = serializers.TimeField()
+    data__benthic_transect__sample_time = serializers.TimeField(required=False, allow_null=True)
     data__benthic_transect__depth = serializers.DecimalField(
         max_digits=3, decimal_places=1
     )
