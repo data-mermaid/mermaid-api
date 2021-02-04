@@ -114,7 +114,7 @@ class BleachingCSVSerializer(CollectRecordCSVSerializer):
         "data__obs_quadrat_benthic_percent__percent_algae",
     )
 
-    data__quadrat_collection__sample_time = serializers.TimeField()
+    data__quadrat_collection__sample_time = serializers.TimeField(required=False, allow_null=True)
     data__quadrat_collection__depth = serializers.DecimalField(max_digits=3, decimal_places=1)
 
     data__quadrat_collection__visibility = LazyChoiceField(

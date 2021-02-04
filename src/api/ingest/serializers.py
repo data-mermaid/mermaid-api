@@ -71,7 +71,7 @@ class CollectRecordCSVListSerializer(ListSerializer):
         )
 
     def get_sample_event_time(self, row):
-        return row.get(f"data__{self.child.sample_unit}__sample_time") or "00:00:00"
+        return row.get(f"data__{self.child.sample_unit}__sample_time") or None
 
     def remove_extra_data(self, row):
         field_names = set(self.child.fields.keys())
