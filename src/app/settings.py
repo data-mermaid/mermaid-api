@@ -75,7 +75,7 @@ INSTALLED_APPS = [
     'tools',
     'taggit',
     'simpleq',
-
+    'sqltables',
 ]
 if ENVIRONMENT in ("local", ):
     INSTALLED_APPS.append("debug_toolbar")
