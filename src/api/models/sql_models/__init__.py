@@ -1,32 +1,22 @@
-from .base import (
-    Profile,
-    BaseModel,
-    AreaMixin,
-    JSONMixin,
-    AppVersion,
-    BaseAttributeModel,
-    BaseChoiceModel,
-    Country,
-    AuthUser,
-    Application,
-)
-from .mermaid import *
-from .sql_models import (
-    BeltFishObsSQLModel,
-    BeltFishSESQLModel,
-    BeltFishSUSQLModel,
+from .beltfish import BeltFishObsSQLModel, BeltFishSESQLModel, BeltFishSUSQLModel
+from .benthiclit import (
     BenthicLITObsSQLModel,
     BenthicLITSESQLModel,
     BenthicLITSUSQLModel,
+)
+from .benthicpit import (
     BenthicPITObsSQLModel,
     BenthicPITSESQLModel,
     BenthicPITSUSQLModel,
+)
+from .bleachingqc import (
     BleachingQCColoniesBleachedObsSQLModel,
     BleachingQCQuadratBenthicPercentObsSQLModel,
     BleachingQCSESQLModel,
     BleachingQCSUSQLModel,
+)
+from .habitatcomplexity import (
     HabitatComplexityObsSQLModel,
     HabitatComplexitySESQLModel,
     HabitatComplexitySUSQLModel,
 )
-from .view_models import *
