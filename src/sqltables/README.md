@@ -1,7 +1,7 @@
 sqltables
 ---------
 
-Use SQL statement to defined the datasource for a Django model.
+Use SQL statement to define the datasource for a Django model.
 
 
 ## Usage
@@ -42,10 +42,11 @@ class TestUserModel(models.Model):
 
 Few things to note:
 
-* `sql`: Select statement that will be used to etch the data.  The model fields defined
+* `sql`: Select statement that will be used to fetch the data.  The model fields defined
 need to exist in the select columns.
 * `sql_args`: Arguments that are resolved in the `sql` when running queries.
 * `db_table`: In SQLTables, `db_table` is used to define an alias for the `sql` statement.
+    This should **NOT** be set to the same as the actual underlying database table
 * `managed = False`: This is **NOT** a managed table
 
 ## Querying

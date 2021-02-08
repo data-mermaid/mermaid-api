@@ -31,7 +31,7 @@ class SQLTableQuery(Query):
                     )  # type: List[Any]
                 except StopIteration:
                     # no parameters were passed from user
-                    # so try to call the function without parameters
+                    # so try to call the sql without parameters
                     # in case that they are optional
                     params = []
 

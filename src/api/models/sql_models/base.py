@@ -172,7 +172,6 @@ sample_event_sql_template = """
 
 
 class BaseSQLModel(models.Model):
-    # fields that are part of vw_sample_events
     se_fields = [
         "project_id",
         "project_name",
