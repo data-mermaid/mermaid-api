@@ -5,12 +5,12 @@ from rest_framework import status
 from rest_framework.response import Response
 from rest_framework.serializers import SerializerMethodField
 
-from ...models.mermaid import HabitatComplexity, Project
-from ...models.view_models import (
-    HabitatComplexityObsView,
-    HabitatComplexitySEView,
-    HabitatComplexitySUView,
+from ...models import (
+    HabitatComplexityObsSQLModel,
+    HabitatComplexitySESQLModel,
+    HabitatComplexitySUSQLModel,
 )
+from ...models.mermaid import HabitatComplexity, Project
 from ...permissions import ProjectDataReadOnlyPermission, ProjectPublicSummaryPermission
 from ...reports.fields import ReportField
 from ...reports.formatters import (
@@ -226,7 +226,7 @@ class HabitatComplexityMethodView(BaseProjectApiViewSet):
 
 class HabitatComplexityMethodObsSerializer(BaseSUViewAPISerializer):
     class Meta(BaseSUViewAPISerializer.Meta):
-        model = HabitatComplexityObsView
+        model = HabitatComplexityObsSQLModel
         exclude = BaseSUViewAPISerializer.Meta.exclude.copy()
         exclude.append("location")
         header_order = ["id"] + BaseSUViewAPISerializer.Meta.header_order.copy()
@@ -250,12 +250,12 @@ class HabitatComplexityMethodObsSerializer(BaseSUViewAPISerializer):
 
 class HabitatComplexityMethodObsGeoSerializer(BaseViewAPIGeoSerializer):
     class Meta(BaseViewAPIGeoSerializer.Meta):
-        model = HabitatComplexityObsView
+        model = HabitatComplexityObsSQLModel
 
 
 class HabitatComplexityMethodSUSerializer(BaseSUViewAPISerializer):
     class Meta(BaseSUViewAPISerializer.Meta):
-        model = HabitatComplexitySUView
+        model = HabitatComplexitySUSQLModel
         exclude = BaseSUViewAPISerializer.Meta.exclude.copy()
         exclude.append("location")
         header_order = BaseSUViewAPISerializer.Meta.header_order.copy()
@@ -395,12 +395,12 @@ class HabitatComplexityMethodSECSVSerializer(ReportSerializer):
 
 class HabitatComplexityMethodSUGeoSerializer(BaseViewAPIGeoSerializer):
     class Meta(BaseViewAPIGeoSerializer.Meta):
-        model = HabitatComplexitySUView
+        model = HabitatComplexitySUSQLModel
 
 
 class HabitatComplexityMethodSESerializer(BaseSUViewAPISerializer):
     class Meta(BaseSUViewAPISerializer.Meta):
-        model = HabitatComplexitySEView
+        model = HabitatComplexitySESQLModel
         exclude = BaseSUViewAPISerializer.Meta.exclude.copy()
         exclude.append("location")
         header_order = BaseSUViewAPISerializer.Meta.header_order.copy()
@@ -416,7 +416,7 @@ class HabitatComplexityMethodSESerializer(BaseSUViewAPISerializer):
 
 class HabitatComplexityMethodSEGeoSerializer(BaseViewAPIGeoSerializer):
     class Meta(BaseViewAPIGeoSerializer.Meta):
-        model = HabitatComplexitySEView
+        model = HabitatComplexitySESQLModel
 
 
 class HabitatComplexityMethodObsFilterSet(BaseSUObsFilterSet):
@@ -425,7 +425,7 @@ class HabitatComplexityMethodObsFilterSet(BaseSUObsFilterSet):
     interval = RangeFilter()
 
     class Meta:
-        model = HabitatComplexityObsView
+        model = HabitatComplexityObsSQLModel
         fields = [
             "depth",
             "sample_unit_id",
@@ -445,7 +445,7 @@ class HabitatComplexityMethodSUFilterSet(BaseSUObsFilterSet):
     interval_size = RangeFilter()
 
     class Meta:
-        model = HabitatComplexitySUView
+        model = HabitatComplexitySUSQLModel
         fields = [
             "transect_len_surveyed",
             "reef_slope",
@@ -461,7 +461,7 @@ class HabitatComplexityMethodSEFilterSet(BaseSEFilterSet):
     score_avg_avg = RangeFilter()
 
     class Meta:
-        model = HabitatComplexitySEView
+        model = HabitatComplexitySESQLModel
         fields = [
             "sample_unit_count",
             "depth_avg",
@@ -477,7 +477,7 @@ class HabitatComplexityProjectMethodObsView(BaseProjectMethodView):
     serializer_class_geojson = HabitatComplexityMethodObsGeoSerializer
     serializer_class_csv = ObsHabitatComplexityCSVSerializer
     filterset_class = HabitatComplexityMethodObsFilterSet
-    queryset = HabitatComplexityObsView.objects.all()
+    model = HabitatComplexityObsSQLModel
     order_by = ("site_name", "sample_date", "transect_number", "label", "interval")
 
 
@@ -488,7 +488,7 @@ class HabitatComplexityProjectMethodSUView(BaseProjectMethodView):
     serializer_class_geojson = HabitatComplexityMethodSUGeoSerializer
     serializer_class_csv = HabitatComplexityMethodSUCSVSerializer
     filterset_class = HabitatComplexityMethodSUFilterSet
-    queryset = HabitatComplexitySUView.objects.all()
+    model = HabitatComplexitySUSQLModel
     order_by = ("site_name", "sample_date", "transect_number")
 
 
@@ -502,5 +502,5 @@ class HabitatComplexityProjectMethodSEView(BaseProjectMethodView):
     serializer_class_geojson = HabitatComplexityMethodSEGeoSerializer
     serializer_class_csv = HabitatComplexityMethodSECSVSerializer
     filterset_class = HabitatComplexityMethodSEFilterSet
-    queryset = HabitatComplexitySEView.objects.all()
+    model = HabitatComplexitySESQLModel
     order_by = ("site_name", "sample_date")
