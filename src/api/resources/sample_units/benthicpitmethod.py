@@ -5,9 +5,8 @@ from rest_framework import status
 from rest_framework.response import Response
 from rest_framework.serializers import SerializerMethodField
 
-# from .. import fieldreport
+from ...models import BenthicPITObsSQLModel, BenthicPITSESQLModel, BenthicPITSUSQLModel
 from ...models.mermaid import BenthicAttribute, BenthicPIT, Project
-from ...models.view_models import BenthicPITObsView, BenthicPITSEView, BenthicPITSUView
 from ...permissions import ProjectDataReadOnlyPermission, ProjectPublicSummaryPermission
 from ...reports.fields import ReportField
 from ...reports.formatters import (
@@ -222,7 +221,7 @@ class ObsBenthicPITCSVSerializer(ReportSerializer):
 
 class BenthicPITMethodObsSerializer(BaseSUViewAPISerializer):
     class Meta(BaseSUViewAPISerializer.Meta):
-        model = BenthicPITObsView
+        model = BenthicPITObsSQLModel
         exclude = BaseSUViewAPISerializer.Meta.exclude.copy()
         exclude.append("location")
         header_order = ["id"] + BaseSUViewAPISerializer.Meta.header_order.copy()
@@ -251,12 +250,12 @@ class BenthicPITMethodObsSerializer(BaseSUViewAPISerializer):
 
 class BenthicPITMethodObsGeoSerializer(BaseViewAPIGeoSerializer):
     class Meta(BaseViewAPIGeoSerializer.Meta):
-        model = BenthicPITObsView
+        model = BenthicPITObsSQLModel
 
 
 class BenthicPITMethodSUSerializer(BaseSUViewAPISerializer):
     class Meta(BaseSUViewAPISerializer.Meta):
-        model = BenthicPITSUView
+        model = BenthicPITSUSQLModel
         exclude = BaseSUViewAPISerializer.Meta.exclude.copy()
         exclude.append("location")
         header_order = BaseSUViewAPISerializer.Meta.header_order.copy()
@@ -400,12 +399,12 @@ class BenthicPITMethodSECSVSerializer(ReportSerializer):
 
 class BenthicPITMethodSUGeoSerializer(BaseViewAPIGeoSerializer):
     class Meta(BaseViewAPIGeoSerializer.Meta):
-        model = BenthicPITSUView
+        model = BenthicPITSUSQLModel
 
 
 class BenthicPITMethodSESerializer(BaseSUViewAPISerializer):
     class Meta(BaseSUViewAPISerializer.Meta):
-        model = BenthicPITSEView
+        model = BenthicPITSESQLModel
         exclude = BaseSUViewAPISerializer.Meta.exclude.copy()
         exclude.append("location")
         header_order = BaseSUViewAPISerializer.Meta.header_order.copy()
@@ -421,7 +420,7 @@ class BenthicPITMethodSESerializer(BaseSUViewAPISerializer):
 
 class BenthicPITMethodSEGeoSerializer(BaseViewAPIGeoSerializer):
     class Meta(BaseViewAPIGeoSerializer.Meta):
-        model = BenthicPITSEView
+        model = BenthicPITSESQLModel
 
 
 class BenthicPITMethodObsFilterSet(BaseSUObsFilterSet):
@@ -431,7 +430,7 @@ class BenthicPITMethodObsFilterSet(BaseSUObsFilterSet):
     interval = RangeFilter()
 
     class Meta:
-        model = BenthicPITObsView
+        model = BenthicPITObsSQLModel
         fields = [
             "transect_len_surveyed",
             "reef_slope",
@@ -451,7 +450,7 @@ class BenthicPITMethodSUFilterSet(BaseSUObsFilterSet):
     interval_size = RangeFilter()
 
     class Meta:
-        model = BenthicPITSUView
+        model = BenthicPITSUSQLModel
         fields = [
             "transect_len_surveyed",
             "reef_slope",
@@ -466,7 +465,7 @@ class BenthicPITMethodSEFilterSet(BaseSEFilterSet):
     depth_avg = RangeFilter()
 
     class Meta:
-        model = BenthicPITSEView
+        model = BenthicPITSESQLModel
         fields = ["sample_unit_count", "depth_avg", "data_policy_benthicpit"]
 
 
@@ -477,7 +476,7 @@ class BenthicPITProjectMethodObsView(BaseProjectMethodView):
     serializer_class_geojson = BenthicPITMethodObsGeoSerializer
     serializer_class_csv = ObsBenthicPITCSVSerializer
     filterset_class = BenthicPITMethodObsFilterSet
-    queryset = BenthicPITObsView.objects.all()
+    model = BenthicPITObsSQLModel
     order_by = ("site_name", "sample_date", "transect_number", "label", "interval")
 
 
@@ -488,7 +487,7 @@ class BenthicPITProjectMethodSUView(BaseProjectMethodView):
     serializer_class_geojson = BenthicPITMethodSUGeoSerializer
     serializer_class_csv = BenthicPITMethodSUCSVSerializer
     filterset_class = BenthicPITMethodSUFilterSet
-    queryset = BenthicPITSUView.objects.all()
+    model = BenthicPITSUSQLModel
     order_by = (
         "site_name", "sample_date", "transect_number"
     )
@@ -504,7 +503,7 @@ class BenthicPITProjectMethodSEView(BaseProjectMethodView):
     serializer_class_geojson = BenthicPITMethodSEGeoSerializer
     serializer_class_csv = BenthicPITMethodSECSVSerializer
     filterset_class = BenthicPITMethodSEFilterSet
-    queryset = BenthicPITSEView.objects.all()
+    model = BenthicPITSESQLModel
     order_by = (
         "site_name", "sample_date"
     )
