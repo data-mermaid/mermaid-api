@@ -140,3 +140,9 @@ class BaseProjectMethodView(AggregatedViewMixin, BaseProjectApiViewSet):
         self.limit_to_project(request, *args, **kwargs)
         kwargs["file_name_prefix"] = file_name_prefix
         return super().csv(request, *args, **kwargs)
+
+    def get_queryset(self):
+        project_id = self.kwargs.get("project_pk")
+        return self.model.objects.all().sql_table(
+            project_id=project_id
+        )
