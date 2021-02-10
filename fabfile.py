@@ -101,19 +101,19 @@ def test(c):
 
 
 @task
-def dbrestore(c, key_name="local"):
+def dbrestore(c, keyname="local"):
     """Restore the database from a named s3 key
-        ie - fab dbrestore:dev
+        ie - fab dbrestore --keyname dev
     """
-    local(_api_cmd("python manage.py dbrestore {}".format(key_name)))
+    local(_api_cmd("python manage.py dbrestore {}".format(keyname)))
 
 
 @task
-def dbbackup(c, key_name="local"):
+def dbbackup(c, keyname="local"):
     """Backup the database from a named s3 key
-        ie - fab dbbackup:dev
+        ie - fab dbbackup --keyname dev
     """
-    local(_api_cmd("python manage.py dbbackup {}".format(key_name)))
+    local(_api_cmd("python manage.py dbbackup {}".format(keyname)))
 
 
 @task
