@@ -1,24 +1,49 @@
+# Makefile Readme
+# ----------------
+#
+# down: shut down docker containers (database and api containers).
+# buildnocache: build new docker image without using cache.
+# up: start docker containers (database and api containers).
+# dbbackup: create a backup of your local database and push to S3.  NOTE: Local backs are used by all devs during database restore.
+# dbrestore: restore a back from s3 to your local database.
+# migrate: apply any database migrations to local database.
+# freshinstall:  helper command that wraps server commands to setup API, database and data locally.
+# runserver: Start api web server, runs on http://localhost:8080/
+# shell: Starts bash terminal inside the API docker container.
+# 
+# 
+# To get start run `make freshinstall`
+# 
+
+
+
+API_SERVICE="api_service"
+
 
 down:
 	@docker-compose down
 
-build_image:
+buildnocache:
+	./ci_cd/version.sh
 	@docker-compose build --no-cache --pull
 
 up:
 	@docker-compose up -d
 
+dbbackup:
+	@docker exec -it $(API_SERVICE) python manage.py dbbackup local
+
 dbrestore:
-	@docker exec -it api_service python manage.py dbrestore local
+	@docker exec -it $(API_SERVICE) python manage.py dbrestore local
 
 migrate:
-	@docker exec -it api_service python manage.py migrate
+	@docker exec -it $(API_SERVICE) python manage.py migrate
 
-fresh_install:
+freshinstall:
 	@echo "\n--- Shutting down existing stack ---\n"
 	@make down
 	@echo "\n--- Building new docker image ---\n"
-	@make build_image
+	@make buildnocache
 	@make up
 	@echo "\n--- Spinning up new stack ---\n"
 	@sleep 20
@@ -28,7 +53,7 @@ fresh_install:
 	@make migrate
 
 runserver:
-	@docker exec -it api_service python manage.py runserver 0.0.0.0:8080
+	@docker exec -it $(API_SERVICE) python manage.py runserver 0.0.0.0:8080
 
 shell:
-	@docker exec -it api_service /bin/bash
+	@docker exec -it $(API_SERVICE) /bin/bash
