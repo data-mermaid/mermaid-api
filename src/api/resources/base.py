@@ -1,7 +1,4 @@
 import uuid
-import six
-from django.utils.decorators import method_decorator
-from django.views.decorators.cache import cache_page
 from django.utils.translation import ugettext_lazy as _
 from django.db.models.sql.constants import ORDER_PATTERN
 from rest_framework import serializers, viewsets
@@ -48,8 +45,8 @@ from .mixins import MethodAuthenticationMixin, UpdatesMixin, OrFilterSetMixin
 
 def to_tag_model_instances(tags, updated_by):
     """
-    Tweaked from taggit/managers.py. Takes an iterable containing either strings, tag objects, or a mixture
-    of both and returns set of tag objects.
+    Tweaked from taggit/managers.py to write updated_by but not use for lookup. Takes an iterable containing either
+    strings, tag objects, or a mixture of both and returns set of tag objects.
     """
 
     str_tags = set()
@@ -58,11 +55,11 @@ def to_tag_model_instances(tags, updated_by):
     for t in tags:
         if isinstance(t, Tag):
             tag_objs.add(t)
-        elif isinstance(t, six.string_types):
+        elif isinstance(t, str):
             str_tags.add(t)
         else:
             raise ValueError(
-                "Cannot add {0} ({1}). Expected {2} or str.".format(t, type(t), Tag)
+                "Cannot add {} ({}). Expected {} or str.".format(t, type(t), Tag)
             )
 
     case_insensitive = getattr(settings, "TAGGIT_CASE_INSENSITIVE", False)
@@ -79,19 +76,17 @@ def to_tag_model_instances(tags, updated_by):
                 tags_to_create.append(name)
     else:
         existing = Tag.objects.filter(name__in=str_tags)
-        tags_to_create = str_tags - {t.name for t in existing}
+        tags_to_create = str_tags - set(t.name for t in existing)
 
     tag_objs.update(existing)
 
     for new_tag in tags_to_create:
         if case_insensitive:
-            try:
-                tag = Tag.objects.get(name__iexact=new_tag)
-            except Tag.DoesNotExist:
-                tag = Tag.objects.create(name=new_tag, updated_by=updated_by)
+            lookup = {"name__iexact": new_tag}
         else:
-            tag = Tag.objects.create(name=new_tag, updated_by=updated_by)
+            lookup = {"name": new_tag}
 
+        tag, create = Tag.objects.get_or_create(**lookup, defaults={"name": new_tag, "updated_by": updated_by})
         tag_objs.add(tag)
 
     return tag_objs
@@ -112,7 +107,7 @@ class TagField(serializers.Field):
         return u"{}".format(obj.name)
 
     def to_internal_value(self, data):
-        if not isinstance(data, six.text_type):
+        if not isinstance(data, str):
             msg = "Incorrect type. Expected a string, but got %s"
             raise ValidationError(msg % type(data).__name__)
         return Tag(name=data)
