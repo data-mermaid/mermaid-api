@@ -1,5 +1,7 @@
 import operator
 from django.db import transaction
+from django.db.models import Count
+
 from . import get_subclasses
 from ..models import (
     BENTHICLIT_PROTOCOL,
@@ -107,13 +109,35 @@ def migrate_collect_record_sample_event(collect_record):
     collect_record.data[sample_unit_attribute].update(migrated_data)
 
 
-def consolidate_sample_events(*args, dryrun=False):
+def has_duplicate_sample_events(site, management, sample_date):
+    qry = SampleEvent.objects.filter(
+        site=site,
+        management=management,
+        sample_date=sample_date,
+    )
+    qry = qry.values(
+        "site",
+        "management",
+        "sample_date"
+    )
+
+    qry = qry.annotate(num_sample_events=Count("site"))
+    qry = qry.filter(num_sample_events__gt=1)
+    return qry.count() > 0 and qry[0]["num_sample_events"] > 1
+
+
+def consolidate_sample_events(*args, dryrun=False, **kwargs):
     suclasses = get_subclasses(SampleUnit)
+
+    if "sample_event_data" in kwargs:
+        qryset = SampleEvent.objects.filter(**kwargs["sample_event_data"])
+    else:
+        qryset = SampleEvent.objects.all()
 
     with transaction.atomic():
         sid = transaction.savepoint()
 
-        for se in SampleEvent.objects.all():
+        for se in qryset:
             se_pk = se.pk
             orphaned = delete_orphaned_sample_event(se)
             if orphaned:
@@ -126,26 +150,28 @@ def consolidate_sample_events(*args, dryrun=False):
                 sample_date=se.sample_date,
             ).exclude(pk=se_pk)
 
-            if dups.count() > 0:
-                print('Removing dups for {}'.format(se_pk))
-                for d in dups:
-                    try:
-                        se2 = SampleEvent.objects.get(pk=se_pk)
+            if dups.count() == 0:
+                continue
+            print('Removing dups for {}'.format(se_pk))
 
-                        for suclass in suclasses:
-                            sus = suclass.objects.filter(sample_event=d.pk)
-                            notes = d.notes or ""
-                            if notes.strip():
-                                se.notes += "\n\n{}".format(notes)
-                                se.save()
-                            sus.update(sample_event=se)  # no signals fired
-                            print('Changed SE from {} to {}'.format(d.pk, se_pk))
+            for d in dups:
+                try:
+                    _ = SampleEvent.objects.get(pk=se_pk)
 
-                        print('Deleting SE {}'.format(d.pk))
-                        d.delete()
+                    for suclass in suclasses:
+                        sus = suclass.objects.filter(sample_event=d.pk)
+                        notes = d.notes or ""
+                        if notes.strip():
+                            se.notes += "\n\n{}".format(notes)
+                            se.save()
+                        sus.update(sample_event=se)  # no signals fired
+                        print('Changed SE from {} to {}'.format(d.pk, se_pk))
 
-                    except SampleEvent.DoesNotExist:
-                        print('{} already deleted'.format(se_pk))
+                    print('Deleting SE {}'.format(d.pk))
+                    d.delete()
+
+                except SampleEvent.DoesNotExist:
+                    print('{} already deleted'.format(se_pk))
 
         if dryrun:
             transaction.savepoint_rollback(sid)
