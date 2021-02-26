@@ -121,9 +121,7 @@ def has_duplicate_sample_events(site, management, sample_date):
         "sample_date"
     )
 
-    qry = qry.annotate(num_sample_events=Count("site"))
-    qry = qry.filter(num_sample_events__gt=1)
-    return qry.count() > 0 and qry[0]["num_sample_events"] > 1
+    return qry.count() > 0
 
 
 def consolidate_sample_events(*args, dryrun=False, **kwargs):
