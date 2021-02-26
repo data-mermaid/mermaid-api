@@ -193,7 +193,7 @@ class BleachingCSVSerializer(CollectRecordCSVSerializer):
             benthic_attr_name = self._get_original_benthic_attribute_value(data)
             if benthic_attr_name is not None:
                 raise ValidationError(
-                    f"'{benthic_attr_name}' benthic attribute has not match in MERMAID."
+                    f"'{benthic_attr_name}' benthic attribute has no match in MERMAID."
                 )
 
             raise ValidationError(
