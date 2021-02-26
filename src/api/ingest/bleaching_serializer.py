@@ -91,7 +91,7 @@ class BleachingCSVSerializer(CollectRecordCSVSerializer):
             "Quadrat number": "data__obs_quadrat_benthic_percent__quadrat_number",
             "Hard coral % cover": "data__obs_quadrat_benthic_percent__percent_hard",
             "Soft coral % cover": "data__obs_quadrat_benthic_percent__percent_soft",
-            "Macroalgae coral % cover": "data__obs_quadrat_benthic_percent__percent_algae",
+            "Macroalgae % cover": "data__obs_quadrat_benthic_percent__percent_algae",
         }
     )
 
