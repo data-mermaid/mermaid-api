@@ -156,6 +156,7 @@ class CollectRecordCSVListSerializer(ListSerializer):
             fmt_rows.append(fmt_row)
 
         self._formatted_records = fmt_rows
+        self.child._row_index = self._row_index
         return fmt_rows
 
     def validate(self, data):
