@@ -121,7 +121,7 @@ def has_duplicate_sample_events(site, management, sample_date):
         "sample_date"
     )
 
-    return qry.count() > 0
+    return qry.count() > 1
 
 
 def consolidate_sample_events(*args, dryrun=False, **kwargs):
