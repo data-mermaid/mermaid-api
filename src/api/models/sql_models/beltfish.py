@@ -177,7 +177,7 @@ class BeltFishSUSQLModel(BaseSUSQLModel):
 
         FROM (
             SELECT 
-            jsonb_agg(DISTINCT beltfish_obs.sample_unit_id) AS sample_unit_ids,
+            jsonb_agg(DISTINCT sample_unit_id) AS sample_unit_ids,
             SUM(beltfish_obs.count) AS total_abundance,
             {_su_fields_qualified},
             {_su_aggfields_sql},
@@ -205,7 +205,7 @@ class BeltFishSUSQLModel(BaseSUSQLModel):
             ) AS biomass_kgha_by_trophic_group
 
             FROM (
-                SELECT jsonb_agg(DISTINCT beltfish_obs.sample_unit_id) AS sample_unit_ids,
+                SELECT jsonb_agg(DISTINCT sample_unit_id) AS sample_unit_ids,
                 depth, transect_number, transect_len_surveyed, sample_event_id,
                 COALESCE(SUM(biomass_kgha), 0::numeric) AS biomass_kgha,
                 trophic_group
@@ -227,7 +227,7 @@ class BeltFishSUSQLModel(BaseSUSQLModel):
         ) AS biomass_kgha_by_fish_family
 
         FROM (
-            SELECT jsonb_agg(DISTINCT beltfish_obs.sample_unit_id) AS sample_unit_ids,
+            SELECT jsonb_agg(DISTINCT sample_unit_id) AS sample_unit_ids,
             depth, transect_number, transect_len_surveyed, sample_event_id,
             COALESCE(SUM(biomass_kgha), 0::numeric) AS biomass_kgha,
             fish_family
@@ -243,7 +243,7 @@ class BeltFishSUSQLModel(BaseSUSQLModel):
             jsonb_agg(DISTINCT observer) AS observers
 
             FROM (
-                SELECT jsonb_agg(DISTINCT beltfish_obs.sample_unit_id) AS sample_unit_ids,
+                SELECT jsonb_agg(DISTINCT sample_unit_id) AS sample_unit_ids,
                 depth, transect_number, transect_len_surveyed, sample_event_id,
                 jsonb_array_elements(observers) AS observer
                 FROM beltfish_obs

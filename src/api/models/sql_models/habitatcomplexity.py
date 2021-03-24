@@ -92,40 +92,38 @@ class HabitatComplexitySUSQLModel(BaseSUSQLModel):
             {HabitatComplexityObsSQLModel.sql}
         )
         SELECT NULL AS id,
-        habcomp_su.pseudosu_id,
+        uuid_generate_v4() AS pseudosu_id,
         {_su_fields},
-        {_agg_su_fields},
+        habcomp_su.{_agg_su_fields},
         reef_slope,
         score_avg
         FROM (
-            SELECT su.pseudosu_id,
-            jsonb_agg(DISTINCT su.sample_unit_id) AS sample_unit_ids,
+            SELECT 
+            jsonb_agg(DISTINCT sample_unit_id) AS sample_unit_ids,
             {_su_fields_qualified},
             {_su_aggfields_sql},
             string_agg(DISTINCT reef_slope::text, ', '::text ORDER BY (reef_slope::text)) AS reef_slope,
             ROUND(AVG(score), 2) AS score_avg
 
             FROM habitatcomplexity_obs
-            INNER JOIN sample_unit_cache su ON (habitatcomplexity_obs.sample_unit_id = su.sample_unit_id)
-            GROUP BY su.pseudosu_id,
+            GROUP BY 
             {_su_fields_qualified}
         ) habcomp_su
 
         INNER JOIN (
-            SELECT pseudosu_id,
+            SELECT sample_unit_ids,
             jsonb_agg(DISTINCT observer) AS observers
 
             FROM (
-                SELECT su.pseudosu_id,
+                SELECT jsonb_agg(DISTINCT sample_unit_id) AS sample_unit_ids,
                 jsonb_array_elements(observers) AS observer
                 FROM habitatcomplexity_obs
-                INNER JOIN sample_unit_cache su ON (habitatcomplexity_obs.sample_unit_id = su.sample_unit_id)
-                GROUP BY su.pseudosu_id,
+                GROUP BY depth, transect_number, transect_len_surveyed, sample_event_id,
                 observers
             ) habcomp_obs_obs
-            GROUP BY pseudosu_id
+            GROUP BY sample_unit_ids
         ) habcomp_obs
-        ON (habcomp_su.pseudosu_id = habcomp_obs.pseudosu_id)
+        ON (habcomp_su.sample_unit_ids = habcomp_obs.sample_unit_ids)
     """
 
     sql_args = dict(project_id=SQLTableArg(required=True))

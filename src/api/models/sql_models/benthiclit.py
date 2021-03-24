@@ -151,63 +151,52 @@ class BenthicLITSUSQLModel(BaseSUSQLModel):
     ]
 
     # Unique combination of these fields defines a single (pseudo) sample unit. All other fields are aggregated.
-    _su_fields = (", ".join(su_fields),)
-    su_fields_qualified = (", ".join([f"benthiclit_obs.{f}" for f in su_fields]),)
-    agg_su_fields = (", ".join(BaseSUSQLModel.agg_su_fields),)
-    su_aggfields_sql = (BaseSUSQLModel.su_aggfields_sql,)
+    _su_fields = ", ".join(su_fields)
+    _su_fields_qualified = ", ".join([f"benthiclit_obs.{f}" for f in su_fields])
+    _agg_su_fields = ", ".join(BaseSUSQLModel.agg_su_fields)
+    _su_aggfields_sql = BaseSUSQLModel.su_aggfields_sql
 
     sql = f"""
         WITH benthiclit_obs AS (
-            { BenthicLITObsSQLModel.sql }
+            {BenthicLITObsSQLModel.sql}
         )
         SELECT
             NULL AS id,
-            benthiclit_su.pseudosu_id,
-            { ", ".join(su_fields) },
-            { ", ".join(BaseSUSQLModel.agg_su_fields) },
+            uuid_generate_v4() AS pseudosu_id,
+            {_su_fields},
+            benthiclit_su.{_agg_su_fields},
             benthiclit_su.total_length,
             reef_slope,
             percent_cover_by_benthic_category
         FROM
             (
                 SELECT
-                    su.pseudosu_id,
-                    jsonb_agg(DISTINCT su.sample_unit_id) AS sample_unit_ids,
+                    jsonb_agg(DISTINCT sample_unit_id) AS sample_unit_ids,
                     SUM(benthiclit_obs.length) AS total_length,
-                    { ", ".join([f"benthiclit_obs.{f}" for f in su_fields]) },
-                    { BaseSUSQLModel.su_aggfields_sql },
+                    {_su_fields_qualified},
+                    {_su_aggfields_sql},
                     string_agg(
                         DISTINCT reef_slope :: text,
                         ', ' :: text
                         ORDER BY
                             (reef_slope :: text)
                     ) AS reef_slope
-                FROM
-                    benthiclit_obs
-                    INNER JOIN sample_unit_cache su ON (
-                        benthiclit_obs.sample_unit_id = su.sample_unit_id
-                    )
+                FROM benthiclit_obs
                 GROUP BY
-                    su.pseudosu_id,
-                    { ", ".join([f"benthiclit_obs.{f}" for f in su_fields]) }
+                    {_su_fields_qualified}
             ) benthiclit_su
+            
             INNER JOIN (
                 WITH cps AS (
-                    SELECT
-                        su.pseudosu_id,
-                        benthic_category,
-                        SUM(length) AS category_length
-                    FROM
-                        benthiclit_obs
-                        INNER JOIN sample_unit_cache su ON (
-                            benthiclit_obs.sample_unit_id = su.sample_unit_id
-                        )
-                    GROUP BY
-                        su.pseudosu_id,
-                        benthic_category
+                    SELECT jsonb_agg(DISTINCT sample_unit_id) AS sample_unit_ids,
+                    benthic_category,
+                    SUM(length) AS category_length
+                    FROM benthiclit_obs
+                    GROUP BY depth, transect_number, transect_len_surveyed, sample_event_id,
+                    benthic_category
                 )
                 SELECT
-                    cps.pseudosu_id,
+                    cps.sample_unit_ids,
                     jsonb_object_agg(
                         cps.benthic_category,
                         ROUND(
@@ -219,41 +208,33 @@ class BenthicLITSUSQLModel(BaseSUSQLModel):
                     cps
                     INNER JOIN (
                         SELECT
-                            pseudosu_id,
+                            sample_unit_ids,
                             SUM(category_length) AS su_length
                         FROM
                             cps
                         GROUP BY
-                            pseudosu_id
-                    ) cat_totals ON (cps.pseudosu_id = cat_totals.pseudosu_id)
+                            sample_unit_ids
+                    ) cat_totals ON (cps.sample_unit_ids = cat_totals.sample_unit_ids)
                 GROUP BY
-                    cps.pseudosu_id
+                    cps.sample_unit_ids
             ) cat_percents ON (
-                benthiclit_su.pseudosu_id = cat_percents.pseudosu_id
+                benthiclit_su.sample_unit_ids = cat_percents.sample_unit_ids
             )
+
             INNER JOIN (
-                SELECT
-                    pseudosu_id,
-                    jsonb_agg(DISTINCT observer) AS observers
-                FROM
-                    (
-                        SELECT
-                            su.pseudosu_id,
-                            jsonb_array_elements(observers) AS observer
-                        FROM
-                            benthiclit_obs
-                            INNER JOIN sample_unit_cache su ON (
-                                benthiclit_obs.sample_unit_id = su.sample_unit_id
-                            )
-                        GROUP BY
-                            su.pseudosu_id,
-                            observers
-                    ) benthiclit_obs_obs
-                GROUP BY
-                    pseudosu_id
-            ) benthiclit_obs ON (
-                benthiclit_su.pseudosu_id = benthiclit_obs.pseudosu_id
-            )
+                SELECT sample_unit_ids,
+                jsonb_agg(DISTINCT observer) AS observers
+    
+                FROM (
+                    SELECT jsonb_agg(DISTINCT sample_unit_id) AS sample_unit_ids,
+                    jsonb_array_elements(observers) AS observer
+                    FROM benthiclit_obs
+                    GROUP BY depth, transect_number, transect_len_surveyed, sample_event_id,
+                    observers
+                ) benthiclit_obs_obs
+                GROUP BY sample_unit_ids
+            ) benthiclit_obs
+            ON (benthiclit_su.sample_unit_ids = benthiclit_obs.sample_unit_ids)
     """
 
     sql_args = dict(project_id=SQLTableArg(required=True))
