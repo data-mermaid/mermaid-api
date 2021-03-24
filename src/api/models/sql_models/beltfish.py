@@ -164,9 +164,9 @@ class BeltFishSUSQLModel(BaseSUSQLModel):
             {BeltFishObsSQLModel.sql}
         )
         SELECT NULL AS id,
-        beltfish_su.pseudosu_id,
+        uuid_generate_v4() AS pseudosu_id,
         {_su_fields},
-        {_agg_su_fields},
+        beltfish_su.{_agg_su_fields},
         reef_slope,
         transect_width_name,
         size_bin,
@@ -176,8 +176,8 @@ class BeltFishSUSQLModel(BaseSUSQLModel):
         biomass_kgha_by_fish_family
 
         FROM (
-            SELECT pseudosu_id,
-            jsonb_agg(DISTINCT su.sample_unit_id) AS sample_unit_ids,
+            SELECT 
+            jsonb_agg(DISTINCT beltfish_obs.sample_unit_id) AS sample_unit_ids,
             SUM(beltfish_obs.count) AS total_abundance,
             {_su_fields_qualified},
             {_su_aggfields_sql},
@@ -190,14 +190,12 @@ class BeltFishSUSQLModel(BaseSUSQLModel):
             ORDER BY (size_bin::text)) AS size_bin
 
             FROM beltfish_obs
-            INNER JOIN sample_unit_cache su
-            ON (beltfish_obs.sample_unit_id = su.sample_unit_id)
-            GROUP BY pseudosu_id,
+            GROUP BY 
             {_su_fields_qualified}
         ) beltfish_su
 
         INNER JOIN (
-            SELECT pseudosu_id,
+            SELECT sample_unit_ids,
             SUM(biomass_kgha) AS biomass_kgha,
             jsonb_object_agg(
                 CASE
@@ -207,21 +205,20 @@ class BeltFishSUSQLModel(BaseSUSQLModel):
             ) AS biomass_kgha_by_trophic_group
 
             FROM (
-                SELECT pseudosu_id,
+                SELECT jsonb_agg(DISTINCT beltfish_obs.sample_unit_id) AS sample_unit_ids,
+                depth, transect_number, transect_len_surveyed, sample_event_id,
                 COALESCE(SUM(biomass_kgha), 0::numeric) AS biomass_kgha,
                 trophic_group
                 FROM beltfish_obs
-                INNER JOIN sample_unit_cache su
-                ON (beltfish_obs.sample_unit_id = su.sample_unit_id)
-                GROUP BY pseudosu_id,
+                GROUP BY depth, transect_number, transect_len_surveyed, sample_event_id,
                 trophic_group
             ) beltfish_obs_tg
-            GROUP BY pseudosu_id
+            GROUP BY sample_unit_ids, depth, transect_number, transect_len_surveyed, sample_event_id
         ) beltfish_tg
-        ON (beltfish_su.pseudosu_id = beltfish_tg.pseudosu_id)
+        ON (beltfish_su.sample_unit_ids = beltfish_tg.sample_unit_ids)
 
         INNER JOIN (
-        SELECT pseudosu_id,
+        SELECT sample_unit_ids,
         jsonb_object_agg(
             CASE
                 WHEN fish_family IS NULL THEN 'other'::character varying
@@ -230,34 +227,32 @@ class BeltFishSUSQLModel(BaseSUSQLModel):
         ) AS biomass_kgha_by_fish_family
 
         FROM (
-            SELECT pseudosu_id,
+            SELECT jsonb_agg(DISTINCT beltfish_obs.sample_unit_id) AS sample_unit_ids,
+            depth, transect_number, transect_len_surveyed, sample_event_id,
             COALESCE(SUM(biomass_kgha), 0::numeric) AS biomass_kgha,
             fish_family
             FROM beltfish_obs
-            INNER JOIN sample_unit_cache su
-            ON (beltfish_obs.sample_unit_id = su.sample_unit_id)
-            GROUP BY pseudosu_id, fish_family
+            GROUP BY depth, transect_number, transect_len_surveyed, sample_event_id, fish_family
         ) beltfish_obs_tg
-        GROUP BY pseudosu_id
+        GROUP BY sample_unit_ids, depth, transect_number, transect_len_surveyed, sample_event_id
         ) beltfish_families
-        ON (beltfish_su.pseudosu_id = beltfish_families.pseudosu_id)
+        ON (beltfish_su.sample_unit_ids = beltfish_families.sample_unit_ids)
 
         INNER JOIN (
-            SELECT pseudosu_id,
+            SELECT sample_unit_ids,
             jsonb_agg(DISTINCT observer) AS observers
 
             FROM (
-                SELECT pseudosu_id,
+                SELECT jsonb_agg(DISTINCT beltfish_obs.sample_unit_id) AS sample_unit_ids,
+                depth, transect_number, transect_len_surveyed, sample_event_id,
                 jsonb_array_elements(observers) AS observer
                 FROM beltfish_obs
-                INNER JOIN sample_unit_cache su
-                ON (beltfish_obs.sample_unit_id = su.sample_unit_id)
-                GROUP BY pseudosu_id,
+                GROUP BY depth, transect_number, transect_len_surveyed, sample_event_id,
                 observers
             ) beltfish_obs_obs
-            GROUP BY pseudosu_id
+            GROUP BY sample_unit_ids, depth, transect_number, transect_len_surveyed, sample_event_id
         ) beltfish_obs
-        ON (beltfish_su.pseudosu_id = beltfish_obs.pseudosu_id)
+        ON (beltfish_su.sample_unit_ids = beltfish_obs.sample_unit_ids)
     """
 
     sql_args = dict(project_id=SQLTableArg(required=True))
