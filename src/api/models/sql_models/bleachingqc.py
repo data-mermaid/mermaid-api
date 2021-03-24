@@ -327,7 +327,7 @@ class BleachingQCSESQLModel(BaseSQLModel):
     percent_normal_avg = models.DecimalField(max_digits=4, decimal_places=1)
     percent_pale_avg = models.DecimalField(max_digits=4, decimal_places=1)
     percent_bleached_avg = models.DecimalField(max_digits=4, decimal_places=1)
-    quadrat_count_avg = models.DecimalField(max_digits=3, decimal_places=1)
+    quadrat_count_avg = models.DecimalField(max_digits=4, decimal_places=1)
     percent_hard_avg_avg = models.DecimalField(max_digits=4, decimal_places=1)
     percent_soft_avg_avg = models.DecimalField(max_digits=4, decimal_places=1)
     percent_algae_avg_avg = models.DecimalField(max_digits=4, decimal_places=1)
