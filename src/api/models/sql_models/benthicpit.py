@@ -255,5 +255,5 @@ class BenthicPITSESQLModel(BaseSQLModel):
     data_policy_benthicpit = models.CharField(max_length=50)
 
     class Meta:
-        db_table = "vw_benthicpit_se"
+        db_table = "benthicpit_se_sm"
         managed = False

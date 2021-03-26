@@ -260,7 +260,7 @@ ORDER BY (
     """
 
     reverse_sql = """
-      DROP VIEW IF EXISTS public.vw_fish_attributes CASCADE;
+      DROP VIEW IF EXISTS public.vw_fish_attributes;
     """
 
     id_family = models.UUIDField()

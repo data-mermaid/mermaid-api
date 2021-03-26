@@ -294,7 +294,7 @@ class BaseSUSQLModel(BaseSQLModel):
         "tide_name",
         "visibility_name",
     ]
-    # SU-level BaseSUViewModel inheritors should instantiate sample_unit_ids; obs-level inheritors shouldn't
+    # SU-level BaseSUSQLModel inheritors should instantiate sample_unit_ids; obs-level inheritors shouldn't
     label = models.CharField(max_length=50, blank=True)
     relative_depth = models.CharField(max_length=50)
     sample_time = models.TimeField()

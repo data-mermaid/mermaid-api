@@ -1,13 +1,13 @@
 from django.contrib.gis.db import models
 from django.contrib.postgres.fields import JSONField
-from . import (
+from ..sql_models import (
     BeltFishSUSQLModel,
     BenthicLITSUSQLModel,
     BenthicPITSUSQLModel,
     BleachingQCSUSQLModel,
     HabitatComplexitySUSQLModel,
+    project_where,
 )
-from .base import project_where
 from .. import Project
 
 
@@ -289,7 +289,7 @@ LEFT JOIN (
 CREATE UNIQUE INDEX ON vw_summary_site (site_id);
     """
 
-    reverse_sql = "DROP MATERIALIZED VIEW IF EXISTS vw_summary_site CASCADE;"
+    reverse_sql = "DROP MATERIALIZED VIEW IF EXISTS vw_summary_site;"
 
     site_id = models.UUIDField(primary_key=True)
     site_name = models.CharField(max_length=255)
