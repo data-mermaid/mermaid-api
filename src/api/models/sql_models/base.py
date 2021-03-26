@@ -7,7 +7,9 @@ from django.utils.translation import ugettext_lazy as _
 from api.models import Project
 
 
-sample_event_sql_template = """
+project_where = """    WHERE\n        project.id = '%s' :: uuid\n"""
+
+sample_event_sql_template = f"""
     SELECT
         project.id AS project_id,
         project.name AS project_name,
@@ -166,8 +168,7 @@ sample_event_sql_template = """
             GROUP BY
                 cov.site_id
         ) AS site_covariates ON site.id = site_covariates.site_id
-    WHERE
-        project.id = '%s' :: uuid
+{project_where}
 """
 
 

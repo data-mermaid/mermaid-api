@@ -1,10 +1,42 @@
-from django.utils.translation import ugettext_lazy as _
-from .base import *
+from django.contrib.gis.db import models
+from django.contrib.postgres.fields import JSONField
+from . import (
+    BeltFishSUSQLModel,
+    BenthicLITSUSQLModel,
+    BenthicPITSUSQLModel,
+    BleachingQCSUSQLModel,
+    HabitatComplexitySUSQLModel,
+)
+from .base import project_where
+from .. import Project
 
 
 class SummarySiteViewModel(models.Model):
-    sql = """
+    beltfishsu_sql = BeltFishSUSQLModel.sql.replace(project_where, "")
+    benthiclitsu_sql = BenthicLITSUSQLModel.sql.replace(project_where, "")
+    benthicpitsu_sql = BenthicPITSUSQLModel.sql.replace(project_where, "")
+    bleachingqcsu_sql = BleachingQCSUSQLModel.sql.replace(project_where, "")
+    habitatcomplexitysu_sql = HabitatComplexitySUSQLModel.sql.replace(project_where, "")
+
+    sql = f"""
 CREATE MATERIALIZED VIEW IF NOT EXISTS vw_summary_site AS 
+
+WITH beltfish_su AS (
+    {beltfishsu_sql}
+),
+benthiclit_su AS (
+    {benthiclitsu_sql}
+),
+benthicpit_su AS (
+    {benthicpitsu_sql}
+),
+bleachingqc_su AS (
+    {bleachingqcsu_sql}
+),
+habitatcomplexity_su AS (
+    {habitatcomplexitysu_sql}
+)
+
 SELECT 
 site.id AS site_id, 
 site.name AS site_name, 
@@ -59,21 +91,21 @@ jsonb_strip_nulls(jsonb_build_object(
         'biomass_kgha_avg', (CASE WHEN project.data_policy_beltfish < 50 THEN NULL ELSE fb.biomass_kgha_avg END),  
         'biomass_kgha_by_trophic_group_avg', (CASE WHEN project.data_policy_beltfish < 50 THEN NULL ELSE 
         fbtg.biomass_kgha_by_trophic_group_avg END)
-    )), '{}'),
+    )), '{{}}'),
     'benthiclit', NULLIF(jsonb_strip_nulls(jsonb_build_object(
         'sample_unit_count', bl.sample_unit_count,
         'percent_cover_by_benthic_category_avg', (CASE WHEN project.data_policy_benthiclit < 50 THEN NULL ELSE 
         bl.percent_cover_by_benthic_category_avg END)
-    )), '{}'),
+    )), '{{}}'),
     'benthicpit', NULLIF(jsonb_strip_nulls(jsonb_build_object(
         'sample_unit_count', bp.sample_unit_count,
         'percent_cover_by_benthic_category_avg', (CASE WHEN project.data_policy_benthicpit < 50 THEN NULL ELSE 
         bp.percent_cover_by_benthic_category_avg END)
-    )), '{}'),
+    )), '{{}}'),
     'habitatcomplexity', NULLIF(jsonb_strip_nulls(jsonb_build_object(
         'sample_unit_count', hc.sample_unit_count,
         'score_avg_avg', (CASE WHEN project.data_policy_habitatcomplexity < 50 THEN NULL ELSE hc.score_avg_avg END)
-    )), '{}'),
+    )), '{{}}'),
     'colonies_bleached', NULLIF(jsonb_strip_nulls(jsonb_build_object(
         'sample_unit_count', bleachingqc.sample_unit_count,
         'count_total_avg', (CASE WHEN project.data_policy_bleachingqc < 50 THEN NULL ELSE bleachingqc.count_total_avg 
@@ -86,7 +118,7 @@ jsonb_strip_nulls(jsonb_build_object(
         bleachingqc.percent_pale_avg END),
         'percent_bleached_avg', (CASE WHEN project.data_policy_bleachingqc < 50 THEN NULL ELSE 
         bleachingqc.percent_bleached_avg END)
-    )), '{}'),
+    )), '{{}}'),
     'quadrat_benthic_percent', NULLIF(jsonb_strip_nulls(jsonb_build_object(
         'sample_unit_count', bleachingqc.sample_unit_count,
         'percent_hard_avg_avg', (CASE WHEN project.data_policy_bleachingqc < 50 THEN NULL ELSE 
@@ -97,7 +129,7 @@ jsonb_strip_nulls(jsonb_build_object(
         bleachingqc.percent_algae_avg_avg END),
         'quadrat_count_avg', (CASE WHEN project.data_policy_bleachingqc < 50 THEN NULL ELSE 
         bleachingqc.quadrat_count_avg END)
-    )), '{}')
+    )), '{{}}')
 )) AS protocols
 
 FROM site
@@ -158,7 +190,7 @@ LEFT JOIN (
     SELECT site_id,
     COUNT(pseudosu_id) AS sample_unit_count,
     ROUND(AVG(biomass_kgha), 1) AS biomass_kgha_avg
-    FROM vw_beltfish_su
+    FROM beltfish_su
     GROUP BY site_id
 ) fb ON (site.id = fb.site_id)
 LEFT JOIN (
@@ -170,7 +202,7 @@ LEFT JOIN (
         FROM (
             SELECT site_id, pseudosu_id, tgdata.key AS tg,
             SUM(tgdata.value::double precision) AS biomass_kgha
-            FROM vw_beltfish_su,
+            FROM beltfish_su,
             LATERAL jsonb_each_text(biomass_kgha_by_trophic_group) tgdata(key, value)
             GROUP BY site_id, pseudosu_id, tgdata.key
         ) meta_su_tgs
@@ -180,10 +212,10 @@ LEFT JOIN (
 ) fbtg ON (site.id = fbtg.site_id)
 
 LEFT JOIN (
-    SELECT vw_benthiclit_su.site_id,
+    SELECT benthiclit_su.site_id,
     COUNT(pseudosu_id) AS sample_unit_count,
     percent_cover_by_benthic_category_avg
-    FROM vw_benthiclit_su
+    FROM benthiclit_su
     INNER JOIN (
         SELECT site_id, 
         jsonb_object_agg(cat, ROUND(cat_percent::numeric, 2)) AS percent_cover_by_benthic_category_avg
@@ -191,23 +223,23 @@ LEFT JOIN (
             SELECT site_id, 
             cpdata.key AS cat, 
             AVG(cpdata.value::float) AS cat_percent
-            FROM vw_benthiclit_su,
+            FROM benthiclit_su,
             jsonb_each_text(percent_cover_by_benthic_category) AS cpdata
             GROUP BY site_id, cpdata.key
         ) AS benthiclit_su_cp
         GROUP BY site_id
     ) AS benthiclit_site_cat_percents
-    ON vw_benthiclit_su.site_id = benthiclit_site_cat_percents.site_id
+    ON benthiclit_su.site_id = benthiclit_site_cat_percents.site_id
     GROUP BY 
-    vw_benthiclit_su.site_id,
+    benthiclit_su.site_id,
     percent_cover_by_benthic_category_avg
 ) bl ON (site.id = bl.site_id)
 
 LEFT JOIN (
-    SELECT vw_benthicpit_su.site_id,
+    SELECT benthicpit_su.site_id,
     COUNT(pseudosu_id) AS sample_unit_count,
     percent_cover_by_benthic_category_avg
-    FROM vw_benthicpit_su
+    FROM benthicpit_su
     INNER JOIN (
         SELECT site_id, 
         jsonb_object_agg(cat, ROUND(cat_percent::numeric, 2)) AS percent_cover_by_benthic_category_avg
@@ -215,15 +247,15 @@ LEFT JOIN (
             SELECT site_id, 
             cpdata.key AS cat, 
             AVG(cpdata.value::float) AS cat_percent
-            FROM vw_benthicpit_su,
+            FROM benthicpit_su,
             jsonb_each_text(percent_cover_by_benthic_category) AS cpdata
             GROUP BY site_id, cpdata.key
         ) AS benthicpit_su_cp
         GROUP BY site_id
     ) AS benthicpit_site_cat_percents
-    ON vw_benthicpit_su.site_id = benthicpit_site_cat_percents.site_id
+    ON benthicpit_su.site_id = benthicpit_site_cat_percents.site_id
     GROUP BY 
-    vw_benthicpit_su.site_id,
+    benthicpit_su.site_id,
     percent_cover_by_benthic_category_avg
 ) bp ON (site.id = bp.site_id)
 
@@ -231,7 +263,7 @@ LEFT JOIN (
     SELECT site_id,
     COUNT(pseudosu_id) AS sample_unit_count,
     ROUND(AVG(score_avg), 2) AS score_avg_avg
-    FROM vw_habitatcomplexity_su
+    FROM habitatcomplexity_su
     GROUP BY 
     site_id
 ) hc ON (site.id = hc.site_id)
@@ -249,7 +281,7 @@ LEFT JOIN (
     ROUND(AVG(percent_hard_avg), 1) AS percent_hard_avg_avg,
     ROUND(AVG(percent_soft_avg), 1) AS percent_soft_avg_avg,
     ROUND(AVG(percent_algae_avg), 1) AS percent_algae_avg_avg
-    FROM vw_bleachingqc_su
+    FROM bleachingqc_su
     GROUP BY 
     site_id
 ) bleachingqc ON (site.id = bleachingqc.site_id);

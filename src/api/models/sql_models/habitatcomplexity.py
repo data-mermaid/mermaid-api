@@ -111,19 +111,20 @@ class HabitatComplexitySUSQLModel(BaseSUSQLModel):
         ) habcomp_su
 
         INNER JOIN (
-            SELECT sample_unit_ids,
+            SELECT jsonb_agg(DISTINCT sample_unit_id) AS sample_unit_ids,
             jsonb_agg(DISTINCT observer) AS observers
 
             FROM (
-                SELECT jsonb_agg(DISTINCT sample_unit_id) AS sample_unit_ids,
+                SELECT sample_unit_id,
+                {_su_fields},
                 jsonb_array_elements(observers) AS observer
                 FROM habitatcomplexity_obs
-                GROUP BY depth, transect_number, transect_len_surveyed, sample_event_id,
+                GROUP BY {_su_fields}, sample_unit_id,
                 observers
             ) habcomp_obs_obs
-            GROUP BY sample_unit_ids
-        ) habcomp_obs
-        ON (habcomp_su.sample_unit_ids = habcomp_obs.sample_unit_ids)
+            GROUP BY {_su_fields}
+        ) habcomp_observers
+        ON (habcomp_su.sample_unit_ids = habcomp_observers.sample_unit_ids)
     """
 
     sql_args = dict(project_id=SQLTableArg(required=True))

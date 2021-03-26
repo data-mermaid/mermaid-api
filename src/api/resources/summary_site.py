@@ -7,7 +7,7 @@ from .base import (
 )
 from .sample_units import AggregatedViewMixin, BaseApiViewSet
 from ..permissions import UnauthenticatedReadOnlyPermission
-from ..models.view_models.summary_site import SummarySiteViewModel
+from api.models.sql_models.summary_site import SummarySiteViewModel
 from ..models import Project
 from ..reports.fields import ReportField
 from ..reports.formatters import (

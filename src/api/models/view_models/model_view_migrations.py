@@ -13,7 +13,7 @@ from .habitatcomplexity import (
     HabitatComplexitySEView,
     HabitatComplexitySUView,
 )
-from .summary_site import SummarySiteViewModel
+from api.models.sql_models.summary_site import SummarySiteViewModel
 
 
 def forward_sql():

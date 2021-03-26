@@ -138,7 +138,7 @@ class BenthicPITSUSQLModel(BaseSUSQLModel):
                 benthic_category,
                 SUM(interval_size) AS category_length
                 FROM benthicpit_obs
-                GROUP BY depth, transect_number, transect_len_surveyed, sample_event_id,
+                GROUP BY {_su_fields},
                 benthic_category
             )
             SELECT cps.sample_unit_ids,
@@ -158,19 +158,20 @@ class BenthicPITSUSQLModel(BaseSUSQLModel):
         ON (benthicpit_su.sample_unit_ids = cat_percents.sample_unit_ids)
 
         INNER JOIN (
-            SELECT sample_unit_ids,
+            SELECT jsonb_agg(DISTINCT sample_unit_id) AS sample_unit_ids,
             jsonb_agg(DISTINCT observer) AS observers
 
             FROM (
-                SELECT jsonb_agg(DISTINCT sample_unit_id) AS sample_unit_ids,
+                SELECT sample_unit_id,
+                {_su_fields},
                 jsonb_array_elements(observers) AS observer
                 FROM benthicpit_obs
-                GROUP BY depth, transect_number, transect_len_surveyed, sample_event_id,
+                GROUP BY {_su_fields}, sample_unit_id,
                 observers
             ) benthicpit_obs_obs
-            GROUP BY sample_unit_ids
-        ) benthicpit_obs
-        ON (benthicpit_su.sample_unit_ids = benthicpit_obs.sample_unit_ids)
+            GROUP BY {_su_fields}
+        ) benthicpit_observers
+        ON (benthicpit_su.sample_unit_ids = benthicpit_observers.sample_unit_ids)
     """
 
     sql_args = dict(project_id=SQLTableArg(required=True))

@@ -175,12 +175,8 @@ class BenthicLITSUSQLModel(BaseSUSQLModel):
                     SUM(benthiclit_obs.length) AS total_length,
                     {_su_fields_qualified},
                     {_su_aggfields_sql},
-                    string_agg(
-                        DISTINCT reef_slope :: text,
-                        ', ' :: text
-                        ORDER BY
-                            (reef_slope :: text)
-                    ) AS reef_slope
+                    string_agg(DISTINCT reef_slope::text, ', '::text ORDER BY (reef_slope::text)) AS reef_slope
+                    
                 FROM benthiclit_obs
                 GROUP BY
                     {_su_fields_qualified}
@@ -192,7 +188,7 @@ class BenthicLITSUSQLModel(BaseSUSQLModel):
                     benthic_category,
                     SUM(length) AS category_length
                     FROM benthiclit_obs
-                    GROUP BY depth, transect_number, transect_len_surveyed, sample_event_id,
+                    GROUP BY {_su_fields},
                     benthic_category
                 )
                 SELECT
@@ -222,19 +218,20 @@ class BenthicLITSUSQLModel(BaseSUSQLModel):
             )
 
             INNER JOIN (
-                SELECT sample_unit_ids,
+                SELECT jsonb_agg(DISTINCT sample_unit_id) AS sample_unit_ids,
                 jsonb_agg(DISTINCT observer) AS observers
     
                 FROM (
-                    SELECT jsonb_agg(DISTINCT sample_unit_id) AS sample_unit_ids,
+                    SELECT sample_unit_id,
+                    {_su_fields},
                     jsonb_array_elements(observers) AS observer
                     FROM benthiclit_obs
-                    GROUP BY depth, transect_number, transect_len_surveyed, sample_event_id,
+                    GROUP BY {_su_fields}, sample_unit_id,
                     observers
                 ) benthiclit_obs_obs
-                GROUP BY sample_unit_ids
-            ) benthiclit_obs
-            ON (benthiclit_su.sample_unit_ids = benthiclit_obs.sample_unit_ids)
+                GROUP BY {_su_fields}
+            ) benthiclit_observers
+            ON (benthiclit_su.sample_unit_ids = benthiclit_observers.sample_unit_ids)
     """
 
     sql_args = dict(project_id=SQLTableArg(required=True))
