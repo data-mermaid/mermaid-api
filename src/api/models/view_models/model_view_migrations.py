@@ -1,4 +1,4 @@
-from .base import FishAttributeView
+from .fish_attributes import FishAttributeView
 from .summary_site import SummarySiteViewModel
 
 

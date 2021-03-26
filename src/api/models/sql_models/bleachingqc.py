@@ -238,7 +238,7 @@ class BleachingQCSUSQLModel(BaseSUSQLModel):
             round(AVG(percent_soft), 1) AS percent_soft_avg,
             round(AVG(percent_algae), 1) AS percent_algae_avg
             FROM bleachingqc_quadrat_benthic_percent_obs
-            GROUP BY depth, quadrat_size, sample_event_id
+            GROUP BY {_su_fields}
         ) bp ON bleachingqc_su.sample_unit_ids = bp.sample_unit_ids
 
         INNER JOIN (

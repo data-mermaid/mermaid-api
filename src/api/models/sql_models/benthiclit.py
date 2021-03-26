@@ -195,27 +195,18 @@ class BenthicLITSUSQLModel(BaseSUSQLModel):
                     cps.sample_unit_ids,
                     jsonb_object_agg(
                         cps.benthic_category,
-                        ROUND(
-                            100 * cps.category_length / cat_totals.su_length,
-                            2
-                        )
+                        ROUND(100 * cps.category_length / cat_totals.su_length, 2)
                     ) AS percent_cover_by_benthic_category
-                FROM
-                    cps
-                    INNER JOIN (
-                        SELECT
-                            sample_unit_ids,
-                            SUM(category_length) AS su_length
-                        FROM
-                            cps
-                        GROUP BY
-                            sample_unit_ids
-                    ) cat_totals ON (cps.sample_unit_ids = cat_totals.sample_unit_ids)
-                GROUP BY
-                    cps.sample_unit_ids
-            ) cat_percents ON (
-                benthiclit_su.sample_unit_ids = cat_percents.sample_unit_ids
-            )
+                FROM cps
+                INNER JOIN (
+                    SELECT sample_unit_ids,
+                    SUM(category_length) AS su_length
+                    FROM cps
+                    GROUP BY sample_unit_ids
+                ) cat_totals ON (cps.sample_unit_ids = cat_totals.sample_unit_ids)
+                GROUP BY cps.sample_unit_ids
+            ) cat_percents 
+            ON (benthiclit_su.sample_unit_ids = cat_percents.sample_unit_ids)
 
             INNER JOIN (
                 SELECT jsonb_agg(DISTINCT sample_unit_id) AS sample_unit_ids,
