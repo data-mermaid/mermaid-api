@@ -248,9 +248,9 @@ def refresh_pseudosu_cache(sender, instance, *args, **kwargs):
 
     SampleUnitCache.refresh_cache(instance)
 
+
 for suclass in get_subclasses(SampleUnit):
     classname = suclass._meta.object_name
-
 
     post_save.connect(
         refresh_pseudosu_cache,
@@ -264,7 +264,7 @@ for suclass in get_subclasses(SampleUnit):
     post_delete.connect(
         refresh_pseudosu_cache,
         sender=suclass,
-        dispatch_uid="{classname}_refresh_pseudosu_cache_delete"
+        dispatch_uid=f"{classname}_refresh_pseudosu_cache_delete"
     )
 
     post_delete.connect(
