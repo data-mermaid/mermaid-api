@@ -13,6 +13,7 @@ from ...report_serializer import *
 from ...reports import csv_report
 from ...resources.base import BaseApiViewSet, BaseProjectApiViewSet
 from ...utils import truthy
+from ...utils.sample_units import consolidate_sample_events, has_duplicate_sample_events
 
 
 def save_one_to_many(foreign_key, database_records, data, serializer_class, context):
@@ -71,6 +72,18 @@ def save_model(data, serializer_class, context):
 
     serializer.save()
     return True, None
+
+
+def clean_sample_event_models(data):
+    site = data.get("site")
+    management = data.get("management")
+    sample_date = data.get("sample_date")
+    if has_duplicate_sample_events(site, management, sample_date):
+        consolidate_sample_events(sample_event_data=dict(
+            site=site,
+            management=management,
+            sample_date=sample_date
+        ))
 
 
 class BaseGeoJsonPagination(GeoJsonPagination):
