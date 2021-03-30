@@ -7,7 +7,6 @@ from .base import BaseSQLModel, BaseSUSQLModel, sample_event_sql_template
 
 
 class BenthicPITObsSQLModel(BaseSUSQLModel):
-
     _se_fields = ", ".join([f"se.{f}" for f in BaseSUSQLModel.se_fields])
     _su_fields = BaseSUSQLModel.su_fields_sql
     sql = f"""
@@ -52,7 +51,8 @@ class BenthicPITObsSQLModel(BaseSUSQLModel):
             LEFT JOIN api_relativedepth r ON su.relative_depth_id = r.id
             LEFT JOIN api_reefslope rs ON su.reef_slope_id = rs.id
             JOIN ( SELECT tt_1.transect_id,
-                    jsonb_agg(jsonb_build_object('id', p.id, 'name', (COALESCE(p.first_name, ''::character varying)::text ||
+                    jsonb_agg(jsonb_build_object('id', p.id, 'name', (COALESCE(p.first_name, ''::character 
+                    varying)::text ||
                     ' '::text) || COALESCE(p.last_name, ''::character varying)::text)) AS observers
                 FROM observer o1
                     JOIN profile p ON o1.profile_id = p.id
@@ -94,7 +94,6 @@ class BenthicPITObsSQLModel(BaseSUSQLModel):
 
 
 class BenthicPITSUSQLModel(BaseSUSQLModel):
-
     # Unique combination of these fields defines a single (pseudo) sample unit. All other fields are aggregated.
     su_fields = BaseSUSQLModel.se_fields + [
         "depth",
@@ -134,12 +133,27 @@ class BenthicPITSUSQLModel(BaseSUSQLModel):
 
         INNER JOIN (
             WITH cps AS (
-                SELECT jsonb_agg(DISTINCT sample_unit_id) AS sample_unit_ids,
-                benthic_category,
-                SUM(interval_size) AS category_length
-                FROM benthicpit_obs
-                GROUP BY {_su_fields},
-                benthic_category
+                WITH cps_obs AS (
+                    SELECT jsonb_agg(DISTINCT sample_unit_id) AS sample_unit_ids,
+                    benthic_category,
+                    SUM(interval_size) AS category_length
+                    FROM benthicpit_obs
+                    GROUP BY {_su_fields},
+                    benthic_category
+                )
+                SELECT cps_expanded.sample_unit_ids, cps_expanded.benthic_category,
+                COALESCE(cps_obs.category_length, 0) AS category_length
+                FROM (
+                    SELECT DISTINCT cps_obs.sample_unit_ids, top_categories.benthic_category
+                    FROM cps_obs
+                    CROSS JOIN (
+                        SELECT name AS benthic_category
+                        FROM benthic_attribute
+                        WHERE benthic_attribute.parent_id IS NULL
+                    ) top_categories
+                ) cps_expanded
+                LEFT JOIN cps_obs ON (cps_expanded.sample_unit_ids = cps_obs.sample_unit_ids AND 
+                cps_expanded.benthic_category = cps_obs.benthic_category)
             )
             SELECT cps.sample_unit_ids,
             jsonb_object_agg(
@@ -202,7 +216,6 @@ class BenthicPITSUSQLModel(BaseSUSQLModel):
 
 
 class BenthicPITSESQLModel(BaseSQLModel):
-
     _se_fields = ", ".join([f"benthicpit_su.{f}" for f in BaseSQLModel.se_fields])
     _su_aggfields_sql = BaseSQLModel.su_aggfields_sql
 
