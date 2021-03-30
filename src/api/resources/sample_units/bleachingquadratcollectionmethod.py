@@ -40,7 +40,12 @@ from ..obs_quadrat_benthic_percent import ObsQuadratBenthicPercentSerializer
 from ..observer import ObserverSerializer
 from ..quadrat_collection import QuadratCollectionSerializer
 from ..sample_event import SampleEventSerializer
-from . import BaseProjectMethodView, save_model, save_one_to_many
+from . import (
+    BaseProjectMethodView,
+    clean_sample_event_models,
+    save_model,
+    save_one_to_many,
+)
 
 
 class BleachingQuadratCollectionMethodSerializer(BleachingQuadratCollectionSerializer):
@@ -158,6 +163,8 @@ class BleachingQuadratCollectionMethodView(BaseProjectApiViewSet):
             if is_valid is False:
                 transaction.savepoint_rollback(sid)
                 return Response(data=errors, status=status.HTTP_400_BAD_REQUEST)
+
+            clean_sample_event_models(nested_data["sample_event"])
 
             transaction.savepoint_commit(sid)
             bleaching_qc = BleachingQuadratCollection.objects.get(id=bleaching_qc_id)

@@ -34,7 +34,12 @@ from ..benthic_transect import BenthicTransectSerializer
 from ..obs_benthic_pit import ObsBenthicPITSerializer
 from ..observer import ObserverSerializer
 from ..sample_event import SampleEventSerializer
-from . import BaseProjectMethodView, save_model, save_one_to_many
+from . import (
+    BaseProjectMethodView,
+    clean_sample_event_models,
+    save_model,
+    save_one_to_many,
+)
 
 
 class BenthicPITMethodSerializer(BenthicPITSerializer):
@@ -136,6 +141,8 @@ class BenthicPITMethodView(BaseProjectApiViewSet):
             if is_valid is False:
                 transaction.savepoint_rollback(sid)
                 return Response(data=errors, status=status.HTTP_400_BAD_REQUEST)
+
+            clean_sample_event_models(nested_data["sample_event"])
 
             transaction.savepoint_commit(sid)
 

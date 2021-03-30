@@ -28,12 +28,13 @@ def mermaid_email(subject, heading, subheading, body, to, from_email=None):
         to=to,
         reply_to=[from_email]
     )
-    if settings.DEBUG:
-        print(email_args)
-    else:
+    if settings.ENVIRONMENT == "prod":
         message = EmailMessage(**email_args)
         message.content_subtype = 'html'
         message.send()
+    else:
+        print(email_args)
+        
 
 
 def email_project_admins(project, subject, body, from_email=None):

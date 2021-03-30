@@ -322,13 +322,7 @@ class BleachingQuadratCollectionProtocolWriter(ProtocolWriter):
             self.collect_record, bleaching_quadrat_collection_id
         )
         if not observations_data:
-            raise ValidationError(
-                {
-                    "obs_quadrat_benthic_percent": [
-                        _(u"Benthic percent cover observations are required.")
-                    ]
-                }
-            )
+            return observation_benthic_percent_covered_data
 
         for observation_data in observations_data:
             observation_data["id"] = uuid.uuid4()
