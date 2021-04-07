@@ -27,6 +27,7 @@ class TableRevision(models.Model):
 
     class Meta:
         db_table = "table_revision"
+        unique_together = ("table_name", "project_id")
 
     def __str__(self):
         return f"[{self.last_rev_id}] {self.table_name} - {self.updated_on}"
