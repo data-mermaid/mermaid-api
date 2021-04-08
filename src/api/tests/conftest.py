@@ -1,7 +1,9 @@
 import pytest
 from django.db import connection
 
-from api.models.view_models import model_view_migrations, SummarySiteViewModel
+from api.models.view_models import model_view_migrations
+from api.models import revisions
+from api.models.view_models.summary_site import SummarySiteViewModel
 from .fixtures import *
 
 
@@ -11,3 +13,4 @@ def db_setup(db):
         cursor.execute("CREATE EXTENSION IF NOT EXISTS pg_trgm;")
         cursor.execute("CREATE EXTENSION IF NOT EXISTS \"uuid-ossp\";")
         cursor.execute(model_view_migrations.forward_sql())
+        cursor.execute(revisions.forward_sql)
