@@ -7,9 +7,9 @@ from .base import BaseSQLModel, BaseSUSQLModel, sample_event_sql_template
 
 
 class BeltFishObsSQLModel(BaseSUSQLModel):
-
     _se_fields = ", ".join([f"se.{f}" for f in BaseSUSQLModel.se_fields])
     _su_fields = BaseSUSQLModel.su_fields_sql
+
     sql = f"""
         WITH se AS (
             {sample_event_sql_template}
@@ -96,9 +96,8 @@ class BeltFishObsSQLModel(BaseSUSQLModel):
                     SELECT 
                         uuid_generate_v4() AS pseudosu_id,
                         array_agg(DISTINCT su.id) AS sample_unit_ids
-                    FROM transect_belt_fish as su
-                    INNER JOIN se ON su.sample_event_id = se.sample_event_id
-                    GROUP BY su.sample_event_id, su.depth, su.number, su.len_surveyed
+                    FROM transect_belt_fish su
+                    GROUP BY {", ".join(BaseSUSQLModel.transect_su_fields)}
                 ) pseudosu
             ) pseudosu_su ON (su.id = pseudosu_su.sample_unit_id)
         """
@@ -159,7 +158,6 @@ class BeltFishObsSQLModel(BaseSUSQLModel):
 
 
 class BeltFishSUSQLModel(BaseSUSQLModel):
-
     # Unique combination of these fields defines a single (pseudo) sample unit.
     # All other fields are aggregated.
     su_fields = BaseSUSQLModel.se_fields + [

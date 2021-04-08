@@ -256,6 +256,15 @@ class BaseSQLModel(models.Model):
 
 
 class BaseSUSQLModel(BaseSQLModel):
+    # Unique combination of these fields defines a single (pseudo) sample unit.
+    # Corresponds to *SUSQLModel.su_fields
+    transect_su_fields = [
+        "sample_event_id",
+        "depth",
+        "number",
+        "len_surveyed",
+    ]
+
     # SU sql common to all obs-level views
     su_fields_sql = """
         su.id AS sample_unit_id,

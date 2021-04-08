@@ -10,7 +10,10 @@ class BenthicPITObsSQLModel(BaseSUSQLModel):
     _se_fields = ", ".join([f"se.{f}" for f in BaseSUSQLModel.se_fields])
     _su_fields = BaseSUSQLModel.su_fields_sql
     sql = f"""
-        SELECT o.id,
+        WITH se AS (
+            {sample_event_sql_template}
+        )
+        SELECT o.id, pseudosu_id,
             {_se_fields},
             {_su_fields},
             se.data_policy_benthicpit,
@@ -59,7 +62,19 @@ class BenthicPITObsSQLModel(BaseSUSQLModel):
                     JOIN transectmethod tm ON o1.transectmethod_id = tm.id
                     JOIN transectmethod_benthicpit tt_1 ON tm.id = tt_1.transectmethod_ptr_id
                 GROUP BY tt_1.transect_id) observers ON su.id = observers.transect_id
-            JOIN ({sample_event_sql_template}) se ON su.sample_event_id = se.sample_event_id
+            JOIN se ON su.sample_event_id = se.sample_event_id
+            INNER JOIN (
+                SELECT 
+                    pseudosu_id,
+                    UNNEST(sample_unit_ids) AS sample_unit_id
+                FROM (
+                    SELECT 
+                        uuid_generate_v4() AS pseudosu_id,
+                        array_agg(DISTINCT su.id) AS sample_unit_ids
+                    FROM transect_benthic su
+                    GROUP BY {", ".join(BaseSUSQLModel.transect_su_fields)}
+                ) pseudosu
+            ) pseudosu_su ON (su.id = pseudosu_su.sample_unit_id)
     """
 
     sql_args = dict(project_id=SQLTableArg(required=True))
@@ -114,37 +129,36 @@ class BenthicPITSUSQLModel(BaseSUSQLModel):
             {BenthicPITObsSQLModel.sql}
         )
         SELECT NULL AS id,
-        uuid_generate_v4() AS pseudosu_id,
+        benthicpit_su.pseudosu_id,
         {_su_fields},
         benthicpit_su.{_agg_su_fields},
         reef_slope,
         percent_cover_by_benthic_category
         FROM (
-            SELECT 
+            SELECT pseudosu_id,
             jsonb_agg(DISTINCT sample_unit_id) AS sample_unit_ids,
             {_su_fields_qualified},
             {_su_aggfields_sql},
             string_agg(DISTINCT reef_slope::text, ', '::text ORDER BY (reef_slope::text)) AS reef_slope
 
             FROM benthicpit_obs
-            GROUP BY 
+            GROUP BY pseudosu_id,
             {_su_fields_qualified}
         ) benthicpit_su
 
         INNER JOIN (
             WITH cps AS (
                 WITH cps_obs AS (
-                    SELECT jsonb_agg(DISTINCT sample_unit_id) AS sample_unit_ids,
+                    SELECT pseudosu_id,
                     benthic_category,
                     SUM(interval_size) AS category_length
                     FROM benthicpit_obs
-                    GROUP BY {_su_fields},
-                    benthic_category
+                    GROUP BY pseudosu_id, benthic_category
                 )
-                SELECT cps_expanded.sample_unit_ids, cps_expanded.benthic_category,
+                SELECT cps_expanded.pseudosu_id, cps_expanded.benthic_category,
                 COALESCE(cps_obs.category_length, 0) AS category_length
                 FROM (
-                    SELECT DISTINCT cps_obs.sample_unit_ids, top_categories.benthic_category
+                    SELECT DISTINCT cps_obs.pseudosu_id, top_categories.benthic_category
                     FROM cps_obs
                     CROSS JOIN (
                         SELECT name AS benthic_category
@@ -152,40 +166,42 @@ class BenthicPITSUSQLModel(BaseSUSQLModel):
                         WHERE benthic_attribute.parent_id IS NULL
                     ) top_categories
                 ) cps_expanded
-                LEFT JOIN cps_obs ON (cps_expanded.sample_unit_ids = cps_obs.sample_unit_ids AND 
-                cps_expanded.benthic_category = cps_obs.benthic_category)
+                LEFT JOIN cps_obs ON (
+                    cps_expanded.pseudosu_id = cps_obs.pseudosu_id AND 
+                    cps_expanded.benthic_category = cps_obs.benthic_category
+                )
             )
-            SELECT cps.sample_unit_ids,
+            SELECT cps.pseudosu_id,
             jsonb_object_agg(
                 cps.benthic_category,
                 ROUND(100 * cps.category_length / cat_totals.su_length, 2)
             ) AS percent_cover_by_benthic_category
             FROM cps
             INNER JOIN (
-                SELECT sample_unit_ids,
+                SELECT pseudosu_id,
                 SUM(category_length) AS su_length
                 FROM cps
-                GROUP BY sample_unit_ids
-            ) cat_totals ON (cps.sample_unit_ids = cat_totals.sample_unit_ids)
-            GROUP BY cps.sample_unit_ids
+                GROUP BY pseudosu_id
+            ) cat_totals ON (cps.pseudosu_id = cat_totals.pseudosu_id)
+            GROUP BY cps.pseudosu_id
         ) cat_percents
-        ON (benthicpit_su.sample_unit_ids = cat_percents.sample_unit_ids)
+        ON (benthicpit_su.pseudosu_id = cat_percents.pseudosu_id)
 
         INNER JOIN (
-            SELECT jsonb_agg(DISTINCT sample_unit_id) AS sample_unit_ids,
+            SELECT pseudosu_id,
             jsonb_agg(DISTINCT observer) AS observers
 
             FROM (
-                SELECT sample_unit_id,
+                SELECT pseudosu_id,
                 {_su_fields},
                 jsonb_array_elements(observers) AS observer
                 FROM benthicpit_obs
-                GROUP BY {_su_fields}, sample_unit_id,
+                GROUP BY pseudosu_id, {_su_fields},
                 observers
             ) benthicpit_obs_obs
-            GROUP BY {_su_fields}
+            GROUP BY pseudosu_id, {_su_fields}
         ) benthicpit_observers
-        ON (benthicpit_su.sample_unit_ids = benthicpit_observers.sample_unit_ids)
+        ON (benthicpit_su.pseudosu_id = benthicpit_observers.pseudosu_id)
     """
 
     sql_args = dict(project_id=SQLTableArg(required=True))
