@@ -85,7 +85,5 @@ def test_delete_record(db_setup, project1, profile1):
     collect_record.delete()
 
     qry = RecordRevision.objects.filter(record_id=pk, deleted=True)
-    for r in RecordRevision.objects.filter(record_id=pk):
-        print(r.deleted)
 
     assert qry.count() == 1
