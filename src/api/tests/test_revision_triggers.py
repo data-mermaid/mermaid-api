@@ -55,7 +55,7 @@ def test_update_record(db_setup, project1):
     assert tr.last_rev_id in rev_ids
 
     # On management create there is a Django signal that runs
-    # a validation on managment and then saves again
+    # a validation on management and then saves again
     assert rev_recs.count() == 2
 
     management.notes += "...some more notes"

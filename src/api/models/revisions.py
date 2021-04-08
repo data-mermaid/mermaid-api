@@ -54,8 +54,6 @@ forward_sql = """
             pg_attribute.attrelid = pg_class.oid AND
             pg_attribute.attnum = any(pg_index.indkey)
             AND indisprimary;
-
-
         RETURN column_name;
 
     END;
@@ -131,7 +129,7 @@ forward_sql = """
             rev_id_val,
             TG_TABLE_NAME,
             updated_on_val,
-            Case WHEN project_id_val is null THEN
+            CASE WHEN project_id_val is null THEN
                 '00000000-0000-0000-0000-000000000000'::uuid
             ELSE project_id_val END
         )
@@ -179,14 +177,6 @@ forward_sql = """
     UPDATE
         OR DELETE ON "benthic_attribute" FOR EACH ROW EXECUTE FUNCTION record_change();
 
-    /*
-    CREATE TRIGGER fish_attribute_trigger
-    AFTER
-    INSERT
-        OR
-    UPDATE
-        OR DELETE ON "fish_attribute" FOR EACH ROW EXECUTE FUNCTION record_change();
-    */
     CREATE TRIGGER fish_genus_trigger
     AFTER
     INSERT
