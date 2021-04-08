@@ -1,11 +1,10 @@
-from django.contrib.gis.geos import Point
 from api.models import (
-    Management,
-    Project,
     CollectRecord,
     FishSpecies,
-    TableRevision,
+    Management,
+    Project,
     RecordRevision,
+    TableRevision,
 )
 
 

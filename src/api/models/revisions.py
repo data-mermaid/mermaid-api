@@ -36,22 +36,22 @@ class TableRevision(models.Model):
 # -- TRIGGER SQL --
 
 forward_sql = """
-    CREATE OR REPLACE FUNCTION primary_key_column_name (table_name text) 
+    CREATE OR REPLACE FUNCTION primary_key_column_name (table_name text)
     RETURNS varchar AS $$
     DECLARE
     column_name text;
     BEGIN
-        SELECT               
+        SELECT
             pg_attribute.attname
         INTO
             column_name
-        FROM pg_index, pg_class, pg_attribute, pg_namespace 
-        WHERE 
+        FROM pg_index, pg_class, pg_attribute, pg_namespace
+        WHERE
             pg_class.oid = table_name::regclass AND
-            indrelid = pg_class.oid AND 
-            nspname = 'public' AND 
-            pg_class.relnamespace = pg_namespace.oid AND 
-            pg_attribute.attrelid = pg_class.oid AND 
+            indrelid = pg_class.oid AND
+            nspname = 'public' AND
+            pg_class.relnamespace = pg_namespace.oid AND
+            pg_attribute.attrelid = pg_class.oid AND
             pg_attribute.attnum = any(pg_index.indkey)
             AND indisprimary;
 
@@ -131,7 +131,8 @@ forward_sql = """
             rev_id_val,
             TG_TABLE_NAME,
             updated_on_val,
-            Case WHEN project_id_val is null THEN '00000000-0000-0000-0000-000000000000'::uuid
+            Case WHEN project_id_val is null THEN
+                '00000000-0000-0000-0000-000000000000'::uuid
             ELSE project_id_val END
         )
         ON CONFLICT (table_name, project_id) DO
@@ -268,21 +269,24 @@ forward_sql = """
     INSERT
         OR
     UPDATE
-        OR DELETE ON "api_habitatcomplexityscore" FOR EACH ROW EXECUTE FUNCTION record_change();
+        OR DELETE ON "api_habitatcomplexityscore"
+        FOR EACH ROW EXECUTE FUNCTION record_change();
 
     CREATE TRIGGER api_belttransectwidth_trigger
     AFTER
     INSERT
         OR
     UPDATE
-        OR DELETE ON "api_belttransectwidth" FOR EACH ROW EXECUTE FUNCTION record_change();
+        OR DELETE ON "api_belttransectwidth"
+        FOR EACH ROW EXECUTE FUNCTION record_change();
 
     CREATE TRIGGER fish_group_size_trigger
     AFTER
     INSERT
         OR
     UPDATE
-        OR DELETE ON "fish_group_size" FOR EACH ROW EXECUTE FUNCTION record_change();
+        OR DELETE ON "fish_group_size"
+        FOR EACH ROW EXECUTE FUNCTION record_change();
 
     CREATE TRIGGER api_reefzone_trigger
     AFTER
