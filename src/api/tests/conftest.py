@@ -1,6 +1,7 @@
+import pytest
 from django.db import connection
 
-from api.models.view_models import model_view_migrations
+from api.models.view_models import model_view_migrations, SummarySiteViewModel
 from .fixtures import *
 
 

@@ -11,7 +11,10 @@ class HabitatComplexityObsSQLModel(BaseSUSQLModel):
     _se_fields = ", ".join([f"se.{f}" for f in BaseSUSQLModel.se_fields])
     _su_fields = BaseSUSQLModel.su_fields_sql
     sql = f"""
-        SELECT o.id,
+        WITH se AS (
+            {sample_event_sql_template}
+        )
+        SELECT o.id, pseudosu_id,
         {_se_fields},
         {_su_fields},
         se.data_policy_habitatcomplexity,
@@ -43,7 +46,19 @@ class HabitatComplexityObsSQLModel(BaseSUSQLModel):
                 JOIN transectmethod_habitatcomplexity tt_1 ON tm.id = tt_1.transectmethod_ptr_id
             GROUP BY tt_1.transect_id
         ) observers ON su.id = observers.transect_id
-        JOIN ({sample_event_sql_template}) se ON su.sample_event_id = se.sample_event_id
+        JOIN se ON su.sample_event_id = se.sample_event_id
+            INNER JOIN (
+                SELECT 
+                    pseudosu_id,
+                    UNNEST(sample_unit_ids) AS sample_unit_id
+                FROM (
+                    SELECT 
+                        uuid_generate_v4() AS pseudosu_id,
+                        array_agg(DISTINCT su.id) AS sample_unit_ids
+                    FROM transect_benthic su
+                    GROUP BY {", ".join(BaseSUSQLModel.transect_su_fields)}
+                ) pseudosu
+            ) pseudosu_su ON (su.id = pseudosu_su.sample_unit_id)
     """
 
     sql_args = dict(project_id=SQLTableArg(required=True))
@@ -72,7 +87,6 @@ class HabitatComplexityObsSQLModel(BaseSUSQLModel):
 
 
 class HabitatComplexitySUSQLModel(BaseSUSQLModel):
-
     # Unique combination of these fields defines a single (pseudo) sample unit. All other fields are aggregated.
     su_fields = BaseSUSQLModel.se_fields + [
         "depth",
@@ -92,13 +106,13 @@ class HabitatComplexitySUSQLModel(BaseSUSQLModel):
             {HabitatComplexityObsSQLModel.sql}
         )
         SELECT NULL AS id,
-        uuid_generate_v4() AS pseudosu_id,
+        habcomp_su.pseudosu_id,
         {_su_fields},
         habcomp_su.{_agg_su_fields},
         reef_slope,
         score_avg
         FROM (
-            SELECT 
+            SELECT pseudosu_id,
             jsonb_agg(DISTINCT sample_unit_id) AS sample_unit_ids,
             {_su_fields_qualified},
             {_su_aggfields_sql},
@@ -106,25 +120,25 @@ class HabitatComplexitySUSQLModel(BaseSUSQLModel):
             ROUND(AVG(score), 2) AS score_avg
 
             FROM habitatcomplexity_obs
-            GROUP BY 
+            GROUP BY pseudosu_id,
             {_su_fields_qualified}
         ) habcomp_su
 
         INNER JOIN (
-            SELECT jsonb_agg(DISTINCT sample_unit_id) AS sample_unit_ids,
+            SELECT pseudosu_id,
             jsonb_agg(DISTINCT observer) AS observers
 
             FROM (
-                SELECT sample_unit_id,
+                SELECT pseudosu_id,
                 {_su_fields},
                 jsonb_array_elements(observers) AS observer
                 FROM habitatcomplexity_obs
-                GROUP BY {_su_fields}, sample_unit_id,
+                GROUP BY pseudosu_id, {_su_fields},
                 observers
             ) habcomp_obs_obs
-            GROUP BY {_su_fields}
+            GROUP BY pseudosu_id, {_su_fields}
         ) habcomp_observers
-        ON (habcomp_su.sample_unit_ids = habcomp_observers.sample_unit_ids)
+        ON (habcomp_su.pseudosu_id = habcomp_observers.pseudosu_id)
     """
 
     sql_args = dict(project_id=SQLTableArg(required=True))
