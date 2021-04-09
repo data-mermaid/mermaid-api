@@ -264,6 +264,11 @@ class BaseSUSQLModel(BaseSQLModel):
         "number",
         "len_surveyed",
     ]
+    qc_su_fields = [
+        "sample_event_id",
+        "depth",
+        "quadrat_size",
+    ]
 
     # SU sql common to all obs-level views
     su_fields_sql = """

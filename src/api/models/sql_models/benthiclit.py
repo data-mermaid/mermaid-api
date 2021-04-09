@@ -217,13 +217,11 @@ class BenthicLITSUSQLModel(BaseSUSQLModel):
 
             FROM (
                 SELECT pseudosu_id,
-                {_su_fields},
                 jsonb_array_elements(observers) AS observer
                 FROM benthiclit_obs
-                GROUP BY pseudosu_id, {_su_fields}, 
-                observers
+                GROUP BY pseudosu_id, observers
             ) benthiclit_obs_obs
-            GROUP BY pseudosu_id, {_su_fields}
+            GROUP BY pseudosu_id,
         ) benthiclit_observers
         ON (benthiclit_su.pseudosu_id = benthiclit_observers.pseudosu_id)
     """

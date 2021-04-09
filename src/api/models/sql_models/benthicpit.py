@@ -53,15 +53,22 @@ class BenthicPITObsSQLModel(BaseSUSQLModel):
             LEFT JOIN api_visibility v ON su.visibility_id = v.id
             LEFT JOIN api_relativedepth r ON su.relative_depth_id = r.id
             LEFT JOIN api_reefslope rs ON su.reef_slope_id = rs.id
-            JOIN ( SELECT tt_1.transect_id,
-                    jsonb_agg(jsonb_build_object('id', p.id, 'name', (COALESCE(p.first_name, ''::character 
-                    varying)::text ||
-                    ' '::text) || COALESCE(p.last_name, ''::character varying)::text)) AS observers
-                FROM observer o1
+            JOIN (
+                SELECT
+                    tt_1.transect_id,
+                    jsonb_agg(jsonb_build_object(
+                        'id', p.id, 
+                        'name', (COALESCE(p.first_name, '' :: character varying) :: text || ' ' :: text) || 
+                            COALESCE(p.last_name, '' :: character varying) :: text
+                    )) AS observers
+                FROM
+                    observer o1
                     JOIN profile p ON o1.profile_id = p.id
                     JOIN transectmethod tm ON o1.transectmethod_id = tm.id
                     JOIN transectmethod_benthicpit tt_1 ON tm.id = tt_1.transectmethod_ptr_id
-                GROUP BY tt_1.transect_id) observers ON su.id = observers.transect_id
+                GROUP BY
+                    tt_1.transect_id
+            ) observers ON su.id = observers.transect_id
             JOIN se ON su.sample_event_id = se.sample_event_id
             INNER JOIN (
                 SELECT 
@@ -193,13 +200,11 @@ class BenthicPITSUSQLModel(BaseSUSQLModel):
 
             FROM (
                 SELECT pseudosu_id,
-                {_su_fields},
                 jsonb_array_elements(observers) AS observer
                 FROM benthicpit_obs
-                GROUP BY pseudosu_id, {_su_fields},
-                observers
+                GROUP BY pseudosu_id, observers
             ) benthicpit_obs_obs
-            GROUP BY pseudosu_id, {_su_fields}
+            GROUP BY pseudosu_id
         ) benthicpit_observers
         ON (benthicpit_su.pseudosu_id = benthicpit_observers.pseudosu_id)
     """
