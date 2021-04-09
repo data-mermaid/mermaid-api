@@ -7,11 +7,13 @@ from .base import BaseSQLModel, BaseSUSQLModel, sample_event_sql_template
 
 
 class BenthicPITObsSQLModel(BaseSUSQLModel):
-
     _se_fields = ", ".join([f"se.{f}" for f in BaseSUSQLModel.se_fields])
     _su_fields = BaseSUSQLModel.su_fields_sql
     sql = f"""
-        SELECT o.id,
+        WITH se AS (
+            {sample_event_sql_template}
+        )
+        SELECT o.id, pseudosu_id,
             {_se_fields},
             {_su_fields},
             se.data_policy_benthicpit,
@@ -51,15 +53,35 @@ class BenthicPITObsSQLModel(BaseSUSQLModel):
             LEFT JOIN api_visibility v ON su.visibility_id = v.id
             LEFT JOIN api_relativedepth r ON su.relative_depth_id = r.id
             LEFT JOIN api_reefslope rs ON su.reef_slope_id = rs.id
-            JOIN ( SELECT tt_1.transect_id,
-                    jsonb_agg(jsonb_build_object('id', p.id, 'name', (COALESCE(p.first_name, ''::character varying)::text ||
-                    ' '::text) || COALESCE(p.last_name, ''::character varying)::text)) AS observers
-                FROM observer o1
+            JOIN (
+                SELECT
+                    tt_1.transect_id,
+                    jsonb_agg(jsonb_build_object(
+                        'id', p.id, 
+                        'name', (COALESCE(p.first_name, '' :: character varying) :: text || ' ' :: text) || 
+                            COALESCE(p.last_name, '' :: character varying) :: text
+                    )) AS observers
+                FROM
+                    observer o1
                     JOIN profile p ON o1.profile_id = p.id
                     JOIN transectmethod tm ON o1.transectmethod_id = tm.id
                     JOIN transectmethod_benthicpit tt_1 ON tm.id = tt_1.transectmethod_ptr_id
-                GROUP BY tt_1.transect_id) observers ON su.id = observers.transect_id
-            JOIN ({sample_event_sql_template}) se ON su.sample_event_id = se.sample_event_id
+                GROUP BY
+                    tt_1.transect_id
+            ) observers ON su.id = observers.transect_id
+            JOIN se ON su.sample_event_id = se.sample_event_id
+            INNER JOIN (
+                SELECT 
+                    pseudosu_id,
+                    UNNEST(sample_unit_ids) AS sample_unit_id
+                FROM (
+                    SELECT 
+                        uuid_generate_v4() AS pseudosu_id,
+                        array_agg(DISTINCT su.id) AS sample_unit_ids
+                    FROM transect_benthic su
+                    GROUP BY {", ".join(BaseSUSQLModel.transect_su_fields)}
+                ) pseudosu
+            ) pseudosu_su ON (su.id = pseudosu_su.sample_unit_id)
     """
 
     sql_args = dict(project_id=SQLTableArg(required=True))
@@ -94,7 +116,6 @@ class BenthicPITObsSQLModel(BaseSUSQLModel):
 
 
 class BenthicPITSUSQLModel(BaseSUSQLModel):
-
     # Unique combination of these fields defines a single (pseudo) sample unit. All other fields are aggregated.
     su_fields = BaseSUSQLModel.se_fields + [
         "depth",
@@ -117,31 +138,45 @@ class BenthicPITSUSQLModel(BaseSUSQLModel):
         SELECT NULL AS id,
         benthicpit_su.pseudosu_id,
         {_su_fields},
-        {_agg_su_fields},
+        benthicpit_su.{_agg_su_fields},
         reef_slope,
         percent_cover_by_benthic_category
         FROM (
-            SELECT su.pseudosu_id,
-            jsonb_agg(DISTINCT su.sample_unit_id) AS sample_unit_ids,
+            SELECT pseudosu_id,
+            jsonb_agg(DISTINCT sample_unit_id) AS sample_unit_ids,
             {_su_fields_qualified},
             {_su_aggfields_sql},
             string_agg(DISTINCT reef_slope::text, ', '::text ORDER BY (reef_slope::text)) AS reef_slope
 
             FROM benthicpit_obs
-            INNER JOIN sample_unit_cache su ON (benthicpit_obs.sample_unit_id = su.sample_unit_id)
-            GROUP BY su.pseudosu_id,
+            GROUP BY pseudosu_id,
             {_su_fields_qualified}
         ) benthicpit_su
 
         INNER JOIN (
             WITH cps AS (
-                SELECT su.pseudosu_id,
-                benthic_category,
-                SUM(interval_size) AS category_length
-                FROM benthicpit_obs
-                INNER JOIN sample_unit_cache su ON (benthicpit_obs.sample_unit_id = su.sample_unit_id)
-                GROUP BY su.pseudosu_id,
-                benthic_category
+                WITH cps_obs AS (
+                    SELECT pseudosu_id,
+                    benthic_category,
+                    SUM(interval_size) AS category_length
+                    FROM benthicpit_obs
+                    GROUP BY pseudosu_id, benthic_category
+                )
+                SELECT cps_expanded.pseudosu_id, cps_expanded.benthic_category,
+                COALESCE(cps_obs.category_length, 0) AS category_length
+                FROM (
+                    SELECT DISTINCT cps_obs.pseudosu_id, top_categories.benthic_category
+                    FROM cps_obs
+                    CROSS JOIN (
+                        SELECT name AS benthic_category
+                        FROM benthic_attribute
+                        WHERE benthic_attribute.parent_id IS NULL
+                    ) top_categories
+                ) cps_expanded
+                LEFT JOIN cps_obs ON (
+                    cps_expanded.pseudosu_id = cps_obs.pseudosu_id AND 
+                    cps_expanded.benthic_category = cps_obs.benthic_category
+                )
             )
             SELECT cps.pseudosu_id,
             jsonb_object_agg(
@@ -164,16 +199,14 @@ class BenthicPITSUSQLModel(BaseSUSQLModel):
             jsonb_agg(DISTINCT observer) AS observers
 
             FROM (
-                SELECT su.pseudosu_id,
+                SELECT pseudosu_id,
                 jsonb_array_elements(observers) AS observer
                 FROM benthicpit_obs
-                INNER JOIN sample_unit_cache su ON (benthicpit_obs.sample_unit_id = su.sample_unit_id)
-                GROUP BY su.pseudosu_id,
-                observers
+                GROUP BY pseudosu_id, observers
             ) benthicpit_obs_obs
             GROUP BY pseudosu_id
-        ) benthicpit_obs
-        ON (benthicpit_su.pseudosu_id = benthicpit_obs.pseudosu_id)
+        ) benthicpit_observers
+        ON (benthicpit_su.pseudosu_id = benthicpit_observers.pseudosu_id)
     """
 
     sql_args = dict(project_id=SQLTableArg(required=True))
@@ -204,7 +237,6 @@ class BenthicPITSUSQLModel(BaseSUSQLModel):
 
 
 class BenthicPITSESQLModel(BaseSQLModel):
-
     _se_fields = ", ".join([f"benthicpit_su.{f}" for f in BaseSQLModel.se_fields])
     _su_aggfields_sql = BaseSQLModel.su_aggfields_sql
 
@@ -257,5 +289,5 @@ class BenthicPITSESQLModel(BaseSQLModel):
     data_policy_benthicpit = models.CharField(max_length=50)
 
     class Meta:
-        db_table = "vw_benthicpit_se"
+        db_table = "benthicpit_se_sm"
         managed = False

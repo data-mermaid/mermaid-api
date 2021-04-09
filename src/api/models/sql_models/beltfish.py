@@ -7,11 +7,14 @@ from .base import BaseSQLModel, BaseSUSQLModel, sample_event_sql_template
 
 
 class BeltFishObsSQLModel(BaseSUSQLModel):
-
     _se_fields = ", ".join([f"se.{f}" for f in BaseSUSQLModel.se_fields])
     _su_fields = BaseSUSQLModel.su_fields_sql
+
     sql = f"""
-        SELECT o.id,
+        WITH se AS (
+            {sample_event_sql_template}
+        )
+        SELECT o.id, pseudosu_id,
             {_se_fields},
             {_su_fields},
             se.data_policy_beltfish,
@@ -84,9 +87,20 @@ class BeltFishObsSQLModel(BaseSUSQLModel):
                     JOIN transectmethod_transectbeltfish tt_1
                     ON tm.id = tt_1.transectmethod_ptr_id
                 GROUP BY tt_1.transect_id) observers ON su.id = observers.transect_id
-            JOIN ({sample_event_sql_template}) se
-            ON su.sample_event_id = se.sample_event_id
-    """
+            JOIN se ON su.sample_event_id = se.sample_event_id
+            INNER JOIN (
+                SELECT 
+                    pseudosu_id,
+                    UNNEST(sample_unit_ids) AS sample_unit_id
+                FROM (
+                    SELECT 
+                        uuid_generate_v4() AS pseudosu_id,
+                        array_agg(DISTINCT su.id) AS sample_unit_ids
+                    FROM transect_belt_fish su
+                    GROUP BY {", ".join(BaseSUSQLModel.transect_su_fields)}
+                ) pseudosu
+            ) pseudosu_su ON (su.id = pseudosu_su.sample_unit_id)
+        """
 
     sql_args = dict(project_id=SQLTableArg(required=True))
 
@@ -144,7 +158,6 @@ class BeltFishObsSQLModel(BaseSUSQLModel):
 
 
 class BeltFishSUSQLModel(BaseSUSQLModel):
-
     # Unique combination of these fields defines a single (pseudo) sample unit.
     # All other fields are aggregated.
     su_fields = BaseSUSQLModel.se_fields + [
@@ -166,7 +179,7 @@ class BeltFishSUSQLModel(BaseSUSQLModel):
         SELECT NULL AS id,
         beltfish_su.pseudosu_id,
         {_su_fields},
-        {_agg_su_fields},
+        beltfish_su.{_agg_su_fields},
         reef_slope,
         transect_width_name,
         size_bin,
@@ -177,21 +190,16 @@ class BeltFishSUSQLModel(BaseSUSQLModel):
 
         FROM (
             SELECT pseudosu_id,
-            jsonb_agg(DISTINCT su.sample_unit_id) AS sample_unit_ids,
+            jsonb_agg(DISTINCT sample_unit_id) AS sample_unit_ids,
             SUM(beltfish_obs.count) AS total_abundance,
             {_su_fields_qualified},
             {_su_aggfields_sql},
-            string_agg(DISTINCT reef_slope::text, ', '::text
-            ORDER BY (reef_slope::text)) AS reef_slope,
-            string_agg(DISTINCT transect_width_name::text, ', '::text
-            ORDER BY (transect_width_name::text)) AS
+            string_agg(DISTINCT reef_slope::text, ', '::text ORDER BY (reef_slope::text)) AS reef_slope,
+            string_agg(DISTINCT transect_width_name::text, ', '::text ORDER BY (transect_width_name::text)) AS
             transect_width_name,
-            string_agg(DISTINCT size_bin::text, ', '::text
-            ORDER BY (size_bin::text)) AS size_bin
+            string_agg(DISTINCT size_bin::text, ', '::text ORDER BY (size_bin::text)) AS size_bin
 
             FROM beltfish_obs
-            INNER JOIN sample_unit_cache su
-            ON (beltfish_obs.sample_unit_id = su.sample_unit_id)
             GROUP BY pseudosu_id,
             {_su_fields_qualified}
         ) beltfish_su
@@ -207,38 +215,34 @@ class BeltFishSUSQLModel(BaseSUSQLModel):
             ) AS biomass_kgha_by_trophic_group
 
             FROM (
-                SELECT pseudosu_id,
-                COALESCE(SUM(biomass_kgha), 0::numeric) AS biomass_kgha,
-                trophic_group
+                SELECT 
+                    pseudosu_id,
+                    COALESCE(SUM(biomass_kgha), 0::numeric) AS biomass_kgha,
+                    trophic_group
                 FROM beltfish_obs
-                INNER JOIN sample_unit_cache su
-                ON (beltfish_obs.sample_unit_id = su.sample_unit_id)
-                GROUP BY pseudosu_id,
-                trophic_group
+                GROUP BY pseudosu_id, trophic_group
             ) beltfish_obs_tg
             GROUP BY pseudosu_id
         ) beltfish_tg
         ON (beltfish_su.pseudosu_id = beltfish_tg.pseudosu_id)
 
         INNER JOIN (
-        SELECT pseudosu_id,
-        jsonb_object_agg(
-            CASE
-                WHEN fish_family IS NULL THEN 'other'::character varying
-                ELSE fish_family
-            END, ROUND(biomass_kgha, 2)
-        ) AS biomass_kgha_by_fish_family
-
-        FROM (
             SELECT pseudosu_id,
-            COALESCE(SUM(biomass_kgha), 0::numeric) AS biomass_kgha,
-            fish_family
-            FROM beltfish_obs
-            INNER JOIN sample_unit_cache su
-            ON (beltfish_obs.sample_unit_id = su.sample_unit_id)
-            GROUP BY pseudosu_id, fish_family
-        ) beltfish_obs_tg
-        GROUP BY pseudosu_id
+            jsonb_object_agg(
+                CASE
+                    WHEN fish_family IS NULL THEN 'other'::character varying
+                    ELSE fish_family
+                END, ROUND(biomass_kgha, 2)
+            ) AS biomass_kgha_by_fish_family
+    
+            FROM (
+                SELECT pseudosu_id,
+                COALESCE(SUM(biomass_kgha), 0::numeric) AS biomass_kgha,
+                fish_family
+                FROM beltfish_obs
+                GROUP BY pseudosu_id, fish_family
+            ) beltfish_obs_fam
+            GROUP BY pseudosu_id
         ) beltfish_families
         ON (beltfish_su.pseudosu_id = beltfish_families.pseudosu_id)
 
@@ -250,14 +254,11 @@ class BeltFishSUSQLModel(BaseSUSQLModel):
                 SELECT pseudosu_id,
                 jsonb_array_elements(observers) AS observer
                 FROM beltfish_obs
-                INNER JOIN sample_unit_cache su
-                ON (beltfish_obs.sample_unit_id = su.sample_unit_id)
-                GROUP BY pseudosu_id,
-                observers
+                GROUP BY pseudosu_id, observers
             ) beltfish_obs_obs
             GROUP BY pseudosu_id
-        ) beltfish_obs
-        ON (beltfish_su.pseudosu_id = beltfish_obs.pseudosu_id)
+        ) beltfish_observers
+        ON (beltfish_su.pseudosu_id = beltfish_observers.pseudosu_id)
     """
 
     sql_args = dict(project_id=SQLTableArg(required=True))

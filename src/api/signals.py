@@ -242,30 +242,8 @@ def del_orphaned_se(sender, instance, *args, **kwargs):
     delete_orphaned_sample_event(instance.sample_event, instance)
 
 
-def refresh_pseudosu_cache(sender, instance, *args, **kwargs):
-    if hasattr(instance, "cache_sql") is False:
-        return
-
-    SampleUnitCache.refresh_cache(instance)
-
-
 for suclass in get_subclasses(SampleUnit):
     classname = suclass._meta.object_name
-
-    post_save.connect(
-        refresh_pseudosu_cache,
-        sender=suclass,
-        dispatch_uid=f"{classname}_refresh_pseudosu_cache_save"
-    )
-
-    # post_delete: Order of registering signal is important.  Pseudo cache needs
-    # to be fired before deleting orphaned sample events.
-
-    post_delete.connect(
-        refresh_pseudosu_cache,
-        sender=suclass,
-        dispatch_uid=f"{classname}_refresh_pseudosu_cache_delete"
-    )
 
     post_delete.connect(
         del_orphaned_se,
