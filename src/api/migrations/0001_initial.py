@@ -3,6 +3,7 @@
 import api.models.mermaid
 import django.contrib.gis.db.models.fields
 import django.contrib.postgres.fields.jsonb
+from django.contrib.postgres.operations import CreateExtension
 import django.core.validators
 from django.db import migrations, models
 import django.db.models.deletion
@@ -20,6 +21,8 @@ class Migration(migrations.Migration):
     ]
 
     operations = [
+        CreateExtension("pg_trgm"),
+        CreateExtension("uuid-ossp"),
         migrations.CreateModel(
             name='BeltFishObsSQLModel',
             fields=[
