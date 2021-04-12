@@ -134,7 +134,7 @@ class HabitatComplexitySUSQLModel(BaseSUSQLModel):
                 FROM habitatcomplexity_obs
                 GROUP BY pseudosu_id, observers
             ) habcomp_obs_obs
-            GROUP BY pseudosu_id,
+            GROUP BY pseudosu_id
         ) habcomp_observers
         ON (habcomp_su.pseudosu_id = habcomp_observers.pseudosu_id)
     """
