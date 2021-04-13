@@ -7,7 +7,7 @@ from django.utils.translation import ugettext_lazy as _
 from api.models import Project
 
 
-project_where = """    WHERE\n        project.id = '%s' :: uuid\n"""
+project_where = """    WHERE\n        project.id = '%(project_id)s' :: uuid\n"""
 
 sample_event_sql_template = f"""
     SELECT

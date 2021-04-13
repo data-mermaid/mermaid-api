@@ -63,6 +63,6 @@ qry = qry.filter(name="user1").order_by("-age")
 ## Limitations
 
 * When filtering you must call `all()` first before calling `sql_table`
-* Does not support joins. For example:
+* Does **NOT** support joins. For example:
 
     `TestUserModel.objects.all().sql_table().filter(user__name="Matt")`
