@@ -4,20 +4,20 @@ from django.contrib.gis.db import models
 
 
 class RecordRevision(models.Model):
-    rev_id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
-    table_name = models.CharField(max_length=50, db_index=True)
-    record_id = models.UUIDField(db_index=True)
-    project_id = models.UUIDField(null=True, blank=True, db_index=True)
-    profile_id = models.UUIDField(null=True, blank=True)
-    updated_on = models.DateTimeField(auto_now=True)
-    deleted = models.BooleanField(default=False)
+    rev_id = models.UUIDField(editable=False, unique=True, db_index=True)
+    table_name = models.CharField(max_length=50, db_index=True, editable=False)
+    record_id = models.UUIDField(db_index=True, editable=False)
+    project_id = models.UUIDField(null=True, db_index=True, editable=False)
+    profile_id = models.UUIDField(null=True, editable=False)
+    updated_on = models.DateTimeField(editable=False)
+    deleted = models.BooleanField(default=False, editable=False)
 
     class Meta:
         db_table = "record_revision"
+        unique_together = ("table_name", "record_id")
 
     def __str__(self):
         return f"[{self.rev_id} {self.updated_on}] {self.table_name} {self.record_id}"
-
 
 class TableRevision(models.Model):
     last_rev_id = models.UUIDField(db_index=True)
@@ -117,7 +117,14 @@ forward_sql = """
             profile_id_val,
             updated_on_val,
             is_deleted
-        );
+        )
+        ON CONFLICT (table_name, record_id) DO
+        UPDATE SET
+            "rev_id" = rev_id_val,
+            "updated_on" = updated_on_val,
+            "project_id" = project_id_val,
+            "profile_id" = profile_id_val,
+            "deleted" = is_deleted;
 
         INSERT INTO table_revision(
             "last_rev_id",
@@ -369,7 +376,6 @@ reverse_sql = """
     DROP TRIGGER growth_form_trigger ON growth_form;
     DROP TRIGGER api_collectrecord_trigger ON api_collectrecord;
     DROP TRIGGER benthic_attribute_trigger ON benthic_attribute;
-    DROP TRIGGER fish_attribute_trigger ON fish_attribute;
     DROP TRIGGER fish_genus_trigger ON fish_genus;
     DROP TRIGGER fish_family_trigger ON fish_family;
     DROP TRIGGER api_fishsize_trigger ON api_fishsize;
