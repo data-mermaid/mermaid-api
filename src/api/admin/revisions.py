@@ -35,10 +35,10 @@ class RecordRevisionAdmin(admin.ModelAdmin):
 @admin.register(TableRevision)
 class TableRevisionAdmin(admin.ModelAdmin):
     readonly_fields = (
-        "last_rev_id",
-        "project_id",
-        "table_name",
-        "updated_on",
+        "last_revision__rev_id",
+        "last_revision__project_id",
+        "last_revision__table_name",
+        "last_revision__updated_on",
     )
     list_display = readonly_fields
 

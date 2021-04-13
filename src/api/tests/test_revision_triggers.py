@@ -15,26 +15,25 @@ def test_create_record_with_project_id(db_setup, project1, profile1):
 
     rev_recs = RecordRevision.objects.filter(record_id=collect_record.id)
     assert rev_recs.count() == 1
-    tabl_rev_rec = TableRevision.objects.get(
-        table_name=CollectRecord._meta.db_table, project_id=project1.id
-    )
-    assert tabl_rev_rec.last_rev_id == rev_recs[0].rev_id
+    tabl_rev_rec = TableRevision.objects.get(last_revision=rev_recs[0])
+    assert tabl_rev_rec.last_revision.rev_id == rev_recs[0].rev_id
 
 
 def test_create_project_record(db_setup):
     project = Project.objects.create(name="Revision Test", status=Project.TEST)
     rev_recs = RecordRevision.objects.filter(record_id=project.id)
     assert rev_recs.count() == 1
-    tabl_rev_rec = TableRevision.objects.get(table_name=Project._meta.db_table)
-    assert tabl_rev_rec.last_rev_id == rev_recs[0].rev_id
+    
+    tabl_rev_rec = TableRevision.objects.get(last_revision__table_name=Project._meta.db_table)
+    assert tabl_rev_rec.last_revision.rev_id == rev_recs[0].rev_id
 
 
 def test_create_non_project_record(db_setup, fish_genus1):
     fish = FishSpecies.objects.create(name="My Fish", genus=fish_genus1)
     rev_recs = RecordRevision.objects.filter(record_id=fish.id)
     assert rev_recs.count() == 1
-    table_rev_rec = TableRevision.objects.get(table_name=FishSpecies._meta.db_table)
-    assert table_rev_rec.last_rev_id == rev_recs[0].rev_id
+    tabl_rev_rec = TableRevision.objects.get(last_revision__table_name=FishSpecies._meta.db_table)
+    assert tabl_rev_rec.last_revision.rev_id == rev_recs[0].rev_id
 
 
 def test_update_record(db_setup, project1):
@@ -49,9 +48,9 @@ def test_update_record(db_setup, project1):
     rev_ids = [rr.rev_id for rr in rev_recs]
 
     tr = TableRevision.objects.get(
-        table_name=Management._meta.db_table, project_id=project1.id
+        last_revision__table_name=Management._meta.db_table, last_revision__project_id=project1.id
     )
-    assert tr.last_rev_id in rev_ids
+    assert tr.last_revision.rev_id in rev_ids
     assert rev_recs.count() == 1
 
     management.notes += "...some more notes"
@@ -63,9 +62,9 @@ def test_update_record(db_setup, project1):
     last_rev_id = list(set(rev_ids_updates).difference(set(rev_ids)))[0]
 
     qry = TableRevision.objects.filter(
-        table_name=Management._meta.db_table,
-        project_id=project1.id,
-        last_rev_id=last_rev_id,
+        last_revision__table_name=Management._meta.db_table,
+        last_revision__project_id=project1.id,
+        last_revision__rev_id=last_rev_id,
     )
     assert qry.count() == 1
 

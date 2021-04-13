@@ -20,17 +20,14 @@ class RecordRevision(models.Model):
         return f"[{self.rev_id} {self.updated_on}] {self.table_name} {self.record_id}"
 
 class TableRevision(models.Model):
-    last_rev_id = models.UUIDField(db_index=True)
-    table_name = models.CharField(max_length=50, db_index=True)
-    updated_on = models.DateTimeField()
-    project_id = models.UUIDField(null=True, blank=True, db_index=True)
+    last_revision = models.OneToOneField("RecordRevision", on_delete=models.CASCADE)
+
 
     class Meta:
         db_table = "table_revision"
-        unique_together = ("table_name", "project_id")
 
-    def __str__(self):
-        return f"[{self.last_rev_id}] {self.table_name} - {self.updated_on}"
+    # def __str__(self):
+    #     return f"[{self.last_rev_id}] {self.table_name} - {self.updated_on}"
 
 
 # -- TRIGGER SQL --
@@ -65,6 +62,7 @@ forward_sql = """
 
     DECLARE
         pk uuid;
+        record_revision_id int;
         rev_id_val uuid;
         profile_id_val uuid;
         project_id_val uuid;
@@ -126,24 +124,27 @@ forward_sql = """
             "profile_id" = profile_id_val,
             "deleted" = is_deleted;
 
+        SELECT
+            id 
+        INTO
+            record_revision_id
+        FROM 
+            record_revision
+        WHERE
+            rev_id = rev_id_val;
+
+        /*
+          Update table revsions
+        */
+
         INSERT INTO table_revision(
-            "last_rev_id",
-            "table_name",
-            "updated_on",
-            "project_id"
+            "last_revision_id"
         )
         VALUES (
-            rev_id_val,
-            TG_TABLE_NAME,
-            updated_on_val,
-            CASE WHEN project_id_val is null THEN
-                '00000000-0000-0000-0000-000000000000'::uuid
-            ELSE project_id_val END
+            record_revision_id
         )
-        ON CONFLICT (table_name, project_id) DO
-        UPDATE SET
-            "last_rev_id" = rev_id_val,
-            "updated_on" = updated_on_val;
+        ON CONFLICT DO NOTHING;
+
         RETURN NULL;
 
     END;
