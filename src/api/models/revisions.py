@@ -26,8 +26,8 @@ class TableRevision(models.Model):
     class Meta:
         db_table = "table_revision"
 
-    # def __str__(self):
-    #     return f"[{self.last_rev_id}] {self.table_name} - {self.updated_on}"
+    def __str__(self):
+        return f"[{self.last_revision__rev_id}] {self.last_revision__table_name} - {self.last_revision__updated_on}"
 
 
 # -- TRIGGER SQL --
