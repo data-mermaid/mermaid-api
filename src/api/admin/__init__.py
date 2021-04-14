@@ -1,6 +1,3 @@
 from .base import *
-from .revisions import (
-    RecordRevisionAdmin,
-    TableRevisionAdmin,
-)
+from .revisions import RecordRevisionAdmin
 from .mermaid import *

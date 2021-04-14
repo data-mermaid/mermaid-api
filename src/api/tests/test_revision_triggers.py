@@ -4,7 +4,6 @@ from api.models import (
     Management,
     Project,
     RecordRevision,
-    TableRevision,
 )
 
 
@@ -15,25 +14,19 @@ def test_create_record_with_project_id(db_setup, project1, profile1):
 
     rev_recs = RecordRevision.objects.filter(record_id=collect_record.id)
     assert rev_recs.count() == 1
-    tabl_rev_rec = TableRevision.objects.get(last_revision=rev_recs[0])
-    assert tabl_rev_rec.last_revision.rev_id == rev_recs[0].rev_id
 
 
 def test_create_project_record(db_setup):
     project = Project.objects.create(name="Revision Test", status=Project.TEST)
     rev_recs = RecordRevision.objects.filter(record_id=project.id)
     assert rev_recs.count() == 1
-    
-    tabl_rev_rec = TableRevision.objects.get(last_revision__table_name=Project._meta.db_table)
-    assert tabl_rev_rec.last_revision.rev_id == rev_recs[0].rev_id
 
 
 def test_create_non_project_record(db_setup, fish_genus1):
     fish = FishSpecies.objects.create(name="My Fish", genus=fish_genus1)
     rev_recs = RecordRevision.objects.filter(record_id=fish.id)
     assert rev_recs.count() == 1
-    tabl_rev_rec = TableRevision.objects.get(last_revision__table_name=FishSpecies._meta.db_table)
-    assert tabl_rev_rec.last_revision.rev_id == rev_recs[0].rev_id
+
 
 def test_create_update_delete_record(db_setup, project1):
     management = Management.objects.create(
@@ -45,7 +38,7 @@ def test_create_update_delete_record(db_setup, project1):
     management_id = management.id
     management.notes = "a note"
     management.save()
-    
+
     rev_recs = RecordRevision.objects.filter(record_id=management_id)
     assert rev_recs.count() == 1
     assert rev_recs[0].deleted is False

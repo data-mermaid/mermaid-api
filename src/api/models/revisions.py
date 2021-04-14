@@ -4,7 +4,6 @@ from django.contrib.gis.db import models
 
 
 class RecordRevision(models.Model):
-    rev_id = models.UUIDField(editable=False, unique=True, db_index=True)
     table_name = models.CharField(max_length=50, db_index=True, editable=False)
     record_id = models.UUIDField(db_index=True, editable=False)
     project_id = models.UUIDField(null=True, db_index=True, editable=False)
@@ -18,16 +17,6 @@ class RecordRevision(models.Model):
 
     def __str__(self):
         return f"[{self.rev_id} {self.updated_on}] {self.table_name} {self.record_id}"
-
-class TableRevision(models.Model):
-    last_revision = models.OneToOneField("RecordRevision", on_delete=models.CASCADE)
-
-
-    class Meta:
-        db_table = "table_revision"
-
-    def __str__(self):
-        return f"[{self.last_revision.rev_id}] {self.last_revision.table_name} - {self.last_revision.updated_on}"
 
 
 # -- TRIGGER SQL --
@@ -123,27 +112,6 @@ forward_sql = """
             "project_id" = project_id_val,
             "profile_id" = profile_id_val,
             "deleted" = is_deleted;
-
-        SELECT
-            id 
-        INTO
-            record_revision_id
-        FROM 
-            record_revision
-        WHERE
-            rev_id = rev_id_val;
-
-        /*
-          Update table revsions
-        */
-
-        INSERT INTO table_revision(
-            "last_revision_id"
-        )
-        VALUES (
-            record_revision_id
-        )
-        ON CONFLICT DO NOTHING;
 
         RETURN NULL;
 
@@ -405,6 +373,7 @@ reverse_sql = """
     DROP TRIGGER api_relativedepth_trigger ON api_relativedepth;
 
     DROP FUNCTION record_change;
+    DROP FUNCTION primary_key_column_name(text);
 """
 
 # -//- TRIGGER SQL -//-
