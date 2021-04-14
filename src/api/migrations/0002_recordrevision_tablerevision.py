@@ -20,7 +20,7 @@ class Migration(migrations.Migration):
                 ('table_name', models.CharField(db_index=True, editable=False, max_length=50)),
                 ('record_id', models.UUIDField(db_index=True, editable=False)),
                 ('project_id', models.UUIDField(db_index=True, editable=False, null=True)),
-                ('profile_id', models.UUIDField(editable=False, null=True)),
+                ('profile_id', models.UUIDField(db_index=True, editable=False, null=True)),
                 ('updated_on', models.DateTimeField(editable=False)),
                 ('deleted', models.BooleanField(default=False, editable=False)),
             ],

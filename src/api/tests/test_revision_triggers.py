@@ -35,55 +35,6 @@ def test_create_non_project_record(db_setup, fish_genus1):
     tabl_rev_rec = TableRevision.objects.get(last_revision__table_name=FishSpecies._meta.db_table)
     assert tabl_rev_rec.last_revision.rev_id == rev_recs[0].rev_id
 
-
-def test_update_record(db_setup, project1):
-    management = Management.objects.create(
-        project=project1,
-        est_year=2000,
-        name="Management 2",
-        notes="Hey what's up, from management2!!",
-    )
-
-    rev_recs = RecordRevision.objects.filter(record_id=management.id)
-    rev_ids = [rr.rev_id for rr in rev_recs]
-
-    tr = TableRevision.objects.get(
-        last_revision__table_name=Management._meta.db_table, last_revision__project_id=project1.id
-    )
-    assert tr.last_revision.rev_id in rev_ids
-    assert rev_recs.count() == 1
-
-    management.notes += "...some more notes"
-    management.save()
-
-    rev_recs = RecordRevision.objects.filter(record_id=management.id)
-    rev_ids_updates = [rr.rev_id for rr in rev_recs]
-
-    last_rev_id = list(set(rev_ids_updates).difference(set(rev_ids)))[0]
-
-    qry = TableRevision.objects.filter(
-        last_revision__table_name=Management._meta.db_table,
-        last_revision__project_id=project1.id,
-        last_revision__rev_id=last_rev_id,
-    )
-    assert qry.count() == 1
-
-
-def test_delete_record(db_setup, project1, profile1):
-    collect_record = CollectRecord.objects.create(
-        project=project1, profile=profile1, data=dict()
-    )
-    pk = collect_record.id
-    qry = RecordRevision.objects.filter(record_id=pk, deleted=True)
-    assert qry.count() == 0
-
-    collect_record.delete()
-
-    qry = RecordRevision.objects.filter(record_id=pk, deleted=True)
-
-    assert qry.count() == 1
-
-
 def test_create_update_delete_record(db_setup, project1):
     management = Management.objects.create(
         project=project1,

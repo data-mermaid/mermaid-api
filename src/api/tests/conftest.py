@@ -3,7 +3,6 @@ from django.db import connection
 
 from api.models.view_models import model_view_migrations
 from api.models import revisions
-from api.models.view_models.summary_site import SummarySiteViewModel
 from .fixtures import *
 
 

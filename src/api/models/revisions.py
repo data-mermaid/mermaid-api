@@ -8,7 +8,7 @@ class RecordRevision(models.Model):
     table_name = models.CharField(max_length=50, db_index=True, editable=False)
     record_id = models.UUIDField(db_index=True, editable=False)
     project_id = models.UUIDField(null=True, db_index=True, editable=False)
-    profile_id = models.UUIDField(null=True, editable=False)
+    profile_id = models.UUIDField(null=True, db_index=True, editable=False)
     updated_on = models.DateTimeField(editable=False)
     deleted = models.BooleanField(default=False, editable=False)
 
@@ -27,7 +27,7 @@ class TableRevision(models.Model):
         db_table = "table_revision"
 
     def __str__(self):
-        return f"[{self.last_revision__rev_id}] {self.last_revision__table_name} - {self.last_revision__updated_on}"
+        return f"[{self.last_revision.rev_id}] {self.last_revision.table_name} - {self.last_revision.updated_on}"
 
 
 # -- TRIGGER SQL --
