@@ -16,7 +16,7 @@ class RecordRevision(models.Model):
         unique_together = ("table_name", "record_id")
 
     def __str__(self):
-        return f"[{self.rev_id} {self.updated_on}] {self.table_name} {self.record_id}"
+        return f"[{self.updated_on}] {self.table_name} {self.record_id}"
 
 
 # -- TRIGGER SQL --
@@ -52,7 +52,6 @@ forward_sql = """
     DECLARE
         pk uuid;
         record_revision_id int;
-        rev_id_val uuid;
         profile_id_val uuid;
         project_id_val uuid;
         is_deleted boolean;
@@ -63,7 +62,6 @@ forward_sql = """
     BEGIN
         pk_col_name := primary_key_column_name(TG_TABLE_NAME);
         updated_on_val := now();
-        rev_id_val := uuid_generate_v4();
 
         IF TG_OP = 'DELETE' THEN
             record := to_jsonb(OLD);
@@ -88,7 +86,6 @@ forward_sql = """
         END IF;
 
         INSERT INTO record_revision (
-            "rev_id",
             "table_name",
             "record_id",
             "project_id",
@@ -97,7 +94,6 @@ forward_sql = """
             "deleted"
         )
         VALUES (
-            rev_id_val,
             TG_TABLE_NAME,
             pk,
             project_id_val,
@@ -107,7 +103,6 @@ forward_sql = """
         )
         ON CONFLICT (table_name, record_id) DO
         UPDATE SET
-            "rev_id" = rev_id_val,
             "updated_on" = updated_on_val,
             "project_id" = project_id_val,
             "profile_id" = profile_id_val,
