@@ -47,6 +47,19 @@ All user profiles for a project. Note a given CollectRecord (unsubmitted sample 
 
 An ``observer`` is a relationship between a user ``profile`` and a sample unit method; a given sample unit method may have multiple observers, and the profile associated with a CollectRecord may or may not be one of the profiles of those observers. Note also that though an ``observer`` has an ``id``, ``observer.profile`` is the id of the user profile associated with the observer.
 
+/projects/<project_id>/collectrecords/
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+See :doc:`collectrecords` for more detail.
+
+A ``CollectRecord`` is a nested JSON representation of all the objects and values that together represent an unsubmitted sample unit for a project. A ``GET`` request to this resource returns the CollectRecords created by the user, unless the ``showall`` query parameter is used to return projects unfiltered by the user's membership.
+
+| `Permissions`: Regular project-based permissions apply, but only the user who created a CollectRecord may use the ``validate`` and ``submit`` routes.
+| `Additional routes`:
+
+- ``validate/`` (``POST``): Runs all relevant validations for a CollectRecord, stores those validations in the CollectRecord itself, and returns them in the response.
+- ``submit/`` (``POST``): Submits CollectRecord, i.e. attempts to store all the component parts of the unsubmitted sample unit in the correct places. Runs validations as part of submission.
+
 Observations
 ------------
 
