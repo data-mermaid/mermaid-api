@@ -440,7 +440,6 @@ class BenthicLITMethodObsFilterSet(BaseSUObsFilterSet):
             "benthic_category",
             "benthic_attribute",
             "growth_form",
-            "data_policy_benthiclit",
         ]
 
 
@@ -454,7 +453,6 @@ class BenthicLITMethodSUFilterSet(BaseSUObsFilterSet):
             "transect_len_surveyed",
             "reef_slope",
             "transect_number",
-            "data_policy_benthiclit",
         ]
 
 
@@ -464,7 +462,7 @@ class BenthicLITMethodSEFilterSet(BaseSEFilterSet):
 
     class Meta:
         model = BenthicLITSESQLModel
-        fields = ["sample_unit_count", "depth_avg", "data_policy_benthiclit"]
+        fields = ["sample_unit_count", "depth_avg",]
 
 
 class BenthicLITProjectMethodObsView(BaseProjectMethodView):

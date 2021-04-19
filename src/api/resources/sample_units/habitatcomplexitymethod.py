@@ -430,19 +430,16 @@ class HabitatComplexityMethodObsFilterSet(BaseSUObsFilterSet):
     transect_len_surveyed = RangeFilter()
     reef_slope = BaseInFilter(method="char_lookup")
     interval = RangeFilter()
+    score = RangeFilter()
 
     class Meta:
         model = HabitatComplexityObsSQLModel
         fields = [
-            "depth",
-            "sample_unit_id",
-            "observers",
             "transect_len_surveyed",
             "reef_slope",
             "transect_number",
             "interval",
             "score",
-            "data_policy_habitatcomplexity",
         ]
 
 
@@ -450,6 +447,7 @@ class HabitatComplexityMethodSUFilterSet(BaseSUObsFilterSet):
     transect_len_surveyed = RangeFilter()
     reef_slope = BaseInFilter(method="char_lookup")
     interval_size = RangeFilter()
+    score_avg = RangeFilter()
 
     class Meta:
         model = HabitatComplexitySUSQLModel
@@ -458,7 +456,6 @@ class HabitatComplexityMethodSUFilterSet(BaseSUObsFilterSet):
             "reef_slope",
             "transect_number",
             "score_avg",
-            "data_policy_habitatcomplexity",
         ]
 
 
@@ -472,7 +469,6 @@ class HabitatComplexityMethodSEFilterSet(BaseSEFilterSet):
         fields = [
             "sample_unit_count",
             "depth_avg",
-            "data_policy_habitatcomplexity",
             "score_avg_avg",
         ]
 
