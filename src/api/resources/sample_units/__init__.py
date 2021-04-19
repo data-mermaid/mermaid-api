@@ -89,7 +89,7 @@ def clean_sample_event_models(data):
 class BaseGeoJsonPagination(GeoJsonPagination):
     page_size = 100
     page_size_query_param = "limit"
-    max_page_size = 1000
+    max_page_size = 5000
 
 
 class AggregatedViewMixin(BaseApiViewSet):

@@ -182,7 +182,6 @@ class SummarySiteFilterSet(AggregatedViewFilterSet):
         }
 
 
-# max_page_size now = 1000 not 5000
 class SummarySiteView(AggregatedViewMixin, BaseApiViewSet):
     drf_label = "summary-site"
     permission_classes = [UnauthenticatedReadOnlyPermission]

@@ -114,7 +114,7 @@ class TagField(serializers.Field):
 
 
 class StandardResultPagination(PageNumberPagination):
-    page_size = 50
+    page_size = 100
     page_size_query_param = "limit"
     max_page_size = 5000
 
@@ -380,7 +380,7 @@ class NullableUUIDFilter(CharFilter):
                 return value.hex
             return super(NullableUUIDFilter, self).filter(qs, value)
 
-        qs = self.get_method(qs)(**{"%s__isnull" % self.name: True})
+        qs = self.get_method(qs)(**{"%s__isnull" % self.field_name: True})
         return qs.distinct() if self.distinct else qs
 
 

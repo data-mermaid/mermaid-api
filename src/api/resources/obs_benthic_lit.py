@@ -25,7 +25,7 @@ class ObsBenthicLITFilterSet(BaseAPIFilterSet):
     class Meta:
         model = ObsBenthicLIT
         fields = ['benthiclit', 'benthiclit__transect', 'benthiclit__transect__sample_event', 'attribute',
-                  'include', 'length', ]
+                  'growth_form', 'include', 'length', ]
 
 
 class ObsBenthicLITViewSet(BaseProjectApiViewSet):
