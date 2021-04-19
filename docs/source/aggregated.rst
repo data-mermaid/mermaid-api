@@ -78,6 +78,8 @@ In practice, the data sharing policies mean that a user has access to data if th
 Observation views
 -----------------
 
+Observation views are the lowest level of MERMAID aggregate views, representing individual observations with all related data from site, project, management regime, and so on followed and relatively flattened into single rows, with row-level indicators like biomass calculated in a standardized way. The csv variants of observation views are what are called from the frontend ``Export to CSV`` button.
+
 All aggregate-view resources at the observations level return data if **either**
 
 1. user is authenticated and a member of the requested project, or
@@ -358,10 +360,11 @@ Site summary view
 
 The site summary view is a special case of MERMAID aggregated views:
 
-1. It never requires authentication
-2. It provides metrics aggregated to the site level, including all survey methods at that site
-3. For each site, a ``protocols`` field contains an object for each survey method conducted at that site, with calculated indicators for each if the data sharing policy for that survey method is ``public summary`` or ``public`` and just ``sample_unit_count`` otherwise.
-4. Under the hood, it draws from a `PostgreSQL materialized view <https://www.postgresql.org/docs/11/rules-materializedviews.html>`_ that is refreshed every 30 minutes.
+1. It is not project-specific, and its url is relative to the API root
+2. It never requires authentication
+3. It provides metrics aggregated to the site level, including all survey methods at that site
+4. For each site, a ``protocols`` field contains an object for each survey method conducted at that site, with calculated indicators for each if the data sharing policy for that survey method is ``public summary`` or ``public`` and just ``sample_unit_count`` otherwise.
+5. Under the hood, it draws from a `PostgreSQL materialized view <https://www.postgresql.org/docs/11/rules-materializedviews.html>`_ that is refreshed every 30 minutes.
 
 This resource is used by the `MERMAID public dashboard <https://dashboard.datamermaid.org/>`_. 
 

@@ -11,7 +11,7 @@ stack including an RDS PostgreSQL database and using `Django <https://www.django
 * `MERMAID public dashboard <https://dashboard.datamermaid.org/>`_ [`repository <https://github.com/data-mermaid/mermaid-dash>`__]
 * `mermaidr <https://github.com/data-mermaid/mermaidr>`_ analysis package
 
-Our code is free and `open source <https://github.com/data-mermaid/>`_.
+Our code is free (`as in speech <https://www.gnu.org/philosophy/free-sw.en.html>`_) and `open source <https://github.com/data-mermaid/>`_.
 
 .. note::
    This documentation is for folks who know how to use `API <https://en.wikipedia.org/wiki/API>`_\s. If you are not a developer and just want to access your MERMAID data for analysis, go to

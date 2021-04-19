@@ -18,11 +18,6 @@ from .resources.project_profile import ProjectProfileViewSet
 from .resources.psite import PSiteViewSet
 from .resources.pmanagement import PManagementViewSet
 from .resources.sample_event import SampleEventViewSet
-from .resources.benthic_lit import BenthicLITViewSet
-from .resources.benthic_pit import BenthicPITViewSet
-from .resources.habitat_complexity import HabitatComplexityViewSet
-from .resources.belt_fish import BeltFishViewSet
-from .resources.bleaching_quadrat_collection import BleachingQuadratCollectionViewSet
 from .resources.benthic_transect import BenthicTransectViewSet
 from .resources.quadrat_collection import QuadratCollectionViewSet
 from .resources.fish_belt_transect import FishBeltTransectViewSet
@@ -215,19 +210,6 @@ project_router.register(
     "bleachingquadratcollectionmethod",
 )
 project_router.register(r"sampleunitmethods", SampleUnitMethodView, "sampleunitmethod")
-
-# straight-up sample unit methods (not typically used on their own)
-# project_router.register(r"benthiclits", BenthicLITViewSet, "benthiclit")
-# project_router.register(r"benthicpits", BenthicPITViewSet, "benthicpit")
-# project_router.register(
-#     r"habitatcomplexities", HabitatComplexityViewSet, "habitatcomplexity"
-# )
-# project_router.register(r"beltfishes", BeltFishViewSet, "beltfish")
-# project_router.register(
-#     r"bleachingquadratcollections",
-#     BleachingQuadratCollectionViewSet,
-#     "bleachingquadratcollection",
-# )
 
 # observations
 project_router.register(
