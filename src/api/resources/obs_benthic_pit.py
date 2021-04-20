@@ -19,7 +19,7 @@ class ObsBenthicPITFilterSet(BaseAPIFilterSet):
     class Meta:
         model = ObsBenthicPIT
         fields = ['benthicpit', 'benthicpit__transect', 'benthicpit__transect__sample_event', 'attribute',
-                  'include', ]
+                  'growth_form', 'include', ]
 
 
 class ObsBenthicPITViewSet(BaseProjectApiViewSet):

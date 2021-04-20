@@ -585,7 +585,6 @@ class BleachingQCMethodColoniesBleachedObsFilterSet(BaseSUObsFilterSet):
             "quadrat_size",
             "benthic_attribute",
             "growth_form",
-            "data_policy_bleachingqc",
             "count_normal",
             "count_pale",
             "count_20",
@@ -605,7 +604,6 @@ class BleachingQCMethodQuadratBenthicPercentObsFilterSet(BaseSUObsFilterSet):
         model = BleachingQCQuadratBenthicPercentObsSQLModel
         fields = [
             "quadrat_size",
-            "data_policy_bleachingqc",
             "quadrat_number",
             "percent_hard",
             "percent_soft",
@@ -628,7 +626,6 @@ class BleachingQCMethodSUFilterSet(BaseSUObsFilterSet):
         model = BleachingQCSUSQLModel
         fields = [
             "quadrat_size",
-            "data_policy_bleachingqc",
             "count_genera",
             "count_total",
             "percent_normal",
@@ -660,7 +657,6 @@ class BleachingQCMethodSEFilterSet(BaseSEFilterSet):
         fields = [
             "sample_unit_count",
             "depth_avg",
-            "data_policy_bleachingqc",
             "quadrat_size_avg",
             "count_total_avg",
             "count_genera_avg",
