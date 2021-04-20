@@ -158,7 +158,7 @@ def ingest(
     errors = s.formatted_errors
 
     if is_valid is False:
-        output["errors"] = errors
+        output["errors"] = errors[0:1000]
         return None, output
 
     with transaction.atomic():

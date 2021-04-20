@@ -518,27 +518,6 @@ class Transect(SampleUnit):
             su_number
         )
 
-    @property
-    def cache_sql(self):
-        return f"""
-            SELECT 
-                uuid_generate_v4() AS pseudosu_id,
-                array_agg(DISTINCT su.id) AS sample_unit_ids,
-                vse.sample_event_id
-            FROM
-                {self._meta.db_table} as su
-            INNER JOIN
-                vw_sample_events as vse
-            ON
-                su.sample_event_id = vse.sample_event_id
-            WHERE vse.sample_event_id = '{self.sample_event.id}'
-            GROUP BY
-                "depth",
-                "number",
-                "len_surveyed",
-                vse."sample_event_id"
-        """
-
 
 class BenthicTransect(Transect):
     project_lookup = 'sample_event__site__project'
@@ -710,26 +689,6 @@ class BaseQuadrat(SampleUnit):
             self.sample_event.__str__(),
             su_number
         )
-
-    @property
-    def cache_sql(self):
-        return f"""
-            SELECT 
-                uuid_generate_v4() AS pseudosu_id,
-                array_agg(DISTINCT su.id) AS sample_unit_ids,
-                vse.sample_event_id
-            FROM
-                {self._meta.db_table} as su
-            INNER JOIN
-                vw_sample_events as vse
-            ON
-                su.sample_event_id = vse.sample_event_id
-            WHERE vse.sample_event_id = '{self.sample_event.id}'
-            GROUP BY
-                "depth",
-                "quadrat_size",
-                vse."sample_event_id"
-        """
 
 
 class QuadratCollection(BaseQuadrat):

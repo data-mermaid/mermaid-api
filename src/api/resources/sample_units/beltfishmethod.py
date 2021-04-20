@@ -34,7 +34,12 @@ from ..fish_belt_transect import FishBeltTransectSerializer
 from ..obs_belt_fish import ObsBeltFishSerializer
 from ..observer import ObserverSerializer
 from ..sample_event import SampleEventSerializer
-from . import BaseProjectMethodView, save_model, save_one_to_many
+from . import (
+    BaseProjectMethodView,
+    clean_sample_event_models,
+    save_model,
+    save_one_to_many
+)
 
 
 class ObsBeltFishCSVSerializer(ReportSerializer):
@@ -214,6 +219,8 @@ class BeltFishMethodView(BaseProjectApiViewSet):
             if is_valid is False:
                 transaction.savepoint_rollback(sid)
                 return Response(data=errors, status=status.HTTP_400_BAD_REQUEST)
+
+            clean_sample_event_models(nested_data["sample_event"])
 
             transaction.savepoint_commit(sid)
 
@@ -451,10 +458,10 @@ class BeltFishMethodSEGeoSerializer(BaseViewAPIGeoSerializer):
 class BeltFishMethodObsFilterSet(BaseSUObsFilterSet):
     transect_len_surveyed = RangeFilter()
     reef_slope = BaseInFilter(method="char_lookup")
-    fish_family = BaseInFilter(method="id_lookup")
-    fish_genus = BaseInFilter(method="id_lookup")
-    fish_taxon = BaseInFilter(method="id_lookup")
-    trophic_group = BaseInFilter(method="id_lookup")
+    fish_family = BaseInFilter(method="char_lookup")
+    fish_genus = BaseInFilter(method="char_lookup")
+    fish_taxon = BaseInFilter(method="char_lookup")
+    trophic_group = BaseInFilter(method="char_lookup")
     trophic_level = RangeFilter()
     functional_group = BaseInFilter(method="id_lookup")
     vulnerability = RangeFilter()
@@ -465,7 +472,6 @@ class BeltFishMethodObsFilterSet(BaseSUObsFilterSet):
     class Meta:
         model = BeltFishObsSQLModel
         fields = [
-            "observers",
             "transect_len_surveyed",
             "reef_slope",
             "transect_number",
@@ -478,9 +484,7 @@ class BeltFishMethodObsFilterSet(BaseSUObsFilterSet):
             "vulnerability",
             "size",
             "count",
-            "size_bin",
             "biomass_kgha",
-            "data_policy_beltfish",
         ]
 
 
@@ -495,9 +499,7 @@ class BeltFishMethodSUFilterSet(BaseSUObsFilterSet):
             "transect_len_surveyed",
             "reef_slope",
             "transect_number",
-            "size_bin",
             "biomass_kgha",
-            "data_policy_beltfish",
         ]
 
 
@@ -512,7 +514,6 @@ class BeltFishMethodSEFilterSet(BaseSEFilterSet):
             "biomass_kgha_avg",
             "sample_unit_count",
             "depth_avg",
-            "data_policy_beltfish",
         ]
 
 

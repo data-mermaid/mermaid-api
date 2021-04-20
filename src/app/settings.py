@@ -35,7 +35,7 @@ LOGIN_REDIRECT_URL = 'api-root'
 SECRET_KEY = os.environ.get('SECRET_KEY')
 
 # SECURITY WARNING: don't run with debug turned on in production!
-DEBUG = ENVIRONMENT not in ('prod',)
+DEBUG = ENVIRONMENT not in ("dev", "prod",)
 
 if ENVIRONMENT in ('dev', 'prod'):
     ALLOWED_HOSTS = [host.strip() for host in os.environ['ALLOWED_HOSTS'].split(',')]

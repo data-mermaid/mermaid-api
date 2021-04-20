@@ -1,19 +1,18 @@
-import re
-from typing import Any, Dict, List, Type
+from typing import Any, Dict, Type
 
-from django.db.models import NOT_PROVIDED, F, Manager, Model, QuerySet
-from django.db.models.constants import LOOKUP_SEP
-from django.db.models.sql import Query
-from django.db.models.sql.datastructures import BaseTable
-from django.db.models.sql.where import WhereNode
+from django.db.models import NOT_PROVIDED, Manager, Model, QuerySet  # type: ignore
+from django.db.models.constants import LOOKUP_SEP  # type: ignore
+from django.db.models.sql import Query  # type: ignore
+from django.db.models.sql.datastructures import BaseTable  # type: ignore
+from django.db.models.sql.where import WhereNode  # type: ignore
 
-from .datastructures import SQLTable, SQLTableJoin, SQLTableParams
+from .datastructures import SQLTable, SQLTableParams
 
 
 class SQLTableQuery(Query):
     def __init__(self, model, where=WhereNode):
         super().__init__(model, where)
-        self.sql_table_params = []  # type: List[SQLTableParams]
+        self.sql_table_params = {}
         self.model_sql = model.sql
 
     def get_initial_alias(self):
@@ -24,16 +23,16 @@ class SQLTableQuery(Query):
 
             if hasattr(self.model, "sql_args"):
                 try:
-                    params = list(
+                    params = dict(
                         next(
                             filter(lambda x: x.level == 0, self.sql_table_params)
-                        ).params.values()
-                    )  # type: List[Any]
+                        ).params.items()
+                    )
                 except StopIteration:
                     # no parameters were passed from user
                     # so try to call the sql without parameters
                     # in case that they are optional
-                    params = []
+                    params = {}
 
                 alias = self.join(
                     SQLTable(self.get_meta().db_table, None, params, self.model_sql)
@@ -41,68 +40,6 @@ class SQLTableQuery(Query):
             else:
                 alias = self.join(BaseTable(self.get_meta().db_table, None))
         return alias
-
-    def setup_joins(  # noqa: C901
-        self,
-        names,
-        opts,
-        alias,
-        can_reuse=None,
-        allow_many=True,
-        reuse_with_filtered_relation=False,
-    ):
-        join_info = super().setup_joins(
-            names, opts, alias, can_reuse, allow_many, reuse_with_filtered_relation
-        )
-
-        level = 0
-        for alias in join_info.joins:
-            join = self.alias_map[alias]
-            if isinstance(join, SQLTable):
-                # skip the `FROM func(...)`, it is handled in `get_initial_alias`
-                continue
-            if not hasattr(join.join_field.related_model, "sql_args"):
-                # skip normal tables
-                continue
-
-            level += 1
-            try:
-                params = list(
-                    next(
-                        filter(
-                            lambda x: x.level == level
-                            and x.join_field == join.join_field,
-                            self.sql_table_params,
-                        )
-                    ).params.values()
-                )  # type: List[Any]
-            except StopIteration:
-                # no parameters were passed from user
-                # so try to call the function without parameters
-                # in case that they are optional
-                params = []
-
-            resolved_params = []
-            for param in params:
-                if isinstance(param, F):
-                    resolved_param = param.resolve_expression(self)
-                else:
-                    resolved_param = param
-                resolved_params.append(resolved_param)
-
-            self.alias_map[alias] = SQLTableJoin(
-                join.table_name,
-                join.parent_alias,
-                join.table_alias,
-                join.join_type,
-                join.join_field,
-                join.nullable,
-                self.model_sql,
-                join.filtered_relation,
-                resolved_params,
-            )
-
-        return join_info
 
     def sql_table(self, **sql_table_params: Dict[str, Any]):
         """
@@ -153,7 +90,7 @@ class SQLTableQuery(Query):
             'root': {'id: 5}
         }
         """
-        param_groups = {}
+        param_groups: Dict[str, Any] = {}
         for lookup, val in sql_table_params.items():
             parts = lookup.split(LOOKUP_SEP)
             prefix = LOOKUP_SEP.join(parts[:-1])

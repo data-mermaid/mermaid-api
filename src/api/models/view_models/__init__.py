@@ -1,6 +1,4 @@
-from .base import *
-from .beltfish import *
-from .benthiclit import *
-from .benthicpit import *
-from .bleachingqc import *
-from .habitatcomplexity import *
+# view_models should only create postgres views that other db entities do not depend on
+
+from .fish_attributes import *
+from .summary_site import SummarySiteViewModel

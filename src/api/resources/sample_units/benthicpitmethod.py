@@ -34,7 +34,12 @@ from ..benthic_transect import BenthicTransectSerializer
 from ..obs_benthic_pit import ObsBenthicPITSerializer
 from ..observer import ObserverSerializer
 from ..sample_event import SampleEventSerializer
-from . import BaseProjectMethodView, save_model, save_one_to_many
+from . import (
+    BaseProjectMethodView,
+    clean_sample_event_models,
+    save_model,
+    save_one_to_many,
+)
 
 
 class BenthicPITMethodSerializer(BenthicPITSerializer):
@@ -136,6 +141,8 @@ class BenthicPITMethodView(BaseProjectApiViewSet):
             if is_valid is False:
                 transaction.savepoint_rollback(sid)
                 return Response(data=errors, status=status.HTTP_400_BAD_REQUEST)
+
+            clean_sample_event_models(nested_data["sample_event"])
 
             transaction.savepoint_commit(sid)
 
@@ -440,7 +447,6 @@ class BenthicPITMethodObsFilterSet(BaseSUObsFilterSet):
             "benthic_category",
             "benthic_attribute",
             "growth_form",
-            "data_policy_benthicpit",
         ]
 
 
@@ -456,7 +462,6 @@ class BenthicPITMethodSUFilterSet(BaseSUObsFilterSet):
             "reef_slope",
             "transect_number",
             "interval_size",
-            "data_policy_benthicpit",
         ]
 
 
@@ -466,7 +471,7 @@ class BenthicPITMethodSEFilterSet(BaseSEFilterSet):
 
     class Meta:
         model = BenthicPITSESQLModel
-        fields = ["sample_unit_count", "depth_avg", "data_policy_benthicpit"]
+        fields = ["sample_unit_count", "depth_avg",]
 
 
 class BenthicPITProjectMethodObsView(BaseProjectMethodView):

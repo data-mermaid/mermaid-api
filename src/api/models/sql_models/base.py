@@ -7,7 +7,9 @@ from django.utils.translation import ugettext_lazy as _
 from api.models import Project
 
 
-sample_event_sql_template = """
+project_where = """    WHERE\n        project.id = '%(project_id)s' :: uuid\n"""
+
+sample_event_sql_template = f"""
     SELECT
         project.id AS project_id,
         project.name AS project_name,
@@ -166,8 +168,7 @@ sample_event_sql_template = """
             GROUP BY
                 cov.site_id
         ) AS site_covariates ON site.id = site_covariates.site_id
-    WHERE
-        project.id = '%s' :: uuid
+{project_where}
 """
 
 
@@ -255,6 +256,20 @@ class BaseSQLModel(models.Model):
 
 
 class BaseSUSQLModel(BaseSQLModel):
+    # Unique combination of these fields defines a single (pseudo) sample unit.
+    # Corresponds to *SUSQLModel.su_fields
+    transect_su_fields = [
+        "sample_event_id",
+        "depth",
+        "number",
+        "len_surveyed",
+    ]
+    qc_su_fields = [
+        "sample_event_id",
+        "depth",
+        "quadrat_size",
+    ]
+
     # SU sql common to all obs-level views
     su_fields_sql = """
         su.id AS sample_unit_id,
@@ -293,7 +308,7 @@ class BaseSUSQLModel(BaseSQLModel):
         "tide_name",
         "visibility_name",
     ]
-    # SU-level BaseSUViewModel inheritors should instantiate sample_unit_ids; obs-level inheritors shouldn't
+    # SU-level BaseSUSQLModel inheritors should instantiate sample_unit_ids; obs-level inheritors shouldn't
     label = models.CharField(max_length=50, blank=True)
     relative_depth = models.CharField(max_length=50)
     sample_time = models.TimeField()

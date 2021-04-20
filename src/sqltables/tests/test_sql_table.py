@@ -63,7 +63,7 @@ def user_model_class(mermaid_testing_table):
         sql = """
             SELECT *
             FROM mermaid_testing_table
-            WHERE category = '%s'
+            WHERE category = '%(category)s'
         """
         sql_args = dict(category=SQLTableArg(required=True))
 
@@ -103,6 +103,34 @@ def user_model_class2(mermaid_testing_table):
     return TestUserModel2
 
 
+@pytest.fixture
+def user_model_multi_parameter_class(mermaid_testing_table):
+    class TestUserModel3(models.Model):
+        sql = """
+            SELECT *
+            FROM mermaid_testing_table
+            WHERE category = '%(category)s'
+            UNION ALL
+            SELECT *
+            FROM mermaid_testing_table
+            WHERE category = '%(category)s'
+        """
+        sql_args = dict(category=SQLTableArg(required=True))
+
+        name = models.CharField(max_length=100)
+        age = models.IntegerField()
+        category = models.CharField(max_length=100)
+
+        class Meta:
+            db_table = "mermaid_testing_table_subset3"
+            managed = False
+            app_label = "api"
+
+        objects = SQLTableManager()
+
+    return TestUserModel3
+
+
 @pytest.mark.django_db
 def test_sql_table(user_model_class):
     qry = user_model_class.objects.all().sql_table(category="category1")
@@ -119,23 +147,17 @@ def test_sql_table(user_model_class):
 
 
 @pytest.mark.django_db
+def test_multi_parameter_sql_table(user_model_multi_parameter_class):
+    qry = user_model_multi_parameter_class.objects.all().sql_table(category="category1")
+
+    assert qry.count() == 4
+
+    qry = qry.filter(name="user1")
+    assert qry.count() == 2
+
+
+@pytest.mark.django_db
 def test_sql_table_ordering(user_model_class):
     qry = user_model_class.objects.all().sql_table(category="category1")
     qry = qry.order_by("-age")
     assert qry[0].age == 99
-
-
-@pytest.mark.skip(reason="Joins not yet supported")
-@pytest.mark.django_db
-def test_sql_table_join(mermaid_testing_table, user_model_class2):
-    qry = user_model_class2.objects.all().sql_table().select_related("user")
-
-    assert qry.count() == 3
-
-    print("\n\n")
-    print(qry.query)
-    print("\n\n")
-    record = qry[1]
-
-    assert record.name == "person1"
-    assert record.user.category == "category2"

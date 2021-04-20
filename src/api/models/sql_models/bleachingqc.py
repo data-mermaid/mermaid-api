@@ -11,8 +11,10 @@ class BleachingQCColoniesBleachedObsSQLModel(BaseSUSQLModel):
     _su_fields = BaseSUSQLModel.su_fields_sql
 
     sql = f"""
-        SELECT
-            o.id,
+        WITH se AS (
+            {sample_event_sql_template}
+        )
+        SELECT o.id,
             { _se_fields },
             { _su_fields },
             se.data_policy_bleachingqc,
@@ -39,16 +41,11 @@ class BleachingQCColoniesBleachedObsSQLModel(BaseSUSQLModel):
             JOIN (
                 SELECT
                     tt_1.quadrat_id,
-                    jsonb_agg(
-                        jsonb_build_object(
-                            'id',
-                            p.id,
-                            'name',
-                            (
-                                COALESCE(p.first_name, '' :: character varying) :: text || ' ' :: text
-                            ) || COALESCE(p.last_name, '' :: character varying) :: text
-                        )
-                    ) AS observers
+                    jsonb_agg(jsonb_build_object(
+                        'id', p.id, 
+                        'name', (COALESCE(p.first_name, '' :: character varying) :: text || ' ' :: text) || 
+                            COALESCE(p.last_name, '' :: character varying) :: text
+                    )) AS observers
                 FROM
                     observer o1
                     JOIN profile p ON o1.profile_id = p.id
@@ -57,7 +54,7 @@ class BleachingQCColoniesBleachedObsSQLModel(BaseSUSQLModel):
                 GROUP BY
                     tt_1.quadrat_id
             ) observers ON su.id = observers.quadrat_id
-            JOIN ({ sample_event_sql_template }) se ON su.sample_event_id = se.sample_event_id
+            JOIN se ON su.sample_event_id = se.sample_event_id
     """
 
     sql_args = dict(project_id=SQLTableArg(required=True))
@@ -93,17 +90,13 @@ class BleachingQCColoniesBleachedObsSQLModel(BaseSUSQLModel):
 
 
 class BleachingQCQuadratBenthicPercentObsSQLModel(BaseSUSQLModel):
-    # Unique combination of these fields defines a single (pseudo) sample unit. All other fields are aggregated.
-    su_fields = BaseSUSQLModel.se_fields + [
-        "depth",
-        "quadrat_size",
-        "data_policy_bleachingqc",
-    ]
-
     _se_fields = ", ".join([f"se.{f}" for f in BaseSUSQLModel.se_fields])
     _su_fields = BaseSUSQLModel.su_fields_sql
 
     sql = f"""
+        WITH se AS (
+            {sample_event_sql_template}
+        ) 
         SELECT o.id,
         {_se_fields},
         {_su_fields},
@@ -122,23 +115,22 @@ class BleachingQCQuadratBenthicPercentObsSQLModel(BaseSUSQLModel):
         LEFT JOIN api_visibility v ON su.visibility_id = v.id
         LEFT JOIN api_relativedepth r ON su.relative_depth_id = r.id
         JOIN (
-            SELECT tt_1.quadrat_id,
-            jsonb_agg(
-            jsonb_build_object(
-                'id', p.id,
-                'name',
-                (COALESCE(p.first_name, ''::character varying)::text || ' '::text) ||
-                COALESCE(p.last_name, ''::character varying)::text
-            )
-            ) AS observers
+            SELECT
+                tt_1.quadrat_id,
+                jsonb_agg(jsonb_build_object(
+                    'id', p.id, 
+                    'name', (COALESCE(p.first_name, '' :: character varying) :: text || ' ' :: text) || 
+                        COALESCE(p.last_name, '' :: character varying) :: text
+                )) AS observers
             FROM
-            observer o1
-            JOIN profile p ON o1.profile_id = p.id
-            JOIN transectmethod tm ON o1.transectmethod_id = tm.id
-            JOIN transectmethod_bleaching_quadrat_collection tt_1 ON tm.id = tt_1.transectmethod_ptr_id
-            GROUP BY tt_1.quadrat_id
+                observer o1
+                JOIN profile p ON o1.profile_id = p.id
+                JOIN transectmethod tm ON o1.transectmethod_id = tm.id
+                JOIN transectmethod_bleaching_quadrat_collection tt_1 ON tm.id = tt_1.transectmethod_ptr_id
+            GROUP BY
+                tt_1.quadrat_id
         ) observers ON su.id = observers.quadrat_id
-        JOIN ({sample_event_sql_template}) se ON su.sample_event_id = se.sample_event_id
+        JOIN se ON su.sample_event_id = se.sample_event_id
     """
 
     sql_args = dict(project_id=SQLTableArg(required=True))
@@ -183,11 +175,26 @@ class BleachingQCSUSQLModel(BaseSUSQLModel):
     sql = f"""
         WITH bleachingqc_colonies_bleached_obs AS (
             {BleachingQCColoniesBleachedObsSQLModel.sql}
-        )
+        ),
+        bleachingqc_quadrat_benthic_percent_obs AS (
+            {BleachingQCQuadratBenthicPercentObsSQLModel.sql}
+        ),
+        pseudosu_su AS (
+            SELECT 
+                pseudosu_id,
+                UNNEST(sample_unit_ids) AS sample_unit_id
+            FROM (
+                SELECT 
+                    uuid_generate_v4() AS pseudosu_id,
+                    array_agg(DISTINCT su.id) AS sample_unit_ids
+                FROM quadrat_collection su
+                GROUP BY {", ".join(BaseSUSQLModel.qc_su_fields)}
+            ) pseudosu
+        ) 
         SELECT NULL AS id,
         bleachingqc_su.pseudosu_id,
         {_su_fields},
-        {_agg_su_fields},
+        bleachingqc_su.{_agg_su_fields},
         count_genera,
         count_total,
         percent_normal,
@@ -198,8 +205,8 @@ class BleachingQCSUSQLModel(BaseSUSQLModel):
         percent_soft_avg,
         percent_algae_avg
         FROM (
-            SELECT su.pseudosu_id,
-            jsonb_agg(DISTINCT su.sample_unit_id) AS sample_unit_ids,
+            SELECT pseudosu_id,
+            jsonb_agg(DISTINCT pseudosu_su.sample_unit_id) AS sample_unit_ids,
             {_su_fields_qualified},
             {_su_aggfields_sql},
             COUNT(DISTINCT benthic_attribute) AS count_genera,
@@ -224,19 +231,20 @@ class BleachingQCSUSQLModel(BaseSUSQLModel):
             , 1) AS percent_bleached
 
             FROM bleachingqc_colonies_bleached_obs
-            INNER JOIN sample_unit_cache su ON (bleachingqc_colonies_bleached_obs.sample_unit_id = su.sample_unit_id)
-            GROUP BY su.pseudosu_id,
+            INNER JOIN pseudosu_su ON(bleachingqc_colonies_bleached_obs.sample_unit_id = pseudosu_su.sample_unit_id)
+            GROUP BY pseudosu_id,
             {_su_fields_qualified}
         ) bleachingqc_su
 
-        INNER JOIN (
+        LEFT JOIN (
             SELECT pseudosu_id,
             COUNT(quadrat_number) AS quadrat_count,
             round(AVG(percent_hard), 1) AS percent_hard_avg,
             round(AVG(percent_soft), 1) AS percent_soft_avg,
             round(AVG(percent_algae), 1) AS percent_algae_avg
-            FROM vw_bleachingqc_quadrat_benthic_percent_obs
-            INNER JOIN sample_unit_cache su ON (vw_bleachingqc_quadrat_benthic_percent_obs.sample_unit_id = su.sample_unit_id)
+            FROM bleachingqc_quadrat_benthic_percent_obs
+            INNER JOIN pseudosu_su 
+                ON(bleachingqc_quadrat_benthic_percent_obs.sample_unit_id = pseudosu_su.sample_unit_id)
             GROUP BY pseudosu_id
         ) bp ON bleachingqc_su.pseudosu_id = bp.pseudosu_id
 
@@ -245,16 +253,15 @@ class BleachingQCSUSQLModel(BaseSUSQLModel):
             jsonb_agg(DISTINCT observer) AS observers
 
             FROM (
-                SELECT su.pseudosu_id,
+                SELECT pseudosu_id,
                 jsonb_array_elements(observers) AS observer
                 FROM bleachingqc_colonies_bleached_obs
-                INNER JOIN sample_unit_cache su ON (bleachingqc_colonies_bleached_obs.sample_unit_id = su.sample_unit_id)
-                GROUP BY su.pseudosu_id,
-                observers
+                INNER JOIN pseudosu_su ON(bleachingqc_colonies_bleached_obs.sample_unit_id = pseudosu_su.sample_unit_id)
+                GROUP BY pseudosu_id, observers
             ) bleachingqc_obs_obs
             GROUP BY pseudosu_id
-        ) bleachingqc_obs
-        ON (bleachingqc_su.pseudosu_id = bleachingqc_obs.pseudosu_id)
+        ) bleachingqc_observers
+        ON (bleachingqc_su.pseudosu_id = bleachingqc_observers.pseudosu_id)
     """
 
     sql_args = dict(project_id=SQLTableArg(required=True))

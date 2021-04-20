@@ -91,7 +91,7 @@ class BleachingCSVSerializer(CollectRecordCSVSerializer):
             "Quadrat number": "data__obs_quadrat_benthic_percent__quadrat_number",
             "Hard coral % cover": "data__obs_quadrat_benthic_percent__percent_hard",
             "Soft coral % cover": "data__obs_quadrat_benthic_percent__percent_soft",
-            "Macroalgae coral % cover": "data__obs_quadrat_benthic_percent__percent_algae",
+            "Macroalgae % cover": "data__obs_quadrat_benthic_percent__percent_algae",
         }
     )
 
@@ -172,20 +172,39 @@ class BleachingCSVSerializer(CollectRecordCSVSerializer):
 
         return field in getattr(self, empty_fields)
 
+    def _get_original_benthic_attribute_value(self, data):
+
+        if hasattr(self, "_attribute_col_name") is False:
+            _reverse_header_map = {v: k for k, v in self.header_map.items()}
+            self._attribute_col_name = _reverse_header_map.get(
+                "data__obs_colonies_bleached__attribute"
+            )
+
+        _row_number = self._row_index.get(str(data["id"]))
+        orig_row = self.original_data[_row_number - 2]
+        return orig_row.get(self._attribute_col_name)
+
     def validate(self, data):
         data = super().validate(data)
-        if not data.get("data__obs_colonies_bleached__attribute") and not data.get(
-            "data__obs_quadrat_benthic_percent__quadrat_number"
-        ):
+        attribute_value = data.get("data__obs_colonies_bleached__attribute")
+        quadrat_number = data.get("data__obs_quadrat_benthic_percent__quadrat_number")
+
+        if not attribute_value and not quadrat_number:
+            benthic_attr_name = self._get_original_benthic_attribute_value(data)
+            if benthic_attr_name is not None:
+                raise ValidationError(
+                    f"'{benthic_attr_name}' benthic attribute has no match in MERMAID."
+                )
+
             raise ValidationError(
-                "One of obs_colonies_bleached or obs_quadrat_benthic_percent is required."
+                "One of 'Colonies Bleached' or 'Percent Cover' columns are required."
             )
 
         if data.get("data__obs_colonies_bleached__attribute") and data.get(
             "data__obs_quadrat_benthic_percent__quadrat_number"
         ):
             raise ValidationError(
-                "Only one of obs_colonies_bleached or obs_quadrat_benthic_percent should be defined."
+                "Only one of 'Colonies Bleached' or 'Percent Cover' columns can be defined."
             )
 
         return data

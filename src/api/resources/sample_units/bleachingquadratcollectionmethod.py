@@ -40,7 +40,12 @@ from ..obs_quadrat_benthic_percent import ObsQuadratBenthicPercentSerializer
 from ..observer import ObserverSerializer
 from ..quadrat_collection import QuadratCollectionSerializer
 from ..sample_event import SampleEventSerializer
-from . import BaseProjectMethodView, save_model, save_one_to_many
+from . import (
+    BaseProjectMethodView,
+    clean_sample_event_models,
+    save_model,
+    save_one_to_many,
+)
 
 
 class BleachingQuadratCollectionMethodSerializer(BleachingQuadratCollectionSerializer):
@@ -158,6 +163,8 @@ class BleachingQuadratCollectionMethodView(BaseProjectApiViewSet):
             if is_valid is False:
                 transaction.savepoint_rollback(sid)
                 return Response(data=errors, status=status.HTTP_400_BAD_REQUEST)
+
+            clean_sample_event_models(nested_data["sample_event"])
 
             transaction.savepoint_commit(sid)
             bleaching_qc = BleachingQuadratCollection.objects.get(id=bleaching_qc_id)
@@ -578,7 +585,6 @@ class BleachingQCMethodColoniesBleachedObsFilterSet(BaseSUObsFilterSet):
             "quadrat_size",
             "benthic_attribute",
             "growth_form",
-            "data_policy_bleachingqc",
             "count_normal",
             "count_pale",
             "count_20",
@@ -598,7 +604,6 @@ class BleachingQCMethodQuadratBenthicPercentObsFilterSet(BaseSUObsFilterSet):
         model = BleachingQCQuadratBenthicPercentObsSQLModel
         fields = [
             "quadrat_size",
-            "data_policy_bleachingqc",
             "quadrat_number",
             "percent_hard",
             "percent_soft",
@@ -621,7 +626,6 @@ class BleachingQCMethodSUFilterSet(BaseSUObsFilterSet):
         model = BleachingQCSUSQLModel
         fields = [
             "quadrat_size",
-            "data_policy_bleachingqc",
             "count_genera",
             "count_total",
             "percent_normal",
@@ -653,7 +657,6 @@ class BleachingQCMethodSEFilterSet(BaseSEFilterSet):
         fields = [
             "sample_unit_count",
             "depth_avg",
-            "data_policy_bleachingqc",
             "quadrat_size_avg",
             "count_total_avg",
             "count_genera_avg",
