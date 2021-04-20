@@ -370,6 +370,17 @@ This resource is used by the `MERMAID public dashboard <https://dashboard.datame
 
 Available filters:
 
+- ``site_id`` *
+- ``site_name`` *
+- ``country_id`` *
+- ``country_name`` *
+- ``tag_id`` *
+- ``tag_name`` *
+- ``reef_type``
+- ``reef_zone``
+- ``reef_exposure``
+- ``management_id`` *
+- ``management_name`` *
 - ``project_id`` *
 - ``project_name`` *
 - ``project_admins`` *
