@@ -20,8 +20,8 @@ import sphinx_rtd_theme
 # -- Project information -----------------------------------------------------
 
 project = 'MERMAID API'
-copyright = '2021, Wildlife Conservation Society, World Wildlife Fund, Sparkgeo'
-author = 'Wildlife Conservation Society, World Wildlife Fund, Sparkgeo'
+copyright = '2021, MERMAID'
+author = 'MERMAID'
 
 
 # -- General configuration ---------------------------------------------------
