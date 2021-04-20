@@ -13,7 +13,7 @@ Before you can make a request for a JSON Web Token (JWT) or accessing the API, y
 2. Requesting Tokens
 --------------------
 
-`OAuth2 Implicit grant type`_ is used to fetch a valid token that can be used to securly access MERMAID API.  The folowing details will be needed to setup an implicit authorization flow:
+`OAuth2 Implicit grant type`_ is used to fetch a valid token that can be used to securely access MERMAID API.  The folowing details will be needed to setup an implicit authorization flow:
 
     - Authorization URL
     - Redirect URL
