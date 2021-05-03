@@ -22,6 +22,11 @@ def project1(db):
 
 
 @pytest.fixture
+def project2(db):
+    return Project.objects.create(name="Test Project 2", status=Project.TEST)
+
+
+@pytest.fixture
 def profile1(db):
     email = "profile1@mermaidcollect.org"
     profile = Profile.objects.create(

@@ -27,6 +27,7 @@ from .resources.obs_benthic_pit import ObsBenthicPITViewSet
 from .resources.obs_habitat_complexity import ObsHabitatComplexityViewSet
 from .resources.obs_colonies_bleached import ObsColoniesBleachedViewSet
 from .resources.obs_quadrat_benthic_percent import ObsQuadratBenthicPercentViewSet
+from .resources.sync import vw_pull, vw_push
 
 
 from .resources.sample_units.beltfishmethod import (
@@ -232,3 +233,5 @@ project_router.register(
 
 api_urls = router.urls + project_router.urls
 api_urls += (url(r"^health/$", health),)
+api_urls += (url(r"^pull/$", vw_pull),)
+api_urls += (url(r"^push/$", vw_push),)
