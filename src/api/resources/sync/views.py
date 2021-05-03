@@ -222,6 +222,7 @@ def _update_source_record(source_type, serializer, record, request):
 
         return {"status_code": status_code, "message": msg, "data": data}
     except Exception as err:
+        print(err)
         return _error(500, err)
 
 

@@ -4,8 +4,7 @@ from api.models import Revision
 
 
 def get_request_method(record):
-    """Get what the request method based on the
-    record's properties.
+    """Determine the request method based on the record's edits.
 
     :param record: Edits record.
     :type record: dict
@@ -20,7 +19,7 @@ def get_request_method(record):
         return "PUT"
 
 
-def has_conflicts(record_id, last_revision_num):
+def _has_push_conflict(record_id, last_revision_num):
     """Check if record would have a conflict if edits
     were applied.
 
@@ -34,7 +33,11 @@ def has_conflicts(record_id, last_revision_num):
     if last_revision_num is None:
         return False
 
-    rev = Revision.objects.get(record_id=record_id)
+    try:
+        rev = Revision.objects.get(record_id=record_id)
+    except ObjectDoesNotExist:
+        return False
+
     return rev.revision_num > last_revision_num
 
 
@@ -66,7 +69,7 @@ def apply_changes(request, serializer, record, force=False):
 
     instance = None
     last_revision_num = record.get("_last_revision_num")
-    if has_conflicts(record_id, last_revision_num) and force is False:
+    if force is False and _has_push_conflict(record_id, last_revision_num):
         return 409, None
 
     if last_revision_num is not None:

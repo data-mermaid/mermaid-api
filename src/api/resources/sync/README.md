@@ -69,7 +69,7 @@ No required properties
             "profile": "832082a0-2c79-4e41-97c2-bd33a652064b",
         },
         "fish_families": {
-        "last_revision": null
+            "last_revision": null
         }
     }
 ```
