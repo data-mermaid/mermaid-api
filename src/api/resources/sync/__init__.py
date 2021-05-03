@@ -7,7 +7,6 @@ from .pull import (
 from .push import (
     apply_changes,
     get_request_method,
-    has_push_conflict,
 )
 from .views import (
     ReadOnlyError,
