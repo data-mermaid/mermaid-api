@@ -11,6 +11,7 @@ from .base import (
     Application,
 )
 from .mermaid import *
+from .revisions import Revision
 from .sql_models import (
     BeltFishObsSQLModel,
     BeltFishSESQLModel,
