@@ -24,7 +24,6 @@ class Revision(models.Model):
 
 forward_sql = """
     CREATE SEQUENCE revision_seq_num START 1;
-    SELECT setval('revision_seq_num', (SELECT MAX(revision_num) FROM revision));
 
     CREATE OR REPLACE FUNCTION primary_key_column_name (table_name text)
     RETURNS varchar AS $$
