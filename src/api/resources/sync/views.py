@@ -195,8 +195,6 @@ def _update_source_record(source_type, serializer, record, request):
         vw_request, {source_type: record}, [source_type]
     )
 
-    print(f"failed_permission_checks: {failed_permission_checks}")
-
     if failed_permission_checks:
         status_code, _ = failed_permission_checks[0]
         exception = NotAuthenticated if status_code == 401 else PermissionError
