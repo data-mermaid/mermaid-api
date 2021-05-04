@@ -2,7 +2,6 @@
 import datetime
 
 from django.db import migrations
-from django.db import connection
 
 from api.models import (
     BenthicAttribute,
@@ -13,7 +12,6 @@ from api.models import (
     Management,
     Project,
     ProjectProfile,
-    Revision,
     Site,
 )
 
@@ -52,11 +50,8 @@ def _generate_sql(table, pk, timestamp, project=None, profile=None):
         );
     """
 
+
 def backfill():
-
-    if Revision.objects.all().count() > 0:
-        return ""
-
     timestamp = datetime.datetime.now()
     sqls = []
     sqls += [
