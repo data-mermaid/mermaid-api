@@ -1,8 +1,10 @@
 import uuid
 
+from django.core.cache import cache
 from rest_framework.test import APIClient
 
 from api.models import CollectRecord, Project
+from api.resources.sync.views import FISH_SPECIES_SOURCE_TYPE
 
 
 def test_pull_view(
@@ -33,6 +35,20 @@ def test_pull_view_invalid_source_type(db_setup, api_client1):
 
     request = api_client1.post("/v1/pull/", data, format="json")
     assert request.status_code == 400
+
+
+def test_pull_view_cache(db_setup, api_client1, fish_species1):
+    data = {
+        "fish_species": {}
+    }
+
+    request = api_client1.post("/v1/pull/", data, format="json")
+    response_data = request.json()
+    assert response_data[FISH_SPECIES_SOURCE_TYPE]["updates"][0]["id"] == str(fish_species1.id)
+    assert cache.get(FISH_SPECIES_SOURCE_TYPE)["updates"][0]["id"] == str(fish_species1.id)
+
+    fish_species1.save()
+    assert cache.get(FISH_SPECIES_SOURCE_TYPE) is None
 
 
 def test_push_view_readonly(db_setup, api_client1):

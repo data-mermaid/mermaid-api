@@ -1,3 +1,4 @@
+from django.core.cache import cache
 from rest_framework.decorators import api_view
 from rest_framework.exceptions import (
     ValidationError,
@@ -36,6 +37,13 @@ FISH_FAMILIES_SOURCE_TYPE = "fish_families"
 FISH_GENERA_SOURCE_TYPE = "fish_genera"
 FISH_SPECIES_SOURCE_TYPE = "fish_species"
 CHOICES_SOURCE_TYPE = "choices"
+
+CACHEABLE_SOURCE_TYPES = (
+    BENTHIC_ATTRIBUTES_SOURCE_TYPE,
+    FISH_FAMILIES_SOURCE_TYPE,
+    FISH_GENERA_SOURCE_TYPE,
+    FISH_SPECIES_SOURCE_TYPE,
+)
 
 
 class ReadOnlyError(Exception):
@@ -243,6 +251,31 @@ def _update_source_records(source_type, records, request):
     return response
 
 
+def _get_source_records(source_type, source_data, request):
+    if source_type == CHOICES_SOURCE_TYPE:
+        return _get_choices()
+
+    src = _get_source(source_type)
+
+    try:
+        req_params = _get_required_parameters(
+            request, source_data, src["required_filters"]
+        )
+    except ValueError as ve:
+        raise ValidationError(str(ve))
+
+    revision_num = req_params["revision_num"]
+
+    if revision_num is None and source_type in CACHEABLE_SOURCE_TYPES:
+        data = cache.get(source_type)
+        if data is None:
+            data = get_serialized_records(src["view"], **req_params)
+            cache.set(source_type, data)
+        return data
+
+    return get_serialized_records(src["view"], **req_params)
+
+
 def check_permissions(request, data, source_types, method=False):
     failed_permissions = []
     for source_type in source_types:
@@ -293,7 +326,6 @@ def check_permissions(request, data, source_types, method=False):
 
 @api_view(http_method_names=["POST"])
 def vw_pull(request):
-    response_data = {}
     request_data = request.data or {}
     source_types = request_data.keys()
 
@@ -311,23 +343,10 @@ def vw_pull(request):
         exception = NotAuthenticated if 401 in status_codes else PermissionError
         raise exception(f"{str(exception)}: {failed_src_types}")
 
-    for source_type, source_data in request_data.items():
-        if source_type == CHOICES_SOURCE_TYPE:
-            response_data[source_type] = _get_choices()
-            continue
-
-        src = _get_source(source_type)
-
-        try:
-            req_params = _get_required_parameters(
-                request, source_data, src["required_filters"]
-            )
-        except ValueError as ve:
-            raise ValidationError(str(ve))
-
-        response_data.update(
-            {source_type: get_serialized_records(src["view"], **req_params)}
-        )
+    response_data = {
+        source_type: _get_source_records(source_type, source_data, request)
+        for source_type, source_data in request_data.items()
+    }
 
     return Response(response_data)
 
