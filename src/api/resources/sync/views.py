@@ -192,7 +192,7 @@ def _get_serialized_record(serializer, record_id):
     return None
 
 
-def _update_source_record(source_type, serializer, record, request):
+def _update_source_record(source_type, serializer, record, request, force=False):
     src = _get_source(source_type)
     vw_request = _create_view_request(
         request, method=get_request_method(record), data=record
@@ -217,7 +217,7 @@ def _update_source_record(source_type, serializer, record, request):
         return _error(405, ReadOnlyError(f"{source_type} is read-only"))
 
     try:
-        status_code, errors = apply_changes(vw_request, serializer, record)
+        status_code, errors = apply_changes(vw_request, serializer, record, force=force)
         if status_code == 400:
             msg = "Validation Error"
             data = _format_errors(errors)
@@ -234,7 +234,7 @@ def _update_source_record(source_type, serializer, record, request):
         return _error(500, err)
 
 
-def _update_source_records(source_type, records, request):
+def _update_source_records(source_type, records, request, force=False):
     src = _get_source(source_type)
     response = []
     if source_type == CHOICES_SOURCE_TYPE:
@@ -245,7 +245,7 @@ def _update_source_records(source_type, records, request):
     serializer = src["view"].serializer_class
 
     for record in records:
-        result = _update_source_record(source_type, serializer, record, request)
+        result = _update_source_record(source_type, serializer, record, request, force=force)
         response.append(result)
 
     return response
@@ -354,6 +354,7 @@ def vw_pull(request):
 @api_view(http_method_names=["POST"])
 def vw_push(request):
     request_data = request.data or {}
+    force = str(request.query_params.get("force")).lower() in ("1", "t", "true", "y", "yes")
 
     invalid_source_types = _validate_source_types(request_data)
     if invalid_source_types:
@@ -362,7 +363,7 @@ def vw_push(request):
 
     response_data = {}
     for source_type, records in request_data.items():
-        result = _update_source_records(source_type, records, request)
+        result = _update_source_records(source_type, records, request, force=force)
         response_data[source_type] = result
 
     return Response(response_data)

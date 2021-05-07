@@ -80,6 +80,11 @@ def test_push_view_conflict(db_setup, serialized_tracked_collect_record, api_cli
     response_data = request.json()
     assert response_data["collect_records"][0]["status_code"] == 409
 
+    # Force push (bypass conflict)
+    request = api_client1.post("/v1/push/?force=true", data, format="json")
+    response_data = request.json()
+    assert response_data["collect_records"][0]["status_code"] == 200
+
 
 def test_push_view_invalid_record(
     db_setup,
