@@ -18,6 +18,13 @@
 
 
 API_SERVICE="api_service"
+OS=$(shell sh -c 'uname 2>/dev/null || echo Unknown')
+
+ifeq ($(OS), Linux)
+	CURRENT_UID="1000:1000"
+else
+	CURRENT_UID="0:0"
+endif
 
 
 down:
@@ -28,16 +35,16 @@ buildnocache:
 	@docker-compose build --no-cache --pull
 
 up:
-	@docker-compose up -d
+	docker-compose up -d	
 
 dbbackup:
-	@docker exec -it $(API_SERVICE) python manage.py dbbackup local
+	@docker-compose exec --user=$(CURRENT_UID) $(API_SERVICE) python manage.py dbbackup local
 
 dbrestore:
-	@docker exec -it $(API_SERVICE) python manage.py dbrestore local
+	@docker-compose exec --user=$(CURRENT_UID) $(API_SERVICE) python manage.py dbrestore local
 
 migrate:
-	@docker exec -it $(API_SERVICE) python manage.py migrate
+	@docker-compose exec --user=$(CURRENT_UID) $(API_SERVICE) python manage.py migrate
 
 freshinstall:
 	@echo "\n--- Shutting down existing stack ---\n"
@@ -53,7 +60,8 @@ freshinstall:
 	@make migrate
 
 runserver:
-	@docker exec -it $(API_SERVICE) python manage.py runserver 0.0.0.0:8080
+	@docker-compose exec --user=$(CURRENT_UID) $(API_SERVICE) python manage.py runserver 0.0.0.0:8080
 
 shell:
-	@docker exec -it $(API_SERVICE) /bin/bash
+	@docker-compose exec --user=$(CURRENT_UID) $(API_SERVICE) /bin/bash
+	
