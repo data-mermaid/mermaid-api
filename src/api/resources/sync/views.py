@@ -19,6 +19,7 @@ from api.resources import (
     project_profile,
     psite,
 )
+from api import utils
 from .pull import get_serialized_records, serialize_revisions, get_record
 from .push import get_request_method, apply_changes
 
@@ -354,7 +355,7 @@ def vw_pull(request):
 @api_view(http_method_names=["POST"])
 def vw_push(request):
     request_data = request.data or {}
-    force = str(request.query_params.get("force")).lower() in ("1", "t", "true", "y", "yes")
+    force = utils.truthy(str(request.query_params.get("force")).strip())
 
     invalid_source_types = _validate_source_types(request_data)
     if invalid_source_types:

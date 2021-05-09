@@ -318,13 +318,7 @@ def update_with_covariates(sender, instance, *args, **kwargs):
 @receiver(post_save, sender=BenthicAttribute)
 @receiver(post_delete, sender=BenthicAttribute)
 def bust_revision_cache(sender, instance, *args, **kwargs):
-    if sender is FishSpecies:
-        print(f"sender: {sender}")
-        cache.delete(FISH_SPECIES_SOURCE_TYPE)
-    elif sender is FishGenus:
-        cache.delete(FISH_SPECIES_SOURCE_TYPE)
-        cache.delete(FISH_GENERA_SOURCE_TYPE)
-    elif sender is FishFamily:
+    if sender is (FishSpecies, FishGenus, FishFamily):
         cache.delete(FISH_SPECIES_SOURCE_TYPE)
         cache.delete(FISH_GENERA_SOURCE_TYPE)
         cache.delete(FISH_FAMILIES_SOURCE_TYPE)
