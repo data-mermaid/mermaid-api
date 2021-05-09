@@ -1,8 +1,10 @@
 import uuid
 
+from django.core.cache import cache
 from rest_framework.test import APIClient
 
 from api.models import CollectRecord, Project
+from api.resources.sync.views import FISH_SPECIES_SOURCE_TYPE
 
 
 def test_pull_view(
@@ -35,6 +37,20 @@ def test_pull_view_invalid_source_type(db_setup, api_client1):
     assert request.status_code == 400
 
 
+def test_pull_view_cache(db_setup, api_client1, fish_species1):
+    data = {
+        "fish_species": {}
+    }
+
+    request = api_client1.post("/v1/pull/", data, format="json")
+    response_data = request.json()
+    assert response_data[FISH_SPECIES_SOURCE_TYPE]["updates"][0]["id"] == str(fish_species1.id)
+    assert cache.get(FISH_SPECIES_SOURCE_TYPE)["updates"][0]["id"] == str(fish_species1.id)
+
+    fish_species1.save()
+    assert cache.get(FISH_SPECIES_SOURCE_TYPE) is None
+
+
 def test_push_view_readonly(db_setup, api_client1):
     data = {"choices": [{"id": "def"}]}
 
@@ -63,6 +79,11 @@ def test_push_view_conflict(db_setup, serialized_tracked_collect_record, api_cli
     request = api_client1.post("/v1/push/", data, format="json")
     response_data = request.json()
     assert response_data["collect_records"][0]["status_code"] == 409
+
+    # Force push (bypass conflict)
+    request = api_client1.post("/v1/push/?force=true", data, format="json")
+    response_data = request.json()
+    assert response_data["collect_records"][0]["status_code"] == 200
 
 
 def test_push_view_invalid_record(
