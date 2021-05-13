@@ -1004,3 +1004,8 @@ class TagAdmin(BaseAdmin):
 @admin.register(Covariate)
 class CovariateAdmin(BaseAdmin):
     pass
+
+
+@admin.register(AuditRecord)
+class AuditRecordAdmin(BaseAdmin):
+    pass
