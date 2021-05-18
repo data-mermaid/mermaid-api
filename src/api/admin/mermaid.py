@@ -1008,4 +1008,4 @@ class CovariateAdmin(BaseAdmin):
 
 @admin.register(AuditRecord)
 class AuditRecordAdmin(BaseAdmin):
-    pass
+    list_display = ("event_on", "event_type", "model", "record_id")

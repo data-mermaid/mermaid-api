@@ -8,7 +8,7 @@ from django.utils.translation import ugettext_lazy
 from rest_framework.exceptions import ValidationError
 
 from ..mocks import MockRequest
-from ..models import CollectRecord
+from ..models import AuditRecord, CollectRecord
 from .protocol_validations import (
     BenthicLITProtocolValidation,
     BenthicPITProtocolValidation,
@@ -24,6 +24,8 @@ from .writer import (
     FishbeltProtocolWriter,
     HabitatComplexityProtocolWriter,
 )
+from ..utils.sample_unit_methods import create_audit_record
+
 
 BENTHICLIT_PROTOCOL = "benthiclit"
 BENTHICPIT_PROTOCOL = "benthicpit"
@@ -111,6 +113,11 @@ def write_collect_record(collect_record, request, dry_run=False):
             if dry_run is True or status != SUCCESS_STATUS:
                 transaction.savepoint_rollback(sid)
             else:
+                create_audit_record(
+                    request.user.profile,
+                    AuditRecord.SUBMIT_RECORD_EVENT_TYPE,
+                    collect_record
+                )
                 collect_record.delete()
                 transaction.savepoint_commit(sid)
         return status, result
