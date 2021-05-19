@@ -1,12 +1,14 @@
 from django.db import transaction
 from django.db.models import Q
 from django_filters import BaseInFilter, RangeFilter
+from rest_framework.decorators import action
 from rest_condition import Or
 from rest_framework import status
 from rest_framework.response import Response
+from rest_framework.exceptions import ValidationError
 
-from ...models import BeltFishObsSQLModel, BeltFishSESQLModel, BeltFishSUSQLModel
-from ...models.mermaid import BeltFish, Project
+from ...models import FISHBELT_PROTOCOL, BeltFishObsSQLModel, BeltFishSESQLModel, BeltFishSUSQLModel
+from ...models import AuditRecord, BeltFish, CollectRecord, Project
 from ...permissions import ProjectDataReadOnlyPermission, ProjectPublicSummaryPermission
 from ...reports.fields import ReportField
 from ...reports.formatters import (
@@ -30,10 +32,12 @@ from ..base import (
     BaseSUViewAPISerializer,
 )
 from ..belt_fish import BeltFishSerializer
+from ..collect_record import CollectRecordSerializer
 from ..fish_belt_transect import FishBeltTransectSerializer
 from ..obs_belt_fish import ObsBeltFishSerializer
 from ..observer import ObserverSerializer
 from ..sample_event import SampleEventSerializer
+from ...utils.sample_unit_methods import edit_transect_method
 from . import (
     BaseProjectMethodView,
     clean_sample_event_models,
@@ -232,7 +236,29 @@ class BeltFishMethodView(BaseProjectApiViewSet):
         except:
             transaction.savepoint_rollback(sid)
             raise
+    
 
+    @transaction.atomic
+    @action(
+        detail=True, methods=["PUT"] #, permission_classes=[ProjectDataAdminPermission]
+    )
+    def edit(self, request, project_pk, pk):
+        collect_record_owner = Project.objects.get_or_none(id=request.data.get("owner"))
+        if collect_record_owner is None:
+            collect_record_owner = request.user.profile
+
+        try:
+            collect_record = edit_transect_method(
+                self.serializer_class,
+                collect_record_owner,
+                request,
+                pk,
+                FISHBELT_PROTOCOL
+            )
+            return Response({"id": str(collect_record.pk)})
+        except Exception as err:
+            return Response(str(err), status=500)
+      
 
 class BeltFishMethodObsSerializer(BaseSUViewAPISerializer):
     class Meta(BaseSUViewAPISerializer.Meta):

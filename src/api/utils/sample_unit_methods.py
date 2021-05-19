@@ -61,7 +61,8 @@ def transect_method_to_collect_record(serializer, transect_method_instance, prof
         "project": str(project.pk),
         "profile": str(profile.pk),
         "data": {
-            "protocol": protocol
+            "protocol": protocol,
+            "sample_unit_method_id":  str(transect_method_instance.pk)
         }
     }
 

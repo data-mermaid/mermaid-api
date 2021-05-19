@@ -68,7 +68,8 @@ def collect_record4(db_setup, project1, profile1, fish_size_bin_1, fish_species2
             "sample_time": None,
             "len_surveyed": 100,
             "relative_depth": None
-        }
+        },
+        "sample_unit_method_id": "6bf3fc93-c08d-497d-98b7-9cb5994a1759"
     }
 
     validations = {
