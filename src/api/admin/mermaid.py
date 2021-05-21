@@ -1004,3 +1004,8 @@ class TagAdmin(BaseAdmin):
 @admin.register(Covariate)
 class CovariateAdmin(BaseAdmin):
     pass
+
+
+@admin.register(AuditRecord)
+class AuditRecordAdmin(BaseAdmin):
+    list_display = ("event_on", "event_type", "model", "record_id")
