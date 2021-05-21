@@ -43,6 +43,11 @@ class SearchNonFieldFilter(django_filters.Filter):
     def filter(self, qs, value):
         value = value or ""
 
+        try:
+            re.compile(value)
+        except re.error:
+            raise exceptions.ValidationError("Invalid search")
+
         qry = Q()
         for field in self.SEARCH_FIELDS:
             qry |= Q(**{"{}__iregex".format(field): value})
@@ -163,6 +168,7 @@ class SampleUnitMethodView(BaseProjectApiViewSet):
     )
 
     def get_queryset(self):
+        print(self.request.query_params)
         qs = self.queryset
 
         protocol_condition = Case(
