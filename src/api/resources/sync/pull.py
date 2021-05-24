@@ -147,7 +147,8 @@ def serialize_revisions(serializer, record_set, skip_deletes=False):
 
 
 def get_serialized_records(viewset, revision_num=None, project=None, profile=None):
-    """Convenience that wraps get_records and serialize_revisions.
+    """Convenience that wraps get_records and serialize_revisions.  If no updates
+    are found, last_revision_num is set to revision_num.
 
     :param viewset: Viewset of the record source to serialize.
     :type viewset: rest_framework.viewsets.ModelViewSet
@@ -166,6 +167,10 @@ def get_serialized_records(viewset, revision_num=None, project=None, profile=Non
 
     record_set = get_records(model_class, revision_num, project, profile)
 
-    return serialize_revisions(
+    serialized_revisions = serialize_revisions(
         serializer, record_set, skip_deletes=revision_num is None
     )
+
+    serialized_revisions["last_revision_num"] = serialized_revisions["last_revision_num"] or revision_num
+
+    return serialized_revisions

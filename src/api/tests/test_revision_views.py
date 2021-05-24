@@ -29,6 +29,18 @@ def test_pull_view(
 
     assert len(response_data["choices"]["updates"]["countries"]["data"]) == 2
 
+    data = {
+        "collect_records": {
+            "last_revision": response_data["collect_records"]["last_revision_num"],
+            "project": rec_rev.project_id,
+        },
+        "choices": {},
+    }
+
+    request = api_client1.post("/v1/pull/", data, format="json")
+    response_data2 = request.json()
+    assert response_data2["collect_records"]["last_revision_num"] == response_data["collect_records"]["last_revision_num"]
+
 
 def test_pull_view_invalid_source_type(db_setup, api_client1):
     data = {"invalid_source_type": {}}

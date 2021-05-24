@@ -73,8 +73,3 @@ def test_serialize_revision_records(
     assert len(serialized_records["updates"]) == 2
     assert len(serialized_records["deletes"]) == 1
     assert serialized_records["last_revision_num"] == recs2[0].revision_revision_num
-
-    # import json
-    # from rest_framework.utils.encoders import JSONEncoder
-    # print(json.dumps(serialized_records, indent=4, cls=JSONEncoder))
-    # assert False
