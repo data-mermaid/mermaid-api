@@ -168,7 +168,6 @@ class SampleUnitMethodView(BaseProjectApiViewSet):
     )
 
     def get_queryset(self):
-        print(self.request.query_params)
         qs = self.queryset
 
         protocol_condition = Case(
