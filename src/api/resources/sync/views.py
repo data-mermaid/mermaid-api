@@ -206,7 +206,7 @@ def _update_source_record(source_type, serializer, record, request, force=False)
 
     if failed_permission_checks:
         status_code, _ = failed_permission_checks[0]
-        exception = NotAuthenticated if status_code == 401 else PermissionError
+        exception = NotAuthenticated if status_code == 401 else PermissionDenied
         return _error(403, exception())
 
     if record_id is None:
@@ -284,7 +284,7 @@ def check_permissions(request, data, source_types, method=False):
         # Need exception for project, so check permissions can work
         # for both pull and push views.
         if source_type == PROJECTS_SOURCE_TYPE:
-            data[source_type]["project"] = data[source_type]["id"]
+            data[source_type]["project"] = data[source_type].get("id") or data[source_type].get("project")
 
         src = _get_source(source_type)
         try:
@@ -341,8 +341,8 @@ def vw_pull(request):
     if failed_permission_checks:
         status_codes = [r[0] for r in failed_permission_checks]
         failed_src_types = ", ".join(r[1] for r in failed_permission_checks)
-        exception = NotAuthenticated if 401 in status_codes else PermissionError
-        raise exception(f"{str(exception)}: {failed_src_types}")
+        exception = NotAuthenticated if 401 in status_codes else PermissionDenied
+        raise exception(f"{str(exception())}: {failed_src_types}")
 
     response_data = {
         source_type: _get_source_records(source_type, source_data, request)

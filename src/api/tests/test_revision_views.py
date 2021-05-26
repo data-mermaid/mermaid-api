@@ -18,6 +18,10 @@ def test_pull_view(
             "project": rec_rev.project_id,
         },
         "choices": {},
+        "projects": {
+            "last_revision": None,
+            "project": rec_rev.project_id,
+        }
     }
 
     request = api_client1.post("/v1/pull/", data, format="json")
@@ -28,6 +32,8 @@ def test_pull_view(
     assert response_data["collect_records"]["last_revision_num"] == 5
 
     assert len(response_data["choices"]["updates"]["countries"]["data"]) == 2
+
+    assert len(response_data["projects"]["updates"]) == 1
 
     data = {
         "collect_records": {
