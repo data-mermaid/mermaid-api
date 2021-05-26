@@ -284,7 +284,7 @@ def check_permissions(request, data, source_types, method=False):
         # Need exception for project, so check permissions can work
         # for both pull and push views.
         if source_type == PROJECTS_SOURCE_TYPE:
-            data[source_type]["project"] = data[source_type]["id"]
+            data[source_type]["project"] = data[source_type].get("id") or data[source_type].get("project")
 
         src = _get_source(source_type)
         try:
