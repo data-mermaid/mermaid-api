@@ -43,6 +43,11 @@ class SearchNonFieldFilter(django_filters.Filter):
     def filter(self, qs, value):
         value = value or ""
 
+        try:
+            re.compile(value)
+        except re.error:
+            raise exceptions.ValidationError("Invalid search")
+
         qry = Q()
         for field in self.SEARCH_FIELDS:
             qry |= Q(**{"{}__iregex".format(field): value})
