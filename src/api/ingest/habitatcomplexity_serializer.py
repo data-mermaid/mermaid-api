@@ -15,7 +15,7 @@ __all__ = ["HabitatComplexityCSVSerializer"]
 
 
 def score_choices():
-    return build_choices(HabitatComplexityScore.objects.choices(order_by="name"))
+    return build_choices(HabitatComplexityScore.objects.choices(order_by="name"), val_key="val")
 
 
 def reef_slopes_choices():
