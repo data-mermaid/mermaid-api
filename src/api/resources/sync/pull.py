@@ -88,12 +88,12 @@ def get_record(viewset, record_id):
         - revision_revision_num
         - revision_deleted
 
-    :param model_class: Model class
-    :type model_class: django.db.models.Model
+    :param viewset: ModelViewSet instance
+    :type viewset: rest_framework.serializers.viewsets.ModelViewSet
     :param record_id: Id of record to return
     :type record_id: UUID or str
-    :return: Model class instance
-    :rtype: django.db.models.Model
+    :return: Updates and deletes
+    :rtype: tuple
     """
     filters = [f"revision.record_id = '{record_id}'::uuid"]
     updates, deletes = list(_get_records(viewset, filters))
@@ -120,16 +120,16 @@ def get_records(viewset, revision_num=None, project=None, profile=None):
         - revision_revision_num
         - revision_deleted
 
-    :param model_class: Model class
-    :type model_class: django.db.models.Model
+    :param viewset: ModelViewSet instance
+    :type viewset: rest_framework.serializers.viewsets.ModelViewSet
     :param revision_num: Revision number, defaults to None
     :type revision_num: int, optional
     :param project: Project id, defaults to None
     :type project: UUID, optional
     :param profile: Profile id, defaults to None
     :type profile: UUID, optional
-    :return: Model class instances
-    :rtype: django.db.models.query.RawQuerySet
+    :return: Updates and deletes
+    :rtype: tuple
     """
     table_name = viewset.get_queryset().model._meta.db_table
     filters = [f"revision.table_name = '{table_name}'"]
