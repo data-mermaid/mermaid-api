@@ -1,15 +1,34 @@
-from django.core.exceptions import ObjectDoesNotExist
+from django.core.exceptions import MultipleObjectsReturned, ObjectDoesNotExist
+from django.db import connection
 
 
-def _get_model_subquery(model_class):
-    return str(model_class.objects.all().query)
+
+def _get_subquery(queryset, pk_field_name):
+    cur = connection.cursor()
+    try:
+        table_name = queryset.model._meta.db_table
+        queryset = queryset.extra(select={"__pk__": f'"{table_name}"."{pk_field_name}"'})
+        qry = queryset.query
+        template_sql, params = qry.sql_with_params()
+        sql = cur.mogrify(template_sql, params)
+    finally:
+        cur.close()
+    return sql.decode()
 
 
-def _get_records(model_class, filters):
-    sub_query = _get_model_subquery(model_class)
+def _get_records(viewset, filters):
+    queryset = viewset.get_queryset()
+    model_class = queryset.model
     pk_field_name = model_class._meta.pk.column
+    sub_query = _get_subquery(queryset, pk_field_name)
+    table_name = model_class._meta.db_table
 
-    sql = f"""
+    updates_filters = [
+        "revision.deleted = false",
+        *filters
+    ]
+
+    updates_sql = f"""
         WITH model_select AS (
             {sub_query}
         )
@@ -20,21 +39,48 @@ def _get_records(model_class, filters):
             revision.revision_num as revision_revision_num,
             revision.deleted as revision_deleted
         FROM
-            revision
-        LEFT JOIN
             model_select
+        INNER JOIN
+            revision
         ON
-            revision.record_id = model_select."{pk_field_name}"
+            revision.record_id = model_select."__pk__"
         WHERE
-            {" AND ".join(filters)}
+            {" AND ".join(updates_filters)}
         ORDER BY
             revision.updated_on DESC, revision.revision_num  DESC
     """
 
-    return model_class.objects.raw(sql)
+    updates = model_class.objects.raw(updates_sql)
+    delete_filters = [
+        f'"revision"."table_name" = \'{table_name}\'',
+        '"revision"."deleted" = true',
+        *filters
+    ]
+    deletes_sql = f"""
+        SELECT
+            "revision"."record_id",
+            "revision"."revision_num"
+        FROM
+            "revision"
+        WHERE
+            {" AND ".join(delete_filters)}
+    """
+
+    try:
+        cur = connection.cursor()
+        cur.execute(deletes_sql)
+        deletes = [
+            {"id": row[0], "revision_num": row[1]}
+            for row in cur.fetchall()
+        ]
+
+    finally:
+        cur.close()
+
+    return updates, deletes
 
 
-def get_record(model_class, record_id):
+def get_record(viewset, record_id):
     """Get model record with revision fields included.
 
         - revision_record_id
@@ -50,14 +96,18 @@ def get_record(model_class, record_id):
     :rtype: django.db.models.Model
     """
     filters = [f"revision.record_id = '{record_id}'::uuid"]
-    result = list(_get_records(model_class, filters))
-    if not result:
+    updates, deletes = list(_get_records(viewset, filters))
+    if len(updates) == 1:
+        return updates[0]
+    elif len(deletes) == 1:
+        return deletes[0]
+    elif not deletes and not updates:
         raise ObjectDoesNotExist()
-    
-    return result[0]
+
+    raise MultipleObjectsReturned()
 
 
-def get_records(model_class, revision_num=None, project=None, profile=None):
+def get_records(viewset, revision_num=None, project=None, profile=None):
     """Fetch model records with optional filters:
         * revision numbers greater than `revision_num`
         * `project` uuid
@@ -81,7 +131,7 @@ def get_records(model_class, revision_num=None, project=None, profile=None):
     :return: Model class instances
     :rtype: django.db.models.query.RawQuerySet
     """
-    table_name = model_class._meta.db_table
+    table_name = viewset.get_queryset().model._meta.db_table
     filters = [f"revision.table_name = '{table_name}'"]
 
     if project is not None:
@@ -93,10 +143,10 @@ def get_records(model_class, revision_num=None, project=None, profile=None):
     if revision_num is not None:
         filters.append(f"revision.revision_num > {revision_num}")
 
-    return _get_records(model_class, filters)
+    return _get_records(viewset, filters)
 
 
-def serialize_revisions(serializer, record_set, skip_deletes=False):
+def serialize_revisions(serializer, updates, deletes, skip_deletes=False):
     """Serialize model instances that include the field additions of:
 
         - revision_record_id
@@ -117,33 +167,36 @@ def serialize_revisions(serializer, record_set, skip_deletes=False):
     """
 
     last_rev_num = None
-    updates = []
-    deletes = []
-    for rec in record_set:
+    seriallized_updates = []
+    seriallized_deletes = []
+
+    for rec in updates:
         rev_num = rec.revision_revision_num
 
         if last_rev_num is None or rev_num > last_rev_num:
             last_rev_num = rev_num
 
-        if rec.revision_deleted is True and skip_deletes is False:
-            deletes.append(
-                {"id": str(rec.revision_record_id), "_last_revision_num": rev_num}
-            )
-            continue
-        elif rec.revision_deleted and skip_deletes is True:
-            continue
-
         serialized_rec = serializer(rec, context={"request": None}).data
         serialized_rec["_last_revision_num"] = rev_num
         serialized_rec["_modified"] = False
         serialized_rec["_deleted"] = False
-        updates.append(serialized_rec)
+        seriallized_updates.append(serialized_rec)
+    
 
-    return {
-        "updates": updates,
-        "deletes": deletes,
-        "last_revision_num": last_rev_num,
-    }
+    for rec in deletes:
+        rev_num = rec["revision_num"]
+
+        if last_rev_num is None or rev_num > last_rev_num:
+            last_rev_num = rev_num
+
+        if skip_deletes is True:
+            continue
+    
+        seriallized_deletes.append(
+            {"id": str(rec["id"]), "_last_revision_num": rev_num}
+        )
+
+    return {"updates": seriallized_updates, "deletes": seriallized_deletes, "last_revision_num": last_rev_num}
 
 
 def get_serialized_records(viewset, revision_num=None, project=None, profile=None):
@@ -163,14 +216,14 @@ def get_serialized_records(viewset, revision_num=None, project=None, profile=Non
     """
 
     serializer = viewset.serializer_class
-    model_class = serializer.Meta.model
-
-    record_set = get_records(model_class, revision_num, project, profile)
+    updates, deletes = get_records(viewset, revision_num, project, profile)
 
     serialized_revisions = serialize_revisions(
-        serializer, record_set, skip_deletes=revision_num is None
+        serializer, updates, deletes, skip_deletes=revision_num is None
     )
 
-    serialized_revisions["last_revision_num"] = serialized_revisions["last_revision_num"] or revision_num
+    serialized_revisions["last_revision_num"] = (
+        serialized_revisions["last_revision_num"] or revision_num
+    )
 
     return serialized_revisions
