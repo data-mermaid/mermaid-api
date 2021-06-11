@@ -50,7 +50,9 @@ def _get_records(viewset, filters):
             revision.updated_on DESC, revision.revision_num  DESC
     """
 
-    updates = model_class.objects.raw(updates_sql)
+    updates = queryset.raw(updates_sql)
+    
+
     delete_filters = [
         f'"revision"."table_name" = \'{table_name}\'',
         '"revision"."deleted" = true',
@@ -170,18 +172,17 @@ def serialize_revisions(serializer, updates, deletes, skip_deletes=False):
     serialized_updates = []
     serialized_deletes = []
 
-    for rec in updates:
+    serialized_updates = serializer(updates, many=True, context={"request": None}).data
+    for n, rec in enumerate(updates):
         rev_num = rec.revision_revision_num
 
         if last_rev_num is None or rev_num > last_rev_num:
             last_rev_num = rev_num
+        
+        serialized_updates[n]["_last_revision_num"] = rev_num
+        serialized_updates[n]["_modified"] = False
+        serialized_updates[n]["_deleted"] = False
 
-        serialized_rec = serializer(rec, context={"request": None}).data
-        serialized_rec["_last_revision_num"] = rev_num
-        serialized_rec["_modified"] = False
-        serialized_rec["_deleted"] = False
-        serialized_updates.append(serialized_rec)
-    
 
     if skip_deletes is False:
         for rec in deletes:

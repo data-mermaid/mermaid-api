@@ -35,7 +35,7 @@ class FishSpeciesSerializer(CreateOrUpdateSerializerMixin, BaseAPISerializer):
         exclude = []
 
     def get_display_name(self, obj):
-        return str(obj)
+        return obj.display_name
 
 
 class FishSpeciesFilterSet(BaseAPIFilterSet):
@@ -47,7 +47,7 @@ class FishSpeciesFilterSet(BaseAPIFilterSet):
 
 class FishSpeciesViewSet(BaseAttributeApiViewSet):
     serializer_class = FishSpeciesSerializer
-    queryset = FishSpecies.objects.select_related().prefetch_related("regions")
+    queryset = FishSpecies.objects.select_related().extra(select={"display_name": "fish_genus.name || ' ' || fish_species.name"}).prefetch_related("regions")
     filter_class = FishSpeciesFilterSet
     search_fields = ['name', 'genus__name', ]
 
