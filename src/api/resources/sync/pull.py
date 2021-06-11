@@ -50,7 +50,9 @@ def _get_records(viewset, filters):
             revision.updated_on DESC, revision.revision_num  DESC
     """
 
-    updates = model_class.objects.raw(updates_sql)
+    updates = queryset.raw(updates_sql)
+    
+
     delete_filters = [
         f'"revision"."table_name" = \'{table_name}\'',
         '"revision"."deleted" = true',
