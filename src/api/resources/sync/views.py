@@ -1,4 +1,3 @@
-from django.core.cache import cache
 from rest_framework.decorators import api_view
 from rest_framework.exceptions import (
     ValidationError,
