@@ -167,8 +167,8 @@ def serialize_revisions(serializer, updates, deletes, skip_deletes=False):
     """
 
     last_rev_num = None
-    seriallized_updates = []
-    seriallized_deletes = []
+    serialized_updates = []
+    serialized_deletes = []
 
     for rec in updates:
         rev_num = rec.revision_revision_num
@@ -180,23 +180,21 @@ def serialize_revisions(serializer, updates, deletes, skip_deletes=False):
         serialized_rec["_last_revision_num"] = rev_num
         serialized_rec["_modified"] = False
         serialized_rec["_deleted"] = False
-        seriallized_updates.append(serialized_rec)
+        serialized_updates.append(serialized_rec)
     
 
-    for rec in deletes:
-        rev_num = rec["revision_num"]
+    if skip_deletes is False:
+        for rec in deletes:
+            rev_num = rec["revision_num"]
 
-        if last_rev_num is None or rev_num > last_rev_num:
-            last_rev_num = rev_num
+            if last_rev_num is None or rev_num > last_rev_num:
+                last_rev_num = rev_num
+        
+            serialized_deletes.append(
+                {"id": str(rec["id"]), "_last_revision_num": rev_num}
+            )
 
-        if skip_deletes is True:
-            continue
-    
-        seriallized_deletes.append(
-            {"id": str(rec["id"]), "_last_revision_num": rev_num}
-        )
-
-    return {"updates": seriallized_updates, "deletes": seriallized_deletes, "last_revision_num": last_rev_num}
+    return {"updates": serialized_updates, "deletes": serialized_deletes, "last_revision_num": last_rev_num}
 
 
 def get_serialized_records(viewset, revision_num=None, project=None, profile=None):
