@@ -271,16 +271,7 @@ def _get_source_records(source_type, source_data, request):
     except ValueError as ve:
         raise ValidationError(str(ve))
 
-    revision_num = req_params["revision_num"]
-
     viewset = src["view"](request=request)
-    if revision_num is None and source_type in CACHEABLE_SOURCE_TYPES:
-        data = cache.get(source_type)
-        if data is None:
-            data = get_serialized_records(viewset, **req_params)
-            cache.set(source_type, data)
-        return data
-
     return get_serialized_records(viewset, **req_params)
 
 
