@@ -74,7 +74,7 @@ project_sources = {
     },
     PROJECTS_SOURCE_TYPE: {
         "view": project.ProjectViewSet,
-        "required_filters": PROJECT_FILTERS,
+        "required_filters": NO_FILTERS,
         "read_only": False,
     },
 }
@@ -181,10 +181,15 @@ def _format_errors(errors):
     return {k: v[0] for k, v in errors.items()}
 
 
-def _get_serialized_record(serializer, record_id):
-    record = get_record(model_class=serializer.Meta.model, record_id=record_id)
+def _get_serialized_record(viewset, record_id):
+    serializer = viewset.serializer_class
+    record = get_record(viewset, record_id)
 
-    data = serialize_revisions(serializer, [record])
+    if isinstance(record, dict):
+        data = serialize_revisions(serializer, [], [record])
+    else:
+        data = serialize_revisions(serializer, [record], [])
+    
     if data["updates"]:
         return data["updates"][0]
     elif data["deletes"]:
@@ -198,6 +203,7 @@ def _update_source_record(source_type, serializer, record, request, force=False)
     vw_request = _create_view_request(
         request, method=get_request_method(record), data=record
     )
+    viewset = src["view"](request=vw_request)
 
     record_id = record.get("id")
     failed_permission_checks = check_permissions(
@@ -224,10 +230,10 @@ def _update_source_record(source_type, serializer, record, request, force=False)
             data = _format_errors(errors)
         elif status_code == 409:
             msg = "Conflict"
-            data = _get_serialized_record(serializer, record_id)
+            data = _get_serialized_record(viewset, record_id)
         else:
             msg = ""
-            data = _get_serialized_record(serializer, record_id)
+            data = _get_serialized_record(viewset, record_id)
 
         return {"status_code": status_code, "message": msg, "data": data}
     except Exception as err:
@@ -267,25 +273,20 @@ def _get_source_records(source_type, source_data, request):
 
     revision_num = req_params["revision_num"]
 
+    viewset = src["view"](request=request)
     if revision_num is None and source_type in CACHEABLE_SOURCE_TYPES:
         data = cache.get(source_type)
         if data is None:
-            data = get_serialized_records(src["view"], **req_params)
+            data = get_serialized_records(viewset, **req_params)
             cache.set(source_type, data)
         return data
 
-    return get_serialized_records(src["view"], **req_params)
+    return get_serialized_records(viewset, **req_params)
 
 
 def check_permissions(request, data, source_types, method=False):
     failed_permissions = []
     for source_type in source_types:
-
-        # Need exception for project, so check permissions can work
-        # for both pull and push views.
-        if source_type == PROJECTS_SOURCE_TYPE:
-            data[source_type]["project"] = data[source_type].get("id") or data[source_type].get("project")
-
         src = _get_source(source_type)
         try:
             params = _get_required_parameters(
@@ -304,6 +305,8 @@ def check_permissions(request, data, source_types, method=False):
 
         vw = src["view"]()
         vw.kwargs = {}
+        if source_type == PROJECTS_SOURCE_TYPE:
+            vw.kwargs["pk"] = data[source_type].get("id") or data[source_type].get("project")
 
         try:
             vw.check_permissions(view_request)

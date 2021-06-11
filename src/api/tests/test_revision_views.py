@@ -3,7 +3,7 @@ import uuid
 from django.core.cache import cache
 from rest_framework.test import APIClient
 
-from api.models import CollectRecord, Project
+from api.models import CollectRecord, Project, Revision
 from api.resources.sync.views import FISH_SPECIES_SOURCE_TYPE
 
 
@@ -150,7 +150,7 @@ def test_push_view_update(
     col_rec = serialized_tracked_collect_record["updates"][0]
     col_rec["data"]["protocol"] = protocol
 
-    project = serialized_tracked_project1["updates"][0]
+    project = serialized_tracked_project1
     project["name"] = new_project_name
 
     data = {
@@ -198,11 +198,9 @@ def test_push_view_wrong_source_type(db_setup, api_client1):
 
 
 def test_push_view_wrong_permission(db_setup, api_client1, serialized_tracked_project2):
-    project = serialized_tracked_project2["updates"][0]
-    project["name"] = "I shouldn't be able to do this"
-
+    
     data = {
-        "projects": [project],
+        "projects": [serialized_tracked_project2],
     }
 
     request = api_client1.post("/v1/push/", data, format="json")
