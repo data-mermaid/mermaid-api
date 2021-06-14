@@ -4,6 +4,7 @@ import datetime
 import itertools
 import json
 import logging
+import uuid
 import operator as pyoperator
 from decimal import Decimal
 
@@ -701,6 +702,8 @@ class QuadratCollection(BaseQuadrat):
 
 # TODO: rename this SampleUnitMethod, and abstract all appropriate references elsewhere
 class TransectMethod(BaseModel):
+    collect_record_id = models.UUIDField(db_index=True, null=True, blank=True)
+
     class Meta:
         db_table = 'transectmethod'
 
@@ -1550,3 +1553,20 @@ class Covariate(BaseModel, JSONMixin):
 
     def __str__(self):
         return f"{self.site.name} - {self.display}"
+
+
+class AuditRecord(JSONMixin):
+    SUBMIT_RECORD_EVENT_TYPE = 1
+    EDIT_RECORD_EVENT_TYPE = 2
+
+    AUDIT_EVENT_TYPES = (
+        (SUBMIT_RECORD_EVENT_TYPE, "Submit Record",),
+        (EDIT_RECORD_EVENT_TYPE, "Edit Record",),
+    )
+
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+    event_type = models.IntegerField(choices=AUDIT_EVENT_TYPES)
+    event_on = models.DateTimeField(auto_now_add=True)
+    event_by = models.ForeignKey("Profile", on_delete=models.SET_NULL, null=True, blank=True)
+    model = models.CharField(max_length=100)
+    record_id = models.UUIDField(db_index=True)

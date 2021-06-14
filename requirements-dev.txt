@@ -1,3 +1,4 @@
+docker-compose==1.29.2
 fabric==2.4.0
 pylint==1.8.1
 pylint-django==0.8.0

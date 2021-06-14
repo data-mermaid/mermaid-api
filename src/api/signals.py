@@ -4,11 +4,18 @@ import sys
 from django import urls
 from django.conf import settings
 from django.core import serializers
+from django.core.cache import cache
 from django.db.models.signals import post_delete, post_save, pre_save, m2m_changed
 from django.dispatch import receiver
 
 from .covariates import update_site_covariates_in_thread
 from .models import *
+from .resources.sync.views import (
+    BENTHIC_ATTRIBUTES_SOURCE_TYPE,
+    FISH_FAMILIES_SOURCE_TYPE,
+    FISH_GENERA_SOURCE_TYPE,
+    FISH_SPECIES_SOURCE_TYPE,
+)
 from .submission.utils import validate
 from .submission.validations import SiteValidation, ManagementValidation
 from .utils import get_subclasses
@@ -300,3 +307,20 @@ def run_cr_management_validation(sender, instance, *args, **kwargs):
 @receiver(pre_save, sender=Site)
 def update_with_covariates(sender, instance, *args, **kwargs):
     update_site_covariates_in_thread(instance)
+
+
+@receiver(post_save, sender=FishFamily)
+@receiver(post_delete, sender=FishFamily)
+@receiver(post_save, sender=FishGenus)
+@receiver(post_delete, sender=FishGenus)
+@receiver(post_save, sender=FishSpecies)
+@receiver(post_delete, sender=FishSpecies)
+@receiver(post_save, sender=BenthicAttribute)
+@receiver(post_delete, sender=BenthicAttribute)
+def bust_revision_cache(sender, instance, *args, **kwargs):
+    if sender in (FishSpecies, FishGenus, FishFamily):
+        cache.delete(FISH_SPECIES_SOURCE_TYPE)
+        cache.delete(FISH_GENERA_SOURCE_TYPE)
+        cache.delete(FISH_FAMILIES_SOURCE_TYPE)
+    elif sender == BenthicAttribute:
+        cache.delete(BENTHIC_ATTRIBUTES_SOURCE_TYPE)

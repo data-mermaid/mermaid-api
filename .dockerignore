@@ -2,3 +2,6 @@
 .elasticbeanstalk/*
 .git
 .gitignore
+
+src/api/tests/__pycache__/*
+*.pyc
