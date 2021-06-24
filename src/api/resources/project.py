@@ -4,7 +4,7 @@ import django_filters
 from django.contrib.auth.models import AnonymousUser
 from django.contrib.postgres.fields import JSONField
 from django.db import transaction
-from rest_framework import exceptions, permissions, serializers
+from rest_framework import exceptions, permissions, serializers, status
 from rest_framework.decorators import action
 from rest_framework.relations import HyperlinkedIdentityField
 from rest_framework.response import Response
@@ -13,6 +13,7 @@ from rest_condition import Or
 from ..auth_backends import AnonymousJWTAuthentication
 from ..models import Management, Project, Site, ProjectProfile, ArchivedRecord
 from ..permissions import *
+from ..utils import delete_instance_and_related_objects
 from ..utils.replace import replace_collect_record_owner, replace_sampleunit_objs
 from .base import (
     BaseAPIFilterSet,
@@ -377,3 +378,16 @@ class ProjectViewSet(BaseApiViewSet):
                 raise Response("Unknown error while replacing sites", status=500)
 
         return Response({"num_collect_records_transferred": num_transferred})
+
+    def destroy(self, request, *args, **kwargs):
+        instance = self.get_object()
+        with transaction.atomic():
+            sid = transaction.savepoint()
+            try:
+                delete_instance_and_related_objects(instance)
+                transaction.savepoint_commit(sid)
+
+                return Response(status=status.HTTP_204_NO_CONTENT)
+            except Exception as err:
+                transaction.savepoint_rollback(sid)
+                return Response(status=status.HTTP_500_INTERNAL_SERVER_ERROR)
