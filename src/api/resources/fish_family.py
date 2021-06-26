@@ -1,5 +1,4 @@
-from django.utils.decorators import method_decorator
-from django.views.decorators.cache import cache_page
+from django_filters import BaseInFilter
 from rest_framework import serializers
 from .base import BaseAPIFilterSet, BaseAttributeApiViewSet, BaseAPISerializer
 from ..models import FishFamily
@@ -18,9 +17,13 @@ class FishFamilySerializer(BaseAPISerializer):
 
 
 class FishFamilyFilterSet(BaseAPIFilterSet):
+    regions = BaseInFilter(
+        field_name="fishgenus__fishspecies__regions", lookup_expr="in"
+    )
+
     class Meta:
         model = FishFamily
-        fields = ["status"]
+        fields = ["status", "regions"]
 
 
 class FishFamilyViewSet(BaseAttributeApiViewSet):
@@ -29,5 +32,13 @@ class FishFamilyViewSet(BaseAttributeApiViewSet):
     filter_class = FishFamilyFilterSet
     search_fields = ["name"]
 
-    def list(self, request, *args, **kwargs):
-        return super(FishFamilyViewSet, self).list(request, *args, **kwargs)
+    def filter_queryset(self, queryset):
+        qs = super().filter_queryset(queryset)
+
+        if (
+            "regions" in self.request.query_params
+            and "," in self.request.query_params["regions"]
+        ):
+            qs = qs.distinct()
+
+        return qs
