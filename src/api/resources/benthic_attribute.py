@@ -1,8 +1,11 @@
-from django.utils.decorators import method_decorator
-from django.views.decorators.cache import cache_page
+from django_filters import BaseInFilter
 from rest_framework import serializers
-from django_filters import ModelMultipleChoiceFilter
-from .base import BaseAPIFilterSet, NullableUUIDFilter, BaseAPISerializer, BaseAttributeApiViewSet
+from .base import (
+    BaseAPIFilterSet,
+    NullableUUIDFilter,
+    BaseAPISerializer,
+    BaseAttributeApiViewSet,
+)
 from .mixins import CreateOrUpdateSerializerMixin
 from ..models import BenthicAttribute, Region
 
@@ -16,20 +19,34 @@ class BenthicAttributeSerializer(CreateOrUpdateSerializerMixin, BaseAPISerialize
 
 
 class BenthicAttributeFilterSet(BaseAPIFilterSet):
-    parent = NullableUUIDFilter(field_name='parent')
-    life_history = NullableUUIDFilter(field_name='life_history')
-    regions = ModelMultipleChoiceFilter(queryset=Region.objects.all())
+    parent = NullableUUIDFilter(field_name="parent")
+    life_history = NullableUUIDFilter(field_name="life_history")
+    regions = BaseInFilter(field_name="regions", lookup_expr="in")
 
     class Meta:
         model = BenthicAttribute
-        fields = ['parent', 'life_history', 'regions', ]
+        fields = [
+            "parent",
+            "life_history",
+            "regions",
+        ]
 
 
 class BenthicAttributeViewSet(BaseAttributeApiViewSet):
     serializer_class = BenthicAttributeSerializer
-    queryset = BenthicAttribute.objects.select_related().prefetch_related('regions')
+    queryset = BenthicAttribute.objects.select_related().prefetch_related("regions")
     filter_class = BenthicAttributeFilterSet
-    search_fields = ['name', ]
+    search_fields = [
+        "name",
+    ]
 
-    def list(self, request, *args, **kwargs):
-        return super(BenthicAttributeViewSet, self).list(request, *args, **kwargs)
+    def filter_queryset(self, queryset):
+        qs = super().filter_queryset(queryset)
+
+        if (
+            "regions" in self.request.query_params
+            and "," in self.request.query_params["regions"]
+        ):
+            qs = qs.distinct()
+
+        return qs
