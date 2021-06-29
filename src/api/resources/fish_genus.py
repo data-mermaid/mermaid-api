@@ -26,7 +26,7 @@ class FishGenusFilterSet(BaseAPIFilterSet):
 class FishGenusViewSet(BaseAttributeApiViewSet):
     serializer_class = FishGenusSerializer
     queryset = FishGenus.objects.select_related()
-    filter_class = FishGenusFilterSet
+    filterset_class = FishGenusFilterSet
     search_fields = ['name', ]
 
     def stringify_instance(self, v):
@@ -37,10 +37,7 @@ class FishGenusViewSet(BaseAttributeApiViewSet):
     def filter_queryset(self, queryset):
         qs = super().filter_queryset(queryset)
 
-        if (
-            "regions" in self.request.query_params
-            and "," in self.request.query_params["regions"]
-        ):
+        if "regions" in self.request.query_params:
             qs = qs.distinct()
 
         return qs

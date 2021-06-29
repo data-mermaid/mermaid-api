@@ -29,16 +29,13 @@ class FishFamilyFilterSet(BaseAPIFilterSet):
 class FishFamilyViewSet(BaseAttributeApiViewSet):
     serializer_class = FishFamilySerializer
     queryset = FishFamily.objects.select_related()
-    filter_class = FishFamilyFilterSet
+    filterset_class = FishFamilyFilterSet
     search_fields = ["name"]
 
     def filter_queryset(self, queryset):
         qs = super().filter_queryset(queryset)
 
-        if (
-            "regions" in self.request.query_params
-            and "," in self.request.query_params["regions"]
-        ):
+        if "regions" in self.request.query_params:
             qs = qs.distinct()
 
         return qs

@@ -65,7 +65,7 @@ class FishSpeciesViewSet(BaseAttributeApiViewSet):
         .extra(select={"display_name": "fish_genus.name || ' ' || fish_species.name"})
         .prefetch_related("regions")
     )
-    filter_class = FishSpeciesFilterSet
+    filterset_class = FishSpeciesFilterSet
     search_fields = [
         "name",
         "genus__name",

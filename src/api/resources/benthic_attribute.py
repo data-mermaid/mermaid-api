@@ -35,7 +35,7 @@ class BenthicAttributeFilterSet(BaseAPIFilterSet):
 class BenthicAttributeViewSet(BaseAttributeApiViewSet):
     serializer_class = BenthicAttributeSerializer
     queryset = BenthicAttribute.objects.select_related().prefetch_related("regions")
-    filter_class = BenthicAttributeFilterSet
+    filterset_class = BenthicAttributeFilterSet
     search_fields = [
         "name",
     ]
@@ -43,10 +43,7 @@ class BenthicAttributeViewSet(BaseAttributeApiViewSet):
     def filter_queryset(self, queryset):
         qs = super().filter_queryset(queryset)
 
-        if (
-            "regions" in self.request.query_params
-            and "," in self.request.query_params["regions"]
-        ):
+        if "regions" in self.request.query_params:
             qs = qs.distinct()
 
         return qs
