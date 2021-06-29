@@ -102,17 +102,13 @@ def delete_instance_and_related_objects(instance):
 
     for obj in protected_objs:
         try:
-            print(f"{obj.__class__}: {obj}")
             obj.delete()
-            
         except ProtectedError:
-            print("protected")
             delete_instance_and_related_objects(obj)
 
     try:
         instance.delete()
     except ProtectedError:
-        print("\n\n------------\n")
         delete_instance_and_related_objects(instance)
 
 

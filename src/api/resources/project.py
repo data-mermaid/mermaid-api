@@ -12,6 +12,7 @@ from rest_framework.response import Response
 from rest_condition import Or
 from ..auth_backends import AnonymousJWTAuthentication
 from ..models import Management, Project, Site, ProjectProfile, ArchivedRecord
+from ..decorators import run_in_thread
 from ..permissions import *
 from ..utils import delete_instance_and_related_objects
 from ..utils.replace import replace_collect_record_owner, replace_sampleunit_objs
@@ -379,15 +380,28 @@ class ProjectViewSet(BaseApiViewSet):
 
         return Response({"num_collect_records_transferred": num_transferred})
 
-    def destroy(self, request, *args, **kwargs):
-        instance = self.get_object()
+    @run_in_thread
+    def _delete_project(self, pk):
+        try:
+            instance = Project.objects.get(id=pk)
+        except Project.DoesNotExist:
+            return
+
         with transaction.atomic():
             sid = transaction.savepoint()
             try:
                 delete_instance_and_related_objects(instance)
                 transaction.savepoint_commit(sid)
-
-                return Response(status=status.HTTP_204_NO_CONTENT)
+                print("project deleted")
             except Exception as err:
+                print(f"Delete Project: {err}")
                 transaction.savepoint_rollback(sid)
-                return Response(status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
+    def destroy(self, request, *args, **kwargs):
+        instance = self.get_object()
+        self._delete_project(instance.pk)
+
+        return Response(
+            data="Project has been flagged for deletion",
+            status=status.HTTP_202_ACCEPTED
+        )
