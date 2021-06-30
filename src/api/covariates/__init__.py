@@ -14,10 +14,12 @@ def update_site_covariates(site):
     supported_covariates = set([c for c, _ in Covariate.SUPPORTED_COVARIATES])
     coral_atlas = CoralAtlasCovariate()
 
+    existing_site = Site.objects.get_or_none(pk=site_pk)
+
     if (
         (
-            site_pk
-            and Site.objects.get(pk=site_pk).location == point
+            site_pk and existing_site
+            and existing_site.location == point
             and not supported_covariates.difference(existing_covariates)
         )
         or geopy_distance((point.y, point.x), north_pole).km < coral_atlas.radius
