@@ -128,18 +128,20 @@ class ProjectFilterSet(BaseAPIFilterSet):
 
 class ProjectAuthenticatedUserPermission(permissions.BasePermission):
     def has_permission(self, request, view):
-        doing_site_mr_replace = False
-        if hasattr(view, "action_map") and "put" in view.action_map:
-            if (
-                view.action_map["put"] == "find_and_replace_sites"
-                or view.action_map["put"] == "find_and_replace_managements"
-            ):
-                doing_site_mr_replace = True
-        return request.user.is_authenticated and (
-            request.method in permissions.SAFE_METHODS
-            or request.method == "POST"
-            or doing_site_mr_replace
-        )
+        user = request.user
+        if user.is_authenticated is False:
+            return False
+        elif request.method in permissions.SAFE_METHODS or request.method == "POST":
+            return True
+        elif hasattr(view, "action_map") and "put" in view.action_map:
+            action = view.action_map["put"]
+            if action in ("find_and_replace_sites", "find_and_replace_managements"):
+                pk = get_project_pk(request, view)
+                project = get_project(pk)
+                pp = get_project_profile(project, user.profile)
+                return pp.role > ProjectProfile.READONLY
+
+        return False
 
 
 class ProjectViewSet(BaseApiViewSet):

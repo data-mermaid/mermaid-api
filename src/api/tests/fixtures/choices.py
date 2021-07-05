@@ -9,6 +9,7 @@ from api.models import (
     ReefType,
     ReefZone,
     RelativeDepth,
+    Region,
     Tide,
     Visibility,
 )
@@ -155,6 +156,35 @@ def relative_depth2(db):
 
 
 @pytest.fixture
+def region1(db):
+    return Region.objects.create(
+        name="Region 1",
+        geom="MULTIPOLYGON(((-10 -10,-10 10,10 10,10 -10,-10 -10)))"
+    )
+
+
+@pytest.fixture
+def region2(db):
+    return Region.objects.create(
+        name="Region 2",
+        geom="MULTIPOLYGON(((-5 -5,-5 5,5 5,5 -5,-5 -5)))"
+    )
+
+
+@pytest.fixture
+def region3(db):
+    return Region.objects.create(
+        name="Region 3",
+        geom="MULTIPOLYGON(((-2 -2,-2 2,2 2,2 -2,-2 -2)))"
+    )
+
+
+@pytest.fixture
+def all_regions(region1, region2, region3):
+    pass
+
+
+@pytest.fixture
 def all_choices(
     db,
     country1,
@@ -178,6 +208,9 @@ def all_choices(
     reef_zone1,
     reef_zone2,
     reef_zone3,
+    region1,
+    region2,
+    region3,
     relative_depth1,
     relative_depth2,
     tide1,
