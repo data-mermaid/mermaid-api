@@ -1465,7 +1465,6 @@ class ObsBeltFish(BaseModel, JSONMixin):
     size = models.DecimalField(max_digits=5, decimal_places=1, verbose_name=_(u'size (cm)'),
                                validators=[MinValueValidator(0)])
     count = models.PositiveIntegerField(default=1)
-    size_bin = models.ForeignKey(FishSizeBin, on_delete=models.PROTECT, null=True, blank=True)
     include = models.BooleanField(default=True, verbose_name=INCLUDE_OBS_TEXT)
     notes = models.TextField(blank=True)
 
