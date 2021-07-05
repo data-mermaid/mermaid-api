@@ -48,7 +48,8 @@ def fish_genus4(db_setup, fish_family4):
     return FishGenus.objects.create(name="Clown Fish Genus", family=fish_family4)
 
 
-def fish_species1(db, fish_genus1, fish_group_trophic_1, region1, region3):
+@pytest.fixture
+def fish_species1(db_setup, fish_genus1, fish_group_trophic_1, region1, region3):
     fs = FishSpecies.objects.create(
         name="Fish Species 1",
         genus=fish_genus1,
@@ -64,8 +65,8 @@ def fish_species1(db, fish_genus1, fish_group_trophic_1, region1, region3):
 
 
 @pytest.fixture
-def fish_species2(db, fish_genus2):
-    return FishSpecies.objects.create(
+def fish_species2(db_setup, fish_genus2, region2):
+    fs = FishSpecies.objects.create(
         name="Fish Species 2",
         genus=fish_genus2,
         biomass_constant_a=0.020000,
@@ -78,8 +79,8 @@ def fish_species2(db, fish_genus2):
 
 
 @pytest.fixture
-def fish_species3(db, fish_genus3):
-    return FishSpecies.objects.create(
+def fish_species3(db_setup, fish_genus3, region2, region3):
+    fs = FishSpecies.objects.create(
         name="Fish Species 3",
         genus=fish_genus3,
         biomass_constant_a=0.030000,
@@ -93,7 +94,21 @@ def fish_species3(db, fish_genus3):
 
 
 @pytest.fixture
+def fish_species4(db_setup, fish_genus3, region2):
+    fs = FishSpecies.objects.create(
+        name="Fish Species 4",
+        genus=fish_genus3,
+        biomass_constant_a=0.040000,
+        biomass_constant_b=4.00000,
+        biomass_constant_c=1.0,
+    )
+    fs.regions.add(region2)
+
+    return fs
+
+
+@pytest.fixture
 def all_test_fish_attributes(
-    db, fish_species1, fish_species2, fish_species3,
+    db_setup, fish_species1, fish_species2, fish_species3, fish_species4
 ):
     pass
