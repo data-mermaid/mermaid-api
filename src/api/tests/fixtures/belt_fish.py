@@ -288,3 +288,120 @@ def belt_fish_project(
     project_profile2,
 ):
     pass
+
+
+@pytest.fixture
+def obs_belt_fishes_low_biomass_invalid(fish_species4):
+    fish_species_id = str(fish_species4.id)
+    return [
+        dict(
+            count=1,
+            fish_attribute=fish_species_id,
+            size=7.5,
+        ),
+        dict(
+            count=32,
+            fish_attribute=fish_species_id,
+            size=7.5,
+        ),
+        dict(
+            count=44,
+            fish_attribute=fish_species_id,
+            size=7.5,
+        ),
+        dict(
+            count=1,
+            fish_attribute=fish_species_id,
+            size=7.5,
+        ),
+        dict(
+            count=3,
+            fish_attribute=fish_species_id,
+            size=7.5,
+        ),
+    ]
+
+
+@pytest.fixture
+def obs_belt_fishes_high_biomass_invalid(fish_species4):
+    fish_species_id = str(fish_species4.id)
+    return [
+        dict(
+            count=7003,
+            fish_attribute=fish_species_id,
+            size=7.5,
+        ),
+        dict(
+            count=3200,
+            fish_attribute=fish_species_id,
+            size=7.5,
+        ),
+        dict(
+            count=4455,
+            fish_attribute=fish_species_id,
+            size=7.5,
+        ),
+        dict(
+            count=4100,
+            fish_attribute=fish_species_id,
+            size=7.5,
+        ),
+        dict(
+            count=3000,
+            fish_attribute=fish_species_id,
+            size=7.5,
+        ),
+    ]
+
+
+@pytest.fixture
+def obs_belt_fishes_biomass_valid(fish_species4):
+    fish_species_id = str(fish_species4.id)
+    return [
+        dict(
+            count=2403,
+            fish_attribute=fish_species_id,
+            size=7.5,
+        ),
+        dict(
+            count=32,
+            fish_attribute=fish_species_id,
+            size=7.5,
+        ),
+        dict(
+            count=445,
+            fish_attribute=fish_species_id,
+            size=7.5,
+        ),
+        dict(
+            count=1100,
+            fish_attribute=fish_species_id,
+            size=7.5,
+        ),
+        dict(
+            count=3000,
+            fish_attribute=fish_species_id,
+            size=7.5,
+        ),
+    ]
+
+
+@pytest.fixture
+def obs_belt_fishes_invalid():
+    return [
+        dict(count=1),
+        dict(count=2),
+        dict(count=3),
+        dict(count=1),
+    ]
+
+
+@pytest.fixture
+def obs_belt_fishes_valid():
+    return [
+        dict(count=1),
+        dict(count=2),
+        dict(count=3),
+        dict(count=1),
+        dict(count=10),
+    ]

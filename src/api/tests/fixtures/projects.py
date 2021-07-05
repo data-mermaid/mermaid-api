@@ -2,6 +2,7 @@ import pytest
 from django.contrib.gis.geos import Point
 from django.utils import timezone
 
+from api.mocks import MockRequest
 from api.models import (
     AuthUser,
     Management,
@@ -155,3 +156,8 @@ def base_project(
     project_profile2,
 ):
     pass
+
+
+@pytest.fixture
+def profile1_request(token1):
+    return MockRequest(token=token1)
