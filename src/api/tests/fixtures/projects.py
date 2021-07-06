@@ -1,6 +1,7 @@
 import pytest
 from django.contrib.gis.geos import Point
 from django.utils import timezone
+from rest_framework.test import APIClient
 
 from api.models import (
     AuthUser,
@@ -155,3 +156,17 @@ def base_project(
     project_profile2,
 ):
     pass
+
+
+@pytest.fixture
+def api_client1(token1, project_profile1):
+    client = APIClient()
+    client.credentials(HTTP_AUTHORIZATION=f"Bearer {token1}")
+    return client
+
+
+@pytest.fixture
+def api_client2(token2, project_profile2):
+    client = APIClient()
+    client.credentials(HTTP_AUTHORIZATION=f"Bearer {token2}")
+    return client
