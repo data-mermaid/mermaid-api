@@ -1,7 +1,5 @@
 import pytest
 
-from rest_framework.test import APIClient
-
 from api.mocks import MockRequest
 from api.models import CollectRecord, Revision
 from api.resources.collect_record import CollectRecordViewSet
@@ -63,9 +61,3 @@ def serialized_tracked_project2(db_setup, project2, project_profile2):
         "id": str(project2.id)
     }
 
-
-@pytest.fixture
-def api_client1(token1, project_profile1):
-    client = APIClient()
-    client.credentials(HTTP_AUTHORIZATION=f"Bearer {token1}")
-    return client
