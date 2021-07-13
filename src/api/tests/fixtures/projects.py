@@ -1,6 +1,7 @@
 import pytest
 from django.contrib.gis.geos import Point
 from django.utils import timezone
+from rest_framework.test import APIClient
 
 from api.mocks import MockRequest
 from api.models import (
@@ -161,3 +162,16 @@ def base_project(
 @pytest.fixture
 def profile1_request(token1):
     return MockRequest(token=token1)
+
+  
+def api_client1(token1, project_profile1):
+    client = APIClient()
+    client.credentials(HTTP_AUTHORIZATION=f"Bearer {token1}")
+    return client
+
+
+@pytest.fixture
+def api_client2(token2, project_profile2):
+    client = APIClient()
+    client.credentials(HTTP_AUTHORIZATION=f"Bearer {token2}")
+    return client
