@@ -869,7 +869,7 @@ class FishSpeciesAdmin(FishAttributeAdmin):
 
 class ObsTransectBeltFishInline(ObservationInline):
     model = ObsBeltFish
-    cache_fields = ["fish_attribute", "size_bin"]
+    cache_fields = ["fish_attribute"]
 
 
 @admin.register(BeltFish)
