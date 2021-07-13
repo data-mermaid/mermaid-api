@@ -30,9 +30,9 @@ class LazyChoiceField(serializers.ChoiceField):
         self._cached_choices = {}
 
     def to_internal_value(self, data):
-        # Overriding this function add cache the choices that are
-        # used during serialization. Can see a performance gain
-        # if a field has a large number of choices and only use
+        # Adding a cache to the choices that are
+        # used during serialization. Will see a performance gain
+        # if a field has a large number of choices but only uses
         # a small number of them when deserializing records.
 
         if data == "" and self.allow_blank:
@@ -42,7 +42,7 @@ class LazyChoiceField(serializers.ChoiceField):
             str_data = str(data)
             val = None
             if str_data not in self._cached_choices:
-                val = self.choice_strings_to_values[str(data)]
+                val = self.choice_strings_to_values[str_data]
                 if val is not None:
                     self._cached_choices[str_data] = val
             else:
