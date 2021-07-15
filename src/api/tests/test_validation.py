@@ -1,8 +1,7 @@
 import datetime
 
-from django.contrib.gis.geos import Point
-
 import pytest
+from django.contrib.gis.geos import Point
 
 from api.models import (
     BenthicAttribute,

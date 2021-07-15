@@ -146,7 +146,6 @@ def sample_event2(management2, site2):
 
 @pytest.fixture
 def base_project(
-    ,
     management1,
     site1,
     management2,
