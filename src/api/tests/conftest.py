@@ -6,7 +6,7 @@ from api.models import revisions
 from .fixtures import *
 
 
-@pytest.fixture
+@pytest.fixture(autouse=True)
 def db_setup(db):
     with connection.cursor() as cursor:
         cursor.execute("CREATE EXTENSION IF NOT EXISTS pg_trgm;")
