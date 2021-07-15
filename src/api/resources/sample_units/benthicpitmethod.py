@@ -222,7 +222,6 @@ class ObsBenthicPITCSVSerializer(ReportSerializer):
         ReportField("interval_size"),
         ReportField("interval_start"),
         ReportField("data_policy_benthicpit"),
-        ReportField("relative_depth"),
     ]
 
 
