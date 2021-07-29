@@ -954,7 +954,6 @@ class BenthicTransectValidation(DataValidation):
         }
 
         results = BenthicTransect.objects.select_related().filter(**qry)
-        print(f"results: {results}")
         for result in results:
             transect_methods = get_related_transect_methods(result)
             for transect_method in transect_methods:
