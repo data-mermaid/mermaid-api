@@ -271,7 +271,6 @@ class ObsBleachingQCColoniesBleachedCSVSerializer(ReportSerializer):
         ReportField("management_id"),
         ReportField("sample_unit_id"),
         ReportField("data_policy_bleachingqc"),
-        ReportField("relative_depth"),
     ]
 
 
@@ -336,7 +335,6 @@ class ObsQuadratBenthicPercentCSVSerializer(ReportSerializer):
         ReportField("management_id"),
         ReportField("sample_unit_id"),
         ReportField("data_policy_bleachingqc"),
-        ReportField("relative_depth")
     ]
 
 

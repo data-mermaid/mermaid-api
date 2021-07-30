@@ -248,7 +248,6 @@ class ObsBenthicLITCSVSerializer(ReportSerializer):
         ReportField("management_id"),
         ReportField("sample_unit_id"),
         ReportField("data_policy_benthiclit"),
-        ReportField("relative_depth"),
     ]
 
 
@@ -473,7 +472,7 @@ class BenthicLITProjectMethodObsView(BaseProjectMethodView):
     serializer_class_csv = ObsBenthicLITCSVSerializer
     filterset_class = BenthicLITMethodObsFilterSet
     model = BenthicLITObsSQLModel
-    order_by = ("site_name", "sample_date", "transect_number", "label")
+    order_by = ("site_name", "sample_date", "transect_number", "label", "id")
 
 
 class BenthicLITProjectMethodSUView(BaseProjectMethodView):

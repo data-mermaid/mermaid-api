@@ -88,8 +88,8 @@ class RegionalAttributesMixin(ObservationsMixin):
         region = str(regions[0].pk)
 
         observations = self.get_observations(self.data, key=self.observations_key)
-        attribute_ids = list(set([obs.get(self.attribute_key) for obs in observations]))
-        attr_lookup = dict()
+        attribute_ids = list(set(obs.get(self.attribute_key) for obs in observations))
+        attr_lookup = {}
         for attr in self.AttributeModelClass.objects.filter(id__in=attribute_ids):
             if isinstance(attr.regions, list):
                 attr_lookup[str(attr.id)] = [str(r) for r in attr.regions]

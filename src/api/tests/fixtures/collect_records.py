@@ -4,23 +4,22 @@ from api.models import FISHBELT_PROTOCOL, CollectRecord, ProjectProfile
 
 
 @pytest.fixture
-def collect_record1(db_setup, project1, profile1):
+def collect_record1(project1, profile1):
     return CollectRecord.objects.create(project=project1, profile=profile1, data=dict())
 
 
 @pytest.fixture
-def collect_record2(db_setup, project1, profile1):
+def collect_record2(project1, profile1):
     return CollectRecord.objects.create(project=project1, profile=profile1, data=dict())
 
 
 @pytest.fixture
-def collect_record3(db_setup, project1, profile1):
+def collect_record3(project1, profile1):
     return CollectRecord.objects.create(project=project1, profile=profile1, data=dict())
 
 
 @pytest.fixture
 def collect_record4(
-    db_setup,
     project1,
     profile1,
     fish_size_bin_1,
@@ -239,4 +238,219 @@ def invalid_collect_record_error(
         profile=profile1,
         stage=CollectRecord.VALIDATED_STAGE,
         data=data_error,
+    )
+
+
+@pytest.fixture
+def valid_benthic_lit_collect_record(
+    benthic_attribute_3,
+    benthic_attribute_4,
+    project1,
+    profile1,
+    project_profile1,
+    sample_event1,
+):
+    observations = [
+        dict(attribute=str(benthic_attribute_3.id), length=1000),
+        dict(attribute=str(benthic_attribute_3.id), length=1500),
+        dict(attribute=str(benthic_attribute_3.id), length=2000),
+        dict(attribute=str(benthic_attribute_3.id), length=2500),
+        dict(attribute=str(benthic_attribute_4.id), length=3000),
+    ]
+    data_ok = dict(
+        protocol="benthiclit",
+        obs_benthic_lits=observations,
+        benthic_transect=dict(depth=1, number=2, len_surveyed=100),
+        sample_event=dict(
+            management=str(sample_event1.management.id),
+            site=str(sample_event1.site.id),
+            sample_date=f"{sample_event1.sample_date:%Y-%m-%d}",
+        ),
+        observers=[{"profile": str(profile1.id)}],
+    )
+    return CollectRecord.objects.create(
+        project=project1,
+        profile=profile1,
+        stage=CollectRecord.VALIDATED_STAGE,
+        data=data_ok,
+    )
+
+
+@pytest.fixture
+def invalid_benthic_lit_collect_record(
+    benthic_attribute_3,
+    project1,
+    profile1,
+    project_profile1,
+    sample_event1,
+):
+    observations = [
+        dict(attribute=str(benthic_attribute_3.id), length=1000),
+        dict(attribute=str(benthic_attribute_3.id), length=1500),
+        dict(attribute=str(benthic_attribute_3.id), length=2000),
+    ]
+    data_error = dict(
+        protocol="benthiclit",
+        obs_benthic_lits=observations,
+        benthic_transect=dict(depth=1, number=2, len_surveyed=100),
+        sample_event=dict(
+            management=str(sample_event1.management.id),
+            site=str(sample_event1.site.id),
+            sample_date=f"{sample_event1.sample_date:%Y-%m-%d}",
+        ),
+        observers=[{"profile": str(profile1.id)}],
+    )
+    return CollectRecord.objects.create(
+        project=project1,
+        profile=profile1,
+        stage=CollectRecord.VALIDATED_STAGE,
+        data=data_error,
+    )
+
+
+@pytest.fixture
+def valid_benthic_pit_collect_record(
+    benthic_attribute_3,
+    benthic_attribute_4,
+    project1,
+    profile1,
+    project_profile1,
+    sample_event1,
+):
+    observations = [
+        dict(attribute=str(benthic_attribute_3.id), interval=5),
+        dict(attribute=str(benthic_attribute_3.id), interval=10),
+        dict(attribute=str(benthic_attribute_3.id), interval=15),
+        dict(attribute=str(benthic_attribute_3.id), interval=20),
+        dict(attribute=str(benthic_attribute_3.id), interval=25),
+        dict(attribute=str(benthic_attribute_4.id), interval=30),
+    ]
+    data = dict(
+        protocol="benthicpit",
+        obs_benthic_pits=observations,
+        benthic_transect=dict(depth=1, number=1, len_surveyed=30),
+        interval_size=5,
+        interval_start=5,
+        sample_event=dict(
+            management=str(sample_event1.management.id),
+            site=str(sample_event1.site.id),
+            sample_date=f"{sample_event1.sample_date:%Y-%m-%d}",
+        ),
+        observers=[{"profile": str(profile1.id)}],
+    )
+    return CollectRecord.objects.create(
+        project=project1,
+        profile=profile1,
+        stage=CollectRecord.VALIDATED_STAGE,
+        data=data,
+    )
+
+
+@pytest.fixture
+def invalid_benthic_pit_collect_record(
+    benthic_attribute_3,
+    project1,
+    profile1,
+    project_profile1,
+    sample_event1,
+):
+    observations = [
+        dict(attribute=str(benthic_attribute_3.id), length=1000),
+        dict(attribute=str(benthic_attribute_3.id), length=1500),
+        dict(attribute=str(benthic_attribute_3.id), length=2000),
+    ]
+
+    data = dict(
+        protocol="benthicpit",
+        obs_benthic_pits=observations,
+        benthic_transect=dict(depth=1, number=1, len_surveyed=30),
+        interval_size=5,
+        interval_start=5,
+        sample_event=dict(
+            management=str(sample_event1.management.id),
+            site=str(sample_event1.site.id),
+            sample_date=f"{sample_event1.sample_date:%Y-%m-%d}",
+        ),
+        observers=[{"profile": str(profile1.id)}],
+    )
+
+    return CollectRecord.objects.create(
+        project=project1,
+        profile=profile1,
+        stage=CollectRecord.VALIDATED_STAGE,
+        data=data,
+    )
+
+
+@pytest.fixture
+def valid_habitat_complexity_collect_record(
+    sample_event1,
+    habitat_complexity_score1,
+    project1,
+    profile1,
+    project_profile1,
+):
+    observations = [
+        dict(score=str(habitat_complexity_score1.id), interval=0),
+        dict(score=str(habitat_complexity_score1.id), interval=5),
+        dict(score=str(habitat_complexity_score1.id), interval=10),
+        dict(score=str(habitat_complexity_score1.id), interval=15),
+        dict(score=str(habitat_complexity_score1.id), interval=20),
+        dict(score=str(habitat_complexity_score1.id), interval=25),
+    ]
+    data = dict(
+        protocol="habitatcomplexity",
+        obs_habitat_complexities=observations,
+        benthic_transect=dict(depth=1, number=2, len_surveyed=30),
+        interval_size=5,
+        sample_event=dict(
+            management=str(sample_event1.management.id),
+            site=str(sample_event1.site.id),
+            sample_date=f"{sample_event1.sample_date:%Y-%m-%d}",
+        ),
+        observers=[{"profile": str(profile1.id)}],
+    )
+
+    return CollectRecord.objects.create(
+        project=project1,
+        profile=profile1,
+        stage=CollectRecord.VALIDATED_STAGE,
+        data=data,
+    )
+
+
+@pytest.fixture
+def invalid_habitat_complexity_collect_record(
+    sample_event1,
+    habitat_complexity_score1,
+    project1,
+    profile1,
+    project_profile1,
+):
+    observations = [
+        dict(score="invalid score id", interval=0),
+        dict(score=str(habitat_complexity_score1.id), interval=5),
+        dict(score=str(habitat_complexity_score1.id), interval=10),
+        dict(score=str(habitat_complexity_score1.id), interval=15),
+        dict(score=str(habitat_complexity_score1.id), interval=20),
+        dict(score=str(habitat_complexity_score1.id), interval=25),
+    ]
+    data = dict(
+        protocol="habitatcomplexity",
+        obs_habitat_complexities=observations,
+        benthic_transect=dict(depth=1, number=2, len_surveyed=30),
+        interval_size=5,
+        sample_event=dict(
+            management=str(sample_event1.management.id),
+            site=str(sample_event1.site.id),
+            sample_date=f"{sample_event1.sample_date:%Y-%m-%d}",
+        ),
+        observers=[{"profile": str(profile1.id)}],
+    )
+
+    return CollectRecord.objects.create(
+        project=project1,
+        profile=profile1,
+        stage=CollectRecord.VALIDATED_STAGE,
+        data=data,
     )
