@@ -11,6 +11,7 @@ class ProjectProfileSerializer(BaseAPISerializer):
     is_collector = serializers.ReadOnlyField()
     is_admin = serializers.ReadOnlyField()
     num_active_sample_units = serializers.SerializerMethodField()
+    picture = serializers.ReadOnlyField(source="profile.picture_url")
 
     class Meta:
         model = ProjectProfile
