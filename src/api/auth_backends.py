@@ -85,6 +85,7 @@ class JWTAuthentication(BaseAuthentication):
         try:
             auth_user = AuthUser.objects.get(user_id=user_id)
             profile = auth_user.profile
+
             if (now_datetime - profile.updated_on).total_seconds() > SECS_PER_DAY:
                 user_info = get_user_info(user_id)
                 profile.picture_url = user_info["picture"]
@@ -92,13 +93,12 @@ class JWTAuthentication(BaseAuthentication):
         except AuthUser.DoesNotExist:
             user_info = get_user_info(user_id)
             profile, is_new = get_or_create_safeish(Profile, email=user_info["email"])
+            profile.first_name = user_info["first_name"]
+            profile.last_name = user_info["last_name"]
+            profile.picture_url = user_info["picture"]
+            profile.save()
 
             if is_new is True:
-                profile.first_name = user_info["first_name"]
-                profile.last_name = user_info["last_name"]
-                profile.picture_url = user_info["picture"]
-                profile.save()
-
                 if (
                     settings.MC_API_KEY is not None
                     and settings.MC_USER is not None
@@ -133,9 +133,6 @@ class JWTAuthentication(BaseAuthentication):
                                 profile.first_name, profile.last_name, profile.email
                             )
                         )
-            elif (now_datetime - profile.updated_on).total_seconds() > SECS_PER_DAY:
-                profile.picture_url = user_info["picture"]
-                profile.save()
 
         get_or_create_safeish(AuthUser, profile=profile, user_id=user_id)
 
