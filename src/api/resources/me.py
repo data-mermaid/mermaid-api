@@ -1,14 +1,17 @@
-from api.auth0_management import Auth0DatabaseAuthenticationAPI, Auth0Users
-from .base import BaseAPISerializer
-from rest_framework import permissions, viewsets
-from rest_framework.exceptions import MethodNotAllowed, NotFound, ValidationError
+from rest_framework import permissions, serializers, viewsets
+from rest_framework.exceptions import NotFound, ValidationError
 from rest_framework.response import Response
 from rest_framework.decorators import action
 
+
+from api.auth0_management import Auth0DatabaseAuthenticationAPI, Auth0Users
+from .base import BaseAPISerializer
 from ..models import Profile
 
 
 class MeSerializer(BaseAPISerializer):
+    picture = serializers.ReadOnlyField(source="picture_url")
+
     class Meta:
         model = Profile
         fields = [
@@ -19,6 +22,7 @@ class MeSerializer(BaseAPISerializer):
             'email',
             'created_on',
             'updated_on',
+            'picture',
         ]
 
 
