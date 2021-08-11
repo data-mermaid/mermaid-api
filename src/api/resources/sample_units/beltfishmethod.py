@@ -5,15 +5,12 @@ from rest_framework.decorators import action
 from rest_condition import Or
 from rest_framework import status
 from rest_framework.response import Response
-from rest_framework.exceptions import ValidationError
 
 from ...models import FISHBELT_PROTOCOL, BeltFishObsSQLModel, BeltFishSESQLModel, BeltFishSUSQLModel
-from ...models import AuditRecord, BeltFish, CollectRecord, Project
+from ...models import BeltFish, Project
 from ...permissions import ProjectDataReadOnlyPermission, ProjectPublicSummaryPermission
 from ...reports.fields import ReportField
 from ...reports.formatters import (
-    to_aca_benthic_covarite,
-    to_aca_geomorphic_covarite,
     to_day,
     to_governance,
     to_latitude,
@@ -32,7 +29,6 @@ from ..base import (
     BaseSUViewAPISerializer,
 )
 from ..belt_fish import BeltFishSerializer
-from ..collect_record import CollectRecordSerializer
 from ..fish_belt_transect import FishBeltTransectSerializer
 from ..obs_belt_fish import ObsBeltFishSerializer
 from ..observer import ObserverSerializer
@@ -41,6 +37,7 @@ from ...utils.sample_unit_methods import edit_transect_method
 from . import (
     BaseProjectMethodView,
     clean_sample_event_models,
+    covariate_report_fields,
     save_model,
     save_one_to_many
 )
@@ -96,19 +93,7 @@ class ObsBeltFishCSVSerializer(ReportSerializer):
         ReportField("functional_group", "Functional group"),
         ReportField("vulnerability", "Vulnerability"),
         ReportField("observation_notes", "Observation notes"),
-        ReportField(
-            "covariates",
-            "ACA benthic class",
-            to_aca_benthic_covarite,
-            alias="aca_benthic"
-        ),
-        ReportField(
-            "covariates",
-            "ACA geomorphic class",
-            to_aca_geomorphic_covarite,
-            alias="aca_geomorphic"
-        ),
-    ]
+    ] + covariate_report_fields
 
     additional_fields = [
         ReportField("id"),
@@ -366,19 +351,7 @@ class BeltFishMethodSUCSVSerializer(ReportSerializer):
         ReportField("site_notes", "Site notes"),
         ReportField("sample_event_notes", "Sampling event notes"),
         ReportField("management_notes", "Management notes"),
-        ReportField(
-            "covariates",
-            "ACA benthic class",
-            to_aca_benthic_covarite,
-            alias="aca_benthic"
-        ),
-        ReportField(
-            "covariates",
-            "ACA geomorphic class",
-            to_aca_geomorphic_covarite,
-            alias="aca_geomorphic"
-        ),
-    ]
+    ] + covariate_report_fields
 
     additional_fields = [
         ReportField("id"),
@@ -425,19 +398,7 @@ class BeltFishMethodSECSVSerializer(ReportSerializer):
         ReportField("site_notes", "Site notes"),
         ReportField("sample_event_notes", "Sampling event notes"),
         ReportField("management_notes", "Management notes"),
-        ReportField(
-            "covariates",
-            "ACA benthic class",
-            to_aca_benthic_covarite,
-            alias="aca_benthic"
-        ),
-        ReportField(
-            "covariates",
-            "ACA geomorphic class",
-            to_aca_geomorphic_covarite,
-            alias="aca_geomorphic"
-        ),
-    ]
+    ] + covariate_report_fields
 
     additional_fields = [
         ReportField("id"),

@@ -3,19 +3,16 @@ from django_filters import BaseInFilter, RangeFilter
 from rest_condition import Or
 from rest_framework import status
 from rest_framework.response import Response
-from rest_framework.serializers import SerializerMethodField
 
 from ...models import (
     HabitatComplexityObsSQLModel,
     HabitatComplexitySESQLModel,
     HabitatComplexitySUSQLModel,
 )
-from ...models.mermaid import HabitatComplexity, Project
+from ...models.mermaid import HabitatComplexity
 from ...permissions import ProjectDataReadOnlyPermission, ProjectPublicSummaryPermission
 from ...reports.fields import ReportField
 from ...reports.formatters import (
-    to_aca_benthic_covarite,
-    to_aca_geomorphic_covarite,
     to_day,
     to_governance,
     to_latitude,
@@ -41,6 +38,7 @@ from ..sample_event import SampleEventSerializer
 from . import (
     BaseProjectMethodView,
     clean_sample_event_models,
+    covariate_report_fields,
     save_model,
     save_one_to_many,
 )
@@ -97,19 +95,7 @@ class ObsHabitatComplexityCSVSerializer(ReportSerializer):
         ReportField("sample_event_notes", "Sampling event notes"),
         ReportField("management_notes", "Management notes"),
         ReportField("observation_notes", "Observation notes"),
-        ReportField(
-            "covariates",
-            "ACA benthic class",
-            to_aca_benthic_covarite,
-            alias="aca_benthic"
-        ),
-        ReportField(
-            "covariates",
-            "ACA geomorphic class",
-            to_aca_geomorphic_covarite,
-            alias="aca_geomorphic"
-        ),
-    ]
+    ] + covariate_report_fields
 
     additional_fields = [
         ReportField("id"),
@@ -313,19 +299,7 @@ class HabitatComplexityMethodSUCSVSerializer(ReportSerializer):
         ReportField("site_notes", "Site notes"),
         ReportField("sample_event_notes", "Sampling event notes"),
         ReportField("management_notes", "Management notes"),
-        ReportField(
-            "covariates",
-            "ACA benthic class",
-            to_aca_benthic_covarite,
-            alias="aca_benthic"
-        ),
-        ReportField(
-            "covariates",
-            "ACA geomorphic class",
-            to_aca_geomorphic_covarite,
-            alias="aca_geomorphic"
-        ),
-    ]
+    ] + covariate_report_fields
 
     additional_fields = [
         ReportField("id"),
@@ -371,19 +345,7 @@ class HabitatComplexityMethodSECSVSerializer(ReportSerializer):
         ReportField("site_notes", "Site notes"),
         ReportField("sample_event_notes", "Sampling event notes"),
         ReportField("management_notes", "Management notes"),
-        ReportField(
-            "covariates",
-            "ACA benthic class",
-            to_aca_benthic_covarite,
-            alias="aca_benthic"
-        ),
-        ReportField(
-            "covariates",
-            "ACA geomorphic class",
-            to_aca_geomorphic_covarite,
-            alias="aca_geomorphic"
-        ),
-    ]
+    ] + covariate_report_fields
 
     additional_fields = [
         ReportField("id"),
