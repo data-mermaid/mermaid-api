@@ -10,6 +10,7 @@ class ProjectProfileSerializer(BaseAPISerializer):
     profile_name = serializers.ReadOnlyField()
     is_collector = serializers.ReadOnlyField()
     is_admin = serializers.ReadOnlyField()
+    email = serializers.ReadOnlyField(source="profile.email")
     num_active_sample_units = serializers.SerializerMethodField()
     picture = serializers.ReadOnlyField(source="profile.picture_url")
 
