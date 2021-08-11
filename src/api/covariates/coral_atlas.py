@@ -1,17 +1,14 @@
 import datetime
 from concurrent.futures import ThreadPoolExecutor
-
-import requests
 from typing import List, Tuple
 
+import requests
 
-class CovariateRequestError(Exception):
-    pass
+from .base import BaseCovariate, CovariateRequestError
 
 
-class CoralAtlasCovariate:
+class CoralAtlasCovariate(BaseCovariate):
     api_url = "https://allencoralatlas.org"
-    radius = 0.025  # in km
     num_threads = 3
     BENTHIC_CLASS_TYPE = "benthic"
     GEOMORPHIC_CLASS_TYPE = "geomorphic"

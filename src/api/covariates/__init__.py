@@ -1,32 +1,13 @@
 from api.decorators import run_in_thread
 from api.models import Covariate, Site
 from geopy.distance import distance as geopy_distance
+from .base import BaseCovariate
 from .coral_atlas import CoralAtlasCovariate
+from .vibrant_oceans import VibrantOceansThreatsCovariate
 
 
-def update_site_covariates(site):
-    site_pk = site.pk
-
-    point = site.location
-    north_pole = (90, 0)
-    south_pole = (-90, 0)
-    existing_covariates = set(site.covariates.all().values_list("name", flat=True))
-    supported_covariates = set([c for c, _ in Covariate.SUPPORTED_COVARIATES])
+def _update_site_aca_covariates(point, site_pk):
     coral_atlas = CoralAtlasCovariate()
-
-    existing_site = Site.objects.get_or_none(pk=site_pk)
-
-    if (
-        (
-            site_pk and existing_site
-            and existing_site.location == point
-            and not supported_covariates.difference(existing_covariates)
-        )
-        or geopy_distance((point.y, point.x), north_pole).km < coral_atlas.radius
-        or geopy_distance((point.y, point.x), south_pole).km < coral_atlas.radius
-    ):
-        return
-
     results = coral_atlas.fetch([(point.x, point.y)])
 
     if not results:
@@ -36,13 +17,14 @@ def update_site_covariates(site):
 
     data_date = result["date"]
     requested_date = result["requested_date"]
+
     aca_covariates = result.get("covariates") or dict()
     aca_benthic = aca_covariates.get("aca_benthic") or []
     aca_geomorphic = aca_covariates.get("aca_geomorphic") or []
 
     aca_benthic_covariate = Covariate.objects.get_or_none(
         name="aca_benthic", site_id=site_pk
-    ) or Covariate(name="aca_benthic", site=site)
+    ) or Covariate(name="aca_benthic", site_id=site_pk)
     aca_benthic_covariate.display = "Alan Coral Atlas Benthic"
     aca_benthic_covariate.datestamp = data_date
     aca_benthic_covariate.requested_datestamp = requested_date
@@ -50,8 +32,8 @@ def update_site_covariates(site):
     aca_benthic_covariate.save()
 
     aca_geomorphic_covariate = Covariate.objects.get_or_none(
-        name="aca_geomorphic", site=site
-    ) or Covariate(name="aca_geomorphic", site=site)
+        name="aca_geomorphic", site_id=site_pk
+    ) or Covariate(name="aca_geomorphic", site_id=site_pk)
     aca_geomorphic_covariate.display = "Alan Coral Atlas Geomorphic"
     aca_geomorphic_covariate.datestamp = data_date
     aca_geomorphic_covariate.requested_datestamp = requested_date
@@ -59,6 +41,51 @@ def update_site_covariates(site):
     aca_geomorphic_covariate.save()
 
 
+def _update_site_vot_covariates(point, site_pk):
+    vibrant_oceans_threats = VibrantOceansThreatsCovariate()
+    results = vibrant_oceans_threats.fetch([(point.x, point.y)])
+
+    if not results or not results[0]:
+        return
+
+    result = results[0]
+
+    data_date = result["date"]
+    requested_date = result["requested_date"]
+    covariates = result.get("covariates") or dict()
+    for key, cov in covariates.items():
+        covariate = Covariate.objects.get_or_none(
+            name=key, site_id=site_pk
+        ) or Covariate(name=key, site_id=site_pk)
+        covariate.display = vibrant_oceans_threats.display_name_lookup[key]
+        covariate.datestamp = data_date
+        covariate.requested_datestamp = requested_date
+        covariate.value = cov
+        covariate.save()
+
+
+def update_site_covariates(site, force=False):
+    site_pk = site.pk
+
+    point = site.location
+    north_pole = (90, 0)
+    south_pole = (-90, 0)
+    existing_site = Site.objects.get_or_none(pk=site_pk)
+
+    if force is False and (
+        (
+            existing_site
+            and existing_site.location == point
+        )
+        or geopy_distance((point.y, point.x), north_pole).km < BaseCovariate.radius
+        or geopy_distance((point.y, point.x), south_pole).km < BaseCovariate.radius
+    ):
+        return
+
+    _update_site_aca_covariates(point, site_pk)
+    _update_site_vot_covariates(point, site_pk)
+
+
 @run_in_thread
-def update_site_covariates_in_thread(site):
-    update_site_covariates(site)
+def update_site_covariates_in_thread(site, force=False):
+    update_site_covariates(site, force=force)
