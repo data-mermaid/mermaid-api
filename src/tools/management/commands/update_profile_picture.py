@@ -16,6 +16,12 @@ class Command(ProgressBarBaseCommand):
             help="Number of auth0 profiles to fetch before 1 second break.",
         )
 
+        parser.add_argument(
+            "--profile_id",
+            type=str,
+            help="Only update profile for given profile id",
+        )
+
     def update_profile_picture(self, profile):
         auth_user = profile.authusers.all()[0]
         user_info = get_user_info(auth_user.user_id)
@@ -25,7 +31,11 @@ class Command(ProgressBarBaseCommand):
 
     def handle(self, *args, **options):
         throttle = options["throttle"]
+        profile_id = options["profile_id"]
+
         qry = Profile.objects.all()
+        if profile_id:
+            qry = qry.filter(id=profile_id)
 
         num_profiles = qry.count()
         self.draw_progress_bar(0)
