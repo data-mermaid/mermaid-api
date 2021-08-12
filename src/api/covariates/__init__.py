@@ -44,8 +44,8 @@ def update_site_aca_covariates(site, force):
         return
 
     aca_covariates = result.get("covariates") or dict()
-    aca_benthic = aca_covariates.get("aca_benthic") or []
-    aca_geomorphic = aca_covariates.get("aca_geomorphic") or []
+    aca_benthic = aca_covariates.get("aca_benthic")
+    aca_geomorphic = aca_covariates.get("aca_geomorphic")
 
     aca_benthic_covariate = Covariate.objects.get_or_none(
         name="aca_benthic", site_id=site_pk
