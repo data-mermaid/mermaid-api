@@ -1,7 +1,12 @@
 import datetime
+import os
+
 from django.conf import settings
-from django.core.mail import EmailMessage
+from django.core.mail import EmailMessage, EmailMultiAlternatives
+from django.template.loader import render_to_string
+
 from ..models.mermaid import ProjectProfile
+from ..decorators import run_in_thread
 
 
 def mermaid_email(subject, heading, subheading, body, to, from_email=None):
@@ -34,7 +39,7 @@ def mermaid_email(subject, heading, subheading, body, to, from_email=None):
         message.send()
     else:
         print(email_args)
-        
+
 
 
 def email_project_admins(project, subject, body, from_email=None):
@@ -57,3 +62,26 @@ def contact_project_admins(project, subject, body, from_email):
     # lots of checking/validation/antispam here
     # email_project_admins(project, subject, body, from_email)
     pass
+
+
+@run_in_thread
+def mermaid_email_from_template(subject, template, to, data=None, from_email=None):
+    _subject = f"[MERMAID] {subject}"
+    path, _ = os.path.splitext(template)
+    template_html = f"{path}.html"
+    template_text = f"{path}.txt"
+    text_content = render_to_string(template_text, context=data)
+    html_content = render_to_string(template_html, context=data)
+
+    if settings.ENVIRONMENT == "prod":
+        msg = EmailMultiAlternatives(
+            _subject,
+            text_content,
+            from_email,
+            to=[to],
+            reply_to=[from_email]
+        )
+        msg.attach_alternative(html_content, "text/html")
+        msg.send()
+    else:
+        print(text_content)
