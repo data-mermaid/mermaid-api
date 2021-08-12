@@ -19,7 +19,7 @@ from .resources.sync.views import (
 from .submission.utils import validate
 from .submission.validations import SiteValidation, ManagementValidation
 from .utils import get_subclasses
-from .utils.email import email_project_admins, mermaid_email
+from .utils.email import email_project_admins, mermaid_email, mermaid_email_from_template
 from .utils.sample_units import delete_orphaned_sample_unit, delete_orphaned_sample_event
 
 
@@ -236,6 +236,23 @@ def notify_admins_new_admin(sender, instance, created, **kwargs):
 def notify_admins_dropped_admin(sender, instance, **kwargs):
     if instance.role >= ProjectProfile.ADMIN:
         notify_admins_change(instance, 'remove')
+
+
+@receiver(post_save, sender=ProjectProfile)
+def notify_new_project_user(sender, instance, created, **kwargs):
+    if created is False:
+        return
+
+    context = {
+        "project_profile": instance,
+        "admin_profile": instance.updated_by
+    }
+    if instance.profile.num_account_connections == 0:
+        template = "emails/new_user_added_to_project.html"
+    else:
+        template = "emails/added_to_project.html"
+
+    mermaid_email_from_template("New Project", template, instance.profile.email, data=context)
 
 
 # Don't need to iterate over TransectMethod subclasses because TransectMethod is not abstract
