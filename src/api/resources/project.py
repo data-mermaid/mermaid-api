@@ -11,7 +11,7 @@ from rest_framework.response import Response
 
 from rest_condition import Or
 from ..auth_backends import AnonymousJWTAuthentication
-from ..models import Management, Project, Site, ProjectProfile, ArchivedRecord
+from ..models import Management, Project, Site, Profile, ProjectProfile, ArchivedRecord
 from ..decorators import run_in_thread
 from ..permissions import *
 from ..utils import delete_instance_and_related_objects
@@ -407,3 +407,36 @@ class ProjectViewSet(BaseApiViewSet):
             data="Project has been flagged for deletion",
             status=status.HTTP_202_ACCEPTED
         )
+
+    @action(
+        detail=True,
+        methods=["post"],
+        permission_classes=[ProjectDataAdminPermission],
+    )
+    def add_profile(self, request, pk, *args, **kwargs):
+        email = request.data.get("email")
+        role = request.data.get("role")
+        admin_profile = request.user.profile
+
+        if email is None:
+            raise exceptions.ValidationError(
+                detail={"email": "Email is required"}
+            )
+
+        profile = Profile.objects.get_or_none(email=email)
+        if profile is None:
+            profile = Profile.objects.create(email=email)
+
+        project_profile, is_new = ProjectProfile.objects.get_or_create(
+            project_id=pk,
+            profile=profile,
+            role=role or ProjectProfile.COLLECTOR,
+            created_by=admin_profile,
+            updated_by=admin_profile,
+        )
+        if is_new is False:
+            raise exceptions.ValidationError(
+                detail={"email": "Profile has already been added to project"}
+            )
+
+        return Response(ProjectProfileSerializer(instance=project_profile).data)
