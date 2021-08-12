@@ -1558,7 +1558,7 @@ class Covariate(BaseModel, JSONMixin):
     display = models.CharField(max_length=100)
     datestamp = models.DateField()
     requested_datestamp = models.DateField()
-    value = JSONField(default=dict)
+    value = JSONField(null=True, blank=True)
 
     class Meta:
         unique_together = ("site", "name",)
