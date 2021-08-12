@@ -1534,6 +1534,19 @@ class Covariate(BaseModel, JSONMixin):
     SUPPORTED_COVARIATES = (
         ("aca_benthic", "aca_benthic",),
         ("aca_geomorphic", "aca_geomorphic",),
+        ("vot_score", "vot_score"),
+        ("vot_scorecn", "vot_scorecn"),
+        ("vot_scorecy", "vot_scorecy"),
+        ("vot_scorepfc", "vot_scorepfc"),
+        ("vot_scoreth", "vot_scoreth"),
+        ("vot_scoretr", "vot_scoretr"),
+        ("vot_grav_nc", "vot_grav_nc"),
+        ("vot_sediment", "vot_sediment"),
+        ("vot_nutrient", "vot_nutrient"),
+        ("vot_pop_count", "vot_pop_count"),
+        ("vot_num_ports", "vot_num_ports"),
+        ("vot_reef_value", "vot_reef_value"),
+        ("vot_cumul_score", "vot_cumul_score"),
     )
 
     site = models.ForeignKey(

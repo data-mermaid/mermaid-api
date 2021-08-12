@@ -8,12 +8,38 @@ from rest_framework.decorators import action
 from rest_framework_gis.pagination import GeoJsonPagination
 
 from ...auth_backends import AnonymousJWTAuthentication
+from ...covariates.vibrant_oceans import VibrantOceansThreatsCovariate
 from ...permissions import *
 from ...report_serializer import *
 from ...reports import csv_report
+from ...reports.fields import ReportField
+from ...reports.formatters import (
+    to_covariate,
+    to_aca_benthic_covarite,
+    to_aca_geomorphic_covarite,
+)
 from ...resources.base import BaseApiViewSet, BaseProjectApiViewSet
 from ...utils import truthy
 from ...utils.sample_units import consolidate_sample_events, has_duplicate_sample_events
+
+
+covariate_report_fields = [
+    ReportField(
+        "covariates",
+        "ACA benthic class",
+        to_aca_benthic_covarite,
+        alias="aca_benthic"
+    ),
+    ReportField(
+        "covariates",
+        "ACA geomorphic class",
+        to_aca_geomorphic_covarite,
+        alias="aca_geomorphic"
+    ),
+] + [
+    ReportField("covariates", v, to_covariate, alias=k)
+    for k, v in VibrantOceansThreatsCovariate().display_name_lookup.items()
+]
 
 
 def save_one_to_many(foreign_key, database_records, data, serializer_class, context):
