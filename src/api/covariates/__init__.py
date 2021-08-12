@@ -37,10 +37,10 @@ def update_site_aca_covariates(site, force):
 
     result = results[0]
 
-    data_date = result["date"]
+    data_date = result.get("date")
     requested_date = result.get("requested_date")
 
-    if requested_date is None:
+    if requested_date is None or data_date is None:
         return
 
     aca_covariates = result.get("covariates") or dict()
@@ -81,10 +81,10 @@ def update_site_vot_covariates(site, force):
 
     result = results[0]
 
-    data_date = result["date"]
-    requested_date = result["requested_date"]
+    data_date = result.get("date")
+    requested_date = result.get("requested_date")
 
-    if requested_date is None:
+    if requested_date is None or data_date is None:
         return
 
     covariates = result.get("covariates") or dict()

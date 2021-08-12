@@ -89,19 +89,14 @@ class VibrantOceansThreatsCovariate(BaseCovariate):
                     {_covariate_cols},
                     ST_Area(
                         ST_Intersection(
-                            ST_Buffer(
-                                ST_GeomFromText('SRID=4326;POINT(%(x)s %(y)s)')::geography,
-                                %(radius)s
-                            ),
+                            ST_Buffer(ST_GeomFromText('SRID=4326;POINT(%(x)s %(y)s)')::geography,%(radius)s),
                             allreef.geom::geography
                         ),
                         true
                     ) /
                     ST_Area(
-                        ST_Buffer(
-                            ST_GeomFromText('SRID=4326;POINT(%(x)s %(y)s)')::geography,
-                        %(radius)s
-                        ), true
+                        ST_Buffer(ST_GeomFromText('SRID=4326;POINT(%(x)s %(y)s)')::geography,%(radius)s),
+                        true
                     ) as partial
                 FROM "covariates"."allreef" AS allreef
                 WHERE
