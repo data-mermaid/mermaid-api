@@ -110,7 +110,7 @@ class VibrantOceansThreatsCovariate(BaseCovariate):
                         allreef.geom::geography
                     )
             )
-            SELECT 
+            SELECT
                 {_sum_covariate_cols}
             FROM
                 allreef_clipped

@@ -1,13 +1,35 @@
 from api.decorators import run_in_thread
 from api.models import Covariate, Site
 from geopy.distance import distance as geopy_distance
-from .base import BaseCovariate
 from .coral_atlas import CoralAtlasCovariate
 from .vibrant_oceans import VibrantOceansThreatsCovariate
 
 
-def _update_site_aca_covariates(point, site_pk):
+def location_checks(site, covariate_cls, force=False):
+    north_pole = (90, 0)
+    south_pole = (-90, 0)
+
+    point = site.location
+    existing_site = Site.objects.get_or_none(pk=site.pk)
+
+    return (
+        force is not False
+        or (not existing_site or existing_site.location != point)
+        and geopy_distance((point.y, point.x), north_pole).km
+        >= covariate_cls.radius
+        and geopy_distance((point.y, point.x), south_pole).km
+        >= covariate_cls.radius
+    )
+
+
+def update_site_aca_covariates(site, force):
     coral_atlas = CoralAtlasCovariate()
+    if location_checks(site, coral_atlas, force) is False:
+        return
+
+    site_pk = site.pk
+    point = site.location
+
     results = coral_atlas.fetch([(point.x, point.y)])
 
     if not results:
@@ -16,7 +38,10 @@ def _update_site_aca_covariates(point, site_pk):
     result = results[0]
 
     data_date = result["date"]
-    requested_date = result["requested_date"]
+    requested_date = result.get("requested_date")
+
+    if requested_date is None:
+        return
 
     aca_covariates = result.get("covariates") or dict()
     aca_benthic = aca_covariates.get("aca_benthic") or []
@@ -41,8 +66,14 @@ def _update_site_aca_covariates(point, site_pk):
     aca_geomorphic_covariate.save()
 
 
-def _update_site_vot_covariates(point, site_pk):
+def update_site_vot_covariates(site, force):
     vibrant_oceans_threats = VibrantOceansThreatsCovariate()
+    if location_checks(site, vibrant_oceans_threats, force) is False:
+        return
+
+    site_pk = site.pk
+    point = site.location
+
     results = vibrant_oceans_threats.fetch([(point.x, point.y)])
 
     if not results or not results[0]:
@@ -52,6 +83,10 @@ def _update_site_vot_covariates(point, site_pk):
 
     data_date = result["date"]
     requested_date = result["requested_date"]
+
+    if requested_date is None:
+        return
+
     covariates = result.get("covariates") or dict()
     for key, cov in covariates.items():
         covariate = Covariate.objects.get_or_none(
@@ -64,28 +99,7 @@ def _update_site_vot_covariates(point, site_pk):
         covariate.save()
 
 
-def update_site_covariates(site, force=False):
-    site_pk = site.pk
-
-    point = site.location
-    north_pole = (90, 0)
-    south_pole = (-90, 0)
-    existing_site = Site.objects.get_or_none(pk=site_pk)
-
-    if force is False and (
-        (
-            existing_site
-            and existing_site.location == point
-        )
-        or geopy_distance((point.y, point.x), north_pole).km < BaseCovariate.radius
-        or geopy_distance((point.y, point.x), south_pole).km < BaseCovariate.radius
-    ):
-        return
-
-    _update_site_aca_covariates(point, site_pk)
-    _update_site_vot_covariates(point, site_pk)
-
-
 @run_in_thread
 def update_site_covariates_in_thread(site, force=False):
-    update_site_covariates(site, force=force)
+    update_site_aca_covariates(site, force=force)
+    update_site_vot_covariates(site, force=force)
