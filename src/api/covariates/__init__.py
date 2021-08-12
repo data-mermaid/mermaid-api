@@ -15,10 +15,9 @@ def location_checks(site, covariate_cls, force=False):
     existing_site = Site.objects.get_or_none(pk=site.pk)
 
     return (
-        force is not False
-        or (not existing_site or existing_site.location != point)
-        and lat_min <= point.y <= lat_max
-        and lon_min <= point.x <= lon_max
+        (force is not False or (not existing_site or existing_site.location != point))
+        and lat_min < point.y < lat_max
+        and lon_min < point.x < lon_max
     )
 
 
