@@ -1,13 +1,15 @@
 from api.decorators import run_in_thread
 from api.models import Covariate, Site
-from geopy.distance import distance as geopy_distance
 from .coral_atlas import CoralAtlasCovariate
 from .vibrant_oceans import VibrantOceansThreatsCovariate
 
 
 def location_checks(site, covariate_cls, force=False):
-    north_pole = (90, 0)
-    south_pole = (-90, 0)
+    # ACA limits, but applicable generally
+    lat_min = -85
+    lat_max = 85
+    lon_min = -180
+    lon_max = 180
 
     point = site.location
     existing_site = Site.objects.get_or_none(pk=site.pk)
@@ -15,10 +17,8 @@ def location_checks(site, covariate_cls, force=False):
     return (
         force is not False
         or (not existing_site or existing_site.location != point)
-        and geopy_distance((point.y, point.x), north_pole).km
-        >= covariate_cls.radius
-        and geopy_distance((point.y, point.x), south_pole).km
-        >= covariate_cls.radius
+        and lat_min <= point.y <= lat_max
+        and lon_min <= point.x <= lon_max
     )
 
 
