@@ -71,6 +71,9 @@ class Profile(models.Model):
             except IndexError:
                 return ''
 
+    @property
+    def num_account_connections(self):
+        return self.authusers.count()
 
 class BaseModel(models.Model):
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)

@@ -1,6 +1,7 @@
 from rest_framework import serializers
 from rest_framework.exceptions import ValidationError
 from rest_condition import Or
+
 from .base import BaseAPIFilterSet, BaseProjectApiViewSet, BaseAPISerializer
 from ..models import CollectRecord, ProjectProfile
 from ..permissions import *
@@ -13,6 +14,7 @@ class ProjectProfileSerializer(BaseAPISerializer):
     email = serializers.ReadOnlyField(source="profile.email")
     num_active_sample_units = serializers.SerializerMethodField()
     picture = serializers.ReadOnlyField(source="profile.picture_url")
+    num_account_connections = serializers.ReadOnlyField(source="profile.num_account_connections")
 
     class Meta:
         model = ProjectProfile
