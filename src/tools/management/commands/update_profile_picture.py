@@ -23,11 +23,13 @@ class Command(ProgressBarBaseCommand):
         )
 
     def update_profile_picture(self, profile):
-        auth_user = profile.authusers.all()[0]
-        user_info = get_user_info(auth_user.user_id)
-
-        profile.picture_url = user_info["picture"]
-        profile.save()
+        for auth_user in profile.authusers.all():
+            user_info = get_user_info(auth_user.user_id)
+            if not user_info["picture"]:
+                continue
+            profile.picture_url = user_info["picture"]
+            profile.save()
+            break
 
     def handle(self, *args, **options):
         throttle = options["throttle"]
