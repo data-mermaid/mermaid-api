@@ -423,10 +423,7 @@ class ProjectViewSet(BaseApiViewSet):
                 detail={"email": "Email is required"}
             )
 
-        profile = Profile.objects.get_or_none(email=email)
-        if profile is None:
-            profile = Profile.objects.create(email=email)
-
+        profile, _ = Profile.objects.get_or_create(email=email)
         project_profile, is_new = ProjectProfile.objects.get_or_create(
             project_id=pk,
             profile=profile,
