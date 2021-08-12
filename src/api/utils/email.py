@@ -5,6 +5,7 @@ from django.conf import settings
 from django.core.mail import EmailMessage, EmailMultiAlternatives
 from django.template.loader import render_to_string
 
+from ..decorators import run_in_thread
 from ..models.mermaid import ProjectProfile
 
 
@@ -63,6 +64,7 @@ def contact_project_admins(project, subject, body, from_email):
     pass
 
 
+@run_in_thread
 def mermaid_email_from_template(subject, template, to, data=None, from_email=None):
     _subject = f"[MERMAID] {subject}"
     path, _ = os.path.splitext(template)
