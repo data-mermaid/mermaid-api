@@ -1,5 +1,7 @@
-from .base import BaseAPIFilterSet, BaseAPISerializer, BaseProjectApiViewSet
 
+from rest_framework.validators import UniqueTogetherValidator
+
+from .base import BaseAPIFilterSet, BaseAPISerializer, BaseProjectApiViewSet\
 from ..models import ObsQuadratBenthicPercent
 
 
@@ -7,7 +9,20 @@ class ObsQuadratBenthicPercentSerializer(BaseAPISerializer):
     class Meta:
         model = ObsQuadratBenthicPercent
         exclude = []
-        extra_kwargs = {}
+        extra_kwargs = {
+            "quadrat_number": {
+                "error_messages": {
+                    "null": "Quadrat number is required"
+                }
+            }
+        }
+        validators = [
+            UniqueTogetherValidator(
+                queryset=ObsQuadratBenthicPercent.objects.all(),
+                fields=["quadrat_number", ],
+                message="Duplicate quadrat numbers"
+            )
+        ]
 
 
 class ObsQuadratBenthicPercentFilterSet(BaseAPIFilterSet):
