@@ -1,7 +1,7 @@
 
 from rest_framework.validators import UniqueTogetherValidator
 
-from .base import BaseAPIFilterSet, BaseAPISerializer, BaseProjectApiViewSet\
+from .base import BaseAPIFilterSet, BaseAPISerializer, BaseProjectApiViewSet
 from ..models import ObsQuadratBenthicPercent
 
 
