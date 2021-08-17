@@ -19,7 +19,7 @@ class ObsQuadratBenthicPercentSerializer(BaseAPISerializer):
         validators = [
             UniqueTogetherValidator(
                 queryset=ObsQuadratBenthicPercent.objects.all(),
-                fields=["quadrat_number", ],
+                fields=["bleachingquadratcollection", "quadrat_number"],
                 message="Duplicate quadrat numbers"
             )
         ]

@@ -1111,7 +1111,7 @@ class ObsBenthicPercentCoveredValidation(DataValidation, ObsBleachingMixin):
                 continue
 
         if has_missing_values:
-            return self.warning(self.identifier, self.VALID_NUMBER_MSG)
+            return self.warning(self.identifier, self.VALUE_NOT_SET)
 
         return self.ok(self.identifier)
 
