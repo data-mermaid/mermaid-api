@@ -157,7 +157,6 @@ class SampleUnitValidation(ProtocolValidation):
                     value_range_operators=("<", ">"),
                 )
             )
-            print(f"results: {results}")
 
         if ERROR in results:
             return ERROR
