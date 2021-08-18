@@ -1,5 +1,6 @@
 import django_filters
 from rest_framework import serializers
+
 from .base import (
     BaseAPIFilterSet,
     BaseApiViewSet,
@@ -10,7 +11,7 @@ from .base import (
 )
 from .mixins import ProtectedResourceMixin
 from ..models import Management, Project
-from ..permissions import UnauthenticatedReadOnlyPermission
+from ..permissions import AuthenticatedReadOnlyPermission
 
 
 def get_rules(obj):
@@ -160,13 +161,9 @@ class ManagementFilterSet(BaseAPIFilterSet):
 
 
 class ManagementViewSet(ProtectedResourceMixin, BaseApiViewSet):
-    method_authentication_classes = {
-        "GET": []
-    }
-
     model_display_name = "Management Regime"
     serializer_class = ManagementSerializer
     queryset = Management.objects.exclude(project__status=Project.TEST)
-    permission_classes = [UnauthenticatedReadOnlyPermission, ]
+    permission_classes = [AuthenticatedReadOnlyPermission]
     filter_class = ManagementFilterSet
     search_fields = ['$name', '$name_secondary', '$project__name', '$est_year']
