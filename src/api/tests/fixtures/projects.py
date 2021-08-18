@@ -20,17 +20,17 @@ from api.utils import tokenutils
 
 @pytest.fixture
 def project1():
-    return Project.objects.create(name="Test Project 1", status=Project.TEST)
+    return Project.objects.create(name="Test Project 1", status=Project.OPEN)
 
 
 @pytest.fixture
 def project2():
-    return Project.objects.create(name="Test Project 2", status=Project.TEST)
+    return Project.objects.create(name="Test Project 2", status=Project.OPEN)
 
 
 @pytest.fixture
 def project3():
-    return Project.objects.create(name="Test Project 3", status=Project.TEST)
+    return Project.objects.create(name="Test Project 3", status=Project.OPEN)
 
 
 @pytest.fixture
