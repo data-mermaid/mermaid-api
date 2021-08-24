@@ -56,8 +56,24 @@ tags.tags,
 pa.project_admins,
 se.date_min,
 se.date_max,
-se.depth_avg_min,
-se.depth_avg_max,
+(SELECT MIN(_depth_avg) FROM UNNEST(
+    ARRAY[
+        fb.depth_avg,
+        bl.depth_avg,
+        bp.depth_avg,
+        bl.depth_avg,
+        hc.depth_avg
+    ]
+) AS _depth_avg) as depth_avg_min,
+(SELECT MAX(_depth_avg) FROM UNNEST(
+    ARRAY[
+        fb.depth_avg,
+        bl.depth_avg,
+        bp.depth_avg,
+        bl.depth_avg,
+        hc.depth_avg
+    ]
+) AS _depth_avg) as depth_avg_max,
 mrs.management_regimes,
 (CASE WHEN project.data_policy_beltfish=10 THEN 'private'
     WHEN project.data_policy_beltfish=50 THEN 'public summary'
@@ -165,9 +181,7 @@ LEFT JOIN (
 ) tags ON (project.id = tags.id)
 
 LEFT JOIN (
-    SELECT site_id, 
-    MIN(depth) AS depth_avg_min,
-    MAX(depth) AS depth_avg_max,
+    SELECT site_id,
     MIN(sample_date) AS date_min,
     MAX(sample_date) AS date_max
     FROM sample_event
@@ -189,7 +203,8 @@ LEFT JOIN (
 LEFT JOIN (
     SELECT site_id,
     COUNT(pseudosu_id) AS sample_unit_count,
-    ROUND(AVG(biomass_kgha), 1) AS biomass_kgha_avg
+    ROUND(AVG(biomass_kgha), 1) AS biomass_kgha_avg,
+    AVG(depth) AS depth_avg
     FROM beltfish_su
     GROUP BY site_id
 ) fb ON (site.id = fb.site_id)
@@ -214,7 +229,8 @@ LEFT JOIN (
 LEFT JOIN (
     SELECT benthiclit_su.site_id,
     COUNT(pseudosu_id) AS sample_unit_count,
-    percent_cover_by_benthic_category_avg
+    percent_cover_by_benthic_category_avg,
+    AVG(depth) AS depth_avg
     FROM benthiclit_su
     INNER JOIN (
         SELECT site_id, 
@@ -238,7 +254,8 @@ LEFT JOIN (
 LEFT JOIN (
     SELECT benthicpit_su.site_id,
     COUNT(pseudosu_id) AS sample_unit_count,
-    percent_cover_by_benthic_category_avg
+    percent_cover_by_benthic_category_avg,
+    AVG(depth) AS depth_avg
     FROM benthicpit_su
     INNER JOIN (
         SELECT site_id, 
@@ -262,7 +279,8 @@ LEFT JOIN (
 LEFT JOIN (
     SELECT site_id,
     COUNT(pseudosu_id) AS sample_unit_count,
-    ROUND(AVG(score_avg), 2) AS score_avg_avg
+    ROUND(AVG(score_avg), 2) AS score_avg_avg,
+    AVG(depth) AS depth_avg
     FROM habitatcomplexity_su
     GROUP BY 
     site_id
@@ -280,7 +298,8 @@ LEFT JOIN (
     ROUND(AVG(quadrat_count), 1) AS quadrat_count_avg,
     ROUND(AVG(percent_hard_avg), 1) AS percent_hard_avg_avg,
     ROUND(AVG(percent_soft_avg), 1) AS percent_soft_avg_avg,
-    ROUND(AVG(percent_algae_avg), 1) AS percent_algae_avg_avg
+    ROUND(AVG(percent_algae_avg), 1) AS percent_algae_avg_avg,
+    AVG(depth) AS depth_avg
     FROM bleachingqc_su
     GROUP BY 
     site_id
