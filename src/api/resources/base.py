@@ -560,6 +560,8 @@ class BaseApiViewSet(MethodAuthenticationMixin, viewsets.ModelViewSet, UpdatesMi
 
     _serializer_class_for_fields = {}
 
+    lookup_value_regex = '[0-9a-fA-F]{8}\-[0-9a-fA-F]{4}\-[0-9a-fA-F]{4}\-[0-9a-fA-F]{4}\-[0-9a-fA-F]{12}'
+
     permission_classes = [DefaultPermission]
 
     def get_serializer_class_for_fields(self, serializer_class, fields):
