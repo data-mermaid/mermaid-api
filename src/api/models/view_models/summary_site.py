@@ -56,24 +56,8 @@ tags.tags,
 pa.project_admins,
 se.date_min,
 se.date_max,
-(SELECT MIN(_depth_avg) FROM UNNEST(
-    ARRAY[
-        fb.depth_avg,
-        bl.depth_avg,
-        bp.depth_avg,
-        bl.depth_avg,
-        hc.depth_avg
-    ]
-) AS _depth_avg) as depth_avg_min,
-(SELECT MAX(_depth_avg) FROM UNNEST(
-    ARRAY[
-        fb.depth_avg,
-        bl.depth_avg,
-        bp.depth_avg,
-        bl.depth_avg,
-        hc.depth_avg
-    ]
-) AS _depth_avg) as depth_avg_max,
+se_depth.depth_avg_min,
+se_depth.depth_avg_max,
 mrs.management_regimes,
 (CASE WHEN project.data_policy_beltfish=10 THEN 'private'
     WHEN project.data_policy_beltfish=50 THEN 'public summary'
@@ -201,10 +185,29 @@ LEFT JOIN (
 ) mrs ON (site.id = mrs.site_id)
 
 LEFT JOIN (
+    SELECT site_id, MIN(avg_depth) as depth_avg_min, MAX(avg_depth) as depth_avg_max
+    FROM (
+        SELECT site_id, sample_event_id, avg(depth) AS avg_depth
+        FROM (
+            SELECT site_id, sample_event_id, depth FROM beltfish_su
+            UNION ALL
+            SELECT site_id, sample_event_id, depth FROM benthicpit_su
+            UNION ALL
+            SELECT site_id, sample_event_id, depth FROM benthiclit_su
+            UNION ALL
+            SELECT site_id, sample_event_id, depth FROM bleachingqc_su
+            UNION ALL
+            SELECT site_id, sample_event_id, depth FROM habitatcomplexity_su
+        ) AS su_depths
+        GROUP BY sample_event_id, site_id
+    ) site_depths
+    GROUP BY site_id
+) se_depth ON (site.id = se_depth.site_id)
+
+LEFT JOIN (
     SELECT site_id,
     COUNT(pseudosu_id) AS sample_unit_count,
-    ROUND(AVG(biomass_kgha), 1) AS biomass_kgha_avg,
-    AVG(depth) AS depth_avg
+    ROUND(AVG(biomass_kgha), 1) AS biomass_kgha_avg
     FROM beltfish_su
     GROUP BY site_id
 ) fb ON (site.id = fb.site_id)
