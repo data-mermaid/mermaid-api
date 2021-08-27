@@ -1,0 +1,19 @@
+{% extends "emails/base.html" %}
+{% block title %}New attribute proposed{% endblock %}
+{% block body %}
+    <p>{{profile.full_name}} has proposed a new {{instance_label}} for MERMAID: {{attrib_name}}</p>
+    <p>To respond, please use the admin interface:<br/>
+        {{admin_link}}
+    </p>
+    <p>You can either:</p>
+    <ol>
+        <li>change status to 'superuser approved' and save</li>
+        <li>delete, and select a new {{instance_label}} to replace all existing uses of the proposed
+            {{instance_label}}
+        </li>
+        <li>communicate further with the user below and come back to the above admin page to choose</li>
+    </ol>
+    <p>The email address of the user who proposed the {{instance_label}} is:
+        <a href="mailto:{{profile.email}}">{{profile.email}}</a>
+    </p>
+{% endblock %}
