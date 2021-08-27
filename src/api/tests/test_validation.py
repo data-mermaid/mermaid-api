@@ -239,7 +239,6 @@ def test_benthic_transect_validation(
         "site": str(benthic_transect1.sample_event.site.id),
         "management": str(benthic_transect1.sample_event.management.id),
         "sample_date": benthic_transect1.sample_event.sample_date,
-        "depth": benthic_transect1.sample_event.depth,
     }
 
     benthic_transect = {

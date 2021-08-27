@@ -145,6 +145,16 @@ def sample_event2(management2, site2):
 
 
 @pytest.fixture
+def sample_event3(management1, site1):
+    return SampleEvent.objects.create(
+        management=management1,
+        site=site1,
+        sample_date=timezone.now(),
+        notes="Some sample event notes for sample_event3",
+    )
+
+
+@pytest.fixture
 def base_project(
     management1,
     site1,
