@@ -56,8 +56,8 @@ tags.tags,
 pa.project_admins,
 se.date_min,
 se.date_max,
-se.depth_avg_min,
-se.depth_avg_max,
+se_depth.depth_avg_min,
+se_depth.depth_avg_max,
 mrs.management_regimes,
 (CASE WHEN project.data_policy_beltfish=10 THEN 'private'
     WHEN project.data_policy_beltfish=50 THEN 'public summary'
@@ -165,9 +165,7 @@ LEFT JOIN (
 ) tags ON (project.id = tags.id)
 
 LEFT JOIN (
-    SELECT site_id, 
-    MIN(depth) AS depth_avg_min,
-    MAX(depth) AS depth_avg_max,
+    SELECT site_id,
     MIN(sample_date) AS date_min,
     MAX(sample_date) AS date_max
     FROM sample_event
@@ -185,6 +183,26 @@ LEFT JOIN (
     INNER JOIN management m ON (s.management_id = m.id)
     GROUP BY site_id
 ) mrs ON (site.id = mrs.site_id)
+
+LEFT JOIN (
+    SELECT site_id, MIN(avg_depth) as depth_avg_min, MAX(avg_depth) as depth_avg_max
+    FROM (
+        SELECT site_id, sample_event_id, avg(depth) AS avg_depth
+        FROM (
+            SELECT site_id, sample_event_id, depth FROM beltfish_su
+            UNION ALL
+            SELECT site_id, sample_event_id, depth FROM benthicpit_su
+            UNION ALL
+            SELECT site_id, sample_event_id, depth FROM benthiclit_su
+            UNION ALL
+            SELECT site_id, sample_event_id, depth FROM bleachingqc_su
+            UNION ALL
+            SELECT site_id, sample_event_id, depth FROM habitatcomplexity_su
+        ) AS su_depths
+        GROUP BY sample_event_id, site_id
+    ) site_depths
+    GROUP BY site_id
+) se_depth ON (site.id = se_depth.site_id)
 
 LEFT JOIN (
     SELECT site_id,
@@ -214,7 +232,8 @@ LEFT JOIN (
 LEFT JOIN (
     SELECT benthiclit_su.site_id,
     COUNT(pseudosu_id) AS sample_unit_count,
-    percent_cover_by_benthic_category_avg
+    percent_cover_by_benthic_category_avg,
+    AVG(depth) AS depth_avg
     FROM benthiclit_su
     INNER JOIN (
         SELECT site_id, 
@@ -238,7 +257,8 @@ LEFT JOIN (
 LEFT JOIN (
     SELECT benthicpit_su.site_id,
     COUNT(pseudosu_id) AS sample_unit_count,
-    percent_cover_by_benthic_category_avg
+    percent_cover_by_benthic_category_avg,
+    AVG(depth) AS depth_avg
     FROM benthicpit_su
     INNER JOIN (
         SELECT site_id, 
@@ -262,7 +282,8 @@ LEFT JOIN (
 LEFT JOIN (
     SELECT site_id,
     COUNT(pseudosu_id) AS sample_unit_count,
-    ROUND(AVG(score_avg), 2) AS score_avg_avg
+    ROUND(AVG(score_avg), 2) AS score_avg_avg,
+    AVG(depth) AS depth_avg
     FROM habitatcomplexity_su
     GROUP BY 
     site_id
@@ -280,7 +301,8 @@ LEFT JOIN (
     ROUND(AVG(quadrat_count), 1) AS quadrat_count_avg,
     ROUND(AVG(percent_hard_avg), 1) AS percent_hard_avg_avg,
     ROUND(AVG(percent_soft_avg), 1) AS percent_soft_avg_avg,
-    ROUND(AVG(percent_algae_avg), 1) AS percent_algae_avg_avg
+    ROUND(AVG(percent_algae_avg), 1) AS percent_algae_avg_avg,
+    AVG(depth) AS depth_avg
     FROM bleachingqc_su
     GROUP BY 
     site_id

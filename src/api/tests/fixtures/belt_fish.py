@@ -72,7 +72,7 @@ def fishbelt_transect1(
         tide=tide1,
         visibility=visibility1,
         width=belt_transect_width_2m,
-        depth=5,
+        depth=8,
         len_surveyed=50,
         sample_time="11:00:00",
     )
@@ -106,6 +106,33 @@ def fishbelt_transect2(
 
 
 @pytest.fixture
+def fishbelt_transect3(
+    db,
+    sample_event3,
+    current1,
+    reef_slope1,
+    relative_depth1,
+    fish_size_bin_1,
+    tide1,
+    visibility1,
+    belt_transect_width_2m,
+):
+    return FishBeltTransect.objects.create(
+        sample_event=sample_event3,
+        current=current1,
+        reef_slope=reef_slope1,
+        relative_depth=relative_depth1,
+        size_bin=fish_size_bin_1,
+        tide=tide1,
+        visibility=visibility1,
+        width=belt_transect_width_2m,
+        depth=5,
+        len_surveyed=50,
+        sample_time="11:00:00",
+    )
+
+
+@pytest.fixture
 def belt_fish1(db, fishbelt_transect1):
     return BeltFish.objects.create(transect=fishbelt_transect1)
 
@@ -116,6 +143,11 @@ def belt_fish2(db, fishbelt_transect2):
 
 
 @pytest.fixture
+def belt_fish3(db, fishbelt_transect3):
+    return BeltFish.objects.create(transect=fishbelt_transect3)
+
+
+@pytest.fixture
 def observer_belt_fish1(db, belt_fish1, profile1):
     return Observer.objects.create(transectmethod=belt_fish1, profile=profile1)
 
@@ -123,6 +155,11 @@ def observer_belt_fish1(db, belt_fish1, profile1):
 @pytest.fixture
 def observer_belt_fish2(db, belt_fish2, profile2):
     return Observer.objects.create(transectmethod=belt_fish2, profile=profile2)
+
+
+@pytest.fixture
+def observer_belt_fish3(db, belt_fish3, profile1):
+    return Observer.objects.create(transectmethod=belt_fish3, profile=profile1)
 
 
 @pytest.fixture
@@ -171,6 +208,26 @@ def obs_belt_fish2_3(db, belt_fish2, fish_species1):
 def obs_belt_fish2_4(db, belt_fish2, fish_species2):
     return ObsBeltFish.objects.create(
         beltfish=belt_fish2, fish_attribute=fish_species2, size=10.0, count=5
+    )
+
+@pytest.fixture
+def obs_belt_fish3_1(db, belt_fish3, fish_species1):
+    return ObsBeltFish.objects.create(
+        beltfish=belt_fish3, fish_attribute=fish_species1, size=10.0, count=5
+    )
+
+
+@pytest.fixture
+def obs_belt_fish3_2(db, belt_fish3, fish_species2):
+    return ObsBeltFish.objects.create(
+        beltfish=belt_fish3, fish_attribute=fish_species2, size=10.0, count=10
+    )
+
+
+@pytest.fixture
+def obs_belt_fish3_3(db, belt_fish3, fish_species3):
+    return ObsBeltFish.objects.create(
+        beltfish=belt_fish3, fish_attribute=fish_species3, size=10.0, count=23
     )
 
 

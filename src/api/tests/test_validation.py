@@ -239,7 +239,6 @@ def test_benthic_transect_validation(
         "site": str(benthic_transect1.sample_event.site.id),
         "management": str(benthic_transect1.sample_event.management.id),
         "sample_date": benthic_transect1.sample_event.sample_date,
-        "depth": benthic_transect1.sample_event.depth,
     }
 
     benthic_transect = {
@@ -473,7 +472,7 @@ def test_obs_benthic_percent_covered_validation():
     assert validation.validate_percent_values() == OK
 
     validation = ObsBenthicPercentCoveredValidation(invalid_data_null)
-    assert validation.validate_percent_values() == ERROR
+    assert validation.validate_percent_values() == WARN
 
     validation = ObsBenthicPercentCoveredValidation(invalid_data_gt_100_val)
     assert validation.validate_percent_values() == ERROR

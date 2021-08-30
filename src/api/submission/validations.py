@@ -31,7 +31,7 @@ from api.models import (
     Region,
     Site,
 )
-from api.utils import calc_biomass_density, get_related_transect_methods
+from api.utils import calc_biomass_density, get_related_transect_methods, safe_sum
 from dateutil import tz
 from timezonefinder import TimezoneFinder
 from . import utils
@@ -1075,56 +1075,58 @@ class ObsBleachingMixin(object):
 
 class ObsBenthicPercentCoveredValidation(DataValidation, ObsBleachingMixin):
     identifier = "obs_quadrat_benthic_percent"
+    VALUE_NOT_SET = "Percent cover value not set"
     LESS_EQUAL_0_MSG = "Percent cover {} is less than or equal to 0"
     GREATER_100_MSG = "Percent cover {} is greater than 100"
     VALID_NUMBER_MSG = "Percent cover value not between 0 and 100"
-
-    def _check_percent_value(self, value, msg_param):
-        try:
-            _ = int(value)
-        except (TypeError, ValueError):
-            return ERROR, self.VALID_NUMBER_MSG
-
-        if value < 0:
-            return ERROR, self.LESS_EQUAL_0_MSG.format(msg_param)
-        elif value > 100:
-            return ERROR, self.GREATER_100_MSG.format(msg_param)
-        return OK, ""
-
-    def _validate_percent_values(self, values, validation, msg_param="value"):
-        for val in values:
-            result, msg = self._check_percent_value(val, msg_param)
-            if result == ERROR:
-                return self.error(self.identifier, msg, validation=validation)
-        return OK
-
-    def _validate_percent_value_total(self, values, validation):
-        total = 0
-        for v in values:
-            try:
-                total += float(v)
-            except (TypeError, ValueError):
-                pass
-        return self._validate_percent_values([total], validation, msg_param="total")
+    LESS_QUADRAT_NUMBER = "Quadrat number less than 1"
+    DUPLICATE_QUADRAT_NUMBERS = "Duplicate quadrat numbers"
 
     def validate_percent_values(self):
         obs = self.get_observations(self.data)
+        has_missing_values = False
         for ob in obs:
-            percent_hard = ob.get("percent_hard")
-            percent_soft = ob.get("percent_soft")
-            percent_algae = ob.get("percent_algae")
-            values = [percent_hard, percent_soft, percent_algae]
-            if (
-                self._validate_percent_values(values, "validate_percent_values")
-                == ERROR
-            ):
-                return ERROR
+            pct_hard = ob.get("percent_hard")
+            pct_soft = ob.get("percent_soft")
+            pct_algae = ob.get("percent_algae")
 
-            if (
-                self._validate_percent_value_total(values, "validate_percent_values")
-                == ERROR
-            ):
-                return ERROR
+            pct_values = [pct_algae, pct_hard, pct_soft]
+
+            if any(pv < 0 or pv > 100 for pv in pct_values if pv):
+                return self.error(
+                    self.identifier,
+                    self.GREATER_100_MSG.format("value"),
+                    validation="validate_percent_values"
+                )
+
+            if safe_sum(pct_algae, pct_hard, pct_soft) > 100:
+                return self.error(
+                    self.identifier,
+                    self.GREATER_100_MSG.format("total"),
+                    validation="validate_percent_values"
+                )
+
+            if None in pct_values:
+                has_missing_values = True
+                continue
+
+        if has_missing_values:
+            return self.warning(self.identifier, self.VALUE_NOT_SET)
+
+        return self.ok(self.identifier)
+
+    def validate_quadrat_numbers(self):
+        obs = self.get_observations(self.data)
+        quadrat_nums = []
+        for ob in obs:
+            quadrat_num = ob.get("quadrat_number")
+            if quadrat_num is not None and quadrat_num <= 0:
+                return self.error(self.identifier, self.LESS_QUADRAT_NUMBER)
+
+            quadrat_nums.append(quadrat_num)
+
+        if len(quadrat_nums) != len(set(quadrat_nums)):
+            return self.error(self.identifier, self.DUPLICATE_QUADRAT_NUMBERS)
 
         return self.ok(self.identifier)
 
