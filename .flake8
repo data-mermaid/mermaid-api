@@ -1,5 +1,5 @@
 [flake8]
-max-line-length = 90
+max-line-length = 100
 select = C,E,F,W,B,B950
 max-complexity = 5
 

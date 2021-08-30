@@ -472,7 +472,7 @@ def test_obs_benthic_percent_covered_validation():
     assert validation.validate_percent_values() == OK
 
     validation = ObsBenthicPercentCoveredValidation(invalid_data_null)
-    assert validation.validate_percent_values() == ERROR
+    assert validation.validate_percent_values() == WARN
 
     validation = ObsBenthicPercentCoveredValidation(invalid_data_gt_100_val)
     assert validation.validate_percent_values() == ERROR

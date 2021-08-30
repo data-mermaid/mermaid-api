@@ -26,14 +26,15 @@ class PositiveIntegerField(fields.Field):
         self.allow_null = True
         self.required = False
         self.allow_blank = True
+        self.default = kwargs.get("default", 0)
 
     def to_internal_value(self, value):
         try:
             val = int(value)
         except (TypeError, ValueError):
-            val = 0
+            val = self.default
 
-        if val < 0:
+        if val is not None and val < 0:
             self.fail("min_value")
 
         return val
@@ -157,9 +158,9 @@ class BleachingCSVSerializer(CollectRecordCSVSerializer):
     data__obs_colonies_bleached__count_100 = PositiveIntegerField()
     data__obs_colonies_bleached__count_dead = PositiveIntegerField()
     data__obs_quadrat_benthic_percent__quadrat_number = PositiveIntegerField()
-    data__obs_quadrat_benthic_percent__percent_hard = PositiveIntegerField()
-    data__obs_quadrat_benthic_percent__percent_soft = PositiveIntegerField()
-    data__obs_quadrat_benthic_percent__percent_algae = PositiveIntegerField()
+    data__obs_quadrat_benthic_percent__percent_hard = PositiveIntegerField(default=None)
+    data__obs_quadrat_benthic_percent__percent_soft = PositiveIntegerField(default=None)
+    data__obs_quadrat_benthic_percent__percent_algae = PositiveIntegerField(default=None)
 
     def skip_field(self, data, field):
         empty_fields = []
