@@ -1,3 +1,5 @@
+import numbers
+
 def handle_none(default_val=None):
     def decorator(func):
         def wrapper(*args, **kwargs):
@@ -125,18 +127,20 @@ def to_covariate(value, field, row, serializer_instance):
         return ""
 
     for covariate in value:
-        if covariate["name"] != field:
+        if covariate["name"] != field.alias:
             continue
         values = covariate["value"]
+        if isinstance(values, numbers.Number):
+            return values
         sorted(values, key=lambda x: (x["area"]), reverse=True)
         return values[0]["name"] if values else ""
 
     return ""
 
 
-def to_aca_benthic_covarite(value, field, row, serializer_instance):
-    return to_covariate(value, "aca_benthic", row, serializer_instance)
+def to_aca_benthic_covariate(value, field, row, serializer_instance):
+    return to_covariate(value, field, row, serializer_instance)
 
 
-def to_aca_geomorphic_covarite(value, field, row, serializer_instance):
-    return to_covariate(value, "aca_geomorphic", row, serializer_instance)
+def to_aca_geomorphic_covariate(value, field, row, serializer_instance):
+    return to_covariate(value, field, row, serializer_instance)

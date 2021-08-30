@@ -15,8 +15,8 @@ from ...reports import csv_report
 from ...reports.fields import ReportField
 from ...reports.formatters import (
     to_covariate,
-    to_aca_benthic_covarite,
-    to_aca_geomorphic_covarite,
+    to_aca_benthic_covariate,
+    to_aca_geomorphic_covariate,
 )
 from ...resources.base import BaseApiViewSet, BaseProjectApiViewSet
 from ...utils import truthy
@@ -27,13 +27,13 @@ covariate_report_fields = [
     ReportField(
         "covariates",
         "ACA benthic class",
-        to_aca_benthic_covarite,
+        to_aca_benthic_covariate,
         alias="aca_benthic"
     ),
     ReportField(
         "covariates",
         "ACA geomorphic class",
-        to_aca_geomorphic_covarite,
+        to_aca_geomorphic_covariate,
         alias="aca_geomorphic"
     ),
 ] + [
