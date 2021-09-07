@@ -1,0 +1,4 @@
+{% if heading %}{{heading}}{% endif %}
+{% if subheading %}{{subheading}}{% endif %}
+{{timestamp}} UTC
+{% block body %}{% endblock %}

@@ -59,6 +59,7 @@ class FishAttributeAdmin(AttributeAdmin):
 
 class SiteInline(CachedFKInline):
     model = Site
+    extra = 0
     readonly_fields = ["created_by", "updated_by"]
     cache_fields = ["country", "reef_type", "reef_zone", "exposure", "predecessor"]
 

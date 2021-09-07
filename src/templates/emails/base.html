@@ -1,0 +1,19 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{% block title %}Document{% endblock %}</title>
+</head>
+<body>
+    <div style="text-align:center; background-color:#666; padding: 20px;">
+        <img style="width:auto; display:inline-block;"
+        src="https://datamermaid.org/wp-content/themes/mermaid/img/mermaid_logo.png">
+    </div>{% if heading %}
+    <h2>{{heading}}</h2>{% endif %}{% if subheading %}
+    <h3>{{subheading}}</h3>{% endif %}
+    <p>{{timestamp}} UTC</p>
+    {% block body %}{% endblock %}
+</body>
+</html>

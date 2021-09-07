@@ -1,3 +1,0 @@
-{{project_profile.project.name}}
-{{project_profile.profile.email}}
-{{admin_profile.full_name}}

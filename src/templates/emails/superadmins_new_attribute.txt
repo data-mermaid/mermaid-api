@@ -1,0 +1,14 @@
+{% extends "emails/base.txt" %}
+{% block body %}
+{{profile.full_name}} has proposed a new {{instance_label}} for MERMAID: {{attrib_name}}
+To respond, please use the admin interface:
+{{admin_link}}
+
+You can either:
+1. change status to 'superuser approved' and save
+2. delete, and select a new {{instance_label}} to replace all existing uses of the proposed {{instance_label}}
+3. communicate further with the user below and come back to the above admin page to choose
+
+The email address of the user who proposed the {{instance_label}} is:
+{{profile.email}}
+{% endblock %}
