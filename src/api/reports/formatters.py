@@ -123,20 +123,17 @@ def to_percent_cover(value, field, row, serializer_instance):
 def to_covariate(value, field, row, serializer_instance):
     if not value:
         return ""
+    covar_keyname = "name"
+    if hasattr(field, "covar_keyname"):
+        covar_keyname = field.covar_keyname
 
     for covariate in value:
-        if covariate["name"] != field:
+        if covariate["name"] != field.alias:
             continue
         values = covariate["value"]
+        if not isinstance(values, list):
+            return values
         sorted(values, key=lambda x: (x["area"]), reverse=True)
-        return values[0]["name"] if values else ""
+        return values[0][covar_keyname] if values else ""
 
     return ""
-
-
-def to_aca_benthic_covarite(value, field, row, serializer_instance):
-    return to_covariate(value, "aca_benthic", row, serializer_instance)
-
-
-def to_aca_geomorphic_covarite(value, field, row, serializer_instance):
-    return to_covariate(value, "aca_geomorphic", row, serializer_instance)
