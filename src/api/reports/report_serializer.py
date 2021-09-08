@@ -49,7 +49,7 @@ class ReportSerializer(object):
 
         column_paths = self._get_column_paths()
         column_paths += self.non_field_columns or tuple()
-        return qs.values(*column_paths)
+        return qs.only(*column_paths)
 
     def _prepare_row(self, row, fields):
         prepared_row = OrderedDict()
