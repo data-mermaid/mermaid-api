@@ -154,13 +154,13 @@ class BenthicPITMethodView(BaseProjectApiViewSet):
             raise
 
 
-class ObsBenthicPITCSVSerializer(ReportSerializer):
+class ObsBenthicPITCSVSerializer(ReportSerializer): 
     fields = [
         ReportField("project_name", "Project name"),
         ReportField("country_name", "Country"),
         ReportField("site_name", "Site"),
-        ReportField("location", "Latitude", to_latitude, alias="latitude"),
-        ReportField("location", "Longitude", to_longitude, alias="longitude"),
+        ReportField("latitude", "Latitude"),
+        ReportField("longitude", "Longitude"),
         ReportField("reef_exposure", "Exposure"),
         ReportField("reef_slope", "Reef slope"),
         ReportField("reef_type", "Reef type"),
@@ -271,8 +271,8 @@ class BenthicPITMethodSUCSVSerializer(ReportSerializer):
         ReportField("project_name", "Project name"),
         ReportField("country_name", "Country"),
         ReportField("site_name", "Site"),
-        ReportField("location", "Latitude", to_latitude, alias="latitude"),
-        ReportField("location", "Longitude", to_longitude, alias="longitude"),
+        ReportField("latitude", "Latitude"),
+        ReportField("longitude", "Longitude"),
         ReportField("reef_exposure", "Exposure"),
         ReportField("reef_slope", "Reef slope"),
         ReportField("reef_type", "Reef type"),
@@ -325,8 +325,8 @@ class BenthicPITMethodSECSVSerializer(ReportSerializer):
         ReportField("project_name", "Project name"),
         ReportField("country_name", "Country"),
         ReportField("site_name", "Site"),
-        ReportField("location", "Latitude", to_latitude, alias="latitude"),
-        ReportField("location", "Longitude", to_longitude, alias="longitude"),
+        ReportField("latitude", "Latitude"),
+        ReportField("longitude", "Longitude"),
         ReportField("reef_exposure", "Exposure"),
         ReportField("reef_type", "Reef type"),
         ReportField("reef_zone", "Reef zone"),
