@@ -42,7 +42,10 @@ class FishSpeciesSerializer(CreateOrUpdateSerializerMixin, BaseAPISerializer):
         exclude = []
 
     def get_display_name(self, obj):
-        return obj.display_name
+        # Can't rely on queryset when POSTing
+        if hasattr(obj, "display_name"):
+            return obj.display_name
+        return f"{obj.genus.name} {obj.name}"
 
 
 class FishSpeciesFilterSet(BaseAPIFilterSet):
