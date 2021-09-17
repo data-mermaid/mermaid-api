@@ -25,7 +25,7 @@ def mermaid_email(
 
     if settings.ENVIRONMENT == "prod":
         msg = EmailMultiAlternatives(
-            _subject, text_content, from_email, to=[to], reply_to=[from_email]
+            _subject, text_content, from_email, to=to, reply_to=[from_email]
         )
         msg.attach_alternative(html_content, "text/html")
         msg.send()

@@ -239,7 +239,7 @@ def notify_new_project_user(sender, instance, created, **kwargs):
     else:
         template = "emails/user_added_to_project.html"
 
-    mermaid_email("New Project", template, instance.profile.email, context=context)
+    mermaid_email("New Project", template, [instance.profile.email], context=context)
 
 
 # Don't need to iterate over TransectMethod subclasses because TransectMethod is not abstract
