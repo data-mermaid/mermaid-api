@@ -248,7 +248,7 @@ def test_benthic_transect_validation(
         "relative_depth": str(relative_depth1.id),
         "tide": str(tide1),
         "visibility": str(visibility1.id),
-        "depth": benthic_transect1.depth,
+        "depth": str(benthic_transect1.depth),
         "len_surveyed": benthic_transect1.len_surveyed,
         "sample_time": benthic_transect1.sample_time,
         "number": benthic_transect1.number,

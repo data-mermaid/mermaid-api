@@ -31,7 +31,7 @@ from api.models import (
     Region,
     Site,
 )
-from api.utils import calc_biomass_density, get_related_transect_methods, safe_sum
+from api.utils import calc_biomass_density, get_related_transect_methods, safe_sum, cast_int, cast_float
 from dateutil import tz
 from timezonefinder import TimezoneFinder
 from . import utils
@@ -78,7 +78,7 @@ class RegionalAttributesMixin(ObservationsMixin):
         sample_event = self.data.get("sample_event") or {}
         site_id = sample_event.get("site")
         site = Site.objects.get_or_none(id=site_id)
-        if site is None:
+        if site is None or site.location is None:
             return self.ok(self.identifier)
 
         regions = Region.objects.filter(geom__intersects=site.location)
@@ -88,7 +88,7 @@ class RegionalAttributesMixin(ObservationsMixin):
         region = str(regions[0].pk)
 
         observations = self.get_observations(self.data, key=self.observations_key)
-        attribute_ids = list(set(obs.get(self.attribute_key) for obs in observations))
+        attribute_ids = list({obs.get(self.attribute_key) for obs in observations if obs.get(self.attribute_key) is not None})
         attr_lookup = {}
         for attr in self.AttributeModelClass.objects.filter(id__in=attribute_ids):
             if isinstance(attr.regions, list):
@@ -153,11 +153,9 @@ class FishAttributeMixin(RegionalAttributesMixin):
     attribute_key = "fish_attribute"
 
     def validate_fish_lengths(self):
-        obs = self.get_observations(self.data)
-        obs = [o for o in obs if o.get("fish_attribute") is not None]
-        fish_attr_ids = [o.get("fish_attribute") for o in obs]
-        fish_attr_ids = list(set(fish_attr_ids))
-        size_bin_id = (self.data.get("fishbelt_transect") or {}).get("size_bin")
+        obs = [o for o in self.get_observations(self.data) if o.get("fish_attribute") is not None]
+        fish_attr_ids = list({o.get("fish_attribute") for o in obs})
+        size_bin_id = (self.data.get("fishbelt_transect") or {}).get("size_bin") or None
 
         try:
             size_bin = FishSizeBin.objects.get(pk=size_bin_id)
@@ -165,42 +163,30 @@ class FishAttributeMixin(RegionalAttributesMixin):
                 fs.val: [fs.min_val, fs.max_val] for fs in size_bin.fishsize_set.all()
             }
         except FishSizeBin.DoesNotExist:
-            fish_size_bin_lookup = dict()
+            fish_size_bin_lookup = {}
 
         # only validate lengths at species level until we know how to aggregate to genus
-        fish_attrs = (
-            FishSpecies.objects.filter(id__in=fish_attr_ids)
-            .select_related("genus__name")
-            .values("id", "genus__name", "name", "max_length")
-        )
+        fish_attrs = {i["id"]: i for i in FishSpecies.objects.filter(id__in=fish_attr_ids).select_related("genus__name").values("id", "genus__name", "name", "max_length")}
         for ob in obs:
-            try:
-                fish = [
-                    f
-                    for f in fish_attrs
-                    if str(f.get("id")) == ob.get("fish_attribute")
-                ][0]
-                max_length = fish.get("max_length")
-                obs_size = ob.get("size")
+            fish = fish_attrs.get(ob["fish_attribute"]) or {}
+            max_length = fish.get("max_length")
+            obs_size = ob.get("size")
+            min_max_vals = fish_size_bin_lookup.get(obs_size)
 
-                min_max_vals = fish_size_bin_lookup.get(obs_size)
+            if max_length is None or obs_size is None:
+                continue
 
-                if max_length is None or obs_size is None:
-                    continue
+            fish_name = f"{fish.get('genus__name')} {fish.get('name')}"
+            warn_message = self.MAX_SPECIES_SIZE_TMPL.format(fish_name, max_length)
 
-                fish_name = "{} {}".format(fish.get("genus__name"), fish.get("name"))
-                warn_message = self.MAX_SPECIES_SIZE_TMPL.format(fish_name, max_length)
-
-                if (
-                    min_max_vals
-                    and min_max_vals[0] is not None
-                    and min_max_vals[0] > max_length
-                ):
-                    return self.log(self.identifier, WARN, warn_message)
-                elif not min_max_vals and obs_size > max_length:
-                    return self.log(self.identifier, WARN, warn_message)
-            except IndexError:
-                pass
+            if (
+                min_max_vals
+                and min_max_vals[0] is not None
+                and min_max_vals[0] > max_length
+            ):
+                return self.log(self.identifier, WARN, warn_message)
+            elif not min_max_vals and obs_size > max_length:
+                return self.log(self.identifier, WARN, warn_message)
 
         return OK, ""
 
@@ -377,9 +363,10 @@ class SampleEventValidation(DataValidation):
 
     def validate_sample_date(self):
         sample_event = self.data.get("sample_event") or {}
-        sample_date_str = sample_event.get("sample_date", "")
-        sample_time_str = sample_event.get("sample_time", "")
+        sample_date_str = sample_event.get("sample_date") or ""
+        sample_time_str = sample_event.get("sample_time") or ""
         site_id = sample_event.get("site")
+
         if sample_date_str.strip() == "":
             sample_date_str = None
 
@@ -635,7 +622,7 @@ class BenthicObservationCountMixin(ObservationsMixin):
     )
 
     def validate_observation_count(self):
-        obs = BenthicObservationCountMixin.get_observations(self.data)
+        obs = BenthicObservationCountMixin.get_observations(self.data) or []
         transect = self.data.get("benthic_transect") or {}
         len_surveyed = transect.get("len_surveyed")
         interval_size = self.data.get("interval_size") or 0
@@ -670,7 +657,7 @@ class ObsBenthicLITValidation(DataValidation, BenthicAttributeMixin):
         benthic_transect = self.data.get("benthic_transect") or {}
         # Convert to cm
         transect_length = (benthic_transect.get("len_surveyed") or 0.0) * 100
-        obs_len = sum([ob.get("length") or 0.0 for ob in obs])
+        obs_len = sum(ob.get("length") or 0.0 for ob in obs)
         if obs_len > transect_length * 1.5 or obs_len < transect_length * 0.5:
             return self.warning(self.identifier, self.TOTAL_LENGTH_WARN)
 
@@ -740,19 +727,22 @@ class ValueInRangeValidation(BaseValidation):
 
     def validate_range(self):
         is_valid = True
-        if self.value is None:
-            is_valid = False
-        else:
-            if self.value_range[0] is not None and self._op(
-                self.value, self.value_range_operators[0], self.value_range[0]
-            ):
-                is_valid = False
-            if len(self.value_range) > 1 and self._op(
-                self.value, self.value_range_operators[1], self.value_range[1]
-            ):
-                is_valid = False
 
-        if is_valid is False:
+        try:
+            val = float(self.value)
+        except (TypeError, ValueError):
+            return False
+
+        if self.value_range[0] is not None and self._op(
+            val, self.value_range_operators[0], self.value_range[0]
+        ):
+            is_valid = False
+        if len(self.value_range) > 1 and self._op(
+            val, self.value_range_operators[1], self.value_range[1]
+        ):
+            is_valid = False
+
+        if not is_valid:
             return self.log(self.identifier, self.status, self.message)
 
         return self.ok(self.identifier)
@@ -767,6 +757,7 @@ class ObsFishBeltValidation(DataValidation, FishAttributeMixin):
     DENSITY_LT_TMPL = "Fish biomass less than {} kg/ha"
     FISH_COUNT_MIN_TMPL = "Total fish count less than {}"
     FISH_FAMILY_SUBSET_TMPL = "There are fish that are not part of project defined fish familes"
+    INVALID_FISH_COUNT_TMPL = "Invalid fish count"
 
     MIN_OBS_COUNT_WARN = 5
     MAX_OBS_COUNT_WARN = 200
@@ -814,13 +805,7 @@ class ObsFishBeltValidation(DataValidation, FishAttributeMixin):
             width = None
 
         # Create a fish attribute constants lookup
-        fishattribute_ids = []
-        for o in observations:
-            fish_attribute = o.get("fish_attribute")
-            if not fish_attribute:
-                continue
-            fishattribute_ids.append(fish_attribute)
-
+        fishattribute_ids = [o.get("fish_attribute") for o in observations if o.get("fish_attribute") is not None]
         fish_attr_lookup = {
             str(fa.id): fa.get_biomass_constants()
             for fa in FishAttribute.objects.filter(id__in=fishattribute_ids)
@@ -842,7 +827,7 @@ class ObsFishBeltValidation(DataValidation, FishAttributeMixin):
             )
             densities.append(density)
 
-        total_density = sum([d for d in densities if d is not None])
+        total_density = sum(d for d in densities if d is not None)
         if total_density > self.OBS_GT_DENSITY:
             return self.warning(self.identifier, self.DENSITY_GT_MSG)
 
@@ -853,7 +838,14 @@ class ObsFishBeltValidation(DataValidation, FishAttributeMixin):
 
     def validate_fish_count(self):
         obs = self.data.get("obs_belt_fishes") or []
-        num_fish = sum([obs.get("count") or 0 for obs in obs])
+        counts = []
+        for ob in obs:
+            try:
+                counts.append(int(ob.get("count") or 0))
+            except ValueError:
+                return self.error(self.identifier, _(self.INVALID_FISH_COUNT_TMPL))
+
+        num_fish = sum(obs.get("count") or 0 for obs in obs)
         if num_fish < self.FISH_COUNT_MIN:
             return self.warning(self.identifier, self.FISH_COUNT_MIN_MSG)
 
@@ -862,7 +854,7 @@ class ObsFishBeltValidation(DataValidation, FishAttributeMixin):
     def validate_fish_family_subset(self):
         obs = self.data.get("obs_belt_fishes") or []
         sample_event = self.data.get("sample_event") or {}
-        site_id = sample_event.get("site", None) or None
+        site_id = sample_event.get("site") or None
         site = Site.objects.get_or_none(id=site_id)
         if site is None:
             return self.ok(self.identifier)
@@ -875,7 +867,7 @@ class ObsFishBeltValidation(DataValidation, FishAttributeMixin):
         if isinstance(fish_family_subset, list) is False:
             return self.ok(self.identifier)
 
-        fish_attribute_ids = set([ob.get("fish_attribute") for ob in obs])
+        fish_attribute_ids = {ob.get("fish_attribute") for ob in obs}
         invalid_fish_attributes = FishAttributeView.objects.filter(
             Q(id__in=fish_attribute_ids) & ~Q(id_family__in=fish_family_subset)
         )
@@ -920,23 +912,23 @@ class BenthicTransectValidation(DataValidation):
 
         number = benthic_transect.get("number") or None
         try:
-            int(number)
+            number = int(number)
         except (ValueError, TypeError):
             return self.error(self.identifier, self.NUMBER_MSG)
 
         label = benthic_transect.get("label") or ""
 
-        relative_depth = benthic_transect.get("relative_depth", None) or None
+        relative_depth = benthic_transect.get("relative_depth") or None
         if relative_depth is not None:
             try:
                 _ = check_uuid(relative_depth)
             except ParseError:
                 return self.error(self.identifier, self.RELATIVE_DEPTH_MSG)
 
-        site = sample_event.get("site", None) or None
-        management = sample_event.get("management", None) or None
-        sample_date = sample_event.get("sample_date", None) or None
-        depth = benthic_transect.get("depth", None) or None
+        site = sample_event.get("site") or None
+        management = sample_event.get("management") or None
+        sample_date = sample_event.get("sample_date") or None
+        depth = benthic_transect.get("depth") or None
         try:
             _ = check_uuid(site)
             _ = check_uuid(management)
@@ -977,7 +969,7 @@ class FishBeltTransectValidation(DataValidation):
 
         number = fishbelt_transect.get("number") or None
         try:
-            int(number)
+            number = int(number)
         except (ValueError, TypeError):
             return self.error(self.identifier, self.NUMBER_MSG)
 
@@ -989,17 +981,17 @@ class FishBeltTransectValidation(DataValidation):
         except ParseError:
             return self.error(self.identifier, self.WIDTH_MSG)
 
-        relative_depth = fishbelt_transect.get("relative_depth", None) or None
+        relative_depth = fishbelt_transect.get("relative_depth") or None
         if relative_depth is not None:
             try:
                 _ = check_uuid(relative_depth)
             except ParseError:
                 return self.error(self.identifier, self.RELATIVE_DEPTH_MSG)
 
-        site = sample_event.get("site", None) or None
-        management = sample_event.get("management", None) or None
-        sample_date = sample_event.get("sample_date", None) or None
-        depth = fishbelt_transect.get("depth", None) or None
+        site = sample_event.get("site") or None
+        management = sample_event.get("management") or None
+        sample_date = sample_event.get("sample_date") or None
+        depth = fishbelt_transect.get("depth") or None
         try:
             _ = check_uuid(site)
             _ = check_uuid(management)
@@ -1086,9 +1078,9 @@ class ObsBenthicPercentCoveredValidation(DataValidation, ObsBleachingMixin):
         obs = self.get_observations(self.data)
         has_missing_values = False
         for ob in obs:
-            pct_hard = ob.get("percent_hard")
-            pct_soft = ob.get("percent_soft")
-            pct_algae = ob.get("percent_algae")
+            pct_hard = cast_float(ob.get("percent_hard"))
+            pct_soft = cast_float(ob.get("percent_soft"))
+            pct_algae = cast_float(ob.get("percent_algae"))
 
             pct_values = [pct_algae, pct_hard, pct_soft]
 
@@ -1119,7 +1111,7 @@ class ObsBenthicPercentCoveredValidation(DataValidation, ObsBleachingMixin):
         obs = self.get_observations(self.data)
         quadrat_nums = []
         for ob in obs:
-            quadrat_num = ob.get("quadrat_number")
+            quadrat_num = cast_int(ob.get("quadrat_number"))
             if quadrat_num is not None and quadrat_num <= 0:
                 return self.error(self.identifier, self.LESS_QUADRAT_NUMBER)
 
@@ -1148,35 +1140,30 @@ class ObsColoniesBleachedValidation(
     attribute_key = "attribute"
     observations_key = "obs_colonies_bleached"
     NO_REGION_MATCH = _("Benthic attributes outside of site region.")
-
-    def _cast_integer(self, val):
-        try:
-            return int(val)
-        except (TypeError, ValueError):
-            return 0
+    MAX_TOTAL_COLONIES = 600
 
     def _get_colony_counts(self, ob):
         return [
-            self._cast_integer(ob.get("count_normal")),
-            self._cast_integer(ob.get("count_pale")),
-            self._cast_integer(ob.get("count_20")),
-            self._cast_integer(ob.get("count_50")),
-            self._cast_integer(ob.get("count_80")),
-            self._cast_integer(ob.get("count_100")),
-            self._cast_integer(ob.get("count_dead")),
+            cast_int(ob.get("count_normal")),
+            cast_int(ob.get("count_pale")),
+            cast_int(ob.get("count_20")),
+            cast_int(ob.get("count_50")),
+            cast_int(ob.get("count_80")),
+            cast_int(ob.get("count_100")),
+            cast_int(ob.get("count_dead")),
         ]
 
     def validate_colony_count(self):
         # WARN
         obs = self.get_observations(self.data)
-        total_count = sum([sum(self._get_colony_counts(ob)) for ob in obs])
-        if total_count > 600:
-            return self.warning(self.identifier, _("Greater than 600 total colonies"))
+        total_count = safe_sum(*[safe_sum(*self._get_colony_counts(ob)) for ob in obs])
+        if total_count > self.MAX_TOTAL_COLONIES:
+            return self.warning(self.identifier, _(f"Greater than {self.MAX_TOTAL_COLONIES} total colonies"))
         return self.ok(self.identifier)
 
     def validate_duplicate_genus_growth(self):
         # ERROR
-        obs = self.get_observations(self.data) or []
+        obs = self.get_observations(self.data)
         # Obs need to be sorted before grouped
         obs.sort(key=lambda e: "{}_{}".format(e.get("attribute"), e.get("growth_form")))
         grouped_obs = itertools.groupby(
@@ -1185,7 +1172,7 @@ class ObsColoniesBleachedValidation(
         )
 
         dup_obs_genus_growth = []
-        for ignore, dup_obs in grouped_obs:
+        for ignored, dup_obs in grouped_obs:
             records = list(dup_obs)
             if len(records) < 2:
                 continue
@@ -1220,17 +1207,17 @@ class QuadratCollectionValidation(DataValidation):
 
         label = quadrat_collection.get("label") or ""
 
-        relative_depth = quadrat_collection.get("relative_depth", None) or None
+        relative_depth = quadrat_collection.get("relative_depth") or None
         if relative_depth is not None:
             try:
                 _ = check_uuid(relative_depth)
             except ParseError:
                 return self.error(self.identifier, self.RELATIVE_DEPTH_MSG)
 
-        site = sample_event.get("site", None) or None
-        management = sample_event.get("management", None) or None
-        sample_date = sample_event.get("sample_date", None) or None
-        depth = quadrat_collection.get("depth", None) or None
+        site = sample_event.get("site") or None
+        management = sample_event.get("management") or None
+        sample_date = sample_event.get("sample_date") or None
+        depth = quadrat_collection.get("depth") or None
 
         profiles = [o.get("profile") for o in self.data.get("observers") or []]
 
