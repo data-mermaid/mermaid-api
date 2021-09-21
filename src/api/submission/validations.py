@@ -2,6 +2,7 @@ import inspect
 import itertools
 import json
 import math
+from datetime import date, datetime
 
 from django.contrib.gis.geos import Polygon
 from django.contrib.gis.measure import Distance
@@ -728,19 +729,17 @@ class ValueInRangeValidation(BaseValidation):
     def validate_range(self):
         is_valid = True
 
-        try:
-            val = float(self.value)
-        except (TypeError, ValueError):
-            return False
-
-        if self.value_range[0] is not None and self._op(
-            val, self.value_range_operators[0], self.value_range[0]
-        ):
+        if self.value is None:
             is_valid = False
-        if len(self.value_range) > 1 and self._op(
-            val, self.value_range_operators[1], self.value_range[1]
-        ):
-            is_valid = False
+        else:
+            if self.value_range[0] is not None and self._op(
+                self.value, self.value_range_operators[0], self.value_range[0]
+            ):
+                is_valid = False
+            if len(self.value_range) > 1 and self._op(
+                self.value, self.value_range_operators[1], self.value_range[1]
+            ):
+                is_valid = False
 
         if not is_valid:
             return self.log(self.identifier, self.status, self.message)
@@ -796,7 +795,7 @@ class ObsFishBeltValidation(DataValidation, FishAttributeMixin):
     def validate_observation_density(self):
         observations = self.data.get("obs_belt_fishes") or []
         transect = self.data.get("fishbelt_transect") or {}
-        len_surveyed = transect.get("len_surveyed")
+        len_surveyed = cast_float(transect.get("len_surveyed"))
         width_id = transect.get("width")
         try:
             _ = check_uuid(width_id)
@@ -813,8 +812,8 @@ class ObsFishBeltValidation(DataValidation, FishAttributeMixin):
 
         densities = []
         for obs in observations:
-            count = obs.get("count")
-            size = obs.get("size")
+            count = cast_int(obs.get("count"))
+            size = cast_float(obs.get("size"))
             try:
                 width_val = width.get_condition(size).val
             except AttributeError:
@@ -845,7 +844,7 @@ class ObsFishBeltValidation(DataValidation, FishAttributeMixin):
             except ValueError:
                 return self.error(self.identifier, _(self.INVALID_FISH_COUNT_TMPL))
 
-        num_fish = sum(obs.get("count") or 0 for obs in obs)
+        num_fish = sum(counts)
         if num_fish < self.FISH_COUNT_MIN:
             return self.warning(self.identifier, self.FISH_COUNT_MIN_MSG)
 

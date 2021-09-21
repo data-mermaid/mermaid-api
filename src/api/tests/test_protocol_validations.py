@@ -44,6 +44,34 @@ def test_fishbelt_protocol_validation_warn(
     assert validation.validations["sample_time"]["validate_range"]["status"] == WARN
 
 
+def test_fishbelt_protocol_validation_null_str_warn(
+    invalid_collect_record_null_str_warn, profile1_request, belt_transect_width_condition2
+):
+    validation = FishBeltProtocolValidation(
+        invalid_collect_record_null_str_warn, request=profile1_request
+    )
+    result = validation.validate()
+    import json
+    print(f"validation.validations: {json.dumps(validation.validations, indent=2)}")
+    assert result == WARN
+    assert validation.validations["len_surveyed"]["validate_range"]["status"] == WARN
+    assert (
+        validation.validations["obs_belt_fishes"]["validate_observation_density"][
+            "status"
+        ]
+        == WARN
+    )
+
+    assert (
+        validation.validations["obs_belt_fishes"]["validate_observation_count"][
+            "status"
+        ]
+        == WARN
+    )
+    assert validation.validations["depth"]["validate_range"]["status"] == WARN
+    assert validation.validations["sample_time"]["validate_range"]["status"] == WARN
+
+
 def test_fishbelt_protocol_validation_error(
     invalid_collect_record_error, profile1_request, belt_transect_width_condition2
 ):
