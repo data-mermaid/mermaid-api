@@ -25,3 +25,6 @@ class ReportField(object):
             return value
 
         return self.formatter(value, self, row, serializer_instance)
+
+    def __str__(self):
+        return f"{self.column_path} - {self.display} ({self.alias})"

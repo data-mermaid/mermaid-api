@@ -36,7 +36,7 @@ class Command(ProgressBarBaseCommand):
         self.draw_progress_bar(0)
         for n, site in enumerate(qry):
             self.draw_progress_bar(float(n) / num_sites)
-            update_site_covariates(site)
+            update_site_covariates(site, True)
             if n % throttle == 0:
                 sleep(1)
 
