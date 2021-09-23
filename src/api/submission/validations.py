@@ -77,7 +77,7 @@ class RegionalAttributesMixin(ObservationsMixin):
 
     def validate_region(self):
         sample_event = self.data.get("sample_event") or {}
-        site_id = sample_event.get("site")
+        site_id = sample_event.get("site") or None
         site = Site.objects.get_or_none(id=site_id)
         if site is None or site.location is None:
             return self.ok(self.identifier)
@@ -366,7 +366,7 @@ class SampleEventValidation(DataValidation):
         sample_event = self.data.get("sample_event") or {}
         sample_date_str = sample_event.get("sample_date") or ""
         sample_time_str = sample_event.get("sample_time") or ""
-        site_id = sample_event.get("site")
+        site_id = sample_event.get("site") or None
 
         if sample_date_str.strip() == "":
             sample_date_str = None
