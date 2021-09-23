@@ -167,7 +167,13 @@ class FishAttributeMixin(RegionalAttributesMixin):
             fish_size_bin_lookup = {}
 
         # only validate lengths at species level until we know how to aggregate to genus
-        fish_attrs = {i["id"]: i for i in FishSpecies.objects.filter(id__in=fish_attr_ids).select_related("genus__name").values("id", "genus__name", "name", "max_length")}
+        fish_species_qry = FishSpecies.objects.filter(id__in=fish_attr_ids)
+        fish_species_qry = fish_species_qry.select_related("genus__name")
+        fish_species_qry = fish_species_qry.values("id", "genus__name", "name", "max_length")
+        fish_attrs = {
+            i["id"]: i
+            for i in fish_species_qry
+        }
         for ob in obs:
             fish = fish_attrs.get(ob["fish_attribute"]) or {}
             max_length = fish.get("max_length")
@@ -840,7 +846,7 @@ class ObsFishBeltValidation(DataValidation, FishAttributeMixin):
         counts = []
         for ob in obs:
             try:
-                counts.append(int(ob.get("count") or 0))
+                counts.append(cast_int(ob.get("count")) or 0)
             except ValueError:
                 return self.error(self.identifier, _(self.INVALID_FISH_COUNT_TMPL))
 
