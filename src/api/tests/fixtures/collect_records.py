@@ -134,32 +134,32 @@ def valid_collect_record(
 ):
     observations = [
         dict(
-            count=10,
+            count="10",
             fish_attribute=str(fish_species1.id),
             size=17.5,
         ),
         dict(
-            count=15,
+            count="15",
             fish_attribute=str(fish_species1.id),
             size=17.5,
         ),
         dict(
-            count=20,
+            count="20",
             fish_attribute=str(fish_species1.id),
             size=17.5,
         ),
         dict(
-            count=30,
+            count="30",
             fish_attribute=str(fish_species1.id),
             size=17.5,
         ),
         dict(
-            count=35,
+            count="35",
             fish_attribute=str(fish_species1.id),
             size=17.5,
         ),
         dict(
-            count=40,
+            count="40",
             fish_attribute=str(fish_species1.id),
             size=17.5,
         ),
@@ -213,9 +213,44 @@ def invalid_collect_record_warn(
     ]
 
     data_warn["obs_belt_fishes"] = observations
-    data_warn["sample_event"]["depth"] = 50.0
     data_warn["fishbelt_transect"]["len_surveyed"] = 101
-    data_warn["fishbelt_transect"]["depth"] = 31
+    data_warn["fishbelt_transect"]["depth"] = 50.0
+    data_warn["fishbelt_transect"]["sample_time"] = "5:00"
+
+    return CollectRecord.objects.create(
+        project=project1,
+        profile=profile1,
+        stage=CollectRecord.VALIDATED_STAGE,
+        data=data_warn,
+    )
+
+
+@pytest.fixture
+def invalid_collect_record_null_str_warn(
+    project1, profile1, valid_collect_record, fish_species1
+):
+    data_warn = valid_collect_record.data
+    observations = [
+        dict(
+            count="10",
+            fish_attribute=str(fish_species1.id),
+            size="17.5",
+        ),
+        dict(
+            count="15",
+            fish_attribute=str(fish_species1.id),
+            size="17.5",
+        ),
+        dict(
+            count="20",
+            fish_attribute=str(fish_species1.id),
+            size="17.5",
+        ),
+    ]
+
+    data_warn["obs_belt_fishes"] = observations
+    data_warn["fishbelt_transect"]["len_surveyed"] = "101"
+    data_warn["fishbelt_transect"]["depth"] = "31"
     data_warn["fishbelt_transect"]["sample_time"] = "5:00"
 
     return CollectRecord.objects.create(

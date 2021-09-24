@@ -24,6 +24,7 @@ from .validations import (
     SiteValidation,
     ValueInRangeValidation,
 )
+from ..utils import cast_float, cast_int
 
 
 class ProtocolValidation(object):
@@ -137,7 +138,7 @@ class SampleUnitValidation(ProtocolValidation):
             self._run_validation(
                 ValueInRangeValidation,
                 "depth",
-                depth,
+                cast_float(depth),
                 self.DEPTH_RANGE,
                 status=WARN,
                 message=self.DEPTH_MSG,
@@ -189,7 +190,7 @@ class TransectValidation(SampleUnitValidation):
             self._run_validation(
                 ValueInRangeValidation,
                 "len_surveyed",
-                len_surveyed,
+                cast_float(len_surveyed),
                 self.LENGTH_RANGE,
                 WARN,
                 str(_(self.LENGTH_RANGE_WARN_MSG_TMPL.format(*self.LENGTH_RANGE))),
@@ -220,7 +221,7 @@ class QuadratValidation(SampleUnitValidation):
             self._run_validation(
                 ValueInRangeValidation,
                 "quadrat_size",
-                quadrat_size,
+                cast_int(quadrat_size),
                 value_range=(0,),
                 value_range_operators=("<=",),
                 message=_("Quadrat size must be greater than 0"),
