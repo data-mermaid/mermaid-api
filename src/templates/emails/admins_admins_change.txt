@@ -7,6 +7,8 @@
 
 If no one in your project made this change, all project admins should change their passwords right away by going to "Your profile" from the menu in the top right, then click "Send Change Password Email".
 
-You received this email because you are an administrator of this project.  To review this project's user roles, visit {{collect_project_url}}.
+You received this email because you are an administrator of this project.  
+
+To review this project's user roles, visit {{collect_project_url}}.
 
 {% endblock %}

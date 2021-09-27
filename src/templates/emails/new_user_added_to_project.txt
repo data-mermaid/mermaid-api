@@ -1,6 +1,4 @@
 {% extends "emails/base.txt" %}
 {% block body %}
-Project: {{project_profile.project.name}}
-New user: {{project_profile.profile.email}}
-Added by: {{admin_profile.full_name}}
+{{project_profile.profile.email}} was added to {{project_profile.project.name}} by {{admin_profile.full_name}}.
 {% endblock %}

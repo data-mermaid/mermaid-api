@@ -1,7 +1,10 @@
-{% extends "emails/base.html" %}
-{% block title %}Added to project{% endblock %}
+{% extends "emails/base.html" %} {% block title %}Added to project{% endblock %}
 {% block body %}
-    <div>Project: {{project_profile.project.name}}</div>
-    <div>New user: {{project_profile.profile.email}}</div>
-    <div>Added by: {{admin_profile.full_name}}</div>
+<h2>New User</h2>
+<p>
+  <strong>{{project_profile.profile.name}}</strong> was added to
+  <strong>{{project_profile.project.name}}</strong> by
+  <strong>{{admin_profile.full_name}}</strong>.
+</p>
+
 {% endblock %}
