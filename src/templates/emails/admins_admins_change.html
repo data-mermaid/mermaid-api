@@ -1,19 +1,24 @@
-{% extends "emails/base.html" %}
-{% block title %}Project administrator change{% endblock %}
-{% block body %}
-    <p>
-    Because you are an administrator of this project, we are letting you know that {{profile.full_name}}
-    was just {{body_snippet}}} this project.
-    If for any reason this is not intended, visit the link below to revise.
-    {% if admin_profile %}The user who made the change is:<br>
-    {{admin_profile.full_name}} &lt;{{admin_profile.email}}&gt;<br>
-    {% endif %}
-    If neither you nor a co-administrator made the changes, make sure all project user roles are set
-    appropriately, and all project administrators should immediately change passwords by navigating to 'Your
-    profile' in the MERMAID menu and then clicking the 'Send Change Password Email' button.
-    </p>
-    <p>
-    To review your project's user roles, click or point your browser to:<br>
-    <a href="{{collect_project_url}}">{{collect_project_url}}</a>
-    </p>
+{% extends "emails/base.html" %} {% block title %}Project administrator change{%
+endblock %} {% block body %}
+
+<h2>{{profile.full_name}} has been {{body_snippet}}} this project.</h2>
+
+{% if admin_profile %}
+<p>
+  This change was made by {{admin_profile.full_name}}. ({{admin_profile.email}})
+</p>
+{% endif %}
+
+<p>
+  If no one in your project made this change, all project admins should change
+  their passwords right away by going to "Your profile" from the menu in the top
+  right, then click "Send Change Password Email".
+</p>
+
+<p>You received this email because you are an administrator of this project.</p>
+<p>
+  To review this project's user roles, visit
+  <a href="{{collect_project_url}}">{{collect_project_url}}</a>.
+</p>
+
 {% endblock %}
