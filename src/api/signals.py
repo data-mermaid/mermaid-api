@@ -185,7 +185,7 @@ def notify_admins_change(instance, changetype):
         body_snippet = "given administrative privileges to"
     elif changetype == "remove":
         subject_snippet = "removed from"
-        body_snippet = "removed from this project, or is not longer an administrator for"
+        body_snippet = "removed from this project, or is no longer an administrator for"
     else:
         return
 
