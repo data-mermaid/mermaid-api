@@ -204,12 +204,56 @@
                       color: #555555;
                     "
                   >
-                    {% if heading %}
-                    <h2>{{heading}}</h2>
-                    {% endif %} {% if subheading %}
-                    <h3>{{subheading}}</h3>
-                    {% endif %} {% block body %}{% endblock %}
+                    <h2>Thank you for signing up.</h2>
+                    <p>
+                      To start using MERMAID, please verify that this is your
+                      email address.
+                    </p>
                   </td>
+                </tr>
+                <tr>
+                  <!-- Button : Begin -->
+                  <table
+                    cellspacing="0"
+                    cellpadding="0"
+                    border="0"
+                    align="center"
+                    style="margin: auto"
+                  >
+                    <tr>
+                      <td
+                        style="
+                          border-radius: 100px;
+                          background: white;
+                          text-align: center;
+                        "
+                        class="button-td"
+                      >
+                        <a
+                          href="{{ url }}"
+                          style="
+                            background: #fe472f;
+                            border: 15px solid #fe472f;
+                            font-family: sans-serif;
+                            font-size: 16px;
+                            line-height: 1.1;
+                            text-align: center;
+                            text-decoration: none;
+                            display: block;
+                            border-radius: 100px;
+                            font-weight: bold;
+                            text-decoration: none !important;
+                          "
+                          class="button-a"
+                        >
+                          &nbsp;&nbsp;&nbsp;&nbsp;<span style="color: #ffffff"
+                            >Verify your email</span
+                          >&nbsp;&nbsp;&nbsp;&nbsp;
+                        </a>
+                      </td>
+                    </tr>
+                  </table>
+                  <br /><br />
                 </tr>
               </table>
             </td>
@@ -250,8 +294,6 @@
               > -->
               <br /><br />
               Sent by <a href="https://datamermaid.org">MERMAID</a>
-              <br />
-              <small>This change happened on {{timestamp}} UTC</small>
               <!-- <span class="mobile-link--footer"
                 >123 Fake Street, SpringField, OR, 97477 US</span
               ><br /><span class="mobile-link--footer">(123) 456-7890</span>

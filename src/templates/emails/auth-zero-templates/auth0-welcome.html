@@ -204,11 +204,12 @@
                       color: #555555;
                     "
                   >
-                    {% if heading %}
-                    <h2>{{heading}}</h2>
-                    {% endif %} {% if subheading %}
-                    <h3>{{subheading}}</h3>
-                    {% endif %} {% block body %}{% endblock %}
+                    <h1 align="center">Welcome to {{ application.name }}!</h1>
+                    <br />
+                    <p>
+                      If you are having any issues with your account, please
+                      don't hesitate to contact us by replying to this email.
+                    </p>
                   </td>
                 </tr>
               </table>
@@ -250,8 +251,6 @@
               > -->
               <br /><br />
               Sent by <a href="https://datamermaid.org">MERMAID</a>
-              <br />
-              <small>This change happened on {{timestamp}} UTC</small>
               <!-- <span class="mobile-link--footer"
                 >123 Fake Street, SpringField, OR, 97477 US</span
               ><br /><span class="mobile-link--footer">(123) 456-7890</span>

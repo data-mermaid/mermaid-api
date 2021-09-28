@@ -204,11 +204,29 @@
                       color: #555555;
                     "
                   >
-                    {% if heading %}
-                    <h2>{{heading}}</h2>
-                    {% endif %} {% if subheading %}
-                    <h3>{{subheading}}</h3>
-                    {% endif %} {% block body %}{% endblock %}
+                    <h2>
+                      Access to your account from {{user.soure_ip}} has been
+                      blocked.
+                    </h2>
+                    <p>
+                      We detected suspicious activity from the IP
+                      <strong>{{ user.source_ip }}</strong> from
+                      <strong>{{ user.city }}</strong>,
+                      <strong>{{ user.country }}</strong>.
+                    </p>
+
+                    <p>
+                      If this is a mistake, you can
+                      <a href="{{ url}}">unblock your IP address</a>. Otherwise
+                      disregard this email.
+                    </p>
+
+                    <p>
+                      <strong
+                        >Your account is not blocked, only access to it from the
+                        that IP</strong
+                      >.
+                    </p>
                   </td>
                 </tr>
               </table>
@@ -250,8 +268,6 @@
               > -->
               <br /><br />
               Sent by <a href="https://datamermaid.org">MERMAID</a>
-              <br />
-              <small>This change happened on {{timestamp}} UTC</small>
               <!-- <span class="mobile-link--footer"
                 >123 Fake Street, SpringField, OR, 97477 US</span
               ><br /><span class="mobile-link--footer">(123) 456-7890</span>
