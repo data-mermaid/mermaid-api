@@ -1517,21 +1517,21 @@ class ArchivedRecord(models.Model):
 
 class Covariate(BaseModel, JSONMixin):
     SUPPORTED_COVARIATES = (
-        ("aca_benthic", "aca_benthic",),
-        ("aca_geomorphic", "aca_geomorphic",),
-        ("vot_score", "vot_score"),
-        ("vot_scorecn", "vot_scorecn"),
-        ("vot_scorecy", "vot_scorecy"),
-        ("vot_scorepfc", "vot_scorepfc"),
-        ("vot_scoreth", "vot_scoreth"),
-        ("vot_scoretr", "vot_scoretr"),
-        ("vot_grav_nc", "vot_grav_nc"),
-        ("vot_sediment", "vot_sediment"),
-        ("vot_nutrient", "vot_nutrient"),
-        ("vot_pop_count", "vot_pop_count"),
-        ("vot_num_ports", "vot_num_ports"),
-        ("vot_reef_value", "vot_reef_value"),
-        ("vot_cumul_score", "vot_cumul_score"),
+        ("aca_benthic", "Benthic_Allen Coral Atlas",),
+        ("aca_geomorphic", "Geomorphic_Allen Coral Atlas",),
+        ("beyer_score", "50 Reefs score_Beyer"),
+        ("beyer_scorecn", "50 Reefs connectivity_Beyer"),
+        ("beyer_scorecy", "50 Reefs cyclones_Beyer"),
+        ("beyer_scorepfc", "50 Reefs thermal future_Beyer"),
+        ("beyer_scoreth", "50 Reefs thermal history_Beyer"),
+        ("beyer_scoretr", "50 Reefs thermal recent_Beyer"),
+        ("andrello_grav_nc", "Market gravity_Andrello"),
+        ("andrello_sediment", "Sediment_Andrello"),
+        ("andrello_nutrient", "Nutrient_Andrello"),
+        ("andrello_pop_count", "Human population_Andrello"),
+        ("andrello_num_ports", "Number of ports_Andrello"),
+        ("andrello_reef_value", "Tourism value_Andrello"),
+        ("andrello_cumul_score", "Cumulative local pressure_Andrello"),
     )
 
     site = models.ForeignKey(
@@ -1540,7 +1540,6 @@ class Covariate(BaseModel, JSONMixin):
         on_delete=models.CASCADE
     )
     name = models.CharField(max_length=100, choices=SUPPORTED_COVARIATES)
-    display = models.CharField(max_length=100)
     datestamp = models.DateField()
     requested_datestamp = models.DateField()
     value = JSONField(null=True, blank=True)
@@ -1549,7 +1548,7 @@ class Covariate(BaseModel, JSONMixin):
         unique_together = ("site", "name",)
 
     def __str__(self):
-        return f"{self.site.name} - {self.display}"
+        return f"{self.site.name} - {self.name}"
 
 
 class AuditRecord(JSONMixin):

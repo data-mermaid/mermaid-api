@@ -74,7 +74,6 @@ def update_site_vot_covariates(site, force):
     point = site.location
 
     results = vibrant_oceans_threats.fetch([(point.x, point.y)])
-
     if not results or not results[0]:
         return
 
@@ -86,12 +85,31 @@ def update_site_vot_covariates(site, force):
     if requested_date is None or data_date is None:
         return
 
+    key_mapping = {
+        vibrant_oceans_threats.SCORE: "beyer_score",
+        vibrant_oceans_threats.SCORE_CN: "beyer_scorecn",
+        vibrant_oceans_threats.SCORE_CY: "beyer_scorecy",
+        vibrant_oceans_threats.SCORE_PFC: "beyer_scorepfc",
+        vibrant_oceans_threats.SCORE_TH: "beyer_scoreth",
+        vibrant_oceans_threats.SCORE_TR: "beyer_scoretr",
+        vibrant_oceans_threats.GRAV_NC: "andrello_grav_nc",
+        vibrant_oceans_threats.SEDIMENT: "andrello_sediment",
+        vibrant_oceans_threats.NUTRIENT: "andrello_nutrient",
+        vibrant_oceans_threats.POP_COUNT: "andrello_pop_count",
+        vibrant_oceans_threats.NUM_PORTS: "andrello_num_ports",
+        vibrant_oceans_threats.REEF_VALUE: "andrello_reef_value",
+        vibrant_oceans_threats.CUMUL_SCORE: "andrello_cumul_score",
+    }
+
     covariates = result.get("covariates") or dict()
     for key, cov in covariates.items():
+        mapped_key = key_mapping.get(key)
+        if mapped_key is None:
+            continue
+
         covariate = Covariate.objects.get_or_none(
-            name=key, site_id=site_pk
-        ) or Covariate(name=key, site_id=site_pk)
-        covariate.display = vibrant_oceans_threats.display_name_lookup[key]
+            name=mapped_key, site_id=site_pk
+        ) or Covariate(name=mapped_key, site_id=site_pk)
         covariate.datestamp = data_date
         covariate.requested_datestamp = requested_date
         covariate.value = cov
@@ -100,5 +118,10 @@ def update_site_vot_covariates(site, force):
 
 @run_in_thread
 def update_site_covariates_in_thread(site, force=False):
+    update_site_aca_covariates(site, force=force)
+    update_site_vot_covariates(site, force=force)
+
+
+def update_site_covariates(site, force=False):
     update_site_aca_covariates(site, force=force)
     update_site_vot_covariates(site, force=force)
