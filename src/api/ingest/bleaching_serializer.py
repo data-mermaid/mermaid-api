@@ -58,7 +58,9 @@ def benthic_attributes_choices():
 
 
 class BleachingCSVListSerializer(CollectRecordCSVListSerializer):
-    def create_hook(self, grouped_records):
+
+    def group_records(self, records):
+        grouped_records = super().group_records(records)
         # Ensure a continuous sequence of quadrat numbers
         for rec in grouped_records:
             for n, obs in enumerate(rec["data"].get("obs_quadrat_benthic_percent")):
