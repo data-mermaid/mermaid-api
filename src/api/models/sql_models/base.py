@@ -15,7 +15,7 @@ sample_event_sql_template = f"""
         project.name AS project_name,
         project.status AS project_status,
         project.notes AS project_notes,
-        'https://datamermaid.org/contact-project/?project_id=' :: text ||
+        'https://datamermaid.org/contact-project?project_id=' :: text ||
             COALESCE(project.id :: text, '' :: text) AS contact_link,
         tags.tags,
         se.site_id,
