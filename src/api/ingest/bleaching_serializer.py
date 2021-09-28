@@ -11,7 +11,7 @@ from .choices import (
     tide_choices,
     visibility_choices,
 )
-from .serializers import CollectRecordCSVSerializer
+from .serializers import CollectRecordCSVListSerializer, CollectRecordCSVSerializer
 
 __all__ = ["BleachingCSVSerializer"]
 
@@ -55,6 +55,17 @@ def benthic_attributes_choices():
         (str(c.id), str(c.name))
         for c in BenthicAttribute.objects.all().order_by("name")
     ]
+
+
+class BleachingCSVListSerializer(CollectRecordCSVListSerializer):
+
+    def group_records(self, records):
+        grouped_records = super().group_records(records)
+        # Ensure a continuous sequence of quadrat numbers
+        for rec in grouped_records:
+            for n, obs in enumerate(rec["data"].get("obs_quadrat_benthic_percent")):
+                obs["quadrat_number"] = n + 1
+        return grouped_records
 
 
 class BleachingCSVSerializer(CollectRecordCSVSerializer):
@@ -115,6 +126,9 @@ class BleachingCSVSerializer(CollectRecordCSVSerializer):
         "data__obs_quadrat_benthic_percent__percent_algae",
     )
 
+    class Meta:
+        list_serializer_class = BleachingCSVListSerializer
+
     data__quadrat_collection__sample_time = serializers.TimeField(required=False, allow_null=True)
     data__quadrat_collection__depth = serializers.DecimalField(max_digits=3, decimal_places=1)
 
@@ -133,8 +147,6 @@ class BleachingCSVSerializer(CollectRecordCSVSerializer):
     data__quadrat_collection__tide = LazyChoiceField(
         choices=tide_choices, required=False, allow_null=True, allow_blank=True
     )
-
-
     data__quadrat_collection__quadrat_size = serializers.DecimalField(
         max_digits=4, decimal_places=2
     )
