@@ -223,9 +223,13 @@ class CollectRecordCSVListSerializer(ListSerializer):
 
         return groups.values()
 
+    def create_hook(self, grouped_records):
+        return grouped_records
+
     def create(self, validated_data):
         records = super().create(validated_data)
         output = self.group_records(records)
+        output = self.create_hook(output)
 
         objs = [
             CollectRecord(
