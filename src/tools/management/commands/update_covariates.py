@@ -23,9 +23,16 @@ class Command(ProgressBarBaseCommand):
             help="Only update sites related to this project id",
         )
 
+        parser.add_argument(
+            "--force",
+            action='store_true',
+            help="Update covariates even if there has been no changes to site.",
+        )
+
     def handle(self, *args, **options):
         throttle = options["throttle"]
         project_id = options["project_id"]
+        force = options["force"]
 
         if project_id:
             qry = Site.objects.filter(project_id=project_id)
@@ -36,7 +43,7 @@ class Command(ProgressBarBaseCommand):
         self.draw_progress_bar(0)
         for n, site in enumerate(qry):
             self.draw_progress_bar(float(n) / num_sites)
-            update_site_covariates(site, True)
+            update_site_covariates(site, force)
             if n % throttle == 0:
                 sleep(1)
 

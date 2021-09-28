@@ -116,7 +116,7 @@ def update_site_vot_covariates(site, force):
         covariate.save()
 
 
-@run_in_thread                                                                                             
+@run_in_thread
 def update_site_covariates_in_thread(site, force=False):
     update_site_aca_covariates(site, force=force)
     update_site_vot_covariates(site, force=force)
