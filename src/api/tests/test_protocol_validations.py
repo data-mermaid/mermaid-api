@@ -79,6 +79,7 @@ def test_fishbelt_protocol_validation_error(
         invalid_collect_record_error, request=profile1_request
     )
     assert validation.validate() == ERROR
+    assert (validation.validations.get("sample_event") or {}).get("validate_sample_date") == ERROR
 
 
 def test_benthic_pit_protocol_validation_ok(
