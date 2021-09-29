@@ -51,8 +51,6 @@ def test_fishbelt_protocol_validation_null_str_warn(
         invalid_collect_record_null_str_warn, request=profile1_request
     )
     result = validation.validate()
-    import json
-    print(f"validation.validations: {json.dumps(validation.validations, indent=2)}")
     assert result == WARN
     assert validation.validations["len_surveyed"]["validate_range"]["status"] == WARN
     assert (
@@ -79,7 +77,7 @@ def test_fishbelt_protocol_validation_error(
         invalid_collect_record_error, request=profile1_request
     )
     assert validation.validate() == ERROR
-    assert (validation.validations.get("sample_event") or {}).get("validate_sample_date") == ERROR
+    assert validation.validations["sample_date"]["validate_system"]["status"] == ERROR
 
 
 def test_benthic_pit_protocol_validation_ok(
@@ -100,7 +98,7 @@ def test_benthic_pit_protocol_validation_error(
 
     assert validation.validate() == ERROR
     assert (
-        validation.validations["obs_benthic_pits"]["validate_observation_count"][
+        validation.validations["interval"]["validate_system"][
             "status"
         ]
         == ERROR
@@ -149,6 +147,6 @@ def test_habitat_complexity_protocol_validation_error(
     )
     assert validation.validate() == ERROR
     assert (
-        validation.validations["obs_habitat_complexities"]["validate_scores"]["status"]
+        validation.validations["score"]["validate_system"]["status"]
         == ERROR
     )
