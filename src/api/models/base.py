@@ -55,21 +55,15 @@ class Profile(models.Model):
 
     @property
     def full_name(self):
-        name = []
-        if self.first_name:
-            name.append(self.first_name)
-
-        if self.last_name:
-            name.append(self.last_name)
-
-        if len(name) > 0:
-            return ' '.join(name)
+        if self.first_name and self.last_name:
+            return f"{self.first_name} {self.last_name}"
+        elif self.num_account_connections == 0:
+            return "(pending user)"
         else:
             try:
-                email_name = self.email.split('@')[0]
-                return email_name
+                return self.email.split("@")[0]
             except IndexError:
-                return ''
+                return "N/A"
 
     @property
     def num_account_connections(self):
