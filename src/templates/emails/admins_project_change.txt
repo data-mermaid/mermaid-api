@@ -16,3 +16,4 @@ If no one in your project made this change, all project admins should change the
 You received this email because you are an administrator of this project.
 
 To view your project's settings, go to {{collect_project_url}}.
+{% endblock %}

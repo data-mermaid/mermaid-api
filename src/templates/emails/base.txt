@@ -1,4 +1,5 @@
 {% if heading %}{{heading}}{% endif %}
 {% if subheading %}{{subheading}}{% endif %}
-{{timestamp}} UTC
 {% block body %}{% endblock %}
+Sent by MERMAID (https://datamermaid.org)
+This change happened on {{timestamp}} UTC
