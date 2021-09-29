@@ -16,12 +16,12 @@ class VibrantOceansThreatsCovariate(BaseCovariate):
     SCORE_PFC = "scorepfc"
     SCORE_TH = "scoreth"
     SCORE_TR = "scoretr"
-    GRAV_NC = "grav_nc"
-    SEDIMENT = "sediment"
-    NUTRIENT = "nutrient"
-    POP_COUNT = "pop_count"
-    NUM_PORTS = "num_ports"
-    REEF_VALUE = "reef_value"
+    GRAV_NC = "grav_nc_raw"
+    SEDIMENT = "sediment_raw"
+    NUTRIENT = "nutrient_raw"
+    POP_COUNT = "pop_count_raw"
+    NUM_PORTS = "num_ports_raw"
+    REEF_VALUE = "reef_value_raw"
     CUMUL_SCORE = "cumul_score"
 
     COLUMNS = (
@@ -39,24 +39,6 @@ class VibrantOceansThreatsCovariate(BaseCovariate):
         REEF_VALUE,
         CUMUL_SCORE,
     )
-
-    @property
-    def display_name_lookup(self):
-        return {
-            f"vot_{self.SCORE}": "Vibrant Oceans Climate: Composite Score",
-            f"vot_{self.SCORE_CN}": "Vibrant Oceans Climate: Connectivity",
-            f"vot_{self.SCORE_CY}": "Vibrant Oceans Climate: Cyclone Risk",
-            f"vot_{self.SCORE_PFC}": "Vibrant Oceans Climate: Thermal Future",
-            f"vot_{self.SCORE_TH}": "Vibrant Oceans Climate: Thermal History",
-            f"vot_{self.SCORE_TR}": "Vibrant Oceans Climate: Recent Stress",
-            f"vot_{self.GRAV_NC}": "Vibrant Oceans Fishing: Market Pressure",
-            f"vot_{self.SEDIMENT}": "Vibrant Oceans Pollution: Sedimentation",
-            f"vot_{self.NUTRIENT}": "Vibrant Oceans Pollution: Nutrients",
-            f"vot_{self.POP_COUNT}": "Vibrant Oceans Coastal Development: Human Population",
-            f"vot_{self.NUM_PORTS}": "Vibrant Oceans Industrial Development: Ports",
-            f"vot_{self.REEF_VALUE}": "Vibrant Oceans Tourism: Reef Value",
-            f"vot_{self.CUMUL_SCORE}": "Vibrant Oceans Climate",
-        }
 
     def _table_exists(self):
         sql = """
@@ -119,8 +101,8 @@ class VibrantOceansThreatsCovariate(BaseCovariate):
                 return None
 
             output = {
-                covariate_key: record[i]
-                for i, covariate_key in enumerate(self.display_name_lookup)
+                col: record[i]
+                for i, col in enumerate(self.COLUMNS)
             }
 
         return {

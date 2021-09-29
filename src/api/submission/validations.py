@@ -1072,7 +1072,7 @@ class ObsBleachingMixin(object):
 
 class ObsBenthicPercentCoveredValidation(DataValidation, ObsBleachingMixin):
     identifier = "obs_quadrat_benthic_percent"
-    VALUE_NOT_SET = "Percent cover value not set"
+    VALUE_NOT_SET = "Warning: There are NA (missing) percent cover values"
     LESS_EQUAL_0_MSG = "Percent cover {} is less than or equal to 0"
     GREATER_100_MSG = "Percent cover {} is greater than 100"
     VALID_NUMBER_MSG = "Percent cover value not between 0 and 100"

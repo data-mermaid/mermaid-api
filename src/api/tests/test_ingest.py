@@ -194,8 +194,6 @@ def test_bleaching_ingest(
     quadrat_collection = new_record.data.get("quadrat_collection")
     obs_colonies_bleached = new_record.data["obs_colonies_bleached"]
 
-    print(new_record.data)
-
     assert new_record.project == project1
     assert new_record.profile == profile1
 
@@ -219,7 +217,7 @@ def test_bleaching_ingest(
     assert len(obs_quadrat_benthic_percent) == 4
     assert obs_quadrat_benthic_percent[3]["quadrat_number"] == 4
     assert obs_quadrat_benthic_percent[3]["percent_hard"] == 87
-    assert obs_quadrat_benthic_percent[3]["percent_soft"] == 0
+    assert obs_quadrat_benthic_percent[3]["percent_soft"] == None
     assert obs_quadrat_benthic_percent[3]["percent_algae"] == 13
 
 

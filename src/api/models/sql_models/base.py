@@ -159,8 +159,6 @@ sample_event_sql_template = f"""
                         cov.value,
                         'datestamp',
                         cov.datestamp,
-                        'display',
-                        cov.display,
                         'requested_datestamp',
                         cov.requested_datestamp
                     )
