@@ -121,7 +121,7 @@ post_save.connect(
 def notify_admins_project_change(instance, text_changes):
     subject = f"Changes to {instance.name}"
     collect_project_url = (
-        f"{settings.DEFAULT_DOMAIN_COLLECT}/#/projects/{instance.pk}/details"
+        f"https://{settings.DEFAULT_DOMAIN_COLLECT}/#/projects/{instance.pk}/details"
     )
 
     context = {
@@ -191,7 +191,7 @@ def notify_admins_change(instance, changetype):
 
     subject = f"Project administrator {subject_snippet} {instance.project.name}"
     collect_project_url = (
-        f"{settings.DEFAULT_DOMAIN_COLLECT}/#/projects/{instance.project.pk}/users"
+        f"https://{settings.DEFAULT_DOMAIN_COLLECT}/#/projects/{instance.project.pk}/users"
     )
 
     context = {
