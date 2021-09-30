@@ -123,6 +123,7 @@ def notify_admins_project_change(instance, text_changes):
     )
 
     context = {
+        "project_name": instance.name,
         "profile": instance.updated_by,
         "collect_project_url": collect_project_url,
         "text_changes": text_changes,
@@ -191,6 +192,7 @@ def notify_admins_change(instance, changetype):
     )
 
     context = {
+        "project_name": instance.project.name,
         "profile": instance.profile,
         "admin_profile": instance.updated_by,
         "collect_project_url": collect_project_url,
@@ -231,7 +233,7 @@ def notify_new_project_user(sender, instance, created, **kwargs):
     else:
         template = "emails/user_added_to_project.html"
 
-    mermaid_email("New Project", template, [instance.profile.email], context=context)
+    mermaid_email(f"New User added to {instance.project.name}", template, [instance.profile.email], context=context)
 
 
 # Don't need to iterate over TransectMethod subclasses because TransectMethod is not abstract

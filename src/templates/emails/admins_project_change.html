@@ -1,7 +1,8 @@
 {% extends "emails/base.html" %}
 {% block title %}Changes to project{% endblock %}
 {% block body %}
-<h2>Changes have been made to your project</h2>
+<h2>Changes have been made to<br />
+{{ project_name }}</h2>
 
 {% if text_changes %}
 <ul>
@@ -12,8 +13,8 @@
 {% endif %}
 
 <p>
-  These changes were made by {% if profile %} {{profile.full_name}}
-  ({{profile.email}}) {% else %} a superadmin not using the API. {% endif %}
+  These changes were made by {% if profile %}{{profile.full_name}} ({{profile.email}}){% else %}a superadmin
+  not using the API{% endif %}.
 </p>
 
 <p>

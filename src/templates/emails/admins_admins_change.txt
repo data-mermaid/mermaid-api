@@ -1,7 +1,7 @@
 {% extends "emails/base.txt" %}
 {% block body %}
 
-{{profile.full_name}} has been {{body_snippet}} this project.
+{{profile.full_name}} has been {{body_snippet}} {{ project_name }}.
 
 {% if admin_profile %}This change was made by {{admin_profile.full_name}} ({{admin_profile.email}}). {% endif %}
 
