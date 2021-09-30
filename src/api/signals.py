@@ -86,8 +86,6 @@ def email_superadmin_on_new(sender, instance, created, **kwargs):
 
     context = {
         "profile": instance.updated_by,
-        "heading": f"MERMAID Proposed New {instance_label.title()}",
-        "subheading": "MERMAID SuperAdmin Communication",
         "admin_link": admin_link,
         "attrib_name": str(instance),
         "instance_label": instance_label,
@@ -126,8 +124,6 @@ def notify_admins_project_change(instance, text_changes):
 
     context = {
         "profile": instance.updated_by,
-        "heading": f"MERMAID Changes to {instance.name}",
-        "subheading": "MERMAID Project Administrator Communication",
         "collect_project_url": collect_project_url,
         "text_changes": text_changes,
     }
@@ -197,8 +193,6 @@ def notify_admins_change(instance, changetype):
     context = {
         "profile": instance.profile,
         "admin_profile": instance.updated_by,
-        "heading": f"MERMAID Administrator Changes to {instance.project.name}",
-        "subheading": "MERMAID Project Administrator Communication",
         "collect_project_url": collect_project_url,
         "body_snippet": body_snippet,
     }
@@ -231,8 +225,6 @@ def notify_new_project_user(sender, instance, created, **kwargs):
     context = {
         "project_profile": instance,
         "admin_profile": instance.updated_by,
-        "heading": instance.project.name,
-        "subheading": "MERMAID Project Communication",
     }
     if instance.profile.num_account_connections == 0:
         template = "emails/new_user_added_to_project.html"

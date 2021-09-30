@@ -124,25 +124,6 @@
   </head>
   <body width="100%" bgcolor="#EDF3FD" style="margin: 0">
     <center style="width: 100%; background: #edf3fd">
-      <!-- Visually Hidden Preheader Text : BEGIN -->
-      <!-- <div
-        style="
-          display: none;
-          font-size: 1px;
-          line-height: 1px;
-          max-height: 0px;
-          max-width: 0px;
-          opacity: 0;
-          overflow: hidden;
-          mso-hide: all;
-          font-family: sans-serif;
-        "
-      >
-        (Optional) This text will appear in the inbox preview, but not the email
-        body.
-      </div> -->
-      <!-- Visually Hidden Preheader Text : END -->
-
       <!--    
             Set the email width. Defined in two places:
             1. max-width for all clients except Desktop Windows Outlook, allowing the email to squish on narrow but never go wider than 680px.
@@ -165,15 +146,17 @@
           style="max-width: 680px"
         >
           <tr>
-            <td style="padding: 20px 0; text-align: center"><a href="https://datamermaid.org">
-              <img
-                src="https://assets.datamermaid.org/email-logo.png"
-                width="200"
-                height="50"
-                alt="MERMAID Logo"
-                border="0"
-              />
-            </a></td>
+            <td style="padding: 20px 0; text-align: center">
+              <a href="https://datamermaid.org">
+                <img
+                  src="https://assets.datamermaid.org/email-logo.png"
+                  width="200"
+                  height="50"
+                  alt="MERMAID Logo"
+                  border="0"
+                />
+              </a>
+            </td>
           </tr>
         </table>
         <!-- Email Header : END -->
@@ -204,11 +187,7 @@
                       color: #555555;
                     "
                   >
-                    {% if heading %}
-                    <h2>{{heading}}</h2>
-                    {% endif %}{% if subheading %}
-                    <h3>{{subheading}}</h3>
-                    {% endif %}{% block body %}{% endblock %}
+                    {% block body %}{% endblock %}
                   </td>
                 </tr>
               </table>
