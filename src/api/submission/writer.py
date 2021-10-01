@@ -74,14 +74,6 @@ class BaseWriter(object):
 
 
 class ProtocolWriter(BaseWriter):
-    def _create_sample_event(self, sample_event_data):
-        sample_event_data["id"] = uuid.uuid4()
-        serializer = SampleEventSerializer(data=sample_event_data, context=self.context)
-        if serializer.is_valid() is False:
-            raise ValidationError(serializer.errors)
-
-        return serializer.save()
-
     def get_sample_unit_method_id(self):
         return self.collect_record.data.get("sample_unit_method_id")
 
