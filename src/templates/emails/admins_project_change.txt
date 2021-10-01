@@ -1,20 +1,19 @@
 {% extends "emails/base.txt" %}
 {% block body %}
-Because you are an administrator of this project, we are letting you know that the changes listed below were
-just made by:
-{% if profile %}{{profile.full_name}} <{{profile.email}}>
-{% else %}<a superadmin not using the API>
-{% endif %}
-If these changes were made by a co-administrator, contact that person to discuss any possible revisions.
-If neither you nor a co-administrator made the changes, make sure all project user roles are set
-appropriately, and all project administrators should immediately change passwords by navigating to 'Your
-profile' in the MERMAID menu and then clicking the 'Send Change Password Email' button.
-To view your project settings, click or point your browser to:<br>
-{{collect_project_url}}
-Summary of changes:
+Changes have been made to {{ project_name }}
+
 {% if text_changes %}
 {% for change in text_changes %}
 - {{change}}
 {% endfor %}
 {% endif %}
+
+
+These changes were made by {% if profile %}{{profile.full_name}} ({{profile.email}}){% else %}a superadmin not using the API{% endif %}.
+
+If no one in your project made this change, all project admins should change their passwords right away by going to "Your profile" from the menu in the top right, then click "Send Change Password Email".
+
+You received this email because you are an administrator of this project.
+
+To view your project's settings, go to {{collect_project_url}}.
 {% endblock %}

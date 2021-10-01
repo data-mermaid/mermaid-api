@@ -7,7 +7,7 @@
     <!-- Forcing initial-scale shouldn't be necessary -->
     <meta http-equiv="X-UA-Compatible" content="IE=edge" />
     <!-- Use the latest (edge) version of IE rendering engine -->
-    <title>{% block title %}MERMAID system email{% endblock %}</title>
+    <title>{% block title %}Document{% endblock %}</title>
     <!-- The title tag shows in email notifications, like Android 4.4. -->
 
     <!-- CSS Reset -->
@@ -124,7 +124,7 @@
   </head>
   <body width="100%" bgcolor="#EDF3FD" style="margin: 0">
     <center style="width: 100%; background: #edf3fd">
-      <!--    
+      <!--
             Set the email width. Defined in two places:
             1. max-width for all clients except Desktop Windows Outlook, allowing the email to squish on narrow but never go wider than 680px.
             2. MSO tags for Desktop Windows Outlook enforce a 680px width.
@@ -146,17 +146,15 @@
           style="max-width: 680px"
         >
           <tr>
-            <td style="padding: 20px 0; text-align: center">
-              <a href="https://datamermaid.org">
-                <img
-                  src="https://assets.datamermaid.org/email-logo.png"
-                  width="200"
-                  height="50"
-                  alt="MERMAID Logo"
-                  border="0"
-                />
-              </a>
-            </td>
+            <td style="padding: 20px 0; text-align: center"><a href="https://datamermaid.org">
+              <img
+                src="https://assets.datamermaid.org/email-logo.png"
+                width="200"
+                height="50"
+                alt="MERMAID Logo"
+                border="0"
+              />
+            </a></td>
           </tr>
         </table>
         <!-- Email Header : END -->
@@ -187,7 +185,29 @@
                       color: #555555;
                     "
                   >
-                    {% block body %}{% endblock %}
+                    <h2>
+                      Access to your account from {{user.soure_ip}} has been
+                      blocked.
+                    </h2>
+                    <p>
+                      We detected suspicious activity from the IP
+                      <strong>{{ user.source_ip }}</strong> from
+                      <strong>{{ user.city }}</strong>,
+                      <strong>{{ user.country }}</strong>.
+                    </p>
+
+                    <p>
+                      If this is a mistake, you can
+                      <a href="{{ url}}">unblock your IP address</a>. Otherwise
+                      disregard this email.
+                    </p>
+
+                    <p>
+                      <strong
+                        >Your account is not blocked, only access to it from the
+                        that IP</strong
+                      >.
+                    </p>
                   </td>
                 </tr>
               </table>
@@ -221,8 +241,6 @@
             >
               <br />
               Sent by <a href="https://datamermaid.org">MERMAID</a>
-              <br />
-              <small>This change happened on {{timestamp}} UTC</small>
             </td>
           </tr>
         </table>
