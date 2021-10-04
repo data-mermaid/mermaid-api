@@ -59,6 +59,7 @@ class FishAttributeAdmin(AttributeAdmin):
 
 class SiteInline(CachedFKInline):
     model = Site
+    extra = 0
     readonly_fields = ["created_by", "updated_by"]
     cache_fields = ["country", "reef_type", "reef_zone", "exposure", "predecessor"]
 
@@ -146,20 +147,20 @@ class ProjectAdmin(BaseAdmin):
         reef_types = ReefType.objects.none()
         reef_zones = ReefZone.objects.none()
         exposures = ReefExposure.objects.none()
-        projects = Project.objects.none()
+        sites = Site.objects.none()
         if obj is not None:
             countries = Country.objects.all()
             reef_types = ReefType.objects.all()
             reef_zones = ReefZone.objects.all()
             exposures = ReefExposure.objects.all()
-            projects = Project.objects.all()
+            sites = Site.objects.all()
 
         for inline in self.get_inline_instances(request, obj):
             inline.cached_countrys = [(c.pk, c.name) for c in countries]
             inline.cached_reef_types = [(rt.pk, rt.name) for rt in reef_types]
             inline.cached_reef_zones = [(rz.pk, rz.name) for rz in reef_zones]
             inline.cached_exposures = [(e.pk, e.name) for e in exposures]
-            inline.cached_predecessors = [(p.pk, p.name) for p in projects]
+            inline.cached_predecessors = [(s.pk, s.name) for s in sites]
             yield inline.get_formset(request, obj), inline
 
 
@@ -869,7 +870,7 @@ class FishSpeciesAdmin(FishAttributeAdmin):
 
 class ObsTransectBeltFishInline(ObservationInline):
     model = ObsBeltFish
-    cache_fields = ["fish_attribute", "size_bin"]
+    cache_fields = ["fish_attribute"]
 
 
 @admin.register(BeltFish)

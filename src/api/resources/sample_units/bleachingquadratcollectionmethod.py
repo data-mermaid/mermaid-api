@@ -1,9 +1,8 @@
 from django.db import transaction
-from django_filters import BaseInFilter, RangeFilter
+from django_filters import RangeFilter
 from rest_condition import Or
 from rest_framework import status
 from rest_framework.response import Response
-from rest_framework.serializers import SerializerMethodField
 
 from ...models import (
     BleachingQCColoniesBleachedObsSQLModel,
@@ -11,16 +10,12 @@ from ...models import (
     BleachingQCSESQLModel,
     BleachingQCSUSQLModel,
 )
-from ...models.mermaid import BleachingQuadratCollection, Project
+from ...models.mermaid import BleachingQuadratCollection
 from ...permissions import ProjectDataReadOnlyPermission, ProjectPublicSummaryPermission
 from ...reports.fields import ReportField
 from ...reports.formatters import (
-    to_aca_benthic_covarite,
-    to_aca_geomorphic_covarite,
     to_day,
     to_governance,
-    to_latitude,
-    to_longitude,
     to_month,
     to_names,
     to_str,
@@ -43,6 +38,7 @@ from ..sample_event import SampleEventSerializer
 from . import (
     BaseProjectMethodView,
     clean_sample_event_models,
+    covariate_report_fields,
     save_model,
     save_one_to_many,
 )
@@ -210,8 +206,8 @@ class ObsBleachingQCColoniesBleachedCSVSerializer(ReportSerializer):
         ReportField("project_name", "Project name"),
         ReportField("country_name", "Country"),
         ReportField("site_name", "Site"),
-        ReportField("location", "Latitude", to_latitude, alias="latitude"),
-        ReportField("location", "Longitude", to_longitude, alias="longitude"),
+        ReportField("latitude", "Latitude"),
+        ReportField("longitude", "Longitude"),
         ReportField("reef_exposure", "Exposure"),
         ReportField("quadrat_size", "Quadrat size"),
         ReportField("reef_type", "Reef type"),
@@ -246,19 +242,7 @@ class ObsBleachingQCColoniesBleachedCSVSerializer(ReportSerializer):
         ReportField("count_80", "50-80% bleached count"),
         ReportField("count_100", "80-100% bleached count"),
         ReportField("count_dead", "Recently dead count"),
-        ReportField(
-            "covariates",
-            "ACA benthic class",
-            to_aca_benthic_covarite,
-            alias="aca_benthic"
-        ),
-        ReportField(
-            "covariates",
-            "ACA geomorphic class",
-            to_aca_geomorphic_covarite,
-            alias="aca_geomorphic"
-        ),
-    ]
+    ] + covariate_report_fields
 
     additional_fields = [
         ReportField("id"),
@@ -271,7 +255,6 @@ class ObsBleachingQCColoniesBleachedCSVSerializer(ReportSerializer):
         ReportField("management_id"),
         ReportField("sample_unit_id"),
         ReportField("data_policy_bleachingqc"),
-        ReportField("relative_depth"),
     ]
 
 
@@ -280,8 +263,8 @@ class ObsQuadratBenthicPercentCSVSerializer(ReportSerializer):
         ReportField("project_name", "Project name"),
         ReportField("country_name", "Country"),
         ReportField("site_name", "Site"),
-        ReportField("location", "Latitude", to_latitude, alias="latitude"),
-        ReportField("location", "Longitude", to_longitude, alias="longitude"),
+        ReportField("latitude", "Latitude"),
+        ReportField("longitude", "Longitude"),
         ReportField("reef_exposure", "Exposure"),
         ReportField("quadrat_size", "Quadrat size"),
         ReportField("reef_type", "Reef type"),
@@ -311,19 +294,7 @@ class ObsQuadratBenthicPercentCSVSerializer(ReportSerializer):
         ReportField("percent_hard", "Hard coral (% cover)"),
         ReportField("percent_soft", "Soft coral (% cover)"),
         ReportField("percent_algae", "Macroalgae (% cover)"),
-        ReportField(
-            "covariates",
-            "ACA benthic class",
-            to_aca_benthic_covarite,
-            alias="aca_benthic"
-        ),
-        ReportField(
-            "covariates",
-            "ACA geomorphic class",
-            to_aca_geomorphic_covarite,
-            alias="aca_geomorphic"
-        ),
-    ]
+    ] + covariate_report_fields
 
     additional_fields = [
         ReportField("id"),
@@ -336,7 +307,6 @@ class ObsQuadratBenthicPercentCSVSerializer(ReportSerializer):
         ReportField("management_id"),
         ReportField("sample_unit_id"),
         ReportField("data_policy_bleachingqc"),
-        ReportField("relative_depth")
     ]
 
 
@@ -404,8 +374,8 @@ class BleachingQCMethodSUCSVSerializer(ReportSerializer):
         ReportField("project_name", "Project name"),
         ReportField("country_name", "Country"),
         ReportField("site_name", "Site"),
-        ReportField("location", "Latitude", to_latitude, alias="latitude"),
-        ReportField("location", "Longitude", to_longitude, alias="longitude"),
+        ReportField("latitude", "Latitude"),
+        ReportField("longitude", "Longitude"),
         ReportField("reef_exposure", "Exposure"),
         ReportField("quadrat_size", "Quadrat size"),
         ReportField("reef_type", "Reef type"),
@@ -440,19 +410,7 @@ class BleachingQCMethodSUCSVSerializer(ReportSerializer):
         ReportField("site_notes", "Site notes"),
         ReportField("sample_event_notes", "Sampling event notes"),
         ReportField("management_notes", "Management notes"),
-        ReportField(
-            "covariates",
-            "ACA benthic class",
-            to_aca_benthic_covarite,
-            alias="aca_benthic"
-        ),
-        ReportField(
-            "covariates",
-            "ACA geomorphic class",
-            to_aca_geomorphic_covarite,
-            alias="aca_geomorphic"
-        ),
-    ]
+    ] + covariate_report_fields
 
     additional_fields = [
         ReportField("id"),
@@ -474,8 +432,8 @@ class BleachingQCMethodSECSVSerializer(ReportSerializer):
         ReportField("project_name", "Project name"),
         ReportField("country_name", "Country"),
         ReportField("site_name", "Site"),
-        ReportField("location", "Latitude", to_latitude, alias="latitude"),
-        ReportField("location", "Longitude", to_longitude, alias="longitude"),
+        ReportField("latitude", "Latitude"),
+        ReportField("longitude", "Longitude"),
         ReportField("reef_exposure", "Exposure"),
         ReportField("quadrat_size_avg", "Quadrat size average"),
         ReportField("reef_type", "Reef type"),
@@ -507,19 +465,7 @@ class BleachingQCMethodSECSVSerializer(ReportSerializer):
         ReportField("site_notes", "Site notes"),
         ReportField("sample_event_notes", "Sampling event notes"),
         ReportField("management_notes", "Management notes"),
-        ReportField(
-            "covariates",
-            "ACA benthic class",
-            to_aca_benthic_covarite,
-            alias="aca_benthic"
-        ),
-        ReportField(
-            "covariates",
-            "ACA geomorphic class",
-            to_aca_geomorphic_covarite,
-            alias="aca_geomorphic"
-        ),
-    ]
+    ] + covariate_report_fields
 
     additional_fields = [
         ReportField("id"),

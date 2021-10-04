@@ -1,8 +1,9 @@
 from rest_framework import serializers
 from rest_framework.exceptions import ValidationError
 from rest_condition import Or
+
 from .base import BaseAPIFilterSet, BaseProjectApiViewSet, BaseAPISerializer
-from ..models import ProjectProfile
+from ..models import CollectRecord, ProjectProfile
 from ..permissions import *
 
 
@@ -10,10 +11,20 @@ class ProjectProfileSerializer(BaseAPISerializer):
     profile_name = serializers.ReadOnlyField()
     is_collector = serializers.ReadOnlyField()
     is_admin = serializers.ReadOnlyField()
+    email = serializers.ReadOnlyField(source="profile.email")
+    num_active_sample_units = serializers.SerializerMethodField()
+    picture = serializers.ReadOnlyField(source="profile.picture_url")
+    num_account_connections = serializers.ReadOnlyField(source="profile.num_account_connections")
 
     class Meta:
         model = ProjectProfile
         exclude = []
+
+    def get_num_active_sample_units(self, obj):
+        return CollectRecord.objects.filter(
+            profile=obj.profile,
+            project=obj.project
+        ).count()
 
 
 class ProjectProfileFilterSet(BaseAPIFilterSet):
@@ -36,7 +47,7 @@ class ProjectProfileCollectorPermission(permissions.BasePermission):
         pp = get_project_profile(project, user.profile)
         return project.is_open and pp.is_collector
 
-
+ 
 class ProjectProfileViewSet(BaseProjectApiViewSet):
     serializer_class = ProjectProfileSerializer
     queryset = ProjectProfile.objects.all()

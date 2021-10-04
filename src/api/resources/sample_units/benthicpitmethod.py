@@ -3,15 +3,12 @@ from django_filters import BaseInFilter, RangeFilter
 from rest_condition import Or
 from rest_framework import status
 from rest_framework.response import Response
-from rest_framework.serializers import SerializerMethodField
 
 from ...models import BenthicPITObsSQLModel, BenthicPITSESQLModel, BenthicPITSUSQLModel
-from ...models.mermaid import BenthicAttribute, BenthicPIT, Project
+from ...models.mermaid import BenthicPIT
 from ...permissions import ProjectDataReadOnlyPermission, ProjectPublicSummaryPermission
 from ...reports.fields import ReportField
 from ...reports.formatters import (
-    to_aca_benthic_covarite,
-    to_aca_geomorphic_covarite,
     to_day,
     to_governance,
     to_latitude,
@@ -37,6 +34,7 @@ from ..sample_event import SampleEventSerializer
 from . import (
     BaseProjectMethodView,
     clean_sample_event_models,
+    covariate_report_fields,
     save_model,
     save_one_to_many,
 )
@@ -156,13 +154,13 @@ class BenthicPITMethodView(BaseProjectApiViewSet):
             raise
 
 
-class ObsBenthicPITCSVSerializer(ReportSerializer):
+class ObsBenthicPITCSVSerializer(ReportSerializer): 
     fields = [
         ReportField("project_name", "Project name"),
         ReportField("country_name", "Country"),
         ReportField("site_name", "Site"),
-        ReportField("location", "Latitude", to_latitude, alias="latitude"),
-        ReportField("location", "Longitude", to_longitude, alias="longitude"),
+        ReportField("latitude", "Latitude"),
+        ReportField("longitude", "Longitude"),
         ReportField("reef_exposure", "Exposure"),
         ReportField("reef_slope", "Reef slope"),
         ReportField("reef_type", "Reef type"),
@@ -195,19 +193,7 @@ class ObsBenthicPITCSVSerializer(ReportSerializer):
         ReportField("sample_event_notes", "Sampling event notes"),
         ReportField("management_notes", "Management notes"),
         ReportField("observation_notes", "Observation notes"),
-        ReportField(
-            "covariates",
-            "ACA benthic class",
-            to_aca_benthic_covarite,
-            alias="aca_benthic"
-        ),
-        ReportField(
-            "covariates",
-            "ACA geomorphic class",
-            to_aca_geomorphic_covarite,
-            alias="aca_geomorphic"
-        ),
-    ]
+    ] + covariate_report_fields
 
     additional_fields = [
         ReportField("id"),
@@ -222,7 +208,6 @@ class ObsBenthicPITCSVSerializer(ReportSerializer):
         ReportField("interval_size"),
         ReportField("interval_start"),
         ReportField("data_policy_benthicpit"),
-        ReportField("relative_depth"),
     ]
 
 
@@ -286,8 +271,8 @@ class BenthicPITMethodSUCSVSerializer(ReportSerializer):
         ReportField("project_name", "Project name"),
         ReportField("country_name", "Country"),
         ReportField("site_name", "Site"),
-        ReportField("location", "Latitude", to_latitude, alias="latitude"),
-        ReportField("location", "Longitude", to_longitude, alias="longitude"),
+        ReportField("latitude", "Latitude"),
+        ReportField("longitude", "Longitude"),
         ReportField("reef_exposure", "Exposure"),
         ReportField("reef_slope", "Reef slope"),
         ReportField("reef_type", "Reef type"),
@@ -318,19 +303,7 @@ class BenthicPITMethodSUCSVSerializer(ReportSerializer):
         ReportField("site_notes", "Site notes"),
         ReportField("sample_event_notes", "Sampling event notes"),
         ReportField("management_notes", "Management notes"),
-        ReportField(
-            "covariates",
-            "ACA benthic class",
-            to_aca_benthic_covarite,
-            alias="aca_benthic"
-        ),
-        ReportField(
-            "covariates",
-            "ACA geomorphic class",
-            to_aca_geomorphic_covarite,
-            alias="aca_geomorphic"
-        ),
-    ]
+    ] + covariate_report_fields
 
     additional_fields = [
         ReportField("id"),
@@ -352,8 +325,8 @@ class BenthicPITMethodSECSVSerializer(ReportSerializer):
         ReportField("project_name", "Project name"),
         ReportField("country_name", "Country"),
         ReportField("site_name", "Site"),
-        ReportField("location", "Latitude", to_latitude, alias="latitude"),
-        ReportField("location", "Longitude", to_longitude, alias="longitude"),
+        ReportField("latitude", "Latitude"),
+        ReportField("longitude", "Longitude"),
         ReportField("reef_exposure", "Exposure"),
         ReportField("reef_type", "Reef type"),
         ReportField("reef_zone", "Reef zone"),
@@ -376,19 +349,7 @@ class BenthicPITMethodSECSVSerializer(ReportSerializer):
         ReportField("site_notes", "Site notes"),
         ReportField("sample_event_notes", "Sampling event notes"),
         ReportField("management_notes", "Management notes"),
-        ReportField(
-            "covariates",
-            "ACA benthic class",
-            to_aca_benthic_covarite,
-            alias="aca_benthic"
-        ),
-        ReportField(
-            "covariates",
-            "ACA geomorphic class",
-            to_aca_geomorphic_covarite,
-            alias="aca_geomorphic"
-        ),
-    ]
+    ] + covariate_report_fields
 
     additional_fields = [
         ReportField("id"),

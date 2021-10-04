@@ -42,7 +42,10 @@ logger = logging.getLogger(__name__)
 class CollectRecordOwner(permissions.BasePermission):
     def has_permission(self, request, view):
         record_ids = request.data.get("ids") or []
-        if not record_ids:
+        pk = view.kwargs.get("pk")
+        if pk:
+            record_ids = [pk]
+        elif not record_ids:
             return True
 
         profile = getattr(request.user, "profile")
@@ -66,15 +69,12 @@ class CollectRecordViewSet(BaseProjectApiViewSet):
     serializer_class = CollectRecordSerializer
     queryset = CollectRecord.objects.all().order_by("id")
     filter_class = CollectRecordFilterSet
+    permission_classes = BaseProjectApiViewSet.permission_classes + [CollectRecordOwner]
 
     def filter_queryset(self, queryset):
         user = self.request.user
-        show_all = "showall" in self.request.query_params
-
-        if show_all is True:
-            return queryset
-
         profile = user.profile
+
         return queryset.filter(profile=profile)
 
     @action(

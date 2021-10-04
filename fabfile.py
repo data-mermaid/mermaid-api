@@ -97,10 +97,10 @@ def lint(c):
 @task
 def test(c):
     """Run unit tests"""
-    local("docker exec -it api_service pytest --cov-report=html --cov=api --verbose")
+    local("docker exec -it api_service pytest --nomigrations --cov-report=html --cov=api --verbose api/tests")
 
 
-@task
+@task 
 def dbrestore(c, keyname="local"):
     """Restore the database from a named s3 key
         ie - fab dbrestore --keyname dev

@@ -1,13 +1,12 @@
 import sys
 from time import sleep
 
-from django.core.management.base import BaseCommand
-
 from api.covariates import update_site_covariates
 from api.models import Site
+from .progress_bar_base_command import ProgressBarBaseCommand
 
 
-class Command(BaseCommand):
+class Command(ProgressBarBaseCommand):
     help = "Update site covariatess"
 
     def add_arguments(self, parser):
@@ -24,19 +23,16 @@ class Command(BaseCommand):
             help="Only update sites related to this project id",
         )
 
-    def draw_progress_bar(self, percent, bar_len=20):
-        # percent float from 0 to 1.s
-        sys.stdout.write("\r")
-        symbols = "=" * int(bar_len * percent)
-        sys.stdout.write(f"[{symbols:<{bar_len}}] {percent * 100:.0f}%")
-        sys.stdout.flush()
-
-        if percent == 1:
-            print("")
+        parser.add_argument(
+            "--force",
+            action='store_true',
+            help="Update covariates even if there has been no changes to site.",
+        )
 
     def handle(self, *args, **options):
         throttle = options["throttle"]
         project_id = options["project_id"]
+        force = options["force"]
 
         if project_id:
             qry = Site.objects.filter(project_id=project_id)
@@ -47,7 +43,7 @@ class Command(BaseCommand):
         self.draw_progress_bar(0)
         for n, site in enumerate(qry):
             self.draw_progress_bar(float(n) / num_sites)
-            update_site_covariates(site)
+            update_site_covariates(site, force)
             if n % throttle == 0:
                 sleep(1)
 

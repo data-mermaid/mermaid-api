@@ -1,10 +1,7 @@
 import re
 from collections import OrderedDict
-from operator import itemgetter
 
 from ..utils import is_match
-
-from api.utils.timer import Timer
 
 
 class ReportSerializer(object):
@@ -24,7 +21,7 @@ class ReportSerializer(object):
         self.ignore_select_related = ignore_select_related
         self.include_additional_fields = include_additional_fields
         self.show_display_fields = show_display_fields
-        self.cache = dict()
+        self.cache = {}
 
     def get_fields(self):
         if self.fields is None:
@@ -49,7 +46,7 @@ class ReportSerializer(object):
 
         column_paths = self._get_column_paths()
         column_paths += self.non_field_columns or tuple()
-        return qs.values(*column_paths)
+        return qs.only(*column_paths)
 
     def _prepare_row(self, row, fields):
         prepared_row = OrderedDict()
@@ -82,5 +79,4 @@ class ReportSerializer(object):
             yield self._prepare_row(row, fields)
 
     def get_serialized_data(self, *args, **kwargs):
-        serialized_data = self.data
-        return serialized_data
+        return self.data

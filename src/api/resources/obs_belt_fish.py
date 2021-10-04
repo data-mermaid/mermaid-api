@@ -32,7 +32,6 @@ class ObsBeltFishFilterSet(BaseAPIFilterSet):
             "beltfish__transect",
             "beltfish__transect__sample_event",
             "fish_attribute",
-            "size_bin",
             "include",
             "size",
             "count",

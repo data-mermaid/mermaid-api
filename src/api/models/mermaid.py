@@ -444,21 +444,6 @@ class SampleEvent(BaseModel, JSONMixin):
     management = models.ForeignKey(Management, on_delete=models.PROTECT, null=True, blank=True)
     sample_date = models.DateField(default=default_date, null=True, blank=True)
     notes = models.TextField(blank=True)
-
-    # Will be removed in a future version
-    sample_time = models.TimeField(null=True, blank=True)
-    depth = models.DecimalField(
-        max_digits=3,
-        decimal_places=1,
-        verbose_name=_(u'depth (m)'),
-        validators=[MinValueValidator(0), MaxValueValidator(40)],
-        null=True,
-        blank=True
-    )
-    visibility = models.ForeignKey(Visibility, on_delete=models.SET_NULL, null=True, blank=True)
-    current = models.ForeignKey(Current, on_delete=models.SET_NULL, null=True, blank=True)
-    relative_depth = models.ForeignKey(RelativeDepth, on_delete=models.SET_NULL, null=True, blank=True)
-    tide = models.ForeignKey(Tide, on_delete=models.SET_NULL, null=True, blank=True)
     validations = JSONField(encoder=JSONEncoder, null=True, blank=True)
 
     class Meta:
@@ -1465,7 +1450,6 @@ class ObsBeltFish(BaseModel, JSONMixin):
     size = models.DecimalField(max_digits=5, decimal_places=1, verbose_name=_(u'size (cm)'),
                                validators=[MinValueValidator(0)])
     count = models.PositiveIntegerField(default=1)
-    size_bin = models.ForeignKey(FishSizeBin, on_delete=models.PROTECT, null=True, blank=True)
     include = models.BooleanField(default=True, verbose_name=INCLUDE_OBS_TEXT)
     notes = models.TextField(blank=True)
 
@@ -1533,8 +1517,21 @@ class ArchivedRecord(models.Model):
 
 class Covariate(BaseModel, JSONMixin):
     SUPPORTED_COVARIATES = (
-        ("aca_benthic", "aca_benthic",),
-        ("aca_geomorphic", "aca_geomorphic",),
+        ("aca_benthic", "Benthic_Allen Coral Atlas",),
+        ("aca_geomorphic", "Geomorphic_Allen Coral Atlas",),
+        ("beyer_score", "50 Reefs score_Beyer"),
+        ("beyer_scorecn", "50 Reefs connectivity_Beyer"),
+        ("beyer_scorecy", "50 Reefs cyclones_Beyer"),
+        ("beyer_scorepfc", "50 Reefs thermal future_Beyer"),
+        ("beyer_scoreth", "50 Reefs thermal history_Beyer"),
+        ("beyer_scoretr", "50 Reefs thermal recent_Beyer"),
+        ("andrello_grav_nc", "Market gravity_Andrello"),
+        ("andrello_sediment", "Sediment_Andrello"),
+        ("andrello_nutrient", "Nutrient_Andrello"),
+        ("andrello_pop_count", "Human population_Andrello"),
+        ("andrello_num_ports", "Number of ports_Andrello"),
+        ("andrello_reef_value", "Tourism value_Andrello"),
+        ("andrello_cumul_score", "Cumulative local pressure_Andrello"),
     )
 
     site = models.ForeignKey(
@@ -1543,16 +1540,15 @@ class Covariate(BaseModel, JSONMixin):
         on_delete=models.CASCADE
     )
     name = models.CharField(max_length=100, choices=SUPPORTED_COVARIATES)
-    display = models.CharField(max_length=100)
     datestamp = models.DateField()
     requested_datestamp = models.DateField()
-    value = JSONField(default=dict)
+    value = JSONField(null=True, blank=True)
 
     class Meta:
         unique_together = ("site", "name",)
 
     def __str__(self):
-        return f"{self.site.name} - {self.display}"
+        return f"{self.site.name} - {self.name}"
 
 
 class AuditRecord(JSONMixin):

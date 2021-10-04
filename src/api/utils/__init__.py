@@ -5,6 +5,7 @@ from datetime import datetime
 
 from django.core.exceptions import ObjectDoesNotExist
 from django.db import IntegrityError
+from django.db.models.deletion import ProtectedError
 from django.db.models.fields.related import OneToOneRel
 from django.contrib.admin.utils import NestedObjects
 from django.db import router
@@ -96,6 +97,21 @@ def get_protected_related_objects(instance):
     return collector.protected
 
 
+def delete_instance_and_related_objects(instance):
+    protected_objs = get_protected_related_objects(instance)
+
+    for obj in protected_objs:
+        try:
+            obj.delete()
+        except ProtectedError:
+            delete_instance_and_related_objects(obj)
+
+    try:
+        instance.delete()
+    except ProtectedError:
+        delete_instance_and_related_objects(instance)
+
+
 def get_sample_unit_number(instance):
     self_number = ""
     self_label = ""
@@ -150,3 +166,17 @@ def create_timestamp(ttl=0):
 
 def expired_timestamp(timestamp):
     return create_timestamp() >= timestamp
+
+
+def cast_float(val):
+    try:
+        return float(val)
+    except (TypeError, ValueError):
+        return None
+
+
+def cast_int(val):
+    try:
+        return int(val)
+    except (TypeError, ValueError):
+        return None

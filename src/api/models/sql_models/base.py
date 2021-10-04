@@ -21,6 +21,8 @@ sample_event_sql_template = f"""
         se.site_id,
         site.name AS site_name,
         site.location,
+        ST_X(site.location) AS longitude,
+        ST_Y(site.location) AS latitude,
         site.notes AS site_notes,
         country.id AS country_id,
         country.name AS country_name,
@@ -157,8 +159,6 @@ sample_event_sql_template = f"""
                         cov.value,
                         'datestamp',
                         cov.datestamp,
-                        'display',
-                        cov.display,
                         'requested_datestamp',
                         cov.requested_datestamp
                     )
@@ -184,6 +184,8 @@ class BaseSQLModel(models.Model):
         "site_name",
         "covariates",
         "location",
+        "longitude",
+        "latitude",
         "site_notes",
         "country_id",
         "country_name",
@@ -225,6 +227,8 @@ class BaseSQLModel(models.Model):
     site_id = models.UUIDField()
     site_name = models.CharField(max_length=255)
     location = models.PointField(srid=4326)
+    longitude = models.FloatField()
+    latitude = models.FloatField()
     site_notes = models.TextField(blank=True)
     country_id = models.UUIDField()
     country_name = models.CharField(max_length=50)

@@ -4,15 +4,17 @@ import django_filters
 from django.contrib.auth.models import AnonymousUser
 from django.contrib.postgres.fields import JSONField
 from django.db import transaction
-from rest_framework import exceptions, permissions, serializers
+from rest_framework import exceptions, permissions, serializers, status
 from rest_framework.decorators import action
 from rest_framework.relations import HyperlinkedIdentityField
 from rest_framework.response import Response
 
 from rest_condition import Or
 from ..auth_backends import AnonymousJWTAuthentication
-from ..models import Management, Project, Site, ProjectProfile, ArchivedRecord
+from ..models import Management, Project, Site, Profile, ProjectProfile, ArchivedRecord
+from ..decorators import run_in_thread
 from ..permissions import *
+from ..utils import delete_instance_and_related_objects
 from ..utils.replace import replace_collect_record_owner, replace_sampleunit_objs
 from .base import (
     BaseAPIFilterSet,
@@ -126,18 +128,20 @@ class ProjectFilterSet(BaseAPIFilterSet):
 
 class ProjectAuthenticatedUserPermission(permissions.BasePermission):
     def has_permission(self, request, view):
-        doing_site_mr_replace = False
-        if hasattr(view, "action_map") and "put" in view.action_map:
-            if (
-                view.action_map["put"] == "find_and_replace_sites"
-                or view.action_map["put"] == "find_and_replace_managements"
-            ):
-                doing_site_mr_replace = True
-        return request.user.is_authenticated and (
-            request.method in permissions.SAFE_METHODS
-            or request.method == "POST"
-            or doing_site_mr_replace
-        )
+        user = request.user
+        if user.is_authenticated is False:
+            return False
+        elif request.method in permissions.SAFE_METHODS or request.method == "POST":
+            return True
+        elif hasattr(view, "action_map") and "put" in view.action_map:
+            action = view.action_map["put"]
+            if action in ("find_and_replace_sites", "find_and_replace_managements"):
+                pk = get_project_pk(request, view)
+                project = get_project(pk)
+                pp = get_project_profile(project, user.profile)
+                return pp.role > ProjectProfile.READONLY
+
+        return False
 
 
 class ProjectViewSet(BaseApiViewSet):
@@ -377,3 +381,59 @@ class ProjectViewSet(BaseApiViewSet):
                 raise Response("Unknown error while replacing sites", status=500)
 
         return Response({"num_collect_records_transferred": num_transferred})
+
+    @run_in_thread
+    def _delete_project(self, pk):
+        try:
+            instance = Project.objects.get(id=pk)
+        except Project.DoesNotExist:
+            return
+
+        with transaction.atomic():
+            sid = transaction.savepoint()
+            try:
+                delete_instance_and_related_objects(instance)
+                transaction.savepoint_commit(sid)
+                print("project deleted")
+            except Exception as err:
+                print(f"Delete Project: {err}")
+                transaction.savepoint_rollback(sid)
+
+    def destroy(self, request, *args, **kwargs):
+        instance = self.get_object()
+        self._delete_project(instance.pk)
+
+        return Response(
+            data="Project has been flagged for deletion",
+            status=status.HTTP_202_ACCEPTED
+        )
+
+    @action(
+        detail=True,
+        methods=["post"],
+        permission_classes=[ProjectDataAdminPermission],
+    )
+    def add_profile(self, request, pk, *args, **kwargs):
+        email = request.data.get("email")
+        role = request.data.get("role")
+        admin_profile = request.user.profile
+
+        if email is None:
+            raise exceptions.ValidationError(
+                detail={"email": "Email is required"}
+            )
+
+        profile, _ = Profile.objects.get_or_create(email=email)
+        project_profile, is_new = ProjectProfile.objects.get_or_create(
+            project_id=pk,
+            profile=profile,
+            role=role or ProjectProfile.COLLECTOR,
+            created_by=admin_profile,
+            updated_by=admin_profile,
+        )
+        if is_new is False:
+            raise exceptions.ValidationError(
+                detail={"email": "Profile has already been added to project"}
+            )
+
+        return Response(ProjectProfileSerializer(instance=project_profile).data)

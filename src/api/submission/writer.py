@@ -53,16 +53,20 @@ class BaseWriter(object):
         self.collect_record = collect_record
         self.context = context
 
+    def validate_data(self, serializer_cls, data):
+        serializer = serializer_cls(data=data, context=self.context)
+        if serializer.is_valid() is False:
+            raise ValidationError(serializer.errors)
+
+        return serializer
+
     def get_or_create(self, model, serializer_cls, data):
+        data["id"] = data.get("id") or uuid.uuid4()
+        serializer = self.validate_data(serializer_cls, data)
         try:
+            data.pop("id")
             return model.objects.get(**data)
-
         except model.DoesNotExist:
-            data["id"] = data.get("id") or uuid.uuid4()
-            serializer = serializer_cls(data=data, context=self.context)
-            if serializer.is_valid() is False:
-                raise ValidationError(serializer.errors)
-
             return serializer.save()
 
     def write(self):
@@ -70,34 +74,25 @@ class BaseWriter(object):
 
 
 class ProtocolWriter(BaseWriter):
-    def _create_sample_event(self, sample_event_data):
-        sample_event_data["id"] = uuid.uuid4()
-        serializer = SampleEventSerializer(data=sample_event_data, context=self.context)
-        if serializer.is_valid() is False:
-            raise ValidationError(serializer.errors)
-
-        return serializer.save()
-    
     def get_sample_unit_method_id(self):
         return self.collect_record.data.get("sample_unit_method_id")
 
     def get_or_create_sample_event(self):
         sample_event_data = get_sample_event_data(self.collect_record)
-        try:
-            query_params = {
-                k: v for k, v in sample_event_data.items() if k not in ("id", "notes")
-            }
-            se = SampleEvent.objects.filter(**query_params)
-            if se.exists():
-                sample_event = se[0]
-                notes = sample_event_data.get("notes") or ""
-                if notes.strip():
-                    sample_event.notes += "\n\n{}".format(notes)
-                    sample_event.save()
-                return sample_event
-            return self._create_sample_event(sample_event_data)
-        except SampleEvent.DoesNotExist:
-            return self._create_sample_event(sample_event_data)
+        sample_event_data["id"] = uuid.uuid4()
+        serializer = self.validate_data(SampleEventSerializer, sample_event_data)
+        query_params = {
+            k: v for k, v in sample_event_data.items() if k not in ("id", "notes")
+        }
+        se = SampleEvent.objects.filter(**query_params)
+        if se.exists():
+            sample_event = se[0]
+            notes = sample_event_data.get("notes") or ""
+            if notes.strip():
+                sample_event.notes += "\n\n{}".format(notes)
+                sample_event.save()
+            return sample_event
+        return serializer.save()
 
     def create_observers(self, sample_unit_method_id):
         observers = []
@@ -108,16 +103,12 @@ class ProtocolWriter(BaseWriter):
             )
 
         for observer_data in observers_data:
+            observer_data["id"] = uuid.uuid4()
+            serializer = self.validate_data(ObserverSerializer, observer_data)
             try:
+                observer_data.pop("id")
                 observers.append(Observer.objects.get(**observer_data))
-            except (Observer.DoesNotExist, ValidationError):
-                observer_data["id"] = uuid.uuid4()
-                serializer = ObserverSerializer(
-                    data=observer_data, context=self.context
-                )
-                if serializer.is_valid() is False:
-                    raise ValidationError(serializer.errors)
-
+            except Observer.DoesNotExist:
                 observers.append(serializer.save())
 
         return observers
@@ -161,12 +152,7 @@ class FishbeltProtocolWriter(ProtocolWriter):
 
         for observation_data in observations_data:
             observation_data["id"] = uuid.uuid4()
-            serializer = ObsBeltFishSerializer(
-                data=observation_data, context=self.context
-            )
-            if serializer.is_valid() is False:
-                raise ValidationError(serializer.errors)
-
+            serializer = self.validate_data(ObsBeltFishSerializer, observation_data)
             observation_beltfishes.append(serializer.save())
 
         return observation_beltfishes

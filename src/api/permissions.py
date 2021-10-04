@@ -6,6 +6,12 @@ from .models import Project, ProjectProfile
 from .models.base import PROPOSED
 
 
+class AuthenticatedReadOnlyPermission(permissions.BasePermission):
+    def has_permission(self, request, view):
+        user = request.user
+        return user.is_authenticated and request.method in permissions.SAFE_METHODS
+
+
 class DefaultPermission(permissions.BasePermission):
     def has_permission(self, request, view):
         return False

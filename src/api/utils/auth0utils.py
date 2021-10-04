@@ -158,11 +158,13 @@ def get_user_info(user_id):
     token = auth.get_token()
     auth_user = Auth0UserInfo(domain, token)
     ui = auth_user.get_userinfo(user_id)
-    um = ui.get('user_metadata') or {}
+    um = ui.get("user_metadata") or {}
+
     return dict(
-        first_name=um.get('first_name') or ui.get('given_name') or '',
-        last_name=um.get('last_name') or ui.get('family_name') or '',
-        email=um.get('email') or ui['email'],
+        first_name=um.get("first_name") or ui.get("given_name") or "",
+        last_name=um.get("last_name") or ui.get("family_name") or "",
+        email=um.get("email") or ui["email"],
+        picture=ui.get("picture")
     )
 
 

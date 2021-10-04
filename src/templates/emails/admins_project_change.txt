@@ -1,0 +1,19 @@
+{% extends "emails/base.txt" %}
+{% block body %}
+Changes have been made to {{ project_name }}
+
+{% if text_changes %}
+{% for change in text_changes %}
+- {{change}}
+{% endfor %}
+{% endif %}
+
+
+These changes were made by {% if profile %}{{profile.full_name}} ({{profile.email}}){% else %}a superadmin not using the API{% endif %}.
+
+If no one in your project made this change, all project admins should change their passwords right away by going to "Your profile" from the menu in the top right, then click "Send Change Password Email".
+
+You received this email because you are an administrator of this project.
+
+To view your project's settings, go to {{collect_project_url}}.
+{% endblock %}

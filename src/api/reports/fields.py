@@ -20,8 +20,11 @@ class ReportField(object):
         self._display = value
 
     def to_representation(self, row, serializer_instance):
-        value = row.get(self.column_path)
+        value = getattr(row, self.column_path)
         if self.formatter is None:
             return value
 
         return self.formatter(value, self, row, serializer_instance)
+
+    def __str__(self):
+        return f"{self.column_path} - {self.display} ({self.alias})"

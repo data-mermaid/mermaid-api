@@ -1,4 +1,6 @@
+import re
 import uuid
+
 from django.utils.translation import ugettext_lazy as _
 from django.db.models.sql.constants import ORDER_PATTERN
 from rest_framework import serializers, viewsets
@@ -446,6 +448,30 @@ class RelatedOrderingFilter(OrderingFilter):
         ]
 
 
+class SafeSearchFilter(SearchFilter):
+
+    def _check_search_terms(self, search_fields, search_terms):
+        if (
+            not search_fields
+            or not search_terms
+            or "$" not in [sf[0] for sf in search_fields]
+        ):
+            return
+
+        for search_term in search_terms:
+            try:
+                re.compile(search_term)
+            except re.error:
+                raise ValidationError(f"Invalid search term: {search_term}")
+
+    def filter_queryset(self, request, queryset, view):
+        search_fields = self.get_search_fields(view, request)
+        search_terms = self.get_search_terms(request)
+        self._check_search_terms(search_fields, search_terms)
+
+        return super().filter_queryset(request, queryset, view)
+
+
 class AggregatedViewFilterSet(OrFilterSetMixin, GeoFilterSet):
     site_id = BaseInFilter(method="id_lookup")
     site_name = BaseInFilter(method="char_lookup")
@@ -530,9 +556,11 @@ class BaseApiViewSet(MethodAuthenticationMixin, viewsets.ModelViewSet, UpdatesMi
 
     pagination_class = StandardResultPagination
 
-    filter_backends = (DjangoFilterBackend, RelatedOrderingFilter, SearchFilter)
+    filter_backends = (DjangoFilterBackend, RelatedOrderingFilter, SafeSearchFilter)
 
     _serializer_class_for_fields = {}
+
+    lookup_value_regex = '[0-9a-fA-F]{8}\-[0-9a-fA-F]{4}\-[0-9a-fA-F]{4}\-[0-9a-fA-F]{4}\-[0-9a-fA-F]{12}'
 
     permission_classes = [DefaultPermission]
 

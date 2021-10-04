@@ -11,7 +11,7 @@ from .base import (
 )
 from .mixins import ProtectedResourceMixin
 from ..models import Site, Project
-from ..permissions import *
+from ..permissions import AuthenticatedReadOnlyPermission
 
 
 class SiteExtendedSerializer(ExtendedSerializer):
@@ -133,13 +133,9 @@ class SiteFilterSet(BaseAPIFilterSet):
 
 
 class SiteViewSet(ProtectedResourceMixin, BaseApiViewSet):
-    method_authentication_classes = {
-        "GET": []
-    }
-
     model_display_name = "Site"
     serializer_class = SiteSerializer
     queryset = Site.objects.exclude(project__status=Project.TEST)
-    permission_classes = [UnauthenticatedReadOnlyPermission, ]
+    permission_classes = [AuthenticatedReadOnlyPermission]
     filter_class = SiteFilterSet
     search_fields = ['$name', '$project__name', '$country__name',]

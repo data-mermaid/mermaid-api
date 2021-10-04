@@ -1,29 +1,33 @@
 from api.decorators import run_in_thread
 from api.models import Covariate, Site
-from geopy.distance import distance as geopy_distance
 from .coral_atlas import CoralAtlasCovariate
+from .vibrant_oceans import VibrantOceansThreatsCovariate
 
 
-def update_site_covariates(site):
-    site_pk = site.pk
+def location_checks(site, covariate_cls, force=False):
+    # ACA limits, but applicable generally
+    lat_min = -85
+    lat_max = 85
+    lon_min = -180
+    lon_max = 180
 
     point = site.location
-    north_pole = (90, 0)
-    south_pole = (-90, 0)
-    existing_covariates = set(site.covariates.all().values_list("name", flat=True))
-    supported_covariates = set([c for c, _ in Covariate.SUPPORTED_COVARIATES])
-    coral_atlas = CoralAtlasCovariate()
+    existing_site = Site.objects.get_or_none(pk=site.pk)
 
-    if (
-        (
-            site_pk
-            and Site.objects.get(pk=site_pk).location == point
-            and not supported_covariates.difference(existing_covariates)
-        )
-        or geopy_distance((point.y, point.x), north_pole).km < coral_atlas.radius
-        or geopy_distance((point.y, point.x), south_pole).km < coral_atlas.radius
-    ):
+    return (
+        (force is not False or (not existing_site or existing_site.location != point))
+        and lat_min < point.y < lat_max
+        and lon_min < point.x < lon_max
+    )
+
+
+def update_site_aca_covariates(site, force):
+    coral_atlas = CoralAtlasCovariate()
+    if location_checks(site, coral_atlas, force) is False:
         return
+
+    site_pk = site.pk
+    point = site.location
 
     results = coral_atlas.fetch([(point.x, point.y)])
 
@@ -32,15 +36,19 @@ def update_site_covariates(site):
 
     result = results[0]
 
-    data_date = result["date"]
-    requested_date = result["requested_date"]
+    data_date = result.get("date")
+    requested_date = result.get("requested_date")
+
+    if requested_date is None or data_date is None:
+        return
+
     aca_covariates = result.get("covariates") or dict()
-    aca_benthic = aca_covariates.get("aca_benthic") or []
-    aca_geomorphic = aca_covariates.get("aca_geomorphic") or []
+    aca_benthic = aca_covariates.get("aca_benthic")
+    aca_geomorphic = aca_covariates.get("aca_geomorphic")
 
     aca_benthic_covariate = Covariate.objects.get_or_none(
         name="aca_benthic", site_id=site_pk
-    ) or Covariate(name="aca_benthic", site=site)
+    ) or Covariate(name="aca_benthic", site_id=site_pk)
     aca_benthic_covariate.display = "Alan Coral Atlas Benthic"
     aca_benthic_covariate.datestamp = data_date
     aca_benthic_covariate.requested_datestamp = requested_date
@@ -48,8 +56,8 @@ def update_site_covariates(site):
     aca_benthic_covariate.save()
 
     aca_geomorphic_covariate = Covariate.objects.get_or_none(
-        name="aca_geomorphic", site=site
-    ) or Covariate(name="aca_geomorphic", site=site)
+        name="aca_geomorphic", site_id=site_pk
+    ) or Covariate(name="aca_geomorphic", site_id=site_pk)
     aca_geomorphic_covariate.display = "Alan Coral Atlas Geomorphic"
     aca_geomorphic_covariate.datestamp = data_date
     aca_geomorphic_covariate.requested_datestamp = requested_date
@@ -57,6 +65,63 @@ def update_site_covariates(site):
     aca_geomorphic_covariate.save()
 
 
+def update_site_vot_covariates(site, force):
+    vibrant_oceans_threats = VibrantOceansThreatsCovariate()
+    if location_checks(site, vibrant_oceans_threats, force) is False:
+        return
+
+    site_pk = site.pk
+    point = site.location
+
+    results = vibrant_oceans_threats.fetch([(point.x, point.y)])
+    if not results or not results[0]:
+        return
+
+    result = results[0]
+
+    data_date = result.get("date")
+    requested_date = result.get("requested_date")
+
+    if requested_date is None or data_date is None:
+        return
+
+    key_mapping = {
+        vibrant_oceans_threats.SCORE: "beyer_score",
+        vibrant_oceans_threats.SCORE_CN: "beyer_scorecn",
+        vibrant_oceans_threats.SCORE_CY: "beyer_scorecy",
+        vibrant_oceans_threats.SCORE_PFC: "beyer_scorepfc",
+        vibrant_oceans_threats.SCORE_TH: "beyer_scoreth",
+        vibrant_oceans_threats.SCORE_TR: "beyer_scoretr",
+        vibrant_oceans_threats.GRAV_NC: "andrello_grav_nc",
+        vibrant_oceans_threats.SEDIMENT: "andrello_sediment",
+        vibrant_oceans_threats.NUTRIENT: "andrello_nutrient",
+        vibrant_oceans_threats.POP_COUNT: "andrello_pop_count",
+        vibrant_oceans_threats.NUM_PORTS: "andrello_num_ports",
+        vibrant_oceans_threats.REEF_VALUE: "andrello_reef_value",
+        vibrant_oceans_threats.CUMUL_SCORE: "andrello_cumul_score",
+    }
+
+    covariates = result.get("covariates") or dict()
+    for key, cov in covariates.items():
+        mapped_key = key_mapping.get(key)
+        if mapped_key is None:
+            continue
+
+        covariate = Covariate.objects.get_or_none(
+            name=mapped_key, site_id=site_pk
+        ) or Covariate(name=mapped_key, site_id=site_pk)
+        covariate.datestamp = data_date
+        covariate.requested_datestamp = requested_date
+        covariate.value = cov
+        covariate.save()
+
+
 @run_in_thread
-def update_site_covariates_in_thread(site):
-    update_site_covariates(site)
+def update_site_covariates_in_thread(site, force=False):
+    update_site_aca_covariates(site, force=force)
+    update_site_vot_covariates(site, force=force)
+
+
+def update_site_covariates(site, force=False):
+    update_site_aca_covariates(site, force=force)
+    update_site_vot_covariates(site, force=force)

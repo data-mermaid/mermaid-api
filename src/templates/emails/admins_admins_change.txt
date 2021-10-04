@@ -1,0 +1,14 @@
+{% extends "emails/base.txt" %}
+{% block body %}
+
+{{profile.full_name}} has been {{body_snippet}} {{ project_name }}.
+
+{% if admin_profile %}This change was made by {{admin_profile.full_name}} ({{admin_profile.email}}). {% endif %}
+
+If no one in your project made this change, all project admins should change their passwords right away by going to "Your profile" from the menu in the top right, then click "Send Change Password Email".
+
+You received this email because you are an administrator of this project.  
+
+To review this project's user roles, visit {{collect_project_url}}.
+
+{% endblock %}

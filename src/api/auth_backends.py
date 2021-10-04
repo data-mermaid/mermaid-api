@@ -1,8 +1,11 @@
 import logging
+from datetime import datetime
 
 from django.conf import settings
 from django.contrib.auth import get_user_model
 from django.contrib.auth.models import AnonymousUser
+from django.utils import timezone
+
 from rest_framework import exceptions
 from rest_framework.authentication import BaseAuthentication
 
@@ -76,20 +79,26 @@ class JWTAuthentication(BaseAuthentication):
         """
         Returns an active Profile that matches the claims's user_id.
         """
-
+        SECS_PER_DAY = 86400
         user_id = payload.get("sub")
+        now_datetime = timezone.now()
         try:
             auth_user = AuthUser.objects.get(user_id=user_id)
             profile = auth_user.profile
+
+            if (now_datetime - profile.updated_on).total_seconds() > SECS_PER_DAY:
+                user_info = get_user_info(user_id)
+                profile.picture_url = user_info["picture"]
+                profile.save()
         except AuthUser.DoesNotExist:
             user_info = get_user_info(user_id)
             profile, is_new = get_or_create_safeish(Profile, email=user_info["email"])
+            profile.first_name = user_info["first_name"]
+            profile.last_name = user_info["last_name"]
+            profile.picture_url = user_info["picture"]
+            profile.save()
 
             if is_new is True:
-                profile.first_name = user_info["first_name"]
-                profile.last_name = user_info["last_name"]
-                profile.save()
-
                 if (
                     settings.MC_API_KEY is not None
                     and settings.MC_USER is not None

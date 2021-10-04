@@ -1,4 +1,5 @@
 import datetime
+from logging import raiseExceptions
 
 import dateutil
 from django.utils.translation import ugettext_lazy as _
@@ -24,6 +25,13 @@ from .validations import (
     SiteValidation,
     ValueInRangeValidation,
 )
+from ..utils import cast_float, cast_int
+
+
+class SerializeValidationError(Exception):
+    def __init__(self, message="", errors=None):
+        super().__init__(message)
+        self.errors = errors
 
 
 class ProtocolValidation(object):
@@ -59,6 +67,20 @@ class ProtocolValidation(object):
         self.validations = dict()
 
         data = self.collect_record.data or dict()
+
+        serializer_validation = SerializerValidation(self.collect_record, self.request)
+        serializer_validation.previous_validations = {}
+        serializer_validation_result = serializer_validation.validate()
+        results = [serializer_validation_result]
+
+        for identifier, value in serializer_validation.logs.items():
+            if identifier not in self.validations:
+                self.validations[identifier] = {}
+            self.validations[identifier].update(value)
+
+        if serializer_validation_result == ERROR:
+            raise SerializeValidationError()
+
         sample_event_data = data.get("sample_event") or dict()
         observers = data.get("observers") or []
         site_id = sample_event_data.get("site")
@@ -92,15 +114,6 @@ class ProtocolValidation(object):
         #         value_range_operators=("<", ">"),
         #     )
         # )
-
-        serializer_validation = SerializerValidation(self.collect_record, self.request)
-        serializer_validation.previous_validations = dict()
-        results.append(serializer_validation.validate())
-
-        for identifier, value in serializer_validation.logs.items():
-            if identifier not in self.validations:
-                self.validations[identifier] = dict()
-            self.validations[identifier].update(value)
 
         if ERROR in results:
             return ERROR
@@ -137,7 +150,7 @@ class SampleUnitValidation(ProtocolValidation):
             self._run_validation(
                 ValueInRangeValidation,
                 "depth",
-                depth,
+                cast_float(depth),
                 self.DEPTH_RANGE,
                 status=WARN,
                 message=self.DEPTH_MSG,
@@ -157,7 +170,6 @@ class SampleUnitValidation(ProtocolValidation):
                     value_range_operators=("<", ">"),
                 )
             )
-            print(f"results: {results}")
 
         if ERROR in results:
             return ERROR
@@ -190,7 +202,7 @@ class TransectValidation(SampleUnitValidation):
             self._run_validation(
                 ValueInRangeValidation,
                 "len_surveyed",
-                len_surveyed,
+                cast_float(len_surveyed),
                 self.LENGTH_RANGE,
                 WARN,
                 str(_(self.LENGTH_RANGE_WARN_MSG_TMPL.format(*self.LENGTH_RANGE))),
@@ -221,7 +233,7 @@ class QuadratValidation(SampleUnitValidation):
             self._run_validation(
                 ValueInRangeValidation,
                 "quadrat_size",
-                quadrat_size,
+                cast_int(quadrat_size),
                 value_range=(0,),
                 value_range_operators=("<=",),
                 message=_("Quadrat size must be greater than 0"),
@@ -243,9 +255,12 @@ class FishBeltProtocolValidation(TransectValidation):
     SAMPLE_UNIT = "fishbelt_transect"
 
     def validate(self):
-        results = [super(FishBeltProtocolValidation, self).validate()]
+        try:
+            results = [super(FishBeltProtocolValidation, self).validate()]
+        except SerializeValidationError:
+            return ERROR
 
-        data = self.collect_record.data or dict()
+        data = self.collect_record.data or {}
 
         results.append(self._run_validation(FishBeltTransectValidation, data))
         results.append(self._run_validation(ObsFishBeltValidation, data))
@@ -264,7 +279,10 @@ class BenthicPITProtocolValidation(TransectValidation):
     SAMPLE_UNIT = "benthic_transect"
 
     def validate(self):
-        results = [super(BenthicPITProtocolValidation, self).validate()]
+        try:
+            results = [super(BenthicPITProtocolValidation, self).validate()]
+        except SerializeValidationError:
+            return ERROR
 
         data = self.collect_record.data or dict()
         results.append(self._run_validation(BenthicTransectValidation, data))
@@ -285,7 +303,10 @@ class BenthicLITProtocolValidation(TransectValidation):
     LENGTH_RANGE = (10, 100)
 
     def validate(self):
-        results = [super(BenthicLITProtocolValidation, self).validate()]
+        try:
+            results = [super(BenthicLITProtocolValidation, self).validate()]
+        except SerializeValidationError:
+            return ERROR
 
         data = self.collect_record.data or dict()
         results.append(self._run_validation(BenthicTransectValidation, data))
@@ -305,7 +326,10 @@ class HabitatComplexityProtocolValidation(TransectValidation):
     SAMPLE_UNIT = "benthic_transect"
 
     def validate(self):
-        results = [super(HabitatComplexityProtocolValidation, self).validate()]
+        try:
+            results = [super(HabitatComplexityProtocolValidation, self).validate()]
+        except SerializeValidationError:
+            return ERROR
 
         data = self.collect_record.data or dict()
         results.append(self._run_validation(BenthicTransectValidation, data))
@@ -323,7 +347,10 @@ class HabitatComplexityProtocolValidation(TransectValidation):
 
 class BleachingQuadratCollectionProtocolValidation(QuadratValidation):
     def validate(self):
-        results = [super(BleachingQuadratCollectionProtocolValidation, self).validate()]
+        try:
+            results = [super(BleachingQuadratCollectionProtocolValidation, self).validate()]
+        except SerializeValidationError:
+            return ERROR
 
         data = self.collect_record.data or dict()
 
