@@ -86,8 +86,6 @@ def email_superadmin_on_new(sender, instance, created, **kwargs):
 
     context = {
         "profile": instance.updated_by,
-        "heading": f"MERMAID Proposed New {instance_label.title()}",
-        "subheading": "MERMAID SuperAdmin Communication",
         "admin_link": admin_link,
         "attrib_name": str(instance),
         "instance_label": instance_label,
@@ -121,13 +119,12 @@ post_save.connect(
 def notify_admins_project_change(instance, text_changes):
     subject = f"Changes to {instance.name}"
     collect_project_url = (
-        f"{settings.DEFAULT_DOMAIN_COLLECT}/#/projects/{instance.pk}/details"
+        f"https://{settings.DEFAULT_DOMAIN_COLLECT}/#/projects/{instance.pk}/details"
     )
 
     context = {
+        "project_name": instance.name,
         "profile": instance.updated_by,
-        "heading": f"MERMAID Changes to {instance.name}",
-        "subheading": "MERMAID Project Administrator Communication",
         "collect_project_url": collect_project_url,
         "text_changes": text_changes,
     }
@@ -185,20 +182,19 @@ def notify_admins_change(instance, changetype):
         body_snippet = "given administrative privileges to"
     elif changetype == "remove":
         subject_snippet = "removed from"
-        body_snippet = "removed, as administrator or entirely, from"
+        body_snippet = "removed from this project, or is no longer an administrator for"
     else:
         return
 
     subject = f"Project administrator {subject_snippet} {instance.project.name}"
     collect_project_url = (
-        f"{settings.DEFAULT_DOMAIN_COLLECT}/#/projects/{instance.project.pk}/users"
+        f"https://{settings.DEFAULT_DOMAIN_COLLECT}/#/projects/{instance.project.pk}/users"
     )
 
     context = {
+        "project_name": instance.project.name,
         "profile": instance.profile,
         "admin_profile": instance.updated_by,
-        "heading": f"MERMAID Administrator Changes to {instance.project.name}",
-        "subheading": "MERMAID Project Administrator Communication",
         "collect_project_url": collect_project_url,
         "body_snippet": body_snippet,
     }
@@ -231,15 +227,13 @@ def notify_new_project_user(sender, instance, created, **kwargs):
     context = {
         "project_profile": instance,
         "admin_profile": instance.updated_by,
-        "heading": instance.project.name,
-        "subheading": "MERMAID Project Communication",
     }
     if instance.profile.num_account_connections == 0:
         template = "emails/new_user_added_to_project.html"
     else:
         template = "emails/user_added_to_project.html"
 
-    mermaid_email("New Project", template, [instance.profile.email], context=context)
+    mermaid_email(f"New User added to {instance.project.name}", template, [instance.profile.email], context=context)
 
 
 # Don't need to iterate over TransectMethod subclasses because TransectMethod is not abstract
