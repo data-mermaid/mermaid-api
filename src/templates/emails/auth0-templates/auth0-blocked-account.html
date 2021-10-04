@@ -146,15 +146,17 @@
           style="max-width: 680px"
         >
           <tr>
-            <td style="padding: 20px 0; text-align: center"><a href="https://datamermaid.org">
-              <img
-                src="https://assets.datamermaid.org/email-logo.png"
-                width="200"
-                height="50"
-                alt="MERMAID Logo"
-                border="0"
-              />
-            </a></td>
+            <td style="padding: 20px 0; text-align: center">
+              <a href="https://datamermaid.org">
+                <img
+                  src="https://assets.datamermaid.org/email-logo.png"
+                  width="200"
+                  height="50"
+                  alt="MERMAID Logo"
+                  border="0"
+                />
+              </a>
+            </td>
           </tr>
         </table>
         <!-- Email Header : END -->
@@ -189,6 +191,7 @@
                       Access to your account from {{user.soure_ip}} has been
                       blocked.
                     </h2>
+                    <br />
                     <p>
                       We detected suspicious activity from the IP
                       <strong>{{ user.source_ip }}</strong> from
@@ -196,12 +199,14 @@
                       <strong>{{ user.country }}</strong>.
                     </p>
 
+                    <br />
                     <p>
                       If this is a mistake, you can
                       <a href="{{ url}}">unblock your IP address</a>. Otherwise
                       disregard this email.
                     </p>
 
+                    <br />
                     <p>
                       <strong
                         >Your account is not blocked, only access to it from the
