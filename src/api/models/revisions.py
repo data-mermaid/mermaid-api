@@ -2,6 +2,8 @@ from django.contrib.gis.db import models
 from django.db import connection
 from django.utils import timezone
 
+from .base import ExtendedManager
+
 
 class Revision(models.Model):
     table_name = models.CharField(max_length=50, db_index=True, editable=False)
@@ -11,6 +13,8 @@ class Revision(models.Model):
     revision_num = models.IntegerField(null=False, default=1)
     updated_on = models.DateTimeField(editable=False)
     deleted = models.BooleanField(default=False, editable=False)
+
+    objects = ExtendedManager()
 
     class Meta:
         db_table = "revision"
