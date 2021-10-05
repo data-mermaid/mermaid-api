@@ -1,6 +1,8 @@
-import uuid
-
 from django.contrib.gis.db import models
+from django.db import connection
+from django.utils import timezone
+
+from .base import ExtendedManager
 
 
 class Revision(models.Model):
@@ -12,6 +14,8 @@ class Revision(models.Model):
     updated_on = models.DateTimeField(editable=False)
     deleted = models.BooleanField(default=False, editable=False)
 
+    objects = ExtendedManager()
+
     class Meta:
         db_table = "revision"
         unique_together = ("table_name", "record_id")
@@ -19,6 +23,88 @@ class Revision(models.Model):
     def __str__(self):
         return f"[{self.revision_num}] {self.table_name} {self.record_id}"
 
+    def __lt__(self, other):
+        return self.revision_num < other.revision_num
+
+    def __le__(self, other):
+        return self.revision_num <= other.revision_num
+
+    def __gt__(self, other):
+        return self.revision_num > other.revision_num
+
+    def __ge__(self, other):
+        return self.revision_num >= other.revision_num
+
+    def __eq__(self, other):
+        return self.revision_num == other.revision_num
+
+    @classmethod
+    def create(cls, table_name, record_id, project_id=None, profile_id=None, deleted=False):
+        cursor = connection.cursor()
+        try:
+            sql = "SELECT nextval('revision_seq_num');"
+            cursor.execute(sql)
+            revision_num = cursor.fetchone()[0]
+
+            revision = Revision.objects.get_or_none(
+                table_name=table_name,
+                record_id=record_id
+            )
+
+            if revision is None:
+                return Revision.objects.create(
+                    table_name=table_name,
+                    record_id=record_id,
+                    project_id=project_id,
+                    profile_id=profile_id,
+                    updated_on=timezone.now(),
+                    deleted=deleted,
+                    revision_num=revision_num
+                )
+
+            revision.project_id = project_id
+            revision.profile_id = profile_id
+            revision.updated_on = timezone.now()
+            revision.deleted = deleted
+            revision.revision_num = revision_num
+            revision.save()
+
+            return revision
+
+        finally:
+            if cursor:
+                cursor.close()
+
+    @classmethod
+    def _get_project_id(cls, instance):
+        if hasattr(instance, "project_id"):
+            return instance.project_id
+
+        if hasattr(instance, "project_lookup"):
+            project_lookup = instance.project_lookup
+            attrs = project_lookup.split("__")
+            val = getattr(instance, attrs.pop(0))
+            for attr in attrs:
+                val = getattr(val, attr)
+
+            if val:
+                return val.pk
+
+        return None
+
+    @classmethod
+    def create_from_instance(cls, instance, profile_id=None, deleted=False):
+        table_name = instance._meta.db_table
+        record_id = instance.pk
+        project_id = cls._get_project_id(instance)
+
+        return cls.create(
+            table_name,
+            record_id,
+            project_id,
+            profile_id,
+            deleted
+        )
 
 # -- TRIGGER SQL --
 
