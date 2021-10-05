@@ -23,6 +23,21 @@ class Revision(models.Model):
     def __str__(self):
         return f"[{self.revision_num}] {self.table_name} {self.record_id}"
 
+    def __lt__(self, other):
+        return self.revision_num < other.revision_num
+
+    def __le__(self, other):
+        return self.revision_num <= other.revision_num
+
+    def __gt__(self, other):
+        return self.revision_num > other.revision_num
+
+    def __ge__(self, other):
+        return self.revision_num >= other.revision_num
+
+    def __eq__(self, other):
+        return self.revision_num == other.revision_num
+
     @classmethod
     def create(cls, table_name, record_id, project_id=None, profile_id=None, deleted=False):
         cursor = connection.cursor()
@@ -30,20 +45,37 @@ class Revision(models.Model):
             sql = "SELECT nextval('revision_seq_num');"
             cursor.execute(sql)
             revision_num = cursor.fetchone()[0]
-            return Revision.objects.create(
-                table_name=table_name,
-                record_id=record_id,
-                project_id=project_id,
-                profile_id=profile_id,
-                updated_on=timezone.now(),
-                deleted=deleted,
-                revision_num=revision_num
 
+            revision = Revision.objects.get_or_none(
+                table_name=table_name,
+                record_id=record_id
             )
+
+            if revision is None:
+                return Revision.objects.create(
+                    table_name=table_name,
+                    record_id=record_id,
+                    project_id=project_id,
+                    profile_id=profile_id,
+                    updated_on=timezone.now(),
+                    deleted=deleted,
+                    revision_num=revision_num
+                )
+
+            revision.project_id = project_id
+            revision.profile_id = profile_id
+            revision.updated_on = timezone.now()
+            revision.deleted = deleted
+            revision.revision_num = revision_num
+            revision.save()
+
+            return revision
+
         finally:
             if cursor:
                 cursor.close()
 
+    @classmethod
     def _get_project_id(cls, instance):
         if hasattr(instance, "project_id"):
             return instance.project_id
