@@ -8,7 +8,6 @@ def test_replace_collect_record_owner(
     profile1,
     profile2,
     project_profile1,
-    project_profile2,
 ):
     table_name = project_profile1._meta.db_table
     project_id = project_profile1.project.pk
