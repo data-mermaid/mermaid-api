@@ -29,7 +29,7 @@ def new_collect_record(sender, instance, created, *args, **kwargs):
 
 
 @receiver(pre_delete, sender=CollectRecord)
-def deleted_collect_record(sender, instance, created, *args, **kwargs):
+def deleted_collect_record(sender, instance, *args, **kwargs):
     _create_project_profile_revisions(
         {"profile": instance.profile, "project": instance.project}
     )
@@ -42,5 +42,5 @@ def new_auth_user(sender, instance, created, *args, **kwargs):
 
 
 @receiver(pre_delete, sender=AuthUser)
-def deleted_auth_user(sender, instance, created, *args, **kwargs):
+def deleted_auth_user(sender, instance, *args, **kwargs):
     _create_project_profile_revisions({"profile": instance.profile})
