@@ -4,6 +4,8 @@ Master [![CircleCI](https://circleci.com/gh/data-mermaid/mermaid-api/tree/master
 
 Dev [![CircleCI](https://circleci.com/gh/data-mermaid/mermaid-api/tree/dev.svg?style=svg)](https://circleci.com/gh/data-mermaid/mermaid-api/tree/dev)
 
+[API User Documentation](https://mermaid-api.readthedocs.io/)
+
 ## Stack
 
 - [Django](https://www.djangoproject.com/) (Python)
