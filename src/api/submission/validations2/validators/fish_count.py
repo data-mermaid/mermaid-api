@@ -37,6 +37,6 @@ class TotalFishCountValidator(FishCountValidator):
     def __call__(self, collect_record, **kwargs):
         super().__call__(collect_record)
         if self._fish_count < self.FISH_COUNT_MIN:
-            return WARN, self.MIN_TOTAL_FISH_COUNT
+            return WARN, self.MIN_TOTAL_FISH_COUNT, {"minimum_fish_count": self.FISH_COUNT_MIN}
 
         return OK

@@ -130,11 +130,11 @@ class ValidationRunner:
         validation_level = validation.validation_level
 
         if validation_level not in LEVELS:
-            raise ValueError("Not sure what you are trying to do")
+            raise ValueError(f"{validation_level} is not a supported validation level")
 
         validation_type = validation.validation_type
         if validation_type not in VALIDATION_TYPES:
-            raise ValueError("Not sure what you are trying to do")
+            raise ValueError(f"{validation_type} is not a supported validation type")
 
         key = RECORD_KEY if validation_level == RECORD_LEVEL else validation.paths[0]
 
