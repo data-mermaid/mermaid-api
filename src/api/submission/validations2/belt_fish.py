@@ -27,6 +27,62 @@ from .validators import (
 
 belt_fish_validations = [
     Validation(
+        validator=RequiredValidator(
+            path="data.sample_event.site",
+        ),
+        paths=["data.sample_event.site"],
+        validation_level=FIELD_LEVEL,
+        validation_type=VALUE_VALIDATION_TYPE,
+    ),
+    Validation(
+        validator=RequiredValidator(
+            path="data.sample_event.management",
+        ),
+        paths=["data.sample_event.management"],
+        validation_level=FIELD_LEVEL,
+        validation_type=VALUE_VALIDATION_TYPE,
+    ),
+    Validation(
+        validator=RequiredValidator(
+            path="data.sample_event.sample_date",
+        ),
+        paths=["data.sample_event.sample_date"],
+        validation_level=FIELD_LEVEL,
+        validation_type=VALUE_VALIDATION_TYPE,
+    ),
+    Validation(
+        validator=RequiredValidator(
+            path="data.fishbelt_transect.number",
+        ),
+        paths=["data.fishbelt_transect.number"],
+        validation_level=FIELD_LEVEL,
+        validation_type=VALUE_VALIDATION_TYPE,
+    ),
+    Validation(
+        validator=RequiredValidator(
+            path="data.fishbelt_transect.width",
+        ),
+        paths=["data.fishbelt_transect.width"],
+        validation_level=FIELD_LEVEL,
+        validation_type=VALUE_VALIDATION_TYPE,
+    ),
+    Validation(
+        validator=RequiredValidator(
+            path="data.fishbelt_transect.relative_depth",
+        ),
+        paths=["data.fishbelt_transect.relative_depth"],
+        validation_level=FIELD_LEVEL,
+        validation_type=VALUE_VALIDATION_TYPE,
+    ),
+    Validation(
+        validator=RequiredValidator(
+            path="data.fishbelt_transect.depth",
+        ),
+        paths=["data.fishbelt_transect.depth"],
+        validation_level=FIELD_LEVEL,
+        validation_type=VALUE_VALIDATION_TYPE,
+    ),
+    Validation(
         validator=SampleDateValidator(
             sample_date_path="data.sample_event.sample_date",
             sample_time_path="data.fishbelt_transect.sample_time",
@@ -102,7 +158,7 @@ belt_fish_validations = [
             label_path="data.fishbelt_transect.label",
             number_path="data.fishbelt_transect.number",
             width_path="data.fishbelt_transect.width",
-            relative_depth_path="data.fishbelt_transect.relative_depth_path",
+            relative_depth_path="data.fishbelt_transect.relative_depth",
             site_path="data.sample_event.site",
             management_path="data.sample_event.management",
             sample_date_path="data.sample_event.sample_date",
