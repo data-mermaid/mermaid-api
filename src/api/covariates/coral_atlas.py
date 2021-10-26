@@ -29,7 +29,8 @@ class CoralAtlasCovariate(BaseCovariate):
         self, x: float, y: float, radius: float, request_datetime: datetime
     ) -> dict:
         url = f"{self.api_url}/mapping/querypoint/{y}/{x}?radius={radius}"
-        resp = requests.get(url)
+        headers = {"User-Agent": "Mozilla/5.0 (X11; Ubuntu; Linux x86_64; rv:91.0) Gecko/20100101 Firefox/91.0"}
+        resp = requests.get(url, headers=headers)
         status_code = resp.status_code
         if status_code != 200:
             print(f"url={url}")
