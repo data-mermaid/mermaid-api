@@ -151,3 +151,11 @@ https://github.com/data-mermaid
 
 Pull Requests welcome! When we move to Python 3 this repo will use [Black](https://black.readthedocs.io/en/stable/). Send development questions to 
 admin@datamermaid.org.
+
+
+## Other Topics
+
+### Collect Record
+
+* [Push/Pull](src/api/resources/sync/README.md)
+* [Validations v2](src/api/submission/validations2/README.md)

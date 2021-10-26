@@ -131,6 +131,7 @@ def valid_collect_record(
     profile1,
     project_profile1,
     fish_size_bin_1,
+    relative_depth1,
 ):
     observations = [
         dict(
@@ -173,6 +174,7 @@ def valid_collect_record(
             len_surveyed=100,
             depth=1,
             size_bin=str(fish_size_bin_1.id),
+            relative_depth=str(relative_depth1.id)
         ),
         sample_event=dict(
             management=str(sample_event1.management.id),

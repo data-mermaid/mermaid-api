@@ -17,6 +17,10 @@ from .protocol_validations import (
     HabitatComplexityProtocolValidation,
 )
 from .validations import ERROR, IGNORE, OK, WARN
+from .validations2 import (
+    belt_fish,
+    ValidationRunner
+)
 from .writer import (
     BenthicLITProtocolWriter,
     BenthicPITProtocolWriter,
@@ -175,6 +179,31 @@ def _validate_collect_record(record, request):
     return result, validations
 
 
+def _validate_collect_record_v2(record, record_serializer, request):
+    protocol = record.data.get("protocol")
+    if protocol not in PROTOCOLS:
+        raise ValueError(ugettext_lazy(f"{protocol} not supported"))
+
+    runner = ValidationRunner(serializer=record_serializer)
+    if protocol == BENTHICLIT_PROTOCOL:
+        raise NotImplementedError()
+    elif protocol == BENTHICPIT_PROTOCOL:
+        raise NotImplementedError()
+    elif protocol == FISHBELT_PROTOCOL:
+        runner.validate(
+            record,
+            belt_fish.belt_fish_validations,
+            request=request
+        )
+        return runner.to_dict()
+    elif protocol == HABITATCOMPLEXITY_PROTOCOL:
+        raise NotImplementedError()
+    elif protocol == BLEACHING_QC_PROTOCOL:
+        raise NotImplementedError()
+
+    raise ValueError("Unsupported protocol")
+
+
 def _apply_validation_suppressants(results, validation_suppressants):
     for identifier, validation_keys in validation_suppressants.items():
         results[identifier] = results.get(identifier) or dict()
@@ -218,6 +247,7 @@ def validate_collect_records(
 
         validation_timestamp = timezone.now()
         validations = dict(
+            version="1",
             status=status,
             results=validation_output,
             last_validated=str(validation_timestamp),
@@ -230,6 +260,51 @@ def validate_collect_records(
         qry.update(
             stage=stage,
             validations=validations,
+            updated_on=validation_timestamp,
+            updated_by=profile,
+        )
+        if qry.count() > 0:
+            collect_record = qry[0]
+            serialized_collect_record = serializer_class(collect_record).data
+        output[str(record.pk)] = dict(status=status, record=serialized_collect_record)
+
+    return output
+
+
+def validate_collect_records_v2(
+    profile, record_ids, serializer_class, validation_suppressants=None
+):
+    output = {}
+    records = CollectRecord.objects.filter(id__in=record_ids)
+    request = MockRequest(profile=profile)
+    for record in records.iterator():
+        validation_output = _validate_collect_record_v2(
+            record,
+            serializer_class,
+            request
+        )
+
+        # if validation_suppressants:
+        #     validation_output = _apply_validation_suppressants(
+        #         validation_output, validation_suppressants
+        #     )
+        #     status = check_validation_status(validation_output)
+
+        stage = CollectRecord.SAVED_STAGE
+        status = validation_output["status"]
+        if status == OK:
+            stage = CollectRecord.VALIDATED_STAGE
+
+        validation_timestamp = timezone.now()
+        validation_output["last_validated"] = str(validation_timestamp)
+        serialized_collect_record = None
+        collect_record = None
+
+        qry = CollectRecord.objects.filter(id=record.pk)
+        # Using update so updated_on and validation_timestamp matches
+        qry.update(
+            stage=stage,
+            validations=validation_output,
             updated_on=validation_timestamp,
             updated_by=profile,
         )

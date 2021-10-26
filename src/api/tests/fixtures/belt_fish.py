@@ -454,6 +454,16 @@ def obs_belt_fishes_invalid():
 
 
 @pytest.fixture
+def obs_belt_fishes_error_invalid():
+    return [
+        dict(count=None),
+        dict(count=2),
+        dict(count="abc"),
+        dict(count=1),
+    ]
+
+
+@pytest.fixture
 def obs_belt_fishes_valid():
     return [
         dict(count=1),
