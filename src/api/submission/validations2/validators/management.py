@@ -1,3 +1,6 @@
+from rest_framework.exceptions import ParseError
+
+from ....exceptions import check_uuid
 from ....models import Management
 from .base import ERROR, OK, WARN, BaseValidator, validator_result
 
@@ -13,7 +16,11 @@ class UniqueManagementValidator(BaseValidator):
     @validator_result
     def __call__(self, collect_record, **kwargs):
         management_id = self.get_value(collect_record, self.management_path) or ""
-        management = Management.objects.get_or_none(id=management_id)
+        try:
+            check_uuid(management_id)
+            management = Management.objects.get_or_none(id=management_id)
+        except ParseError:
+            management = None
 
         if management is None:
             return ERROR, self.MANAGEMENT_NOT_FOUND

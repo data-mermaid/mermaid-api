@@ -1,3 +1,6 @@
+from rest_framework.exceptions import ParseError
+
+from ....exceptions import check_uuid
 from ....models import FishAttributeView, Site
 from .base import OK, WARN, BaseValidator, validator_result
 
@@ -29,7 +32,12 @@ class FishFamilySubsetValidator(BaseValidator):
         observations = self.get_value(collect_record, self.observations_path) or []
         site_id = self.get_value(collect_record, self.site_path)
 
-        site = Site.objects.get_or_none(id=site_id)
+        try:
+            check_uuid(site_id)
+            site = Site.objects.get_or_none(id=site_id)
+        except ParseError:
+            site = None
+
         if site is None:
             return self._get_ok(observations)
 

@@ -2,13 +2,14 @@ from django.contrib.gis.geos import Polygon
 from django.contrib.gis.measure import Distance
 from django.contrib.postgres.search import TrigramSimilarity
 from django.db.models import Q
+from rest_framework.exceptions import ParseError
 
+from ....exceptions import check_uuid
 from ....models import Site
 from .base import ERROR, OK, WARN, BaseValidator, validator_result
 
 
 class UniqueSiteValidator(BaseValidator):
-    SITE_NOT_FOUND = "site_not_found"
     NOT_UNIQUE = "not_unique_site"
 
     name_match_percent = 0.5
@@ -38,10 +39,14 @@ class UniqueSiteValidator(BaseValidator):
         # 2. Fuzzy match site name
 
         site_id = self.get_value(collect_record, self.site_path) or ""
-        site = Site.objects.get_or_none(id=site_id)
+        try:
+            check_uuid(site_id)
+            site = Site.objects.get_or_none(id=site_id)
+        except ParseError:
+            site = None
 
         if site is None:
-            return ERROR, self.SITE_NOT_FOUND
+            return OK
 
         project_id = site.project_id
         name = site.name
