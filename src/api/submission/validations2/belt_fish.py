@@ -1,4 +1,3 @@
-# from ...resources.belt_fish import BeltFishSerializer
 from .base import (
     FIELD_LEVEL,
     LIST_VALIDATION_TYPE,
@@ -18,7 +17,7 @@ from .validators import (
     RequiredValidator,
     SampleDateValidator,
     SampleTimeValidator,
-    # SerializerValidator,
+    DrySubmitValidator,
     TotalFishCountValidator,
     UniqueManagementValidator,
     UniqueSiteValidator,
@@ -79,6 +78,14 @@ belt_fish_validations = [
             path="data.fishbelt_transect.depth",
         ),
         paths=["data.fishbelt_transect.depth"],
+        validation_level=FIELD_LEVEL,
+        validation_type=VALUE_VALIDATION_TYPE,
+    ),
+    Validation(
+        validator=RequiredValidator(
+            path="data.fishbelt_transect.size_bin",
+        ),
+        paths=["data.fishbelt_transect.size_bin"],
         validation_level=FIELD_LEVEL,
         validation_type=VALUE_VALIDATION_TYPE,
     ),
@@ -211,13 +218,11 @@ belt_fish_validations = [
         validation_level=FIELD_LEVEL,
         validation_type=VALUE_VALIDATION_TYPE,
     ),
-    # Validation(
-    #     validator=SerializerValidator(
-    #         serializer=BeltFishSerializer
-    #     ),
-    #     paths=["."],
-    #     validation_level=RECORD_LEVEL,
-    #     validation_type=VALUE_VALIDATION_TYPE,
-    #     requires_instance=True,
-    # ),
+    Validation(
+        validator=DrySubmitValidator(),
+        paths=["__all__"],
+        validation_level=RECORD_LEVEL,
+        validation_type=VALUE_VALIDATION_TYPE,
+        requires_instance=True,
+    ),
 ]
