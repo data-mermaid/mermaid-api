@@ -10,6 +10,6 @@ from .management import UniqueManagementValidator
 from .observations import ObservationCountValidator
 from .sample_date import SampleDateValidator
 from .sample_time import SampleTimeValidator
-# from .serializer import SerializerValidator
+from .dry_submit import DrySubmitValidator
 from .site import UniqueSiteValidator
 from .transect import UniqueTransectValidator
