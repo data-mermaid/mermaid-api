@@ -1,7 +1,6 @@
 from api.submission.validations2 import belt_fish, ValidationRunner
 from api.submission.validations import ERROR, OK, WARN, IGNORE
 from api.resources.collect_record import CollectRecordSerializer
-from api.models import CollectRecord
 
 
 def _get_result_status(validator_results, validator_name):
@@ -101,5 +100,10 @@ def test_fishbelt_protocol_validation_error(
     )
     assert overall_status == ERROR
 
-    sample_event_results = runner.to_dict()["results"]["data"]["sample_event"]
+    results = runner.to_dict()["results"]["data"]
+    sample_event_results = results["sample_event"]
     assert _get_result_status(sample_event_results["sample_date"], "sample_date_validator") == ERROR
+
+    observation_results = results["obs_belt_fishes"]
+    assert _get_result_status(observation_results[0], "fish_size_validator") == WARN
+    assert _get_result_status(observation_results[1], "fish_size_validator") == ERROR
