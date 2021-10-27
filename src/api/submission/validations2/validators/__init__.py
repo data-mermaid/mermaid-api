@@ -7,7 +7,7 @@ from .fish_family import FishFamilySubsetValidator
 from .fish_size import FishSizeValidator
 from .generic import AllEqualValidator, RequiredValidator
 from .len_surveyed import LenSurveyedValidator
-from .management import UniqueManagementValidator
+from .management import ManagementRuleValidator, UniqueManagementValidator
 from .observations import ObservationCountValidator
 from .sample_date import SampleDateValidator
 from .sample_time import SampleTimeValidator
