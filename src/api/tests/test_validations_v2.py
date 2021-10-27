@@ -63,6 +63,9 @@ def test_fishbelt_protocol_validation_warn(
     assert _get_result_status(transect_results["depth"], "depth_validator") == WARN
     assert _get_result_status(transect_results["sample_time"], "sample_time_validator") == WARN
 
+    se_results = results["data"]["sample_event"]
+    assert _get_result_status(se_results["management"], "management_rule_validator") == WARN
+
 
 def test_fishbelt_protocol_validation_null_str_warn(
     invalid_collect_record_null_str_warn,

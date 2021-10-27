@@ -193,7 +193,7 @@ def valid_collect_record(
 
 @pytest.fixture
 def invalid_collect_record_warn(
-    project1, profile1, valid_collect_record, fish_species1
+    project1, profile1, valid_collect_record, sample_event2, fish_species1
 ):
     data_warn = valid_collect_record.data
     observations = [
@@ -218,6 +218,11 @@ def invalid_collect_record_warn(
     data_warn["fishbelt_transect"]["len_surveyed"] = 101
     data_warn["fishbelt_transect"]["depth"] = 50.0
     data_warn["fishbelt_transect"]["sample_time"] = "5:00"
+    data_warn["sample_event"] = dict(
+        management=str(sample_event2.management.id),
+        site=str(sample_event2.site.id),
+        sample_date=f"{sample_event2.sample_date.year}-{sample_event2.sample_date.month}-{sample_event2.sample_date.day}",
+    )
 
     return CollectRecord.objects.create(
         project=project1,
