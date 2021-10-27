@@ -12,6 +12,7 @@ from .validators import (
     DepthValidator,
     FishCountValidator,
     FishFamilySubsetValidator,
+    FishSizeValidator,
     LenSurveyedValidator,
     ObservationCountValidator,
     RequiredValidator,
@@ -119,6 +120,16 @@ belt_fish_validations = [
         validator=FishFamilySubsetValidator(
             observations_path="data.obs_belt_fishes",
             site_path="data.sample_event.site",
+        ),
+        paths=["data.obs_belt_fishes"],
+        validation_level=ROW_LEVEL,
+        validation_type=LIST_VALIDATION_TYPE,
+    ),
+    Validation(
+        validator=FishSizeValidator(
+            observations_path="data.obs_belt_fishes",
+            observation_fish_attribute_path="fish_attribute",
+            observation_size_path="size"
         ),
         paths=["data.obs_belt_fishes"],
         validation_level=ROW_LEVEL,

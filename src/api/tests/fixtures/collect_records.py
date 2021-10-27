@@ -271,6 +271,8 @@ def invalid_collect_record_error(
     data_error["observers"] = None
     data_error["sample_event"]["sample_date"] = '2021-9-<font style="vertical-align: inherit;">' + \
         '<font style="vertical-align: inherit;">24</font></font>'
+    data_error["obs_belt_fishes"][0]["size"] = 10000
+    data_error["obs_belt_fishes"][1]["size"] = ""
 
     return CollectRecord.objects.create(
         project=project1,

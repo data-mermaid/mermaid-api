@@ -12,7 +12,7 @@ from django.contrib.gis.db import models
 from django.contrib.postgres.aggregates import ArrayAgg
 from django.contrib.postgres.fields import JSONField
 from django.core.validators import MaxValueValidator, MinValueValidator
-from django.db.models import Avg, F, Q
+from django.db.models import Avg, F, Max, Q
 from django.forms.models import model_to_dict
 from django.utils import timezone
 from django.utils.translation import ugettext_lazy as _
@@ -1092,14 +1092,17 @@ class FishAttribute(BaseAttributeModel):
     def regions(self):
         return self._get_taxon().regions
 
+    def get_max_length(self):
+        return self._get_taxon().max_length
+
 
 class FishGrouping(FishAttribute):
     name = models.CharField(max_length=100)
     regions = models.ManyToManyField(Region, blank=True)
 
-    def _get_attribute_constants(self):
-        if hasattr(self, "_attribute_constants"):
-            return self._attribute_constants
+    def _get_attribute_aggs(self):
+        if hasattr(self, "_attribute_aggs"):
+            return self._attribute_aggs
 
         q = Q()
         for a in self.attribute_grouping.all():
@@ -1110,29 +1113,40 @@ class FishGrouping(FishAttribute):
         q &= Q(regions__in=self.regions.all())
         species = FishSpecies.objects.filter(q).distinct()
 
-        avebiomass = list(species.aggregate(
+        fishattr_aggs = list(species.aggregate(
             Avg('biomass_constant_a'),
             Avg('biomass_constant_b'),
             Avg('biomass_constant_c'),
+            Max('max_length'),
         ).values())
-        biomass_constant_a = round(avebiomass[0] or 0, 6)
-        biomass_constant_b = round(avebiomass[1] or 0, 6)
-        biomass_constant_c = round(avebiomass[2] or 0, 6)
+        biomass_constant_a = round(fishattr_aggs[0] or 0, 6)
+        biomass_constant_b = round(fishattr_aggs[1] or 0, 6)
+        biomass_constant_c = round(fishattr_aggs[2] or 0, 6)
+        max_length = fishattr_aggs[3]
 
-        self._attribute_constants = biomass_constant_a, biomass_constant_b, biomass_constant_c
-        return self._attribute_constants
+        self._attribute_aggs = {
+            "biomass_constant_a": biomass_constant_a,
+            "biomass_constant_b": biomass_constant_b,
+            "biomass_constant_c": biomass_constant_c,
+            "max_length": max_length,
+        }
+        return self._attribute_aggs
 
     @property
     def biomass_constant_a(self):
-        return self._get_attribute_constants()[0]
+        return self._get_attribute_aggs()["biomass_constant_a"]
 
     @property
     def biomass_constant_b(self):
-        return self._get_attribute_constants()[1]
+        return self._get_attribute_aggs()["biomass_constant_b"]
 
     @property
     def biomass_constant_c(self):
-        return self._get_attribute_constants()[2]
+        return self._get_attribute_aggs()["biomass_constant_c"]
+
+    @property
+    def max_length(self):
+        return self._get_attribute_aggs()["max_length"]
 
     class Meta:
         db_table = "fish_grouping"
@@ -1168,6 +1182,7 @@ class FishFamily(FishAttribute):
                     biomass_constant_a=Avg('biomass_constant_a'),
                     biomass_constant_b=Avg('biomass_constant_b'),
                     biomass_constant_c=Avg('biomass_constant_c'),
+                    max_length=Max('max_length'),
                 )
 
             regions_agg_qs = FishSpecies.objects \
@@ -1184,12 +1199,16 @@ class FishFamily(FishAttribute):
         self._biomass_a = None
         self._biomass_b = None
         self._biomass_c = None
+        self._max_length = None
         if family.get("biomass_constant_a") is not None:
             self._biomass_a = round(family.get("biomass_constant_a"), 6)
         if family.get("biomass_constant_b") is not None:
             self._biomass_b = round(family.get("biomass_constant_b"), 6)
         if family.get("biomass_constant_c") is not None:
             self._biomass_c = round(family.get("biomass_constant_c"), 6)
+        if family.get("max_length") is not None:
+            self._max_length = round(family.get("max_length"), 6)
+
         self._regions = FishFamily.regions_agg.get(str(self.pk))
 
         return FishFamily.species_agg
@@ -1217,6 +1236,14 @@ class FishFamily(FishAttribute):
 
         self._set_species_agg_vals()
         return self._biomass_c
+
+    @property
+    def max_length(self):
+        if hasattr(self, '_max_length'):
+            return self._max_length
+
+        self._set_species_agg_vals()
+        return self._max_length
 
     @property
     def regions(self):
@@ -1251,6 +1278,7 @@ class FishGenus(FishAttribute):
                 biomass_constant_a=Avg('biomass_constant_a'),
                 biomass_constant_b=Avg('biomass_constant_b'),
                 biomass_constant_c=Avg('biomass_constant_c'),
+                max_length=Max('max_length'),
             )
 
             regions_agg_qs = FishSpecies.objects.order_by().values("genus").annotate(
@@ -1265,12 +1293,16 @@ class FishGenus(FishAttribute):
         self._biomass_a = None
         self._biomass_b = None
         self._biomass_c = None
+        self._max_length = None
         if genus.get("biomass_constant_a") is not None:
             self._biomass_a = round(genus.get("biomass_constant_a"), 6)
         if genus.get("biomass_constant_b") is not None:
             self._biomass_b = round(genus.get("biomass_constant_b"), 6)
         if genus.get("biomass_constant_c") is not None:
             self._biomass_c = round(genus.get("biomass_constant_c"), 6)
+        if genus.get("max_length") is not None:
+            self._max_length = genus.get("max_length")
+
         self._regions = FishGenus.regions_agg.get(str(self.pk))
 
         return FishGenus.species_agg
@@ -1306,6 +1338,14 @@ class FishGenus(FishAttribute):
 
         self._set_species_agg_vals()
         return self._regions
+
+    @property
+    def max_length(self):
+        if hasattr(self, '_max_length'):
+            return self._max_length
+
+        self._set_species_agg_vals()
+        return self._max_length
 
     class Meta:
         db_table = 'fish_genus'

@@ -56,7 +56,8 @@ def fish_species1(fish_genus1, fish_group_trophic_1, region1, region3):
         biomass_constant_a=0.010000,
         biomass_constant_b=3.010000,
         biomass_constant_c=1.0,
-        trophic_group=fish_group_trophic_1
+        trophic_group=fish_group_trophic_1,
+        max_length=41,
     )
     fs.regions.add(region1)
     fs.regions.add(region3)
@@ -72,6 +73,7 @@ def fish_species2(fish_genus2, region2):
         biomass_constant_a=0.020000,
         biomass_constant_b=3.020000,
         biomass_constant_c=1.0,
+        max_length=32,
     )
     fs.regions.add(region2)
     
@@ -86,6 +88,7 @@ def fish_species3(fish_genus3, region2, region3):
         biomass_constant_a=0.030000,
         biomass_constant_b=3.030000,
         biomass_constant_c=1.0,
+        max_length=55,
     )
     fs.regions.add(region2)
     fs.regions.add(region3)
@@ -101,6 +104,7 @@ def fish_species4(fish_genus3, region2):
         biomass_constant_a=0.01,
         biomass_constant_b=3.06,
         biomass_constant_c=1.0,
+        max_length=21,
     )
     fs.regions.add(region2)
 

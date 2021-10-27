@@ -4,6 +4,7 @@ from .biomass import BiomassValidator
 from .depth import DepthValidator
 from .fish_count import FishCountValidator, TotalFishCountValidator
 from .fish_family import FishFamilySubsetValidator
+from .fish_size import FishSizeValidator
 from .generic import AllEqualValidator, RequiredValidator
 from .len_surveyed import LenSurveyedValidator
 from .management import UniqueManagementValidator
