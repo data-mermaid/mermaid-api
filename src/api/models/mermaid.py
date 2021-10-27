@@ -1100,9 +1100,9 @@ class FishGrouping(FishAttribute):
     name = models.CharField(max_length=100)
     regions = models.ManyToManyField(Region, blank=True)
 
-    def _get_attribute_constants(self):
-        if hasattr(self, "_attribute_constants"):
-            return self._attribute_constants
+    def _get_attribute_aggs(self):
+        if hasattr(self, "_attribute_aggs"):
+            return self._attribute_aggs
 
         q = Q()
         for a in self.attribute_grouping.all():
@@ -1113,29 +1113,40 @@ class FishGrouping(FishAttribute):
         q &= Q(regions__in=self.regions.all())
         species = FishSpecies.objects.filter(q).distinct()
 
-        avebiomass = list(species.aggregate(
+        fishattr_aggs = list(species.aggregate(
             Avg('biomass_constant_a'),
             Avg('biomass_constant_b'),
             Avg('biomass_constant_c'),
+            Max('max_length'),
         ).values())
-        biomass_constant_a = round(avebiomass[0] or 0, 6)
-        biomass_constant_b = round(avebiomass[1] or 0, 6)
-        biomass_constant_c = round(avebiomass[2] or 0, 6)
+        biomass_constant_a = round(fishattr_aggs[0] or 0, 6)
+        biomass_constant_b = round(fishattr_aggs[1] or 0, 6)
+        biomass_constant_c = round(fishattr_aggs[2] or 0, 6)
+        max_length = fishattr_aggs[3]
 
-        self._attribute_constants = biomass_constant_a, biomass_constant_b, biomass_constant_c
-        return self._attribute_constants
+        self._attribute_aggs = {
+            "biomass_constant_a": biomass_constant_a,
+            "biomass_constant_b": biomass_constant_b,
+            "biomass_constant_c": biomass_constant_c,
+            "max_length": max_length,
+        }
+        return self._attribute_aggs
 
     @property
     def biomass_constant_a(self):
-        return self._get_attribute_constants()[0]
+        return self._get_attribute_aggs()["biomass_constant_a"]
 
     @property
     def biomass_constant_b(self):
-        return self._get_attribute_constants()[1]
+        return self._get_attribute_aggs()["biomass_constant_b"]
 
     @property
     def biomass_constant_c(self):
-        return self._get_attribute_constants()[2]
+        return self._get_attribute_aggs()["biomass_constant_c"]
+
+    @property
+    def max_length(self):
+        return self._get_attribute_aggs()["max_length"]
 
     class Meta:
         db_table = "fish_grouping"
