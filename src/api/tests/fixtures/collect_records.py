@@ -193,7 +193,7 @@ def valid_collect_record(
 
 @pytest.fixture
 def invalid_collect_record_warn(
-    project1, profile1, valid_collect_record, sample_event2, fish_species1
+    project1, profile1, valid_collect_record, fish_species1
 ):
     data_warn = valid_collect_record.data
     observations = [
@@ -218,11 +218,6 @@ def invalid_collect_record_warn(
     data_warn["fishbelt_transect"]["len_surveyed"] = 101
     data_warn["fishbelt_transect"]["depth"] = 50.0
     data_warn["fishbelt_transect"]["sample_time"] = "5:00"
-    data_warn["sample_event"] = dict(
-        management=str(sample_event2.management.id),
-        site=str(sample_event2.site.id),
-        sample_date=f"{sample_event2.sample_date.year}-{sample_event2.sample_date.month}-{sample_event2.sample_date.day}",
-    )
 
     return CollectRecord.objects.create(
         project=project1,
@@ -270,14 +265,18 @@ def invalid_collect_record_null_str_warn(
 
 @pytest.fixture
 def invalid_collect_record_error(
-    project1, profile1, valid_collect_record, fish_species1
+    project1, profile1, valid_collect_record, sample_event2, fish_species1
 ):
     data_error = valid_collect_record.data
     data_error["observers"] = None
-    data_error["sample_event"]["sample_date"] = '2021-9-<font style="vertical-align: inherit;">' + \
-        '<font style="vertical-align: inherit;">24</font></font>'
     data_error["obs_belt_fishes"][0]["size"] = 10000
     data_error["obs_belt_fishes"][1]["size"] = ""
+
+    data_error["sample_event"] = dict(
+        management=str(sample_event2.management.id),
+        site=str(sample_event2.site.id),
+        sample_date='2021-9-<font style="vertical-align: inherit;"><font style="vertical-align: inherit;">24</font></font>',
+    )
 
     return CollectRecord.objects.create(
         project=project1,

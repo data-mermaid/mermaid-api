@@ -147,6 +147,6 @@ class ManagementRuleValidator(BaseValidator):
 
         management = Management.objects.get_or_none(id=management_id)
         if not management or not management.rules:
-            return WARN, self.REQUIRED_RULES
+            return ERROR, self.REQUIRED_RULES
 
         return OK
