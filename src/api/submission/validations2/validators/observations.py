@@ -8,8 +8,9 @@ class ObservationCountValidator(BaseValidator):
     TO_FEW_OBS = "to_few_observations"
     TO_MANY_OBS = "to_many_observations"
 
-    def __init__(self, observations_path):
+    def __init__(self, observations_path, **kwargs):
         self.observations_path = observations_path
+        super().__init__(**kwargs)
 
     @validator_result
     def __call__(self, collect_record, **kwargs):

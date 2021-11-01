@@ -5,8 +5,9 @@ class LenSurveyedValidator(BaseValidator):
     LENGTH_RANGE = [10, 100]
     LEN_SURVEYED_OUT_OF_RANGE = "len_surveyed_out_of_range"
 
-    def __init__(self, len_surveyed_path):
+    def __init__(self, len_surveyed_path, **kwargs):
         self.len_surveyed_path = len_surveyed_path
+        super().__init__(**kwargs)
 
     @validator_result
     def __call__(self, collect_record, **kwargs):

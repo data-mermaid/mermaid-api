@@ -18,8 +18,9 @@ class UniqueSiteValidator(BaseValidator):
     search_bbox_size = (0.5, 0.5)
     srid = 4326
 
-    def __init__(self, site_path):
+    def __init__(self, site_path, **kwargs):
         self.site_path = site_path
+        super().__init__(**kwargs)
 
     def _search_bounding_box(self, location):
         x = location.x

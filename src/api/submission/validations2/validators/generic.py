@@ -6,8 +6,9 @@ from .base import ERROR, OK, WARN, BaseValidator, validator_result
 class RequiredValidator(BaseValidator):
     REQUIRED = "required"
 
-    def __init__(self, path):
+    def __init__(self, path, **kwargs):
         self.path = path
+        super().__init__(**kwargs)
 
     @validator_result
     def __call__(self, collect_record, **kwargs):
@@ -20,8 +21,9 @@ class RequiredValidator(BaseValidator):
 class AllEqualValidator(BaseValidator):
     ALL_EQUAL = "all_equal"
 
-    def __init__(self, path):
+    def __init__(self, path, **kwargs):
         self.path = path
+        super().__init__(**kwargs)
 
     def _to_json(self, d):
         return json.dumps(d, sort_keys=True)

@@ -5,9 +5,10 @@ class FishCountValidator(BaseValidator):
     INVALID_FISH_COUNT = "invalid_fish_count"
     _fish_count = 0
 
-    def __init__(self, observations_path, observation_count_path):
+    def __init__(self, observations_path, observation_count_path, **kwargs):
         self.observations_path = observations_path
         self.observation_count_path = observation_count_path
+        super().__init__(**kwargs)
 
     @validator_result
     def check_fish_count(self, obs):
@@ -29,9 +30,10 @@ class TotalFishCountValidator(FishCountValidator):
     MIN_TOTAL_FISH_COUNT = "minimum_total_fish_count"
     FISH_COUNT_MIN = 10
 
-    def __init__(self, observations_path, observation_count_path):
+    def __init__(self, observations_path, observation_count_path, **kwargs):
         self.observations_path = observations_path
         self.observation_count_path = observation_count_path
+        super().__init__(observations_path, observation_count_path, **kwargs)
 
     @validator_result
     def __call__(self, collect_record, **kwargs):
