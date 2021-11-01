@@ -10,6 +10,7 @@ from .base import OK, WARN, BaseValidator, validator_result
 
 
 class UniqueSiteValidator(BaseValidator):
+    SITE_NOT_FOUND = "site_not_found"
     NOT_UNIQUE = "not_unique_site"
 
     name_match_percent = 0.5
@@ -47,7 +48,7 @@ class UniqueSiteValidator(BaseValidator):
             site = None
 
         if site is None:
-            return OK
+            return ERROR, self.SITE_NOT_FOUND
 
         project_id = site.project_id
         name = site.name
