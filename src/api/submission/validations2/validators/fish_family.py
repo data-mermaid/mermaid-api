@@ -8,9 +8,10 @@ from .base import OK, WARN, BaseValidator, validator_result
 class FishFamilySubsetValidator(BaseValidator):
     INVALID_FISH_FAMILY = "not_part_of_fish_family_subset"
 
-    def __init__(self, observations_path, site_path):
+    def __init__(self, observations_path, site_path, **kwargs):
         self.observations_path = observations_path
         self.site_path = site_path
+        super().__init__(**kwargs)
 
     @validator_result
     def check_fish_family_subset(

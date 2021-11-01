@@ -20,6 +20,7 @@ class BiomassValidator(BaseValidator):
         obs_fish_attribute_path,
         obs_count_path,
         obs_size_path,
+        **kwargs
     ):
         self.observations_path = observations_path
         self.len_surveyed_path = len_surveyed_path
@@ -27,6 +28,8 @@ class BiomassValidator(BaseValidator):
         self.obs_fish_attribute_path = obs_fish_attribute_path
         self.obs_count_path = obs_count_path
         self.obs_size_path = obs_size_path
+
+        super().__init__(**kwargs)
 
     def _check_total_density(self, total_density):
         if total_density > self.OBS_GT_DENSITY:

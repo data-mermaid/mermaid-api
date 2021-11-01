@@ -273,6 +273,7 @@ def invalid_collect_record_error(
         '<font style="vertical-align: inherit;">24</font></font>'
     data_error["obs_belt_fishes"][0]["size"] = 10000
     data_error["obs_belt_fishes"][1]["size"] = ""
+    data_error["obs_belt_fishes"][2]["size"] = None
 
     return CollectRecord.objects.create(
         project=project1,

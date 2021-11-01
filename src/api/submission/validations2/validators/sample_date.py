@@ -11,10 +11,11 @@ class SampleDateValidator(BaseValidator):
     INVALID_SAMPLE_DATE = "invalid_sample_date"
     FUTURE_SAMPLE_DATE = "future_sample_date"
 
-    def __init__(self, sample_date_path, sample_time_path, site_path):
+    def __init__(self, sample_date_path, sample_time_path, site_path, **kwargs):
         self.sample_date_path = sample_date_path
         self.sample_time_path = sample_time_path
         self.site_path = site_path
+        super().__init__(**kwargs)
 
     def is_sample_date(self, date_str):
         sample_date = parse_datetime(f"{date_str} 00:00:00")

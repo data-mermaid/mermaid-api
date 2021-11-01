@@ -11,6 +11,7 @@ class SampleTimeValidator(BaseValidator):
 
     def __init__(self, sample_time_path, **kwargs):
         self.sample_time_path = sample_time_path
+        super().__init__(**kwargs)
 
     @validator_result
     def __call__(self, collect_record, **kwargs):

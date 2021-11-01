@@ -10,8 +10,9 @@ class UniqueManagementValidator(BaseValidator):
     NOT_UNIQUE = "not_unique_management"
     name_match_percent = 0.5
 
-    def __init__(self, management_path):
+    def __init__(self, management_path, **kwargs):
         self.management_path = management_path
+        super().__init__(**kwargs)
 
     @validator_result
     def __call__(self, collect_record, **kwargs):

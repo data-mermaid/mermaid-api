@@ -5,8 +5,9 @@ class DepthValidator(BaseValidator):
     DEPTH_RANGE = [0, 30]
     INVALID_DEPTH = "invalid_depth"
 
-    def __init__(self, depth_path):
+    def __init__(self, depth_path, **kwargs):
         self.depth_path = depth_path
+        super().__init__(**kwargs)
 
     @validator_result
     def __call__(self, collect_record, **kwargs):

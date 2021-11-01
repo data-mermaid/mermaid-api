@@ -7,11 +7,12 @@ class FishSizeValidator(BaseValidator):
     MAX_FISH_SIZE = "max_fish_size"
 
     def __init__(
-        self, observations_path, observation_fish_attribute_path, observation_size_path
+        self, observations_path, observation_fish_attribute_path, observation_size_path, **kwargs
     ):
         self.observations_path = observations_path
         self.observation_fish_attribute_path = observation_fish_attribute_path
         self.observation_size_path = observation_size_path
+        super().__init__(**kwargs)
 
     @validator_result
     def check_fish_size(self, obs, max_fish_length_lookup):
