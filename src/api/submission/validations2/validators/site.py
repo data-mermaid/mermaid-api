@@ -6,7 +6,7 @@ from rest_framework.exceptions import ParseError
 
 from ....exceptions import check_uuid
 from ....models import Site
-from .base import ERROR, OK, WARN, BaseValidator, validator_result
+from .base import OK, WARN, BaseValidator, validator_result
 
 
 class UniqueSiteValidator(BaseValidator):
