@@ -90,6 +90,8 @@ class ValidationRunner:
 
     def _get_dotty_value(self, data, key):
         try:
+            if isinstance(data, dict):
+                data = dotty(data)
             return data.get(key)
         except (TypeError, KeyError):
             return None
