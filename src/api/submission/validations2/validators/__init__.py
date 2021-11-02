@@ -9,6 +9,7 @@ from .generic import AllEqualValidator, ListRequiredValidator, RequiredValidator
 from .len_surveyed import LenSurveyedValidator
 from .management import UniqueManagementValidator
 from .observations import ObservationCountValidator
+from .region import RegionValidator
 from .sample_date import SampleDateValidator
 from .sample_time import SampleTimeValidator
 from .dry_submit import DrySubmitValidator
