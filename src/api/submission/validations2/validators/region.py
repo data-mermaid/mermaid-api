@@ -1,3 +1,6 @@
+from rest_framework.exceptions import ParseError
+
+from ....exceptions import check_uuid
 from ....models import Region, Site
 from .base import OK, WARN, BaseValidator, validator_result
 
@@ -56,8 +59,12 @@ class RegionValidator(BaseValidator):
         site_id = self.get_value(collect_record, self.site_path)
         obs = self.get_value(collect_record, self.observations_path) or []
 
-        site = Site.objects.get_or_none(id=site_id)
-        if site is None or site.location is None:
+        try:
+            check_uuid(site_id)
+            site = Site.objects.get_or_none(id=site_id)
+            if site is None or site.location is None:
+                raise ParseError()
+        except ParseError:
             return self._get_ok(obs)
 
         regions = Region.objects.filter(geom__intersects=site.location)
