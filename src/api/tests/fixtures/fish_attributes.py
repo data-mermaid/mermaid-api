@@ -76,7 +76,7 @@ def fish_species2(fish_genus2, region2):
         max_length=32,
     )
     fs.regions.add(region2)
-    
+
     return fs
 
 

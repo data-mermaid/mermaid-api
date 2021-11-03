@@ -116,3 +116,4 @@ def test_fishbelt_protocol_validation_error(
     assert _get_result_status(observation_results[0], "fish_size_validator") == WARN
     assert _get_result_status(observation_results[1], "fish_size_validator") == ERROR
     assert _get_result_status(observation_results[2], "size_list_required_validator") == ERROR
+    assert _get_result_status(observation_results[2], "region_validator") == WARN
