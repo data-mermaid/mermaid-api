@@ -8,14 +8,14 @@ def _get_validator():
     )
 
 
-def test_depth_validator_ok(valid_collect_record, belt_transect_width_condition2):
+def test_depth_validator_ok(valid_collect_record):
     validator = _get_validator()
     record = CollectRecordSerializer(instance=valid_collect_record).data
     result = validator(record)
     assert result.status == OK
 
 
-def test_depth_validator_invalid(valid_collect_record, belt_transect_width_condition2):
+def test_depth_validator_invalid(valid_collect_record):
     validator = _get_validator()
     record = CollectRecordSerializer(instance=valid_collect_record).data
     record["data"]["fishbelt_transect"]["depth"] = 0
@@ -34,7 +34,7 @@ def test_depth_validator_invalid(valid_collect_record, belt_transect_width_condi
     assert result.code == DepthValidator.INVALID_DEPTH
 
 
-def test_depth_validator_max_depth(valid_collect_record, belt_transect_width_condition2):
+def test_depth_validator_max_depth(valid_collect_record):
     validator = _get_validator()
     record = CollectRecordSerializer(instance=valid_collect_record).data
     record["data"]["fishbelt_transect"]["depth"] = 100
