@@ -1,6 +1,8 @@
 from django.db.models import Q
 from django.utils import timezone
 
+from api.models.revisions import Revision
+
 from ..models import CollectRecord, SampleEvent
 
 
@@ -56,5 +58,11 @@ def replace_collect_record_owner(project_id, from_profile, to_profile, updated_b
     collect_records = CollectRecord.objects.filter(project_id=project_id, profile=from_profile)
     num_collect_records_updated = collect_records.count()
     collect_records.update(profile=to_profile, updated_on=updated_on, updated_by=updated_by)
+
+    # Trigger new revision for project profiles
+    from_project_profile = from_profile.projects.get(project_id=project_id)
+    to_project_profile = to_profile.projects.get(project_id=project_id)
+    Revision.create_from_instance(from_project_profile)
+    Revision.create_from_instance(to_project_profile)
 
     return num_collect_records_updated

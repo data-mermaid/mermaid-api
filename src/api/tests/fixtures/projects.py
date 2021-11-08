@@ -108,6 +108,19 @@ def site2(project1, country1, reef_type1, reef_exposure1, reef_zone1):
 
 
 @pytest.fixture
+def site3(project1, country1, reef_type1, reef_exposure1, reef_zone1):
+    return Site.objects.create(
+        project=project1,
+        name="Site 3",
+        location=Point(-100, 100, srid=4326),
+        country=country1,
+        reef_type=reef_type1,
+        exposure=reef_exposure1,
+        reef_zone=reef_zone1,
+    )
+
+
+@pytest.fixture
 def management1(project1):
     return Management.objects.create(
         project=project1, est_year=2000, name="Management 1", notes="Hey what's up!!",
@@ -160,6 +173,7 @@ def base_project(
     site1,
     management2,
     site2,
+    site3,
     profile1,
     profile2,
     project_profile1,

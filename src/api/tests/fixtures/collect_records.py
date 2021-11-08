@@ -131,6 +131,7 @@ def valid_collect_record(
     profile1,
     project_profile1,
     fish_size_bin_1,
+    relative_depth1,
 ):
     observations = [
         dict(
@@ -173,6 +174,7 @@ def valid_collect_record(
             len_surveyed=100,
             depth=1,
             size_bin=str(fish_size_bin_1.id),
+            relative_depth=str(relative_depth1.id)
         ),
         sample_event=dict(
             management=str(sample_event1.management.id),
@@ -263,10 +265,16 @@ def invalid_collect_record_null_str_warn(
 
 @pytest.fixture
 def invalid_collect_record_error(
-    project1, profile1, valid_collect_record, fish_species1
+    project1, profile1, valid_collect_record, fish_species2
 ):
     data_error = valid_collect_record.data
     data_error["observers"] = None
+    data_error["sample_event"]["sample_date"] = '2021-9-<font style="vertical-align: inherit;">' + \
+        '<font style="vertical-align: inherit;">24</font></font>'
+    data_error["obs_belt_fishes"][0]["size"] = 10000
+    data_error["obs_belt_fishes"][1]["size"] = ""
+    data_error["obs_belt_fishes"][2]["size"] = None
+    data_error["obs_belt_fishes"][2]["fish_attribute"] = str(fish_species2.pk)
 
     return CollectRecord.objects.create(
         project=project1,

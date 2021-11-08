@@ -3,5 +3,8 @@ max-line-length = 100
 select = C,E,F,W,B,B950
 max-complexity = 5
 
+# W503 is incompatible with PEP8
+ignore: W503
+
 # Error Codes: http://pycdestyle.pycqa.org/en/latest/intro.html#configuration
 #ignore = # Add error codes to ignore here
