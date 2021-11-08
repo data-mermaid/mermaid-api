@@ -440,9 +440,9 @@ class SampleEvent(BaseModel, JSONMixin):
     project_lookup = "site__project"
 
     # Required
-    site = models.ForeignKey(Site, on_delete=models.PROTECT, related_name='sample_events', null=True, blank=True)
-    management = models.ForeignKey(Management, on_delete=models.PROTECT, null=True, blank=True)
-    sample_date = models.DateField(default=default_date, null=True, blank=True)
+    site = models.ForeignKey(Site, on_delete=models.PROTECT, related_name='sample_events')
+    management = models.ForeignKey(Management, on_delete=models.PROTECT)
+    sample_date = models.DateField(default=default_date)
     notes = models.TextField(blank=True)
     validations = JSONField(encoder=JSONEncoder, null=True, blank=True)
 
