@@ -464,9 +464,7 @@ class SampleUnit(BaseModel):
         max_digits=3,
         decimal_places=1,
         verbose_name=_(u'depth (m)'),
-        validators=[MinValueValidator(0), MaxValueValidator(40)],
-        null=True,
-        blank=True
+        validators=[MinValueValidator(0), MaxValueValidator(40)]
     )
     visibility = models.ForeignKey(Visibility, on_delete=models.SET_NULL, null=True, blank=True)
     current = models.ForeignKey(Current, on_delete=models.SET_NULL, null=True, blank=True)
