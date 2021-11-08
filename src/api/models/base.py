@@ -54,9 +54,13 @@ class Profile(models.Model):
         return u'{} [{}]'.format(self.full_name, self.pk)
 
     @property
-    def full_name(self):
+    def full_name(self):  # noqa
         if self.first_name and self.last_name:
             return f"{self.first_name} {self.last_name}"
+        elif self.first_name:
+            return self.first_name
+        elif self.last_name:
+            return self.last_name
         elif self.num_account_connections == 0:
             return "(pending user)"
         else:
