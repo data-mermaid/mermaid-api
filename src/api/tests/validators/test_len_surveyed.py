@@ -8,14 +8,14 @@ def _get_validator():
     )
 
 
-def test_depth_validator_ok(valid_collect_record):
+def test_len_surveyed_validator_ok(valid_collect_record):
     validator = _get_validator()
     record = CollectRecordSerializer(instance=valid_collect_record).data
     result = validator(record)
     assert result.status == OK
 
 
-def test_depth_validator_invalid_low(valid_collect_record):
+def test_len_surveyed_validator_invalid_low(valid_collect_record):
     validator = _get_validator()
     record = CollectRecordSerializer(instance=valid_collect_record).data
     record["data"]["fishbelt_transect"]["len_surveyed"] = 9
@@ -24,7 +24,7 @@ def test_depth_validator_invalid_low(valid_collect_record):
     assert result.code == LenSurveyedValidator.LEN_SURVEYED_OUT_OF_RANGE
 
 
-def test_depth_validator_invalid_high(valid_collect_record):
+def test_len_surveyed_validator_invalid_high(valid_collect_record):
     validator = _get_validator()
     record = CollectRecordSerializer(instance=valid_collect_record).data
     record["data"]["fishbelt_transect"]["len_surveyed"] = 101
@@ -33,7 +33,7 @@ def test_depth_validator_invalid_high(valid_collect_record):
     assert result.code == LenSurveyedValidator.LEN_SURVEYED_OUT_OF_RANGE
 
 
-def test_depth_validator_invalid_null(valid_collect_record):
+def test_len_surveyed_validator_invalid_null(valid_collect_record):
     validator = _get_validator()
     record = CollectRecordSerializer(instance=valid_collect_record).data
     record["data"]["fishbelt_transect"]["len_surveyed"] = None
@@ -42,7 +42,7 @@ def test_depth_validator_invalid_null(valid_collect_record):
     assert result.code == LenSurveyedValidator.LEN_SURVEYED_OUT_OF_RANGE
 
 
-def test_depth_validator_invalid_empty_str(valid_collect_record):
+def test_len_surveyed_validator_invalid_empty_str(valid_collect_record):
     validator = _get_validator()
     record = CollectRecordSerializer(instance=valid_collect_record).data
     record["data"]["fishbelt_transect"]["len_surveyed"] = ""
