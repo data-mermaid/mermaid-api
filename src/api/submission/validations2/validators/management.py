@@ -130,7 +130,7 @@ class UniqueManagementValidator(BaseValidator):
         qry = Management.objects.raw(match_sql, params)
         results = qry[0:3]
         if len(results) > 0:
-            matches = [r.id for r in results]
+            matches = [str(r.id) for r in results]
             return WARN, self.NOT_UNIQUE, {"matches": dict(matches=matches)}
 
         return OK

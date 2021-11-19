@@ -70,7 +70,7 @@ class UniqueSiteValidator(BaseValidator):
 
         results = qry[0:3]
         if results.count() > 0:
-            matches = [r.id for r in results]
+            matches = [str(r.id) for r in results]
             return WARN, self.NOT_UNIQUE, {"matches": dict(matches=matches)}
 
         return OK
