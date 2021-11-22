@@ -30,6 +30,7 @@ from ..submission.utils import (
     HABITATCOMPLEXITY_PROTOCOL,
     PROTOCOLS,
     submit_collect_records,
+    submit_collect_records_v2,
     validate_collect_records,
     validate_collect_records_v2,
 )
@@ -110,9 +111,21 @@ class CollectRecordViewSet(BaseProjectApiViewSet):
         + [CollectRecordOwner],
     )
     def submit(self, request, project_pk):
+        validation_version = request.data.get("version") or "1"
         record_ids = request.data.get("ids")
         profile = request.user.profile
-        output = submit_collect_records(profile, record_ids)
+
+        if validation_version == "2":
+            output = submit_collect_records_v2(
+                profile,
+                record_ids,
+                CollectRecordSerializer
+            )
+        else:
+            output = submit_collect_records(
+                profile, record_ids
+            )
+
         return Response(output)
 
     @action(detail=False, methods=["POST"], permission_classes=[ProjectDataPermission])
