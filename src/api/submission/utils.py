@@ -284,11 +284,8 @@ def validate_collect_records_v2(
             request
         )
 
-        # if validation_suppressants:
-        #     validation_output = _apply_validation_suppressants(
-        #         validation_output, validation_suppressants
-        #     )
-        #     status = check_validation_status(validation_output)
+        if validation_suppressants:
+            print("validation_suppressants not suppported")
 
         stage = CollectRecord.SAVED_STAGE
         status = validation_output["status"]
@@ -373,13 +370,8 @@ def submit_collect_records_v2(profile, record_ids, serializer_class, validation_
             request
         )
         status = validation_output["status"]
-        import json
-        print(json.dumps(validation_output, indent=2))
-        # if validation_suppressants:
-        #     validation_output = _apply_validation_suppressants(
-        #         validation_output, validation_suppressants
-        #     )
-        #     status = check_validation_status(validation_output)
+        if validation_suppressants:
+            print("validation_suppressants not suppported")
 
         if status != OK:
             output[record_id] = dict(
