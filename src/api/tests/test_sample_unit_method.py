@@ -50,3 +50,30 @@ def test_submit_collect_record(db_setup, api_client1, project1, collect_record4)
         model=CollectRecord.__name__.lower()
     ).exists()
     assert BeltFish.objects.filter(id=collect_record4.data.get("sample_unit_method_id")).exists()
+
+
+def test_submit_collect_record_v2(db_setup, api_client1, project1, collect_record4_with_v2_validation):
+    url_kwargs = {
+        "project_pk": str(project1.pk)
+    }
+    edit_url = reverse("collectrecords-submit", kwargs=url_kwargs)
+
+    assert BeltFish.objects.filter(id=collect_record4_with_v2_validation.data.get("sample_unit_method_id")).exists() is False
+
+    collect_record_id = str(collect_record4_with_v2_validation.pk)
+    request = api_client1.post(edit_url, data={
+        "version": "2",
+        "ids": [collect_record_id]
+    }, format="json")
+    response_data = request.json()
+
+    assert response_data[collect_record_id]["status"] == "ok"
+    assert CollectRecord.objects.filter(id=collect_record_id).exists() is False
+    assert AuditRecord.objects.filter(
+        record_id=collect_record_id,
+        event_type=AuditRecord.SUBMIT_RECORD_EVENT_TYPE,
+        model=CollectRecord.__name__.lower()
+    ).exists()
+    assert BeltFish.objects.filter(
+        id=collect_record4_with_v2_validation.data.get("sample_unit_method_id")
+    ).exists()
