@@ -90,6 +90,8 @@ class ValidationRunner:
 
     def _get_dotty_value(self, data, key):
         try:
+            if isinstance(data, dict):
+                data = dotty(data)
             return data.get(key)
         except (TypeError, KeyError):
             return None
@@ -115,7 +117,7 @@ class ValidationRunner:
 
             try:
                 is_ignored = self._check_is_ignored(
-                    self.results[key][n],
+                    res,
                     existing_validation_result[0]
                 )
                 res["status"] = IGNORE if is_ignored else res["status"]
@@ -190,7 +192,6 @@ class ValidationRunner:
         assert (
             self.results is not None
         ), "Cannot call to_dict because nothing has been validated."
-
         return {
             "version": self.VERSION,
             "status": self.status,

@@ -15,7 +15,9 @@ from .validators import (
     FishSizeValidator,
     LenSurveyedValidator,
     ManagementRuleValidator,
+    ListRequiredValidator,
     ObservationCountValidator,
+    RegionValidator,
     RequiredValidator,
     SampleDateValidator,
     SampleTimeValidator,
@@ -25,6 +27,7 @@ from .validators import (
     UniqueSiteValidator,
     UniqueTransectValidator,
 )
+from ...models import FishAttribute
 
 belt_fish_validations = [
     Validation(
@@ -139,6 +142,41 @@ belt_fish_validations = [
     Validation(
         validator=FishCountValidator(
             observations_path="data.obs_belt_fishes", observation_count_path="count"
+        ),
+        paths=["data.obs_belt_fishes"],
+        validation_level=ROW_LEVEL,
+        validation_type=LIST_VALIDATION_TYPE,
+    ),
+    Validation(
+        validator=RegionValidator(
+            attribute_model_class=FishAttribute,
+            site_path="data.sample_event.site",
+            observations_path="data.obs_belt_fishes",
+            observation_attribute_path="fish_attribute"
+        ),
+        paths=["data.obs_belt_fishes"],
+        validation_level=ROW_LEVEL,
+        validation_type=LIST_VALIDATION_TYPE,
+    ),
+    Validation(
+        validator=ListRequiredValidator(
+            list_path="data.obs_belt_fishes", path="fish_attribute", name_prefix="fish_attribute"
+        ),
+        paths=["data.obs_belt_fishes"],
+        validation_level=ROW_LEVEL,
+        validation_type=LIST_VALIDATION_TYPE,
+    ),
+    Validation(
+        validator=ListRequiredValidator(
+            list_path="data.obs_belt_fishes", path="size", name_prefix="size"
+        ),
+        paths=["data.obs_belt_fishes"],
+        validation_level=ROW_LEVEL,
+        validation_type=LIST_VALIDATION_TYPE,
+    ),
+    Validation(
+        validator=ListRequiredValidator(
+            list_path="data.obs_belt_fishes", path="count", name_prefix="count"
         ),
         paths=["data.obs_belt_fishes"],
         validation_level=ROW_LEVEL,

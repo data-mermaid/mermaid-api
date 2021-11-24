@@ -22,6 +22,7 @@ class UniqueTransectValidator(BaseValidator):
         management_path,
         sample_date_path,
         depth_path,
+        **kwargs
     ):
         self.protocol = protocol
         self.label_path = label_path
@@ -32,6 +33,7 @@ class UniqueTransectValidator(BaseValidator):
         self.management_path = management_path
         self.sample_date_path = sample_date_path
         self.depth_path = depth_path
+        super().__init__(**kwargs)
 
     def _get_query_args(self, collect_record):
         label = self.get_value(collect_record, self.label_path) or ""

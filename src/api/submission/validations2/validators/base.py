@@ -62,7 +62,7 @@ class BaseValidator:
     result = None
 
     def __init__(self, **kwargs):
-        self.context = kwargs
+        self.context = kwargs or {}
 
     def __call__(self, *args, **kwargs):
         raise NotImplementedError()
@@ -70,7 +70,12 @@ class BaseValidator:
     @property
     def name(self):
         cls_name = self.__class__.__name__
-        return re.sub(r"(?<!^)(?=[A-Z])", "_", cls_name).lower()
+        name = re.sub(r"(?<!^)(?=[A-Z])", "_", cls_name).lower()
+        name_prefix = self.context.get("name_prefix")
+        if name_prefix is not None:
+            name = f"{name_prefix}_{name}"
+
+        return name
 
     @validator_result
     def skip(self):

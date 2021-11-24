@@ -210,7 +210,7 @@ def invalid_collect_record_warn(
         dict(
             count=20,
             fish_attribute=str(fish_species1.id),
-            size=17.5,
+            size=1999,
         ),
     ]
 
@@ -265,12 +265,14 @@ def invalid_collect_record_null_str_warn(
 
 @pytest.fixture
 def invalid_collect_record_error(
-    project1, profile1, valid_collect_record, sample_event2, fish_species1
+    project1, profile1, valid_collect_record, sample_event2, fish_species1, fish_species2
 ):
     data_error = valid_collect_record.data
     data_error["observers"] = None
     data_error["obs_belt_fishes"][0]["size"] = 10000
     data_error["obs_belt_fishes"][1]["size"] = ""
+    data_error["obs_belt_fishes"][2]["size"] = None
+    data_error["obs_belt_fishes"][2]["fish_attribute"] = str(fish_species2.pk)
 
     data_error["sample_event"] = dict(
         management=str(sample_event2.management.id),

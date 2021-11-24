@@ -36,13 +36,28 @@ def test_fishbelt_protocol_validation_warn(
         belt_fish.belt_fish_validations,
         request=profile1_request,
     )
+
     assert overall_status == WARN
     invalid_collect_record_warn.validations = runner.to_dict()
     invalid_collect_record_warn.save()
+    assert _get_result_status(invalid_collect_record_warn.validations["results"]["data"]["fishbelt_transect"]["depth"], "depth_validator") == WARN
+    assert _get_result_status(invalid_collect_record_warn.validations["results"]["data"]["obs_belt_fishes"][2], "fish_size_validator") == WARN
 
     _set_result_status(
         invalid_collect_record_warn.validations["results"]["$record"],
         "observation_count_validator",
+        IGNORE
+    )
+
+    _set_result_status(
+        invalid_collect_record_warn.validations["results"]["data"]["obs_belt_fishes"][2],
+        "fish_size_validator",
+        IGNORE
+    )
+
+    _set_result_status(
+        invalid_collect_record_warn.validations["results"]["data"]["fishbelt_transect"]["depth"],
+        "depth_validator",
         IGNORE
     )
 
@@ -60,8 +75,10 @@ def test_fishbelt_protocol_validation_warn(
     assert _get_result_status(record_results, "biomass_validator") == WARN
 
     transect_results = results["data"]["fishbelt_transect"]
-    assert _get_result_status(transect_results["depth"], "depth_validator") == WARN
+    assert _get_result_status(transect_results["depth"], "depth_validator") == IGNORE
     assert _get_result_status(transect_results["sample_time"], "sample_time_validator") == WARN
+
+    assert _get_result_status(invalid_collect_record_warn.validations["results"]["data"]["obs_belt_fishes"][2], "fish_size_validator") == IGNORE
 
 
 def test_fishbelt_protocol_validation_null_str_warn(
@@ -108,3 +125,5 @@ def test_fishbelt_protocol_validation_error(
     observation_results = results["obs_belt_fishes"]
     assert _get_result_status(observation_results[0], "fish_size_validator") == WARN
     assert _get_result_status(observation_results[1], "fish_size_validator") == ERROR
+    assert _get_result_status(observation_results[2], "size_list_required_validator") == ERROR
+    assert _get_result_status(observation_results[2], "region_validator") == WARN
