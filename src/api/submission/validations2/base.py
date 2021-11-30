@@ -111,6 +111,7 @@ class ValidationRunner:
         )
 
     def _set_validator_list_result(self, key, result, existing_validation_result):
+        statuses = []
         for n, res in enumerate(result):
             if len(self.results[key]) == n:
                 self.results[key].append([])
@@ -124,9 +125,13 @@ class ValidationRunner:
             except (IndexError, TypeError):
                 is_ignored = False
 
+            statuses.append(res["status"])
             self.results[key][n].append(res)
+        return self._get_overall_status_level(statuses)
 
     def set_validator_result(self, validation: Validation, existing_validations: dict):
+        status = OK
+
         self.results = self.results or dotty()
         result = validation.to_validation_result()
         validation_level = validation.validation_level
@@ -143,29 +148,26 @@ class ValidationRunner:
         self.results.setdefault(key, [])
         existing_validation_result = self._get_dotty_value(existing_validations, key)
         if validation_type == LIST_VALIDATION_TYPE:
-            self._set_validator_list_result(key, result, existing_validation_result)
+            status = self._set_validator_list_result(key, result, existing_validation_result)
         else:
             is_ignored = self._check_is_ignored(result, existing_validation_result)
             if is_ignored:
                 result["status"] = IGNORE
-
+            status = result["status"]
             self.results[key].append(result)
 
-    def _check_result_status(self, result):
-        if isinstance(result, ValidatorResult):
-            return result.status
-        elif isinstance(result, list):
-            result_statuses = {res.status for res in result}
-            if ERROR in result_statuses:
-                return ERROR
-            elif WARN in result_statuses:
-                return WARN
-            return OK
+        return status
 
-        raise TypeError("Invalid ValidatorResult")
+    def _get_overall_status_level(self, statuses):
+        if ERROR in statuses:
+            return ERROR
+        elif WARN in statuses:
+            return WARN
+
+        return OK
 
     def validate(self, collect_record, validations, request):
-        overall_status = []
+        statuses = []
         collect_record_dict = self.serializer(instance=collect_record).data
         existing_validations = (
             self._get_dotty_value(dotty(collect_record_dict), "validations.results")
@@ -176,17 +178,10 @@ class ValidationRunner:
                 validation.run(collect_record, request=request)
             else:
                 validation.run(collect_record_dict, request=request)
-            overall_status.append(self._check_result_status(validation.result))
-            self.set_validator_result(validation, existing_validations)
+            statuses.append(self.set_validator_result(validation, existing_validations))
 
-        status = OK
-        if ERROR in overall_status:
-            status = ERROR
-        elif WARN in overall_status:
-            status = WARN
-
-        self.status = status
-        return status
+        self.status = self._get_overall_status_level(statuses)
+        return self.status
 
     def to_dict(self):
         assert (

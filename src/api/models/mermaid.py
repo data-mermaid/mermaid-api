@@ -372,7 +372,7 @@ class ProjectProfile(BaseModel):
 
     @property
     def profile_name(self):
-        return u'{} {}'.format(self.profile.first_name, self.profile.last_name)
+        return self.profile.full_name
 
     @classmethod
     def from_db(cls, db, field_names, values):
