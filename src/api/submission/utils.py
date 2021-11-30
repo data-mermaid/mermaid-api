@@ -284,11 +284,8 @@ def validate_collect_records_v2(
             request
         )
 
-        # if validation_suppressants:
-        #     validation_output = _apply_validation_suppressants(
-        #         validation_output, validation_suppressants
-        #     )
-        #     status = check_validation_status(validation_output)
+        if validation_suppressants:
+            print("validation_suppressants not suppported")
 
         stage = CollectRecord.SAVED_STAGE
         status = validation_output["status"]
@@ -331,6 +328,50 @@ def submit_collect_records(profile, record_ids, validation_suppressants=None):
                 validation_output, validation_suppressants
             )
             status = check_validation_status(validation_output)
+
+        if status != OK:
+            output[record_id] = dict(
+                status=status, message=ugettext_lazy("Invalid collect record")
+            )
+            continue
+
+        # If validate comes out all good (status == OK) then
+        # try parsing and saving the collect record into its
+        # components.
+        status, result = write_collect_record(collect_record, request)
+        if status == VALIDATION_ERROR_STATUS:
+            output[record_id] = dict(status=ERROR, message=result)
+            continue
+        elif status == ERROR_STATUS:
+            logger.error(
+                json.dumps(dict(id=record_id, data=collect_record.data)), result
+            )
+            output[record_id] = dict(
+                status=ERROR, message=ugettext_lazy("System failure")
+            )
+            continue
+        output[record_id] = dict(status=OK, message=ugettext_lazy("Success"))
+
+    return output
+
+
+def submit_collect_records_v2(profile, record_ids, serializer_class, validation_suppressants=None):
+    output = {}
+    request = MockRequest(profile=profile)
+    for record_id in record_ids:
+        collect_record = CollectRecord.objects.get_or_none(id=record_id)
+        if collect_record is None:
+            output[record_id] = dict(status=ERROR, message=ugettext_lazy("Not found"))
+            continue
+
+        validation_output = _validate_collect_record_v2(
+            collect_record,
+            serializer_class,
+            request
+        )
+        status = validation_output["status"]
+        if validation_suppressants:
+            print("validation_suppressants not suppported")
 
         if status != OK:
             output[record_id] = dict(
