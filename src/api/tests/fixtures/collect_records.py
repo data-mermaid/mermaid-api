@@ -210,7 +210,7 @@ def invalid_collect_record_warn(
         dict(
             count=20,
             fish_attribute=str(fish_species1.id),
-            size=17.5,
+            size=1999,
         ),
     ]
 
