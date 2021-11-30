@@ -161,7 +161,7 @@ def test_management_validation(management1, project1, site1):
         )
 
         benthic_transect = BenthicTransect.objects.create(
-            number=1, len_surveyed=100, sample_event=se2
+            number=1, len_surveyed=100, sample_event=se2, depth=2
         )
 
         management_validation = ManagementValidation(str(management1.pk))
