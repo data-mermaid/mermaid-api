@@ -72,14 +72,6 @@ belt_fish_validations = [
     ),
     Validation(
         validator=RequiredValidator(
-            path="data.fishbelt_transect.relative_depth",
-        ),
-        paths=["data.fishbelt_transect.relative_depth"],
-        validation_level=FIELD_LEVEL,
-        validation_type=VALUE_VALIDATION_TYPE,
-    ),
-    Validation(
-        validator=RequiredValidator(
             path="data.fishbelt_transect.depth",
         ),
         paths=["data.fishbelt_transect.depth"],

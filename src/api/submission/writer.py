@@ -109,6 +109,8 @@ class ProtocolWriter(BaseWriter):
                 observer_data.pop("id")
                 observers.append(Observer.objects.get(**observer_data))
             except Observer.DoesNotExist:
+                if serializer.is_valid() is False:
+                    raise ValidationError(serializer.errors)
                 observers.append(serializer.save())
 
         return observers
