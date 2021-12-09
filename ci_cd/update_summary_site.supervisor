@@ -1,0 +1,9 @@
+[program:update_summary_site]
+directory=/var/projects/webapp/
+environment=DJANGO_SETTINGS_MODULE="app.settings",PYTHONPATH="/var/projects/webapp"
+command=bash -c "sleep 1800;/usr/local/bin/python manage.py update_summary_sites"
+user=webapp
+autostart=true
+autorestart=true
+stdout_logfile = /var/log/webapp/update_summary_site.log
+redirect_stderr=True
