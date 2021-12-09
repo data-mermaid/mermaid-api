@@ -12,7 +12,7 @@ from .sql_models import (
 )
 
 
-class SummarySiteSQLBaseModel(models.Model):
+class SummarySiteBaseModel(models.Model):
     site_id = models.UUIDField(primary_key=True)
     site_name = models.CharField(max_length=255)
     site_notes = models.TextField(blank=True)
@@ -45,7 +45,7 @@ class SummarySiteSQLBaseModel(models.Model):
         abstract = True
 
 
-class SummarySiteSQLModel(SummarySiteSQLBaseModel):
+class SummarySiteSQLModel(SummarySiteBaseModel):
     sql = f"""
         WITH beltfish_su AS (
             {BeltFishSUSQLModel.sql}
@@ -320,6 +320,6 @@ class SummarySiteSQLModel(SummarySiteSQLBaseModel):
     sql_args = dict(project_id=SQLTableArg(required=True))
 
 
-class SummarySiteModel(SummarySiteSQLBaseModel):
+class SummarySiteModel(SummarySiteBaseModel):
     class Meta:
         db_table = "summary_site"
