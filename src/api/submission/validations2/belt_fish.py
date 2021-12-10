@@ -14,6 +14,7 @@ from .validators import (
     FishFamilySubsetValidator,
     FishSizeValidator,
     LenSurveyedValidator,
+    ManagementRuleValidator,
     ListRequiredValidator,
     ObservationCountValidator,
     RegionValidator,
@@ -235,6 +236,14 @@ belt_fish_validations = [
     ),
     Validation(
         validator=UniqueManagementValidator(
+            management_path="data.sample_event.management",
+        ),
+        paths=["data.sample_event.management"],
+        validation_level=FIELD_LEVEL,
+        validation_type=VALUE_VALIDATION_TYPE,
+    ),
+    Validation(
+        validator=ManagementRuleValidator(
             management_path="data.sample_event.management",
         ),
         paths=["data.sample_event.management"],

@@ -123,7 +123,11 @@ def site3(project1, country1, reef_type1, reef_exposure1, reef_zone1):
 @pytest.fixture
 def management1(project1):
     return Management.objects.create(
-        project=project1, est_year=2000, name="Management 1", notes="Hey what's up!!",
+        project=project1,
+        est_year=2000,
+        name="Management 1",
+        notes="Hey what's up!!",
+        open_access=True
     )
 
 
