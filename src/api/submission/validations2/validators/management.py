@@ -134,3 +134,21 @@ class UniqueManagementValidator(BaseValidator):
             return WARN, self.NOT_UNIQUE, {"matches": dict(matches=matches)}
 
         return OK
+
+
+class ManagementRuleValidator(BaseValidator):
+    REQUIRED_RULES = "required_management_rules"
+
+    def __init__(self, management_path, **kwargs):
+        self.management_path = management_path
+        super().__init__(**kwargs)
+
+    @validator_result
+    def __call__(self, collect_record, **kwargs):
+        management_id = self.get_value(collect_record, self.management_path) or None
+
+        management = Management.objects.get_or_none(id=management_id)
+        if not management or not management.rules:
+            return ERROR, self.REQUIRED_RULES
+
+        return OK

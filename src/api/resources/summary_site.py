@@ -7,8 +7,7 @@ from .base import (
 )
 from .sample_units import AggregatedViewMixin, BaseApiViewSet
 from ..permissions import UnauthenticatedReadOnlyPermission
-from ..models.view_models.summary_site import SummarySiteViewModel
-from ..models import Project
+from ..models import Project, SummarySiteModel
 from ..reports.fields import ReportField
 from ..reports.formatters import (
     to_latitude,
@@ -26,7 +25,7 @@ class SummarySiteSerializer(BaseViewAPISerializer):
     updated_by = None
 
     class Meta(BaseViewAPISerializer.Meta):
-        model = SummarySiteViewModel
+        model = SummarySiteModel
         exclude = BaseViewAPISerializer.Meta.exclude.copy()
         exclude.append("location")
 
@@ -36,7 +35,7 @@ class SummarySiteGeoSerializer(BaseViewAPIGeoSerializer):
     updated_by = None
 
     class Meta(BaseViewAPIGeoSerializer.Meta):
-        model = SummarySiteViewModel
+        model = SummarySiteModel
 
 
 class SummarySiteCSVSerializer(ReportSerializer):
@@ -53,8 +52,6 @@ class SummarySiteCSVSerializer(ReportSerializer):
         ReportField("reef_zone", "Reef zone"),
         ReportField("date_min", "Earliest date"),
         ReportField("date_max", "Most recent date"),
-        ReportField("depth_avg_min", "Minimum average depth"),
-        ReportField("depth_avg_max", "Maximum average depth"),
         ReportField("management_regimes", "Management regimes", to_names),
         ReportField(
             "protocols",
@@ -160,7 +157,7 @@ class SummarySiteFilterSet(AggregatedViewFilterSet):
     date_max = filters.DateFromToRangeFilter()
 
     class Meta:
-        model = SummarySiteViewModel
+        model = SummarySiteModel
         fields = [
             "project_id",
             "project_name",
@@ -189,7 +186,7 @@ class SummarySiteView(AggregatedViewMixin, BaseApiViewSet):
     serializer_class_geojson = SummarySiteGeoSerializer
     serializer_class_csv = SummarySiteCSVSerializer
     filterset_class = SummarySiteFilterSet
-    queryset = SummarySiteViewModel.objects.filter(
+    queryset = SummarySiteModel.objects.filter(
         ~Q(project_status=Project.TEST)  # replace with solution for filtering generally
         & Q(management_regimes__isnull=False)
     )
