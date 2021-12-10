@@ -1,8 +1,10 @@
 from django_filters import BaseInFilter
+from django.db.models import Prefetch
 from rest_framework import serializers
+
 from .base import BaseAPIFilterSet, BaseAttributeApiViewSet, BaseAPISerializer
 from .mixins import CreateOrUpdateSerializerMixin
-from ..models import FishSpecies
+from ..models import FishSpecies, Region
 
 
 class FishSpeciesSerializer(CreateOrUpdateSerializerMixin, BaseAPISerializer):
@@ -66,7 +68,7 @@ class FishSpeciesViewSet(BaseAttributeApiViewSet):
     queryset = (
         FishSpecies.objects.select_related()
         .extra(select={"display_name": "fish_genus.name || ' ' || fish_species.name"})
-        .prefetch_related("regions")
+        .prefetch_related(Prefetch("regions", queryset=Region.objects.all().only("id")))
     )
     filterset_class = FishSpeciesFilterSet
     search_fields = [
