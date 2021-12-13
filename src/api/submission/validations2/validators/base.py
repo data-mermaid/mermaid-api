@@ -53,7 +53,17 @@ def validator_result(func):
         result = func(*args, **kwargs)
         if isinstance(result, str):
             result = [result]
-        return ValidatorResult(class_name(args[0]), *result)
+
+        result_len = len(result)
+        status = result[0]
+        code = result[1] if result_len > 1 else None
+        context = result[2] if result_len > 2 else None
+        return ValidatorResult(
+            name=class_name(args[0]),
+            status=status,
+            code=code,
+            context=context,
+        )
 
     return inner1
 

@@ -152,7 +152,10 @@ belt_fish_validations = [
     ),
     Validation(
         validator=ListRequiredValidator(
-            list_path="data.obs_belt_fishes", path="fish_attribute", name_prefix="fish_attribute"
+            list_path="data.obs_belt_fishes",
+            path="fish_attribute",
+            name_prefix="fish_attribute",
+            unique_identifier_label="observation_id",
         ),
         paths=["data.obs_belt_fishes"],
         validation_level=ROW_LEVEL,
@@ -160,7 +163,10 @@ belt_fish_validations = [
     ),
     Validation(
         validator=ListRequiredValidator(
-            list_path="data.obs_belt_fishes", path="size", name_prefix="size"
+            list_path="data.obs_belt_fishes",
+            path="size",
+            name_prefix="size",
+            unique_identifier_label="observation_id",
         ),
         paths=["data.obs_belt_fishes"],
         validation_level=ROW_LEVEL,
@@ -168,7 +174,10 @@ belt_fish_validations = [
     ),
     Validation(
         validator=ListRequiredValidator(
-            list_path="data.obs_belt_fishes", path="count", name_prefix="count"
+            list_path="data.obs_belt_fishes",
+            path="count",
+            name_prefix="count",
+            unique_identifier_label="observation_id",
         ),
         paths=["data.obs_belt_fishes"],
         validation_level=ROW_LEVEL,

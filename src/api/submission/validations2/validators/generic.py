@@ -24,15 +24,22 @@ class ListRequiredValidator(BaseValidator):
     def __init__(self, list_path, path, **kwargs):
         self.list_path = list_path
         self.path = path
+        self.unique_identifier_label = kwargs.get("unique_identifier_label")
+        self.unique_identifier_key = kwargs.get("unique_identifier_key") or "id"
         super().__init__(**kwargs)
 
     @validator_result
     def _check_value(self, record, path):
+        status = OK
+        code = None
+        context = {self.unique_identifier_label: record.get(self.unique_identifier_key)}
         val = self.get_value(record, path)
 
         if val != 0 and not val:
-            return ERROR, self.REQUIRED, {"path": path}
-        return OK
+            status = ERROR
+            code = self.REQUIRED
+
+        return status, code, context
 
     def __call__(self, collect_record, **kwargs):
         records = self.get_value(collect_record, self.list_path) or []

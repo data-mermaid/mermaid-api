@@ -25,14 +25,17 @@ class RegionValidator(BaseValidator):
     def _get_ok(self, observations):
         return [self.skip() for _ in observations]
 
-    def _get_attribute_ids(self, observations):
+    def _get_observation_ids_and_attribute_ids(self, observations):
+        observation_ids = []
         attribute_ids = []
         for ob in observations:
             attr_id = self.get_value(ob, self.observation_attribute_path)
+            _id = ob.get("id")
             if attr_id is None:
                 continue
             attribute_ids.append(attr_id)
-        return attribute_ids
+            observation_ids.append(_id)
+        return observation_ids, attribute_ids
 
     def _get_attribute_region_lookup(self, attribute_ids):
         return {
@@ -43,22 +46,25 @@ class RegionValidator(BaseValidator):
         }
 
     @validator_result
-    def check_region(self, site_region, attribute_id, attribute_regions):
+    def check_region(self, observation_id, site_region, attribute_id, attribute_regions):
+        status = OK
+        code = None
+        context = {"observation_id": observation_id}
         if attribute_id is None:
-            return OK
+            # Skip
+            ...
+        elif attribute_id not in attribute_regions or not attribute_regions[attribute_id]:
+            # Skip
+            ...
+        elif site_region not in attribute_regions[attribute_id]:
+            status = WARN
+            code = self.NO_REGION_MATCH
 
-        if attribute_id not in attribute_regions or not attribute_regions[attribute_id]:
-            return OK
-
-        if site_region not in attribute_regions[attribute_id]:
-            return WARN, self.NO_REGION_MATCH
-
-        return OK
+        return status, code, context
 
     def __call__(self, collect_record, **kwargs):
         site_id = self.get_value(collect_record, self.site_path)
         obs = self.get_value(collect_record, self.observations_path) or []
-
         try:
             check_uuid(site_id)
             site = Site.objects.get_or_none(id=site_id)
@@ -73,10 +79,10 @@ class RegionValidator(BaseValidator):
 
         site_region_id = str(regions[0].pk)
 
-        attribute_ids = self._get_attribute_ids(obs)
+        observation_ids, attribute_ids = self._get_observation_ids_and_attribute_ids(obs)
         attr_lookup = self._get_attribute_region_lookup(set(attribute_ids))
 
         return [
-            self.check_region(site_region_id, attribute_id, attr_lookup)
-            for attribute_id in attribute_ids
+            self.check_region(observation_id, site_region_id, attribute_id, attr_lookup)
+            for observation_id, attribute_id in zip(observation_ids, attribute_ids)
         ]
