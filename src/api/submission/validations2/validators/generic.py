@@ -38,6 +38,7 @@ class ListRequiredValidator(BaseValidator):
         if val != 0 and not val:
             status = ERROR
             code = self.REQUIRED
+            context["path"] = path
 
         return status, code, context
 
@@ -50,12 +51,14 @@ class ListRequiredValidator(BaseValidator):
 class AllEqualValidator(BaseValidator):
     ALL_EQUAL = "all_equal"
 
-    def __init__(self, path, **kwargs):
+    def __init__(self, path, ignore_keys=None, **kwargs):
         self.path = path
+        self.ignore_keys = ignore_keys
         super().__init__(**kwargs)
 
     def _to_json(self, d):
-        return json.dumps(d, sort_keys=True)
+        self.ignore_keys = self.ignore_keys or []
+        return json.dumps({k: v for k, v in d.items() if k not in self.ignore_keys}, sort_keys=True)
 
     @validator_result
     def __call__(self, collect_record, **kwargs):

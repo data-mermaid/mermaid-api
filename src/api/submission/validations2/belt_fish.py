@@ -266,7 +266,10 @@ belt_fish_validations = [
         validation_type=VALUE_VALIDATION_TYPE,
     ),
     Validation(
-        validator=AllEqualValidator(path="data.obs_belt_fishes"),
+        validator=AllEqualValidator(
+            path="data.obs_belt_fishes",
+            ignore_keys=["id"]
+        ),
         paths=["data.obs_belt_fishes"],
         validation_level=RECORD_LEVEL,
         validation_type=VALUE_VALIDATION_TYPE,
