@@ -1538,9 +1538,41 @@ class CollectRecord(BaseModel):
     validations = JSONField(encoder=JSONEncoder, null=True, blank=True)
     stage = models.PositiveIntegerField(choices=STAGE_CHOICES, null=True, blank=True)
 
+    @property
+    def protocol(self):
+        data = self.data or {}
+        protocol = data.get("protocol")
+        if protocol not in PROTOCOL_MAP:
+            return None
+
+        return protocol
+
+    def _assign_id(self, record):
+        record["id"] = record.get("id") or str(uuid.uuid4())
+        return record
+
     def save(self, ignore_stage=False, **kwargs):
         if ignore_stage is False:
             self.stage = self.SAVED_STAGE
+
+        protocol = self.protocol
+        obs_keys = []
+        if protocol == FISHBELT_PROTOCOL:
+            obs_keys = ["obs_belt_fishes"]
+        elif protocol == BLEACHINGQC_PROTOCOL:
+            obs_keys = ["obs_colonies_bleached", "obs_quadrat_benthic_percent"]
+        elif protocol == BENTHICLIT_PROTOCOL:
+            obs_keys = ["obs_benthic_lits"]
+        elif protocol == BENTHICPIT_PROTOCOL:
+            obs_keys = ["obs_benthic_pits"]
+        elif protocol == HABITATCOMPLEXITY_PROTOCOL:
+            obs_keys = ["obs_habitat_complexities"]
+
+        for obs_key in obs_keys:
+            self.data[obs_key] = [self._assign_id(r) for r in self.data.get(obs_key) or []]
+
+
+
         super(CollectRecord, self).save(**kwargs)
 
 

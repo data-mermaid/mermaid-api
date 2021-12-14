@@ -18,13 +18,14 @@ class FishFamilySubsetValidator(BaseValidator):
         self, observation, fish_family_subset, fish_family_lookup
     ):
         fish_attribute_id = fish_family_lookup[observation.get("fish_attribute")]
+        status = OK
+        code = None
+        context = {"observation_id": observation.get("id")}
         if fish_attribute_id not in fish_family_subset:
-            return (
-                WARN,
-                self.INVALID_FISH_FAMILY,
-                {"observation_id": observation.get("id")},
-            )
-        return OK
+            status = WARN
+            code = self.INVALID_FISH_FAMILY
+            
+        return status, code, context
 
     def _get_ok(self, observations):
         return [self.skip() for _ in observations]
