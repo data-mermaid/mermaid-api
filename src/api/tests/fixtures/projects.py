@@ -19,8 +19,21 @@ from api.utils import tokenutils
 
 
 @pytest.fixture
-def project1():
-    return Project.objects.create(name="Test Project 1", status=Project.OPEN)
+def project1(fish_family1, fish_family2, fish_family3, fish_family4):
+    return Project.objects.create(
+        name="Test Project 1",
+        status=Project.OPEN,
+        data={
+            "settings": {
+                "fishFamilySubset": [
+                    str(fish_family1.pk),
+                    str(fish_family2.pk),
+                    str(fish_family3.pk),
+                    str(fish_family4.pk),
+                ]
+            }
+        }
+    )
 
 
 @pytest.fixture
@@ -31,6 +44,21 @@ def project2():
 @pytest.fixture
 def project3():
     return Project.objects.create(name="Test Project 3", status=Project.OPEN)
+
+
+@pytest.fixture
+def project4():
+    return Project.objects.create(
+        name="Test Project 4",
+        status=Project.OPEN,
+        data={
+            "settings": {
+                "fishFamilySubset": [
+                    "343f38e9-2497-422f-bac9-576682bb97f6"  # Fake
+                ]
+            }
+        }
+    )
 
 
 @pytest.fixture
@@ -78,6 +106,13 @@ def project_profile1(project1, profile1):
 def project_profile2(project1, profile2):
     return ProjectProfile.objects.create(
         project=project1, profile=profile2, role=ProjectProfile.COLLECTOR
+    )
+
+
+@pytest.fixture
+def project_profile4(project4, profile1):
+    return ProjectProfile.objects.create(
+        project=project4, profile=profile1, role=ProjectProfile.ADMIN
     )
 
 
