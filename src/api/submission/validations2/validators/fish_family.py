@@ -17,7 +17,7 @@ class FishFamilySubsetValidator(BaseValidator):
     def check_fish_family_subset(
         self, observation, fish_family_subset, fish_family_lookup
     ):
-        fish_attribute_id = fish_family_lookup[observation["fish_attribute"]]
+        fish_attribute_id = fish_family_lookup[observation.get("fish_attribute")]
         if fish_attribute_id not in fish_family_subset:
             return (
                 WARN,
@@ -54,7 +54,7 @@ class FishFamilySubsetValidator(BaseValidator):
         ):
             return self._get_ok(observations)
 
-        fish_attribute_ids = {ob.get("fish_attribute") for ob in observations}
+        fish_attribute_ids = {ob.get("fish_attribute") for ob in observations if ob.get("fish_attribute")}
         fish_family_lookup = {
             str(fa.id): str(fa.id_family)
             for fa in FishAttributeView.objects.filter(id__in=fish_attribute_ids)
