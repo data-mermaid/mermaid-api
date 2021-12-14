@@ -16,17 +16,23 @@ class FishSizeValidator(BaseValidator):
 
     @validator_result
     def check_fish_size(self, obs, max_fish_length_lookup):
+        status = OK
+        code = None
+        context = {"observation_id": obs.get("id")}
         try:
             fish_attribute_id = self.get_value(obs, self.observation_fish_attribute_path)
             fish_size = float(self.get_value(obs, self.observation_size_path))
             max_length = max_fish_length_lookup.get(fish_attribute_id)
             if max_length is not None and fish_size > max_length:
-                return WARN, self.MAX_FISH_SIZE, {"max_length": float(max_length)}
+                status = WARN
+                code = self.MAX_FISH_SIZE
+                context["max_length"] = float(max_length)
 
         except (TypeError, ValueError):
-            return ERROR, self.INVALID_FISH_SIZE
+            status = ERROR
+            code = self.INVALID_FISH_SIZE
 
-        return OK
+        return status, code, context
 
     def __call__(self, collect_record, **kwargs):
         observations = self.get_value(collect_record, self.observations_path) or []

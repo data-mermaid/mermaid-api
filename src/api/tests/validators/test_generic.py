@@ -26,6 +26,7 @@ def _get_list_required_validator():
 def _get_all_equal_validator():
     return AllEqualValidator(
         path="data.obs_belt_fishes",
+        ignore_keys=["id"]
     )
 
 

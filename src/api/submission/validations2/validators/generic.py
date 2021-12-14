@@ -24,15 +24,23 @@ class ListRequiredValidator(BaseValidator):
     def __init__(self, list_path, path, **kwargs):
         self.list_path = list_path
         self.path = path
+        self.unique_identifier_label = kwargs.get("unique_identifier_label")
+        self.unique_identifier_key = kwargs.get("unique_identifier_key") or "id"
         super().__init__(**kwargs)
 
     @validator_result
     def _check_value(self, record, path):
+        status = OK
+        code = None
+        context = {self.unique_identifier_label: record.get(self.unique_identifier_key)}
         val = self.get_value(record, path)
 
         if val != 0 and not val:
-            return ERROR, self.REQUIRED, {"path": path}
-        return OK
+            status = ERROR
+            code = self.REQUIRED
+            context["path"] = path
+
+        return status, code, context
 
     def __call__(self, collect_record, **kwargs):
         records = self.get_value(collect_record, self.list_path) or []
@@ -43,12 +51,14 @@ class ListRequiredValidator(BaseValidator):
 class AllEqualValidator(BaseValidator):
     ALL_EQUAL = "all_equal"
 
-    def __init__(self, path, **kwargs):
+    def __init__(self, path, ignore_keys=None, **kwargs):
         self.path = path
+        self.ignore_keys = ignore_keys
         super().__init__(**kwargs)
 
     def _to_json(self, d):
-        return json.dumps(d, sort_keys=True)
+        self.ignore_keys = self.ignore_keys or []
+        return json.dumps({k: v for k, v in d.items() if k not in self.ignore_keys}, sort_keys=True)
 
     @validator_result
     def __call__(self, collect_record, **kwargs):
