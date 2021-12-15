@@ -1,6 +1,6 @@
 import uuid
 
-from api.models import CollectRecord, Project
+from api.models import CollectRecord, Project, Revision
 
 
 def test_pull_view(
@@ -22,10 +22,11 @@ def test_pull_view(
 
     request = api_client1.post("/v1/pull/", data, format="json")
     response_data = request.json()
+    revision = Revision.objects.get(record_id=collect_record_revision_with_updates.record_id)
 
     assert len(response_data["collect_records"]["updates"]) == 1
     assert len(response_data["collect_records"]["deletes"]) == 1
-    assert response_data["collect_records"]["last_revision_num"] == 5
+    assert response_data["collect_records"]["last_revision_num"] == revision.revision_num
 
     assert len(response_data["choices"]["updates"]["countries"]["data"]) == 2
 

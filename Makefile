@@ -64,4 +64,6 @@ runserver:
 
 shell:
 	@docker-compose exec --user=$(CURRENT_UID) $(API_SERVICE) /bin/bash
-	
+
+test:
+	@docker-compose exec --user=$(CURRENT_UID) $(API_SERVICE) pytest -v --no-migrations api/tests

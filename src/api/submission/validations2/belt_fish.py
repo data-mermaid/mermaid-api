@@ -115,7 +115,7 @@ belt_fish_validations = [
     Validation(
         validator=FishFamilySubsetValidator(
             observations_path="data.obs_belt_fishes",
-            site_path="data.sample_event.site",
+            project_path="project",
         ),
         paths=["data.obs_belt_fishes"],
         validation_level=ROW_LEVEL,

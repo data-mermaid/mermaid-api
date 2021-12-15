@@ -1,23 +1,23 @@
 from rest_framework.exceptions import ParseError
 
 from ....exceptions import check_uuid
-from ....models import FishAttributeView, Site
+from ....models import FishAttributeView, Project
 from .base import OK, WARN, BaseValidator, validator_result
 
 
 class FishFamilySubsetValidator(BaseValidator):
     INVALID_FISH_FAMILY = "not_part_of_fish_family_subset"
 
-    def __init__(self, observations_path, site_path, **kwargs):
+    def __init__(self, observations_path, project_path, **kwargs):
         self.observations_path = observations_path
-        self.site_path = site_path
+        self.project_path = project_path
         super().__init__(**kwargs)
 
     @validator_result
     def check_fish_family_subset(
         self, observation, fish_family_subset, fish_family_lookup
     ):
-        fish_attribute_id = fish_family_lookup[observation["fish_attribute"]]
+        fish_attribute_id = fish_family_lookup[observation.get("fish_attribute")]
         status = OK
         code = None
         context = {"observation_id": observation.get("id")}
@@ -32,18 +32,17 @@ class FishFamilySubsetValidator(BaseValidator):
 
     def __call__(self, collect_record, **kwargs):
         observations = self.get_value(collect_record, self.observations_path) or []
-        site_id = self.get_value(collect_record, self.site_path)
+        project_id = self.get_value(collect_record, self.project_path)
 
         try:
-            check_uuid(site_id)
-            site = Site.objects.get_or_none(id=site_id)
+            check_uuid(project_id)
+            project = Project.objects.get_or_none(id=project_id)
         except ParseError:
-            site = None
+            project = None
 
-        if site is None:
+        if project is None:
             return self._get_ok(observations)
 
-        project = site.project
         project_data = project.data or {}
         fish_family_subset = (project_data.get("settings") or {}).get(
             "fishFamilySubset"
@@ -55,7 +54,7 @@ class FishFamilySubsetValidator(BaseValidator):
         ):
             return self._get_ok(observations)
 
-        fish_attribute_ids = {ob.get("fish_attribute") for ob in observations}
+        fish_attribute_ids = {ob.get("fish_attribute") for ob in observations if ob.get("fish_attribute")}
         fish_family_lookup = {
             str(fa.id): str(fa.id_family)
             for fa in FishAttributeView.objects.filter(id__in=fish_attribute_ids)
