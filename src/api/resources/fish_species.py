@@ -76,9 +76,7 @@ class FishSpeciesViewSet(BaseAttributeApiViewSet):
         FishSpecies.objects.select_related()
         .annotate(
             regions_=ArrayAggExt(
-                "regions",
-                # filter=Q(regions__isnull=False),
-                # default=Value([])
+                "regions"
             ),
             display_name=Concat(F("genus__name"), Value(" "), F("name"))
         )
