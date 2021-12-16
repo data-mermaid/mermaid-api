@@ -1,13 +1,20 @@
 from django_filters import BaseInFilter
-from django.db.models import Prefetch
+from django.db.models import F, Value
+from django.db.models.functions import Concat
 from rest_framework import serializers
 
-from .base import BaseAPIFilterSet, BaseAttributeApiViewSet, BaseAPISerializer
+from .base import (
+    ArrayAggExt,
+    BaseAPIFilterSet,
+    BaseAttributeApiViewSet,
+    BaseAPISerializer,
+    RegionsSerializerMixin,
+)
 from .mixins import CreateOrUpdateSerializerMixin
-from ..models import FishSpecies, Region
+from ..models import FishSpecies
 
 
-class FishSpeciesSerializer(CreateOrUpdateSerializerMixin, BaseAPISerializer):
+class FishSpeciesSerializer(RegionsSerializerMixin, CreateOrUpdateSerializerMixin, BaseAPISerializer):
     status = serializers.ReadOnlyField()
     display_name = serializers.SerializerMethodField()
     biomass_constant_a = serializers.DecimalField(
@@ -67,9 +74,14 @@ class FishSpeciesViewSet(BaseAttributeApiViewSet):
     serializer_class = FishSpeciesSerializer
     queryset = (
         FishSpecies.objects.select_related()
-        .extra(select={"display_name": "fish_genus.name || ' ' || fish_species.name"})
-        .prefetch_related(Prefetch("regions", queryset=Region.objects.all().only("id")))
+        .annotate(
+            regions_=ArrayAggExt(
+                "regions"
+            ),
+            display_name=Concat(F("genus__name"), Value(" "), F("name"))
+        )
     )
+
     filterset_class = FishSpeciesFilterSet
     search_fields = [
         "name",
