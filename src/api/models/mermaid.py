@@ -1055,9 +1055,9 @@ class ObsQuadratBenthicPercent(BaseModel, JSONMixin):
 
 
 class BenthicPhotoQuadratTransect(TransectMethod):
-    project_lookup = "transect_quadrat__sample_event__site__project"
+    project_lookup = "quadrat_transect__sample_event__site__project"
 
-    transect_quadrat = models.OneToOneField(
+    quadrat_transect = models.OneToOneField(
         QuadratTransect, on_delete=models.CASCADE,
         related_name="benthic_photo_quadrat_transect_method",
         verbose_name=_("benthic photo quadrat transect")
@@ -1073,7 +1073,7 @@ class BenthicPhotoQuadratTransect(TransectMethod):
 
 
 class ObsBenthicPhotoQuadrat(BaseModel, JSONMixin):
-    project_lookup = "benthic_photo_quadrat_transect__transect_quadrat__sample_event__site__project"
+    project_lookup = "benthic_photo_quadrat_transect__quadrat_transect__sample_event__site__project"
 
     benthic_photo_quadrat_transect = models.ForeignKey(
         BenthicPhotoQuadratTransect, on_delete=models.CASCADE
