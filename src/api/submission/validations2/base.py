@@ -119,7 +119,7 @@ class ValidationRunner:
             try:
                 is_ignored = self._check_is_ignored(
                     res,
-                    existing_validation_result[0]
+                    existing_validation_result[n]
                 )
                 res["status"] = IGNORE if is_ignored else res["status"]
             except (IndexError, TypeError):
