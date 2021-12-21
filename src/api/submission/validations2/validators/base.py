@@ -88,8 +88,8 @@ class BaseValidator:
         return name
 
     @validator_result
-    def skip(self):
-        return OK
+    def skip(self, context=None):
+        return OK, None, context
 
     def get_value(self, record, key):
         data = dotty(record)
