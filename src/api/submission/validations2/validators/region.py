@@ -23,7 +23,7 @@ class RegionValidator(BaseValidator):
         super().__init__(**kwargs)
 
     def _get_ok(self, observations):
-        return [self.skip() for _ in observations]
+        return [self.skip({"observation_id": o.get("id")}) for o in observations]
 
     def _get_observation_ids_and_attribute_ids(self, observations):
         observation_ids = []
