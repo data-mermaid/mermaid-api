@@ -62,6 +62,7 @@ from .resources.sample_units.bleachingquadratcollectionmethod import (
     BleachingQCProjectMethodSEView,
 )
 from .resources.sample_units.sample_unit_methods import SampleUnitMethodView
+from .resources.summary_sample_event import SummarySampleEventView
 from .resources.summary_site import SummarySiteView
 
 from .resources.fish_size import FishSizeViewSet
@@ -86,6 +87,7 @@ router.register(r"sites", SiteViewSet, "site")
 router.register(r"managements", ManagementViewSet, "management")
 router.register(r"projecttags", ProjectTagViewSet, "projecttag")
 router.register(r"summarysites", SummarySiteView, "summarysite")
+router.register(r"summarysampleevents", SummarySampleEventView, "summarysampleevent")
 
 # observation attributes
 router.register(r"benthicattributes", BenthicAttributeViewSet, "benthicattribute")

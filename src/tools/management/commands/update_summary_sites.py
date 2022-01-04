@@ -18,7 +18,7 @@ class Command(BaseCommand):
 
     def handle(self, *args, **options):
         start_time = time()
-        print("Starting...")
+        print("Updating summary sites...")
         futures = []
         with ThreadPoolExecutor(max_workers=4) as exc:
             for project in Project.objects.filter(status__in=[Project.OPEN, Project.LOCKED]):

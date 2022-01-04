@@ -13,9 +13,9 @@ ADD ./ci_cd/simpleq.supervisor .
 RUN bash -c "cat <(echo) <(echo) simpleq.supervisor  >> /etc/supervisor/supervisord.conf"
 RUN rm simpleq.supervisor
 
-ADD ./ci_cd/update_summary_site.supervisor .
-RUN bash -c "cat <(echo) <(echo) update_summary_site.supervisor  >> /etc/supervisor/supervisord.conf"
-RUN rm update_summary_site.supervisor
+ADD ./ci_cd/update_summaries.supervisor .
+RUN bash -c "cat <(echo) <(echo) update_summaries.supervisor  >> /etc/supervisor/supervisord.conf"
+RUN rm update_summaries.supervisor
 
 EXPOSE 8000 80 443
 CMD ["supervisord", "-n", "-c", "/etc/supervisor/supervisord.conf"]
