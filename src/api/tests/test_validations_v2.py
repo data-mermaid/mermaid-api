@@ -1,4 +1,8 @@
-from api.submission.validations2 import belt_fish, ValidationRunner
+from api.submission.validations2 import (
+    belt_fish,
+    bleaching_quadrat_collection,
+    ValidationRunner,
+)
 from api.submission.validations import ERROR, OK, WARN, IGNORE
 from api.resources.collect_record import CollectRecordSerializer
 
@@ -40,25 +44,45 @@ def test_fishbelt_protocol_validation_warn(
     assert overall_status == WARN
     invalid_collect_record_warn.validations = runner.to_dict()
     invalid_collect_record_warn.save()
-    assert _get_result_status(invalid_collect_record_warn.validations["results"]["data"]["fishbelt_transect"]["depth"], "depth_validator") == WARN
-    assert _get_result_status(invalid_collect_record_warn.validations["results"]["data"]["obs_belt_fishes"][2], "fish_size_validator") == WARN
+    assert (
+        _get_result_status(
+            invalid_collect_record_warn.validations["results"]["data"][
+                "fishbelt_transect"
+            ]["depth"],
+            "depth_validator",
+        )
+        == WARN
+    )
+    assert (
+        _get_result_status(
+            invalid_collect_record_warn.validations["results"]["data"][
+                "obs_belt_fishes"
+            ][2],
+            "fish_size_validator",
+        )
+        == WARN
+    )
 
     _set_result_status(
         invalid_collect_record_warn.validations["results"]["$record"],
         "observation_count_validator",
-        IGNORE
+        IGNORE,
     )
 
     _set_result_status(
-        invalid_collect_record_warn.validations["results"]["data"]["obs_belt_fishes"][2],
+        invalid_collect_record_warn.validations["results"]["data"]["obs_belt_fishes"][
+            2
+        ],
         "fish_size_validator",
-        IGNORE
+        IGNORE,
     )
 
     _set_result_status(
-        invalid_collect_record_warn.validations["results"]["data"]["fishbelt_transect"]["depth"],
+        invalid_collect_record_warn.validations["results"]["data"]["fishbelt_transect"][
+            "depth"
+        ],
         "depth_validator",
-        IGNORE
+        IGNORE,
     )
 
     runner = ValidationRunner(serializer=CollectRecordSerializer)
@@ -76,9 +100,20 @@ def test_fishbelt_protocol_validation_warn(
 
     transect_results = results["data"]["fishbelt_transect"]
     assert _get_result_status(transect_results["depth"], "depth_validator") == IGNORE
-    assert _get_result_status(transect_results["sample_time"], "sample_time_validator") == WARN
+    assert (
+        _get_result_status(transect_results["sample_time"], "sample_time_validator")
+        == WARN
+    )
 
-    assert _get_result_status(invalid_collect_record_warn.validations["results"]["data"]["obs_belt_fishes"][2], "fish_size_validator") == IGNORE
+    assert (
+        _get_result_status(
+            invalid_collect_record_warn.validations["results"]["data"][
+                "obs_belt_fishes"
+            ][2],
+            "fish_size_validator",
+        )
+        == IGNORE
+    )
 
 
 def test_fishbelt_protocol_validation_null_str_warn(
@@ -97,9 +132,15 @@ def test_fishbelt_protocol_validation_null_str_warn(
     results = runner.to_dict()["results"]
     transect_results = results["data"]["fishbelt_transect"]
 
-    assert _get_result_status(transect_results["len_surveyed"], "len_surveyed_validator") == WARN
+    assert (
+        _get_result_status(transect_results["len_surveyed"], "len_surveyed_validator")
+        == WARN
+    )
     assert _get_result_status(transect_results["depth"], "depth_validator") == WARN
-    assert _get_result_status(transect_results["sample_time"], "sample_time_validator") == WARN
+    assert (
+        _get_result_status(transect_results["sample_time"], "sample_time_validator")
+        == WARN
+    )
 
     assert _get_result_status(results["$record"], "biomass_validator") == WARN
     assert _get_result_status(results["$record"], "observation_count_validator") == WARN
@@ -119,11 +160,33 @@ def test_fishbelt_protocol_validation_error(
 
     results = runner.to_dict()["results"]["data"]
     se_results = results["sample_event"]
-    assert _get_result_status(se_results["sample_date"], "sample_date_validator") == ERROR
-    assert _get_result_status(se_results["management"], "management_rule_validator") == ERROR
+    assert (
+        _get_result_status(se_results["sample_date"], "sample_date_validator") == ERROR
+    )
+    assert (
+        _get_result_status(se_results["management"], "management_rule_validator")
+        == ERROR
+    )
 
     observation_results = results["obs_belt_fishes"]
     assert _get_result_status(observation_results[0], "fish_size_validator") == WARN
     assert _get_result_status(observation_results[1], "fish_size_validator") == ERROR
-    assert _get_result_status(observation_results[2], "size_list_required_validator") == ERROR
+    assert (
+        _get_result_status(observation_results[2], "size_list_required_validator")
+        == ERROR
+    )
     assert _get_result_status(observation_results[2], "region_validator") == WARN
+
+
+def test_bleachingqc_protocol_validation_ok(
+    valid_bleaching_qc_collect_record, profile1_request
+):
+    runner = ValidationRunner(serializer=CollectRecordSerializer)
+    overall_status = runner.validate(
+        valid_bleaching_qc_collect_record,
+        bleaching_quadrat_collection.bleaching_quadrat_collection_validations,
+        request=profile1_request,
+    )
+    import json
+    print(json.dumps(runner.to_dict(), indent=2))
+    assert overall_status == OK
