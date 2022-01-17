@@ -1,6 +1,7 @@
+from collections import defaultdict
 import json
 
-from .base import ERROR, OK, WARN, BaseValidator, validator_result
+from .base import ERROR, OK, WARN, BaseValidator, assign_ids, validator_result
 
 
 class RequiredValidator(BaseValidator):
@@ -24,7 +25,7 @@ class ListRequiredValidator(BaseValidator):
     def __init__(self, list_path, path, **kwargs):
         self.list_path = list_path
         self.path = path
-        self.unique_identifier_label = kwargs.get("unique_identifier_label")
+        self.unique_identifier_label = kwargs.get("unique_identifier_label") or "id"
         self.unique_identifier_key = kwargs.get("unique_identifier_key") or "id"
         super().__init__(**kwargs)
 
@@ -75,3 +76,72 @@ class AllEqualValidator(BaseValidator):
                 return OK
 
         return WARN, self.ALL_EQUAL
+
+
+class DuplicateValidator(BaseValidator):
+    DUPLICATE_VALUES = "duplicate_values"
+
+    def __init__(self, list_path, key_paths, **kwargs):
+        self.list_path = list_path
+        self.key_paths = key_paths
+        self.unique_identifier_label = kwargs.get("unique_identifier_label") or "id"
+        self.unique_identifier_key = kwargs.get("unique_identifier_key") or "id"
+        super().__init__(**kwargs)
+
+    @validator_result
+    def __call__(self, collect_record, **kwargs):
+        records = self.get_value(collect_record, self.list_path)
+
+        if len(records) < 2:
+            return OK
+
+        duplicate_tracker = defaultdict(list)
+
+        for n, record in enumerate(records):
+            vals = [str(self.get_value(record, key_path) or "") for key_path in self.key_paths]
+            uid = record.get(self.unique_identifier_key)
+
+            duplicate_tracker[":::".join(vals)].append({
+                "id": uid,
+                "index": n
+            })
+
+        duplicates = [r for r in duplicate_tracker.values() if len(r) > 1]
+        if not duplicates:
+            return OK
+
+        return ERROR, self.DUPLICATE_VALUES, {"duplicates": duplicates}
+
+
+class PositiveIntegerValidator(BaseValidator):
+    NOT_POSITIVE_INTEGER = "not_postitive_integer"
+
+    def __init__(self, key_path, **kwargs):
+        self.key_path = key_path
+        super().__init__(**kwargs)
+
+    @validator_result
+    def __call__(self, collect_record, **kwargs):
+        val = self.get_value(collect_record, self.key_path)
+
+        if isinstance(val, int) is False or val < 0:
+            return ERROR, self.NOT_POSITIVE_INTEGER
+
+        return OK
+
+
+class ListPositiveIntegerValidator(BaseValidator):
+
+    def __init__(self, list_path, key_path, **kwargs):
+        self.list_path = list_path
+        self.key_path = key_path
+        self.unique_identifier_label = kwargs.get("unique_identifier_label")
+        self.unique_identifier_key = kwargs.get("unique_identifier_key")
+
+        super().__init__(**kwargs)
+
+    @assign_ids
+    def __call__(self, collect_record, **kwargs):
+        records = self.get_value(collect_record, self.list_path)
+        validator = PositiveIntegerValidator(self.key_path)
+        return validator, records

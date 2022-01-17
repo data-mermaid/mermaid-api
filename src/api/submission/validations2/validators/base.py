@@ -68,6 +68,25 @@ def validator_result(func):
     return inner1
 
 
+def assign_ids(func):
+    def _validate(instance, validator_instance, record):
+        result = validator_instance(record)
+        if hasattr(instance, "unique_identifier_key"):
+            uid_key = instance.unique_identifier_key or "id"
+            label = uid_key
+            if hasattr(instance, "unique_identifier_label"):
+                label = instance.unique_identifier_label or label
+
+            result.context = {label: record.get(uid_key)}
+        return result
+
+    def inner(instance, *args, **kwargs):
+        validator_instance, records = func(instance, *args, **kwargs)
+        return [_validate(instance, validator_instance, r) for r in records]
+
+    return inner
+
+
 class BaseValidator:
     result = None
 
