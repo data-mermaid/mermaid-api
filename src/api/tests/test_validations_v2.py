@@ -169,6 +169,7 @@ def test_fishbelt_protocol_validation_error(
     )
 
     observation_results = results["obs_belt_fishes"]
+    print(f"observation_results[2]: {observation_results[2]}")
     assert _get_result_status(observation_results[0], "fish_size_validator") == WARN
     assert _get_result_status(observation_results[1], "fish_size_validator") == ERROR
     assert (

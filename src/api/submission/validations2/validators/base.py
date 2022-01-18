@@ -68,7 +68,10 @@ def validator_result(func):
     return inner1
 
 
-def assign_ids(func):
+def validate_list(func):
+    def class_name(cls):
+        return cls.name
+
     def _validate(instance, validator_instance, record):
         result = validator_instance(record)
         if hasattr(instance, "unique_identifier_key"):
@@ -78,6 +81,8 @@ def assign_ids(func):
                 label = instance.unique_identifier_label or label
 
             result.context = {label: record.get(uid_key)}
+            result.name = class_name(instance)
+
         return result
 
     def inner(instance, *args, **kwargs):

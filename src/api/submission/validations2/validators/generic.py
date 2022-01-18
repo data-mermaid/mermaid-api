@@ -1,7 +1,7 @@
 from collections import defaultdict
 import json
 
-from .base import ERROR, OK, WARN, BaseValidator, assign_ids, validator_result
+from .base import ERROR, OK, WARN, BaseValidator, validate_list, validator_result
 
 
 class RequiredValidator(BaseValidator):
@@ -29,24 +29,11 @@ class ListRequiredValidator(BaseValidator):
         self.unique_identifier_key = kwargs.get("unique_identifier_key") or "id"
         super().__init__(**kwargs)
 
-    @validator_result
-    def _check_value(self, record, path):
-        status = OK
-        code = None
-        context = {self.unique_identifier_label: record.get(self.unique_identifier_key)}
-        val = self.get_value(record, path)
-
-        if val != 0 and not val:
-            status = ERROR
-            code = self.REQUIRED
-            context["path"] = path
-
-        return status, code, context
-
+    @validate_list
     def __call__(self, collect_record, **kwargs):
-        records = self.get_value(collect_record, self.list_path) or []
-        key_path = self.path
-        return [self._check_value(r, key_path) for r in records]
+        records = self.get_value(collect_record, self.list_path)
+        validator = RequiredValidator(self.path)
+        return validator, records
 
 
 class AllEqualValidator(BaseValidator):
@@ -140,7 +127,7 @@ class ListPositiveIntegerValidator(BaseValidator):
 
         super().__init__(**kwargs)
 
-    @assign_ids
+    @validate_list
     def __call__(self, collect_record, **kwargs):
         records = self.get_value(collect_record, self.list_path)
         validator = PositiveIntegerValidator(self.key_path)
