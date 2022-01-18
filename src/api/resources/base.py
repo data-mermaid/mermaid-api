@@ -1,6 +1,7 @@
 import re
 import uuid
 
+from django.contrib.postgres.aggregates import ArrayAgg
 from django.utils.translation import ugettext_lazy as _
 from django.db.models.sql.constants import ORDER_PATTERN
 from rest_framework import serializers, viewsets
@@ -37,7 +38,7 @@ from django_filters import (
 )
 from django_filters.fields import Lookup
 from django.conf import settings
-from ..models import Tag, APPROVAL_STATUSES
+from ..models import Region, Tag, APPROVAL_STATUSES
 from ..exceptions import check_uuid
 from ..permissions import *
 from ..utils.auth0utils import get_jwt_token
@@ -720,3 +721,27 @@ class BaseChoiceApiViewSet(MethodAuthenticationMixin, viewsets.ViewSet):
 
     def destroy(self, request, pk=None):
         raise MethodNotAllowed("DELETE")
+
+
+class ArrayAggExt(ArrayAgg):
+    template = "ARRAY_REMOVE(%(function)s(%(distinct)s%(expressions)s %(ordering)s), NULL)"
+
+
+class RegionsSerializerMixin():
+    """
+    Assumes that the viewset queryset is using
+    `.annotate(regions_=ArrayAgg("regions"))`
+    """
+    _default_regions_field = serializers.ManyRelatedField(
+        child_relation=PrimaryKeyRelatedField(queryset=Region.objects.all(), required=False),
+        required=False
+    )
+
+    def to_representation(self, instance):
+        if hasattr(instance, "regions_"):
+            self.fields["regions"] = serializers.ListField(source="regions_")
+        return super().to_representation(instance)
+    
+    def to_internal_value(self, data):
+        self.fields["regions"] = self._default_regions_field
+        return super().to_internal_value(data)

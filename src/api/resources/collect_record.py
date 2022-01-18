@@ -30,7 +30,9 @@ from ..submission.utils import (
     HABITATCOMPLEXITY_PROTOCOL,
     PROTOCOLS,
     submit_collect_records,
+    submit_collect_records_v2,
     validate_collect_records,
+    validate_collect_records_v2,
 )
 from ..submission.validations import ERROR, OK, WARN
 from ..utils import truthy
@@ -85,12 +87,18 @@ class CollectRecordViewSet(BaseProjectApiViewSet):
     )
     def validate(self, request, project_pk):
         output = dict()
+        validation_version = request.data.get("version") or "1"
         record_ids = request.data.get("ids") or []
         profile = request.user.profile
         try:
-            output = validate_collect_records(
-                profile, record_ids, CollectRecordSerializer
-            )
+            if validation_version == "2":
+                output = validate_collect_records_v2(
+                    profile, record_ids, CollectRecordSerializer
+                )
+            else:
+                output = validate_collect_records(
+                    profile, record_ids, CollectRecordSerializer
+                )
         except ValueError as err:
             raise ParseError(err.message)
 
@@ -103,9 +111,21 @@ class CollectRecordViewSet(BaseProjectApiViewSet):
         + [CollectRecordOwner],
     )
     def submit(self, request, project_pk):
+        validation_version = request.data.get("version") or "1"
         record_ids = request.data.get("ids")
         profile = request.user.profile
-        output = submit_collect_records(profile, record_ids)
+
+        if validation_version == "2":
+            output = submit_collect_records_v2(
+                profile,
+                record_ids,
+                CollectRecordSerializer
+            )
+        else:
+            output = submit_collect_records(
+                profile, record_ids
+            )
+
         return Response(output)
 
     @action(detail=False, methods=["POST"], permission_classes=[ProjectDataPermission])

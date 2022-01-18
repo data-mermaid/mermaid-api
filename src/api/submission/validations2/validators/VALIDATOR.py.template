@@ -1,0 +1,12 @@
+from .base import OK, WARN, ERROR, BaseValidator, validator_result
+
+
+class <NAME>Validator(BaseValidator):
+    def __init__(self, <FIELD_PATH>):
+        pass
+
+    @validator_result
+    def __call__(self, collect_record, **kwargs):
+        #site_id = self.get_value(collect_record, self.<FIELD_PATH>) or ""
+
+        return OK

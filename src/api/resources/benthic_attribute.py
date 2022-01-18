@@ -1,16 +1,18 @@
 from django_filters import BaseInFilter
 from rest_framework import serializers
 from .base import (
+    ArrayAggExt,
     BaseAPIFilterSet,
     NullableUUIDFilter,
     BaseAPISerializer,
     BaseAttributeApiViewSet,
+    RegionsSerializerMixin,
 )
 from .mixins import CreateOrUpdateSerializerMixin
-from ..models import BenthicAttribute, Region
+from ..models import BenthicAttribute
 
 
-class BenthicAttributeSerializer(CreateOrUpdateSerializerMixin, BaseAPISerializer):
+class BenthicAttributeSerializer(RegionsSerializerMixin, CreateOrUpdateSerializerMixin, BaseAPISerializer):
     status = serializers.ReadOnlyField()
 
     class Meta:
@@ -34,7 +36,11 @@ class BenthicAttributeFilterSet(BaseAPIFilterSet):
 
 class BenthicAttributeViewSet(BaseAttributeApiViewSet):
     serializer_class = BenthicAttributeSerializer
-    queryset = BenthicAttribute.objects.select_related().prefetch_related("regions")
+    queryset = (
+        BenthicAttribute.objects.select_related()
+        .annotate(regions_=ArrayAggExt("regions"))
+    )
+
     filterset_class = BenthicAttributeFilterSet
     search_fields = [
         "name",

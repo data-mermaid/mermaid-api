@@ -46,6 +46,18 @@ dbrestore:
 migrate:
 	@docker-compose exec --user=$(CURRENT_UID) $(API_SERVICE) python manage.py migrate
 
+install:
+	@echo "\n--- Shutting down existing stack ---\n"
+	@make down
+	@echo "\n--- Building new docker image ---\n"
+	@make buildnocache
+	@make up
+	@echo "\n--- Spinning up new stack ---\n"
+	@sleep 20
+	@echo "\n--- Applying MERMAID database migrations ---\n"
+	@make migrate
+
+
 freshinstall:
 	@echo "\n--- Shutting down existing stack ---\n"
 	@make down
@@ -64,4 +76,6 @@ runserver:
 
 shell:
 	@docker-compose exec --user=$(CURRENT_UID) $(API_SERVICE) /bin/bash
-	
+
+test:
+	@docker-compose exec --user=$(CURRENT_UID) $(API_SERVICE) pytest -v --no-migrations api/tests

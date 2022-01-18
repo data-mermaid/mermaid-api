@@ -19,8 +19,21 @@ from api.utils import tokenutils
 
 
 @pytest.fixture
-def project1():
-    return Project.objects.create(name="Test Project 1", status=Project.OPEN)
+def project1(fish_family1, fish_family2, fish_family3, fish_family4):
+    return Project.objects.create(
+        name="Test Project 1",
+        status=Project.OPEN,
+        data={
+            "settings": {
+                "fishFamilySubset": [
+                    str(fish_family1.pk),
+                    str(fish_family2.pk),
+                    str(fish_family3.pk),
+                    str(fish_family4.pk),
+                ]
+            }
+        }
+    )
 
 
 @pytest.fixture
@@ -31,6 +44,21 @@ def project2():
 @pytest.fixture
 def project3():
     return Project.objects.create(name="Test Project 3", status=Project.OPEN)
+
+
+@pytest.fixture
+def project4():
+    return Project.objects.create(
+        name="Test Project 4",
+        status=Project.OPEN,
+        data={
+            "settings": {
+                "fishFamilySubset": [
+                    "343f38e9-2497-422f-bac9-576682bb97f6"  # Fake
+                ]
+            }
+        }
+    )
 
 
 @pytest.fixture
@@ -82,6 +110,13 @@ def project_profile2(project1, profile2):
 
 
 @pytest.fixture
+def project_profile4(project4, profile1):
+    return ProjectProfile.objects.create(
+        project=project4, profile=profile1, role=ProjectProfile.ADMIN
+    )
+
+
+@pytest.fixture
 def site1(project1, country1, reef_type1, reef_exposure1, reef_zone1):
     return Site.objects.create(
         project=project1,
@@ -108,9 +143,26 @@ def site2(project1, country1, reef_type1, reef_exposure1, reef_zone1):
 
 
 @pytest.fixture
+def site3(project1, country1, reef_type1, reef_exposure1, reef_zone1):
+    return Site.objects.create(
+        project=project1,
+        name="Site 3",
+        location=Point(-100, 100, srid=4326),
+        country=country1,
+        reef_type=reef_type1,
+        exposure=reef_exposure1,
+        reef_zone=reef_zone1,
+    )
+
+
+@pytest.fixture
 def management1(project1):
     return Management.objects.create(
-        project=project1, est_year=2000, name="Management 1", notes="Hey what's up!!",
+        project=project1,
+        est_year=2000,
+        name="Management 1",
+        notes="Hey what's up!!",
+        open_access=True
     )
 
 
@@ -160,6 +212,7 @@ def base_project(
     site1,
     management2,
     site2,
+    site3,
     profile1,
     profile2,
     project_profile1,
