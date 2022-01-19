@@ -1636,3 +1636,26 @@ class AuditRecord(JSONMixin):
     event_by = models.ForeignKey("Profile", on_delete=models.SET_NULL, null=True, blank=True)
     model = models.CharField(max_length=100)
     record_id = models.UUIDField(db_index=True)
+
+
+class EditedProject(models.Model):
+    project_pk = models.UUIDField(db_index=True, unique=True, null=True, blank=True)
+    created_on = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        db_table = "edited_projects"
+
+    @classmethod
+    def get_projects(cls):
+        qs = cls.objects.all().order_by("id")
+        if qs.count() < 1:
+            return [], None
+
+        last_pk = qs.last().pk
+        return [p.project_pk for p in qs], last_pk
+
+    @classmethod
+    def truncate(cls, last_pk):
+        if last_pk is None:
+            return
+        cls.objects.filter(pk__lte=last_pk).delete()
