@@ -12,6 +12,7 @@ from .validators import (
     DepthValidator,
     DuplicateValidator,
     ListPositiveIntegerValidator,
+    ListRequiredValidator,
     ManagementRuleValidator,
     ObservationCountValidator,
     QuadratCollectionValidator,
@@ -52,12 +53,18 @@ bleaching_quadrat_collection_validations = [
         validation_type=VALUE_VALIDATION_TYPE,
     ),
     Validation(
-        validator=SampleDateValidator(
-            sample_date_path="data.sample_event.sample_date",
-            sample_time_path="data.quadrat_collection.sample_time",
-            site_path="data.sample_event.site",
+        validator=RequiredValidator(
+            path="data.sample_event.sample_date",
         ),
         paths=["data.sample_event.sample_date"],
+        validation_level=FIELD_LEVEL,
+        validation_type=VALUE_VALIDATION_TYPE,
+    ),
+    Validation(
+        validator=RequiredValidator(
+            path="data.quadrat_collection.depth",
+        ),
+        paths=["data.quadrat_collection.depth"],
         validation_level=FIELD_LEVEL,
         validation_type=VALUE_VALIDATION_TYPE,
     ),
@@ -224,5 +231,27 @@ bleaching_quadrat_collection_validations = [
         paths=["data.obs_colonies_bleached"],
         validation_level=RECORD_LEVEL,
         validation_type=VALUE_VALIDATION_TYPE,
+    ),
+    Validation(
+        validator=ListRequiredValidator(
+            list_path="data.obs_colonies_bleached",
+            path="attribute",
+            name_prefix="attribute",
+            unique_identifier_label="observation_id",
+        ),
+        paths=["data.obs_colonies_bleached"],
+        validation_level=ROW_LEVEL,
+        validation_type=LIST_VALIDATION_TYPE,
+    ),
+    Validation(
+        validator=ListRequiredValidator(
+            list_path="data.obs_quadrat_benthic_percent",
+            path="quadrat_number",
+            name_prefix="quadrat_number",
+            unique_identifier_label="observation_id",
+        ),
+        paths=["data.obs_quadrat_benthic_percent"],
+        validation_level=ROW_LEVEL,
+        validation_type=LIST_VALIDATION_TYPE,
     ),
 ]
