@@ -1,7 +1,7 @@
 [program:update_summaries]
 directory=/var/projects/webapp/
 environment=DJANGO_SETTINGS_MODULE="app.settings",PYTHONPATH="/var/projects/webapp"
-command=bash -c "sleep 1800;/usr/local/bin/python manage.py update_summary_sites;/usr/local/bin/python manage.py update_summary_sample_events"
+command=bash -c "sleep 1800;/usr/local/bin/python manage.py update_summary_sites;/usr/local/bin/python manage.py update_summary_sample_events --clear"
 user=webapp
 autostart=true
 autorestart=true

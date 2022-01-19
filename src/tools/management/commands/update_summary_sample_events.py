@@ -5,7 +5,7 @@ from django.conf import settings
 from django.core.management.base import BaseCommand
 from django.db import transaction
 
-from api.models import Project, SummarySampleEventModel, SummarySampleEventSQLModel
+from api.models import EditedProject, SummarySampleEventModel, SummarySampleEventSQLModel
 
 
 class Command(BaseCommand):
@@ -14,6 +14,12 @@ class Command(BaseCommand):
             "--force",
             action='store_true',
             help="Ignores environment check before running update.",
+        )
+
+        parser.add_argument(
+            "--clear",
+            action='store_true',
+            help="Truncate edited projects table after updates are done.",
         )
 
     @transaction.atomic
@@ -25,20 +31,26 @@ class Command(BaseCommand):
 
     def handle(self, *args, **options):
         is_forced = options["force"]
+        clear_edited_projects = options["clear"]
 
         if settings.ENVIRONMENT != "prod" and is_forced is False:
             print("Skipping update")
             return
 
+        project_ids, last_pk = EditedProject.get_projects()
+
         start_time = time()
         print("Updating summary sample events...")
         futures = []
         with ThreadPoolExecutor(max_workers=4) as exc:
-            for project in Project.objects.filter(status__in=[Project.OPEN, Project.LOCKED]):
-                futures.append(exc.submit(self.update_project_summary_sample_event, project.pk))
+            for project_id in project_ids:
+                futures.append(exc.submit(self.update_project_summary_sample_event, project_id))
 
         for future in futures:
             future.result()
+
+        if clear_edited_projects:
+            EditedProject.truncate(last_pk)
 
         end_time = time()
         print(f"Done: {end_time - start_time:.3f}s")
