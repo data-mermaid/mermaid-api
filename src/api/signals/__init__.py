@@ -7,6 +7,7 @@ from django.core.cache import cache
 from django.db.models.signals import post_delete, post_save, pre_delete, pre_save, m2m_changed
 from django.dispatch import receiver
 
+from . import project_edits
 from . import revision
 from ..covariates import update_site_covariates_in_thread
 from ..models import *
