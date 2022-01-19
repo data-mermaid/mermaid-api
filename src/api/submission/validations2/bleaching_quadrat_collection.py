@@ -77,6 +77,16 @@ bleaching_quadrat_collection_validations = [
         validation_type=VALUE_VALIDATION_TYPE,
     ),
     Validation(
+        validator=SampleDateValidator(
+            sample_date_path="data.sample_event.sample_date",
+            sample_time_path="data.quadrat_collection.sample_time",
+            site_path="data.sample_event.site",
+        ),
+        paths=["data.sample_event.sample_date"],
+        validation_level=FIELD_LEVEL,
+        validation_type=VALUE_VALIDATION_TYPE,
+    ),
+    Validation(
         validator=RegionValidator(
             attribute_model_class=BenthicAttribute,
             site_path="data.sample_event.site",
