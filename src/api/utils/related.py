@@ -34,6 +34,8 @@ def get_related_project(model):
         return model
 
     if hasattr(model, "project_lookup"):
+        model_class = model.__class__
+        model = model_class.objects.select_related(model_class.project_lookup).filter(id=model.pk)[0]
         project_lookup = getattr(model, "project_lookup")
         lookups = project_lookup.split("__")
         rel_obj = get_model_value(model, lookups)
