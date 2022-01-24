@@ -65,7 +65,6 @@ class BleachingCSVListSerializer(CollectRecordCSVListSerializer):
         for rec in grouped_records:
             for n, obs in enumerate(rec["data"].get("obs_quadrat_benthic_percent")):
                 obs["quadrat_number"] = n + 1
-        print(f"grouped_records: {grouped_records}")
         return grouped_records
 
 

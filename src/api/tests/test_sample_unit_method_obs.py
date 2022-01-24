@@ -1,4 +1,6 @@
 import csv
+
+from decimal import Decimal
 from io import StringIO
 
 import pytest
@@ -345,6 +347,6 @@ def test_bleaching_quadrat_benthic_percent_field_report(
     assert float(rows[3]["Latitude"]) == site1.location.y
     assert float(rows[3]["Longitude"]) == site1.location.x
     assert rows[3]["Observers"] == profile1.full_name
-    assert pytest.approx(float(rows[3]["Soft coral (% cover)"]), 1) == pytest.approx(
+    assert pytest.approx(Decimal(rows[3]["Soft coral (% cover)"]), 1) == pytest.approx(
         obs_quadrat_benthic_percent1_4.percent_soft, 1
     )
