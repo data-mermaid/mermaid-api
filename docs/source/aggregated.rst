@@ -351,22 +351,14 @@ Aggregated view of all bleaching quadrat collection data collected for a sample 
 - ``percent_soft_avg_avg_min``/``percent_soft_avg_avg_max``
 - ``percent_algae_avg_avg_min``/``percent_algae_avg_avg_max``
 
-Site summary view
------------------
+Summary views
+-------------
 
-::
+MERMAID provides two "summary" endpoints that aggregate metrics from **all** surveys associated with a Site, either for a specific Sample Event (i.e. on the same date) or for all dates. For each sample event or site, a ``protocols`` field contains an object for each survey method conducted at that site, with calculated indicators for each if the data sharing policy for that survey method is ``public summary`` or ``public``, and just ``sample_unit_count`` otherwise. These views additionally differ from other aggregated views because:
 
-    /summarysites/
-
-The site summary view is a special case of MERMAID aggregated views:
-
-1. It is not project-specific, and its url is relative to the API root
-2. It never requires authentication
-3. It provides metrics aggregated to the site level, including all survey methods at that site
-4. For each site, a ``protocols`` field contains an object for each survey method conducted at that site, with calculated indicators for each if the data sharing policy for that survey method is ``public summary`` or ``public`` and just ``sample_unit_count`` otherwise.
-5. Under the hood, it draws from a `PostgreSQL materialized view <https://www.postgresql.org/docs/11/rules-materializedviews.html>`_ that is refreshed every 30 minutes.
-
-This resource is used by the `MERMAID public dashboard <https://dashboard.datamermaid.org/>`_. 
+1. They are not project-specific; urls are relative to the API root. Thus ``/sampleevents/`` provides data for **all** surveys associated with each Site, while ``/projects/<project_id>/beltfishes/sampleevents/`` provides just beltfish data for a particular project.
+2. They never require authentication
+3. They are not refreshed immediately; under the hood, they draw from tables that are refreshed every 30 minutes.
 
 Available filters:
 
@@ -390,3 +382,13 @@ Available filters:
 - ``data_policy_benthicpit``
 - ``data_policy_habitatcomplexity``
 - ``data_policy_bleachingqc``
+
+/summarysampleevents/
+^^^^^^^^^^^^^^^^^^^^^
+
+Provides aggregated results for each survey conducted at a given place on a given date.
+
+/summarysites/
+^^^^^^^^^^^^^^
+
+Provides aggregated results for each survey conducted at a given place, across all dates. This resource is used by the `MERMAID public dashboard <https://dashboard.datamermaid.org/>`_.

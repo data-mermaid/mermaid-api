@@ -117,6 +117,17 @@ def dbbackup(c, keyname="local"):
 
 
 @task
+def install(c, keyname="local"):
+    down(c)
+    buildnocache(c)
+    up(c)
+
+    time.sleep(20)
+    migrate(c)
+
+
+
+@task
 def freshinstall(c, keyname="local"):
     down(c)
     buildnocache(c)

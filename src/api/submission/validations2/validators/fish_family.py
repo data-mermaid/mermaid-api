@@ -24,11 +24,11 @@ class FishFamilySubsetValidator(BaseValidator):
         if fish_attribute_id not in fish_family_subset:
             status = WARN
             code = self.INVALID_FISH_FAMILY
-            
+
         return status, code, context
 
     def _get_ok(self, observations):
-        return [self.skip() for _ in observations]
+        return [self.skip({"observation_id": o.get("id")}) for o in observations]
 
     def __call__(self, collect_record, **kwargs):
         observations = self.get_value(collect_record, self.observations_path) or []
