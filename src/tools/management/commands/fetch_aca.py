@@ -31,7 +31,6 @@ class Command(ProgressBarBaseCommand):
             "-r",
             "--radius",
             type=float,
-            default=0.025,
             help="radius of buffer around point from which to extract covariate values",
         )
         parser.add_argument(
