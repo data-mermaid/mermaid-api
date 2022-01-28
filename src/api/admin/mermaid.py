@@ -136,9 +136,7 @@ class ProjectAdmin(BaseAdmin):
             ses = SampleEvent.objects.filter(site__project=object_id)
             for se in ses:
                 for suclass in get_subclasses(SampleUnit):
-                    sus = "{}_set".format(suclass._meta.model_name)
-                    su_set = operator.attrgetter(sus)(se)
-                    su_set.all().delete()
+                    suclass.objects.filter(sample_event=se).delete()
                 # Actual SE gets deleted via SU signal
         return super(ProjectAdmin, self).delete_view(request, object_id, extra_context)
 
