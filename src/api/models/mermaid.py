@@ -1014,13 +1014,16 @@ class ObsQuadratBenthicPercent(BaseModel, JSONMixin):
     quadrat_number = models.PositiveSmallIntegerField(
         verbose_name=u"quadrat number"
     )
-    percent_hard = models.PositiveSmallIntegerField(
+    percent_hard = models.DecimalField(
+        max_digits=5, decimal_places=2,
         verbose_name=u"hard coral, % cover", null=True, blank=True
     )
-    percent_soft = models.PositiveSmallIntegerField(
+    percent_soft = models.DecimalField(
+        max_digits=5, decimal_places=2,
         verbose_name=u"soft coral, % cover", null=True, blank=True
     )
-    percent_algae = models.PositiveSmallIntegerField(
+    percent_algae = models.DecimalField(
+        max_digits=5, decimal_places=2,
         verbose_name=u"macroalgae, % cover", null=True, blank=True
     )
 
