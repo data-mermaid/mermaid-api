@@ -68,6 +68,7 @@ def create_audit_record(profile, event_type, record):
     )
 
 
+@transaction.atomic
 def edit_transect_method(serializer_class, collect_record_owner, request, pk, protocol):
     instance = serializer_class.Meta.model.objects.get(id=pk)
     collect_record = transect_method_to_collect_record(

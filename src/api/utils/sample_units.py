@@ -3,7 +3,7 @@ from django.db import transaction
 from django.db.models import Count
 from django.db.models.fields.reverse_related import OneToOneRel
 
-from . import get_subclasses, get_subclasses
+from . import get_subclasses
 from ..models import (
     BENTHICLIT_PROTOCOL,
     BENTHICPIT_PROTOCOL,
@@ -46,7 +46,7 @@ def delete_orphaned_sample_event(se, deleted_su=None):
         else suclass.objects.filter(sample_event=se).count()
         for suclass in get_subclasses(SampleUnit)
     )
- 
+
     if su_count == 0:
         se.delete()
         deleted = True

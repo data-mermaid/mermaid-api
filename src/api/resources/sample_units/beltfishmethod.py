@@ -8,7 +8,7 @@ from rest_framework.response import Response
 
 from ...models import FISHBELT_PROTOCOL, BeltFishObsSQLModel, BeltFishSESQLModel, BeltFishSUSQLModel
 from ...models import BeltFish, Project
-from ...permissions import ProjectDataReadOnlyPermission, ProjectPublicSummaryPermission
+from ...permissions import ProjectDataAdminPermission, ProjectDataReadOnlyPermission, ProjectPublicSummaryPermission
 from ...reports.fields import ReportField
 from ...reports.formatters import (
     to_day,
@@ -223,7 +223,7 @@ class BeltFishMethodView(BaseProjectApiViewSet):
 
     @transaction.atomic
     @action(
-        detail=True, methods=["PUT"] #, permission_classes=[ProjectDataAdminPermission]
+        detail=True, methods=["PUT"], permission_classes=[ProjectDataAdminPermission]
     )
     def edit(self, request, project_pk, pk):
         collect_record_owner = Project.objects.get_or_none(id=request.data.get("owner"))
