@@ -1,4 +1,3 @@
-import sys
 from time import sleep
 
 from api.covariates import update_site_covariates

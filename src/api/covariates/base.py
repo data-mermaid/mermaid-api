@@ -6,7 +6,9 @@ class CovariateRequestError(Exception):
 
 
 class BaseCovariate:
-    radius = 0.025  # in km
+
+    def __init__(self, *args, **kwargs):
+        self.radius = kwargs.get("radius") or 0.025  # in km
 
     def fetch(self, points: List[Tuple[float, float]]) -> List[dict]:
         raise NotImplementedError()
