@@ -66,16 +66,13 @@ def calc_biomass_density(
 
 
 def get_subclasses(cls):
-    result = []
-    classes_to_inspect = [cls]
-    while classes_to_inspect:
-        class_to_inspect = classes_to_inspect.pop()
-        for subclass in class_to_inspect.__subclasses__():
-            if subclass not in result:
-                classes_to_inspect.append(subclass)
-                if not subclass._meta.abstract:
-                    result.append(subclass)
-    return result
+    for subclass in cls.__subclasses__():
+        if not subclass._meta.abstract:
+            yield subclass
+        if subclass.__subclasses__():
+            yield from get_subclasses(subclass)
+
+
 
 
 def get_related_transect_methods(model):
