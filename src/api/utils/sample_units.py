@@ -1,7 +1,4 @@
-import operator
 from django.db import transaction
-from django.db.models import Count
-from django.db.models.fields.reverse_related import OneToOneRel
 
 from . import get_subclasses
 from ..models import (
@@ -89,7 +86,6 @@ def migrate_collect_record_sample_event(collect_record):
         sample_unit_attribute = "benthic_transect"
     elif protocol == FISHBELT_PROTOCOL:
         sample_unit_attribute = "fishbelt_transect"
-        pass
     elif protocol == BLEACHINGQC_PROTOCOL:
         sample_unit_attribute = "quadrat_collection"
     else:
