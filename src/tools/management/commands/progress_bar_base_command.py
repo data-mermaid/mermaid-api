@@ -1,10 +1,5 @@
 import sys
-from time import sleep
-
 from django.core.management.base import BaseCommand
-
-from api.covariates import update_site_covariates
-from api.models import Profile
 
 
 class ProgressBarBaseCommand(BaseCommand):

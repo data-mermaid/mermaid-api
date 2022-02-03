@@ -170,9 +170,12 @@ class BleachingCSVSerializer(CollectRecordCSVSerializer):
     data__obs_colonies_bleached__count_100 = PositiveIntegerField()
     data__obs_colonies_bleached__count_dead = PositiveIntegerField()
     data__obs_quadrat_benthic_percent__quadrat_number = PositiveIntegerField()
-    data__obs_quadrat_benthic_percent__percent_hard = PositiveIntegerField(default=None)
-    data__obs_quadrat_benthic_percent__percent_soft = PositiveIntegerField(default=None)
-    data__obs_quadrat_benthic_percent__percent_algae = PositiveIntegerField(default=None)
+    data__obs_quadrat_benthic_percent__percent_hard = serializers.DecimalField(
+        default=None, required=False, max_digits=5, decimal_places=2, allow_null=True)
+    data__obs_quadrat_benthic_percent__percent_soft = serializers.DecimalField(
+        default=None, required=False, max_digits=5, decimal_places=2, allow_null=True)
+    data__obs_quadrat_benthic_percent__percent_algae = serializers.DecimalField(
+        default=None, required=False, max_digits=5, decimal_places=2, allow_null=True)
 
     def skip_field(self, data, field):
         empty_fields = []

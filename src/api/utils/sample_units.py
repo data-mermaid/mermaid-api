@@ -1,6 +1,4 @@
-import operator
 from django.db import transaction
-from django.db.models import Count
 
 from . import get_subclasses
 from ..models import (
@@ -17,18 +15,16 @@ from ..models import (
 
 def delete_orphaned_sample_unit(su, deleted_tm=None):
     deleted = False
-    tm_count = None
-    # have to make sure there aren't other transect methods of *any* type left for this sample unit
+    tm_count = 0
+    sample_unit_classes = list(get_subclasses(SampleUnit))
+
     for tmclass in get_subclasses(TransectMethod):
-        # Depends on OneToOne relationship, and `related_name` must end in '_method'
-        tm = "{}_method".format(tmclass._meta.model_name)
-        if hasattr(su, tm):
-            if tm_count is None:
-                tm_count = 0
-            if not deleted_tm or (
-                deleted_tm and not type(deleted_tm.subclass) == tmclass
-            ):
-                tm_count += 1
+        if deleted_tm and isinstance(deleted_tm, tmclass):
+            continue
+
+        for field in tmclass._meta.fields:
+            if field.one_to_one is True and field.related_model in sample_unit_classes and isinstance(su, field.related_model):
+                tm_count += tmclass.objects.filter(**{field.name: su}).count()
 
     if tm_count == 0:
         su.delete()
@@ -39,15 +35,14 @@ def delete_orphaned_sample_unit(su, deleted_tm=None):
 
 def delete_orphaned_sample_event(se, deleted_su=None):
     deleted = False
-    su_count = 0
-    # have to make sure there aren't other SUs of *any* type left for this SE
-    for suclass in get_subclasses(SampleUnit):
-        sus = "{}_set".format(suclass._meta.model_name)
-        su_set = operator.attrgetter(sus)(se)
-        if deleted_su:
-            su_count += su_set.exclude(pk=deleted_su.pk).count()
-        else:
-            su_count += su_set.all().count()
+    su_count = sum(
+        suclass.objects.filter(sample_event=se)
+        .exclude(pk=deleted_su.pk)
+        .count()
+        if deleted_su
+        else suclass.objects.filter(sample_event=se).count()
+        for suclass in get_subclasses(SampleUnit)
+    )
 
     if su_count == 0:
         se.delete()
@@ -91,7 +86,6 @@ def migrate_collect_record_sample_event(collect_record):
         sample_unit_attribute = "benthic_transect"
     elif protocol == FISHBELT_PROTOCOL:
         sample_unit_attribute = "fishbelt_transect"
-        pass
     elif protocol == BLEACHINGQC_PROTOCOL:
         sample_unit_attribute = "quadrat_collection"
     else:
