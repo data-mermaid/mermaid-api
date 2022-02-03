@@ -1,0 +1,9 @@
+[program:dbbackup]
+directory=/var/projects/webapp/
+environment=DJANGO_SETTINGS_MODULE="app.settings",PYTHONPATH="/var/projects/webapp"
+command=bash -c "sleep 86400;/usr/local/bin/python manage.py dbbackup --cron"
+user=webapp
+autostart=true
+autorestart=true
+stdout_logfile = /var/log/webapp/dbbackup.log
+redirect_stderr=True
