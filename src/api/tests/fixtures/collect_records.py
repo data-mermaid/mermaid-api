@@ -854,6 +854,10 @@ def valid_bleaching_qc_collect_record(
     profile1,
     project_profile1,
     sample_event1,
+    tide1,
+    current1,
+    visibility1,
+    relative_depth1,
 ):
     obs_quadrat_benthic_percent = [
         {
@@ -952,12 +956,12 @@ def valid_bleaching_qc_collect_record(
         "obs_colonies_bleached": obs_colonies_bleached,
         "quadrat_collection": {
             "quadrat_size": 1,
-            "tide": None,
+            "tide": str(tide1.pk),
             "depth": 5,
-            "current": None,
-            "visibility": None,
+            "current": str(current1.pk),
+            "visibility": str(visibility1.pk),
             "sample_time": None,
-            "relative_depth": None
+            "relative_depth": str(relative_depth1.pk)
         },
         "sample_event": {
             "management": str(sample_event1.management.id),

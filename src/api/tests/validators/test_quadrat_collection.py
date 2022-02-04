@@ -11,6 +11,7 @@ def _get_validator():
         sample_date_path="data.sample_event.sample_date",
         label_path="data.quadrat_collection.label",
         depth_path="data.quadrat_collection.depth",
+        observers_path="data.observers",
     )
 
 
@@ -36,7 +37,7 @@ def test_quadrat_collection_validator_data_invalid(
 
 def test_quadrat_collection_validator_duplicate_invalid(
     valid_bleaching_qc_collect_record,
-    bleaching_quadrat_collection1
+    observer_bleaching_quadrat_collection1
 ):
     validator = _get_validator()
     record = CollectRecordSerializer(valid_bleaching_qc_collect_record).data

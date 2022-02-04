@@ -18,6 +18,7 @@ class QuadratCollectionValidator(BaseValidator):
         sample_date_path,
         label_path,
         depth_path,
+        observers_path,
         **kwargs
     ):
         self.protocol_path = protocol_path
@@ -26,6 +27,7 @@ class QuadratCollectionValidator(BaseValidator):
         self.sample_date_path = sample_date_path
         self.label_path = label_path
         self.depth_path = depth_path
+        self.observers_path = observers_path
         super().__init__(**kwargs)
 
     @validator_result
@@ -36,11 +38,16 @@ class QuadratCollectionValidator(BaseValidator):
         sample_date = self.get_value(collect_record, self.sample_date_path)
         label = self.get_value(collect_record, self.label_path)
         depth = self.get_value(collect_record, self.depth_path)
+        observers = self.get_value(collect_record, self.observers_path) or []
+
+        profiles = [o.get("profile") for o in observers]
 
         try:
             check_uuid(site_id)
             check_uuid(management_id)
             float(depth)
+            for profile in profiles:
+                _ = check_uuid(profile)
         except (ParseError, ValueError, TypeError):
             return ERROR, self.INVALID_DATA
 
@@ -54,8 +61,11 @@ class QuadratCollectionValidator(BaseValidator):
             qry["label"] = label
 
         queryset = QuadratCollection.objects.filter(**qry)
+        for profile in profiles:
+            queryset = queryset.filter(
+                bleachingquadratcollection_method__observers__profile_id=profile
+            )
 
-        # TODO: Dropped filtering by observer, not sure why it was needed
         for result in queryset:
             transect_methods = get_related_transect_methods(result)
             for transect_method in transect_methods:

@@ -156,6 +156,7 @@ bleaching_quadrat_collection_validations = [
             sample_date_path="data.sample_event.sample_date",
             label_path="data.quadrat_collection.label",
             depth_path="data.quadrat_collection.depth",
+            observers_path="data.observers",
         ),
         paths=[
             "data.protocol",
