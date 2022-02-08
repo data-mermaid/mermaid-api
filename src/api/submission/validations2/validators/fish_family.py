@@ -17,7 +17,7 @@ class FishFamilySubsetValidator(BaseValidator):
     def check_fish_family_subset(
         self, observation, fish_family_subset, fish_family_lookup
     ):
-        fish_attribute_id = fish_family_lookup[observation.get("fish_attribute")]
+        fish_attribute_id = fish_family_lookup.get(observation.get("fish_attribute"))
         status = OK
         code = None
         context = {"observation_id": observation.get("id")}
