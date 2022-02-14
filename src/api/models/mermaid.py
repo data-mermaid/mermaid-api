@@ -759,7 +759,7 @@ class TransectMethod(BaseModel):
 
     @property
     def project(self):
-        return get_related_project(self.subclass)
+        return get_related_project(self.sample_unit)
 
 
 class Observer(BaseModel):
@@ -779,6 +779,10 @@ class Observer(BaseModel):
     @property
     def profile_name(self):
         return u'{} {}'.format(self.profile.first_name, self.profile.last_name)
+
+    # @property
+    # def project(self):
+    #     return self.transectmethod.project
 
 
 class BenthicLifeHistory(BaseChoiceModel):

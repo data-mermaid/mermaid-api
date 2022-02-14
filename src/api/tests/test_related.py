@@ -58,8 +58,8 @@ def test_quadrat_collection(bleaching_project):
     assert project_id == rel_model.pk
 
 
-def test_observer(belt_fish_project, bleaching_project):
-    model_instance = Observer.objects.last()
+def test_observer(bleaching_project, belt_fish_project, belt_fish1):
+    model_instance = belt_fish1.beltfish_observations.all()[0].observers[0]
     project_id = (
         model_instance.transectmethod.subclass.transect.sample_event.site.project_id
     )
