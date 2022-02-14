@@ -5,7 +5,8 @@ from django.conf import settings
 from django.core.management.base import BaseCommand
 from django.db import transaction
 
-from api.models import Project, SummarySiteModel, SummarySiteSQLModel
+from api.models import Project
+from api.utils.summaries import update_project_summary_site
 
 
 class Command(BaseCommand):
@@ -18,10 +19,7 @@ class Command(BaseCommand):
 
     @transaction.atomic
     def update_project_summary_site(self, project_id):
-        SummarySiteModel.objects.filter(project_id=project_id).delete()
-        for record in SummarySiteSQLModel.objects.all().sql_table(project_id=project_id):
-            values = {field.name: getattr(record, field.name) for field in SummarySiteModel._meta.fields}
-            SummarySiteModel.objects.create(**values)
+        update_project_summary_site(project_id)
 
     def handle(self, *args, **options):
         is_forced = options["force"]

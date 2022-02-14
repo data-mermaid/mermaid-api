@@ -14,6 +14,10 @@ from ..models import (
 
 
 def delete_orphaned_sample_unit(su, deleted_tm=None):
+
+    if su.pk is None:
+        return True
+
     deleted = False
     tm_count = 0
     sample_unit_classes = list(get_subclasses(SampleUnit))

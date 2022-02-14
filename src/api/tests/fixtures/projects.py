@@ -222,8 +222,11 @@ def base_project(
 
 
 @pytest.fixture
-def profile1_request(token1):
-    return MockRequest(token=token1)
+def profile1_request(token1, profile1):
+    return MockRequest(
+        token=token1,
+        profile=profile1
+    )
 
 
 @pytest.fixture

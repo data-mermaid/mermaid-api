@@ -22,6 +22,7 @@ import pytz
 from taggit.managers import TaggableManager
 from taggit.models import GenericUUIDTaggedItemBase, TagBase
 from ..utils import create_timestamp, expired_timestamp, get_sample_unit_number
+from ..utils.related import get_related_project
 from .base import (
     APPROVAL_STATUSES,
     AreaMixin,
@@ -755,6 +756,10 @@ class TransectMethod(BaseModel):
 
     def __str__(self):
         return str(_(u'transect method'))
+
+    @property
+    def project(self):
+        return get_related_project(self.subclass)
 
 
 class Observer(BaseModel):
