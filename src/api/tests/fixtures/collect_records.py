@@ -840,3 +840,141 @@ def invalid_habitat_complexity_collect_record(
         stage=CollectRecord.VALIDATED_STAGE,
         data=data,
     )
+
+
+@pytest.fixture
+def valid_bleaching_qc_collect_record(
+    benthic_attribute_1,
+    benthic_attribute_2,
+    benthic_attribute_3,
+    benthic_attribute_4,
+    growth_form1,
+    growth_form2,
+    project1,
+    profile1,
+    project_profile1,
+    sample_event1,
+    tide1,
+    current1,
+    visibility1,
+    relative_depth1,
+):
+    obs_quadrat_benthic_percent = [
+        {
+            "quadrat_number": 1,
+            "percent_hard": 3,
+            "percent_algae": 0,
+            "percent_soft": 32
+        },
+        {
+            "quadrat_number": 2,
+            "percent_hard": 3,
+            "percent_algae": 0,
+            "percent_soft": 0
+        },
+        {
+            "quadrat_number": 3,
+            "percent_hard": 3,
+            "percent_algae": 0,
+            "percent_soft": 97
+        },
+        {
+            "quadrat_number": 4,
+            "percent_hard": 50,
+            "percent_algae": 50,
+            "percent_soft": 0
+        },
+        {
+            "quadrat_number": 5,
+            "percent_hard": 5,
+            "percent_algae": 0,
+            "percent_soft": 95
+        },
+    ]
+
+    obs_colonies_bleached = [
+        {
+            "attribute": str(benthic_attribute_1.pk),
+            "growth_form": None,
+            "count_normal": 0,
+            "count_pale": 0,
+            "count_20": 0,
+            "count_50": 4,
+            "count_80": 0,
+            "count_100": 0,
+            "count_dead": 0,
+        },
+        {
+            "attribute": str(benthic_attribute_1.pk),
+            "growth_form": str(growth_form2.pk),
+            "count_normal": 0,
+            "count_pale": 0,
+            "count_20": 0,
+            "count_50": 4,
+            "count_80": 0,
+            "count_100": 0,
+            "count_dead": 0,
+        },
+        {
+            "attribute": str(benthic_attribute_3.pk),
+            "growth_form": None,
+            "count_normal": 0,
+            "count_pale": 0,
+            "count_20": 0,
+            "count_50": 4,
+            "count_80": 0,
+            "count_100": 0,
+            "count_dead": 0,
+        },
+        {
+            "attribute": str(benthic_attribute_4.pk),
+            "growth_form": None,
+            "count_normal": 0,
+            "count_pale": 0,
+            "count_20": 0,
+            "count_50": 4,
+            "count_80": 0,
+            "count_100": 1,
+            "count_dead": 0,
+        },
+        {
+            "attribute": str(benthic_attribute_1.pk),
+            "growth_form": str(growth_form1.pk),
+            "count_normal": 0,
+            "count_pale": 0,
+            "count_20": 0,
+            "count_50": 4,
+            "count_80": 0,
+            "count_100": 0,
+            "count_dead": 0,
+        }
+    ]
+
+    data = {
+        "protocol": "bleachingqc",
+        "obs_quadrat_benthic_percent": obs_quadrat_benthic_percent,
+        "obs_colonies_bleached": obs_colonies_bleached,
+        "quadrat_collection": {
+            "quadrat_size": 1,
+            "tide": str(tide1.pk),
+            "depth": 5,
+            "current": str(current1.pk),
+            "visibility": str(visibility1.pk),
+            "sample_time": None,
+            "relative_depth": str(relative_depth1.pk)
+        },
+        "sample_event": {
+            "management": str(sample_event1.management.id),
+            "site": str(sample_event1.site.id),
+            "sample_date": f"{sample_event1.sample_date:%Y-%m-%d}",
+        },
+        "observers": [{
+            "profile": str(profile1.id)
+        }]
+    }
+    return CollectRecord.objects.create(
+        project=project1,
+        profile=profile1,
+        stage=CollectRecord.VALIDATED_STAGE,
+        data=data,
+    )
