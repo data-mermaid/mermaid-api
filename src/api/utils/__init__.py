@@ -185,6 +185,7 @@ def run_subprocess(command, std_input=None, to_file=None):
             stdin=subprocess.PIPE,
             stdout=subprocess.PIPE,
             stderr=subprocess.PIPE,
+            universal_newlines=True,
         )
     except Exception as e:
         print(command)
@@ -199,5 +200,4 @@ def run_subprocess(command, std_input=None, to_file=None):
             f.write("ERR: \n")
             f.write(str(err))
     else:
-        print(data)
-        print(err)
+        return data, err
