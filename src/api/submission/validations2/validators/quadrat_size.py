@@ -15,7 +15,7 @@ class QuadratSizeValidator(BaseValidator):
 
         try:
             quadrat_size = float(quadrat_size)
-            if quadrat_size == 0:
+            if quadrat_size <= 0:
                 raise ValueError("quadrat_size must be greater than 0")
             return OK
         except TypeError:

@@ -101,7 +101,7 @@ class DuplicateValidator(BaseValidator):
 
 
 class PositiveIntegerValidator(BaseValidator):
-    NOT_POSITIVE_INTEGER = "not_postitive_integer"
+    NOT_POSITIVE_INTEGER = "not_positive_integer"
 
     def __init__(self, key_path, **kwargs):
         self.key_path = key_path
