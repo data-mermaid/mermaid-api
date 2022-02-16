@@ -8,30 +8,16 @@ from .base import ERROR, OK, WARN, BaseValidator, validator_result
 class UniqueManagementValidator(BaseValidator):
     MANAGEMENT_NOT_FOUND = "management_not_found"
     NOT_UNIQUE = "not_unique_management"
-    name_match_percent = 0.5
+    SIMILAR_NAME = "similar_name"
 
     def __init__(self, management_path, **kwargs):
         self.management_path = management_path
         super().__init__(**kwargs)
 
-    @validator_result
-    def __call__(self, collect_record, **kwargs):
-        management_id = self.get_value(collect_record, self.management_path) or ""
-        try:
-            check_uuid(management_id)
-            management = Management.objects.get_or_none(id=management_id)
-        except ParseError:
-            management = None
-
-        if management is None:
-            return ERROR, self.MANAGEMENT_NOT_FOUND
-
-        project_id = management.project_id
-        name = management.name
-
+    def _duplicate_by_site(self, project_id, management_id):
         # Finds MRs that:
-        # - are not self and in same project, and fuzzy match name, AND
-        # - belong to SEs with the same site (but diff MR) as any SE with
+        # - are not self and in same project,
+        # - AND belong to SEs with the same site (but diff MR) as any SE with
         #   associated SUs that uses this MR OR
         # - belong to CRs with the same site (but diff MR) as any CR that uses this MR
         # When we make MR a FK of site, this can be replaced with simple ORM site lookup
@@ -93,13 +79,11 @@ class UniqueManagementValidator(BaseValidator):
                     (diff_cr_mans.data #>> '{sample_event, management}')::text != %(mr_id)s
                 )
             )
-            SELECT management.id, management.project_id, management.name, management.name_secondary,
-            SIMILARITY(management.name, %(name)s) AS "similarity"
+            SELECT management.id, management.project_id, management.name, management.name_secondary
             FROM management
             WHERE (
                 NOT (management.id = %(mr_id)s)
                 AND management.project_id = %(project_id)s
-                AND SIMILARITY(management.name, %(name)s) >= %(match_percent)s
                 AND (
                     management.id IN (SELECT * FROM se_diff_mrs)
                     OR management.id::text IN (SELECT * FROM cr_diff_mrs)
@@ -118,20 +102,103 @@ class UniqueManagementValidator(BaseValidator):
                     ) AS se_cr)
                 )
             )
-            ORDER BY similarity DESC
         """
         params = {
             "mr_id": str(management_id),
-            "project_id": str(project_id),
-            "name": name,
-            "match_percent": self.name_match_percent,
+            "project_id": str(project_id)
         }
 
-        qry = Management.objects.raw(match_sql, params)
-        results = qry[0:3]
+        return Management.objects.raw(match_sql, params)
+
+    def _duplicate_by_name(self, project_id, management_id, name):
+        match_sql = """
+            WITH se_mrs AS (
+                SELECT DISTINCT management_id FROM
+                sample_event ses
+                INNER JOIN management ON (ses.management_id = management.id)
+                LEFT JOIN transect_benthic tbs ON (ses.id = tbs.sample_event_id)
+                LEFT JOIN transect_belt_fish tbfs ON (ses.id = tbfs.sample_event_id)
+                LEFT JOIN quadrat_collection qcs ON (ses.id = qcs.sample_event_id)
+                WHERE management.project_id = %(project_id)s
+                AND (
+                    tbs.id IS NOT NULL OR
+                    tbfs.id IS NOT NULL OR
+                    qcs.id IS NOT NULL
+                )
+            ),
+            cr_mrs AS (
+                SELECT DISTINCT (cr.data #>> '{sample_event, management}')::text AS "management_id"
+                FROM api_collectrecord cr
+                WHERE cr.project_id = %(project_id)s
+            )
+            SELECT management.id, management.project_id, management.name, management.name_secondary
+            FROM management
+            WHERE (
+                management.id != %(mr_id)s
+                AND management.project_id = %(project_id)s
+                AND (
+                    management.id IN (SELECT * FROM se_mrs)
+                    OR
+                    management.id::text IN (SELECT * FROM cr_mrs)
+                )
+                AND
+                    LOWER(
+                        REPLACE(
+                            REPLACE(
+                                REPLACE(management.name, ' ', ''),
+                                '_',
+                                ''
+                            ),
+                            '-',
+                            ''
+                        )
+                    ) =
+                    LOWER(
+                        REPLACE(
+                            REPLACE(
+                                REPLACE(%(name)s, ' ', ''),
+                                '_',
+                                ''
+                            ),
+                            '-',
+                            ''
+                        )
+                    )
+            )
+        """
+        params = {
+            "name": name,
+            "mr_id": str(management_id),
+            "project_id": str(project_id)
+        }
+        return Management.objects.raw(match_sql, params)
+
+    @validator_result
+    def __call__(self, collect_record, **kwargs):
+        management_id = self.get_value(collect_record, self.management_path) or ""
+        try:
+            check_uuid(management_id)
+            management = Management.objects.get_or_none(id=management_id)
+        except ParseError:
+            management = None
+
+        if management is None:
+            return ERROR, self.MANAGEMENT_NOT_FOUND
+
+        project_id = management.project_id
+        name = management.name
+
+        qry = self._duplicate_by_site(project_id, management_id)
+        results = qry[:3]
         if len(results) > 0:
             matches = [str(r.id) for r in results]
             return WARN, self.NOT_UNIQUE, {"matches": dict(matches=matches)}
+
+        qry = self._duplicate_by_name(project_id, management_id, name)
+        results = qry[:3]
+        if len(results) > 0:
+            matches = [str(r.id) for r in results]
+            return WARN, self.SIMILAR_NAME, {"matches": dict(matches=matches)}
 
         return OK
 
