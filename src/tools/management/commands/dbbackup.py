@@ -1,96 +1,116 @@
+import boto3
 import os
 import shlex
-import subprocess
-
-import boto3
+import traceback
 from django.conf import settings
 from django.core.management.base import BaseCommand
 from simpleflake import simpleflake
+from datetime import datetime, timezone
+from api.utils import run_subprocess
 
-AWS_ACCESS_KEY_ID = settings.AWS_ACCESS_KEY_ID
-AWS_SECRET_ACCESS_KEY = settings.AWS_SECRET_ACCESS_KEY
-AWS_REGION = settings.AWS_REGION
 
-AWS_BACKUP_BUCKET = settings.AWS_BACKUP_BUCKET
-BACKUP_EXTENSION = 'sql'
+BACKUP_EXTENSION = "sql"
 
 
 class Command(BaseCommand):
-    help = 'Kill local processes running runserver command'
+    help = "Kill local processes running runserver command"
 
     def __init__(self):
         super(Command, self).__init__()
-        self.backup = os.environ.get('BACKUP', 'false').lower()
-        self.env = os.environ.get('ENV', 'none').lower()
-        print('ENV: %s' % self.env)
-        print('BACKUP: %s' % self.backup)
-        self.local_file_location = os.path.join(os.path.sep, 'tmp', 'mermaid')
+        self.now = datetime.now(timezone.utc)
+        self.backup = os.environ.get("BACKUP", "false").lower()
+        self.env = os.environ.get("ENV", "none").lower()
+        self.local_file_location = os.path.join(os.path.sep, "tmp", "mermaid")
         try:
             os.mkdir(self.local_file_location)
         except OSError:
             pass  # Means it already exists.
         session = boto3.session.Session(
-            aws_access_key_id=AWS_ACCESS_KEY_ID,
-            aws_secret_access_key=AWS_SECRET_ACCESS_KEY,
-            region_name=AWS_REGION
+            aws_access_key_id=settings.AWS_ACCESS_KEY_ID,
+            aws_secret_access_key=settings.AWS_SECRET_ACCESS_KEY,
+            region_name=settings.AWS_REGION,
         )
-        self.s3 = session.client('s3')
+        self.s3 = session.client("s3")
+
+    def get_s3_bucket_obj_list(self):
+        try:
+            return self.s3.list_objects_v2(Bucket=settings.AWS_BACKUP_BUCKET).get("Contents")
+        except:
+            traceback.print_exc()
+            return []
 
     def add_arguments(self, parser):
-        parser.add_argument('backup', nargs='?', type=str)
-        parser.add_argument('-n', action='store_true', dest='no_upload', default=False, help='Do not upload dumped '
-                                                                                             'data to S3')
+        parser.add_argument("backup", nargs="?", type=str)
+        parser.add_argument(
+            "-n",
+            action="store_true",
+            dest="no_upload",
+            default=False,
+            help="Do not upload dumped data to S3",
+        )
+        parser.add_argument(
+            "--cron",
+            "-c",
+            action="store_true",
+            default=False,
+            help="Execute within a scheduled context only appropriate for production environment"
+        )
 
     def handle(self, *args, **options):
-        # Override backup with command line arg value
-        backup_name = options.get('backup')
+        if options.get("cron") and self.env != "prod":
+            print("Skipping backup in cron context not in production")
+            return None
 
+        backup_name = options.get("backup")
         if backup_name:
             if not isinstance(backup_name, str):
-                print('Incorrect argument type')
+                print("Incorrect argument type")
                 return None
             self.backup = backup_name
 
-        if self.backup in ["False", "false"]:
-            print('Skipping Backup')
-            return None
+        print(f"ENV: {self.env}")
+        print(f"BACKUP: {self.backup}")
 
-        new_aws_key_name = '%s/mermaid_backup_%s.%s' % (self.backup, simpleflake(), BACKUP_EXTENSION)
-        new_backup_filename = '%s_mermaid_backup_%s.%s' % (self.backup, simpleflake(), BACKUP_EXTENSION)
+        new_aws_key_name = f"{self.backup}/mermaid_backup_{simpleflake()}.{BACKUP_EXTENSION}"
+        new_backup_filename = f"{self.backup}_mermaid_backup_{simpleflake()}.{BACKUP_EXTENSION}"
         new_backup_path = os.path.join(self.local_file_location, new_backup_filename)
-        self._pg_dump(new_backup_path)
 
-        if options.get('no_upload', False) is False:
-            print('Uploading {0} to S3 bucket {1}'.format(new_aws_key_name, AWS_BACKUP_BUCKET))
-            self.s3.upload_file(new_backup_path, AWS_BACKUP_BUCKET, new_aws_key_name)
-            print('Backup Complete')
+        self.pg_dump(new_backup_path)
 
-    def _pg_dump(self, filename):
+        if not options.get("no_upload"):
+            print(
+                f"Uploading {new_aws_key_name} to S3 bucket {settings.AWS_BACKUP_BUCKET}"
+            )
+            self.s3.upload_file(
+                new_backup_path, settings.AWS_BACKUP_BUCKET, new_aws_key_name
+            )
+            print("Upload complete")
+
+        bucket_file_list = self.get_s3_bucket_obj_list()
+        if bucket_file_list:
+            for s3_obj in bucket_file_list:
+                if self.backup in s3_obj["Key"]:
+                    age = (self.now - s3_obj.get("LastModified")).days
+                    if age > settings.S3_DBBACKUP_MAXAGE:
+                        self.s3.delete_object(Bucket=settings.AWS_BACKUP_BUCKET, Key=s3_obj["Key"])
+                        print(f"{s3_obj['Key']} deleted")
+            print("Cleanup complete")
+
+        print("Backup complete")
+
+    def pg_dump(self, filename):
         params = {
-            'db_user': settings.DATABASES['default']['USER'],
-            'db_host': settings.DATABASES['default']['HOST'],
-            'db_name': settings.DATABASES['default']['NAME'],
-            'dump_file': filename
+            "db_user": settings.DATABASES["default"]["USER"],
+            "db_host": settings.DATABASES["default"]["HOST"],
+            "db_name": settings.DATABASES["default"]["NAME"],
+            "dump_file": filename,
         }
 
-        dump_command_str = 'pg_dump -F c -v -U {db_user} -h {db_host} -d {db_name} -f {dump_file}'
-        dump_command = shlex.split(dump_command_str.format(**params))
-        self._run(dump_command, to_file='/tmp/mermaid/std_out_backup.log')
-        print('Dump Complete!')
-
-    def _run(self, command, std_input=None, to_file=None):
-        if to_file is not None:
-            out_handler = open(to_file, 'w')
-        else:
-            out_handler = subprocess.PIPE
-
-        proc = subprocess.Popen(
-            command,
-            stdin=subprocess.PIPE,
-            stdout=out_handler,
-            stderr=out_handler
+        dump_command_str = (
+            "pg_dump -F c -v -U {db_user} -h {db_host} -d {db_name} -f {dump_file}"
         )
-        data = proc.communicate(input=std_input)[0]
-
-        if to_file is None:
-            print(data)
+        dump_command = shlex.split(dump_command_str.format(**params))
+        run_subprocess(
+            dump_command, to_file=f"/tmp/mermaid/std_out_backup.log"
+        )
+        print("Dump complete")
