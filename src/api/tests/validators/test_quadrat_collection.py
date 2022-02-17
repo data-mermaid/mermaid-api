@@ -1,4 +1,3 @@
-from api.models import QuadratCollection
 from api.resources.collect_record import CollectRecordSerializer
 from api.submission.validations2.validators import OK, ERROR, QuadratCollectionValidator
 
