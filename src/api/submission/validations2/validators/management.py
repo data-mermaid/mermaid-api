@@ -17,8 +17,6 @@ class UniqueManagementValidator(BaseValidator):
     def _duplicate_by_site(self, project_id, management_id):
         # Finds MRs that:
         # - are not self and in same project,
-        # - AND belong to SEs with the same site (but diff MR) as any SE with
-        #   associated SUs that uses this MR OR
         # - belong to CRs with the same site (but diff MR) as any CR that uses this MR
         # When we make MR a FK of site, this can be replaced with simple ORM site lookup
         match_sql = """
