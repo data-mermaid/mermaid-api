@@ -780,11 +780,6 @@ class Observer(BaseModel):
     def profile_name(self):
         return u'{} {}'.format(self.profile.first_name, self.profile.last_name)
 
-    # @property
-    # def project(self):
-    #     return self.transectmethod.project
-
-
 class BenthicLifeHistory(BaseChoiceModel):
     name = models.CharField(max_length=100)
 
