@@ -2,15 +2,13 @@ import pytest
 from django.urls import reverse
 
 from api.models import Project
-from tools.management.commands.update_summary_sample_events import (
-    Command as UpdateSampleEvents,
-)
+from api.utils.summaries import update_project_summary_sample_event
 
 
 @pytest.fixture
 def update_summary_sample_events():
     for project in Project.objects.all():
-        UpdateSampleEvents().update_project_summary_sample_event(project.pk)
+        update_project_summary_sample_event(project.pk)
 
 
 @pytest.fixture

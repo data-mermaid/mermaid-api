@@ -295,6 +295,8 @@ class SummarySampleEventSQLModel(SummarySampleEventBaseModel):
         ) bleachingqc ON (sample_event.id = bleachingqc.sample_event_id)
 
         WHERE site.project_id = '%(project_id)s'::uuid
+        -- Not a test project
+        AND project.status != 80
     """
 
     class Meta:
