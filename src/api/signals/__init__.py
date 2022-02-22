@@ -8,6 +8,7 @@ from django.db.models.signals import post_delete, post_save, pre_delete, pre_sav
 from django.dispatch import receiver
 
 from . import revision
+from . import summaries
 from ..covariates import update_site_covariates_in_thread
 from ..models import *
 from ..resources.sync.views import (
@@ -136,25 +137,27 @@ def notify_admins_project_change(instance, text_changes):
 
 @receiver(post_save, sender=Project)
 def notify_admins_project_instance_change(sender, instance, created, **kwargs):
-    if not created:
-        old_values = instance._old_values
-        new_values = instance._new_values
-        diffs = [
-            (k, (v, new_values[k])) for k, v in old_values.items() if v != new_values[k]
-        ]
-        if diffs:
-            text_changes = []
-            for diff in diffs:
-                field = sender._meta.get_field(diff[0])
-                fname = field.verbose_name
-                oldval = diff[1][0]
-                newval = diff[1][1]
-                if field.choices:
-                    oldval = dict(field.choices)[diff[1][0]]
-                    newval = dict(field.choices)[diff[1][1]]
-                text_changes.append(f"Old {fname}: {oldval}\nNew {fname}: {newval}")
+    if created or not hasattr(instance, "_old_values"):
+        return
 
-            notify_admins_project_change(instance, text_changes)
+    old_values = instance._old_values
+    new_values = instance._new_values
+    diffs = [
+        (k, (v, new_values[k])) for k, v in old_values.items() if v != new_values[k]
+    ]
+    if diffs:
+        text_changes = []
+        for diff in diffs:
+            field = sender._meta.get_field(diff[0])
+            fname = field.verbose_name
+            oldval = diff[1][0]
+            newval = diff[1][1]
+            if field.choices:
+                oldval = dict(field.choices)[diff[1][0]]
+                newval = dict(field.choices)[diff[1][1]]
+            text_changes.append(f"Old {fname}: {oldval}\nNew {fname}: {newval}")
+
+        notify_admins_project_change(instance, text_changes)
 
 
 @receiver(m2m_changed, sender=Project.tags.through)
@@ -208,7 +211,7 @@ def notify_admins_change(instance, changetype):
 def notify_admins_new_admin(sender, instance, created, **kwargs):
     if instance.role >= ProjectProfile.ADMIN:
         notify_admins_change(instance, "add")
-    elif not created:
+    elif not created and hasattr(instance, "_old_values"):
         old_role = instance._old_values.get("role")
         if old_role >= ProjectProfile.ADMIN:
             notify_admins_change(instance, "remove")
