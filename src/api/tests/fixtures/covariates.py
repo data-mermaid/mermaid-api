@@ -1,9 +1,17 @@
-import json
-
 import pytest
+from django.conf import settings
+from django.db import connection
 
 
-@pytest.fixture()
+@pytest.fixture
+def load_allreef_sample(scope="function"):
+    with connection.cursor() as cur:
+        with open(f"{settings.BASE_DIR}/api/tests/covariate_data/allreef_test.sql") as r:
+            sql = r.read()
+            cur.execute(sql)
+
+
+@pytest.fixture
 def alan_coral_atlas_no_map_assets():
     return {
         "message": "",

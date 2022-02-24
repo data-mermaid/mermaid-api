@@ -92,13 +92,16 @@ class VibrantOceansThreatsCovariate(BaseCovariate):
             FROM
                 allreef_clipped
         """
+
+        output = {col: None for col in self.COLUMNS}
+
         with connection.cursor() as cursor:
             params = {"x": x, "y": y, "radius": radius * 1000}
             cursor.execute(sql_template, params=params)
             record = cursor.fetchone()
 
             if record is None:
-                return None
+                return output
 
             output = {
                 col: record[i]
