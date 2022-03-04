@@ -12,7 +12,16 @@ from rest_framework.response import Response
 
 from .mixins import CreateOrUpdateSerializerMixin
 from ..ingest.utils import InvalidSchema, ingest
-from ..models import CollectRecord
+from ..models import (
+    BENTHICLIT_PROTOCOL,
+    BENTHICPIT_PROTOCOL,
+    FISHBELT_PROTOCOL,
+    HABITATCOMPLEXITY_PROTOCOL,
+    BLEACHINGQC_PROTOCOL,
+    BENTHIC_PHOTO_QUADRAT_TRANSECT,
+    PROTOCOL_MAP,
+    CollectRecord,
+)
 from ..permissions import ProjectDataAdminPermission, ProjectDataPermission
 from ..submission import utils
 from ..submission.protocol_validations import (
@@ -23,12 +32,6 @@ from ..submission.protocol_validations import (
     HabitatComplexityProtocolValidation,
 )
 from ..submission.utils import (
-    BENTHICLIT_PROTOCOL,
-    BENTHICPIT_PROTOCOL,
-    BLEACHING_QC_PROTOCOL,
-    FISHBELT_PROTOCOL,
-    HABITATCOMPLEXITY_PROTOCOL,
-    PROTOCOLS,
     submit_collect_records,
     submit_collect_records_v2,
     validate_collect_records,
@@ -200,7 +203,7 @@ class CollectRecordViewSet(BaseProjectApiViewSet):
         if uploaded_file is None:
             return Response("Missing file", status=400)
 
-        if protocol not in PROTOCOLS:
+        if protocol not in PROTOCOL_MAP:
             return Response("Protocol not supported", status=400)
 
         content_type = uploaded_file.content_type

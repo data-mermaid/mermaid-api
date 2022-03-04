@@ -8,7 +8,17 @@ from django.utils.translation import ugettext_lazy
 from rest_framework.exceptions import ValidationError
 
 from ..mocks import MockRequest
-from ..models import AuditRecord, CollectRecord
+from ..models import (
+    BENTHICLIT_PROTOCOL,
+    BENTHICPIT_PROTOCOL,
+    FISHBELT_PROTOCOL,
+    HABITATCOMPLEXITY_PROTOCOL,
+    BLEACHINGQC_PROTOCOL,
+    BENTHIC_PHOTO_QUADRAT_TRANSECT,
+    PROTOCOL_MAP,
+    AuditRecord,
+    CollectRecord,
+)
 from .protocol_validations import (
     BenthicLITProtocolValidation,
     BenthicPITProtocolValidation,
@@ -32,20 +42,6 @@ from ..utils.sample_unit_methods import create_audit_record
 from ..utils.summaries import update_project_summaries
 
 
-BENTHICLIT_PROTOCOL = "benthiclit"
-BENTHICPIT_PROTOCOL = "benthicpit"
-BLEACHING_QC_PROTOCOL = "bleachingqc"
-FISHBELT_PROTOCOL = "fishbelt"
-HABITATCOMPLEXITY_PROTOCOL = "habitatcomplexity"
-PROTOCOLS = (
-    BENTHICLIT_PROTOCOL,
-    BENTHICPIT_PROTOCOL,
-    BLEACHING_QC_PROTOCOL,
-    FISHBELT_PROTOCOL,
-    HABITATCOMPLEXITY_PROTOCOL,
-)
-
-
 SUCCESS_STATUS = 200
 VALIDATION_ERROR_STATUS = 400
 ERROR_STATUS = 500
@@ -55,7 +51,7 @@ logger = logging.getLogger(__name__)
 
 def get_writer(collect_record, context):
     protocol = collect_record.data.get("protocol")
-    if protocol not in PROTOCOLS:
+    if protocol not in PROTOCOL_MAP:
         return None
 
     if protocol == BENTHICLIT_PROTOCOL:
@@ -70,7 +66,7 @@ def get_writer(collect_record, context):
     elif protocol == HABITATCOMPLEXITY_PROTOCOL:
         return HabitatComplexityProtocolWriter(collect_record, context)
 
-    elif protocol == BLEACHING_QC_PROTOCOL:
+    elif protocol == BLEACHINGQC_PROTOCOL:
         return BleachingQuadratCollectionProtocolWriter(collect_record, context)
 
 
@@ -161,7 +157,7 @@ def validate(validator_cls, model_cls, qry_params=None):
 
 def _validate_collect_record(record, request):
     protocol = record.data.get("protocol")
-    if protocol not in PROTOCOLS:
+    if protocol not in PROTOCOL_MAP:
         raise ValueError(ugettext_lazy(f"{protocol} not supported"))
 
     if protocol == BENTHICLIT_PROTOCOL:
@@ -172,7 +168,7 @@ def _validate_collect_record(record, request):
         validator = FishBeltProtocolValidation(record, request)
     elif protocol == HABITATCOMPLEXITY_PROTOCOL:
         validator = HabitatComplexityProtocolValidation(record, request)
-    elif protocol == BLEACHING_QC_PROTOCOL:
+    elif protocol == BLEACHINGQC_PROTOCOL:
         validator = BleachingQuadratCollectionProtocolValidation(record, request)
 
     result = validator.validate()
@@ -183,7 +179,7 @@ def _validate_collect_record(record, request):
 
 def _validate_collect_record_v2(record, record_serializer, request):
     protocol = record.data.get("protocol")
-    if protocol not in PROTOCOLS:
+    if protocol not in PROTOCOL_MAP:
         raise ValueError(ugettext_lazy(f"{protocol} not supported"))
 
     runner = ValidationRunner(serializer=record_serializer)
@@ -200,7 +196,7 @@ def _validate_collect_record_v2(record, record_serializer, request):
         return runner.to_dict()
     elif protocol == HABITATCOMPLEXITY_PROTOCOL:
         raise NotImplementedError()
-    elif protocol == BLEACHING_QC_PROTOCOL:
+    elif protocol == BLEACHINGQC_PROTOCOL:
         raise NotImplementedError()
 
     raise ValueError("Unsupported protocol")
