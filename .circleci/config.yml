@@ -2,7 +2,7 @@ version: 2
 
 default: &default
   docker:
-    - image: cimg/python:3.8.4
+    - image: cimg/python:3.10.2
   environment:
     AWS_DEFAULT_REGION: us-east-1
 
@@ -10,9 +10,8 @@ install_dependencies: &install_dependencies
   run:
     name: Load Dependencies
     command: |
-      python -m ensurepip --upgrade
-      sudo pip install awscli==1.16.96 boto3==1.9.86 awsebcli==3.14.10 requests==2.20.0
-      sudo pip install git+https://github.com/data-mermaid/mermaid-changelog.git
+      python -m "pip" install awscli==1.16.96 boto3==1.9.86 awsebcli==3.14.10 requests==2.20.0
+      python -m "pip" install git+https://github.com/data-mermaid/mermaid-changelog.git
 
 build: &build
   run:
@@ -22,7 +21,7 @@ build: &build
 jobs:
   build_and_test:
     docker:
-      - image: cimg/python:3.8.4
+      - image: cimg/python:3.10.2
     environment:
       AWS_DEFAULT_REGION: us-east-1
     steps:
