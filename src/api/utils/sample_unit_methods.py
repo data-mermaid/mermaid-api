@@ -83,4 +83,5 @@ def edit_transect_method(serializer_class, collect_record_owner, request, pk, pr
         instance
     )
     instance.delete()
+
     return collect_record

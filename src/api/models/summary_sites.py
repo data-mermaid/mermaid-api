@@ -188,7 +188,7 @@ class SummarySiteSQLModel(SummarySiteBaseModel):
             GROUP BY project.id
         ) tags ON (project.id = tags.id)
 
-        LEFT JOIN (
+        INNER JOIN (
             SELECT site_id,
             MIN(sample_date) AS date_min,
             MAX(sample_date) AS date_max
@@ -309,6 +309,8 @@ class SummarySiteSQLModel(SummarySiteBaseModel):
         ) bleachingqc ON (site.id = bleachingqc.site_id)
 
         WHERE site.project_id = '%(project_id)s'::uuid
+         -- Not a test project
+        AND project.status != 80
     """
 
     class Meta:
