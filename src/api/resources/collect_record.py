@@ -13,12 +13,6 @@ from rest_framework.response import Response
 from .mixins import CreateOrUpdateSerializerMixin
 from ..ingest.utils import InvalidSchema, ingest
 from ..models import (
-    BENTHICLIT_PROTOCOL,
-    BENTHICPIT_PROTOCOL,
-    FISHBELT_PROTOCOL,
-    HABITATCOMPLEXITY_PROTOCOL,
-    BLEACHINGQC_PROTOCOL,
-    BENTHIC_PHOTO_QUADRAT_TRANSECT,
     PROTOCOL_MAP,
     CollectRecord,
 )
