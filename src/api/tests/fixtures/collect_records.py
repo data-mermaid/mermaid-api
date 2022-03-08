@@ -466,6 +466,10 @@ def valid_collect_record(
     project_profile1,
     fish_size_bin_1,
     relative_depth1,
+    current1,
+    reef_slope1,
+    visibility1,
+    tide1,
 ):
     observations = [
         dict(
@@ -499,16 +503,23 @@ def valid_collect_record(
             size=17.5,
         ),
     ]
+
     data_ok = dict(
         protocol="fishbelt",
         obs_belt_fishes=observations,
         fishbelt_transect=dict(
-            width=str(belt_transect_width_5m.id),
+            # sample_event=str(sample_event1),
+            current=str(current1.pk),
+            reef_slope=str(reef_slope1.pk),
+            relative_depth=str(relative_depth1.pk),
+            size_bin=str(fish_size_bin_1.pk),
+            tide=str(tide1.pk),
+            visibility=str(visibility1.pk),
+            width=str(belt_transect_width_5m.pk),
+            depth=8,
+            len_surveyed=50,
+            sample_time="11:00:00",
             number=1,
-            len_surveyed=100,
-            depth=1,
-            size_bin=str(fish_size_bin_1.id),
-            relative_depth=str(relative_depth1.id),
         ),
         sample_event=dict(
             management=str(sample_event1.management.id),

@@ -8,8 +8,8 @@ from .base import ERROR, OK, ERROR, BaseValidator, validator_result
 
 
 class UniqueFishbeltTransectValidator(BaseValidator):
-    INVALID_INPUTS = "invalid_transect_inputs"
-    DUPLICATE_TRANSECT = "duplicate_transect"
+    INVALID_DATA = "invalid_fishbelt_transect"
+    DUPLICATE_FISHBELT_TRANSECT = "duplicate_fishbelt_transect"
 
     def __init__(
         self,
@@ -52,6 +52,8 @@ class UniqueFishbeltTransectValidator(BaseValidator):
             check_uuid(width)
             check_uuid(site)
             check_uuid(management)
+            float(depth)
+
             if parse_datetime(f"{sample_date} 00:00:00") is None:
                 raise ValueError()
 
@@ -75,7 +77,7 @@ class UniqueFishbeltTransectValidator(BaseValidator):
             if transect_method.protocol == protocol:
                 return (
                     ERROR,
-                    self.DUPLICATE_TRANSECT,
+                    self.DUPLICATE_FISHBELT_TRANSECT,
                     {"duplicate_transect_method": str(transect_method.pk)},
                 )
         return OK
@@ -85,7 +87,7 @@ class UniqueFishbeltTransectValidator(BaseValidator):
         try:
             qry, profiles = self._get_query_args(collect_record)
         except ParseError:
-            return ERROR, self.INVALID_INPUTS
+            return ERROR, self.INVALID_DATA
 
         queryset = FishBeltTransect.objects.select_related().filter(**qry)
 

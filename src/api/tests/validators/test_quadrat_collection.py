@@ -26,7 +26,7 @@ def test_quadrat_collection_validator_data_invalid(
 ):
     validator = _get_validator()
     record = CollectRecordSerializer(valid_bleaching_qc_collect_record).data
-    
+
     record["data"]["quadrat_collection"]["depth"] = None
     result = validator(record)
 
