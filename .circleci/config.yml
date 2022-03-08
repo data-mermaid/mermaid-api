@@ -10,6 +10,7 @@ install_dependencies: &install_dependencies
   run:
     name: Load Dependencies
     command: |
+      python -m ensurepip --upgrade
       sudo pip install awscli==1.16.96 boto3==1.9.86 awsebcli==3.14.10 requests==2.20.0
       sudo pip install git+https://github.com/data-mermaid/mermaid-changelog.git
 
