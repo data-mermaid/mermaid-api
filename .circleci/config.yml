@@ -2,7 +2,7 @@ version: 2
 
 default: &default
   docker:
-    - image: circleci/python:3.7.3
+    - image: cimg/python:3.8.4
   environment:
     AWS_DEFAULT_REGION: us-east-1
 
@@ -21,7 +21,7 @@ build: &build
 jobs:
   build_and_test:
     docker:
-      - image: circleci/python:3.7.3
+      - image: cimg/python:3.8.4
     environment:
       AWS_DEFAULT_REGION: us-east-1
     steps:
