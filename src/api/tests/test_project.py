@@ -20,7 +20,7 @@ def test_add_profile_new(
     assert response.status_code == 200
 
 
-def test_add_profile_new(
+def test_add_profile_existing_profile(
     client,
     base_project,
     project1,
