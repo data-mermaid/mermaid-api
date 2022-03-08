@@ -3,12 +3,14 @@ import csv
 from api import mocks
 from api.ingest import (
     BenthicLITCSVSerializer,
+    BenthicPhotoQTCSVSerializer,
     BenthicPITCSVSerializer,
     BleachingCSVSerializer,
     FishBeltCSVSerializer,
     HabitatComplexityCSVSerializer,
 )
 from api.models import (
+    BENTHIC_PHOTO_QUADRAT_TRANSECT,
     BENTHICLIT_PROTOCOL,
     BENTHICPIT_PROTOCOL,
     BLEACHINGQC_PROTOCOL,
@@ -138,6 +140,8 @@ def ingest(
         serializer = HabitatComplexityCSVSerializer
     elif protocol == BLEACHINGQC_PROTOCOL:
         serializer = BleachingCSVSerializer
+    elif protocol == BENTHIC_PHOTO_QUADRAT_TRANSECT:
+        serializer = BenthicPhotoQTCSVSerializer
     else:
         return None, output
 
