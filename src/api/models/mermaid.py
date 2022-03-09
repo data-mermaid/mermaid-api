@@ -1641,6 +1641,8 @@ class CollectRecord(BaseModel):
             obs_keys = ["obs_benthic_pits"]
         elif protocol == HABITATCOMPLEXITY_PROTOCOL:
             obs_keys = ["obs_habitat_complexities"]
+        elif protocol == BENTHIC_PHOTO_QUADRAT_TRANSECT:
+            obs_keys = ["obs_benthic_photo_quadrats"]
 
         for obs_key in obs_keys:
             self.data[obs_key] = [self._assign_id(r) for r in self.data.get(obs_key) or []]

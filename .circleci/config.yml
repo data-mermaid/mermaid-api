@@ -2,7 +2,9 @@ version: 2
 
 default: &default
   docker:
-    - image: circleci/python:3.7.3
+    - image: cimg/python:3.8.5
+      environment:
+        PAGER: cat
   environment:
     AWS_DEFAULT_REGION: us-east-1
 
@@ -10,8 +12,11 @@ install_dependencies: &install_dependencies
   run:
     name: Load Dependencies
     command: |
-      sudo pip install awscli==1.16.96 boto3==1.9.86 awsebcli==3.14.10 requests==2.20.0
-      sudo pip install git+https://github.com/data-mermaid/mermaid-changelog.git
+      curl "https://awscli.amazonaws.com/awscli-exe-linux-x86_64.zip" -o "awscliv2.zip"
+      unzip awscliv2.zip
+      sudo ./aws/install
+      python -m pip install boto3==1.9.86 requests==2.20.1
+      python -m pip install git+https://github.com/data-mermaid/mermaid-changelog.git
 
 build: &build
   run:
@@ -21,7 +26,9 @@ build: &build
 jobs:
   build_and_test:
     docker:
-      - image: circleci/python:3.7.3
+      - image: cimg/python:3.8.5
+        environment:
+          PAGER: cat
     environment:
       AWS_DEFAULT_REGION: us-east-1
     steps:
@@ -80,7 +87,7 @@ jobs:
           name: Update changelog
           command: |
               chlog
-            
+
 workflows:
   version: 2
   build_test_deploy:

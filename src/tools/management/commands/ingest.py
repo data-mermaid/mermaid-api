@@ -9,11 +9,7 @@ from django.template.defaultfilters import pluralize
 
 from api.ingest.utils import ingest
 from api.models import (
-    BENTHICLIT_PROTOCOL,
-    BENTHICPIT_PROTOCOL,
-    BLEACHINGQC_PROTOCOL,
-    FISHBELT_PROTOCOL,
-    HABITATCOMPLEXITY_PROTOCOL,
+    PROTOCOL_MAP,
     CollectRecord,
 )
 from api.resources.collect_record import CollectRecordSerializer
@@ -23,7 +19,7 @@ from api.submission.validations import ERROR, OK, WARN
 class Command(BaseCommand):
     help = "Ingest collect records from a CSV file."
 
-    protocol_choices = (BENTHICPIT_PROTOCOL, BLEACHINGQC_PROTOCOL, FISHBELT_PROTOCOL)
+    protocol_choices = list(PROTOCOL_MAP)
 
     def add_arguments(self, parser):
         parser.add_argument("datafile", nargs=1, type=argparse.FileType("r"))

@@ -10,6 +10,7 @@ from api.models import (
     BLEACHINGQC_PROTOCOL,
     FISHBELT_PROTOCOL,
     HABITATCOMPLEXITY_PROTOCOL,
+    BENTHIC_PHOTO_QUADRAT_TRANSECT,
 )
 
 BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
@@ -39,6 +40,11 @@ def habitatcomplexity_file(db):
 @pytest.fixture
 def bleaching_file(db):
     return open(os.path.join(csv_data_dir, "bleaching.csv"))
+
+
+@pytest.fixture
+def benthicpqt_file(db):
+    return open(os.path.join(csv_data_dir, "benthicpqt.csv"))
 
 
 def test_fishbelt_ingest(
@@ -102,7 +108,9 @@ def test_fishbelt_ingest(
     assert observations[2].get("count") == 1
     assert observations[2].get("fish_attribute") == str(fish_species3.id)
 
-    assert new_records[1].data["obs_belt_fishes"][2]["fish_attribute"] == str(fish_species4.id)
+    assert new_records[1].data["obs_belt_fishes"][2]["fish_attribute"] == str(
+        fish_species4.id
+    )
 
 
 def test_benthicpit_ingest(
@@ -357,3 +365,59 @@ def test_habitatcomplexity_ingest(
     assert len(observations) == 5
     assert observations[0].get("interval") == 0.5
     assert observations[0].get("score") == str(habitat_complexity_score3.id)
+
+
+def test_benthicpqt_ingest(
+    benthicpqt_file,
+    project1,
+    profile1,
+    base_project,
+    all_test_benthic_attributes,
+    site1,
+    site2,
+    management1,
+    management2,
+    relative_depth1,
+    relative_depth2,
+    reef_slope1,
+    visibility1,
+    current3,
+    tide1,
+    tide2,
+    growth_form1,
+):
+    new_records, _ = utils.ingest(
+        protocol=BENTHIC_PHOTO_QUADRAT_TRANSECT,
+        datafile=benthicpqt_file,
+        project_id=project1.pk,
+        profile_id=profile1.pk,
+        request=None,
+        dry_run=False,
+        clear_existing=False,
+        bulk_validation=False,
+        bulk_submission=False,
+        validation_suppressants=None,
+        serializer_class=None,
+    )
+
+    assert new_records is not None and len(new_records) == 2
+    new_record = new_records[0]
+    obs = new_record.data["obs_benthic_photo_quadrats"]
+
+    assert new_record.data["sample_event"]["sample_date"] == datetime.date(2009, 4, 15)
+    assert new_record.data["quadrat_transect"]["depth"] == 4
+    assert new_record.data["quadrat_transect"]["len_surveyed"] == 50
+    assert new_record.data["quadrat_transect"]["num_quadrats"] == 7
+    assert new_record.data["quadrat_transect"]["number"] == 1
+    assert new_record.data["quadrat_transect"]["num_points_per_quadrat"] == 100
+    assert new_record.data["quadrat_transect"]["visibility"] == str(visibility1.id)
+    assert new_record.data["quadrat_transect"]["quadrat_size"] == 0.5
+
+    assert len(obs) == 24
+    assert obs[-1]["num_points"] == 100
+    assert sum(o.get("num_points") or 0 for o in obs) == 700
+    assert obs[1]["growth_form"] == str(growth_form1.id)
+
+    new_records[1].data["quadrat_transect"]["reef_slope"] = str(reef_slope1.id)
+    new_records[1].data["quadrat_transect"]["relative_depth"] = str(relative_depth2.id)
+    new_records[1].data["quadrat_transect"]["num_quadrats"] = 2
