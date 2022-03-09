@@ -10,8 +10,11 @@ install_dependencies: &install_dependencies
   run:
     name: Load Dependencies
     command: |
-      python -m "pip" install awscli==1.16.96 boto3==1.9.86 awsebcli==3.14.10 requests==2.20.1
-      python -m "pip" install git+https://github.com/data-mermaid/mermaid-changelog.git
+      curl "https://awscli.amazonaws.com/awscli-exe-linux-x86_64.zip" -o "awscliv2.zip"
+      unzip awscliv2.zip
+      sudo ./aws/install
+      python -m pip install boto3==1.9.86 requests==2.20.1
+      python -m pip install git+https://github.com/data-mermaid/mermaid-changelog.git
 
 build: &build
   run:
