@@ -10,6 +10,7 @@ from .fish_size import FishSizeValidator
 from .generic import AllEqualValidator, DuplicateValidator, ListPositiveIntegerValidator, ListRequiredValidator, PositiveIntegerValidator, RequiredValidator
 from .len_surveyed import LenSurveyedValidator
 from .management import ManagementRuleValidator, UniqueManagementValidator
+from .obs_benthic_photo_quadrat import PointsPerQuadratValidator
 from .observations import ObservationCountValidator
 from .quadrat_collection import QuadratCollectionValidator
 from .quadrat_size import QuadratSizeValidator
