@@ -109,7 +109,7 @@ class Revision(models.Model):
 # -- TRIGGER SQL --
 
 forward_sql = """
-    CREATE SEQUENCE revision_seq_num START 1;
+    CREATE SEQUENCE IF NOT EXISTS revision_seq_num START 1;
 
     CREATE OR REPLACE FUNCTION primary_key_column_name (table_name text)
     RETURNS varchar AS $$
@@ -209,6 +209,7 @@ forward_sql = """
     END;
     $$;
 
+    DROP TRIGGER IF EXISTS fish_species_trigger ON "fish_species";
     CREATE TRIGGER fish_species_trigger
     AFTER
     INSERT
@@ -216,6 +217,7 @@ forward_sql = """
     UPDATE
         OR DELETE ON "fish_species" FOR EACH ROW EXECUTE FUNCTION write_revision();
 
+    DROP TRIGGER IF EXISTS management_trigger ON management;
     CREATE TRIGGER management_trigger
     AFTER
     INSERT
@@ -223,6 +225,7 @@ forward_sql = """
     UPDATE
         OR DELETE ON "management" FOR EACH ROW EXECUTE FUNCTION write_revision();
 
+    DROP TRIGGER IF EXISTS api_collectrecord_trigger ON api_collectrecord;
     CREATE TRIGGER api_collectrecord_trigger
     AFTER
     INSERT
@@ -230,6 +233,7 @@ forward_sql = """
     UPDATE
         OR DELETE ON "api_collectrecord" FOR EACH ROW EXECUTE FUNCTION write_revision();
 
+    DROP TRIGGER IF EXISTS benthic_attribute_trigger ON benthic_attribute;
     CREATE TRIGGER benthic_attribute_trigger
     AFTER
     INSERT
@@ -237,6 +241,7 @@ forward_sql = """
     UPDATE
         OR DELETE ON "benthic_attribute" FOR EACH ROW EXECUTE FUNCTION write_revision();
 
+    DROP TRIGGER IF EXISTS fish_genus_trigger ON fish_genus;
     CREATE TRIGGER fish_genus_trigger
     AFTER
     INSERT
@@ -244,6 +249,7 @@ forward_sql = """
     UPDATE
         OR DELETE ON "fish_genus" FOR EACH ROW EXECUTE FUNCTION write_revision();
 
+    DROP TRIGGER IF EXISTS fish_family_trigger ON fish_family;
     CREATE TRIGGER fish_family_trigger
     AFTER
     INSERT
@@ -251,6 +257,7 @@ forward_sql = """
     UPDATE
         OR DELETE ON "fish_family" FOR EACH ROW EXECUTE FUNCTION write_revision();
 
+    DROP TRIGGER IF EXISTS site_trigger ON site;
     CREATE TRIGGER site_trigger
     AFTER
     INSERT
@@ -258,6 +265,7 @@ forward_sql = """
     UPDATE
         OR DELETE ON "site" FOR EACH ROW EXECUTE FUNCTION write_revision();
 
+    DROP TRIGGER IF EXISTS project_profile_trigger ON project_profile;
     CREATE TRIGGER project_profile_trigger
     AFTER
     INSERT
@@ -265,6 +273,7 @@ forward_sql = """
     UPDATE
         OR DELETE ON "project_profile" FOR EACH ROW EXECUTE FUNCTION write_revision();
 
+    DROP TRIGGER IF EXISTS project_trigger ON project;
     CREATE TRIGGER project_trigger
     AFTER
     INSERT
