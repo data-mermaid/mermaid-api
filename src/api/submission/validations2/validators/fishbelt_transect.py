@@ -1,4 +1,4 @@
-from django.utils.dateparse import parse_datetime
+from django.utils.dateparse import parse_date
 from rest_framework.exceptions import ParseError
 
 from ....exceptions import check_uuid
@@ -54,7 +54,7 @@ class UniqueFishbeltTransectValidator(BaseValidator):
             check_uuid(management)
             float(depth)
 
-            if parse_datetime(f"{sample_date} 00:00:00") is None:
+            if parse_date(f"{sample_date}") is None:
                 raise ValueError()
 
             for profile in profiles:
