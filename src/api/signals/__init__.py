@@ -308,7 +308,7 @@ def run_cr_management_validation(sender, instance, *args, **kwargs):
 
 @receiver(pre_save, sender=Site)
 def update_with_covariates(sender, instance, *args, **kwargs):
-    update_site_covariates(instance)
+    update_site_covariates_in_thread(instance)
 
 
 @receiver(post_save, sender=FishFamily)
