@@ -1,4 +1,3 @@
-from api.models import QuadratCollection
 from api.resources.collect_record import CollectRecordSerializer
 from api.submission.validations2.validators import OK, ERROR, QuadratCollectionValidator
 
@@ -27,7 +26,7 @@ def test_quadrat_collection_validator_data_invalid(
 ):
     validator = _get_validator()
     record = CollectRecordSerializer(valid_bleaching_qc_collect_record).data
-    
+
     record["data"]["quadrat_collection"]["depth"] = None
     result = validator(record)
 

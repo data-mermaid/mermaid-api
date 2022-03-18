@@ -415,7 +415,10 @@ class ProjectViewSet(BaseApiViewSet):
     )
     def add_profile(self, request, pk, *args, **kwargs):
         email = request.data.get("email")
-        role = request.data.get("role")
+        try:
+            role = int(request.data.get("role"))
+        except (TypeError, ValueError):
+            role = ProjectProfile.COLLECTOR
         admin_profile = request.user.profile
 
         if email is None:
@@ -428,7 +431,7 @@ class ProjectViewSet(BaseApiViewSet):
             project_profile = ProjectProfile.objects.create(
                 project_id=pk,
                 profile=profile,
-                role=role or ProjectProfile.COLLECTOR,
+                role=role,
                 created_by=admin_profile,
                 updated_by=admin_profile,
             )

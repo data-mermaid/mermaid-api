@@ -61,7 +61,7 @@ def fishbelt_transect1(
     fish_size_bin_1,
     tide1,
     visibility1,
-    belt_transect_width_2m,
+    belt_transect_width_5m,
 ):
     return FishBeltTransect.objects.create(
         sample_event=sample_event1,
@@ -71,10 +71,11 @@ def fishbelt_transect1(
         size_bin=fish_size_bin_1,
         tide=tide1,
         visibility=visibility1,
-        width=belt_transect_width_2m,
+        width=belt_transect_width_5m,
         depth=8,
         len_surveyed=50,
         sample_time="11:00:00",
+        number=1,
     )
 
 
