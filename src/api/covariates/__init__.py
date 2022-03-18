@@ -1,6 +1,5 @@
 from django.conf import settings
 
-from api.decorators import run_in_thread
 from api.models import Covariate, Site
 from .coral_atlas import CoralAtlasCovariate
 from .vibrant_oceans import VibrantOceansThreatsCovariate
@@ -116,11 +115,6 @@ def update_site_vot_covariates(site, force):
         covariate.requested_datestamp = requested_date
         covariate.value = cov
         covariate.save()
-
-
-@run_in_thread
-def update_site_covariates_in_thread(site, force=False):
-    update_site_covariates(site, force=force)
 
 
 def update_site_covariates(site, force=False):
