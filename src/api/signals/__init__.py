@@ -9,7 +9,7 @@ from django.dispatch import receiver
 
 from . import revision
 from . import summaries
-from ..covariates import update_site_covariates_in_thread
+from ..covariates import update_site_covariates
 from ..models import *
 from ..resources.sync.views import (
     BENTHIC_ATTRIBUTES_SOURCE_TYPE,
