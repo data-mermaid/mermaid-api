@@ -84,8 +84,9 @@ class BeltFishObsSQLModel(BaseSUSQLModel):
                 FROM observer o1
                     JOIN profile p ON o1.profile_id = p.id
                     JOIN transectmethod tm ON o1.transectmethod_id = tm.id
-                    JOIN transectmethod_transectbeltfish tt_1
-                    ON tm.id = tt_1.transectmethod_ptr_id
+                    JOIN transectmethod_transectbeltfish tt_1 ON tm.id = tt_1.transectmethod_ptr_id
+                    JOIN transect_belt_fish as tbf ON tbf.id = tt_1.transect_id
+                    JOIN se ON se.sample_event_id = tbf.sample_event_id
                 GROUP BY tt_1.transect_id) observers ON su.id = observers.transect_id
             JOIN se ON su.sample_event_id = se.sample_event_id
             INNER JOIN (
@@ -97,6 +98,7 @@ class BeltFishObsSQLModel(BaseSUSQLModel):
                         uuid_generate_v4() AS pseudosu_id,
                         array_agg(DISTINCT su.id) AS sample_unit_ids
                     FROM transect_belt_fish su
+                    JOIN se ON se.sample_event_id = su.sample_event_id
                     GROUP BY {", ".join(BaseSUSQLModel.transect_su_fields)}
                 ) pseudosu
             ) pseudosu_su ON (su.id = pseudosu_su.sample_unit_id)

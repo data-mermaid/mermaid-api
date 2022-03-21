@@ -4,12 +4,6 @@ from ..models import (
     SummarySiteModel,
     SummarySiteSQLModel,
 )
-from ..decorators import run_in_thread
-
-
-@run_in_thread
-def update_project_summaries_threaded(project_id):
-    update_project_summaries(project_id=project_id)
 
 
 def update_project_summaries(project_id):
