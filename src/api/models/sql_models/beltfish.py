@@ -98,6 +98,7 @@ class BeltFishObsSQLModel(BaseSUSQLModel):
                         uuid_generate_v4() AS pseudosu_id,
                         array_agg(DISTINCT su.id) AS sample_unit_ids
                     FROM transect_belt_fish su
+                    JOIN se ON se.sample_event_id = su.sample_event_id
                     GROUP BY {", ".join(BaseSUSQLModel.transect_su_fields)}
                 ) pseudosu
             ) pseudosu_su ON (su.id = pseudosu_su.sample_unit_id)

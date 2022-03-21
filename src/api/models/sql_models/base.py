@@ -276,10 +276,10 @@ class BaseSUSQLModel(BaseSQLModel):
     # Unique combination of these fields defines a single (pseudo) sample unit.
     # Corresponds to *SUSQLModel.su_fields
     transect_su_fields = [
-        "sample_event_id",
-        "depth",
-        "number",
-        "len_surveyed",
+        "su.sample_event_id",
+        "su.depth",
+        "su.number",
+        "su.len_surveyed",
     ]
     qc_su_fields = [
         "sample_event_id",
