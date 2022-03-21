@@ -51,6 +51,8 @@ class BleachingQCColoniesBleachedObsSQLModel(BaseSUSQLModel):
                     JOIN profile p ON o1.profile_id = p.id
                     JOIN transectmethod tm ON o1.transectmethod_id = tm.id
                     JOIN transectmethod_bleaching_quadrat_collection tt_1 ON tm.id = tt_1.transectmethod_ptr_id
+                    JOIN quadrat_collection as qc ON qc.sample_event_id = sample_event_id
+                    JOIN se ON se.sample_event_id = qc.sample_event_id
                 GROUP BY
                     tt_1.quadrat_id
             ) observers ON su.id = observers.quadrat_id
@@ -127,6 +129,8 @@ class BleachingQCQuadratBenthicPercentObsSQLModel(BaseSUSQLModel):
                 JOIN profile p ON o1.profile_id = p.id
                 JOIN transectmethod tm ON o1.transectmethod_id = tm.id
                 JOIN transectmethod_bleaching_quadrat_collection tt_1 ON tm.id = tt_1.transectmethod_ptr_id
+                JOIN quadrat_collection as qc ON qc.id = tt_1.quadrat_id
+                JOIN se ON se.sample_event_id = qc.sample_event_id
             GROUP BY
                 tt_1.quadrat_id
         ) observers ON su.id = observers.quadrat_id
@@ -188,6 +192,7 @@ class BleachingQCSUSQLModel(BaseSUSQLModel):
                     uuid_generate_v4() AS pseudosu_id,
                     array_agg(DISTINCT su.id) AS sample_unit_ids
                 FROM quadrat_collection su
+                JOIN bleachingqc_colonies_bleached_obs bcbo ON su.sample_event_id = bcbo.sample_event_id
                 GROUP BY {", ".join(BaseSUSQLModel.qc_su_fields)}
             ) pseudosu
         ) 
