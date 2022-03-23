@@ -17,5 +17,5 @@ boto3==1.9.190
 timezonefinder==4.2.0
 natsort==7.0.1
 django-debug-toolbar==2.2.1
-pytest-rich==0.9.4
+pytest-rich==0.1.1
 dotty-dict==1.3.0
