@@ -309,8 +309,6 @@ class SummarySiteSQLModel(SummarySiteBaseModel):
         ) bleachingqc ON (site.id = bleachingqc.site_id)
 
         WHERE site.project_id = '%(project_id)s'::uuid
-         -- Not a test project
-        AND project.status != 80
     """
 
     class Meta:
