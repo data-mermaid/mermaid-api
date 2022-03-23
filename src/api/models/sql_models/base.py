@@ -10,6 +10,69 @@ from api.models import Project
 project_where = """    WHERE\n        project.id = '%(project_id)s' :: uuid\n"""
 
 sample_event_sql_template = f"""
+    WITH tags AS (
+        SELECT
+            project_1.id,
+            jsonb_agg(
+                jsonb_build_object('id', t_1.id, 'name', t_1.name)
+            ) AS tags
+        FROM
+            api_uuidtaggeditem ti
+            JOIN django_content_type ct ON ti.content_type_id = ct.id
+            JOIN project project_1 ON ti.object_id = project_1.id
+            JOIN api_tag t_1 ON ti.tag_id = t_1.id
+        WHERE
+            ct.app_label :: text = 'api' :: text
+            AND ct.model :: text = 'project' :: text
+        GROUP BY
+            project_1.id
+    ),
+    parties AS (
+        SELECT
+            mps.management_id,
+            jsonb_agg(
+                mp.name
+                ORDER BY
+                    mp.name
+            ) AS parties
+        FROM
+            management_parties mps
+        INNER JOIN management_party mp ON mps.managementparty_id = mp.id
+        INNER JOIN
+            management
+        ON (management.id = mps.management_id)
+        WHERE
+            management.project_id = '%(project_id)s' :: uuid
+        GROUP BY
+            mps.management_id
+    ),
+    site_covariates AS (
+        SELECT
+            cov.site_id,
+            jsonb_agg(
+                jsonb_build_object(
+                    'id',
+                    cov.id,
+                    'name',
+                    cov.name,
+                    'value',
+                    cov.value,
+                    'datestamp',
+                    cov.datestamp,
+                    'requested_datestamp',
+                    cov.requested_datestamp
+                )
+            ) AS covariates
+        FROM
+            api_covariate as cov
+        INNER JOIN
+            site
+        ON (site.id = cov.site_id)
+        WHERE
+            site.project_id = '%(project_id)s' :: uuid
+        GROUP BY
+            cov.site_id
+    )
     SELECT
         project.id AS project_id,
         project.name AS project_name,
@@ -109,66 +172,16 @@ sample_event_sql_template = f"""
         sample_event se
         JOIN site ON se.site_id = site.id
         JOIN project ON site.project_id = project.id
-        LEFT JOIN (
-            SELECT
-                project_1.id,
-                jsonb_agg(
-                    jsonb_build_object('id', t_1.id, 'name', t_1.name)
-                ) AS tags
-            FROM
-                api_uuidtaggeditem ti
-                JOIN django_content_type ct ON ti.content_type_id = ct.id
-                JOIN project project_1 ON ti.object_id = project_1.id
-                JOIN api_tag t_1 ON ti.tag_id = t_1.id
-            WHERE
-                ct.app_label :: text = 'api' :: text
-                AND ct.model :: text = 'project' :: text
-            GROUP BY
-                project_1.id
-        ) tags ON project.id = tags.id
+        LEFT JOIN tags ON project.id = tags.id
         JOIN country ON site.country_id = country.id
         LEFT JOIN api_reeftype rt ON site.reef_type_id = rt.id
         LEFT JOIN api_reefzone rz ON site.reef_zone_id = rz.id
         LEFT JOIN api_reefexposure re ON site.exposure_id = re.id
         JOIN management m ON se.management_id = m.id
         LEFT JOIN management_compliance mc ON m.compliance_id = mc.id
-        LEFT JOIN (
-            SELECT
-                mps.management_id,
-                jsonb_agg(
-                    mp.name
-                    ORDER BY
-                        mp.name
-                ) AS parties
-            FROM
-                management_parties mps
-                JOIN management_party mp ON mps.managementparty_id = mp.id
-            GROUP BY
-                mps.management_id
-        ) parties ON m.id = parties.management_id
-        LEFT JOIN (
-            SELECT
-                cov.site_id,
-                jsonb_agg(
-                    jsonb_build_object(
-                        'id',
-                        cov.id,
-                        'name',
-                        cov.name,
-                        'value',
-                        cov.value,
-                        'datestamp',
-                        cov.datestamp,
-                        'requested_datestamp',
-                        cov.requested_datestamp
-                    )
-                ) AS covariates
-            FROM
-                api_covariate as cov
-            GROUP BY
-                cov.site_id
-        ) AS site_covariates ON site.id = site_covariates.site_id
-{project_where}
+        LEFT JOIN parties ON m.id = parties.management_id
+        LEFT JOIN site_covariates ON site.id = site_covariates.site_id
+    {project_where}
 """
 
 
@@ -263,15 +276,15 @@ class BaseSUSQLModel(BaseSQLModel):
     # Unique combination of these fields defines a single (pseudo) sample unit.
     # Corresponds to *SUSQLModel.su_fields
     transect_su_fields = [
-        "sample_event_id",
-        "depth",
-        "number",
-        "len_surveyed",
+        "su.sample_event_id",
+        "su.depth",
+        "su.number",
+        "su.len_surveyed",
     ]
     qc_su_fields = [
-        "sample_event_id",
-        "depth",
-        "quadrat_size",
+        "su.sample_event_id",
+        "su.depth",
+        "su.quadrat_size",
     ]
 
     # SU sql common to all obs-level views
