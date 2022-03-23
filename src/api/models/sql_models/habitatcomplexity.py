@@ -27,29 +27,11 @@ class HabitatComplexityObsSQLModel(BaseSUSQLModel):
         s.name AS score_name,
         o.notes AS observation_notes
         FROM
-        obs_habitatcomplexity o
-        INNER JOIN api_habitatcomplexityscore s ON (o.score_id = s.id)
-        INNER JOIN transectmethod_habitatcomplexity tt ON o.habitatcomplexity_id = tt.transectmethod_ptr_id
-        INNER JOIN transect_benthic su ON tt.transect_id = su.id
-        LEFT JOIN api_current c ON su.current_id = c.id
-        LEFT JOIN api_tide t ON su.tide_id = t.id
-        LEFT JOIN api_visibility v ON su.visibility_id = v.id
-        LEFT JOIN api_relativedepth r ON su.relative_depth_id = r.id
-        LEFT JOIN api_reefslope rs ON su.reef_slope_id = rs.id
-        JOIN (
-            SELECT tt_1.transect_id,
-                jsonb_agg(jsonb_build_object('id', p.id, 'name', (COALESCE(p.first_name, ''::character varying)::text ||
-                ' '::text) || COALESCE(p.last_name, ''::character varying)::text)) AS observers
-            FROM observer o1
-                JOIN profile p ON o1.profile_id = p.id
-                JOIN transectmethod tm ON o1.transectmethod_id = tm.id
-                JOIN transectmethod_habitatcomplexity tt_1 ON tm.id = tt_1.transectmethod_ptr_id
-                JOIN transect_benthic as tb ON tt_1.transect_id = tb.id
-                JOIN se ON tb.sample_event_id = se.sample_event_id
-            GROUP BY tt_1.transect_id
-        ) observers ON su.id = observers.transect_id
-        JOIN se ON su.sample_event_id = se.sample_event_id
-            INNER JOIN (
+            obs_habitatcomplexity o
+            JOIN transectmethod_habitatcomplexity tt ON o.habitatcomplexity_id = tt.transectmethod_ptr_id
+            JOIN transect_benthic su ON tt.transect_id = su.id
+            JOIN se ON su.sample_event_id = se.sample_event_id
+            JOIN (
                 SELECT 
                     pseudosu_id,
                     UNNEST(sample_unit_ids) AS sample_unit_id
@@ -62,6 +44,24 @@ class HabitatComplexityObsSQLModel(BaseSUSQLModel):
                     GROUP BY {", ".join(BaseSUSQLModel.transect_su_fields)}
                 ) pseudosu
             ) pseudosu_su ON (su.id = pseudosu_su.sample_unit_id)
+            JOIN (
+                SELECT tt_1.transect_id,
+                    jsonb_agg(jsonb_build_object('id', p.id, 'name', (COALESCE(p.first_name, ''::character varying)::text ||
+                    ' '::text) || COALESCE(p.last_name, ''::character varying)::text)) AS observers
+                FROM observer o1
+                    JOIN profile p ON o1.profile_id = p.id
+                    JOIN transectmethod tm ON o1.transectmethod_id = tm.id
+                    JOIN transectmethod_habitatcomplexity tt_1 ON tm.id = tt_1.transectmethod_ptr_id
+                    JOIN transect_benthic as tb ON tt_1.transect_id = tb.id
+                    JOIN se ON tb.sample_event_id = se.sample_event_id
+                GROUP BY tt_1.transect_id
+            ) observers ON su.id = observers.transect_id
+            JOIN api_habitatcomplexityscore s ON (o.score_id = s.id)
+            LEFT JOIN api_current c ON su.current_id = c.id
+            LEFT JOIN api_tide t ON su.tide_id = t.id
+            LEFT JOIN api_visibility v ON su.visibility_id = v.id
+            LEFT JOIN api_relativedepth r ON su.relative_depth_id = r.id
+            LEFT JOIN api_reefslope rs ON su.reef_slope_id = rs.id     
     """
 
     sql_args = dict(project_id=SQLTableArg(required=True))
