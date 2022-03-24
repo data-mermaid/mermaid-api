@@ -1,3 +1,4 @@
+from ..decorators import run_in_thread
 from ..models import (
     Project,
     SummarySampleEventModel,
@@ -12,6 +13,11 @@ project_statuses = [Project.OPEN, Project.LOCKED]
 def update_project_summaries(project_id):
     update_project_summary_site(project_id)
     update_project_summary_sample_event(project_id)
+
+
+@run_in_thread
+def update_project_summaries_thread(project_id):
+    update_project_summaries(project_id=project_id)
 
 
 def update_project_summary_site(project_id, skip_test_project=True):
