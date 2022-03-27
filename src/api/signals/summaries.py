@@ -3,7 +3,7 @@ from django.dispatch import receiver
 
 from ..models import Management, Project, ProjectProfile, Site, TransectMethod
 from ..utils.related import get_related_project
-from ..utils.summaries import update_project_summaries_thread
+from ..utils.summaries import update_project_summaries
 
 
 @receiver(post_delete, sender=TransectMethod)
@@ -14,7 +14,7 @@ def update_summaries_on_delete_transect_method(sender, instance, *args, **kwargs
 
     sample_unit = instance.sample_unit
     sample_unit.delete()
-    update_project_summaries_thread(project.pk)
+    update_project_summaries(project.pk)
 
 
 @receiver(post_delete, sender=Management)
@@ -29,4 +29,4 @@ def update_summaries(sender, instance, *args, **kwargs):
     project = get_related_project(instance)
     if project is None:
         return
-    update_project_summaries_thread(project.pk)
+    update_project_summaries(project.pk)
