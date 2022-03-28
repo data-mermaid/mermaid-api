@@ -16,6 +16,11 @@ class Command(BaseCommand):
             action='store_true',
             help="Ignores environment check before running update.",
         )
+        parser.add_argument(
+            "--test_projects",
+            action='store_true',
+            help="Include test_projects when running update.",
+        )
 
     @transaction.atomic
     def update_summaries(self, project_id):
@@ -23,6 +28,7 @@ class Command(BaseCommand):
 
     def handle(self, *args, **options):
         is_forced = options["force"]
+        include_test_projects = options["test_projects"]
 
         if settings.ENVIRONMENT != "prod" and is_forced is False:
             print("Skipping update")
@@ -32,7 +38,11 @@ class Command(BaseCommand):
         print("Updating summaries...")
         futures = []
         with ThreadPoolExecutor(max_workers=4) as exc:
-            for project in Project.objects.filter(status__in=[Project.OPEN, Project.LOCKED]):
+            project_statuses = [Project.OPEN, Project.LOCKED]
+            if include_test_projects:
+                project_statuses.append(Project.TEST)
+
+            for project in Project.objects.filter(status__in=project_statuses):
                 futures.append(exc.submit(self.update_summaries, project.pk))
 
         for future in futures:

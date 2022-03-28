@@ -1,6 +1,7 @@
 from django.conf import settings
 
-from api.models import Covariate, Site
+from ..decorators import run_in_thread
+from ..models import Covariate
 from .coral_atlas import CoralAtlasCovariate
 from .vibrant_oceans import VibrantOceansThreatsCovariate
 
@@ -116,3 +117,8 @@ def update_site_covariates(site, force=False):
     if settings.ENVIRONMENT in ("dev", "prod"):
         update_site_aca_covariates(site, force=force)
         update_site_vot_covariates(site, force=force)
+
+
+@run_in_thread
+def update_site_covariates_threaded(site, force=False):
+    update_site_covariates(site, force=force)

@@ -28,31 +28,22 @@ class BenthicPITObsSQLModel(BaseSUSQLModel):
             gf.name AS growth_form,
             o.notes AS observation_notes
         FROM obs_benthicpit o
-            JOIN ( WITH RECURSIVE tree(child, root) AS (
-                        SELECT c_1.id,
-                            c_1.id
-                        FROM benthic_attribute c_1
-                            LEFT JOIN benthic_attribute p ON c_1.parent_id = p.id
-                        WHERE p.id IS NULL
-                        UNION
-                        SELECT benthic_attribute.id,
-                            tree_1.root
-                        FROM tree tree_1
-                            JOIN benthic_attribute ON tree_1.child = benthic_attribute.parent_id
-                        )
-                SELECT tree.child,
-                    tree.root
-                FROM tree) category ON o.attribute_id = category.child
-            JOIN benthic_attribute cat ON category.root = cat.id
-            JOIN benthic_attribute b ON o.attribute_id = b.id
-            LEFT JOIN growth_form gf ON o.growth_form_id = gf.id
             JOIN transectmethod_benthicpit tt ON o.benthicpit_id = tt.transectmethod_ptr_id
             JOIN transect_benthic su ON tt.transect_id = su.id
-            LEFT JOIN api_current c ON su.current_id = c.id
-            LEFT JOIN api_tide t ON su.tide_id = t.id
-            LEFT JOIN api_visibility v ON su.visibility_id = v.id
-            LEFT JOIN api_relativedepth r ON su.relative_depth_id = r.id
-            LEFT JOIN api_reefslope rs ON su.reef_slope_id = rs.id
+            JOIN se ON su.sample_event_id = se.sample_event_id
+            JOIN (
+                SELECT 
+                    pseudosu_id,
+                    UNNEST(sample_unit_ids) AS sample_unit_id
+                FROM (
+                    SELECT 
+                        uuid_generate_v4() AS pseudosu_id,
+                        array_agg(DISTINCT su.id) AS sample_unit_ids
+                    FROM transect_benthic su
+                    JOIN se ON su.sample_event_id = se.sample_event_id
+                    GROUP BY {", ".join(BaseSUSQLModel.transect_su_fields)}
+                ) pseudosu
+            ) pseudosu_su ON (su.id = pseudosu_su.sample_unit_id)
             JOIN (
                 SELECT
                     tt_1.transect_id,
@@ -71,20 +62,29 @@ class BenthicPITObsSQLModel(BaseSUSQLModel):
                 GROUP BY
                     tt_1.transect_id
             ) observers ON su.id = observers.transect_id
-            JOIN se ON su.sample_event_id = se.sample_event_id
-            INNER JOIN (
-                SELECT 
-                    pseudosu_id,
-                    UNNEST(sample_unit_ids) AS sample_unit_id
-                FROM (
-                    SELECT 
-                        uuid_generate_v4() AS pseudosu_id,
-                        array_agg(DISTINCT su.id) AS sample_unit_ids
-                    FROM transect_benthic su
-                    JOIN se ON su.sample_event_id = se.sample_event_id
-                    GROUP BY {", ".join(BaseSUSQLModel.transect_su_fields)}
-                ) pseudosu
-            ) pseudosu_su ON (su.id = pseudosu_su.sample_unit_id)
+            JOIN ( WITH RECURSIVE tree(child, root) AS (
+                        SELECT c_1.id,
+                            c_1.id
+                        FROM benthic_attribute c_1
+                            LEFT JOIN benthic_attribute p ON c_1.parent_id = p.id
+                        WHERE p.id IS NULL
+                        UNION
+                        SELECT benthic_attribute.id,
+                            tree_1.root
+                        FROM tree tree_1
+                            JOIN benthic_attribute ON tree_1.child = benthic_attribute.parent_id
+                        )
+                SELECT tree.child,
+                    tree.root
+                FROM tree) category ON o.attribute_id = category.child
+            JOIN benthic_attribute cat ON category.root = cat.id
+            JOIN benthic_attribute b ON o.attribute_id = b.id
+            LEFT JOIN growth_form gf ON o.growth_form_id = gf.id
+            LEFT JOIN api_current c ON su.current_id = c.id
+            LEFT JOIN api_tide t ON su.tide_id = t.id
+            LEFT JOIN api_visibility v ON su.visibility_id = v.id
+            LEFT JOIN api_relativedepth r ON su.relative_depth_id = r.id
+            LEFT JOIN api_reefslope rs ON su.reef_slope_id = rs.id
     """
 
     sql_args = dict(project_id=SQLTableArg(required=True))

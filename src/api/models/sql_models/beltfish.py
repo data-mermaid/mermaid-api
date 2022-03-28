@@ -46,18 +46,25 @@ class BeltFishObsSQLModel(BaseSUSQLModel):
             )::numeric AS biomass_kgha,
             o.notes AS observation_notes
         FROM obs_transectbeltfish o
-            JOIN vw_fish_attributes f ON o.fish_attribute_id = f.id
-            RIGHT JOIN transectmethod_transectbeltfish tt
-            ON o.beltfish_id = tt.transectmethod_ptr_id
+            RIGHT JOIN transectmethod_transectbeltfish tt ON o.beltfish_id = tt.transectmethod_ptr_id
             JOIN transect_belt_fish su ON tt.transect_id = su.id
-            LEFT JOIN api_current c ON su.current_id = c.id
-            LEFT JOIN api_tide t ON su.tide_id = t.id
-            LEFT JOIN api_visibility v ON su.visibility_id = v.id
-            LEFT JOIN api_relativedepth r ON su.relative_depth_id = r.id
-            LEFT JOIN api_fishsizebin sb ON su.size_bin_id = sb.id
-            LEFT JOIN api_reefslope rs ON su.reef_slope_id = rs.id
+            JOIN se ON su.sample_event_id = se.sample_event_id
+            JOIN (
+                SELECT 
+                    pseudosu_id,
+                    UNNEST(sample_unit_ids) AS sample_unit_id
+                FROM (
+                    SELECT 
+                        uuid_generate_v4() AS pseudosu_id,
+                        array_agg(DISTINCT su.id) AS sample_unit_ids
+                    FROM transect_belt_fish su
+                    JOIN se ON su.sample_event_id = se.sample_event_id
+                    GROUP BY {", ".join(BaseSUSQLModel.transect_su_fields)}
+                ) pseudosu
+            ) pseudosu_su ON (su.id = pseudosu_su.sample_unit_id)
+            JOIN vw_fish_attributes f ON o.fish_attribute_id = f.id
             JOIN api_belttransectwidth w ON su.width_id = w.id
-            INNER JOIN api_belttransectwidthcondition wc ON (
+            JOIN api_belttransectwidthcondition wc ON (
                 w.id = wc.belttransectwidth_id
                 AND (
                     ((wc.operator = '<' AND o.size < wc.size)
@@ -88,20 +95,12 @@ class BeltFishObsSQLModel(BaseSUSQLModel):
                     JOIN transect_belt_fish as tbf ON tt_1.transect_id = tbf.id
                     JOIN se ON tbf.sample_event_id = se.sample_event_id
                 GROUP BY tt_1.transect_id) observers ON su.id = observers.transect_id
-            JOIN se ON su.sample_event_id = se.sample_event_id
-            INNER JOIN (
-                SELECT 
-                    pseudosu_id,
-                    UNNEST(sample_unit_ids) AS sample_unit_id
-                FROM (
-                    SELECT 
-                        uuid_generate_v4() AS pseudosu_id,
-                        array_agg(DISTINCT su.id) AS sample_unit_ids
-                    FROM transect_belt_fish su
-                    JOIN se ON su.sample_event_id = se.sample_event_id
-                    GROUP BY {", ".join(BaseSUSQLModel.transect_su_fields)}
-                ) pseudosu
-            ) pseudosu_su ON (su.id = pseudosu_su.sample_unit_id)
+            LEFT JOIN api_current c ON su.current_id = c.id
+            LEFT JOIN api_tide t ON su.tide_id = t.id
+            LEFT JOIN api_visibility v ON su.visibility_id = v.id
+            LEFT JOIN api_relativedepth r ON su.relative_depth_id = r.id
+            LEFT JOIN api_fishsizebin sb ON su.size_bin_id = sb.id
+            LEFT JOIN api_reefslope rs ON su.reef_slope_id = rs.id
         """
 
     sql_args = dict(project_id=SQLTableArg(required=True))
