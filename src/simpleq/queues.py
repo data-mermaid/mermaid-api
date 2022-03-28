@@ -65,12 +65,16 @@ class Queue:
         if sqs_resource:
             self.sqs_resource = sqs_resource
         else:
-            self.sqs_resource = boto3.resource(
-                "sqs",
-                aws_access_key_id=os.environ["AWS_ACCESS_KEY_ID"],
-                aws_secret_access_key=os.environ["AWS_SECRET_ACCESS_KEY"],
-                region_name=os.environ["AWS_REGION"],
-            )
+            resource_args = {
+                "service_name": "sqs",
+                "aws_access_key_id": os.environ["AWS_ACCESS_KEY_ID"],
+                "aws_secret_access_key": os.environ["AWS_SECRET_ACCESS_KEY"],
+                "region_name": os.environ["AWS_REGION"],
+            }
+            if settings.ENDPOINT_URL:
+                resource_args["endpoint_url"] = settings.ENDPOINT_URL
+
+            self.sqs_resource = boto3.resource(**resource_args)
 
         self._queue = None
 
