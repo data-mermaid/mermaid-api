@@ -8,7 +8,7 @@ from django.db.models.signals import post_delete, post_save, pre_save, m2m_chang
 from django.dispatch import receiver
 
 from .revision import * # noqa
-from .summaries import *  # noqa
+from .summaries import * # noqa
 from ..covariates import update_site_covariates_threaded
 from ..models import *
 from ..resources.sync.views import (
