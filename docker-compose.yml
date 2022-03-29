@@ -9,6 +9,7 @@ services:
     image: softwaremill/elasticmq-native
     ports:
       - 9324:9324
+      - 9325:9325
 
   api_db:
     container_name: api_db
