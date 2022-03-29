@@ -47,6 +47,7 @@ class Queue:
 
     BATCH_SIZE = getattr(settings, "SQS_BATCH_SIZE", 10)
     WAIT_SECONDS = getattr(settings, "SQS_WAIT_SECONDS", 20)
+    VISIBILITY_TIMEOUT = getattr(settings, "SQS_MESSAGE_VISIBILITY", "300")
     _delayed_jobs = defaultdict(list)
 
     def __init__(self, name, sqs_resource=None):
@@ -100,13 +101,13 @@ class Queue:
         try:
             self._queue = self.sqs_resource.get_queue_by_name(QueueName=queue_name)
         except self.sqs_resource.meta.client.exceptions.QueueDoesNotExist:
-            visibility_timeout = getattr(settings, "SQS_MESSAGE_VISIBILITY", "300")
+            visibility_timeout = self.VISIBILITY_TIMEOUT
             self._queue = self.sqs_resource.create_queue(
                 QueueName=queue_name,
                 Attributes={
                     "VisibilityTimeout": str(visibility_timeout),
                     "FifoQueue": "true",
-                    "ContentBasedDeduplication": "true",
+                    "ContentBasedDeduplication": "false",
                 },
             )
 
@@ -145,8 +146,7 @@ class Queue:
         :param int delay: Delay sending job to SQS queue.
 
         """
-
-        if delay and job.id is not None:
+        if delay:
             if job.id not in self._delayed_jobs:
                 th.Timer(delay, self.add_job, args=[job]).start()
 
@@ -208,8 +208,9 @@ class Queue:
             MaxNumberOfMessages=self.BATCH_SIZE,
             WaitTimeSeconds=self.WAIT_SECONDS,
             MessageAttributeNames=["id"],
+            VisibilityTimeout=self.VISIBILITY_TIMEOUT,
         )
-        duplicate_job_groups = dict()
+        duplicate_job_groups = {}
 
         for message in messages:
             job = Job.from_message(message)

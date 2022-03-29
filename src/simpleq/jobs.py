@@ -14,7 +14,7 @@ class Job:
         :param obj callable: [optional] A callable to run.
         """
         self._id = job_id if job_id is not None else str(uuid.uuid4())
-        self.group = group if group else "mermaid"
+        self.group = group or "mermaid"
         self.start_time = None
         self.stop_time = None
         self.run_time = None
@@ -39,6 +39,10 @@ class Job:
         self._id = val
 
     @property
+    def composite_id(self):
+        return f"{self.group}::{self.id}"
+
+    @property
     def message(self):
         return dict(
             MessageAttributes={
@@ -47,6 +51,7 @@ class Job:
                     "DataType": "String"
                 }
             },
+            MessageDeduplicationId=self.composite_id,
             MessageGroupId=self.group,
             MessageBody=codecs.encode(
                 dumps({
