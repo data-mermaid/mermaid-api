@@ -7,7 +7,7 @@ from ..models import (
 )
 
 
-def update_project_summaries(project_id):
+def update_project_summaries(project_id, *args, **kwargs):
     update_project_summary_site(project_id)
     update_project_summary_sample_event(project_id)
 

@@ -30,12 +30,18 @@ endif
 down:
 	@docker-compose down
 
+stop:
+	@make down
+
 buildnocache:
 	./ci_cd/version.sh
 	@docker-compose build --no-cache --pull
 
 up:
-	docker-compose up -d	
+	docker-compose up -d
+
+start:
+	@make up
 
 dbbackup:
 	@docker-compose exec --user=$(CURRENT_UID) $(API_SERVICE) python manage.py dbbackup local

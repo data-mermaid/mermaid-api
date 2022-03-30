@@ -15,7 +15,7 @@ import os
 import sys
 
 # Options: None, DEV, PROD
-ENVIRONMENT = os.environ.get('ENV')
+ENVIRONMENT = os.environ.get('ENV') or "local"
 if ENVIRONMENT:
     ENVIRONMENT = ENVIRONMENT.lower()
 PROJECT_NAME = 'MERMAID API'
@@ -335,5 +335,8 @@ SQS_MESSAGE_VISIBILITY = 300
 
 # Name of queue, if it doesn't exist it will be created.
 QUEUE_NAME = f"mermaid-{ENVIRONMENT}"  # required
+
+# Override default boto3 url for SQS
+ENDPOINT_URL = None if ENVIRONMENT in ("dev", "prod") else "http://sqs:9324"
 
 ## -SIMPLEQ SETTINGS-

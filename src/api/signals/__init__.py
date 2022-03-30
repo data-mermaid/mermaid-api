@@ -7,8 +7,8 @@ from django.core.cache import cache
 from django.db.models.signals import post_delete, post_save, pre_save, m2m_changed
 from django.dispatch import receiver
 
-from .revision import * # noqa
-from .summaries import * # noqa
+from .revision import *  # noqa
+from .summaries import *  # noqa
 from ..covariates import update_site_covariates_threaded
 from ..models import *
 from ..resources.sync.views import (
@@ -191,9 +191,7 @@ def notify_admins_change(instance, changetype):
         return
 
     subject = f"Project administrator {subject_snippet} {instance.project.name}"
-    collect_project_url = (
-        f"https://{settings.DEFAULT_DOMAIN_COLLECT}/#/projects/{instance.project.pk}/users"
-    )
+    collect_project_url = f"https://{settings.DEFAULT_DOMAIN_COLLECT}/#/projects/{instance.project.pk}/users"
 
     context = {
         "project_name": instance.project.name,
@@ -237,7 +235,12 @@ def notify_new_project_user(sender, instance, created, **kwargs):
     else:
         template = "emails/user_added_to_project.html"
 
-    mermaid_email(f"New User added to {instance.project.name}", template, [instance.profile.email], context=context)
+    mermaid_email(
+        f"New User added to {instance.project.name}",
+        template,
+        [instance.profile.email],
+        context=context,
+    )
 
 
 # Don't need to iterate over TransectMethod subclasses because TransectMethod is not abstract
