@@ -1,6 +1,6 @@
 import codecs
 import uuid
-from datetime import datetime
+from datetime import timezone
 from pickle import dumps, loads
 
 
@@ -45,22 +45,19 @@ class Job:
     @property
     def message(self):
         return dict(
-            MessageAttributes={
-                "id": {
-                    "StringValue": self.id,
-                    "DataType": "String"
-                }
-            },
+            MessageAttributes={"id": {"StringValue": self.id, "DataType": "String"}},
             MessageDeduplicationId=self.composite_id,
             MessageGroupId=self.group,
             MessageBody=codecs.encode(
-                dumps({
-                    "callable": self.callable,
-                    "args": self.args,
-                    "kwargs": self.kwargs,
-                }),
-                "base64"
-            ).decode()
+                dumps(
+                    {
+                        "callable": self.callable,
+                        "args": self.args,
+                        "kwargs": self.kwargs,
+                    }
+                ),
+                "base64",
+            ).decode(),
         )
 
     @classmethod
@@ -91,7 +88,7 @@ class Job:
 
     def run(self):
         """Run this job."""
-        self.start_time = datetime.utcnow()
+        self.start_time = timezone.utcnow()
         self.log(
             f"Starting job {self.callable.__name__} at {self.start_time.isoformat()}."
         )
@@ -102,10 +99,11 @@ class Job:
             self.exception = e
 
         if not self.exception:
-            self.stop_time = datetime.utcnow()
+            self.stop_time = timezone.utcnow()
             self.run_time = (self.stop_time - self.start_time).total_seconds()
             self.log(
-                f"Finished job {self.callable.__name__} at {self.stop_time.isoformat()} in {self.run_time} seconds."
+                f"Finished job {self.callable.__name__} at {self.stop_time.isoformat()} "
+                "in {self.run_time} seconds."
             )
         else:
             self.log(f"Job {self.callable.__name__} failed to run: {self.exception}")
