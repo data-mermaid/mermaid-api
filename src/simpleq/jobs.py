@@ -1,6 +1,6 @@
 import codecs
 import uuid
-from datetime import timezone
+from datetime import datetime
 from pickle import dumps, loads
 
 
@@ -88,7 +88,7 @@ class Job:
 
     def run(self):
         """Run this job."""
-        self.start_time = timezone.utcnow()
+        self.start_time = datetime.utcnow()
         self.log(
             f"Starting job {self.callable.__name__} at {self.start_time.isoformat()}."
         )
@@ -99,7 +99,7 @@ class Job:
             self.exception = e
 
         if not self.exception:
-            self.stop_time = timezone.utcnow()
+            self.stop_time = datetime.utcnow()
             self.run_time = (self.stop_time - self.start_time).total_seconds()
             self.log(
                 f"Finished job {self.callable.__name__} at {self.stop_time.isoformat()} "
