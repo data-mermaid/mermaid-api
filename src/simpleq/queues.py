@@ -68,9 +68,9 @@ class Queue:
         else:
             resource_args = {
                 "service_name": "sqs",
-                "aws_access_key_id": os.environ["AWS_ACCESS_KEY_ID"],
-                "aws_secret_access_key": os.environ["AWS_SECRET_ACCESS_KEY"],
-                "region_name": os.environ["AWS_REGION"],
+                "aws_access_key_id": settings.AWS_ACCESS_KEY_ID,
+                "aws_secret_access_key": settings.AWS_SECRET_ACCESS_KEY,
+                "region_name": settings.AWS_REGION,
             }
             if settings.ENDPOINT_URL:
                 resource_args["endpoint_url"] = settings.ENDPOINT_URL
