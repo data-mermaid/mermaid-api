@@ -7,6 +7,7 @@ from .depth import DepthValidator
 from .fish_count import FishCountValidator, TotalFishCountValidator
 from .fish_family import FishFamilySubsetValidator
 from .fish_size import FishSizeValidator
+from .fishbelt_transect import UniqueFishbeltTransectValidator
 from .generic import AllEqualValidator, DuplicateValidator, ListPositiveIntegerValidator, ListRequiredValidator, PositiveIntegerValidator, RequiredValidator
 from .len_surveyed import LenSurveyedValidator
 from .management import ManagementRuleValidator, UniqueManagementValidator
@@ -19,4 +20,3 @@ from .sample_date import SampleDateValidator
 from .sample_time import SampleTimeValidator
 from .dry_submit import DrySubmitValidator
 from .site import UniqueSiteValidator
-from .transect import UniqueTransectValidator

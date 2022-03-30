@@ -1,9 +1,15 @@
-version: '2'
+version: '3.9'
 
 volumes:
   pg_data:
 
 services:
+  sqs:
+    container_name: sqs
+    image: softwaremill/elasticmq-native
+    ports:
+      - 9324:9324
+      - 9325:9325
 
   api_db:
     container_name: api_db
@@ -28,6 +34,6 @@ services:
       - 8080:8080
     env_file:
       - .env
-
-    links:
+    depends_on:
       - api_db
+      - sqs

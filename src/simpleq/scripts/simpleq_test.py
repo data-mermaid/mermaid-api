@@ -10,6 +10,7 @@ def log_stuff(txt):
 
 
 def run():
+    q = None
     try:
         job_id = str(uuid.uuid4())
         uid = str(uuid.uuid4())
@@ -19,11 +20,12 @@ def run():
         print(f"job_id: {job_id}")
         print(f"uid: {uid}")
 
-        for n in range(10):
+        for _ in range(10):
             q.add_job(job, delay=5)
 
         sleep(10)
         print(f"q.num_jobs(): {q.num_jobs()}")
 
     finally:
-        q.delete()
+        if q:
+            q.delete()

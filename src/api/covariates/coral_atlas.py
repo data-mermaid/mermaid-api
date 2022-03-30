@@ -39,7 +39,7 @@ class CoralAtlasCovariate(BaseCovariate):
         data = (resp.json() or {}).get("data")
         stats = (data or {}).get("stats")
         map_assets = (stats or {}).get("map_assets") or []
-        output = {"aca_benthic": [], "aca_geomorphic": []}
+        output = {"aca_benthic": None, "aca_geomorphic": None}
         for map_asset in map_assets:
             class_type = (map_asset.get("class_type") or "").lower()
             if not class_type or class_type not in (
@@ -48,7 +48,11 @@ class CoralAtlasCovariate(BaseCovariate):
             ):
                 continue
             classes = self._parse_classes(map_asset.get("classes"))
-            output[f"aca_{class_type}"].extend(classes)
+            key = f"aca_{class_type}"
+            if output[key] is None:
+                output[key] = classes
+            else:
+                output[key].extend(classes)
 
         return dict(
             date=request_datetime,

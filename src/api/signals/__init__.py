@@ -4,12 +4,12 @@ from django import urls
 from django.conf import settings
 from django.core import serializers
 from django.core.cache import cache
-from django.db.models.signals import post_delete, post_save, pre_delete, pre_save, m2m_changed
+from django.db.models.signals import post_delete, post_save, pre_save, m2m_changed
 from django.dispatch import receiver
 
-from . import revision
-from . import summaries
-from ..covariates import update_site_covariates_in_thread
+from .revision import *  # noqa
+from .summaries import *  # noqa
+from ..covariates import update_site_covariates_threaded
 from ..models import *
 from ..resources.sync.views import (
     BENTHIC_ATTRIBUTES_SOURCE_TYPE,
@@ -191,9 +191,7 @@ def notify_admins_change(instance, changetype):
         return
 
     subject = f"Project administrator {subject_snippet} {instance.project.name}"
-    collect_project_url = (
-        f"https://{settings.DEFAULT_DOMAIN_COLLECT}/#/projects/{instance.project.pk}/users"
-    )
+    collect_project_url = f"https://{settings.DEFAULT_DOMAIN_COLLECT}/#/projects/{instance.project.pk}/users"
 
     context = {
         "project_name": instance.project.name,
@@ -237,7 +235,12 @@ def notify_new_project_user(sender, instance, created, **kwargs):
     else:
         template = "emails/user_added_to_project.html"
 
-    mermaid_email(f"New User added to {instance.project.name}", template, [instance.profile.email], context=context)
+    mermaid_email(
+        f"New User added to {instance.project.name}",
+        template,
+        [instance.profile.email],
+        context=context,
+    )
 
 
 # Don't need to iterate over TransectMethod subclasses because TransectMethod is not abstract
@@ -308,7 +311,7 @@ def run_cr_management_validation(sender, instance, *args, **kwargs):
 
 @receiver(pre_save, sender=Site)
 def update_with_covariates(sender, instance, *args, **kwargs):
-    update_site_covariates_in_thread(instance)
+    update_site_covariates_threaded(instance)
 
 
 @receiver(post_save, sender=FishFamily)

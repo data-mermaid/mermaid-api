@@ -178,6 +178,7 @@ class SummarySampleEventSQLModel(SummarySampleEventBaseModel):
             INNER JOIN project_profile ON (project.id = project_profile.project_id)
             INNER JOIN profile ON (project_profile.profile_id = profile.id)
             WHERE project_profile.role >= 90
+            AND project.id = '%(project_id)s'::uuid
             GROUP BY project.id
         ) pa ON (project.id = pa.id)
 
@@ -191,6 +192,7 @@ class SummarySampleEventSQLModel(SummarySampleEventBaseModel):
             INNER JOIN project ON (ti.object_id = project.id)
             INNER JOIN api_tag t ON (ti.tag_id = t.id)
             WHERE ct.app_label = 'api' AND ct.model = 'project'
+            AND project.id = '%(project_id)s'::uuid
             GROUP BY project.id
         ) tags ON (project.id = tags.id)
 
@@ -295,8 +297,6 @@ class SummarySampleEventSQLModel(SummarySampleEventBaseModel):
         ) bleachingqc ON (sample_event.id = bleachingqc.sample_event_id)
 
         WHERE site.project_id = '%(project_id)s'::uuid
-        -- Not a test project
-        AND project.status != 80
     """
 
     class Meta:
