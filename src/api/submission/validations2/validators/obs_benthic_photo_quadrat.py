@@ -67,6 +67,7 @@ class QuadratCountValidator(BaseValidator):
     def __call__(self, collect_record, **kwargs):
         num_quadrats = self.get_value(collect_record, self.num_quadrats_path)
         observations = self.get_value(collect_record, self.obs_benthic_photo_quadrats_path) or []
+        quadrat_numbers = sorted({self.get_value(o, self.observation_quadrat_number_path) for o in observations})
 
 
 
