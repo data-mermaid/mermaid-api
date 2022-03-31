@@ -4,11 +4,12 @@ from django import urls
 from django.conf import settings
 from django.core import serializers
 from django.core.cache import cache
-from django.db.models.signals import post_delete, post_save, pre_delete, pre_save, m2m_changed
+from django.db.models.signals import post_delete, post_save, pre_save, m2m_changed
 from django.dispatch import receiver
 
-from . import revision
-from ..covariates import update_site_covariates_in_thread
+from .revision import *  # noqa
+from .summaries import *  # noqa
+from ..covariates import update_site_covariates_threaded
 from ..models import *
 from ..resources.sync.views import (
     BENTHIC_ATTRIBUTES_SOURCE_TYPE,
@@ -136,25 +137,27 @@ def notify_admins_project_change(instance, text_changes):
 
 @receiver(post_save, sender=Project)
 def notify_admins_project_instance_change(sender, instance, created, **kwargs):
-    if not created:
-        old_values = instance._old_values
-        new_values = instance._new_values
-        diffs = [
-            (k, (v, new_values[k])) for k, v in old_values.items() if v != new_values[k]
-        ]
-        if diffs:
-            text_changes = []
-            for diff in diffs:
-                field = sender._meta.get_field(diff[0])
-                fname = field.verbose_name
-                oldval = diff[1][0]
-                newval = diff[1][1]
-                if field.choices:
-                    oldval = dict(field.choices)[diff[1][0]]
-                    newval = dict(field.choices)[diff[1][1]]
-                text_changes.append(f"Old {fname}: {oldval}\nNew {fname}: {newval}")
+    if created or not hasattr(instance, "_old_values"):
+        return
 
-            notify_admins_project_change(instance, text_changes)
+    old_values = instance._old_values
+    new_values = instance._new_values
+    diffs = [
+        (k, (v, new_values[k])) for k, v in old_values.items() if v != new_values[k]
+    ]
+    if diffs:
+        text_changes = []
+        for diff in diffs:
+            field = sender._meta.get_field(diff[0])
+            fname = field.verbose_name
+            oldval = diff[1][0]
+            newval = diff[1][1]
+            if field.choices:
+                oldval = dict(field.choices)[diff[1][0]]
+                newval = dict(field.choices)[diff[1][1]]
+            text_changes.append(f"Old {fname}: {oldval}\nNew {fname}: {newval}")
+
+        notify_admins_project_change(instance, text_changes)
 
 
 @receiver(m2m_changed, sender=Project.tags.through)
@@ -188,9 +191,7 @@ def notify_admins_change(instance, changetype):
         return
 
     subject = f"Project administrator {subject_snippet} {instance.project.name}"
-    collect_project_url = (
-        f"https://{settings.DEFAULT_DOMAIN_COLLECT}/#/projects/{instance.project.pk}/users"
-    )
+    collect_project_url = f"https://{settings.DEFAULT_DOMAIN_COLLECT}/#/projects/{instance.project.pk}/users"
 
     context = {
         "project_name": instance.project.name,
@@ -208,7 +209,7 @@ def notify_admins_change(instance, changetype):
 def notify_admins_new_admin(sender, instance, created, **kwargs):
     if instance.role >= ProjectProfile.ADMIN:
         notify_admins_change(instance, "add")
-    elif not created:
+    elif not created and hasattr(instance, "_old_values"):
         old_role = instance._old_values.get("role")
         if old_role >= ProjectProfile.ADMIN:
             notify_admins_change(instance, "remove")
@@ -234,7 +235,12 @@ def notify_new_project_user(sender, instance, created, **kwargs):
     else:
         template = "emails/user_added_to_project.html"
 
-    mermaid_email(f"New User added to {instance.project.name}", template, [instance.profile.email], context=context)
+    mermaid_email(
+        f"New User added to {instance.project.name}",
+        template,
+        [instance.profile.email],
+        context=context,
+    )
 
 
 # Don't need to iterate over TransectMethod subclasses because TransectMethod is not abstract
@@ -305,7 +311,7 @@ def run_cr_management_validation(sender, instance, *args, **kwargs):
 
 @receiver(pre_save, sender=Site)
 def update_with_covariates(sender, instance, *args, **kwargs):
-    update_site_covariates_in_thread(instance)
+    update_site_covariates_threaded(instance)
 
 
 @receiver(post_save, sender=FishFamily)

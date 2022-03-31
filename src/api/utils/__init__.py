@@ -1,6 +1,7 @@
 import math
 import re
 import numbers
+import subprocess
 from datetime import datetime
 
 from django.core.exceptions import ObjectDoesNotExist
@@ -66,16 +67,11 @@ def calc_biomass_density(
 
 
 def get_subclasses(cls):
-    result = []
-    classes_to_inspect = [cls]
-    while classes_to_inspect:
-        class_to_inspect = classes_to_inspect.pop()
-        for subclass in class_to_inspect.__subclasses__():
-            if subclass not in result:
-                classes_to_inspect.append(subclass)
-                if not subclass._meta.abstract:
-                    result.append(subclass)
-    return result
+    for subclass in cls.__subclasses__():
+        if not subclass._meta.abstract:
+            yield subclass
+        if subclass.__subclasses__():
+            yield from get_subclasses(subclass)
 
 
 def get_related_transect_methods(model):
@@ -180,3 +176,28 @@ def cast_int(val):
         return int(val)
     except (TypeError, ValueError):
         return None
+
+
+def run_subprocess(command, std_input=None, to_file=None):
+    try:
+        proc = subprocess.Popen(
+            command,
+            stdin=subprocess.PIPE,
+            stdout=subprocess.PIPE,
+            stderr=subprocess.PIPE,
+            universal_newlines=True,
+        )
+    except Exception as e:
+        print(command)
+        raise e
+
+    data, err = proc.communicate(input=std_input)
+
+    if to_file is not None:
+        with open(to_file, "w") as f:
+            f.write("DATA: \n")
+            f.write(str(data))
+            f.write("ERR: \n")
+            f.write(str(err))
+    else:
+        return data, err

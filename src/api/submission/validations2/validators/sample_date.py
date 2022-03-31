@@ -1,13 +1,16 @@
 from dateutil import tz
 from django.utils import timezone
 from django.utils.dateparse import parse_datetime
+from rest_framework.exceptions import ParseError
 from timezonefinder import TimezoneFinder
 
-from api.models import Site
 from .base import ERROR, OK, WARN, BaseValidator, validator_result
+from ....exceptions import check_uuid
+from ....models import Site
 
 
 class SampleDateValidator(BaseValidator):
+    INVALID_SITE = "invalid_site"
     INVALID_SAMPLE_DATE = "invalid_sample_date"
     FUTURE_SAMPLE_DATE = "future_sample_date"
 
@@ -24,7 +27,7 @@ class SampleDateValidator(BaseValidator):
     def is_future_sample_date(self, date_str, time_str, site_id):
         site = Site.objects.get_or_none(id=site_id)
 
-        if site is None or site.location is None:
+        if not site or site.location is None:
             return False
 
         x = site.location.x
@@ -33,6 +36,9 @@ class SampleDateValidator(BaseValidator):
         tf = TimezoneFinder()
         tz_str = tf.timezone_at(lng=x, lat=y) or "UTC"
         tzinfo = tz.gettz(tz_str)
+
+        date_str = date_str or ""
+        time_str = time_str or "00:00"
         sample_date = parse_datetime("{} {}".format(date_str, time_str))
         if sample_date is None:
             return False
@@ -53,6 +59,11 @@ class SampleDateValidator(BaseValidator):
 
         if sample_time_str.strip() == "":
             sample_time_str = None
+
+        try:
+            check_uuid(site_id)
+        except ParseError:
+            return ERROR, self.INVALID_SITE
 
         if self.is_sample_date(sample_date_str) is False:
             return ERROR, self.INVALID_SAMPLE_DATE

@@ -14,7 +14,6 @@ def test_edit_transect_method(db_setup, api_client1, project1, belt_fish_project
     }
     edit_url = reverse("beltfishtransectmethod-edit", kwargs=url_kwargs)
 
-
     request = api_client1.put(edit_url, data, format="json")
     response_data = request.json()
 

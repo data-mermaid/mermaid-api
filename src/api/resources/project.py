@@ -415,7 +415,10 @@ class ProjectViewSet(BaseApiViewSet):
     )
     def add_profile(self, request, pk, *args, **kwargs):
         email = request.data.get("email")
-        role = request.data.get("role")
+        try:
+            role = int(request.data.get("role"))
+        except (TypeError, ValueError):
+            role = ProjectProfile.COLLECTOR
         admin_profile = request.user.profile
 
         if email is None:
@@ -424,14 +427,15 @@ class ProjectViewSet(BaseApiViewSet):
             )
 
         profile, _ = Profile.objects.get_or_create(email=email)
-        project_profile, is_new = ProjectProfile.objects.get_or_create(
-            project_id=pk,
-            profile=profile,
-            role=role or ProjectProfile.COLLECTOR,
-            created_by=admin_profile,
-            updated_by=admin_profile,
-        )
-        if is_new is False:
+        if ProjectProfile.objects.filter(project_id=pk, profile=profile).exists() is False:
+            project_profile = ProjectProfile.objects.create(
+                project_id=pk,
+                profile=profile,
+                role=role,
+                created_by=admin_profile,
+                updated_by=admin_profile,
+            )
+        else:
             raise exceptions.ValidationError(
                 detail={"email": "Profile has already been added to project"}
             )

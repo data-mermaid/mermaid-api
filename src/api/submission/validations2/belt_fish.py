@@ -23,9 +23,9 @@ from .validators import (
     SampleTimeValidator,
     DrySubmitValidator,
     TotalFishCountValidator,
+    UniqueFishbeltTransectValidator,
     UniqueManagementValidator,
     UniqueSiteValidator,
-    UniqueTransectValidator,
 )
 from ...models import FishAttribute
 
@@ -211,7 +211,7 @@ belt_fish_validations = [
         validation_type=VALUE_VALIDATION_TYPE,
     ),
     Validation(
-        validator=UniqueTransectValidator(
+        validator=UniqueFishbeltTransectValidator(
             protocol="fishbelt",
             label_path="data.fishbelt_transect.label",
             number_path="data.fishbelt_transect.number",
@@ -221,6 +221,7 @@ belt_fish_validations = [
             management_path="data.sample_event.management",
             sample_date_path="data.sample_event.sample_date",
             depth_path="data.fishbelt_transect.depth",
+            observers_path="data.observers",
         ),
         paths=[
             "data.fishbelt_transect.label",
@@ -246,6 +247,7 @@ belt_fish_validations = [
     Validation(
         validator=UniqueManagementValidator(
             management_path="data.sample_event.management",
+            site_path="data.sample_event.site",
         ),
         paths=["data.sample_event.management"],
         validation_level=FIELD_LEVEL,

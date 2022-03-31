@@ -172,11 +172,12 @@ class SummarySiteSQLModel(SummarySiteBaseModel):
             INNER JOIN project_profile ON (project.id = project_profile.project_id)
             INNER JOIN profile ON (project_profile.profile_id = profile.id)
             WHERE project_profile.role >= 90
+            AND project.id = '%(project_id)s'::uuid
             GROUP BY project.id
         ) pa ON (project.id = pa.id)
 
         LEFT JOIN (
-            SELECT project.id, 
+            SELECT project.id,
             jsonb_agg(
                 jsonb_build_object('id', t.id, 'name', t.name)
             ) AS tags
@@ -188,7 +189,7 @@ class SummarySiteSQLModel(SummarySiteBaseModel):
             GROUP BY project.id
         ) tags ON (project.id = tags.id)
 
-        LEFT JOIN (
+        INNER JOIN (
             SELECT site_id,
             MIN(sample_date) AS date_min,
             MAX(sample_date) AS date_max

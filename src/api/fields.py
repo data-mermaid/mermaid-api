@@ -1,3 +1,4 @@
+from django.utils.translation import gettext_lazy as _
 from rest_framework import fields, serializers
 
 
@@ -52,3 +53,34 @@ class LazyChoiceField(serializers.ChoiceField):
             self.fail("invalid_choice", input=data)
 
     choices = property(_get_choices, _set_choices)
+
+
+
+class PositiveIntegerField(fields.Field):
+    default_error_messages = {
+        "min_value": _("Ensure this value is greater than or equal to 0.")
+    }
+
+    def __init__(self, **kwargs):
+        super().__init__(**kwargs)
+        self.allow_null = True
+        self.required = False
+        self.allow_blank = True
+        self.default = kwargs.get("default", 0)
+
+    def to_internal_value(self, value):
+        try:
+            val = int(value)
+        except (TypeError, ValueError):
+            val = self.default
+
+        if val is not None and val < 0:
+            self.fail("min_value")
+
+        return val
+
+    def to_representation(self, value):
+        try:
+            return int(value)
+        except (TypeError, ValueError):
+            return 0

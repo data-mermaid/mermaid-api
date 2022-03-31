@@ -22,6 +22,7 @@ import pytz
 from taggit.managers import TaggableManager
 from taggit.models import GenericUUIDTaggedItemBase, TagBase
 from ..utils import create_timestamp, expired_timestamp, get_sample_unit_number
+from ..utils.related import get_related_project
 from .base import (
     APPROVAL_STATUSES,
     AreaMixin,
@@ -42,9 +43,11 @@ BENTHICPIT_PROTOCOL = "benthicpit"
 FISHBELT_PROTOCOL = "fishbelt"
 HABITATCOMPLEXITY_PROTOCOL = "habitatcomplexity"
 BLEACHINGQC_PROTOCOL = "bleachingqc"
+BENTHIC_PHOTO_QUADRAT_TRANSECT = "benthicpqt"
 
 PROTOCOL_MAP = {
     BENTHICLIT_PROTOCOL: "Benthic LIT",
+    BENTHIC_PHOTO_QUADRAT_TRANSECT: "Benthic Photo Quadrat Transect",
     BENTHICPIT_PROTOCOL: "Benthic PIT",
     FISHBELT_PROTOCOL: "Fish Belt",
     HABITATCOMPLEXITY_PROTOCOL: "Habitat Complexity",
@@ -661,7 +664,6 @@ class BaseQuadrat(SampleUnit):
     )
 
     class Meta:
-        db_table = 'quadrat'
         abstract = True
         ordering = ('sample_event',)
 
@@ -669,7 +671,7 @@ class BaseQuadrat(SampleUnit):
         su_number = get_sample_unit_number(self)
         if su_number != '':
             su_number = ' {}'.format(su_number)
-        return _(u'%s%s') % (
+        return _('%s%s') % (
             self.sample_event.__str__(),
             su_number
         )
@@ -681,6 +683,19 @@ class QuadratCollection(BaseQuadrat):
 
     class Meta:
         db_table = 'quadrat_collection'
+
+
+class QuadratTransect(BenthicTransect):
+    project_lookup = "sample_event__site__project"
+
+    quadrat_size = models.DecimalField(
+        decimal_places=2, max_digits=6,
+        verbose_name=_('single quadrat area (m2)'),
+        default=1,
+        validators=[MinValueValidator(0)]
+    )
+    num_quadrats = models.PositiveSmallIntegerField()
+    num_points_per_quadrat = models.PositiveSmallIntegerField()
 
 
 # TODO: rename this SampleUnitMethod, and abstract all appropriate references elsewhere
@@ -702,6 +717,8 @@ class TransectMethod(BaseModel):
             return HABITATCOMPLEXITY_PROTOCOL
         elif hasattr(self, 'bleachingquadratcollection'):
             return BLEACHINGQC_PROTOCOL
+        elif hasattr(self, 'benthicphotoquadrattransect'):
+            return BENTHIC_PHOTO_QUADRAT_TRANSECT
         return None
 
     @property
@@ -716,6 +733,8 @@ class TransectMethod(BaseModel):
             return getattr(self, "habitatcomplexity")
         elif hasattr(self, "bleachingquadratcollection"):
             return getattr(self, "bleachingquadratcollection")
+        elif hasattr(self, "benthicphotoquadrattransect"):
+            return getattr(self, "benthicphotoquadrattransect")
         return None
 
     @property
@@ -738,6 +757,10 @@ class TransectMethod(BaseModel):
     def __str__(self):
         return str(_(u'transect method'))
 
+    @property
+    def project(self):
+        return get_related_project(self.sample_unit)
+
 
 class Observer(BaseModel):
     transectmethod = models.ForeignKey(TransectMethod, on_delete=models.CASCADE,
@@ -756,7 +779,6 @@ class Observer(BaseModel):
     @property
     def profile_name(self):
         return u'{} {}'.format(self.profile.first_name, self.profile.last_name)
-
 
 class BenthicLifeHistory(BaseChoiceModel):
     name = models.CharField(max_length=100)
@@ -1014,13 +1036,16 @@ class ObsQuadratBenthicPercent(BaseModel, JSONMixin):
     quadrat_number = models.PositiveSmallIntegerField(
         verbose_name=u"quadrat number"
     )
-    percent_hard = models.PositiveSmallIntegerField(
+    percent_hard = models.DecimalField(
+        max_digits=5, decimal_places=2,
         verbose_name=u"hard coral, % cover", null=True, blank=True
     )
-    percent_soft = models.PositiveSmallIntegerField(
+    percent_soft = models.DecimalField(
+        max_digits=5, decimal_places=2,
         verbose_name=u"soft coral, % cover", null=True, blank=True
     )
-    percent_algae = models.PositiveSmallIntegerField(
+    percent_algae = models.DecimalField(
+        max_digits=5, decimal_places=2,
         verbose_name=u"macroalgae, % cover", null=True, blank=True
     )
 
@@ -1034,6 +1059,55 @@ class ObsQuadratBenthicPercent(BaseModel, JSONMixin):
 
     def __str__(self):
         return _(u"%s") % self.quadrat_number
+
+
+class BenthicPhotoQuadratTransect(TransectMethod):
+    project_lookup = "quadrat_transect__sample_event__site__project"
+
+    quadrat_transect = models.OneToOneField(
+        QuadratTransect, on_delete=models.CASCADE,
+        related_name="benthic_photo_quadrat_transect_method",
+        verbose_name=_("benthic photo quadrat transect")
+    )
+
+    class Meta:
+        db_table = "transectmethod_benthicpqt"
+        verbose_name = _("benthic photo quadrat transect")
+        verbose_name_plural = _("benthic photo quadrat transects")
+
+    def __str__(self):
+        return _("benthic photo quadrat transect %s") % self.transect.__str__()
+
+
+class ObsBenthicPhotoQuadrat(BaseModel, JSONMixin):
+    project_lookup = "benthic_photo_quadrat_transect__quadrat_transect__sample_event__site__project"
+
+    benthic_photo_quadrat_transect = models.ForeignKey(
+        BenthicPhotoQuadratTransect, on_delete=models.CASCADE
+    )
+
+    quadrat_number = models.PositiveSmallIntegerField(
+        verbose_name="quadrat number"
+    )
+    attribute = models.ForeignKey(BenthicAttribute, on_delete=models.PROTECT)
+    growth_form = models.ForeignKey(GrowthForm, on_delete=models.SET_NULL, null=True, blank=True)
+    num_points = models.PositiveSmallIntegerField(verbose_name='number of points', default=0)
+
+    class Meta:
+        db_table = "obs_benthic_photo_quadrat"
+        verbose_name = _(
+            "benthic photo quadrat transect observation"
+        )
+        unique_together = (
+            "benthic_photo_quadrat_transect",
+            "quadrat_number",
+            "attribute",
+            "growth_form"
+        )
+        ordering = ["created_on"]
+
+    def __str__(self):
+        return str(self.quadrat_number)
 
 
 class FishAttribute(BaseAttributeModel):
@@ -1567,6 +1641,8 @@ class CollectRecord(BaseModel):
             obs_keys = ["obs_benthic_pits"]
         elif protocol == HABITATCOMPLEXITY_PROTOCOL:
             obs_keys = ["obs_habitat_complexities"]
+        elif protocol == BENTHIC_PHOTO_QUADRAT_TRANSECT:
+            obs_keys = ["obs_benthic_photo_quadrats"]
 
         for obs_key in obs_keys:
             self.data[obs_key] = [self._assign_id(r) for r in self.data.get(obs_key) or []]

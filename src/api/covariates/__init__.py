@@ -1,5 +1,7 @@
-from api.decorators import run_in_thread
-from api.models import Covariate, Site
+from django.conf import settings
+
+from ..decorators import run_in_thread
+from ..models import Covariate
 from .coral_atlas import CoralAtlasCovariate
 from .vibrant_oceans import VibrantOceansThreatsCovariate
 
@@ -12,13 +14,8 @@ def location_checks(site, covariate_cls, force=False):
     lon_max = 180
 
     point = site.location
-    existing_site = Site.objects.get_or_none(pk=site.pk)
 
-    return (
-        (force is not False or (not existing_site or existing_site.location != point))
-        and lat_min < point.y < lat_max
-        and lon_min < point.x < lon_max
-    )
+    return lat_min < point.y < lat_max and lon_min < point.x < lon_max
 
 
 def update_site_aca_covariates(site, force):
@@ -116,12 +113,12 @@ def update_site_vot_covariates(site, force):
         covariate.save()
 
 
-@run_in_thread
-def update_site_covariates_in_thread(site, force=False):
-    update_site_aca_covariates(site, force=force)
-    update_site_vot_covariates(site, force=force)
-
-
 def update_site_covariates(site, force=False):
-    update_site_aca_covariates(site, force=force)
-    update_site_vot_covariates(site, force=force)
+    if settings.ENVIRONMENT in ("dev", "prod"):
+        update_site_aca_covariates(site, force=force)
+        update_site_vot_covariates(site, force=force)
+
+
+@run_in_thread
+def update_site_covariates_threaded(site, force=False):
+    update_site_covariates(site, force=force)

@@ -1,9 +1,9 @@
+import boto3
 import os
 import shlex
 import subprocess
 import traceback
-
-import boto3
+from api.utils import run_subprocess
 from django.conf import settings
 from django.core.management.base import BaseCommand
 
@@ -91,7 +91,7 @@ class Command(BaseCommand):
         else:
             bucket_file_list = self.get_s3_bucket_obj_list(AWS_BACKUP_BUCKET)
 
-            if bucket_file_list and len(bucket_file_list) > 0:
+            if bucket_file_list:
                 latest_key_name = None
 
                 # Get key with oldest timestamp, use self.restore to identify which backup
@@ -178,7 +178,7 @@ class Command(BaseCommand):
             psql_command = "%s %s" % (cmd, query.format(**params))
             print(psql_command)
             command = shlex.split(psql_command)
-            self._run(command)
+            run_subprocess(command)
 
         print("Init Complete!")
 
@@ -198,28 +198,4 @@ class Command(BaseCommand):
 
         command = shlex.split(cmd_str)
 
-        self._run(command, to_file="/tmp/mermaid/stdout.log")
-
-    def _run(self, command, std_input=None, to_file=None):
-        try:
-            proc = subprocess.Popen(
-                command,
-                stdin=subprocess.PIPE,
-                stdout=subprocess.PIPE,
-                stderr=subprocess.PIPE,
-            )
-        except Exception as e:
-            print(command)
-            raise e
-
-        data, err = proc.communicate(input=std_input)
-
-        if to_file is not None:
-            with open(to_file, "w") as f:
-                f.write("DATA: \n")
-                f.write(str(data))
-                f.write("ERR: \n")
-                f.write(str(err))
-        else:
-            print(data)
-            print(err)
+        run_subprocess(command, to_file=f"/tmp/mermaid/std_out_restore.log")

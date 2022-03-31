@@ -70,22 +70,18 @@ def create_audit_record(profile, event_type, record):
 
 @transaction.atomic
 def edit_transect_method(serializer_class, collect_record_owner, request, pk, protocol):
-    sid = transaction.savepoint()
-    try:
-        instance = serializer_class.Meta.model.objects.get(id=pk)
-        collect_record = transect_method_to_collect_record(
-            serializer_class,
-            instance,
-            collect_record_owner,
-            protocol
-        )
-        create_audit_record(
-            request.user.profile,
-            AuditRecord.EDIT_RECORD_EVENT_TYPE,
-            instance
-        )
-        instance.delete()
-        return collect_record
-    except:
-        transaction.savepoint_rollback(sid)
-        raise
+    instance = serializer_class.Meta.model.objects.get(id=pk)
+    collect_record = transect_method_to_collect_record(
+        serializer_class,
+        instance,
+        collect_record_owner,
+        protocol
+    )
+    create_audit_record(
+        request.user.profile,
+        AuditRecord.EDIT_RECORD_EVENT_TYPE,
+        instance
+    )
+    instance.delete()
+
+    return collect_record

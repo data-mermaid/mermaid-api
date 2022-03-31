@@ -14,7 +14,7 @@ class Job:
         :param obj callable: [optional] A callable to run.
         """
         self._id = job_id if job_id is not None else str(uuid.uuid4())
-        self.group = group if group else "mermaid"
+        self.group = group or "mermaid"
         self.start_time = None
         self.stop_time = None
         self.run_time = None
@@ -39,23 +39,25 @@ class Job:
         self._id = val
 
     @property
+    def composite_id(self):
+        return f"{self.group}::{self.id}"
+
+    @property
     def message(self):
         return dict(
-            MessageAttributes={
-                "id": {
-                    "StringValue": self.id,
-                    "DataType": "String"
-                }
-            },
+            MessageAttributes={"id": {"StringValue": self.id, "DataType": "String"}},
+            MessageDeduplicationId=self.composite_id,
             MessageGroupId=self.group,
             MessageBody=codecs.encode(
-                dumps({
-                    "callable": self.callable,
-                    "args": self.args,
-                    "kwargs": self.kwargs,
-                }),
-                "base64"
-            ).decode()
+                dumps(
+                    {
+                        "callable": self.callable,
+                        "args": self.args,
+                        "kwargs": self.kwargs,
+                    }
+                ),
+                "base64",
+            ).decode(),
         )
 
     @classmethod
@@ -100,7 +102,8 @@ class Job:
             self.stop_time = datetime.utcnow()
             self.run_time = (self.stop_time - self.start_time).total_seconds()
             self.log(
-                f"Finished job {self.callable.__name__} at {self.stop_time.isoformat()} in {self.run_time} seconds."
+                f"Finished job {self.callable.__name__} at {self.stop_time.isoformat()} "
+                "in {self.run_time} seconds."
             )
         else:
             self.log(f"Job {self.callable.__name__} failed to run: {self.exception}")

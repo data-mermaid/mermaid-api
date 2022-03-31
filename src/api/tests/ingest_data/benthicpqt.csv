@@ -1,0 +1,30 @@
+Site *,Management *,Sample date: Year *,Sample date: Month *,Sample date: Day *,Sample time,Depth *,Transect length surveyed *,Number of quadrats *,Quadrat size *,Number of points per quadrat *,Transect number *,Transect label,Reef slope,Visibility,Current,Relative depth,Tide,Notes,Observer emails *,Quadrat *,Benthic attribute *,Growth form,Number of points *
+Site 1,Management 1,2009,4,15,11:46:00,4,50,7,0.5,100,1,,,Near,,Deep,Low,,profile1@mermaidcollect.org,1,Red Fleshy Algae,,50
+Site 1,Management 1,2009,4,15,11:46:00,4,50,7,0.5,100,1,,,Near,,Deep,Low,,profile1@mermaidcollect.org,1,Faviidae,massive,5
+Site 1,Management 1,2009,4,15,11:46:00,4,50,7,0.5,100,1,,,Near,,Deep,Low,,profile1@mermaidcollect.org,1,Rock,,32
+Site 1,Management 1,2009,4,15,11:46:00,4,50,7,0.5,100,1,,,Near,,Deep,Low,,profile1@mermaidcollect.org,1,Sand,,13
+Site 1,Management 1,2009,4,15,11:46:00,4,50,7,0.5,100,1,,,Near,,Deep,Low,,profile1@mermaidcollect.org,2,Red Fleshy Algae,,59
+Site 1,Management 1,2009,4,15,11:46:00,4,50,7,0.5,100,1,,,Near,,Deep,Low,,profile1@mermaidcollect.org,2,Rock,,31
+Site 1,Management 1,2009,4,15,11:46:00,4,50,7,0.5,100,1,,,Near,,Deep,Low,,profile1@mermaidcollect.org,2,Sand,,10
+Site 1,Management 1,2009,4,15,11:46:00,4,50,7,0.5,100,1,,,Near,,Deep,Low,,profile1@mermaidcollect.org,3,Red Fleshy Algae,,70
+Site 1,Management 1,2009,4,15,11:46:00,4,50,7,0.5,100,1,,,Near,,Deep,Low,,profile1@mermaidcollect.org,3,Rock,,24
+Site 1,Management 1,2009,4,15,11:46:00,4,50,7,0.5,100,1,,,Near,,Deep,Low,,profile1@mermaidcollect.org,3,Sand,,6
+Site 1,Management 1,2009,4,15,11:46:00,4,50,7,0.5,100,1,,,Near,,Deep,Low,,profile1@mermaidcollect.org,4,Red Fleshy Algae,,75
+Site 1,Management 1,2009,4,15,11:46:00,4,50,7,0.5,100,1,,,Near,,Deep,Low,,profile1@mermaidcollect.org,4,Rock,,17
+Site 1,Management 1,2009,4,15,11:46:00,4,50,7,0.5,100,1,,,Near,,Deep,Low,,profile1@mermaidcollect.org,4,Sand,,8
+Site 1,Management 1,2009,4,15,11:46:00,4,50,7,0.5,100,1,,,Near,,Deep,Low,,profile1@mermaidcollect.org,5,Red Fleshy Algae,,47
+Site 1,Management 1,2009,4,15,11:46:00,4,50,7,0.5,100,1,,,Near,,Deep,Low,,profile1@mermaidcollect.org,5,Faviidae,massive,2
+Site 1,Management 1,2009,4,15,11:46:00,4,50,7,0.5,100,1,,,Near,,Deep,Low,,profile1@mermaidcollect.org,5,Rock,,43
+Site 1,Management 1,2009,4,15,11:46:00,4,50,7,0.5,100,1,,,Near,,Deep,Low,,profile1@mermaidcollect.org,5,Sand,,8
+Site 1,Management 1,2009,4,15,11:46:00,4,50,7,0.5,100,1,,,Near,,Deep,Low,,profile1@mermaidcollect.org,6,Red Fleshy Algae,,55
+Site 1,Management 1,2009,4,15,11:46:00,4,50,7,0.5,100,1,,,Near,,Deep,Low,,profile1@mermaidcollect.org,6,Macroalgae,,8
+Site 1,Management 1,2009,4,15,11:46:00,4,50,7,0.5,100,1,,,Near,,Deep,Low,,profile1@mermaidcollect.org,6,Faviidae,digitate,3
+Site 1,Management 1,2009,4,15,11:46:00,4,50,7,0.5,100,1,,,Near,,Deep,Low,,profile1@mermaidcollect.org,6,Faviidae,,3
+Site 1,Management 1,2009,4,15,11:46:00,4,50,7,0.5,100,1,,,Near,,Deep,Low,,profile1@mermaidcollect.org,6,Rock,,25
+Site 1,Management 1,2009,4,15,11:46:00,4,50,7,0.5,100,1,,,Near,,Deep,Low,,profile1@mermaidcollect.org,6,Sand,,6
+Site 1,Management 1,2009,4,15,11:46:00,4,50,7,0.5,100,1,,,Near,,Deep,Low,,profile1@mermaidcollect.org,7,Red Fleshy Algae,,100
+Site 1,Management 1,2009,4,16,7:00:00,7,50,2,0.5,100,1,,flat,,Strong,Shallow,High,,profile1@mermaidcollect.org,1,Faviidae,digitate,3
+Site 1,Management 1,2009,4,16,7:00:00,7,50,2,0.5,100,1,,flat,,Strong,Shallow,High,,profile1@mermaidcollect.org,1,Faviidae,,3
+Site 1,Management 1,2009,4,16,7:00:00,7,50,2,0.5,100,1,,flat,,Strong,Shallow,High,,profile1@mermaidcollect.org,2,Rock,,25
+Site 1,Management 1,2009,4,16,7:00:00,7,50,2,0.5,100,1,,flat,,Strong,Shallow,High,,profile1@mermaidcollect.org,2,Sand,,6
+Site 1,Management 1,2009,4,16,7:00:00,7,50,2,0.5,100,1,,flat,,Strong,Shallow,High,,profile1@mermaidcollect.org,2,Red Fleshy Algae,,100

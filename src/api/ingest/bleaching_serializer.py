@@ -1,8 +1,8 @@
 from django.utils.translation import gettext_lazy as _
-from rest_framework import fields, serializers
+from rest_framework import serializers
 from rest_framework.exceptions import ValidationError
 
-from ..fields import LazyChoiceField
+from ..fields import LazyChoiceField, PositiveIntegerField
 from ..models import BLEACHINGQC_PROTOCOL, BenthicAttribute, GrowthForm
 from .choices import (
     build_choices,
@@ -14,36 +14,6 @@ from .choices import (
 from .serializers import CollectRecordCSVListSerializer, CollectRecordCSVSerializer
 
 __all__ = ["BleachingCSVSerializer"]
-
-
-class PositiveIntegerField(fields.Field):
-    default_error_messages = {
-        "min_value": _("Ensure this value is greater than or equal to 0.")
-    }
-
-    def __init__(self, **kwargs):
-        super().__init__(**kwargs)
-        self.allow_null = True
-        self.required = False
-        self.allow_blank = True
-        self.default = kwargs.get("default", 0)
-
-    def to_internal_value(self, value):
-        try:
-            val = int(value)
-        except (TypeError, ValueError):
-            val = self.default
-
-        if val is not None and val < 0:
-            self.fail("min_value")
-
-        return val
-
-    def to_representation(self, value):
-        try:
-            return int(value)
-        except (TypeError, ValueError):
-            return 0
 
 
 def growth_form_choices():
@@ -170,9 +140,12 @@ class BleachingCSVSerializer(CollectRecordCSVSerializer):
     data__obs_colonies_bleached__count_100 = PositiveIntegerField()
     data__obs_colonies_bleached__count_dead = PositiveIntegerField()
     data__obs_quadrat_benthic_percent__quadrat_number = PositiveIntegerField()
-    data__obs_quadrat_benthic_percent__percent_hard = PositiveIntegerField(default=None)
-    data__obs_quadrat_benthic_percent__percent_soft = PositiveIntegerField(default=None)
-    data__obs_quadrat_benthic_percent__percent_algae = PositiveIntegerField(default=None)
+    data__obs_quadrat_benthic_percent__percent_hard = serializers.DecimalField(
+        default=None, required=False, max_digits=5, decimal_places=2, allow_null=True)
+    data__obs_quadrat_benthic_percent__percent_soft = serializers.DecimalField(
+        default=None, required=False, max_digits=5, decimal_places=2, allow_null=True)
+    data__obs_quadrat_benthic_percent__percent_algae = serializers.DecimalField(
+        default=None, required=False, max_digits=5, decimal_places=2, allow_null=True)
 
     def skip_field(self, data, field):
         empty_fields = []
