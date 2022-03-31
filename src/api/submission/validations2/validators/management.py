@@ -124,22 +124,13 @@ class UniqueManagementValidator(BaseValidator):
                     tbfs.id IS NOT NULL OR
                     qcs.id IS NOT NULL
                 )
-            ),
-            cr_mrs AS (
-                SELECT DISTINCT (cr.data #>> '{sample_event, management}')::text AS "management_id"
-                FROM api_collectrecord cr
-                WHERE cr.project_id = %(project_id)s
             )
             SELECT management.id, management.project_id, management.name, management.name_secondary
             FROM management
             WHERE (
                 management.id != %(mr_id)s
                 AND management.project_id = %(project_id)s
-                AND (
-                    management.id IN (SELECT * FROM se_mrs)
-                    OR
-                    management.id::text IN (SELECT * FROM cr_mrs)
-                )
+                AND management.id IN (SELECT * FROM se_mrs)
                 AND
                     LOWER(
                         REPLACE(
