@@ -15,7 +15,6 @@ def submit_job(delay, callable, *args, **kwargs):
     kwargs = kwargs or []
     q = Queue(settings.QUEUE_NAME)
     job_id = generate_job_id(delay, callable, *args, **kwargs)
-    print(f"---> {job_id}")
     job = Job(job_id, None, callable, *args, **kwargs)
     q.add_job(job, delay=delay)
 
