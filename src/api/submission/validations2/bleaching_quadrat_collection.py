@@ -108,6 +108,7 @@ bleaching_quadrat_collection_validations = [
     Validation(
         validator=UniqueManagementValidator(
             management_path="data.sample_event.management",
+            site_path="data.sample_event.site",
         ),
         paths=["data.sample_event.management"],
         validation_level=FIELD_LEVEL,

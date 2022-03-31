@@ -5,6 +5,7 @@ from api.submission.validations2.validators import OK, WARN, ERROR, UniqueManage
 def _get_validator():
     return UniqueManagementValidator(
         management_path="data.sample_event.management",
+        site_path="data.sample_event.site",
     )
 
 
@@ -24,11 +25,13 @@ def test_management_validator_invalid_not_found(valid_collect_record):
     assert result.code == UniqueManagementValidator.MANAGEMENT_NOT_FOUND
 
 
-def test_management_validator_invalid_not_unique_site(project1, management1, valid_collect_record, valid_benthic_lit_collect_record):
+def test_management_validator_invalid_not_unique_site(project1, management1, valid_collect_record, benthic_lit1, benthic_lit_project):
     validator = _get_validator()
 
     management1.id = None
     management1.save()
+
+
     valid_collect_record.data["sample_event"]["management"] = str(management1.pk)
     valid_collect_record.save()
 
@@ -39,10 +42,10 @@ def test_management_validator_invalid_not_unique_site(project1, management1, val
     assert result.code == UniqueManagementValidator.NOT_UNIQUE
 
 
-def test_management_validator_invalid_not_unique_name(project1, management1, site1, valid_collect_record, valid_benthic_lit_collect_record):
+def test_management_validator_invalid_not_unique_name(project1, management1, site1, valid_collect_record, benthic_lit_project):
     validator = _get_validator()
 
-    management1.id = None
+    management1.pk = None
     management1.name = management1.name.replace(" ", "-")
     management1.save()
 
