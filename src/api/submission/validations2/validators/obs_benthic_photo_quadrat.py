@@ -1,4 +1,5 @@
 from collections import defaultdict
+from dataclasses import MISSING
 from .base import OK, WARN, ERROR, BaseValidator, validator_result
 
 
@@ -50,6 +51,36 @@ class PointsPerQuadratValidator(BaseValidator):
 
 
 class QuadratCountValidator(BaseValidator):
+    DIFFERENT_NUMBER_OF_QUADRATS = "diff_num_quadrats"
+
+    def __init__(
+        self,
+        num_quadrats_path,
+        obs_benthic_photo_quadrats_path,
+        observation_quadrat_number_path,
+        **kwargs
+    ):
+        self.num_quadrats_path = num_quadrats_path
+        self.obs_benthic_photo_quadrats_path = obs_benthic_photo_quadrats_path
+        self.observation_quadrat_number_path = observation_quadrat_number_path
+
+        super().__init__(**kwargs)
+    
+    @validator_result
+    def __call__(self, collect_record, **kwargs):
+        num_quadrats = self.get_value(collect_record, self.num_quadrats_path)
+        observations = self.get_value(collect_record, self.obs_benthic_photo_quadrats_path) or []
+        quadrat_numbers = {self.get_value(o, self.observation_quadrat_number_path) for o in observations}
+
+        if len(quadrat_numbers) != num_quadrats:
+            return WARN, self.DIFFERENT_NUMBER_OF_QUADRATS
+
+        return OK
+
+
+class QuadratNumberSequenceValidator(BaseValidator):
+    MISSING_QUADRAT_NUMBERS = "missing_quadrat_numbers"
+
     def __init__(
         self,
         num_quadrats_path,
@@ -69,6 +100,16 @@ class QuadratCountValidator(BaseValidator):
         observations = self.get_value(collect_record, self.obs_benthic_photo_quadrats_path) or []
         quadrat_numbers = sorted({self.get_value(o, self.observation_quadrat_number_path) for o in observations})
 
+        quadrat_number_seq = [quadrat_numbers[0] + i for i in range(len(quadrat_numbers))]
+
+        missing_quadrat_numbers = [qn for qn in quadrat_number_seq if qn not in quadrat_numbers]
+        
+        if missing_quadrat_numbers:
+            return WARN, self.MISSING_QUADRAT_NUMBERS, {"missing_quadrat_numbers": missing_quadrat_numbers}
+
+        print(f"quadrat_numbers: {quadrat_numbers}")
+
+        return WARN
 
 
 # class UniqueObsBenthicPhotoQuadrat(BaseValidator):

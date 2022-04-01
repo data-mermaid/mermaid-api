@@ -1,6 +1,6 @@
 import pytest
 
-from api.models import FISHBELT_PROTOCOL, CollectRecord, ProjectProfile
+from api.models import BENTHIC_PHOTO_QUADRAT_TRANSECT, FISHBELT_PROTOCOL, CollectRecord, ProjectProfile
 
 
 @pytest.fixture
@@ -1042,7 +1042,7 @@ def valid_benthic_pq_transect_collect_record(
     ]
 
     data = {
-        "protocol": CollectRecord.BENTHIC_PHOTO_QUADRAT_TRANSECT,
+        "protocol": BENTHIC_PHOTO_QUADRAT_TRANSECT,
         "obs_benthic_photo_quadrats": obs_benthic_photo_quadrats,
         "quadrat_transect": {
             "quadrat_size": 1,
