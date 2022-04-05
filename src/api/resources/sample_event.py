@@ -43,7 +43,7 @@ class SampleEventSerializer(BaseAPISerializer):
 
 
 class SampleEventFilterSet(BaseAPIFilterSet):
-    sample_date = django_filters.DateTimeFromToRangeFilter(field_name="sample_date")
+    sample_date = django_filters.DateFromToRangeFilter()
 
     class Meta:
         model = SampleEvent
