@@ -151,6 +151,18 @@ class BenthicLITSUSQLModel(BaseSUSQLModel):
     sql = f"""
         WITH benthiclit_obs AS (
             {BenthicLITObsSQLModel.sql}
+        ),
+        benthiclit_observers AS (
+            SELECT pseudosu_id,
+            jsonb_agg(DISTINCT observer) AS observers
+
+            FROM (
+                SELECT pseudosu_id,
+                jsonb_array_elements(observers) AS observer
+                FROM benthiclit_obs
+                GROUP BY pseudosu_id, observers
+            ) benthiclit_obs_obs
+            GROUP BY pseudosu_id
         )
         SELECT NULL AS id,
             benthiclit_su.pseudosu_id,
@@ -214,18 +226,7 @@ class BenthicLITSUSQLModel(BaseSUSQLModel):
         ) cat_percents 
         ON (benthiclit_su.pseudosu_id = cat_percents.pseudosu_id)
 
-        INNER JOIN (
-            SELECT pseudosu_id,
-            jsonb_agg(DISTINCT observer) AS observers
-
-            FROM (
-                SELECT pseudosu_id,
-                jsonb_array_elements(observers) AS observer
-                FROM benthiclit_obs
-                GROUP BY pseudosu_id, observers
-            ) benthiclit_obs_obs
-            GROUP BY pseudosu_id
-        ) benthiclit_observers
+        INNER JOIN benthiclit_observers
         ON (benthiclit_su.pseudosu_id = benthiclit_observers.pseudosu_id)
     """
 
