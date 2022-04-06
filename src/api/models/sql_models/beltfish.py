@@ -176,6 +176,17 @@ class BeltFishSUSQLModel(BaseSUSQLModel):
     sql = f"""
         WITH beltfish_obs AS (
             {BeltFishObsSQLModel.sql}
+        ),
+        beltfish_observers AS (
+            SELECT pseudosu_id,
+            jsonb_agg(DISTINCT observer) AS observers
+            FROM (
+                SELECT pseudosu_id,
+                jsonb_array_elements(observers) AS observer
+                FROM beltfish_obs
+                GROUP BY pseudosu_id, observers
+            ) beltfish_obs_obs
+            GROUP BY pseudosu_id
         )
         SELECT NULL AS id,
         beltfish_su.pseudosu_id,
@@ -246,19 +257,7 @@ class BeltFishSUSQLModel(BaseSUSQLModel):
             GROUP BY pseudosu_id
         ) beltfish_families
         ON (beltfish_su.pseudosu_id = beltfish_families.pseudosu_id)
-
-        INNER JOIN (
-            SELECT pseudosu_id,
-            jsonb_agg(DISTINCT observer) AS observers
-
-            FROM (
-                SELECT pseudosu_id,
-                jsonb_array_elements(observers) AS observer
-                FROM beltfish_obs
-                GROUP BY pseudosu_id, observers
-            ) beltfish_obs_obs
-            GROUP BY pseudosu_id
-        ) beltfish_observers
+        INNER JOIN beltfish_observers
         ON (beltfish_su.pseudosu_id = beltfish_observers.pseudosu_id)
     """
 

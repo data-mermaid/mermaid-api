@@ -195,7 +195,21 @@ class BleachingQCSUSQLModel(BaseSUSQLModel):
                 JOIN bleachingqc_colonies_bleached_obs bcbo ON su.sample_event_id = bcbo.sample_event_id
                 GROUP BY {", ".join(BaseSUSQLModel.qc_su_fields)}
             ) pseudosu
-        ) 
+        ),
+        bleachingqc_observers AS (
+            SELECT pseudosu_id,
+            jsonb_agg(DISTINCT observer) AS observers
+
+            FROM (
+                SELECT pseudosu_id,
+                jsonb_array_elements(observers) AS observer
+                FROM bleachingqc_colonies_bleached_obs
+                INNER JOIN pseudosu_su 
+                ON(bleachingqc_colonies_bleached_obs.sample_unit_id = pseudosu_su.sample_unit_id)
+                GROUP BY pseudosu_id, observers
+            ) bleachingqc_obs_obs
+            GROUP BY pseudosu_id
+        )
         SELECT NULL AS id,
         bleachingqc_su.pseudosu_id,
         {_su_fields},
@@ -240,7 +254,8 @@ class BleachingQCSUSQLModel(BaseSUSQLModel):
             GROUP BY pseudosu_id,
             {_su_fields_qualified}
         ) bleachingqc_su
-
+        INNER JOIN bleachingqc_observers
+            ON (bleachingqc_su.pseudosu_id = bleachingqc_observers.pseudosu_id)
         LEFT JOIN (
             SELECT pseudosu_id,
             COUNT(quadrat_number) AS quadrat_count,
@@ -252,21 +267,6 @@ class BleachingQCSUSQLModel(BaseSUSQLModel):
                 ON(bleachingqc_quadrat_benthic_percent_obs.sample_unit_id = pseudosu_su.sample_unit_id)
             GROUP BY pseudosu_id
         ) bp ON bleachingqc_su.pseudosu_id = bp.pseudosu_id
-
-        INNER JOIN (
-            SELECT pseudosu_id,
-            jsonb_agg(DISTINCT observer) AS observers
-
-            FROM (
-                SELECT pseudosu_id,
-                jsonb_array_elements(observers) AS observer
-                FROM bleachingqc_colonies_bleached_obs
-                INNER JOIN pseudosu_su ON(bleachingqc_colonies_bleached_obs.sample_unit_id = pseudosu_su.sample_unit_id)
-                GROUP BY pseudosu_id, observers
-            ) bleachingqc_obs_obs
-            GROUP BY pseudosu_id
-        ) bleachingqc_observers
-        ON (bleachingqc_su.pseudosu_id = bleachingqc_observers.pseudosu_id)
     """
 
     sql_args = dict(project_id=SQLTableArg(required=True))

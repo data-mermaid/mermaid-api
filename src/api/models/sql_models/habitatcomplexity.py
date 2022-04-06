@@ -107,6 +107,18 @@ class HabitatComplexitySUSQLModel(BaseSUSQLModel):
     sql = f"""
         WITH habitatcomplexity_obs AS (
             {HabitatComplexityObsSQLModel.sql}
+        ),
+        habcomp_observers AS (
+            SELECT pseudosu_id,
+            jsonb_agg(DISTINCT observer) AS observers
+
+            FROM (
+                SELECT pseudosu_id,
+                jsonb_array_elements(observers) AS observer
+                FROM habitatcomplexity_obs
+                GROUP BY pseudosu_id, observers
+            ) habcomp_obs_obs
+            GROUP BY pseudosu_id
         )
         SELECT NULL AS id,
         habcomp_su.pseudosu_id,
@@ -127,18 +139,7 @@ class HabitatComplexitySUSQLModel(BaseSUSQLModel):
             {_su_fields_qualified}
         ) habcomp_su
 
-        INNER JOIN (
-            SELECT pseudosu_id,
-            jsonb_agg(DISTINCT observer) AS observers
-
-            FROM (
-                SELECT pseudosu_id,
-                jsonb_array_elements(observers) AS observer
-                FROM habitatcomplexity_obs
-                GROUP BY pseudosu_id, observers
-            ) habcomp_obs_obs
-            GROUP BY pseudosu_id
-        ) habcomp_observers
+        INNER JOIN habcomp_observers
         ON (habcomp_su.pseudosu_id = habcomp_observers.pseudosu_id)
     """
 
