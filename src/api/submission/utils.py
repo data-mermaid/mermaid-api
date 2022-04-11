@@ -38,6 +38,7 @@ from .writer import (
     FishbeltProtocolWriter,
     HabitatComplexityProtocolWriter,
 )
+from ..utils.q import submit_job
 from ..utils.sample_unit_methods import create_audit_record
 from ..utils.summaries import update_project_summaries
 
@@ -121,7 +122,7 @@ def write_collect_record(collect_record, request, dry_run=False):
                 )
                 collect_record.delete()
                 transaction.savepoint_commit(sid)
-                update_project_summaries(collect_record.project_id)
+                submit_job(5, update_project_summaries, project_id=collect_record.project_id)
         return status, result
 
 
