@@ -5,7 +5,7 @@
 <p>
   <strong>{{project_profile.profile.full_name}} ({{project_profile.profile.email}})</strong> was added to
   <strong>{{project_profile.project.name}}</strong> by
-  <strong>{% if profile %}{{admin_profile.full_name}} ({{admin_profileprofile.email}}){% else %}a superadmin
+  <strong>{% if admin_profile %}{{admin_profile.full_name}} ({{admin_profile.email}}){% else %}a superadmin
   not using the API{% endif %}</strong>.
 </p>
 {% endblock %}
