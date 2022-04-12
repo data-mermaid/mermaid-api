@@ -160,8 +160,7 @@ class SummarySampleEventFilterSet(AggregatedViewFilterSet):
     project_id = filters.BaseInFilter(method="id_lookup")
     project_name = filters.BaseInFilter(method="char_lookup")
     project_admins = filters.BaseInFilter(method="json_name_lookup")
-    date_min = filters.DateFromToRangeFilter()
-    date_max = filters.DateFromToRangeFilter()
+    sample_date = filters.DateFromToRangeFilter()
 
     class Meta:
         model = SummarySampleEventModel
