@@ -26,7 +26,7 @@ from .validators import (
     DrySubmitValidator,
     UniqueManagementValidator,
     UniqueSiteValidator,
-    # UniqueQuadratTransectValidator,
+    UniqueQuadratTransectValidator,
 )
 from ...models import BenthicAttribute
 
@@ -65,9 +65,9 @@ benthic_photo_quadrat_transect_validations = [
     ),
     Validation(
         validator=RequiredValidator(
-            path="data.sample_event.quadrat_size",
+            path="data.quadrat_transect.quadrat_size",
         ),
-        paths=["data.sample_event.quadrat_size"],
+        paths=["data.quadrat_transect.quadrat_size"],
         validation_level=FIELD_LEVEL,
         validation_type=VALUE_VALIDATION_TYPE,
     ),
@@ -208,13 +208,13 @@ benthic_photo_quadrat_transect_validations = [
         validation_level=FIELD_LEVEL,
         validation_type=VALUE_VALIDATION_TYPE,
     ),
-    Validation(
-        validator=DrySubmitValidator(),
-        paths=["__all__"],
-        validation_level=RECORD_LEVEL,
-        validation_type=VALUE_VALIDATION_TYPE,
-        requires_instance=True,
-    ),
+    # Validation(
+    #     validator=DrySubmitValidator(),
+    #     paths=["__all__"],
+    #     validation_level=RECORD_LEVEL,
+    #     validation_type=VALUE_VALIDATION_TYPE,
+    #     requires_instance=True,
+    # ),
     Validation(
         validator=QuadratSizeValidator(
             quadrat_size_path="data.quadrat_transect.quadrat_size"
@@ -269,6 +269,30 @@ benthic_photo_quadrat_transect_validations = [
             observation_quadrat_number_path="quadrat_number",
         ),
         paths=["data.obs_benthic_photo_quadrats"],
+        validation_level=RECORD_LEVEL,
+        validation_type=VALUE_VALIDATION_TYPE,
+    ),
+    Validation(
+        validator=UniqueQuadratTransectValidator(
+            protocol_path="data.protocol",
+            label_path="data.quadrat_transect.label",
+            number_path="data.quadrat_transect.number",
+            relative_depth_path="data.quadrat_transect.relative_depth",
+            site_path="data.sample_event.site",
+            management_path="data.sample_event.management",
+            sample_date_path="data.sample_event.sample_date",
+            depth_path="data.quadrat_transect.depth",
+            observers_path="data.observers",
+        ),
+        paths=[
+            "data.quadrat_transect.label",
+            "data.quadrat_transect.number",
+            "data.quadrat_transect.relative_depth",
+            "data.quadrat_transect.depth",
+            "data.sample_event.site",
+            "data.sample_event.management",
+            "data.sample_event.sample_date",
+        ],
         validation_level=RECORD_LEVEL,
         validation_type=VALUE_VALIDATION_TYPE,
     ),

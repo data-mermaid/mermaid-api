@@ -15,7 +15,7 @@ from .validators import (
     ListRequiredValidator,
     ManagementRuleValidator,
     ObservationCountValidator,
-    QuadratCollectionValidator,
+    UniqueQuadratCollectionValidator,
     QuadratSizeValidator,
     RegionValidator,
     RequiredValidator,
@@ -150,7 +150,7 @@ bleaching_quadrat_collection_validations = [
         validation_type=VALUE_VALIDATION_TYPE,
     ),
     Validation(
-        validator=QuadratCollectionValidator(
+        validator=UniqueQuadratCollectionValidator(
             protocol_path="data.protocol",
             site_path="data.sample_event.site",
             management_path="data.sample_event.management",

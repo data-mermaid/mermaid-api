@@ -1,5 +1,6 @@
 from api.submission.validations2 import (
     belt_fish,
+    benthic_photo_quadrat_transect,
     bleaching_quadrat_collection,
     ValidationRunner,
 )
@@ -188,6 +189,17 @@ def test_bleachingqc_protocol_validation_ok(
         bleaching_quadrat_collection.bleaching_quadrat_collection_validations,
         request=profile1_request,
     )
-    import json
-    print(json.dumps(runner.to_dict(), indent=2))
+    assert overall_status == OK
+
+
+def test_benthicpqt_protocol_validation_ok(
+    valid_benthic_pq_transect_collect_record, profile1_request
+):
+    runner = ValidationRunner(serializer=CollectRecordSerializer)
+    overall_status = runner.validate(
+        valid_benthic_pq_transect_collect_record,
+        benthic_photo_quadrat_transect.benthic_photo_quadrat_transect_validations,
+        request=profile1_request,
+    )
+
     assert overall_status == OK

@@ -32,10 +32,8 @@ class PointsPerQuadratValidator(BaseValidator):
         quadrat_number_groups = defaultdict(int)
         for obs in observations:
             quadrat_number = self.get_value(obs, self.observation_quadrat_number_path)
-            print(f"quadrat_number: {quadrat_number}")
             try:
                 num_points = self.get_value(obs, self.observation_num_points_path) or 0
-                print(f"num_points: {num_points}")
             except (TypeError, ValueError):
                 continue
 
@@ -45,7 +43,6 @@ class PointsPerQuadratValidator(BaseValidator):
 
         invalid_quadrat_numbers = []
         for qn, pnt_cnt in quadrat_number_groups.items():
-            print(f"pnt_cnt: {pnt_cnt}")
             if pnt_cnt != num_points_per_quadrat:
                 invalid_quadrat_numbers.append(qn)
 
@@ -134,41 +131,3 @@ class QuadratNumberSequenceValidator(BaseValidator):
             )
 
         return OK
-
-
-# class UniqueObsBenthicPhotoQuadrat(BaseValidator):
-#     # "benthic_photo_quadrat_transect",
-#     #         "quadrat_number",
-#     #         "attribute",
-#     #         "growth_form"
-#     def __init__(
-#         self,
-#         obs_benthic_photo_quadrats_path,
-#         observation_quadrat_number_path,
-#         observation_attribute_path,
-#         observation_growth_form_path,
-#         **kwargs
-#     ):
-#         self.obs_benthic_photo_quadrats_path = obs_benthic_photo_quadrats_path
-#         self.observation_quadrat_number_path = observation_quadrat_number_path
-#         self.observation_attribute_path = observation_attribute_path
-#         self.observation_growth_form_path = observation_growth_form_path
-#         super().__init__(**kwargs)
-
-#     def _create_key(self, obs):
-#         quadrat_number = self.get_value(obs, self.observation_quadrat_number_path)
-#         attribute = self.get_value(obs, self.observation_attribute_path)
-#         growth_form = self.get_value(obs, self.observation_growth_form_path)
-#         return f"{quadrat_number}::{attribute}::{growth_form}"
-
-#     @validator_result
-#     def __call__(self, collect_record, **kwargs):
-#         observations = self.get_value(collect_record, self.obs_benthic_photo_quadrats_path) or []
-#         groups = defaultdict(list)
-#         for obs in observations:
-#             key = self._create_key(obs)
-#             groups[key].append(obs.get("id"))
-
-#         duplicates = [group for group in groups if len(group) > 1]
-
-#         return OK

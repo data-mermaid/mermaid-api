@@ -995,7 +995,6 @@ def valid_bleaching_qc_collect_record(
 @pytest.fixture
 def valid_benthic_pq_transect_collect_record(
     benthic_attribute_1,
-    benthic_attribute_2,
     benthic_attribute_3,
     benthic_attribute_4,
     growth_form1,
@@ -1017,7 +1016,7 @@ def valid_benthic_pq_transect_collect_record(
         },
         {
             "quadrat_number": 1,
-            "attribute": str(benthic_attribute_2.pk),
+            "attribute": str(benthic_attribute_1.pk),
             "growth_form": str(growth_form1.pk),
             "num_points": 50,
         },
@@ -1045,6 +1044,7 @@ def valid_benthic_pq_transect_collect_record(
         "protocol": BENTHIC_PHOTO_QUADRAT_TRANSECT,
         "obs_benthic_photo_quadrats": obs_benthic_photo_quadrats,
         "quadrat_transect": {
+            "number": 1,
             "quadrat_size": 1,
             "num_quadrats": 3,
             "num_points_per_quadrat": 100,
@@ -1053,7 +1053,8 @@ def valid_benthic_pq_transect_collect_record(
             "current": str(current1.pk),
             "visibility": str(visibility1.pk),
             "sample_time": None,
-            "relative_depth": str(relative_depth1.pk)
+            "relative_depth": str(relative_depth1.pk),
+            "len_surveyed": 100,
         },
         "sample_event": {
             "management": str(sample_event1.management.id),

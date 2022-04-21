@@ -13,7 +13,8 @@ from .len_surveyed import LenSurveyedValidator
 from .management import ManagementRuleValidator, UniqueManagementValidator
 from .obs_benthic_photo_quadrat import PointsPerQuadratValidator, QuadratCountValidator, QuadratNumberSequenceValidator
 from .observations import ObservationCountValidator
-from .quadrat_collection import UniqueQuadratTransectValidator
+from .quadrat_collection import UniqueQuadratCollectionValidator
+from .quadrat_transect import UniqueQuadratTransectValidator
 from .quadrat_size import QuadratSizeValidator
 from .region import RegionValidator
 from .sample_date import SampleDateValidator
