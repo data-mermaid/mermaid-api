@@ -20,6 +20,7 @@ from .resources.pmanagement import PManagementViewSet
 from .resources.sample_event import SampleEventViewSet
 from .resources.benthic_transect import BenthicTransectViewSet
 from .resources.quadrat_collection import QuadratCollectionViewSet
+from .resources.quadrat_transect import QuadratTransectViewSet
 from .resources.fish_belt_transect import FishBeltTransectViewSet
 from .resources.obs_belt_fish import ObsBeltFishViewSet
 from .resources.obs_benthic_lit import ObsBenthicLITViewSet
@@ -119,6 +120,10 @@ project_router.register(
 )
 project_router.register(
     r"quadratcollections", QuadratCollectionViewSet, "quadratcollection"
+)
+
+project_router.register(
+    r"quadrattransectss", QuadratTransectViewSet, "quadrattransect"
 )
 
 # multi model sample unit method views

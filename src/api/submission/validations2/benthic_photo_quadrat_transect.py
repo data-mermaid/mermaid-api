@@ -208,13 +208,13 @@ benthic_photo_quadrat_transect_validations = [
         validation_level=FIELD_LEVEL,
         validation_type=VALUE_VALIDATION_TYPE,
     ),
-    # Validation(
-    #     validator=DrySubmitValidator(),
-    #     paths=["__all__"],
-    #     validation_level=RECORD_LEVEL,
-    #     validation_type=VALUE_VALIDATION_TYPE,
-    #     requires_instance=True,
-    # ),
+    Validation(
+        validator=DrySubmitValidator(),
+        paths=["__all__"],
+        validation_level=RECORD_LEVEL,
+        validation_type=VALUE_VALIDATION_TYPE,
+        requires_instance=True,
+    ),
     Validation(
         validator=QuadratSizeValidator(
             quadrat_size_path="data.quadrat_transect.quadrat_size"

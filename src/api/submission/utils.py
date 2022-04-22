@@ -33,6 +33,7 @@ from .validations2 import (
 )
 from .writer import (
     BenthicLITProtocolWriter,
+    BenthicPhotoQuadratTransectProtocolWriter,
     BenthicPITProtocolWriter,
     BleachingQuadratCollectionProtocolWriter,
     FishbeltProtocolWriter,
@@ -60,6 +61,9 @@ def get_writer(collect_record, context):
 
     elif protocol == BENTHICPIT_PROTOCOL:
         return BenthicPITProtocolWriter(collect_record, context)
+
+    elif protocol == BENTHIC_PHOTO_QUADRAT_TRANSECT:
+        return BenthicPhotoQuadratTransectProtocolWriter(collect_record, context)
 
     elif protocol == FISHBELT_PROTOCOL:
         return FishbeltProtocolWriter(collect_record, context)
