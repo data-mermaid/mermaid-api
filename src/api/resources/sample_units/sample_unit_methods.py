@@ -72,7 +72,6 @@ class SampleUnitMethodSerializer(BaseAPISerializer):
     depth = serializers.SerializerMethodField(method_name="get_sample_unit_depth")
     sample_date = serializers.SerializerMethodField()
     sample_unit_number = serializers.SerializerMethodField()
-    label = serializers.SerializerMethodField()
     size = serializers.SerializerMethodField()
     size_display = serializers.ReadOnlyField()
     observers = serializers.SerializerMethodField()
@@ -126,9 +125,6 @@ class SampleUnitMethodSerializer(BaseAPISerializer):
             sample_unit = o.sample_unit
             return dict(quadrat_size=sample_unit.quadrat_size, quadrat_size_units="m")
         return None
-
-    def get_label(self, o):
-        return o.sample_unit.label if hasattr(o.sample_unit, "label") else ""
 
     def get_observers(self, o):
         context = self.context
