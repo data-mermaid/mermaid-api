@@ -131,7 +131,7 @@ class Command(BaseCommand):
         if protocol == BENTHICPIT_PROTOCOL:
             obs_lookup = self._create_benthic_pit_model_lookup(project_id)
         else:
-            raise ValueError("Not supported protcol")
+            raise ValueError("Not supported protocol")
 
         gf_lookup = self._growth_form_lookup()
 
