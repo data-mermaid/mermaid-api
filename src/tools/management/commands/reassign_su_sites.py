@@ -1,12 +1,11 @@
 from django.core.management.base import BaseCommand
 from api.exceptions import check_uuid
-from api.models import PROTOCOL_MAP, SampleEvent, Site, TransectMethod
+from api.models import SampleEvent, Site, TransectMethod
 
 
 class Command(BaseCommand):
     help = """For a given list of transect method ids, get/create a SE with the passed site name 
     and the other existing SE attributes, and assign that SE to the SUs"""
-    protocol_choices = list(PROTOCOL_MAP)
 
     def add_arguments(self, parser):
         parser.add_argument("newsite_name")
