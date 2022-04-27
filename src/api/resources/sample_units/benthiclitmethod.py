@@ -217,7 +217,7 @@ class ObsBenthicLITCSVSerializer(ReportSerializer):
         ReportField("length", "LIT (cm)"),
         ReportField("total_length", "Total transect cm"),
         ReportField("site_notes", "Site notes"),
-        ReportField("sample_event_notes", "Sampling event notes"),
+        # ReportField("sample_event_notes", "Sampling event notes"),
         ReportField("management_notes", "Management notes"),
         ReportField("observation_notes", "Observation notes"),
     ] + covariate_report_fields
