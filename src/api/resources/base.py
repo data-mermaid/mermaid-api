@@ -739,7 +739,7 @@ class RegionsSerializerMixin():
 
     def to_representation(self, instance):
         if hasattr(instance, "regions_"):
-            self.fields["regions"] = serializers.ListField(source="regions_")
+            self.fields["regions"] = serializers.ListField()
         return super().to_representation(instance)
     
     def to_internal_value(self, data):
