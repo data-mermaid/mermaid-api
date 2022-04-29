@@ -732,16 +732,7 @@ class RegionsSerializerMixin():
     Assumes that the viewset queryset is using
     `.annotate(regions_=ArrayAgg("regions"))`
     """
-    _default_regions_field = serializers.ManyRelatedField(
-        child_relation=PrimaryKeyRelatedField(queryset=Region.objects.all(), required=False),
-        required=False
-    )
-
     def to_representation(self, instance):
         if hasattr(instance, "regions_"):
             self.fields["regions"] = serializers.ListField(source="regions_")
         return super().to_representation(instance)
-    
-    def to_internal_value(self, data):
-        self.fields["regions"] = self._default_regions_field
-        return super().to_internal_value(data)
