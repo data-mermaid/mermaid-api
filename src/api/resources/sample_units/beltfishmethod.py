@@ -84,7 +84,7 @@ class ObsBeltFishCSVSerializer(ReportSerializer):
         ReportField("biomass_constant_c", "c"),
         ReportField("biomass_kgha", "Biomass_kgha"),
         ReportField("site_notes", "Site notes"),
-        ReportField("sample_event_notes", "Sampling event notes"),
+        # ReportField("sample_event_notes", "Sampling event notes"),
         ReportField("management_notes", "Management notes"),
         ReportField("trophic_group", "Trophic group"),
         ReportField("trophic_level", "Trophic level"),

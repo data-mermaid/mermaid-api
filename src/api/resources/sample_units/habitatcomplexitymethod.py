@@ -90,7 +90,7 @@ class ObsHabitatComplexityCSVSerializer(ReportSerializer):
         ReportField("score", "Habitat complexity value"),
         ReportField("score_name", "Habitat complexity name"),
         ReportField("site_notes", "Site notes"),
-        ReportField("sample_event_notes", "Sampling event notes"),
+        # ReportField("sample_event_notes", "Sampling event notes"),
         ReportField("management_notes", "Management notes"),
         ReportField("observation_notes", "Observation notes"),
     ] + covariate_report_fields

@@ -4,7 +4,7 @@ from api import models
 
 
 def get_model_value(model, lookups):
-    """Recursively looks up value in model instane.
+    """Recursively looks up value in model instance.
 
     :param model: Model Instance
     :type model: Django Model
