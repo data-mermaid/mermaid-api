@@ -23,12 +23,12 @@ class ObsBenthicPhotoQuadratFilterSet(BaseAPIFilterSet):
     class Meta:
         model = ObsBenthicPhotoQuadrat
         fields = [
-            "benthicphotoquadrattransect",
-            "benthicphotoquadrattransect__transect",
-            "benthicphotoquadrattransect__transect__sample_event",
+            # "benthicphotoquadrattransect",
+            # "benthicphotoquadrattransect__quadrat_transect",
+            # "benthicphotoquadrattransect__quadrat_transect__sample_event",
             "attribute",
             "growth_form",
-            "include",
+            # "include",
             "length",
         ]
 

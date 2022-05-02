@@ -29,12 +29,12 @@ from api.resources.benthic_photo_quadrat_transect import (
 )
 from api.resources.fish_belt_transect import FishBeltTransectSerializer
 from api.resources.habitat_complexity import HabitatComplexitySerializer
-from api.resources.obs_benthic_photo_quadrat import ObsBeltFishSerializer
+from api.resources.obs_belt_fish import ObsBeltFishSerializer
+from api.resources.obs_benthic_photo_quadrat import ObsBenthicPhotoQuadratSerializer
 from api.resources.obs_benthic_lit import ObsBenthicLITSerializer
 from api.resources.obs_benthic_pit import ObsBenthicPITSerializer
 from api.resources.obs_colonies_bleached import ObsColoniesBleachedSerializer
 from api.resources.obs_habitat_complexity import ObsHabitatComplexitySerializer
-from api.resources.obs_quadrat_benthic_percent import ObsBenthicPhotoQuadratSerializer
 from api.resources.obs_quadrat_benthic_percent import ObsQuadratBenthicPercentSerializer
 from api.resources.observer import ObserverSerializer
 from api.resources.quadrat_collection import QuadratCollectionSerializer
@@ -119,7 +119,7 @@ class ProtocolWriter(BaseWriter):
                 observers.append(Observer.objects.get(**observer_data))
             except Observer.DoesNotExist:
                 if serializer.is_valid() is False:
-                    raise ValidationError(serializer.errors)
+                    raise ValidationError(serializer.errors) from _
                 observers.append(serializer.save())
 
         return observers
@@ -139,7 +139,7 @@ class BenthicProtocolWriter(ProtocolWriter):
                 data=benthic_transect_data, context=self.context
             )
             if serializer.is_valid() is False:
-                raise ValidationError(serializer.errors)
+                raise ValidationError(serializer.errors) from _
 
             return serializer.save()
 
@@ -310,7 +310,7 @@ class BleachingQuadratCollectionProtocolWriter(ProtocolWriter):
                 data=quadrat_collection_data, context=self.context
             )
             if serializer.is_valid() is False:
-                raise ValidationError(serializer.errors)
+                raise ValidationError(serializer.errors) from _
 
             return serializer.save()
 
@@ -381,28 +381,25 @@ class BleachingQuadratCollectionProtocolWriter(ProtocolWriter):
         _ = self.create_obs_colonies_bleached(bleaching_quadrat_collection.id)
 
 
-
 class BenthicPhotoQuadratTransectProtocolWriter(ProtocolWriter):
     def get_or_create_quadrat_transect(self, sample_event_id):
         quadrat_transect_data = get_quadrat_transect_data(
             self.collect_record, sample_event_id
         )
         try:
-            return BenthicTransect.objects.get(**quadrat_transect_data)
+            return QuadratTransect.objects.get(**quadrat_transect_data)
 
         except (QuadratTransect.DoesNotExist, ValidationError) as _:
             quadrat_transect_data["id"] = uuid.uuid4()
-            serializer = QuadratTransectSerializer(
-                data=quadrat_transect_data, context=self.context
-            )
+            serializer = QuadratTransectSerializer(data=quadrat_transect_data, context=self.context)
             if serializer.is_valid() is False:
-                raise ValidationError(serializer.errors)
+                raise ValidationError(serializer.errors) from _
 
             return serializer.save()
 
-    def get_or_create_benthic_photo_quadrat_transect(self, benthic_transect_id, sample_unit_method_id=None):
+    def get_or_create_benthic_photo_quadrat_transect(self, quadrat_transect_id, sample_unit_method_id=None):
         benthic_photo_quadrat_transect_data = {
-            "transect": benthic_transect_id,
+            "quadrat_transect": quadrat_transect_id,
             "id": sample_unit_method_id
         }
         return self.get_or_create(
@@ -437,7 +434,7 @@ class BenthicPhotoQuadratTransectProtocolWriter(ProtocolWriter):
     def write(self):
         sample_unit_method_id = self.get_sample_unit_method_id()
         sample_event = self.get_or_create_sample_event()
-        quadrat_transect = self.get_or_create_benthic_transect(sample_event.id)
+        quadrat_transect = self.get_or_create_quadrat_transect(sample_event.id)
         benthic_photo_quadrat_transect = self.get_or_create_benthic_photo_quadrat_transect(
             quadrat_transect.id,
             sample_unit_method_id

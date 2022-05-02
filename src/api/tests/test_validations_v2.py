@@ -201,5 +201,6 @@ def test_benthicpqt_protocol_validation_ok(
         benthic_photo_quadrat_transect.benthic_photo_quadrat_transect_validations,
         request=profile1_request,
     )
-
+    import json
+    print(json.dumps(runner.to_dict()["results"]))
     assert overall_status == OK

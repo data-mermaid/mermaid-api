@@ -12,8 +12,8 @@ class BenthicPhotoQuadratTransectFilterSet(BaseAPIFilterSet):
     class Meta:
         model = BenthicPhotoQuadratTransect
         fields = [
-            "transect",
-            "transect__sample_event",
+            "quadrat_transect",
+            "quadrat_transect__sample_event",
         ]
 
 
