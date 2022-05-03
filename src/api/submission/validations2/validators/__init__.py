@@ -11,6 +11,7 @@ from .fishbelt_transect import UniqueFishbeltTransectValidator
 from .generic import AllEqualValidator, DuplicateValidator, ListPositiveIntegerValidator, ListRequiredValidator, PositiveIntegerValidator, RequiredValidator
 from .len_surveyed import LenSurveyedValidator
 from .management import ManagementRuleValidator, UniqueManagementValidator
+from .obs_benthic_photo_quadrat import PointsPerQuadratValidator, QuadratCountValidator, QuadratNumberSequenceValidator
 from .observations import ObservationCountValidator
 from .quadrat_collection import QuadratCollectionValidator
 from .quadrat_size import QuadratSizeValidator
