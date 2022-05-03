@@ -4,7 +4,7 @@ from api.submission.validations2.validators import OK, ERROR, UniqueFishbeltTran
 
 def _get_validator():
     return UniqueFishbeltTransectValidator(
-        protocol="fishbelt",
+        protocol_path="data.protocol",
         site_path="data.sample_event.site",
         management_path="data.sample_event.management",
         sample_date_path="data.sample_event.sample_date",
