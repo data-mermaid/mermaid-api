@@ -14,11 +14,9 @@ __all__ = (
     "get_site_id",
 )
 
+
 def _cast_decimal_to_str(val):
-    if val is None:
-        return None
-    
-    return str(val)
+    return None if val is None else str(val)
 
 
 def _extract_sample_event(collect_record):
@@ -57,7 +55,7 @@ def get_fishbelt_transect_data(collect_record, sample_event_id=None):
         number=fishbelt_transect_data.get("number"),
         label=fishbelt_transect_data.get("label") or "",
         width=fishbelt_transect_data.get("width"),
-        len_surveyed=fishbelt_transect_data.get("len_surveyed"),
+        len_surveyed=_cast_decimal_to_str(fishbelt_transect_data.get("len_surveyed")),
         reef_slope=fishbelt_transect_data.get("reef_slope") or None,
         size_bin=size_bin,
         collect_record_id=collect_record.id,
@@ -106,8 +104,8 @@ def get_benthic_transect_data(collect_record, sample_event_id=None):
     return dict(
         sample_event=sample_event_id,
         number=benthic_transect_data.get("number"),
-        label= benthic_transect_data.get("label") or "",
-        len_surveyed=benthic_transect_data.get("len_surveyed"),
+        label=benthic_transect_data.get("label") or "",
+        len_surveyed=_cast_decimal_to_str(benthic_transect_data.get("len_surveyed")),
         reef_slope=benthic_transect_data.get("reef_slope") or None,
         collect_record_id=collect_record.id,
         sample_time=benthic_transect_data.get("sample_time") or None,
@@ -225,6 +223,42 @@ def get_obs_colonies_bleached_data(collect_record, bleaching_quadrat_collection_
                 count_80=observation.get("count_80"),
                 count_100=observation.get("count_100"),
                 count_dead=observation.get("count_dead"),
+            )
+        )
+
+    return observations_data
+
+
+def get_quadrat_transect_data(collect_record, sample_event_id=None):
+    data = collect_record.data
+    quadrat_transect_data = data.get("quadrat_transect") or dict()
+    return dict(
+        sample_event=sample_event_id,
+        quadrat_size=_cast_decimal_to_str(quadrat_transect_data.get("quadrat_size")),
+        len_surveyed=_cast_decimal_to_str(quadrat_transect_data.get("len_surveyed")),
+        num_quadrats=quadrat_transect_data.get("num_quadrats"),
+        num_points_per_quadrat=quadrat_transect_data.get("num_points_per_quadrat"),
+        collect_record_id=collect_record.id,
+        sample_time=quadrat_transect_data.get("sample_time") or None,
+        depth=_cast_decimal_to_str(quadrat_transect_data.get("depth")),
+        visibility=quadrat_transect_data.get("visibility") or None,
+        current=quadrat_transect_data.get("current") or None,
+        relative_depth=quadrat_transect_data.get("relative_depth") or None,
+        tide=quadrat_transect_data.get("tide") or None
+    )
+
+def get_obs_benthic_photo_quadrat_data(collect_record, benthic_photo_quadrat_transect_id=None):
+    observations_data = []
+    data = collect_record.data or dict()
+    observations = data.get("obs_benthic_photo_quadrats") or []
+    for observation in observations:
+        observations_data.append(
+            dict(
+                benthic_photo_quadrat_transect=benthic_photo_quadrat_transect_id,
+                attribute=observation.get("attribute"),
+                growth_form=observation.get("growth_form"),
+                quadrat_number=observation.get("quadrat_number"),
+                num_points=observation.get("num_points"),
             )
         )
 
