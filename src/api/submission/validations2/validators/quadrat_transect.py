@@ -2,21 +2,20 @@ from django.utils.dateparse import parse_date
 from rest_framework.exceptions import ParseError
 
 from ....exceptions import check_uuid
-from ....models import FishBeltTransect
+from ....models import QuadratTransect
 from ....utils import get_related_transect_methods
 from .base import ERROR, OK, ERROR, BaseValidator, validator_result
 
 
-class UniqueFishbeltTransectValidator(BaseValidator):
-    INVALID_DATA = "invalid_fishbelt_transect"
-    DUPLICATE_FISHBELT_TRANSECT = "duplicate_fishbelt_transect"
+class UniqueQuadratTransectValidator(BaseValidator):
+    INVALID_DATA = "invalid_quadrat_transect"
+    DUPLICATE_QUADRAT_TRANSECT = "duplicate_quadrat_transect"
 
     def __init__(
         self,
         protocol_path,
         label_path,
         number_path,
-        width_path,
         site_path,
         management_path,
         sample_date_path,
@@ -27,7 +26,6 @@ class UniqueFishbeltTransectValidator(BaseValidator):
         self.protocol_path = protocol_path
         self.label_path = label_path
         self.number_path = number_path
-        self.width_path = width_path
         self.site_path = site_path
         self.management_path = management_path
         self.sample_date_path = sample_date_path
@@ -39,7 +37,6 @@ class UniqueFishbeltTransectValidator(BaseValidator):
     def _get_query_args(self, collect_record):
         label = self.get_value(collect_record, self.label_path) or ""
         number = self.get_value(collect_record, self.number_path) or None
-        width = self.get_value(collect_record, self.width_path) or None
         site = self.get_value(collect_record, self.site_path) or None
         management = self.get_value(collect_record, self.management_path) or None
         sample_date = self.get_value(collect_record, self.sample_date_path) or None
@@ -49,7 +46,6 @@ class UniqueFishbeltTransectValidator(BaseValidator):
 
         try:
             number = int(number)
-            check_uuid(width)
             check_uuid(site)
             check_uuid(management)
             float(depth)
@@ -69,7 +65,6 @@ class UniqueFishbeltTransectValidator(BaseValidator):
             "number": number,
             "label": label,
             "depth": depth,
-            "width_id": width,
         }, profiles
 
     def _check_for_duplicate_transect_methods(self, transect_methods, protocol):
@@ -77,7 +72,7 @@ class UniqueFishbeltTransectValidator(BaseValidator):
             if transect_method.protocol == protocol:
                 return (
                     ERROR,
-                    self.DUPLICATE_FISHBELT_TRANSECT,
+                    self.DUPLICATE_QUADRAT_TRANSECT,
                     {"duplicate_transect_method": str(transect_method.pk)},
                 )
         return OK
@@ -91,10 +86,10 @@ class UniqueFishbeltTransectValidator(BaseValidator):
         except ParseError:
             return ERROR, self.INVALID_DATA
 
-        queryset = FishBeltTransect.objects.select_related().filter(**qry)
+        queryset = QuadratTransect.objects.select_related().filter(**qry)
 
         for profile in profiles:
-            queryset = queryset.filter(beltfish_method__observers__profile_id=profile)
+            queryset = queryset.filter(benthic_photo_quadrat_transect_method__observers__profile_id=profile)
 
         for result in queryset:
             transect_methods = get_related_transect_methods(result)
