@@ -29,6 +29,8 @@ from .protocol_validations import (
 from .validations import ERROR, IGNORE, OK, WARN
 from .validations2 import (
     belt_fish,
+    benthic_photo_quadrat_transect,
+    bleaching_quadrat_collection,
     ValidationRunner
 )
 from .writer import (
@@ -202,7 +204,19 @@ def _validate_collect_record_v2(record, record_serializer, request):
     elif protocol == HABITATCOMPLEXITY_PROTOCOL:
         raise NotImplementedError()
     elif protocol == BLEACHINGQC_PROTOCOL:
-        raise NotImplementedError()
+        runner.validate(
+            record,
+            bleaching_quadrat_collection.bleaching_quadrat_collection_validations,
+            request=request
+        )
+        return runner.to_dict()
+    elif protocol == BENTHIC_PHOTO_QUADRAT_TRANSECT:
+        runner.validate(
+            record,
+            benthic_photo_quadrat_transect.benthic_photo_quadrat_transect_validations,
+            request=request
+        )
+        return runner.to_dict()
 
     raise ValueError("Unsupported protocol")
 
