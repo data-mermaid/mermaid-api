@@ -1031,7 +1031,7 @@ class BenthicPhotoQuadratTransectAdmin(BaseAdmin):
     ordering = ["quadrat_transect__sample_event__site__name"]
 
     def name(self, obj):
-        return str(obj.quadrat)
+        return str(obj.quadrat_transect)
 
     name.admin_order_field = "quadrat_transect__sample_event__site__name"
 
@@ -1041,7 +1041,7 @@ class BenthicPhotoQuadratTransectAdmin(BaseAdmin):
     quadrat_size.admin_order_field = "quadrat_transect__quadrat_size"
 
     def depth(self, obj):
-        return obj.transect.depth
+        return obj.quadrat_transect.depth
 
     depth.admin_order_field = "quadrat_transect__sample_event__depth"
 

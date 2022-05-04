@@ -97,7 +97,7 @@ class CollectRecordViewSet(BaseProjectApiViewSet):
                     profile, record_ids, CollectRecordSerializer
                 )
         except ValueError as err:
-            raise ParseError(err.message)
+            raise ParseError(err) from err
 
         return Response(output)
 
@@ -108,11 +108,11 @@ class CollectRecordViewSet(BaseProjectApiViewSet):
         + [CollectRecordOwner],
     )
     def submit(self, request, project_pk):
-        validation_version = request.data.get("version") or "1"
+        submit_version = request.data.get("version") or "1"
         record_ids = request.data.get("ids")
         profile = request.user.profile
 
-        if validation_version == "2":
+        if str(submit_version) == "2":
             output = submit_collect_records_v2(
                 profile,
                 record_ids,
