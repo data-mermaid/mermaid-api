@@ -201,3 +201,12 @@ def run_subprocess(command, std_input=None, to_file=None):
             f.write(str(err))
     else:
         return data, err
+
+
+# source: https://stackoverflow.com/a/70310511/15624918
+def combine_into(d, combined):
+    for k, v in d.items():
+        if isinstance(v, dict):
+            combine_into(v, combined.setdefault(k, {}))
+        else:
+            combined[k] = v

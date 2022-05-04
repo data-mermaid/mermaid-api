@@ -17,6 +17,7 @@ from api.models import (
     QuadratTransect,
     SampleEvent,
 )
+from api.utils import combine_into
 from api.resources.belt_fish import BeltFishSerializer
 from api.resources.benthic_lit import BenthicLITSerializer
 from api.resources.benthic_pit import BenthicPITSerializer
@@ -69,13 +70,18 @@ class BaseWriter(object):
 
         return serializer
 
-    def get_or_create(self, model, serializer_cls, data):
-        data["id"] = data.get("id") or uuid.uuid4()
+    def get_or_create(self, model, serializer_cls, data, additional_data=None):
+        pk = data.get("id") or uuid.uuid4()
+        data["id"] = pk
         serializer = self.validate_data(serializer_cls, data)
         try:
             data.pop("id")
             return model.objects.get(**data)
         except model.DoesNotExist:
+            if isinstance(additional_data, dict):
+                data["id"] = pk
+                combine_into(additional_data, data)
+                serializer = self.validate_data(serializer_cls, data)
             return serializer.save()
 
     def write(self):
@@ -108,7 +114,7 @@ class ProtocolWriter(BaseWriter):
         observers_data = get_observers_data(self.collect_record, sample_unit_method_id)
         if not observers_data:
             raise ValidationError(
-                {"observers": [str(_(u"Must have at least 1 observer."))]}
+                {"observers": [str(_("Must have at least 1 observer."))]}
             )
 
         for observer_data in observers_data:
@@ -157,11 +163,12 @@ class FishbeltProtocolWriter(ProtocolWriter):
         self, collect_record_id, fishbelt_transect_id, sample_unit_method_id=None
     ):
         beltfish_data = {"transect": fishbelt_transect_id, "id": sample_unit_method_id}
-        record = self.get_or_create(BeltFish, BeltFishSerializer, beltfish_data)
-        record.collect_record_id = collect_record_id
-        record.save()
-        return record
-        
+        return self.get_or_create(
+            BeltFish,
+            BeltFishSerializer,
+            beltfish_data,
+            additional_data={"collect_record_id": collect_record_id},
+        )
 
     def create_obsbeltfish(self, belt_fish_id):
         observation_beltfishes = []
@@ -195,17 +202,19 @@ class BenthicPITProtocolWriter(BenthicProtocolWriter):
             "interval_size": self.collect_record.data.get("interval_size"),
             "interval_start": self.collect_record.data.get("interval_start"),
         }
-        record = self.get_or_create(BenthicPIT, BenthicPITSerializer, benthic_pit_data)
-        record.collect_record_id = collect_record_id
-        record.save()
-        return record
+        return self.get_or_create(
+            BenthicPIT,
+            BenthicPITSerializer,
+            benthic_pit_data,
+            additional_data={"collect_record_id": collect_record_id},
+        )
 
     def create_obsbenthicpit(self, benthic_pit_id):
         observation_benthicpits = []
         observations_data = get_obsbenthicpit_data(self.collect_record, benthic_pit_id)
         if not observations_data:
             raise ValidationError(
-                {"obs_benthic_pits": [_(u"Benthic PIT observations are required.")]}
+                {"obs_benthic_pits": [_("Benthic PIT observations are required.")]}
             )
 
         for observation_data in observations_data:
@@ -239,17 +248,19 @@ class BenthicLITProtocolWriter(BenthicProtocolWriter):
             "transect": benthic_transect_id,
             "id": sample_unit_method_id,
         }
-        record = self.get_or_create(BenthicLIT, BenthicLITSerializer, benthic_lit_data)
-        record.collect_record_id = collect_record_id
-        record.save()
-        return record
+        return self.get_or_create(
+            BenthicLIT,
+            BenthicLITSerializer,
+            benthic_lit_data,
+            additional_data={"collect_record_id": collect_record_id},
+        )
 
     def create_obsbenthiclit(self, benthic_lit_id):
         observation_benthiclits = []
         observations_data = get_obsbenthiclit_data(self.collect_record, benthic_lit_id)
         if not observations_data:
             raise ValidationError(
-                {"obs_benthic_lits": [_(u"Benthic LIT observations are required.")]}
+                {"obs_benthic_lits": [_("Benthic LIT observations are required.")]}
             )
 
         for observation_data in observations_data:
@@ -284,12 +295,12 @@ class HabitatComplexityProtocolWriter(BenthicProtocolWriter):
             "transect": benthic_transect_id,
             "interval_size": self.collect_record.data.get("interval_size"),
         }
-        record = self.get_or_create(
-            HabitatComplexity, HabitatComplexitySerializer, habitat_complexity_data
+        return self.get_or_create(
+            HabitatComplexity,
+            HabitatComplexitySerializer,
+            habitat_complexity_data,
+            additional_data={"collect_record_id": collect_record_id},
         )
-        record.collect_record_id = collect_record_id
-        record.save()
-        return record
 
     def create_obshabitatcomplexity(self, habitatcomplexity_id):
         observation_habitatcomplexities = []
@@ -300,7 +311,7 @@ class HabitatComplexityProtocolWriter(BenthicProtocolWriter):
             raise ValidationError(
                 {
                     "obs_habitat_complexities": [
-                        _(u"Habitat complexity observations are required.")
+                        _("Habitat complexity observations are required.")
                     ]
                 }
             )
@@ -353,14 +364,12 @@ class BleachingQuadratCollectionProtocolWriter(ProtocolWriter):
             "quadrat": quadrat_collection_id,
             "id": sample_unit_method_id,
         }
-        record = self.get_or_create(
+        return self.get_or_create(
             BleachingQuadratCollection,
             BleachingQuadratCollectionSerializer,
             bleaching_quadrat_collection_data,
+            additional_data={"collect_record_id": collect_record_id},
         )
-        record.collect_record_id = collect_record_id
-        record.save()
-        return record
 
     def create_obs_quadrat_benthic_percent(self, bleaching_quadrat_collection_id):
         observation_benthic_percent_covered_data = []
@@ -391,7 +400,7 @@ class BleachingQuadratCollectionProtocolWriter(ProtocolWriter):
             raise ValidationError(
                 {
                     "obs_colonies_bleached": [
-                        _(u"Colonies bleached observations are required.")
+                        _("Colonies bleached observations are required.")
                     ]
                 }
             )
@@ -445,14 +454,12 @@ class BenthicPhotoQuadratTransectProtocolWriter(ProtocolWriter):
             "quadrat_transect": quadrat_transect_id,
             "id": sample_unit_method_id,
         }
-        record = self.get_or_create(
+        return self.get_or_create(
             BenthicPhotoQuadratTransect,
             BenthicPhotoQuadratTransectSerializer,
             benthic_photo_quadrat_transect_data,
+            additional_data={"collect_record_id": collect_record_id},
         )
-        record.collect_record_id = collect_record_id
-        record.save()
-        return record
 
     def create_obs_benthic_photo_quadrat(self, benthic_photo_quadrat_transect_id):
         observations = []
@@ -463,7 +470,7 @@ class BenthicPhotoQuadratTransectProtocolWriter(ProtocolWriter):
             raise ValidationError(
                 {
                     "obs_benthic_photo_quadrats": [
-                        _(u"Benthic Photo Quadrat observations are required.")
+                        _("Benthic Photo Quadrat observations are required.")
                     ]
                 }
             )
