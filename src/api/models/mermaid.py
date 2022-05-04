@@ -1077,7 +1077,7 @@ class BenthicPhotoQuadratTransect(TransectMethod):
         verbose_name_plural = _("benthic photo quadrat transects")
 
     def __str__(self):
-        return _("benthic photo quadrat transect %s") % self.transect.__str__()
+        return _("benthic photo quadrat transect %s") % self.quadrat_transect.__str__()
 
 
 class ObsBenthicPhotoQuadrat(BaseModel, JSONMixin):
