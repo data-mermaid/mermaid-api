@@ -126,6 +126,7 @@ class Project(BaseModel, JSONMixin):
     data_policy_benthicpit = models.PositiveSmallIntegerField(choices=DATA_POLICIES, default=PUBLIC_SUMMARY)
     data_policy_habitatcomplexity = models.PositiveSmallIntegerField(choices=DATA_POLICIES, default=PUBLIC_SUMMARY)
     data_policy_bleachingqc = models.PositiveSmallIntegerField(choices=DATA_POLICIES, default=PUBLIC_SUMMARY)
+    data_policy_benthicpqt = models.PositiveSmallIntegerField(choices=DATA_POLICIES, default=PUBLIC_SUMMARY)
 
     tags = TaggableManager(through=UUIDTaggedItem, blank=True)
 
@@ -1096,6 +1097,7 @@ class ObsBenthicPhotoQuadrat(BaseModel, JSONMixin):
     attribute = models.ForeignKey(BenthicAttribute, on_delete=models.PROTECT)
     growth_form = models.ForeignKey(GrowthForm, on_delete=models.SET_NULL, null=True, blank=True)
     num_points = models.PositiveSmallIntegerField(verbose_name='number of points', default=0)
+    notes = models.TextField(blank=True)
 
     class Meta:
         db_table = "obs_benthic_photo_quadrat"
