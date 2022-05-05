@@ -697,6 +697,9 @@ class QuadratTransect(BenthicTransect):
     num_quadrats = models.PositiveSmallIntegerField()
     num_points_per_quadrat = models.PositiveSmallIntegerField()
 
+    class Meta:
+        db_table = 'quadrat_transect'
+
 
 # TODO: rename this SampleUnitMethod, and abstract all appropriate references elsewhere
 class TransectMethod(BaseModel):
