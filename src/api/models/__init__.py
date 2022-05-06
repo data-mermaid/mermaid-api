@@ -20,7 +20,7 @@ from .sql_models import (
     BenthicLITSESQLModel,
     BenthicLITSUSQLModel,
     BenthicPhotoQuadratTransectObsSQLModel,
-    BenthicPhotQuadratTransectSESQLModel,
+    BenthicPhotoQuadratTransectSESQLModel,
     BenthicPhotoQuadratTransectSUSQLModel,
     BenthicPITObsSQLModel,
     BenthicPITSESQLModel,

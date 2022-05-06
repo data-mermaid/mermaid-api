@@ -252,7 +252,7 @@ class BenthicPhotoQuadratTransectSUSQLModel(BaseSUSQLModel):
         managed = False
 
 
-class BenthicPhotQuadratTransectSESQLModel(BaseSQLModel):
+class BenthicPhotoQuadratTransectSESQLModel(BaseSQLModel):
     _se_fields = ", ".join([f"benthicpqt_su.{f}" for f in BaseSQLModel.se_fields])
     _su_aggfields_sql = BaseSQLModel.su_aggfields_sql
 

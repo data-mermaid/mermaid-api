@@ -129,7 +129,7 @@ class Migration(migrations.Migration):
             },
         ),
         migrations.CreateModel(
-            name='BenthicPhotQuadratTransectSESQLModel',
+            name='BenthicPhotoQuadratTransectSESQLModel',
             fields=[
                 ('id', models.UUIDField(default=uuid.uuid4, editable=False, primary_key=True, serialize=False)),
                 ('project_id', models.UUIDField()),

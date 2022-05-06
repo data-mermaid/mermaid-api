@@ -7,7 +7,7 @@ from .benthiclit import (
 )
 from .benthicpqt import (
     BenthicPhotoQuadratTransectObsSQLModel,
-    BenthicPhotQuadratTransectSESQLModel,
+    BenthicPhotoQuadratTransectSESQLModel,
     BenthicPhotoQuadratTransectSUSQLModel,
 )
 from .benthicpit import (
