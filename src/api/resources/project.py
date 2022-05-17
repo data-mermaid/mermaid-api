@@ -1,7 +1,6 @@
 import logging
 
 import django_filters
-from django.contrib.auth.models import AnonymousUser
 from django.contrib.postgres.fields import JSONField
 from django.db import transaction
 from rest_framework import exceptions, permissions, serializers, status
@@ -15,6 +14,7 @@ from ..models import Management, Project, Site, Profile, ProjectProfile, Archive
 from ..decorators import run_in_thread
 from ..permissions import *
 from ..utils import delete_instance_and_related_objects
+from ..utils.project import create_collecting_summary, create_submitted_summary
 from ..utils.replace import replace_collect_record_owner, replace_sampleunit_objs
 from .base import (
     BaseAPIFilterSet,
@@ -441,3 +441,25 @@ class ProjectViewSet(BaseApiViewSet):
             )
 
         return Response(ProjectProfileSerializer(instance=project_profile).data)
+
+    @action(
+        detail=True,
+        methods=["get"],
+        permission_classes=[ProjectDataPermission],
+    )
+    def summary(self, request, pk, *args, **kwargs):
+        project = Project.objects.prefetch_related("sites", "profiles", "collect_records").get(id=pk)
+        summary = {"name": project.name, "site_collecting_summary": {}, "site_submitted_summary": {}}
+        protocols = []
+
+        collecting_protocols, site_collecting_summary = create_collecting_summary(project)
+        summary["site_collecting_summary"] = site_collecting_summary
+        protocols.extend(collecting_protocols)
+
+        submitted_protocols, site_submitted_summary = create_submitted_summary(project)
+        summary["site_submitted_summary"] = site_submitted_summary
+        protocols.extend(submitted_protocols)
+
+
+        summary["protocols"] = sorted(set(protocols))
+        return Response(summary)
