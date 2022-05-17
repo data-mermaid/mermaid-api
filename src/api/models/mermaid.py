@@ -1630,6 +1630,20 @@ class CollectRecord(BaseModel):
             return None
 
         return protocol
+    
+    @property
+    def sample_unit(self):
+        data = self.data or {}
+        protocol = self.protocol
+        if protocol in (BENTHICLIT_PROTOCOL, BENTHICPIT_PROTOCOL, HABITATCOMPLEXITY_PROTOCOL):
+            return data.get("benthic_transect") or {}
+        elif protocol == FISHBELT_PROTOCOL:
+            return data.get("fishbelt_transect") or {}
+        elif protocol == BENTHICPQT_PROTOCOL:
+            return data.get("quadrat_transect") or {}
+        elif protocol == BLEACHINGQC_PROTOCOL:
+            return data.get("quadrat_collection") or {}
+        return None
 
     def _assign_id(self, record):
         record["id"] = record.get("id") or str(uuid.uuid4())
