@@ -10,7 +10,7 @@ from api.ingest import (
     HabitatComplexityCSVSerializer,
 )
 from api.models import (
-    BENTHIC_PHOTO_QUADRAT_TRANSECT,
+    BENTHICPQT_PROTOCOL,
     BENTHICLIT_PROTOCOL,
     BENTHICPIT_PROTOCOL,
     BLEACHINGQC_PROTOCOL,
@@ -140,7 +140,7 @@ def ingest(
         serializer = HabitatComplexityCSVSerializer
     elif protocol == BLEACHINGQC_PROTOCOL:
         serializer = BleachingCSVSerializer
-    elif protocol == BENTHIC_PHOTO_QUADRAT_TRANSECT:
+    elif protocol == BENTHICPQT_PROTOCOL:
         serializer = BenthicPhotoQTCSVSerializer
     else:
         return None, output
