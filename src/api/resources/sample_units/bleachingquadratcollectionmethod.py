@@ -30,6 +30,7 @@ from ..base import (
     BaseSUViewAPISerializer,
 )
 from ..bleaching_quadrat_collection import BleachingQuadratCollectionSerializer
+from ..mixins import SampleUnitMethodEditMixin
 from ..obs_colonies_bleached import ObsColoniesBleachedSerializer
 from ..obs_quadrat_benthic_percent import ObsQuadratBenthicPercentSerializer
 from ..observer import ObserverSerializer
@@ -60,7 +61,7 @@ class BleachingQuadratCollectionMethodSerializer(BleachingQuadratCollectionSeria
         exclude = []
 
 
-class BleachingQuadratCollectionMethodView(BaseProjectApiViewSet):
+class BleachingQuadratCollectionMethodView(SampleUnitMethodEditMixin, BaseProjectApiViewSet):
     queryset = BleachingQuadratCollection.objects.select_related(
         "quadrat", "quadrat__sample_event"
     ).all()
