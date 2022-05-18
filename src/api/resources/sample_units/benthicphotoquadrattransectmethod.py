@@ -56,7 +56,6 @@ class BenthicPhotoQuadratTransectMethodView(BaseProjectApiViewSet):
         BenthicPhotoQuadratTransect.objects.select_related(
             "quadrat_transect", "quadrat_transect__sample_event"
         )
-        .all()
         .order_by("updated_on", "id")
     )
     serializer_class = BenthicPhotoQuadratTransectMethodSerializer
@@ -154,7 +153,7 @@ class BenthicPQTMethodObsSerializer(BaseSUViewAPISerializer):
         )
 
 
-class BenthicPQTMethodGeoSerializer(BaseViewAPIGeoSerializer):
+class BenthicPQTObsMethodGeoSerializer(BaseViewAPIGeoSerializer):
     class Meta(BaseViewAPIGeoSerializer.Meta):
         model = BenthicPhotoQuadratTransectObsSQLModel
 
@@ -300,7 +299,7 @@ class BenthicPQTMethodSEGeoSerializer(BaseViewAPIGeoSerializer):
         model = BenthicPhotoQuadratTransectSESQLModel
 
 
-class BenthicPQTMethodFilterSet(BaseSUObsFilterSet):
+class BenthicPQTMethodObsFilterSet(BaseSUObsFilterSet):
     transect_len_surveyed = RangeFilter()
     reef_slope = BaseInFilter(method="char_lookup")
     interval_size = RangeFilter()
@@ -348,9 +347,9 @@ class BenthicPQTProjectMethodObsView(BaseProjectMethodView):
     drf_label = "benthicphotoquadrattransect-obs"
     project_policy = "data_policy_benthicpqt"
     serializer_class = BenthicPQTMethodObsSerializer
-    serializer_class_geojson = BenthicPQTMethodGeoSerializer
+    serializer_class_geojson = BenthicPQTObsMethodGeoSerializer
     serializer_class_csv = ObsBenthicPQTCSVSerializer
-    filterset_class = BenthicPQTMethodFilterSet
+    filterset_class = BenthicPQTMethodObsFilterSet
     model = BenthicPhotoQuadratTransectObsSQLModel
     order_by = (
         "site_name",
