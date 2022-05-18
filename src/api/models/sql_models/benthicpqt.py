@@ -5,15 +5,6 @@ from django.utils.translation import ugettext_lazy as _
 from sqltables import SQLTableArg, SQLTableManager
 from .base import BaseSQLModel, BaseSUSQLModel, sample_event_sql_template
 
-# Unique combination of these fields defines a single (pseudo) sample unit.
-# All other fields are aggregated.
-su_fields = BaseSUSQLModel.se_fields + [
-    "depth",
-    "transect_number",
-    "transect_len_surveyed",
-    "data_policy_benthicpqt",
-]
-
 
 class BenthicPhotoQuadratTransectObsSQLModel(BaseSUSQLModel):
     _se_fields = ", ".join([f"se.{f}" for f in BaseSUSQLModel.se_fields])
@@ -141,8 +132,6 @@ class BenthicPhotoQuadratTransectObsSQLModel(BaseSUSQLModel):
 
 class BenthicPhotoQuadratTransectSUSQLModel(BaseSUSQLModel):
     # Unique combination of these fields defines a single (pseudo) sample unit. All other fields are aggregated.
-
-    # TODO: Does anything specific to Photo quadrat should be defined in this list
     su_fields = BaseSUSQLModel.se_fields + [
         "depth",
         "transect_number",
@@ -252,7 +241,7 @@ class BenthicPhotoQuadratTransectSUSQLModel(BaseSUSQLModel):
         managed = False
 
 
-class BenthicPhotQuadratTransectSESQLModel(BaseSQLModel):
+class BenthicPhotoQuadratTransectSESQLModel(BaseSQLModel):
     _se_fields = ", ".join([f"benthicpqt_su.{f}" for f in BaseSQLModel.se_fields])
     _su_aggfields_sql = BaseSQLModel.su_aggfields_sql
 
