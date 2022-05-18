@@ -5,6 +5,11 @@ from .benthiclit import (
     BenthicLITSESQLModel,
     BenthicLITSUSQLModel,
 )
+from .benthicpqt import (
+    BenthicPhotoQuadratTransectObsSQLModel,
+    BenthicPhotoQuadratTransectSESQLModel,
+    BenthicPhotoQuadratTransectSUSQLModel,
+)
 from .benthicpit import (
     BenthicPITObsSQLModel,
     BenthicPITSESQLModel,

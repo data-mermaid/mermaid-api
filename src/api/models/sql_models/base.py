@@ -167,6 +167,12 @@ sample_event_sql_template = f"""
             WHEN project.data_policy_bleachingqc = 100 THEN 'public' :: text
             ELSE '' :: text
         END AS data_policy_bleachingqc,
+        CASE
+            WHEN project.data_policy_benthicpqt = 10 THEN 'private' :: text
+            WHEN project.data_policy_benthicpqt = 50 THEN 'public summary' :: text
+            WHEN project.data_policy_benthicpqt = 100 THEN 'public' :: text
+            ELSE '' :: text
+        END AS data_policy_benthicpqt,
         site_covariates.covariates
     FROM
         sample_event se
