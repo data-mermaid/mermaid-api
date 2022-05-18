@@ -1,5 +1,5 @@
 import pytz
-from django.db import IntegrityError
+from django.db import IntegrityError, transaction
 from django.db.models import ProtectedError, Q
 from django.http.response import HttpResponseBadRequest
 from django.template.defaultfilters import pluralize
@@ -10,8 +10,10 @@ from rest_framework.response import Response
 from rest_framework.decorators import action
 from rest_framework.serializers import raise_errors_on_nested_writes
 
-from ..models import ArchivedRecord
+from ..models import ArchivedRecord, Project
 from ..utils import get_protected_related_objects
+from ..utils.sample_unit_methods import edit_transect_method
+from ..permissions import ProjectDataAdminPermission
 
 
 class ProtectedResourceMixin(object):
@@ -216,3 +218,30 @@ class OrFilterSetMixin(object):
 
     def json_name_lookup(self, queryset, name, value):
         return self.str_or_lookup(queryset, name, value, "name", "contains")
+
+
+class SampleUnitMethodEditMixin(object):
+    @transaction.atomic
+    @action(
+        detail=True, methods=["PUT"], permission_classes=[ProjectDataAdminPermission]
+    )
+    def edit(self, request, project_pk, pk):
+        collect_record_owner = Project.objects.get_or_none(id=request.data.get("owner"))
+        if collect_record_owner is None:
+            collect_record_owner = request.user.profile
+
+        try:
+            model = self.get_queryset().model
+            if hasattr(model, "protocol") is False:
+                raise ValueError("Unsupported model")
+
+            collect_record = edit_transect_method(
+                self.serializer_class,
+                collect_record_owner,
+                request,
+                pk,
+                model.protocol
+            )
+            return Response({"id": str(collect_record.pk)})
+        except Exception as err:
+            return Response(str(err), status=500)
