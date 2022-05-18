@@ -14,7 +14,7 @@ from ..models import (
     FISHBELT_PROTOCOL,
     HABITATCOMPLEXITY_PROTOCOL,
     BLEACHINGQC_PROTOCOL,
-    BENTHIC_PHOTO_QUADRAT_TRANSECT,
+    BENTHICPQT_PROTOCOL,
     PROTOCOL_MAP,
     AuditRecord,
     CollectRecord,
@@ -64,7 +64,7 @@ def get_writer(collect_record, context):
     elif protocol == BENTHICPIT_PROTOCOL:
         return BenthicPITProtocolWriter(collect_record, context)
 
-    elif protocol == BENTHIC_PHOTO_QUADRAT_TRANSECT:
+    elif protocol == BENTHICPQT_PROTOCOL:
         return BenthicPhotoQuadratTransectProtocolWriter(collect_record, context)
 
     elif protocol == FISHBELT_PROTOCOL:
@@ -210,7 +210,7 @@ def _validate_collect_record_v2(record, record_serializer, request):
             request=request
         )
         return runner.to_dict()
-    elif protocol == BENTHIC_PHOTO_QUADRAT_TRANSECT:
+    elif protocol == BENTHICPQT_PROTOCOL:
         runner.validate(
             record,
             benthic_photo_quadrat_transect.benthic_photo_quadrat_transect_validations,
