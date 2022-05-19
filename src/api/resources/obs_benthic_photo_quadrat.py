@@ -1,7 +1,5 @@
-import django_filters
-
 from ..models import ObsBenthicPhotoQuadrat
-from .base import BaseAPIFilterSet, BaseAPISerializer, BaseProjectApiViewSet
+from .base import BaseAPISerializer
 
 
 class ObsBenthicPhotoQuadratSerializer(BaseAPISerializer):
@@ -15,27 +13,3 @@ class ObsBenthicPhotoQuadratSerializer(BaseAPISerializer):
                 }
             }
         }
-
-
-# class ObsBenthicPhotoQuadratFilterSet(BaseAPIFilterSet):
-#     length = django_filters.RangeFilter(field_name="length")
-
-#     class Meta:
-#         model = ObsBenthicPhotoQuadrat
-#         fields = [
-#             # "benthicphotoquadrattransect",
-#             # "benthicphotoquadrattransect__quadrat_transect",
-#             # "benthicphotoquadrattransect__quadrat_transect__sample_event",
-#             "attribute",
-#             "growth_form",
-#             # "include",
-#             "length",
-#         ]
-
-
-# class ObsBenthicPhotoQuadratViewSet(BaseProjectApiViewSet):
-#     serializer_class = ObsBenthicPhotoQuadratSerializer
-#     queryset = ObsBenthicPhotoQuadrat.objects.prefetch_related(
-#         ObsBenthicPhotoQuadrat.project_lookup
-#     )
-#     filter_class = ObsBenthicPhotoQuadratFilterSet

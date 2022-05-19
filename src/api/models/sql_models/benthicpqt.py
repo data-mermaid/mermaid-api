@@ -118,6 +118,7 @@ class BenthicPhotoQuadratTransectObsSQLModel(BaseSUSQLModel):
     num_quadrats = models.PositiveSmallIntegerField()
     num_points_per_quadrat = models.PositiveSmallIntegerField()
     reef_slope = models.CharField(max_length=50)
+    quadrat_number = models.PositiveSmallIntegerField(verbose_name="quadrat number")
     benthic_category = models.CharField(max_length=100)
     benthic_attribute = models.CharField(max_length=100)
     growth_form = models.CharField(max_length=100)
