@@ -11,10 +11,10 @@ def _get_sample_unit_method_label(sample_unit):
     if hasattr(sample_unit, "number") and sample_unit.number is not None:
         number_label.append(str(sample_unit.number))
 
-    if hasattr(sample_unit, "label") and sample_unit.label:
+    if hasattr(sample_unit, "label") and sample_unit.label.strip():
         number_label.append(sample_unit.label)
 
-    return "-".join(number_label)
+    return " ".join(number_label)
 
 
 def _get_sample_unit_field(model):
@@ -103,13 +103,13 @@ def _get_collect_record_label(collect_record):
     sample_unit = collect_record.sample_unit
     number = sample_unit.get("number")
     label = sample_unit.get("label") or ""
-    if isinstance(number, (str, int)):
+    if number is not None:
         number_label.append(str(number))
 
     if label.strip():
         number_label.append(label)
 
-    return "-".join(number_label)
+    return " ".join(number_label)
 
 
 def create_collecting_summary(project):
