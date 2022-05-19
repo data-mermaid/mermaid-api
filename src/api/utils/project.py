@@ -8,22 +8,22 @@ from . import get_value
 
 def _get_sample_unit_method_label(sample_unit):
     number_label = []
-    if hasattr(sample_unit, "number") and isinstance(sample_unit.number, int):
+    if hasattr(sample_unit, "number") and sample_unit.number is not None:
         number_label.append(str(sample_unit.number))
 
-    if hasattr(sample_unit, "label") and sample_unit.label:
+    if hasattr(sample_unit, "label") and sample_unit.label.strip():
         number_label.append(sample_unit.label)
 
-    return "-".join(number_label)
+    return " ".join(number_label)
 
 
-def _get_sample_unit_field(model, sample_unit_class):
+def _get_sample_unit_field(model):
     return next(
         (
             field.name
             for field in model._meta.get_fields()
             if isinstance(field, OneToOneField)
-            and issubclass(field.related_model, sample_unit_class)
+            and issubclass(field.related_model, SampleUnit)
         ),
         None,
     )
@@ -32,10 +32,10 @@ def _get_sample_unit_field(model, sample_unit_class):
 def _create_submitted_sample_unit_method_summary(model_cls, project):
     summary = defaultdict(dict)
     protocol = model_cls.protocol
-    sample_unit_name = _get_sample_unit_field(model_cls, SampleUnit)
+    sample_unit_name = _get_sample_unit_field(model_cls)
 
     if sample_unit_name is None:
-        return {}
+        return summary
 
     qry_filter = {f"{sample_unit_name}__sample_event__site__project_id": project}
     queryset = model_cls.objects.select_related(
@@ -102,14 +102,14 @@ def _get_collect_record_label(collect_record):
     number_label = []
     sample_unit = collect_record.sample_unit
     number = sample_unit.get("number")
-    label = sample_unit.get("label")
-    if isinstance(number, (str, int)):
+    label = sample_unit.get("label") or ""
+    if number is not None:
         number_label.append(str(number))
 
-    if label:
+    if label.strip():
         number_label.append(label)
 
-    return "-".join(number_label)
+    return " ".join(number_label)
 
 
 def create_collecting_summary(project):

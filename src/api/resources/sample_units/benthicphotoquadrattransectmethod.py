@@ -154,7 +154,7 @@ class BenthicPQTMethodObsSerializer(BaseSUViewAPISerializer):
         )
 
 
-class BenthicPQTObsMethodGeoSerializer(BaseViewAPIGeoSerializer):
+class BenthicPQTMethodObsGeoSerializer(BaseViewAPIGeoSerializer):
     class Meta(BaseViewAPIGeoSerializer.Meta):
         model = BenthicPhotoQuadratTransectObsSQLModel
 
@@ -348,7 +348,7 @@ class BenthicPQTProjectMethodObsView(BaseProjectMethodView):
     drf_label = "benthicphotoquadrattransect-obs"
     project_policy = "data_policy_benthicpqt"
     serializer_class = BenthicPQTMethodObsSerializer
-    serializer_class_geojson = BenthicPQTObsMethodGeoSerializer
+    serializer_class_geojson = BenthicPQTMethodObsGeoSerializer
     serializer_class_csv = ObsBenthicPQTCSVSerializer
     filterset_class = BenthicPQTMethodObsFilterSet
     model = BenthicPhotoQuadratTransectObsSQLModel
