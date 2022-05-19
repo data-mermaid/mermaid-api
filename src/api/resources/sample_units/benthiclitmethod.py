@@ -28,6 +28,7 @@ from ..base import (
 )
 from ..benthic_lit import BenthicLITSerializer
 from ..benthic_transect import BenthicTransectSerializer
+from ..mixins import SampleUnitMethodEditMixin
 from ..obs_benthic_lit import ObsBenthicLITSerializer
 from ..observer import ObserverSerializer
 from ..sample_event import SampleEventSerializer
@@ -51,7 +52,7 @@ class BenthicLITMethodSerializer(BenthicLITSerializer):
         exclude = []
 
 
-class BenthicLITMethodView(BaseProjectApiViewSet):
+class BenthicLITMethodView(SampleUnitMethodEditMixin, BaseProjectApiViewSet):
     queryset = (
         BenthicLIT.objects.select_related("transect", "transect__sample_event")
         .all()

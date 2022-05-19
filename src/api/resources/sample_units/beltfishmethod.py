@@ -28,6 +28,7 @@ from ..base import (
 )
 from ..belt_fish import BeltFishSerializer
 from ..fish_belt_transect import FishBeltTransectSerializer
+from ..mixins import SampleUnitMethodEditMixin
 from ..obs_belt_fish import ObsBeltFishSerializer
 from ..observer import ObserverSerializer
 from ..sample_event import SampleEventSerializer
@@ -119,7 +120,7 @@ class BeltFishMethodSerializer(BeltFishSerializer):
         exclude = []
 
 
-class BeltFishMethodView(BaseProjectApiViewSet):
+class BeltFishMethodView(SampleUnitMethodEditMixin, BaseProjectApiViewSet):
     project_policy = "data_policy_beltfish"
     queryset = (
         BeltFish.objects.select_related("transect", "transect__sample_event")
@@ -219,29 +220,7 @@ class BeltFishMethodView(BaseProjectApiViewSet):
         except:
             transaction.savepoint_rollback(sid)
             raise
-    
 
-    @transaction.atomic
-    @action(
-        detail=True, methods=["PUT"], permission_classes=[ProjectDataAdminPermission]
-    )
-    def edit(self, request, project_pk, pk):
-        collect_record_owner = Project.objects.get_or_none(id=request.data.get("owner"))
-        if collect_record_owner is None:
-            collect_record_owner = request.user.profile
-
-        try:
-            collect_record = edit_transect_method(
-                self.serializer_class,
-                collect_record_owner,
-                request,
-                pk,
-                FISHBELT_PROTOCOL
-            )
-            return Response({"id": str(collect_record.pk)})
-        except Exception as err:
-            return Response(str(err), status=500)
-      
 
 class BeltFishMethodObsSerializer(BaseSUViewAPISerializer):
     class Meta(BaseSUViewAPISerializer.Meta):

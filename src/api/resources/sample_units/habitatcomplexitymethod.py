@@ -30,6 +30,7 @@ from ..base import (
 )
 from ..benthic_transect import BenthicTransectSerializer
 from ..habitat_complexity import HabitatComplexitySerializer
+from ..mixins import SampleUnitMethodEditMixin
 from ..obs_habitat_complexity import ObsHabitatComplexitySerializer
 from ..observer import ObserverSerializer
 from ..sample_event import SampleEventSerializer
@@ -110,7 +111,7 @@ class ObsHabitatComplexityCSVSerializer(ReportSerializer):
     ]
 
 
-class HabitatComplexityMethodView(BaseProjectApiViewSet):
+class HabitatComplexityMethodView(SampleUnitMethodEditMixin, BaseProjectApiViewSet):
     queryset = (
         HabitatComplexity.objects.select_related("transect", "transect__sample_event")
         .all()

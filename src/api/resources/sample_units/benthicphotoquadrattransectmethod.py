@@ -28,6 +28,7 @@ from ..base import (
 from ..benthic_photo_quadrat_transect import BenthicPhotoQuadratTransectSerializer
 from ..obs_benthic_photo_quadrat import ObsBenthicPhotoQuadratSerializer
 from ..observer import ObserverSerializer
+from ..mixins import SampleUnitMethodEditMixin
 from ..quadrat_transect import QuadratTransectSerializer
 from ..sample_event import SampleEventSerializer
 from . import (
@@ -51,7 +52,7 @@ class BenthicPhotoQuadratTransectMethodSerializer(
         exclude = []
 
 
-class BenthicPhotoQuadratTransectMethodView(BaseProjectApiViewSet):
+class BenthicPhotoQuadratTransectMethodView(SampleUnitMethodEditMixin, BaseProjectApiViewSet):
     queryset = (
         BenthicPhotoQuadratTransect.objects.select_related(
             "quadrat_transect", "quadrat_transect__sample_event"
