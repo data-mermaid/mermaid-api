@@ -426,7 +426,11 @@ class ProjectViewSet(BaseApiViewSet):
                 detail={"email": "Email is required"}
             )
 
-        profile, _ = Profile.objects.get_or_create(email=email)
+        try:
+            profile = Profile.objects.get(email__iexact=email)
+        except Profile.DoesNotExist:
+            profile = Profile.objects.create(email=email)
+
         if ProjectProfile.objects.filter(project_id=pk, profile=profile).exists() is False:
             project_profile = ProjectProfile.objects.create(
                 project_id=pk,
