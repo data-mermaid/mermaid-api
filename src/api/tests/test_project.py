@@ -1,25 +1,53 @@
 from django.urls import reverse
 
-from api.models import ProjectProfile
+from api.models import Profile, ProjectProfile
 
 
-def test_add_profile_new(
+def test_add_profile_new_user(
     client,
     base_project,
     project1,
     token1,
 ):
     url = reverse("project-add-profile", kwargs=dict(pk=project1.pk))
+    email = "bill@test.com"
+
+    assert Profile.objects.filter(email=email).exists() is False
 
     response = client.post(
         url,
-        data={"email": "bill@test.com", "role": ProjectProfile.COLLECTOR},
+        data={"email": email, "role": ProjectProfile.COLLECTOR},
         HTTP_AUTHORIZATION=f"Bearer {token1}",
     )
+
+    assert Profile.objects.filter(email=email).exists() is True
+
     assert response.status_code == 200
 
 
-def test_add_profile_existing_profile(
+def test_add_profile_existing_user(
+    client,
+    base_project,
+    project1,
+    token1,
+    profile3,
+):
+    url = reverse("project-add-profile", kwargs=dict(pk=project1.pk))
+    email = profile3.email.title()
+
+    profile_id = str(profile3.pk)
+
+    response = client.post(
+        url,
+        data={"email": email, "role": ProjectProfile.COLLECTOR},
+        HTTP_AUTHORIZATION=f"Bearer {token1}",
+    )
+
+    assert response.status_code == 200
+    assert profile_id == response.json()["profile"]
+
+
+def test_add_profile_existing_project_profile(
     client,
     base_project,
     project1,

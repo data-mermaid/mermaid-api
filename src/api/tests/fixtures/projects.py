@@ -84,6 +84,17 @@ def profile2():
 
 
 @pytest.fixture
+def profile3():
+    email = "profile3@mermaidcollect.org"
+    profile = Profile.objects.create(
+        email=email, first_name="Garrick", last_name="Ollivander"
+    )
+    AuthUser.objects.create(profile=profile, user_id=f"test|{email}")
+
+    return profile
+
+
+@pytest.fixture
 def token1(profile1):
     auth_user = profile1.authusers.first()
     return tokenutils.create_token(auth_user.user_id)
@@ -215,6 +226,7 @@ def base_project(
     site3,
     profile1,
     profile2,
+    profile3,
     project_profile1,
     project_profile2,
 ):
