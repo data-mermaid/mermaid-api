@@ -28,7 +28,7 @@ from .resources.obs_habitat_complexity import ObsHabitatComplexityViewSet
 from .resources.obs_colonies_bleached import ObsColoniesBleachedViewSet
 from .resources.obs_quadrat_benthic_percent import ObsQuadratBenthicPercentViewSet
 from .resources.sync import vw_pull, vw_push
-
+from .resources.notification import NotificationViewSet
 
 from .resources.sample_units.beltfishmethod import (
     BeltFishMethodView,
@@ -94,6 +94,7 @@ router.register(r"managements", ManagementViewSet, "management")
 router.register(r"projecttags", ProjectTagViewSet, "projecttag")
 router.register(r"summarysites", SummarySiteView, "summarysite")
 router.register(r"summarysampleevents", SummarySampleEventView, "summarysampleevent")
+router.register(r"notifications", NotificationViewSet, "notification")
 
 # observation attributes
 router.register(r"benthicattributes", BenthicAttributeViewSet, "benthicattribute")
