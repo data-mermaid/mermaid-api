@@ -10,5 +10,6 @@ from .covariates import *
 from .fish_attributes import *
 from .habitat_complexity import *
 from .mock_http_server import mock_covariate_server
+from .notifications import *
 from .projects import *
 from .revisions_setup import *
