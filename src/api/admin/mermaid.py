@@ -1074,3 +1074,9 @@ class BenthicPhotoQuadratTransectAdmin(BaseAdmin):
             inline.cached_attributes = [(a.pk, a.name) for a in attributes]
             inline.cached_growth_forms = [(gf.pk, gf.name) for gf in growth_forms]
             yield inline.get_formset(request, obj), inline
+
+
+@admin.register(Notification)
+class NotificationAdmin(BaseAdmin):
+    list_display = ("owner", "status", "title", "created_on")
+    search_fields = ["owner__first_name", "owner__last_name", "owner__pk", "status"]
