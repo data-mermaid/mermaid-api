@@ -1738,3 +1738,24 @@ class AuditRecord(JSONMixin):
     event_by = models.ForeignKey("Profile", on_delete=models.SET_NULL, null=True, blank=True)
     model = models.CharField(max_length=100)
     record_id = models.UUIDField(db_index=True)
+
+
+class Notification(BaseModel):
+    INFO = "info"
+    WARNING = "warning"
+    ERROR = "error"
+    
+    STATUSES = (
+        (INFO, INFO),
+        (WARNING, WARNING),
+        (ERROR, ERROR),
+    )
+
+    title = models.CharField(max_length=200)
+    status = models.CharField(max_length=10, choices=STATUSES)
+    description = models.TextField(null=True, blank=True)
+    owner = models.ForeignKey("Profile", on_delete=models.CASCADE)
+
+    class Meta:
+        db_table = "notification"
+        ordering = ["created_on"]
