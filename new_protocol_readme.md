@@ -38,7 +38,57 @@
   -  src/api/submission/validations2/belt_fish.py
   -  src/api/submission/validations2/benthic_photo_quadrat_transect.py
 
-
 ## API Endpoints
 
-- TODO
+- Create a sample unit method endpoint serializer (example: BenthicPhotoQuadratTransectMethodSerializer).
+- Create observation summary serializers for CSV, JSON and GeoJSON, examples:
+  - ObsBenthicPQTCSVSerializer (CSV)
+  - BenthicPQTMethodObsSerializer (JSON)
+  - BenthicPQTMethodObsGeoSerializer (GeoJSON)
+- Create sample unit (SU) summary serializers for CSV, JSON and GeoJSON, examples:
+  - BenthicPQTMethodSUCSVSerializer (CSV)
+  - BenthicPQTMethodSUSerializer (JSON)
+  - BenthicPQTMethodSUGeoSerializer (GeoJSON)
+- Create sample event (SE) summary serializers for CSV, JSON and GeoJSON, examples:
+  - BenthicPQTMethodSECSVSerializer (CSV)
+  - BenthicPQTMethodSESerializer (JSON)
+  - BenthicPQTMethodSEGeoSerializer (GeoJSON)
+- Create filtersets for Observation, SU and SE viewsets, examples:
+  - BenthicPQTMethodObsFilterSet
+  - BenthicPQTMethodSUFilterSet
+  - BenthicPQTMethodSEFilterSet
+- Create viewsets for Observation, SU and SE viewsets, examples:
+  - BenthicPQTProjectMethodObsView
+  - BenthicPQTProjectMethodSUView
+  - BenthicPQTProjectMethodSEView
+- Create a sample unit method endpoint viewset, example:  
+  - BenthicPhotoQuadratTransectMethodView
+- Update api/urls.py with new viewsets, example:
+
+```
+  ...
+  project_router.register(
+      r"benthicpqts/obstransectbenthicpqts",
+      BenthicPQTProjectMethodObsView,
+      "benthicpqtmethod-obs",
+  )
+  project_router.register(
+      r"benthicpqts/sampleunits", BenthicPQTProjectMethodSUView, "benthicpqtmethod-sampleunit"
+  )
+  project_router.register(
+      r"benthicpqts/sampleevents", BenthicPQTProjectMethodSEView, "benthicpqtmethod-sampleevent"
+  )
+  ...
+  project_router.register(
+      r"benthicphotoquadrattransectmethods",
+      BenthicPhotoQuadratTransectMethodView,
+      "benthicphotoquadrattransectmethod",
+  )
+  ...
+
+```
+
+
+**API endpoints example files:**
+  - [Benthic Photo Quadrat Transect](https://github.com/data-mermaid/mermaid-api/blob/dev/src/api/resources/sample_units/benthicphotoquadrattransectmethod.py)
+  - [Belt Fish](https://github.com/data-mermaid/mermaid-api/blob/dev/src/api/resources/sample_units/beltfishmethod.py)
