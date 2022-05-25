@@ -2,6 +2,7 @@ import math
 import re
 import numbers
 import subprocess
+import uuid
 from datetime import datetime
 
 from django.core.exceptions import ObjectDoesNotExist
@@ -210,3 +211,11 @@ def combine_into(d, combined):
             combine_into(v, combined.setdefault(k, {}))
         else:
             combined[k] = v
+
+
+def is_uuid(val):
+    try:
+        uuid.UUID(val)
+        return True
+    except (ValueError, TypeError) as _:
+        return False

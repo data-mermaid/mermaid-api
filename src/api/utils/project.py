@@ -3,7 +3,7 @@ from collections import defaultdict
 from django.db.models.fields.related import OneToOneField
 
 from ..models import PROTOCOL_MAP, CollectRecord, SampleUnit, Site, TransectMethod
-from . import get_value
+from . import get_value, is_uuid
 
 
 def _get_sample_unit_method_label(sample_unit):
@@ -118,10 +118,13 @@ def create_collecting_summary(project):
     collect_records = CollectRecord.objects.select_related("profile").filter(
         project=project
     )
-    site_ids = [
-        get_value(collect_record.data or {}, "sample_event.site", ".")
-        for collect_record in collect_records
-    ]
+    site_ids = []
+    for collect_record in collect_records:
+        val = get_value(collect_record.data or {}, "sample_event.site", ".")
+        if is_uuid(val) is False:
+            continue
+        site_ids.append(val)
+
     sites = Site.objects.filter(id__in=set(site_ids))
     site_lookup = {str(s.pk): s.name for s in sites}
 
@@ -138,6 +141,9 @@ def create_collecting_summary(project):
 
         profile = collect_record.profile
         site_id = get_value(data, "sample_event.site", ".")
+        if site_id not in site_lookup:
+            site_id = DEFAULT_SITE_ID
+
         profile_id = str(profile.pk)
 
         if site_id not in summary:
