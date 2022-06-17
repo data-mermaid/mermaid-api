@@ -1,4 +1,5 @@
 import logging
+import uuid
 
 import django_filters
 from django.contrib.postgres.fields import JSONField
@@ -12,9 +13,10 @@ from rest_condition import Or
 from ..auth_backends import AnonymousJWTAuthentication
 from ..models import Management, Project, Site, Profile, ProjectProfile, ArchivedRecord
 from ..decorators import run_in_thread
+from ..exceptions import check_uuid
 from ..permissions import *
-from ..utils import delete_instance_and_related_objects
-from ..utils.project import create_collecting_summary, create_submitted_summary
+from ..utils import delete_instance_and_related_objects, truthy
+from ..utils.project import create_collecting_summary, create_submitted_summary, copy_project_and_resources
 from ..utils.replace import replace_collect_record_owner, replace_sampleunit_objs
 from .base import (
     BaseAPIFilterSet,
@@ -250,6 +252,66 @@ class ProjectViewSet(BaseApiViewSet):
 
         transaction.savepoint_commit(save_point_id)
         return Response(project_serializer.data)
+    
+
+    @action(
+        detail=False,
+        methods=["post"],
+        permission_classes=[ProjectAuthenticatedUserPermission],
+    )
+    def copy_project(self, request):
+        """
+        Payload schema:
+        
+        {
+            "new_project_name": [string] New project name
+            "original_project_id": [string] Project id to copy
+            "notify_users": [boolean] Sends email to all members of new project. (defaults: false)
+        }
+
+        """
+        
+        profile = request.user.profile
+
+        data = request.data
+        try:
+            new_project_name = data["new_project_name"]
+        except KeyError as e:
+            raise exceptions.ParseError(detail="'new_project_name' is required") from e
+
+        try:
+            original_project_id = data["original_project_id"]
+            if original_project_id and str(original_project_id).strip() != "":
+                check_uuid(original_project_id)
+            original_project = ProjectProfile.objects.get(
+                project_id=original_project_id,
+                profile=profile,
+                role=ProjectProfile.ADMIN).project
+        except KeyError as e:
+            raise exceptions.ParseError(detail="'original_project_id' is required") from e
+        except ProjectProfile.DoesNotExist as not_exist_err:
+            raise exceptions.ParseError(detail="Original project does not exist or you are not an admin") from not_exist_err
+
+        notify_users = truthy(data.get("notify_users"))
+
+        try:
+            new_project = copy_project_and_resources(
+                owner_profile=profile,
+                new_project_name=new_project_name,
+                original_project=original_project
+            )
+
+            if notify_users:
+                # TODO: Add send email to simpleq here
+                # https://trello.com/c/rTFq2mix/678-handle-notify-users-by-email-in-new-project-interface
+                ...
+
+            context = {"request": request}
+            project_serializer = ProjectSerializer(instance=new_project, context=context)
+            return Response(project_serializer.data)
+        except Exception as err:
+            raise exceptions.APIException(detail=f"[{type(err).__name__}] Copying project") from err
+
 
     def get_updates(self, request, *args, **kwargs):
         added, updated, deleted = super().get_updates(request, *args, **kwargs)
