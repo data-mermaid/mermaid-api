@@ -1,11 +1,5 @@
-"""
-Settings Class
-"""
 import re
 import subprocess
-from dataclasses import dataclass
-
-from aws_cdk import Environment
 
 
 def get_branch_name(strip_punctuation: bool = True) -> str:
@@ -27,24 +21,3 @@ def get_branch_name(strip_punctuation: bool = True) -> str:
         return re.sub("[\W_]+", "", git_branch)
 
     return git_branch
-
-
-@dataclass
-class VpcSettings:
-    """Settings Class for VPCs"""
-
-    az_count: int
-    cidr_block: str
-
-
-@dataclass
-class ProjectSettings:
-    """Settings Class for Project Envs"""
-
-    # Custom attrs
-    cdk_env: Environment
-    env_id: str
-    # vpc: VpcSettings
-
-    # Common (default) attrs
-    branch_name: str = get_branch_name()

@@ -1,13 +1,4 @@
-# Envs
-.envrc
-.venv
-.direnv
 
 # CDK
 cdk.out/
 cdk.context.json
-
-# Node (for CDK)
-package.json
-package-lock.json
-node_modules/
