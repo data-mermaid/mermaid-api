@@ -226,7 +226,7 @@ def copy_project_and_resources(owner_profile, new_project_name, original_project
 
 
 def email_members_of_new_project(project, owner_profile):
-    for project_profile in project.profiles.all():
+    for project_profile in project.profiles.filter(~Q(profile=owner_profile)):
         context = {
             "owner": owner_profile,
             "project": project,
