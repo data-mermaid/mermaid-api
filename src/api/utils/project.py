@@ -4,7 +4,16 @@ from django.db import transaction
 from django.db.models import Q
 from django.db.models.fields.related import OneToOneField
 
-from ..models import PROTOCOL_MAP, CollectRecord, Project, ProjectProfile, SampleUnit, Site, TransectMethod
+from ..models import (
+    PROTOCOL_MAP,
+    CollectRecord,
+    Management,
+    Project,
+    ProjectProfile,
+    SampleUnit,
+    Site,
+    TransectMethod
+)
 from . import get_value, is_uuid
 from .email import mermaid_email
 
@@ -189,20 +198,29 @@ def copy_project_and_resources(owner_profile, new_project_name, original_project
             profile=owner_profile
         )
 
+        project_profiles = []
         for pp in original_project.profiles.filter(~Q(profile=owner_profile)):
             pp.id = None
             pp.project = new_project
-            pp.save()
+            project_profiles.append(pp)
+        
+        ProjectProfile.objects.bulk_create(project_profiles)
     
+        new_sites = []
         for site in original_project.sites.all():
             site.id = None
             site.project = new_project
-            site.save()
+            new_sites.append(site)
         
+        Site.objects.bulk_create(new_sites)
+        
+        new_management_regimes = []
         for mr in original_project.management_set.all():
             mr.id = None
             mr.project = new_project
-            mr.save()
+            new_management_regimes.append(mr)
+        
+        Management.objects.bulk_create(new_management_regimes)
 
         return new_project
 

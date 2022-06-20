@@ -320,6 +320,7 @@ class ProjectViewSet(BaseApiViewSet):
             project_serializer = ProjectSerializer(instance=new_project, context=context)
             return Response(project_serializer.data)
         except Exception as err:
+            print(err)
             raise exceptions.APIException(detail=f"[{type(err).__name__}] Copying project") from err
 
 
