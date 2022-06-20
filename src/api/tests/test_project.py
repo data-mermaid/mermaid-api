@@ -2,7 +2,7 @@ from venv import create
 from django.urls import reverse
 
 from api.models import Profile, ProjectProfile
-from api.utils.project import copy_project_and_resources, create_project
+from api.utils.project import copy_project_and_resources
 
 
 def test_add_profile_new_user(
@@ -114,7 +114,7 @@ def test_copy_project_and_resources(
 ):
     project_name = "new title"
     owner_profile = project_profile1.profile
-    new_project = copy_project_and_resources(owner_profile, project_name, project1.pk)
+    new_project = copy_project_and_resources(owner_profile, project_name, project1)
 
     assert new_project.pk != project1.pk
     assert new_project.name == project_name
