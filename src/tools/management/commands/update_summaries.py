@@ -30,7 +30,7 @@ class Command(BaseCommand):
         is_forced = options["force"]
         skip_test_project = options["test_projects"] is not True
 
-        if settings.ENVIRONMENT != "prod" and is_forced is False:
+        if settings.ENVIRONMENT not in ("dev", "prod") and is_forced is False:
             print("Skipping update")
             return
 
