@@ -6,6 +6,7 @@ from django.db.models.fields.related import OneToOneField
 
 from ..models import PROTOCOL_MAP, CollectRecord, Project, ProjectProfile, SampleUnit, Site, TransectMethod
 from . import get_value, is_uuid
+from .email import mermaid_email
 
 
 def _get_sample_unit_method_label(sample_unit):
@@ -204,3 +205,18 @@ def copy_project_and_resources(owner_profile, new_project_name, original_project
             mr.save()
 
         return new_project
+
+
+def email_members_of_new_project(project, owner_profile):
+    for project_profile in project.profiles.all():
+        context = {
+            "owner": owner_profile,
+            "project": project,
+            "project_profile": project_profile
+        }
+        mermaid_email(
+            subject="New Project",
+            template="emails/added_to_project.txt",
+            to=[project_profile.profile.email],
+            context=context
+        )
