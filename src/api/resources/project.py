@@ -296,7 +296,7 @@ class ProjectViewSet(BaseApiViewSet):
         except KeyError as e:
             raise exceptions.ParseError(detail="'original_project_id' is required") from e
         except ProjectProfile.DoesNotExist as not_exist_err:
-            raise exceptions.ParseError(detail="Original project does not exist or you are not an admin") from not_exist_err
+            raise exceptions.ParseError(detail="Original project does not exist or you are not a member") from not_exist_err
 
         notify_users = truthy(data.get("notify_users"))
 
