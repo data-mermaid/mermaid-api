@@ -23,14 +23,14 @@ class Command(BaseCommand):
         )
 
     @transaction.atomic
-    def update_summaries(self, project_id):
-        update_project_summaries(project_id)
+    def update_summaries(self, project_id, skip_test_project):
+        update_project_summaries(project_id, skip_test_project)
 
     def handle(self, *args, **options):
         is_forced = options["force"]
-        include_test_projects = options["test_projects"]
+        skip_test_project = options["test_projects"] is not True
 
-        if settings.ENVIRONMENT != "prod" and is_forced is False:
+        if settings.ENVIRONMENT not in ("dev", "prod") and is_forced is False:
             print("Skipping update")
             return
 
@@ -38,12 +38,8 @@ class Command(BaseCommand):
         print("Updating summaries...")
         futures = []
         with ThreadPoolExecutor(max_workers=4) as exc:
-            project_statuses = [Project.OPEN, Project.LOCKED]
-            if include_test_projects:
-                project_statuses.append(Project.TEST)
-
-            for project in Project.objects.filter(status__in=project_statuses):
-                futures.append(exc.submit(self.update_summaries, project.pk))
+            for project in Project.objects.all():
+                futures.append(exc.submit(self.update_summaries, project.pk, skip_test_project))
 
         for future in futures:
             future.result()
