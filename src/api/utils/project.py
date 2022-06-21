@@ -183,20 +183,20 @@ def create_collecting_summary(project):
     return list(protocols), summary
 
 
+@transaction.atomic()
 def copy_project_and_resources(owner_profile, new_project_name, original_project):
-    with transaction.atomic():
-        new_project = Project.objects.get(id=original_project.pk)
-        new_project.id = None
-        new_project.name = new_project_name
-        new_project.save()
+    new_project = Project.objects.get(id=original_project.pk)
+    new_project.id = None
+    new_project.name = new_project_name
+    new_project.save()
 
-        new_project.tags.add(*original_project.tags.all())
+    new_project.tags.add(*original_project.tags.all())
 
-        ProjectProfile.objects.create(
-            role=ProjectProfile.ADMIN,
-            project=new_project,
-            profile=owner_profile
-        )
+    ProjectProfile.objects.create(
+        role=ProjectProfile.ADMIN,
+        project=new_project,
+        profile=owner_profile
+    )
 
         project_profiles = []
         for pp in original_project.profiles.filter(~Q(profile=owner_profile)):
@@ -222,7 +222,7 @@ def copy_project_and_resources(owner_profile, new_project_name, original_project
         
         Management.objects.bulk_create(new_management_regimes)
 
-        return new_project
+    return new_project
 
 
 def email_members_of_new_project(project, owner_profile):
