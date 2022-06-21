@@ -20,7 +20,7 @@ from api.utils import tokenutils
 
 @pytest.fixture
 def project1(fish_family1, fish_family2, fish_family3, fish_family4):
-    return Project.objects.create(
+    project = Project.objects.create(
         name="Test Project 1",
         status=Project.OPEN,
         data={
@@ -34,6 +34,9 @@ def project1(fish_family1, fish_family2, fish_family3, fish_family4):
             }
         }
     )
+    project.tags.add("test", "fishy", "global")
+
+    return project
 
 
 @pytest.fixture
