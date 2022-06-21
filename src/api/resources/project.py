@@ -16,7 +16,12 @@ from ..decorators import run_in_thread
 from ..exceptions import check_uuid
 from ..permissions import *
 from ..utils import delete_instance_and_related_objects, truthy
-from ..utils.project import create_collecting_summary, create_submitted_summary, copy_project_and_resources
+from ..utils.project import (
+    create_collecting_summary,
+    create_submitted_summary,
+    copy_project_and_resources,
+    email_members_of_new_project
+)
 from ..utils.replace import replace_collect_record_owner, replace_sampleunit_objs
 from .base import (
     BaseAPIFilterSet,
@@ -308,14 +313,13 @@ class ProjectViewSet(BaseApiViewSet):
             )
 
             if notify_users:
-                # TODO: Add send email to simpleq here
-                # https://trello.com/c/rTFq2mix/678-handle-notify-users-by-email-in-new-project-interface
-                ...
+                email_members_of_new_project(new_project, profile)
 
             context = {"request": request}
             project_serializer = ProjectSerializer(instance=new_project, context=context)
             return Response(project_serializer.data)
         except Exception as err:
+            print(err)
             raise exceptions.APIException(detail=f"[{type(err).__name__}] Copying project") from err
 
 

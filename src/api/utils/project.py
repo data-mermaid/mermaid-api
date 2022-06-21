@@ -4,8 +4,18 @@ from django.db import transaction
 from django.db.models import Q
 from django.db.models.fields.related import OneToOneField
 
-from ..models import PROTOCOL_MAP, CollectRecord, Project, ProjectProfile, SampleUnit, Site, TransectMethod
+from ..models import (
+    PROTOCOL_MAP,
+    CollectRecord,
+    Management,
+    Project,
+    ProjectProfile,
+    SampleUnit,
+    Site,
+    TransectMethod
+)
 from . import get_value, is_uuid
+from .email import mermaid_email
 
 
 def _get_sample_unit_method_label(sample_unit):
@@ -188,19 +198,43 @@ def copy_project_and_resources(owner_profile, new_project_name, original_project
         profile=owner_profile
     )
 
-    for pp in original_project.profiles.filter(~Q(profile=owner_profile)):
-        pp.id = None
-        pp.project = new_project
-        pp.save()
-
-    for site in original_project.sites.all():
-        site.id = None
-        site.project = new_project
-        site.save()
+        project_profiles = []
+        for pp in original_project.profiles.filter(~Q(profile=owner_profile)):
+            pp.id = None
+            pp.project = new_project
+            project_profiles.append(pp)
+        
+        ProjectProfile.objects.bulk_create(project_profiles)
     
-    for mr in original_project.management_set.all():
-        mr.id = None
-        mr.project = new_project
-        mr.save()
+        new_sites = []
+        for site in original_project.sites.all():
+            site.id = None
+            site.project = new_project
+            new_sites.append(site)
+        
+        Site.objects.bulk_create(new_sites)
+        
+        new_management_regimes = []
+        for mr in original_project.management_set.all():
+            mr.id = None
+            mr.project = new_project
+            new_management_regimes.append(mr)
+        
+        Management.objects.bulk_create(new_management_regimes)
 
     return new_project
+
+
+def email_members_of_new_project(project, owner_profile):
+    for project_profile in project.profiles.filter(~Q(profile=owner_profile)):
+        context = {
+            "owner": owner_profile,
+            "project": project,
+            "project_profile": project_profile
+        }
+        mermaid_email(
+            subject="New Project",
+            template="emails/added_to_project.txt",
+            to=[project_profile.profile.email],
+            context=context
+        )

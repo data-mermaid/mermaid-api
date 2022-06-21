@@ -5,12 +5,11 @@ from django.conf import settings
 from django.core.mail import EmailMultiAlternatives
 from django.template.loader import render_to_string
 
-from ..decorators import run_in_thread
 from ..models.mermaid import ProjectProfile
+from .q import submit_job
 
 
-@run_in_thread
-def mermaid_email(
+def _mermaid_email(
     subject, template, to, context=None, from_email=None, reply_to=None
 ):
     _subject = f"[MERMAID] {subject}"
@@ -33,6 +32,21 @@ def mermaid_email(
         msg.send()
     else:
         print(text_content)
+
+
+def mermaid_email(
+    subject, template, to, context=None, from_email=None, reply_to=None
+):
+    submit_job(
+        delay=0,
+        callable=_mermaid_email,
+        subject=subject,
+        template=template,
+        to=to,
+        context=context,
+        from_email=from_email,
+        reply_to=reply_to
+    )
 
 
 def email_project_admins(project, subject, template, context, from_email=None):
