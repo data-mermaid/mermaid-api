@@ -292,8 +292,7 @@ class ProjectViewSet(BaseApiViewSet):
                 check_uuid(original_project_id)
             original_project = ProjectProfile.objects.get(
                 project_id=original_project_id,
-                profile=profile,
-                role=ProjectProfile.ADMIN).project
+                profile=profile).project
         except KeyError as e:
             raise exceptions.ParseError(detail="'original_project_id' is required") from e
         except ProjectProfile.DoesNotExist as not_exist_err:
