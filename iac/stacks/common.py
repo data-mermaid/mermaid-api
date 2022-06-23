@@ -9,10 +9,10 @@ from aws_cdk import (
 )
 from constructs import Construct
 
-from cdk.settings import ProjectSettings
+from iac.settings import ProjectSettings
 
 
-class MainStack(Stack):
+class CommonStack(Stack):
     def __init__(
         self,
         scope: Construct,

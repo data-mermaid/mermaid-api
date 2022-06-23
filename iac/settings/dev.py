@@ -3,7 +3,7 @@ import os
 
 from aws_cdk import Environment
 
-from cdk.settings.settings import DatabaseSettings, ProjectSettings, DjangoSettings
+from iac.settings.settings import DatabaseSettings, ProjectSettings, DjangoSettings
 
 DEV_ENV_ID = "dev"
 DEV_SETTINGS = ProjectSettings(
@@ -11,14 +11,17 @@ DEV_SETTINGS = ProjectSettings(
         account=os.getenv("DEV_AWS_ACCT", None),
         region=os.getenv("DEV_AWS_REGION", "us-east-1"),
     ),
-    env_id="dev",
+    env_id=DEV_ENV_ID,
     database=DatabaseSettings(
-        name=f'{DEV_ENV_ID}-mermaid',
+        name=f'mermaid-{DEV_ENV_ID}',
     ),
     api=DjangoSettings(
-        backup_bucket_name="",
         container_cpu=1024,
         container_memory=2048,
-        container_count=1
+        container_count=1,
+        allowed_hosts= "",
+        default_domain_api= "dev-api.datamermaid.org",
+        default_domain_collect= "dev-collect.datamermaid.org",
+        mermaid_api_audience= "https://dev-api.datamermaid.org"
     )
 )
