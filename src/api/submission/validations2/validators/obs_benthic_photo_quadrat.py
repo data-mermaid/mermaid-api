@@ -110,7 +110,7 @@ class QuadratNumberSequenceValidator(BaseValidator):
         )
         quadrat_numbers = sorted(
             {
-                self.get_value(o, self.observation_quadrat_number_path)
+                self.get_value(o, self.observation_quadrat_number_path) or 0
                 for o in observations
             }
         )
