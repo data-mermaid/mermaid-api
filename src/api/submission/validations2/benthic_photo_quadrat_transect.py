@@ -266,6 +266,7 @@ benthic_photo_quadrat_transect_validations = [
             num_quadrats_path="data.quadrat_transect.num_quadrats",
             obs_benthic_photo_quadrats_path="data.obs_benthic_photo_quadrats",
             observation_quadrat_number_path="quadrat_number",
+            quadrat_number_start_path="data.quadrat_transect.quadrat_number_start"
         ),
         paths=["data.obs_benthic_photo_quadrats"],
         validation_level=RECORD_LEVEL,

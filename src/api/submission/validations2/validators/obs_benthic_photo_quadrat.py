@@ -94,12 +94,16 @@ class QuadratNumberSequenceValidator(BaseValidator):
 
     def __init__(
         self,
+        num_quadrats_path,
         obs_benthic_photo_quadrats_path,
         observation_quadrat_number_path,
+        quadrat_number_start_path,
         **kwargs,
     ):
+        self.num_quadrats_path = num_quadrats_path
         self.obs_benthic_photo_quadrats_path = obs_benthic_photo_quadrats_path
         self.observation_quadrat_number_path = observation_quadrat_number_path
+        self.quadrat_number_start_path = quadrat_number_start_path
 
         super().__init__(**kwargs)
 
@@ -108,15 +112,20 @@ class QuadratNumberSequenceValidator(BaseValidator):
         observations = (
             self.get_value(collect_record, self.obs_benthic_photo_quadrats_path) or []
         )
-        quadrat_numbers = sorted(
-            {
-                self.get_value(o, self.observation_quadrat_number_path)
-                for o in observations
-            }
+        num_quadrats = self.get_value(collect_record, self.num_quadrats_path) or 0
+        quadrat_number_start = (
+            self.get_value(collect_record, self.quadrat_number_start_path) or 1
         )
+        quadrat_numbers = []
+        for o in observations:
+            quadrat_number = self.get_value(o, self.observation_quadrat_number_path)
+            if quadrat_number is None:
+                continue
+            quadrat_numbers.append(quadrat_number)
+        quadrat_numbers = set(quadrat_numbers)
 
         quadrat_number_seq = [
-            quadrat_numbers[0] + i for i in range(len(quadrat_numbers))
+            i for i in range(quadrat_number_start, quadrat_number_start + num_quadrats)
         ]
 
         missing_quadrat_numbers = [

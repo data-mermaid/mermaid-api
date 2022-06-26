@@ -1009,31 +1009,31 @@ def valid_benthic_pq_transect_collect_record(
 ):
     obs_benthic_photo_quadrats = [
         {
-            "quadrat_number": 1,
+            "quadrat_number": 2,
             "attribute": str(benthic_attribute_1.pk),
             "growth_form": "",
             "num_points": 50,
         },
         {
-            "quadrat_number": 1,
+            "quadrat_number": 2,
             "attribute": str(benthic_attribute_1.pk),
             "growth_form": str(growth_form1.pk),
             "num_points": 50,
         },
         {
-            "quadrat_number": 2,
+            "quadrat_number": 3,
             "attribute": str(benthic_attribute_4.pk),
             "growth_form": "",
             "num_points": 50,
         },
         {
-            "quadrat_number": 2,
+            "quadrat_number": 3,
             "attribute": str(benthic_attribute_3.pk),
             "growth_form": str(growth_form2.pk),
             "num_points": 50,
         },
         {
-            "quadrat_number": 3,
+            "quadrat_number": 4,
             "attribute": str(benthic_attribute_1.pk),
             "growth_form": str(growth_form1.pk),
             "num_points": 100,
@@ -1055,6 +1055,7 @@ def valid_benthic_pq_transect_collect_record(
             "sample_time": None,
             "relative_depth": str(relative_depth1.pk),
             "len_surveyed": 100,
+            "quadrat_number_start": 2,
         },
         "sample_event": {
             "management": str(sample_event1.management.id),
