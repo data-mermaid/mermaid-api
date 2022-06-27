@@ -1,0 +1,4 @@
+{% extends "notifications/base.txt" %}
+{% block body %}Changes have been made to {{ project_name }}{% if text_changes %}{% for change in text_changes %}
+- {{change}}
+{% endfor %}{% endif %}{% endblock %}
