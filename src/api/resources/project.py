@@ -181,12 +181,6 @@ class ProjectViewSet(BaseApiViewSet):
             profile = user.profile
             return qs.filter(profiles__profile=profile)
 
-    
-    def create(self, request, *args, **kwargs):
-        if not request.data.get("id"):
-            request.data["id"] = uuid.uuid4()
-        return super().create(request, *args, **kwargs)
-    
     @action(
         detail=False,
         methods=["post"],
