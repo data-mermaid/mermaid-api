@@ -1,6 +1,7 @@
+from datetime import date
+
 import pytest
 from django.contrib.gis.geos import Point
-from django.utils import timezone
 from rest_framework.test import APIClient
 
 from api.mocks import MockRequest
@@ -195,7 +196,7 @@ def sample_event1(management1, site1):
     return SampleEvent.objects.create(
         management=management1,
         site=site1,
-        sample_date=timezone.now(),
+        sample_date=date(2022, 1, 1),
         notes="Some sample event notes for sample_event1",
     )
 
@@ -205,7 +206,7 @@ def sample_event2(management2, site2):
     return SampleEvent.objects.create(
         management=management2,
         site=site2,
-        sample_date=timezone.now(),
+        sample_date=date(2022, 1, 1),
         notes="Some sample event notes for sample_event2",
     )
 
@@ -215,7 +216,7 @@ def sample_event3(management1, site1):
     return SampleEvent.objects.create(
         management=management1,
         site=site1,
-        sample_date=timezone.now(),
+        sample_date=date(2022, 1, 1),
         notes="Some sample event notes for sample_event3",
     )
 

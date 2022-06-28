@@ -244,4 +244,5 @@ class SampleUnitMethodEditMixin(object):
             )
             return Response({"id": str(collect_record.pk)})
         except Exception as err:
+            print(err)
             return Response(str(err), status=500)
