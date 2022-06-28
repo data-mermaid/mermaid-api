@@ -1,6 +1,7 @@
 from .belt_fish import *
 from .benthic_attributes import *
 from .benthic_lit import *
+from .benthic_photo_quadrat_transect import *
 from .benthic_pit import *
 from .benthic_transects import *
 from .bleaching import *
