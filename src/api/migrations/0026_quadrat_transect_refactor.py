@@ -95,7 +95,7 @@ ALTER TABLE IF EXISTS public.quadrat_transect
 
 
 ALTER TABLE IF EXISTS public.quadrat_transect
-    OWNER to postgres;
+    OWNER to mermaid_admin;
 
 
 CREATE INDEX IF NOT EXISTS quadrat_transect_created_by_id_5cbe9ac6
