@@ -176,6 +176,7 @@ def get_quadrat_collection_data(collect_record, sample_event_id=None):
     quadrat_collection_data = data.get("quadrat_collection") or dict()
     return dict(
         sample_event=sample_event_id,
+        label=quadrat_collection_data.get("label") or "",
         quadrat_size= _cast_decimal_to_str(quadrat_collection_data.get("quadrat_size")),
         collect_record_id=collect_record.id,
         sample_time=quadrat_collection_data.get("sample_time") or None,
@@ -183,8 +184,7 @@ def get_quadrat_collection_data(collect_record, sample_event_id=None):
         visibility=quadrat_collection_data.get("visibility") or None,
         current=quadrat_collection_data.get("current") or None,
         relative_depth=quadrat_collection_data.get("relative_depth") or None,
-        tide=quadrat_collection_data.get("tide") or None
-        
+        tide=quadrat_collection_data.get("tide") or None   
     )
 
 
@@ -234,6 +234,7 @@ def get_quadrat_transect_data(collect_record, sample_event_id=None):
     quadrat_transect_data = data.get("quadrat_transect") or dict()
     return dict(
         sample_event=sample_event_id,
+        label=quadrat_transect_data.get("label") or "",
         quadrat_size=_cast_decimal_to_str(quadrat_transect_data.get("quadrat_size")),
         len_surveyed=_cast_decimal_to_str(quadrat_transect_data.get("len_surveyed")),
         num_quadrats=quadrat_transect_data.get("num_quadrats"),
