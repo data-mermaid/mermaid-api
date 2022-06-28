@@ -686,9 +686,11 @@ class QuadratCollection(BaseQuadrat):
         db_table = 'quadrat_collection'
 
 
-class QuadratTransect(BenthicTransect):
+class QuadratTransect(Transect):
     project_lookup = "sample_event__site__project"
 
+    number = models.PositiveSmallIntegerField(default=1)
+    label = models.CharField(max_length=50, blank=True)
     quadrat_size = models.DecimalField(
         decimal_places=2, max_digits=6,
         verbose_name=_('single quadrat area (m2)'),
