@@ -28,8 +28,11 @@ api_stack = ApiStack(
     config=PROJECT_SETTINGS,
     env=PROJECT_SETTINGS.cdk_env,
     tags=tags,
-    vpc=common_stack.vpc,
-    database=common_stack.database
+    cluster=common_stack.cluster,
+    database=common_stack.database,
+    backup_bucket=common_stack.backup_bucket,
+    load_balancer=common_stack.load_balancer,
+    container_security_group=common_stack.ecs_sg
 )
 
 

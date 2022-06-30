@@ -42,7 +42,6 @@ class DjangoSettings:
     admins: str = "sysadmin@datamermaid.org"
     maintenance_mode: str = "False"
     auth0_management_api_audience: str = "https://datamermaid.auth0.com/api/v2/"
-    aws_backup_bucket_name: str = "mermaid-api-v2-backups" # Use CDK construct?
     email_host: str = "smtp.gmail.com"
     email_port: str = "587"
     email_host_user: str = "sysadmin@datamermaid.org"
@@ -70,3 +69,4 @@ class ProjectSettings:
 
     # Common Attrs (defaults)
     branch_name: str = get_branch_name()
+    backup_bucket_name: str = "mermaid-api-v2-backups" # Use CDK construct?
