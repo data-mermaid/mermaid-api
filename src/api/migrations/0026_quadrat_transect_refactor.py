@@ -94,10 +94,6 @@ ALTER TABLE IF EXISTS public.quadrat_transect
     DEFERRABLE INITIALLY DEFERRED;
 
 
-ALTER TABLE IF EXISTS public.quadrat_transect
-    OWNER to mermaid_admin;
-
-
 CREATE INDEX IF NOT EXISTS quadrat_transect_created_by_id_5cbe9ac6
     ON public.quadrat_transect USING btree
     (created_by_id ASC NULLS LAST)
