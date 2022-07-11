@@ -12,10 +12,10 @@ WORKDIR /var/projects/webapp
 
 RUN groupadd webapps
 RUN useradd webapp -G webapps
-RUN mkdir -p /var/log/webapp/ && chown -R webapp /var/log/webapp/ && chmod -R u+rX /var/log/webapp/
-RUN mkdir -p /var/run/webapp/ && chown -R webapp /var/run/webapp/ && chmod -R u+rX /var/run/webapp/
-RUN mkdir -p /etc/gunicorn/
-ADD ./gunicorn_webapp.py /etc/gunicorn/webapp.py
+# RUN mkdir -p /var/log/webapp/ && chown -R webapp /var/log/webapp/ && chmod -R u+rX /var/log/webapp/
+# RUN mkdir -p /var/run/webapp/ && chown -R webapp /var/run/webapp/ && chmod -R u+rX /var/run/webapp/
+# RUN mkdir -p /etc/gunicorn/
+# ADD ./gunicorn_webapp.py /etc/gunicorn/webapp.py
 
 RUN apt-get update && apt-get upgrade -y
 RUN apt-get install -y --no-install-recommends \
@@ -31,6 +31,7 @@ RUN apt-get install -y --no-install-recommends \
     gdal-bin \
     python3-gdal
 
+USER webapp
 RUN pip install --upgrade pip
 ADD requirements.txt requirements.txt
 RUN pip install --no-cache-dir -r requirements.txt
@@ -39,4 +40,4 @@ RUN rm requirements.txt
 ADD . /var/projects/webapp
 
 EXPOSE 8080 80
-CMD ["gunicorn", "app.wsgi:application", "-c",  "/etc/gunicorn/webapp.py"]
+CMD ["/bin/bash", "/var/projects/webapp/entry.sh" ]

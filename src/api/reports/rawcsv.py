@@ -1,5 +1,5 @@
 import csv
-from collections import Mapping
+from collections.abc import Mapping
 from . import BaseReport
 
 
