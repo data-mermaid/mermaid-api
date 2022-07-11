@@ -24,7 +24,7 @@ common_stack = CommonStack(
 
 api_stack = ApiStack(
     app,
-    f"{PROJECT_SETTINGS.branch_name}-mermaid-api-django",
+    f"{PROJECT_SETTINGS.env_id}-mermaid-api-django",
     config=PROJECT_SETTINGS,
     env=PROJECT_SETTINGS.cdk_env,
     tags=tags,
