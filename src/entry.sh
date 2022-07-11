@@ -5,7 +5,8 @@ echo "SELECT 'CREATE DATABASE mermaid' WHERE NOT EXISTS (SELECT FROM pg_database
 # set -e
 
 echo "Starting Django Migrations"
-python manage.py migrate
+python manage.py migrate --noinput
+python manage.py collectstatic --noinput
 
 echo "Run Gunicorn Server"
 gunicorn app.wsgi --bind 0.0.0.0:8080
