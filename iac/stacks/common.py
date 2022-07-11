@@ -66,8 +66,18 @@ class CommonStack(Stack):
             self,
             "Bastion",
             vpc=self.vpc,
-            subnet_selection=ec2.SubnetSelection(subnet_type=ec2.SubnetType.PUBLIC)
+            subnet_selection=ec2.SubnetSelection(subnet_type=ec2.SubnetType.PUBLIC),
+            init=ec2.CloudFormationInit.from_elements(
+                ec2.InitPackage.yum("postgresql"),
+                ec2.InitPackage.yum("postgresql-devel")
+            ),
+            # init_options=ec2.ApplyCloudFormationInitOptions(),
         )
+        # Allow from EC2_INSTANCE_CONNECT: 
+        # https://docs.aws.amazon.com/general/latest/gr/aws-ip-ranges.html#aws-ip-download
+        # jq -r '.prefixes[] | select(.region=="us-east-1") | select(.service=="EC2_INSTANCE_CONNECT") | .ip_prefix' < ~/.aws/ip-ranges.json
+        # 18.206.107.24/29
+        bastion.allow_ssh_access_from(ec2.Peer.ipv4("18.206.107.24/29"))
 
         self.database.connections.allow_from(bastion.connections, port_range=ec2.Port.tcp(5432))
 
