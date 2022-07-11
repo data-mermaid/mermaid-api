@@ -4,9 +4,18 @@ Settings Class
 import os
 from dataclasses import dataclass
 
-from aws_cdk import Environment, RemovalPolicy, aws_ec2 as ec2
+from aws_cdk import (
+    Environment, 
+    Stack,
+    Arn,
+    ArnComponents,
+    ArnFormat,
+    aws_ec2 as ec2,
+    aws_secretsmanager as secrets
+)
 
 from iac.settings.utils import get_branch_name
+from iac.settings.utils import camel_case
 
 
 @dataclass
@@ -48,12 +57,36 @@ class DjangoSettings:
     mc_user: str = "Mermaid"
 
     # Common Secrets
-    secret_key_name: str = "common/mermaid-api/secret"
-    email_host_password_name: str = "common/mermaid-api/email-host-password"
-    mermaid_api_signing_secret_name: str = "common/mermaid-api/mermaid-api-signing-secret"
-    spa_admin_client_name: str = "common/mermaid-api/spa-admin-client"
-    mermaid_management_api_client_name: str = "common/mermaid-api/mermaid-management-api-client"
-    mc_api_key_name: str = "common/mermaid-api/mc-api-key"
+    secret_key_name: str = "common/mermaid-api/secret-OcuWCl"
+    email_host_password_name: str = "common/mermaid-api/email-host-password-CI6hBI"
+    mermaid_api_signing_secret_name: str = "common/mermaid-api/mermaid-api-signing-secret-FM7ATI"
+    
+    spa_admin_client_id_name: str = "common/mermaid-api/spa-admin-client-id-FuMVtc"
+    spa_admin_client_secret_name: str = "common/mermaid-api/spa-admin-client-secret-kYccw0"
+    mermaid_management_api_client_id_name: str = "common/mermaid-api/mermaid-management-api-client-id-nIWaxV"
+    mermaid_management_api_client_secret_name: str = "common/mermaid-api/mermaid-management-api-client-secret-HNVoT0"
+    mc_api_key_name: str = "common/mermaid-api/mc-api-key-xSsQOk"
+    mc_api_list_id_name: str = "common/mermaid-api/mc-api-list-id-Am5u1G"
+
+
+    def get_secret_object(self, stack: Stack, secret_name: str):
+        """Return secret object from name and field"""
+        id = f'{camel_case(secret_name.split("/")[-1])}'
+        return secrets.Secret.from_secret_complete_arn(
+            stack,
+            id=f'SSM-{id}',
+            secret_complete_arn=Arn.format(
+                components=ArnComponents(
+                    region=stack.region,
+                    account=stack.account,
+                    partition=stack.partition,
+                    resource="secret",
+                    service="secretsmanager",
+                    resource_name=secret_name,
+                    arn_format=ArnFormat.COLON_RESOURCE_NAME
+                )
+            )
+        )
 
 
 @dataclass
