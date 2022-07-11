@@ -1,12 +1,12 @@
+from importlib import resources
 from aws_cdk import (
     Stack,
+    Duration,
     aws_ec2 as ec2,
     aws_ecs as ecs,
-    aws_ecs_patterns as ecs_patterns,
     aws_rds as rds,
-    aws_secretsmanager as secrets,
     aws_s3 as s3,
-    aws_elasticloadbalancingv2 as elb
+    aws_elasticloadbalancingv2 as elb,
 )
 from constructs import Construct
 
@@ -33,18 +33,26 @@ class ApiStack(Stack):
 
         # svc = "mermaid_api"
 
-        # log_group = logs.LogGroup(
-        #     self,
-        #     id=f"{id}LogGroup",
-        #     log_group_name=f"{config.prefix}-{svc}",
-        # )
-
         task_definition = ecs.FargateTaskDefinition(
             self,
             id="FargateTaskDefinition",
             cpu=config.api.container_cpu,
             memory_limit_mib=config.api.container_memory,
         )
+
+        api_secrets = {
+            "DB_USER": ecs.Secret.from_secrets_manager(database.secret, "username"),
+            "DB_PASSWORD": ecs.Secret.from_secrets_manager(database.secret, "password"),
+            "EMAIL_HOST_PASSWORD": ecs.Secret.from_secrets_manager(config.api.get_secret_object(self, config.api.email_host_password_name)),
+            "SECRET_KEY": ecs.Secret.from_secrets_manager(config.api.get_secret_object(self, config.api.secret_key_name)),
+            "MERMAID_API_SIGNING_SECRET": ecs.Secret.from_secrets_manager(config.api.get_secret_object(self, config.api.mermaid_api_signing_secret_name)),
+            "SPA_ADMIN_CLIENT_ID": ecs.Secret.from_secrets_manager(config.api.get_secret_object(self, config.api.spa_admin_client_id_name)),
+            "SPA_ADMIN_CLIENT_SECRET": ecs.Secret.from_secrets_manager(config.api.get_secret_object(self, config.api.spa_admin_client_secret_name)),
+            "MERMAID_MANAGEMENT_API_CLIENT_ID": ecs.Secret.from_secrets_manager(config.api.get_secret_object(self, config.api.mermaid_management_api_client_id_name)),
+            "MERMAID_MANAGEMENT_API_CLIENT_SECRET": ecs.Secret.from_secrets_manager(config.api.get_secret_object(self, config.api.mermaid_management_api_client_secret_name)),
+            "MC_API_KEY": ecs.Secret.from_secrets_manager(config.api.get_secret_object(self, config.api.mc_api_key_name)),
+            "MC_LIST_ID": ecs.Secret.from_secrets_manager(config.api.get_secret_object(self, config.api.mc_api_list_id_name)),
+        }
 
         task_definition.add_container(
             id="MermaidAPI",
@@ -75,20 +83,10 @@ class ApiStack(Stack):
                 "DB_NAME": config.database.name,
                 "DB_HOST": database.instance_endpoint.hostname
             },
-            secrets={
-                "DB_USER": ecs.Secret.from_secrets_manager(database.secret, "username"),
-                "DB_PASSWORD": ecs.Secret.from_secrets_manager(database.secret, "password"),
-                "EMAIL_HOST_PASSWORD": self._get_from_secrets_manager(config.api.email_host_password_name),
-                "SECRET_KEY": self._get_from_secrets_manager(config.api.secret_key_name),
-                "MERMAID_API_SIGNING_SECRET": self._get_from_secrets_manager(config.api.mermaid_api_signing_secret_name),
-                "SPA_ADMIN_CLIENT_ID": self._get_from_secrets_manager(config.api.spa_admin_client_name, key="id"),
-                "SPA_ADMIN_CLIENT_SECRET": self._get_from_secrets_manager(config.api.spa_admin_client_name, key="secret"),
-                "MERMAID_MANAGEMENT_API_CLIENT_ID": self._get_from_secrets_manager(config.api.mermaid_management_api_client_name, key="id"),
-                "MERMAID_MANAGEMENT_API_CLIENT_SECRET": self._get_from_secrets_manager(config.api.mermaid_management_api_client_name, key="secret"),
-                "MC_API_KEY": self._get_from_secrets_manager(config.api.mc_api_key_name, key="api_key"),
-                "MC_LIST_ID": self._get_from_secrets_manager(config.api.mc_api_key_name, key="list_id"),
-            },
-            # health_check= # Setup.
+            secrets=api_secrets,
+            logging=ecs.LogDrivers.aws_logs(
+                stream_prefix=config.env_id
+            )
         )
 
         service = ecs.FargateService(
@@ -104,7 +102,16 @@ class ApiStack(Stack):
             vpc_subnets=ec2.SubnetSelection(
                 subnets=cluster.vpc.select_subnets(subnet_type=ec2.SubnetType.PRIVATE_WITH_NAT).subnets
             ),
+            # capacity_provider_strategies=ecs.CapacityProviderStrategy(
+            #     capacity_provider="FARGATE_SPOT",
+            #     base=1,
+            #     weight=50 # Not sure about this.
+            # ) # Manually set FARGATE_SPOT as deafult in cluster console.
         )
+
+        # Grant Secret read to API container
+        for _, container_secret in api_secrets.items():
+            container_secret.grant_read(service.task_definition.execution_role)
 
         # add FargateService as target to LoadBalancer/Listener, currently, send all traffic. TODO filter by domain?
 
@@ -114,6 +121,14 @@ class ApiStack(Stack):
             targets=[service],
             protocol=elb.ApplicationProtocol.HTTP,
             vpc=cluster.vpc,
+            health_check=elb.HealthCheck(
+                path="/health/",
+                healthy_http_codes="200-299",
+                healthy_threshold_count=2,
+                unhealthy_threshold_count=10,
+                timeout=Duration.seconds(10),
+                interval=Duration.seconds(60),
+            )
         )
 
         listener_rule = elb.ApplicationListenerRule(
@@ -129,19 +144,5 @@ class ApiStack(Stack):
 
         database.connections.allow_from(service.connections, port_range=ec2.Port.tcp(5432))
 
-        backup_bucket.grant_read_write(service.task_definition.task_role)
-    
-    def _get_from_secrets_manager(self, secret_path: str, key: str = "") -> ecs.Secret:
-        """Return secret object from name and field"""
-        id = f'{camel_case(secret_path.split("/")[-1])}{key.title()}'
-        secret_obj = secrets.Secret.from_secret_name_v2(
-            self,
-            id=f'SSM-{id}',
-            secret_name=secret_path
-        )
-        if key:
-            return ecs.Secret.from_secrets_manager(secret_obj, key)
-        else:
-            return ecs.Secret.from_secrets_manager(secret_obj)
-        
+        backup_bucket.grant_read_write(service.task_definition.task_role)        
     
