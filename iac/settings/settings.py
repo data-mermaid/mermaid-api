@@ -22,6 +22,7 @@ from iac.settings.utils import camel_case
 class DatabaseSettings:
     """Settings Class for Postgres Database"""
     name: str
+    port: str
     username: str = "mermaid_admin"
 
 
@@ -41,7 +42,6 @@ class DjangoSettings:
     container_cpu: int
     container_memory: int
     container_count: int
-    allowed_hosts: str
     default_domain_api: str
     default_domain_collect: str
     mermaid_api_audience: str
