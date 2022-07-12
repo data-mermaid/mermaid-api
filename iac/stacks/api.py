@@ -43,6 +43,7 @@ class ApiStack(Stack):
         api_secrets = {
             "DB_USER": ecs.Secret.from_secrets_manager(database.secret, "username"),
             "DB_PASSWORD": ecs.Secret.from_secrets_manager(database.secret, "password"),
+            "PGPASSWORD": ecs.Secret.from_secrets_manager(database.secret, "password"),
             "EMAIL_HOST_PASSWORD": ecs.Secret.from_secrets_manager(config.api.get_secret_object(self, config.api.email_host_password_name)),
             "SECRET_KEY": ecs.Secret.from_secrets_manager(config.api.get_secret_object(self, config.api.secret_key_name)),
             "MERMAID_API_SIGNING_SECRET": ecs.Secret.from_secrets_manager(config.api.get_secret_object(self, config.api.mermaid_api_signing_secret_name)),
@@ -62,10 +63,11 @@ class ApiStack(Stack):
             # command=[""], # Need overiding?
             # entry_point=[""], # Need overiding?
             # user="", # Set in Dockerfile?
-            port_mappings=[ecs.PortMapping(container_port=80)],
+            port_mappings=[ecs.PortMapping(container_port=8080)],
             environment={
-                "ENV": f"{config.env_id}",
-                "ALLOWED_HOSTS": config.api.allowed_hosts,
+                "ENV": config.env_id,
+                "ENVIRONMENT": config.env_id,
+                "ALLOWED_HOSTS": load_balancer.load_balancer_dns_name,
                 "MAINTENANCE_MODE": config.api.maintenance_mode,
                 "ADMINS": config.api.admins,
                 "SUPERUSER": config.api.superuser,
@@ -81,7 +83,8 @@ class ApiStack(Stack):
                 "CIRCLE_CI_CLIENT_ID": "", # Leave empty
 
                 "DB_NAME": config.database.name,
-                "DB_HOST": database.instance_endpoint.hostname
+                "DB_HOST": database.instance_endpoint.hostname,
+                "DB_PORT": config.database.port
             },
             secrets=api_secrets,
             logging=ecs.LogDrivers.aws_logs(
@@ -122,10 +125,10 @@ class ApiStack(Stack):
             protocol=elb.ApplicationProtocol.HTTP,
             vpc=cluster.vpc,
             health_check=elb.HealthCheck(
-                path="/health/",
-                healthy_http_codes="200-299",
-                healthy_threshold_count=2,
-                unhealthy_threshold_count=10,
+                path="/v1/health/",
+                healthy_http_codes="200",
+                healthy_threshold_count=4,
+                unhealthy_threshold_count=4,
                 timeout=Duration.seconds(10),
                 interval=Duration.seconds(60),
             )
@@ -137,7 +140,7 @@ class ApiStack(Stack):
             listener=load_balancer.listeners[0],
             priority=100,
             # action=elb.ListenerAction.forward(target_groups=[target_group]),
-            conditions=[elb.ListenerCondition.path_patterns(values=["/"])],
+            conditions=[elb.ListenerCondition.path_patterns(values=["/*"])],
             # conditions=[elb.ListenerCondition.host_headers([config.api.domain_name])],
             target_groups=[target_group],
         )
