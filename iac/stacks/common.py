@@ -109,7 +109,7 @@ class CommonStack(Stack):
             id="MermaidApiListener",
             port=80, # Until a domain is sorted out
             protocol=elb.ApplicationProtocol.HTTP,
-            default_action=elb.ListenerAction.fixed_response(200)
+            default_action=elb.ListenerAction.fixed_response(404)
         )
         # self.load_balancer.add_redirect() # Needs to be HTTPs first.
 
