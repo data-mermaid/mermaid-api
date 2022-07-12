@@ -7,11 +7,12 @@ ENV LANGUAGE C.UTF-8
 ENV LC_ALL C.UTF-8
 ENV DJANGO_SETTINGS_MODULE="app.settings"
 ENV PYTHONPATH="/var/projects/webapp"
+ENV PATH="/home/webapp/.local/bin:${PATH}"
 
 WORKDIR /var/projects/webapp
 
 RUN groupadd webapps
-RUN useradd webapp -G webapps
+RUN useradd -m webapp -G webapps
 # RUN mkdir -p /var/log/webapp/ && chown -R webapp /var/log/webapp/ && chmod -R u+rX /var/log/webapp/
 # RUN mkdir -p /var/run/webapp/ && chown -R webapp /var/run/webapp/ && chmod -R u+rX /var/run/webapp/
 # RUN mkdir -p /etc/gunicorn/
@@ -31,13 +32,13 @@ RUN apt-get install -y --no-install-recommends \
     gdal-bin \
     python3-gdal
 
-USER webapp
-RUN pip install --upgrade pip
-ADD requirements.txt requirements.txt
-RUN pip install --no-cache-dir -r requirements.txt
-RUN rm requirements.txt
-
 ADD . /var/projects/webapp
+RUN chown -R webapp:webapp .
+RUN rm -rf /var/projects/webapp/static
+
+USER webapp
+RUN pip install --user --upgrade pip
+RUN pip install --no-cache-dir -r requirements.txt
 
 EXPOSE 8080 80
 CMD ["/bin/bash", "/var/projects/webapp/entry.sh" ]
