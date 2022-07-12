@@ -13,6 +13,7 @@ https://docs.djangoproject.com/en/1.10/ref/settings/
 import boto3
 import os
 import sys
+import requests
 
 # Options: None, DEV, PROD
 ENVIRONMENT = os.environ.get('ENV') or "local"
@@ -41,6 +42,13 @@ if ENVIRONMENT in ('dev', 'prod'):
     ALLOWED_HOSTS = [host.strip() for host in os.environ['ALLOWED_HOSTS'].split(',')]
 else:
     ALLOWED_HOSTS = ['*']
+
+# Look for Fargate IP, for health checks.
+METADATA_URI = os.getenv('ECS_CONTAINER_METADATA_URI', None)
+if METADATA_URI:
+    container_metadata = requests.get(METADATA_URI).json()
+    ALLOWED_HOSTS.append(container_metadata['Networks'][0]['IPv4Addresses'][0])
+print(f'ALOWED HOSTS: {ALLOWED_HOSTS}')
 
 # Set to True to prevent db writes and return 503
 MAINTENANCE_MODE = os.environ.get('MAINTENANCE_MODE') == 'True' or False
@@ -91,6 +99,7 @@ if ENVIRONMENT in ("local",):
     DEBUG_TOOLBAR_CONFIG["SHOW_TOOLBAR_CALLBACK"] = show_toolbar
 
 MIDDLEWARE = [
+    # 'api.middleware.HealthEndpointMiddleware',
     'django.middleware.security.SecurityMiddleware',
     'django.contrib.sessions.middleware.SessionMiddleware',
     'corsheaders.middleware.CorsMiddleware',
