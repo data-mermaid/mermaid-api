@@ -5,7 +5,8 @@ from django.db.models import Q
 from rest_framework.exceptions import ParseError
 
 from ....exceptions import check_uuid
-from ....models import Site
+from ....models import SampleUnit, Site
+from ....utils import get_subclasses
 from .base import ERROR, OK, WARN, BaseValidator, validator_result
 
 
@@ -35,6 +36,28 @@ class UniqueSiteValidator(BaseValidator):
             (((x1, y1), (x1, y2), (x2, y2), (x2, y1), (x1, y1))), srid=self.srid
         )
 
+    def _sample_unit_duplicate_sites(self, sample_unit, site, project_id, location):
+        # Ignore self and ensure same project
+        qry = sample_unit.objects.select_related(
+            "sample_event", "sample_event__site"
+        ).filter(~Q(sample_event__site=site))
+        qry = qry.filter(sample_event__site__project_id=project_id)
+        if location is not None:
+            qry = qry.filter(
+                sample_event__site__location__distance_lt=(
+                    location,
+                    Distance(m=self.site_buffer),
+                )
+            )
+
+        # Fuzzy name match
+        qry = qry.annotate(
+            similarity=TrigramSimilarity("sample_event__site__name", site.name)
+        )
+        qry = qry.filter(similarity__gte=self.name_match_percent)
+
+        return [r.sample_event.site for r in qry.order_by("-similarity")]
+
     @validator_result
     def __call__(self, collect_record, **kwargs):
         # 1. Location within buffer
@@ -51,26 +74,18 @@ class UniqueSiteValidator(BaseValidator):
             return ERROR, self.SITE_NOT_FOUND
 
         project_id = site.project_id
-        name = site.name
         location = site.location
 
-        # Ignore self and ensure same project
-        qry = Site.objects.filter(~Q(id=site_id))
-        qry = qry.filter(project_id=project_id)
-
-        if location is not None:
-            qry = qry.filter(
-                location__distance_lt=(location, Distance(m=self.site_buffer))
+        duplicate_sites = []
+        for suclass in get_subclasses(SampleUnit):
+            duplicate_sites.extend(
+                self._sample_unit_duplicate_sites(suclass, site, project_id, location)
             )
 
-        # Fuzzy name match
-        qry = qry.annotate(similarity=TrigramSimilarity("name", name))
-        qry = qry.filter(similarity__gte=self.name_match_percent)
-        qry = qry.order_by("-similarity")
+        duplicate_sites = list(set(duplicate_sites))
 
-        results = qry[0:3]
-        if results.count() > 0:
-            matches = [str(r.id) for r in results]
-            return WARN, self.NOT_UNIQUE, {"matches": dict(matches=matches)}
+        if len(duplicate_sites) > 0:
+            matches = [str(r.id) for r in duplicate_sites[:3]]
+            return WARN, self.NOT_UNIQUE, {"matches": matches}
 
         return OK
