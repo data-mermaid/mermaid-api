@@ -29,8 +29,16 @@ class MeSerializer(BaseAPISerializer):
         ]
     
     def get_projects(self, o):
-        qry = ProjectProfile.objects.select_related("project").filter(profile=o) 
-        return [{"id": pp.project_id, "name": pp.project.name, "role": pp.role} for pp in qry]
+        qry = ProjectProfile.objects.select_related("project").filter(profile=o)
+        return [
+            {
+                "id": pp.project_id,
+                "name": pp.project.name,
+                "role": pp.role,
+                "num_active_sample_units":0,
+                "num_sample_units": 0,
+            }
+            for pp in qry]
 
 
 class AuthenticatedMePermission(permissions.BasePermission):
