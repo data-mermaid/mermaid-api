@@ -11,7 +11,7 @@ from rest_framework.response import Response
 
 from rest_condition import Or
 from ..auth_backends import AnonymousJWTAuthentication
-from ..models import Management, Project, Site, Profile, ProjectProfile, ArchivedRecord
+from ..models import Management, Project, Site, Profile, ProjectProfile, ArchivedRecord, TransectMethod
 from ..decorators import run_in_thread
 from ..exceptions import check_uuid
 from ..permissions import *
@@ -20,7 +20,8 @@ from ..utils.project import (
     create_collecting_summary,
     create_submitted_summary,
     copy_project_and_resources,
-    email_members_of_new_project
+    email_members_of_new_project,
+    get_sample_unit_field,
 )
 from ..utils.replace import replace_collect_record_owner, replace_sampleunit_objs
 from .base import (
@@ -59,6 +60,8 @@ class ProjectSerializer(BaseAPISerializer):
 
     countries = serializers.SerializerMethodField()
     num_sites = serializers.SerializerMethodField()
+    num_active_sample_units = serializers.SerializerMethodField()
+    num_sample_units = serializers.SerializerMethodField()
     tags = serializers.ListField(source="tags.all", child=TagField(), required=False)
     members = serializers.SerializerMethodField()
 
@@ -112,6 +115,25 @@ class ProjectSerializer(BaseAPISerializer):
 
     def get_members(self, obj):
         return [pp.profile_id for pp in obj.profiles.all()]
+
+    def get_num_active_sample_units(self, obj):
+        return obj.collect_records.count()
+    
+
+    def get_num_sample_units(self, obj):
+        sample_unit_methods = TransectMethod.__subclasses__()
+        num_sample_units = 0
+        for sample_unit_method in sample_unit_methods:
+            sample_unit_name = get_sample_unit_field(sample_unit_method)
+            qry_filter = {f"{sample_unit_name}__sample_event__site__project_id": obj}
+            queryset = sample_unit_method.objects.select_related(
+                f"{sample_unit_name}",
+                f"{sample_unit_name}__sample_event",
+                f"{sample_unit_name}__sample_event__site",
+            )
+            num_sample_units += queryset.filter(**qry_filter).count()
+
+        return num_sample_units
 
 
 class ProjectFilterSet(BaseAPIFilterSet):
