@@ -38,7 +38,7 @@ class MeSerializer(BaseAPISerializer):
                 "id": pp.project_id,
                 "name": pp.project.name,
                 "role": pp.role,
-                "num_active_sample_units": pp.project.collect_records.count(),
+                "num_active_sample_units": pp.project.collect_records.filter(profile=pp.profile).count(),
             }
             for pp in qry]
 
