@@ -27,16 +27,18 @@ class MeSerializer(BaseAPISerializer):
             'picture',
             'projects',
         ]
-    
+
     def get_projects(self, o):
-        qry = ProjectProfile.objects.select_related("project").filter(profile=o)
+        qry = ProjectProfile.objects.select_related("project")
+        qry = qry.prefetch_related("project__collect_records")
+        qry = qry.filter(profile=o)
+
         return [
             {
                 "id": pp.project_id,
                 "name": pp.project.name,
                 "role": pp.role,
-                "num_active_sample_units":0,
-                "num_sample_units": 0,
+                "num_active_sample_units": pp.project.collect_records.count(),
             }
             for pp in qry]
 
