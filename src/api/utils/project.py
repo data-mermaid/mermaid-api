@@ -29,7 +29,7 @@ def _get_sample_unit_method_label(sample_unit):
     return " ".join(number_label)
 
 
-def _get_sample_unit_field(model):
+def get_sample_unit_field(model):
     return next(
         (
             field.name
@@ -44,7 +44,7 @@ def _get_sample_unit_field(model):
 def _create_submitted_sample_unit_method_summary(model_cls, project):
     summary = defaultdict(dict)
     protocol = model_cls.protocol
-    sample_unit_name = _get_sample_unit_field(model_cls)
+    sample_unit_name = get_sample_unit_field(model_cls)
 
     if sample_unit_name is None:
         return summary
