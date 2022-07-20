@@ -48,34 +48,36 @@ class BleachingCSVSerializer(CollectRecordCSVSerializer):
     ordering_field = "data__obs_quadrat_benthic_percent__quadrat_number"
     additional_group_fields = CollectRecordCSVSerializer.additional_group_fields.copy()
     additional_group_fields.append("data__quadrat_collection__label")
-    header_map = CollectRecordCSVSerializer.header_map.copy()
-
-    header_map.update(
-        {
-            "Sample time": "data__quadrat_collection__sample_time",
-            "Depth *": "data__quadrat_collection__depth",
-            "Visibility": "data__quadrat_collection__visibility",
-            "Current": "data__quadrat_collection__current",
-            "Relative depth": "data__quadrat_collection__relative_depth",
-            "Tide": "data__quadrat_collection__tide",
-
-            "Quadrat size *": "data__quadrat_collection__quadrat_size",
-            "Label": "data__quadrat_collection__label",
-            "Benthic attribute": "data__obs_colonies_bleached__attribute",
-            "Growth form": "data__obs_colonies_bleached__growth_form",
-            "Number of colonies normal": "data__obs_colonies_bleached__count_normal",
-            "Number of colonies pale": "data__obs_colonies_bleached__count_pale",
-            "Number of colonies bleached 0-20% bleached": "data__obs_colonies_bleached__count_20",
-            "Number of colonies bleached 20-50% bleached": "data__obs_colonies_bleached__count_50",
-            "Number of colonies bleached 50-80% bleached": "data__obs_colonies_bleached__count_80",
-            "Number of colonies bleached 80-100% bleached": "data__obs_colonies_bleached__count_100",
-            "Number of colonies recently dead": "data__obs_colonies_bleached__count_dead",
-            "Quadrat number": "data__obs_quadrat_benthic_percent__quadrat_number",
-            "Hard coral % cover": "data__obs_quadrat_benthic_percent__percent_hard",
-            "Soft coral % cover": "data__obs_quadrat_benthic_percent__percent_soft",
-            "Macroalgae % cover": "data__obs_quadrat_benthic_percent__percent_algae",
-        }
-    )
+    header_map = {
+        "Site *": "data__sample_event__site",
+        "Management *": "data__sample_event__management",
+        "Sample date: Year *": "data__sample_event__sample_date__year",
+        "Sample date: Month *": "data__sample_event__sample_date__month",
+        "Sample date: Day *": "data__sample_event__sample_date__day",
+        "Sample time": "data__quadrat_collection__sample_time",
+        "Depth *": "data__quadrat_collection__depth",
+        "Quadrat size *": "data__quadrat_collection__quadrat_size",
+        "Label": "data__quadrat_collection__label",
+        "Visibility": "data__quadrat_collection__visibility",
+        "Current": "data__quadrat_collection__current",
+        "Relative depth": "data__quadrat_collection__relative_depth",
+        "Tide": "data__quadrat_collection__tide",
+        "Notes": "data__sample_event__notes",
+        "Observer emails *": "data__observers",
+        "Benthic attribute": "data__obs_colonies_bleached__attribute",
+        "Growth form": "data__obs_colonies_bleached__growth_form",
+        "Number of colonies normal": "data__obs_colonies_bleached__count_normal",
+        "Number of colonies pale": "data__obs_colonies_bleached__count_pale",
+        "Number of colonies bleached 0-20% bleached": "data__obs_colonies_bleached__count_20",
+        "Number of colonies bleached 20-50% bleached": "data__obs_colonies_bleached__count_50",
+        "Number of colonies bleached 50-80% bleached": "data__obs_colonies_bleached__count_80",
+        "Number of colonies bleached 80-100% bleached": "data__obs_colonies_bleached__count_100",
+        "Number of colonies recently dead": "data__obs_colonies_bleached__count_dead",
+        "Quadrat number": "data__obs_quadrat_benthic_percent__quadrat_number",
+        "Hard coral % cover": "data__obs_quadrat_benthic_percent__percent_hard",
+        "Soft coral % cover": "data__obs_quadrat_benthic_percent__percent_soft",
+        "Macroalgae % cover": "data__obs_quadrat_benthic_percent__percent_algae",
+    }
 
     obs_colonies_bleached_fields = (
         "data__obs_colonies_bleached__attribute",

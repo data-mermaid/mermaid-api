@@ -1,7 +1,7 @@
 from rest_framework import serializers
 
 from ..fields import LazyChoiceField
-from ..models import BenthicAttribute, GrowthForm, ReefSlope
+from ..models import BENTHICLIT_PROTOCOL, BenthicAttribute, GrowthForm, ReefSlope
 from .choices import (
     build_choices,
     current_choices,
@@ -30,30 +30,33 @@ def benthic_attributes_choices():
 
 
 class BenthicLITCSVSerializer(CollectRecordCSVSerializer):
-    protocol = "benthiclit"
+    protocol = BENTHICLIT_PROTOCOL
     sample_unit = "benthic_transect"
     observations_fields = ["data__obs_benthic_lits"]
     additional_group_fields = CollectRecordCSVSerializer.additional_group_fields.copy()
     additional_group_fields.append("data__benthic_transect__label")
-
-    header_map = CollectRecordCSVSerializer.header_map.copy()
-    header_map.update(
-        {
-            "Sample time": "data__benthic_transect__sample_time",
-            "Depth *": "data__benthic_transect__depth",
-            "Visibility": "data__benthic_transect__visibility",
-            "Current": "data__benthic_transect__current",
-            "Relative depth": "data__benthic_transect__relative_depth",
-            "Tide": "data__benthic_transect__tide",
-            "Transect length surveyed *": "data__benthic_transect__len_surveyed",
-            "Transect number *": "data__benthic_transect__number",
-            "Transect label": "data__benthic_transect__label",
-            "Reef slope": "data__benthic_transect__reef_slope",
-            "Benthic attribute *": "data__obs_benthic_lits__attribute",
-            "Growth form": "data__obs_benthic_lits__growth_form",
-            "Observation length *": "data__obs_benthic_lits__length",
-        }
-    )
+    header_map = {
+        "Site *": "data__sample_event__site",
+        "Management *": "data__sample_event__management",
+        "Sample date: Year *": "data__sample_event__sample_date__year",
+        "Sample date: Month *": "data__sample_event__sample_date__month",
+        "Sample date: Day *": "data__sample_event__sample_date__day",
+        "Sample time": "data__benthic_transect__sample_time",
+        "Depth *": "data__benthic_transect__depth",
+        "Transect length surveyed *": "data__benthic_transect__len_surveyed",
+        "Transect number *": "data__benthic_transect__number",
+        "Transect label": "data__benthic_transect__label",
+        "Reef slope": "data__benthic_transect__reef_slope",
+        "Visibility": "data__benthic_transect__visibility",
+        "Current": "data__benthic_transect__current",
+        "Relative depth": "data__benthic_transect__relative_depth",
+        "Tide": "data__benthic_transect__tide",
+        "Notes": "data__sample_event__notes",
+        "Observer emails *": "data__observers",
+        "Benthic attribute *": "data__obs_benthic_lits__attribute",
+        "Growth form": "data__obs_benthic_lits__growth_form",
+        "Observation length *": "data__obs_benthic_lits__length",
+    }
 
     data__benthic_transect__sample_time = serializers.TimeField(required=False, allow_null=True)
     data__benthic_transect__depth = serializers.DecimalField(
