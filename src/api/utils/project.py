@@ -54,6 +54,7 @@ def _create_submitted_sample_unit_method_summary(model_cls, project):
         f"{sample_unit_name}",
         f"{sample_unit_name}__sample_event",
         f"{sample_unit_name}__sample_event__site",
+        f"{sample_unit_name}__sample_event__management",
     )
     queryset = queryset.filter(**qry_filter)
 
@@ -61,6 +62,7 @@ def _create_submitted_sample_unit_method_summary(model_cls, project):
         sample_unit = getattr(record, sample_unit_name)
         sample_event = sample_unit.sample_event
         site = sample_event.site
+        management = sample_event.management
         site_id = str(site.pk)
         label = _get_sample_unit_method_label(sample_unit)
 
@@ -73,6 +75,10 @@ def _create_submitted_sample_unit_method_summary(model_cls, project):
                 "id": f"{record.pk}",
                 "sample_date": sample_event.sample_date,
                 "label": label,
+                "management": {
+                    "id": management.id,
+                    "name": management.name,
+                }
             }
         )
 
