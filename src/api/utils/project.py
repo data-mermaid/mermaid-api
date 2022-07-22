@@ -176,9 +176,10 @@ def create_collecting_summary(project):
             ] = {"profile_name": profile.full_name, "labels": []}
 
         label = _get_collect_record_label(collect_record)
+        sample_date = get_value(data, "sample_event__sample_date")
         summary[site_id]["sample_unit_methods"][protocol]["profile_summary"][
             profile_id
-        ]["labels"].append(label)
+        ]["labels"].append({"name": label, "sample_date": sample_date})
 
     return list(protocols), summary
 
