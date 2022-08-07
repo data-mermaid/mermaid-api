@@ -273,6 +273,7 @@ class BeltFishSUSQLModel(BaseSUSQLModel):
             ) beltfish_obs_obs
             GROUP BY pseudosu_id
         )
+        
         SELECT NULL AS id,
         beltfish_su.pseudosu_id,
         {_su_fields},
