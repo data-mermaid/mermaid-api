@@ -177,6 +177,7 @@ class BeltFishSUSQLModel(BaseSUSQLModel):
         WITH beltfish_obs AS (
             {BeltFishObsSQLModel.sql}
         ),
+        
 		beltfish_su_tg_all AS (SELECT
 			pseudosu_id, fish_group_trophic.name AS trophic_group
 			FROM fish_group_trophic CROSS JOIN beltfish_obs
@@ -201,6 +202,66 @@ class BeltFishSUSQLModel(BaseSUSQLModel):
             FROM beltfish_obs
             GROUP BY pseudosu_id, fish_family
         ),
+        
+		beltfish_tg AS (
+            SELECT beltfish_su_tg.pseudosu_id,
+            SUM(beltfish_su_tg.biomass_kgha) AS biomass_kgha,
+			jsonb_object_agg(
+                CASE
+                    WHEN beltfish_su_tg.trophic_group IS NULL THEN 'other'::character varying
+                    ELSE beltfish_su_tg.trophic_group
+                END, ROUND(beltfish_su_tg.biomass_kgha, 2)
+            ) AS biomass_kgha_by_trophic_group,
+            jsonb_object_agg(
+                beltfish_su_tg_zeroes.trophic_group, 
+				ROUND(beltfish_su_tg_zeroes.biomass_kgha, 2)
+            ) AS biomass_kgha_by_trophic_group_zeroes
+
+            FROM beltfish_su_tg
+			INNER JOIN (
+                SELECT 
+				beltfish_su_tg_all.pseudosu_id,
+				beltfish_su_tg_all.trophic_group,
+				COALESCE(beltfish_su_tg.biomass_kgha, 0) AS biomass_kgha
+				FROM beltfish_su_tg_all 
+				LEFT JOIN beltfish_su_tg ON(
+					beltfish_su_tg_all.pseudosu_id = beltfish_su_tg.pseudosu_id 
+					AND beltfish_su_tg_all.trophic_group = beltfish_su_tg.trophic_group
+				)
+            ) beltfish_su_tg_zeroes
+			ON(beltfish_su_tg.pseudosu_id = beltfish_su_tg_zeroes.pseudosu_id)
+			GROUP BY beltfish_su_tg.pseudosu_id
+        ),
+        
+		beltfish_families AS (
+            SELECT beltfish_su_family.pseudosu_id,
+            jsonb_object_agg(
+                CASE
+                    WHEN beltfish_su_family.fish_family IS NULL THEN 'other'::character varying
+                    ELSE beltfish_su_family.fish_family
+                END, ROUND(beltfish_su_family.biomass_kgha, 2)
+            ) AS biomass_kgha_by_fish_family,
+            jsonb_object_agg(
+                beltfish_su_family_zeroes.fish_family,
+                ROUND(beltfish_su_family_zeroes.biomass_kgha, 2)
+            ) AS biomass_kgha_by_fish_family_zeroes
+    
+            FROM beltfish_su_family
+            INNER JOIN (
+                SELECT 
+                beltfish_su_family_all.pseudosu_id,
+                beltfish_su_family_all.fish_family,
+                COALESCE(beltfish_su_family.biomass_kgha, 0) AS biomass_kgha
+                FROM beltfish_su_family_all
+                LEFT JOIN beltfish_su_family ON(
+                    beltfish_su_family_all.pseudosu_id = beltfish_su_family.pseudosu_id
+                    AND beltfish_su_family_all.fish_family = beltfish_su_family.fish_family
+                )
+            ) beltfish_su_family_zeroes
+            ON(beltfish_su_family.pseudosu_id = beltfish_su_family_zeroes.pseudosu_id)
+            GROUP BY beltfish_su_family.pseudosu_id
+        ),
+
         beltfish_observers AS (
             SELECT pseudosu_id,
             jsonb_agg(DISTINCT observer) AS observers
@@ -242,65 +303,9 @@ class BeltFishSUSQLModel(BaseSUSQLModel):
             {_su_fields_qualified}
         ) beltfish_su
 
-        INNER JOIN (
-            SELECT beltfish_su_tg.pseudosu_id,
-            SUM(beltfish_su_tg.biomass_kgha) AS biomass_kgha,
-			jsonb_object_agg(
-                CASE
-                    WHEN beltfish_su_tg.trophic_group IS NULL THEN 'other'::character varying
-                    ELSE beltfish_su_tg.trophic_group
-                END, ROUND(beltfish_su_tg.biomass_kgha, 2)
-            ) AS biomass_kgha_by_trophic_group,
-            jsonb_object_agg(
-                beltfish_su_tg_zeroes.trophic_group, 
-				ROUND(beltfish_su_tg_zeroes.biomass_kgha, 2)
-            ) AS biomass_kgha_by_trophic_group_zeroes
-
-            FROM beltfish_su_tg
-			INNER JOIN (
-                SELECT 
-				beltfish_su_tg_all.pseudosu_id,
-				beltfish_su_tg_all.trophic_group,
-				COALESCE(beltfish_su_tg.biomass_kgha, 0) AS biomass_kgha
-				FROM beltfish_su_tg_all 
-				LEFT JOIN beltfish_su_tg ON(
-					beltfish_su_tg_all.pseudosu_id = beltfish_su_tg.pseudosu_id 
-					AND beltfish_su_tg_all.trophic_group = beltfish_su_tg.trophic_group
-				)
-            ) beltfish_su_tg_zeroes
-			ON(beltfish_su_tg.pseudosu_id = beltfish_su_tg_zeroes.pseudosu_id)
-			GROUP BY beltfish_su_tg.pseudosu_id
-        ) beltfish_tg
+        INNER JOIN beltfish_tg
         ON (beltfish_su.pseudosu_id = beltfish_tg.pseudosu_id)
-
-        INNER JOIN (
-            SELECT beltfish_su_family.pseudosu_id,
-            jsonb_object_agg(
-                CASE
-                    WHEN beltfish_su_family.fish_family IS NULL THEN 'other'::character varying
-                    ELSE beltfish_su_family.fish_family
-                END, ROUND(beltfish_su_family.biomass_kgha, 2)
-            ) AS biomass_kgha_by_fish_family,
-            jsonb_object_agg(
-                beltfish_su_family_zeroes.fish_family,
-                ROUND(beltfish_su_family_zeroes.biomass_kgha, 2)
-            ) AS biomass_kgha_by_fish_family_zeroes
-    
-            FROM beltfish_su_family
-            INNER JOIN (
-                SELECT 
-                beltfish_su_family_all.pseudosu_id,
-                beltfish_su_family_all.fish_family,
-                COALESCE(beltfish_su_family.biomass_kgha, 0) AS biomass_kgha
-                FROM beltfish_su_family_all
-                LEFT JOIN beltfish_su_family ON(
-                    beltfish_su_family_all.pseudosu_id = beltfish_su_family.pseudosu_id
-                    AND beltfish_su_family_all.fish_family = beltfish_su_family.fish_family
-                )
-            ) beltfish_su_family_zeroes
-            ON(beltfish_su_family.pseudosu_id = beltfish_su_family_zeroes.pseudosu_id)
-            GROUP BY beltfish_su_family.pseudosu_id
-        ) beltfish_families
+        INNER JOIN beltfish_families
         ON (beltfish_su.pseudosu_id = beltfish_families.pseudosu_id)
         INNER JOIN beltfish_observers
         ON (beltfish_su.pseudosu_id = beltfish_observers.pseudosu_id)
