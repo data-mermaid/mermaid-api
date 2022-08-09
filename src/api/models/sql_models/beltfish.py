@@ -177,6 +177,91 @@ class BeltFishSUSQLModel(BaseSUSQLModel):
         WITH beltfish_obs AS (
             {BeltFishObsSQLModel.sql}
         ),
+        
+		beltfish_su_tg_all AS (SELECT
+			pseudosu_id, fish_group_trophic.name AS trophic_group
+			FROM fish_group_trophic CROSS JOIN beltfish_obs
+			GROUP BY pseudosu_id, fish_group_trophic.name
+		),
+		beltfish_su_tg AS (SELECT 
+			pseudosu_id,
+			trophic_group,
+			COALESCE(SUM(biomass_kgha), 0::numeric) AS biomass_kgha
+			FROM beltfish_obs
+			GROUP BY pseudosu_id, trophic_group
+		),
+		beltfish_su_family_all AS (SELECT
+		    pseudosu_id, fish_family.name AS fish_family
+		    FROM fish_family CROSS JOIN beltfish_obs
+		    GROUP BY pseudosu_id, fish_family.name
+		),
+		beltfish_su_family AS (SELECT
+            pseudosu_id,
+            fish_family,
+            COALESCE(SUM(biomass_kgha), 0::numeric) AS biomass_kgha
+            FROM beltfish_obs
+            GROUP BY pseudosu_id, fish_family
+        ),
+        
+		beltfish_tg AS (
+            SELECT beltfish_su_tg.pseudosu_id,
+            SUM(beltfish_su_tg.biomass_kgha) AS biomass_kgha,
+			jsonb_object_agg(
+                CASE
+                    WHEN beltfish_su_tg.trophic_group IS NULL THEN 'other'::character varying
+                    ELSE beltfish_su_tg.trophic_group
+                END, ROUND(beltfish_su_tg.biomass_kgha, 2)
+            ) AS biomass_kgha_by_trophic_group,
+            jsonb_object_agg(
+                beltfish_su_tg_zeroes.trophic_group, 
+				ROUND(beltfish_su_tg_zeroes.biomass_kgha, 2)
+            ) AS biomass_kgha_by_trophic_group_zeroes
+
+            FROM beltfish_su_tg
+			INNER JOIN (
+                SELECT 
+				beltfish_su_tg_all.pseudosu_id,
+				beltfish_su_tg_all.trophic_group,
+				COALESCE(beltfish_su_tg.biomass_kgha, 0) AS biomass_kgha
+				FROM beltfish_su_tg_all 
+				LEFT JOIN beltfish_su_tg ON(
+					beltfish_su_tg_all.pseudosu_id = beltfish_su_tg.pseudosu_id 
+					AND beltfish_su_tg_all.trophic_group = beltfish_su_tg.trophic_group
+				)
+            ) beltfish_su_tg_zeroes
+			ON(beltfish_su_tg.pseudosu_id = beltfish_su_tg_zeroes.pseudosu_id)
+			GROUP BY beltfish_su_tg.pseudosu_id
+        ),
+        
+		beltfish_families AS (
+            SELECT beltfish_su_family.pseudosu_id,
+            jsonb_object_agg(
+                CASE
+                    WHEN beltfish_su_family.fish_family IS NULL THEN 'other'::character varying
+                    ELSE beltfish_su_family.fish_family
+                END, ROUND(beltfish_su_family.biomass_kgha, 2)
+            ) AS biomass_kgha_by_fish_family,
+            jsonb_object_agg(
+                beltfish_su_family_zeroes.fish_family,
+                ROUND(beltfish_su_family_zeroes.biomass_kgha, 2)
+            ) AS biomass_kgha_by_fish_family_zeroes
+    
+            FROM beltfish_su_family
+            INNER JOIN (
+                SELECT 
+                beltfish_su_family_all.pseudosu_id,
+                beltfish_su_family_all.fish_family,
+                COALESCE(beltfish_su_family.biomass_kgha, 0) AS biomass_kgha
+                FROM beltfish_su_family_all
+                LEFT JOIN beltfish_su_family ON(
+                    beltfish_su_family_all.pseudosu_id = beltfish_su_family.pseudosu_id
+                    AND beltfish_su_family_all.fish_family = beltfish_su_family.fish_family
+                )
+            ) beltfish_su_family_zeroes
+            ON(beltfish_su_family.pseudosu_id = beltfish_su_family_zeroes.pseudosu_id)
+            GROUP BY beltfish_su_family.pseudosu_id
+        ),
+
         beltfish_observers AS (
             SELECT pseudosu_id,
             jsonb_agg(DISTINCT observer) AS observers
@@ -188,6 +273,7 @@ class BeltFishSUSQLModel(BaseSUSQLModel):
             ) beltfish_obs_obs
             GROUP BY pseudosu_id
         )
+        
         SELECT NULL AS id,
         beltfish_su.pseudosu_id,
         {_su_fields},
@@ -198,7 +284,9 @@ class BeltFishSUSQLModel(BaseSUSQLModel):
         total_abundance,
         biomass_kgha,
         biomass_kgha_by_trophic_group,
-        biomass_kgha_by_fish_family
+        biomass_kgha_by_trophic_group_zeroes,
+        biomass_kgha_by_fish_family,
+        biomass_kgha_by_fish_family_zeroes
 
         FROM (
             SELECT pseudosu_id,
@@ -216,46 +304,9 @@ class BeltFishSUSQLModel(BaseSUSQLModel):
             {_su_fields_qualified}
         ) beltfish_su
 
-        INNER JOIN (
-            SELECT pseudosu_id,
-            SUM(biomass_kgha) AS biomass_kgha,
-            jsonb_object_agg(
-                CASE
-                    WHEN trophic_group IS NULL THEN 'other'::character varying
-                    ELSE trophic_group
-                END, ROUND(biomass_kgha, 2)
-            ) AS biomass_kgha_by_trophic_group
-
-            FROM (
-                SELECT 
-                    pseudosu_id,
-                    COALESCE(SUM(biomass_kgha), 0::numeric) AS biomass_kgha,
-                    trophic_group
-                FROM beltfish_obs
-                GROUP BY pseudosu_id, trophic_group
-            ) beltfish_obs_tg
-            GROUP BY pseudosu_id
-        ) beltfish_tg
+        INNER JOIN beltfish_tg
         ON (beltfish_su.pseudosu_id = beltfish_tg.pseudosu_id)
-
-        INNER JOIN (
-            SELECT pseudosu_id,
-            jsonb_object_agg(
-                CASE
-                    WHEN fish_family IS NULL THEN 'other'::character varying
-                    ELSE fish_family
-                END, ROUND(biomass_kgha, 2)
-            ) AS biomass_kgha_by_fish_family
-    
-            FROM (
-                SELECT pseudosu_id,
-                COALESCE(SUM(biomass_kgha), 0::numeric) AS biomass_kgha,
-                fish_family
-                FROM beltfish_obs
-                GROUP BY pseudosu_id, fish_family
-            ) beltfish_obs_fam
-            GROUP BY pseudosu_id
-        ) beltfish_families
+        INNER JOIN beltfish_families
         ON (beltfish_su.pseudosu_id = beltfish_families.pseudosu_id)
         INNER JOIN beltfish_observers
         ON (beltfish_su.pseudosu_id = beltfish_observers.pseudosu_id)
@@ -317,7 +368,7 @@ class BeltFishSESQLModel(BaseSQLModel):
             jsonb_object_agg(
                 tg,
                 ROUND(biomass_kgha::numeric, 2)
-            ) AS biomass_kgha_by_trophic_group_avg
+            ) FILTER (WHERE biomass_kgha > 0) AS biomass_kgha_by_trophic_group_avg
             FROM (
                 SELECT meta_su_tgs.sample_event_id, tg,
                 AVG(biomass_kgha) AS biomass_kgha
@@ -325,7 +376,7 @@ class BeltFishSESQLModel(BaseSQLModel):
                     SELECT sample_event_id, pseudosu_id, tgdata.key AS tg,
                     SUM(tgdata.value::double precision) AS biomass_kgha
                     FROM beltfish_su,
-                    LATERAL jsonb_each_text(biomass_kgha_by_trophic_group)
+                    LATERAL jsonb_each_text(biomass_kgha_by_trophic_group_zeroes)
                     tgdata(key, value)
                     GROUP BY sample_event_id, pseudosu_id, tgdata.key
                 ) meta_su_tgs
@@ -340,7 +391,7 @@ class BeltFishSESQLModel(BaseSQLModel):
             jsonb_object_agg(
                 ff,
                 ROUND(biomass_kgha::numeric, 2)
-            ) AS biomass_kgha_by_fish_family_avg
+            ) FILTER (WHERE biomass_kgha > 0) AS biomass_kgha_by_fish_family_avg
             FROM (
                 SELECT meta_su_ffs.sample_event_id, ff,
                 AVG(biomass_kgha) AS biomass_kgha
@@ -348,7 +399,7 @@ class BeltFishSESQLModel(BaseSQLModel):
                     SELECT sample_event_id, pseudosu_id, ffdata.key AS ff,
                     SUM(ffdata.value::double precision) AS biomass_kgha
                     FROM beltfish_su,
-                    LATERAL jsonb_each_text(biomass_kgha_by_fish_family)
+                    LATERAL jsonb_each_text(biomass_kgha_by_fish_family_zeroes)
                     ffdata(key, value)
                     GROUP BY sample_event_id, pseudosu_id, ffdata.key
                 ) meta_su_ffs
