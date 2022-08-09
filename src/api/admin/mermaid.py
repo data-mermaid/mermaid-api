@@ -664,7 +664,7 @@ class BleachingQuadratCollectionAdmin(BaseAdmin):
         return obj.quadrat.quadrat_size
 
     def depth(self, obj):
-        return obj.transect.depth
+        return obj.quadrat.depth
 
     quadrat_size.admin_order_field = "quadrat__quadrat_size"
 

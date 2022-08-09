@@ -389,6 +389,10 @@ class HabitatComplexityMethodSEGeoSerializer(BaseViewAPIGeoSerializer):
 class HabitatComplexityMethodObsFilterSet(BaseSUObsFilterSet):
     transect_len_surveyed = RangeFilter()
     reef_slope = BaseInFilter(method="char_lookup")
+    transect_number = BaseInFilter(method="char_lookup")
+    benthic_category = BaseInFilter(method="char_lookup")
+    benthic_attribute = BaseInFilter(method="char_lookup")
+    growth_form = BaseInFilter(method="char_lookup")
     interval = RangeFilter()
     score = RangeFilter()
 
@@ -406,6 +410,7 @@ class HabitatComplexityMethodObsFilterSet(BaseSUObsFilterSet):
 class HabitatComplexityMethodSUFilterSet(BaseSUObsFilterSet):
     transect_len_surveyed = RangeFilter()
     reef_slope = BaseInFilter(method="char_lookup")
+    transect_number = BaseInFilter(method="char_lookup")
     interval_size = RangeFilter()
     score_avg = RangeFilter()
 

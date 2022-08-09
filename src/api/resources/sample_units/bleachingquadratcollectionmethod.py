@@ -1,5 +1,5 @@
 from django.db import transaction
-from django_filters import RangeFilter
+from django_filters import BaseInFilter, RangeFilter
 from rest_condition import Or
 from rest_framework import status
 from rest_framework.response import Response
@@ -518,6 +518,8 @@ class BleachingQCMethodSEGeoSerializer(BaseViewAPIGeoSerializer):
 
 
 class BleachingQCMethodColoniesBleachedObsFilterSet(BaseSUObsFilterSet):
+    benthic_attribute = BaseInFilter(method="char_lookup")
+    growth_form = BaseInFilter(method="char_lookup")
     count_normal = RangeFilter()
     count_pale = RangeFilter()
     count_20 = RangeFilter()
