@@ -237,7 +237,7 @@ class CollectRecordViewSet(BaseProjectApiViewSet):
         detail=False,
         methods=["GET"],
         permission_classes=[ProjectDataAdminPermission],
-        url_path="ingest_schema/(?P<sample_unit>\w+)",
+        url_path="ingest_schema/(?P<sample_unit>\w+)/csv",
         url_name="ingest-schemas",
     )
     def ingest_schema(self, request, project_pk, sample_unit, *args, **kwargs):
