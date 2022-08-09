@@ -1,7 +1,7 @@
 from rest_framework import serializers
 
 from ..fields import LazyChoiceField
-from ..models import BeltTransectWidth, FishSizeBin, ReefSlope
+from ..models import FISHBELT_PROTOCOL, BeltTransectWidth, FishSizeBin, ReefSlope
 from ..models.view_models import FishAttributeView
 from .choices import (
     build_choices,
@@ -35,32 +35,35 @@ def fish_attributes_choices():
 
 
 class FishBeltCSVSerializer(CollectRecordCSVSerializer):
-    protocol = "fishbelt"
+    protocol = FISHBELT_PROTOCOL
     sample_unit = "fishbelt_transect"
     observations_fields = ["data__obs_belt_fishes"]
     additional_group_fields = CollectRecordCSVSerializer.additional_group_fields.copy()
     additional_group_fields.append("data__fishbelt_transect__label")
-    header_map = CollectRecordCSVSerializer.header_map.copy()
-    header_map.update(
-        {
-            "Sample time": "data__fishbelt_transect__sample_time",
-            "Depth *": "data__fishbelt_transect__depth",
-            "Visibility": "data__fishbelt_transect__visibility",
-            "Current": "data__fishbelt_transect__current",
-            "Relative depth": "data__fishbelt_transect__relative_depth",
-            "Tide": "data__fishbelt_transect__tide",
-
-            "Transect length surveyed *": "data__fishbelt_transect__len_surveyed",
-            "Transect number *": "data__fishbelt_transect__number",
-            "Transect label": "data__fishbelt_transect__label",
-            "Width *": "data__fishbelt_transect__width",
-            "Fish size bin *": "data__fishbelt_transect__size_bin",
-            "Reef slope": "data__fishbelt_transect__reef_slope",
-            "Fish name *": "data__obs_belt_fishes__fish_attribute",
-            "Size *": "data__obs_belt_fishes__size",
-            "Count *": "data__obs_belt_fishes__count",
-        }
-    )
+    header_map = {
+        "Site *": "data__sample_event__site",
+        "Management *": "data__sample_event__management",
+        "Sample date: Year *": "data__sample_event__sample_date__year",
+        "Sample date: Month *": "data__sample_event__sample_date__month",
+        "Sample date: Day *": "data__sample_event__sample_date__day",
+        "Sample time": "data__fishbelt_transect__sample_time",
+        "Depth *": "data__fishbelt_transect__depth",
+        "Transect number *": "data__fishbelt_transect__number",
+        "Transect label": "data__fishbelt_transect__label",
+        "Transect length surveyed *": "data__fishbelt_transect__len_surveyed",
+        "Width *": "data__fishbelt_transect__width",
+        "Fish size bin *": "data__fishbelt_transect__size_bin",
+        "Reef slope": "data__fishbelt_transect__reef_slope",
+        "Visibility": "data__fishbelt_transect__visibility",
+        "Current": "data__fishbelt_transect__current",
+        "Relative depth": "data__fishbelt_transect__relative_depth",
+        "Tide": "data__fishbelt_transect__tide",
+        "Notes": "data__sample_event__notes",
+        "Observer emails *": "data__observers",
+        "Fish name *": "data__obs_belt_fishes__fish_attribute",
+        "Size *": "data__obs_belt_fishes__size",
+        "Count *": "data__obs_belt_fishes__count",
+    }
 
     data__fishbelt_transect__sample_time = serializers.TimeField(required=False, allow_null=True)
     data__fishbelt_transect__depth = serializers.DecimalField(max_digits=3, decimal_places=1)

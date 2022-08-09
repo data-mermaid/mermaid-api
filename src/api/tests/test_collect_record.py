@@ -2,7 +2,8 @@ import uuid
 
 from django.urls import reverse
 
-from api.models import CollectRecord
+from api.models import PROTOCOL_MAP, CollectRecord
+from api.ingest import ingest_serializers
 
 
 def test_owner_read_edit_collect_record(
@@ -70,7 +71,24 @@ def test_create_collect_record(db_setup, api_client2, project1, profile2):
     }
     response = api_client2.post(url, data, format="json")
     response_data = response.json()
-    print(f"response_data: {response_data}")
 
     assert response.status_code == 201
     assert CollectRecord.objects.filter(id=response_data["id"]).exists()
+
+
+def test_ingest_schemas(api_client1, project1):
+    sample_units = list(PROTOCOL_MAP.keys())
+    serializers = {i.protocol: i for i in ingest_serializers}
+    for sample_unit in sample_units:
+        url = reverse(
+            "collectrecords-ingest-schemas",
+            kwargs={
+                "project_pk": str(project1.pk),
+                "sample_unit": sample_unit
+            }
+        )
+        response = api_client1.get(url)
+        data = response.content.decode('utf-8')
+        csv_columns = data.replace("\r\n", "").split(",")
+        serializer = serializers[sample_unit]
+        assert csv_columns == list(serializer.header_map.keys())
