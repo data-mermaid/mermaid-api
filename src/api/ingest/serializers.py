@@ -260,15 +260,7 @@ class CollectRecordCSVSerializer(Serializer):
     sample_unit = None
     observations_fields = None
     error_row_offset = 1
-    header_map = {
-        "Site *": "data__sample_event__site",
-        "Management *": "data__sample_event__management",
-        "Sample date: Year *": "data__sample_event__sample_date__year",
-        "Sample date: Month *": "data__sample_event__sample_date__month",
-        "Sample date: Day *": "data__sample_event__sample_date__day",
-        "Notes": "data__sample_event__notes",
-        "Observer emails *": "data__observers",
-    }
+    header_map = {}
 
     reverse_header_map = {
         "data__sample_event__sample_date": "Sample date: Year *, Sample date: Month *, Sample date: Day *",
