@@ -79,6 +79,7 @@ class ProjectAdmin(BaseAdmin):
         "data_policy_benthicpit",
         "data_policy_habitatcomplexity",
         "data_policy_bleachingqc",
+        "data_policy_benthicpqt",
         "notes",
     )
     inlines = [SiteInline]
@@ -1031,7 +1032,7 @@ class BenthicPhotoQuadratTransectAdmin(BaseAdmin):
     ordering = ["quadrat_transect__sample_event__site__name"]
 
     def name(self, obj):
-        return str(obj.quadrat)
+        return str(obj.quadrat_transect)
 
     name.admin_order_field = "quadrat_transect__sample_event__site__name"
 
@@ -1041,7 +1042,7 @@ class BenthicPhotoQuadratTransectAdmin(BaseAdmin):
     quadrat_size.admin_order_field = "quadrat_transect__quadrat_size"
 
     def depth(self, obj):
-        return obj.transect.depth
+        return obj.quadrat_transect.depth
 
     depth.admin_order_field = "quadrat_transect__sample_event__depth"
 
@@ -1074,3 +1075,9 @@ class BenthicPhotoQuadratTransectAdmin(BaseAdmin):
             inline.cached_attributes = [(a.pk, a.name) for a in attributes]
             inline.cached_growth_forms = [(gf.pk, gf.name) for gf in growth_forms]
             yield inline.get_formset(request, obj), inline
+
+
+@admin.register(Notification)
+class NotificationAdmin(BaseAdmin):
+    list_display = ("owner", "status", "title", "created_on")
+    search_fields = ["owner__first_name", "owner__last_name", "owner__pk", "status"]

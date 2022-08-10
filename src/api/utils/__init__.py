@@ -2,6 +2,7 @@ import math
 import re
 import numbers
 import subprocess
+import uuid
 from datetime import datetime
 
 from django.core.exceptions import ObjectDoesNotExist
@@ -68,11 +69,14 @@ def calc_biomass_density(
 
 def get_subclasses(cls):
     for subclass in cls.__subclasses__():
-        if not subclass._meta.abstract:
-            yield subclass
+        if subclass._meta.abstract:
+            yield from get_subclasses(subclass)
+            continue
         if subclass.__subclasses__():
             yield from get_subclasses(subclass)
-
+        
+        yield subclass
+    
 
 def get_related_transect_methods(model):
     related_objects = [
@@ -201,3 +205,20 @@ def run_subprocess(command, std_input=None, to_file=None):
             f.write(str(err))
     else:
         return data, err
+
+
+# source: https://stackoverflow.com/a/70310511/15624918
+def combine_into(d, combined):
+    for k, v in d.items():
+        if isinstance(v, dict):
+            combine_into(v, combined.setdefault(k, {}))
+        else:
+            combined[k] = v
+
+
+def is_uuid(val):
+    try:
+        uuid.UUID(val)
+        return True
+    except (ValueError, TypeError) as _:
+        return False

@@ -28,7 +28,7 @@ from .resources.obs_habitat_complexity import ObsHabitatComplexityViewSet
 from .resources.obs_colonies_bleached import ObsColoniesBleachedViewSet
 from .resources.obs_quadrat_benthic_percent import ObsQuadratBenthicPercentViewSet
 from .resources.sync import vw_pull, vw_push
-
+from .resources.notification import NotificationViewSet
 
 from .resources.sample_units.beltfishmethod import (
     BeltFishMethodView,
@@ -61,6 +61,12 @@ from .resources.sample_units.bleachingquadratcollectionmethod import (
     BleachingQCProjectMethodSUView,
     BleachingQCProjectMethodSEView,
 )
+from .resources.sample_units.benthicphotoquadrattransectmethod import (
+    BenthicPQTProjectMethodObsView,
+    BenthicPhotoQuadratTransectMethodView,
+    BenthicPQTProjectMethodSEView,
+    BenthicPQTProjectMethodSUView,
+)
 from .resources.sample_units.sample_unit_methods import SampleUnitMethodView
 from .resources.summary_sample_event import SummarySampleEventView
 from .resources.summary_site import SummarySiteView
@@ -88,6 +94,7 @@ router.register(r"managements", ManagementViewSet, "management")
 router.register(r"projecttags", ProjectTagViewSet, "projecttag")
 router.register(r"summarysites", SummarySiteView, "summarysite")
 router.register(r"summarysampleevents", SummarySampleEventView, "summarysampleevent")
+router.register(r"notifications", NotificationViewSet, "notification")
 
 # observation attributes
 router.register(r"benthicattributes", BenthicAttributeViewSet, "benthicattribute")
@@ -191,6 +198,18 @@ project_router.register(
     "habitatcomplexitymethod-sampleevent",
 )
 
+project_router.register(
+    r"benthicpqts/obstransectbenthicpqts",
+    BenthicPQTProjectMethodObsView,
+    "benthicpqtmethod-obs",
+)
+project_router.register(
+    r"benthicpqts/sampleunits", BenthicPQTProjectMethodSUView, "benthicpqtmethod-sampleunit"
+)
+project_router.register(
+    r"benthicpqts/sampleevents", BenthicPQTProjectMethodSEView, "benthicpqtmethod-sampleevent"
+)
+
 
 # multi model sample unit method reports
 project_router.register(
@@ -211,6 +230,11 @@ project_router.register(
     r"bleachingquadratcollectionmethods",
     BleachingQuadratCollectionMethodView,
     "bleachingquadratcollectionmethod",
+)
+project_router.register(
+    r"benthicphotoquadrattransectmethods",
+    BenthicPhotoQuadratTransectMethodView,
+    "benthicphotoquadrattransectmethod",
 )
 project_router.register(r"sampleunitmethods", SampleUnitMethodView, "sampleunitmethod")
 

@@ -10,7 +10,7 @@ from api.models import (
     BLEACHINGQC_PROTOCOL,
     FISHBELT_PROTOCOL,
     HABITATCOMPLEXITY_PROTOCOL,
-    BENTHIC_PHOTO_QUADRAT_TRANSECT,
+    BENTHICPQT_PROTOCOL,
 )
 
 BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
@@ -387,7 +387,7 @@ def test_benthicpqt_ingest(
     growth_form1,
 ):
     new_records, _ = utils.ingest(
-        protocol=BENTHIC_PHOTO_QUADRAT_TRANSECT,
+        protocol=BENTHICPQT_PROTOCOL,
         datafile=benthicpqt_file,
         project_id=project1.pk,
         profile_id=profile1.pk,

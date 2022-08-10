@@ -21,6 +21,7 @@ class ProfileFilterSet(BaseAPIFilterSet):
     project = django_filters.UUIDFilter(
         field_name="projects__project", distinct=True, label="Associated with project"
     )
+    email = django_filters.CharFilter(lookup_expr='iexact')
 
     class Meta:
         model = Profile

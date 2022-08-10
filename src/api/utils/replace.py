@@ -57,7 +57,18 @@ def replace_collect_record_owner(project_id, from_profile, to_profile, updated_b
     updated_on = timezone.now()
     collect_records = CollectRecord.objects.filter(project_id=project_id, profile=from_profile)
     num_collect_records_updated = collect_records.count()
-    collect_records.update(profile=to_profile, updated_on=updated_on, updated_by=updated_by)
+
+    new_collect_records = []
+    for collect_record in collect_records:
+        collect_record.pk = None
+        collect_record.profile = to_profile
+        collect_record.updated_on = updated_on
+        collect_record.updated_by = updated_by
+
+        new_collect_records.append(collect_record)
+
+    CollectRecord.objects.bulk_create(new_collect_records)
+    collect_records.delete()
 
     # Trigger new revision for project profiles
     from_project_profile = from_profile.projects.get(project_id=project_id)

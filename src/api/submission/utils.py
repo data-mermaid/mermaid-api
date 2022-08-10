@@ -14,7 +14,7 @@ from ..models import (
     FISHBELT_PROTOCOL,
     HABITATCOMPLEXITY_PROTOCOL,
     BLEACHINGQC_PROTOCOL,
-    BENTHIC_PHOTO_QUADRAT_TRANSECT,
+    BENTHICPQT_PROTOCOL,
     PROTOCOL_MAP,
     AuditRecord,
     CollectRecord,
@@ -29,10 +29,13 @@ from .protocol_validations import (
 from .validations import ERROR, IGNORE, OK, WARN
 from .validations2 import (
     belt_fish,
+    benthic_photo_quadrat_transect,
+    bleaching_quadrat_collection,
     ValidationRunner
 )
 from .writer import (
     BenthicLITProtocolWriter,
+    BenthicPhotoQuadratTransectProtocolWriter,
     BenthicPITProtocolWriter,
     BleachingQuadratCollectionProtocolWriter,
     FishbeltProtocolWriter,
@@ -60,6 +63,9 @@ def get_writer(collect_record, context):
 
     elif protocol == BENTHICPIT_PROTOCOL:
         return BenthicPITProtocolWriter(collect_record, context)
+
+    elif protocol == BENTHICPQT_PROTOCOL:
+        return BenthicPhotoQuadratTransectProtocolWriter(collect_record, context)
 
     elif protocol == FISHBELT_PROTOCOL:
         return FishbeltProtocolWriter(collect_record, context)
@@ -198,7 +204,19 @@ def _validate_collect_record_v2(record, record_serializer, request):
     elif protocol == HABITATCOMPLEXITY_PROTOCOL:
         raise NotImplementedError()
     elif protocol == BLEACHINGQC_PROTOCOL:
-        raise NotImplementedError()
+        runner.validate(
+            record,
+            bleaching_quadrat_collection.bleaching_quadrat_collection_validations,
+            request=request
+        )
+        return runner.to_dict()
+    elif protocol == BENTHICPQT_PROTOCOL:
+        runner.validate(
+            record,
+            benthic_photo_quadrat_transect.benthic_photo_quadrat_transect_validations,
+            request=request
+        )
+        return runner.to_dict()
 
     raise ValueError("Unsupported protocol")
 

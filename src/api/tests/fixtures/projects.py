@@ -1,6 +1,7 @@
+from datetime import date
+
 import pytest
 from django.contrib.gis.geos import Point
-from django.utils import timezone
 from rest_framework.test import APIClient
 
 from api.mocks import MockRequest
@@ -20,7 +21,7 @@ from api.utils import tokenutils
 
 @pytest.fixture
 def project1(fish_family1, fish_family2, fish_family3, fish_family4):
-    return Project.objects.create(
+    project = Project.objects.create(
         name="Test Project 1",
         status=Project.OPEN,
         data={
@@ -34,6 +35,9 @@ def project1(fish_family1, fish_family2, fish_family3, fish_family4):
             }
         }
     )
+    project.tags.add("test", "fishy", "global")
+
+    return project
 
 
 @pytest.fixture
@@ -77,6 +81,17 @@ def profile2():
     email = "profile2@mermaidcollect.org"
     profile = Profile.objects.create(
         email=email, first_name="Bellatrix", last_name="Lestrange"
+    )
+    AuthUser.objects.create(profile=profile, user_id=f"test|{email}")
+
+    return profile
+
+
+@pytest.fixture
+def profile3():
+    email = "profile3@mermaidcollect.org"
+    profile = Profile.objects.create(
+        email=email, first_name="Garrick", last_name="Ollivander"
     )
     AuthUser.objects.create(profile=profile, user_id=f"test|{email}")
 
@@ -181,7 +196,7 @@ def sample_event1(management1, site1):
     return SampleEvent.objects.create(
         management=management1,
         site=site1,
-        sample_date=timezone.now(),
+        sample_date=date(2022, 1, 1),
         notes="Some sample event notes for sample_event1",
     )
 
@@ -191,7 +206,7 @@ def sample_event2(management2, site2):
     return SampleEvent.objects.create(
         management=management2,
         site=site2,
-        sample_date=timezone.now(),
+        sample_date=date(2022, 1, 1),
         notes="Some sample event notes for sample_event2",
     )
 
@@ -201,7 +216,7 @@ def sample_event3(management1, site1):
     return SampleEvent.objects.create(
         management=management1,
         site=site1,
-        sample_date=timezone.now(),
+        sample_date=date(2022, 1, 1),
         notes="Some sample event notes for sample_event3",
     )
 
@@ -215,6 +230,7 @@ def base_project(
     site3,
     profile1,
     profile2,
+    profile3,
     project_profile1,
     project_profile2,
 ):

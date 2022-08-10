@@ -212,7 +212,7 @@ belt_fish_validations = [
     ),
     Validation(
         validator=UniqueFishbeltTransectValidator(
-            protocol="fishbelt",
+            protocol_path="data.protocol",
             label_path="data.fishbelt_transect.label",
             number_path="data.fishbelt_transect.number",
             width_path="data.fishbelt_transect.width",

@@ -43,11 +43,11 @@ BENTHICPIT_PROTOCOL = "benthicpit"
 FISHBELT_PROTOCOL = "fishbelt"
 HABITATCOMPLEXITY_PROTOCOL = "habitatcomplexity"
 BLEACHINGQC_PROTOCOL = "bleachingqc"
-BENTHIC_PHOTO_QUADRAT_TRANSECT = "benthicpqt"
+BENTHICPQT_PROTOCOL = "benthicpqt"
 
 PROTOCOL_MAP = {
     BENTHICLIT_PROTOCOL: "Benthic LIT",
-    BENTHIC_PHOTO_QUADRAT_TRANSECT: "Benthic Photo Quadrat Transect",
+    BENTHICPQT_PROTOCOL: "Benthic Photo Quadrat Transect",
     BENTHICPIT_PROTOCOL: "Benthic PIT",
     FISHBELT_PROTOCOL: "Fish Belt",
     HABITATCOMPLEXITY_PROTOCOL: "Habitat Complexity",
@@ -126,6 +126,7 @@ class Project(BaseModel, JSONMixin):
     data_policy_benthicpit = models.PositiveSmallIntegerField(choices=DATA_POLICIES, default=PUBLIC_SUMMARY)
     data_policy_habitatcomplexity = models.PositiveSmallIntegerField(choices=DATA_POLICIES, default=PUBLIC_SUMMARY)
     data_policy_bleachingqc = models.PositiveSmallIntegerField(choices=DATA_POLICIES, default=PUBLIC_SUMMARY)
+    data_policy_benthicpqt = models.PositiveSmallIntegerField(choices=DATA_POLICIES, default=PUBLIC_SUMMARY)
 
     tags = TaggableManager(through=UUIDTaggedItem, blank=True)
 
@@ -685,9 +686,11 @@ class QuadratCollection(BaseQuadrat):
         db_table = 'quadrat_collection'
 
 
-class QuadratTransect(BenthicTransect):
+class QuadratTransect(Transect):
     project_lookup = "sample_event__site__project"
 
+    number = models.PositiveSmallIntegerField(default=1)
+    label = models.CharField(max_length=50, blank=True)
     quadrat_size = models.DecimalField(
         decimal_places=2, max_digits=6,
         verbose_name=_('single quadrat area (m2)'),
@@ -696,6 +699,12 @@ class QuadratTransect(BenthicTransect):
     )
     num_quadrats = models.PositiveSmallIntegerField()
     num_points_per_quadrat = models.PositiveSmallIntegerField()
+    quadrat_number_start = models.PositiveSmallIntegerField(
+        default=1, verbose_name=_("number of first quadrat")
+    )
+
+    class Meta:
+        db_table = 'quadrat_transect'
 
 
 # TODO: rename this SampleUnitMethod, and abstract all appropriate references elsewhere
@@ -708,17 +717,17 @@ class TransectMethod(BaseModel):
     @property
     def protocol(self):
         if hasattr(self, 'benthiclit'):
-            return BENTHICLIT_PROTOCOL
+            return self.benthiclit.protocol
         elif hasattr(self, 'benthicpit'):
-            return BENTHICPIT_PROTOCOL
+            return self.benthicpit.protocol
         elif hasattr(self, 'beltfish'):
-            return FISHBELT_PROTOCOL
+            return self.beltfish.protocol
         elif hasattr(self, 'habitatcomplexity'):
-            return HABITATCOMPLEXITY_PROTOCOL
+            return self.habitatcomplexity.protocol
         elif hasattr(self, 'bleachingquadratcollection'):
-            return BLEACHINGQC_PROTOCOL
+            return self.bleachingquadratcollection.protocol
         elif hasattr(self, 'benthicphotoquadrattransect'):
-            return BENTHIC_PHOTO_QUADRAT_TRANSECT
+            return self.benthicphotoquadrattransect.protocol
         return None
 
     @property
@@ -857,6 +866,7 @@ class BenthicAttribute(BaseAttributeModel):
 
 
 class BenthicLIT(TransectMethod):
+    protocol = BENTHICLIT_PROTOCOL
     project_lookup = 'transect__sample_event__site__project'
 
     transect = models.OneToOneField(BenthicTransect, on_delete=models.CASCADE,
@@ -892,6 +902,7 @@ class ObsBenthicLIT(BaseModel, JSONMixin):
 
 
 class BenthicPIT(TransectMethod):
+    protocol = BENTHICPIT_PROTOCOL
     project_lookup = 'transect__sample_event__site__project'
 
     transect = models.OneToOneField(BenthicTransect, on_delete=models.CASCADE,
@@ -937,6 +948,7 @@ class ObsBenthicPIT(BaseModel, JSONMixin):
 
 
 class HabitatComplexity(TransectMethod):
+    protocol = HABITATCOMPLEXITY_PROTOCOL
     project_lookup = 'transect__sample_event__site__project'
 
     transect = models.OneToOneField(BenthicTransect, on_delete=models.CASCADE,
@@ -985,6 +997,7 @@ class ObsHabitatComplexity(BaseModel, JSONMixin):
 
 
 class BleachingQuadratCollection(TransectMethod):
+    protocol = BLEACHINGQC_PROTOCOL
     project_lookup = 'quadrat__sample_event__site__project'
 
     quadrat = models.OneToOneField(QuadratCollection,
@@ -1063,6 +1076,7 @@ class ObsQuadratBenthicPercent(BaseModel, JSONMixin):
 
 
 class BenthicPhotoQuadratTransect(TransectMethod):
+    protocol = BENTHICPQT_PROTOCOL
     project_lookup = "quadrat_transect__sample_event__site__project"
 
     quadrat_transect = models.OneToOneField(
@@ -1077,7 +1091,7 @@ class BenthicPhotoQuadratTransect(TransectMethod):
         verbose_name_plural = _("benthic photo quadrat transects")
 
     def __str__(self):
-        return _("benthic photo quadrat transect %s") % self.transect.__str__()
+        return _("benthic photo quadrat transect %s") % self.quadrat_transect.__str__()
 
 
 class ObsBenthicPhotoQuadrat(BaseModel, JSONMixin):
@@ -1093,6 +1107,7 @@ class ObsBenthicPhotoQuadrat(BaseModel, JSONMixin):
     attribute = models.ForeignKey(BenthicAttribute, on_delete=models.PROTECT)
     growth_form = models.ForeignKey(GrowthForm, on_delete=models.SET_NULL, null=True, blank=True)
     num_points = models.PositiveSmallIntegerField(verbose_name='number of points', default=0)
+    notes = models.TextField(blank=True)
 
     class Meta:
         db_table = "obs_benthic_photo_quadrat"
@@ -1520,6 +1535,7 @@ class FishSpecies(FishAttribute):
 
 
 class BeltFish(TransectMethod):
+    protocol = FISHBELT_PROTOCOL
     project_lookup = 'transect__sample_event__site__project'
 
     transect = models.OneToOneField(FishBeltTransect, on_delete=models.CASCADE,
@@ -1621,6 +1637,20 @@ class CollectRecord(BaseModel):
             return None
 
         return protocol
+    
+    @property
+    def sample_unit(self):
+        data = self.data or {}
+        protocol = self.protocol
+        if protocol in (BENTHICLIT_PROTOCOL, BENTHICPIT_PROTOCOL, HABITATCOMPLEXITY_PROTOCOL):
+            return data.get("benthic_transect") or {}
+        elif protocol == FISHBELT_PROTOCOL:
+            return data.get("fishbelt_transect") or {}
+        elif protocol == BENTHICPQT_PROTOCOL:
+            return data.get("quadrat_transect") or {}
+        elif protocol == BLEACHINGQC_PROTOCOL:
+            return data.get("quadrat_collection") or {}
+        return None
 
     def _assign_id(self, record):
         record["id"] = record.get("id") or str(uuid.uuid4())
@@ -1642,7 +1672,7 @@ class CollectRecord(BaseModel):
             obs_keys = ["obs_benthic_pits"]
         elif protocol == HABITATCOMPLEXITY_PROTOCOL:
             obs_keys = ["obs_habitat_complexities"]
-        elif protocol == BENTHIC_PHOTO_QUADRAT_TRANSECT:
+        elif protocol == BENTHICPQT_PROTOCOL:
             obs_keys = ["obs_benthic_photo_quadrats"]
 
         for obs_key in obs_keys:
@@ -1713,3 +1743,24 @@ class AuditRecord(JSONMixin):
     event_by = models.ForeignKey("Profile", on_delete=models.SET_NULL, null=True, blank=True)
     model = models.CharField(max_length=100)
     record_id = models.UUIDField(db_index=True)
+
+
+class Notification(BaseModel):
+    INFO = "info"
+    WARNING = "warning"
+    ERROR = "error"
+    
+    STATUSES = (
+        (INFO, INFO),
+        (WARNING, WARNING),
+        (ERROR, ERROR),
+    )
+
+    title = models.CharField(max_length=200)
+    status = models.CharField(max_length=10, choices=STATUSES)
+    description = models.TextField(null=True, blank=True)
+    owner = models.ForeignKey("Profile", on_delete=models.CASCADE)
+
+    class Meta:
+        db_table = "notification"
+        ordering = ["created_on"]

@@ -1,6 +1,6 @@
 import pytest
 
-from api.models import FISHBELT_PROTOCOL, CollectRecord, ProjectProfile
+from api.models import BENTHICPQT_PROTOCOL, FISHBELT_PROTOCOL, CollectRecord, ProjectProfile
 
 
 @pytest.fixture
@@ -973,6 +973,89 @@ def valid_bleaching_qc_collect_record(
             "visibility": str(visibility1.pk),
             "sample_time": None,
             "relative_depth": str(relative_depth1.pk)
+        },
+        "sample_event": {
+            "management": str(sample_event1.management.id),
+            "site": str(sample_event1.site.id),
+            "sample_date": f"{sample_event1.sample_date:%Y-%m-%d}",
+        },
+        "observers": [{
+            "profile": str(profile1.id)
+        }]
+    }
+    return CollectRecord.objects.create(
+        project=project1,
+        profile=profile1,
+        stage=CollectRecord.VALIDATED_STAGE,
+        data=data,
+    )
+
+
+
+@pytest.fixture
+def valid_benthic_pq_transect_collect_record(
+    benthic_attribute_1,
+    benthic_attribute_3,
+    benthic_attribute_4,
+    growth_form1,
+    growth_form2,
+    tide1,
+    current1,
+    relative_depth1,
+    visibility1,
+    sample_event1,
+    profile1,
+    project1,
+):
+    obs_benthic_photo_quadrats = [
+        {
+            "quadrat_number": 2,
+            "attribute": str(benthic_attribute_1.pk),
+            "growth_form": "",
+            "num_points": 50,
+        },
+        {
+            "quadrat_number": 2,
+            "attribute": str(benthic_attribute_1.pk),
+            "growth_form": str(growth_form1.pk),
+            "num_points": 50,
+        },
+        {
+            "quadrat_number": 3,
+            "attribute": str(benthic_attribute_4.pk),
+            "growth_form": "",
+            "num_points": 50,
+        },
+        {
+            "quadrat_number": 3,
+            "attribute": str(benthic_attribute_3.pk),
+            "growth_form": str(growth_form2.pk),
+            "num_points": 50,
+        },
+        {
+            "quadrat_number": 4,
+            "attribute": str(benthic_attribute_1.pk),
+            "growth_form": str(growth_form1.pk),
+            "num_points": 100,
+        },
+    ]
+
+    data = {
+        "protocol": BENTHICPQT_PROTOCOL,
+        "obs_benthic_photo_quadrats": obs_benthic_photo_quadrats,
+        "quadrat_transect": {
+            "number": 1,
+            "quadrat_size": 1,
+            "num_quadrats": 3,
+            "num_points_per_quadrat": 100,
+            "tide": str(tide1.pk),
+            "depth": 5,
+            "current": str(current1.pk),
+            "visibility": str(visibility1.pk),
+            "sample_time": None,
+            "relative_depth": str(relative_depth1.pk),
+            "len_surveyed": 100,
+            "quadrat_number_start": 2,
         },
         "sample_event": {
             "management": str(sample_event1.management.id),

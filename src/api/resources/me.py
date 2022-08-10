@@ -1,3 +1,4 @@
+from django.db.models import F
 from rest_framework import permissions, serializers, viewsets
 from rest_framework.exceptions import NotFound, ValidationError
 from rest_framework.response import Response
@@ -6,11 +7,12 @@ from rest_framework.decorators import action
 
 from api.auth0_management import Auth0DatabaseAuthenticationAPI, Auth0Users
 from .base import BaseAPISerializer
-from ..models import Profile
+from ..models import Profile, ProjectProfile
 
 
 class MeSerializer(BaseAPISerializer):
     picture = serializers.ReadOnlyField(source="picture_url")
+    projects = serializers.SerializerMethodField()
 
     class Meta:
         model = Profile
@@ -23,7 +25,22 @@ class MeSerializer(BaseAPISerializer):
             'created_on',
             'updated_on',
             'picture',
+            'projects',
         ]
+
+    def get_projects(self, o):
+        qry = ProjectProfile.objects.select_related("project")
+        qry = qry.prefetch_related("project__collect_records")
+        qry = qry.filter(profile=o)
+
+        return [
+            {
+                "id": pp.project_id,
+                "name": pp.project.name,
+                "role": pp.role,
+                "num_active_sample_units": pp.project.collect_records.filter(profile=pp.profile).count(),
+            }
+            for pp in qry]
 
 
 class AuthenticatedMePermission(permissions.BasePermission):

@@ -1,7 +1,7 @@
 import logging
+import uuid
 
 import django_filters
-from django.contrib.auth.models import AnonymousUser
 from django.contrib.postgres.fields import JSONField
 from django.db import transaction
 from rest_framework import exceptions, permissions, serializers, status
@@ -11,10 +11,18 @@ from rest_framework.response import Response
 
 from rest_condition import Or
 from ..auth_backends import AnonymousJWTAuthentication
-from ..models import Management, Project, Site, Profile, ProjectProfile, ArchivedRecord
+from ..models import Management, Project, Site, Profile, ProjectProfile, ArchivedRecord, TransectMethod
 from ..decorators import run_in_thread
+from ..exceptions import check_uuid
 from ..permissions import *
-from ..utils import delete_instance_and_related_objects
+from ..utils import delete_instance_and_related_objects, truthy
+from ..utils.project import (
+    create_collecting_summary,
+    create_submitted_summary,
+    copy_project_and_resources,
+    email_members_of_new_project,
+    get_sample_unit_field,
+)
 from ..utils.replace import replace_collect_record_owner, replace_sampleunit_objs
 from .base import (
     BaseAPIFilterSet,
@@ -52,6 +60,8 @@ class ProjectSerializer(BaseAPISerializer):
 
     countries = serializers.SerializerMethodField()
     num_sites = serializers.SerializerMethodField()
+    num_active_sample_units = serializers.SerializerMethodField()
+    num_sample_units = serializers.SerializerMethodField()
     tags = serializers.ListField(source="tags.all", child=TagField(), required=False)
     members = serializers.SerializerMethodField()
 
@@ -67,6 +77,7 @@ class ProjectSerializer(BaseAPISerializer):
             )
         super(ProjectSerializer, self).__init__(*args, **kwargs)
 
+    @transaction.atomic()
     def create(self, validated_data):
         p = super(ProjectSerializer, self).create(validated_data)
         request = self.context.get("request")
@@ -104,6 +115,25 @@ class ProjectSerializer(BaseAPISerializer):
 
     def get_members(self, obj):
         return [pp.profile_id for pp in obj.profiles.all()]
+
+    def get_num_active_sample_units(self, obj):
+        return obj.collect_records.count()
+    
+
+    def get_num_sample_units(self, obj):
+        sample_unit_methods = TransectMethod.__subclasses__()
+        num_sample_units = 0
+        for sample_unit_method in sample_unit_methods:
+            sample_unit_name = get_sample_unit_field(sample_unit_method)
+            qry_filter = {f"{sample_unit_name}__sample_event__site__project_id": obj}
+            queryset = sample_unit_method.objects.select_related(
+                f"{sample_unit_name}",
+                f"{sample_unit_name}__sample_event",
+                f"{sample_unit_name}__sample_event__site",
+            )
+            num_sample_units += queryset.filter(**qry_filter).count()
+
+        return num_sample_units
 
 
 class ProjectFilterSet(BaseAPIFilterSet):
@@ -250,6 +280,64 @@ class ProjectViewSet(BaseApiViewSet):
 
         transaction.savepoint_commit(save_point_id)
         return Response(project_serializer.data)
+    
+
+    @action(
+        detail=False,
+        methods=["post"],
+        permission_classes=[ProjectAuthenticatedUserPermission],
+    )
+    def copy_project(self, request):
+        """
+        Payload schema:
+        
+        {
+            "new_project_name": [string] New project name
+            "original_project_id": [string] Project id to copy
+            "notify_users": [boolean] Sends email to all members of new project. (defaults: false)
+        }
+
+        """
+        
+        profile = request.user.profile
+
+        data = request.data
+        try:
+            new_project_name = data["new_project_name"]
+        except KeyError as e:
+            raise exceptions.ParseError(detail="'new_project_name' is required") from e
+
+        try:
+            original_project_id = data["original_project_id"]
+            if original_project_id and str(original_project_id).strip() != "":
+                check_uuid(original_project_id)
+            original_project = ProjectProfile.objects.get(
+                project_id=original_project_id,
+                profile=profile).project
+        except KeyError as e:
+            raise exceptions.ParseError(detail="'original_project_id' is required") from e
+        except ProjectProfile.DoesNotExist as not_exist_err:
+            raise exceptions.ParseError(detail="Original project does not exist or you are not a member") from not_exist_err
+
+        notify_users = truthy(data.get("notify_users"))
+
+        try:
+            new_project = copy_project_and_resources(
+                owner_profile=profile,
+                new_project_name=new_project_name,
+                original_project=original_project
+            )
+
+            if notify_users:
+                email_members_of_new_project(new_project, profile)
+
+            context = {"request": request}
+            project_serializer = ProjectSerializer(instance=new_project, context=context)
+            return Response(project_serializer.data)
+        except Exception as err:
+            print(err)
+            raise exceptions.APIException(detail=f"[{type(err).__name__}] Copying project") from err
+
 
     def get_updates(self, request, *args, **kwargs):
         added, updated, deleted = super().get_updates(request, *args, **kwargs)
@@ -426,7 +514,11 @@ class ProjectViewSet(BaseApiViewSet):
                 detail={"email": "Email is required"}
             )
 
-        profile, _ = Profile.objects.get_or_create(email=email)
+        try:
+            profile = Profile.objects.get(email__iexact=email)
+        except Profile.DoesNotExist:
+            profile = Profile.objects.create(email=email)
+
         if ProjectProfile.objects.filter(project_id=pk, profile=profile).exists() is False:
             project_profile = ProjectProfile.objects.create(
                 project_id=pk,
@@ -441,3 +533,25 @@ class ProjectViewSet(BaseApiViewSet):
             )
 
         return Response(ProjectProfileSerializer(instance=project_profile).data)
+
+    @action(
+        detail=True,
+        methods=["get"],
+        permission_classes=[ProjectDataPermission],
+    )
+    def summary(self, request, pk, *args, **kwargs):
+        project = Project.objects.prefetch_related("sites", "profiles", "collect_records").get(id=pk)
+        summary = {"name": project.name, "site_collecting_summary": {}, "site_submitted_summary": {}}
+        protocols = []
+
+        collecting_protocols, site_collecting_summary = create_collecting_summary(project)
+        summary["site_collecting_summary"] = site_collecting_summary
+        protocols.extend(collecting_protocols)
+
+        submitted_protocols, site_submitted_summary = create_submitted_summary(project)
+        summary["site_submitted_summary"] = site_submitted_summary
+        protocols.extend(submitted_protocols)
+
+
+        summary["protocols"] = sorted(set(protocols))
+        return Response(summary)

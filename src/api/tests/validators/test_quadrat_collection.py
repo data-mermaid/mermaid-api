@@ -1,9 +1,9 @@
 from api.resources.collect_record import CollectRecordSerializer
-from api.submission.validations2.validators import OK, ERROR, QuadratCollectionValidator
+from api.submission.validations2.validators import OK, ERROR, UniqueQuadratCollectionValidator
 
 
 def _get_validator():
-    return QuadratCollectionValidator(
+    return UniqueQuadratCollectionValidator(
         protocol_path="data.protocol",
         site_path="data.sample_event.site",
         management_path="data.sample_event.management",
@@ -31,7 +31,7 @@ def test_quadrat_collection_validator_data_invalid(
     result = validator(record)
 
     assert result.status == ERROR
-    assert result.code == QuadratCollectionValidator.INVALID_DATA
+    assert result.code == UniqueQuadratCollectionValidator.INVALID_DATA
 
 
 def test_quadrat_collection_validator_duplicate_invalid(
@@ -43,4 +43,4 @@ def test_quadrat_collection_validator_duplicate_invalid(
 
     result = validator(record)
     assert result.status == ERROR
-    assert result.code == QuadratCollectionValidator.DUPLICATE_QUADRAT_COLLECTION
+    assert result.code == UniqueQuadratCollectionValidator.DUPLICATE_QUADRAT_COLLECTION

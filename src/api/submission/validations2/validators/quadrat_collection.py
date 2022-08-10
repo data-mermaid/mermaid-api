@@ -6,7 +6,7 @@ from ....utils import get_related_transect_methods
 from .base import OK, ERROR, BaseValidator, validator_result
 
 
-class QuadratCollectionValidator(BaseValidator):
+class UniqueQuadratCollectionValidator(BaseValidator):
     INVALID_DATA = "invalid_quadrat_collection"
     DUPLICATE_QUADRAT_COLLECTION = "duplicate_quadrat_collection"
 

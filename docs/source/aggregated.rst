@@ -302,7 +302,18 @@ All aggregate-view resources at the sample event level support the following fil
 /projects/<project_id>/beltfishes/sampleevents/
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-Aggregated view of all fish belt transect data collected for a sample event. Additional filters:
+Aggregated view of all fish belt transect data collected for a sample event.
+
+.. note::
+    The fish belt sample event resource two properties of special note, ``biomass_kgha_by_trophic_group_avg`` and ``biomass_kgha_by_fish_family_avg``.
+    Each is calculated as an average of the given property for all transects per sample event (i.e., at a place on a date), **assuming**
+    that if that property exists in any transect, it is relevant to all other transects.
+
+    For example, if ``biomass_kgha_by_fish_family`` contains a value of ``316`` for the ``Balistidae`` family in transect 1,
+    and no ``Balistidae`` fish were observed in transect 2, the value for the sample event's ``biomass_kgha_by_fish_family_avg`` ``Balistidae``
+    family would be ``158`` (not ``316``), on the assumption that ``Balistidae`` was a candidate in transect 2, but not found -- ``0``, not ``null``.
+
+Additional filters:
 
 - ``biomass_kgha_avg_min``/``biomass_kgha_avg_max``
 - ``sample_unit_count_min``/``sample_unit_count_max``

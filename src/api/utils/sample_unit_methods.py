@@ -28,7 +28,6 @@ def transect_method_to_collect_record(serializer, transect_method_instance, prof
         "updated_on",
         "created_by",
         "updated_by",
-        "transect",
     )
 
     project = _get_project(

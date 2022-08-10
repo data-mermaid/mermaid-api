@@ -72,6 +72,7 @@ class SampleUnitMethodSerializer(BaseAPISerializer):
     depth = serializers.SerializerMethodField(method_name="get_sample_unit_depth")
     sample_date = serializers.SerializerMethodField()
     sample_unit_number = serializers.SerializerMethodField()
+    label = serializers.SerializerMethodField()
     size = serializers.SerializerMethodField()
     size_display = serializers.ReadOnlyField()
     observers = serializers.SerializerMethodField()
@@ -126,6 +127,9 @@ class SampleUnitMethodSerializer(BaseAPISerializer):
             return dict(quadrat_size=sample_unit.quadrat_size, quadrat_size_units="m")
         return None
 
+    def get_label(self, o):
+        return o.sample_unit.label if hasattr(o.sample_unit, "label") else ""
+
     def get_observers(self, o):
         context = self.context
         return context["observers"].get(str(o.id))
@@ -145,11 +149,13 @@ class SampleUnitMethodView(BaseProjectApiViewSet):
         "habitatcomplexity",
         "beltfish",
         "bleachingquadratcollection",
+        "benthicphotoquadrattransect",
         "benthicpit__transect",
         "benthiclit__transect",
         "beltfish__transect",
         "habitatcomplexity__transect",
         "bleachingquadratcollection__quadrat",
+        "benthicphotoquadrattransect__quadrat_transect",
     ).all()
 
     filter_class = SampleUnitMethodFilterSet
@@ -182,6 +188,7 @@ class SampleUnitMethodView(BaseProjectApiViewSet):
                 then=Value(mermaid.BLEACHINGQC_PROTOCOL),
             ),
             When(beltfish__id__isnull=False, then=Value(mermaid.FISHBELT_PROTOCOL)),
+            When(benthicphotoquadrattransect__id__isnull=False, then=Value(mermaid.BENTHICPQT_PROTOCOL)),
             output_field=CharField(),
         )
 
@@ -206,6 +213,10 @@ class SampleUnitMethodView(BaseProjectApiViewSet):
                 beltfish__transect__sample_event__site__name__isnull=False,
                 then="beltfish__transect__sample_event__site__name",
             ),
+            When(
+                benthicphotoquadrattransect__quadrat_transect__sample_event__site__name__isnull=False,
+                then="benthicphotoquadrattransect__quadrat_transect__sample_event__site__name",
+            ),
         )
 
         management_name_condition = Case(
@@ -229,6 +240,10 @@ class SampleUnitMethodView(BaseProjectApiViewSet):
                 beltfish__transect__sample_event__management__name__isnull=False,
                 then="beltfish__transect__sample_event__management__name",
             ),
+            When(
+                benthicphotoquadrattransect__quadrat_transect__sample_event__management__name__isnull=False,
+                then="benthicphotoquadrattransect__quadrat_transect__sample_event__management__name",
+            ),
         )
 
         sample_unit_number_condition = Case(
@@ -247,6 +262,10 @@ class SampleUnitMethodView(BaseProjectApiViewSet):
             When(
                 beltfish__transect__number__isnull=False,
                 then="beltfish__transect__number",
+            ),
+            When(
+                benthicphotoquadrattransect__quadrat_transect__number__isnull=False,
+                then="benthicphotoquadrattransect__quadrat_transect__number",
             ),
         )
 
@@ -271,6 +290,10 @@ class SampleUnitMethodView(BaseProjectApiViewSet):
                 beltfish__transect__depth__isnull=False,
                 then="beltfish__transect__depth",
             ),
+            When(
+                benthicphotoquadrattransect__quadrat_transect__depth__isnull=False,
+                then="benthicphotoquadrattransect__quadrat_transect__depth",
+            ),
         )
 
         sample_date_condition = Case(
@@ -294,6 +317,10 @@ class SampleUnitMethodView(BaseProjectApiViewSet):
                 beltfish__transect__sample_event__sample_date__isnull=False,
                 then="beltfish__transect__sample_event__sample_date",
             ),
+            When(
+                benthicphotoquadrattransect__quadrat_transect__sample_event__sample_date__isnull=False,
+                then="benthicphotoquadrattransect__quadrat_transect__sample_event__sample_date",
+            ),
         )
 
         size_condition = Case(
@@ -313,6 +340,13 @@ class SampleUnitMethodView(BaseProjectApiViewSet):
                 habitatcomplexity__id__isnull=False,
                 then=Concat(
                     Cast("habitatcomplexity__transect__len_surveyed", CharField()),
+                    Value("m"),
+                ),
+            ),
+            When(
+                benthicphotoquadrattransect__id__isnull=False,
+                then=Concat(
+                    Cast("benthicphotoquadrattransect__quadrat_transect__len_surveyed", CharField()),
                     Value("m"),
                 ),
             ),
@@ -366,6 +400,7 @@ class SampleUnitMethodView(BaseProjectApiViewSet):
             | Q(habitatcomplexity__transect__sample_event__site__project=prj_pk)
             | Q(beltfish__transect__sample_event__site__project=prj_pk)
             | Q(bleachingquadratcollection__quadrat__sample_event__site__project=prj_pk)
+            | Q(benthicphotoquadrattransect__quadrat_transect__sample_event__site__project=prj_pk)
         )
         return self.queryset
 

@@ -13,7 +13,7 @@ class UniqueFishbeltTransectValidator(BaseValidator):
 
     def __init__(
         self,
-        protocol,
+        protocol_path,
         label_path,
         number_path,
         width_path,
@@ -24,7 +24,7 @@ class UniqueFishbeltTransectValidator(BaseValidator):
         observers_path,
         **kwargs,
     ):
-        self.protocol = protocol
+        self.protocol_path = protocol_path
         self.label_path = label_path
         self.number_path = number_path
         self.width_path = width_path
@@ -84,6 +84,8 @@ class UniqueFishbeltTransectValidator(BaseValidator):
 
     @validator_result
     def __call__(self, collect_record, **kwargs):
+        protocol = self.get_value(collect_record, self.protocol_path)
+
         try:
             qry, profiles = self._get_query_args(collect_record)
         except ParseError:
@@ -97,7 +99,7 @@ class UniqueFishbeltTransectValidator(BaseValidator):
         for result in queryset:
             transect_methods = get_related_transect_methods(result)
             duplicate_check = self._check_for_duplicate_transect_methods(
-                transect_methods, self.protocol
+                transect_methods, protocol
             )
             if duplicate_check != OK:
                 return duplicate_check
