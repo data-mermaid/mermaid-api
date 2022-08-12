@@ -145,6 +145,7 @@ class SummarySampleEventCSVSerializer(ReportSerializer):
         ),
         ReportField("project_notes", "Project notes"),
         ReportField("site_notes", "Site notes"),
+        ReportField("sample_event_notes", "Sample event notes"),
     ]
 
     additional_fields = [

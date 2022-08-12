@@ -108,7 +108,6 @@ class ObsBenthicPQTCSVSerializer(ReportSerializer):
         ReportField("site_notes", "Site notes"),
         # ReportField("sample_event_notes", "Sampling event notes"),
         ReportField("management_notes", "Management notes"),
-        ReportField("observation_notes", "Observation notes"),
     ] + covariate_report_fields
 
     additional_fields = [
@@ -148,7 +147,6 @@ class BenthicPQTMethodObsSerializer(BaseSUViewAPISerializer):
                 "benthic_category",
                 "benthic_attribute",
                 "growth_form",
-                "observation_notes",
                 "percent_cover_by_benthic_category",
             ]
         )

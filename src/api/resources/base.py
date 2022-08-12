@@ -211,7 +211,7 @@ class BaseViewAPISerializer(BaseAPISerializer):
     longitude = SerializerMethodField()
 
     class Meta:
-        exclude = ["project_status"]
+        exclude = ["project_status", "observation_notes"]
 
     def get_latitude(self, obj):
         if obj.location is not None:

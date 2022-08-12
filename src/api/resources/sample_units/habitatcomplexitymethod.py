@@ -93,7 +93,6 @@ class ObsHabitatComplexityCSVSerializer(ReportSerializer):
         ReportField("site_notes", "Site notes"),
         # ReportField("sample_event_notes", "Sampling event notes"),
         ReportField("management_notes", "Management notes"),
-        ReportField("observation_notes", "Observation notes"),
     ] + covariate_report_fields
 
     additional_fields = [
@@ -234,7 +233,6 @@ class HabitatComplexityMethodObsSerializer(BaseSUViewAPISerializer):
                 "data_policy_habitatcomplexity",
                 "interval",
                 "score",
-                "observation_notes",
             ]
         )
 

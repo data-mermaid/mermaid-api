@@ -91,7 +91,6 @@ class ObsBeltFishCSVSerializer(ReportSerializer):
         ReportField("trophic_level", "Trophic level"),
         ReportField("functional_group", "Functional group"),
         ReportField("vulnerability", "Vulnerability"),
-        ReportField("observation_notes", "Observation notes"),
     ] + covariate_report_fields
 
     additional_fields = [
@@ -255,7 +254,6 @@ class BeltFishMethodObsSerializer(BaseSUViewAPISerializer):
                 "size",
                 "count",
                 "biomass_kgha",
-                "observation_notes",
             ]
         )
 
