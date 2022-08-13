@@ -178,7 +178,7 @@ class BleachingQCMethodObsColoniesBleachedSerializer(BaseSUViewAPISerializer):
     class Meta(BaseSUViewAPISerializer.Meta):
         model = BleachingQCColoniesBleachedObsSQLModel
         exclude = BaseSUViewAPISerializer.Meta.exclude.copy()
-        exclude.append("location")
+        exclude.extend(["location", "observation_notes"])
         header_order = ["id"] + BaseSUViewAPISerializer.Meta.header_order.copy()
         header_order.extend(
             [
@@ -232,7 +232,6 @@ class ObsBleachingQCColoniesBleachedCSVSerializer(ReportSerializer):
         ReportField("observers", "Observers", to_names),
         ReportField("label", "Quadrat collection label"),
         ReportField("site_notes", "Site notes"),
-        # ReportField("sample_event_notes", "Sampling event notes"),
         ReportField("management_notes", "Management notes"),
         ReportField("benthic_attribute", "Benthic attribute"),
         ReportField("growth_form", "Growth form"),
@@ -243,6 +242,8 @@ class ObsBleachingQCColoniesBleachedCSVSerializer(ReportSerializer):
         ReportField("count_80", "50-80% bleached count"),
         ReportField("count_100", "80-100% bleached count"),
         ReportField("count_dead", "Recently dead count"),
+        # ReportField("sample_event_notes", "Sampling event notes"),
+        # ReportField("observation_notes", "Observation notes"),
     ] + covariate_report_fields
 
     additional_fields = [
@@ -289,12 +290,13 @@ class ObsQuadratBenthicPercentCSVSerializer(ReportSerializer):
         ReportField("observers", "Observers", to_names),
         ReportField("label", "Quadrat collection label"),
         ReportField("site_notes", "Site notes"),
-        ReportField("sample_event_notes", "Sampling event notes"),
         ReportField("management_notes", "Management notes"),
         ReportField("quadrat_number", "Quadrat number"),
         ReportField("percent_hard", "Hard coral (% cover)"),
         ReportField("percent_soft", "Soft coral (% cover)"),
         ReportField("percent_algae", "Macroalgae (% cover)"),
+        # ReportField("sample_event_notes", "Sampling event notes"),
+        # ReportField("observation_notes", "Observation notes"),
     ] + covariate_report_fields
 
     additional_fields = [
@@ -320,7 +322,7 @@ class BleachingQCMethodObsQuadratBenthicPercentSerializer(BaseSUViewAPISerialize
     class Meta(BaseSUViewAPISerializer.Meta):
         model = BleachingQCQuadratBenthicPercentObsSQLModel
         exclude = BaseSUViewAPISerializer.Meta.exclude.copy()
-        exclude.append("location")
+        exclude.extend(["location", "observation_notes"])
         header_order = ["id"] + BaseSUViewAPISerializer.Meta.header_order.copy()
         header_order.extend(
             [
@@ -409,7 +411,7 @@ class BleachingQCMethodSUCSVSerializer(ReportSerializer):
         ReportField("percent_soft_avg", "Average Soft Coral (% cover)"),
         ReportField("percent_algae_avg", "Average Macroalgae (% cover)"),
         ReportField("site_notes", "Site notes"),
-        ReportField("sample_event_notes", "Sampling event notes"),
+        # ReportField("sample_event_notes", "Sampling event notes"),
         ReportField("management_notes", "Management notes"),
     ] + covariate_report_fields
 
@@ -464,7 +466,7 @@ class BleachingQCMethodSECSVSerializer(ReportSerializer):
         ReportField("percent_soft_avg_avg", "Average Soft Coral (% cover) average"),
         ReportField("percent_algae_avg_avg", "Average Macroalgae (% cover) average"),
         ReportField("site_notes", "Site notes"),
-        ReportField("sample_event_notes", "Sampling event notes"),
+        # ReportField("sample_event_notes", "Sampling event notes"),
         ReportField("management_notes", "Management notes"),
     ] + covariate_report_fields
 

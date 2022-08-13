@@ -211,7 +211,7 @@ class BaseViewAPISerializer(BaseAPISerializer):
     longitude = SerializerMethodField()
 
     class Meta:
-        exclude = ["project_status", "observation_notes"]
+        exclude = ["project_status", "sample_event_notes"]
 
     def get_latitude(self, obj):
         if obj.location is not None:
@@ -256,7 +256,6 @@ class BaseSUViewAPISerializer(BaseViewAPISerializer):
             "current_name",
             "tide_name",
             "visibility_name",
-            "sample_event_notes",
             "relative_depth",
             "sample_time",
             "sample_unit_ids",
@@ -346,9 +345,6 @@ class SampleEventExtendedSerializer(BaseAPISerializer):
         self.fields["observers"] = serializers.SerializerMethodField()
         self.fields["site_notes"] = serializers.ReadOnlyField(
             source="{}.site.notes".format(self._sample_event)
-        )
-        self.fields["sample_event_notes"] = serializers.ReadOnlyField(
-            source="{}.notes".format(self._sample_event)
         )
         self.fields["management_notes"] = serializers.ReadOnlyField(
             source="{}.management.notes".format(self._sample_event)

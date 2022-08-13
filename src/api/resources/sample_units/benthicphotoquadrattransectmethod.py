@@ -106,8 +106,9 @@ class ObsBenthicPQTCSVSerializer(ReportSerializer):
         ReportField("growth_form", "Growth form"),
         ReportField("num_points", "Number of points"),
         ReportField("site_notes", "Site notes"),
-        # ReportField("sample_event_notes", "Sampling event notes"),
         ReportField("management_notes", "Management notes"),
+        # ReportField("sample_event_notes", "Sampling event notes"),
+        # ReportField("observation_notes", "Observation notes"),
     ] + covariate_report_fields
 
     additional_fields = [
@@ -128,7 +129,7 @@ class BenthicPQTMethodObsSerializer(BaseSUViewAPISerializer):
     class Meta(BaseSUViewAPISerializer.Meta):
         model = BenthicPhotoQuadratTransectObsSQLModel
         exclude = BaseSUViewAPISerializer.Meta.exclude.copy()
-        exclude.append("location")
+        exclude.extend(["location", "observation_notes"])
         header_order = ["id"] + BaseSUViewAPISerializer.Meta.header_order.copy()
         header_order.extend(
             [
@@ -208,7 +209,7 @@ class BenthicPQTMethodSUCSVSerializer(ReportSerializer):
         ReportField("transect_len_surveyed", "Transect length surveyed"),
         ReportField("observers", "Observers", to_names),
         ReportField("site_notes", "Site notes"),
-        ReportField("sample_event_notes", "Sampling event notes"),
+        # ReportField("sample_event_notes", "Sampling event notes"),
         ReportField("management_notes", "Management notes"),
     ] + covariate_report_fields
 
@@ -254,7 +255,7 @@ class BenthicPQTMethodSECSVSerializer(ReportSerializer):
         ReportField("sample_unit_count", "Sample unit count"),
         ReportField("percent_cover_by_benthic_category_avg", "Percent cover by benthic category average"),
         ReportField("site_notes", "Site notes"),
-        ReportField("sample_event_notes", "Sampling event notes"),
+        # ReportField("sample_event_notes", "Sampling event notes"),
         ReportField("management_notes", "Management notes"),
     ] + covariate_report_fields
 

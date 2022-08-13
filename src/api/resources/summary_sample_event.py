@@ -128,8 +128,20 @@ class SummarySampleEventCSVSerializer(ReportSerializer):
             protocol="colonies_bleached",
             key="sample_unit_count",
         ),
-        ReportField("protocols", "Bleaching colonies", to_colonies_bleached),
-        ReportField("protocols", "Bleaching % cover", to_percent_cover),
+        ReportField(
+            "protocols",
+            "Bleaching colonies",
+            to_colonies_bleached,
+            protocol="colonies_bleached",
+            key="percent_bleached",
+        ),
+        ReportField(
+            "protocols",
+            "Bleaching % cover",
+            to_percent_cover,
+            protocol="quadrat_benthic_percent",
+            key="percent_cover",
+        ),
         ReportField("contact_link", "Contact link"),
         ReportField("tags", "Organizations", to_names),
         ReportField("project_admins", "Project administrators", to_names),
@@ -145,7 +157,7 @@ class SummarySampleEventCSVSerializer(ReportSerializer):
         ),
         ReportField("project_notes", "Project notes"),
         ReportField("site_notes", "Site notes"),
-        ReportField("sample_event_notes", "Sample event notes"),
+        # ReportField("sample_event_notes", "Sample event notes"),
     ]
 
     additional_fields = [

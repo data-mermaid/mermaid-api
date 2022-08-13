@@ -85,12 +85,13 @@ class ObsBeltFishCSVSerializer(ReportSerializer):
         ReportField("biomass_constant_c", "c"),
         ReportField("biomass_kgha", "Biomass_kgha"),
         ReportField("site_notes", "Site notes"),
-        # ReportField("sample_event_notes", "Sampling event notes"),
         ReportField("management_notes", "Management notes"),
         ReportField("trophic_group", "Trophic group"),
         ReportField("trophic_level", "Trophic level"),
         ReportField("functional_group", "Functional group"),
         ReportField("vulnerability", "Vulnerability"),
+        # ReportField("sample_event_notes", "Sampling event notes"),
+        # ReportField("observation_notes", "Observation notes"),
     ] + covariate_report_fields
 
     additional_fields = [
@@ -225,7 +226,7 @@ class BeltFishMethodObsSerializer(BaseSUViewAPISerializer):
     class Meta(BaseSUViewAPISerializer.Meta):
         model = BeltFishObsSQLModel
         exclude = BaseSUViewAPISerializer.Meta.exclude.copy()
-        exclude.append("location")
+        exclude.extend(["location", "observation_notes"])
         header_order = ["id"] + BaseSUViewAPISerializer.Meta.header_order.copy()
         header_order.extend(
             [
@@ -324,7 +325,7 @@ class BeltFishMethodSUCSVSerializer(ReportSerializer):
         ReportField("biomass_kgha", "Biomass_kgha"),
         ReportField("biomass_kgha_by_trophic_group", "Biomass kgha by trophic group"),
         ReportField("site_notes", "Site notes"),
-        ReportField("sample_event_notes", "Sampling event notes"),
+        # ReportField("sample_event_notes", "Sampling event notes"),
         ReportField("management_notes", "Management notes"),
     ] + covariate_report_fields
 
@@ -371,7 +372,7 @@ class BeltFishMethodSECSVSerializer(ReportSerializer):
         ReportField("biomass_kgha_avg", "Biomass_kgha average"),
         ReportField("biomass_kgha_by_trophic_group_avg", "Biomass kgha by trophic group average"),
         ReportField("site_notes", "Site notes"),
-        ReportField("sample_event_notes", "Sampling event notes"),
+        # ReportField("sample_event_notes", "Sampling event notes"),
         ReportField("management_notes", "Management notes"),
     ] + covariate_report_fields
 
