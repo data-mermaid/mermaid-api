@@ -172,6 +172,8 @@ class ProjectProfileAdmin(BaseAdmin):
         "profile__first_name",
         "profile__last_name",
         "profile__email",
+        "project__id",
+        "profile__id",
     ]
     list_filter = ("role",)
 

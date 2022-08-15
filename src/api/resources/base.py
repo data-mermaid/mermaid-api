@@ -259,6 +259,7 @@ class BaseSUViewAPISerializer(BaseViewAPISerializer):
             "relative_depth",
             "sample_time",
             "sample_unit_ids",
+            "sample_unit_notes",
         ]
 
     def get_observers(self, obj):
