@@ -81,7 +81,7 @@ def test_ingest_schemas(api_client1, project1):
     serializers = {i.protocol: i for i in ingest_serializers}
     for sample_unit in sample_units:
         url = reverse(
-            "collectrecords-ingest-schemas",
+            "collectrecords-ingest-schemas-csv",
             kwargs={
                 "project_pk": str(project1.pk),
                 "sample_unit": sample_unit

@@ -14,7 +14,7 @@ from rest_framework.exceptions import NotFound, ParseError, ValidationError
 from rest_framework.response import Response
 
 from .mixins import CreateOrUpdateSerializerMixin
-from ..ingest import ingest_serializers
+from ..ingest import ingest_serializers, CollectRecordCSVListSerializer
 from ..ingest.utils import InvalidSchema, ingest
 from ..models import (
     PROTOCOL_MAP,
@@ -237,10 +237,48 @@ class CollectRecordViewSet(BaseProjectApiViewSet):
         detail=False,
         methods=["GET"],
         permission_classes=[ProjectDataAdminPermission],
-        url_path="ingest_schema/(?P<sample_unit>\w+)/csv",
-        url_name="ingest-schemas",
+        url_path="ingest_schema/(?P<sample_unit>\w+)",
+        url_name="ingest-schemas-json",
     )
-    def ingest_schema(self, request, project_pk, sample_unit, *args, **kwargs):
+    def ingest_schema_json(self, request, project_pk, sample_unit, *args, **kwargs):
+        serializer = None
+        sample_unit = sample_unit.lower()
+        for ingest_serializer in ingest_serializers:
+            if ingest_serializer.protocol == sample_unit.lower():
+                serializer = ingest_serializer
+                break
+        if serializer is None:
+            raise NotFound(detail=f"{sample_unit} sample unit not found")
+
+        response = []
+        for human_name, path in serializer.header_map.items():
+            fieldname = "__".join(path.split("__")[1:])
+            choices = None
+            dummy = serializer.many_init()
+            for name, field in dummy.child.fields.items():
+            # for name, field_choices in serializer.many_init().get_choices_sets().items():
+                if name == path and name != "data__obs_belt_fishes__fish_attribute" and hasattr(field, "choices"):
+                    choices = field.choices.values()
+                    break
+
+            field_def = {
+                "name": fieldname,
+                "label": human_name,
+                "required": human_name.endswith("*"),
+                "choices": choices,
+            }
+            response.append(field_def)
+
+        return Response(response, status=200)
+
+    @action(
+        detail=False,
+        methods=["GET"],
+        permission_classes=[ProjectDataAdminPermission],
+        url_path="ingest_schema/(?P<sample_unit>\w+)/csv",
+        url_name="ingest-schemas-csv",
+    )
+    def ingest_schema_csv(self, request, project_pk, sample_unit, *args, **kwargs):
         csv_column_names = None
         sample_unit = sample_unit.lower()
         for serializer in ingest_serializers:
