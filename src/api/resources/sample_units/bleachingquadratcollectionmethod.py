@@ -242,9 +242,7 @@ class ObsBleachingQCColoniesBleachedCSVSerializer(ReportSerializer):
         ReportField("count_dead", "Recently dead count"),
         ReportField("site_notes", "Site notes"),
         ReportField("management_notes", "Management notes"),
-        # ReportField("sample_event_notes", "Sampling event notes"),
         ReportField("sample_unit_notes", "Sample unit notes"),
-        # ReportField("observation_notes", "Observation notes"),
     ] + covariate_report_fields
 
     additional_fields = [
@@ -296,9 +294,7 @@ class ObsQuadratBenthicPercentCSVSerializer(ReportSerializer):
         ReportField("percent_algae", "Macroalgae (% cover)"),
         ReportField("site_notes", "Site notes"),
         ReportField("management_notes", "Management notes"),
-        # ReportField("sample_event_notes", "Sampling event notes"),
         ReportField("sample_unit_notes", "Sample unit notes"),
-        # ReportField("observation_notes", "Observation notes"),
     ] + covariate_report_fields
 
     additional_fields = [
@@ -413,7 +409,6 @@ class BleachingQCMethodSUCSVSerializer(ReportSerializer):
         ReportField("percent_soft_avg", "Average Soft Coral (% cover)"),
         ReportField("percent_algae_avg", "Average Macroalgae (% cover)"),
         ReportField("site_notes", "Site notes"),
-        # ReportField("sample_event_notes", "Sampling event notes"),
         ReportField("management_notes", "Management notes"),
         ReportField("sample_unit_notes", "Sample unit notes"),
     ] + covariate_report_fields
@@ -469,7 +464,6 @@ class BleachingQCMethodSECSVSerializer(ReportSerializer):
         ReportField("percent_soft_avg_avg", "Average Soft Coral (% cover) average"),
         ReportField("percent_algae_avg_avg", "Average Macroalgae (% cover) average"),
         ReportField("site_notes", "Site notes"),
-        # ReportField("sample_event_notes", "Sampling event notes"),
         ReportField("management_notes", "Management notes"),
     ] + covariate_report_fields
 

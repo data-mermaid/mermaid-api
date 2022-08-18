@@ -8,7 +8,6 @@ def update_project_summaries(project_id, skip_test_project=True, *args, **kwargs
 
 
 def update_project_summary_sample_event(project_id, skip_test_project=True):
-    print(project_id, skip_test_project)
     if (
         skip_test_project
         and Project.objects.filter(pk=project_id, status=Project.TEST).exists()
