@@ -269,33 +269,6 @@ class Management(BaseModel, JSONMixin, AreaMixin):
         return rules
 
 
-class MPA(BaseModel, AreaMixin):
-    name = models.CharField(max_length=255)
-    wdpa_id = models.IntegerField(null=True, blank=True)
-    est_year = models.PositiveSmallIntegerField(validators=[MaxValueValidator(timezone.now().year)],
-                                                verbose_name=_(u'year established'),
-                                                null=True, blank=True)
-    notes = models.TextField(blank=True)
-    boundary = models.MultiPolygonField(geography=True, null=True, blank=True)
-    size = models.IntegerField(verbose_name=_(u'Size (km2)'), null=True, blank=True)
-
-    class Meta:
-        db_table = 'mpa'
-        verbose_name = _(u'MPA')
-        verbose_name_plural = _(u'MPAs')
-        ordering = ('name', 'est_year')
-
-    def __str__(self):
-        return _(u'%s') % self.name
-
-
-class MPAZone(Management):
-    mpa = models.ForeignKey(MPA, related_name='mpa_zones', on_delete=models.CASCADE)
-
-    class Meta:
-        db_table = 'mpa_zone'
-
-
 class ReefType(BaseChoiceModel):
     name = models.CharField(max_length=50)
 
