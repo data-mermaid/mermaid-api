@@ -369,7 +369,6 @@ MERMAID provides two "summary" endpoints that aggregate metrics from **all** sur
 
 1. They are not project-specific; urls are relative to the API root. Thus ``/sampleevents/`` provides data for **all** surveys associated with each Site, while ``/projects/<project_id>/beltfishes/sampleevents/`` provides just beltfish data for a particular project.
 2. They never require authentication
-3. They are not refreshed immediately; under the hood, they draw from tables that are refreshed every 30 minutes.
 
 Available filters:
 

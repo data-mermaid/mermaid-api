@@ -231,8 +231,6 @@ class ObsBleachingQCColoniesBleachedCSVSerializer(ReportSerializer):
         ReportField("management_rules", "Management rules"),
         ReportField("observers", "Observers", to_names),
         ReportField("label", "Quadrat collection label"),
-        ReportField("site_notes", "Site notes"),
-        ReportField("management_notes", "Management notes"),
         ReportField("benthic_attribute", "Benthic attribute"),
         ReportField("growth_form", "Growth form"),
         ReportField("count_normal", "Normal count"),
@@ -242,7 +240,10 @@ class ObsBleachingQCColoniesBleachedCSVSerializer(ReportSerializer):
         ReportField("count_80", "50-80% bleached count"),
         ReportField("count_100", "80-100% bleached count"),
         ReportField("count_dead", "Recently dead count"),
+        ReportField("site_notes", "Site notes"),
+        ReportField("management_notes", "Management notes"),
         # ReportField("sample_event_notes", "Sampling event notes"),
+        ReportField("sample_unit_notes", "Sample unit notes"),
         # ReportField("observation_notes", "Observation notes"),
     ] + covariate_report_fields
 
@@ -289,13 +290,14 @@ class ObsQuadratBenthicPercentCSVSerializer(ReportSerializer):
         ReportField("management_rules", "Management rules"),
         ReportField("observers", "Observers", to_names),
         ReportField("label", "Quadrat collection label"),
-        ReportField("site_notes", "Site notes"),
-        ReportField("management_notes", "Management notes"),
         ReportField("quadrat_number", "Quadrat number"),
         ReportField("percent_hard", "Hard coral (% cover)"),
         ReportField("percent_soft", "Soft coral (% cover)"),
         ReportField("percent_algae", "Macroalgae (% cover)"),
+        ReportField("site_notes", "Site notes"),
+        ReportField("management_notes", "Management notes"),
         # ReportField("sample_event_notes", "Sampling event notes"),
+        ReportField("sample_unit_notes", "Sample unit notes"),
         # ReportField("observation_notes", "Observation notes"),
     ] + covariate_report_fields
 

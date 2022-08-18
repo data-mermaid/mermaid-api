@@ -1,4 +1,3 @@
-from django.utils.translation import gettext_lazy as _
 from rest_framework import serializers
 from rest_framework.exceptions import ValidationError
 
@@ -28,7 +27,6 @@ def benthic_attributes_choices():
 
 
 class BleachingCSVListSerializer(CollectRecordCSVListSerializer):
-
     def group_records(self, records):
         grouped_records = super().group_records(records)
         # Ensure a continuous sequence of quadrat numbers
@@ -62,7 +60,7 @@ class BleachingCSVSerializer(CollectRecordCSVSerializer):
         "Current": "data__quadrat_collection__current",
         "Relative depth": "data__quadrat_collection__relative_depth",
         "Tide": "data__quadrat_collection__tide",
-        "Notes": "data__sample_event__notes",
+        "Sample unit notes": "data__quadrat_collection__notes",
         "Observer emails *": "data__observers",
         "Benthic attribute": "data__obs_colonies_bleached__attribute",
         "Growth form": "data__obs_colonies_bleached__growth_form",
@@ -101,9 +99,12 @@ class BleachingCSVSerializer(CollectRecordCSVSerializer):
     class Meta:
         list_serializer_class = BleachingCSVListSerializer
 
-    data__quadrat_collection__sample_time = serializers.TimeField(required=False, allow_null=True)
-    data__quadrat_collection__depth = serializers.DecimalField(max_digits=3, decimal_places=1)
-
+    data__quadrat_collection__sample_time = serializers.TimeField(
+        required=False, allow_null=True
+    )
+    data__quadrat_collection__depth = serializers.DecimalField(
+        max_digits=3, decimal_places=1
+    )
     data__quadrat_collection__visibility = LazyChoiceField(
         choices=visibility_choices, required=False, allow_null=True, allow_blank=True
     )
@@ -118,6 +119,9 @@ class BleachingCSVSerializer(CollectRecordCSVSerializer):
     )
     data__quadrat_collection__tide = LazyChoiceField(
         choices=tide_choices, required=False, allow_null=True, allow_blank=True
+    )
+    data__quadrat_collection__notes = serializers.CharField(
+        required=False, allow_blank=True, default=""
     )
     data__quadrat_collection__quadrat_size = serializers.DecimalField(
         max_digits=4, decimal_places=2
@@ -143,11 +147,14 @@ class BleachingCSVSerializer(CollectRecordCSVSerializer):
     data__obs_colonies_bleached__count_dead = PositiveIntegerField()
     data__obs_quadrat_benthic_percent__quadrat_number = PositiveIntegerField()
     data__obs_quadrat_benthic_percent__percent_hard = serializers.DecimalField(
-        default=None, required=False, max_digits=5, decimal_places=2, allow_null=True)
+        default=None, required=False, max_digits=5, decimal_places=2, allow_null=True
+    )
     data__obs_quadrat_benthic_percent__percent_soft = serializers.DecimalField(
-        default=None, required=False, max_digits=5, decimal_places=2, allow_null=True)
+        default=None, required=False, max_digits=5, decimal_places=2, allow_null=True
+    )
     data__obs_quadrat_benthic_percent__percent_algae = serializers.DecimalField(
-        default=None, required=False, max_digits=5, decimal_places=2, allow_null=True)
+        default=None, required=False, max_digits=5, decimal_places=2, allow_null=True
+    )
 
     def skip_field(self, data, field):
         empty_fields = []

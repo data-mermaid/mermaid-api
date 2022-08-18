@@ -27,7 +27,8 @@ class BleachingQCColoniesBleachedObsSQLModel(BaseSUSQLModel):
             o.count_50,
             o.count_80,
             o.count_100,
-            o.count_dead
+            o.count_dead,
+            o.notes AS observation_notes
         FROM
             obs_colonies_bleached o
             JOIN transectmethod_bleaching_quadrat_collection tt ON o.bleachingquadratcollection_id = tt.transectmethod_ptr_id
@@ -84,6 +85,7 @@ class BleachingQCColoniesBleachedObsSQLModel(BaseSUSQLModel):
     count_dead = models.PositiveSmallIntegerField(
         verbose_name="recently dead", default=0
     )
+    observation_notes = models.TextField(blank=True)
     data_policy_bleachingqc = models.CharField(max_length=50)
 
     class Meta:
@@ -107,7 +109,8 @@ class BleachingQCQuadratBenthicPercentObsSQLModel(BaseSUSQLModel):
         o.quadrat_number,
         o.percent_hard,
         o.percent_soft,
-        o.percent_algae
+        o.percent_algae,
+        o.notes AS observation_notes
         FROM
         obs_quadrat_benthic_percent o
         JOIN transectmethod_bleaching_quadrat_collection tt ON o.bleachingquadratcollection_id = tt.transectmethod_ptr_id
@@ -153,6 +156,7 @@ class BleachingQCQuadratBenthicPercentObsSQLModel(BaseSUSQLModel):
     percent_algae = models.PositiveSmallIntegerField(
         verbose_name="macroalgae, % cover", default=0
     )
+    observation_notes = models.TextField(blank=True)
     data_policy_bleachingqc = models.CharField(max_length=50)
 
     class Meta:

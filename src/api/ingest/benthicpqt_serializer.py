@@ -55,7 +55,7 @@ class BenthicPhotoQTCSVSerializer(CollectRecordCSVSerializer):
         "Current": "data__quadrat_transect__current",
         "Relative depth": "data__quadrat_transect__relative_depth",
         "Tide": "data__quadrat_transect__tide",
-        "Notes": "data__sample_event__notes",
+        "Sample unit notes": "data__quadrat_transect__notes",
         "Observer emails *": "data__observers",
         "Quadrat *": "data__obs_benthic_photo_quadrats__quadrat_number",
         "Benthic attribute *": "data__obs_benthic_photo_quadrats__attribute",
@@ -63,8 +63,12 @@ class BenthicPhotoQTCSVSerializer(CollectRecordCSVSerializer):
         "Number of points *": "data__obs_benthic_photo_quadrats__num_points",
     }
 
-    data__quadrat_transect__sample_time = serializers.TimeField(required=False, allow_null=True)
-    data__quadrat_transect__depth = serializers.DecimalField(max_digits=3, decimal_places=1)
+    data__quadrat_transect__sample_time = serializers.TimeField(
+        required=False, allow_null=True
+    )
+    data__quadrat_transect__depth = serializers.DecimalField(
+        max_digits=3, decimal_places=1
+    )
     data__quadrat_transect__visibility = LazyChoiceField(
         choices=visibility_choices, required=False, allow_null=True, allow_blank=True
     )
@@ -83,7 +87,9 @@ class BenthicPhotoQTCSVSerializer(CollectRecordCSVSerializer):
     data__quadrat_transect__quadrat_size = serializers.DecimalField(
         max_digits=4, decimal_places=2
     )
-    data__quadrat_transect__len_surveyed = serializers.DecimalField(max_digits=4, decimal_places=1)
+    data__quadrat_transect__len_surveyed = serializers.DecimalField(
+        max_digits=4, decimal_places=1
+    )
     data__quadrat_transect__number = serializers.IntegerField(min_value=0)
     data__quadrat_transect__label = serializers.CharField(
         allow_blank=True, required=False, default=""
@@ -91,7 +97,9 @@ class BenthicPhotoQTCSVSerializer(CollectRecordCSVSerializer):
     data__quadrat_transect__reef_slope = LazyChoiceField(
         choices=reef_slopes_choices, required=False, allow_null=True, allow_blank=True
     )
-
+    data__quadrat_transect__notes = serializers.CharField(
+        required=False, allow_blank=True, default=""
+    )
     data__quadrat_transect__num_quadrats = PositiveIntegerField()
     data__quadrat_transect__num_points_per_quadrat = PositiveIntegerField()
     data__obs_benthic_photo_quadrats__attribute = LazyChoiceField(

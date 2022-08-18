@@ -54,16 +54,19 @@ class BenthicPITCSVSerializer(CollectRecordCSVSerializer):
         "Current": "data__benthic_transect__current",
         "Relative depth": "data__benthic_transect__relative_depth",
         "Tide": "data__benthic_transect__tide",
-        "Notes": "data__sample_event__notes",
+        "Sample unit notes": "data__benthic_transect__notes",
         "Observer emails *": "data__observers",
         "Observation interval *": "data__obs_benthic_pits__interval",
         "Benthic attribute *": "data__obs_benthic_pits__attribute",
         "Growth form": "data__obs_benthic_pits__growth_form",
     }
 
-    data__benthic_transect__sample_time = serializers.TimeField(required=False, allow_null=True)
-    data__benthic_transect__depth = serializers.DecimalField(max_digits=3, decimal_places=1)
-
+    data__benthic_transect__sample_time = serializers.TimeField(
+        required=False, allow_null=True
+    )
+    data__benthic_transect__depth = serializers.DecimalField(
+        max_digits=3, decimal_places=1
+    )
     data__benthic_transect__visibility = LazyChoiceField(
         choices=visibility_choices, required=False, allow_null=True, allow_blank=True
     )
@@ -79,10 +82,11 @@ class BenthicPITCSVSerializer(CollectRecordCSVSerializer):
     data__benthic_transect__tide = LazyChoiceField(
         choices=tide_choices, required=False, allow_null=True, allow_blank=True
     )
-
     data__interval_size = serializers.DecimalField(max_digits=4, decimal_places=2)
     data__interval_start = serializers.DecimalField(max_digits=4, decimal_places=2)
-    data__benthic_transect__len_surveyed = serializers.DecimalField(max_digits=4, decimal_places=1)
+    data__benthic_transect__len_surveyed = serializers.DecimalField(
+        max_digits=4, decimal_places=1
+    )
     data__benthic_transect__number = serializers.IntegerField(min_value=0)
     data__benthic_transect__label = serializers.CharField(
         allow_blank=True, required=False, default=""
@@ -90,7 +94,9 @@ class BenthicPITCSVSerializer(CollectRecordCSVSerializer):
     data__benthic_transect__reef_slope = LazyChoiceField(
         choices=reef_slopes_choices, required=False, allow_null=True, allow_blank=True
     )
-
+    data__benthic_transect__notes = serializers.CharField(
+        required=False, allow_blank=True, default=""
+    )
     data__obs_benthic_pits__interval = serializers.DecimalField(
         max_digits=7, decimal_places=2
     )

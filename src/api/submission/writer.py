@@ -74,16 +74,10 @@ class BaseWriter(object):
         pk = data.get("id") or uuid.uuid4()
         data["id"] = pk
         serializer = self.validate_data(serializer_cls, data)
-        query_params = {k: v for k, v in data.items() if k not in ("id", "notes")}
 
         try:
-            instance = model.objects.get(**query_params)
-            notes = data.get("notes") or ""
-            if notes.strip():
-                instance.notes = f"{instance.notes}\n\n{notes}"
-                instance.save()
-            return instance
-
+            data.pop("id")
+            return model.objects.get(**data)
         except model.DoesNotExist:
             if isinstance(additional_data, dict):
                 data["id"] = pk

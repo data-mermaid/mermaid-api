@@ -11,6 +11,16 @@ class Migration(migrations.Migration):
 
     operations = [
         migrations.AddField(
+            model_name='obscoloniesbleached',
+            name='notes',
+            field=models.TextField(blank=True),
+        ),
+        migrations.AddField(
+            model_name='obsquadratbenthicpercent',
+            name='notes',
+            field=models.TextField(blank=True),
+        ),
+        migrations.AddField(
             model_name='summarysampleeventmodel',
             name='sample_event_notes',
             field=models.TextField(blank=True, null=True),

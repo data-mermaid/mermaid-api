@@ -1028,6 +1028,7 @@ class ObsColoniesBleached(BaseModel, JSONMixin):
     count_80 = models.PositiveSmallIntegerField(verbose_name=u'50-80% bleached', default=0)
     count_100 = models.PositiveSmallIntegerField(verbose_name=u'80-100% bleached', default=0)
     count_dead = models.PositiveSmallIntegerField(verbose_name=u'recently dead', default=0)
+    notes = models.TextField(blank=True)
 
     class Meta:
         db_table = 'obs_colonies_bleached'
@@ -1062,6 +1063,7 @@ class ObsQuadratBenthicPercent(BaseModel, JSONMixin):
         max_digits=5, decimal_places=2,
         verbose_name=u"macroalgae, % cover", null=True, blank=True
     )
+    notes = models.TextField(blank=True)
 
     class Meta:
         db_table = "obs_quadrat_benthic_percent"
