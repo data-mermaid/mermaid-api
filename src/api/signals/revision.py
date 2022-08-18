@@ -15,6 +15,16 @@ def _create_project_profile_revisions(query_kwargs):
         Revision.create_from_instance(project_profile)
 
 
+@receiver(pre_delete, sender=ProjectProfile)
+def update_delete_project_profile_revisions(sender, instance, *args, **kwargs):
+    Revision.create_from_instance(instance.project)
+
+
+@receiver(post_save, sender=ProjectProfile)
+def update_delete_project_profile_revisions(sender, instance, *args, **kwargs):
+    Revision.create_from_instance(instance.project)
+
+
 @receiver(post_save, sender=Profile)
 def update_project_profile_revisions(sender, instance, *args, **kwargs):
     _create_project_profile_revisions({"profile": instance})

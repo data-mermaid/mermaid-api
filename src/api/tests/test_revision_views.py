@@ -52,6 +52,31 @@ def test_pull_view_invalid_source_type(db_setup, api_client1):
     assert request.status_code == 400
 
 
+def test_pull_view_wrong_permission(
+    db_setup, collect_record_revision_with_updates, api_client1, project_profile1
+):
+    rec_rev = collect_record_revision_with_updates
+
+    data = {
+        "collect_records": {
+            "last_revision": rec_rev.revision_num,
+            "project": rec_rev.project_id,
+        },
+        "choices": {},
+        "projects": {
+            "last_revision": None,
+            "project": rec_rev.project_id,
+        }
+    }
+
+    project_profile1.delete()
+
+    request = api_client1.post("/v1/pull/", data, format="json")
+    response_data = request.json()
+    
+    assert response_data["collect_records"]["error"]["code"] == 403
+
+
 def test_push_view_readonly(db_setup, api_client1):
     data = {"choices": [{"id": "def"}]}
 
