@@ -98,3 +98,58 @@ def test_serialize_revision_records(
     assert len(serialized_records["updates"]) == 2
     assert len(serialized_records["deletes"]) == 1
     assert serialized_records["last_revision_num"] == check_rev_num2
+
+
+def test_added_to_project(db_setup, profile1):
+    request = MockRequest(profile=profile1)
+    project_viewset = ProjectViewSet(request=request)
+
+    project2 = Project.objects.create(name="p2")
+    project1 = Project.objects.create(name="p1")
+
+    ProjectProfile.objects.create(project=project1, profile=profile1, role=ProjectProfile.COLLECTOR)
+
+    updates, deletes = get_records(
+        project_viewset,
+        None
+    )
+
+    assert len(updates) == 1
+    assert len(deletes) == 0
+
+    revision_number = updates[0].revision_revision_num
+
+    ProjectProfile.objects.create(project=project2, profile=profile1, role=ProjectProfile.COLLECTOR)
+
+    updates, deletes = get_records(
+        project_viewset,
+        revision_number
+    )
+
+    assert len(updates) == 1
+    assert len(deletes) == 0
+
+
+def test_removed_from_project(db_setup, profile1, project_profile1):
+    request = MockRequest(profile=profile1)
+    project_viewset = ProjectViewSet(request=request)
+
+    updates, deletes = get_records(
+        project_viewset,
+        None
+    )
+
+    assert len(updates) == 1
+    assert len(deletes) == 0
+
+    revision_number = updates[0].revision_revision_num
+
+    project_profile1.delete()
+
+    updates, deletes = get_records(
+        project_viewset,
+        revision_number
+    )
+
+    assert len(updates) == 0
+    assert len(deletes) == 0
