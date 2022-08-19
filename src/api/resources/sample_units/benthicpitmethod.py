@@ -192,9 +192,7 @@ class ObsBenthicPITCSVSerializer(ReportSerializer):
         ReportField("growth_form", "Growth form"),
         ReportField("site_notes", "Site notes"),
         ReportField("management_notes", "Management notes"),
-        # ReportField("sample_event_notes", "Sampling event notes"),
         ReportField("sample_unit_notes", "Sample unit notes"), 
-        # ReportField("observation_notes", "Observation notes"),
     ] + covariate_report_fields
 
     additional_fields = [
@@ -302,7 +300,6 @@ class BenthicPITMethodSUCSVSerializer(ReportSerializer):
         ReportField("interval_start", "Interval start"),
         ReportField("percent_cover_by_benthic_category", "Percent cover by benthic category"),
         ReportField("site_notes", "Site notes"),
-        # ReportField("sample_event_notes", "Sampling event notes"),
         ReportField("management_notes", "Management notes"),
         ReportField("sample_unit_notes", "Sample unit notes"),
     ] + covariate_report_fields
@@ -349,7 +346,6 @@ class BenthicPITMethodSECSVSerializer(ReportSerializer):
         ReportField("sample_unit_count", "Sample unit count"),
         ReportField("percent_cover_by_benthic_category_avg", "Percent cover by benthic category average"),
         ReportField("site_notes", "Site notes"),
-        # ReportField("sample_event_notes", "Sampling event notes"),
         ReportField("management_notes", "Management notes"),
     ] + covariate_report_fields
 
