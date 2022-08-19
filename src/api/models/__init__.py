@@ -34,5 +34,4 @@ from .sql_models import (
     HabitatComplexitySUSQLModel,
 )
 from .summary_sample_events import SummarySampleEventModel, SummarySampleEventSQLModel
-from .summary_sites import SummarySiteModel, SummarySiteSQLModel
 from .view_models import *

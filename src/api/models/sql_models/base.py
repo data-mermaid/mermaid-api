@@ -303,7 +303,8 @@ class BaseSUSQLModel(BaseSQLModel):
         observers.observers,
         c.name AS current_name,
         t.name AS tide_name,
-        v.name AS visibility_name
+        v.name AS visibility_name,
+        su.notes AS sample_unit_notes
     """
 
     # SU aggregation SQL common to all SU-level views
@@ -313,7 +314,8 @@ class BaseSUSQLModel(BaseSQLModel):
         string_agg(DISTINCT sample_time::text, ', '::text ORDER BY (sample_time::text)) AS sample_time,
         string_agg(DISTINCT current_name::text, ', '::text ORDER BY (current_name::text)) AS current_name,
         string_agg(DISTINCT tide_name::text, ', '::text ORDER BY (tide_name::text)) AS tide_name,
-        string_agg(DISTINCT visibility_name::text, ', '::text ORDER BY (visibility_name::text)) AS visibility_name
+        string_agg(DISTINCT visibility_name::text, ', '::text ORDER BY (visibility_name::text)) AS visibility_name,
+        string_agg(DISTINCT sample_unit_notes::text, '\n\n '::text) AS sample_unit_notes
     """
 
     # Fields common to all SUs that are actually SU properties (that make SUs distinct)
@@ -330,6 +332,7 @@ class BaseSUSQLModel(BaseSQLModel):
         "current_name",
         "tide_name",
         "visibility_name",
+        "sample_unit_notes",
     ]
     # SU-level BaseSUSQLModel inheritors should instantiate sample_unit_ids; obs-level inheritors shouldn't
     label = models.CharField(max_length=50, blank=True)
@@ -339,6 +342,7 @@ class BaseSUSQLModel(BaseSQLModel):
     current_name = models.CharField(max_length=50)
     tide_name = models.CharField(max_length=50)
     visibility_name = models.CharField(max_length=50)
+    sample_unit_notes = models.TextField(blank=True)
 
     class Meta:
         abstract = True

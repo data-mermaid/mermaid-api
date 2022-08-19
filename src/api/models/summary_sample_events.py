@@ -24,6 +24,7 @@ class SummarySampleEventBaseModel(models.Model):
         choices=Project.STATUSES, default=Project.OPEN
     )
     project_notes = models.TextField(blank=True)
+    sample_event_notes = models.TextField(blank=True, null=True)
     contact_link = models.CharField(max_length=255)
     tags = JSONField(null=True, blank=True)
     country_id = models.UUIDField()
@@ -75,6 +76,7 @@ class SummarySampleEventSQLModel(SummarySampleEventBaseModel):
         project.name AS project_name,
         project.status AS project_status,
         project.notes AS project_notes,
+        sample_event.notes AS sample_event_notes,
         'https://datamermaid.org/contact-project?project_id=' || COALESCE(project.id::text, '') AS contact_link,
         country.id AS country_id,
         country.name AS country_name,

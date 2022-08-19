@@ -79,6 +79,7 @@ class ProjectAdmin(BaseAdmin):
         "data_policy_benthicpit",
         "data_policy_habitatcomplexity",
         "data_policy_bleachingqc",
+        "data_policy_benthicpqt",
         "notes",
     )
     inlines = [SiteInline]
@@ -171,6 +172,8 @@ class ProjectProfileAdmin(BaseAdmin):
         "profile__first_name",
         "profile__last_name",
         "profile__email",
+        "project__id",
+        "profile__id",
     ]
     list_filter = ("role",)
 

@@ -34,20 +34,17 @@ def test_beltfish_se_view(
     biomass_kgha_1 = sum(
         [obs_belt_fish1_1_biomass, obs_belt_fish1_2_biomass, obs_belt_fish1_3_biomass]
     )
-    biomass_kgha_1_other = sum([obs_belt_fish1_2_biomass, obs_belt_fish1_3_biomass])
 
     assert count == 2
     assert data[0]["sample_unit_count"] == 1
     assert data[0]["depth_avg"] == 8.0
     assert data[0]["biomass_kgha_avg"] == pytest.approx(biomass_kgha_1, 0.1)
-    assert data[0]["biomass_kgha_by_trophic_group_avg"]["other"] == pytest.approx(biomass_kgha_1_other, 0.1)
     assert data[0]["biomass_kgha_by_trophic_group_avg"]["omnivore"] == pytest.approx(obs_belt_fish1_1_biomass, 0.1)
 
     fish_family_biomass_avg_0 = data[0]["biomass_kgha_by_fish_family_avg"]
     assert fish_family_biomass_avg_0["Fish Family 1"] == pytest.approx(obs_belt_fish1_1_biomass, 0.1)
     assert fish_family_biomass_avg_0["Fish Family 2"] == pytest.approx(obs_belt_fish1_2_biomass, 0.1)
     assert fish_family_biomass_avg_0["Fish Family 3"] == pytest.approx(obs_belt_fish1_3_biomass, 0.1)
-
 
     fish_family_biomass_avg_1 = data[1]["biomass_kgha_by_fish_family_avg"]
     fish_family_2_biomass = sum([obs_belt_fish2_1_biomass, obs_belt_fish2_4_biomass])

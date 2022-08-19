@@ -98,6 +98,7 @@ def test_fishbelt_ingest(
     assert fishbelt_transect.get("reef_slope") == str(reef_slope1.id)
     assert fishbelt_transect.get("visibility") == str(visibility1.id)
     assert fishbelt_transect.get("relative_depth") == str(relative_depth1.id)
+    assert fishbelt_transect.get("notes") == "SU notes"
 
     assert sample_event.get("site") == str(site1.id)
     assert sample_event.get("management") == str(management1.id)
@@ -154,6 +155,7 @@ def test_benthicpit_ingest(
     assert benthic_transect.get("depth") == 8.0
     assert benthic_transect.get("tide") == str(tide1.id)
     assert benthic_transect.get("relative_depth") == str(relative_depth1.id)
+    assert benthic_transect.get("notes") == "SU notes"
 
     assert sample_event.get("site") == str(site1.id)
     assert sample_event.get("management") == str(management1.id)
@@ -211,6 +213,7 @@ def test_bleaching_ingest(
     assert quadrat_collection.get("visibility") == str(visibility1.id)
     assert quadrat_collection.get("current") == str(current3.id)
     assert quadrat_collection.get("relative_depth") == str(relative_depth1.id)
+    assert quadrat_collection.get("notes") == "SU notes"
 
     assert sample_event.get("site") == str(site1.id)
     assert sample_event.get("management") == str(management1.id)
@@ -290,6 +293,7 @@ def test_benthiclit_ingest(
     assert benthic_transect.get("sample_time") == datetime.time(8, 0)
     assert benthic_transect.get("number") == 2
     assert benthic_transect.get("reef_slope") == str(reef_slope3.id)
+    assert benthic_transect.get("notes") == "SU notes"
 
     assert sample_event.get("site") == str(site2.id)
     assert sample_event.get("management") == str(management2.id)
@@ -357,6 +361,7 @@ def test_habitatcomplexity_ingest(
     assert benthic_transect.get("sample_time") == datetime.time(8, 0)
     assert benthic_transect.get("number") == 2
     assert benthic_transect.get("reef_slope") == str(reef_slope3.id)
+    assert benthic_transect.get("notes") == "SU notes"
 
     assert sample_event.get("site") == str(site2.id)
     assert sample_event.get("management") == str(management2.id)
@@ -412,6 +417,7 @@ def test_benthicpqt_ingest(
     assert new_record.data["quadrat_transect"]["num_points_per_quadrat"] == 100
     assert new_record.data["quadrat_transect"]["visibility"] == str(visibility1.id)
     assert new_record.data["quadrat_transect"]["quadrat_size"] == 0.5
+    assert new_record.data["quadrat_transect"]["notes"] == "SU notes"
 
     assert len(obs) == 24
     assert obs[-1]["num_points"] == 100
