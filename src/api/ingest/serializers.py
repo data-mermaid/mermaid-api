@@ -266,8 +266,6 @@ class CollectRecordCSVSerializer(Serializer):
         "data__sample_event__sample_date": "Sample date: Year *, Sample date: Month *, Sample date: Day *",
     }
 
-    
-
     # By Default:
     # - required fields are used
     # - "id" is excluded
@@ -291,7 +289,6 @@ class CollectRecordCSVSerializer(Serializer):
     data__sample_event__site = serializers.CharField()
     data__sample_event__management = serializers.CharField()
     data__sample_event__sample_date = serializers.DateField()
-    data__sample_event__notes = serializers.CharField(required=False, allow_blank=True, default="")
 
     data__observers = serializers.ListField(
         child=serializers.CharField(), allow_empty=False

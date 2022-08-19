@@ -24,9 +24,7 @@ class SampleUnitSerializer(BaseAPISerializer):
         error_messages={"null": "Depth is required"},
     )
 
-    extra_kwargs = {
-        "sample_time": {"error_messages": {"null": "Sample time is required"}}
-    }
+    extra_kwargs = {}
 
 
 class SampleUnitFilterSet(BaseAPIFilterSet):

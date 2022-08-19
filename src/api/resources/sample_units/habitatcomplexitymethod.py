@@ -91,9 +91,8 @@ class ObsHabitatComplexityCSVSerializer(ReportSerializer):
         ReportField("score", "Habitat complexity value"),
         ReportField("score_name", "Habitat complexity name"),
         ReportField("site_notes", "Site notes"),
-        # ReportField("sample_event_notes", "Sampling event notes"),
         ReportField("management_notes", "Management notes"),
-        ReportField("observation_notes", "Observation notes"),
+        ReportField("sample_unit_notes", "Sample unit notes"),
     ] + covariate_report_fields
 
     additional_fields = [
@@ -219,7 +218,7 @@ class HabitatComplexityMethodObsSerializer(BaseSUViewAPISerializer):
     class Meta(BaseSUViewAPISerializer.Meta):
         model = HabitatComplexityObsSQLModel
         exclude = BaseSUViewAPISerializer.Meta.exclude.copy()
-        exclude.append("location")
+        exclude.extend(["location", "observation_notes"])
         header_order = ["id"] + BaseSUViewAPISerializer.Meta.header_order.copy()
         header_order.extend(
             [
@@ -234,7 +233,6 @@ class HabitatComplexityMethodObsSerializer(BaseSUViewAPISerializer):
                 "data_policy_habitatcomplexity",
                 "interval",
                 "score",
-                "observation_notes",
             ]
         )
 
@@ -296,8 +294,8 @@ class HabitatComplexityMethodSUCSVSerializer(ReportSerializer):
         ReportField("observers", "Observers", to_names),
         ReportField("score_avg", "Score average"),
         ReportField("site_notes", "Site notes"),
-        ReportField("sample_event_notes", "Sampling event notes"),
         ReportField("management_notes", "Management notes"),
+        ReportField("sample_unit_notes", "Sample unit notes"),
     ] + covariate_report_fields
 
     additional_fields = [
@@ -342,7 +340,6 @@ class HabitatComplexityMethodSECSVSerializer(ReportSerializer):
         ReportField("sample_unit_count", "Sample unit count"),
         ReportField("score_avg_avg", "Score average"),
         ReportField("site_notes", "Site notes"),
-        ReportField("sample_event_notes", "Sampling event notes"),
         ReportField("management_notes", "Management notes"),
     ] + covariate_report_fields
 

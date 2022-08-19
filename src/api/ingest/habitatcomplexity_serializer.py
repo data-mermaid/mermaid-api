@@ -15,7 +15,9 @@ __all__ = ["HabitatComplexityCSVSerializer"]
 
 
 def score_choices():
-    return build_choices(HabitatComplexityScore.objects.choices(order_by="name"), val_key="val")
+    return build_choices(
+        HabitatComplexityScore.objects.choices(order_by="name"), val_key="val"
+    )
 
 
 def reef_slopes_choices():
@@ -46,17 +48,18 @@ class HabitatComplexityCSVSerializer(CollectRecordCSVSerializer):
         "Current": "data__benthic_transect__current",
         "Relative depth": "data__benthic_transect__relative_depth",
         "Tide": "data__benthic_transect__tide",
-        "Notes": "data__sample_event__notes",
+        "Sample unit notes": "data__benthic_transect__notes",
         "Observer emails *": "data__observers",
         "Observation interval *": "data__obs_habitat_complexities__interval",
         "Habitat complexity score *": "data__obs_habitat_complexities__score",
     }
 
-    data__benthic_transect__sample_time = serializers.TimeField(required=False, allow_null=True)
+    data__benthic_transect__sample_time = serializers.TimeField(
+        required=False, allow_null=True
+    )
     data__benthic_transect__depth = serializers.DecimalField(
         max_digits=3, decimal_places=1
     )
-
     data__benthic_transect__visibility = LazyChoiceField(
         choices=visibility_choices, required=False, allow_null=True, allow_blank=True
     )
@@ -72,7 +75,6 @@ class HabitatComplexityCSVSerializer(CollectRecordCSVSerializer):
     data__benthic_transect__tide = LazyChoiceField(
         choices=tide_choices, required=False, allow_null=True, allow_blank=True
     )
-
     data__interval_size = serializers.DecimalField(max_digits=4, decimal_places=2)
     data__benthic_transect__len_surveyed = serializers.IntegerField(min_value=0)
     data__benthic_transect__number = serializers.IntegerField(min_value=0)
@@ -82,7 +84,9 @@ class HabitatComplexityCSVSerializer(CollectRecordCSVSerializer):
     data__benthic_transect__reef_slope = LazyChoiceField(
         choices=reef_slopes_choices, required=False, allow_null=True, allow_blank=True
     )
-
+    data__benthic_transect__notes = serializers.CharField(
+        required=False, allow_blank=True, default=""
+    )
     data__obs_habitat_complexities__interval = serializers.DecimalField(
         max_digits=7, decimal_places=2
     )

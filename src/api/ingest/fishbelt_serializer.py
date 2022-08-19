@@ -58,16 +58,19 @@ class FishBeltCSVSerializer(CollectRecordCSVSerializer):
         "Current": "data__fishbelt_transect__current",
         "Relative depth": "data__fishbelt_transect__relative_depth",
         "Tide": "data__fishbelt_transect__tide",
-        "Notes": "data__sample_event__notes",
+        "Sample unit notes": "data__fishbelt_transect__notes",
         "Observer emails *": "data__observers",
         "Fish name *": "data__obs_belt_fishes__fish_attribute",
         "Size *": "data__obs_belt_fishes__size",
         "Count *": "data__obs_belt_fishes__count",
     }
 
-    data__fishbelt_transect__sample_time = serializers.TimeField(required=False, allow_null=True)
-    data__fishbelt_transect__depth = serializers.DecimalField(max_digits=3, decimal_places=1)
-
+    data__fishbelt_transect__sample_time = serializers.TimeField(
+        required=False, allow_null=True
+    )
+    data__fishbelt_transect__depth = serializers.DecimalField(
+        max_digits=3, decimal_places=1
+    )
     data__fishbelt_transect__visibility = LazyChoiceField(
         choices=visibility_choices, required=False, allow_null=True, allow_blank=True
     )
@@ -83,14 +86,18 @@ class FishBeltCSVSerializer(CollectRecordCSVSerializer):
     data__fishbelt_transect__tide = LazyChoiceField(
         choices=tide_choices, required=False, allow_null=True, allow_blank=True
     )
-
-    data__fishbelt_transect__len_surveyed = serializers.DecimalField(max_digits=4, decimal_places=1)
+    data__fishbelt_transect__len_surveyed = serializers.DecimalField(
+        max_digits=4, decimal_places=1
+    )
     data__fishbelt_transect__number = serializers.IntegerField(min_value=0)
     data__fishbelt_transect__label = serializers.CharField(
         allow_blank=True, required=False, default=""
     )
     data__fishbelt_transect__reef_slope = LazyChoiceField(
         choices=reef_slopes_choices, required=False, allow_null=True, allow_blank=True
+    )
+    data__fishbelt_transect__notes = serializers.CharField(
+        required=False, allow_blank=True, default=""
     )
     data__fishbelt_transect__width = LazyChoiceField(
         choices=belt_transect_widths_choices
