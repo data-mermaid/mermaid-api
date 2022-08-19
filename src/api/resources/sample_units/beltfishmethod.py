@@ -90,9 +90,7 @@ class ObsBeltFishCSVSerializer(ReportSerializer):
         ReportField("vulnerability", "Vulnerability"),
         ReportField("site_notes", "Site notes"),
         ReportField("management_notes", "Management notes"),
-        # ReportField("sample_event_notes", "Sampling event notes"),
         ReportField("sample_unit_notes", "Sample unit notes"),
-        # ReportField("observation_notes", "Observation notes"),
     ] + covariate_report_fields
 
     additional_fields = [
@@ -326,7 +324,6 @@ class BeltFishMethodSUCSVSerializer(ReportSerializer):
         ReportField("biomass_kgha", "Biomass_kgha"),
         ReportField("biomass_kgha_by_trophic_group", "Biomass kgha by trophic group"),
         ReportField("site_notes", "Site notes"),
-        # ReportField("sample_event_notes", "Sampling event notes"),
         ReportField("management_notes", "Management notes"),
         ReportField("sample_unit_notes", "Sample unit notes"),
     ] + covariate_report_fields
@@ -374,7 +371,6 @@ class BeltFishMethodSECSVSerializer(ReportSerializer):
         ReportField("biomass_kgha_avg", "Biomass_kgha average"),
         ReportField("biomass_kgha_by_trophic_group_avg", "Biomass kgha by trophic group average"),
         ReportField("site_notes", "Site notes"),
-        # ReportField("sample_event_notes", "Sampling event notes"),
         ReportField("management_notes", "Management notes"),
     ] + covariate_report_fields
 
