@@ -8,10 +8,8 @@ from rest_framework.decorators import action
 from rest_framework_gis.pagination import GeoJsonPagination
 
 from ...auth_backends import AnonymousJWTAuthentication
-from ...covariates.vibrant_oceans import VibrantOceansThreatsCovariate
 from ...models import Covariate
 from ...permissions import *
-from ...report_serializer import *
 from ...reports import csv_report
 from ...reports.fields import ReportField
 from ...reports.formatters import (

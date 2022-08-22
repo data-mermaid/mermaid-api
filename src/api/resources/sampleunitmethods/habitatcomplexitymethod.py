@@ -29,9 +29,11 @@ from ..base import (
     BaseSUViewAPISerializer,
 )
 from ..benthic_transect import BenthicTransectSerializer
-from ..habitat_complexity import HabitatComplexitySerializer
+from .sumethod_serializers import (
+    HabitatComplexitySerializer,
+    ObsHabitatComplexitySerializer,
+)
 from ..mixins import SampleUnitMethodEditMixin
-from ..obs_habitat_complexity import ObsHabitatComplexitySerializer
 from ..observer import ObserverSerializer
 from ..sample_event import SampleEventSerializer
 from . import (
@@ -81,7 +83,7 @@ class ObsHabitatComplexityCSVSerializer(ReportSerializer):
         ReportField("management_est_year", "Management year established"),
         ReportField("management_size", "Management size"),
         ReportField("management_parties", "Governance", to_governance),
-        ReportField("management_compliance", "Estimated compliance",),
+        ReportField("management_compliance", "Estimated compliance"),
         ReportField("management_rules", "Management rules"),
         ReportField("transect_number", "Transect number"),
         ReportField("label", "Transect label"),
@@ -286,7 +288,7 @@ class HabitatComplexityMethodSUCSVSerializer(ReportSerializer):
         ReportField("management_est_year", "Management year established"),
         ReportField("management_size", "Management size"),
         ReportField("management_parties", "Governance", to_governance),
-        ReportField("management_compliance", "Estimated compliance", ),
+        ReportField("management_compliance", "Estimated compliance"),
         ReportField("management_rules", "Management rules"),
         ReportField("transect_number", "Transect number"),
         ReportField("label", "Transect label"),
@@ -335,7 +337,7 @@ class HabitatComplexityMethodSECSVSerializer(ReportSerializer):
         ReportField("management_est_year", "Management year established"),
         ReportField("management_size", "Management size"),
         ReportField("management_parties", "Governance", to_governance),
-        ReportField("management_compliance", "Estimated compliance", ),
+        ReportField("management_compliance", "Estimated compliance"),
         ReportField("management_rules", "Management rules"),
         ReportField("sample_unit_count", "Sample unit count"),
         ReportField("score_avg_avg", "Score average"),

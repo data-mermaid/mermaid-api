@@ -6,9 +6,18 @@ from rest_condition import Or
 from rest_framework import status
 from rest_framework.response import Response
 
-from ...models import FISHBELT_PROTOCOL, BeltFishObsSQLModel, BeltFishSESQLModel, BeltFishSUSQLModel
+from ...models import (
+    FISHBELT_PROTOCOL,
+    BeltFishObsSQLModel,
+    BeltFishSESQLModel,
+    BeltFishSUSQLModel,
+)
 from ...models import BeltFish, Project
-from ...permissions import ProjectDataAdminPermission, ProjectDataReadOnlyPermission, ProjectPublicSummaryPermission
+from ...permissions import (
+    ProjectDataAdminPermission,
+    ProjectDataReadOnlyPermission,
+    ProjectPublicSummaryPermission,
+)
 from ...reports.fields import ReportField
 from ...reports.formatters import (
     to_day,
@@ -26,10 +35,9 @@ from ..base import (
     BaseViewAPIGeoSerializer,
     BaseSUViewAPISerializer,
 )
-from ..belt_fish import BeltFishSerializer
+from .sumethod_serializers import BeltFishSerializer, ObsBeltFishSerializer
 from ..fish_belt_transect import FishBeltTransectSerializer
 from ..mixins import SampleUnitMethodEditMixin
-from ..obs_belt_fish import ObsBeltFishSerializer
 from ..observer import ObserverSerializer
 from ..sample_event import SampleEventSerializer
 from ...utils.sample_unit_methods import edit_transect_method
@@ -38,7 +46,7 @@ from . import (
     clean_sample_event_models,
     covariate_report_fields,
     save_model,
-    save_one_to_many
+    save_one_to_many,
 )
 
 
@@ -67,7 +75,7 @@ class ObsBeltFishCSVSerializer(ReportSerializer):
         ReportField("management_est_year", "Management year established"),
         ReportField("management_size", "Management size"),
         ReportField("management_parties", "Governance", to_governance),
-        ReportField("management_compliance", "Estimated compliance",),
+        ReportField("management_compliance", "Estimated compliance"),
         ReportField("management_rules", "Management rules"),
         ReportField("transect_number", "Transect number"),
         ReportField("label", "Transect label"),
@@ -312,7 +320,7 @@ class BeltFishMethodSUCSVSerializer(ReportSerializer):
         ReportField("management_est_year", "Management year established"),
         ReportField("management_size", "Management size"),
         ReportField("management_parties", "Governance", to_governance),
-        ReportField("management_compliance", "Estimated compliance", ),
+        ReportField("management_compliance", "Estimated compliance"),
         ReportField("management_rules", "Management rules"),
         ReportField("transect_number", "Transect number"),
         ReportField("label", "Transect label"),
@@ -365,11 +373,13 @@ class BeltFishMethodSECSVSerializer(ReportSerializer):
         ReportField("management_est_year", "Management year established"),
         ReportField("management_size", "Management size"),
         ReportField("management_parties", "Governance", to_governance),
-        ReportField("management_compliance", "Estimated compliance", ),
+        ReportField("management_compliance", "Estimated compliance"),
         ReportField("management_rules", "Management rules"),
         ReportField("sample_unit_count", "Sample unit count"),
         ReportField("biomass_kgha_avg", "Biomass_kgha average"),
-        ReportField("biomass_kgha_by_trophic_group_avg", "Biomass kgha by trophic group average"),
+        ReportField(
+            "biomass_kgha_by_trophic_group_avg", "Biomass kgha by trophic group average"
+        ),
         ReportField("site_notes", "Site notes"),
         ReportField("management_notes", "Management notes"),
     ] + covariate_report_fields
@@ -500,12 +510,14 @@ class BeltFishProjectMethodObsView(BaseProjectMethodView):
 
     def get_queryset(self):
         project_id = self.kwargs.get("project_pk")
-        return self.model.objects.all().sql_table(
-            project_id=project_id
-        ).filter(
-            Q(size__isnull=False)
-            | Q(count__isnull=False)
-            | Q(biomass_kgha__isnull=False)
+        return (
+            self.model.objects.all()
+            .sql_table(project_id=project_id)
+            .filter(
+                Q(size__isnull=False)
+                | Q(count__isnull=False)
+                | Q(biomass_kgha__isnull=False)
+            )
         )
 
 
@@ -517,9 +529,7 @@ class BeltFishProjectMethodSUView(BaseProjectMethodView):
     serializer_class_csv = BeltFishMethodSUCSVSerializer
     filterset_class = BeltFishMethodSUFilterSet
     model = BeltFishSUSQLModel
-    order_by = (
-        "site_name", "sample_date", "transect_number"
-    )
+    order_by = ("site_name", "sample_date", "transect_number")
 
 
 class BeltFishProjectMethodSEView(BaseProjectMethodView):
@@ -533,6 +543,4 @@ class BeltFishProjectMethodSEView(BaseProjectMethodView):
     serializer_class_csv = BeltFishMethodSECSVSerializer
     filterset_class = BeltFishMethodSEFilterSet
     model = BeltFishSESQLModel
-    order_by = (
-        "site_name", "sample_date"
-    )
+    order_by = ("site_name", "sample_date")

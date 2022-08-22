@@ -47,14 +47,12 @@ class ProjectSerializer(BaseAPISerializer):
         "sampleevent",
         "benthictransect",
         "fishbelttransect",
-        "obstransectbeltfish",
-        "obsbenthiclit",
-        "obsbenthicpit",
-        "obshabitatcomplexity",
         "collectrecords",
         "beltfishtransectmethod",
         "benthiclittransectmethod",
+        "benthicphotoquadrattransectmethod",
         "benthicpittransectmethod",
+        "bleachingquadratcollectionmethod",
         "habitatcomplexitytransectmethod",
     ]
 

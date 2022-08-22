@@ -21,53 +21,47 @@ from .resources.sample_event import SampleEventViewSet
 from .resources.benthic_transect import BenthicTransectViewSet
 from .resources.quadrat_collection import QuadratCollectionViewSet
 from .resources.fish_belt_transect import FishBeltTransectViewSet
-from .resources.obs_belt_fish import ObsBeltFishViewSet
-from .resources.obs_benthic_lit import ObsBenthicLITViewSet
-from .resources.obs_benthic_pit import ObsBenthicPITViewSet
-from .resources.obs_habitat_complexity import ObsHabitatComplexityViewSet
-from .resources.obs_colonies_bleached import ObsColoniesBleachedViewSet
-from .resources.obs_quadrat_benthic_percent import ObsQuadratBenthicPercentViewSet
 from .resources.sync import vw_pull, vw_push
 from .resources.notification import NotificationViewSet
 
-from .resources.sample_units.beltfishmethod import (
+from .resources.sampleunitmethods.beltfishmethod import (
     BeltFishMethodView,
     BeltFishProjectMethodObsView,
     BeltFishProjectMethodSUView,
     BeltFishProjectMethodSEView,
 )
-from .resources.sample_units.benthiclitmethod import (
+from .resources.sampleunitmethods.benthiclitmethod import (
     BenthicLITMethodView,
     BenthicLITProjectMethodObsView,
     BenthicLITProjectMethodSUView,
     BenthicLITProjectMethodSEView,
 )
-from .resources.sample_units.benthicpitmethod import (
+from .resources.sampleunitmethods.benthicpitmethod import (
     BenthicPITMethodView,
     BenthicPITProjectMethodObsView,
     BenthicPITProjectMethodSUView,
     BenthicPITProjectMethodSEView,
 )
-from .resources.sample_units.habitatcomplexitymethod import (
+from .resources.sampleunitmethods.habitatcomplexitymethod import (
     HabitatComplexityMethodView,
     HabitatComplexityProjectMethodObsView,
     HabitatComplexityProjectMethodSUView,
     HabitatComplexityProjectMethodSEView,
 )
-from .resources.sample_units.bleachingquadratcollectionmethod import (
+from .resources.sampleunitmethods.bleachingquadratcollectionmethod import (
     BleachingQuadratCollectionMethodView,
     BleachingQCProjectMethodObsColoniesBleachedView,
     BleachingQCProjectMethodObsQuadratBenthicPercentView,
     BleachingQCProjectMethodSUView,
     BleachingQCProjectMethodSEView,
 )
-from .resources.sample_units.benthicphotoquadrattransectmethod import (
+from .resources.sampleunitmethods.benthicphotoquadrattransectmethod import (
     BenthicPQTProjectMethodObsView,
     BenthicPhotoQuadratTransectMethodView,
     BenthicPQTProjectMethodSEView,
     BenthicPQTProjectMethodSUView,
 )
-from .resources.sample_units.sample_unit_methods import SampleUnitMethodView
+from .resources.sampleunitmethods.sample_unit_methods import SampleUnitMethodView
 from .resources.summary_sample_event import SummarySampleEventView
 
 from .resources.fish_size import FishSizeViewSet
@@ -235,24 +229,6 @@ project_router.register(
     "benthicphotoquadrattransectmethod",
 )
 project_router.register(r"sampleunitmethods", SampleUnitMethodView, "sampleunitmethod")
-
-# observations
-project_router.register(
-    r"obstransectbeltfishs", ObsBeltFishViewSet, "obstransectbeltfish"
-)
-project_router.register(r"obsbenthiclits", ObsBenthicLITViewSet, "obsbenthiclit")
-project_router.register(r"obsbenthicpits", ObsBenthicPITViewSet, "obsbenthicpit")
-project_router.register(
-    r"obshabitatcomplexities", ObsHabitatComplexityViewSet, "obshabitatcomplexity"
-)
-project_router.register(
-    r"obscoloniesbleached", ObsColoniesBleachedViewSet, "obscoloniesbleached"
-)
-project_router.register(
-    r"obsquadratbenthicpercent",
-    ObsQuadratBenthicPercentViewSet,
-    "obsquadratbenthicpercent",
-)
 
 
 api_urls = router.urls + project_router.urls

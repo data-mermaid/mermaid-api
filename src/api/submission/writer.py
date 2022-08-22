@@ -18,28 +18,26 @@ from api.models import (
     SampleEvent,
 )
 from api.utils import combine_into
-from api.resources.belt_fish import BeltFishSerializer
-from api.resources.benthic_lit import BenthicLITSerializer
-from api.resources.benthic_pit import BenthicPITSerializer
 from api.resources.benthic_transect import BenthicTransectSerializer
-from api.resources.bleaching_quadrat_collection import (
-    BleachingQuadratCollectionSerializer,
-)
-from api.resources.benthic_photo_quadrat_transect import (
-    BenthicPhotoQuadratTransectSerializer,
-)
 from api.resources.fish_belt_transect import FishBeltTransectSerializer
-from api.resources.habitat_complexity import HabitatComplexitySerializer
-from api.resources.obs_belt_fish import ObsBeltFishSerializer
-from api.resources.obs_benthic_photo_quadrat import ObsBenthicPhotoQuadratSerializer
-from api.resources.obs_benthic_lit import ObsBenthicLITSerializer
-from api.resources.obs_benthic_pit import ObsBenthicPITSerializer
-from api.resources.obs_colonies_bleached import ObsColoniesBleachedSerializer
-from api.resources.obs_habitat_complexity import ObsHabitatComplexitySerializer
-from api.resources.obs_quadrat_benthic_percent import ObsQuadratBenthicPercentSerializer
 from api.resources.observer import ObserverSerializer
 from api.resources.quadrat_collection import QuadratCollectionSerializer
 from api.resources.quadrat_transect import QuadratTransectSerializer
+from api.resources.sampleunitmethods.sumethod_serializers import (
+    BenthicLITSerializer,
+    ObsBenthicLITSerializer,
+    BeltFishSerializer,
+    ObsBeltFishSerializer,
+    BenthicPITSerializer,
+    ObsBenthicPITSerializer,
+    HabitatComplexitySerializer,
+    ObsHabitatComplexitySerializer,
+    BleachingQuadratCollectionSerializer,
+    ObsColoniesBleachedSerializer,
+    ObsQuadratBenthicPercentSerializer,
+    BenthicPhotoQuadratTransectSerializer,
+    ObsBenthicPhotoQuadratSerializer,
+)
 from api.resources.sample_event import SampleEventSerializer
 from .parser import (
     get_benthic_transect_data,

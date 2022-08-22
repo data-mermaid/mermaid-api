@@ -29,10 +29,12 @@ from ..base import (
     BaseViewAPIGeoSerializer,
     BaseSUViewAPISerializer,
 )
-from ..bleaching_quadrat_collection import BleachingQuadratCollectionSerializer
+from .sumethod_serializers import (
+    BleachingQuadratCollectionSerializer,
+    ObsColoniesBleachedSerializer,
+    ObsQuadratBenthicPercentSerializer,
+)
 from ..mixins import SampleUnitMethodEditMixin
-from ..obs_colonies_bleached import ObsColoniesBleachedSerializer
-from ..obs_quadrat_benthic_percent import ObsQuadratBenthicPercentSerializer
 from ..observer import ObserverSerializer
 from ..quadrat_collection import QuadratCollectionSerializer
 from ..sample_event import SampleEventSerializer
@@ -61,7 +63,9 @@ class BleachingQuadratCollectionMethodSerializer(BleachingQuadratCollectionSeria
         exclude = []
 
 
-class BleachingQuadratCollectionMethodView(SampleUnitMethodEditMixin, BaseProjectApiViewSet):
+class BleachingQuadratCollectionMethodView(
+    SampleUnitMethodEditMixin, BaseProjectApiViewSet
+):
     queryset = BleachingQuadratCollection.objects.select_related(
         "quadrat", "quadrat__sample_event"
     ).all()
@@ -227,7 +231,7 @@ class ObsBleachingQCColoniesBleachedCSVSerializer(ReportSerializer):
         ReportField("management_est_year", "Management year established"),
         ReportField("management_size", "Management size"),
         ReportField("management_parties", "Governance", to_governance),
-        ReportField("management_compliance", "Estimated compliance",),
+        ReportField("management_compliance", "Estimated compliance"),
         ReportField("management_rules", "Management rules"),
         ReportField("observers", "Observers", to_names),
         ReportField("label", "Quadrat collection label"),
@@ -284,7 +288,7 @@ class ObsQuadratBenthicPercentCSVSerializer(ReportSerializer):
         ReportField("management_est_year", "Management year established"),
         ReportField("management_size", "Management size"),
         ReportField("management_parties", "Governance", to_governance),
-        ReportField("management_compliance", "Estimated compliance",),
+        ReportField("management_compliance", "Estimated compliance"),
         ReportField("management_rules", "Management rules"),
         ReportField("observers", "Observers", to_names),
         ReportField("label", "Quadrat collection label"),
@@ -395,7 +399,7 @@ class BleachingQCMethodSUCSVSerializer(ReportSerializer):
         ReportField("management_est_year", "Management year established"),
         ReportField("management_size", "Management size"),
         ReportField("management_parties", "Governance", to_governance),
-        ReportField("management_compliance", "Estimated compliance", ),
+        ReportField("management_compliance", "Estimated compliance"),
         ReportField("management_rules", "Management rules"),
         ReportField("observers", "Observers", to_names),
         ReportField("label", "Transect label"),
@@ -451,7 +455,7 @@ class BleachingQCMethodSECSVSerializer(ReportSerializer):
         ReportField("management_est_year", "Management year established"),
         ReportField("management_size", "Management size"),
         ReportField("management_parties", "Governance", to_governance),
-        ReportField("management_compliance", "Estimated compliance", ),
+        ReportField("management_compliance", "Estimated compliance"),
         ReportField("management_rules", "Management rules"),
         ReportField("sample_unit_count", "Sample unit count"),
         ReportField("count_genera_avg", "Genera count average"),
@@ -646,9 +650,7 @@ class BleachingQCProjectMethodSUView(BaseProjectMethodView):
     serializer_class_csv = BleachingQCMethodSUCSVSerializer
     filterset_class = BleachingQCMethodSUFilterSet
     model = BleachingQCSUSQLModel
-    order_by = (
-        "site_name", "sample_date", "label"
-    )
+    order_by = ("site_name", "sample_date", "label")
 
 
 class BleachingQCProjectMethodSEView(BaseProjectMethodView):
@@ -662,6 +664,4 @@ class BleachingQCProjectMethodSEView(BaseProjectMethodView):
     serializer_class_csv = BleachingQCMethodSECSVSerializer
     filterset_class = BleachingQCMethodSEFilterSet
     model = BleachingQCSESQLModel
-    order_by = (
-        "site_name", "sample_date"
-    )
+    order_by = ("site_name", "sample_date")

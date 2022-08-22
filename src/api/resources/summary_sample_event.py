@@ -5,7 +5,7 @@ from .base import (
     BaseViewAPISerializer,
     AggregatedViewFilterSet,
 )
-from .sample_units import AggregatedViewMixin, BaseApiViewSet
+from .sampleunitmethods import AggregatedViewMixin, BaseApiViewSet
 from ..permissions import UnauthenticatedReadOnlyPermission
 from ..models import Project, SummarySampleEventModel
 from ..reports.fields import ReportField
