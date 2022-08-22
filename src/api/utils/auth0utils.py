@@ -6,8 +6,8 @@ import string
 from app import settings
 from auth0.v3.authentication import GetToken
 from auth0.v3.management import Auth0
-from django.utils.encoding import smart_text
-from django.utils.translation import ugettext as _
+from django.utils.encoding import smart_str
+from django.utils.translation import gettext as _
 from jose import jws
 from jose import jwt
 from rest_framework import exceptions
@@ -128,7 +128,7 @@ def get_jwt_token(request):
         if not auth:
             return None
 
-        if smart_text(auth[0].lower()) != auth_header_prefix.lower():
+        if smart_str(auth[0].lower()) != auth_header_prefix.lower():
             return None
 
         token = auth[1]

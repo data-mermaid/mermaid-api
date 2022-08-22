@@ -1,6 +1,5 @@
 from django.contrib.gis.db import models
-from django.contrib.postgres.fields import JSONField
-from django.utils.translation import ugettext_lazy as _
+from django.utils.translation import gettext_lazy as _
 
 from sqltables import SQLTableArg, SQLTableManager
 from .base import BaseSQLModel, BaseSUSQLModel, sample_event_sql_template
@@ -147,7 +146,7 @@ class HabitatComplexitySUSQLModel(BaseSUSQLModel):
 
     objects = SQLTableManager()
 
-    sample_unit_ids = JSONField()
+    sample_unit_ids = models.JSONField()
     transect_number = models.PositiveSmallIntegerField()
     transect_len_surveyed = models.PositiveSmallIntegerField(
         verbose_name=_("transect length surveyed (m)")

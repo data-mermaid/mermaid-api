@@ -10,12 +10,11 @@ from decimal import Decimal
 
 from django.contrib.gis.db import models
 from django.contrib.postgres.aggregates import ArrayAgg
-from django.contrib.postgres.fields import JSONField
 from django.core.validators import MaxValueValidator, MinValueValidator
 from django.db.models import Avg, F, Max, Q
 from django.forms.models import model_to_dict
 from django.utils import timezone
-from django.utils.translation import ugettext_lazy as _
+from django.utils.translation import gettext_lazy as _
 from rest_framework.utils.encoders import JSONEncoder
 
 import pytz
@@ -232,7 +231,7 @@ class Management(BaseModel, JSONMixin, AreaMixin):
     gear_restriction = models.BooleanField(verbose_name=_(u'partial gear restriction'), default=False)
     species_restriction = models.BooleanField(verbose_name=_(u'partial species restriction'), default=False)
     access_restriction = models.BooleanField(verbose_name=_(u'access restriction'), default=False)
-    validations = JSONField(encoder=JSONEncoder, null=True, blank=True)
+    validations = models.JSONField(encoder=JSONEncoder, null=True, blank=True)
 
     class Meta:
         db_table = 'management'
@@ -340,7 +339,7 @@ class Site(BaseModel, JSONMixin):
     notes = models.TextField(blank=True)
     predecessor = models.ForeignKey(
         'self', on_delete=models.SET_NULL, null=True, blank=True)
-    validations = JSONField(encoder=JSONEncoder, null=True, blank=True)
+    validations = models.JSONField(encoder=JSONEncoder, null=True, blank=True)
 
     class Meta:
         db_table = 'site'
@@ -448,7 +447,7 @@ class SampleEvent(BaseModel, JSONMixin):
     management = models.ForeignKey(Management, on_delete=models.PROTECT)
     sample_date = models.DateField(default=default_date)
     notes = models.TextField(blank=True)
-    validations = JSONField(encoder=JSONEncoder, null=True, blank=True)
+    validations = models.JSONField(encoder=JSONEncoder, null=True, blank=True)
 
     class Meta:
         db_table = 'sample_event'
@@ -1627,8 +1626,8 @@ class CollectRecord(BaseModel):
     project = models.ForeignKey(Project, related_name='collect_records', on_delete=models.CASCADE)
     profile = models.ForeignKey(Profile, on_delete=models.CASCADE,
                                 related_name='collect_records')
-    data = JSONField(encoder=JSONEncoder, null=True, blank=True)
-    validations = JSONField(encoder=JSONEncoder, null=True, blank=True)
+    data = models.JSONField(encoder=JSONEncoder, null=True, blank=True)
+    validations = models.JSONField(encoder=JSONEncoder, null=True, blank=True)
     stage = models.PositiveIntegerField(choices=STAGE_CHOICES, null=True, blank=True)
 
     @property
@@ -1691,7 +1690,7 @@ class ArchivedRecord(models.Model):
     model = models.CharField(max_length=100)
     project_pk = models.UUIDField(db_index=True, null=True, blank=True)
     record_pk = models.UUIDField(db_index=True, null=True, blank=True)
-    record = JSONField(null=True, blank=True)
+    record = models.JSONField(null=True, blank=True)
 
 
 class Covariate(BaseModel, JSONMixin):
@@ -1721,7 +1720,7 @@ class Covariate(BaseModel, JSONMixin):
     name = models.CharField(max_length=100, choices=SUPPORTED_COVARIATES)
     datestamp = models.DateField()
     requested_datestamp = models.DateField()
-    value = JSONField(null=True, blank=True)
+    value = models.JSONField(null=True, blank=True)
 
     class Meta:
         unique_together = ("site", "name",)

@@ -1,5 +1,4 @@
 from django.contrib.gis.db import models
-from django.contrib.postgres.fields import JSONField
 
 from sqltables import SQLTableArg, SQLTableManager
 from . import Project
@@ -14,6 +13,7 @@ from .sql_models import (
 
 class SummarySampleEventBaseModel(models.Model):
     sample_event_id = models.UUIDField(primary_key=True)
+    id = models.UUIDField(blank=True, null=True)
     site_id = models.UUIDField()
     site_name = models.CharField(max_length=255)
     site_notes = models.TextField(blank=True)
@@ -26,18 +26,18 @@ class SummarySampleEventBaseModel(models.Model):
     project_notes = models.TextField(blank=True)
     sample_event_notes = models.TextField(blank=True, null=True)
     contact_link = models.CharField(max_length=255)
-    tags = JSONField(null=True, blank=True)
+    tags = models.JSONField(null=True, blank=True)
     country_id = models.UUIDField()
     country_name = models.CharField(max_length=50)
     reef_type = models.CharField(max_length=50)
     reef_zone = models.CharField(max_length=50)
     reef_exposure = models.CharField(max_length=50)  # name change
-    project_admins = JSONField(null=True, blank=True)
+    project_admins = models.JSONField(null=True, blank=True)
     sample_date = models.DateField(null=True, blank=True)
     management_id = models.UUIDField()
     management_name = models.CharField(max_length=255)
     management_notes = models.TextField(blank=True, null=True)
-    protocols = JSONField(null=True, blank=True)  # most keys changed inside here
+    protocols = models.JSONField(null=True, blank=True)  # most keys changed inside here
     data_policy_beltfish = models.CharField(max_length=50)
     data_policy_benthiclit = models.CharField(max_length=50)
     data_policy_benthicpit = models.CharField(max_length=50)
@@ -67,6 +67,7 @@ class SummarySampleEventSQLModel(SummarySampleEventBaseModel):
         )
 
         SELECT
+        NULL AS id,
         sample_event.id as sample_event_id,
         site.id AS site_id,
         site.name AS site_name,

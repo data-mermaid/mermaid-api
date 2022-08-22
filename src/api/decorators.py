@@ -2,7 +2,7 @@ import functools
 import threading
 import time
 
-from django.utils.translation import ugettext as _
+from django.utils.translation import gettext as _
 
 
 def timeit(method):

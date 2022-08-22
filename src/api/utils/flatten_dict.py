@@ -1,7 +1,7 @@
 
 # Source: https://github.com/ianlini/flatten-dict
 import os.path
-from collections import Mapping
+from collections.abc import Mapping
 import six
 
 

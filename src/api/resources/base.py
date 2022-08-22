@@ -2,7 +2,7 @@ import re
 import uuid
 
 from django.contrib.postgres.aggregates import ArrayAgg
-from django.utils.translation import ugettext_lazy as _
+from django.utils.translation import gettext_lazy as _
 from django.db.models.sql.constants import ORDER_PATTERN
 from rest_framework import serializers, viewsets
 from rest_framework.decorators import action

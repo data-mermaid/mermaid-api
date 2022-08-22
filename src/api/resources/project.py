@@ -2,7 +2,7 @@ import logging
 import uuid
 
 import django_filters
-from django.contrib.postgres.fields import JSONField
+from django.db.models import JSONField
 from django.db import transaction
 from rest_framework import exceptions, permissions, serializers, status
 from rest_framework.decorators import action

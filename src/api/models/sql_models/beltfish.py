@@ -1,6 +1,5 @@
 from django.contrib.gis.db import models
-from django.contrib.postgres.fields import JSONField
-from django.utils.translation import ugettext_lazy as _
+from django.utils.translation import gettext_lazy as _
 
 from sqltables import SQLTableArg, SQLTableManager
 from .base import BaseSQLModel, BaseSUSQLModel, sample_event_sql_template
@@ -316,7 +315,7 @@ class BeltFishSUSQLModel(BaseSUSQLModel):
 
     objects = SQLTableManager()
 
-    sample_unit_ids = JSONField()
+    sample_unit_ids = models.JSONField()
     total_abundance = models.PositiveIntegerField()
     transect_number = models.PositiveSmallIntegerField()
     transect_len_surveyed = models.PositiveSmallIntegerField(
@@ -332,8 +331,8 @@ class BeltFishSUSQLModel(BaseSUSQLModel):
         null=True,
         blank=True,
     )
-    biomass_kgha_by_trophic_group = JSONField(null=True, blank=True)
-    biomass_kgha_by_fish_family = JSONField(null=True, blank=True)
+    biomass_kgha_by_trophic_group = models.JSONField(null=True, blank=True)
+    biomass_kgha_by_fish_family = models.JSONField(null=True, blank=True)
     data_policy_beltfish = models.CharField(max_length=50)
 
     class Meta:
@@ -434,8 +433,8 @@ class BeltFishSESQLModel(BaseSQLModel):
         null=True,
         blank=True,
     )
-    biomass_kgha_by_trophic_group_avg = JSONField(null=True, blank=True)
-    biomass_kgha_by_fish_family_avg = JSONField(null=True, blank=True)
+    biomass_kgha_by_trophic_group_avg = models.JSONField(null=True, blank=True)
+    biomass_kgha_by_fish_family_avg = models.JSONField(null=True, blank=True)
     data_policy_beltfish = models.CharField(max_length=50)
 
     class Meta:

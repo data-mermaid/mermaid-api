@@ -1,6 +1,5 @@
 from django.contrib.gis.db import models
-from django.contrib.postgres.fields import JSONField
-from django.utils.translation import ugettext_lazy as _
+from django.utils.translation import gettext_lazy as _
 
 from sqltables import SQLTableArg, SQLTableManager
 from .base import BaseSQLModel, BaseSUSQLModel, sample_event_sql_template
@@ -217,7 +216,7 @@ class BenthicPITSUSQLModel(BaseSUSQLModel):
 
     objects = SQLTableManager()
 
-    sample_unit_ids = JSONField()
+    sample_unit_ids = models.JSONField()
     transect_number = models.PositiveSmallIntegerField()
     transect_len_surveyed = models.PositiveSmallIntegerField(
         verbose_name=_("transect length surveyed (m)")
@@ -232,7 +231,7 @@ class BenthicPITSUSQLModel(BaseSUSQLModel):
         default=0.5,
         verbose_name=_("interval start (m)"),
     )
-    percent_cover_by_benthic_category = JSONField(null=True, blank=True)
+    percent_cover_by_benthic_category = models.JSONField(null=True, blank=True)
     data_policy_benthicpit = models.CharField(max_length=50)
 
     class Meta:
@@ -289,7 +288,7 @@ class BenthicPITSESQLModel(BaseSQLModel):
     current_name = models.CharField(max_length=100)
     tide_name = models.CharField(max_length=100)
     visibility_name = models.CharField(max_length=100)
-    percent_cover_by_benthic_category_avg = JSONField(null=True, blank=True)
+    percent_cover_by_benthic_category_avg = models.JSONField(null=True, blank=True)
     data_policy_benthicpit = models.CharField(max_length=50)
 
     class Meta:
