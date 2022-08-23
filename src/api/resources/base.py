@@ -122,16 +122,15 @@ class StandardResultPagination(PageNumberPagination):
     max_page_size = 5000
 
 
-class CurrentProfileDefault(object):
-    def set_context(self, serializer_field):
+class CurrentProfileDefault:
+    requires_context = True
+
+    def __call__(self, serializer_field):
         try:
             token = get_jwt_token(serializer_field.context["request"])
-            self.profile = get_unverified_profile(token)
+            return get_unverified_profile(token)
         except exceptions.AuthenticationFailed:
-            self.profile = None
-
-    def __call__(self):
-        return self.profile
+            return None
 
     def __repr__(self):
         return "%s()" % self.__class__.__name__
@@ -558,7 +557,7 @@ class BaseApiViewSet(MethodAuthenticationMixin, viewsets.ModelViewSet, UpdatesMi
 
     _serializer_class_for_fields = {}
 
-    lookup_value_regex = '[0-9a-fA-F]{8}\-[0-9a-fA-F]{4}\-[0-9a-fA-F]{4}\-[0-9a-fA-F]{4}\-[0-9a-fA-F]{12}'
+    lookup_value_regex = r"[0-9a-fA-F]{8}\-[0-9a-fA-F]{4}\-[0-9a-fA-F]{4}\-[0-9a-fA-F]{4}\-[0-9a-fA-F]{12}"
 
     permission_classes = [DefaultPermission]
 
