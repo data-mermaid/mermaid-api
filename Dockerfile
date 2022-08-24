@@ -39,6 +39,7 @@ RUN mkdir -p /var/log/supervisor
 ADD ./config/supervisor_conf.d/*.conf /etc/supervisor/conf.d/
 
 ADD ./requirements.txt requirements.txt
+RUN pip install --upgrade pip
 RUN pip install --upgrade -r requirements.txt
 RUN rm requirements.txt
 

@@ -38,61 +38,12 @@ from django_filters import (
 )
 from django_filters.fields import Lookup
 from django.conf import settings
-from ..models import Region, Tag, APPROVAL_STATUSES
+from ..models import Tag, APPROVAL_STATUSES
 from ..exceptions import check_uuid
 from ..permissions import *
 from ..utils.auth0utils import get_jwt_token
 from ..utils.auth0utils import get_unverified_profile
 from .mixins import MethodAuthenticationMixin, UpdatesMixin, OrFilterSetMixin
-
-
-def to_tag_model_instances(tags, updated_by):
-    """
-    Tweaked from taggit/managers.py to write updated_by but not use for lookup. Takes an iterable containing either
-    strings, tag objects, or a mixture of both and returns set of tag objects.
-    """
-
-    str_tags = set()
-    tag_objs = set()
-
-    for t in tags:
-        if isinstance(t, Tag):
-            tag_objs.add(t)
-        elif isinstance(t, str):
-            str_tags.add(t)
-        else:
-            raise ValueError(
-                "Cannot add {} ({}). Expected {} or str.".format(t, type(t), Tag)
-            )
-
-    case_insensitive = getattr(settings, "TAGGIT_CASE_INSENSITIVE", False)
-
-    if case_insensitive:
-        existing = []
-        tags_to_create = []
-
-        for name in str_tags:
-            try:
-                tag = Tag.objects.get(name__iexact=name)
-                existing.append(tag)
-            except Tag.DoesNotExist:
-                tags_to_create.append(name)
-    else:
-        existing = Tag.objects.filter(name__in=str_tags)
-        tags_to_create = str_tags - set(t.name for t in existing)
-
-    tag_objs.update(existing)
-
-    for new_tag in tags_to_create:
-        if case_insensitive:
-            lookup = {"name__iexact": new_tag}
-        else:
-            lookup = {"name": new_tag}
-
-        tag, create = Tag.objects.get_or_create(**lookup, defaults={"name": new_tag, "updated_by": updated_by})
-        tag_objs.add(tag)
-
-    return tag_objs
 
 
 class ModelNameReadOnlyField(serializers.Field):
@@ -128,8 +79,11 @@ class CurrentProfileDefault:
     def __call__(self, serializer_field):
         try:
             token = get_jwt_token(serializer_field.context["request"])
+            print(f"token: {token}")
+            print(f"profile: {get_unverified_profile(token)}")
             return get_unverified_profile(token)
         except exceptions.AuthenticationFailed:
+            print("AuthenticationFailed")
             return None
 
     def __repr__(self):
@@ -137,7 +91,7 @@ class CurrentProfileDefault:
 
 
 class BaseAPISerializer(serializers.ModelSerializer):
-    id = UUIDField(allow_null=True)
+    id = UUIDField(allow_null=True, default=uuid.uuid4())
     updated_by = PrimaryKeyRelatedField(read_only=True, default=CurrentProfileDefault())
 
     class Meta:
@@ -176,23 +130,6 @@ class BaseAPISerializer(serializers.ModelSerializer):
         for field in exclude_fields:
             if field in fields:
                 self.fields.pop(field)
-
-    def validate_id(self, value):
-        message = _("This field must be unique.")
-
-        if value is None:
-            return value
-
-        ModelClass = self.Meta.model
-        queryset = ModelClass.objects.filter(pk=check_uuid(value))
-        existing_instance = getattr(self.fields["id"].parent, "instance", None)
-        if existing_instance is not None:
-            queryset = queryset.exclude(pk=self.instance.pk)
-
-        if qs_exists(queryset):
-            raise ValidationError(message, code="unique")
-
-        return value
 
     def save(self, **kwargs):
         request = self.context.get("request")

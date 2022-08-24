@@ -32,7 +32,6 @@ from ..mixins import SampleUnitMethodEditMixin
 from ..obs_belt_fish import ObsBeltFishSerializer
 from ..observer import ObserverSerializer
 from ..sample_event import SampleEventSerializer
-from ...utils.sample_unit_methods import edit_transect_method
 from . import (
     BaseProjectMethodView,
     clean_sample_event_models,

@@ -230,6 +230,7 @@ class SampleUnitMethodEditMixin(object):
         if collect_record_owner is None:
             collect_record_owner = request.user.profile
 
+        print(f"collect_record_owner: {collect_record_owner}")
         try:
             model = self.get_queryset().model
             if hasattr(model, "protocol") is False:

@@ -76,11 +76,13 @@ def edit_transect_method(serializer_class, collect_record_owner, request, pk, pr
         collect_record_owner,
         protocol
     )
-    create_audit_record(
+    print(f"collect_record: {collect_record}")
+    audit_record = create_audit_record(
         request.user.profile,
         AuditRecord.EDIT_RECORD_EVENT_TYPE,
         instance
     )
+    print(f"audit_record: {audit_record}")
     instance.delete()
 
     return collect_record
