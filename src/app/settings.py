@@ -14,6 +14,8 @@ import boto3
 import os
 import sys
 
+from corsheaders.defaults import default_methods
+
 # Options: None, DEV, PROD
 ENVIRONMENT = os.environ.get('ENV') or "local"
 if ENVIRONMENT:
@@ -59,6 +61,7 @@ DEFAULT_DOMAIN_COLLECT = os.environ['DEFAULT_DOMAIN_COLLECT']
 # Application definition
 
 INSTALLED_APPS = [
+    "corsheaders",
     'django.contrib.admin',
     'django.contrib.auth',
     'django.contrib.contenttypes',
@@ -96,6 +99,7 @@ MIDDLEWARE = [
     'corsheaders.middleware.CorsMiddleware',
     'django.middleware.common.CommonMiddleware',
     'django.middleware.csrf.CsrfViewMiddleware',
+    "corsheaders.middleware.CorsPostCsrfMiddleware",
     'django.contrib.auth.middleware.AuthenticationMiddleware',
     'django.contrib.messages.middleware.MessageMiddleware',
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
@@ -217,7 +221,10 @@ CORS_ORIGIN_ALLOW_ALL = True
 CORS_EXPOSE_HEADERS = [
     "HTTP_API_VERSION"
 ]
-
+CORS_ALLOW_ALL_ORIGINS = True
+CORS_REPLACE_HTTPS_REFERER = True
+CORS_ALLOW_CREDENTIALS = True
+CORS_ALLOW_METHODS = list(default_methods) + ["HEAD"]
 
 # *****************
 # **    Auth0    **
