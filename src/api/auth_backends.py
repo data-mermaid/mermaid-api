@@ -42,7 +42,9 @@ class JWTAuthentication(BaseAuthentication):
             return None
 
         payload = decode(jwt_token)
+        print(f"payload: {payload}")
         profile = self._authenticate_profile(payload)
+        print(f"profile: {profile}")
 
         # use a dummy Django user. (it doesn't stop you from scaling
         # to any number of instances as well).

@@ -30,6 +30,9 @@ endif
 down:
 	@docker-compose down
 
+downnocache:
+	@docker-compose down -v
+
 stop:
 	@make down
 
@@ -66,7 +69,7 @@ install:
 
 freshinstall:
 	@echo "\n--- Shutting down existing stack ---\n"
-	@make down
+	@make downnocache
 	@echo "\n--- Building new docker image ---\n"
 	@make buildnocache
 	@make up

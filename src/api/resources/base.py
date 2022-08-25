@@ -79,11 +79,11 @@ class CurrentProfileDefault:
     def __call__(self, serializer_field):
         try:
             token = get_jwt_token(serializer_field.context["request"])
-            print(f"token: {token}")
-            print(f"profile: {get_unverified_profile(token)}")
+            print(f"CurrentProfileDefault token: {token}")
+            print(f"CurrentProfileDefault profile: {get_unverified_profile(token)}")
             return get_unverified_profile(token)
         except exceptions.AuthenticationFailed:
-            print("AuthenticationFailed")
+            print("CurrentProfileDefault AuthenticationFailed")
             return None
 
     def __repr__(self):
