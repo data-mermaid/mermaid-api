@@ -38,17 +38,17 @@ class InvalidSchema(Exception):
 def get_ingest_project_choices(project_id):
     project_choices = dict()
     project_choices["data__sample_event__site"] = {
-        s.name.lower().replace("\t", " "): str(s.id)
+        s.name: str(s.id)
         for s in Site.objects.filter(project_id=project_id)
     }
 
     project_choices["data__sample_event__management"] = {
-        m.name.lower().replace("\t", " "): str(m.id)
+        m.name: str(m.id)
         for m in Management.objects.filter(project_id=project_id)
     }
 
-    project_choices["project_profiles"] = {
-        pp.profile.email.lower(): ProjectProfileSerializer(instance=pp).data
+    project_choices["data__observers"] = {
+        pp.profile.email: ProjectProfileSerializer(instance=pp).data
         for pp in ProjectProfile.objects.select_related("profile").filter(
             project_id=project_id
         )
@@ -147,7 +147,8 @@ def ingest(
 
     reader = csv.DictReader(datafile)
 
-    _schema_check(reader.fieldnames, list(serializer.header_map.keys()))
+    schema = [v["label"] for v in serializer.header_map.values()]
+    _schema_check(reader.fieldnames, schema)
 
     context = _create_context(profile_id, request)
     rows = _add_extra_fields(reader, project_id, profile_id)

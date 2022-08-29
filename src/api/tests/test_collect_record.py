@@ -91,4 +91,5 @@ def test_ingest_schemas(api_client1, project1):
         data = response.content.decode('utf-8')
         csv_columns = data.replace("\r\n", "").split(",")
         serializer = serializers[sample_unit]
-        assert csv_columns == list(serializer.header_map.keys())
+        labels = [field["label"] for name, field in serializer.header_map.items()]
+        assert csv_columns == labels
