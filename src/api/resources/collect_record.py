@@ -1,18 +1,15 @@
-import csv
 import json
 import logging
 import uuid
 
 from django.db import connection
-from django.http import HttpResponse
 from rest_framework import permissions, status as drf_status
 from rest_framework.decorators import action
-from rest_framework.exceptions import NotFound, ParseError
+from rest_framework.exceptions import ParseError
 from rest_framework.response import Response
 
 from .mixins import CreateOrUpdateSerializerMixin
-from ..ingest import ingest_serializers
-from ..ingest.utils import InvalidSchema, ingest
+from ..ingest.utils import InvalidSchema, ingest, get_ingest_schema
 from ..models import (
     PROTOCOL_MAP,
     CollectRecord,
@@ -24,44 +21,10 @@ from ..submission.utils import (
     validate_collect_records,
     validate_collect_records_v2,
 )
-from ..ingest.utils import get_ingest_project_choices
 from ..utils import truthy
 from .base import BaseAPIFilterSet, BaseAPISerializer, BaseProjectApiViewSet
 
 logger = logging.getLogger(__name__)
-
-
-def get_ingest_schema(request, project_pk, sample_unit, *args, **kwargs):
-    serializer = None
-    sample_unit = sample_unit.lower()
-    for ingest_serializer in ingest_serializers:
-        if ingest_serializer.protocol == sample_unit.lower():
-            serializer = ingest_serializer
-            break
-    if serializer is None:
-        raise NotFound(detail=f"{sample_unit} sample unit not found")
-
-    schema = []
-    project_choices = get_ingest_project_choices(project_pk)
-    instance = serializer(project_choices=project_choices, many=True)
-    choice_sets = instance.get_choices_sets()
-    for fieldname, fieldprops in serializer.header_map.items():
-        fieldname_simple = "__".join(fieldname.split("__")[1:])
-
-        choices = None
-        if fieldname in choice_sets:
-            choices = [name for name, id in choice_sets[fieldname].items()]
-
-        field_def = {
-            "name": fieldname_simple,
-            "label": fieldprops["label"],
-            "required": fieldprops["label"].endswith("*"),
-            "description": fieldprops["description"],
-            "choices": choices,
-        }
-        schema.append(field_def)
-
-    return schema
 
 
 class CollectRecordOwner(permissions.BasePermission):
@@ -263,23 +226,6 @@ class CollectRecordViewSet(BaseProjectApiViewSet):
         url_name="ingest-schemas-json",
     )
     def ingest_schema_json(self, request, project_pk, sample_unit, *args, **kwargs):
-        schema = get_ingest_schema(request, project_pk, sample_unit, *args, **kwargs)
+        schema = get_ingest_schema(sample_unit, project_pk)
 
         return Response(schema, status=200)
-
-    @action(
-        detail=False,
-        methods=["GET"],
-        permission_classes=[ProjectDataAdminPermission],
-        url_path="ingest_schema/(?P<sample_unit>\w+)/csv",
-        url_name="ingest-schemas-csv",
-    )
-    def ingest_schema_csv(self, request, project_pk, sample_unit, *args, **kwargs):
-        schema = get_ingest_schema(request, project_pk, sample_unit, *args, **kwargs)
-        csv_column_names = [field["label"] for field in schema]
-
-        response = HttpResponse(content_type="text/csv")
-        response["Content-Disposition"] = f'attachment; filename="{sample_unit}_template.csv"'
-        writer = csv.writer(response)
-        writer.writerow(csv_column_names)
-        return response

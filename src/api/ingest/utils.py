@@ -1,5 +1,7 @@
 import csv
 
+from rest_framework.exceptions import NotFound
+
 from api import mocks
 from api.ingest import (
     BenthicLITCSVSerializer,
@@ -7,7 +9,7 @@ from api.ingest import (
     BenthicPITCSVSerializer,
     BleachingCSVSerializer,
     FishBeltCSVSerializer,
-    HabitatComplexityCSVSerializer,
+    HabitatComplexityCSVSerializer, ingest_serializers,
 )
 from api.models import (
     BENTHICPQT_PROTOCOL,
@@ -55,6 +57,41 @@ def get_ingest_project_choices(project_id):
     }
 
     return project_choices
+
+
+def get_ingest_schema(sample_unit, project_pk=None):
+    serializer = None
+    sample_unit = sample_unit.lower()
+    for ingest_serializer in ingest_serializers:
+        if ingest_serializer.protocol == sample_unit.lower():
+            serializer = ingest_serializer
+            break
+    if serializer is None:
+        raise NotFound(detail=f"{sample_unit} sample unit not found")
+
+    schema = []
+    project_choices = None
+    if project_pk:
+        project_choices = get_ingest_project_choices(project_pk)
+    instance = serializer(project_choices=project_choices, many=True)
+    choice_sets = instance.get_choices_sets()
+    for fieldname, fieldprops in serializer.header_map.items():
+        fieldname_simple = "__".join(fieldname.split("__")[1:])
+
+        choices = None
+        if fieldname in choice_sets and choice_sets[fieldname]:
+            choices = [name for name, id in choice_sets[fieldname].items()]
+
+        field_def = {
+            "name": fieldname_simple,
+            "label": fieldprops["label"],
+            "required": fieldprops["label"].endswith("*"),
+            "description": fieldprops["description"],
+            "choices": choices,
+        }
+        schema.append(field_def)
+
+    return schema
 
 
 def _create_context(profile_id, request=None):

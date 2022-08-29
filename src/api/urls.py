@@ -1,4 +1,4 @@
-from django.conf.urls import url
+from django.conf.urls import url, re_path
 from rest_framework_nested import routers
 
 from .resources.me import MeViewSet
@@ -13,6 +13,7 @@ from .resources.fish_species import FishSpeciesViewSet
 from .resources.fish_grouping import FishGroupingViewSet
 from .resources.choices import ChoiceViewSet
 from .resources.collect_record import CollectRecordViewSet
+from .resources.ingest_schema import ingest_schema_csv
 from .resources.observer import ObserverViewSet
 from .resources.project_profile import ProjectProfileViewSet
 from .resources.psite import PSiteViewSet
@@ -136,7 +137,9 @@ project_router.register(
     r"beltfishes/sampleunits", BeltFishProjectMethodSUView, "beltfishmethod-sampleunit"
 )
 project_router.register(
-    r"beltfishes/sampleevents", BeltFishProjectMethodSEView, "beltfishmethod-sampleevent"
+    r"beltfishes/sampleevents",
+    BeltFishProjectMethodSEView,
+    "beltfishmethod-sampleevent",
 )
 
 project_router.register(
@@ -145,10 +148,14 @@ project_router.register(
     "benthiclitmethod-obs",
 )
 project_router.register(
-    r"benthiclits/sampleunits", BenthicLITProjectMethodSUView, "benthiclitmethod-sampleunit"
+    r"benthiclits/sampleunits",
+    BenthicLITProjectMethodSUView,
+    "benthiclitmethod-sampleunit",
 )
 project_router.register(
-    r"benthiclits/sampleevents", BenthicLITProjectMethodSEView, "benthiclitmethod-sampleevent"
+    r"benthiclits/sampleevents",
+    BenthicLITProjectMethodSEView,
+    "benthiclitmethod-sampleevent",
 )
 
 project_router.register(
@@ -157,10 +164,14 @@ project_router.register(
     "benthicpitmethod-obs",
 )
 project_router.register(
-    r"benthicpits/sampleunits", BenthicPITProjectMethodSUView, "benthicpitmethod-sampleunit"
+    r"benthicpits/sampleunits",
+    BenthicPITProjectMethodSUView,
+    "benthicpitmethod-sampleunit",
 )
 project_router.register(
-    r"benthicpits/sampleevents", BenthicPITProjectMethodSEView, "benthicpitmethod-sampleevent"
+    r"benthicpits/sampleevents",
+    BenthicPITProjectMethodSEView,
+    "benthicpitmethod-sampleevent",
 )
 
 project_router.register(
@@ -174,10 +185,14 @@ project_router.register(
     "quadratbenthicpercentmethod-obs",
 )
 project_router.register(
-    r"bleachingqcs/sampleunits", BleachingQCProjectMethodSUView, "bleachingqcsmethod-sampleunit"
+    r"bleachingqcs/sampleunits",
+    BleachingQCProjectMethodSUView,
+    "bleachingqcsmethod-sampleunit",
 )
 project_router.register(
-    r"bleachingqcs/sampleevents", BleachingQCProjectMethodSEView, "bleachingqcsmethod-sampleevent"
+    r"bleachingqcs/sampleevents",
+    BleachingQCProjectMethodSEView,
+    "bleachingqcsmethod-sampleevent",
 )
 
 project_router.register(
@@ -202,10 +217,14 @@ project_router.register(
     "benthicpqtmethod-obs",
 )
 project_router.register(
-    r"benthicpqts/sampleunits", BenthicPQTProjectMethodSUView, "benthicpqtmethod-sampleunit"
+    r"benthicpqts/sampleunits",
+    BenthicPQTProjectMethodSUView,
+    "benthicpqtmethod-sampleunit",
 )
 project_router.register(
-    r"benthicpqts/sampleevents", BenthicPQTProjectMethodSEView, "benthicpqtmethod-sampleevent"
+    r"benthicpqts/sampleevents",
+    BenthicPQTProjectMethodSEView,
+    "benthicpqtmethod-sampleevent",
 )
 
 
@@ -257,5 +276,12 @@ project_router.register(
 
 api_urls = router.urls + project_router.urls
 api_urls += (url(r"^health/$", health),)
+api_urls += (
+    re_path(
+        r"^ingest_schema_csv/(?P<sample_unit>\w+)/$",
+        ingest_schema_csv,
+        name="ingest-schemas-csv",
+    ),
+)
 api_urls += (url(r"^pull/$", vw_pull),)
 api_urls += (url(r"^push/$", vw_push),)
