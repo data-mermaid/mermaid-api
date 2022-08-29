@@ -300,6 +300,10 @@ class BenthicPQTMethodSEGeoSerializer(BaseViewAPIGeoSerializer):
 class BenthicPQTMethodObsFilterSet(BaseSUObsFilterSet):
     transect_len_surveyed = RangeFilter()
     reef_slope = BaseInFilter(method="char_lookup")
+    transect_number = BaseInFilter(method="char_lookup")
+    benthic_category = BaseInFilter(method="char_lookup")
+    benthic_attribute = BaseInFilter(method="char_lookup")
+    growth_form = BaseInFilter(method="char_lookup")
     interval_size = RangeFilter()
     interval = RangeFilter()
 
@@ -322,6 +326,7 @@ class BenthicPQTMethodObsFilterSet(BaseSUObsFilterSet):
 class BenthicPQTMethodSUFilterSet(BaseSUObsFilterSet):
     transect_len_surveyed = RangeFilter()
     reef_slope = BaseInFilter(method="char_lookup")
+    transect_number = BaseInFilter(method="char_lookup")
 
     class Meta:
         model = BenthicPhotoQuadratTransectSUSQLModel

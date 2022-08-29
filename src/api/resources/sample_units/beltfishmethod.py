@@ -419,6 +419,7 @@ class BeltFishMethodSEGeoSerializer(BaseViewAPIGeoSerializer):
 class BeltFishMethodObsFilterSet(BaseSUObsFilterSet):
     transect_len_surveyed = RangeFilter()
     reef_slope = BaseInFilter(method="char_lookup")
+    transect_number = BaseInFilter(method="char_lookup")
     fish_family = BaseInFilter(method="char_lookup")
     fish_genus = BaseInFilter(method="char_lookup")
     fish_taxon = BaseInFilter(method="char_lookup")
@@ -452,6 +453,7 @@ class BeltFishMethodObsFilterSet(BaseSUObsFilterSet):
 class BeltFishMethodSUFilterSet(BaseSUObsFilterSet):
     transect_len_surveyed = RangeFilter()
     reef_slope = BaseInFilter(method="char_lookup")
+    transect_number = BaseInFilter(method="char_lookup")
     biomass_kgha = RangeFilter()
 
     class Meta:
