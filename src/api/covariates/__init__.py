@@ -6,7 +6,7 @@ from .coral_atlas import CoralAtlasCovariate
 from .vibrant_oceans import VibrantOceansThreatsCovariate
 
 
-def location_checks(site, covariate_cls, force=False):
+def location_checks(site):
     # ACA limits, but applicable generally
     lat_min = -85
     lat_max = 85
@@ -18,9 +18,9 @@ def location_checks(site, covariate_cls, force=False):
     return lat_min < point.y < lat_max and lon_min < point.x < lon_max
 
 
-def update_site_aca_covariates(site, force):
+def update_site_aca_covariates(site):
     coral_atlas = CoralAtlasCovariate()
-    if location_checks(site, coral_atlas, force) is False:
+    if location_checks(site) is False:
         return
 
     site_pk = site.pk
@@ -62,9 +62,9 @@ def update_site_aca_covariates(site, force):
     aca_geomorphic_covariate.save()
 
 
-def update_site_vot_covariates(site, force):
+def update_site_vot_covariates(site):
     vibrant_oceans_threats = VibrantOceansThreatsCovariate()
-    if location_checks(site, vibrant_oceans_threats, force) is False:
+    if location_checks(site) is False:
         return
 
     site_pk = site.pk
@@ -113,12 +113,12 @@ def update_site_vot_covariates(site, force):
         covariate.save()
 
 
-def update_site_covariates(site, force=False):
+def update_site_covariates(site):
     if settings.ENVIRONMENT in ("dev", "prod"):
-        update_site_aca_covariates(site, force=force)
-        update_site_vot_covariates(site, force=force)
+        update_site_aca_covariates(site)
+        update_site_vot_covariates(site)
 
 
 @run_in_thread
-def update_site_covariates_threaded(site, force=False):
-    update_site_covariates(site, force=force)
+def update_site_covariates_threaded(site):
+    update_site_covariates(site)
