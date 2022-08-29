@@ -386,6 +386,10 @@ class BenthicLITMethodSEGeoSerializer(BaseViewAPIGeoSerializer):
 class BenthicLITMethodObsFilterSet(BaseSUObsFilterSet):
     transect_len_surveyed = RangeFilter()
     reef_slope = BaseInFilter(method="char_lookup")
+    transect_number = BaseInFilter(method="char_lookup")
+    benthic_category = BaseInFilter(method="char_lookup")
+    benthic_attribute = BaseInFilter(method="char_lookup")
+    growth_form = BaseInFilter(method="char_lookup")
     length = RangeFilter()
 
     class Meta:
@@ -404,6 +408,7 @@ class BenthicLITMethodObsFilterSet(BaseSUObsFilterSet):
 class BenthicLITMethodSUFilterSet(BaseSUObsFilterSet):
     transect_len_surveyed = RangeFilter()
     reef_slope = BaseInFilter(method="char_lookup")
+    transect_number = BaseInFilter(method="char_lookup")
 
     class Meta:
         model = BenthicLITSUSQLModel
