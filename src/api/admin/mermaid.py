@@ -367,30 +367,6 @@ class ManagementPartyAdmin(BaseAdmin):
     list_display = ("name",)
 
 
-# TODO: make inline display map when creating (not just editing). Ideally using OSMGeoAdmin.
-# https://djangosnippets.org/snippets/2232/
-class MPAZoneInline(admin.StackedInline):
-    model = MPAZone
-    readonly_fields = ("area",)
-    extra = 0
-
-
-@admin.register(MPA)
-class MPAAdmin(BaseAdmin):
-    list_display = ("name", "wdpa_link", "est_year")
-    readonly_fields = ("area",)
-    inlines = (MPAZoneInline,)
-
-    def wdpa_link(self, obj):
-        domain = "http://www.protectedplanet.net/"
-        return format_html(
-            '<a href="{}{}" target="_blank">{}</a>', domain, obj.wdpa_id, obj.wdpa_id
-        )
-
-    wdpa_link.allow_tags = True
-    wdpa_link.short_description = _(u"WDPA id")
-
-
 @admin.register(BenthicTransect)
 class BenthicTransectAdmin(SampleUnitAdmin):
     list_display = ("name", "len_surveyed", "depth")
