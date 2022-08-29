@@ -23,20 +23,30 @@ from api.resources.fish_belt_transect import FishBeltTransectSerializer
 from api.resources.observer import ObserverSerializer
 from api.resources.quadrat_collection import QuadratCollectionSerializer
 from api.resources.quadrat_transect import QuadratTransectSerializer
-from api.resources.sampleunitmethods.sumethod_serializers import (
-    BenthicLITSerializer,
-    ObsBenthicLITSerializer,
-    BeltFishSerializer,
-    ObsBeltFishSerializer,
-    BenthicPITSerializer,
-    ObsBenthicPITSerializer,
+from ..resources.sampleunitmethods.habitatcomplexitymethod import (
     HabitatComplexitySerializer,
     ObsHabitatComplexitySerializer,
+)
+from ..resources.sampleunitmethods.bleachingquadratcollectionmethod import (
     BleachingQuadratCollectionSerializer,
     ObsColoniesBleachedSerializer,
     ObsQuadratBenthicPercentSerializer,
+)
+from ..resources.sampleunitmethods.benthicpitmethod import (
+    BenthicPITSerializer,
+    ObsBenthicPITSerializer,
+)
+from ..resources.sampleunitmethods.benthicphotoquadrattransectmethod import (
     BenthicPhotoQuadratTransectSerializer,
     ObsBenthicPhotoQuadratSerializer,
+)
+from ..resources.sampleunitmethods.benthiclitmethod import (
+    BenthicLITSerializer,
+    ObsBenthicLITSerializer,
+)
+from ..resources.sampleunitmethods.beltfishmethod import (
+    BeltFishSerializer,
+    ObsBeltFishSerializer,
 )
 from api.resources.sample_event import SampleEventSerializer
 from .parser import (

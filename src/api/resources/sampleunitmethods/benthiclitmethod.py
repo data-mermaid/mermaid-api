@@ -4,8 +4,13 @@ from rest_condition import Or
 from rest_framework import status
 from rest_framework.response import Response
 
-from ...models import BenthicLITObsSQLModel, BenthicLITSESQLModel, BenthicLITSUSQLModel
-from ...models.mermaid import BenthicLIT
+from ...models import (
+    BenthicLITObsSQLModel,
+    BenthicLITSESQLModel,
+    BenthicLITSUSQLModel,
+    BenthicLIT,
+    ObsBenthicLIT,
+)
 from ...permissions import ProjectDataReadOnlyPermission, ProjectPublicSummaryPermission
 from ...reports.fields import ReportField
 from ...reports.formatters import (
@@ -25,6 +30,7 @@ from ..base import (
     BaseSUObsFilterSet,
     BaseViewAPIGeoSerializer,
     BaseSUViewAPISerializer,
+    BaseAPISerializer,
 )
 from ..benthic_transect import BenthicTransectSerializer
 from ..mixins import SampleUnitMethodEditMixin
@@ -37,7 +43,25 @@ from . import (
     save_model,
     save_one_to_many,
 )
-from .sumethod_serializers import BenthicLITSerializer, ObsBenthicLITSerializer
+
+
+class BenthicLITSerializer(BaseAPISerializer):
+    class Meta:
+        model = BenthicLIT
+        exclude = []
+
+
+class ObsBenthicLITSerializer(BaseAPISerializer):
+    class Meta:
+        model = ObsBenthicLIT
+        exclude = []
+        extra_kwargs = {
+            "attribute": {
+                "error_messages": {
+                    "does_not_exist": 'Benthic attribute with id "{pk_value}", does not exist.'
+                }
+            }
+        }
 
 
 class BenthicLITMethodSerializer(BenthicLITSerializer):
@@ -179,6 +203,11 @@ class BenthicLITMethodObsSerializer(BaseSUViewAPISerializer):
         )
 
 
+class BenthicLITMethodObsGeoSerializer(BaseViewAPIGeoSerializer):
+    class Meta(BaseViewAPIGeoSerializer.Meta):
+        model = BenthicLITObsSQLModel
+
+
 class ObsBenthicLITCSVSerializer(ReportSerializer):
     fields = [
         ReportField("project_name", "Project name"),
@@ -234,11 +263,6 @@ class ObsBenthicLITCSVSerializer(ReportSerializer):
     ]
 
 
-class BenthicLITMethodObsGeoSerializer(BaseViewAPIGeoSerializer):
-    class Meta(BaseViewAPIGeoSerializer.Meta):
-        model = BenthicLITObsSQLModel
-
-
 class BenthicLITMethodSUSerializer(BaseSUViewAPISerializer):
     class Meta(BaseSUViewAPISerializer.Meta):
         model = BenthicLITSUSQLModel
@@ -257,6 +281,11 @@ class BenthicLITMethodSUSerializer(BaseSUViewAPISerializer):
                 "data_policy_benthiclit",
             ]
         )
+
+
+class BenthicLITMethodSUGeoSerializer(BaseViewAPIGeoSerializer):
+    class Meta(BaseViewAPIGeoSerializer.Meta):
+        model = BenthicLITSUSQLModel
 
 
 class BenthicLITMethodSUCSVSerializer(ReportSerializer):
@@ -314,6 +343,27 @@ class BenthicLITMethodSUCSVSerializer(ReportSerializer):
     ]
 
 
+class BenthicLITMethodSESerializer(BaseSUViewAPISerializer):
+    class Meta(BaseSUViewAPISerializer.Meta):
+        model = BenthicLITSESQLModel
+        exclude = BaseSUViewAPISerializer.Meta.exclude.copy()
+        exclude.append("location")
+        header_order = BaseSUViewAPISerializer.Meta.header_order.copy()
+        header_order.extend(
+            [
+                "data_policy_benthiclit",
+                "sample_unit_count",
+                "depth_avg",
+                "percent_cover_by_benthic_category_avg",
+            ]
+        )
+
+
+class BenthicLITMethodSEGeoSerializer(BaseViewAPIGeoSerializer):
+    class Meta(BaseViewAPIGeoSerializer.Meta):
+        model = BenthicLITSESQLModel
+
+
 class BenthicLITMethodSECSVSerializer(ReportSerializer):
     fields = [
         ReportField("project_name", "Project name"),
@@ -359,32 +409,6 @@ class BenthicLITMethodSECSVSerializer(ReportSerializer):
         ReportField("sample_event_id"),
         ReportField("data_policy_benthiclit"),
     ]
-
-
-class BenthicLITMethodSUGeoSerializer(BaseViewAPIGeoSerializer):
-    class Meta(BaseViewAPIGeoSerializer.Meta):
-        model = BenthicLITSUSQLModel
-
-
-class BenthicLITMethodSESerializer(BaseSUViewAPISerializer):
-    class Meta(BaseSUViewAPISerializer.Meta):
-        model = BenthicLITSESQLModel
-        exclude = BaseSUViewAPISerializer.Meta.exclude.copy()
-        exclude.append("location")
-        header_order = BaseSUViewAPISerializer.Meta.header_order.copy()
-        header_order.extend(
-            [
-                "data_policy_benthiclit",
-                "sample_unit_count",
-                "depth_avg",
-                "percent_cover_by_benthic_category_avg",
-            ]
-        )
-
-
-class BenthicLITMethodSEGeoSerializer(BaseViewAPIGeoSerializer):
-    class Meta(BaseViewAPIGeoSerializer.Meta):
-        model = BenthicLITSESQLModel
 
 
 class BenthicLITMethodObsFilterSet(BaseSUObsFilterSet):
