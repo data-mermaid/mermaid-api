@@ -1,0 +1,16 @@
+name: Mirror database backups to non-AWS (Google Drive) location
+on:
+  schedule:
+    - cron: "0 0 * * *"  # Runs daily
+  workflow_dispatch:
+jobs:
+  rclone:
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@v3
+    - name: rclone
+      uses: data-mermaid/backup/rclone@v1
+      env:
+        RCLONE_CONF: ${{ secrets.RCLONE_CONF }}
+      with:
+        args: sync dbbackups-s3:mermaid-db-backups dbbackups-drive:mermaid-db-backups-mirror/
