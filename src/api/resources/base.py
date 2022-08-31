@@ -205,7 +205,7 @@ class BaseViewAPIGeoSerializer(GeoFeatureModelSerializer, BaseAPISerializer):
     location = GeometryField(precision=settings.GEO_PRECISION)
 
     class Meta:
-        exclude = ["project_status"]
+        exclude = ["project_status", "sample_event_notes"]
         geo_field = "location"
 
 
