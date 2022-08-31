@@ -1,0 +1,7 @@
+{% extends "emails/base.txt" %}
+{% block body %}
+{{ name }} <{{ from_email }}> sent this email via MERMAID to you as an administrator of the MERMAID project:
+{{ project.name }}
+
+{{ message }}
+{% endblock %}

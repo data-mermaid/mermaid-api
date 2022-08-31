@@ -1,0 +1,12 @@
+{% extends "emails/base.html" %}
+{% block title %}Contact email regarding project {{ project.name }}{% endblock %}
+{% block body %}
+    <p>
+        <a href="mailto:{{ from_email }}">{{ name }} <{{ from_email }}></a>
+        sent this email via MERMAID to you as an administrator of the MERMAID project:<br />
+        {{ project.name }}
+    </p>
+    <p>
+        {{ message }}
+    </p>
+{% endblock %}
