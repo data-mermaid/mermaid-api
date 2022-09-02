@@ -170,6 +170,7 @@ class Command(BaseCommand):
             "DROP DATABASE {db_name};",
             "CREATE DATABASE {db_name} OWNER {db_user};",
             "ALTER PROCEDURAL LANGUAGE plpgsql OWNER TO {db_user};",
+            "ALTER DATABASE {db_name} SET jit TO false;"
         ]
 
         cmd = "psql -a -h {db_host} -d postgres -U {db_user}".format(**params)
