@@ -166,6 +166,9 @@ DATABASES = {
         'PASSWORD': os.environ.get('DB_PASSWORD') or 'postgres',
         'HOST': os.environ.get('DB_HOST') or 'localhost',
         'PORT': os.environ.get('DB_PORT') or '5432',
+        'TEST': {
+            'NAME': 'test_mermaid',  # explicitly setting default
+        },
     }
 }
 
