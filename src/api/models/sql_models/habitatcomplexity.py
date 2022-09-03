@@ -12,7 +12,20 @@ class HabitatComplexityObsSQLModel(BaseSUSQLModel):
     sql = f"""
         WITH se AS (
             {sample_event_sql_template}
-        )
+        ),
+        pseudosu_su AS MATERIALIZED (
+            SELECT 
+                pseudosu_id,
+                UNNEST(sample_unit_ids) AS sample_unit_id
+            FROM (
+                SELECT 
+                    uuid_generate_v4() AS pseudosu_id,
+                    array_agg(DISTINCT su.id) AS sample_unit_ids
+                FROM transect_benthic su
+                JOIN se ON su.sample_event_id = se.sample_event_id
+                GROUP BY {", ".join(BaseSUSQLModel.transect_su_fields)}
+            ) pseudosu
+        ) 
         SELECT o.id, pseudosu_id,
         {_se_fields},
         {_su_fields},
@@ -30,19 +43,7 @@ class HabitatComplexityObsSQLModel(BaseSUSQLModel):
             JOIN transectmethod_habitatcomplexity tt ON o.habitatcomplexity_id = tt.transectmethod_ptr_id
             JOIN transect_benthic su ON tt.transect_id = su.id
             JOIN se ON su.sample_event_id = se.sample_event_id
-            JOIN (
-                SELECT 
-                    pseudosu_id,
-                    UNNEST(sample_unit_ids) AS sample_unit_id
-                FROM (
-                    SELECT 
-                        uuid_generate_v4() AS pseudosu_id,
-                        array_agg(DISTINCT su.id) AS sample_unit_ids
-                    FROM transect_benthic su
-                    JOIN se ON su.sample_event_id = se.sample_event_id
-                    GROUP BY {", ".join(BaseSUSQLModel.transect_su_fields)}
-                ) pseudosu
-            ) pseudosu_su ON (su.id = pseudosu_su.sample_unit_id)
+            JOIN pseudosu_su ON (su.id = pseudosu_su.sample_unit_id)
             JOIN (
                 SELECT tt_1.transect_id,
                     jsonb_agg(jsonb_build_object('id', p.id, 'name', (COALESCE(p.first_name, ''::character varying)::text ||
