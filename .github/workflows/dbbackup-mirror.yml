@@ -7,10 +7,15 @@ jobs:
   rclone:
     runs-on: ubuntu-latest
     steps:
-    - uses: actions/checkout@v3
-    - name: rclone
-      uses: data-mermaid/backup/rclone@v1
-      env:
-        RCLONE_CONF: ${{ secrets.RCLONE_CONF }}
-      with:
-        args: sync dbbackups-s3:mermaid-db-backups dbbackups-drive:mermaid-db-backups-mirror/
+      - name: rclone copy
+        uses: data-mermaid/backup/rclone@v1
+        env:
+          RCLONE_CONF: ${{ secrets.RCLONE_CONF }}
+        with:
+          args: copy dbbackups-s3:mermaid-db-backups dbbackups-drive:mermaid-db-backups-mirror
+      - name: rclone delete
+        uses: data-mermaid/backup/rclone@v1
+        env:
+          RCLONE_CONF: ${{ secrets.RCLONE_CONF }}
+        with:
+          args: delete --min-age 60d dbbackups-drive:mermaid-db-backups-mirror
