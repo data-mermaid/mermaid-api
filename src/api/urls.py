@@ -256,8 +256,8 @@ project_router.register(
 )
 
 api_urls = router.urls + project_router.urls + [
-    re_path(r"^contactmermaid/$", contact_mermaid),
-    re_path(r"^contactprojectadmins/$", contact_project_admins),
+    re_path(r"^contactmermaid/$", contact_mermaid, name="contactmermaid"),
+    re_path(r"^contactprojectadmins/$", contact_project_admins, name="contactprojectadmins"),
     re_path(r"^health/$", health),
     re_path(r"^pull/$", vw_pull),
     re_path(r"^push/$", vw_push),

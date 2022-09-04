@@ -95,6 +95,7 @@ CORS_ALLOW_ALL_ORIGINS = True
 CORS_ALLOW_METHODS = list(default_methods) + ["HEAD"]
 CORS_EXPOSE_HEADERS = ["HTTP_API_VERSION"]
 CORS_REPLACE_HTTPS_REFERER = True
+EMAIL_BACKEND = 'django.core.mail.backends.smtp.EmailBackend'
 
 if ENVIRONMENT not in ("dev", "prod",):
     def show_toolbar(request):
@@ -106,6 +107,7 @@ if ENVIRONMENT not in ("dev", "prod",):
     INSTALLED_APPS.append("debug_toolbar")
     MIDDLEWARE.append("debug_toolbar.middleware.DebugToolbarMiddleware")
     DEBUG_TOOLBAR_CONFIG = {"SHOW_TOOLBAR_CALLBACK": show_toolbar}
+    EMAIL_BACKEND = 'django.core.mail.backends.locmem.EmailBackend'
 
 ROOT_URLCONF = 'app.urls'
 
@@ -219,7 +221,6 @@ EMAIL_HOST_USER = os.environ.get('EMAIL_HOST_USER')
 EMAIL_HOST_PASSWORD = os.environ.get('EMAIL_HOST_PASSWORD')
 EMAIL_USE_TLS = True
 DEFAULT_FROM_EMAIL = 'MERMAID System <{}>'.format(EMAIL_HOST_USER)
-EMAIL_BACKEND = 'django.core.mail.backends.smtp.EmailBackend'
 CORS_ORIGIN_ALLOW_ALL = True
 CORS_EXPOSE_HEADERS = ["HTTP_API_VERSION"]
 CORS_ALLOW_ALL_ORIGINS = True
