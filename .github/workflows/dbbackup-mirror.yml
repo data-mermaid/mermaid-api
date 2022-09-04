@@ -18,4 +18,4 @@ jobs:
         env:
           RCLONE_CONF: ${{ secrets.RCLONE_CONF }}
         with:
-          args: delete --verbose --min-age 60d dbbackups-drive:mermaid-db-backups-mirror
+          args: delete --verbose --min-age 61d dbbackups-drive:mermaid-db-backups-mirror
