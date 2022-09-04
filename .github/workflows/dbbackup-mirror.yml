@@ -12,10 +12,10 @@ jobs:
         env:
           RCLONE_CONF: ${{ secrets.RCLONE_CONF }}
         with:
-          args: copy dbbackups-s3:mermaid-db-backups dbbackups-drive:mermaid-db-backups-mirror
+          args: copy --verbose dbbackups-s3:mermaid-db-backups dbbackups-drive:mermaid-db-backups-mirror
       - name: rclone delete
         uses: data-mermaid/backup/rclone@v1
         env:
           RCLONE_CONF: ${{ secrets.RCLONE_CONF }}
         with:
-          args: delete --min-age 60d dbbackups-drive:mermaid-db-backups-mirror
+          args: delete --verbose --min-age 60d dbbackups-drive:mermaid-db-backups-mirror
