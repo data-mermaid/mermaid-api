@@ -43,10 +43,7 @@ class CollectRecordCSVListSerializer(ListSerializer):
                 continue
             try:
                 val = self._lower(val)
-                choices = {
-                    label.lower().replace("\t", " "): value
-                    for label, value in choices.items()
-                }
+                choices = {label.lower(): value for label, value in choices.items()}
                 row[name] = choices.get(val)
             except (ValueError, TypeError):
                 row[name] = None

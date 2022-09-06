@@ -9,7 +9,12 @@ from rest_framework.exceptions import ParseError
 from rest_framework.response import Response
 
 from .mixins import CreateOrUpdateSerializerMixin
-from ..ingest.utils import InvalidSchema, ingest, get_ingest_schema
+from ..ingest.utils import (
+    InvalidSchema,
+    ingest,
+    get_ingest_project_choices,
+    get_su_serializer,
+)
 from ..models import (
     PROTOCOL_MAP,
     CollectRecord,
@@ -103,14 +108,10 @@ class CollectRecordViewSet(BaseProjectApiViewSet):
 
         if str(submit_version) == "2":
             output = submit_collect_records_v2(
-                profile,
-                record_ids,
-                CollectRecordSerializer
+                profile, record_ids, CollectRecordSerializer
             )
         else:
-            output = submit_collect_records(
-                profile, record_ids
-            )
+            output = submit_collect_records(profile, record_ids)
 
         return Response(output)
 
@@ -210,7 +211,10 @@ class CollectRecordViewSet(BaseProjectApiViewSet):
             )
         except InvalidSchema as schema_error:
             missing_required_fields = schema_error.errors
-            return Response(f"Missing required fields: {', '.join(missing_required_fields)}", status=400)
+            return Response(
+                f"Missing required fields: {', '.join(missing_required_fields)}",
+                status=400,
+            )
 
         if "errors" in ingest_output:
             errors = ingest_output["errors"]
@@ -226,6 +230,27 @@ class CollectRecordViewSet(BaseProjectApiViewSet):
         url_name="ingest-schemas-json",
     )
     def ingest_schema_json(self, request, project_pk, sample_unit, *args, **kwargs):
-        schema = get_ingest_schema(sample_unit, project_pk)
+        serializer = get_su_serializer(sample_unit)
 
+        schema = []
+        project_choices = None
+        if project_pk:
+            project_choices = get_ingest_project_choices(project_pk)
+        instance = serializer(project_choices=project_choices, many=True)
+        choice_sets = instance.get_choices_sets()
+        for fieldname, fieldprops in serializer.header_map.items():
+            fieldname_simple = "__".join(fieldname.split("__")[1:])
+
+            choices = None
+            if fieldname in choice_sets and choice_sets[fieldname]:
+                choices = [name for name, choice_id in choice_sets[fieldname].items()]
+
+            field_def = {
+                "name": fieldname_simple,
+                "label": fieldprops["label"],
+                "required": fieldprops["label"].endswith("*"),
+                "description": fieldprops["description"],
+                "choices": choices,
+            }
+            schema.append(field_def)
         return Response(schema, status=200)

@@ -9,7 +9,8 @@ from api.ingest import (
     BenthicPITCSVSerializer,
     BleachingCSVSerializer,
     FishBeltCSVSerializer,
-    HabitatComplexityCSVSerializer, ingest_serializers,
+    HabitatComplexityCSVSerializer,
+    ingest_serializers,
 )
 from api.models import (
     BENTHICPQT_PROTOCOL,
@@ -59,7 +60,7 @@ def get_ingest_project_choices(project_id):
     return project_choices
 
 
-def get_ingest_schema(sample_unit, project_pk=None):
+def get_su_serializer(sample_unit):
     serializer = None
     sample_unit = sample_unit.lower()
     for ingest_serializer in ingest_serializers:
@@ -69,29 +70,7 @@ def get_ingest_schema(sample_unit, project_pk=None):
     if serializer is None:
         raise NotFound(detail=f"{sample_unit} sample unit not found")
 
-    schema = []
-    project_choices = None
-    if project_pk:
-        project_choices = get_ingest_project_choices(project_pk)
-    instance = serializer(project_choices=project_choices, many=True)
-    choice_sets = instance.get_choices_sets()
-    for fieldname, fieldprops in serializer.header_map.items():
-        fieldname_simple = "__".join(fieldname.split("__")[1:])
-
-        choices = None
-        if fieldname in choice_sets and choice_sets[fieldname]:
-            choices = [name for name, id in choice_sets[fieldname].items()]
-
-        field_def = {
-            "name": fieldname_simple,
-            "label": fieldprops["label"],
-            "required": fieldprops["label"].endswith("*"),
-            "description": fieldprops["description"],
-            "choices": choices,
-        }
-        schema.append(field_def)
-
-    return schema
+    return serializer
 
 
 def _create_context(profile_id, request=None):
