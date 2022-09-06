@@ -14,3 +14,4 @@ from .mock_http_server import mock_covariate_server
 from .notifications import *
 from .projects import *
 from .revisions_setup import *
+from .settings_overrides import *
