@@ -252,10 +252,12 @@ MERMAID_MANAGEMENT_API_CLIENT_SECRET = os.environ.get('MERMAID_MANAGEMENT_API_CL
 # Circle CI API
 CIRCLE_CI_CLIENT_ID = os.environ.get('CIRCLE_CI_CLIENT_ID')
 
-boto3_session = boto3.session.Session(
+boto3_client = boto3.client(
+    "logs",
     aws_access_key_id=os.environ.get('AWS_ACCESS_KEY_ID'),
     aws_secret_access_key=os.environ.get('AWS_SECRET_ACCESS_KEY'),
-    region_name=os.environ.get('AWS_REGION'))
+    region_name=os.environ.get('AWS_REGION')
+)
 
 # ***************
 # ** MAILCHIMP **
@@ -315,7 +317,7 @@ if ENVIRONMENT in ("dev", "prod"):
         'formatter': 'file',
         'log_group': '{}-mermaid-api'.format(ENVIRONMENT),
         'use_queues': True,
-        'boto3_session': boto3_session
+        'boto3_client': boto3_client
     }
     LOGGING["loggers"][""]["handlers"].append("watchtower")
 
