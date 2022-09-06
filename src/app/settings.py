@@ -14,6 +14,8 @@ import boto3
 import os
 import sys
 
+from corsheaders.defaults import default_methods
+
 # Options: None, DEV, PROD
 ENVIRONMENT = os.environ.get('ENV') or "local"
 if ENVIRONMENT:
@@ -59,6 +61,7 @@ DEFAULT_DOMAIN_COLLECT = os.environ['DEFAULT_DOMAIN_COLLECT']
 # Application definition
 
 INSTALLED_APPS = [
+    "corsheaders",
     'django.contrib.admin',
     'django.contrib.auth',
     'django.contrib.contenttypes',
@@ -96,6 +99,7 @@ MIDDLEWARE = [
     'corsheaders.middleware.CorsMiddleware',
     'django.middleware.common.CommonMiddleware',
     'django.middleware.csrf.CsrfViewMiddleware',
+    "corsheaders.middleware.CorsPostCsrfMiddleware",
     'django.contrib.auth.middleware.AuthenticationMiddleware',
     'django.contrib.messages.middleware.MessageMiddleware',
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
@@ -113,7 +117,7 @@ ROOT_URLCONF = 'app.urls'
 TEMPLATES = [
     {
         'BACKEND': 'django.template.backends.django.DjangoTemplates',
-        'DIRS': [BASE_DIR, os.path.join(BASE_DIR, 'templates')],
+        'DIRS': [os.path.join(BASE_DIR, 'templates')],
         'APP_DIRS': True,
         'OPTIONS': {
             'context_processors': [
@@ -127,6 +131,7 @@ TEMPLATES = [
 ]
 
 WSGI_APPLICATION = 'app.wsgi.application'
+DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 
 # from rest_framework import permissions
 # class DefaultPermission(permissions.BasePermission):
@@ -150,7 +155,7 @@ REST_FRAMEWORK = {
         'rest_framework.renderers.JSONRenderer',
     ),
     'COERCE_DECIMAL_TO_STRING': False,
-    'DEFAULT_SCHEMA_CLASS': 'rest_framework.schemas.coreapi.AutoSchema'
+    'DEFAULT_SCHEMA_CLASS': 'rest_framework.schemas.openapi.AutoSchema'
 }
 
 DATABASES = {
@@ -161,6 +166,9 @@ DATABASES = {
         'PASSWORD': os.environ.get('DB_PASSWORD') or 'postgres',
         'HOST': os.environ.get('DB_HOST') or 'localhost',
         'PORT': os.environ.get('DB_PORT') or '5432',
+        'TEST': {
+            'NAME': 'test_mermaid',  # explicitly setting default
+        },
     }
 }
 
@@ -213,10 +221,11 @@ EMAIL_USE_TLS = True
 DEFAULT_FROM_EMAIL = 'MERMAID System <{}>'.format(EMAIL_HOST_USER)
 EMAIL_BACKEND = 'django.core.mail.backends.smtp.EmailBackend'
 CORS_ORIGIN_ALLOW_ALL = True
-CORS_EXPOSE_HEADERS = [
-    "HTTP_API_VERSION"
-]
-
+CORS_EXPOSE_HEADERS = ["HTTP_API_VERSION"]
+CORS_ALLOW_ALL_ORIGINS = True
+CORS_REPLACE_HTTPS_REFERER = True
+CORS_ALLOW_CREDENTIALS = True
+CORS_ALLOW_METHODS = list(default_methods) + ["HEAD"]
 
 # *****************
 # **    Auth0    **

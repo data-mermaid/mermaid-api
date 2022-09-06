@@ -6,7 +6,6 @@ from invoke import run, task
 
 
 def _api_cmd(cmd):
-    """Prefix the container command with the docker cmd"""
     return "docker exec -it api_service %s" % cmd
 
 
@@ -21,59 +20,54 @@ def create_version_file():
 
 @task
 def build(c):
-    """Run to build a new image prior to fab up"""
     create_version_file()
     local("docker-compose build")
 
 
 @task(aliases=["build-nocache"])
 def buildnocache(c):
-    """Run to build a new image prior fab up"""
     create_version_file()
     local("docker-compose build --no-cache --pull")
 
 
 @task
 def up(c):
-    """Create and start the mermaid-api services
-    Note: api_db takes a minute or more to init.
-    """
+    """Note: api_db takes a minute or more to init."""
     local("docker-compose up -d")
 
 
 @task
 def down(c):
-    """Stop and remove the mermaid-api services"""
     local("docker-compose down")
 
 
 @task
+def downnocache(c):
+    local("docker-compose down -v")
+
+
+@task
 def runserver(c):
-    """Enter Django's runserver on 0.0.0.0:8080"""
     local(_api_cmd("python manage.py runserver 0.0.0.0:8080"))
 
 
 @task
 def runserverplus(c):
-    """Enter gunicorn runserver on 0.0.0.0:8080"""
     local(_api_cmd("gunicorn --reload -c runserverplus.conf app.wsgi:application"))
 
 
 @task
 def makemigrations(c):
-    """Run Django's makemigrations"""
     local(_api_cmd("python manage.py makemigrations"))
 
 
 @task
 def migrate(c):
-    """Run Django's migrate"""
     local(_api_cmd("python manage.py migrate"))
 
 
 @task
 def shell(c):
-    """ssh into the running container"""
     local("docker exec -it api_service /bin/bash")
 
 
@@ -84,19 +78,16 @@ def dbshell(c):
 
 @task
 def shellplus(c):
-    """Run Django extensions's shell_plus"""
     local(_api_cmd("python manage.py shell_plus"))
 
 
 @task
 def lint(c):
-    """Run pylint"""
     local(_api_cmd("pylint --load-plugins pylint_django api"))
 
 
 @task
 def test(c):
-    """Run unit tests"""
     local("docker exec -it api_service pytest --nomigrations --cov-report=html --cov=api --verbose api/tests")
 
 
@@ -126,10 +117,9 @@ def install(c, keyname="local"):
     migrate(c)
 
 
-
 @task
 def freshinstall(c, keyname="local"):
-    down(c)
+    downnocache(c)
     buildnocache(c)
     up(c)
 

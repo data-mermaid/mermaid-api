@@ -1,4 +1,4 @@
-from django.conf.urls import url
+from django.conf.urls import re_path
 from rest_framework_nested import routers
 
 from .resources.me import MeViewSet
@@ -256,6 +256,6 @@ project_router.register(
 
 
 api_urls = router.urls + project_router.urls
-api_urls += (url(r"^health/$", health),)
-api_urls += (url(r"^pull/$", vw_pull),)
-api_urls += (url(r"^push/$", vw_push),)
+api_urls += (re_path(r"^health/$", health),)
+api_urls += (re_path(r"^pull/$", vw_pull),)
+api_urls += (re_path(r"^push/$", vw_push),)

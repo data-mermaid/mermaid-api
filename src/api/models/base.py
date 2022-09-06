@@ -1,10 +1,9 @@
 import uuid
 
 from django.contrib.gis.db.models.fields import PolygonField, MultiPolygonField
-from django.contrib.postgres.fields import JSONField
 from django.core.exceptions import ObjectDoesNotExist
 from django.db import models
-from django.utils.translation import ugettext_lazy as _
+from django.utils.translation import gettext_lazy as _
 
 PROPOSED = 10
 SUPERUSER_APPROVED = 90
@@ -73,6 +72,7 @@ class Profile(models.Model):
     def num_account_connections(self):
         return self.authusers.count()
 
+
 class BaseModel(models.Model):
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
 
@@ -117,7 +117,7 @@ class AreaMixin(models.Model):
 
 
 class JSONMixin(models.Model):
-    data = JSONField(null=True, blank=True)
+    data = models.JSONField(null=True, blank=True)
 
     class Meta:
         abstract = True
