@@ -60,9 +60,8 @@ install:
 	@make down
 	@echo "\n--- Building new docker image ---\n"
 	@make buildnocache
-	@make up
 	@echo "\n--- Spinning up new stack ---\n"
-	@sleep 20
+	@make up
 	@echo "\n--- Applying MERMAID database migrations ---\n"
 	@make migrate
 
@@ -72,9 +71,8 @@ freshinstall:
 	@make downnocache
 	@echo "\n--- Building new docker image ---\n"
 	@make buildnocache
-	@make up
 	@echo "\n--- Spinning up new stack ---\n"
-	@sleep 20
+	@make up
 	@echo "\n--- Restoring MERMAID database ---\n"
 	@make dbrestore
 	@echo "\n--- Applying MERMAID database migrations ---\n"
