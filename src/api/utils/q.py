@@ -23,7 +23,7 @@ def submit_job(delay, callable, *args, **kwargs):
 
 def generate_job_id(delay, *args, **kwargs):
     timestamp = ""
-    if delay > 0:
+    if delay and delay > 0:
         t = int(time.time())
         _delay = float(delay)
         timestamp = math.ceil(t / _delay) * _delay

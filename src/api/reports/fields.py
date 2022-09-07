@@ -8,6 +8,9 @@ class ReportField(object):
         for key in kwargs:
             setattr(self, key, kwargs[key])
 
+        if hasattr(self, "protocol") and hasattr(self, "key"):
+            self.alias = f"{self.protocol}__{self.key}"
+
     @property
     def display(self):
         if self._display is None:

@@ -31,7 +31,7 @@ def test_beltfish_csv_view(
     assert response.has_header("Content-Disposition")
     assert (
         "test_project_1-beltfish-obs-"
-        in response._headers.get("content-disposition")[1]
+        in response.headers.get("content-disposition")
     )
     assert len(rows) == 7
     assert "country_name" in fieldnames
@@ -52,7 +52,7 @@ def test_beltfish_field_report(
     assert response.has_header("Content-Disposition")
     assert (
         "test_project_1-beltfish-obs-"
-        in response._headers.get("content-disposition")[1]
+        in response.headers.get("content-disposition")
     )
     assert len(rows) == 7
     assert "Country" in fieldnames
@@ -81,7 +81,7 @@ def test_benthicpit_csv_view(
     assert response.has_header("Content-Disposition")
     assert (
         "test_project_1-benthicpit-obs-"
-        in response._headers.get("content-disposition")[1]
+        in response.headers.get("content-disposition")
     )
 
     assert len(rows) == 10
@@ -110,7 +110,7 @@ def test_benthicpit_field_report(
     assert response.has_header("Content-Disposition")
     assert (
         "test_project_1-benthicpit-obs-"
-        in response._headers.get("content-disposition")[1]
+        in response.headers.get("content-disposition")
     )
     assert len(rows) == 10
     assert "Country" in fieldnames
@@ -145,7 +145,7 @@ def test_benthiclit_csv_view(
     assert response.has_header("Content-Disposition")
     assert (
         "test_project_1-benthiclit-obs-"
-        in response._headers.get("content-disposition")[1]
+        in response.headers.get("content-disposition")
     )
 
     assert len(rows) == 10
@@ -181,7 +181,7 @@ def test_benthiclit_field_report(
     assert response.has_header("Content-Disposition")
     assert (
         "test_project_1-benthiclit-obs-"
-        in response._headers.get("content-disposition")[1]
+        in response.headers.get("content-disposition")
     )
     assert len(rows) == 10
     assert "Country" in fieldnames
@@ -265,7 +265,7 @@ def test_bleaching_colonies_bleached_csv_view(
 
     assert len(rows) == 5
     assert "country_name" in fieldnames
-    assert len(rows[3].keys()) == 63
+    assert len(rows[3].keys()) == 64
     assert rows[3]["site_name"] == site1.name
     assert float(rows[3]["latitude"]) == site1.location.y
     assert float(rows[3]["longitude"]) == site1.location.x
@@ -289,7 +289,7 @@ def test_bleaching_colonies_bleached_field_report(
 
     assert len(rows) == 5
     assert "Country" in fieldnames
-    assert len(rows[3].keys()) == 53
+    assert len(rows[3].keys()) == 54
     assert rows[3]["Site"] == site1.name
     assert float(rows[3]["Latitude"]) == site1.location.y
     assert float(rows[3]["Longitude"]) == site1.location.x

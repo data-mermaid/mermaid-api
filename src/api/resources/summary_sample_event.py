@@ -30,7 +30,7 @@ class SummarySampleEventSerializer(BaseViewAPISerializer):
     class Meta(BaseViewAPISerializer.Meta):
         model = SummarySampleEventModel
         exclude = BaseViewAPISerializer.Meta.exclude.copy()
-        exclude.append("location")
+        exclude.extend(["id", "location"])
 
 
 class SummarySampleEventGeoSerializer(BaseViewAPIGeoSerializer):
@@ -39,6 +39,7 @@ class SummarySampleEventGeoSerializer(BaseViewAPIGeoSerializer):
 
     class Meta(BaseViewAPIGeoSerializer.Meta):
         model = SummarySampleEventModel
+        exclude = ["id"]
 
 
 class SummarySampleEventCSVSerializer(ReportSerializer):
@@ -128,8 +129,20 @@ class SummarySampleEventCSVSerializer(ReportSerializer):
             protocol="colonies_bleached",
             key="sample_unit_count",
         ),
-        ReportField("protocols", "Bleaching colonies", to_colonies_bleached),
-        ReportField("protocols", "Bleaching % cover", to_percent_cover),
+        ReportField(
+            "protocols",
+            "Bleaching colonies",
+            to_colonies_bleached,
+            protocol="colonies_bleached",
+            key="percent_bleached",
+        ),
+        ReportField(
+            "protocols",
+            "Bleaching % cover",
+            to_percent_cover,
+            protocol="quadrat_benthic_percent",
+            key="percent_cover",
+        ),
         ReportField("contact_link", "Contact link"),
         ReportField("tags", "Organizations", to_names),
         ReportField("project_admins", "Project administrators", to_names),

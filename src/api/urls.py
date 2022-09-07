@@ -1,4 +1,4 @@
-from django.conf.urls import url
+from django.urls import re_path
 from rest_framework_nested import routers
 
 from .resources.me import MeViewSet
@@ -69,12 +69,12 @@ from .resources.sample_units.benthicphotoquadrattransectmethod import (
 )
 from .resources.sample_units.sample_unit_methods import SampleUnitMethodView
 from .resources.summary_sample_event import SummarySampleEventView
-from .resources.summary_site import SummarySiteView
 
 from .resources.fish_size import FishSizeViewSet
 from .resources.version import AppVersionViewSet
 from .resources.health import health
 from .resources.project_tag import ProjectTagViewSet
+from .resources.contact import contact_mermaid, contact_project_admins
 
 
 # APP-WIDE - BASE
@@ -92,7 +92,6 @@ router.register(r"projects", ProjectViewSet, "project")
 router.register(r"sites", SiteViewSet, "site")
 router.register(r"managements", ManagementViewSet, "management")
 router.register(r"projecttags", ProjectTagViewSet, "projecttag")
-router.register(r"summarysites", SummarySiteView, "summarysite")
 router.register(r"summarysampleevents", SummarySampleEventView, "summarysampleevent")
 router.register(r"notifications", NotificationViewSet, "notification")
 
@@ -256,8 +255,10 @@ project_router.register(
     "obsquadratbenthicpercent",
 )
 
-
-api_urls = router.urls + project_router.urls
-api_urls += (url(r"^health/$", health),)
-api_urls += (url(r"^pull/$", vw_pull),)
-api_urls += (url(r"^push/$", vw_push),)
+api_urls = router.urls + project_router.urls + [
+    re_path(r"^contactmermaid/$", contact_mermaid, name="contactmermaid"),
+    re_path(r"^contactprojectadmins/$", contact_project_admins, name="contactprojectadmins"),
+    re_path(r"^health/$", health),
+    re_path(r"^pull/$", vw_pull),
+    re_path(r"^push/$", vw_push),
+]

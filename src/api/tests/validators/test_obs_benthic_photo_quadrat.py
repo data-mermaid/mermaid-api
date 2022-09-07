@@ -25,6 +25,7 @@ def quadrat_number_sequence_validator():
         num_quadrats_path="data.quadrat_transect.num_quadrats",
         obs_benthic_photo_quadrats_path="data.obs_benthic_photo_quadrats",
         observation_quadrat_number_path="quadrat_number",
+        quadrat_number_start_path="data.quadrat_transect.quadrat_number_start",
     )
 
 
@@ -73,6 +74,7 @@ def test_quadrat_number_sequence_valid(quadrat_number_sequence_validator, valid_
 
 def test_quadrat_number_sequence_invalid(quadrat_number_sequence_validator, valid_benthic_pq_transect_collect_record):
     valid_benthic_pq_transect_collect_record.data["obs_benthic_photo_quadrats"][0]["quadrat_number"] = 1000
+    valid_benthic_pq_transect_collect_record.data["obs_benthic_photo_quadrats"][1]["quadrat_number"] = 1000
 
     record = CollectRecordSerializer(instance=valid_benthic_pq_transect_collect_record).data
     result = quadrat_number_sequence_validator(record)

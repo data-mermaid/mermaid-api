@@ -4,7 +4,7 @@ import logging
 from django.core.exceptions import ValidationError as DJValidationError
 from django.db import transaction
 from django.utils import timezone
-from django.utils.translation import ugettext_lazy
+from django.utils.translation import gettext_lazy
 from rest_framework.exceptions import ValidationError
 
 from ..mocks import MockRequest
@@ -165,7 +165,7 @@ def validate(validator_cls, model_cls, qry_params=None):
 def _validate_collect_record(record, request):
     protocol = record.data.get("protocol")
     if protocol not in PROTOCOL_MAP:
-        raise ValueError(ugettext_lazy(f"{protocol} not supported"))
+        raise ValueError(gettext_lazy(f"{protocol} not supported"))
 
     if protocol == BENTHICLIT_PROTOCOL:
         validator = BenthicLITProtocolValidation(record, request)
@@ -187,7 +187,7 @@ def _validate_collect_record(record, request):
 def _validate_collect_record_v2(record, record_serializer, request):
     protocol = record.data.get("protocol")
     if protocol not in PROTOCOL_MAP:
-        raise ValueError(ugettext_lazy(f"{protocol} not supported"))
+        raise ValueError(gettext_lazy(f"{protocol} not supported"))
 
     runner = ValidationRunner(serializer=record_serializer)
     if protocol == BENTHICLIT_PROTOCOL:
@@ -336,7 +336,7 @@ def submit_collect_records(profile, record_ids, validation_suppressants=None):
     for record_id in record_ids:
         collect_record = CollectRecord.objects.get_or_none(id=record_id)
         if collect_record is None:
-            output[record_id] = dict(status=ERROR, message=ugettext_lazy("Not found"))
+            output[record_id] = dict(status=ERROR, message=gettext_lazy("Not found"))
             continue
 
         status, validation_output = _validate_collect_record(collect_record, request)
@@ -348,7 +348,7 @@ def submit_collect_records(profile, record_ids, validation_suppressants=None):
 
         if status != OK:
             output[record_id] = dict(
-                status=status, message=ugettext_lazy("Invalid collect record")
+                status=status, message=gettext_lazy("Invalid collect record")
             )
             continue
 
@@ -364,10 +364,10 @@ def submit_collect_records(profile, record_ids, validation_suppressants=None):
                 json.dumps(dict(id=record_id, data=collect_record.data)), result
             )
             output[record_id] = dict(
-                status=ERROR, message=ugettext_lazy("System failure")
+                status=ERROR, message=gettext_lazy("System failure")
             )
             continue
-        output[record_id] = dict(status=OK, message=ugettext_lazy("Success"))
+        output[record_id] = dict(status=OK, message=gettext_lazy("Success"))
 
     return output
 
@@ -378,7 +378,7 @@ def submit_collect_records_v2(profile, record_ids, serializer_class, validation_
     for record_id in record_ids:
         collect_record = CollectRecord.objects.get_or_none(id=record_id)
         if collect_record is None:
-            output[record_id] = dict(status=ERROR, message=ugettext_lazy("Not found"))
+            output[record_id] = dict(status=ERROR, message=gettext_lazy("Not found"))
             continue
 
         validation_output = _validate_collect_record_v2(
@@ -392,7 +392,7 @@ def submit_collect_records_v2(profile, record_ids, serializer_class, validation_
 
         if status != OK:
             output[record_id] = dict(
-                status=status, message=ugettext_lazy("Invalid collect record")
+                status=status, message=gettext_lazy("Invalid collect record")
             )
             continue
 
@@ -408,9 +408,9 @@ def submit_collect_records_v2(profile, record_ids, serializer_class, validation_
                 json.dumps(dict(id=record_id, data=collect_record.data)), result
             )
             output[record_id] = dict(
-                status=ERROR, message=ugettext_lazy("System failure")
+                status=ERROR, message=gettext_lazy("System failure")
             )
             continue
-        output[record_id] = dict(status=OK, message=ugettext_lazy("Success"))
+        output[record_id] = dict(status=OK, message=gettext_lazy("Success"))
 
     return output

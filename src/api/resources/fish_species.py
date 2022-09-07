@@ -80,6 +80,7 @@ class FishSpeciesViewSet(BaseAttributeApiViewSet):
             ),
             display_name=Concat(F("genus__name"), Value(" "), F("name"))
         )
+        .order_by("genus", "name")
     )
 
     filterset_class = FishSpeciesFilterSet

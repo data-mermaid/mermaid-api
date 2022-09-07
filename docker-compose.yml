@@ -13,7 +13,7 @@ services:
 
   api_db:
     container_name: api_db
-    image: mdillon/postgis:11-alpine
+    image: postgis/postgis:13-3.2-alpine
     volumes:
       - pg_data:/var/lib/postgresql/data
     environment:

@@ -1,4 +1,3 @@
-from django.utils.translation import gettext_lazy as _
 from rest_framework import serializers
 from rest_framework.exceptions import ValidationError
 
@@ -28,7 +27,6 @@ def benthic_attributes_choices():
 
 
 class BleachingCSVListSerializer(CollectRecordCSVListSerializer):
-
     def group_records(self, records):
         grouped_records = super().group_records(records)
         # Ensure a continuous sequence of quadrat numbers
@@ -48,34 +46,36 @@ class BleachingCSVSerializer(CollectRecordCSVSerializer):
     ordering_field = "data__obs_quadrat_benthic_percent__quadrat_number"
     additional_group_fields = CollectRecordCSVSerializer.additional_group_fields.copy()
     additional_group_fields.append("data__quadrat_collection__label")
-    header_map = CollectRecordCSVSerializer.header_map.copy()
-
-    header_map.update(
-        {
-            "Sample time": "data__quadrat_collection__sample_time",
-            "Depth *": "data__quadrat_collection__depth",
-            "Visibility": "data__quadrat_collection__visibility",
-            "Current": "data__quadrat_collection__current",
-            "Relative depth": "data__quadrat_collection__relative_depth",
-            "Tide": "data__quadrat_collection__tide",
-
-            "Quadrat size *": "data__quadrat_collection__quadrat_size",
-            "Label": "data__quadrat_collection__label",
-            "Benthic attribute": "data__obs_colonies_bleached__attribute",
-            "Growth form": "data__obs_colonies_bleached__growth_form",
-            "Number of colonies normal": "data__obs_colonies_bleached__count_normal",
-            "Number of colonies pale": "data__obs_colonies_bleached__count_pale",
-            "Number of colonies bleached 0-20% bleached": "data__obs_colonies_bleached__count_20",
-            "Number of colonies bleached 20-50% bleached": "data__obs_colonies_bleached__count_50",
-            "Number of colonies bleached 50-80% bleached": "data__obs_colonies_bleached__count_80",
-            "Number of colonies bleached 80-100% bleached": "data__obs_colonies_bleached__count_100",
-            "Number of colonies recently dead": "data__obs_colonies_bleached__count_dead",
-            "Quadrat number": "data__obs_quadrat_benthic_percent__quadrat_number",
-            "Hard coral % cover": "data__obs_quadrat_benthic_percent__percent_hard",
-            "Soft coral % cover": "data__obs_quadrat_benthic_percent__percent_soft",
-            "Macroalgae % cover": "data__obs_quadrat_benthic_percent__percent_algae",
-        }
-    )
+    header_map = {
+        "Site *": "data__sample_event__site",
+        "Management *": "data__sample_event__management",
+        "Sample date: Year *": "data__sample_event__sample_date__year",
+        "Sample date: Month *": "data__sample_event__sample_date__month",
+        "Sample date: Day *": "data__sample_event__sample_date__day",
+        "Sample time": "data__quadrat_collection__sample_time",
+        "Depth *": "data__quadrat_collection__depth",
+        "Quadrat size *": "data__quadrat_collection__quadrat_size",
+        "Label": "data__quadrat_collection__label",
+        "Visibility": "data__quadrat_collection__visibility",
+        "Current": "data__quadrat_collection__current",
+        "Relative depth": "data__quadrat_collection__relative_depth",
+        "Tide": "data__quadrat_collection__tide",
+        "Sample unit notes": "data__quadrat_collection__notes",
+        "Observer emails *": "data__observers",
+        "Benthic attribute": "data__obs_colonies_bleached__attribute",
+        "Growth form": "data__obs_colonies_bleached__growth_form",
+        "Number of colonies normal": "data__obs_colonies_bleached__count_normal",
+        "Number of colonies pale": "data__obs_colonies_bleached__count_pale",
+        "Number of colonies bleached 0-20% bleached": "data__obs_colonies_bleached__count_20",
+        "Number of colonies bleached 20-50% bleached": "data__obs_colonies_bleached__count_50",
+        "Number of colonies bleached 50-80% bleached": "data__obs_colonies_bleached__count_80",
+        "Number of colonies bleached 80-100% bleached": "data__obs_colonies_bleached__count_100",
+        "Number of colonies recently dead": "data__obs_colonies_bleached__count_dead",
+        "Quadrat number": "data__obs_quadrat_benthic_percent__quadrat_number",
+        "Hard coral % cover": "data__obs_quadrat_benthic_percent__percent_hard",
+        "Soft coral % cover": "data__obs_quadrat_benthic_percent__percent_soft",
+        "Macroalgae % cover": "data__obs_quadrat_benthic_percent__percent_algae",
+    }
 
     obs_colonies_bleached_fields = (
         "data__obs_colonies_bleached__attribute",
@@ -99,9 +99,12 @@ class BleachingCSVSerializer(CollectRecordCSVSerializer):
     class Meta:
         list_serializer_class = BleachingCSVListSerializer
 
-    data__quadrat_collection__sample_time = serializers.TimeField(required=False, allow_null=True)
-    data__quadrat_collection__depth = serializers.DecimalField(max_digits=3, decimal_places=1)
-
+    data__quadrat_collection__sample_time = serializers.TimeField(
+        required=False, allow_null=True
+    )
+    data__quadrat_collection__depth = serializers.DecimalField(
+        max_digits=3, decimal_places=1
+    )
     data__quadrat_collection__visibility = LazyChoiceField(
         choices=visibility_choices, required=False, allow_null=True, allow_blank=True
     )
@@ -116,6 +119,9 @@ class BleachingCSVSerializer(CollectRecordCSVSerializer):
     )
     data__quadrat_collection__tide = LazyChoiceField(
         choices=tide_choices, required=False, allow_null=True, allow_blank=True
+    )
+    data__quadrat_collection__notes = serializers.CharField(
+        required=False, allow_blank=True, default=""
     )
     data__quadrat_collection__quadrat_size = serializers.DecimalField(
         max_digits=4, decimal_places=2
@@ -141,11 +147,14 @@ class BleachingCSVSerializer(CollectRecordCSVSerializer):
     data__obs_colonies_bleached__count_dead = PositiveIntegerField()
     data__obs_quadrat_benthic_percent__quadrat_number = PositiveIntegerField()
     data__obs_quadrat_benthic_percent__percent_hard = serializers.DecimalField(
-        default=None, required=False, max_digits=5, decimal_places=2, allow_null=True)
+        default=None, required=False, max_digits=5, decimal_places=2, allow_null=True
+    )
     data__obs_quadrat_benthic_percent__percent_soft = serializers.DecimalField(
-        default=None, required=False, max_digits=5, decimal_places=2, allow_null=True)
+        default=None, required=False, max_digits=5, decimal_places=2, allow_null=True
+    )
     data__obs_quadrat_benthic_percent__percent_algae = serializers.DecimalField(
-        default=None, required=False, max_digits=5, decimal_places=2, allow_null=True)
+        default=None, required=False, max_digits=5, decimal_places=2, allow_null=True
+    )
 
     def skip_field(self, data, field):
         empty_fields = []

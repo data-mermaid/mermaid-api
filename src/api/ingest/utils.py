@@ -187,6 +187,7 @@ def ingest(
                 transaction.savepoint_commit(sid)
 
     is_bulk_invalid = False
+    record_ids = []
     if dry_run is False and bulk_validation or bulk_submission:
         record_ids = [str(r.pk) for r in new_records]
         validation_output = validate_collect_records(

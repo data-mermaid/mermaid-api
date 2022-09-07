@@ -1,0 +1,7 @@
+{% extends "emails/base.html" %}
+{% block title %}Added to project{% endblock %}
+{% block body %}
+<p>
+  You were added to <strong>{{project.name}}</strong>, a new MERMAID project created by <strong>{{owner.full_name}}</strong>.
+</p>
+{% endblock %}

@@ -1,6 +1,5 @@
 from django.contrib.gis.db import models
-from django.contrib.postgres.fields import JSONField
-from django.utils.translation import ugettext_lazy as _
+from django.utils.translation import gettext_lazy as _
 
 from sqltables import SQLTableArg, SQLTableManager
 from .base import BaseSQLModel, BaseSUSQLModel, sample_event_sql_template
@@ -13,7 +12,20 @@ class BenthicPhotoQuadratTransectObsSQLModel(BaseSUSQLModel):
     sql = f"""
         WITH se AS (
             {sample_event_sql_template}
-        )
+        ),
+        pseudosu_su AS MATERIALIZED (
+            SELECT
+                pseudosu_id,
+                UNNEST(sample_unit_ids) AS sample_unit_id
+            FROM (
+                SELECT
+                    uuid_generate_v4() AS pseudosu_id,
+                    array_agg(DISTINCT su.id) AS sample_unit_ids
+                FROM quadrat_transect su
+                JOIN se ON su.sample_event_id = se.sample_event_id
+                GROUP BY {", ".join(BaseSUSQLModel.transect_su_fields)}
+            ) pseudosu
+        ) 
         SELECT
             o.id, pseudosu_id,
             { _se_fields },
@@ -21,9 +33,9 @@ class BenthicPhotoQuadratTransectObsSQLModel(BaseSUSQLModel):
             se.data_policy_benthicpqt,
             su.number AS transect_number,
             su.len_surveyed AS transect_len_surveyed,
-            qt.quadrat_size AS quadrat_size,
-            qt.num_quadrats AS num_quadrats,
-            qt.num_points_per_quadrat AS num_points_per_quadrat,
+            su.quadrat_size AS quadrat_size,
+            su.num_quadrats AS num_quadrats,
+            su.num_points_per_quadrat AS num_points_per_quadrat,
             rs.name AS reef_slope,
             o.quadrat_number,
             cat.name AS benthic_category,
@@ -34,23 +46,9 @@ class BenthicPhotoQuadratTransectObsSQLModel(BaseSUSQLModel):
         FROM
             obs_benthic_photo_quadrat o
             JOIN transectmethod_benthicpqt tt ON o.benthic_photo_quadrat_transect_id = tt.transectmethod_ptr_id
-            JOIN quadrat_transect qt ON tt.quadrat_transect_id = qt.benthictransect_ptr_id
-            JOIN transect_benthic su ON qt.benthictransect_ptr_id = su.id
+            JOIN quadrat_transect su ON tt.quadrat_transect_id = su.id
             JOIN se ON su.sample_event_id = se.sample_event_id
-            JOIN (
-                SELECT
-                    pseudosu_id,
-                    UNNEST(sample_unit_ids) AS sample_unit_id
-                FROM (
-                    SELECT
-                        uuid_generate_v4() AS pseudosu_id,
-                        array_agg(DISTINCT su.id) AS sample_unit_ids
-                    FROM quadrat_transect qt
-                    JOIN transect_benthic su ON qt.benthictransect_ptr_id = su.id
-                    JOIN se ON su.sample_event_id = se.sample_event_id
-                    GROUP BY {", ".join(BaseSUSQLModel.transect_su_fields)}
-                ) pseudosu
-            ) pseudosu_su ON (su.id = pseudosu_su.sample_unit_id)
+            JOIN pseudosu_su ON (su.id = pseudosu_su.sample_unit_id)
             JOIN (
                 SELECT
                     tt_1.quadrat_transect_id,
@@ -64,8 +62,7 @@ class BenthicPhotoQuadratTransectObsSQLModel(BaseSUSQLModel):
                     JOIN profile p ON o1.profile_id = p.id
                     JOIN transectmethod tm ON o1.transectmethod_id = tm.id
                     JOIN transectmethod_benthicpqt tt_1 ON tm.id = tt_1.transectmethod_ptr_id
-                    JOIN quadrat_transect as qt ON tt_1.quadrat_transect_id = qt.benthictransect_ptr_id
-                    JOIN transect_benthic as su ON qt.benthictransect_ptr_id = su.id
+                    JOIN quadrat_transect as su ON tt_1.quadrat_transect_id = su.id
                     JOIN se ON su.sample_event_id = se.sample_event_id
                 GROUP BY
                     tt_1.quadrat_transect_id
@@ -228,13 +225,13 @@ class BenthicPhotoQuadratTransectSUSQLModel(BaseSUSQLModel):
 
     objects = SQLTableManager()
 
-    sample_unit_ids = JSONField()
+    sample_unit_ids = models.JSONField()
     transect_number = models.PositiveSmallIntegerField()
     transect_len_surveyed = models.PositiveSmallIntegerField(
         verbose_name=_("transect length surveyed (m)")
     )
     reef_slope = models.CharField(max_length=50)
-    percent_cover_by_benthic_category = JSONField(null=True, blank=True)
+    percent_cover_by_benthic_category = models.JSONField(null=True, blank=True)
     data_policy_benthicpqt = models.CharField(max_length=50)
 
     class Meta:
@@ -291,7 +288,7 @@ class BenthicPhotoQuadratTransectSESQLModel(BaseSQLModel):
     current_name = models.CharField(max_length=100)
     tide_name = models.CharField(max_length=100)
     visibility_name = models.CharField(max_length=100)
-    percent_cover_by_benthic_category_avg = JSONField(null=True, blank=True)
+    percent_cover_by_benthic_category_avg = models.JSONField(null=True, blank=True)
     data_policy_benthicpqt = models.CharField(max_length=50)
 
     class Meta:

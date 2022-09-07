@@ -1,9 +1,21 @@
 from collections import defaultdict
 
+from django.db import transaction
+from django.db.models import Q
 from django.db.models.fields.related import OneToOneField
 
-from ..models import PROTOCOL_MAP, CollectRecord, SampleUnit, Site, TransectMethod
+from ..models import (
+    PROTOCOL_MAP,
+    CollectRecord,
+    Management,
+    Project,
+    ProjectProfile,
+    SampleUnit,
+    Site,
+    TransectMethod
+)
 from . import get_value, is_uuid
+from .email import mermaid_email
 
 
 def _get_sample_unit_method_label(sample_unit):
@@ -17,7 +29,7 @@ def _get_sample_unit_method_label(sample_unit):
     return " ".join(number_label)
 
 
-def _get_sample_unit_field(model):
+def get_sample_unit_field(model):
     return next(
         (
             field.name
@@ -32,7 +44,7 @@ def _get_sample_unit_field(model):
 def _create_submitted_sample_unit_method_summary(model_cls, project):
     summary = defaultdict(dict)
     protocol = model_cls.protocol
-    sample_unit_name = _get_sample_unit_field(model_cls)
+    sample_unit_name = get_sample_unit_field(model_cls)
 
     if sample_unit_name is None:
         return summary
@@ -42,6 +54,7 @@ def _create_submitted_sample_unit_method_summary(model_cls, project):
         f"{sample_unit_name}",
         f"{sample_unit_name}__sample_event",
         f"{sample_unit_name}__sample_event__site",
+        f"{sample_unit_name}__sample_event__management",
     )
     queryset = queryset.filter(**qry_filter)
 
@@ -49,6 +62,7 @@ def _create_submitted_sample_unit_method_summary(model_cls, project):
         sample_unit = getattr(record, sample_unit_name)
         sample_event = sample_unit.sample_event
         site = sample_event.site
+        management = sample_event.management
         site_id = str(site.pk)
         label = _get_sample_unit_method_label(sample_unit)
 
@@ -61,6 +75,10 @@ def _create_submitted_sample_unit_method_summary(model_cls, project):
                 "id": f"{record.pk}",
                 "sample_date": sample_event.sample_date,
                 "label": label,
+                "management": {
+                    "id": management.id,
+                    "name": management.name,
+                }
             }
         )
 
@@ -164,8 +182,66 @@ def create_collecting_summary(project):
             ] = {"profile_name": profile.full_name, "labels": []}
 
         label = _get_collect_record_label(collect_record)
+        sample_date = get_value(data, "sample_event__sample_date")
         summary[site_id]["sample_unit_methods"][protocol]["profile_summary"][
             profile_id
-        ]["labels"].append(label)
+        ]["labels"].append({"name": label, "sample_date": sample_date})
 
     return list(protocols), summary
+
+
+@transaction.atomic()
+def copy_project_and_resources(owner_profile, new_project_name, original_project):
+    new_project = Project.objects.get(id=original_project.pk)
+    new_project.id = None
+    new_project.name = new_project_name
+    new_project.save()
+
+    new_project.tags.add(*original_project.tags.all())
+
+    ProjectProfile.objects.create(
+        role=ProjectProfile.ADMIN,
+        project=new_project,
+        profile=owner_profile
+    )
+
+    project_profiles = []
+    for pp in original_project.profiles.filter(~Q(profile=owner_profile)):
+        pp.id = None
+        pp.project = new_project
+        project_profiles.append(pp)
+    
+    ProjectProfile.objects.bulk_create(project_profiles)
+
+    new_sites = []
+    for site in original_project.sites.all():
+        site.id = None
+        site.project = new_project
+        new_sites.append(site)
+    
+    Site.objects.bulk_create(new_sites)
+    
+    new_management_regimes = []
+    for mr in original_project.management_set.all():
+        mr.id = None
+        mr.project = new_project
+        new_management_regimes.append(mr)
+    
+    Management.objects.bulk_create(new_management_regimes)
+
+    return new_project
+
+
+def email_members_of_new_project(project, owner_profile):
+    for project_profile in project.profiles.filter(~Q(profile=owner_profile)):
+        context = {
+            "owner": owner_profile,
+            "project": project,
+            "project_profile": project_profile
+        }
+        mermaid_email(
+            subject="New Project",
+            template="emails/added_to_project.txt",
+            to=[project_profile.profile.email],
+            context=context
+        )

@@ -267,6 +267,7 @@ class SampleUnitAdmin(BaseAdmin):
     exclude = ("collect_record_id",)
     autocomplete_fields = ["sample_event"]
     search_fields = [
+        "id",
         "sample_event__site__name",
         "sample_event__sample_date",
         "sample_event__site__project__name",

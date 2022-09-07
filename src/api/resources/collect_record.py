@@ -1,16 +1,20 @@
+import csv
 import json
 import logging
+from random import sample
 import uuid
 
 from django.db import connection, transaction
+from django.http import HttpResponse
 from django.utils import timezone
-from django.utils.translation import ugettext_lazy
+from django.utils.translation import gettext_lazy
 from rest_framework import permissions, status as drf_status
 from rest_framework.decorators import action
 from rest_framework.exceptions import NotFound, ParseError, ValidationError
 from rest_framework.response import Response
 
 from .mixins import CreateOrUpdateSerializerMixin
+from ..ingest import ingest_serializers
 from ..ingest.utils import InvalidSchema, ingest
 from ..models import (
     PROTOCOL_MAP,
@@ -228,3 +232,27 @@ class CollectRecordViewSet(BaseProjectApiViewSet):
             return Response(errors, status=400)
 
         return Response(CollectRecordSerializer(records, many=True).data)
+
+    @action(
+        detail=False,
+        methods=["GET"],
+        permission_classes=[ProjectDataAdminPermission],
+        url_path="ingest_schema/(?P<sample_unit>\w+)/csv",
+        url_name="ingest-schemas",
+    )
+    def ingest_schema(self, request, project_pk, sample_unit, *args, **kwargs):
+        csv_column_names = None
+        sample_unit = sample_unit.lower()
+        for serializer in ingest_serializers:
+            if serializer.protocol == sample_unit.lower():
+                csv_column_names = list(serializer.header_map.keys())
+                break
+        
+        if csv_column_names is None:
+            raise NotFound(detail=f"{sample_unit} sample unit not found")
+
+        response = HttpResponse(content_type="text/csv")
+        response["Content-Disposition"] = f'attachment; filename="{sample_unit}_template.csv"'
+        writer = csv.writer(response)
+        writer.writerow(csv_column_names)
+        return response

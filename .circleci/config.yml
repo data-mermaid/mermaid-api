@@ -1,6 +1,7 @@
 version: 2
 
-default: &default
+default:
+  &default
   docker:
     - image: cimg/python:3.8.5
       environment:
@@ -8,7 +9,8 @@ default: &default
   environment:
     AWS_DEFAULT_REGION: us-east-1
 
-install_dependencies: &install_dependencies
+install_dependencies:
+  &install_dependencies
   run:
     name: Load Dependencies
     command: |
@@ -18,7 +20,8 @@ install_dependencies: &install_dependencies
       pip install boto3==1.9.86 requests==2.20.1
       pip install git+https://github.com/data-mermaid/mermaid-changelog.git
 
-build: &build
+build:
+  &build
   run:
     name: Build
     command: ./ci_cd/build.sh ${CIRCLE_SHA1:0:7}
@@ -48,18 +51,19 @@ jobs:
       - run:
           name: Docker image update
           command: |
-              docker login -u $DOCKER_USER -p $DOCKER_PASS
-              docker tag honeycrisp/mermaid-api:${CIRCLE_SHA1:0:7} honeycrisp/mermaid-api:mermaid-dev-api2
-              docker push honeycrisp/mermaid-api:mermaid-dev-api2
+            docker login -u $DOCKER_USER -p $DOCKER_PASS
+            docker tag honeycrisp/mermaid-api:${CIRCLE_SHA1:0:7} honeycrisp/mermaid-api:mermaid-dev-api2
+            docker push honeycrisp/mermaid-api:mermaid-dev-api2
       - run:
           name: Deploy
           command: |
-              ./ci_cd/deploy.sh mermaid-dev-api2 ${CIRCLE_SHA1:0:7} Mermaid-API
-              python ci_cd/wait_for_ok.py mermaid-dev-api2 ${CIRCLE_SHA1:0:7}
+            ./ci_cd/deploy.sh mermaid-dev-api2 ${CIRCLE_SHA1:0:7} Mermaid-API
+            python ci_cd/wait_for_ok.py mermaid-dev-api2 ${CIRCLE_SHA1:0:7}
       - run:
           name: Update version
           command: |
-              python ci_cd/update_version.py dev api "${CIRCLE_BRANCH}-${CIRCLE_SHA1:0:7}"
+            python ci_cd/update_version.py dev api "${CIRCLE_BRANCH}-${CIRCLE_SHA1:0:7}"
+    resource_class: large
 
   deploy_prod:
     <<: *default
@@ -71,22 +75,23 @@ jobs:
       - run:
           name: Docker image update
           command: |
-              docker login -u $DOCKER_USER -p $DOCKER_PASS
-              docker tag honeycrisp/mermaid-api:${CIRCLE_SHA1:0:7} honeycrisp/mermaid-api:mermaid-prod-api2
-              docker push honeycrisp/mermaid-api:mermaid-prod-api2
+            docker login -u $DOCKER_USER -p $DOCKER_PASS
+            docker tag honeycrisp/mermaid-api:${CIRCLE_SHA1:0:7} honeycrisp/mermaid-api:mermaid-prod-api2
+            docker push honeycrisp/mermaid-api:mermaid-prod-api2
       - run:
           name: Deploy
           command: |
-              ./ci_cd/deploy.sh mermaid-prod-api2 ${CIRCLE_SHA1:0:7} Mermaid-API
-              python ci_cd/wait_for_ok.py mermaid-prod-api2 ${CIRCLE_SHA1:0:7}
+            ./ci_cd/deploy.sh mermaid-prod-api2 ${CIRCLE_SHA1:0:7} Mermaid-API
+            python ci_cd/wait_for_ok.py mermaid-prod-api2 ${CIRCLE_SHA1:0:7}
       - run:
           name: Update version
           command: |
-              python ci_cd/update_version.py prod api ${CIRCLE_TAG}
+            python ci_cd/update_version.py prod api ${CIRCLE_TAG}
       - run:
           name: Update changelog
           command: |
-              chlog
+            chlog
+    resource_class: large
 
 workflows:
   version: 2
@@ -110,7 +115,7 @@ workflows:
           context: org-global
           filters:
             branches:
-              ignore: /.*/  # IMPORTANT!
+              ignore: /.*/ # IMPORTANT!
             tags:
               only: /v[0-9]+(\.[0-9]+)+/ # v1.2.3
           requires:

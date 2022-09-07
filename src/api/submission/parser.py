@@ -41,7 +41,7 @@ def get_sample_event_data(collect_record, site_id=None, management_id=None):
         site=site_id or data.get("site") or None,
         management=management_id or data.get("management") or None,
         sample_date=data.get("sample_date") or None,
-        notes=data.get("notes", "")   
+        notes=data.get("notes", ""),
     )
 
 
@@ -65,6 +65,7 @@ def get_fishbelt_transect_data(collect_record, sample_event_id=None):
         current=fishbelt_transect_data.get("current") or None,
         relative_depth=fishbelt_transect_data.get("relative_depth") or None,
         tide=fishbelt_transect_data.get("tide") or None,
+        notes=data.get("notes", ""),
     )
 
 
@@ -114,7 +115,7 @@ def get_benthic_transect_data(collect_record, sample_event_id=None):
         current=benthic_transect_data.get("current") or None,
         relative_depth=benthic_transect_data.get("relative_depth") or None,
         tide=benthic_transect_data.get("tide") or None,
-        
+        notes=data.get("notes", ""),
     )
 
 
@@ -176,6 +177,7 @@ def get_quadrat_collection_data(collect_record, sample_event_id=None):
     quadrat_collection_data = data.get("quadrat_collection") or dict()
     return dict(
         sample_event=sample_event_id,
+        label=quadrat_collection_data.get("label") or "",
         quadrat_size= _cast_decimal_to_str(quadrat_collection_data.get("quadrat_size")),
         collect_record_id=collect_record.id,
         sample_time=quadrat_collection_data.get("sample_time") or None,
@@ -183,8 +185,8 @@ def get_quadrat_collection_data(collect_record, sample_event_id=None):
         visibility=quadrat_collection_data.get("visibility") or None,
         current=quadrat_collection_data.get("current") or None,
         relative_depth=quadrat_collection_data.get("relative_depth") or None,
-        tide=quadrat_collection_data.get("tide") or None
-        
+        tide=quadrat_collection_data.get("tide") or None,
+        notes=data.get("notes", ""),
     )
 
 
@@ -234,6 +236,7 @@ def get_quadrat_transect_data(collect_record, sample_event_id=None):
     quadrat_transect_data = data.get("quadrat_transect") or dict()
     return dict(
         sample_event=sample_event_id,
+        label=quadrat_transect_data.get("label") or "",
         quadrat_size=_cast_decimal_to_str(quadrat_transect_data.get("quadrat_size")),
         len_surveyed=_cast_decimal_to_str(quadrat_transect_data.get("len_surveyed")),
         num_quadrats=quadrat_transect_data.get("num_quadrats"),
@@ -244,8 +247,10 @@ def get_quadrat_transect_data(collect_record, sample_event_id=None):
         visibility=quadrat_transect_data.get("visibility") or None,
         current=quadrat_transect_data.get("current") or None,
         relative_depth=quadrat_transect_data.get("relative_depth") or None,
-        tide=quadrat_transect_data.get("tide") or None
+        tide=quadrat_transect_data.get("tide") or None,
+        notes=data.get("notes", ""),
     )
+
 
 def get_obs_benthic_photo_quadrat_data(collect_record, benthic_photo_quadrat_transect_id=None):
     observations_data = []

@@ -3,7 +3,41 @@ from django.urls import reverse
 from api.models import BeltFish, CollectRecord, AuditRecord
 
 
-def test_edit_transect_method(db_setup, api_client1, project1, belt_fish_project, belt_fish1, profile2):
+def test_edit_benthic_photo_quadrat_transect_method(
+    db_setup,
+    api_client1,
+    project1,
+    benthic_photo_quadrat_transect_project,
+    benthic_photo_quadrat_transect1,
+    profile1
+):
+    benthic_photo_quadrat_transect_id = str(benthic_photo_quadrat_transect1.pk)
+    url_kwargs = {
+        "project_pk": str(project1.pk),
+        "pk": benthic_photo_quadrat_transect_id        
+    }
+    data = {
+        "profile": str(profile1.pk)
+    }
+    edit_url = reverse("benthicphotoquadrattransectmethod-edit", kwargs=url_kwargs)
+
+    request = api_client1.put(edit_url, data, format="json")
+    response_data = request.json()
+
+    assert request.status_code == 200
+
+    collect_records = CollectRecord.objects.filter(id=response_data["id"])
+
+    assert collect_records.exists()
+    assert collect_records[0].data.get("sample_unit_method_id") == benthic_photo_quadrat_transect_id
+    assert AuditRecord.objects.filter(
+        record_id=benthic_photo_quadrat_transect_id,
+        event_type=AuditRecord.EDIT_RECORD_EVENT_TYPE,
+        model=benthic_photo_quadrat_transect1.__class__.__name__.lower()
+    ).exists()
+
+
+def test_edit_belt_fish_transect_method(db_setup, api_client1, project1, belt_fish_project, belt_fish1, profile2):
     belt_fish_id = str(belt_fish1.pk)
     url_kwargs = {
         "project_pk": str(project1.pk),
