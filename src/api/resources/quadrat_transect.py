@@ -28,4 +28,4 @@ class QuadratTransectSerializer(SampleUnitSerializer):
 # class QuadratTransectViewSet(BaseProjectApiViewSet):
 #     serializer_class = QuadratTransectSerializer
 #     queryset = QuadratTransect.objects.all()
-#     filter_class = QuadratTransectFilterSet
+#     filterset_class = QuadratTransectFilterSet

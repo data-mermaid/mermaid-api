@@ -165,5 +165,5 @@ class ManagementViewSet(ProtectedResourceMixin, BaseApiViewSet):
     serializer_class = ManagementSerializer
     queryset = Management.objects.exclude(project__status=Project.TEST)
     permission_classes = [AuthenticatedReadOnlyPermission]
-    filter_class = ManagementFilterSet
+    filterset_class = ManagementFilterSet
     search_fields = ['$name', '$name_secondary', '$project__name', '$est_year']

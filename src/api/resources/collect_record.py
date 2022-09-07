@@ -71,7 +71,7 @@ class CollectRecordFilterSet(BaseAPIFilterSet):
 class CollectRecordViewSet(BaseProjectApiViewSet):
     serializer_class = CollectRecordSerializer
     queryset = CollectRecord.objects.all().order_by("id")
-    filter_class = CollectRecordFilterSet
+    filterset_class = CollectRecordFilterSet
     permission_classes = BaseProjectApiViewSet.permission_classes + [CollectRecordOwner]
 
     def filter_queryset(self, queryset):

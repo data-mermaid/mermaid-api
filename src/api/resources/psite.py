@@ -23,5 +23,5 @@ class PSiteViewSet(ProtectedResourceMixin, BaseProjectApiViewSet):
     serializer_class = PSiteSerializer
     queryset = Site.objects.all()
     project_lookup = "project"
-    filter_class = PSiteFilterSet
+    filterset_class = PSiteFilterSet
     search_fields = ["name"]

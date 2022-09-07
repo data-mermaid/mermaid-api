@@ -41,4 +41,4 @@ class BenthicPITFilterSet(BaseAPIFilterSet):
 class BenthicPITViewSet(BaseProjectApiViewSet):
     serializer_class = BenthicPITSerializer
     queryset = BenthicPIT.objects.all()
-    filter_class = BenthicPITFilterSet
+    filterset_class = BenthicPITFilterSet

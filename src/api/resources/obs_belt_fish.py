@@ -41,4 +41,4 @@ class ObsBeltFishFilterSet(BaseAPIFilterSet):
 class ObsBeltFishViewSet(BaseProjectApiViewSet):
     serializer_class = ObsBeltFishSerializer
     queryset = ObsBeltFish.objects.prefetch_related(ObsBeltFish.project_lookup)
-    filter_class = ObsBeltFishFilterSet
+    filterset_class = ObsBeltFishFilterSet

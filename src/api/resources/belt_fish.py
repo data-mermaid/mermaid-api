@@ -19,4 +19,4 @@ class BeltFishFilterSet(BaseAPIFilterSet):
 class BeltFishViewSet(BaseProjectApiViewSet):
     serializer_class = BeltFishSerializer
     queryset = BeltFish.objects.all()
-    filter_class = BeltFishFilterSet
+    filterset_class = BeltFishFilterSet

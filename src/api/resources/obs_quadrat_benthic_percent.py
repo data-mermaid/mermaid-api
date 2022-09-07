@@ -36,4 +36,4 @@ class ObsQuadratBenthicPercentViewSet(BaseProjectApiViewSet):
     queryset = ObsQuadratBenthicPercent.objects.prefetch_related(
         ObsQuadratBenthicPercent.project_lookup
     )
-    filter_class = ObsQuadratBenthicPercentFilterSet
+    filterset_class = ObsQuadratBenthicPercentFilterSet

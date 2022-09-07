@@ -158,7 +158,7 @@ class SampleUnitMethodView(BaseProjectApiViewSet):
         "benthicphotoquadrattransect__quadrat_transect",
     ).all()
 
-    filter_class = SampleUnitMethodFilterSet
+    filterset_class = SampleUnitMethodFilterSet
     serializer_class = SampleUnitMethodSerializer
     http_method_names = ["get", "head"]
 

@@ -24,4 +24,4 @@ class ObsHabitatComplexityFilterSet(BaseAPIFilterSet):
 class ObsHabitatComplexityViewSet(BaseProjectApiViewSet):
     serializer_class = ObsHabitatComplexitySerializer
     queryset = ObsHabitatComplexity.objects.prefetch_related(ObsHabitatComplexity.project_lookup)
-    filter_class = ObsHabitatComplexityFilterSet
+    filterset_class = ObsHabitatComplexityFilterSet
