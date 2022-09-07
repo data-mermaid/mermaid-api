@@ -14,6 +14,8 @@ import boto3
 import os
 import sys
 
+from corsheaders.defaults import default_methods
+
 # Options: None, DEV, PROD
 ENVIRONMENT = os.environ.get('ENV') or "local"
 if ENVIRONMENT:
@@ -30,17 +32,7 @@ except:
     API_VERSION = "NA"
 
 LOGIN_REDIRECT_URL = 'api-root'
-
-# SECURITY WARNING: keep the secret key used in production secret!
 SECRET_KEY = os.environ.get('SECRET_KEY')
-
-# SECURITY WARNING: don't run with debug turned on in production!
-DEBUG = ENVIRONMENT not in ("dev", "prod",)
-
-if ENVIRONMENT in ('dev', 'prod'):
-    ALLOWED_HOSTS = [host.strip() for host in os.environ['ALLOWED_HOSTS'].split(',')]
-else:
-    ALLOWED_HOSTS = ['*']
 
 # Set to True to prevent db writes and return 503
 MAINTENANCE_MODE = os.environ.get('MAINTENANCE_MODE') == 'True' or False
@@ -59,6 +51,7 @@ DEFAULT_DOMAIN_COLLECT = os.environ['DEFAULT_DOMAIN_COLLECT']
 # Application definition
 
 INSTALLED_APPS = [
+    "corsheaders",
     'django.contrib.admin',
     'django.contrib.auth',
     'django.contrib.contenttypes',
@@ -71,49 +64,57 @@ INSTALLED_APPS = [
     'rest_framework_gis',
     'django_filters',
     'django_extensions',
+    "drf_recaptcha",
     'api.apps.ApiConfig',
     'tools',
     'taggit',
     'simpleq',
     'sqltables',
 ]
-if ENVIRONMENT in ("local", ):
-    INSTALLED_APPS.append("debug_toolbar")
-
-
-def show_toolbar(request):
-    return True
-
-
-DEBUG_TOOLBAR_CONFIG = {
-}
-if ENVIRONMENT in ("local",):
-    DEBUG_TOOLBAR_CONFIG["SHOW_TOOLBAR_CALLBACK"] = show_toolbar
 
 MIDDLEWARE = [
     'django.middleware.security.SecurityMiddleware',
-    'django.contrib.sessions.middleware.SessionMiddleware',
     'corsheaders.middleware.CorsMiddleware',
+    'django.contrib.sessions.middleware.SessionMiddleware',
     'django.middleware.common.CommonMiddleware',
     'django.middleware.csrf.CsrfViewMiddleware',
+    "corsheaders.middleware.CorsPostCsrfMiddleware",
     'django.contrib.auth.middleware.AuthenticationMiddleware',
     'django.contrib.messages.middleware.MessageMiddleware',
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
     'maintenance_mode.middleware.MaintenanceModeMiddleware',
     "api.middleware.APIVersionMiddleware",
 ]
-if ENVIRONMENT in ("local", ):
-    MIDDLEWARE = ['debug_toolbar.middleware.DebugToolbarMiddleware'] + MIDDLEWARE
 
-if ENVIRONMENT in ('dev', 'prod'):
-    CONN_MAX_AGE = None
+DEBUG = False
+DEBUG_LEVEL = "ERROR"
+_allowed_hosts = os.environ.get("ALLOWED_HOSTS") or ""
+ALLOWED_HOSTS = [host.strip() for host in _allowed_hosts.split(",")]
+CONN_MAX_AGE = None
+CORS_ALLOW_ALL_ORIGINS = True
+CORS_ALLOW_METHODS = list(default_methods) + ["HEAD"]
+CORS_EXPOSE_HEADERS = ["HTTP_API_VERSION"]
+CORS_REPLACE_HTTPS_REFERER = True
+EMAIL_BACKEND = 'django.core.mail.backends.smtp.EmailBackend'
+
+if ENVIRONMENT not in ("dev", "prod",):
+    def show_toolbar(request):
+        return True
+
+    DEBUG = True
+    DEBUG_LEVEL = "DEBUG"
+    ALLOWED_HOSTS = ['*']
+    INSTALLED_APPS.append("debug_toolbar")
+    MIDDLEWARE.append("debug_toolbar.middleware.DebugToolbarMiddleware")
+    DEBUG_TOOLBAR_CONFIG = {"SHOW_TOOLBAR_CALLBACK": show_toolbar}
+    EMAIL_BACKEND = 'django.core.mail.backends.locmem.EmailBackend'
 
 ROOT_URLCONF = 'app.urls'
 
 TEMPLATES = [
     {
         'BACKEND': 'django.template.backends.django.DjangoTemplates',
-        'DIRS': [BASE_DIR, os.path.join(BASE_DIR, 'templates')],
+        'DIRS': [os.path.join(BASE_DIR, 'templates')],
         'APP_DIRS': True,
         'OPTIONS': {
             'context_processors': [
@@ -127,11 +128,7 @@ TEMPLATES = [
 ]
 
 WSGI_APPLICATION = 'app.wsgi.application'
-
-# from rest_framework import permissions
-# class DefaultPermission(permissions.BasePermission):
-#     def has_permission(self, request, view):
-#         return False
+DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 
 REST_FRAMEWORK = {
     'DEFAULT_AUTHENTICATION_CLASSES': (
@@ -141,16 +138,13 @@ REST_FRAMEWORK = {
     'DEFAULT_PERMISSION_CLASSES': (
         'rest_framework.permissions.IsAuthenticatedOrReadOnly',
     ),
-    # 'DEFAULT_PERMISSION_CLASSES': (
-    #     'api.resources.DefaultPermission',
-    # ),
     'DEFAULT_FILTER_BACKENDS': ('django_filters.rest_framework.DjangoFilterBackend',),
     'DEFAULT_RENDERER_CLASSES': (
         # 'api.renderers.BaseBrowsableAPIRenderer',
         'rest_framework.renderers.JSONRenderer',
     ),
     'COERCE_DECIMAL_TO_STRING': False,
-    'DEFAULT_SCHEMA_CLASS': 'rest_framework.schemas.coreapi.AutoSchema'
+    'DEFAULT_SCHEMA_CLASS': 'rest_framework.schemas.openapi.AutoSchema'
 }
 
 DATABASES = {
@@ -161,6 +155,9 @@ DATABASES = {
         'PASSWORD': os.environ.get('DB_PASSWORD') or 'postgres',
         'HOST': os.environ.get('DB_HOST') or 'localhost',
         'PORT': os.environ.get('DB_PORT') or '5432',
+        'TEST': {
+            'NAME': 'test_mermaid',  # explicitly setting default
+        },
     }
 }
 
@@ -197,42 +194,48 @@ USE_TZ = True
 STATIC_URL = '/static/'
 STATIC_ROOT = os.path.join(BASE_DIR, 'static')
 
-AWS_BACKUP_BUCKET = os.environ.get('AWS_BACKUP_BUCKET')
-AWS_ACCESS_KEY_ID = os.environ.get('AWS_ACCESS_KEY_ID')
-AWS_SECRET_ACCESS_KEY = os.environ.get('AWS_SECRET_ACCESS_KEY')
-AWS_REGION = os.environ.get('AWS_REGION')
-S3_DBBACKUP_MAXAGE = 60  # days
-
-API_NULLQUERY = 'null'
-
-EMAIL_HOST = os.environ.get('EMAIL_HOST')
-EMAIL_PORT = os.environ.get('EMAIL_PORT')
-EMAIL_HOST_USER = os.environ.get('EMAIL_HOST_USER')
-EMAIL_HOST_PASSWORD = os.environ.get('EMAIL_HOST_PASSWORD')
-EMAIL_USE_TLS = True
-DEFAULT_FROM_EMAIL = 'MERMAID System <{}>'.format(EMAIL_HOST_USER)
-EMAIL_BACKEND = 'django.core.mail.backends.smtp.EmailBackend'
-CORS_ORIGIN_ALLOW_ALL = True
-CORS_EXPOSE_HEADERS = [
-    "HTTP_API_VERSION"
-]
-
-
 # *****************
 # **    Auth0    **
 # *****************
 
 AUTH0_DOMAIN = 'datamermaid.auth0.com'
 AUTH0_USER_INFO_ENDPOINT = 'https://{domain}/userinfo'.format(domain=AUTH0_DOMAIN)
+AUTH0_MANAGEMENT_API_AUDIENCE = os.environ.get('AUTH0_MANAGEMENT_API_AUDIENCE')
+MERMAID_API_AUDIENCE = os.environ.get('MERMAID_API_AUDIENCE')
+MERMAID_API_SIGNING_SECRET = os.environ.get('MERMAID_API_SIGNING_SECRET')
 
 # *********
 # ** API **
 # *********
-AUTH0_MANAGEMENT_API_AUDIENCE = os.environ.get('AUTH0_MANAGEMENT_API_AUDIENCE')
-MERMAID_API_AUDIENCE = os.environ.get('MERMAID_API_AUDIENCE')
-MERMAID_API_SIGNING_SECRET = os.environ.get('MERMAID_API_SIGNING_SECRET')
+
+AWS_BACKUP_BUCKET = os.environ.get('AWS_BACKUP_BUCKET')
+AWS_ACCESS_KEY_ID = os.environ.get('AWS_ACCESS_KEY_ID')
+AWS_SECRET_ACCESS_KEY = os.environ.get('AWS_SECRET_ACCESS_KEY')
+AWS_REGION = os.environ.get('AWS_REGION')
+S3_DBBACKUP_MAXAGE = 60  # days
+
+EMAIL_BACKEND = "django.core.mail.backends.smtp.EmailBackend"
+EMAIL_HOST = os.environ.get('EMAIL_HOST')
+EMAIL_PORT = os.environ.get('EMAIL_PORT')
+EMAIL_HOST_USER = os.environ.get('EMAIL_HOST_USER')
+EMAIL_HOST_PASSWORD = os.environ.get('EMAIL_HOST_PASSWORD')
+EMAIL_USE_TLS = True
+DEFAULT_FROM_EMAIL = 'MERMAID System <{}>'.format(EMAIL_HOST_USER)
+CORS_ORIGIN_ALLOW_ALL = True
+CORS_EXPOSE_HEADERS = ["HTTP_API_VERSION"]
+CORS_ALLOW_ALL_ORIGINS = True
+CORS_REPLACE_HTTPS_REFERER = True
+CORS_ALLOW_CREDENTIALS = True
+CORS_ALLOW_METHODS = list(default_methods) + ["HEAD"]
+WEBCONTACT_EMAIL = f"MERMAID Web Contact <{os.environ.get('WEBCONTACT_EMAIL')}>"
+
+API_NULLQUERY = 'null'
 TAGGIT_CASE_INSENSITIVE = True
 GEO_PRECISION = 6  # to nearest 10 cm
+CORAL_ATLAS_APP_ID = os.environ.get("CORAL_ATLAS_APP_ID")
+# https://github.com/llybin/drf-recaptcha
+DRF_RECAPTCHA_SECRET_KEY = os.environ.get("DRF_RECAPTCHA_SECRET_KEY")
+# DRF_RECAPTCHA_TESTING = True
 
 # ************
 # ** CLIENT **
@@ -249,10 +252,12 @@ MERMAID_MANAGEMENT_API_CLIENT_SECRET = os.environ.get('MERMAID_MANAGEMENT_API_CL
 # Circle CI API
 CIRCLE_CI_CLIENT_ID = os.environ.get('CIRCLE_CI_CLIENT_ID')
 
-boto3_session = boto3.session.Session(
+boto3_client = boto3.client(
+    "logs",
     aws_access_key_id=os.environ.get('AWS_ACCESS_KEY_ID'),
     aws_secret_access_key=os.environ.get('AWS_SECRET_ACCESS_KEY'),
-    region_name=os.environ.get('AWS_REGION'))
+    region_name=os.environ.get('AWS_REGION')
+)
 
 # ***************
 # ** MAILCHIMP **
@@ -262,10 +267,6 @@ MC_API_KEY = os.environ.get('MC_API_KEY')
 MC_USER = os.environ.get('MC_USER')
 MC_LIST_ID = os.environ.get('MC_LIST_ID')
 
-
-DEBUG_LEVEL = 'ERROR'
-if ENVIRONMENT in ('local', 'dev'):
-    DEBUG_LEVEL = 'DEBUG'
 
 LOGGING = {
     'version': 1,
@@ -316,7 +317,7 @@ if ENVIRONMENT in ("dev", "prod"):
         'formatter': 'file',
         'log_group': '{}-mermaid-api'.format(ENVIRONMENT),
         'use_queues': True,
-        'boto3_session': boto3_session
+        'boto3_client': boto3_client
     }
     LOGGING["loggers"][""]["handlers"].append("watchtower")
 
@@ -338,8 +339,3 @@ QUEUE_NAME = f"mermaid-{ENVIRONMENT}"  # required
 
 # Override default boto3 url for SQS
 ENDPOINT_URL = None if ENVIRONMENT in ("dev", "prod") else "http://sqs:9324"
-
-# -SIMPLEQ SETTINGS-
-
-
-CORAL_ATLAS_APP_ID = os.environ.get("CORAL_ATLAS_APP_ID")

@@ -1,4 +1,4 @@
-from django.conf.urls import url, re_path
+from django.urls import re_path
 from rest_framework_nested import routers
 
 from .resources.me import MeViewSet
@@ -75,6 +75,7 @@ from .resources.fish_size import FishSizeViewSet
 from .resources.version import AppVersionViewSet
 from .resources.health import health
 from .resources.project_tag import ProjectTagViewSet
+from .resources.contact import contact_mermaid, contact_project_admins
 
 
 # APP-WIDE - BASE
@@ -273,15 +274,15 @@ project_router.register(
     "obsquadratbenthicpercent",
 )
 
-
-api_urls = router.urls + project_router.urls
-api_urls += (url(r"^health/$", health),)
-api_urls += (
+api_urls = router.urls + project_router.urls + [
+    re_path(r"^contactmermaid/$", contact_mermaid, name="contactmermaid"),
+    re_path(r"^contactprojectadmins/$", contact_project_admins, name="contactprojectadmins"),
     re_path(
         r"^ingest_schema_csv/(?P<sample_unit>\w+)/$",
         ingest_schema_csv,
         name="ingest-schemas-csv",
     ),
-)
-api_urls += (url(r"^pull/$", vw_pull),)
-api_urls += (url(r"^push/$", vw_push),)
+    re_path(r"^health/$", health),
+    re_path(r"^pull/$", vw_pull),
+    re_path(r"^push/$", vw_push),
+]

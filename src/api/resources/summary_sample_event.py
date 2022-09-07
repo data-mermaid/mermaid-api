@@ -30,7 +30,7 @@ class SummarySampleEventSerializer(BaseViewAPISerializer):
     class Meta(BaseViewAPISerializer.Meta):
         model = SummarySampleEventModel
         exclude = BaseViewAPISerializer.Meta.exclude.copy()
-        exclude.append("location")
+        exclude.extend(["id", "location"])
 
 
 class SummarySampleEventGeoSerializer(BaseViewAPIGeoSerializer):
@@ -39,6 +39,7 @@ class SummarySampleEventGeoSerializer(BaseViewAPIGeoSerializer):
 
     class Meta(BaseViewAPIGeoSerializer.Meta):
         model = SummarySampleEventModel
+        exclude = ["id"]
 
 
 class SummarySampleEventCSVSerializer(ReportSerializer):
