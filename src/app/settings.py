@@ -96,6 +96,8 @@ CORS_ALLOW_METHODS = list(default_methods) + ["HEAD"]
 CORS_EXPOSE_HEADERS = ["HTTP_API_VERSION"]
 CORS_REPLACE_HTTPS_REFERER = True
 EMAIL_BACKEND = 'django.core.mail.backends.smtp.EmailBackend'
+if ENVIRONMENT not in ("prod",):
+    EMAIL_BACKEND = 'django.core.mail.backends.locmem.EmailBackend'
 
 if ENVIRONMENT not in ("dev", "prod",):
     def show_toolbar(request):
@@ -107,7 +109,6 @@ if ENVIRONMENT not in ("dev", "prod",):
     INSTALLED_APPS.append("debug_toolbar")
     MIDDLEWARE.append("debug_toolbar.middleware.DebugToolbarMiddleware")
     DEBUG_TOOLBAR_CONFIG = {"SHOW_TOOLBAR_CALLBACK": show_toolbar}
-    EMAIL_BACKEND = 'django.core.mail.backends.locmem.EmailBackend'
 
 ROOT_URLCONF = 'app.urls'
 
@@ -214,7 +215,6 @@ AWS_SECRET_ACCESS_KEY = os.environ.get('AWS_SECRET_ACCESS_KEY')
 AWS_REGION = os.environ.get('AWS_REGION')
 S3_DBBACKUP_MAXAGE = 60  # days
 
-EMAIL_BACKEND = "django.core.mail.backends.smtp.EmailBackend"
 EMAIL_HOST = os.environ.get('EMAIL_HOST')
 EMAIL_PORT = os.environ.get('EMAIL_PORT')
 EMAIL_HOST_USER = os.environ.get('EMAIL_HOST_USER')
@@ -252,10 +252,12 @@ MERMAID_MANAGEMENT_API_CLIENT_SECRET = os.environ.get('MERMAID_MANAGEMENT_API_CL
 # Circle CI API
 CIRCLE_CI_CLIENT_ID = os.environ.get('CIRCLE_CI_CLIENT_ID')
 
-boto3_session = boto3.session.Session(
+boto3_client = boto3.client(
+    "logs",
     aws_access_key_id=os.environ.get('AWS_ACCESS_KEY_ID'),
     aws_secret_access_key=os.environ.get('AWS_SECRET_ACCESS_KEY'),
-    region_name=os.environ.get('AWS_REGION'))
+    region_name=os.environ.get('AWS_REGION')
+)
 
 # ***************
 # ** MAILCHIMP **
@@ -315,7 +317,7 @@ if ENVIRONMENT in ("dev", "prod"):
         'formatter': 'file',
         'log_group': '{}-mermaid-api'.format(ENVIRONMENT),
         'use_queues': True,
-        'boto3_session': boto3_session
+        'boto3_client': boto3_client
     }
     LOGGING["loggers"][""]["handlers"].append("watchtower")
 
