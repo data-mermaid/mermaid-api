@@ -40,6 +40,10 @@ buildnocache:
 	./ci_cd/version.sh
 	@docker-compose build --no-cache --pull
 
+build:
+	./ci_cd/version.sh
+	@docker-compose build
+
 up:
 	docker-compose up -d
 
