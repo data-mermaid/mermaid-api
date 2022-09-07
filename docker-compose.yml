@@ -17,8 +17,8 @@ services:
     volumes:
       - pg_data:/var/lib/postgresql/data
     environment:
-      - POSTGRES_PASSWORD=postgres
-      - POSTGRES_USER=postgres
+      POSTGRES_PASSWORD: postgres
+      POSTGRES_USER: postgres
     ports:
       - 5432:5432
     healthcheck:
@@ -37,8 +37,44 @@ services:
       - $PWD/src:/var/projects/webapp
     ports:
       - 8080:8080
+    environment:
+      # db
+      DB_NAME: mermaid
+      DB_HOST: api_db
+      DB_PORT: 5432
+      DB_USER: postgres
+      DB_PASSWORD: postgres
+
+      # Auth0
+      MERMAID_DOMAIN: datamermaid.auth0.com
+      MERMAID_API_AUDIENCE: https://dev-api.datamermaid.org
+      AUTH0_MANAGEMENT_API_AUDIENCE: https://datamermaid.auth0.com/api/v2/
+
+      # django
+      ENV: local
+      RESTORE: local
+      BACKUP: local
+      DEBUG: "True"
+      ALLOWED_HOSTS: "*"
+      SUPERUSER: me@mydomain.com
+      ADMINS: me@mydomain.com
+
+      DEFAULT_DOMAIN_API: api_service
+      DEFAULT_DOMAIN_COLLECT: localhost:8888
+      
+      DRF_RECAPTCHA_TESTING: "True"
+
+      # smtp
+      EMAIL_HOST: smtp.gmail.com
+      EMAIL_PORT: 587
+      EMAIL_HOST_USER: me@mydomain.com 
+
+      # AWS
+      AWS_REGION: us-east-1
+      AWS_BACKUP_BUCKET: mermaid-db-backups
+
     env_file:
-      - .env
+      - .secrets.env
     depends_on:
       api_db:
         condition: service_healthy
