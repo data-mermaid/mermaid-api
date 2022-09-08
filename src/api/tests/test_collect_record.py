@@ -91,7 +91,7 @@ def test_ingest_schemas_json(api_client1, project1):
         response = api_client1.get(url)
         data = json.loads(response.content)
         serializer = serializers[sample_unit]
-        labels = [field["label"] for name, field in serializer.header_map.items()]
+        labels = serializer().get_schema_labels()
         response_labels = [field["label"] for field in data]
         assert response_labels == labels
 
@@ -108,5 +108,5 @@ def test_ingest_schemas_csv(api_client1):
         data = response.content.decode('utf-8')
         csv_columns = data.replace("\r\n", "").split(",")
         serializer = serializers[sample_unit]
-        labels = [field["label"] for name, field in serializer.header_map.items()]
+        labels = serializer().get_schema_labels()
         assert csv_columns == labels

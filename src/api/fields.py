@@ -55,7 +55,6 @@ class LazyChoiceField(serializers.ChoiceField):
     choices = property(_get_choices, _set_choices)
 
 
-
 class PositiveIntegerField(fields.Field):
     default_error_messages = {
         "min_value": _("Ensure this value is greater than or equal to 0.")
@@ -63,9 +62,6 @@ class PositiveIntegerField(fields.Field):
 
     def __init__(self, **kwargs):
         super().__init__(**kwargs)
-        self.allow_null = True
-        self.required = False
-        self.allow_blank = True
         self.default = kwargs.get("default", 0)
 
     def to_internal_value(self, value):

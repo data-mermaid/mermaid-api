@@ -1,11 +1,13 @@
 from rest_framework import serializers
 
 from ..fields import LazyChoiceField
-from ..models import FISHBELT_PROTOCOL, BeltTransectWidth, FishSizeBin, ReefSlope
-from ..models.view_models import FishAttributeView
+from ..models import FISHBELT_PROTOCOL
 from .choices import (
-    build_choices,
+    belt_transect_widths_choices,
     current_choices,
+    fish_attributes_choices,
+    fish_size_bins_choices,
+    reef_slopes_choices,
     relative_depth_choices,
     tide_choices,
     visibility_choices,
@@ -13,25 +15,6 @@ from .choices import (
 from .serializers import CollectRecordCSVSerializer
 
 __all__ = ["FishBeltCSVSerializer"]
-
-
-def reef_slopes_choices():
-    return build_choices(ReefSlope.objects.choices(order_by="name"))
-
-
-def belt_transect_widths_choices():
-    return build_choices(BeltTransectWidth.objects.choices(order_by="name"), "name")
-
-
-def fish_size_bins_choices():
-    return build_choices(FishSizeBin.objects.choices(order_by="val"), "val")
-
-
-def fish_attributes_choices():
-    return [
-        (str(c.id), str(c.name))
-        for c in FishAttributeView.objects.all().order_by("name")
-    ]
 
 
 class FishBeltCSVSerializer(CollectRecordCSVSerializer):
@@ -46,11 +29,9 @@ class FishBeltCSVSerializer(CollectRecordCSVSerializer):
     data__sample_event__management = serializers.CharField(
         label="Management", help_text=""
     )
-
     data__sample_event__sample_date = serializers.DateField(
         label="Sample date: Year,Sample date: Month,Sample date: Day", help_text=""
     )
-
     data__fishbelt_transect__sample_time = serializers.TimeField(
         required=False, allow_null=True, label="Sample time", help_text=""
     )
@@ -142,6 +123,3 @@ class FishBeltCSVSerializer(CollectRecordCSVSerializer):
     def validate(self, data):
         data = super().validate(data)
         return data
-
-    def get_sample_event_time(self, row):
-        return row.get("data__fishbelt_transect__sample_time")

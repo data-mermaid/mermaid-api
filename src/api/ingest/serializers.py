@@ -33,7 +33,7 @@ class CollectRecordCSVListSerializer(ListSerializer):
             data[field_name] = [s.strip() for s in val.split(",")]
 
     def map_column_names(self, row):
-        return {self.child.get_schemafield(k)[1]: v for k, v in row.items()}
+        return {self.child.get_schemafield(k)[0]: v for k, v in row.items()}
 
     def assign_choices(self, row, choices_sets):
         for name, field in self.child.fields.items():
