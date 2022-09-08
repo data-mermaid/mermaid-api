@@ -98,14 +98,15 @@ def _add_extra_fields(rows, project_id, profile_id):
     return _rows
 
 
-def _schema_check(csv_headers, serializer_headers):
+def _schema_check(csv_headers, instance):
     missing_required_headers = []
     if csv_headers is None:
         raise InvalidSchema(errors=["CSV headers are null"])
 
-    for h in serializer_headers:
-        if "*" in h and h not in csv_headers:
-            missing_required_headers.append(h)
+    for label in instance.get_schema_labels():
+        fieldname, field = instance.get_schemafield(label)
+        if field and field.required and label not in csv_headers:
+            missing_required_headers.append(label)
 
     if missing_required_headers:
         print(missing_required_headers)
@@ -162,9 +163,7 @@ def ingest(
         return None, output
 
     reader = csv.DictReader(datafile)
-
-    schema = [v["label"] for v in serializer.header_map.values()]
-    _schema_check(reader.fieldnames, schema)
+    _schema_check(reader.fieldnames, serializer())
 
     context = _create_context(profile_id, request)
     rows = _add_extra_fields(reader, project_id, profile_id)

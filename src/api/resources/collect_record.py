@@ -6,6 +6,7 @@ from django.db import connection
 from rest_framework import permissions, status as drf_status
 from rest_framework.decorators import action
 from rest_framework.exceptions import ParseError
+from rest_framework.permissions import SAFE_METHODS
 from rest_framework.response import Response
 
 from .mixins import CreateOrUpdateSerializerMixin
@@ -224,33 +225,35 @@ class CollectRecordViewSet(BaseProjectApiViewSet):
 
     @action(
         detail=False,
-        methods=["GET"],
+        methods=SAFE_METHODS,
         permission_classes=[ProjectDataAdminPermission],
         url_path="ingest_schema/(?P<sample_unit>\w+)",
         url_name="ingest-schemas-json",
     )
     def ingest_schema_json(self, request, project_pk, sample_unit, *args, **kwargs):
         serializer = get_su_serializer(sample_unit)
-
         schema = []
         project_choices = None
         if project_pk:
             project_choices = get_ingest_project_choices(project_pk)
         instance = serializer(project_choices=project_choices, many=True)
         choice_sets = instance.get_choices_sets()
-        for fieldname, fieldprops in serializer.header_map.items():
-            fieldname_simple = "__".join(fieldname.split("__")[1:])
 
-            choices = None
-            if fieldname in choice_sets and choice_sets[fieldname]:
-                choices = [name for name, choice_id in choice_sets[fieldname].items()]
+        for label in instance.child.get_schema_labels():
+            fieldname, field = instance.child.get_schemafield(label)
+            if field:
+                fieldname_simple = "__".join(fieldname.split("__")[1:])
+                choices = None
+                if field.field_name in choice_sets and choice_sets[field.field_name]:
+                    choices = [name for name, choice_id in choice_sets[field.field_name].items()]
 
-            field_def = {
-                "name": fieldname_simple,
-                "label": fieldprops["label"],
-                "required": fieldprops["label"].endswith("*"),
-                "description": fieldprops["description"],
-                "choices": choices,
-            }
-            schema.append(field_def)
+                field_def = {
+                    "name": fieldname_simple,
+                    "label": label,
+                    "required": field.required,
+                    "help_text": field.help_text,
+                    "choices": choices,
+                }
+                schema.append(field_def)
+
         return Response(schema, status=200)
