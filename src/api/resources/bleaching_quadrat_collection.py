@@ -20,4 +20,4 @@ class BleachingQuadratCollectionFilterSet(BaseAPIFilterSet):
 class BleachingQuadratCollectionViewSet(BaseProjectApiViewSet):
     serializer_class = BleachingQuadratCollectionSerializer
     queryset = BleachingQuadratCollection.objects.all()
-    filter_class = BleachingQuadratCollectionFilterSet
+    filterset_class = BleachingQuadratCollectionFilterSet

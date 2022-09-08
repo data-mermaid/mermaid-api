@@ -31,4 +31,4 @@ class ObsBenthicLITFilterSet(BaseAPIFilterSet):
 class ObsBenthicLITViewSet(BaseProjectApiViewSet):
     serializer_class = ObsBenthicLITSerializer
     queryset = ObsBenthicLIT.objects.prefetch_related(ObsBenthicLIT.project_lookup)
-    filter_class = ObsBenthicLITFilterSet
+    filterset_class = ObsBenthicLITFilterSet

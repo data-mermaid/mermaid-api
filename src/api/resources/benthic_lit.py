@@ -23,4 +23,4 @@ class BenthicLITFilterSet(BaseAPIFilterSet):
 class BenthicLITViewSet(BaseProjectApiViewSet):
     serializer_class = BenthicLITSerializer
     queryset = BenthicLIT.objects.all()
-    filter_class = BenthicLITFilterSet
+    filterset_class = BenthicLITFilterSet

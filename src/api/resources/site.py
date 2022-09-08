@@ -137,5 +137,5 @@ class SiteViewSet(ProtectedResourceMixin, BaseApiViewSet):
     serializer_class = SiteSerializer
     queryset = Site.objects.exclude(project__status=Project.TEST)
     permission_classes = [AuthenticatedReadOnlyPermission]
-    filter_class = SiteFilterSet
+    filterset_class = SiteFilterSet
     search_fields = ['$name', '$project__name', '$country__name',]

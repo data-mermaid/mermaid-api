@@ -35,4 +35,4 @@ class BenthicTransectFilterSet(SampleUnitFilterSet):
 class BenthicTransectViewSet(BaseProjectApiViewSet):
     serializer_class = BenthicTransectSerializer
     queryset = BenthicTransect.objects.all()
-    filter_class = BenthicTransectFilterSet
+    filterset_class = BenthicTransectFilterSet

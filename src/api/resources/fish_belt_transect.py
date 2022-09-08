@@ -57,4 +57,4 @@ class FishBeltTransectFilterSet(SampleUnitFilterSet):
 class FishBeltTransectViewSet(BaseProjectApiViewSet):
     serializer_class = FishBeltTransectSerializer
     queryset = FishBeltTransect.objects.all()
-    filter_class = FishBeltTransectFilterSet
+    filterset_class = FishBeltTransectFilterSet
