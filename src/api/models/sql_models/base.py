@@ -1,8 +1,7 @@
 import uuid
 
 from django.contrib.gis.db import models
-from django.contrib.postgres.fields import JSONField
-from django.utils.translation import ugettext_lazy as _
+from django.utils.translation import gettext_lazy as _
 
 from api.models import Project
 
@@ -242,7 +241,7 @@ class BaseSQLModel(models.Model):
     )
     project_notes = models.TextField(blank=True)
     contact_link = models.CharField(max_length=255)
-    tags = JSONField(null=True, blank=True)
+    tags = models.JSONField(null=True, blank=True)
     site_id = models.UUIDField()
     site_name = models.CharField(max_length=255)
     location = models.PointField(srid=4326)
@@ -265,14 +264,14 @@ class BaseSQLModel(models.Model):
         null=True,
         blank=True,
     )
-    management_parties = JSONField(null=True, blank=True)
+    management_parties = models.JSONField(null=True, blank=True)
     management_compliance = models.CharField(max_length=100)
-    management_rules = JSONField(null=True, blank=True)
+    management_rules = models.JSONField(null=True, blank=True)
     management_notes = models.TextField(blank=True)
     sample_date = models.DateField()
     sample_event_id = models.UUIDField()
     sample_event_notes = models.TextField(blank=True)
-    covariates = JSONField(null=True, blank=True)
+    covariates = models.JSONField(null=True, blank=True)
 
     class Meta:
         abstract = True
@@ -338,7 +337,7 @@ class BaseSUSQLModel(BaseSQLModel):
     label = models.CharField(max_length=50, blank=True)
     relative_depth = models.CharField(max_length=50)
     sample_time = models.TimeField()
-    observers = JSONField(null=True, blank=True)
+    observers = models.JSONField(null=True, blank=True)
     current_name = models.CharField(max_length=50)
     tide_name = models.CharField(max_length=50)
     visibility_name = models.CharField(max_length=50)

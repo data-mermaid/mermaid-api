@@ -45,7 +45,7 @@ def mock_covariate_server():
         mock_server = MockHTTPServer(("localhost", port), MockServerRequestHandler)
         mock_server.data = data
         mock_server_thread = Thread(target=mock_server.serve_forever)
-        mock_server_thread.setDaemon(True)
+        mock_server_thread.daemon = True
         mock_server_thread.start()
 
         return f"http://localhost:{port}"

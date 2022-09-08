@@ -1,6 +1,5 @@
 from django.contrib.gis.db import models
-from django.contrib.postgres.fields import JSONField
-from django.utils.translation import ugettext_lazy as _
+from django.utils.translation import gettext_lazy as _
 
 from sqltables import SQLTableArg, SQLTableManager
 from .base import BaseSQLModel, BaseSUSQLModel, sample_event_sql_template
@@ -277,7 +276,7 @@ class BleachingQCSUSQLModel(BaseSUSQLModel):
 
     objects = SQLTableManager()
 
-    sample_unit_ids = JSONField()
+    sample_unit_ids = models.JSONField()
     quadrat_size = models.DecimalField(decimal_places=2, max_digits=6)
     count_genera = models.PositiveSmallIntegerField(default=0)
     count_total = models.PositiveSmallIntegerField(default=0)

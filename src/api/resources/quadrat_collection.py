@@ -26,4 +26,4 @@ class QuadratCollectionFilterSet(SampleUnitFilterSet):
 class QuadratCollectionViewSet(BaseProjectApiViewSet):
     serializer_class = QuadratCollectionSerializer
     queryset = QuadratCollection.objects.all()
-    filter_class = QuadratCollectionFilterSet
+    filterset_class = QuadratCollectionFilterSet

@@ -84,7 +84,7 @@ class PManagementViewSet(ProtectedResourceMixin, BaseProjectApiViewSet):
     serializer_class = PManagementSerializer
     queryset = Management.objects.all()
     project_lookup = "project"
-    filter_class = PManagementFilterSet
+    filterset_class = PManagementFilterSet
     search_fields = [
         "name",
         "name_secondary",

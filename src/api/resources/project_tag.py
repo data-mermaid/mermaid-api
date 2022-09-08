@@ -21,7 +21,7 @@ class ProjectTagViewSet(BaseApiViewSet):
         "GET": []
     }
     permission_classes = [UnauthenticatedReadOnlyPermission]
-    filter_class = ProjectTagFilterSet
+    filterset_class = ProjectTagFilterSet
     serializer_class = ProjectTagSerializer
     pt = ContentType.objects.get(app_label="api", model="project")
     queryset = (

@@ -19,7 +19,7 @@ class NotificationFilterSet(BaseAPIFilterSet):
 class NotificationViewSet(BaseApiViewSet):
     serializer_class = NotificationSerializer
     model = Notification
-    filter_class = NotificationFilterSet
+    filterset_class = NotificationFilterSet
     permission_classes = [IsAuthenticated]
 
     http_method_names = ["get", "head", "delete"]

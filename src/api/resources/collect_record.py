@@ -7,7 +7,7 @@ import uuid
 from django.db import connection, transaction
 from django.http import HttpResponse
 from django.utils import timezone
-from django.utils.translation import ugettext_lazy
+from django.utils.translation import gettext_lazy
 from rest_framework import permissions, status as drf_status
 from rest_framework.decorators import action
 from rest_framework.exceptions import NotFound, ParseError, ValidationError
@@ -71,7 +71,7 @@ class CollectRecordFilterSet(BaseAPIFilterSet):
 class CollectRecordViewSet(BaseProjectApiViewSet):
     serializer_class = CollectRecordSerializer
     queryset = CollectRecord.objects.all().order_by("id")
-    filter_class = CollectRecordFilterSet
+    filterset_class = CollectRecordFilterSet
     permission_classes = BaseProjectApiViewSet.permission_classes + [CollectRecordOwner]
 
     def filter_queryset(self, queryset):

@@ -56,7 +56,7 @@ class ProjectProfileViewSet(BaseProjectApiViewSet):
            ProjectProfileCollectorPermission,
            ProjectDataAdminPermission)
     ]
-    filter_class = ProjectProfileFilterSet
+    filterset_class = ProjectProfileFilterSet
 
     def is_last_admin(self):
         obj = self.get_object()

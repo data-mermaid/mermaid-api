@@ -7,6 +7,68 @@ from sqltables.datastructures import SQLTableArg
 from sqltables.query import SQLTableManager
 
 
+class UserTestModel(models.Model):
+    sql = """
+        SELECT *
+        FROM mermaid_testing_table
+        WHERE category = '%(category)s'
+    """
+    sql_args = dict(category=SQLTableArg(required=True))
+
+    name = models.CharField(max_length=100)
+    age = models.IntegerField()
+    category = models.CharField(max_length=100)
+
+    class Meta:
+        db_table = "mermaid_testing_table_subset"
+        managed = False
+        app_label = "api"
+
+    objects = SQLTableManager()
+
+
+class UserTestModel2(models.Model):
+    sql = """
+        SELECT *
+        FROM mermaid_testing_table2
+    """
+    sql_args = dict()
+
+    name = models.CharField(max_length=100)
+    user = models.ForeignKey("api.TestUserModel", on_delete=models.DO_NOTHING)
+
+    class Meta:
+        db_table = "mermaid_testing_table_subset2"
+        managed = False
+        app_label = "api"
+
+    objects = SQLTableManager()
+
+
+class UserTestModel3(models.Model):
+    sql = """
+        SELECT *
+        FROM mermaid_testing_table
+        WHERE category = '%(category)s'
+        UNION ALL
+        SELECT *
+        FROM mermaid_testing_table
+        WHERE category = '%(category)s'
+    """
+    sql_args = dict(category=SQLTableArg(required=True))
+
+    name = models.CharField(max_length=100)
+    age = models.IntegerField()
+    category = models.CharField(max_length=100)
+
+    class Meta:
+        db_table = "mermaid_testing_table_subset3"
+        managed = False
+        app_label = "api"
+
+    objects = SQLTableManager()
+
+
 @pytest.fixture
 def mermaid_testing_table():
     table_sql = """
@@ -59,76 +121,17 @@ def mermaid_testing_table():
 
 @pytest.fixture
 def user_model_class(mermaid_testing_table):
-    class TestUserModel(models.Model):
-        sql = """
-            SELECT *
-            FROM mermaid_testing_table
-            WHERE category = '%(category)s'
-        """
-        sql_args = dict(category=SQLTableArg(required=True))
-
-        name = models.CharField(max_length=100)
-        age = models.IntegerField()
-        category = models.CharField(max_length=100)
-
-        class Meta:
-            db_table = "mermaid_testing_table_subset"
-            managed = False
-            app_label = "api"
-
-        objects = SQLTableManager()
-
-    return TestUserModel
+    return UserTestModel
 
 
 @pytest.fixture
 def user_model_class2(mermaid_testing_table):
-    class TestUserModel2(models.Model):
-        sql = """
-            SELECT *
-            FROM mermaid_testing_table2
-        """
-        sql_args = dict()
-
-        name = models.CharField(max_length=100)
-        user = models.ForeignKey("api.TestUserModel", on_delete=models.DO_NOTHING)
-
-        class Meta:
-            db_table = "mermaid_testing_table_subset2"
-            managed = False
-            app_label = "api"
-
-        objects = SQLTableManager()
-
-    return TestUserModel2
+    return UserTestModel2
 
 
 @pytest.fixture
 def user_model_multi_parameter_class(mermaid_testing_table):
-    class TestUserModel3(models.Model):
-        sql = """
-            SELECT *
-            FROM mermaid_testing_table
-            WHERE category = '%(category)s'
-            UNION ALL
-            SELECT *
-            FROM mermaid_testing_table
-            WHERE category = '%(category)s'
-        """
-        sql_args = dict(category=SQLTableArg(required=True))
-
-        name = models.CharField(max_length=100)
-        age = models.IntegerField()
-        category = models.CharField(max_length=100)
-
-        class Meta:
-            db_table = "mermaid_testing_table_subset3"
-            managed = False
-            app_label = "api"
-
-        objects = SQLTableManager()
-
-    return TestUserModel3
+    return UserTestModel3
 
 
 @pytest.mark.django_db

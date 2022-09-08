@@ -2,7 +2,7 @@ import uuid
 
 from django.http import HttpResponseBadRequest
 from django.utils.text import get_valid_filename
-from django.utils.translation import ugettext_lazy as _
+from django.utils.translation import gettext_lazy as _
 from rest_condition import Or
 from rest_framework.decorators import action
 from rest_framework_gis.pagination import GeoJsonPagination

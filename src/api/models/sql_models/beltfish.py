@@ -1,6 +1,5 @@
 from django.contrib.gis.db import models
-from django.contrib.postgres.fields import JSONField
-from django.utils.translation import ugettext_lazy as _
+from django.utils.translation import gettext_lazy as _
 
 from sqltables import SQLTableArg, SQLTableManager
 from .base import BaseSQLModel, BaseSUSQLModel, sample_event_sql_template
@@ -13,7 +12,20 @@ class BeltFishObsSQLModel(BaseSUSQLModel):
     sql = f"""
         WITH se AS (
             {sample_event_sql_template}
-        )
+        ),
+        pseudosu_su AS MATERIALIZED (
+            SELECT 
+                pseudosu_id,
+                UNNEST(sample_unit_ids) AS sample_unit_id
+            FROM (
+                SELECT 
+                    uuid_generate_v4() AS pseudosu_id,
+                    array_agg(DISTINCT su.id) AS sample_unit_ids
+                FROM transect_belt_fish su
+                JOIN se ON su.sample_event_id = se.sample_event_id
+                GROUP BY {", ".join(BaseSUSQLModel.transect_su_fields)}
+            ) pseudosu
+        ) 
         SELECT o.id, pseudosu_id,
             {_se_fields},
             {_su_fields},
@@ -49,19 +61,7 @@ class BeltFishObsSQLModel(BaseSUSQLModel):
             RIGHT JOIN transectmethod_transectbeltfish tt ON o.beltfish_id = tt.transectmethod_ptr_id
             JOIN transect_belt_fish su ON tt.transect_id = su.id
             JOIN se ON su.sample_event_id = se.sample_event_id
-            JOIN (
-                SELECT 
-                    pseudosu_id,
-                    UNNEST(sample_unit_ids) AS sample_unit_id
-                FROM (
-                    SELECT 
-                        uuid_generate_v4() AS pseudosu_id,
-                        array_agg(DISTINCT su.id) AS sample_unit_ids
-                    FROM transect_belt_fish su
-                    JOIN se ON su.sample_event_id = se.sample_event_id
-                    GROUP BY {", ".join(BaseSUSQLModel.transect_su_fields)}
-                ) pseudosu
-            ) pseudosu_su ON (su.id = pseudosu_su.sample_unit_id)
+            JOIN pseudosu_su ON (su.id = pseudosu_su.sample_unit_id)
             JOIN vw_fish_attributes f ON o.fish_attribute_id = f.id
             JOIN api_belttransectwidth w ON su.width_id = w.id
             JOIN api_belttransectwidthcondition wc ON (
@@ -316,7 +316,7 @@ class BeltFishSUSQLModel(BaseSUSQLModel):
 
     objects = SQLTableManager()
 
-    sample_unit_ids = JSONField()
+    sample_unit_ids = models.JSONField()
     total_abundance = models.PositiveIntegerField()
     transect_number = models.PositiveSmallIntegerField()
     transect_len_surveyed = models.PositiveSmallIntegerField(
@@ -332,8 +332,8 @@ class BeltFishSUSQLModel(BaseSUSQLModel):
         null=True,
         blank=True,
     )
-    biomass_kgha_by_trophic_group = JSONField(null=True, blank=True)
-    biomass_kgha_by_fish_family = JSONField(null=True, blank=True)
+    biomass_kgha_by_trophic_group = models.JSONField(null=True, blank=True)
+    biomass_kgha_by_fish_family = models.JSONField(null=True, blank=True)
     data_policy_beltfish = models.CharField(max_length=50)
 
     class Meta:
@@ -434,8 +434,8 @@ class BeltFishSESQLModel(BaseSQLModel):
         null=True,
         blank=True,
     )
-    biomass_kgha_by_trophic_group_avg = JSONField(null=True, blank=True)
-    biomass_kgha_by_fish_family_avg = JSONField(null=True, blank=True)
+    biomass_kgha_by_trophic_group_avg = models.JSONField(null=True, blank=True)
+    biomass_kgha_by_fish_family_avg = models.JSONField(null=True, blank=True)
     data_policy_beltfish = models.CharField(max_length=50)
 
     class Meta:

@@ -22,7 +22,7 @@ class FishSizeViewSet(BaseApiViewSet):
     method_authentication_classes = {
         "GET": []
     }
-    filter_class = FishSizeFilterSet
+    filterset_class = FishSizeFilterSet
 
     serializer_class = FishSizeSerializer
     queryset = FishSize.objects.all().order_by('name')
