@@ -14,4 +14,4 @@ python manage.py migrate --noinput
 # python manage.py collectstatic --noinput
 
 # exec "$@"
-gunicorn app.wsgi --bind 0.0.0.0:8000 --timeout 300 --workers 3
+gunicorn app.wsgi --bind 0.0.0.0:8081 --timeout 300 --workers 3
