@@ -47,6 +47,9 @@ build:
 up:
 	docker-compose up -d
 
+logs:
+	@docker-compose logs -f $(API_SERVICE)
+
 start:
 	@make up
 
