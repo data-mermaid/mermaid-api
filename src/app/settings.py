@@ -59,10 +59,11 @@ MAINTENANCE_MODE_IGNORE_SUPERUSER = os.environ.get('MAINTENANCE_MODE_IGNORE_SUPE
 # MAINTENANCE_MODE_REDIRECT_URL = 'https://datamermaid.org/'
 # Other maintenance_mode settings: https://github.com/fabiocaccamo/django-maintenance-mode
 
-ADMINS = [('Datamermaid admin', admin.strip()) for admin in os.environ['ADMINS'].split(',')]
-SUPERUSER = ('Datamermaid superuser', os.environ['SUPERUSER'])
-DEFAULT_DOMAIN_API = os.environ['DEFAULT_DOMAIN_API']
-DEFAULT_DOMAIN_COLLECT = os.environ['DEFAULT_DOMAIN_COLLECT']
+_admins = os.environ.get('ADMINS') or ""
+ADMINS = [('Datamermaid admin', admin.strip()) for admin in _admins.split(',')]
+SUPERUSER = ('Datamermaid superuser', os.environ.get('SUPERUSER'))
+DEFAULT_DOMAIN_API = os.environ.get('DEFAULT_DOMAIN_API')
+DEFAULT_DOMAIN_COLLECT = os.environ.get('DEFAULT_DOMAIN_COLLECT')
 
 # Application definition
 
@@ -229,7 +230,7 @@ MERMAID_API_SIGNING_SECRET = os.environ.get('MERMAID_API_SIGNING_SECRET')
 AWS_BACKUP_BUCKET = os.environ.get('AWS_BACKUP_BUCKET')
 AWS_ACCESS_KEY_ID = os.environ.get('AWS_ACCESS_KEY_ID')
 AWS_SECRET_ACCESS_KEY = os.environ.get('AWS_SECRET_ACCESS_KEY')
-AWS_REGION = os.environ.get('AWS_REGION')
+AWS_REGION = os.environ.get('AWS_REGION') or 'us-east-1'
 S3_DBBACKUP_MAXAGE = 60  # days
 
 EMAIL_HOST = os.environ.get('EMAIL_HOST')
@@ -273,7 +274,7 @@ boto3_client = boto3.client( # TODO Remove, look for references.
     "logs",
     aws_access_key_id=os.environ.get('AWS_ACCESS_KEY_ID'),
     aws_secret_access_key=os.environ.get('AWS_SECRET_ACCESS_KEY'),
-    region_name=os.environ.get('AWS_REGION')
+    region_name=AWS_REGION
 )
 
 # ***************
