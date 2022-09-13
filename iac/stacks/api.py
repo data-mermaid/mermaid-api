@@ -1,3 +1,4 @@
+import os
 from importlib import resources
 from aws_cdk import (
     Stack,
@@ -84,7 +85,8 @@ class ApiStack(Stack):
 
                 "DB_NAME": config.database.name,
                 "DB_HOST": database.instance_endpoint.hostname,
-                "DB_PORT": config.database.port
+                "DB_PORT": config.database.port,
+                "DRF_RECAPTCHA_SECRET_KEY": os.environ.get("DRF_RECAPTCHA_SECRET_KEY") or "abc"
             },
             secrets=api_secrets,
             logging=ecs.LogDrivers.aws_logs(
