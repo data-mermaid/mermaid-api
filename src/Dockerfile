@@ -32,13 +32,17 @@ RUN apt-get install -y --no-install-recommends \
     gdal-bin \
     python3-gdal
 
-ADD . /var/projects/webapp
+RUN pip install --user --upgrade pip
+COPY requirements.txt .
+RUN pip install -r requirements.txt
+
+ADD . .
 RUN chown -R webapp:webapp .
-RUN rm -rf /var/projects/webapp/static
+
+RUN DATABASE_URL='' SECRET_KEY='abc' python manage.py collectstatic --noinput
 
 USER webapp
-RUN pip install --user --upgrade pip
-RUN pip install --no-cache-dir -r requirements.txt
 
-EXPOSE 8080 80
-CMD ["/bin/bash", "/var/projects/webapp/entry.sh" ]
+EXPOSE 8000
+
+ENTRYPOINT ["/var/projects/webapp/entry.sh"]

@@ -28,11 +28,13 @@ services:
         context: ./src
         dockerfile: ./Dockerfile
     image: wcs/mermaid-api:latest
-    # command: [ "/bin/bash", "entry.sh" ]
     volumes:
       - $PWD/src:/var/projects/webapp
     ports:
+      # runserver port
       - 8080:8080
+      # container port
+      - 8000:8000
     env_file:
       - .env
     depends_on:
