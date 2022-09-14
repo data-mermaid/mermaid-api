@@ -119,6 +119,8 @@ freshinstall:
 	@make buildnocache
 	@echo "\n--- Restoring MERMAID database ---\n"
 	@make dbrestore
+	@echo "\n--- Migrate ---\n"
+	@make migrations
 	@echo "\n--- Spinning up new stack ---\n"
 	@make up
 	
