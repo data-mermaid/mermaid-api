@@ -16,9 +16,12 @@ services:
     image: postgis/postgis:13-3.2-alpine
     volumes:
       - pg_data:/var/lib/postgresql/data
+      # copy the sql script to create db/tables
+      - ./sql/init_db.sql:/docker-entrypoint-initdb.d/init_db.sql
     environment:
       POSTGRES_PASSWORD: postgres
       POSTGRES_USER: postgres
+    restart: always
     ports:
       - 5432:5432
     healthcheck:
@@ -33,13 +36,17 @@ services:
         context: ./src
         dockerfile: ./Dockerfile
     image: wcs/mermaid-api:latest
+    working_dir: /code
+    # override the default entrypoint and use runserver (for development)
+    entrypoint: python
+    command: manage.py runserver 0.0.0.0:8080
     volumes:
-      - $PWD/src:/var/projects/webapp
+      - $PWD/src:/code
     ports:
       # runserver port
       - 8080:8080
       # container port
-      - 8081:8081
+      # - 8081:8081
     environment:
       # db
       DB_NAME: mermaid
