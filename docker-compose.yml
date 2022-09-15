@@ -30,14 +30,6 @@ services:
       timeout: 1s
       retries: 10
 
-  pgadmin:
-    image: dpage/pgadmin4
-    environment:
-      PGADMIN_DEFAULT_EMAIL: admin@admin.com
-      PGADMIN_DEFAULT_PASSWORD: postgres
-    ports:
-      - 5050:80
-
   api_service:
     container_name: api_service
     build:

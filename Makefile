@@ -109,6 +109,8 @@ install:
 	@make down
 	@echo "\n--- Building new docker image ---\n"
 	@make build
+	@echo "\n--- Migrate ---\n"
+	@make migrate
 	@echo "\n--- Spinning up new stack ---\n"
 	@make up
 
@@ -117,8 +119,6 @@ freshinstall:
 	@make downnocache
 	@echo "\n--- Building new docker image ---\n"
 	@make buildnocache
-	@echo "\n--- Restoring MERMAID database ---\n"
-	@make dbrestore
 	@echo "\n--- Migrate ---\n"
 	@make migrate
 	@echo "\n--- Spinning up new stack ---\n"
