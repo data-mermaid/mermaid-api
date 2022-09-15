@@ -13,10 +13,6 @@ WORKDIR /var/projects/webapp
 
 RUN groupadd webapps
 RUN useradd -m webapp -G webapps
-# RUN mkdir -p /var/log/webapp/ && chown -R webapp /var/log/webapp/ && chmod -R u+rX /var/log/webapp/
-# RUN mkdir -p /var/run/webapp/ && chown -R webapp /var/run/webapp/ && chmod -R u+rX /var/run/webapp/
-# RUN mkdir -p /etc/gunicorn/
-# ADD ./gunicorn_webapp.py /etc/gunicorn/webapp.py
 
 RUN apt-get update && apt-get upgrade -y
 RUN apt-get install -y --no-install-recommends \
