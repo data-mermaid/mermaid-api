@@ -54,7 +54,7 @@ services:
       # runserver port
       - 8080:8080
       # container port
-      # - 8081:8081
+      # - 80:80
     environment:
       # db
       DB_NAME: mermaid

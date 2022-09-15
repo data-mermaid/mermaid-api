@@ -39,6 +39,6 @@ RUN DATABASE_URL='' SECRET_KEY='abc' python manage.py collectstatic --noinput
 
 USER webapp
 
-EXPOSE 8081
+EXPOSE 80
 
 ENTRYPOINT ["/var/projects/webapp/entry.sh"]
