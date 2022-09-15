@@ -1,41 +1,32 @@
-import csv
 import json
 import logging
-from random import sample
 import uuid
 
-from django.db import connection, transaction
-from django.http import HttpResponse
-from django.utils import timezone
-from django.utils.translation import gettext_lazy
+from django.db import connection
 from rest_framework import permissions, status as drf_status
 from rest_framework.decorators import action
-from rest_framework.exceptions import NotFound, ParseError, ValidationError
+from rest_framework.exceptions import ParseError
+from rest_framework.permissions import SAFE_METHODS
 from rest_framework.response import Response
 
 from .mixins import CreateOrUpdateSerializerMixin
-from ..ingest import ingest_serializers
-from ..ingest.utils import InvalidSchema, ingest
+from ..ingest.utils import (
+    InvalidSchema,
+    ingest,
+    get_ingest_project_choices,
+    get_su_serializer,
+)
 from ..models import (
     PROTOCOL_MAP,
     CollectRecord,
 )
 from ..permissions import ProjectDataAdminPermission, ProjectDataPermission
-from ..submission import utils
-from ..submission.protocol_validations import (
-    BenthicLITProtocolValidation,
-    BenthicPITProtocolValidation,
-    BleachingQuadratCollectionProtocolValidation,
-    FishBeltProtocolValidation,
-    HabitatComplexityProtocolValidation,
-)
 from ..submission.utils import (
     submit_collect_records,
     submit_collect_records_v2,
     validate_collect_records,
     validate_collect_records_v2,
 )
-from ..submission.validations import ERROR, OK, WARN
 from ..utils import truthy
 from .base import BaseAPIFilterSet, BaseAPISerializer, BaseProjectApiViewSet
 
@@ -118,14 +109,10 @@ class CollectRecordViewSet(BaseProjectApiViewSet):
 
         if str(submit_version) == "2":
             output = submit_collect_records_v2(
-                profile,
-                record_ids,
-                CollectRecordSerializer
+                profile, record_ids, CollectRecordSerializer
             )
         else:
-            output = submit_collect_records(
-                profile, record_ids
-            )
+            output = submit_collect_records(profile, record_ids)
 
         return Response(output)
 
@@ -225,7 +212,10 @@ class CollectRecordViewSet(BaseProjectApiViewSet):
             )
         except InvalidSchema as schema_error:
             missing_required_fields = schema_error.errors
-            return Response(f"Missing required fields: {', '.join(missing_required_fields)}", status=400)
+            return Response(
+                f"Missing required fields: {', '.join(missing_required_fields)}",
+                status=400,
+            )
 
         if "errors" in ingest_output:
             errors = ingest_output["errors"]
@@ -235,24 +225,35 @@ class CollectRecordViewSet(BaseProjectApiViewSet):
 
     @action(
         detail=False,
-        methods=["GET"],
+        methods=SAFE_METHODS,
         permission_classes=[ProjectDataAdminPermission],
-        url_path="ingest_schema/(?P<sample_unit>\w+)/csv",
-        url_name="ingest-schemas",
+        url_path="ingest_schema/(?P<sample_unit>\w+)",
+        url_name="ingest-schemas-json",
     )
-    def ingest_schema(self, request, project_pk, sample_unit, *args, **kwargs):
-        csv_column_names = None
-        sample_unit = sample_unit.lower()
-        for serializer in ingest_serializers:
-            if serializer.protocol == sample_unit.lower():
-                csv_column_names = list(serializer.header_map.keys())
-                break
-        
-        if csv_column_names is None:
-            raise NotFound(detail=f"{sample_unit} sample unit not found")
+    def ingest_schema_json(self, request, project_pk, sample_unit, *args, **kwargs):
+        serializer = get_su_serializer(sample_unit)
+        schema = []
+        project_choices = None
+        if project_pk:
+            project_choices = get_ingest_project_choices(project_pk)
+        instance = serializer(project_choices=project_choices, many=True)
+        choice_sets = instance.get_choices_sets()
 
-        response = HttpResponse(content_type="text/csv")
-        response["Content-Disposition"] = f'attachment; filename="{sample_unit}_template.csv"'
-        writer = csv.writer(response)
-        writer.writerow(csv_column_names)
-        return response
+        for label in instance.child.get_schema_labels():
+            fieldname, field = instance.child.get_schemafield(label)
+            if field:
+                fieldname_simple = "__".join(fieldname.split("__")[1:])
+                choices = None
+                if field.field_name in choice_sets and choice_sets[field.field_name]:
+                    choices = [name for name, choice_id in choice_sets[field.field_name].items()]
+
+                field_def = {
+                    "name": fieldname_simple,
+                    "label": label,
+                    "required": field.required,
+                    "help_text": field.help_text,
+                    "choices": choices,
+                }
+                schema.append(field_def)
+
+        return Response(schema, status=200)

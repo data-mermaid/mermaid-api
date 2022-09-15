@@ -95,7 +95,13 @@ def email_superadmin_on_new(sender, instance, created, **kwargs):
     }
     template = "emails/superadmins_new_attribute.html"
 
-    mermaid_email(subject, template, [settings.SUPERUSER[1]], context=context)
+    mermaid_email(
+        subject,
+        template,
+        [settings.SUPERUSER[1]],
+        context=context,
+        reply_to=instance.updated_by.email,
+    )
 
 
 for c in get_subclasses(BaseModel):
