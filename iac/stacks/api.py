@@ -65,7 +65,7 @@ class ApiStack(Stack):
             # command=[""], # Need overiding?
             # entry_point=[""], # Need overiding?
             # user="", # Set in Dockerfile?
-            port_mappings=[ecs.PortMapping(container_port=80)],
+            port_mappings=[ecs.PortMapping(container_port=8081)],
             environment={
                 "ENV": config.env_id,
                 "ENVIRONMENT": config.env_id,
@@ -142,7 +142,7 @@ class ApiStack(Stack):
                 unhealthy_threshold_count=4,
                 timeout=Duration.seconds(10),
                 interval=Duration.seconds(60),
-                port="80"
+                port="8081"
             )
         )
 
