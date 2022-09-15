@@ -8,6 +8,7 @@ from aws_cdk import (
     aws_rds as rds,
     aws_s3 as s3,
     aws_elasticloadbalancingv2 as elb,
+    aws_logs as logs,
 )
 from constructs import Construct
 
@@ -90,8 +91,16 @@ class ApiStack(Stack):
             },
             secrets=api_secrets,
             logging=ecs.LogDrivers.aws_logs(
-                stream_prefix=config.env_id
-            )
+                stream_prefix=config.env_id,
+                log_retention=logs.RetentionDays.ONE_MONTH
+            ),
+            # health_check=elb.HealthCheck(
+            #     command=["CMD-SHELL", "curl --fail http://localhost:80/v1/health/ || exit 1"],
+            #     interval=Duration.seconds(60),
+            #     retries=5,
+            #     timeout=Duration.seconds(10),
+            #     start_period=Duration.seconds(20),
+            # )
         )
 
         service = ecs.FargateService(

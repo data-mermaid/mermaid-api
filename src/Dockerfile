@@ -22,6 +22,7 @@ RUN apt-get install -y --no-install-recommends \
     python3-dev \
     wget \
     vim \
+    curl \
     nano \
     gunicorn \
     postgresql-client-13 \

@@ -136,7 +136,7 @@ runserver:
 # 	manage.py runserver 0.0.0.0:8080
 
 
-shell:
+shell_new:
 	@docker-compose run \
 		--rm \
 		--name api_shell \
@@ -144,6 +144,12 @@ shell:
 		--user=$(CURRENT_UID) \
 		api_service \
 		-c bash
+
+shell:
+	@docker-compose exec \
+		--user=$(CURRENT_UID) \
+		api_service \
+		bash
 
 test:
 	@docker-compose run \
