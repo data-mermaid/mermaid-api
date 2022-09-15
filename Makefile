@@ -120,7 +120,7 @@ freshinstall:
 	@echo "\n--- Restoring MERMAID database ---\n"
 	@make dbrestore
 	@echo "\n--- Migrate ---\n"
-	@make migrations
+	@make migrate
 	@echo "\n--- Spinning up new stack ---\n"
 	@make up
 	
