@@ -136,7 +136,7 @@ class ApiStack(Stack):
             protocol=elb.ApplicationProtocol.HTTP,
             vpc=cluster.vpc,
             health_check=elb.HealthCheck(
-                path="/v1/health/",
+                path="/health/",
                 healthy_http_codes="200",
                 healthy_threshold_count=4,
                 unhealthy_threshold_count=4,
