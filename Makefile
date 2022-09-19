@@ -124,26 +124,18 @@ freshinstall:
 	@echo "\n--- Spinning up new stack ---\n"
 	@make up
 	
+# override the default entrypoint and use runserver (for development)
 runserver:
-	echo "runserver is already running. Try 'make logs' to see stdout"
-
-# @docker-compose run \
-# 	--rm \
-# 	--name api_runserver \
-# 	--entrypoint python \
-# 	--user=$(CURRENT_UID) \
-# 	$(API_SERVICE) \
-# 	manage.py runserver 0.0.0.0:8080
-
-
-shell_new:
 	@docker-compose run \
 		--rm \
-		--name api_shell \
-		--entrypoint bash \
+		--name api_runserver \
+		--workdir /code \
+		--volume $(PWD)/src:/code \
+		--publish 8080:8080 \
+		--entrypoint python \
 		--user=$(CURRENT_UID) \
-		api_service \
-		-c bash
+		$(API_SERVICE) \
+		manage.py runserver 0.0.0.0:8080
 
 shell:
 	@docker-compose exec \
