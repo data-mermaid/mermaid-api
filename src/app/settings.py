@@ -104,7 +104,6 @@ MIDDLEWARE = [
     "api.middleware.APIVersionMiddleware",
 ]
 
-DEBUG = False
 DEBUG_LEVEL = "ERROR"
 _allowed_hosts = os.environ.get("ALLOWED_HOSTS") or ""
 ALLOWED_HOSTS = [host.strip() for host in _allowed_hosts.split(",")]
@@ -121,7 +120,6 @@ if ENVIRONMENT not in ("dev", "prod",):
     def show_toolbar(request):
         return True
 
-    DEBUG = True
     DEBUG_LEVEL = "DEBUG"
     ALLOWED_HOSTS = ['*']
     INSTALLED_APPS.append("debug_toolbar")
