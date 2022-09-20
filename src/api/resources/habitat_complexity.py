@@ -24,4 +24,4 @@ class HabitatComplexityFilterSet(BaseAPIFilterSet):
 class HabitatComplexityViewSet(BaseProjectApiViewSet):
     serializer_class = HabitatComplexitySerializer
     queryset = HabitatComplexity.objects.all()
-    filter_class = HabitatComplexityFilterSet
+    filterset_class = HabitatComplexityFilterSet

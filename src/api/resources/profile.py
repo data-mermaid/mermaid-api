@@ -32,7 +32,7 @@ class ProfileViewSet(BaseApiViewSet):
     serializer_class = ProfileSerializer
     queryset = Profile.objects.all()
     permission_classes = [UnauthenticatedReadOnlyPermission]
-    filter_class = ProfileFilterSet
+    filterset_class = ProfileFilterSet
     search_fields = ['^email', '^first_name', '^last_name', ]
 
     def create(self, request):

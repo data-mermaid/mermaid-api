@@ -27,4 +27,4 @@ class ObsColoniesBleachedViewSet(BaseProjectApiViewSet):
     queryset = ObsColoniesBleached.objects.prefetch_related(
         ObsColoniesBleached.project_lookup
     )
-    filter_class = ObsColoniesBleachedFilterSet
+    filterset_class = ObsColoniesBleachedFilterSet

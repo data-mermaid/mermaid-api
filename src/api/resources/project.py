@@ -180,7 +180,7 @@ class ProjectViewSet(BaseApiViewSet):
         )
     ]
     method_authentication_classes = {"GET": [AnonymousJWTAuthentication]}
-    filter_class = ProjectFilterSet
+    filterset_class = ProjectFilterSet
     search_fields = ["$name", "$sites__country__name"]
 
     def get_queryset(self):

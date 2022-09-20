@@ -25,7 +25,6 @@ def senotes2suset(sample_event, suset_prop, dryrun=False):
                 if sunotes:
                     sunotes = f"{sunotes}{SEP}"
                 su.notes = f"{sunotes}{senotes}"
-                sample_event.notes = ""
 
                 if dryrun:
                     print(
@@ -33,9 +32,14 @@ def senotes2suset(sample_event, suset_prop, dryrun=False):
                     )
                 else:
                     su.save()
-                    sample_event.save()
 
 
 def senotes2sunotes(sample_event, dryrun=False):
     for suset in susets:
         senotes2suset(sample_event, suset, dryrun)
+
+    if dryrun:
+        print(f"se id {sample_event.id} notes delete")
+    else:
+        sample_event.notes = ""
+        sample_event.save()

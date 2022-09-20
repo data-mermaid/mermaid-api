@@ -37,7 +37,7 @@ class ObserverFilterSet(BaseAPIFilterSet):
 class ObserverViewSet(BaseProjectApiViewSet):
     serializer_class = ObserverSerializer
     queryset = Observer.objects.all()
-    filter_class = ObserverFilterSet
+    filterset_class = ObserverFilterSet
     search_fields = ['profile__first_name', 'profile__last_name']
 
     def perform_update(self, serializer):

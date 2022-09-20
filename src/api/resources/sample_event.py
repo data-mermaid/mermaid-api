@@ -53,7 +53,7 @@ class SampleEventFilterSet(BaseAPIFilterSet):
 class SampleEventViewSet(BaseProjectApiViewSet):
     serializer_class = SampleEventSerializer
     queryset = SampleEvent.objects.all()
-    filter_class = SampleEventFilterSet
+    filterset_class = SampleEventFilterSet
 
     def perform_update(self, serializer):
         serializer.save()
