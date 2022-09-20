@@ -6,6 +6,8 @@ from aws_cdk import (
     aws_rds as rds,
     aws_s3 as s3,
     aws_ecs as ecs,
+    aws_kms as kms,
+    aws_logs as logs,
     aws_elasticloadbalancingv2 as elb
 )
 from constructs import Construct
@@ -90,12 +92,32 @@ class CommonStack(Stack):
             block_public_access=s3.BlockPublicAccess.BLOCK_ALL,
         )
 
+        # KMS Key for encrypting logs
+        ecs_exec_kms_key = kms.Key(self, 'ecsExecKmsKey')
+
+        # Pass the KMS key in the `encryptionKey` field to associate the key to the log group
+        ecs_exec_log_group = logs.LogGroup(
+            self, 
+            'ECSExecLogGroup',
+            encryption_key=ecs_exec_kms_key,
+        )
+
+        ecs_exec_config = ecs.ExecuteCommandConfiguration(
+            kms_key=ecs_exec_kms_key,
+            log_configuration=ecs.ExecuteCommandLogConfiguration(
+                cloud_watch_log_group=ecs_exec_log_group,
+                cloud_watch_encryption_enabled=True
+            ),
+            logging=ecs.ExecuteCommandLogging.OVERRIDE
+        )
+
         self.cluster = ecs.Cluster(
             self, 
             "MermaidApiCluster", 
             vpc=self.vpc, 
             container_insights=True,
             enable_fargate_capacity_providers=True,
+            execute_command_configuration=ecs_exec_config
         )
 
         self.load_balancer = elb.ApplicationLoadBalancer(
