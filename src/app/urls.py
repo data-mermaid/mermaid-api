@@ -4,7 +4,6 @@ from django.conf import settings
 from django.contrib import admin
 from django.urls import path
 from rest_framework.schemas import get_schema_view
-from django.contrib.staticfiles.urls import staticfiles_urlpatterns
 
 admin.autodiscover()
 
@@ -26,5 +25,3 @@ urlpatterns += [
 if settings.ENVIRONMENT in ("local",):
     import debug_toolbar
     urlpatterns = [path("__debug__/", include(debug_toolbar.urls))] + urlpatterns
-
-urlpatterns += staticfiles_urlpatterns()

@@ -30,3 +30,4 @@ pytest-cov==2.5.1
 pytest-django==3.8
 requests==2.28.1
 drf-recaptcha==2.2.1
+whitenoise==6.2.0
