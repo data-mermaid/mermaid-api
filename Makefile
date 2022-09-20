@@ -164,3 +164,20 @@ deploy:
 
 diff:
 	cd iac && cdk diff
+
+# -----------------
+# Fargate Maintenance (docker exec)
+# -----------------
+
+cloud_shell:
+ifdef taskid
+	aws ecs execute-command  \
+    --region us-east-1 \
+    --cluster mermaid-api-infra-common-MermaidApiClusterB0854EC6-xitj9XbqTwap \
+    --task $(taskid) \
+    --container MermaidAPI \
+    --command "/bin/bash" \
+    --interactive
+else
+	@echo "Please specify the taskId that you want to connect to. \nie: make cloud_shell taskid=XXX"
+endif
