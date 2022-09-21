@@ -18,10 +18,15 @@ function diff(){
 	if [ "$GITHUB_EVENT_NAME" == "pull_request" ]; then
 		commentWrapper="#### \`cdk diff\` ${commentStatus}
 <details><summary>Show Output</summary>
+
 \`\`\`
 ${output}
 \`\`\`
-</details>"
+
+</details>
+
+*Workflow: \`${GITHUB_WORKFLOW}\`
+"
 
 		payload=$(echo "${commentWrapper}" | jq -R --slurp '{body: .}')
 		commentsURL=$(cat ${GITHUB_EVENT_PATH} | jq -r .pull_request.comments_url)
