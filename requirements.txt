@@ -25,4 +25,3 @@ rest_condition==1.0.3
 simpleflake==0.1.5
 timezonefinder==6.1.1
 watchtower==3.0.0
-aws-cdk-lib==2.29.1
