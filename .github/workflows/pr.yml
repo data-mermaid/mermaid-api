@@ -45,6 +45,7 @@ jobs:
         with:
           cdk_subcommand: 'diff'
           actions_comment: true
+          debug_log: true
         env:
           AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID_CDK }}
           AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY_CDK }}
