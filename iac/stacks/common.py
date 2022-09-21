@@ -160,5 +160,5 @@ def create_cdk_bot_user(self, config: ProjectSettings):
         self, 
         "CICD_Bot",
         user_name="CICD_Bot",
-        managed_policies=[cdk_policy]
     )
+    cicd_bot_user.attach_inline_policy(cdk_policy)
