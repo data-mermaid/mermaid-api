@@ -69,10 +69,6 @@ jobs:
         env:
           AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID_CDK }}
           AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY_CDK }}
-          PYTHONPATH2: ${{ env.GITHUB_WORKSPACE }}
           PYTHONPATH: ${{ github.workspace }}
         run: |
-          echo "$PYTHONPATH"
-          echo "$PYTHONPATH2"
-          cd iac && cdk diff
-          # ci_cd/cdk_diff.sh
+          ci_cd/cdk_diff.sh
