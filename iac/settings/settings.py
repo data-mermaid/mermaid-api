@@ -67,6 +67,7 @@ class DjangoSettings:
     mermaid_management_api_client_secret_name: str = "common/mermaid-api/mermaid-management-api-client-secret-HNVoT0"
     mc_api_key_name: str = "common/mermaid-api/mc-api-key-xSsQOk"
     mc_api_list_id_name: str = "common/mermaid-api/mc-api-list-id-Am5u1G"
+    drf_recaptcha_secret_key_name: str = "common/mermaid-api/drf-recaptcha-secret-key-MdFr2W"
 
 
     def get_secret_object(self, stack: Stack, secret_name: str):

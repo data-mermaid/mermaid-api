@@ -25,7 +25,7 @@ ${output}
 
 </details>
 
-*Workflow: \`${GITHUB_WORKFLOW}\`
+*Workflow: \`${GITHUB_WORKFLOW}\`*
 "
 
 		payload=$(echo "${commentWrapper}" | jq -R --slurp '{body: .}')

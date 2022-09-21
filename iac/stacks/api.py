@@ -55,6 +55,7 @@ class ApiStack(Stack):
             "MERMAID_MANAGEMENT_API_CLIENT_SECRET": ecs.Secret.from_secrets_manager(config.api.get_secret_object(self, config.api.mermaid_management_api_client_secret_name)),
             "MC_API_KEY": ecs.Secret.from_secrets_manager(config.api.get_secret_object(self, config.api.mc_api_key_name)),
             "MC_LIST_ID": ecs.Secret.from_secrets_manager(config.api.get_secret_object(self, config.api.mc_api_list_id_name)),
+            "DRF_RECAPTCHA_SECRET_KEY": ecs.Secret.from_secrets_manager(config.api.get_secret_object(self, config.api.drf_recaptcha_secret_key_name)),
         }
 
         task_definition.add_container(
@@ -87,7 +88,6 @@ class ApiStack(Stack):
                 "DB_NAME": config.database.name,
                 "DB_HOST": database.instance_endpoint.hostname,
                 "DB_PORT": config.database.port,
-                "DRF_RECAPTCHA_SECRET_KEY": os.environ.get("DRF_RECAPTCHA_SECRET_KEY") or "abc"
             },
             secrets=api_secrets,
             logging=ecs.LogDrivers.aws_logs(
