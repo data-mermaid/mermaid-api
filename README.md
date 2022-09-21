@@ -10,8 +10,6 @@ Dev [![CircleCI](https://circleci.com/gh/data-mermaid/mermaid-api/tree/dev.svg?s
 
 - [Django](https://www.djangoproject.com/) (Python)
 - [Gunicorn](https://gunicorn.org/) (wsgi)
-- [Nginx](https://www.nginx.com/) (webserver)
-- [Supervisor](http://supervisord.org/) (process control)
 - [Debian](https://www.debian.org/releases/stretch/) (OS)
 - [Docker](https://www.docker.com/) (container)
 
