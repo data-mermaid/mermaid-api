@@ -2,25 +2,35 @@
 
 This directory contains the IAC for the mermaid-api using the AWS CDK.
 
-> All deployments are to be done through CircleCI (Maybe Github Actions).
+> All deployments are to be done through Github Actions using a branch naming strategy. ie: PRs merged to dev/develop will trigger a cdk deploy and tags will trigger deploys to prod. Similar to what we're doing today in CircleCI.
 
-## Local Setup
+## Local Setup 
 
-The AWS CDK is a NodeJS cli. So it needs to be installed using `npm install aws-cdk@<version>` (or install it globally with `-g`, users choice). The version should match what is in the `cdk/requirements.txt`.
+Note: This is for running `cdk synth` and `cdk diff` commands. Do NOT run `cdk deploy` commands locally. Allow this to be handled by the CD in Github Actions
 
-For the python packages, there is a `cdk/requirements.txt`, so from this directory run `pip install -r requirements.txt` (assuming your venv is active).
+### Prerequisites
+
+- Node
+- Pip
+
+### Installation
+
+Activate your virtual environment and run the following script to install the CDK CLI and it's python libraries: 
+- `./install_cdk.sh`
 
 ## Settings
 
-Each deployment environment is configured using a settings dataclass located in `cdk/settings/`. See `cdk/settings/dev.py` and `cdk/settings/prod.py` for examples.
+Each deployment environment is configured using a settings dataclass located in `iac/settings/`. See `iac/settings/dev.py` and `iac/settings/prod.py` for examples.
 
-The default behaviour for switching between environments can be found in `cdk/settings/__init__.py`, and works as follows:
+The default behaviour for switching between environments can be found in `iac/settings/__init__.py`, and works as follows:
 
-- If the branch name is `main`, then us the production environment settings
+- If the branch name is `main`, then use the production environment settings
 - If the branch name is NOT `main`, then use the development environment settings.
+
+## Diff
+
+You can run a `cdk diff` from this directory and see the changes that will be applied.
 
 ## Deployment
 
-Whether a deployment is performed is done through the CICD configuration.
-
-Each deployment will be prefixed with the branch name.
+This should be handled through the CI/CD configuration.

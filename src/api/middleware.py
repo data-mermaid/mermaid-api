@@ -14,8 +14,9 @@ class APIVersionMiddleware(MiddlewareMixin):
         return response
 
 
-# This is not working as expected. Still returns "ok", not "OK",
-# so it seems to be getting to the endpoint.
+# This /health/ endpoint bypasses all other middleware. This is required
+# to allow the Application Load Balancer (ALB) to determine health on the
+# targets in the Target Group
 class HealthEndpointMiddleware(MiddlewareMixin):
     def process_request(self, request):
         if request.META["PATH_INFO"] == "/health/":

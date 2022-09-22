@@ -5,7 +5,7 @@ from iac.stacks.api import ApiStack
 from iac.settings import PROJECT_SETTINGS
 
 tags = {
-    "Owner": "team@mycompany.com",  # TODO: Update email
+    "Owner": "sysadmin@datamermaid.org",
     "Environment": PROJECT_SETTINGS.env_id,
     "Git Branch": PROJECT_SETTINGS.branch_name,
 }

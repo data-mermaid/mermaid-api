@@ -105,8 +105,3 @@ ci_cd/VERSION.txt
 src/VERSION.txt
 src/growthform/
 src/data/
-
-# Node (for CDK)
-package.json
-package-lock.json
-node_modules/

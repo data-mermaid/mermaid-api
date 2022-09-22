@@ -62,9 +62,6 @@ class ApiStack(Stack):
             image=ecs.ContainerImage.from_asset(
                 directory="../src/", file="Dockerfile"
             ),
-            # command=[""], # Need overiding?
-            # entry_point=[""], # Need overiding?
-            # user="", # Set in Dockerfile?
             port_mappings=[ecs.PortMapping(container_port=8081)],
             environment={
                 "ENV": config.env_id,
