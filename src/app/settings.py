@@ -38,17 +38,19 @@ SECRET_KEY = os.environ.get('SECRET_KEY')
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = ENVIRONMENT not in ("dev", "prod",)
 
+# Setup ALLOWED_HOSTS
 if ENVIRONMENT in ('dev', 'prod'):
-    ALLOWED_HOSTS = [host.strip() for host in os.environ['ALLOWED_HOSTS'].split(',')]
+    _allowed_hosts = os.environ.get("ALLOWED_HOSTS") or ""
+    ALLOWED_HOSTS = [host.strip() for host in _allowed_hosts.split(",")]
+
+    # Look for Fargate IP, for health checks.
+    METADATA_URI = os.getenv('ECS_CONTAINER_METADATA_URI', None)
+    if METADATA_URI:
+        container_metadata = requests.get(METADATA_URI).json()
+        ALLOWED_HOSTS.append(container_metadata['Networks'][0]['IPv4Addresses'][0])
+
 else:
     ALLOWED_HOSTS = ['*']
-
-# Look for Fargate IP, for health checks.
-METADATA_URI = os.getenv('ECS_CONTAINER_METADATA_URI', None)
-if METADATA_URI:
-    container_metadata = requests.get(METADATA_URI).json()
-    ALLOWED_HOSTS.append(container_metadata['Networks'][0]['IPv4Addresses'][0])
-print(f'ALOWED HOSTS: {ALLOWED_HOSTS}')
 
 # Set to True to prevent db writes and return 503
 MAINTENANCE_MODE = os.environ.get('MAINTENANCE_MODE') == 'True' or False
@@ -107,8 +109,6 @@ MIDDLEWARE = [
 ]
 
 DEBUG_LEVEL = "ERROR"
-_allowed_hosts = os.environ.get("ALLOWED_HOSTS") or ""
-ALLOWED_HOSTS = [host.strip() for host in _allowed_hosts.split(",")]
 CONN_MAX_AGE = None
 CORS_ALLOW_ALL_ORIGINS = True
 CORS_ALLOW_METHODS = list(default_methods) + ["HEAD"]
@@ -123,7 +123,6 @@ if ENVIRONMENT not in ("dev", "prod",):
         return True
 
     DEBUG_LEVEL = "DEBUG"
-    ALLOWED_HOSTS = ['*']
     INSTALLED_APPS.append("debug_toolbar")
     MIDDLEWARE.append("debug_toolbar.middleware.DebugToolbarMiddleware")
     DEBUG_TOOLBAR_CONFIG = {"SHOW_TOOLBAR_CALLBACK": show_toolbar}

@@ -56,7 +56,6 @@ services:
       RESTORE: local
       BACKUP: local
       DEBUG: "True"
-      ALLOWED_HOSTS: "*"
       SUPERUSER: me@mydomain.com
       ADMINS: me@mydomain.com
 
