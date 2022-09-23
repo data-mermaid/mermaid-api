@@ -9,14 +9,9 @@ from rest_framework.fields import empty
 from rest_framework.serializers import ListSerializer, Serializer
 
 from .. import utils
-from ..fields import LazyChoiceField
-from ..models import CollectRecord, SampleEvent
-from ..resources.sample_event import SampleEventSerializer
+from ..models import CollectRecord
 
-__all__ = [
-    "CollectRecordCSVListSerializer",
-    "CollectRecordCSVSerializer"
-]
+__all__ = ["CollectRecordCSVListSerializer", "CollectRecordCSVSerializer"]
 
 
 class CollectRecordCSVListSerializer(ListSerializer):
@@ -38,11 +33,7 @@ class CollectRecordCSVListSerializer(ListSerializer):
             data[field_name] = [s.strip() for s in val.split(",")]
 
     def map_column_names(self, row):
-        header_map = self.child.header_map
-        return {
-            (header_map[k.strip()] if k.strip() in header_map else k): v
-            for k, v in row.items()
-        }
+        return {self.child.get_schemafield(k)[0]: v for k, v in row.items()}
 
     def assign_choices(self, row, choices_sets):
         for name, field in self.child.fields.items():
@@ -52,6 +43,7 @@ class CollectRecordCSVListSerializer(ListSerializer):
                 continue
             try:
                 val = self._lower(val)
+                choices = {label.lower(): value for label, value in choices.items()}
                 row[name] = choices.get(val)
             except (ValueError, TypeError):
                 row[name] = None
@@ -70,9 +62,6 @@ class CollectRecordCSVListSerializer(ListSerializer):
             row["data__sample_event__sample_date__day"],
         )
 
-    def get_sample_event_time(self, row):
-        return row.get(f"data__{self.child.sample_unit}__sample_time") or None
-
     def remove_extra_data(self, row):
         field_names = set(self.child.fields.keys())
         row_keys = set(row.keys())
@@ -87,7 +76,7 @@ class CollectRecordCSVListSerializer(ListSerializer):
         return val
 
     def _get_reverse_choices(self, field):
-        return dict((self._lower(v), k) for k, v in field.choices.items())
+        return dict((v, k) for k, v in field.choices.items())
 
     def get_choices_sets(self):
         choices = dict()
@@ -117,11 +106,6 @@ class CollectRecordCSVListSerializer(ListSerializer):
         ), "protocol is required serializer property"
 
         assert (
-            hasattr(self.child, "header_map") is True
-            or self.child.header_map is not None
-        ), "header_map is a required serializer property"
-
-        assert (
             hasattr(self.child, "error_row_offset") is True
             or isinstance(self.child.error_row_offset, int) is False
         ), "error_row_offset is must be an int"
@@ -132,7 +116,10 @@ class CollectRecordCSVListSerializer(ListSerializer):
             error_row_offset = 1
 
         fmt_rows = []
-        choices_sets = self.get_choices_sets()
+        # Handle multiple-select project choices separately
+        choices_sets = {
+            k: v for k, v in self.get_choices_sets().items() if k != "data__observers"
+        }
         protocol = self.child.protocol
         self._row_index = dict()
         for n, row in enumerate(data):
@@ -142,9 +129,6 @@ class CollectRecordCSVListSerializer(ListSerializer):
             fmt_row["id"] = pk
             fmt_row["stage"] = CollectRecord.SAVED_STAGE
             fmt_row["data__sample_event__sample_date"] = self.get_sample_event_date(
-                fmt_row
-            )
-            fmt_row[f"data__{self.child.sample_unit}__sample_time"] = self.get_sample_event_time(
                 fmt_row
             )
             fmt_row["data__protocol"] = protocol
@@ -260,11 +244,6 @@ class CollectRecordCSVSerializer(Serializer):
     sample_unit = None
     observations_fields = None
     error_row_offset = 1
-    header_map = {}
-
-    reverse_header_map = {
-        "data__sample_event__sample_date": "Sample date: Year *, Sample date: Month *, Sample date: Day *",
-    }
 
     # By Default:
     # - required fields are used
@@ -273,26 +252,27 @@ class CollectRecordCSVSerializer(Serializer):
     additional_group_fields = []
     excluded_group_fields = ["id"]
 
+    # Inheritors can declare 'composite' fields, which map from the actual field name
+    # to a list of suffixes corresponding in the same order to comma-separated labels
+    # stored in the field's `label` field. Example:
+    #     composite_fields = {"data__sample_event__sample_date": ["year", "month", "day"]}
+    composite_fields = []
+
     # PROJECT RELATED CHOICES
     project_choices = {
         "data__sample_event__site": None,
         "data__sample_event__management": None,
+        "data__observers": None,
     }
 
-    # FIELDS
+    # Fields common to all ingestion serializers, excluded from schema definition.
+    # All fields declared in inheritors will be used for schema generation and validation;
+    # the order of those field declarations is preserved in csv headers and json schema lists.
     id = serializers.UUIDField(format="hex_verbose")
     stage = serializers.IntegerField()
     project = serializers.UUIDField(format="hex_verbose")
     profile = serializers.UUIDField(format="hex_verbose")
     data__protocol = serializers.CharField(required=True, allow_blank=False)
-
-    data__sample_event__site = serializers.CharField()
-    data__sample_event__management = serializers.CharField()
-    data__sample_event__sample_date = serializers.DateField()
-
-    data__observers = serializers.ListField(
-        child=serializers.CharField(), allow_empty=False
-    )
 
     class Meta:
         list_serializer_class = CollectRecordCSVListSerializer
@@ -340,7 +320,7 @@ class CollectRecordCSVSerializer(Serializer):
         return super().run_validation(data)
 
     def validate_data__observers(self, val):
-        project_profiles = self.project_choices.get("project_profiles")
+        project_profiles = self.project_choices.get("data__observers")
         val = val or []
         for email in val:
             if email.lower() not in project_profiles:
@@ -361,7 +341,6 @@ class CollectRecordCSVSerializer(Serializer):
                 node[path] = val
         else:
             if len(field_path) >= 1:
-
                 self.create_path(field_path, node[path], val)
             else:
                 node[path] = val
@@ -378,7 +357,7 @@ class CollectRecordCSVSerializer(Serializer):
 
         # Need to serialize observers after validation to avoid
         # unique id errors
-        project_profiles = self.project_choices.get("project_profiles")
+        project_profiles = self.project_choices.get("data__observers")
         ob_emails = output["data"]["observers"]
         output["data"]["observers"] = [
             project_profiles[ob_email.lower()]
@@ -388,17 +367,48 @@ class CollectRecordCSVSerializer(Serializer):
 
         return output
 
-    def reverse_kv_lookup(self, lookup):
-        lookup = dict(zip(lookup.values(), lookup.keys()))
-        lookup.update(self.reverse_header_map or dict())
-        return lookup
+    def get_schemafields(self):
+        base_csv_serializer_fields = self.__class__.__mro__[1]().fields
+        return {
+            k: v for k, v in self.fields.items() if k not in base_csv_serializer_fields
+        }
+
+    def get_field_labels(self, field):
+        return [
+            f"{label} *" if field.required else label
+            for label in field.label.split(",")
+        ]
+
+    def get_schema_labels(self):
+        schema_labels = []
+        for fieldname, field in self.get_schemafields().items():
+            labels = self.get_field_labels(field)
+            schema_labels.extend(labels)
+        return schema_labels
+
+    def get_schemafield_name(self, field, header):
+        fieldname = getattr(field, "field_name", "unknown_field")
+        if fieldname in self.composite_fields:
+            suffix = "__"
+            for n, label in enumerate(self.get_field_labels(field)):
+                if label in header:
+                    suffix = f"{suffix}{self.composite_fields[field.field_name][n]}"
+            fieldname = f"{fieldname}{suffix}"
+        return fieldname
+
+    def get_schemafield(self, label):
+        schema_fields = self.get_schemafields()
+        for fieldname, field in schema_fields.items():
+            if label.strip() in self.get_field_labels(field):
+                fieldname = self.get_schemafield_name(field, label)
+                return fieldname, field
+        return label, None
 
     def format_error(self, record_errors):
         fmt_errs = dict()
-        field_map = self.reverse_kv_lookup(self.header_map)
         for k, v in record_errors.items():
-            display = field_map.get(k) or k
-            fmt_errs[display] = {"description": v}
+            fieldname, field = self.get_schemafield(k)
+            fmt_errs[fieldname] = {"description": v}
         return fmt_errs
 
     @property
