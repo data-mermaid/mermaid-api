@@ -2,6 +2,7 @@ Django==3.2.15
 auth0-python==3.23.1
 boto3==1.24.57
 django-cors-headers==3.13.0
+django-cors-middleware==1.5.0
 django-debug-toolbar==3.6.0
 django-maintenance-mode==0.16.3
 django-taggit==3.0.0
