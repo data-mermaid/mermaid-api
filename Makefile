@@ -143,3 +143,14 @@ test:
 		--user=$(CURRENT_UID) \
 		$(API_SERVICE) \
 		-v --no-migrations api/tests
+
+# -----------------
+# CDK
+# -----------------
+deploy:
+	cd iac && cdk deploy --require-approval never dev-mermaid-api-django
+# cdk deploy --require-approval never mermaid-api-infra-common
+# cdk deploy --require-approval never --all
+
+diff:
+	cd iac && cdk diff
