@@ -2,6 +2,7 @@ import inspect
 import itertools
 import json
 import math
+from collections import defaultdict
 from datetime import date, datetime
 
 from django.contrib.gis.geos import Polygon
@@ -10,7 +11,7 @@ from django.contrib.postgres.search import TrigramSimilarity
 from django.core.exceptions import ObjectDoesNotExist
 from django.db.models import Q
 from django.utils import timezone
-from django.utils.dateparse import parse_datetime
+from django.utils.dateparse import parse_date, parse_datetime
 from django.utils.translation import gettext as _
 from rest_framework.exceptions import ParseError
 
@@ -29,6 +30,7 @@ from api.models import (
     Management,
     Observer,
     QuadratCollection,
+    QuadratTransect,
     Region,
     Site,
 )
@@ -1257,4 +1259,186 @@ class QuadratCollectionValidation(DataValidation):
                 if transect_method.protocol == protocol:
                     return self.error(self.identifier, self.DUPLICATE_MSG)
 
+        return self.ok(self.identifier)
+
+class QuadratTransectValidation(DataValidation):
+    identifier = "quadrat_transect"
+    INVALID_DATA = "invalid_quadrat_transect"
+    DUPLICATE_QUADRAT_TRANSECT = "duplicate_quadrat_transect"
+
+    def _get_query_args(self):
+        data = self.data or {}
+        sample_event = data.get("sample_event") or {}
+        quadrat_transect = data.get("quadrat_transect") or {}
+        label = quadrat_transect.get("label") or ""
+        number = quadrat_transect.get("number") or None
+        site = sample_event.get("site") or None
+        management = sample_event.get("management") or None
+        sample_date = sample_event.get("sample_date") or None
+        depth =  quadrat_transect.get("depth") or None
+        observers = data.get("observers") or []
+        profiles = [o.get("profile") for o in observers]
+
+        try:
+            number = int(number)
+            check_uuid(site)
+            check_uuid(management)
+            float(depth)
+
+            if parse_date(f"{sample_date}") is None:
+                raise ValueError()
+
+            for profile in profiles:
+                _ = check_uuid(profile)
+        except (ValueError, TypeError, ParseError) as e:
+            raise ParseError() from e
+
+        return {
+            "sample_event__site": site,
+            "sample_event__management": management,
+            "sample_event__sample_date": sample_date,
+            "number": number,
+            "label": label,
+            "depth": depth,
+        }, profiles
+
+    def _check_for_duplicate_transect_methods(self, transect_methods, protocol):
+        for transect_method in transect_methods:
+            if transect_method.protocol == protocol:
+                return self.error(
+                    self.identifier,
+                    self.DUPLICATE_QUADRAT_TRANSECT,
+                    data={"duplicate_transect_method": str(transect_method.pk)}
+                )
+        return OK
+
+    def validate_duplicate(self):
+        data = self.data or {}
+        protocol = data.get("protocol")
+
+        try:
+            qry, profiles = self._get_query_args()
+        except ParseError:
+            return ERROR, self.INVALID_DATA
+
+        queryset = QuadratTransect.objects.select_related().filter(**qry)
+
+        for profile in profiles:
+            queryset = queryset.filter(benthic_photo_quadrat_transect_method__observers__profile_id=profile)
+
+        for result in queryset:
+            transect_methods = get_related_transect_methods(result)
+            duplicate_check = self._check_for_duplicate_transect_methods(
+                transect_methods, protocol
+            )
+            if duplicate_check != OK:
+                return duplicate_check
+        return self.ok(self.identifier)
+
+class ObsBenthicPhotoQuadratValidation(DataValidation, BenthicAttributeMixin):
+    identifier = "obs_benthic_photo_quadrats"
+    AttributeModelClass = BenthicAttribute
+    attribute_key = "attribute"
+    observations_key = "obs_benthic_photo_quadrats"
+    MIN_OBS_COUNT_WARN = 5
+    MAX_OBS_COUNT_WARN = 200
+
+    TOO_FEW_OBS = f"Fewer than {MIN_OBS_COUNT_WARN} observations"
+    TOO_MANY_OBS = f"Greater than {MAX_OBS_COUNT_WARN} observations"
+    INVALID_NUMBER_POINTS = "Invalid number of points per quadrat"
+    DIFFERENT_NUMBER_OF_QUADRATS = "Defined number of quadrats does not match"
+    MISSING_QUADRAT_NUMBERS_TMPL = "Missing quadrat numbers {}"
+    MIN_OBS_COUNT_TMPL = "Fewer than {} observations"
+    MAX_OBS_COUNT_TMPL = "Greater than or equal to {} observations"
+
+    def validate_observation_count(self):
+        observations = self.data.get(self.attribute_key) or []
+        count = len(observations)
+        if count < self.MIN_OBS_COUNT_WARN:
+            return self.warning(
+                self.identifier, 
+                str(_(self.MIN_OBS_COUNT_TMPL.format(self.MIN_OBS_COUNT_WARN)))
+            )
+
+        elif count >= self.MAX_OBS_COUNT_WARN:
+            return self.warning(
+                self.identifier,
+                str(_(self.MAX_OBS_COUNT_TMPL.format(self.MAX_OBS_COUNT_WARN)))
+            )
+
+        return self.ok(self.identifier)
+
+    
+    def validate_points_per_quadrat(self):
+        quadrat_transect = self.data.get("quadrat_transect") or {}
+        observations = self.data.get(self.observations_key) or []
+        num_points_per_quadrat = cast_int(quadrat_transect.get("num_points_per_quadrat"))
+        
+        quadrat_number_groups = defaultdict(int)
+        for obs in observations:
+            quadrat_number = obs.get("quadrat_number")
+            try:
+                num_points = cast_int(obs.get("num_points"))
+            except (TypeError, ValueError):
+                continue
+
+            if quadrat_number is None:
+                continue
+            quadrat_number_groups[quadrat_number] += num_points
+
+        invalid_quadrat_numbers = []
+        for qn, pnt_cnt in quadrat_number_groups.items():
+            if pnt_cnt != num_points_per_quadrat:
+                invalid_quadrat_numbers.append(qn)
+
+        if len(invalid_quadrat_numbers) > 0:
+            return self.warning(self.identifier, self.INVALID_NUMBER_POINTS)
+
+
+        return self.ok(self.identifier)
+    
+    def validate_quadrat_count(self):
+        quadrat_transect = self.data.get("quadrat_transect") or {}
+        observations = self.data.get(self.observations_key) or []
+        num_quadrats = cast_int(quadrat_transect.get("num_quadrats"))
+
+        quadrat_numbers = {
+            cast_int(o.get("quadrat_number"))
+            for o in observations
+        }
+
+        if len(quadrat_numbers) != num_quadrats:
+            return self.warning(self.identifier, self.DIFFERENT_NUMBER_OF_QUADRATS)
+
+        return self.ok(self.identifier)
+    
+    def validate_quadrat_number_sequence(self):
+        quadrat_transect = self.data.get("quadrat_transect") or {}
+        observations = self.data.get(self.observations_key) or []
+        num_quadrats = cast_int(quadrat_transect.get("num_quadrats")) or 0
+        quadrat_number_start = cast_int(quadrat_transect.get("quadrat_number_start")) or 1
+
+        quadrat_numbers = []
+        for o in observations:
+            quadrat_number = o.get("quadrat_number")
+            if quadrat_number is None:
+                continue
+            quadrat_numbers.append(quadrat_number)
+        quadrat_numbers = set(quadrat_numbers)
+
+        quadrat_number_seq = [
+            i for i in range(quadrat_number_start, quadrat_number_start + num_quadrats)
+        ]
+
+        missing_quadrat_numbers = [
+            qn for qn in quadrat_number_seq if qn not in quadrat_numbers
+        ]
+
+        if missing_quadrat_numbers:
+            return self.warning(
+                self.identifier,
+                self.MISSING_QUADRAT_NUMBERS_TMPL.format(", ".join(str(n) for n in missing_quadrat_numbers)),
+                data={"missing_quadrat_numbers": missing_quadrat_numbers}
+            )
+            
         return self.ok(self.identifier)
