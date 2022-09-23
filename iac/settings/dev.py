@@ -8,7 +8,7 @@ from iac.settings.settings import DatabaseSettings, ProjectSettings, DjangoSetti
 DEV_ENV_ID = "dev"
 DEV_SETTINGS = ProjectSettings(
     cdk_env=Environment(
-        account=os.getenv("DEV_AWS_ACCT", None),
+        account=os.getenv("DEV_AWS_ACCT", "554812291621"),
         region=os.getenv("DEV_AWS_REGION", "us-east-1"),
     ),
     env_id=DEV_ENV_ID,
