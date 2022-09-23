@@ -327,17 +327,18 @@ CACHES = {
     }
 }
 
-# NOTE not required in ECS
-# if ENVIRONMENT in ("dev", "prod"):
-#     LOGGING["handlers"]["watchtower"] = {
-#         'level': DEBUG_LEVEL,
-#         'class': 'watchtower.CloudWatchLogHandler',
-#         'formatter': 'file',
-#         'log_group': '{}-mermaid-api'.format(ENVIRONMENT),
-#         'use_queues': True,
-#         'boto3_client': boto3_client
-#     }
-#     LOGGING["loggers"][""]["handlers"].append("watchtower")
+# NOTE this is not required in ECS. I do a check ealier on to see if the
+# METADATA_URI env var is set from ECS
+if ENVIRONMENT in ("dev", "prod") and METADATA_URI is None:
+    LOGGING["handlers"]["watchtower"] = {
+        'level': DEBUG_LEVEL,
+        'class': 'watchtower.CloudWatchLogHandler',
+        'formatter': 'file',
+        'log_group': '{}-mermaid-api'.format(ENVIRONMENT),
+        'use_queues': True,
+        'boto3_client': boto3_client
+    }
+    LOGGING["loggers"][""]["handlers"].append("watchtower")
 
 ## SIMPLEQ SETTINGS
 
