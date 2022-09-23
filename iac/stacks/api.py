@@ -60,7 +60,7 @@ class ApiStack(Stack):
         task_definition.add_container(
             id="MermaidAPI",
             image=ecs.ContainerImage.from_asset(
-                directory="../src/", file="Dockerfile.ecs"
+                directory="../src/", file="Dockerfile"
             ),
             port_mappings=[ecs.PortMapping(container_port=8081)],
             environment={

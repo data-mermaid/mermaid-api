@@ -35,7 +35,7 @@ services:
     container_name: api_service
     build:
         context: .
-        dockerfile: ./src/Dockerfile.ecs
+        dockerfile: Dockerfile.ecs
     image: wcs/mermaid-api:latest
     ports:
       - 8081:8081
