@@ -19,8 +19,15 @@ services:
     environment:
       POSTGRES_PASSWORD: postgres
       POSTGRES_USER: postgres
+    restart: always
     ports:
       - 5432:5432
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres"]
+      start_period: 60s
+      interval: 5s
+      timeout: 3s
+      retries: 10
 
   api_service:
     container_name: api_service
@@ -70,5 +77,7 @@ services:
     env_file:
       - .secrets.env
     depends_on:
-      - api_db
-      - sqs
+      api_db:
+        condition: service_healthy
+      sqs:
+        condition: service_started
