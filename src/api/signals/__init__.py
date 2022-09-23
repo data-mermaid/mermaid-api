@@ -261,6 +261,7 @@ def notify_new_project_user(sender, instance, created, **kwargs):
         "admin_profile": instance.updated_by,
     }
     if instance.profile.num_account_connections == 0:
+        # add content to template to tell new user what to do
         template = "emails/new_user_added_to_project.html"
     else:
         template = "emails/user_added_to_project.html"
