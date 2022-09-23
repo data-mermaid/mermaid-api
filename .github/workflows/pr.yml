@@ -1,0 +1,53 @@
+name: pr
+
+on:
+  pull_request:
+    branches:
+      - dev
+
+env:
+  CDK_VERSION: 2.29.1
+  ENV: dev
+  AWS_DEFAULT_REGION: us-east-1
+
+jobs:
+   
+  cdk-diff:
+    # environment: dev
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/setup-node@v3
+        with:
+          node-version: '16'
+      
+      - name: Setup Python
+        uses: actions/setup-python@v2
+        with:
+          python-version: "3.10"
+
+      - uses: actions/checkout@v3
+      
+      - name: Install CDK
+        run: |
+          iac/install_cdk.sh
+
+      # - name: Cache CDK out
+      #   uses: actions/cache@v2
+      #   with:
+      #     path: |
+      #       iac/cdk.out/
+      #     key: cdk-out-dev-${{ steps.get-date.outputs.date }}
+      #     restore-keys: |
+      #       cdk-out-dev-
+      
+      - name: CDK Diff
+        env:
+          AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID_CDK }}
+          AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY_CDK }}
+          PYTHONPATH: ${{ github.workspace }}
+          GITHUB_EVENT_NAME: ${{ github.event_name }}
+          GITHUB_EVENT_PATH: ${{ github.event_path }}
+          GITHUB_TOKEN: ${{ github.token }}
+          GITHUB_WORKFLOW: ${{ github.workflow }}
+        run: |
+          iac/cdk_diff.sh
