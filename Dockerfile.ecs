@@ -11,9 +11,7 @@ ENV PATH="/home/webapp/.local/bin:${PATH}"
 
 WORKDIR /var/projects/webapp
 
-RUN groupadd webapps
-RUN useradd -m webapp -G webapps
-
+# Install OS dependencies
 RUN apt-get update && apt-get upgrade -y
 RUN apt-get install -y --no-install-recommends \
     gnupg \
@@ -28,18 +26,22 @@ RUN apt-get install -y --no-install-recommends \
     postgresql-client-13 \
     gdal-bin \
     python3-gdal
+RUN pip install --upgrade pip
 
-RUN pip install --user --upgrade pip
+# Install APP dependencies
 COPY requirements.txt .
 RUN pip install -r requirements.txt
 
-ADD . .
-RUN chown -R webapp:webapp .
+# Add src code
+ADD ./src .
 
+# run collectstatic and keep the static files INSIDE the image
 RUN DATABASE_URL='' SECRET_KEY='abc' python manage.py collectstatic --noinput
 
+# create user (we don't want to run as root)
+RUN useradd -m webapp
 USER webapp
 
 EXPOSE 8081
 
-ENTRYPOINT ["/var/projects/webapp/entry.sh"]
+ENTRYPOINT ["/var/projects/webapp/docker-entry.sh"]
