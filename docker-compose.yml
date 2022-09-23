@@ -35,12 +35,10 @@ services:
     container_name: api_service
     build:
         context: .
-        dockerfile: Dockerfile
+        dockerfile: Dockerfile.ecs
     image: wcs/mermaid-api:latest
-    volumes:
-      - $PWD/src:/var/projects/webapp
     ports:
-      - 8080:8080
+      - 8081:8081
     environment:
       # db
       DB_NAME: mermaid
