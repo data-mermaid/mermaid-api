@@ -1,3 +1,4 @@
+import json
 import uuid
 
 from django.urls import reverse
@@ -76,19 +77,36 @@ def test_create_collect_record(db_setup, api_client2, project1, profile2):
     assert CollectRecord.objects.filter(id=response_data["id"]).exists()
 
 
-def test_ingest_schemas(api_client1, project1):
+def test_ingest_schemas_json(api_client1, project1):
     sample_units = list(PROTOCOL_MAP.keys())
     serializers = {i.protocol: i for i in ingest_serializers}
     for sample_unit in sample_units:
         url = reverse(
-            "collectrecords-ingest-schemas",
+            "collectrecords-ingest-schemas-json",
             kwargs={
                 "project_pk": str(project1.pk),
                 "sample_unit": sample_unit
             }
         )
         response = api_client1.get(url)
+        data = json.loads(response.content)
+        serializer = serializers[sample_unit]
+        labels = serializer().get_schema_labels()
+        response_labels = [field["label"] for field in data]
+        assert response_labels == labels
+
+
+def test_ingest_schemas_csv(api_client1):
+    sample_units = list(PROTOCOL_MAP.keys())
+    serializers = {i.protocol: i for i in ingest_serializers}
+    for sample_unit in sample_units:
+        url = reverse(
+            "ingest-schemas-csv",
+            kwargs={"sample_unit": sample_unit}
+        )
+        response = api_client1.get(url)
         data = response.content.decode('utf-8')
         csv_columns = data.replace("\r\n", "").split(",")
         serializer = serializers[sample_unit]
-        assert csv_columns == list(serializer.header_map.keys())
+        labels = serializer().get_schema_labels()
+        assert csv_columns == labels

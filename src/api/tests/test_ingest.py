@@ -99,6 +99,7 @@ def test_fishbelt_ingest(
     assert fishbelt_transect.get("visibility") == str(visibility1.id)
     assert fishbelt_transect.get("relative_depth") == str(relative_depth1.id)
     assert fishbelt_transect.get("notes") == "SU notes"
+    assert str(fishbelt_transect.get("sample_time")) == "11:00:00"
 
     assert sample_event.get("site") == str(site1.id)
     assert sample_event.get("management") == str(management1.id)
