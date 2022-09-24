@@ -14,6 +14,9 @@ def _get_mermaid_email_content(template, context):
     template_dir = settings.TEMPLATES[0]["DIRS"][0]
     template_html = f"{path}.html"
     template_text = f"{path}.txt"
+    context = context or {}
+    context["timestamp"] = datetime.datetime.utcnow().replace(microsecond=0).isoformat()
+
     text_content = render_to_string(template_text, context=context)
     html_content = None
     if (Path(template_dir) / template_html).is_file():
@@ -24,8 +27,6 @@ def _get_mermaid_email_content(template, context):
 def _mermaid_email(subject, template, to, context=None, from_email=None, reply_to=None):
     _subject = f"[MERMAID] {subject}"
     text_content, html_content = _get_mermaid_email_content(template, context)
-    context = context or {}
-    context["timestamp"] = datetime.datetime.utcnow().replace(microsecond=0).isoformat()
     from_email = from_email or settings.DEFAULT_FROM_EMAIL
     reply_to = reply_to or [settings.DEFAULT_FROM_EMAIL]
     if not isinstance(reply_to, (list, tuple)):
