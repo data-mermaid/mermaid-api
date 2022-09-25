@@ -5,6 +5,7 @@ from django.db.models import Q
 from django.db.models.fields.related import OneToOneField
 
 from ..models import (
+    BLEACHINGQC_PROTOCOL,
     PROTOCOL_MAP,
     CollectRecord,
     Management,
@@ -18,10 +19,13 @@ from . import get_value, is_uuid
 from .email import mermaid_email
 
 
-def _get_sample_unit_method_label(sample_unit):
+def _get_sample_unit_method_label(sample_unit_method, sample_unit_name):
     number_label = []
+    sample_unit = getattr(sample_unit_method, sample_unit_name)
     if hasattr(sample_unit, "number") and sample_unit.number is not None:
         number_label.append(str(sample_unit.number))
+    elif sample_unit_method.protocol == BLEACHINGQC_PROTOCOL:
+        number_label.append("1")
 
     if hasattr(sample_unit, "label") and sample_unit.label.strip():
         number_label.append(sample_unit.label)
@@ -64,7 +68,7 @@ def _create_submitted_sample_unit_method_summary(model_cls, project):
         site = sample_event.site
         management = sample_event.management
         site_id = str(site.pk)
-        label = _get_sample_unit_method_label(sample_unit)
+        label = _get_sample_unit_method_label(record, sample_unit_name)
 
         if site_id not in summary:
             summary[site_id] = {"site_name": "", "sample_unit_methods": {protocol: []}}
@@ -120,6 +124,8 @@ def _get_collect_record_label(collect_record):
     number_label = []
     sample_unit = collect_record.sample_unit
     number = sample_unit.get("number")
+    if collect_record.protocol == BLEACHINGQC_PROTOCOL and number is None:
+        number = 1
     label = sample_unit.get("label") or ""
     if number is not None:
         number_label.append(str(number))
