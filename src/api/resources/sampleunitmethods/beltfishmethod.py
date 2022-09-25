@@ -1,14 +1,18 @@
 from django.db import transaction
 from django.db.models import Q
 from django_filters import BaseInFilter, RangeFilter
-from rest_framework.decorators import action
 from rest_condition import Or
-from rest_framework import status
+from rest_framework import status, serializers
 from rest_framework.response import Response
 
-from ...models import FISHBELT_PROTOCOL, BeltFishObsSQLModel, BeltFishSESQLModel, BeltFishSUSQLModel
-from ...models import BeltFish, Project
-from ...permissions import ProjectDataAdminPermission, ProjectDataReadOnlyPermission, ProjectPublicSummaryPermission
+from ...models import (
+    BeltFishObsSQLModel,
+    BeltFishSESQLModel,
+    BeltFishSUSQLModel,
+    BeltFish,
+    ObsBeltFish,
+)
+from ...permissions import ProjectDataReadOnlyPermission, ProjectPublicSummaryPermission
 from ...reports.fields import ReportField
 from ...reports.formatters import (
     to_day,
@@ -25,11 +29,10 @@ from ..base import (
     BaseSUObsFilterSet,
     BaseViewAPIGeoSerializer,
     BaseSUViewAPISerializer,
+    BaseAPISerializer,
 )
-from ..belt_fish import BeltFishSerializer
 from ..fish_belt_transect import FishBeltTransectSerializer
 from ..mixins import SampleUnitMethodEditMixin
-from ..obs_belt_fish import ObsBeltFishSerializer
 from ..observer import ObserverSerializer
 from ..sample_event import SampleEventSerializer
 from . import (
@@ -37,74 +40,31 @@ from . import (
     clean_sample_event_models,
     covariate_report_fields,
     save_model,
-    save_one_to_many
+    save_one_to_many,
 )
 
 
-class ObsBeltFishCSVSerializer(ReportSerializer):
-    fields = [
-        ReportField("project_name", "Project name"),
-        ReportField("country_name", "Country"),
-        ReportField("site_name", "Site"),
-        ReportField("latitude", "Latitude"),
-        ReportField("longitude", "Longitude"),
-        ReportField("reef_exposure", "Exposure"),
-        ReportField("reef_slope", "Reef slope"),
-        ReportField("reef_type", "Reef type"),
-        ReportField("reef_zone", "Reef zone"),
-        ReportField("sample_date", "Year", to_year, "sample_date_year"),
-        ReportField("sample_date", "Month", to_month, "sample_date_month"),
-        ReportField("sample_date", "Day", to_day, "sample_date_day"),
-        ReportField("sample_time", "Start time", to_str),
-        ReportField("tide_name", "Tide"),
-        ReportField("visibility_name", "Visibility"),
-        ReportField("current_name", "Current"),
-        ReportField("depth", "Depth"),
-        ReportField("relative_depth", "Relative depth"),
-        ReportField("management_name", "Management name"),
-        ReportField("management_name_secondary", "Management secondary name"),
-        ReportField("management_est_year", "Management year established"),
-        ReportField("management_size", "Management size"),
-        ReportField("management_parties", "Governance", to_governance),
-        ReportField("management_compliance", "Estimated compliance",),
-        ReportField("management_rules", "Management rules"),
-        ReportField("transect_number", "Transect number"),
-        ReportField("label", "Transect label"),
-        ReportField("transect_len_surveyed", "Transect length surveyed"),
-        ReportField("transect_width_name", "Transect width"),
-        ReportField("observers", "Observers", to_names),
-        ReportField("fish_family", "Fish family"),
-        ReportField("fish_genus", "Fish genus"),
-        ReportField("fish_taxon", "Fish taxon"),
-        ReportField("size_bin", "Size bin"),
-        ReportField("size", "Size"),
-        ReportField("count", "Count"),
-        ReportField("biomass_constant_a", "a"),
-        ReportField("biomass_constant_b", "b"),
-        ReportField("biomass_constant_c", "c"),
-        ReportField("biomass_kgha", "Biomass_kgha"),
-        ReportField("trophic_group", "Trophic group"),
-        ReportField("trophic_level", "Trophic level"),
-        ReportField("functional_group", "Functional group"),
-        ReportField("vulnerability", "Vulnerability"),
-        ReportField("site_notes", "Site notes"),
-        ReportField("management_notes", "Management notes"),
-        ReportField("sample_unit_notes", "Sample unit notes"),
-    ] + covariate_report_fields
+class BeltFishSerializer(BaseAPISerializer):
+    class Meta:
+        model = BeltFish
+        exclude = []
 
-    additional_fields = [
-        ReportField("id"),
-        ReportField("site_id"),
-        ReportField("project_id"),
-        ReportField("project_notes"),
-        ReportField("contact_link"),
-        ReportField("tags"),
-        ReportField("country_id"),
-        ReportField("management_id"),
-        ReportField("sample_event_id"),
-        ReportField("sample_unit_id"),
-        ReportField("data_policy_beltfish"),
-    ]
+
+class ObsBeltFishSerializer(BaseAPISerializer):
+    size = serializers.DecimalField(
+        max_digits=5, decimal_places=1, coerce_to_string=False
+    )
+
+    class Meta:
+        model = ObsBeltFish
+        exclude = []
+        extra_kwargs = {
+            "fish_attribute": {
+                "error_messages": {
+                    "does_not_exist": 'Fish attribute with id "{pk_value}", does not exist.'
+                }
+            }
+        }
 
 
 class BeltFishMethodSerializer(BeltFishSerializer):
@@ -262,6 +222,72 @@ class BeltFishMethodObsGeoSerializer(BaseViewAPIGeoSerializer):
         model = BeltFishObsSQLModel
 
 
+class ObsBeltFishCSVSerializer(ReportSerializer):
+    fields = [
+        ReportField("project_name", "Project name"),
+        ReportField("country_name", "Country"),
+        ReportField("site_name", "Site"),
+        ReportField("latitude", "Latitude"),
+        ReportField("longitude", "Longitude"),
+        ReportField("reef_exposure", "Exposure"),
+        ReportField("reef_slope", "Reef slope"),
+        ReportField("reef_type", "Reef type"),
+        ReportField("reef_zone", "Reef zone"),
+        ReportField("sample_date", "Year", to_year, "sample_date_year"),
+        ReportField("sample_date", "Month", to_month, "sample_date_month"),
+        ReportField("sample_date", "Day", to_day, "sample_date_day"),
+        ReportField("sample_time", "Start time", to_str),
+        ReportField("tide_name", "Tide"),
+        ReportField("visibility_name", "Visibility"),
+        ReportField("current_name", "Current"),
+        ReportField("depth", "Depth"),
+        ReportField("relative_depth", "Relative depth"),
+        ReportField("management_name", "Management name"),
+        ReportField("management_name_secondary", "Management secondary name"),
+        ReportField("management_est_year", "Management year established"),
+        ReportField("management_size", "Management size"),
+        ReportField("management_parties", "Governance", to_governance),
+        ReportField("management_compliance", "Estimated compliance"),
+        ReportField("management_rules", "Management rules"),
+        ReportField("transect_number", "Transect number"),
+        ReportField("label", "Transect label"),
+        ReportField("transect_len_surveyed", "Transect length surveyed"),
+        ReportField("transect_width_name", "Transect width"),
+        ReportField("observers", "Observers", to_names),
+        ReportField("fish_family", "Fish family"),
+        ReportField("fish_genus", "Fish genus"),
+        ReportField("fish_taxon", "Fish taxon"),
+        ReportField("size_bin", "Size bin"),
+        ReportField("size", "Size"),
+        ReportField("count", "Count"),
+        ReportField("biomass_constant_a", "a"),
+        ReportField("biomass_constant_b", "b"),
+        ReportField("biomass_constant_c", "c"),
+        ReportField("biomass_kgha", "Biomass_kgha"),
+        ReportField("trophic_group", "Trophic group"),
+        ReportField("trophic_level", "Trophic level"),
+        ReportField("functional_group", "Functional group"),
+        ReportField("vulnerability", "Vulnerability"),
+        ReportField("site_notes", "Site notes"),
+        ReportField("management_notes", "Management notes"),
+        ReportField("sample_unit_notes", "Sample unit notes"),
+    ] + covariate_report_fields
+
+    additional_fields = [
+        ReportField("id"),
+        ReportField("site_id"),
+        ReportField("project_id"),
+        ReportField("project_notes"),
+        ReportField("contact_link"),
+        ReportField("tags"),
+        ReportField("country_id"),
+        ReportField("management_id"),
+        ReportField("sample_event_id"),
+        ReportField("sample_unit_id"),
+        ReportField("data_policy_beltfish"),
+    ]
+
+
 class BeltFishMethodSUSerializer(BaseSUViewAPISerializer):
     class Meta(BaseSUViewAPISerializer.Meta):
         model = BeltFishSUSQLModel
@@ -284,6 +310,11 @@ class BeltFishMethodSUSerializer(BaseSUViewAPISerializer):
                 "biomass_kgha_by_fish_family",
             ]
         )
+
+
+class BeltFishMethodSUGeoSerializer(BaseViewAPIGeoSerializer):
+    class Meta(BaseViewAPIGeoSerializer.Meta):
+        model = BeltFishSUSQLModel
 
 
 class BeltFishMethodSUCSVSerializer(ReportSerializer):
@@ -311,7 +342,7 @@ class BeltFishMethodSUCSVSerializer(ReportSerializer):
         ReportField("management_est_year", "Management year established"),
         ReportField("management_size", "Management size"),
         ReportField("management_parties", "Governance", to_governance),
-        ReportField("management_compliance", "Estimated compliance", ),
+        ReportField("management_compliance", "Estimated compliance"),
         ReportField("management_rules", "Management rules"),
         ReportField("transect_number", "Transect number"),
         ReportField("label", "Transect label"),
@@ -342,6 +373,29 @@ class BeltFishMethodSUCSVSerializer(ReportSerializer):
     ]
 
 
+class BeltFishMethodSESerializer(BaseSUViewAPISerializer):
+    class Meta(BaseSUViewAPISerializer.Meta):
+        model = BeltFishSESQLModel
+        exclude = BaseSUViewAPISerializer.Meta.exclude.copy()
+        exclude.append("location")
+        header_order = BaseSUViewAPISerializer.Meta.header_order.copy()
+        header_order.extend(
+            [
+                "data_policy_beltfish",
+                "sample_unit_count",
+                "depth_avg",
+                "biomass_kgha_avg",
+                "biomass_kgha_by_trophic_group_avg",
+                "biomass_kgha_by_fish_family_avg",
+            ]
+        )
+
+
+class BeltFishMethodSEGeoSerializer(BaseViewAPIGeoSerializer):
+    class Meta(BaseViewAPIGeoSerializer.Meta):
+        model = BeltFishSESQLModel
+
+
 class BeltFishMethodSECSVSerializer(ReportSerializer):
     fields = [
         ReportField("project_name", "Project name"),
@@ -364,11 +418,13 @@ class BeltFishMethodSECSVSerializer(ReportSerializer):
         ReportField("management_est_year", "Management year established"),
         ReportField("management_size", "Management size"),
         ReportField("management_parties", "Governance", to_governance),
-        ReportField("management_compliance", "Estimated compliance", ),
+        ReportField("management_compliance", "Estimated compliance"),
         ReportField("management_rules", "Management rules"),
         ReportField("sample_unit_count", "Sample unit count"),
         ReportField("biomass_kgha_avg", "Biomass_kgha average"),
-        ReportField("biomass_kgha_by_trophic_group_avg", "Biomass kgha by trophic group average"),
+        ReportField(
+            "biomass_kgha_by_trophic_group_avg", "Biomass kgha by trophic group average"
+        ),
         ReportField("site_notes", "Site notes"),
         ReportField("management_notes", "Management notes"),
     ] + covariate_report_fields
@@ -385,34 +441,6 @@ class BeltFishMethodSECSVSerializer(ReportSerializer):
         ReportField("sample_event_id"),
         ReportField("data_policy_beltfish"),
     ]
-
-
-class BeltFishMethodSUGeoSerializer(BaseViewAPIGeoSerializer):
-    class Meta(BaseViewAPIGeoSerializer.Meta):
-        model = BeltFishSUSQLModel
-
-
-class BeltFishMethodSESerializer(BaseSUViewAPISerializer):
-    class Meta(BaseSUViewAPISerializer.Meta):
-        model = BeltFishSESQLModel
-        exclude = BaseSUViewAPISerializer.Meta.exclude.copy()
-        exclude.append("location")
-        header_order = BaseSUViewAPISerializer.Meta.header_order.copy()
-        header_order.extend(
-            [
-                "data_policy_beltfish",
-                "sample_unit_count",
-                "depth_avg",
-                "biomass_kgha_avg",
-                "biomass_kgha_by_trophic_group_avg",
-                "biomass_kgha_by_fish_family_avg",
-            ]
-        )
-
-
-class BeltFishMethodSEGeoSerializer(BaseViewAPIGeoSerializer):
-    class Meta(BaseViewAPIGeoSerializer.Meta):
-        model = BeltFishSESQLModel
 
 
 class BeltFishMethodObsFilterSet(BaseSUObsFilterSet):
@@ -501,12 +529,14 @@ class BeltFishProjectMethodObsView(BaseProjectMethodView):
 
     def get_queryset(self):
         project_id = self.kwargs.get("project_pk")
-        return self.model.objects.all().sql_table(
-            project_id=project_id
-        ).filter(
-            Q(size__isnull=False)
-            | Q(count__isnull=False)
-            | Q(biomass_kgha__isnull=False)
+        return (
+            self.model.objects.all()
+            .sql_table(project_id=project_id)
+            .filter(
+                Q(size__isnull=False)
+                | Q(count__isnull=False)
+                | Q(biomass_kgha__isnull=False)
+            )
         )
 
 
@@ -518,9 +548,7 @@ class BeltFishProjectMethodSUView(BaseProjectMethodView):
     serializer_class_csv = BeltFishMethodSUCSVSerializer
     filterset_class = BeltFishMethodSUFilterSet
     model = BeltFishSUSQLModel
-    order_by = (
-        "site_name", "sample_date", "transect_number"
-    )
+    order_by = ("site_name", "sample_date", "transect_number")
 
 
 class BeltFishProjectMethodSEView(BaseProjectMethodView):
@@ -534,6 +562,4 @@ class BeltFishProjectMethodSEView(BaseProjectMethodView):
     serializer_class_csv = BeltFishMethodSECSVSerializer
     filterset_class = BeltFishMethodSEFilterSet
     model = BeltFishSESQLModel
-    order_by = (
-        "site_name", "sample_date"
-    )
+    order_by = ("site_name", "sample_date")

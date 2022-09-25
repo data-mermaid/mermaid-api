@@ -216,8 +216,8 @@ class QuadratValidation(SampleUnitValidation):
         results = [super(QuadratValidation, self).validate()]
         data = self.collect_record.data
 
-        quadrat_collection = data.get(self.SAMPLE_UNIT) or dict()
-        quadrat_size = quadrat_collection.get("quadrat_size")
+        sample_unit = data.get(self.SAMPLE_UNIT) or dict()
+        quadrat_size = sample_unit.get("quadrat_size")
 
         results.append(
             self._run_validation(
