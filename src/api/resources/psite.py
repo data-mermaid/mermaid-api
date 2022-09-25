@@ -1,5 +1,3 @@
-from rest_framework.decorators import action
-
 from ..models import Site
 from .base import BaseAPIFilterSet, BaseAPISerializer, BaseProjectApiViewSet
 from .mixins import CreateOrUpdateSerializerMixin, ProtectedResourceMixin
@@ -25,3 +23,11 @@ class PSiteViewSet(ProtectedResourceMixin, BaseProjectApiViewSet):
     project_lookup = "project"
     filterset_class = PSiteFilterSet
     search_fields = ["name"]
+
+    # set updated_by before deleting for use by signal
+    def destroy(self, request, *args, **kwargs):
+        updated_by = getattr(request.user, "profile")
+        instance = self.get_object()
+        instance.updated_by = updated_by
+        instance.save()
+        return super().destroy(request, *args, **kwargs)

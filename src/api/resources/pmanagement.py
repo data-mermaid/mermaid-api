@@ -89,3 +89,11 @@ class PManagementViewSet(ProtectedResourceMixin, BaseProjectApiViewSet):
         "name",
         "name_secondary",
     ]
+
+    # set updated_by before deleting for use by signal
+    def destroy(self, request, *args, **kwargs):
+        updated_by = getattr(request.user, "profile")
+        instance = self.get_object()
+        instance.updated_by = updated_by
+        instance.save()
+        return super().destroy(request, *args, **kwargs)

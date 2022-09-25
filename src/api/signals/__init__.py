@@ -1,5 +1,6 @@
 import operator
 
+from collections import defaultdict
 from django import urls
 from django.conf import settings
 from django.core import serializers
@@ -298,7 +299,39 @@ for suclass in get_subclasses(SampleUnit):
     )
 
 
-@receiver(post_delete, sender=Site)
+@receiver(pre_delete, sender=Site)
+@receiver(pre_delete, sender=Management)
+def notify_cr_owners_site_deleted(sender, instance, *args, **kwargs):
+    collect_records = CollectRecord.objects.filter(data__sample_event__site=instance.pk)
+    deleted_by = "An unknown user"
+    if instance.updated_by:
+        deleted_by = instance.updated_by.full_name
+    cr_profiles = defaultdict(int)
+    for cr in collect_records:
+        cr_profiles[cr.profile] += 1
+
+    for profile, cr_count in cr_profiles.items():
+        count = f"{cr_count} unsubmitted sample unit"
+        if cr_count > 1:
+            count = f"{count}s"
+        context = {
+            "site_mr": sender._meta.verbose_name,
+            "site_mr_name": instance.name,
+            "project_name": instance.project.name,
+            "deleted_by": deleted_by,
+            "cr_count": count,
+        }
+        notify_template = "notifications/site_mr_deleted.txt"
+
+        add_notification(
+            f"Site {instance.name} deleted from {instance.project.name}",
+            Notification.WARNING,
+            notify_template,
+            context,
+            [profile]
+        )
+
+
 @receiver(post_save, sender=Site)
 def run_site_validation(sender, instance, *args, **kwargs):
     if instance.project is None:
@@ -314,7 +347,6 @@ def run_site_validation(sender, instance, *args, **kwargs):
         instance.updated_on = site.updated_on
 
 
-@receiver(post_delete, sender=Management)
 @receiver(post_save, sender=Management)
 def run_management_validation(sender, instance, *args, **kwargs):
     if instance.project is None:
