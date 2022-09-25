@@ -1263,8 +1263,9 @@ class QuadratCollectionValidation(DataValidation):
 
 class QuadratTransectValidation(DataValidation):
     identifier = "quadrat_transect"
-    INVALID_DATA = "invalid_quadrat_transect"
-    DUPLICATE_QUADRAT_TRANSECT = "duplicate_quadrat_transect"
+    INVALID_DATA = "Invalid transect"
+    DUPLICATE_QUADRAT_TRANSECT_TMPL = "Duplicate sample unit {}"
+    POSITIVE_NUMBER = "Quadrat number start is not greater or equal to zero"
 
     def _get_query_args(self):
         data = self.data or {}
@@ -1307,7 +1308,7 @@ class QuadratTransectValidation(DataValidation):
             if transect_method.protocol == protocol:
                 return self.error(
                     self.identifier,
-                    self.DUPLICATE_QUADRAT_TRANSECT,
+                    self.DUPLICATE_QUADRAT_TRANSECT_TMPL.format(transect_method.pk),
                     data={"duplicate_transect_method": str(transect_method.pk)}
                 )
         return OK
@@ -1334,6 +1335,17 @@ class QuadratTransectValidation(DataValidation):
             if duplicate_check != OK:
                 return duplicate_check
         return self.ok(self.identifier)
+
+    def validate_quadrat_number_start(self):
+        data = self.data or {}
+        quadrat_transect = data.get("quadrat_transect")
+        quadrat_number_start = cast_int(quadrat_transect.get("quadrat_number_start"))
+        if not quadrat_number_start or quadrat_number_start < 0:
+            return self.error("quadrat_number_start", self.POSITIVE_NUMBER)
+        
+        return self.ok("quadrat_number_start")
+
+
 
 class ObsBenthicPhotoQuadratValidation(DataValidation, BenthicAttributeMixin):
     identifier = "obs_benthic_photo_quadrats"
@@ -1368,7 +1380,6 @@ class ObsBenthicPhotoQuadratValidation(DataValidation, BenthicAttributeMixin):
 
         return self.ok(self.identifier)
 
-    
     def validate_points_per_quadrat(self):
         quadrat_transect = self.data.get("quadrat_transect") or {}
         observations = self.data.get(self.observations_key) or []
