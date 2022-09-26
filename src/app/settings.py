@@ -114,15 +114,16 @@ CORS_ALLOW_ALL_ORIGINS = True
 CORS_ALLOW_METHODS = list(default_methods) + ["HEAD"]
 CORS_EXPOSE_HEADERS = ["HTTP_API_VERSION"]
 CORS_REPLACE_HTTPS_REFERER = True
-EMAIL_BACKEND = 'django.core.mail.backends.smtp.EmailBackend'
-if ENVIRONMENT not in ("prod",):
-    EMAIL_BACKEND = 'django.core.mail.backends.locmem.EmailBackend'
+EMAIL_BACKEND = "django.core.mail.backends.smtp.EmailBackend"
+_dev_emails = os.environ.get("DEV_EMAILS") or ""
+DEV_EMAILS = [email.strip() for email in _dev_emails.split(",")]
 
 if ENVIRONMENT not in ("dev", "prod",):
     def show_toolbar(request):
         return True
 
     DEBUG_LEVEL = "DEBUG"
+    EMAIL_BACKEND = "django.core.mail.backends.console.EmailBackend"
     INSTALLED_APPS.append("debug_toolbar")
     MIDDLEWARE.append("debug_toolbar.middleware.DebugToolbarMiddleware")
     DEBUG_TOOLBAR_CONFIG = {"SHOW_TOOLBAR_CALLBACK": show_toolbar}

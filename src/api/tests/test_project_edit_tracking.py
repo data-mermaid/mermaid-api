@@ -3,7 +3,7 @@ from api.models import (
     ProjectProfile,
     SummarySampleEventModel,
 )
-from api.resources.sample_units.beltfishmethod import BeltFishMethodSerializer
+from api.resources.sampleunitmethods.beltfishmethod import BeltFishMethodSerializer
 from api.submission.utils import write_collect_record
 from api.utils.sample_unit_methods import edit_transect_method
 from api.utils.summaries import update_project_summaries

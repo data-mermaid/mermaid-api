@@ -1,18 +1,21 @@
 from django.db import transaction
 from django_filters import BaseInFilter, RangeFilter
 from rest_condition import Or
-from rest_framework import status
+from rest_framework import status, serializers
 from rest_framework.response import Response
 
-from ...models import BenthicLITObsSQLModel, BenthicLITSESQLModel, BenthicLITSUSQLModel
-from ...models.mermaid import BenthicLIT
+from ...models import (
+    HabitatComplexityObsSQLModel,
+    HabitatComplexitySESQLModel,
+    HabitatComplexitySUSQLModel,
+    HabitatComplexity,
+    ObsHabitatComplexity,
+)
 from ...permissions import ProjectDataReadOnlyPermission, ProjectPublicSummaryPermission
 from ...reports.fields import ReportField
 from ...reports.formatters import (
     to_day,
     to_governance,
-    to_latitude,
-    to_longitude,
     to_month,
     to_names,
     to_str,
@@ -25,11 +28,10 @@ from ..base import (
     BaseSUObsFilterSet,
     BaseViewAPIGeoSerializer,
     BaseSUViewAPISerializer,
+    BaseAPISerializer,
 )
-from ..benthic_lit import BenthicLITSerializer
 from ..benthic_transect import BenthicTransectSerializer
 from ..mixins import SampleUnitMethodEditMixin
-from ..obs_benthic_lit import ObsBenthicLITSerializer
 from ..observer import ObserverSerializer
 from ..sample_event import SampleEventSerializer
 from . import (
@@ -41,24 +43,45 @@ from . import (
 )
 
 
-class BenthicLITMethodSerializer(BenthicLITSerializer):
-    sample_event = SampleEventSerializer(source="transect.sample_event")
-    benthic_transect = BenthicTransectSerializer(source="transect")
-    observers = ObserverSerializer(many=True)
-    obs_benthic_lits = ObsBenthicLITSerializer(many=True, source="obsbenthiclit_set")
+class HabitatComplexitySerializer(BaseAPISerializer):
+    interval_size = serializers.DecimalField(
+        max_digits=4,
+        decimal_places=2,
+        coerce_to_string=False,
+        error_messages={"null": "Interval size is required"},
+    )
 
     class Meta:
-        model = BenthicLIT
+        model = HabitatComplexity
         exclude = []
 
 
-class BenthicLITMethodView(SampleUnitMethodEditMixin, BaseProjectApiViewSet):
+class ObsHabitatComplexitySerializer(BaseAPISerializer):
+    class Meta:
+        model = ObsHabitatComplexity
+        exclude = []
+
+
+class HabitatComplexityMethodSerializer(HabitatComplexitySerializer):
+    sample_event = SampleEventSerializer(source="transect.sample_event")
+    benthic_transect = BenthicTransectSerializer(source="transect")
+    observers = ObserverSerializer(many=True)
+    obs_habitat_complexities = ObsHabitatComplexitySerializer(
+        many=True, source="habitatcomplexity_set"
+    )
+
+    class Meta:
+        model = HabitatComplexity
+        exclude = []
+
+
+class HabitatComplexityMethodView(SampleUnitMethodEditMixin, BaseProjectApiViewSet):
     queryset = (
-        BenthicLIT.objects.select_related("transect", "transect__sample_event")
+        HabitatComplexity.objects.select_related("transect", "transect__sample_event")
         .all()
         .order_by("updated_on", "id")
     )
-    serializer_class = BenthicLITMethodSerializer
+    serializer_class = HabitatComplexityMethodSerializer
     http_method_names = ["get", "put", "head", "delete"]
 
     @transaction.atomic
@@ -69,24 +92,24 @@ class BenthicLITMethodView(SampleUnitMethodEditMixin, BaseProjectApiViewSet):
             sample_event=request.data.get("sample_event"),
             benthic_transect=request.data.get("benthic_transect"),
             observers=request.data.get("observers"),
-            obs_benthic_lits=request.data.get("obs_benthic_lits"),
+            obs_habitat_complexities=request.data.get("obs_habitat_complexities"),
         )
-        benthic_lit_data = {
+        habitat_complexity_data = {
             k: v for k, v in request.data.items() if k not in nested_data
         }
-        benthic_lit_id = benthic_lit_data["id"]
+        habitat_complexity_id = habitat_complexity_data["id"]
 
         context = dict(request=request)
 
         # Save models in a transaction
         sid = transaction.savepoint()
         try:
-            benthic_lit = BenthicLIT.objects.get(id=benthic_lit_id)
+            habitat_complexity = HabitatComplexity.objects.get(id=habitat_complexity_id)
 
             # Observers
             check, errs = save_one_to_many(
-                foreign_key=("transectmethod", benthic_lit_id),
-                database_records=benthic_lit.observers.all(),
+                foreign_key=("transectmethod", habitat_complexity_id),
+                database_records=habitat_complexity.observers.all(),
                 data=request.data.get("observers") or [],
                 serializer_class=ObserverSerializer,
                 context=context,
@@ -97,15 +120,15 @@ class BenthicLITMethodView(SampleUnitMethodEditMixin, BaseProjectApiViewSet):
 
             # Observations
             check, errs = save_one_to_many(
-                foreign_key=("benthiclit", benthic_lit_id),
-                database_records=benthic_lit.obsbenthiclit_set.all(),
-                data=request.data.get("obs_benthic_lits") or [],
-                serializer_class=ObsBenthicLITSerializer,
+                foreign_key=("habitatcomplexity", habitat_complexity_id),
+                database_records=habitat_complexity.habitatcomplexity_set.all(),
+                data=request.data.get("obs_habitat_complexities") or [],
+                serializer_class=ObsHabitatComplexitySerializer,
                 context=context,
             )
             if check is False:
                 is_valid = False
-                errors["obs_benthic_lits"] = errs
+                errors["obs_habitat_complexities"] = errs
 
             # Sample Event
             check, errs = save_model(
@@ -127,15 +150,15 @@ class BenthicLITMethodView(SampleUnitMethodEditMixin, BaseProjectApiViewSet):
                 is_valid = False
                 errors["benthic_transect"] = errs
 
-            # Benthic LIT
+            # Habitat Complexity
             check, errs = save_model(
-                data=benthic_lit_data,
-                serializer_class=BenthicLITSerializer,
+                data=habitat_complexity_data,
+                serializer_class=HabitatComplexitySerializer,
                 context=context,
             )
             if check is False:
                 is_valid = False
-                errors["benthic_lit"] = errs
+                errors["habitat_complexity"] = errs
 
             if is_valid is False:
                 transaction.savepoint_rollback(sid)
@@ -145,9 +168,10 @@ class BenthicLITMethodView(SampleUnitMethodEditMixin, BaseProjectApiViewSet):
 
             transaction.savepoint_commit(sid)
 
-            benthic_lit = BenthicLIT.objects.get(id=benthic_lit_id)
+            habitat_complexity = HabitatComplexity.objects.get(id=habitat_complexity_id)
             return Response(
-                BenthicLITMethodSerializer(benthic_lit).data, status=status.HTTP_200_OK
+                HabitatComplexityMethodSerializer(habitat_complexity).data,
+                status=status.HTTP_200_OK,
             )
 
         except:
@@ -155,9 +179,9 @@ class BenthicLITMethodView(SampleUnitMethodEditMixin, BaseProjectApiViewSet):
             raise
 
 
-class BenthicLITMethodObsSerializer(BaseSUViewAPISerializer):
+class HabitatComplexityMethodObsSerializer(BaseSUViewAPISerializer):
     class Meta(BaseSUViewAPISerializer.Meta):
-        model = BenthicLITObsSQLModel
+        model = HabitatComplexityObsSQLModel
         exclude = BaseSUViewAPISerializer.Meta.exclude.copy()
         exclude.extend(["location", "observation_notes"])
         header_order = ["id"] + BaseSUViewAPISerializer.Meta.header_order.copy()
@@ -171,22 +195,25 @@ class BenthicLITMethodObsSerializer(BaseSUViewAPISerializer):
                 "transect_len_surveyed",
                 "reef_slope",
                 "observers",
-                "data_policy_benthiclit",
-                "length",
-                "benthic_category",
-                "benthic_attribute",
-                "growth_form",
+                "data_policy_habitatcomplexity",
+                "interval",
+                "score",
             ]
         )
 
 
-class ObsBenthicLITCSVSerializer(ReportSerializer):
+class HabitatComplexityMethodObsGeoSerializer(BaseViewAPIGeoSerializer):
+    class Meta(BaseViewAPIGeoSerializer.Meta):
+        model = HabitatComplexityObsSQLModel
+
+
+class ObsHabitatComplexityCSVSerializer(ReportSerializer):
     fields = [
         ReportField("project_name", "Project name"),
         ReportField("country_name", "Country"),
         ReportField("site_name", "Site"),
-        ReportField("location", "Latitude", to_latitude, alias="latitude"),
-        ReportField("location", "Longitude", to_longitude, alias="longitude"),
+        ReportField("latitude", "Latitude"),
+        ReportField("longitude", "Longitude"),
         ReportField("reef_exposure", "Exposure"),
         ReportField("reef_slope", "Reef slope"),
         ReportField("reef_type", "Reef type"),
@@ -205,17 +232,15 @@ class ObsBenthicLITCSVSerializer(ReportSerializer):
         ReportField("management_est_year", "Management year established"),
         ReportField("management_size", "Management size"),
         ReportField("management_parties", "Governance", to_governance),
-        ReportField("management_compliance", "Estimated compliance",),
+        ReportField("management_compliance", "Estimated compliance"),
         ReportField("management_rules", "Management rules"),
         ReportField("transect_number", "Transect number"),
         ReportField("label", "Transect label"),
         ReportField("transect_len_surveyed", "Transect length surveyed"),
         ReportField("observers", "Observers", to_names),
-        ReportField("benthic_category", "Benthic category"),
-        ReportField("benthic_attribute", "Benthic attribute"),
-        ReportField("growth_form", "Growth form"),
-        ReportField("length", "LIT (cm)"),
-        ReportField("total_length", "Total transect cm"),
+        ReportField("interval", "Interval (m)"),
+        ReportField("score", "Habitat complexity value"),
+        ReportField("score_name", "Habitat complexity name"),
         ReportField("site_notes", "Site notes"),
         ReportField("management_notes", "Management notes"),
         ReportField("sample_unit_notes", "Sample unit notes"),
@@ -231,18 +256,14 @@ class ObsBenthicLITCSVSerializer(ReportSerializer):
         ReportField("country_id"),
         ReportField("management_id"),
         ReportField("sample_unit_id"),
-        ReportField("data_policy_benthiclit"),
+        ReportField("interval_size"),
+        ReportField("data_policy_habitatcomplexity"),
     ]
 
 
-class BenthicLITMethodObsGeoSerializer(BaseViewAPIGeoSerializer):
-    class Meta(BaseViewAPIGeoSerializer.Meta):
-        model = BenthicLITObsSQLModel
-
-
-class BenthicLITMethodSUSerializer(BaseSUViewAPISerializer):
+class HabitatComplexityMethodSUSerializer(BaseSUViewAPISerializer):
     class Meta(BaseSUViewAPISerializer.Meta):
-        model = BenthicLITSUSQLModel
+        model = HabitatComplexitySUSQLModel
         exclude = BaseSUViewAPISerializer.Meta.exclude.copy()
         exclude.append("location")
         header_order = BaseSUViewAPISerializer.Meta.header_order.copy()
@@ -251,22 +272,26 @@ class BenthicLITMethodSUSerializer(BaseSUViewAPISerializer):
                 "label",
                 "transect_number",
                 "transect_len_surveyed",
-                "total_length",
                 "depth",
                 "reef_slope",
-                "percent_cover_by_benthic_category",
-                "data_policy_benthiclit",
+                "score_avg",
+                "data_policy_habitatcomplexity",
             ]
         )
 
 
-class BenthicLITMethodSUCSVSerializer(ReportSerializer):
+class HabitatComplexityMethodSUGeoSerializer(BaseViewAPIGeoSerializer):
+    class Meta(BaseViewAPIGeoSerializer.Meta):
+        model = HabitatComplexitySUSQLModel
+
+
+class HabitatComplexityMethodSUCSVSerializer(ReportSerializer):
     fields = [
         ReportField("project_name", "Project name"),
         ReportField("country_name", "Country"),
         ReportField("site_name", "Site"),
-        ReportField("location", "Latitude", to_latitude, alias="latitude"),
-        ReportField("location", "Longitude", to_longitude, alias="longitude"),
+        ReportField("latitude", "Latitude"),
+        ReportField("longitude", "Longitude"),
         ReportField("reef_exposure", "Exposure"),
         ReportField("reef_slope", "Reef slope"),
         ReportField("reef_type", "Reef type"),
@@ -285,14 +310,13 @@ class BenthicLITMethodSUCSVSerializer(ReportSerializer):
         ReportField("management_est_year", "Management year established"),
         ReportField("management_size", "Management size"),
         ReportField("management_parties", "Governance", to_governance),
-        ReportField("management_compliance", "Estimated compliance", ),
+        ReportField("management_compliance", "Estimated compliance"),
         ReportField("management_rules", "Management rules"),
         ReportField("transect_number", "Transect number"),
         ReportField("label", "Transect label"),
         ReportField("transect_len_surveyed", "Transect length surveyed"),
-        ReportField("total_length", "Total cm"),
         ReportField("observers", "Observers", to_names),
-        ReportField("percent_cover_by_benthic_category", "Percent cover by benthic category"),
+        ReportField("score_avg", "Score average"),
         ReportField("site_notes", "Site notes"),
         ReportField("management_notes", "Management notes"),
         ReportField("sample_unit_notes", "Sample unit notes"),
@@ -309,17 +333,38 @@ class BenthicLITMethodSUCSVSerializer(ReportSerializer):
         ReportField("management_id"),
         ReportField("sample_event_id"),
         ReportField("sample_unit_ids"),
-        ReportField("data_policy_benthiclit"),
+        ReportField("data_policy_habitatcomplexity"),
     ]
 
 
-class BenthicLITMethodSECSVSerializer(ReportSerializer):
+class HabitatComplexityMethodSESerializer(BaseSUViewAPISerializer):
+    class Meta(BaseSUViewAPISerializer.Meta):
+        model = HabitatComplexitySESQLModel
+        exclude = BaseSUViewAPISerializer.Meta.exclude.copy()
+        exclude.append("location")
+        header_order = BaseSUViewAPISerializer.Meta.header_order.copy()
+        header_order.extend(
+            [
+                "data_policy_habitatcomplexity",
+                "sample_unit_count",
+                "depth_avg",
+                "score_avg_avg",
+            ]
+        )
+
+
+class HabitatComplexityMethodSEGeoSerializer(BaseViewAPIGeoSerializer):
+    class Meta(BaseViewAPIGeoSerializer.Meta):
+        model = HabitatComplexitySESQLModel
+
+
+class HabitatComplexityMethodSECSVSerializer(ReportSerializer):
     fields = [
         ReportField("project_name", "Project name"),
         ReportField("country_name", "Country"),
         ReportField("site_name", "Site"),
-        ReportField("location", "Latitude", to_latitude, alias="latitude"),
-        ReportField("location", "Longitude", to_longitude, alias="longitude"),
+        ReportField("latitude", "Latitude"),
+        ReportField("longitude", "Longitude"),
         ReportField("reef_exposure", "Exposure"),
         ReportField("reef_type", "Reef type"),
         ReportField("reef_zone", "Reef zone"),
@@ -335,10 +380,10 @@ class BenthicLITMethodSECSVSerializer(ReportSerializer):
         ReportField("management_est_year", "Management year established"),
         ReportField("management_size", "Management size"),
         ReportField("management_parties", "Governance", to_governance),
-        ReportField("management_compliance", "Estimated compliance", ),
+        ReportField("management_compliance", "Estimated compliance"),
         ReportField("management_rules", "Management rules"),
         ReportField("sample_unit_count", "Sample unit count"),
-        ReportField("percent_cover_by_benthic_category_avg", "Percent cover by benthic category average"),
+        ReportField("score_avg_avg", "Score average"),
         ReportField("site_notes", "Site notes"),
         ReportField("management_notes", "Management notes"),
     ] + covariate_report_fields
@@ -353,116 +398,93 @@ class BenthicLITMethodSECSVSerializer(ReportSerializer):
         ReportField("country_id"),
         ReportField("management_id"),
         ReportField("sample_event_id"),
-        ReportField("data_policy_benthiclit"),
+        ReportField("data_policy_habitatcomplexity"),
     ]
 
 
-class BenthicLITMethodSUGeoSerializer(BaseViewAPIGeoSerializer):
-    class Meta(BaseViewAPIGeoSerializer.Meta):
-        model = BenthicLITSUSQLModel
-
-
-class BenthicLITMethodSESerializer(BaseSUViewAPISerializer):
-    class Meta(BaseSUViewAPISerializer.Meta):
-        model = BenthicLITSESQLModel
-        exclude = BaseSUViewAPISerializer.Meta.exclude.copy()
-        exclude.append("location")
-        header_order = BaseSUViewAPISerializer.Meta.header_order.copy()
-        header_order.extend(
-            [
-                "data_policy_benthiclit",
-                "sample_unit_count",
-                "depth_avg",
-                "percent_cover_by_benthic_category_avg",
-            ]
-        )
-
-
-class BenthicLITMethodSEGeoSerializer(BaseViewAPIGeoSerializer):
-    class Meta(BaseViewAPIGeoSerializer.Meta):
-        model = BenthicLITSESQLModel
-
-
-class BenthicLITMethodObsFilterSet(BaseSUObsFilterSet):
+class HabitatComplexityMethodObsFilterSet(BaseSUObsFilterSet):
     transect_len_surveyed = RangeFilter()
     reef_slope = BaseInFilter(method="char_lookup")
     transect_number = BaseInFilter(method="char_lookup")
     benthic_category = BaseInFilter(method="char_lookup")
     benthic_attribute = BaseInFilter(method="char_lookup")
     growth_form = BaseInFilter(method="char_lookup")
-    length = RangeFilter()
+    interval = RangeFilter()
+    score = RangeFilter()
 
     class Meta:
-        model = BenthicLITObsSQLModel
+        model = HabitatComplexityObsSQLModel
         fields = [
             "transect_len_surveyed",
             "reef_slope",
             "transect_number",
-            "length",
-            "benthic_category",
-            "benthic_attribute",
-            "growth_form",
+            "interval",
+            "score",
         ]
 
 
-class BenthicLITMethodSUFilterSet(BaseSUObsFilterSet):
+class HabitatComplexityMethodSUFilterSet(BaseSUObsFilterSet):
     transect_len_surveyed = RangeFilter()
     reef_slope = BaseInFilter(method="char_lookup")
     transect_number = BaseInFilter(method="char_lookup")
+    interval_size = RangeFilter()
+    score_avg = RangeFilter()
 
     class Meta:
-        model = BenthicLITSUSQLModel
+        model = HabitatComplexitySUSQLModel
         fields = [
             "transect_len_surveyed",
             "reef_slope",
             "transect_number",
+            "score_avg",
         ]
 
 
-class BenthicLITMethodSEFilterSet(BaseSEFilterSet):
+class HabitatComplexityMethodSEFilterSet(BaseSEFilterSet):
     sample_unit_count = RangeFilter()
     depth_avg = RangeFilter()
+    score_avg_avg = RangeFilter()
 
     class Meta:
-        model = BenthicLITSESQLModel
-        fields = ["sample_unit_count", "depth_avg",]
+        model = HabitatComplexitySESQLModel
+        fields = [
+            "sample_unit_count",
+            "depth_avg",
+            "score_avg_avg",
+        ]
 
 
-class BenthicLITProjectMethodObsView(BaseProjectMethodView):
-    drf_label = "benthiclit-obs"
-    project_policy = "data_policy_benthiclit"
-    serializer_class = BenthicLITMethodObsSerializer
-    serializer_class_geojson = BenthicLITMethodObsGeoSerializer
-    serializer_class_csv = ObsBenthicLITCSVSerializer
-    filterset_class = BenthicLITMethodObsFilterSet
-    model = BenthicLITObsSQLModel
-    order_by = ("site_name", "sample_date", "transect_number", "label", "id")
+class HabitatComplexityProjectMethodObsView(BaseProjectMethodView):
+    drf_label = "habitatcomplexity-obs"
+    project_policy = "data_policy_habitatcomplexity"
+    serializer_class = HabitatComplexityMethodObsSerializer
+    serializer_class_geojson = HabitatComplexityMethodObsGeoSerializer
+    serializer_class_csv = ObsHabitatComplexityCSVSerializer
+    filterset_class = HabitatComplexityMethodObsFilterSet
+    model = HabitatComplexityObsSQLModel
+    order_by = ("site_name", "sample_date", "transect_number", "label", "interval")
 
 
-class BenthicLITProjectMethodSUView(BaseProjectMethodView):
-    drf_label = "benthiclit-su"
-    project_policy = "data_policy_benthiclit"
-    serializer_class = BenthicLITMethodSUSerializer
-    serializer_class_geojson = BenthicLITMethodSUGeoSerializer
-    serializer_class_csv = BenthicLITMethodSUCSVSerializer
-    filterset_class = BenthicLITMethodSUFilterSet
-    model = BenthicLITSUSQLModel
-    order_by = (
-        "site_name", "sample_date", "transect_number"
-    )
+class HabitatComplexityProjectMethodSUView(BaseProjectMethodView):
+    drf_label = "habitatcomplexity-su"
+    project_policy = "data_policy_habitatcomplexity"
+    serializer_class = HabitatComplexityMethodSUSerializer
+    serializer_class_geojson = HabitatComplexityMethodSUGeoSerializer
+    serializer_class_csv = HabitatComplexityMethodSUCSVSerializer
+    filterset_class = HabitatComplexityMethodSUFilterSet
+    model = HabitatComplexitySUSQLModel
+    order_by = ("site_name", "sample_date", "transect_number")
 
 
-class BenthicLITProjectMethodSEView(BaseProjectMethodView):
-    drf_label = "benthiclit-se"
-    project_policy = "data_policy_benthiclit"
+class HabitatComplexityProjectMethodSEView(BaseProjectMethodView):
+    drf_label = "habitatcomplexity-se"
+    project_policy = "data_policy_habitatcomplexity"
     permission_classes = [
         Or(ProjectDataReadOnlyPermission, ProjectPublicSummaryPermission)
     ]
-    serializer_class = BenthicLITMethodSESerializer
-    serializer_class_geojson = BenthicLITMethodSEGeoSerializer
-    serializer_class_csv = BenthicLITMethodSECSVSerializer
-    filterset_class = BenthicLITMethodSEFilterSet
-    model = BenthicLITSESQLModel
-    order_by = (
-        "site_name", "sample_date"
-    )
+    serializer_class = HabitatComplexityMethodSESerializer
+    serializer_class_geojson = HabitatComplexityMethodSEGeoSerializer
+    serializer_class_csv = HabitatComplexityMethodSECSVSerializer
+    filterset_class = HabitatComplexityMethodSEFilterSet
+    model = HabitatComplexitySESQLModel
+    order_by = ("site_name", "sample_date")
