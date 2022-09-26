@@ -46,22 +46,46 @@ class ApiStack(Stack):
             "DB_USER": ecs.Secret.from_secrets_manager(database.secret, "username"),
             "DB_PASSWORD": ecs.Secret.from_secrets_manager(database.secret, "password"),
             "PGPASSWORD": ecs.Secret.from_secrets_manager(database.secret, "password"),
-            "EMAIL_HOST_PASSWORD": ecs.Secret.from_secrets_manager(config.api.get_secret_object(self, config.api.email_host_password_name)),
-            "SECRET_KEY": ecs.Secret.from_secrets_manager(config.api.get_secret_object(self, config.api.secret_key_name)),
-            "MERMAID_API_SIGNING_SECRET": ecs.Secret.from_secrets_manager(config.api.get_secret_object(self, config.api.mermaid_api_signing_secret_name)),
-            "SPA_ADMIN_CLIENT_ID": ecs.Secret.from_secrets_manager(config.api.get_secret_object(self, config.api.spa_admin_client_id_name)),
-            "SPA_ADMIN_CLIENT_SECRET": ecs.Secret.from_secrets_manager(config.api.get_secret_object(self, config.api.spa_admin_client_secret_name)),
-            "MERMAID_MANAGEMENT_API_CLIENT_ID": ecs.Secret.from_secrets_manager(config.api.get_secret_object(self, config.api.mermaid_management_api_client_id_name)),
-            "MERMAID_MANAGEMENT_API_CLIENT_SECRET": ecs.Secret.from_secrets_manager(config.api.get_secret_object(self, config.api.mermaid_management_api_client_secret_name)),
-            "MC_API_KEY": ecs.Secret.from_secrets_manager(config.api.get_secret_object(self, config.api.mc_api_key_name)),
-            "MC_LIST_ID": ecs.Secret.from_secrets_manager(config.api.get_secret_object(self, config.api.mc_api_list_id_name)),
+            "EMAIL_HOST_PASSWORD": ecs.Secret.from_secrets_manager(
+                config.api.get_secret_object(self, config.api.email_host_password_name)
+            ),
+            "SECRET_KEY": ecs.Secret.from_secrets_manager(
+                config.api.get_secret_object(self, config.api.secret_key_name)
+            ),
+            "MERMAID_API_SIGNING_SECRET": ecs.Secret.from_secrets_manager(
+                config.api.get_secret_object(
+                    self, config.api.mermaid_api_signing_secret_name
+                )
+            ),
+            "SPA_ADMIN_CLIENT_ID": ecs.Secret.from_secrets_manager(
+                config.api.get_secret_object(self, config.api.spa_admin_client_id_name)
+            ),
+            "SPA_ADMIN_CLIENT_SECRET": ecs.Secret.from_secrets_manager(
+                config.api.get_secret_object(
+                    self, config.api.spa_admin_client_secret_name
+                )
+            ),
+            "MERMAID_MANAGEMENT_API_CLIENT_ID": ecs.Secret.from_secrets_manager(
+                config.api.get_secret_object(
+                    self, config.api.mermaid_management_api_client_id_name
+                )
+            ),
+            "MERMAID_MANAGEMENT_API_CLIENT_SECRET": ecs.Secret.from_secrets_manager(
+                config.api.get_secret_object(
+                    self, config.api.mermaid_management_api_client_secret_name
+                )
+            ),
+            "MC_API_KEY": ecs.Secret.from_secrets_manager(
+                config.api.get_secret_object(self, config.api.mc_api_key_name)
+            ),
+            "MC_LIST_ID": ecs.Secret.from_secrets_manager(
+                config.api.get_secret_object(self, config.api.mc_api_list_id_name)
+            ),
         }
 
         task_definition.add_container(
             id="MermaidAPI",
-            image=ecs.ContainerImage.from_asset(
-                directory="../", file="Dockerfile.ecs"
-            ),
+            image=ecs.ContainerImage.from_asset(directory="../", file="Dockerfile.ecs"),
             port_mappings=[ecs.PortMapping(container_port=8081)],
             environment={
                 "ENV": config.env_id,
@@ -79,17 +103,16 @@ class ApiStack(Stack):
                 "AUTH0_MANAGEMENT_API_AUDIENCE": config.api.auth0_management_api_audience,
                 "MERMAID_API_AUDIENCE": config.api.mermaid_api_audience,
                 "MC_USER": config.api.mc_user,
-                "CIRCLE_CI_CLIENT_ID": "", # Leave empty
-
+                "CIRCLE_CI_CLIENT_ID": "",  # Leave empty
                 "DB_NAME": config.database.name,
                 "DB_HOST": database.instance_endpoint.hostname,
                 "DB_PORT": config.database.port,
-                "DRF_RECAPTCHA_SECRET_KEY": os.environ.get("DRF_RECAPTCHA_SECRET_KEY") or "abc"
+                "DRF_RECAPTCHA_SECRET_KEY": os.environ.get("DRF_RECAPTCHA_SECRET_KEY")
+                or "abc",
             },
             secrets=api_secrets,
             logging=ecs.LogDrivers.aws_logs(
-                stream_prefix=config.env_id,
-                log_retention=logs.RetentionDays.ONE_MONTH
+                stream_prefix=config.env_id, log_retention=logs.RetentionDays.ONE_MONTH
             ),
             # health_check=elb.HealthCheck(
             #     command=["CMD-SHELL", "curl --fail http://localhost:80/v1/health/ || exit 1"],
@@ -111,7 +134,9 @@ class ApiStack(Stack):
             desired_count=config.api.container_count,
             enable_execute_command=True,
             vpc_subnets=ec2.SubnetSelection(
-                subnets=cluster.vpc.select_subnets(subnet_type=ec2.SubnetType.PRIVATE_WITH_NAT).subnets
+                subnets=cluster.vpc.select_subnets(
+                    subnet_type=ec2.SubnetType.PRIVATE_WITH_NAT
+                ).subnets
             ),
             # capacity_provider_strategies=ecs.CapacityProviderStrategy(
             #     capacity_provider="FARGATE_SPOT",
@@ -139,8 +164,8 @@ class ApiStack(Stack):
                 unhealthy_threshold_count=4,
                 timeout=Duration.seconds(10),
                 interval=Duration.seconds(60),
-                port="8081"
-            )
+                port="8081",
+            ),
         )
 
         listener_rule = elb.ApplicationListenerRule(
@@ -154,7 +179,8 @@ class ApiStack(Stack):
             target_groups=[target_group],
         )
 
-        database.connections.allow_from(service.connections, port_range=ec2.Port.tcp(5432))
+        database.connections.allow_from(
+            service.connections, port_range=ec2.Port.tcp(5432)
+        )
 
-        backup_bucket.grant_read_write(service.task_definition.task_role)        
-    
+        backup_bucket.grant_read_write(service.task_definition.task_role)

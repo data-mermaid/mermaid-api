@@ -25,4 +25,4 @@ def get_branch_name(strip_punctuation: bool = True) -> str:
 
 def camel_case(string: str) -> str:
     s = re.sub(r"(_|-)+", " ", string).title().replace(" ", "")
-    return ''.join([s[0].lower(), s[1:]])
+    return "".join([s[0].lower(), s[1:]])
