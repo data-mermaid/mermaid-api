@@ -17,6 +17,7 @@ from ..utils.sample_units import (
     delete_orphaned_sample_event,
 )
 
+
 def backup_model_record(sender, instance, using, **kwargs):
     try:
         if (

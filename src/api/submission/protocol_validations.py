@@ -14,12 +14,14 @@ from .validations import (
     ManagementValidation,
     ObsBenthicLITValidation,
     ObsBenthicPercentCoveredValidation,
+    ObsBenthicPhotoQuadratValidation,
     ObsBenthicPITValidation,
     ObsColoniesBleachedValidation,
     ObservationsValidation,
     ObsFishBeltValidation,
     ObsHabitatComplexitiesValidation,
     QuadratCollectionValidation,
+    QuadratTransectValidation,
     SampleEventValidation,
     SerializerValidation,
     SiteValidation,
@@ -103,18 +105,6 @@ class ProtocolValidation(object):
 
         results.append(self._run_validation(ObservationsValidation, data))
 
-        # results.append(
-        #     self._run_validation(
-        #         ValueInRangeValidation,
-        #         "depth",
-        #         depth,
-        #         self.DEPTH_RANGE,
-        #         status=WARN,
-        #         message=self.DEPTH_MSG,
-        #         value_range_operators=("<", ">"),
-        #     )
-        # )
-
         if ERROR in results:
             return ERROR
 
@@ -194,7 +184,7 @@ class TransectValidation(SampleUnitValidation):
         data = self.collect_record.data or dict()
 
         if self.SAMPLE_UNIT is None:
-            raise NotImplementedError(f"{SAMPLE_UNIT} not defined")
+            raise NotImplementedError("SAMPLE_UNIT not defined")
 
         sample_unit = data.get(self.SAMPLE_UNIT) or dict()
         len_surveyed = sample_unit.get("len_surveyed")
@@ -226,8 +216,8 @@ class QuadratValidation(SampleUnitValidation):
         results = [super(QuadratValidation, self).validate()]
         data = self.collect_record.data
 
-        quadrat_collection = data.get("quadrat_collection") or dict()
-        quadrat_size = quadrat_collection.get("quadrat_size")
+        sample_unit = data.get(self.SAMPLE_UNIT) or dict()
+        quadrat_size = sample_unit.get("quadrat_size")
 
         results.append(
             self._run_validation(
@@ -357,6 +347,30 @@ class BleachingQuadratCollectionProtocolValidation(QuadratValidation):
         results.append(self._run_validation(QuadratCollectionValidation, data))
         results.append(self._run_validation(ObsBenthicPercentCoveredValidation, data))
         results.append(self._run_validation(ObsColoniesBleachedValidation, data))
+
+        if ERROR in results:
+            return ERROR
+
+        elif WARN in results:
+            return WARN
+
+        elif len(results) == results.count(OK):
+            return OK
+
+class BenthicPhotoQuadratTransectProtocolValidation(TransectValidation, QuadratValidation):
+    SAMPLE_UNIT = "quadrat_transect"
+
+
+    def validate(self):
+        try:
+            results = [super(BenthicPhotoQuadratTransectProtocolValidation, self).validate()]
+        except SerializeValidationError:
+            return ERROR
+
+        data = self.collect_record.data or {}
+
+        results.append(self._run_validation(QuadratTransectValidation, data))
+        results.append(self._run_validation(ObsBenthicPhotoQuadratValidation, data))
 
         if ERROR in results:
             return ERROR

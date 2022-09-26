@@ -236,7 +236,7 @@ benthic_photo_quadrat_transect_validations = [
             path="data.obs_benthic_photo_quadrats",
             ignore_keys=["id"]
         ),
-        paths=["data.obs_belt_fishes"],
+        paths=["data.obs_benthic_photo_quadrats"],
         validation_level=RECORD_LEVEL,
         validation_type=VALUE_VALIDATION_TYPE,
     ),
