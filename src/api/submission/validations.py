@@ -1364,7 +1364,7 @@ class ObsBenthicPhotoQuadratValidation(DataValidation, BenthicAttributeMixin):
     MAX_OBS_COUNT_TMPL = "Greater than or equal to {} observations"
 
     def validate_observation_count(self):
-        observations = self.data.get(self.attribute_key) or []
+        observations = self.data.get(self.observations_key) or []
         count = len(observations)
         if count < self.MIN_OBS_COUNT_WARN:
             return self.warning(
