@@ -130,9 +130,10 @@ runserver:
 		manage.py runserver 0.0.0.0:8080
 
 shell:
-	@docker-compose exec \
-		--user=$(CURRENT_UID) \
-		api_service \
+	@docker exec \
+		--user=root \
+		-it \
+		api_runserver \
 		bash
 
 test:
