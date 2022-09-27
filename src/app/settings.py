@@ -35,23 +35,6 @@ except:
 LOGIN_REDIRECT_URL = 'api-root'
 SECRET_KEY = os.environ.get('SECRET_KEY')
 
-# SECURITY WARNING: don't run with debug turned on in production!
-DEBUG = ENVIRONMENT not in ("dev", "prod",)
-
-# Setup ALLOWED_HOSTS
-if ENVIRONMENT in ('dev', 'prod'):
-    _allowed_hosts = os.environ.get("ALLOWED_HOSTS") or ""
-    ALLOWED_HOSTS = [host.strip() for host in _allowed_hosts.split(",")]
-
-    # Look for Fargate IP, for health checks.
-    METADATA_URI = os.getenv('ECS_CONTAINER_METADATA_URI', None)
-    if METADATA_URI:
-        container_metadata = requests.get(METADATA_URI).json()
-        ALLOWED_HOSTS.append(container_metadata['Networks'][0]['IPv4Addresses'][0])
-
-else:
-    ALLOWED_HOSTS = ['*']
-
 # Set to True to prevent db writes and return 503
 MAINTENANCE_MODE = os.environ.get('MAINTENANCE_MODE') == 'True' or False
 MAINTENANCE_MODE_IGNORE_ADMIN_SITE = os.environ.get('MAINTENANCE_MODE_IGNORE_ADMIN_SITE', True)
@@ -108,24 +91,38 @@ MIDDLEWARE = [
     "api.middleware.APIVersionMiddleware",
 ]
 
+DEBUG = False
 DEBUG_LEVEL = "ERROR"
 CONN_MAX_AGE = None
 CORS_ALLOW_ALL_ORIGINS = True
 CORS_ALLOW_METHODS = list(default_methods) + ["HEAD"]
 CORS_EXPOSE_HEADERS = ["HTTP_API_VERSION"]
 CORS_REPLACE_HTTPS_REFERER = True
-EMAIL_BACKEND = 'django.core.mail.backends.smtp.EmailBackend'
-if ENVIRONMENT not in ("prod",):
-    EMAIL_BACKEND = 'django.core.mail.backends.locmem.EmailBackend'
+EMAIL_BACKEND = "django.core.mail.backends.smtp.EmailBackend"
+_dev_emails = os.environ.get("DEV_EMAILS") or ""
+DEV_EMAILS = [email.strip() for email in _dev_emails.split(",")]
+
+# Setup ALLOWED_HOSTS
+_allowed_hosts = os.environ.get("ALLOWED_HOSTS") or ""
+ALLOWED_HOSTS = [host.strip() for host in _allowed_hosts.split(",")]
+
+# Look for Fargate IP, for health checks.
+METADATA_URI = os.getenv('ECS_CONTAINER_METADATA_URI', None)
+if METADATA_URI:
+    container_metadata = requests.get(METADATA_URI).json()
+    ALLOWED_HOSTS.append(container_metadata['Networks'][0]['IPv4Addresses'][0])
 
 if ENVIRONMENT not in ("dev", "prod",):
     def show_toolbar(request):
         return True
 
     DEBUG_LEVEL = "DEBUG"
+    EMAIL_BACKEND = "django.core.mail.backends.console.EmailBackend"
     INSTALLED_APPS.append("debug_toolbar")
     MIDDLEWARE.append("debug_toolbar.middleware.DebugToolbarMiddleware")
     DEBUG_TOOLBAR_CONFIG = {"SHOW_TOOLBAR_CALLBACK": show_toolbar}
+    ALLOWED_HOSTS = ['*']
+    DEBUG = True
 
 ROOT_URLCONF = 'app.urls'
 

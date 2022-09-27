@@ -32,7 +32,7 @@ api_stack = ApiStack(
     database=common_stack.database,
     backup_bucket=common_stack.backup_bucket,
     load_balancer=common_stack.load_balancer,
-    container_security_group=common_stack.ecs_sg
+    container_security_group=common_stack.ecs_sg,
 )
 
 

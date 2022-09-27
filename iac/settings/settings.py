@@ -5,13 +5,13 @@ import os
 from dataclasses import dataclass
 
 from aws_cdk import (
-    Environment, 
+    Environment,
     Stack,
     Arn,
     ArnComponents,
     ArnFormat,
     aws_ec2 as ec2,
-    aws_secretsmanager as secrets
+    aws_secretsmanager as secrets,
 )
 
 from iac.settings.utils import get_branch_name
@@ -21,6 +21,7 @@ from iac.settings.utils import camel_case
 @dataclass
 class DatabaseSettings:
     """Settings Class for Postgres Database"""
+
     name: str
     port: str
     username: str = "mermaid_admin"
@@ -45,37 +46,44 @@ class DjangoSettings:
     default_domain_api: str
     default_domain_collect: str
     mermaid_api_audience: str
-    
+
     # Common Attrs (defaults)
-    superuser: str = "contact@datamermaid.org"
-    admins: str = "sysadmin@datamermaid.org"
     maintenance_mode: str = "False"
     auth0_management_api_audience: str = "https://datamermaid.auth0.com/api/v2/"
     email_host: str = "smtp.gmail.com"
     email_port: str = "587"
-    email_host_user: str = "sysadmin@datamermaid.org"
     mc_user: str = "Mermaid"
 
     # Common Secrets
+    superuser_name: str = "common/mermaid-api/superuser-u3SSj4"
+    admins_name: str = "common/mermaid-api/admins-z5Y80V"
     secret_key_name: str = "common/mermaid-api/secret-OcuWCl"
+    email_host_user_name: str = "common/mermaid-api/email-host-user-afLrHz"
     email_host_password_name: str = "common/mermaid-api/email-host-password-CI6hBI"
-    mermaid_api_signing_secret_name: str = "common/mermaid-api/mermaid-api-signing-secret-FM7ATI"
-    
+    mermaid_api_signing_secret_name: str = (
+        "common/mermaid-api/mermaid-api-signing-secret-FM7ATI"
+    )
+
     spa_admin_client_id_name: str = "common/mermaid-api/spa-admin-client-id-FuMVtc"
-    spa_admin_client_secret_name: str = "common/mermaid-api/spa-admin-client-secret-kYccw0"
-    mermaid_management_api_client_id_name: str = "common/mermaid-api/mermaid-management-api-client-id-nIWaxV"
-    mermaid_management_api_client_secret_name: str = "common/mermaid-api/mermaid-management-api-client-secret-HNVoT0"
+    spa_admin_client_secret_name: str = (
+        "common/mermaid-api/spa-admin-client-secret-kYccw0"
+    )
+    mermaid_management_api_client_id_name: str = (
+        "common/mermaid-api/mermaid-management-api-client-id-nIWaxV"
+    )
+    mermaid_management_api_client_secret_name: str = (
+        "common/mermaid-api/mermaid-management-api-client-secret-HNVoT0"
+    )
     mc_api_key_name: str = "common/mermaid-api/mc-api-key-xSsQOk"
     mc_api_list_id_name: str = "common/mermaid-api/mc-api-list-id-Am5u1G"
     drf_recaptcha_secret_key_name: str = "common/mermaid-api/drf-recaptcha-secret-key-MdFr2W"
-
 
     def get_secret_object(self, stack: Stack, secret_name: str):
         """Return secret object from name and field"""
         id = f'{camel_case(secret_name.split("/")[-1])}'
         return secrets.Secret.from_secret_complete_arn(
             stack,
-            id=f'SSM-{id}',
+            id=f"SSM-{id}",
             secret_complete_arn=Arn.format(
                 components=ArnComponents(
                     region=stack.region,
@@ -84,9 +92,9 @@ class DjangoSettings:
                     resource="secret",
                     service="secretsmanager",
                     resource_name=secret_name,
-                    arn_format=ArnFormat.COLON_RESOURCE_NAME
+                    arn_format=ArnFormat.COLON_RESOURCE_NAME,
                 )
-            )
+            ),
         )
 
 
@@ -99,8 +107,7 @@ class ProjectSettings:
     env_id: str
     database: DatabaseSettings
     api: DjangoSettings
-    
 
     # Common Attrs (defaults)
     branch_name: str = get_branch_name()
-    backup_bucket_name: str = "mermaid-api-v2-backups" # Use CDK construct?
+    backup_bucket_name: str = "mermaid-api-v2-backups"  # Use CDK construct?

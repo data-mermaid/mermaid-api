@@ -60,6 +60,7 @@ restart_api:
 # DB actions
 # -----------------
 dbbackup:
+ifdef target
 	@docker-compose run \
 		--rm \
 		--name api_dbbackup \
@@ -69,9 +70,16 @@ dbbackup:
 		--entrypoint python \
 		--user=$(CURRENT_UID) \
 		$(API_SERVICE) \
-		manage.py dbbackup local
+		manage.py dbbackup $(target)
+else
+	@echo "Please specify a target. \nie: make dbbackup target=local"
+endif
+
+db:
+	@echo "Test"
 
 dbrestore:
+ifdef target
 	@docker-compose run \
 		--rm \
 		--name api_dbrestore \
@@ -81,7 +89,10 @@ dbrestore:
 		--entrypoint python \
 		--user=$(CURRENT_UID) \
 		$(API_SERVICE) \
-		manage.py dbrestore local
+		manage.py dbrestore $(target)
+else
+	@echo "Please specify a target. \nie: make dbrestore target=local"
+endif
 
 migrate:
 	@docker-compose run \
@@ -130,9 +141,10 @@ runserver:
 		manage.py runserver 0.0.0.0:8080
 
 shell:
-	@docker-compose exec \
-		--user=$(CURRENT_UID) \
-		api_service \
+	@docker exec \
+		--user=root \
+		-it \
+		api_runserver \
 		bash
 
 test:

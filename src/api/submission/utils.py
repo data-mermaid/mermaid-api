@@ -21,6 +21,7 @@ from ..models import (
 )
 from .protocol_validations import (
     BenthicLITProtocolValidation,
+    BenthicPhotoQuadratTransectProtocolValidation,
     BenthicPITProtocolValidation,
     BleachingQuadratCollectionProtocolValidation,
     FishBeltProtocolValidation,
@@ -177,6 +178,8 @@ def _validate_collect_record(record, request):
         validator = HabitatComplexityProtocolValidation(record, request)
     elif protocol == BLEACHINGQC_PROTOCOL:
         validator = BleachingQuadratCollectionProtocolValidation(record, request)
+    elif protocol == BENTHICPQT_PROTOCOL:
+        validator = BenthicPhotoQuadratTransectProtocolValidation(record, request)
 
     result = validator.validate()
     validations = validator.validations
