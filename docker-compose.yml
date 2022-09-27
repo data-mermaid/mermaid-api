@@ -57,8 +57,6 @@ services:
       RESTORE: local
       BACKUP: local
       DEBUG: "True"
-      SUPERUSER: me@mydomain.com
-      ADMINS: me@mydomain.com
 
       DEFAULT_DOMAIN_API: api_service
       DEFAULT_DOMAIN_COLLECT: localhost:8888
@@ -68,7 +66,6 @@ services:
       # smtp
       EMAIL_HOST: smtp.gmail.com
       EMAIL_PORT: 587
-      EMAIL_HOST_USER: me@mydomain.com 
 
       # AWS
       AWS_REGION: us-east-1

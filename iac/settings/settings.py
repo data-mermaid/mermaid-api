@@ -48,17 +48,17 @@ class DjangoSettings:
     mermaid_api_audience: str
 
     # Common Attrs (defaults)
-    superuser: str = "contact@datamermaid.org"
-    admins: str = "sysadmin@datamermaid.org"
     maintenance_mode: str = "False"
     auth0_management_api_audience: str = "https://datamermaid.auth0.com/api/v2/"
     email_host: str = "smtp.gmail.com"
     email_port: str = "587"
-    email_host_user: str = "sysadmin@datamermaid.org"
     mc_user: str = "Mermaid"
 
     # Common Secrets
+    superuser_name: str = "common/mermaid-api/superuser-u3SSj4"
+    admins_name: str = "common/mermaid-api/admins-z5Y80V"
     secret_key_name: str = "common/mermaid-api/secret-OcuWCl"
+    email_host_user_name: str = "common/mermaid-api/email-host-user-afLrHz"
     email_host_password_name: str = "common/mermaid-api/email-host-password-CI6hBI"
     mermaid_api_signing_secret_name: str = (
         "common/mermaid-api/mermaid-api-signing-secret-FM7ATI"

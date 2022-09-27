@@ -46,6 +46,9 @@ class ApiStack(Stack):
             "DB_USER": ecs.Secret.from_secrets_manager(database.secret, "username"),
             "DB_PASSWORD": ecs.Secret.from_secrets_manager(database.secret, "password"),
             "PGPASSWORD": ecs.Secret.from_secrets_manager(database.secret, "password"),
+            "EMAIL_HOST_USER": ecs.Secret.from_secrets_manager(
+                config.api.get_secret_object(self, config.api.email_host_user_name)
+            ),
             "EMAIL_HOST_PASSWORD": ecs.Secret.from_secrets_manager(
                 config.api.get_secret_object(self, config.api.email_host_password_name)
             ),
@@ -81,6 +84,12 @@ class ApiStack(Stack):
             "MC_LIST_ID": ecs.Secret.from_secrets_manager(
                 config.api.get_secret_object(self, config.api.mc_api_list_id_name)
             ),
+            "ADMINS": ecs.Secret.from_secrets_manager(
+                config.api.get_secret_object(self, config.api.admins_name)
+            ),
+             "SUPERUSER": ecs.Secret.from_secrets_manager(
+                config.api.get_secret_object(self, config.api.superuser_name)
+            ),
         }
 
         task_definition.add_container(
@@ -92,14 +101,11 @@ class ApiStack(Stack):
                 "ENVIRONMENT": config.env_id,
                 "ALLOWED_HOSTS": load_balancer.load_balancer_dns_name,
                 "MAINTENANCE_MODE": config.api.maintenance_mode,
-                "ADMINS": config.api.admins,
-                "SUPERUSER": config.api.superuser,
                 "DEFAULT_DOMAIN_API": config.api.default_domain_api,
                 "DEFAULT_DOMAIN_COLLECT": config.api.default_domain_collect,
                 "AWS_BACKUP_BUCKET": backup_bucket.bucket_name,
                 "EMAIL_HOST": config.api.email_host,
                 "EMAIL_PORT": config.api.email_port,
-                "EMAIL_HOST_USER": config.api.email_host_user,
                 "AUTH0_MANAGEMENT_API_AUDIENCE": config.api.auth0_management_api_audience,
                 "MERMAID_API_AUDIENCE": config.api.mermaid_api_audience,
                 "MC_USER": config.api.mc_user,
