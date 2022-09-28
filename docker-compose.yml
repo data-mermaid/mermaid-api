@@ -56,7 +56,6 @@ services:
       ENV: local
       RESTORE: local
       BACKUP: local
-      DEBUG: "True"
 
       DEFAULT_DOMAIN_API: api_service
       DEFAULT_DOMAIN_COLLECT: localhost:8888

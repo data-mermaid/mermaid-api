@@ -54,7 +54,7 @@ start:
 	@make up
 
 restart_api:
-	@docker-compose restart api_service
+	@docker-compose restart $(API_SERVICE)
 
 # -----------------
 # DB actions
