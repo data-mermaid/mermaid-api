@@ -1,8 +1,7 @@
 import uuid
 
 from django.contrib.gis.db import models
-from django.contrib.postgres.fields import JSONField
-from django.utils.translation import ugettext_lazy as _
+from django.utils.translation import gettext_lazy as _
 
 from api.models import Project
 
@@ -242,7 +241,7 @@ class BaseSQLModel(models.Model):
     )
     project_notes = models.TextField(blank=True)
     contact_link = models.CharField(max_length=255)
-    tags = JSONField(null=True, blank=True)
+    tags = models.JSONField(null=True, blank=True)
     site_id = models.UUIDField()
     site_name = models.CharField(max_length=255)
     location = models.PointField(srid=4326)
@@ -265,14 +264,14 @@ class BaseSQLModel(models.Model):
         null=True,
         blank=True,
     )
-    management_parties = JSONField(null=True, blank=True)
+    management_parties = models.JSONField(null=True, blank=True)
     management_compliance = models.CharField(max_length=100)
-    management_rules = JSONField(null=True, blank=True)
+    management_rules = models.JSONField(null=True, blank=True)
     management_notes = models.TextField(blank=True)
     sample_date = models.DateField()
     sample_event_id = models.UUIDField()
     sample_event_notes = models.TextField(blank=True)
-    covariates = JSONField(null=True, blank=True)
+    covariates = models.JSONField(null=True, blank=True)
 
     class Meta:
         abstract = True
@@ -303,7 +302,8 @@ class BaseSUSQLModel(BaseSQLModel):
         observers.observers,
         c.name AS current_name,
         t.name AS tide_name,
-        v.name AS visibility_name
+        v.name AS visibility_name,
+        su.notes AS sample_unit_notes
     """
 
     # SU aggregation SQL common to all SU-level views
@@ -313,7 +313,8 @@ class BaseSUSQLModel(BaseSQLModel):
         string_agg(DISTINCT sample_time::text, ', '::text ORDER BY (sample_time::text)) AS sample_time,
         string_agg(DISTINCT current_name::text, ', '::text ORDER BY (current_name::text)) AS current_name,
         string_agg(DISTINCT tide_name::text, ', '::text ORDER BY (tide_name::text)) AS tide_name,
-        string_agg(DISTINCT visibility_name::text, ', '::text ORDER BY (visibility_name::text)) AS visibility_name
+        string_agg(DISTINCT visibility_name::text, ', '::text ORDER BY (visibility_name::text)) AS visibility_name,
+        string_agg(DISTINCT sample_unit_notes::text, '\n\n '::text) AS sample_unit_notes
     """
 
     # Fields common to all SUs that are actually SU properties (that make SUs distinct)
@@ -330,15 +331,17 @@ class BaseSUSQLModel(BaseSQLModel):
         "current_name",
         "tide_name",
         "visibility_name",
+        "sample_unit_notes",
     ]
     # SU-level BaseSUSQLModel inheritors should instantiate sample_unit_ids; obs-level inheritors shouldn't
     label = models.CharField(max_length=50, blank=True)
     relative_depth = models.CharField(max_length=50)
     sample_time = models.TimeField()
-    observers = JSONField(null=True, blank=True)
+    observers = models.JSONField(null=True, blank=True)
     current_name = models.CharField(max_length=50)
     tide_name = models.CharField(max_length=50)
     visibility_name = models.CharField(max_length=50)
+    sample_unit_notes = models.TextField(blank=True)
 
     class Meta:
         abstract = True

@@ -1,5 +1,9 @@
 {% extends "emails/base.txt" %}
 {% block body %}
-{{project_profile.profile.email}} was added to {{project_profile.project.name}} by {% if admin_profile %}{{admin_profile.full_name}} ({{admin_profile.email}}){% else %}a superadmin
-  not using the API{% endif %}.
+This email ({{project_profile.profile.email}}) was added to the MERMAID project {{project_profile.project.name}} by {% if admin_profile %}{{admin_profile.full_name}} ({{admin_profile.email}}){% else %}a superadmin
+not using the API{% endif %}, and can now be associated with survey data for the project.
+
+In order to participate in the project, you will need to create a MERMAID account using {{project_profile.profile.email}}
+by going to {{collect_project_url}} and clicking "Sign Up",
+then entering your email and other details directly or clicking the "Sign up with Google" button if this is email is associated with a Google account.
 {% endblock %}

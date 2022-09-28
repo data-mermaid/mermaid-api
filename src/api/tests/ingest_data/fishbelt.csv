@@ -1,13 +1,13 @@
-Site *,Management *,Observer emails *,Sample date: Year *,Sample date: Month *,Sample date: Day *,Depth *,Transect number *,Transect label,Transect length surveyed *,Width *,Fish size bin *,Visibility,Relative depth,Reef slope,Current,Tide,Notes,Fish name *,Size *,Count *
-Site 1,Management 1,profile1@mermaidcollect.org,2015,12,3,10,4,,50,5m,1,Near,Shallow,flat,Moderate,High,,Fish Genus 1 Fish Species 1,25,1
-Site 1,Management 1,profile1@mermaidcollect.org,2015,12,3,10,4,,50,5m,1,Near,Shallow,flat,Moderate,High,,Fish Genus 2 Fish Species 2,25,1
-Site 1,Management 1,profile1@mermaidcollect.org,2015,12,3,10,4,,50,5m,1,Near,Shallow,flat,Moderate,High,,Fish Genus 3 Fish Species 3,20,1
-Site 1,Management 1,profile1@mermaidcollect.org,2015,12,3,10,4,,50,5m,1,Near,Shallow,flat,Moderate,High,,Fish Genus 1 Fish Species 1,27,1
-Site 1,Management 1,profile1@mermaidcollect.org,2015,12,3,10,4,,50,5m,1,Near,Shallow,flat,Moderate,High,,Fish Genus 3 Fish Species 3,10,1
-Site 1,Management 1,profile1@mermaidcollect.org,2015,12,3,10,4,,50,5m,1,Near,Shallow,flat,Moderate,High,,Fish Genus 2 Fish Species 2,30,1
-Site 2,Management 1,profile1@mermaidcollect.org,2015,12,3,10,4,,50,5m,1,Near,Shallow,flat,Moderate,High,,Fish Genus 1 Fish Species 1,25,1
-Site 2,Management 1,profile1@mermaidcollect.org,2015,12,3,10,4,,50,5m,1,Near,Shallow,flat,Moderate,High,,Fish Genus 2 Fish Species 2,25,1
-Site 2,Management 1,profile1@mermaidcollect.org,2015,12,3,10,4,,50,5m,1,Near,Shallow,flat,Moderate,High,,Fish Genus 3 Fish Species 4,25,3
-Site 2,Management 1,profile1@mermaidcollect.org,2015,12,3,10,4,,50,5m,1,Near,Shallow,flat,Moderate,High,,Fish Genus 1 Fish Species 1,27,1
-Site 2,Management 1,profile1@mermaidcollect.org,2015,12,3,10,4,,50,5m,1,Near,Shallow,flat,Moderate,High,,Fish Genus 3 Fish Species 4,15,14
-Site 2,Management 1,profile1@mermaidcollect.org,2015,12,3,10,4,,50,5m,1,Near,Shallow,flat,Moderate,High,,Fish Genus 2 Fish Species 2,30,1
+Site *,Management *,Observer emails *,Sample date: Year *,Sample date: Month *,Sample date: Day *,Depth *,Transect number *,Transect label,Transect length surveyed *,Width *,Fish size bin *,Visibility,Relative depth,Reef slope,Current,Tide,Sample unit notes,Fish name *,Size *,Count *,Sample time
+Site 1,Management 1,profile1@mermaidcollect.org,2015,12,3,10,4,,50,5m,1,Near,Shallow,flat,Moderate,High,SU notes,Fish Genus 1 Fish Species 1,25,1,11:00:00
+Site 1,Management 1,profile1@mermaidcollect.org,2015,12,3,10,4,,50,5m,1,Near,Shallow,flat,Moderate,High,SU notes,Fish Genus 2 Fish Species 2,25,1,11:00:00
+Site 1,Management 1,profile1@mermaidcollect.org,2015,12,3,10,4,,50,5m,1,Near,Shallow,flat,Moderate,High,SU notes,Fish Genus 3 Fish Species 3,20,1,11:00:00
+Site 1,Management 1,profile1@mermaidcollect.org,2015,12,3,10,4,,50,5m,1,Near,Shallow,flat,Moderate,High,SU notes,Fish Genus 1 Fish Species 1,27,1,11:00:00
+Site 1,Management 1,profile1@mermaidcollect.org,2015,12,3,10,4,,50,5m,1,Near,Shallow,flat,Moderate,High,SU notes,Fish Genus 3 Fish Species 3,10,1,11:00:00
+Site 1,Management 1,profile1@mermaidcollect.org,2015,12,3,10,4,,50,5m,1,Near,Shallow,flat,Moderate,High,SU notes,Fish Genus 2 Fish Species 2,30,1,11:00:00
+Site 2,Management 1,profile1@mermaidcollect.org,2015,12,3,10,4,,50,5m,1,Near,Shallow,flat,Moderate,High,SU notes,Fish Genus 1 Fish Species 1,25,1,11:00:00
+Site 2,Management 1,profile1@mermaidcollect.org,2015,12,3,10,4,,50,5m,1,Near,Shallow,flat,Moderate,High,SU notes,Fish Genus 2 Fish Species 2,25,1,11:00:00
+Site 2,Management 1,profile1@mermaidcollect.org,2015,12,3,10,4,,50,5m,1,Near,Shallow,flat,Moderate,High,SU notes,Fish Genus 3 Fish Species 4,25,3,11:00:00
+Site 2,Management 1,profile1@mermaidcollect.org,2015,12,3,10,4,,50,5m,1,Near,Shallow,flat,Moderate,High,SU notes,Fish Genus 1 Fish Species 1,27,1,11:00:00
+Site 2,Management 1,profile1@mermaidcollect.org,2015,12,3,10,4,,50,5m,1,Near,Shallow,flat,Moderate,High,SU notes,Fish Genus 3 Fish Species 4,15,14,11:00:00
+Site 2,Management 1,profile1@mermaidcollect.org,2015,12,3,10,4,,50,5m,1,Near,Shallow,flat,Moderate,High,SU notes,Fish Genus 2 Fish Species 2,30,1,11:00:00

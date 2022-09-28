@@ -87,7 +87,6 @@ def to_colonies_bleached(value, field, row, serializer_instance):
     if "colonies_bleached" not in value:
         return None
 
-    field.protocol = "colonies_bleached"
     field.key = "count_genera_avg"
     count_genera_avg = to_protocol_value(value, field, row, serializer_instance)
     field.key = "percent_normal_avg"
@@ -106,7 +105,6 @@ def to_percent_cover(value, field, row, serializer_instance):
     if "quadrat_benthic_percent" not in value:
         return None
 
-    field.protocol = "quadrat_benthic_percent"
     field.key = "percent_hard_avg_avg"
     percent_hard_avg_avg = to_protocol_value(value, field, row, serializer_instance)
     field.key = "percent_soft_avg_avg"

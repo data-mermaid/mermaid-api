@@ -1,5 +1,3 @@
-from __future__ import unicode_literals
-
 import datetime
 import itertools
 import json
@@ -10,12 +8,11 @@ from decimal import Decimal
 
 from django.contrib.gis.db import models
 from django.contrib.postgres.aggregates import ArrayAgg
-from django.contrib.postgres.fields import JSONField
 from django.core.validators import MaxValueValidator, MinValueValidator
 from django.db.models import Avg, F, Max, Q
 from django.forms.models import model_to_dict
 from django.utils import timezone
-from django.utils.translation import ugettext_lazy as _
+from django.utils.translation import gettext_lazy as _
 from rest_framework.utils.encoders import JSONEncoder
 
 import pytz
@@ -232,7 +229,7 @@ class Management(BaseModel, JSONMixin, AreaMixin):
     gear_restriction = models.BooleanField(verbose_name=_(u'partial gear restriction'), default=False)
     species_restriction = models.BooleanField(verbose_name=_(u'partial species restriction'), default=False)
     access_restriction = models.BooleanField(verbose_name=_(u'access restriction'), default=False)
-    validations = JSONField(encoder=JSONEncoder, null=True, blank=True)
+    validations = models.JSONField(encoder=JSONEncoder, null=True, blank=True)
 
     class Meta:
         db_table = 'management'
@@ -267,33 +264,6 @@ class Management(BaseModel, JSONMixin, AreaMixin):
             rules.append('Access Restriction')
 
         return rules
-
-
-class MPA(BaseModel, AreaMixin):
-    name = models.CharField(max_length=255)
-    wdpa_id = models.IntegerField(null=True, blank=True)
-    est_year = models.PositiveSmallIntegerField(validators=[MaxValueValidator(timezone.now().year)],
-                                                verbose_name=_(u'year established'),
-                                                null=True, blank=True)
-    notes = models.TextField(blank=True)
-    boundary = models.MultiPolygonField(geography=True, null=True, blank=True)
-    size = models.IntegerField(verbose_name=_(u'Size (km2)'), null=True, blank=True)
-
-    class Meta:
-        db_table = 'mpa'
-        verbose_name = _(u'MPA')
-        verbose_name_plural = _(u'MPAs')
-        ordering = ('name', 'est_year')
-
-    def __str__(self):
-        return _(u'%s') % self.name
-
-
-class MPAZone(Management):
-    mpa = models.ForeignKey(MPA, related_name='mpa_zones', on_delete=models.CASCADE)
-
-    class Meta:
-        db_table = 'mpa_zone'
 
 
 class ReefType(BaseChoiceModel):
@@ -340,7 +310,7 @@ class Site(BaseModel, JSONMixin):
     notes = models.TextField(blank=True)
     predecessor = models.ForeignKey(
         'self', on_delete=models.SET_NULL, null=True, blank=True)
-    validations = JSONField(encoder=JSONEncoder, null=True, blank=True)
+    validations = models.JSONField(encoder=JSONEncoder, null=True, blank=True)
 
     class Meta:
         db_table = 'site'
@@ -448,7 +418,7 @@ class SampleEvent(BaseModel, JSONMixin):
     management = models.ForeignKey(Management, on_delete=models.PROTECT)
     sample_date = models.DateField(default=default_date)
     notes = models.TextField(blank=True)
-    validations = JSONField(encoder=JSONEncoder, null=True, blank=True)
+    validations = models.JSONField(encoder=JSONEncoder, null=True, blank=True)
 
     class Meta:
         db_table = 'sample_event'
@@ -1028,6 +998,7 @@ class ObsColoniesBleached(BaseModel, JSONMixin):
     count_80 = models.PositiveSmallIntegerField(verbose_name=u'50-80% bleached', default=0)
     count_100 = models.PositiveSmallIntegerField(verbose_name=u'80-100% bleached', default=0)
     count_dead = models.PositiveSmallIntegerField(verbose_name=u'recently dead', default=0)
+    notes = models.TextField(blank=True)
 
     class Meta:
         db_table = 'obs_colonies_bleached'
@@ -1062,6 +1033,7 @@ class ObsQuadratBenthicPercent(BaseModel, JSONMixin):
         max_digits=5, decimal_places=2,
         verbose_name=u"macroalgae, % cover", null=True, blank=True
     )
+    notes = models.TextField(blank=True)
 
     class Meta:
         db_table = "obs_quadrat_benthic_percent"
@@ -1625,8 +1597,8 @@ class CollectRecord(BaseModel):
     project = models.ForeignKey(Project, related_name='collect_records', on_delete=models.CASCADE)
     profile = models.ForeignKey(Profile, on_delete=models.CASCADE,
                                 related_name='collect_records')
-    data = JSONField(encoder=JSONEncoder, null=True, blank=True)
-    validations = JSONField(encoder=JSONEncoder, null=True, blank=True)
+    data = models.JSONField(encoder=JSONEncoder, null=True, blank=True)
+    validations = models.JSONField(encoder=JSONEncoder, null=True, blank=True)
     stage = models.PositiveIntegerField(choices=STAGE_CHOICES, null=True, blank=True)
 
     @property
@@ -1689,7 +1661,7 @@ class ArchivedRecord(models.Model):
     model = models.CharField(max_length=100)
     project_pk = models.UUIDField(db_index=True, null=True, blank=True)
     record_pk = models.UUIDField(db_index=True, null=True, blank=True)
-    record = JSONField(null=True, blank=True)
+    record = models.JSONField(null=True, blank=True)
 
 
 class Covariate(BaseModel, JSONMixin):
@@ -1719,7 +1691,7 @@ class Covariate(BaseModel, JSONMixin):
     name = models.CharField(max_length=100, choices=SUPPORTED_COVARIATES)
     datestamp = models.DateField()
     requested_datestamp = models.DateField()
-    value = JSONField(null=True, blank=True)
+    value = models.JSONField(null=True, blank=True)
 
     class Meta:
         unique_together = ("site", "name",)

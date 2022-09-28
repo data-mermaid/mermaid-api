@@ -1,28 +1,28 @@
-Site *,Management *,Sample date: Year *,Sample date: Month *,Sample date: Day *,Sample time,Depth *,Transect length surveyed *,Interval size *,Interval start *,Transect number *,Transect label *,Reef Slope,Visibility,Current,Relative depth,Tide,Notes,Observer emails *,Observation interval *,Benthic attribute *,Growth form
-Site 1,Management 1,2009,4,15,11:46:00,4,50,0.5,0.5,1,,,,,,High,,profile1@mermaidcollect.org,0.5,Acroporidae,massive
-Site 1,Management 1,2009,4,15,11:46:00,4,50,0.5,0.5,1,,,,,,High,,profile1@mermaidcollect.org,1,Rock,
-Site 1,Management 1,2009,4,15,11:46:00,4,50,0.5,0.5,1,,,,,,High,,profile1@mermaidcollect.org,1.5,Acroporidae,branching
-Site 1,Management 1,2009,4,15,11:46:00,4,50,0.5,0.5,1,,,,,,High,,profile1@mermaidcollect.org,2,Rock,
-Site 1,Management 1,2009,4,15,11:46:00,4,50,0.5,0.5,1,,,,,,High,,profile1@mermaidcollect.org,2.5,Rock,
-Site 1,Management 1,2009,4,15,11:46:00,4,50,0.5,0.5,1,,,,,,High,,profile1@mermaidcollect.org,3,Rock,
-Site 1,Management 1,2009,4,15,11:46:00,4,50,0.5,0.5,1,,,,,,High,,profile1@mermaidcollect.org,3.5,Acroporidae,plates or tables
-Site 1,Management 1,2009,4,15,11:46:00,4,50,0.5,0.5,1,,,,,,High,,profile1@mermaidcollect.org,4,Astreopora,digitate
-Site 1,Management 1,2009,4,15,11:46:00,4,50,0.5,0.5,1,,,,,,High,,profile1@mermaidcollect.org,4.5,Rock,
-Site 1,Management 1,2009,4,15,11:46:00,4,50,0.5,0.5,1,,,,,,High,,profile1@mermaidcollect.org,5,Rock,
-Site 1,Management 1,2009,4,15,11:46:00,4,50,0.5,0.5,1,,,,,,High,,profile1@mermaidcollect.org,5.5,Astreopora,massive
-Site 1,Management 1,2009,4,15,11:46:00,4,50,0.5,0.5,1,,,,,,High,,profile1@mermaidcollect.org,6,Rock,
-Site 1,Management 1,2009,4,15,11:46:00,4,50,0.5,0.5,1,,,,,,High,,profile1@mermaidcollect.org,6.5,Acroporidae,digitate
-Site 1,Management 1,2009,4,15,11:46:00,4,50,0.5,0.5,1,,,,,,High,,profile1@mermaidcollect.org,7,Rock,
-Site 1,Management 1,2009,4,15,11:46:00,4,50,0.5,0.5,1,,,,,,High,,profile1@mermaidcollect.org,7.5,Rock,
-Site 1,Management 1,2009,4,15,11:46:00,4,50,0.5,0.5,1,,,,,,High,,profile1@mermaidcollect.org,8,Rock,
-Site 1,Management 1,2009,4,15,11:46:00,4,50,0.5,0.5,1,,,,,,High,,profile1@mermaidcollect.org,8.5,Rock,
-Site 1,Management 1,2009,4,15,11:46:00,4,50,0.5,0.5,1,,,,,,High,,profile1@mermaidcollect.org,9,Astreopora,massive
-Site 1,Management 1,2009,4,15,11:46:00,4,50,0.5,0.5,1,,,,,,High,,profile1@mermaidcollect.org,9.5,Rock,
-Site 1,Management 1,2009,4,15,11:46:00,4,50,0.5,0.5,1,,,,,,High,,profile1@mermaidcollect.org,10,Rock,
-Site 1,Management 1,2009,4,15,11:46:00,4,50,0.5,0.5,1,,,,,,High,,profile1@mermaidcollect.org,10.5,Astreopora,plates or tables
-Site 1,Management 1,2009,4,15,11:46:00,4,50,0.5,0.5,1,,,,,,High,,profile1@mermaidcollect.org,11,Erythrastrea,
-Site 1,Management 1,2009,4,15,11:46:00,4,50,0.5,0.5,1,,,,,,High,,profile1@mermaidcollect.org,11.5,Rock,
-Site 1,Management 1,2009,4,15,11:46:00,4,50,0.5,0.5,1,,,,,,High,,profile1@mermaidcollect.org,12,Rock,
-Site 1,Management 1,2011,3,31,10:52:00,8,50,0.5,0.5,6,,,,,Shallow,Low,,profile1@mermaidcollect.org,11.5,Astreopora,massive
-Site 1,Management 1,2011,3,31,10:52:00,8,50,0.5,0.5,6,,,,,Shallow,Low,,profile1@mermaidcollect.org,12,Erythrastrea,
-Site 1,Management 1,2011,3,31,10:52:00,8,50,0.5,0.5,6,,,,,Shallow,Low,,profile1@mermaidcollect.org,12.5,Red Fleshy Algae,
+Site *,Management *,Sample date: Year *,Sample date: Month *,Sample date: Day *,Sample time,Depth *,Transect length surveyed *,Interval size *,Interval start *,Transect number *,Transect label *,Reef Slope,Visibility,Current,Relative depth,Tide,Sample unit notes,Observer emails *,Observation interval *,Benthic attribute *,Growth form
+Site 1,Management 1,2009,4,15,11:46:00,4,50,0.5,0.5,1,,,,,,High,SU notes,profile1@mermaidcollect.org,0.5,Acroporidae,massive
+Site 1,Management 1,2009,4,15,11:46:00,4,50,0.5,0.5,1,,,,,,High,SU notes,profile1@mermaidcollect.org,1,Rock,
+Site 1,Management 1,2009,4,15,11:46:00,4,50,0.5,0.5,1,,,,,,High,SU notes,profile1@mermaidcollect.org,1.5,Acroporidae,branching
+Site 1,Management 1,2009,4,15,11:46:00,4,50,0.5,0.5,1,,,,,,High,SU notes,profile1@mermaidcollect.org,2,Rock,
+Site 1,Management 1,2009,4,15,11:46:00,4,50,0.5,0.5,1,,,,,,High,SU notes,profile1@mermaidcollect.org,2.5,Rock,
+Site 1,Management 1,2009,4,15,11:46:00,4,50,0.5,0.5,1,,,,,,High,SU notes,profile1@mermaidcollect.org,3,Rock,
+Site 1,Management 1,2009,4,15,11:46:00,4,50,0.5,0.5,1,,,,,,High,SU notes,profile1@mermaidcollect.org,3.5,Acroporidae,plates or tables
+Site 1,Management 1,2009,4,15,11:46:00,4,50,0.5,0.5,1,,,,,,High,SU notes,profile1@mermaidcollect.org,4,Astreopora,digitate
+Site 1,Management 1,2009,4,15,11:46:00,4,50,0.5,0.5,1,,,,,,High,SU notes,profile1@mermaidcollect.org,4.5,Rock,
+Site 1,Management 1,2009,4,15,11:46:00,4,50,0.5,0.5,1,,,,,,High,SU notes,profile1@mermaidcollect.org,5,Rock,
+Site 1,Management 1,2009,4,15,11:46:00,4,50,0.5,0.5,1,,,,,,High,SU notes,profile1@mermaidcollect.org,5.5,Astreopora,massive
+Site 1,Management 1,2009,4,15,11:46:00,4,50,0.5,0.5,1,,,,,,High,SU notes,profile1@mermaidcollect.org,6,Rock,
+Site 1,Management 1,2009,4,15,11:46:00,4,50,0.5,0.5,1,,,,,,High,SU notes,profile1@mermaidcollect.org,6.5,Acroporidae,digitate
+Site 1,Management 1,2009,4,15,11:46:00,4,50,0.5,0.5,1,,,,,,High,SU notes,profile1@mermaidcollect.org,7,Rock,
+Site 1,Management 1,2009,4,15,11:46:00,4,50,0.5,0.5,1,,,,,,High,SU notes,profile1@mermaidcollect.org,7.5,Rock,
+Site 1,Management 1,2009,4,15,11:46:00,4,50,0.5,0.5,1,,,,,,High,SU notes,profile1@mermaidcollect.org,8,Rock,
+Site 1,Management 1,2009,4,15,11:46:00,4,50,0.5,0.5,1,,,,,,High,SU notes,profile1@mermaidcollect.org,8.5,Rock,
+Site 1,Management 1,2009,4,15,11:46:00,4,50,0.5,0.5,1,,,,,,High,SU notes,profile1@mermaidcollect.org,9,Astreopora,massive
+Site 1,Management 1,2009,4,15,11:46:00,4,50,0.5,0.5,1,,,,,,High,SU notes,profile1@mermaidcollect.org,9.5,Rock,
+Site 1,Management 1,2009,4,15,11:46:00,4,50,0.5,0.5,1,,,,,,High,SU notes,profile1@mermaidcollect.org,10,Rock,
+Site 1,Management 1,2009,4,15,11:46:00,4,50,0.5,0.5,1,,,,,,High,SU notes,profile1@mermaidcollect.org,10.5,Astreopora,plates or tables
+Site 1,Management 1,2009,4,15,11:46:00,4,50,0.5,0.5,1,,,,,,High,SU notes,profile1@mermaidcollect.org,11,Erythrastrea,
+Site 1,Management 1,2009,4,15,11:46:00,4,50,0.5,0.5,1,,,,,,High,SU notes,profile1@mermaidcollect.org,11.5,Rock,
+Site 1,Management 1,2009,4,15,11:46:00,4,50,0.5,0.5,1,,,,,,High,SU notes,profile1@mermaidcollect.org,12,Rock,
+Site 1,Management 1,2011,3,31,10:52:00,8,50,0.5,0.5,6,,,,,Shallow,Low,SU notes,profile1@mermaidcollect.org,11.5,Astreopora,massive
+Site 1,Management 1,2011,3,31,10:52:00,8,50,0.5,0.5,6,,,,,Shallow,Low,SU notes,profile1@mermaidcollect.org,12,Erythrastrea,
+Site 1,Management 1,2011,3,31,10:52:00,8,50,0.5,0.5,6,,,,,Shallow,Low,SU notes,profile1@mermaidcollect.org,12.5,Red Fleshy Algae,

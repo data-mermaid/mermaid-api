@@ -5,6 +5,8 @@ from ...models import (
     BenthicPhotoQuadratTransectObsSQLModel,
     BenthicPhotoQuadratTransectSESQLModel,
     BenthicPhotoQuadratTransectSUSQLModel,
+    BenthicPhotoQuadratTransect,
+    ObsBenthicPhotoQuadrat,
 )
 from ...models.mermaid import BenthicPhotoQuadratTransect
 from ...permissions import ProjectDataReadOnlyPermission, ProjectPublicSummaryPermission
@@ -24,9 +26,8 @@ from ..base import (
     BaseSUObsFilterSet,
     BaseSUViewAPISerializer,
     BaseViewAPIGeoSerializer,
+    BaseAPISerializer,
 )
-from ..benthic_photo_quadrat_transect import BenthicPhotoQuadratTransectSerializer
-from ..obs_benthic_photo_quadrat import ObsBenthicPhotoQuadratSerializer
 from ..observer import ObserverSerializer
 from ..mixins import SampleUnitMethodEditMixin
 from ..quadrat_transect import QuadratTransectSerializer
@@ -35,6 +36,25 @@ from . import (
     BaseProjectMethodView,
     covariate_report_fields,
 )
+
+
+class BenthicPhotoQuadratTransectSerializer(BaseAPISerializer):
+    class Meta:
+        model = BenthicPhotoQuadratTransect
+        exclude = []
+
+
+class ObsBenthicPhotoQuadratSerializer(BaseAPISerializer):
+    class Meta:
+        model = ObsBenthicPhotoQuadrat
+        exclude = []
+        extra_kwargs = {
+            "attribute": {
+                "error_messages": {
+                    "does_not_exist": 'Benthic attribute with id "{pk_value}", does not exist.'
+                }
+            }
+        }
 
 
 class BenthicPhotoQuadratTransectMethodSerializer(
@@ -52,15 +72,47 @@ class BenthicPhotoQuadratTransectMethodSerializer(
         exclude = []
 
 
-class BenthicPhotoQuadratTransectMethodView(SampleUnitMethodEditMixin, BaseProjectApiViewSet):
-    queryset = (
-        BenthicPhotoQuadratTransect.objects.select_related(
-            "quadrat_transect", "quadrat_transect__sample_event"
-        )
-        .order_by("updated_on", "id")
-    )
+class BenthicPhotoQuadratTransectMethodView(
+    SampleUnitMethodEditMixin, BaseProjectApiViewSet
+):
+    queryset = BenthicPhotoQuadratTransect.objects.select_related(
+        "quadrat_transect", "quadrat_transect__sample_event"
+    ).order_by("updated_on", "id")
     serializer_class = BenthicPhotoQuadratTransectMethodSerializer
     http_method_names = ["get", "put", "head", "delete"]
+
+
+class BenthicPQTMethodObsSerializer(BaseSUViewAPISerializer):
+    class Meta(BaseSUViewAPISerializer.Meta):
+        model = BenthicPhotoQuadratTransectObsSQLModel
+        exclude = BaseSUViewAPISerializer.Meta.exclude.copy()
+        exclude.extend(["location", "observation_notes"])
+        header_order = ["id"] + BaseSUViewAPISerializer.Meta.header_order.copy()
+        header_order.extend(
+            [
+                "sample_unit_id",
+                "sample_time",
+                "transect_number",
+                "label",
+                "depth",
+                "transect_len_surveyed",
+                "reef_slope",
+                "observers",
+                "data_policy_benthicpqt",
+                "interval_size",
+                "interval_start",
+                "interval",
+                "benthic_category",
+                "benthic_attribute",
+                "growth_form",
+                "percent_cover_by_benthic_category",
+            ]
+        )
+
+
+class BenthicPQTMethodObsGeoSerializer(BaseViewAPIGeoSerializer):
+    class Meta(BaseViewAPIGeoSerializer.Meta):
+        model = BenthicPhotoQuadratTransectObsSQLModel
 
 
 class ObsBenthicPQTCSVSerializer(ReportSerializer):
@@ -106,9 +158,8 @@ class ObsBenthicPQTCSVSerializer(ReportSerializer):
         ReportField("growth_form", "Growth form"),
         ReportField("num_points", "Number of points"),
         ReportField("site_notes", "Site notes"),
-        # ReportField("sample_event_notes", "Sampling event notes"),
         ReportField("management_notes", "Management notes"),
-        ReportField("observation_notes", "Observation notes"),
+        ReportField("sample_unit_notes", "Sample unit notes"),
     ] + covariate_report_fields
 
     additional_fields = [
@@ -123,40 +174,6 @@ class ObsBenthicPQTCSVSerializer(ReportSerializer):
         ReportField("sample_unit_id"),
         ReportField("data_policy_benthicpqt"),
     ]
-
-
-class BenthicPQTMethodObsSerializer(BaseSUViewAPISerializer):
-    class Meta(BaseSUViewAPISerializer.Meta):
-        model = BenthicPhotoQuadratTransectObsSQLModel
-        exclude = BaseSUViewAPISerializer.Meta.exclude.copy()
-        exclude.append("location")
-        header_order = ["id"] + BaseSUViewAPISerializer.Meta.header_order.copy()
-        header_order.extend(
-            [
-                "sample_unit_id",
-                "sample_time",
-                "transect_number",
-                "label",
-                "depth",
-                "transect_len_surveyed",
-                "reef_slope",
-                "observers",
-                "data_policy_benthicpqt",
-                "interval_size",
-                "interval_start",
-                "interval",
-                "benthic_category",
-                "benthic_attribute",
-                "growth_form",
-                "observation_notes",
-                "percent_cover_by_benthic_category",
-            ]
-        )
-
-
-class BenthicPQTMethodObsGeoSerializer(BaseViewAPIGeoSerializer):
-    class Meta(BaseViewAPIGeoSerializer.Meta):
-        model = BenthicPhotoQuadratTransectObsSQLModel
 
 
 class BenthicPQTMethodSUSerializer(BaseSUViewAPISerializer):
@@ -176,6 +193,11 @@ class BenthicPQTMethodSUSerializer(BaseSUViewAPISerializer):
                 "data_policy_benthicpqt",
             ]
         )
+
+
+class BenthicPQTMethodSUGeoSerializer(BaseViewAPIGeoSerializer):
+    class Meta(BaseViewAPIGeoSerializer.Meta):
+        model = BenthicPhotoQuadratTransectSUSQLModel
 
 
 class BenthicPQTMethodSUCSVSerializer(ReportSerializer):
@@ -203,15 +225,18 @@ class BenthicPQTMethodSUCSVSerializer(ReportSerializer):
         ReportField("management_est_year", "Management year established"),
         ReportField("management_size", "Management size"),
         ReportField("management_parties", "Governance", to_governance),
-        ReportField("management_compliance", "Estimated compliance", ),
+        ReportField(
+            "management_compliance",
+            "Estimated compliance",
+        ),
         ReportField("management_rules", "Management rules"),
         ReportField("transect_number", "Transect number"),
         ReportField("label", "Transect label"),
         ReportField("transect_len_surveyed", "Transect length surveyed"),
         ReportField("observers", "Observers", to_names),
         ReportField("site_notes", "Site notes"),
-        ReportField("sample_event_notes", "Sampling event notes"),
         ReportField("management_notes", "Management notes"),
+        ReportField("sample_unit_notes", "Sample unit notes"),
     ] + covariate_report_fields
 
     additional_fields = [
@@ -227,6 +252,27 @@ class BenthicPQTMethodSUCSVSerializer(ReportSerializer):
         ReportField("sample_unit_ids"),
         ReportField("data_policy_benthicpqt"),
     ]
+
+
+class BenthicPQTMethodSESerializer(BaseSUViewAPISerializer):
+    class Meta(BaseSUViewAPISerializer.Meta):
+        model = BenthicPhotoQuadratTransectSESQLModel
+        exclude = BaseSUViewAPISerializer.Meta.exclude.copy()
+        exclude.append("location")
+        header_order = BaseSUViewAPISerializer.Meta.header_order.copy()
+        header_order.extend(
+            [
+                "data_policy_benthicpqt",
+                "sample_unit_count",
+                "depth_avg",
+                "percent_cover_by_benthic_category_avg",
+            ]
+        )
+
+
+class BenthicPQTMethodSEGeoSerializer(BaseViewAPIGeoSerializer):
+    class Meta(BaseViewAPIGeoSerializer.Meta):
+        model = BenthicPhotoQuadratTransectSESQLModel
 
 
 class BenthicPQTMethodSECSVSerializer(ReportSerializer):
@@ -251,12 +297,17 @@ class BenthicPQTMethodSECSVSerializer(ReportSerializer):
         ReportField("management_est_year", "Management year established"),
         ReportField("management_size", "Management size"),
         ReportField("management_parties", "Governance", to_governance),
-        ReportField("management_compliance", "Estimated compliance", ),
+        ReportField(
+            "management_compliance",
+            "Estimated compliance",
+        ),
         ReportField("management_rules", "Management rules"),
         ReportField("sample_unit_count", "Sample unit count"),
-        ReportField("percent_cover_by_benthic_category_avg", "Percent cover by benthic category average"),
+        ReportField(
+            "percent_cover_by_benthic_category_avg",
+            "Percent cover by benthic category average",
+        ),
         ReportField("site_notes", "Site notes"),
-        ReportField("sample_event_notes", "Sampling event notes"),
         ReportField("management_notes", "Management notes"),
     ] + covariate_report_fields
 
@@ -274,35 +325,13 @@ class BenthicPQTMethodSECSVSerializer(ReportSerializer):
     ]
 
 
-class BenthicPQTMethodSUGeoSerializer(BaseViewAPIGeoSerializer):
-    class Meta(BaseViewAPIGeoSerializer.Meta):
-        model = BenthicPhotoQuadratTransectSUSQLModel
-
-
-class BenthicPQTMethodSESerializer(BaseSUViewAPISerializer):
-    class Meta(BaseSUViewAPISerializer.Meta):
-        model = BenthicPhotoQuadratTransectSESQLModel
-        exclude = BaseSUViewAPISerializer.Meta.exclude.copy()
-        exclude.append("location")
-        header_order = BaseSUViewAPISerializer.Meta.header_order.copy()
-        header_order.extend(
-            [
-                "data_policy_benthicpqt",
-                "sample_unit_count",
-                "depth_avg",
-                "percent_cover_by_benthic_category_avg",
-            ]
-        )
-
-
-class BenthicPQTMethodSEGeoSerializer(BaseViewAPIGeoSerializer):
-    class Meta(BaseViewAPIGeoSerializer.Meta):
-        model = BenthicPhotoQuadratTransectSESQLModel
-
-
 class BenthicPQTMethodObsFilterSet(BaseSUObsFilterSet):
     transect_len_surveyed = RangeFilter()
     reef_slope = BaseInFilter(method="char_lookup")
+    transect_number = BaseInFilter(method="char_lookup")
+    benthic_category = BaseInFilter(method="char_lookup")
+    benthic_attribute = BaseInFilter(method="char_lookup")
+    growth_form = BaseInFilter(method="char_lookup")
     interval_size = RangeFilter()
     interval = RangeFilter()
 
@@ -325,6 +354,7 @@ class BenthicPQTMethodObsFilterSet(BaseSUObsFilterSet):
 class BenthicPQTMethodSUFilterSet(BaseSUObsFilterSet):
     transect_len_surveyed = RangeFilter()
     reef_slope = BaseInFilter(method="char_lookup")
+    transect_number = BaseInFilter(method="char_lookup")
 
     class Meta:
         model = BenthicPhotoQuadratTransectSUSQLModel
@@ -341,7 +371,10 @@ class BenthicPQTMethodSEFilterSet(BaseSEFilterSet):
 
     class Meta:
         model = BenthicPhotoQuadratTransectSESQLModel
-        fields = ["sample_unit_count", "depth_avg",]
+        fields = [
+            "sample_unit_count",
+            "depth_avg",
+        ]
 
 
 class BenthicPQTProjectMethodObsView(BaseProjectMethodView):
@@ -369,9 +402,7 @@ class BenthicPQTProjectMethodSUView(BaseProjectMethodView):
     serializer_class_csv = BenthicPQTMethodSUCSVSerializer
     filterset_class = BenthicPQTMethodSUFilterSet
     model = BenthicPhotoQuadratTransectSUSQLModel
-    order_by = (
-        "site_name", "sample_date", "transect_number"
-    )
+    order_by = ("site_name", "sample_date", "transect_number")
 
 
 class BenthicPQTProjectMethodSEView(BaseProjectMethodView):
@@ -385,6 +416,4 @@ class BenthicPQTProjectMethodSEView(BaseProjectMethodView):
     serializer_class_csv = BenthicPQTMethodSECSVSerializer
     filterset_class = BenthicPQTMethodSEFilterSet
     model = BenthicPhotoQuadratTransectSESQLModel
-    order_by = (
-        "site_name", "sample_date"
-    )
+    order_by = ("site_name", "sample_date")

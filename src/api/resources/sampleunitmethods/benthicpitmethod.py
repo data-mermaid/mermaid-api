@@ -1,18 +1,21 @@
 from django.db import transaction
 from django_filters import BaseInFilter, RangeFilter
 from rest_condition import Or
-from rest_framework import status
+from rest_framework import status, serializers
 from rest_framework.response import Response
 
-from ...models import BenthicPITObsSQLModel, BenthicPITSESQLModel, BenthicPITSUSQLModel
-from ...models.mermaid import BenthicPIT
+from ...models import (
+    BenthicPITObsSQLModel,
+    BenthicPITSESQLModel,
+    BenthicPITSUSQLModel,
+    BenthicPIT,
+    ObsBenthicPIT,
+)
 from ...permissions import ProjectDataReadOnlyPermission, ProjectPublicSummaryPermission
 from ...reports.fields import ReportField
 from ...reports.formatters import (
     to_day,
     to_governance,
-    to_latitude,
-    to_longitude,
     to_month,
     to_names,
     to_str,
@@ -25,11 +28,10 @@ from ..base import (
     BaseSUObsFilterSet,
     BaseViewAPIGeoSerializer,
     BaseSUViewAPISerializer,
+    BaseAPISerializer,
 )
-from ..benthic_pit import BenthicPITSerializer
 from ..benthic_transect import BenthicTransectSerializer
 from ..mixins import SampleUnitMethodEditMixin
-from ..obs_benthic_pit import ObsBenthicPITSerializer
 from ..observer import ObserverSerializer
 from ..sample_event import SampleEventSerializer
 from . import (
@@ -39,6 +41,39 @@ from . import (
     save_model,
     save_one_to_many,
 )
+
+
+class BenthicPITSerializer(BaseAPISerializer):
+    interval_size = serializers.DecimalField(
+        max_digits=4,
+        decimal_places=2,
+        coerce_to_string=False,
+        error_messages={"null": "Interval size is required"},
+    )
+
+    interval_start = serializers.DecimalField(
+        max_digits=4,
+        decimal_places=2,
+        coerce_to_string=False,
+        error_messages={"null": "Interval start is required"},
+    )
+
+    class Meta:
+        model = BenthicPIT
+        exclude = []
+
+
+class ObsBenthicPITSerializer(BaseAPISerializer):
+    class Meta:
+        model = ObsBenthicPIT
+        exclude = []
+        extra_kwargs = {
+            "attribute": {
+                "error_messages": {
+                    "does_not_exist": 'Benthic attribute with id "{pk_value}", does not exist.'
+                }
+            }
+        }
 
 
 class BenthicPITMethodSerializer(BenthicPITSerializer):
@@ -155,7 +190,40 @@ class BenthicPITMethodView(SampleUnitMethodEditMixin, BaseProjectApiViewSet):
             raise
 
 
-class ObsBenthicPITCSVSerializer(ReportSerializer): 
+class BenthicPITMethodObsSerializer(BaseSUViewAPISerializer):
+    class Meta(BaseSUViewAPISerializer.Meta):
+        model = BenthicPITObsSQLModel
+        exclude = BaseSUViewAPISerializer.Meta.exclude.copy()
+        exclude.extend(["location", "observation_notes"])
+        header_order = ["id"] + BaseSUViewAPISerializer.Meta.header_order.copy()
+        header_order.extend(
+            [
+                "sample_unit_id",
+                "sample_time",
+                "transect_number",
+                "label",
+                "depth",
+                "transect_len_surveyed",
+                "reef_slope",
+                "observers",
+                "data_policy_benthicpit",
+                "interval_size",
+                "interval_start",
+                "interval",
+                "benthic_category",
+                "benthic_attribute",
+                "growth_form",
+                "percent_cover_by_benthic_category",
+            ]
+        )
+
+
+class BenthicPITMethodObsGeoSerializer(BaseViewAPIGeoSerializer):
+    class Meta(BaseViewAPIGeoSerializer.Meta):
+        model = BenthicPITObsSQLModel
+
+
+class ObsBenthicPITCSVSerializer(ReportSerializer):
     fields = [
         ReportField("project_name", "Project name"),
         ReportField("country_name", "Country"),
@@ -180,7 +248,7 @@ class ObsBenthicPITCSVSerializer(ReportSerializer):
         ReportField("management_est_year", "Management year established"),
         ReportField("management_size", "Management size"),
         ReportField("management_parties", "Governance", to_governance),
-        ReportField("management_compliance", "Estimated compliance",),
+        ReportField("management_compliance", "Estimated compliance"),
         ReportField("management_rules", "Management rules"),
         ReportField("transect_number", "Transect number"),
         ReportField("label", "Transect label"),
@@ -191,9 +259,8 @@ class ObsBenthicPITCSVSerializer(ReportSerializer):
         ReportField("benthic_attribute", "Benthic attribute"),
         ReportField("growth_form", "Growth form"),
         ReportField("site_notes", "Site notes"),
-        # ReportField("sample_event_notes", "Sampling event notes"),
         ReportField("management_notes", "Management notes"),
-        ReportField("observation_notes", "Observation notes"),
+        ReportField("sample_unit_notes", "Sample unit notes"),
     ] + covariate_report_fields
 
     additional_fields = [
@@ -210,40 +277,6 @@ class ObsBenthicPITCSVSerializer(ReportSerializer):
         ReportField("interval_start"),
         ReportField("data_policy_benthicpit"),
     ]
-
-
-class BenthicPITMethodObsSerializer(BaseSUViewAPISerializer):
-    class Meta(BaseSUViewAPISerializer.Meta):
-        model = BenthicPITObsSQLModel
-        exclude = BaseSUViewAPISerializer.Meta.exclude.copy()
-        exclude.append("location")
-        header_order = ["id"] + BaseSUViewAPISerializer.Meta.header_order.copy()
-        header_order.extend(
-            [
-                "sample_unit_id",
-                "sample_time",
-                "transect_number",
-                "label",
-                "depth",
-                "transect_len_surveyed",
-                "reef_slope",
-                "observers",
-                "data_policy_benthicpit",
-                "interval_size",
-                "interval_start",
-                "interval",
-                "benthic_category",
-                "benthic_attribute",
-                "growth_form",
-                "observation_notes",
-                "percent_cover_by_benthic_category",
-            ]
-        )
-
-
-class BenthicPITMethodObsGeoSerializer(BaseViewAPIGeoSerializer):
-    class Meta(BaseViewAPIGeoSerializer.Meta):
-        model = BenthicPITObsSQLModel
 
 
 class BenthicPITMethodSUSerializer(BaseSUViewAPISerializer):
@@ -265,6 +298,11 @@ class BenthicPITMethodSUSerializer(BaseSUViewAPISerializer):
                 "data_policy_benthicpit",
             ]
         )
+
+
+class BenthicPITMethodSUGeoSerializer(BaseViewAPIGeoSerializer):
+    class Meta(BaseViewAPIGeoSerializer.Meta):
+        model = BenthicPITSUSQLModel
 
 
 class BenthicPITMethodSUCSVSerializer(ReportSerializer):
@@ -292,7 +330,7 @@ class BenthicPITMethodSUCSVSerializer(ReportSerializer):
         ReportField("management_est_year", "Management year established"),
         ReportField("management_size", "Management size"),
         ReportField("management_parties", "Governance", to_governance),
-        ReportField("management_compliance", "Estimated compliance", ),
+        ReportField("management_compliance", "Estimated compliance"),
         ReportField("management_rules", "Management rules"),
         ReportField("transect_number", "Transect number"),
         ReportField("label", "Transect label"),
@@ -300,10 +338,12 @@ class BenthicPITMethodSUCSVSerializer(ReportSerializer):
         ReportField("observers", "Observers", to_names),
         ReportField("interval_size", "Interval size"),
         ReportField("interval_start", "Interval start"),
-        ReportField("percent_cover_by_benthic_category", "Percent cover by benthic category"),
+        ReportField(
+            "percent_cover_by_benthic_category", "Percent cover by benthic category"
+        ),
         ReportField("site_notes", "Site notes"),
-        ReportField("sample_event_notes", "Sampling event notes"),
         ReportField("management_notes", "Management notes"),
+        ReportField("sample_unit_notes", "Sample unit notes"),
     ] + covariate_report_fields
 
     additional_fields = [
@@ -319,6 +359,27 @@ class BenthicPITMethodSUCSVSerializer(ReportSerializer):
         ReportField("sample_unit_ids"),
         ReportField("data_policy_benthicpit"),
     ]
+
+
+class BenthicPITMethodSESerializer(BaseSUViewAPISerializer):
+    class Meta(BaseSUViewAPISerializer.Meta):
+        model = BenthicPITSESQLModel
+        exclude = BaseSUViewAPISerializer.Meta.exclude.copy()
+        exclude.append("location")
+        header_order = BaseSUViewAPISerializer.Meta.header_order.copy()
+        header_order.extend(
+            [
+                "data_policy_benthicpit",
+                "sample_unit_count",
+                "depth_avg",
+                "percent_cover_by_benthic_category_avg",
+            ]
+        )
+
+
+class BenthicPITMethodSEGeoSerializer(BaseViewAPIGeoSerializer):
+    class Meta(BaseViewAPIGeoSerializer.Meta):
+        model = BenthicPITSESQLModel
 
 
 class BenthicPITMethodSECSVSerializer(ReportSerializer):
@@ -343,12 +404,14 @@ class BenthicPITMethodSECSVSerializer(ReportSerializer):
         ReportField("management_est_year", "Management year established"),
         ReportField("management_size", "Management size"),
         ReportField("management_parties", "Governance", to_governance),
-        ReportField("management_compliance", "Estimated compliance", ),
+        ReportField("management_compliance", "Estimated compliance"),
         ReportField("management_rules", "Management rules"),
         ReportField("sample_unit_count", "Sample unit count"),
-        ReportField("percent_cover_by_benthic_category_avg", "Percent cover by benthic category average"),
+        ReportField(
+            "percent_cover_by_benthic_category_avg",
+            "Percent cover by benthic category average",
+        ),
         ReportField("site_notes", "Site notes"),
-        ReportField("sample_event_notes", "Sampling event notes"),
         ReportField("management_notes", "Management notes"),
     ] + covariate_report_fields
 
@@ -366,35 +429,13 @@ class BenthicPITMethodSECSVSerializer(ReportSerializer):
     ]
 
 
-class BenthicPITMethodSUGeoSerializer(BaseViewAPIGeoSerializer):
-    class Meta(BaseViewAPIGeoSerializer.Meta):
-        model = BenthicPITSUSQLModel
-
-
-class BenthicPITMethodSESerializer(BaseSUViewAPISerializer):
-    class Meta(BaseSUViewAPISerializer.Meta):
-        model = BenthicPITSESQLModel
-        exclude = BaseSUViewAPISerializer.Meta.exclude.copy()
-        exclude.append("location")
-        header_order = BaseSUViewAPISerializer.Meta.header_order.copy()
-        header_order.extend(
-            [
-                "data_policy_benthicpit",
-                "sample_unit_count",
-                "depth_avg",
-                "percent_cover_by_benthic_category_avg",
-            ]
-        )
-
-
-class BenthicPITMethodSEGeoSerializer(BaseViewAPIGeoSerializer):
-    class Meta(BaseViewAPIGeoSerializer.Meta):
-        model = BenthicPITSESQLModel
-
-
 class BenthicPITMethodObsFilterSet(BaseSUObsFilterSet):
     transect_len_surveyed = RangeFilter()
     reef_slope = BaseInFilter(method="char_lookup")
+    transect_number = BaseInFilter(method="char_lookup")
+    benthic_category = BaseInFilter(method="char_lookup")
+    benthic_attribute = BaseInFilter(method="char_lookup")
+    growth_form = BaseInFilter(method="char_lookup")
     interval_size = RangeFilter()
     interval = RangeFilter()
 
@@ -415,6 +456,7 @@ class BenthicPITMethodObsFilterSet(BaseSUObsFilterSet):
 class BenthicPITMethodSUFilterSet(BaseSUObsFilterSet):
     transect_len_surveyed = RangeFilter()
     reef_slope = BaseInFilter(method="char_lookup")
+    transect_number = BaseInFilter(method="char_lookup")
     interval_size = RangeFilter()
 
     class Meta:
@@ -433,7 +475,7 @@ class BenthicPITMethodSEFilterSet(BaseSEFilterSet):
 
     class Meta:
         model = BenthicPITSESQLModel
-        fields = ["sample_unit_count", "depth_avg",]
+        fields = ["sample_unit_count", "depth_avg"]
 
 
 class BenthicPITProjectMethodObsView(BaseProjectMethodView):
@@ -455,9 +497,7 @@ class BenthicPITProjectMethodSUView(BaseProjectMethodView):
     serializer_class_csv = BenthicPITMethodSUCSVSerializer
     filterset_class = BenthicPITMethodSUFilterSet
     model = BenthicPITSUSQLModel
-    order_by = (
-        "site_name", "sample_date", "transect_number"
-    )
+    order_by = ("site_name", "sample_date", "transect_number")
 
 
 class BenthicPITProjectMethodSEView(BaseProjectMethodView):
@@ -471,6 +511,4 @@ class BenthicPITProjectMethodSEView(BaseProjectMethodView):
     serializer_class_csv = BenthicPITMethodSECSVSerializer
     filterset_class = BenthicPITMethodSEFilterSet
     model = BenthicPITSESQLModel
-    order_by = (
-        "site_name", "sample_date"
-    )
+    order_by = ("site_name", "sample_date")

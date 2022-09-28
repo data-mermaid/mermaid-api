@@ -205,13 +205,13 @@ def _update_source_record(source_type, serializer, record, request, force=False)
     viewset = src["view"](request=vw_request)
 
     record_id = record.get("id")
-    failed_permission_checks = check_permissions(
+    permission_checks = check_permissions(
         vw_request, {source_type: record}, [source_type]
     )
 
-    if failed_permission_checks:
-        status_code, _ = failed_permission_checks[0]
-        exception = NotAuthenticated if status_code == 401 else PermissionDenied
+    code = permission_checks[source_type]["code"]
+    if code in [401, 403]:
+        exception = NotAuthenticated if code == 401 else PermissionDenied
         return _error(403, exception())
 
     if record_id is None:
@@ -275,7 +275,7 @@ def _get_source_records(source_type, source_data, request):
 
 
 def check_permissions(request, data, source_types, method=False):
-    failed_permissions = []
+    permission_checks = {}
     for source_type in source_types:
         src = _get_source(source_type)
         try:
@@ -283,12 +283,10 @@ def check_permissions(request, data, source_types, method=False):
                 request, data[source_type], src["required_filters"]
             )
         except ValueError:
-            failed_permissions.append(
-                (
-                    403,
-                    source_type,
-                )
-            )
+            permission_checks[source_type] = {
+                "data": data[source_type],
+                "code": 403
+            }
             continue
 
         view_request = _create_view_request(request, method=method, data=params)
@@ -298,24 +296,20 @@ def check_permissions(request, data, source_types, method=False):
         if source_type == PROJECTS_SOURCE_TYPE:
             vw.kwargs["pk"] = data[source_type].get("id") or data[source_type].get("project")
 
+        permission_check = {
+            "data": data[source_type],
+            "code": 200
+        }
         try:
             vw.check_permissions(view_request)
         except NotAuthenticated:
-            failed_permissions.append(
-                (
-                    401,
-                    source_type,
-                )
-            )
+            permission_check["code"] = 401
         except PermissionDenied:
-            failed_permissions.append(
-                (
-                    403,
-                    source_type,
-                )
-            )
+            permission_check["code"] = 403
+        
+        permission_checks[source_type] = permission_check
 
-    return failed_permissions
+    return permission_checks
 
 
 @api_view(http_method_names=["POST"])
@@ -328,19 +322,27 @@ def vw_pull(request):
         invalid_types = ", ".join(invalid_source_types)
         raise ValidationError(f"Invalid source types: {invalid_types}")
 
-    failed_permission_checks = check_permissions(
+    permission_checks = check_permissions(
         request, request_data, source_types, method="GET"
     )
-    if failed_permission_checks:
-        status_codes = [r[0] for r in failed_permission_checks]
-        failed_src_types = ", ".join(r[1] for r in failed_permission_checks)
-        exception = NotAuthenticated if 401 in status_codes else PermissionDenied
-        raise exception(f"{str(exception())}: {failed_src_types}")
 
-    response_data = {
-        source_type: _get_source_records(source_type, source_data, request)
-        for source_type, source_data in request_data.items()
-    }
+    response_data = {}
+    for source_type, source_data in request_data.items():
+        code = permission_checks[source_type]["code"]
+        if code == 200:
+            response_data[source_type] = _get_source_records(source_type, source_data, request)
+        elif code in [401, 403]:
+            source_data["last_revision"] = None
+            response = _get_source_records(source_type, source_data, request)
+            record_ids = [rec["id"] for rec in response["updates"]]
+            record_ids.extend(rec["id"] for rec in response["deletes"])
+            response["updates"] = []
+            response["deletes"] = []
+            response["error"] = {
+                "code": code,
+                "record_ids": record_ids
+            }
+            response_data[source_type] = response
 
     return Response(response_data)
 

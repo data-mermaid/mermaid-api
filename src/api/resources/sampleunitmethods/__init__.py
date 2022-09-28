@@ -2,16 +2,14 @@ import uuid
 
 from django.http import HttpResponseBadRequest
 from django.utils.text import get_valid_filename
-from django.utils.translation import ugettext_lazy as _
+from django.utils.translation import gettext_lazy as _
 from rest_condition import Or
 from rest_framework.decorators import action
 from rest_framework_gis.pagination import GeoJsonPagination
 
 from ...auth_backends import AnonymousJWTAuthentication
-from ...covariates.vibrant_oceans import VibrantOceansThreatsCovariate
 from ...models import Covariate
 from ...permissions import *
-from ...report_serializer import *
 from ...reports import csv_report
 from ...reports.fields import ReportField
 from ...reports.formatters import (

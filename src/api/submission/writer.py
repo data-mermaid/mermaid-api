@@ -1,6 +1,6 @@
 import uuid
 
-from django.utils.translation import ugettext_lazy as _
+from django.utils.translation import gettext_lazy as _
 from rest_framework.exceptions import ValidationError
 
 from api.models import (
@@ -18,28 +18,36 @@ from api.models import (
     SampleEvent,
 )
 from api.utils import combine_into
-from api.resources.belt_fish import BeltFishSerializer
-from api.resources.benthic_lit import BenthicLITSerializer
-from api.resources.benthic_pit import BenthicPITSerializer
 from api.resources.benthic_transect import BenthicTransectSerializer
-from api.resources.bleaching_quadrat_collection import (
-    BleachingQuadratCollectionSerializer,
-)
-from api.resources.benthic_photo_quadrat_transect import (
-    BenthicPhotoQuadratTransectSerializer,
-)
 from api.resources.fish_belt_transect import FishBeltTransectSerializer
-from api.resources.habitat_complexity import HabitatComplexitySerializer
-from api.resources.obs_belt_fish import ObsBeltFishSerializer
-from api.resources.obs_benthic_photo_quadrat import ObsBenthicPhotoQuadratSerializer
-from api.resources.obs_benthic_lit import ObsBenthicLITSerializer
-from api.resources.obs_benthic_pit import ObsBenthicPITSerializer
-from api.resources.obs_colonies_bleached import ObsColoniesBleachedSerializer
-from api.resources.obs_habitat_complexity import ObsHabitatComplexitySerializer
-from api.resources.obs_quadrat_benthic_percent import ObsQuadratBenthicPercentSerializer
 from api.resources.observer import ObserverSerializer
 from api.resources.quadrat_collection import QuadratCollectionSerializer
 from api.resources.quadrat_transect import QuadratTransectSerializer
+from ..resources.sampleunitmethods.habitatcomplexitymethod import (
+    HabitatComplexitySerializer,
+    ObsHabitatComplexitySerializer,
+)
+from ..resources.sampleunitmethods.bleachingquadratcollectionmethod import (
+    BleachingQuadratCollectionSerializer,
+    ObsColoniesBleachedSerializer,
+    ObsQuadratBenthicPercentSerializer,
+)
+from ..resources.sampleunitmethods.benthicpitmethod import (
+    BenthicPITSerializer,
+    ObsBenthicPITSerializer,
+)
+from ..resources.sampleunitmethods.benthicphotoquadrattransectmethod import (
+    BenthicPhotoQuadratTransectSerializer,
+    ObsBenthicPhotoQuadratSerializer,
+)
+from ..resources.sampleunitmethods.benthiclitmethod import (
+    BenthicLITSerializer,
+    ObsBenthicLITSerializer,
+)
+from ..resources.sampleunitmethods.beltfishmethod import (
+    BeltFishSerializer,
+    ObsBeltFishSerializer,
+)
 from api.resources.sample_event import SampleEventSerializer
 from .parser import (
     get_benthic_transect_data,
@@ -74,6 +82,7 @@ class BaseWriter(object):
         pk = data.get("id") or uuid.uuid4()
         data["id"] = pk
         serializer = self.validate_data(serializer_cls, data)
+
         try:
             data.pop("id")
             return model.objects.get(**data)
@@ -94,20 +103,7 @@ class ProtocolWriter(BaseWriter):
 
     def get_or_create_sample_event(self):
         sample_event_data = get_sample_event_data(self.collect_record)
-        sample_event_data["id"] = uuid.uuid4()
-        serializer = self.validate_data(SampleEventSerializer, sample_event_data)
-        query_params = {
-            k: v for k, v in sample_event_data.items() if k not in ("id", "notes")
-        }
-        se = SampleEvent.objects.filter(**query_params)
-        if se.exists():
-            sample_event = se[0]
-            notes = sample_event_data.get("notes") or ""
-            if notes.strip():
-                sample_event.notes += "\n\n{}".format(notes)
-                sample_event.save()
-            return sample_event
-        return serializer.save()
+        return self.get_or_create(SampleEvent, SampleEventSerializer, sample_event_data)
 
     def create_observers(self, sample_unit_method_id):
         observers = []
@@ -136,18 +132,9 @@ class BenthicProtocolWriter(ProtocolWriter):
         benthic_transect_data = get_benthic_transect_data(
             self.collect_record, sample_event_id
         )
-        try:
-            return BenthicTransect.objects.get(**benthic_transect_data)
-
-        except (BenthicTransect.DoesNotExist, ValidationError):
-            benthic_transect_data["id"] = uuid.uuid4()
-            serializer = BenthicTransectSerializer(
-                data=benthic_transect_data, context=self.context
-            )
-            if serializer.is_valid() is False:
-                raise ValidationError(serializer.errors) from _
-
-            return serializer.save()
+        return self.get_or_create(
+            BenthicTransect, BenthicTransectSerializer, benthic_transect_data
+        )
 
 
 class FishbeltProtocolWriter(ProtocolWriter):

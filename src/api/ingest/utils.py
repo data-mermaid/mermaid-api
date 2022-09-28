@@ -1,5 +1,7 @@
 import csv
 
+from rest_framework.exceptions import NotFound
+
 from api import mocks
 from api.ingest import (
     BenthicLITCSVSerializer,
@@ -8,6 +10,7 @@ from api.ingest import (
     BleachingCSVSerializer,
     FishBeltCSVSerializer,
     HabitatComplexityCSVSerializer,
+    ingest_serializers,
 )
 from api.models import (
     BENTHICPQT_PROTOCOL,
@@ -38,23 +41,36 @@ class InvalidSchema(Exception):
 def get_ingest_project_choices(project_id):
     project_choices = dict()
     project_choices["data__sample_event__site"] = {
-        s.name.lower().replace("\t", " "): str(s.id)
+        s.name: str(s.id)
         for s in Site.objects.filter(project_id=project_id)
     }
 
     project_choices["data__sample_event__management"] = {
-        m.name.lower().replace("\t", " "): str(m.id)
+        m.name: str(m.id)
         for m in Management.objects.filter(project_id=project_id)
     }
 
-    project_choices["project_profiles"] = {
-        pp.profile.email.lower(): ProjectProfileSerializer(instance=pp).data
+    project_choices["data__observers"] = {
+        pp.profile.email: ProjectProfileSerializer(instance=pp).data
         for pp in ProjectProfile.objects.select_related("profile").filter(
             project_id=project_id
         )
     }
 
     return project_choices
+
+
+def get_su_serializer(sample_unit):
+    serializer = None
+    sample_unit = sample_unit.lower()
+    for ingest_serializer in ingest_serializers:
+        if ingest_serializer.protocol == sample_unit.lower():
+            serializer = ingest_serializer
+            break
+    if serializer is None:
+        raise NotFound(detail=f"{sample_unit} sample unit not found")
+
+    return serializer
 
 
 def _create_context(profile_id, request=None):
@@ -82,14 +98,15 @@ def _add_extra_fields(rows, project_id, profile_id):
     return _rows
 
 
-def _schema_check(csv_headers, serializer_headers):
+def _schema_check(csv_headers, instance):
     missing_required_headers = []
     if csv_headers is None:
         raise InvalidSchema(errors=["CSV headers are null"])
 
-    for h in serializer_headers:
-        if "*" in h and h not in csv_headers:
-            missing_required_headers.append(h)
+    for label in instance.get_schema_labels():
+        fieldname, field = instance.get_schemafield(label)
+        if field and field.required and label not in csv_headers:
+            missing_required_headers.append(label)
 
     if missing_required_headers:
         print(missing_required_headers)
@@ -146,8 +163,7 @@ def ingest(
         return None, output
 
     reader = csv.DictReader(datafile)
-
-    _schema_check(reader.fieldnames, list(serializer.header_map.keys()))
+    _schema_check(reader.fieldnames, serializer())
 
     context = _create_context(profile_id, request)
     rows = _add_extra_fields(reader, project_id, profile_id)
@@ -187,6 +203,7 @@ def ingest(
                 transaction.savepoint_commit(sid)
 
     is_bulk_invalid = False
+    record_ids = []
     if dry_run is False and bulk_validation or bulk_submission:
         record_ids = [str(r.pk) for r in new_records]
         validation_output = validate_collect_records(

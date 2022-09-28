@@ -1,4 +1,4 @@
-from django.conf.urls import url
+from django.urls import re_path
 from rest_framework_nested import routers
 
 from .resources.me import MeViewSet
@@ -13,6 +13,7 @@ from .resources.fish_species import FishSpeciesViewSet
 from .resources.fish_grouping import FishGroupingViewSet
 from .resources.choices import ChoiceViewSet
 from .resources.collect_record import CollectRecordViewSet
+from .resources.ingest_schema import ingest_schema_csv
 from .resources.observer import ObserverViewSet
 from .resources.project_profile import ProjectProfileViewSet
 from .resources.psite import PSiteViewSet
@@ -21,60 +22,54 @@ from .resources.sample_event import SampleEventViewSet
 from .resources.benthic_transect import BenthicTransectViewSet
 from .resources.quadrat_collection import QuadratCollectionViewSet
 from .resources.fish_belt_transect import FishBeltTransectViewSet
-from .resources.obs_belt_fish import ObsBeltFishViewSet
-from .resources.obs_benthic_lit import ObsBenthicLITViewSet
-from .resources.obs_benthic_pit import ObsBenthicPITViewSet
-from .resources.obs_habitat_complexity import ObsHabitatComplexityViewSet
-from .resources.obs_colonies_bleached import ObsColoniesBleachedViewSet
-from .resources.obs_quadrat_benthic_percent import ObsQuadratBenthicPercentViewSet
 from .resources.sync import vw_pull, vw_push
 from .resources.notification import NotificationViewSet
 
-from .resources.sample_units.beltfishmethod import (
+from .resources.sampleunitmethods.beltfishmethod import (
     BeltFishMethodView,
     BeltFishProjectMethodObsView,
     BeltFishProjectMethodSUView,
     BeltFishProjectMethodSEView,
 )
-from .resources.sample_units.benthiclitmethod import (
+from .resources.sampleunitmethods.benthiclitmethod import (
     BenthicLITMethodView,
     BenthicLITProjectMethodObsView,
     BenthicLITProjectMethodSUView,
     BenthicLITProjectMethodSEView,
 )
-from .resources.sample_units.benthicpitmethod import (
+from .resources.sampleunitmethods.benthicpitmethod import (
     BenthicPITMethodView,
     BenthicPITProjectMethodObsView,
     BenthicPITProjectMethodSUView,
     BenthicPITProjectMethodSEView,
 )
-from .resources.sample_units.habitatcomplexitymethod import (
+from .resources.sampleunitmethods.habitatcomplexitymethod import (
     HabitatComplexityMethodView,
     HabitatComplexityProjectMethodObsView,
     HabitatComplexityProjectMethodSUView,
     HabitatComplexityProjectMethodSEView,
 )
-from .resources.sample_units.bleachingquadratcollectionmethod import (
+from .resources.sampleunitmethods.bleachingquadratcollectionmethod import (
     BleachingQuadratCollectionMethodView,
     BleachingQCProjectMethodObsColoniesBleachedView,
     BleachingQCProjectMethodObsQuadratBenthicPercentView,
     BleachingQCProjectMethodSUView,
     BleachingQCProjectMethodSEView,
 )
-from .resources.sample_units.benthicphotoquadrattransectmethod import (
+from .resources.sampleunitmethods.benthicphotoquadrattransectmethod import (
     BenthicPQTProjectMethodObsView,
     BenthicPhotoQuadratTransectMethodView,
     BenthicPQTProjectMethodSEView,
     BenthicPQTProjectMethodSUView,
 )
-from .resources.sample_units.sample_unit_methods import SampleUnitMethodView
+from .resources.sampleunitmethods.sample_unit_methods import SampleUnitMethodView
 from .resources.summary_sample_event import SummarySampleEventView
-from .resources.summary_site import SummarySiteView
 
 from .resources.fish_size import FishSizeViewSet
 from .resources.version import AppVersionViewSet
 from .resources.health import health
 from .resources.project_tag import ProjectTagViewSet
+from .resources.contact import contact_mermaid, contact_project_admins
 
 
 # APP-WIDE - BASE
@@ -92,7 +87,6 @@ router.register(r"projects", ProjectViewSet, "project")
 router.register(r"sites", SiteViewSet, "site")
 router.register(r"managements", ManagementViewSet, "management")
 router.register(r"projecttags", ProjectTagViewSet, "projecttag")
-router.register(r"summarysites", SummarySiteView, "summarysite")
 router.register(r"summarysampleevents", SummarySampleEventView, "summarysampleevent")
 router.register(r"notifications", NotificationViewSet, "notification")
 
@@ -138,7 +132,9 @@ project_router.register(
     r"beltfishes/sampleunits", BeltFishProjectMethodSUView, "beltfishmethod-sampleunit"
 )
 project_router.register(
-    r"beltfishes/sampleevents", BeltFishProjectMethodSEView, "beltfishmethod-sampleevent"
+    r"beltfishes/sampleevents",
+    BeltFishProjectMethodSEView,
+    "beltfishmethod-sampleevent",
 )
 
 project_router.register(
@@ -147,10 +143,14 @@ project_router.register(
     "benthiclitmethod-obs",
 )
 project_router.register(
-    r"benthiclits/sampleunits", BenthicLITProjectMethodSUView, "benthiclitmethod-sampleunit"
+    r"benthiclits/sampleunits",
+    BenthicLITProjectMethodSUView,
+    "benthiclitmethod-sampleunit",
 )
 project_router.register(
-    r"benthiclits/sampleevents", BenthicLITProjectMethodSEView, "benthiclitmethod-sampleevent"
+    r"benthiclits/sampleevents",
+    BenthicLITProjectMethodSEView,
+    "benthiclitmethod-sampleevent",
 )
 
 project_router.register(
@@ -159,10 +159,14 @@ project_router.register(
     "benthicpitmethod-obs",
 )
 project_router.register(
-    r"benthicpits/sampleunits", BenthicPITProjectMethodSUView, "benthicpitmethod-sampleunit"
+    r"benthicpits/sampleunits",
+    BenthicPITProjectMethodSUView,
+    "benthicpitmethod-sampleunit",
 )
 project_router.register(
-    r"benthicpits/sampleevents", BenthicPITProjectMethodSEView, "benthicpitmethod-sampleevent"
+    r"benthicpits/sampleevents",
+    BenthicPITProjectMethodSEView,
+    "benthicpitmethod-sampleevent",
 )
 
 project_router.register(
@@ -176,10 +180,14 @@ project_router.register(
     "quadratbenthicpercentmethod-obs",
 )
 project_router.register(
-    r"bleachingqcs/sampleunits", BleachingQCProjectMethodSUView, "bleachingqcsmethod-sampleunit"
+    r"bleachingqcs/sampleunits",
+    BleachingQCProjectMethodSUView,
+    "bleachingqcsmethod-sampleunit",
 )
 project_router.register(
-    r"bleachingqcs/sampleevents", BleachingQCProjectMethodSEView, "bleachingqcsmethod-sampleevent"
+    r"bleachingqcs/sampleevents",
+    BleachingQCProjectMethodSEView,
+    "bleachingqcsmethod-sampleevent",
 )
 
 project_router.register(
@@ -204,10 +212,14 @@ project_router.register(
     "benthicpqtmethod-obs",
 )
 project_router.register(
-    r"benthicpqts/sampleunits", BenthicPQTProjectMethodSUView, "benthicpqtmethod-sampleunit"
+    r"benthicpqts/sampleunits",
+    BenthicPQTProjectMethodSUView,
+    "benthicpqtmethod-sampleunit",
 )
 project_router.register(
-    r"benthicpqts/sampleevents", BenthicPQTProjectMethodSEView, "benthicpqtmethod-sampleevent"
+    r"benthicpqts/sampleevents",
+    BenthicPQTProjectMethodSEView,
+    "benthicpqtmethod-sampleevent",
 )
 
 
@@ -238,26 +250,16 @@ project_router.register(
 )
 project_router.register(r"sampleunitmethods", SampleUnitMethodView, "sampleunitmethod")
 
-# observations
-project_router.register(
-    r"obstransectbeltfishs", ObsBeltFishViewSet, "obstransectbeltfish"
-)
-project_router.register(r"obsbenthiclits", ObsBenthicLITViewSet, "obsbenthiclit")
-project_router.register(r"obsbenthicpits", ObsBenthicPITViewSet, "obsbenthicpit")
-project_router.register(
-    r"obshabitatcomplexities", ObsHabitatComplexityViewSet, "obshabitatcomplexity"
-)
-project_router.register(
-    r"obscoloniesbleached", ObsColoniesBleachedViewSet, "obscoloniesbleached"
-)
-project_router.register(
-    r"obsquadratbenthicpercent",
-    ObsQuadratBenthicPercentViewSet,
-    "obsquadratbenthicpercent",
-)
 
-
-api_urls = router.urls + project_router.urls
-api_urls += (url(r"^health/$", health),)
-api_urls += (url(r"^pull/$", vw_pull),)
-api_urls += (url(r"^push/$", vw_push),)
+api_urls = router.urls + project_router.urls + [
+    re_path(r"^contactmermaid/$", contact_mermaid, name="contactmermaid"),
+    re_path(r"^contactprojectadmins/$", contact_project_admins, name="contactprojectadmins"),
+    re_path(
+        r"^ingest_schema_csv/(?P<sample_unit>\w+)/$",
+        ingest_schema_csv,
+        name="ingest-schemas-csv",
+    ),
+    re_path(r"^health/$", health),
+    re_path(r"^pull/$", vw_pull),
+    re_path(r"^push/$", vw_push),
+]

@@ -95,7 +95,13 @@ def email_superadmin_on_new(sender, instance, created, **kwargs):
     }
     template = "emails/superadmins_new_attribute.html"
 
-    mermaid_email(subject, template, [settings.SUPERUSER[1]], context=context)
+    mermaid_email(
+        subject,
+        template,
+        [settings.SUPERUSER[1]],
+        context=context,
+        reply_to=instance.updated_by.email,
+    )
 
 
 for c in get_subclasses(BaseModel):
@@ -256,9 +262,13 @@ def notify_new_project_user(sender, instance, created, **kwargs):
     if created is False:
         return
 
+    collect_project_url = (
+        f"https://{settings.DEFAULT_DOMAIN_COLLECT}/projects/{instance.project.pk}/data"
+    )
     context = {
         "project_profile": instance,
         "admin_profile": instance.updated_by,
+        "collect_project_url": collect_project_url,
     }
     if instance.profile.num_account_connections == 0:
         template = "emails/new_user_added_to_project.html"

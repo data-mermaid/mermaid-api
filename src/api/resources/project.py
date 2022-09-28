@@ -1,15 +1,13 @@
-import logging
-import uuid
-
 import django_filters
-from django.contrib.postgres.fields import JSONField
+import logging
+from django.db.models import JSONField
 from django.db import transaction
-from rest_framework import exceptions, permissions, serializers, status
+from rest_condition import Or
+from rest_framework import exceptions, serializers, status
 from rest_framework.decorators import action
 from rest_framework.relations import HyperlinkedIdentityField
 from rest_framework.response import Response
 
-from rest_condition import Or
 from ..auth_backends import AnonymousJWTAuthentication
 from ..models import Management, Project, Site, Profile, ProjectProfile, ArchivedRecord, TransectMethod
 from ..decorators import run_in_thread
@@ -29,7 +27,6 @@ from .base import (
     BaseAPISerializer,
     BaseApiViewSet,
     TagField,
-    to_tag_model_instances,
 )
 from .management import ManagementSerializer
 from .project_profile import ProjectProfileSerializer
@@ -47,14 +44,12 @@ class ProjectSerializer(BaseAPISerializer):
         "sampleevent",
         "benthictransect",
         "fishbelttransect",
-        "obstransectbeltfish",
-        "obsbenthiclit",
-        "obsbenthicpit",
-        "obshabitatcomplexity",
         "collectrecords",
         "beltfishtransectmethod",
         "benthiclittransectmethod",
+        "benthicphotoquadrattransectmethod",
         "benthicpittransectmethod",
+        "bleachingquadratcollectionmethod",
         "habitatcomplexitytransectmethod",
     ]
 
@@ -75,11 +70,11 @@ class ProjectSerializer(BaseAPISerializer):
                     )
                 }
             )
-        super(ProjectSerializer, self).__init__(*args, **kwargs)
+        super().__init__(*args, **kwargs)
 
     @transaction.atomic()
     def create(self, validated_data):
-        p = super(ProjectSerializer, self).create(validated_data)
+        p = super().create(validated_data)
         request = self.context.get("request")
         pp = ProjectProfile(
             project=p, profile=request.user.profile, role=ProjectProfile.ADMIN
@@ -92,10 +87,10 @@ class ProjectSerializer(BaseAPISerializer):
         if "tags" in validated_data:
             tags_data = validated_data["tags"].get("all") or []
             del validated_data["tags"]
-        instance = super(ProjectSerializer, self).update(instance, validated_data)
+        instance = super().update(instance, validated_data)
 
-        tags = to_tag_model_instances([t.name for t in tags_data], instance.updated_by)
-        instance.tags.set(*tags)
+        tags = [t.name for t in tags_data]
+        instance.tags.set(tags)
         return instance
 
     class Meta:
@@ -119,7 +114,6 @@ class ProjectSerializer(BaseAPISerializer):
     def get_num_active_sample_units(self, obj):
         return obj.collect_records.count()
     
-
     def get_num_sample_units(self, obj):
         sample_unit_methods = TransectMethod.__subclasses__()
         num_sample_units = 0
@@ -184,7 +178,7 @@ class ProjectViewSet(BaseApiViewSet):
         )
     ]
     method_authentication_classes = {"GET": [AnonymousJWTAuthentication]}
-    filter_class = ProjectFilterSet
+    filterset_class = ProjectFilterSet
     search_fields = ["$name", "$sites__country__name"]
 
     def get_queryset(self):
@@ -220,6 +214,10 @@ class ProjectViewSet(BaseApiViewSet):
         sites_data = data.get("sites") or []
         managements_data = data.get("managements") or []
         tags_data = data.get("tags") or []
+
+        if project_data is None:
+            transaction.savepoint_rollback(save_point_id)
+            raise exceptions.ParseError("No project data specified")
 
         # Save Project
         project_data["id"] = None
@@ -271,8 +269,7 @@ class ProjectViewSet(BaseApiViewSet):
             else:
                 mgmt_serializer.save()
 
-        tags = to_tag_model_instances(tags_data, project.updated_by)
-        project.tags.add(*tags)
+        project.tags.add(*tags_data)
 
         if has_validation_errors is True:
             transaction.savepoint_rollback(save_point_id)
@@ -307,6 +304,10 @@ class ProjectViewSet(BaseApiViewSet):
         except KeyError as e:
             raise exceptions.ParseError(detail="'new_project_name' is required") from e
 
+        existing_named_projects = Project.objects.filter(name=new_project_name)
+        if existing_named_projects.count() > 0:
+            raise exceptions.ValidationError({"new_project_name": "Project name already exists"})
+
         try:
             original_project_id = data["original_project_id"]
             if original_project_id and str(original_project_id).strip() != "":
@@ -337,7 +338,6 @@ class ProjectViewSet(BaseApiViewSet):
         except Exception as err:
             print(err)
             raise exceptions.APIException(detail=f"[{type(err).__name__}] Copying project") from err
-
 
     def get_updates(self, request, *args, **kwargs):
         added, updated, deleted = super().get_updates(request, *args, **kwargs)
@@ -551,7 +551,6 @@ class ProjectViewSet(BaseApiViewSet):
         submitted_protocols, site_submitted_summary = create_submitted_summary(project)
         summary["site_submitted_summary"] = site_submitted_summary
         protocols.extend(submitted_protocols)
-
 
         summary["protocols"] = sorted(set(protocols))
         return Response(summary)
