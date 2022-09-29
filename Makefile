@@ -47,124 +47,45 @@ build:
 up:
 	docker-compose up -d
 
-logs:
-	@docker-compose logs -f $(API_SERVICE)
-
 start:
 	@make up
 
-restart_api:
-	@docker-compose restart $(API_SERVICE)
-
-# -----------------
-# DB actions
-# -----------------
 dbbackup:
-ifdef target
-	@docker-compose run \
-		--rm \
-		--name api_dbbackup \
-		-e AWS_ACCESS_KEY_ID=${OLD_AWS_ACCESS_KEY_ID} \
-		-e AWS_SECRET_ACCESS_KEY=${OLD_AWS_SECRET_ACCESS_KEY} \
-		-e PGPASSWORD=postgres \
-		--entrypoint python \
-		--user=$(CURRENT_UID) \
-		$(API_SERVICE) \
-		manage.py dbbackup $(target)
-else
-	@echo "Please specify a target. \nie: make dbbackup target=local"
-endif
-
-db:
-	@echo "Test"
+	@docker-compose exec --user=$(CURRENT_UID) $(API_SERVICE) python manage.py dbbackup local
 
 dbrestore:
-ifdef target
-	@docker-compose run \
-		--rm \
-		--name api_dbrestore \
-		-e AWS_ACCESS_KEY_ID=${OLD_AWS_ACCESS_KEY_ID} \
-		-e AWS_SECRET_ACCESS_KEY=${OLD_AWS_SECRET_ACCESS_KEY} \
-		-e PGPASSWORD=postgres \
-		--entrypoint python \
-		--user=$(CURRENT_UID) \
-		$(API_SERVICE) \
-		manage.py dbrestore $(target)
-else
-	@echo "Please specify a target. \nie: make dbrestore target=local"
-endif
+	@docker-compose exec --user=$(CURRENT_UID) $(API_SERVICE) python manage.py dbrestore local
 
 migrate:
-	@docker-compose run \
-		--rm \
-		--name api_migrate \
-		--entrypoint python \
-		--user=$(CURRENT_UID) \
-		$(API_SERVICE) \
-		manage.py migrate
-# -----------------
-# Setup actions
-# -----------------
+	@docker-compose exec --user=$(CURRENT_UID) $(API_SERVICE) python manage.py migrate
+
 install:
 	@echo "\n--- Shutting down existing stack ---\n"
 	@make down
 	@echo "\n--- Building new docker image ---\n"
 	@make build
-	@echo "\n--- Migrate ---\n"
-	@make migrate
 	@echo "\n--- Spinning up new stack ---\n"
 	@make up
+	@echo "\n--- Applying MERMAID database migrations ---\n"
+	@make migrate
 
 freshinstall:
 	@echo "\n--- Shutting down existing stack ---\n"
-	@make downnocache
+	@make down
 	@echo "\n--- Building new docker image ---\n"
 	@make buildnocache
-	@echo "\n--- Restoring MERMAID database ---\n"
-	@make dbrestore
-	@echo "\n--- Migrate ---\n"
-	@make migrate
 	@echo "\n--- Spinning up new stack ---\n"
 	@make up
+	@echo "\n--- Restoring MERMAID database ---\n"
+	@make dbrestore
+	@echo "\n--- Applying MERMAID database migrations ---\n"
+	@make migrate
 	
-# override the default entrypoint and use runserver (for development)
 runserver:
-	@docker-compose run \
-		--rm \
-		--name api_runserver \
-		--workdir /code \
-		--volume $(PWD)/src:/code \
-		--publish 8080:8080 \
-		--entrypoint python \
-		--user=$(CURRENT_UID) \
-		$(API_SERVICE) \
-		manage.py runserver 0.0.0.0:8080
+	@docker-compose exec --user=$(CURRENT_UID) $(API_SERVICE) python manage.py runserver 0.0.0.0:8080
 
 shell:
-	@docker exec \
-		--user=root \
-		-it \
-		api_runserver \
-		bash
+	@docker-compose exec --user=$(CURRENT_UID) $(API_SERVICE) /bin/bash
 
 test:
-	@docker-compose run \
-		--rm \
-		--name api_test \
-		-e AWS_ACCESS_KEY_ID=${OLD_AWS_ACCESS_KEY_ID} \
-		-e AWS_SECRET_ACCESS_KEY=${OLD_AWS_SECRET_ACCESS_KEY} \
-		--entrypoint pytest \
-		--user=$(CURRENT_UID) \
-		$(API_SERVICE) \
-		-v --no-migrations api/tests
-
-# -----------------
-# CDK
-# -----------------
-deploy:
-	cd iac && cdk deploy --require-approval never dev-mermaid-api-django
-# cdk deploy --require-approval never mermaid-api-infra-common
-# cdk deploy --require-approval never --all
-
-diff:
-	cd iac && cdk diff
+	@docker-compose exec --user=$(CURRENT_UID) $(API_SERVICE) pytest -v --no-migrations --rich api/tests

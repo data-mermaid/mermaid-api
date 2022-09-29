@@ -37,40 +37,13 @@ services:
         context: .
         dockerfile: Dockerfile.ecs
     image: wcs/mermaid-api:latest
+    volumes:
+      - $PWD/src:/var/projects/webapp
     ports:
-      - 8081:8081
-    environment:
-      # db
-      DB_NAME: mermaid
-      DB_HOST: api_db
-      DB_PORT: 5432
-      DB_USER: postgres
-      DB_PASSWORD: postgres
-
-      # Auth0
-      MERMAID_DOMAIN: datamermaid.auth0.com
-      MERMAID_API_AUDIENCE: https://dev-api.datamermaid.org
-      AUTH0_MANAGEMENT_API_AUDIENCE: https://datamermaid.auth0.com/api/v2/
-
-      # django
-      ENV: local
-      RESTORE: local
-      BACKUP: local
-
-      DEFAULT_DOMAIN_API: api_service
-      DEFAULT_DOMAIN_COLLECT: localhost:8888
-      
-      DRF_RECAPTCHA_TESTING: "True"
-
-      # smtp
-      EMAIL_HOST: smtp.gmail.com
-      EMAIL_PORT: 587
-
-      # AWS
-      AWS_REGION: us-east-1
-      AWS_BACKUP_BUCKET: mermaid-db-backups
-
+      - 8080:8080
+    entrypoint: python manage.py runserver 0.0.0.0:8080
     env_file:
+      - .env
       - .secrets.env
     depends_on:
       api_db:
