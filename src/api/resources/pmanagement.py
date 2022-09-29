@@ -11,7 +11,7 @@ from .base import (
     NullableUUIDFilter,
 )
 from .management import get_rules
-from .mixins import CreateOrUpdateSerializerMixin, ProtectedResourceMixin
+from .mixins import CopyRecordsMixin, CreateOrUpdateSerializerMixin, ProtectedResourceMixin
 
 
 class PManagementSerializer(CreateOrUpdateSerializerMixin, BaseAPISerializer):
@@ -79,7 +79,7 @@ class PManagementFilterSet(BaseAPIFilterSet):
         ]
 
 
-class PManagementViewSet(ProtectedResourceMixin, BaseProjectApiViewSet):
+class PManagementViewSet(ProtectedResourceMixin, CopyRecordsMixin, BaseProjectApiViewSet):
     model_display_name = "Management Regime"
     serializer_class = PManagementSerializer
     queryset = Management.objects.all()
