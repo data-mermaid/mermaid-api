@@ -20,5 +20,9 @@ DEV_SETTINGS = ProjectSettings(
         default_domain_api="dev-api.datamermaid.org",
         default_domain_collect="dev-collect.datamermaid.org",
         mermaid_api_audience="https://dev-api.datamermaid.org",
+        
+        # Secrets
+        dev_emails_name="dev/mermaid-api/dev-emails-mUnSDl"
+
     ),
 )

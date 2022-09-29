@@ -92,6 +92,11 @@ class ApiStack(Stack):
             ),
         }
 
+        if config.env_id == "dev":
+            api_secrets["DEV_EMAILS"] = ecs.Secret.from_secrets_manager(
+                config.api.get_secret_object(self, config.api.dev_emails_name)
+            )
+
         task_definition.add_container(
             id="MermaidAPI",
             image=ecs.ContainerImage.from_asset(directory="../", file="Dockerfile.ecs"),

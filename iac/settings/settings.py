@@ -47,6 +47,9 @@ class DjangoSettings:
     default_domain_collect: str
     mermaid_api_audience: str
 
+    # Dynamic Secrets
+    dev_emails_name: str
+
     # Common Attrs (defaults)
     maintenance_mode: str = "False"
     auth0_management_api_audience: str = "https://datamermaid.auth0.com/api/v2/"
