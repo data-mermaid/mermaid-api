@@ -16,8 +16,6 @@ services:
     image: postgis/postgis:13-3.2-alpine
     volumes:
       - pg_data:/var/lib/postgresql/data
-      # copy the sql script to create db/tables
-      - ./sql/init_db.sql:/docker-entrypoint-initdb.d/init_db.sql
     environment:
       POSTGRES_PASSWORD: postgres
       POSTGRES_USER: postgres
