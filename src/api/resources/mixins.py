@@ -251,8 +251,6 @@ class SampleUnitMethodEditMixin(object):
             return Response(str(err), status=500)
 
 
-
-
 class CopyRecordsMixin:
     @action(
         detail=False,
