@@ -86,9 +86,6 @@ freshinstall:
 	@echo "\n--- Applying MERMAID database migrations ---\n"
 	@make migrate
 
-runserver:
-	@docker-compose exec --user=$(CURRENT_UID) $(API_SERVICE) python manage.py runserver 0.0.0.0:8080
-
 shell:
 	@docker-compose exec --user=$(CURRENT_UID) $(API_SERVICE) /bin/bash
 
