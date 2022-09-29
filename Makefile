@@ -50,6 +50,9 @@ up:
 start:
 	@make up
 
+logs:
+	@docker-compose logs -f $(API_SERVICE)
+
 dbbackup:
 	@docker-compose exec --user=$(CURRENT_UID) $(API_SERVICE) python manage.py dbbackup local
 
