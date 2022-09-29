@@ -69,21 +69,23 @@ install:
 	@make build
 	@echo "\n--- Spinning up new stack ---\n"
 	@make up
+	@sleep 20
 	@echo "\n--- Applying MERMAID database migrations ---\n"
 	@make migrate
 
 freshinstall:
 	@echo "\n--- Shutting down existing stack ---\n"
-	@make down
+	@make downnocache
 	@echo "\n--- Building new docker image ---\n"
 	@make buildnocache
 	@echo "\n--- Spinning up new stack ---\n"
 	@make up
+	@sleep 20
 	@echo "\n--- Restoring MERMAID database ---\n"
 	@make dbrestore
 	@echo "\n--- Applying MERMAID database migrations ---\n"
 	@make migrate
-	
+
 runserver:
 	@docker-compose exec --user=$(CURRENT_UID) $(API_SERVICE) python manage.py runserver 0.0.0.0:8080
 
