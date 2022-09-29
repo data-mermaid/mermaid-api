@@ -8,8 +8,8 @@ from iac.settings.settings import DatabaseSettings, ProjectSettings, DjangoSetti
 DEV_ENV_ID = "dev"
 DEV_SETTINGS = ProjectSettings(
     cdk_env=Environment(
-        account=os.getenv("DEV_AWS_ACCT", "554812291621"),
-        region=os.getenv("DEV_AWS_REGION", "us-east-1"),
+        account=os.getenv("CDK_DEFAULT_ACCOUNT", ""),
+        region=os.getenv("CDK_DEFAULT_REGION", "us-east-1"),
     ),
     env_id=DEV_ENV_ID,
     database=DatabaseSettings(name=f"mermaid-{DEV_ENV_ID}", port="5432"),
