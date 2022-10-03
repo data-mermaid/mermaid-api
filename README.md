@@ -133,3 +133,15 @@ admin@datamermaid.org.
 
 * [Push/Pull](src/api/resources/sync/README.md)
 * [Validations v2](src/api/submission/validations2/README.md)
+
+### SSH into containers in the cloud
+
+Requirements: 
+- Install Session Manager Plugin for AWS-CLI:
+- https://docs.aws.amazon.com/systems-manager/latest/userguide/session-manager-working-with-install-plugin.html
+
+Then
+
+```
+$ make cloud_shell taskid=XXX
+```
