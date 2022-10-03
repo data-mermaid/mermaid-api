@@ -32,43 +32,15 @@ Note that the following covers only local configuration, not deployment. Neverth
  `src` for how we deploy to [Elastic Beanstalk](https://aws.amazon.com/elasticbeanstalk/) using 
  [CircleCI](https://circleci.com/) and [Docker Hub](https://hub.docker.com/).
  
-#### Environment variables
+### Environment variables
 
-The following are the redacted key-val pairs for a local MERMAID `.env` file or for Elastic Beanstalk configuration 
-settings:
-```
-AUTH0_MANAGEMENT_API_AUDIENCE=https://datamermaid.auth0.com/api/v2/
-MERMAID_API_AUDIENCE=https://dev-api.datamermaid.org
-MERMAID_API_SIGNING_SECRET=
-SPA_ADMIN_CLIENT_ID=
-SPA_ADMIN_CLIENT_SECRET=
-MERMAID_MANAGEMENT_API_CLIENT_ID=
-MERMAID_MANAGEMENT_API_CLIENT_SECRET=
-DB_NAME=mermaid
-DB_USER=postgres
-PGPASSWORD=postgres
-DB_PASSWORD=postgres
-DB_HOST=api_db
-DB_PORT=5432
-RESTORE=local
-BACKUP=local
-AWS_BACKUP_BUCKET=mermaid-db-backups
-AWS_ACCESS_KEY_ID=
-AWS_SECRET_ACCESS_KEY=
-AWS_REGION=
-ENV=local
-EMAIL_HOST=
-EMAIL_PORT=
-EMAIL_HOST_USER=
-EMAIL_HOST_PASSWORD=
-ADMINS=
-SUPERUSER=
-MERMAID_DOMAIN=datamermaid.auth0.com
-DEFAULT_DOMAIN_API=localhost:8080
-DEFAULT_DOMAIN_COLLECT=localhost:8888
-```
+1. copy the sample `.secrets.env.sample` file and fill in the blanks: 
+- `cp .secrets.env.sample .secrets.env`
 
-#### Local environment intialization
+2. copy the sample `.env.sample` file and fill in the blanks: 
+- `cp .env.sample .env`
+
+### Local environment intialization
 
 Once Docker is installed and local environment variables set, run the following:
 
