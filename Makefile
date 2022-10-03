@@ -53,12 +53,9 @@ logs:
 start:
 	@make up
 
-restart_api:
-	@docker-compose restart api_service
+logs:
+	@docker-compose logs -f $(API_SERVICE)
 
-# -----------------
-# DB actions
-# -----------------
 dbbackup:
 ifdef target
 	@docker-compose run \
@@ -110,35 +107,24 @@ install:
 	@make down
 	@echo "\n--- Building new docker image ---\n"
 	@make build
-	@echo "\n--- Migrate ---\n"
-	@make migrate
 	@echo "\n--- Spinning up new stack ---\n"
 	@make up
+	@sleep 20
+	@echo "\n--- Applying MERMAID database migrations ---\n"
+	@make migrate
 
 freshinstall:
 	@echo "\n--- Shutting down existing stack ---\n"
 	@make downnocache
 	@echo "\n--- Building new docker image ---\n"
 	@make buildnocache
+	@echo "\n--- Spinning up new stack ---\n"
+	@make up
+	@sleep 20
 	@echo "\n--- Restoring MERMAID database ---\n"
 	@make dbrestore
 	@echo "\n--- Migrate ---\n"
 	@make migrate
-	@echo "\n--- Spinning up new stack ---\n"
-	@make up
-	
-# override the default entrypoint and use runserver (for development)
-runserver:
-	@docker-compose run \
-		--rm \
-		--name api_runserver \
-		--workdir /code \
-		--volume $(PWD)/src:/code \
-		--publish 8080:8080 \
-		--entrypoint python \
-		--user=$(CURRENT_UID) \
-		$(API_SERVICE) \
-		manage.py runserver 0.0.0.0:8080
 
 shell:
 	@docker exec \
@@ -157,14 +143,3 @@ test:
 		--user=$(CURRENT_UID) \
 		$(API_SERVICE) \
 		-v --no-migrations api/tests
-
-# -----------------
-# CDK
-# -----------------
-deploy:
-	cd iac && cdk deploy --require-approval never dev-mermaid-api-django
-# cdk deploy --require-approval never mermaid-api-infra-common
-# cdk deploy --require-approval never --all
-
-diff:
-	cd iac && cdk diff

@@ -8,7 +8,7 @@ from iac.settings.settings import DatabaseSettings, ProjectSettings, DjangoSetti
 DEV_ENV_ID = "dev"
 DEV_SETTINGS = ProjectSettings(
     cdk_env=Environment(
-        account=os.getenv("CDK_DEFAULT_ACCOUNT", ""),
+        account=os.getenv("CDK_DEFAULT_ACCOUNT", None),
         region=os.getenv("CDK_DEFAULT_REGION", "us-east-1"),
     ),
     env_id=DEV_ENV_ID,
@@ -20,5 +20,9 @@ DEV_SETTINGS = ProjectSettings(
         default_domain_api="dev-api.datamermaid.org",
         default_domain_collect="dev-collect.datamermaid.org",
         mermaid_api_audience="https://dev-api.datamermaid.org",
+        
+        # Secrets
+        dev_emails_name="dev/mermaid-api/dev-emails-mUnSDl"
+
     ),
 )

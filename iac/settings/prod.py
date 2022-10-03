@@ -8,8 +8,8 @@ from iac.settings.settings import DatabaseSettings, ProjectSettings, DjangoSetti
 PROD_ENV_ID = "prod"
 # PROD_SETTINGS = ProjectSettings(
 #     cdk_env=Environment(
-#         account=os.getenv("PROD_AWS_ACCT", None),
-#         region=os.getenv("PROD_AWS_REGION", "us-east-1"),
+#         account=os.getenv("CDK_DEFAULT_ACCOUNT", None),
+#         region=os.getenv("CDK_DEFAULT_REGION", "us-east-1"),
 #     ),
 #     env_id=PROD_ENV_ID,
 #     database=DatabaseSettings(

@@ -34,9 +34,11 @@ Note that the following covers only local configuration, not deployment. Neverth
  
 ### Environment variables
 
-copy the sample `.secrets.env.sample` file and fill in the blanks: 
+1. copy the sample `.secrets.env.sample` file and fill in the blanks: 
 - `cp .secrets.env.sample .secrets.env`
 
+2. copy the sample `.env.sample` file and fill in the blanks: 
+- `cp .env.sample .env`
 
 ### Local environment intialization
 
