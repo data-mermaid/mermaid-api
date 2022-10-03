@@ -46,6 +46,7 @@ class ApiStack(Stack):
             "DB_USER": ecs.Secret.from_secrets_manager(database.secret, "username"),
             "DB_PASSWORD": ecs.Secret.from_secrets_manager(database.secret, "password"),
             "PGPASSWORD": ecs.Secret.from_secrets_manager(database.secret, "password"),
+            "DRF_RECAPTCHA_SECRET_KEY": ecs.Secret.from_secrets_manager(config.api.get_secret_object(self, config.api.drf_recaptcha_secret_key_name)),
             "EMAIL_HOST_USER": ecs.Secret.from_secrets_manager(
                 config.api.get_secret_object(self, config.api.email_host_user_name)
             ),
@@ -87,7 +88,7 @@ class ApiStack(Stack):
             "ADMINS": ecs.Secret.from_secrets_manager(
                 config.api.get_secret_object(self, config.api.admins_name)
             ),
-             "SUPERUSER": ecs.Secret.from_secrets_manager(
+            "SUPERUSER": ecs.Secret.from_secrets_manager(
                 config.api.get_secret_object(self, config.api.superuser_name)
             ),
         }
@@ -118,8 +119,6 @@ class ApiStack(Stack):
                 "DB_NAME": config.database.name,
                 "DB_HOST": database.instance_endpoint.hostname,
                 "DB_PORT": config.database.port,
-                "DRF_RECAPTCHA_SECRET_KEY": os.environ.get("DRF_RECAPTCHA_SECRET_KEY")
-                or "abc",
             },
             secrets=api_secrets,
             logging=ecs.LogDrivers.aws_logs(
