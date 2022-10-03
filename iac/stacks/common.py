@@ -6,6 +6,7 @@ from aws_cdk import (
     aws_rds as rds,
     aws_s3 as s3,
     aws_ecs as ecs,
+    aws_iam as iam,
     aws_elasticloadbalancingv2 as elb,
 )
 from constructs import Construct
