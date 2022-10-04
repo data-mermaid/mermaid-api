@@ -134,8 +134,8 @@ class ApiStack(Stack):
         backup_task = ecs_patterns.ScheduledFargateTask(
             self,
             "ScheduledBackupTask",
-            # schedule=appscaling.Schedule.rate(Duration.days(1)),
-            schedule=appscaling.Schedule.cron(hour="23"),
+            schedule=appscaling.Schedule.rate(Duration.days(1)),
+            # schedule=appscaling.Schedule.cron(hour="23"),
             cluster=cluster,
             security_groups=[container_security_group],
             scheduled_fargate_task_image_options=ecs_patterns.ScheduledFargateTaskImageOptions(
@@ -144,7 +144,7 @@ class ApiStack(Stack):
                 memory_limit_mib=config.api.container_memory,
                 secrets=api_secrets,
                 environment=environment,
-                command=[f"python manage.py dbbackup {config.env_id}"]
+                command=[f"python manage.py dbbackup {config.env_id}"],
             ),
         )
 
