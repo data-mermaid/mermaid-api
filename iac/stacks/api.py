@@ -188,9 +188,11 @@ class ApiStack(Stack):
             # ) # Manually set FARGATE_SPOT as deafult in cluster console.
         )
 
+
         # Grant Secret read to API container
         for _, container_secret in api_secrets.items():
             container_secret.grant_read(service.task_definition.execution_role)
+            container_secret.grant_read(backup_task.task_definition.execution_role)
 
         # add FargateService as target to LoadBalancer/Listener, currently, send all traffic. TODO filter by domain?
 
@@ -222,8 +224,10 @@ class ApiStack(Stack):
             target_groups=[target_group],
         )
 
+        # Is this required? We has a custom SG already defined...
         database.connections.allow_from(
             service.connections, port_range=ec2.Port.tcp(5432)
         )
 
         backup_bucket.grant_read_write(service.task_definition.task_role)
+        backup_bucket.grant_read_write(backup_task.task_definition.execution_role)
