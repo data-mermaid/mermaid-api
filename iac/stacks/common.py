@@ -6,6 +6,7 @@ from aws_cdk import (
     aws_rds as rds,
     aws_s3 as s3,
     aws_ecs as ecs,
+    aws_iam as iam,
     aws_elasticloadbalancingv2 as elb,
 )
 from constructs import Construct
@@ -117,3 +118,26 @@ class CommonStack(Stack):
         )
 
         self.load_balancer.add_security_group(alb_sg)
+
+        create_cdk_bot_user(self, config)
+
+
+def create_cdk_bot_user(self, config: ProjectSettings):
+    cdk_policy = iam.Policy(
+        self,
+        "CDKRolePolicy",
+        statements=[
+            iam.PolicyStatement(
+                actions=["sts:AssumeRole", "sts:TagSession"],
+                effect=iam.Effect.ALLOW,
+                resources=[f"arn:aws:iam::{config.cdk_env.account}:role/cdk-*"]
+            )
+        ]
+    )
+
+    cicd_bot_user = iam.User(
+        self, 
+        "CICD_Bot",
+        user_name="CICD_Bot",
+    )
+    cicd_bot_user.attach_inline_policy(cdk_policy)
