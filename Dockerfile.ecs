@@ -8,9 +8,8 @@ ENV LC_ALL C.UTF-8
 ENV PYTHONPATH="/var/projects/webapp"
 ENV PATH="/home/webapp/.local/bin:${PATH}"
 
-# Create a group and user to run our app
-ARG APP_USER=webapp
-RUN groupadd -r ${APP_USER} && useradd --no-log-init -r -g ${APP_USER} ${APP_USER}
+# Add any static environment variables needed by Django or your settings file here:
+ENV DJANGO_SETTINGS_MODULE=app.settings
 
 # Install OS dependencies
 RUN apt-get update && apt-get upgrade -y
@@ -23,24 +22,26 @@ RUN apt-get install -y --no-install-recommends \
     gdal-bin \
     python3-gdal
 
-# Copy in your requirements file
-ADD requirements.txt /requirements.txt
-RUN pip install --no-cache-dir -r requirements.txt
-
-# Copy your application code to the container (make sure you create a .dockerignore file if any large files or directories should be excluded)
-WORKDIR /var/projects/webapp
-ADD ./src .
-
 # gunicorn will listen on this port
 EXPOSE 8081
 
-# Add any static environment variables needed by Django or your settings file here:
-ENV DJANGO_SETTINGS_MODULE=app.settings
+ARG APP_USER=webapp
+ARG APP_DIR=/var/projects/${APP_USER}
+RUN groupadd -r ${APP_USER} && useradd -m --no-log-init -r -g ${APP_USER} ${APP_USER}
+
+# Copy your application code to the container (make sure you create a .dockerignore file if any large files or directories should be excluded)
+WORKDIR ${APP_DIR}
+ADD ./src .
+ADD requirements.txt .
+RUN chown -R ${APP_USER}:${APP_USER} ${APP_DIR}
+
+# Run everything from here forward as non-root
+USER ${APP_USER}:${APP_USER}
+
+RUN pip install --user --no-cache-dir -r requirements.txt
+RUN rm ${APP_DIR}/requirements.txt
 
 # Call collectstatic (customize the following line with the minimal environment variables needed for manage.py to run):
 RUN SECRET_KEY='abc' python manage.py collectstatic --noinput
-
-# Change to a non-root user
-USER ${APP_USER}:${APP_USER}
 
 ENTRYPOINT ["/var/projects/webapp/docker-entry.sh"]
