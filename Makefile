@@ -21,7 +21,7 @@ API_SERVICE="api_service"
 OS=$(shell sh -c 'uname 2>/dev/null || echo Unknown')
 
 ifeq ($(OS), Linux)
-	CURRENT_UID="1000:1000"
+	CURRENT_UID="webapp:webapp"
 else
 	CURRENT_UID="0:0"
 endif
@@ -88,6 +88,9 @@ freshinstall:
 
 shell:
 	@docker-compose exec --user=$(CURRENT_UID) $(API_SERVICE) /bin/bash
+
+shellroot:
+	@docker-compose exec $(API_SERVICE) /bin/bash
 
 test:
 	@docker-compose exec --user=$(CURRENT_UID) $(API_SERVICE) pytest -v --no-migrations --rich api/tests
