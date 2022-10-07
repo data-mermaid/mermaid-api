@@ -5,3 +5,6 @@
 
 src/api/tests/__pycache__/*
 *.pyc
+
+**/cdk.out
+.direnv

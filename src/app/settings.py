@@ -13,6 +13,7 @@ https://docs.djangoproject.com/en/1.10/ref/settings/
 import boto3
 import os
 import sys
+import requests
 
 from corsheaders.defaults import default_methods
 
@@ -43,10 +44,11 @@ MAINTENANCE_MODE_IGNORE_SUPERUSER = os.environ.get('MAINTENANCE_MODE_IGNORE_SUPE
 # MAINTENANCE_MODE_REDIRECT_URL = 'https://datamermaid.org/'
 # Other maintenance_mode settings: https://github.com/fabiocaccamo/django-maintenance-mode
 
-ADMINS = [('Datamermaid admin', admin.strip()) for admin in os.environ['ADMINS'].split(',')]
-SUPERUSER = ('Datamermaid superuser', os.environ['SUPERUSER'])
-DEFAULT_DOMAIN_API = os.environ['DEFAULT_DOMAIN_API']
-DEFAULT_DOMAIN_COLLECT = os.environ['DEFAULT_DOMAIN_COLLECT']
+_admins = os.environ.get('ADMINS') or ""
+ADMINS = [('Datamermaid admin', admin.strip()) for admin in _admins.split(',')]
+SUPERUSER = ('Datamermaid superuser', os.environ.get('SUPERUSER'))
+DEFAULT_DOMAIN_API = os.environ.get('DEFAULT_DOMAIN_API')
+DEFAULT_DOMAIN_COLLECT = os.environ.get('DEFAULT_DOMAIN_COLLECT')
 
 # Application definition
 
@@ -57,6 +59,7 @@ INSTALLED_APPS = [
     'django.contrib.contenttypes',
     'django.contrib.sessions',
     'django.contrib.messages',
+    'whitenoise.runserver_nostatic',
     'django.contrib.staticfiles',
     'django.contrib.gis',
     'maintenance_mode',
@@ -73,7 +76,9 @@ INSTALLED_APPS = [
 ]
 
 MIDDLEWARE = [
+    'api.middleware.HealthEndpointMiddleware',
     'django.middleware.security.SecurityMiddleware',
+    "whitenoise.middleware.WhiteNoiseMiddleware",
     'corsheaders.middleware.CorsMiddleware',
     'django.contrib.sessions.middleware.SessionMiddleware',
     'django.middleware.common.CommonMiddleware',
@@ -88,8 +93,6 @@ MIDDLEWARE = [
 
 DEBUG = False
 DEBUG_LEVEL = "ERROR"
-_allowed_hosts = os.environ.get("ALLOWED_HOSTS") or ""
-ALLOWED_HOSTS = [host.strip() for host in _allowed_hosts.split(",")]
 CONN_MAX_AGE = None
 CORS_ALLOW_ALL_ORIGINS = True
 CORS_ALLOW_METHODS = list(default_methods) + ["HEAD"]
@@ -99,17 +102,27 @@ EMAIL_BACKEND = "django.core.mail.backends.smtp.EmailBackend"
 _dev_emails = os.environ.get("DEV_EMAILS") or ""
 DEV_EMAILS = [email.strip() for email in _dev_emails.split(",")]
 
+# Setup ALLOWED_HOSTS
+_allowed_hosts = os.environ.get("ALLOWED_HOSTS") or ""
+ALLOWED_HOSTS = [host.strip() for host in _allowed_hosts.split(",")]
+
+# Look for Fargate IP, for health checks.
+METADATA_URI = os.getenv('ECS_CONTAINER_METADATA_URI', None)
+if METADATA_URI:
+    container_metadata = requests.get(METADATA_URI).json()
+    ALLOWED_HOSTS.append(container_metadata['Networks'][0]['IPv4Addresses'][0])
+
 if ENVIRONMENT not in ("dev", "prod",):
     def show_toolbar(request):
         return True
 
-    DEBUG = True
     DEBUG_LEVEL = "DEBUG"
-    ALLOWED_HOSTS = ['*']
     EMAIL_BACKEND = "django.core.mail.backends.console.EmailBackend"
     INSTALLED_APPS.append("debug_toolbar")
     MIDDLEWARE.append("debug_toolbar.middleware.DebugToolbarMiddleware")
     DEBUG_TOOLBAR_CONFIG = {"SHOW_TOOLBAR_CALLBACK": show_toolbar}
+    ALLOWED_HOSTS = ['*']
+    DEBUG = True
 
 ROOT_URLCONF = 'app.urls'
 
@@ -213,7 +226,7 @@ MERMAID_API_SIGNING_SECRET = os.environ.get('MERMAID_API_SIGNING_SECRET')
 AWS_BACKUP_BUCKET = os.environ.get('AWS_BACKUP_BUCKET')
 AWS_ACCESS_KEY_ID = os.environ.get('AWS_ACCESS_KEY_ID')
 AWS_SECRET_ACCESS_KEY = os.environ.get('AWS_SECRET_ACCESS_KEY')
-AWS_REGION = os.environ.get('AWS_REGION')
+AWS_REGION = os.environ.get('AWS_REGION') or 'us-east-1'
 S3_DBBACKUP_MAXAGE = 60  # days
 
 EMAIL_HOST = os.environ.get('EMAIL_HOST')
@@ -236,7 +249,7 @@ GEO_PRECISION = 6  # to nearest 10 cm
 CORAL_ATLAS_APP_ID = os.environ.get("CORAL_ATLAS_APP_ID")
 # https://github.com/llybin/drf-recaptcha
 DRF_RECAPTCHA_SECRET_KEY = os.environ.get("DRF_RECAPTCHA_SECRET_KEY")
-# DRF_RECAPTCHA_TESTING = True
+DRF_RECAPTCHA_TESTING = os.environ.get("DRF_RECAPTCHA_TESTING") or False
 
 # ************
 # ** CLIENT **
@@ -257,7 +270,7 @@ boto3_client = boto3.client(
     "logs",
     aws_access_key_id=os.environ.get('AWS_ACCESS_KEY_ID'),
     aws_secret_access_key=os.environ.get('AWS_SECRET_ACCESS_KEY'),
-    region_name=os.environ.get('AWS_REGION')
+    region_name=AWS_REGION
 )
 
 # ***************
@@ -311,7 +324,9 @@ CACHES = {
     }
 }
 
-if ENVIRONMENT in ("dev", "prod"):
+# NOTE this is not required in ECS. I do a check ealier on to see if the
+# METADATA_URI env var is set from ECS
+if ENVIRONMENT in ("dev", "prod") and METADATA_URI is None:
     LOGGING["handlers"]["watchtower"] = {
         'level': DEBUG_LEVEL,
         'class': 'watchtower.CloudWatchLogHandler',

@@ -1,6 +1,6 @@
 from ..models import Site
 from .base import BaseAPIFilterSet, BaseAPISerializer, BaseProjectApiViewSet
-from .mixins import CreateOrUpdateSerializerMixin, ProtectedResourceMixin
+from .mixins import CopyRecordsMixin, CreateOrUpdateSerializerMixin, ProtectedResourceMixin
 
 
 class PSiteSerializer(CreateOrUpdateSerializerMixin, BaseAPISerializer):
@@ -16,7 +16,7 @@ class PSiteFilterSet(BaseAPIFilterSet):
         fields = ["country", "reef_type", "reef_zone", "exposure"]
 
 
-class PSiteViewSet(ProtectedResourceMixin, BaseProjectApiViewSet):
+class PSiteViewSet(ProtectedResourceMixin, CopyRecordsMixin, BaseProjectApiViewSet):
     model_display_name = "Site"
     serializer_class = PSiteSerializer
     queryset = Site.objects.all()
