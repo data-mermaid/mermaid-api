@@ -1,6 +1,4 @@
 import django_filters
-from django.core.exceptions import ObjectDoesNotExist
-from rest_framework.decorators import action
 from rest_framework.serializers import DecimalField
 
 from ..models import Management
@@ -12,6 +10,7 @@ from .base import (
 )
 from .management import get_rules
 from .mixins import CopyRecordsMixin, CreateOrUpdateSerializerMixin, ProtectedResourceMixin
+from ..notifications import notify_cr_owners_site_mr_deleted
 
 
 class PManagementSerializer(CreateOrUpdateSerializerMixin, BaseAPISerializer):
@@ -90,10 +89,9 @@ class PManagementViewSet(ProtectedResourceMixin, CopyRecordsMixin, BaseProjectAp
         "name_secondary",
     ]
 
-    # set updated_by before deleting for use by signal
     def destroy(self, request, *args, **kwargs):
-        updated_by = getattr(request.user, "profile")
         instance = self.get_object()
-        instance.updated_by = updated_by
-        instance.save()
-        return super().destroy(request, *args, **kwargs)
+        deleted_by = getattr(request.user, "profile", None)
+        response = super().destroy(request, *args, **kwargs)
+        notify_cr_owners_site_mr_deleted(instance, deleted_by)
+        return response

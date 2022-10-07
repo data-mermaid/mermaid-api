@@ -1,6 +1,7 @@
 from ..models import Site
 from .base import BaseAPIFilterSet, BaseAPISerializer, BaseProjectApiViewSet
 from .mixins import CopyRecordsMixin, CreateOrUpdateSerializerMixin, ProtectedResourceMixin
+from ..notifications import notify_cr_owners_site_mr_deleted
 
 
 class PSiteSerializer(CreateOrUpdateSerializerMixin, BaseAPISerializer):
@@ -24,10 +25,9 @@ class PSiteViewSet(ProtectedResourceMixin, CopyRecordsMixin, BaseProjectApiViewS
     filterset_class = PSiteFilterSet
     search_fields = ["name"]
 
-    # set updated_by before deleting for use by signal
     def destroy(self, request, *args, **kwargs):
-        updated_by = getattr(request.user, "profile")
         instance = self.get_object()
-        instance.updated_by = updated_by
-        instance.save()
-        return super().destroy(request, *args, **kwargs)
+        deleted_by = getattr(request.user, "profile", None)
+        response = super().destroy(request, *args, **kwargs)
+        notify_cr_owners_site_mr_deleted(instance, deleted_by)
+        return response

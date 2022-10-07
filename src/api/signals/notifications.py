@@ -1,5 +1,3 @@
-from collections import defaultdict
-
 from django import urls
 from django.conf import settings
 from django.db.models.signals import post_delete, post_save, m2m_changed, pre_delete
@@ -11,9 +9,6 @@ from ..models import (
     ProjectProfile,
     Notification,
     Project,
-    Site,
-    Management,
-    CollectRecord,
 )
 from ..utils import get_subclasses
 from ..utils.email import mermaid_email
@@ -26,7 +21,6 @@ __all__ = (
     "notify_admins_new_admin",
     "notify_admins_dropped_admin",
     "notify_new_project_user",
-    "notify_cr_owners_site_mr_deleted",
 )
 
 
@@ -227,37 +221,3 @@ def notify_new_project_user(sender, instance, created, **kwargs):
         [instance.profile.email],
         context=context,
     )
-
-
-@receiver(pre_delete, sender=Site)
-@receiver(pre_delete, sender=Management)
-def notify_cr_owners_site_mr_deleted(sender, instance, *args, **kwargs):
-    lookup = f"data__sample_event__{sender._meta.model_name}"
-    collect_records = CollectRecord.objects.filter(**{lookup: instance.pk})
-    deleted_by = "An unknown user"
-    if instance.updated_by:
-        deleted_by = instance.updated_by.full_name
-    cr_profiles = defaultdict(int)
-    for cr in collect_records:
-        cr_profiles[cr.profile] += 1
-
-    for profile, cr_count in cr_profiles.items():
-        count = f"{cr_count} unsubmitted sample unit"
-        if cr_count > 1:
-            count = f"{count}s"
-        context = {
-            "site_mr": sender._meta.verbose_name,
-            "site_mr_name": instance.name,
-            "project_name": instance.project.name,
-            "deleted_by": deleted_by,
-            "cr_count": count,
-        }
-        notify_template = "notifications/site_mr_deleted.txt"
-
-        add_notification(
-            f"Site {instance.name} deleted from {instance.project.name}",
-            Notification.WARNING,
-            notify_template,
-            context,
-            [profile],
-        )
