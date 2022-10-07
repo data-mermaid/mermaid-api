@@ -35,11 +35,11 @@ ADD ./src .
 ADD requirements.txt .
 RUN chown -R ${APP_USER}:${APP_USER} ${APP_DIR}
 
+RUN pip install --no-cache-dir -r requirements.txt
+RUN rm ${APP_DIR}/requirements.txt
+
 # Run everything from here forward as non-root
 USER ${APP_USER}:${APP_USER}
-
-RUN pip install --user --no-cache-dir -r requirements.txt
-RUN rm ${APP_DIR}/requirements.txt
 
 # Call collectstatic (customize the following line with the minimal environment variables needed for manage.py to run):
 RUN SECRET_KEY='abc' python manage.py collectstatic --noinput
