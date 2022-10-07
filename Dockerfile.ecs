@@ -44,4 +44,4 @@ USER ${APP_USER}:${APP_USER}
 # Call collectstatic (customize the following line with the minimal environment variables needed for manage.py to run):
 RUN SECRET_KEY='abc' python manage.py collectstatic --noinput
 
-ENTRYPOINT ["/var/projects/webapp/docker-entry.sh"]
+ENTRYPOINT ["${APP_DIR}/docker-entry.sh"]
