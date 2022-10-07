@@ -88,7 +88,7 @@ class CurrentProfileDefault:
 
 
 class BaseAPISerializer(serializers.ModelSerializer):
-    id = UUIDField(allow_null=True, default=uuid.uuid4())
+    id = UUIDField(allow_null=True, default=uuid.uuid4)
     updated_by = PrimaryKeyRelatedField(read_only=True, default=CurrentProfileDefault())
 
     class Meta:
