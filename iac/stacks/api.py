@@ -230,4 +230,4 @@ class ApiStack(Stack):
         )
 
         backup_bucket.grant_read_write(service.task_definition.task_role)
-        backup_bucket.grant_read_write(backup_task.task_definition.execution_role)
+        backup_bucket.grant_read_write(backup_task.task_definition.task_role)
