@@ -144,7 +144,7 @@ class ApiStack(Stack):
                 memory_limit_mib=config.api.container_memory,
                 secrets=api_secrets,
                 environment=environment,
-                command=[f"python manage.py dbbackup {config.env_id}"],
+                command=["python", "manage.py", "dbbackup", f"{config.env_id}"],
             ),
         )
 
