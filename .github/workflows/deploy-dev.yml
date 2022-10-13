@@ -6,7 +6,6 @@ on:
       - dev
 
 env:
-  CDK_VERSION: 2.29.1
   ENV: dev
   # PIPENV_VENV_IN_PROJECT: "true"
 
