@@ -17,7 +17,6 @@ app = App()
 common_stack = CommonStack(
     app,
     f"mermaid-api-infra-common",
-    config=PROJECT_SETTINGS,
     env=PROJECT_SETTINGS.cdk_env,
     tags=tags,
 )

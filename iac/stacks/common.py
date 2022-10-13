@@ -13,7 +13,6 @@ from aws_cdk import (
 )
 from constructs import Construct
 
-from iac.settings import ProjectSettings
 
 
 class CommonStack(Stack):
@@ -21,7 +20,6 @@ class CommonStack(Stack):
         self,
         scope: Construct,
         id: str,
-        config: ProjectSettings,
         **kwargs,
     ) -> None:
         super().__init__(scope, id, **kwargs)
@@ -60,7 +58,7 @@ class CommonStack(Stack):
             instance_type=ec2.InstanceType.of(
                 ec2.InstanceClass.BURSTABLE3, ec2.InstanceSize.MICRO
             ),
-            # database_name=config.database.name,
+            # database_name="default",
             vpc_subnets=ec2.SubnetSelection(
                 subnet_type=ec2.SubnetType.PRIVATE_ISOLATED
             ),
