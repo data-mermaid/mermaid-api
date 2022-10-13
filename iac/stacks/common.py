@@ -141,10 +141,10 @@ class CommonStack(Stack):
 
         self.load_balancer.add_security_group(alb_sg)
 
-        create_cdk_bot_user(self, config)
+        create_cdk_bot_user(self, self.account)
 
 
-def create_cdk_bot_user(self, config: ProjectSettings):
+def create_cdk_bot_user(self, account: str):
     cdk_policy = iam.Policy(
         self,
         "CDKRolePolicy",
@@ -152,7 +152,7 @@ def create_cdk_bot_user(self, config: ProjectSettings):
             iam.PolicyStatement(
                 actions=["sts:AssumeRole", "sts:TagSession"],
                 effect=iam.Effect.ALLOW,
-                resources=[f"arn:aws:iam::{config.cdk_env.account}:role/cdk-*"]
+                resources=[f"arn:aws:iam::{account}:role/cdk-*"]
             )
         ]
     )

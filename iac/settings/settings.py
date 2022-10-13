@@ -47,7 +47,7 @@ class DjangoSettings:
     mermaid_api_audience: str
 
     # Dynamic Secrets
-    dev_emails_name: str
+    dev_emails_name: str = ""
 
     # Common Attrs (defaults)
     maintenance_mode: str = "False"

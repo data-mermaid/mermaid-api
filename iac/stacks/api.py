@@ -135,7 +135,6 @@ class ApiStack(Stack):
             self,
             "ScheduledBackupTask",
             schedule=appscaling.Schedule.rate(Duration.days(1)),
-            # schedule=appscaling.Schedule.cron(hour="23"),
             cluster=cluster,
             security_groups=[container_security_group],
             scheduled_fargate_task_image_options=ecs_patterns.ScheduledFargateTaskImageOptions(
@@ -189,7 +188,7 @@ class ApiStack(Stack):
         )
 
 
-        # Grant Secret read to API container
+        # Grant Secret read to API container & backup task
         for _, container_secret in api_secrets.items():
             container_secret.grant_read(service.task_definition.execution_role)
             container_secret.grant_read(backup_task.task_definition.execution_role)
@@ -226,8 +225,14 @@ class ApiStack(Stack):
 
         # Is this required? We has a custom SG already defined...
         database.connections.allow_from(
-            service.connections, port_range=ec2.Port.tcp(5432)
+            service.connections, 
+            port_range=ec2.Port.tcp(5432),
+            description="Allow Fargate service connections to Postgres"
         )
 
+        # Allow API service to read/write to backup bucket in case we want to manually
+        # run dbbackup/dbrestore tasks from within the container
         backup_bucket.grant_read_write(service.task_definition.task_role)
+        
+        # Give permission to backup task
         backup_bucket.grant_read_write(backup_task.task_definition.task_role)
