@@ -39,7 +39,7 @@ services:
       - $PWD/src:/var/projects/webapp
     ports:
       - 8080:8080
-    entrypoint: python manage.py runserver 0.0.0.0:8080
+    command: tail -f /dev/null
     env_file:
       - .env
       - .secrets.env

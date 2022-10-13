@@ -6,8 +6,8 @@ from iac.settings import PROJECT_SETTINGS
 
 tags = {
     "Owner": "sysadmin@datamermaid.org",
-    "Environment": PROJECT_SETTINGS.env_id,
-    "Git Branch": PROJECT_SETTINGS.branch_name,
+    # "Environment": PROJECT_SETTINGS.env_id,
+    # "Git Branch": PROJECT_SETTINGS.branch_name,
 }
 
 
