@@ -157,6 +157,7 @@ def create_cdk_bot_user(self, config: ProjectSettings):
         ]
     )
 
+    # this user account is used in Github Actions to deploy to AWS
     cicd_bot_user = iam.User(
         self, 
         "CICD_Bot",
