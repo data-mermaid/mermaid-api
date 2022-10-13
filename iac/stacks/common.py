@@ -72,7 +72,7 @@ class CommonStack(Stack):
         self.backup_bucket = s3.Bucket(
             self,
             id="MermaidApiBackupBucket",
-            bucket_name=config.backup_bucket_name,
+            bucket_name="mermaid-api-v2-backups",
             removal_policy=RemovalPolicy.RETAIN,
             public_read_access=False,
             block_public_access=s3.BlockPublicAccess.BLOCK_ALL,

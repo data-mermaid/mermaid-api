@@ -16,7 +16,6 @@ PROD_ENV_ID = "prod"
 #         name=f'{PROD_ENV_ID}-mermaid', # TODO, Change name??
 #     ),
 #     api=DjangoSettings(
-#         backup_bucket_name="",
 #         container_cpu=1024,
 #         container_memory=2048,
 #         container_count=1

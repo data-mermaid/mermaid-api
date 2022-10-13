@@ -109,6 +109,3 @@ class ProjectSettings:
     env_id: str
     database: DatabaseSettings
     api: DjangoSettings
-
-    # Common Attrs (defaults)
-    backup_bucket_name: str = "mermaid-api-v2-backups"  # Use CDK construct?
