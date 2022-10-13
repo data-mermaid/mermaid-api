@@ -54,7 +54,9 @@ class CommonStack(Stack):
             self,
             "PostgresRds",
             vpc=self.vpc,
-            engine=rds.DatabaseInstanceEngine.POSTGRES,
+            engine=rds.DatabaseInstanceEngine.postgres(
+                version=rds.PostgresEngineVersion.VER_13_7
+            ),            
             instance_type=ec2.InstanceType.of(
                 ec2.InstanceClass.BURSTABLE3, ec2.InstanceSize.MICRO
             ),
