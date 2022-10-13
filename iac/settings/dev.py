@@ -7,12 +7,9 @@ from iac.settings.settings import DatabaseSettings, ProjectSettings, DjangoSetti
 
 DEV_ENV_ID = "dev"
 DEV_SETTINGS = ProjectSettings(
-    cdk_env=Environment(
-        account=os.getenv("CDK_DEFAULT_ACCOUNT", None),
-        region=os.getenv("CDK_DEFAULT_REGION", "us-east-1"),
-    ),
+    
     env_id=DEV_ENV_ID,
-    database=DatabaseSettings(name=f"mermaid-{DEV_ENV_ID}", port="5432"),
+    database=DatabaseSettings(name=f"mermaid-dev", port="5432"),
     api=DjangoSettings(
         container_cpu=1024,
         container_memory=2048,

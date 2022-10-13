@@ -105,7 +105,6 @@ class ProjectSettings:
     """Settings Class for Project Envs"""
 
     # Dynamic Attrs
-    cdk_env: Environment
     env_id: str
     database: DatabaseSettings
     api: DjangoSettings
