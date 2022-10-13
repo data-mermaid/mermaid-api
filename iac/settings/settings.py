@@ -14,7 +14,6 @@ from aws_cdk import (
     aws_secretsmanager as secrets,
 )
 
-from iac.settings.utils import get_branch_name
 from iac.settings.utils import camel_case
 
 
@@ -112,5 +111,4 @@ class ProjectSettings:
     api: DjangoSettings
 
     # Common Attrs (defaults)
-    branch_name: str = get_branch_name()
     backup_bucket_name: str = "mermaid-api-v2-backups"  # Use CDK construct?
