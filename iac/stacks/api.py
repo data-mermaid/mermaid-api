@@ -5,6 +5,9 @@ from aws_cdk import (
     Duration,
     aws_ec2 as ec2,
     aws_ecs as ecs,
+    aws_ecs_patterns as ecs_patterns,
+    aws_applicationautoscaling as appscaling,
+    aws_ecr_assets as ecr_assets,
     aws_rds as rds,
     aws_s3 as s3,
     aws_elasticloadbalancingv2 as elb,
@@ -42,10 +45,12 @@ class ApiStack(Stack):
             memory_limit_mib=config.api.container_memory,
         )
 
+        # Secrets
         api_secrets = {
             "DB_USER": ecs.Secret.from_secrets_manager(database.secret, "username"),
             "DB_PASSWORD": ecs.Secret.from_secrets_manager(database.secret, "password"),
             "PGPASSWORD": ecs.Secret.from_secrets_manager(database.secret, "password"),
+            "DRF_RECAPTCHA_SECRET_KEY": ecs.Secret.from_secrets_manager(config.api.get_secret_object(self, config.api.drf_recaptcha_secret_key_name)),
             "EMAIL_HOST_USER": ecs.Secret.from_secrets_manager(
                 config.api.get_secret_object(self, config.api.email_host_user_name)
             ),
@@ -87,7 +92,7 @@ class ApiStack(Stack):
             "ADMINS": ecs.Secret.from_secrets_manager(
                 config.api.get_secret_object(self, config.api.admins_name)
             ),
-             "SUPERUSER": ecs.Secret.from_secrets_manager(
+            "SUPERUSER": ecs.Secret.from_secrets_manager(
                 config.api.get_secret_object(self, config.api.superuser_name)
             ),
         }
@@ -97,30 +102,57 @@ class ApiStack(Stack):
                 config.api.get_secret_object(self, config.api.dev_emails_name)
             )
 
+        # Envir Vars
+        environment={
+            "ENV": config.env_id,
+            "ENVIRONMENT": config.env_id,
+            "ALLOWED_HOSTS": load_balancer.load_balancer_dns_name,
+            "MAINTENANCE_MODE": config.api.maintenance_mode,
+            "DEFAULT_DOMAIN_API": config.api.default_domain_api,
+            "DEFAULT_DOMAIN_COLLECT": config.api.default_domain_collect,
+            "AWS_BACKUP_BUCKET": backup_bucket.bucket_name,
+            "EMAIL_HOST": config.api.email_host,
+            "EMAIL_PORT": config.api.email_port,
+            "AUTH0_MANAGEMENT_API_AUDIENCE": config.api.auth0_management_api_audience,
+            "MERMAID_API_AUDIENCE": config.api.mermaid_api_audience,
+            "MC_USER": config.api.mc_user,
+            "CIRCLE_CI_CLIENT_ID": "",  # Leave empty
+            "DB_NAME": config.database.name,
+            "DB_HOST": database.instance_endpoint.hostname,
+            "DB_PORT": config.database.port,
+        }
+
+        # build image asset to be shared with API and Backup Task
+        image_asset = ecr_assets.DockerImageAsset(
+            self,
+            "ApiImage",
+            directory="../", 
+            file="Dockerfile.ecs",
+        )
+
+        # create a scheduled fargate task
+        backup_task = ecs_patterns.ScheduledFargateTask(
+            self,
+            "ScheduledBackupTask",
+            schedule=appscaling.Schedule.rate(Duration.days(1)),
+            # schedule=appscaling.Schedule.cron(hour="23"),
+            cluster=cluster,
+            security_groups=[container_security_group],
+            scheduled_fargate_task_image_options=ecs_patterns.ScheduledFargateTaskImageOptions(
+                image=ecs.ContainerImage.from_docker_image_asset(image_asset),
+                cpu=config.api.container_cpu,
+                memory_limit_mib=config.api.container_memory,
+                secrets=api_secrets,
+                environment=environment,
+                command=["python", "manage.py", "dbbackup", f"{config.env_id}"],
+            ),
+        )
+
         task_definition.add_container(
             id="MermaidAPI",
-            image=ecs.ContainerImage.from_asset(directory="../", file="Dockerfile.ecs"),
+            image=ecs.ContainerImage.from_docker_image_asset(image_asset),
             port_mappings=[ecs.PortMapping(container_port=8081)],
-            environment={
-                "ENV": config.env_id,
-                "ENVIRONMENT": config.env_id,
-                "ALLOWED_HOSTS": load_balancer.load_balancer_dns_name,
-                "MAINTENANCE_MODE": config.api.maintenance_mode,
-                "DEFAULT_DOMAIN_API": config.api.default_domain_api,
-                "DEFAULT_DOMAIN_COLLECT": config.api.default_domain_collect,
-                "AWS_BACKUP_BUCKET": backup_bucket.bucket_name,
-                "EMAIL_HOST": config.api.email_host,
-                "EMAIL_PORT": config.api.email_port,
-                "AUTH0_MANAGEMENT_API_AUDIENCE": config.api.auth0_management_api_audience,
-                "MERMAID_API_AUDIENCE": config.api.mermaid_api_audience,
-                "MC_USER": config.api.mc_user,
-                "CIRCLE_CI_CLIENT_ID": "",  # Leave empty
-                "DB_NAME": config.database.name,
-                "DB_HOST": database.instance_endpoint.hostname,
-                "DB_PORT": config.database.port,
-                "DRF_RECAPTCHA_SECRET_KEY": os.environ.get("DRF_RECAPTCHA_SECRET_KEY")
-                or "abc",
-            },
+            environment=environment,
             secrets=api_secrets,
             logging=ecs.LogDrivers.aws_logs(
                 stream_prefix=config.env_id, log_retention=logs.RetentionDays.ONE_MONTH
@@ -156,9 +188,11 @@ class ApiStack(Stack):
             # ) # Manually set FARGATE_SPOT as deafult in cluster console.
         )
 
+
         # Grant Secret read to API container
         for _, container_secret in api_secrets.items():
             container_secret.grant_read(service.task_definition.execution_role)
+            container_secret.grant_read(backup_task.task_definition.execution_role)
 
         # add FargateService as target to LoadBalancer/Listener, currently, send all traffic. TODO filter by domain?
 
@@ -190,8 +224,10 @@ class ApiStack(Stack):
             target_groups=[target_group],
         )
 
+        # Is this required? We has a custom SG already defined...
         database.connections.allow_from(
             service.connections, port_range=ec2.Port.tcp(5432)
         )
 
         backup_bucket.grant_read_write(service.task_definition.task_role)
+        backup_bucket.grant_read_write(backup_task.task_definition.task_role)
