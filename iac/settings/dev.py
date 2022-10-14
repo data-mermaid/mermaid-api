@@ -1,15 +1,11 @@
 """Settings for development environments"""
-import os
-
-from aws_cdk import Environment
-
 from iac.settings.settings import DatabaseSettings, ProjectSettings, DjangoSettings
 
 DEV_ENV_ID = "dev"
 DEV_SETTINGS = ProjectSettings(
     
     env_id=DEV_ENV_ID,
-    database=DatabaseSettings(name=f"mermaid-dev", port="5432"),
+    database=DatabaseSettings(name=f"mermaid-{DEV_ENV_ID}", port="5432"),
     api=DjangoSettings(
         container_cpu=1024,
         container_memory=2048,

@@ -4,6 +4,7 @@ from aws_cdk import App, Environment
 from iac.stacks.common import CommonStack
 from iac.stacks.api import ApiStack
 from iac.settings.dev import DEV_SETTINGS
+from iac.settings.prod import PROD_SETTINGS
 
 tags = {
     "Owner": "sysadmin@datamermaid.org",
@@ -32,6 +33,19 @@ dev_api_stack = ApiStack(
     env=cdk_env,
     tags=tags,
     config=DEV_SETTINGS,
+    cluster=common_stack.cluster,
+    database=common_stack.database,
+    backup_bucket=common_stack.backup_bucket,
+    load_balancer=common_stack.load_balancer,
+    container_security_group=common_stack.ecs_sg,
+)
+
+prod_api_stack = ApiStack(
+    app,
+    "prod-mermaid-api-django",
+    env=cdk_env,
+    tags=tags,
+    config=PROD_SETTINGS,
     cluster=common_stack.cluster,
     database=common_stack.database,
     backup_bucket=common_stack.backup_bucket,
