@@ -133,11 +133,6 @@ class CommonStack(Stack):
         self.ecs_sg = ec2.SecurityGroup(
             self, id="EcsSg", vpc=self.vpc, allow_all_outbound=True
         )
-        self.ecs_sg.connections.allow_from(
-            other=alb_sg,
-            port_range=ec2.Port.all_tcp(),
-            description="Application load balancer",
-        )
 
         self.load_balancer.add_security_group(alb_sg)
 
