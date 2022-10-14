@@ -28,7 +28,7 @@ class CommonStack(Stack):
             self,
             "Vpc",
             cidr="10.10.0.0/16",
-            max_azs=2,
+            max_azs=3,
             nat_gateways=1,
             subnet_configuration=[
                 ec2.SubnetConfiguration(
