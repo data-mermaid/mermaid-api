@@ -38,7 +38,7 @@ class CommonStack(Stack):
                     cidr_mask=24,
                 ),
                 ec2.SubnetConfiguration(
-                    subnet_type=ec2.SubnetType.PRIVATE_WITH_NAT,
+                    subnet_type=ec2.SubnetType.PRIVATE_WITH_EGRESS,
                     name="Application",
                     cidr_mask=20,
                 ),
