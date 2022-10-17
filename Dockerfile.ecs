@@ -27,7 +27,7 @@ EXPOSE 8081
 
 ARG APP_USER=webapp
 ARG APP_DIR=/var/projects/${APP_USER}
-RUN groupadd -r ${APP_USER} && useradd -m --no-log-init -r -g ${APP_USER} ${APP_USER}
+RUN groupadd ${APP_USER} && useradd -m --no-log-init -g ${APP_USER} ${APP_USER}
 
 # Copy your application code to the container (make sure you create a .dockerignore file if any large files or directories should be excluded)
 WORKDIR ${APP_DIR}
@@ -35,7 +35,8 @@ ADD ./src .
 ADD requirements.txt .
 RUN chown -R ${APP_USER}:${APP_USER} ${APP_DIR}
 
-RUN pip install --no-cache-dir -r requirements.txt
+RUN su ${APP_USER} -c "pip install --no-cache-dir -r requirements.txt"
+
 RUN rm ${APP_DIR}/requirements.txt
 
 # Run everything from here forward as non-root

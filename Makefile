@@ -18,13 +18,6 @@
 
 
 API_SERVICE="api_service"
-OS=$(shell sh -c 'uname 2>/dev/null || echo Unknown')
-
-ifeq ($(OS), Linux)
-	CURRENT_UID="webapp:webapp"
-else
-	CURRENT_UID="0:0"
-endif
 
 
 down:
@@ -54,13 +47,13 @@ logs:
 	@docker-compose logs -f $(API_SERVICE)
 
 dbbackup:
-	@docker-compose exec --user=$(CURRENT_UID) $(API_SERVICE) python manage.py dbbackup local
+	@docker-compose exec $(API_SERVICE) python manage.py dbbackup local
 
 dbrestore:
-	@docker-compose exec --user=$(CURRENT_UID) $(API_SERVICE) python manage.py dbrestore local
+	@docker-compose exec $(API_SERVICE) python manage.py dbrestore local
 
 migrate:
-	@docker-compose exec --user=$(CURRENT_UID) $(API_SERVICE) python manage.py migrate
+	@docker-compose exec $(API_SERVICE) python manage.py migrate
 
 install:
 	@echo "\n--- Shutting down existing stack ---\n"
@@ -87,16 +80,16 @@ freshinstall:
 	@make migrate
 
 runserver:
-	@docker-compose exec --user=$(CURRENT_UID) $(API_SERVICE) python manage.py runserver 0.0.0.0:8080
+	@docker-compose exec $(API_SERVICE) python manage.py runserver 0.0.0.0:8080
 
 shell:
-	@docker-compose exec --user=$(CURRENT_UID) $(API_SERVICE) /bin/bash
+	@docker-compose exec $(API_SERVICE) /bin/bash
 
 shellroot:
 	@docker-compose exec --user=root $(API_SERVICE) /bin/bash
 
 test:
-	@docker-compose exec --user=$(CURRENT_UID) $(API_SERVICE) pytest -v --no-migrations --rich api/tests
+	@docker-compose exec $(API_SERVICE) pytest -v --no-migrations --rich api/tests
 
 # -----------------
 # Fargate Maintenance (docker exec)
