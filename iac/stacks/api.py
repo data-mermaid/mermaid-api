@@ -12,6 +12,7 @@ from aws_cdk import (
     aws_s3 as s3,
     aws_elasticloadbalancingv2 as elb,
     aws_logs as logs,
+    aws_sqs as sqs,
 )
 from constructs import Construct
 
@@ -250,3 +251,32 @@ class ApiStack(Stack):
         
         # Give permission to backup task
         backup_bucket.grant_read_write(backup_task.task_definition.task_role)
+
+        # define fifo queue
+        queue = sqs.Queue(
+            self,
+            "FifoQueue",
+            fifo=True,
+            queue_name=f"mermaid-{config.env_id}.fifo",
+            content_based_deduplication=False,
+            visibility_timeout=Duration.seconds(300),
+        )
+
+        sqs_worker_service = ecs_patterns.QueueProcessingFargateService(
+            self,
+            "SQSWorker",
+            cluster=cluster,
+            queue=queue,
+            image=ecs.ContainerImage.from_docker_image_asset(image_asset),
+            cpu=config.api.container_cpu,
+            memory_limit_mib=config.api.container_memory,
+            secrets=api_secrets,
+            environment=environment,
+            command=["python", "manage.py", "simpleq_worker"],
+        )
+
+        # allow API to send messages to the queue
+        queue.grant_send_messages(service.task_definition.task_role)
+
+        # allow Worker to read messages from the queue
+        queue.grant_send_messages(sqs_worker_service.task_definition.task_role)
