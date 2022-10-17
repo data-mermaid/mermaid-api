@@ -7,11 +7,12 @@ def fix_mono(apps, schema_editor):
     FishFamily = apps.get_model("api", "FishFamily")
     FishGenus = apps.get_model("api", "FishGenus")
 
-    correct_family = FishFamily.objects.get(name="Monacanthidae")
-    incorrect_family = FishFamily.objects.get(name="Monocanthidae")
-    genera_to_reassign = FishGenus.objects.filter(family=incorrect_family)
-    genera_to_reassign.update(family=correct_family)
-    incorrect_family.delete()
+    correct_family = FishFamily.objects.get_or_none(name="Monacanthidae")
+    incorrect_family = FishFamily.objects.get_or_none(name="Monocanthidae")
+    if correct_family and incorrect_family:
+        genera_to_reassign = FishGenus.objects.filter(family=incorrect_family)
+        genera_to_reassign.update(family=correct_family)
+        incorrect_family.delete()
 
 
 class Migration(migrations.Migration):
