@@ -82,6 +82,9 @@ freshinstall:
 runserver:
 	@docker-compose exec $(API_SERVICE) python manage.py runserver 0.0.0.0:8080
 
+shellplus:
+	@docker-compose exec --user=$(CURRENT_UID) $(API_SERVICE) python manage.py shell_plus
+
 shell:
 	@docker-compose exec $(API_SERVICE) /bin/bash
 
