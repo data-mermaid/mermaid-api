@@ -280,3 +280,8 @@ class ApiStack(Stack):
 
         # allow Worker to read messages from the queue
         queue.grant_send_messages(sqs_worker_service.task_definition.task_role)
+        sqs_worker_service.service.connections.allow_to(
+            database.connections, 
+            port_range=ec2.Port.tcp(5432),
+            description="Allow SQS Worker service connections to Postgres"
+        )
