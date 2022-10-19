@@ -9,10 +9,11 @@ from aws_cdk import (
     aws_ecs as ecs,
     aws_kms as kms,
     aws_logs as logs,
+    aws_secretsmanager as sm,
     aws_elasticloadbalancingv2 as elb,
 )
 from constructs import Construct
-
+import json
 
 
 class CommonStack(Stack):
@@ -50,6 +51,20 @@ class CommonStack(Stack):
             ],
         )
 
+        # create a secret so we can manually set the username
+        database_credentials_secret = sm.Secret(
+            self,
+            "DBCredentialsSecret",
+            secret_name="common/mermaid-db/creds",
+            generate_secret_string=sm.SecretStringGenerator(
+                secret_string_template=json.dumps({"username": "mermaid_admin"}),
+                generate_string_key="password",
+                exclude_punctuation=True,
+                include_space=False,
+            )
+        )
+
+
         self.database = rds.DatabaseInstance(
             self,
             "PostgresRds",
@@ -67,6 +82,7 @@ class CommonStack(Stack):
             backup_retention=Duration.days(7),
             deletion_protection=True,
             removal_policy=RemovalPolicy.SNAPSHOT,
+            credentials=rds.Credentials.from_secret(database_credentials_secret),
         )
 
         self.backup_bucket = s3.Bucket(
