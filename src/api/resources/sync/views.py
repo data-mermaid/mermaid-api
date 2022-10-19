@@ -223,15 +223,15 @@ def _update_source_record(source_type, serializer, record, request, force=False)
         return _error(405, ReadOnlyError(f"{source_type} is read-only"))
 
     try:
-        status_code, errors = apply_changes(vw_request, serializer, record, force=force)
+        status_code, msg, errors = apply_changes(vw_request, serializer, record, force=force)
         if status_code == 400:
-            msg = "Validation Error"
             data = _format_errors(errors)
         elif status_code == 409:
-            msg = "Conflict"
             data = _get_serialized_record(viewset, record_id)
+        elif status_code == 418:  # other custom error output
+            status_code = 409
+            data = errors
         else:
-            msg = ""
             data = _get_serialized_record(viewset, record_id)
 
         return {"status_code": status_code, "message": msg, "data": data}
