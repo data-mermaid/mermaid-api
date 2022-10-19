@@ -67,7 +67,7 @@ class CommonStack(Stack):
 
         self.database = rds.DatabaseInstance(
             self,
-            "PostgresRds",
+            "PostgresRdsV2",
             vpc=self.vpc,
             engine=rds.DatabaseInstanceEngine.postgres(
                 version=rds.PostgresEngineVersion.VER_13_7
