@@ -1,4 +1,5 @@
 from django.core.exceptions import ObjectDoesNotExist
+from django.db.models.deletion import ProtectedError
 
 from api.models import Revision
 
@@ -62,8 +63,11 @@ def apply_changes(request, serializer, record, force=False):
     if is_deleted:
         try:
             model_class.objects.get(pk=record_id).delete()
+        except ProtectedError as err:
+            print(err.__dict__)
+            raise err
         except ObjectDoesNotExist:
-            pass
+            raise ObjectDoesNotExist(f"{model_class._meta.model_name.capitalize()} with id {record_id} does not exist to delete")
 
         return 204, None
 
