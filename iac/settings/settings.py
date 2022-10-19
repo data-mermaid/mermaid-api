@@ -23,7 +23,6 @@ class DatabaseSettings:
 
     name: str
     port: str
-    username: str = "mermaid_admin"
 
 
 @dataclass
