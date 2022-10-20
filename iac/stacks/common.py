@@ -9,11 +9,11 @@ from aws_cdk import (
     aws_ecs as ecs,
     aws_kms as kms,
     aws_logs as logs,
+    aws_secretsmanager as sm,
     aws_elasticloadbalancingv2 as elb,
 )
 from constructs import Construct
-
-from iac.settings import ProjectSettings
+import json
 
 
 class CommonStack(Stack):
@@ -21,7 +21,6 @@ class CommonStack(Stack):
         self,
         scope: Construct,
         id: str,
-        config: ProjectSettings,
         **kwargs,
     ) -> None:
         super().__init__(scope, id, **kwargs)
@@ -40,7 +39,7 @@ class CommonStack(Stack):
                     cidr_mask=24,
                 ),
                 ec2.SubnetConfiguration(
-                    subnet_type=ec2.SubnetType.PRIVATE_WITH_NAT,
+                    subnet_type=ec2.SubnetType.PRIVATE_WITH_EGRESS,
                     name="Application",
                     cidr_mask=20,
                 ),
@@ -52,27 +51,44 @@ class CommonStack(Stack):
             ],
         )
 
+        # create a secret so we can manually set the username
+        database_credentials_secret = sm.Secret(
+            self,
+            "DBCredentialsSecret",
+            secret_name="common/mermaid-db/creds",
+            generate_secret_string=sm.SecretStringGenerator(
+                secret_string_template=json.dumps({"username": "mermaid_admin"}),
+                generate_string_key="password",
+                exclude_punctuation=True,
+                include_space=False,
+            )
+        )
+
+
         self.database = rds.DatabaseInstance(
             self,
-            "PostgresRds",
+            "PostgresRdsV2",
             vpc=self.vpc,
-            engine=rds.DatabaseInstanceEngine.POSTGRES,
+            engine=rds.DatabaseInstanceEngine.postgres(
+                version=rds.PostgresEngineVersion.VER_13_7
+            ),            
             instance_type=ec2.InstanceType.of(
                 ec2.InstanceClass.BURSTABLE3, ec2.InstanceSize.MICRO
             ),
-            # database_name=config.database.name,
+            # database_name="default",
             vpc_subnets=ec2.SubnetSelection(
                 subnet_type=ec2.SubnetType.PRIVATE_ISOLATED
             ),
             backup_retention=Duration.days(7),
             deletion_protection=True,
             removal_policy=RemovalPolicy.SNAPSHOT,
+            credentials=rds.Credentials.from_secret(database_credentials_secret),
         )
 
         self.backup_bucket = s3.Bucket(
             self,
             id="MermaidApiBackupBucket",
-            bucket_name=config.backup_bucket_name,
+            bucket_name="mermaid-api-v2-backups",
             removal_policy=RemovalPolicy.RETAIN,
             public_read_access=False,
             block_public_access=s3.BlockPublicAccess.BLOCK_ALL,
@@ -133,18 +149,13 @@ class CommonStack(Stack):
         self.ecs_sg = ec2.SecurityGroup(
             self, id="EcsSg", vpc=self.vpc, allow_all_outbound=True
         )
-        self.ecs_sg.connections.allow_from(
-            other=alb_sg,
-            port_range=ec2.Port.all_tcp(),
-            description="Application load balancer",
-        )
 
         self.load_balancer.add_security_group(alb_sg)
 
-        create_cdk_bot_user(self, config)
+        create_cdk_bot_user(self, self.account)
 
 
-def create_cdk_bot_user(self, config: ProjectSettings):
+def create_cdk_bot_user(self, account: str):
     cdk_policy = iam.Policy(
         self,
         "CDKRolePolicy",
@@ -152,11 +163,12 @@ def create_cdk_bot_user(self, config: ProjectSettings):
             iam.PolicyStatement(
                 actions=["sts:AssumeRole", "sts:TagSession"],
                 effect=iam.Effect.ALLOW,
-                resources=[f"arn:aws:iam::{config.cdk_env.account}:role/cdk-*"]
+                resources=[f"arn:aws:iam::{account}:role/cdk-*"]
             )
         ]
     )
 
+    # this user account is used in Github Actions to deploy to AWS
     cicd_bot_user = iam.User(
         self, 
         "CICD_Bot",

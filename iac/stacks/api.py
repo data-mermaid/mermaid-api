@@ -135,7 +135,6 @@ class ApiStack(Stack):
             self,
             "ScheduledBackupTask",
             schedule=appscaling.Schedule.rate(Duration.days(1)),
-            # schedule=appscaling.Schedule.cron(hour="23"),
             cluster=cluster,
             security_groups=[container_security_group],
             scheduled_fargate_task_image_options=ecs_patterns.ScheduledFargateTaskImageOptions(
@@ -189,7 +188,7 @@ class ApiStack(Stack):
         )
 
 
-        # Grant Secret read to API container
+        # Grant Secret read to API container & backup task
         for _, container_secret in api_secrets.items():
             container_secret.grant_read(service.task_definition.execution_role)
             container_secret.grant_read(backup_task.task_definition.execution_role)
@@ -213,21 +212,41 @@ class ApiStack(Stack):
             ),
         )
 
-        listener_rule = elb.ApplicationListenerRule(
+        rule_priority = 100
+        if config.env_id == "dev":
+            rule_priority = 101
+
+            # add a rule just for dev to allow for testing
+            # TODO: once DNS has been sorted out, we can remove this
+            dev_rule = elb.ApplicationListenerRule(
+                self,
+                id="DevListenerRule",
+                listener=load_balancer.listeners[0],
+                priority=200,
+                conditions=[elb.ListenerCondition.path_patterns(values=["/*"])],
+                target_groups=[target_group],
+            )
+
+        # add a host header rule for each environment
+        host_rule = elb.ApplicationListenerRule(
             self,
-            id="ListenerRule",
+            id="HostHeaderListenerRule",
             listener=load_balancer.listeners[0],
-            priority=100,
-            # action=elb.ListenerAction.forward(target_groups=[target_group]),
-            conditions=[elb.ListenerCondition.path_patterns(values=["/*"])],
-            # conditions=[elb.ListenerCondition.host_headers([config.api.domain_name])],
+            priority=rule_priority,
+            conditions=[elb.ListenerCondition.host_headers([config.api.default_domain_api])],
             target_groups=[target_group],
         )
 
         # Is this required? We has a custom SG already defined...
         database.connections.allow_from(
-            service.connections, port_range=ec2.Port.tcp(5432)
+            service.connections, 
+            port_range=ec2.Port.tcp(5432),
+            description="Allow Fargate service connections to Postgres"
         )
 
+        # Allow API service to read/write to backup bucket in case we want to manually
+        # run dbbackup/dbrestore tasks from within the container
         backup_bucket.grant_read_write(service.task_definition.task_role)
+        
+        # Give permission to backup task
         backup_bucket.grant_read_write(backup_task.task_definition.task_role)

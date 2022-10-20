@@ -14,7 +14,6 @@ from aws_cdk import (
     aws_secretsmanager as secrets,
 )
 
-from iac.settings.utils import get_branch_name
 from iac.settings.utils import camel_case
 
 
@@ -24,7 +23,6 @@ class DatabaseSettings:
 
     name: str
     port: str
-    username: str = "mermaid_admin"
 
 
 @dataclass
@@ -48,7 +46,7 @@ class DjangoSettings:
     mermaid_api_audience: str
 
     # Dynamic Secrets
-    dev_emails_name: str
+    dev_emails_name: str = ""
 
     # Common Attrs (defaults)
     maintenance_mode: str = "False"
@@ -106,11 +104,6 @@ class ProjectSettings:
     """Settings Class for Project Envs"""
 
     # Dynamic Attrs
-    cdk_env: Environment
     env_id: str
     database: DatabaseSettings
     api: DjangoSettings
-
-    # Common Attrs (defaults)
-    branch_name: str = get_branch_name()
-    backup_bucket_name: str = "mermaid-api-v2-backups"  # Use CDK construct?
