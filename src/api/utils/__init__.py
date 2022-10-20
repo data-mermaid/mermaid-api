@@ -198,7 +198,7 @@ def run_subprocess(command, std_input=None, to_file=None):
     
     # print things like NOTICEs and WARNINGs
     if proc.stderr:
-        print(e.stderr.decode('UTF-8'))
+        print(proc.stderr.decode('UTF-8'))
 
     if to_file is not None:
         with open(to_file, "w") as f:
