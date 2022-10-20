@@ -183,28 +183,28 @@ def cast_int(val):
 
 
 def run_subprocess(command, std_input=None, to_file=None):
+    proc: subprocess.CompletedProcess = None
     try:
-        proc = subprocess.Popen(
+        proc = subprocess.run(
             command,
-            stdin=subprocess.PIPE,
-            stdout=subprocess.PIPE,
-            stderr=subprocess.PIPE,
-            universal_newlines=True,
+            input=std_input,
+            check=True,
+            capture_output=True
         )
-    except Exception as e:
-        print(command)
-        raise e
 
-    data, err = proc.communicate(input=std_input)
+    except subprocess.CalledProcessError as e:
+        print(e.stderr.decode('UTF-8'))
+        raise e
+    
+    if proc.stderr:
+        print(proc.stderr)
 
     if to_file is not None:
         with open(to_file, "w") as f:
             f.write("DATA: \n")
-            f.write(str(data))
+            f.write(str(proc.stdout))
             f.write("ERR: \n")
-            f.write(str(err))
-    else:
-        return data, err
+            f.write(str(proc.stderr))
 
 
 # source: https://stackoverflow.com/a/70310511/15624918
