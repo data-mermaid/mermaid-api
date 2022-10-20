@@ -5,7 +5,7 @@ DEV_ENV_ID = "dev"
 DEV_SETTINGS = ProjectSettings(
     
     env_id=DEV_ENV_ID,
-    database=DatabaseSettings(name=f"mermaid-{DEV_ENV_ID}", port="5432"),
+    database=DatabaseSettings(name=f"mermaid_{DEV_ENV_ID}", port="5432"),
     api=DjangoSettings(
         container_cpu=512,
         container_memory=1024,

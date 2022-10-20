@@ -5,7 +5,7 @@ PROD_ENV_ID = "prod"
 PROD_SETTINGS = ProjectSettings(
     
     env_id=PROD_ENV_ID,
-    database=DatabaseSettings(name=f"mermaid-{PROD_ENV_ID}", port="5432"),
+    database=DatabaseSettings(name=f"mermaid_{PROD_ENV_ID}", port="5432"),
     api=DjangoSettings(
         container_cpu=1024,
         container_memory=2048,
@@ -13,9 +13,5 @@ PROD_SETTINGS = ProjectSettings(
         default_domain_api="api.datamermaid.org",
         default_domain_collect="collect.datamermaid.org",
         mermaid_api_audience="https://api.datamermaid.org",
-        
-        # Secrets
-        # dev_emails_name="dev/mermaid-api/dev-emails-mUnSDl"
-
     ),
 )
