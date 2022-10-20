@@ -274,17 +274,18 @@ class ApiStack(Stack):
             environment=environment,
             command=["python", "manage.py", "simpleq_worker"],
             min_scaling_capacity=0,
+            max_scaling_capacity=1,
 
             # when the task takes the last message off the queue we do not 
             # want any change to occur to the service. If we set the change 
             # to be -1 the service will try to tear down the task whilst it 
             # is processing the last message. So it is key that when there 
             # are 0 messages on the queue we do not kill our task
-            scaling_steps=[
-                {"upper": 0, "change": 0},
-                {"lower": 100, "change": +1},
-                {"lower": 500, "change": +5},
-            ], # this defines how the service shall autoscale based on the 
+            # scaling_steps=[
+            #     {"upper": 0, "change": 0},
+            #     {"lower": 100, "change": +1},
+            #     {"lower": 500, "change": +5},
+            # ], # this defines how the service shall autoscale based on the 
             # SQS queue's ApproximateNumberOfMessagesVisible metric
         )
 
