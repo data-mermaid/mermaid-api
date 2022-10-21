@@ -1,5 +1,4 @@
 from time import sleep
-from django.conf import settings
 
 
 class Worker:
@@ -37,8 +36,7 @@ class Worker:
         :param bool burst: Should we quickly *burst* and finish all existing
             jobs then quit?
         """
-        condition = True
-        while condition:
+        while True:
             for queue in self.queues:
                 for job in queue.jobs:
                     job.run()
@@ -48,5 +46,3 @@ class Worker:
                 break
 
             sleep(wait_seconds)
-
-            condition = not settings.IN_ECS
