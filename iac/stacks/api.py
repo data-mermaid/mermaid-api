@@ -281,11 +281,12 @@ class ApiStack(Stack):
             # to be -1 the service will try to tear down the task whilst it 
             # is processing the last message. So it is key that when there 
             # are 0 messages on the queue we do not kill our task
-            # scaling_steps=[
-            #     {"upper": 0, "change": 0},
-            #     {"lower": 100, "change": +1},
-            #     {"lower": 500, "change": +5},
-            # ], # this defines how the service shall autoscale based on the 
+            scaling_steps=[
+                # when 0 messages, scale down
+                appscaling.ScalingInterval(upper=0, change=-1),
+                # when >=1 messages, scale up
+                appscaling.ScalingInterval(lower=1, change=+1),
+            ], # this defines how the service shall autoscale based on the 
             # SQS queue's ApproximateNumberOfMessagesVisible metric
         )
 
