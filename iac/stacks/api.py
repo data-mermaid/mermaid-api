@@ -275,7 +275,6 @@ class ApiStack(Stack):
             command=["python", "manage.py", "simpleq_worker"],
             min_scaling_capacity=0,
             max_scaling_capacity=1,
-            security_groups=[container_security_group],
 
             # when the task takes the last message off the queue we do not 
             # want any change to occur to the service. If we set the change 
