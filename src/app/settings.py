@@ -111,7 +111,6 @@ METADATA_URI = os.getenv('ECS_CONTAINER_METADATA_URI', None)
 IN_ECS = METADATA_URI != None
 
 if IN_ECS:
-    print("We're in ECS!")
     container_metadata = requests.get(METADATA_URI).json()
     ALLOWED_HOSTS.append(container_metadata['Networks'][0]['IPv4Addresses'][0])
 

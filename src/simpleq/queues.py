@@ -100,6 +100,8 @@ class Queue:
         try:
             self._queue = self.sqs_resource.get_queue_by_name(QueueName=queue_name)
         except self.sqs_resource.meta.client.exceptions.QueueDoesNotExist:
+            # TODO: remove this block once ported over to new account. We 
+            # want to let cdk take care of our infra
             visibility_timeout = self.VISIBILITY_TIMEOUT
             self._queue = self.sqs_resource.create_queue(
                 QueueName=queue_name,

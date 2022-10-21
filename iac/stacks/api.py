@@ -273,21 +273,18 @@ class ApiStack(Stack):
             secrets=api_secrets,
             environment=environment,
             command=["python", "manage.py", "simpleq_worker"],
-            min_scaling_capacity=0,
-            max_scaling_capacity=1,
 
-            # when the task takes the last message off the queue we do not 
-            # want any change to occur to the service. If we set the change 
-            # to be -1 the service will try to tear down the task whilst it 
-            # is processing the last message. So it is key that when there 
-            # are 0 messages on the queue we do not kill our task
+            min_scaling_capacity=0, # service should only run if ness
+            max_scaling_capacity=1, # only run one task at a time to process messages
+
+            # this defines how the service shall autoscale based on the 
+            # SQS queue's ApproximateNumberOfMessagesVisible metric
             scaling_steps=[
                 # when 0 messages, scale down
                 appscaling.ScalingInterval(upper=0, change=-1),
                 # when >=1 messages, scale up
                 appscaling.ScalingInterval(lower=1, change=+1),
-            ], # this defines how the service shall autoscale based on the 
-            # SQS queue's ApproximateNumberOfMessagesVisible metric
+            ], 
         )
 
         # allow API to send messages to the queue
@@ -295,6 +292,8 @@ class ApiStack(Stack):
 
         # allow Worker to read messages from the queue
         queue.grant_send_messages(sqs_worker_service.task_definition.task_role)
+        
+        # allow Worker to talk to RDS
         sqs_worker_service.service.connections.allow_to(
             database.connections, 
             port_range=ec2.Port.tcp(5432),
