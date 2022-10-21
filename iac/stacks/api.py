@@ -121,7 +121,7 @@ class ApiStack(Stack):
             "DB_NAME": config.database.name,
             "DB_HOST": database.instance_endpoint.hostname,
             "DB_PORT": config.database.port,
-            "SQS_MESSAGE_VISIBILITY": 300,
+            "SQS_MESSAGE_VISIBILITY": "300",
         }
 
         # build image asset to be shared with API and Backup Task
