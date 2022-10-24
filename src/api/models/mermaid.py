@@ -410,10 +410,8 @@ def default_time():  # no longer used; remove once migrations are squashed
 
 
 class SampleEvent(BaseModel, JSONMixin):
-
     project_lookup = "site__project"
 
-    # Required
     site = models.ForeignKey(Site, on_delete=models.PROTECT, related_name='sample_events')
     management = models.ForeignKey(Management, on_delete=models.PROTECT)
     sample_date = models.DateField(default=default_date)
@@ -448,6 +446,18 @@ class SampleUnit(BaseModel):
     class Meta:
         db_table = 'sample_unit'
         abstract = True
+
+    @property
+    def su_method(self):
+        for tmclass in TransectMethod.__subclasses__():
+            for field in tmclass._meta.fields:
+                if (
+                    field.one_to_one is True
+                    and isinstance(self, field.related_model)
+                ):
+                    return getattr(self, field.related_query_name())
+
+        raise NameError("Sample unit method field can't be found")
 
     def __str__(self):
         if hasattr(self, 'transect') or hasattr(self, 'quadrat'):
@@ -614,7 +624,6 @@ class BeltTransectWidthCondition(BaseChoiceModel):
 
 class FishBeltTransect(Transect):
     project_lookup = 'sample_event__site__project'
-    suview = "BeltFishSUView"
 
     number = models.PositiveSmallIntegerField(default=1)
     label = models.CharField(max_length=50, blank=True)

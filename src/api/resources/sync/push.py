@@ -1,9 +1,12 @@
 from collections import defaultdict
 from django.core.exceptions import ObjectDoesNotExist
 from django.db.models.deletion import ProtectedError
+from django.forms.models import model_to_dict
 
-from api.models import Revision, SampleUnit
-from api.utils.sample_units import get_subclasses
+from api.models import Revision, SampleEvent
+from api.resources.sampleunitmethods.sample_unit_methods import SampleUnitMethodView
+from api.utils.sample_unit_methods import get_project
+from .utils import ViewRequest
 
 
 def get_request_method(record):
@@ -44,6 +47,25 @@ def _has_push_conflict(record_id, last_revision_num):
     return rev.revision_num > last_revision_num
 
 
+def _get_sumethods(request, se):
+    project = get_project(se, se.project_lookup.split("__"))
+    vw_request = ViewRequest(user=request.user, headers=request.headers, method="GET")
+    vw_request.META = request.META
+    vw_request.authenticators = request.authenticators
+    vw_request.successful_authenticator = request.successful_authenticator
+
+    viewset = SampleUnitMethodView(request=vw_request, format_kwarg=None)
+    kwargs = {"project_pk": project.pk}
+    queryset = viewset.limit_to_project(vw_request, **kwargs)
+    serializer = viewset.get_serializer(queryset, many=True)
+    sumethods = []
+    for sumethod in serializer.data:
+        if sumethod.get("sample_event") == str(se.pk):
+            sumethods.append(sumethod)
+
+    return sumethods
+
+
 def apply_changes(request, serializer, record, force=False):
     """Create, update or delete record.
 
@@ -62,27 +84,30 @@ def apply_changes(request, serializer, record, force=False):
     is_deleted = record.get("_deleted") is True
     record_id = record.get("id")
     model_class = serializer.Meta.model
+
     if is_deleted:
         try:
             model_class.objects.get(pk=record_id).delete()
+
         except ProtectedError as err:
             protected_objects = defaultdict(list)
             if hasattr(err, "protected_objects"):
                 for obj in err.protected_objects:
                     protected_model = obj._meta.model_name
-                    protected_id = obj.pk
-                    protected_objects[protected_model].append(protected_id)
+                    protected_obj = model_to_dict(obj)
+                    protected_objects[protected_model].append(protected_obj)
 
-                    if protected_model == "sampleevent":
-                        for suclass in get_subclasses(SampleUnit):
-                            sus = suclass.objects.filter(sample_event=protected_id)
-                            for su in sus:
-                                su_model = suclass._meta.model_name
-                                protected_objects[su_model].append(su.pk)
-
+                    if isinstance(obj, SampleEvent):
+                        sumethods = _get_sumethods(request, obj)
+                        for sumethod in sumethods:
+                            sumethod_model = sumethod.get("protocol", "undefined_method")
+                            protected_objects[sumethod_model].append(sumethod)
             return 418, "Protected Objects", protected_objects
+
         except ObjectDoesNotExist:
-            raise ObjectDoesNotExist(f"{model_class._meta.model_name.capitalize()} with id {record_id} does not exist to delete")
+            raise ObjectDoesNotExist(
+                f"{model_class._meta.model_name.capitalize()} with id {record_id} does not exist to delete"
+            )
 
         return 204, "", None
 

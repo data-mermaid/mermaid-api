@@ -19,6 +19,7 @@ from api.resources import (
     psite,
 )
 from api import utils
+from .utils import create_view_request
 from .pull import get_serialized_records, serialize_revisions, get_record
 from .push import get_request_method, apply_changes
 
@@ -107,32 +108,6 @@ non_project_sources = {
 }
 
 
-class ViewRequest:
-    def __init__(self, user, headers, method="GET"):
-        self.user = user
-        self.data = {}
-        self.query_params = {}
-        self.GET = {}
-        self.META = {}
-        self.method = method
-        self.headers = headers
-
-
-def _create_view_request(request, method=None, data=None):
-    data = data or {}
-
-    method = method or request.method
-    vw_request = ViewRequest(user=request.user, headers=request.headers, method=method)
-    for k, v in data.items():
-        vw_request.data[k] = v
-
-    vw_request.META = request.META
-    vw_request.authenticators = request.authenticators
-    vw_request.successful_authenticator = request.successful_authenticator
-
-    return vw_request
-
-
 def _get_source(source_type):
     return project_sources.get(source_type) or non_project_sources.get(source_type)
 
@@ -199,7 +174,7 @@ def _get_serialized_record(viewset, record_id):
 
 def _update_source_record(source_type, serializer, record, request, force=False):
     src = _get_source(source_type)
-    vw_request = _create_view_request(
+    vw_request = create_view_request(
         request, method=get_request_method(record), data=record
     )
     viewset = src["view"](request=vw_request)
@@ -289,7 +264,7 @@ def check_permissions(request, data, source_types, method=False):
             }
             continue
 
-        view_request = _create_view_request(request, method=method, data=params)
+        view_request = create_view_request(request, method=method, data=params)
 
         vw = src["view"]()
         vw.kwargs = {}
