@@ -108,7 +108,9 @@ ALLOWED_HOSTS = [host.strip() for host in _allowed_hosts.split(",")]
 
 # Look for Fargate IP, for health checks.
 METADATA_URI = os.getenv('ECS_CONTAINER_METADATA_URI', None)
-if METADATA_URI:
+IN_ECS = METADATA_URI != None
+
+if IN_ECS:
     container_metadata = requests.get(METADATA_URI).json()
     ALLOWED_HOSTS.append(container_metadata['Networks'][0]['IPv4Addresses'][0])
 
@@ -326,7 +328,7 @@ CACHES = {
 
 # NOTE this is not required in ECS. I do a check ealier on to see if the
 # METADATA_URI env var is set from ECS
-if ENVIRONMENT in ("dev", "prod") and METADATA_URI is None:
+if ENVIRONMENT in ("dev", "prod") and not IN_ECS:
     LOGGING["handlers"]["watchtower"] = {
         'level': DEBUG_LEVEL,
         'class': 'watchtower.CloudWatchLogHandler',
@@ -348,7 +350,7 @@ SQS_WAIT_SECONDS = 20
 
 # Number of seconds before the message is visible again
 # in SQS for other tasks to pull.
-SQS_MESSAGE_VISIBILITY = 300
+SQS_MESSAGE_VISIBILITY = os.environ.get('SQS_MESSAGE_VISIBILITY', 300)
 
 # Name of queue, if it doesn't exist it will be created.
 QUEUE_NAME = f"mermaid-{ENVIRONMENT}"  # required
