@@ -353,6 +353,7 @@ class BeltFishMethodSUCSVSerializer(ReportSerializer):
         ReportField("total_abundance", "Total abundance"),
         ReportField("biomass_kgha", "Biomass_kgha"),
         ReportField("biomass_kgha_by_trophic_group", "Biomass kgha by trophic group"),
+        ReportField("biomass_kgha_by_fish_family", "Biomass kgha by family"),
         ReportField("site_notes", "Site notes"),
         ReportField("management_notes", "Management notes"),
         ReportField("sample_unit_notes", "Sample unit notes"),
@@ -425,6 +426,7 @@ class BeltFishMethodSECSVSerializer(ReportSerializer):
         ReportField(
             "biomass_kgha_by_trophic_group_avg", "Biomass kgha by trophic group average"
         ),
+        ReportField("biomass_kgha_by_fish_family_avg", "Biomass kgha by family average"),
         ReportField("site_notes", "Site notes"),
         ReportField("management_notes", "Management notes"),
     ] + covariate_report_fields
