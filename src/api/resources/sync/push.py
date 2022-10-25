@@ -55,15 +55,14 @@ def _get_sumethods(request, se):
     vw_request.successful_authenticator = request.successful_authenticator
 
     viewset = SampleUnitMethodView(request=vw_request, format_kwarg=None)
-    kwargs = {"project_pk": project.pk}
-    queryset = viewset.limit_to_project(vw_request, **kwargs)
+    queryset = viewset.limit_to_project(vw_request, project_pk=project.pk)
     serializer = viewset.get_serializer(queryset, many=True)
-    sumethods = []
-    for sumethod in serializer.data:
-        if sumethod.get("sample_event") == str(se.pk):
-            sumethods.append(sumethod)
 
-    return sumethods
+    return [
+        sumethod
+        for sumethod in serializer.data
+        if sumethod.get("sample_event") == str(se.pk)
+    ]
 
 
 def apply_changes(request, serializer, record, force=False):
@@ -100,7 +99,9 @@ def apply_changes(request, serializer, record, force=False):
                     if isinstance(obj, SampleEvent):
                         sumethods = _get_sumethods(request, obj)
                         for sumethod in sumethods:
-                            sumethod_model = sumethod.get("protocol", "undefined_method")
+                            sumethod_model = sumethod.get(
+                                "protocol", "undefined_method"
+                            )
                             protected_objects[sumethod_model].append(sumethod)
             return 418, "Protected Objects", protected_objects
 
