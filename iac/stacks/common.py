@@ -127,6 +127,9 @@ class CommonStack(Stack):
             id="MermaidApiLoadBalancer",
             vpc=self.vpc,
             internet_facing=True,
+            deletion_protection=True,
+
+        )
         )
 
         self.load_balancer.add_listener(
