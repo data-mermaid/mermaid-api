@@ -91,6 +91,9 @@ shell:
 shellroot:
 	@docker-compose exec --user=root $(API_SERVICE) /bin/bash
 
+shellplus:
+	@docker-compose exec $(API_SERVICE) python manage.py shell_plus
+
 test:
 	@docker-compose exec $(API_SERVICE) pytest -v --no-migrations --rich api/tests
 
