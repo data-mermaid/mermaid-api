@@ -12,6 +12,7 @@ from aws_cdk import (
     aws_s3 as s3,
     aws_elasticloadbalancingv2 as elb,
     aws_logs as logs,
+    aws_sqs as sqs,
 )
 from constructs import Construct
 
@@ -120,6 +121,7 @@ class ApiStack(Stack):
             "DB_NAME": config.database.name,
             "DB_HOST": database.instance_endpoint.hostname,
             "DB_PORT": config.database.port,
+            "SQS_MESSAGE_VISIBILITY": "300",
         }
 
         # build image asset to be shared with API and Backup Task
@@ -250,3 +252,51 @@ class ApiStack(Stack):
         
         # Give permission to backup task
         backup_bucket.grant_read_write(backup_task.task_definition.task_role)
+
+        # define fifo queue
+        queue = sqs.Queue(
+            self,
+            "FifoQueue",
+            fifo=True,
+            queue_name=f"mermaid-{config.env_id}.fifo",
+            content_based_deduplication=False,
+            visibility_timeout=Duration.seconds(os.environ.get('SQS_MESSAGE_VISIBILITY', 300)),
+        )
+
+        sqs_worker_service = ecs_patterns.QueueProcessingFargateService(
+            self,
+            "SQSWorker",
+            cluster=cluster,
+            queue=queue,
+            image=ecs.ContainerImage.from_docker_image_asset(image_asset),
+            cpu=config.api.container_cpu,
+            memory_limit_mib=config.api.container_memory,
+            secrets=api_secrets,
+            environment=environment,
+            command=["python", "manage.py", "simpleq_worker"],
+
+            min_scaling_capacity=0, # service should only run if ness
+            max_scaling_capacity=1, # only run one task at a time to process messages
+
+            # this defines how the service shall autoscale based on the 
+            # SQS queue's ApproximateNumberOfMessagesVisible metric
+            scaling_steps=[
+                # when 0 messages, scale down
+                appscaling.ScalingInterval(upper=0, change=-1),
+                # when >=1 messages, scale up
+                appscaling.ScalingInterval(lower=1, change=+1),
+            ], 
+        )
+
+        # allow API to send messages to the queue
+        queue.grant_send_messages(service.task_definition.task_role)
+
+        # allow Worker to read messages from the queue
+        queue.grant_send_messages(sqs_worker_service.task_definition.task_role)
+        
+        # allow Worker to talk to RDS
+        sqs_worker_service.service.connections.allow_to(
+            database.connections, 
+            port_range=ec2.Port.tcp(5432),
+            description="Allow SQS Worker service connections to Postgres"
+        )
