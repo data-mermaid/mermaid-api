@@ -218,17 +218,6 @@ class ApiStack(Stack):
         if config.env_id == "dev":
             rule_priority = 101
 
-            # add a rule just for dev to allow for testing
-            # TODO: once DNS has been sorted out, we can remove this
-            dev_rule = elb.ApplicationListenerRule(
-                self,
-                id="DevListenerRule",
-                listener=load_balancer.listeners[0],
-                priority=200,
-                conditions=[elb.ListenerCondition.path_patterns(values=["/*"])],
-                target_groups=[target_group],
-            )
-
         # add a host header rule for each environment
         host_rule = elb.ApplicationListenerRule(
             self,
