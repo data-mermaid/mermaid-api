@@ -130,30 +130,26 @@ class CommonStack(Stack):
             deletion_protection=True,
 
         )
+        # SSL Certificate
+        # TODO: create one dynamically
+        default_cert = acm.Certificate.from_certificate_arn(
+            self,
+            "DefaultSSLCert",
+            certificate_arn="arn:aws:acm:us-east-1:554812291621:certificate/b32ae8cb-aea4-4926-adf3-4669dd1a0bcb"
+        )
         )
 
         self.load_balancer.add_listener(
             id="MermaidApiListener",
-            port=80,  # Until a domain is sorted out
-            protocol=elb.ApplicationProtocol.HTTP,
+            protocol=elb.ApplicationProtocol.HTTPS,
             default_action=elb.ListenerAction.fixed_response(404),
+            certificates=[default_cert]
         )
         # self.load_balancer.add_redirect() # Needs to be HTTPs first.
-
-        alb_sg = ec2.SecurityGroup(
-            self, id="AlbSg", vpc=self.vpc, allow_all_outbound=True
-        )
-        alb_sg.add_ingress_rule(
-            peer=ec2.Peer.any_ipv4(),
-            connection=ec2.Port.tcp(443),
-            description="Allow incoming https traffic",
-        )
 
         self.ecs_sg = ec2.SecurityGroup(
             self, id="EcsSg", vpc=self.vpc, allow_all_outbound=True
         )
-
-        self.load_balancer.add_security_group(alb_sg)
 
         create_cdk_bot_user(self, self.account)
 

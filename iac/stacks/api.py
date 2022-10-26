@@ -214,6 +214,7 @@ class ApiStack(Stack):
             ),
         )
 
+        # add rule to SSL listener
         rule_priority = 100
         if config.env_id == "dev":
             rule_priority = 101
