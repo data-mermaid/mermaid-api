@@ -65,6 +65,7 @@ class SampleUnitMethodFilterSet(BaseAPIFilterSet):
 
 class SampleUnitMethodSerializer(BaseAPISerializer):
     protocol = serializers.SerializerMethodField()
+    sample_event = serializers.SerializerMethodField()
     site_name = serializers.ReadOnlyField()
     site = serializers.SerializerMethodField()
     management_name = serializers.ReadOnlyField()
@@ -80,6 +81,14 @@ class SampleUnitMethodSerializer(BaseAPISerializer):
     def get_protocol(self, o):
         return o.protocol
 
+    def _get_sample_event(self, o):
+        se = self.context["sample_events"].get(str(o.sample_unit.sample_event_id))
+        return se
+
+    def get_sample_event(self, o):
+        se = self._get_sample_event(o)
+        return str(se.pk)
+
     def get_sample_unit_number(self, o):
         sample_unit = o.sample_unit
         if hasattr(sample_unit, "number"):
@@ -87,19 +96,19 @@ class SampleUnitMethodSerializer(BaseAPISerializer):
         return None
 
     def get_site(self, o):
-        se = self.context["sample_events"].get(str(o.sample_unit.sample_event_id))
+        se = self._get_sample_event(o)
         if se is None:
             return
         return se.site_id
 
     def get_management(self, o):
-        se = self.context["sample_events"].get(str(o.sample_unit.sample_event_id))
+        se = self._get_sample_event(o)
         if se is None:
             return
         return se.management_id
 
     def get_sample_date(self, o):
-        se = self.context["sample_events"].get(str(o.sample_unit.sample_event_id))
+        se = self._get_sample_event(o)
         if se is None:
             return
         return se.sample_date

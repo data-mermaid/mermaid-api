@@ -10,7 +10,7 @@ from .push import (
 )
 from .views import (
     ReadOnlyError,
-    ViewRequest,
     vw_pull,
     vw_push,
 )
+from .utils import ViewRequest
