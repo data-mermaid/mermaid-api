@@ -10,7 +10,7 @@ PROD_SETTINGS = ProjectSettings(
         container_cpu=1024,
         container_memory=2048,
         container_count=1,
-        default_domain_api="api2.datamermaid.org",
+        default_domain_api="api.datamermaid.org",
         default_domain_collect="collect.datamermaid.org",
         mermaid_api_audience="https://api.datamermaid.org",
     ),

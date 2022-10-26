@@ -9,6 +9,8 @@ from aws_cdk import (
     aws_ecs as ecs,
     aws_kms as kms,
     aws_logs as logs,
+    aws_route53 as r53,
+    aws_certificatemanager as acm,
     aws_secretsmanager as sm,
     aws_elasticloadbalancingv2 as elb,
 )
@@ -130,20 +132,42 @@ class CommonStack(Stack):
             deletion_protection=True,
 
         )
-        # SSL Certificate
-        # TODO: create one dynamically
+        
+
+        # DNS setup
+        root_domain = "datamermaid.org" 
+        api_domain = f"api2.{root_domain}"
+
+        # lookup hosted zone for the API. 
+        # NOTE: This depends on the zone already created (manually) and NS's added to cloudflare (manually)
+        self.api_zone = r53.HostedZone.from_lookup(
+            self,
+            "APIZone",
+            domain_name=api_domain,
+        )
+
+        # SSL Certificates
+        # Lookup the cert for *.datamermaid.org
+        # NOTE: This depends on the cert already created (manually)
         default_cert = acm.Certificate.from_certificate_arn(
             self,
             "DefaultSSLCert",
             certificate_arn="arn:aws:acm:us-east-1:554812291621:certificate/b32ae8cb-aea4-4926-adf3-4669dd1a0bcb"
         )
+
+        # Create a cert for the API zone
+        api_cert = acm.Certificate(
+            self,
+            "APISSLCert",
+            domain_name=f"*.{api_domain}",
+            validation=acm.CertificateValidation.from_dns(self.api_zone)
         )
 
         self.load_balancer.add_listener(
             id="MermaidApiListener",
             protocol=elb.ApplicationProtocol.HTTPS,
             default_action=elb.ListenerAction.fixed_response(404),
-            certificates=[default_cert]
+            certificates=[default_cert, api_cert]
         )
         # self.load_balancer.add_redirect() # Needs to be HTTPs first.
 
