@@ -12,6 +12,8 @@ from aws_cdk import (
     aws_s3 as s3,
     aws_elasticloadbalancingv2 as elb,
     aws_logs as logs,
+    aws_route53 as r53,
+    aws_route53_targets as r53_targets,
     aws_sqs as sqs,
 )
 from constructs import Construct
@@ -31,6 +33,7 @@ class ApiStack(Stack):
         backup_bucket: s3.Bucket,
         load_balancer: elb.ApplicationLoadBalancer,
         container_security_group: ec2.SecurityGroup,
+        api_zone: r53.HostedZone,
         **kwargs,
     ) -> None:
         super().__init__(scope, id, **kwargs)
@@ -214,28 +217,29 @@ class ApiStack(Stack):
             ),
         )
 
-        rule_priority = 100
-        if config.env_id == "dev":
-            rule_priority = 101
+        # create CNAME for ALB
+        record = r53.ARecord(
+            self,
+            "AliasRecord",
+            zone=api_zone,
+            record_name=f"{config.env_id}.{api_zone.zone_name}",
+            target=r53.RecordTarget.from_alias(r53_targets.LoadBalancerTarget(load_balancer))
+        )
 
-            # add a rule just for dev to allow for testing
-            # TODO: once DNS has been sorted out, we can remove this
-            dev_rule = elb.ApplicationListenerRule(
-                self,
-                id="DevListenerRule",
-                listener=load_balancer.listeners[0],
-                priority=200,
-                conditions=[elb.ListenerCondition.path_patterns(values=["/*"])],
-                target_groups=[target_group],
-            )
+        # add rule to SSL listener
+        host_headers = [record.domain_name]
+        rule_priority = 101
+        if config.env_id == "prod":
+            rule_priority = 100
+            host_headers.append("api.datamermaid.org")
 
-        # add a host header rule for each environment
+        # add a host header rule
         host_rule = elb.ApplicationListenerRule(
             self,
             id="HostHeaderListenerRule",
             listener=load_balancer.listeners[0],
             priority=rule_priority,
-            conditions=[elb.ListenerCondition.host_headers([config.api.default_domain_api])],
+            conditions=[elb.ListenerCondition.host_headers(host_headers)],
             target_groups=[target_group],
         )
 

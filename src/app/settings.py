@@ -112,7 +112,9 @@ IN_ECS = METADATA_URI != None
 
 if IN_ECS:
     container_metadata = requests.get(METADATA_URI).json()
+    # allow container IPs for ALB health checks
     ALLOWED_HOSTS.append(container_metadata['Networks'][0]['IPv4Addresses'][0])
+    ALLOWED_HOSTS.append(".datamermaid.org")
 
 if ENVIRONMENT not in ("dev", "prod",):
     def show_toolbar(request):

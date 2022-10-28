@@ -10,7 +10,7 @@ DEV_SETTINGS = ProjectSettings(
         container_cpu=512,
         container_memory=1024,
         container_count=1,
-        default_domain_api="dev-api.datamermaid.org",
+        default_domain_api="dev.api2.datamermaid.org",
         default_domain_collect="dev-collect.datamermaid.org",
         mermaid_api_audience="https://dev-api.datamermaid.org",
         
