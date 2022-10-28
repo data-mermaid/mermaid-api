@@ -9,8 +9,7 @@ from .base import (
     NullableUUIDFilter,
 )
 from .management import get_rules
-from .mixins import CopyRecordsMixin, CreateOrUpdateSerializerMixin, ProtectedResourceMixin
-from ..notifications import notify_cr_owners_site_mr_deleted
+from .mixins import CopyRecordsMixin, CreateOrUpdateSerializerMixin, NotifyDeletedSiteMRMixin
 
 
 class PManagementSerializer(CreateOrUpdateSerializerMixin, BaseAPISerializer):
@@ -78,7 +77,7 @@ class PManagementFilterSet(BaseAPIFilterSet):
         ]
 
 
-class PManagementViewSet(ProtectedResourceMixin, CopyRecordsMixin, BaseProjectApiViewSet):
+class PManagementViewSet(NotifyDeletedSiteMRMixin, CopyRecordsMixin, BaseProjectApiViewSet):
     model_display_name = "Management Regime"
     serializer_class = PManagementSerializer
     queryset = Management.objects.all()
@@ -88,10 +87,3 @@ class PManagementViewSet(ProtectedResourceMixin, CopyRecordsMixin, BaseProjectAp
         "name",
         "name_secondary",
     ]
-
-    def destroy(self, request, *args, **kwargs):
-        instance = self.get_object()
-        deleted_by = getattr(request.user, "profile", None)
-        response = super().destroy(request, *args, **kwargs)
-        notify_cr_owners_site_mr_deleted(instance, deleted_by)
-        return response
