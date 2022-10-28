@@ -20,4 +20,4 @@ class APIVersionMiddleware(MiddlewareMixin):
 class HealthEndpointMiddleware(MiddlewareMixin):
     def process_request(self, request):
         if request.META["PATH_INFO"] == "/health/":
-            return HttpResponse("OK")
+            return HttpResponse(f"OK ({settings.ENVIRONMENT})")

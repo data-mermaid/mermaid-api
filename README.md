@@ -137,10 +137,9 @@ admin@datamermaid.org.
 ### SSH into containers in the cloud
 
 Requirements: 
-- Install Session Manager Plugin for AWS-CLI:
-- https://docs.aws.amazon.com/systems-manager/latest/userguide/session-manager-working-with-install-plugin.html
+- Install [Session Manager Plugin for AWS-CLI](https://docs.aws.amazon.com/systems-manager/latest/userguide/session-manager-working-with-install-plugin.html) locally
 
-Then
+Then, log into the AWS console and identify the task ID of the ECS container that you want to "exec" into. Once you have the task ID, replace the XXX in the command below:
 
 ```
 $ make cloud_shell taskid=XXX

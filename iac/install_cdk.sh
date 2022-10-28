@@ -1,7 +1,7 @@
 #!/bin/sh
 set -e
 
-CDK_VERSION=2.29.1
+CDK_VERSION=2.44.0
 
 echo "Installing AWS CDK CLI"
 npm install -g aws-cdk@$CDK_VERSION

@@ -1,6 +1,12 @@
+from collections import defaultdict
 from django.core.exceptions import ObjectDoesNotExist
+from django.db.models.deletion import ProtectedError
+from django.forms.models import model_to_dict
 
-from api.models import Revision
+from api.models import Revision, SampleEvent
+from api.resources.sampleunitmethods.sample_unit_methods import SampleUnitMethodView
+from api.utils.sample_unit_methods import get_project
+from .utils import ViewRequest
 
 
 def get_request_method(record):
@@ -41,6 +47,24 @@ def _has_push_conflict(record_id, last_revision_num):
     return rev.revision_num > last_revision_num
 
 
+def _get_sumethods(request, se):
+    project = get_project(se, se.project_lookup.split("__"))
+    vw_request = ViewRequest(user=request.user, headers=request.headers, method="GET")
+    vw_request.META = request.META
+    vw_request.authenticators = request.authenticators
+    vw_request.successful_authenticator = request.successful_authenticator
+
+    viewset = SampleUnitMethodView(request=vw_request, format_kwarg=None)
+    queryset = viewset.limit_to_project(vw_request, project_pk=project.pk)
+    serializer = viewset.get_serializer(queryset, many=True)
+
+    return [
+        sumethod
+        for sumethod in serializer.data
+        if sumethod.get("sample_event") == str(se.pk)
+    ]
+
+
 def apply_changes(request, serializer, record, force=False):
     """Create, update or delete record.
 
@@ -53,24 +77,45 @@ def apply_changes(request, serializer, record, force=False):
     :type record: dict
     :param force: Ignore conflicts and apply change, defaults to False
     :type force: bool, optional
-    :return: Status code and errors [optional]
+    :return: Status code, message, and errors [optional]. Use 418 for special cases.
     :rtype: tuple
     """
     is_deleted = record.get("_deleted") is True
     record_id = record.get("id")
     model_class = serializer.Meta.model
+
     if is_deleted:
         try:
             model_class.objects.get(pk=record_id).delete()
-        except ObjectDoesNotExist:
-            pass
 
-        return 204, None
+        except ProtectedError as err:
+            protected_objects = defaultdict(list)
+            if hasattr(err, "protected_objects"):
+                for obj in err.protected_objects:
+                    protected_model = obj._meta.model_name
+                    protected_obj = model_to_dict(obj)
+                    protected_objects[protected_model].append(protected_obj)
+
+                    if isinstance(obj, SampleEvent):
+                        sumethods = _get_sumethods(request, obj)
+                        for sumethod in sumethods:
+                            sumethod_model = sumethod.get(
+                                "protocol", "undefined_method"
+                            )
+                            protected_objects[sumethod_model].append(sumethod)
+            return 418, "Protected Objects", protected_objects
+
+        except ObjectDoesNotExist:
+            raise ObjectDoesNotExist(
+                f"{model_class._meta.model_name.capitalize()} with id {record_id} does not exist to delete"
+            )
+
+        return 204, "", None
 
     instance = None
     last_revision_num = record.get("_last_revision_num")
     if force is False and _has_push_conflict(record_id, last_revision_num):
-        return 409, None
+        return 409, "Conflict", None
 
     if last_revision_num is not None:
         instance = model_class.objects.get(pk=record_id)
@@ -81,8 +126,8 @@ def apply_changes(request, serializer, record, force=False):
     s = serializer(instance=instance, data=record, context={"request": request})
 
     if s.is_valid() is False:
-        return 400, s.errors
+        return 400, "Validation Error", s.errors
 
     s.save()
 
-    return status_code, None
+    return status_code, "", None
