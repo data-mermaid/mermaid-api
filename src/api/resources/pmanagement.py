@@ -1,6 +1,4 @@
 import django_filters
-from django.core.exceptions import ObjectDoesNotExist
-from rest_framework.decorators import action
 from rest_framework.serializers import DecimalField
 
 from ..models import Management
@@ -11,7 +9,7 @@ from .base import (
     NullableUUIDFilter,
 )
 from .management import get_rules
-from .mixins import CopyRecordsMixin, CreateOrUpdateSerializerMixin, ProtectedResourceMixin
+from .mixins import CopyRecordsMixin, CreateOrUpdateSerializerMixin, NotifyDeletedSiteMRMixin
 
 
 class PManagementSerializer(CreateOrUpdateSerializerMixin, BaseAPISerializer):
@@ -79,7 +77,7 @@ class PManagementFilterSet(BaseAPIFilterSet):
         ]
 
 
-class PManagementViewSet(ProtectedResourceMixin, CopyRecordsMixin, BaseProjectApiViewSet):
+class PManagementViewSet(NotifyDeletedSiteMRMixin, CopyRecordsMixin, BaseProjectApiViewSet):
     model_display_name = "Management Regime"
     serializer_class = PManagementSerializer
     queryset = Management.objects.all()

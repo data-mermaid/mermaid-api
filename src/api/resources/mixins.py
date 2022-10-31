@@ -10,13 +10,13 @@ from rest_framework import exceptions
 from rest_framework.request import Request
 from rest_framework.response import Response
 from rest_framework.decorators import action
-from rest_framework.serializers import raise_errors_on_nested_writes
 
 from ..exceptions import check_uuid
 from ..models import ArchivedRecord, Project
+from ..notifications import notify_cr_owners_site_mr_deleted
+from ..permissions import ProjectDataAdminPermission
 from ..utils import get_protected_related_objects
 from ..utils.sample_unit_methods import edit_transect_method
-from ..permissions import ProjectDataAdminPermission
 
 
 class ProtectedResourceMixin(object):
@@ -41,6 +41,15 @@ class ProtectedResourceMixin(object):
 
             msg += " [" + ", ".join(protected_instance_displays) + "]"
             return Response(msg, status=status.HTTP_403_FORBIDDEN)
+
+
+class NotifyDeletedSiteMRMixin(ProtectedResourceMixin):
+    def destroy(self, request, *args, **kwargs):
+        instance = self.get_object()
+        deleted_by = getattr(request.user, "profile", None)
+        response = super().destroy(request, *args, **kwargs)
+        notify_cr_owners_site_mr_deleted(instance, deleted_by)
+        return response
 
 
 class CreateOrUpdateSerializerMixin(object):

@@ -90,5 +90,5 @@
 
 
 **API endpoints example files:**
-  - [Benthic Photo Quadrat Transect](https://github.com/data-mermaid/mermaid-api/blob/dev/src/api/resources/sample_units/benthicphotoquadrattransectmethod.py)
-  - [Belt Fish](https://github.com/data-mermaid/mermaid-api/blob/dev/src/api/resources/sample_units/beltfishmethod.py)
+  - [Benthic Photo Quadrat Transect](https://github.com/data-mermaid/mermaid-api/blob/dev/src/api/resources/sampleunitmethods/benthicphotoquadrattransectmethod.py)
+  - [Belt Fish](https://github.com/data-mermaid/mermaid-api/blob/dev/src/api/resources/sampleunitmethods/beltfishmethod.py)
