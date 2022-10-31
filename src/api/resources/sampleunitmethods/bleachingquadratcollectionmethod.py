@@ -291,13 +291,14 @@ class ObsBleachingQCColoniesBleachedCSVSerializer(ReportSerializer):
 
     additional_fields = [
         ReportField("id"),
+        ReportField("site_id"),
         ReportField("project_id"),
         ReportField("project_notes"),
-        ReportField("site_id"),
         ReportField("contact_link"),
         ReportField("tags"),
         ReportField("country_id"),
         ReportField("management_id"),
+        ReportField("sample_event_id"),
         ReportField("sample_unit_id"),
         ReportField("data_policy_bleachingqc"),
     ]
@@ -371,13 +372,14 @@ class ObsQuadratBenthicPercentCSVSerializer(ReportSerializer):
 
     additional_fields = [
         ReportField("id"),
+        ReportField("site_id"),
         ReportField("project_id"),
         ReportField("project_notes"),
-        ReportField("site_id"),
         ReportField("contact_link"),
         ReportField("tags"),
         ReportField("country_id"),
         ReportField("management_id"),
+        ReportField("sample_event_id"),
         ReportField("sample_unit_id"),
         ReportField("data_policy_bleachingqc"),
     ]
