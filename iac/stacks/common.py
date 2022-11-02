@@ -152,7 +152,7 @@ class CommonStack(Stack):
         default_cert = acm.Certificate.from_certificate_arn(
             self,
             "DefaultSSLCert",
-            certificate_arn="arn:aws:acm:us-east-1:554812291621:certificate/b32ae8cb-aea4-4926-adf3-4669dd1a0bcb"
+            certificate_arn=f"arn:aws:acm:us-east-1:{self.account}:certificate/783d7a91-1ebd-4387-9518-e28521086db6"
         )
 
         # Create a cert for the API zone
