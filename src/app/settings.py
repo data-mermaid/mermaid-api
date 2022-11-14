@@ -217,7 +217,7 @@ STATIC_ROOT = os.path.join(BASE_DIR, 'static')
 # **    Auth0    **
 # *****************
 
-AUTH0_DOMAIN = 'datamermaid.auth0.com'
+AUTH0_DOMAIN = os.environ.get("MERMAID_DOMAIN")
 AUTH0_USER_INFO_ENDPOINT = 'https://{domain}/userinfo'.format(domain=AUTH0_DOMAIN)
 AUTH0_MANAGEMENT_API_AUDIENCE = os.environ.get('AUTH0_MANAGEMENT_API_AUDIENCE')
 MERMAID_API_AUDIENCE = os.environ.get('MERMAID_API_AUDIENCE')
