@@ -65,7 +65,7 @@ def get_fishbelt_transect_data(collect_record, sample_event_id=None):
         current=fishbelt_transect_data.get("current") or None,
         relative_depth=fishbelt_transect_data.get("relative_depth") or None,
         tide=fishbelt_transect_data.get("tide") or None,
-        notes=data.get("notes", ""),
+        notes=fishbelt_transect_data.get("notes", ""),
     )
 
 
@@ -115,7 +115,7 @@ def get_benthic_transect_data(collect_record, sample_event_id=None):
         current=benthic_transect_data.get("current") or None,
         relative_depth=benthic_transect_data.get("relative_depth") or None,
         tide=benthic_transect_data.get("tide") or None,
-        notes=data.get("notes", ""),
+        notes=benthic_transect_data.get("notes", ""),
     )
 
 
@@ -186,7 +186,7 @@ def get_quadrat_collection_data(collect_record, sample_event_id=None):
         current=quadrat_collection_data.get("current") or None,
         relative_depth=quadrat_collection_data.get("relative_depth") or None,
         tide=quadrat_collection_data.get("tide") or None,
-        notes=data.get("notes", ""),
+        notes=quadrat_collection_data.get("notes", ""),
     )
 
 
@@ -248,7 +248,7 @@ def get_quadrat_transect_data(collect_record, sample_event_id=None):
         current=quadrat_transect_data.get("current") or None,
         relative_depth=quadrat_transect_data.get("relative_depth") or None,
         tide=quadrat_transect_data.get("tide") or None,
-        notes=data.get("notes", ""),
+        notes=quadrat_transect_data.get("notes", ""),
     )
 
 
