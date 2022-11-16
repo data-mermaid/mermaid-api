@@ -40,6 +40,8 @@ def test_quadrat_collection_validator_duplicate_invalid(
 ):
     validator = _get_validator()
     record = CollectRecordSerializer(valid_bleaching_qc_collect_record).data
+    # valid_bleaching_qc_collect_record and observer_bleaching_quadrat_collection1
+    # both have the same quadrat_collection properties, creating duplicate
 
     result = validator(record)
     assert result.status == ERROR
