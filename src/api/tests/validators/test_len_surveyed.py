@@ -1,5 +1,5 @@
 from api.resources.collect_record import CollectRecordSerializer
-from api.submission.validations2.validators import OK, WARN, LenSurveyedValidator
+from api.submission.validations2.validators import ERROR, OK, WARN, LenSurveyedValidator
 
 
 def _get_validator():
@@ -38,8 +38,7 @@ def test_len_surveyed_validator_invalid_null(valid_collect_record):
     record = CollectRecordSerializer(instance=valid_collect_record).data
     record["data"]["fishbelt_transect"]["len_surveyed"] = None
     result = validator(record)
-    assert result.status == WARN
-    assert result.code == LenSurveyedValidator.LEN_SURVEYED_OUT_OF_RANGE
+    assert result.status == ERROR
 
 
 def test_len_surveyed_validator_invalid_empty_str(valid_collect_record):
@@ -47,5 +46,4 @@ def test_len_surveyed_validator_invalid_empty_str(valid_collect_record):
     record = CollectRecordSerializer(instance=valid_collect_record).data
     record["data"]["fishbelt_transect"]["len_surveyed"] = ""
     result = validator(record)
-    assert result.status == WARN
-    assert result.code == LenSurveyedValidator.LEN_SURVEYED_OUT_OF_RANGE
+    assert result.status == ERROR
