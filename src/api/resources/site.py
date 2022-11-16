@@ -135,7 +135,9 @@ class SiteFilterSet(BaseAPIFilterSet):
 class SiteViewSet(ProtectedResourceMixin, BaseApiViewSet):
     model_display_name = "Site"
     serializer_class = SiteSerializer
-    queryset = Site.objects.exclude(project__status=Project.TEST)
+    queryset = Site.objects \
+        .select_related("project", "country", "reef_type", "reef_zone", "exposure") \
+        .exclude(project__status=Project.TEST)
     permission_classes = [AuthenticatedReadOnlyPermission]
     filterset_class = SiteFilterSet
     search_fields = ['$name', '$project__name', '$country__name',]
