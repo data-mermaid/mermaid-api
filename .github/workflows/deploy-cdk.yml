@@ -5,8 +5,13 @@ on:
     branches:
       - dev
     tags:
-      - 'w[0-9]+.[0-9]+'        # eg: v1.1
-      - 'w[0-9]+.[0-9]+.[0-9]+' # eg: v1.1.1
+      - 'v[0-9]+.[0-9]+'        # eg: v1.1
+      - 'v[0-9]+.[0-9]+.[0-9]+' # eg: v1.1.1
+
+      # The following tags allow you to deploy prod on the new AWS account only.
+      # TODO: remove after migration
+      - 'w[0-9]+.[0-9]+'        # eg: w1.1
+      - 'w[0-9]+.[0-9]+.[0-9]+' # eg: w1.1.1
 
 jobs:
   deploy:
