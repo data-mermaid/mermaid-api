@@ -7,6 +7,7 @@ from django.urls import reverse
 from django.utils.html import format_html
 from django.conf import settings
 from django.contrib import messages
+from django.db.models import Count
 
 from ..models import Application, AuthUser, Profile, AppVersion, CollectRecord, Observer
 
@@ -103,8 +104,21 @@ class AuthUserAdmin(BaseAdmin):
 
 @admin.register(Profile)
 class ProfileAdmin(BaseAdmin):
-    list_display = ("first_name", "last_name", "email")
+    list_display = ("first_name", "last_name", "linked_email", "project_count")
     search_fields = ["first_name", "last_name", "email"]
+
+    @admin.display(description="Email", ordering="email")
+    def linked_email(self, obj):
+        return format_html(f'<a href="mailto:{obj.email}">{obj.email}</a>')
+
+    @admin.display(description="Project membership count", ordering="projects__count")
+    def project_count(self, obj):
+        return obj.projects__count
+
+    def get_queryset(self, request):
+        qs = super().get_queryset(request)
+        qs = qs.annotate(Count("projects"))
+        return qs
 
 
 @admin.register(AppVersion)
