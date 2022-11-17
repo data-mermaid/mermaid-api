@@ -152,22 +152,14 @@ class CommonStack(Stack):
         default_cert = acm.Certificate.from_certificate_arn(
             self,
             "DefaultSSLCert",
-            certificate_arn="arn:aws:acm:us-east-1:554812291621:certificate/b32ae8cb-aea4-4926-adf3-4669dd1a0bcb"
-        )
-
-        # Create a cert for the API zone
-        api_cert = acm.Certificate(
-            self,
-            "APISSLCert",
-            domain_name=f"*.{api_domain}",
-            validation=acm.CertificateValidation.from_dns(self.api_zone)
+            certificate_arn=f"arn:aws:acm:us-east-1:{self.account}:certificate/783d7a91-1ebd-4387-9518-e28521086db6"
         )
 
         self.load_balancer.add_listener(
             id="MermaidApiListener",
             protocol=elb.ApplicationProtocol.HTTPS,
             default_action=elb.ListenerAction.fixed_response(404),
-            certificates=[default_cert, api_cert]
+            certificates=[default_cert]
         )
         # self.load_balancer.add_redirect() # Needs to be HTTPs first.
 
