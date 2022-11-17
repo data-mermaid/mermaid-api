@@ -289,6 +289,11 @@ MC_LIST_ID = os.environ.get('MC_LIST_ID')
 LOGGING = {
     'version': 1,
     'disable_existing_loggers': False,
+    "filters": {
+        "require_not_maintenance_mode_503": {
+            "()": "maintenance_mode.logging.RequireNotMaintenanceMode503",
+        },
+    },
     'handlers': {
         'null': {
             'class': 'logging.NullHandler',
@@ -314,10 +319,6 @@ LOGGING = {
             'handlers': ['null'],
             'propagate': False,
         },
-        # 'django.db.backends': {
-        #     'handlers': ['console'],
-        #     'level': 'DEBUG',
-        # },
     }
 }
 
@@ -328,7 +329,7 @@ CACHES = {
     }
 }
 
-# NOTE this is not required in ECS. I do a check ealier on to see if the
+# NOTE this is not required in ECS. I do a check earlier on to see if the
 # METADATA_URI env var is set from ECS
 if ENVIRONMENT in ("dev", "prod") and not IN_ECS:
     LOGGING["handlers"]["watchtower"] = {
