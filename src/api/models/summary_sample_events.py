@@ -6,6 +6,7 @@ from .sql_models import (
     BeltFishSUSQLModel,
     BenthicLITSUSQLModel,
     BenthicPITSUSQLModel,
+    BenthicPhotoQuadratTransectSUSQLModel,
     BleachingQCSUSQLModel,
     HabitatComplexitySUSQLModel,
 )
@@ -43,6 +44,7 @@ class SummarySampleEventBaseModel(models.Model):
     data_policy_benthicpit = models.CharField(max_length=50)
     data_policy_habitatcomplexity = models.CharField(max_length=50)
     data_policy_bleachingqc = models.CharField(max_length=50)
+    data_policy_benthicpqt = models.CharField(max_length=50)
 
     class Meta:
         abstract = True
@@ -61,6 +63,9 @@ class SummarySampleEventSQLModel(SummarySampleEventBaseModel):
         ),
         bleachingqc_su AS (
             {BleachingQCSUSQLModel.sql}
+        ),
+        benthicpqt_su AS (
+            {BenthicPhotoQuadratTransectSUSQLModel.sql}
         ),
         habitatcomplexity_su AS (
             {HabitatComplexitySUSQLModel.sql}
@@ -115,6 +120,11 @@ class SummarySampleEventSQLModel(SummarySampleEventBaseModel):
             WHEN project.data_policy_bleachingqc=100 THEN 'public'
             ELSE ''
         END) AS data_policy_bleachingqc,
+        (CASE WHEN project.data_policy_benthicpqt=10 THEN 'private'
+            WHEN project.data_policy_benthicpqt=50 THEN 'public summary'
+            WHEN project.data_policy_benthicpqt=100 THEN 'public'
+            ELSE ''
+        END) AS data_policy_benthicpqt,
 
         jsonb_strip_nulls(jsonb_build_object(
             'beltfish', NULLIF(jsonb_strip_nulls(jsonb_build_object(
@@ -132,6 +142,11 @@ class SummarySampleEventSQLModel(SummarySampleEventBaseModel):
                 'sample_unit_count', bp.sample_unit_count,
                 'percent_cover_by_benthic_category_avg', (CASE WHEN project.data_policy_benthicpit < 50 THEN NULL ELSE
                 bp.percent_cover_by_benthic_category_avg END)
+            )), '{{}}'),
+            'benthicpqt', NULLIF(jsonb_strip_nulls(jsonb_build_object(
+                'sample_unit_count', pqt.sample_unit_count,
+                'percent_cover_by_benthic_category_avg', (CASE WHEN project.data_policy_benthicpqt < 50 THEN NULL ELSE
+                pqt.percent_cover_by_benthic_category_avg END)
             )), '{{}}'),
             'habitatcomplexity', NULLIF(jsonb_strip_nulls(jsonb_build_object(
                 'sample_unit_count', hc.sample_unit_count,
@@ -271,6 +286,30 @@ class SummarySampleEventSQLModel(SummarySampleEventBaseModel):
             benthicpit_su.sample_event_id,
             percent_cover_by_benthic_category_avg
         ) bp ON (sample_event.id = bp.sample_event_id)
+
+        LEFT JOIN (
+            SELECT benthicpqt_su.sample_event_id,
+            COUNT(pseudosu_id) AS sample_unit_count,
+            percent_cover_by_benthic_category_avg
+            FROM benthicpqt_su
+            INNER JOIN (
+                SELECT sample_event_id,
+                jsonb_object_agg(cat, ROUND(cat_percent::numeric, 2)) AS percent_cover_by_benthic_category_avg
+                FROM (
+                    SELECT sample_event_id,
+                    cpdata.key AS cat,
+                    AVG(cpdata.value::float) AS cat_percent
+                    FROM benthicpqt_su,
+                    jsonb_each_text(percent_cover_by_benthic_category) AS cpdata
+                    GROUP BY sample_event_id, cpdata.key
+                ) AS benthicpqt_su_cp
+                GROUP BY sample_event_id
+            ) AS benthicpqt_se_cat_percents
+            ON benthicpqt_su.sample_event_id = benthicpqt_se_cat_percents.sample_event_id
+            GROUP BY
+            benthicpqt_su.sample_event_id,
+            percent_cover_by_benthic_category_avg
+        ) pqt ON (sample_event.id = pqt.sample_event_id)
 
         LEFT JOIN (
             SELECT sample_event_id,
