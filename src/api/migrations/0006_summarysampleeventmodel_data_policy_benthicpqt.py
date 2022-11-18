@@ -13,7 +13,7 @@ class Migration(migrations.Migration):
         migrations.AddField(
             model_name='summarysampleeventmodel',
             name='data_policy_benthicpqt',
-            field=models.CharField(default=50, max_length=50),
+            field=models.CharField(default='public summary', max_length=50),
             preserve_default=False,
         ),
     ]
