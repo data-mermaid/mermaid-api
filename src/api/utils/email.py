@@ -3,6 +3,7 @@ import datetime
 from django.conf import settings
 from django.core.mail import EmailMultiAlternatives
 from django.template.loader import render_to_string
+from maintenance_mode.core import get_maintenance_mode
 from pathlib import Path
 
 from ..models.mermaid import ProjectProfile
@@ -43,13 +44,16 @@ def _mermaid_email(subject, template, to, context=None, from_email=None, reply_t
 
 def _to_in_dev_emails(to):
     for to_email in to:
-        dev_email_match = [email for email in settings.DEV_EMAILS if to_email.endswith(email)]
+        dev_email_match = [
+            email for email in settings.DEV_EMAILS if to_email.endswith(email)
+        ]
         if dev_email_match:
             return True
     return False
 
 
 def mermaid_email(subject, template, to, context=None, from_email=None, reply_to=None):
+    # if maintenance mode is on: console
     # if local and not dev email and pytest: console
     # if local and not dev email and not pytest: console
     # if local and dev email and pytest: submit_job (locmem)
@@ -57,7 +61,9 @@ def mermaid_email(subject, template, to, context=None, from_email=None, reply_to
     # if dev and not dev email: console
     # if dev and dev email: submit_job
     # if prod: submit_job
-    if settings.ENVIRONMENT in ("prod",) or _to_in_dev_emails(to):
+    if get_maintenance_mode() is False and (
+        settings.ENVIRONMENT in ("prod",) or _to_in_dev_emails(to)
+    ):
         submit_job(
             delay=0,
             callable=_mermaid_email,
