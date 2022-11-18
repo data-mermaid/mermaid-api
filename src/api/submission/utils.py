@@ -31,6 +31,7 @@ from .validations import ERROR, IGNORE, OK, WARN
 from .validations2 import (
     belt_fish,
     benthic_photo_quadrat_transect,
+    benthic_pit,
     bleaching_quadrat_collection,
     ValidationRunner
 )
@@ -196,7 +197,12 @@ def _validate_collect_record_v2(record, record_serializer, request):
     if protocol == BENTHICLIT_PROTOCOL:
         raise NotImplementedError()
     elif protocol == BENTHICPIT_PROTOCOL:
-        raise NotImplementedError()
+        runner.validate(
+            record,
+            benthic_pit.benthic_pit_validations,
+            request=request
+        )
+        return runner.to_dict()
     elif protocol == FISHBELT_PROTOCOL:
         runner.validate(
             record,
