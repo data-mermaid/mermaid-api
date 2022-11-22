@@ -1,6 +1,7 @@
 import math
 
 from .base import OK, WARN, ERROR, BaseValidator, validator_result
+from ..utils import valid_id
 from ....models import BenthicAttribute
 
 
@@ -67,7 +68,7 @@ class AllAttributesSameCategoryValidator(BaseValidator):
 
         benthic_attr_ids = []
         for ob in obs_benthicpits:
-            attr_id = ob.get("attribute")
+            attr_id = valid_id(ob.get("attribute"))
             if attr_id is not None:
                 benthic_attr_ids.append(attr_id)
 

@@ -14,7 +14,7 @@ class RequiredValidator(BaseValidator):
     @validator_result
     def __call__(self, collect_record, **kwargs):
         val = self.get_value(collect_record, self.path)
-        if val != 0 and not val:
+        if val != 0 and (not val or val == ""):
             return ERROR, self.REQUIRED
         return OK
 
