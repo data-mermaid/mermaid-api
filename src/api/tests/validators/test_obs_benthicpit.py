@@ -2,6 +2,7 @@ from api.resources.collect_record import CollectRecordSerializer
 from api.submission.validations2.validators import (
     AllAttributesSameCategoryValidator,
     BenthicPITObservationCountValidator,
+    ListRequiredValidator,
     ERROR,
     OK,
     WARN,
@@ -26,6 +27,20 @@ def test_benthicpit_attributes_differentcats(valid_benthic_pit_collect_record):
     assert result.status == OK
 
 
+def test_benthicpit_obs_required_fields(valid_benthic_pit_collect_record):
+    validator = ListRequiredValidator(
+        list_path="data.obs_benthic_pits",
+        path="attribute",
+        name_prefix="attribute",
+        unique_identifier_label="observation_id",
+    )
+    record = CollectRecordSerializer(valid_benthic_pit_collect_record).data
+    record["data"]["obs_benthic_pits"][0]["attribute"] = ""
+    result = validator(record)
+    assert result[0].status == ERROR
+    assert result[0].code == ListRequiredValidator.REQUIRED
+
+
 def test_benthicpit_attributes_allsamecat(
     valid_benthic_pit_collect_record, benthic_attribute_2
 ):
@@ -36,12 +51,18 @@ def test_benthicpit_attributes_allsamecat(
     observations = [
         dict(attribute=str(benthic_attribute_2.id), interval=5),
         dict(attribute=str(benthic_attribute_2.id), interval=10),
+        dict(attribute=str(benthic_attribute_2.id), interval=15),
     ]
     record["data"]["obs_benthic_pits"] = observations
 
     result = validator(record)
     assert result.status == WARN
     assert result.code == AllAttributesSameCategoryValidator.ALL_SAME_CATEGORY
+
+    record["data"]["obs_benthic_pits"][0]["attribute"] = ""
+    record["data"]["obs_benthic_pits"][1]["attribute"] = ""
+    result = validator(record)
+    assert result.status == OK
 
 
 def test_benthicpit_observation_count_validator_ok(valid_benthic_pit_collect_record):
