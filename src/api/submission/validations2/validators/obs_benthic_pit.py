@@ -71,6 +71,8 @@ class AllAttributesSameCategoryValidator(BaseValidator):
             attr_id = valid_id(ob.get("attribute"))
             if attr_id is not None:
                 benthic_attr_ids.append(attr_id)
+        if len(benthic_attr_ids) < 2:
+            return OK
 
         benthic_attr_ids = list(set(benthic_attr_ids))
         benthic_attrs = BenthicAttribute.objects.filter(id__in=benthic_attr_ids)
