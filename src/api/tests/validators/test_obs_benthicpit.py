@@ -19,7 +19,7 @@ def _get_validator():
 
 def test_benthicpit_attributes_differentcats(valid_benthic_pit_collect_record):
     validator = AllAttributesSameCategoryValidator(
-        obs_benthicpits_path="data.obs_benthic_pits"
+        obs_benthic_path="data.obs_benthic_pits"
     )
     record = CollectRecordSerializer(valid_benthic_pit_collect_record).data
 
@@ -27,25 +27,11 @@ def test_benthicpit_attributes_differentcats(valid_benthic_pit_collect_record):
     assert result.status == OK
 
 
-def test_benthicpit_obs_required_fields(valid_benthic_pit_collect_record):
-    validator = ListRequiredValidator(
-        list_path="data.obs_benthic_pits",
-        path="attribute",
-        name_prefix="attribute",
-        unique_identifier_label="observation_id",
-    )
-    record = CollectRecordSerializer(valid_benthic_pit_collect_record).data
-    record["data"]["obs_benthic_pits"][0]["attribute"] = ""
-    result = validator(record)
-    assert result[0].status == ERROR
-    assert result[0].code == ListRequiredValidator.REQUIRED
-
-
 def test_benthicpit_attributes_allsamecat(
     valid_benthic_pit_collect_record, benthic_attribute_2
 ):
     validator = AllAttributesSameCategoryValidator(
-        obs_benthicpits_path="data.obs_benthic_pits"
+        obs_benthic_path="data.obs_benthic_pits"
     )
     record = CollectRecordSerializer(valid_benthic_pit_collect_record).data
     observations = [
@@ -63,6 +49,20 @@ def test_benthicpit_attributes_allsamecat(
     record["data"]["obs_benthic_pits"][1]["attribute"] = ""
     result = validator(record)
     assert result.status == OK
+
+
+def test_benthicpit_obs_required_fields(valid_benthic_pit_collect_record):
+    validator = ListRequiredValidator(
+        list_path="data.obs_benthic_pits",
+        path="attribute",
+        name_prefix="attribute",
+        unique_identifier_label="observation_id",
+    )
+    record = CollectRecordSerializer(valid_benthic_pit_collect_record).data
+    record["data"]["obs_benthic_pits"][0]["attribute"] = ""
+    result = validator(record)
+    assert result[0].status == ERROR
+    assert result[0].code == ListRequiredValidator.REQUIRED
 
 
 def test_benthicpit_observation_count_validator_ok(valid_benthic_pit_collect_record):

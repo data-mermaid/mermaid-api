@@ -1,8 +1,6 @@
 import math
 
-from .base import OK, WARN, ERROR, BaseValidator, validator_result
-from ..utils import valid_id
-from ....models import BenthicAttribute
+from .base import OK, ERROR, BaseValidator, validator_result
 
 
 class BenthicPITObservationCountValidator(BaseValidator):
@@ -48,38 +46,5 @@ class BenthicPITObservationCountValidator(BaseValidator):
                 self.INCORRECT_OBSERVATION_COUNT,
                 {"expected_count": calc_obs_count},
             )
-
-        return OK
-
-
-class AllAttributesSameCategoryValidator(BaseValidator):
-    ALL_SAME_CATEGORY = "all_attributes_same_category"
-    CATEGORIES_TO_CHECK = ["Hard coral"]
-
-    def __init__(self, obs_benthicpits_path, **kwargs):
-        self.obs_benthicpits_path = obs_benthicpits_path
-        super().__init__(**kwargs)
-
-    @validator_result
-    def __call__(self, collect_record, **kwargs):
-        obs_benthicpits = (
-            self.get_value(collect_record, self.obs_benthicpits_path) or []
-        )
-
-        benthic_attr_ids = []
-        for ob in obs_benthicpits:
-            attr_id = valid_id(ob.get("attribute"))
-            if attr_id is not None:
-                benthic_attr_ids.append(attr_id)
-        if len(benthic_attr_ids) < 2:
-            return OK
-
-        benthic_attr_ids = list(set(benthic_attr_ids))
-        benthic_attrs = BenthicAttribute.objects.filter(id__in=benthic_attr_ids)
-
-        attribute_categories = [ba.origin.name for ba in benthic_attrs]
-        for category in self.CATEGORIES_TO_CHECK:
-            if category in attribute_categories and len(set(attribute_categories)) == 1:
-                return WARN, self.ALL_SAME_CATEGORY, {"category": category}
 
         return OK
