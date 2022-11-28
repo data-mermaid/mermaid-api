@@ -7,9 +7,9 @@ from ....utils import get_related_transect_methods
 from .base import ERROR, OK, BaseValidator, validator_result
 
 
-class UniqueBenthicPITTransectValidator(BaseValidator):
-    INVALID_DATA = "invalid_benthicpit_transect"
-    DUPLICATE_BENTHICPIT_TRANSECT = "duplicate_benthicpit_transect"
+class UniqueBenthicTransectValidator(BaseValidator):
+    INVALID_DATA = "invalid_benthic_transect"
+    DUPLICATE_BENTHIC_TRANSECT = "duplicate_benthic_transect"
 
     def __init__(
         self,
@@ -72,7 +72,7 @@ class UniqueBenthicPITTransectValidator(BaseValidator):
             if transect_method.protocol == protocol:
                 return (
                     ERROR,
-                    self.DUPLICATE_BENTHICPIT_TRANSECT,
+                    self.DUPLICATE_BENTHIC_TRANSECT,
                     {"duplicate_transect_method": str(transect_method.pk)},
                 )
         return OK
@@ -89,7 +89,8 @@ class UniqueBenthicPITTransectValidator(BaseValidator):
         queryset = BenthicTransect.objects.select_related().filter(**qry)
 
         for profile in profiles:
-            queryset = queryset.filter(benthicpit_method__observers__profile_id=profile)
+            key = f"{protocol}_method__observers__profile_id"
+            queryset = queryset.filter(**{key: profile})
 
         for result in queryset:
             transect_methods = get_related_transect_methods(result)
