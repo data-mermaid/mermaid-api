@@ -65,6 +65,8 @@ class DjangoSettings:
         "common/mermaid-api/mermaid-api-signing-secret-FM7ATI"
     )
 
+    auth0_domain: str = "common/mermaid-api/auth0_domain-K9a7w2"
+
     spa_admin_client_id_name: str = "common/mermaid-api/spa-admin-client-id-FuMVtc"
     spa_admin_client_secret_name: str = (
         "common/mermaid-api/spa-admin-client-secret-kYccw0"
