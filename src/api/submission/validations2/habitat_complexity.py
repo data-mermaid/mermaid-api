@@ -7,16 +7,15 @@ from .base import (
     Validation,
 )
 from .validators import (
-    AllAttributesSameCategoryValidator,
     AllEqualValidator,
     BenthicIntervalObservationCountValidator,
     DepthValidator,
     DrySubmitValidator,
     DuplicateValidator,
     LenSurveyedValidator,
+    ListScoreValidator,
     ListRequiredValidator,
     ManagementRuleValidator,
-    RegionValidator,
     RequiredValidator,
     SampleDateValidator,
     SampleTimeValidator,
@@ -24,10 +23,9 @@ from .validators import (
     UniqueSiteValidator,
     UniqueManagementValidator,
 )
-from ...models import BenthicAttribute
 
 
-benthic_pit_validations = [
+habcomp_validations = [
     Validation(
         validator=RequiredValidator(
             path="data.sample_event.site",
@@ -134,14 +132,6 @@ benthic_pit_validations = [
         validation_type=VALUE_VALIDATION_TYPE,
     ),
     Validation(
-        validator=RequiredValidator(
-            path="data.interval_start",
-        ),
-        paths=["data.interval_start"],
-        validation_level=FIELD_LEVEL,
-        validation_type=VALUE_VALIDATION_TYPE,
-    ),
-    Validation(
         validator=RequiredValidator(path="data.observers"),
         paths=["data.observers"],
         validation_level=FIELD_LEVEL,
@@ -175,65 +165,59 @@ benthic_pit_validations = [
         validator=BenthicIntervalObservationCountValidator(
             len_surveyed_path="data.benthic_transect.len_surveyed",
             interval_size_path="data.interval_size",
-            observations_path="data.obs_benthic_pits",
+            observations_path="data.obs_habitat_complexities",
         ),
-        paths=["data.obs_benthic_pits"],
+        paths=["data.obs_habitat_complexities"],
         validation_level=RECORD_LEVEL,
         validation_type=VALUE_VALIDATION_TYPE,
     ),
     Validation(
         validator=ListRequiredValidator(
-            list_path="data.obs_benthic_pits",
+            list_path="data.obs_habitat_complexities",
             path="interval",
             name_prefix="interval",
             unique_identifier_label="observation_id",
         ),
-        paths=["data.obs_benthic_pits"],
+        paths=["data.obs_habitat_complexities"],
         validation_level=ROW_LEVEL,
         validation_type=LIST_VALIDATION_TYPE,
     ),
     Validation(
         validator=ListRequiredValidator(
-            list_path="data.obs_benthic_pits",
-            path="attribute",
-            name_prefix="attribute",
+            list_path="data.obs_habitat_complexities",
+            path="score",
+            name_prefix="score",
             unique_identifier_label="observation_id",
         ),
-        paths=["data.obs_benthic_pits"],
+        paths=["data.obs_habitat_complexities"],
         validation_level=ROW_LEVEL,
         validation_type=LIST_VALIDATION_TYPE,
     ),
     Validation(
-        validator=RegionValidator(
-            attribute_model_class=BenthicAttribute,
-            site_path="data.sample_event.site",
-            observations_path="data.obs_benthic_pits",
-            observation_attribute_path="attribute",
+        validator=ListScoreValidator(
+            observations_path="data.obs_habitat_complexities",
+            score_path="score",
+            name_prefix="score",
+            unique_identifier_label="observation_id",
         ),
-        paths=["data.obs_benthic_pits"],
+        paths=["data.obs_habitat_complexities"],
         validation_level=ROW_LEVEL,
         validation_type=LIST_VALIDATION_TYPE,
     ),
     Validation(
-        validator=AllEqualValidator(path="data.obs_benthic_pits", ignore_keys=["id"]),
-        paths=["data.obs_benthic_pits"],
+        validator=AllEqualValidator(
+            path="data.obs_habitat_complexities", ignore_keys=["id"]
+        ),
+        paths=["data.obs_habitat_complexities"],
         validation_level=RECORD_LEVEL,
         validation_type=VALUE_VALIDATION_TYPE,
     ),
     Validation(
         validator=DuplicateValidator(
-            list_path="data.obs_benthic_pits",
+            list_path="data.obs_habitat_complexities",
             key_paths=["interval"],
         ),
-        paths=["data.obs_benthic_pits"],
-        validation_level=RECORD_LEVEL,
-        validation_type=VALUE_VALIDATION_TYPE,
-    ),
-    Validation(
-        validator=AllAttributesSameCategoryValidator(
-            obs_benthic_path="data.obs_benthic_pits"
-        ),
-        paths=["data.obs_benthic_pits"],
+        paths=["data.obs_habitat_complexities"],
         validation_level=RECORD_LEVEL,
         validation_type=VALUE_VALIDATION_TYPE,
     ),

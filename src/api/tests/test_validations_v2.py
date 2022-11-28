@@ -4,6 +4,7 @@ from api.submission.validations2 import (
     benthic_lit,
     benthic_pit,
     bleaching_quadrat_collection,
+    habitat_complexity,
     ValidationRunner,
 )
 from api.submission.validations import ERROR, OK, WARN, IGNORE
@@ -255,3 +256,13 @@ def test_benthicpqt_protocol_validation_warn(
         )
         == WARN
     )
+
+
+def test_habcomp_protocol_validation_ok(valid_habitat_complexity_collect_record, profile1_request):
+    runner = ValidationRunner(serializer=CollectRecordSerializer)
+    overall_status = runner.validate(
+        valid_habitat_complexity_collect_record,
+        habitat_complexity.habcomp_validations,
+        request=profile1_request
+    )
+    assert overall_status == OK
