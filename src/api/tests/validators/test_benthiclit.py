@@ -14,8 +14,6 @@ def _get_validator():
         protocol_path="data.protocol",
         label_path="data.benthic_transect.label",
         number_path="data.benthic_transect.number",
-        width_path="data.benthic_transect.width",
-        relative_depth_path="data.benthic_transect.relative_depth",
         site_path="data.sample_event.site",
         management_path="data.sample_event.management",
         sample_date_path="data.sample_event.sample_date",

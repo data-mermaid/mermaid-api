@@ -1,6 +1,9 @@
 # flake8: noqa
 from .base import ERROR, IGNORE, OK, WARN, BaseValidator, ValidatorResult
-from .benthic_transect import UniqueBenthicTransectValidator
+from .benthic_transect import (
+    BenthicIntervalObservationCountValidator,
+    UniqueBenthicTransectValidator,
+)
 from .biomass import BiomassValidator
 from .bleaching_percent import BleachingPercentValidator
 from .colony_count import ColonyCountValidator
@@ -20,12 +23,12 @@ from .generic import (
 from .len_surveyed import LenSurveyedValidator
 from .management import ManagementRuleValidator, UniqueManagementValidator
 from .obs_benthic_lit import BenthicLITObservationTotalLengthValidator
-from .obs_benthic_pit import BenthicPITObservationCountValidator
 from .obs_benthic_photo_quadrat import (
     PointsPerQuadratValidator,
     QuadratCountValidator,
     QuadratNumberSequenceValidator,
 )
+from .obs_habcomp import ListScoreValidator, ScoreValidator
 from .observations import AllAttributesSameCategoryValidator, ObservationCountValidator
 from .quadrat_collection import UniqueQuadratCollectionValidator
 from .quadrat_transect import UniqueQuadratTransectValidator

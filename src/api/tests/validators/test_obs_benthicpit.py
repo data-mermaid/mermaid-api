@@ -1,7 +1,7 @@
 from api.resources.collect_record import CollectRecordSerializer
 from api.submission.validations2.validators import (
     AllAttributesSameCategoryValidator,
-    BenthicPITObservationCountValidator,
+    BenthicIntervalObservationCountValidator,
     ListRequiredValidator,
     ERROR,
     OK,
@@ -10,10 +10,10 @@ from api.submission.validations2.validators import (
 
 
 def _get_validator():
-    return BenthicPITObservationCountValidator(
+    return BenthicIntervalObservationCountValidator(
         len_surveyed_path="data.benthic_transect.len_surveyed",
         interval_size_path="data.interval_size",
-        obs_benthicpits_path="data.obs_benthic_pits",
+        observations_path="data.obs_benthic_pits",
     )
 
 
@@ -80,7 +80,7 @@ def test_benthicpit_observation_count_invalid_data(valid_benthic_pit_collect_rec
 
     result = validator(record)
     assert result.status == ERROR
-    assert result.code == BenthicPITObservationCountValidator.NON_POSITIVE.format(
+    assert result.code == BenthicIntervalObservationCountValidator.NON_POSITIVE.format(
         "interval_size"
     )
 
@@ -93,7 +93,7 @@ def test_benthicpit_observation_count_invalid(valid_benthic_pit_collect_record):
     result = validator(record)
     assert result.status == ERROR
     assert (
-        result.code == BenthicPITObservationCountValidator.INCORRECT_OBSERVATION_COUNT
+            result.code == BenthicIntervalObservationCountValidator.INCORRECT_OBSERVATION_COUNT
     )
 
 
