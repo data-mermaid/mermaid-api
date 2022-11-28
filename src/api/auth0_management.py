@@ -4,11 +4,12 @@ import time
 from auth0.v3.authentication import GetToken
 from auth0.v3.management import Auth0
 from auth0.v3.authentication import Database
+from django.conf import settings
 
 
 class BaseAPI(object):
     def __init__(self, domain=None, client_id=None, client_secret=None, audience=None):
-        self.domain = domain or os.environ.get('MERMAID_DOMAIN')
+        self.domain = domain or settings.AUTH0_DOMAIN
         self.client_id = client_id or os.environ.get('MERMAID_MANAGEMENT_API_CLIENT_ID')
         self.client_secret = client_secret or os.environ.get('MERMAID_MANAGEMENT_API_CLIENT_SECRET')
         self.audience = audience or os.environ.get('AUTH0_MANAGEMENT_API_AUDIENCE')

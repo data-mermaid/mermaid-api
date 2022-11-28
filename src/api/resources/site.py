@@ -10,6 +10,7 @@ from .base import (
     ListFilter,
 )
 from .mixins import ProtectedResourceMixin
+from ..exceptions import check_uuid
 from ..models import Site, Project
 from ..permissions import AuthenticatedReadOnlyPermission
 
@@ -128,7 +129,8 @@ class SiteFilterSet(BaseAPIFilterSet):
         return queryset.extra(where=[sql])
 
     def filter_not_projects(self, queryset, name, value):
-        value_list = [v.strip() for v in value.split(u',')]
+        value_list = [check_uuid(v.strip()) for v in value.split(u',')]
+        
         return queryset.exclude(project__in=value_list)
 
 
