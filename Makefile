@@ -102,14 +102,11 @@ test:
 # -----------------
 
 cloud_shell:
-ifdef taskid
+	$(eval taskid=$(shell aws ecs list-tasks --region us-east-1 --cluster mermaid-api-infra-common-MermaidApiClusterB0854EC6-xitj9XbqTwap --service-name dev-mermaid-api-django-FargateServiceAC2B3B85-UkIk9eW3sVHC --output text | awk -F'/' '{print $$3}'))
 	aws ecs execute-command  \
-    --region us-east-1 \
-    --cluster mermaid-api-infra-common-MermaidApiClusterB0854EC6-xitj9XbqTwap \
-    --task $(taskid) \
-    --container MermaidAPI \
-    --command "/bin/bash" \
-    --interactive
-else
-	@echo "Please specify the taskId that you want to connect to. \nie: make cloud_shell taskid=XXX"
-endif
+		--region us-east-1 \
+		--cluster mermaid-api-infra-common-MermaidApiClusterB0854EC6-xitj9XbqTwap \
+		--task $(taskid) \
+		--container MermaidAPI \
+		--command "/bin/bash" \
+		--interactive

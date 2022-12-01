@@ -99,6 +99,9 @@ class ApiStack(Stack):
             "SUPERUSER": ecs.Secret.from_secrets_manager(
                 config.api.get_secret_object(self, config.api.superuser_name)
             ),
+            "AUTH0_DOMAIN": ecs.Secret.from_secrets_manager(
+                config.api.get_secret_object(self, config.api.auth0_domain)
+            ),
         }
 
         if config.env_id == "dev":
