@@ -1,5 +1,4 @@
 from collections import defaultdict
-from dataclasses import MISSING
 from .base import OK, WARN, ERROR, BaseValidator, validator_result
 
 
