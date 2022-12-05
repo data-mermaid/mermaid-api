@@ -21,15 +21,6 @@ def test_sample_date_validator_ok(valid_collect_record):
     assert result.status == OK
 
 
-def test_sample_date_validator_invalid_site(valid_collect_record):
-    validator = _get_validator()
-    record = CollectRecordSerializer(instance=valid_collect_record).data
-    record["data"]["sample_event"]["site"] = ""
-    result = validator(record)
-    assert result.status == ERROR
-    assert result.code == SampleDateValidator.INVALID_SITE
-
-
 def test_sample_date_validator_invalid_sample_date(valid_collect_record):
     validator = _get_validator()
     record = CollectRecordSerializer(instance=valid_collect_record).data
