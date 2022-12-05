@@ -231,6 +231,7 @@ class ApiStack(Stack):
 
         # add rule to SSL listener
         host_headers = [record.domain_name]
+        host_headers.append("dev-api.datamermaid.org")
         rule_priority = 101
         if config.env_id == "prod":
             rule_priority = 100
