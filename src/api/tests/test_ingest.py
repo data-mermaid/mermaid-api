@@ -123,6 +123,7 @@ def test_benthicpit_ingest(
     base_project,
     all_test_benthic_attributes,
     tide1,
+    tide2,
     relative_depth1,
     benthic_attribute_2a1,
     growth_form1,
