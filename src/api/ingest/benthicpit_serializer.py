@@ -1,6 +1,6 @@
 from rest_framework import serializers
 
-from ..fields import LazyChoiceField
+from ..fields import LazyChoiceField, NullCoercedTimeField
 from ..models import BENTHICPIT_PROTOCOL
 from .choices import (
     benthic_attributes_choices,
@@ -32,7 +32,7 @@ class BenthicPITCSVSerializer(CollectRecordCSVSerializer):
     data__sample_event__sample_date = serializers.DateField(
         label="Sample date: Year,Sample date: Month,Sample date: Day", help_text=""
     )
-    data__benthic_transect__sample_time = serializers.TimeField(
+    data__benthic_transect__sample_time = NullCoercedTimeField(
         required=False, allow_null=True, label="Sample time", help_text=""
     )
     data__benthic_transect__depth = serializers.DecimalField(

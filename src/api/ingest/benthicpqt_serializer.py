@@ -1,6 +1,6 @@
 from rest_framework import serializers
 
-from ..fields import LazyChoiceField, PositiveIntegerField
+from ..fields import LazyChoiceField, NullCoercedTimeField, PositiveIntegerField
 from ..models import BENTHICPQT_PROTOCOL
 from .choices import (
     benthic_attributes_choices,
@@ -32,7 +32,7 @@ class BenthicPhotoQTCSVSerializer(CollectRecordCSVSerializer):
     data__sample_event__sample_date = serializers.DateField(
         label="Sample date: Year,Sample date: Month,Sample date: Day", help_text=""
     )
-    data__quadrat_transect__sample_time = serializers.TimeField(
+    data__quadrat_transect__sample_time = NullCoercedTimeField(
         required=False, allow_null=True, label="Sample time", help_text=""
     )
     data__quadrat_transect__depth = serializers.DecimalField(
@@ -56,6 +56,9 @@ class BenthicPhotoQTCSVSerializer(CollectRecordCSVSerializer):
     )
     data__quadrat_transect__quadrat_size = serializers.DecimalField(
         max_digits=4, decimal_places=2, label="Quadrat size", help_text=""
+    )
+    data__quadrat_transect__quadrat_number_start = PositiveIntegerField(
+        default=1, label="First quadrat number", help_text=""
     )
     data__quadrat_transect__num_points_per_quadrat = PositiveIntegerField(
         label="Number of points per quadrat", help_text=""
