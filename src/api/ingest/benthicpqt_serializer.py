@@ -57,6 +57,9 @@ class BenthicPhotoQTCSVSerializer(CollectRecordCSVSerializer):
     data__quadrat_transect__quadrat_size = serializers.DecimalField(
         max_digits=4, decimal_places=2, label="Quadrat size", help_text=""
     )
+    data__quadrat_transect__quadrat_number_start = PositiveIntegerField(
+        default=1, label="First quadrat number", help_text=""
+    )
     data__quadrat_transect__num_points_per_quadrat = PositiveIntegerField(
         label="Number of points per quadrat", help_text=""
     )
