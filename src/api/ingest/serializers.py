@@ -19,8 +19,10 @@ class CollectRecordCSVListSerializer(ListSerializer):
     _formatted_records = None
     _sample_events = dict()
 
-    # Track original record order
-    _row_index = None
+    def __init__(self, *args, **kwargs):
+        # Track original record order
+        self._row_index = None
+        super().__init__(*args, **kwargs)
 
     def split_list_fields(self, field_name, data, choices=None):
         val = data.get(field_name, empty)
@@ -44,7 +46,7 @@ class CollectRecordCSVListSerializer(ListSerializer):
             try:
                 val = self._lower(val)
                 choices = {label.lower(): value for label, value in choices.items()}
-                row[name] = choices.get(val)
+                row[name] = choices.get(val) or val
             except (ValueError, TypeError):
                 row[name] = None
 
@@ -299,14 +301,14 @@ class CollectRecordCSVSerializer(Serializer):
         return super(CollectRecordCSVSerializer, cls).many_init(*args, **kwargs)
 
     def get_initial(self):
-        if not isinstance(self._original_data, Mapping):
+        if not isinstance(self.original_data, Mapping):
             return OrderedDict()
 
         return OrderedDict(
             [
-                (field_name, field.get_value(self._original_data))
+                (field_name, field.get_value(self.original_data))
                 for field_name, field in self.fields.items()
-                if (field.get_value(self._original_data) == empty)
+                if (field.get_value(self.original_data) == empty)
                 and not field.read_only
             ]
         )
