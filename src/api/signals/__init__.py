@@ -120,21 +120,6 @@ def run_management_validation(sender, instance, *args, **kwargs):
         instance.updated_on = mgmt.updated_on
 
 
-@receiver(post_delete, sender=CollectRecord)
-@receiver(post_save, sender=CollectRecord)
-def run_cr_management_validation(sender, instance, *args, **kwargs):
-    if instance.project is None:
-        return
-
-    data = instance.data or {}
-    if "sample_event" in data:
-        mrid = data["sample_event"].get("management")
-        if mrid is not None:
-            validate(
-                ManagementValidation, Management, {"project_id": instance.project_id}
-            )
-
-
 @receiver(pre_save, sender=Site)
 def update_with_covariates(sender, instance, *args, **kwargs):
     update_site_covariates_threaded(instance)
