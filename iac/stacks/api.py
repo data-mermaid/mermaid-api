@@ -118,6 +118,7 @@ class ApiStack(Stack):
             "DEFAULT_DOMAIN_API": config.api.default_domain_api,
             "DEFAULT_DOMAIN_COLLECT": config.api.default_domain_collect,
             "AWS_BACKUP_BUCKET": backup_bucket.bucket_name,
+            "AWS_PUBLIC_BUCKET": config.api.public_bucket,
             "EMAIL_HOST": config.api.email_host,
             "EMAIL_PORT": config.api.email_port,
             "AUTH0_MANAGEMENT_API_AUDIENCE": config.api.auth0_management_api_audience,

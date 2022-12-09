@@ -362,4 +362,4 @@ QUEUE_NAME = f"mermaid-{ENVIRONMENT}"  # required
 ENDPOINT_URL = None if ENVIRONMENT in ("dev", "prod") else "http://sqs:9324"
 
 # AWS S3 bucket for public files
-PUBLIC_BUCKET = os.environ.get("PUBLIC_BUCKET")
+PUBLIC_BUCKET = os.environ.get("AWS_PUBLIC_BUCKET")
