@@ -11,6 +11,7 @@ from ..models import (
     Region,
 )
 from ..reports import attributes_report
+from ..utils.reports import update_attributes_report
 from ..utils.q import submit_job
 
 
@@ -24,12 +25,9 @@ from ..utils.q import submit_job
 @receiver(post_save, sender=FishGrouping)
 @receiver(post_delete, sender=FishSpecies)
 @receiver(post_save, sender=FishSpecies)
+@receiver(post_delete, sender=Region)
+@receiver(post_save, sender=Region)
 def generate_attribute_report(sender, instance, **kwargs):
-    if instance.status == SUPERUSER_APPROVED:
+    if instance.status == SUPERUSER_APPROVED or isinstance(instance, Region):
         attributes_report.write_attribute_reference()
-        # submit_job(
-        #     delay=10,
-
-        # )
-
-
+        submit_job(10, update_attributes_report)

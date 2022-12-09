@@ -250,7 +250,7 @@ def write_benthic(wb, regions):
     insert_range_and_resize(wb[BENTHIC_NAME], "A1", data)
 
 
-def write_attribute_reference():
+def write_attribute_reference(output_path):
     wb = create_workbook_template()
     regions = get_regions()
     write_fish_families(wb, regions)
@@ -259,14 +259,4 @@ def write_attribute_reference():
     write_fish_grouping(wb, regions)
     write_benthic(wb, regions)
 
-    wb.save("/var/projects/webapp/attribute_reference.xlsx")
-
-
-# from io import BytesIO
-# from tempfile import NamedTemporaryFile
-# from openpyxl import Workbook
-
-# wb = Workbook()
-# with NamedTemporaryFile() as tmp:
-#     wb.save(tmp.name)
-#     output = BytesIO(tmp.read())
+    wb.save(output_path)
