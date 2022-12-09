@@ -149,7 +149,7 @@ class CommonStack(Stack):
         # SSL Certificates
         # Lookup the cert for *.datamermaid.org
         # NOTE: This depends on the cert already created (manually)
-        default_cert = acm.Certificate.from_certificate_arn(
+        self.default_cert = acm.Certificate.from_certificate_arn(
             self,
             "DefaultSSLCert",
             certificate_arn=f"arn:aws:acm:us-east-1:{self.account}:certificate/783d7a91-1ebd-4387-9518-e28521086db6"
@@ -159,7 +159,7 @@ class CommonStack(Stack):
             id="MermaidApiListener",
             protocol=elb.ApplicationProtocol.HTTPS,
             default_action=elb.ListenerAction.fixed_response(404),
-            certificates=[default_cert]
+            certificates=[self.default_cert]
         )
         # self.load_balancer.add_redirect() # Needs to be HTTPs first.
 
