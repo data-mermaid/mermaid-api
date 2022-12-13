@@ -17,5 +17,6 @@ DEV_SETTINGS = ProjectSettings(
         # Secrets
         dev_emails_name="dev/mermaid-api/dev-emails-mUnSDl"
 
+        public_bucket="dev-public.datamermaid.org"
     ),
 )
