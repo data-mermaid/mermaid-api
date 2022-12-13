@@ -31,7 +31,7 @@ from ..base import (
     BaseAPISerializer,
 )
 from ..benthic_transect import BenthicTransectSerializer
-from ..mixins import SampleUnitMethodEditMixin
+from ..mixins import SampleUnitMethodSummaryReport, SampleUnitMethodEditMixin
 from ..observer import ObserverSerializer
 from ..sample_event import SampleEventSerializer
 from . import (
@@ -75,7 +75,7 @@ class HabitatComplexityMethodSerializer(HabitatComplexitySerializer):
         exclude = []
 
 
-class HabitatComplexityMethodView(SampleUnitMethodEditMixin, BaseProjectApiViewSet):
+class HabitatComplexityMethodView(SampleUnitMethodSummaryReport, SampleUnitMethodEditMixin, BaseProjectApiViewSet):
     queryset = (
         HabitatComplexity.objects.select_related("transect", "transect__sample_event")
         .all()

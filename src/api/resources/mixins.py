@@ -1,8 +1,12 @@
+import os
+from tempfile import NamedTemporaryFile
 from xml.dom import ValidationErr
+
 import pytz
 from django.db import IntegrityError, transaction
 from django.db.models import ProtectedError, Q
-from django.http.response import HttpResponseBadRequest
+from django.http import FileResponse
+from django.http.response import HttpResponse, HttpResponseBadRequest
 from django.template.defaultfilters import pluralize
 from django.utils.dateparse import parse_datetime
 from rest_framework import status
@@ -255,6 +259,31 @@ class SampleUnitMethodEditMixin(object):
                 model.protocol
             )
             return Response({"id": str(collect_record.pk)})
+        except Exception as err:
+            print(err)
+            return Response(str(err), status=500)
+
+
+class SampleUnitMethodSummaryReport(object):
+    @action(
+        detail=False, methods=["GET"], permission_classes=[ProjectDataAdminPermission]
+    )
+    def xlsx(self, request, project_pk):
+        from ..utils.reports import create_sample_unit_method_summary_report
+        try:
+            model = self.get_queryset().model
+            with NamedTemporaryFile(delete=False) as f:
+                create_sample_unit_method_summary_report(
+                    project_pk,
+                    getattr(model, "protocol"),
+                    f.name,
+                    request=request
+                )
+                response = HttpResponse(content_type="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet")
+                response["Content-Length"] = os.fstat(f.fileno()).st_size
+                response["Content-Disposition"] = f'attachment; filename="summary_report_{project_pk}.xlsx"'
+                response.write(f.read())
+                return response
         except Exception as err:
             print(err)
             return Response(str(err), status=500)

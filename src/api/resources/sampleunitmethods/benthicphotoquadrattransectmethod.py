@@ -29,7 +29,7 @@ from ..base import (
     BaseAPISerializer,
 )
 from ..observer import ObserverSerializer
-from ..mixins import SampleUnitMethodEditMixin
+from ..mixins import SampleUnitMethodEditMixin, SampleUnitMethodSummaryReport
 from ..quadrat_transect import QuadratTransectSerializer
 from ..sample_event import SampleEventSerializer
 from . import (
@@ -73,7 +73,7 @@ class BenthicPhotoQuadratTransectMethodSerializer(
 
 
 class BenthicPhotoQuadratTransectMethodView(
-    SampleUnitMethodEditMixin, BaseProjectApiViewSet
+    SampleUnitMethodSummaryReport, SampleUnitMethodEditMixin, BaseProjectApiViewSet
 ):
     queryset = BenthicPhotoQuadratTransect.objects.select_related(
         "quadrat_transect", "quadrat_transect__sample_event"
