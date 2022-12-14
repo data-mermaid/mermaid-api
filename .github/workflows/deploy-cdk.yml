@@ -50,6 +50,9 @@ jobs:
           PYTHONPATH: ${{ github.workspace }}
           DEPLOY_AWS_ACCT: ${{ secrets.DEPLOY_AWS_ACCT }}
         run: |
-          cd iac && cdk deploy --require-approval never "${{ env.TARGET }}"-mermaid-api-django
+          cd iac && cdk deploy \
+            --require-approval never \
+            "${{ env.TARGET }}"-mermaid-api-django \
+            "${{ env.TARGET }}"-mermaid-static-site
 
       
