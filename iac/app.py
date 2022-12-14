@@ -66,4 +66,14 @@ prod_api_stack = ApiStack(
     api_zone=common_stack.api_zone,
 )
 
+prod_static_site_stack = StaticSiteStack(
+    app,
+    "prod-mermaid-static-site",
+    env=cdk_env,
+    tags=tags,
+    config=PROD_SETTINGS,
+    api_zone=common_stack.api_zone,
+    default_cert=common_stack.default_cert,
+)
+
 app.synth()

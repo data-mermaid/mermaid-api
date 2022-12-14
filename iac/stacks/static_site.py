@@ -28,21 +28,21 @@ class StaticSiteStack(Stack):
     ) -> None:
         super().__init__(scope, id, **kwargs)
 
-        name = "public"
-        site_domain = f"{config.env_id}-{name}.{api_zone.zone_name}"
-
-        CfnOutput(
-            self,
-            'StaticSite',
-            value=f"https://{site_domain}")
+        subdomain = config.api.public_bucket.split(".")[0]
+        domain = f"{subdomain}.{api_zone.zone_name}"
 
         # bucket
         site_bucket = s3.Bucket(
             self,
             id="Bucket",
-            bucket_name=site_domain,
+            bucket_name=config.api.public_bucket,
             public_read_access=False,
             block_public_access=s3.BlockPublicAccess.BLOCK_ALL,
+        )
+
+        CfnOutput(self,
+            id="BucketName",
+            value=config.api.public_bucket,
         )
 
         # cloudfront
@@ -50,33 +50,23 @@ class StaticSiteStack(Stack):
             site_bucket=site_bucket,
             config=config,
             default_cert=default_cert,
+            main_domain=domain,
         )
 
         r53.ARecord(
             self,
             id="AliasRecord",
-            record_name=site_domain,
+            record_name=domain,
             target=r53.RecordTarget.from_alias(targets.CloudFrontTarget(distribution=distribution)),
             zone=api_zone,
         )
-
-        # Deploy site contents to S3 bucket
-        # s3_asset = s3Deploy.Source.asset('../site')
-
-        # s3Deploy.BucketDeployment(
-        #     self,
-        #     id="DeployWithInvalidation",
-        #     sources=[s3_asset],
-        #     destination_bucket=site_bucket,
-        #     distribution=distribution,
-        #     distribution_paths=['/*']
-        # )
 
     def setup_cloudfront(
         self,
         config: ProjectSettings,
         default_cert: acm.Certificate,
         site_bucket: s3.Bucket,
+        main_domain: str,
     ) -> cf.Distribution:
 
         # cfOAI
@@ -98,16 +88,9 @@ class StaticSiteStack(Stack):
         site_bucket.add_to_resource_policy(policy_stmt)
 
         # CloudFront distribution
-        domain_names = [site_bucket.bucket_name]
-
+        domain_names = [main_domain]
         # allow the prod domains into the cloudfront distribution
-        if config.env_id == "prod":
-            # TODO: @alain to add ENV VAR here for subdomain
-            domain_names.append("public.datamermaid.org")
-
-        if config.env_id == "dev":
-            # TODO: @alain to add ENV VAR here for subdomain
-            domain_names.append("dev-public.datamermaid.org")
+        domain_names.append(config.api.public_bucket)
 
         behaviour_options = cf.BehaviorOptions(
             cache_policy=cf.CachePolicy.CACHING_DISABLED,
@@ -115,7 +98,6 @@ class StaticSiteStack(Stack):
                 bucket=site_bucket, 
                 origin_access_identity=cloudfront_OAI
             ),
-            # compress=True,
             allowed_methods=cf.AllowedMethods.ALLOW_GET_HEAD_OPTIONS,
             viewer_protocol_policy=cf.ViewerProtocolPolicy.REDIRECT_TO_HTTPS,
         )
@@ -125,18 +107,14 @@ class StaticSiteStack(Stack):
             id="Distribution",
             certificate=default_cert,
             price_class=cf.PriceClass.PRICE_CLASS_100,
-            # default_root_object="index.html",
             domain_names=domain_names,
             minimum_protocol_version=cf.SecurityPolicyProtocol.TLS_V1_2_2021,
-            # error_responses=[
-            #     cf.ErrorResponse(http_status=403)
-            # ]
             default_behavior=behaviour_options
         )
 
         CfnOutput(self,
-            id="DistributionId",
-            value=distribution.distribution_id,
+            id="DistributionDomains",
+            value=", ".join(domain_names),
         )
 
         return distribution

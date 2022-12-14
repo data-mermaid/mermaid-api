@@ -13,6 +13,6 @@ PROD_SETTINGS = ProjectSettings(
         default_domain_api="api.datamermaid.org",
         default_domain_collect="collect.datamermaid.org",
         mermaid_api_audience="https://api.datamermaid.org",
-        public_bucket="public.datamermaid.org"
+        public_bucket="public.datamermaid.org",
     ),
 )

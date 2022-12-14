@@ -44,6 +44,7 @@ class DjangoSettings:
     default_domain_api: str
     default_domain_collect: str
     mermaid_api_audience: str
+    public_bucket: str
 
     # Dynamic Secrets
     dev_emails_name: str = ""
