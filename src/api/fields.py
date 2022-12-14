@@ -30,17 +30,28 @@ class LazyChoiceField(serializers.ChoiceField):
         self._flattened_choices = None
         self._cached_choices = {}
 
-    def to_internal_value(self, data):
+    def _check_nulls(self, value):
+        if (
+            (value is not None and value != "")
+            or (value == "" and self.allow_blank)
+            or (value is None and self.allow_null)
+        ):
+            return
+
+        self.fail("null", input=value)
+
+    def to_internal_value(self, value):
         # Adding a cache to the choices that are
         # used during serialization. Will see a performance gain
         # if a field has a large number of choices but only uses
         # a small number of them when deserializing records.
 
-        if data == "" and self.allow_blank:
-            return ""
+        self._check_nulls(value)
+        if value is None or value == "":
+            return None
 
         try:
-            str_data = str(data)
+            str_data = str(value)
             val = None
             if str_data not in self._cached_choices:
                 val = self.choice_strings_to_values[str_data]
@@ -50,7 +61,7 @@ class LazyChoiceField(serializers.ChoiceField):
                 val = self._cached_choices[str_data]
             return val
         except KeyError:
-            self.fail("invalid_choice", input=data)
+            self.fail("invalid_choice", input=value)
 
     choices = property(_get_choices, _set_choices)
 
@@ -80,3 +91,10 @@ class PositiveIntegerField(fields.Field):
             return int(value)
         except (TypeError, ValueError):
             return 0
+
+
+class NullCoercedTimeField(fields.TimeField):
+    def to_internal_value(self, value):
+        if self.allow_null is True and isinstance(value, str) and value.strip() == "":
+            return None
+        return super().to_internal_value(value)

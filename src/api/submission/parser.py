@@ -238,6 +238,7 @@ def get_quadrat_transect_data(collect_record, sample_event_id=None):
         sample_event=sample_event_id,
         label=quadrat_transect_data.get("label") or "",
         quadrat_size=_cast_decimal_to_str(quadrat_transect_data.get("quadrat_size")),
+        quadrat_number_start=quadrat_transect_data.get("quadrat_number_start"),
         len_surveyed=_cast_decimal_to_str(quadrat_transect_data.get("len_surveyed")),
         num_quadrats=quadrat_transect_data.get("num_quadrats"),
         num_points_per_quadrat=quadrat_transect_data.get("num_points_per_quadrat"),
