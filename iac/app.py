@@ -48,7 +48,6 @@ dev_static_site_stack = StaticSiteStack(
     env=cdk_env,
     tags=tags,
     config=DEV_SETTINGS,
-    api_zone=common_stack.api_zone,
     default_cert=common_stack.default_cert,
 )
 
@@ -72,7 +71,6 @@ prod_static_site_stack = StaticSiteStack(
     env=cdk_env,
     tags=tags,
     config=PROD_SETTINGS,
-    api_zone=common_stack.api_zone,
     default_cert=common_stack.default_cert,
 )
 

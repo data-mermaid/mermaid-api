@@ -22,14 +22,14 @@ class StaticSiteStack(Stack):
         scope: Construct,
         id: str,
         config: ProjectSettings,
-        api_zone: r53.HostedZone,
+        # api_zone: r53.HostedZone,
         default_cert: acm.Certificate,
         **kwargs,
     ) -> None:
         super().__init__(scope, id, **kwargs)
 
-        subdomain = config.api.public_bucket.split(".")[0]
-        domain = f"{subdomain}.{api_zone.zone_name}"
+        # subdomain = config.api.public_bucket.split(".")[0]
+        # domain = f"{subdomain}.{api_zone.zone_name}"
 
         # bucket
         site_bucket = s3.Bucket(
@@ -47,26 +47,14 @@ class StaticSiteStack(Stack):
 
         # cloudfront
         distribution = self.setup_cloudfront(
-            site_bucket=site_bucket,
-            config=config,
             default_cert=default_cert,
-            main_domain=domain,
-        )
-
-        r53.ARecord(
-            self,
-            id="AliasRecord",
-            record_name=domain,
-            target=r53.RecordTarget.from_alias(targets.CloudFrontTarget(distribution=distribution)),
-            zone=api_zone,
+            site_bucket=site_bucket,
         )
 
     def setup_cloudfront(
         self,
-        config: ProjectSettings,
         default_cert: acm.Certificate,
         site_bucket: s3.Bucket,
-        main_domain: str,
     ) -> cf.Distribution:
 
         # cfOAI
@@ -88,9 +76,7 @@ class StaticSiteStack(Stack):
         site_bucket.add_to_resource_policy(policy_stmt)
 
         # CloudFront distribution
-        domain_names = [main_domain]
-        # allow the prod domains into the cloudfront distribution
-        domain_names.append(config.api.public_bucket)
+        domain_names = [site_bucket.bucket_name]
 
         behaviour_options = cf.BehaviorOptions(
             cache_policy=cf.CachePolicy.CACHING_DISABLED,
@@ -110,11 +96,6 @@ class StaticSiteStack(Stack):
             domain_names=domain_names,
             minimum_protocol_version=cf.SecurityPolicyProtocol.TLS_V1_2_2021,
             default_behavior=behaviour_options
-        )
-
-        CfnOutput(self,
-            id="DistributionDomains",
-            value=", ".join(domain_names),
         )
 
         return distribution
