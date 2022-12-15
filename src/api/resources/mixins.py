@@ -1,11 +1,9 @@
 import os
 from tempfile import NamedTemporaryFile
-from xml.dom import ValidationErr
 
 import pytz
 from django.db import IntegrityError, transaction
 from django.db.models import ProtectedError, Q
-from django.http import FileResponse
 from django.http.response import HttpResponse, HttpResponseBadRequest
 from django.template.defaultfilters import pluralize
 from django.utils.dateparse import parse_datetime
@@ -19,7 +17,8 @@ from ..exceptions import check_uuid
 from ..models import ArchivedRecord, Project
 from ..notifications import notify_cr_owners_site_mr_deleted
 from ..permissions import ProjectDataAdminPermission
-from ..utils import get_protected_related_objects
+from ..utils import create_iso_date_string, get_protected_related_objects
+from ..utils.project import get_safe_project_name
 from ..utils.sample_unit_methods import edit_transect_method
 
 
@@ -273,15 +272,27 @@ class SampleUnitMethodSummaryReport(object):
         try:
             model = self.get_queryset().model
             with NamedTemporaryFile(delete=False) as f:
-                create_sample_unit_method_summary_report(
-                    project_pk,
-                    getattr(model, "protocol"),
-                    f.name,
-                    request=request
-                )
+                try:
+                    protocol = getattr(model, "protocol")
+                    create_sample_unit_method_summary_report(
+                        project_pk,
+                        protocol,
+                        f.name,
+                        request=request
+                    )
+                except AttributeError as ae:
+                    raise exceptions.ValidationError("Uknown protocol") from ae
+                except ValueError as ve:
+                    raise exceptions.ValidationError(f"{protocol} protocol not suppoort") from ve
+                
+                try:
+                    file_name = f"{get_safe_project_name(project_pk)}_{protocol}_{create_iso_date_string(delimiter='_')}.xlsx"
+                except ValueError as e:
+                    raise exceptions.ValidationError(f"[{project_pk}] Project does not exist") from e
+
                 response = HttpResponse(content_type="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet")
                 response["Content-Length"] = os.fstat(f.fileno()).st_size
-                response["Content-Disposition"] = f'attachment; filename="summary_report_{project_pk}.xlsx"'
+                response["Content-Disposition"] = f'attachment; filename="{file_name}"'
                 response.write(f.read())
                 return response
         except Exception as err:
