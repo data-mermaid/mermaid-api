@@ -648,11 +648,11 @@ def valid_benthic_lit_collect_record(
     sample_event1,
 ):
     observations = [
-        dict(attribute=str(benthic_attribute_3.id), length=1000),
+        dict(attribute=str(benthic_attribute_3.id), length="1000"),
         dict(attribute=str(benthic_attribute_3.id), length=1500),
         dict(attribute=str(benthic_attribute_3.id), length=2000),
         dict(attribute=str(benthic_attribute_3.id), length=2500),
-        dict(attribute=str(benthic_attribute_4.id), length=3000),
+        dict(attribute=str(benthic_attribute_4.id), length="3000"),
     ]
     data_ok = dict(
         protocol="benthiclit",
