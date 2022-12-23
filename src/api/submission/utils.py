@@ -34,6 +34,7 @@ from .validations2 import (
     benthic_lit,
     benthic_pit,
     bleaching_quadrat_collection,
+    habitat_complexity,
     ValidationRunner
 )
 from .writer import (
@@ -201,39 +202,37 @@ def _validate_collect_record_v2(record, record_serializer, request):
             benthic_lit.benthic_lit_validations,
             request=request
         )
-        return runner.to_dict()
     elif protocol == BENTHICPIT_PROTOCOL:
         runner.validate(
             record,
             benthic_pit.benthic_pit_validations,
             request=request
         )
-        return runner.to_dict()
     elif protocol == FISHBELT_PROTOCOL:
         runner.validate(
             record,
             belt_fish.belt_fish_validations,
             request=request
         )
-        return runner.to_dict()
     elif protocol == HABITATCOMPLEXITY_PROTOCOL:
-        raise NotImplementedError()
+        runner.validate(
+            record,
+            habitat_complexity.habcomp_validations,
+            request=request
+        )
     elif protocol == BLEACHINGQC_PROTOCOL:
         runner.validate(
             record,
             bleaching_quadrat_collection.bleaching_quadrat_collection_validations,
             request=request
         )
-        return runner.to_dict()
     elif protocol == BENTHICPQT_PROTOCOL:
         runner.validate(
             record,
             benthic_photo_quadrat_transect.benthic_photo_quadrat_transect_validations,
             request=request
         )
-        return runner.to_dict()
-
-    raise ValueError("Unsupported protocol")
+    return runner.to_dict()
 
 
 def _apply_validation_suppressants(results, validation_suppressants):
