@@ -205,7 +205,6 @@ class BeltFishSUSQLModel(BaseSUSQLModel):
         
 		beltfish_tg AS (
             SELECT beltfish_su_tg.pseudosu_id,
-            SUM(beltfish_su_tg.biomass_kgha) AS biomass_kgha,
 			jsonb_object_agg(
                 CASE
                     WHEN beltfish_su_tg.trophic_group IS NULL THEN 'other'::character varying
@@ -292,6 +291,7 @@ class BeltFishSUSQLModel(BaseSUSQLModel):
             SELECT pseudosu_id,
             jsonb_agg(DISTINCT sample_unit_id) AS sample_unit_ids,
             SUM(beltfish_obs.count) AS total_abundance,
+            SUM(beltfish_obs.biomass_kgha) AS biomass_kgha,
             {_su_fields_qualified},
             {_su_aggfields_sql},
             string_agg(DISTINCT reef_slope::text, ', '::text ORDER BY (reef_slope::text)) AS reef_slope,
