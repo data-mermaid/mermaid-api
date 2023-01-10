@@ -236,10 +236,12 @@ def get_quadrat_transect_data(collect_record, sample_event_id=None):
     quadrat_transect_data = data.get("quadrat_transect") or dict()
     return dict(
         sample_event=sample_event_id,
+        number=quadrat_transect_data.get("number"),
         label=quadrat_transect_data.get("label") or "",
         quadrat_size=_cast_decimal_to_str(quadrat_transect_data.get("quadrat_size")),
         quadrat_number_start=quadrat_transect_data.get("quadrat_number_start"),
         len_surveyed=_cast_decimal_to_str(quadrat_transect_data.get("len_surveyed")),
+        reef_slope=quadrat_transect_data.get("reef_slope") or None,
         num_quadrats=quadrat_transect_data.get("num_quadrats"),
         num_points_per_quadrat=quadrat_transect_data.get("num_points_per_quadrat"),
         collect_record_id=collect_record.id,
