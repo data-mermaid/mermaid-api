@@ -1,8 +1,9 @@
 import uuid
 
 from django.contrib.gis.db.models.fields import PolygonField, MultiPolygonField
-from django.core.exceptions import ObjectDoesNotExist
+from django.core.exceptions import ObjectDoesNotExist, ValidationError
 from django.db import models
+from django.utils import timezone
 from django.utils.translation import gettext_lazy as _
 
 PROPOSED = 10
@@ -12,6 +13,15 @@ APPROVAL_STATUSES = (
     # (50, _(u'project admin approved')),
     (PROPOSED, _(u'proposed')),
 )
+
+
+def validate_max_year(value):
+    current_year = timezone.now().year
+    if value > current_year:
+        raise ValidationError(
+            _('%(value)s is in the future'),
+            params={'value': value},
+        )
 
 
 class ExtendedManager(models.Manager):
