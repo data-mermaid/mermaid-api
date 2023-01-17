@@ -3,15 +3,12 @@ import json
 import sys
 import uuid
 
-from django.core.management.base import BaseCommand, CommandError
-from django.db import connection, transaction
+from django.core.management.base import BaseCommand
+from django.db import transaction
 from django.template.defaultfilters import pluralize
 
-from api.ingest.utils import ingest
-from api.models import (
-    PROTOCOL_MAP,
-    CollectRecord,
-)
+from api.ingest.utils import ingest, InvalidSchema
+from api.models import PROTOCOL_MAP
 from api.resources.collect_record import CollectRecordSerializer
 from api.submission.validations import ERROR, OK, WARN
 
@@ -79,7 +76,7 @@ class Command(BaseCommand):
         dry_run,
         clear_existing,
         *args,
-        **options
+        **options,
     ):
         datafile = datafile[0]
         project = project[0]
@@ -116,12 +113,14 @@ class Command(BaseCommand):
                         bulk_validation=is_validate,
                         bulk_submission=is_submit,
                         validation_suppressants=validate_config,
-                        serializer_class=CollectRecordSerializer
+                        serializer_class=CollectRecordSerializer,
                     )
                 except InvalidSchema as schema_error:
                     missing_required_fields = schema_error.errors
                     transaction.savepoint_rollback(sid)
-                    self.stderr.write(f"Missing required fields: {', '.join(missing_required_fields)}")
+                    self.stderr.write(
+                        f"Missing required fields: {', '.join(missing_required_fields)}"
+                    )
                     sys.exit(1)
 
                 transaction.savepoint_commit(sid)
@@ -154,7 +153,11 @@ class Command(BaseCommand):
 
         if "validate" in ingest_output:
             validation_results = ingest_output["validate"]
-            validation_oks, validation_warns, validation_errors = self._validation_summary(validation_results.values())
+            (
+                validation_oks,
+                validation_warns,
+                validation_errors,
+            ) = self._validation_summary(validation_results.values())
 
             if verbosity > 0:
                 pass
@@ -167,7 +170,11 @@ class Command(BaseCommand):
 
         if "submit" in ingest_output:
             submission_results = ingest_output["submit"]
-            submission_oks, submission_warns, submission_errors = self._validation_summary(submission_results.values())
+            (
+                submission_oks,
+                submission_warns,
+                submission_errors,
+            ) = self._validation_summary(submission_results.values())
 
             if verbosity > 0:
                 pass
