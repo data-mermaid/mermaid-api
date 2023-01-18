@@ -247,13 +247,6 @@ class ApiStack(Stack):
             target_groups=[target_group],
         )
 
-        # Is this required? We has a custom SG already defined...
-        database.connections.allow_from(
-            service.connections, 
-            port_range=ec2.Port.tcp(5432),
-            description="Allow Fargate service connections to Postgres"
-        )
-
         # Allow API service to read/write to backup bucket in case we want to manually
         # run dbbackup/dbrestore tasks from within the container
         backup_bucket.grant_read_write(service.task_definition.task_role)
@@ -302,9 +295,12 @@ class ApiStack(Stack):
         # allow Worker to read messages from the queue
         queue.grant_send_messages(sqs_worker_service.task_definition.task_role)
         
+        sqs_worker_service.service.connections.add_security_group(container_security_group)
+        
         # allow Worker to talk to RDS
         sqs_worker_service.service.connections.allow_to(
             database.connections, 
             port_range=ec2.Port.tcp(5432),
             description="Allow SQS Worker service connections to Postgres"
         )
+
