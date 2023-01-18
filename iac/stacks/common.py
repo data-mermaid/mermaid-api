@@ -100,6 +100,7 @@ class CommonStack(Stack):
                 version=rds.PostgresEngineVersion.VER_13_7
             ),            
             instance_type=ec2.InstanceType.of(
+                # NOTE: this is a T2.SMALL in the old RDS
                 ec2.InstanceClass.BURSTABLE3, ec2.InstanceSize.MICRO
             ),
             # database_name="default",
