@@ -272,6 +272,7 @@ class ApiStack(Stack):
             image=ecs.ContainerImage.from_docker_image_asset(image_asset),
             cpu=config.api.container_cpu,
             memory_limit_mib=config.api.container_memory,
+            security_groups=[container_security_group],
             secrets=api_secrets,
             environment=environment,
             command=["python", "manage.py", "simpleq_worker"],
@@ -295,12 +296,3 @@ class ApiStack(Stack):
         # allow Worker to read messages from the queue
         queue.grant_send_messages(sqs_worker_service.task_definition.task_role)
         
-        sqs_worker_service.service.connections.add_security_group(container_security_group)
-        
-        # allow Worker to talk to RDS
-        sqs_worker_service.service.connections.allow_to(
-            database.connections, 
-            port_range=ec2.Port.tcp(5432),
-            description="Allow SQS Worker service connections to Postgres"
-        )
-
