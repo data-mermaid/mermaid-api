@@ -247,13 +247,6 @@ class ApiStack(Stack):
             target_groups=[target_group],
         )
 
-        # Is this required? We has a custom SG already defined...
-        database.connections.allow_from(
-            service.connections, 
-            port_range=ec2.Port.tcp(5432),
-            description="Allow Fargate service connections to Postgres"
-        )
-
         # Allow API service to read/write to backup bucket in case we want to manually
         # run dbbackup/dbrestore tasks from within the container
         backup_bucket.grant_read_write(service.task_definition.task_role)

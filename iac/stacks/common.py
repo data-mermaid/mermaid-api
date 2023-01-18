@@ -192,6 +192,13 @@ class CommonStack(Stack):
             self, id="EcsSg", vpc=self.vpc, allow_all_outbound=True
         )
 
+        # Allow ECS tasks to RDS
+        self.ecs_sg.connections.allow_to(
+            self.database.connections,
+            port_range=ec2.Port.tcp(5432),
+            description="Allow ECS tasks to RDS"
+        )
+
         # Allow ECS tasks to ECR VPC endpoints
         self.ecs_sg.connections.allow_to(
             vpc_ep_ecr_sg.connections,
