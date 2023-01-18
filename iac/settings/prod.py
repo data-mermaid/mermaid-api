@@ -13,5 +13,10 @@ PROD_SETTINGS = ProjectSettings(
         default_domain_api="api.datamermaid.org",
         default_domain_collect="collect.datamermaid.org",
         mermaid_api_audience="https://api.datamermaid.org",
+        
+        # Secrets
+        spa_admin_client_id_name="prod/mermaid-api/spa-admin-client-id-8GJ1mU",
+        spa_admin_client_secret_name="prod/mermaid-api/spa-admin-client-secret-5oMItZ",
+        mermaid_api_signing_secret_name="prod/mermaid-api/mermaid-api-signing-secret-3625sz",
     ),
 )
