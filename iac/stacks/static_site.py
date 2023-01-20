@@ -1,17 +1,12 @@
 from aws_cdk import (
     CfnOutput, 
-    RemovalPolicy,
     Stack,
-    aws_route53 as r53,
-    aws_route53_targets as targets,
     aws_certificatemanager as acm,
     aws_cloudfront as cf,
     aws_cloudfront_origins as cf_origins,
     aws_iam as iam,
     aws_s3 as s3,
-    aws_s3_deployment as s3Deploy,
 )
-# from static_site import StaticSitePublicS3, StaticSitePrivateS3
 from constructs import Construct
 from iac.settings import ProjectSettings
 
@@ -22,14 +17,10 @@ class StaticSiteStack(Stack):
         scope: Construct,
         id: str,
         config: ProjectSettings,
-        # api_zone: r53.HostedZone,
         default_cert: acm.Certificate,
         **kwargs,
     ) -> None:
         super().__init__(scope, id, **kwargs)
-
-        # subdomain = config.api.public_bucket.split(".")[0]
-        # domain = f"{subdomain}.{api_zone.zone_name}"
 
         # bucket
         site_bucket = s3.Bucket(
