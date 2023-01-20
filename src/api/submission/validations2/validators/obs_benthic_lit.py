@@ -25,7 +25,7 @@ class BenthicLITObservationTotalLengthValidator(BaseValidator):
 
         # convert to cm
         len_surveyed = (self.get_value(collect_record, self.len_surveyed_path) or 0) * 100
-        obs_len = sum(ob.get("length") or 0.0 for ob in obs_benthiclits)
+        obs_len = sum(float(ob.get("length") or 0.0) for ob in obs_benthiclits)
 
         if len_surveyed <= 0:
             return ERROR, "len_surveyed_not_positive"

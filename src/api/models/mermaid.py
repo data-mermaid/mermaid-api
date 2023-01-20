@@ -29,6 +29,7 @@ from .base import (
     Country,
     JSONMixin,
     Profile,
+    validate_max_year
 )
 
 INCLUDE_OBS_TEXT = _(u'include observation in aggregations/analyses?')
@@ -211,7 +212,7 @@ class Management(BaseModel, JSONMixin, AreaMixin):
     compliance = models.ForeignKey(ManagementCompliance, on_delete=models.SET_NULL, null=True, blank=True)
     # help_text=_(u'Optional estimate of level of compliance associated with this management regime'))
     est_year = models.PositiveSmallIntegerField(null=True, blank=True,
-                                                validators=[MaxValueValidator(timezone.now().year)],
+                                                validators=[validate_max_year],
                                                 verbose_name=_(u'year established'))
     predecessor = models.ForeignKey('self', on_delete=models.SET_NULL, null=True, blank=True)
     # help_text=_(u'Management regime that preceded this one before a change in name, rules, or boundary'))
@@ -403,10 +404,6 @@ class Tide(BaseChoiceModel):
 
 def default_date():
     return timezone.now().date()
-
-
-def default_time():  # no longer used; remove once migrations are squashed
-    return timezone.now().time()
 
 
 class SampleEvent(BaseModel, JSONMixin):
