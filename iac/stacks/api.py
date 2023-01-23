@@ -181,6 +181,7 @@ class ApiStack(Stack):
             platform_version=ecs.FargatePlatformVersion.LATEST,
             cluster=cluster,
             security_groups=[container_security_group],
+            circuit_breaker=ecs.DeploymentCircuitBreaker(rollback=True),
             # cloud_map_options=ecs.CloudMapOptions(cloud_map_namespace=namespace, name=self.svc),
             desired_count=config.api.container_count,
             enable_execute_command=True,
@@ -196,6 +197,23 @@ class ApiStack(Stack):
             # ) # Manually set FARGATE_SPOT as deafult in cluster console.
         )
 
+        # set up autoscaling
+        scaling = service.auto_scale_task_count(
+            min_capacity=1,
+            max_capacity=3, #TODO: change this after we've successfully testing autoscaling. Otherwise we might incur extra Fargate costs.
+        )
+        cpu_utilization = service.metric_cpu_utilization()
+        scaling.scale_on_metric('autoscale_cpu',
+            metric=cpu_utilization,
+            scaling_steps=[
+                # scale out when CPU utilization exceeds 50%
+                appscaling.ScalingInterval(lower=50, change=+1),
+                # increase scale out speed if CPU utilization exceeds 70%
+                appscaling.ScalingInterval(lower=70, change=+3),
+                # scale in when CPU utilization falls below 10%.
+                appscaling.ScalingInterval(upper=10, change=-1),
+            ], 
+        )
 
         # Grant Secret read to API container & backup task
         for _, container_secret in api_secrets.items():
@@ -277,6 +295,7 @@ class ApiStack(Stack):
             cpu=config.api.container_cpu,
             memory_limit_mib=config.api.container_memory,
             security_groups=[container_security_group],
+            circuit_breaker=ecs.DeploymentCircuitBreaker(rollback=True),
             secrets=api_secrets,
             environment=environment,
             command=["python", "manage.py", "simpleq_worker"],

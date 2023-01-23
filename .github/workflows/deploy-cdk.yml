@@ -13,6 +13,9 @@ on:
       - 'w[0-9]+.[0-9]+'        # eg: w1.1
       - 'w[0-9]+.[0-9]+.[0-9]+' # eg: w1.1.1
 
+concurrency:
+  group: api-deployment-${{ github.ref }}
+
 jobs:
   deploy:
     runs-on: ubuntu-20.04

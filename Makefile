@@ -100,6 +100,8 @@ test:
 # -----------------
 # Fargate Maintenance (docker exec)
 # -----------------
+# TODO: populate service-name dynamically, using dev/prod arg passed in from commandline like `make env=dev cloud_shell`
+# Maybe specify --profile? Maybe wrap in `su webapp` and then `bash`?
 
 cloud_shell:
 	$(eval taskid=$(shell aws ecs list-tasks --region us-east-1 --cluster mermaid-api-infra-common-MermaidApiClusterB0854EC6-xitj9XbqTwap --service-name dev-mermaid-api-django-FargateServiceAC2B3B85-UkIk9eW3sVHC --output text | awk -F'/' '{print $$3}'))
