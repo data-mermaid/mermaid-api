@@ -17,9 +17,12 @@ concurrency:
   group: api-deployment-${{ github.ref }}
 
 jobs:
-  deploy:
-    runs-on: ubuntu-20.04
+  call-test:
+    uses: ./.github/workflows/_test.yml
 
+  deploy:
+    needs: [call-test]
+    runs-on: ubuntu-20.04
     steps:
       - uses: actions/setup-node@v3
         with:
