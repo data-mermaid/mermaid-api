@@ -4,6 +4,7 @@ from api.resources.collect_record import CollectRecordSerializer
 from api.submission.validations2.validators import (
     OK,
     WARN,
+    ERROR,
     PointsPerQuadratValidator,
     QuadratCountValidator,
     QuadratNumberSequenceValidator
@@ -79,3 +80,11 @@ def test_quadrat_number_sequence_invalid(quadrat_number_sequence_validator, vali
     record = CollectRecordSerializer(instance=valid_benthic_pq_transect_collect_record).data
     result = quadrat_number_sequence_validator(record)
     assert result.status == WARN
+
+
+def test_number_of_quadrats_toolarge(quadrat_number_sequence_validator, valid_benthic_pq_transect_collect_record):
+    valid_benthic_pq_transect_collect_record.data["quadrat_transect"]["num_quadrats"] = 100000
+
+    record = CollectRecordSerializer(instance=valid_benthic_pq_transect_collect_record).data
+    result = quadrat_number_sequence_validator(record)
+    assert result.status == ERROR
