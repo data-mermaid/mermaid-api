@@ -10,4 +10,4 @@ from ..reports import attributes_report
 def update_attributes_report():
     with NamedTemporaryFile() as tmp:
         attributes_report.write_attribute_reference(tmp.name)
-        s3.upload_file(settings.PUBLIC_BUCKET, tmp.name, "attributes_guide.xlsx")
+        s3.upload_file(settings.PUBLIC_BUCKET, tmp.name, "mermaid_attributes.xlsx")

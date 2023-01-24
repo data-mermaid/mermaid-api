@@ -160,8 +160,7 @@ def write_fish_species(wb, regions):
         *[
             [
                 fish_species.genus.family.name,
-                fish_species.genus.name,
-                fish_species.name,
+                str(fish_species),
                 fish_species.biomass_constant_a,
                 fish_species.biomass_constant_b,
                 fish_species.biomass_constant_c,
@@ -174,7 +173,7 @@ def write_fish_species(wb, regions):
                 fish_species.vulnerability,
                 fish_species.climate_score,
                 *create_regions_row(
-                    regions, [str(r.id) for r in fish_species.regions.all()]
+                    regions, [str(r.id) for r in fish_species.regions.all().order_by("genus", "name")]
                 ),
             ]
             for fish_species in FishSpecies.objects.select_related(

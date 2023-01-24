@@ -8,6 +8,7 @@ from ..models import (
     FishGenus,
     FishGrouping,
     FishSpecies,
+    GrowthForm,
     Region,
 )
 from ..reports import attributes_report
@@ -27,6 +28,7 @@ from ..utils.q import submit_job
 @receiver(post_save, sender=FishSpecies)
 @receiver(post_delete, sender=Region)
 @receiver(post_save, sender=Region)
+@receiver(post_save, sender=GrowthForm)
 def generate_attribute_report(sender, instance, **kwargs):
     if instance.status == SUPERUSER_APPROVED or isinstance(instance, Region):
         attributes_report.write_attribute_reference()
