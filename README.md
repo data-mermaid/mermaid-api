@@ -142,5 +142,3 @@ admin@datamermaid.org.
 - `$ make cloud_shell`
 - su webapp
 - bash
-
-<!-- Trigger GH Action deployment for testing M1816 -->
