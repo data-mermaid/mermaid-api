@@ -10,6 +10,7 @@ from .base import (
     ListFilter,
 )
 from .mixins import ProtectedResourceMixin
+from ..exceptions import check_uuid
 from ..models import Site, Project
 from ..permissions import AuthenticatedReadOnlyPermission
 
@@ -128,14 +129,17 @@ class SiteFilterSet(BaseAPIFilterSet):
         return queryset.extra(where=[sql])
 
     def filter_not_projects(self, queryset, name, value):
-        value_list = [v.strip() for v in value.split(u',')]
+        value_list = [check_uuid(v.strip()) for v in value.split(u',')]
+        
         return queryset.exclude(project__in=value_list)
 
 
 class SiteViewSet(ProtectedResourceMixin, BaseApiViewSet):
     model_display_name = "Site"
     serializer_class = SiteSerializer
-    queryset = Site.objects.exclude(project__status=Project.TEST)
+    queryset = Site.objects \
+        .select_related("project", "country", "reef_type", "reef_zone", "exposure") \
+        .exclude(project__status=Project.TEST)
     permission_classes = [AuthenticatedReadOnlyPermission]
     filterset_class = SiteFilterSet
     search_fields = ['$name', '$project__name', '$country__name',]

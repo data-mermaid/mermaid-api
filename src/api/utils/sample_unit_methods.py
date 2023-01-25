@@ -6,12 +6,12 @@ from ..mocks import MockRequest
 from ..models import AuditRecord
 
 
-def _get_project(obj, keys):
+def get_project(obj, keys):
     if not keys:
         return obj
 
     new_obj = getattr(obj, keys[0])
-    return _get_project(new_obj, keys[1:])
+    return get_project(new_obj, keys[1:])
 
 
 def transect_method_to_collect_record(serializer, transect_method_instance, profile, protocol):
@@ -30,7 +30,7 @@ def transect_method_to_collect_record(serializer, transect_method_instance, prof
         "updated_by",
     )
 
-    project = _get_project(
+    project = get_project(
         transect_method_instance,
         transect_method_instance.project_lookup.split("__")
     )

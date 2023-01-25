@@ -18,8 +18,8 @@ class Command(BaseCommand):
     def __init__(self):
         super(Command, self).__init__()
         self.now = datetime.now(timezone.utc)
-        self.backup = os.environ.get("BACKUP", "false").lower()
         self.env = os.environ.get("ENV", "none").lower()
+        self.backup = self.env
         self.local_file_location = os.path.join(os.path.sep, "tmp", "mermaid")
         try:
             os.mkdir(self.local_file_location)

@@ -1,3 +1,4 @@
+from xml.dom import ValidationErr
 import pytz
 from django.db import IntegrityError, transaction
 from django.db.models import ProtectedError, Q
@@ -5,15 +6,17 @@ from django.http.response import HttpResponseBadRequest
 from django.template.defaultfilters import pluralize
 from django.utils.dateparse import parse_datetime
 from rest_framework import status
+from rest_framework import exceptions
 from rest_framework.request import Request
 from rest_framework.response import Response
 from rest_framework.decorators import action
-from rest_framework.serializers import raise_errors_on_nested_writes
 
+from ..exceptions import check_uuid
 from ..models import ArchivedRecord, Project
+from ..notifications import notify_cr_owners_site_mr_deleted
+from ..permissions import ProjectDataAdminPermission
 from ..utils import get_protected_related_objects
 from ..utils.sample_unit_methods import edit_transect_method
-from ..permissions import ProjectDataAdminPermission
 
 
 class ProtectedResourceMixin(object):
@@ -38,6 +41,15 @@ class ProtectedResourceMixin(object):
 
             msg += " [" + ", ".join(protected_instance_displays) + "]"
             return Response(msg, status=status.HTTP_403_FORBIDDEN)
+
+
+class NotifyDeletedSiteMRMixin(ProtectedResourceMixin):
+    def destroy(self, request, *args, **kwargs):
+        instance = self.get_object()
+        deleted_by = getattr(request.user, "profile", None)
+        response = super().destroy(request, *args, **kwargs)
+        notify_cr_owners_site_mr_deleted(instance, deleted_by)
+        return response
 
 
 class CreateOrUpdateSerializerMixin(object):
@@ -246,3 +258,49 @@ class SampleUnitMethodEditMixin(object):
         except Exception as err:
             print(err)
             return Response(str(err), status=500)
+
+
+class CopyRecordsMixin:
+    @action(
+        detail=False,
+        methods=["post"],
+    )
+    def copy(self, request, project_pk, *args, **kwargs):
+        """
+        Payload schema:
+        
+        {
+            "original_ids": [Array] Original record ids to copy to project.
+        }
+
+        """
+        
+        profile = request.user.profile
+        context = {"request": request}
+        data = request.data
+        original_ids = data.get("original_ids") or []
+        save_point_id = transaction.savepoint()
+
+        new_records = []
+        for original_id in original_ids:
+            check_uuid(original_id)
+            try:
+                new_record = self.get_queryset().model.objects.get_or_none(id=original_id)
+                if new_record is None:
+                    transaction.savepoint_rollback(save_point_id)
+                    raise exceptions.ValidationError(f"Original id does not exist [{original_id}]")
+
+                new_record.id = None
+                new_record.project_id = project_pk
+                new_record.created_by = profile
+                new_record.save()
+
+                record_serializer = self.serializer_class(instance=new_record, context=context)
+                new_records.append(record_serializer.data)
+            except Exception as err:
+                print(err)
+                transaction.savepoint_rollback(save_point_id)
+                raise exceptions.APIException(detail=f"[{type(err).__name__}] Copy records") from err
+
+        transaction.savepoint_commit(save_point_id)
+        return Response(new_records)

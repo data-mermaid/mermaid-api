@@ -3,6 +3,7 @@ from rest_framework.exceptions import ParseError
 from ....exceptions import check_uuid
 from ....models import Region, Site
 from .base import OK, WARN, BaseValidator, validator_result
+from ..utils import valid_id
 
 
 class RegionValidator(BaseValidator):
@@ -29,12 +30,11 @@ class RegionValidator(BaseValidator):
         observation_ids = []
         attribute_ids = []
         for ob in observations:
-            attr_id = self.get_value(ob, self.observation_attribute_path)
+            attr_id = valid_id(self.get_value(ob, self.observation_attribute_path))
             _id = ob.get("id")
-            if attr_id is None:
-                continue
-            attribute_ids.append(attr_id)
-            observation_ids.append(_id)
+            if attr_id is not None:
+                attribute_ids.append(attr_id)
+                observation_ids.append(_id)
         return observation_ids, attribute_ids
 
     def _get_attribute_region_lookup(self, attribute_ids):

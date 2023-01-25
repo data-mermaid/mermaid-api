@@ -1,11 +1,11 @@
-from rest_framework.decorators import action
-
 from ..models import Site
-from .base import BaseAPIFilterSet, BaseAPISerializer, BaseProjectApiViewSet
-from .mixins import CreateOrUpdateSerializerMixin, ProtectedResourceMixin
+from .base import BaseAPIFilterSet, BaseAPISerializer, BaseProjectApiViewSet, PointFieldValidated
+from .mixins import CopyRecordsMixin, CreateOrUpdateSerializerMixin, NotifyDeletedSiteMRMixin
 
 
 class PSiteSerializer(CreateOrUpdateSerializerMixin, BaseAPISerializer):
+    location = PointFieldValidated()
+
     class Meta:
         geo_field = "location"
         model = Site
@@ -18,7 +18,7 @@ class PSiteFilterSet(BaseAPIFilterSet):
         fields = ["country", "reef_type", "reef_zone", "exposure"]
 
 
-class PSiteViewSet(ProtectedResourceMixin, BaseProjectApiViewSet):
+class PSiteViewSet(NotifyDeletedSiteMRMixin, CopyRecordsMixin, BaseProjectApiViewSet):
     model_display_name = "Site"
     serializer_class = PSiteSerializer
     queryset = Site.objects.all()

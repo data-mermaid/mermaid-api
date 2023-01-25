@@ -5,12 +5,12 @@ from rest_framework.exceptions import ParseError
 from timezonefinder import TimezoneFinder
 
 from .base import ERROR, OK, WARN, BaseValidator, validator_result
+from ..utils import valid_id
 from ....exceptions import check_uuid
 from ....models import Site
 
 
 class SampleDateValidator(BaseValidator):
-    INVALID_SITE = "invalid_site"
     INVALID_SAMPLE_DATE = "invalid_sample_date"
     FUTURE_SAMPLE_DATE = "future_sample_date"
 
@@ -52,7 +52,7 @@ class SampleDateValidator(BaseValidator):
     def __call__(self, collect_record, **kwargs):
         sample_date_str = self.get_value(collect_record, self.sample_date_path) or ""
         sample_time_str = self.get_value(collect_record, self.sample_time_path) or ""
-        site_id = self.get_value(collect_record, self.site_path) or ""
+        site_id = valid_id(self.get_value(collect_record, self.site_path))
 
         if sample_date_str.strip() == "":
             sample_date_str = None
@@ -60,16 +60,11 @@ class SampleDateValidator(BaseValidator):
         if sample_time_str.strip() == "":
             sample_time_str = None
 
-        try:
-            check_uuid(site_id)
-        except ParseError:
-            return ERROR, self.INVALID_SITE
-
         if self.is_sample_date(sample_date_str) is False:
             return ERROR, self.INVALID_SAMPLE_DATE
 
         if (
-            self.is_future_sample_date(sample_date_str, sample_time_str, site_id)
+            site_id and self.is_future_sample_date(sample_date_str, sample_time_str, site_id)
             is True
         ):
             return WARN, self.FUTURE_SAMPLE_DATE

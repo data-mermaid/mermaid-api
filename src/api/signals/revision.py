@@ -1,13 +1,36 @@
-from django.db.models.signals import (
-    m2m_changed,
-    post_delete,
-    post_save,
-    pre_delete,
-    pre_save,
-)
+from django.core.cache import cache
+from django.db.models.signals import post_delete, post_save, pre_delete
 from django.dispatch import receiver
 
-from ..models import AuthUser, CollectRecord, Profile, ProjectProfile, Revision
+from ..models import (
+    AuthUser,
+    CollectRecord,
+    Profile,
+    ProjectProfile,
+    Revision,
+    FishFamily,
+    FishGenus,
+    FishSpecies,
+    BenthicAttribute,
+)
+from ..resources.sync.views import (
+    FISH_SPECIES_SOURCE_TYPE,
+    FISH_GENERA_SOURCE_TYPE,
+    FISH_FAMILIES_SOURCE_TYPE,
+    BENTHIC_ATTRIBUTES_SOURCE_TYPE,
+)
+
+
+__all__ = (
+    "update_delete_project_profile_revisions",
+    "update_delete_project_profile_revisions",
+    "update_project_profile_revisions",
+    "new_collect_record",
+    "deleted_collect_record",
+    "new_auth_user",
+    "deleted_auth_user",
+    "bust_revision_cache",
+)
 
 
 def _create_project_profile_revisions(query_kwargs):
@@ -54,3 +77,20 @@ def new_auth_user(sender, instance, created, *args, **kwargs):
 @receiver(pre_delete, sender=AuthUser)
 def deleted_auth_user(sender, instance, *args, **kwargs):
     _create_project_profile_revisions({"profile": instance.profile})
+
+
+@receiver(post_save, sender=FishFamily)
+@receiver(post_delete, sender=FishFamily)
+@receiver(post_save, sender=FishGenus)
+@receiver(post_delete, sender=FishGenus)
+@receiver(post_save, sender=FishSpecies)
+@receiver(post_delete, sender=FishSpecies)
+@receiver(post_save, sender=BenthicAttribute)
+@receiver(post_delete, sender=BenthicAttribute)
+def bust_revision_cache(sender, instance, *args, **kwargs):
+    if sender in (FishSpecies, FishGenus, FishFamily):
+        cache.delete(FISH_SPECIES_SOURCE_TYPE)
+        cache.delete(FISH_GENERA_SOURCE_TYPE)
+        cache.delete(FISH_FAMILIES_SOURCE_TYPE)
+    elif sender == BenthicAttribute:
+        cache.delete(BENTHIC_ATTRIBUTES_SOURCE_TYPE)

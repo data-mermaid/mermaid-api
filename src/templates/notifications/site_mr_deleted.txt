@@ -1,0 +1,2 @@
+{% extends "notifications/base.txt" %}
+{% block body %}{{deleted_by}} deleted the {{site_mr}} '{{site_mr_name}}' from the project {{project_name}}. You will need to reassign {{cr_count}} to a different site.{% endblock %}

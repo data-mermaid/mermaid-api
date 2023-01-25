@@ -7,6 +7,12 @@ from ..utils.summaries import update_project_summaries
 from ..utils.q import submit_job
 
 
+__all__ = (
+    "update_summaries_on_delete_transect_method",
+    "update_summaries",
+)
+
+
 @receiver(post_delete, sender=TransectMethod)
 def update_summaries_on_delete_transect_method(sender, instance, *args, **kwargs):
     project = get_related_project(instance)

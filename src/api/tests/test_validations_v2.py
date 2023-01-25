@@ -1,7 +1,10 @@
 from api.submission.validations2 import (
     belt_fish,
     benthic_photo_quadrat_transect,
+    benthic_lit,
+    benthic_pit,
     bleaching_quadrat_collection,
+    habitat_complexity,
     ValidationRunner,
 )
 from api.submission.validations import ERROR, OK, WARN, IGNORE
@@ -191,6 +194,26 @@ def test_bleachingqc_protocol_validation_ok(
     assert overall_status == OK
 
 
+def test_benthiclit_protocol_validation_ok(valid_benthic_lit_collect_record, profile1_request):
+    runner = ValidationRunner(serializer=CollectRecordSerializer)
+    overall_status = runner.validate(
+        valid_benthic_lit_collect_record,
+        benthic_lit.benthic_lit_validations,
+        request=profile1_request
+    )
+    assert overall_status == OK
+
+
+def test_benthicpit_protocol_validation_ok(valid_benthic_pit_collect_record, profile1_request):
+    runner = ValidationRunner(serializer=CollectRecordSerializer)
+    overall_status = runner.validate(
+        valid_benthic_pit_collect_record,
+        benthic_pit.benthic_pit_validations,
+        request=profile1_request
+    )
+    assert overall_status == OK
+
+
 def test_benthicpqt_protocol_validation_ok(
     valid_benthic_pq_transect_collect_record, profile1_request
 ):
@@ -233,3 +256,13 @@ def test_benthicpqt_protocol_validation_warn(
         )
         == WARN
     )
+
+
+def test_habcomp_protocol_validation_ok(valid_habitat_complexity_collect_record, profile1_request):
+    runner = ValidationRunner(serializer=CollectRecordSerializer)
+    overall_status = runner.validate(
+        valid_habitat_complexity_collect_record,
+        habitat_complexity.habcomp_validations,
+        request=profile1_request
+    )
+    assert overall_status == OK

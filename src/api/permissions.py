@@ -52,7 +52,7 @@ def data_policy_permission(request, view, project_policy):
 
 
 # get the project pk for use in determining
-# user permissions for project-related ata
+# user permissions for project-related data
 def get_project_pk(request, view):
     data = request.data or {}
     kwargs = view.kwargs or {}

@@ -13,7 +13,7 @@ def test_observation_count_validator_ok(valid_collect_record):
     assert result.status == OK
 
 
-def test_depth_validator_invalid_min(valid_collect_record):
+def test_observation_count_invalid_min(valid_collect_record):
     validator = _get_validator()
     record = CollectRecordSerializer(instance=valid_collect_record).data
     record["data"]["obs_belt_fishes"] = record["data"]["obs_belt_fishes"][0:3]
@@ -22,7 +22,7 @@ def test_depth_validator_invalid_min(valid_collect_record):
     assert result.code == ObservationCountValidator.TOO_FEW_OBS
 
 
-def test_depth_validator_invalid_max(valid_collect_record):
+def test_observation_count_invalid_max(valid_collect_record):
     validator = _get_validator()
     record = CollectRecordSerializer(instance=valid_collect_record).data
 
