@@ -118,6 +118,7 @@ class ApiStack(Stack):
             "DEFAULT_DOMAIN_API": config.api.default_domain_api,
             "DEFAULT_DOMAIN_COLLECT": config.api.default_domain_collect,
             "AWS_BACKUP_BUCKET": backup_bucket.bucket_name,
+            "AWS_PUBLIC_BUCKET": config.api.public_bucket,
             "EMAIL_HOST": config.api.email_host,
             "EMAIL_PORT": config.api.email_port,
             "AUTH0_MANAGEMENT_API_AUDIENCE": config.api.auth0_management_api_audience,
@@ -180,6 +181,7 @@ class ApiStack(Stack):
             platform_version=ecs.FargatePlatformVersion.LATEST,
             cluster=cluster,
             security_groups=[container_security_group],
+            circuit_breaker=ecs.DeploymentCircuitBreaker(rollback=True),
             # cloud_map_options=ecs.CloudMapOptions(cloud_map_namespace=namespace, name=self.svc),
             desired_count=config.api.container_count,
             enable_execute_command=True,
@@ -195,6 +197,23 @@ class ApiStack(Stack):
             # ) # Manually set FARGATE_SPOT as deafult in cluster console.
         )
 
+        # set up autoscaling
+        scaling = service.auto_scale_task_count(
+            min_capacity=1,
+            max_capacity=3, #TODO: change this after we've successfully testing autoscaling. Otherwise we might incur extra Fargate costs.
+        )
+        cpu_utilization = service.metric_cpu_utilization()
+        scaling.scale_on_metric('autoscale_cpu',
+            metric=cpu_utilization,
+            scaling_steps=[
+                # scale out when CPU utilization exceeds 50%
+                appscaling.ScalingInterval(lower=50, change=+1),
+                # increase scale out speed if CPU utilization exceeds 70%
+                appscaling.ScalingInterval(lower=70, change=+3),
+                # scale in when CPU utilization falls below 10%.
+                appscaling.ScalingInterval(upper=10, change=-1),
+            ], 
+        )
 
         # Grant Secret read to API container & backup task
         for _, container_secret in api_secrets.items():
@@ -231,9 +250,12 @@ class ApiStack(Stack):
 
         # add rule to SSL listener
         host_headers = [record.domain_name]
-        host_headers.append("dev-api.datamermaid.org")
         rule_priority = 101
-        if config.env_id == "prod":
+
+        if config.env_id == "dev":
+            host_headers.append("dev-api.datamermaid.org")
+        
+        elif config.env_id == "prod":
             rule_priority = 100
             host_headers.append("api.datamermaid.org")
 
@@ -245,13 +267,6 @@ class ApiStack(Stack):
             priority=rule_priority,
             conditions=[elb.ListenerCondition.host_headers(host_headers)],
             target_groups=[target_group],
-        )
-
-        # Is this required? We has a custom SG already defined...
-        database.connections.allow_from(
-            service.connections, 
-            port_range=ec2.Port.tcp(5432),
-            description="Allow Fargate service connections to Postgres"
         )
 
         # Allow API service to read/write to backup bucket in case we want to manually
@@ -268,7 +283,7 @@ class ApiStack(Stack):
             fifo=True,
             queue_name=f"mermaid-{config.env_id}.fifo",
             content_based_deduplication=False,
-            visibility_timeout=Duration.seconds(os.environ.get('SQS_MESSAGE_VISIBILITY', 300)),
+            visibility_timeout=Duration.seconds(int(os.environ.get('SQS_MESSAGE_VISIBILITY', 300))),
         )
 
         sqs_worker_service = ecs_patterns.QueueProcessingFargateService(
@@ -279,6 +294,8 @@ class ApiStack(Stack):
             image=ecs.ContainerImage.from_docker_image_asset(image_asset),
             cpu=config.api.container_cpu,
             memory_limit_mib=config.api.container_memory,
+            security_groups=[container_security_group],
+            circuit_breaker=ecs.DeploymentCircuitBreaker(rollback=True),
             secrets=api_secrets,
             environment=environment,
             command=["python", "manage.py", "simpleq_worker"],
@@ -302,9 +319,3 @@ class ApiStack(Stack):
         # allow Worker to read messages from the queue
         queue.grant_send_messages(sqs_worker_service.task_definition.task_role)
         
-        # allow Worker to talk to RDS
-        sqs_worker_service.service.connections.allow_to(
-            database.connections, 
-            port_range=ec2.Port.tcp(5432),
-            description="Allow SQS Worker service connections to Postgres"
-        )

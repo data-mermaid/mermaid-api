@@ -532,10 +532,10 @@ class ManagementValidation(ModelValidation):
                 AND (
                     management.id IN (SELECT * FROM se_diff_mrs)
                     OR management.id::text IN (SELECT * FROM cr_diff_mrs)
-                    OR management.id IN (SELECT * FROM (
+                    OR management.id::text IN (SELECT * FROM (
                         SELECT CASE
-                        WHEN se_mrs.management_id != %(mr_id)s THEN se_mrs.management_id
-                        WHEN cr_mrs.management_id::text != %(mr_id)s THEN cr_mrs.management_id::uuid
+                        WHEN se_mrs.management_id::text != %(mr_id)s THEN se_mrs.management_id::text
+                        WHEN cr_mrs.management_id::text != %(mr_id)s THEN cr_mrs.management_id::text
                         END
                         FROM se_mrs
                         INNER JOIN cr_mrs ON (se_mrs.site_id::text = cr_mrs.site_id)
@@ -666,7 +666,7 @@ class ObsBenthicLITValidation(DataValidation, BenthicAttributeMixin):
         benthic_transect = self.data.get("benthic_transect") or {}
         # Convert to cm
         transect_length = (benthic_transect.get("len_surveyed") or 0.0) * 100
-        obs_len = sum(ob.get("length") or 0.0 for ob in obs)
+        obs_len = sum(float(ob.get("length") or 0.0) for ob in obs)
         if obs_len > transect_length * 1.5 or obs_len < transect_length * 0.5:
             return self.warning(self.identifier, self.TOTAL_LENGTH_WARN)
 

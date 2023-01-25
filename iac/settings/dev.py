@@ -13,9 +13,12 @@ DEV_SETTINGS = ProjectSettings(
         default_domain_api="dev-api.datamermaid.org",
         default_domain_collect="dev-collect.datamermaid.org",
         mermaid_api_audience="https://dev-api.datamermaid.org",
+        public_bucket="dev-public.datamermaid.org",
         
         # Secrets
-        dev_emails_name="dev/mermaid-api/dev-emails-mUnSDl"
-
+        dev_emails_name="dev/mermaid-api/dev-emails-mUnSDl",
+        spa_admin_client_id_name="common/mermaid-api/spa-admin-client-id-FuMVtc",
+        spa_admin_client_secret_name="common/mermaid-api/spa-admin-client-secret-kYccw0",
+        mermaid_api_signing_secret_name="common/mermaid-api/mermaid-api-signing-secret-FM7ATI",
     ),
 )

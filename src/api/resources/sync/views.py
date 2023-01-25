@@ -145,7 +145,11 @@ def _get_choices():
 
 
 def _error(status_code, exception, data=None):
-    return {"status_code": status_code, "message": str(exception), "data": data}
+    message = str(exception)
+    if status_code == 500:
+        data = {"name": message}
+        message = "Server error"
+    return {"status_code": status_code, "message": message, "data": data}
 
 
 def _format_errors(errors):

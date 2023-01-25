@@ -20,8 +20,7 @@ class UniqueManagementValidator(BaseValidator):
         # Finds MRs that:
         # - are not self and in same project,
         # - AND belong to SEs with the same site (but diff MR) as any SE with
-        # associated SUs that uses this MR OR
-        # - belong to CRs with the same site (but diff MR) as any CR that uses this MR
+        # associated SUs that uses this MR
         match_sql = """
             WITH se_mrs AS (
                 SELECT DISTINCT management_id, site_id FROM
@@ -30,11 +29,13 @@ class UniqueManagementValidator(BaseValidator):
                 LEFT JOIN transect_benthic tbs ON (ses.id = tbs.sample_event_id)
                 LEFT JOIN transect_belt_fish tbfs ON (ses.id = tbfs.sample_event_id)
                 LEFT JOIN quadrat_collection qcs ON (ses.id = qcs.sample_event_id)
+                LEFT JOIN quadrat_transect qts ON (ses.id = qts.sample_event_id)
                 WHERE management.project_id = %(project_id)s
                 AND (
                     tbs.id IS NOT NULL OR
                     tbfs.id IS NOT NULL OR
-                    qcs.id IS NOT NULL
+                    qcs.id IS NOT NULL OR
+                    qts.id IS NOT NULL
                 )
             )
             SELECT management_id AS id
@@ -61,11 +62,13 @@ class UniqueManagementValidator(BaseValidator):
                 LEFT JOIN transect_benthic tbs ON (ses.id = tbs.sample_event_id)
                 LEFT JOIN transect_belt_fish tbfs ON (ses.id = tbfs.sample_event_id)
                 LEFT JOIN quadrat_collection qcs ON (ses.id = qcs.sample_event_id)
+                LEFT JOIN quadrat_transect qts ON (ses.id = qts.sample_event_id)
                 WHERE management.project_id = %(project_id)s
                 AND (
                     tbs.id IS NOT NULL OR
                     tbfs.id IS NOT NULL OR
-                    qcs.id IS NOT NULL
+                    qcs.id IS NOT NULL OR
+                    qts.id IS NOT NULL
                 )
             )
             SELECT management_id AS id
@@ -130,13 +133,13 @@ class UniqueManagementValidator(BaseValidator):
         results = qry[:3]
         if len(results) > 0:
             matches = [str(r.id) for r in results]
-            return WARN, self.NOT_UNIQUE, {"matches": dict(matches=matches)}
+            return WARN, self.NOT_UNIQUE, {"matches": matches}
 
         qry = self._duplicate_by_name(project_id, management_id, name)
         results = qry[:3]
         if len(results) > 0:
             matches = [str(r.id) for r in results]
-            return WARN, self.SIMILAR_NAME, {"matches": dict(matches=matches)}
+            return WARN, self.SIMILAR_NAME, {"matches": matches}
 
         return OK
 

@@ -3,6 +3,7 @@ import os
 from aws_cdk import App, Environment
 from iac.stacks.common import CommonStack
 from iac.stacks.api import ApiStack
+from iac.stacks.static_site import StaticSiteStack
 from iac.settings.dev import DEV_SETTINGS
 from iac.settings.prod import PROD_SETTINGS
 
@@ -41,6 +42,15 @@ dev_api_stack = ApiStack(
     api_zone=common_stack.api_zone,
 )
 
+dev_static_site_stack = StaticSiteStack(
+    app,
+    "dev-mermaid-static-site",
+    env=cdk_env,
+    tags=tags,
+    config=DEV_SETTINGS,
+    default_cert=common_stack.default_cert,
+)
+
 prod_api_stack = ApiStack(
     app,
     "prod-mermaid-api-django",
@@ -55,5 +65,13 @@ prod_api_stack = ApiStack(
     api_zone=common_stack.api_zone,
 )
 
+prod_static_site_stack = StaticSiteStack(
+    app,
+    "prod-mermaid-static-site",
+    env=cdk_env,
+    tags=tags,
+    config=PROD_SETTINGS,
+    default_cert=common_stack.default_cert,
+)
 
 app.synth()

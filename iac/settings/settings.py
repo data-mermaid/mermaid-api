@@ -44,8 +44,12 @@ class DjangoSettings:
     default_domain_api: str
     default_domain_collect: str
     mermaid_api_audience: str
+    public_bucket: str
 
     # Dynamic Secrets
+    spa_admin_client_id_name: str
+    spa_admin_client_secret_name: str
+    mermaid_api_signing_secret_name: str
     dev_emails_name: str = ""
 
     # Common Attrs (defaults)
@@ -61,22 +65,17 @@ class DjangoSettings:
     secret_key_name: str = "common/mermaid-api/secret-OcuWCl"
     email_host_user_name: str = "common/mermaid-api/email-host-user-afLrHz"
     email_host_password_name: str = "common/mermaid-api/email-host-password-CI6hBI"
-    mermaid_api_signing_secret_name: str = (
-        "common/mermaid-api/mermaid-api-signing-secret-FM7ATI"
-    )
-
+    
     auth0_domain: str = "common/mermaid-api/auth0_domain-K9a7w2"
 
-    spa_admin_client_id_name: str = "common/mermaid-api/spa-admin-client-id-FuMVtc"
-    spa_admin_client_secret_name: str = (
-        "common/mermaid-api/spa-admin-client-secret-kYccw0"
-    )
+    # M2M client used by API to do things in Auth0. Apparently this is shared with both envs?
     mermaid_management_api_client_id_name: str = (
         "common/mermaid-api/mermaid-management-api-client-id-nIWaxV"
     )
     mermaid_management_api_client_secret_name: str = (
         "common/mermaid-api/mermaid-management-api-client-secret-HNVoT0"
     )
+
     mc_api_key_name: str = "common/mermaid-api/mc-api-key-xSsQOk"
     mc_api_list_id_name: str = "common/mermaid-api/mc-api-list-id-Am5u1G"
     drf_recaptcha_secret_key_name: str = "common/mermaid-api/drf-recaptcha-secret-key-MdFr2W"

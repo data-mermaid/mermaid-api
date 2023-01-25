@@ -175,7 +175,7 @@ class Command(BaseCommand):
             "db_name": settings.DATABASES["default"]["NAME"],
         }
 
-        cmd_str = "pg_restore -O -F c --jobs=4 -U {db_user} -h {db_host} -d {db_name} {sql_loc}".format(
+        cmd_str = "pg_restore -O -x -F c --jobs=4 -U {db_user} -h {db_host} -d {db_name} {sql_loc}".format(
             **params
         )
         print("$> %s" % cmd_str)
