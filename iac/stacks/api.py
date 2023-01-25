@@ -139,7 +139,7 @@ class ApiStack(Stack):
             file="Dockerfile.ecs",
         )
 
-        # create a scheduled fargate task
+        # create a ScheduledBackupTask
         backup_task = ecs_patterns.ScheduledFargateTask(
             self,
             "ScheduledBackupTask",
@@ -153,6 +153,23 @@ class ApiStack(Stack):
                 secrets=api_secrets,
                 environment=environment,
                 command=["python", "manage.py", "dbbackup", f"{config.env_id}"],
+            ),
+        )
+
+        # create a DailySummaryTask
+        daily_summary_task = ecs_patterns.ScheduledFargateTask(
+            self,
+            "DailySummaryTask",
+            schedule=appscaling.Schedule.rate(Duration.days(1)),
+            cluster=cluster,
+            security_groups=[container_security_group],
+            scheduled_fargate_task_image_options=ecs_patterns.ScheduledFargateTaskImageOptions(
+                image=ecs.ContainerImage.from_docker_image_asset(image_asset),
+                cpu=config.api.container_cpu,
+                memory_limit_mib=config.api.container_memory,
+                secrets=api_secrets,
+                environment=environment,
+                command=["python", "manage.py", "update_summaries"],
             ),
         )
 
@@ -219,6 +236,7 @@ class ApiStack(Stack):
         for _, container_secret in api_secrets.items():
             container_secret.grant_read(service.task_definition.execution_role)
             container_secret.grant_read(backup_task.task_definition.execution_role)
+            container_secret.grant_read(daily_summary_task.task_definition.execution_role)
 
         # add FargateService as target to LoadBalancer/Listener, currently, send all traffic. TODO filter by domain?
 
