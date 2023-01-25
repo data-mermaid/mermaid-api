@@ -4,6 +4,7 @@ from django.core import serializers
 from django.db.models.signals import post_delete, post_save, pre_save
 from django.dispatch import receiver
 
+from .attributes import *
 from .notifications import *
 from .revision import *
 from .summaries import *
