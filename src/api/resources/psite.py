@@ -1,9 +1,11 @@
 from ..models import Site
-from .base import BaseAPIFilterSet, BaseAPISerializer, BaseProjectApiViewSet
+from .base import BaseAPIFilterSet, BaseAPISerializer, BaseProjectApiViewSet, PointFieldValidated
 from .mixins import CopyRecordsMixin, CreateOrUpdateSerializerMixin, NotifyDeletedSiteMRMixin
 
 
 class PSiteSerializer(CreateOrUpdateSerializerMixin, BaseAPISerializer):
+    location = PointFieldValidated()
+
     class Meta:
         geo_field = "location"
         model = Site

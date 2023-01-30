@@ -13,6 +13,9 @@ on:
       - 'w[0-9]+.[0-9]+'        # eg: w1.1
       - 'w[0-9]+.[0-9]+.[0-9]+' # eg: w1.1.1
 
+concurrency:
+  group: api-deployment-${{ github.ref }}
+
 jobs:
   deploy:
     runs-on: ubuntu-20.04
@@ -50,6 +53,9 @@ jobs:
           PYTHONPATH: ${{ github.workspace }}
           DEPLOY_AWS_ACCT: ${{ secrets.DEPLOY_AWS_ACCT }}
         run: |
-          cd iac && cdk deploy --require-approval never "${{ env.TARGET }}"-mermaid-api-django
+          cd iac && cdk deploy \
+            --require-approval never \
+            "${{ env.TARGET }}"-mermaid-api-django \
+            "${{ env.TARGET }}"-mermaid-static-site
 
       

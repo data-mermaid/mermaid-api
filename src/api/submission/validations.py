@@ -532,10 +532,10 @@ class ManagementValidation(ModelValidation):
                 AND (
                     management.id IN (SELECT * FROM se_diff_mrs)
                     OR management.id::text IN (SELECT * FROM cr_diff_mrs)
-                    OR management.id IN (SELECT * FROM (
+                    OR management.id::text IN (SELECT * FROM (
                         SELECT CASE
-                        WHEN se_mrs.management_id != %(mr_id)s THEN se_mrs.management_id
-                        WHEN cr_mrs.management_id::text != %(mr_id)s THEN cr_mrs.management_id::uuid
+                        WHEN se_mrs.management_id::text != %(mr_id)s THEN se_mrs.management_id::text
+                        WHEN cr_mrs.management_id::text != %(mr_id)s THEN cr_mrs.management_id::text
                         END
                         FROM se_mrs
                         INNER JOIN cr_mrs ON (se_mrs.site_id::text = cr_mrs.site_id)
