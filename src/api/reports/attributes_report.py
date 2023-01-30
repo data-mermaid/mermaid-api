@@ -173,7 +173,7 @@ def write_fish_species(wb, regions):
                 fish_species.vulnerability,
                 fish_species.climate_score,
                 *create_regions_row(
-                    regions, [str(r.id) for r in fish_species.regions.all().order_by("genus", "name")]
+                    regions, [str(r.id) for r in fish_species.regions.all()]
                 ),
             ]
             for fish_species in FishSpecies.objects.select_related(
