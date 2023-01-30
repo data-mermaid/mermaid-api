@@ -1,4 +1,5 @@
 from .base import (
+    SUPERUSER_APPROVED,
     Profile,
     BaseModel,
     AreaMixin,

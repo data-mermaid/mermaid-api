@@ -17,6 +17,7 @@ gunicorn==20.1.0
 mailchimp3==3.0.17
 natsort==8.1.0
 psycopg2-binary==2.9.3
+openpyxl==3.0.10
 pytest-cov==3.0.0
 pytest-django==4.5.2
 pytest-rich==0.1.1
