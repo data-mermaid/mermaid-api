@@ -12,7 +12,7 @@ from simpleq.queues import Queue
 
 def submit_job(delay, callable, *args, **kwargs):
     args = args or []
-    kwargs = kwargs or []
+    kwargs = kwargs or {}
     q = Queue(settings.QUEUE_NAME)
     job_id = generate_job_id(delay, callable, *args, **kwargs)
     job = Job(job_id, None, callable, *args, **kwargs)
@@ -21,7 +21,7 @@ def submit_job(delay, callable, *args, **kwargs):
     return job_id
 
 
-def generate_job_id(delay, *args, **kwargs):
+def generate_job_id(delay, callable, *args, **kwargs):
     timestamp = ""
     if delay and delay > 0:
         t = int(time.time())
