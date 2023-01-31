@@ -23,7 +23,7 @@ class StaticSiteStack(Stack):
         super().__init__(scope, id, **kwargs)
 
         # bucket
-        site_bucket = s3.Bucket(
+        self.site_bucket = s3.Bucket(
             self,
             id="Bucket",
             bucket_name=config.api.public_bucket,
@@ -39,7 +39,7 @@ class StaticSiteStack(Stack):
         # cloudfront
         distribution = self.setup_cloudfront(
             default_cert=default_cert,
-            site_bucket=site_bucket,
+            site_bucket=self.site_bucket,
         )
 
     def setup_cloudfront(
