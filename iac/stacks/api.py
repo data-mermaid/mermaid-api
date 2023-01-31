@@ -31,6 +31,7 @@ class ApiStack(Stack):
         cluster: ecs.Cluster,
         database: rds.DatabaseInstance,
         backup_bucket: s3.Bucket,
+        public_bucket: s3.Bucket,
         load_balancer: elb.ApplicationLoadBalancer,
         container_security_group: ec2.SecurityGroup,
         api_zone: r53.HostedZone,
@@ -299,4 +300,9 @@ class ApiStack(Stack):
 
         # allow Worker to read messages from the queue
         queue.grant_send_messages(sqs_worker_service.task_definition.task_role)
+
+        # allow Tasks (API/SQS) to read/write to the public bucket
+        public_bucket.grant_read_write(sqs_worker_service.task_definition.task_role)
+        public_bucket.grant_read_write(service.task_definition.task_role)
+
         
