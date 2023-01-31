@@ -36,18 +36,8 @@ class StaticSiteStack(Stack):
             value=config.api.public_bucket,
         )
 
-        # cloudfront
-        distribution = self.setup_cloudfront(
-            default_cert=default_cert,
-            site_bucket=self.site_bucket,
-        )
-
-    def setup_cloudfront(
-        self,
-        default_cert: acm.Certificate,
-        site_bucket: s3.Bucket,
-    ) -> cf.Distribution:
-
+        # Set up cloudfront
+        
         # cfOAI
         cloudfront_OAI = cf.OriginAccessIdentity(
             self,
@@ -61,18 +51,18 @@ class StaticSiteStack(Stack):
         # Grant access to cloudfront
         policy_stmt = iam.PolicyStatement(
             actions=['s3:GetObject'],
-            resources=[site_bucket.arn_for_objects('*')],
+            resources=[self.site_bucket.arn_for_objects('*')],
             principals=[cfoai_principal]
         )
-        site_bucket.add_to_resource_policy(policy_stmt)
+        self.site_bucket.add_to_resource_policy(policy_stmt)
 
         # CloudFront distribution
-        domain_names = [site_bucket.bucket_name]
+        domain_names = [self.site_bucket.bucket_name]
 
         behaviour_options = cf.BehaviorOptions(
             cache_policy=cf.CachePolicy.CACHING_DISABLED,
             origin=cf_origins.S3Origin(
-                bucket=site_bucket, 
+                bucket=self.site_bucket, 
                 origin_access_identity=cloudfront_OAI
             ),
             allowed_methods=cf.AllowedMethods.ALLOW_GET_HEAD_OPTIONS,
@@ -88,5 +78,3 @@ class StaticSiteStack(Stack):
             minimum_protocol_version=cf.SecurityPolicyProtocol.TLS_V1_2_2021,
             default_behavior=behaviour_options
         )
-
-        return distribution
