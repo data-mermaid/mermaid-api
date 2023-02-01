@@ -103,7 +103,7 @@ class Job:
             self.run_time = (self.stop_time - self.start_time).total_seconds()
             self.log(
                 f"Finished job {self.callable.__name__} at {self.stop_time.isoformat()} "
-                "in {self.run_time} seconds."
+                f"in {self.run_time} seconds."
             )
         else:
             self.log(f"Job {self.callable.__name__} failed to run: {self.exception}")
