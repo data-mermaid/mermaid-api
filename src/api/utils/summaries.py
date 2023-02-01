@@ -4,7 +4,8 @@ from ..models import Project, SummarySampleEventModel, SummarySampleEventSQLMode
 
 
 def update_project_summaries(project_id, skip_test_project=True, *args, **kwargs):
-    update_project_summary_sample_event(project_id, skip_test_project)
+    pass  # stop the fires burning
+    # update_project_summary_sample_event(project_id, skip_test_project)
 
 
 def update_project_summary_sample_event(project_id, skip_test_project=True):
