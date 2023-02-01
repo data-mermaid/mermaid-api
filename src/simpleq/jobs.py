@@ -90,7 +90,7 @@ class Job:
         """Run this job."""
         self.start_time = datetime.utcnow()
         self.log(
-            f"Starting job {self.callable.__name__} at {self.start_time.isoformat()}."
+            f"Starting job {self.callable.__name__} with args [{self.kwargs}] at {self.start_time.isoformat()}"
         )
 
         try:
