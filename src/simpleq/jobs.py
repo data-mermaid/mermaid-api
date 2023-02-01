@@ -89,9 +89,12 @@ class Job:
     def run(self):
         """Run this job."""
         self.start_time = datetime.utcnow()
-        self.log(
-            f"Starting job {self.callable.__name__} with args [{self.kwargs}] at {self.start_time.isoformat()}"
-        )
+        msg = f"Starting job {self.callable.__name__} at {self.start_time.isoformat()}"
+
+        if self.callable.__name__ == "update_project_summaries":
+            msg = f"Starting job {self.callable.__name__} with args [{self.kwargs}] at {self.start_time.isoformat()}"
+        
+        self.log(msg)
 
         try:
             self.result = self.callable(*self.args, **self.kwargs)
