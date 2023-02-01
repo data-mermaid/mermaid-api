@@ -266,7 +266,7 @@ class ApiStack(Stack):
             fifo=True,
             queue_name=f"mermaid-{config.env_id}.fifo",
             content_based_deduplication=False,
-            visibility_timeout=Duration.seconds(config.api.sqs_visibility_timeout),
+            visibility_timeout=Duration.seconds(config.api.sqs_message_visibility),
         )
 
         sqs_worker_service = ecs_patterns.QueueProcessingFargateService(
