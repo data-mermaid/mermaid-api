@@ -129,7 +129,7 @@ class ApiStack(Stack):
             "DB_NAME": config.database.name,
             "DB_HOST": database.instance_endpoint.hostname,
             "DB_PORT": config.database.port,
-            "SQS_MESSAGE_VISIBILITY": "300",
+            "SQS_MESSAGE_VISIBILITY": str(config.api.sqs_message_visibility),
         }
 
         # build image asset to be shared with API and Backup Task
@@ -266,7 +266,7 @@ class ApiStack(Stack):
             fifo=True,
             queue_name=f"mermaid-{config.env_id}.fifo",
             content_based_deduplication=False,
-            visibility_timeout=Duration.seconds(int(os.environ.get('SQS_MESSAGE_VISIBILITY', 300))),
+            visibility_timeout=Duration.seconds(config.api.sqs_visibility_timeout),
         )
 
         sqs_worker_service = ecs_patterns.QueueProcessingFargateService(
