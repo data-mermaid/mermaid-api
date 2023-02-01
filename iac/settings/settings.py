@@ -45,6 +45,7 @@ class DjangoSettings:
     default_domain_collect: str
     mermaid_api_audience: str
     public_bucket: str
+    sqs_message_visibility: int
 
     # Dynamic Secrets
     spa_admin_client_id_name: str

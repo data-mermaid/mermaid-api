@@ -14,6 +14,7 @@ PROD_SETTINGS = ProjectSettings(
         default_domain_collect="collect.datamermaid.org",
         mermaid_api_audience="https://api.datamermaid.org",
         public_bucket="public.datamermaid.org",
+        sqs_message_visibility=600,
         
         # Secrets
         spa_admin_client_id_name="prod/mermaid-api/spa-admin-client-id-8GJ1mU",
