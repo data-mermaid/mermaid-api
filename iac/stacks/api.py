@@ -1,5 +1,6 @@
 import os
 from importlib import resources
+
 from aws_cdk import (
     Stack,
     Duration,
@@ -55,7 +56,11 @@ class ApiStack(Stack):
             "DB_USER": ecs.Secret.from_secrets_manager(database.secret, "username"),
             "DB_PASSWORD": ecs.Secret.from_secrets_manager(database.secret, "password"),
             "PGPASSWORD": ecs.Secret.from_secrets_manager(database.secret, "password"),
-            "DRF_RECAPTCHA_SECRET_KEY": ecs.Secret.from_secrets_manager(config.api.get_secret_object(self, config.api.drf_recaptcha_secret_key_name)),
+            "DRF_RECAPTCHA_SECRET_KEY": ecs.Secret.from_secrets_manager(
+                config.api.get_secret_object(
+                    self, config.api.drf_recaptcha_secret_key_name
+                )
+            ),
             "EMAIL_HOST_USER": ecs.Secret.from_secrets_manager(
                 config.api.get_secret_object(self, config.api.email_host_user_name)
             ),
@@ -111,7 +116,7 @@ class ApiStack(Stack):
             )
 
         # Envir Vars
-        environment={
+        environment = {
             "ENV": config.env_id,
             "ENVIRONMENT": config.env_id,
             "ALLOWED_HOSTS": load_balancer.load_balancer_dns_name,
@@ -136,7 +141,7 @@ class ApiStack(Stack):
         image_asset = ecr_assets.DockerImageAsset(
             self,
             "ApiImage",
-            directory="../", 
+            directory="../",
             file="Dockerfile.ecs",
         )
 
@@ -197,7 +202,6 @@ class ApiStack(Stack):
             # ) # Manually set FARGATE_SPOT as deafult in cluster console.
         )
 
-
         # Grant Secret read to API container & backup task
         for _, container_secret in api_secrets.items():
             container_secret.grant_read(service.task_definition.execution_role)
@@ -228,7 +232,9 @@ class ApiStack(Stack):
             "AliasRecord",
             zone=api_zone,
             record_name=f"{config.env_id}.{api_zone.zone_name}",
-            target=r53.RecordTarget.from_alias(r53_targets.LoadBalancerTarget(load_balancer))
+            target=r53.RecordTarget.from_alias(
+                r53_targets.LoadBalancerTarget(load_balancer)
+            ),
         )
 
         # add rule to SSL listener
@@ -237,7 +243,7 @@ class ApiStack(Stack):
 
         if config.env_id == "dev":
             host_headers.append("dev-api.datamermaid.org")
-        
+
         elif config.env_id == "prod":
             rule_priority = 100
             host_headers.append("api.datamermaid.org")
@@ -255,11 +261,19 @@ class ApiStack(Stack):
         # Allow API service to read/write to backup bucket in case we want to manually
         # run dbbackup/dbrestore tasks from within the container
         backup_bucket.grant_read_write(service.task_definition.task_role)
-        
+
         # Give permission to backup task
         backup_bucket.grant_read_write(backup_task.task_definition.task_role)
 
         # define fifo queue
+        dead_letter_queue = sqs.Queue(
+            self,
+            "DeadLetterQueue",
+            fifo=True,
+            queue_name=f"mermaid-{config.env_id}-deadletter.fifo",
+            content_based_deduplication=True,
+            retention_period=Duration.days(7),
+        )
         queue = sqs.Queue(
             self,
             "FifoQueue",
@@ -267,6 +281,9 @@ class ApiStack(Stack):
             queue_name=f"mermaid-{config.env_id}.fifo",
             content_based_deduplication=False,
             visibility_timeout=Duration.seconds(config.api.sqs_message_visibility),
+            dead_letter_queue=sqs.DeadLetterQueue(
+                max_receive_count=3, queue=dead_letter_queue
+            ),
         )
 
         sqs_worker_service = ecs_patterns.QueueProcessingFargateService(
@@ -281,18 +298,16 @@ class ApiStack(Stack):
             secrets=api_secrets,
             environment=environment,
             command=["python", "manage.py", "simpleq_worker"],
-
-            min_scaling_capacity=0, # service should only run if ness
-            max_scaling_capacity=1, # only run one task at a time to process messages
-
-            # this defines how the service shall autoscale based on the 
+            min_scaling_capacity=0,  # service should only run if ness
+            max_scaling_capacity=1,  # only run one task at a time to process messages
+            # this defines how the service shall autoscale based on the
             # SQS queue's ApproximateNumberOfMessagesVisible metric
             scaling_steps=[
                 # when 0 messages, scale down
                 appscaling.ScalingInterval(upper=0, change=-1),
                 # when >=1 messages, scale up
                 appscaling.ScalingInterval(lower=1, change=+1),
-            ], 
+            ],
         )
 
         # allow API to send messages to the queue
@@ -304,5 +319,3 @@ class ApiStack(Stack):
         # allow Tasks (API/SQS) to read/write to the public bucket
         public_bucket.grant_read_write(sqs_worker_service.task_definition.task_role)
         public_bucket.grant_read_write(service.task_definition.task_role)
-
-        
