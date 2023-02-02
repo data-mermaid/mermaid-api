@@ -52,7 +52,7 @@ class BeltFishObsSQLModel(BaseSUSQLModel):
             o.count,
             ROUND(
                 (10 * o.count)::numeric * f.biomass_constant_a *
-                ((o.size * f.biomass_constant_c) ^ f.biomass_constant_b) /
+                power((o.size * f.biomass_constant_c)::float, f.biomass_constant_b::float)::numeric /
                 (su.len_surveyed * wc.val)::numeric,
                 2
             )::numeric AS biomass_kgha,
