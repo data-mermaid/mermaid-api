@@ -21,7 +21,9 @@ from constructs import Construct
 
 from iac.settings import ProjectSettings
 from iac.settings.utils import camel_case
-
+from iac.stacks.constructs.monitored_queue import (
+    MonitoredQueue,
+)
 
 class ApiStack(Stack):
     def __init__(
@@ -265,32 +267,19 @@ class ApiStack(Stack):
         # Give permission to backup task
         backup_bucket.grant_read_write(backup_task.task_definition.task_role)
 
-        # define fifo queue
-        dead_letter_queue = sqs.Queue(
+        # get monitored queue
+        monitored_queue = MonitoredQueue(
             self,
-            "DeadLetterQueue",
-            fifo=True,
-            queue_name=f"mermaid-{config.env_id}-deadletter.fifo",
-            content_based_deduplication=True,
-            retention_period=Duration.days(7),
-        )
-        queue = sqs.Queue(
-            self,
-            "FifoQueue",
-            fifo=True,
-            queue_name=f"mermaid-{config.env_id}.fifo",
-            content_based_deduplication=False,
-            visibility_timeout=Duration.seconds(config.api.sqs_message_visibility),
-            dead_letter_queue=sqs.DeadLetterQueue(
-                max_receive_count=3, queue=dead_letter_queue
-            ),
+            "MonitoredQueue",
+            config=config,
+            # email=sns_email,
         )
 
         sqs_worker_service = ecs_patterns.QueueProcessingFargateService(
             self,
             "SQSWorker",
             cluster=cluster,
-            queue=queue,
+            queue=monitored_queue.queue,
             image=ecs.ContainerImage.from_docker_image_asset(image_asset),
             cpu=config.api.container_cpu,
             memory_limit_mib=config.api.container_memory,
@@ -311,10 +300,10 @@ class ApiStack(Stack):
         )
 
         # allow API to send messages to the queue
-        queue.grant_send_messages(service.task_definition.task_role)
+        monitored_queue.queue.grant_send_messages(service.task_definition.task_role)
 
         # allow Worker to read messages from the queue
-        queue.grant_send_messages(sqs_worker_service.task_definition.task_role)
+        monitored_queue.queue.grant_send_messages(sqs_worker_service.task_definition.task_role)
 
         # allow Tasks (API/SQS) to read/write to the public bucket
         public_bucket.grant_read_write(sqs_worker_service.task_definition.task_role)
