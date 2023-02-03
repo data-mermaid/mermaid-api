@@ -27,6 +27,7 @@ class QueueWorker(Construct):
         api_secrets: dict,
         environment: dict,
         public_bucket: s3.Bucket,
+        queue_name: str,
         email: str = None,
         **kwargs,
     ) -> None:
@@ -38,7 +39,7 @@ class QueueWorker(Construct):
             self,
             "DLQ",
             fifo=True,
-            queue_name=f"mermaid-{config.env_id}-deadletter.fifo",
+            queue_name=f"{queue_name}-dql.fifo",
             visibility_timeout=Duration.seconds(config.api.sqs_message_visibility),
             retention_period=Duration.days(7),
         )
@@ -48,7 +49,7 @@ class QueueWorker(Construct):
             self,
             "Queue",
             fifo=True,
-            queue_name=f"mermaid-{config.env_id}.fifo",
+            queue_name=f"{queue_name}.fifo",
             content_based_deduplication=False,
             visibility_timeout=Duration.seconds(config.api.sqs_message_visibility),
             dead_letter_queue=sqs.DeadLetterQueue(

@@ -356,7 +356,7 @@ SQS_WAIT_SECONDS = 20
 SQS_MESSAGE_VISIBILITY = int(os.environ.get('SQS_MESSAGE_VISIBILITY', "300"))
 
 # Name of queue, if it doesn't exist it will be created.
-QUEUE_NAME = f"mermaid-{ENVIRONMENT}"  # required
+QUEUE_NAME = os.environ.get("SQS_QUEUE_NAME", "mermaid-local") # required
 
 # Override default boto3 url for SQS
 ENDPOINT_URL = None if ENVIRONMENT in ("dev", "prod") else "http://sqs:9324"
