@@ -11,6 +11,7 @@ from aws_cdk import (
     aws_ec2 as ec2,
     aws_applicationautoscaling as appscaling,
     aws_s3 as s3,
+    aws_lambda as _lambda,
 )
 
 from iac.settings.settings import ProjectSettings
@@ -100,6 +101,26 @@ class QueueWorker(Construct):
 
         dlq_alarm.add_alarm_action(sns_action)
         dlq_alarm.add_ok_action(sns_action)
+
+        # TODO: need to pass secret name only, then use secretsmanager to get value inside container
+        # combined_env = {**environment, **api_secrets}
+        
+        lambda_fn = _lambda.DockerImageFunction(
+            self,
+            "LambdaFn",
+            code=_lambda.DockerImageCode.from_ecr(
+                image_asset.repository,
+                cmd=["python", "manage.py", "simpleq_worker"],
+                tag_or_digest=image_asset.image_tag,
+            ),
+            # environment=combined_env,
+            environment=environment,
+        )
+
+        for _, secret in api_secrets.items():
+            secret.grant_read(lambda_fn)
+
+        # TODO: create a custom event source mapping to map the SQS queue to the lambda function
 
         # Fargate Service for Worker Task
         fargate_service = ecs_patterns.QueueProcessingFargateService(

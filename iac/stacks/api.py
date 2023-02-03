@@ -206,6 +206,7 @@ class ApiStack(Stack):
         )
 
         # Grant Secret read to API container & backup task
+        # TODO: I dont think this is needed. I'm not doing this for the Worker task and it works fine.
         for _, container_secret in api_secrets.items():
             container_secret.grant_read(service.task_definition.execution_role)
             container_secret.grant_read(backup_task.task_definition.execution_role)
