@@ -117,6 +117,7 @@ class ApiStack(Stack):
             )
 
         # Envir Vars
+        sqs_queue_name = f'mermaid-{config.env_id}-queue'
         environment = {
             "ENV": config.env_id,
             "ENVIRONMENT": config.env_id,
@@ -136,6 +137,7 @@ class ApiStack(Stack):
             "DB_HOST": database.instance_endpoint.hostname,
             "DB_PORT": config.database.port,
             "SQS_MESSAGE_VISIBILITY": str(config.api.sqs_message_visibility),
+            "SQS_QUEUE_NAME": sqs_queue_name,
         }
 
         # build image asset to be shared with API and Backup Task
@@ -277,6 +279,7 @@ class ApiStack(Stack):
             api_secrets=api_secrets,
             environment=environment,
             public_bucket=public_bucket,
+            queue_name=sqs_queue_name,
             # email=sns_email,
         )
 
