@@ -77,7 +77,7 @@ class QueueWorker(Construct):
         dlq_alarm = cw.Alarm(
             self,
             "DLQAlarm",
-            metric=queue.metric_approximate_number_of_messages_visible(
+            metric=dead_letter_queue.metric_approximate_number_of_messages_visible(
                 statistic="Maximum",
             ),
             threshold=1,
@@ -130,4 +130,3 @@ class QueueWorker(Construct):
 
         # exports
         self.queue = queue
-        # self.fargate_service = fargate_service
