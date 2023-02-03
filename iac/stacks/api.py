@@ -269,7 +269,7 @@ class ApiStack(Stack):
         # get monitored queue
         worker = QueueWorker(
             self,
-            "QueueWorker",
+            "Worker",
             config=config,
             cluster=cluster,
             image_asset=image_asset,
@@ -283,9 +283,6 @@ class ApiStack(Stack):
         # allow API to send messages to the queue
         worker.queue.grant_send_messages(service.task_definition.task_role)
 
-        # allow Worker to read messages from the queue
-        # worker.queue.grant_send_messages(sqs_worker_service.task_definition.task_role)
-
-        # allow Tasks (API/SQS) to read/write to the public bucket
+        # allow API to read/write to the public bucket
         public_bucket.grant_read_write(service.task_definition.task_role)
         

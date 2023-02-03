@@ -36,15 +36,17 @@ class QueueWorker(Construct):
         # DLQ
         dead_letter_queue = sqs.Queue(
             self,
-            "DeadLetterQueue",
-            queue_name=f"mermaid-{config.env_id}-deadletter",
+            "DLQ",
+            fifo=True,
+            queue_name=f"mermaid-{config.env_id}-deadletter.fifo",
+            visibility_timeout=Duration.seconds(config.api.sqs_message_visibility),
             retention_period=Duration.days(7),
         )
 
         # FIFO Queue
         queue = sqs.Queue(
             self,
-            "FifoQueue",
+            "Queue",
             fifo=True,
             queue_name=f"mermaid-{config.env_id}.fifo",
             content_based_deduplication=False,
@@ -60,7 +62,7 @@ class QueueWorker(Construct):
         alarm_when_message_older_than = 15
         queue_alarm = cw.Alarm(
             self,
-            "QueueAlarm",
+            "QAlarm",
             metric=queue.metric_approximate_age_of_oldest_message(
                 statistic="Maximum",
                 period=Duration.minutes(1),
@@ -101,7 +103,7 @@ class QueueWorker(Construct):
         # Fargate Service for Worker Task
         fargate_service = ecs_patterns.QueueProcessingFargateService(
             self,
-            "WorkerService",
+            "Service",
             cluster=cluster,
             queue=queue,
             image=ecs.ContainerImage.from_docker_image_asset(image_asset),
