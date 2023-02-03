@@ -6,16 +6,27 @@ from aws_cdk import (
     aws_cloudwatch_actions as cw_actions,
     aws_sns as sns,
     aws_sns_subscriptions as sns_subs,
+    aws_ecs_patterns as ecs_patterns,
+    aws_ecs as ecs,
+    aws_ec2 as ec2,
+    aws_applicationautoscaling as appscaling,
+    aws_s3 as s3,
 )
 
 from iac.settings.settings import ProjectSettings
 
-class MonitoredQueue(Construct):
+class QueueWorker(Construct):
     def __init__(
         self, 
         scope: Construct, 
         id: str, 
         config: ProjectSettings,
+        cluster: ecs.Cluster,
+        image_asset: ecs.ContainerImage,
+        container_security_group: ec2.SecurityGroup,
+        api_secrets: dict,
+        environment: dict,
+        public_bucket: s3.Bucket,
         email: str = None,
         **kwargs,
     ) -> None:
@@ -87,5 +98,34 @@ class MonitoredQueue(Construct):
         dlq_alarm.add_alarm_action(sns_action)
         dlq_alarm.add_ok_action(sns_action)
 
-        # export the main queue
+        # Fargate Service for Worker Task
+        fargate_service = ecs_patterns.QueueProcessingFargateService(
+            self,
+            "WorkerService",
+            cluster=cluster,
+            queue=queue,
+            image=ecs.ContainerImage.from_docker_image_asset(image_asset),
+            cpu=config.api.container_cpu,
+            memory_limit_mib=config.api.container_memory,
+            security_groups=[container_security_group],
+            secrets=api_secrets,
+            environment=environment,
+            command=["python", "manage.py", "simpleq_worker"],
+            min_scaling_capacity=0,  # service should only run if ness
+            max_scaling_capacity=1,  # only run one task at a time to process messages
+            # this defines how the service shall autoscale based on the
+            # SQS queue's ApproximateNumberOfMessagesVisible metric
+            scaling_steps=[
+                # when 0 messages, scale down
+                appscaling.ScalingInterval(upper=0, change=-1),
+                # when >=1 messages, scale up
+                appscaling.ScalingInterval(lower=1, change=+1),
+            ],
+        )
+
+        # allow worker access to public bucket
+        public_bucket.grant_read_write(fargate_service.task_definition.task_role)
+
+        # exports
         self.queue = queue
+        # self.fargate_service = fargate_service

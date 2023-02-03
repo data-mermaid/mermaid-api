@@ -20,9 +20,8 @@ from aws_cdk import (
 from constructs import Construct
 
 from iac.settings import ProjectSettings
-from iac.settings.utils import camel_case
-from iac.stacks.constructs.monitored_queue import (
-    MonitoredQueue,
+from iac.stacks.constructs.worker import (
+    QueueWorker,
 )
 
 class ApiStack(Stack):
@@ -268,43 +267,25 @@ class ApiStack(Stack):
         backup_bucket.grant_read_write(backup_task.task_definition.task_role)
 
         # get monitored queue
-        monitored_queue = MonitoredQueue(
+        worker = QueueWorker(
             self,
-            "MonitoredQueue",
+            "QueueWorker",
             config=config,
+            cluster=cluster,
+            image_asset=image_asset,
+            container_security_group=container_security_group,
+            api_secrets=api_secrets,
+            environment=environment,
+            public_bucket=public_bucket,
             # email=sns_email,
         )
 
-        sqs_worker_service = ecs_patterns.QueueProcessingFargateService(
-            self,
-            "SQSWorker",
-            cluster=cluster,
-            queue=monitored_queue.queue,
-            image=ecs.ContainerImage.from_docker_image_asset(image_asset),
-            cpu=config.api.container_cpu,
-            memory_limit_mib=config.api.container_memory,
-            security_groups=[container_security_group],
-            secrets=api_secrets,
-            environment=environment,
-            command=["python", "manage.py", "simpleq_worker"],
-            min_scaling_capacity=0,  # service should only run if ness
-            max_scaling_capacity=1,  # only run one task at a time to process messages
-            # this defines how the service shall autoscale based on the
-            # SQS queue's ApproximateNumberOfMessagesVisible metric
-            scaling_steps=[
-                # when 0 messages, scale down
-                appscaling.ScalingInterval(upper=0, change=-1),
-                # when >=1 messages, scale up
-                appscaling.ScalingInterval(lower=1, change=+1),
-            ],
-        )
-
         # allow API to send messages to the queue
-        monitored_queue.queue.grant_send_messages(service.task_definition.task_role)
+        worker.queue.grant_send_messages(service.task_definition.task_role)
 
         # allow Worker to read messages from the queue
-        monitored_queue.queue.grant_send_messages(sqs_worker_service.task_definition.task_role)
+        # worker.queue.grant_send_messages(sqs_worker_service.task_definition.task_role)
 
         # allow Tasks (API/SQS) to read/write to the public bucket
-        public_bucket.grant_read_write(sqs_worker_service.task_definition.task_role)
         public_bucket.grant_read_write(service.task_definition.task_role)
+        
