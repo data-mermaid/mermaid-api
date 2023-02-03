@@ -1,5 +1,6 @@
 import os
 from importlib import resources
+
 from aws_cdk import (
     Stack,
     Duration,
@@ -19,8 +20,9 @@ from aws_cdk import (
 from constructs import Construct
 
 from iac.settings import ProjectSettings
-from iac.settings.utils import camel_case
-
+from iac.stacks.constructs.worker import (
+    QueueWorker,
+)
 
 class ApiStack(Stack):
     def __init__(
@@ -55,7 +57,11 @@ class ApiStack(Stack):
             "DB_USER": ecs.Secret.from_secrets_manager(database.secret, "username"),
             "DB_PASSWORD": ecs.Secret.from_secrets_manager(database.secret, "password"),
             "PGPASSWORD": ecs.Secret.from_secrets_manager(database.secret, "password"),
-            "DRF_RECAPTCHA_SECRET_KEY": ecs.Secret.from_secrets_manager(config.api.get_secret_object(self, config.api.drf_recaptcha_secret_key_name)),
+            "DRF_RECAPTCHA_SECRET_KEY": ecs.Secret.from_secrets_manager(
+                config.api.get_secret_object(
+                    self, config.api.drf_recaptcha_secret_key_name
+                )
+            ),
             "EMAIL_HOST_USER": ecs.Secret.from_secrets_manager(
                 config.api.get_secret_object(self, config.api.email_host_user_name)
             ),
@@ -111,7 +117,8 @@ class ApiStack(Stack):
             )
 
         # Envir Vars
-        environment={
+        sqs_queue_name = f'mermaid-{config.env_id}-queue'
+        environment = {
             "ENV": config.env_id,
             "ENVIRONMENT": config.env_id,
             "ALLOWED_HOSTS": load_balancer.load_balancer_dns_name,
@@ -129,14 +136,15 @@ class ApiStack(Stack):
             "DB_NAME": config.database.name,
             "DB_HOST": database.instance_endpoint.hostname,
             "DB_PORT": config.database.port,
-            "SQS_MESSAGE_VISIBILITY": "300",
+            "SQS_MESSAGE_VISIBILITY": str(config.api.sqs_message_visibility),
+            "SQS_QUEUE_NAME": sqs_queue_name,
         }
 
         # build image asset to be shared with API and Backup Task
         image_asset = ecr_assets.DockerImageAsset(
             self,
             "ApiImage",
-            directory="../", 
+            directory="../",
             file="Dockerfile.ecs",
         )
 
@@ -197,7 +205,6 @@ class ApiStack(Stack):
             # ) # Manually set FARGATE_SPOT as deafult in cluster console.
         )
 
-
         # Grant Secret read to API container & backup task
         for _, container_secret in api_secrets.items():
             container_secret.grant_read(service.task_definition.execution_role)
@@ -228,7 +235,9 @@ class ApiStack(Stack):
             "AliasRecord",
             zone=api_zone,
             record_name=f"{config.env_id}.{api_zone.zone_name}",
-            target=r53.RecordTarget.from_alias(r53_targets.LoadBalancerTarget(load_balancer))
+            target=r53.RecordTarget.from_alias(
+                r53_targets.LoadBalancerTarget(load_balancer)
+            ),
         )
 
         # add rule to SSL listener
@@ -237,7 +246,7 @@ class ApiStack(Stack):
 
         if config.env_id == "dev":
             host_headers.append("dev-api.datamermaid.org")
-        
+
         elif config.env_id == "prod":
             rule_priority = 100
             host_headers.append("api.datamermaid.org")
@@ -255,54 +264,28 @@ class ApiStack(Stack):
         # Allow API service to read/write to backup bucket in case we want to manually
         # run dbbackup/dbrestore tasks from within the container
         backup_bucket.grant_read_write(service.task_definition.task_role)
-        
+
         # Give permission to backup task
         backup_bucket.grant_read_write(backup_task.task_definition.task_role)
 
-        # define fifo queue
-        queue = sqs.Queue(
+        # get monitored queue
+        worker = QueueWorker(
             self,
-            "FifoQueue",
-            fifo=True,
-            queue_name=f"mermaid-{config.env_id}.fifo",
-            content_based_deduplication=False,
-            visibility_timeout=Duration.seconds(int(os.environ.get('SQS_MESSAGE_VISIBILITY', 300))),
-        )
-
-        sqs_worker_service = ecs_patterns.QueueProcessingFargateService(
-            self,
-            "SQSWorker",
+            "Worker",
+            config=config,
             cluster=cluster,
-            queue=queue,
-            image=ecs.ContainerImage.from_docker_image_asset(image_asset),
-            cpu=config.api.container_cpu,
-            memory_limit_mib=config.api.container_memory,
-            security_groups=[container_security_group],
-            secrets=api_secrets,
+            image_asset=image_asset,
+            container_security_group=container_security_group,
+            api_secrets=api_secrets,
             environment=environment,
-            command=["python", "manage.py", "simpleq_worker"],
-
-            min_scaling_capacity=0, # service should only run if ness
-            max_scaling_capacity=1, # only run one task at a time to process messages
-
-            # this defines how the service shall autoscale based on the 
-            # SQS queue's ApproximateNumberOfMessagesVisible metric
-            scaling_steps=[
-                # when 0 messages, scale down
-                appscaling.ScalingInterval(upper=0, change=-1),
-                # when >=1 messages, scale up
-                appscaling.ScalingInterval(lower=1, change=+1),
-            ], 
+            public_bucket=public_bucket,
+            queue_name=sqs_queue_name,
+            # email=sns_email,
         )
 
         # allow API to send messages to the queue
-        queue.grant_send_messages(service.task_definition.task_role)
+        worker.queue.grant_send_messages(service.task_definition.task_role)
 
-        # allow Worker to read messages from the queue
-        queue.grant_send_messages(sqs_worker_service.task_definition.task_role)
-
-        # allow Tasks (API/SQS) to read/write to the public bucket
-        public_bucket.grant_read_write(sqs_worker_service.task_definition.task_role)
+        # allow API to read/write to the public bucket
         public_bucket.grant_read_write(service.task_definition.task_role)
-
         
