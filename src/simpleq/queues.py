@@ -100,8 +100,7 @@ class Queue:
         try:
             self._queue = self.sqs_resource.get_queue_by_name(QueueName=queue_name)
         except self.sqs_resource.meta.client.exceptions.QueueDoesNotExist:
-            # TODO: remove this block once ported over to new account. We 
-            # want to let cdk take care of our infra
+            # TODO: leave this for now until we sort out local 
             self._queue = self.sqs_resource.create_queue(
                 QueueName=queue_name,
                 Attributes={
@@ -208,7 +207,6 @@ class Queue:
             MaxNumberOfMessages=self.BATCH_SIZE,
             WaitTimeSeconds=self.WAIT_SECONDS,
             MessageAttributeNames=["id"],
-            VisibilityTimeout=self.SQS_MESSAGE_VISIBILITY,
         )
         duplicate_job_groups = {}
 
