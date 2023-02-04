@@ -1,45 +1,16 @@
-import django_filters
-from django.conf import settings
-from rest_framework import exceptions, permissions, serializers, viewsets
-
-from ..models import AppVersion
-from ..utils.auth0utils import decode_hs
+from pathlib import Path
+from rest_framework.decorators import api_view, permission_classes, authentication_classes
+from rest_framework.response import Response
+from rest_framework.permissions import AllowAny
 
 
-class AppVersionSerializer(serializers.ModelSerializer):
+@api_view(['GET', 'HEAD', 'OPTIONS'])
+@authentication_classes([])
+@permission_classes((AllowAny,))
+def version(request):
+    version = ""
+    versionfile = Path("/var/projects/webapp/version.txt")
+    if versionfile.is_file():
+        version = versionfile.read_text().strip()
 
-    class Meta:
-        model = AppVersion
-        fields = ['id', 'application', 'version']
-
-
-class AppVersionPermission(permissions.BasePermission):
-
-    def has_permission(self, request, view):
-        write_methods = ('PUT', 'POST',)
-        user = request.user
-        method = request.method
-        if not user and not user.is_authenticated:
-            return False
-
-        if method in permissions.SAFE_METHODS:
-            return True
-
-        if method not in write_methods:
-            return False
-
-        try:
-            jwt = decode_hs(request.auth)
-            client_id = jwt.get('azp')
-            return client_id == settings.CIRCLE_CI_CLIENT_ID
-
-        except exceptions.AuthenticationFailed:
-            return False
-
-
-class AppVersionViewSet(viewsets.ModelViewSet):
-    serializer_class = AppVersionSerializer
-    queryset = AppVersion.objects.all()
-    filter_backends = (django_filters.rest_framework.DjangoFilterBackend,)
-    filterset_fields = ('application',)
-    permission_classes = [AppVersionPermission]
+    return Response(version)
