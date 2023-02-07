@@ -112,6 +112,7 @@ class BenthicPITObsSQLModel(BaseSUSQLModel):
     growth_form = models.CharField(max_length=100)
     observation_notes = models.TextField(blank=True)
     data_policy_benthicpit = models.CharField(max_length=50)
+    pseudosu_id = models.UUIDField()
 
     class Meta:
         db_table = "benthicpit_obs_sm"
@@ -136,7 +137,7 @@ class BenthicPITSUSQLModel(BaseSUSQLModel):
 
     sql = f"""
         WITH benthicpit_obs AS (
-            {BenthicPITObsSQLModel.sql}
+            SELECT * FROM summary_benthicpit_obs WHERE project_id = '%(project_id)s'::uuid          
         ),
         benthicpit_observers AS (
             SELECT pseudosu_id,
@@ -234,6 +235,7 @@ class BenthicPITSUSQLModel(BaseSUSQLModel):
     )
     percent_cover_by_benthic_category = models.JSONField(null=True, blank=True)
     data_policy_benthicpit = models.CharField(max_length=50)
+    pseudosu_id = models.UUIDField()
 
     class Meta:
         db_table = "benthicpit_su_sm"
@@ -246,7 +248,7 @@ class BenthicPITSESQLModel(BaseSQLModel):
 
     sql = f"""
         WITH benthicpit_su AS (
-            {BenthicPITSUSQLModel.sql}
+            SELECT * FROM summary_benthicpit_su WHERE project_id = '%(project_id)s'::uuid
         )
         SELECT benthicpit_su.sample_event_id AS id,
         {_se_fields},
