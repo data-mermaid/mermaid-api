@@ -54,7 +54,6 @@ class BaseSummaryModel(models.Model):
 class BaseSUModel(BaseSummaryModel):
     label = models.CharField(max_length=50, blank=True)
     relative_depth = models.CharField(max_length=50, null=True, blank=True)
-    sample_time = models.TimeField(null=True, blank=True)
     observers = models.JSONField(null=True, blank=True)
     current_name = models.CharField(max_length=50, null=True, blank=True)
     tide_name = models.CharField(max_length=50, null=True, blank=True)
@@ -71,6 +70,7 @@ class BaseSUModel(BaseSummaryModel):
 
 class BeltFishObsModel(BaseSUModel):
     sample_unit_id = models.UUIDField()
+    sample_time = models.TimeField(null=True, blank=True)
     transect_number = models.PositiveSmallIntegerField()
     transect_len_surveyed = models.PositiveSmallIntegerField(
         verbose_name=_("transect length surveyed (m)")
@@ -123,6 +123,7 @@ class BeltFishObsModel(BaseSUModel):
 
 class BeltFishSUModel(BaseSUModel):
     sample_unit_ids = models.JSONField()
+    sample_time = models.CharField(max_length=100, null=True, blank=True)
     total_abundance = models.PositiveIntegerField()
     transect_number = models.PositiveSmallIntegerField()
     transect_len_surveyed = models.PositiveSmallIntegerField(
@@ -174,6 +175,7 @@ class BeltFishSEModel(BaseSummaryModel):
 
 class BenthicPITObsModel(BaseSUModel):
     sample_unit_id = models.UUIDField()
+    sample_time = models.TimeField(null=True, blank=True)
     transect_number = models.PositiveSmallIntegerField()
     transect_len_surveyed = models.PositiveSmallIntegerField(
         verbose_name=_("transect length surveyed (m)")
@@ -202,6 +204,7 @@ class BenthicPITObsModel(BaseSUModel):
 
 class BenthicPITSUModel(BaseSUModel):
     sample_unit_ids = models.JSONField()
+    sample_time = models.CharField(max_length=100, null=True, blank=True)
     transect_number = models.PositiveSmallIntegerField()
     transect_len_surveyed = models.PositiveSmallIntegerField(
         verbose_name=_("transect length surveyed (m)")
@@ -241,6 +244,7 @@ class BenthicPITSEModel(BaseSummaryModel):
 
 class BenthicLITObsModel(BaseSUModel):
     sample_unit_id = models.UUIDField()
+    sample_time = models.TimeField(null=True, blank=True)
     transect_number = models.PositiveSmallIntegerField()
     relative_depth = models.CharField(max_length=50, null=True, blank=True)
     transect_len_surveyed = models.PositiveSmallIntegerField(
@@ -262,6 +266,7 @@ class BenthicLITObsModel(BaseSUModel):
 
 class BenthicLITSUModel(BaseSUModel):
     sample_unit_ids = models.JSONField()
+    sample_time = models.CharField(max_length=100, null=True, blank=True)
     transect_number = models.PositiveSmallIntegerField()
     transect_len_surveyed = models.PositiveSmallIntegerField(
         verbose_name=_("transect length surveyed (m)")
@@ -293,6 +298,7 @@ class BenthicLITSEModel(BaseSummaryModel):
 
 class BenthicPhotoQuadratTransectObsModel(BaseSUModel):
     sample_unit_id = models.UUIDField()
+    sample_time = models.TimeField(null=True, blank=True)
     transect_number = models.PositiveSmallIntegerField()
     relative_depth = models.CharField(max_length=50, null=True, blank=True)
     transect_len_surveyed = models.PositiveSmallIntegerField(
@@ -317,6 +323,7 @@ class BenthicPhotoQuadratTransectObsModel(BaseSUModel):
 
 class BenthicPhotoQuadratTransectSUModel(BaseSUModel):
     sample_unit_ids = models.JSONField()
+    sample_time = models.CharField(max_length=100, null=True, blank=True)
     transect_number = models.PositiveSmallIntegerField()
     transect_len_surveyed = models.PositiveSmallIntegerField(
         verbose_name=_("transect length surveyed (m)")
@@ -347,6 +354,7 @@ class BenthicPhotoQuadratTransectSEModel(BaseSummaryModel):
 
 class BleachingQCColoniesBleachedObsModel(BaseSUModel):
     sample_unit_id = models.UUIDField()
+    sample_time = models.TimeField(null=True, blank=True)
     quadrat_size = models.DecimalField(decimal_places=2, max_digits=6)
     benthic_attribute = models.CharField(max_length=100, null=True, blank=True)
     growth_form = models.CharField(max_length=100, null=True, blank=True)
@@ -376,16 +384,17 @@ class BleachingQCColoniesBleachedObsModel(BaseSUModel):
 
 class BleachingQCQuadratBenthicPercentObsModel(BaseSUModel):
     sample_unit_id = models.UUIDField()
+    sample_time = models.TimeField(null=True, blank=True)
     quadrat_size = models.DecimalField(decimal_places=2, max_digits=6)
     quadrat_number = models.PositiveSmallIntegerField(verbose_name="quadrat number")
     percent_hard = models.PositiveSmallIntegerField(
-        verbose_name="hard coral, % cover", default=0
+        verbose_name="hard coral, % cover", null=True, blank=True
     )
     percent_soft = models.PositiveSmallIntegerField(
-        verbose_name="soft coral, % cover", default=0
+        verbose_name="soft coral, % cover", null=True, blank=True
     )
     percent_algae = models.PositiveSmallIntegerField(
-        verbose_name="macroalgae, % cover", default=0
+        verbose_name="macroalgae, % cover", null=True, blank=True
     )
     observation_notes = models.TextField(blank=True)
     data_policy_bleachingqc = models.CharField(max_length=50)
@@ -396,16 +405,17 @@ class BleachingQCQuadratBenthicPercentObsModel(BaseSUModel):
 
 class BleachingQCSUModel(BaseSUModel):
     sample_unit_ids = models.JSONField()
+    sample_time = models.CharField(max_length=100, null=True, blank=True)
     quadrat_size = models.DecimalField(decimal_places=2, max_digits=6)
     count_genera = models.PositiveSmallIntegerField(default=0)
     count_total = models.PositiveSmallIntegerField(default=0)
-    percent_normal = models.DecimalField(max_digits=4, decimal_places=1, default=0)
-    percent_pale = models.DecimalField(max_digits=4, decimal_places=1, default=0)
-    percent_bleached = models.DecimalField(max_digits=4, decimal_places=1, default=0)
+    percent_normal = models.DecimalField(max_digits=4, decimal_places=1, null=True, blank=True)
+    percent_pale = models.DecimalField(max_digits=4, decimal_places=1, null=True, blank=True)
+    percent_bleached = models.DecimalField(max_digits=4, decimal_places=1, null=True, blank=True)
     quadrat_count = models.PositiveSmallIntegerField(default=0)
-    percent_hard_avg = models.DecimalField(max_digits=4, decimal_places=1, default=0)
-    percent_soft_avg = models.DecimalField(max_digits=4, decimal_places=1, default=0)
-    percent_algae_avg = models.DecimalField(max_digits=4, decimal_places=1, default=0)
+    percent_hard_avg = models.DecimalField(max_digits=4, decimal_places=1, null=True, blank=True)
+    percent_soft_avg = models.DecimalField(max_digits=4, decimal_places=1, null=True, blank=True)
+    percent_algae_avg = models.DecimalField(max_digits=4, decimal_places=1, null=True, blank=True)
     data_policy_bleachingqc = models.CharField(max_length=50)
     pseudosu_id = models.UUIDField()
 
@@ -424,13 +434,13 @@ class BleachingQCSEModel(BaseSummaryModel):
     quadrat_size_avg = models.DecimalField(decimal_places=2, max_digits=6)
     count_total_avg = models.DecimalField(max_digits=5, decimal_places=1)
     count_genera_avg = models.DecimalField(max_digits=4, decimal_places=1)
-    percent_normal_avg = models.DecimalField(max_digits=4, decimal_places=1)
-    percent_pale_avg = models.DecimalField(max_digits=4, decimal_places=1)
-    percent_bleached_avg = models.DecimalField(max_digits=4, decimal_places=1)
-    quadrat_count_avg = models.DecimalField(max_digits=4, decimal_places=1)
-    percent_hard_avg_avg = models.DecimalField(max_digits=4, decimal_places=1)
-    percent_soft_avg_avg = models.DecimalField(max_digits=4, decimal_places=1)
-    percent_algae_avg_avg = models.DecimalField(max_digits=4, decimal_places=1)
+    percent_normal_avg = models.DecimalField(max_digits=4, decimal_places=1, null=True, blank=True)
+    percent_pale_avg = models.DecimalField(max_digits=4, decimal_places=1, null=True, blank=True)
+    percent_bleached_avg = models.DecimalField(max_digits=4, decimal_places=1, null=True, blank=True)
+    quadrat_count_avg = models.DecimalField(max_digits=4, decimal_places=1, null=True, blank=True)
+    percent_hard_avg_avg = models.DecimalField(max_digits=4, decimal_places=1, null=True, blank=True)
+    percent_soft_avg_avg = models.DecimalField(max_digits=4, decimal_places=1, null=True, blank=True)
+    percent_algae_avg_avg = models.DecimalField(max_digits=4, decimal_places=1, null=True, blank=True)
     data_policy_bleachingqc = models.CharField(max_length=50)
 
     class Meta:
@@ -461,6 +471,7 @@ class HabitatComplexityObsModel(BaseSUModel):
 
 class HabitatComplexitySUModel(BaseSUModel):
     sample_unit_ids = models.JSONField()
+    sample_time = models.CharField(max_length=100, null=True, blank=True)
     transect_number = models.PositiveSmallIntegerField()
     transect_len_surveyed = models.PositiveSmallIntegerField(
         verbose_name=_("transect length surveyed (m)")

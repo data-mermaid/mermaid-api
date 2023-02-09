@@ -34,15 +34,17 @@ class Command(BaseCommand):
 
         start_time = time()
         print("Updating summaries...")
-        futures = []
-        with ThreadPoolExecutor(max_workers=4) as exc:
-            futures.extend(
-                exc.submit(self.update_summaries, project.pk, skip_test_project)
-                for project in Project.objects.all()
-            )
+        for project in Project.objects.all():
+            self.update_summaries(project.pk, skip_test_project)
+        # futures = []
+        # with ThreadPoolExecutor(max_workers=1) as exc:
+        #     futures.extend(
+        #         exc.submit(self.update_summaries, project.pk, skip_test_project)
+        #         for project in Project.objects.all()
+        #     )
 
-        for future in futures:
-            future.result()
+        # for future in futures:
+        #     future.result()
 
         end_time = time()
         print(f"Done: {end_time - start_time:.3f}s")

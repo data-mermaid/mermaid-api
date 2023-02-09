@@ -172,7 +172,7 @@ sample_event_sql_template = f"""
             WHEN project.data_policy_benthicpqt = 100 THEN 'public' :: text
             ELSE '' :: text
         END AS data_policy_benthicpqt,
-        site_covariates.covariates::text
+        site_covariates.covariates
     FROM
         sample_event se
         JOIN site ON se.site_id = site.id
