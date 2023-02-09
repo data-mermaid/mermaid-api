@@ -46,7 +46,7 @@ class Queue:
 
     BATCH_SIZE = getattr(settings, "SQS_BATCH_SIZE", 10)
     WAIT_SECONDS = getattr(settings, "SQS_WAIT_SECONDS", 20)
-    VISIBILITY_TIMEOUT = getattr(settings, "SQS_MESSAGE_VISIBILITY", "300")
+    SQS_MESSAGE_VISIBILITY = getattr(settings, "SQS_MESSAGE_VISIBILITY")
     _delayed_jobs = defaultdict(list)
 
     def __init__(self, name, sqs_resource=None):
@@ -100,13 +100,11 @@ class Queue:
         try:
             self._queue = self.sqs_resource.get_queue_by_name(QueueName=queue_name)
         except self.sqs_resource.meta.client.exceptions.QueueDoesNotExist:
-            # TODO: remove this block once ported over to new account. We 
-            # want to let cdk take care of our infra
-            visibility_timeout = self.VISIBILITY_TIMEOUT
+            # TODO: leave this for now until we sort out local 
             self._queue = self.sqs_resource.create_queue(
                 QueueName=queue_name,
                 Attributes={
-                    "VisibilityTimeout": str(visibility_timeout),
+                    "VisibilityTimeout": str(self.SQS_MESSAGE_VISIBILITY),
                     "FifoQueue": "true",
                     "ContentBasedDeduplication": "false",
                 },
@@ -209,7 +207,6 @@ class Queue:
             MaxNumberOfMessages=self.BATCH_SIZE,
             WaitTimeSeconds=self.WAIT_SECONDS,
             MessageAttributeNames=["id"],
-            VisibilityTimeout=self.VISIBILITY_TIMEOUT,
         )
         duplicate_job_groups = {}
 
