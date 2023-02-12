@@ -54,8 +54,8 @@ from ..utils.timer import timing
 BATCH_SIZE = 1000
 
 
-def _update_records(records, target_model_cls):
-    target_model_cls.objects.all().delete()
+def _update_records(project_id, records, target_model_cls):
+    target_model_cls.objects.filter(project_id=project_id).delete()
     idx = 0
     while True:
         batch = records[idx : idx + BATCH_SIZE]
@@ -73,13 +73,13 @@ def _update_cache(
     project_id, obs_sql_model, obs_model, su_sql_model, su_model, se_sql_model, se_model
 ):
     obs_records = _fetch_records(obs_sql_model, project_id)
-    _update_records(obs_records, obs_model)
+    _update_records(project_id, obs_records, obs_model)
 
     su_records = _fetch_records(su_sql_model, project_id)
-    _update_records(su_records, su_model)
+    _update_records(project_id, su_records, su_model)
 
     se_records = _fetch_records(se_sql_model, project_id)
-    _update_records(se_records, se_model)
+    _update_records(project_id, se_records, se_model)
 
 
 def _update_bleaching_qc_summary(project_id):
@@ -90,16 +90,18 @@ def _update_bleaching_qc_summary(project_id):
         BleachingQCQuadratBenthicPercentObsSQLModel, project_id
     )
 
-    _update_records(bleaching_colonies_obs, BleachingQCColoniesBleachedObsModel)
     _update_records(
-        bleaching_quad_percent_obs, BleachingQCQuadratBenthicPercentObsModel
+        project_id, bleaching_colonies_obs, BleachingQCColoniesBleachedObsModel
+    )
+    _update_records(
+        project_id, bleaching_quad_percent_obs, BleachingQCQuadratBenthicPercentObsModel
     )
 
     bleaching_su = _fetch_records(BleachingQCSUSQLModel, project_id)
-    _update_records(bleaching_su, BleachingQCSUModel)
+    _update_records(project_id, bleaching_su, BleachingQCSUModel)
 
     bleaching_se = _fetch_records(BleachingQCSESQLModel, project_id)
-    _update_records(bleaching_se, BleachingQCSEModel)
+    _update_records(project_id, bleaching_se, BleachingQCSEModel)
 
 
 def _update_project_summary_sample_event(project_id, skip_test_project=True):
