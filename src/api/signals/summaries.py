@@ -3,7 +3,7 @@ from django.dispatch import receiver
 
 from ..models import Management, Project, ProjectProfile, Site, TransectMethod
 from ..utils.related import get_related_project
-from ..utils.summaries import update_project_summaries
+from ..utils.summary_cache import update_summary_cache
 from ..utils.q import submit_job
 
 
@@ -21,7 +21,12 @@ def update_summaries_on_delete_transect_method(sender, instance, *args, **kwargs
 
     sample_unit = instance.sample_unit
     sample_unit.delete()
-    submit_job(5, update_project_summaries, project_id=project.pk)
+    submit_job(
+        5,
+        update_summary_cache,
+        project_id=project.pk,
+        sample_unit=instance.protocol
+    )
 
 
 @receiver(post_delete, sender=Management)
@@ -36,4 +41,4 @@ def update_summaries(sender, instance, *args, **kwargs):
     project = get_related_project(instance)
     if project is None:
         return
-    submit_job(5, update_project_summaries, project_id=project.pk)
+    submit_job(5, update_summary_cache, project_id=project.pk)
