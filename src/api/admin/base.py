@@ -9,7 +9,7 @@ from django.conf import settings
 from django.contrib import messages
 from django.db.models import Count
 
-from ..models import Application, AuthUser, Profile, AppVersion, CollectRecord, Observer
+from ..models import Application, AuthUser, Profile, CollectRecord, Observer
 
 
 def lookup_field_from_choices(field_obj, value):
@@ -119,11 +119,6 @@ class ProfileAdmin(BaseAdmin):
         qs = super().get_queryset(request)
         qs = qs.annotate(Count("projects"))
         return qs
-
-
-@admin.register(AppVersion)
-class AppVersionAdmin(BaseAdmin):
-    list_display = ("application", "version")
 
 
 def get_crs_with_attrib(query, attrib_val):
