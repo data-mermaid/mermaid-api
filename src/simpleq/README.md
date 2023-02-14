@@ -14,7 +14,7 @@ Modified version of [SimpleQ](https://github.com/rdegges/simpleq/blob/master/sim
 
 `SQS_BATCH_SIZE = 10  # default`
 
-**Number of seconds to wait in seconds for new messages.**
+**Number of seconds to wait in seconds for new messages. If there are messages ready to be processed, then the receiver will not wait this long.**
 
 `SQS_WAIT_SECONDS = 20  # default`
 

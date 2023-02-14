@@ -53,22 +53,22 @@ class SummarySampleEventBaseModel(models.Model):
 class SummarySampleEventSQLModel(SummarySampleEventBaseModel):
     sql = f"""
         WITH beltfish_su AS (
-            {BeltFishSUSQLModel.sql}
+            SELECT * FROM summary_belt_fish_su WHERE project_id = '%(project_id)s'::uuid
         ),
         benthiclit_su AS (
-            {BenthicLITSUSQLModel.sql}
+            SELECT * FROM summary_benthiclit_su WHERE project_id = '%(project_id)s'::uuid
         ),
         benthicpit_su AS (
-            {BenthicPITSUSQLModel.sql}
+            SELECT * FROM summary_benthicpit_su WHERE project_id = '%(project_id)s'::uuid
         ),
         bleachingqc_su AS (
-            {BleachingQCSUSQLModel.sql}
+            SELECT * FROM summary_bleachingqc_su WHERE project_id = '%(project_id)s'::uuid
         ),
         benthicpqt_su AS (
-            {BenthicPhotoQuadratTransectSUSQLModel.sql}
+            SELECT * FROM summary_benthicpqt_su WHERE project_id = '%(project_id)s'::uuid
         ),
         habitatcomplexity_su AS (
-            {HabitatComplexitySUSQLModel.sql}
+            SELECT * FROM summary_habitatcomplexity_su WHERE project_id = '%(project_id)s'::uuid
         )
 
         SELECT

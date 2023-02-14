@@ -136,6 +136,7 @@ class BenthicLITObsSQLModel(BaseSUSQLModel):
     growth_form = models.CharField(max_length=100)
     observation_notes = models.TextField(blank=True)
     data_policy_benthiclit = models.CharField(max_length=50)
+    pseudosu_id = models.UUIDField()
 
     class Meta:
         db_table = "benthiclit_obs_sm"
@@ -150,7 +151,7 @@ class BenthicLITSUSQLModel(BaseSUSQLModel):
 
     sql = f"""
         WITH benthiclit_obs AS (
-            {BenthicLITObsSQLModel.sql}
+            SELECT * FROM summary_benthiclit_obs WHERE project_id = '%(project_id)s'::uuid
         ),
         benthiclit_observers AS (
             SELECT pseudosu_id,
@@ -243,6 +244,7 @@ class BenthicLITSUSQLModel(BaseSUSQLModel):
     reef_slope = models.CharField(max_length=50)
     percent_cover_by_benthic_category = models.JSONField(null=True, blank=True)
     data_policy_benthiclit = models.CharField(max_length=50)
+    pseudosu_id = models.UUIDField()
 
     class Meta:
         db_table = "benthiclit_su_sm"
@@ -254,7 +256,9 @@ class BenthicLITSESQLModel(BaseSQLModel):
     _se_fields = ", ".join([f"benthiclit_su.{f}" for f in BaseSQLModel.se_fields])
     _su_aggfields_sql = BaseSQLModel.su_aggfields_sql
     sql = f"""
-        WITH benthiclit_su AS ({ BenthicLITSUSQLModel.sql })
+        WITH benthiclit_su AS (
+            SELECT * FROM summary_benthiclit_su WHERE project_id = '%(project_id)s'::uuid
+        )
         SELECT
             benthiclit_su.sample_event_id AS id,
             { _se_fields },

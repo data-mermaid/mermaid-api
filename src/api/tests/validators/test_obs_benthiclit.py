@@ -71,7 +71,7 @@ def test_benthiclit_observation_total_length_invalid(valid_benthic_lit_collect_r
 
     result = validator(record)
     assert result.status == WARN
-    assert result.code == validator.TOTAL_LENGTH_WARN
+    assert result.code == validator.TOTAL_LENGTH_TOOLARGE
 
 
 def test_benthiclit_observation_total_length_valid_plus50(valid_benthic_lit_collect_record):

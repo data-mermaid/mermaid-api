@@ -25,6 +25,7 @@ def test_beltfish_su_view(
     obs_belt_fish2_2_biomass,
     obs_belt_fish2_3_biomass,
     obs_belt_fish2_4_biomass,
+    update_summary_cache,
 ):
     url = reverse("beltfishmethod-sampleunit-list", kwargs=dict(project_pk=project1.pk))
     count, data, response = _call(client, token1, url)
@@ -73,6 +74,7 @@ def test_benthicpit_su_view(
     site2,
     management2,
     profile2,
+    update_summary_cache,
 ):
     url = reverse(
         "benthicpitmethod-sampleunit-list", kwargs=dict(project_pk=project1.pk)
@@ -100,6 +102,7 @@ def test_benthiclit_su_view(
     site2,
     management2,
     profile2,
+    update_summary_cache,
 ):
     url = reverse(
         "benthiclitmethod-sampleunit-list", kwargs=dict(project_pk=project1.pk)
@@ -118,7 +121,14 @@ def test_benthiclit_su_view(
 
 
 def test_habitatcomplexity_su_view(
-    client, db_setup, project1, token1, habitat_complexity_project, all_choices, site1,
+    client,
+    db_setup,
+    project1,
+    token1,
+    habitat_complexity_project,
+    all_choices,
+    site1,
+    update_summary_cache,
 ):
     url = reverse(
         "habitatcomplexitymethod-sampleunit-list", kwargs=dict(project_pk=project1.pk)
@@ -131,7 +141,14 @@ def test_habitatcomplexity_su_view(
 
 
 def test_bleachingqc_su_view(
-    client, db_setup, project1, token1, bleaching_project, all_choices, site1,
+    client,
+    db_setup,
+    project1,
+    token1,
+    bleaching_project,
+    all_choices,
+    site1,
+    update_summary_cache,
 ):
     url = reverse(
         "bleachingqcsmethod-sampleunit-list", kwargs=dict(project_pk=project1.pk)

@@ -763,7 +763,7 @@ class Observer(BaseModel):
 
     @property
     def profile_name(self):
-        return u'{} {}'.format(self.profile.first_name, self.profile.last_name)
+        return self.profile.full_name
 
 
 class BenthicLifeHistory(BaseChoiceModel):
