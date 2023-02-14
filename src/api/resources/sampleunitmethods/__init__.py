@@ -166,6 +166,6 @@ class BaseProjectMethodView(AggregatedViewMixin, BaseProjectApiViewSet):
 
     def get_queryset(self):
         project_id = self.kwargs.get("project_pk")
-        return self.model.objects.all().sql_table(
+        return self.model.objects.filter(
             project_id=project_id
         )

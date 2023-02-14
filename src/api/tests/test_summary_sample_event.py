@@ -1,15 +1,6 @@
 import pytest
 from django.urls import reverse
 
-from api.models import Project
-from api.utils.summaries import update_project_summary_sample_event
-
-
-@pytest.fixture
-def update_summary_sample_events():
-    for project in Project.objects.all():
-        update_project_summary_sample_event(project.pk)
-
 
 @pytest.fixture
 def obs_benthic_pit1_benthic_category_avgs(
@@ -45,12 +36,12 @@ def test_summary_sample_event(
     api_client1,
     belt_fish_project,
     benthic_pit_project,
-    update_summary_sample_events,
     obs_belt_fish1_1_biomass,
     obs_belt_fish1_2_biomass,
     obs_belt_fish1_3_biomass,
     obs_benthic_pit1_benthic_category_avgs,
     obs_benthic_pit1_3,
+    update_summary_cache,
 ):
     url = reverse("summarysampleevent-list")
 

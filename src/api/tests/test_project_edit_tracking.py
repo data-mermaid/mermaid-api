@@ -6,7 +6,7 @@ from api.models import (
 from api.resources.sampleunitmethods.beltfishmethod import BeltFishMethodSerializer
 from api.submission.utils import write_collect_record
 from api.utils.sample_unit_methods import edit_transect_method
-from api.utils.summaries import update_project_summaries
+from api.utils.summary_cache import update_summary_cache
 
 
 def test_project_edit_tracking(valid_collect_record, profile1_request):
@@ -24,7 +24,7 @@ def test_edit_transect_method(
 ):
     project_id = belt_fish1.transect.sample_event.site.project_id
 
-    update_project_summaries(project_id)
+    update_summary_cache(project_id)
     summary_se_count = SummarySampleEventModel.objects.filter(
         project_id=project_id
     ).count()
@@ -48,7 +48,7 @@ def test_edit_transect_method(
 
 def test_edit_site(belt_fish_project, site1):
     project_id = site1.project_id
-    update_project_summaries(project_id)
+    update_summary_cache(project_id)
 
     original_site_name = site1.name
 
@@ -65,7 +65,7 @@ def test_edit_site(belt_fish_project, site1):
 
 def test_edit_management(belt_fish_project, management1):
     project_id = management1.project_id
-    update_project_summaries(project_id)
+    update_summary_cache(project_id)
 
     original_management_name = management1.name
 
@@ -89,7 +89,7 @@ def test_edit_management(belt_fish_project, management1):
 
 def test_edit_project_profile(belt_fish_project, project_profile1):
     project_id = project_profile1.project_id
-    update_project_summaries(project_id)
+    update_summary_cache(project_id)
 
     for ssm in SummarySampleEventModel.objects.all():
         assert len(ssm.project_admins) == 1
@@ -102,7 +102,7 @@ def test_edit_project_profile(belt_fish_project, project_profile1):
 
 
 def test_edit_project(belt_fish_project, project1):
-    update_project_summaries(project1.pk)
+    update_summary_cache(project1.pk)
 
     new_name = "Change the name"
     project1.name = new_name
