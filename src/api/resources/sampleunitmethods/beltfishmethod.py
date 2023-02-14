@@ -6,9 +6,9 @@ from rest_framework import status, serializers
 from rest_framework.response import Response
 
 from ...models import (
-    BeltFishObsSQLModel,
-    BeltFishSESQLModel,
-    BeltFishSUSQLModel,
+    BeltFishObsModel,
+    BeltFishSEModel,
+    BeltFishSUModel,
     BeltFish,
     ObsBeltFish,
 )
@@ -182,7 +182,7 @@ class BeltFishMethodView(SampleUnitMethodSummaryReport, SampleUnitMethodEditMixi
 
 class BeltFishMethodObsSerializer(BaseSUViewAPISerializer):
     class Meta(BaseSUViewAPISerializer.Meta):
-        model = BeltFishObsSQLModel
+        model = BeltFishObsModel
         exclude = BaseSUViewAPISerializer.Meta.exclude.copy()
         exclude.extend(["location", "observation_notes"])
         header_order = ["id"] + BaseSUViewAPISerializer.Meta.header_order.copy()
@@ -219,7 +219,7 @@ class BeltFishMethodObsSerializer(BaseSUViewAPISerializer):
 
 class BeltFishMethodObsGeoSerializer(BaseViewAPIGeoSerializer):
     class Meta(BaseViewAPIGeoSerializer.Meta):
-        model = BeltFishObsSQLModel
+        model = BeltFishObsModel
 
 
 class ObsBeltFishCSVSerializer(ReportSerializer):
@@ -290,7 +290,7 @@ class ObsBeltFishCSVSerializer(ReportSerializer):
 
 class BeltFishMethodSUSerializer(BaseSUViewAPISerializer):
     class Meta(BaseSUViewAPISerializer.Meta):
-        model = BeltFishSUSQLModel
+        model = BeltFishSUModel
         exclude = BaseSUViewAPISerializer.Meta.exclude.copy()
         exclude.append("location")
         header_order = BaseSUViewAPISerializer.Meta.header_order.copy()
@@ -314,7 +314,7 @@ class BeltFishMethodSUSerializer(BaseSUViewAPISerializer):
 
 class BeltFishMethodSUGeoSerializer(BaseViewAPIGeoSerializer):
     class Meta(BaseViewAPIGeoSerializer.Meta):
-        model = BeltFishSUSQLModel
+        model = BeltFishSUModel
 
 
 class BeltFishMethodSUCSVSerializer(ReportSerializer):
@@ -376,7 +376,7 @@ class BeltFishMethodSUCSVSerializer(ReportSerializer):
 
 class BeltFishMethodSESerializer(BaseSUViewAPISerializer):
     class Meta(BaseSUViewAPISerializer.Meta):
-        model = BeltFishSESQLModel
+        model = BeltFishSEModel
         exclude = BaseSUViewAPISerializer.Meta.exclude.copy()
         exclude.append("location")
         header_order = BaseSUViewAPISerializer.Meta.header_order.copy()
@@ -394,7 +394,7 @@ class BeltFishMethodSESerializer(BaseSUViewAPISerializer):
 
 class BeltFishMethodSEGeoSerializer(BaseViewAPIGeoSerializer):
     class Meta(BaseViewAPIGeoSerializer.Meta):
-        model = BeltFishSESQLModel
+        model = BeltFishSEModel
 
 
 class BeltFishMethodSECSVSerializer(ReportSerializer):
@@ -461,7 +461,7 @@ class BeltFishMethodObsFilterSet(BaseSUObsFilterSet):
     biomass_kgha = RangeFilter()
 
     class Meta:
-        model = BeltFishObsSQLModel
+        model = BeltFishObsModel
         fields = [
             "transect_len_surveyed",
             "reef_slope",
@@ -486,7 +486,7 @@ class BeltFishMethodSUFilterSet(BaseSUObsFilterSet):
     biomass_kgha = RangeFilter()
 
     class Meta:
-        model = BeltFishSUSQLModel
+        model = BeltFishSUModel
         fields = [
             "transect_len_surveyed",
             "reef_slope",
@@ -501,7 +501,7 @@ class BeltFishMethodSEFilterSet(BaseSEFilterSet):
     depth_avg = RangeFilter()
 
     class Meta:
-        model = BeltFishSESQLModel
+        model = BeltFishSEModel
         fields = [
             "biomass_kgha_avg",
             "sample_unit_count",
@@ -527,18 +527,14 @@ class BeltFishProjectMethodObsView(BaseProjectMethodView):
         "size",
     )
 
-    model = BeltFishObsSQLModel
+    model = BeltFishObsModel
 
     def get_queryset(self):
-        project_id = self.kwargs.get("project_pk")
-        return (
-            self.model.objects.all()
-            .sql_table(project_id=project_id)
-            .filter(
-                Q(size__isnull=False)
-                | Q(count__isnull=False)
-                | Q(biomass_kgha__isnull=False)
-            )
+        qs = super().get_queryset()
+        return qs.filter(
+            Q(size__isnull=False)
+            | Q(count__isnull=False)
+            | Q(biomass_kgha__isnull=False)
         )
 
 
@@ -549,7 +545,7 @@ class BeltFishProjectMethodSUView(BaseProjectMethodView):
     serializer_class_geojson = BeltFishMethodSUGeoSerializer
     serializer_class_csv = BeltFishMethodSUCSVSerializer
     filterset_class = BeltFishMethodSUFilterSet
-    model = BeltFishSUSQLModel
+    model = BeltFishSUModel
     order_by = ("site_name", "sample_date", "transect_number")
 
 
@@ -563,5 +559,5 @@ class BeltFishProjectMethodSEView(BaseProjectMethodView):
     serializer_class_geojson = BeltFishMethodSEGeoSerializer
     serializer_class_csv = BeltFishMethodSECSVSerializer
     filterset_class = BeltFishMethodSEFilterSet
-    model = BeltFishSESQLModel
+    model = BeltFishSEModel
     order_by = ("site_name", "sample_date")

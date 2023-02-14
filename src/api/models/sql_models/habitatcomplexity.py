@@ -83,6 +83,7 @@ class HabitatComplexityObsSQLModel(BaseSUSQLModel):
     score = models.PositiveSmallIntegerField()
     score_name = models.CharField(max_length=100)
     data_policy_habitatcomplexity = models.CharField(max_length=50)
+    pseudosu_id = models.UUIDField()
 
     class Meta:
         db_table = "habitatcomplexity_obs_sm"
@@ -106,7 +107,7 @@ class HabitatComplexitySUSQLModel(BaseSUSQLModel):
 
     sql = f"""
         WITH habitatcomplexity_obs AS (
-            {HabitatComplexityObsSQLModel.sql}
+            SELECT * FROM summary_habitatcomplexity_obs WHERE project_id = '%(project_id)s'::uuid
         ),
         habcomp_observers AS (
             SELECT pseudosu_id,
@@ -155,6 +156,7 @@ class HabitatComplexitySUSQLModel(BaseSUSQLModel):
     reef_slope = models.CharField(max_length=50)
     score_avg = models.DecimalField(decimal_places=2, max_digits=3)
     data_policy_habitatcomplexity = models.CharField(max_length=50)
+    pseudosu_id = models.UUIDField()
 
     class Meta:
         db_table = "habitatcomplexity_su_sm"
@@ -169,7 +171,7 @@ class HabitatComplexitySESQLModel(BaseSQLModel):
     _su_aggfields_sql = BaseSQLModel.su_aggfields_sql
     sql = f"""
         WITH habitatcomplexity_su AS (
-            {HabitatComplexitySUSQLModel.sql}
+            SELECT * FROM summary_habitatcomplexity_su WHERE project_id = '%(project_id)s'::uuid
         )
         SELECT sample_event_id AS id,
         {_se_fields},
