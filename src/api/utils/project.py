@@ -13,7 +13,7 @@ from ..models import (
     ProjectProfile,
     SampleUnit,
     Site,
-    TransectMethod
+    TransectMethod,
 )
 from . import get_value, is_uuid
 from .email import mermaid_email
@@ -46,6 +46,7 @@ def get_sample_unit_field(model):
 
 
 def _create_submitted_sample_unit_method_summary(model_cls, project):
+    DEFAULT_UPDATED_BY = "N/A"
     summary = defaultdict(dict)
     protocol = model_cls.protocol
     sample_unit_name = get_sample_unit_field(model_cls)
@@ -59,7 +60,8 @@ def _create_submitted_sample_unit_method_summary(model_cls, project):
         f"{sample_unit_name}__sample_event",
         f"{sample_unit_name}__sample_event__site",
         f"{sample_unit_name}__sample_event__management",
-    )
+        "updated_by",
+    ).prefetch_related("observers")
     queryset = queryset.filter(**qry_filter)
 
     for record in queryset:
@@ -69,6 +71,10 @@ def _create_submitted_sample_unit_method_summary(model_cls, project):
         management = sample_event.management
         site_id = str(site.pk)
         label = _get_sample_unit_method_label(record, sample_unit_name)
+        updated_by = DEFAULT_UPDATED_BY
+        if sample_unit.updated_by:
+            updated_by = sample_unit.updated_by.full_name
+        observers = [o.profile_name for o in record.observers.all()]
 
         if site_id not in summary:
             summary[site_id] = {"site_name": "", "sample_unit_methods": {protocol: []}}
@@ -82,7 +88,9 @@ def _create_submitted_sample_unit_method_summary(model_cls, project):
                 "management": {
                     "id": management.id,
                     "name": management.name,
-                }
+                },
+                "updated_by": updated_by,
+                "observers": observers,
             }
         )
 
@@ -138,19 +146,29 @@ def _get_collect_record_label(collect_record):
 
 def create_collecting_summary(project):
     DEFAULT_SITE_ID = "__null__"
+    DEFAULT_MR_ID = "__null__"
+    DEFAULT_OBSERVER_NAME = "unnamed observer"
     summary = {}
     collect_records = CollectRecord.objects.select_related("profile").filter(
         project=project
     )
+
     site_ids = []
+    mr_ids = []
     for collect_record in collect_records:
-        val = get_value(collect_record.data or {}, "sample_event.site", ".")
-        if is_uuid(val) is False:
+        site_id = get_value(collect_record.data or {}, "sample_event.site", ".")
+        if is_uuid(site_id) is False:
             continue
-        site_ids.append(val)
+        site_ids.append(site_id)
+        mr_id = get_value(collect_record.data or {}, "sample_event.management", ".")
+        if is_uuid(mr_id) is False:
+            continue
+        mr_ids.append(mr_id)
 
     sites = Site.objects.filter(id__in=set(site_ids))
     site_lookup = {str(s.pk): s.name for s in sites}
+    managements = Management.objects.filter(id__in=set(mr_ids))
+    mr_lookup = {str(mr.pk): mr.name for mr in managements}
 
     protocols = {}
 
@@ -167,6 +185,9 @@ def create_collecting_summary(project):
         site_id = get_value(data, "sample_event.site", ".")
         if site_id not in site_lookup:
             site_id = DEFAULT_SITE_ID
+        mr_id = get_value(data, "sample_event.management", ".")
+        if mr_id not in mr_lookup:
+            mr_id = DEFAULT_MR_ID
 
         profile_id = str(profile.pk)
 
@@ -185,13 +206,26 @@ def create_collecting_summary(project):
         ):
             summary[site_id]["sample_unit_methods"][protocol]["profile_summary"][
                 profile_id
-            ] = {"profile_name": profile.full_name, "labels": []}
+            ] = {"profile_name": profile.full_name, "collect_records": []}
 
         label = _get_collect_record_label(collect_record)
         sample_date = get_value(data, "sample_event__sample_date")
+        mr = mr_lookup.get(mr_id) or DEFAULT_MR_ID
+        observers = get_value(data, "observers") or []
+        observer_names = [
+            o.get("profile_name") or DEFAULT_OBSERVER_NAME for o in observers
+        ]
+
         summary[site_id]["sample_unit_methods"][protocol]["profile_summary"][
             profile_id
-        ]["labels"].append({"name": label, "sample_date": sample_date})
+        ]["collect_records"].append(
+            {
+                "name": label,
+                "sample_date": sample_date,
+                "management_name": mr,
+                "observers": observer_names,
+            }
+        )
 
     return list(protocols), summary
 
@@ -206,9 +240,7 @@ def copy_project_and_resources(owner_profile, new_project_name, original_project
     new_project.tags.add(*original_project.tags.all())
 
     ProjectProfile.objects.create(
-        role=ProjectProfile.ADMIN,
-        project=new_project,
-        profile=owner_profile
+        role=ProjectProfile.ADMIN, project=new_project, profile=owner_profile
     )
 
     project_profiles = []
@@ -216,7 +248,6 @@ def copy_project_and_resources(owner_profile, new_project_name, original_project
         pp.id = None
         pp.project = new_project
         project_profiles.append(pp)
-    
     ProjectProfile.objects.bulk_create(project_profiles)
 
     new_sites = []
@@ -224,15 +255,13 @@ def copy_project_and_resources(owner_profile, new_project_name, original_project
         site.id = None
         site.project = new_project
         new_sites.append(site)
-    
     Site.objects.bulk_create(new_sites)
-    
+
     new_management_regimes = []
     for mr in original_project.management_set.all():
         mr.id = None
         mr.project = new_project
         new_management_regimes.append(mr)
-    
     Management.objects.bulk_create(new_management_regimes)
 
     return new_project
@@ -243,11 +272,11 @@ def email_members_of_new_project(project, owner_profile):
         context = {
             "owner": owner_profile,
             "project": project,
-            "project_profile": project_profile
+            "project_profile": project_profile,
         }
         mermaid_email(
             subject="New Project",
             template="emails/added_to_project.txt",
             to=[project_profile.profile.email],
-            context=context
+            context=context,
         )

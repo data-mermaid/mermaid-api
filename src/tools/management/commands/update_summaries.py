@@ -3,10 +3,9 @@ from concurrent.futures import ThreadPoolExecutor
 
 from django.conf import settings
 from django.core.management.base import BaseCommand
-from django.db import transaction
 
 from api.models import Project
-from api.utils.summaries import update_project_summaries
+from api.utils.summary_cache import update_summary_cache
 
 
 class Command(BaseCommand):
@@ -22,9 +21,8 @@ class Command(BaseCommand):
             help="Include test_projects when running update.",
         )
 
-    @transaction.atomic
     def update_summaries(self, project_id, skip_test_project):
-        update_project_summaries(project_id, skip_test_project)
+        update_summary_cache(project_id, skip_test_project=skip_test_project)
 
     def handle(self, *args, **options):
         is_forced = options["force"]
@@ -38,8 +36,10 @@ class Command(BaseCommand):
         print("Updating summaries...")
         futures = []
         with ThreadPoolExecutor(max_workers=4) as exc:
-            for project in Project.objects.all():
-                futures.append(exc.submit(self.update_summaries, project.pk, skip_test_project))
+            futures.extend(
+                exc.submit(self.update_summaries, project.pk, skip_test_project)
+                for project in Project.objects.all()
+            )
 
         for future in futures:
             future.result()

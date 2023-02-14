@@ -53,7 +53,7 @@ class QueueWorker(Construct):
             content_based_deduplication=False,
             visibility_timeout=Duration.seconds(config.api.sqs_message_visibility),
             dead_letter_queue=sqs.DeadLetterQueue(
-                max_receive_count=3, 
+                max_receive_count=2, 
                 queue=dead_letter_queue
             ),
         )

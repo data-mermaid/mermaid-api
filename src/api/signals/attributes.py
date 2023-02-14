@@ -29,5 +29,9 @@ from ..utils.q import submit_job
 @receiver(post_save, sender=Region)
 @receiver(post_save, sender=GrowthForm)
 def generate_attribute_report(sender, instance, **kwargs):
-    if instance.status == SUPERUSER_APPROVED or isinstance(instance, Region):
+    if (
+        isinstance(instance, Region)
+        or isinstance(instance, GrowthForm)
+        or instance.status == SUPERUSER_APPROVED
+    ):
         submit_job(10, update_attributes_report)
