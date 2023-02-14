@@ -1,8 +1,13 @@
-from xml.dom import ValidationErr
+import os
+from pathlib import Path
+from tempfile import NamedTemporaryFile
+from zipfile import ZIP_DEFLATED, ZipFile
+
 import pytz
 from django.db import IntegrityError, transaction
 from django.db.models import ProtectedError, Q
-from django.http.response import HttpResponseBadRequest
+from django.http import FileResponse
+from django.http.response import HttpResponse, HttpResponseBadRequest
 from django.template.defaultfilters import pluralize
 from django.utils.dateparse import parse_datetime
 from rest_framework import status
@@ -15,7 +20,8 @@ from ..exceptions import check_uuid
 from ..models import ArchivedRecord, Project
 from ..notifications import notify_cr_owners_site_mr_deleted
 from ..permissions import ProjectDataAdminPermission
-from ..utils import get_protected_related_objects
+from ..utils import create_iso_date_string, get_protected_related_objects
+from ..utils.project import get_safe_project_name
 from ..utils.sample_unit_methods import edit_transect_method
 
 
@@ -255,6 +261,53 @@ class SampleUnitMethodEditMixin(object):
                 model.protocol
             )
             return Response({"id": str(collect_record.pk)})
+        except Exception as err:
+            print(err)
+            return Response(str(err), status=500)
+
+
+class SampleUnitMethodSummaryReport(object):
+    @action(
+        detail=False, methods=["GET"], permission_classes=[ProjectDataAdminPermission]
+    )
+    def xlsx(self, request, project_pk):
+        from ..utils.reports import create_sample_unit_method_summary_report
+        try:
+            model = self.get_queryset().model
+            with NamedTemporaryFile(delete=False) as f:
+                try:
+                    protocol = getattr(model, "protocol")
+                    create_sample_unit_method_summary_report(
+                        project_pk,
+                        protocol,
+                        f.name,
+                        request=request
+                    )
+                except AttributeError as ae:
+                    raise exceptions.ValidationError("Uknown protocol") from ae
+                except ValueError as ve:
+                    raise exceptions.ValidationError(f"{protocol} protocol not suppoort") from ve
+                
+                try:
+                    base_file_name = f"{get_safe_project_name(project_pk)}_{protocol}_{create_iso_date_string(delimiter='_')}"
+                    xlsx_file_name = f"{base_file_name}.xlsx"
+                    zip_file_name = f"{base_file_name}.zip"
+                except ValueError as e:
+                    raise exceptions.ValidationError(f"[{project_pk}] Project does not exist") from e
+                
+                try:
+                    with ZipFile(zip_file_name, "w", compression=ZIP_DEFLATED) as z:
+                        z.write(f.name, arcname=xlsx_file_name)
+
+                    z_file = open(zip_file_name, "rb")
+                    response = FileResponse(z_file, content_type="application/zip")
+                    response["Content-Length"] = os.fstat(z_file.fileno()).st_size
+                    response["Content-Disposition"] = f'attachment; filename="{zip_file_name}"'
+
+                    return response
+                finally:
+                    if zip_file_name and Path(zip_file_name).exists():
+                        os.remove(zip_file_name)
         except Exception as err:
             print(err)
             return Response(str(err), status=500)

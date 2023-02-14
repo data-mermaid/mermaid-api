@@ -33,7 +33,7 @@ from ..base import (
     BaseSUViewAPISerializer,
     BaseAPISerializer,
 )
-from ..mixins import SampleUnitMethodEditMixin
+from ..mixins import SampleUnitMethodSummaryReport, SampleUnitMethodEditMixin
 from ..observer import ObserverSerializer
 from ..quadrat_collection import QuadratCollectionSerializer
 from ..sample_event import SampleEventSerializer
@@ -99,7 +99,7 @@ class BleachingQuadratCollectionMethodSerializer(BleachingQuadratCollectionSeria
 
 
 class BleachingQuadratCollectionMethodView(
-    SampleUnitMethodEditMixin, BaseProjectApiViewSet
+    SampleUnitMethodSummaryReport, SampleUnitMethodEditMixin, BaseProjectApiViewSet
 ):
     queryset = BleachingQuadratCollection.objects.select_related(
         "quadrat", "quadrat__sample_event"

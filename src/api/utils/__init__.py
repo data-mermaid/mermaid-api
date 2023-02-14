@@ -3,7 +3,7 @@ import re
 import numbers
 import subprocess
 import uuid
-from datetime import datetime
+from datetime import datetime, timezone
 
 from django.core.exceptions import ObjectDoesNotExist
 from django.db import IntegrityError
@@ -160,12 +160,18 @@ def truthy(val):
     return val in ("t", "T", "true", "True", True, 1)
 
 
+def create_iso_date_string(delimiter="-"):
+    date_format = f"%y{delimiter}%m{delimiter}%d"
+    return datetime.now(timezone.utc).strftime(date_format)
+
+
 def create_timestamp(ttl=0):
-    return datetime.utcnow().timestamp() + ttl
+    return datetime.now(timezone.utc).timestamp() + ttl
 
 
 def expired_timestamp(timestamp):
-    return create_timestamp() >= timestamp
+    tstamp = timestamp or create_timestamp()
+    return create_timestamp() >= tstamp
 
 
 def cast_float(val):
