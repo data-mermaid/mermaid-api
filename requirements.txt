@@ -19,6 +19,7 @@ natsort==8.1.0
 openpyxl==3.0.10
 psycopg2-binary==2.9.3
 openpyxl==3.0.10
+pyexcelerate==0.10.0
 pytest-cov==3.0.0
 pytest-django==4.5.2
 pytest-rich==0.1.1
