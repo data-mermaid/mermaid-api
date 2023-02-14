@@ -144,7 +144,7 @@ class ApiStack(Stack):
             self,
             "ApiImage",
             directory="../",
-            file="Dockerfile.ecs",
+            file="Dockerfile",
         )
 
         # create a scheduled fargate task

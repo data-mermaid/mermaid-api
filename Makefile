@@ -30,11 +30,15 @@ stop:
 	@make down
 
 buildnocache:
-	./ci_cd/version.sh
+	$(eval short_sha=$(shell git rev-parse --short HEAD))
+	@echo $(short_sha) > src/VERSION.txt
+	@cat src/VERSION.txt
 	@docker-compose build --no-cache --pull
 
 build:
-	./ci_cd/version.sh
+	$(eval short_sha=$(shell git rev-parse --short HEAD))
+	@echo $(short_sha) > src/VERSION.txt
+	@cat src/VERSION.txt
 	@docker-compose build
 
 up:
@@ -104,7 +108,7 @@ test:
 # Maybe specify --profile? Maybe wrap in `su webapp` and then `bash`?
 
 cloud_shell:
-	$(eval taskid=$(shell aws ecs list-tasks --region us-east-1 --cluster mermaid-api-infra-common-MermaidApiClusterB0854EC6-xitj9XbqTwap --service-name dev-mermaid-api-django-FargateServiceAC2B3B85-BifBKQE0PkAo --output text | awk -F'/' '{print $$3}'))
+	$(eval taskid=$(shell aws ecs list-tasks --region us-east-1 --cluster mermaid-api-infra-common-MermaidApiClusterB0854EC6-xitj9XbqTwap --service-name dev-mermaid-api-django-FargateServiceAC2B3B85-bxgJi3aV1CQd --output text | awk -F'/' '{print $$3}'))
 	aws ecs execute-command  \
 		--region us-east-1 \
 		--cluster mermaid-api-infra-common-MermaidApiClusterB0854EC6-xitj9XbqTwap \

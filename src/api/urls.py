@@ -67,7 +67,6 @@ from .resources.summary_sample_event import SummarySampleEventView
 
 from .resources.fish_size import FishSizeViewSet
 from .resources.health import health
-from .resources.version import version
 from .resources.project_tag import ProjectTagViewSet
 from .resources.contact import contact_mermaid, contact_project_admins
 
@@ -261,5 +260,4 @@ api_urls = router.urls + project_router.urls + [
     re_path(r"^health/$", health),
     re_path(r"^pull/$", vw_pull),
     re_path(r"^push/$", vw_push),
-    re_path(r"^version/$", version),
 ]
