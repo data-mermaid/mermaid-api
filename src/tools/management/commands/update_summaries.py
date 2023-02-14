@@ -1,5 +1,4 @@
 from time import time
-from concurrent.futures import ThreadPoolExecutor
 
 from django.conf import settings
 from django.core.management.base import BaseCommand
@@ -21,9 +20,6 @@ class Command(BaseCommand):
             help="Include test_projects when running update.",
         )
 
-    def update_summaries(self, project_id, skip_test_project):
-        update_summary_cache(project_id, skip_test_project=skip_test_project)
-
     def handle(self, *args, **options):
         is_forced = options["force"]
         skip_test_project = options["test_projects"] is not True
@@ -34,15 +30,8 @@ class Command(BaseCommand):
 
         start_time = time()
         print("Updating summaries...")
-        futures = []
-        with ThreadPoolExecutor(max_workers=4) as exc:
-            futures.extend(
-                exc.submit(self.update_summaries, project.pk, skip_test_project)
-                for project in Project.objects.all()
-            )
-
-        for future in futures:
-            future.result()
+        for project in Project.objects.all():
+            update_summary_cache(project.pk, skip_test_project=skip_test_project)
 
         end_time = time()
         print(f"Done: {end_time - start_time:.3f}s")

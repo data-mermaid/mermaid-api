@@ -379,13 +379,13 @@ class BleachingQCQuadratBenthicPercentObsModel(BaseSUModel):
     quadrat_size = models.DecimalField(decimal_places=2, max_digits=6)
     quadrat_number = models.PositiveSmallIntegerField(verbose_name="quadrat number")
     percent_hard = models.PositiveSmallIntegerField(
-        verbose_name="hard coral, % cover", default=0
+        verbose_name="hard coral, % cover", default=0, null=True, blank=True
     )
     percent_soft = models.PositiveSmallIntegerField(
-        verbose_name="soft coral, % cover", default=0
+        verbose_name="soft coral, % cover", default=0, null=True, blank=True
     )
     percent_algae = models.PositiveSmallIntegerField(
-        verbose_name="macroalgae, % cover", default=0
+        verbose_name="macroalgae, % cover", default=0, null=True, blank=True
     )
     observation_notes = models.TextField(blank=True)
     data_policy_bleachingqc = models.CharField(max_length=50)
@@ -403,9 +403,9 @@ class BleachingQCSUModel(BaseSUModel):
     percent_pale = models.DecimalField(max_digits=4, decimal_places=1, default=0)
     percent_bleached = models.DecimalField(max_digits=4, decimal_places=1, default=0)
     quadrat_count = models.PositiveSmallIntegerField(default=0)
-    percent_hard_avg = models.DecimalField(max_digits=4, decimal_places=1, default=0)
-    percent_soft_avg = models.DecimalField(max_digits=4, decimal_places=1, default=0)
-    percent_algae_avg = models.DecimalField(max_digits=4, decimal_places=1, default=0)
+    percent_hard_avg = models.DecimalField(max_digits=4, decimal_places=1, default=0, null=True, blank=True)
+    percent_soft_avg = models.DecimalField(max_digits=4, decimal_places=1, default=0, null=True, blank=True)
+    percent_algae_avg = models.DecimalField(max_digits=4, decimal_places=1, default=0, null=True, blank=True)
     data_policy_bleachingqc = models.CharField(max_length=50)
     pseudosu_id = models.UUIDField()
 
@@ -428,9 +428,9 @@ class BleachingQCSEModel(BaseSummaryModel):
     percent_pale_avg = models.DecimalField(max_digits=4, decimal_places=1)
     percent_bleached_avg = models.DecimalField(max_digits=4, decimal_places=1)
     quadrat_count_avg = models.DecimalField(max_digits=4, decimal_places=1)
-    percent_hard_avg_avg = models.DecimalField(max_digits=4, decimal_places=1)
-    percent_soft_avg_avg = models.DecimalField(max_digits=4, decimal_places=1)
-    percent_algae_avg_avg = models.DecimalField(max_digits=4, decimal_places=1)
+    percent_hard_avg_avg = models.DecimalField(max_digits=4, decimal_places=1, null=True, blank=True)
+    percent_soft_avg_avg = models.DecimalField(max_digits=4, decimal_places=1, null=True, blank=True)
+    percent_algae_avg_avg = models.DecimalField(max_digits=4, decimal_places=1, null=True, blank=True)
     data_policy_bleachingqc = models.CharField(max_length=50)
 
     class Meta:
