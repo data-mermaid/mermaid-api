@@ -14,6 +14,7 @@ DEV_SETTINGS = ProjectSettings(
         default_domain_collect="dev-collect.datamermaid.org",
         mermaid_api_audience="https://dev-api.datamermaid.org",
         public_bucket="dev-public.datamermaid.org",
+        sqs_message_visibility=600,
         
         # Secrets
         dev_emails_name="dev/mermaid-api/dev-emails-mUnSDl",

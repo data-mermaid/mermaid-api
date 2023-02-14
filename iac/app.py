@@ -28,6 +28,15 @@ common_stack = CommonStack(
     tags=tags,
 )
 
+dev_static_site_stack = StaticSiteStack(
+    app,
+    "dev-mermaid-static-site",
+    env=cdk_env,
+    tags=tags,
+    config=DEV_SETTINGS,
+    default_cert=common_stack.default_cert,
+)
+
 dev_api_stack = ApiStack(
     app,
     "dev-mermaid-api-django",
@@ -40,14 +49,15 @@ dev_api_stack = ApiStack(
     load_balancer=common_stack.load_balancer,
     container_security_group=common_stack.ecs_sg,
     api_zone=common_stack.api_zone,
+    public_bucket=dev_static_site_stack.site_bucket,
 )
 
-dev_static_site_stack = StaticSiteStack(
+prod_static_site_stack = StaticSiteStack(
     app,
-    "dev-mermaid-static-site",
+    "prod-mermaid-static-site",
     env=cdk_env,
     tags=tags,
-    config=DEV_SETTINGS,
+    config=PROD_SETTINGS,
     default_cert=common_stack.default_cert,
 )
 
@@ -63,15 +73,9 @@ prod_api_stack = ApiStack(
     load_balancer=common_stack.load_balancer,
     container_security_group=common_stack.ecs_sg,
     api_zone=common_stack.api_zone,
+    public_bucket=prod_static_site_stack.site_bucket,
 )
 
-prod_static_site_stack = StaticSiteStack(
-    app,
-    "prod-mermaid-static-site",
-    env=cdk_env,
-    tags=tags,
-    config=PROD_SETTINGS,
-    default_cert=common_stack.default_cert,
-)
+
 
 app.synth()

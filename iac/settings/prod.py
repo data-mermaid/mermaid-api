@@ -9,11 +9,12 @@ PROD_SETTINGS = ProjectSettings(
     api=DjangoSettings(
         container_cpu=1024,
         container_memory=2048,
-        container_count=2,
+        container_count=1,
         default_domain_api="api.datamermaid.org",
         default_domain_collect="collect.datamermaid.org",
         mermaid_api_audience="https://api.datamermaid.org",
         public_bucket="public.datamermaid.org",
+        sqs_message_visibility=600,
         
         # Secrets
         spa_admin_client_id_name="prod/mermaid-api/spa-admin-client-id-8GJ1mU",
