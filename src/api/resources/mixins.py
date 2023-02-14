@@ -1,9 +1,12 @@
 import os
+from pathlib import Path
 from tempfile import NamedTemporaryFile
+from zipfile import ZIP_DEFLATED, ZipFile
 
 import pytz
 from django.db import IntegrityError, transaction
 from django.db.models import ProtectedError, Q
+from django.http import FileResponse
 from django.http.response import HttpResponse, HttpResponseBadRequest
 from django.template.defaultfilters import pluralize
 from django.utils.dateparse import parse_datetime
@@ -286,15 +289,25 @@ class SampleUnitMethodSummaryReport(object):
                     raise exceptions.ValidationError(f"{protocol} protocol not suppoort") from ve
                 
                 try:
-                    file_name = f"{get_safe_project_name(project_pk)}_{protocol}_{create_iso_date_string(delimiter='_')}.xlsx"
+                    base_file_name = f"{get_safe_project_name(project_pk)}_{protocol}_{create_iso_date_string(delimiter='_')}"
+                    xlsx_file_name = f"{base_file_name}.xlsx"
+                    zip_file_name = f"{base_file_name}.zip"
                 except ValueError as e:
                     raise exceptions.ValidationError(f"[{project_pk}] Project does not exist") from e
+                
+                try:
+                    with ZipFile(zip_file_name, "w", compression=ZIP_DEFLATED) as z:
+                        z.write(f.name, arcname=xlsx_file_name)
 
-                response = HttpResponse(content_type="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet")
-                response["Content-Length"] = os.fstat(f.fileno()).st_size
-                response["Content-Disposition"] = f'attachment; filename="{file_name}"'
-                response.write(f.read())
-                return response
+                    z_file = open(zip_file_name, "rb")
+                    response = FileResponse(z_file, content_type="application/zip")
+                    response["Content-Length"] = os.fstat(z_file.fileno()).st_size
+                    response["Content-Disposition"] = f'attachment; filename="{zip_file_name}"'
+
+                    return response
+                finally:
+                    if zip_file_name and Path(zip_file_name).exists():
+                        os.remove(zip_file_name)
         except Exception as err:
             print(err)
             return Response(str(err), status=500)
