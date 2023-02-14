@@ -165,7 +165,8 @@ def create_timestamp(ttl=0):
 
 
 def expired_timestamp(timestamp):
-    return create_timestamp() >= timestamp
+    tstamp = timestamp or create_timestamp()
+    return create_timestamp() >= tstamp
 
 
 def cast_float(val):
