@@ -4,7 +4,6 @@ from .base import (
     BaseModel,
     AreaMixin,
     JSONMixin,
-    AppVersion,
     BaseAttributeModel,
     BaseChoiceModel,
     Country,

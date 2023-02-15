@@ -132,7 +132,6 @@ class ApiStack(Stack):
             "AUTH0_MANAGEMENT_API_AUDIENCE": config.api.auth0_management_api_audience,
             "MERMAID_API_AUDIENCE": config.api.mermaid_api_audience,
             "MC_USER": config.api.mc_user,
-            "CIRCLE_CI_CLIENT_ID": "",  # Leave empty
             "DB_NAME": config.database.name,
             "DB_HOST": database.instance_endpoint.hostname,
             "DB_PORT": config.database.port,
@@ -145,7 +144,7 @@ class ApiStack(Stack):
             self,
             "ApiImage",
             directory="../",
-            file="Dockerfile.ecs",
+            file="Dockerfile",
         )
 
         # create a scheduled fargate task

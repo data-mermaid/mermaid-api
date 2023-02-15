@@ -191,8 +191,3 @@ class Application(BaseModel):
 
     def __str__(self):
         return '{} - {}'.format(self.profile, self.client_id)
-
-
-class AppVersion(models.Model):
-    application = models.CharField(unique=True, max_length=25)
-    version = models.CharField(max_length=25)

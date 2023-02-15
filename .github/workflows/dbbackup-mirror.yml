@@ -12,7 +12,7 @@ jobs:
         env:
           RCLONE_CONF: ${{ secrets.RCLONE_CONF }}
         with:
-          args: copy --verbose dbbackups-s3:mermaid-db-backups dbbackups-drive:mermaid-db-backups-mirror
+          args: copy --verbose dbbackups-s3:mermaid-api-v2-backups dbbackups-drive:mermaid-db-backups-mirror
       - name: rclone delete
         uses: data-mermaid/backup/rclone@v1
         env:

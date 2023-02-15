@@ -8,7 +8,6 @@ from django.core.management.base import BaseCommand
 class Command(BaseCommand):
     SKIP_MODELS = (
         "growthform",
-        "appversion",
         "application",
         "archivedrecord",
         "uuidtaggeditem",
