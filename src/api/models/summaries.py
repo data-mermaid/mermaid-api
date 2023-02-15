@@ -51,7 +51,7 @@ class BaseSummaryModel(models.Model):
         abstract = True
 
 
-class BaseSUModel(BaseSummaryModel):
+class BaseObsModel(BaseSummaryModel):
     label = models.CharField(max_length=50, blank=True)
     relative_depth = models.CharField(max_length=50, null=True, blank=True)
     sample_time = models.TimeField(null=True, blank=True)
@@ -69,7 +69,25 @@ class BaseSUModel(BaseSummaryModel):
         abstract = True
 
 
-class BeltFishObsModel(BaseSUModel):
+class BaseSUModel(BaseSummaryModel):
+    label = models.TextField(blank=True)
+    relative_depth = models.TextField(null=True, blank=True)
+    sample_time = models.TextField(null=True, blank=True)
+    observers = models.JSONField(null=True, blank=True)
+    current_name = models.TextField(null=True, blank=True)
+    tide_name = models.TextField(null=True, blank=True)
+    visibility_name = models.TextField(null=True, blank=True)
+    sample_unit_notes = models.TextField(blank=True)
+    # Fields common to all SUs that are actually SU properties (that make SUs distinct)
+    depth = models.DecimalField(
+        max_digits=3, decimal_places=1, verbose_name=_("depth (m)")
+    )
+
+    class Meta:
+        abstract = True
+
+
+class BeltFishObsModel(BaseObsModel):
     sample_unit_id = models.UUIDField()
     transect_number = models.PositiveSmallIntegerField()
     transect_len_surveyed = models.PositiveSmallIntegerField(
@@ -172,7 +190,7 @@ class BeltFishSEModel(BaseSummaryModel):
         db_table = "summary_belt_fish_se"
 
 
-class BenthicPITObsModel(BaseSUModel):
+class BenthicPITObsModel(BaseObsModel):
     sample_unit_id = models.UUIDField()
     transect_number = models.PositiveSmallIntegerField()
     transect_len_surveyed = models.PositiveSmallIntegerField(
@@ -239,7 +257,7 @@ class BenthicPITSEModel(BaseSummaryModel):
         db_table = "summary_benthicpit_se"
 
 
-class BenthicLITObsModel(BaseSUModel):
+class BenthicLITObsModel(BaseObsModel):
     sample_unit_id = models.UUIDField()
     transect_number = models.PositiveSmallIntegerField()
     relative_depth = models.CharField(max_length=50, null=True, blank=True)
@@ -291,7 +309,7 @@ class BenthicLITSEModel(BaseSummaryModel):
         db_table = "summary_benthiclit_se"
 
 
-class BenthicPhotoQuadratTransectObsModel(BaseSUModel):
+class BenthicPhotoQuadratTransectObsModel(BaseObsModel):
     sample_unit_id = models.UUIDField()
     transect_number = models.PositiveSmallIntegerField()
     relative_depth = models.CharField(max_length=50, null=True, blank=True)
@@ -345,7 +363,7 @@ class BenthicPhotoQuadratTransectSEModel(BaseSummaryModel):
         db_table = "summary_benthicpqt_se"
 
 
-class BleachingQCColoniesBleachedObsModel(BaseSUModel):
+class BleachingQCColoniesBleachedObsModel(BaseObsModel):
     sample_unit_id = models.UUIDField()
     quadrat_size = models.DecimalField(decimal_places=2, max_digits=6)
     benthic_attribute = models.CharField(max_length=100, null=True, blank=True)
@@ -374,7 +392,7 @@ class BleachingQCColoniesBleachedObsModel(BaseSUModel):
         db_table = "summary_bleachingqc_colonies_bleached_obs"
 
 
-class BleachingQCQuadratBenthicPercentObsModel(BaseSUModel):
+class BleachingQCQuadratBenthicPercentObsModel(BaseObsModel):
     sample_unit_id = models.UUIDField()
     quadrat_size = models.DecimalField(decimal_places=2, max_digits=6)
     quadrat_number = models.PositiveSmallIntegerField(verbose_name="quadrat number")
@@ -437,7 +455,7 @@ class BleachingQCSEModel(BaseSummaryModel):
         db_table = "summary_bleachingqc_se"
 
 
-class HabitatComplexityObsModel(BaseSUModel):
+class HabitatComplexityObsModel(BaseObsModel):
     sample_unit_id = models.UUIDField()
     sample_time = models.TimeField(null=True, blank=True)
     transect_number = models.PositiveSmallIntegerField()

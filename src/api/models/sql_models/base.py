@@ -333,15 +333,6 @@ class BaseSUSQLModel(BaseSQLModel):
         "visibility_name",
         "sample_unit_notes",
     ]
-    # SU-level BaseSUSQLModel inheritors should instantiate sample_unit_ids; obs-level inheritors shouldn't
-    label = models.CharField(max_length=50, blank=True)
-    relative_depth = models.CharField(max_length=50)
-    sample_time = models.TimeField()
-    observers = models.JSONField(null=True, blank=True)
-    current_name = models.CharField(max_length=50)
-    tide_name = models.CharField(max_length=50)
-    visibility_name = models.CharField(max_length=50)
-    sample_unit_notes = models.TextField(blank=True)
 
     class Meta:
         abstract = True

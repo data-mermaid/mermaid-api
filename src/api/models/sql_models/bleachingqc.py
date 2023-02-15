@@ -64,6 +64,15 @@ class BleachingQCColoniesBleachedObsSQLModel(BaseSUSQLModel):
     objects = SQLTableManager()
 
     sample_unit_id = models.UUIDField()
+    label = models.CharField(max_length=50, blank=True)
+    relative_depth = models.CharField(max_length=50, null=True, blank=True)
+    sample_time = models.TimeField(null=True, blank=True)
+    observers = models.JSONField(null=True, blank=True)
+    current_name = models.CharField(max_length=50, null=True, blank=True)
+    tide_name = models.CharField(max_length=50, null=True, blank=True)
+    visibility_name = models.CharField(max_length=50, null=True, blank=True)
+    sample_unit_notes = models.TextField(blank=True)
+
     quadrat_size = models.DecimalField(decimal_places=2, max_digits=6)
     benthic_attribute = models.CharField(max_length=100)
     growth_form = models.CharField(max_length=100)
@@ -144,6 +153,15 @@ class BleachingQCQuadratBenthicPercentObsSQLModel(BaseSUSQLModel):
     objects = SQLTableManager()
 
     sample_unit_id = models.UUIDField()
+    label = models.CharField(max_length=50, blank=True)
+    relative_depth = models.CharField(max_length=50, null=True, blank=True)
+    sample_time = models.TimeField(null=True, blank=True)
+    observers = models.JSONField(null=True, blank=True)
+    current_name = models.CharField(max_length=50, null=True, blank=True)
+    tide_name = models.CharField(max_length=50, null=True, blank=True)
+    visibility_name = models.CharField(max_length=50, null=True, blank=True)
+    sample_unit_notes = models.TextField(blank=True)
+
     quadrat_size = models.DecimalField(decimal_places=2, max_digits=6)
     quadrat_number = models.PositiveSmallIntegerField(verbose_name="quadrat number")
     percent_hard = models.PositiveSmallIntegerField(
@@ -277,6 +295,15 @@ class BleachingQCSUSQLModel(BaseSUSQLModel):
     objects = SQLTableManager()
 
     sample_unit_ids = models.JSONField()
+    label = models.TextField(blank=True)
+    relative_depth = models.TextField(blank=True)
+    sample_time = models.TextField(blank=True)
+    observers = models.JSONField(null=True, blank=True)
+    current_name = models.TextField(blank=True)
+    tide_name = models.TextField(blank=True)
+    visibility_name = models.TextField(blank=True)
+    sample_unit_notes = models.TextField(blank=True)
+
     quadrat_size = models.DecimalField(decimal_places=2, max_digits=6)
     count_genera = models.PositiveSmallIntegerField(default=0)
     count_total = models.PositiveSmallIntegerField(default=0)
