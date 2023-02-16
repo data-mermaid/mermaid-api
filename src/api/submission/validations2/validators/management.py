@@ -113,17 +113,13 @@ class UniqueManagementValidator(BaseValidator):
         site_id = self.get_value(collect_record, self.site_path) or ""
         try:
             check_uuid(management_id)
-            check_uuid(site_id)
             management = Management.objects.get_or_none(id=management_id)
+        except ParseError:
+            return ERROR, self.MANAGEMENT_NOT_FOUND
+        try:
+            check_uuid(site_id)
             site = Site.objects.get_or_none(id=site_id)
         except ParseError:
-            management = None
-            site = None
-
-        if management is None:
-            return ERROR, self.MANAGEMENT_NOT_FOUND
-
-        if site is None:
             return ERROR, self.SITE_NOT_FOUND
 
         project_id = management.project_id
@@ -145,6 +141,7 @@ class UniqueManagementValidator(BaseValidator):
 
 
 class ManagementRuleValidator(BaseValidator):
+    MANAGEMENT_NOT_FOUND = "management_not_found"
     REQUIRED_RULES = "required_management_rules"
 
     def __init__(self, management_path, **kwargs):
@@ -153,10 +150,17 @@ class ManagementRuleValidator(BaseValidator):
 
     @validator_result
     def __call__(self, collect_record, **kwargs):
-        management_id = self.get_value(collect_record, self.management_path) or None
+        management_id = self.get_value(collect_record, self.management_path) or ""
 
-        management = Management.objects.get_or_none(id=management_id)
-        if not management or not management.rules:
+        try:
+            check_uuid(management_id)
+            management = Management.objects.get_or_none(id=management_id)
+        except ParseError:
+            management = None
+
+        if management is None:
+            return ERROR, self.MANAGEMENT_NOT_FOUND
+        if not management.rules:
             return ERROR, self.REQUIRED_RULES
 
         return OK
