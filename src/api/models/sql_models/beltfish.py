@@ -52,7 +52,7 @@ class BeltFishObsSQLModel(BaseSUSQLModel):
             o.count,
             ROUND(
                 (10 * o.count)::numeric * f.biomass_constant_a *
-                ((o.size * f.biomass_constant_c) ^ f.biomass_constant_b) /
+                power((o.size * f.biomass_constant_c)::float, f.biomass_constant_b::float)::numeric /
                 (su.len_surveyed * wc.val)::numeric,
                 2
             )::numeric AS biomass_kgha,
@@ -108,6 +108,15 @@ class BeltFishObsSQLModel(BaseSUSQLModel):
     objects = SQLTableManager()
 
     sample_unit_id = models.UUIDField()
+    label = models.CharField(max_length=50, blank=True)
+    relative_depth = models.CharField(max_length=50, null=True, blank=True)
+    sample_time = models.TimeField(null=True, blank=True)
+    observers = models.JSONField(null=True, blank=True)
+    current_name = models.CharField(max_length=50, null=True, blank=True)
+    tide_name = models.CharField(max_length=50, null=True, blank=True)
+    visibility_name = models.CharField(max_length=50, null=True, blank=True)
+    sample_unit_notes = models.TextField(blank=True)
+
     transect_number = models.PositiveSmallIntegerField()
     transect_len_surveyed = models.PositiveSmallIntegerField(
         verbose_name=_("transect length surveyed (m)")
@@ -152,6 +161,7 @@ class BeltFishObsSQLModel(BaseSUSQLModel):
     )
     observation_notes = models.TextField(blank=True)
     data_policy_beltfish = models.CharField(max_length=50)
+    pseudosu_id = models.UUIDField()
 
     class Meta:
         db_table = "belt_fish_obs_sm"
@@ -173,29 +183,34 @@ class BeltFishSUSQLModel(BaseSUSQLModel):
     _agg_su_fields = ", ".join(BaseSUSQLModel.agg_su_fields)
     _su_aggfields_sql = BaseSUSQLModel.su_aggfields_sql
 
+    # biomass_kgha_by_trophic_group_zeroes: object field
+    # with biomass sum or 0 for every trophic group used by at least one observation
+    # (not just TGs in that SU)
+    # SE sql then produces mean per TG of all SUs in the SE
+    # even if some SUs don't have that TG
     sql = f"""
         WITH beltfish_obs AS (
-            {BeltFishObsSQLModel.sql}
+            SELECT * FROM summary_belt_fish_obs WHERE project_id = '%(project_id)s'::uuid
         ),
         
-		beltfish_su_tg_all AS (SELECT
+		beltfish_su_tg_all AS MATERIALIZED (SELECT
 			pseudosu_id, fish_group_trophic.name AS trophic_group
 			FROM fish_group_trophic CROSS JOIN beltfish_obs
 			GROUP BY pseudosu_id, fish_group_trophic.name
 		),
-		beltfish_su_tg AS (SELECT 
+		beltfish_su_tg AS MATERIALIZED (SELECT 
 			pseudosu_id,
 			trophic_group,
 			COALESCE(SUM(biomass_kgha), 0::numeric) AS biomass_kgha
 			FROM beltfish_obs
 			GROUP BY pseudosu_id, trophic_group
 		),
-		beltfish_su_family_all AS (SELECT
+		beltfish_su_family_all AS MATERIALIZED (SELECT
 		    pseudosu_id, fish_family.name AS fish_family
 		    FROM fish_family CROSS JOIN beltfish_obs
 		    GROUP BY pseudosu_id, fish_family.name
 		),
-		beltfish_su_family AS (SELECT
+		beltfish_su_family AS MATERIALIZED (SELECT
             pseudosu_id,
             fish_family,
             COALESCE(SUM(biomass_kgha), 0::numeric) AS biomass_kgha
@@ -203,8 +218,8 @@ class BeltFishSUSQLModel(BaseSUSQLModel):
             GROUP BY pseudosu_id, fish_family
         ),
         
-		beltfish_tg AS (
-            SELECT beltfish_su_tg.pseudosu_id,
+		beltfish_tg AS MATERIALIZED (SELECT
+            beltfish_su_tg.pseudosu_id,
 			jsonb_object_agg(
                 CASE
                     WHEN beltfish_su_tg.trophic_group IS NULL THEN 'other'::character varying
@@ -232,8 +247,8 @@ class BeltFishSUSQLModel(BaseSUSQLModel):
 			GROUP BY beltfish_su_tg.pseudosu_id
         ),
         
-		beltfish_families AS (
-            SELECT beltfish_su_family.pseudosu_id,
+		beltfish_families AS MATERIALIZED (SELECT
+            beltfish_su_family.pseudosu_id,
             jsonb_object_agg(
                 CASE
                     WHEN beltfish_su_family.fish_family IS NULL THEN 'other'::character varying
@@ -317,6 +332,15 @@ class BeltFishSUSQLModel(BaseSUSQLModel):
     objects = SQLTableManager()
 
     sample_unit_ids = models.JSONField()
+    label = models.TextField(blank=True)
+    relative_depth = models.TextField(blank=True)
+    sample_time = models.TextField(blank=True)
+    observers = models.JSONField(null=True, blank=True)
+    current_name = models.TextField(blank=True)
+    tide_name = models.TextField(blank=True)
+    visibility_name = models.TextField(blank=True)
+    sample_unit_notes = models.TextField(blank=True)
+
     total_abundance = models.PositiveIntegerField()
     transect_number = models.PositiveSmallIntegerField()
     transect_len_surveyed = models.PositiveSmallIntegerField(
@@ -335,6 +359,9 @@ class BeltFishSUSQLModel(BaseSUSQLModel):
     biomass_kgha_by_trophic_group = models.JSONField(null=True, blank=True)
     biomass_kgha_by_fish_family = models.JSONField(null=True, blank=True)
     data_policy_beltfish = models.CharField(max_length=50)
+    pseudosu_id = models.UUIDField()
+    biomass_kgha_by_trophic_group_zeroes = models.JSONField(null=True, blank=True)
+    biomass_kgha_by_fish_family_zeroes = models.JSONField(null=True, blank=True)
 
     class Meta:
         db_table = "belt_fish_su_sm"
@@ -348,7 +375,7 @@ class BeltFishSESQLModel(BaseSQLModel):
 
     sql = f"""
         WITH beltfish_su AS (
-            {BeltFishSUSQLModel.sql}
+            SELECT * FROM summary_belt_fish_su WHERE project_id = '%(project_id)s'::uuid
         )
         -- For each SE, summarize biomass by 1) avg
         -- of transects and 2) avg of transects' trophic groups

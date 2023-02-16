@@ -5,9 +5,9 @@ from rest_framework import status
 from rest_framework.response import Response
 
 from ...models import (
-    BenthicLITObsSQLModel,
-    BenthicLITSESQLModel,
-    BenthicLITSUSQLModel,
+    BenthicLITObsModel,
+    BenthicLITSEModel,
+    BenthicLITSUModel,
     BenthicLIT,
     ObsBenthicLIT,
 )
@@ -33,7 +33,7 @@ from ..base import (
     BaseAPISerializer,
 )
 from ..benthic_transect import BenthicTransectSerializer
-from ..mixins import SampleUnitMethodEditMixin
+from ..mixins import SampleUnitMethodEditMixin, SampleUnitMethodSummaryReport
 from ..observer import ObserverSerializer
 from ..sample_event import SampleEventSerializer
 from . import (
@@ -75,7 +75,7 @@ class BenthicLITMethodSerializer(BenthicLITSerializer):
         exclude = []
 
 
-class BenthicLITMethodView(SampleUnitMethodEditMixin, BaseProjectApiViewSet):
+class BenthicLITMethodView(SampleUnitMethodSummaryReport, SampleUnitMethodEditMixin, BaseProjectApiViewSet):
     queryset = (
         BenthicLIT.objects.select_related("transect", "transect__sample_event")
         .all()
@@ -180,7 +180,7 @@ class BenthicLITMethodView(SampleUnitMethodEditMixin, BaseProjectApiViewSet):
 
 class BenthicLITMethodObsSerializer(BaseSUViewAPISerializer):
     class Meta(BaseSUViewAPISerializer.Meta):
-        model = BenthicLITObsSQLModel
+        model = BenthicLITObsModel
         exclude = BaseSUViewAPISerializer.Meta.exclude.copy()
         exclude.extend(["location", "observation_notes"])
         header_order = ["id"] + BaseSUViewAPISerializer.Meta.header_order.copy()
@@ -205,7 +205,7 @@ class BenthicLITMethodObsSerializer(BaseSUViewAPISerializer):
 
 class BenthicLITMethodObsGeoSerializer(BaseViewAPIGeoSerializer):
     class Meta(BaseViewAPIGeoSerializer.Meta):
-        model = BenthicLITObsSQLModel
+        model = BenthicLITObsModel
 
 
 class ObsBenthicLITCSVSerializer(ReportSerializer):
@@ -266,7 +266,7 @@ class ObsBenthicLITCSVSerializer(ReportSerializer):
 
 class BenthicLITMethodSUSerializer(BaseSUViewAPISerializer):
     class Meta(BaseSUViewAPISerializer.Meta):
-        model = BenthicLITSUSQLModel
+        model = BenthicLITSUModel
         exclude = BaseSUViewAPISerializer.Meta.exclude.copy()
         exclude.append("location")
         header_order = BaseSUViewAPISerializer.Meta.header_order.copy()
@@ -286,7 +286,7 @@ class BenthicLITMethodSUSerializer(BaseSUViewAPISerializer):
 
 class BenthicLITMethodSUGeoSerializer(BaseViewAPIGeoSerializer):
     class Meta(BaseViewAPIGeoSerializer.Meta):
-        model = BenthicLITSUSQLModel
+        model = BenthicLITSUModel
 
 
 class BenthicLITMethodSUCSVSerializer(ReportSerializer):
@@ -346,7 +346,7 @@ class BenthicLITMethodSUCSVSerializer(ReportSerializer):
 
 class BenthicLITMethodSESerializer(BaseSUViewAPISerializer):
     class Meta(BaseSUViewAPISerializer.Meta):
-        model = BenthicLITSESQLModel
+        model = BenthicLITSEModel
         exclude = BaseSUViewAPISerializer.Meta.exclude.copy()
         exclude.append("location")
         header_order = BaseSUViewAPISerializer.Meta.header_order.copy()
@@ -362,7 +362,7 @@ class BenthicLITMethodSESerializer(BaseSUViewAPISerializer):
 
 class BenthicLITMethodSEGeoSerializer(BaseViewAPIGeoSerializer):
     class Meta(BaseViewAPIGeoSerializer.Meta):
-        model = BenthicLITSESQLModel
+        model = BenthicLITSEModel
 
 
 class BenthicLITMethodSECSVSerializer(ReportSerializer):
@@ -422,7 +422,7 @@ class BenthicLITMethodObsFilterSet(BaseSUObsFilterSet):
     length = RangeFilter()
 
     class Meta:
-        model = BenthicLITObsSQLModel
+        model = BenthicLITObsModel
         fields = [
             "transect_len_surveyed",
             "reef_slope",
@@ -440,7 +440,7 @@ class BenthicLITMethodSUFilterSet(BaseSUObsFilterSet):
     transect_number = BaseInFilter(method="char_lookup")
 
     class Meta:
-        model = BenthicLITSUSQLModel
+        model = BenthicLITSUModel
         fields = [
             "transect_len_surveyed",
             "reef_slope",
@@ -453,7 +453,7 @@ class BenthicLITMethodSEFilterSet(BaseSEFilterSet):
     depth_avg = RangeFilter()
 
     class Meta:
-        model = BenthicLITSESQLModel
+        model = BenthicLITSEModel
         fields = ["sample_unit_count", "depth_avg"]
 
 
@@ -464,7 +464,7 @@ class BenthicLITProjectMethodObsView(BaseProjectMethodView):
     serializer_class_geojson = BenthicLITMethodObsGeoSerializer
     serializer_class_csv = ObsBenthicLITCSVSerializer
     filterset_class = BenthicLITMethodObsFilterSet
-    model = BenthicLITObsSQLModel
+    model = BenthicLITObsModel
     order_by = ("site_name", "sample_date", "transect_number", "label", "id")
 
 
@@ -475,7 +475,7 @@ class BenthicLITProjectMethodSUView(BaseProjectMethodView):
     serializer_class_geojson = BenthicLITMethodSUGeoSerializer
     serializer_class_csv = BenthicLITMethodSUCSVSerializer
     filterset_class = BenthicLITMethodSUFilterSet
-    model = BenthicLITSUSQLModel
+    model = BenthicLITSUModel
     order_by = ("site_name", "sample_date", "transect_number")
 
 
@@ -489,5 +489,5 @@ class BenthicLITProjectMethodSEView(BaseProjectMethodView):
     serializer_class_geojson = BenthicLITMethodSEGeoSerializer
     serializer_class_csv = BenthicLITMethodSECSVSerializer
     filterset_class = BenthicLITMethodSEFilterSet
-    model = BenthicLITSESQLModel
+    model = BenthicLITSEModel
     order_by = ("site_name", "sample_date")

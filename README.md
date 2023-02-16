@@ -1,10 +1,8 @@
 # WCS MERMAID API
 
-Master [![CircleCI](https://circleci.com/gh/data-mermaid/mermaid-api/tree/master.svg?style=svg)](https://circleci.com/gh/data-mermaid/mermaid-api/tree/master)
+![Deployment](https://github.com/data-mermaid/mermaid-api/actions/workflows/deploy-cdk.yml/badge.svg)
 
-Dev [![CircleCI](https://circleci.com/gh/data-mermaid/mermaid-api/tree/dev.svg?style=svg)](https://circleci.com/gh/data-mermaid/mermaid-api/tree/dev)
-
-[API User Documentation](https://mermaid-api.readthedocs.io/)
+## [API User Documentation](https://mermaid-api.readthedocs.io/)
 
 ## Stack
 
@@ -28,9 +26,8 @@ This project uses Docker for configuring the development environment and managin
 environment variables, the same Docker image can be used for the production service. Thus, for development work, you
  must have Docker installed and running. 
  
-Note that the following covers only local configuration, not deployment. Nevertheless, see the directories outside of
- `src` for how we deploy to [Elastic Beanstalk](https://aws.amazon.com/elasticbeanstalk/) using 
- [CircleCI](https://circleci.com/) and [Docker Hub](https://hub.docker.com/).
+Note that the following covers only local configuration, not deployment. See the 
+[IAC README](iac/README.md) in this repository for more information.
  
 ### Environment variables
 

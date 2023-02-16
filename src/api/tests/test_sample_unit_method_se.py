@@ -24,7 +24,8 @@ def test_beltfish_se_view(
     obs_belt_fish2_1_biomass,
     obs_belt_fish2_2_biomass,
     obs_belt_fish2_3_biomass,
-    obs_belt_fish2_4_biomass
+    obs_belt_fish2_4_biomass,
+    update_summary_cache,
 ):
     url = reverse(
         "beltfishmethod-sampleevent-list", kwargs=dict(project_pk=project1.pk)
@@ -63,6 +64,7 @@ def test_benthicpit_se_view(
     site2,
     management2,
     profile2,
+    update_summary_cache,
 ):
     url = reverse(
         "benthicpitmethod-sampleevent-list", kwargs=dict(project_pk=project1.pk)
@@ -90,6 +92,7 @@ def test_benthiclit_se_view(
     site2,
     management2,
     profile2,
+    update_summary_cache,
 ):
     url = reverse(
         "benthiclitmethod-sampleevent-list", kwargs=dict(project_pk=project1.pk)
@@ -106,7 +109,14 @@ def test_benthiclit_se_view(
 
 
 def test_habitatcomplexity_se_view(
-    client, db_setup, project1, token1, habitat_complexity_project, all_choices, site1,
+    client,
+    db_setup,
+    project1,
+    token1,
+    habitat_complexity_project,
+    all_choices,
+    site1,
+    update_summary_cache,
 ):
     url = reverse(
         "habitatcomplexitymethod-sampleevent-list", kwargs=dict(project_pk=project1.pk)
@@ -118,7 +128,14 @@ def test_habitatcomplexity_se_view(
 
 
 def test_bleachingqc_se_view(
-    client, db_setup, project1, token1, bleaching_project, all_choices, site1,
+    client,
+    db_setup,
+    project1,
+    token1,
+    bleaching_project,
+    all_choices,
+    site1,
+    update_summary_cache,
 ):
     url = reverse(
         "bleachingqcsmethod-sampleevent-list", kwargs=dict(project_pk=project1.pk)

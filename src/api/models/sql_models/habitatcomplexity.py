@@ -69,6 +69,15 @@ class HabitatComplexityObsSQLModel(BaseSUSQLModel):
     objects = SQLTableManager()
 
     sample_unit_id = models.UUIDField()
+    label = models.CharField(max_length=50, blank=True)
+    relative_depth = models.CharField(max_length=50, null=True, blank=True)
+    sample_time = models.TimeField(null=True, blank=True)
+    observers = models.JSONField(null=True, blank=True)
+    current_name = models.CharField(max_length=50, null=True, blank=True)
+    tide_name = models.CharField(max_length=50, null=True, blank=True)
+    visibility_name = models.CharField(max_length=50, null=True, blank=True)
+    sample_unit_notes = models.TextField(blank=True)
+
     sample_time = models.TimeField()
     transect_number = models.PositiveSmallIntegerField()
     transect_len_surveyed = models.PositiveSmallIntegerField(
@@ -83,6 +92,7 @@ class HabitatComplexityObsSQLModel(BaseSUSQLModel):
     score = models.PositiveSmallIntegerField()
     score_name = models.CharField(max_length=100)
     data_policy_habitatcomplexity = models.CharField(max_length=50)
+    pseudosu_id = models.UUIDField()
 
     class Meta:
         db_table = "habitatcomplexity_obs_sm"
@@ -106,7 +116,7 @@ class HabitatComplexitySUSQLModel(BaseSUSQLModel):
 
     sql = f"""
         WITH habitatcomplexity_obs AS (
-            {HabitatComplexityObsSQLModel.sql}
+            SELECT * FROM summary_habitatcomplexity_obs WHERE project_id = '%(project_id)s'::uuid
         ),
         habcomp_observers AS (
             SELECT pseudosu_id,
@@ -148,6 +158,15 @@ class HabitatComplexitySUSQLModel(BaseSUSQLModel):
     objects = SQLTableManager()
 
     sample_unit_ids = models.JSONField()
+    label = models.TextField(blank=True)
+    relative_depth = models.TextField(blank=True)
+    sample_time = models.TextField(blank=True)
+    observers = models.JSONField(null=True, blank=True)
+    current_name = models.TextField(blank=True)
+    tide_name = models.TextField(blank=True)
+    visibility_name = models.TextField(blank=True)
+    sample_unit_notes = models.TextField(blank=True)
+
     transect_number = models.PositiveSmallIntegerField()
     transect_len_surveyed = models.PositiveSmallIntegerField(
         verbose_name=_("transect length surveyed (m)")
@@ -155,6 +174,7 @@ class HabitatComplexitySUSQLModel(BaseSUSQLModel):
     reef_slope = models.CharField(max_length=50)
     score_avg = models.DecimalField(decimal_places=2, max_digits=3)
     data_policy_habitatcomplexity = models.CharField(max_length=50)
+    pseudosu_id = models.UUIDField()
 
     class Meta:
         db_table = "habitatcomplexity_su_sm"
@@ -169,7 +189,7 @@ class HabitatComplexitySESQLModel(BaseSQLModel):
     _su_aggfields_sql = BaseSQLModel.su_aggfields_sql
     sql = f"""
         WITH habitatcomplexity_su AS (
-            {HabitatComplexitySUSQLModel.sql}
+            SELECT * FROM summary_habitatcomplexity_su WHERE project_id = '%(project_id)s'::uuid
         )
         SELECT sample_event_id AS id,
         {_se_fields},

@@ -66,7 +66,6 @@ from .resources.sampleunitmethods.sample_unit_methods import SampleUnitMethodVie
 from .resources.summary_sample_event import SummarySampleEventView
 
 from .resources.fish_size import FishSizeViewSet
-from .resources.version import AppVersionViewSet
 from .resources.health import health
 from .resources.project_tag import ProjectTagViewSet
 from .resources.contact import contact_mermaid, contact_project_admins
@@ -77,7 +76,6 @@ router = routers.DefaultRouter()
 
 router.register(r"me", MeViewSet, "me")
 router.register(r"profiles", ProfileViewSet, "profile")
-router.register(r"version", AppVersionViewSet, "app_version")
 
 
 # APP-WIDE - MERMAID

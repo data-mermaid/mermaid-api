@@ -9,7 +9,7 @@ from api.models import Project
 project_where = """    WHERE\n        project.id = '%(project_id)s' :: uuid\n"""
 
 sample_event_sql_template = f"""
-    WITH tags AS (
+    WITH tags AS MATERIALIZED (
         SELECT
             project_1.id,
             jsonb_agg(
@@ -26,7 +26,7 @@ sample_event_sql_template = f"""
         GROUP BY
             project_1.id
     ),
-    parties AS (
+    parties AS MATERIALIZED (
         SELECT
             mps.management_id,
             jsonb_agg(
@@ -45,7 +45,7 @@ sample_event_sql_template = f"""
         GROUP BY
             mps.management_id
     ),
-    site_covariates AS (
+    site_covariates AS MATERIALIZED (
         SELECT
             cov.site_id,
             jsonb_agg(
@@ -172,7 +172,7 @@ sample_event_sql_template = f"""
             WHEN project.data_policy_benthicpqt = 100 THEN 'public' :: text
             ELSE '' :: text
         END AS data_policy_benthicpqt,
-        site_covariates.covariates
+        site_covariates.covariates::text
     FROM
         sample_event se
         JOIN site ON se.site_id = site.id
@@ -333,15 +333,6 @@ class BaseSUSQLModel(BaseSQLModel):
         "visibility_name",
         "sample_unit_notes",
     ]
-    # SU-level BaseSUSQLModel inheritors should instantiate sample_unit_ids; obs-level inheritors shouldn't
-    label = models.CharField(max_length=50, blank=True)
-    relative_depth = models.CharField(max_length=50)
-    sample_time = models.TimeField()
-    observers = models.JSONField(null=True, blank=True)
-    current_name = models.CharField(max_length=50)
-    tide_name = models.CharField(max_length=50)
-    visibility_name = models.CharField(max_length=50)
-    sample_unit_notes = models.TextField(blank=True)
 
     class Meta:
         abstract = True

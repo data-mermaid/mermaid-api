@@ -64,6 +64,15 @@ class BleachingQCColoniesBleachedObsSQLModel(BaseSUSQLModel):
     objects = SQLTableManager()
 
     sample_unit_id = models.UUIDField()
+    label = models.CharField(max_length=50, blank=True)
+    relative_depth = models.CharField(max_length=50, null=True, blank=True)
+    sample_time = models.TimeField(null=True, blank=True)
+    observers = models.JSONField(null=True, blank=True)
+    current_name = models.CharField(max_length=50, null=True, blank=True)
+    tide_name = models.CharField(max_length=50, null=True, blank=True)
+    visibility_name = models.CharField(max_length=50, null=True, blank=True)
+    sample_unit_notes = models.TextField(blank=True)
+
     quadrat_size = models.DecimalField(decimal_places=2, max_digits=6)
     benthic_attribute = models.CharField(max_length=100)
     growth_form = models.CharField(max_length=100)
@@ -144,6 +153,15 @@ class BleachingQCQuadratBenthicPercentObsSQLModel(BaseSUSQLModel):
     objects = SQLTableManager()
 
     sample_unit_id = models.UUIDField()
+    label = models.CharField(max_length=50, blank=True)
+    relative_depth = models.CharField(max_length=50, null=True, blank=True)
+    sample_time = models.TimeField(null=True, blank=True)
+    observers = models.JSONField(null=True, blank=True)
+    current_name = models.CharField(max_length=50, null=True, blank=True)
+    tide_name = models.CharField(max_length=50, null=True, blank=True)
+    visibility_name = models.CharField(max_length=50, null=True, blank=True)
+    sample_unit_notes = models.TextField(blank=True)
+
     quadrat_size = models.DecimalField(decimal_places=2, max_digits=6)
     quadrat_number = models.PositiveSmallIntegerField(verbose_name="quadrat number")
     percent_hard = models.PositiveSmallIntegerField(
@@ -181,10 +199,10 @@ class BleachingQCSUSQLModel(BaseSUSQLModel):
     # SU fields and observers pieces both rely on being the same for both types of QC observations
     sql = f"""
         WITH bleachingqc_colonies_bleached_obs AS (
-            {BleachingQCColoniesBleachedObsSQLModel.sql}
+            SELECT * FROM summary_bleachingqc_colonies_bleached_obs WHERE project_id = '%(project_id)s'::uuid
         ),
         bleachingqc_quadrat_benthic_percent_obs AS (
-            {BleachingQCQuadratBenthicPercentObsSQLModel.sql}
+            SELECT * FROM summary_bleachingqc_quadrat_benthic_percent_obs WHERE project_id = '%(project_id)s'::uuid
         ),
         pseudosu_su AS (
             SELECT 
@@ -277,6 +295,15 @@ class BleachingQCSUSQLModel(BaseSUSQLModel):
     objects = SQLTableManager()
 
     sample_unit_ids = models.JSONField()
+    label = models.TextField(blank=True)
+    relative_depth = models.TextField(blank=True)
+    sample_time = models.TextField(blank=True)
+    observers = models.JSONField(null=True, blank=True)
+    current_name = models.TextField(blank=True)
+    tide_name = models.TextField(blank=True)
+    visibility_name = models.TextField(blank=True)
+    sample_unit_notes = models.TextField(blank=True)
+
     quadrat_size = models.DecimalField(decimal_places=2, max_digits=6)
     count_genera = models.PositiveSmallIntegerField(default=0)
     count_total = models.PositiveSmallIntegerField(default=0)
@@ -288,6 +315,7 @@ class BleachingQCSUSQLModel(BaseSUSQLModel):
     percent_soft_avg = models.DecimalField(max_digits=4, decimal_places=1, default=0)
     percent_algae_avg = models.DecimalField(max_digits=4, decimal_places=1, default=0)
     data_policy_bleachingqc = models.CharField(max_length=50)
+    pseudosu_id = models.UUIDField()
 
     class Meta:
         db_table = "bleachingqc_su_sm"
@@ -301,7 +329,7 @@ class BleachingQCSESQLModel(BaseSQLModel):
 
     sql = f"""
         WITH bleachingqc_su AS (
-            {BleachingQCSUSQLModel.sql}
+            SELECT * FROM summary_bleachingqc_su WHERE project_id = '%(project_id)s'::uuid
         )
         SELECT sample_event_id AS id,
         {_se_fields},

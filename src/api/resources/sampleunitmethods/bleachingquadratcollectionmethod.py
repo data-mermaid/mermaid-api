@@ -6,10 +6,10 @@ from rest_framework.response import Response
 from rest_framework.validators import UniqueTogetherValidator
 
 from ...models import (
-    BleachingQCColoniesBleachedObsSQLModel,
-    BleachingQCQuadratBenthicPercentObsSQLModel,
-    BleachingQCSESQLModel,
-    BleachingQCSUSQLModel,
+    BleachingQCColoniesBleachedObsModel,
+    BleachingQCQuadratBenthicPercentObsModel,
+    BleachingQCSEModel,
+    BleachingQCSUModel,
     BleachingQuadratCollection,
     ObsColoniesBleached,
     ObsQuadratBenthicPercent,
@@ -33,7 +33,7 @@ from ..base import (
     BaseSUViewAPISerializer,
     BaseAPISerializer,
 )
-from ..mixins import SampleUnitMethodEditMixin
+from ..mixins import SampleUnitMethodSummaryReport, SampleUnitMethodEditMixin
 from ..observer import ObserverSerializer
 from ..quadrat_collection import QuadratCollectionSerializer
 from ..sample_event import SampleEventSerializer
@@ -99,7 +99,7 @@ class BleachingQuadratCollectionMethodSerializer(BleachingQuadratCollectionSeria
 
 
 class BleachingQuadratCollectionMethodView(
-    SampleUnitMethodEditMixin, BaseProjectApiViewSet
+    SampleUnitMethodSummaryReport, SampleUnitMethodEditMixin, BaseProjectApiViewSet
 ):
     queryset = BleachingQuadratCollection.objects.select_related(
         "quadrat", "quadrat__sample_event"
@@ -215,7 +215,7 @@ class BleachingQuadratCollectionMethodView(
 
 class BleachingQCMethodObsColoniesBleachedSerializer(BaseSUViewAPISerializer):
     class Meta(BaseSUViewAPISerializer.Meta):
-        model = BleachingQCColoniesBleachedObsSQLModel
+        model = BleachingQCColoniesBleachedObsModel
         exclude = BaseSUViewAPISerializer.Meta.exclude.copy()
         exclude.extend(["location", "observation_notes"])
         header_order = ["id"] + BaseSUViewAPISerializer.Meta.header_order.copy()
@@ -243,7 +243,7 @@ class BleachingQCMethodObsColoniesBleachedSerializer(BaseSUViewAPISerializer):
 
 class BleachingQCMethodObsColoniesBleachedGeoSerializer(BaseViewAPIGeoSerializer):
     class Meta(BaseViewAPIGeoSerializer.Meta):
-        model = BleachingQCColoniesBleachedObsSQLModel
+        model = BleachingQCColoniesBleachedObsModel
 
 
 class ObsBleachingQCColoniesBleachedCSVSerializer(ReportSerializer):
@@ -306,7 +306,7 @@ class ObsBleachingQCColoniesBleachedCSVSerializer(ReportSerializer):
 
 class BleachingQCMethodObsQuadratBenthicPercentSerializer(BaseSUViewAPISerializer):
     class Meta(BaseSUViewAPISerializer.Meta):
-        model = BleachingQCQuadratBenthicPercentObsSQLModel
+        model = BleachingQCQuadratBenthicPercentObsModel
         exclude = BaseSUViewAPISerializer.Meta.exclude.copy()
         exclude.extend(["location", "observation_notes"])
         header_order = ["id"] + BaseSUViewAPISerializer.Meta.header_order.copy()
@@ -329,7 +329,7 @@ class BleachingQCMethodObsQuadratBenthicPercentSerializer(BaseSUViewAPISerialize
 
 class BleachingQCMethodObsQuadratBenthicPercentGeoSerializer(BaseViewAPIGeoSerializer):
     class Meta(BaseViewAPIGeoSerializer.Meta):
-        model = BleachingQCQuadratBenthicPercentObsSQLModel
+        model = BleachingQCQuadratBenthicPercentObsModel
 
 
 class ObsQuadratBenthicPercentCSVSerializer(ReportSerializer):
@@ -387,7 +387,7 @@ class ObsQuadratBenthicPercentCSVSerializer(ReportSerializer):
 
 class BleachingQCMethodSUSerializer(BaseSUViewAPISerializer):
     class Meta(BaseSUViewAPISerializer.Meta):
-        model = BleachingQCSUSQLModel
+        model = BleachingQCSUModel
         exclude = BaseSUViewAPISerializer.Meta.exclude.copy()
         exclude.append("location")
         header_order = BaseSUViewAPISerializer.Meta.header_order.copy()
@@ -413,7 +413,7 @@ class BleachingQCMethodSUSerializer(BaseSUViewAPISerializer):
 
 class BleachingQCMethodSUGeoSerializer(BaseViewAPIGeoSerializer):
     class Meta(BaseViewAPIGeoSerializer.Meta):
-        model = BleachingQCSUSQLModel
+        model = BleachingQCSUModel
 
 
 class BleachingQCMethodSUCSVSerializer(ReportSerializer):
@@ -476,7 +476,7 @@ class BleachingQCMethodSUCSVSerializer(ReportSerializer):
 
 class BleachingQCMethodSESerializer(BaseSUViewAPISerializer):
     class Meta(BaseSUViewAPISerializer.Meta):
-        model = BleachingQCSESQLModel
+        model = BleachingQCSEModel
         exclude = BaseSUViewAPISerializer.Meta.exclude.copy()
         exclude.append("location")
         header_order = BaseSUViewAPISerializer.Meta.header_order.copy()
@@ -501,7 +501,7 @@ class BleachingQCMethodSESerializer(BaseSUViewAPISerializer):
 
 class BleachingQCMethodSEGeoSerializer(BaseViewAPIGeoSerializer):
     class Meta(BaseViewAPIGeoSerializer.Meta):
-        model = BleachingQCSESQLModel
+        model = BleachingQCSEModel
 
 
 class BleachingQCMethodSECSVSerializer(ReportSerializer):
@@ -569,7 +569,7 @@ class BleachingQCMethodColoniesBleachedObsFilterSet(BaseSUObsFilterSet):
     count_dead = RangeFilter()
 
     class Meta:
-        model = BleachingQCColoniesBleachedObsSQLModel
+        model = BleachingQCColoniesBleachedObsModel
         fields = [
             "quadrat_size",
             "benthic_attribute",
@@ -590,7 +590,7 @@ class BleachingQCMethodQuadratBenthicPercentObsFilterSet(BaseSUObsFilterSet):
     percent_algae = RangeFilter()
 
     class Meta:
-        model = BleachingQCQuadratBenthicPercentObsSQLModel
+        model = BleachingQCQuadratBenthicPercentObsModel
         fields = [
             "quadrat_size",
             "quadrat_number",
@@ -612,7 +612,7 @@ class BleachingQCMethodSUFilterSet(BaseSUObsFilterSet):
     percent_algae_avg = RangeFilter()
 
     class Meta:
-        model = BleachingQCSUSQLModel
+        model = BleachingQCSUModel
         fields = [
             "quadrat_size",
             "count_genera",
@@ -642,7 +642,7 @@ class BleachingQCMethodSEFilterSet(BaseSEFilterSet):
     percent_algae_avg_avg = RangeFilter()
 
     class Meta:
-        model = BleachingQCSESQLModel
+        model = BleachingQCSEModel
         fields = [
             "sample_unit_count",
             "depth_avg",
@@ -666,7 +666,7 @@ class BleachingQCProjectMethodObsColoniesBleachedView(BaseProjectMethodView):
     serializer_class_geojson = BleachingQCMethodObsColoniesBleachedGeoSerializer
     serializer_class_csv = ObsBleachingQCColoniesBleachedCSVSerializer
     filterset_class = BleachingQCMethodColoniesBleachedObsFilterSet
-    model = BleachingQCColoniesBleachedObsSQLModel
+    model = BleachingQCColoniesBleachedObsModel
     order_by = ("site_name", "sample_date", "label", "benthic_attribute", "growth_form")
 
 
@@ -677,7 +677,7 @@ class BleachingQCProjectMethodObsQuadratBenthicPercentView(BaseProjectMethodView
     serializer_class_geojson = BleachingQCMethodObsQuadratBenthicPercentGeoSerializer
     serializer_class_csv = ObsQuadratBenthicPercentCSVSerializer
     filterset_class = BleachingQCMethodQuadratBenthicPercentObsFilterSet
-    model = BleachingQCQuadratBenthicPercentObsSQLModel
+    model = BleachingQCQuadratBenthicPercentObsModel
     order_by = ("site_name", "sample_date", "label", "quadrat_number")
 
 
@@ -688,7 +688,7 @@ class BleachingQCProjectMethodSUView(BaseProjectMethodView):
     serializer_class_geojson = BleachingQCMethodSUGeoSerializer
     serializer_class_csv = BleachingQCMethodSUCSVSerializer
     filterset_class = BleachingQCMethodSUFilterSet
-    model = BleachingQCSUSQLModel
+    model = BleachingQCSUModel
     order_by = ("site_name", "sample_date", "label")
 
 
@@ -702,5 +702,5 @@ class BleachingQCProjectMethodSEView(BaseProjectMethodView):
     serializer_class_geojson = BleachingQCMethodSEGeoSerializer
     serializer_class_csv = BleachingQCMethodSECSVSerializer
     filterset_class = BleachingQCMethodSEFilterSet
-    model = BleachingQCSESQLModel
+    model = BleachingQCSEModel
     order_by = ("site_name", "sample_date")
