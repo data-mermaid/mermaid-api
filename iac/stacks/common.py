@@ -190,7 +190,7 @@ class CommonStack(Stack):
             default_action=elb.ListenerAction.fixed_response(404),
             certificates=[self.default_cert],
         )
-        # self.load_balancer.add_redirect() # Needs to be HTTPs first.
+        self.load_balancer.add_redirect()
 
         self.ecs_sg = ec2.SecurityGroup(
             self, id="EcsSg", vpc=self.vpc, allow_all_outbound=True
