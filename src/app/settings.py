@@ -116,6 +116,9 @@ if ENVIRONMENT not in ("dev", "prod",):
     ALLOWED_HOSTS = ['*']
     DEBUG = True
 
+# SSL settings
+SECURE_PROXY_SSL_HEADER = ('HTTP_X_FORWARDED_PROTO', 'https')
+
 ROOT_URLCONF = 'app.urls'
 
 TEMPLATES = [
