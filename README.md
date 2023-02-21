@@ -135,7 +135,6 @@ admin@datamermaid.org.
 
 - Install [Session Manager Plugin for AWS-CLI](https://docs.aws.amazon.com/systems-manager/latest/userguide/session-manager-working-with-install-plugin.html) locally
 - Ensure AWS `mermaid` profile is set (~/.aws/config and ~/.aws/credentials)
-- export AWS_PROFILE=mermaid
 - `$ make cloud_shell`
 - su webapp
 - bash

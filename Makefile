@@ -104,15 +104,31 @@ test:
 # -----------------
 # Fargate Maintenance (docker exec)
 # -----------------
-# TODO: populate service-name dynamically, using dev/prod arg passed in from commandline like `make env=dev cloud_shell`
-# Maybe specify --profile? Maybe wrap in `su webapp` and then `bash`?
+# Assume local profile name in ~/.aws/config is `mermaid`
 
-cloud_shell:
-	$(eval taskid=$(shell aws ecs list-tasks --region us-east-1 --cluster mermaid-api-infra-common-MermaidApiClusterB0854EC6-xitj9XbqTwap --service-name dev-mermaid-api-django-FargateServiceAC2B3B85-bxgJi3aV1CQd --output text | awk -F'/' '{print $$3}'))
+# TODO: populate service-name dynamically, using dev/prod arg passed in from commandline like `make env=dev cloud_shell`
+# Some way to wrap in `su webapp` and then `bash`?
+cloudshell:
+	$(eval cluster=mermaid-api-infra-common-MermaidApiClusterB0854EC6-xitj9XbqTwap)
+	$(eval service=dev-mermaid-api-django-FargateServiceAC2B3B85-bxgJi3aV1CQd)
+	$(eval taskid=$(shell aws ecs list-tasks --profile mermaid --cluster $(cluster) --service-name $(service) --output text | awk -F'/' '{print $$3}'))
 	aws ecs execute-command  \
-		--region us-east-1 \
+		--profile mermaid \
 		--cluster mermaid-api-infra-common-MermaidApiClusterB0854EC6-xitj9XbqTwap \
 		--task $(taskid) \
 		--container MermaidAPI \
 		--command "/bin/bash" \
 		--interactive
+
+cloudtunnel:
+	$(eval cluster=mermaid-api-infra-common-MermaidApiClusterB0854EC6-xitj9XbqTwap)
+	$(eval service=dev-mermaid-api-django-FargateServiceAC2B3B85-bxgJi3aV1CQd)
+	$(eval taskid=$(shell aws ecs list-tasks --profile mermaid --cluster $(cluster) --service-name $(service) --output text | awk -F'/' '{print $$3}'))
+	$(eval runtimeid=$(shell aws ecs describe-tasks --profile mermaid --cluster $(cluster) --tasks $(taskid) | grep -oP '"runtimeId": "\K.+"' | head -c-2))
+	$(eval dbhost=mermaid-api-infra-common-postgresrdsv2b4b63a33-576a8t2dqako.cus0vfcwxkgi.us-east-1.rds.amazonaws.com)
+	$(eval localport=5444)
+	aws ssm start-session \
+		--profile mermaid \
+		--target ecs:$(cluster)_$(taskid)_$(runtimeid) \
+		--document-name AWS-StartPortForwardingSessionToRemoteHost \
+		--parameters '{"host":["$(dbhost)"], "portNumber":["5432"], "localPortNumber":["$(localport)"]}'
