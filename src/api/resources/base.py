@@ -47,17 +47,17 @@ from .mixins import MethodAuthenticationMixin, UpdatesMixin, OrFilterSetMixin
 
 class ModelNameReadOnlyField(serializers.Field):
     def to_representation(self, obj):
-        return u"{}".format(obj.name)
+        return "{}".format(obj.name)
 
 
 class ModelValReadOnlyField(serializers.Field):
     def to_representation(self, obj):
-        return u"{}".format(obj.val)
+        return "{}".format(obj.val)
 
 
 class TagField(serializers.Field):
     def to_representation(self, obj):
-        return u"{}".format(obj.name)
+        return "{}".format(obj.name)
 
     def to_internal_value(self, data):
         if not isinstance(data, str):
@@ -315,7 +315,7 @@ class ListFilter(Filter):
     def filter(self, qs, value):
         if value is None:
             return qs
-        value_list = [v.strip() for v in value.split(u",")]
+        value_list = [v.strip() for v in value.split(",")]
         return super(ListFilter, self).filter(qs, Lookup(value_list, "in"))
 
 
