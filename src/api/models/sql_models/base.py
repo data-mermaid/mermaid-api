@@ -232,6 +232,9 @@ class BaseSQLModel(models.Model):
         string_agg(DISTINCT visibility_name, ', ' ORDER BY visibility_name) AS visibility_name
     """
 
+    # top-level benthic categories to exclude from SU- and SE-level summaries
+    excluded_benthic_categories = ["Other"]
+
     # model fields to be inherited by every obs/su/se view
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
     project_id = models.UUIDField()

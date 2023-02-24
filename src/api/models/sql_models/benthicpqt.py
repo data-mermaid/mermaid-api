@@ -152,9 +152,12 @@ class BenthicPhotoQuadratTransectSUSQLModel(BaseSUSQLModel):
     _agg_su_fields = ", ".join(BaseSUSQLModel.agg_su_fields)
     _su_aggfields_sql = BaseSUSQLModel.su_aggfields_sql
 
+    excluded_categories = ", ".join(f"'{c}'" for c in BaseSUSQLModel.excluded_benthic_categories)
+
     sql = f"""
         WITH benthicpqt_obs AS (
             SELECT * FROM summary_benthicpqt_obs WHERE project_id = '%(project_id)s'::uuid
+            AND benthic_category NOT IN ({excluded_categories})
         ),
         benthicpqt_observers AS (
             SELECT pseudosu_id,
@@ -203,6 +206,7 @@ class BenthicPhotoQuadratTransectSUSQLModel(BaseSUSQLModel):
                         SELECT name AS benthic_category
                         FROM benthic_attribute
                         WHERE benthic_attribute.parent_id IS NULL
+                        AND benthic_attribute.name NOT IN ({excluded_categories})
                     ) top_categories
                 ) cps_expanded
                 LEFT JOIN cps_obs ON (
