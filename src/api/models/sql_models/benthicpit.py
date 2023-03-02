@@ -144,12 +144,10 @@ class BenthicPITSUSQLModel(BaseSUSQLModel):
     _agg_su_fields = ", ".join(BaseSUSQLModel.agg_su_fields)
     _su_aggfields_sql = BaseSUSQLModel.su_aggfields_sql
 
-    excluded_categories = ", ".join(f"'{c}'" for c in BaseSUSQLModel.excluded_benthic_categories)
-
     sql = f"""
         WITH benthicpit_obs AS (
             SELECT * FROM summary_benthicpit_obs WHERE project_id = '%(project_id)s'::uuid          
-            AND benthic_category NOT IN ({excluded_categories})
+            AND benthic_category != 'Other'
         ),
         benthicpit_observers AS (
             SELECT pseudosu_id,
@@ -199,7 +197,7 @@ class BenthicPITSUSQLModel(BaseSUSQLModel):
                         SELECT name AS benthic_category
                         FROM benthic_attribute
                         WHERE benthic_attribute.parent_id IS NULL
-                        AND benthic_attribute.name NOT IN ({excluded_categories})
+                        AND benthic_attribute.name != 'Other'
                     ) top_categories
                 ) cps_expanded
                 LEFT JOIN cps_obs ON (
