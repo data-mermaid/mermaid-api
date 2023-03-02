@@ -114,6 +114,8 @@ class UniqueManagementValidator(BaseValidator):
         try:
             check_uuid(management_id)
             management = Management.objects.get_or_none(id=management_id)
+            if management is None:
+                return ERROR, self.MANAGEMENT_NOT_FOUND
         except ParseError:
             return ERROR, self.MANAGEMENT_NOT_FOUND
         try:
