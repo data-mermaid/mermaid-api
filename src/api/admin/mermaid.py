@@ -100,7 +100,7 @@ class ProjectAdmin(BaseAdmin):
         pps = self._get_admins()
         return ", ".join(
             [
-                u"{} <{}>".format(p.profile.full_name, p.profile.email)
+                "{} <{}>".format(p.profile.full_name, p.profile.email)
                 for p in pps
                 if p.project == obj
             ]
@@ -123,9 +123,9 @@ class ProjectAdmin(BaseAdmin):
 
     def tag_list(self, obj):
         # TODO: cache this
-        return ", ".join(u"{}".format(t.name) for t in obj.tags.all())
+        return ", ".join("{}".format(t.name) for t in obj.tags.all())
 
-    tag_list.short_description = _(u"organizations")
+    tag_list.short_description = _("organizations")
 
     def get_queryset(self, request):
         return super().get_queryset(request).select_related("created_by", "updated_by")
@@ -457,13 +457,13 @@ class BenthicAttributeAdmin(AttributeAdmin):
     def fk_link(self, obj):
         if obj.parent:
             link = reverse("admin:api_benthicattribute_change", args=[obj.parent.pk])
-            return format_html(u'<a href="{}">{}</a>', link, obj.parent.name)
+            return format_html('<a href="{}">{}</a>', link, obj.parent.name)
         else:
             return ""
 
     fk_link.allow_tags = True
     fk_link.admin_order_field = "parent"
-    fk_link.short_description = _(u"Parent")
+    fk_link.short_description = _("Parent")
 
     def region_list(self, obj):
         return ",".join([r.name for r in obj.regions.all()])
@@ -785,11 +785,11 @@ class FishGenusAdmin(FishAttributeGroupingAdmin):
 
     def fk_link(self, obj):
         link = reverse("admin:api_fishfamily_change", args=[obj.family.pk])
-        return format_html(u'<a href="{}">{}</a>', link, obj.family.name)
+        return format_html('<a href="{}">{}</a>', link, obj.family.name)
 
     fk_link.allow_tags = True
     fk_link.admin_order_field = "family"
-    fk_link.short_description = _(u"Family")
+    fk_link.short_description = _("Family")
 
 
 @admin.register(FishSpecies)
@@ -829,11 +829,11 @@ class FishSpeciesAdmin(FishAttributeAdmin):
 
     def fk_link(self, obj):
         link = reverse("admin:api_fishgenus_change", args=[obj.genus.pk])
-        return format_html(u'<a href="{}">{}</a>', link, obj.genus.name)
+        return format_html('<a href="{}">{}</a>', link, obj.genus.name)
 
     fk_link.allow_tags = True
     fk_link.admin_order_field = "genus"
-    fk_link.short_description = _(u"Genus")
+    fk_link.short_description = _("Genus")
 
     def fish_family(self, obj):
         return obj.genus.family.name
