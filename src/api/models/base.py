@@ -9,9 +9,9 @@ from django.utils.translation import gettext_lazy as _
 PROPOSED = 10
 SUPERUSER_APPROVED = 90
 APPROVAL_STATUSES = (
-    (SUPERUSER_APPROVED, _(u'superuser approved')),
-    # (50, _(u'project admin approved')),
-    (PROPOSED, _(u'proposed')),
+    (SUPERUSER_APPROVED, _('superuser approved')),
+    # (50, _('project admin approved')),
+    (PROPOSED, _('proposed')),
 )
 
 
@@ -60,7 +60,7 @@ class Profile(models.Model):
         db_table = 'profile'
 
     def __str__(self):
-        return u'{} [{}]'.format(self.full_name, self.pk)
+        return '{} [{}]'.format(self.full_name, self.pk)
 
     @property
     def full_name(self):  # noqa
@@ -120,7 +120,7 @@ class AreaMixin(models.Model):
         # Thought geography=True would make this unnecessary
         self._area = round(field.transform(3410, clone=True).area / 10000, 3)
         return self._area
-    area.fget.short_description = _(u'area (ha)')
+    area.fget.short_description = _('area (ha)')
 
     class Meta:
         abstract = True
@@ -160,11 +160,11 @@ class Country(BaseChoiceModel):
 
     class Meta:
         db_table = 'country'
-        verbose_name_plural = u'countries'
+        verbose_name_plural = 'countries'
         ordering = ('name',)
 
     def __str__(self):
-        return _(u'%s') % self.name
+        return _('%s') % self.name
 
 
 class AuthUser(BaseModel):
@@ -176,7 +176,7 @@ class AuthUser(BaseModel):
         unique_together = ('profile', 'user_id',)
 
     def __str__(self):
-        return _(u'%s') % self.profile.full_name
+        return _('%s') % self.profile.full_name
 
 
 class Application(BaseModel):

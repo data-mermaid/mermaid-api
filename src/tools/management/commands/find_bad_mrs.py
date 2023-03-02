@@ -10,7 +10,7 @@ from api.models import Management, Project, ProjectProfile
 
 def admin_list(proj):
     pps = ProjectProfile.objects.filter(project=proj, role=ProjectProfile.ADMIN).select_related('profile')
-    return ", ".join([u'{} <{}>'.format(p.profile.full_name, p.profile.email) for p in pps])
+    return ", ".join(['{} <{}>'.format(p.profile.full_name, p.profile.email) for p in pps])
 
 
 class Command(BaseCommand):
