@@ -13,8 +13,8 @@ from api.models import (
 
 # Used by other refresh commands, not this one
 def get_regions(region):
-    region_ip, _ = Region.objects.get_or_create(name=u'Indo-Pacific')
-    region_c, _ = Region.objects.get_or_create(name=u'Caribbean')
+    region_ip, _ = Region.objects.get_or_create(name='Indo-Pacific')
+    region_c, _ = Region.objects.get_or_create(name='Caribbean')
     REGION_BOTH = '*both regions*'
 
     chosen_regions = []

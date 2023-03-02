@@ -55,7 +55,7 @@ class Command(BaseCommand):
         if show_details is True:
             for c in sorted(changes):
                 for m in changes[c]:
-                    s = u"{model},{id},{updated_on},{updated_by}".format(model=c, **m)
+                    s = "{model},{id},{updated_on},{updated_by}".format(model=c, **m)
                     print(s)
         else:
             for c in sorted(changes):

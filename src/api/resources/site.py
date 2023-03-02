@@ -129,7 +129,7 @@ class SiteFilterSet(BaseAPIFilterSet):
         return queryset.extra(where=[sql])
 
     def filter_not_projects(self, queryset, name, value):
-        value_list = [check_uuid(v.strip()) for v in value.split(u',')]
+        value_list = [check_uuid(v.strip()) for v in value.split(',')]
         
         return queryset.exclude(project__in=value_list)
 
