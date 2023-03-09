@@ -4,7 +4,11 @@ from django.db.models.signals import post_delete, post_save, m2m_changed
 from django.dispatch import receiver
 
 from ..models import BaseAttributeModel, Tag, ProjectProfile, Project
-from ..notifications import notify_admins_change, notify_admins_project_change
+from ..notifications import (
+    notify_admins_change,
+    notify_admins_project_change,
+    notify_project_users,
+)
 from ..utils import get_subclasses
 from ..utils.email import mermaid_email
 
@@ -13,7 +17,7 @@ __all__ = (
     "notify_admins_project_instance_change",
     "notify_admins_project_tags_change",
     "notify_admins_new_admin",
-    "notify_admins_dropped_admin",
+    "notify_removed_project_user",
     "notify_new_project_user",
 )
 
@@ -118,29 +122,45 @@ def notify_admins_new_admin(sender, instance, created, **kwargs):
             notify_admins_change(instance, "remove")
 
 
-@receiver(post_delete, sender=ProjectProfile)
-def notify_admins_dropped_admin(sender, instance, **kwargs):
-    if instance.role >= ProjectProfile.ADMIN:
-        notify_admins_change(instance, "remove")
-
-
 @receiver(post_save, sender=ProjectProfile)
 def notify_new_project_user(sender, instance, created, **kwargs):
     if created is False:
         return
 
+    subject = f"User added to {instance.project.name}"
     context = {
         "project_profile": instance,
         "admin_profile": instance.updated_by,
+        "added_removed": "added to",
     }
     if instance.profile.num_account_connections == 0:
-        template = "emails/new_user_added_to_project.html"
+        email_template = "emails/new_user_added_to_project.html"
     else:
-        template = "emails/user_added_to_project.html"
+        email_template = "emails/user_project_add_remove.html"
+    notify_template = "notifications/user_project_add_remove.txt"
 
-    mermaid_email(
-        f"New User added to {instance.project.name}",
-        template,
-        [instance.profile.email],
-        context=context,
+    notify_project_users(
+        instance.project, subject, email_template, notify_template, context
+    )
+
+
+@receiver(post_delete, sender=ProjectProfile)
+def notify_removed_project_user(sender, instance, **kwargs):
+    subject = f"User removed from {instance.project.name}"
+    context = {
+        "project_profile": instance,
+        "admin_profile": instance.updated_by,
+        "added_removed": "removed from",
+    }
+    email_template = "emails/user_project_add_remove.html"
+    notify_template = "notifications/user_project_add_remove.txt"
+    self = [instance.profile]
+
+    notify_project_users(
+        instance.project,
+        subject,
+        email_template,
+        notify_template,
+        context,
+        extra_profiles=self,
     )

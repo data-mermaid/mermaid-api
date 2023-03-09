@@ -2,8 +2,8 @@
 {% block title %}Project administrator change{% endblock %}
 {% block body %}
 
-<h2>{{profile.full_name}} has been {{body_snippet}}<br />
-{{ project_name }}</h2>
+<h2>Administrative privileges have been {{body_snippet}} {{profile.full_name}} for <br />
+    {{ project_name }}</h2>
 
 {% if admin_profile %}
 <p>
@@ -17,7 +17,6 @@
   right, then click "Send Change Password Email".
 </p>
 
-<p>You received this email because you are an administrator of this project.</p>
 <p>
   To review this project's user roles, go to
   <a href="{{collect_project_url}}">{{collect_project_url}}</a>.
