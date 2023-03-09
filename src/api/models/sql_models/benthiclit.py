@@ -161,6 +161,7 @@ class BenthicLITSUSQLModel(BaseSUSQLModel):
     sql = f"""
         WITH benthiclit_obs AS (
             SELECT * FROM summary_benthiclit_obs WHERE project_id = '%(project_id)s'::uuid
+            AND benthic_category != 'Other'
         ),
         benthiclit_observers AS (
             SELECT pseudosu_id,
@@ -212,6 +213,7 @@ class BenthicLITSUSQLModel(BaseSUSQLModel):
                         SELECT name AS benthic_category
                         FROM benthic_attribute
                         WHERE benthic_attribute.parent_id IS NULL
+                        AND benthic_attribute.name != 'Other'
                     ) top_categories
                 ) cps_expanded
                 LEFT JOIN cps_obs ON (
