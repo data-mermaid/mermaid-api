@@ -115,7 +115,7 @@ def _get_source(source_type):
 
 def _get_project(data, source_type):
     projid = None
-    projname = ""
+    projname = "NO PROJECT"
     if "project" in data[source_type]:
         projid = data[source_type].get("project")
     elif source_type == PROJECTS_SOURCE_TYPE and "id" in data[source_type]:
