@@ -106,29 +106,22 @@ test:
 # -----------------
 # Assume local profile name in ~/.aws/config is `mermaid`
 
-# TODO: populate service-name dynamically, using dev/prod arg passed in from commandline like `make env=dev cloud_shell`
-# Some way to wrap in `su webapp` and then `bash`?
 cloudshell:
-	$(eval cluster=mermaid-api-infra-common-MermaidApiClusterB0854EC6-xitj9XbqTwap)
-	$(eval service=dev-mermaid-api-django-FargateServiceAC2B3B85-bxgJi3aV1CQd)
-	$(eval taskid=$(shell aws ecs list-tasks --profile mermaid --cluster $(cluster) --service-name $(service) --output text | awk -F'/' '{print $$3}'))
+	$(eval taskid=$(shell aws ecs list-tasks --profile mermaid --cluster $(MERMAID_CLUSTER) --service-name $(MERMAID_SERVICE) --output text | awk -F'/' '{print $$3}'))
 	aws ecs execute-command  \
 		--profile mermaid \
-		--cluster mermaid-api-infra-common-MermaidApiClusterB0854EC6-xitj9XbqTwap \
+		--cluster $(MERMAID_CLUSTER) \
 		--task $(taskid) \
 		--container MermaidAPI \
 		--command "/bin/bash" \
 		--interactive
 
 cloudtunnel:
-	$(eval cluster=mermaid-api-infra-common-MermaidApiClusterB0854EC6-xitj9XbqTwap)
-	$(eval service=dev-mermaid-api-django-FargateServiceAC2B3B85-bxgJi3aV1CQd)
-	$(eval taskid=$(shell aws ecs list-tasks --profile mermaid --cluster $(cluster) --service-name $(service) --output text | awk -F'/' '{print $$3}'))
-	$(eval runtimeid=$(shell aws ecs describe-tasks --profile mermaid --cluster $(cluster) --tasks $(taskid) | grep -oP '"runtimeId": "\K.+"' | head -c-2))
-	$(eval dbhost=mermaid-api-infra-common-postgresrdsv2b4b63a33-576a8t2dqako.cus0vfcwxkgi.us-east-1.rds.amazonaws.com)
+	$(eval taskid=$(shell aws ecs list-tasks --profile mermaid --cluster $(MERMAID_CLUSTER) --service-name $(MERMAID_SERVICE) --output text | awk -F'/' '{print $$3}'))
+	$(eval runtimeid=$(shell aws ecs describe-tasks --profile mermaid --cluster $(MERMAID_CLUSTER) --tasks $(taskid) | grep -oP '"runtimeId": "\K.+"' | head -c-2))
 	$(eval localport=5444)
 	aws ssm start-session \
 		--profile mermaid \
-		--target ecs:$(cluster)_$(taskid)_$(runtimeid) \
+		--target ecs:$(MERMAID_CLUSTER)_$(taskid)_$(runtimeid) \
 		--document-name AWS-StartPortForwardingSessionToRemoteHost \
-		--parameters '{"host":["$(dbhost)"], "portNumber":["5432"], "localPortNumber":["$(localport)"]}'
+		--parameters '{"host":["$(MERMAID_DBHOST)"], "portNumber":["$(MERMAID_DBPORT)"], "localPortNumber":["$(localport)"]}'
