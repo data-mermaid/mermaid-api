@@ -12,6 +12,7 @@ def update_attributes_report():
         attributes_report.write_attribute_reference(tmp.name)
         s3.upload_file(settings.PUBLIC_BUCKET, tmp.name, "mermaid_attributes.xlsx")
 
+
 from ..mocks import MockRequest
 from ..models import (
     BENTHICLIT_PROTOCOL,
@@ -30,7 +31,10 @@ from ..reports.summary_report import (
     create_benthic_pqt_report,
 )
 
-def create_sample_unit_method_summary_report(project_pk, protocol, output_path, request=None):
+
+def create_sample_unit_method_summary_report(
+    project_pk, protocol, output_path, request=None
+):
     request = request or MockRequest()
 
     if protocol == BENTHICLIT_PROTOCOL:
