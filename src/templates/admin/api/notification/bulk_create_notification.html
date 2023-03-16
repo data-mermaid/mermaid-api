@@ -1,0 +1,71 @@
+{% extends "admin/base_site.html" %}
+{% load i18n admin_urls static admin_modify %}
+
+{% block extrahead %}{{ block.super }}
+<script src="{% url 'admin:jsi18n' %}"></script>
+{{ media }}
+{% endblock %}
+
+{% block extrastyle %}{{ block.super }}<link rel="stylesheet" type="text/css" href="{% static "admin/css/forms.css" %}">{% endblock %}
+
+{% block coltype %}colM{% endblock %}
+
+{% block bodyclass %}{{ block.super }} app-{{ opts.app_label }} model-{{ opts.model_name }} change-form{% endblock %}
+
+{% if not is_popup %}
+{% block breadcrumbs %}
+<div class="breadcrumbs">
+<a href="{% url 'admin:index' %}">{% translate 'Home' %}</a>
+&rsaquo; <a href="{% url 'admin:app_list' app_label=opts.app_label %}">{{ opts.app_config.verbose_name }}</a>
+&rsaquo; {% if has_view_permission %}<a href="{% url opts|admin_urlname:'changelist' %}">{{ opts.verbose_name_plural|capfirst }}</a>{% else %}{{ opts.verbose_name_plural|capfirst }}{% endif %}
+&rsaquo; {% if add %}{% blocktranslate with name=opts.verbose_name %}Add {{ name }}{% endblocktranslate %}{% else %}{{ original|truncatewords:"18" }}{% endif %}
+</div>
+{% endblock %}
+{% endif %}
+
+{% block content %}<div id="content-main">
+<form {% if has_file_field %}enctype="multipart/form-data" {% endif %}{% if form_url %}action="{{ form_url }}" {% endif %}method="post" id="{{ opts.model_name }}_form" novalidate>{% csrf_token %}{% block form_top %}{% endblock %}
+<div>
+
+    <fieldset class="module aligned">
+    <div class="form-row field-title">
+        <div>
+            <label class="required" for="id_title">Title:</label>
+            <input type="text" name="title" class="vTextField" maxlength="200" required id="id_title">
+        </div>
+    </div>
+    <div class="form-row field-status">
+        <div>
+            <label class="required" for="id_status">Status:</label>
+            <select name="status" required id="id_status">
+                <option value="" selected>---------</option>
+                {% for status in statuses %}
+                <option value="{{ status }}">{{ status }}</option>
+                {% endfor %}
+            </select>
+        </div>
+    </div>
+    <div class="form-row field-description">
+        <div>
+            <label class="required" for="id_description">Description:</label>
+            <textarea name="description" cols="40" rows="10" class="vLargeTextField" id="id_description"></textarea>
+        </div>
+    </div>
+    <div class="form-row field-project">
+        <div>
+            <label for="id_project">Project:</label>
+            <select name="project" id="id_project">
+                <option value="" selected>---------</option>
+                {% for project in projects %}
+                <option value="{{ project.id }}">{{ project.name }}</option>
+                {% endfor %}
+            </select>
+        </div>
+    </div>
+    <div class="submit-row">
+        <input type="submit" value="Bulk add" class="default" name="_save">
+    </div>
+    </fieldset>
+</div>
+</form></div>
+{% endblock %}

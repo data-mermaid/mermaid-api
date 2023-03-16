@@ -1,15 +1,16 @@
-import operator
 from django.conf import settings
-from django.contrib import admin
+from django.contrib import admin, messages
 from django.contrib.admin.utils import unquote
 from django.db.models import Q
+from django.template.response import TemplateResponse
 from django.utils.html import format_html
 from django.utils.translation import gettext_lazy as _
-from django.urls import reverse
+from django.urls import path, reverse
 
 from .base import *
-from ..utils import get_subclasses
 from ..models import *
+from ..utils import get_subclasses
+from ..utils.notification import add_notification
 
 
 class FishAttributeAdmin(AttributeAdmin):
@@ -1016,7 +1017,7 @@ class BenthicPhotoQuadratTransectAdmin(BaseAdmin):
 
     def quadrat_size(self, obj):
         return obj.quadrat_transect.quadrat_size
-    
+
     quadrat_size.admin_order_field = "quadrat_transect__quadrat_size"
 
     def depth(self, obj):
@@ -1059,3 +1060,52 @@ class BenthicPhotoQuadratTransectAdmin(BaseAdmin):
 class NotificationAdmin(BaseAdmin):
     list_display = ("owner", "status", "title", "created_on")
     search_fields = ["owner__first_name", "owner__last_name", "owner__pk", "status"]
+
+    def get_urls(self):
+        urls = super().get_urls()
+        custom_urls = [
+            path(
+                "bulk_notification/",
+                self.admin_site.admin_view(self.bulk_notification_view),
+                name="bulk_notification",
+            )
+        ]
+        return custom_urls + urls
+
+    def bulk_notification_view(self, request):
+        template = "admin/api/notification/bulk_create_notification.html"
+        opts = self.model._meta
+        statuses = [s[0] for s in Notification.STATUSES]
+        all_projects = Project.objects.order_by("name")
+        projects = [{"id": p.id, "name": p.name} for p in all_projects]
+        context = dict(
+            self.admin_site.each_context(request),
+            opts=opts,
+            statuses=statuses,
+            projects=projects,
+        )
+
+        if request.method == "POST":
+            data = request.POST
+            title = data.get("title") or ""
+            status = data.get("status") or ""
+            description = data.get("description") or ""
+            project_id = data.get("project") or ""
+            if title == "" or status == "" or description == "":
+                messages.error(request, "Missing required input(s)")
+                return TemplateResponse(request, template, context)
+
+            notify_template = "notifications/adhoc.txt"
+            form_context = {"adhoctext": description}
+
+            profiles = Profile.objects.all()
+            if project_id != "":
+                project_profiles = ProjectProfile.objects.filter(
+                    project_id=project_id
+                ).select_related("profile")
+                profiles = [p.profile for p in project_profiles]
+
+            add_notification(title, status, notify_template, form_context, profiles)
+            messages.success(request, "Notifications created")
+
+        return TemplateResponse(request, template, context)
