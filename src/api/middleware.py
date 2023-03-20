@@ -54,11 +54,18 @@ class MetricsMiddleware:
 
         return "", "", ""
 
+    def _obfuscate(self, value):
+        for key in value.keys():
+            if key.lower() in ["password", "password1", "password2", "token"]:
+                for i in range(len(value[key])):
+                    value[key][i] = "********"
+
     def __call__(self, request):
         url_path = request.path
         method = request.method
-        token_type, auth_type, user_id  = self.parse_token(request.headers.get("Authorization"))
-        
+        token_type, auth_type, user_id = self.parse_token(
+            request.headers.get("Authorization")
+        )
 
         s = time.time_ns()
 
@@ -67,15 +74,23 @@ class MetricsMiddleware:
         response_status_code = response.status_code
         duration = (time.time_ns() - s) / 1_000_000  # ms
 
-        print(json.dumps({
-            "timestamp": datetime.now().timestamp(),
-            "method": method,
-            "path": url_path,
-            "status_code": response_status_code,
-            "duration_ms": duration,
-            "token_type": token_type,
-            "auth_type": auth_type,
-            "user_id": user_id or "",
-        }))
+        query_params = dict(request.GET)
+        self._obfuscate(query_params)
+
+        print(
+            json.dumps(
+                {
+                    "timestamp": datetime.now().timestamp(),
+                    "method": method,
+                    "path": url_path,
+                    "query_params": query_params,
+                    "status_code": response_status_code,
+                    "duration_ms": duration,
+                    "token_type": token_type,
+                    "auth_type": auth_type,
+                    "user_id": user_id or "",
+                }
+            )
+        )
 
         return response
