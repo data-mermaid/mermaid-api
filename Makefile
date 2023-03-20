@@ -30,11 +30,15 @@ stop:
 	@make down
 
 buildnocache:
-	./ci_cd/version.sh
+	$(eval short_sha=$(shell git rev-parse --short HEAD))
+	@echo $(short_sha) > src/VERSION.txt
+	@cat src/VERSION.txt
 	@docker-compose build --no-cache --pull
 
 build:
-	./ci_cd/version.sh
+	$(eval short_sha=$(shell git rev-parse --short HEAD))
+	@echo $(short_sha) > src/VERSION.txt
+	@cat src/VERSION.txt
 	@docker-compose build
 
 up:
@@ -100,13 +104,24 @@ test:
 # -----------------
 # Fargate Maintenance (docker exec)
 # -----------------
+# Assume local profile name in ~/.aws/config is `mermaid`
 
-cloud_shell:
-	$(eval taskid=$(shell aws ecs list-tasks --region us-east-1 --cluster mermaid-api-infra-common-MermaidApiClusterB0854EC6-xitj9XbqTwap --service-name dev-mermaid-api-django-FargateServiceAC2B3B85-UkIk9eW3sVHC --output text | awk -F'/' '{print $$3}'))
+cloudshell:
+	$(eval taskid=$(shell aws ecs list-tasks --profile mermaid --cluster $(MERMAID_CLUSTER) --service-name $(MERMAID_SERVICE) --output text | awk -F'/' '{print $$3}'))
 	aws ecs execute-command  \
-		--region us-east-1 \
-		--cluster mermaid-api-infra-common-MermaidApiClusterB0854EC6-xitj9XbqTwap \
+		--profile mermaid \
+		--cluster $(MERMAID_CLUSTER) \
 		--task $(taskid) \
 		--container MermaidAPI \
 		--command "/bin/bash" \
 		--interactive
+
+cloudtunnel:
+	$(eval taskid=$(shell aws ecs list-tasks --profile mermaid --cluster $(MERMAID_CLUSTER) --service-name $(MERMAID_SERVICE) --output text | awk -F'/' '{print $$3}'))
+	$(eval runtimeid=$(shell aws ecs describe-tasks --profile mermaid --cluster $(MERMAID_CLUSTER) --tasks $(taskid) | grep -oP '"runtimeId": "\K.+"' | head -c-2))
+	$(eval localport=5444)
+	aws ssm start-session \
+		--profile mermaid \
+		--target ecs:$(MERMAID_CLUSTER)_$(taskid)_$(runtimeid) \
+		--document-name AWS-StartPortForwardingSessionToRemoteHost \
+		--parameters '{"host":["$(MERMAID_DBHOST)"], "portNumber":["$(MERMAID_DBPORT)"], "localPortNumber":["$(localport)"]}'

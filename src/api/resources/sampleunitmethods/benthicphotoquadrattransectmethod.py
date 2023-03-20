@@ -2,9 +2,9 @@ from django_filters import BaseInFilter, RangeFilter
 from rest_condition import Or
 
 from ...models import (
-    BenthicPhotoQuadratTransectObsSQLModel,
-    BenthicPhotoQuadratTransectSESQLModel,
-    BenthicPhotoQuadratTransectSUSQLModel,
+    BenthicPhotoQuadratTransectObsModel,
+    BenthicPhotoQuadratTransectSEModel,
+    BenthicPhotoQuadratTransectSUModel,
     BenthicPhotoQuadratTransect,
     ObsBenthicPhotoQuadrat,
 )
@@ -29,7 +29,7 @@ from ..base import (
     BaseAPISerializer,
 )
 from ..observer import ObserverSerializer
-from ..mixins import SampleUnitMethodEditMixin
+from ..mixins import SampleUnitMethodEditMixin, SampleUnitMethodSummaryReport
 from ..quadrat_transect import QuadratTransectSerializer
 from ..sample_event import SampleEventSerializer
 from . import (
@@ -73,7 +73,7 @@ class BenthicPhotoQuadratTransectMethodSerializer(
 
 
 class BenthicPhotoQuadratTransectMethodView(
-    SampleUnitMethodEditMixin, BaseProjectApiViewSet
+    SampleUnitMethodSummaryReport, SampleUnitMethodEditMixin, BaseProjectApiViewSet
 ):
     queryset = BenthicPhotoQuadratTransect.objects.select_related(
         "quadrat_transect", "quadrat_transect__sample_event"
@@ -84,7 +84,7 @@ class BenthicPhotoQuadratTransectMethodView(
 
 class BenthicPQTMethodObsSerializer(BaseSUViewAPISerializer):
     class Meta(BaseSUViewAPISerializer.Meta):
-        model = BenthicPhotoQuadratTransectObsSQLModel
+        model = BenthicPhotoQuadratTransectObsModel
         exclude = BaseSUViewAPISerializer.Meta.exclude.copy()
         exclude.extend(["location", "observation_notes"])
         header_order = ["id"] + BaseSUViewAPISerializer.Meta.header_order.copy()
@@ -112,7 +112,7 @@ class BenthicPQTMethodObsSerializer(BaseSUViewAPISerializer):
 
 class BenthicPQTMethodObsGeoSerializer(BaseViewAPIGeoSerializer):
     class Meta(BaseViewAPIGeoSerializer.Meta):
-        model = BenthicPhotoQuadratTransectObsSQLModel
+        model = BenthicPhotoQuadratTransectObsModel
 
 
 class ObsBenthicPQTCSVSerializer(ReportSerializer):
@@ -179,7 +179,7 @@ class ObsBenthicPQTCSVSerializer(ReportSerializer):
 
 class BenthicPQTMethodSUSerializer(BaseSUViewAPISerializer):
     class Meta(BaseSUViewAPISerializer.Meta):
-        model = BenthicPhotoQuadratTransectSUSQLModel
+        model = BenthicPhotoQuadratTransectSUModel
         exclude = BaseSUViewAPISerializer.Meta.exclude.copy()
         exclude.append("location")
         header_order = BaseSUViewAPISerializer.Meta.header_order.copy()
@@ -198,7 +198,7 @@ class BenthicPQTMethodSUSerializer(BaseSUViewAPISerializer):
 
 class BenthicPQTMethodSUGeoSerializer(BaseViewAPIGeoSerializer):
     class Meta(BaseViewAPIGeoSerializer.Meta):
-        model = BenthicPhotoQuadratTransectSUSQLModel
+        model = BenthicPhotoQuadratTransectSUModel
 
 
 class BenthicPQTMethodSUCSVSerializer(ReportSerializer):
@@ -235,6 +235,9 @@ class BenthicPQTMethodSUCSVSerializer(ReportSerializer):
         ReportField("label", "Transect label"),
         ReportField("transect_len_surveyed", "Transect length surveyed"),
         ReportField("observers", "Observers", to_names),
+        ReportField(
+            "percent_cover_by_benthic_category", "Percent cover by benthic category"
+        ),
         ReportField("site_notes", "Site notes"),
         ReportField("management_notes", "Management notes"),
         ReportField("sample_unit_notes", "Sample unit notes"),
@@ -257,7 +260,7 @@ class BenthicPQTMethodSUCSVSerializer(ReportSerializer):
 
 class BenthicPQTMethodSESerializer(BaseSUViewAPISerializer):
     class Meta(BaseSUViewAPISerializer.Meta):
-        model = BenthicPhotoQuadratTransectSESQLModel
+        model = BenthicPhotoQuadratTransectSEModel
         exclude = BaseSUViewAPISerializer.Meta.exclude.copy()
         exclude.append("location")
         header_order = BaseSUViewAPISerializer.Meta.header_order.copy()
@@ -273,7 +276,7 @@ class BenthicPQTMethodSESerializer(BaseSUViewAPISerializer):
 
 class BenthicPQTMethodSEGeoSerializer(BaseViewAPIGeoSerializer):
     class Meta(BaseViewAPIGeoSerializer.Meta):
-        model = BenthicPhotoQuadratTransectSESQLModel
+        model = BenthicPhotoQuadratTransectSEModel
 
 
 class BenthicPQTMethodSECSVSerializer(ReportSerializer):
@@ -337,7 +340,7 @@ class BenthicPQTMethodObsFilterSet(BaseSUObsFilterSet):
     interval = RangeFilter()
 
     class Meta:
-        model = BenthicPhotoQuadratTransectObsSQLModel
+        model = BenthicPhotoQuadratTransectObsModel
         fields = [
             "transect_len_surveyed",
             "reef_slope",
@@ -358,7 +361,7 @@ class BenthicPQTMethodSUFilterSet(BaseSUObsFilterSet):
     transect_number = BaseInFilter(method="char_lookup")
 
     class Meta:
-        model = BenthicPhotoQuadratTransectSUSQLModel
+        model = BenthicPhotoQuadratTransectSUModel
         fields = [
             "transect_len_surveyed",
             "reef_slope",
@@ -371,7 +374,7 @@ class BenthicPQTMethodSEFilterSet(BaseSEFilterSet):
     depth_avg = RangeFilter()
 
     class Meta:
-        model = BenthicPhotoQuadratTransectSESQLModel
+        model = BenthicPhotoQuadratTransectSEModel
         fields = [
             "sample_unit_count",
             "depth_avg",
@@ -385,7 +388,7 @@ class BenthicPQTProjectMethodObsView(BaseProjectMethodView):
     serializer_class_geojson = BenthicPQTMethodObsGeoSerializer
     serializer_class_csv = ObsBenthicPQTCSVSerializer
     filterset_class = BenthicPQTMethodObsFilterSet
-    model = BenthicPhotoQuadratTransectObsSQLModel
+    model = BenthicPhotoQuadratTransectObsModel
     order_by = (
         "site_name",
         "sample_date",
@@ -402,7 +405,7 @@ class BenthicPQTProjectMethodSUView(BaseProjectMethodView):
     serializer_class_geojson = BenthicPQTMethodSUGeoSerializer
     serializer_class_csv = BenthicPQTMethodSUCSVSerializer
     filterset_class = BenthicPQTMethodSUFilterSet
-    model = BenthicPhotoQuadratTransectSUSQLModel
+    model = BenthicPhotoQuadratTransectSUModel
     order_by = ("site_name", "sample_date", "transect_number")
 
 
@@ -416,5 +419,5 @@ class BenthicPQTProjectMethodSEView(BaseProjectMethodView):
     serializer_class_geojson = BenthicPQTMethodSEGeoSerializer
     serializer_class_csv = BenthicPQTMethodSECSVSerializer
     filterset_class = BenthicPQTMethodSEFilterSet
-    model = BenthicPhotoQuadratTransectSESQLModel
+    model = BenthicPhotoQuadratTransectSEModel
     order_by = ("site_name", "sample_date")

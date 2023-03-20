@@ -4,6 +4,7 @@ from django.core import serializers
 from django.db.models.signals import post_delete, post_save, pre_save
 from django.dispatch import receiver
 
+from .attributes import *
 from .notifications import *
 from .revision import *
 from .summaries import *
@@ -95,7 +96,7 @@ def run_site_validation(sender, instance, *args, **kwargs):
     if instance.project is None:
         return
 
-    validate(SiteValidation, Site, {"project_id": instance.project_id})
+    # validate(SiteValidation, Site, {"project_id": instance.project_id})
 
     if "created" in kwargs:
         # Need to update cached instance to keep
@@ -110,7 +111,7 @@ def run_management_validation(sender, instance, *args, **kwargs):
     if instance.project is None:
         return
 
-    validate(ManagementValidation, Management, {"project_id": instance.project_id})
+    # validate(ManagementValidation, Management, {"project_id": instance.project_id})
 
     if "created" in kwargs:
         # Need to update cached instance to keep
@@ -118,21 +119,6 @@ def run_management_validation(sender, instance, *args, **kwargs):
         mgmt = Management.objects.get(id=instance.id)
         instance.validations = mgmt.validations
         instance.updated_on = mgmt.updated_on
-
-
-@receiver(post_delete, sender=CollectRecord)
-@receiver(post_save, sender=CollectRecord)
-def run_cr_management_validation(sender, instance, *args, **kwargs):
-    if instance.project is None:
-        return
-
-    data = instance.data or {}
-    if "sample_event" in data:
-        mrid = data["sample_event"].get("management")
-        if mrid is not None:
-            validate(
-                ManagementValidation, Management, {"project_id": instance.project_id}
-            )
 
 
 @receiver(pre_save, sender=Site)

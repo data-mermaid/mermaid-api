@@ -1,32 +1,41 @@
 from collections import defaultdict
 from django.conf import settings
+from django.db.models import Q
 from ..models import CollectRecord, Notification, ProjectProfile
 from ..utils.email import mermaid_email
 from ..utils.notification import add_notification
 
 
-def notify_project_admins(
-    project, subject, email_template, notify_template, context, from_email=None
+def notify_project_users(
+    project,
+    subject,
+    email_template,
+    notify_template,
+    context,
+    user_filters=None,
+    extra_profiles=None,
 ):
-    project_admins = ProjectProfile.objects.filter(
-        project_id=project, role=ProjectProfile.ADMIN
-    ).select_related("profile")
-    project_admin_profiles = [p.profile for p in project_admins]
+    filters = Q(project_id=project)
+    if user_filters:
+        filters &= user_filters
+    project_users = ProjectProfile.objects.filter(filters).select_related("profile")
+    project_profiles = [p.profile for p in project_users]
+    if extra_profiles:
+        project_profiles.extend(extra_profiles)
 
-    if project_admins.count() > 0:
+    if len(project_profiles) > 0:
         add_notification(
-            subject, Notification.INFO, notify_template, context, project_admin_profiles
+            subject, Notification.INFO, notify_template, context, project_profiles
         )
 
-        project_admin_emails = [p.email for p in project_admin_profiles]
-        from_email = from_email or settings.DEFAULT_FROM_EMAIL
+        project_emails = [p.email for p in project_profiles]
         mermaid_email(
             subject,
             email_template,
-            project_admin_emails,
+            project_emails,
             context=context,
-            from_email=from_email,
-            reply_to=project_admin_emails,
+            from_email=settings.DEFAULT_FROM_EMAIL,
+            reply_to=project_emails,
         )
 
 
@@ -44,17 +53,20 @@ def notify_admins_project_change(instance, text_changes):
     }
     email_template = "emails/admins_project_change.html"
     notify_template = "notifications/admins_project_change.txt"
+    admins = Q(role=ProjectProfile.ADMIN)
 
-    notify_project_admins(instance, subject, email_template, notify_template, context)
+    notify_project_users(
+        instance, subject, email_template, notify_template, context, user_filters=admins
+    )
 
 
 def notify_admins_change(instance, changetype):
     if changetype == "add":
         subject_snippet = "added to"
-        body_snippet = "given administrative privileges to"
+        body_snippet = "given to"
     elif changetype == "remove":
         subject_snippet = "removed from"
-        body_snippet = "removed from this project, or is no longer an administrator for"
+        body_snippet = "removed from"
     else:
         return
 
@@ -70,9 +82,15 @@ def notify_admins_change(instance, changetype):
     }
     email_template = "emails/admins_admins_change.html"
     notify_template = "notifications/admins_admins_change.txt"
+    admins = Q(Q(role=ProjectProfile.ADMIN) | Q(id=instance.id))
 
-    notify_project_admins(
-        instance.project, subject, email_template, notify_template, context
+    notify_project_users(
+        instance.project,
+        subject,
+        email_template,
+        notify_template,
+        context,
+        user_filters=admins,
     )
 
 

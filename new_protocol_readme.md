@@ -61,6 +61,7 @@
   - BenthicPQTProjectMethodObsView
   - BenthicPQTProjectMethodSUView
   - BenthicPQTProjectMethodSEView
+- Add new function to support new protocol in summary report [summary_report.py](src/api/reports/summary_report.py)
 - Create a sample unit method endpoint viewset, example:  
   - BenthicPhotoQuadratTransectMethodView
 - Update api/urls.py with new viewsets, example:

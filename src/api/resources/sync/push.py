@@ -106,9 +106,7 @@ def apply_changes(request, serializer, record, force=False):
             return 418, "Protected Objects", protected_objects
 
         except ObjectDoesNotExist:
-            raise ObjectDoesNotExist(
-                f"{model_class._meta.model_name.capitalize()} with id {record_id} does not exist to delete"
-            )
+            return 404, "Does Not Exist", f"{model_class._meta.model_name.capitalize()} with id {record_id} does not exist to delete"
 
         return 204, "", None
 
@@ -118,7 +116,11 @@ def apply_changes(request, serializer, record, force=False):
         return 409, "Conflict", None
 
     if last_revision_num is not None:
-        instance = model_class.objects.get(pk=record_id)
+        try:
+            instance = model_class.objects.get(pk=record_id)
+        except ObjectDoesNotExist:
+            return 404, "Does Not Exist", f"{model_class._meta.model_name.capitalize()} with id {record_id} does not exist"
+
         status_code = 200
     else:
         status_code = 201

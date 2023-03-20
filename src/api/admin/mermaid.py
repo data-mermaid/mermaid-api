@@ -1,15 +1,16 @@
-import operator
 from django.conf import settings
-from django.contrib import admin
+from django.contrib import admin, messages
 from django.contrib.admin.utils import unquote
 from django.db.models import Q
+from django.template.response import TemplateResponse
 from django.utils.html import format_html
 from django.utils.translation import gettext_lazy as _
-from django.urls import reverse
+from django.urls import path, reverse
 
 from .base import *
-from ..utils import get_subclasses
 from ..models import *
+from ..utils import get_subclasses
+from ..utils.notification import add_notification
 
 
 class FishAttributeAdmin(AttributeAdmin):
@@ -100,7 +101,7 @@ class ProjectAdmin(BaseAdmin):
         pps = self._get_admins()
         return ", ".join(
             [
-                u"{} <{}>".format(p.profile.full_name, p.profile.email)
+                "{} <{}>".format(p.profile.full_name, p.profile.email)
                 for p in pps
                 if p.project == obj
             ]
@@ -123,9 +124,9 @@ class ProjectAdmin(BaseAdmin):
 
     def tag_list(self, obj):
         # TODO: cache this
-        return ", ".join(u"{}".format(t.name) for t in obj.tags.all())
+        return ", ".join("{}".format(t.name) for t in obj.tags.all())
 
-    tag_list.short_description = _(u"organizations")
+    tag_list.short_description = _("organizations")
 
     def get_queryset(self, request):
         return super().get_queryset(request).select_related("created_by", "updated_by")
@@ -457,13 +458,13 @@ class BenthicAttributeAdmin(AttributeAdmin):
     def fk_link(self, obj):
         if obj.parent:
             link = reverse("admin:api_benthicattribute_change", args=[obj.parent.pk])
-            return format_html(u'<a href="{}">{}</a>', link, obj.parent.name)
+            return format_html('<a href="{}">{}</a>', link, obj.parent.name)
         else:
             return ""
 
     fk_link.allow_tags = True
     fk_link.admin_order_field = "parent"
-    fk_link.short_description = _(u"Parent")
+    fk_link.short_description = _("Parent")
 
     def region_list(self, obj):
         return ",".join([r.name for r in obj.regions.all()])
@@ -785,11 +786,11 @@ class FishGenusAdmin(FishAttributeGroupingAdmin):
 
     def fk_link(self, obj):
         link = reverse("admin:api_fishfamily_change", args=[obj.family.pk])
-        return format_html(u'<a href="{}">{}</a>', link, obj.family.name)
+        return format_html('<a href="{}">{}</a>', link, obj.family.name)
 
     fk_link.allow_tags = True
     fk_link.admin_order_field = "family"
-    fk_link.short_description = _(u"Family")
+    fk_link.short_description = _("Family")
 
 
 @admin.register(FishSpecies)
@@ -829,11 +830,11 @@ class FishSpeciesAdmin(FishAttributeAdmin):
 
     def fk_link(self, obj):
         link = reverse("admin:api_fishgenus_change", args=[obj.genus.pk])
-        return format_html(u'<a href="{}">{}</a>', link, obj.genus.name)
+        return format_html('<a href="{}">{}</a>', link, obj.genus.name)
 
     fk_link.allow_tags = True
     fk_link.admin_order_field = "genus"
-    fk_link.short_description = _(u"Genus")
+    fk_link.short_description = _("Genus")
 
     def fish_family(self, obj):
         return obj.genus.family.name
@@ -1016,7 +1017,7 @@ class BenthicPhotoQuadratTransectAdmin(BaseAdmin):
 
     def quadrat_size(self, obj):
         return obj.quadrat_transect.quadrat_size
-    
+
     quadrat_size.admin_order_field = "quadrat_transect__quadrat_size"
 
     def depth(self, obj):
@@ -1059,3 +1060,52 @@ class BenthicPhotoQuadratTransectAdmin(BaseAdmin):
 class NotificationAdmin(BaseAdmin):
     list_display = ("owner", "status", "title", "created_on")
     search_fields = ["owner__first_name", "owner__last_name", "owner__pk", "status"]
+
+    def get_urls(self):
+        urls = super().get_urls()
+        custom_urls = [
+            path(
+                "bulk_notification/",
+                self.admin_site.admin_view(self.bulk_notification_view),
+                name="bulk_notification",
+            )
+        ]
+        return custom_urls + urls
+
+    def bulk_notification_view(self, request):
+        template = "admin/api/notification/bulk_create_notification.html"
+        opts = self.model._meta
+        statuses = [s[0] for s in Notification.STATUSES]
+        all_projects = Project.objects.order_by("name")
+        projects = [{"id": p.id, "name": p.name} for p in all_projects]
+        context = dict(
+            self.admin_site.each_context(request),
+            opts=opts,
+            statuses=statuses,
+            projects=projects,
+        )
+
+        if request.method == "POST":
+            data = request.POST
+            title = data.get("title") or ""
+            status = data.get("status") or ""
+            description = data.get("description") or ""
+            project_id = data.get("project") or ""
+            if title == "" or status == "" or description == "":
+                messages.error(request, "Missing required input(s)")
+                return TemplateResponse(request, template, context)
+
+            notify_template = "notifications/adhoc.txt"
+            form_context = {"adhoctext": description}
+
+            profiles = Profile.objects.all()
+            if project_id != "":
+                project_profiles = ProjectProfile.objects.filter(
+                    project_id=project_id
+                ).select_related("profile")
+                profiles = [p.profile for p in project_profiles]
+
+            add_notification(title, status, notify_template, form_context, profiles)
+            messages.success(request, "Notifications created")
+
+        return TemplateResponse(request, template, context)

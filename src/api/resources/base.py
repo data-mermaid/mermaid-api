@@ -17,15 +17,14 @@ from rest_framework.pagination import PageNumberPagination
 from rest_framework.filters import OrderingFilter, SearchFilter
 from rest_framework.response import Response
 from rest_framework.fields import empty
-from rest_framework_gis.serializers import GeoFeatureModelSerializer
-from rest_framework_gis.filterset import GeoFilterSet
-from rest_framework_gis.filters import GeometryFilter
 from rest_framework_gis.fields import GeometryField
+from rest_framework_gis.filters import GeometryFilter
+from rest_framework_gis.filterset import GeoFilterSet
+from rest_framework_gis.serializers import GeoFeatureModelSerializer
 from rest_condition import Or
 from django.core.exceptions import FieldDoesNotExist
 
 from django.db.models.fields.related import ForeignObjectRel
-from rest_framework.validators import qs_exists
 from django_filters.rest_framework import DjangoFilterBackend
 from django_filters import (
     Filter,
@@ -48,23 +47,39 @@ from .mixins import MethodAuthenticationMixin, UpdatesMixin, OrFilterSetMixin
 
 class ModelNameReadOnlyField(serializers.Field):
     def to_representation(self, obj):
-        return u"{}".format(obj.name)
+        return "{}".format(obj.name)
 
 
 class ModelValReadOnlyField(serializers.Field):
     def to_representation(self, obj):
-        return u"{}".format(obj.val)
+        return "{}".format(obj.val)
 
 
 class TagField(serializers.Field):
     def to_representation(self, obj):
-        return u"{}".format(obj.name)
+        return "{}".format(obj.name)
 
     def to_internal_value(self, data):
         if not isinstance(data, str):
             msg = "Incorrect type. Expected a string, but got %s"
             raise ValidationError(msg % type(data).__name__)
         return Tag(name=data)
+
+
+class PointFieldValidated(GeometryField):
+    def to_internal_value(self, value):
+        coords = value.get("coordinates")
+        if coords is None or len(coords) != 2:
+            raise ValidationError("Invalid coordinates")
+        x = value["coordinates"][0]
+        y = value["coordinates"][1]
+
+        if not isinstance(x, float) and not isinstance(x, int):
+            raise ValidationError(f"Invalid 'x' coordinate. Type is not double or integer for '{x}'")
+        if not isinstance(y, float) and not isinstance(y, int):
+            raise ValidationError(f"Invalid 'y' coordinate. Type is not double or integer for '{y}'")
+
+        return super().to_internal_value(value)
 
 
 class StandardResultPagination(PageNumberPagination):
@@ -300,7 +315,7 @@ class ListFilter(Filter):
     def filter(self, qs, value):
         if value is None:
             return qs
-        value_list = [v.strip() for v in value.split(u",")]
+        value_list = [v.strip() for v in value.split(",")]
         return super(ListFilter, self).filter(qs, Lookup(value_list, "in"))
 
 

@@ -123,6 +123,15 @@ class BenthicLITObsSQLModel(BaseSUSQLModel):
     objects = SQLTableManager()
 
     sample_unit_id = models.UUIDField()
+    label = models.CharField(max_length=50, blank=True)
+    relative_depth = models.CharField(max_length=50, null=True, blank=True)
+    sample_time = models.TimeField(null=True, blank=True)
+    observers = models.JSONField(null=True, blank=True)
+    current_name = models.CharField(max_length=50, null=True, blank=True)
+    tide_name = models.CharField(max_length=50, null=True, blank=True)
+    visibility_name = models.CharField(max_length=50, null=True, blank=True)
+    sample_unit_notes = models.TextField(blank=True)
+
     transect_number = models.PositiveSmallIntegerField()
     relative_depth = models.CharField(max_length=50)
     transect_len_surveyed = models.PositiveSmallIntegerField(
@@ -136,6 +145,7 @@ class BenthicLITObsSQLModel(BaseSUSQLModel):
     growth_form = models.CharField(max_length=100)
     observation_notes = models.TextField(blank=True)
     data_policy_benthiclit = models.CharField(max_length=50)
+    pseudosu_id = models.UUIDField()
 
     class Meta:
         db_table = "benthiclit_obs_sm"
@@ -150,7 +160,8 @@ class BenthicLITSUSQLModel(BaseSUSQLModel):
 
     sql = f"""
         WITH benthiclit_obs AS (
-            {BenthicLITObsSQLModel.sql}
+            SELECT * FROM summary_benthiclit_obs WHERE project_id = '%(project_id)s'::uuid
+            AND benthic_category != 'Other'
         ),
         benthiclit_observers AS (
             SELECT pseudosu_id,
@@ -202,6 +213,7 @@ class BenthicLITSUSQLModel(BaseSUSQLModel):
                         SELECT name AS benthic_category
                         FROM benthic_attribute
                         WHERE benthic_attribute.parent_id IS NULL
+                        AND benthic_attribute.name != 'Other'
                     ) top_categories
                 ) cps_expanded
                 LEFT JOIN cps_obs ON (
@@ -235,6 +247,15 @@ class BenthicLITSUSQLModel(BaseSUSQLModel):
     objects = SQLTableManager()
 
     sample_unit_ids = models.JSONField()
+    label = models.TextField(blank=True)
+    relative_depth = models.TextField(blank=True)
+    sample_time = models.TextField(blank=True)
+    observers = models.JSONField(null=True, blank=True)
+    current_name = models.TextField(blank=True)
+    tide_name = models.TextField(blank=True)
+    visibility_name = models.TextField(blank=True)
+    sample_unit_notes = models.TextField(blank=True)
+
     transect_number = models.PositiveSmallIntegerField()
     transect_len_surveyed = models.PositiveSmallIntegerField(
         verbose_name=_("transect length surveyed (m)")
@@ -243,6 +264,7 @@ class BenthicLITSUSQLModel(BaseSUSQLModel):
     reef_slope = models.CharField(max_length=50)
     percent_cover_by_benthic_category = models.JSONField(null=True, blank=True)
     data_policy_benthiclit = models.CharField(max_length=50)
+    pseudosu_id = models.UUIDField()
 
     class Meta:
         db_table = "benthiclit_su_sm"
@@ -254,7 +276,9 @@ class BenthicLITSESQLModel(BaseSQLModel):
     _se_fields = ", ".join([f"benthiclit_su.{f}" for f in BaseSQLModel.se_fields])
     _su_aggfields_sql = BaseSQLModel.su_aggfields_sql
     sql = f"""
-        WITH benthiclit_su AS ({ BenthicLITSUSQLModel.sql })
+        WITH benthiclit_su AS (
+            SELECT * FROM summary_benthiclit_su WHERE project_id = '%(project_id)s'::uuid
+        )
         SELECT
             benthiclit_su.sample_event_id AS id,
             { _se_fields },

@@ -6,6 +6,7 @@ from rest_framework.exceptions import (
 )
 from rest_framework.response import Response
 
+from api.models import Project
 from api.resources import (
     benthic_attribute,
     choices,
@@ -112,6 +113,24 @@ def _get_source(source_type):
     return project_sources.get(source_type) or non_project_sources.get(source_type)
 
 
+def _get_project(data, source_type):
+    projid = None
+    projname = "NO PROJECT"
+    if "project" in data[source_type]:
+        projid = data[source_type].get("project")
+    elif source_type == PROJECTS_SOURCE_TYPE and "id" in data[source_type]:
+        projid = data[source_type].get("id")
+
+    if projid:
+        try:
+            proj = Project.objects.get(pk=projid)
+            projname = proj.name
+        except Project.DoesNotExist:
+            pass
+
+    return {"project_id": projid, "project_name": projname}
+
+
 def _get_required_parameters(request, data, required_filters):
     params = {"revision_num": data.get("last_revision")}
 
@@ -145,7 +164,11 @@ def _get_choices():
 
 
 def _error(status_code, exception, data=None):
-    return {"status_code": status_code, "message": str(exception), "data": data}
+    message = str(exception)
+    if status_code == 500:
+        data = {"name": message}
+        message = "Server error"
+    return {"status_code": status_code, "message": message, "data": data}
 
 
 def _format_errors(errors):
@@ -185,9 +208,10 @@ def _update_source_record(source_type, serializer, record, request, force=False)
     )
 
     code = permission_checks[source_type]["code"]
+    data = permission_checks[source_type]["data"]
     if code in [401, 403]:
         exception = NotAuthenticated if code == 401 else PermissionDenied
-        return _error(403, exception())
+        return _error(code, exception(), data)
 
     if record_id is None:
         return _error(
@@ -253,13 +277,14 @@ def check_permissions(request, data, source_types, method=False):
     permission_checks = {}
     for source_type in source_types:
         src = _get_source(source_type)
+        proj = _get_project(data, source_type)
         try:
             params = _get_required_parameters(
                 request, data[source_type], src["required_filters"]
             )
         except ValueError:
             permission_checks[source_type] = {
-                "data": data[source_type],
+                "data": proj,
                 "code": 403
             }
             continue
@@ -269,10 +294,10 @@ def check_permissions(request, data, source_types, method=False):
         vw = src["view"]()
         vw.kwargs = {}
         if source_type == PROJECTS_SOURCE_TYPE:
-            vw.kwargs["pk"] = data[source_type].get("id") or data[source_type].get("project")
+            vw.kwargs["pk"] = proj.get("project_id")
 
         permission_check = {
-            "data": data[source_type],
+            "data": proj,
             "code": 200
         }
         try:

@@ -1,9 +1,9 @@
 from .base import (
+    SUPERUSER_APPROVED,
     Profile,
     BaseModel,
     AreaMixin,
     JSONMixin,
-    AppVersion,
     BaseAttributeModel,
     BaseChoiceModel,
     Country,
@@ -35,3 +35,24 @@ from .sql_models import (
 )
 from .summary_sample_events import SummarySampleEventModel, SummarySampleEventSQLModel
 from .view_models import *
+from .summaries import (
+    BeltFishObsModel,
+    BeltFishSUModel,
+    BeltFishSEModel,
+    BenthicLITObsModel,
+    BenthicLITSUModel,
+    BenthicLITSEModel,
+    BenthicPITObsModel,
+    BenthicPITSUModel,
+    BenthicPITSEModel,
+    BenthicPhotoQuadratTransectObsModel,
+    BenthicPhotoQuadratTransectSUModel,
+    BenthicPhotoQuadratTransectSEModel,
+    BleachingQCColoniesBleachedObsModel,
+    BleachingQCQuadratBenthicPercentObsModel,
+    BleachingQCSUModel,
+    BleachingQCSEModel,
+    HabitatComplexityObsModel,
+    HabitatComplexitySUModel,
+    HabitatComplexitySEModel,
+)

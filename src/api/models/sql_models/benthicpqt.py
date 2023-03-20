@@ -106,6 +106,15 @@ class BenthicPhotoQuadratTransectObsSQLModel(BaseSUSQLModel):
     objects = SQLTableManager()
 
     sample_unit_id = models.UUIDField()
+    label = models.CharField(max_length=50, blank=True)
+    relative_depth = models.CharField(max_length=50, null=True, blank=True)
+    sample_time = models.TimeField(null=True, blank=True)
+    observers = models.JSONField(null=True, blank=True)
+    current_name = models.CharField(max_length=50, null=True, blank=True)
+    tide_name = models.CharField(max_length=50, null=True, blank=True)
+    visibility_name = models.CharField(max_length=50, null=True, blank=True)
+    sample_unit_notes = models.TextField(blank=True)
+
     transect_number = models.PositiveSmallIntegerField()
     relative_depth = models.CharField(max_length=50)
     transect_len_surveyed = models.PositiveSmallIntegerField(
@@ -122,6 +131,7 @@ class BenthicPhotoQuadratTransectObsSQLModel(BaseSUSQLModel):
     num_points = models.PositiveSmallIntegerField()
     observation_notes = models.TextField(blank=True)
     data_policy_benthicpqt = models.CharField(max_length=50)
+    pseudosu_id = models.UUIDField()
 
     class Meta:
         db_table = "benthicpqt_obs_sm"
@@ -144,7 +154,8 @@ class BenthicPhotoQuadratTransectSUSQLModel(BaseSUSQLModel):
 
     sql = f"""
         WITH benthicpqt_obs AS (
-            {BenthicPhotoQuadratTransectObsSQLModel.sql}
+            SELECT * FROM summary_benthicpqt_obs WHERE project_id = '%(project_id)s'::uuid
+            AND benthic_category != 'Other'
         ),
         benthicpqt_observers AS (
             SELECT pseudosu_id,
@@ -193,6 +204,7 @@ class BenthicPhotoQuadratTransectSUSQLModel(BaseSUSQLModel):
                         SELECT name AS benthic_category
                         FROM benthic_attribute
                         WHERE benthic_attribute.parent_id IS NULL
+                        AND benthic_attribute.name != 'Other'
                     ) top_categories
                 ) cps_expanded
                 LEFT JOIN cps_obs ON (
@@ -226,6 +238,15 @@ class BenthicPhotoQuadratTransectSUSQLModel(BaseSUSQLModel):
     objects = SQLTableManager()
 
     sample_unit_ids = models.JSONField()
+    label = models.TextField(blank=True)
+    relative_depth = models.TextField(blank=True)
+    sample_time = models.TextField(blank=True)
+    observers = models.JSONField(null=True, blank=True)
+    current_name = models.TextField(blank=True)
+    tide_name = models.TextField(blank=True)
+    visibility_name = models.TextField(blank=True)
+    sample_unit_notes = models.TextField(blank=True)
+
     transect_number = models.PositiveSmallIntegerField()
     transect_len_surveyed = models.PositiveSmallIntegerField(
         verbose_name=_("transect length surveyed (m)")
@@ -233,6 +254,7 @@ class BenthicPhotoQuadratTransectSUSQLModel(BaseSUSQLModel):
     reef_slope = models.CharField(max_length=50)
     percent_cover_by_benthic_category = models.JSONField(null=True, blank=True)
     data_policy_benthicpqt = models.CharField(max_length=50)
+    pseudosu_id = models.UUIDField()
 
     class Meta:
         db_table = "benthicpqt_su_sm"
@@ -245,7 +267,7 @@ class BenthicPhotoQuadratTransectSESQLModel(BaseSQLModel):
 
     sql = f"""
         WITH benthicpqt_su AS (
-            {BenthicPhotoQuadratTransectSUSQLModel.sql}
+            SELECT * FROM summary_benthicpqt_su WHERE project_id = '%(project_id)s'::uuid
         )
         SELECT benthicpqt_su.sample_event_id AS id,
         {_se_fields},

@@ -1,5 +1,7 @@
 from collections import defaultdict
+from django.core.validators import MaxValueValidator
 from .base import OK, WARN, ERROR, BaseValidator, validator_result
+from ....models.mermaid import QuadratTransect
 
 
 class PointsPerQuadratValidator(BaseValidator):
@@ -89,6 +91,7 @@ class QuadratCountValidator(BaseValidator):
 
 
 class QuadratNumberSequenceValidator(BaseValidator):
+    LARGE_NUM_QUADRATS = "large_num_quadrats"
     MISSING_QUADRAT_NUMBERS = "missing_quadrat_numbers"
 
     def __init__(
@@ -108,10 +111,19 @@ class QuadratNumberSequenceValidator(BaseValidator):
 
     @validator_result
     def __call__(self, collect_record, **kwargs):
+        num_quadrats_max = 10000  # default max for num_quadrats
+        for validator in QuadratTransect.num_quadrats.field.validators:
+            if isinstance(validator, MaxValueValidator):
+                num_quadrats_max = validator.limit_value
+
+        num_quadrats = self.get_value(collect_record, self.num_quadrats_path) or 0
+        # bail out early if num_quadrats will cause list(range()) below to crash server
+        if num_quadrats > num_quadrats_max:
+            return ERROR, self.LARGE_NUM_QUADRATS, {"max_value": num_quadrats_max}
+
         observations = (
             self.get_value(collect_record, self.obs_benthic_photo_quadrats_path) or []
         )
-        num_quadrats = self.get_value(collect_record, self.num_quadrats_path) or 0
         quadrat_number_start = (
             self.get_value(collect_record, self.quadrat_number_start_path) or 1
         )

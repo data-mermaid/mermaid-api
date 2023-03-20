@@ -24,6 +24,7 @@ def test_beltfish_csv_view(
     site2,
     management2,
     profile2,
+    update_summary_cache,
 ):
     url = reverse("beltfishmethod-obs-csv", kwargs=dict(project_pk=project1.pk))
     fieldnames, rows, response = _get_rows(client, token1, url)
@@ -44,7 +45,15 @@ def test_beltfish_csv_view(
 
 
 def test_beltfish_field_report(
-    client, db_setup, project1, token1, belt_fish_project, all_choices, site2, profile2
+    client,
+    db_setup,
+    project1,
+    token1,
+    belt_fish_project,
+    all_choices,
+    site2,
+    profile2,
+    update_summary_cache,
 ):
     url = reverse("beltfishmethod-obs-csv", kwargs=dict(project_pk=project1.pk))
     fieldnames, rows, response = _get_rows(client, token1, f"{url}?field_report=true")
@@ -74,6 +83,7 @@ def test_benthicpit_csv_view(
     profile1,
     profile2,
     management2,
+    update_summary_cache,
 ):
     url = reverse("benthicpitmethod-obs-csv", kwargs=dict(project_pk=project1.pk))
     fieldnames, rows, response = _get_rows(client, token1, url)
@@ -103,6 +113,7 @@ def test_benthicpit_field_report(
     all_choices,
     site2,
     profile2,
+    update_summary_cache,
 ):
     url = reverse("benthicpitmethod-obs-csv", kwargs=dict(project_pk=project1.pk))
     fieldnames, rows, response = _get_rows(client, token1, f"{url}?field_report=true")
@@ -134,6 +145,7 @@ def test_benthiclit_csv_view(
     management2,
     ordered_benthic_lit1_observations,
     ordered_benthic_lit2_observations,
+    update_summary_cache,
 ):
     url = reverse("benthiclitmethod-obs-csv", kwargs=dict(project_pk=project1.pk))
     fieldnames, rows, response = _get_rows(client, token1, url)
@@ -170,6 +182,7 @@ def test_benthiclit_field_report(
     profile2,
     ordered_benthic_lit1_observations,
     ordered_benthic_lit2_observations,
+    update_summary_cache,
 ):
     url = reverse("benthiclitmethod-obs-csv", kwargs=dict(project_pk=project1.pk))
     fieldnames, rows, response = _get_rows(client, token1, f"{url}?field_report=true")
@@ -203,6 +216,7 @@ def test_habitatcomplexity_csv_view(
     site2,
     profile2,
     obs_habitat_complexity1_1,
+    update_summary_cache,
 ):
     url = reverse(
         "habitatcomplexitymethod-obs-csv", kwargs=dict(project_pk=project1.pk)
@@ -231,6 +245,7 @@ def test_habitatcomplexity_field_report(
     site2,
     profile2,
     obs_habitat_complexity1_1,
+    update_summary_cache,
 ):
     url = reverse(
         "habitatcomplexitymethod-obs-csv", kwargs=dict(project_pk=project1.pk)
@@ -259,6 +274,7 @@ def test_bleaching_colonies_bleached_csv_view(
     site1,
     profile1,
     obs_colonies_bleached1_4,
+    update_summary_cache,
 ):
     url = reverse("coloniesbleachedmethod-obs-csv", kwargs=dict(project_pk=project1.pk))
     fieldnames, rows, response = _get_rows(client, token1, url)
@@ -283,6 +299,7 @@ def test_bleaching_colonies_bleached_field_report(
     site1,
     profile1,
     obs_colonies_bleached1_4,
+    update_summary_cache,
 ):
     url = reverse("coloniesbleachedmethod-obs-csv", kwargs=dict(project_pk=project1.pk))
     fieldnames, rows, response = _get_rows(client, token1, f"{url}?field_report=true")
@@ -307,6 +324,7 @@ def test_bleaching_quadrat_benthic_percent_csv_view(
     site1,
     profile1,
     obs_quadrat_benthic_percent1_4,
+    update_summary_cache,
 ):
     url = reverse(
         "quadratbenthicpercentmethod-obs-csv", kwargs=dict(project_pk=project1.pk)
@@ -333,6 +351,7 @@ def test_bleaching_quadrat_benthic_percent_field_report(
     site1,
     profile1,
     obs_quadrat_benthic_percent1_4,
+    update_summary_cache,
 ):
     url = reverse(
         "quadratbenthicpercentmethod-obs-csv", kwargs=dict(project_pk=project1.pk)

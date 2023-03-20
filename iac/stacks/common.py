@@ -53,6 +53,38 @@ class CommonStack(Stack):
             ],
         )
 
+        # create s3 gateway endpoint
+        self.vpc.add_gateway_endpoint(
+            "s3-endpoint",
+            service=ec2.GatewayVpcEndpointAwsService.S3,
+            subnets=[
+                ec2.SubnetSelection(subnet_type=ec2.SubnetType.PRIVATE_WITH_EGRESS)
+            ],
+        )
+
+        # create a SG for the ECR endpoints
+        vpc_ep_ecr_sg = ec2.SecurityGroup(
+            self,
+            id="VPCEndpointsSecurityGroup",
+            vpc=self.vpc,
+            allow_all_outbound=True,
+            description="Security group for VPC Endpoints for ECR",
+        )
+
+        # create VPC endopoints for ECR
+        self.vpc.add_interface_endpoint(
+            "ecr-api-endpoint",
+            service=ec2.InterfaceVpcEndpointAwsService.ECR,
+            subnets=ec2.SubnetSelection(subnet_type=ec2.SubnetType.PRIVATE_WITH_EGRESS),
+            security_groups=[vpc_ep_ecr_sg],
+        )
+        self.vpc.add_interface_endpoint(
+            "ecr-dkr-endpoint",
+            service=ec2.InterfaceVpcEndpointAwsService.ECR_DOCKER,
+            subnets=ec2.SubnetSelection(subnet_type=ec2.SubnetType.PRIVATE_WITH_EGRESS),
+            security_groups=[vpc_ep_ecr_sg],
+        )
+
         # create a secret so we can manually set the username
         database_credentials_secret = sm.Secret(
             self,
@@ -63,9 +95,8 @@ class CommonStack(Stack):
                 generate_string_key="password",
                 exclude_punctuation=True,
                 include_space=False,
-            )
+            ),
         )
-
 
         self.database = rds.DatabaseInstance(
             self,
@@ -73,11 +104,11 @@ class CommonStack(Stack):
             vpc=self.vpc,
             engine=rds.DatabaseInstanceEngine.postgres(
                 version=rds.PostgresEngineVersion.VER_13_7
-            ),            
-            instance_type=ec2.InstanceType.of(
-                ec2.InstanceClass.BURSTABLE3, ec2.InstanceSize.MICRO
             ),
-            # database_name="default",
+            instance_type=ec2.InstanceType.of(
+                ec2.InstanceClass.BURSTABLE3,
+                ec2.InstanceSize.SMALL,
+            ),
             vpc_subnets=ec2.SubnetSelection(
                 subnet_type=ec2.SubnetType.PRIVATE_ISOLATED
             ),
@@ -97,12 +128,12 @@ class CommonStack(Stack):
         )
 
         # KMS Key for encrypting logs
-        ecs_exec_kms_key = kms.Key(self, 'ecsExecKmsKey')
+        ecs_exec_kms_key = kms.Key(self, "ecsExecKmsKey")
 
         # Pass the KMS key in the `encryptionKey` field to associate the key to the log group
         ecs_exec_log_group = logs.LogGroup(
-            self, 
-            'ECSExecLogGroup',
+            self,
+            "ECSExecLogGroup",
             encryption_key=ecs_exec_kms_key,
         )
 
@@ -110,9 +141,9 @@ class CommonStack(Stack):
             kms_key=ecs_exec_kms_key,
             log_configuration=ecs.ExecuteCommandLogConfiguration(
                 cloud_watch_log_group=ecs_exec_log_group,
-                cloud_watch_encryption_enabled=True
+                cloud_watch_encryption_enabled=True,
             ),
-            logging=ecs.ExecuteCommandLogging.OVERRIDE
+            logging=ecs.ExecuteCommandLogging.OVERRIDE,
         )
 
         self.cluster = ecs.Cluster(
@@ -121,7 +152,7 @@ class CommonStack(Stack):
             vpc=self.vpc,
             container_insights=True,
             enable_fargate_capacity_providers=True,
-            execute_command_configuration=ecs_exec_config
+            execute_command_configuration=ecs_exec_config,
         )
 
         self.load_balancer = elb.ApplicationLoadBalancer(
@@ -130,15 +161,13 @@ class CommonStack(Stack):
             vpc=self.vpc,
             internet_facing=True,
             deletion_protection=True,
-
         )
-        
 
         # DNS setup
-        root_domain = "datamermaid.org" 
+        root_domain = "datamermaid.org"
         api_domain = f"api2.{root_domain}"
 
-        # lookup hosted zone for the API. 
+        # lookup hosted zone for the API.
         # NOTE: This depends on the zone already created (manually) and NS's added to cloudflare (manually)
         self.api_zone = r53.HostedZone.from_lookup(
             self,
@@ -149,22 +178,36 @@ class CommonStack(Stack):
         # SSL Certificates
         # Lookup the cert for *.datamermaid.org
         # NOTE: This depends on the cert already created (manually)
-        default_cert = acm.Certificate.from_certificate_arn(
+        self.default_cert = acm.Certificate.from_certificate_arn(
             self,
             "DefaultSSLCert",
-            certificate_arn=f"arn:aws:acm:us-east-1:{self.account}:certificate/783d7a91-1ebd-4387-9518-e28521086db6"
+            certificate_arn=f"arn:aws:acm:us-east-1:{self.account}:certificate/783d7a91-1ebd-4387-9518-e28521086db6",
         )
 
         self.load_balancer.add_listener(
             id="MermaidApiListener",
             protocol=elb.ApplicationProtocol.HTTPS,
             default_action=elb.ListenerAction.fixed_response(404),
-            certificates=[default_cert]
+            certificates=[self.default_cert],
         )
-        # self.load_balancer.add_redirect() # Needs to be HTTPs first.
+        self.load_balancer.add_redirect()
 
         self.ecs_sg = ec2.SecurityGroup(
             self, id="EcsSg", vpc=self.vpc, allow_all_outbound=True
+        )
+
+        # Allow ECS tasks to RDS
+        self.ecs_sg.connections.allow_to(
+            self.database.connections,
+            port_range=ec2.Port.tcp(5432),
+            description="Allow ECS tasks to RDS",
+        )
+
+        # Allow ECS tasks to ECR VPC endpoints
+        self.ecs_sg.connections.allow_to(
+            vpc_ep_ecr_sg.connections,
+            port_range=ec2.Port.tcp(443),
+            description="Allow ECS tasks to ECR VPC endpoints",
         )
 
         create_cdk_bot_user(self, self.account)
@@ -178,14 +221,14 @@ def create_cdk_bot_user(self, account: str):
             iam.PolicyStatement(
                 actions=["sts:AssumeRole", "sts:TagSession"],
                 effect=iam.Effect.ALLOW,
-                resources=[f"arn:aws:iam::{account}:role/cdk-*"]
+                resources=[f"arn:aws:iam::{account}:role/cdk-*"],
             )
-        ]
+        ],
     )
 
     # this user account is used in Github Actions to deploy to AWS
     cicd_bot_user = iam.User(
-        self, 
+        self,
         "CICD_Bot",
         user_name="CICD_Bot",
     )

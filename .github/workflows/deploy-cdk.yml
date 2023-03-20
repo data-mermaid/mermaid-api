@@ -13,10 +13,16 @@ on:
       - 'w[0-9]+.[0-9]+'        # eg: w1.1
       - 'w[0-9]+.[0-9]+.[0-9]+' # eg: w1.1.1
 
-jobs:
-  deploy:
-    runs-on: ubuntu-20.04
+concurrency:
+  group: api-deployment-${{ github.ref }}
 
+jobs:
+  call-test:
+    uses: ./.github/workflows/_test.yml
+
+  deploy:
+    needs: [call-test]
+    runs-on: ubuntu-20.04
     steps:
       - uses: actions/setup-node@v3
         with:
@@ -33,16 +39,21 @@ jobs:
         run: |
           iac/install_cdk.sh
 
-      - name: Set target for dev
+      - name: Set target and version for dev
         if: startsWith(github.ref, 'refs/heads/dev')
         run: |
           echo "TARGET=dev" >> "$GITHUB_ENV"
-      
-      - name: Set target for prod
+          short_sha=$(git rev-parse --short ${{ github.sha }})
+          echo "$short_sha" > src/VERSION.txt
+          cat src/VERSION.txt
+
+      - name: Set target and version for prod
         if: startsWith(github.ref, 'refs/tags')
         run: |
           echo "TARGET=prod" >> "$GITHUB_ENV"
-          
+          echo "${{ github.ref_name }}" > src/VERSION.txt
+          cat src/VERSION.txt
+
       - name: CDK Deploy
         env:
           AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID_CDK }}
@@ -50,6 +61,9 @@ jobs:
           PYTHONPATH: ${{ github.workspace }}
           DEPLOY_AWS_ACCT: ${{ secrets.DEPLOY_AWS_ACCT }}
         run: |
-          cd iac && cdk deploy --require-approval never "${{ env.TARGET }}"-mermaid-api-django
+          cd iac && cdk deploy \
+            --require-approval never \
+            "${{ env.TARGET }}"-mermaid-api-django \
+            "${{ env.TARGET }}"-mermaid-static-site
 
       

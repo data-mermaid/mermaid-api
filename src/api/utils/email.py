@@ -43,13 +43,14 @@ def _mermaid_email(subject, template, to, context=None, from_email=None, reply_t
 
 
 def _to_in_dev_emails(to):
+    to_emails = []
     for to_email in to:
         dev_email_match = [
             email for email in settings.DEV_EMAILS if to_email.endswith(email)
         ]
         if dev_email_match:
-            return True
-    return False
+            to_emails.append(to_email)
+    return to_emails
 
 
 def mermaid_email(subject, template, to, context=None, from_email=None, reply_to=None):
@@ -61,19 +62,22 @@ def mermaid_email(subject, template, to, context=None, from_email=None, reply_to
     # if dev and not dev email: console
     # if dev and dev email: submit_job
     # if prod: submit_job
-    if get_maintenance_mode() is False and (
-        settings.ENVIRONMENT in ("prod",) or _to_in_dev_emails(to)
-    ):
-        submit_job(
-            delay=0,
-            callable=_mermaid_email,
-            subject=subject,
-            template=template,
-            to=to,
-            context=context,
-            from_email=from_email,
-            reply_to=reply_to,
-        )
+    if get_maintenance_mode() is False:
+        to_emails = to
+        if settings.ENVIRONMENT not in ("prod",):
+            to_emails = _to_in_dev_emails(to)
+
+        if to_emails:
+            submit_job(
+                delay=0,
+                callable=_mermaid_email,
+                subject=subject,
+                template=template,
+                to=to_emails,
+                context=context,
+                from_email=from_email,
+                reply_to=reply_to,
+            )
     else:
         text_content, html_content = _get_mermaid_email_content(template, context)
         print(text_content)

@@ -1,10 +1,8 @@
 # WCS MERMAID API
 
-Master [![CircleCI](https://circleci.com/gh/data-mermaid/mermaid-api/tree/master.svg?style=svg)](https://circleci.com/gh/data-mermaid/mermaid-api/tree/master)
+![Deployment](https://github.com/data-mermaid/mermaid-api/actions/workflows/deploy-cdk.yml/badge.svg)
 
-Dev [![CircleCI](https://circleci.com/gh/data-mermaid/mermaid-api/tree/dev.svg?style=svg)](https://circleci.com/gh/data-mermaid/mermaid-api/tree/dev)
-
-[API User Documentation](https://mermaid-api.readthedocs.io/)
+## [API User Documentation](https://mermaid-api.readthedocs.io/)
 
 ## Stack
 
@@ -28,9 +26,8 @@ This project uses Docker for configuring the development environment and managin
 environment variables, the same Docker image can be used for the production service. Thus, for development work, you
  must have Docker installed and running. 
  
-Note that the following covers only local configuration, not deployment. Nevertheless, see the directories outside of
- `src` for how we deploy to [Elastic Beanstalk](https://aws.amazon.com/elasticbeanstalk/) using 
- [CircleCI](https://circleci.com/) and [Docker Hub](https://hub.docker.com/).
+Note that the following covers only local configuration, not deployment. See the 
+[IAC README](iac/README.md) in this repository for more information.
  
 ### Environment variables
 
@@ -138,7 +135,11 @@ admin@datamermaid.org.
 
 - Install [Session Manager Plugin for AWS-CLI](https://docs.aws.amazon.com/systems-manager/latest/userguide/session-manager-working-with-install-plugin.html) locally
 - Ensure AWS `mermaid` profile is set (~/.aws/config and ~/.aws/credentials)
-- export AWS_PROFILE=mermaid
+- Ensure AWS resource IDs are set in environment
+  - export MERMAID_CLUSTER=
+  - export MERMAID_SERVICE=
+  - export MERMAID_DBHOST=
+  - export MERMAID_DBPORT=
 - `$ make cloud_shell`
 - su webapp
 - bash
