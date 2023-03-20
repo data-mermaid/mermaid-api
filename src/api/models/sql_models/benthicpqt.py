@@ -2,7 +2,13 @@ from django.contrib.gis.db import models
 from django.utils.translation import gettext_lazy as _
 
 from sqltables import SQLTableArg, SQLTableManager
-from .base import BaseSQLModel, BaseSUSQLModel, sample_event_sql_template
+from .base import (
+    BaseSQLModel,
+    BaseSUSQLModel,
+    project_where,
+    sample_event_sql_template,
+    sample_event_where
+)
 
 
 class BenthicPhotoQuadratTransectObsSQLModel(BaseSUSQLModel):
@@ -101,7 +107,10 @@ class BenthicPhotoQuadratTransectObsSQLModel(BaseSUSQLModel):
             LEFT JOIN api_reefslope rs ON su.reef_slope_id = rs.id
     """
 
-    sql_args = dict(project_id=SQLTableArg(required=True))
+    sql_args = dict(
+        project_id=SQLTableArg(sql=project_where, required=True),
+        sample_event_id=SQLTableArg(sql=sample_event_where, required=False),
+    )
 
     objects = SQLTableManager()
 
@@ -233,7 +242,10 @@ class BenthicPhotoQuadratTransectSUSQLModel(BaseSUSQLModel):
         ON (benthicpqt_su.pseudosu_id = benthicpqt_observers.pseudosu_id)
     """
 
-    sql_args = dict(project_id=SQLTableArg(required=True))
+    sql_args = dict(
+        project_id=SQLTableArg(sql=project_where, required=True),
+        sample_event_id=SQLTableArg(sql=sample_event_where, required=False),
+    )
 
     objects = SQLTableManager()
 
@@ -299,7 +311,10 @@ class BenthicPhotoQuadratTransectSESQLModel(BaseSQLModel):
         percent_cover_by_benthic_category_avg
     """
 
-    sql_args = dict(project_id=SQLTableArg(required=True))
+    sql_args = dict(
+        project_id=SQLTableArg(sql=project_where, required=True),
+        sample_event_id=SQLTableArg(sql=sample_event_where, required=False),
+    )
 
     objects = SQLTableManager()
 

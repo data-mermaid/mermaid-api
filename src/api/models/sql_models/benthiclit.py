@@ -2,7 +2,13 @@ from django.contrib.gis.db import models
 from django.utils.translation import gettext_lazy as _
 
 from sqltables import SQLTableArg, SQLTableManager
-from .base import BaseSQLModel, BaseSUSQLModel, sample_event_sql_template
+from .base import (
+    BaseSQLModel,
+    BaseSUSQLModel,
+    project_where,
+    sample_event_sql_template,
+    sample_event_where
+)
 
 
 # Unique combination of these fields defines a single (pseudo) sample unit. All other fields are aggregated.
@@ -118,7 +124,10 @@ class BenthicLITObsSQLModel(BaseSUSQLModel):
             ) benthiclit_su ON (benthiclit_obs.pseudosu_id = benthiclit_su.pseudosu_id)
     """
 
-    sql_args = dict(project_id=SQLTableArg(required=True))
+    sql_args = dict(
+        project_id=SQLTableArg(sql=project_where, required=True),
+        sample_event_id=SQLTableArg(sql=sample_event_where, required=False),
+    )
 
     objects = SQLTableManager()
 
@@ -242,7 +251,10 @@ class BenthicLITSUSQLModel(BaseSUSQLModel):
         ON (benthiclit_su.pseudosu_id = benthiclit_observers.pseudosu_id)
     """
 
-    sql_args = dict(project_id=SQLTableArg(required=True))
+    sql_args = dict(
+        project_id=SQLTableArg(sql=project_where, required=True),
+        sample_event_id=SQLTableArg(sql=sample_event_where, required=False),
+    )
 
     objects = SQLTableManager()
 
@@ -315,7 +327,10 @@ class BenthicLITSESQLModel(BaseSQLModel):
             data_policy_benthiclit,
             percent_cover_by_benthic_category_avg
     """
-    sql_args = dict(project_id=SQLTableArg(required=True))
+    sql_args = dict(
+        project_id=SQLTableArg(sql=project_where, required=True),
+        sample_event_id=SQLTableArg(sql=sample_event_where, required=False),
+    )
 
     objects = SQLTableManager()
 
