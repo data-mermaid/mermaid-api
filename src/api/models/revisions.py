@@ -13,6 +13,7 @@ class Revision(models.Model):
     revision_num = models.IntegerField(null=False, default=1)
     updated_on = models.DateTimeField(editable=False)
     deleted = models.BooleanField(default=False, editable=False)
+    related_to_profile_id = models.UUIDField(null=True, db_index=True, editable=False)
 
     objects = ExtendedManager()
 
@@ -39,7 +40,7 @@ class Revision(models.Model):
         return self.revision_num == other.revision_num
 
     @classmethod
-    def create(cls, table_name, record_id, project_id=None, profile_id=None, deleted=False):
+    def create(cls, table_name, record_id, project_id=None, profile_id=None, deleted=False, related_to_profile_id=None):
         cursor = connection.cursor()
         try:
             sql = "SELECT nextval('revision_seq_num');"
@@ -59,7 +60,8 @@ class Revision(models.Model):
                     profile_id=profile_id,
                     updated_on=timezone.now(),
                     deleted=deleted,
-                    revision_num=revision_num
+                    revision_num=revision_num,
+                    related_to_profile_id=related_to_profile_id,
                 )
 
             revision.project_id = project_id
@@ -67,6 +69,7 @@ class Revision(models.Model):
             revision.updated_on = timezone.now()
             revision.deleted = deleted
             revision.revision_num = revision_num
+            revision.related_to_profile_id = related_to_profile_id
             revision.save()
 
             return revision
@@ -93,7 +96,7 @@ class Revision(models.Model):
         return None
 
     @classmethod
-    def create_from_instance(cls, instance, profile_id=None, deleted=False):
+    def create_from_instance(cls, instance, profile_id=None, deleted=False, related_to_profile_id=None):
         table_name = instance._meta.db_table
         record_id = instance.pk
         project_id = cls._get_project_id(instance)
@@ -103,7 +106,8 @@ class Revision(models.Model):
             record_id,
             project_id,
             profile_id,
-            deleted
+            deleted,
+            related_to_profile_id
         )
 
 # -- TRIGGER SQL --
