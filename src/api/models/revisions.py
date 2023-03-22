@@ -19,7 +19,7 @@ class Revision(models.Model):
 
     class Meta:
         db_table = "revision"
-        unique_together = ("table_name", "record_id")
+        unique_together = ("table_name", "record_id", "related_to_profile_id")
 
     def __str__(self):
         return f"[{self.revision_num}] {self.table_name} {self.record_id}"
@@ -147,6 +147,7 @@ forward_sql = """
         revision_id int;
         profile_id_val uuid;
         project_id_val uuid;
+        related_to_profile_id_val uuid;
         is_deleted boolean;
         updated_on_val timestamp;
         pk_col_name varchar;
@@ -182,6 +183,14 @@ forward_sql = """
             project_id_val := null;
         END IF;
 
+        IF record ? 'related_to_profile_id' THEN
+            related_to_profile_id_val := record->>'related_to_profile_id';
+        ELSIF TG_TABLE_NAME = 'project' THEN
+            related_to_profile_id_val := pk;
+        ELSE
+            related_to_profile_id_val := null;
+        END IF;
+
         INSERT INTO revision (
             "table_name",
             "record_id",
@@ -189,7 +198,8 @@ forward_sql = """
             "profile_id",
             "revision_num",
             "updated_on",
-            "deleted"
+            "deleted",
+            "related_to_profile_id"
         )
         VALUES (
             TG_TABLE_NAME,
@@ -198,15 +208,17 @@ forward_sql = """
             profile_id_val,
             rev_num,
             updated_on_val,
-            is_deleted
+            is_deleted,
+            related_to_profile_id_val
         )
-        ON CONFLICT (table_name, record_id) DO
+        ON CONFLICT (table_name, record_id, related_to_profile_id) DO
         UPDATE SET
             "revision_num" = rev_num,
             "updated_on" = updated_on_val,
             "project_id" = project_id_val,
             "profile_id" = profile_id_val,
-            "deleted" = is_deleted;
+            "deleted" = is_deleted,
+            "related_to_profile_id" = related_to_profile_id_val;
 
         RETURN NULL;
 
