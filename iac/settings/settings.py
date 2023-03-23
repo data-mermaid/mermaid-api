@@ -51,6 +51,8 @@ class DjangoSettings:
     spa_admin_client_id_name: str
     spa_admin_client_secret_name: str
     mermaid_api_signing_secret_name: str
+    mermaid_management_api_client_id_name: str
+    mermaid_management_api_client_secret_name: str
     dev_emails_name: str = ""
 
     # Common Attrs (defaults)
@@ -68,14 +70,6 @@ class DjangoSettings:
     email_host_password_name: str = "common/mermaid-api/email-host-password-CI6hBI"
     
     auth0_domain: str = "common/mermaid-api/auth0_domain-K9a7w2"
-
-    # M2M client used by API to do things in Auth0. Apparently this is shared with both envs?
-    mermaid_management_api_client_id_name: str = (
-        "common/mermaid-api/mermaid-management-api-client-id-nIWaxV"
-    )
-    mermaid_management_api_client_secret_name: str = (
-        "common/mermaid-api/mermaid-management-api-client-secret-HNVoT0"
-    )
 
     mc_api_key_name: str = "common/mermaid-api/mc-api-key-xSsQOk"
     mc_api_list_id_name: str = "common/mermaid-api/mc-api-list-id-Am5u1G"
