@@ -49,7 +49,8 @@ class Revision(models.Model):
 
             revision = Revision.objects.get_or_none(
                 table_name=table_name,
-                record_id=record_id
+                record_id=record_id,
+                related_to_profile_id=related_to_profile_id
             )
 
             if revision is None:

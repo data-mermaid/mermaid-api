@@ -135,7 +135,7 @@ def get_record(viewset, profile_id, record_id):
         return deletes[0]
     elif len(removes) == 1:
         return removes[0]
-    elif not deletes and not updates:
+    elif not deletes and not updates and not removes:
         raise ObjectDoesNotExist()
 
     raise MultipleObjectsReturned()
