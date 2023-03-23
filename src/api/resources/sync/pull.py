@@ -16,15 +16,17 @@ def _get_subquery(queryset, pk_field_name):
     return sql.decode()
 
 
-def _get_records(viewset, filters):
+def _get_records(viewset, profile_id, filters):
     queryset = viewset.get_queryset()
     model_class = queryset.model
     pk_field_name = model_class._meta.pk.column
     sub_query = _get_subquery(queryset, pk_field_name)
     table_name = model_class._meta.db_table
 
+    # UPDATES
     updates_filters = [
         "revision.deleted = false",
+        "revision.related_to_profile_id is null",
         *filters
     ]
 
@@ -52,10 +54,11 @@ def _get_records(viewset, filters):
 
     updates = queryset.raw(updates_sql)
     
-
+    # DELETES
     delete_filters = [
         f'"revision"."table_name" = \'{table_name}\'',
         '"revision"."deleted" = true',
+        "revision.related_to_profile_id is null",
         *filters
     ]
     deletes_sql = f"""
@@ -78,11 +81,38 @@ def _get_records(viewset, filters):
 
     finally:
         cur.close()
+    
+    # REMOVES
+    remove_filters = [
+        f'"revision"."table_name" = \'{table_name}\'',
+        f"revision.related_to_profile_id = '{profile_id}'::uuid",
+        *filters
+    ]
+    removes_sql = f"""
+        SELECT
+            "revision"."record_id",
+            "revision"."revision_num"
+        FROM
+            "revision"
+        WHERE
+            {" AND ".join(remove_filters)}
+    """
 
-    return updates, deletes
+    try:
+        cur = connection.cursor()
+        cur.execute(removes_sql)
+        removes = [
+            {"id": row[0], "revision_num": row[1]}
+            for row in cur.fetchall()
+        ]
+
+    finally:
+        cur.close()
+
+    return updates, deletes, removes
 
 
-def get_record(viewset, record_id):
+def get_record(viewset, profile_id, record_id):
     """Get model record with revision fields included.
 
         - revision_record_id
@@ -98,18 +128,20 @@ def get_record(viewset, record_id):
     :rtype: tuple
     """
     filters = [f"revision.record_id = '{record_id}'::uuid"]
-    updates, deletes = list(_get_records(viewset, filters))
+    updates, deletes, removes = list(_get_records(viewset, profile_id, filters))
     if len(updates) == 1:
         return updates[0]
     elif len(deletes) == 1:
         return deletes[0]
+    elif len(removes) == 1:
+        return removes[0]
     elif not deletes and not updates:
         raise ObjectDoesNotExist()
 
     raise MultipleObjectsReturned()
 
 
-def get_records(viewset, revision_num=None, project=None, profile=None):
+def get_records(viewset, profile_id, required_params=None):
     """Fetch model records with optional filters:
         * revision numbers greater than `revision_num`
         * `project` uuid
@@ -124,31 +156,40 @@ def get_records(viewset, revision_num=None, project=None, profile=None):
 
     :param viewset: ModelViewSet instance
     :type viewset: rest_framework.serializers.viewsets.ModelViewSet
-    :param revision_num: Revision number, defaults to None
-    :type revision_num: int, optional
-    :param project: Project id, defaults to None
-    :type project: UUID, optional
-    :param profile: Profile id, defaults to None
-    :type profile: UUID, optional
-    :return: Updates and deletes
+    :param profile_id: Profile id
+    :type profile_id: str
+    :param required_params: Required params for pull filtering, options include revision_num, project, profile.
+    :type required_params: dict, optional
+        :param revision_num: Revision number, defaults to None
+        :type revision_num: int, optional
+        :param project: Project id, defaults to None
+        :type project: UUID, optional
+        :param profile: Profile id, defaults to None
+        :type profile: UUID, optional
+        :return: Updates and deletes
     :rtype: tuple
     """
     table_name = viewset.get_queryset().model._meta.db_table
     filters = [f"revision.table_name = '{table_name}'"]
 
-    if project is not None:
-        filters.append(f"revision.project_id = '{project}'::uuid")
+    required_params = required_params or {}
+    rp_revision_num = required_params.get("revision_num")
+    rp_project = required_params.get("project")
+    rp_profile = required_params.get("profile")
 
-    if profile is not None:
-        filters.append(f"revision.profile_id = '{profile}'::uuid")
+    if rp_project is not None:
+        filters.append(f"revision.project_id = '{rp_project}'::uuid")
 
-    if revision_num is not None:
-        filters.append(f"revision.revision_num > {revision_num}")
+    if rp_profile is not None:
+        filters.append(f"revision.profile_id = '{rp_profile}'::uuid")
 
-    return _get_records(viewset, filters)
+    if rp_revision_num is not None:
+        filters.append(f"revision.revision_num > {rp_revision_num}")
+
+    return _get_records(viewset, profile_id, filters)
 
 
-def serialize_revisions(serializer, updates, deletes, skip_deletes=False):
+def serialize_revisions(serializer, updates, deletes, removes, skip_deletes=False):
     """Serialize model instances that include the field additions of:
 
         - revision_record_id
@@ -170,6 +211,7 @@ def serialize_revisions(serializer, updates, deletes, skip_deletes=False):
 
     last_rev_num = None
     serialized_updates = []
+    serialized_removes = []
     serialized_deletes = []
 
     serialized_updates = serializer(updates, many=True, context={"request": None}).data
@@ -184,6 +226,16 @@ def serialize_revisions(serializer, updates, deletes, skip_deletes=False):
         serialized_updates[n]["_deleted"] = False
 
 
+    for rec in removes:
+        rev_num = rec["revision_num"]
+
+        if last_rev_num is None or rev_num > last_rev_num:
+            last_rev_num = rev_num
+    
+        serialized_removes.append(
+            {"id": str(rec["id"]), "_last_revision_num": rev_num}
+        )
+
     if skip_deletes is False:
         for rec in deletes:
             rev_num = rec["revision_num"]
@@ -195,10 +247,15 @@ def serialize_revisions(serializer, updates, deletes, skip_deletes=False):
                 {"id": str(rec["id"]), "_last_revision_num": rev_num}
             )
 
-    return {"updates": serialized_updates, "deletes": serialized_deletes, "last_revision_num": last_rev_num}
+    return {
+        "updates": serialized_updates,
+        "removes": serialized_removes,
+        "deletes": serialized_deletes,
+        "last_revision_num": last_rev_num
+    }
 
 
-def get_serialized_records(viewset, revision_num=None, project=None, profile=None):
+def get_serialized_records(viewset, profile_id, required_params=None):
     """Convenience that wraps get_records and serialize_revisions.  If no updates
     are found, last_revision_num is set to revision_num.
 
@@ -215,10 +272,16 @@ def get_serialized_records(viewset, revision_num=None, project=None, profile=Non
     """
 
     serializer = viewset.serializer_class
-    updates, deletes = get_records(viewset, revision_num, project, profile)
+    revision_num = required_params.get("revision_num")
+
+    updates, deletes, removes = get_records(
+        viewset,
+        profile_id,
+        required_params
+    )
 
     serialized_revisions = serialize_revisions(
-        serializer, updates, deletes, skip_deletes=revision_num is None
+        serializer, updates, deletes, removes, skip_deletes=revision_num is None
     )
 
     serialized_revisions["last_revision_num"] = (

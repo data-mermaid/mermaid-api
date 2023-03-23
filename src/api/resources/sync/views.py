@@ -131,6 +131,11 @@ def _get_project(data, source_type):
     return {"project_id": projid, "project_name": projname}
 
 
+def _get_profile_id(request):
+    user = request.user
+    return None if user is None else str(user.profile.pk)
+
+
 def _get_required_parameters(request, data, required_filters):
     params = {"revision_num": data.get("last_revision")}
 
@@ -141,11 +146,11 @@ def _get_required_parameters(request, data, required_filters):
         params["project"] = project
 
     if "profile" in required_filters:
-        user = request.user
-        if user is None:
+        profile_id = _get_profile_id(request)
+        if profile_id is None:
             raise ValueError("Profile is missing")
 
-        params["profile"] = str(user.profile.pk)
+        params["profile"] = profile_id
 
     return params
 
@@ -178,14 +183,14 @@ def _format_errors(errors):
     return {k: v[0] for k, v in errors.items()}
 
 
-def _get_serialized_record(viewset, record_id):
+def _get_serialized_record(viewset, profile_id, record_id):
     serializer = viewset.serializer_class
-    record = get_record(viewset, record_id)
+    record = get_record(viewset, profile_id, record_id)
 
     if isinstance(record, dict):
-        data = serialize_revisions(serializer, [], [record])
+        data = serialize_revisions(serializer, [], [record], [])
     else:
-        data = serialize_revisions(serializer, [record], [])
+        data = serialize_revisions(serializer, [record], [], [])
     
     if data["updates"]:
         return data["updates"][0]
@@ -222,16 +227,17 @@ def _update_source_record(source_type, serializer, record, request, force=False)
         return _error(405, ReadOnlyError(f"{source_type} is read-only"))
 
     try:
+        profile_id = _get_profile_id(request)
         status_code, msg, errors = apply_changes(vw_request, serializer, record, force=force)
         if status_code == 400:
             data = _format_errors(errors)
         elif status_code == 409:
-            data = _get_serialized_record(viewset, record_id)
+            data = _get_serialized_record(viewset, profile_id, record_id)
         elif status_code == 418:  # other custom error output
             status_code = 409
             data = errors
         else:
-            data = _get_serialized_record(viewset, record_id)
+            data = _get_serialized_record(viewset, profile_id, record_id)
 
         return {"status_code": status_code, "message": msg, "data": data}
     except Exception as err:
@@ -270,7 +276,8 @@ def _get_source_records(source_type, source_data, request):
         raise ValidationError(str(ve))
 
     viewset = src["view"](request=request)
-    return get_serialized_records(viewset, **req_params)
+    profile_id = _get_profile_id(request)
+    return get_serialized_records(viewset, profile_id, required_params=req_params)
 
 
 def check_permissions(request, data, source_types, method=False):
