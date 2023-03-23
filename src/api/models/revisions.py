@@ -113,6 +113,14 @@ class Revision(models.Model):
 # -- TRIGGER SQL --
 
 forward_sql = """
+    -- This index is needed to allow upsert to catch null values with related_to_profile_id
+    -- (a.k.a. make the ON CONFLICT work)
+    -- Reference: https://dba.stackexchange.com/questions/151431/postgresql-upsert-issue-with-null-values/151438#151438
+
+    CREATE UNIQUE INDEX IF NOT EXISTS revision_related_to_profile_id_upsert_idx
+    ON public.revision (table_name, record_id)
+    WHERE revision.related_to_profile_id IS NULL;
+
     CREATE SEQUENCE IF NOT EXISTS revision_seq_num START 1;
 
     CREATE OR REPLACE FUNCTION primary_key_column_name (table_name text)
@@ -211,8 +219,9 @@ forward_sql = """
             is_deleted,
             related_to_profile_id_val
         )
-        ON CONFLICT (table_name, record_id, related_to_profile_id) DO
-        UPDATE SET
+        ON CONFLICT (table_name, record_id)
+        WHERE related_to_profile_id IS NULL
+        DO UPDATE SET
             "revision_num" = rev_num,
             "updated_on" = updated_on_val,
             "project_id" = project_id_val,

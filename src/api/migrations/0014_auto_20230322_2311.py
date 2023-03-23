@@ -12,5 +12,5 @@ class Migration(migrations.Migration):
     ]
 
     operations = [
-        migrations.RunSQL(forward_sql),
+        migrations.RunSQL(forward_sql, ""),
     ]
