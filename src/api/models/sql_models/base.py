@@ -6,9 +6,8 @@ from django.utils.translation import gettext_lazy as _
 from api.models import Project
 
 
-project_where = """project.id = '%(project_id)s' :: uuid"""
-sample_event_where = """se.id::uuid = ANY(ARRAY[%(sample_event_id)s]::uuid[])"""
-# sample_event_where = """se.id = '%(sample_event_id)s' :: uuid"""
+project_where = """project.id = '%(project_id)s'::uuid"""
+sample_event_where = """se.id::uuid = ANY(ARRAY[%(sample_event_ids)s]::uuid[])"""
 
 sample_event_sql_template = f"""
     WITH tags AS MATERIALIZED (

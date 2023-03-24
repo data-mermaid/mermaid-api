@@ -27,7 +27,7 @@ class SQLTable(BaseTable):
         self.sql = sql
 
     def as_sql(self, compiler, connection):
-        # Resolve sql params from db_table
+        # Resolve sql params from db_tables
         base_sql = self.sql % self.sql_table_params
 
         s = f"({base_sql}) {self.table_name}"

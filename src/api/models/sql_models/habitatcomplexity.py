@@ -72,7 +72,7 @@ class HabitatComplexityObsSQLModel(BaseSUSQLModel):
 
     sql_args = dict(
         project_id=SQLTableArg(sql=project_where, required=True),
-        sample_event_id=SQLTableArg(sql=sample_event_where, required=False),
+        sample_event_ids=SQLTableArg(sql=sample_event_where, required=False),
     )
 
     objects = SQLTableManager()
@@ -164,7 +164,7 @@ class HabitatComplexitySUSQLModel(BaseSUSQLModel):
 
     sql_args = dict(
         project_id=SQLTableArg(sql=project_where, required=True),
-        sample_event_id=SQLTableArg(sql=sample_event_where, required=False),
+        sample_event_ids=SQLTableArg(sql=sample_event_where, required=False),
     )
 
     objects = SQLTableManager()
@@ -217,7 +217,7 @@ class HabitatComplexitySESQLModel(BaseSQLModel):
 
     sql_args = dict(
         project_id=SQLTableArg(sql=project_where, required=True),
-        sample_event_id=SQLTableArg(sql=sample_event_where, required=False),
+        sample_event_ids=SQLTableArg(sql=sample_event_where, required=False),
     )
 
     objects = SQLTableManager()

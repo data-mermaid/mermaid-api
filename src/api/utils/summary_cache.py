@@ -76,7 +76,7 @@ def _update_records(project_id, records, target_model_cls, created_on):
 def _fetch_records(sql_model_cls, project_id, sample_event_ids=None):
     return list(
         sql_model_cls.objects.all().sql_table(
-            project_id=project_id, sample_event_id=sample_event_ids
+            project_id=project_id, sample_event_ids=sample_event_ids
         )
     )
 
