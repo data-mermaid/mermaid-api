@@ -6,7 +6,8 @@ from django.utils.translation import gettext_lazy as _
 from api.models import Project
 
 
-project_where = """    WHERE\n        project.id = '%(project_id)s' :: uuid\n"""
+project_where = """project.id = '%(project_id)s'::uuid"""
+sample_event_where = """se.id::uuid = ANY(ARRAY[%(sample_event_ids)s]::uuid[])"""
 
 sample_event_sql_template = f"""
     WITH tags AS MATERIALIZED (
@@ -186,7 +187,8 @@ sample_event_sql_template = f"""
         LEFT JOIN management_compliance mc ON m.compliance_id = mc.id
         LEFT JOIN parties ON m.id = parties.management_id
         LEFT JOIN site_covariates ON site.id = site_covariates.site_id
-    {project_where}
+    WHERE
+        <<__sql_table_args__>>
 """
 
 
