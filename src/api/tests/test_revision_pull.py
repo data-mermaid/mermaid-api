@@ -15,11 +15,15 @@ def test_get_records(db_setup, project1, project2, project3, profile1, project_p
     collect_record_viewset = CollectRecordViewSet(request=request)
     project_viewset = ProjectViewSet(request=request)
 
+    # Create new revision
     collect_record = CollectRecord.objects.create(
         project=project1, profile=profile1, data=dict()
     )
 
+    # This should NOT create a revision
     collect_record.save()
+
+    # Create new revision
     CollectRecord.objects.create(project=project1, profile=profile1, data=dict())
     for rev in Revision.objects.all():
         print(f"[{rev.revision_num}] {rev.table_name} {rev.record_id} {rev.deleted} {rev.related_to_profile_id}")
@@ -29,8 +33,8 @@ def test_get_records(db_setup, project1, project2, project3, profile1, project_p
         profile1.pk,
         required_params={
             "revision_num": None,
-            "project_id": collect_record.project_id,
-            "profile_id": collect_record.profile_id,
+            "project": collect_record.project_id,
+            "profile": collect_record.profile_id,
         }
     )
 
@@ -51,8 +55,8 @@ def test_get_records(db_setup, project1, project2, project3, profile1, project_p
         profile1.pk,
         required_params={
             "revision_num": revision_num,
-            "project_id": project_id,
-            "profile_id": profile_id,
+            "project": project_id,
+            "profile": profile_id,
         }
     )
 
@@ -177,3 +181,4 @@ def test_removed_from_project(db_setup, profile1, project_profile1):
 
     assert len(updates) == 0
     assert len(deletes) == 0
+    assert len(removes) == 1

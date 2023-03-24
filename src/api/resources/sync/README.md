@@ -98,7 +98,7 @@ No required properties
     * `_deleted`: Property available for client applications for tracking deleted records, set to `false`
 
 `deletes`: Only includes the record `id` and the system property `_last_revision_num`.
-`removes`: Only includes the record `id` and the system property `_last_revision_num`.
+`removes`: Only includes the record `id` and the system property `_last_revision_num`. Removes are used when a user loses access to a record or related record.  Example: A user has been removed from a project but there is still a project profile records locally.  Next time they do a /pull they will not get a "delete" revision because they no longer have access to the project but will get a "remove" revision for project_profiles.
 
 
 #### Example
