@@ -60,6 +60,13 @@ def replace_collect_record_owner(project_id, from_profile, to_profile, updated_b
 
     new_collect_records = []
     for collect_record in collect_records:
+        Revision.create_from_instance(
+            instance=collect_record,
+            profile_id=from_profile.pk,
+            deleted=False,
+            related_to_profile_id=from_profile.pk
+        )
+
         collect_record.pk = None
         collect_record.profile = to_profile
         collect_record.updated_on = updated_on

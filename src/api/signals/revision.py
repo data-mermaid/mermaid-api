@@ -22,8 +22,8 @@ from ..resources.sync.views import (
 
 
 __all__ = (
-    "update_delete_project_profile_revisions",
-    "update_delete_project_profile_revisions",
+    "update_project_profile_revisions",
+    "delete_project_profile_revisions",
     "update_project_profile_revisions",
     "new_collect_record",
     "deleted_collect_record",
@@ -39,12 +39,14 @@ def _create_project_profile_revisions(query_kwargs):
 
 
 @receiver(pre_delete, sender=ProjectProfile)
-def update_delete_project_profile_revisions(sender, instance, *args, **kwargs):
+def delete_project_profile_revisions(sender, instance, *args, **kwargs):
     Revision.create_from_instance(instance.project)
+    Revision.create_from_instance(instance, related_to_profile_id=instance.profile.pk)
+    Revision.create_from_instance(instance.project, related_to_profile_id=instance.profile.pk)
 
 
 @receiver(post_save, sender=ProjectProfile)
-def update_delete_project_profile_revisions(sender, instance, *args, **kwargs):
+def update_project_profile_revisions(sender, instance, *args, **kwargs):
     Revision.create_from_instance(instance.project)
 
 
