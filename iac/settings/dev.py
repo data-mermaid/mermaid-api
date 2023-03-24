@@ -11,7 +11,7 @@ DEV_SETTINGS = ProjectSettings(
         container_memory=4096,
         container_count=1,
         default_domain_api="dev-api.datamermaid.org",
-        default_domain_collect="dev-collect.datamermaid.org",
+        default_domain_collect="dev-app.datamermaid.org",
         mermaid_api_audience="https://dev-api.datamermaid.org",
         public_bucket="dev-public.datamermaid.org",
         sqs_message_visibility=600,
@@ -21,5 +21,7 @@ DEV_SETTINGS = ProjectSettings(
         spa_admin_client_id_name="common/mermaid-api/spa-admin-client-id-FuMVtc",
         spa_admin_client_secret_name="common/mermaid-api/spa-admin-client-secret-kYccw0",
         mermaid_api_signing_secret_name="common/mermaid-api/mermaid-api-signing-secret-FM7ATI",
+        mermaid_management_api_client_id_name="common/mermaid-api/mermaid-management-api-client-id-nIWaxV",
+        mermaid_management_api_client_secret_name="common/mermaid-api/mermaid-management-api-client-secret-HNVoT0",
     ),
 )

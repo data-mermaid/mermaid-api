@@ -11,7 +11,7 @@ PROD_SETTINGS = ProjectSettings(
         container_memory=4096,
         container_count=1,
         default_domain_api="api.datamermaid.org",
-        default_domain_collect="collect.datamermaid.org",
+        default_domain_collect="app.datamermaid.org",
         mermaid_api_audience="https://api.datamermaid.org",
         public_bucket="public.datamermaid.org",
         sqs_message_visibility=600,
@@ -20,5 +20,7 @@ PROD_SETTINGS = ProjectSettings(
         spa_admin_client_id_name="prod/mermaid-api/spa-admin-client-id-8GJ1mU",
         spa_admin_client_secret_name="prod/mermaid-api/spa-admin-client-secret-5oMItZ",
         mermaid_api_signing_secret_name="prod/mermaid-api/mermaid-api-signing-secret-3625sz",
+        mermaid_management_api_client_id_name="prod/mermaid-api/mermaid-management-api-client-id-Kb3Sty",
+        mermaid_management_api_client_secret_name="prod/mermaid-api/mermaid-management-api-client-secret-HHVBL1",
     ),
 )

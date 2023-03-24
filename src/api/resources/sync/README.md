@@ -84,6 +84,7 @@ No required properties
         "<SOURCE TYPE>": {
             "updates": Array,
             "deletes": Array,
+            "removes": Array,
             "last_revision_num": int, 
         },
         ...
@@ -97,6 +98,7 @@ No required properties
     * `_deleted`: Property available for client applications for tracking deleted records, set to `false`
 
 `deletes`: Only includes the record `id` and the system property `_last_revision_num`.
+`removes`: Only includes the record `id` and the system property `_last_revision_num`. Removes are used when a user loses access to a record or related record.  Example: A user has been removed from a project but there is still a project profile records locally.  Next time they do a /pull they will not get a "delete" revision because they no longer have access to the project but will get a "remove" revision for project_profiles.
 
 
 #### Example
@@ -114,6 +116,10 @@ No required properties
             "deletes": [{
                 "id": "f504559a-dc31-4c64-b590-0ca10d02a64e",
                 "_last_revision_num": 434
+            }],
+            "removes": [{
+                "id": "fe04559a-dc31-4c64-b590-0ca10d22264e",
+                "_last_revision_num": 435
             }]
         },
         "fish_families": {...}

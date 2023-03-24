@@ -32,9 +32,12 @@ def serialized_tracked_collect_record(db_setup, collect_record_revision_with_upd
     rev = collect_record_revision_with_updates
     return get_serialized_records(
         CollectRecordViewSet(request=request),
-        revision_num=rev.revision_num,
-        project=rev.project_id,
-        profile=rev.profile_id
+        profile1.pk,
+        {
+            "revision_num": rev.revision_num,
+            "project": rev.project_id,
+            "profile": rev.profile_id
+        }
     )
 
 
