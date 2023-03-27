@@ -95,4 +95,4 @@ def bust_revision_cache(sender, instance, *args, **kwargs):
         cache.delete(FISH_GENERA_SOURCE_TYPE)
         cache.delete(FISH_FAMILIES_SOURCE_TYPE)
     elif sender == BenthicAttribute:
-        cache.delete(BENTHIC_ATTRIBUTES_SOURCE_TYPE)
+        cache.delete(BENTHIC_ATTRIBUTES_SOURCE_TYPE) 
