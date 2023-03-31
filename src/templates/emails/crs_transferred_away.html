@@ -1,0 +1,10 @@
+{% extends "emails/base.html" %}
+{% block title %}Unsubmitted Sample Units transferred{% endblock %}
+{% block body %}
+<h2>Unsubmitted Sample Units transferred</h2>
+<p>
+  <strong>{{admin_profile.full_name}} ({{admin_profile.email}})</strong>
+    transferred your unsubmitted sample units in the project {{project_name}} to
+  <strong>{{to_profile.full_name}}</strong>.
+</p>
+{% endblock %}
