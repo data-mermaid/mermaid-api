@@ -63,7 +63,7 @@ def _set_created_on(created_on, records):
 
 def _update_records(project_id, records, target_model_cls, created_on, skip_updates=False):
     target_model_cls.objects.filter(project_id=project_id).delete()
-    if not skip_updates:
+    if skip_updates:
         return
     idx = 0
     while True:
