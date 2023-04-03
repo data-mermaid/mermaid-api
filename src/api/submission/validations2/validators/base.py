@@ -6,11 +6,7 @@ from dotty_dict import dotty
 
 from ....utils import OK, WARN, ERROR, IGNORE, STALE
 
-# IGNORE: str = "ignore"
-# ERROR: str = "error"
-# WARN: str = "warning"
-# OK: str = "ok"
-# STALE: str = "stale"
+
 STATUSES: Tuple[str] = (ERROR, IGNORE, OK, WARN, STALE)
 
 
