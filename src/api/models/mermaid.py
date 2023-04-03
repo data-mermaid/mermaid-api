@@ -31,6 +31,7 @@ from .base import (
     Profile,
     validate_max_year
 )
+from ..utils import STALE
 
 INCLUDE_OBS_TEXT = _('include observation in aggregations/analyses?')
 
@@ -1637,6 +1638,7 @@ class CollectRecord(BaseModel):
     def save(self, ignore_stage=False, **kwargs):
         if ignore_stage is False:
             self.stage = self.SAVED_STAGE
+            self.validations["status"] = STALE
 
         protocol = self.protocol
         obs_keys = []
@@ -1655,8 +1657,6 @@ class CollectRecord(BaseModel):
 
         for obs_key in obs_keys:
             self.data[obs_key] = [self._assign_id(r) for r in self.data.get(obs_key) or []]
-
-
 
         super(CollectRecord, self).save(**kwargs)
 
