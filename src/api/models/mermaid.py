@@ -1638,6 +1638,7 @@ class CollectRecord(BaseModel):
     def save(self, ignore_stage=False, **kwargs):
         if ignore_stage is False:
             self.stage = self.SAVED_STAGE
+            self.validations = self.validations or {}
             self.validations["status"] = STALE
 
         protocol = self.protocol
