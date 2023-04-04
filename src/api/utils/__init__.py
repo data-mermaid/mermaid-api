@@ -13,6 +13,13 @@ from django.contrib.admin.utils import NestedObjects
 from django.db import router
 
 
+IGNORE: str = "ignore"
+ERROR: str = "error"
+WARN: str = "warning"
+OK: str = "ok"
+STALE: str = "stale"
+
+
 def is_match(string, match_patterns):
     for match_pattern in match_patterns:
         if re.search(match_pattern, string) is not None:

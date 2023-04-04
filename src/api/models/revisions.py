@@ -13,12 +13,13 @@ class Revision(models.Model):
     revision_num = models.IntegerField(null=False, default=1)
     updated_on = models.DateTimeField(editable=False)
     deleted = models.BooleanField(default=False, editable=False)
+    related_to_profile_id = models.UUIDField(null=True, db_index=True, editable=False)
 
     objects = ExtendedManager()
 
     class Meta:
         db_table = "revision"
-        unique_together = ("table_name", "record_id")
+        unique_together = ("table_name", "record_id", "related_to_profile_id")
 
     def __str__(self):
         return f"[{self.revision_num}] {self.table_name} {self.record_id}"
@@ -39,7 +40,7 @@ class Revision(models.Model):
         return self.revision_num == other.revision_num
 
     @classmethod
-    def create(cls, table_name, record_id, project_id=None, profile_id=None, deleted=False):
+    def create(cls, table_name, record_id, project_id=None, profile_id=None, deleted=False, related_to_profile_id=None):
         cursor = connection.cursor()
         try:
             sql = "SELECT nextval('revision_seq_num');"
@@ -48,7 +49,8 @@ class Revision(models.Model):
 
             revision = Revision.objects.get_or_none(
                 table_name=table_name,
-                record_id=record_id
+                record_id=record_id,
+                related_to_profile_id=related_to_profile_id
             )
 
             if revision is None:
@@ -59,7 +61,8 @@ class Revision(models.Model):
                     profile_id=profile_id,
                     updated_on=timezone.now(),
                     deleted=deleted,
-                    revision_num=revision_num
+                    revision_num=revision_num,
+                    related_to_profile_id=related_to_profile_id,
                 )
 
             revision.project_id = project_id
@@ -67,6 +70,7 @@ class Revision(models.Model):
             revision.updated_on = timezone.now()
             revision.deleted = deleted
             revision.revision_num = revision_num
+            revision.related_to_profile_id = related_to_profile_id
             revision.save()
 
             return revision
@@ -93,7 +97,7 @@ class Revision(models.Model):
         return None
 
     @classmethod
-    def create_from_instance(cls, instance, profile_id=None, deleted=False):
+    def create_from_instance(cls, instance, profile_id=None, deleted=False, related_to_profile_id=None):
         table_name = instance._meta.db_table
         record_id = instance.pk
         project_id = cls._get_project_id(instance)
@@ -103,12 +107,21 @@ class Revision(models.Model):
             record_id,
             project_id,
             profile_id,
-            deleted
+            deleted,
+            related_to_profile_id
         )
 
 # -- TRIGGER SQL --
 
 forward_sql = """
+    -- This index is needed to allow upsert to catch null values with related_to_profile_id
+    -- (a.k.a. make the ON CONFLICT work)
+    -- Reference: https://dba.stackexchange.com/questions/151431/postgresql-upsert-issue-with-null-values/151438#151438
+
+    CREATE UNIQUE INDEX IF NOT EXISTS revision_related_to_profile_id_upsert_idx
+    ON public.revision (table_name, record_id)
+    WHERE revision.related_to_profile_id IS NULL;
+
     CREATE SEQUENCE IF NOT EXISTS revision_seq_num START 1;
 
     CREATE OR REPLACE FUNCTION primary_key_column_name (table_name text)
@@ -143,6 +156,7 @@ forward_sql = """
         revision_id int;
         profile_id_val uuid;
         project_id_val uuid;
+        related_to_profile_id_val uuid;
         is_deleted boolean;
         updated_on_val timestamp;
         pk_col_name varchar;
@@ -178,6 +192,14 @@ forward_sql = """
             project_id_val := null;
         END IF;
 
+        IF record ? 'related_to_profile_id' THEN
+            related_to_profile_id_val := record->>'related_to_profile_id';
+        ELSIF TG_TABLE_NAME = 'project' THEN
+            related_to_profile_id_val := pk;
+        ELSE
+            related_to_profile_id_val := null;
+        END IF;
+
         INSERT INTO revision (
             "table_name",
             "record_id",
@@ -185,7 +207,8 @@ forward_sql = """
             "profile_id",
             "revision_num",
             "updated_on",
-            "deleted"
+            "deleted",
+            "related_to_profile_id"
         )
         VALUES (
             TG_TABLE_NAME,
@@ -194,15 +217,18 @@ forward_sql = """
             profile_id_val,
             rev_num,
             updated_on_val,
-            is_deleted
+            is_deleted,
+            related_to_profile_id_val
         )
-        ON CONFLICT (table_name, record_id) DO
-        UPDATE SET
+        ON CONFLICT (table_name, record_id)
+        WHERE related_to_profile_id IS NULL
+        DO UPDATE SET
             "revision_num" = rev_num,
             "updated_on" = updated_on_val,
             "project_id" = project_id_val,
             "profile_id" = profile_id_val,
-            "deleted" = is_deleted;
+            "deleted" = is_deleted,
+            "related_to_profile_id" = related_to_profile_id_val;
 
         RETURN NULL;
 

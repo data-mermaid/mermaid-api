@@ -21,5 +21,7 @@ DEV_SETTINGS = ProjectSettings(
         spa_admin_client_id_name="common/mermaid-api/spa-admin-client-id-FuMVtc",
         spa_admin_client_secret_name="common/mermaid-api/spa-admin-client-secret-kYccw0",
         mermaid_api_signing_secret_name="common/mermaid-api/mermaid-api-signing-secret-FM7ATI",
+        mermaid_management_api_client_id_name="common/mermaid-api/mermaid-management-api-client-id-nIWaxV",
+        mermaid_management_api_client_secret_name="common/mermaid-api/mermaid-management-api-client-secret-HNVoT0",
     ),
 )

@@ -47,6 +47,8 @@ class BaseSummaryModel(models.Model):
     sample_event_notes = models.TextField(blank=True)
     covariates = models.JSONField(null=True, blank=True)
 
+    created_on = models.DateTimeField(auto_now_add=True)
+
     class Meta:
         abstract = True
 

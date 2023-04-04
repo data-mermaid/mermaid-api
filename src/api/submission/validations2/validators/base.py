@@ -4,17 +4,16 @@ from typing import Literal, Optional, Tuple, Union
 
 from dotty_dict import dotty
 
-IGNORE: str = "ignore"
-ERROR: str = "error"
-WARN: str = "warning"
-OK: str = "ok"
-STATUSES: Tuple[str] = (ERROR, IGNORE, OK, WARN)
+from ....utils import OK, WARN, ERROR, IGNORE, STALE
+
+
+STATUSES: Tuple[str] = (ERROR, IGNORE, OK, WARN, STALE)
 
 
 @dataclass
 class ValidatorResult:
     name: str
-    status: Union[None, Literal[OK, WARN, ERROR, IGNORE]] = None
+    status: Union[None, Literal[OK, WARN, ERROR, IGNORE, STALE]] = None
     code: Optional[str] = None
     context: Optional[dict] = None
     validation_id: Optional[str] = None

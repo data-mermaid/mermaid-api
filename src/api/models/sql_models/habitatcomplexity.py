@@ -2,7 +2,13 @@ from django.contrib.gis.db import models
 from django.utils.translation import gettext_lazy as _
 
 from sqltables import SQLTableArg, SQLTableManager
-from .base import BaseSQLModel, BaseSUSQLModel, sample_event_sql_template
+from .base import (
+    BaseSQLModel,
+    BaseSUSQLModel,
+    project_where,
+    sample_event_sql_template,
+    sample_event_where
+)
 
 
 class HabitatComplexityObsSQLModel(BaseSUSQLModel):
@@ -64,7 +70,10 @@ class HabitatComplexityObsSQLModel(BaseSUSQLModel):
             LEFT JOIN api_reefslope rs ON su.reef_slope_id = rs.id     
     """
 
-    sql_args = dict(project_id=SQLTableArg(required=True))
+    sql_args = dict(
+        project_id=SQLTableArg(sql=project_where, required=True),
+        sample_event_ids=SQLTableArg(sql=sample_event_where, required=False),
+    )
 
     objects = SQLTableManager()
 
@@ -153,7 +162,10 @@ class HabitatComplexitySUSQLModel(BaseSUSQLModel):
         ON (habcomp_su.pseudosu_id = habcomp_observers.pseudosu_id)
     """
 
-    sql_args = dict(project_id=SQLTableArg(required=True))
+    sql_args = dict(
+        project_id=SQLTableArg(sql=project_where, required=True),
+        sample_event_ids=SQLTableArg(sql=sample_event_where, required=False),
+    )
 
     objects = SQLTableManager()
 
@@ -203,7 +215,10 @@ class HabitatComplexitySESQLModel(BaseSQLModel):
         data_policy_habitatcomplexity
     """
 
-    sql_args = dict(project_id=SQLTableArg(required=True))
+    sql_args = dict(
+        project_id=SQLTableArg(sql=project_where, required=True),
+        sample_event_ids=SQLTableArg(sql=sample_event_where, required=False),
+    )
 
     objects = SQLTableManager()
 

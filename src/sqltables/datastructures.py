@@ -5,7 +5,8 @@ from django.db.models.sql.datastructures import BaseTable  # type: ignore
 
 
 class SQLTableArg:
-    def __init__(self, required: bool = True, default=NOT_PROVIDED):
+    def __init__(self, sql: str = "", required: bool = True, default=NOT_PROVIDED):
+        self.sql = sql
         self.required = required
         self.default = default
 
@@ -26,7 +27,7 @@ class SQLTable(BaseTable):
         self.sql = sql
 
     def as_sql(self, compiler, connection):
-        # Resolve sql params from db_table
+        # Resolve sql params from db_tables
         base_sql = self.sql % self.sql_table_params
 
         s = f"({base_sql}) {self.table_name}"

@@ -15,18 +15,27 @@ def test_get_records(db_setup, project1, project2, project3, profile1, project_p
     collect_record_viewset = CollectRecordViewSet(request=request)
     project_viewset = ProjectViewSet(request=request)
 
+    # Create new revision
     collect_record = CollectRecord.objects.create(
         project=project1, profile=profile1, data=dict()
     )
 
+    # This should NOT create a revision
     collect_record.save()
-    CollectRecord.objects.create(project=project1, profile=profile1, data=dict())
 
-    updates, deletes = get_records(
+    # Create new revision
+    CollectRecord.objects.create(project=project1, profile=profile1, data=dict())
+    for rev in Revision.objects.all():
+        print(f"[{rev.revision_num}] {rev.table_name} {rev.record_id} {rev.deleted} {rev.related_to_profile_id}")
+
+    updates, deletes, removes = get_records(
         collect_record_viewset,
-        None,
-        collect_record.project_id,
-        collect_record.profile_id,
+        profile1.pk,
+        required_params={
+            "revision_num": None,
+            "project": collect_record.project_id,
+            "profile": collect_record.profile_id,
+        }
     )
 
     assert len(updates) == 2
@@ -41,19 +50,23 @@ def test_get_records(db_setup, project1, project2, project3, profile1, project_p
 
     collect_record.delete()
 
-    updates, deletes = get_records(
+    updates, deletes, removes = get_records(
         collect_record_viewset,
-        revision_num,
-        project_id,
-        profile_id
+        profile1.pk,
+        required_params={
+            "revision_num": revision_num,
+            "project": project_id,
+            "profile": profile_id,
+        }
     )
 
     assert len(updates) == 0
     assert len(deletes) == 1
 
-    updates, deletes = get_records(
+    updates, deletes, removes = get_records(
         project_viewset,
-        None
+        profile1.pk,
+        required_params=None
     )
 
     assert len(updates) == 1
@@ -67,8 +80,12 @@ def test_serialize_revision_records(
     collect_record_viewset = CollectRecordViewSet(request=request)
     rec_rev = collect_record_revision_with_updates
 
-    updates, deletes = get_records(collect_record_viewset, None, rec_rev.project_id, rec_rev.profile_id)
-    serialized_records = serialize_revisions(CollectRecordSerializer, updates, deletes)
+    updates, deletes, removes = get_records(
+        collect_record_viewset,
+        profile1.pk,
+        {"revision_num": None, "project": rec_rev.project_id, "profile": rec_rev.profile_id}
+    )
+    serialized_records = serialize_revisions(CollectRecordSerializer, updates, deletes, removes)
 
     rev_nums = [u.revision_revision_num for u in updates]
     rev_nums.extend([d["revision_num"] for d in deletes])
@@ -76,20 +93,24 @@ def test_serialize_revision_records(
 
     assert len(serialized_records["updates"]) == 1
     assert len(serialized_records["deletes"]) == 1
+    assert len(serialized_records["removes"]) == 0
     assert serialized_records["last_revision_num"] == check_rev_num
 
     CollectRecord.objects.create(
         project=project1, profile=profile1, data=dict(protocol="fishbelt")
     )
 
-    updates2, deletes2 = get_records(
+    updates2, deletes2, removes2 = get_records(
         collect_record_viewset,
-        revision_num=rec_rev.revision_num,
-        project=rec_rev.project_id,
-        profile=rec_rev.profile_id
+        profile1.pk,
+        {
+            "revision_num": rec_rev.revision_num,
+            "project": rec_rev.project_id,
+            "profile": rec_rev.profile_id
+        }
     )
 
-    serialized_records = serialize_revisions(CollectRecordSerializer, updates2, deletes2)
+    serialized_records = serialize_revisions(CollectRecordSerializer, updates2, deletes2, removes2)
 
     rev_nums2 = [u.revision_revision_num for u in updates2]
     rev_nums2.extend([d["revision_num"] for d in deletes2])
@@ -97,6 +118,7 @@ def test_serialize_revision_records(
 
     assert len(serialized_records["updates"]) == 2
     assert len(serialized_records["deletes"]) == 1
+    assert len(serialized_records["removes"]) == 0
     assert serialized_records["last_revision_num"] == check_rev_num2
 
 
@@ -109,33 +131,38 @@ def test_added_to_project(db_setup, profile1):
 
     ProjectProfile.objects.create(project=project1, profile=profile1, role=ProjectProfile.COLLECTOR)
 
-    updates, deletes = get_records(
+    updates, deletes, removes = get_records(
         project_viewset,
+        profile1.pk,
         None
     )
 
     assert len(updates) == 1
     assert len(deletes) == 0
+    assert len(removes) == 0
 
     revision_number = updates[0].revision_revision_num
 
     ProjectProfile.objects.create(project=project2, profile=profile1, role=ProjectProfile.COLLECTOR)
 
-    updates, deletes = get_records(
+    updates, deletes, removes = get_records(
         project_viewset,
-        revision_number
+        profile1.pk,
+        {"revision_num": revision_number}
     )
 
     assert len(updates) == 1
     assert len(deletes) == 0
+    assert len(removes) == 0
 
 
 def test_removed_from_project(db_setup, profile1, project_profile1):
     request = MockRequest(profile=profile1)
     project_viewset = ProjectViewSet(request=request)
 
-    updates, deletes = get_records(
+    updates, deletes, removes = get_records(
         project_viewset,
+        profile1.pk,
         None
     )
 
@@ -146,10 +173,12 @@ def test_removed_from_project(db_setup, profile1, project_profile1):
 
     project_profile1.delete()
 
-    updates, deletes = get_records(
+    updates, deletes, removes = get_records(
         project_viewset,
-        revision_number
+        profile1.pk,
+        {"revision_num": revision_number}
     )
 
     assert len(updates) == 0
     assert len(deletes) == 0
+    assert len(removes) == 1
