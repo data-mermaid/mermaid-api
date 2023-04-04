@@ -80,6 +80,7 @@ class MetricsMiddleware:
         print(
             json.dumps(
                 {
+                    "type": "mermaid-metrics",
                     "timestamp": datetime.now().timestamp(),
                     "method": method,
                     "path": url_path,
