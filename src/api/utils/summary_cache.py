@@ -61,8 +61,10 @@ def _set_created_on(created_on, records):
         record.created_on = created_on
 
 
-def _update_records(project_id, records, target_model_cls, created_on):
+def _update_records(project_id, records, target_model_cls, created_on, skip_updates=False):
     target_model_cls.objects.filter(project_id=project_id).delete()
+    if skip_updates:
+        return
     idx = 0
     while True:
         batch = records[idx : idx + BATCH_SIZE]
@@ -90,20 +92,21 @@ def _update_cache(
     su_model,
     se_sql_model,
     se_model,
+    skip_updates,
 ):
     created_on = timezone.now()
     for sample_event_ids in sample_event_ids_set:
         obs_records = _fetch_records(obs_sql_model, project_id, sample_event_ids)
-        _update_records(project_id, obs_records, obs_model, created_on)
+        _update_records(project_id, obs_records, obs_model, created_on, skip_updates)
 
         su_records = _fetch_records(su_sql_model, project_id)
-        _update_records(project_id, su_records, su_model, created_on)
+        _update_records(project_id, su_records, su_model, created_on, skip_updates)
 
         se_records = _fetch_records(se_sql_model, project_id)
-        _update_records(project_id, se_records, se_model, created_on)
+        _update_records(project_id, se_records, se_model, created_on, skip_updates)
 
 
-def _update_bleaching_qc_summary(project_id, sample_event_ids_set):
+def _update_bleaching_qc_summary(project_id, sample_event_ids_set, skip_updates):
     created_on = timezone.now()
     for sample_event_ids in sample_event_ids_set:
         bleaching_colonies_obs = _fetch_records(
@@ -118,19 +121,21 @@ def _update_bleaching_qc_summary(project_id, sample_event_ids_set):
             bleaching_colonies_obs,
             BleachingQCColoniesBleachedObsModel,
             created_on,
+            skip_updates,
         )
         _update_records(
             project_id,
             bleaching_quad_percent_obs,
             BleachingQCQuadratBenthicPercentObsModel,
             created_on,
+            skip_updates,
         )
 
         bleaching_su = _fetch_records(BleachingQCSUSQLModel, project_id)
-        _update_records(project_id, bleaching_su, BleachingQCSUModel, created_on)
+        _update_records(project_id, bleaching_su, BleachingQCSUModel, created_on, skip_updates)
 
         bleaching_se = _fetch_records(BleachingQCSESQLModel, project_id)
-        _update_records(project_id, bleaching_se, BleachingQCSEModel, created_on)
+        _update_records(project_id, bleaching_se, BleachingQCSEModel, created_on, skip_updates)
 
 
 def _update_project_summary_sample_event(project_id, skip_test_project=True):
@@ -164,11 +169,12 @@ def _get_sample_event_ids_set(project_id):
 
 @timing
 def update_summary_cache(project_id, sample_unit=None, skip_test_project=True):
+    skip_updates = False
     if (
         skip_test_project is True
         and Project.objects.filter(id=project_id, status=Project.TEST).exists()
     ):
-        return
+        skip_updates = True
 
     sample_event_ids = _get_sample_event_ids_set(project_id)
 
@@ -183,6 +189,7 @@ def update_summary_cache(project_id, sample_unit=None, skip_test_project=True):
                 BeltFishSUModel,
                 BeltFishSESQLModel,
                 BeltFishSEModel,
+                skip_updates,
             )
 
         if sample_unit is None or sample_unit == BENTHICLIT_PROTOCOL:
@@ -195,6 +202,7 @@ def update_summary_cache(project_id, sample_unit=None, skip_test_project=True):
                 BenthicLITSUModel,
                 BenthicLITSESQLModel,
                 BenthicLITSEModel,
+                skip_updates,
             )
 
         if sample_unit is None or sample_unit == BENTHICPIT_PROTOCOL:
@@ -207,6 +215,7 @@ def update_summary_cache(project_id, sample_unit=None, skip_test_project=True):
                 BenthicPITSUModel,
                 BenthicPITSESQLModel,
                 BenthicPITSEModel,
+                skip_updates,
             )
 
         if sample_unit is None or sample_unit == BENTHICPQT_PROTOCOL:
@@ -219,12 +228,14 @@ def update_summary_cache(project_id, sample_unit=None, skip_test_project=True):
                 BenthicPhotoQuadratTransectSUModel,
                 BenthicPhotoQuadratTransectSESQLModel,
                 BenthicPhotoQuadratTransectSEModel,
+                skip_updates,
             )
 
         if sample_unit is None or sample_unit == BLEACHINGQC_PROTOCOL:
             _update_bleaching_qc_summary(
                 project_id,
                 sample_event_ids,
+                skip_updates,
             )
 
         if sample_unit is None or sample_unit == HABITATCOMPLEXITY_PROTOCOL:
@@ -237,6 +248,7 @@ def update_summary_cache(project_id, sample_unit=None, skip_test_project=True):
                 HabitatComplexitySUModel,
                 HabitatComplexitySESQLModel,
                 HabitatComplexitySEModel,
+                skip_updates,
             )
 
         _update_project_summary_sample_event(project_id)
