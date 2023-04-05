@@ -268,7 +268,7 @@ class SampleUnitMethodEditMixin(object):
 
 class SampleUnitMethodSummaryReport(object):
     @action(
-        detail=False, methods=["GET"], permission_classes=[ProjectDataAdminPermission]
+        detail=False, methods=["GET"]
     )
     def xlsx(self, request, project_pk):
         from ..utils.reports import create_sample_unit_method_summary_report

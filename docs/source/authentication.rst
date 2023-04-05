@@ -7,7 +7,7 @@ MERMAID uses OAuth2 authentication for securing and accessing the MERMAID API's 
 1. Create a MERMAID Account
 ---------------------------
 
-Before you can make a request for a JSON Web Token (JWT) or accessing the API, you must first create a MERMAID user account.  If you already have an account jump to section 2, if not, an account can be created at https://collect.datamermaid.org/.
+Before you can make a request for a JSON Web Token (JWT) or accessing the API, you must first create a MERMAID user account.  If you already have an account jump to section 2, if not, an account can be created at https://app.datamermaid.org/.
 
 
 2. Requesting Tokens
@@ -20,7 +20,7 @@ Before you can make a request for a JSON Web Token (JWT) or accessing the API, y
     - Client ID
     - Audience
 
-These details can be requested from the MERMAID team at https://datamermaid.org/contact/.
+These details can be requested from the MERMAID team at https://datamermaid.org/contact-us/.
 
 .. _`OAuth2 Implicit grant type`: https://oauth.net/2/grant-types/implicit/
 

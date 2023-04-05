@@ -24,6 +24,7 @@ from iac.stacks.constructs.worker import (
     QueueWorker,
 )
 
+
 class ApiStack(Stack):
     def __init__(
         self,
@@ -42,8 +43,6 @@ class ApiStack(Stack):
         super().__init__(scope, id, **kwargs)
 
         # namespace = sd.PrivateDnsNamespace(self, "Namespace", name=config.private_dns_name, vpc=self.vpc)
-
-        # svc = "mermaid_api"
 
         task_definition = ecs.FargateTaskDefinition(
             self,
@@ -117,7 +116,7 @@ class ApiStack(Stack):
             )
 
         # Envir Vars
-        sqs_queue_name = f'mermaid-{config.env_id}-queue'
+        sqs_queue_name = f"mermaid-{config.env_id}-queue"
         environment = {
             "ENV": config.env_id,
             "ENVIRONMENT": config.env_id,
@@ -287,4 +286,3 @@ class ApiStack(Stack):
 
         # allow API to read/write to the public bucket
         public_bucket.grant_read_write(service.task_definition.task_role)
-        

@@ -4,14 +4,16 @@ from django.dispatch import receiver
 
 from ..models import (
     AuthUser,
+    BenthicAttribute,
     CollectRecord,
-    Profile,
-    ProjectProfile,
-    Revision,
     FishFamily,
     FishGenus,
     FishSpecies,
-    BenthicAttribute,
+    Profile,
+    ProjectProfile,
+    Revision,
+    Site,
+    TransectMethod,
 )
 from ..resources.sync.views import (
     FISH_SPECIES_SOURCE_TYPE,
@@ -22,11 +24,14 @@ from ..resources.sync.views import (
 
 
 __all__ = (
-    "update_delete_project_profile_revisions",
-    "update_delete_project_profile_revisions",
+    "update_profile_revisions",
     "update_project_profile_revisions",
-    "new_collect_record",
-    "deleted_collect_record",
+    "delete_project_profile_revisions",
+    "new_collect_record_revisions",
+    "deleted_collect_record_revisions",
+    "deleted_su_revisions",
+    "created_site_revisions",
+    "deleted_site_revisions",
     "new_auth_user",
     "deleted_auth_user",
     "bust_revision_cache",
@@ -38,34 +43,59 @@ def _create_project_profile_revisions(query_kwargs):
         Revision.create_from_instance(project_profile)
 
 
-@receiver(pre_delete, sender=ProjectProfile)
-def update_delete_project_profile_revisions(sender, instance, *args, **kwargs):
-    Revision.create_from_instance(instance.project)
-
-
-@receiver(post_save, sender=ProjectProfile)
-def update_delete_project_profile_revisions(sender, instance, *args, **kwargs):
-    Revision.create_from_instance(instance.project)
-
-
 @receiver(post_save, sender=Profile)
-def update_project_profile_revisions(sender, instance, *args, **kwargs):
+def update_profile_revisions(sender, instance, *args, **kwargs):
     _create_project_profile_revisions({"profile": instance})
 
 
+@receiver(post_save, sender=ProjectProfile)
+def update_project_profile_revisions(sender, instance, *args, **kwargs):
+    Revision.create_from_instance(instance.project)
+
+
+@receiver(pre_delete, sender=ProjectProfile)
+def delete_project_profile_revisions(sender, instance, *args, **kwargs):
+    Revision.create_from_instance(instance.project)
+    Revision.create_from_instance(instance, related_to_profile_id=instance.profile.pk)
+    Revision.create_from_instance(
+        instance.project, related_to_profile_id=instance.profile.pk
+    )
+
+
 @receiver(post_save, sender=CollectRecord)
-def new_collect_record(sender, instance, created, *args, **kwargs):
+def new_collect_record_revisions(sender, instance, created, *args, **kwargs):
     if created:
         _create_project_profile_revisions(
             {"profile": instance.profile, "project": instance.project}
         )
+        Revision.create_from_instance(instance.project)
 
 
 @receiver(pre_delete, sender=CollectRecord)
-def deleted_collect_record(sender, instance, *args, **kwargs):
+def deleted_collect_record_revisions(sender, instance, *args, **kwargs):
     _create_project_profile_revisions(
         {"profile": instance.profile, "project": instance.project}
     )
+    Revision.create_from_instance(instance.project)
+
+
+# create handled in utils.submit_collect_records_v2
+@receiver(post_delete, sender=TransectMethod)
+def deleted_su_revisions(sender, instance, *args, **kwargs):
+    su_project = instance.project
+    if su_project is not None:
+        Revision.create_from_instance(su_project)
+
+
+@receiver(post_save, sender=Site)
+def created_site_revisions(sender, instance, created, *args, **kwargs):
+    if created:
+        Revision.create_from_instance(instance.project)
+
+
+@receiver(post_delete, sender=Site)
+def deleted_site_revisions(sender, instance, *args, **kwargs):
+    Revision.create_from_instance(instance.project)
 
 
 @receiver(post_save, sender=AuthUser)

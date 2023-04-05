@@ -106,3 +106,5 @@ src/growthform/
 src/data/
 
 *.env
+
+.env.host
