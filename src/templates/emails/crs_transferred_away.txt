@@ -1,0 +1,4 @@
+{% extends "emails/base.txt" %}
+{% block body %}
+{{admin_profile.full_name}} transferred your unsubmitted sample units in the project {{project_name}} to {{to_profile.full_name}}.
+{% endblock %}
