@@ -1,0 +1,2 @@
+{% extends "notifications/base.txt" %}
+{% block body %}{{admin_profile.full_name}} transferred your unsubmitted sample units to {{to_profile.full_name}}.{% endblock %}
