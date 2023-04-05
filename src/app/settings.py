@@ -77,6 +77,7 @@ MIDDLEWARE = [
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
     'maintenance_mode.middleware.MaintenanceModeMiddleware',
     "api.middleware.APIVersionMiddleware",
+    "api.middleware.MetricsMiddleware",
 ]
 
 DEBUG = False
