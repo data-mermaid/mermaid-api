@@ -1,12 +1,15 @@
-import json
 import time
-from datetime import datetime
+from django.utils import timezone
 
 from django.conf import settings
 from django.http import HttpResponse
 from django.utils.deprecation import MiddlewareMixin
 
+from tools.logger import DatabaseLogger
 from .utils.auth0utils import decode
+
+
+metrics_logger = DatabaseLogger(chunk_size=10)
 
 
 class APIVersionMiddleware(MiddlewareMixin):
@@ -77,21 +80,21 @@ class MetricsMiddleware:
         query_params = dict(request.GET)
         self._obfuscate(query_params)
 
-        print(
-            json.dumps(
-                {
-                    "type": "mermaid-metrics",
-                    "timestamp": datetime.now().timestamp(),
-                    "method": method,
-                    "path": url_path,
-                    "query_params": query_params,
-                    "status_code": response_status_code,
-                    "duration_ms": duration,
-                    "token_type": token_type,
-                    "auth_type": auth_type,
-                    "user_id": user_id or "",
-                }
-            )
+        now = timezone.now()
+        metrics_logger.log(
+            now,
+            {
+                "type": "mermaid-metrics",
+                "timestamp": now.timestamp(),
+                "method": method,
+                "path": url_path,
+                "query_params": query_params,
+                "status_code": response_status_code,
+                "duration_ms": duration,
+                "token_type": token_type,
+                "auth_type": auth_type,
+                "user_id": user_id or "",
+            }
         )
 
         return response
