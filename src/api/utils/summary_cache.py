@@ -61,8 +61,10 @@ def _set_created_on(created_on, records):
         record.created_on = created_on
 
 
-def _update_records(project_id, records, target_model_cls, created_on, skip_updates=False):
+def _delete_existing_records(project_id, target_model_cls):
     target_model_cls.objects.filter(project_id=project_id).delete()
+
+def _update_records(records, target_model_cls, created_on, skip_updates=False):
     if skip_updates:
         return
     idx = 0
@@ -95,19 +97,31 @@ def _update_cache(
     skip_updates,
 ):
     created_on = timezone.now()
+    if skip_updates is not True:
+        _delete_existing_records(project_id, obs_model)
+        _delete_existing_records(project_id, su_model)
+        _delete_existing_records(project_id, se_model)
+
     for sample_event_ids in sample_event_ids_set:
         obs_records = _fetch_records(obs_sql_model, project_id, sample_event_ids)
-        _update_records(project_id, obs_records, obs_model, created_on, skip_updates)
+        _update_records(obs_records, obs_model, created_on, skip_updates)
 
-        su_records = _fetch_records(su_sql_model, project_id)
-        _update_records(project_id, su_records, su_model, created_on, skip_updates)
+    su_records = _fetch_records(su_sql_model, project_id)
+    _update_records(su_records, su_model, created_on, skip_updates)
 
-        se_records = _fetch_records(se_sql_model, project_id)
-        _update_records(project_id, se_records, se_model, created_on, skip_updates)
+    se_records = _fetch_records(se_sql_model, project_id)
+    _update_records(se_records, se_model, created_on, skip_updates)
 
 
 def _update_bleaching_qc_summary(project_id, sample_event_ids_set, skip_updates):
     created_on = timezone.now()
+
+    if not skip_updates:
+        _delete_existing_records(project_id, BleachingQCColoniesBleachedObsModel)
+        _delete_existing_records(project_id, BleachingQCQuadratBenthicPercentObsModel)
+        _delete_existing_records(project_id, BleachingQCSUModel)
+        _delete_existing_records(project_id, BleachingQCSEModel)
+
     for sample_event_ids in sample_event_ids_set:
         bleaching_colonies_obs = _fetch_records(
             BleachingQCColoniesBleachedObsSQLModel, project_id, sample_event_ids
@@ -115,27 +129,24 @@ def _update_bleaching_qc_summary(project_id, sample_event_ids_set, skip_updates)
         bleaching_quad_percent_obs = _fetch_records(
             BleachingQCQuadratBenthicPercentObsSQLModel, project_id, sample_event_ids
         )
-
         _update_records(
-            project_id,
             bleaching_colonies_obs,
             BleachingQCColoniesBleachedObsModel,
             created_on,
             skip_updates,
         )
         _update_records(
-            project_id,
             bleaching_quad_percent_obs,
             BleachingQCQuadratBenthicPercentObsModel,
             created_on,
             skip_updates,
         )
 
-        bleaching_su = _fetch_records(BleachingQCSUSQLModel, project_id)
-        _update_records(project_id, bleaching_su, BleachingQCSUModel, created_on, skip_updates)
+    bleaching_su = _fetch_records(BleachingQCSUSQLModel, project_id)
+    _update_records(bleaching_su, BleachingQCSUModel, created_on, skip_updates)
 
-        bleaching_se = _fetch_records(BleachingQCSESQLModel, project_id)
-        _update_records(project_id, bleaching_se, BleachingQCSEModel, created_on, skip_updates)
+    bleaching_se = _fetch_records(BleachingQCSESQLModel, project_id)
+    _update_records(bleaching_se, BleachingQCSEModel, created_on, skip_updates)
 
 
 def _update_project_summary_sample_event(project_id, skip_test_project=True):
