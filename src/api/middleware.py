@@ -9,9 +9,6 @@ from tools.logger import DatabaseLogger
 from .utils.auth0utils import decode
 
 
-metrics_logger = DatabaseLogger(chunk_size=10)
-
-
 class APIVersionMiddleware(MiddlewareMixin):
     def __init__(self, get_response):
         self.get_response = get_response
@@ -37,6 +34,7 @@ class MetricsMiddleware:
     APP = "app"
 
     def __init__(self, get_response):
+        self.metrics_logger = DatabaseLogger(batch_size=settings.DB_LOGGER_BATCH_WRITE_SIZE)
         self.get_response = get_response
 
     def parse_token(self, token):
@@ -63,8 +61,18 @@ class MetricsMiddleware:
                 for i in range(len(value[key])):
                     value[key][i] = "********"
 
+    def _ignore_url_path(self, url_path):
+        return any(
+            url_path.startswith(ignore_route)
+            for ignore_route in settings.METRICS_IGNORE_ROUTES
+        )
+
     def __call__(self, request):
         url_path = request.path
+
+        if settings.DISABLE_METRICS or self._ignore_url_path(url_path):
+            return self.get_response(request)
+
         method = request.method
         token_type, auth_type, user_id = self.parse_token(
             request.headers.get("Authorization")
@@ -81,7 +89,8 @@ class MetricsMiddleware:
         self._obfuscate(query_params)
 
         now = timezone.now()
-        metrics_logger.log(
+        writer = self.metrics_logger.log if settings.WRITE_METRICS_TO_DB else print
+        writer(
             now,
             {
                 "type": "mermaid-metrics",

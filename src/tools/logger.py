@@ -6,8 +6,8 @@ from .models import LogEvent
 
 
 class DatabaseLogger:
-    def __init__(self, chunk_size=1):
-        self._chunk_size = chunk_size
+    def __init__(self, batch_size=1):
+        self._batch_size = batch_size
         self._queue = queue.Queue()
         self._setup()
 
@@ -29,7 +29,7 @@ class DatabaseLogger:
     def _process_log_queue(self):
         while True:
             log_records = []
-            for _ in range(self._chunk_size):
+            for _ in range(self._batch_size):
                 try:
                     timestamp, event = self._queue.get(timeout=1)
                     log_records.append(LogEvent(
