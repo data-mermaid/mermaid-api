@@ -51,7 +51,7 @@ def get_viewset_csv_content(view_cls, project_pk, request):
 def write_data(wb, sheet_name, data):
     casted_data = []
     for row in data:
-        casted_row = casted_row = [cast_str_value(col) for col in row]
+        casted_row = [cast_str_value(col) for col in row]
         casted_data.append(casted_row)
 
     ws = wb.new_sheet(sheet_name, data=casted_data)
