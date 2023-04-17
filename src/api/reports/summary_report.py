@@ -1,5 +1,4 @@
 import csv
-
 from pyexcelerate import Font, Style, Workbook
 
 from ..mocks import MockRequest
@@ -34,6 +33,7 @@ from ..resources.sampleunitmethods.habitatcomplexitymethod import (
     HabitatComplexityProjectMethodSEView,
     HabitatComplexityProjectMethodSUView,
 )
+from ..utils.castutils import cast_str_value
 from ..utils.timer import timing
 
 
@@ -49,7 +49,12 @@ def get_viewset_csv_content(view_cls, project_pk, request):
 
 
 def write_data(wb, sheet_name, data):
-    ws = wb.new_sheet(sheet_name, data=data)
+    casted_data = []
+    for row in data:
+        casted_row = [cast_str_value(col) for col in row]
+        casted_data.append(casted_row)
+
+    ws = wb.new_sheet(sheet_name, data=casted_data)
     ws.set_row_style(1, Style(font=Font(bold=True)))
 
 
