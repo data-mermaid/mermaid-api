@@ -274,6 +274,18 @@ MC_API_KEY = os.environ.get('MC_API_KEY')
 MC_USER = os.environ.get('MC_USER')
 MC_LIST_ID = os.environ.get('MC_LIST_ID')
 
+# ************************
+# ** METRICS MIDDLEWARE **
+# ************************
+
+DISABLE_METRICS = False
+WRITE_METRICS_TO_DB = DEBUG is False
+DB_LOGGER_BATCH_WRITE_SIZE = 100
+# Uses Python's startswith() to match routes
+METRICS_IGNORE_ROUTES = [
+    "/v1/health/",
+]
+
 
 LOGGING = {
     'version': 1,

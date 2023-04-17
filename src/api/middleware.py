@@ -1,11 +1,11 @@
-import json
 import time
-from datetime import datetime
+from django.utils import timezone
 
 from django.conf import settings
 from django.http import HttpResponse
 from django.utils.deprecation import MiddlewareMixin
 
+from tools.logger import DatabaseLogger
 from .utils.auth0utils import decode
 
 
@@ -34,6 +34,7 @@ class MetricsMiddleware:
     APP = "app"
 
     def __init__(self, get_response):
+        self.metrics_logger = DatabaseLogger(batch_size=settings.DB_LOGGER_BATCH_WRITE_SIZE)
         self.get_response = get_response
 
     def parse_token(self, token):
@@ -60,8 +61,19 @@ class MetricsMiddleware:
                 for i in range(len(value[key])):
                     value[key][i] = "********"
 
+    def _ignore_url_path(self, url_path):
+        return any(
+            url_path.startswith(ignore_route)
+            for ignore_route in settings.METRICS_IGNORE_ROUTES
+        )
+
     def __call__(self, request):
         url_path = request.path
+        response = self.get_response(request)
+
+        if settings.DISABLE_METRICS or self._ignore_url_path(url_path):
+            return response
+
         method = request.method
         token_type, auth_type, user_id = self.parse_token(
             request.headers.get("Authorization")
@@ -69,29 +81,28 @@ class MetricsMiddleware:
 
         s = time.time_ns()
 
-        response = self.get_response(request)
-
         response_status_code = response.status_code
         duration = (time.time_ns() - s) / 1_000_000  # ms
 
         query_params = dict(request.GET)
         self._obfuscate(query_params)
 
-        print(
-            json.dumps(
-                {
-                    "type": "mermaid-metrics",
-                    "timestamp": datetime.now().timestamp(),
-                    "method": method,
-                    "path": url_path,
-                    "query_params": query_params,
-                    "status_code": response_status_code,
-                    "duration_ms": duration,
-                    "token_type": token_type,
-                    "auth_type": auth_type,
-                    "user_id": user_id or "",
-                }
-            )
+        now = timezone.now()
+        writer = self.metrics_logger.log if settings.WRITE_METRICS_TO_DB else print
+        writer(
+            now,
+            {
+                "type": "mermaid-metrics",
+                "timestamp": now.timestamp(),
+                "method": method,
+                "path": url_path,
+                "query_params": query_params,
+                "status_code": response_status_code,
+                "duration_ms": duration,
+                "token_type": token_type,
+                "auth_type": auth_type,
+                "user_id": user_id or "",
+            }
         )
 
         return response
