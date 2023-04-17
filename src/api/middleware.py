@@ -69,9 +69,10 @@ class MetricsMiddleware:
 
     def __call__(self, request):
         url_path = request.path
+        response = self.get_response(request)
 
         if settings.DISABLE_METRICS or self._ignore_url_path(url_path):
-            return self.get_response(request)
+            return response
 
         method = request.method
         token_type, auth_type, user_id = self.parse_token(
@@ -79,8 +80,6 @@ class MetricsMiddleware:
         )
 
         s = time.time_ns()
-
-        response = self.get_response(request)
 
         response_status_code = response.status_code
         duration = (time.time_ns() - s) / 1_000_000  # ms
