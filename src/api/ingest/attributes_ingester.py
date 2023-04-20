@@ -303,7 +303,7 @@ class FishIngester(BaseAttributeIngester):
                 kwargs = dict(
                     max_digits=field.max_digits, precision=field.decimal_places
                 )
-                casts[field.name.lower()] = dict(fx=castutils.to_decimal, kwargs=kwargs)
+                casts[field.name.lower()] = dict(fx=castutils.to_number, kwargs=kwargs)
 
         return casts
 

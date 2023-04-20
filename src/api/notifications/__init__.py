@@ -30,12 +30,50 @@ def notify_project_users(
 
         project_emails = [p.email for p in project_profiles]
         mermaid_email(
-            subject,
-            email_template,
-            project_emails,
+            subject=subject,
+            template=email_template,
+            to=project_emails,
             context=context,
             from_email=settings.DEFAULT_FROM_EMAIL,
             reply_to=project_emails,
+        )
+
+
+def notify_crs_transferred(project, from_profile, to_profile, admin_profile):
+    project_name = project.name
+    subject = f"{project_name} unsubmitted Sample Units transferred"
+    context = {"project_name": project_name, "admin_profile": admin_profile}
+
+    if admin_profile != from_profile:
+        notify_template = "notifications/crs_transferred_away.txt"
+        email_template = "emails/crs_transferred_away.txt"
+        context["to_profile"] = to_profile
+        add_notification(
+            subject, Notification.INFO, notify_template, context, [from_profile]
+        )
+        mermaid_email(
+            subject=subject,
+            template=email_template,
+            to=[from_profile.email],
+            context=context,
+            from_email=settings.DEFAULT_FROM_EMAIL,
+            reply_to=[admin_profile.email],
+        )
+
+    if admin_profile != to_profile:
+        notify_template = "notifications/crs_transferred_to.txt"
+        email_template = "emails/crs_transferred_to.txt"
+        context["from_profile"] = from_profile
+        add_notification(
+            subject, Notification.INFO, notify_template, context, [to_profile]
+        )
+        mermaid_email(
+            subject=subject,
+            template=email_template,
+            to=[to_profile.email],
+            context=context,
+            from_email=settings.DEFAULT_FROM_EMAIL,
+            reply_to=[admin_profile.email],
         )
 
 

@@ -9,9 +9,18 @@ from rest_framework.relations import HyperlinkedIdentityField
 from rest_framework.response import Response
 
 from ..auth_backends import AnonymousJWTAuthentication
-from ..models import Management, Project, Site, Profile, ProjectProfile, ArchivedRecord, TransectMethod
+from ..models import (
+    Management,
+    Project,
+    Site,
+    Profile,
+    ProjectProfile,
+    ArchivedRecord,
+    TransectMethod,
+)
 from ..decorators import run_in_thread
 from ..exceptions import check_uuid
+from ..notifications import notify_crs_transferred
 from ..permissions import *
 from ..utils import delete_instance_and_related_objects, truthy
 from ..utils.project import (
@@ -113,7 +122,7 @@ class ProjectSerializer(BaseAPISerializer):
 
     def get_num_active_sample_units(self, obj):
         return obj.collect_records.count()
-    
+
     def get_num_sample_units(self, obj):
         sample_unit_methods = TransectMethod.__subclasses__()
         num_sample_units = 0
@@ -137,12 +146,12 @@ class ProjectFilterSet(BaseAPIFilterSet):
         model = Project
         exclude = []
         filter_overrides = {
-             JSONField: {
-                 "filter_class": django_filters.CharFilter,
-                 "extra": lambda f: {
-                     "lookup_expr": "icontains",
-                 }
-             }
+            JSONField: {
+                "filter_class": django_filters.CharFilter,
+                "extra": lambda f: {
+                    "lookup_expr": "icontains",
+                },
+            }
         }
 
     def filter_tags(self, queryset, name, value):
@@ -277,7 +286,6 @@ class ProjectViewSet(BaseApiViewSet):
 
         transaction.savepoint_commit(save_point_id)
         return Response(project_serializer.data)
-    
 
     @action(
         detail=False,
@@ -287,7 +295,7 @@ class ProjectViewSet(BaseApiViewSet):
     def copy_project(self, request):
         """
         Payload schema:
-        
+
         {
             "new_project_name": [string] New project name
             "original_project_id": [string] Project id to copy
@@ -295,7 +303,7 @@ class ProjectViewSet(BaseApiViewSet):
         }
 
         """
-        
+
         profile = request.user.profile
 
         data = request.data
@@ -306,19 +314,25 @@ class ProjectViewSet(BaseApiViewSet):
 
         existing_named_projects = Project.objects.filter(name=new_project_name)
         if existing_named_projects.count() > 0:
-            raise exceptions.ValidationError({"new_project_name": "Project name already exists"})
+            raise exceptions.ValidationError(
+                {"new_project_name": "Project name already exists"}
+            )
 
         try:
             original_project_id = data["original_project_id"]
             if original_project_id and str(original_project_id).strip() != "":
                 check_uuid(original_project_id)
             original_project = ProjectProfile.objects.get(
-                project_id=original_project_id,
-                profile=profile).project
+                project_id=original_project_id, profile=profile
+            ).project
         except KeyError as e:
-            raise exceptions.ParseError(detail="'original_project_id' is required") from e
+            raise exceptions.ParseError(
+                detail="'original_project_id' is required"
+            ) from e
         except ProjectProfile.DoesNotExist as not_exist_err:
-            raise exceptions.ParseError(detail="Original project does not exist or you are not a member") from not_exist_err
+            raise exceptions.ParseError(
+                detail="Original project does not exist or you are not a member"
+            ) from not_exist_err
 
         notify_users = truthy(data.get("notify_users"))
 
@@ -326,18 +340,22 @@ class ProjectViewSet(BaseApiViewSet):
             new_project = copy_project_and_resources(
                 owner_profile=profile,
                 new_project_name=new_project_name,
-                original_project=original_project
+                original_project=original_project,
             )
 
             if notify_users:
                 email_members_of_new_project(new_project, profile)
 
             context = {"request": request}
-            project_serializer = ProjectSerializer(instance=new_project, context=context)
+            project_serializer = ProjectSerializer(
+                instance=new_project, context=context
+            )
             return Response(project_serializer.data)
         except Exception as err:
             print(err)
-            raise exceptions.APIException(detail=f"[{type(err).__name__}] Copying project") from err
+            raise exceptions.APIException(
+                detail=f"[{type(err).__name__}] Copying project"
+            ) from err
 
     def get_updates(self, request, *args, **kwargs):
         added, updated, deleted = super().get_updates(request, *args, **kwargs)
@@ -360,7 +378,9 @@ class ProjectViewSet(BaseApiViewSet):
         updated_ons = []
         projects = []
         project_profiles = ProjectProfile.objects.select_related("project")
-        project_profiles = project_profiles.prefetch_related("project__sites", "project__sites__country")
+        project_profiles = project_profiles.prefetch_related(
+            "project__sites", "project__sites__country"
+        )
         project_profiles = project_profiles.filter(**added_filter)
         for pp in project_profiles:
             updated_ons.append(pp.updated_on)
@@ -442,7 +462,11 @@ class ProjectViewSet(BaseApiViewSet):
 
     @action(detail=True, methods=["put"])
     def transfer_sample_units(self, request, pk, *args, **kwargs):
-        project_id = pk
+        try:
+            project_id = check_uuid(pk)
+            project = Project.objects.get(pk=project_id)
+        except (exceptions.ParseError, Project.DoesNotExist):
+            raise exceptions.ValidationError("Invalid or nonexistent project", code=400)
         qp_to_profile_id = request.data.get("to_profile")
         qp_from_profile_id = request.data.get("from_profile")
 
@@ -463,6 +487,7 @@ class ProjectViewSet(BaseApiViewSet):
                     project_id, from_profile, to_profile, profile
                 )
                 transaction.savepoint_commit(sid)
+                notify_crs_transferred(project, from_profile, to_profile, profile)
             except Exception as err:
                 logger.error(err)
                 transaction.savepoint_rollback(sid)
@@ -493,7 +518,7 @@ class ProjectViewSet(BaseApiViewSet):
 
         return Response(
             data="Project has been flagged for deletion",
-            status=status.HTTP_202_ACCEPTED
+            status=status.HTTP_202_ACCEPTED,
         )
 
     @action(
@@ -510,16 +535,17 @@ class ProjectViewSet(BaseApiViewSet):
         admin_profile = request.user.profile
 
         if email is None:
-            raise exceptions.ValidationError(
-                detail={"email": "Email is required"}
-            )
+            raise exceptions.ValidationError(detail={"email": "Email is required"})
 
         try:
             profile = Profile.objects.get(email__iexact=email)
         except Profile.DoesNotExist:
             profile = Profile.objects.create(email=email)
 
-        if ProjectProfile.objects.filter(project_id=pk, profile=profile).exists() is False:
+        if (
+            ProjectProfile.objects.filter(project_id=pk, profile=profile).exists()
+            is False
+        ):
             project_profile = ProjectProfile.objects.create(
                 project_id=pk,
                 profile=profile,
@@ -540,11 +566,19 @@ class ProjectViewSet(BaseApiViewSet):
         permission_classes=[ProjectDataPermission],
     )
     def summary(self, request, pk, *args, **kwargs):
-        project = Project.objects.prefetch_related("sites", "profiles", "collect_records").get(id=pk)
-        summary = {"name": project.name, "site_collecting_summary": {}, "site_submitted_summary": {}}
+        project = Project.objects.prefetch_related(
+            "sites", "profiles", "collect_records"
+        ).get(id=pk)
+        summary = {
+            "name": project.name,
+            "site_collecting_summary": {},
+            "site_submitted_summary": {},
+        }
         protocols = []
 
-        collecting_protocols, site_collecting_summary = create_collecting_summary(project)
+        collecting_protocols, site_collecting_summary = create_collecting_summary(
+            project
+        )
         summary["site_collecting_summary"] = site_collecting_summary
         protocols.extend(collecting_protocols)
 

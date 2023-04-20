@@ -1,11 +1,23 @@
 from decimal import ROUND_HALF_DOWN, Decimal, localcontext
 
 
-def to_decimal(val, max_digits, precision):
-    if str(val) == "" or val is None:
+def to_number(string, max_digits=None, precision=None):
+    try:
+        if max_digits is None or precision is None:
+            num = float(string)
+            return int(num) if num.is_integer() else num
+        else:
+            with localcontext() as ctx:
+                ctx.prec = max_digits
+                places = Decimal(10) ** (precision * -1)
+                return Decimal(string).quantize(places, ROUND_HALF_DOWN)
+    except (TypeError, ValueError) as e:
         return None
 
-    with localcontext() as ctx:
-        ctx.prec = max_digits
-        places = Decimal(10) ** (precision * -1)
-        return Decimal(val).quantize(places, ROUND_HALF_DOWN)
+
+def cast_str_value(string):
+    if not isinstance(string, str):
+        return string
+
+    val = to_number(string)
+    return val if val is not None else string
