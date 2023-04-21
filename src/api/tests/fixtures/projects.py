@@ -132,6 +132,11 @@ def project_profile4(project4, profile1):
 
 
 @pytest.fixture
+def sample_date1():
+    return date(2022, 1, 1)
+
+
+@pytest.fixture
 def site1(project1, country1, reef_type1, reef_exposure1, reef_zone1):
     return Site.objects.create(
         project=project1,
@@ -192,31 +197,31 @@ def management2(project1):
 
 
 @pytest.fixture
-def sample_event1(management1, site1):
+def sample_event1(management1, site1, sample_date1):
     return SampleEvent.objects.create(
         management=management1,
         site=site1,
-        sample_date=date(2022, 1, 1),
+        sample_date=sample_date1,
         notes="Some sample event notes for sample_event1",
     )
 
 
 @pytest.fixture
-def sample_event2(management2, site2):
+def sample_event2(management2, site2, sample_date1):
     return SampleEvent.objects.create(
         management=management2,
         site=site2,
-        sample_date=date(2022, 1, 1),
+        sample_date=sample_date1,
         notes="Some sample event notes for sample_event2",
     )
 
 
 @pytest.fixture
-def sample_event3(management1, site1):
+def sample_event3(management1, site1, sample_date1):
     return SampleEvent.objects.create(
         management=management1,
         site=site1,
-        sample_date=date(2022, 1, 1),
+        sample_date=sample_date1,
         notes="Some sample event notes for sample_event3",
     )
 
