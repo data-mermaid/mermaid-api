@@ -15,7 +15,6 @@ def submit_job(delay, callable, *args, **kwargs):
         callable(*args, **kwargs)
         return
 
-    print(f"HERE: {callable.__name__}")
     args = args or []
     kwargs = kwargs or {}
     q = Queue(settings.QUEUE_NAME)
