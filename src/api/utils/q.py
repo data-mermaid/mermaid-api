@@ -11,6 +11,11 @@ from simpleq.queues import Queue
 
 
 def submit_job(delay, callable, *args, **kwargs):
+    if settings.TESTING:
+        callable(*args, **kwargs)
+        return
+
+    print(f"HERE: {callable.__name__}")
     args = args or []
     kwargs = kwargs or {}
     q = Queue(settings.QUEUE_NAME)
