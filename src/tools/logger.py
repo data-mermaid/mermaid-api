@@ -15,9 +15,9 @@ class DatabaseLogger:
         self._thread = threading.Thread(target=self._process_log_queue)
         self._thread.daemon = True
         self._thread.start()
-        atexit.register(self._shutdown)
+        atexit.register(self.close)
 
-    def _shutdown(self):
+    def close(self):
         self._thread.join()
         self._queue = None
 
