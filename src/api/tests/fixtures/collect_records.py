@@ -458,7 +458,9 @@ def collect_record4_with_v2_validation(
 
 @pytest.fixture
 def valid_collect_record(
-    sample_event1,
+    management1,
+    site1,
+    sample_date1,
     belt_transect_width_5m,
     fish_species1,
     project1,
@@ -508,7 +510,6 @@ def valid_collect_record(
         protocol="fishbelt",
         obs_belt_fishes=observations,
         fishbelt_transect=dict(
-            # sample_event=str(sample_event1),
             current=str(current1.pk),
             reef_slope=str(reef_slope1.pk),
             relative_depth=str(relative_depth1.pk),
@@ -522,9 +523,9 @@ def valid_collect_record(
             number=1,
         ),
         sample_event=dict(
-            management=str(sample_event1.management.id),
-            site=str(sample_event1.site.id),
-            sample_date=f"{sample_event1.sample_date.year}-{sample_event1.sample_date.month}-{sample_event1.sample_date.day}",
+            management=str(management1.id),
+            site=str(site1.id),
+            sample_date=f"{sample_date1.year}-{sample_date1.month}-{sample_date1.day}",
         ),
         observers=[{"profile": str(project_profile1.profile.id)}],
     )
@@ -645,7 +646,9 @@ def valid_benthic_lit_collect_record(
     project1,
     profile1,
     project_profile1,
-    sample_event1,
+    management1,
+    site1,
+    sample_date1,
 ):
     observations = [
         dict(attribute=str(benthic_attribute_3.id), length="1000"),
@@ -659,9 +662,9 @@ def valid_benthic_lit_collect_record(
         obs_benthic_lits=observations,
         benthic_transect=dict(depth=1, number=2, len_surveyed=100),
         sample_event=dict(
-            management=str(sample_event1.management.id),
-            site=str(sample_event1.site.id),
-            sample_date=f"{sample_event1.sample_date:%Y-%m-%d}",
+            management=str(management1.id),
+            site=str(site1.id),
+            sample_date=f"{sample_date1:%Y-%m-%d}",
         ),
         observers=[{"profile": str(profile1.id)}],
     )
@@ -679,7 +682,9 @@ def invalid_benthic_lit_collect_record(
     project1,
     profile1,
     project_profile1,
-    sample_event1,
+    management1,
+    site1,
+    sample_date1,
 ):
     observations = [
         dict(attribute=str(benthic_attribute_3.id), length=1000),
@@ -691,9 +696,9 @@ def invalid_benthic_lit_collect_record(
         obs_benthic_lits=observations,
         benthic_transect=dict(depth=1, number=2, len_surveyed=100),
         sample_event=dict(
-            management=str(sample_event1.management.id),
-            site=str(sample_event1.site.id),
-            sample_date=f"{sample_event1.sample_date:%Y-%m-%d}",
+            management=str(management1.id),
+            site=str(site1.id),
+            sample_date=f"{sample_date1:%Y-%m-%d}",
         ),
         observers=[{"profile": str(profile1.id)}],
     )
@@ -712,7 +717,9 @@ def valid_benthic_pit_collect_record(
     project1,
     profile1,
     project_profile1,
-    sample_event1,
+    management1,
+    site1,
+    sample_date1,
 ):
     observations = [
         dict(attribute=str(benthic_attribute_3.id), interval=5),
@@ -729,9 +736,9 @@ def valid_benthic_pit_collect_record(
         interval_size=5,
         interval_start=5,
         sample_event=dict(
-            management=str(sample_event1.management.id),
-            site=str(sample_event1.site.id),
-            sample_date=f"{sample_event1.sample_date:%Y-%m-%d}",
+            management=str(management1.id),
+            site=str(site1.id),
+            sample_date=f"{sample_date1:%Y-%m-%d}",
         ),
         observers=[{"profile": str(profile1.id)}],
     )
@@ -749,7 +756,9 @@ def invalid_benthic_pit_collect_record(
     project1,
     profile1,
     project_profile1,
-    sample_event1,
+    management1,
+    site1,
+    sample_date1,
 ):
     observations = [
         dict(attribute=str(benthic_attribute_3.id), length=1000),
@@ -764,9 +773,9 @@ def invalid_benthic_pit_collect_record(
         interval_size=5,
         interval_start=5,
         sample_event=dict(
-            management=str(sample_event1.management.id),
-            site=str(sample_event1.site.id),
-            sample_date=f"{sample_event1.sample_date:%Y-%m-%d}",
+            management=str(management1.id),
+            site=str(site1.id),
+            sample_date=f"{sample_date1:%Y-%m-%d}",
         ),
         observers=[{"profile": str(profile1.id)}],
     )
@@ -781,7 +790,9 @@ def invalid_benthic_pit_collect_record(
 
 @pytest.fixture
 def valid_habitat_complexity_collect_record(
-    sample_event1,
+    management1,
+    site1,
+    sample_date1,
     habitat_complexity_score1,
     project1,
     profile1,
@@ -801,9 +812,9 @@ def valid_habitat_complexity_collect_record(
         benthic_transect=dict(depth=1, number=2, len_surveyed=30),
         interval_size=5,
         sample_event=dict(
-            management=str(sample_event1.management.id),
-            site=str(sample_event1.site.id),
-            sample_date=f"{sample_event1.sample_date:%Y-%m-%d}",
+            management=str(management1.id),
+            site=str(site1.id),
+            sample_date=f"{sample_date1:%Y-%m-%d}",
         ),
         observers=[{"profile": str(profile1.id)}],
     )
@@ -818,7 +829,9 @@ def valid_habitat_complexity_collect_record(
 
 @pytest.fixture
 def invalid_habitat_complexity_collect_record(
-    sample_event1,
+    management1,
+    site1,
+    sample_date1,
     habitat_complexity_score1,
     project1,
     profile1,
@@ -838,9 +851,9 @@ def invalid_habitat_complexity_collect_record(
         benthic_transect=dict(depth=1, number=2, len_surveyed=30),
         interval_size=5,
         sample_event=dict(
-            management=str(sample_event1.management.id),
-            site=str(sample_event1.site.id),
-            sample_date=f"{sample_event1.sample_date:%Y-%m-%d}",
+            management=str(management1.id),
+            site=str(site1.id),
+            sample_date=f"{sample_date1:%Y-%m-%d}",
         ),
         observers=[{"profile": str(profile1.id)}],
     )
@@ -864,7 +877,9 @@ def valid_bleaching_qc_collect_record(
     project1,
     profile1,
     project_profile1,
-    sample_event1,
+    management1,
+    site1,
+    sample_date1,
     tide1,
     current1,
     visibility1,
@@ -975,9 +990,9 @@ def valid_bleaching_qc_collect_record(
             "relative_depth": str(relative_depth1.pk)
         },
         "sample_event": {
-            "management": str(sample_event1.management.id),
-            "site": str(sample_event1.site.id),
-            "sample_date": f"{sample_event1.sample_date:%Y-%m-%d}",
+            "management": str(management1.id),
+            "site": str(site1.id),
+            "sample_date": f"{sample_date1:%Y-%m-%d}",
         },
         "observers": [{
             "profile": str(profile1.id)
@@ -1003,7 +1018,9 @@ def valid_benthic_pq_transect_collect_record(
     current1,
     relative_depth1,
     visibility1,
-    sample_event1,
+    management1,
+    site1,
+    sample_date1,
     profile1,
     project1,
 ):
@@ -1058,9 +1075,9 @@ def valid_benthic_pq_transect_collect_record(
             "quadrat_number_start": 2,
         },
         "sample_event": {
-            "management": str(sample_event1.management.id),
-            "site": str(sample_event1.site.id),
-            "sample_date": f"{sample_event1.sample_date:%Y-%m-%d}",
+            "management": str(management1.id),
+            "site": str(site1.id),
+            "sample_date": f"{sample_date1:%Y-%m-%d}",
         },
         "observers": [{
             "profile": str(profile1.id)

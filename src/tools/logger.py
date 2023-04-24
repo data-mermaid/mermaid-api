@@ -6,6 +6,7 @@ from .models import LogEvent
 
 
 class DatabaseLogger:
+    _running = False
     def __init__(self, batch_size=1):
         self._batch_size = batch_size
         self._queue = queue.Queue()
@@ -15,9 +16,11 @@ class DatabaseLogger:
         self._thread = threading.Thread(target=self._process_log_queue)
         self._thread.daemon = True
         self._thread.start()
-        atexit.register(self._shutdown)
+        self._running = True
+        atexit.register(self.close)
 
-    def _shutdown(self):
+    def close(self):
+        self._running = False
         self._thread.join()
         self._queue = None
 
@@ -27,7 +30,7 @@ class DatabaseLogger:
         self._queue.put((timestamp, event))
 
     def _process_log_queue(self):
-        while True:
+        while self._running:
             log_records = []
             for _ in range(self._batch_size):
                 try:
