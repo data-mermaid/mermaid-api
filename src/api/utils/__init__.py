@@ -5,6 +5,7 @@ import subprocess
 import uuid
 from datetime import datetime, timezone
 
+from django.conf import settings
 from django.core.exceptions import ObjectDoesNotExist
 from django.db import IntegrityError
 from django.db.models.deletion import ProtectedError
@@ -18,6 +19,14 @@ ERROR: str = "error"
 WARN: str = "warning"
 OK: str = "ok"
 STALE: str = "stale"
+
+
+class Testing:
+    def __enter__(self):
+        settings.TESTING = True
+
+    def __exit__(self, *args, **kwargs):
+        settings.TESTING = False
 
 
 def is_match(string, match_patterns):

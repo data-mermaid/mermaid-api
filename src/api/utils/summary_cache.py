@@ -65,7 +65,7 @@ def _delete_existing_records(project_id, target_model_cls):
     target_model_cls.objects.filter(project_id=project_id).delete()
 
 def _update_records(records, target_model_cls, created_on, skip_updates=False):
-    if skip_updates:
+    if skip_updates or not records:
         return
     idx = 0
     while True:

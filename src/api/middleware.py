@@ -72,6 +72,10 @@ class MetricsMiddleware:
             for ignore_route in settings.METRICS_IGNORE_ROUTES
         )
 
+    def __exit__(self, exc_type, exc_value, traceback):
+        self.metrics_logger.close()
+        super().__exit__(exc_type, exc_value, traceback)
+    
     def __call__(self, request):
         url_path = request.path
         response = self.get_response(request)
