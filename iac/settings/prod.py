@@ -7,8 +7,8 @@ PROD_SETTINGS = ProjectSettings(
     env_id=PROD_ENV_ID,
     database=DatabaseSettings(name=f"mermaid_{PROD_ENV_ID}", port="5432"),
     api=DjangoSettings(
-        container_cpu=2048,
-        container_memory=4096,
+        container_cpu=1024,
+        container_memory=2048,
         container_count=1,
         default_domain_api="api.datamermaid.org",
         default_domain_collect="app.datamermaid.org",
