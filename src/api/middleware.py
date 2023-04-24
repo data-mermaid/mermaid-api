@@ -29,7 +29,7 @@ class HealthEndpointMiddleware(MiddlewareMixin):
             return HttpResponse(f"OK ({settings.ENVIRONMENT})")
 
 
-class MetricsMiddleware:
+class MetricsMiddleware:  # Should we inherit from MiddlewareMixin?
     USER = "user"
     APP = "app"
 
@@ -38,10 +38,15 @@ class MetricsMiddleware:
         self.get_response = get_response
 
     def parse_token(self, token):
+        default_parsed = "", "", ""
         if token is None:
-            return "", "", ""
+            return default_parsed
 
-        sub = (decode(token.split(" ")[1].strip()) or {}).get("sub")
+        try:
+            sub = (decode(token.split(" ")[1].strip()) or {}).get("sub")
+        except:  # If token doesn't parse for any reason, don't 500
+            return default_parsed
+
         if "|" in sub:
             return (
                 self.USER,
@@ -53,7 +58,7 @@ class MetricsMiddleware:
                 *sub.split("@"),
             )
 
-        return "", "", ""
+        return default_parsed
 
     def _obfuscate(self, value):
         for key in value.keys():
