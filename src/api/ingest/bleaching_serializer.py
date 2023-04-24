@@ -60,28 +60,42 @@ class BleachingCSVSerializer(CollectRecordCSVSerializer):
     class Meta:
         list_serializer_class = BleachingCSVListSerializer
 
-    data__sample_event__site = serializers.CharField(label="Site", help_text="")
+    data__sample_event__site = serializers.CharField(
+        label="Site",
+        help_text="A unique name of a site where data was collected. Every site must be defined before ingestion and set up in the project in the web app.",
+    )
     data__sample_event__management = serializers.CharField(
-        label="Management", help_text=""
+        label="Management",
+        help_text="Name of management regime in effect for the site where data was collected on the date of collection. Must be defined before ingestion and set up in the project in the web app.",
     )
     data__sample_event__sample_date = serializers.DateField(
-        label="Sample date: Year,Sample date: Month,Sample date: Day", help_text=""
+        label="Sample date: Year,Sample date: Month,Sample date: Day",
+        help_text="Date data was collected: four-digit year (e.g. 2023), two-digit month(e.g. 02), two-digit day (e.g. 28)",
     )
     data__quadrat_collection__sample_time = NullCoercedTimeField(
-        required=False, allow_null=True, label="Sample time", help_text=""
+        required=False,
+        allow_null=True,
+        label="Sample time",
+        help_text="24-hour time when sample unit began (e.g. 13:15)",
     )
     data__quadrat_collection__depth = serializers.DecimalField(
-        max_digits=3, decimal_places=1, label="Depth", help_text=""
+        max_digits=3,
+        decimal_places=1,
+        label="Depth",
+        help_text="Depth of sample unit, in meters (e.g. 3)",
     )
     data__quadrat_collection__label = serializers.CharField(
         allow_blank=True,
         required=False,
         default="",
         label="Label",
-        help_text="",
+        help_text="Arbitrary text to distinguish sample units that are distinct but should be combined analytically (i.e. all other properties are identical). For example: 'little fish'. Rarely used.",
     )
     data__quadrat_collection__quadrat_size = serializers.DecimalField(
-        max_digits=4, decimal_places=2, label="Quadrat size", help_text=""
+        max_digits=4,
+        decimal_places=2,
+        label="Quadrat size",
+        help_text="Quadrat size used, in square meters (e.g. 1).",
     )
     data__quadrat_collection__visibility = LazyChoiceField(
         choices=visibility_choices,
@@ -89,7 +103,7 @@ class BleachingCSVSerializer(CollectRecordCSVSerializer):
         allow_null=True,
         allow_blank=True,
         label="Visibility",
-        help_text="",
+        help_text="The horizontal distance at which an object underwater can still be identified. See relevant tab on ingestion template for choices.",
     )
     data__quadrat_collection__current = LazyChoiceField(
         choices=current_choices,
@@ -97,7 +111,7 @@ class BleachingCSVSerializer(CollectRecordCSVSerializer):
         allow_null=True,
         allow_blank=True,
         label="Current",
-        help_text="",
+        help_text="The current/water speed during the survey. See relevant tab on ingestion template for choices.",
     )
     data__quadrat_collection__relative_depth = LazyChoiceField(
         choices=relative_depth_choices,
@@ -105,7 +119,7 @@ class BleachingCSVSerializer(CollectRecordCSVSerializer):
         allow_null=True,
         allow_blank=True,
         label="Relative depth",
-        help_text="",
+        help_text="Depth category to distinguish surveys in the same site but at different depths. See relevant tab on ingestion template for choices.",
     )
     data__quadrat_collection__tide = LazyChoiceField(
         choices=tide_choices,
@@ -113,20 +127,20 @@ class BleachingCSVSerializer(CollectRecordCSVSerializer):
         allow_null=True,
         allow_blank=True,
         label="Tide",
-        help_text="",
+        help_text="The tide characteristics of the survey. Falling tide is when the sea surface height is decreasing after the High tide due to the outgoing tide (ebb current); High tide occurs when the sea surface height is at the highest; Low tide occurs when the sea surface height is at the lowest; Rising tide is when the sea surface height increases after the Low tide due to the incoming tide along the coast (flood current); and Slack water is the weakest current between the flood and ebb currents. See relevant tab on ingestion template for choices.",
     )
     data__quadrat_collection__notes = serializers.CharField(
         required=False,
         allow_blank=True,
         default="",
         label="Sample unit notes",
-        help_text="",
+        help_text="Notes recorded by observer for quadrat collection",
     )
     data__observers = serializers.ListField(
         child=serializers.CharField(),
         allow_empty=False,
         label="Observer emails",
-        help_text="",
+        help_text="Comma-separated list of emails of sample unit observers (e.g. 'me@example.com,you@example.com').",
     )
     data__obs_colonies_bleached__attribute = LazyChoiceField(
         choices=benthic_attributes_choices,
@@ -134,7 +148,7 @@ class BleachingCSVSerializer(CollectRecordCSVSerializer):
         allow_null=True,
         allow_blank=True,
         label="Benthic attribute",
-        help_text="",
+        help_text="Benthic attribute observed. See relevant tab on ingestion template for choices.",
     )
     data__obs_colonies_bleached__growth_form = LazyChoiceField(
         choices=growth_form_choices,
@@ -142,55 +156,55 @@ class BleachingCSVSerializer(CollectRecordCSVSerializer):
         allow_null=True,
         allow_blank=True,
         label="Growth form",
-        help_text="",
+        help_text="Growth form of the observed benthic attribute (if applicable). See relevant tab on ingestion template for choices.",
     )
     data__obs_colonies_bleached__count_normal = PositiveIntegerField(
         required=False,
         allow_null=True,
         label="Number of colonies normal",
-        help_text="",
+        help_text="Number of normal colonies, as integer (3).",
     )
     data__obs_colonies_bleached__count_pale = PositiveIntegerField(
         required=False,
         allow_null=True,
         label="Number of colonies pale",
-        help_text="",
+        help_text="Number of pale colonies, as integer (3).",
     )
     data__obs_colonies_bleached__count_20 = PositiveIntegerField(
         required=False,
         allow_null=True,
         label="Number of colonies bleached 0-20% bleached",
-        help_text="",
+        help_text="Number of 0-20% bleached colonies, as integer (3).",
     )
     data__obs_colonies_bleached__count_50 = PositiveIntegerField(
         required=False,
         allow_null=True,
         label="Number of colonies bleached 20-50% bleached",
-        help_text="",
+        help_text="Number of 20-50% bleached colonies, as integer (3).",
     )
     data__obs_colonies_bleached__count_80 = PositiveIntegerField(
         required=False,
         allow_null=True,
         label="Number of colonies bleached 50-80% bleached",
-        help_text="",
+        help_text="Number of 50-80% bleached colonies, as integer (3).",
     )
     data__obs_colonies_bleached__count_100 = PositiveIntegerField(
         required=False,
         allow_null=True,
         label="Number of colonies bleached 80-100% bleached",
-        help_text="",
+        help_text="Number of 80-100% bleached colonies, as integer (3).",
     )
     data__obs_colonies_bleached__count_dead = PositiveIntegerField(
         required=False,
         allow_null=True,
         label="Number of colonies recently dead",
-        help_text="",
+        help_text="Number of recently dead colonies, as integer (3).",
     )
     data__obs_quadrat_benthic_percent__quadrat_number = PositiveIntegerField(
         required=False,
         allow_null=True,
         label="Quadrat number",
-        help_text="",
+        help_text="Number of quadrat in sample unit collection, as integer (e.g. 1).",
     )
     data__obs_quadrat_benthic_percent__percent_hard = serializers.DecimalField(
         default=None,
@@ -199,7 +213,7 @@ class BleachingCSVSerializer(CollectRecordCSVSerializer):
         decimal_places=2,
         allow_null=True,
         label="Hard coral % cover",
-        help_text="",
+        help_text="Hard coral cover as decimal percentage of quadrat total area (e.g. 33.3).",
     )
     data__obs_quadrat_benthic_percent__percent_soft = serializers.DecimalField(
         default=None,
@@ -208,7 +222,7 @@ class BleachingCSVSerializer(CollectRecordCSVSerializer):
         decimal_places=2,
         allow_null=True,
         label="Soft coral % cover",
-        help_text="",
+        help_text="Soft coral cover as decimal percentage of quadrat total area (e.g. 33.3).",
     )
     data__obs_quadrat_benthic_percent__percent_algae = serializers.DecimalField(
         default=None,
@@ -217,7 +231,7 @@ class BleachingCSVSerializer(CollectRecordCSVSerializer):
         decimal_places=2,
         allow_null=True,
         label="Macroalgae % cover",
-        help_text="",
+        help_text="Macroalgae cover as decimal percentage of quadrat total area (e.g. 33.3).",
     )
 
     def skip_field(self, data, field):
