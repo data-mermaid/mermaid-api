@@ -29,7 +29,7 @@ class HealthEndpointMiddleware(MiddlewareMixin):
             return HttpResponse(f"OK ({settings.ENVIRONMENT})")
 
 
-class MetricsMiddleware:  # Should we inherit from MiddlewareMixin?
+class MetricsMiddleware:
     USER = "user"
     APP = "app"
 
