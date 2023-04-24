@@ -1,3 +1,4 @@
+from django.utils.dateparse import parse_date
 from rest_framework.exceptions import ParseError
 
 from ....exceptions import check_uuid
@@ -46,6 +47,8 @@ class UniqueQuadratCollectionValidator(BaseValidator):
             check_uuid(site_id)
             check_uuid(management_id)
             float(depth)
+            if parse_date(f"{sample_date}") is None:
+                raise ValueError()
             for profile in profiles:
                 _ = check_uuid(profile)
         except (ParseError, ValueError, TypeError):
