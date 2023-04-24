@@ -51,10 +51,8 @@ class UniqueBenthicTransectValidator(BaseValidator):
             check_uuid(site)
             check_uuid(management)
             float(depth)
-
             if parse_date(f"{sample_date}") is None:
                 raise ValueError()
-
             for profile in profiles:
                 _ = check_uuid(profile)
         except (ValueError, TypeError, ParseError) as e:
