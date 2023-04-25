@@ -45,7 +45,7 @@ class ChoiceViewSet(BaseChoiceApiViewSet):
         )
         growthforms = dict(data=GrowthForm.objects.choices(order_by="name"))
         countries = dict(data=Country.objects.choices(order_by="name"))
-        currents = dict(data=Current.objects.choices(order_by="name"))
+        currents = dict(data=Current.objects.choices(order_by="val"))
         fishgroupfunctions = dict(
             data=FishGroupFunction.objects.choices(order_by="name")
         )
@@ -65,8 +65,8 @@ class ChoiceViewSet(BaseChoiceApiViewSet):
         reeftypes = dict(data=ReefType.objects.choices(order_by="name"))
         reefzones = dict(data=ReefZone.objects.choices(order_by="name"))
         regions = dict(data=Region.objects.choices(order_by="name"))
-        relativedepths = dict(data=RelativeDepth.objects.choices(order_by="name"))
-        tides = dict(data=Tide.objects.choices(order_by="name"))
+        relativedepths = dict(data=RelativeDepth.objects.choices(order_by="-name"))
+        tides = dict(data=Tide.objects.choices(order_by="val"))
         visibilities = dict(data=Visibility.objects.choices(order_by="val"))
 
         return {

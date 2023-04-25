@@ -260,7 +260,7 @@ class RelativeDepthAdmin(BaseAdmin):
 
 @admin.register(Tide)
 class TideAdmin(BaseAdmin):
-    list_display = ("name",)
+    list_display = ("val", "name",)
 
 
 @admin.register(Visibility)
@@ -909,16 +909,31 @@ class ObserverAdmin(BaseAdmin):
     ]
 
 
+class ProtocolFilter(admin.SimpleListFilter):
+    title = _("protocol")
+    parameter_name = "protocol"
+
+    def lookups(self, request, model_admin):
+        return [(key, val) for key, val in PROTOCOL_MAP.items()]
+
+    def queryset(self, request, queryset):
+        if self.value() is None:
+            return queryset
+        return queryset.filter(data__protocol=self.value())
+
+
 @admin.register(CollectRecord)
 class CollectRecordAdmin(BaseAdmin):
     list_display = ("id", "protocol", "profile", "created_by")
     search_fields = [
         "id",
+        "project__id",
         "project__name",
         "profile__first_name",
         "profile__last_name",
         "profile__email",
     ]
+    list_filter = [ProtocolFilter]
 
     def protocol(self, obj):
         data = obj.data or dict()
