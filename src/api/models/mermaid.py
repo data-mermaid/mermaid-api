@@ -385,6 +385,9 @@ class Current(BaseChoiceModel):
     name = models.CharField(max_length=50)
     val = models.PositiveSmallIntegerField()
 
+    class Meta:
+        ordering = ("val", "name")
+
     def __str__(self):
         return _('%s') % self.name
 
@@ -398,6 +401,10 @@ class RelativeDepth(BaseChoiceModel):
 
 class Tide(BaseChoiceModel):
     name = models.CharField(max_length=50)
+    val = models.PositiveSmallIntegerField()
+
+    class Meta:
+        ordering = ("val", "name")
 
     def __str__(self):
         return _('%s') % self.name
