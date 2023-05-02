@@ -41,6 +41,13 @@ class DjangoSettings:
     container_cpu: int
     container_memory: int
     container_count: int
+    
+    sqs_cpu: int
+    sqs_memory: int
+    
+    backup_cpu: int
+    backup_memory: int
+
     default_domain_api: str
     default_domain_collect: str
     mermaid_api_audience: str
