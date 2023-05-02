@@ -155,8 +155,8 @@ class ApiStack(Stack):
             security_groups=[container_security_group],
             scheduled_fargate_task_image_options=ecs_patterns.ScheduledFargateTaskImageOptions(
                 image=ecs.ContainerImage.from_docker_image_asset(image_asset),
-                cpu=config.api.container_cpu,
-                memory_limit_mib=config.api.container_memory,
+                cpu=config.api.backup_cpu,
+                memory_limit_mib=config.api.backup_memory,
                 secrets=api_secrets,
                 environment=environment,
                 command=["python", "manage.py", "dbbackup", f"{config.env_id}"],
