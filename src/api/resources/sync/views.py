@@ -123,8 +123,9 @@ def _get_project(data, source_type):
 
     if projid:
         try:
-            proj = Project.objects.get(pk=projid)
-            projname = proj.name
+            if utils.is_uuid(projid) is True:
+                proj = Project.objects.get(pk=projid)
+                projname = proj.name
         except Project.DoesNotExist:
             pass
 
