@@ -45,7 +45,6 @@ class BaseSummaryModel(models.Model):
     sample_date = models.DateField()
     sample_event_id = models.UUIDField()
     sample_event_notes = models.TextField(blank=True)
-    covariates = models.JSONField(null=True, blank=True)
 
     created_on = models.DateTimeField(auto_now_add=True)
 

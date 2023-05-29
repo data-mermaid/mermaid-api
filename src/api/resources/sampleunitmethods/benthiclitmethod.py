@@ -39,7 +39,6 @@ from ..sample_event import SampleEventSerializer
 from . import (
     BaseProjectMethodView,
     clean_sample_event_models,
-    covariate_report_fields,
     save_model,
     save_one_to_many,
 )
@@ -247,7 +246,7 @@ class ObsBenthicLITCSVSerializer(ReportSerializer):
         ReportField("site_notes", "Site notes"),
         ReportField("management_notes", "Management notes"),
         ReportField("sample_unit_notes", "Sample unit notes"),
-    ] + covariate_report_fields
+    ]
 
     additional_fields = [
         ReportField("id"),
@@ -327,7 +326,7 @@ class BenthicLITMethodSUCSVSerializer(ReportSerializer):
         ReportField("site_notes", "Site notes"),
         ReportField("management_notes", "Management notes"),
         ReportField("sample_unit_notes", "Sample unit notes"),
-    ] + covariate_report_fields
+    ]
 
     additional_fields = [
         ReportField("id"),
@@ -396,7 +395,7 @@ class BenthicLITMethodSECSVSerializer(ReportSerializer):
         ),
         ReportField("site_notes", "Site notes"),
         ReportField("management_notes", "Management notes"),
-    ] + covariate_report_fields
+    ]
 
     additional_fields = [
         ReportField("id"),
