@@ -13,8 +13,8 @@ PROD_SETTINGS = ProjectSettings(
         container_count=1,
 
         # SQS
-        sqs_cpu=2048,
-        sqs_memory=4096,
+        sqs_cpu=4096,
+        sqs_memory=8192,
 
         # Backup
         backup_cpu=1024,
@@ -24,7 +24,7 @@ PROD_SETTINGS = ProjectSettings(
         default_domain_collect="app.datamermaid.org",
         mermaid_api_audience="https://api.datamermaid.org",
         public_bucket="public.datamermaid.org",
-        sqs_message_visibility=600,
+        sqs_message_visibility=1800,
         
         # Secrets
         spa_admin_client_id_name="prod/mermaid-api/spa-admin-client-id-8GJ1mU",
