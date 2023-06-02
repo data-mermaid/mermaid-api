@@ -66,6 +66,7 @@ INSTALLED_APPS = [
 MIDDLEWARE = [
     'api.middleware.HealthEndpointMiddleware',
     'django.middleware.security.SecurityMiddleware',
+    'django.middleware.gzip.GZipMiddleware',
     "whitenoise.middleware.WhiteNoiseMiddleware",
     'corsheaders.middleware.CorsMiddleware',
     'django.contrib.sessions.middleware.SessionMiddleware',

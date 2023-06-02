@@ -40,7 +40,6 @@ from ..sample_event import SampleEventSerializer
 from . import (
     BaseProjectMethodView,
     clean_sample_event_models,
-    covariate_report_fields,
     save_model,
     save_one_to_many,
 )
@@ -287,7 +286,7 @@ class ObsBleachingQCColoniesBleachedCSVSerializer(ReportSerializer):
         ReportField("site_notes", "Site notes"),
         ReportField("management_notes", "Management notes"),
         ReportField("sample_unit_notes", "Sample unit notes"),
-    ] + covariate_report_fields
+    ]
 
     additional_fields = [
         ReportField("id"),
@@ -368,7 +367,7 @@ class ObsQuadratBenthicPercentCSVSerializer(ReportSerializer):
         ReportField("site_notes", "Site notes"),
         ReportField("management_notes", "Management notes"),
         ReportField("sample_unit_notes", "Sample unit notes"),
-    ] + covariate_report_fields
+    ]
 
     additional_fields = [
         ReportField("id"),
@@ -457,7 +456,7 @@ class BleachingQCMethodSUCSVSerializer(ReportSerializer):
         ReportField("site_notes", "Site notes"),
         ReportField("management_notes", "Management notes"),
         ReportField("sample_unit_notes", "Sample unit notes"),
-    ] + covariate_report_fields
+    ]
 
     additional_fields = [
         ReportField("id"),
@@ -541,7 +540,7 @@ class BleachingQCMethodSECSVSerializer(ReportSerializer):
         ReportField("percent_algae_avg_avg", "Average Macroalgae (% cover) average"),
         ReportField("site_notes", "Site notes"),
         ReportField("management_notes", "Management notes"),
-    ] + covariate_report_fields
+    ]
 
     additional_fields = [
         ReportField("id"),

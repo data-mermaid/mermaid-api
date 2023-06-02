@@ -13,8 +13,8 @@ PROD_SETTINGS = ProjectSettings(
         container_count=1,
 
         # SQS
-        sqs_cpu=4096,
-        sqs_memory=8192,
+        sqs_cpu=2048,
+        sqs_memory=4096,
 
         # Backup
         backup_cpu=1024,

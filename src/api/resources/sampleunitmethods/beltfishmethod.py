@@ -38,7 +38,6 @@ from ..sample_event import SampleEventSerializer
 from . import (
     BaseProjectMethodView,
     clean_sample_event_models,
-    covariate_report_fields,
     save_model,
     save_one_to_many,
 )
@@ -271,7 +270,7 @@ class ObsBeltFishCSVSerializer(ReportSerializer):
         ReportField("site_notes", "Site notes"),
         ReportField("management_notes", "Management notes"),
         ReportField("sample_unit_notes", "Sample unit notes"),
-    ] + covariate_report_fields
+    ]
 
     additional_fields = [
         ReportField("id"),
@@ -357,7 +356,7 @@ class BeltFishMethodSUCSVSerializer(ReportSerializer):
         ReportField("site_notes", "Site notes"),
         ReportField("management_notes", "Management notes"),
         ReportField("sample_unit_notes", "Sample unit notes"),
-    ] + covariate_report_fields
+    ]
 
     additional_fields = [
         ReportField("id"),
@@ -429,7 +428,7 @@ class BeltFishMethodSECSVSerializer(ReportSerializer):
         ReportField("biomass_kgha_by_fish_family_avg", "Biomass kgha by family average"),
         ReportField("site_notes", "Site notes"),
         ReportField("management_notes", "Management notes"),
-    ] + covariate_report_fields
+    ]
 
     additional_fields = [
         ReportField("id"),
