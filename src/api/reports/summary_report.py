@@ -73,14 +73,14 @@ def create_belt_fish_report(request, project_pk):
         request,
         project_pk,
         views=[
-            BeltFishProjectMethodObsView,
-            BeltFishProjectMethodSUView,
             BeltFishProjectMethodSEView,
+            BeltFishProjectMethodSUView,
+            BeltFishProjectMethodObsView,
         ],
         sheet_names=[
-            "Belt Fish Obs",
-            "Belt Fish SU",
             "Belt Fish SE",
+            "Belt Fish SU",
+            "Belt Fish Obs",
         ],
     )
 
@@ -90,14 +90,14 @@ def create_benthic_pit_report(request, project_pk):
         request,
         project_pk,
         views=[
-            BenthicPITProjectMethodObsView,
-            BenthicPITProjectMethodSUView,
             BenthicPITProjectMethodSEView,
+            BenthicPITProjectMethodSUView,
+            BenthicPITProjectMethodObsView,
         ],
         sheet_names=[
-            "Benthic PIT Obs",
-            "Benthic PIT SU",
             "Benthic PIT SE",
+            "Benthic PIT SU",
+            "Benthic PIT Obs",
         ],
     )
 
@@ -107,14 +107,14 @@ def create_benthic_lit_report(request, project_pk):
         request,
         project_pk,
         views=[
+            BenthicLITProjectMethodSEView,
             BenthicLITProjectMethodObsView,
             BenthicLITProjectMethodSUView,
-            BenthicLITProjectMethodSEView,
         ],
         sheet_names=[
-            "Benthic LIT Obs",
-            "Benthic LIT SU",
             "Benthic LIT SE",
+            "Benthic LIT SU",
+            "Benthic LIT Obs",
         ],
     )
 
@@ -124,16 +124,16 @@ def create_bleaching_qc_report(request, project_pk):
         request,
         project_pk,
         views=[
+            BleachingQCProjectMethodSEView,
+            BleachingQCProjectMethodSUView,
             BleachingQCProjectMethodObsColoniesBleachedView,
             BleachingQCProjectMethodObsQuadratBenthicPercentView,
-            BleachingQCProjectMethodSUView,
-            BleachingQCProjectMethodSEView,
         ],
         sheet_names=[
+            "Bleaching QT SE",
+            "Bleaching QT SU",
             "BQT Colonies Bleached Obs",
             "BQT Quad Benthic Percent Obs",
-            "Bleaching QT SU",
-            "Bleaching QT SE",
         ],
     )
 
@@ -143,14 +143,14 @@ def create_benthic_pqt_report(request, project_pk):
         request,
         project_pk,
         views=[
-            BenthicPQTProjectMethodObsView,
-            BenthicPQTProjectMethodSUView,
             BenthicPQTProjectMethodSEView,
+            BenthicPQTProjectMethodSUView,
+            BenthicPQTProjectMethodObsView,
         ],
         sheet_names=[
-            "Benthic PQT Obs",
-            "Benthic PQT SU",
             "Benthic PQT SE",
+            "Benthic PQT SU",
+            "Benthic PQT Obs",
         ],
     )
 
@@ -160,13 +160,13 @@ def create_habitat_complexity_report(request, project_pk):
         request,
         project_pk,
         views=[
-            HabitatComplexityProjectMethodObsView,
-            HabitatComplexityProjectMethodSUView,
             HabitatComplexityProjectMethodSEView,
+            HabitatComplexityProjectMethodSUView,
+            HabitatComplexityProjectMethodObsView,
         ],
         sheet_names=[
-            "Habitat Complexity Obs",
-            "Habitat Complexity SU",
             "Habitat Complexity SE",
+            "Habitat Complexity SU",
+            "Habitat Complexity Obs",
         ],
     )

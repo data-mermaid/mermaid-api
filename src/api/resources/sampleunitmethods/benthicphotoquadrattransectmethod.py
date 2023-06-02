@@ -32,10 +32,7 @@ from ..observer import ObserverSerializer
 from ..mixins import SampleUnitMethodEditMixin, SampleUnitMethodSummaryReport
 from ..quadrat_transect import QuadratTransectSerializer
 from ..sample_event import SampleEventSerializer
-from . import (
-    BaseProjectMethodView,
-    covariate_report_fields,
-)
+from . import BaseProjectMethodView
 
 
 class BenthicPhotoQuadratTransectSerializer(BaseAPISerializer):
@@ -160,7 +157,7 @@ class ObsBenthicPQTCSVSerializer(ReportSerializer):
         ReportField("site_notes", "Site notes"),
         ReportField("management_notes", "Management notes"),
         ReportField("sample_unit_notes", "Sample unit notes"),
-    ] + covariate_report_fields
+    ]
 
     additional_fields = [
         ReportField("id"),
@@ -241,7 +238,7 @@ class BenthicPQTMethodSUCSVSerializer(ReportSerializer):
         ReportField("site_notes", "Site notes"),
         ReportField("management_notes", "Management notes"),
         ReportField("sample_unit_notes", "Sample unit notes"),
-    ] + covariate_report_fields
+    ]
 
     additional_fields = [
         ReportField("id"),
@@ -313,7 +310,7 @@ class BenthicPQTMethodSECSVSerializer(ReportSerializer):
         ),
         ReportField("site_notes", "Site notes"),
         ReportField("management_notes", "Management notes"),
-    ] + covariate_report_fields
+    ]
 
     additional_fields = [
         ReportField("id"),
