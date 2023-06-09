@@ -129,7 +129,15 @@ class SQLTableQuerySet(QuerySet):
         self.query = query or SQLTableQuery(self.model)
 
     def sql_table(self, **sql_table_params: Dict[str, Any]) -> "SQLTableQuerySet":
-        self.query.model_sql = self.query.model_sql.replace("<<__sql_table_args__>>", " AND ".join(["1 = 1", *[self.model.sql_args[field].sql for field  in sql_table_params]]))
+        self.query.model_sql = self.query.model_sql.replace(
+            "<<__sql_table_args__>>",
+            " AND ".join(
+                [
+                    "1 = 1",
+                    *[self.model.sql_args[field].sql for field in sql_table_params],
+                ]
+            ),
+        )
 
         self.query.sql_table(**sql_table_params)
         return self
