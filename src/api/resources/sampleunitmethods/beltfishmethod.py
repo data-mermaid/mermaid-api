@@ -7,8 +7,11 @@ from rest_framework.response import Response
 
 from ...models import (
     BeltFishObsModel,
+    BeltFishObsSQLModel,
     BeltFishSEModel,
+    BeltFishSESQLModel,
     BeltFishSUModel,
+    BeltFishSUSQLModel,
     BeltFish,
     ObsBeltFish,
 )
@@ -478,6 +481,11 @@ class BeltFishMethodObsFilterSet(BaseSUObsFilterSet):
         ]
 
 
+class BeltFishMethodObsSQLFilterSet(BeltFishMethodObsFilterSet):
+    class Meta(BeltFishMethodObsFilterSet.Meta):
+        model = BeltFishObsSQLModel
+
+
 class BeltFishMethodSUFilterSet(BaseSUObsFilterSet):
     transect_len_surveyed = RangeFilter()
     reef_slope = BaseInFilter(method="char_lookup")
@@ -494,6 +502,11 @@ class BeltFishMethodSUFilterSet(BaseSUObsFilterSet):
         ]
 
 
+class BeltFishMethodSUSQLFilterSet(BeltFishMethodSUFilterSet):
+    class Meta(BeltFishMethodSUFilterSet.Meta):
+        model = BeltFishSUSQLModel
+
+
 class BeltFishMethodSEFilterSet(BaseSEFilterSet):
     biomass_kgha_avg = RangeFilter()
     sample_unit_count = RangeFilter()
@@ -508,13 +521,21 @@ class BeltFishMethodSEFilterSet(BaseSEFilterSet):
         ]
 
 
+class BeltFishMethodSESQLFilterSet(BeltFishMethodSEFilterSet):
+    class Meta(BeltFishMethodSEFilterSet.Meta):
+        model = BeltFishSESQLModel
+
+
 class BeltFishProjectMethodObsView(BaseProjectMethodView):
     drf_label = "beltfish-obs"
     project_policy = "data_policy_beltfish"
+    model = BeltFishObsModel
+    sql_model = BeltFishObsSQLModel
     serializer_class = BeltFishMethodObsSerializer
     serializer_class_geojson = BeltFishMethodObsGeoSerializer
     serializer_class_csv = ObsBeltFishCSVSerializer
     filterset_class = BeltFishMethodObsFilterSet
+    sql_filterset_class = BeltFishMethodObsSQLFilterSet
     order_by = (
         "site_name",
         "sample_date",
@@ -525,8 +546,6 @@ class BeltFishProjectMethodObsView(BaseProjectMethodView):
         "fish_taxon",
         "size",
     )
-
-    model = BeltFishObsModel
 
     def get_queryset(self):
         qs = super().get_queryset()
@@ -540,11 +559,13 @@ class BeltFishProjectMethodObsView(BaseProjectMethodView):
 class BeltFishProjectMethodSUView(BaseProjectMethodView):
     drf_label = "beltfish-su"
     project_policy = "data_policy_beltfish"
+    model = BeltFishSUModel
+    sql_model = BeltFishSUSQLModel
     serializer_class = BeltFishMethodSUSerializer
     serializer_class_geojson = BeltFishMethodSUGeoSerializer
     serializer_class_csv = BeltFishMethodSUCSVSerializer
     filterset_class = BeltFishMethodSUFilterSet
-    model = BeltFishSUModel
+    sql_filterset_class = BeltFishMethodSUSQLFilterSet
     order_by = ("site_name", "sample_date", "transect_number")
 
 
@@ -554,9 +575,11 @@ class BeltFishProjectMethodSEView(BaseProjectMethodView):
     permission_classes = [
         Or(ProjectDataReadOnlyPermission, ProjectPublicSummaryPermission)
     ]
+    model = BeltFishSEModel
+    sql_model = BeltFishSESQLModel
     serializer_class = BeltFishMethodSESerializer
     serializer_class_geojson = BeltFishMethodSEGeoSerializer
     serializer_class_csv = BeltFishMethodSECSVSerializer
     filterset_class = BeltFishMethodSEFilterSet
-    model = BeltFishSEModel
+    sql_filterset_class = BeltFishMethodSESQLFilterSet
     order_by = ("site_name", "sample_date")

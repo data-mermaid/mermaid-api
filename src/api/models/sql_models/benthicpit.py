@@ -7,7 +7,6 @@ from .base import (
     BaseSUSQLModel,
     project_where,
     sample_event_sql_template,
-    sample_event_where
 )
 
 
@@ -95,7 +94,6 @@ class BenthicPITObsSQLModel(BaseSUSQLModel):
 
     sql_args = dict(
         project_id=SQLTableArg(sql=project_where, required=True),
-        sample_event_ids=SQLTableArg(sql=sample_event_where, required=False),
     )
 
     objects = SQLTableManager()
@@ -236,7 +234,6 @@ class BenthicPITSUSQLModel(BaseSUSQLModel):
 
     sql_args = dict(
         project_id=SQLTableArg(sql=project_where, required=True),
-        sample_event_ids=SQLTableArg(sql=sample_event_where, required=False),
     )
 
     objects = SQLTableManager()
@@ -314,7 +311,6 @@ class BenthicPITSESQLModel(BaseSQLModel):
 
     sql_args = dict(
         project_id=SQLTableArg(sql=project_where, required=True),
-        sample_event_ids=SQLTableArg(sql=sample_event_where, required=False),
     )
 
     objects = SQLTableManager()
