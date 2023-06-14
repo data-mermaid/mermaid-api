@@ -213,7 +213,7 @@ def write_fish_grouping(wb, regions):
                 fish_group.biomass_constant_b,
                 fish_group.biomass_constant_c,
                 *create_regions_row(
-                    regions, [str(r) for r in fish_group.regions.all()]
+                    regions, [str(r.id) for r in fish_group.regions.all()]
                 ),
             ]
             for fish_group in FishGrouping.objects.select_related()
@@ -239,7 +239,7 @@ def write_benthic(wb, regions):
                 ba.name,
                 ba.parent and ba.parent.name,
                 ba.life_history and ba.life_history.name,
-                *create_regions_row(regions, [str(r) for r in ba.regions.all()]),
+                *create_regions_row(regions, [str(r.id) for r in ba.regions.all()]),
             ]
             for ba in BenthicAttribute.objects.select_related("life_history")
             .filter(status=SUPERUSER_APPROVED)
