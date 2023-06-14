@@ -208,10 +208,10 @@ class BleachingQCSUSQLModel(BaseSUSQLModel):
     # SU fields and observers pieces both rely on being the same for both types of QC observations
     sql = f"""
         WITH bleachingqc_colonies_bleached_obs AS (
-            SELECT * FROM summary_bleachingqc_colonies_bleached_obs WHERE project_id = '%(project_id)s'::uuid
+            {BleachingQCColoniesBleachedObsSQLModel.sql}
         ),
         bleachingqc_quadrat_benthic_percent_obs AS (
-            SELECT * FROM summary_bleachingqc_quadrat_benthic_percent_obs WHERE project_id = '%(project_id)s'::uuid
+            {BleachingQCQuadratBenthicPercentObsSQLModel.sql}
         ),
         pseudosu_su AS (
             SELECT 
@@ -340,7 +340,7 @@ class BleachingQCSESQLModel(BaseSQLModel):
 
     sql = f"""
         WITH bleachingqc_su AS (
-            SELECT * FROM summary_bleachingqc_su WHERE project_id = '%(project_id)s'::uuid
+            {BleachingQCSUSQLModel.sql}
         )
         SELECT sample_event_id AS id,
         {_se_fields},

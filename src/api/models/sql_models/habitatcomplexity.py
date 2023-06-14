@@ -123,7 +123,7 @@ class HabitatComplexitySUSQLModel(BaseSUSQLModel):
 
     sql = f"""
         WITH habitatcomplexity_obs AS (
-            SELECT * FROM summary_habitatcomplexity_obs WHERE project_id = '%(project_id)s'::uuid
+            {HabitatComplexityObsSQLModel.sql}
         ),
         habcomp_observers AS (
             SELECT pseudosu_id,
@@ -198,7 +198,7 @@ class HabitatComplexitySESQLModel(BaseSQLModel):
     _su_aggfields_sql = BaseSQLModel.su_aggfields_sql
     sql = f"""
         WITH habitatcomplexity_su AS (
-            SELECT * FROM summary_habitatcomplexity_su WHERE project_id = '%(project_id)s'::uuid
+            {HabitatComplexitySUSQLModel.sql}
         )
         SELECT sample_event_id AS id,
         {_se_fields},

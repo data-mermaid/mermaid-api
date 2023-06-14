@@ -167,7 +167,7 @@ class BenthicLITSUSQLModel(BaseSUSQLModel):
 
     sql = f"""
         WITH benthiclit_obs AS (
-            SELECT * FROM summary_benthiclit_obs WHERE project_id = '%(project_id)s'::uuid
+            SELECT * FROM ({BenthicLITObsSQLModel.sql}) AS benthiclit_obs_core WHERE project_id = '%(project_id)s'::uuid
             AND benthic_category != 'Other'
         ),
         benthiclit_observers AS (
@@ -286,7 +286,7 @@ class BenthicLITSESQLModel(BaseSQLModel):
     _su_aggfields_sql = BaseSQLModel.su_aggfields_sql
     sql = f"""
         WITH benthiclit_su AS (
-            SELECT * FROM summary_benthiclit_su WHERE project_id = '%(project_id)s'::uuid
+            {BenthicLITSUSQLModel.sql}
         )
         SELECT
             benthiclit_su.sample_event_id AS id,

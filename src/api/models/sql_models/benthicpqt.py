@@ -161,7 +161,7 @@ class BenthicPhotoQuadratTransectSUSQLModel(BaseSUSQLModel):
 
     sql = f"""
         WITH benthicpqt_obs AS (
-            SELECT * FROM summary_benthicpqt_obs WHERE project_id = '%(project_id)s'::uuid
+            SELECT * FROM ({BenthicPhotoQuadratTransectObsSQLModel.sql}) AS benthicpqt_obs_core WHERE project_id = '%(project_id)s'::uuid
             AND benthic_category != 'Other'
         ),
         benthicpqt_observers AS (
@@ -276,7 +276,7 @@ class BenthicPhotoQuadratTransectSESQLModel(BaseSQLModel):
 
     sql = f"""
         WITH benthicpqt_su AS (
-            SELECT * FROM summary_benthicpqt_su WHERE project_id = '%(project_id)s'::uuid
+            {BenthicPhotoQuadratTransectSUSQLModel.sql}
         )
         SELECT benthicpqt_su.sample_event_id AS id,
         {_se_fields},
