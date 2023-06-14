@@ -39,10 +39,11 @@ from ..utils.timer import timing
 
 def get_viewset_csv_content(view_cls, project_pk, request):
     request = MockRequest(query_params={"field_report": "t"})
-    vw = view_cls()
-    vw.kwargs = {"project_pk": project_pk}
+    kwargs = {"project_pk": project_pk, "use_cached": False}
+    vw = view_cls(**kwargs)
+    vw.kwargs = kwargs
     vw.request = request
-    resp = vw.csv(request, **vw.kwargs)
+    resp = vw.csv(request)
     return list(
         csv.reader([str(row, "UTF-8").strip() for row in resp.streaming_content])
     )

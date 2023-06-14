@@ -7,7 +7,6 @@ from .base import (
     BaseSUSQLModel,
     project_where,
     sample_event_sql_template,
-    sample_event_where
 )
 
 
@@ -111,7 +110,6 @@ class BeltFishObsSQLModel(BaseSUSQLModel):
 
     sql_args = dict(
         project_id=SQLTableArg(sql=project_where, required=True),
-        sample_event_ids=SQLTableArg(sql=sample_event_where, required=False),
     )
 
     objects = SQLTableManager()
@@ -199,7 +197,7 @@ class BeltFishSUSQLModel(BaseSUSQLModel):
     # even if some SUs don't have that TG
     sql = f"""
         WITH beltfish_obs AS (
-            SELECT * FROM summary_belt_fish_obs WHERE project_id = '%(project_id)s'::uuid
+            {BeltFishObsSQLModel.sql}
         ),
         
 		beltfish_su_tg_all AS MATERIALIZED (SELECT
@@ -338,7 +336,6 @@ class BeltFishSUSQLModel(BaseSUSQLModel):
 
     sql_args = dict(
         project_id=SQLTableArg(sql=project_where, required=True),
-        sample_event_ids=SQLTableArg(sql=sample_event_where, required=False),
     )
 
     objects = SQLTableManager()
@@ -387,7 +384,7 @@ class BeltFishSESQLModel(BaseSQLModel):
 
     sql = f"""
         WITH beltfish_su AS (
-            SELECT * FROM summary_belt_fish_su WHERE project_id = '%(project_id)s'::uuid
+            {BeltFishSUSQLModel.sql}
         )
         -- For each SE, summarize biomass by 1) avg
         -- of transects and 2) avg of transects' trophic groups
@@ -457,7 +454,6 @@ class BeltFishSESQLModel(BaseSQLModel):
 
     sql_args = dict(
         project_id=SQLTableArg(sql=project_where, required=True),
-        sample_event_ids=SQLTableArg(sql=sample_event_where, required=False),
     )
 
     objects = SQLTableManager()

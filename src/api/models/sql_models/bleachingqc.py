@@ -7,7 +7,6 @@ from .base import (
     BaseSUSQLModel,
     project_where,
     sample_event_sql_template,
-    sample_event_where
 )
 
 
@@ -67,7 +66,6 @@ class BleachingQCColoniesBleachedObsSQLModel(BaseSUSQLModel):
 
     sql_args = dict(
         project_id=SQLTableArg(sql=project_where, required=True),
-        sample_event_ids=SQLTableArg(sql=sample_event_where, required=False),
     )
 
     objects = SQLTableManager()
@@ -159,7 +157,6 @@ class BleachingQCQuadratBenthicPercentObsSQLModel(BaseSUSQLModel):
 
     sql_args = dict(
         project_id=SQLTableArg(sql=project_where, required=True),
-        sample_event_ids=SQLTableArg(sql=sample_event_where, required=False),
     )
 
     objects = SQLTableManager()
@@ -211,10 +208,10 @@ class BleachingQCSUSQLModel(BaseSUSQLModel):
     # SU fields and observers pieces both rely on being the same for both types of QC observations
     sql = f"""
         WITH bleachingqc_colonies_bleached_obs AS (
-            SELECT * FROM summary_bleachingqc_colonies_bleached_obs WHERE project_id = '%(project_id)s'::uuid
+            {BleachingQCColoniesBleachedObsSQLModel.sql}
         ),
         bleachingqc_quadrat_benthic_percent_obs AS (
-            SELECT * FROM summary_bleachingqc_quadrat_benthic_percent_obs WHERE project_id = '%(project_id)s'::uuid
+            {BleachingQCQuadratBenthicPercentObsSQLModel.sql}
         ),
         pseudosu_su AS (
             SELECT 
@@ -304,7 +301,6 @@ class BleachingQCSUSQLModel(BaseSUSQLModel):
 
     sql_args = dict(
         project_id=SQLTableArg(sql=project_where, required=True),
-        sample_event_ids=SQLTableArg(sql=sample_event_where, required=False),
     )
 
     objects = SQLTableManager()
@@ -344,7 +340,7 @@ class BleachingQCSESQLModel(BaseSQLModel):
 
     sql = f"""
         WITH bleachingqc_su AS (
-            SELECT * FROM summary_bleachingqc_su WHERE project_id = '%(project_id)s'::uuid
+            {BleachingQCSUSQLModel.sql}
         )
         SELECT sample_event_id AS id,
         {_se_fields},
@@ -370,7 +366,6 @@ class BleachingQCSESQLModel(BaseSQLModel):
 
     sql_args = dict(
         project_id=SQLTableArg(sql=project_where, required=True),
-        sample_event_ids=SQLTableArg(sql=sample_event_where, required=False),
     )
 
     objects = SQLTableManager()
