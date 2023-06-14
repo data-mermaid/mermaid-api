@@ -7,7 +7,6 @@ from .base import (
     BaseSUSQLModel,
     project_where,
     sample_event_sql_template,
-    sample_event_where
 )
 
 
@@ -109,7 +108,6 @@ class BenthicPhotoQuadratTransectObsSQLModel(BaseSUSQLModel):
 
     sql_args = dict(
         project_id=SQLTableArg(sql=project_where, required=True),
-        sample_event_ids=SQLTableArg(sql=sample_event_where, required=False),
     )
 
     objects = SQLTableManager()
@@ -163,7 +161,7 @@ class BenthicPhotoQuadratTransectSUSQLModel(BaseSUSQLModel):
 
     sql = f"""
         WITH benthicpqt_obs AS (
-            SELECT * FROM summary_benthicpqt_obs WHERE project_id = '%(project_id)s'::uuid
+            SELECT * FROM ({BenthicPhotoQuadratTransectObsSQLModel.sql}) AS benthicpqt_obs_core WHERE project_id = '%(project_id)s'::uuid
             AND benthic_category != 'Other'
         ),
         benthicpqt_observers AS (
@@ -244,7 +242,6 @@ class BenthicPhotoQuadratTransectSUSQLModel(BaseSUSQLModel):
 
     sql_args = dict(
         project_id=SQLTableArg(sql=project_where, required=True),
-        sample_event_ids=SQLTableArg(sql=sample_event_where, required=False),
     )
 
     objects = SQLTableManager()
@@ -279,7 +276,7 @@ class BenthicPhotoQuadratTransectSESQLModel(BaseSQLModel):
 
     sql = f"""
         WITH benthicpqt_su AS (
-            SELECT * FROM summary_benthicpqt_su WHERE project_id = '%(project_id)s'::uuid
+            {BenthicPhotoQuadratTransectSUSQLModel.sql}
         )
         SELECT benthicpqt_su.sample_event_id AS id,
         {_se_fields},
@@ -313,7 +310,6 @@ class BenthicPhotoQuadratTransectSESQLModel(BaseSQLModel):
 
     sql_args = dict(
         project_id=SQLTableArg(sql=project_where, required=True),
-        sample_event_ids=SQLTableArg(sql=sample_event_where, required=False),
     )
 
     objects = SQLTableManager()

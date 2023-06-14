@@ -7,7 +7,6 @@ from .base import (
     BaseSUSQLModel,
     project_where,
     sample_event_sql_template,
-    sample_event_where
 )
 
 
@@ -72,7 +71,6 @@ class HabitatComplexityObsSQLModel(BaseSUSQLModel):
 
     sql_args = dict(
         project_id=SQLTableArg(sql=project_where, required=True),
-        sample_event_ids=SQLTableArg(sql=sample_event_where, required=False),
     )
 
     objects = SQLTableManager()
@@ -125,7 +123,7 @@ class HabitatComplexitySUSQLModel(BaseSUSQLModel):
 
     sql = f"""
         WITH habitatcomplexity_obs AS (
-            SELECT * FROM summary_habitatcomplexity_obs WHERE project_id = '%(project_id)s'::uuid
+            {HabitatComplexityObsSQLModel.sql}
         ),
         habcomp_observers AS (
             SELECT pseudosu_id,
@@ -164,7 +162,6 @@ class HabitatComplexitySUSQLModel(BaseSUSQLModel):
 
     sql_args = dict(
         project_id=SQLTableArg(sql=project_where, required=True),
-        sample_event_ids=SQLTableArg(sql=sample_event_where, required=False),
     )
 
     objects = SQLTableManager()
@@ -201,7 +198,7 @@ class HabitatComplexitySESQLModel(BaseSQLModel):
     _su_aggfields_sql = BaseSQLModel.su_aggfields_sql
     sql = f"""
         WITH habitatcomplexity_su AS (
-            SELECT * FROM summary_habitatcomplexity_su WHERE project_id = '%(project_id)s'::uuid
+            {HabitatComplexitySUSQLModel.sql}
         )
         SELECT sample_event_id AS id,
         {_se_fields},
@@ -217,7 +214,6 @@ class HabitatComplexitySESQLModel(BaseSQLModel):
 
     sql_args = dict(
         project_id=SQLTableArg(sql=project_where, required=True),
-        sample_event_ids=SQLTableArg(sql=sample_event_where, required=False),
     )
 
     objects = SQLTableManager()

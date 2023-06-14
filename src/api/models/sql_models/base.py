@@ -7,7 +7,6 @@ from api.models import Project
 
 
 project_where = """project.id = '%(project_id)s'::uuid"""
-sample_event_where = """se.id::uuid = ANY(ARRAY[%(sample_event_ids)s]::uuid[])"""
 
 sample_event_sql_template = f"""
     WITH tags AS MATERIALIZED (

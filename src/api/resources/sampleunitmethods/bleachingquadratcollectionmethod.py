@@ -7,9 +7,13 @@ from rest_framework.validators import UniqueTogetherValidator
 
 from ...models import (
     BleachingQCColoniesBleachedObsModel,
+    BleachingQCColoniesBleachedObsSQLModel,
     BleachingQCQuadratBenthicPercentObsModel,
+    BleachingQCQuadratBenthicPercentObsSQLModel,
     BleachingQCSEModel,
+    BleachingQCSESQLModel,
     BleachingQCSUModel,
+    BleachingQCSUSQLModel,
     BleachingQuadratCollection,
     ObsColoniesBleached,
     ObsQuadratBenthicPercent,
@@ -583,6 +587,11 @@ class BleachingQCMethodColoniesBleachedObsFilterSet(BaseSUObsFilterSet):
         ]
 
 
+class BleachingQCMethodColoniesBleachedObsSQLFilterSet(BleachingQCMethodColoniesBleachedObsFilterSet):
+    class Meta(BleachingQCMethodColoniesBleachedObsFilterSet.Meta):
+        model = BleachingQCColoniesBleachedObsSQLModel
+
+
 class BleachingQCMethodQuadratBenthicPercentObsFilterSet(BaseSUObsFilterSet):
     percent_hard = RangeFilter()
     percent_soft = RangeFilter()
@@ -597,6 +606,11 @@ class BleachingQCMethodQuadratBenthicPercentObsFilterSet(BaseSUObsFilterSet):
             "percent_soft",
             "percent_algae",
         ]
+
+
+class BleachingQCMethodQuadratBenthicPercentObsSQLFilterSet(BleachingQCMethodQuadratBenthicPercentObsFilterSet):
+    class Meta(BleachingQCMethodQuadratBenthicPercentObsFilterSet.Meta):
+        model = BleachingQCQuadratBenthicPercentObsSQLModel
 
 
 class BleachingQCMethodSUFilterSet(BaseSUObsFilterSet):
@@ -624,6 +638,11 @@ class BleachingQCMethodSUFilterSet(BaseSUObsFilterSet):
             "percent_soft_avg",
             "percent_algae_avg",
         ]
+
+
+class BleachingQCMethodSUSQLFilterSet(BleachingQCMethodSUFilterSet):
+    class Meta(BleachingQCMethodSUFilterSet.Meta):
+        model = BleachingQCSUSQLModel
 
 
 class BleachingQCMethodSEFilterSet(BaseSEFilterSet):
@@ -658,36 +677,47 @@ class BleachingQCMethodSEFilterSet(BaseSEFilterSet):
         ]
 
 
+class BleachingQCMethodSESQLFilterSet(BleachingQCMethodSEFilterSet):
+    class Meta(BleachingQCMethodSEFilterSet.Meta):
+        model = BleachingQCSESQLModel
+
+
 class BleachingQCProjectMethodObsColoniesBleachedView(BaseProjectMethodView):
     drf_label = "bleachingqc-obscoloniesbleached"
     project_policy = "data_policy_bleachingqc"
+    model = BleachingQCColoniesBleachedObsModel
+    sql_model = BleachingQCColoniesBleachedObsSQLModel
     serializer_class = BleachingQCMethodObsColoniesBleachedSerializer
     serializer_class_geojson = BleachingQCMethodObsColoniesBleachedGeoSerializer
     serializer_class_csv = ObsBleachingQCColoniesBleachedCSVSerializer
     filterset_class = BleachingQCMethodColoniesBleachedObsFilterSet
-    model = BleachingQCColoniesBleachedObsModel
+    sql_filterset_class = BleachingQCMethodColoniesBleachedObsSQLFilterSet
     order_by = ("site_name", "sample_date", "label", "benthic_attribute", "growth_form")
 
 
 class BleachingQCProjectMethodObsQuadratBenthicPercentView(BaseProjectMethodView):
     drf_label = "bleachingqc-obsquadratbenthicpercent"
     project_policy = "data_policy_bleachingqc"
+    model = BleachingQCQuadratBenthicPercentObsModel
+    sql_model = BleachingQCQuadratBenthicPercentObsSQLModel
     serializer_class = BleachingQCMethodObsQuadratBenthicPercentSerializer
     serializer_class_geojson = BleachingQCMethodObsQuadratBenthicPercentGeoSerializer
     serializer_class_csv = ObsQuadratBenthicPercentCSVSerializer
     filterset_class = BleachingQCMethodQuadratBenthicPercentObsFilterSet
-    model = BleachingQCQuadratBenthicPercentObsModel
+    sql_filterset_class = BleachingQCMethodQuadratBenthicPercentObsSQLFilterSet
     order_by = ("site_name", "sample_date", "label", "quadrat_number")
 
 
 class BleachingQCProjectMethodSUView(BaseProjectMethodView):
     drf_label = "bleachingqc-su"
     project_policy = "data_policy_bleachingqc"
+    model = BleachingQCSUModel
+    sql_model = BleachingQCSUSQLModel
     serializer_class = BleachingQCMethodSUSerializer
     serializer_class_geojson = BleachingQCMethodSUGeoSerializer
     serializer_class_csv = BleachingQCMethodSUCSVSerializer
     filterset_class = BleachingQCMethodSUFilterSet
-    model = BleachingQCSUModel
+    sql_filterset_class = BleachingQCMethodSUSQLFilterSet
     order_by = ("site_name", "sample_date", "label")
 
 
@@ -697,9 +727,11 @@ class BleachingQCProjectMethodSEView(BaseProjectMethodView):
     permission_classes = [
         Or(ProjectDataReadOnlyPermission, ProjectPublicSummaryPermission)
     ]
+    model = BleachingQCSEModel
+    sql_model = BleachingQCSESQLModel
     serializer_class = BleachingQCMethodSESerializer
     serializer_class_geojson = BleachingQCMethodSEGeoSerializer
     serializer_class_csv = BleachingQCMethodSECSVSerializer
     filterset_class = BleachingQCMethodSEFilterSet
-    model = BleachingQCSEModel
+    sql_filterset_class = BleachingQCMethodSESQLFilterSet
     order_by = ("site_name", "sample_date")

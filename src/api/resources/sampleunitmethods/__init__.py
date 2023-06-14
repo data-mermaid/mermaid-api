@@ -142,10 +142,18 @@ class AggregatedViewMixin(BaseApiViewSet):
 class BaseProjectMethodView(AggregatedViewMixin, BaseProjectApiViewSet):
     permission_classes = [Or(ProjectDataReadOnlyPermission, ProjectPublicPermission)]
 
+    def __init__(self, **kwargs):
+        super().__init__(**kwargs)
+        self.sql_model = getattr(self, "sql_model", None)
+        self.use_cached = getattr(self, "use_cached", True)
+        if self.sql_model and self.use_cached is False:
+            self.model = self.sql_model
+            self.filterset_class = self.sql_filterset_class
+
     @action(detail=False, methods=["get"])
     def csv(self, request, *args, **kwargs):
         try:
-            project = Project.objects.get(pk=kwargs["project_pk"])
+            project = Project.objects.get(pk=self.kwargs.get("project_pk"))
         except ObjectDoesNotExist:
             return HttpResponseBadRequest("Project doesn't exist")
 
@@ -158,6 +166,10 @@ class BaseProjectMethodView(AggregatedViewMixin, BaseProjectApiViewSet):
 
     def get_queryset(self):
         project_id = self.kwargs.get("project_pk")
+        if self.sql_model and self.use_cached is False:
+            return self.model.objects.all().sql_table(
+                project_id=project_id
+            )
         return self.model.objects.filter(
             project_id=project_id
         )
