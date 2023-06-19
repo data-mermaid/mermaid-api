@@ -28,7 +28,7 @@ class PSiteSerializer(CreateOrUpdateSerializerMixin, BaseAPISerializer):
     def to_representation(self, instance):
         request = self.context.get("request")
 
-        if request and request.query_params.get("include_covariates"):
+        if request and request.query_params.get("covars"):
             representation = super().to_representation(instance)
             project_id = str(instance.project_id)
             site_id = str(instance.id)

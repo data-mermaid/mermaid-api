@@ -6,8 +6,11 @@ from rest_framework.response import Response
 
 from ...models import (
     BenthicPITObsModel,
+    BenthicPITObsSQLModel,
     BenthicPITSEModel,
+    BenthicPITSESQLModel,
     BenthicPITSUModel,
+    BenthicPITSUSQLModel,
     BenthicPIT,
     ObsBenthicPIT,
 )
@@ -453,6 +456,11 @@ class BenthicPITMethodObsFilterSet(BaseSUObsFilterSet):
         ]
 
 
+class BenthicPITMethodObsSQLFilterSet(BenthicPITMethodObsFilterSet):
+    class Meta(BenthicPITMethodObsFilterSet.Meta):
+        model = BenthicPITObsSQLModel
+
+
 class BenthicPITMethodSUFilterSet(BaseSUObsFilterSet):
     transect_len_surveyed = RangeFilter()
     reef_slope = BaseInFilter(method="char_lookup")
@@ -469,6 +477,11 @@ class BenthicPITMethodSUFilterSet(BaseSUObsFilterSet):
         ]
 
 
+class BenthicPITMethodSUSQLFilterSet(BenthicPITMethodSUFilterSet):
+    class Meta(BenthicPITMethodSUFilterSet.Meta):
+        model = BenthicPITSUSQLModel
+
+
 class BenthicPITMethodSEFilterSet(BaseSEFilterSet):
     sample_unit_count = RangeFilter()
     depth_avg = RangeFilter()
@@ -478,25 +491,34 @@ class BenthicPITMethodSEFilterSet(BaseSEFilterSet):
         fields = ["sample_unit_count", "depth_avg"]
 
 
+class BenthicPITMethodSESQLFilterSet(BenthicPITMethodSEFilterSet):
+    class Meta(BenthicPITMethodSEFilterSet.Meta):
+        model = BenthicPITSESQLModel
+
+
 class BenthicPITProjectMethodObsView(BaseProjectMethodView):
     drf_label = "benthicpit-obs"
     project_policy = "data_policy_benthicpit"
+    model = BenthicPITObsModel
+    sql_model = BenthicPITObsSQLModel
     serializer_class = BenthicPITMethodObsSerializer
     serializer_class_geojson = BenthicPITMethodObsGeoSerializer
     serializer_class_csv = ObsBenthicPITCSVSerializer
     filterset_class = BenthicPITMethodObsFilterSet
-    model = BenthicPITObsModel
+    sql_filterset_class = BenthicPITMethodObsSQLFilterSet
     order_by = ("site_name", "sample_date", "transect_number", "label", "interval")
 
 
 class BenthicPITProjectMethodSUView(BaseProjectMethodView):
     drf_label = "benthicpit-su"
     project_policy = "data_policy_benthicpit"
+    model = BenthicPITSUModel
+    sql_model = BenthicPITSUSQLModel
     serializer_class = BenthicPITMethodSUSerializer
     serializer_class_geojson = BenthicPITMethodSUGeoSerializer
     serializer_class_csv = BenthicPITMethodSUCSVSerializer
     filterset_class = BenthicPITMethodSUFilterSet
-    model = BenthicPITSUModel
+    sql_filterset_class = BenthicPITMethodSUSQLFilterSet
     order_by = ("site_name", "sample_date", "transect_number")
 
 
@@ -506,9 +528,11 @@ class BenthicPITProjectMethodSEView(BaseProjectMethodView):
     permission_classes = [
         Or(ProjectDataReadOnlyPermission, ProjectPublicSummaryPermission)
     ]
+    model = BenthicPITSEModel
+    sql_model = BenthicPITSESQLModel
     serializer_class = BenthicPITMethodSESerializer
     serializer_class_geojson = BenthicPITMethodSEGeoSerializer
     serializer_class_csv = BenthicPITMethodSECSVSerializer
     filterset_class = BenthicPITMethodSEFilterSet
-    model = BenthicPITSEModel
+    sql_filterset_class = BenthicPITMethodSESQLFilterSet
     order_by = ("site_name", "sample_date")

@@ -7,7 +7,6 @@ from .base import (
     BaseSUSQLModel,
     project_where,
     sample_event_sql_template,
-    sample_event_where
 )
 
 
@@ -95,7 +94,6 @@ class BenthicPITObsSQLModel(BaseSUSQLModel):
 
     sql_args = dict(
         project_id=SQLTableArg(sql=project_where, required=True),
-        sample_event_ids=SQLTableArg(sql=sample_event_where, required=False),
     )
 
     objects = SQLTableManager()
@@ -155,7 +153,7 @@ class BenthicPITSUSQLModel(BaseSUSQLModel):
 
     sql = f"""
         WITH benthicpit_obs AS (
-            SELECT * FROM summary_benthicpit_obs WHERE project_id = '%(project_id)s'::uuid          
+            SELECT * FROM ({BenthicPITObsSQLModel.sql}) AS benthicpit_obs_core WHERE project_id = '%(project_id)s'::uuid          
             AND benthic_category != 'Other'
         ),
         benthicpit_observers AS (
@@ -236,7 +234,6 @@ class BenthicPITSUSQLModel(BaseSUSQLModel):
 
     sql_args = dict(
         project_id=SQLTableArg(sql=project_where, required=True),
-        sample_event_ids=SQLTableArg(sql=sample_event_where, required=False),
     )
 
     objects = SQLTableManager()
@@ -280,7 +277,7 @@ class BenthicPITSESQLModel(BaseSQLModel):
 
     sql = f"""
         WITH benthicpit_su AS (
-            SELECT * FROM summary_benthicpit_su WHERE project_id = '%(project_id)s'::uuid
+            {BenthicPITSUSQLModel.sql}
         )
         SELECT benthicpit_su.sample_event_id AS id,
         {_se_fields},
@@ -314,7 +311,6 @@ class BenthicPITSESQLModel(BaseSQLModel):
 
     sql_args = dict(
         project_id=SQLTableArg(sql=project_where, required=True),
-        sample_event_ids=SQLTableArg(sql=sample_event_where, required=False),
     )
 
     objects = SQLTableManager()

@@ -92,12 +92,12 @@ def visibility3(db):
 
 @pytest.fixture
 def tide1(db):
-    return Tide.objects.create(name="Low")
+    return Tide.objects.create(name="Low", val=20)
 
 
 @pytest.fixture
 def tide2(db):
-    return Tide.objects.create(name="High")
+    return Tide.objects.create(name="High", val=40)
 
 
 @pytest.fixture

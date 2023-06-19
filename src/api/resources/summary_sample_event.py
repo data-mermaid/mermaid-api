@@ -156,6 +156,10 @@ class SummarySampleEventCSVSerializer(ReportSerializer):
             "data_policy_bleachingqc",
             "Bleaching Quadrat Collection data sharing policy",
         ),
+        ReportField(
+            "data_policy_benthicpqt",
+            "Photo Quadrat Transect data sharing policy",
+        ),
         ReportField("project_notes", "Project notes"),
         ReportField("site_notes", "Site notes"),
     ]
@@ -187,6 +191,7 @@ class SummarySampleEventFilterSet(AggregatedViewFilterSet):
             "data_policy_benthicpit",
             "data_policy_habitatcomplexity",
             "data_policy_bleachingqc",
+            "data_policy_benthicpqt",
         ]
 
         filter_overrides = {

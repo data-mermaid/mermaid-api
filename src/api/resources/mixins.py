@@ -284,9 +284,9 @@ class SampleUnitMethodSummaryReport(object):
                         request=request
                     )
                 except AttributeError as ae:
-                    raise exceptions.ValidationError("Uknown protocol") from ae
+                    raise exceptions.ValidationError("Unknown protocol") from ae
                 except ValueError as ve:
-                    raise exceptions.ValidationError(f"{protocol} protocol not suppoort") from ve
+                    raise exceptions.ValidationError(f"{protocol} protocol not supported") from ve
                 
                 try:
                     base_file_name = f"{get_safe_project_name(project_pk)}_{protocol}_{create_iso_date_string(delimiter='_')}"
