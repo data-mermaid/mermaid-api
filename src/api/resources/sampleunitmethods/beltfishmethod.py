@@ -530,12 +530,10 @@ class BeltFishProjectMethodObsView(BaseProjectMethodView):
     drf_label = "beltfish-obs"
     project_policy = "data_policy_beltfish"
     model = BeltFishObsModel
-    sql_model = BeltFishObsSQLModel
     serializer_class = BeltFishMethodObsSerializer
     serializer_class_geojson = BeltFishMethodObsGeoSerializer
     serializer_class_csv = ObsBeltFishCSVSerializer
     filterset_class = BeltFishMethodObsFilterSet
-    sql_filterset_class = BeltFishMethodObsSQLFilterSet
     order_by = (
         "site_name",
         "sample_date",
@@ -560,12 +558,10 @@ class BeltFishProjectMethodSUView(BaseProjectMethodView):
     drf_label = "beltfish-su"
     project_policy = "data_policy_beltfish"
     model = BeltFishSUModel
-    sql_model = BeltFishSUSQLModel
     serializer_class = BeltFishMethodSUSerializer
     serializer_class_geojson = BeltFishMethodSUGeoSerializer
     serializer_class_csv = BeltFishMethodSUCSVSerializer
     filterset_class = BeltFishMethodSUFilterSet
-    sql_filterset_class = BeltFishMethodSUSQLFilterSet
     order_by = ("site_name", "sample_date", "transect_number")
 
 
@@ -576,10 +572,8 @@ class BeltFishProjectMethodSEView(BaseProjectMethodView):
         Or(ProjectDataReadOnlyPermission, ProjectPublicSummaryPermission)
     ]
     model = BeltFishSEModel
-    sql_model = BeltFishSESQLModel
     serializer_class = BeltFishMethodSESerializer
     serializer_class_geojson = BeltFishMethodSEGeoSerializer
     serializer_class_csv = BeltFishMethodSECSVSerializer
     filterset_class = BeltFishMethodSEFilterSet
-    sql_filterset_class = BeltFishMethodSESQLFilterSet
     order_by = ("site_name", "sample_date")

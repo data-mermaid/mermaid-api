@@ -476,12 +476,10 @@ class HabitatComplexityProjectMethodObsView(BaseProjectMethodView):
     drf_label = "habitatcomplexity-obs"
     project_policy = "data_policy_habitatcomplexity"
     model = HabitatComplexityObsModel
-    sql_model = HabitatComplexityObsSQLModel
     serializer_class = HabitatComplexityMethodObsSerializer
     serializer_class_geojson = HabitatComplexityMethodObsGeoSerializer
     serializer_class_csv = ObsHabitatComplexityCSVSerializer
     filterset_class = HabitatComplexityMethodObsFilterSet
-    sql_filterset_class = HabitatComplexityMethodObsSQLFilterSet
     order_by = ("site_name", "sample_date", "transect_number", "label", "interval")
 
 
@@ -489,12 +487,10 @@ class HabitatComplexityProjectMethodSUView(BaseProjectMethodView):
     drf_label = "habitatcomplexity-su"
     project_policy = "data_policy_habitatcomplexity"
     model = HabitatComplexitySUModel
-    sql_model = HabitatComplexitySUSQLModel
     serializer_class = HabitatComplexityMethodSUSerializer
     serializer_class_geojson = HabitatComplexityMethodSUGeoSerializer
     serializer_class_csv = HabitatComplexityMethodSUCSVSerializer
     filterset_class = HabitatComplexityMethodSUFilterSet
-    sql_filterset_class = HabitatComplexityMethodSUSQLFilterSet
     order_by = ("site_name", "sample_date", "transect_number")
 
 
@@ -505,10 +501,8 @@ class HabitatComplexityProjectMethodSEView(BaseProjectMethodView):
         Or(ProjectDataReadOnlyPermission, ProjectPublicSummaryPermission)
     ]
     model = HabitatComplexitySEModel
-    sql_model = HabitatComplexitySESQLModel
     serializer_class = HabitatComplexityMethodSESerializer
     serializer_class_geojson = HabitatComplexityMethodSEGeoSerializer
     serializer_class_csv = HabitatComplexityMethodSECSVSerializer
     filterset_class = HabitatComplexityMethodSEFilterSet
-    sql_filterset_class = HabitatComplexityMethodSESQLFilterSet
     order_by = ("site_name", "sample_date")
