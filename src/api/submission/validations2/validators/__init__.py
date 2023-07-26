@@ -20,6 +20,8 @@ from .generic import (
     PositiveIntegerValidator,
     RequiredValidator,
 )
+from .interval_size import IntervalSizeValidator
+from .interval_start import IntervalStartValidator
 from .len_surveyed import LenSurveyedValidator
 from .management import ManagementRuleValidator, UniqueManagementValidator
 from .obs_benthic_lit import BenthicLITObservationTotalLengthValidator

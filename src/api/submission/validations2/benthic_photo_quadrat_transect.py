@@ -15,6 +15,7 @@ from .validators import (
     ManagementRuleValidator,
     ObservationCountValidator,
     PointsPerQuadratValidator,
+    PositiveIntegerValidator,
     QuadratCountValidator,
     QuadratNumberSequenceValidator,
     QuadratSizeValidator,
@@ -79,6 +80,12 @@ benthic_photo_quadrat_transect_validations = [
         validation_type=VALUE_VALIDATION_TYPE,
     ),
     Validation(
+        validator=PositiveIntegerValidator(key_path="data.quadrat_transect.quadrat_number_start"),
+        paths=["data.quadrat_transect.quadrat_number_start"],
+        validation_level=FIELD_LEVEL,
+        validation_type=VALUE_VALIDATION_TYPE,
+    ),
+    Validation(
         validator=RequiredValidator(
             path="data.quadrat_transect.num_quadrats",
         ),
@@ -87,9 +94,21 @@ benthic_photo_quadrat_transect_validations = [
         validation_type=VALUE_VALIDATION_TYPE,
     ),
     Validation(
+        validator=PositiveIntegerValidator(key_path="data.quadrat_transect.num_quadrats"),
+        paths=["data.quadrat_transect.num_quadrats"],
+        validation_level=FIELD_LEVEL,
+        validation_type=VALUE_VALIDATION_TYPE,
+    ),
+    Validation(
         validator=RequiredValidator(
             path="data.quadrat_transect.num_points_per_quadrat",
         ),
+        paths=["data.quadrat_transect.num_points_per_quadrat"],
+        validation_level=FIELD_LEVEL,
+        validation_type=VALUE_VALIDATION_TYPE,
+    ),
+    Validation(
+        validator=PositiveIntegerValidator(key_path="data.quadrat_transect.num_points_per_quadrat"),
         paths=["data.quadrat_transect.num_points_per_quadrat"],
         validation_level=FIELD_LEVEL,
         validation_type=VALUE_VALIDATION_TYPE,
