@@ -500,12 +500,10 @@ class BenthicPITProjectMethodObsView(BaseProjectMethodView):
     drf_label = "benthicpit-obs"
     project_policy = "data_policy_benthicpit"
     model = BenthicPITObsModel
-    sql_model = BenthicPITObsSQLModel
     serializer_class = BenthicPITMethodObsSerializer
     serializer_class_geojson = BenthicPITMethodObsGeoSerializer
     serializer_class_csv = ObsBenthicPITCSVSerializer
     filterset_class = BenthicPITMethodObsFilterSet
-    sql_filterset_class = BenthicPITMethodObsSQLFilterSet
     order_by = ("site_name", "sample_date", "transect_number", "label", "interval")
 
 
@@ -513,12 +511,10 @@ class BenthicPITProjectMethodSUView(BaseProjectMethodView):
     drf_label = "benthicpit-su"
     project_policy = "data_policy_benthicpit"
     model = BenthicPITSUModel
-    sql_model = BenthicPITSUSQLModel
     serializer_class = BenthicPITMethodSUSerializer
     serializer_class_geojson = BenthicPITMethodSUGeoSerializer
     serializer_class_csv = BenthicPITMethodSUCSVSerializer
     filterset_class = BenthicPITMethodSUFilterSet
-    sql_filterset_class = BenthicPITMethodSUSQLFilterSet
     order_by = ("site_name", "sample_date", "transect_number")
 
 
@@ -529,10 +525,8 @@ class BenthicPITProjectMethodSEView(BaseProjectMethodView):
         Or(ProjectDataReadOnlyPermission, ProjectPublicSummaryPermission)
     ]
     model = BenthicPITSEModel
-    sql_model = BenthicPITSESQLModel
     serializer_class = BenthicPITMethodSESerializer
     serializer_class_geojson = BenthicPITMethodSEGeoSerializer
     serializer_class_csv = BenthicPITMethodSECSVSerializer
     filterset_class = BenthicPITMethodSEFilterSet
-    sql_filterset_class = BenthicPITMethodSESQLFilterSet
     order_by = ("site_name", "sample_date")

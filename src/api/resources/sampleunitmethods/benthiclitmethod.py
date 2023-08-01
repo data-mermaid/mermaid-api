@@ -478,12 +478,10 @@ class BenthicLITProjectMethodObsView(BaseProjectMethodView):
     drf_label = "benthiclit-obs"
     project_policy = "data_policy_benthiclit"
     model = BenthicLITObsModel
-    sql_model = BenthicLITObsSQLModel
     serializer_class = BenthicLITMethodObsSerializer
     serializer_class_geojson = BenthicLITMethodObsGeoSerializer
     serializer_class_csv = ObsBenthicLITCSVSerializer
     filterset_class = BenthicLITMethodObsFilterSet
-    sql_filterset_class = BenthicLITMethodObsSQLFilterSet
     order_by = ("site_name", "sample_date", "transect_number", "label", "id")
 
 
@@ -491,12 +489,10 @@ class BenthicLITProjectMethodSUView(BaseProjectMethodView):
     drf_label = "benthiclit-su"
     project_policy = "data_policy_benthiclit"
     model = BenthicLITSUModel
-    sql_model = BenthicLITSUSQLModel
     serializer_class = BenthicLITMethodSUSerializer
     serializer_class_geojson = BenthicLITMethodSUGeoSerializer
     serializer_class_csv = BenthicLITMethodSUCSVSerializer
     filterset_class = BenthicLITMethodSUFilterSet
-    sql_filterset_class = BenthicLITMethodSUSQLFilterSet
     order_by = ("site_name", "sample_date", "transect_number")
 
 
@@ -507,10 +503,8 @@ class BenthicLITProjectMethodSEView(BaseProjectMethodView):
         Or(ProjectDataReadOnlyPermission, ProjectPublicSummaryPermission)
     ]
     model = BenthicLITSEModel
-    sql_model = BenthicLITSESQLModel
     serializer_class = BenthicLITMethodSESerializer
     serializer_class_geojson = BenthicLITMethodSEGeoSerializer
     serializer_class_csv = BenthicLITMethodSECSVSerializer
     filterset_class = BenthicLITMethodSEFilterSet
-    sql_filterset_class = BenthicLITMethodSESQLFilterSet
     order_by = ("site_name", "sample_date")

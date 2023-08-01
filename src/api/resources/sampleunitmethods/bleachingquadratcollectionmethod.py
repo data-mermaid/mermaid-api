@@ -686,12 +686,10 @@ class BleachingQCProjectMethodObsColoniesBleachedView(BaseProjectMethodView):
     drf_label = "bleachingqc-obscoloniesbleached"
     project_policy = "data_policy_bleachingqc"
     model = BleachingQCColoniesBleachedObsModel
-    sql_model = BleachingQCColoniesBleachedObsSQLModel
     serializer_class = BleachingQCMethodObsColoniesBleachedSerializer
     serializer_class_geojson = BleachingQCMethodObsColoniesBleachedGeoSerializer
     serializer_class_csv = ObsBleachingQCColoniesBleachedCSVSerializer
     filterset_class = BleachingQCMethodColoniesBleachedObsFilterSet
-    sql_filterset_class = BleachingQCMethodColoniesBleachedObsSQLFilterSet
     order_by = ("site_name", "sample_date", "label", "benthic_attribute", "growth_form")
 
 
@@ -699,12 +697,10 @@ class BleachingQCProjectMethodObsQuadratBenthicPercentView(BaseProjectMethodView
     drf_label = "bleachingqc-obsquadratbenthicpercent"
     project_policy = "data_policy_bleachingqc"
     model = BleachingQCQuadratBenthicPercentObsModel
-    sql_model = BleachingQCQuadratBenthicPercentObsSQLModel
     serializer_class = BleachingQCMethodObsQuadratBenthicPercentSerializer
     serializer_class_geojson = BleachingQCMethodObsQuadratBenthicPercentGeoSerializer
     serializer_class_csv = ObsQuadratBenthicPercentCSVSerializer
     filterset_class = BleachingQCMethodQuadratBenthicPercentObsFilterSet
-    sql_filterset_class = BleachingQCMethodQuadratBenthicPercentObsSQLFilterSet
     order_by = ("site_name", "sample_date", "label", "quadrat_number")
 
 
@@ -712,12 +708,10 @@ class BleachingQCProjectMethodSUView(BaseProjectMethodView):
     drf_label = "bleachingqc-su"
     project_policy = "data_policy_bleachingqc"
     model = BleachingQCSUModel
-    sql_model = BleachingQCSUSQLModel
     serializer_class = BleachingQCMethodSUSerializer
     serializer_class_geojson = BleachingQCMethodSUGeoSerializer
     serializer_class_csv = BleachingQCMethodSUCSVSerializer
     filterset_class = BleachingQCMethodSUFilterSet
-    sql_filterset_class = BleachingQCMethodSUSQLFilterSet
     order_by = ("site_name", "sample_date", "label")
 
 
@@ -728,10 +722,8 @@ class BleachingQCProjectMethodSEView(BaseProjectMethodView):
         Or(ProjectDataReadOnlyPermission, ProjectPublicSummaryPermission)
     ]
     model = BleachingQCSEModel
-    sql_model = BleachingQCSESQLModel
     serializer_class = BleachingQCMethodSESerializer
     serializer_class_geojson = BleachingQCMethodSEGeoSerializer
     serializer_class_csv = BleachingQCMethodSECSVSerializer
     filterset_class = BleachingQCMethodSEFilterSet
-    sql_filterset_class = BleachingQCMethodSESQLFilterSet
     order_by = ("site_name", "sample_date")

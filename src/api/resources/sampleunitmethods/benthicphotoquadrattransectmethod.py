@@ -399,12 +399,10 @@ class BenthicPQTProjectMethodObsView(BaseProjectMethodView):
     drf_label = "benthicphotoquadrattransect-obs"
     project_policy = "data_policy_benthicpqt"
     model = BenthicPhotoQuadratTransectObsModel
-    sql_model = BenthicPhotoQuadratTransectObsSQLModel
     serializer_class = BenthicPQTMethodObsSerializer
     serializer_class_geojson = BenthicPQTMethodObsGeoSerializer
     serializer_class_csv = ObsBenthicPQTCSVSerializer
     filterset_class = BenthicPQTMethodObsFilterSet
-    sql_filterset_class = BenthicPQTMethodObsSQLFilterSet
     order_by = (
         "site_name",
         "sample_date",
@@ -418,12 +416,10 @@ class BenthicPQTProjectMethodSUView(BaseProjectMethodView):
     drf_label = "benthicphotoquadrattransect-su"
     project_policy = "data_policy_benthicpqt"
     model = BenthicPhotoQuadratTransectSUModel
-    sql_model = BenthicPhotoQuadratTransectSUSQLModel
     serializer_class = BenthicPQTMethodSUSerializer
     serializer_class_geojson = BenthicPQTMethodSUGeoSerializer
     serializer_class_csv = BenthicPQTMethodSUCSVSerializer
     filterset_class = BenthicPQTMethodSUFilterSet
-    sql_filterset_class = BenthicPQTMethodSUSQLFilterSet
     order_by = ("site_name", "sample_date", "transect_number")
 
 
@@ -434,10 +430,8 @@ class BenthicPQTProjectMethodSEView(BaseProjectMethodView):
         Or(ProjectDataReadOnlyPermission, ProjectPublicSummaryPermission)
     ]
     model = BenthicPhotoQuadratTransectSEModel
-    sql_model = BenthicPhotoQuadratTransectSESQLModel
     serializer_class = BenthicPQTMethodSESerializer
     serializer_class_geojson = BenthicPQTMethodSEGeoSerializer
     serializer_class_csv = BenthicPQTMethodSECSVSerializer
     filterset_class = BenthicPQTMethodSEFilterSet
-    sql_filterset_class = BenthicPQTMethodSESQLFilterSet
     order_by = ("site_name", "sample_date")
