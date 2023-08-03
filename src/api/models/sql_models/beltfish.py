@@ -67,7 +67,7 @@ class BeltFishObsSQLModel(BaseSUSQLModel):
             JOIN transect_belt_fish su ON tt.transect_id = su.id
             JOIN se ON su.sample_event_id = se.sample_event_id
             JOIN pseudosu_su ON (su.id = pseudosu_su.sample_unit_id)
-            JOIN vw_fish_attributes f ON o.fish_attribute_id = f.id
+            LEFT JOIN vw_fish_attributes f ON o.fish_attribute_id = f.id
             JOIN api_belttransectwidth w ON su.width_id = w.id
             JOIN api_belttransectwidthcondition wc ON (
                 w.id = wc.belttransectwidth_id
@@ -312,8 +312,8 @@ class BeltFishSUSQLModel(BaseSUSQLModel):
         FROM (
             SELECT pseudosu_id,
             jsonb_agg(DISTINCT sample_unit_id) AS sample_unit_ids,
-            SUM(beltfish_obs.count) AS total_abundance,
-            SUM(beltfish_obs.biomass_kgha) AS biomass_kgha,
+            COALESCE(SUM(beltfish_obs.count), 0) AS total_abundance,
+            COALESCE(SUM(beltfish_obs.biomass_kgha), 0) AS biomass_kgha,
             {_su_fields_qualified},
             {_su_aggfields_sql},
             string_agg(DISTINCT reef_slope::text, ', '::text ORDER BY (reef_slope::text)) AS reef_slope,

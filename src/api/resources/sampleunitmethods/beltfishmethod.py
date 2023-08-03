@@ -547,6 +547,8 @@ class BeltFishProjectMethodObsView(BaseProjectMethodView):
 
     def get_queryset(self):
         qs = super().get_queryset()
+        # Important: BeltFishObsSQLModel.sql will return a single 'dummy' observation for a FB
+        # transect with no observations, necessary for SU/SE views, but inappropriate for obs views.
         return qs.filter(
             Q(size__isnull=False)
             | Q(count__isnull=False)
