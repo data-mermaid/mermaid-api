@@ -12,6 +12,8 @@ from .validators import (
     DepthValidator,
     DrySubmitValidator,
     DuplicateValidator,
+    IntervalSizeValidator,
+    IntervalStartValidator,
     LenSurveyedValidator,
     ListScoreValidator,
     ListRequiredValidator,
@@ -128,6 +130,30 @@ habcomp_validations = [
             path="data.interval_size",
         ),
         paths=["data.interval_size"],
+        validation_level=FIELD_LEVEL,
+        validation_type=VALUE_VALIDATION_TYPE,
+    ),
+    Validation(
+        validator=IntervalSizeValidator(
+            interval_size_path="data.interval_size",
+        ),
+        paths=["data.interval_size"],
+        validation_level=FIELD_LEVEL,
+        validation_type=VALUE_VALIDATION_TYPE,
+    ),
+    Validation(
+        validator=RequiredValidator(
+            path="data.interval_start",
+        ),
+        paths=["data.interval_start"],
+        validation_level=FIELD_LEVEL,
+        validation_type=VALUE_VALIDATION_TYPE,
+    ),
+    Validation(
+        validator=IntervalStartValidator(
+            interval_start_path="data.interval_start",
+        ),
+        paths=["data.interval_start"],
         validation_level=FIELD_LEVEL,
         validation_type=VALUE_VALIDATION_TYPE,
     ),

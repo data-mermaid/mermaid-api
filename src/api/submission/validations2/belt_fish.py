@@ -17,6 +17,7 @@ from .validators import (
     ManagementRuleValidator,
     ListRequiredValidator,
     ObservationCountValidator,
+    PositiveIntegerValidator,
     RegionValidator,
     RequiredValidator,
     SampleDateValidator,
@@ -58,6 +59,12 @@ belt_fish_validations = [
         validator=RequiredValidator(
             path="data.fishbelt_transect.number",
         ),
+        paths=["data.fishbelt_transect.number"],
+        validation_level=FIELD_LEVEL,
+        validation_type=VALUE_VALIDATION_TYPE,
+    ),
+    Validation(
+        validator=PositiveIntegerValidator(key_path="data.fishbelt_transect.number"),
         paths=["data.fishbelt_transect.number"],
         validation_level=FIELD_LEVEL,
         validation_type=VALUE_VALIDATION_TYPE,
