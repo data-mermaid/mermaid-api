@@ -132,7 +132,7 @@ class BeltFishObsModel(BaseObsModel):
         null=True,
         blank=True,
     )
-    observation_notes = models.TextField(blank=True)
+    observation_notes = models.TextField(null=True, blank=True)
     data_policy_beltfish = models.CharField(max_length=50)
     pseudosu_id = models.UUIDField()
 
