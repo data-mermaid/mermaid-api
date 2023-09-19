@@ -171,7 +171,14 @@ class BeltFishSUModel(BaseSUModel):
 class BeltFishSEModel(BaseSummaryModel):
     sample_unit_count = models.PositiveSmallIntegerField()
     depth_avg = models.DecimalField(
-        max_digits=4, decimal_places=2, verbose_name=_("depth (m)")
+        max_digits=4, decimal_places=2, verbose_name=_("depth mean (m)")
+    )
+    depth_sd = models.DecimalField(
+        max_digits=4,
+        decimal_places=2,
+        verbose_name=_("depth standard deviation (m)"),
+        blank=True,
+        null=True,
     )
     current_name = models.CharField(max_length=100, null=True, blank=True)
     tide_name = models.CharField(max_length=100, null=True, blank=True)
@@ -246,7 +253,14 @@ class BenthicPITSUModel(BaseSUModel):
 class BenthicPITSEModel(BaseSummaryModel):
     sample_unit_count = models.PositiveSmallIntegerField()
     depth_avg = models.DecimalField(
-        max_digits=4, decimal_places=2, verbose_name=_("depth (m)")
+        max_digits=4, decimal_places=2, verbose_name=_("depth mean (m)")
+    )
+    depth_sd = models.DecimalField(
+        max_digits=4,
+        decimal_places=2,
+        verbose_name=_("depth standard deviation (m)"),
+        blank=True,
+        null=True,
     )
     current_name = models.CharField(max_length=100, null=True, blank=True)
     tide_name = models.CharField(max_length=100, null=True, blank=True)
@@ -298,7 +312,14 @@ class BenthicLITSUModel(BaseSUModel):
 class BenthicLITSEModel(BaseSummaryModel):
     sample_unit_count = models.PositiveSmallIntegerField()
     depth_avg = models.DecimalField(
-        max_digits=4, decimal_places=2, verbose_name=_("depth (m)")
+        max_digits=4, decimal_places=2, verbose_name=_("depth mean (m)")
+    )
+    depth_sd = models.DecimalField(
+        max_digits=4,
+        decimal_places=2,
+        verbose_name=_("depth standard deviation (m)"),
+        blank=True,
+        null=True,
     )
     current_name = models.CharField(max_length=100, null=True, blank=True)
     tide_name = models.CharField(max_length=100, null=True, blank=True)
@@ -355,7 +376,14 @@ class BenthicPhotoQuadratTransectSUModel(BaseSUModel):
 class BenthicPhotoQuadratTransectSEModel(BaseSummaryModel):
     sample_unit_count = models.PositiveSmallIntegerField()
     depth_avg = models.DecimalField(
-        max_digits=4, decimal_places=2, verbose_name=_("depth (m)")
+        max_digits=4, decimal_places=2, verbose_name=_("depth mean (m)")
+    )
+    depth_sd = models.DecimalField(
+        max_digits=4,
+        decimal_places=2,
+        verbose_name=_("depth standard deviation (m)"),
+        blank=True,
+        null=True,
     )
     current_name = models.CharField(max_length=100, null=True, blank=True)
     tide_name = models.CharField(max_length=100, null=True, blank=True)
@@ -441,7 +469,14 @@ class BleachingQCSUModel(BaseSUModel):
 class BleachingQCSEModel(BaseSummaryModel):
     sample_unit_count = models.PositiveSmallIntegerField()
     depth_avg = models.DecimalField(
-        max_digits=4, decimal_places=2, verbose_name=_("depth (m)")
+        max_digits=4, decimal_places=2, verbose_name=_("depth mean (m)")
+    )
+    depth_sd = models.DecimalField(
+        max_digits=4,
+        decimal_places=2,
+        verbose_name=_("depth standard deviation (m)"),
+        blank=True,
+        null=True,
     )
     current_name = models.CharField(max_length=100, null=True, blank=True)
     tide_name = models.CharField(max_length=100, null=True, blank=True)
@@ -502,7 +537,14 @@ class HabitatComplexitySUModel(BaseSUModel):
 class HabitatComplexitySEModel(BaseSummaryModel):
     sample_unit_count = models.PositiveSmallIntegerField()
     depth_avg = models.DecimalField(
-        max_digits=4, decimal_places=2, verbose_name=_("depth (m)")
+        max_digits=4, decimal_places=2, verbose_name=_("depth mean (m)")
+    )
+    depth_sd = models.DecimalField(
+        max_digits=4,
+        decimal_places=2,
+        verbose_name=_("depth standard deviation (m)"),
+        blank=True,
+        null=True,
     )
     current_name = models.CharField(max_length=100, null=True, blank=True)
     tide_name = models.CharField(max_length=100, null=True, blank=True)

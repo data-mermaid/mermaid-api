@@ -357,6 +357,7 @@ class BenthicLITMethodSESerializer(BaseSUViewAPISerializer):
                 "data_policy_benthiclit",
                 "sample_unit_count",
                 "depth_avg",
+                "depth_sd",
                 "percent_cover_by_benthic_category_avg",
             ]
         )
@@ -384,6 +385,7 @@ class BenthicLITMethodSECSVSerializer(ReportSerializer):
         ReportField("visibility_name", "Visibility"),
         ReportField("current_name", "Current"),
         ReportField("depth_avg", "Depth average"),
+        ReportField("depth_sd", "Depth standard deviation"),
         ReportField("management_name", "Management name"),
         ReportField("management_name_secondary", "Management secondary name"),
         ReportField("management_est_year", "Management year established"),

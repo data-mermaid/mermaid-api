@@ -198,6 +198,7 @@ class BaseSQLModel(models.Model):
     # SU aggregation SQL common to all SEs
     su_aggfields_sql = """
         ROUND(AVG("depth"), 2) as depth_avg,
+        ROUND(STDDEV("depth"), 2) as depth_sd,
         string_agg(DISTINCT current_name, ', ' ORDER BY current_name) AS current_name,
         string_agg(DISTINCT tide_name, ', ' ORDER BY tide_name) AS tide_name,
         string_agg(DISTINCT visibility_name, ', ' ORDER BY visibility_name) AS visibility_name

@@ -598,7 +598,7 @@ def invalid_collect_record_null_str_warn(
 
     data_warn["obs_belt_fishes"] = observations
     data_warn["fishbelt_transect"]["len_surveyed"] = "101"
-    data_warn["fishbelt_transect"]["depth"] = "31"
+    data_warn["fishbelt_transect"]["depth"] = "41"
     data_warn["fishbelt_transect"]["sample_time"] = "5:00"
     data_warn["fishbelt_transect"]["relative_depth"] = ""
 

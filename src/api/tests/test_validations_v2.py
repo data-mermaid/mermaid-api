@@ -45,7 +45,7 @@ def test_fishbelt_protocol_validation_warn(
         request=profile1_request,
     )
 
-    assert overall_status == WARN
+    assert overall_status == ERROR
     invalid_collect_record_warn.validations = runner.to_dict()
     invalid_collect_record_warn.save()
     assert (
@@ -55,7 +55,7 @@ def test_fishbelt_protocol_validation_warn(
             ]["depth"],
             "depth_validator",
         )
-        == WARN
+        == ERROR
     )
     assert (
         _get_result_status(
@@ -131,7 +131,7 @@ def test_fishbelt_protocol_validation_null_str_warn(
         belt_fish.belt_fish_validations,
         request=profile1_request,
     )
-    assert overall_status == WARN
+    assert overall_status == ERROR
 
     results = runner.to_dict()["results"]
     transect_results = results["data"]["fishbelt_transect"]
@@ -140,7 +140,7 @@ def test_fishbelt_protocol_validation_null_str_warn(
         _get_result_status(transect_results["len_surveyed"], "len_surveyed_validator")
         == WARN
     )
-    assert _get_result_status(transect_results["depth"], "depth_validator") == WARN
+    assert _get_result_status(transect_results["depth"], "depth_validator") == ERROR
     assert (
         _get_result_status(transect_results["sample_time"], "sample_time_validator")
         == WARN

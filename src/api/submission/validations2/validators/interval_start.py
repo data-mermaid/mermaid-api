@@ -18,7 +18,7 @@ class IntervalStartValidator(BaseValidator):
         except (TypeError, ValueError):
             return ERROR, self.INVALID_INTERVAL_START, {"interval_start_range": self.INTERVAL_START_RANGE}
 
-        if interval_start <= self.INTERVAL_START_RANGE[0]:
+        if interval_start < self.INTERVAL_START_RANGE[0]:
             return ERROR, self.INVALID_INTERVAL_START, {"interval_start_range": self.INTERVAL_START_RANGE}
         elif interval_start > self.INTERVAL_START_RANGE[1]:
             return ERROR, self.EXCEED_MAX_INTERVAL_START, {"interval_start_range": self.INTERVAL_START_RANGE}

@@ -351,6 +351,7 @@ class HabitatComplexityMethodSESerializer(BaseSUViewAPISerializer):
                 "data_policy_habitatcomplexity",
                 "sample_unit_count",
                 "depth_avg",
+                "depth_sd",
                 "score_avg_avg",
             ]
         )
@@ -378,6 +379,7 @@ class HabitatComplexityMethodSECSVSerializer(ReportSerializer):
         ReportField("visibility_name", "Visibility"),
         ReportField("current_name", "Current"),
         ReportField("depth_avg", "Depth average"),
+        ReportField("depth_sd", "Depth standard deviation"),
         ReportField("management_name", "Management name"),
         ReportField("management_name_secondary", "Management secondary name"),
         ReportField("management_est_year", "Management year established"),

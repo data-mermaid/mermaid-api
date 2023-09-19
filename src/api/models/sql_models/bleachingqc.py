@@ -372,7 +372,14 @@ class BleachingQCSESQLModel(BaseSQLModel):
 
     sample_unit_count = models.PositiveSmallIntegerField()
     depth_avg = models.DecimalField(
-        max_digits=4, decimal_places=2, verbose_name=_("depth (m)")
+        max_digits=4, decimal_places=2, verbose_name=_("depth mean (m)")
+    )
+    depth_sd = models.DecimalField(
+        max_digits=4,
+        decimal_places=2,
+        verbose_name=_("depth standard deviation (m)"),
+        blank=True,
+        null=True,
     )
     current_name = models.CharField(max_length=100)
     tide_name = models.CharField(max_length=100)
