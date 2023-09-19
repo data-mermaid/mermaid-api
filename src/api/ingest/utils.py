@@ -51,7 +51,7 @@ def get_ingest_project_choices(project_id):
     }
 
     project_choices["data__observers"] = {
-        pp.profile.email: ProjectProfileSerializer(instance=pp).data
+        pp.profile.email.lower(): ProjectProfileSerializer(instance=pp).data
         for pp in ProjectProfile.objects.select_related("profile").filter(
             project_id=project_id
         )
