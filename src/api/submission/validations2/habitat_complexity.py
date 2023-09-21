@@ -142,22 +142,6 @@ habcomp_validations = [
         validation_type=VALUE_VALIDATION_TYPE,
     ),
     Validation(
-        validator=RequiredValidator(
-            path="data.interval_start",
-        ),
-        paths=["data.interval_start"],
-        validation_level=FIELD_LEVEL,
-        validation_type=VALUE_VALIDATION_TYPE,
-    ),
-    Validation(
-        validator=IntervalStartValidator(
-            interval_start_path="data.interval_start",
-        ),
-        paths=["data.interval_start"],
-        validation_level=FIELD_LEVEL,
-        validation_type=VALUE_VALIDATION_TYPE,
-    ),
-    Validation(
         validator=RequiredValidator(path="data.observers"),
         paths=["data.observers"],
         validation_level=FIELD_LEVEL,
