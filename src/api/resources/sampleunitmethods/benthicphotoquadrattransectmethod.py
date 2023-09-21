@@ -234,6 +234,7 @@ class BenthicPQTMethodSUCSVSerializer(ReportSerializer):
         ReportField("label", "Transect label"),
         ReportField("transect_len_surveyed", "Transect length surveyed"),
         ReportField("observers", "Observers", to_names),
+        ReportField("num_points_nonother", "Number of non-Other points"),
         ReportField(
             "percent_cover_by_benthic_category", "Percent cover by benthic category"
         ),
@@ -306,6 +307,7 @@ class BenthicPQTMethodSECSVSerializer(ReportSerializer):
         ),
         ReportField("management_rules", "Management rules"),
         ReportField("sample_unit_count", "Sample unit count"),
+        ReportField("num_points_nonother", "Number of non-Other points"),
         ReportField(
             "percent_cover_by_benthic_category_avg",
             "Percent cover by benthic category average",
