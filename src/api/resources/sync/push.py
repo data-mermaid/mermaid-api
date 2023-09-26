@@ -3,10 +3,12 @@ from django.core.exceptions import ObjectDoesNotExist
 from django.db.models.deletion import ProtectedError
 from django.forms.models import model_to_dict
 
-from api.models import Revision, SampleEvent
+from api.models import Project, Revision, SampleEvent
 from api.resources.sampleunitmethods.sample_unit_methods import SampleUnitMethodView
 from api.utils.sample_unit_methods import get_project
 from .utils import ViewRequest
+from ...utils.project import delete_project
+from ...utils.q import submit_job
 
 
 def get_request_method(record):
@@ -86,7 +88,15 @@ def apply_changes(request, serializer, record, force=False):
 
     if is_deleted:
         try:
-            model_class.objects.get(pk=record_id).delete()
+            instance = model_class.objects.get(pk=record_id)
+
+            # If deleting a project, deliberately delete all protected objects!
+            if model_class == Project:
+                submit_job(0, delete_project, record_id)
+                Revision.create_from_instance(instance, deleted=True)
+                return 202, "Project has been flagged for deletion", None
+
+            instance.delete()
 
         except ProtectedError as err:
             protected_objects = defaultdict(list)
