@@ -18,18 +18,19 @@ from ..models import (
     ArchivedRecord,
     TransectMethod,
 )
-from ..decorators import run_in_thread
 from ..exceptions import check_uuid
 from ..notifications import notify_crs_transferred
 from ..permissions import *
-from ..utils import delete_instance_and_related_objects, truthy
+from ..utils import truthy
 from ..utils.project import (
     create_collecting_summary,
     create_submitted_summary,
     copy_project_and_resources,
+    delete_project,
     email_members_of_new_project,
     get_sample_unit_field,
 )
+from ..utils.q import submit_job
 from ..utils.replace import replace_collect_record_owner, replace_sampleunit_objs
 from .base import (
     BaseAPIFilterSet,
@@ -495,26 +496,9 @@ class ProjectViewSet(BaseApiViewSet):
 
         return Response({"num_collect_records_transferred": num_transferred})
 
-    @run_in_thread
-    def _delete_project(self, pk):
-        try:
-            instance = Project.objects.get(id=pk)
-        except Project.DoesNotExist:
-            return
-
-        with transaction.atomic():
-            sid = transaction.savepoint()
-            try:
-                delete_instance_and_related_objects(instance)
-                transaction.savepoint_commit(sid)
-                print("project deleted")
-            except Exception as err:
-                print(f"Delete Project: {err}")
-                transaction.savepoint_rollback(sid)
-
     def destroy(self, request, *args, **kwargs):
         instance = self.get_object()
-        self._delete_project(instance.pk)
+        submit_job(0, delete_project, instance.pk)
 
         return Response(
             data="Project has been flagged for deletion",

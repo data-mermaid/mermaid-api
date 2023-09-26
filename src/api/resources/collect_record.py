@@ -3,7 +3,8 @@ import logging
 import uuid
 
 from django.db import connection
-from rest_framework import permissions, status as drf_status
+from rest_condition import Or
+from rest_framework import status as drf_status
 from rest_framework.decorators import action
 from rest_framework.exceptions import ParseError
 from rest_framework.permissions import SAFE_METHODS
@@ -20,7 +21,11 @@ from ..models import (
     PROTOCOL_MAP,
     CollectRecord,
 )
-from ..permissions import ProjectDataAdminPermission, ProjectDataPermission
+from ..permissions import (
+    CollectRecordOwner,
+    ProjectDataAdminPermission,
+    ProjectDataPermission,
+)
 from ..submission.utils import (
     submit_collect_records,
     submit_collect_records_v2,
@@ -30,21 +35,11 @@ from ..submission.utils import (
 from ..utils import truthy
 from .base import BaseAPIFilterSet, BaseAPISerializer, BaseProjectApiViewSet
 
+
 logger = logging.getLogger(__name__)
-
-
-class CollectRecordOwner(permissions.BasePermission):
-    def has_permission(self, request, view):
-        record_ids = request.data.get("ids") or []
-        pk = view.kwargs.get("pk")
-        if pk:
-            record_ids = [pk]
-        elif not record_ids:
-            return True
-
-        profile = getattr(request.user, "profile")
-        count = CollectRecord.objects.filter(id__in=record_ids, profile=profile).count()
-        return count == len(record_ids)
+cr_permissions = list(BaseProjectApiViewSet.permission_classes[0].perms_or_conds) + [
+    CollectRecordOwner
+]
 
 
 class CollectRecordSerializer(CreateOrUpdateSerializerMixin, BaseAPISerializer):
@@ -63,7 +58,7 @@ class CollectRecordViewSet(BaseProjectApiViewSet):
     serializer_class = CollectRecordSerializer
     queryset = CollectRecord.objects.all().order_by("id")
     filterset_class = CollectRecordFilterSet
-    permission_classes = BaseProjectApiViewSet.permission_classes + [CollectRecordOwner]
+    permission_classes = [Or(*cr_permissions)]
 
     def filter_queryset(self, queryset):
         user = self.request.user
@@ -99,8 +94,7 @@ class CollectRecordViewSet(BaseProjectApiViewSet):
     @action(
         detail=False,
         methods=["post"],
-        permission_classes=BaseProjectApiViewSet.permission_classes
-        + [CollectRecordOwner],
+        permission_classes=[Or(*cr_permissions)],
     )
     def submit(self, request, project_pk):
         submit_version = request.data.get("version") or "1"
@@ -245,7 +239,10 @@ class CollectRecordViewSet(BaseProjectApiViewSet):
                 fieldname_simple = "__".join(fieldname.split("__")[1:])
                 choices = None
                 if field.field_name in choice_sets and choice_sets[field.field_name]:
-                    choices = [name for name, choice_id in choice_sets[field.field_name].items()]
+                    choices = [
+                        name
+                        for name, choice_id in choice_sets[field.field_name].items()
+                    ]
 
                 field_def = {
                     "name": fieldname_simple,
