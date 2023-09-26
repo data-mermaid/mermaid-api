@@ -1,6 +1,7 @@
 import csv
 from pyexcelerate import Font, Style, Workbook
 
+from ..models import Covariate, Site
 from ..mocks import MockRequest
 from ..resources.sampleunitmethods.beltfishmethod import (
     BeltFishProjectMethodObsView,
@@ -37,15 +38,78 @@ from ..utils.castutils import cast_str_value
 from ..utils.timer import timing
 
 
+aca_benthic_key, aca_benthic_field = Covariate.SUPPORTED_COVARIATES[0]
+aca_geomorphic_key, aca_geomorphic_field = Covariate.SUPPORTED_COVARIATES[1]
+
+
+def _covariate_lookup(site_id_index, content):
+    if isinstance(content, list) is False or len(content) < 2:
+        return None
+
+    site_ids = list({r[site_id_index] for r in content[1:]})
+    sites = Site.objects.filter(id__in=site_ids)
+    covar_lookup = {}
+
+    for s in sites:
+        covariates = s.covariates.filter(name__in=[aca_benthic_key, aca_geomorphic_key])
+        if not covariates:
+            continue
+
+        site_id = str(s.id)
+        covar_lookup[site_id] = ["", ""]
+        for covariate in covariates:
+            values = covariate.value
+            if values is None:
+                continue
+            covar_name = covariate.name
+            if covar_name == aca_benthic_key:
+                values = sorted(values, key=lambda x: (x["area"]), reverse=True)
+                covar_lookup[site_id][0] = values[0]["name"] if values else ""
+            elif covar_name == aca_geomorphic_key:
+                values = sorted(values, key=lambda x: (x["area"]), reverse=True)
+                covar_lookup[site_id][1] = values[0]["name"] if values else ""
+
+    return covar_lookup
+
+
+def _append_covariates(site_id_index, content, view_serializer):
+    num_additional_fields = len(view_serializer.additional_fields)
+    column_names = [f.display for f in view_serializer.fields]
+    column_names.extend([aca_benthic_field, aca_geomorphic_field])
+
+    covariate_lookup = _covariate_lookup(site_id_index, content)
+    data = [column_names]
+    for row in content[1:]:
+        site_id = row[site_id_index]
+        covariates = covariate_lookup.get(site_id)
+        row = row[0:-1 * num_additional_fields]
+        row.extend(covariates)
+        data.append(row)
+    
+    return data
+
+
 def get_viewset_csv_content(view_cls, project_pk, request):
-    request = MockRequest(query_params={"field_report": "t"})
+    request = MockRequest()
     kwargs = {"project_pk": project_pk, "use_cached": False}
     vw = view_cls(**kwargs)
     vw.kwargs = kwargs
     vw.request = request
     resp = vw.csv(request)
-    return list(
+    content = list(
         csv.reader([str(row, "UTF-8").strip() for row in resp.streaming_content])
+    )
+    if isinstance(content, list) is False or len(content) < 2 or "site_id" not in content[0]:
+        return content
+
+    site_id_index =  content[0].index("site_id")
+    if site_id_index is None:
+        return content
+    
+    return _append_covariates(
+        site_id_index,
+        content,
+        view_cls.serializer_class_csv
     )
 
 
