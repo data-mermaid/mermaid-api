@@ -527,7 +527,7 @@ class ProjectViewSet(BaseApiViewSet):
         permission_classes=[ProjectDataAdminPermission],
     )
     def add_profile(self, request, pk, *args, **kwargs):
-        email = request.data.get("email")
+        email = request.data.get("email").lower()
         try:
             role = int(request.data.get("role"))
         except (TypeError, ValueError):
@@ -538,7 +538,7 @@ class ProjectViewSet(BaseApiViewSet):
             raise exceptions.ValidationError(detail={"email": "Email is required"})
 
         try:
-            profile = Profile.objects.get(email__iexact=email)
+            profile = Profile.objects.get(email=email)
         except Profile.DoesNotExist:
             profile = Profile.objects.create(email=email)
 

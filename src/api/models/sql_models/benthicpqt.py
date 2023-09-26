@@ -180,6 +180,7 @@ class BenthicPhotoQuadratTransectSUSQLModel(BaseSUSQLModel):
         benthicpqt_su.pseudosu_id,
         {_su_fields},
         benthicpqt_su.{_agg_su_fields},
+        num_points_nonother,
         reef_slope,
         percent_cover_by_benthic_category
         FROM (
@@ -187,6 +188,7 @@ class BenthicPhotoQuadratTransectSUSQLModel(BaseSUSQLModel):
             jsonb_agg(DISTINCT sample_unit_id) AS sample_unit_ids,
             {_su_fields_qualified},
             {_su_aggfields_sql},
+            SUM(num_points) AS num_points_nonother,
             string_agg(DISTINCT reef_slope::text, ', '::text ORDER BY (reef_slope::text)) AS reef_slope
             FROM benthicpqt_obs
             GROUP BY pseudosu_id,
@@ -260,6 +262,9 @@ class BenthicPhotoQuadratTransectSUSQLModel(BaseSUSQLModel):
     transect_len_surveyed = models.PositiveSmallIntegerField(
         verbose_name=_("transect length surveyed (m)")
     )
+    num_points_nonother = models.PositiveSmallIntegerField(
+        verbose_name="number of non-'Other' points for all observations in all quadrats for the transect"
+    )
     reef_slope = models.CharField(max_length=50)
     percent_cover_by_benthic_category = models.JSONField(null=True, blank=True)
     data_policy_benthicpqt = models.CharField(max_length=50)
@@ -283,6 +288,7 @@ class BenthicPhotoQuadratTransectSESQLModel(BaseSQLModel):
         data_policy_benthicpqt,
         {_su_aggfields_sql},
         COUNT(benthicpqt_su.pseudosu_id) AS sample_unit_count,
+        SUM(benthicpqt_su.num_points_nonother) AS num_points_nonother,
         percent_cover_by_benthic_category_avg
 
         FROM benthicpqt_su
@@ -321,6 +327,9 @@ class BenthicPhotoQuadratTransectSESQLModel(BaseSQLModel):
     current_name = models.CharField(max_length=100)
     tide_name = models.CharField(max_length=100)
     visibility_name = models.CharField(max_length=100)
+    num_points_nonother = models.PositiveSmallIntegerField(
+        verbose_name="number of non-'Other' points for all observations in all transects for the sample event"
+    )
     percent_cover_by_benthic_category_avg = models.JSONField(null=True, blank=True)
     data_policy_benthicpqt = models.CharField(max_length=50)
 

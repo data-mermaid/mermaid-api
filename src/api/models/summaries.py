@@ -340,6 +340,9 @@ class BenthicPhotoQuadratTransectSUModel(BaseSUModel):
     transect_len_surveyed = models.PositiveSmallIntegerField(
         verbose_name=_("transect length surveyed (m)")
     )
+    num_points_nonother = models.PositiveSmallIntegerField(
+        verbose_name="number of non-'Other' points for all observations in all quadrats for the transect"
+    )
     reef_slope = models.CharField(max_length=50, null=True, blank=True)
     percent_cover_by_benthic_category = models.JSONField(null=True, blank=True)
     data_policy_benthicpqt = models.CharField(max_length=50)
@@ -357,6 +360,9 @@ class BenthicPhotoQuadratTransectSEModel(BaseSummaryModel):
     current_name = models.CharField(max_length=100, null=True, blank=True)
     tide_name = models.CharField(max_length=100, null=True, blank=True)
     visibility_name = models.CharField(max_length=100, null=True, blank=True)
+    num_points_nonother = models.PositiveSmallIntegerField(
+        verbose_name="number of non-'Other' points for all observations in all transects for the sample event"
+    )
     percent_cover_by_benthic_category_avg = models.JSONField(null=True, blank=True)
     data_policy_benthicpqt = models.CharField(max_length=50)
 
