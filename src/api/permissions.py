@@ -2,7 +2,7 @@ from django.core.exceptions import ObjectDoesNotExist
 from rest_framework import permissions
 from rest_framework.exceptions import NotFound, PermissionDenied
 from .exceptions import check_uuid
-from .models import Project, ProjectProfile
+from .models import CollectRecord, Project, ProjectProfile
 from .models.base import PROPOSED
 
 
@@ -144,3 +144,17 @@ class ProjectPublicPermission(permissions.BasePermission):
 class ProjectPublicSummaryPermission(permissions.BasePermission):
     def has_permission(self, request, view):
         return data_policy_permission(request, view, Project.PUBLIC_SUMMARY)
+
+
+class CollectRecordOwner(permissions.BasePermission):
+    def has_permission(self, request, view):
+        record_ids = request.data.get("ids") or []
+        pk = view.kwargs.get("pk")
+        if pk:
+            record_ids = [pk]
+        elif not record_ids:
+            return True
+
+        profile = getattr(request.user, "profile")
+        count = CollectRecord.objects.filter(id__in=record_ids, profile=profile).count()
+        return count == len(record_ids)

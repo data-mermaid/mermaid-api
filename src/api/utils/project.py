@@ -16,7 +16,7 @@ from ..models import (
     Site,
     TransectMethod,
 )
-from . import get_value, is_uuid
+from . import delete_instance_and_related_objects, get_value, is_uuid
 from .email import mermaid_email
 
 
@@ -290,3 +290,20 @@ def get_safe_project_name(project_id):
     except Project.DoesNotExist as e:
         raise ValueError(f"Project with id '{project_id}' does not exist") from e
 
+
+def delete_project(pk):
+    try:
+        instance = Project.objects.get(id=pk)
+    except Project.DoesNotExist:
+        print(f"project {pk} does not exist")
+        return
+
+    with transaction.atomic():
+        sid = transaction.savepoint()
+        try:
+            delete_instance_and_related_objects(instance)
+            transaction.savepoint_commit(sid)
+            print("project deleted")
+        except Exception as err:
+            print(f"Delete Project: {err}")
+            transaction.savepoint_rollback(sid)
