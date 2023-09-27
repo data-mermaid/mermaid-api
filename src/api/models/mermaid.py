@@ -430,6 +430,10 @@ class SampleEvent(BaseModel, JSONMixin):
     def __str__(self):
         return '%s %s' % (self.site.__str__(), self.sample_date)
 
+    @property
+    def project(self):
+        return self.site.project
+
 
 class SampleUnit(BaseModel):
     sample_event = models.ForeignKey(SampleEvent, on_delete=models.PROTECT)
@@ -499,6 +503,10 @@ class BenthicTransect(Transect):
 
     class Meta:
         db_table = 'transect_benthic'
+    
+    @property
+    def project(self):
+        return self.sample_event.site.project
 
 
 class BeltTransectWidth(BaseChoiceModel):
@@ -639,6 +647,9 @@ class FishBeltTransect(Transect):
         db_table = 'transect_belt_fish'
         verbose_name = _('fish belt transect')
 
+    @property
+    def project(self):
+        return self.sample_event.site.project
 
 class BaseQuadrat(SampleUnit):
     quadrat_size = models.DecimalField(
@@ -668,6 +679,10 @@ class QuadratCollection(BaseQuadrat):
 
     class Meta:
         db_table = 'quadrat_collection'
+    
+    @property
+    def project(self):
+        return self.sample_event.site.project
 
 
 class QuadratTransect(Transect):
@@ -689,6 +704,10 @@ class QuadratTransect(Transect):
 
     class Meta:
         db_table = 'quadrat_transect'
+    
+    @property
+    def project(self):
+        return self.sample_event.site.project
 
 
 # TODO: rename this SampleUnitMethod, and abstract all appropriate references elsewhere
@@ -772,6 +791,10 @@ class Observer(BaseModel):
     @property
     def profile_name(self):
         return self.profile.full_name
+
+    @property
+    def project(self):
+        return self.transectmethod.project
 
 
 class BenthicLifeHistory(BaseChoiceModel):
@@ -883,6 +906,10 @@ class ObsBenthicLIT(BaseModel, JSONMixin):
 
     def __str__(self):
         return _('%s') % (self.length)
+    
+    @property
+    def project(self):
+        return self.benthiclit.transect.sample_event.site.project
 
 
 class BenthicPIT(TransectMethod):
@@ -929,6 +956,10 @@ class ObsBenthicPIT(BaseModel, JSONMixin):
 
     def __str__(self):
         return _('%s') % self.interval
+
+    @property
+    def project(self):
+        return self.benthicpit.transect.sample_event.site.project
 
 
 class HabitatComplexity(TransectMethod):
@@ -978,6 +1009,10 @@ class ObsHabitatComplexity(BaseModel, JSONMixin):
 
     def __str__(self):
         return _('%s') % self.interval
+    
+    @property
+    def project(self):
+        return self.habitatcomplexity.transect.sample_event.site.project
 
 
 class BleachingQuadratCollection(TransectMethod):
@@ -1025,6 +1060,10 @@ class ObsColoniesBleached(BaseModel, JSONMixin):
             gf = ' {}'.format(self.growth_form)
         return _('%s%s') % (self.attribute.__str__(), gf)
 
+    @property
+    def project(self):
+        return self.bleachingquadratcollection.quadrat.sample_event.site.project
+
 
 class ObsQuadratBenthicPercent(BaseModel, JSONMixin):
     project_lookup = "bleachingquadratcollection__quadrat__sample_event__site__project"
@@ -1059,6 +1098,10 @@ class ObsQuadratBenthicPercent(BaseModel, JSONMixin):
 
     def __str__(self):
         return _("%s") % self.quadrat_number
+    
+    @property
+    def project(self):
+        return self.bleachingquadratcollection.quadrat.sample_event.site.project
 
 
 class BenthicPhotoQuadratTransect(TransectMethod):
@@ -1110,6 +1153,10 @@ class ObsBenthicPhotoQuadrat(BaseModel, JSONMixin):
 
     def __str__(self):
         return str(self.quadrat_number)
+    
+    @property
+    def project(self):
+        return self.benthic_photo_quadrat_transect.quadrat_transect.sample_event.site.project
 
 
 class FishAttribute(BaseAttributeModel):
@@ -1586,6 +1633,10 @@ class ObsBeltFish(BaseModel, JSONMixin):
             return Observer.objects.none()
 
         return self.beltfish.observers.all()
+    
+    @property
+    def project(self):
+        return self.beltfish.transect.sample_event.site.project
 
 
 class CollectRecord(BaseModel):
