@@ -94,14 +94,14 @@ def test_benthicpit_csv_view(
         in response.headers.get("content-disposition")
     )
 
-    assert len(rows) == 10
+    assert len(rows) == 15
     assert "country_name" in fieldnames
-    assert len(rows[6].keys()) == 49
-    assert rows[6]["site_name"] == site2.name
-    assert float(rows[6]["latitude"]) == site2.location.y
-    assert float(rows[6]["longitude"]) == site2.location.x
-    assert rows[6]["observers"] == profile2.full_name
-    assert rows[6]["management_id"] == str(management2.id)
+    assert len(rows[11].keys()) == 49
+    assert rows[11]["site_name"] == site2.name
+    assert float(rows[11]["latitude"]) == site2.location.y
+    assert float(rows[11]["longitude"]) == site2.location.x
+    assert rows[11]["observers"] == profile2.full_name
+    assert rows[11]["management_id"] == str(management2.id)
 
 
 def test_benthicpit_field_report(
@@ -123,13 +123,13 @@ def test_benthicpit_field_report(
         "test_project_1-benthicpit-obs-"
         in response.headers.get("content-disposition")
     )
-    assert len(rows) == 10
+    assert len(rows) == 15
     assert "Country" in fieldnames
-    assert len(rows[6].keys()) == 36
-    assert rows[6]["Site"] == site2.name
-    assert float(rows[6]["Latitude"]) == site2.location.y
-    assert float(rows[6]["Longitude"]) == site2.location.x
-    assert rows[6]["Observers"] == profile2.full_name
+    assert len(rows[11].keys()) == 36
+    assert rows[11]["Site"] == site2.name
+    assert float(rows[11]["Latitude"]) == site2.location.y
+    assert float(rows[11]["Longitude"]) == site2.location.x
+    assert rows[11]["Observers"] == profile2.full_name
 
 
 def test_benthiclit_csv_view(

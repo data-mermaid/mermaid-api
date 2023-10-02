@@ -72,11 +72,16 @@ def test_benthicpit_se_view(
     count, data, response = _call(client, token1, url)
 
     assert count == 2
-    assert data[0]["sample_unit_count"] == 1
-    assert data[0]["depth_avg"] == 5.0
-    assert data[0]["percent_cover_by_benthic_category_avg"]["Macroalgae"] == 20.0
-    assert data[0]["percent_cover_by_benthic_category_avg"]["Hard coral"] == 60.0
-    assert data[0]["percent_cover_by_benthic_category_avg"]["Rock"] == 20.0
+
+    assert data[0]["sample_unit_count"] == 2
+    assert data[0]["depth_avg"] == 6.5
+    assert data[0]["depth_sd"] == 2.12
+    assert data[0]["percent_cover_by_benthic_category_avg"]["Macroalgae"] == 40.0
+    assert data[0]["percent_cover_by_benthic_category_sd"]["Macroalgae"] == 28.28
+    assert data[0]["percent_cover_by_benthic_category_avg"]["Hard coral"] == 50.0
+    assert data[0]["percent_cover_by_benthic_category_sd"]["Hard coral"] == 14.14
+    assert data[0]["percent_cover_by_benthic_category_avg"]["Rock"] == 10.0
+    assert data[0]["percent_cover_by_benthic_category_sd"]["Rock"] == 14.14
 
     assert data[1]["percent_cover_by_benthic_category_avg"]["Hard coral"] == 60.0
     assert data[1]["percent_cover_by_benthic_category_avg"]["Rock"] == 40.0
