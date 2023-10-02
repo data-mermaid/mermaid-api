@@ -205,7 +205,8 @@ class HabitatComplexitySESQLModel(BaseSQLModel):
         data_policy_habitatcomplexity,
         {_su_aggfields_sql},
         COUNT(pseudosu_id) AS sample_unit_count,
-        ROUND(AVG(score_avg), 2) AS score_avg_avg
+        ROUND(AVG(score_avg), 2) AS score_avg_avg,
+        ROUND(STDDEV(score_avg), 2) AS score_avg_sd
         FROM habitatcomplexity_su
         GROUP BY
         {_se_fields},
@@ -233,6 +234,7 @@ class HabitatComplexitySESQLModel(BaseSQLModel):
     tide_name = models.CharField(max_length=100)
     visibility_name = models.CharField(max_length=100)
     score_avg_avg = models.DecimalField(decimal_places=2, max_digits=3)
+    score_avg_sd = models.DecimalField(decimal_places=2, max_digits=3, blank=True, null=True)
     data_policy_habitatcomplexity = models.CharField(max_length=50)
 
     class Meta:

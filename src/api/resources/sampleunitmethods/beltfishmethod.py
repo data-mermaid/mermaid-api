@@ -389,8 +389,11 @@ class BeltFishMethodSESerializer(BaseSUViewAPISerializer):
                 "depth_avg",
                 "depth_sd",
                 "biomass_kgha_avg",
+                "biomass_kgha_sd",
                 "biomass_kgha_by_trophic_group_avg",
+                "biomass_kgha_by_trophic_group_sd",
                 "biomass_kgha_by_fish_family_avg",
+                "biomass_kgha_by_fish_family_sd",
             ]
         )
 
@@ -427,10 +430,15 @@ class BeltFishMethodSECSVSerializer(ReportSerializer):
         ReportField("management_rules", "Management rules"),
         ReportField("sample_unit_count", "Sample unit count"),
         ReportField("biomass_kgha_avg", "Biomass_kgha average"),
+        ReportField("biomass_kgha_sd", "Biomass_kgha standard deviation"),
         ReportField(
             "biomass_kgha_by_trophic_group_avg", "Biomass kgha by trophic group average"
         ),
+        ReportField(
+            "biomass_kgha_by_trophic_group_sd", "Biomass kgha by trophic group standard deviation"
+        ),
         ReportField("biomass_kgha_by_fish_family_avg", "Biomass kgha by family average"),
+        ReportField("biomass_kgha_by_fish_family_sd", "Biomass kgha by family standard deviation"),
         ReportField("site_notes", "Site notes"),
         ReportField("management_notes", "Management notes"),
     ]

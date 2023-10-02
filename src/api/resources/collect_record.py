@@ -69,8 +69,7 @@ class CollectRecordViewSet(BaseProjectApiViewSet):
     @action(
         detail=False,
         methods=["post"],
-        permission_classes=BaseProjectApiViewSet.permission_classes
-        + [CollectRecordOwner],
+        permission_classes=[Or(*cr_permissions)],
     )
     def validate(self, request, project_pk):
         output = dict()

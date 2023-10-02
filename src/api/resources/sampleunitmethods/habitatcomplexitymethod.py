@@ -353,6 +353,7 @@ class HabitatComplexityMethodSESerializer(BaseSUViewAPISerializer):
                 "depth_avg",
                 "depth_sd",
                 "score_avg_avg",
+                "score_avg_sd",
             ]
         )
 
@@ -389,6 +390,7 @@ class HabitatComplexityMethodSECSVSerializer(ReportSerializer):
         ReportField("management_rules", "Management rules"),
         ReportField("sample_unit_count", "Sample unit count"),
         ReportField("score_avg_avg", "Score average"),
+        ReportField("score_avg_sd", "Score standard deviation"),
         ReportField("site_notes", "Site notes"),
         ReportField("management_notes", "Management notes"),
     ]

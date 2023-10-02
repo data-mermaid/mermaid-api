@@ -271,6 +271,7 @@ class BenthicPQTMethodSESerializer(BaseSUViewAPISerializer):
                 "depth_avg",
                 "depth_sd",
                 "percent_cover_by_benthic_category_avg",
+                "percent_cover_by_benthic_category_sd",
             ]
         )
 
@@ -313,6 +314,10 @@ class BenthicPQTMethodSECSVSerializer(ReportSerializer):
         ReportField(
             "percent_cover_by_benthic_category_avg",
             "Percent cover by benthic category average",
+        ),
+        ReportField(
+            "percent_cover_by_benthic_category_sd",
+            "Percent cover by benthic category standard deviation",
         ),
         ReportField("site_notes", "Site notes"),
         ReportField("management_notes", "Management notes"),

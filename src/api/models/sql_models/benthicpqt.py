@@ -289,17 +289,20 @@ class BenthicPhotoQuadratTransectSESQLModel(BaseSQLModel):
         {_su_aggfields_sql},
         COUNT(benthicpqt_su.pseudosu_id) AS sample_unit_count,
         SUM(benthicpqt_su.num_points_nonother) AS num_points_nonother,
-        percent_cover_by_benthic_category_avg
+        percent_cover_by_benthic_category_avg,
+        percent_cover_by_benthic_category_sd
 
         FROM benthicpqt_su
 
         INNER JOIN (
             SELECT sample_event_id,
-            jsonb_object_agg(cat, ROUND(cat_percent::numeric, 2)) AS percent_cover_by_benthic_category_avg
+            jsonb_object_agg(cat, ROUND(cat_percent_avg :: numeric, 2)) AS percent_cover_by_benthic_category_avg,
+            jsonb_object_agg(cat, ROUND(cat_percent_sd :: numeric, 2)) AS percent_cover_by_benthic_category_sd
             FROM (
                 SELECT sample_event_id,
                 cpdata.key AS cat,
-                AVG(cpdata.value::float) AS cat_percent
+                AVG(cpdata.value :: float) AS cat_percent_avg,
+                STDDEV(cpdata.value :: float) AS cat_percent_sd
                 FROM benthicpqt_su,
                 jsonb_each_text(percent_cover_by_benthic_category) AS cpdata
                 GROUP BY sample_event_id, cpdata.key
@@ -311,7 +314,8 @@ class BenthicPhotoQuadratTransectSESQLModel(BaseSQLModel):
         GROUP BY
         {_se_fields},
         data_policy_benthicpqt,
-        percent_cover_by_benthic_category_avg
+        percent_cover_by_benthic_category_avg,
+        percent_cover_by_benthic_category_sd
     """
 
     sql_args = dict(
@@ -338,6 +342,7 @@ class BenthicPhotoQuadratTransectSESQLModel(BaseSQLModel):
         verbose_name="number of non-'Other' points for all observations in all transects for the sample event"
     )
     percent_cover_by_benthic_category_avg = models.JSONField(null=True, blank=True)
+    percent_cover_by_benthic_category_sd = models.JSONField(null=True, blank=True)
     data_policy_benthicpqt = models.CharField(max_length=50)
 
     class Meta:
