@@ -171,7 +171,14 @@ class BeltFishSUModel(BaseSUModel):
 class BeltFishSEModel(BaseSummaryModel):
     sample_unit_count = models.PositiveSmallIntegerField()
     depth_avg = models.DecimalField(
-        max_digits=4, decimal_places=2, verbose_name=_("depth (m)")
+        max_digits=4, decimal_places=2, verbose_name=_("depth mean (m)")
+    )
+    depth_sd = models.DecimalField(
+        max_digits=4,
+        decimal_places=2,
+        verbose_name=_("depth standard deviation (m)"),
+        blank=True,
+        null=True,
     )
     current_name = models.CharField(max_length=100, null=True, blank=True)
     tide_name = models.CharField(max_length=100, null=True, blank=True)
@@ -179,12 +186,21 @@ class BeltFishSEModel(BaseSummaryModel):
     biomass_kgha_avg = models.DecimalField(
         max_digits=8,
         decimal_places=2,
-        verbose_name=_("biomass (kg/ha)"),
+        verbose_name=_("biomass mean (kg/ha)"),
         null=True,
         blank=True,
     )
+    biomass_kgha_sd = models.DecimalField(
+        max_digits=8,
+        decimal_places=2,
+        verbose_name=_("biomass standard deviation (kg/ha)"),
+        blank=True,
+        null=True,
+    )
     biomass_kgha_by_trophic_group_avg = models.JSONField(null=True, blank=True)
+    biomass_kgha_by_trophic_group_sd = models.JSONField(null=True, blank=True)
     biomass_kgha_by_fish_family_avg = models.JSONField(null=True, blank=True)
+    biomass_kgha_by_fish_family_sd = models.JSONField(null=True, blank=True)
     data_policy_beltfish = models.CharField(max_length=50)
 
     class Meta:
@@ -246,12 +262,20 @@ class BenthicPITSUModel(BaseSUModel):
 class BenthicPITSEModel(BaseSummaryModel):
     sample_unit_count = models.PositiveSmallIntegerField()
     depth_avg = models.DecimalField(
-        max_digits=4, decimal_places=2, verbose_name=_("depth (m)")
+        max_digits=4, decimal_places=2, verbose_name=_("depth mean (m)")
+    )
+    depth_sd = models.DecimalField(
+        max_digits=4,
+        decimal_places=2,
+        verbose_name=_("depth standard deviation (m)"),
+        blank=True,
+        null=True,
     )
     current_name = models.CharField(max_length=100, null=True, blank=True)
     tide_name = models.CharField(max_length=100, null=True, blank=True)
     visibility_name = models.CharField(max_length=100, null=True, blank=True)
     percent_cover_by_benthic_category_avg = models.JSONField(null=True, blank=True)
+    percent_cover_by_benthic_category_sd = models.JSONField(null=True, blank=True)
     data_policy_benthicpit = models.CharField(max_length=50)
 
     class Meta:
@@ -298,12 +322,20 @@ class BenthicLITSUModel(BaseSUModel):
 class BenthicLITSEModel(BaseSummaryModel):
     sample_unit_count = models.PositiveSmallIntegerField()
     depth_avg = models.DecimalField(
-        max_digits=4, decimal_places=2, verbose_name=_("depth (m)")
+        max_digits=4, decimal_places=2, verbose_name=_("depth mean (m)")
+    )
+    depth_sd = models.DecimalField(
+        max_digits=4,
+        decimal_places=2,
+        verbose_name=_("depth standard deviation (m)"),
+        blank=True,
+        null=True,
     )
     current_name = models.CharField(max_length=100, null=True, blank=True)
     tide_name = models.CharField(max_length=100, null=True, blank=True)
     visibility_name = models.CharField(max_length=100, null=True, blank=True)
     percent_cover_by_benthic_category_avg = models.JSONField(null=True, blank=True)
+    percent_cover_by_benthic_category_sd = models.JSONField(null=True, blank=True)
     data_policy_benthiclit = models.CharField(max_length=50)
 
     class Meta:
@@ -355,7 +387,14 @@ class BenthicPhotoQuadratTransectSUModel(BaseSUModel):
 class BenthicPhotoQuadratTransectSEModel(BaseSummaryModel):
     sample_unit_count = models.PositiveSmallIntegerField()
     depth_avg = models.DecimalField(
-        max_digits=4, decimal_places=2, verbose_name=_("depth (m)")
+        max_digits=4, decimal_places=2, verbose_name=_("depth mean (m)")
+    )
+    depth_sd = models.DecimalField(
+        max_digits=4,
+        decimal_places=2,
+        verbose_name=_("depth standard deviation (m)"),
+        blank=True,
+        null=True,
     )
     current_name = models.CharField(max_length=100, null=True, blank=True)
     tide_name = models.CharField(max_length=100, null=True, blank=True)
@@ -364,6 +403,7 @@ class BenthicPhotoQuadratTransectSEModel(BaseSummaryModel):
         verbose_name="number of non-'Other' points for all observations in all transects for the sample event"
     )
     percent_cover_by_benthic_category_avg = models.JSONField(null=True, blank=True)
+    percent_cover_by_benthic_category_sd = models.JSONField(null=True, blank=True)
     data_policy_benthicpqt = models.CharField(max_length=50)
 
     class Meta:
@@ -441,21 +481,36 @@ class BleachingQCSUModel(BaseSUModel):
 class BleachingQCSEModel(BaseSummaryModel):
     sample_unit_count = models.PositiveSmallIntegerField()
     depth_avg = models.DecimalField(
-        max_digits=4, decimal_places=2, verbose_name=_("depth (m)")
+        max_digits=4, decimal_places=2, verbose_name=_("depth mean (m)")
+    )
+    depth_sd = models.DecimalField(
+        max_digits=4,
+        decimal_places=2,
+        verbose_name=_("depth standard deviation (m)"),
+        blank=True,
+        null=True,
     )
     current_name = models.CharField(max_length=100, null=True, blank=True)
     tide_name = models.CharField(max_length=100, null=True, blank=True)
     visibility_name = models.CharField(max_length=100, null=True, blank=True)
     quadrat_size_avg = models.DecimalField(decimal_places=2, max_digits=6)
     count_total_avg = models.DecimalField(max_digits=5, decimal_places=1)
+    count_total_sd = models.DecimalField(max_digits=5, decimal_places=1, blank=True, null=True)
     count_genera_avg = models.DecimalField(max_digits=4, decimal_places=1)
+    count_genera_sd = models.DecimalField(max_digits=4, decimal_places=1, blank=True, null=True)
     percent_normal_avg = models.DecimalField(max_digits=4, decimal_places=1)
+    percent_normal_sd = models.DecimalField(max_digits=4, decimal_places=1, blank=True, null=True)
     percent_pale_avg = models.DecimalField(max_digits=4, decimal_places=1)
+    percent_pale_sd = models.DecimalField(max_digits=4, decimal_places=1, blank=True, null=True)
     percent_bleached_avg = models.DecimalField(max_digits=4, decimal_places=1)
+    percent_bleached_sd = models.DecimalField(max_digits=4, decimal_places=1, blank=True, null=True)
     quadrat_count_avg = models.DecimalField(max_digits=4, decimal_places=1, null=True, blank=True)
     percent_hard_avg_avg = models.DecimalField(max_digits=4, decimal_places=1, null=True, blank=True)
+    percent_hard_avg_sd = models.DecimalField(max_digits=4, decimal_places=1, null=True, blank=True)
     percent_soft_avg_avg = models.DecimalField(max_digits=4, decimal_places=1, null=True, blank=True)
+    percent_soft_avg_sd = models.DecimalField(max_digits=4, decimal_places=1, null=True, blank=True)
     percent_algae_avg_avg = models.DecimalField(max_digits=4, decimal_places=1, null=True, blank=True)
+    percent_algae_avg_sd = models.DecimalField(max_digits=4, decimal_places=1, null=True, blank=True)
     data_policy_bleachingqc = models.CharField(max_length=50)
 
     class Meta:
@@ -502,12 +557,20 @@ class HabitatComplexitySUModel(BaseSUModel):
 class HabitatComplexitySEModel(BaseSummaryModel):
     sample_unit_count = models.PositiveSmallIntegerField()
     depth_avg = models.DecimalField(
-        max_digits=4, decimal_places=2, verbose_name=_("depth (m)")
+        max_digits=4, decimal_places=2, verbose_name=_("depth mean (m)")
+    )
+    depth_sd = models.DecimalField(
+        max_digits=4,
+        decimal_places=2,
+        verbose_name=_("depth standard deviation (m)"),
+        blank=True,
+        null=True,
     )
     current_name = models.CharField(max_length=100, null=True, blank=True)
     tide_name = models.CharField(max_length=100, null=True, blank=True)
     visibility_name = models.CharField(max_length=100, null=True, blank=True)
     score_avg_avg = models.DecimalField(decimal_places=2, max_digits=3)
+    score_avg_sd = models.DecimalField(decimal_places=2, max_digits=3, blank=True, null=True)
     data_policy_habitatcomplexity = models.CharField(max_length=50)
 
     class Meta:

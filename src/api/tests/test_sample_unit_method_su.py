@@ -81,15 +81,18 @@ def test_benthicpit_su_view(
     )
     count, data, response = _call(client, token1, url)
 
-    assert count == 2
-    assert data[1]["site_name"] == site2.name
+    assert count == 3
+    assert data[2]["site_name"] == site2.name
 
     assert data[0]["percent_cover_by_benthic_category"]["Macroalgae"] == 20.0
     assert data[0]["percent_cover_by_benthic_category"]["Hard coral"] == 60.0
     assert data[0]["percent_cover_by_benthic_category"]["Rock"] == 20.0
 
-    assert data[1]["percent_cover_by_benthic_category"]["Hard coral"] == 60.0
-    assert data[1]["percent_cover_by_benthic_category"]["Rock"] == 40.0
+    assert data[1]["percent_cover_by_benthic_category"]["Macroalgae"] == 60.0
+    assert data[1]["percent_cover_by_benthic_category"]["Hard coral"] == 40.0
+
+    assert data[2]["percent_cover_by_benthic_category"]["Hard coral"] == 60.0
+    assert data[2]["percent_cover_by_benthic_category"]["Rock"] == 40.0
 
 
 def test_benthiclit_su_view(
