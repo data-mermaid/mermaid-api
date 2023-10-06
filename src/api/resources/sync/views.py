@@ -366,7 +366,13 @@ def vw_push(request):
         raise ValidationError(f"Invalid source types: {invalid_types}")
 
     response_data = {}
-    for source_type, records in request_data.items():
+    source_types = list(request_data.keys())
+    if PROJECTS_SOURCE_TYPE in source_types:
+        source_types.remove(PROJECTS_SOURCE_TYPE)
+        source_types.insert(0, PROJECTS_SOURCE_TYPE)
+
+    for source_type in source_types:
+        records = request_data[source_type]
         result = _update_source_records(source_type, records, request, force=force)
         response_data[source_type] = result
 
