@@ -45,18 +45,9 @@ def test_fishbelt_protocol_validation_warn(
         request=profile1_request,
     )
 
-    assert overall_status == ERROR
+    assert overall_status == WARN
     invalid_collect_record_warn.validations = runner.to_dict()
     invalid_collect_record_warn.save()
-    assert (
-        _get_result_status(
-            invalid_collect_record_warn.validations["results"]["data"][
-                "fishbelt_transect"
-            ]["depth"],
-            "depth_validator",
-        )
-        == ERROR
-    )
     assert (
         _get_result_status(
             invalid_collect_record_warn.validations["results"]["data"][
@@ -163,6 +154,14 @@ def test_fishbelt_protocol_validation_error(
     assert overall_status == ERROR
 
     results = runner.to_dict()["results"]["data"]
+    assert (
+        _get_result_status(
+            results["fishbelt_transect"]["depth"],
+            "depth_validator",
+        )
+        == ERROR
+    )
+
     se_results = results["sample_event"]
     assert (
         _get_result_status(se_results["sample_date"], "sample_date_validator") == ERROR
@@ -194,22 +193,26 @@ def test_bleachingqc_protocol_validation_ok(
     assert overall_status == OK
 
 
-def test_benthiclit_protocol_validation_ok(valid_benthic_lit_collect_record, profile1_request):
+def test_benthiclit_protocol_validation_ok(
+    valid_benthic_lit_collect_record, profile1_request
+):
     runner = ValidationRunner(serializer=CollectRecordSerializer)
     overall_status = runner.validate(
         valid_benthic_lit_collect_record,
         benthic_lit.benthic_lit_validations,
-        request=profile1_request
+        request=profile1_request,
     )
     assert overall_status == OK
 
 
-def test_benthicpit_protocol_validation_ok(valid_benthic_pit_collect_record, profile1_request):
+def test_benthicpit_protocol_validation_ok(
+    valid_benthic_pit_collect_record, profile1_request
+):
     runner = ValidationRunner(serializer=CollectRecordSerializer)
     overall_status = runner.validate(
         valid_benthic_pit_collect_record,
         benthic_pit.benthic_pit_validations,
-        request=profile1_request
+        request=profile1_request,
     )
     assert overall_status == OK
 
@@ -230,8 +233,12 @@ def test_benthicpqt_protocol_validation_warn(
     valid_benthic_pq_transect_collect_record, profile1_request
 ):
 
-    valid_benthic_pq_transect_collect_record.data["quadrat_transect"]["num_quadrats"] = 2
-    valid_benthic_pq_transect_collect_record.data["quadrat_transect"]["num_points_per_quadrat"] = 1
+    valid_benthic_pq_transect_collect_record.data["quadrat_transect"][
+        "num_quadrats"
+    ] = 2
+    valid_benthic_pq_transect_collect_record.data["quadrat_transect"][
+        "num_points_per_quadrat"
+    ] = 1
     runner = ValidationRunner(serializer=CollectRecordSerializer)
     overall_status = runner.validate(
         valid_benthic_pq_transect_collect_record,
@@ -250,19 +257,17 @@ def test_benthicpqt_protocol_validation_warn(
         == WARN
     )
     assert (
-        _get_result_status(
-            results["$record"],
-            "points_per_quadrat_validator"
-        )
-        == WARN
+        _get_result_status(results["$record"], "points_per_quadrat_validator") == WARN
     )
 
 
-def test_habcomp_protocol_validation_ok(valid_habitat_complexity_collect_record, profile1_request):
+def test_habcomp_protocol_validation_ok(
+    valid_habitat_complexity_collect_record, profile1_request
+):
     runner = ValidationRunner(serializer=CollectRecordSerializer)
     overall_status = runner.validate(
         valid_habitat_complexity_collect_record,
         habitat_complexity.habcomp_validations,
-        request=profile1_request
+        request=profile1_request,
     )
     assert overall_status == OK

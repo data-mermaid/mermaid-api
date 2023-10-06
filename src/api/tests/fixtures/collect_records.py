@@ -562,7 +562,6 @@ def invalid_collect_record_warn(
 
     data_warn["obs_belt_fishes"] = observations
     data_warn["fishbelt_transect"]["len_surveyed"] = 101
-    data_warn["fishbelt_transect"]["depth"] = 50.0
     data_warn["fishbelt_transect"]["sample_time"] = "5:00"
 
     return CollectRecord.objects.create(
@@ -615,6 +614,7 @@ def invalid_collect_record_error(
     project1, profile1, valid_collect_record, sample_event2, fish_species1, fish_species2
 ):
     data_error = valid_collect_record.data
+    data_error["fishbelt_transect"]["depth"] = 50.0
     data_error["observers"] = None
     data_error["sample_event"]["sample_date"] = (
         '2021-9-<font style="vertical-align: inherit;">'
