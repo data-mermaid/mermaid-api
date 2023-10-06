@@ -35,6 +35,22 @@ from ..resources.sync.views import (
     FISH_FAMILIES_SOURCE_TYPE,
     BENTHIC_ATTRIBUTES_SOURCE_TYPE,
 )
+from ..utils.related import get_related_project
+
+
+# ***************************************************************
+# NOTE: Database triggers exist to populate revisions 
+# if the following tables are inserted, deleted or updated:
+#     * fish_species
+#     * management
+#     * api_collectrecord
+#     * benthic_attribute
+#     * fish_genus
+#     * fish_family
+#     * site
+#     * project_profile
+#     * project
+# ***************************************************************
 
 
 def _create_project_profile_revisions(query_kwargs):
@@ -107,8 +123,9 @@ def deleted_collect_record_revisions(sender, instance, *args, **kwargs):
 @receiver(post_delete, sender=TransectMethod)
 @receiver(post_save, sender=TransectMethod)
 def update_project_updated_on(sender, instance, *args, **kwargs):
-    if instance.project is not None:
-        instance.project.save()
+    project = get_related_project(instance)
+    if project is not None:
+        project.save()
 
 
 @receiver(post_save, sender=AuthUser)
