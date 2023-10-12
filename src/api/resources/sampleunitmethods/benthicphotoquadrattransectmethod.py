@@ -117,7 +117,10 @@ class BenthicPQTMethodObsGeoSerializer(BaseViewAPIGeoSerializer):
 class ObsBenthicPQTCSVSerializer(ReportSerializer):
     fields = [
         ReportField("project_name", "Project name"),
+        ReportField("project_admins", "Project admins", to_names),
         ReportField("country_name", "Country"),
+        ReportField("contact_link", "Project contact link"),
+        ReportField("tags", "Project organizations", to_names),
         ReportField("site_name", "Site"),
         ReportField("latitude", "Latitude"),
         ReportField("longitude", "Longitude"),
@@ -159,20 +162,18 @@ class ObsBenthicPQTCSVSerializer(ReportSerializer):
         ReportField("site_notes", "Site notes"),
         ReportField("management_notes", "Management notes"),
         ReportField("sample_unit_notes", "Sample unit notes"),
+        ReportField("project_notes", "Project notes"),
+        ReportField("data_policy_benthicpqt", "Benthic PQT data policy"),
     ]
 
     additional_fields = [
         ReportField("id"),
         ReportField("site_id"),
         ReportField("project_id"),
-        ReportField("project_notes"),
-        ReportField("contact_link"),
-        ReportField("tags"),
         ReportField("country_id"),
         ReportField("management_id"),
         ReportField("sample_event_id"),
         ReportField("sample_unit_id"),
-        ReportField("data_policy_benthicpqt"),
     ]
 
 
@@ -203,7 +204,10 @@ class BenthicPQTMethodSUGeoSerializer(BaseViewAPIGeoSerializer):
 class BenthicPQTMethodSUCSVSerializer(ReportSerializer):
     fields = [
         ReportField("project_name", "Project name"),
+        ReportField("project_admins", "Project admins", to_names),
         ReportField("country_name", "Country"),
+        ReportField("contact_link", "Project contact link"),
+        ReportField("tags", "Project organizations", to_names),
         ReportField("site_name", "Site"),
         ReportField("latitude", "Latitude"),
         ReportField("longitude", "Longitude"),
@@ -241,20 +245,18 @@ class BenthicPQTMethodSUCSVSerializer(ReportSerializer):
         ReportField("site_notes", "Site notes"),
         ReportField("management_notes", "Management notes"),
         ReportField("sample_unit_notes", "Sample unit notes"),
+        ReportField("project_notes", "Project notes"),
+        ReportField("data_policy_benthicpqt", "Benthic PQT data policy"),
     ]
 
     additional_fields = [
         ReportField("id"),
         ReportField("site_id"),
         ReportField("project_id"),
-        ReportField("project_notes"),
-        ReportField("contact_link"),
-        ReportField("tags"),
         ReportField("country_id"),
         ReportField("management_id"),
         ReportField("sample_event_id"),
         ReportField("sample_unit_ids"),
-        ReportField("data_policy_benthicpqt"),
     ]
 
 
@@ -284,7 +286,10 @@ class BenthicPQTMethodSEGeoSerializer(BaseViewAPIGeoSerializer):
 class BenthicPQTMethodSECSVSerializer(ReportSerializer):
     fields = [
         ReportField("project_name", "Project name"),
+        ReportField("project_admins", "Project admins", to_names),
         ReportField("country_name", "Country"),
+        ReportField("contact_link", "Project contact link"),
+        ReportField("tags", "Project organizations", to_names),
         ReportField("site_name", "Site"),
         ReportField("latitude", "Latitude"),
         ReportField("longitude", "Longitude"),
@@ -321,19 +326,17 @@ class BenthicPQTMethodSECSVSerializer(ReportSerializer):
         ),
         ReportField("site_notes", "Site notes"),
         ReportField("management_notes", "Management notes"),
+        ReportField("project_notes", "Project notes"),
+        ReportField("data_policy_benthicpqt", "Benthic PQT data policy"),
     ]
 
     additional_fields = [
         ReportField("id"),
         ReportField("site_id"),
         ReportField("project_id"),
-        ReportField("project_notes"),
-        ReportField("contact_link"),
-        ReportField("tags"),
         ReportField("country_id"),
         ReportField("management_id"),
         ReportField("sample_event_id"),
-        ReportField("data_policy_benthicpqt"),
     ]
 
 

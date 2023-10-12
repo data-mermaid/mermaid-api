@@ -213,7 +213,10 @@ class BenthicLITMethodObsGeoSerializer(BaseViewAPIGeoSerializer):
 class ObsBenthicLITCSVSerializer(ReportSerializer):
     fields = [
         ReportField("project_name", "Project name"),
+        ReportField("project_admins", "Project admins", to_names),
         ReportField("country_name", "Country"),
+        ReportField("contact_link", "Project contact link"),
+        ReportField("tags", "Project organizations", to_names),
         ReportField("site_name", "Site"),
         ReportField("location", "Latitude", to_latitude, alias="latitude"),
         ReportField("location", "Longitude", to_longitude, alias="longitude"),
@@ -249,20 +252,18 @@ class ObsBenthicLITCSVSerializer(ReportSerializer):
         ReportField("site_notes", "Site notes"),
         ReportField("management_notes", "Management notes"),
         ReportField("sample_unit_notes", "Sample unit notes"),
+        ReportField("project_notes", "Project notes"),
+        ReportField("data_policy_benthiclit", "Benthic LIT data policy"),
     ]
 
     additional_fields = [
         ReportField("id"),
         ReportField("site_id"),
         ReportField("project_id"),
-        ReportField("project_notes"),
-        ReportField("contact_link"),
-        ReportField("tags"),
         ReportField("country_id"),
         ReportField("management_id"),
         ReportField("sample_event_id"),
         ReportField("sample_unit_id"),
-        ReportField("data_policy_benthiclit"),
     ]
 
 
@@ -294,7 +295,10 @@ class BenthicLITMethodSUGeoSerializer(BaseViewAPIGeoSerializer):
 class BenthicLITMethodSUCSVSerializer(ReportSerializer):
     fields = [
         ReportField("project_name", "Project name"),
+        ReportField("project_admins", "Project admins", to_names),
         ReportField("country_name", "Country"),
+        ReportField("contact_link", "Project contact link"),
+        ReportField("tags", "Project organizations", to_names),
         ReportField("site_name", "Site"),
         ReportField("location", "Latitude", to_latitude, alias="latitude"),
         ReportField("location", "Longitude", to_longitude, alias="longitude"),
@@ -329,20 +333,18 @@ class BenthicLITMethodSUCSVSerializer(ReportSerializer):
         ReportField("site_notes", "Site notes"),
         ReportField("management_notes", "Management notes"),
         ReportField("sample_unit_notes", "Sample unit notes"),
+        ReportField("project_notes", "Project notes"),
+        ReportField("data_policy_benthiclit", "Benthic LIT data policy"),
     ]
 
     additional_fields = [
         ReportField("id"),
         ReportField("site_id"),
         ReportField("project_id"),
-        ReportField("project_notes"),
-        ReportField("contact_link"),
-        ReportField("tags"),
         ReportField("country_id"),
         ReportField("management_id"),
         ReportField("sample_event_id"),
         ReportField("sample_unit_ids"),
-        ReportField("data_policy_benthiclit"),
     ]
 
 
@@ -372,7 +374,10 @@ class BenthicLITMethodSEGeoSerializer(BaseViewAPIGeoSerializer):
 class BenthicLITMethodSECSVSerializer(ReportSerializer):
     fields = [
         ReportField("project_name", "Project name"),
+        ReportField("project_admins", "Project admins", to_names),
         ReportField("country_name", "Country"),
+        ReportField("contact_link", "Project contact link"),
+        ReportField("tags", "Project organizations", to_names),
         ReportField("site_name", "Site"),
         ReportField("location", "Latitude", to_latitude, alias="latitude"),
         ReportField("location", "Longitude", to_longitude, alias="longitude"),
@@ -405,19 +410,17 @@ class BenthicLITMethodSECSVSerializer(ReportSerializer):
         ),
         ReportField("site_notes", "Site notes"),
         ReportField("management_notes", "Management notes"),
+        ReportField("project_notes", "Project notes"),
+        ReportField("data_policy_benthiclit", "Benthic LIT data policy"),
     ]
 
     additional_fields = [
         ReportField("id"),
         ReportField("site_id"),
         ReportField("project_id"),
-        ReportField("project_notes"),
-        ReportField("contact_link"),
-        ReportField("tags"),
         ReportField("country_id"),
         ReportField("management_id"),
         ReportField("sample_event_id"),
-        ReportField("data_policy_benthiclit"),
     ]
 
 
