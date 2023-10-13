@@ -90,7 +90,8 @@ def _append_aca_covariates(site_id_index, content, view_serializer):
         site_id = row[site_id_index]
         covariates = covariate_lookup.get(site_id)
         row = row[0:-1 * num_additional_fields]
-        row.extend(covariates)
+        if covariates:
+            row.extend(covariates)
         data.append(row)
     
     return data
@@ -109,7 +110,7 @@ def get_viewset_csv_content(view_cls, project_pk, request):
     if isinstance(content, list) is False or len(content) < 2 or "site_id" not in content[0]:
         return content
 
-    site_id_index =  content[0].index("site_id")
+    site_id_index = content[0].index("site_id")
     if site_id_index is None:
         return content
     
