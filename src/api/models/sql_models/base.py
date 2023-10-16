@@ -7,7 +7,6 @@ from api.models import Project
 
 
 project_where = """project.id = '%(project_id)s'::uuid"""
-sample_event_where = """se.id::uuid = ANY(ARRAY[%(sample_event_ids)s]::uuid[])"""
 
 sample_event_sql_template = f"""
     WITH tags AS MATERIALIZED (
@@ -45,33 +44,6 @@ sample_event_sql_template = f"""
             management.project_id = '%(project_id)s' :: uuid
         GROUP BY
             mps.management_id
-    ),
-    site_covariates AS MATERIALIZED (
-        SELECT
-            cov.site_id,
-            jsonb_agg(
-                jsonb_build_object(
-                    'id',
-                    cov.id,
-                    'name',
-                    cov.name,
-                    'value',
-                    cov.value,
-                    'datestamp',
-                    cov.datestamp,
-                    'requested_datestamp',
-                    cov.requested_datestamp
-                )
-            ) AS covariates
-        FROM
-            api_covariate as cov
-        INNER JOIN
-            site
-        ON (site.id = cov.site_id)
-        WHERE
-            site.project_id = '%(project_id)s' :: uuid
-        GROUP BY
-            cov.site_id
     )
     SELECT
         project.id AS project_id,
@@ -172,8 +144,7 @@ sample_event_sql_template = f"""
             WHEN project.data_policy_benthicpqt = 50 THEN 'public summary' :: text
             WHEN project.data_policy_benthicpqt = 100 THEN 'public' :: text
             ELSE '' :: text
-        END AS data_policy_benthicpqt,
-        site_covariates.covariates::text
+        END AS data_policy_benthicpqt
     FROM
         sample_event se
         JOIN site ON se.site_id = site.id
@@ -186,7 +157,6 @@ sample_event_sql_template = f"""
         JOIN management m ON se.management_id = m.id
         LEFT JOIN management_compliance mc ON m.compliance_id = mc.id
         LEFT JOIN parties ON m.id = parties.management_id
-        LEFT JOIN site_covariates ON site.id = site_covariates.site_id
     WHERE
         <<__sql_table_args__>>
 """
@@ -202,7 +172,6 @@ class BaseSQLModel(models.Model):
         "tags",
         "site_id",
         "site_name",
-        "covariates",
         "location",
         "longitude",
         "latitude",
@@ -229,6 +198,7 @@ class BaseSQLModel(models.Model):
     # SU aggregation SQL common to all SEs
     su_aggfields_sql = """
         ROUND(AVG("depth"), 2) as depth_avg,
+        ROUND(STDDEV("depth"), 2) as depth_sd,
         string_agg(DISTINCT current_name, ', ' ORDER BY current_name) AS current_name,
         string_agg(DISTINCT tide_name, ', ' ORDER BY tide_name) AS tide_name,
         string_agg(DISTINCT visibility_name, ', ' ORDER BY visibility_name) AS visibility_name
@@ -273,7 +243,6 @@ class BaseSQLModel(models.Model):
     sample_date = models.DateField()
     sample_event_id = models.UUIDField()
     sample_event_notes = models.TextField(blank=True)
-    covariates = models.JSONField(null=True, blank=True)
 
     class Meta:
         abstract = True

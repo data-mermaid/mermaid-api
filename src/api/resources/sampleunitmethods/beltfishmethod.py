@@ -7,8 +7,11 @@ from rest_framework.response import Response
 
 from ...models import (
     BeltFishObsModel,
+    BeltFishObsSQLModel,
     BeltFishSEModel,
+    BeltFishSESQLModel,
     BeltFishSUModel,
+    BeltFishSUSQLModel,
     BeltFish,
     ObsBeltFish,
 )
@@ -38,7 +41,6 @@ from ..sample_event import SampleEventSerializer
 from . import (
     BaseProjectMethodView,
     clean_sample_event_models,
-    covariate_report_fields,
     save_model,
     save_one_to_many,
 )
@@ -271,7 +273,7 @@ class ObsBeltFishCSVSerializer(ReportSerializer):
         ReportField("site_notes", "Site notes"),
         ReportField("management_notes", "Management notes"),
         ReportField("sample_unit_notes", "Sample unit notes"),
-    ] + covariate_report_fields
+    ]
 
     additional_fields = [
         ReportField("id"),
@@ -357,7 +359,7 @@ class BeltFishMethodSUCSVSerializer(ReportSerializer):
         ReportField("site_notes", "Site notes"),
         ReportField("management_notes", "Management notes"),
         ReportField("sample_unit_notes", "Sample unit notes"),
-    ] + covariate_report_fields
+    ]
 
     additional_fields = [
         ReportField("id"),
@@ -385,9 +387,13 @@ class BeltFishMethodSESerializer(BaseSUViewAPISerializer):
                 "data_policy_beltfish",
                 "sample_unit_count",
                 "depth_avg",
+                "depth_sd",
                 "biomass_kgha_avg",
+                "biomass_kgha_sd",
                 "biomass_kgha_by_trophic_group_avg",
+                "biomass_kgha_by_trophic_group_sd",
                 "biomass_kgha_by_fish_family_avg",
+                "biomass_kgha_by_fish_family_sd",
             ]
         )
 
@@ -414,6 +420,7 @@ class BeltFishMethodSECSVSerializer(ReportSerializer):
         ReportField("visibility_name", "Visibility"),
         ReportField("current_name", "Current"),
         ReportField("depth_avg", "Depth average"),
+        ReportField("depth_sd", "Depth standard deviation"),
         ReportField("management_name", "Management name"),
         ReportField("management_name_secondary", "Management secondary name"),
         ReportField("management_est_year", "Management year established"),
@@ -423,13 +430,18 @@ class BeltFishMethodSECSVSerializer(ReportSerializer):
         ReportField("management_rules", "Management rules"),
         ReportField("sample_unit_count", "Sample unit count"),
         ReportField("biomass_kgha_avg", "Biomass_kgha average"),
+        ReportField("biomass_kgha_sd", "Biomass_kgha standard deviation"),
         ReportField(
             "biomass_kgha_by_trophic_group_avg", "Biomass kgha by trophic group average"
         ),
+        ReportField(
+            "biomass_kgha_by_trophic_group_sd", "Biomass kgha by trophic group standard deviation"
+        ),
         ReportField("biomass_kgha_by_fish_family_avg", "Biomass kgha by family average"),
+        ReportField("biomass_kgha_by_fish_family_sd", "Biomass kgha by family standard deviation"),
         ReportField("site_notes", "Site notes"),
         ReportField("management_notes", "Management notes"),
-    ] + covariate_report_fields
+    ]
 
     additional_fields = [
         ReportField("id"),
@@ -479,6 +491,11 @@ class BeltFishMethodObsFilterSet(BaseSUObsFilterSet):
         ]
 
 
+class BeltFishMethodObsSQLFilterSet(BeltFishMethodObsFilterSet):
+    class Meta(BeltFishMethodObsFilterSet.Meta):
+        model = BeltFishObsSQLModel
+
+
 class BeltFishMethodSUFilterSet(BaseSUObsFilterSet):
     transect_len_surveyed = RangeFilter()
     reef_slope = BaseInFilter(method="char_lookup")
@@ -495,6 +512,11 @@ class BeltFishMethodSUFilterSet(BaseSUObsFilterSet):
         ]
 
 
+class BeltFishMethodSUSQLFilterSet(BeltFishMethodSUFilterSet):
+    class Meta(BeltFishMethodSUFilterSet.Meta):
+        model = BeltFishSUSQLModel
+
+
 class BeltFishMethodSEFilterSet(BaseSEFilterSet):
     biomass_kgha_avg = RangeFilter()
     sample_unit_count = RangeFilter()
@@ -509,9 +531,15 @@ class BeltFishMethodSEFilterSet(BaseSEFilterSet):
         ]
 
 
+class BeltFishMethodSESQLFilterSet(BeltFishMethodSEFilterSet):
+    class Meta(BeltFishMethodSEFilterSet.Meta):
+        model = BeltFishSESQLModel
+
+
 class BeltFishProjectMethodObsView(BaseProjectMethodView):
     drf_label = "beltfish-obs"
     project_policy = "data_policy_beltfish"
+    model = BeltFishObsModel
     serializer_class = BeltFishMethodObsSerializer
     serializer_class_geojson = BeltFishMethodObsGeoSerializer
     serializer_class_csv = ObsBeltFishCSVSerializer
@@ -527,10 +555,10 @@ class BeltFishProjectMethodObsView(BaseProjectMethodView):
         "size",
     )
 
-    model = BeltFishObsModel
-
     def get_queryset(self):
         qs = super().get_queryset()
+        # Important: BeltFishObsSQLModel.sql will return a single 'dummy' observation for a FB
+        # transect with no observations, necessary for SU/SE views, but inappropriate for obs views.
         return qs.filter(
             Q(size__isnull=False)
             | Q(count__isnull=False)
@@ -541,11 +569,11 @@ class BeltFishProjectMethodObsView(BaseProjectMethodView):
 class BeltFishProjectMethodSUView(BaseProjectMethodView):
     drf_label = "beltfish-su"
     project_policy = "data_policy_beltfish"
+    model = BeltFishSUModel
     serializer_class = BeltFishMethodSUSerializer
     serializer_class_geojson = BeltFishMethodSUGeoSerializer
     serializer_class_csv = BeltFishMethodSUCSVSerializer
     filterset_class = BeltFishMethodSUFilterSet
-    model = BeltFishSUModel
     order_by = ("site_name", "sample_date", "transect_number")
 
 
@@ -555,9 +583,9 @@ class BeltFishProjectMethodSEView(BaseProjectMethodView):
     permission_classes = [
         Or(ProjectDataReadOnlyPermission, ProjectPublicSummaryPermission)
     ]
+    model = BeltFishSEModel
     serializer_class = BeltFishMethodSESerializer
     serializer_class_geojson = BeltFishMethodSEGeoSerializer
     serializer_class_csv = BeltFishMethodSECSVSerializer
     filterset_class = BeltFishMethodSEFilterSet
-    model = BeltFishSEModel
     order_by = ("site_name", "sample_date")

@@ -66,6 +66,7 @@ INSTALLED_APPS = [
 MIDDLEWARE = [
     'api.middleware.HealthEndpointMiddleware',
     'django.middleware.security.SecurityMiddleware',
+    'django.middleware.gzip.GZipMiddleware',
     "whitenoise.middleware.WhiteNoiseMiddleware",
     'corsheaders.middleware.CorsMiddleware',
     'django.contrib.sessions.middleware.SessionMiddleware',
@@ -83,7 +84,7 @@ MIDDLEWARE = [
 DEBUG = False
 TESTING = False
 DEBUG_LEVEL = "ERROR"
-CONN_MAX_AGE = None
+CONN_MAX_AGE = 0
 CORS_ALLOW_ALL_ORIGINS = True
 CORS_ALLOW_METHODS = list(default_methods) + ["HEAD"]
 CORS_EXPOSE_HEADERS = ["HTTP_API_VERSION"]

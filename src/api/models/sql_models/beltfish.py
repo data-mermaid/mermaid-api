@@ -7,7 +7,6 @@ from .base import (
     BaseSUSQLModel,
     project_where,
     sample_event_sql_template,
-    sample_event_where
 )
 
 
@@ -68,7 +67,7 @@ class BeltFishObsSQLModel(BaseSUSQLModel):
             JOIN transect_belt_fish su ON tt.transect_id = su.id
             JOIN se ON su.sample_event_id = se.sample_event_id
             JOIN pseudosu_su ON (su.id = pseudosu_su.sample_unit_id)
-            JOIN vw_fish_attributes f ON o.fish_attribute_id = f.id
+            LEFT JOIN vw_fish_attributes f ON o.fish_attribute_id = f.id
             JOIN api_belttransectwidth w ON su.width_id = w.id
             JOIN api_belttransectwidthcondition wc ON (
                 w.id = wc.belttransectwidth_id
@@ -111,7 +110,6 @@ class BeltFishObsSQLModel(BaseSUSQLModel):
 
     sql_args = dict(
         project_id=SQLTableArg(sql=project_where, required=True),
-        sample_event_ids=SQLTableArg(sql=sample_event_where, required=False),
     )
 
     objects = SQLTableManager()
@@ -199,7 +197,7 @@ class BeltFishSUSQLModel(BaseSUSQLModel):
     # even if some SUs don't have that TG
     sql = f"""
         WITH beltfish_obs AS (
-            SELECT * FROM summary_belt_fish_obs WHERE project_id = '%(project_id)s'::uuid
+            {BeltFishObsSQLModel.sql}
         ),
         
 		beltfish_su_tg_all AS MATERIALIZED (SELECT
@@ -314,8 +312,8 @@ class BeltFishSUSQLModel(BaseSUSQLModel):
         FROM (
             SELECT pseudosu_id,
             jsonb_agg(DISTINCT sample_unit_id) AS sample_unit_ids,
-            SUM(beltfish_obs.count) AS total_abundance,
-            SUM(beltfish_obs.biomass_kgha) AS biomass_kgha,
+            COALESCE(SUM(beltfish_obs.count), 0) AS total_abundance,
+            COALESCE(SUM(beltfish_obs.biomass_kgha), 0) AS biomass_kgha,
             {_su_fields_qualified},
             {_su_aggfields_sql},
             string_agg(DISTINCT reef_slope::text, ', '::text ORDER BY (reef_slope::text)) AS reef_slope,
@@ -338,7 +336,6 @@ class BeltFishSUSQLModel(BaseSUSQLModel):
 
     sql_args = dict(
         project_id=SQLTableArg(sql=project_where, required=True),
-        sample_event_ids=SQLTableArg(sql=sample_event_where, required=False),
     )
 
     objects = SQLTableManager()
@@ -387,7 +384,7 @@ class BeltFishSESQLModel(BaseSQLModel):
 
     sql = f"""
         WITH beltfish_su AS (
-            SELECT * FROM summary_belt_fish_su WHERE project_id = '%(project_id)s'::uuid
+            {BeltFishSUSQLModel.sql}
         )
         -- For each SE, summarize biomass by 1) avg
         -- of transects and 2) avg of transects' trophic groups
@@ -397,8 +394,11 @@ class BeltFishSESQLModel(BaseSQLModel):
         {_su_aggfields_sql},
         COUNT(beltfish_su.pseudosu_id) AS sample_unit_count,
         ROUND(AVG(beltfish_su.biomass_kgha), 2) AS biomass_kgha_avg,
+        ROUND(STDDEV(beltfish_su.biomass_kgha), 2) AS biomass_kgha_sd,
         biomass_kgha_by_trophic_group_avg,
-        biomass_kgha_by_fish_family_avg
+        biomass_kgha_by_trophic_group_sd,
+        biomass_kgha_by_fish_family_avg,
+        biomass_kgha_by_fish_family_sd
 
         FROM beltfish_su
 
@@ -406,11 +406,16 @@ class BeltFishSESQLModel(BaseSQLModel):
             SELECT sample_event_id,
             jsonb_object_agg(
                 tg,
-                ROUND(biomass_kgha::numeric, 2)
-            ) FILTER (WHERE biomass_kgha > 0) AS biomass_kgha_by_trophic_group_avg
+                ROUND(biomass_kgha_avg::numeric, 2)
+            ) FILTER (WHERE biomass_kgha_avg > 0) AS biomass_kgha_by_trophic_group_avg,
+            jsonb_object_agg(
+                tg,
+                ROUND(biomass_kgha_sd::numeric, 2)
+            ) FILTER (WHERE biomass_kgha_avg > 0) AS biomass_kgha_by_trophic_group_sd
             FROM (
                 SELECT meta_su_tgs.sample_event_id, tg,
-                AVG(biomass_kgha) AS biomass_kgha
+                AVG(biomass_kgha) AS biomass_kgha_avg,
+                STDDEV(biomass_kgha) AS biomass_kgha_sd
                 FROM (
                     SELECT sample_event_id, pseudosu_id, tgdata.key AS tg,
                     SUM(tgdata.value::double precision) AS biomass_kgha
@@ -429,11 +434,16 @@ class BeltFishSESQLModel(BaseSQLModel):
             SELECT sample_event_id,
             jsonb_object_agg(
                 ff,
-                ROUND(biomass_kgha::numeric, 2)
-            ) FILTER (WHERE biomass_kgha > 0) AS biomass_kgha_by_fish_family_avg
+                ROUND(biomass_kgha_avg::numeric, 2)
+            ) FILTER (WHERE biomass_kgha_avg > 0) AS biomass_kgha_by_fish_family_avg,
+            jsonb_object_agg(
+                ff,
+                ROUND(biomass_kgha_sd::numeric, 2)
+            ) FILTER (WHERE biomass_kgha_avg > 0) AS biomass_kgha_by_fish_family_sd
             FROM (
                 SELECT meta_su_ffs.sample_event_id, ff,
-                AVG(biomass_kgha) AS biomass_kgha
+                AVG(biomass_kgha) AS biomass_kgha_avg,
+                STDDEV(biomass_kgha) AS biomass_kgha_sd
                 FROM (
                     SELECT sample_event_id, pseudosu_id, ffdata.key AS ff,
                     SUM(ffdata.value::double precision) AS biomass_kgha
@@ -452,19 +462,27 @@ class BeltFishSESQLModel(BaseSQLModel):
         {_se_fields},
         data_policy_beltfish,
         biomass_kgha_by_trophic_group_avg,
-        biomass_kgha_by_fish_family_avg
+        biomass_kgha_by_trophic_group_sd,
+        biomass_kgha_by_fish_family_avg,
+        biomass_kgha_by_fish_family_sd
     """
 
     sql_args = dict(
         project_id=SQLTableArg(sql=project_where, required=True),
-        sample_event_ids=SQLTableArg(sql=sample_event_where, required=False),
     )
 
     objects = SQLTableManager()
 
     sample_unit_count = models.PositiveSmallIntegerField()
     depth_avg = models.DecimalField(
-        max_digits=4, decimal_places=2, verbose_name=_("depth (m)")
+        max_digits=4, decimal_places=2, verbose_name=_("depth mean (m)")
+    )
+    depth_sd = models.DecimalField(
+        max_digits=4,
+        decimal_places=2,
+        verbose_name=_("depth standard deviation (m)"),
+        blank=True,
+        null=True,
     )
     current_name = models.CharField(max_length=100)
     tide_name = models.CharField(max_length=100)
@@ -472,12 +490,21 @@ class BeltFishSESQLModel(BaseSQLModel):
     biomass_kgha_avg = models.DecimalField(
         max_digits=8,
         decimal_places=2,
-        verbose_name=_("biomass (kg/ha)"),
+        verbose_name=_("biomass mean (kg/ha)"),
         null=True,
         blank=True,
     )
+    biomass_kgha_sd = models.DecimalField(
+        max_digits=8,
+        decimal_places=2,
+        verbose_name=_("biomass standard deviation (kg/ha)"),
+        blank=True,
+        null=True,
+    )
     biomass_kgha_by_trophic_group_avg = models.JSONField(null=True, blank=True)
+    biomass_kgha_by_trophic_group_sd = models.JSONField(null=True, blank=True)
     biomass_kgha_by_fish_family_avg = models.JSONField(null=True, blank=True)
+    biomass_kgha_by_fish_family_sd = models.JSONField(null=True, blank=True)
     data_policy_beltfish = models.CharField(max_length=50)
 
     class Meta:

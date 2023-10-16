@@ -4,6 +4,7 @@ from django.conf import settings
 from django.core.management.base import BaseCommand
 
 from api.models import Project
+from api.utils.q import submit_job
 from api.utils.summary_cache import update_summary_cache
 
 
@@ -32,7 +33,7 @@ class Command(BaseCommand):
         print("Updating summaries...")
         for project in Project.objects.all():
             print(f"project {project.pk}")
-            update_summary_cache(project.pk, skip_test_project=skip_test_project)
+            submit_job(5, update_summary_cache, project_id=project.pk, skip_test_project=skip_test_project)
 
         end_time = time()
         print(f"Done: {end_time - start_time:.3f}s")

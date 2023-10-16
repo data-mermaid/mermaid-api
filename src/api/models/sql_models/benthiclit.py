@@ -7,7 +7,6 @@ from .base import (
     BaseSUSQLModel,
     project_where,
     sample_event_sql_template,
-    sample_event_where
 )
 
 
@@ -126,7 +125,6 @@ class BenthicLITObsSQLModel(BaseSUSQLModel):
 
     sql_args = dict(
         project_id=SQLTableArg(sql=project_where, required=True),
-        sample_event_ids=SQLTableArg(sql=sample_event_where, required=False),
     )
 
     objects = SQLTableManager()
@@ -169,7 +167,7 @@ class BenthicLITSUSQLModel(BaseSUSQLModel):
 
     sql = f"""
         WITH benthiclit_obs AS (
-            SELECT * FROM summary_benthiclit_obs WHERE project_id = '%(project_id)s'::uuid
+            SELECT * FROM ({BenthicLITObsSQLModel.sql}) AS benthiclit_obs_core WHERE project_id = '%(project_id)s'::uuid
             AND benthic_category != 'Other'
         ),
         benthiclit_observers AS (
@@ -253,7 +251,6 @@ class BenthicLITSUSQLModel(BaseSUSQLModel):
 
     sql_args = dict(
         project_id=SQLTableArg(sql=project_where, required=True),
-        sample_event_ids=SQLTableArg(sql=sample_event_where, required=False),
     )
 
     objects = SQLTableManager()
@@ -289,7 +286,7 @@ class BenthicLITSESQLModel(BaseSQLModel):
     _su_aggfields_sql = BaseSQLModel.su_aggfields_sql
     sql = f"""
         WITH benthiclit_su AS (
-            SELECT * FROM summary_benthiclit_su WHERE project_id = '%(project_id)s'::uuid
+            {BenthicLITSUSQLModel.sql}
         )
         SELECT
             benthiclit_su.sample_event_id AS id,
@@ -297,19 +294,22 @@ class BenthicLITSESQLModel(BaseSQLModel):
             data_policy_benthiclit,
             { _su_aggfields_sql },
             COUNT(benthiclit_su.pseudosu_id) AS sample_unit_count,
-            percent_cover_by_benthic_category_avg
+            percent_cover_by_benthic_category_avg,
+            percent_cover_by_benthic_category_sd
         FROM
             benthiclit_su
             INNER JOIN (
                 SELECT
                     sample_event_id,
-                    jsonb_object_agg(cat, ROUND(cat_percent :: numeric, 2)) AS percent_cover_by_benthic_category_avg
+                    jsonb_object_agg(cat, ROUND(cat_percent_avg :: numeric, 2)) AS percent_cover_by_benthic_category_avg,
+                    jsonb_object_agg(cat, ROUND(cat_percent_sd :: numeric, 2)) AS percent_cover_by_benthic_category_sd
                 FROM
                     (
                         SELECT
                             sample_event_id,
                             cpdata.key AS cat,
-                            AVG(cpdata.value :: float) AS cat_percent
+                            AVG(cpdata.value :: float) AS cat_percent_avg,
+                            STDDEV(cpdata.value :: float) AS cat_percent_sd
                         FROM
                             benthiclit_su,
                             jsonb_each_text(percent_cover_by_benthic_category) AS cpdata
@@ -325,23 +325,31 @@ class BenthicLITSESQLModel(BaseSQLModel):
                 [f"benthiclit_su.{f}" for f in BaseSQLModel.se_fields]
             ) },
             data_policy_benthiclit,
-            percent_cover_by_benthic_category_avg
+            percent_cover_by_benthic_category_avg,
+            percent_cover_by_benthic_category_sd
     """
     sql_args = dict(
         project_id=SQLTableArg(sql=project_where, required=True),
-        sample_event_ids=SQLTableArg(sql=sample_event_where, required=False),
     )
 
     objects = SQLTableManager()
 
     sample_unit_count = models.PositiveSmallIntegerField()
     depth_avg = models.DecimalField(
-        max_digits=4, decimal_places=2, verbose_name=_("depth (m)")
+        max_digits=4, decimal_places=2, verbose_name=_("depth mean (m)")
+    )
+    depth_sd = models.DecimalField(
+        max_digits=4,
+        decimal_places=2,
+        verbose_name=_("depth standard deviation (m)"),
+        blank=True,
+        null=True,
     )
     current_name = models.CharField(max_length=100)
     tide_name = models.CharField(max_length=100)
     visibility_name = models.CharField(max_length=100)
     percent_cover_by_benthic_category_avg = models.JSONField(null=True, blank=True)
+    percent_cover_by_benthic_category_sd = models.JSONField(null=True, blank=True)
     data_policy_benthiclit = models.CharField(max_length=50)
 
     class Meta:

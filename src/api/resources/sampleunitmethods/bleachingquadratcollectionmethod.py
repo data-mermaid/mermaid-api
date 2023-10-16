@@ -7,9 +7,13 @@ from rest_framework.validators import UniqueTogetherValidator
 
 from ...models import (
     BleachingQCColoniesBleachedObsModel,
+    BleachingQCColoniesBleachedObsSQLModel,
     BleachingQCQuadratBenthicPercentObsModel,
+    BleachingQCQuadratBenthicPercentObsSQLModel,
     BleachingQCSEModel,
+    BleachingQCSESQLModel,
     BleachingQCSUModel,
+    BleachingQCSUSQLModel,
     BleachingQuadratCollection,
     ObsColoniesBleached,
     ObsQuadratBenthicPercent,
@@ -40,7 +44,6 @@ from ..sample_event import SampleEventSerializer
 from . import (
     BaseProjectMethodView,
     clean_sample_event_models,
-    covariate_report_fields,
     save_model,
     save_one_to_many,
 )
@@ -287,7 +290,7 @@ class ObsBleachingQCColoniesBleachedCSVSerializer(ReportSerializer):
         ReportField("site_notes", "Site notes"),
         ReportField("management_notes", "Management notes"),
         ReportField("sample_unit_notes", "Sample unit notes"),
-    ] + covariate_report_fields
+    ]
 
     additional_fields = [
         ReportField("id"),
@@ -368,7 +371,7 @@ class ObsQuadratBenthicPercentCSVSerializer(ReportSerializer):
         ReportField("site_notes", "Site notes"),
         ReportField("management_notes", "Management notes"),
         ReportField("sample_unit_notes", "Sample unit notes"),
-    ] + covariate_report_fields
+    ]
 
     additional_fields = [
         ReportField("id"),
@@ -457,7 +460,7 @@ class BleachingQCMethodSUCSVSerializer(ReportSerializer):
         ReportField("site_notes", "Site notes"),
         ReportField("management_notes", "Management notes"),
         ReportField("sample_unit_notes", "Sample unit notes"),
-    ] + covariate_report_fields
+    ]
 
     additional_fields = [
         ReportField("id"),
@@ -484,16 +487,25 @@ class BleachingQCMethodSESerializer(BaseSUViewAPISerializer):
             [
                 "sample_unit_count",
                 "depth_avg",
+                "depth_sd",
                 "quadrat_size_avg",
-                "count_genera_avg",
                 "count_total_avg",
+                "count_total_sd",
+                "count_genera_avg",
+                "count_genera_sd",
                 "percent_normal_avg",
+                "percent_normal_sd",
                 "percent_pale_avg",
+                "percent_pale_sd",
                 "percent_bleached_avg",
+                "percent_bleached_sd",
                 "quadrat_count_avg",
                 "percent_hard_avg_avg",
+                "percent_hard_avg_sd",
                 "percent_soft_avg_avg",
+                "percent_soft_avg_sd",
                 "percent_algae_avg_avg",
+                "percent_algae_avg_sd",
                 "data_policy_bleachingqc",
             ]
         )
@@ -522,6 +534,7 @@ class BleachingQCMethodSECSVSerializer(ReportSerializer):
         ReportField("visibility_name", "Visibility"),
         ReportField("current_name", "Current"),
         ReportField("depth_avg", "Depth average"),
+        ReportField("depth_sd", "Depth standard deviation"),
         ReportField("management_name", "Management name"),
         ReportField("management_name_secondary", "Management secondary name"),
         ReportField("management_est_year", "Management year established"),
@@ -530,18 +543,26 @@ class BleachingQCMethodSECSVSerializer(ReportSerializer):
         ReportField("management_compliance", "Estimated compliance"),
         ReportField("management_rules", "Management rules"),
         ReportField("sample_unit_count", "Sample unit count"),
-        ReportField("count_genera_avg", "Genera count average"),
         ReportField("count_total_avg", "Total count average"),
+        ReportField("count_total_sd", "Total count standard deviation"),
+        ReportField("count_genera_avg", "Genera count average"),
+        ReportField("count_genera_sd", "Genera count standard deviation"),
         ReportField("percent_normal_avg", "Percent normal average"),
+        ReportField("percent_normal_sd", "Percent normal standard deviation"),
         ReportField("percent_pale_avg", "Percent pale average"),
+        ReportField("percent_pale_sd", "Percent pale standard deviation"),
         ReportField("percent_bleached_avg", "Percent bleached average"),
+        ReportField("percent_bleached_sd", "Percent bleached standard deviation"),
         ReportField("quadrat_count_avg", "Number of quadrats average"),
         ReportField("percent_hard_avg_avg", "Average Hard Coral (% cover) average"),
+        ReportField("percent_hard_avg_sd", "Average Hard Coral (% cover) standard deviation"),
         ReportField("percent_soft_avg_avg", "Average Soft Coral (% cover) average"),
+        ReportField("percent_soft_avg_sd", "Average Soft Coral (% cover) standard deviation"),
         ReportField("percent_algae_avg_avg", "Average Macroalgae (% cover) average"),
+        ReportField("percent_algae_avg_sd", "Average Macroalgae (% cover) standard deviation"),
         ReportField("site_notes", "Site notes"),
         ReportField("management_notes", "Management notes"),
-    ] + covariate_report_fields
+    ]
 
     additional_fields = [
         ReportField("id"),
@@ -584,6 +605,11 @@ class BleachingQCMethodColoniesBleachedObsFilterSet(BaseSUObsFilterSet):
         ]
 
 
+class BleachingQCMethodColoniesBleachedObsSQLFilterSet(BleachingQCMethodColoniesBleachedObsFilterSet):
+    class Meta(BleachingQCMethodColoniesBleachedObsFilterSet.Meta):
+        model = BleachingQCColoniesBleachedObsSQLModel
+
+
 class BleachingQCMethodQuadratBenthicPercentObsFilterSet(BaseSUObsFilterSet):
     percent_hard = RangeFilter()
     percent_soft = RangeFilter()
@@ -598,6 +624,11 @@ class BleachingQCMethodQuadratBenthicPercentObsFilterSet(BaseSUObsFilterSet):
             "percent_soft",
             "percent_algae",
         ]
+
+
+class BleachingQCMethodQuadratBenthicPercentObsSQLFilterSet(BleachingQCMethodQuadratBenthicPercentObsFilterSet):
+    class Meta(BleachingQCMethodQuadratBenthicPercentObsFilterSet.Meta):
+        model = BleachingQCQuadratBenthicPercentObsSQLModel
 
 
 class BleachingQCMethodSUFilterSet(BaseSUObsFilterSet):
@@ -625,6 +656,11 @@ class BleachingQCMethodSUFilterSet(BaseSUObsFilterSet):
             "percent_soft_avg",
             "percent_algae_avg",
         ]
+
+
+class BleachingQCMethodSUSQLFilterSet(BleachingQCMethodSUFilterSet):
+    class Meta(BleachingQCMethodSUFilterSet.Meta):
+        model = BleachingQCSUSQLModel
 
 
 class BleachingQCMethodSEFilterSet(BaseSEFilterSet):
@@ -659,36 +695,41 @@ class BleachingQCMethodSEFilterSet(BaseSEFilterSet):
         ]
 
 
+class BleachingQCMethodSESQLFilterSet(BleachingQCMethodSEFilterSet):
+    class Meta(BleachingQCMethodSEFilterSet.Meta):
+        model = BleachingQCSESQLModel
+
+
 class BleachingQCProjectMethodObsColoniesBleachedView(BaseProjectMethodView):
     drf_label = "bleachingqc-obscoloniesbleached"
     project_policy = "data_policy_bleachingqc"
+    model = BleachingQCColoniesBleachedObsModel
     serializer_class = BleachingQCMethodObsColoniesBleachedSerializer
     serializer_class_geojson = BleachingQCMethodObsColoniesBleachedGeoSerializer
     serializer_class_csv = ObsBleachingQCColoniesBleachedCSVSerializer
     filterset_class = BleachingQCMethodColoniesBleachedObsFilterSet
-    model = BleachingQCColoniesBleachedObsModel
     order_by = ("site_name", "sample_date", "label", "benthic_attribute", "growth_form")
 
 
 class BleachingQCProjectMethodObsQuadratBenthicPercentView(BaseProjectMethodView):
     drf_label = "bleachingqc-obsquadratbenthicpercent"
     project_policy = "data_policy_bleachingqc"
+    model = BleachingQCQuadratBenthicPercentObsModel
     serializer_class = BleachingQCMethodObsQuadratBenthicPercentSerializer
     serializer_class_geojson = BleachingQCMethodObsQuadratBenthicPercentGeoSerializer
     serializer_class_csv = ObsQuadratBenthicPercentCSVSerializer
     filterset_class = BleachingQCMethodQuadratBenthicPercentObsFilterSet
-    model = BleachingQCQuadratBenthicPercentObsModel
     order_by = ("site_name", "sample_date", "label", "quadrat_number")
 
 
 class BleachingQCProjectMethodSUView(BaseProjectMethodView):
     drf_label = "bleachingqc-su"
     project_policy = "data_policy_bleachingqc"
+    model = BleachingQCSUModel
     serializer_class = BleachingQCMethodSUSerializer
     serializer_class_geojson = BleachingQCMethodSUGeoSerializer
     serializer_class_csv = BleachingQCMethodSUCSVSerializer
     filterset_class = BleachingQCMethodSUFilterSet
-    model = BleachingQCSUModel
     order_by = ("site_name", "sample_date", "label")
 
 
@@ -698,9 +739,9 @@ class BleachingQCProjectMethodSEView(BaseProjectMethodView):
     permission_classes = [
         Or(ProjectDataReadOnlyPermission, ProjectPublicSummaryPermission)
     ]
+    model = BleachingQCSEModel
     serializer_class = BleachingQCMethodSESerializer
     serializer_class_geojson = BleachingQCMethodSEGeoSerializer
     serializer_class_csv = BleachingQCMethodSECSVSerializer
     filterset_class = BleachingQCMethodSEFilterSet
-    model = BleachingQCSEModel
     order_by = ("site_name", "sample_date")

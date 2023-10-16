@@ -44,7 +44,6 @@ def test_non_owner_read_edit_collect_record(
 
     response_data["data"]["some_key"] = "some_data"
     response = api_client2.put(url, response_data, format="json")
-
     assert response.status_code == 403
 
     response = api_client2.delete(url, None, format="json")

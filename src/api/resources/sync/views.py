@@ -1,8 +1,9 @@
 from rest_framework.decorators import api_view
 from rest_framework.exceptions import (
-    ValidationError,
     NotAuthenticated,
+    NotFound,
     PermissionDenied,
+    ValidationError,
 )
 from rest_framework.response import Response
 
@@ -123,8 +124,9 @@ def _get_project(data, source_type):
 
     if projid:
         try:
-            proj = Project.objects.get(pk=projid)
-            projname = proj.name
+            if utils.is_uuid(projid) is True:
+                proj = Project.objects.get(pk=projid)
+                projname = proj.name
         except Project.DoesNotExist:
             pass
 
@@ -313,7 +315,9 @@ def check_permissions(request, data, source_types, method=False):
             permission_check["code"] = 401
         except PermissionDenied:
             permission_check["code"] = 403
-        
+        except NotFound as e:
+            print(e)
+
         permission_checks[source_type] = permission_check
 
     return permission_checks
@@ -365,7 +369,13 @@ def vw_push(request):
         raise ValidationError(f"Invalid source types: {invalid_types}")
 
     response_data = {}
-    for source_type, records in request_data.items():
+    source_types = list(request_data.keys())
+    if PROJECTS_SOURCE_TYPE in source_types:
+        source_types.remove(PROJECTS_SOURCE_TYPE)
+        source_types.insert(0, PROJECTS_SOURCE_TYPE)
+
+    for source_type in source_types:
+        records = request_data[source_type]
         result = _update_source_records(source_type, records, request, force=force)
         response_data[source_type] = result
 

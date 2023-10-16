@@ -8,22 +8,14 @@ from rest_framework.decorators import action
 from rest_framework_gis.pagination import GeoJsonPagination
 
 from ...auth_backends import AnonymousJWTAuthentication
-from ...models import Covariate
 from ...permissions import *
 from ...reports import csv_report
 from ...reports.fields import ReportField
-from ...reports.formatters import (
-    to_covariate,
-)
+
 from ...resources.base import BaseApiViewSet, BaseProjectApiViewSet
 from ...utils import truthy
 from ...utils.sample_units import consolidate_sample_events, has_duplicate_sample_events
 
-
-covariate_report_fields = [
-    ReportField("covariates", v, to_covariate, alias=k)
-    for k, v in Covariate.SUPPORTED_COVARIATES
-]
 
 
 def save_one_to_many(foreign_key, database_records, data, serializer_class, context):
@@ -150,10 +142,18 @@ class AggregatedViewMixin(BaseApiViewSet):
 class BaseProjectMethodView(AggregatedViewMixin, BaseProjectApiViewSet):
     permission_classes = [Or(ProjectDataReadOnlyPermission, ProjectPublicPermission)]
 
+    def __init__(self, **kwargs):
+        super().__init__(**kwargs)
+        self.sql_model = getattr(self, "sql_model", None)
+        self.use_cached = getattr(self, "use_cached", True)
+        if self.sql_model and self.use_cached is False:
+            self.model = self.sql_model
+            self.filterset_class = self.sql_filterset_class
+
     @action(detail=False, methods=["get"])
     def csv(self, request, *args, **kwargs):
         try:
-            project = Project.objects.get(pk=kwargs["project_pk"])
+            project = Project.objects.get(pk=self.kwargs.get("project_pk"))
         except ObjectDoesNotExist:
             return HttpResponseBadRequest("Project doesn't exist")
 
@@ -166,6 +166,10 @@ class BaseProjectMethodView(AggregatedViewMixin, BaseProjectApiViewSet):
 
     def get_queryset(self):
         project_id = self.kwargs.get("project_pk")
+        if self.sql_model and self.use_cached is False:
+            return self.model.objects.all().sql_table(
+                project_id=project_id
+            )
         return self.model.objects.filter(
             project_id=project_id
         )

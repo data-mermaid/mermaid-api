@@ -7,7 +7,6 @@ from .base import (
     BaseSUSQLModel,
     project_where,
     sample_event_sql_template,
-    sample_event_where
 )
 
 
@@ -67,7 +66,6 @@ class BleachingQCColoniesBleachedObsSQLModel(BaseSUSQLModel):
 
     sql_args = dict(
         project_id=SQLTableArg(sql=project_where, required=True),
-        sample_event_ids=SQLTableArg(sql=sample_event_where, required=False),
     )
 
     objects = SQLTableManager()
@@ -159,7 +157,6 @@ class BleachingQCQuadratBenthicPercentObsSQLModel(BaseSUSQLModel):
 
     sql_args = dict(
         project_id=SQLTableArg(sql=project_where, required=True),
-        sample_event_ids=SQLTableArg(sql=sample_event_where, required=False),
     )
 
     objects = SQLTableManager()
@@ -211,10 +208,10 @@ class BleachingQCSUSQLModel(BaseSUSQLModel):
     # SU fields and observers pieces both rely on being the same for both types of QC observations
     sql = f"""
         WITH bleachingqc_colonies_bleached_obs AS (
-            SELECT * FROM summary_bleachingqc_colonies_bleached_obs WHERE project_id = '%(project_id)s'::uuid
+            {BleachingQCColoniesBleachedObsSQLModel.sql}
         ),
         bleachingqc_quadrat_benthic_percent_obs AS (
-            SELECT * FROM summary_bleachingqc_quadrat_benthic_percent_obs WHERE project_id = '%(project_id)s'::uuid
+            {BleachingQCQuadratBenthicPercentObsSQLModel.sql}
         ),
         pseudosu_su AS (
             SELECT 
@@ -304,7 +301,6 @@ class BleachingQCSUSQLModel(BaseSUSQLModel):
 
     sql_args = dict(
         project_id=SQLTableArg(sql=project_where, required=True),
-        sample_event_ids=SQLTableArg(sql=sample_event_where, required=False),
     )
 
     objects = SQLTableManager()
@@ -344,7 +340,7 @@ class BleachingQCSESQLModel(BaseSQLModel):
 
     sql = f"""
         WITH bleachingqc_su AS (
-            SELECT * FROM summary_bleachingqc_su WHERE project_id = '%(project_id)s'::uuid
+            {BleachingQCSUSQLModel.sql}
         )
         SELECT sample_event_id AS id,
         {_se_fields},
@@ -353,14 +349,22 @@ class BleachingQCSESQLModel(BaseSQLModel):
         COUNT(pseudosu_id) AS sample_unit_count,
         ROUND(AVG(quadrat_size), 1) AS quadrat_size_avg,
         ROUND(AVG(count_total), 1) AS count_total_avg,
+        ROUND(STDDEV(count_total), 1) AS count_total_sd,
         ROUND(AVG(count_genera), 1) AS count_genera_avg,
+        ROUND(STDDEV(count_genera), 1) AS count_genera_sd,
         ROUND(AVG(percent_normal), 1) AS percent_normal_avg,
+        ROUND(STDDEV(percent_normal), 1) AS percent_normal_sd,
         ROUND(AVG(percent_pale), 1) AS percent_pale_avg,
+        ROUND(STDDEV(percent_pale), 1) AS percent_pale_sd,
         ROUND(AVG(percent_bleached), 1) AS percent_bleached_avg,
+        ROUND(STDDEV(percent_bleached), 1) AS percent_bleached_sd,
         ROUND(AVG(quadrat_count), 1) AS quadrat_count_avg,
         ROUND(AVG(percent_hard_avg), 1) AS percent_hard_avg_avg,
+        ROUND(STDDEV(percent_hard_avg), 1) AS percent_hard_avg_sd,
         ROUND(AVG(percent_soft_avg), 1) AS percent_soft_avg_avg,
-        ROUND(AVG(percent_algae_avg), 1) AS percent_algae_avg_avg
+        ROUND(STDDEV(percent_soft_avg), 1) AS percent_soft_avg_sd,
+        ROUND(AVG(percent_algae_avg), 1) AS percent_algae_avg_avg,
+        ROUND(STDDEV(percent_algae_avg), 1) AS percent_algae_avg_sd
 
         FROM bleachingqc_su
         GROUP BY
@@ -370,28 +374,42 @@ class BleachingQCSESQLModel(BaseSQLModel):
 
     sql_args = dict(
         project_id=SQLTableArg(sql=project_where, required=True),
-        sample_event_ids=SQLTableArg(sql=sample_event_where, required=False),
     )
 
     objects = SQLTableManager()
 
     sample_unit_count = models.PositiveSmallIntegerField()
     depth_avg = models.DecimalField(
-        max_digits=4, decimal_places=2, verbose_name=_("depth (m)")
+        max_digits=4, decimal_places=2, verbose_name=_("depth mean (m)")
+    )
+    depth_sd = models.DecimalField(
+        max_digits=4,
+        decimal_places=2,
+        verbose_name=_("depth standard deviation (m)"),
+        blank=True,
+        null=True,
     )
     current_name = models.CharField(max_length=100)
     tide_name = models.CharField(max_length=100)
     visibility_name = models.CharField(max_length=100)
     quadrat_size_avg = models.DecimalField(decimal_places=2, max_digits=6)
     count_total_avg = models.DecimalField(max_digits=5, decimal_places=1)
+    count_total_sd = models.DecimalField(max_digits=5, decimal_places=1, blank=True, null=True)
     count_genera_avg = models.DecimalField(max_digits=4, decimal_places=1)
+    count_genera_sd = models.DecimalField(max_digits=4, decimal_places=1, blank=True, null=True)
     percent_normal_avg = models.DecimalField(max_digits=4, decimal_places=1)
+    percent_normal_sd = models.DecimalField(max_digits=4, decimal_places=1, blank=True, null=True)
     percent_pale_avg = models.DecimalField(max_digits=4, decimal_places=1)
+    percent_pale_sd = models.DecimalField(max_digits=4, decimal_places=1, blank=True, null=True)
     percent_bleached_avg = models.DecimalField(max_digits=4, decimal_places=1)
-    quadrat_count_avg = models.DecimalField(max_digits=4, decimal_places=1)
-    percent_hard_avg_avg = models.DecimalField(max_digits=4, decimal_places=1)
-    percent_soft_avg_avg = models.DecimalField(max_digits=4, decimal_places=1)
-    percent_algae_avg_avg = models.DecimalField(max_digits=4, decimal_places=1)
+    percent_bleached_sd = models.DecimalField(max_digits=4, decimal_places=1, blank=True, null=True)
+    quadrat_count_avg = models.DecimalField(max_digits=4, decimal_places=1, null=True, blank=True)
+    percent_hard_avg_avg = models.DecimalField(max_digits=4, decimal_places=1, null=True, blank=True)
+    percent_hard_avg_sd = models.DecimalField(max_digits=4, decimal_places=1, null=True, blank=True)
+    percent_soft_avg_avg = models.DecimalField(max_digits=4, decimal_places=1, null=True, blank=True)
+    percent_soft_avg_sd = models.DecimalField(max_digits=4, decimal_places=1, null=True, blank=True)
+    percent_algae_avg_avg = models.DecimalField(max_digits=4, decimal_places=1, null=True, blank=True)
+    percent_algae_avg_sd = models.DecimalField(max_digits=4, decimal_places=1, null=True, blank=True)
     data_policy_bleachingqc = models.CharField(max_length=50)
 
     class Meta:

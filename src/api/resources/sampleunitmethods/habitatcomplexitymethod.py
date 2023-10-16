@@ -6,8 +6,11 @@ from rest_framework.response import Response
 
 from ...models import (
     HabitatComplexityObsModel,
+    HabitatComplexityObsSQLModel,
     HabitatComplexitySEModel,
+    HabitatComplexitySESQLModel,
     HabitatComplexitySUModel,
+    HabitatComplexitySUSQLModel,
     HabitatComplexity,
     ObsHabitatComplexity,
 )
@@ -37,7 +40,6 @@ from ..sample_event import SampleEventSerializer
 from . import (
     BaseProjectMethodView,
     clean_sample_event_models,
-    covariate_report_fields,
     save_model,
     save_one_to_many,
 )
@@ -244,7 +246,7 @@ class ObsHabitatComplexityCSVSerializer(ReportSerializer):
         ReportField("site_notes", "Site notes"),
         ReportField("management_notes", "Management notes"),
         ReportField("sample_unit_notes", "Sample unit notes"),
-    ] + covariate_report_fields
+    ]
 
     additional_fields = [
         ReportField("id"),
@@ -321,7 +323,7 @@ class HabitatComplexityMethodSUCSVSerializer(ReportSerializer):
         ReportField("site_notes", "Site notes"),
         ReportField("management_notes", "Management notes"),
         ReportField("sample_unit_notes", "Sample unit notes"),
-    ] + covariate_report_fields
+    ]
 
     additional_fields = [
         ReportField("id"),
@@ -349,7 +351,9 @@ class HabitatComplexityMethodSESerializer(BaseSUViewAPISerializer):
                 "data_policy_habitatcomplexity",
                 "sample_unit_count",
                 "depth_avg",
+                "depth_sd",
                 "score_avg_avg",
+                "score_avg_sd",
             ]
         )
 
@@ -376,6 +380,7 @@ class HabitatComplexityMethodSECSVSerializer(ReportSerializer):
         ReportField("visibility_name", "Visibility"),
         ReportField("current_name", "Current"),
         ReportField("depth_avg", "Depth average"),
+        ReportField("depth_sd", "Depth standard deviation"),
         ReportField("management_name", "Management name"),
         ReportField("management_name_secondary", "Management secondary name"),
         ReportField("management_est_year", "Management year established"),
@@ -385,9 +390,10 @@ class HabitatComplexityMethodSECSVSerializer(ReportSerializer):
         ReportField("management_rules", "Management rules"),
         ReportField("sample_unit_count", "Sample unit count"),
         ReportField("score_avg_avg", "Score average"),
+        ReportField("score_avg_sd", "Score standard deviation"),
         ReportField("site_notes", "Site notes"),
         ReportField("management_notes", "Management notes"),
-    ] + covariate_report_fields
+    ]
 
     additional_fields = [
         ReportField("id"),
@@ -424,6 +430,11 @@ class HabitatComplexityMethodObsFilterSet(BaseSUObsFilterSet):
         ]
 
 
+class HabitatComplexityMethodObsSQLFilterSet(HabitatComplexityMethodObsFilterSet):
+    class Meta(HabitatComplexityMethodObsFilterSet.Meta):
+        model = HabitatComplexityObsSQLModel
+
+
 class HabitatComplexityMethodSUFilterSet(BaseSUObsFilterSet):
     transect_len_surveyed = RangeFilter()
     reef_slope = BaseInFilter(method="char_lookup")
@@ -441,6 +452,11 @@ class HabitatComplexityMethodSUFilterSet(BaseSUObsFilterSet):
         ]
 
 
+class HabitatComplexityMethodSUSQLFilterSet(HabitatComplexityMethodSUFilterSet):
+    class Meta(HabitatComplexityMethodSUFilterSet.Meta):
+        model = HabitatComplexitySUSQLModel
+
+
 class HabitatComplexityMethodSEFilterSet(BaseSEFilterSet):
     sample_unit_count = RangeFilter()
     depth_avg = RangeFilter()
@@ -455,25 +471,30 @@ class HabitatComplexityMethodSEFilterSet(BaseSEFilterSet):
         ]
 
 
+class HabitatComplexityMethodSESQLFilterSet(HabitatComplexityMethodSEFilterSet):
+    class Meta(HabitatComplexityMethodSEFilterSet.Meta):
+        model = HabitatComplexitySESQLModel
+
+
 class HabitatComplexityProjectMethodObsView(BaseProjectMethodView):
     drf_label = "habitatcomplexity-obs"
     project_policy = "data_policy_habitatcomplexity"
+    model = HabitatComplexityObsModel
     serializer_class = HabitatComplexityMethodObsSerializer
     serializer_class_geojson = HabitatComplexityMethodObsGeoSerializer
     serializer_class_csv = ObsHabitatComplexityCSVSerializer
     filterset_class = HabitatComplexityMethodObsFilterSet
-    model = HabitatComplexityObsModel
     order_by = ("site_name", "sample_date", "transect_number", "label", "interval")
 
 
 class HabitatComplexityProjectMethodSUView(BaseProjectMethodView):
     drf_label = "habitatcomplexity-su"
     project_policy = "data_policy_habitatcomplexity"
+    model = HabitatComplexitySUModel
     serializer_class = HabitatComplexityMethodSUSerializer
     serializer_class_geojson = HabitatComplexityMethodSUGeoSerializer
     serializer_class_csv = HabitatComplexityMethodSUCSVSerializer
     filterset_class = HabitatComplexityMethodSUFilterSet
-    model = HabitatComplexitySUModel
     order_by = ("site_name", "sample_date", "transect_number")
 
 
@@ -483,9 +504,9 @@ class HabitatComplexityProjectMethodSEView(BaseProjectMethodView):
     permission_classes = [
         Or(ProjectDataReadOnlyPermission, ProjectPublicSummaryPermission)
     ]
+    model = HabitatComplexitySEModel
     serializer_class = HabitatComplexityMethodSESerializer
     serializer_class_geojson = HabitatComplexityMethodSEGeoSerializer
     serializer_class_csv = HabitatComplexityMethodSECSVSerializer
     filterset_class = HabitatComplexityMethodSEFilterSet
-    model = HabitatComplexitySEModel
     order_by = ("site_name", "sample_date")

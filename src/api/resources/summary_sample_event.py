@@ -75,10 +75,24 @@ class SummarySampleEventCSVSerializer(ReportSerializer):
         ),
         ReportField(
             "protocols",
+            "Fish Belt biomass (kg/ha) standard deviation",
+            to_protocol_value,
+            protocol="beltfish",
+            key="biomass_kgha_sd",
+        ),
+        ReportField(
+            "protocols",
             "Fish Belt average biomass (kg/ha) by trophic group",
             to_protocol_value,
             protocol="beltfish",
             key="biomass_kgha_by_trophic_group_avg",
+        ),
+        ReportField(
+            "protocols",
+            "Fish Belt biomass (kg/ha) standard deviation by trophic group",
+            to_protocol_value,
+            protocol="beltfish",
+            key="biomass_kgha_by_trophic_group_sd",
         ),
         ReportField(
             "protocols",
@@ -96,6 +110,13 @@ class SummarySampleEventCSVSerializer(ReportSerializer):
         ),
         ReportField(
             "protocols",
+            "Benthic LIT % cover standard deviation by benthic category",
+            to_protocol_value,
+            protocol="benthiclit",
+            key="percent_cover_by_benthic_category_sd",
+        ),
+        ReportField(
+            "protocols",
             "Benthic PIT transect count",
             to_protocol_value,
             protocol="benthicpit",
@@ -110,6 +131,34 @@ class SummarySampleEventCSVSerializer(ReportSerializer):
         ),
         ReportField(
             "protocols",
+            "Benthic PIT % cover standard deviation by benthic category",
+            to_protocol_value,
+            protocol="benthicpit",
+            key="percent_cover_by_benthic_category_sd",
+        ),
+        ReportField(
+            "protocols",
+            "Benthic PQT transect count",
+            to_protocol_value,
+            protocol="benthicpqt",
+            key="sample_unit_count",
+        ),
+        ReportField(
+            "protocols",
+            "Benthic PQT average % cover by benthic category",
+            to_protocol_value,
+            protocol="benthicpqt",
+            key="percent_cover_by_benthic_category_avg",
+        ),
+        ReportField(
+            "protocols",
+            "Benthic PQT % cover standard deviation by benthic category",
+            to_protocol_value,
+            protocol="benthicpqt",
+            key="percent_cover_by_benthic_category_sd",
+        ),
+        ReportField(
+            "protocols",
             "Habitat Complexity transect count",
             to_protocol_value,
             protocol="habitatcomplexity",
@@ -121,6 +170,13 @@ class SummarySampleEventCSVSerializer(ReportSerializer):
             to_protocol_value,
             protocol="habitatcomplexity",
             key="score_avg_avg",
+        ),
+        ReportField(
+            "protocols",
+            "Habitat Complexity score standard deviation",
+            to_protocol_value,
+            protocol="habitatcomplexity",
+            key="score_avg_sd",
         ),
         ReportField(
             "protocols",
@@ -156,6 +212,10 @@ class SummarySampleEventCSVSerializer(ReportSerializer):
             "data_policy_bleachingqc",
             "Bleaching Quadrat Collection data sharing policy",
         ),
+        ReportField(
+            "data_policy_benthicpqt",
+            "Photo Quadrat Transect data sharing policy",
+        ),
         ReportField("project_notes", "Project notes"),
         ReportField("site_notes", "Site notes"),
     ]
@@ -187,6 +247,7 @@ class SummarySampleEventFilterSet(AggregatedViewFilterSet):
             "data_policy_benthicpit",
             "data_policy_habitatcomplexity",
             "data_policy_bleachingqc",
+            "data_policy_benthicpqt",
         ]
 
         filter_overrides = {
@@ -206,5 +267,3 @@ class SummarySampleEventView(AggregatedViewMixin, BaseApiViewSet):
     filterset_class = SummarySampleEventFilterSet
     queryset = SummarySampleEventModel.objects.filter(~Q(project_status=Project.TEST))
     order_by = ("project_name", "site_name")
-    # TODO: POST/create complex geometry filters? Too much of a pain to deal with pagination? Nobody currently uses...
-    # TODO: documentation

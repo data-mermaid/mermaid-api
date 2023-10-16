@@ -3,12 +3,14 @@ from rest_condition import Or
 
 from ...models import (
     BenthicPhotoQuadratTransectObsModel,
+    BenthicPhotoQuadratTransectObsSQLModel,
     BenthicPhotoQuadratTransectSEModel,
+    BenthicPhotoQuadratTransectSESQLModel,
     BenthicPhotoQuadratTransectSUModel,
+    BenthicPhotoQuadratTransectSUSQLModel,
     BenthicPhotoQuadratTransect,
     ObsBenthicPhotoQuadrat,
 )
-from ...models.mermaid import BenthicPhotoQuadratTransect
 from ...permissions import ProjectDataReadOnlyPermission, ProjectPublicSummaryPermission
 from ...reports.fields import ReportField
 from ...reports.formatters import (
@@ -32,10 +34,7 @@ from ..observer import ObserverSerializer
 from ..mixins import SampleUnitMethodEditMixin, SampleUnitMethodSummaryReport
 from ..quadrat_transect import QuadratTransectSerializer
 from ..sample_event import SampleEventSerializer
-from . import (
-    BaseProjectMethodView,
-    covariate_report_fields,
-)
+from . import BaseProjectMethodView
 
 
 class BenthicPhotoQuadratTransectSerializer(BaseAPISerializer):
@@ -160,7 +159,7 @@ class ObsBenthicPQTCSVSerializer(ReportSerializer):
         ReportField("site_notes", "Site notes"),
         ReportField("management_notes", "Management notes"),
         ReportField("sample_unit_notes", "Sample unit notes"),
-    ] + covariate_report_fields
+    ]
 
     additional_fields = [
         ReportField("id"),
@@ -235,13 +234,14 @@ class BenthicPQTMethodSUCSVSerializer(ReportSerializer):
         ReportField("label", "Transect label"),
         ReportField("transect_len_surveyed", "Transect length surveyed"),
         ReportField("observers", "Observers", to_names),
+        ReportField("num_points_nonother", "Number of non-Other points"),
         ReportField(
             "percent_cover_by_benthic_category", "Percent cover by benthic category"
         ),
         ReportField("site_notes", "Site notes"),
         ReportField("management_notes", "Management notes"),
         ReportField("sample_unit_notes", "Sample unit notes"),
-    ] + covariate_report_fields
+    ]
 
     additional_fields = [
         ReportField("id"),
@@ -269,7 +269,9 @@ class BenthicPQTMethodSESerializer(BaseSUViewAPISerializer):
                 "data_policy_benthicpqt",
                 "sample_unit_count",
                 "depth_avg",
+                "depth_sd",
                 "percent_cover_by_benthic_category_avg",
+                "percent_cover_by_benthic_category_sd",
             ]
         )
 
@@ -296,6 +298,7 @@ class BenthicPQTMethodSECSVSerializer(ReportSerializer):
         ReportField("visibility_name", "Visibility"),
         ReportField("current_name", "Current"),
         ReportField("depth_avg", "Depth average"),
+        ReportField("depth_sd", "Depth standard deviation"),
         ReportField("management_name", "Management name"),
         ReportField("management_name_secondary", "Management secondary name"),
         ReportField("management_est_year", "Management year established"),
@@ -307,13 +310,18 @@ class BenthicPQTMethodSECSVSerializer(ReportSerializer):
         ),
         ReportField("management_rules", "Management rules"),
         ReportField("sample_unit_count", "Sample unit count"),
+        ReportField("num_points_nonother", "Number of non-Other points"),
         ReportField(
             "percent_cover_by_benthic_category_avg",
             "Percent cover by benthic category average",
         ),
+        ReportField(
+            "percent_cover_by_benthic_category_sd",
+            "Percent cover by benthic category standard deviation",
+        ),
         ReportField("site_notes", "Site notes"),
         ReportField("management_notes", "Management notes"),
-    ] + covariate_report_fields
+    ]
 
     additional_fields = [
         ReportField("id"),
@@ -355,6 +363,11 @@ class BenthicPQTMethodObsFilterSet(BaseSUObsFilterSet):
         ]
 
 
+class BenthicPQTMethodObsSQLFilterSet(BenthicPQTMethodObsFilterSet):
+    class Meta(BenthicPQTMethodObsFilterSet.Meta):
+        model = BenthicPhotoQuadratTransectObsSQLModel
+
+
 class BenthicPQTMethodSUFilterSet(BaseSUObsFilterSet):
     transect_len_surveyed = RangeFilter()
     reef_slope = BaseInFilter(method="char_lookup")
@@ -369,6 +382,11 @@ class BenthicPQTMethodSUFilterSet(BaseSUObsFilterSet):
         ]
 
 
+class BenthicPQTMethodSUSQLFilterSet(BenthicPQTMethodSUFilterSet):
+    class Meta(BenthicPQTMethodSUFilterSet.Meta):
+        model = BenthicPhotoQuadratTransectSUSQLModel
+
+
 class BenthicPQTMethodSEFilterSet(BaseSEFilterSet):
     sample_unit_count = RangeFilter()
     depth_avg = RangeFilter()
@@ -381,14 +399,19 @@ class BenthicPQTMethodSEFilterSet(BaseSEFilterSet):
         ]
 
 
+class BenthicPQTMethodSESQLFilterSet(BenthicPQTMethodSEFilterSet):
+    class Meta(BenthicPQTMethodSEFilterSet.Meta):
+        model = BenthicPhotoQuadratTransectSESQLModel
+
+
 class BenthicPQTProjectMethodObsView(BaseProjectMethodView):
     drf_label = "benthicphotoquadrattransect-obs"
     project_policy = "data_policy_benthicpqt"
+    model = BenthicPhotoQuadratTransectObsModel
     serializer_class = BenthicPQTMethodObsSerializer
     serializer_class_geojson = BenthicPQTMethodObsGeoSerializer
     serializer_class_csv = ObsBenthicPQTCSVSerializer
     filterset_class = BenthicPQTMethodObsFilterSet
-    model = BenthicPhotoQuadratTransectObsModel
     order_by = (
         "site_name",
         "sample_date",
@@ -401,11 +424,11 @@ class BenthicPQTProjectMethodObsView(BaseProjectMethodView):
 class BenthicPQTProjectMethodSUView(BaseProjectMethodView):
     drf_label = "benthicphotoquadrattransect-su"
     project_policy = "data_policy_benthicpqt"
+    model = BenthicPhotoQuadratTransectSUModel
     serializer_class = BenthicPQTMethodSUSerializer
     serializer_class_geojson = BenthicPQTMethodSUGeoSerializer
     serializer_class_csv = BenthicPQTMethodSUCSVSerializer
     filterset_class = BenthicPQTMethodSUFilterSet
-    model = BenthicPhotoQuadratTransectSUModel
     order_by = ("site_name", "sample_date", "transect_number")
 
 
@@ -415,9 +438,9 @@ class BenthicPQTProjectMethodSEView(BaseProjectMethodView):
     permission_classes = [
         Or(ProjectDataReadOnlyPermission, ProjectPublicSummaryPermission)
     ]
+    model = BenthicPhotoQuadratTransectSEModel
     serializer_class = BenthicPQTMethodSESerializer
     serializer_class_geojson = BenthicPQTMethodSEGeoSerializer
     serializer_class_csv = BenthicPQTMethodSECSVSerializer
     filterset_class = BenthicPQTMethodSEFilterSet
-    model = BenthicPhotoQuadratTransectSEModel
     order_by = ("site_name", "sample_date")
