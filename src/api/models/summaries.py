@@ -95,6 +95,7 @@ class BeltFishObsModel(BaseObsModel):
         verbose_name=_("transect length surveyed (m)")
     )
     transect_width_name = models.CharField(max_length=100, null=True, blank=True)
+    assigned_transect_width_m = models.PositiveSmallIntegerField(null=True, blank=True)
     reef_slope = models.CharField(max_length=50, null=True, blank=True)
     fish_family = models.CharField(max_length=100, null=True, blank=True)
     fish_genus = models.CharField(max_length=100, null=True, blank=True)

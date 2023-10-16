@@ -39,6 +39,7 @@ class BeltFishObsSQLModel(BaseSUSQLModel):
             su.len_surveyed AS transect_len_surveyed,
             rs.name AS reef_slope,
             w.name AS transect_width_name,
+            wc.val AS assigned_transect_width_m,
             f.id_family AS id_family,
             f.id_genus AS id_genus,
             f.id_species AS id_species,
@@ -129,6 +130,7 @@ class BeltFishObsSQLModel(BaseSUSQLModel):
         verbose_name=_("transect length surveyed (m)")
     )
     transect_width_name = models.CharField(max_length=100, null=True, blank=True)
+    assigned_transect_width_m = models.PositiveSmallIntegerField(null=True, blank=True)
     reef_slope = models.CharField(max_length=50)
     fish_family = models.CharField(max_length=100, null=True, blank=True)
     fish_genus = models.CharField(max_length=100, null=True, blank=True)
