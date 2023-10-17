@@ -117,11 +117,12 @@ def get_project_lookup(log_events):
             "project_name": p.name,
             "project_status": p.get_status_display(),
             "project_tags": ",".join(t.name for t in p.tags.all()),
+            "countries": ",".join(set([s.country.name for s in p.sites.order_by("country__name")])),
             "profiles": {
                 str(pp.profile.id): pp.get_role_display() for pp in p.profiles.all()
             },
         }
-        for p in Project.objects.prefetch_related("profiles", "tags").filter(
+        for p in Project.objects.prefetch_related("profiles", "tags", "sites").filter(
             id__in=project_lookup.keys()
         )
     }
