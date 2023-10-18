@@ -86,6 +86,9 @@ freshinstall:
 runserver:
 	@docker-compose exec $(API_SERVICE) python manage.py runserver 0.0.0.0:8080
 
+simpleq:
+	@docker-compose exec $(API_SERVICE) python manage.py simpleq_worker
+
 shellplus:
 	@docker-compose exec $(API_SERVICE) python manage.py shell_plus
 

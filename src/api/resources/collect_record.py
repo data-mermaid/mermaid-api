@@ -3,7 +3,7 @@ import logging
 import uuid
 
 from django.db import connection
-from rest_condition import Or
+from rest_condition import And, Or
 from rest_framework import status as drf_status
 from rest_framework.decorators import action
 from rest_framework.exceptions import ParseError
@@ -37,9 +37,7 @@ from .base import BaseAPIFilterSet, BaseAPISerializer, BaseProjectApiViewSet
 
 
 logger = logging.getLogger(__name__)
-cr_permissions = list(BaseProjectApiViewSet.permission_classes[0].perms_or_conds) + [
-    CollectRecordOwner
-]
+cr_permissions = [And(BaseProjectApiViewSet.permission_classes[0], CollectRecordOwner)]
 
 
 class CollectRecordSerializer(CreateOrUpdateSerializerMixin, BaseAPISerializer):
@@ -58,7 +56,7 @@ class CollectRecordViewSet(BaseProjectApiViewSet):
     serializer_class = CollectRecordSerializer
     queryset = CollectRecord.objects.all().order_by("id")
     filterset_class = CollectRecordFilterSet
-    permission_classes = [Or(*cr_permissions)]
+    permission_classes = cr_permissions
 
     def filter_queryset(self, queryset):
         user = self.request.user
@@ -69,8 +67,7 @@ class CollectRecordViewSet(BaseProjectApiViewSet):
     @action(
         detail=False,
         methods=["post"],
-        permission_classes=BaseProjectApiViewSet.permission_classes
-        + [CollectRecordOwner],
+        permission_classes=cr_permissions,
     )
     def validate(self, request, project_pk):
         output = dict()
@@ -94,7 +91,7 @@ class CollectRecordViewSet(BaseProjectApiViewSet):
     @action(
         detail=False,
         methods=["post"],
-        permission_classes=[Or(*cr_permissions)],
+        permission_classes=cr_permissions,
     )
     def submit(self, request, project_pk):
         submit_version = request.data.get("version") or "1"

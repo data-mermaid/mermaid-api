@@ -19,7 +19,6 @@ from ..models import (
     AuditRecord,
     CollectRecord,
 )
-from ..models.revisions import Revision
 from .protocol_validations import (
     BenthicLITProtocolValidation,
     BenthicPhotoQuadratTransectProtocolValidation,
@@ -432,7 +431,5 @@ def submit_collect_records_v2(profile, record_ids, serializer_class, validation_
             )
             continue
         output[record_id] = dict(status=OK, message=gettext_lazy("Success"))
-
-        Revision.create_from_instance(collect_record.project)
 
     return output

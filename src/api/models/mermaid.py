@@ -472,6 +472,8 @@ class SampleUnit(BaseModel):
 
 
 class Transect(SampleUnit):
+    project_lookup = "sample_event__site__project"
+
     len_surveyed = models.DecimalField(max_digits=4, decimal_places=1,
                                        verbose_name=_('transect length surveyed (m)'))
     reef_slope = models.ForeignKey(
@@ -493,7 +495,6 @@ class Transect(SampleUnit):
 
 
 class BenthicTransect(Transect):
-    project_lookup = 'sample_event__site__project'
     number = models.PositiveSmallIntegerField(default=1)
     label = models.CharField(max_length=50, blank=True)
 
@@ -628,8 +629,6 @@ class BeltTransectWidthCondition(BaseChoiceModel):
 
 
 class FishBeltTransect(Transect):
-    project_lookup = 'sample_event__site__project'
-
     number = models.PositiveSmallIntegerField(default=1)
     label = models.CharField(max_length=50, blank=True)
     width = models.ForeignKey(BeltTransectWidth, verbose_name=_('width (m)'), on_delete=models.PROTECT)
@@ -671,8 +670,6 @@ class QuadratCollection(BaseQuadrat):
 
 
 class QuadratTransect(Transect):
-    project_lookup = "sample_event__site__project"
-
     number = models.PositiveSmallIntegerField(default=1)
     label = models.CharField(max_length=50, blank=True)
     quadrat_size = models.DecimalField(

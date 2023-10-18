@@ -269,7 +269,9 @@ class BenthicPQTMethodSESerializer(BaseSUViewAPISerializer):
                 "data_policy_benthicpqt",
                 "sample_unit_count",
                 "depth_avg",
+                "depth_sd",
                 "percent_cover_by_benthic_category_avg",
+                "percent_cover_by_benthic_category_sd",
             ]
         )
 
@@ -296,6 +298,7 @@ class BenthicPQTMethodSECSVSerializer(ReportSerializer):
         ReportField("visibility_name", "Visibility"),
         ReportField("current_name", "Current"),
         ReportField("depth_avg", "Depth average"),
+        ReportField("depth_sd", "Depth standard deviation"),
         ReportField("management_name", "Management name"),
         ReportField("management_name_secondary", "Management secondary name"),
         ReportField("management_est_year", "Management year established"),
@@ -311,6 +314,10 @@ class BenthicPQTMethodSECSVSerializer(ReportSerializer):
         ReportField(
             "percent_cover_by_benthic_category_avg",
             "Percent cover by benthic category average",
+        ),
+        ReportField(
+            "percent_cover_by_benthic_category_sd",
+            "Percent cover by benthic category standard deviation",
         ),
         ReportField("site_notes", "Site notes"),
         ReportField("management_notes", "Management notes"),
