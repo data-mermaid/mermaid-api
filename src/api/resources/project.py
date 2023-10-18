@@ -36,9 +36,11 @@ from .base import (
     BaseAPIFilterSet,
     BaseAPISerializer,
     BaseApiViewSet,
+    BaseInFilter,
     TagField,
 )
 from .management import ManagementSerializer
+from .mixins import OrFilterSetMixin
 from .project_profile import ProjectProfileSerializer
 from .site import SiteSerializer
 
@@ -140,8 +142,10 @@ class ProjectSerializer(BaseAPISerializer):
         return num_sample_units
 
 
-class ProjectFilterSet(BaseAPIFilterSet):
+class ProjectFilterSet(BaseAPIFilterSet, OrFilterSetMixin):
+    name = BaseInFilter(method="char_lookup")
     tags = django_filters.CharFilter(distinct=True, method="filter_tags")
+    country = BaseInFilter(method="site_country")
 
     class Meta:
         model = Project
@@ -158,6 +162,9 @@ class ProjectFilterSet(BaseAPIFilterSet):
     def filter_tags(self, queryset, name, value):
         values = [v.strip() for v in value.split(",")]
         return queryset.filter(tags__name__in=values)
+
+    def site_country(self, queryset, name, value):
+        return self.char_lookup(queryset, "sites__country__name", value)
 
 
 class ProjectAuthenticatedUserPermission(permissions.BasePermission):
