@@ -131,31 +131,31 @@ class SummarySampleEventSQLModel(SummarySampleEventBaseModel):
                 'sample_unit_count', fb.sample_unit_count,
                 'biomass_kgha_avg', (CASE WHEN project.data_policy_beltfish < 50 THEN NULL ELSE fb.biomass_kgha_avg END),
                 'biomass_kgha_sd', (CASE WHEN project.data_policy_beltfish < 50 THEN NULL ELSE fb.biomass_kgha_sd END),
-                'biomass_kgha_by_trophic_group_avg', (CASE WHEN project.data_policy_beltfish < 50 THEN NULL ELSE
-                fbtg.biomass_kgha_by_trophic_group_avg END),
-                'biomass_kgha_by_trophic_group_sd', (CASE WHEN project.data_policy_beltfish < 50 THEN NULL ELSE
-                fbtg.biomass_kgha_by_trophic_group_sd END)
+                'biomass_kgha_trophic_group_avg', (CASE WHEN project.data_policy_beltfish < 50 THEN NULL ELSE
+                fbtg.biomass_kgha_trophic_group_avg END),
+                'biomass_kgha_trophic_group_sd', (CASE WHEN project.data_policy_beltfish < 50 THEN NULL ELSE
+                fbtg.biomass_kgha_trophic_group_sd END)
             )), '{{}}'),
             'benthiclit', NULLIF(jsonb_strip_nulls(jsonb_build_object(
                 'sample_unit_count', bl.sample_unit_count,
-                'percent_cover_by_benthic_category_avg', (CASE WHEN project.data_policy_benthiclit < 50 THEN NULL ELSE
-                bl.percent_cover_by_benthic_category_avg END),
-                'percent_cover_by_benthic_category_sd', (CASE WHEN project.data_policy_benthiclit < 50 THEN NULL ELSE
-                bl.percent_cover_by_benthic_category_sd END)
+                'percent_cover_benthic_category_avg', (CASE WHEN project.data_policy_benthiclit < 50 THEN NULL ELSE
+                bl.percent_cover_benthic_category_avg END),
+                'percent_cover_benthic_category_sd', (CASE WHEN project.data_policy_benthiclit < 50 THEN NULL ELSE
+                bl.percent_cover_benthic_category_sd END)
             )), '{{}}'),
             'benthicpit', NULLIF(jsonb_strip_nulls(jsonb_build_object(
                 'sample_unit_count', bp.sample_unit_count,
-                'percent_cover_by_benthic_category_avg', (CASE WHEN project.data_policy_benthicpit < 50 THEN NULL ELSE
-                bp.percent_cover_by_benthic_category_avg END),
-                'percent_cover_by_benthic_category_sd', (CASE WHEN project.data_policy_benthicpit < 50 THEN NULL ELSE
-                bp.percent_cover_by_benthic_category_sd END)
+                'percent_cover_benthic_category_avg', (CASE WHEN project.data_policy_benthicpit < 50 THEN NULL ELSE
+                bp.percent_cover_benthic_category_avg END),
+                'percent_cover_benthic_category_sd', (CASE WHEN project.data_policy_benthicpit < 50 THEN NULL ELSE
+                bp.percent_cover_benthic_category_sd END)
             )), '{{}}'),
             'benthicpqt', NULLIF(jsonb_strip_nulls(jsonb_build_object(
                 'sample_unit_count', pqt.sample_unit_count,
-                'percent_cover_by_benthic_category_avg', (CASE WHEN project.data_policy_benthicpqt < 50 THEN NULL ELSE
-                pqt.percent_cover_by_benthic_category_avg END),
-                'percent_cover_by_benthic_category_sd', (CASE WHEN project.data_policy_benthicpqt < 50 THEN NULL ELSE
-                pqt.percent_cover_by_benthic_category_sd END)
+                'percent_cover_benthic_category_avg', (CASE WHEN project.data_policy_benthicpqt < 50 THEN NULL ELSE
+                pqt.percent_cover_benthic_category_avg END),
+                'percent_cover_benthic_category_sd', (CASE WHEN project.data_policy_benthicpqt < 50 THEN NULL ELSE
+                pqt.percent_cover_benthic_category_sd END)
             )), '{{}}'),
             'habitatcomplexity', NULLIF(jsonb_strip_nulls(jsonb_build_object(
                 'sample_unit_count', hc.sample_unit_count,
@@ -233,8 +233,8 @@ class SummarySampleEventSQLModel(SummarySampleEventBaseModel):
         ) fb ON (sample_event.id = fb.sample_event_id)
         LEFT JOIN (
             SELECT sample_event_id,
-            jsonb_object_agg(tg, ROUND(biomass_kgha_avg::numeric, 2)) AS biomass_kgha_by_trophic_group_avg,
-            jsonb_object_agg(tg, ROUND(biomass_kgha_sd::numeric, 2)) AS biomass_kgha_by_trophic_group_sd
+            jsonb_object_agg(tg, ROUND(biomass_kgha_avg::numeric, 2)) AS biomass_kgha_trophic_group_avg,
+            jsonb_object_agg(tg, ROUND(biomass_kgha_sd::numeric, 2)) AS biomass_kgha_trophic_group_sd
             FROM (
                 SELECT meta_su_tgs.sample_event_id, tg,
                 AVG(biomass_kgha) AS biomass_kgha_avg,
@@ -243,7 +243,7 @@ class SummarySampleEventSQLModel(SummarySampleEventBaseModel):
                     SELECT sample_event_id, pseudosu_id, tgdata.key AS tg,
                     SUM(tgdata.value::double precision) AS biomass_kgha
                     FROM beltfish_su,
-                    LATERAL jsonb_each_text(biomass_kgha_by_trophic_group) tgdata(key, value)
+                    LATERAL jsonb_each_text(biomass_kgha_trophic_group) tgdata(key, value)
                     GROUP BY sample_event_id, pseudosu_id, tgdata.key
                 ) meta_su_tgs
                 GROUP BY meta_su_tgs.sample_event_id, tg
@@ -254,20 +254,20 @@ class SummarySampleEventSQLModel(SummarySampleEventBaseModel):
         LEFT JOIN (
             SELECT benthiclit_su.sample_event_id,
             COUNT(pseudosu_id) AS sample_unit_count,
-            percent_cover_by_benthic_category_avg,
-            percent_cover_by_benthic_category_sd
+            percent_cover_benthic_category_avg,
+            percent_cover_benthic_category_sd
             FROM benthiclit_su
             INNER JOIN (
                 SELECT sample_event_id,
-                jsonb_object_agg(cat, ROUND(cat_percent_avg :: numeric, 2)) AS percent_cover_by_benthic_category_avg,
-                jsonb_object_agg(cat, ROUND(cat_percent_sd :: numeric, 2)) AS percent_cover_by_benthic_category_sd
+                jsonb_object_agg(cat, ROUND(cat_percent_avg :: numeric, 2)) AS percent_cover_benthic_category_avg,
+                jsonb_object_agg(cat, ROUND(cat_percent_sd :: numeric, 2)) AS percent_cover_benthic_category_sd
                 FROM (
                     SELECT sample_event_id,
                     cpdata.key AS cat,
                     AVG(cpdata.value :: float) AS cat_percent_avg,
                     STDDEV(cpdata.value :: float) AS cat_percent_sd
                     FROM benthiclit_su,
-                    jsonb_each_text(percent_cover_by_benthic_category) AS cpdata
+                    jsonb_each_text(percent_cover_benthic_category) AS cpdata
                     GROUP BY sample_event_id, cpdata.key
                 ) AS benthiclit_su_cp
                 GROUP BY sample_event_id
@@ -275,27 +275,27 @@ class SummarySampleEventSQLModel(SummarySampleEventBaseModel):
             ON benthiclit_su.sample_event_id = benthiclit_se_cat_percents.sample_event_id
             GROUP BY
             benthiclit_su.sample_event_id,
-            percent_cover_by_benthic_category_avg,
-            percent_cover_by_benthic_category_sd
+            percent_cover_benthic_category_avg,
+            percent_cover_benthic_category_sd
         ) bl ON (sample_event.id = bl.sample_event_id)
 
         LEFT JOIN (
             SELECT benthicpit_su.sample_event_id,
             COUNT(pseudosu_id) AS sample_unit_count,
-            percent_cover_by_benthic_category_avg,
-            percent_cover_by_benthic_category_sd
+            percent_cover_benthic_category_avg,
+            percent_cover_benthic_category_sd
             FROM benthicpit_su
             INNER JOIN (
                 SELECT sample_event_id,
-                jsonb_object_agg(cat, ROUND(cat_percent_avg :: numeric, 2)) AS percent_cover_by_benthic_category_avg,
-                jsonb_object_agg(cat, ROUND(cat_percent_sd :: numeric, 2)) AS percent_cover_by_benthic_category_sd
+                jsonb_object_agg(cat, ROUND(cat_percent_avg :: numeric, 2)) AS percent_cover_benthic_category_avg,
+                jsonb_object_agg(cat, ROUND(cat_percent_sd :: numeric, 2)) AS percent_cover_benthic_category_sd
                 FROM (
                     SELECT sample_event_id,
                     cpdata.key AS cat,
                     AVG(cpdata.value :: float) AS cat_percent_avg,
                     STDDEV(cpdata.value :: float) AS cat_percent_sd
                     FROM benthicpit_su,
-                    jsonb_each_text(percent_cover_by_benthic_category) AS cpdata
+                    jsonb_each_text(percent_cover_benthic_category) AS cpdata
                     GROUP BY sample_event_id, cpdata.key
                 ) AS benthicpit_su_cp
                 GROUP BY sample_event_id
@@ -303,27 +303,27 @@ class SummarySampleEventSQLModel(SummarySampleEventBaseModel):
             ON benthicpit_su.sample_event_id = benthicpit_se_cat_percents.sample_event_id
             GROUP BY
             benthicpit_su.sample_event_id,
-            percent_cover_by_benthic_category_avg,
-            percent_cover_by_benthic_category_sd
+            percent_cover_benthic_category_avg,
+            percent_cover_benthic_category_sd
         ) bp ON (sample_event.id = bp.sample_event_id)
 
         LEFT JOIN (
             SELECT benthicpqt_su.sample_event_id,
             COUNT(pseudosu_id) AS sample_unit_count,
-            percent_cover_by_benthic_category_avg,
-            percent_cover_by_benthic_category_sd
+            percent_cover_benthic_category_avg,
+            percent_cover_benthic_category_sd
             FROM benthicpqt_su
             INNER JOIN (
                 SELECT sample_event_id,
-                jsonb_object_agg(cat, ROUND(cat_percent_avg :: numeric, 2)) AS percent_cover_by_benthic_category_avg,
-                jsonb_object_agg(cat, ROUND(cat_percent_sd :: numeric, 2)) AS percent_cover_by_benthic_category_sd
+                jsonb_object_agg(cat, ROUND(cat_percent_avg :: numeric, 2)) AS percent_cover_benthic_category_avg,
+                jsonb_object_agg(cat, ROUND(cat_percent_sd :: numeric, 2)) AS percent_cover_benthic_category_sd
                 FROM (
                     SELECT sample_event_id,
                     cpdata.key AS cat,
                     AVG(cpdata.value :: float) AS cat_percent_avg,
                     STDDEV(cpdata.value :: float) AS cat_percent_sd
                     FROM benthicpqt_su,
-                    jsonb_each_text(percent_cover_by_benthic_category) AS cpdata
+                    jsonb_each_text(percent_cover_benthic_category) AS cpdata
                     GROUP BY sample_event_id, cpdata.key
                 ) AS benthicpqt_su_cp
                 GROUP BY sample_event_id
@@ -331,8 +331,8 @@ class SummarySampleEventSQLModel(SummarySampleEventBaseModel):
             ON benthicpqt_su.sample_event_id = benthicpqt_se_cat_percents.sample_event_id
             GROUP BY
             benthicpqt_su.sample_event_id,
-            percent_cover_by_benthic_category_avg,
-            percent_cover_by_benthic_category_sd
+            percent_cover_benthic_category_avg,
+            percent_cover_benthic_category_sd
         ) pqt ON (sample_event.id = pqt.sample_event_id)
 
         LEFT JOIN (

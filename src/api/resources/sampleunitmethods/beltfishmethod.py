@@ -308,8 +308,8 @@ class BeltFishMethodSUSerializer(BaseSUViewAPISerializer):
                 "data_policy_beltfish",
                 "total_abundance",
                 "biomass_kgha",
-                "biomass_kgha_by_trophic_group",
-                "biomass_kgha_by_fish_family",
+                "biomass_kgha_trophic_group",
+                "biomass_kgha_fish_family",
             ]
         )
 
@@ -354,8 +354,8 @@ class BeltFishMethodSUCSVSerializer(ReportSerializer):
         ReportField("size_bin", "Size bin"),
         ReportField("total_abundance", "Total abundance"),
         ReportField("biomass_kgha", "Biomass_kgha"),
-        ReportField("biomass_kgha_by_trophic_group", "Biomass kgha by trophic group"),
-        ReportField("biomass_kgha_by_fish_family", "Biomass kgha by family"),
+        ReportField("biomass_kgha_trophic_group", "Biomass kgha by trophic group"),
+        ReportField("biomass_kgha_fish_family", "Biomass kgha by family"),
         ReportField("site_notes", "Site notes"),
         ReportField("management_notes", "Management notes"),
         ReportField("sample_unit_notes", "Sample unit notes"),
@@ -390,10 +390,10 @@ class BeltFishMethodSESerializer(BaseSUViewAPISerializer):
                 "depth_sd",
                 "biomass_kgha_avg",
                 "biomass_kgha_sd",
-                "biomass_kgha_by_trophic_group_avg",
-                "biomass_kgha_by_trophic_group_sd",
-                "biomass_kgha_by_fish_family_avg",
-                "biomass_kgha_by_fish_family_sd",
+                "biomass_kgha_trophic_group_avg",
+                "biomass_kgha_trophic_group_sd",
+                "biomass_kgha_fish_family_avg",
+                "biomass_kgha_fish_family_sd",
             ]
         )
 
@@ -432,13 +432,13 @@ class BeltFishMethodSECSVSerializer(ReportSerializer):
         ReportField("biomass_kgha_avg", "Biomass_kgha average"),
         ReportField("biomass_kgha_sd", "Biomass_kgha standard deviation"),
         ReportField(
-            "biomass_kgha_by_trophic_group_avg", "Biomass kgha by trophic group average"
+            "biomass_kgha_trophic_group_avg", "Biomass kgha by trophic group average"
         ),
         ReportField(
-            "biomass_kgha_by_trophic_group_sd", "Biomass kgha by trophic group standard deviation"
+            "biomass_kgha_trophic_group_sd", "Biomass kgha by trophic group standard deviation"
         ),
-        ReportField("biomass_kgha_by_fish_family_avg", "Biomass kgha by family average"),
-        ReportField("biomass_kgha_by_fish_family_sd", "Biomass kgha by family standard deviation"),
+        ReportField("biomass_kgha_fish_family_avg", "Biomass kgha by family average"),
+        ReportField("biomass_kgha_fish_family_sd", "Biomass kgha by family standard deviation"),
         ReportField("site_notes", "Site notes"),
         ReportField("management_notes", "Management notes"),
     ]
