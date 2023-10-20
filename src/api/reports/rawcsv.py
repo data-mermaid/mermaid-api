@@ -43,7 +43,7 @@ class RawCSVReport(BaseReport):
             yield ""
         csv_buffer = Echo()
         csv_writer = csv.writer(csv_buffer)
-        csv_writer.writerow(fields)
+        yield csv_writer.writerow(fields)
         for row in data:
             yield csv_writer.writerow(row)
     
