@@ -30,6 +30,23 @@ class RawCSVReport(BaseReport):
     def _apply_formatters(self, flat_record):
         return self._flatten_record(flat_record)
 
+    def data(self, fields, data, *args, **kwargs):
+        if data is None:
+            return []
+        records = [fields]
+        for r in data:
+            records.append(self._apply_formatters(r))
+        return records
+        
+    def stream_list(self, fields, data, *args, **kwargs):
+        if data is None:
+            yield ""
+        csv_buffer = Echo()
+        csv_writer = csv.writer(csv_buffer)
+        csv_writer.writerow(fields)
+        for row in data:
+            yield csv_writer.writerow(row)
+    
     def stream(self, fields, data, *args, **kwargs):
         if data is None:
             yield ""
