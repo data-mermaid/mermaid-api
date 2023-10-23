@@ -27,7 +27,9 @@ from ..base import (
     BaseSEFilterSet,
     BaseSUObsFilterSet,
     BaseSUViewAPISerializer,
+    BaseSUViewAPISUSerializer,
     BaseViewAPIGeoSerializer,
+    BaseViewAPISUGeoSerializer,
     BaseAPISerializer,
 )
 from ..observer import ObserverSerializer
@@ -177,12 +179,12 @@ class ObsBenthicPQTCSVSerializer(ReportSerializer):
     ]
 
 
-class BenthicPQTMethodSUSerializer(BaseSUViewAPISerializer):
-    class Meta(BaseSUViewAPISerializer.Meta):
+class BenthicPQTMethodSUSerializer(BaseSUViewAPISUSerializer):
+    class Meta(BaseSUViewAPISUSerializer.Meta):
         model = BenthicPhotoQuadratTransectSUModel
-        exclude = BaseSUViewAPISerializer.Meta.exclude.copy()
+        exclude = BaseSUViewAPISUSerializer.Meta.exclude.copy()
         exclude.append("location")
-        header_order = BaseSUViewAPISerializer.Meta.header_order.copy()
+        header_order = BaseSUViewAPISUSerializer.Meta.header_order.copy()
         header_order.extend(
             [
                 "label",
@@ -196,8 +198,8 @@ class BenthicPQTMethodSUSerializer(BaseSUViewAPISerializer):
         )
 
 
-class BenthicPQTMethodSUGeoSerializer(BaseViewAPIGeoSerializer):
-    class Meta(BaseViewAPIGeoSerializer.Meta):
+class BenthicPQTMethodSUGeoSerializer(BaseViewAPISUGeoSerializer):
+    class Meta(BaseViewAPISUGeoSerializer.Meta):
         model = BenthicPhotoQuadratTransectSUModel
 
 
@@ -250,7 +252,6 @@ class BenthicPQTMethodSUCSVSerializer(ReportSerializer):
     ]
 
     additional_fields = [
-        ReportField("id"),
         ReportField("site_id"),
         ReportField("project_id"),
         ReportField("country_id"),

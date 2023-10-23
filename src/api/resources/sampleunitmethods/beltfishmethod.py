@@ -30,8 +30,10 @@ from ..base import (
     BaseProjectApiViewSet,
     BaseSEFilterSet,
     BaseSUObsFilterSet,
-    BaseViewAPIGeoSerializer,
     BaseSUViewAPISerializer,
+    BaseSUViewAPISUSerializer,
+    BaseViewAPIGeoSerializer,
+    BaseViewAPISUGeoSerializer,
     BaseAPISerializer,
 )
 from ..fish_belt_transect import FishBeltTransectSerializer
@@ -291,12 +293,12 @@ class ObsBeltFishCSVSerializer(ReportSerializer):
     ]
 
 
-class BeltFishMethodSUSerializer(BaseSUViewAPISerializer):
-    class Meta(BaseSUViewAPISerializer.Meta):
+class BeltFishMethodSUSerializer(BaseSUViewAPISUSerializer):
+    class Meta(BaseSUViewAPISUSerializer.Meta):
         model = BeltFishSUModel
-        exclude = BaseSUViewAPISerializer.Meta.exclude.copy()
-        exclude.append("location")
-        header_order = BaseSUViewAPISerializer.Meta.header_order.copy()
+        exclude = BaseSUViewAPISUSerializer.Meta.exclude.copy()
+        exclude.extend(["location", "biomass_kgha_by_trophic_group_zeroes", "biomass_kgha_by_fish_family_zeroes"])
+        header_order = BaseSUViewAPISUSerializer.Meta.header_order.copy()
         header_order.extend(
             [
                 "label",
@@ -315,9 +317,11 @@ class BeltFishMethodSUSerializer(BaseSUViewAPISerializer):
         )
 
 
-class BeltFishMethodSUGeoSerializer(BaseViewAPIGeoSerializer):
-    class Meta(BaseViewAPIGeoSerializer.Meta):
+class BeltFishMethodSUGeoSerializer(BaseViewAPISUGeoSerializer):
+    class Meta(BaseViewAPISUGeoSerializer.Meta):
         model = BeltFishSUModel
+        exclude = BaseViewAPISUGeoSerializer.Meta.exclude.copy()
+        exclude.extend(["biomass_kgha_by_trophic_group_zeroes", "biomass_kgha_by_fish_family_zeroes"])
 
 
 class BeltFishMethodSUCSVSerializer(ReportSerializer):
@@ -368,7 +372,6 @@ class BeltFishMethodSUCSVSerializer(ReportSerializer):
     ]
 
     additional_fields = [
-        ReportField("id"),
         ReportField("site_id"),
         ReportField("project_id"),
         ReportField("country_id"),

@@ -1,8 +1,9 @@
 from rest_framework.decorators import api_view
 from rest_framework.exceptions import (
-    ValidationError,
     NotAuthenticated,
+    NotFound,
     PermissionDenied,
+    ValidationError,
 )
 from rest_framework.response import Response
 
@@ -314,7 +315,9 @@ def check_permissions(request, data, source_types, method=False):
             permission_check["code"] = 401
         except PermissionDenied:
             permission_check["code"] = 403
-        
+        except NotFound as e:
+            print(e)
+
         permission_checks[source_type] = permission_check
 
     return permission_checks
