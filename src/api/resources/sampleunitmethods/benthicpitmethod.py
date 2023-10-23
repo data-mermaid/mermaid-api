@@ -29,8 +29,10 @@ from ..base import (
     BaseProjectApiViewSet,
     BaseSEFilterSet,
     BaseSUObsFilterSet,
-    BaseViewAPIGeoSerializer,
     BaseSUViewAPISerializer,
+    BaseSUViewAPISUSerializer,
+    BaseViewAPIGeoSerializer,
+    BaseViewAPISUGeoSerializer,
     BaseAPISerializer,
 )
 from ..benthic_transect import BenthicTransectSerializer
@@ -282,12 +284,12 @@ class ObsBenthicPITCSVSerializer(ReportSerializer):
     ]
 
 
-class BenthicPITMethodSUSerializer(BaseSUViewAPISerializer):
-    class Meta(BaseSUViewAPISerializer.Meta):
+class BenthicPITMethodSUSerializer(BaseSUViewAPISUSerializer):
+    class Meta(BaseSUViewAPISUSerializer.Meta):
         model = BenthicPITSUModel
-        exclude = BaseSUViewAPISerializer.Meta.exclude.copy()
+        exclude = BaseSUViewAPISUSerializer.Meta.exclude.copy()
         exclude.append("location")
-        header_order = BaseSUViewAPISerializer.Meta.header_order.copy()
+        header_order = BaseSUViewAPISUSerializer.Meta.header_order.copy()
         header_order.extend(
             [
                 "label",
@@ -303,8 +305,8 @@ class BenthicPITMethodSUSerializer(BaseSUViewAPISerializer):
         )
 
 
-class BenthicPITMethodSUGeoSerializer(BaseViewAPIGeoSerializer):
-    class Meta(BaseViewAPIGeoSerializer.Meta):
+class BenthicPITMethodSUGeoSerializer(BaseViewAPISUGeoSerializer):
+    class Meta(BaseViewAPISUGeoSerializer.Meta):
         model = BenthicPITSUModel
 
 
@@ -350,7 +352,6 @@ class BenthicPITMethodSUCSVSerializer(ReportSerializer):
     ]
 
     additional_fields = [
-        ReportField("id"),
         ReportField("site_id"),
         ReportField("project_id"),
         ReportField("project_notes"),

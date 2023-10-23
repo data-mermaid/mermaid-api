@@ -33,8 +33,10 @@ from ..base import (
     BaseProjectApiViewSet,
     BaseSEFilterSet,
     BaseSUObsFilterSet,
-    BaseViewAPIGeoSerializer,
     BaseSUViewAPISerializer,
+    BaseSUViewAPISUSerializer,
+    BaseViewAPIGeoSerializer,
+    BaseViewAPISUGeoSerializer,
     BaseAPISerializer,
 )
 from ..mixins import SampleUnitMethodSummaryReport, SampleUnitMethodEditMixin
@@ -388,12 +390,12 @@ class ObsQuadratBenthicPercentCSVSerializer(ReportSerializer):
     ]
 
 
-class BleachingQCMethodSUSerializer(BaseSUViewAPISerializer):
-    class Meta(BaseSUViewAPISerializer.Meta):
+class BleachingQCMethodSUSerializer(BaseSUViewAPISUSerializer):
+    class Meta(BaseSUViewAPISUSerializer.Meta):
         model = BleachingQCSUModel
-        exclude = BaseSUViewAPISerializer.Meta.exclude.copy()
+        exclude = BaseSUViewAPISUSerializer.Meta.exclude.copy()
         exclude.append("location")
-        header_order = BaseSUViewAPISerializer.Meta.header_order.copy()
+        header_order = BaseSUViewAPISUSerializer.Meta.header_order.copy()
         header_order.extend(
             [
                 "label",
@@ -414,8 +416,8 @@ class BleachingQCMethodSUSerializer(BaseSUViewAPISerializer):
         )
 
 
-class BleachingQCMethodSUGeoSerializer(BaseViewAPIGeoSerializer):
-    class Meta(BaseViewAPIGeoSerializer.Meta):
+class BleachingQCMethodSUGeoSerializer(BaseViewAPISUGeoSerializer):
+    class Meta(BaseViewAPISUGeoSerializer.Meta):
         model = BleachingQCSUModel
 
 
@@ -463,7 +465,6 @@ class BleachingQCMethodSUCSVSerializer(ReportSerializer):
     ]
 
     additional_fields = [
-        ReportField("id"),
         ReportField("site_id"),
         ReportField("project_id"),
         ReportField("project_notes"),
