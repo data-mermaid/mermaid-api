@@ -183,6 +183,7 @@ class BaseSUViewAPISerializer(BaseViewAPISerializer):
             "project_id",
             "project_name",
             "project_notes",
+            "project_admins",
             "contact_link",
             "tags",
             "country_id",
@@ -216,12 +217,29 @@ class BaseSUViewAPISerializer(BaseViewAPISerializer):
         return None
 
 
+class BaseSUViewAPISUSerializer(BaseSUViewAPISerializer):
+    id = None
+
+    class Meta(BaseSUViewAPISerializer.Meta):
+        exclude = BaseSUViewAPISerializer.Meta.exclude.copy()
+        exclude.append("id")
+
+
 class BaseViewAPIGeoSerializer(GeoFeatureModelSerializer, BaseAPISerializer):
     location = GeometryField(precision=settings.GEO_PRECISION)
 
     class Meta:
         exclude = ["project_status", "sample_event_notes"]
         geo_field = "location"
+
+
+class BaseViewAPISUGeoSerializer(BaseViewAPIGeoSerializer):
+    id = None
+
+    class Meta(BaseViewAPIGeoSerializer.Meta):
+        exclude = BaseViewAPIGeoSerializer.Meta.exclude.copy()
+        exclude.append("id")
+        id_field = "sample_unit_ids"
 
 
 class SampleEventExtendedSerializer(BaseAPISerializer):

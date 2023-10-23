@@ -197,17 +197,20 @@ class SummarySampleEventSQLModel(SummarySampleEventBaseModel):
         INNER JOIN api_reefexposure ON (site.exposure_id = api_reefexposure.id)
 
         INNER JOIN (
-            SELECT project.id,
-            jsonb_agg(
-                jsonb_build_object('name', COALESCE(profile.first_name, '') || ' ' || COALESCE(profile.last_name, ''))
+            SELECT 
+            project_id,
+            jsonb_agg(jsonb_build_object(
+                'id', p.id,
+                'name',
+                (COALESCE(p.first_name, ''::character varying)::text || ' '::text)
+                || COALESCE(p.last_name, ''::character varying)::text)
             ) AS project_admins
-            FROM project
-            INNER JOIN project_profile ON (project.id = project_profile.project_id)
-            INNER JOIN profile ON (project_profile.profile_id = profile.id)
-            WHERE project_profile.role >= 90
-            AND project.id = '%(project_id)s'::uuid
-            GROUP BY project.id
-        ) pa ON (project.id = pa.id)
+            FROM project_profile pp
+            INNER JOIN profile p ON (pp.profile_id = p.id)
+            WHERE project_id = '%(project_id)s'::uuid
+            AND role >= 90
+            GROUP BY project_id
+        ) pa ON (project.id = pa.project_id)
 
         LEFT JOIN (
             SELECT project.id,
