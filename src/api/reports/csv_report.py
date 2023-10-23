@@ -28,12 +28,12 @@ def get_data(
         include_additional_fields=include_additional_fields,
         show_display_fields=show_display_fields,
     )
-    return serializer.get_serialized_data() or []
+    return list(serializer.get_serialized_data()) or []
 
  
 def _flatten_column(column_name, column_records):
     all_keys = {f"{column_name}_{key}": key for d in column_records for key in d.keys()}
-    return {new_key: [dic.get(key, None) for dic in column_records] for new_key, key in all_keys.items()}
+    return {new_key: [dic.get(key) for dic in column_records] for new_key, key in all_keys.items()}
 
 
 def is_json_like(v):
@@ -84,7 +84,6 @@ def get_csv_response(
     serialized_data = get_data(
         serializer_class, queryset, include_additional_fields=include_additional_fields, show_display_fields=show_display_fields
     )
-    serialized_data = list(serialized_data)
     time_stamp = datetime.utcnow().strftime("%Y%m%d")
     file_name = f"{file_name_prefix}-{time_stamp}.csv".lower()
     return _get_csv_response(file_name, fields, serialized_data)

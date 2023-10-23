@@ -80,7 +80,7 @@ def _covariate_aca_lookup(site_ids: List[str]) -> Dict[str, List[str]]:
 
 
 def _get_site_aca_covariate_columns(site_ids: List[str]) -> Tuple[list, list]:
-    """Alan Coral Atlas covariates
+    """Allen Coral Atlas covariates
 
     Args:
         site_ids (list): List of site ids for lookup up covariate values.
