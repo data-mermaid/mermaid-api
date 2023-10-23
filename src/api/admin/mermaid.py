@@ -949,6 +949,8 @@ class ArchivedRecordAdmin(BaseAdmin):
 @admin.register(Tag)
 class TagAdmin(BaseAdmin):
     list_display = ("name", "status", "updated_by")
+    list_filter = ("status",)
+    readonly_fields = ["created_on", "updated_on"]
 
     def delete_view(self, request, object_id, extra_context=None):
         obj = Tag.objects.get(pk=object_id)

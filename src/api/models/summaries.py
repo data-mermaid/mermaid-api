@@ -14,6 +14,7 @@ class BaseSummaryModel(models.Model):
         choices=Project.STATUSES, default=Project.OPEN
     )
     project_notes = models.TextField(blank=True)
+    project_admins = models.JSONField(null=True, blank=True)
     contact_link = models.CharField(max_length=255)
     tags = models.JSONField(null=True, blank=True)
     site_id = models.UUIDField()
