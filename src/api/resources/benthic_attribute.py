@@ -46,7 +46,6 @@ class BenthicAttributeSerializer(RegionsSerializerMixin, CreateOrUpdateSerialize
         return self._top_level_category.get(str(obj.id))
 
 
-
 class BenthicAttributeFilterSet(BaseAPIFilterSet):
     parent = NullableUUIDFilter(field_name="parent")
     life_history = NullableUUIDFilter(field_name="life_history")

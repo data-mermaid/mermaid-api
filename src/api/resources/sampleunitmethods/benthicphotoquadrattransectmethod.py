@@ -27,7 +27,9 @@ from ..base import (
     BaseSEFilterSet,
     BaseSUObsFilterSet,
     BaseSUViewAPISerializer,
+    BaseSUViewAPISUSerializer,
     BaseViewAPIGeoSerializer,
+    BaseViewAPISUGeoSerializer,
     BaseAPISerializer,
 )
 from ..observer import ObserverSerializer
@@ -117,7 +119,10 @@ class BenthicPQTMethodObsGeoSerializer(BaseViewAPIGeoSerializer):
 class ObsBenthicPQTCSVSerializer(ReportSerializer):
     fields = [
         ReportField("project_name", "Project name"),
+        ReportField("project_admins", "Project admins", to_names),
         ReportField("country_name", "Country"),
+        ReportField("contact_link", "Project contact link"),
+        ReportField("tags", "Project organizations", to_names),
         ReportField("site_name", "Site"),
         ReportField("latitude", "Latitude"),
         ReportField("longitude", "Longitude"),
@@ -159,29 +164,27 @@ class ObsBenthicPQTCSVSerializer(ReportSerializer):
         ReportField("site_notes", "Site notes"),
         ReportField("management_notes", "Management notes"),
         ReportField("sample_unit_notes", "Sample unit notes"),
+        ReportField("project_notes", "Project notes"),
+        ReportField("data_policy_benthicpqt", "Benthic PQT data policy"),
     ]
 
     additional_fields = [
         ReportField("id"),
         ReportField("site_id"),
         ReportField("project_id"),
-        ReportField("project_notes"),
-        ReportField("contact_link"),
-        ReportField("tags"),
         ReportField("country_id"),
         ReportField("management_id"),
         ReportField("sample_event_id"),
         ReportField("sample_unit_id"),
-        ReportField("data_policy_benthicpqt"),
     ]
 
 
-class BenthicPQTMethodSUSerializer(BaseSUViewAPISerializer):
-    class Meta(BaseSUViewAPISerializer.Meta):
+class BenthicPQTMethodSUSerializer(BaseSUViewAPISUSerializer):
+    class Meta(BaseSUViewAPISUSerializer.Meta):
         model = BenthicPhotoQuadratTransectSUModel
-        exclude = BaseSUViewAPISerializer.Meta.exclude.copy()
+        exclude = BaseSUViewAPISUSerializer.Meta.exclude.copy()
         exclude.append("location")
-        header_order = BaseSUViewAPISerializer.Meta.header_order.copy()
+        header_order = BaseSUViewAPISUSerializer.Meta.header_order.copy()
         header_order.extend(
             [
                 "label",
@@ -195,15 +198,18 @@ class BenthicPQTMethodSUSerializer(BaseSUViewAPISerializer):
         )
 
 
-class BenthicPQTMethodSUGeoSerializer(BaseViewAPIGeoSerializer):
-    class Meta(BaseViewAPIGeoSerializer.Meta):
+class BenthicPQTMethodSUGeoSerializer(BaseViewAPISUGeoSerializer):
+    class Meta(BaseViewAPISUGeoSerializer.Meta):
         model = BenthicPhotoQuadratTransectSUModel
 
 
 class BenthicPQTMethodSUCSVSerializer(ReportSerializer):
     fields = [
         ReportField("project_name", "Project name"),
+        ReportField("project_admins", "Project admins", to_names),
         ReportField("country_name", "Country"),
+        ReportField("contact_link", "Project contact link"),
+        ReportField("tags", "Project organizations", to_names),
         ReportField("site_name", "Site"),
         ReportField("latitude", "Latitude"),
         ReportField("longitude", "Longitude"),
@@ -241,20 +247,17 @@ class BenthicPQTMethodSUCSVSerializer(ReportSerializer):
         ReportField("site_notes", "Site notes"),
         ReportField("management_notes", "Management notes"),
         ReportField("sample_unit_notes", "Sample unit notes"),
+        ReportField("project_notes", "Project notes"),
+        ReportField("data_policy_benthicpqt", "Benthic PQT data policy"),
     ]
 
     additional_fields = [
-        ReportField("id"),
         ReportField("site_id"),
         ReportField("project_id"),
-        ReportField("project_notes"),
-        ReportField("contact_link"),
-        ReportField("tags"),
         ReportField("country_id"),
         ReportField("management_id"),
         ReportField("sample_event_id"),
         ReportField("sample_unit_ids"),
-        ReportField("data_policy_benthicpqt"),
     ]
 
 
@@ -284,7 +287,10 @@ class BenthicPQTMethodSEGeoSerializer(BaseViewAPIGeoSerializer):
 class BenthicPQTMethodSECSVSerializer(ReportSerializer):
     fields = [
         ReportField("project_name", "Project name"),
+        ReportField("project_admins", "Project admins", to_names),
         ReportField("country_name", "Country"),
+        ReportField("contact_link", "Project contact link"),
+        ReportField("tags", "Project organizations", to_names),
         ReportField("site_name", "Site"),
         ReportField("latitude", "Latitude"),
         ReportField("longitude", "Longitude"),
@@ -321,19 +327,17 @@ class BenthicPQTMethodSECSVSerializer(ReportSerializer):
         ),
         ReportField("site_notes", "Site notes"),
         ReportField("management_notes", "Management notes"),
+        ReportField("project_notes", "Project notes"),
+        ReportField("data_policy_benthicpqt", "Benthic PQT data policy"),
     ]
 
     additional_fields = [
         ReportField("id"),
         ReportField("site_id"),
         ReportField("project_id"),
-        ReportField("project_notes"),
-        ReportField("contact_link"),
-        ReportField("tags"),
         ReportField("country_id"),
         ReportField("management_id"),
         ReportField("sample_event_id"),
-        ReportField("data_policy_benthicpqt"),
     ]
 
 
