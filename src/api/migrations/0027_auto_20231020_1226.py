@@ -6,7 +6,7 @@ from django.db import migrations
 class Migration(migrations.Migration):
 
     dependencies = [
-        ('api', '0024_auto_20230913_1858'),
+        ('api', '0026_beltfishobsmodel_assigned_transect_width_m'),
     ]
 
     operations = [
