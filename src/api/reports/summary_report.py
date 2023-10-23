@@ -264,8 +264,8 @@ def create_benthic_lit_report(request, project_pk):
         project_pk,
         views=[
             BenthicLITProjectMethodSEView,
-            BenthicLITProjectMethodObsView,
             BenthicLITProjectMethodSUView,
+            BenthicLITProjectMethodObsView,
         ],
         sheet_names=[
             "Benthic LIT SE",
