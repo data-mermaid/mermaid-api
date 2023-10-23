@@ -411,7 +411,7 @@ class BeltFishSESQLModel(BaseSQLModel):
             jsonb_object_agg(
                 tg,
                 ROUND(biomass_kgha_sd::numeric, 2)
-            ) FILTER (WHERE biomass_kgha_sd > 0) AS biomass_kgha_by_trophic_group_sd
+            ) FILTER (WHERE biomass_kgha_avg > 0) AS biomass_kgha_by_trophic_group_sd
             FROM (
                 SELECT meta_su_tgs.sample_event_id, tg,
                 AVG(biomass_kgha) AS biomass_kgha_avg,
@@ -439,7 +439,7 @@ class BeltFishSESQLModel(BaseSQLModel):
             jsonb_object_agg(
                 ff,
                 ROUND(biomass_kgha_sd::numeric, 2)
-            ) FILTER (WHERE biomass_kgha_sd > 0) AS biomass_kgha_by_fish_family_sd
+            ) FILTER (WHERE biomass_kgha_avg > 0) AS biomass_kgha_by_fish_family_sd
             FROM (
                 SELECT meta_su_ffs.sample_event_id, ff,
                 AVG(biomass_kgha) AS biomass_kgha_avg,
