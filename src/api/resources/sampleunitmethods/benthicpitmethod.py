@@ -29,8 +29,10 @@ from ..base import (
     BaseProjectApiViewSet,
     BaseSEFilterSet,
     BaseSUObsFilterSet,
-    BaseViewAPIGeoSerializer,
     BaseSUViewAPISerializer,
+    BaseSUViewAPISUSerializer,
+    BaseViewAPIGeoSerializer,
+    BaseViewAPISUGeoSerializer,
     BaseAPISerializer,
 )
 from ..benthic_transect import BenthicTransectSerializer
@@ -228,7 +230,10 @@ class BenthicPITMethodObsGeoSerializer(BaseViewAPIGeoSerializer):
 class ObsBenthicPITCSVSerializer(ReportSerializer):
     fields = [
         ReportField("project_name", "Project name"),
+        ReportField("project_admins", "Project admins", to_names),
         ReportField("country_name", "Country"),
+        ReportField("contact_link", "Project contact link"),
+        ReportField("tags", "Project organizations", to_names),
         ReportField("site_name", "Site"),
         ReportField("latitude", "Latitude"),
         ReportField("longitude", "Longitude"),
@@ -263,31 +268,29 @@ class ObsBenthicPITCSVSerializer(ReportSerializer):
         ReportField("site_notes", "Site notes"),
         ReportField("management_notes", "Management notes"),
         ReportField("sample_unit_notes", "Sample unit notes"),
+        ReportField("project_notes", "Project notes"),
+        ReportField("data_policy_benthicpit", "Benthic PIT data policy"),
     ]
 
     additional_fields = [
         ReportField("id"),
         ReportField("site_id"),
         ReportField("project_id"),
-        ReportField("project_notes"),
-        ReportField("contact_link"),
-        ReportField("tags"),
         ReportField("country_id"),
         ReportField("management_id"),
         ReportField("sample_event_id"),
         ReportField("sample_unit_id"),
         ReportField("interval_size"),
         ReportField("interval_start"),
-        ReportField("data_policy_benthicpit"),
     ]
 
 
-class BenthicPITMethodSUSerializer(BaseSUViewAPISerializer):
-    class Meta(BaseSUViewAPISerializer.Meta):
+class BenthicPITMethodSUSerializer(BaseSUViewAPISUSerializer):
+    class Meta(BaseSUViewAPISUSerializer.Meta):
         model = BenthicPITSUModel
-        exclude = BaseSUViewAPISerializer.Meta.exclude.copy()
+        exclude = BaseSUViewAPISUSerializer.Meta.exclude.copy()
         exclude.append("location")
-        header_order = BaseSUViewAPISerializer.Meta.header_order.copy()
+        header_order = BaseSUViewAPISUSerializer.Meta.header_order.copy()
         header_order.extend(
             [
                 "label",
@@ -303,15 +306,18 @@ class BenthicPITMethodSUSerializer(BaseSUViewAPISerializer):
         )
 
 
-class BenthicPITMethodSUGeoSerializer(BaseViewAPIGeoSerializer):
-    class Meta(BaseViewAPIGeoSerializer.Meta):
+class BenthicPITMethodSUGeoSerializer(BaseViewAPISUGeoSerializer):
+    class Meta(BaseViewAPISUGeoSerializer.Meta):
         model = BenthicPITSUModel
 
 
 class BenthicPITMethodSUCSVSerializer(ReportSerializer):
     fields = [
         ReportField("project_name", "Project name"),
+        ReportField("project_admins", "Project admins", to_names),
         ReportField("country_name", "Country"),
+        ReportField("contact_link", "Project contact link"),
+        ReportField("tags", "Project organizations", to_names),
         ReportField("site_name", "Site"),
         ReportField("latitude", "Latitude"),
         ReportField("longitude", "Longitude"),
@@ -347,20 +353,17 @@ class BenthicPITMethodSUCSVSerializer(ReportSerializer):
         ReportField("site_notes", "Site notes"),
         ReportField("management_notes", "Management notes"),
         ReportField("sample_unit_notes", "Sample unit notes"),
+        ReportField("project_notes", "Project notes"),
+        ReportField("data_policy_benthicpit", "Benthic PIT data policy"),
     ]
 
     additional_fields = [
-        ReportField("id"),
         ReportField("site_id"),
         ReportField("project_id"),
-        ReportField("project_notes"),
-        ReportField("contact_link"),
-        ReportField("tags"),
         ReportField("country_id"),
         ReportField("management_id"),
         ReportField("sample_event_id"),
         ReportField("sample_unit_ids"),
-        ReportField("data_policy_benthicpit"),
     ]
 
 
@@ -390,7 +393,10 @@ class BenthicPITMethodSEGeoSerializer(BaseViewAPIGeoSerializer):
 class BenthicPITMethodSECSVSerializer(ReportSerializer):
     fields = [
         ReportField("project_name", "Project name"),
+        ReportField("project_admins", "Project admins", to_names),
         ReportField("country_name", "Country"),
+        ReportField("contact_link", "Project contact link"),
+        ReportField("tags", "Project organizations", to_names),
         ReportField("site_name", "Site"),
         ReportField("latitude", "Latitude"),
         ReportField("longitude", "Longitude"),
@@ -423,19 +429,17 @@ class BenthicPITMethodSECSVSerializer(ReportSerializer):
         ),
         ReportField("site_notes", "Site notes"),
         ReportField("management_notes", "Management notes"),
+        ReportField("project_notes", "Project notes"),
+        ReportField("data_policy_benthicpit", "Benthic PIT data policy"),
     ]
 
     additional_fields = [
         ReportField("id"),
         ReportField("site_id"),
         ReportField("project_id"),
-        ReportField("project_notes"),
-        ReportField("contact_link"),
-        ReportField("tags"),
         ReportField("country_id"),
         ReportField("management_id"),
         ReportField("sample_event_id"),
-        ReportField("data_policy_benthicpit"),
     ]
 
 
