@@ -36,7 +36,7 @@ def test_beltfish_csv_view(
     )
     assert len(rows) == 7
     assert "country_name" in fieldnames
-    assert len(rows[3].keys()) == 59
+    assert len(rows[3].keys()) == 60
     assert rows[3]["site_name"] == site2.name
     assert float(rows[3]["latitude"]) == site2.location.y
     assert float(rows[3]["longitude"]) == site2.location.x
@@ -65,7 +65,7 @@ def test_beltfish_field_report(
     )
     assert len(rows) == 7
     assert "Country" in fieldnames
-    assert len(rows[3].keys()) == 52
+    assert len(rows[3].keys()) == 53
     assert rows[3]["Site"] == site2.name
     assert float(rows[3]["Latitude"]) == site2.location.y
     assert float(rows[3]["Longitude"]) == site2.location.x
