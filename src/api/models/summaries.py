@@ -159,12 +159,12 @@ class BeltFishSUModel(BaseSUModel):
         null=True,
         blank=True,
     )
-    biomass_kgha_by_trophic_group = models.JSONField(null=True, blank=True)
-    biomass_kgha_by_fish_family = models.JSONField(null=True, blank=True)
+    biomass_kgha_trophic_group = models.JSONField(null=True, blank=True)
+    biomass_kgha_fish_family = models.JSONField(null=True, blank=True)
     data_policy_beltfish = models.CharField(max_length=50)
     pseudosu_id = models.UUIDField()
-    biomass_kgha_by_trophic_group_zeroes = models.JSONField(null=True, blank=True)
-    biomass_kgha_by_fish_family_zeroes = models.JSONField(null=True, blank=True)
+    biomass_kgha_trophic_group_zeroes = models.JSONField(null=True, blank=True)
+    biomass_kgha_fish_family_zeroes = models.JSONField(null=True, blank=True)
 
     class Meta:
         db_table = "summary_belt_fish_su"
@@ -199,10 +199,10 @@ class BeltFishSEModel(BaseSummaryModel):
         blank=True,
         null=True,
     )
-    biomass_kgha_by_trophic_group_avg = models.JSONField(null=True, blank=True)
-    biomass_kgha_by_trophic_group_sd = models.JSONField(null=True, blank=True)
-    biomass_kgha_by_fish_family_avg = models.JSONField(null=True, blank=True)
-    biomass_kgha_by_fish_family_sd = models.JSONField(null=True, blank=True)
+    biomass_kgha_trophic_group_avg = models.JSONField(null=True, blank=True)
+    biomass_kgha_trophic_group_sd = models.JSONField(null=True, blank=True)
+    biomass_kgha_fish_family_avg = models.JSONField(null=True, blank=True)
+    biomass_kgha_fish_family_sd = models.JSONField(null=True, blank=True)
     data_policy_beltfish = models.CharField(max_length=50)
 
     class Meta:
@@ -253,7 +253,7 @@ class BenthicPITSUModel(BaseSUModel):
         default=0.5,
         verbose_name=_("interval start (m)"),
     )
-    percent_cover_by_benthic_category = models.JSONField(null=True, blank=True)
+    percent_cover_benthic_category = models.JSONField(null=True, blank=True)
     data_policy_benthicpit = models.CharField(max_length=50)
     pseudosu_id = models.UUIDField()
 
@@ -276,8 +276,8 @@ class BenthicPITSEModel(BaseSummaryModel):
     current_name = models.CharField(max_length=100, null=True, blank=True)
     tide_name = models.CharField(max_length=100, null=True, blank=True)
     visibility_name = models.CharField(max_length=100, null=True, blank=True)
-    percent_cover_by_benthic_category_avg = models.JSONField(null=True, blank=True)
-    percent_cover_by_benthic_category_sd = models.JSONField(null=True, blank=True)
+    percent_cover_benthic_category_avg = models.JSONField(null=True, blank=True)
+    percent_cover_benthic_category_sd = models.JSONField(null=True, blank=True)
     data_policy_benthicpit = models.CharField(max_length=50)
 
     class Meta:
@@ -313,7 +313,7 @@ class BenthicLITSUModel(BaseSUModel):
     )
     total_length = models.PositiveIntegerField()
     reef_slope = models.CharField(max_length=50, null=True, blank=True)
-    percent_cover_by_benthic_category = models.JSONField(null=True, blank=True)
+    percent_cover_benthic_category = models.JSONField(null=True, blank=True)
     data_policy_benthiclit = models.CharField(max_length=50)
     pseudosu_id = models.UUIDField()
 
@@ -336,8 +336,8 @@ class BenthicLITSEModel(BaseSummaryModel):
     current_name = models.CharField(max_length=100, null=True, blank=True)
     tide_name = models.CharField(max_length=100, null=True, blank=True)
     visibility_name = models.CharField(max_length=100, null=True, blank=True)
-    percent_cover_by_benthic_category_avg = models.JSONField(null=True, blank=True)
-    percent_cover_by_benthic_category_sd = models.JSONField(null=True, blank=True)
+    percent_cover_benthic_category_avg = models.JSONField(null=True, blank=True)
+    percent_cover_benthic_category_sd = models.JSONField(null=True, blank=True)
     data_policy_benthiclit = models.CharField(max_length=50)
 
     class Meta:
@@ -378,7 +378,7 @@ class BenthicPhotoQuadratTransectSUModel(BaseSUModel):
         verbose_name="number of non-'Other' points for all observations in all quadrats for the transect"
     )
     reef_slope = models.CharField(max_length=50, null=True, blank=True)
-    percent_cover_by_benthic_category = models.JSONField(null=True, blank=True)
+    percent_cover_benthic_category = models.JSONField(null=True, blank=True)
     data_policy_benthicpqt = models.CharField(max_length=50)
     pseudosu_id = models.UUIDField()
 
@@ -404,8 +404,8 @@ class BenthicPhotoQuadratTransectSEModel(BaseSummaryModel):
     num_points_nonother = models.PositiveSmallIntegerField(
         verbose_name="number of non-'Other' points for all observations in all transects for the sample event"
     )
-    percent_cover_by_benthic_category_avg = models.JSONField(null=True, blank=True)
-    percent_cover_by_benthic_category_sd = models.JSONField(null=True, blank=True)
+    percent_cover_benthic_category_avg = models.JSONField(null=True, blank=True)
+    percent_cover_benthic_category_sd = models.JSONField(null=True, blank=True)
     data_policy_benthicpqt = models.CharField(max_length=50)
 
     class Meta:

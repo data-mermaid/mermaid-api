@@ -283,7 +283,7 @@ class BenthicLITMethodSUSerializer(BaseSUViewAPISUSerializer):
                 "total_length",
                 "depth",
                 "reef_slope",
-                "percent_cover_by_benthic_category",
+                "percent_cover_benthic_category",
                 "data_policy_benthiclit",
             ]
         )
@@ -330,7 +330,7 @@ class BenthicLITMethodSUCSVSerializer(ReportSerializer):
         ReportField("total_length", "Total cm"),
         ReportField("observers", "Observers", to_names),
         ReportField(
-            "percent_cover_by_benthic_category", "Percent cover by benthic category"
+            "percent_cover_benthic_category", "Percent cover by benthic category"
         ),
         ReportField("site_notes", "Site notes"),
         ReportField("management_notes", "Management notes"),
@@ -361,8 +361,8 @@ class BenthicLITMethodSESerializer(BaseSUViewAPISerializer):
                 "sample_unit_count",
                 "depth_avg",
                 "depth_sd",
-                "percent_cover_by_benthic_category_avg",
-                "percent_cover_by_benthic_category_sd",
+                "percent_cover_benthic_category_avg",
+                "percent_cover_benthic_category_sd",
             ]
         )
 
@@ -402,11 +402,11 @@ class BenthicLITMethodSECSVSerializer(ReportSerializer):
         ReportField("management_rules", "Management rules"),
         ReportField("sample_unit_count", "Sample unit count"),
         ReportField(
-            "percent_cover_by_benthic_category_avg",
+            "percent_cover_benthic_category_avg",
             "Percent cover by benthic category average",
         ),
         ReportField(
-            "percent_cover_by_benthic_category_sd",
+            "percent_cover_benthic_category_sd",
             "Percent cover by benthic category standard deviation",
         ),
         ReportField("site_notes", "Site notes"),

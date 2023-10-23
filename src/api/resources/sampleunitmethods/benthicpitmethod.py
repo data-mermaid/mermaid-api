@@ -217,7 +217,7 @@ class BenthicPITMethodObsSerializer(BaseSUViewAPISerializer):
                 "benthic_category",
                 "benthic_attribute",
                 "growth_form",
-                "percent_cover_by_benthic_category",
+                "percent_cover_benthic_category",
             ]
         )
 
@@ -300,7 +300,7 @@ class BenthicPITMethodSUSerializer(BaseSUViewAPISUSerializer):
                 "reef_slope",
                 "interval_size",
                 "interval_start",
-                "percent_cover_by_benthic_category",
+                "percent_cover_benthic_category",
                 "data_policy_benthicpit",
             ]
         )
@@ -348,7 +348,7 @@ class BenthicPITMethodSUCSVSerializer(ReportSerializer):
         ReportField("interval_size", "Interval size"),
         ReportField("interval_start", "Interval start"),
         ReportField(
-            "percent_cover_by_benthic_category", "Percent cover by benthic category"
+            "percent_cover_benthic_category", "Percent cover by benthic category"
         ),
         ReportField("site_notes", "Site notes"),
         ReportField("management_notes", "Management notes"),
@@ -379,8 +379,8 @@ class BenthicPITMethodSESerializer(BaseSUViewAPISerializer):
                 "sample_unit_count",
                 "depth_avg",
                 "depth_sd",
-                "percent_cover_by_benthic_category_avg",
-                "percent_cover_by_benthic_category_sd",
+                "percent_cover_benthic_category_avg",
+                "percent_cover_benthic_category_sd",
             ]
         )
 
@@ -420,11 +420,11 @@ class BenthicPITMethodSECSVSerializer(ReportSerializer):
         ReportField("management_rules", "Management rules"),
         ReportField("sample_unit_count", "Sample unit count"),
         ReportField(
-            "percent_cover_by_benthic_category_avg",
+            "percent_cover_benthic_category_avg",
             "Percent cover by benthic category average",
         ),
         ReportField(
-            "percent_cover_by_benthic_category_sd",
+            "percent_cover_benthic_category_sd",
             "Percent cover by benthic category standard deviation",
         ),
         ReportField("site_notes", "Site notes"),
