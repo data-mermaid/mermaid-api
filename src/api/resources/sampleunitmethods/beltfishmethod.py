@@ -229,7 +229,10 @@ class BeltFishMethodObsGeoSerializer(BaseViewAPIGeoSerializer):
 class ObsBeltFishCSVSerializer(ReportSerializer):
     fields = [
         ReportField("project_name", "Project name"),
+        ReportField("project_admins", "Project admins", to_names),
         ReportField("country_name", "Country"),
+        ReportField("contact_link", "Project contact link"),
+        ReportField("tags", "Project organizations", to_names),
         ReportField("site_name", "Site"),
         ReportField("latitude", "Latitude"),
         ReportField("longitude", "Longitude"),
@@ -275,20 +278,18 @@ class ObsBeltFishCSVSerializer(ReportSerializer):
         ReportField("site_notes", "Site notes"),
         ReportField("management_notes", "Management notes"),
         ReportField("sample_unit_notes", "Sample unit notes"),
+        ReportField("project_notes", "Project notes"),
+        ReportField("data_policy_beltfish", "Fish belt data policy"),
     ]
 
     additional_fields = [
         ReportField("id"),
         ReportField("site_id"),
         ReportField("project_id"),
-        ReportField("project_notes"),
-        ReportField("contact_link"),
-        ReportField("tags"),
         ReportField("country_id"),
         ReportField("management_id"),
         ReportField("sample_event_id"),
         ReportField("sample_unit_id"),
-        ReportField("data_policy_beltfish"),
     ]
 
 
@@ -326,7 +327,10 @@ class BeltFishMethodSUGeoSerializer(BaseViewAPISUGeoSerializer):
 class BeltFishMethodSUCSVSerializer(ReportSerializer):
     fields = [
         ReportField("project_name", "Project name"),
+        ReportField("project_admins", "Project admins", to_names),
         ReportField("country_name", "Country"),
+        ReportField("contact_link", "Project contact link"),
+        ReportField("tags", "Project organizations", to_names),
         ReportField("site_name", "Site"),
         ReportField("latitude", "Latitude"),
         ReportField("longitude", "Longitude"),
@@ -363,19 +367,17 @@ class BeltFishMethodSUCSVSerializer(ReportSerializer):
         ReportField("site_notes", "Site notes"),
         ReportField("management_notes", "Management notes"),
         ReportField("sample_unit_notes", "Sample unit notes"),
+        ReportField("project_notes", "Project notes"),
+        ReportField("data_policy_beltfish", "Fish belt data policy"),
     ]
 
     additional_fields = [
         ReportField("site_id"),
         ReportField("project_id"),
-        ReportField("project_notes"),
-        ReportField("contact_link"),
-        ReportField("tags"),
         ReportField("country_id"),
         ReportField("management_id"),
         ReportField("sample_event_id"),
         ReportField("sample_unit_ids"),
-        ReportField("data_policy_beltfish"),
     ]
 
 
@@ -409,7 +411,10 @@ class BeltFishMethodSEGeoSerializer(BaseViewAPIGeoSerializer):
 class BeltFishMethodSECSVSerializer(ReportSerializer):
     fields = [
         ReportField("project_name", "Project name"),
+        ReportField("project_admins", "Project admins", to_names),
         ReportField("country_name", "Country"),
+        ReportField("contact_link", "Project contact link"),
+        ReportField("tags", "Project organizations", to_names),
         ReportField("site_name", "Site"),
         ReportField("latitude", "Latitude"),
         ReportField("longitude", "Longitude"),
@@ -444,19 +449,17 @@ class BeltFishMethodSECSVSerializer(ReportSerializer):
         ReportField("biomass_kgha_by_fish_family_sd", "Biomass kgha by family standard deviation"),
         ReportField("site_notes", "Site notes"),
         ReportField("management_notes", "Management notes"),
+        ReportField("project_notes", "Project notes"),
+        ReportField("data_policy_beltfish", "Fish belt data policy"),
     ]
 
     additional_fields = [
         ReportField("id"),
         ReportField("site_id"),
         ReportField("project_id"),
-        ReportField("project_notes"),
-        ReportField("contact_link"),
-        ReportField("tags"),
         ReportField("country_id"),
         ReportField("management_id"),
         ReportField("sample_event_id"),
-        ReportField("data_policy_beltfish"),
     ]
 
 

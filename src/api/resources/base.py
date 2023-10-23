@@ -183,6 +183,7 @@ class BaseSUViewAPISerializer(BaseViewAPISerializer):
             "project_id",
             "project_name",
             "project_notes",
+            "project_admins",
             "contact_link",
             "tags",
             "country_id",
