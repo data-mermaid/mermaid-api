@@ -471,8 +471,11 @@ class BleachingQCSUModel(BaseSUModel):
     percent_bleached = models.DecimalField(max_digits=4, decimal_places=1, default=0)
     quadrat_count = models.PositiveSmallIntegerField(default=0, null=True, blank=True)
     percent_hard_avg = models.DecimalField(max_digits=4, decimal_places=1, default=0, null=True, blank=True)
+    percent_hard_sd = models.DecimalField(max_digits=4, decimal_places=1, default=0, null=True, blank=True)
     percent_soft_avg = models.DecimalField(max_digits=4, decimal_places=1, default=0, null=True, blank=True)
+    percent_soft_sd = models.DecimalField(max_digits=4, decimal_places=1, default=0, null=True, blank=True)
     percent_algae_avg = models.DecimalField(max_digits=4, decimal_places=1, default=0, null=True, blank=True)
+    percent_algae_sd = models.DecimalField(max_digits=4, decimal_places=1, default=0, null=True, blank=True)
     data_policy_bleachingqc = models.CharField(max_length=50)
     pseudosu_id = models.UUIDField()
 
@@ -549,6 +552,7 @@ class HabitatComplexitySUModel(BaseSUModel):
     )
     reef_slope = models.CharField(max_length=50, null=True, blank=True)
     score_avg = models.DecimalField(decimal_places=2, max_digits=3)
+    score_sd = models.DecimalField(decimal_places=2, max_digits=3, null=True, blank=True)
     data_policy_habitatcomplexity = models.CharField(max_length=50)
     pseudosu_id = models.UUIDField()
 

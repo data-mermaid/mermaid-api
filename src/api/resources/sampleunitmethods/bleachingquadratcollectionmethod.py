@@ -411,8 +411,11 @@ class BleachingQCMethodSUSerializer(BaseSUViewAPISUSerializer):
                 "percent_bleached",
                 "quadrat_count",
                 "percent_hard_avg",
+                "percent_hard_sd",
                 "percent_soft_avg",
+                "percent_soft_sd",
                 "percent_algae_avg",
+                "percent_algae_sd",
                 "data_policy_bleachingqc",
             ]
         )
@@ -462,8 +465,11 @@ class BleachingQCMethodSUCSVSerializer(ReportSerializer):
         ReportField("percent_bleached", "Percent bleached"),
         ReportField("quadrat_count", "Number of quadrats"),
         ReportField("percent_hard_avg", "Average Hard Coral (% cover)"),
+        ReportField("percent_hard_sd", "Hard Coral (% cover) standard deviation"),
         ReportField("percent_soft_avg", "Average Soft Coral (% cover)"),
+        ReportField("percent_soft_sd", "Soft Coral (% cover) standard deviation"),
         ReportField("percent_algae_avg", "Average Macroalgae (% cover)"),
+        ReportField("percent_algae_sd", "Macroalgae (% cover) standard deviation"),
         ReportField("site_notes", "Site notes"),
         ReportField("management_notes", "Management notes"),
         ReportField("sample_unit_notes", "Sample unit notes"),

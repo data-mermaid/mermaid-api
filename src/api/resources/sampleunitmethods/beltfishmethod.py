@@ -299,7 +299,7 @@ class BeltFishMethodSUSerializer(BaseSUViewAPISUSerializer):
     class Meta(BaseSUViewAPISUSerializer.Meta):
         model = BeltFishSUModel
         exclude = BaseSUViewAPISUSerializer.Meta.exclude.copy()
-        exclude.extend(["location", "biomass_kgha_by_trophic_group_zeroes", "biomass_kgha_by_fish_family_zeroes"])
+        exclude.extend(["location", "biomass_kgha_trophic_group_zeroes", "biomass_kgha_fish_family_zeroes"])
         header_order = BaseSUViewAPISUSerializer.Meta.header_order.copy()
         header_order.extend(
             [
@@ -323,7 +323,7 @@ class BeltFishMethodSUGeoSerializer(BaseViewAPISUGeoSerializer):
     class Meta(BaseViewAPISUGeoSerializer.Meta):
         model = BeltFishSUModel
         exclude = BaseViewAPISUGeoSerializer.Meta.exclude.copy()
-        exclude.extend(["biomass_kgha_by_trophic_group_zeroes", "biomass_kgha_by_fish_family_zeroes"])
+        exclude.extend(["biomass_kgha_trophic_group_zeroes", "biomass_kgha_fish_family_zeroes"])
 
 
 class BeltFishMethodSUCSVSerializer(ReportSerializer):
