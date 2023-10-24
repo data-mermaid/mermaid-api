@@ -142,14 +142,16 @@ class HabitatComplexitySUSQLModel(BaseSUSQLModel):
         {_su_fields},
         habcomp_su.{_agg_su_fields},
         reef_slope,
-        score_avg
+        score_avg,
+        score_sd
         FROM (
             SELECT pseudosu_id,
             jsonb_agg(DISTINCT sample_unit_id) AS sample_unit_ids,
             {_su_fields_qualified},
             {_su_aggfields_sql},
             string_agg(DISTINCT reef_slope::text, ', '::text ORDER BY (reef_slope::text)) AS reef_slope,
-            ROUND(AVG(score), 2) AS score_avg
+            ROUND(AVG(score), 2) AS score_avg,
+            ROUND(STDDEV(score), 2) AS score_sd
 
             FROM habitatcomplexity_obs
             GROUP BY pseudosu_id,
@@ -182,6 +184,7 @@ class HabitatComplexitySUSQLModel(BaseSUSQLModel):
     )
     reef_slope = models.CharField(max_length=50)
     score_avg = models.DecimalField(decimal_places=2, max_digits=3)
+    score_sd = models.DecimalField(decimal_places=2, max_digits=3, null=True, blank=True)
     data_policy_habitatcomplexity = models.CharField(max_length=50)
     pseudosu_id = models.UUIDField()
 

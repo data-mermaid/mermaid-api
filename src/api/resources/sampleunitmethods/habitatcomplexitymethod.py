@@ -281,6 +281,7 @@ class HabitatComplexityMethodSUSerializer(BaseSUViewAPISUSerializer):
                 "depth",
                 "reef_slope",
                 "score_avg",
+                "score_sd",
                 "data_policy_habitatcomplexity",
             ]
         )
@@ -326,6 +327,7 @@ class HabitatComplexityMethodSUCSVSerializer(ReportSerializer):
         ReportField("transect_len_surveyed", "Transect length surveyed"),
         ReportField("observers", "Observers", to_names),
         ReportField("score_avg", "Score average"),
+        ReportField("score_sd", "Score standard deviation"),
         ReportField("site_notes", "Site notes"),
         ReportField("management_notes", "Management notes"),
         ReportField("sample_unit_notes", "Sample unit notes"),
