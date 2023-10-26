@@ -32,7 +32,7 @@ def get_data(
 
  
 def _flatten_column(column_name, column_records):
-    column_records = [d for d in column_records if d is not None]
+    column_records = [d if d is not None else {} for d in column_records]
     all_keys = {f"{column_name}_{key}": key for d in column_records for key in d.keys()}
     return {new_key: [dic.get(key) for dic in column_records] for new_key, key in all_keys.items()}
 
