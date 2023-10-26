@@ -32,6 +32,7 @@ def get_data(
 
  
 def _flatten_column(column_name, column_records):
+    column_records = [d for d in column_records if d is not None]
     all_keys = {f"{column_name}_{key}": key for d in column_records for key in d.keys()}
     return {new_key: [dic.get(key) for dic in column_records] for new_key, key in all_keys.items()}
 
@@ -42,7 +43,7 @@ def is_json_like(v):
 
 def _flatten_json_columns(content):
     headers = content[0]
-    cols = list(zip(*[c.values() for c in content[1:]])) # transpose rows
+    cols = list(zip(*[c.values() for c in content[1:]]))  # transpose rows
     new_columns = []
     new_headers = []
     existing_headers = []
@@ -58,7 +59,7 @@ def _flatten_json_columns(content):
     
     existing_headers.extend(new_headers)
     existing_columns.extend(new_columns)
-    return [existing_headers] + list(zip(*existing_columns)) # transpose columns
+    return [existing_headers] + list(zip(*existing_columns))  # transpose columns
 
 
 def _get_csv_response(file_name, fields, data):
