@@ -145,7 +145,7 @@ def _filter_columns(
         else:
             matches = _partial_key_match(display_header_lookup, header)
             if len(matches) > 1:
-                h = header[len(matches[0]) + 1 :]
+                h = header[len(matches[0]) + 1:]
                 new_headers.append(h)
             else:
                 new_headers.append(header)
@@ -157,6 +157,7 @@ def _filter_columns(
 def get_viewset_csv_content(view_cls, project_pk, request):
     # Mocking a required request object so we can call viewset action.
     request = MockRequest()
+    request.query_params["field_report"] = True
     kwargs = {"project_pk": project_pk, "use_cached": False}
     vw = view_cls(**kwargs)
     vw.kwargs = kwargs
