@@ -1,5 +1,5 @@
 import csv
-from typing import Dict, List, Tuple
+from typing import Dict, List, Set, Tuple
 
 from pyexcelerate import Font, Style, Workbook
 from django.db.models import QuerySet
@@ -132,10 +132,15 @@ def _filter_columns(
     headers: List[str],
     cols: List[list],
     display_header_lookup: Dict[str, None],
-    additional_header_lookup: Dict[str, None],
+    additional_header_lookup: Set[str],
 ) -> Tuple[List[str], List[list]]:
     new_headers = []
     new_cols = []
+
+    # Remove site_id, it was only needed to attach
+    # covariates to the content.
+    additional_header_lookup = list(additional_header_lookup)
+    additional_header_lookup.append("site_id")
     for header, col in zip(headers, cols):
         if header in additional_header_lookup:
             continue
@@ -169,18 +174,16 @@ def get_viewset_csv_content(view_cls, project_pk, request):
     if not isinstance(content, list) or len(content) < 2 or "site_id" not in content[0]:
         return content
 
-    site_id_index = content[0].index("site_id")
-    if site_id_index is None:
-        return content
-
     headers = content[0]
     cols = _transpose(content[1:])
-    site_ids = cols[site_id_index]
 
-    # Add Alan Coral Atlas covariates
-    aca_benthic_col, aca_geomorphic_col = _get_site_aca_covariate_columns(site_ids)
-    headers.extend([ACA_BENTHIC_FIELD, ACA_GEOMORPHIC_FIELD])
-    cols.extend([aca_benthic_col, aca_geomorphic_col])
+    site_id_index = content[0].index("site_id")
+    if site_id_index is not None:
+        site_ids = cols[site_id_index]
+        # Add Alan Coral Atlas covariates
+        aca_benthic_col, aca_geomorphic_col = _get_site_aca_covariate_columns(site_ids)
+        headers.extend([ACA_BENTHIC_FIELD, ACA_GEOMORPHIC_FIELD])
+        cols.extend([aca_benthic_col, aca_geomorphic_col])
 
     # Create lookups to help with filtering output header columns.
     display_header_lookup = {
@@ -194,7 +197,6 @@ def get_viewset_csv_content(view_cls, project_pk, request):
         for f in view_cls.serializer_class_csv.additional_fields
         if f.column_path in headers
     }
-
     new_headers, new_cols = _filter_columns(
         headers, cols, display_header_lookup, additional_header_lookup
     )
