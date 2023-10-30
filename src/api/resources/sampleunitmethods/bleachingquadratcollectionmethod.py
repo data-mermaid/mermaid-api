@@ -298,11 +298,11 @@ class ObsBleachingQCColoniesBleachedCSVSerializer(ReportSerializer):
         ReportField("sample_unit_notes", "Sample unit notes"),
         ReportField("project_notes", "Project notes"),
         ReportField("data_policy_bleachingqc", "Bleaching data policy"),
+        ReportField("site_id"),
     ]
 
     additional_fields = [
         ReportField("id"),
-        ReportField("site_id"),
         ReportField("project_id"),
         ReportField("country_id"),
         ReportField("management_id"),
@@ -380,11 +380,11 @@ class ObsQuadratBenthicPercentCSVSerializer(ReportSerializer):
         ReportField("sample_unit_notes", "Sample unit notes"),
         ReportField("project_notes", "Project notes"),
         ReportField("data_policy_bleachingqc", "Bleaching data policy"),
+        ReportField("site_id"),
     ]
 
     additional_fields = [
         ReportField("id"),
-        ReportField("site_id"),
         ReportField("project_id"),
         ReportField("country_id"),
         ReportField("management_id"),
@@ -476,10 +476,10 @@ class BleachingQCMethodSUCSVSerializer(ReportSerializer):
         ReportField("sample_unit_notes", "Sample unit notes"),
         ReportField("project_notes", "Project notes"),
         ReportField("data_policy_bleachingqc", "Bleaching data policy"),
+        ReportField("site_id"),
     ]
 
     additional_fields = [
-        ReportField("site_id"),
         ReportField("project_id"),
         ReportField("country_id"),
         ReportField("management_id"),
@@ -578,11 +578,11 @@ class BleachingQCMethodSECSVSerializer(ReportSerializer):
         ReportField("management_notes", "Management notes"),
         ReportField("project_notes", "Project notes"),
         ReportField("data_policy_bleachingqc", "Bleaching data policy"),
+        ReportField("site_id"),
     ]
 
     additional_fields = [
         ReportField("id"),
-        ReportField("site_id"),
         ReportField("project_id"),
         ReportField("country_id"),
         ReportField("management_id"),

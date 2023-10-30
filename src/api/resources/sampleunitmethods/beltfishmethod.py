@@ -283,11 +283,11 @@ class ObsBeltFishCSVSerializer(ReportSerializer):
         ReportField("sample_unit_notes", "Sample unit notes"),
         ReportField("project_notes", "Project notes"),
         ReportField("data_policy_beltfish", "Fish belt data policy"),
+        ReportField("site_id"),
     ]
 
     additional_fields = [
         ReportField("id"),
-        ReportField("site_id"),
         ReportField("project_id"),
         ReportField("country_id"),
         ReportField("management_id"),
@@ -372,10 +372,10 @@ class BeltFishMethodSUCSVSerializer(ReportSerializer):
         ReportField("sample_unit_notes", "Sample unit notes"),
         ReportField("project_notes", "Project notes"),
         ReportField("data_policy_beltfish", "Fish belt data policy"),
+        ReportField("site_id"),
     ]
 
     additional_fields = [
-        ReportField("site_id"),
         ReportField("project_id"),
         ReportField("country_id"),
         ReportField("management_id"),
@@ -454,11 +454,11 @@ class BeltFishMethodSECSVSerializer(ReportSerializer):
         ReportField("management_notes", "Management notes"),
         ReportField("project_notes", "Project notes"),
         ReportField("data_policy_beltfish", "Fish belt data policy"),
+        ReportField("site_id"),
     ]
 
     additional_fields = [
         ReportField("id"),
-        ReportField("site_id"),
         ReportField("project_id"),
         ReportField("country_id"),
         ReportField("management_id"),

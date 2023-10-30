@@ -167,11 +167,11 @@ class ObsBenthicPQTCSVSerializer(ReportSerializer):
         ReportField("sample_unit_notes", "Sample unit notes"),
         ReportField("project_notes", "Project notes"),
         ReportField("data_policy_benthicpqt", "Benthic PQT data policy"),
+        ReportField("site_id"),
     ]
 
     additional_fields = [
         ReportField("id"),
-        ReportField("site_id"),
         ReportField("project_id"),
         ReportField("country_id"),
         ReportField("management_id"),
@@ -246,6 +246,7 @@ class BenthicPQTMethodSUCSVSerializer(ReportSerializer):
             "percent_cover_benthic_category", "Percent cover by benthic category"
         ),
         ReportField("site_notes", "Site notes"),
+        ReportField("site_id"),
         ReportField("management_notes", "Management notes"),
         ReportField("sample_unit_notes", "Sample unit notes"),
         ReportField("project_notes", "Project notes"),
@@ -253,7 +254,6 @@ class BenthicPQTMethodSUCSVSerializer(ReportSerializer):
     ]
 
     additional_fields = [
-        ReportField("site_id"),
         ReportField("project_id"),
         ReportField("country_id"),
         ReportField("management_id"),
@@ -330,11 +330,11 @@ class BenthicPQTMethodSECSVSerializer(ReportSerializer):
         ReportField("management_notes", "Management notes"),
         ReportField("project_notes", "Project notes"),
         ReportField("data_policy_benthicpqt", "Benthic PQT data policy"),
+        ReportField("site_id"),
     ]
 
     additional_fields = [
         ReportField("id"),
-        ReportField("site_id"),
         ReportField("project_id"),
         ReportField("country_id"),
         ReportField("management_id"),
