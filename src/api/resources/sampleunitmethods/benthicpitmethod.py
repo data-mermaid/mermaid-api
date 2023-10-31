@@ -19,6 +19,7 @@ from ...reports.fields import ReportField
 from ...reports.formatters import (
     to_day,
     to_governance,
+    to_join_list,
     to_month,
     to_names,
     to_str,
@@ -29,8 +30,10 @@ from ..base import (
     BaseProjectApiViewSet,
     BaseSEFilterSet,
     BaseSUObsFilterSet,
-    BaseViewAPIGeoSerializer,
     BaseSUViewAPISerializer,
+    BaseSUViewAPISUSerializer,
+    BaseViewAPIGeoSerializer,
+    BaseViewAPISUGeoSerializer,
     BaseAPISerializer,
 )
 from ..benthic_transect import BenthicTransectSerializer
@@ -215,7 +218,7 @@ class BenthicPITMethodObsSerializer(BaseSUViewAPISerializer):
                 "benthic_category",
                 "benthic_attribute",
                 "growth_form",
-                "percent_cover_by_benthic_category",
+                "percent_cover_benthic_category",
             ]
         )
 
@@ -228,7 +231,10 @@ class BenthicPITMethodObsGeoSerializer(BaseViewAPIGeoSerializer):
 class ObsBenthicPITCSVSerializer(ReportSerializer):
     fields = [
         ReportField("project_name", "Project name"),
+        ReportField("project_admins", "Project admins", to_names),
         ReportField("country_name", "Country"),
+        ReportField("contact_link", "Project contact link"),
+        ReportField("tags", "Project organizations", to_names),
         ReportField("site_name", "Site"),
         ReportField("latitude", "Latitude"),
         ReportField("longitude", "Longitude"),
@@ -251,7 +257,7 @@ class ObsBenthicPITCSVSerializer(ReportSerializer):
         ReportField("management_size", "Management size"),
         ReportField("management_parties", "Governance", to_governance),
         ReportField("management_compliance", "Estimated compliance"),
-        ReportField("management_rules", "Management rules"),
+        ReportField("management_rules", "Management rules", to_join_list),
         ReportField("transect_number", "Transect number"),
         ReportField("label", "Transect label"),
         ReportField("transect_len_surveyed", "Transect length surveyed"),
@@ -263,31 +269,29 @@ class ObsBenthicPITCSVSerializer(ReportSerializer):
         ReportField("site_notes", "Site notes"),
         ReportField("management_notes", "Management notes"),
         ReportField("sample_unit_notes", "Sample unit notes"),
+        ReportField("project_notes", "Project notes"),
+        ReportField("data_policy_benthicpit", "Benthic PIT data policy"),
+        ReportField("site_id"),
     ]
 
     additional_fields = [
         ReportField("id"),
-        ReportField("site_id"),
         ReportField("project_id"),
-        ReportField("project_notes"),
-        ReportField("contact_link"),
-        ReportField("tags"),
         ReportField("country_id"),
         ReportField("management_id"),
         ReportField("sample_event_id"),
         ReportField("sample_unit_id"),
         ReportField("interval_size"),
         ReportField("interval_start"),
-        ReportField("data_policy_benthicpit"),
     ]
 
 
-class BenthicPITMethodSUSerializer(BaseSUViewAPISerializer):
-    class Meta(BaseSUViewAPISerializer.Meta):
+class BenthicPITMethodSUSerializer(BaseSUViewAPISUSerializer):
+    class Meta(BaseSUViewAPISUSerializer.Meta):
         model = BenthicPITSUModel
-        exclude = BaseSUViewAPISerializer.Meta.exclude.copy()
+        exclude = BaseSUViewAPISUSerializer.Meta.exclude.copy()
         exclude.append("location")
-        header_order = BaseSUViewAPISerializer.Meta.header_order.copy()
+        header_order = BaseSUViewAPISUSerializer.Meta.header_order.copy()
         header_order.extend(
             [
                 "label",
@@ -297,21 +301,24 @@ class BenthicPITMethodSUSerializer(BaseSUViewAPISerializer):
                 "reef_slope",
                 "interval_size",
                 "interval_start",
-                "percent_cover_by_benthic_category",
+                "percent_cover_benthic_category",
                 "data_policy_benthicpit",
             ]
         )
 
 
-class BenthicPITMethodSUGeoSerializer(BaseViewAPIGeoSerializer):
-    class Meta(BaseViewAPIGeoSerializer.Meta):
+class BenthicPITMethodSUGeoSerializer(BaseViewAPISUGeoSerializer):
+    class Meta(BaseViewAPISUGeoSerializer.Meta):
         model = BenthicPITSUModel
 
 
 class BenthicPITMethodSUCSVSerializer(ReportSerializer):
     fields = [
         ReportField("project_name", "Project name"),
+        ReportField("project_admins", "Project admins", to_names),
         ReportField("country_name", "Country"),
+        ReportField("contact_link", "Project contact link"),
+        ReportField("tags", "Project organizations", to_names),
         ReportField("site_name", "Site"),
         ReportField("latitude", "Latitude"),
         ReportField("longitude", "Longitude"),
@@ -334,7 +341,7 @@ class BenthicPITMethodSUCSVSerializer(ReportSerializer):
         ReportField("management_size", "Management size"),
         ReportField("management_parties", "Governance", to_governance),
         ReportField("management_compliance", "Estimated compliance"),
-        ReportField("management_rules", "Management rules"),
+        ReportField("management_rules", "Management rules", to_join_list),
         ReportField("transect_number", "Transect number"),
         ReportField("label", "Transect label"),
         ReportField("transect_len_surveyed", "Transect length surveyed"),
@@ -342,25 +349,22 @@ class BenthicPITMethodSUCSVSerializer(ReportSerializer):
         ReportField("interval_size", "Interval size"),
         ReportField("interval_start", "Interval start"),
         ReportField(
-            "percent_cover_by_benthic_category", "Percent cover by benthic category"
+            "percent_cover_benthic_category", "Percent cover by benthic category"
         ),
         ReportField("site_notes", "Site notes"),
         ReportField("management_notes", "Management notes"),
         ReportField("sample_unit_notes", "Sample unit notes"),
+        ReportField("project_notes", "Project notes"),
+        ReportField("data_policy_benthicpit", "Benthic PIT data policy"),
+        ReportField("site_id"),
     ]
 
     additional_fields = [
-        ReportField("id"),
-        ReportField("site_id"),
         ReportField("project_id"),
-        ReportField("project_notes"),
-        ReportField("contact_link"),
-        ReportField("tags"),
         ReportField("country_id"),
         ReportField("management_id"),
         ReportField("sample_event_id"),
         ReportField("sample_unit_ids"),
-        ReportField("data_policy_benthicpit"),
     ]
 
 
@@ -376,8 +380,8 @@ class BenthicPITMethodSESerializer(BaseSUViewAPISerializer):
                 "sample_unit_count",
                 "depth_avg",
                 "depth_sd",
-                "percent_cover_by_benthic_category_avg",
-                "percent_cover_by_benthic_category_sd",
+                "percent_cover_benthic_category_avg",
+                "percent_cover_benthic_category_sd",
             ]
         )
 
@@ -390,7 +394,10 @@ class BenthicPITMethodSEGeoSerializer(BaseViewAPIGeoSerializer):
 class BenthicPITMethodSECSVSerializer(ReportSerializer):
     fields = [
         ReportField("project_name", "Project name"),
+        ReportField("project_admins", "Project admins", to_names),
         ReportField("country_name", "Country"),
+        ReportField("contact_link", "Project contact link"),
+        ReportField("tags", "Project organizations", to_names),
         ReportField("site_name", "Site"),
         ReportField("latitude", "Latitude"),
         ReportField("longitude", "Longitude"),
@@ -411,31 +418,29 @@ class BenthicPITMethodSECSVSerializer(ReportSerializer):
         ReportField("management_size", "Management size"),
         ReportField("management_parties", "Governance", to_governance),
         ReportField("management_compliance", "Estimated compliance"),
-        ReportField("management_rules", "Management rules"),
+        ReportField("management_rules", "Management rules", to_join_list),
         ReportField("sample_unit_count", "Sample unit count"),
         ReportField(
-            "percent_cover_by_benthic_category_avg",
+            "percent_cover_benthic_category_avg",
             "Percent cover by benthic category average",
         ),
         ReportField(
-            "percent_cover_by_benthic_category_sd",
+            "percent_cover_benthic_category_sd",
             "Percent cover by benthic category standard deviation",
         ),
         ReportField("site_notes", "Site notes"),
         ReportField("management_notes", "Management notes"),
+        ReportField("project_notes", "Project notes"),
+        ReportField("data_policy_benthicpit", "Benthic PIT data policy"),
+        ReportField("site_id"),
     ]
 
     additional_fields = [
         ReportField("id"),
-        ReportField("site_id"),
         ReportField("project_id"),
-        ReportField("project_notes"),
-        ReportField("contact_link"),
-        ReportField("tags"),
         ReportField("country_id"),
         ReportField("management_id"),
         ReportField("sample_event_id"),
-        ReportField("data_policy_benthicpit"),
     ]
 
 

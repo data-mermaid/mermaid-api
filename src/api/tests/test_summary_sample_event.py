@@ -74,4 +74,4 @@ def test_summary_sample_event(
     assert pytest.approx(biomass, 0.1) == beltfish["biomass_kgha_avg"]
 
     origin = obs_benthic_pit1_3.attribute.origin.name
-    assert benthicpit["percent_cover_by_benthic_category_avg"][origin] == obs_benthic_pit1_benthic_category_avgs[origin]
+    assert benthicpit["percent_cover_benthic_category_avg"][origin] == obs_benthic_pit1_benthic_category_avgs[origin]

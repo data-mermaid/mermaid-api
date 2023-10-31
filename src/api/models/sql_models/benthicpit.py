@@ -173,7 +173,7 @@ class BenthicPITSUSQLModel(BaseSUSQLModel):
         {_su_fields},
         benthicpit_su.{_agg_su_fields},
         reef_slope,
-        percent_cover_by_benthic_category
+        percent_cover_benthic_category
         FROM (
             SELECT pseudosu_id,
             jsonb_agg(DISTINCT sample_unit_id) AS sample_unit_ids,
@@ -216,7 +216,7 @@ class BenthicPITSUSQLModel(BaseSUSQLModel):
             jsonb_object_agg(
                 cps.benthic_category,
                 ROUND(100 * cps.category_length / cat_totals.su_length, 2)
-            ) AS percent_cover_by_benthic_category
+            ) AS percent_cover_benthic_category
             FROM cps
             INNER JOIN (
                 SELECT pseudosu_id,
@@ -262,7 +262,7 @@ class BenthicPITSUSQLModel(BaseSUSQLModel):
         default=0.5,
         verbose_name=_("interval start (m)"),
     )
-    percent_cover_by_benthic_category = models.JSONField(null=True, blank=True)
+    percent_cover_benthic_category = models.JSONField(null=True, blank=True)
     data_policy_benthicpit = models.CharField(max_length=50)
     pseudosu_id = models.UUIDField()
 
@@ -284,22 +284,22 @@ class BenthicPITSESQLModel(BaseSQLModel):
         data_policy_benthicpit,
         {_su_aggfields_sql},
         COUNT(benthicpit_su.pseudosu_id) AS sample_unit_count,
-        percent_cover_by_benthic_category_avg,
-        percent_cover_by_benthic_category_sd
+        percent_cover_benthic_category_avg,
+        percent_cover_benthic_category_sd
 
         FROM benthicpit_su
 
         INNER JOIN (
             SELECT sample_event_id,
-            jsonb_object_agg(cat, ROUND(cat_percent_avg :: numeric, 2)) AS percent_cover_by_benthic_category_avg,
-            jsonb_object_agg(cat, ROUND(cat_percent_sd :: numeric, 2)) AS percent_cover_by_benthic_category_sd
+            jsonb_object_agg(cat, ROUND(cat_percent_avg :: numeric, 2)) AS percent_cover_benthic_category_avg,
+            jsonb_object_agg(cat, ROUND(cat_percent_sd :: numeric, 2)) AS percent_cover_benthic_category_sd
             FROM (
                 SELECT sample_event_id,
                 cpdata.key AS cat,
                 AVG(cpdata.value :: float) AS cat_percent_avg,
                 STDDEV(cpdata.value :: float) AS cat_percent_sd
                 FROM benthicpit_su,
-                jsonb_each_text(percent_cover_by_benthic_category) AS cpdata
+                jsonb_each_text(percent_cover_benthic_category) AS cpdata
                 GROUP BY sample_event_id, cpdata.key
             ) AS benthicpit_su_cp
             GROUP BY sample_event_id
@@ -309,8 +309,8 @@ class BenthicPITSESQLModel(BaseSQLModel):
         GROUP BY
         {_se_fields},
         data_policy_benthicpit,
-        percent_cover_by_benthic_category_avg,
-        percent_cover_by_benthic_category_sd
+        percent_cover_benthic_category_avg,
+        percent_cover_benthic_category_sd
     """
 
     sql_args = dict(
@@ -333,8 +333,8 @@ class BenthicPITSESQLModel(BaseSQLModel):
     current_name = models.CharField(max_length=100)
     tide_name = models.CharField(max_length=100)
     visibility_name = models.CharField(max_length=100)
-    percent_cover_by_benthic_category_avg = models.JSONField(null=True, blank=True)
-    percent_cover_by_benthic_category_sd = models.JSONField(null=True, blank=True)
+    percent_cover_benthic_category_avg = models.JSONField(null=True, blank=True)
+    percent_cover_benthic_category_sd = models.JSONField(null=True, blank=True)
     data_policy_benthicpit = models.CharField(max_length=50)
 
     class Meta:

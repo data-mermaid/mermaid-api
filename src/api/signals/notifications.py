@@ -28,7 +28,7 @@ def email_superadmin_on_new(sender, instance, created, **kwargs):
     admin_emails = [e[1] for e in settings.ADMINS] + [settings.SUPERUSER[1]]
     instance_label = sender._meta.verbose_name or "instance"
     if (
-        created is False
+        (created is False and sender != Tag)
         or instance.updated_by is None
         or instance.updated_by.email in admin_emails
     ):

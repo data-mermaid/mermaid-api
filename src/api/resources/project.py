@@ -10,12 +10,13 @@ from rest_framework.response import Response
 
 from ..auth_backends import AnonymousJWTAuthentication
 from ..models import (
+    ArchivedRecord,
     Management,
     Project,
     Site,
     Profile,
     ProjectProfile,
-    ArchivedRecord,
+    Tag,
     TransectMethod,
 )
 from ..exceptions import check_uuid
@@ -36,9 +37,11 @@ from .base import (
     BaseAPIFilterSet,
     BaseAPISerializer,
     BaseApiViewSet,
+    BaseInFilter,
     TagField,
 )
 from .management import ManagementSerializer
+from .mixins import OrFilterSetMixin
 from .project_profile import ProjectProfileSerializer
 from .site import SiteSerializer
 
@@ -100,7 +103,19 @@ class ProjectSerializer(BaseAPISerializer):
         instance = super().update(instance, validated_data)
 
         tags = [t.name for t in tags_data]
+        existing_tags = [t["name"] for t in Tag.objects.filter(name__in=tags).values("name")]
+        new_tags = [t for t in tags if t not in existing_tags]
         instance.tags.set(tags)
+
+        if new_tags:
+            request = self.context.get("request")
+            profile = request.user.profile
+            for t in new_tags:
+                tag = Tag.objects.get(name=t)
+                tag.created_by = profile
+                tag.updated_by = profile
+                tag.save()
+
         return instance
 
     class Meta:
@@ -140,8 +155,10 @@ class ProjectSerializer(BaseAPISerializer):
         return num_sample_units
 
 
-class ProjectFilterSet(BaseAPIFilterSet):
+class ProjectFilterSet(BaseAPIFilterSet, OrFilterSetMixin):
+    name = BaseInFilter(method="char_lookup")
     tags = django_filters.CharFilter(distinct=True, method="filter_tags")
+    country = BaseInFilter(method="site_country")
 
     class Meta:
         model = Project
@@ -158,6 +175,9 @@ class ProjectFilterSet(BaseAPIFilterSet):
     def filter_tags(self, queryset, name, value):
         values = [v.strip() for v in value.split(",")]
         return queryset.filter(tags__name__in=values)
+
+    def site_country(self, queryset, name, value):
+        return self.char_lookup(queryset, "sites__country__name", value)
 
 
 class ProjectAuthenticatedUserPermission(permissions.BasePermission):
