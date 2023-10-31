@@ -48,16 +48,12 @@ def to_day(value, field, row, serializer_instance):
 
 @handle_none()
 def to_join_list(value, field, row, serializer_instance):
-    return ",".join(value)
+    return ", ".join(value)
 
 
 @handle_none()
 def to_governance(value, field, row, serializer_instance):
-    vals = []
-    for v in value:
-        vals.extend(v.split("/"))
-
-    return ", ".join(vals)
+    return ", ".join(value)
 
 
 @handle_none()

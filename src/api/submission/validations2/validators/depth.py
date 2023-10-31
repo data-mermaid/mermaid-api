@@ -1,4 +1,4 @@
-from .base import ERROR, OK, WARN, BaseValidator, validator_result
+from .base import ERROR, OK, BaseValidator, validator_result
 
 
 class DepthValidator(BaseValidator):

@@ -9,6 +9,11 @@ def obs_benthic_pit1_benthic_category_avgs(
     obs_benthic_pit1_3,
     obs_benthic_pit1_4,
     obs_benthic_pit1_5,
+    obs_benthic_pit1_2_1,
+    obs_benthic_pit1_2_2,
+    obs_benthic_pit1_2_3,
+    obs_benthic_pit1_2_4,
+    obs_benthic_pit1_2_5,
 ):
     obs = [
         obs_benthic_pit1_1,
@@ -16,6 +21,11 @@ def obs_benthic_pit1_benthic_category_avgs(
         obs_benthic_pit1_3,
         obs_benthic_pit1_4,
         obs_benthic_pit1_5,
+        obs_benthic_pit1_2_1,
+        obs_benthic_pit1_2_2,
+        obs_benthic_pit1_2_3,
+        obs_benthic_pit1_2_4,
+        obs_benthic_pit1_2_5,
     ]
     avgs = {}
     for ob in obs:
@@ -56,7 +66,7 @@ def test_summary_sample_event(
     benthicpit = response_data["results"][0]["protocols"]["benthicpit"]
 
     assert beltfish["sample_unit_count"] == 1
-    assert benthicpit["sample_unit_count"] == 1
+    assert benthicpit["sample_unit_count"] == 2
 
     biomass = (
         obs_belt_fish1_1_biomass + obs_belt_fish1_2_biomass + obs_belt_fish1_3_biomass
@@ -64,4 +74,4 @@ def test_summary_sample_event(
     assert pytest.approx(biomass, 0.1) == beltfish["biomass_kgha_avg"]
 
     origin = obs_benthic_pit1_3.attribute.origin.name
-    assert benthicpit["percent_cover_by_benthic_category_avg"][origin] == obs_benthic_pit1_benthic_category_avgs[origin]
+    assert benthicpit["percent_cover_benthic_category_avg"][origin] == obs_benthic_pit1_benthic_category_avgs[origin]

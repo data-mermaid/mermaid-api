@@ -26,6 +26,21 @@ sample_event_sql_template = f"""
         GROUP BY
             project_1.id
     ),
+    project_admins AS MATERIALIZED (
+        SELECT 
+        project_id,
+        jsonb_agg(jsonb_build_object(
+            'id', p.id,
+            'name',
+            (COALESCE(p.first_name, ''::character varying)::text || ' '::text)
+            || COALESCE(p.last_name, ''::character varying)::text)
+        ) AS project_admins
+        FROM project_profile pp
+        INNER JOIN profile p ON (pp.profile_id = p.id)
+        WHERE project_id = '%(project_id)s'::uuid
+        AND role >= 90
+        GROUP BY project_id
+    ),
     parties AS MATERIALIZED (
         SELECT
             mps.management_id,
@@ -52,6 +67,7 @@ sample_event_sql_template = f"""
         project.notes AS project_notes,
         'https://datamermaid.org/contact-project?project_id=' :: text ||
             COALESCE(project.id :: text, '' :: text) AS contact_link,
+        project_admins.project_admins,
         tags.tags,
         se.site_id,
         site.name AS site_name,
@@ -149,6 +165,7 @@ sample_event_sql_template = f"""
         sample_event se
         JOIN site ON se.site_id = site.id
         JOIN project ON site.project_id = project.id
+        LEFT JOIN project_admins ON (project.id = project_admins.project_id)
         LEFT JOIN tags ON project.id = tags.id
         JOIN country ON site.country_id = country.id
         LEFT JOIN api_reeftype rt ON site.reef_type_id = rt.id
@@ -168,6 +185,7 @@ class BaseSQLModel(models.Model):
         "project_name",
         "project_status",
         "project_notes",
+        "project_admins",
         "contact_link",
         "tags",
         "site_id",
@@ -198,6 +216,7 @@ class BaseSQLModel(models.Model):
     # SU aggregation SQL common to all SEs
     su_aggfields_sql = """
         ROUND(AVG("depth"), 2) as depth_avg,
+        ROUND(STDDEV("depth"), 2) as depth_sd,
         string_agg(DISTINCT current_name, ', ' ORDER BY current_name) AS current_name,
         string_agg(DISTINCT tide_name, ', ' ORDER BY tide_name) AS tide_name,
         string_agg(DISTINCT visibility_name, ', ' ORDER BY visibility_name) AS visibility_name
@@ -211,6 +230,7 @@ class BaseSQLModel(models.Model):
         choices=Project.STATUSES, default=Project.OPEN
     )
     project_notes = models.TextField(blank=True)
+    project_admins = models.JSONField(null=True, blank=True)
     contact_link = models.CharField(max_length=255)
     tags = models.JSONField(null=True, blank=True)
     site_id = models.UUIDField()

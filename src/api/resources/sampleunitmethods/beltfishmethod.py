@@ -20,6 +20,7 @@ from ...reports.fields import ReportField
 from ...reports.formatters import (
     to_day,
     to_governance,
+    to_join_list,
     to_month,
     to_names,
     to_str,
@@ -30,8 +31,10 @@ from ..base import (
     BaseProjectApiViewSet,
     BaseSEFilterSet,
     BaseSUObsFilterSet,
-    BaseViewAPIGeoSerializer,
     BaseSUViewAPISerializer,
+    BaseSUViewAPISUSerializer,
+    BaseViewAPIGeoSerializer,
+    BaseViewAPISUGeoSerializer,
     BaseAPISerializer,
 )
 from ..fish_belt_transect import FishBeltTransectSerializer
@@ -198,6 +201,7 @@ class BeltFishMethodObsSerializer(BaseSUViewAPISerializer):
                 "relative_depth",
                 "transect_len_surveyed",
                 "transect_width_name",
+                "assigned_transect_width_m",
                 "reef_slope",
                 "size_bin",
                 "observers",
@@ -227,7 +231,10 @@ class BeltFishMethodObsGeoSerializer(BaseViewAPIGeoSerializer):
 class ObsBeltFishCSVSerializer(ReportSerializer):
     fields = [
         ReportField("project_name", "Project name"),
+        ReportField("project_admins", "Project admins", to_names),
         ReportField("country_name", "Country"),
+        ReportField("contact_link", "Project contact link"),
+        ReportField("tags", "Project organizations", to_names),
         ReportField("site_name", "Site"),
         ReportField("latitude", "Latitude"),
         ReportField("longitude", "Longitude"),
@@ -250,11 +257,12 @@ class ObsBeltFishCSVSerializer(ReportSerializer):
         ReportField("management_size", "Management size"),
         ReportField("management_parties", "Governance", to_governance),
         ReportField("management_compliance", "Estimated compliance"),
-        ReportField("management_rules", "Management rules"),
+        ReportField("management_rules", "Management rules", to_join_list),
         ReportField("transect_number", "Transect number"),
         ReportField("label", "Transect label"),
         ReportField("transect_len_surveyed", "Transect length surveyed"),
         ReportField("transect_width_name", "Transect width"),
+        ReportField("assigned_transect_width_m", "Assigned transect width (m)"),
         ReportField("observers", "Observers", to_names),
         ReportField("fish_family", "Fish family"),
         ReportField("fish_genus", "Fish genus"),
@@ -262,10 +270,10 @@ class ObsBeltFishCSVSerializer(ReportSerializer):
         ReportField("size_bin", "Size bin"),
         ReportField("size", "Size"),
         ReportField("count", "Count"),
-        ReportField("biomass_constant_a", "a"),
-        ReportField("biomass_constant_b", "b"),
-        ReportField("biomass_constant_c", "c"),
-        ReportField("biomass_kgha", "Biomass_kgha"),
+        ReportField("biomass_constant_a", "Biomass constant a"),
+        ReportField("biomass_constant_b", "Biomass constant b"),
+        ReportField("biomass_constant_c", "Biomass constant c"),
+        ReportField("biomass_kgha", "Biomass kg/ha"),
         ReportField("trophic_group", "Trophic group"),
         ReportField("trophic_level", "Trophic level"),
         ReportField("functional_group", "Functional group"),
@@ -273,29 +281,27 @@ class ObsBeltFishCSVSerializer(ReportSerializer):
         ReportField("site_notes", "Site notes"),
         ReportField("management_notes", "Management notes"),
         ReportField("sample_unit_notes", "Sample unit notes"),
+        ReportField("project_notes", "Project notes"),
+        ReportField("data_policy_beltfish", "Fish belt data policy"),
+        ReportField("site_id"),
     ]
 
     additional_fields = [
         ReportField("id"),
-        ReportField("site_id"),
         ReportField("project_id"),
-        ReportField("project_notes"),
-        ReportField("contact_link"),
-        ReportField("tags"),
         ReportField("country_id"),
         ReportField("management_id"),
         ReportField("sample_event_id"),
         ReportField("sample_unit_id"),
-        ReportField("data_policy_beltfish"),
     ]
 
 
-class BeltFishMethodSUSerializer(BaseSUViewAPISerializer):
-    class Meta(BaseSUViewAPISerializer.Meta):
+class BeltFishMethodSUSerializer(BaseSUViewAPISUSerializer):
+    class Meta(BaseSUViewAPISUSerializer.Meta):
         model = BeltFishSUModel
-        exclude = BaseSUViewAPISerializer.Meta.exclude.copy()
-        exclude.append("location")
-        header_order = BaseSUViewAPISerializer.Meta.header_order.copy()
+        exclude = BaseSUViewAPISUSerializer.Meta.exclude.copy()
+        exclude.extend(["location", "biomass_kgha_trophic_group_zeroes", "biomass_kgha_fish_family_zeroes"])
+        header_order = BaseSUViewAPISUSerializer.Meta.header_order.copy()
         header_order.extend(
             [
                 "label",
@@ -308,21 +314,26 @@ class BeltFishMethodSUSerializer(BaseSUViewAPISerializer):
                 "data_policy_beltfish",
                 "total_abundance",
                 "biomass_kgha",
-                "biomass_kgha_by_trophic_group",
-                "biomass_kgha_by_fish_family",
+                "biomass_kgha_trophic_group",
+                "biomass_kgha_fish_family",
             ]
         )
 
 
-class BeltFishMethodSUGeoSerializer(BaseViewAPIGeoSerializer):
-    class Meta(BaseViewAPIGeoSerializer.Meta):
+class BeltFishMethodSUGeoSerializer(BaseViewAPISUGeoSerializer):
+    class Meta(BaseViewAPISUGeoSerializer.Meta):
         model = BeltFishSUModel
+        exclude = BaseViewAPISUGeoSerializer.Meta.exclude.copy()
+        exclude.extend(["biomass_kgha_trophic_group_zeroes", "biomass_kgha_fish_family_zeroes"])
 
 
 class BeltFishMethodSUCSVSerializer(ReportSerializer):
     fields = [
         ReportField("project_name", "Project name"),
+        ReportField("project_admins", "Project admins", to_names),
         ReportField("country_name", "Country"),
+        ReportField("contact_link", "Project contact link"),
+        ReportField("tags", "Project organizations", to_names),
         ReportField("site_name", "Site"),
         ReportField("latitude", "Latitude"),
         ReportField("longitude", "Longitude"),
@@ -345,7 +356,7 @@ class BeltFishMethodSUCSVSerializer(ReportSerializer):
         ReportField("management_size", "Management size"),
         ReportField("management_parties", "Governance", to_governance),
         ReportField("management_compliance", "Estimated compliance"),
-        ReportField("management_rules", "Management rules"),
+        ReportField("management_rules", "Management rules", to_join_list),
         ReportField("transect_number", "Transect number"),
         ReportField("label", "Transect label"),
         ReportField("transect_len_surveyed", "Transect length surveyed"),
@@ -353,26 +364,23 @@ class BeltFishMethodSUCSVSerializer(ReportSerializer):
         ReportField("observers", "Observers", to_names),
         ReportField("size_bin", "Size bin"),
         ReportField("total_abundance", "Total abundance"),
-        ReportField("biomass_kgha", "Biomass_kgha"),
-        ReportField("biomass_kgha_by_trophic_group", "Biomass kgha by trophic group"),
-        ReportField("biomass_kgha_by_fish_family", "Biomass kgha by family"),
+        ReportField("biomass_kgha", "Biomass kg/ha"),
+        ReportField("biomass_kgha_trophic_group", "Biomass kg/ha by trophic group"),
+        ReportField("biomass_kgha_fish_family", "Biomass kg/ha by family"),
         ReportField("site_notes", "Site notes"),
         ReportField("management_notes", "Management notes"),
         ReportField("sample_unit_notes", "Sample unit notes"),
+        ReportField("project_notes", "Project notes"),
+        ReportField("data_policy_beltfish", "Fish belt data policy"),
+        ReportField("site_id"),
     ]
 
     additional_fields = [
-        ReportField("id"),
-        ReportField("site_id"),
         ReportField("project_id"),
-        ReportField("project_notes"),
-        ReportField("contact_link"),
-        ReportField("tags"),
         ReportField("country_id"),
         ReportField("management_id"),
         ReportField("sample_event_id"),
         ReportField("sample_unit_ids"),
-        ReportField("data_policy_beltfish"),
     ]
 
 
@@ -387,9 +395,13 @@ class BeltFishMethodSESerializer(BaseSUViewAPISerializer):
                 "data_policy_beltfish",
                 "sample_unit_count",
                 "depth_avg",
+                "depth_sd",
                 "biomass_kgha_avg",
-                "biomass_kgha_by_trophic_group_avg",
-                "biomass_kgha_by_fish_family_avg",
+                "biomass_kgha_sd",
+                "biomass_kgha_trophic_group_avg",
+                "biomass_kgha_trophic_group_sd",
+                "biomass_kgha_fish_family_avg",
+                "biomass_kgha_fish_family_sd",
             ]
         )
 
@@ -402,7 +414,10 @@ class BeltFishMethodSEGeoSerializer(BaseViewAPIGeoSerializer):
 class BeltFishMethodSECSVSerializer(ReportSerializer):
     fields = [
         ReportField("project_name", "Project name"),
+        ReportField("project_admins", "Project admins", to_names),
         ReportField("country_name", "Country"),
+        ReportField("contact_link", "Project contact link"),
+        ReportField("tags", "Project organizations", to_names),
         ReportField("site_name", "Site"),
         ReportField("latitude", "Latitude"),
         ReportField("longitude", "Longitude"),
@@ -416,34 +431,38 @@ class BeltFishMethodSECSVSerializer(ReportSerializer):
         ReportField("visibility_name", "Visibility"),
         ReportField("current_name", "Current"),
         ReportField("depth_avg", "Depth average"),
+        ReportField("depth_sd", "Depth standard deviation"),
         ReportField("management_name", "Management name"),
         ReportField("management_name_secondary", "Management secondary name"),
         ReportField("management_est_year", "Management year established"),
         ReportField("management_size", "Management size"),
         ReportField("management_parties", "Governance", to_governance),
         ReportField("management_compliance", "Estimated compliance"),
-        ReportField("management_rules", "Management rules"),
+        ReportField("management_rules", "Management rules", to_join_list),
         ReportField("sample_unit_count", "Sample unit count"),
-        ReportField("biomass_kgha_avg", "Biomass_kgha average"),
+        ReportField("biomass_kgha_avg", "Biomass kg/ha average"),
+        ReportField("biomass_kgha_sd", "Biomass kg/ha standard deviation"),
         ReportField(
-            "biomass_kgha_by_trophic_group_avg", "Biomass kgha by trophic group average"
+            "biomass_kgha_trophic_group_avg", "Biomass kg/ha by trophic group average"
         ),
-        ReportField("biomass_kgha_by_fish_family_avg", "Biomass kgha by family average"),
+        ReportField(
+            "biomass_kgha_trophic_group_sd", "Biomass kg/ha by trophic group standard deviation"
+        ),
+        ReportField("biomass_kgha_fish_family_avg", "Biomass kg/ha by family average"),
+        ReportField("biomass_kgha_fish_family_sd", "Biomass kg/ha by family standard deviation"),
         ReportField("site_notes", "Site notes"),
         ReportField("management_notes", "Management notes"),
+        ReportField("project_notes", "Project notes"),
+        ReportField("data_policy_beltfish", "Fish belt data policy"),
+        ReportField("site_id"),
     ]
 
     additional_fields = [
         ReportField("id"),
-        ReportField("site_id"),
         ReportField("project_id"),
-        ReportField("project_notes"),
-        ReportField("contact_link"),
-        ReportField("tags"),
         ReportField("country_id"),
         ReportField("management_id"),
         ReportField("sample_event_id"),
-        ReportField("data_policy_beltfish"),
     ]
 
 

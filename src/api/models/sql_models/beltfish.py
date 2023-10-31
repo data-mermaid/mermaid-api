@@ -39,6 +39,7 @@ class BeltFishObsSQLModel(BaseSUSQLModel):
             su.len_surveyed AS transect_len_surveyed,
             rs.name AS reef_slope,
             w.name AS transect_width_name,
+            wc.val AS assigned_transect_width_m,
             f.id_family AS id_family,
             f.id_genus AS id_genus,
             f.id_species AS id_species,
@@ -129,6 +130,7 @@ class BeltFishObsSQLModel(BaseSUSQLModel):
         verbose_name=_("transect length surveyed (m)")
     )
     transect_width_name = models.CharField(max_length=100, null=True, blank=True)
+    assigned_transect_width_m = models.PositiveSmallIntegerField(null=True, blank=True)
     reef_slope = models.CharField(max_length=50)
     fish_family = models.CharField(max_length=100, null=True, blank=True)
     fish_genus = models.CharField(max_length=100, null=True, blank=True)
@@ -190,7 +192,7 @@ class BeltFishSUSQLModel(BaseSUSQLModel):
     _agg_su_fields = ", ".join(BaseSUSQLModel.agg_su_fields)
     _su_aggfields_sql = BaseSUSQLModel.su_aggfields_sql
 
-    # biomass_kgha_by_trophic_group_zeroes: object field
+    # biomass_kgha_trophic_group_zeroes: object field
     # with biomass sum or 0 for every trophic group used by at least one observation
     # (not just TGs in that SU)
     # SE sql then produces mean per TG of all SUs in the SE
@@ -232,11 +234,11 @@ class BeltFishSUSQLModel(BaseSUSQLModel):
                     WHEN beltfish_su_tg.trophic_group IS NULL THEN 'other'::character varying
                     ELSE beltfish_su_tg.trophic_group
                 END, ROUND(beltfish_su_tg.biomass_kgha, 2)
-            ) AS biomass_kgha_by_trophic_group,
+            ) AS biomass_kgha_trophic_group,
             jsonb_object_agg(
                 beltfish_su_tg_zeroes.trophic_group, 
 				ROUND(beltfish_su_tg_zeroes.biomass_kgha, 2)
-            ) AS biomass_kgha_by_trophic_group_zeroes
+            ) AS biomass_kgha_trophic_group_zeroes
 
             FROM beltfish_su_tg
 			INNER JOIN (
@@ -261,11 +263,11 @@ class BeltFishSUSQLModel(BaseSUSQLModel):
                     WHEN beltfish_su_family.fish_family IS NULL THEN 'other'::character varying
                     ELSE beltfish_su_family.fish_family
                 END, ROUND(beltfish_su_family.biomass_kgha, 2)
-            ) AS biomass_kgha_by_fish_family,
+            ) AS biomass_kgha_fish_family,
             jsonb_object_agg(
                 beltfish_su_family_zeroes.fish_family,
                 ROUND(beltfish_su_family_zeroes.biomass_kgha, 2)
-            ) AS biomass_kgha_by_fish_family_zeroes
+            ) AS biomass_kgha_fish_family_zeroes
     
             FROM beltfish_su_family
             INNER JOIN (
@@ -304,10 +306,10 @@ class BeltFishSUSQLModel(BaseSUSQLModel):
         size_bin,
         total_abundance,
         biomass_kgha,
-        biomass_kgha_by_trophic_group,
-        biomass_kgha_by_trophic_group_zeroes,
-        biomass_kgha_by_fish_family,
-        biomass_kgha_by_fish_family_zeroes
+        biomass_kgha_trophic_group,
+        biomass_kgha_trophic_group_zeroes,
+        biomass_kgha_fish_family,
+        biomass_kgha_fish_family_zeroes
 
         FROM (
             SELECT pseudosu_id,
@@ -365,12 +367,12 @@ class BeltFishSUSQLModel(BaseSUSQLModel):
         null=True,
         blank=True,
     )
-    biomass_kgha_by_trophic_group = models.JSONField(null=True, blank=True)
-    biomass_kgha_by_fish_family = models.JSONField(null=True, blank=True)
+    biomass_kgha_trophic_group = models.JSONField(null=True, blank=True)
+    biomass_kgha_fish_family = models.JSONField(null=True, blank=True)
     data_policy_beltfish = models.CharField(max_length=50)
     pseudosu_id = models.UUIDField()
-    biomass_kgha_by_trophic_group_zeroes = models.JSONField(null=True, blank=True)
-    biomass_kgha_by_fish_family_zeroes = models.JSONField(null=True, blank=True)
+    biomass_kgha_trophic_group_zeroes = models.JSONField(null=True, blank=True)
+    biomass_kgha_fish_family_zeroes = models.JSONField(null=True, blank=True)
 
     class Meta:
         db_table = "belt_fish_su_sm"
@@ -394,8 +396,11 @@ class BeltFishSESQLModel(BaseSQLModel):
         {_su_aggfields_sql},
         COUNT(beltfish_su.pseudosu_id) AS sample_unit_count,
         ROUND(AVG(beltfish_su.biomass_kgha), 2) AS biomass_kgha_avg,
-        biomass_kgha_by_trophic_group_avg,
-        biomass_kgha_by_fish_family_avg
+        ROUND(STDDEV(beltfish_su.biomass_kgha), 2) AS biomass_kgha_sd,
+        biomass_kgha_trophic_group_avg,
+        biomass_kgha_trophic_group_sd,
+        biomass_kgha_fish_family_avg,
+        biomass_kgha_fish_family_sd
 
         FROM beltfish_su
 
@@ -403,16 +408,21 @@ class BeltFishSESQLModel(BaseSQLModel):
             SELECT sample_event_id,
             jsonb_object_agg(
                 tg,
-                ROUND(biomass_kgha::numeric, 2)
-            ) FILTER (WHERE biomass_kgha > 0) AS biomass_kgha_by_trophic_group_avg
+                ROUND(biomass_kgha_avg::numeric, 2)
+            ) FILTER (WHERE biomass_kgha_avg > 0) AS biomass_kgha_trophic_group_avg,
+            jsonb_object_agg(
+                tg,
+                ROUND(biomass_kgha_sd::numeric, 2)
+            ) FILTER (WHERE biomass_kgha_avg > 0) AS biomass_kgha_trophic_group_sd
             FROM (
                 SELECT meta_su_tgs.sample_event_id, tg,
-                AVG(biomass_kgha) AS biomass_kgha
+                AVG(biomass_kgha) AS biomass_kgha_avg,
+                STDDEV(biomass_kgha) AS biomass_kgha_sd
                 FROM (
                     SELECT sample_event_id, pseudosu_id, tgdata.key AS tg,
                     SUM(tgdata.value::double precision) AS biomass_kgha
                     FROM beltfish_su,
-                    LATERAL jsonb_each_text(biomass_kgha_by_trophic_group_zeroes)
+                    LATERAL jsonb_each_text(biomass_kgha_trophic_group_zeroes)
                     tgdata(key, value)
                     GROUP BY sample_event_id, pseudosu_id, tgdata.key
                 ) meta_su_tgs
@@ -426,16 +436,21 @@ class BeltFishSESQLModel(BaseSQLModel):
             SELECT sample_event_id,
             jsonb_object_agg(
                 ff,
-                ROUND(biomass_kgha::numeric, 2)
-            ) FILTER (WHERE biomass_kgha > 0) AS biomass_kgha_by_fish_family_avg
+                ROUND(biomass_kgha_avg::numeric, 2)
+            ) FILTER (WHERE biomass_kgha_avg > 0) AS biomass_kgha_fish_family_avg,
+            jsonb_object_agg(
+                ff,
+                ROUND(biomass_kgha_sd::numeric, 2)
+            ) FILTER (WHERE biomass_kgha_avg > 0) AS biomass_kgha_fish_family_sd
             FROM (
                 SELECT meta_su_ffs.sample_event_id, ff,
-                AVG(biomass_kgha) AS biomass_kgha
+                AVG(biomass_kgha) AS biomass_kgha_avg,
+                STDDEV(biomass_kgha) AS biomass_kgha_sd
                 FROM (
                     SELECT sample_event_id, pseudosu_id, ffdata.key AS ff,
                     SUM(ffdata.value::double precision) AS biomass_kgha
                     FROM beltfish_su,
-                    LATERAL jsonb_each_text(biomass_kgha_by_fish_family_zeroes)
+                    LATERAL jsonb_each_text(biomass_kgha_fish_family_zeroes)
                     ffdata(key, value)
                     GROUP BY sample_event_id, pseudosu_id, ffdata.key
                 ) meta_su_ffs
@@ -448,8 +463,10 @@ class BeltFishSESQLModel(BaseSQLModel):
         GROUP BY
         {_se_fields},
         data_policy_beltfish,
-        biomass_kgha_by_trophic_group_avg,
-        biomass_kgha_by_fish_family_avg
+        biomass_kgha_trophic_group_avg,
+        biomass_kgha_trophic_group_sd,
+        biomass_kgha_fish_family_avg,
+        biomass_kgha_fish_family_sd
     """
 
     sql_args = dict(
@@ -460,7 +477,14 @@ class BeltFishSESQLModel(BaseSQLModel):
 
     sample_unit_count = models.PositiveSmallIntegerField()
     depth_avg = models.DecimalField(
-        max_digits=4, decimal_places=2, verbose_name=_("depth (m)")
+        max_digits=4, decimal_places=2, verbose_name=_("depth mean (m)")
+    )
+    depth_sd = models.DecimalField(
+        max_digits=4,
+        decimal_places=2,
+        verbose_name=_("depth standard deviation (m)"),
+        blank=True,
+        null=True,
     )
     current_name = models.CharField(max_length=100)
     tide_name = models.CharField(max_length=100)
@@ -468,12 +492,21 @@ class BeltFishSESQLModel(BaseSQLModel):
     biomass_kgha_avg = models.DecimalField(
         max_digits=8,
         decimal_places=2,
-        verbose_name=_("biomass (kg/ha)"),
+        verbose_name=_("biomass mean (kg/ha)"),
         null=True,
         blank=True,
     )
-    biomass_kgha_by_trophic_group_avg = models.JSONField(null=True, blank=True)
-    biomass_kgha_by_fish_family_avg = models.JSONField(null=True, blank=True)
+    biomass_kgha_sd = models.DecimalField(
+        max_digits=8,
+        decimal_places=2,
+        verbose_name=_("biomass standard deviation (kg/ha)"),
+        blank=True,
+        null=True,
+    )
+    biomass_kgha_trophic_group_avg = models.JSONField(null=True, blank=True)
+    biomass_kgha_trophic_group_sd = models.JSONField(null=True, blank=True)
+    biomass_kgha_fish_family_avg = models.JSONField(null=True, blank=True)
+    biomass_kgha_fish_family_sd = models.JSONField(null=True, blank=True)
     data_policy_beltfish = models.CharField(max_length=50)
 
     class Meta:

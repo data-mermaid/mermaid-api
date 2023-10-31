@@ -10,34 +10,38 @@ from rest_framework.response import Response
 
 from ..auth_backends import AnonymousJWTAuthentication
 from ..models import (
+    ArchivedRecord,
     Management,
     Project,
     Site,
     Profile,
     ProjectProfile,
-    ArchivedRecord,
+    Tag,
     TransectMethod,
 )
-from ..decorators import run_in_thread
 from ..exceptions import check_uuid
 from ..notifications import notify_crs_transferred
 from ..permissions import *
-from ..utils import delete_instance_and_related_objects, truthy
+from ..utils import truthy
 from ..utils.project import (
     create_collecting_summary,
     create_submitted_summary,
     copy_project_and_resources,
+    delete_project,
     email_members_of_new_project,
     get_sample_unit_field,
 )
+from ..utils.q import submit_job
 from ..utils.replace import replace_collect_record_owner, replace_sampleunit_objs
 from .base import (
     BaseAPIFilterSet,
     BaseAPISerializer,
     BaseApiViewSet,
+    BaseInFilter,
     TagField,
 )
 from .management import ManagementSerializer
+from .mixins import OrFilterSetMixin
 from .project_profile import ProjectProfileSerializer
 from .site import SiteSerializer
 
@@ -99,7 +103,19 @@ class ProjectSerializer(BaseAPISerializer):
         instance = super().update(instance, validated_data)
 
         tags = [t.name for t in tags_data]
+        existing_tags = [t["name"] for t in Tag.objects.filter(name__in=tags).values("name")]
+        new_tags = [t for t in tags if t not in existing_tags]
         instance.tags.set(tags)
+
+        if new_tags:
+            request = self.context.get("request")
+            profile = request.user.profile
+            for t in new_tags:
+                tag = Tag.objects.get(name=t)
+                tag.created_by = profile
+                tag.updated_by = profile
+                tag.save()
+
         return instance
 
     class Meta:
@@ -139,8 +155,10 @@ class ProjectSerializer(BaseAPISerializer):
         return num_sample_units
 
 
-class ProjectFilterSet(BaseAPIFilterSet):
+class ProjectFilterSet(BaseAPIFilterSet, OrFilterSetMixin):
+    name = BaseInFilter(method="char_lookup")
     tags = django_filters.CharFilter(distinct=True, method="filter_tags")
+    country = BaseInFilter(method="site_country")
 
     class Meta:
         model = Project
@@ -157,6 +175,9 @@ class ProjectFilterSet(BaseAPIFilterSet):
     def filter_tags(self, queryset, name, value):
         values = [v.strip() for v in value.split(",")]
         return queryset.filter(tags__name__in=values)
+
+    def site_country(self, queryset, name, value):
+        return self.char_lookup(queryset, "sites__country__name", value)
 
 
 class ProjectAuthenticatedUserPermission(permissions.BasePermission):
@@ -495,26 +516,9 @@ class ProjectViewSet(BaseApiViewSet):
 
         return Response({"num_collect_records_transferred": num_transferred})
 
-    @run_in_thread
-    def _delete_project(self, pk):
-        try:
-            instance = Project.objects.get(id=pk)
-        except Project.DoesNotExist:
-            return
-
-        with transaction.atomic():
-            sid = transaction.savepoint()
-            try:
-                delete_instance_and_related_objects(instance)
-                transaction.savepoint_commit(sid)
-                print("project deleted")
-            except Exception as err:
-                print(f"Delete Project: {err}")
-                transaction.savepoint_rollback(sid)
-
     def destroy(self, request, *args, **kwargs):
         instance = self.get_object()
-        self._delete_project(instance.pk)
+        submit_job(0, delete_project, instance.pk)
 
         return Response(
             data="Project has been flagged for deletion",

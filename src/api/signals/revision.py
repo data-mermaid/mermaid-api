@@ -5,13 +5,27 @@ from django.dispatch import receiver
 from ..models import (
     AuthUser,
     BenthicAttribute,
+    BenthicTransect,
     CollectRecord,
+    FishBeltTransect,
     FishFamily,
     FishGenus,
     FishSpecies,
+    Management,
+    ObsBeltFish,
+    ObsBenthicLIT,
+    ObsBenthicPhotoQuadrat,
+    ObsBenthicPIT,
+    ObsColoniesBleached,
+    ObsHabitatComplexity,
+    ObsQuadratBenthicPercent,
+    Observer,
     Profile,
     ProjectProfile,
+    QuadratCollection,
+    QuadratTransect,
     Revision,
+    SampleEvent,
     Site,
     TransectMethod,
 )
@@ -21,21 +35,22 @@ from ..resources.sync.views import (
     FISH_FAMILIES_SOURCE_TYPE,
     BENTHIC_ATTRIBUTES_SOURCE_TYPE,
 )
+from ..utils.related import get_related_project
 
 
-__all__ = (
-    "update_profile_revisions",
-    "update_project_profile_revisions",
-    "delete_project_profile_revisions",
-    "new_collect_record_revisions",
-    "deleted_collect_record_revisions",
-    "deleted_su_revisions",
-    "created_site_revisions",
-    "deleted_site_revisions",
-    "new_auth_user",
-    "deleted_auth_user",
-    "bust_revision_cache",
-)
+# ***************************************************************
+# NOTE: Database triggers exist to populate revisions 
+# if the following tables are inserted, deleted or updated:
+#     * fish_species
+#     * management
+#     * api_collectrecord
+#     * benthic_attribute
+#     * fish_genus
+#     * fish_family
+#     * site
+#     * project_profile
+#     * project
+# ***************************************************************
 
 
 def _create_project_profile_revisions(query_kwargs):
@@ -48,14 +63,8 @@ def update_profile_revisions(sender, instance, *args, **kwargs):
     _create_project_profile_revisions({"profile": instance})
 
 
-@receiver(post_save, sender=ProjectProfile)
-def update_project_profile_revisions(sender, instance, *args, **kwargs):
-    Revision.create_from_instance(instance.project)
-
-
 @receiver(pre_delete, sender=ProjectProfile)
 def delete_project_profile_revisions(sender, instance, *args, **kwargs):
-    Revision.create_from_instance(instance.project)
     Revision.create_from_instance(instance, related_to_profile_id=instance.profile.pk)
     Revision.create_from_instance(
         instance.project, related_to_profile_id=instance.profile.pk
@@ -68,7 +77,6 @@ def new_collect_record_revisions(sender, instance, created, *args, **kwargs):
         _create_project_profile_revisions(
             {"profile": instance.profile, "project": instance.project}
         )
-        Revision.create_from_instance(instance.project)
 
 
 @receiver(pre_delete, sender=CollectRecord)
@@ -76,26 +84,48 @@ def deleted_collect_record_revisions(sender, instance, *args, **kwargs):
     _create_project_profile_revisions(
         {"profile": instance.profile, "project": instance.project}
     )
-    Revision.create_from_instance(instance.project)
 
 
-# create handled in utils.submit_collect_records_v2
-@receiver(post_delete, sender=TransectMethod)
-def deleted_su_revisions(sender, instance, *args, **kwargs):
-    su_project = instance.project
-    if su_project is not None:
-        Revision.create_from_instance(su_project)
-
-
-@receiver(post_save, sender=Site)
-def created_site_revisions(sender, instance, created, *args, **kwargs):
-    if created:
-        Revision.create_from_instance(instance.project)
-
-
+@receiver(post_delete, sender=BenthicTransect)
+@receiver(post_save, sender=BenthicTransect)
+@receiver(post_delete, sender=CollectRecord)
+@receiver(post_save, sender=CollectRecord)
+@receiver(post_delete, sender=FishBeltTransect)
+@receiver(post_save, sender=FishBeltTransect)
+@receiver(post_delete, sender=Management)
+@receiver(post_save, sender=Management)
+@receiver(post_delete, sender=ObsBeltFish)
+@receiver(post_save, sender=ObsBeltFish)
+@receiver(post_delete, sender=ObsBenthicPhotoQuadrat)
+@receiver(post_save, sender=ObsBenthicPhotoQuadrat)
+@receiver(post_delete, sender=ObsBenthicLIT)
+@receiver(post_save, sender=ObsBenthicLIT)
+@receiver(post_delete, sender=ObsBenthicPIT)
+@receiver(post_save, sender=ObsBenthicPIT)
+@receiver(post_delete, sender=ObsColoniesBleached)
+@receiver(post_save, sender=ObsColoniesBleached)
+@receiver(post_delete, sender=ObsHabitatComplexity)
+@receiver(post_save, sender=ObsHabitatComplexity)
+@receiver(post_delete, sender=ObsQuadratBenthicPercent)
+@receiver(post_save, sender=ObsQuadratBenthicPercent)
+@receiver(post_delete, sender=Observer)
+@receiver(post_save, sender=Observer)
+@receiver(post_delete, sender=ProjectProfile)
+@receiver(post_save, sender=ProjectProfile)
+@receiver(post_delete, sender=QuadratCollection)
+@receiver(post_save, sender=QuadratCollection)
+@receiver(post_delete, sender=QuadratTransect)
+@receiver(post_save, sender=QuadratTransect)
+@receiver(post_delete, sender=SampleEvent)
+@receiver(post_save, sender=SampleEvent)
 @receiver(post_delete, sender=Site)
-def deleted_site_revisions(sender, instance, *args, **kwargs):
-    Revision.create_from_instance(instance.project)
+@receiver(post_save, sender=Site)
+@receiver(post_delete, sender=TransectMethod)
+@receiver(post_save, sender=TransectMethod)
+def update_project_updated_on(sender, instance, *args, **kwargs):
+    project = get_related_project(instance)
+    if project is not None:
+        project.save()
 
 
 @receiver(post_save, sender=AuthUser)
