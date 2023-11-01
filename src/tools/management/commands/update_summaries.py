@@ -32,7 +32,6 @@ class Command(BaseCommand):
         start_time = time()
         print("Updating summaries...")
         for project in Project.objects.all():
-            print(f"project {project.pk}")
             submit_job(5, update_summary_cache, project_id=project.pk, skip_test_project=skip_test_project)
 
         end_time = time()
