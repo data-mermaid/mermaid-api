@@ -25,7 +25,7 @@ SUMMARY_URL_SUFFIXES = (
     "/benthicpqts/sampleevents/",
     # "/summarysampleevents/",
 )
-SUMBIT_URL_SUFFIX = "/submit/"
+SUBMIT_URL_SUFFIX = "/submit/"
 PROJECT_URL_PREFIX = "/v1/projects/"
 SUMMARY_EVENT_TYPE = "summary"
 PROJECT_EVENT_TYPE = "project"
@@ -40,10 +40,7 @@ def meta(method):
     def _meta(*args, **kw):
         args = list(args)
         log_event = args[0]
-        if hasattr(log_event, "meta"):
-            log_event.meta = log_event.meta or {}
-        else:
-            log_event.meta = {}
+        log_event.meta = getattr(log_event, "meta", {})
         args[0] = log_event
         return method(*args, **kw)
     return _meta
@@ -62,7 +59,7 @@ def get_auth_id(log_event):
 @meta
 def tag_event_type(log_event):
     path = log_event.event.get("path")
-    if path.endswith(SUMBIT_URL_SUFFIX):
+    if path.endswith(SUBMIT_URL_SUFFIX):
         log_event.meta["event_type"] = SUBMIT_EVENT_TYPE
     elif list(filter(path.endswith, SUMMARY_URL_SUFFIXES)) != []:
         log_event.meta["event_type"] = SUMMARY_EVENT_TYPE
