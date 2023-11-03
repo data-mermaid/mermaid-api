@@ -1076,7 +1076,7 @@ class BenthicPhotoQuadratTransectAdmin(BaseAdmin):
 @admin.register(Notification)
 class NotificationAdmin(BaseAdmin):
     list_display = ("owner", "status", "title", "created_on")
-    search_fields = ["owner__first_name", "owner__last_name", "owner__pk", "status"]
+    search_fields = ["owner__first_name", "owner__last_name", "owner__pk", "title", "status"]
 
     def get_urls(self):
         urls = super().get_urls()
