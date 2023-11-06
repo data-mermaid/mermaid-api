@@ -1,17 +1,27 @@
-from collections import Counter
+import csv
+from collections import defaultdict
 from dateutil.relativedelta import relativedelta
 from django.utils import timezone
 from api.models import Profile, Site, SampleUnit
+from api.utils import get_subclasses
 
+
+OBJECT = "object"
+START_DATE = "start_date"
+END_DATE = "end_date"
+COUNT = "count"
+fieldnames = [OBJECT, START_DATE, END_DATE, COUNT]
 
 bin_size_years = 1
-models = [Profile, Site]
+date_format = "%Y-%m-%d"
 
 
-def count_objects(model, years):
-    print(f"model: {model}")
+def count_by_date(model):
+    print(f"model: {model._meta.model_name}")
+    modelname = model._meta.model_name
     objs = model.objects.order_by("created_on")
     if hasattr(model, "project_lookup"):
+        # print(f"{model.project_lookup}")
         proj_filter = {f"{model.project_lookup}__status__gte": 90}
         objs = model.objects.filter(**proj_filter).order_by("created_on")
     first_year = min(obj.created_on for obj in objs).year
@@ -19,38 +29,47 @@ def count_objects(model, years):
     start_date = timezone.datetime(first_year, 1, 1, tzinfo=timezone.utc)
     end_date = timezone.datetime(end_year, 1, 1, tzinfo=timezone.utc)
     current_date = start_date
-    bin_counter = Counter()
+    bin_counter = []
 
     while current_date < end_date:
         bin_start = current_date
         bin_end = current_date + relativedelta(years=bin_size_years)
         bin_objs = [obj for obj in objs if bin_start <= obj.created_on < bin_end]
-        bin_counter[bin_start] = len(bin_objs)
+        row = {
+            OBJECT: modelname,
+            START_DATE: bin_start.strftime(date_format),
+            END_DATE: (bin_end - relativedelta(days=1)).strftime(date_format),
+            COUNT: len(bin_objs),
+        }
+        bin_counter.append(row)
         current_date = bin_end
 
-    for bin_start, count in bin_counter.items():
-        bin_end = bin_start + relativedelta(years=bin_size_years)
-        print(f"Bin {bin_start.strftime('%Y-%m-%d')} to {bin_end.strftime('%Y-%m-%d')}: {count} objects")
+    return bin_counter
 
 
 def run():
-    for model in models:
-        count_objects(model, bin_size_years)
-    # profiles = Profile.objects.order_by("created_on")
-    # first_year = min(profile.created_on for profile in profiles).year
-    # end_year = max(profile.created_on for profile in profiles).year + 1
-    # start_date = timezone.datetime(first_year, 1, 1, tzinfo=timezone.utc)
-    # end_date = timezone.datetime(end_year, 1, 1, tzinfo=timezone.utc)
-    # current_date = start_date
-    # bin_counter = Counter()
-    #
-    # while current_date < end_date:
-    #     bin_start = current_date
-    #     bin_end = current_date + relativedelta(years=bin_size_years)
-    #     bin_profiles = [profile for profile in profiles if bin_start <= profile.created_on < bin_end]
-    #     bin_counter[bin_start] = len(bin_profiles)
-    #     current_date = bin_end
-    #
-    # for bin_start, count in bin_counter.items():
-    #     bin_end = bin_start + relativedelta(years=bin_size_years)
-    #     print(f"Bin {bin_start.strftime('%Y-%m-%d')} to {bin_end.strftime('%Y-%m-%d')}: {count} objects")
+    today = timezone.now().date().isoformat()
+    filename = f"objects_by_time-{today}.csv"
+    count_data = []
+
+    profile_rows = count_by_date(Profile)
+    count_data.extend(profile_rows)
+
+    site_rows = count_by_date(Site)
+    count_data.extend(site_rows)
+
+    su_totals = defaultdict(lambda: {COUNT: 0})
+    for suclass in get_subclasses(SampleUnit):
+        su_rows = count_by_date(suclass)
+        for row in su_rows:
+            su_date = row[START_DATE]
+            su_totals[su_date][END_DATE] = row[END_DATE]
+            su_totals[su_date][OBJECT] = "sampleunit"
+            su_totals[su_date][COUNT] += row[COUNT]
+    su_results = [{START_DATE: date, **data} for date, data in su_totals.items()]
+    count_data.extend(su_results)
+
+    with open(filename, "w") as csvfile:
+        writer = csv.DictWriter(csvfile, fieldnames=fieldnames)
+        writer.writeheader()
+        writer.writerows(count_data)
