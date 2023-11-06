@@ -167,6 +167,7 @@ def _update_project_summary_sample_event(project_id, skip_test_project=True):
 
 @timing
 def update_summary_cache(project_id, sample_unit=None, skip_test_project=True):
+    print(f"project {project_id}")
     skip_updates = False
     if (
         skip_test_project is True
