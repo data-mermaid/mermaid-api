@@ -14,6 +14,16 @@ def get_project(obj, keys):
     return get_project(new_obj, keys[1:])
 
 
+def add_protected_data(instance, k, v):
+    decorated_v = v
+    if k == "observers":
+        observers = {str(o.id): o for o in instance.observers.select_related("profile")}
+        for serialized_observer in decorated_v:
+            serialized_observer["email"] = observers[serialized_observer["id"]].profile.email
+
+    return decorated_v
+
+
 def transect_method_to_collect_record(serializer, transect_method_instance, profile, protocol):
     from api.resources.collect_record import CollectRecordSerializer
 
@@ -51,7 +61,7 @@ def transect_method_to_collect_record(serializer, transect_method_instance, prof
         if k in skip_fields:
             record[k] = v
         else:
-            record["data"][k] = v
+            record["data"][k] = add_protected_data(transect_method_instance, k, v)
 
     cr = CollectRecordSerializer(data=record, context={"request": request})
     cr.is_valid(raise_exception=True)
