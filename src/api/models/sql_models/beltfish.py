@@ -68,7 +68,7 @@ class BeltFishObsSQLModel(BaseSUSQLModel):
             JOIN transect_belt_fish su ON tt.transect_id = su.id
             JOIN se ON su.sample_event_id = se.sample_event_id
             JOIN pseudosu_su ON (su.id = pseudosu_su.sample_unit_id)
-            LEFT JOIN vw_fish_attributes f ON o.fish_attribute_id = f.id
+            LEFT JOIN mv_fish_attributes f ON o.fish_attribute_id = f.id
             JOIN api_belttransectwidth w ON su.width_id = w.id
             JOIN api_belttransectwidthcondition wc ON (
                 w.id = wc.belttransectwidth_id
