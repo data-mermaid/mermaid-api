@@ -271,6 +271,14 @@ forward_sql = """
     UPDATE
         OR DELETE ON "fish_family" FOR EACH ROW EXECUTE FUNCTION write_revision();
 
+    DROP TRIGGER IF EXISTS fish_grouping_trigger ON fish_grouping;
+    CREATE TRIGGER fish_grouping_trigger
+    AFTER
+    INSERT
+        OR
+    UPDATE
+        OR DELETE ON "fish_grouping" FOR EACH ROW EXECUTE FUNCTION write_revision();
+
     DROP TRIGGER IF EXISTS site_trigger ON site;
     CREATE TRIGGER site_trigger
     AFTER
@@ -303,7 +311,8 @@ reverse_sql = """
     DROP TRIGGER benthic_attribute_trigger ON benthic_attribute;
     DROP TRIGGER fish_genus_trigger ON fish_genus;
     DROP TRIGGER fish_family_trigger ON fish_family;
-    DROP TRIGGER site_trigger ON site;    
+    DROP TRIGGER fish_grouping_trigger ON fish_grouping;
+    DROP TRIGGER site_trigger ON site;
     DROP TRIGGER project_profile_trigger ON project_profile;
     DROP TRIGGER project_trigger ON project;
 

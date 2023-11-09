@@ -10,6 +10,7 @@ from ..models import (
     FishBeltTransect,
     FishFamily,
     FishGenus,
+    FishGrouping,
     FishSpecies,
     Management,
     ObsBeltFish,
@@ -30,9 +31,10 @@ from ..models import (
     TransectMethod,
 )
 from ..resources.sync.views import (
-    FISH_SPECIES_SOURCE_TYPE,
-    FISH_GENERA_SOURCE_TYPE,
     FISH_FAMILIES_SOURCE_TYPE,
+    FISH_GENERA_SOURCE_TYPE,
+    FISH_GROUPINGS_SOURCE_TYPE,
+    FISH_SPECIES_SOURCE_TYPE,
     BENTHIC_ATTRIBUTES_SOURCE_TYPE,
 )
 from ..utils.related import get_related_project
@@ -143,14 +145,17 @@ def deleted_auth_user(sender, instance, *args, **kwargs):
 @receiver(post_delete, sender=FishFamily)
 @receiver(post_save, sender=FishGenus)
 @receiver(post_delete, sender=FishGenus)
+@receiver(post_save, sender=FishGrouping)
+@receiver(post_delete, sender=FishGrouping)
 @receiver(post_save, sender=FishSpecies)
 @receiver(post_delete, sender=FishSpecies)
 @receiver(post_save, sender=BenthicAttribute)
 @receiver(post_delete, sender=BenthicAttribute)
 def bust_revision_cache(sender, instance, *args, **kwargs):
-    if sender in (FishSpecies, FishGenus, FishFamily):
+    if sender in (FishSpecies, FishGenus, FishFamily, FishGrouping):
         cache.delete(FISH_SPECIES_SOURCE_TYPE)
         cache.delete(FISH_GENERA_SOURCE_TYPE)
         cache.delete(FISH_FAMILIES_SOURCE_TYPE)
+        cache.delete(FISH_GROUPINGS_SOURCE_TYPE)
     elif sender == BenthicAttribute:
         cache.delete(BENTHIC_ATTRIBUTES_SOURCE_TYPE)
