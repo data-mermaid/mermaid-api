@@ -287,5 +287,5 @@ CREATE UNIQUE INDEX fish_attributes_id
     )
 
     class Meta:
-        db_table = "vw_fish_attributes"
+        db_table = "mv_fish_attributes"
         managed = False
