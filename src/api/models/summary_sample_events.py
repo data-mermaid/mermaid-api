@@ -171,6 +171,16 @@ class SummarySampleEventSQLModel(SummarySampleEventBaseModel):
                 bleachingqc.percent_normal_avg END),
                 'percent_pale_avg', (CASE WHEN project.data_policy_bleachingqc < 50 THEN NULL ELSE
                 bleachingqc.percent_pale_avg END),
+                'percent_20_avg', (CASE WHEN project.data_policy_bleachingqc < 50 THEN NULL ELSE
+                bleachingqc.percent_20_avg END),
+                'percent_50_avg', (CASE WHEN project.data_policy_bleachingqc < 50 THEN NULL ELSE
+                bleachingqc.percent_50_avg END),
+                'percent_80_avg', (CASE WHEN project.data_policy_bleachingqc < 50 THEN NULL ELSE
+                bleachingqc.percent_80_avg END),
+                'percent_100_avg', (CASE WHEN project.data_policy_bleachingqc < 50 THEN NULL ELSE
+                bleachingqc.percent_100_avg END),
+                'percent_dead_avg', (CASE WHEN project.data_policy_bleachingqc < 50 THEN NULL ELSE
+                bleachingqc.percent_dead_avg END),
                 'percent_bleached_avg', (CASE WHEN project.data_policy_bleachingqc < 50 THEN NULL ELSE
                 bleachingqc.percent_bleached_avg END)
             )), '{{}}'),
@@ -355,6 +365,11 @@ class SummarySampleEventSQLModel(SummarySampleEventBaseModel):
             ROUND(AVG(count_genera), 1) AS count_genera_avg,
             ROUND(AVG(percent_normal), 1) AS percent_normal_avg,
             ROUND(AVG(percent_pale), 1) AS percent_pale_avg,
+            ROUND(AVG(percent_20), 1) AS percent_20_avg,
+            ROUND(AVG(percent_50), 1) AS percent_50_avg,
+            ROUND(AVG(percent_80), 1) AS percent_80_avg,
+            ROUND(AVG(percent_100), 1) AS percent_100_avg,
+            ROUND(AVG(percent_dead), 1) AS percent_dead_avg,
             ROUND(AVG(percent_bleached), 1) AS percent_bleached_avg,
             ROUND(AVG(quadrat_count), 1) AS quadrat_count_avg,
             ROUND(AVG(percent_hard_avg), 1) AS percent_hard_avg_avg,
