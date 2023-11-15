@@ -14,6 +14,7 @@ from api.resources import (
     collect_record,
     fish_family,
     fish_genus,
+    fish_grouping,
     fish_species,
     pmanagement,
     project,
@@ -38,6 +39,7 @@ PROJECTS_SOURCE_TYPE = "projects"
 BENTHIC_ATTRIBUTES_SOURCE_TYPE = "benthic_attributes"
 FISH_FAMILIES_SOURCE_TYPE = "fish_families"
 FISH_GENERA_SOURCE_TYPE = "fish_genera"
+FISH_GROUPINGS_SOURCE_TYPE = "fish_groupings"
 FISH_SPECIES_SOURCE_TYPE = "fish_species"
 CHOICES_SOURCE_TYPE = "choices"
 
@@ -45,6 +47,7 @@ CACHEABLE_SOURCE_TYPES = (
     BENTHIC_ATTRIBUTES_SOURCE_TYPE,
     FISH_FAMILIES_SOURCE_TYPE,
     FISH_GENERA_SOURCE_TYPE,
+    FISH_GROUPINGS_SOURCE_TYPE,
     FISH_SPECIES_SOURCE_TYPE,
 )
 
@@ -94,6 +97,11 @@ non_project_sources = {
     },
     FISH_GENERA_SOURCE_TYPE: {
         "view": fish_genus.FishGenusViewSet,
+        "required_filters": NO_FILTERS,
+        "read_only": True,
+    },
+    FISH_GROUPINGS_SOURCE_TYPE: {
+        "view": fish_grouping.FishGroupingViewSet,
         "required_filters": NO_FILTERS,
         "read_only": True,
     },
