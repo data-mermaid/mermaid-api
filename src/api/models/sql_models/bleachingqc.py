@@ -248,6 +248,11 @@ class BleachingQCSUSQLModel(BaseSUSQLModel):
         count_total,
         percent_normal,
         percent_pale,
+        percent_20,
+        percent_50,
+        percent_80,
+        percent_100,
+        percent_dead,
         percent_bleached,
         quadrat_count,
         percent_hard_avg,
@@ -263,25 +268,39 @@ class BleachingQCSUSQLModel(BaseSUSQLModel):
             {_su_aggfields_sql},
             COUNT(DISTINCT benthic_attribute) AS count_genera,
             SUM(count_normal + count_pale + count_20 + count_50 + count_80 + count_100 + count_dead) AS count_total,
-            ROUND(100 *
-                (SUM(count_normal)::decimal /
-                CASE WHEN SUM(count_normal + count_pale + count_20 + count_50 + count_80 + count_100 + count_dead) = 0 THEN 1
-                ELSE SUM(count_normal + count_pale + count_20 + count_50 + count_80 + count_100 + count_dead) END
-                )
-            , 1) AS percent_normal,
-            ROUND(100 *
-                (SUM(count_pale)::decimal /
-                CASE WHEN SUM(count_normal + count_pale + count_20 + count_50 + count_80 + count_100 + count_dead) = 0 THEN 1
-                ELSE SUM(count_normal + count_pale + count_20 + count_50 + count_80 + count_100 + count_dead) END
-                )
-            , 1) AS percent_pale,
-            ROUND(100 *
-                (SUM(count_20 + count_50 + count_80 + count_100 + count_dead)::decimal /
-                CASE WHEN SUM(count_normal + count_pale + count_20 + count_50 + count_80 + count_100 + count_dead) = 0 THEN 1
-                ELSE SUM(count_normal + count_pale + count_20 + count_50 + count_80 + count_100 + count_dead) END
-                )
-            , 1) AS percent_bleached
-
+			ROUND(
+				100 * (SUM(count_normal)::decimal /
+				COALESCE(NULLIF(SUM(count_normal + count_pale + count_20 + count_50 + count_80 + count_100 + count_dead), 0), 1)
+				), 1) AS percent_normal,
+			ROUND(
+				100 * (SUM(count_pale)::decimal /
+				COALESCE(NULLIF(SUM(count_normal + count_pale + count_20 + count_50 + count_80 + count_100 + count_dead), 0), 1)
+				), 1) AS percent_pale,
+			ROUND(
+				100 * (SUM(count_20)::decimal /
+				COALESCE(NULLIF(SUM(count_normal + count_pale + count_20 + count_50 + count_80 + count_100 + count_dead), 0), 1)
+				), 1) AS percent_20,
+			ROUND(
+				100 * (SUM(count_50)::decimal /
+				COALESCE(NULLIF(SUM(count_normal + count_pale + count_20 + count_50 + count_80 + count_100 + count_dead), 0), 1)
+				), 1) AS percent_50,
+			ROUND(
+				100 * (SUM(count_80)::decimal /
+				COALESCE(NULLIF(SUM(count_normal + count_pale + count_20 + count_50 + count_80 + count_100 + count_dead), 0), 1)
+				), 1) AS percent_80,
+			ROUND(
+				100 * (SUM(count_100)::decimal /
+				COALESCE(NULLIF(SUM(count_normal + count_pale + count_20 + count_50 + count_80 + count_100 + count_dead), 0), 1)
+				), 1) AS percent_100,
+			ROUND(
+				100 * (SUM(count_dead)::decimal /
+				COALESCE(NULLIF(SUM(count_normal + count_pale + count_20 + count_50 + count_80 + count_100 + count_dead), 0), 1)
+				), 1) AS percent_dead,
+            ROUND(
+                100 * (SUM(count_20 + count_50 + count_80 + count_100 + count_dead)::decimal /
+				COALESCE(NULLIF(SUM(count_normal + count_pale + count_20 + count_50 + count_80 + count_100 + count_dead), 0), 1)
+				), 1) AS percent_bleached
+            
             FROM bleachingqc_colonies_bleached_obs
             INNER JOIN pseudosu_su ON(bleachingqc_colonies_bleached_obs.sample_unit_id = pseudosu_su.sample_unit_id)
             GROUP BY pseudosu_id,
@@ -326,6 +345,11 @@ class BleachingQCSUSQLModel(BaseSUSQLModel):
     count_total = models.PositiveSmallIntegerField(default=0)
     percent_normal = models.DecimalField(max_digits=4, decimal_places=1, default=0)
     percent_pale = models.DecimalField(max_digits=4, decimal_places=1, default=0)
+    percent_20 = models.DecimalField(max_digits=4, decimal_places=1, default=0)
+    percent_50 = models.DecimalField(max_digits=4, decimal_places=1, default=0)
+    percent_80 = models.DecimalField(max_digits=4, decimal_places=1, default=0)
+    percent_100 = models.DecimalField(max_digits=4, decimal_places=1, default=0)
+    percent_dead = models.DecimalField(max_digits=4, decimal_places=1, default=0)
     percent_bleached = models.DecimalField(max_digits=4, decimal_places=1, default=0)
     quadrat_count = models.PositiveSmallIntegerField(default=0)
     percent_hard_avg = models.DecimalField(max_digits=4, decimal_places=1, default=0)
@@ -365,6 +389,16 @@ class BleachingQCSESQLModel(BaseSQLModel):
         ROUND(STDDEV(percent_normal), 1) AS percent_normal_sd,
         ROUND(AVG(percent_pale), 1) AS percent_pale_avg,
         ROUND(STDDEV(percent_pale), 1) AS percent_pale_sd,
+        ROUND(AVG(percent_20), 1) AS percent_20_avg,
+        ROUND(STDDEV(percent_20), 1) AS percent_20_sd,
+        ROUND(AVG(percent_50), 1) AS percent_50_avg,
+        ROUND(STDDEV(percent_50), 1) AS percent_50_sd,
+        ROUND(AVG(percent_80), 1) AS percent_80_avg,
+        ROUND(STDDEV(percent_80), 1) AS percent_80_sd,
+        ROUND(AVG(percent_100), 1) AS percent_100_avg,
+        ROUND(STDDEV(percent_100), 1) AS percent_100_sd,
+        ROUND(AVG(percent_dead), 1) AS percent_dead_avg,
+        ROUND(STDDEV(percent_dead), 1) AS percent_dead_sd,
         ROUND(AVG(percent_bleached), 1) AS percent_bleached_avg,
         ROUND(STDDEV(percent_bleached), 1) AS percent_bleached_sd,
         ROUND(AVG(quadrat_count), 1) AS quadrat_count_avg,
@@ -410,7 +444,17 @@ class BleachingQCSESQLModel(BaseSQLModel):
     percent_normal_sd = models.DecimalField(max_digits=4, decimal_places=1, blank=True, null=True)
     percent_pale_avg = models.DecimalField(max_digits=4, decimal_places=1)
     percent_pale_sd = models.DecimalField(max_digits=4, decimal_places=1, blank=True, null=True)
-    percent_bleached_avg = models.DecimalField(max_digits=4, decimal_places=1)
+    percent_20_avg = models.DecimalField(max_digits=4, decimal_places=1, default=0)
+    percent_20_sd = models.DecimalField(max_digits=4, decimal_places=1, blank=True, null=True)
+    percent_50_avg = models.DecimalField(max_digits=4, decimal_places=1, default=0)
+    percent_50_sd = models.DecimalField(max_digits=4, decimal_places=1, blank=True, null=True)
+    percent_80_avg = models.DecimalField(max_digits=4, decimal_places=1, default=0)
+    percent_80_sd = models.DecimalField(max_digits=4, decimal_places=1, blank=True, null=True)
+    percent_100_avg = models.DecimalField(max_digits=4, decimal_places=1, default=0)
+    percent_100_sd = models.DecimalField(max_digits=4, decimal_places=1, blank=True, null=True)
+    percent_dead_avg = models.DecimalField(max_digits=4, decimal_places=1, default=0)
+    percent_dead_sd = models.DecimalField(max_digits=4, decimal_places=1, blank=True, null=True)
+    percent_bleached_avg = models.DecimalField(max_digits=4, decimal_places=1, default=0)
     percent_bleached_sd = models.DecimalField(max_digits=4, decimal_places=1, blank=True, null=True)
     quadrat_count_avg = models.DecimalField(max_digits=4, decimal_places=1, null=True, blank=True)
     percent_hard_avg_avg = models.DecimalField(max_digits=4, decimal_places=1, null=True, blank=True)
