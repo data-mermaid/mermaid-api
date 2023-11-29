@@ -221,21 +221,21 @@ class BeltFishSUSQLModel(BaseSUSQLModel):
             FROM beltfish_obs
             GROUP BY pseudosu_id, fish_family
         ),
-		beltfish_su_family_zeroes AS MATERIALIZED (SELECT 
-			beltfish_su_family_all.pseudosu_id,
-			beltfish_su_family_all.fish_family,
-			COALESCE(beltfish_su_family.biomass_kgha, 0) AS biomass_kgha
-			FROM (
-				SELECT
-				pseudosu_id, fish_family.name AS fish_family
-				FROM fish_family CROSS JOIN beltfish_obs
-				GROUP BY pseudosu_id, fish_family.name
-			) beltfish_su_family_all
-			LEFT JOIN beltfish_su_family ON (
-				beltfish_su_family_all.pseudosu_id = beltfish_su_family.pseudosu_id
-				AND beltfish_su_family_all.fish_family = beltfish_su_family.fish_family
-			)
-		),
+        beltfish_su_family_zeroes AS MATERIALIZED (SELECT 
+            beltfish_su_family_all.pseudosu_id,
+            beltfish_su_family_all.fish_family,
+            COALESCE(beltfish_su_family.biomass_kgha, 0) AS biomass_kgha
+            FROM (
+                SELECT
+                pseudosu_id, fish_family.name AS fish_family
+                FROM fish_family CROSS JOIN beltfish_obs
+                GROUP BY pseudosu_id, fish_family.name
+            ) beltfish_su_family_all
+            LEFT JOIN beltfish_su_family ON (
+                beltfish_su_family_all.pseudosu_id = beltfish_su_family.pseudosu_id
+                AND beltfish_su_family_all.fish_family = beltfish_su_family.fish_family
+            )
+        ),
         
 		beltfish_tg AS MATERIALIZED (SELECT
             beltfish_su_tg.pseudosu_id,
