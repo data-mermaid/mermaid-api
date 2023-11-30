@@ -411,7 +411,7 @@ class BenthicAttributeAdmin(AttributeAdmin):
             "cr_obs": "obs_benthic_pits",
             "cr_sampleunit": "benthicpit",
             "su_obs": "obsbenthicpit_set",
-            "su_sampleunit": "benthicpittransectmethods",
+            "su_sampleunit": "benthicpit",
         },
         {
             "model_su": BenthicLIT,
@@ -419,7 +419,23 @@ class BenthicAttributeAdmin(AttributeAdmin):
             "cr_obs": "obs_benthic_lits",
             "cr_sampleunit": "benthiclit",
             "su_obs": "obsbenthiclit_set",
-            "su_sampleunit": "benthiclittransectmethods",
+            "su_sampleunit": "benthiclit",
+        },
+        {
+            "model_su": BleachingQuadratCollection,
+            "model_obs": ObsColoniesBleached,
+            "cr_obs": "obs_colonies_bleached",
+            "cr_sampleunit": "bleachingqc",
+            "su_obs": "obscoloniesbleached",
+            "su_sampleunit": "bleachingqc",
+        },
+        {
+            "model_su": BenthicPhotoQuadratTransect,
+            "model_obs": ObsBenthicPhotoQuadrat,
+            "cr_obs": "obs_benthic_photo_quadrats",
+            "cr_sampleunit": "benthicpqt",
+            "su_obs": "obsbenthicphotoquadrat",
+            "su_sampleunit": "benthicpqt",
         },
     ]
 
@@ -971,7 +987,7 @@ class TagAdmin(BaseAdmin):
                 ),
                 args=(p.pk,),
             )
-            app_url = "{}/#/projects/{}/details".format(
+            app_url = "{}/projects/{}/project-info".format(
                 settings.DEFAULT_DOMAIN_COLLECT, p.pk
             )
             pstr = format_html(
