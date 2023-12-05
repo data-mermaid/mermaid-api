@@ -9,6 +9,7 @@ from django.conf import settings
 from django.contrib import messages
 from django.db.models import Count
 
+from api.utils.sample_unit_methods import get_project
 from ..models import Application, AuthUser, Profile, CollectRecord, Observer
 
 
@@ -185,14 +186,14 @@ class AttributeAdmin(BaseAdmin):
                         )
                         crstr = format_html('<a href="{}">{}</a>', admin_url, cr)
                         if project_id is not None:
-                            app_url = "{}/#/projects/{}/collect/{}/{}".format(
+                            app_url = "{}/projects/{}/collecting/{}/{}".format(
                                 settings.DEFAULT_DOMAIN_COLLECT,
                                 project_id,
                                 p.get("cr_sampleunit"),
                                 cr.pk,
                             )
                             crstr = format_html(
-                                '<a href="{}">{}</a> [<a href="{}">{}</a>]',
+                                '<a href="{}">{}</a> [<a href="{}" target="_blank">{}</a>]',
                                 admin_url,
                                 cr,
                                 app_url,
@@ -209,7 +210,7 @@ class AttributeAdmin(BaseAdmin):
                 if sus.count() > 0:
                     atleast_one_su = True
                     for su in sus:
-                        project_id = su.transect.sample_event.site.project.pk
+                        project = get_project(su, su.project_lookup.split("__"))
                         admin_url = reverse(
                             "admin:{}_{}_change".format(
                                 p.get("model_su")._meta.app_label,
@@ -217,14 +218,14 @@ class AttributeAdmin(BaseAdmin):
                             ),
                             args=(su.pk,),
                         )
-                        app_url = "{}/#/projects/{}/{}/{}".format(
+                        app_url = "{}/projects/{}/submitted/{}/{}".format(
                             settings.DEFAULT_DOMAIN_COLLECT,
-                            project_id,
+                            project.pk,
                             p.get("su_sampleunit"),
                             su.pk,
                         )
                         sustr = format_html(
-                            '<a href="{}">{}</a> [<a href="{}">{}</a>]',
+                            '<a href="{}">{}</a> [<a href="{}" target="_blank">{}</a>]',
                             admin_url,
                             su,
                             app_url,

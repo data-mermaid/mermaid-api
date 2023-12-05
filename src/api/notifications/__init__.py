@@ -80,7 +80,7 @@ def notify_crs_transferred(project, from_profile, to_profile, admin_profile):
 def notify_admins_project_change(instance, text_changes):
     subject = f"Changes to {instance.name}"
     collect_project_url = (
-        f"https://{settings.DEFAULT_DOMAIN_COLLECT}/#/projects/{instance.pk}/details"
+        f"{settings.DEFAULT_DOMAIN_COLLECT}/projects/{instance.pk}/project-info"
     )
 
     context = {
@@ -109,7 +109,7 @@ def notify_admins_change(instance, changetype):
         return
 
     subject = f"Project administrator {subject_snippet} {instance.project.name}"
-    collect_project_url = f"https://{settings.DEFAULT_DOMAIN_COLLECT}/#/projects/{instance.project.pk}/users"
+    collect_project_url = f"{settings.DEFAULT_DOMAIN_COLLECT}/projects/{instance.project.pk}/users"
 
     context = {
         "project_name": instance.project.name,

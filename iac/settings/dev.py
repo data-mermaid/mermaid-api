@@ -21,7 +21,7 @@ DEV_SETTINGS = ProjectSettings(
         backup_memory=1024,
 
         default_domain_api="dev-api.datamermaid.org",
-        default_domain_collect="dev-app.datamermaid.org",
+        default_domain_collect="https://dev-app.datamermaid.org",
         mermaid_api_audience="https://dev-api.datamermaid.org",
         public_bucket="dev-public.datamermaid.org",
         sqs_message_visibility=1800,
