@@ -223,7 +223,8 @@ class CollectRecordCSVListSerializer(ListSerializer):
             )
             for rec in output
         ]
-        return CollectRecord.objects.bulk_create(objs)
+        collect_records = [cr.ensure_obs_ids() or cr for cr in objs]
+        return CollectRecord.objects.bulk_create(collect_records)
 
     @property
     def formatted_errors(self):
