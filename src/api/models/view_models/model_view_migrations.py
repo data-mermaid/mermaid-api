@@ -1,5 +1,6 @@
 from .fish_attributes import FishAttributeView
 
+
 def forward_sql():
     sql = [
         FishAttributeView.sql,

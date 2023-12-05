@@ -409,6 +409,11 @@ class BleachingQCMethodSUSerializer(BaseSUViewAPISUSerializer):
                 "count_total",
                 "percent_normal",
                 "percent_pale",
+                "percent_20",
+                "percent_50",
+                "percent_80",
+                "percent_100",
+                "percent_dead",
                 "percent_bleached",
                 "quadrat_count",
                 "percent_hard_avg",
@@ -463,6 +468,11 @@ class BleachingQCMethodSUCSVSerializer(ReportSerializer):
         ReportField("count_total", "Total count"),
         ReportField("percent_normal", "Percent normal"),
         ReportField("percent_pale", "Percent pale"),
+        ReportField("percent_20", "Percent 0-20% bleached"),
+        ReportField("percent_50", "Percent 20-50% bleached"),
+        ReportField("percent_80", "Percent 50-80% bleached"),
+        ReportField("percent_100", "Percent 80-100% bleached"),
+        ReportField("percent_dead", "Percent recently dead"),
         ReportField("percent_bleached", "Percent bleached"),
         ReportField("quadrat_count", "Number of quadrats"),
         ReportField("percent_hard_avg", "Average Hard Coral (% cover)"),
@@ -508,6 +518,16 @@ class BleachingQCMethodSESerializer(BaseSUViewAPISerializer):
                 "percent_normal_sd",
                 "percent_pale_avg",
                 "percent_pale_sd",
+                "percent_20_avg",
+                "percent_20_sd",
+                "percent_50_avg",
+                "percent_50_sd",
+                "percent_80_avg",
+                "percent_80_sd",
+                "percent_100_avg",
+                "percent_100_sd",
+                "percent_dead_avg",
+                "percent_dead_sd",
                 "percent_bleached_avg",
                 "percent_bleached_sd",
                 "quadrat_count_avg",
@@ -565,6 +585,16 @@ class BleachingQCMethodSECSVSerializer(ReportSerializer):
         ReportField("percent_normal_sd", "Percent normal standard deviation"),
         ReportField("percent_pale_avg", "Percent pale average"),
         ReportField("percent_pale_sd", "Percent pale standard deviation"),
+        ReportField("percent_20_avg", "Percent 0-20% bleached average"),
+        ReportField("percent_20_sd", "Percent 0-20% bleached standard deviation"),
+        ReportField("percent_50_avg", "Percent 20-50% bleached average"),
+        ReportField("percent_50_sd", "Percent 20-50% bleached standard deviation"),
+        ReportField("percent_80_avg", "Percent 50%-80% bleached average"),
+        ReportField("percent_80_sd", "Percent 50%-80% bleached standard deviation"),
+        ReportField("percent_100_avg", "Percent 80-100% bleached average"),
+        ReportField("percent_100_sd", "Percent 80-100% bleached standard deviation"),
+        ReportField("percent_dead_avg", "Percent recently dead average"),
+        ReportField("percent_dead_sd", "Percent recently dead standard deviation"),
         ReportField("percent_bleached_avg", "Percent bleached average"),
         ReportField("percent_bleached_sd", "Percent bleached standard deviation"),
         ReportField("quadrat_count_avg", "Number of quadrats average"),
@@ -648,6 +678,11 @@ class BleachingQCMethodSUFilterSet(BaseSUObsFilterSet):
     count_total = RangeFilter()
     percent_normal = RangeFilter()
     percent_pale = RangeFilter()
+    percent_20 = RangeFilter()
+    percent_50 = RangeFilter()
+    percent_80 = RangeFilter()
+    percent_100 = RangeFilter()
+    percent_dead = RangeFilter()
     percent_bleached = RangeFilter()
     quadrat_count = RangeFilter()
     percent_hard_avg = RangeFilter()
@@ -662,6 +697,11 @@ class BleachingQCMethodSUFilterSet(BaseSUObsFilterSet):
             "count_total",
             "percent_normal",
             "percent_pale",
+            "percent_20",
+            "percent_50",
+            "percent_80",
+            "percent_100",
+            "percent_dead",
             "percent_bleached",
             "quadrat_count",
             "percent_hard_avg",
@@ -683,6 +723,11 @@ class BleachingQCMethodSEFilterSet(BaseSEFilterSet):
     count_genera_avg = RangeFilter()
     percent_normal_avg = RangeFilter()
     percent_pale_avg = RangeFilter()
+    percent_20_avg = RangeFilter()
+    percent_50_avg = RangeFilter()
+    percent_80_avg = RangeFilter()
+    percent_100_avg = RangeFilter()
+    percent_dead_avg = RangeFilter()
     percent_bleached_avg = RangeFilter()
     quadrat_count_avg = RangeFilter()
     percent_hard_avg_avg = RangeFilter()
@@ -699,6 +744,11 @@ class BleachingQCMethodSEFilterSet(BaseSEFilterSet):
             "count_genera_avg",
             "percent_normal_avg",
             "percent_pale_avg",
+            "percent_20_avg",
+            "percent_50_avg",
+            "percent_80_avg",
+            "percent_100_avg",
+            "percent_dead_avg",
             "percent_bleached_avg",
             "quadrat_count_avg",
             "percent_hard_avg_avg",

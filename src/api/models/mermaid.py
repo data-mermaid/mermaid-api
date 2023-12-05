@@ -1620,7 +1620,19 @@ class CollectRecord(BaseModel):
             return None
 
         return protocol
-    
+
+    @property
+    def obs_keys(self):
+        protocol_obs_keys = {
+            FISHBELT_PROTOCOL: ["obs_belt_fishes"],
+            BLEACHINGQC_PROTOCOL: ["obs_colonies_bleached", "obs_quadrat_benthic_percent"],
+            BENTHICLIT_PROTOCOL: ["obs_benthic_lits"],
+            BENTHICPIT_PROTOCOL: ["obs_benthic_pits"],
+            HABITATCOMPLEXITY_PROTOCOL: ["obs_habitat_complexities"],
+            BENTHICPQT_PROTOCOL: ["obs_benthic_photo_quadrats"],
+        }
+        return protocol_obs_keys.get(self.protocol)
+
     @property
     def sample_unit(self):
         data = self.data or {}
@@ -1639,29 +1651,18 @@ class CollectRecord(BaseModel):
         record["id"] = record.get("id") or str(uuid.uuid4())
         return record
 
+    def ensure_obs_ids(self):
+        if self.obs_keys:
+            for obs_key in self.obs_keys:
+                self.data[obs_key] = [self._assign_id(r) for r in self.data.get(obs_key) or []]
+
     def save(self, ignore_stage=False, **kwargs):
         if ignore_stage is False:
             self.stage = self.SAVED_STAGE
             self.validations = self.validations or {}
             self.validations["status"] = STALE
 
-        protocol = self.protocol
-        obs_keys = []
-        if protocol == FISHBELT_PROTOCOL:
-            obs_keys = ["obs_belt_fishes"]
-        elif protocol == BLEACHINGQC_PROTOCOL:
-            obs_keys = ["obs_colonies_bleached", "obs_quadrat_benthic_percent"]
-        elif protocol == BENTHICLIT_PROTOCOL:
-            obs_keys = ["obs_benthic_lits"]
-        elif protocol == BENTHICPIT_PROTOCOL:
-            obs_keys = ["obs_benthic_pits"]
-        elif protocol == HABITATCOMPLEXITY_PROTOCOL:
-            obs_keys = ["obs_habitat_complexities"]
-        elif protocol == BENTHICPQT_PROTOCOL:
-            obs_keys = ["obs_benthic_photo_quadrats"]
-
-        for obs_key in obs_keys:
-            self.data[obs_key] = [self._assign_id(r) for r in self.data.get(obs_key) or []]
+        self.ensure_obs_ids()
 
         super(CollectRecord, self).save(**kwargs)
 
