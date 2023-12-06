@@ -162,7 +162,7 @@ class FishbeltProtocolWriter(ProtocolWriter):
         observations_data = get_obsbeltfish_data(self.collect_record, belt_fish_id)
 
         for observation_data in observations_data:
-            observation_data["id"] = observation_data["id"] or uuid.uuid4()
+            observation_data["id"] = observation_data.get("id") or uuid.uuid4()
             serializer = self.validate_data(ObsBeltFishSerializer, observation_data)
             observation_beltfishes.append(serializer.save())
 
@@ -205,7 +205,7 @@ class BenthicPITProtocolWriter(BenthicProtocolWriter):
             )
 
         for observation_data in observations_data:
-            observation_data["id"] = observation_data["id"] or uuid.uuid4()
+            observation_data["id"] = observation_data.get("id") or uuid.uuid4()
             serializer = ObsBenthicPITSerializer(
                 data=observation_data, context=self.context
             )
@@ -251,7 +251,7 @@ class BenthicLITProtocolWriter(BenthicProtocolWriter):
             )
 
         for observation_data in observations_data:
-            observation_data["id"] = observation_data["id"] or uuid.uuid4()
+            observation_data["id"] = observation_data.get("id") or uuid.uuid4()
             serializer = ObsBenthicLITSerializer(
                 data=observation_data, context=self.context
             )
@@ -304,7 +304,7 @@ class HabitatComplexityProtocolWriter(BenthicProtocolWriter):
             )
 
         for observation_data in observations_data:
-            observation_data["id"] = observation_data["id"] or uuid.uuid4()
+            observation_data["id"] = observation_data.get("id") or uuid.uuid4()
             serializer = ObsHabitatComplexitySerializer(
                 data=observation_data, context=self.context
             )
@@ -328,16 +328,16 @@ class HabitatComplexityProtocolWriter(BenthicProtocolWriter):
 
 class BleachingQuadratCollectionProtocolWriter(ProtocolWriter):
     def get_or_create_quadrat_collection(self, sample_event_id):
-        quadrat_collection_data = get_quadrat_collection_data(
+        observation_data = get_quadrat_collection_data(
             self.collect_record, sample_event_id
         )
         try:
-            return QuadratCollection.objects.get(**quadrat_collection_data)
+            return QuadratCollection.objects.get(**observation_data)
 
         except (QuadratCollection.DoesNotExist, ValidationError):
-            observation_data["id"] = observation_data["id"] or uuid.uuid4()
+            observation_data["id"] = observation_data.get("id") or uuid.uuid4()
             serializer = QuadratCollectionSerializer(
-                data=quadrat_collection_data, context=self.context
+                data=observation_data, context=self.context
             )
             if serializer.is_valid() is False:
                 raise ValidationError(serializer.errors) from _
@@ -367,7 +367,7 @@ class BleachingQuadratCollectionProtocolWriter(ProtocolWriter):
             return observation_benthic_percent_covered_data
 
         for observation_data in observations_data:
-            observation_data["id"] = observation_data["id"] or uuid.uuid4()
+            observation_data["id"] = observation_data.get("id") or uuid.uuid4()
             serializer = ObsQuadratBenthicPercentSerializer(
                 data=observation_data, context=self.context
             )
@@ -393,7 +393,7 @@ class BleachingQuadratCollectionProtocolWriter(ProtocolWriter):
             )
 
         for observation_data in observations_data:
-            observation_data["id"] = observation_data["id"] or uuid.uuid4()
+            observation_data["id"] = observation_data.get("id") or uuid.uuid4()
             serializer = ObsColoniesBleachedSerializer(
                 data=observation_data, context=self.context
             )
@@ -463,7 +463,7 @@ class BenthicPhotoQuadratTransectProtocolWriter(ProtocolWriter):
             )
 
         for observation_data in observations_data:
-            observation_data["id"] = observation_data["id"] or uuid.uuid4()
+            observation_data["id"] = observation_data.get("id") or uuid.uuid4()
             serializer = ObsBenthicPhotoQuadratSerializer(
                 data=observation_data, context=self.context
             )
