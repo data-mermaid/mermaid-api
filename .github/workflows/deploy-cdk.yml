@@ -58,6 +58,7 @@ jobs:
         env:
           AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID_CDK }}
           AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY_CDK }}
+          SYS_EMAIL: ${{ secrets.SYS_EMAIL }}
           PYTHONPATH: ${{ github.workspace }}
           DEPLOY_AWS_ACCT: ${{ secrets.DEPLOY_AWS_ACCT }}
         run: |

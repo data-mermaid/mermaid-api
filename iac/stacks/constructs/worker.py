@@ -91,8 +91,6 @@ class QueueWorker(Construct):
         topic = sns.Topic(self, "Topic")
         if email:
             topic.add_subscription(sns_subs.EmailSubscription(email))
-        else:
-            raise Exception("No email provided for SNS subscription")
 
         # Add SNS Action to CloudWatch Alarms
         sns_action = cw_actions.SnsAction(topic=topic)
