@@ -328,16 +328,16 @@ class HabitatComplexityProtocolWriter(BenthicProtocolWriter):
 
 class BleachingQuadratCollectionProtocolWriter(ProtocolWriter):
     def get_or_create_quadrat_collection(self, sample_event_id):
-        quadrat_collection_data = get_quadrat_collection_data(
+        observation_data = get_quadrat_collection_data(
             self.collect_record, sample_event_id
         )
         try:
-            return QuadratCollection.objects.get(**quadrat_collection_data)
+            return QuadratCollection.objects.get(**observation_data)
 
         except (QuadratCollection.DoesNotExist, ValidationError):
             observation_data["id"] = observation_data.get("id") or uuid.uuid4()
             serializer = QuadratCollectionSerializer(
-                data=quadrat_collection_data, context=self.context
+                data=observation_data, context=self.context
             )
             if serializer.is_valid() is False:
                 raise ValidationError(serializer.errors) from _
