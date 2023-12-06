@@ -58,22 +58,6 @@ class QueueWorker(Construct):
             ),
         )
 
-        # CloudWatch Alarm for Queue
-        # Issue alarm when message is older than 15 mins in queue
-        alarm_when_message_older_than = 15
-        queue_alarm = cw.Alarm(
-            self,
-            "QAlarm",
-            metric=queue.metric_approximate_age_of_oldest_message(
-                statistic="Maximum",
-                period=Duration.minutes(1),
-            ),
-            threshold=alarm_when_message_older_than,
-            evaluation_periods=1,
-            comparison_operator=cw.ComparisonOperator.GREATER_THAN_OR_EQUAL_TO_THRESHOLD,
-            treat_missing_data=cw.TreatMissingData.IGNORE,
-        )
-
         # CloudWatch Alarm for DLQ
         dlq_alarm = cw.Alarm(
             self,
@@ -89,14 +73,11 @@ class QueueWorker(Construct):
 
         # SNS Topic & Subscription
         topic = sns.Topic(self, "Topic")
-        if email:
+        if email:   
             topic.add_subscription(sns_subs.EmailSubscription(email))
 
         # Add SNS Action to CloudWatch Alarms
         sns_action = cw_actions.SnsAction(topic=topic)
-
-        queue_alarm.add_alarm_action(sns_action)
-        queue_alarm.add_ok_action(sns_action)
 
         dlq_alarm.add_alarm_action(sns_action)
         dlq_alarm.add_ok_action(sns_action)
