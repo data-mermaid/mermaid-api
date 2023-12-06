@@ -411,7 +411,7 @@ class BenthicAttributeAdmin(AttributeAdmin):
             "cr_obs": "obs_benthic_pits",
             "cr_sampleunit": "benthicpit",
             "su_obs": "obsbenthicpit_set",
-            "su_sampleunit": "benthicpittransectmethods",
+            "su_sampleunit": "benthicpit",
         },
         {
             "model_su": BenthicLIT,
@@ -419,7 +419,23 @@ class BenthicAttributeAdmin(AttributeAdmin):
             "cr_obs": "obs_benthic_lits",
             "cr_sampleunit": "benthiclit",
             "su_obs": "obsbenthiclit_set",
-            "su_sampleunit": "benthiclittransectmethods",
+            "su_sampleunit": "benthiclit",
+        },
+        {
+            "model_su": BleachingQuadratCollection,
+            "model_obs": ObsColoniesBleached,
+            "cr_obs": "obs_colonies_bleached",
+            "cr_sampleunit": "bleachingqc",
+            "su_obs": "obscoloniesbleached",
+            "su_sampleunit": "bleachingqc",
+        },
+        {
+            "model_su": BenthicPhotoQuadratTransect,
+            "model_obs": ObsBenthicPhotoQuadrat,
+            "cr_obs": "obs_benthic_photo_quadrats",
+            "cr_sampleunit": "benthicpqt",
+            "su_obs": "obsbenthicphotoquadrat",
+            "su_sampleunit": "benthicpqt",
         },
     ]
 
@@ -951,6 +967,7 @@ class TagAdmin(BaseAdmin):
     list_display = ("name", "status", "updated_by")
     list_filter = ("status",)
     readonly_fields = ["created_on", "updated_on"]
+    search_fields = ["name"]
 
     def delete_view(self, request, object_id, extra_context=None):
         obj = Tag.objects.get(pk=object_id)
@@ -971,7 +988,7 @@ class TagAdmin(BaseAdmin):
                 ),
                 args=(p.pk,),
             )
-            app_url = "{}/#/projects/{}/details".format(
+            app_url = "{}/projects/{}/project-info".format(
                 settings.DEFAULT_DOMAIN_COLLECT, p.pk
             )
             pstr = format_html(
@@ -1076,7 +1093,7 @@ class BenthicPhotoQuadratTransectAdmin(BaseAdmin):
 @admin.register(Notification)
 class NotificationAdmin(BaseAdmin):
     list_display = ("owner", "status", "title", "created_on")
-    search_fields = ["owner__first_name", "owner__last_name", "owner__pk", "status"]
+    search_fields = ["owner__first_name", "owner__last_name", "owner__pk", "title", "status"]
 
     def get_urls(self):
         urls = super().get_urls()

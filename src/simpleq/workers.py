@@ -40,7 +40,8 @@ class Worker:
             for queue in self.queues:
                 for job in queue.jobs:
                     job.run()
-                    queue.remove_job(job)
+                    if not job.exception:
+                        queue.remove_job(job)
 
             if burst:
                 break

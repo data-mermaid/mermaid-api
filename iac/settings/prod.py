@@ -21,7 +21,7 @@ PROD_SETTINGS = ProjectSettings(
         backup_memory=2048,
 
         default_domain_api="api.datamermaid.org",
-        default_domain_collect="app.datamermaid.org",
+        default_domain_collect="https://app.datamermaid.org",
         mermaid_api_audience="https://api.datamermaid.org",
         public_bucket="public.datamermaid.org",
         sqs_message_visibility=1800,
