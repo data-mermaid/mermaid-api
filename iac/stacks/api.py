@@ -51,6 +51,8 @@ class ApiStack(Stack):
             memory_limit_mib=config.api.container_memory,
         )
 
+        sys_email = os.environ.get("SYS_EMAIL") or None
+
         # Secrets
         api_secrets = {
             "DB_USER": ecs.Secret.from_secrets_manager(database.secret, "username"),
@@ -278,7 +280,7 @@ class ApiStack(Stack):
             environment=environment,
             public_bucket=public_bucket,
             queue_name=sqs_queue_name,
-            # email=sns_email,
+            email=sys_email,
         )
 
         # allow API to send messages to the queue
