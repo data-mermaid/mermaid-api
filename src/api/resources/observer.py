@@ -1,14 +1,14 @@
-from rest_framework import serializers
 from django.db.models import Q
+from rest_framework import serializers
 
-from .base import (
-    BaseAPIFilterSet,
-    BaseProjectApiViewSet,
-    BaseAPISerializer,
-    ExtendedSerializer,
-)
 from ..exceptions import check_uuid
 from ..models import Observer
+from .base import (
+    BaseAPIFilterSet,
+    BaseAPISerializer,
+    BaseProjectApiViewSet,
+    ExtendedSerializer,
+)
 
 
 class ObserverExtendedSerializer(ExtendedSerializer):
@@ -28,17 +28,20 @@ class ObserverSerializer(BaseAPISerializer):
 
 
 class ObserverFilterSet(BaseAPIFilterSet):
-
     class Meta:
         model = Observer
-        fields = ['transectmethod', 'profile', 'rank', ]
+        fields = [
+            "transectmethod",
+            "profile",
+            "rank",
+        ]
 
 
 class ObserverViewSet(BaseProjectApiViewSet):
     serializer_class = ObserverSerializer
     queryset = Observer.objects.all()
     filterset_class = ObserverFilterSet
-    search_fields = ['profile__first_name', 'profile__last_name']
+    search_fields = ["profile__first_name", "profile__last_name"]
 
     def perform_update(self, serializer):
         serializer.save()
@@ -50,6 +53,8 @@ class ObserverViewSet(BaseProjectApiViewSet):
             | Q(transectmethod__benthicpit__transect__sample_event__site__project=prj_pk)
             | Q(transectmethod__habitatcomplexity__transect__sample_event__site__project=prj_pk)
             | Q(transectmethod__beltfish__transect__sample_event__site__project=prj_pk)
-            | Q(transectmethod__bleachingquadratcollection__quadrat__sample_event__site__project=prj_pk)
+            | Q(
+                transectmethod__bleachingquadratcollection__quadrat__sample_event__site__project=prj_pk
+            )
         )
         return self.queryset

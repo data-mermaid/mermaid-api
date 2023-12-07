@@ -15,17 +15,16 @@ from .validators import (
     IntervalSizeValidator,
     IntervalStartValidator,
     LenSurveyedValidator,
-    ListScoreValidator,
     ListRequiredValidator,
+    ListScoreValidator,
     ManagementRuleValidator,
     RequiredValidator,
     SampleDateValidator,
     SampleTimeValidator,
     UniqueBenthicTransectValidator,
-    UniqueSiteValidator,
     UniqueManagementValidator,
+    UniqueSiteValidator,
 )
-
 
 habcomp_validations = [
     Validation(
@@ -215,9 +214,7 @@ habcomp_validations = [
         validation_type=LIST_VALIDATION_TYPE,
     ),
     Validation(
-        validator=AllEqualValidator(
-            path="data.obs_habitat_complexities", ignore_keys=["id"]
-        ),
+        validator=AllEqualValidator(path="data.obs_habitat_complexities", ignore_keys=["id"]),
         paths=["data.obs_habitat_complexities"],
         validation_level=RECORD_LEVEL,
         validation_type=VALUE_VALIDATION_TYPE,

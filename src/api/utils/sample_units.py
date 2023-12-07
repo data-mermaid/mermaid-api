@@ -1,6 +1,5 @@
 from django.db import transaction
 
-from . import get_subclasses
 from ..models import (
     BENTHICLIT_PROTOCOL,
     BENTHICPIT_PROTOCOL,
@@ -11,10 +10,10 @@ from ..models import (
     SampleUnit,
     TransectMethod,
 )
+from . import get_subclasses
 
 
 def delete_orphaned_sample_unit(su, deleted_tm=None):
-
     if su.pk is None:
         return True
 
@@ -27,7 +26,11 @@ def delete_orphaned_sample_unit(su, deleted_tm=None):
             continue
 
         for field in tmclass._meta.fields:
-            if field.one_to_one is True and field.related_model in sample_unit_classes and isinstance(su, field.related_model):
+            if (
+                field.one_to_one is True
+                and field.related_model in sample_unit_classes
+                and isinstance(su, field.related_model)
+            ):
                 tm_count += tmclass.objects.filter(**{field.name: su}).count()
 
     if tm_count == 0:
@@ -40,9 +43,7 @@ def delete_orphaned_sample_unit(su, deleted_tm=None):
 def delete_orphaned_sample_event(se, deleted_su=None):
     deleted = False
     su_count = sum(
-        suclass.objects.filter(sample_event=se)
-        .exclude(pk=deleted_su.pk)
-        .count()
+        suclass.objects.filter(sample_event=se).exclude(pk=deleted_su.pk).count()
         if deleted_su
         else suclass.objects.filter(sample_event=se).count()
         for suclass in get_subclasses(SampleUnit)
@@ -57,10 +58,7 @@ def delete_orphaned_sample_event(se, deleted_su=None):
 
 def find_bpfb_same_sample_event():
     for se in SampleEvent.objects.all():
-        if (
-            se.benthictransect_set.all().count() > 1
-            and se.fishbelttransect_set.all().count() > 1
-        ):
+        if se.benthictransect_set.all().count() > 1 and se.fishbelttransect_set.all().count() > 1:
             print(se.pk)
             break
 
@@ -113,11 +111,7 @@ def has_duplicate_sample_events(site, management, sample_date):
         management=management,
         sample_date=sample_date,
     )
-    qry = qry.values(
-        "site",
-        "management",
-        "sample_date"
-    )
+    qry = qry.values("site", "management", "sample_date")
 
     return qry.count() > 1
 
@@ -137,7 +131,7 @@ def consolidate_sample_events(*args, dryrun=False, **kwargs):
             se_pk = se.pk
             orphaned = delete_orphaned_sample_event(se)
             if orphaned:
-                print('Deleted orphaned SE {}'.format(se_pk))
+                print("Deleted orphaned SE {}".format(se_pk))
                 continue
 
             dups = SampleEvent.objects.filter(
@@ -148,7 +142,7 @@ def consolidate_sample_events(*args, dryrun=False, **kwargs):
 
             if dups.count() == 0:
                 continue
-            print('Removing dups for {}'.format(se_pk))
+            print("Removing dups for {}".format(se_pk))
 
             for d in dups:
                 try:
@@ -161,13 +155,13 @@ def consolidate_sample_events(*args, dryrun=False, **kwargs):
                             se.notes += "\n\n{}".format(notes)
                             se.save()
                         sus.update(sample_event=se)  # no signals fired
-                        print('Changed SE from {} to {}'.format(d.pk, se_pk))
+                        print("Changed SE from {} to {}".format(d.pk, se_pk))
 
-                    print('Deleting SE {}'.format(d.pk))
+                    print("Deleting SE {}".format(d.pk))
                     d.delete()
 
                 except SampleEvent.DoesNotExist:
-                    print('{} already deleted'.format(se_pk))
+                    print("{} already deleted".format(se_pk))
 
         if dryrun:
             transaction.savepoint_rollback(sid)

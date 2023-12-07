@@ -5,7 +5,6 @@ from django.utils.translation import gettext_lazy as _
 
 from api.models import Project
 
-
 project_where = """project.id = '%(project_id)s'::uuid"""
 
 sample_event_sql_template = f"""
@@ -308,9 +307,7 @@ class BaseSUSQLModel(BaseSQLModel):
     """
 
     # Fields common to all SUs that are actually SU properties (that make SUs distinct)
-    depth = models.DecimalField(
-        max_digits=3, decimal_places=1, verbose_name=_("depth (m)")
-    )
+    depth = models.DecimalField(max_digits=3, decimal_places=1, verbose_name=_("depth (m)"))
     # Fields common to all SUs that are aggregated from actual SUs into pseudo-SUs
     agg_su_fields = [
         "sample_unit_ids",

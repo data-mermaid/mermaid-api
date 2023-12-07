@@ -1,6 +1,5 @@
 import re
 
-
 SEP = "\n\n"
 susets = (
     "benthictransect_set",

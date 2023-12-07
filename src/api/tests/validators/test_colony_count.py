@@ -1,9 +1,5 @@
 from api.resources.collect_record import CollectRecordSerializer
-from api.submission.validations2.validators import (
-    OK,
-    WARN,
-    ColonyCountValidator,
-)
+from api.submission.validations2.validators import OK, WARN, ColonyCountValidator
 
 
 def _get_validator():
@@ -18,18 +14,18 @@ def _get_validator():
         observation_count_dead_path="count_dead",
     )
 
+
 def test_colony_count_validator_ok(valid_bleaching_qc_collect_record):
     validator = _get_validator()
     record = CollectRecordSerializer(valid_bleaching_qc_collect_record).data
     result = validator(record)
     assert result.status == OK
 
-def test_colony_count_validator_data_invalid(
-    valid_bleaching_qc_collect_record
-):
+
+def test_colony_count_validator_data_invalid(valid_bleaching_qc_collect_record):
     validator = _get_validator()
     record = CollectRecordSerializer(valid_bleaching_qc_collect_record).data
-    
+
     record["data"]["obs_colonies_bleached"][0]["count_20"] = 601
     result = validator(record)
 

@@ -1,7 +1,6 @@
 from datetime import datetime
 
 from django.conf import settings
-
 from jose import jwt
 
 

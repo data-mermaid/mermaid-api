@@ -1,11 +1,11 @@
 import csv
 from typing import Dict, List, Set, Tuple
 
-from pyexcelerate import Font, Style, Workbook
 from django.db.models import QuerySet
+from pyexcelerate import Font, Style, Workbook
 
-from ..models import Covariate, Site
 from ..mocks import MockRequest
+from ..models import Covariate, Site
 from ..resources.sampleunitmethods.beltfishmethod import (
     BeltFishProjectMethodObsView,
     BeltFishProjectMethodSEView,
@@ -39,7 +39,6 @@ from ..resources.sampleunitmethods.habitatcomplexitymethod import (
 )
 from ..utils.castutils import cast_str_value
 from ..utils.timer import timing
-
 
 ACA_BENTHIC_KEY, ACA_BENTHIC_FIELD = Covariate.SUPPORTED_COVARIATES[0]
 ACA_GEOMORPHIC_KEY, ACA_GEOMORPHIC_FIELD = Covariate.SUPPORTED_COVARIATES[1]
@@ -150,7 +149,7 @@ def _filter_columns(
         else:
             matches = _partial_key_match(display_header_lookup, header)
             if len(matches) > 1:
-                h = header[len(matches[0]) + 1:]
+                h = header[len(matches[0]) + 1 :]
                 new_headers.append(h)
             else:
                 new_headers.append(header)
@@ -168,9 +167,7 @@ def get_viewset_csv_content(view_cls, project_pk, request):
     vw.kwargs = kwargs
     vw.request = request
     resp = vw.csv(request)
-    content = list(
-        csv.reader([str(row, "UTF-8").strip() for row in resp.streaming_content])
-    )
+    content = list(csv.reader([str(row, "UTF-8").strip() for row in resp.streaming_content]))
     if not isinstance(content, list) or len(content) < 2 or "site_id" not in content[0]:
         return content
 
@@ -187,8 +184,7 @@ def get_viewset_csv_content(view_cls, project_pk, request):
 
     # Create lookups to help with filtering output header columns.
     display_header_lookup = {
-        f.alias or f.column_path: f.display
-        for f in view_cls.serializer_class_csv.fields
+        f.alias or f.column_path: f.display for f in view_cls.serializer_class_csv.fields
     }
     display_header_lookup[ACA_BENTHIC_FIELD] = ACA_BENTHIC_FIELD
     display_header_lookup[ACA_GEOMORPHIC_FIELD] = ACA_GEOMORPHIC_FIELD

@@ -5,8 +5,8 @@ from . import Project
 from .sql_models import (
     BeltFishSUSQLModel,
     BenthicLITSUSQLModel,
-    BenthicPITSUSQLModel,
     BenthicPhotoQuadratTransectSUSQLModel,
+    BenthicPITSUSQLModel,
     BleachingQCSUSQLModel,
     HabitatComplexitySUSQLModel,
 )

@@ -2,10 +2,11 @@ import datetime
 import itertools
 import json
 import logging
-import uuid
 import operator as pyoperator
+import uuid
 from decimal import Decimal
 
+import pytz
 from django.contrib.gis.db import models
 from django.contrib.postgres.aggregates import ArrayAgg
 from django.core.validators import MaxValueValidator, MinValueValidator
@@ -14,11 +15,10 @@ from django.forms.models import model_to_dict
 from django.utils import timezone
 from django.utils.translation import gettext_lazy as _
 from rest_framework.utils.encoders import JSONEncoder
-
-import pytz
 from taggit.managers import TaggableManager
 from taggit.models import GenericUUIDTaggedItemBase, TagBase
-from ..utils import create_timestamp, expired_timestamp, get_sample_unit_number
+
+from ..utils import STALE, create_timestamp, expired_timestamp, get_sample_unit_number
 from ..utils.related import get_related_project
 from .base import (
     APPROVAL_STATUSES,
@@ -29,11 +29,10 @@ from .base import (
     Country,
     JSONMixin,
     Profile,
-    validate_max_year
+    validate_max_year,
 )
-from ..utils import STALE
 
-INCLUDE_OBS_TEXT = _('include observation in aggregations/analyses?')
+INCLUDE_OBS_TEXT = _("include observation in aggregations/analyses?")
 
 logger = logging.getLogger(__name__)
 
@@ -56,23 +55,23 @@ PROTOCOL_MAP = {
 
 class Tag(TagBase, BaseModel):
     description = models.TextField(blank=True)
-    status = models.PositiveSmallIntegerField(choices=APPROVAL_STATUSES, default=APPROVAL_STATUSES[-1][0])
+    status = models.PositiveSmallIntegerField(
+        choices=APPROVAL_STATUSES, default=APPROVAL_STATUSES[-1][0]
+    )
 
     class Meta:
         verbose_name = _("Tag")
         verbose_name_plural = _("Tags")
-        ordering = ["name", ]
+        ordering = [
+            "name",
+        ]
 
     def __str__(self):
-        return _('%s') % self.name
+        return _("%s") % self.name
 
 
 class UUIDTaggedItem(GenericUUIDTaggedItemBase):
-    tag = models.ForeignKey(
-        Tag,
-        related_name="tagged_items",
-        on_delete=models.CASCADE
-    )
+    tag = models.ForeignKey(Tag, related_name="tagged_items", on_delete=models.CASCADE)
 
 
 class Project(BaseModel, JSONMixin):
@@ -80,18 +79,18 @@ class Project(BaseModel, JSONMixin):
     TEST = 80
     LOCKED = 10
     STATUSES = (
-        (OPEN, _('open')),
-        (TEST, _('test')),
-        (LOCKED, _('locked')),
+        (OPEN, _("open")),
+        (TEST, _("test")),
+        (LOCKED, _("locked")),
     )
 
     PRIVATE = 10
     PUBLIC_SUMMARY = 50
     PUBLIC = 100
     DATA_POLICIES = (
-        (PRIVATE, _('private')),
-        (PUBLIC_SUMMARY, _('public summary')),
-        (PUBLIC, _('public')),
+        (PRIVATE, _("private")),
+        (PUBLIC_SUMMARY, _("public summary")),
+        (PUBLIC, _("public")),
     )
 
     DATA_POLICY_CHOICES_UPDATED_ON = datetime.datetime(2019, 2, 2, 0, 0, 0, 0, pytz.UTC)
@@ -101,31 +100,39 @@ class Project(BaseModel, JSONMixin):
             "id": PRIVATE,
             "name": "Private",
             "description": "Collected observations and site-level summary statistics are private, but metadata for "
-                           "project, protocol and site, including site location and type and count of sample unit at "
-                           "each site, are public."
+            "project, protocol and site, including site location and type and count of sample unit at "
+            "each site, are public.",
         },
         {
             "id": PUBLIC_SUMMARY,
             "name": "Public Summary",
             "description": "Collected observations are private, but site-level summary statistics are public, "
-                           "along with metadata for project, protocol and site. This option is the default."
+            "along with metadata for project, protocol and site. This option is the default.",
         },
-        {
-            "id": PUBLIC,
-            "name": "Public",
-            "description": "All collected observations are public."
-        },
+        {"id": PUBLIC, "name": "Public", "description": "All collected observations are public."},
     )
 
     name = models.CharField(max_length=255, unique=True)
     notes = models.TextField(blank=True)
     status = models.PositiveSmallIntegerField(choices=STATUSES, default=OPEN)
-    data_policy_beltfish = models.PositiveSmallIntegerField(choices=DATA_POLICIES, default=PUBLIC_SUMMARY)
-    data_policy_benthiclit = models.PositiveSmallIntegerField(choices=DATA_POLICIES, default=PUBLIC_SUMMARY)
-    data_policy_benthicpit = models.PositiveSmallIntegerField(choices=DATA_POLICIES, default=PUBLIC_SUMMARY)
-    data_policy_habitatcomplexity = models.PositiveSmallIntegerField(choices=DATA_POLICIES, default=PUBLIC_SUMMARY)
-    data_policy_bleachingqc = models.PositiveSmallIntegerField(choices=DATA_POLICIES, default=PUBLIC_SUMMARY)
-    data_policy_benthicpqt = models.PositiveSmallIntegerField(choices=DATA_POLICIES, default=PUBLIC_SUMMARY)
+    data_policy_beltfish = models.PositiveSmallIntegerField(
+        choices=DATA_POLICIES, default=PUBLIC_SUMMARY
+    )
+    data_policy_benthiclit = models.PositiveSmallIntegerField(
+        choices=DATA_POLICIES, default=PUBLIC_SUMMARY
+    )
+    data_policy_benthicpit = models.PositiveSmallIntegerField(
+        choices=DATA_POLICIES, default=PUBLIC_SUMMARY
+    )
+    data_policy_habitatcomplexity = models.PositiveSmallIntegerField(
+        choices=DATA_POLICIES, default=PUBLIC_SUMMARY
+    )
+    data_policy_bleachingqc = models.PositiveSmallIntegerField(
+        choices=DATA_POLICIES, default=PUBLIC_SUMMARY
+    )
+    data_policy_benthicpqt = models.PositiveSmallIntegerField(
+        choices=DATA_POLICIES, default=PUBLIC_SUMMARY
+    )
 
     tags = TaggableManager(through=UUIDTaggedItem, blank=True)
 
@@ -144,19 +151,22 @@ class Project(BaseModel, JSONMixin):
         return instance
 
     def save(self, *args, **kwargs):
-        notify_fields = [f.name for f in self._meta.get_fields(include_parents=False, include_hidden=False) if
-                         f.editable and f.name != 'updated_by']
-        if hasattr(self, '_loaded_values'):
+        notify_fields = [
+            f.name
+            for f in self._meta.get_fields(include_parents=False, include_hidden=False)
+            if f.editable and f.name != "updated_by"
+        ]
+        if hasattr(self, "_loaded_values"):
             self._old_values = {k: v for k, v in self._loaded_values.items() if k in notify_fields}
         self._new_values = model_to_dict(self, fields=notify_fields)
         super(Project, self).save(*args, **kwargs)
 
     class Meta:
-        db_table = 'project'
-        ordering = ['name']
+        db_table = "project"
+        ordering = ["name"]
 
     def __str__(self):
-        return _('%s') % self.name
+        return _("%s") % self.name
 
 
 class Region(BaseChoiceModel):
@@ -164,17 +174,22 @@ class Region(BaseChoiceModel):
     geom = models.MultiPolygonField(geography=True)
 
     class Meta:
-        db_table = 'region'
-        ordering = ('name',)
+        db_table = "region"
+        ordering = ("name",)
 
     def __str__(self):
-        return _('%s') % self.name
-    
+        return _("%s") % self.name
+
     @property
     def choice(self):
-        ret = {'id': self.pk, 'name': self.__str__(), 'geom': json.loads(self.geom.json), 'updated_on': self.updated_on}
-        if hasattr(self, 'val'):
-            ret['val'] = self.val
+        ret = {
+            "id": self.pk,
+            "name": self.__str__(),
+            "geom": json.loads(self.geom.json),
+            "updated_on": self.updated_on,
+        }
+        if hasattr(self, "val"):
+            ret["val"] = self.val
         return ret
 
 
@@ -182,88 +197,98 @@ class ManagementParty(BaseChoiceModel):
     name = models.CharField(max_length=100)
 
     class Meta:
-        db_table = 'management_party'
-        verbose_name = _('management party')
-        verbose_name_plural = _('management parties')
-        ordering = ('name',)
+        db_table = "management_party"
+        verbose_name = _("management party")
+        verbose_name_plural = _("management parties")
+        ordering = ("name",)
 
     def __str__(self):
-        return _('%s') % self.name
+        return _("%s") % self.name
 
 
 class ManagementCompliance(BaseChoiceModel):
     name = models.CharField(max_length=100)
 
     class Meta:
-        db_table = 'management_compliance'
-        verbose_name = _('management compliance')
-        ordering = ('name',)
+        db_table = "management_compliance"
+        verbose_name = _("management compliance")
+        ordering = ("name",)
 
     def __str__(self):
-        return _('%s') % self.name
+        return _("%s") % self.name
 
 
 class Management(BaseModel, JSONMixin, AreaMixin):
-    project_lookup = 'project'
+    project_lookup = "project"
 
     project = models.ForeignKey(Project, on_delete=models.CASCADE)
     name = models.CharField(max_length=255)
-    name_secondary = models.CharField(max_length=255, blank=True, verbose_name=_('secondary name'))
-    parties = models.ManyToManyField(ManagementParty, related_name='management_parties', blank=True)
-    compliance = models.ForeignKey(ManagementCompliance, on_delete=models.SET_NULL, null=True, blank=True)
+    name_secondary = models.CharField(max_length=255, blank=True, verbose_name=_("secondary name"))
+    parties = models.ManyToManyField(ManagementParty, related_name="management_parties", blank=True)
+    compliance = models.ForeignKey(
+        ManagementCompliance, on_delete=models.SET_NULL, null=True, blank=True
+    )
     # help_text=_('Optional estimate of level of compliance associated with this management regime'))
-    est_year = models.PositiveSmallIntegerField(null=True, blank=True,
-                                                validators=[validate_max_year],
-                                                verbose_name=_('year established'))
-    predecessor = models.ForeignKey('self', on_delete=models.SET_NULL, null=True, blank=True)
+    est_year = models.PositiveSmallIntegerField(
+        null=True, blank=True, validators=[validate_max_year], verbose_name=_("year established")
+    )
+    predecessor = models.ForeignKey("self", on_delete=models.SET_NULL, null=True, blank=True)
     # help_text=_('Management regime that preceded this one before a change in name, rules, or boundary'))
     notes = models.TextField(blank=True)
     boundary = models.MultiPolygonField(geography=True, null=True, blank=True)
-    size = models.DecimalField(max_digits=12, decimal_places=3,
-                               verbose_name=_('Size (ha)'),
-                               null=True, blank=True,
-                               validators=[MinValueValidator(0)])
+    size = models.DecimalField(
+        max_digits=12,
+        decimal_places=3,
+        verbose_name=_("Size (ha)"),
+        null=True,
+        blank=True,
+        validators=[MinValueValidator(0)],
+    )
     # These might be abstracted into separate model detailing all choices
-    no_take = models.BooleanField(verbose_name=_('no-take zone'), default=False)
-    periodic_closure = models.BooleanField(verbose_name=_('periodic closure'), default=False)
-    open_access = models.BooleanField(verbose_name=_('open access'), default=False)
-    size_limits = models.BooleanField(verbose_name=_('size limits'), default=False)
-    gear_restriction = models.BooleanField(verbose_name=_('partial gear restriction'), default=False)
-    species_restriction = models.BooleanField(verbose_name=_('partial species restriction'), default=False)
-    access_restriction = models.BooleanField(verbose_name=_('access restriction'), default=False)
+    no_take = models.BooleanField(verbose_name=_("no-take zone"), default=False)
+    periodic_closure = models.BooleanField(verbose_name=_("periodic closure"), default=False)
+    open_access = models.BooleanField(verbose_name=_("open access"), default=False)
+    size_limits = models.BooleanField(verbose_name=_("size limits"), default=False)
+    gear_restriction = models.BooleanField(
+        verbose_name=_("partial gear restriction"), default=False
+    )
+    species_restriction = models.BooleanField(
+        verbose_name=_("partial species restriction"), default=False
+    )
+    access_restriction = models.BooleanField(verbose_name=_("access restriction"), default=False)
     validations = models.JSONField(encoder=JSONEncoder, null=True, blank=True)
 
     class Meta:
-        db_table = 'management'
-        verbose_name = _('management regime')
-        ordering = ('name',)
+        db_table = "management"
+        verbose_name = _("management regime")
+        ordering = ("name",)
 
     def __str__(self):
         fullname = self.name
-        if self.name_secondary != '':
-            fullname = _('%s (%s)') % (fullname, self.name_secondary)
+        if self.name_secondary != "":
+            fullname = _("%s (%s)") % (fullname, self.name_secondary)
         if self.est_year is not None:
-            fullname = _('%s [%s]') % (fullname, self.est_year)
+            fullname = _("%s [%s]") % (fullname, self.est_year)
         return fullname
 
     @property
     def rules(self):
         rules = []
-        
+
         if self.no_take:
-            rules.append('No Take')
+            rules.append("No Take")
         if self.periodic_closure:
-            rules.append('Periodic Closure')
+            rules.append("Periodic Closure")
         if self.open_access:
-            rules.append('Open Access')
+            rules.append("Open Access")
         if self.size_limits:
-            rules.append('Size Limits')
+            rules.append("Size Limits")
         if self.gear_restriction:
-            rules.append('Gear Restriction')
+            rules.append("Gear Restriction")
         if self.species_restriction:
-            rules.append('Species Restriction')
+            rules.append("Species Restriction")
         if self.access_restriction:
-            rules.append('Access Restriction')
+            rules.append("Access Restriction")
 
         return rules
 
@@ -272,14 +297,14 @@ class ReefType(BaseChoiceModel):
     name = models.CharField(max_length=50)
 
     def __str__(self):
-        return _('%s') % self.name
+        return _("%s") % self.name
 
 
 class ReefZone(BaseChoiceModel):
     name = models.CharField(max_length=50)
 
     def __str__(self):
-        return _('%s') % self.name
+        return _("%s") % self.name
 
 
 class ReefExposure(BaseChoiceModel):
@@ -287,7 +312,7 @@ class ReefExposure(BaseChoiceModel):
     val = models.PositiveSmallIntegerField()
 
     def __str__(self):
-        return _('%s') % self.name
+        return _("%s") % self.name
 
 
 class ReefSlope(BaseChoiceModel):
@@ -295,14 +320,13 @@ class ReefSlope(BaseChoiceModel):
     val = models.PositiveSmallIntegerField()
 
     def __str__(self):
-        return _('%s') % self.name
+        return _("%s") % self.name
 
 
 class Site(BaseModel, JSONMixin):
-    project_lookup = 'project'
+    project_lookup = "project"
 
-    project = models.ForeignKey(
-        Project, on_delete=models.CASCADE, related_name='sites')
+    project = models.ForeignKey(Project, on_delete=models.CASCADE, related_name="sites")
     name = models.CharField(max_length=255)
     country = models.ForeignKey(Country, on_delete=models.PROTECT)
     reef_type = models.ForeignKey(ReefType, on_delete=models.PROTECT)
@@ -310,32 +334,31 @@ class Site(BaseModel, JSONMixin):
     exposure = models.ForeignKey(ReefExposure, on_delete=models.PROTECT)
     location = models.PointField(srid=4326)
     notes = models.TextField(blank=True)
-    predecessor = models.ForeignKey(
-        'self', on_delete=models.SET_NULL, null=True, blank=True)
+    predecessor = models.ForeignKey("self", on_delete=models.SET_NULL, null=True, blank=True)
     validations = models.JSONField(encoder=JSONEncoder, null=True, blank=True)
 
     class Meta:
-        db_table = 'site'
-        ordering = ('name',)
+        db_table = "site"
+        ordering = ("name",)
 
     def __str__(self):
-        return _('%s') % self.name
+        return _("%s") % self.name
 
 
 class ProjectProfile(BaseModel):
-    project_lookup = 'project'
+    project_lookup = "project"
     ADMIN = 90
     COLLECTOR = 50
     READONLY = 10
     ROLES = (
-        (ADMIN, _('admin')),
-        (COLLECTOR, _('collector')),  # add/edit
-        (READONLY, _('read-only')),
+        (ADMIN, _("admin")),
+        (COLLECTOR, _("collector")),  # add/edit
+        (READONLY, _("read-only")),
     )
     ROLES_UPDATED_ON = datetime.datetime(2019, 2, 2, 0, 0, 0, 0, pytz.UTC)
 
-    project = models.ForeignKey(Project, related_name='profiles', on_delete=models.CASCADE)
-    profile = models.ForeignKey(Profile, related_name='projects', on_delete=models.CASCADE)
+    project = models.ForeignKey(Project, related_name="profiles", on_delete=models.CASCADE)
+    profile = models.ForeignKey(Profile, related_name="projects", on_delete=models.CASCADE)
     role = models.PositiveSmallIntegerField(choices=ROLES)
 
     @property
@@ -357,17 +380,20 @@ class ProjectProfile(BaseModel):
         return instance
 
     def save(self, *args, **kwargs):
-        notify_fields = [f.name for f in self._meta.get_fields(include_parents=False, include_hidden=False) if
-                         f.editable and f.name != 'updated_by']
-        if hasattr(self, '_loaded_values'):
+        notify_fields = [
+            f.name
+            for f in self._meta.get_fields(include_parents=False, include_hidden=False)
+            if f.editable and f.name != "updated_by"
+        ]
+        if hasattr(self, "_loaded_values"):
             self._old_values = {k: v for k, v in self._loaded_values.items() if k in notify_fields}
         self._new_values = model_to_dict(self, fields=notify_fields)
         super(ProjectProfile, self).save(*args, **kwargs)
 
     class Meta:
-        db_table = 'project_profile'
-        ordering = ('project', 'profile')
-        unique_together = ('project', 'profile')
+        db_table = "project_profile"
+        ordering = ("project", "profile")
+        unique_together = ("project", "profile")
 
 
 class Visibility(BaseChoiceModel):
@@ -375,10 +401,10 @@ class Visibility(BaseChoiceModel):
     val = models.PositiveSmallIntegerField()
 
     class Meta:
-        verbose_name_plural = 'visibilities'
+        verbose_name_plural = "visibilities"
 
     def __str__(self):
-        return _('%s') % self.name
+        return _("%s") % self.name
 
 
 class Current(BaseChoiceModel):
@@ -389,14 +415,14 @@ class Current(BaseChoiceModel):
         ordering = ("val", "name")
 
     def __str__(self):
-        return _('%s') % self.name
+        return _("%s") % self.name
 
 
 class RelativeDepth(BaseChoiceModel):
     name = models.CharField(max_length=50)
 
     def __str__(self):
-        return _('%s') % self.name
+        return _("%s") % self.name
 
 
 class Tide(BaseChoiceModel):
@@ -407,7 +433,7 @@ class Tide(BaseChoiceModel):
         ordering = ("val", "name")
 
     def __str__(self):
-        return _('%s') % self.name
+        return _("%s") % self.name
 
 
 def default_date():
@@ -417,18 +443,18 @@ def default_date():
 class SampleEvent(BaseModel, JSONMixin):
     project_lookup = "site__project"
 
-    site = models.ForeignKey(Site, on_delete=models.PROTECT, related_name='sample_events')
+    site = models.ForeignKey(Site, on_delete=models.PROTECT, related_name="sample_events")
     management = models.ForeignKey(Management, on_delete=models.PROTECT)
     sample_date = models.DateField(default=default_date)
     notes = models.TextField(blank=True)
     validations = models.JSONField(encoder=JSONEncoder, null=True, blank=True)
 
     class Meta:
-        db_table = 'sample_event'
-        ordering = ('site', 'sample_date')
+        db_table = "sample_event"
+        ordering = ("site", "sample_date")
 
     def __str__(self):
-        return '%s %s' % (self.site.__str__(), self.sample_date)
+        return "%s %s" % (self.site.__str__(), self.sample_date)
 
 
 class SampleUnit(BaseModel):
@@ -440,58 +466,54 @@ class SampleUnit(BaseModel):
     depth = models.DecimalField(
         max_digits=3,
         decimal_places=1,
-        verbose_name=_('depth (m)'),
-        validators=[MinValueValidator(0), MaxValueValidator(40)]
+        verbose_name=_("depth (m)"),
+        validators=[MinValueValidator(0), MaxValueValidator(40)],
     )
     visibility = models.ForeignKey(Visibility, on_delete=models.SET_NULL, null=True, blank=True)
     current = models.ForeignKey(Current, on_delete=models.SET_NULL, null=True, blank=True)
-    relative_depth = models.ForeignKey(RelativeDepth, on_delete=models.SET_NULL, null=True, blank=True)
+    relative_depth = models.ForeignKey(
+        RelativeDepth, on_delete=models.SET_NULL, null=True, blank=True
+    )
     tide = models.ForeignKey(Tide, on_delete=models.SET_NULL, null=True, blank=True)
 
     class Meta:
-        db_table = 'sample_unit'
+        db_table = "sample_unit"
         abstract = True
 
     @property
     def su_method(self):
         for tmclass in TransectMethod.__subclasses__():
             for field in tmclass._meta.fields:
-                if (
-                    field.one_to_one is True
-                    and isinstance(self, field.related_model)
-                ):
+                if field.one_to_one is True and isinstance(self, field.related_model):
                     return getattr(self, field.related_query_name())
 
         raise NameError("Sample unit method field can't be found")
 
     def __str__(self):
-        if hasattr(self, 'transect') or hasattr(self, 'quadrat'):
-            return _('%s') % self.__str__()
+        if hasattr(self, "transect") or hasattr(self, "quadrat"):
+            return _("%s") % self.__str__()
 
-        return _('sample unit')
+        return _("sample unit")
 
 
 class Transect(SampleUnit):
     project_lookup = "sample_event__site__project"
 
-    len_surveyed = models.DecimalField(max_digits=4, decimal_places=1,
-                                       verbose_name=_('transect length surveyed (m)'))
-    reef_slope = models.ForeignKey(
-        ReefSlope, on_delete=models.SET_NULL, null=True, blank=True)
+    len_surveyed = models.DecimalField(
+        max_digits=4, decimal_places=1, verbose_name=_("transect length surveyed (m)")
+    )
+    reef_slope = models.ForeignKey(ReefSlope, on_delete=models.SET_NULL, null=True, blank=True)
 
     class Meta:
-        db_table = 'transect'
+        db_table = "transect"
         abstract = True
-        ordering = ('sample_event', )
+        ordering = ("sample_event",)
 
     def __str__(self):
         su_number = get_sample_unit_number(self)
-        if su_number != '':
-            su_number = ' {}'.format(su_number)
-        return _('%s%s') % (
-            self.sample_event.__str__(),
-            su_number
-        )
+        if su_number != "":
+            su_number = " {}".format(su_number)
+        return _("%s%s") % (self.sample_event.__str__(), su_number)
 
 
 class BenthicTransect(Transect):
@@ -499,22 +521,22 @@ class BenthicTransect(Transect):
     label = models.CharField(max_length=50, blank=True)
 
     class Meta:
-        db_table = 'transect_benthic'
+        db_table = "transect_benthic"
 
 
 class BeltTransectWidth(BaseChoiceModel):
     name = models.CharField(unique=True, max_length=100, null=True, blank=True)
 
     def __str__(self):
-        return _('%s') % self.name
+        return _("%s") % self.name
 
     @property
     def choice(self):
         ret = {
-            'id': self.pk,
-            'name': self.__str__(),
-            'updated_on': self.updated_on,
-            'conditions': [cnd.choice for cnd in self.conditions.all().order_by("val")]
+            "id": self.pk,
+            "name": self.__str__(),
+            "updated_on": self.updated_on,
+            "conditions": [cnd.choice for cnd in self.conditions.all().order_by("val")],
         }
 
         return ret
@@ -566,22 +588,11 @@ class BeltTransectWidthCondition(BaseChoiceModel):
     )
 
     belttransectwidth = models.ForeignKey(
-        "BeltTransectWidth",
-        on_delete=models.PROTECT,
-        related_name="conditions"
+        "BeltTransectWidth", on_delete=models.PROTECT, related_name="conditions"
     )
-    operator = models.CharField(
-        max_length=2,
-        choices=OPERATOR_CHOICES,
-        null=True,
-        blank=True
-    )
+    operator = models.CharField(max_length=2, choices=OPERATOR_CHOICES, null=True, blank=True)
     size = models.DecimalField(
-        decimal_places=1,
-        max_digits=5,
-        null=True,
-        blank=True,
-        verbose_name=_('fish size (cm)')
+        decimal_places=1, max_digits=5, null=True, blank=True, verbose_name=_("fish size (cm)")
     )
     val = models.PositiveSmallIntegerField()
 
@@ -591,11 +602,13 @@ class BeltTransectWidthCondition(BaseChoiceModel):
     def __str__(self):
         if self.operator is None or self.size is None:
             return str(self.belttransectwidth)
-        return str(_("{} {}cm @ {}".format(
-            str(self.operator or ""),
-            str(self.size or ""),
-            str(self.belttransectwidth)
-        )))
+        return str(
+            _(
+                "{} {}cm @ {}".format(
+                    str(self.operator or ""), str(self.size or ""), str(self.belttransectwidth)
+                )
+            )
+        )
 
     @property
     def op(self):
@@ -616,67 +629,68 @@ class BeltTransectWidthCondition(BaseChoiceModel):
     @property
     def choice(self):
         ret = {
-            'id': self.pk,
-            'name': self.__str__(),
-            'updated_on': self.updated_on,
-            'size': self.size,
-            'operator': self.operator,
-            'val': self.val,
+            "id": self.pk,
+            "name": self.__str__(),
+            "updated_on": self.updated_on,
+            "size": self.size,
+            "operator": self.operator,
+            "val": self.val,
         }
-        if hasattr(self, 'val'):
-            ret['val'] = self.val
+        if hasattr(self, "val"):
+            ret["val"] = self.val
         return ret
 
 
 class FishBeltTransect(Transect):
     number = models.PositiveSmallIntegerField(default=1)
     label = models.CharField(max_length=50, blank=True)
-    width = models.ForeignKey(BeltTransectWidth, verbose_name=_('width (m)'), on_delete=models.PROTECT)
+    width = models.ForeignKey(
+        BeltTransectWidth, verbose_name=_("width (m)"), on_delete=models.PROTECT
+    )
     size_bin = models.ForeignKey("FishSizeBin", on_delete=models.PROTECT)
 
     class Meta:
-        db_table = 'transect_belt_fish'
-        verbose_name = _('fish belt transect')
+        db_table = "transect_belt_fish"
+        verbose_name = _("fish belt transect")
 
 
 class BaseQuadrat(SampleUnit):
     quadrat_size = models.DecimalField(
-        decimal_places=2, max_digits=6,
-        verbose_name=_('single quadrat area (m2)'),
+        decimal_places=2,
+        max_digits=6,
+        verbose_name=_("single quadrat area (m2)"),
         default=1,
-        validators=[MinValueValidator(0)]
+        validators=[MinValueValidator(0)],
     )
 
     class Meta:
         abstract = True
-        ordering = ('sample_event',)
+        ordering = ("sample_event",)
 
     def __str__(self):
         su_number = get_sample_unit_number(self)
-        if su_number != '':
-            su_number = ' {}'.format(su_number)
-        return _('%s%s') % (
-            self.sample_event.__str__(),
-            su_number
-        )
+        if su_number != "":
+            su_number = " {}".format(su_number)
+        return _("%s%s") % (self.sample_event.__str__(), su_number)
 
 
 class QuadratCollection(BaseQuadrat):
-    project_lookup = 'sample_event__site__project'
+    project_lookup = "sample_event__site__project"
     label = models.CharField(max_length=50, blank=True)
 
     class Meta:
-        db_table = 'quadrat_collection'
+        db_table = "quadrat_collection"
 
 
 class QuadratTransect(Transect):
     number = models.PositiveSmallIntegerField(default=1)
     label = models.CharField(max_length=50, blank=True)
     quadrat_size = models.DecimalField(
-        decimal_places=2, max_digits=6,
-        verbose_name=_('single quadrat area (m2)'),
+        decimal_places=2,
+        max_digits=6,
+        verbose_name=_("single quadrat area (m2)"),
         default=1,
-        validators=[MinValueValidator(0)]
+        validators=[MinValueValidator(0)],
     )
     num_quadrats = models.PositiveSmallIntegerField()
     num_points_per_quadrat = models.PositiveSmallIntegerField()
@@ -685,7 +699,7 @@ class QuadratTransect(Transect):
     )
 
     class Meta:
-        db_table = 'quadrat_transect'
+        db_table = "quadrat_transect"
 
 
 # TODO: rename this SampleUnitMethod, and abstract all appropriate references elsewhere
@@ -693,21 +707,21 @@ class TransectMethod(BaseModel):
     collect_record_id = models.UUIDField(db_index=True, null=True, blank=True)
 
     class Meta:
-        db_table = 'transectmethod'
+        db_table = "transectmethod"
 
     @property
     def protocol(self):
-        if hasattr(self, 'benthiclit'):
+        if hasattr(self, "benthiclit"):
             return self.benthiclit.protocol
-        elif hasattr(self, 'benthicpit'):
+        elif hasattr(self, "benthicpit"):
             return self.benthicpit.protocol
-        elif hasattr(self, 'beltfish'):
+        elif hasattr(self, "beltfish"):
             return self.beltfish.protocol
-        elif hasattr(self, 'habitatcomplexity'):
+        elif hasattr(self, "habitatcomplexity"):
             return self.habitatcomplexity.protocol
-        elif hasattr(self, 'bleachingquadratcollection'):
+        elif hasattr(self, "bleachingquadratcollection"):
             return self.bleachingquadratcollection.protocol
-        elif hasattr(self, 'benthicphotoquadrattransect'):
+        elif hasattr(self, "benthicphotoquadrattransect"):
             return self.benthicphotoquadrattransect.protocol
         return None
 
@@ -734,8 +748,10 @@ class TransectMethod(BaseModel):
             return None
 
         related_objects = [
-            f for f in sample_unit_method_subclass._meta.get_fields()
-            if isinstance(f, models.OneToOneField)]
+            f
+            for f in sample_unit_method_subclass._meta.get_fields()
+            if isinstance(f, models.OneToOneField)
+        ]
 
         one2one_fields = [ro for ro in related_objects if ro.name.endswith("_ptr") is False]
         if len(one2one_fields) == 1:
@@ -745,7 +761,7 @@ class TransectMethod(BaseModel):
         raise NameError("Sample unit field can't be found")
 
     def __str__(self):
-        return str(_('transect method'))
+        return str(_("transect method"))
 
     @property
     def project(self):
@@ -753,18 +769,21 @@ class TransectMethod(BaseModel):
 
 
 class Observer(BaseModel):
-    transectmethod = models.ForeignKey(TransectMethod, on_delete=models.CASCADE,
-                                       verbose_name=_('transect method'),
-                                       related_name='observers')
+    transectmethod = models.ForeignKey(
+        TransectMethod,
+        on_delete=models.CASCADE,
+        verbose_name=_("transect method"),
+        related_name="observers",
+    )
     profile = models.ForeignKey(Profile, on_delete=models.CASCADE)
     rank = models.PositiveSmallIntegerField(default=1)
 
     class Meta:
-        db_table = 'observer'
-        unique_together = ('transectmethod', 'profile')
+        db_table = "observer"
+        unique_together = ("transectmethod", "profile")
 
     def __str__(self):
-        return _('%s') % (self.profile)
+        return _("%s") % (self.profile)
 
     @property
     def profile_name(self):
@@ -775,31 +794,35 @@ class BenthicLifeHistory(BaseChoiceModel):
     name = models.CharField(max_length=100)
 
     class Meta:
-        db_table = 'benthic_lifehistory'
-        verbose_name_plural = _('benthic life histories')
-        ordering = ['name']
+        db_table = "benthic_lifehistory"
+        verbose_name_plural = _("benthic life histories")
+        ordering = ["name"]
 
     def __str__(self):
-        return _('%s') % self.name
+        return _("%s") % self.name
 
 
 class GrowthForm(BaseChoiceModel):
     name = models.CharField(max_length=100)
 
     class Meta:
-        db_table = 'growth_form'
-        verbose_name_plural = _('growth forms')
-        ordering = ['name']
+        db_table = "growth_form"
+        verbose_name_plural = _("growth forms")
+        ordering = ["name"]
 
     def __str__(self):
-        return _('%s') % self.name
+        return _("%s") % self.name
 
 
 class BenthicAttribute(BaseAttributeModel):
     name = models.CharField(max_length=100)
-    parent = models.ForeignKey('self', on_delete=models.SET_NULL, null=True, blank=True, related_name='children')
+    parent = models.ForeignKey(
+        "self", on_delete=models.SET_NULL, null=True, blank=True, related_name="children"
+    )
     regions = models.ManyToManyField(Region, blank=True)
-    life_history = models.ForeignKey(BenthicLifeHistory, on_delete=models.SET_NULL, null=True, blank=True)
+    life_history = models.ForeignKey(
+        BenthicLifeHistory, on_delete=models.SET_NULL, null=True, blank=True
+    )
 
     # Get *all* descendants of this instance, not just immediate children.
     # This is good for summarizing aggregate descendant properties, but if we need more
@@ -838,80 +861,92 @@ class BenthicAttribute(BaseAttributeModel):
         return type(self).objects.raw(sql)[0]
 
     class Meta:
-        db_table = 'benthic_attribute'
-        ordering = ['name']
+        db_table = "benthic_attribute"
+        ordering = ["name"]
 
     def __str__(self):
-        return _('%s') % self.name
+        return _("%s") % self.name
         # return '%s' % str(self.name)
 
 
 class BenthicLIT(TransectMethod):
     protocol = BENTHICLIT_PROTOCOL
-    project_lookup = 'transect__sample_event__site__project'
+    project_lookup = "transect__sample_event__site__project"
 
-    transect = models.OneToOneField(BenthicTransect, on_delete=models.CASCADE,
-                                    related_name='benthiclit_method',
-                                    verbose_name=_('benthic transect'))
+    transect = models.OneToOneField(
+        BenthicTransect,
+        on_delete=models.CASCADE,
+        related_name="benthiclit_method",
+        verbose_name=_("benthic transect"),
+    )
 
     class Meta:
-        db_table = 'transectmethod_benthiclit'
-        verbose_name = _('benthic LIT')
-        verbose_name_plural = _('benthic LIT observations')
+        db_table = "transectmethod_benthiclit"
+        verbose_name = _("benthic LIT")
+        verbose_name_plural = _("benthic LIT observations")
 
     def __str__(self):
-        return _('benthic LIT %s') % self.transect.__str__()
+        return _("benthic LIT %s") % self.transect.__str__()
 
 
 class ObsBenthicLIT(BaseModel, JSONMixin):
-    project_lookup = 'benthiclit__transect__sample_event__site__project'
+    project_lookup = "benthiclit__transect__sample_event__site__project"
 
-    benthiclit = models.ForeignKey(BenthicLIT, related_name='obsbenthiclit_set', on_delete=models.CASCADE)
+    benthiclit = models.ForeignKey(
+        BenthicLIT, related_name="obsbenthiclit_set", on_delete=models.CASCADE
+    )
     attribute = models.ForeignKey(BenthicAttribute, on_delete=models.PROTECT)
     growth_form = models.ForeignKey(GrowthForm, on_delete=models.SET_NULL, null=True, blank=True)
-    length = models.PositiveSmallIntegerField(verbose_name=_('length (cm)'))
+    length = models.PositiveSmallIntegerField(verbose_name=_("length (cm)"))
     include = models.BooleanField(default=True, verbose_name=INCLUDE_OBS_TEXT)
     notes = models.TextField(blank=True)
 
     class Meta:
-        db_table = 'obs_benthiclit'
-        verbose_name = _('benthic LIT observation')
+        db_table = "obs_benthiclit"
+        verbose_name = _("benthic LIT observation")
         ordering = ["created_on"]
 
     def __str__(self):
-        return _('%s') % (self.length)
+        return _("%s") % (self.length)
 
 
 class BenthicPIT(TransectMethod):
     protocol = BENTHICPIT_PROTOCOL
-    project_lookup = 'transect__sample_event__site__project'
+    project_lookup = "transect__sample_event__site__project"
 
-    transect = models.OneToOneField(BenthicTransect, on_delete=models.CASCADE,
-                                    related_name='benthicpit_method',
-                                    verbose_name='benthic transect')
-    interval_size = models.DecimalField(max_digits=4, decimal_places=2,
-                                        default=0.5,
-                                        validators=[MinValueValidator(0), MaxValueValidator(10)],
-                                        verbose_name=_('interval size (m)'))
+    transect = models.OneToOneField(
+        BenthicTransect,
+        on_delete=models.CASCADE,
+        related_name="benthicpit_method",
+        verbose_name="benthic transect",
+    )
+    interval_size = models.DecimalField(
+        max_digits=4,
+        decimal_places=2,
+        default=0.5,
+        validators=[MinValueValidator(0), MaxValueValidator(10)],
+        verbose_name=_("interval size (m)"),
+    )
 
-    interval_start = models.DecimalField(max_digits=4,
-                                         decimal_places=2,
-                                         default=0.5,
-                                         verbose_name=_('interval start (m)'))
+    interval_start = models.DecimalField(
+        max_digits=4, decimal_places=2, default=0.5, verbose_name=_("interval start (m)")
+    )
 
     class Meta:
-        db_table = 'transectmethod_benthicpit'
-        verbose_name = _('benthic PIT')
-        verbose_name_plural = _('benthic PIT observations')
+        db_table = "transectmethod_benthicpit"
+        verbose_name = _("benthic PIT")
+        verbose_name_plural = _("benthic PIT observations")
 
     def __str__(self):
-        return _('benthic PIT %s') % self.transect.__str__()
+        return _("benthic PIT %s") % self.transect.__str__()
 
 
 class ObsBenthicPIT(BaseModel, JSONMixin):
-    project_lookup = 'benthicpit__transect__sample_event__site__project'
+    project_lookup = "benthicpit__transect__sample_event__site__project"
 
-    benthicpit = models.ForeignKey(BenthicPIT, related_name='obsbenthicpit_set', on_delete=models.CASCADE)
+    benthicpit = models.ForeignKey(
+        BenthicPIT, related_name="obsbenthicpit_set", on_delete=models.CASCADE
+    )
     attribute = models.ForeignKey(BenthicAttribute, on_delete=models.PROTECT)
     growth_form = models.ForeignKey(GrowthForm, on_delete=models.SET_NULL, null=True, blank=True)
     interval = models.DecimalField(max_digits=7, decimal_places=2)
@@ -919,34 +954,40 @@ class ObsBenthicPIT(BaseModel, JSONMixin):
     notes = models.TextField(blank=True)
 
     class Meta:
-        db_table = 'obs_benthicpit'
-        unique_together = ('benthicpit', 'interval')
-        verbose_name = _('benthic PIT observation')
+        db_table = "obs_benthicpit"
+        unique_together = ("benthicpit", "interval")
+        verbose_name = _("benthic PIT observation")
         ordering = ["interval"]
 
     def __str__(self):
-        return _('%s') % self.interval
+        return _("%s") % self.interval
 
 
 class HabitatComplexity(TransectMethod):
     protocol = HABITATCOMPLEXITY_PROTOCOL
-    project_lookup = 'transect__sample_event__site__project'
+    project_lookup = "transect__sample_event__site__project"
 
-    transect = models.OneToOneField(BenthicTransect, on_delete=models.CASCADE,
-                                    related_name='habitatcomplexity_method',
-                                    verbose_name='benthic transect')
-    interval_size = models.DecimalField(max_digits=4, decimal_places=2,
-                                        default=0.5,
-                                        validators=[MinValueValidator(0), MaxValueValidator(10)],
-                                        verbose_name=_('interval size (m)'))
+    transect = models.OneToOneField(
+        BenthicTransect,
+        on_delete=models.CASCADE,
+        related_name="habitatcomplexity_method",
+        verbose_name="benthic transect",
+    )
+    interval_size = models.DecimalField(
+        max_digits=4,
+        decimal_places=2,
+        default=0.5,
+        validators=[MinValueValidator(0), MaxValueValidator(10)],
+        verbose_name=_("interval size (m)"),
+    )
 
     class Meta:
-        db_table = 'transectmethod_habitatcomplexity'
-        verbose_name = _('habitat complexity transect')
-        verbose_name_plural = _('habitat complexity transect observations')
+        db_table = "transectmethod_habitatcomplexity"
+        verbose_name = _("habitat complexity transect")
+        verbose_name_plural = _("habitat complexity transect observations")
 
     def __str__(self):
-        return _('habitat complexity %s') % self.transect.__str__()
+        return _("habitat complexity %s") % self.transect.__str__()
 
 
 class HabitatComplexityScore(BaseChoiceModel):
@@ -954,73 +995,77 @@ class HabitatComplexityScore(BaseChoiceModel):
     val = models.PositiveSmallIntegerField()
 
     def __str__(self):
-        return _('%s %s') % (self.val, self.name)
+        return _("%s %s") % (self.val, self.name)
 
 
 class ObsHabitatComplexity(BaseModel, JSONMixin):
-    project_lookup = 'habitatcomplexity__transect__sample_event__site__project'
+    project_lookup = "habitatcomplexity__transect__sample_event__site__project"
 
-    habitatcomplexity = models.ForeignKey(HabitatComplexity, related_name='habitatcomplexity_set',
-                                          on_delete=models.CASCADE)
+    habitatcomplexity = models.ForeignKey(
+        HabitatComplexity, related_name="habitatcomplexity_set", on_delete=models.CASCADE
+    )
     interval = models.DecimalField(max_digits=7, decimal_places=2)
     score = models.ForeignKey(HabitatComplexityScore, on_delete=models.PROTECT)
     include = models.BooleanField(default=True, verbose_name=INCLUDE_OBS_TEXT)
     notes = models.TextField(blank=True)
 
     class Meta:
-        db_table = 'obs_habitatcomplexity'
-        unique_together = ('habitatcomplexity', 'interval')
-        verbose_name = _('habitat complexity transect observation')
+        db_table = "obs_habitatcomplexity"
+        unique_together = ("habitatcomplexity", "interval")
+        verbose_name = _("habitat complexity transect observation")
         ordering = ["interval"]
 
     def __str__(self):
-        return _('%s') % self.interval
+        return _("%s") % self.interval
 
 
 class BleachingQuadratCollection(TransectMethod):
     protocol = BLEACHINGQC_PROTOCOL
-    project_lookup = 'quadrat__sample_event__site__project'
+    project_lookup = "quadrat__sample_event__site__project"
 
-    quadrat = models.OneToOneField(QuadratCollection,
-                                   on_delete=models.CASCADE,
-                                   related_name='bleachingquadratcollection_method',
-                                   verbose_name=_('bleaching quadrat collection'))
+    quadrat = models.OneToOneField(
+        QuadratCollection,
+        on_delete=models.CASCADE,
+        related_name="bleachingquadratcollection_method",
+        verbose_name=_("bleaching quadrat collection"),
+    )
 
     class Meta:
-        db_table = 'transectmethod_bleaching_quadrat_collection'
-        verbose_name = _('bleaching quadrat collection')
-        verbose_name_plural = _('bleaching quadrat collection observations')
+        db_table = "transectmethod_bleaching_quadrat_collection"
+        verbose_name = _("bleaching quadrat collection")
+        verbose_name_plural = _("bleaching quadrat collection observations")
 
     def __str__(self):
-        return _('bleaching quadrat collection %s') % self.quadrat.__str__()
+        return _("bleaching quadrat collection %s") % self.quadrat.__str__()
 
 
 class ObsColoniesBleached(BaseModel, JSONMixin):
-    project_lookup = 'bleachingquadratcollection__quadrat__sample_event__site__project'
+    project_lookup = "bleachingquadratcollection__quadrat__sample_event__site__project"
 
-    bleachingquadratcollection = models.ForeignKey(BleachingQuadratCollection,
-                                                         on_delete=models.CASCADE)
+    bleachingquadratcollection = models.ForeignKey(
+        BleachingQuadratCollection, on_delete=models.CASCADE
+    )
     attribute = models.ForeignKey(BenthicAttribute, on_delete=models.PROTECT)
     growth_form = models.ForeignKey(GrowthForm, on_delete=models.SET_NULL, null=True, blank=True)
-    count_normal = models.PositiveSmallIntegerField(verbose_name='normal', default=0)
-    count_pale = models.PositiveSmallIntegerField(verbose_name='pale', default=0)
-    count_20 = models.PositiveSmallIntegerField(verbose_name='0-20% bleached', default=0)
-    count_50 = models.PositiveSmallIntegerField(verbose_name='20-50% bleached', default=0)
-    count_80 = models.PositiveSmallIntegerField(verbose_name='50-80% bleached', default=0)
-    count_100 = models.PositiveSmallIntegerField(verbose_name='80-100% bleached', default=0)
-    count_dead = models.PositiveSmallIntegerField(verbose_name='recently dead', default=0)
+    count_normal = models.PositiveSmallIntegerField(verbose_name="normal", default=0)
+    count_pale = models.PositiveSmallIntegerField(verbose_name="pale", default=0)
+    count_20 = models.PositiveSmallIntegerField(verbose_name="0-20% bleached", default=0)
+    count_50 = models.PositiveSmallIntegerField(verbose_name="20-50% bleached", default=0)
+    count_80 = models.PositiveSmallIntegerField(verbose_name="50-80% bleached", default=0)
+    count_100 = models.PositiveSmallIntegerField(verbose_name="80-100% bleached", default=0)
+    count_dead = models.PositiveSmallIntegerField(verbose_name="recently dead", default=0)
     notes = models.TextField(blank=True)
 
     class Meta:
-        db_table = 'obs_colonies_bleached'
-        verbose_name = _('bleaching quadrat collection colonies bleached observation')
+        db_table = "obs_colonies_bleached"
+        verbose_name = _("bleaching quadrat collection colonies bleached observation")
         ordering = ["created_on"]
 
     def __str__(self):
-        gf = ''
+        gf = ""
         if self.growth_form is not None:
-            gf = ' {}'.format(self.growth_form)
-        return _('%s%s') % (self.attribute.__str__(), gf)
+            gf = " {}".format(self.growth_form)
+        return _("%s%s") % (self.attribute.__str__(), gf)
 
 
 class ObsQuadratBenthicPercent(BaseModel, JSONMixin):
@@ -1029,28 +1074,21 @@ class ObsQuadratBenthicPercent(BaseModel, JSONMixin):
     bleachingquadratcollection = models.ForeignKey(
         BleachingQuadratCollection, on_delete=models.CASCADE
     )
-    quadrat_number = models.PositiveSmallIntegerField(
-        verbose_name="quadrat number"
-    )
+    quadrat_number = models.PositiveSmallIntegerField(verbose_name="quadrat number")
     percent_hard = models.DecimalField(
-        max_digits=5, decimal_places=2,
-        verbose_name="hard coral, % cover", null=True, blank=True
+        max_digits=5, decimal_places=2, verbose_name="hard coral, % cover", null=True, blank=True
     )
     percent_soft = models.DecimalField(
-        max_digits=5, decimal_places=2,
-        verbose_name="soft coral, % cover", null=True, blank=True
+        max_digits=5, decimal_places=2, verbose_name="soft coral, % cover", null=True, blank=True
     )
     percent_algae = models.DecimalField(
-        max_digits=5, decimal_places=2,
-        verbose_name="macroalgae, % cover", null=True, blank=True
+        max_digits=5, decimal_places=2, verbose_name="macroalgae, % cover", null=True, blank=True
     )
     notes = models.TextField(blank=True)
 
     class Meta:
         db_table = "obs_quadrat_benthic_percent"
-        verbose_name = _(
-            "bleaching quadrat collection percent benthic cover observation"
-        )
+        verbose_name = _("bleaching quadrat collection percent benthic cover observation")
         unique_together = ("bleachingquadratcollection", "quadrat_number")
         ordering = ["created_on"]
 
@@ -1063,9 +1101,10 @@ class BenthicPhotoQuadratTransect(TransectMethod):
     project_lookup = "quadrat_transect__sample_event__site__project"
 
     quadrat_transect = models.OneToOneField(
-        QuadratTransect, on_delete=models.CASCADE,
+        QuadratTransect,
+        on_delete=models.CASCADE,
         related_name="benthic_photo_quadrat_transect_method",
-        verbose_name=_("benthic photo quadrat transect")
+        verbose_name=_("benthic photo quadrat transect"),
     )
 
     class Meta:
@@ -1084,24 +1123,20 @@ class ObsBenthicPhotoQuadrat(BaseModel, JSONMixin):
         BenthicPhotoQuadratTransect, on_delete=models.CASCADE
     )
 
-    quadrat_number = models.PositiveSmallIntegerField(
-        verbose_name="quadrat number"
-    )
+    quadrat_number = models.PositiveSmallIntegerField(verbose_name="quadrat number")
     attribute = models.ForeignKey(BenthicAttribute, on_delete=models.PROTECT)
     growth_form = models.ForeignKey(GrowthForm, on_delete=models.SET_NULL, null=True, blank=True)
-    num_points = models.PositiveSmallIntegerField(verbose_name='number of points', default=0)
+    num_points = models.PositiveSmallIntegerField(verbose_name="number of points", default=0)
     notes = models.TextField(blank=True)
 
     class Meta:
         db_table = "obs_benthic_photo_quadrat"
-        verbose_name = _(
-            "benthic photo quadrat transect observation"
-        )
+        verbose_name = _("benthic photo quadrat transect observation")
         unique_together = (
             "benthic_photo_quadrat_transect",
             "quadrat_number",
             "attribute",
-            "growth_form"
+            "growth_form",
         )
         ordering = ["created_on"]
 
@@ -1110,46 +1145,45 @@ class ObsBenthicPhotoQuadrat(BaseModel, JSONMixin):
 
 
 class FishAttribute(BaseAttributeModel):
-
-    GROUPING_RANK = 'grouping'
-    FAMILY_RANK = 'family'
-    GENUS_RANK = 'genus'
-    SPECIES_RANK = 'species'
+    GROUPING_RANK = "grouping"
+    FAMILY_RANK = "family"
+    GENUS_RANK = "genus"
+    SPECIES_RANK = "species"
 
     class Meta:
-        db_table = 'fish_attribute'
+        db_table = "fish_attribute"
 
     def __str__(self):
-        if hasattr(self, 'fishgrouping'):
-            return _('%s') % self.fishgrouping.name
-        elif hasattr(self, 'fishfamily'):
-            return _('%s') % self.fishfamily.name
-        elif hasattr(self, 'fishgenus'):
-            return _('%s') % self.fishgenus.name
-        elif hasattr(self, 'fishspecies'):
-            return _('%s %s') % (self.fishspecies.genus.name, self.fishspecies.name)
+        if hasattr(self, "fishgrouping"):
+            return _("%s") % self.fishgrouping.name
+        elif hasattr(self, "fishfamily"):
+            return _("%s") % self.fishfamily.name
+        elif hasattr(self, "fishgenus"):
+            return _("%s") % self.fishgenus.name
+        elif hasattr(self, "fishspecies"):
+            return _("%s %s") % (self.fishspecies.genus.name, self.fishspecies.name)
         return "no-name attribute"
 
     @property
     def taxonomic_rank(self):
-        if hasattr(self, 'fishgrouping'):
+        if hasattr(self, "fishgrouping"):
             return self.GROUPING_RANK
-        elif hasattr(self, 'fishfamily'):
+        elif hasattr(self, "fishfamily"):
             return self.FAMILY_RANK
-        elif hasattr(self, 'fishgenus'):
+        elif hasattr(self, "fishgenus"):
             return self.GENUS_RANK
-        elif hasattr(self, 'fishspecies'):
+        elif hasattr(self, "fishspecies"):
             return self.SPECIES_RANK
         return None
 
     def _get_taxon(self):
-        if hasattr(self, 'fishgrouping'):
+        if hasattr(self, "fishgrouping"):
             return self.fishgrouping
-        elif hasattr(self, 'fishfamily'):
+        elif hasattr(self, "fishfamily"):
             return self.fishfamily
-        elif hasattr(self, 'fishgenus'):
+        elif hasattr(self, "fishgenus"):
             return self.fishgenus
-        elif hasattr(self, 'fishspecies'):
+        elif hasattr(self, "fishspecies"):
             return self.fishspecies
         return None
 
@@ -1184,12 +1218,14 @@ class FishGrouping(FishAttribute):
         q &= Q(regions__in=self.regions.all())
         species = FishSpecies.objects.filter(q).distinct()
 
-        fishattr_aggs = list(species.aggregate(
-            Avg('biomass_constant_a'),
-            Avg('biomass_constant_b'),
-            Avg('biomass_constant_c'),
-            Max('max_length'),
-        ).values())
+        fishattr_aggs = list(
+            species.aggregate(
+                Avg("biomass_constant_a"),
+                Avg("biomass_constant_b"),
+                Avg("biomass_constant_c"),
+                Max("max_length"),
+            ).values()
+        )
         biomass_constant_a = round(fishattr_aggs[0] or 0, 6)
         biomass_constant_b = round(fishattr_aggs[1] or 0, 6)
         biomass_constant_c = round(fishattr_aggs[2] or 0, 6)
@@ -1224,12 +1260,16 @@ class FishGrouping(FishAttribute):
         ordering = ("name",)
 
     def __str__(self):
-        return _('%s') % self.name or ""
+        return _("%s") % self.name or ""
 
 
 class FishGroupingRelationship(models.Model):
-    grouping = models.ForeignKey(FishGrouping, related_name="attribute_grouping", on_delete=models.CASCADE)
-    attribute = models.ForeignKey(FishAttribute, related_name="grouping_attribute", on_delete=models.CASCADE)
+    grouping = models.ForeignKey(
+        FishGrouping, related_name="attribute_grouping", on_delete=models.CASCADE
+    )
+    attribute = models.ForeignKey(
+        FishAttribute, related_name="grouping_attribute", on_delete=models.CASCADE
+    )
 
     def __str__(self):
         return "%s > %s" % (self.grouping, self.attribute)
@@ -1244,23 +1284,27 @@ class FishFamily(FishAttribute):
     name = models.CharField(max_length=100)
 
     def _set_species_agg_vals(self):
-        if (not FishFamily.species_agg or
-           expired_timestamp(FishFamily.species_agg_timestamp)):
-
-            species_agg_qs = FishSpecies.objects \
-                .select_related("genus__family") \
-                .order_by().values(family=F("genus__family")).annotate(
-                    biomass_constant_a=Avg('biomass_constant_a'),
-                    biomass_constant_b=Avg('biomass_constant_b'),
-                    biomass_constant_c=Avg('biomass_constant_c'),
-                    max_length=Max('max_length'),
+        if not FishFamily.species_agg or expired_timestamp(FishFamily.species_agg_timestamp):
+            species_agg_qs = (
+                FishSpecies.objects.select_related("genus__family")
+                .order_by()
+                .values(family=F("genus__family"))
+                .annotate(
+                    biomass_constant_a=Avg("biomass_constant_a"),
+                    biomass_constant_b=Avg("biomass_constant_b"),
+                    biomass_constant_c=Avg("biomass_constant_c"),
+                    max_length=Max("max_length"),
                 )
+            )
 
-            regions_agg_qs = FishSpecies.objects \
-                .select_related("genus__family") \
-                .order_by().values(family=F("genus__family")).annotate(
+            regions_agg_qs = (
+                FishSpecies.objects.select_related("genus__family")
+                .order_by()
+                .values(family=F("genus__family"))
+                .annotate(
                     regions=ArrayAgg("regions", distinct=True),
                 )
+            )
 
             FishFamily.species_agg = {str(bc["family"]): bc for bc in species_agg_qs}
             FishFamily.regions_agg = {str(fr["family"]): fr["regions"] for fr in regions_agg_qs}
@@ -1286,7 +1330,7 @@ class FishFamily(FishAttribute):
 
     @property
     def biomass_constant_a(self):
-        if hasattr(self, '_biomass_a'):
+        if hasattr(self, "_biomass_a"):
             return self._biomass_a
 
         self._set_species_agg_vals()
@@ -1294,7 +1338,7 @@ class FishFamily(FishAttribute):
 
     @property
     def biomass_constant_b(self):
-        if hasattr(self, '_biomass_b'):
+        if hasattr(self, "_biomass_b"):
             return self._biomass_b
 
         self._set_species_agg_vals()
@@ -1302,7 +1346,7 @@ class FishFamily(FishAttribute):
 
     @property
     def biomass_constant_c(self):
-        if hasattr(self, '_biomass_c'):
+        if hasattr(self, "_biomass_c"):
             return self._biomass_c
 
         self._set_species_agg_vals()
@@ -1310,7 +1354,7 @@ class FishFamily(FishAttribute):
 
     @property
     def max_length(self):
-        if hasattr(self, '_max_length'):
+        if hasattr(self, "_max_length"):
             return self._max_length
 
         self._set_species_agg_vals()
@@ -1318,23 +1362,22 @@ class FishFamily(FishAttribute):
 
     @property
     def regions(self):
-        if hasattr(self, '_regions'):
+        if hasattr(self, "_regions"):
             return self._regions
 
         self._set_species_agg_vals()
         return self._regions
 
     class Meta:
-        db_table = 'fish_family'
-        ordering = ('name',)
-        verbose_name_plural = _('fish families')
+        db_table = "fish_family"
+        ordering = ("name",)
+        verbose_name_plural = _("fish families")
 
     def __str__(self):
-        return _('%s') % self.name
+        return _("%s") % self.name
 
 
 class FishGenus(FishAttribute):
-
     # Caching at the class level
     species_agg = None
     species_agg_timestamp = None
@@ -1345,15 +1388,23 @@ class FishGenus(FishAttribute):
 
     def _set_species_agg_vals(self):
         if not FishGenus.species_agg or expired_timestamp(FishGenus.species_agg_timestamp):
-            species_agg_qs = FishSpecies.objects.order_by().values("genus").annotate(
-                biomass_constant_a=Avg('biomass_constant_a'),
-                biomass_constant_b=Avg('biomass_constant_b'),
-                biomass_constant_c=Avg('biomass_constant_c'),
-                max_length=Max('max_length'),
+            species_agg_qs = (
+                FishSpecies.objects.order_by()
+                .values("genus")
+                .annotate(
+                    biomass_constant_a=Avg("biomass_constant_a"),
+                    biomass_constant_b=Avg("biomass_constant_b"),
+                    biomass_constant_c=Avg("biomass_constant_c"),
+                    max_length=Max("max_length"),
+                )
             )
 
-            regions_agg_qs = FishSpecies.objects.order_by().values("genus").annotate(
-                regions=ArrayAgg("regions", distinct=True),
+            regions_agg_qs = (
+                FishSpecies.objects.order_by()
+                .values("genus")
+                .annotate(
+                    regions=ArrayAgg("regions", distinct=True),
+                )
             )
 
             FishGenus.species_agg = {str(bc["genus"]): bc for bc in species_agg_qs}
@@ -1380,7 +1431,7 @@ class FishGenus(FishAttribute):
 
     @property
     def biomass_constant_a(self):
-        if hasattr(self, '_biomass_a'):
+        if hasattr(self, "_biomass_a"):
             return self._biomass_a
 
         self._set_species_agg_vals()
@@ -1388,7 +1439,7 @@ class FishGenus(FishAttribute):
 
     @property
     def biomass_constant_b(self):
-        if hasattr(self, '_biomass_b'):
+        if hasattr(self, "_biomass_b"):
             return self._biomass_b
 
         self._set_species_agg_vals()
@@ -1396,7 +1447,7 @@ class FishGenus(FishAttribute):
 
     @property
     def biomass_constant_c(self):
-        if hasattr(self, '_biomass_c'):
+        if hasattr(self, "_biomass_c"):
             return self._biomass_c
 
         self._set_species_agg_vals()
@@ -1404,7 +1455,7 @@ class FishGenus(FishAttribute):
 
     @property
     def regions(self):
-        if hasattr(self, '_regions'):
+        if hasattr(self, "_regions"):
             return self._regions
 
         self._set_species_agg_vals()
@@ -1412,19 +1463,19 @@ class FishGenus(FishAttribute):
 
     @property
     def max_length(self):
-        if hasattr(self, '_max_length'):
+        if hasattr(self, "_max_length"):
             return self._max_length
 
         self._set_species_agg_vals()
         return self._max_length
 
     class Meta:
-        db_table = 'fish_genus'
-        ordering = ('name',)
-        verbose_name_plural = _('fish genera')
+        db_table = "fish_genus"
+        ordering = ("name",)
+        verbose_name_plural = _("fish genera")
 
     def __str__(self):
-        return _('%s') % self.name
+        return _("%s") % self.name
 
 
 class FishGroupSize(BaseChoiceModel):
@@ -1432,12 +1483,12 @@ class FishGroupSize(BaseChoiceModel):
     description = models.TextField(blank=True)
 
     class Meta:
-        db_table = 'fish_group_size'
-        ordering = ('name',)
-        verbose_name = _('fish group size')
+        db_table = "fish_group_size"
+        ordering = ("name",)
+        verbose_name = _("fish group size")
 
     def __str__(self):
-        return _('%s') % self.name
+        return _("%s") % self.name
 
 
 class FishGroupTrophic(BaseChoiceModel):
@@ -1445,12 +1496,12 @@ class FishGroupTrophic(BaseChoiceModel):
     description = models.TextField(blank=True)
 
     class Meta:
-        db_table = 'fish_group_trophic'
-        ordering = ('name',)
-        verbose_name = _('fish trophic group')
+        db_table = "fish_group_trophic"
+        ordering = ("name",)
+        verbose_name = _("fish trophic group")
 
     def __str__(self):
-        return _('%s') % self.name
+        return _("%s") % self.name
 
 
 class FishGroupFunction(BaseChoiceModel):
@@ -1458,80 +1509,100 @@ class FishGroupFunction(BaseChoiceModel):
     description = models.TextField(blank=True)
 
     class Meta:
-        db_table = 'fish_group_function'
-        ordering = ('name',)
-        verbose_name = _('fish functional group')
+        db_table = "fish_group_function"
+        ordering = ("name",)
+        verbose_name = _("fish functional group")
 
     def __str__(self):
-        return _('%s') % self.name
+        return _("%s") % self.name
 
 
 class FishSpecies(FishAttribute):
     LENGTH_TYPES = (
-        ('fork length', 'fork length'),
-        ('standard length', 'standard length'),
-        ('total length', 'total length'),
-        ('wing diameter', 'wing diameter')
+        ("fork length", "fork length"),
+        ("standard length", "standard length"),
+        ("total length", "total length"),
+        ("wing diameter", "wing diameter"),
     )
     LENGTH_TYPES_CHOICES_UPDATED_ON = datetime.datetime(2020, 1, 21, 0, 0, 0, 0, pytz.UTC)
 
     name = models.CharField(max_length=100)
     genus = models.ForeignKey(FishGenus, on_delete=models.CASCADE)
     regions = models.ManyToManyField(Region, blank=True)
-    biomass_constant_a = models.DecimalField(max_digits=7, decimal_places=6,
-                                             null=True, blank=True)
-    biomass_constant_b = models.DecimalField(max_digits=7, decimal_places=6,
-                                             null=True, blank=True)
-    biomass_constant_c = models.DecimalField(max_digits=7, decimal_places=6, default=1,
-                                             null=True, blank=True)
-    vulnerability = models.DecimalField(max_digits=4, decimal_places=2, null=True, blank=True,
-                                        validators=[MinValueValidator(0),
-                                                    MaxValueValidator(100)])
-    max_length = models.DecimalField(max_digits=6, decimal_places=2, verbose_name=_('maximum length (cm)'),
-                                     null=True, blank=True,
-                                     validators=[MinValueValidator(1),
-                                                 MaxValueValidator(2000)])  # Rhincodon typus is world's largest fish
-    trophic_level = models.DecimalField(max_digits=3, decimal_places=2, null=True, blank=True,
-                                        validators=[MinValueValidator(1),
-                                                    MaxValueValidator(5)])
+    biomass_constant_a = models.DecimalField(max_digits=7, decimal_places=6, null=True, blank=True)
+    biomass_constant_b = models.DecimalField(max_digits=7, decimal_places=6, null=True, blank=True)
+    biomass_constant_c = models.DecimalField(
+        max_digits=7, decimal_places=6, default=1, null=True, blank=True
+    )
+    vulnerability = models.DecimalField(
+        max_digits=4,
+        decimal_places=2,
+        null=True,
+        blank=True,
+        validators=[MinValueValidator(0), MaxValueValidator(100)],
+    )
+    max_length = models.DecimalField(
+        max_digits=6,
+        decimal_places=2,
+        verbose_name=_("maximum length (cm)"),
+        null=True,
+        blank=True,
+        validators=[MinValueValidator(1), MaxValueValidator(2000)],
+    )  # Rhincodon typus is world's largest fish
+    trophic_level = models.DecimalField(
+        max_digits=3,
+        decimal_places=2,
+        null=True,
+        blank=True,
+        validators=[MinValueValidator(1), MaxValueValidator(5)],
+    )
     max_length_type = models.CharField(max_length=50, choices=LENGTH_TYPES, blank=True)
-    group_size = models.ForeignKey(FishGroupSize,  on_delete=models.SET_NULL, null=True, blank=True)
-    trophic_group = models.ForeignKey(FishGroupTrophic,
-                                      on_delete=models.SET_NULL,
-                                      null=True, blank=True)
-    functional_group = models.ForeignKey(FishGroupFunction,
-                                         on_delete=models.SET_NULL,
-                                         null=True, blank=True)
-    climate_score = models.DecimalField(max_digits=10, decimal_places=9,
-                                        blank=True, null=True,
-                                        validators=[MinValueValidator(0),
-                                                    MaxValueValidator(1)])
+    group_size = models.ForeignKey(FishGroupSize, on_delete=models.SET_NULL, null=True, blank=True)
+    trophic_group = models.ForeignKey(
+        FishGroupTrophic, on_delete=models.SET_NULL, null=True, blank=True
+    )
+    functional_group = models.ForeignKey(
+        FishGroupFunction, on_delete=models.SET_NULL, null=True, blank=True
+    )
+    climate_score = models.DecimalField(
+        max_digits=10,
+        decimal_places=9,
+        blank=True,
+        null=True,
+        validators=[MinValueValidator(0), MaxValueValidator(1)],
+    )
     notes = models.TextField(blank=True)
 
     class Meta:
-        db_table = 'fish_species'
-        ordering = ('genus', 'name',)
-        verbose_name_plural = _('fish species')
+        db_table = "fish_species"
+        ordering = (
+            "genus",
+            "name",
+        )
+        verbose_name_plural = _("fish species")
 
     def __str__(self):
-        return _('%s %s') % (self.genus.name, self.name)
+        return _("%s %s") % (self.genus.name, self.name)
 
 
 class BeltFish(TransectMethod):
     protocol = FISHBELT_PROTOCOL
-    project_lookup = 'transect__sample_event__site__project'
+    project_lookup = "transect__sample_event__site__project"
 
-    transect = models.OneToOneField(FishBeltTransect, on_delete=models.CASCADE,
-                                    related_name='beltfish_method',
-                                    verbose_name=_('fish belt transect'))
+    transect = models.OneToOneField(
+        FishBeltTransect,
+        on_delete=models.CASCADE,
+        related_name="beltfish_method",
+        verbose_name=_("fish belt transect"),
+    )
 
     class Meta:
-        db_table = 'transectmethod_transectbeltfish'
-        verbose_name = _('fish belt transect')
-        verbose_name_plural = _('fish belt transect observations')
+        db_table = "transectmethod_transectbeltfish"
+        verbose_name = _("fish belt transect")
+        verbose_name_plural = _("fish belt transect observations")
 
     def __str__(self):
-        return _('fish belt transect %s') % self.transect.__str__()
+        return _("fish belt transect %s") % self.transect.__str__()
 
 
 class FishSizeBin(BaseChoiceModel):
@@ -1550,17 +1621,22 @@ class FishSize(BaseModel):
 
     @property
     def choice(self):
-        return {'id': self.val, 'name': self.name, 'updated_on': self.updated_on}
+        return {"id": self.val, "name": self.name, "updated_on": self.updated_on}
 
 
 class ObsBeltFish(BaseModel, JSONMixin):
     project_lookup = "beltfish__transect__sample_event__site__project"
 
-    beltfish = models.ForeignKey(BeltFish, on_delete=models.CASCADE,
-                                 related_name='beltfish_observations')
+    beltfish = models.ForeignKey(
+        BeltFish, on_delete=models.CASCADE, related_name="beltfish_observations"
+    )
     fish_attribute = models.ForeignKey(FishAttribute, on_delete=models.PROTECT)
-    size = models.DecimalField(max_digits=5, decimal_places=1, verbose_name=_('size (cm)'),
-                               validators=[MinValueValidator(0)])
+    size = models.DecimalField(
+        max_digits=5,
+        decimal_places=1,
+        verbose_name=_("size (cm)"),
+        validators=[MinValueValidator(0)],
+    )
     count = models.PositiveIntegerField(default=1)
     include = models.BooleanField(default=True, verbose_name=INCLUDE_OBS_TEXT)
     notes = models.TextField(blank=True)
@@ -1568,14 +1644,14 @@ class ObsBeltFish(BaseModel, JSONMixin):
     _hide_fish_in_repr = False
 
     class Meta:
-        db_table = 'obs_transectbeltfish'
-        verbose_name = _('fish belt transect observation')
+        db_table = "obs_transectbeltfish"
+        verbose_name = _("fish belt transect observation")
         ordering = ["created_on"]
 
     def __str__(self):
         if self._hide_fish_in_repr:
             return ""
-        return _('%s %s x %scm') % (self.fish_attribute.__str__(), self.count, self.size)
+        return _("%s %s x %scm") % (self.fish_attribute.__str__(), self.count, self.size)
 
     @property
     def observers(self):
@@ -1596,18 +1672,35 @@ class CollectRecord(BaseModel):
     SUBMITTED_STAGE = 25
 
     STAGE_CHOICES = (
-        (SAVING_STAGE, _('Saving'),),
-        (SAVED_STAGE, _('Saved'),),
-        (VALIDATING_STAGE, _('Validating'),),
-        (VALIDATED_STAGE, _('Validated'),),
-        (SUBMITTING_STAGE, _('Submitting'),),
-        (SUBMITTED_STAGE, _('Submitted'),),
+        (
+            SAVING_STAGE,
+            _("Saving"),
+        ),
+        (
+            SAVED_STAGE,
+            _("Saved"),
+        ),
+        (
+            VALIDATING_STAGE,
+            _("Validating"),
+        ),
+        (
+            VALIDATED_STAGE,
+            _("Validated"),
+        ),
+        (
+            SUBMITTING_STAGE,
+            _("Submitting"),
+        ),
+        (
+            SUBMITTED_STAGE,
+            _("Submitted"),
+        ),
     )
     STAGE_CHOICES_UPDATED_ON = datetime.datetime(2019, 2, 2, 0, 0, 0, 0, pytz.UTC)
 
-    project = models.ForeignKey(Project, related_name='collect_records', on_delete=models.CASCADE)
-    profile = models.ForeignKey(Profile, on_delete=models.CASCADE,
-                                related_name='collect_records')
+    project = models.ForeignKey(Project, related_name="collect_records", on_delete=models.CASCADE)
+    profile = models.ForeignKey(Profile, on_delete=models.CASCADE, related_name="collect_records")
     data = models.JSONField(encoder=JSONEncoder, null=True, blank=True)
     validations = models.JSONField(encoder=JSONEncoder, null=True, blank=True)
     stage = models.PositiveIntegerField(choices=STAGE_CHOICES, null=True, blank=True)
@@ -1678,8 +1771,14 @@ class ArchivedRecord(models.Model):
 
 class Covariate(BaseModel, JSONMixin):
     SUPPORTED_COVARIATES = (
-        ("aca_benthic", "Benthic_Allen Coral Atlas",),
-        ("aca_geomorphic", "Geomorphic_Allen Coral Atlas",),
+        (
+            "aca_benthic",
+            "Benthic_Allen Coral Atlas",
+        ),
+        (
+            "aca_geomorphic",
+            "Geomorphic_Allen Coral Atlas",
+        ),
         ("beyer_score", "50 Reefs score_Beyer"),
         ("beyer_scorecn", "50 Reefs connectivity_Beyer"),
         ("beyer_scorecy", "50 Reefs cyclones_Beyer"),
@@ -1695,18 +1794,17 @@ class Covariate(BaseModel, JSONMixin):
         ("andrello_cumul_score", "Cumulative local pressure_Andrello"),
     )
 
-    site = models.ForeignKey(
-        "Site",
-        related_name="covariates",
-        on_delete=models.CASCADE
-    )
+    site = models.ForeignKey("Site", related_name="covariates", on_delete=models.CASCADE)
     name = models.CharField(max_length=100, choices=SUPPORTED_COVARIATES)
     datestamp = models.DateField()
     requested_datestamp = models.DateField()
     value = models.JSONField(null=True, blank=True)
 
     class Meta:
-        unique_together = ("site", "name",)
+        unique_together = (
+            "site",
+            "name",
+        )
 
     def __str__(self):
         return f"{self.site.name} - {self.name}"
@@ -1717,8 +1815,14 @@ class AuditRecord(JSONMixin):
     EDIT_RECORD_EVENT_TYPE = 2
 
     AUDIT_EVENT_TYPES = (
-        (SUBMIT_RECORD_EVENT_TYPE, "Submit Record",),
-        (EDIT_RECORD_EVENT_TYPE, "Edit Record",),
+        (
+            SUBMIT_RECORD_EVENT_TYPE,
+            "Submit Record",
+        ),
+        (
+            EDIT_RECORD_EVENT_TYPE,
+            "Edit Record",
+        ),
     )
 
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
@@ -1733,7 +1837,7 @@ class Notification(BaseModel):
     INFO = "info"
     WARNING = "warning"
     ERROR = "error"
-    
+
     STATUSES = (
         (INFO, INFO),
         (WARNING, WARNING),

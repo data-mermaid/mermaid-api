@@ -1,12 +1,10 @@
-from .base import ERROR, OK, BaseValidator, validate_list, validator_result
-from ..utils import valid_id
 from ....models import HabitatComplexityScore
+from ..utils import valid_id
+from .base import ERROR, OK, BaseValidator, validate_list, validator_result
 
 
 def valid_scores():
-    return [
-        str(pk) for pk in HabitatComplexityScore.objects.values_list("id", flat=True)
-    ]
+    return [str(pk) for pk in HabitatComplexityScore.objects.values_list("id", flat=True)]
 
 
 class ScoreValidator(BaseValidator):

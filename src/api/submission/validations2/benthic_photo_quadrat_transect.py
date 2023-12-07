@@ -1,3 +1,4 @@
+from ...models import BenthicAttribute
 from .base import (
     FIELD_LEVEL,
     LIST_VALIDATION_TYPE,
@@ -9,6 +10,7 @@ from .base import (
 from .validators import (
     AllEqualValidator,
     DepthValidator,
+    DrySubmitValidator,
     DuplicateValidator,
     LenSurveyedValidator,
     ListRequiredValidator,
@@ -23,12 +25,10 @@ from .validators import (
     RequiredValidator,
     SampleDateValidator,
     SampleTimeValidator,
-    DrySubmitValidator,
     UniqueManagementValidator,
-    UniqueSiteValidator,
     UniqueQuadratTransectValidator,
+    UniqueSiteValidator,
 )
-from ...models import BenthicAttribute
 
 benthic_photo_quadrat_transect_validations = [
     Validation(
@@ -183,7 +183,7 @@ benthic_photo_quadrat_transect_validations = [
             attribute_model_class=BenthicAttribute,
             site_path="data.sample_event.site",
             observations_path="data.obs_benthic_photo_quadrats",
-            observation_attribute_path="attribute"
+            observation_attribute_path="attribute",
         ),
         paths=["data.obs_benthic_photo_quadrats"],
         validation_level=ROW_LEVEL,
@@ -234,9 +234,7 @@ benthic_photo_quadrat_transect_validations = [
         requires_instance=True,
     ),
     Validation(
-        validator=QuadratSizeValidator(
-            quadrat_size_path="data.quadrat_transect.quadrat_size"
-        ),
+        validator=QuadratSizeValidator(quadrat_size_path="data.quadrat_transect.quadrat_size"),
         paths=["data.quadrat_transect.quadrat_size"],
         validation_level=FIELD_LEVEL,
         validation_type=VALUE_VALIDATION_TYPE,
@@ -251,10 +249,7 @@ benthic_photo_quadrat_transect_validations = [
         validation_type=VALUE_VALIDATION_TYPE,
     ),
     Validation(
-        validator=AllEqualValidator(
-            path="data.obs_benthic_photo_quadrats",
-            ignore_keys=["id"]
-        ),
+        validator=AllEqualValidator(path="data.obs_benthic_photo_quadrats", ignore_keys=["id"]),
         paths=["data.obs_benthic_photo_quadrats"],
         validation_level=RECORD_LEVEL,
         validation_type=VALUE_VALIDATION_TYPE,
@@ -285,7 +280,7 @@ benthic_photo_quadrat_transect_validations = [
             num_quadrats_path="data.quadrat_transect.num_quadrats",
             obs_benthic_photo_quadrats_path="data.obs_benthic_photo_quadrats",
             observation_quadrat_number_path="quadrat_number",
-            quadrat_number_start_path="data.quadrat_transect.quadrat_number_start"
+            quadrat_number_start_path="data.quadrat_transect.quadrat_number_start",
         ),
         paths=["data.obs_benthic_photo_quadrats"],
         validation_level=RECORD_LEVEL,

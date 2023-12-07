@@ -1,8 +1,8 @@
 import time
-from django.utils import timezone
 
 from django.conf import settings
 from django.http import HttpResponse
+from django.utils import timezone
 from django.utils.deprecation import MiddlewareMixin
 
 from tools.logger import DatabaseLogger
@@ -68,14 +68,13 @@ class MetricsMiddleware:
 
     def _ignore_url_path(self, url_path):
         return any(
-            url_path.startswith(ignore_route)
-            for ignore_route in settings.METRICS_IGNORE_ROUTES
+            url_path.startswith(ignore_route) for ignore_route in settings.METRICS_IGNORE_ROUTES
         )
 
     def __exit__(self, exc_type, exc_value, traceback):
         self.metrics_logger.close()
         super().__exit__(exc_type, exc_value, traceback)
-    
+
     def __call__(self, request):
         url_path = request.path
         response = self.get_response(request)
@@ -84,9 +83,7 @@ class MetricsMiddleware:
             return response
 
         method = request.method
-        token_type, auth_type, user_id = self.parse_token(
-            request.headers.get("Authorization")
-        )
+        token_type, auth_type, user_id = self.parse_token(request.headers.get("Authorization"))
 
         s = time.time_ns()
 
@@ -111,7 +108,7 @@ class MetricsMiddleware:
                 "token_type": token_type,
                 "auth_type": auth_type,
                 "user_id": user_id or "",
-            }
+            },
         )
 
         return response

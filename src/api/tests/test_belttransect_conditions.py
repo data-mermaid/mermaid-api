@@ -1,5 +1,6 @@
-from api.models import BeltTransectWidth, BeltTransectWidthCondition
 from django.test import TestCase
+
+from api.models import BeltTransectWidth, BeltTransectWidthCondition
 
 
 class BeltTransectWidthNoGapsTest(TestCase):
@@ -35,7 +36,6 @@ class BeltTransectWidthNoGapsTest(TestCase):
         self.btw_cond_gt_10 = None
 
     def test_no_range_gap(self):
-
         condition = self.belt_transect_width.get_condition(3)
         assert condition.val == 1
 
@@ -76,7 +76,8 @@ class BeltTransectWidthGapsTest(TestCase):
         )
 
         self.btw_cond_default = BeltTransectWidthCondition.objects.create(
-            belttransectwidth=self.belt_transect_width, val=3,
+            belttransectwidth=self.belt_transect_width,
+            val=3,
         )
 
     def tearDown(self):
@@ -91,7 +92,6 @@ class BeltTransectWidthGapsTest(TestCase):
         self.btw_cond_default = None
 
     def test_range_gap(self):
-
         condition = self.belt_transect_width.get_condition(3)
         assert condition.val == 1
 

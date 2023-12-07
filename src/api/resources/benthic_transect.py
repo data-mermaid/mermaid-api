@@ -1,8 +1,8 @@
 import django_filters
 
-from .base import BaseAPIFilterSet, BaseProjectApiViewSet, BaseAPISerializer
-from .sample_units_base import SampleUnitFilterSet, SampleUnitSerializer
 from ..models import BenthicTransect
+from .base import BaseAPIFilterSet, BaseAPISerializer, BaseProjectApiViewSet
+from .sample_units_base import SampleUnitFilterSet, SampleUnitSerializer
 
 
 class BenthicTransectSerializer(SampleUnitSerializer):
@@ -10,9 +10,7 @@ class BenthicTransectSerializer(SampleUnitSerializer):
         model = BenthicTransect
         exclude = []
         extra_kwargs = {
-            "len_surveyed": {
-                "error_messages": {"null": "Transect length surveyed is required"}
-            },
+            "len_surveyed": {"error_messages": {"null": "Transect length surveyed is required"}},
             "number": {"error_messages": {"null": "Transect Number is required"}},
         }
         extra_kwargs.update(SampleUnitSerializer.extra_kwargs)

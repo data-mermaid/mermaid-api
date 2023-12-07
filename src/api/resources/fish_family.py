@@ -1,7 +1,8 @@
 from django_filters import BaseInFilter
 from rest_framework import serializers
-from .base import BaseAPIFilterSet, BaseAttributeApiViewSet, BaseAPISerializer
+
 from ..models import FishFamily
+from .base import BaseAPIFilterSet, BaseAPISerializer, BaseAttributeApiViewSet
 
 
 class FishFamilySerializer(BaseAPISerializer):
@@ -17,9 +18,7 @@ class FishFamilySerializer(BaseAPISerializer):
 
 
 class FishFamilyFilterSet(BaseAPIFilterSet):
-    regions = BaseInFilter(
-        field_name="fishgenus__fishspecies__regions", lookup_expr="in"
-    )
+    regions = BaseInFilter(field_name="fishgenus__fishspecies__regions", lookup_expr="in")
 
     class Meta:
         model = FishFamily

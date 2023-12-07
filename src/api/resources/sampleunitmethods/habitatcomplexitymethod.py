@@ -1,17 +1,17 @@
 from django.db import transaction
 from django_filters import BaseInFilter, RangeFilter
 from rest_condition import Or
-from rest_framework import status, serializers
+from rest_framework import serializers, status
 from rest_framework.response import Response
 
 from ...models import (
+    HabitatComplexity,
     HabitatComplexityObsModel,
     HabitatComplexityObsSQLModel,
     HabitatComplexitySEModel,
     HabitatComplexitySESQLModel,
     HabitatComplexitySUModel,
     HabitatComplexitySUSQLModel,
-    HabitatComplexity,
     ObsHabitatComplexity,
 )
 from ...permissions import ProjectDataReadOnlyPermission, ProjectPublicSummaryPermission
@@ -27,6 +27,7 @@ from ...reports.formatters import (
 )
 from ...reports.report_serializer import ReportSerializer
 from ..base import (
+    BaseAPISerializer,
     BaseProjectApiViewSet,
     BaseSEFilterSet,
     BaseSUObsFilterSet,
@@ -34,10 +35,9 @@ from ..base import (
     BaseSUViewAPISUSerializer,
     BaseViewAPIGeoSerializer,
     BaseViewAPISUGeoSerializer,
-    BaseAPISerializer,
 )
 from ..benthic_transect import BenthicTransectSerializer
-from ..mixins import SampleUnitMethodSummaryReport, SampleUnitMethodEditMixin
+from ..mixins import SampleUnitMethodEditMixin, SampleUnitMethodSummaryReport
 from ..observer import ObserverSerializer
 from ..sample_event import SampleEventSerializer
 from . import (
@@ -80,7 +80,9 @@ class HabitatComplexityMethodSerializer(HabitatComplexitySerializer):
         exclude = []
 
 
-class HabitatComplexityMethodView(SampleUnitMethodSummaryReport, SampleUnitMethodEditMixin, BaseProjectApiViewSet):
+class HabitatComplexityMethodView(
+    SampleUnitMethodSummaryReport, SampleUnitMethodEditMixin, BaseProjectApiViewSet
+):
     queryset = (
         HabitatComplexity.objects.select_related("transect", "transect__sample_event")
         .all()
@@ -99,9 +101,7 @@ class HabitatComplexityMethodView(SampleUnitMethodSummaryReport, SampleUnitMetho
             observers=request.data.get("observers"),
             obs_habitat_complexities=request.data.get("obs_habitat_complexities"),
         )
-        habitat_complexity_data = {
-            k: v for k, v in request.data.items() if k not in nested_data
-        }
+        habitat_complexity_data = {k: v for k, v in request.data.items() if k not in nested_data}
         habitat_complexity_id = habitat_complexity_data["id"]
 
         context = dict(request=request)
@@ -508,9 +508,7 @@ class HabitatComplexityProjectMethodSUView(BaseProjectMethodView):
 class HabitatComplexityProjectMethodSEView(BaseProjectMethodView):
     drf_label = "habitatcomplexity-se"
     project_policy = "data_policy_habitatcomplexity"
-    permission_classes = [
-        Or(ProjectDataReadOnlyPermission, ProjectPublicSummaryPermission)
-    ]
+    permission_classes = [Or(ProjectDataReadOnlyPermission, ProjectPublicSummaryPermission)]
     model = HabitatComplexitySEModel
     serializer_class = HabitatComplexityMethodSESerializer
     serializer_class_geojson = HabitatComplexityMethodSEGeoSerializer

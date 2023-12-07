@@ -3,6 +3,7 @@ from datetime import datetime as dt
 
 from django.conf import settings
 from django.contrib.gis.geos import Point
+from jose import jwt
 
 from api.models.base import AuthUser, Profile
 from api.models.mermaid import (
@@ -30,7 +31,6 @@ from api.models.mermaid import (
     Tide,
     Visibility,
 )
-from jose import jwt
 
 
 class MockRequest:
@@ -130,17 +130,13 @@ class TestDataMixin(object):
         self.fish_family3 = None
 
     def load_benthicattributes(self):
-        self.benthic_attribute1a, _ = BenthicAttribute.objects.get_or_create(
-            name="Macroalgae"
-        )
+        self.benthic_attribute1a, _ = BenthicAttribute.objects.get_or_create(name="Macroalgae")
 
         self.benthic_attribute1b, _ = BenthicAttribute.objects.get_or_create(
             name="Red Fleshy Algae", parent=self.benthic_attribute1a
         )
 
-        self.benthic_attribute2a, _ = BenthicAttribute.objects.get_or_create(
-            name="Hard coral"
-        )
+        self.benthic_attribute2a, _ = BenthicAttribute.objects.get_or_create(name="Hard coral")
 
         self.benthic_attribute2b, _ = BenthicAttribute.objects.get_or_create(
             name="Acroporidae", parent=self.benthic_attribute2a
@@ -187,15 +183,9 @@ class TestDataMixin(object):
         self.reef_zone2, _ = ReefZone.objects.get_or_create(name="reefzone2")
         self.reef_zone3, _ = ReefZone.objects.get_or_create(name="reefzone3")
 
-        self.reef_exposure1, _ = ReefExposure.objects.get_or_create(
-            name="reefexp1", val=1
-        )
-        self.reef_exposure2, _ = ReefExposure.objects.get_or_create(
-            name="reefexp2", val=2
-        )
-        self.reef_exposure3, _ = ReefExposure.objects.get_or_create(
-            name="reefexp3", val=3
-        )
+        self.reef_exposure1, _ = ReefExposure.objects.get_or_create(name="reefexp1", val=1)
+        self.reef_exposure2, _ = ReefExposure.objects.get_or_create(name="reefexp2", val=2)
+        self.reef_exposure3, _ = ReefExposure.objects.get_or_create(name="reefexp3", val=3)
 
         self.visibility1, _ = Visibility.objects.get_or_create(name="Near", val=1)
         self.visibility2, _ = Visibility.objects.get_or_create(name="Mid", val=2)
@@ -211,12 +201,8 @@ class TestDataMixin(object):
         self.tide1, _ = Tide.objects.get_or_create(name="Low")
         self.tide2, _ = Tide.objects.get_or_create(name="High")
 
-        self.belt_transect_width1, _ = BeltTransectWidth.objects.get_or_create(
-            name="2m"
-        )
-        self.belt_transect_width2, _ = BeltTransectWidth.objects.get_or_create(
-            name="5m"
-        )
+        self.belt_transect_width1, _ = BeltTransectWidth.objects.get_or_create(name="2m")
+        self.belt_transect_width2, _ = BeltTransectWidth.objects.get_or_create(name="5m")
 
         (
             self.belt_transect_width1_condition,
@@ -238,9 +224,7 @@ class TestDataMixin(object):
         (
             self.habitat_complexity_score1,
             _,
-        ) = HabitatComplexityScore.objects.get_or_create(
-            name="no vertical relief", val=1
-        )
+        ) = HabitatComplexityScore.objects.get_or_create(name="no vertical relief", val=1)
         (
             self.habitat_complexity_score2,
             _,
@@ -248,17 +232,11 @@ class TestDataMixin(object):
         (
             self.habitat_complexity_score3,
             _,
-        ) = HabitatComplexityScore.objects.get_or_create(
-            name="exceptionally complex", val=3
-        )
+        ) = HabitatComplexityScore.objects.get_or_create(name="exceptionally complex", val=3)
 
-        self.management_party1, _ = ManagementParty.objects.get_or_create(
-            name="Government"
-        )
+        self.management_party1, _ = ManagementParty.objects.get_or_create(name="Government")
         self.management_party2, _ = ManagementParty.objects.get_or_create(name="NGO")
-        self.management_party3, _ = ManagementParty.objects.get_or_create(
-            name="Private Sector"
-        )
+        self.management_party3, _ = ManagementParty.objects.get_or_create(name="Private Sector")
 
         self.fish_size_bin1, _ = FishSizeBin.objects.get_or_create(val="1")
         self.fish_size_bin2, _ = FishSizeBin.objects.get_or_create(val="5")
@@ -340,9 +318,7 @@ class TestDataMixin(object):
         self.fish_size_bin3 = None
 
     def load_projects(self):
-        self.project1, _ = Project.objects.get_or_create(
-            name="Test Project 1", status=Project.OPEN
-        )
+        self.project1, _ = Project.objects.get_or_create(name="Test Project 1", status=Project.OPEN)
         self.project2, _ = Project.objects.get_or_create(
             name="Test Project 2", status=Project.LOCKED
         )

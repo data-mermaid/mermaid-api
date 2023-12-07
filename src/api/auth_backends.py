@@ -5,7 +5,6 @@ from django.conf import settings
 from django.contrib.auth import get_user_model
 from django.contrib.auth.models import AnonymousUser
 from django.utils import timezone
-
 from rest_framework import exceptions
 from rest_framework.authentication import BaseAuthentication
 
@@ -51,7 +50,6 @@ class JWTAuthentication(BaseAuthentication):
         return (user, jwt_token)
 
     def _authenticate_profile(self, payload):
-
         sub = payload.get("sub")
         if not sub:
             msg = "Missing 'sub' claim."
@@ -67,9 +65,7 @@ class JWTAuthentication(BaseAuthentication):
             profile = self._validate_profile(payload)
 
         else:
-            msg = (
-                "Invalid claim. sub should contain '|' or" + " '@clients': {}"
-            ).format(sub)
+            msg = ("Invalid claim. sub should contain '|' or" + " '@clients': {}").format(sub)
             logger.debug(msg)
             raise exceptions.AuthenticationFailed(msg)
 
@@ -110,9 +106,7 @@ class JWTAuthentication(BaseAuthentication):
                     # https://developer.mailchimp.com/documentation/mailchimp/guides/manage-subscribers-with-the
                     # -mailchimp-api/
                     try:
-                        client = MailChimp(
-                            mc_api=settings.MC_API_KEY, mc_user=settings.MC_USER
-                        )
+                        client = MailChimp(mc_api=settings.MC_API_KEY, mc_user=settings.MC_USER)
 
                         client.lists.members.create_or_update(
                             settings.MC_LIST_ID,

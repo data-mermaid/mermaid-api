@@ -1,9 +1,9 @@
 from django import urls
 from django.conf import settings
-from django.db.models.signals import post_delete, post_save, m2m_changed
+from django.db.models.signals import m2m_changed, post_delete, post_save
 from django.dispatch import receiver
 
-from ..models import BaseAttributeModel, Tag, ProjectProfile, Project
+from ..models import BaseAttributeModel, Project, ProjectProfile, Tag
 from ..notifications import (
     notify_admins_change,
     notify_admins_project_change,
@@ -11,7 +11,6 @@ from ..notifications import (
 )
 from ..utils import get_subclasses
 from ..utils.email import mermaid_email
-
 
 __all__ = (
     "notify_admins_project_instance_change",
@@ -34,9 +33,7 @@ def email_superadmin_on_new(sender, instance, created, **kwargs):
     ):
         return
 
-    subject = (
-        f"New {instance_label} proposed for MERMAID by {instance.updated_by.full_name}"
-    )
+    subject = f"New {instance_label} proposed for MERMAID by {instance.updated_by.full_name}"
     reverse_str = f"admin:{sender._meta.app_label}_{sender._meta.model_name}_change"
     url = urls.reverse(reverse_str, args=[instance.pk])
     admin_link = f"{settings.DEFAULT_DOMAIN_API}{url}"
@@ -59,12 +56,8 @@ def email_superadmin_on_new(sender, instance, created, **kwargs):
 
 
 for c in get_subclasses(BaseAttributeModel):
-    post_save.connect(
-        email_superadmin_on_new, sender=c, dispatch_uid=f"{c._meta.object_name}_save"
-    )
-post_save.connect(
-    email_superadmin_on_new, sender=Tag, dispatch_uid=f"{Tag._meta.object_name}_save"
-)
+    post_save.connect(email_superadmin_on_new, sender=c, dispatch_uid=f"{c._meta.object_name}_save")
+post_save.connect(email_superadmin_on_new, sender=Tag, dispatch_uid=f"{Tag._meta.object_name}_save")
 
 
 @receiver(post_save, sender=Project)
@@ -74,9 +67,7 @@ def notify_admins_project_instance_change(sender, instance, created, **kwargs):
 
     old_values = instance._old_values
     new_values = instance._new_values
-    diffs = [
-        (k, (v, new_values[k])) for k, v in old_values.items() if v != new_values[k]
-    ]
+    diffs = [(k, (v, new_values[k])) for k, v in old_values.items() if v != new_values[k]]
     if diffs:
         text_changes = []
         for diff in diffs:
@@ -93,9 +84,7 @@ def notify_admins_project_instance_change(sender, instance, created, **kwargs):
 
 
 @receiver(m2m_changed, sender=Project.tags.through)
-def notify_admins_project_tags_change(
-    sender, instance, action, reverse, model, pk_set, **kwargs
-):
+def notify_admins_project_tags_change(sender, instance, action, reverse, model, pk_set, **kwargs):
     if action == "post_add" or action == "post_remove":
         text_changes = []
         verb = ""
@@ -139,9 +128,7 @@ def notify_new_project_user(sender, instance, created, **kwargs):
         email_template = "emails/user_project_add_remove.html"
     notify_template = "notifications/user_project_add_remove.txt"
 
-    notify_project_users(
-        instance.project, subject, email_template, notify_template, context
-    )
+    notify_project_users(instance.project, subject, email_template, notify_template, context)
 
 
 @receiver(post_delete, sender=ProjectProfile)

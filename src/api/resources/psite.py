@@ -1,9 +1,19 @@
 from functools import cache
+
 from django_filters import rest_framework as filters
 
 from ..models import Covariate, Site
-from .base import BaseAPIFilterSet, BaseAPISerializer, BaseProjectApiViewSet, PointFieldValidated
-from .mixins import CopyRecordsMixin, CreateOrUpdateSerializerMixin, NotifyDeletedSiteMRMixin
+from .base import (
+    BaseAPIFilterSet,
+    BaseAPISerializer,
+    BaseProjectApiViewSet,
+    PointFieldValidated,
+)
+from .mixins import (
+    CopyRecordsMixin,
+    CreateOrUpdateSerializerMixin,
+    NotifyDeletedSiteMRMixin,
+)
 
 
 class PSiteSerializer(CreateOrUpdateSerializerMixin, BaseAPISerializer):
@@ -13,7 +23,7 @@ class PSiteSerializer(CreateOrUpdateSerializerMixin, BaseAPISerializer):
         geo_field = "location"
         model = Site
         exclude = []
-    
+
     @cache
     def _covariates(self, project_id):
         covariates = {}
@@ -21,7 +31,14 @@ class PSiteSerializer(CreateOrUpdateSerializerMixin, BaseAPISerializer):
             site_id = str(c.site_id)
             if site_id not in covariates:
                 covariates[site_id] = []
-            covariates[site_id].append({"id": str(c.id), "name": c.name, "value": c.value, "requested_datestamp": c.requested_datestamp})
+            covariates[site_id].append(
+                {
+                    "id": str(c.id),
+                    "name": c.name,
+                    "value": c.value,
+                    "requested_datestamp": c.requested_datestamp,
+                }
+            )
 
         return covariates
 
@@ -40,10 +57,7 @@ class PSiteSerializer(CreateOrUpdateSerializerMixin, BaseAPISerializer):
 
 
 class PSiteFilterSet(BaseAPIFilterSet):
-    covars = filters.BooleanFilter(
-        field_name="covars",
-        method="filter_covars"
-    )
+    covars = filters.BooleanFilter(field_name="covars", method="filter_covars")
 
     def filter_covars(self, queryset, name, value):
         return queryset
@@ -51,7 +65,7 @@ class PSiteFilterSet(BaseAPIFilterSet):
     class Meta:
         model = Site
         fields = ["country", "reef_type", "reef_zone", "exposure", "covars"]
-    
+
 
 class PSiteViewSet(NotifyDeletedSiteMRMixin, CopyRecordsMixin, BaseProjectApiViewSet):
     model_display_name = "Site"

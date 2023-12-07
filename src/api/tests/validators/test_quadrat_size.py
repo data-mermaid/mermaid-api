@@ -1,17 +1,11 @@
 import pytest
-from api.submission.validations2.validators import OK, ERROR, QuadratSizeValidator
+
+from api.submission.validations2.validators import ERROR, OK, QuadratSizeValidator
 
 
 @pytest.fixture
 def base_collect_record():
-    return {
-        "protocol": "bleachingqc",
-        "data": {
-            "quadrat_collection": {
-                "quadrat_size": 1
-            }
-        }
-    }
+    return {"protocol": "bleachingqc", "data": {"quadrat_collection": {"quadrat_size": 1}}}
 
 
 def _get_validator():
@@ -27,7 +21,6 @@ def test_quadrat_size_validator_ok(base_collect_record):
 
 
 def test_quadrat_size_validator_invalid(base_collect_record):
-
     base_collect_record["data"]["quadrat_collection"]["quadrat_size"] = 0
 
     validator = _get_validator()

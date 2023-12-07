@@ -1,7 +1,8 @@
 from django_filters import BaseInFilter
 from rest_framework import serializers
-from .base import BaseAPIFilterSet, BaseAttributeApiViewSet, BaseAPISerializer
+
 from ..models import FishGenus, FishSpecies
+from .base import BaseAPIFilterSet, BaseAPISerializer, BaseAttributeApiViewSet
 
 
 class FishGenusSerializer(BaseAPISerializer):
@@ -18,16 +19,19 @@ class FishGenusSerializer(BaseAPISerializer):
 
 class FishGenusFilterSet(BaseAPIFilterSet):
     regions = BaseInFilter(field_name="fishspecies__regions", lookup_expr="in")
+
     class Meta:
         model = FishGenus
-        fields = ['family', 'status', "regions"]
+        fields = ["family", "status", "regions"]
 
 
 class FishGenusViewSet(BaseAttributeApiViewSet):
     serializer_class = FishGenusSerializer
     queryset = FishGenus.objects.select_related()
     filterset_class = FishGenusFilterSet
-    search_fields = ['name', ]
+    search_fields = [
+        "name",
+    ]
 
     def stringify_instance(self, v):
         if v is None:

@@ -4,10 +4,10 @@ from django.utils.dateparse import parse_datetime
 from rest_framework.exceptions import ParseError
 from timezonefinder import TimezoneFinder
 
-from .base import ERROR, OK, WARN, BaseValidator, validator_result
-from ..utils import valid_id
 from ....exceptions import check_uuid
 from ....models import Site
+from ..utils import valid_id
+from .base import ERROR, OK, WARN, BaseValidator, validator_result
 
 
 class SampleDateValidator(BaseValidator):
@@ -64,8 +64,8 @@ class SampleDateValidator(BaseValidator):
             return ERROR, self.INVALID_SAMPLE_DATE
 
         if (
-            site_id and self.is_future_sample_date(sample_date_str, sample_time_str, site_id)
-            is True
+            site_id
+            and self.is_future_sample_date(sample_date_str, sample_time_str, site_id) is True
         ):
             return WARN, self.FUTURE_SAMPLE_DATE
 

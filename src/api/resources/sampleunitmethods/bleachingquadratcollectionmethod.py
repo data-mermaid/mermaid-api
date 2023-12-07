@@ -31,6 +31,7 @@ from ...reports.formatters import (
 )
 from ...reports.report_serializer import ReportSerializer
 from ..base import (
+    BaseAPISerializer,
     BaseProjectApiViewSet,
     BaseSEFilterSet,
     BaseSUObsFilterSet,
@@ -38,9 +39,8 @@ from ..base import (
     BaseSUViewAPISUSerializer,
     BaseViewAPIGeoSerializer,
     BaseViewAPISUGeoSerializer,
-    BaseAPISerializer,
 )
-from ..mixins import SampleUnitMethodSummaryReport, SampleUnitMethodEditMixin
+from ..mixins import SampleUnitMethodEditMixin, SampleUnitMethodSummaryReport
 from ..observer import ObserverSerializer
 from ..quadrat_collection import QuadratCollectionSerializer
 from ..sample_event import SampleEventSerializer
@@ -124,9 +124,7 @@ class BleachingQuadratCollectionMethodView(
             obs_quadrat_benthic_percent=request.data.get("obs_quadrat_benthic_percent"),
             obs_colonies_bleached=request.data.get("obs_colonies_bleached"),
         )
-        bleaching_qc_data = {
-            k: v for k, v in request.data.items() if k not in nested_data
-        }
+        bleaching_qc_data = {k: v for k, v in request.data.items() if k not in nested_data}
         bleaching_qc_id = bleaching_qc_data["id"]
 
         context = dict(request=request)
@@ -647,7 +645,9 @@ class BleachingQCMethodColoniesBleachedObsFilterSet(BaseSUObsFilterSet):
         ]
 
 
-class BleachingQCMethodColoniesBleachedObsSQLFilterSet(BleachingQCMethodColoniesBleachedObsFilterSet):
+class BleachingQCMethodColoniesBleachedObsSQLFilterSet(
+    BleachingQCMethodColoniesBleachedObsFilterSet
+):
     class Meta(BleachingQCMethodColoniesBleachedObsFilterSet.Meta):
         model = BleachingQCColoniesBleachedObsSQLModel
 
@@ -668,7 +668,9 @@ class BleachingQCMethodQuadratBenthicPercentObsFilterSet(BaseSUObsFilterSet):
         ]
 
 
-class BleachingQCMethodQuadratBenthicPercentObsSQLFilterSet(BleachingQCMethodQuadratBenthicPercentObsFilterSet):
+class BleachingQCMethodQuadratBenthicPercentObsSQLFilterSet(
+    BleachingQCMethodQuadratBenthicPercentObsFilterSet
+):
     class Meta(BleachingQCMethodQuadratBenthicPercentObsFilterSet.Meta):
         model = BleachingQCQuadratBenthicPercentObsSQLModel
 
@@ -798,9 +800,7 @@ class BleachingQCProjectMethodSUView(BaseProjectMethodView):
 class BleachingQCProjectMethodSEView(BaseProjectMethodView):
     drf_label = "bleachingqc-se"
     project_policy = "data_policy_bleachingqc"
-    permission_classes = [
-        Or(ProjectDataReadOnlyPermission, ProjectPublicSummaryPermission)
-    ]
+    permission_classes = [Or(ProjectDataReadOnlyPermission, ProjectPublicSummaryPermission)]
     model = BleachingQCSEModel
     serializer_class = BleachingQCMethodSESerializer
     serializer_class_geojson = BleachingQCMethodSEGeoSerializer

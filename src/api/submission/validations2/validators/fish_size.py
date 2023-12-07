@@ -1,5 +1,5 @@
 from ....models.mermaid import FishAttribute
-from .base import OK, WARN, ERROR, BaseValidator, validator_result
+from .base import ERROR, OK, WARN, BaseValidator, validator_result
 
 
 class FishSizeValidator(BaseValidator):

@@ -1,25 +1,26 @@
-from constructs import Construct
 from aws_cdk import (
     Duration,
-    aws_sqs as sqs,
+    aws_applicationautoscaling as appscaling,
     aws_cloudwatch as cw,
     aws_cloudwatch_actions as cw_actions,
+    aws_ec2 as ec2,
+    aws_ecs as ecs,
+    aws_ecs_patterns as ecs_patterns,
+    aws_s3 as s3,
     aws_sns as sns,
     aws_sns_subscriptions as sns_subs,
-    aws_ecs_patterns as ecs_patterns,
-    aws_ecs as ecs,
-    aws_ec2 as ec2,
-    aws_applicationautoscaling as appscaling,
-    aws_s3 as s3,
+    aws_sqs as sqs,
 )
+from constructs import Construct
 
 from iac.settings.settings import ProjectSettings
 
+
 class QueueWorker(Construct):
     def __init__(
-        self, 
-        scope: Construct, 
-        id: str, 
+        self,
+        scope: Construct,
+        id: str,
         config: ProjectSettings,
         cluster: ecs.Cluster,
         image_asset: ecs.ContainerImage,
@@ -31,7 +32,6 @@ class QueueWorker(Construct):
         email: str = None,
         **kwargs,
     ) -> None:
-        
         super().__init__(scope, id, **kwargs)
 
         # DLQ
@@ -52,10 +52,7 @@ class QueueWorker(Construct):
             queue_name=f"{queue_name}.fifo",
             content_based_deduplication=False,
             visibility_timeout=Duration.seconds(config.api.sqs_message_visibility),
-            dead_letter_queue=sqs.DeadLetterQueue(
-                max_receive_count=2, 
-                queue=dead_letter_queue
-            ),
+            dead_letter_queue=sqs.DeadLetterQueue(max_receive_count=2, queue=dead_letter_queue),
         )
 
         # CloudWatch Alarm for DLQ
@@ -73,7 +70,7 @@ class QueueWorker(Construct):
 
         # SNS Topic & Subscription
         topic = sns.Topic(self, "Topic")
-        if email:   
+        if email:
             topic.add_subscription(sns_subs.EmailSubscription(email))
 
         # Add SNS Action to CloudWatch Alarms

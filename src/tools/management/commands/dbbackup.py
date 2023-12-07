@@ -1,13 +1,14 @@
-import boto3
 import os
 import shlex
 import traceback
+from datetime import datetime, timezone
+
+import boto3
 from django.conf import settings
 from django.core.management.base import BaseCommand
 from simpleflake import simpleflake
-from datetime import datetime, timezone
-from api.utils import run_subprocess
 
+from api.utils import run_subprocess
 
 BACKUP_EXTENSION = "sql"
 
@@ -53,7 +54,7 @@ class Command(BaseCommand):
             "-c",
             action="store_true",
             default=False,
-            help="Execute within a scheduled context only appropriate for production environment"
+            help="Execute within a scheduled context only appropriate for production environment",
         )
 
     def handle(self, *args, **options):
@@ -78,12 +79,8 @@ class Command(BaseCommand):
         self.pg_dump(new_backup_path)
 
         if not options.get("no_upload"):
-            print(
-                f"Uploading {new_aws_key_name} to S3 bucket {settings.AWS_BACKUP_BUCKET}"
-            )
-            self.s3.upload_file(
-                new_backup_path, settings.AWS_BACKUP_BUCKET, new_aws_key_name
-            )
+            print(f"Uploading {new_aws_key_name} to S3 bucket {settings.AWS_BACKUP_BUCKET}")
+            self.s3.upload_file(new_backup_path, settings.AWS_BACKUP_BUCKET, new_aws_key_name)
             print("Upload complete")
 
         bucket_file_list = self.get_s3_bucket_obj_list()
@@ -106,11 +103,7 @@ class Command(BaseCommand):
             "dump_file": filename,
         }
 
-        dump_command_str = (
-            "pg_dump -F c -v -U {db_user} -h {db_host} -d {db_name} -f {dump_file}"
-        )
+        dump_command_str = "pg_dump -F c -v -U {db_user} -h {db_host} -d {db_name} -f {dump_file}"
         dump_command = shlex.split(dump_command_str.format(**params))
-        run_subprocess(
-            dump_command, to_file=f"/tmp/mermaid/std_out_backup.log"
-        )
+        run_subprocess(dump_command, to_file=f"/tmp/mermaid/std_out_backup.log")
         print("Dump complete")

@@ -1,5 +1,5 @@
-from collections import defaultdict
 import json
+from collections import defaultdict
 
 from .base import ERROR, OK, WARN, BaseValidator, validate_list, validator_result
 
@@ -88,10 +88,7 @@ class DuplicateValidator(BaseValidator):
             vals = [str(self.get_value(record, key_path) or "") for key_path in self.key_paths]
             uid = record.get(self.unique_identifier_key)
 
-            duplicate_tracker[":::".join(vals)].append({
-                "id": uid,
-                "index": n
-            })
+            duplicate_tracker[":::".join(vals)].append({"id": uid, "index": n})
 
         duplicates = [r for r in duplicate_tracker.values() if len(r) > 1]
         if not duplicates:
@@ -118,7 +115,6 @@ class PositiveIntegerValidator(BaseValidator):
 
 
 class ListPositiveIntegerValidator(BaseValidator):
-
     def __init__(self, list_path, key_path, **kwargs):
         self.list_path = list_path
         self.key_path = key_path

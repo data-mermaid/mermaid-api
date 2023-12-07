@@ -2,12 +2,7 @@ from django.contrib.gis.db import models
 from django.utils.translation import gettext_lazy as _
 
 from sqltables import SQLTableArg, SQLTableManager
-from .base import (
-    BaseSQLModel,
-    BaseSUSQLModel,
-    project_where,
-    sample_event_sql_template,
-)
+from .base import BaseSQLModel, BaseSUSQLModel, project_where, sample_event_sql_template
 
 
 class BenthicPITObsSQLModel(BaseSUSQLModel):

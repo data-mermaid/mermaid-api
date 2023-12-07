@@ -3,8 +3,8 @@ from tempfile import NamedTemporaryFile
 
 from django.conf import settings
 
-from . import s3
 from ..reports import attributes_report
+from . import s3
 
 
 def update_attributes_report():
@@ -17,24 +17,22 @@ from ..mocks import MockRequest
 from ..models import (
     BENTHICLIT_PROTOCOL,
     BENTHICPIT_PROTOCOL,
+    BENTHICPQT_PROTOCOL,
+    BLEACHINGQC_PROTOCOL,
     FISHBELT_PROTOCOL,
     HABITATCOMPLEXITY_PROTOCOL,
-    BLEACHINGQC_PROTOCOL,
-    BENTHICPQT_PROTOCOL,
 )
 from ..reports.summary_report import (
+    create_belt_fish_report,
     create_benthic_lit_report,
     create_benthic_pit_report,
-    create_belt_fish_report,
-    create_habitat_complexity_report,
-    create_bleaching_qc_report,
     create_benthic_pqt_report,
+    create_bleaching_qc_report,
+    create_habitat_complexity_report,
 )
 
 
-def create_sample_unit_method_summary_report(
-    project_pk, protocol, output_path, request=None
-):
+def create_sample_unit_method_summary_report(project_pk, protocol, output_path, request=None):
     request = request or MockRequest()
 
     if protocol == BENTHICLIT_PROTOCOL:

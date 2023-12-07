@@ -1,4 +1,4 @@
-from .base import OK, ERROR, BaseValidator, validator_result
+from .base import ERROR, OK, BaseValidator, validator_result
 
 
 class QuadratSizeValidator(BaseValidator):
@@ -28,4 +28,3 @@ class QuadratSizeValidator(BaseValidator):
             return ERROR, self.MAX_QUADRAT_SIZE, {"quadrat_size_range": self.QUADRAT_SIZE_RANGE}
 
         return OK
-

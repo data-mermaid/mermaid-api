@@ -1,11 +1,12 @@
 import os
 
 from aws_cdk import App, Environment
-from iac.stacks.common import CommonStack
-from iac.stacks.api import ApiStack
-from iac.stacks.static_site import StaticSiteStack
+
 from iac.settings.dev import DEV_SETTINGS
 from iac.settings.prod import PROD_SETTINGS
+from iac.stacks.api import ApiStack
+from iac.stacks.common import CommonStack
+from iac.stacks.static_site import StaticSiteStack
 
 tags = {
     "Owner": "sysadmin@datamermaid.org",
@@ -16,7 +17,7 @@ tags = {
 
 app = App()
 
-cdk_env=Environment(
+cdk_env = Environment(
     account=os.getenv("CDK_DEFAULT_ACCOUNT", None),
     region=os.getenv("CDK_DEFAULT_REGION", "us-east-1"),
 )
@@ -75,7 +76,6 @@ prod_api_stack = ApiStack(
     api_zone=common_stack.api_zone,
     public_bucket=prod_static_site_stack.site_bucket,
 )
-
 
 
 app.synth()

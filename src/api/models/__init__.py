@@ -1,14 +1,14 @@
 from .base import (
     SUPERUSER_APPROVED,
-    Profile,
-    BaseModel,
+    Application,
     AreaMixin,
-    JSONMixin,
+    AuthUser,
     BaseAttributeModel,
     BaseChoiceModel,
+    BaseModel,
     Country,
-    AuthUser,
-    Application,
+    JSONMixin,
+    Profile,
 )
 from .mermaid import *
 from .revisions import Revision
@@ -33,26 +33,26 @@ from .sql_models import (
     HabitatComplexitySESQLModel,
     HabitatComplexitySUSQLModel,
 )
-from .summary_sample_events import SummarySampleEventModel, SummarySampleEventSQLModel
-from .view_models import *
 from .summaries import (
     BeltFishObsModel,
-    BeltFishSUModel,
     BeltFishSEModel,
+    BeltFishSUModel,
     BenthicLITObsModel,
-    BenthicLITSUModel,
     BenthicLITSEModel,
-    BenthicPITObsModel,
-    BenthicPITSUModel,
-    BenthicPITSEModel,
+    BenthicLITSUModel,
     BenthicPhotoQuadratTransectObsModel,
-    BenthicPhotoQuadratTransectSUModel,
     BenthicPhotoQuadratTransectSEModel,
+    BenthicPhotoQuadratTransectSUModel,
+    BenthicPITObsModel,
+    BenthicPITSEModel,
+    BenthicPITSUModel,
     BleachingQCColoniesBleachedObsModel,
     BleachingQCQuadratBenthicPercentObsModel,
-    BleachingQCSUModel,
     BleachingQCSEModel,
+    BleachingQCSUModel,
     HabitatComplexityObsModel,
-    HabitatComplexitySUModel,
     HabitatComplexitySEModel,
+    HabitatComplexitySUModel,
 )
+from .summary_sample_events import SummarySampleEventModel, SummarySampleEventSQLModel
+from .view_models import *

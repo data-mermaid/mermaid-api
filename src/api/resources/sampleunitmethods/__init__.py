@@ -11,11 +11,9 @@ from ...auth_backends import AnonymousJWTAuthentication
 from ...permissions import *
 from ...reports import csv_report
 from ...reports.fields import ReportField
-
 from ...resources.base import BaseApiViewSet, BaseProjectApiViewSet
 from ...utils import truthy
 from ...utils.sample_units import consolidate_sample_events, has_duplicate_sample_events
-
 
 
 def save_one_to_many(foreign_key, database_records, data, serializer_class, context):
@@ -81,11 +79,9 @@ def clean_sample_event_models(data):
     management = data.get("management")
     sample_date = data.get("sample_date")
     if has_duplicate_sample_events(site, management, sample_date):
-        consolidate_sample_events(sample_event_data=dict(
-            site=site,
-            management=management,
-            sample_date=sample_date
-        ))
+        consolidate_sample_events(
+            sample_event_data=dict(site=site, management=management, sample_date=sample_date)
+        )
 
 
 class BaseGeoJsonPagination(GeoJsonPagination):
@@ -167,9 +163,5 @@ class BaseProjectMethodView(AggregatedViewMixin, BaseProjectApiViewSet):
     def get_queryset(self):
         project_id = self.kwargs.get("project_pk")
         if self.sql_model and self.use_cached is False:
-            return self.model.objects.all().sql_table(
-                project_id=project_id
-            )
-        return self.model.objects.filter(
-            project_id=project_id
-        )
+            return self.model.objects.all().sql_table(project_id=project_id)
+        return self.model.objects.filter(project_id=project_id)

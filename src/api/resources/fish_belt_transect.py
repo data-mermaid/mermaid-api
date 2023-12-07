@@ -1,20 +1,20 @@
 import django_filters
 from rest_framework import serializers
 
+from ..models import FishBeltTransect
 from .base import (
     BaseAPIFilterSet,
-    BaseProjectApiViewSet,
     BaseAPISerializer,
+    BaseProjectApiViewSet,
     ExtendedSerializer,
-    ModelValReadOnlyField,
     ModelNameReadOnlyField,
+    ModelValReadOnlyField,
 )
 from .sample_units_base import (
     SampleUnitExtendedSerializer,
     SampleUnitFilterSet,
     SampleUnitSerializer,
 )
-from ..models import FishBeltTransect
 
 
 class FishBeltTransectExtendedSerializer(SampleUnitExtendedSerializer):
@@ -31,9 +31,7 @@ class FishBeltTransectSerializer(SampleUnitSerializer):
         exclude = []
         extra_kwargs = {
             "number": {"error_messages": {"null": "Transect number is required"}},
-            "len_surveyed": {
-                "error_messages": {"null": "Transect length surveyed is required"}
-            },
+            "len_surveyed": {"error_messages": {"null": "Transect length surveyed is required"}},
             "width": {"error_messages": {"null": "Width is required"}},
             "size_bin": {"error_messages": {"null": "Fish size bin is required"}},
         }

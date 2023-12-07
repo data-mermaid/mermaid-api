@@ -10,17 +10,13 @@ from rest_framework.exceptions import ParseError
 from rest_framework.permissions import SAFE_METHODS
 from rest_framework.response import Response
 
-from .mixins import CreateOrUpdateSerializerMixin
 from ..ingest.utils import (
     InvalidSchema,
-    ingest,
     get_ingest_project_choices,
     get_su_serializer,
+    ingest,
 )
-from ..models import (
-    PROTOCOL_MAP,
-    CollectRecord,
-)
+from ..models import PROTOCOL_MAP, CollectRecord
 from ..permissions import (
     CollectRecordOwner,
     ProjectDataAdminPermission,
@@ -34,7 +30,7 @@ from ..submission.utils import (
 )
 from ..utils import truthy
 from .base import BaseAPIFilterSet, BaseAPISerializer, BaseProjectApiViewSet
-
+from .mixins import CreateOrUpdateSerializerMixin
 
 logger = logging.getLogger(__name__)
 cr_permissions = [And(BaseProjectApiViewSet.permission_classes[0], CollectRecordOwner)]
@@ -76,13 +72,9 @@ class CollectRecordViewSet(BaseProjectApiViewSet):
         profile = request.user.profile
         try:
             if validation_version == "2":
-                output = validate_collect_records_v2(
-                    profile, record_ids, CollectRecordSerializer
-                )
+                output = validate_collect_records_v2(profile, record_ids, CollectRecordSerializer)
             else:
-                output = validate_collect_records(
-                    profile, record_ids, CollectRecordSerializer
-                )
+                output = validate_collect_records(profile, record_ids, CollectRecordSerializer)
         except ValueError as err:
             raise ParseError(err) from err
 
@@ -99,9 +91,7 @@ class CollectRecordViewSet(BaseProjectApiViewSet):
         profile = request.user.profile
 
         if str(submit_version) == "2":
-            output = submit_collect_records_v2(
-                profile, record_ids, CollectRecordSerializer
-            )
+            output = submit_collect_records_v2(profile, record_ids, CollectRecordSerializer)
         else:
             output = submit_collect_records(profile, record_ids)
 
@@ -112,9 +102,7 @@ class CollectRecordViewSet(BaseProjectApiViewSet):
         ids = request.data.get("id")
 
         if ids is None or isinstance(ids, list) is False:
-            return Response(
-                "Invalid 'id' value.", status=drf_status.HTTP_400_BAD_REQUEST
-            )
+            return Response("Invalid 'id' value.", status=drf_status.HTTP_400_BAD_REQUEST)
 
         if len(ids) == 0:
             return Response([])
@@ -134,9 +122,7 @@ class CollectRecordViewSet(BaseProjectApiViewSet):
         sql, params = qs.query.get_compiler(using=qs.db).as_sql()
 
         query_sql = (
-            "SELECT * FROM unnest(%s) _pk_ "
-            "EXCEPT ALL "
-            "SELECT _pk_ FROM (" + sql + ") as foo"
+            "SELECT * FROM unnest(%s) _pk_ " "EXCEPT ALL " "SELECT _pk_ FROM (" + sql + ") as foo"
         )
 
         query_params = [uuids]
@@ -147,9 +133,7 @@ class CollectRecordViewSet(BaseProjectApiViewSet):
 
         return Response(dict(missing_ids=missing_ids))
 
-    @action(
-        detail=False, methods=["POST"], permission_classes=[ProjectDataAdminPermission]
-    )
+    @action(detail=False, methods=["POST"], permission_classes=[ProjectDataAdminPermission])
     def ingest(self, request, project_pk, *args, **kwargs):
         supported_content_types = (
             "application/csv",
@@ -236,10 +220,7 @@ class CollectRecordViewSet(BaseProjectApiViewSet):
                 fieldname_simple = "__".join(fieldname.split("__")[1:])
                 choices = None
                 if field.field_name in choice_sets and choice_sets[field.field_name]:
-                    choices = [
-                        name
-                        for name, choice_id in choice_sets[field.field_name].items()
-                    ]
+                    choices = [name for name, choice_id in choice_sets[field.field_name].items()]
 
                 field_def = {
                     "name": fieldname_simple,

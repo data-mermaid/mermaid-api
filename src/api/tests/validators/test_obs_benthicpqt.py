@@ -2,12 +2,12 @@ import pytest
 
 from api.resources.collect_record import CollectRecordSerializer
 from api.submission.validations2.validators import (
+    ERROR,
     OK,
     WARN,
-    ERROR,
     PointsPerQuadratValidator,
     QuadratCountValidator,
-    QuadratNumberSequenceValidator
+    QuadratNumberSequenceValidator,
 )
 
 
@@ -40,26 +40,36 @@ def points_per_quadrat_validator():
     )
 
 
-def test_num_of_pnts_per_quadrat_valid(points_per_quadrat_validator, valid_benthic_pq_transect_collect_record):
+def test_num_of_pnts_per_quadrat_valid(
+    points_per_quadrat_validator, valid_benthic_pq_transect_collect_record
+):
     record = CollectRecordSerializer(instance=valid_benthic_pq_transect_collect_record).data
     result = points_per_quadrat_validator(record)
     assert result.status == OK
 
 
-def test_num_of_pnts_per_quadrat_invalid(points_per_quadrat_validator, valid_benthic_pq_transect_collect_record):
-    valid_benthic_pq_transect_collect_record.data["obs_benthic_photo_quadrats"][0]["num_points"] = 10
+def test_num_of_pnts_per_quadrat_invalid(
+    points_per_quadrat_validator, valid_benthic_pq_transect_collect_record
+):
+    valid_benthic_pq_transect_collect_record.data["obs_benthic_photo_quadrats"][0][
+        "num_points"
+    ] = 10
     record = CollectRecordSerializer(instance=valid_benthic_pq_transect_collect_record).data
     result = points_per_quadrat_validator(record)
     assert result.status == WARN
 
 
-def test_number_of_quadrats_valid(quadrat_count_validator, valid_benthic_pq_transect_collect_record):
+def test_number_of_quadrats_valid(
+    quadrat_count_validator, valid_benthic_pq_transect_collect_record
+):
     record = CollectRecordSerializer(instance=valid_benthic_pq_transect_collect_record).data
     result = quadrat_count_validator(record)
     assert result.status == OK
 
 
-def test_number_of_quadrats_invalid(quadrat_count_validator, valid_benthic_pq_transect_collect_record):
+def test_number_of_quadrats_invalid(
+    quadrat_count_validator, valid_benthic_pq_transect_collect_record
+):
     valid_benthic_pq_transect_collect_record.data["quadrat_transect"]["num_quadrats"] = 10
 
     record = CollectRecordSerializer(instance=valid_benthic_pq_transect_collect_record).data
@@ -67,22 +77,32 @@ def test_number_of_quadrats_invalid(quadrat_count_validator, valid_benthic_pq_tr
     assert result.status == WARN
 
 
-def test_quadrat_number_sequence_valid(quadrat_number_sequence_validator, valid_benthic_pq_transect_collect_record):
+def test_quadrat_number_sequence_valid(
+    quadrat_number_sequence_validator, valid_benthic_pq_transect_collect_record
+):
     record = CollectRecordSerializer(instance=valid_benthic_pq_transect_collect_record).data
     result = quadrat_number_sequence_validator(record)
     assert result.status == OK
 
 
-def test_quadrat_number_sequence_invalid(quadrat_number_sequence_validator, valid_benthic_pq_transect_collect_record):
-    valid_benthic_pq_transect_collect_record.data["obs_benthic_photo_quadrats"][0]["quadrat_number"] = 1000
-    valid_benthic_pq_transect_collect_record.data["obs_benthic_photo_quadrats"][1]["quadrat_number"] = 1000
+def test_quadrat_number_sequence_invalid(
+    quadrat_number_sequence_validator, valid_benthic_pq_transect_collect_record
+):
+    valid_benthic_pq_transect_collect_record.data["obs_benthic_photo_quadrats"][0][
+        "quadrat_number"
+    ] = 1000
+    valid_benthic_pq_transect_collect_record.data["obs_benthic_photo_quadrats"][1][
+        "quadrat_number"
+    ] = 1000
 
     record = CollectRecordSerializer(instance=valid_benthic_pq_transect_collect_record).data
     result = quadrat_number_sequence_validator(record)
     assert result.status == WARN
 
 
-def test_number_of_quadrats_toolarge(quadrat_number_sequence_validator, valid_benthic_pq_transect_collect_record):
+def test_number_of_quadrats_toolarge(
+    quadrat_number_sequence_validator, valid_benthic_pq_transect_collect_record
+):
     valid_benthic_pq_transect_collect_record.data["quadrat_transect"]["num_quadrats"] = 100000
 
     record = CollectRecordSerializer(instance=valid_benthic_pq_transect_collect_record).data

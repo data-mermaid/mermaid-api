@@ -1,5 +1,5 @@
-from .base import OK, WARN, ERROR, BaseValidator, validator_result
 from ....utils import cast_int, safe_sum
+from .base import ERROR, OK, WARN, BaseValidator, validator_result
 
 
 class BleachingPercentValidator(BaseValidator):
@@ -7,9 +7,7 @@ class BleachingPercentValidator(BaseValidator):
     INVALID_TOTAL_PERCENT = "invalid_total_percent"
     VALUE_NOT_SET = "value_not_set"
 
-    def __init__(
-        self, obs_quadrat_benthic_percent_path, observation_percent_paths, **kwargs
-    ):
+    def __init__(self, obs_quadrat_benthic_percent_path, observation_percent_paths, **kwargs):
         self.obs_quadrat_benthic_percent_path = obs_quadrat_benthic_percent_path
         self.observation_percent_paths = observation_percent_paths
         super().__init__(**kwargs)
@@ -35,8 +33,6 @@ class BleachingPercentValidator(BaseValidator):
         return status, code, context
 
     def __call__(self, collect_record, **kwargs):
-        obs = (
-            self.get_value(collect_record, self.obs_quadrat_benthic_percent_path) or []
-        )
+        obs = self.get_value(collect_record, self.obs_quadrat_benthic_percent_path) or []
 
         return [self._check_percent(ob) for ob in obs]

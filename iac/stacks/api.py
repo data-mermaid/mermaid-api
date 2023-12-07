@@ -2,27 +2,25 @@ import os
 from importlib import resources
 
 from aws_cdk import (
-    Stack,
     Duration,
+    Stack,
+    aws_applicationautoscaling as appscaling,
     aws_ec2 as ec2,
+    aws_ecr_assets as ecr_assets,
     aws_ecs as ecs,
     aws_ecs_patterns as ecs_patterns,
-    aws_applicationautoscaling as appscaling,
-    aws_ecr_assets as ecr_assets,
-    aws_rds as rds,
-    aws_s3 as s3,
     aws_elasticloadbalancingv2 as elb,
     aws_logs as logs,
+    aws_rds as rds,
     aws_route53 as r53,
     aws_route53_targets as r53_targets,
+    aws_s3 as s3,
     aws_sqs as sqs,
 )
 from constructs import Construct
 
 from iac.settings import ProjectSettings
-from iac.stacks.constructs.worker import (
-    QueueWorker,
-)
+from iac.stacks.constructs.worker import QueueWorker
 
 
 class ApiStack(Stack):
@@ -59,9 +57,7 @@ class ApiStack(Stack):
             "DB_PASSWORD": ecs.Secret.from_secrets_manager(database.secret, "password"),
             "PGPASSWORD": ecs.Secret.from_secrets_manager(database.secret, "password"),
             "DRF_RECAPTCHA_SECRET_KEY": ecs.Secret.from_secrets_manager(
-                config.api.get_secret_object(
-                    self, config.api.drf_recaptcha_secret_key_name
-                )
+                config.api.get_secret_object(self, config.api.drf_recaptcha_secret_key_name)
             ),
             "EMAIL_HOST_USER": ecs.Secret.from_secrets_manager(
                 config.api.get_secret_object(self, config.api.email_host_user_name)
@@ -73,22 +69,16 @@ class ApiStack(Stack):
                 config.api.get_secret_object(self, config.api.secret_key_name)
             ),
             "MERMAID_API_SIGNING_SECRET": ecs.Secret.from_secrets_manager(
-                config.api.get_secret_object(
-                    self, config.api.mermaid_api_signing_secret_name
-                )
+                config.api.get_secret_object(self, config.api.mermaid_api_signing_secret_name)
             ),
             "SPA_ADMIN_CLIENT_ID": ecs.Secret.from_secrets_manager(
                 config.api.get_secret_object(self, config.api.spa_admin_client_id_name)
             ),
             "SPA_ADMIN_CLIENT_SECRET": ecs.Secret.from_secrets_manager(
-                config.api.get_secret_object(
-                    self, config.api.spa_admin_client_secret_name
-                )
+                config.api.get_secret_object(self, config.api.spa_admin_client_secret_name)
             ),
             "MERMAID_MANAGEMENT_API_CLIENT_ID": ecs.Secret.from_secrets_manager(
-                config.api.get_secret_object(
-                    self, config.api.mermaid_management_api_client_id_name
-                )
+                config.api.get_secret_object(self, config.api.mermaid_management_api_client_id_name)
             ),
             "MERMAID_MANAGEMENT_API_CLIENT_SECRET": ecs.Secret.from_secrets_manager(
                 config.api.get_secret_object(
@@ -235,9 +225,7 @@ class ApiStack(Stack):
             "AliasRecord",
             zone=api_zone,
             record_name=f"{config.env_id}.{api_zone.zone_name}",
-            target=r53.RecordTarget.from_alias(
-                r53_targets.LoadBalancerTarget(load_balancer)
-            ),
+            target=r53.RecordTarget.from_alias(r53_targets.LoadBalancerTarget(load_balancer)),
         )
 
         # add rule to SSL listener

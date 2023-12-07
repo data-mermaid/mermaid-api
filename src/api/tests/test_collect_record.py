@@ -3,13 +3,11 @@ import uuid
 
 from django.urls import reverse
 
-from api.models import PROTOCOL_MAP, CollectRecord
 from api.ingest import ingest_serializers
+from api.models import PROTOCOL_MAP, CollectRecord
 
 
-def test_owner_read_edit_collect_record(
-    db_setup, api_client1, api_client2, collect_record4
-):
+def test_owner_read_edit_collect_record(db_setup, api_client1, api_client2, collect_record4):
     url = reverse(
         "collectrecords-detail",
         args=[str(collect_record4.project.pk), str(collect_record4.pk)],
@@ -82,10 +80,7 @@ def test_ingest_schemas_json(api_client1, project1):
     for sample_unit in sample_units:
         url = reverse(
             "collectrecords-ingest-schemas-json",
-            kwargs={
-                "project_pk": str(project1.pk),
-                "sample_unit": sample_unit
-            }
+            kwargs={"project_pk": str(project1.pk), "sample_unit": sample_unit},
         )
         response = api_client1.get(url)
         data = json.loads(response.content)
@@ -99,12 +94,9 @@ def test_ingest_schemas_csv(api_client1):
     sample_units = list(PROTOCOL_MAP.keys())
     serializers = {i.protocol: i for i in ingest_serializers}
     for sample_unit in sample_units:
-        url = reverse(
-            "ingest-schemas-csv",
-            kwargs={"sample_unit": sample_unit}
-        )
+        url = reverse("ingest-schemas-csv", kwargs={"sample_unit": sample_unit})
         response = api_client1.get(url)
-        data = response.content.decode('utf-8')
+        data = response.content.decode("utf-8")
         csv_columns = data.replace("\r\n", "").split(",")
         serializer = serializers[sample_unit]
         labels = serializer().get_schema_labels()

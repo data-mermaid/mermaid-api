@@ -2,13 +2,13 @@ from django_filters import BaseInFilter, RangeFilter
 from rest_condition import Or
 
 from ...models import (
+    BenthicPhotoQuadratTransect,
     BenthicPhotoQuadratTransectObsModel,
     BenthicPhotoQuadratTransectObsSQLModel,
     BenthicPhotoQuadratTransectSEModel,
     BenthicPhotoQuadratTransectSESQLModel,
     BenthicPhotoQuadratTransectSUModel,
     BenthicPhotoQuadratTransectSUSQLModel,
-    BenthicPhotoQuadratTransect,
     ObsBenthicPhotoQuadrat,
 )
 from ...permissions import ProjectDataReadOnlyPermission, ProjectPublicSummaryPermission
@@ -24,6 +24,7 @@ from ...reports.formatters import (
 )
 from ...reports.report_serializer import ReportSerializer
 from ..base import (
+    BaseAPISerializer,
     BaseProjectApiViewSet,
     BaseSEFilterSet,
     BaseSUObsFilterSet,
@@ -31,10 +32,9 @@ from ..base import (
     BaseSUViewAPISUSerializer,
     BaseViewAPIGeoSerializer,
     BaseViewAPISUGeoSerializer,
-    BaseAPISerializer,
 )
-from ..observer import ObserverSerializer
 from ..mixins import SampleUnitMethodEditMixin, SampleUnitMethodSummaryReport
+from ..observer import ObserverSerializer
 from ..quadrat_transect import QuadratTransectSerializer
 from ..sample_event import SampleEventSerializer
 from . import BaseProjectMethodView
@@ -59,9 +59,7 @@ class ObsBenthicPhotoQuadratSerializer(BaseAPISerializer):
         }
 
 
-class BenthicPhotoQuadratTransectMethodSerializer(
-    BenthicPhotoQuadratTransectSerializer
-):
+class BenthicPhotoQuadratTransectMethodSerializer(BenthicPhotoQuadratTransectSerializer):
     sample_event = SampleEventSerializer(source="quadrat_transect.sample_event")
     quadrat_transect = QuadratTransectSerializer()
     observers = ObserverSerializer(many=True)
@@ -242,9 +240,7 @@ class BenthicPQTMethodSUCSVSerializer(ReportSerializer):
         ReportField("transect_len_surveyed", "Transect length surveyed"),
         ReportField("observers", "Observers", to_names),
         ReportField("num_points_nonother", "Number of non-Other points"),
-        ReportField(
-            "percent_cover_benthic_category", "Percent cover by benthic category"
-        ),
+        ReportField("percent_cover_benthic_category", "Percent cover by benthic category"),
         ReportField("site_notes", "Site notes"),
         ReportField("site_id"),
         ReportField("management_notes", "Management notes"),
@@ -440,9 +436,7 @@ class BenthicPQTProjectMethodSUView(BaseProjectMethodView):
 class BenthicPQTProjectMethodSEView(BaseProjectMethodView):
     drf_label = "benthicpqt-se"
     project_policy = "data_policy_benthicpqt"
-    permission_classes = [
-        Or(ProjectDataReadOnlyPermission, ProjectPublicSummaryPermission)
-    ]
+    permission_classes = [Or(ProjectDataReadOnlyPermission, ProjectPublicSummaryPermission)]
     model = BenthicPhotoQuadratTransectSEModel
     serializer_class = BenthicPQTMethodSESerializer
     serializer_class_geojson = BenthicPQTMethodSEGeoSerializer

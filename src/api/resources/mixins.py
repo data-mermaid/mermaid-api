@@ -10,11 +10,10 @@ from django.http import FileResponse
 from django.http.response import HttpResponse, HttpResponseBadRequest
 from django.template.defaultfilters import pluralize
 from django.utils.dateparse import parse_datetime
-from rest_framework import status
-from rest_framework import exceptions
+from rest_framework import exceptions, status
+from rest_framework.decorators import action
 from rest_framework.request import Request
 from rest_framework.response import Response
-from rest_framework.decorators import action
 
 from ..exceptions import check_uuid
 from ..models import ArchivedRecord, Project
@@ -36,9 +35,7 @@ class ProtectedResourceMixin(object):
             num_protected_instances = len(protected_instances)
             protected_instance_displays = [str(pi) for pi in protected_instances]
 
-            model_name = (
-                self.model_display_name or self.queryset.model.__class__.__name__
-            )
+            model_name = self.model_display_name or self.queryset.model.__class__.__name__
             msg = "Cannot delete '{}' because " "it is referenced by {} {}.".format(
                 model_name,
                 num_protected_instances,
@@ -86,9 +83,7 @@ class UpdatesMixin(object):
         compressed_modified = []
         for rec_timestamp, rec in modified:
             pk = str(rec["id"])
-            if pk in added_lookup or (
-                pk in removed_lookup and rec_timestamp <= removed_lookup[pk]
-            ):
+            if pk in added_lookup or (pk in removed_lookup and rec_timestamp <= removed_lookup[pk]):
                 continue
             compressed_modified.append(rec)
 
@@ -194,9 +189,7 @@ class MethodAuthenticationMixin(object):
         if hasattr(self, "method_authentication_classes") and isinstance(
             self.method_authentication_classes.get(method), (list, tuple)
         ):
-            authenticators = [
-                auth() for auth in self.method_authentication_classes[method]
-            ]
+            authenticators = [auth() for auth in self.method_authentication_classes[method]]
         else:
             authenticators = self.get_authenticators()
 
@@ -240,9 +233,7 @@ class OrFilterSetMixin(object):
 
 class SampleUnitMethodEditMixin(object):
     @transaction.atomic
-    @action(
-        detail=True, methods=["PUT"], permission_classes=[ProjectDataAdminPermission]
-    )
+    @action(detail=True, methods=["PUT"], permission_classes=[ProjectDataAdminPermission])
     def edit(self, request, project_pk, pk):
         collect_record_owner = Project.objects.get_or_none(id=request.data.get("owner"))
         if collect_record_owner is None:
@@ -254,11 +245,7 @@ class SampleUnitMethodEditMixin(object):
                 raise ValueError("Unsupported model")
 
             collect_record = edit_transect_method(
-                self.serializer_class,
-                collect_record_owner,
-                request,
-                pk,
-                model.protocol
+                self.serializer_class, collect_record_owner, request, pk, model.protocol
             )
             return Response({"id": str(collect_record.pk)})
         except Exception as err:
@@ -267,34 +254,32 @@ class SampleUnitMethodEditMixin(object):
 
 
 class SampleUnitMethodSummaryReport(object):
-    @action(
-        detail=False, methods=["GET"]
-    )
+    @action(detail=False, methods=["GET"])
     def xlsx(self, request, project_pk):
         from ..utils.reports import create_sample_unit_method_summary_report
+
         try:
             model = self.get_queryset().model
             with NamedTemporaryFile(delete=False) as f:
                 try:
                     protocol = getattr(model, "protocol")
                     create_sample_unit_method_summary_report(
-                        project_pk,
-                        protocol,
-                        f.name,
-                        request=request
+                        project_pk, protocol, f.name, request=request
                     )
                 except AttributeError as ae:
                     raise exceptions.ValidationError("Unknown protocol") from ae
                 except ValueError as ve:
                     raise exceptions.ValidationError(f"{protocol} protocol not supported") from ve
-                
+
                 try:
                     base_file_name = f"{get_safe_project_name(project_pk)}_{protocol}_{create_iso_date_string(delimiter='_')}"
                     xlsx_file_name = f"{base_file_name}.xlsx"
                     zip_file_name = f"{base_file_name}.zip"
                 except ValueError as e:
-                    raise exceptions.ValidationError(f"[{project_pk}] Project does not exist") from e
-                
+                    raise exceptions.ValidationError(
+                        f"[{project_pk}] Project does not exist"
+                    ) from e
+
                 try:
                     with ZipFile(zip_file_name, "w", compression=ZIP_DEFLATED) as z:
                         z.write(f.name, arcname=xlsx_file_name)
@@ -321,13 +306,13 @@ class CopyRecordsMixin:
     def copy(self, request, project_pk, *args, **kwargs):
         """
         Payload schema:
-        
+
         {
             "original_ids": [Array] Original record ids to copy to project.
         }
 
         """
-        
+
         profile = request.user.profile
         context = {"request": request}
         data = request.data
@@ -353,7 +338,9 @@ class CopyRecordsMixin:
             except Exception as err:
                 print(err)
                 transaction.savepoint_rollback(save_point_id)
-                raise exceptions.APIException(detail=f"[{type(err).__name__}] Copy records") from err
+                raise exceptions.APIException(
+                    detail=f"[{type(err).__name__}] Copy records"
+                ) from err
 
         transaction.savepoint_commit(save_point_id)
         return Response(new_records)

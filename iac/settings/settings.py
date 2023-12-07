@@ -5,11 +5,11 @@ import os
 from dataclasses import dataclass
 
 from aws_cdk import (
-    Environment,
-    Stack,
     Arn,
     ArnComponents,
     ArnFormat,
+    Environment,
+    Stack,
     aws_ec2 as ec2,
     aws_secretsmanager as secrets,
 )
@@ -41,10 +41,10 @@ class DjangoSettings:
     container_cpu: int
     container_memory: int
     container_count: int
-    
+
     sqs_cpu: int
     sqs_memory: int
-    
+
     backup_cpu: int
     backup_memory: int
 
@@ -75,7 +75,7 @@ class DjangoSettings:
     secret_key_name: str = "common/mermaid-api/secret-OcuWCl"
     email_host_user_name: str = "common/mermaid-api/email-host-user-afLrHz"
     email_host_password_name: str = "common/mermaid-api/email-host-password-CI6hBI"
-    
+
     auth0_domain: str = "common/mermaid-api/auth0_domain-K9a7w2"
 
     mc_api_key_name: str = "common/mermaid-api/mc-api-key-xSsQOk"

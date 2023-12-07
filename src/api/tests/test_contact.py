@@ -3,13 +3,12 @@ from django.core import mail
 from django.urls import reverse
 from rest_framework import status
 
-
 MESSAGE_POST = {
     "name": "Test User",
     "email": "test@datamermaid.org",
     "subject": "test subject",
     "message": "test message",
-    "recaptcha": "foo"
+    "recaptcha": "foo",
 }
 
 

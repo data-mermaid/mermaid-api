@@ -1,13 +1,9 @@
 from drf_recaptcha.fields import ReCaptchaV3Field
-from rest_framework import serializers
-from rest_framework import status
-from rest_framework.decorators import (
-    api_view,
-    authentication_classes,
-    permission_classes,
-)
+from rest_framework import serializers, status
+from rest_framework.decorators import api_view, authentication_classes, permission_classes
 from rest_framework.permissions import AllowAny
 from rest_framework.response import Response
+
 from ..models import Project
 from ..utils.email import email_mermaid_admins, email_project_admins
 
@@ -57,9 +53,7 @@ def _process_contact_request(serializer, email_function):
 @authentication_classes([])
 @permission_classes((AllowAny,))
 def contact_mermaid(request):
-    serializer = ContactMERMAIDSerializer(
-        data=request.data, context={"request": request}
-    )
+    serializer = ContactMERMAIDSerializer(data=request.data, context={"request": request})
     return _process_contact_request(serializer, email_mermaid_admins)
 
 
@@ -67,7 +61,5 @@ def contact_mermaid(request):
 @authentication_classes([])
 @permission_classes((AllowAny,))
 def contact_project_admins(request):
-    serializer = ContactProjectAdminsSerializer(
-        data=request.data, context={"request": request}
-    )
+    serializer = ContactProjectAdminsSerializer(data=request.data, context={"request": request})
     return _process_contact_request(serializer, email_project_admins)

@@ -4,19 +4,16 @@ from django.core import serializers
 from django.db.models.signals import post_delete, post_save, pre_save
 from django.dispatch import receiver
 
+from ..covariates import update_site_covariates_threaded
+from ..models import *
+from ..submission.utils import validate
+from ..submission.validations import ManagementValidation, SiteValidation
+from ..utils import get_subclasses
+from ..utils.sample_units import delete_orphaned_sample_event, delete_orphaned_sample_unit
 from .attributes import *
 from .notifications import *
 from .revision import *
 from .summaries import *
-from ..covariates import update_site_covariates_threaded
-from ..models import *
-from ..submission.utils import validate
-from ..submission.validations import SiteValidation, ManagementValidation
-from ..utils import get_subclasses
-from ..utils.sample_units import (
-    delete_orphaned_sample_unit,
-    delete_orphaned_sample_event,
-)
 
 
 def backup_model_record(sender, instance, using, **kwargs):
@@ -86,9 +83,7 @@ def del_orphaned_se(sender, instance, *args, **kwargs):
 for suclass in get_subclasses(SampleUnit):
     classname = suclass._meta.object_name
 
-    post_delete.connect(
-        del_orphaned_se, sender=suclass, dispatch_uid=f"{classname}_delete_se"
-    )
+    post_delete.connect(del_orphaned_se, sender=suclass, dispatch_uid=f"{classname}_delete_se")
 
 
 @receiver(post_save, sender=Site)

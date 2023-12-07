@@ -2,7 +2,6 @@ import uuid
 
 from api.models import AuthUser, Project
 
-
 SUMMARY_URL_SUFFIXES = (
     "/beltfishes/obstransectbeltfishes/",
     "/beltfishes/sampleunits/",
@@ -43,6 +42,7 @@ def meta(method):
         log_event.meta = getattr(log_event, "meta", {})
         args[0] = log_event
         return method(*args, **kw)
+
     return _meta
 
 
@@ -106,8 +106,7 @@ def get_project_lookup(log_events):
     project_lookup = {
         log_event.meta["project_id"]: None
         for log_event in log_events
-        if hasattr(log_event, "meta") is not False
-        and log_event.meta.get("project_id") is not None
+        if hasattr(log_event, "meta") is not False and log_event.meta.get("project_id") is not None
     }
     return {
         str(p.id): {
@@ -115,9 +114,7 @@ def get_project_lookup(log_events):
             "project_status": p.get_status_display(),
             "project_tags": ",".join(t.name for t in p.tags.all()),
             "countries": ",".join(set([s.country.name for s in p.sites.order_by("country__name")])),
-            "profiles": {
-                str(pp.profile.id): pp.get_role_display() for pp in p.profiles.all()
-            },
+            "profiles": {str(pp.profile.id): pp.get_role_display() for pp in p.profiles.all()},
         }
         for p in Project.objects.prefetch_related("profiles", "tags", "sites").filter(
             id__in=project_lookup.keys()
@@ -157,7 +154,11 @@ def agg_log_events(log_events=None):
     for log_event in log_events:
         status_code = log_event.event.get("status_code") or None
         method = log_event.event.get("method") or ""
-        if status_code is None or status_code >= 400 or method.upper() not in ("DELETE", "PUT", "GET", "POST"):
+        if (
+            status_code is None
+            or status_code >= 400
+            or method.upper() not in ("DELETE", "PUT", "GET", "POST")
+        ):
             continue
         log_event = tag_event_type(log_event)
         if log_event.meta["event_type"] not in EVENT_TYPES_FILTER:

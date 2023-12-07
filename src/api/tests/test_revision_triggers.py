@@ -1,16 +1,8 @@
-from api.models import (
-    CollectRecord,
-    FishSpecies,
-    Management,
-    Project,
-    Revision,
-)
+from api.models import CollectRecord, FishSpecies, Management, Project, Revision
 
 
 def test_create_record_with_project_id(db_setup, project1, profile1):
-    collect_record = CollectRecord.objects.create(
-        project=project1, profile=profile1, data=dict()
-    )
+    collect_record = CollectRecord.objects.create(project=project1, profile=profile1, data=dict())
 
     rev_recs = Revision.objects.filter(record_id=collect_record.id)
     assert rev_recs.count() == 1

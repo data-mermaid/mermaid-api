@@ -4,6 +4,7 @@ from logging import raiseExceptions
 import dateutil
 from django.utils.translation import gettext_lazy as _
 
+from ..utils import cast_float, cast_int
 from .validations import (
     ERROR,
     OK,
@@ -27,7 +28,6 @@ from .validations import (
     SiteValidation,
     ValueInRangeValidation,
 )
-from ..utils import cast_float, cast_int
 
 
 class SerializeValidationError(Exception):
@@ -45,17 +45,12 @@ class ProtocolValidation(object):
 
     def _run_validation(self, validation_cls, *args, **kwargs):
         validation = validation_cls(*args, **kwargs)
-        if (
-            self.collect_record.validations
-            and "results" in self.collect_record.validations
-        ):
+        if self.collect_record.validations and "results" in self.collect_record.validations:
             prev_validations = self.collect_record.validations["results"]
         else:
             prev_validations = dict()
 
-        validation.previous_validations = prev_validations.get(
-            validation.identifier, dict()
-        )
+        validation.previous_validations = prev_validations.get(validation.identifier, dict())
         result = validation.validate()
         for k, v in validation.logs.items():
             if k not in self.validations:
@@ -119,7 +114,7 @@ class ProtocolValidation(object):
 
 class SampleUnitValidation(ProtocolValidation):
     DEPTH_RANGE = (1, 30)
-    DATE_TIME_RANGE = (datetime.time(6,0), datetime.time(19,0))
+    DATE_TIME_RANGE = (datetime.time(6, 0), datetime.time(19, 0))
     DEPTH_MSG = str(_("Depth value outside range of {} and {}".format(*DEPTH_RANGE)))
     DATE_TIME_MSG = str(_("Sample time outside of range {} and {}".format(*DATE_TIME_RANGE)))
 
@@ -173,9 +168,7 @@ class SampleUnitValidation(ProtocolValidation):
 
 class TransectValidation(SampleUnitValidation):
     LENGTH_RANGE = (10, 100)
-    LENGTH_RANGE_WARN_MSG_TMPL = (
-        "Transect length surveyed value " + "outside range of {} and {}"
-    )
+    LENGTH_RANGE_WARN_MSG_TMPL = "Transect length surveyed value " + "outside range of {} and {}"
     SAMPLE_UNIT = None
 
     def validate(self):
@@ -357,9 +350,9 @@ class BleachingQuadratCollectionProtocolValidation(QuadratValidation):
         elif len(results) == results.count(OK):
             return OK
 
+
 class BenthicPhotoQuadratTransectProtocolValidation(TransectValidation, QuadratValidation):
     SAMPLE_UNIT = "quadrat_transect"
-
 
     def validate(self):
         try:

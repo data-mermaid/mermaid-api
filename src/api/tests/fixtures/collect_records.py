@@ -1,6 +1,11 @@
 import pytest
 
-from api.models import BENTHICPQT_PROTOCOL, FISHBELT_PROTOCOL, CollectRecord, ProjectProfile
+from api.models import (
+    BENTHICPQT_PROTOCOL,
+    FISHBELT_PROTOCOL,
+    CollectRecord,
+    ProjectProfile,
+)
 
 
 @pytest.fixture
@@ -35,9 +40,7 @@ def collect_record4(
             "site": str(site1.pk),
             "sample_date": "2019-12-3",
         },
-        "obs_belt_fishes": [
-            {"size": 51, "count": 3, "fish_attribute": str(fish_species2.pk)}
-        ],
+        "obs_belt_fishes": [{"size": 51, "count": 3, "fish_attribute": str(fish_species2.pk)}],
         "observers": [
             {
                 "id": None,
@@ -106,9 +109,7 @@ def collect_record4(
                     "message": "Fish biomass less than 50 kg/ha",
                 },
             },
-            "fishbelt_transect": {
-                "validate_duplicate": {"status": "ok", "message": ""}
-            },
+            "fishbelt_transect": {"validate_duplicate": {"status": "ok", "message": ""}},
         },
         "last_validated": "2019-06-03 22:13:14.332342+00:00",
     }
@@ -140,9 +141,7 @@ def collect_record4_with_v2_validation(
             "site": str(site1.pk),
             "sample_date": "2019-12-3",
         },
-        "obs_belt_fishes": [
-            {"size": 51, "count": 3, "fish_attribute": str(fish_species2.pk)}
-        ],
+        "obs_belt_fishes": [{"size": 51, "count": 3, "fish_attribute": str(fish_species2.pk)}],
         "observers": [
             {
                 "id": None,
@@ -538,9 +537,7 @@ def valid_collect_record(
 
 
 @pytest.fixture
-def invalid_collect_record_warn(
-    project1, profile1, valid_collect_record, fish_species1
-):
+def invalid_collect_record_warn(project1, profile1, valid_collect_record, fish_species1):
     data_warn = valid_collect_record.data
     observations = [
         dict(
@@ -573,9 +570,7 @@ def invalid_collect_record_warn(
 
 
 @pytest.fixture
-def invalid_collect_record_null_str_warn(
-    project1, profile1, valid_collect_record, fish_species1
-):
+def invalid_collect_record_null_str_warn(project1, profile1, valid_collect_record, fish_species1):
     data_warn = valid_collect_record.data
     observations = [
         dict(
@@ -886,36 +881,11 @@ def valid_bleaching_qc_collect_record(
     relative_depth1,
 ):
     obs_quadrat_benthic_percent = [
-        {
-            "quadrat_number": 1,
-            "percent_hard": 3,
-            "percent_algae": 0,
-            "percent_soft": 32
-        },
-        {
-            "quadrat_number": 2,
-            "percent_hard": 3,
-            "percent_algae": 0,
-            "percent_soft": 0
-        },
-        {
-            "quadrat_number": 3,
-            "percent_hard": 3,
-            "percent_algae": 0,
-            "percent_soft": 97
-        },
-        {
-            "quadrat_number": 4,
-            "percent_hard": 50,
-            "percent_algae": 50,
-            "percent_soft": 0
-        },
-        {
-            "quadrat_number": 5,
-            "percent_hard": 5,
-            "percent_algae": 0,
-            "percent_soft": 95
-        },
+        {"quadrat_number": 1, "percent_hard": 3, "percent_algae": 0, "percent_soft": 32},
+        {"quadrat_number": 2, "percent_hard": 3, "percent_algae": 0, "percent_soft": 0},
+        {"quadrat_number": 3, "percent_hard": 3, "percent_algae": 0, "percent_soft": 97},
+        {"quadrat_number": 4, "percent_hard": 50, "percent_algae": 50, "percent_soft": 0},
+        {"quadrat_number": 5, "percent_hard": 5, "percent_algae": 0, "percent_soft": 95},
     ]
 
     obs_colonies_bleached = [
@@ -973,7 +943,7 @@ def valid_bleaching_qc_collect_record(
             "count_80": 0,
             "count_100": 0,
             "count_dead": 0,
-        }
+        },
     ]
 
     data = {
@@ -987,16 +957,14 @@ def valid_bleaching_qc_collect_record(
             "current": str(current1.pk),
             "visibility": str(visibility1.pk),
             "sample_time": None,
-            "relative_depth": str(relative_depth1.pk)
+            "relative_depth": str(relative_depth1.pk),
         },
         "sample_event": {
             "management": str(management1.id),
             "site": str(site1.id),
             "sample_date": f"{sample_date1:%Y-%m-%d}",
         },
-        "observers": [{
-            "profile": str(profile1.id)
-        }]
+        "observers": [{"profile": str(profile1.id)}],
     }
     return CollectRecord.objects.create(
         project=project1,
@@ -1004,7 +972,6 @@ def valid_bleaching_qc_collect_record(
         stage=CollectRecord.VALIDATED_STAGE,
         data=data,
     )
-
 
 
 @pytest.fixture
@@ -1079,9 +1046,7 @@ def valid_benthic_pq_transect_collect_record(
             "site": str(site1.id),
             "sample_date": f"{sample_date1:%Y-%m-%d}",
         },
-        "observers": [{
-            "profile": str(profile1.id)
-        }]
+        "observers": [{"profile": str(profile1.id)}],
     }
     return CollectRecord.objects.create(
         project=project1,

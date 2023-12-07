@@ -8,8 +8,8 @@ from api.models import (
     ReefSlope,
     ReefType,
     ReefZone,
-    RelativeDepth,
     Region,
+    RelativeDepth,
     Tide,
     Visibility,
 )
@@ -158,24 +158,21 @@ def relative_depth2(db):
 @pytest.fixture
 def region1(db):
     return Region.objects.create(
-        name="Region 1",
-        geom="MULTIPOLYGON(((-10 -10,-10 10,10 10,10 -10,-10 -10)))"
+        name="Region 1", geom="MULTIPOLYGON(((-10 -10,-10 10,10 10,10 -10,-10 -10)))"
     )
 
 
 @pytest.fixture
 def region2(db):
     return Region.objects.create(
-        name="Region 2",
-        geom="MULTIPOLYGON(((-5 -5,-5 5,5 5,5 -5,-5 -5)))"
+        name="Region 2", geom="MULTIPOLYGON(((-5 -5,-5 5,5 5,5 -5,-5 -5)))"
     )
 
 
 @pytest.fixture
 def region3(db):
     return Region.objects.create(
-        name="Region 3",
-        geom="MULTIPOLYGON(((-2 -2,-2 2,2 2,2 -2,-2 -2)))"
+        name="Region 3", geom="MULTIPOLYGON(((-2 -2,-2 2,2 2,2 -2,-2 -2)))"
     )
 
 

@@ -1,7 +1,7 @@
-
 # Source: https://github.com/ianlini/flatten-dict
 import os.path
 from collections.abc import Mapping
+
 import six
 
 
@@ -23,17 +23,17 @@ def dot_reducer(k1, k2):
     if k1 is None:
         return k2
     else:
-        return '{}.{}'.format(k1, k2)
+        return "{}.{}".format(k1, k2)
 
 
 REDUCER_DICT = {
-    'tuple': tuple_reducer,
-    'path': path_reducer,
-    'dot': dot_reducer,
+    "tuple": tuple_reducer,
+    "path": path_reducer,
+    "dot": dot_reducer,
 }
 
 
-def flatten(d, reducer='dot', inverse=False):
+def flatten(d, reducer="dot", inverse=False):
     """Flatten dict-like object.
 
     Parameters
