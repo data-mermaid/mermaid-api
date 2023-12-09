@@ -11,7 +11,7 @@ def timestamp():
 def create_token(auth_user_id):
     token_header = {"typ": "JWT", "alg": "HS256"}
     issued_at = timestamp()
-    expiration_time = timestamp() + 60
+    expiration_time = timestamp() + 300
     token_payload = {
         "iss": settings.AUTH0_MANAGEMENT_API_AUDIENCE,
         "sub": auth_user_id,
