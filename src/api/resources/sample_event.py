@@ -1,7 +1,4 @@
 import django_filters
-from django.core.exceptions import ValidationError as DjangoValidationError
-from rest_framework import serializers
-from rest_framework.exceptions import ValidationError
 
 from ..models import SampleEvent
 from .base import (
@@ -9,7 +6,6 @@ from .base import (
     BaseAPISerializer,
     BaseProjectApiViewSet,
     ExtendedSerializer,
-    ModelNameReadOnlyField,
 )
 from .management import ManagementExtendedSerializer
 from .site import SiteExtendedSerializer

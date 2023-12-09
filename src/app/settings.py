@@ -17,7 +17,7 @@ BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 try:
     with open(os.path.join(BASE_DIR, "VERSION.txt")) as f:
         API_VERSION = f.read().replace("\n", "")
-except:
+except Exception as _:
     API_VERSION = "NA"
 
 LOGIN_REDIRECT_URL = "api-root"
@@ -99,7 +99,7 @@ ALLOWED_HOSTS = [host.strip() for host in _allowed_hosts.split(",")]
 
 # Look for Fargate IP, for health checks.
 METADATA_URI = os.getenv("ECS_CONTAINER_METADATA_URI", None)
-IN_ECS = METADATA_URI != None
+IN_ECS = METADATA_URI is not None
 
 if IN_ECS:
     container_metadata = requests.get(METADATA_URI).json()

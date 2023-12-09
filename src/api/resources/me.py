@@ -1,4 +1,3 @@
-from django.db.models import F
 from rest_framework import permissions, serializers, viewsets
 from rest_framework.decorators import action
 from rest_framework.exceptions import NotFound, ValidationError

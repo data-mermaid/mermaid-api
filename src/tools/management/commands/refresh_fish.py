@@ -1,14 +1,11 @@
 import csv
 import os
-from contextlib import closing
 
-import requests
 from django.conf import settings
 from django.core.management.base import BaseCommand
 
 from api.models import (
     APPROVAL_STATUSES,
-    BaseAttributeModel,
     FishFamily,
     FishGenus,
     FishGroupFunction,

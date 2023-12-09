@@ -3,7 +3,7 @@ import logging
 import uuid
 
 from django.db import connection
-from rest_condition import And, Or
+from rest_condition import And
 from rest_framework import status as drf_status
 from rest_framework.decorators import action
 from rest_framework.exceptions import ParseError
@@ -202,7 +202,7 @@ class CollectRecordViewSet(BaseProjectApiViewSet):
         detail=False,
         methods=SAFE_METHODS,
         permission_classes=[ProjectDataAdminPermission],
-        url_path="ingest_schema/(?P<sample_unit>\w+)",
+        url_path=r"ingest_schema/(?P<sample_unit>\w+)",
         url_name="ingest-schemas-json",
     )
     def ingest_schema_json(self, request, project_pk, sample_unit, *args, **kwargs):

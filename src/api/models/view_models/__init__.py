@@ -1,3 +1,3 @@
 # view_models should only create postgres views that other db entities do not depend on
 
-from .fish_attributes import *
+from .fish_attributes import *  # noqa: F403

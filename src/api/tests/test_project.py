@@ -1,5 +1,3 @@
-from venv import create
-
 from django.urls import reverse
 
 from api.models import Profile, ProjectProfile

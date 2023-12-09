@@ -6,7 +6,7 @@ from django.conf import settings
 from django.contrib.auth import get_user_model
 from django.core.management.base import BaseCommand
 
-from api.models import Profile, Region
+from api.models import Region
 
 
 # Used by other refresh commands, not this one

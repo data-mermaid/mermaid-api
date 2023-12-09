@@ -1,15 +1,7 @@
 import django_filters
-from rest_framework import serializers
 
 from ..models import FishBeltTransect
-from .base import (
-    BaseAPIFilterSet,
-    BaseAPISerializer,
-    BaseProjectApiViewSet,
-    ExtendedSerializer,
-    ModelNameReadOnlyField,
-    ModelValReadOnlyField,
-)
+from .base import BaseProjectApiViewSet, ModelValReadOnlyField
 from .sample_units_base import (
     SampleUnitExtendedSerializer,
     SampleUnitFilterSet,

@@ -4,7 +4,7 @@ import django_filters
 from django.db import transaction
 from django.db.models import JSONField
 from rest_condition import Or
-from rest_framework import exceptions, serializers, status
+from rest_framework import exceptions, permissions, serializers, status
 from rest_framework.decorators import action
 from rest_framework.relations import HyperlinkedIdentityField
 from rest_framework.response import Response
@@ -22,7 +22,14 @@ from ..models import (
     TransectMethod,
 )
 from ..notifications import notify_crs_transferred
-from ..permissions import *
+from ..permissions import (
+    ProjectDataAdminPermission,
+    ProjectDataPermission,
+    UnauthenticatedReadOnlyPermission,
+    get_project,
+    get_project_pk,
+    get_project_profile,
+)
 from ..utils import truthy
 from ..utils.project import (
     copy_project_and_resources,
@@ -451,7 +458,7 @@ class ProjectViewSet(BaseApiViewSet):
         try:
             return ProjectProfile.objects.get(project_id=project_id, profile_id=profile_id).profile
         except ProjectProfile.DoesNotExist:
-            msg = "Profile does not exist in project".format(profile_id)
+            msg = f"[{profile_id}] Profile does not exist in project"
             logger.error("Profile {} does not exist in project {}".format(profile_id, project_id))
             raise exceptions.ValidationError(msg, code=400)
 

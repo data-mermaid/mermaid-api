@@ -228,7 +228,7 @@ def test_bleaching_ingest(
     assert len(obs_quadrat_benthic_percent) == 4
     assert obs_quadrat_benthic_percent[3]["quadrat_number"] == 4
     assert obs_quadrat_benthic_percent[3]["percent_hard"] == 87
-    assert obs_quadrat_benthic_percent[3]["percent_soft"] == None
+    assert obs_quadrat_benthic_percent[3]["percent_soft"] is None
     assert obs_quadrat_benthic_percent[3]["percent_algae"] == 13
 
 

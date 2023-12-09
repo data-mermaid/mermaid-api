@@ -76,7 +76,7 @@ class ProjectDataPermission(permissions.BasePermission):
         pk = get_project_pk(request, view)
 
         project = get_project(pk)
-        pp = get_project_profile(project, user.profile)
+        _ = get_project_profile(project, user.profile)
         return True
 
 

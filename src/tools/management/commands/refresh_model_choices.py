@@ -14,7 +14,7 @@ def load_belt_fish_widths():
     for btw in belt_transect_widths:
         try:
             _ = BeltTransectWidth.objects.get(id=btw["id"])
-        except:
+        except Exception as _:
             _ = BeltTransectWidth.objects.create(**btw)
             n += 1
     return n

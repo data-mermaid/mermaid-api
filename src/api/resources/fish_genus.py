@@ -1,7 +1,7 @@
 from django_filters import BaseInFilter
 from rest_framework import serializers
 
-from ..models import FishGenus, FishSpecies
+from ..models import FishGenus
 from .base import BaseAPIFilterSet, BaseAPISerializer, BaseAttributeApiViewSet
 
 

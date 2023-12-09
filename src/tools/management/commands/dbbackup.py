@@ -1,6 +1,5 @@
 import os
 import shlex
-import traceback
 from datetime import datetime, timezone
 
 import boto3
@@ -36,8 +35,8 @@ class Command(BaseCommand):
     def get_s3_bucket_obj_list(self):
         try:
             return self.s3.list_objects_v2(Bucket=settings.AWS_BACKUP_BUCKET).get("Contents")
-        except:
-            traceback.print_exc()
+        except Exception as e:
+            print(e)
             return []
 
     def add_arguments(self, parser):
@@ -105,5 +104,5 @@ class Command(BaseCommand):
 
         dump_command_str = "pg_dump -F c -v -U {db_user} -h {db_host} -d {db_name} -f {dump_file}"
         dump_command = shlex.split(dump_command_str.format(**params))
-        run_subprocess(dump_command, to_file=f"/tmp/mermaid/std_out_backup.log")
+        run_subprocess(dump_command, to_file="/tmp/mermaid/std_out_backup.log")
         print("Dump complete")

@@ -1,7 +1,7 @@
 from api.mocks import MockRequest
 from api.models import CollectRecord, Project, ProjectProfile, Revision
 from api.resources.collect_record import CollectRecordSerializer, CollectRecordViewSet
-from api.resources.project import ProjectSerializer, ProjectViewSet
+from api.resources.project import ProjectViewSet
 from api.resources.sync.pull import get_records, serialize_revisions
 
 

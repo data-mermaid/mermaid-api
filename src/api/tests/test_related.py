@@ -1,6 +1,5 @@
 from api.models import (
     ObsBeltFish,
-    Observer,
     Project,
     ProjectProfile,
     QuadratCollection,
@@ -60,9 +59,7 @@ def test_quadrat_collection(bleaching_project):
 
 def test_observer(bleaching_project, belt_fish_project, belt_fish1):
     model_instance = belt_fish1.beltfish_observations.all()[0].observers[0]
-    project_id = (
-        model_instance.transectmethod.subclass.transect.sample_event.site.project_id
-    )
+    project_id = model_instance.transectmethod.subclass.transect.sample_event.site.project_id
     rel_model = get_related_project(model_instance)
 
     assert project_id == rel_model.pk

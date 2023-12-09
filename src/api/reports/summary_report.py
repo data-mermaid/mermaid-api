@@ -123,8 +123,8 @@ def _partial_key_match(d: dict, substring):
     return [key for key, length in matches if length > 0]
 
 
-def _transpose(l: list):
-    return list(zip(*l))
+def _transpose(data: list):
+    return list(zip(*data))
 
 
 def _filter_columns(

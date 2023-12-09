@@ -6,7 +6,6 @@ from django.contrib.postgres.aggregates import ArrayAgg
 from django.core.exceptions import FieldDoesNotExist
 from django.db.models.fields.related import ForeignObjectRel
 from django.db.models.sql.constants import ORDER_PATTERN
-from django.utils.translation import gettext_lazy as _
 from django_filters import (
     BaseInFilter,
     CharFilter,
@@ -21,7 +20,7 @@ from django_filters.rest_framework import DjangoFilterBackend
 from rest_condition import Or
 from rest_framework import exceptions, serializers, viewsets
 from rest_framework.decorators import action
-from rest_framework.exceptions import MethodNotAllowed, ValidationError
+from rest_framework.exceptions import MethodNotAllowed, NotFound, ValidationError
 from rest_framework.fields import empty
 from rest_framework.filters import OrderingFilter, SearchFilter
 from rest_framework.pagination import PageNumberPagination
@@ -38,7 +37,14 @@ from rest_framework_gis.serializers import GeoFeatureModelSerializer
 
 from ..exceptions import check_uuid
 from ..models import APPROVAL_STATUSES, Tag
-from ..permissions import *
+from ..permissions import (
+    AttributeAuthenticatedUserPermission,
+    DefaultPermission,
+    ProjectDataAdminPermission,
+    ProjectDataCollectorPermission,
+    ProjectDataReadOnlyPermission,
+    UnauthenticatedReadOnlyPermission,
+)
 from ..utils.auth0utils import get_jwt_token, get_unverified_profile
 from .mixins import MethodAuthenticationMixin, OrFilterSetMixin, UpdatesMixin
 
@@ -560,7 +566,7 @@ class BaseApiViewSet(MethodAuthenticationMixin, viewsets.ModelViewSet, UpdatesMi
         serializer.save(updated_by=updated_by)
 
     def get_object(self):
-        pk = check_uuid(self.kwargs.get(self.lookup_field))
+        _ = check_uuid(self.kwargs.get(self.lookup_field))
         return super(BaseApiViewSet, self).get_object()
 
 

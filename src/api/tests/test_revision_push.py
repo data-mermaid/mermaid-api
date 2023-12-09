@@ -2,7 +2,7 @@ import uuid
 
 from api.mocks import MockRequest
 from api.models import CollectRecord
-from api.resources.collect_record import CollectRecordSerializer, CollectRecordViewSet
+from api.resources.collect_record import CollectRecordSerializer
 from api.resources.sync.push import apply_changes
 
 

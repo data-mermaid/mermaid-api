@@ -44,7 +44,7 @@ class MetricsMiddleware:
 
         try:
             sub = (decode(token.split(" ")[1].strip()) or {}).get("sub")
-        except:  # If token doesn't parse for any reason, don't 500
+        except Exception as _:  # If token doesn't parse for any reason, don't 500
             return default_parsed
 
         if "|" in sub:

@@ -1,9 +1,15 @@
 from rest_condition import Or
-from rest_framework import serializers
+from rest_framework import permissions, serializers
 from rest_framework.exceptions import ValidationError
 
 from ..models import CollectRecord, ProjectProfile
-from ..permissions import *
+from ..permissions import (
+    ProjectDataAdminPermission,
+    ProjectDataReadOnlyPermission,
+    get_project,
+    get_project_pk,
+    get_project_profile,
+)
 from .base import BaseAPIFilterSet, BaseAPISerializer, BaseProjectApiViewSet
 
 

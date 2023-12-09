@@ -7,7 +7,7 @@ import pytz
 from django.db import IntegrityError, transaction
 from django.db.models import ProtectedError, Q
 from django.http import FileResponse
-from django.http.response import HttpResponse, HttpResponseBadRequest
+from django.http.response import HttpResponseBadRequest
 from django.template.defaultfilters import pluralize
 from django.utils.dateparse import parse_datetime
 from rest_framework import exceptions, status
@@ -30,7 +30,7 @@ class ProtectedResourceMixin(object):
         try:
             self.perform_destroy(instance)
             return Response(status=status.HTTP_204_NO_CONTENT)
-        except ProtectedError as pe:
+        except ProtectedError as _:
             protected_instances = list(get_protected_related_objects(instance))
             num_protected_instances = len(protected_instances)
             protected_instance_displays = [str(pi) for pi in protected_instances]

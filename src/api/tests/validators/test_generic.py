@@ -27,10 +27,7 @@ def _get_list_required_validator():
 
 
 def _get_all_equal_validator():
-    return AllEqualValidator(
-        path="data.obs_belt_fishes",
-        ignore_keys=["id"]
-    )
+    return AllEqualValidator(path="data.obs_belt_fishes", ignore_keys=["id"])
 
 
 def test_required_validator_ok(valid_collect_record):
@@ -80,7 +77,7 @@ def test_all_equal_validator_ok(valid_collect_record):
     assert result.status == OK
 
 
-def test_required_validator_invalid(valid_collect_record):
+def test_required_validator_invalid2(valid_collect_record):
     validator = _get_all_equal_validator()
     record = CollectRecordSerializer(instance=valid_collect_record).data
 

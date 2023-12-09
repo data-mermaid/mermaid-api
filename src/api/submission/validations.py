@@ -3,7 +3,6 @@ import itertools
 import json
 import math
 from collections import defaultdict
-from datetime import date, datetime
 
 from dateutil import tz
 from django.contrib.gis.geos import Polygon

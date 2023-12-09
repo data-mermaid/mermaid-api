@@ -1,6 +1,5 @@
 import os
 import shlex
-import traceback
 
 import boto3
 from django.conf import settings
@@ -32,8 +31,8 @@ class Command(BaseCommand):
     def get_s3_bucket_obj_list(self, bucket_name):
         try:
             return self.s3.list_objects(Bucket=bucket_name).get("Contents")
-        except:
-            traceback.print_exc()
+        except Exception as e:
+            print(e)
             return []
 
     def add_arguments(self, parser):
@@ -132,7 +131,7 @@ class Command(BaseCommand):
             self._psql_restore_db(download_file_name)
             print("Restore Complete")
         except Exception as e:
-            print(traceback.print_exc())
+            print(e)
             print("Restore FAILED!")
 
         # if options.get('no_download', False) is False:
@@ -178,4 +177,4 @@ class Command(BaseCommand):
 
         command = shlex.split(cmd_str)
 
-        run_subprocess(command, to_file=f"/tmp/mermaid/std_out_restore.log")
+        run_subprocess(command, to_file="/tmp/mermaid/std_out_restore.log")

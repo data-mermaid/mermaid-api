@@ -13,7 +13,6 @@ from .validators import (
     DrySubmitValidator,
     DuplicateValidator,
     IntervalSizeValidator,
-    IntervalStartValidator,
     LenSurveyedValidator,
     ListRequiredValidator,
     ListScoreValidator,

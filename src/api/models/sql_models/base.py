@@ -7,7 +7,7 @@ from api.models import Project
 
 project_where = """project.id = '%(project_id)s'::uuid"""
 
-sample_event_sql_template = f"""
+sample_event_sql_template = """
     WITH tags AS MATERIALIZED (
         SELECT
             project_1.id,

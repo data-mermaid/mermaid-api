@@ -8,9 +8,13 @@ from rest_framework.decorators import action
 from rest_framework_gis.pagination import GeoJsonPagination
 
 from ...auth_backends import AnonymousJWTAuthentication
-from ...permissions import *
+from ...models import Project
+from ...permissions import (
+    ObjectDoesNotExist,
+    ProjectDataReadOnlyPermission,
+    ProjectPublicPermission,
+)
 from ...reports import csv_report
-from ...reports.fields import ReportField
 from ...resources.base import BaseApiViewSet, BaseProjectApiViewSet
 from ...utils import truthy
 from ...utils.sample_units import consolidate_sample_events, has_duplicate_sample_events

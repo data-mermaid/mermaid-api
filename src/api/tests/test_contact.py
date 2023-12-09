@@ -1,7 +1,7 @@
-from django.conf import settings
-from django.core import mail
-from django.urls import reverse
-from rest_framework import status
+# from django.conf import settings
+# from django.core import mail
+# from django.urls import reverse
+# from rest_framework import status
 
 MESSAGE_POST = {
     "name": "Test User",

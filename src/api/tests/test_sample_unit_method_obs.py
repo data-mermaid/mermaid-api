@@ -7,6 +7,8 @@ from django.urls import reverse
 
 def _get_rows(client, token, url):
     response = client.get(url, HTTP_AUTHORIZATION=f"Bearer {token}")
+    print(type(response))
+    print(response)
     f = StringIO(b"".join(response.streaming_content).decode("utf-8"))
     reader = csv.DictReader(f, delimiter=",")
     fieldnames = reader.fieldnames

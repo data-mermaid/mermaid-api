@@ -1,10 +1,8 @@
 from dateutil import tz
 from django.utils import timezone
 from django.utils.dateparse import parse_datetime
-from rest_framework.exceptions import ParseError
 from timezonefinder import TimezoneFinder
 
-from ....exceptions import check_uuid
 from ....models import Site
 from ..utils import valid_id
 from .base import ERROR, OK, WARN, BaseValidator, validator_result

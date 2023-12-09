@@ -1,5 +1,4 @@
 import datetime
-from logging import raiseExceptions
 
 import dateutil
 from django.utils.translation import gettext_lazy as _
@@ -128,7 +127,7 @@ class SampleUnitValidation(ProtocolValidation):
 
         try:
             sample_time = dateutil.parser.parse(sample_unit.get("sample_time")).time()
-        except (TypeError, ValueError) as err:
+        except (TypeError, ValueError) as _:
             sample_time = None
 
         results.append(

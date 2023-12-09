@@ -1,7 +1,7 @@
 import django_filters
 
 from ..models import BenthicTransect
-from .base import BaseAPIFilterSet, BaseAPISerializer, BaseProjectApiViewSet
+from .base import BaseProjectApiViewSet
 from .sample_units_base import SampleUnitFilterSet, SampleUnitSerializer
 
 

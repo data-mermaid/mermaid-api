@@ -1,16 +1,8 @@
 import datetime
 
-import pytest
 from django.contrib.gis.geos import Point
 
-from api.models import (
-    BenthicAttribute,
-    BenthicTransect,
-    HabitatComplexityScore,
-    Management,
-    SampleEvent,
-    Site,
-)
+from api.models import BenthicAttribute, BenthicTransect, Management, SampleEvent, Site
 from api.submission.validations import (
     ERROR,
     IGNORE,
@@ -81,9 +73,7 @@ def test_value_in_range_validation():
     assert validation.validate() == ERROR
 
 
-def test_site_validation(
-    site1, project1, country1, reef_type1, reef_exposure1, reef_zone1
-):
+def test_site_validation(site1, project1, country1, reef_type1, reef_exposure1, reef_zone1):
     validation = SiteValidation(str(site1.pk))
     assert validation.validate() == OK
 
@@ -119,10 +109,7 @@ def test_site_validation(
         retry_validation_logs = retry_validation.logs
 
         assert (
-            retry_validation_logs[SiteValidation.identifier]["validate_similar"][
-                "status"
-            ]
-            == IGNORE
+            retry_validation_logs[SiteValidation.identifier]["validate_similar"]["status"] == IGNORE
         )
     finally:
         if site3:
@@ -167,23 +154,17 @@ def test_management_validation(management1, project1, site1):
         management_validation = ManagementValidation(str(management1.pk))
         management_validation.validate()
 
-        management_validation.ignore_warning(
-            ManagementValidation.identifier, "validate_similar"
-        )
+        management_validation.ignore_warning(ManagementValidation.identifier, "validate_similar")
 
         retry_validation = ManagementValidation(
             str(management1.pk),
-            previous_validations=management_validation.logs[
-                ManagementValidation.identifier
-            ],
+            previous_validations=management_validation.logs[ManagementValidation.identifier],
         )
         retry_validation.validate()
         retry_validation_logs = retry_validation.logs
 
         assert (
-            retry_validation_logs[ManagementValidation.identifier]["validate_similar"][
-                "status"
-            ]
+            retry_validation_logs[ManagementValidation.identifier]["validate_similar"]["status"]
             == IGNORE
         )
 
@@ -207,9 +188,7 @@ def test_observations_validation():
         dict(interval=2, score="test2"),
         dict(interval=3, score="test3"),
     ]
-    validation = ObservationsValidation(
-        dict(obs_habitat_complexities=valid_observations)
-    )
+    validation = ObservationsValidation(dict(obs_habitat_complexities=valid_observations))
     assert validation.validate_all_equal() == OK
 
     invalid_observations = [
@@ -217,9 +196,7 @@ def test_observations_validation():
         dict(interval=1, score="test1"),
         dict(interval=1, score="test1"),
     ]
-    validation = ObservationsValidation(
-        dict(obs_habitat_complexities=invalid_observations)
-    )
+    validation = ObservationsValidation(dict(obs_habitat_complexities=invalid_observations))
     assert validation.validate_all_equal() == WARN
 
 
@@ -505,9 +482,7 @@ def test_obs_benthic_percent_covered_validation():
     assert validation.validate_quadrat_count() == WARN
 
 
-def test_obs_colonies_bleached_validation(
-    benthic_attribute_3, growth_form1, growth_form2
-):
+def test_obs_colonies_bleached_validation(benthic_attribute_3, growth_form1, growth_form2):
     obs1 = [
         {
             "count_normal": 20,

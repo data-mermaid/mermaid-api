@@ -2,7 +2,7 @@ import django_filters
 from rest_framework.exceptions import MethodNotAllowed
 
 from ..models import Profile
-from ..permissions import *
+from ..permissions import UnauthenticatedReadOnlyPermission
 from .base import BaseAPIFilterSet, BaseAPISerializer, BaseApiViewSet
 
 

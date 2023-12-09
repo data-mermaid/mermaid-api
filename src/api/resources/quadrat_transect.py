@@ -1,8 +1,5 @@
-import django_filters
-
 from ..models import QuadratTransect
-from .base import BaseAPIFilterSet, BaseAPISerializer, BaseProjectApiViewSet
-from .sample_units_base import SampleUnitFilterSet, SampleUnitSerializer
+from .sample_units_base import SampleUnitSerializer
 
 
 class QuadratTransectSerializer(SampleUnitSerializer):

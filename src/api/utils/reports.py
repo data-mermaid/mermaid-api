@@ -1,17 +1,6 @@
-from io import BytesIO
 from tempfile import NamedTemporaryFile
 
 from django.conf import settings
-
-from ..reports import attributes_report
-from . import s3
-
-
-def update_attributes_report():
-    with NamedTemporaryFile() as tmp:
-        attributes_report.write_attribute_reference(tmp.name)
-        s3.upload_file(settings.PUBLIC_BUCKET, tmp.name, "mermaid_attributes.xlsx")
-
 
 from ..mocks import MockRequest
 from ..models import (
@@ -22,6 +11,7 @@ from ..models import (
     FISHBELT_PROTOCOL,
     HABITATCOMPLEXITY_PROTOCOL,
 )
+from ..reports import attributes_report
 from ..reports.summary_report import (
     create_belt_fish_report,
     create_benthic_lit_report,
@@ -30,6 +20,13 @@ from ..reports.summary_report import (
     create_bleaching_qc_report,
     create_habitat_complexity_report,
 )
+from . import s3
+
+
+def update_attributes_report():
+    with NamedTemporaryFile() as tmp:
+        attributes_report.write_attribute_reference(tmp.name)
+        s3.upload_file(settings.PUBLIC_BUCKET, tmp.name, "mermaid_attributes.xlsx")
 
 
 def create_sample_unit_method_summary_report(project_pk, protocol, output_path, request=None):

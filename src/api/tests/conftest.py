@@ -4,7 +4,7 @@ from django.db import connection
 
 from api.models import revisions
 from api.models.view_models import model_view_migrations
-from .fixtures import *
+from .fixtures import *  # noqa: F403
 
 
 @pytest.fixture(scope="session")

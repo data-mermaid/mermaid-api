@@ -4,13 +4,7 @@ import os
 from django.conf import settings
 from django.core.management.base import BaseCommand
 
-from api.models import (
-    APPROVAL_STATUSES,
-    BaseAttributeModel,
-    BenthicAttribute,
-    BenthicLifeHistory,
-    Region,
-)
+from api.models import APPROVAL_STATUSES, BenthicAttribute, BenthicLifeHistory
 from .refresh_base import get_regions
 
 

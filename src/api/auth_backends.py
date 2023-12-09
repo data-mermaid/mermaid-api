@@ -1,5 +1,4 @@
 import logging
-from datetime import datetime
 
 from django.conf import settings
 from django.contrib.auth import get_user_model
@@ -121,7 +120,7 @@ class JWTAuthentication(BaseAuthentication):
                                 },
                             },
                         )
-                    except:  # Don't ever fail because subscription didn't work
+                    except Exception as _:  # Don't ever fail because subscription didn't work
                         logger.error(
                             "Unable to create mailchimp member {} {} <{}>".format(
                                 profile.first_name, profile.last_name, profile.email
