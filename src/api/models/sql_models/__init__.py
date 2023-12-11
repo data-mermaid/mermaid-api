@@ -14,13 +14,19 @@ from .benthicpit import (  # noqa: F401
     BenthicPITSESQLModel,
     BenthicPITSUSQLModel,
 )
-from .benthicpqt import BenthicPhotoQuadratTransectObsSQLModel  # noqa: F401
-from .benthicpqt import BenthicPhotoQuadratTransectSESQLModel  # noqa: F401
-from .benthicpqt import BenthicPhotoQuadratTransectSUSQLModel  # noqa: F401
-from .bleachingqc import BleachingQCColoniesBleachedObsSQLModel  # noqa: F401
-from .bleachingqc import BleachingQCQuadratBenthicPercentObsSQLModel  # noqa: F401
-from .bleachingqc import BleachingQCSESQLModel  # noqa: F401
-from .bleachingqc import BleachingQCSUSQLModel  # noqa: F401
-from .habitatcomplexity import HabitatComplexityObsSQLModel  # noqa: F401
-from .habitatcomplexity import HabitatComplexitySESQLModel  # noqa: F401
-from .habitatcomplexity import HabitatComplexitySUSQLModel  # noqa: F401
+from .benthicpqt import (  # noqa: F401
+    BenthicPhotoQuadratTransectObsSQLModel,
+    BenthicPhotoQuadratTransectSESQLModel,
+    BenthicPhotoQuadratTransectSUSQLModel,
+)
+from .bleachingqc import (  # noqa: F401
+    BleachingQCColoniesBleachedObsSQLModel,
+    BleachingQCQuadratBenthicPercentObsSQLModel,
+    BleachingQCSESQLModel,
+    BleachingQCSUSQLModel,
+)
+from .habitatcomplexity import (  # noqa: F401
+    HabitatComplexityObsSQLModel,
+    HabitatComplexitySESQLModel,
+    HabitatComplexitySUSQLModel,
+)

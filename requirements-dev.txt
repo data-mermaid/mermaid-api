@@ -1,4 +1,4 @@
-#docker-compose==1.29.2
+docker-compose==1.29.2
 fabric==2.4.0
 Sphinx==3.5.4
 sphinx-rtd-theme==0.5.2

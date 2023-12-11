@@ -614,7 +614,7 @@ class BeltTransectWidthCondition(BaseChoiceModel):
     def op(self):
         if self.operator == self.OPERATOR_EQ:
             return pyoperator.eq
-        elif self.operator == self.OPERATOR_EQ:
+        elif self.operator == self.OPERATOR_NE:
             return pyoperator.ne
         elif self.operator == self.OPERATOR_LT:
             return pyoperator.lt
@@ -1672,30 +1672,12 @@ class CollectRecord(BaseModel):
     SUBMITTED_STAGE = 25
 
     STAGE_CHOICES = (
-        (
-            SAVING_STAGE,
-            _("Saving"),
-        ),
-        (
-            SAVED_STAGE,
-            _("Saved"),
-        ),
-        (
-            VALIDATING_STAGE,
-            _("Validating"),
-        ),
-        (
-            VALIDATED_STAGE,
-            _("Validated"),
-        ),
-        (
-            SUBMITTING_STAGE,
-            _("Submitting"),
-        ),
-        (
-            SUBMITTED_STAGE,
-            _("Submitted"),
-        ),
+        (SAVING_STAGE, _("Saving")),
+        (SAVED_STAGE, _("Saved")),
+        (VALIDATING_STAGE, _("Validating")),
+        (VALIDATED_STAGE, _("Validated")),
+        (SUBMITTING_STAGE, _("Submitting")),
+        (SUBMITTED_STAGE, _("Submitted")),
     )
     STAGE_CHOICES_UPDATED_ON = datetime.datetime(2019, 2, 2, 0, 0, 0, 0, pytz.UTC)
 

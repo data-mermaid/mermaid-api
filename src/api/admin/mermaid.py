@@ -327,10 +327,7 @@ class RelativeDepthAdmin(BaseAdmin):
 
 @admin.register(Tide)
 class TideAdmin(BaseAdmin):
-    list_display = (
-        "val",
-        "name",
-    )
+    list_display = ("val", "name")
 
 
 @admin.register(Visibility)

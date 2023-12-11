@@ -29,9 +29,7 @@ class FishGenusViewSet(BaseAttributeApiViewSet):
     serializer_class = FishGenusSerializer
     queryset = FishGenus.objects.select_related()
     filterset_class = FishGenusFilterSet
-    search_fields = [
-        "name",
-    ]
+    search_fields = ["name"]
 
     def stringify_instance(self, v):
         if v is None:
