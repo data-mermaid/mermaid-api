@@ -32,15 +32,13 @@ class UniqueSiteValidator(BaseValidator):
         y1 = y - self.search_bbox_size[1] / 2.0
         y2 = y + self.search_bbox_size[1] / 2.0
 
-        return Polygon(
-            (((x1, y1), (x1, y2), (x2, y2), (x2, y1), (x1, y1))), srid=self.srid
-        )
+        return Polygon((((x1, y1), (x1, y2), (x2, y2), (x2, y1), (x1, y1))), srid=self.srid)
 
     def _sample_unit_duplicate_sites(self, sample_unit, site, project_id, location):
         # Ignore self and ensure same project
-        qry = sample_unit.objects.select_related(
-            "sample_event", "sample_event__site"
-        ).filter(~Q(sample_event__site=site))
+        qry = sample_unit.objects.select_related("sample_event", "sample_event__site").filter(
+            ~Q(sample_event__site=site)
+        )
         qry = qry.filter(sample_event__site__project_id=project_id)
         if location is not None:
             qry = qry.filter(
@@ -51,9 +49,7 @@ class UniqueSiteValidator(BaseValidator):
             )
 
         # Fuzzy name match
-        qry = qry.annotate(
-            similarity=TrigramSimilarity("sample_event__site__name", site.name)
-        )
+        qry = qry.annotate(similarity=TrigramSimilarity("sample_event__site__name", site.name))
         qry = qry.filter(similarity__gte=self.name_match_percent)
 
         return [r.sample_event.site for r in qry.order_by("-similarity")]

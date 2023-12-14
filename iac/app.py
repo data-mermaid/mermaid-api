@@ -24,7 +24,7 @@ cdk_env = Environment(
 
 common_stack = CommonStack(
     app,
-    f"mermaid-api-infra-common",
+    "mermaid-api-infra-common",
     env=cdk_env,
     tags=tags,
 )

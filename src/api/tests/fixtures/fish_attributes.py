@@ -112,7 +112,5 @@ def fish_species4(fish_genus3, region2):
 
 
 @pytest.fixture
-def all_test_fish_attributes(
-    fish_species1, fish_species2, fish_species3, fish_species4
-):
+def all_test_fish_attributes(fish_species1, fish_species2, fish_species3, fish_species4):
     pass

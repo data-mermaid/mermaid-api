@@ -178,7 +178,7 @@ def get_quadrat_collection_data(collect_record, sample_event_id=None):
     return dict(
         sample_event=sample_event_id,
         label=quadrat_collection_data.get("label") or "",
-        quadrat_size= _cast_decimal_to_str(quadrat_collection_data.get("quadrat_size")),
+        quadrat_size=_cast_decimal_to_str(quadrat_collection_data.get("quadrat_size")),
         collect_record_id=collect_record.id,
         sample_time=quadrat_collection_data.get("sample_time") or None,
         depth=_cast_decimal_to_str(quadrat_collection_data.get("depth")),
@@ -201,7 +201,7 @@ def get_obs_quadrat_benthic_percent_data(collect_record, bleaching_quadrat_colle
                 quadrat_number=observation.get("quadrat_number"),
                 percent_algae=observation.get("percent_algae"),
                 percent_hard=observation.get("percent_hard"),
-                percent_soft=observation.get("percent_soft")
+                percent_soft=observation.get("percent_soft"),
             )
         )
 
@@ -219,7 +219,7 @@ def get_obs_colonies_bleached_data(collect_record, bleaching_quadrat_collection_
                 attribute=observation.get("attribute"),
                 growth_form=observation.get("growth_form"),
                 count_normal=observation.get("count_normal"),
-                count_pale=observation.get("count_pale") ,
+                count_pale=observation.get("count_pale"),
                 count_20=observation.get("count_20"),
                 count_50=observation.get("count_50"),
                 count_80=observation.get("count_80"),

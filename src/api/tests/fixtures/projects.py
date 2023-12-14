@@ -33,7 +33,7 @@ def project1(fish_family1, fish_family2, fish_family3, fish_family4):
                     str(fish_family4.pk),
                 ]
             }
-        }
+        },
     )
     project.tags.add("test", "fishy", "global")
 
@@ -61,16 +61,14 @@ def project4():
                     "343f38e9-2497-422f-bac9-576682bb97f6"  # Fake
                 ]
             }
-        }
+        },
     )
 
 
 @pytest.fixture
 def profile1():
     email = "profile1@mermaidcollect.org"
-    profile = Profile.objects.create(
-        email=email, first_name="Philip", last_name="Glass"
-    )
+    profile = Profile.objects.create(email=email, first_name="Philip", last_name="Glass")
     AuthUser.objects.create(profile=profile, user_id=f"test|{email}")
 
     return profile
@@ -79,9 +77,7 @@ def profile1():
 @pytest.fixture
 def profile2():
     email = "profile2@mermaidcollect.org"
-    profile = Profile.objects.create(
-        email=email, first_name="Bellatrix", last_name="Lestrange"
-    )
+    profile = Profile.objects.create(email=email, first_name="Bellatrix", last_name="Lestrange")
     AuthUser.objects.create(profile=profile, user_id=f"test|{email}")
 
     return profile
@@ -90,9 +86,7 @@ def profile2():
 @pytest.fixture
 def profile3():
     email = "profile3@mermaidcollect.org"
-    profile = Profile.objects.create(
-        email=email, first_name="Garrick", last_name="Ollivander"
-    )
+    profile = Profile.objects.create(email=email, first_name="Garrick", last_name="Ollivander")
     AuthUser.objects.create(profile=profile, user_id=f"test|{email}")
 
     return profile
@@ -182,7 +176,7 @@ def management1(project1):
         est_year=2000,
         name="Management 1",
         notes="Hey what's up!!",
-        open_access=True
+        open_access=True,
     )
 
 
@@ -244,10 +238,7 @@ def base_project(
 
 @pytest.fixture
 def profile1_request(token1, profile1):
-    return MockRequest(
-        token=token1,
-        profile=profile1
-    )
+    return MockRequest(token=token1, profile=profile1)
 
 
 @pytest.fixture

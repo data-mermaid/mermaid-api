@@ -21,10 +21,7 @@ class SampleTimeValidator(BaseValidator):
         except (TypeError, ValueError):
             return OK
 
-        if (
-            sample_time < self.DATE_TIME_RANGE[0]
-            or sample_time > self.DATE_TIME_RANGE[1]
-        ):
+        if sample_time < self.DATE_TIME_RANGE[0] or sample_time > self.DATE_TIME_RANGE[1]:
             return (
                 WARN,
                 self.TIME_OUT_OF_RANGE,

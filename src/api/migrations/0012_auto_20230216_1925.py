@@ -4,20 +4,19 @@ from django.db import migrations, models
 
 
 class Migration(migrations.Migration):
-
     dependencies = [
-        ('api', '0011_auto_20230215_1959'),
+        ("api", "0011_auto_20230215_1959"),
     ]
 
     operations = [
         migrations.AlterField(
-            model_name='bleachingqcsemodel',
-            name='quadrat_count_avg',
+            model_name="bleachingqcsemodel",
+            name="quadrat_count_avg",
             field=models.DecimalField(blank=True, decimal_places=1, max_digits=4, null=True),
         ),
         migrations.AlterField(
-            model_name='bleachingqcsumodel',
-            name='quadrat_count',
+            model_name="bleachingqcsumodel",
+            name="quadrat_count",
             field=models.PositiveSmallIntegerField(blank=True, default=0, null=True),
         ),
     ]

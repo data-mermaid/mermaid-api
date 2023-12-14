@@ -6,9 +6,8 @@ from api.models.revisions import forward_sql
 
 
 class Migration(migrations.Migration):
-
     dependencies = [
-        ('api', '0015_merge_0013_auto_20230316_1608_0014_auto_20230322_2311'),
+        ("api", "0015_merge_0013_auto_20230316_1608_0014_auto_20230322_2311"),
     ]
 
     operations = [

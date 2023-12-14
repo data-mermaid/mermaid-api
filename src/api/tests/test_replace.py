@@ -13,8 +13,7 @@ def test_replace_collect_record_owner(
     project_id = project_profile1.project.pk
 
     last_project_profile_revision_num = Revision.objects.filter(
-        table_name=table_name,
-        project_id=project_id
+        table_name=table_name, project_id=project_id
     ).order_by("-revision_num")[0]
 
     num_collect_records_updated = replace_collect_record_owner(
@@ -25,8 +24,7 @@ def test_replace_collect_record_owner(
     )
 
     new_project_profile_revision_num = Revision.objects.filter(
-        table_name=table_name,
-        project_id=project_id
+        table_name=table_name, project_id=project_id
     ).order_by("-revision_num")[0]
 
     assert num_collect_records_updated == 1

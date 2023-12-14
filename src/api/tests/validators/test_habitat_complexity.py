@@ -28,9 +28,7 @@ def existing_benthic_transect(db, sample_event1, profile1):
         sample_event=sample_event1, number=2, depth=1, len_surveyed=100
     )
     habitat_complexity = HabitatComplexity.objects.create(transect=benthic_transect)
-    observer = Observer.objects.create(
-        transectmethod=habitat_complexity, profile=profile1
-    )
+    observer = Observer.objects.create(transectmethod=habitat_complexity, profile=profile1)
 
     return observer
 

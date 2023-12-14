@@ -6,21 +6,27 @@ from api.models import BenthicPIT, ObsBenthicPIT, Observer
 @pytest.fixture
 def benthic_pit1(db, benthic_transect1):
     return BenthicPIT.objects.create(
-        transect=benthic_transect1, interval_size=1, interval_start=1,
+        transect=benthic_transect1,
+        interval_size=1,
+        interval_start=1,
     )
 
 
 @pytest.fixture
 def benthic_pit1_2(db, benthic_transect1_2):
     return BenthicPIT.objects.create(
-        transect=benthic_transect1_2, interval_size=1, interval_start=1,
+        transect=benthic_transect1_2,
+        interval_size=1,
+        interval_start=1,
     )
 
 
 @pytest.fixture
 def benthic_pit2(db, benthic_transect2):
     return BenthicPIT.objects.create(
-        transect=benthic_transect2, interval_size=0.5, interval_start=0.5,
+        transect=benthic_transect2,
+        interval_size=0.5,
+        interval_start=0.5,
     )
 
 
@@ -193,6 +199,6 @@ def benthic_pit_project(
     observer_benthic_pit1_2,
     observer_benthic_pit2,
     project_profile1,
-    project_profile2
+    project_profile2,
 ):
     pass

@@ -53,9 +53,7 @@ class BaseAttributeIngester(object):
             mapped_key = field_map.get(key)
             if mapped_key is None:
                 continue
-            mapped_rec[field_map[key]] = self._map_field(
-                key, val, field_map, lookups, casts
-            )
+            mapped_rec[field_map[key]] = self._map_field(key, val, field_map, lookups, casts)
 
         mapped_rec["status"] = self.approval_status
         return mapped_rec
@@ -67,8 +65,7 @@ class BaseAttributeIngester(object):
 
     def _update_regions(self, attribute, region_names, is_combined=True):
         new_regions = [
-            self.regions.get(region.strip().lower())
-            for region in region_names.split(",")
+            self.regions.get(region.strip().lower()) for region in region_names.split(",")
         ]
 
         existing_regions = set(attribute.regions.all())
@@ -81,9 +78,7 @@ class BaseAttributeIngester(object):
         else:
             combined_regions = new_regions
 
-        updates = (
-            f"regions: {existing_region_names} -> {[f.name for f in combined_regions]}"
-        )
+        updates = f"regions: {existing_region_names} -> {[f.name for f in combined_regions]}"
 
         attribute.regions.clear()
         attribute.regions.set(combined_regions)
@@ -114,9 +109,7 @@ class BenthicIngester(BaseAttributeIngester):
         return dict()
 
     def _ingest_benthic(self, row):
-        benthic_row = self._map_fields(
-            row, self.benthic_field_map, self.benthic_lookups
-        )
+        benthic_row = self._map_fields(row, self.benthic_field_map, self.benthic_lookups)
 
         region_names = benthic_row.get("regions")
         level1 = benthic_row.get("level1")
@@ -129,13 +122,9 @@ class BenthicIngester(BaseAttributeIngester):
 
         try:
             parent1 = BenthicAttribute.objects.get(name__iexact=level1)
-            has_region_edits, region_updates = self._update_regions(
-                parent1, region_names
-            )
+            has_region_edits, region_updates = self._update_regions(parent1, region_names)
             if has_region_edits:
-                self.write_log(
-                    self.UPDATE_BENTHIC, f"Level 1 - {parent1.name}: {region_updates}"
-                )
+                self.write_log(self.UPDATE_BENTHIC, f"Level 1 - {parent1.name}: {region_updates}")
             else:
                 self.write_log(self.EXISTING_BENTHIC, f"Level 1 - {parent1.name}")
         except BenthicAttribute.DoesNotExist:
@@ -148,9 +137,7 @@ class BenthicIngester(BaseAttributeIngester):
 
         try:
             parent2 = BenthicAttribute.objects.get(name__iexact=level2, parent=parent1)
-            has_region_edits, region_updates = self._update_regions(
-                parent2, region_names
-            )
+            has_region_edits, region_updates = self._update_regions(parent2, region_names)
             if has_region_edits:
                 self.write_log(
                     self.UPDATE_BENTHIC,
@@ -162,7 +149,9 @@ class BenthicIngester(BaseAttributeIngester):
                     f"Level 1 - {parent1.name} - Level 2 - {parent2.name}",
                 )
         except BenthicAttribute.DoesNotExist:
-            parent2 = BenthicAttribute.objects.create(name=level2, parent=parent1, status=self.approval_status)
+            parent2 = BenthicAttribute.objects.create(
+                name=level2, parent=parent1, status=self.approval_status
+            )
             self._update_regions(parent2, region_names)
             self.write_log(
                 self.EXISTING_BENTHIC,
@@ -174,9 +163,7 @@ class BenthicIngester(BaseAttributeIngester):
 
         try:
             parent3 = BenthicAttribute.objects.get(name__iexact=level3, parent=parent2)
-            has_region_edits, region_updates = self._update_regions(
-                parent3, region_names
-            )
+            has_region_edits, region_updates = self._update_regions(parent3, region_names)
             if has_region_edits:
                 self.write_log(
                     self.UPDATE_BENTHIC,
@@ -188,7 +175,9 @@ class BenthicIngester(BaseAttributeIngester):
                     f"Level 1 - {parent1.name} - Level 2 - {parent2.name} - Level 3 - {parent3.name}",
                 )
         except BenthicAttribute.DoesNotExist:
-            parent3 = BenthicAttribute.objects.create(name=level3, parent=parent2, status=self.approval_status)
+            parent3 = BenthicAttribute.objects.create(
+                name=level3, parent=parent2, status=self.approval_status
+            )
             self._update_regions(parent3, region_names)
             self.write_log(
                 self.NEW_BENTHIC,
@@ -200,9 +189,7 @@ class BenthicIngester(BaseAttributeIngester):
 
         try:
             parent4 = BenthicAttribute.objects.get(name__iexact=level4, parent=parent3)
-            has_region_edits, region_updates = self._update_regions(
-                parent4, region_names
-            )
+            has_region_edits, region_updates = self._update_regions(parent4, region_names)
             if has_region_edits:
                 self.write_log(
                     self.UPDATE_BENTHIC,
@@ -214,7 +201,9 @@ class BenthicIngester(BaseAttributeIngester):
                     f"Level 1 - {parent1.name} - Level 2 - {parent2.name} - Level 3 - {parent3.name} - Level 4 - {parent4.name}",
                 )
         except BenthicAttribute.DoesNotExist:
-            parent4 = BenthicAttribute.objects.create(name=level4, parent=parent3, status=self.approval_status)
+            parent4 = BenthicAttribute.objects.create(
+                name=level4, parent=parent3, status=self.approval_status
+            )
             self._update_regions(parent3, region_names)
             self.write_log(
                 self.NEW_BENTHIC,
@@ -298,23 +287,16 @@ class FishIngester(BaseAttributeIngester):
         casts = dict()
 
         for field in fields:
-
             if field.get_internal_type() == "DecimalField":
-                kwargs = dict(
-                    max_digits=field.max_digits, precision=field.decimal_places
-                )
+                kwargs = dict(max_digits=field.max_digits, precision=field.decimal_places)
                 casts[field.name.lower()] = dict(fx=castutils.to_number, kwargs=kwargs)
 
         return casts
 
     def _create_fish_species_lookups(self):
         fish_group_sizes = {fg.name.lower(): fg for fg in FishGroupSize.objects.all()}
-        fish_group_trophics = {
-            fgt.name.lower(): fgt for fgt in FishGroupTrophic.objects.all()
-        }
-        fish_group_functions = {
-            fgf.name.lower(): fgf for fgf in FishGroupFunction.objects.all()
-        }
+        fish_group_trophics = {fgt.name.lower(): fgt for fgt in FishGroupTrophic.objects.all()}
+        fish_group_functions = {fgf.name.lower(): fgf for fgf in FishGroupFunction.objects.all()}
 
         return dict(
             group_size=fish_group_sizes,
@@ -351,9 +333,7 @@ class FishIngester(BaseAttributeIngester):
         return is_successful, self.log
 
     def _ingest_fish_family(self, row):
-        family_row = self._map_fields(
-            row, self.fish_family_field_map, self.fish_family_lookups
-        )
+        family_row = self._map_fields(row, self.fish_family_field_map, self.fish_family_lookups)
         family_name = family_row.get("name")
 
         fish_family = None
@@ -369,9 +349,7 @@ class FishIngester(BaseAttributeIngester):
         return fish_family
 
     def _ingest_fish_genus(self, row, fish_family):
-        genus_row = self._map_fields(
-            row, self.fish_genus_field_map, self.fish_genus_lookups
-        )
+        genus_row = self._map_fields(row, self.fish_genus_field_map, self.fish_genus_lookups)
         genus_name = genus_row["name"]
         try:
             genus = FishGenus.objects.get(name__iexact=genus_name, family=fish_family)
@@ -394,9 +372,7 @@ class FishIngester(BaseAttributeIngester):
         species_name = species_row["name"]
         genus_name = fish_genus.name
         try:
-            species = FishSpecies.objects.get(
-                name__iexact=species_name, genus=fish_genus
-            )
+            species = FishSpecies.objects.get(name__iexact=species_name, genus=fish_genus)
             has_edits = False
             region_names = species_row.pop("regions")
             updates = []

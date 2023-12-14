@@ -1,5 +1,4 @@
 import os
-from importlib import resources
 
 from aws_cdk import (
     Duration,
@@ -15,7 +14,6 @@ from aws_cdk import (
     aws_route53 as r53,
     aws_route53_targets as r53_targets,
     aws_s3 as s3,
-    aws_sqs as sqs,
 )
 from constructs import Construct
 
@@ -240,7 +238,7 @@ class ApiStack(Stack):
             host_headers.append("api.datamermaid.org")
 
         # add a host header rule
-        host_rule = elb.ApplicationListenerRule(
+        _ = elb.ApplicationListenerRule(
             self,
             id="HostHeaderListenerRule",
             listener=load_balancer.listeners[0],

@@ -94,9 +94,7 @@ class UniqueBenthicTransectValidator(BaseValidator):
 
         for result in queryset:
             transect_methods = get_related_transect_methods(result)
-            duplicate_check = self._check_for_duplicate_transect_methods(
-                transect_methods, protocol
-            )
+            duplicate_check = self._check_for_duplicate_transect_methods(transect_methods, protocol)
             if duplicate_check != OK:
                 return duplicate_check
         return OK
@@ -112,9 +110,7 @@ class BenthicIntervalObservationCountValidator(BaseValidator):
     INCORRECT_OBSERVATION_COUNT = "incorrect_observation_count"
     NON_POSITIVE = "{}_not_positive"
 
-    def __init__(
-        self, len_surveyed_path, interval_size_path, observations_path, **kwargs
-    ):
+    def __init__(self, len_surveyed_path, interval_size_path, observations_path, **kwargs):
         self.len_surveyed_path = len_surveyed_path
         self.interval_size_path = interval_size_path
         self.observations_path = observations_path
@@ -123,9 +119,7 @@ class BenthicIntervalObservationCountValidator(BaseValidator):
     @validator_result
     def __call__(self, collect_record, **kwargs):
         tolerance = 1
-        observations = (
-                self.get_value(collect_record, self.observations_path) or []
-        )
+        observations = self.get_value(collect_record, self.observations_path) or []
         observations_count = len(observations)
         len_surveyed = self.get_value(collect_record, self.len_surveyed_path) or 0
         interval_size = self.get_value(collect_record, self.interval_size_path) or 0

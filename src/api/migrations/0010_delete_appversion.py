@@ -4,13 +4,12 @@ from django.db import migrations
 
 
 class Migration(migrations.Migration):
-
     dependencies = [
-        ('api', '0009_auto_20230214_2208'),
+        ("api", "0009_auto_20230214_2208"),
     ]
 
     operations = [
         migrations.DeleteModel(
-            name='AppVersion',
+            name="AppVersion",
         ),
     ]

@@ -6,9 +6,7 @@ class DrySubmitValidator(BaseValidator):
     UNSUCCESSFUL_SUBMIT = "unsuccessful_dry_submit"
 
     def _dry_validation_write(self, collect_record, request):
-        http_status, results = utils.write_collect_record(
-            collect_record, request, dry_run=True
-        )
+        http_status, results = utils.write_collect_record(collect_record, request, dry_run=True)
         if http_status == utils.ERROR_STATUS:
             status = ERROR
         elif http_status == utils.VALIDATION_ERROR_STATUS:

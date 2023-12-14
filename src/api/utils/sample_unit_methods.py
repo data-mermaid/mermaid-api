@@ -41,8 +41,7 @@ def transect_method_to_collect_record(serializer, transect_method_instance, prof
     )
 
     project = get_project(
-        transect_method_instance,
-        transect_method_instance.project_lookup.split("__")
+        transect_method_instance, transect_method_instance.project_lookup.split("__")
     )
 
     data = serializer(instance=transect_method_instance).data
@@ -51,10 +50,7 @@ def transect_method_to_collect_record(serializer, transect_method_instance, prof
         "stage": CollectRecordSerializer.Meta.model.SAVED_STAGE,
         "project": str(project.pk),
         "profile": str(profile.pk),
-        "data": {
-            "protocol": protocol,
-            "sample_unit_method_id":  str(transect_method_instance.pk)
-        }
+        "data": {"protocol": protocol, "sample_unit_method_id": str(transect_method_instance.pk)},
     }
 
     for k, v in data.items():
@@ -73,7 +69,7 @@ def create_audit_record(profile, event_type, record):
         event_type=event_type,
         event_by=profile,
         model=record._meta.model.__name__.lower(),
-        record_id=record.pk
+        record_id=record.pk,
     )
 
 
@@ -81,16 +77,9 @@ def create_audit_record(profile, event_type, record):
 def edit_transect_method(serializer_class, collect_record_owner, request, pk, protocol):
     instance = serializer_class.Meta.model.objects.get(id=pk)
     collect_record = transect_method_to_collect_record(
-        serializer_class,
-        instance,
-        collect_record_owner,
-        protocol
+        serializer_class, instance, collect_record_owner, protocol
     )
-    create_audit_record(
-        request.user.profile,
-        AuditRecord.EDIT_RECORD_EVENT_TYPE,
-        instance
-    )
+    create_audit_record(request.user.profile, AuditRecord.EDIT_RECORD_EVENT_TYPE, instance)
     instance.delete()
 
     return collect_record

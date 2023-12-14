@@ -20,7 +20,6 @@ def needs_instance(message):
     def _needs_instance(func):
         @functools.wraps(func)
         def wrapped(*args, **kwargs):
-
             # Assume it's a method.
             self = args[0]
             if self.instance is None:
@@ -37,4 +36,5 @@ def run_in_thread(fn):
     def run(*k, **kw):
         t = threading.Thread(target=fn, args=k, kwargs=kw)
         t.start()
+
     return run

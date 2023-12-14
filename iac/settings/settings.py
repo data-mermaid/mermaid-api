@@ -1,18 +1,9 @@
 """
 Settings Class
 """
-import os
 from dataclasses import dataclass
 
-from aws_cdk import (
-    Arn,
-    ArnComponents,
-    ArnFormat,
-    Environment,
-    Stack,
-    aws_ec2 as ec2,
-    aws_secretsmanager as secrets,
-)
+from aws_cdk import Arn, ArnComponents, ArnFormat, Stack, aws_secretsmanager as secrets
 
 from iac.settings.utils import camel_case
 

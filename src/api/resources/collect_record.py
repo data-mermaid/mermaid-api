@@ -121,9 +121,7 @@ class CollectRecordViewSet(BaseProjectApiViewSet):
 
         sql, params = qs.query.get_compiler(using=qs.db).as_sql()
 
-        query_sql = (
-            "SELECT * FROM unnest(%s) _pk_ EXCEPT ALL " "SELECT _pk_ FROM (" + sql + ") as foo"
-        )
+        query_sql = "SELECT * FROM unnest(%s) _pk_ EXCEPT ALL SELECT _pk_ FROM (" + sql + ") as foo"
         query_params = [uuids]
         query_params.extend(list(params))
         with connection.cursor() as cursor:

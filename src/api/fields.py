@@ -67,9 +67,7 @@ class LazyChoiceField(serializers.ChoiceField):
 
 
 class PositiveIntegerField(fields.Field):
-    default_error_messages = {
-        "min_value": _("Ensure this value is greater than or equal to 0.")
-    }
+    default_error_messages = {"min_value": _("Ensure this value is greater than or equal to 0.")}
 
     def __init__(self, **kwargs):
         super().__init__(**kwargs)

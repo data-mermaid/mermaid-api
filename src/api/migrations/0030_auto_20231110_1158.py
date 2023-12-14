@@ -10,11 +10,8 @@ def trigger_fishgrouping_revision(apps, schema_editor):
 
 
 class Migration(migrations.Migration):
-
     dependencies = [
-        ('api', '0029_auto_20231109_2235'),
+        ("api", "0029_auto_20231109_2235"),
     ]
 
-    operations = [
-        migrations.RunPython(trigger_fishgrouping_revision, migrations.RunPython.noop)
-    ]
+    operations = [migrations.RunPython(trigger_fishgrouping_revision, migrations.RunPython.noop)]

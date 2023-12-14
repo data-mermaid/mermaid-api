@@ -29,9 +29,7 @@ def test_beltfish_se_view(
     obs_belt_fish2_4_biomass,
     update_summary_cache,
 ):
-    url = reverse(
-        "beltfishmethod-sampleevent-list", kwargs=dict(project_pk=project1.pk)
-    )
+    url = reverse("beltfishmethod-sampleevent-list", kwargs=dict(project_pk=project1.pk))
     count, data, _ = _call(client, token1, url)
 
     biomass_kgha_1 = sum(
@@ -45,25 +43,39 @@ def test_beltfish_se_view(
             assert record["sample_unit_count"] == 1
             assert record["depth_avg"] == 8.0
             assert record["biomass_kgha_avg"] == pytest.approx(biomass_kgha_1, 0.1)
-            assert record["biomass_kgha_trophic_group_avg"]["omnivore"] == pytest.approx(obs_belt_fish1_1_biomass, 0.1)
+            assert record["biomass_kgha_trophic_group_avg"]["omnivore"] == pytest.approx(
+                obs_belt_fish1_1_biomass, 0.1
+            )
 
             fish_family_biomass_avg_0 = record["biomass_kgha_fish_family_avg"]
-            assert fish_family_biomass_avg_0["Fish Family 1"] == pytest.approx(obs_belt_fish1_1_biomass, 0.1)
-            assert fish_family_biomass_avg_0["Fish Family 2"] == pytest.approx(obs_belt_fish1_2_biomass, 0.1)
-            assert fish_family_biomass_avg_0["Fish Family 3"] == pytest.approx(obs_belt_fish1_3_biomass, 0.1)
+            assert fish_family_biomass_avg_0["Fish Family 1"] == pytest.approx(
+                obs_belt_fish1_1_biomass, 0.1
+            )
+            assert fish_family_biomass_avg_0["Fish Family 2"] == pytest.approx(
+                obs_belt_fish1_2_biomass, 0.1
+            )
+            assert fish_family_biomass_avg_0["Fish Family 3"] == pytest.approx(
+                obs_belt_fish1_3_biomass, 0.1
+            )
 
             fish_family_biomass_avg_1 = data[1]["biomass_kgha_fish_family_avg"]
             fish_family_2_biomass = sum([obs_belt_fish2_1_biomass, obs_belt_fish2_4_biomass])
-            assert fish_family_biomass_avg_1["Fish Family 1"] == pytest.approx(obs_belt_fish2_3_biomass, 0.1)
-            assert fish_family_biomass_avg_1["Fish Family 2"] == pytest.approx(fish_family_2_biomass, 0.1)
-            assert fish_family_biomass_avg_1["Fish Family 3"] == pytest.approx(obs_belt_fish2_2_biomass, 0.1)
+            assert fish_family_biomass_avg_1["Fish Family 1"] == pytest.approx(
+                obs_belt_fish2_3_biomass, 0.1
+            )
+            assert fish_family_biomass_avg_1["Fish Family 2"] == pytest.approx(
+                fish_family_2_biomass, 0.1
+            )
+            assert fish_family_biomass_avg_1["Fish Family 3"] == pytest.approx(
+                obs_belt_fish2_2_biomass, 0.1
+            )
             n += 1
         elif record["id"] == str(sample_event2.pk):
             n += 1
-    
+
     if n != count:
         assert False, f"Wrong number of sample events, {n} should be {count}"
-            
+
 
 def test_benthicpit_se_view(
     client,
@@ -79,9 +91,7 @@ def test_benthicpit_se_view(
     profile2,
     update_summary_cache,
 ):
-    url = reverse(
-        "benthicpitmethod-sampleevent-list", kwargs=dict(project_pk=project1.pk)
-    )
+    url = reverse("benthicpitmethod-sampleevent-list", kwargs=dict(project_pk=project1.pk))
     count, data, _ = _call(client, token1, url)
 
     assert count == 2
@@ -102,7 +112,7 @@ def test_benthicpit_se_view(
             assert record["percent_cover_benthic_category_avg"]["Hard coral"] == 60.0
             assert record["percent_cover_benthic_category_avg"]["Rock"] == 40.0
             n += 1
-    
+
     if n != count:
         assert False, f"Wrong number of sample events, {n} should be {count}"
 
@@ -121,9 +131,7 @@ def test_benthiclit_se_view(
     profile2,
     update_summary_cache,
 ):
-    url = reverse(
-        "benthiclitmethod-sampleevent-list", kwargs=dict(project_pk=project1.pk)
-    )
+    url = reverse("benthiclitmethod-sampleevent-list", kwargs=dict(project_pk=project1.pk))
     count, data, _ = _call(client, token1, url)
 
     assert count == 2
@@ -138,7 +146,7 @@ def test_benthiclit_se_view(
             assert record["percent_cover_benthic_category_avg"]["Hard coral"] == 58.46
             assert record["percent_cover_benthic_category_avg"]["Rock"] == 41.54
             n += 1
-    
+
     if n != count:
         assert False, f"Wrong number of sample events, {n} should be {count}"
 
@@ -155,9 +163,7 @@ def test_habitatcomplexity_se_view(
     site1,
     update_summary_cache,
 ):
-    url = reverse(
-        "habitatcomplexitymethod-sampleevent-list", kwargs=dict(project_pk=project1.pk)
-    )
+    url = reverse("habitatcomplexitymethod-sampleevent-list", kwargs=dict(project_pk=project1.pk))
     count, data, _ = _call(client, token1, url)
 
     assert count == 2
@@ -168,7 +174,7 @@ def test_habitatcomplexity_se_view(
             n += 1
         elif record["id"] == str(sample_event2.pk):
             n += 1
-    
+
     if n != count:
         assert False, f"Wrong number of sample events, {n} should be {count}"
 
@@ -184,9 +190,7 @@ def test_bleachingqc_se_view(
     site1,
     update_summary_cache,
 ):
-    url = reverse(
-        "bleachingqcsmethod-sampleevent-list", kwargs=dict(project_pk=project1.pk)
-    )
+    url = reverse("bleachingqcsmethod-sampleevent-list", kwargs=dict(project_pk=project1.pk))
     count, data, _ = _call(client, token1, url)
 
     assert count == 1
@@ -203,6 +207,6 @@ def test_bleachingqc_se_view(
             assert record["percent_soft_avg_avg"] == 19.6
             assert record["percent_algae_avg_avg"] == 20.4
             n += 1
-    
+
     if n != count:
         assert False, f"Wrong number of sample events, {n} should be {count}"

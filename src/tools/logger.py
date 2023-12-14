@@ -7,6 +7,7 @@ from .models import LogEvent
 
 class DatabaseLogger:
     _running = False
+
     def __init__(self, batch_size=1):
         self._batch_size = batch_size
         self._queue = queue.Queue()
@@ -35,10 +36,12 @@ class DatabaseLogger:
             for _ in range(self._batch_size):
                 try:
                     timestamp, event = self._queue.get(timeout=1)
-                    log_records.append(LogEvent(
-                        timestamp=timestamp,
-                        event=event,
-                    ))
+                    log_records.append(
+                        LogEvent(
+                            timestamp=timestamp,
+                            event=event,
+                        )
+                    )
                 except queue.Empty:
                     break
 

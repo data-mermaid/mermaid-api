@@ -4,18 +4,17 @@ from django.db import migrations
 
 
 class Migration(migrations.Migration):
-
     dependencies = [
-        ('api', '0018_auto_20230425_2108'),
+        ("api", "0018_auto_20230425_2108"),
     ]
 
     operations = [
         migrations.AlterModelOptions(
-            name='current',
-            options={'ordering': ('val', 'name')},
+            name="current",
+            options={"ordering": ("val", "name")},
         ),
         migrations.AlterModelOptions(
-            name='tide',
-            options={'ordering': ('val', 'name')},
+            name="tide",
+            options={"ordering": ("val", "name")},
         ),
     ]

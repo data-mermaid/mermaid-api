@@ -7,9 +7,7 @@ def test_dry_submit_validator_ok(valid_collect_record, profile1_request):
     assert result.status == OK
 
 
-def test_dry_submit_validator_invalid_sample_event(
-    valid_collect_record, profile1_request
-):
+def test_dry_submit_validator_invalid_sample_event(valid_collect_record, profile1_request):
     validator = DrySubmitValidator()
 
     collect_record = valid_collect_record
@@ -22,9 +20,7 @@ def test_dry_submit_validator_invalid_sample_event(
     assert "management" in result.context["dry_submit_results"]
 
 
-def test_dry_submit_validator_invalid_fishbelt_transect(
-    valid_collect_record, profile1_request
-):
+def test_dry_submit_validator_invalid_fishbelt_transect(valid_collect_record, profile1_request):
     validator = DrySubmitValidator()
 
     collect_record = valid_collect_record
