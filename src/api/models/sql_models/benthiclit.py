@@ -2,13 +2,7 @@ from django.contrib.gis.db import models
 from django.utils.translation import gettext_lazy as _
 
 from sqltables import SQLTableArg, SQLTableManager
-from .base import (
-    BaseSQLModel,
-    BaseSUSQLModel,
-    project_where,
-    sample_event_sql_template,
-)
-
+from .base import BaseSQLModel, BaseSUSQLModel, project_where, sample_event_sql_template
 
 # Unique combination of these fields defines a single (pseudo) sample unit. All other fields are aggregated.
 su_fields = BaseSUSQLModel.se_fields + [
@@ -281,7 +275,6 @@ class BenthicLITSUSQLModel(BaseSUSQLModel):
 
 
 class BenthicLITSESQLModel(BaseSQLModel):
-
     _se_fields = ", ".join([f"benthiclit_su.{f}" for f in BaseSQLModel.se_fields])
     _su_aggfields_sql = BaseSQLModel.su_aggfields_sql
     sql = f"""

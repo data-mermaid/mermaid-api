@@ -1,10 +1,14 @@
-
 from api.covariates import CoralAtlasCovariate, VibrantOceansThreatsCovariate
 
 
 def test_coral_atlas_covariate_with_map_assets(mock_covariate_server, alan_coral_atlas_map_assets):
     url = mock_covariate_server(alan_coral_atlas_map_assets)
-    mock_coords = [(0, 0,)]
+    mock_coords = [
+        (
+            0,
+            0,
+        )
+    ]
 
     cov = CoralAtlasCovariate()
     cov.api_url = url
@@ -19,9 +23,16 @@ def test_coral_atlas_covariate_with_map_assets(mock_covariate_server, alan_coral
         assert c["name"] in ["Seagrass", "Sand"]
 
 
-def test_coral_atlas_covariate_without_map_assets(mock_covariate_server, alan_coral_atlas_no_map_assets):
+def test_coral_atlas_covariate_without_map_assets(
+    mock_covariate_server, alan_coral_atlas_no_map_assets
+):
     url = mock_covariate_server(alan_coral_atlas_no_map_assets)
-    mock_coords = [(0, 0,)]
+    mock_coords = [
+        (
+            0,
+            0,
+        )
+    ]
 
     cov = CoralAtlasCovariate()
     cov.api_url = url

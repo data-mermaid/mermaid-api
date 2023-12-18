@@ -1,7 +1,6 @@
 import pytest
-
-from django.db import connection
 from django.contrib.gis.db import models
+from django.db import connection
 
 from sqltables.datastructures import SQLTableArg
 from sqltables.query import SQLTableManager

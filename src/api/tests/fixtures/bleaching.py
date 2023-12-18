@@ -11,7 +11,12 @@ from api.models import (
 
 @pytest.fixture
 def quadrat_collection1(
-    db, sample_event1, current1, relative_depth1, tide1, visibility1,
+    db,
+    sample_event1,
+    current1,
+    relative_depth1,
+    tide1,
+    visibility1,
 ):
     return QuadratCollection.objects.create(
         sample_event=sample_event1,
@@ -27,7 +32,12 @@ def quadrat_collection1(
 
 @pytest.fixture
 def quadrat_collection2(
-    db, sample_event2, current2, relative_depth1, tide1, visibility2,
+    db,
+    sample_event2,
+    current2,
+    relative_depth1,
+    tide1,
+    visibility2,
 ):
     return QuadratCollection.objects.create(
         sample_event=sample_event2,
@@ -53,16 +63,12 @@ def bleaching_quadrat_collection2(db, quadrat_collection2):
 
 @pytest.fixture
 def observer_bleaching_quadrat_collection1(db, bleaching_quadrat_collection1, profile1):
-    return Observer.objects.create(
-        transectmethod=bleaching_quadrat_collection1, profile=profile1
-    )
+    return Observer.objects.create(transectmethod=bleaching_quadrat_collection1, profile=profile1)
 
 
 @pytest.fixture
 def observer_bleaching_quadrat_collection2(db, bleaching_quadrat_collection2, profile1):
-    return Observer.objects.create(
-        transectmethod=bleaching_quadrat_collection2, profile=profile1
-    )
+    return Observer.objects.create(transectmethod=bleaching_quadrat_collection2, profile=profile1)
 
 
 @pytest.fixture
@@ -141,9 +147,7 @@ def obs_colonies_bleached1_5(db, bleaching_quadrat_collection1, benthic_attribut
 
 
 @pytest.fixture
-def obs_quadrat_benthic_percent1_1(
-    db, bleaching_quadrat_collection1, benthic_attribute_2a1
-):
+def obs_quadrat_benthic_percent1_1(db, bleaching_quadrat_collection1, benthic_attribute_2a1):
     return ObsQuadratBenthicPercent.objects.create(
         bleachingquadratcollection=bleaching_quadrat_collection1,
         quadrat_number=1,

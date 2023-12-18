@@ -18,9 +18,9 @@ from ..models import (
     ObsBenthicPhotoQuadrat,
     ObsBenthicPIT,
     ObsColoniesBleached,
+    Observer,
     ObsHabitatComplexity,
     ObsQuadratBenthicPercent,
-    Observer,
     Profile,
     ProjectProfile,
     QuadratCollection,
@@ -31,17 +31,16 @@ from ..models import (
     TransectMethod,
 )
 from ..resources.sync.views import (
+    BENTHIC_ATTRIBUTES_SOURCE_TYPE,
     FISH_FAMILIES_SOURCE_TYPE,
     FISH_GENERA_SOURCE_TYPE,
     FISH_GROUPINGS_SOURCE_TYPE,
     FISH_SPECIES_SOURCE_TYPE,
-    BENTHIC_ATTRIBUTES_SOURCE_TYPE,
 )
 from ..utils.related import get_related_project
 
-
 # ***************************************************************
-# NOTE: Database triggers exist to populate revisions 
+# NOTE: Database triggers exist to populate revisions
 # if the following tables are inserted, deleted or updated:
 #     * fish_species
 #     * management
@@ -68,9 +67,7 @@ def update_profile_revisions(sender, instance, *args, **kwargs):
 @receiver(pre_delete, sender=ProjectProfile)
 def delete_project_profile_revisions(sender, instance, *args, **kwargs):
     Revision.create_from_instance(instance, related_to_profile_id=instance.profile.pk)
-    Revision.create_from_instance(
-        instance.project, related_to_profile_id=instance.profile.pk
-    )
+    Revision.create_from_instance(instance.project, related_to_profile_id=instance.profile.pk)
 
 
 @receiver(post_save, sender=CollectRecord)
@@ -83,9 +80,7 @@ def new_collect_record_revisions(sender, instance, created, *args, **kwargs):
 
 @receiver(pre_delete, sender=CollectRecord)
 def deleted_collect_record_revisions(sender, instance, *args, **kwargs):
-    _create_project_profile_revisions(
-        {"profile": instance.profile, "project": instance.project}
-    )
+    _create_project_profile_revisions({"profile": instance.profile, "project": instance.project})
 
 
 @receiver(post_delete, sender=BenthicTransect)

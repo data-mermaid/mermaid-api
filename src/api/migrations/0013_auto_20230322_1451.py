@@ -4,19 +4,18 @@ from django.db import migrations, models
 
 
 class Migration(migrations.Migration):
-
     dependencies = [
-        ('api', '0012_auto_20230216_1925'),
+        ("api", "0012_auto_20230216_1925"),
     ]
 
     operations = [
         migrations.AddField(
-            model_name='revision',
-            name='related_to_profile_id',
+            model_name="revision",
+            name="related_to_profile_id",
             field=models.UUIDField(db_index=True, editable=False, null=True),
         ),
         migrations.AlterUniqueTogether(
-            name='revision',
-            unique_together={('table_name', 'record_id', 'related_to_profile_id')},
+            name="revision",
+            unique_together={("table_name", "record_id", "related_to_profile_id")},
         ),
     ]

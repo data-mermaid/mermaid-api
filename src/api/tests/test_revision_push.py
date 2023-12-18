@@ -1,9 +1,9 @@
 import uuid
 
-from api.models import CollectRecord
-from api.resources.collect_record import CollectRecordSerializer, CollectRecordViewSet
-from api.resources.sync.push import apply_changes
 from api.mocks import MockRequest
+from api.models import CollectRecord
+from api.resources.collect_record import CollectRecordSerializer
+from api.resources.sync.push import apply_changes
 
 
 def test_apply_changes(db_setup, serialized_tracked_collect_record, profile1, project1):
@@ -24,7 +24,7 @@ def test_apply_changes(db_setup, serialized_tracked_collect_record, profile1, pr
         "id": str(uuid.uuid4()),
         "profile": str(profile1.pk),
         "project": str(project1.pk),
-        "data": dict()
+        "data": dict(),
     }
     assert apply_changes(request, CollectRecordSerializer, new_collect_record)
     assert CollectRecord.objects.filter(id=new_collect_record["id"]).exists() is True

@@ -1,5 +1,6 @@
 import csv
 
+from django.db import connection, transaction
 from rest_framework.exceptions import NotFound
 
 from api import mocks
@@ -13,9 +14,9 @@ from api.ingest import (
     ingest_serializers,
 )
 from api.models import (
-    BENTHICPQT_PROTOCOL,
     BENTHICLIT_PROTOCOL,
     BENTHICPIT_PROTOCOL,
+    BENTHICPQT_PROTOCOL,
     BLEACHINGQC_PROTOCOL,
     FISHBELT_PROTOCOL,
     HABITATCOMPLEXITY_PROTOCOL,
@@ -29,7 +30,6 @@ from api.resources.project_profile import ProjectProfileSerializer
 from api.submission.utils import submit_collect_records_v2, validate_collect_records_v2
 from api.submission.validations import ERROR, WARN
 from api.utils import tokenutils
-from django.db import connection, transaction
 
 
 class InvalidSchema(Exception):
@@ -41,20 +41,16 @@ class InvalidSchema(Exception):
 def get_ingest_project_choices(project_id):
     project_choices = dict()
     project_choices["data__sample_event__site"] = {
-        s.name: str(s.id)
-        for s in Site.objects.filter(project_id=project_id)
+        s.name: str(s.id) for s in Site.objects.filter(project_id=project_id)
     }
 
     project_choices["data__sample_event__management"] = {
-        m.name: str(m.id)
-        for m in Management.objects.filter(project_id=project_id)
+        m.name: str(m.id) for m in Management.objects.filter(project_id=project_id)
     }
 
     project_choices["data__observers"] = {
         pp.profile.email.lower(): ProjectProfileSerializer(instance=pp).data
-        for pp in ProjectProfile.objects.select_related("profile").filter(
-            project_id=project_id
-        )
+        for pp in ProjectProfile.objects.select_related("profile").filter(project_id=project_id)
     }
 
     return project_choices
@@ -144,7 +140,6 @@ def ingest(
     validation_suppressants=None,
     serializer_class=None,
 ):
-
     output = dict()
 
     if protocol == BENTHICLIT_PROTOCOL:
@@ -172,9 +167,7 @@ def ingest(
     if profile is None:
         raise ValueError("Profile does not exist")
 
-    s = serializer(
-        data=rows, many=True, project_choices=project_choices, context=context
-    )
+    s = serializer(data=rows, many=True, project_choices=project_choices, context=context)
 
     is_valid = s.is_valid()
     errors = s.formatted_errors
@@ -215,9 +208,7 @@ def ingest(
             is_bulk_invalid = True
 
     if dry_run is False and bulk_submission and not is_bulk_invalid:
-        submit_output = submit_collect_records_v2(
-            profile, record_ids, validation_suppressants
-        )
+        submit_output = submit_collect_records_v2(profile, record_ids, validation_suppressants)
         output["submit"] = submit_output
 
     return new_records, output

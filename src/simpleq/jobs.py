@@ -93,7 +93,7 @@ class Job:
 
         if self.callable.__name__ == "update_project_summaries":
             msg = f"Starting job {self.callable.__name__} with args [{self.kwargs}] at {self.start_time.isoformat()}"
-        
+
         self.log(msg)
 
         try:

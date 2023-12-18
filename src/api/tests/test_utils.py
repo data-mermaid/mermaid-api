@@ -1,5 +1,5 @@
+from api.models import BenthicTransect, QuadratCollection, QuadratTransect, SampleUnit
 from api.utils import get_subclasses
-from api.models import SampleUnit, BenthicTransect, QuadratTransect, QuadratCollection
 
 
 def test_get_subclasses():

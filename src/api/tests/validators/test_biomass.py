@@ -20,9 +20,7 @@ def test_biomass_validator_ok(valid_collect_record, belt_transect_width_conditio
     assert result.status == OK
 
 
-def test_biomass_validator_low_density(
-    valid_collect_record, belt_transect_width_condition2
-):
+def test_biomass_validator_low_density(valid_collect_record, belt_transect_width_condition2):
     record = CollectRecordSerializer(instance=valid_collect_record).data
     validator = _get_validator()
 
@@ -38,9 +36,7 @@ def test_biomass_validator_low_density(
     assert result.code == BiomassValidator.LOW_DENSITY
 
 
-def test_biomass_validator_high_density(
-    valid_collect_record, belt_transect_width_condition2
-):
+def test_biomass_validator_high_density(valid_collect_record, belt_transect_width_condition2):
     record = CollectRecordSerializer(instance=valid_collect_record).data
     validator = _get_validator()
 
@@ -56,9 +52,7 @@ def test_biomass_validator_high_density(
     assert result.code == BiomassValidator.HIGH_DENSITY
 
 
-def test_biomass_validator_invalid_values(
-    valid_collect_record, belt_transect_width_condition2
-):
+def test_biomass_validator_invalid_values(valid_collect_record, belt_transect_width_condition2):
     record = CollectRecordSerializer(instance=valid_collect_record).data
     record["data"]["fishbelt_transect"]["len_surveyed"] = ""
     record["data"]["fishbelt_transect"]["width"] = ""

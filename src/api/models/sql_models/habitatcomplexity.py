@@ -2,16 +2,10 @@ from django.contrib.gis.db import models
 from django.utils.translation import gettext_lazy as _
 
 from sqltables import SQLTableArg, SQLTableManager
-from .base import (
-    BaseSQLModel,
-    BaseSUSQLModel,
-    project_where,
-    sample_event_sql_template,
-)
+from .base import BaseSQLModel, BaseSUSQLModel, project_where, sample_event_sql_template
 
 
 class HabitatComplexityObsSQLModel(BaseSUSQLModel):
-
     _se_fields = ", ".join([f"se.{f}" for f in BaseSUSQLModel.se_fields])
     _su_fields = BaseSUSQLModel.su_fields_sql
     sql = f"""
@@ -194,10 +188,7 @@ class HabitatComplexitySUSQLModel(BaseSUSQLModel):
 
 
 class HabitatComplexitySESQLModel(BaseSQLModel):
-
-    _se_fields = ", ".join(
-        [f"habitatcomplexity_su.{f}" for f in BaseSQLModel.se_fields]
-    )
+    _se_fields = ", ".join([f"habitatcomplexity_su.{f}" for f in BaseSQLModel.se_fields])
     _su_aggfields_sql = BaseSQLModel.su_aggfields_sql
     sql = f"""
         WITH habitatcomplexity_su AS (

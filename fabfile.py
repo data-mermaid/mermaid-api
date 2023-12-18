@@ -15,8 +15,10 @@ def local(command):
 
 # FABRIC COMMANDS ###
 
+
 def create_version_file():
     local("./ci_cd/version.sh")
+
 
 @task
 def build(c):
@@ -88,13 +90,15 @@ def lint(c):
 
 @task
 def test(c):
-    local("docker exec -it api_service pytest --nomigrations --cov-report=html --cov=api --verbose api/tests")
+    local(
+        "docker exec -it api_service pytest --nomigrations --cov-report=html --cov=api --verbose api/tests"
+    )
 
 
-@task 
+@task
 def dbrestore(c, keyname="local"):
     """Restore the database from a named s3 key
-        ie - fab dbrestore --keyname dev
+    ie - fab dbrestore --keyname dev
     """
     local(_api_cmd("python manage.py dbrestore {}".format(keyname)))
 
@@ -102,7 +106,7 @@ def dbrestore(c, keyname="local"):
 @task
 def dbbackup(c, keyname="local"):
     """Backup the database from a named s3 key
-        ie - fab dbbackup --keyname dev
+    ie - fab dbbackup --keyname dev
     """
     local(_api_cmd("python manage.py dbbackup {}".format(keyname)))
 

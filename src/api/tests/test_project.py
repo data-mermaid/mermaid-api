@@ -1,4 +1,3 @@
-from venv import create
 from django.urls import reverse
 
 from api.models import Profile, ProjectProfile
@@ -103,14 +102,7 @@ def test_project_summary(
 
 
 def test_copy_project_and_resources(
-    project1,
-    project_profile1,
-    project_profile2,
-    site1,
-    site2,
-    site3,
-    management1,
-    management2
+    project1, project_profile1, project_profile2, site1, site2, site3, management1, management2
 ):
     project_name = "new title"
     owner_profile = project_profile1.profile
@@ -122,7 +114,7 @@ def test_copy_project_and_resources(
     original_tags = [t.name for t in project1.tags.all()]
     assert new_project.tags.filter(name__in=original_tags).count() == len(original_tags)
 
-    assert new_project.tags.count() == 3    
+    assert new_project.tags.count() == 3
 
     assert new_project.sites.all().count() == 3
     assert new_project.management_set.count() == 2

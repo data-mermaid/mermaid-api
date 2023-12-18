@@ -39,8 +39,7 @@ def get_sample_unit_field(model):
         (
             field.name
             for field in model._meta.get_fields()
-            if isinstance(field, OneToOneField)
-            and issubclass(field.related_model, SampleUnit)
+            if isinstance(field, OneToOneField) and issubclass(field.related_model, SampleUnit)
         ),
         None,
     )
@@ -150,9 +149,7 @@ def create_collecting_summary(project):
     DEFAULT_MR_ID = "__null__"
     DEFAULT_OBSERVER_NAME = "unnamed observer"
     summary = {}
-    collect_records = CollectRecord.objects.select_related("profile").filter(
-        project=project
-    )
+    collect_records = CollectRecord.objects.select_related("profile").filter(project=project)
 
     site_ids = []
     mr_ids = []
@@ -201,25 +198,21 @@ def create_collecting_summary(project):
         if protocol not in summary[site_id]["sample_unit_methods"]:
             summary[site_id]["sample_unit_methods"][protocol] = {"profile_summary": {}}
 
-        if (
-            profile_id
-            not in summary[site_id]["sample_unit_methods"][protocol]["profile_summary"]
-        ):
-            summary[site_id]["sample_unit_methods"][protocol]["profile_summary"][
-                profile_id
-            ] = {"profile_name": profile.full_name, "collect_records": []}
+        if profile_id not in summary[site_id]["sample_unit_methods"][protocol]["profile_summary"]:
+            summary[site_id]["sample_unit_methods"][protocol]["profile_summary"][profile_id] = {
+                "profile_name": profile.full_name,
+                "collect_records": [],
+            }
 
         label = _get_collect_record_label(collect_record)
         sample_date = get_value(data, "sample_event__sample_date")
         mr = mr_lookup.get(mr_id) or DEFAULT_MR_ID
         observers = get_value(data, "observers") or []
-        observer_names = [
-            o.get("profile_name") or DEFAULT_OBSERVER_NAME for o in observers
-        ]
+        observer_names = [o.get("profile_name") or DEFAULT_OBSERVER_NAME for o in observers]
 
-        summary[site_id]["sample_unit_methods"][protocol]["profile_summary"][
-            profile_id
-        ]["collect_records"].append(
+        summary[site_id]["sample_unit_methods"][protocol]["profile_summary"][profile_id][
+            "collect_records"
+        ].append(
             {
                 "name": label,
                 "sample_date": sample_date,

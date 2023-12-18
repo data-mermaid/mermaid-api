@@ -7,7 +7,7 @@ from django.core.management.base import BaseCommand
 from django.db import transaction
 from django.template.defaultfilters import pluralize
 
-from api.ingest.utils import ingest, InvalidSchema
+from api.ingest.utils import InvalidSchema, ingest
 from api.models import PROTOCOL_MAP
 from api.resources.collect_record import CollectRecordSerializer
 from api.submission.validations import ERROR, OK, WARN

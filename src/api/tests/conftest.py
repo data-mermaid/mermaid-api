@@ -1,10 +1,10 @@
 import pytest
-from django.db import connection
 from django.conf import settings
+from django.db import connection
 
-from api.models.view_models import model_view_migrations
 from api.models import revisions
-from .fixtures import *
+from api.models.view_models import model_view_migrations
+from .fixtures import *  # noqa: F403
 
 
 @pytest.fixture(scope="session")
@@ -14,7 +14,7 @@ def django_db_setup(django_db_setup, django_db_blocker):
     with django_db_blocker.unblock():
         with connection.cursor() as cursor:
             cursor.execute("CREATE EXTENSION IF NOT EXISTS pg_trgm;")
-            cursor.execute("CREATE EXTENSION IF NOT EXISTS \"uuid-ossp\";")
+            cursor.execute('CREATE EXTENSION IF NOT EXISTS "uuid-ossp";')
             cursor.execute(f"ALTER DATABASE {db_name} SET jit TO false;")
             cursor.execute(model_view_migrations.forward_sql())
             cursor.execute(revisions.forward_sql)

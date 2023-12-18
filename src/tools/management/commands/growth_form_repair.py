@@ -9,9 +9,7 @@ from api.models import (
     BENTHICPIT_PROTOCOL,
     BLEACHINGQC_PROTOCOL,
     GrowthForm,
-    ObsBenthicLIT,
     ObsBenthicPIT,
-    ObsColoniesBleached,
 )
 from api.utils.timer import timing
 
@@ -40,8 +38,8 @@ class Command(BaseCommand):
         obs_interval,
         benthic_attr,
     ):
-        depth = f'{float(depth):.1f}'
-        obs_interval = f'{float(obs_interval):.1f}'
+        depth = f"{float(depth):.1f}"
+        obs_interval = f"{float(obs_interval):.1f}"
         return f"{site}:::{management}:::{transect_number}:::{sample_date}:::{depth}:::{obs_interval}:::{benthic_attr}".lower()
 
     def _create_csv_lookup(self, csv_file):
@@ -89,9 +87,7 @@ class Command(BaseCommand):
             management = se.management.name
             transect_number = transect.number
             depth = transect.depth
-            sample_date = (
-                f"{se.sample_date.year}-{se.sample_date.month}-{se.sample_date.day}"
-            )
+            sample_date = f"{se.sample_date.year}-{se.sample_date.month}-{se.sample_date.day}"
             obs_interval = ob.interval
             benthic_attr = ob.attribute.name
             key = self.create_key(

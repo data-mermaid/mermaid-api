@@ -1,32 +1,40 @@
-import django_filters
 import logging
-from django.db.models import JSONField
+
+import django_filters
 from django.db import transaction
+from django.db.models import JSONField
 from rest_condition import Or
-from rest_framework import exceptions, serializers, status
+from rest_framework import exceptions, permissions, serializers, status
 from rest_framework.decorators import action
 from rest_framework.relations import HyperlinkedIdentityField
 from rest_framework.response import Response
 
 from ..auth_backends import AnonymousJWTAuthentication
+from ..exceptions import check_uuid
 from ..models import (
     ArchivedRecord,
     Management,
-    Project,
-    Site,
     Profile,
+    Project,
     ProjectProfile,
+    Site,
     Tag,
     TransectMethod,
 )
-from ..exceptions import check_uuid
 from ..notifications import notify_crs_transferred
-from ..permissions import *
+from ..permissions import (
+    ProjectDataAdminPermission,
+    ProjectDataPermission,
+    UnauthenticatedReadOnlyPermission,
+    get_project,
+    get_project_pk,
+    get_project_profile,
+)
 from ..utils import truthy
 from ..utils.project import (
+    copy_project_and_resources,
     create_collecting_summary,
     create_submitted_summary,
-    copy_project_and_resources,
     delete_project,
     email_members_of_new_project,
     get_sample_unit_field,
@@ -77,8 +85,7 @@ class ProjectSerializer(BaseAPISerializer):
         for field in self.project_specific_fields:
             self._declared_fields.update(
                 {
-                    "%ss"
-                    % field: HyperlinkedIdentityField(
+                    "%ss" % field: HyperlinkedIdentityField(
                         lookup_url_kwarg="project_pk", view_name="%s-list" % field
                     )
                 }
@@ -89,9 +96,7 @@ class ProjectSerializer(BaseAPISerializer):
     def create(self, validated_data):
         p = super().create(validated_data)
         request = self.context.get("request")
-        pp = ProjectProfile(
-            project=p, profile=request.user.profile, role=ProjectProfile.ADMIN
-        )
+        pp = ProjectProfile(project=p, profile=request.user.profile, role=ProjectProfile.ADMIN)
         pp.save()
         return p
 
@@ -125,9 +130,7 @@ class ProjectSerializer(BaseAPISerializer):
 
     def get_countries(self, obj):
         sites = obj.sites.all()
-        return sorted(
-            list(set([s.country.name for s in sites if s.country is not None]))
-        )
+        return sorted(list(set([s.country.name for s in sites if s.country is not None])))
 
     def get_num_sites(self, obj):
         sites = obj.sites.all()
@@ -290,9 +293,7 @@ class ProjectViewSet(BaseApiViewSet):
             management_data["predecessor"] = management_data["id"]
             management_data["project"] = project.pk
             management_data["id"] = None
-            mgmt_serializer = ManagementSerializer(
-                data=management_data, context=context
-            )
+            mgmt_serializer = ManagementSerializer(data=management_data, context=context)
             if mgmt_serializer.is_valid() is False:
                 validation_errors["Management Regimes"] = mgmt_serializer.errors
                 has_validation_errors = True
@@ -335,9 +336,7 @@ class ProjectViewSet(BaseApiViewSet):
 
         existing_named_projects = Project.objects.filter(name=new_project_name)
         if existing_named_projects.count() > 0:
-            raise exceptions.ValidationError(
-                {"new_project_name": "Project name already exists"}
-            )
+            raise exceptions.ValidationError({"new_project_name": "Project name already exists"})
 
         try:
             original_project_id = data["original_project_id"]
@@ -347,9 +346,7 @@ class ProjectViewSet(BaseApiViewSet):
                 project_id=original_project_id, profile=profile
             ).project
         except KeyError as e:
-            raise exceptions.ParseError(
-                detail="'original_project_id' is required"
-            ) from e
+            raise exceptions.ParseError(detail="'original_project_id' is required") from e
         except ProjectProfile.DoesNotExist as not_exist_err:
             raise exceptions.ParseError(
                 detail="Original project does not exist or you are not a member"
@@ -368,15 +365,11 @@ class ProjectViewSet(BaseApiViewSet):
                 email_members_of_new_project(new_project, profile)
 
             context = {"request": request}
-            project_serializer = ProjectSerializer(
-                instance=new_project, context=context
-            )
+            project_serializer = ProjectSerializer(instance=new_project, context=context)
             return Response(project_serializer.data)
         except Exception as err:
             print(err)
-            raise exceptions.APIException(
-                detail=f"[{type(err).__name__}] Copying project"
-            ) from err
+            raise exceptions.APIException(detail=f"[{type(err).__name__}] Copying project") from err
 
     def get_updates(self, request, *args, **kwargs):
         added, updated, deleted = super().get_updates(request, *args, **kwargs)
@@ -438,12 +431,8 @@ class ProjectViewSet(BaseApiViewSet):
             sid = transaction.savepoint()
             try:
                 replace_obj = obj_cls.objects.get(id=qp_replace_obj_id)
-                find_objs = obj_cls.objects.filter(
-                    id__in=qp_find_obj_ids, project__id=project_id
-                )
-                results = replace_sampleunit_objs(
-                    find_objs, replace_obj, field, profile
-                )
+                find_objs = obj_cls.objects.filter(id__in=qp_find_obj_ids, project__id=project_id)
+                results = replace_sampleunit_objs(find_objs, replace_obj, field, profile)
                 transaction.savepoint_commit(sid)
             except obj_cls.DoesNotExist:
                 msg = "Replace {} {} does not exist".format(field, qp_replace_obj_id)
@@ -453,17 +442,13 @@ class ProjectViewSet(BaseApiViewSet):
             except Exception as err:
                 logger.error(err)
                 transaction.savepoint_rollback(sid)
-                return Response(
-                    "Unknown error while replacing {}s".format(field), status=500
-                )
+                return Response("Unknown error while replacing {}s".format(field), status=500)
 
         return Response(results)
 
     @action(detail=True, methods=["put"])
     def find_and_replace_managements(self, request, pk, *args, **kwargs):
-        return self._find_and_replace_objs(
-            request, pk, Management, "management", *args, **kwargs
-        )
+        return self._find_and_replace_objs(request, pk, Management, "management", *args, **kwargs)
 
     @action(detail=True, methods=["put"])
     def find_and_replace_sites(self, request, pk, *args, **kwargs):
@@ -471,14 +456,10 @@ class ProjectViewSet(BaseApiViewSet):
 
     def _get_profile(self, project_id, profile_id):
         try:
-            return ProjectProfile.objects.get(
-                project_id=project_id, profile_id=profile_id
-            ).profile
+            return ProjectProfile.objects.get(project_id=project_id, profile_id=profile_id).profile
         except ProjectProfile.DoesNotExist:
-            msg = "Profile does not exist in project".format(profile_id)
-            logger.error(
-                "Profile {} does not exist in project {}".format(profile_id, project_id)
-            )
+            msg = f"[{profile_id}] Profile does not exist in project"
+            logger.error("Profile {} does not exist in project {}".format(profile_id, project_id))
             raise exceptions.ValidationError(msg, code=400)
 
     @action(detail=True, methods=["put"])
@@ -546,10 +527,7 @@ class ProjectViewSet(BaseApiViewSet):
         except Profile.DoesNotExist:
             profile = Profile.objects.create(email=email)
 
-        if (
-            ProjectProfile.objects.filter(project_id=pk, profile=profile).exists()
-            is False
-        ):
+        if ProjectProfile.objects.filter(project_id=pk, profile=profile).exists() is False:
             project_profile = ProjectProfile.objects.create(
                 project_id=pk,
                 profile=profile,
@@ -570,9 +548,9 @@ class ProjectViewSet(BaseApiViewSet):
         permission_classes=[ProjectDataPermission],
     )
     def summary(self, request, pk, *args, **kwargs):
-        project = Project.objects.prefetch_related(
-            "sites", "profiles", "collect_records"
-        ).get(id=pk)
+        project = Project.objects.prefetch_related("sites", "profiles", "collect_records").get(
+            id=pk
+        )
         summary = {
             "name": project.name,
             "site_collecting_summary": {},
@@ -580,9 +558,7 @@ class ProjectViewSet(BaseApiViewSet):
         }
         protocols = []
 
-        collecting_protocols, site_collecting_summary = create_collecting_summary(
-            project
-        )
+        collecting_protocols, site_collecting_summary = create_collecting_summary(project)
         summary["site_collecting_summary"] = site_collecting_summary
         protocols.extend(collecting_protocols)
 

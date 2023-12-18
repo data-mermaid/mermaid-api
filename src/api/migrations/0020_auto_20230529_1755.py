@@ -4,86 +4,85 @@ from django.db import migrations
 
 
 class Migration(migrations.Migration):
-
     dependencies = [
-        ('api', '0019_auto_20230425_2143'),
+        ("api", "0019_auto_20230425_2143"),
     ]
 
     operations = [
         migrations.RemoveField(
-            model_name='beltfishobsmodel',
-            name='covariates',
+            model_name="beltfishobsmodel",
+            name="covariates",
         ),
         migrations.RemoveField(
-            model_name='beltfishsemodel',
-            name='covariates',
+            model_name="beltfishsemodel",
+            name="covariates",
         ),
         migrations.RemoveField(
-            model_name='beltfishsumodel',
-            name='covariates',
+            model_name="beltfishsumodel",
+            name="covariates",
         ),
         migrations.RemoveField(
-            model_name='benthiclitobsmodel',
-            name='covariates',
+            model_name="benthiclitobsmodel",
+            name="covariates",
         ),
         migrations.RemoveField(
-            model_name='benthiclitsemodel',
-            name='covariates',
+            model_name="benthiclitsemodel",
+            name="covariates",
         ),
         migrations.RemoveField(
-            model_name='benthiclitsumodel',
-            name='covariates',
+            model_name="benthiclitsumodel",
+            name="covariates",
         ),
         migrations.RemoveField(
-            model_name='benthicphotoquadrattransectobsmodel',
-            name='covariates',
+            model_name="benthicphotoquadrattransectobsmodel",
+            name="covariates",
         ),
         migrations.RemoveField(
-            model_name='benthicphotoquadrattransectsemodel',
-            name='covariates',
+            model_name="benthicphotoquadrattransectsemodel",
+            name="covariates",
         ),
         migrations.RemoveField(
-            model_name='benthicphotoquadrattransectsumodel',
-            name='covariates',
+            model_name="benthicphotoquadrattransectsumodel",
+            name="covariates",
         ),
         migrations.RemoveField(
-            model_name='benthicpitobsmodel',
-            name='covariates',
+            model_name="benthicpitobsmodel",
+            name="covariates",
         ),
         migrations.RemoveField(
-            model_name='benthicpitsemodel',
-            name='covariates',
+            model_name="benthicpitsemodel",
+            name="covariates",
         ),
         migrations.RemoveField(
-            model_name='benthicpitsumodel',
-            name='covariates',
+            model_name="benthicpitsumodel",
+            name="covariates",
         ),
         migrations.RemoveField(
-            model_name='bleachingqccoloniesbleachedobsmodel',
-            name='covariates',
+            model_name="bleachingqccoloniesbleachedobsmodel",
+            name="covariates",
         ),
         migrations.RemoveField(
-            model_name='bleachingqcquadratbenthicpercentobsmodel',
-            name='covariates',
+            model_name="bleachingqcquadratbenthicpercentobsmodel",
+            name="covariates",
         ),
         migrations.RemoveField(
-            model_name='bleachingqcsemodel',
-            name='covariates',
+            model_name="bleachingqcsemodel",
+            name="covariates",
         ),
         migrations.RemoveField(
-            model_name='bleachingqcsumodel',
-            name='covariates',
+            model_name="bleachingqcsumodel",
+            name="covariates",
         ),
         migrations.RemoveField(
-            model_name='habitatcomplexityobsmodel',
-            name='covariates',
+            model_name="habitatcomplexityobsmodel",
+            name="covariates",
         ),
         migrations.RemoveField(
-            model_name='habitatcomplexitysemodel',
-            name='covariates',
+            model_name="habitatcomplexitysemodel",
+            name="covariates",
         ),
         migrations.RemoveField(
-            model_name='habitatcomplexitysumodel',
-            name='covariates',
+            model_name="habitatcomplexitysumodel",
+            name="covariates",
         ),
     ]

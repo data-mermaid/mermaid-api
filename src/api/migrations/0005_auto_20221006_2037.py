@@ -19,11 +19,8 @@ def fix_mono(apps, schema_editor):
 
 
 class Migration(migrations.Migration):
-
     dependencies = [
-        ('api', '0004_merge_0003_auto_20220818_1823_0003_auto_20220823_1042'),
+        ("api", "0004_merge_0003_auto_20220818_1823_0003_auto_20220823_1042"),
     ]
 
-    operations = [
-        migrations.RunPython(fix_mono, migrations.RunPython.noop)
-    ]
+    operations = [migrations.RunPython(fix_mono, migrations.RunPython.noop)]

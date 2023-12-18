@@ -2,8 +2,8 @@ from rest_framework.exceptions import ParseError
 
 from ....exceptions import check_uuid
 from ....models import Region, Site
-from .base import OK, WARN, BaseValidator, validator_result
 from ..utils import valid_id
+from .base import OK, WARN, BaseValidator, validator_result
 
 
 class RegionValidator(BaseValidator):
@@ -15,7 +15,7 @@ class RegionValidator(BaseValidator):
         site_path,
         observations_path,
         observation_attribute_path,
-        **kwargs
+        **kwargs,
     ):
         self.attribute_model_class = attribute_model_class
         self.site_path = site_path

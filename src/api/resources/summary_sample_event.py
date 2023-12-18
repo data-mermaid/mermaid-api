@@ -1,26 +1,23 @@
-from django.db.models import Q, CharField
+from django.db.models import CharField, Q
 from django_filters import rest_framework as filters
-from .base import (
-    BaseViewAPIGeoSerializer,
-    BaseViewAPISerializer,
-    AggregatedViewFilterSet,
-)
-from .sampleunitmethods import AggregatedViewMixin, BaseApiViewSet
-from ..permissions import UnauthenticatedReadOnlyPermission
+
 from ..models import Project, SummarySampleEventModel
+from ..permissions import UnauthenticatedReadOnlyPermission
 from ..reports.fields import ReportField
 from ..reports.formatters import (
+    to_colonies_bleached,
+    to_day,
     to_latitude,
     to_longitude,
-    to_names,
-    to_protocol_value,
-    to_colonies_bleached,
-    to_percent_cover,
-    to_year,
     to_month,
-    to_day,
+    to_names,
+    to_percent_cover,
+    to_protocol_value,
+    to_year,
 )
 from ..reports.report_serializer import ReportSerializer
+from .base import AggregatedViewFilterSet, BaseViewAPIGeoSerializer, BaseViewAPISerializer
+from .sampleunitmethods import AggregatedViewMixin, BaseApiViewSet
 
 
 class SummarySampleEventSerializer(BaseViewAPISerializer):
@@ -205,9 +202,7 @@ class SummarySampleEventCSVSerializer(ReportSerializer):
         ReportField("data_policy_beltfish", "Fish Belt data sharing policy"),
         ReportField("data_policy_benthiclit", "Benthic LIT data sharing policy"),
         ReportField("data_policy_benthicpit", "Benthic PIT data sharing policy"),
-        ReportField(
-            "data_policy_habitatcomplexity", "Habitat Complexity data sharing policy"
-        ),
+        ReportField("data_policy_habitatcomplexity", "Habitat Complexity data sharing policy"),
         ReportField(
             "data_policy_bleachingqc",
             "Bleaching Quadrat Collection data sharing policy",

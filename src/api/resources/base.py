@@ -1,48 +1,52 @@
 import re
 import uuid
 
+from django.conf import settings
 from django.contrib.postgres.aggregates import ArrayAgg
-from django.utils.translation import gettext_lazy as _
+from django.core.exceptions import FieldDoesNotExist
+from django.db.models.fields.related import ForeignObjectRel
 from django.db.models.sql.constants import ORDER_PATTERN
-from rest_framework import serializers, viewsets
+from django_filters import (
+    BaseInFilter,
+    CharFilter,
+    DateFromToRangeFilter,
+    DateTimeFromToRangeFilter,
+    Filter,
+    FilterSet,
+    RangeFilter,
+)
+from django_filters.fields import Lookup
+from django_filters.rest_framework import DjangoFilterBackend
+from rest_condition import Or
+from rest_framework import exceptions, serializers, viewsets
 from rest_framework.decorators import action
-from rest_framework import exceptions
+from rest_framework.exceptions import MethodNotAllowed, NotFound, ValidationError
+from rest_framework.fields import empty
+from rest_framework.filters import OrderingFilter, SearchFilter
+from rest_framework.pagination import PageNumberPagination
+from rest_framework.response import Response
 from rest_framework.serializers import (
-    UUIDField,
     PrimaryKeyRelatedField,
     SerializerMethodField,
+    UUIDField,
 )
-from rest_framework.exceptions import MethodNotAllowed, ValidationError
-from rest_framework.pagination import PageNumberPagination
-from rest_framework.filters import OrderingFilter, SearchFilter
-from rest_framework.response import Response
-from rest_framework.fields import empty
 from rest_framework_gis.fields import GeometryField
 from rest_framework_gis.filters import GeometryFilter
 from rest_framework_gis.filterset import GeoFilterSet
 from rest_framework_gis.serializers import GeoFeatureModelSerializer
-from rest_condition import Or
-from django.core.exceptions import FieldDoesNotExist
 
-from django.db.models.fields.related import ForeignObjectRel
-from django_filters.rest_framework import DjangoFilterBackend
-from django_filters import (
-    Filter,
-    BaseInFilter,
-    CharFilter,
-    FilterSet,
-    DateFromToRangeFilter,
-    DateTimeFromToRangeFilter,
-    RangeFilter,
-)
-from django_filters.fields import Lookup
-from django.conf import settings
-from ..models import Tag, APPROVAL_STATUSES
 from ..exceptions import check_uuid
-from ..permissions import *
-from ..utils.auth0utils import get_jwt_token
-from ..utils.auth0utils import get_unverified_profile
-from .mixins import MethodAuthenticationMixin, UpdatesMixin, OrFilterSetMixin
+from ..models import APPROVAL_STATUSES, Tag
+from ..permissions import (
+    AttributeAuthenticatedUserPermission,
+    DefaultPermission,
+    ProjectDataAdminPermission,
+    ProjectDataCollectorPermission,
+    ProjectDataReadOnlyPermission,
+    UnauthenticatedReadOnlyPermission,
+)
+from ..utils.auth0utils import get_jwt_token, get_unverified_profile
+from .mixins import MethodAuthenticationMixin, OrFilterSetMixin, UpdatesMixin
 
 
 class ModelNameReadOnlyField(serializers.Field):
@@ -75,9 +79,13 @@ class PointFieldValidated(GeometryField):
         y = value["coordinates"][1]
 
         if not isinstance(x, float) and not isinstance(x, int):
-            raise ValidationError(f"Invalid 'x' coordinate. Type is not double or integer for '{x}'")
+            raise ValidationError(
+                f"Invalid 'x' coordinate. Type is not double or integer for '{x}'"
+            )
         if not isinstance(y, float) and not isinstance(y, int):
-            raise ValidationError(f"Invalid 'y' coordinate. Type is not double or integer for '{y}'")
+            raise ValidationError(
+                f"Invalid 'y' coordinate. Type is not double or integer for '{y}'"
+            )
 
         return super().to_internal_value(value)
 
@@ -247,9 +255,7 @@ class SampleEventExtendedSerializer(BaseAPISerializer):
 
     def __init__(self, *args, **kwargs):
         if self._sample_event is None:
-            raise Exception(
-                "SampleEventExtendedSerializer must be given a _sample_event string"
-            )
+            raise Exception("SampleEventExtendedSerializer must be given a _sample_event string")
 
         self.fields["project_name"] = serializers.ReadOnlyField(
             source="{}.site.project.name".format(self._sample_event)
@@ -396,13 +402,10 @@ class RelatedOrderingFilter(OrderingFilter):
 
     def remove_invalid_fields(self, queryset, fields, view, request):
         valid_fields = [
-            item[0]
-            for item in self.get_valid_fields(queryset, view, {"request": request})
+            item[0] for item in self.get_valid_fields(queryset, view, {"request": request})
         ]
         valid_model_fields = [
-            term
-            for term in fields
-            if self.is_valid_field(queryset.model, term.lstrip("-"))
+            term for term in fields if self.is_valid_field(queryset.model, term.lstrip("-"))
         ]
         valid_fields = set(valid_fields + valid_model_fields)
         return [
@@ -413,13 +416,8 @@ class RelatedOrderingFilter(OrderingFilter):
 
 
 class SafeSearchFilter(SearchFilter):
-
     def _check_search_terms(self, search_fields, search_terms):
-        if (
-            not search_fields
-            or not search_terms
-            or "$" not in [sf[0] for sf in search_fields]
-        ):
+        if not search_fields or not search_terms or "$" not in [sf[0] for sf in search_fields]:
             return
 
         for search_term in search_terms:
@@ -474,9 +472,7 @@ class BaseSEFilterSet(AggregatedViewFilterSet):
     sample_date = DateFromToRangeFilter()
     management_est_year = RangeFilter()
     management_size = RangeFilter()
-    management_party = BaseInFilter(
-        field_name="management_parties", method="char_lookup"
-    )
+    management_party = BaseInFilter(field_name="management_parties", method="char_lookup")
     management_compliance = BaseInFilter(method="char_lookup")
     management_rule = BaseInFilter(field_name="management_rules", method="char_lookup")
     current_name = BaseInFilter(method="char_lookup")
@@ -524,7 +520,9 @@ class BaseApiViewSet(MethodAuthenticationMixin, viewsets.ModelViewSet, UpdatesMi
 
     _serializer_class_for_fields = {}
 
-    lookup_value_regex = r"[0-9a-fA-F]{8}\-[0-9a-fA-F]{4}\-[0-9a-fA-F]{4}\-[0-9a-fA-F]{4}\-[0-9a-fA-F]{12}"
+    lookup_value_regex = (
+        r"[0-9a-fA-F]{8}\-[0-9a-fA-F]{4}\-[0-9a-fA-F]{4}\-[0-9a-fA-F]{4}\-[0-9a-fA-F]{12}"
+    )
 
     permission_classes = [DefaultPermission]
 
@@ -568,7 +566,7 @@ class BaseApiViewSet(MethodAuthenticationMixin, viewsets.ModelViewSet, UpdatesMi
         serializer.save(updated_by=updated_by)
 
     def get_object(self):
-        pk = check_uuid(self.kwargs.get(self.lookup_field))
+        _ = check_uuid(self.kwargs.get(self.lookup_field))
         return super(BaseApiViewSet, self).get_object()
 
 
@@ -633,9 +631,7 @@ class BaseProjectApiViewSet(BaseApiViewSet):
 
     def partial_update(self, request, *args, **kwargs):
         self.limit_to_project(request, *args, **kwargs)
-        return super(BaseProjectApiViewSet, self).partial_update(
-            request, *args, **kwargs
-        )
+        return super(BaseProjectApiViewSet, self).partial_update(request, *args, **kwargs)
 
     def destroy(self, request, *args, **kwargs):
         self.limit_to_project(request, *args, **kwargs)
@@ -690,11 +686,12 @@ class ArrayAggExt(ArrayAgg):
     template = "ARRAY_REMOVE(%(function)s(%(distinct)s%(expressions)s %(ordering)s), NULL)"
 
 
-class RegionsSerializerMixin():
+class RegionsSerializerMixin:
     """
     Assumes that the viewset queryset is using
     `.annotate(regions_=ArrayAgg("regions"))`
     """
+
     def to_representation(self, instance):
         if hasattr(instance, "regions_"):
             self.fields["regions"] = serializers.ListField(source="regions_")

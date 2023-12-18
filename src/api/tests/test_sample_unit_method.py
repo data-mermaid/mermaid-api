@@ -5,9 +5,7 @@ from api.models import AuditRecord, BeltFish, CollectRecord, Revision
 
 def _get_latest_proj_revision():
     revision_num = (
-        Revision.objects.filter(table_name="project")
-        .order_by("-revision_num")[0]
-        .revision_num
+        Revision.objects.filter(table_name="project").order_by("-revision_num")[0].revision_num
     )
     return revision_num
 
@@ -36,10 +34,7 @@ def test_edit_benthic_photo_quadrat_transect_method(
     collect_records = CollectRecord.objects.filter(id=response_data["id"])
 
     assert collect_records.exists()
-    assert (
-        collect_records[0].data.get("sample_unit_method_id")
-        == benthic_photo_quadrat_transect_id
-    )
+    assert collect_records[0].data.get("sample_unit_method_id") == benthic_photo_quadrat_transect_id
     assert AuditRecord.objects.filter(
         record_id=benthic_photo_quadrat_transect_id,
         event_type=AuditRecord.EDIT_RECORD_EVENT_TYPE,
@@ -80,16 +75,12 @@ def test_submit_collect_record(db_setup, api_client1, project1, collect_record4)
     edit_url = reverse("collectrecords-submit", kwargs=url_kwargs)
 
     assert (
-        BeltFish.objects.filter(
-            id=collect_record4.data.get("sample_unit_method_id")
-        ).exists()
+        BeltFish.objects.filter(id=collect_record4.data.get("sample_unit_method_id")).exists()
         is False
     )
 
     collect_record_id = str(collect_record4.pk)
-    request = api_client1.post(
-        edit_url, data={"ids": [collect_record_id]}, format="json"
-    )
+    request = api_client1.post(edit_url, data={"ids": [collect_record_id]}, format="json")
     response_data = request.json()
 
     assert response_data[collect_record_id]["status"] == "ok"
@@ -99,9 +90,7 @@ def test_submit_collect_record(db_setup, api_client1, project1, collect_record4)
         event_type=AuditRecord.SUBMIT_RECORD_EVENT_TYPE,
         model=CollectRecord.__name__.lower(),
     ).exists()
-    assert BeltFish.objects.filter(
-        id=collect_record4.data.get("sample_unit_method_id")
-    ).exists()
+    assert BeltFish.objects.filter(id=collect_record4.data.get("sample_unit_method_id")).exists()
 
 
 def test_submit_collect_record_v2(

@@ -1,8 +1,4 @@
-from api.models import (
-    FISHBELT_PROTOCOL,
-    ProjectProfile,
-    SummarySampleEventModel,
-)
+from api.models import FISHBELT_PROTOCOL, ProjectProfile, SummarySampleEventModel
 from api.resources.sampleunitmethods.beltfishmethod import BeltFishMethodSerializer
 from api.submission.utils import write_collect_record
 from api.utils import Testing
@@ -14,23 +10,17 @@ def test_project_edit_tracking(valid_collect_record, profile1_request):
     with Testing():
         project_id = valid_collect_record.project_id
         write_collect_record(valid_collect_record, profile1_request)
-        summary_se_count = SummarySampleEventModel.objects.filter(
-            project_id=project_id
-        ).count()
+        summary_se_count = SummarySampleEventModel.objects.filter(project_id=project_id).count()
 
         assert summary_se_count == 1
 
 
-def test_edit_transect_method(
-    belt_fish_project, belt_fish1, profile1, profile1_request
-):
+def test_edit_transect_method(belt_fish_project, belt_fish1, profile1, profile1_request):
     with Testing():
         project_id = belt_fish1.transect.sample_event.site.project_id
 
         update_summary_cache(project_id)
-        summary_se_count = SummarySampleEventModel.objects.filter(
-            project_id=project_id
-        ).count()
+        summary_se_count = SummarySampleEventModel.objects.filter(project_id=project_id).count()
 
         assert summary_se_count == 2
 
@@ -42,9 +32,7 @@ def test_edit_transect_method(
             FISHBELT_PROTOCOL,
         )
 
-        summary_se_count = SummarySampleEventModel.objects.filter(
-            project_id=project_id
-        ).count()
+        summary_se_count = SummarySampleEventModel.objects.filter(project_id=project_id).count()
 
         assert summary_se_count == 1
 
@@ -87,9 +75,7 @@ def test_edit_management(belt_fish_project, management1):
             ).exists()
             is False
         )
-        assert SummarySampleEventModel.objects.filter(
-            management_name=management1.name
-        ).exists()
+        assert SummarySampleEventModel.objects.filter(management_name=management1.name).exists()
 
 
 def test_edit_project_profile(belt_fish_project, project_profile1):

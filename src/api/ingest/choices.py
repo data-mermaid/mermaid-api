@@ -22,10 +22,7 @@ def belt_transect_widths_choices():
 
 
 def benthic_attributes_choices():
-    return [
-        (str(c.id), str(c.name))
-        for c in BenthicAttribute.objects.all().order_by("name")
-    ]
+    return [(str(c.id), str(c.name)) for c in BenthicAttribute.objects.all().order_by("name")]
 
 
 def current_choices():
@@ -33,10 +30,7 @@ def current_choices():
 
 
 def fish_attributes_choices():
-    return [
-        (str(c.id), str(c.name))
-        for c in FishAttributeView.objects.all().order_by("name")
-    ]
+    return [(str(c.id), str(c.name)) for c in FishAttributeView.objects.all().order_by("name")]
 
 
 def fish_size_bins_choices():
@@ -60,9 +54,7 @@ def relative_depth_choices():
 
 
 def score_choices():
-    return build_choices(
-        HabitatComplexityScore.objects.choices(order_by="name"), val_key="val"
-    )
+    return build_choices(HabitatComplexityScore.objects.choices(order_by="name"), val_key="val")
 
 
 def visibility_choices():

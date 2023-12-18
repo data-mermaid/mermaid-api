@@ -104,9 +104,9 @@ def update_site_vot_covariates(site):
         if mapped_key is None:
             continue
 
-        covariate = Covariate.objects.get_or_none(
+        covariate = Covariate.objects.get_or_none(name=mapped_key, site_id=site_pk) or Covariate(
             name=mapped_key, site_id=site_pk
-        ) or Covariate(name=mapped_key, site_id=site_pk)
+        )
         covariate.datestamp = data_date
         covariate.requested_datestamp = requested_date
         covariate.value = cov

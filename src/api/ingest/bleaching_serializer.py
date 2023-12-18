@@ -238,9 +238,7 @@ class BleachingCSVSerializer(CollectRecordCSVSerializer):
         empty_fields = []
         if (data.get("data__obs_colonies_bleached__attribute") or "").strip() == "":
             empty_fields = "obs_colonies_bleached_fields"
-        elif (
-            data.get("data__obs_quadrat_benthic_percent__quadrat_number") or ""
-        ).strip() == "":
+        elif (data.get("data__obs_quadrat_benthic_percent__quadrat_number") or "").strip() == "":
             empty_fields = "obs_quadrat_benthic_percent_fields"
 
         return field in getattr(self, empty_fields)

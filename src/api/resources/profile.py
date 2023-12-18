@@ -1,8 +1,9 @@
 import django_filters
 from rest_framework.exceptions import MethodNotAllowed
-from .base import BaseAPIFilterSet, BaseApiViewSet, BaseAPISerializer
+
 from ..models import Profile
-from ..permissions import *
+from ..permissions import UnauthenticatedReadOnlyPermission
+from .base import BaseAPIFilterSet, BaseAPISerializer, BaseApiViewSet
 
 
 class ProfileSerializer(BaseAPISerializer):
@@ -21,7 +22,7 @@ class ProfileFilterSet(BaseAPIFilterSet):
     project = django_filters.UUIDFilter(
         field_name="projects__project", distinct=True, label="Associated with project"
     )
-    email = django_filters.CharFilter(lookup_expr='iexact')
+    email = django_filters.CharFilter(lookup_expr="iexact")
 
     class Meta:
         model = Profile
@@ -33,7 +34,11 @@ class ProfileViewSet(BaseApiViewSet):
     queryset = Profile.objects.all()
     permission_classes = [UnauthenticatedReadOnlyPermission]
     filterset_class = ProfileFilterSet
-    search_fields = ['^email', '^first_name', '^last_name', ]
+    search_fields = [
+        "^email",
+        "^first_name",
+        "^last_name",
+    ]
 
     def create(self, request):
         raise MethodNotAllowed("POST")

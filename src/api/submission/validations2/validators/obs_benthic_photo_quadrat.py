@@ -1,7 +1,9 @@
 from collections import defaultdict
+
 from django.core.validators import MaxValueValidator
-from .base import OK, WARN, ERROR, BaseValidator, validator_result
+
 from ....models.mermaid import QuadratTransect
+from .base import ERROR, OK, WARN, BaseValidator, validator_result
 
 
 class PointsPerQuadratValidator(BaseValidator):
@@ -23,12 +25,8 @@ class PointsPerQuadratValidator(BaseValidator):
 
     @validator_result
     def __call__(self, collect_record, **kwargs):
-        num_points_per_quadrat = self.get_value(
-            collect_record, self.num_points_per_quadrat_path
-        )
-        observations = (
-            self.get_value(collect_record, self.obs_benthic_photo_quadrats_path) or []
-        )
+        num_points_per_quadrat = self.get_value(collect_record, self.num_points_per_quadrat_path)
+        observations = self.get_value(collect_record, self.obs_benthic_photo_quadrats_path) or []
 
         quadrat_number_groups = defaultdict(int)
         for obs in observations:
@@ -76,12 +74,9 @@ class QuadratCountValidator(BaseValidator):
     @validator_result
     def __call__(self, collect_record, **kwargs):
         num_quadrats = self.get_value(collect_record, self.num_quadrats_path)
-        observations = (
-            self.get_value(collect_record, self.obs_benthic_photo_quadrats_path) or []
-        )
+        observations = self.get_value(collect_record, self.obs_benthic_photo_quadrats_path) or []
         quadrat_numbers = {
-            self.get_value(o, self.observation_quadrat_number_path)
-            for o in observations
+            self.get_value(o, self.observation_quadrat_number_path) for o in observations
         }
 
         if len(quadrat_numbers) != num_quadrats:
@@ -121,12 +116,8 @@ class QuadratNumberSequenceValidator(BaseValidator):
         if num_quadrats > num_quadrats_max:
             return ERROR, self.LARGE_NUM_QUADRATS, {"max_value": num_quadrats_max}
 
-        observations = (
-            self.get_value(collect_record, self.obs_benthic_photo_quadrats_path) or []
-        )
-        quadrat_number_start = (
-            self.get_value(collect_record, self.quadrat_number_start_path) or 1
-        )
+        observations = self.get_value(collect_record, self.obs_benthic_photo_quadrats_path) or []
+        quadrat_number_start = self.get_value(collect_record, self.quadrat_number_start_path) or 1
         quadrat_numbers = []
         for o in observations:
             quadrat_number = self.get_value(o, self.observation_quadrat_number_path)
@@ -139,9 +130,7 @@ class QuadratNumberSequenceValidator(BaseValidator):
             i for i in range(quadrat_number_start, quadrat_number_start + num_quadrats)
         ]
 
-        missing_quadrat_numbers = [
-            qn for qn in quadrat_number_seq if qn not in quadrat_numbers
-        ]
+        missing_quadrat_numbers = [qn for qn in quadrat_number_seq if qn not in quadrat_numbers]
 
         if missing_quadrat_numbers:
             return (

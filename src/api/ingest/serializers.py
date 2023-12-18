@@ -85,19 +85,13 @@ class CollectRecordCSVListSerializer(ListSerializer):
         for name, field in self.child.fields.items():
             if hasattr(field, "choices"):
                 choices[name] = self._get_reverse_choices(field)
-            elif (
-                hasattr(self.child, "project_choices")
-                and name in self.child.project_choices
-            ):
+            elif hasattr(self.child, "project_choices") and name in self.child.project_choices:
                 choices[name] = self.child.project_choices[name]
 
         return choices
 
     def sort_records(self, data):
-        if (
-            hasattr(self.child, "ordering_field") is False
-            or self.child.ordering_field is None
-        ):
+        if hasattr(self.child, "ordering_field") is False or self.child.ordering_field is None:
             return data
 
         return sorted(data, key=lambda item: item.get(self.child.ordering_field))
@@ -119,9 +113,7 @@ class CollectRecordCSVListSerializer(ListSerializer):
 
         fmt_rows = []
         # Handle multiple-select project choices separately
-        choices_sets = {
-            k: v for k, v in self.get_choices_sets().items() if k != "data__observers"
-        }
+        choices_sets = {k: v for k, v in self.get_choices_sets().items() if k != "data__observers"}
         protocol = self.child.protocol
         self._row_index = dict()
         for n, row in enumerate(data):
@@ -130,9 +122,7 @@ class CollectRecordCSVListSerializer(ListSerializer):
             self._row_index[pk] = n + 1 + error_row_offset
             fmt_row["id"] = pk
             fmt_row["stage"] = CollectRecord.SAVED_STAGE
-            fmt_row["data__sample_event__sample_date"] = self.get_sample_event_date(
-                fmt_row
-            )
+            fmt_row["data__sample_event__sample_date"] = self.get_sample_event_date(fmt_row)
             fmt_row["data__protocol"] = protocol
 
             self.remove_extra_data(fmt_row)
@@ -190,8 +180,7 @@ class CollectRecordCSVListSerializer(ListSerializer):
         for record in records:
             key = self.create_key(record, group_fields)
             obs_list = [
-                utils.get_value(record, obs_field)
-                for obs_field in self.child.observations_fields
+                utils.get_value(record, obs_field) for obs_field in self.child.observations_fields
             ]
 
             if key not in groups:
@@ -309,8 +298,7 @@ class CollectRecordCSVSerializer(Serializer):
             [
                 (field_name, field.get_value(self.original_data))
                 for field_name, field in self.fields.items()
-                if (field.get_value(self.original_data) == empty)
-                and not field.read_only
+                if (field.get_value(self.original_data) == empty) and not field.read_only
             ]
         )
 
@@ -372,15 +360,10 @@ class CollectRecordCSVSerializer(Serializer):
 
     def get_schemafields(self):
         base_csv_serializer_fields = self.__class__.__mro__[1]().fields
-        return {
-            k: v for k, v in self.fields.items() if k not in base_csv_serializer_fields
-        }
+        return {k: v for k, v in self.fields.items() if k not in base_csv_serializer_fields}
 
     def get_field_labels(self, field):
-        return [
-            f"{label} *" if field.required else label
-            for label in field.label.split(",")
-        ]
+        return [f"{label} *" if field.required else label for label in field.label.split(",")]
 
     def get_schema_labels(self):
         schema_labels = []

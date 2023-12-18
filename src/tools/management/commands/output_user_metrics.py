@@ -1,8 +1,10 @@
-import boto3
 import csv
+
+import boto3
 from django.conf import settings
 from django.core.management.base import BaseCommand
 from django.utils import timezone
+
 from tools.metrics import agg_log_events
 from tools.models import LogEvent
 
@@ -25,6 +27,4 @@ class Command(BaseCommand):
             region_name=settings.AWS_REGION,
         )
         s3 = session.client("s3")
-        s3.upload_file(
-            filename, settings.AWS_METRICS_BUCKET, filename
-        )
+        s3.upload_file(filename, settings.AWS_METRICS_BUCKET, filename)

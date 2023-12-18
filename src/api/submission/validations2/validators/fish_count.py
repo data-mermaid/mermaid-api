@@ -23,7 +23,7 @@ class FishCountValidator(BaseValidator):
         except Exception:
             status = ERROR
             code = self.INVALID_FISH_COUNT
-        
+
         return status, code, context
 
     def __call__(self, collect_record, **kwargs):

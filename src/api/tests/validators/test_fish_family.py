@@ -1,9 +1,5 @@
 from api.resources.collect_record import CollectRecordSerializer
-from api.submission.validations2.validators import (
-    OK,
-    WARN,
-    FishFamilySubsetValidator,
-)
+from api.submission.validations2.validators import OK, WARN, FishFamilySubsetValidator
 
 
 def _get_validator():
@@ -11,6 +7,7 @@ def _get_validator():
         observations_path="data.obs_belt_fishes",
         project_path="project",
     )
+
 
 def test_fish_family_subset_validator_ok(valid_collect_record):
     validator = _get_validator()

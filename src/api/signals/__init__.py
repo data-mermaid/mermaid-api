@@ -1,22 +1,26 @@
+import json
 import operator
+import uuid
 
 from django.core import serializers
 from django.db.models.signals import post_delete, post_save, pre_save
 from django.dispatch import receiver
 
-from .attributes import *
-from .notifications import *
-from .revision import *
-from .summaries import *
 from ..covariates import update_site_covariates_threaded
-from ..models import *
-from ..submission.utils import validate
-from ..submission.validations import SiteValidation, ManagementValidation
-from ..utils import get_subclasses
-from ..utils.sample_units import (
-    delete_orphaned_sample_unit,
-    delete_orphaned_sample_event,
+from ..models import (
+    ArchivedRecord,
+    BaseModel,
+    Management,
+    SampleUnit,
+    Site,
+    TransectMethod,
 )
+from ..utils import get_subclasses
+from ..utils.sample_units import delete_orphaned_sample_event, delete_orphaned_sample_unit
+from .attributes import *  # noqa: F403
+from .notifications import *  # noqa: F403
+from .revision import *  # noqa: F403
+from .summaries import *  # noqa: F403
 
 
 def backup_model_record(sender, instance, using, **kwargs):
@@ -44,7 +48,7 @@ def backup_model_record(sender, instance, using, **kwargs):
         )
         ArchivedRecord.objects.create(**record)
     except Exception as err:
-        logger.exception(err)
+        print(err)
 
 
 def set_created_by(sender, instance, **kwargs):
@@ -86,17 +90,13 @@ def del_orphaned_se(sender, instance, *args, **kwargs):
 for suclass in get_subclasses(SampleUnit):
     classname = suclass._meta.object_name
 
-    post_delete.connect(
-        del_orphaned_se, sender=suclass, dispatch_uid=f"{classname}_delete_se"
-    )
+    post_delete.connect(del_orphaned_se, sender=suclass, dispatch_uid=f"{classname}_delete_se")
 
 
 @receiver(post_save, sender=Site)
 def run_site_validation(sender, instance, *args, **kwargs):
     if instance.project is None:
         return
-
-    # validate(SiteValidation, Site, {"project_id": instance.project_id})
 
     if "created" in kwargs:
         # Need to update cached instance to keep

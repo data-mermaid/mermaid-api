@@ -26,9 +26,7 @@ def test_retrieving_notifications(
     assert response_data["count"] == Notification.objects.filter(owner=profile1).count()
 
 
-def test_deleting_notification(
-    db_setup, api_client1, profile1, notifications, notification_info
-):
+def test_deleting_notification(db_setup, api_client1, profile1, notifications, notification_info):
     num_notifications = Notification.objects.filter(owner=profile1).count()
     url_kwargs = {"pk": notification_info.pk}
     url = reverse("notification-detail", kwargs=url_kwargs)
@@ -38,9 +36,7 @@ def test_deleting_notification(
     assert Notification.objects.filter(owner=profile1).count() == num_notifications - 1
 
 
-def test_delete_others_notification(
-    db_setup, api_client2, notifications, notification_info
-):
+def test_delete_others_notification(db_setup, api_client2, notifications, notification_info):
     url_kwargs = {"pk": notification_info.pk}
     url = reverse("notification-detail", kwargs=url_kwargs)
     request = api_client2.delete(url)

@@ -1,23 +1,19 @@
 import django_filters
 
-from rest_framework.exceptions import ValidationError
-from django.core.exceptions import ValidationError as DjangoValidationError
-from rest_framework import serializers
+from ..models import SampleEvent
 from .base import (
     BaseAPIFilterSet,
-    BaseProjectApiViewSet,
     BaseAPISerializer,
+    BaseProjectApiViewSet,
     ExtendedSerializer,
-    ModelNameReadOnlyField,
 )
-from .site import SiteExtendedSerializer
 from .management import ManagementExtendedSerializer
-from ..models import SampleEvent
+from .site import SiteExtendedSerializer
 
 
 class SampleEventExtendedSerializer(ExtendedSerializer):
     site = SiteExtendedSerializer()
-    management = ManagementExtendedSerializer(exclude=['project'])
+    management = ManagementExtendedSerializer(exclude=["project"])
 
     class Meta:
         model = SampleEvent
@@ -25,20 +21,13 @@ class SampleEventExtendedSerializer(ExtendedSerializer):
 
 
 class SampleEventSerializer(BaseAPISerializer):
-
     class Meta:
         model = SampleEvent
         exclude = []
         extra_kwargs = {
-            "sample_date": {
-                "error_messages": {"null": "Sample date is required"}
-            },
-            "site": {
-                "error_messages": {"null": "Site is required"}
-            },
-            "management": {
-                "error_messages": {"null": "Management is required"}
-            },
+            "sample_date": {"error_messages": {"null": "Sample date is required"}},
+            "site": {"error_messages": {"null": "Site is required"}},
+            "management": {"error_messages": {"null": "Management is required"}},
         }
 
 
@@ -47,7 +36,7 @@ class SampleEventFilterSet(BaseAPIFilterSet):
 
     class Meta:
         model = SampleEvent
-        fields = ['site', 'management', 'sample_date']
+        fields = ["site", "management", "sample_date"]
 
 
 class SampleEventViewSet(BaseProjectApiViewSet):

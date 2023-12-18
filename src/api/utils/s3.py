@@ -13,8 +13,4 @@ def get_client():
 
 def upload_file(bucket, local_file_path, blob_name):
     client = get_client()
-    client.upload_file(
-        local_file_path,
-        bucket,
-        blob_name
-    )
+    client.upload_file(local_file_path, bucket, blob_name)

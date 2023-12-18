@@ -1,18 +1,16 @@
 import math
-import re
 import numbers
+import re
 import subprocess
 import uuid
 from datetime import datetime, timezone
 
 from django.conf import settings
+from django.contrib.admin.utils import NestedObjects
 from django.core.exceptions import ObjectDoesNotExist
-from django.db import IntegrityError
+from django.db import IntegrityError, router
 from django.db.models.deletion import ProtectedError
 from django.db.models.fields.related import OneToOneRel
-from django.contrib.admin.utils import NestedObjects
-from django.db import router
-
 
 IGNORE: str = "ignore"
 ERROR: str = "error"
@@ -90,19 +88,15 @@ def get_subclasses(cls):
             continue
         if subclass.__subclasses__():
             yield from get_subclasses(subclass)
-        
+
         yield subclass
-    
+
 
 def get_related_transect_methods(model):
-    related_objects = [
-        f for f in model._meta.get_fields() if isinstance(f, OneToOneRel)
-    ]
+    related_objects = [f for f in model._meta.get_fields() if isinstance(f, OneToOneRel)]
 
     return [
-        getattr(model, ro.related_name)
-        for ro in related_objects
-        if hasattr(model, ro.name or "")
+        getattr(model, ro.related_name) for ro in related_objects if hasattr(model, ro.name or "")
     ]
 
 
@@ -148,9 +142,7 @@ def safe_sum(*args):
 
 
 def safe_division(numerator, denominator):
-    if isinstance(numerator, numbers.Number) and isinstance(
-        denominator, numbers.Number
-    ):
+    if isinstance(numerator, numbers.Number) and isinstance(denominator, numbers.Number):
         return numerator * 1.0 / denominator
     return None
 
@@ -207,20 +199,15 @@ def cast_int(val):
 def run_subprocess(command, std_input=None, to_file=None):
     proc: subprocess.CompletedProcess = None
     try:
-        proc = subprocess.run(
-            command,
-            input=std_input,
-            check=True,
-            capture_output=True
-        )
+        proc = subprocess.run(command, input=std_input, check=True, capture_output=True)
 
     except subprocess.CalledProcessError as e:
-        print(e.stderr.decode('UTF-8'))
+        print(e.stderr.decode("UTF-8"))
         raise e
-    
+
     # print things like NOTICEs and WARNINGs
     if proc.stderr:
-        print(proc.stderr.decode('UTF-8'))
+        print(proc.stderr.decode("UTF-8"))
 
     if to_file is not None:
         with open(to_file, "w") as f:

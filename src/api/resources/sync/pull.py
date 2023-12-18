@@ -2,7 +2,6 @@ from django.core.exceptions import MultipleObjectsReturned, ObjectDoesNotExist
 from django.db import connection
 
 
-
 def _get_subquery(queryset, pk_field_name):
     cur = connection.cursor()
     try:
@@ -27,7 +26,7 @@ def _get_records(viewset, profile_id, filters):
     updates_filters = [
         "revision.deleted = false",
         "revision.related_to_profile_id is null",
-        *filters
+        *filters,
     ]
 
     updates_sql = f"""
@@ -53,13 +52,13 @@ def _get_records(viewset, profile_id, filters):
     """
 
     updates = queryset.raw(updates_sql)
-    
+
     # DELETES
     delete_filters = [
         f'"revision"."table_name" = \'{table_name}\'',
         '"revision"."deleted" = true',
         "revision.related_to_profile_id is null",
-        *filters
+        *filters,
     ]
     deletes_sql = f"""
         SELECT
@@ -74,19 +73,16 @@ def _get_records(viewset, profile_id, filters):
     try:
         cur = connection.cursor()
         cur.execute(deletes_sql)
-        deletes = [
-            {"id": row[0], "revision_num": row[1]}
-            for row in cur.fetchall()
-        ]
+        deletes = [{"id": row[0], "revision_num": row[1]} for row in cur.fetchall()]
 
     finally:
         cur.close()
-    
+
     # REMOVES
     remove_filters = [
         f'"revision"."table_name" = \'{table_name}\'',
         f"revision.related_to_profile_id = '{profile_id}'::uuid",
-        *filters
+        *filters,
     ]
     removes_sql = f"""
         SELECT
@@ -101,10 +97,7 @@ def _get_records(viewset, profile_id, filters):
     try:
         cur = connection.cursor()
         cur.execute(removes_sql)
-        removes = [
-            {"id": row[0], "revision_num": row[1]}
-            for row in cur.fetchall()
-        ]
+        removes = [{"id": row[0], "revision_num": row[1]} for row in cur.fetchall()]
 
     finally:
         cur.close()
@@ -196,7 +189,7 @@ def serialize_revisions(serializer, updates, deletes, removes, skip_deletes=Fals
         - revision_updated_on
         - revision_revision_num
         - revision_deleted
-    
+
     (record_set: from get_record() or get_records())
 
     :param serializer: Model's serializer
@@ -220,21 +213,18 @@ def serialize_revisions(serializer, updates, deletes, removes, skip_deletes=Fals
 
         if last_rev_num is None or rev_num > last_rev_num:
             last_rev_num = rev_num
-        
+
         serialized_updates[n]["_last_revision_num"] = rev_num
         serialized_updates[n]["_modified"] = False
         serialized_updates[n]["_deleted"] = False
-
 
     for rec in removes:
         rev_num = rec["revision_num"]
 
         if last_rev_num is None or rev_num > last_rev_num:
             last_rev_num = rev_num
-    
-        serialized_removes.append(
-            {"id": str(rec["id"]), "_last_revision_num": rev_num}
-        )
+
+        serialized_removes.append({"id": str(rec["id"]), "_last_revision_num": rev_num})
 
     if skip_deletes is False:
         for rec in deletes:
@@ -242,16 +232,14 @@ def serialize_revisions(serializer, updates, deletes, removes, skip_deletes=Fals
 
             if last_rev_num is None or rev_num > last_rev_num:
                 last_rev_num = rev_num
-        
-            serialized_deletes.append(
-                {"id": str(rec["id"]), "_last_revision_num": rev_num}
-            )
+
+            serialized_deletes.append({"id": str(rec["id"]), "_last_revision_num": rev_num})
 
     return {
         "updates": serialized_updates,
         "removes": serialized_removes,
         "deletes": serialized_deletes,
-        "last_revision_num": last_rev_num
+        "last_revision_num": last_rev_num,
     }
 
 
@@ -274,11 +262,7 @@ def get_serialized_records(viewset, profile_id, required_params=None):
     serializer = viewset.serializer_class
     revision_num = required_params.get("revision_num")
 
-    updates, deletes, removes = get_records(
-        viewset,
-        profile_id,
-        required_params
-    )
+    updates, deletes, removes = get_records(viewset, profile_id, required_params)
 
     serialized_revisions = serialize_revisions(
         serializer, updates, deletes, removes, skip_deletes=revision_num is None

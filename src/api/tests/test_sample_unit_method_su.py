@@ -42,37 +42,51 @@ def test_beltfish_su_view(
 
             biomass_kgha_1_other = sum([obs_belt_fish1_2_biomass, obs_belt_fish1_3_biomass])
 
-            assert record["biomass_kgha"] == pytest.approx(biomass_kgha_1, 0.1) 
-            assert record["biomass_kgha_trophic_group"]["other"] == pytest.approx(biomass_kgha_1_other, 0.1)
-            assert record["biomass_kgha_trophic_group"]["omnivore"] == pytest.approx(obs_belt_fish1_1_biomass, 0.1)
+            assert record["biomass_kgha"] == pytest.approx(biomass_kgha_1, 0.1)
+            assert record["biomass_kgha_trophic_group"]["other"] == pytest.approx(
+                biomass_kgha_1_other, 0.1
+            )
+            assert record["biomass_kgha_trophic_group"]["omnivore"] == pytest.approx(
+                obs_belt_fish1_1_biomass, 0.1
+            )
 
-            biomass_kgha_2 = sum([
-                obs_belt_fish2_1_biomass,
-                obs_belt_fish2_2_biomass,
-                obs_belt_fish2_3_biomass
-            ])
+            biomass_kgha_2 = sum(
+                [obs_belt_fish2_1_biomass, obs_belt_fish2_2_biomass, obs_belt_fish2_3_biomass]
+            )
 
             assert data[1]["biomass_kgha"] == pytest.approx(biomass_kgha_2, 0.1)
 
             fish_family_biomass_0 = record["biomass_kgha_fish_family"]
-            assert fish_family_biomass_0["Fish Family 1"] == pytest.approx(obs_belt_fish1_1_biomass, 0.1)
-            assert fish_family_biomass_0["Fish Family 2"] == pytest.approx(obs_belt_fish1_2_biomass, 0.1)
-            assert fish_family_biomass_0["Fish Family 3"] == pytest.approx(obs_belt_fish1_3_biomass, 0.1)
+            assert fish_family_biomass_0["Fish Family 1"] == pytest.approx(
+                obs_belt_fish1_1_biomass, 0.1
+            )
+            assert fish_family_biomass_0["Fish Family 2"] == pytest.approx(
+                obs_belt_fish1_2_biomass, 0.1
+            )
+            assert fish_family_biomass_0["Fish Family 3"] == pytest.approx(
+                obs_belt_fish1_3_biomass, 0.1
+            )
 
             fish_family_biomass_1 = data[1]["biomass_kgha_fish_family"]
             fish_family_2_biomass = sum([obs_belt_fish2_1_biomass, obs_belt_fish2_4_biomass])
-            assert fish_family_biomass_1["Fish Family 1"] == pytest.approx(obs_belt_fish2_3_biomass, 0.1)
-            assert fish_family_biomass_1["Fish Family 2"] == pytest.approx(fish_family_2_biomass, 0.1)
-            assert fish_family_biomass_1["Fish Family 3"] == pytest.approx(obs_belt_fish2_2_biomass, 0.1)
+            assert fish_family_biomass_1["Fish Family 1"] == pytest.approx(
+                obs_belt_fish2_3_biomass, 0.1
+            )
+            assert fish_family_biomass_1["Fish Family 2"] == pytest.approx(
+                fish_family_2_biomass, 0.1
+            )
+            assert fish_family_biomass_1["Fish Family 3"] == pytest.approx(
+                obs_belt_fish2_2_biomass, 0.1
+            )
             n += 1
 
         elif record["sample_unit_ids"][0] == str(fishbelt_transect2.pk):
             assert record["site_name"] == site2.name
             n += 1
-    
+
     if n != count:
         assert False, f"Wrong number of sample units, {n} should be {count}"
-    
+
 
 def test_benthicpit_su_view(
     client,
@@ -88,9 +102,7 @@ def test_benthicpit_su_view(
     profile2,
     update_summary_cache,
 ):
-    url = reverse(
-        "benthicpitmethod-sampleunit-list", kwargs=dict(project_pk=project1.pk)
-    )
+    url = reverse("benthicpitmethod-sampleunit-list", kwargs=dict(project_pk=project1.pk))
     count, data, _ = _call(client, token1, url)
 
     assert count == 3
@@ -110,7 +122,7 @@ def test_benthicpit_su_view(
             assert record["percent_cover_benthic_category"]["Hard coral"] == 60.0
             assert record["percent_cover_benthic_category"]["Rock"] == 40.0
             n += 1
-    
+
     if n != count:
         assert False, f"Wrong number of sample units, {n} should be {count}"
 
@@ -129,9 +141,7 @@ def test_benthiclit_su_view(
     profile2,
     update_summary_cache,
 ):
-    url = reverse(
-        "benthiclitmethod-sampleunit-list", kwargs=dict(project_pk=project1.pk)
-    )
+    url = reverse("benthiclitmethod-sampleunit-list", kwargs=dict(project_pk=project1.pk))
     count, data, _ = _call(client, token1, url)
 
     assert count == 2
@@ -147,7 +157,7 @@ def test_benthiclit_su_view(
             assert record["percent_cover_benthic_category"]["Hard coral"] == 58.46
             assert record["percent_cover_benthic_category"]["Rock"] == 41.54
             n += 1
-    
+
     if n != count:
         assert False, f"Wrong number of sample units, {n} should be {count}"
 
@@ -164,9 +174,7 @@ def test_habitatcomplexity_su_view(
     site1,
     update_summary_cache,
 ):
-    url = reverse(
-        "habitatcomplexitymethod-sampleunit-list", kwargs=dict(project_pk=project1.pk)
-    )
+    url = reverse("habitatcomplexitymethod-sampleunit-list", kwargs=dict(project_pk=project1.pk))
     count, data, _ = _call(client, token1, url)
 
     assert count == 2
@@ -178,7 +186,7 @@ def test_habitatcomplexity_su_view(
             n += 1
         elif record["sample_unit_ids"][0] == str(benthic_transect2.pk):
             n += 1
-    
+
     if n != count:
         assert False, f"Wrong number of sample units, {n} should be {count}"
 
@@ -194,9 +202,7 @@ def test_bleachingqc_su_view(
     site1,
     update_summary_cache,
 ):
-    url = reverse(
-        "bleachingqcsmethod-sampleunit-list", kwargs=dict(project_pk=project1.pk)
-    )
+    url = reverse("bleachingqcsmethod-sampleunit-list", kwargs=dict(project_pk=project1.pk))
     count, data, _ = _call(client, token1, url)
 
     assert count == 1
@@ -214,6 +220,6 @@ def test_bleachingqc_su_view(
             assert record["percent_soft_avg"] == 19.6
             assert record["percent_algae_avg"] == 20.4
             n += 1
-    
+
     if n != count:
         assert False, f"Wrong number of sample units, {n} should be {count}"

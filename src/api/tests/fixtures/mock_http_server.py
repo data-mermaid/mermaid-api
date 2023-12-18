@@ -6,7 +6,6 @@ from threading import Thread
 import pytest
 
 
-
 class MockServerRequestHandler(BaseHTTPRequestHandler):
     def __init__(self, *args, **kwargs):
         self.response_data = kwargs.pop("response_data")

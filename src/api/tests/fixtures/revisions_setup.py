@@ -8,9 +8,7 @@ from api.resources.sync.pull import get_serialized_records
 
 @pytest.fixture
 def collect_record_revision_with_updates(db_setup, project1, profile1):
-    collect_record = CollectRecord.objects.create(
-        project=project1, profile=profile1, data=dict()
-    )
+    collect_record = CollectRecord.objects.create(project=project1, profile=profile1, data=dict())
 
     collect_record.save()
 
@@ -33,11 +31,7 @@ def serialized_tracked_collect_record(db_setup, collect_record_revision_with_upd
     return get_serialized_records(
         CollectRecordViewSet(request=request),
         profile1.pk,
-        {
-            "revision_num": rev.revision_num,
-            "project": rev.project_id,
-            "profile": rev.profile_id
-        }
+        {"revision_num": rev.revision_num, "project": rev.project_id, "profile": rev.profile_id},
     )
 
 
@@ -49,7 +43,7 @@ def serialized_tracked_project1(db_setup, project1, profile1, project_profile1):
         "_modified": False,
         "_deleted": rev.deleted,
         "name": project1.name,
-        "id": str(project1.id)
+        "id": str(project1.id),
     }
 
 
@@ -61,6 +55,5 @@ def serialized_tracked_project2(db_setup, project2, project_profile2):
         "_modified": False,
         "_deleted": rev.deleted,
         "name": project2.name,
-        "id": str(project2.id)
+        "id": str(project2.id),
     }
-

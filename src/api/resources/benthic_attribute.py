@@ -2,30 +2,33 @@ from django.db import connection
 from django_filters import BaseInFilter
 from rest_framework import serializers
 
+from ..models import BenthicAttribute
 from .base import (
     ArrayAggExt,
     BaseAPIFilterSet,
-    NullableUUIDFilter,
     BaseAPISerializer,
     BaseAttributeApiViewSet,
+    NullableUUIDFilter,
     RegionsSerializerMixin,
 )
 from .mixins import CreateOrUpdateSerializerMixin
-from ..models import BenthicAttribute
 
 
-class BenthicAttributeSerializer(RegionsSerializerMixin, CreateOrUpdateSerializerMixin, BaseAPISerializer):
+class BenthicAttributeSerializer(
+    RegionsSerializerMixin, CreateOrUpdateSerializerMixin, BaseAPISerializer
+):
     status = serializers.ReadOnlyField()
     top_level_category = serializers.SerializerMethodField()
 
     class Meta:
         model = BenthicAttribute
         exclude = []
-    
+
     def get_top_level_category(self, obj):
         if hasattr(self, "_top_level_category") is False:
             with connection.cursor() as cur:
-                cur.execute("""
+                cur.execute(
+                    """
                     WITH RECURSIVE tree(child, root) AS (
                         SELECT c_1.id,
                             c_1.id
@@ -40,9 +43,10 @@ class BenthicAttributeSerializer(RegionsSerializerMixin, CreateOrUpdateSerialize
                         )
                     SELECT tree.child, tree.root
                     FROM tree
-                """)
+                """
+                )
                 self._top_level_category = {str(row[0]): row[1] for row in cur}
-        
+
         return self._top_level_category.get(str(obj.id))
 
 
@@ -62,10 +66,7 @@ class BenthicAttributeFilterSet(BaseAPIFilterSet):
 
 class BenthicAttributeViewSet(BaseAttributeApiViewSet):
     serializer_class = BenthicAttributeSerializer
-    queryset = (
-        BenthicAttribute.objects.select_related()
-        .annotate(regions_=ArrayAggExt("regions"))
-    )
+    queryset = BenthicAttribute.objects.select_related().annotate(regions_=ArrayAggExt("regions"))
 
     filterset_class = BenthicAttributeFilterSet
     search_fields = [

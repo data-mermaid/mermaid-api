@@ -6,7 +6,6 @@ class CovariateRequestError(Exception):
 
 
 class BaseCovariate:
-
     def __init__(self, *args, **kwargs):
         self.radius = kwargs.get("radius") or 0.025  # in km
 

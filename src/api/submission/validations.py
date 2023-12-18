@@ -3,8 +3,8 @@ import itertools
 import json
 import math
 from collections import defaultdict
-from datetime import date, datetime
 
+from dateutil import tz
 from django.contrib.gis.geos import Polygon
 from django.contrib.gis.measure import Distance
 from django.contrib.postgres.search import TrigramSimilarity
@@ -14,6 +14,7 @@ from django.utils import timezone
 from django.utils.dateparse import parse_date, parse_datetime
 from django.utils.translation import gettext as _
 from rest_framework.exceptions import ParseError
+from timezonefinder import TimezoneFinder
 
 from api.decorators import needs_instance
 from api.exceptions import check_uuid
@@ -34,9 +35,13 @@ from api.models import (
     Region,
     Site,
 )
-from api.utils import calc_biomass_density, get_related_transect_methods, safe_sum, cast_int, cast_float
-from dateutil import tz
-from timezonefinder import TimezoneFinder
+from api.utils import (
+    calc_biomass_density,
+    cast_float,
+    cast_int,
+    get_related_transect_methods,
+    safe_sum,
+)
 from . import utils
 
 IGNORE = "ignore"
@@ -91,7 +96,13 @@ class RegionalAttributesMixin(ObservationsMixin):
         region = str(regions[0].pk)
 
         observations = self.get_observations(self.data, key=self.observations_key)
-        attribute_ids = list({obs.get(self.attribute_key) for obs in observations if obs.get(self.attribute_key) is not None})
+        attribute_ids = list(
+            {
+                obs.get(self.attribute_key)
+                for obs in observations
+                if obs.get(self.attribute_key) is not None
+            }
+        )
         attr_lookup = {}
         for attr in self.AttributeModelClass.objects.filter(id__in=attribute_ids):
             if isinstance(attr.regions, list):
@@ -143,9 +154,7 @@ class BenthicAttributeMixin(RegionalAttributesMixin):
         return OK, ""
 
     def validate_hard_coral(self):
-        result, message = self._validate_by_origin(
-            "Hard coral", self.ALL_HARD_CORAL_MSG
-        )
+        result, message = self._validate_by_origin("Hard coral", self.ALL_HARD_CORAL_MSG)
         return self.log(self.identifier, result, message)
 
 
@@ -172,10 +181,7 @@ class FishAttributeMixin(RegionalAttributesMixin):
         fish_species_qry = FishSpecies.objects.filter(id__in=fish_attr_ids)
         fish_species_qry = fish_species_qry.select_related("genus__name")
         fish_species_qry = fish_species_qry.values("id", "genus__name", "name", "max_length")
-        fish_attrs = {
-            i["id"]: i
-            for i in fish_species_qry
-        }
+        fish_attrs = {i["id"]: i for i in fish_species_qry}
         for ob in obs:
             fish = fish_attrs.get(ob["fish_attribute"]) or {}
             max_length = fish.get("max_length")
@@ -188,11 +194,7 @@ class FishAttributeMixin(RegionalAttributesMixin):
             fish_name = f"{fish.get('genus__name')} {fish.get('name')}"
             warn_message = self.MAX_SPECIES_SIZE_TMPL.format(fish_name, max_length)
 
-            if (
-                min_max_vals
-                and min_max_vals[0] is not None
-                and min_max_vals[0] > max_length
-            ):
+            if min_max_vals and min_max_vals[0] is not None and min_max_vals[0] > max_length:
                 return self.log(self.identifier, WARN, warn_message)
             elif not min_max_vals and obs_size > max_length:
                 return self.log(self.identifier, WARN, warn_message)
@@ -263,9 +265,7 @@ class BaseValidation(ValidationLogger):
         validations = []
         objs = inspect.getmembers(self)
         for obj in objs:
-            if inspect.ismethod(obj[1]) and (
-                obj[0].startswith(self._validation_prefix)
-            ):
+            if inspect.ismethod(obj[1]) and (obj[0].startswith(self._validation_prefix)):
                 validations.append(obj[0])
 
         return validations
@@ -382,17 +382,13 @@ class SampleEventValidation(DataValidation):
         if sample_time_str.strip() == "":
             sample_time_str = None
 
-        if (
-            self.is_future_sample_date(sample_date_str, sample_time_str, site_id)
-            is True
-        ):
+        if self.is_future_sample_date(sample_date_str, sample_time_str, site_id) is True:
             return self.warning(self.identifier, self.FUTURE_DATE)
 
         return self.ok(self.identifier)
 
 
 class SiteValidation(ModelValidation):
-
     model = Site
     name_match_percent = 0.5
     site_buffer = 100  # m
@@ -410,9 +406,7 @@ class SiteValidation(ModelValidation):
         y1 = y - self.search_bbox_size[1] / 2.0
         y2 = y + self.search_bbox_size[1] / 2.0
 
-        return Polygon(
-            (((x1, y1), (x1, y2), (x2, y2), (x2, y1), (x1, y1))), srid=self.srid
-        )
+        return Polygon((((x1, y1), (x1, y2), (x2, y2), (x2, y1), (x1, y1))), srid=self.srid)
 
     @needs_instance(MissingRecordSimilarity)
     def validate_similar(self):
@@ -429,9 +423,7 @@ class SiteValidation(ModelValidation):
         qry = qry.filter(project_id=project_id)
 
         if location is not None:
-            qry = qry.filter(
-                location__distance_lt=(location, Distance(m=self.site_buffer))
-            )
+            qry = qry.filter(location__distance_lt=(location, Distance(m=self.site_buffer)))
 
         # Fuzzy name match
         qry = qry.annotate(similarity=TrigramSimilarity("name", name))
@@ -442,15 +434,12 @@ class SiteValidation(ModelValidation):
         if results.count() > 0:
             matches = [r.id for r in results]
             data = dict(matches=matches)
-            return self.warning(
-                self.identifier, _(LikeMatchWarning.format(self.name)), data=data
-            )
+            return self.warning(self.identifier, _(LikeMatchWarning.format(self.name)), data=data)
 
         return self.ok(self.identifier)
 
 
 class ManagementValidation(ModelValidation):
-
     model = Management
     name_match_percent = 0.5
     identifier = "management"
@@ -558,15 +547,12 @@ class ManagementValidation(ModelValidation):
         if len(results) > 0:
             matches = [r.id for r in results]
             data = dict(matches=matches)
-            return self.warning(
-                self.identifier, _(LikeMatchWarning.format(self.name)), data=data
-            )
+            return self.warning(self.identifier, _(LikeMatchWarning.format(self.name)), data=data)
 
         return self.ok(self.identifier)
 
 
 class ObserverValidation(ModelValidation):
-
     model = Observer
     identifier = "observers"
     name = "Observer"
@@ -603,9 +589,7 @@ class ObservationsValidation(DataValidation, ObservationsMixin):
 
 class EmptyListValidation(BaseValidation):
     def __init__(self, identifier, value, error_message, previous_validations=None):
-        super(EmptyListValidation, self).__init__(
-            previous_validations=previous_validations
-        )
+        super(EmptyListValidation, self).__init__(previous_validations=previous_validations)
         self.identifier = identifier
         self.value = value
         self.error_message = error_message
@@ -638,7 +622,7 @@ class BenthicObservationCountMixin(ObservationsMixin):
 
         obs_count = len(obs)
         calc_obs_count = None
-        
+
         if len_surveyed is not None and interval_size != 0:
             calc_obs_count = int(math.ceil(len_surveyed / interval_size))
         if calc_obs_count is None:
@@ -673,9 +657,7 @@ class ObsBenthicLITValidation(DataValidation, BenthicAttributeMixin):
         return self.ok(self.identifier)
 
 
-class ObsBenthicPITValidation(
-    DataValidation, BenthicAttributeMixin, BenthicObservationCountMixin
-):
+class ObsBenthicPITValidation(DataValidation, BenthicAttributeMixin, BenthicObservationCountMixin):
     identifier = "obs_benthic_pits"
 
 
@@ -697,10 +679,7 @@ class ValueInRangeValidation(BaseValidation):
         previous_validations=None,
         value_range_operators=("<", ">"),
     ):
-
-        super(ValueInRangeValidation, self).__init__(
-            previous_validations=previous_validations
-        )
+        super(ValueInRangeValidation, self).__init__(previous_validations=previous_validations)
         self.identifier = identifier
         self.value = value
         self.value_range = value_range
@@ -720,7 +699,6 @@ class ValueInRangeValidation(BaseValidation):
         self._status = val
 
     def _op(self, val1, operator, val2):
-
         if operator == "==":
             return val1 == val2
         elif operator == "<=":
@@ -773,21 +751,13 @@ class ObsFishBeltValidation(DataValidation, FishAttributeMixin):
     FISH_COUNT_MIN = 10
 
     def __init__(self, data, previous_validations=None):
-        super(ObsFishBeltValidation, self).__init__(
-            data, previous_validations=previous_validations
-        )
+        super(ObsFishBeltValidation, self).__init__(data, previous_validations=previous_validations)
 
-        self.MIN_OBS_COUNT_MSG = str(
-            _(self.MIN_OBS_COUNT_TMPL.format(self.MIN_OBS_COUNT_WARN))
-        )
-        self.MAX_OBS_COUNT_MSG = str(
-            _(self.MAX_OBS_COUNT_TMPL.format(self.MAX_OBS_COUNT_WARN))
-        )
+        self.MIN_OBS_COUNT_MSG = str(_(self.MIN_OBS_COUNT_TMPL.format(self.MIN_OBS_COUNT_WARN)))
+        self.MAX_OBS_COUNT_MSG = str(_(self.MAX_OBS_COUNT_TMPL.format(self.MAX_OBS_COUNT_WARN)))
         self.DENSITY_GT_MSG = str(_(self.DENSITY_GT_TMPL.format(self.OBS_GT_DENSITY)))
         self.DENSITY_LT_MSG = str(_(self.DENSITY_LT_TMPL.format(self.OBS_LT_DENSITY)))
-        self.FISH_COUNT_MIN_MSG = str(
-            _(self.FISH_COUNT_MIN_TMPL.format(self.FISH_COUNT_MIN))
-        )
+        self.FISH_COUNT_MIN_MSG = str(_(self.FISH_COUNT_MIN_TMPL.format(self.FISH_COUNT_MIN)))
 
     def validate_observation_count(self):
         observations = self.data.get("obs_belt_fishes") or []
@@ -812,7 +782,9 @@ class ObsFishBeltValidation(DataValidation, FishAttributeMixin):
             width = None
 
         # Create a fish attribute constants lookup
-        fishattribute_ids = [o.get("fish_attribute") for o in observations if o.get("fish_attribute") is not None]
+        fishattribute_ids = [
+            o.get("fish_attribute") for o in observations if o.get("fish_attribute") is not None
+        ]
         fish_attr_lookup = {
             str(fa.id): fa.get_biomass_constants()
             for fa in FishAttribute.objects.filter(id__in=fishattribute_ids)
@@ -829,9 +801,7 @@ class ObsFishBeltValidation(DataValidation, FishAttributeMixin):
 
             fish_attribute = obs.get("fish_attribute")
             constants = fish_attr_lookup.get(fish_attribute) or [None, None, None]
-            density = calc_biomass_density(
-                count, size, len_surveyed, width_val, *constants
-            )
+            density = calc_biomass_density(count, size, len_surveyed, width_val, *constants)
             densities.append(density)
 
         total_density = sum(d for d in densities if d is not None)
@@ -868,9 +838,7 @@ class ObsFishBeltValidation(DataValidation, FishAttributeMixin):
 
         project = site.project
         project_data = project.data or dict()
-        fish_family_subset = (project_data.get("settings") or dict()).get(
-            "fishFamilySubset"
-        )
+        fish_family_subset = (project_data.get("settings") or dict()).get("fishFamilySubset")
         if isinstance(fish_family_subset, list) is False:
             return self.ok(self.identifier)
 
@@ -891,10 +859,7 @@ class ObsHabitatComplexitiesValidation(DataValidation, BenthicObservationCountMi
 
     def validate_scores(self):
         obs = self.get_observations(self.data)
-        hcs_ids = [
-            str(pk)
-            for pk in HabitatComplexityScore.objects.values_list("id", flat=True)
-        ]
+        hcs_ids = [str(pk) for pk in HabitatComplexityScore.objects.values_list("id", flat=True)]
         for ob in obs:
             if ob.get("score") not in hcs_ids:
                 return self.error(
@@ -1095,14 +1060,14 @@ class ObsBenthicPercentCoveredValidation(DataValidation, ObsBleachingMixin):
                 return self.error(
                     self.identifier,
                     self.GREATER_100_MSG.format("value"),
-                    validation="validate_percent_values"
+                    validation="validate_percent_values",
                 )
 
             if safe_sum(pct_algae, pct_hard, pct_soft) > 100:
                 return self.error(
                     self.identifier,
                     self.GREATER_100_MSG.format("total"),
-                    validation="validate_percent_values"
+                    validation="validate_percent_values",
                 )
 
             if None in pct_values:
@@ -1139,9 +1104,7 @@ class ObsBenthicPercentCoveredValidation(DataValidation, ObsBleachingMixin):
         return self.ok(self.identifier)
 
 
-class ObsColoniesBleachedValidation(
-    DataValidation, ObsBleachingMixin, RegionalAttributesMixin
-):
+class ObsColoniesBleachedValidation(DataValidation, ObsBleachingMixin, RegionalAttributesMixin):
     identifier = "obs_colonies_bleached"
     AttributeModelClass = BenthicAttribute
     attribute_key = "attribute"
@@ -1165,7 +1128,9 @@ class ObsColoniesBleachedValidation(
         obs = self.get_observations(self.data)
         total_count = safe_sum(*[safe_sum(*self._get_colony_counts(ob)) for ob in obs])
         if total_count > self.MAX_TOTAL_COLONIES:
-            return self.warning(self.identifier, _(f"Greater than {self.MAX_TOTAL_COLONIES} total colonies"))
+            return self.warning(
+                self.identifier, _(f"Greater than {self.MAX_TOTAL_COLONIES} total colonies")
+            )
         return self.ok(self.identifier)
 
     def validate_duplicate_genus_growth(self):
@@ -1261,6 +1226,7 @@ class QuadratCollectionValidation(DataValidation):
 
         return self.ok(self.identifier)
 
+
 class QuadratTransectValidation(DataValidation):
     identifier = "quadrat_transect"
     INVALID_DATA = "Invalid transect"
@@ -1276,7 +1242,7 @@ class QuadratTransectValidation(DataValidation):
         site = sample_event.get("site") or None
         management = sample_event.get("management") or None
         sample_date = sample_event.get("sample_date") or None
-        depth =  quadrat_transect.get("depth") or None
+        depth = quadrat_transect.get("depth") or None
         observers = data.get("observers") or []
         profiles = [o.get("profile") for o in observers]
 
@@ -1309,7 +1275,7 @@ class QuadratTransectValidation(DataValidation):
                 return self.error(
                     self.identifier,
                     self.DUPLICATE_QUADRAT_TRANSECT_TMPL.format(transect_method.pk),
-                    data={"duplicate_transect_method": str(transect_method.pk)}
+                    data={"duplicate_transect_method": str(transect_method.pk)},
                 )
         return OK
 
@@ -1325,13 +1291,13 @@ class QuadratTransectValidation(DataValidation):
         queryset = QuadratTransect.objects.select_related().filter(**qry)
 
         for profile in profiles:
-            queryset = queryset.filter(benthic_photo_quadrat_transect_method__observers__profile_id=profile)
+            queryset = queryset.filter(
+                benthic_photo_quadrat_transect_method__observers__profile_id=profile
+            )
 
         for result in queryset:
             transect_methods = get_related_transect_methods(result)
-            duplicate_check = self._check_for_duplicate_transect_methods(
-                transect_methods, protocol
-            )
+            duplicate_check = self._check_for_duplicate_transect_methods(transect_methods, protocol)
             if duplicate_check != OK:
                 return duplicate_check
         return self.ok(self.identifier)
@@ -1342,9 +1308,8 @@ class QuadratTransectValidation(DataValidation):
         quadrat_number_start = cast_int(quadrat_transect.get("quadrat_number_start"))
         if not quadrat_number_start or quadrat_number_start < 0:
             return self.error("quadrat_number_start", self.POSITIVE_NUMBER)
-        
-        return self.ok("quadrat_number_start")
 
+        return self.ok("quadrat_number_start")
 
 
 class ObsBenthicPhotoQuadratValidation(DataValidation, BenthicAttributeMixin):
@@ -1368,14 +1333,12 @@ class ObsBenthicPhotoQuadratValidation(DataValidation, BenthicAttributeMixin):
         count = len(observations)
         if count < self.MIN_OBS_COUNT_WARN:
             return self.warning(
-                self.identifier, 
-                str(_(self.MIN_OBS_COUNT_TMPL.format(self.MIN_OBS_COUNT_WARN)))
+                self.identifier, str(_(self.MIN_OBS_COUNT_TMPL.format(self.MIN_OBS_COUNT_WARN)))
             )
 
         elif count >= self.MAX_OBS_COUNT_WARN:
             return self.warning(
-                self.identifier,
-                str(_(self.MAX_OBS_COUNT_TMPL.format(self.MAX_OBS_COUNT_WARN)))
+                self.identifier, str(_(self.MAX_OBS_COUNT_TMPL.format(self.MAX_OBS_COUNT_WARN)))
             )
 
         return self.ok(self.identifier)
@@ -1384,7 +1347,7 @@ class ObsBenthicPhotoQuadratValidation(DataValidation, BenthicAttributeMixin):
         quadrat_transect = self.data.get("quadrat_transect") or {}
         observations = self.data.get(self.observations_key) or []
         num_points_per_quadrat = cast_int(quadrat_transect.get("num_points_per_quadrat"))
-        
+
         quadrat_number_groups = defaultdict(int)
         for obs in observations:
             quadrat_number = obs.get("quadrat_number")
@@ -1405,24 +1368,20 @@ class ObsBenthicPhotoQuadratValidation(DataValidation, BenthicAttributeMixin):
         if len(invalid_quadrat_numbers) > 0:
             return self.warning(self.identifier, self.INVALID_NUMBER_POINTS)
 
-
         return self.ok(self.identifier)
-    
+
     def validate_quadrat_count(self):
         quadrat_transect = self.data.get("quadrat_transect") or {}
         observations = self.data.get(self.observations_key) or []
         num_quadrats = cast_int(quadrat_transect.get("num_quadrats"))
 
-        quadrat_numbers = {
-            cast_int(o.get("quadrat_number"))
-            for o in observations
-        }
+        quadrat_numbers = {cast_int(o.get("quadrat_number")) for o in observations}
 
         if len(quadrat_numbers) != num_quadrats:
             return self.warning(self.identifier, self.DIFFERENT_NUMBER_OF_QUADRATS)
 
         return self.ok(self.identifier)
-    
+
     def validate_quadrat_number_sequence(self):
         quadrat_transect = self.data.get("quadrat_transect") or {}
         observations = self.data.get(self.observations_key) or []
@@ -1441,15 +1400,15 @@ class ObsBenthicPhotoQuadratValidation(DataValidation, BenthicAttributeMixin):
             i for i in range(quadrat_number_start, quadrat_number_start + num_quadrats)
         ]
 
-        missing_quadrat_numbers = [
-            qn for qn in quadrat_number_seq if qn not in quadrat_numbers
-        ]
+        missing_quadrat_numbers = [qn for qn in quadrat_number_seq if qn not in quadrat_numbers]
 
         if missing_quadrat_numbers:
             return self.warning(
                 self.identifier,
-                self.MISSING_QUADRAT_NUMBERS_TMPL.format(", ".join(str(n) for n in missing_quadrat_numbers)),
-                data={"missing_quadrat_numbers": missing_quadrat_numbers}
+                self.MISSING_QUADRAT_NUMBERS_TMPL.format(
+                    ", ".join(str(n) for n in missing_quadrat_numbers)
+                ),
+                data={"missing_quadrat_numbers": missing_quadrat_numbers},
             )
-            
+
         return self.ok(self.identifier)

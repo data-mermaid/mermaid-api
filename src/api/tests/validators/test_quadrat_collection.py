@@ -1,5 +1,9 @@
 from api.resources.collect_record import CollectRecordSerializer
-from api.submission.validations2.validators import OK, ERROR, UniqueQuadratCollectionValidator
+from api.submission.validations2.validators import (
+    ERROR,
+    OK,
+    UniqueQuadratCollectionValidator,
+)
 
 
 def _get_validator():
@@ -21,9 +25,7 @@ def test_quadrat_collection_validator_ok(valid_bleaching_qc_collect_record):
     assert result.status == OK
 
 
-def test_quadrat_collection_validator_data_invalid(
-    valid_bleaching_qc_collect_record
-):
+def test_quadrat_collection_validator_data_invalid(valid_bleaching_qc_collect_record):
     validator = _get_validator()
     record = CollectRecordSerializer(valid_bleaching_qc_collect_record).data
 
@@ -35,8 +37,7 @@ def test_quadrat_collection_validator_data_invalid(
 
 
 def test_quadrat_collection_validator_duplicate_invalid(
-    valid_bleaching_qc_collect_record,
-    observer_bleaching_quadrat_collection1
+    valid_bleaching_qc_collect_record, observer_bleaching_quadrat_collection1
 ):
     validator = _get_validator()
     record = CollectRecordSerializer(valid_bleaching_qc_collect_record).data

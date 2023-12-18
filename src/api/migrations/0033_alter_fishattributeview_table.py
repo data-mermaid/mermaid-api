@@ -4,14 +4,13 @@ from django.db import migrations
 
 
 class Migration(migrations.Migration):
-
     dependencies = [
-        ('api', '0032_merge_0029_auto_20231108_1528_0031_auto_20231112_1910'),
+        ("api", "0032_merge_0029_auto_20231108_1528_0031_auto_20231112_1910"),
     ]
 
     operations = [
         migrations.AlterModelTable(
-            name='fishattributeview',
-            table='mv_fish_attributes',
+            name="fishattributeview",
+            table="mv_fish_attributes",
         ),
     ]

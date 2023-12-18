@@ -3,9 +3,7 @@ import uuid
 from api.models import CollectRecord, Project, Revision
 
 
-def test_pull_view(
-    db_setup, collect_record_revision_with_updates, api_client1, country1, country2
-):
+def test_pull_view(db_setup, collect_record_revision_with_updates, api_client1, country1, country2):
     rec_rev = collect_record_revision_with_updates
 
     data = {
@@ -17,7 +15,7 @@ def test_pull_view(
         "projects": {
             "last_revision": None,
             "project": rec_rev.project_id,
-        }
+        },
     }
 
     request = api_client1.post("/v1/pull/", data, format="json")
@@ -42,7 +40,10 @@ def test_pull_view(
 
     request = api_client1.post("/v1/pull/", data, format="json")
     response_data2 = request.json()
-    assert response_data2["collect_records"]["last_revision_num"] == response_data["collect_records"]["last_revision_num"]
+    assert (
+        response_data2["collect_records"]["last_revision_num"]
+        == response_data["collect_records"]["last_revision_num"]
+    )
 
 
 def test_pull_view_invalid_source_type(db_setup, api_client1):
@@ -66,14 +67,14 @@ def test_pull_view_wrong_permission(
         "projects": {
             "last_revision": None,
             "project": rec_rev.project_id,
-        }
+        },
     }
 
     project_profile1.delete()
 
     request = api_client1.post("/v1/pull/", data, format="json")
     response_data = request.json()
-    
+
     assert response_data["collect_records"]["error"]["code"] == 403
 
 
@@ -119,9 +120,7 @@ def test_push_view_invalid_record(
 ):
     new_id = str(uuid.uuid4())
     data = {
-        "project_sites": [
-            {"name": "My Test Site", "project": str(project1.id), "id": new_id}
-        ],
+        "project_sites": [{"name": "My Test Site", "project": str(project1.id), "id": new_id}],
     }
 
     request = api_client1.post("/v1/push/", data, format="json")
@@ -172,9 +171,7 @@ def test_push_view_update(
     project_id = project["id"]
 
     assert response_data["collect_records"][0]["status_code"] == 200
-    assert (
-        CollectRecord.objects.get(id=collect_record_id).data.get("protocol") == protocol
-    )
+    assert CollectRecord.objects.get(id=collect_record_id).data.get("protocol") == protocol
 
     assert response_data["projects"][0]["status_code"] == 200
     assert Project.objects.get(id=project_id).name == new_project_name
@@ -206,7 +203,6 @@ def test_push_view_wrong_source_type(db_setup, api_client1):
 
 
 def test_push_view_wrong_permission(db_setup, api_client1, serialized_tracked_project2):
-    
     data = {
         "projects": [serialized_tracked_project2],
     }

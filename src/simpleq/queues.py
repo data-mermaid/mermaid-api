@@ -100,7 +100,7 @@ class Queue:
         try:
             self._queue = self.sqs_resource.get_queue_by_name(QueueName=queue_name)
         except self.sqs_resource.meta.client.exceptions.QueueDoesNotExist:
-            # TODO: leave this for now until we sort out local 
+            # TODO: leave this for now until we sort out local
             self._queue = self.sqs_resource.create_queue(
                 QueueName=queue_name,
                 Attributes={

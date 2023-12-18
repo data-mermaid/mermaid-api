@@ -1,37 +1,31 @@
 from api.resources.collect_record import CollectRecordSerializer
 from api.submission.validations2.validators import (
-    AllAttributesSameCategoryValidator,
-    BenthicLITObservationTotalLengthValidator,
-    ListRequiredValidator,
     ERROR,
     OK,
     WARN,
+    AllAttributesSameCategoryValidator,
+    BenthicLITObservationTotalLengthValidator,
+    ListRequiredValidator,
 )
 
 
 def _get_validator():
     return BenthicLITObservationTotalLengthValidator(
         len_surveyed_path="data.benthic_transect.len_surveyed",
-        obs_benthiclits_path="data.obs_benthic_lits"
+        obs_benthiclits_path="data.obs_benthic_lits",
     )
 
 
 def test_benthicpit_attributes_differentcats(valid_benthic_lit_collect_record):
-    validator = AllAttributesSameCategoryValidator(
-        obs_benthic_path="data.obs_benthic_lits"
-    )
+    validator = AllAttributesSameCategoryValidator(obs_benthic_path="data.obs_benthic_lits")
     record = CollectRecordSerializer(valid_benthic_lit_collect_record).data
 
     result = validator(record)
     assert result.status == OK
 
 
-def test_benthiclit_attributes_allsamecat(
-    valid_benthic_lit_collect_record, benthic_attribute_2
-):
-    validator = AllAttributesSameCategoryValidator(
-        obs_benthic_path="data.obs_benthic_lits"
-    )
+def test_benthiclit_attributes_allsamecat(valid_benthic_lit_collect_record, benthic_attribute_2):
+    validator = AllAttributesSameCategoryValidator(obs_benthic_path="data.obs_benthic_lits")
     record = CollectRecordSerializer(valid_benthic_lit_collect_record).data
     observations = [
         dict(attribute=str(benthic_attribute_2.id), length=500),

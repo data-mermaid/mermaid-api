@@ -68,10 +68,11 @@ def test_summary_sample_event(
     assert beltfish["sample_unit_count"] == 1
     assert benthicpit["sample_unit_count"] == 2
 
-    biomass = (
-        obs_belt_fish1_1_biomass + obs_belt_fish1_2_biomass + obs_belt_fish1_3_biomass
-    )
+    biomass = obs_belt_fish1_1_biomass + obs_belt_fish1_2_biomass + obs_belt_fish1_3_biomass
     assert pytest.approx(biomass, 0.1) == beltfish["biomass_kgha_avg"]
 
     origin = obs_benthic_pit1_3.attribute.origin.name
-    assert benthicpit["percent_cover_benthic_category_avg"][origin] == obs_benthic_pit1_benthic_category_avgs[origin]
+    assert (
+        benthicpit["percent_cover_benthic_category_avg"][origin]
+        == obs_benthic_pit1_benthic_category_avgs[origin]
+    )

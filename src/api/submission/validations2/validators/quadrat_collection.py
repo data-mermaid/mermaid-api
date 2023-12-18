@@ -4,7 +4,7 @@ from rest_framework.exceptions import ParseError
 from ....exceptions import check_uuid
 from ....models import QuadratCollection
 from ....utils import get_related_transect_methods
-from .base import OK, ERROR, BaseValidator, validator_result
+from .base import ERROR, OK, BaseValidator, validator_result
 
 
 class UniqueQuadratCollectionValidator(BaseValidator):
@@ -20,7 +20,7 @@ class UniqueQuadratCollectionValidator(BaseValidator):
         label_path,
         depth_path,
         observers_path,
-        **kwargs
+        **kwargs,
     ):
         self.protocol_path = protocol_path
         self.site_path = site_path
@@ -33,7 +33,7 @@ class UniqueQuadratCollectionValidator(BaseValidator):
 
     @validator_result
     def __call__(self, collect_record, **kwargs):
-        protocol = self.get_value(collect_record, self.protocol_path) 
+        protocol = self.get_value(collect_record, self.protocol_path)
         site_id = self.get_value(collect_record, self.site_path)
         management_id = self.get_value(collect_record, self.management_path)
         sample_date = self.get_value(collect_record, self.sample_date_path)
@@ -58,7 +58,7 @@ class UniqueQuadratCollectionValidator(BaseValidator):
             "sample_event__site": site_id,
             "sample_event__management": management_id,
             "sample_event__sample_date": sample_date,
-            "depth": depth
+            "depth": depth,
         }
         if label:
             qry["label"] = label

@@ -4,11 +4,9 @@ from django.db import migrations
 
 
 class Migration(migrations.Migration):
-
     dependencies = [
-        ('api', '0005_alter_management_est_year'),
-        ('api', '0006_summarysampleeventmodel_data_policy_benthicpqt'),
+        ("api", "0005_alter_management_est_year"),
+        ("api", "0006_summarysampleeventmodel_data_policy_benthicpqt"),
     ]
 
-    operations = [
-    ]
+    operations = []

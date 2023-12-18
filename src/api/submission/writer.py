@@ -17,44 +17,44 @@ from api.models import (
     QuadratTransect,
     SampleEvent,
 )
-from api.utils import combine_into
 from api.resources.benthic_transect import BenthicTransectSerializer
 from api.resources.fish_belt_transect import FishBeltTransectSerializer
 from api.resources.observer import ObserverSerializer
 from api.resources.quadrat_collection import QuadratCollectionSerializer
 from api.resources.quadrat_transect import QuadratTransectSerializer
-from ..resources.sampleunitmethods.habitatcomplexitymethod import (
-    HabitatComplexitySerializer,
-    ObsHabitatComplexitySerializer,
+from api.resources.sample_event import SampleEventSerializer
+from api.utils import combine_into
+from ..resources.sampleunitmethods.beltfishmethod import (
+    BeltFishSerializer,
+    ObsBeltFishSerializer,
+)
+from ..resources.sampleunitmethods.benthiclitmethod import (
+    BenthicLITSerializer,
+    ObsBenthicLITSerializer,
+)
+from ..resources.sampleunitmethods.benthicphotoquadrattransectmethod import (
+    BenthicPhotoQuadratTransectSerializer,
+    ObsBenthicPhotoQuadratSerializer,
+)
+from ..resources.sampleunitmethods.benthicpitmethod import (
+    BenthicPITSerializer,
+    ObsBenthicPITSerializer,
 )
 from ..resources.sampleunitmethods.bleachingquadratcollectionmethod import (
     BleachingQuadratCollectionSerializer,
     ObsColoniesBleachedSerializer,
     ObsQuadratBenthicPercentSerializer,
 )
-from ..resources.sampleunitmethods.benthicpitmethod import (
-    BenthicPITSerializer,
-    ObsBenthicPITSerializer,
+from ..resources.sampleunitmethods.habitatcomplexitymethod import (
+    HabitatComplexitySerializer,
+    ObsHabitatComplexitySerializer,
 )
-from ..resources.sampleunitmethods.benthicphotoquadrattransectmethod import (
-    BenthicPhotoQuadratTransectSerializer,
-    ObsBenthicPhotoQuadratSerializer,
-)
-from ..resources.sampleunitmethods.benthiclitmethod import (
-    BenthicLITSerializer,
-    ObsBenthicLITSerializer,
-)
-from ..resources.sampleunitmethods.beltfishmethod import (
-    BeltFishSerializer,
-    ObsBeltFishSerializer,
-)
-from api.resources.sample_event import SampleEventSerializer
 from .parser import (
     get_benthic_transect_data,
     get_fishbelt_transect_data,
+    get_obs_benthic_photo_quadrat_data,
     get_obs_colonies_bleached_data,
     get_obs_quadrat_benthic_percent_data,
-    get_obs_benthic_photo_quadrat_data,
     get_obsbeltfish_data,
     get_obsbenthiclit_data,
     get_obsbenthicpit_data,
@@ -109,9 +109,7 @@ class ProtocolWriter(BaseWriter):
         observers = []
         observers_data = get_observers_data(self.collect_record, sample_unit_method_id)
         if not observers_data:
-            raise ValidationError(
-                {"observers": [str(_("Must have at least 1 observer."))]}
-            )
+            raise ValidationError({"observers": [str(_("Must have at least 1 observer."))]})
 
         for observer_data in observers_data:
             observer_data["id"] = uuid.uuid4()
@@ -129,19 +127,13 @@ class ProtocolWriter(BaseWriter):
 
 class BenthicProtocolWriter(ProtocolWriter):
     def get_or_create_benthic_transect(self, sample_event_id):
-        benthic_transect_data = get_benthic_transect_data(
-            self.collect_record, sample_event_id
-        )
-        return self.get_or_create(
-            BenthicTransect, BenthicTransectSerializer, benthic_transect_data
-        )
+        benthic_transect_data = get_benthic_transect_data(self.collect_record, sample_event_id)
+        return self.get_or_create(BenthicTransect, BenthicTransectSerializer, benthic_transect_data)
 
 
 class FishbeltProtocolWriter(ProtocolWriter):
     def get_or_create_fishbelt_transect(self, sample_event_id):
-        fishbelt_transect_data = get_fishbelt_transect_data(
-            self.collect_record, sample_event_id
-        )
+        fishbelt_transect_data = get_fishbelt_transect_data(self.collect_record, sample_event_id)
         return self.get_or_create(
             FishBeltTransect, FishBeltTransectSerializer, fishbelt_transect_data
         )
@@ -206,9 +198,7 @@ class BenthicPITProtocolWriter(BenthicProtocolWriter):
 
         for observation_data in observations_data:
             observation_data["id"] = observation_data.get("id") or uuid.uuid4()
-            serializer = ObsBenthicPITSerializer(
-                data=observation_data, context=self.context
-            )
+            serializer = ObsBenthicPITSerializer(data=observation_data, context=self.context)
             if serializer.is_valid() is False:
                 raise ValidationError(serializer.errors)
 
@@ -252,9 +242,7 @@ class BenthicLITProtocolWriter(BenthicProtocolWriter):
 
         for observation_data in observations_data:
             observation_data["id"] = observation_data.get("id") or uuid.uuid4()
-            serializer = ObsBenthicLITSerializer(
-                data=observation_data, context=self.context
-            )
+            serializer = ObsBenthicLITSerializer(data=observation_data, context=self.context)
             if serializer.is_valid() is False:
                 raise ValidationError(serializer.errors)
 
@@ -291,23 +279,15 @@ class HabitatComplexityProtocolWriter(BenthicProtocolWriter):
 
     def create_obshabitatcomplexity(self, habitatcomplexity_id):
         observation_habitatcomplexities = []
-        observations_data = get_obshabitatcomplexity_data(
-            self.collect_record, habitatcomplexity_id
-        )
+        observations_data = get_obshabitatcomplexity_data(self.collect_record, habitatcomplexity_id)
         if not observations_data:
             raise ValidationError(
-                {
-                    "obs_habitat_complexities": [
-                        _("Habitat complexity observations are required.")
-                    ]
-                }
+                {"obs_habitat_complexities": [_("Habitat complexity observations are required.")]}
             )
 
         for observation_data in observations_data:
             observation_data["id"] = observation_data.get("id") or uuid.uuid4()
-            serializer = ObsHabitatComplexitySerializer(
-                data=observation_data, context=self.context
-            )
+            serializer = ObsHabitatComplexitySerializer(data=observation_data, context=self.context)
             if serializer.is_valid() is False:
                 raise ValidationError(serializer.errors)
 
@@ -328,17 +308,13 @@ class HabitatComplexityProtocolWriter(BenthicProtocolWriter):
 
 class BleachingQuadratCollectionProtocolWriter(ProtocolWriter):
     def get_or_create_quadrat_collection(self, sample_event_id):
-        observation_data = get_quadrat_collection_data(
-            self.collect_record, sample_event_id
-        )
+        observation_data = get_quadrat_collection_data(self.collect_record, sample_event_id)
         try:
             return QuadratCollection.objects.get(**observation_data)
 
         except (QuadratCollection.DoesNotExist, ValidationError):
             observation_data["id"] = observation_data.get("id") or uuid.uuid4()
-            serializer = QuadratCollectionSerializer(
-                data=observation_data, context=self.context
-            )
+            serializer = QuadratCollectionSerializer(data=observation_data, context=self.context)
             if serializer.is_valid() is False:
                 raise ValidationError(serializer.errors) from _
 
@@ -385,18 +361,12 @@ class BleachingQuadratCollectionProtocolWriter(ProtocolWriter):
         )
         if not observations_data:
             raise ValidationError(
-                {
-                    "obs_colonies_bleached": [
-                        _("Colonies bleached observations are required.")
-                    ]
-                }
+                {"obs_colonies_bleached": [_("Colonies bleached observations are required.")]}
             )
 
         for observation_data in observations_data:
             observation_data["id"] = observation_data.get("id") or uuid.uuid4()
-            serializer = ObsColoniesBleachedSerializer(
-                data=observation_data, context=self.context
-            )
+            serializer = ObsColoniesBleachedSerializer(data=observation_data, context=self.context)
             if serializer.is_valid() is False:
                 raise ValidationError(serializer.errors)
 
@@ -418,17 +388,13 @@ class BleachingQuadratCollectionProtocolWriter(ProtocolWriter):
 
 class BenthicPhotoQuadratTransectProtocolWriter(ProtocolWriter):
     def get_or_create_quadrat_transect(self, sample_event_id):
-        quadrat_transect_data = get_quadrat_transect_data(
-            self.collect_record, sample_event_id
-        )
+        quadrat_transect_data = get_quadrat_transect_data(self.collect_record, sample_event_id)
         try:
             return QuadratTransect.objects.get(**quadrat_transect_data)
 
         except (QuadratTransect.DoesNotExist, ValidationError) as _:
             quadrat_transect_data["id"] = uuid.uuid4()
-            serializer = QuadratTransectSerializer(
-                data=quadrat_transect_data, context=self.context
-            )
+            serializer = QuadratTransectSerializer(data=quadrat_transect_data, context=self.context)
             if serializer.is_valid() is False:
                 raise ValidationError(serializer.errors) from _
 
@@ -478,10 +444,8 @@ class BenthicPhotoQuadratTransectProtocolWriter(ProtocolWriter):
         sample_unit_method_id = self.get_sample_unit_method_id()
         sample_event = self.get_or_create_sample_event()
         quadrat_transect = self.get_or_create_quadrat_transect(sample_event.id)
-        benthic_photo_quadrat_transect = (
-            self.get_or_create_benthic_photo_quadrat_transect(
-                self.collect_record.id, quadrat_transect.id, sample_unit_method_id
-            )
+        benthic_photo_quadrat_transect = self.get_or_create_benthic_photo_quadrat_transect(
+            self.collect_record.id, quadrat_transect.id, sample_unit_method_id
         )
         _ = self.create_observers(benthic_photo_quadrat_transect.id)
         _ = self.create_obs_benthic_photo_quadrat(benthic_photo_quadrat_transect.id)

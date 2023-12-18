@@ -1,6 +1,6 @@
 import uuid
 
-from django.contrib.gis.db.models.fields import PolygonField, MultiPolygonField
+from django.contrib.gis.db.models.fields import MultiPolygonField, PolygonField
 from django.core.exceptions import ObjectDoesNotExist, ValidationError
 from django.db import models
 from django.utils import timezone
@@ -9,9 +9,9 @@ from django.utils.translation import gettext_lazy as _
 PROPOSED = 10
 SUPERUSER_APPROVED = 90
 APPROVAL_STATUSES = (
-    (SUPERUSER_APPROVED, _('superuser approved')),
+    (SUPERUSER_APPROVED, _("superuser approved")),
     # (50, _('project admin approved')),
-    (PROPOSED, _('proposed')),
+    (PROPOSED, _("proposed")),
 )
 
 
@@ -19,13 +19,12 @@ def validate_max_year(value):
     current_year = timezone.now().year
     if value > current_year:
         raise ValidationError(
-            _('%(value)s is in the future'),
-            params={'value': value},
+            _("%(value)s is in the future"),
+            params={"value": value},
         )
 
 
 class ExtendedManager(models.Manager):
-
     def get_or_none(self, *args, **kwargs):
         try:
             return super().get(*args, **kwargs)
@@ -34,21 +33,24 @@ class ExtendedManager(models.Manager):
 
 
 class ChoicesManager(ExtendedManager):
-
     def choices(self, order_by, *args, **kwargs):
         return [c.choice for c in super().all().order_by(order_by)]
 
 
 class Profile(models.Model):
-    project_lookup = 'projects__project'
+    project_lookup = "projects__project"
 
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
 
     created_on = models.DateTimeField(auto_now_add=True)
     updated_on = models.DateTimeField(auto_now=True)
-    updated_by = models.ForeignKey('self', on_delete=models.SET_NULL,
-                                   null=True, blank=True,
-                                   related_name='%(class)s_updated_by')
+    updated_by = models.ForeignKey(
+        "self",
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name="%(class)s_updated_by",
+    )
     email = models.EmailField(unique=True)
     first_name = models.CharField(max_length=100, blank=True, null=True)
     last_name = models.CharField(max_length=100, blank=True, null=True)
@@ -57,10 +59,10 @@ class Profile(models.Model):
     objects = ExtendedManager()
 
     class Meta:
-        db_table = 'profile'
+        db_table = "profile"
 
     def __str__(self):
-        return '{} [{}]'.format(self.full_name, self.pk)
+        return "{} [{}]".format(self.full_name, self.pk)
 
     @property
     def full_name(self):  # noqa
@@ -87,13 +89,21 @@ class BaseModel(models.Model):
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
 
     created_on = models.DateTimeField(auto_now_add=True)
-    created_by = models.ForeignKey('Profile', on_delete=models.SET_NULL,
-                                   null=True, blank=True,
-                                   related_name='%(class)s_created_by')
+    created_by = models.ForeignKey(
+        "Profile",
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name="%(class)s_created_by",
+    )
     updated_on = models.DateTimeField(auto_now=True)
-    updated_by = models.ForeignKey('Profile', on_delete=models.SET_NULL,
-                                   null=True, blank=True,
-                                   related_name='%(class)s_updated_by')
+    updated_by = models.ForeignKey(
+        "Profile",
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name="%(class)s_updated_by",
+    )
 
     class Meta:
         abstract = True
@@ -113,14 +123,15 @@ class AreaMixin(models.Model):
         field = self.get_polygon()
         if field is None:
             return None
-        if hasattr(self, '_area'):
+        if hasattr(self, "_area"):
             return self._area
         # using a world equal area projection to do the areal measurement; there may be a better one
         # https://epsg.io/3410
         # Thought geography=True would make this unnecessary
         self._area = round(field.transform(3410, clone=True).area / 10000, 3)
         return self._area
-    area.fget.short_description = _('area (ha)')
+
+    area.fget.short_description = _("area (ha)")
 
     class Meta:
         abstract = True
@@ -134,7 +145,9 @@ class JSONMixin(models.Model):
 
 
 class BaseAttributeModel(BaseModel):
-    status = models.PositiveSmallIntegerField(choices=APPROVAL_STATUSES, default=APPROVAL_STATUSES[-1][0])
+    status = models.PositiveSmallIntegerField(
+        choices=APPROVAL_STATUSES, default=APPROVAL_STATUSES[-1][0]
+    )
 
     class Meta:
         abstract = True
@@ -143,9 +156,9 @@ class BaseAttributeModel(BaseModel):
 class BaseChoiceModel(BaseModel):
     @property
     def choice(self):
-        ret = {'id': self.pk, 'name': self.__str__(), 'updated_on': self.updated_on}
-        if hasattr(self, 'val'):
-            ret['val'] = self.val
+        ret = {"id": self.pk, "name": self.__str__(), "updated_on": self.updated_on}
+        if hasattr(self, "val"):
+            ret["val"] = self.val
         return ret
 
     class Meta:
@@ -159,35 +172,37 @@ class Country(BaseChoiceModel):
     name = models.CharField(max_length=50)
 
     class Meta:
-        db_table = 'country'
-        verbose_name_plural = 'countries'
-        ordering = ('name',)
+        db_table = "country"
+        verbose_name_plural = "countries"
+        ordering = ("name",)
 
     def __str__(self):
-        return _('%s') % self.name
+        return _("%s") % self.name
 
 
 class AuthUser(BaseModel):
-    profile = models.ForeignKey(Profile, related_name='authusers', on_delete=models.CASCADE)
+    profile = models.ForeignKey(Profile, related_name="authusers", on_delete=models.CASCADE)
     user_id = models.CharField(unique=True, max_length=255)
 
     class Meta:
-        db_table = 'authuser'
-        unique_together = ('profile', 'user_id',)
+        db_table = "authuser"
+        unique_together = (
+            "profile",
+            "user_id",
+        )
 
     def __str__(self):
-        return _('%s') % self.profile.full_name
+        return _("%s") % self.profile.full_name
 
 
 class Application(BaseModel):
     name = models.CharField(max_length=100)
-    profile = models.ForeignKey('Profile', related_name='registered_apps',
-                                on_delete=models.CASCADE)
+    profile = models.ForeignKey("Profile", related_name="registered_apps", on_delete=models.CASCADE)
     client_id = models.CharField(max_length=100, unique=True)
 
     class Meta:
-        db_table = 'applications'
-        unique_together = ('profile', 'client_id')
+        db_table = "applications"
+        unique_together = ("profile", "client_id")
 
     def __str__(self):
-        return '{} - {}'.format(self.profile, self.client_id)
+        return "{} - {}".format(self.profile, self.client_id)

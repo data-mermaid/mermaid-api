@@ -1,5 +1,5 @@
-from .base import OK, WARN, BaseValidator, validator_result
 from ....utils import safe_sum
+from .base import OK, WARN, BaseValidator, validator_result
 
 
 class ColonyCountValidator(BaseValidator):
@@ -16,7 +16,7 @@ class ColonyCountValidator(BaseValidator):
         observation_count_80_path,
         observation_count_100_path,
         observation_count_dead_path,
-        **kwargs
+        **kwargs,
     ):
         self.obs_colonies_bleached_path = obs_colonies_bleached_path
         self.observation_count_normal_path = observation_count_normal_path

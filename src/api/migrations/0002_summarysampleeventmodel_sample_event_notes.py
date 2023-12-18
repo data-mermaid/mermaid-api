@@ -4,31 +4,30 @@ from django.db import migrations, models
 
 
 class Migration(migrations.Migration):
-
     dependencies = [
-        ('api', '0001_initial'),
+        ("api", "0001_initial"),
     ]
 
     operations = [
         migrations.AddField(
-            model_name='obscoloniesbleached',
-            name='notes',
+            model_name="obscoloniesbleached",
+            name="notes",
             field=models.TextField(blank=True),
         ),
         migrations.AddField(
-            model_name='obsquadratbenthicpercent',
-            name='notes',
+            model_name="obsquadratbenthicpercent",
+            name="notes",
             field=models.TextField(blank=True),
         ),
         migrations.AddField(
-            model_name='summarysampleeventmodel',
-            name='sample_event_notes',
+            model_name="summarysampleeventmodel",
+            name="sample_event_notes",
             field=models.TextField(blank=True, null=True),
         ),
         migrations.DeleteModel(
-            name='SummarySiteModel',
+            name="SummarySiteModel",
         ),
         migrations.DeleteModel(
-            name='SummarySiteSQLModel',
+            name="SummarySiteSQLModel",
         ),
     ]

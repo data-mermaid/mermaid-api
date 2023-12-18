@@ -40,7 +40,15 @@ class Revision(models.Model):
         return self.revision_num == other.revision_num
 
     @classmethod
-    def create(cls, table_name, record_id, project_id=None, profile_id=None, deleted=False, related_to_profile_id=None):
+    def create(
+        cls,
+        table_name,
+        record_id,
+        project_id=None,
+        profile_id=None,
+        deleted=False,
+        related_to_profile_id=None,
+    ):
         cursor = connection.cursor()
         try:
             sql = "SELECT nextval('revision_seq_num');"
@@ -50,7 +58,7 @@ class Revision(models.Model):
             revision = Revision.objects.get_or_none(
                 table_name=table_name,
                 record_id=record_id,
-                related_to_profile_id=related_to_profile_id
+                related_to_profile_id=related_to_profile_id,
             )
 
             if revision is None:
@@ -97,19 +105,17 @@ class Revision(models.Model):
         return None
 
     @classmethod
-    def create_from_instance(cls, instance, profile_id=None, deleted=False, related_to_profile_id=None):
+    def create_from_instance(
+        cls, instance, profile_id=None, deleted=False, related_to_profile_id=None
+    ):
         table_name = instance._meta.db_table
         record_id = instance.pk
         project_id = cls._get_project_id(instance)
 
         return cls.create(
-            table_name,
-            record_id,
-            project_id,
-            profile_id,
-            deleted,
-            related_to_profile_id
+            table_name, record_id, project_id, profile_id, deleted, related_to_profile_id
         )
+
 
 # -- TRIGGER SQL --
 

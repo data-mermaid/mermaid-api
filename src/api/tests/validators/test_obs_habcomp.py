@@ -1,10 +1,10 @@
 from api.resources.collect_record import CollectRecordSerializer
 from api.submission.validations2.validators import (
+    ERROR,
+    OK,
     BenthicIntervalObservationCountValidator,
     ListRequiredValidator,
     ListScoreValidator,
-    ERROR,
-    OK,
 )
 
 
@@ -29,16 +29,11 @@ def test_habcomp_observation_count_validator_ok(
 def test_habcomp_observation_count_invalid(valid_habitat_complexity_collect_record):
     validator = _get_validator()
     record = CollectRecordSerializer(valid_habitat_complexity_collect_record).data
-    record["data"]["obs_habitat_complexities"] = record["data"][
-        "obs_habitat_complexities"
-    ][0:4]
+    record["data"]["obs_habitat_complexities"] = record["data"]["obs_habitat_complexities"][0:4]
 
     result = validator(record)
     assert result.status == ERROR
-    assert (
-        result.code
-        == BenthicIntervalObservationCountValidator.INCORRECT_OBSERVATION_COUNT
-    )
+    assert result.code == BenthicIntervalObservationCountValidator.INCORRECT_OBSERVATION_COUNT
 
 
 def test_habcomp_missing_score(valid_habitat_complexity_collect_record):
@@ -64,9 +59,7 @@ def test_habcomp_invalid_score(valid_habitat_complexity_collect_record):
         unique_identifier_label="observation_id",
     )
     record = CollectRecordSerializer(valid_habitat_complexity_collect_record).data
-    record["data"]["obs_habitat_complexities"][1][
-        "score"
-    ] = "9a291f1b-c00d-4d5f-9aff-da9f8adeb6bd"
+    record["data"]["obs_habitat_complexities"][1]["score"] = "9a291f1b-c00d-4d5f-9aff-da9f8adeb6bd"
 
     result = validator(record)
     assert result[1].status == ERROR

@@ -1,5 +1,4 @@
 import csv
-
 from io import StringIO
 
 import pytest
@@ -8,6 +7,8 @@ from django.urls import reverse
 
 def _get_rows(client, token, url):
     response = client.get(url, HTTP_AUTHORIZATION=f"Bearer {token}")
+    print(type(response))
+    print(response)
     f = StringIO(b"".join(response.streaming_content).decode("utf-8"))
     reader = csv.DictReader(f, delimiter=",")
     fieldnames = reader.fieldnames
@@ -30,10 +31,7 @@ def test_beltfish_csv_view(
     fieldnames, rows, response = _get_rows(client, token1, url)
 
     assert response.has_header("Content-Disposition")
-    assert (
-        "test_project_1-beltfish-obs-"
-        in response.headers.get("content-disposition")
-    )
+    assert "test_project_1-beltfish-obs-" in response.headers.get("content-disposition")
     assert len(rows) == 7
     assert "country_name" in fieldnames
     assert len(rows[3].keys()) == 60
@@ -59,10 +57,7 @@ def test_beltfish_field_report(
     fieldnames, rows, response = _get_rows(client, token1, f"{url}?field_report=true")
 
     assert response.has_header("Content-Disposition")
-    assert (
-        "test_project_1-beltfish-obs-"
-        in response.headers.get("content-disposition")
-    )
+    assert "test_project_1-beltfish-obs-" in response.headers.get("content-disposition")
     assert len(rows) == 7
     assert "Country" in fieldnames
     assert len(rows[3].keys()) == 54
@@ -89,10 +84,7 @@ def test_benthicpit_csv_view(
     fieldnames, rows, response = _get_rows(client, token1, url)
 
     assert response.has_header("Content-Disposition")
-    assert (
-        "test_project_1-benthicpit-obs-"
-        in response.headers.get("content-disposition")
-    )
+    assert "test_project_1-benthicpit-obs-" in response.headers.get("content-disposition")
 
     assert len(rows) == 15
     assert "country_name" in fieldnames
@@ -119,10 +111,7 @@ def test_benthicpit_field_report(
     fieldnames, rows, response = _get_rows(client, token1, f"{url}?field_report=true")
 
     assert response.has_header("Content-Disposition")
-    assert (
-        "test_project_1-benthicpit-obs-"
-        in response.headers.get("content-disposition")
-    )
+    assert "test_project_1-benthicpit-obs-" in response.headers.get("content-disposition")
     assert len(rows) == 15
     assert "Country" in fieldnames
     assert len(rows[11].keys()) == 42
@@ -150,15 +139,10 @@ def test_benthiclit_csv_view(
     url = reverse("benthiclitmethod-obs-csv", kwargs=dict(project_pk=project1.pk))
     fieldnames, rows, response = _get_rows(client, token1, url)
 
-    ordered_obs = list(ordered_benthic_lit1_observations) + list(
-        ordered_benthic_lit2_observations
-    )
+    ordered_obs = list(ordered_benthic_lit1_observations) + list(ordered_benthic_lit2_observations)
 
     assert response.has_header("Content-Disposition")
-    assert (
-        "test_project_1-benthiclit-obs-"
-        in response.headers.get("content-disposition")
-    )
+    assert "test_project_1-benthiclit-obs-" in response.headers.get("content-disposition")
 
     assert len(rows) == 10
     assert "country_name" in fieldnames
@@ -187,15 +171,10 @@ def test_benthiclit_field_report(
     url = reverse("benthiclitmethod-obs-csv", kwargs=dict(project_pk=project1.pk))
     fieldnames, rows, response = _get_rows(client, token1, f"{url}?field_report=true")
 
-    ordered_obs = list(ordered_benthic_lit1_observations) + list(
-        ordered_benthic_lit2_observations
-    )
+    ordered_obs = list(ordered_benthic_lit1_observations) + list(ordered_benthic_lit2_observations)
 
     assert response.has_header("Content-Disposition")
-    assert (
-        "test_project_1-benthiclit-obs-"
-        in response.headers.get("content-disposition")
-    )
+    assert "test_project_1-benthiclit-obs-" in response.headers.get("content-disposition")
     assert len(rows) == 10
     assert "Country" in fieldnames
     assert len(rows[6].keys()) == 43
@@ -218,9 +197,7 @@ def test_habitatcomplexity_csv_view(
     obs_habitat_complexity1_1,
     update_summary_cache,
 ):
-    url = reverse(
-        "habitatcomplexitymethod-obs-csv", kwargs=dict(project_pk=project1.pk)
-    )
+    url = reverse("habitatcomplexitymethod-obs-csv", kwargs=dict(project_pk=project1.pk))
     fieldnames, rows, response = _get_rows(client, token1, url)
 
     assert len(rows) == 6
@@ -230,9 +207,7 @@ def test_habitatcomplexity_csv_view(
     assert float(rows[3]["latitude"]) == site2.location.y
     assert float(rows[3]["longitude"]) == site2.location.x
     assert rows[3]["observers"] == profile2.full_name
-    assert int(float(rows[3]["interval"])) == int(
-        float(obs_habitat_complexity1_1.interval)
-    )
+    assert int(float(rows[3]["interval"])) == int(float(obs_habitat_complexity1_1.interval))
 
 
 def test_habitatcomplexity_field_report(
@@ -247,9 +222,7 @@ def test_habitatcomplexity_field_report(
     obs_habitat_complexity1_1,
     update_summary_cache,
 ):
-    url = reverse(
-        "habitatcomplexitymethod-obs-csv", kwargs=dict(project_pk=project1.pk)
-    )
+    url = reverse("habitatcomplexitymethod-obs-csv", kwargs=dict(project_pk=project1.pk))
     fieldnames, rows, response = _get_rows(client, token1, f"{url}?field_report=true")
 
     assert len(rows) == 6
@@ -259,9 +232,7 @@ def test_habitatcomplexity_field_report(
     assert float(rows[3]["Latitude"]) == site2.location.y
     assert float(rows[3]["Longitude"]) == site2.location.x
     assert rows[3]["Observers"] == profile2.full_name
-    assert int(float(rows[3]["Interval (m)"])) == int(
-        float(obs_habitat_complexity1_1.interval)
-    )
+    assert int(float(rows[3]["Interval (m)"])) == int(float(obs_habitat_complexity1_1.interval))
 
 
 def test_bleaching_colonies_bleached_csv_view(
@@ -326,9 +297,7 @@ def test_bleaching_quadrat_benthic_percent_csv_view(
     obs_quadrat_benthic_percent1_4,
     update_summary_cache,
 ):
-    url = reverse(
-        "quadratbenthicpercentmethod-obs-csv", kwargs=dict(project_pk=project1.pk)
-    )
+    url = reverse("quadratbenthicpercentmethod-obs-csv", kwargs=dict(project_pk=project1.pk))
     fieldnames, rows, response = _get_rows(client, token1, url)
 
     assert len(rows) == 5
@@ -353,9 +322,7 @@ def test_bleaching_quadrat_benthic_percent_field_report(
     obs_quadrat_benthic_percent1_4,
     update_summary_cache,
 ):
-    url = reverse(
-        "quadratbenthicpercentmethod-obs-csv", kwargs=dict(project_pk=project1.pk)
-    )
+    url = reverse("quadratbenthicpercentmethod-obs-csv", kwargs=dict(project_pk=project1.pk))
     fieldnames, rows, response = _get_rows(client, token1, f"{url}?field_report=true")
 
     assert len(rows) == 5

@@ -1,18 +1,18 @@
 import django_filters
 from rest_framework import serializers
 
+from ..exceptions import check_uuid
+from ..models import Project, Site
+from ..permissions import AuthenticatedReadOnlyPermission
 from .base import (
     BaseAPIFilterSet,
-    BaseApiViewSet,
     BaseAPISerializer,
+    BaseApiViewSet,
     ExtendedSerializer,
-    ModelNameReadOnlyField,
     ListFilter,
+    ModelNameReadOnlyField,
 )
 from .mixins import ProtectedResourceMixin
-from ..exceptions import check_uuid
-from ..models import Site, Project
-from ..permissions import AuthenticatedReadOnlyPermission
 
 
 class SiteExtendedSerializer(ExtendedSerializer):
@@ -25,7 +25,7 @@ class SiteExtendedSerializer(ExtendedSerializer):
     longitude = serializers.SerializerMethodField()
 
     class Meta:
-        geo_field = 'location'
+        geo_field = "location"
         model = Site
         exclude = []
 
@@ -48,14 +48,14 @@ class SiteSerializer(BaseAPISerializer):
     exposure_name = serializers.SerializerMethodField()
 
     class Meta:
-        geo_field = 'location'
+        geo_field = "location"
         model = Site
         available_fields = [
-            'country_name',
-            'project_name',
-            'reef_type_name',
-            'reef_zone_name',
-            'exposure_name',
+            "country_name",
+            "project_name",
+            "reef_type_name",
+            "reef_zone_name",
+            "exposure_name",
         ]
         exclude = []
 
@@ -76,36 +76,37 @@ class SiteSerializer(BaseAPISerializer):
 
 
 class SiteFilterSet(BaseAPIFilterSet):
-    project = django_filters.UUIDFilter(field_name='project', distinct=True,
-                                        label='Associated with project')
+    project = django_filters.UUIDFilter(
+        field_name="project", distinct=True, label="Associated with project"
+    )
 
     country_id = ListFilter()
-    unique = django_filters.CharFilter(method='filter_unique')
-    exclude_projects = django_filters.CharFilter(method='filter_not_projects')
+    unique = django_filters.CharFilter(method="filter_unique")
+    exclude_projects = django_filters.CharFilter(method="filter_not_projects")
 
     class Meta:
         model = Site
         fields = [
-            'project',
-            'country',
-            'reef_type',
-            'reef_zone',
-            'exposure',
-            'exclude_projects',
+            "project",
+            "country",
+            "reef_type",
+            "reef_zone",
+            "exposure",
+            "exclude_projects",
         ]
 
     def filter_unique(self, queryset, name, value):
         unique_fields = (
-            'name',
-            'country_id',
-            'reef_type_id',
-            'reef_zone_id',
-            'exposure_id',
-            'location'
+            "name",
+            "country_id",
+            "reef_type_id",
+            "reef_zone_id",
+            "exposure_id",
+            "location",
         )
         project_id = value
 
-        group_by = ','.join(['"{}"'.format(uf) for uf in unique_fields])
+        group_by = ",".join(['"{}"'.format(uf) for uf in unique_fields])
 
         sql = """
             "site".id::text IN (
@@ -129,17 +130,21 @@ class SiteFilterSet(BaseAPIFilterSet):
         return queryset.extra(where=[sql])
 
     def filter_not_projects(self, queryset, name, value):
-        value_list = [check_uuid(v.strip()) for v in value.split(',')]
-        
+        value_list = [check_uuid(v.strip()) for v in value.split(",")]
+
         return queryset.exclude(project__in=value_list)
 
 
 class SiteViewSet(ProtectedResourceMixin, BaseApiViewSet):
     model_display_name = "Site"
     serializer_class = SiteSerializer
-    queryset = Site.objects \
-        .select_related("project", "country", "reef_type", "reef_zone", "exposure") \
-        .exclude(project__status=Project.TEST)
+    queryset = Site.objects.select_related(
+        "project", "country", "reef_type", "reef_zone", "exposure"
+    ).exclude(project__status=Project.TEST)
     permission_classes = [AuthenticatedReadOnlyPermission]
     filterset_class = SiteFilterSet
-    search_fields = ['$name', '$project__name', '$country__name',]
+    search_fields = [
+        "$name",
+        "$project__name",
+        "$country__name",
+    ]

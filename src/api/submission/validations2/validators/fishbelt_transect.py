@@ -4,7 +4,7 @@ from rest_framework.exceptions import ParseError
 from ....exceptions import check_uuid
 from ....models import FishBeltTransect
 from ....utils import get_related_transect_methods
-from .base import ERROR, OK, ERROR, BaseValidator, validator_result
+from .base import ERROR, OK, BaseValidator, validator_result
 
 
 class UniqueFishbeltTransectValidator(BaseValidator):
@@ -96,9 +96,7 @@ class UniqueFishbeltTransectValidator(BaseValidator):
 
         for result in queryset:
             transect_methods = get_related_transect_methods(result)
-            duplicate_check = self._check_for_duplicate_transect_methods(
-                transect_methods, protocol
-            )
+            duplicate_check = self._check_for_duplicate_transect_methods(transect_methods, protocol)
             if duplicate_check != OK:
                 return duplicate_check
         return OK

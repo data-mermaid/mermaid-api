@@ -63,9 +63,7 @@ class BaseObsModel(BaseSummaryModel):
     visibility_name = models.CharField(max_length=50, null=True, blank=True)
     sample_unit_notes = models.TextField(blank=True)
     # Fields common to all SUs that are actually SU properties (that make SUs distinct)
-    depth = models.DecimalField(
-        max_digits=3, decimal_places=1, verbose_name=_("depth (m)")
-    )
+    depth = models.DecimalField(max_digits=3, decimal_places=1, verbose_name=_("depth (m)"))
 
     class Meta:
         abstract = True
@@ -81,9 +79,7 @@ class BaseSUModel(BaseSummaryModel):
     visibility_name = models.TextField(null=True, blank=True)
     sample_unit_notes = models.TextField(blank=True)
     # Fields common to all SUs that are actually SU properties (that make SUs distinct)
-    depth = models.DecimalField(
-        max_digits=3, decimal_places=1, verbose_name=_("depth (m)")
-    )
+    depth = models.DecimalField(max_digits=3, decimal_places=1, verbose_name=_("depth (m)"))
 
     class Meta:
         abstract = True
@@ -102,19 +98,11 @@ class BeltFishObsModel(BaseObsModel):
     fish_genus = models.CharField(max_length=100, null=True, blank=True)
     fish_taxon = models.CharField(max_length=100, null=True, blank=True)
     trophic_group = models.CharField(max_length=100, null=True, blank=True)
-    trophic_level = models.DecimalField(
-        max_digits=3, decimal_places=2, null=True, blank=True
-    )
+    trophic_level = models.DecimalField(max_digits=3, decimal_places=2, null=True, blank=True)
     functional_group = models.CharField(max_length=100, null=True, blank=True)
-    vulnerability = models.DecimalField(
-        max_digits=4, decimal_places=2, null=True, blank=True
-    )
-    biomass_constant_a = models.DecimalField(
-        max_digits=7, decimal_places=6, null=True, blank=True
-    )
-    biomass_constant_b = models.DecimalField(
-        max_digits=7, decimal_places=6, null=True, blank=True
-    )
+    vulnerability = models.DecimalField(max_digits=4, decimal_places=2, null=True, blank=True)
+    biomass_constant_a = models.DecimalField(max_digits=7, decimal_places=6, null=True, blank=True)
+    biomass_constant_b = models.DecimalField(max_digits=7, decimal_places=6, null=True, blank=True)
     biomass_constant_c = models.DecimalField(
         max_digits=7, decimal_places=6, default=1, null=True, blank=True
     )
@@ -419,21 +407,11 @@ class BleachingQCColoniesBleachedObsModel(BaseObsModel):
     growth_form = models.CharField(max_length=100, null=True, blank=True)
     count_normal = models.PositiveSmallIntegerField(verbose_name="normal", default=0)
     count_pale = models.PositiveSmallIntegerField(verbose_name="pale", default=0)
-    count_20 = models.PositiveSmallIntegerField(
-        verbose_name="0-20% bleached", default=0
-    )
-    count_50 = models.PositiveSmallIntegerField(
-        verbose_name="20-50% bleached", default=0
-    )
-    count_80 = models.PositiveSmallIntegerField(
-        verbose_name="50-80% bleached", default=0
-    )
-    count_100 = models.PositiveSmallIntegerField(
-        verbose_name="80-100% bleached", default=0
-    )
-    count_dead = models.PositiveSmallIntegerField(
-        verbose_name="recently dead", default=0
-    )
+    count_20 = models.PositiveSmallIntegerField(verbose_name="0-20% bleached", default=0)
+    count_50 = models.PositiveSmallIntegerField(verbose_name="20-50% bleached", default=0)
+    count_80 = models.PositiveSmallIntegerField(verbose_name="50-80% bleached", default=0)
+    count_100 = models.PositiveSmallIntegerField(verbose_name="80-100% bleached", default=0)
+    count_dead = models.PositiveSmallIntegerField(verbose_name="recently dead", default=0)
     observation_notes = models.TextField(blank=True)
     data_policy_bleachingqc = models.CharField(max_length=50)
 
@@ -475,12 +453,24 @@ class BleachingQCSUModel(BaseSUModel):
     percent_dead = models.DecimalField(max_digits=4, decimal_places=1, default=0)
     percent_bleached = models.DecimalField(max_digits=4, decimal_places=1, default=0)
     quadrat_count = models.PositiveSmallIntegerField(default=0, null=True, blank=True)
-    percent_hard_avg = models.DecimalField(max_digits=4, decimal_places=1, default=0, null=True, blank=True)
-    percent_hard_sd = models.DecimalField(max_digits=4, decimal_places=1, default=0, null=True, blank=True)
-    percent_soft_avg = models.DecimalField(max_digits=4, decimal_places=1, default=0, null=True, blank=True)
-    percent_soft_sd = models.DecimalField(max_digits=4, decimal_places=1, default=0, null=True, blank=True)
-    percent_algae_avg = models.DecimalField(max_digits=4, decimal_places=1, default=0, null=True, blank=True)
-    percent_algae_sd = models.DecimalField(max_digits=4, decimal_places=1, default=0, null=True, blank=True)
+    percent_hard_avg = models.DecimalField(
+        max_digits=4, decimal_places=1, default=0, null=True, blank=True
+    )
+    percent_hard_sd = models.DecimalField(
+        max_digits=4, decimal_places=1, default=0, null=True, blank=True
+    )
+    percent_soft_avg = models.DecimalField(
+        max_digits=4, decimal_places=1, default=0, null=True, blank=True
+    )
+    percent_soft_sd = models.DecimalField(
+        max_digits=4, decimal_places=1, default=0, null=True, blank=True
+    )
+    percent_algae_avg = models.DecimalField(
+        max_digits=4, decimal_places=1, default=0, null=True, blank=True
+    )
+    percent_algae_sd = models.DecimalField(
+        max_digits=4, decimal_places=1, default=0, null=True, blank=True
+    )
     data_policy_bleachingqc = models.CharField(max_length=50)
     pseudosu_id = models.UUIDField()
 
@@ -525,12 +515,20 @@ class BleachingQCSEModel(BaseSummaryModel):
     percent_bleached_avg = models.DecimalField(max_digits=4, decimal_places=1)
     percent_bleached_sd = models.DecimalField(max_digits=4, decimal_places=1, blank=True, null=True)
     quadrat_count_avg = models.DecimalField(max_digits=4, decimal_places=1, null=True, blank=True)
-    percent_hard_avg_avg = models.DecimalField(max_digits=4, decimal_places=1, null=True, blank=True)
+    percent_hard_avg_avg = models.DecimalField(
+        max_digits=4, decimal_places=1, null=True, blank=True
+    )
     percent_hard_avg_sd = models.DecimalField(max_digits=4, decimal_places=1, null=True, blank=True)
-    percent_soft_avg_avg = models.DecimalField(max_digits=4, decimal_places=1, null=True, blank=True)
+    percent_soft_avg_avg = models.DecimalField(
+        max_digits=4, decimal_places=1, null=True, blank=True
+    )
     percent_soft_avg_sd = models.DecimalField(max_digits=4, decimal_places=1, null=True, blank=True)
-    percent_algae_avg_avg = models.DecimalField(max_digits=4, decimal_places=1, null=True, blank=True)
-    percent_algae_avg_sd = models.DecimalField(max_digits=4, decimal_places=1, null=True, blank=True)
+    percent_algae_avg_avg = models.DecimalField(
+        max_digits=4, decimal_places=1, null=True, blank=True
+    )
+    percent_algae_avg_sd = models.DecimalField(
+        max_digits=4, decimal_places=1, null=True, blank=True
+    )
     data_policy_bleachingqc = models.CharField(max_length=50)
 
     class Meta:

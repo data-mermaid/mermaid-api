@@ -1,5 +1,5 @@
 from api.resources.collect_record import CollectRecordSerializer
-from api.submission.validations2.validators import OK, ERROR, DepthValidator
+from api.submission.validations2.validators import ERROR, OK, DepthValidator
 
 
 def _get_validator():

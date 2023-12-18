@@ -1,6 +1,8 @@
 from collections import defaultdict
+
 from django.conf import settings
 from django.db.models import Q
+
 from ..models import CollectRecord, Notification, ProjectProfile
 from ..utils.email import mermaid_email
 from ..utils.notification import add_notification
@@ -24,9 +26,7 @@ def notify_project_users(
         project_profiles.extend(extra_profiles)
 
     if len(project_profiles) > 0:
-        add_notification(
-            subject, Notification.INFO, notify_template, context, project_profiles
-        )
+        add_notification(subject, Notification.INFO, notify_template, context, project_profiles)
 
         project_emails = [p.email for p in project_profiles]
         mermaid_email(
@@ -48,9 +48,7 @@ def notify_crs_transferred(project, from_profile, to_profile, admin_profile):
         notify_template = "notifications/crs_transferred_away.txt"
         email_template = "emails/crs_transferred_away.txt"
         context["to_profile"] = to_profile
-        add_notification(
-            subject, Notification.INFO, notify_template, context, [from_profile]
-        )
+        add_notification(subject, Notification.INFO, notify_template, context, [from_profile])
         mermaid_email(
             subject=subject,
             template=email_template,
@@ -64,9 +62,7 @@ def notify_crs_transferred(project, from_profile, to_profile, admin_profile):
         notify_template = "notifications/crs_transferred_to.txt"
         email_template = "emails/crs_transferred_to.txt"
         context["from_profile"] = from_profile
-        add_notification(
-            subject, Notification.INFO, notify_template, context, [to_profile]
-        )
+        add_notification(subject, Notification.INFO, notify_template, context, [to_profile])
         mermaid_email(
             subject=subject,
             template=email_template,
@@ -79,9 +75,7 @@ def notify_crs_transferred(project, from_profile, to_profile, admin_profile):
 
 def notify_admins_project_change(instance, text_changes):
     subject = f"Changes to {instance.name}"
-    collect_project_url = (
-        f"{settings.DEFAULT_DOMAIN_COLLECT}/projects/{instance.pk}/project-info"
-    )
+    collect_project_url = f"{settings.DEFAULT_DOMAIN_COLLECT}/projects/{instance.pk}/project-info"
 
     context = {
         "project_name": instance.name,

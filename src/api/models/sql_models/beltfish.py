@@ -2,12 +2,7 @@ from django.contrib.gis.db import models
 from django.utils.translation import gettext_lazy as _
 
 from sqltables import SQLTableArg, SQLTableManager
-from .base import (
-    BaseSQLModel,
-    BaseSUSQLModel,
-    project_where,
-    sample_event_sql_template,
-)
+from .base import BaseSQLModel, BaseSUSQLModel, project_where, sample_event_sql_template
 
 
 class BeltFishObsSQLModel(BaseSUSQLModel):
@@ -136,19 +131,11 @@ class BeltFishObsSQLModel(BaseSUSQLModel):
     fish_genus = models.CharField(max_length=100, null=True, blank=True)
     fish_taxon = models.CharField(max_length=100, null=True, blank=True)
     trophic_group = models.CharField(max_length=100, blank=True)
-    trophic_level = models.DecimalField(
-        max_digits=3, decimal_places=2, null=True, blank=True
-    )
+    trophic_level = models.DecimalField(max_digits=3, decimal_places=2, null=True, blank=True)
     functional_group = models.CharField(max_length=100, blank=True)
-    vulnerability = models.DecimalField(
-        max_digits=4, decimal_places=2, null=True, blank=True
-    )
-    biomass_constant_a = models.DecimalField(
-        max_digits=7, decimal_places=6, null=True, blank=True
-    )
-    biomass_constant_b = models.DecimalField(
-        max_digits=7, decimal_places=6, null=True, blank=True
-    )
+    vulnerability = models.DecimalField(max_digits=4, decimal_places=2, null=True, blank=True)
+    biomass_constant_a = models.DecimalField(max_digits=7, decimal_places=6, null=True, blank=True)
+    biomass_constant_b = models.DecimalField(max_digits=7, decimal_places=6, null=True, blank=True)
     biomass_constant_c = models.DecimalField(
         max_digits=7, decimal_places=6, default=1, null=True, blank=True
     )
@@ -380,7 +367,6 @@ class BeltFishSUSQLModel(BaseSUSQLModel):
 
 
 class BeltFishSESQLModel(BaseSQLModel):
-
     _se_fields = ", ".join([f"beltfish_su.{f}" for f in BaseSQLModel.se_fields])
     _su_aggfields_sql = BaseSQLModel.su_aggfields_sql
 
