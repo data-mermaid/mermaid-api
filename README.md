@@ -50,6 +50,8 @@ pip install -r requirements-dev.txt
 pre-commit install
 ```
 
+When updating the local development python environment, be sure to run `pre-commit uninstall` followed by `pre-commit install`.
+
 Once Docker is installed and local environment variables set, run the following:
 
 ```sh
