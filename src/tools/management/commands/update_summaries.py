@@ -12,12 +12,12 @@ class Command(BaseCommand):
     def add_arguments(self, parser):
         parser.add_argument(
             "--force",
-            action='store_true',
+            action="store_true",
             help="Ignores environment check before running update.",
         )
         parser.add_argument(
             "--test_projects",
-            action='store_true',
+            action="store_true",
             help="Include test_projects when running update.",
         )
 
@@ -32,7 +32,9 @@ class Command(BaseCommand):
         start_time = time()
         print("Updating summaries...")
         for project in Project.objects.all():
-            submit_job(5, update_summary_cache, project_id=project.pk, skip_test_project=skip_test_project)
+            submit_job(
+                5, update_summary_cache, project_id=project.pk, skip_test_project=skip_test_project
+            )
 
         end_time = time()
         print(f"Done: {end_time - start_time:.3f}s")

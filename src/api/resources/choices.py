@@ -1,8 +1,9 @@
-import pytz
 from operator import itemgetter
-from natsort import natsorted
+
+import pytz
 from django.http.response import HttpResponseBadRequest
 from django.utils.dateparse import parse_datetime
+from natsort import natsorted
 from rest_framework.decorators import action
 from rest_framework.response import Response
 
@@ -37,28 +38,18 @@ from .base import BaseChoiceApiViewSet
 
 class ChoiceViewSet(BaseChoiceApiViewSet):
     def get_choices(self):
-        belttransectwidths = dict(
-            data=BeltTransectWidth.objects.choices(order_by="name")
-        )
-        benthiclifehistories = dict(
-            data=BenthicLifeHistory.objects.choices(order_by="name")
-        )
+        belttransectwidths = dict(data=BeltTransectWidth.objects.choices(order_by="name"))
+        benthiclifehistories = dict(data=BenthicLifeHistory.objects.choices(order_by="name"))
         growthforms = dict(data=GrowthForm.objects.choices(order_by="name"))
         countries = dict(data=Country.objects.choices(order_by="name"))
         currents = dict(data=Current.objects.choices(order_by="val"))
-        fishgroupfunctions = dict(
-            data=FishGroupFunction.objects.choices(order_by="name")
-        )
+        fishgroupfunctions = dict(data=FishGroupFunction.objects.choices(order_by="name"))
         fishgrouptrophics = dict(data=FishGroupTrophic.objects.choices(order_by="name"))
         fishgroupsizes = dict(data=FishGroupSize.objects.choices(order_by="name"))
         fishsizebins = dict(data=FishSizeBin.objects.choices(order_by="val"))
-        fishsizebins["data"] = natsorted(fishsizebins["data"], key=itemgetter(*['name']))
-        habitatcomplexityscores = dict(
-            data=HabitatComplexityScore.objects.choices(order_by="val")
-        )
-        managementcompliances = dict(
-            data=ManagementCompliance.objects.choices(order_by="name")
-        )
+        fishsizebins["data"] = natsorted(fishsizebins["data"], key=itemgetter(*["name"]))
+        habitatcomplexityscores = dict(data=HabitatComplexityScore.objects.choices(order_by="val"))
+        managementcompliances = dict(data=ManagementCompliance.objects.choices(order_by="name"))
         managementparties = dict(data=ManagementParty.objects.choices(order_by="name"))
         reefexposures = dict(data=ReefExposure.objects.choices(order_by="val"))
         reefslopes = dict(data=ReefSlope.objects.choices(order_by="val"))
@@ -91,7 +82,7 @@ class ChoiceViewSet(BaseChoiceApiViewSet):
                     {
                         "id": c[0],
                         "name": c[1],
-                        "updated_on": FishSpecies.LENGTH_TYPES_CHOICES_UPDATED_ON
+                        "updated_on": FishSpecies.LENGTH_TYPES_CHOICES_UPDATED_ON,
                     }
                     for c in FishSpecies.LENGTH_TYPES
                 ]
@@ -129,9 +120,7 @@ class ChoiceViewSet(BaseChoiceApiViewSet):
         }
 
     def _get_newest_timestamp(self, choices):
-        return max(
-            [c["updated_on"] for c in choices.get("data") if c.get("updated_on")]
-        )
+        return max([c["updated_on"] for c in choices.get("data") if c.get("updated_on")])
 
     @action(detail=False, methods=["GET"])
     def updates(self, request, *args, **kwargs):
@@ -154,10 +143,6 @@ class ChoiceViewSet(BaseChoiceApiViewSet):
         choices = self.get_choices()
         for key, choice_set in choices.items():
             choice_timestamp = self._get_newest_timestamp(choice_set)
-            if (
-                choice_timestamp is None
-                or timestamp is None
-                or choice_timestamp > timestamp
-            ):
+            if choice_timestamp is None or timestamp is None or choice_timestamp > timestamp:
                 modified.append(dict(name=key, **choice_set))
         return Response(dict(added=added, modified=modified, removed=removed))

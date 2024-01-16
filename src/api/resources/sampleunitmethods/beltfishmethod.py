@@ -2,17 +2,17 @@ from django.db import transaction
 from django.db.models import Q
 from django_filters import BaseInFilter, RangeFilter
 from rest_condition import Or
-from rest_framework import status, serializers
+from rest_framework import serializers, status
 from rest_framework.response import Response
 
 from ...models import (
+    BeltFish,
     BeltFishObsModel,
     BeltFishObsSQLModel,
     BeltFishSEModel,
     BeltFishSESQLModel,
     BeltFishSUModel,
     BeltFishSUSQLModel,
-    BeltFish,
     ObsBeltFish,
 )
 from ...permissions import ProjectDataReadOnlyPermission, ProjectPublicSummaryPermission
@@ -28,6 +28,7 @@ from ...reports.formatters import (
 )
 from ...reports.report_serializer import ReportSerializer
 from ..base import (
+    BaseAPISerializer,
     BaseProjectApiViewSet,
     BaseSEFilterSet,
     BaseSUObsFilterSet,
@@ -35,7 +36,6 @@ from ..base import (
     BaseSUViewAPISUSerializer,
     BaseViewAPIGeoSerializer,
     BaseViewAPISUGeoSerializer,
-    BaseAPISerializer,
 )
 from ..fish_belt_transect import FishBeltTransectSerializer
 from ..mixins import SampleUnitMethodEditMixin, SampleUnitMethodSummaryReport
@@ -56,9 +56,7 @@ class BeltFishSerializer(BaseAPISerializer):
 
 
 class ObsBeltFishSerializer(BaseAPISerializer):
-    size = serializers.DecimalField(
-        max_digits=5, decimal_places=1, coerce_to_string=False
-    )
+    size = serializers.DecimalField(max_digits=5, decimal_places=1, coerce_to_string=False)
 
     class Meta:
         model = ObsBeltFish
@@ -83,7 +81,9 @@ class BeltFishMethodSerializer(BeltFishSerializer):
         exclude = []
 
 
-class BeltFishMethodView(SampleUnitMethodSummaryReport, SampleUnitMethodEditMixin, BaseProjectApiViewSet):
+class BeltFishMethodView(
+    SampleUnitMethodSummaryReport, SampleUnitMethodEditMixin, BaseProjectApiViewSet
+):
     project_policy = "data_policy_beltfish"
     queryset = (
         BeltFish.objects.select_related("transect", "transect__sample_event")
@@ -176,9 +176,7 @@ class BeltFishMethodView(SampleUnitMethodSummaryReport, SampleUnitMethodEditMixi
             transaction.savepoint_commit(sid)
 
             belt_fish = BeltFish.objects.get(id=belt_fish_id)
-            return Response(
-                BeltFishMethodSerializer(belt_fish).data, status=status.HTTP_200_OK
-            )
+            return Response(BeltFishMethodSerializer(belt_fish).data, status=status.HTTP_200_OK)
 
         except:
             transaction.savepoint_rollback(sid)
@@ -300,7 +298,9 @@ class BeltFishMethodSUSerializer(BaseSUViewAPISUSerializer):
     class Meta(BaseSUViewAPISUSerializer.Meta):
         model = BeltFishSUModel
         exclude = BaseSUViewAPISUSerializer.Meta.exclude.copy()
-        exclude.extend(["location", "biomass_kgha_trophic_group_zeroes", "biomass_kgha_fish_family_zeroes"])
+        exclude.extend(
+            ["location", "biomass_kgha_trophic_group_zeroes", "biomass_kgha_fish_family_zeroes"]
+        )
         header_order = BaseSUViewAPISUSerializer.Meta.header_order.copy()
         header_order.extend(
             [
@@ -442,9 +442,7 @@ class BeltFishMethodSECSVSerializer(ReportSerializer):
         ReportField("sample_unit_count", "Sample unit count"),
         ReportField("biomass_kgha_avg", "Biomass kg/ha average"),
         ReportField("biomass_kgha_sd", "Biomass kg/ha standard deviation"),
-        ReportField(
-            "biomass_kgha_trophic_group_avg", "Biomass kg/ha by trophic group average"
-        ),
+        ReportField("biomass_kgha_trophic_group_avg", "Biomass kg/ha by trophic group average"),
         ReportField(
             "biomass_kgha_trophic_group_sd", "Biomass kg/ha by trophic group standard deviation"
         ),
@@ -569,9 +567,7 @@ class BeltFishProjectMethodObsView(BaseProjectMethodView):
         # Important: BeltFishObsSQLModel.sql will return a single 'dummy' observation for a FB
         # transect with no observations, necessary for SU/SE views, but inappropriate for obs views.
         return qs.filter(
-            Q(size__isnull=False)
-            | Q(count__isnull=False)
-            | Q(biomass_kgha__isnull=False)
+            Q(size__isnull=False) | Q(count__isnull=False) | Q(biomass_kgha__isnull=False)
         )
 
 
@@ -589,9 +585,7 @@ class BeltFishProjectMethodSUView(BaseProjectMethodView):
 class BeltFishProjectMethodSEView(BaseProjectMethodView):
     drf_label = "beltfish-se"
     project_policy = "data_policy_beltfish"
-    permission_classes = [
-        Or(ProjectDataReadOnlyPermission, ProjectPublicSummaryPermission)
-    ]
+    permission_classes = [Or(ProjectDataReadOnlyPermission, ProjectPublicSummaryPermission)]
     model = BeltFishSEModel
     serializer_class = BeltFishMethodSESerializer
     serializer_class_geojson = BeltFishMethodSEGeoSerializer

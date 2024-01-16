@@ -2,7 +2,6 @@ from django.db.models import Q
 from django.utils import timezone
 
 from api.models.revisions import Revision
-
 from ..models import CollectRecord, SampleEvent
 
 
@@ -10,7 +9,7 @@ def replace_sampleunit_objs(find_objs, replace_obj, field, profile):
     replace_counts = {
         "num_sample_events_updated": 0,
         "num_collect_records_updated": 0,
-        "num_{}s_removed".format(field): 0
+        "num_{}s_removed".format(field): 0,
     }
 
     if not find_objs:
@@ -20,17 +19,17 @@ def replace_sampleunit_objs(find_objs, replace_obj, field, profile):
 
     sample_events = SampleEvent.objects.filter(**{"{}__in".format(field): find_objs})
     replace_counts["num_sample_events_updated"] = sample_events.count()
-    sample_events.update(**{
-        "updated_on": updated_on,
-        "updated_by": profile,
-        "{}_id".format(field): replace_obj.id,
-    })
+    sample_events.update(
+        **{
+            "updated_on": updated_on,
+            "updated_by": profile,
+            "{}_id".format(field): replace_obj.id,
+        }
+    )
 
     qry_filter = Q()
     for obj in find_objs:
-        qry_filter |= Q(**{
-            "data__sample_event__{}".format(field): obj.id
-        })
+        qry_filter |= Q(**{"data__sample_event__{}".format(field): obj.id})
 
     collect_records = CollectRecord.objects.filter(qry_filter)
     replace_counts["num_collect_records_updated"] = collect_records.count()
@@ -64,7 +63,7 @@ def replace_collect_record_owner(project_id, from_profile, to_profile, updated_b
             instance=collect_record,
             profile_id=from_profile.pk,
             deleted=False,
-            related_to_profile_id=from_profile.pk
+            related_to_profile_id=from_profile.pk,
         )
 
         collect_record.pk = None

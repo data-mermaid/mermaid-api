@@ -197,7 +197,10 @@ class SampleUnitMethodView(BaseProjectApiViewSet):
                 then=Value(mermaid.BLEACHINGQC_PROTOCOL),
             ),
             When(beltfish__id__isnull=False, then=Value(mermaid.FISHBELT_PROTOCOL)),
-            When(benthicphotoquadrattransect__id__isnull=False, then=Value(mermaid.BENTHICPQT_PROTOCOL)),
+            When(
+                benthicphotoquadrattransect__id__isnull=False,
+                then=Value(mermaid.BENTHICPQT_PROTOCOL),
+            ),
             output_field=CharField(),
         )
 
@@ -335,15 +338,11 @@ class SampleUnitMethodView(BaseProjectApiViewSet):
         size_condition = Case(
             When(
                 benthiclit__id__isnull=False,
-                then=Concat(
-                    Cast("benthiclit__transect__len_surveyed", CharField()), Value("m")
-                ),
+                then=Concat(Cast("benthiclit__transect__len_surveyed", CharField()), Value("m")),
             ),
             When(
                 benthicpit__id__isnull=False,
-                then=Concat(
-                    Cast("benthicpit__transect__len_surveyed", CharField()), Value("m")
-                ),
+                then=Concat(Cast("benthicpit__transect__len_surveyed", CharField()), Value("m")),
             ),
             When(
                 habitatcomplexity__id__isnull=False,
@@ -355,7 +354,9 @@ class SampleUnitMethodView(BaseProjectApiViewSet):
             When(
                 benthicphotoquadrattransect__id__isnull=False,
                 then=Concat(
-                    Cast("benthicphotoquadrattransect__quadrat_transect__len_surveyed", CharField()),
+                    Cast(
+                        "benthicphotoquadrattransect__quadrat_transect__len_surveyed", CharField()
+                    ),
                     Value("m"),
                 ),
             ),
@@ -370,9 +371,7 @@ class SampleUnitMethodView(BaseProjectApiViewSet):
             When(
                 bleachingquadratcollection__id__isnull=False,
                 then=Concat(
-                    Cast(
-                        "bleachingquadratcollection__quadrat__quadrat_size", CharField()
-                    ),
+                    Cast("bleachingquadratcollection__quadrat__quadrat_size", CharField()),
                     Value("m"),
                 ),
             ),

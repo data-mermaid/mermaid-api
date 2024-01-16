@@ -1,17 +1,17 @@
 from django.db import transaction
 from django_filters import BaseInFilter, RangeFilter
 from rest_condition import Or
-from rest_framework import status, serializers
+from rest_framework import serializers, status
 from rest_framework.response import Response
 
 from ...models import (
+    BenthicPIT,
     BenthicPITObsModel,
     BenthicPITObsSQLModel,
     BenthicPITSEModel,
     BenthicPITSESQLModel,
     BenthicPITSUModel,
     BenthicPITSUSQLModel,
-    BenthicPIT,
     ObsBenthicPIT,
 )
 from ...permissions import ProjectDataReadOnlyPermission, ProjectPublicSummaryPermission
@@ -27,6 +27,7 @@ from ...reports.formatters import (
 )
 from ...reports.report_serializer import ReportSerializer
 from ..base import (
+    BaseAPISerializer,
     BaseProjectApiViewSet,
     BaseSEFilterSet,
     BaseSUObsFilterSet,
@@ -34,7 +35,6 @@ from ..base import (
     BaseSUViewAPISUSerializer,
     BaseViewAPIGeoSerializer,
     BaseViewAPISUGeoSerializer,
-    BaseAPISerializer,
 )
 from ..benthic_transect import BenthicTransectSerializer
 from ..mixins import SampleUnitMethodEditMixin, SampleUnitMethodSummaryReport
@@ -92,7 +92,9 @@ class BenthicPITMethodSerializer(BenthicPITSerializer):
         exclude = []
 
 
-class BenthicPITMethodView(SampleUnitMethodSummaryReport, SampleUnitMethodEditMixin, BaseProjectApiViewSet):
+class BenthicPITMethodView(
+    SampleUnitMethodSummaryReport, SampleUnitMethodEditMixin, BaseProjectApiViewSet
+):
     queryset = (
         BenthicPIT.objects.select_related("transect", "transect__sample_event")
         .all()
@@ -111,9 +113,7 @@ class BenthicPITMethodView(SampleUnitMethodSummaryReport, SampleUnitMethodEditMi
             observers=request.data.get("observers"),
             obs_benthic_pits=request.data.get("obs_benthic_pits"),
         )
-        benthic_pit_data = {
-            k: v for k, v in request.data.items() if k not in nested_data
-        }
+        benthic_pit_data = {k: v for k, v in request.data.items() if k not in nested_data}
         benthic_pit_id = benthic_pit_data["id"]
 
         context = dict(request=request)
@@ -186,9 +186,7 @@ class BenthicPITMethodView(SampleUnitMethodSummaryReport, SampleUnitMethodEditMi
             transaction.savepoint_commit(sid)
 
             benthic_pit = BenthicPIT.objects.get(id=benthic_pit_id)
-            return Response(
-                BenthicPITMethodSerializer(benthic_pit).data, status=status.HTTP_200_OK
-            )
+            return Response(BenthicPITMethodSerializer(benthic_pit).data, status=status.HTTP_200_OK)
 
         except:
             transaction.savepoint_rollback(sid)
@@ -348,9 +346,7 @@ class BenthicPITMethodSUCSVSerializer(ReportSerializer):
         ReportField("observers", "Observers", to_names),
         ReportField("interval_size", "Interval size"),
         ReportField("interval_start", "Interval start"),
-        ReportField(
-            "percent_cover_benthic_category", "Percent cover by benthic category"
-        ),
+        ReportField("percent_cover_benthic_category", "Percent cover by benthic category"),
         ReportField("site_notes", "Site notes"),
         ReportField("management_notes", "Management notes"),
         ReportField("sample_unit_notes", "Sample unit notes"),
@@ -533,9 +529,7 @@ class BenthicPITProjectMethodSUView(BaseProjectMethodView):
 class BenthicPITProjectMethodSEView(BaseProjectMethodView):
     drf_label = "benthicpit-se"
     project_policy = "data_policy_benthicpit"
-    permission_classes = [
-        Or(ProjectDataReadOnlyPermission, ProjectPublicSummaryPermission)
-    ]
+    permission_classes = [Or(ProjectDataReadOnlyPermission, ProjectPublicSummaryPermission)]
     model = BenthicPITSEModel
     serializer_class = BenthicPITMethodSESerializer
     serializer_class_geojson = BenthicPITMethodSEGeoSerializer

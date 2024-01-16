@@ -1,6 +1,7 @@
 from django.core.exceptions import ObjectDoesNotExist
 from rest_framework import permissions
 from rest_framework.exceptions import NotFound, PermissionDenied
+
 from .exceptions import check_uuid
 from .models import CollectRecord, Project, ProjectProfile
 from .models.base import PROPOSED
@@ -37,9 +38,7 @@ def get_project_profile(project, profile):
 
 
 def data_policy_permission(request, view, project_policy):
-    if request.method not in permissions.SAFE_METHODS or not hasattr(
-            view, "project_policy"
-    ):
+    if request.method not in permissions.SAFE_METHODS or not hasattr(view, "project_policy"):
         return False
 
     pk = get_project_pk(request, view)
@@ -77,15 +76,13 @@ class ProjectDataPermission(permissions.BasePermission):
         pk = get_project_pk(request, view)
 
         project = get_project(pk)
-        pp = get_project_profile(project, user.profile)
+        _ = get_project_profile(project, user.profile)
         return True
 
 
 class ProjectDataReadOnlyPermission(ProjectDataPermission):
     def has_permission(self, request, view):
-        permission_check = super(ProjectDataReadOnlyPermission, self).has_permission(
-            request, view
-        )
+        permission_check = super(ProjectDataReadOnlyPermission, self).has_permission(request, view)
         return permission_check is True and request.method in permissions.SAFE_METHODS
 
 

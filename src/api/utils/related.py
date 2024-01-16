@@ -29,7 +29,6 @@ def get_model_value(model, lookups):
 
 
 def get_related_project(model):
-
     if isinstance(model, models.Project):
         return model
 

@@ -1,10 +1,11 @@
-import boto3
 import os
 import shlex
-import traceback
-from api.utils import run_subprocess
+
+import boto3
 from django.conf import settings
 from django.core.management.base import BaseCommand
+
+from api.utils import run_subprocess
 
 
 class Command(BaseCommand):
@@ -30,15 +31,17 @@ class Command(BaseCommand):
     def get_s3_bucket_obj_list(self, bucket_name):
         try:
             return self.s3.list_objects(Bucket=bucket_name).get("Contents")
-        except:
-            traceback.print_exc()
+        except Exception as e:
+            print(e)
             return []
 
     def add_arguments(self, parser):
         parser.add_argument("restore", nargs="?", type=str)
-        parser.add_argument(
-            "-f", action="store_true", dest="force", default=False, help="Force restore"
-        ),
+        (
+            parser.add_argument(
+                "-f", action="store_true", dest="force", default=False, help="Force restore"
+            ),
+        )
         parser.add_argument(
             "-n",
             action="store_true",
@@ -68,9 +71,9 @@ class Command(BaseCommand):
             for f in os.listdir(tmpdir):
                 localfile = os.path.join(tmpdir, f)
                 if os.path.isfile(localfile) and self.restore in localfile:
-                    if download_file_name is None or os.path.getmtime(
-                        localfile
-                    ) > os.path.getmtime(download_file_name):
+                    if download_file_name is None or os.path.getmtime(localfile) > os.path.getmtime(
+                        download_file_name
+                    ):
                         download_file_name = localfile
 
             if download_file_name is None:
@@ -99,17 +102,13 @@ class Command(BaseCommand):
                         os.path.sep,
                         self.local_file_location,
                         "{0}_{1}".format(
-                            latest_key_name.get("LastModified").strftime(
-                                "%Y%m%d%H%M%S"
-                            ),
+                            latest_key_name.get("LastModified").strftime("%Y%m%d%H%M%S"),
                             latest_key_name.get("Key").replace("/", "_"),
                         ),
                     )
 
                     # If the file doesn't exist locally, then download
-                    if not os.path.isfile(
-                        download_file_name
-                    ):  # Check if the file exists
+                    if not os.path.isfile(download_file_name):  # Check if the file exists
                         print(
                             "Downloading: {0} to: {1} ".format(
                                 latest_key_name.get("Key"), download_file_name
@@ -123,9 +122,7 @@ class Command(BaseCommand):
                         )
 
             else:
-                raise ValueError(
-                    f"{settings.AWS_BACKUP_BUCKET} does not exist or is not listable"
-                )
+                raise ValueError(f"{settings.AWS_BACKUP_BUCKET} does not exist or is not listable")
 
         try:
             self._init_db()
@@ -134,14 +131,13 @@ class Command(BaseCommand):
             self._psql_restore_db(download_file_name)
             print("Restore Complete")
         except Exception as e:
-            print(traceback.print_exc())
+            print(e)
             print("Restore FAILED!")
 
         # if options.get('no_download', False) is False:
         #     os.remove(download_file_name)
 
     def _init_db(self):
-
         params = {
             "db_user": settings.DATABASES["default"]["USER"],
             "db_host": settings.DATABASES["default"]["HOST"],
@@ -167,7 +163,6 @@ class Command(BaseCommand):
         print("Init Complete!")
 
     def _psql_restore_db(self, file_name):
-
         params = {
             "sql_loc": file_name,
             "db_user": settings.DATABASES["default"]["USER"],
@@ -182,4 +177,4 @@ class Command(BaseCommand):
 
         command = shlex.split(cmd_str)
 
-        run_subprocess(command, to_file=f"/tmp/mermaid/std_out_restore.log")
+        run_subprocess(command, to_file="/tmp/mermaid/std_out_restore.log")

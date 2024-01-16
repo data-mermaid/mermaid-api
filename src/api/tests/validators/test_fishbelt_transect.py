@@ -1,5 +1,9 @@
 from api.resources.collect_record import CollectRecordSerializer
-from api.submission.validations2.validators import OK, ERROR, UniqueFishbeltTransectValidator
+from api.submission.validations2.validators import (
+    ERROR,
+    OK,
+    UniqueFishbeltTransectValidator,
+)
 
 
 def _get_validator():
@@ -23,9 +27,7 @@ def test_fishbelt_transect_validator_ok(valid_collect_record):
     assert result.status == OK
 
 
-def test_fishbelt_transect_validator_data_invalid(
-    valid_collect_record
-):
+def test_fishbelt_transect_validator_data_invalid(valid_collect_record):
     validator = _get_validator()
     record = CollectRecordSerializer(valid_collect_record).data
 
@@ -36,10 +38,7 @@ def test_fishbelt_transect_validator_data_invalid(
     assert result.code == UniqueFishbeltTransectValidator.INVALID_DATA
 
 
-def test_fishbelt_transect_validator_duplicate_invalid(
-    valid_collect_record,
-    observer_belt_fish1
-):
+def test_fishbelt_transect_validator_duplicate_invalid(valid_collect_record, observer_belt_fish1):
     validator = _get_validator()
     record = CollectRecordSerializer(valid_collect_record).data
 

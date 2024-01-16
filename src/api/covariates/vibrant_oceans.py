@@ -57,14 +57,11 @@ class VibrantOceansThreatsCovariate(BaseCovariate):
             return record[0]
 
     def _fetch(self, x: float, y: float, radius: float, request_datetime: datetime):
-
         if self._table_exists() is not True:
             return None
 
         _covariate_cols = ", ".join(self.COLUMNS)
-        _sum_covariate_cols = ", ".join(
-            f"SUM({c} * partial) as {c}" for c in self.COLUMNS
-        )
+        _sum_covariate_cols = ", ".join(f"SUM({c} * partial) as {c}" for c in self.COLUMNS)
         sql_template = f"""
             WITH allreef_clipped AS (
                 SELECT
@@ -103,10 +100,7 @@ class VibrantOceansThreatsCovariate(BaseCovariate):
             if record is None:
                 return output
 
-            output = {
-                col: record[i]
-                for i, col in enumerate(self.COLUMNS)
-            }
+            output = {col: record[i] for i, col in enumerate(self.COLUMNS)}
 
         return {
             "date": request_datetime,

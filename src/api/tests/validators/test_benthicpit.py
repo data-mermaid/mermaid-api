@@ -61,6 +61,4 @@ def test_benthicpit_validator_duplicate_invalid(
 
     result = validator(record)
     assert result.status == ERROR
-    assert (
-            result.code == UniqueBenthicTransectValidator.DUPLICATE_BENTHIC_TRANSECT
-    )
+    assert result.code == UniqueBenthicTransectValidator.DUPLICATE_BENTHIC_TRANSECT

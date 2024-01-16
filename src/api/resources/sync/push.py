@@ -1,4 +1,5 @@
 from collections import defaultdict
+
 from django.core.exceptions import ObjectDoesNotExist
 from django.db.models.deletion import ProtectedError
 from django.forms.models import model_to_dict
@@ -6,9 +7,9 @@ from django.forms.models import model_to_dict
 from api.models import Project, Revision, SampleEvent
 from api.resources.sampleunitmethods.sample_unit_methods import SampleUnitMethodView
 from api.utils.sample_unit_methods import get_project
-from .utils import ViewRequest
 from ...utils.project import delete_project
 from ...utils.q import submit_job
+from .utils import ViewRequest
 
 
 def get_request_method(record):
@@ -60,11 +61,7 @@ def _get_sumethods(request, se):
     queryset = viewset.limit_to_project(vw_request, project_pk=project.pk)
     serializer = viewset.get_serializer(queryset, many=True)
 
-    return [
-        sumethod
-        for sumethod in serializer.data
-        if sumethod.get("sample_event") == str(se.pk)
-    ]
+    return [sumethod for sumethod in serializer.data if sumethod.get("sample_event") == str(se.pk)]
 
 
 def apply_changes(request, serializer, record, force=False):
@@ -109,14 +106,16 @@ def apply_changes(request, serializer, record, force=False):
                     if isinstance(obj, SampleEvent):
                         sumethods = _get_sumethods(request, obj)
                         for sumethod in sumethods:
-                            sumethod_model = sumethod.get(
-                                "protocol", "undefined_method"
-                            )
+                            sumethod_model = sumethod.get("protocol", "undefined_method")
                             protected_objects[sumethod_model].append(sumethod)
             return 418, "Protected Objects", protected_objects
 
         except ObjectDoesNotExist:
-            return 404, "Does Not Exist", f"{model_class._meta.model_name.capitalize()} with id {record_id} does not exist to delete"
+            return (
+                404,
+                "Does Not Exist",
+                f"{model_class._meta.model_name.capitalize()} with id {record_id} does not exist to delete",
+            )
 
         return 204, "", None
 
@@ -129,7 +128,11 @@ def apply_changes(request, serializer, record, force=False):
         try:
             instance = model_class.objects.get(pk=record_id)
         except ObjectDoesNotExist:
-            return 404, "Does Not Exist", f"{model_class._meta.model_name.capitalize()} with id {record_id} does not exist"
+            return (
+                404,
+                "Does Not Exist",
+                f"{model_class._meta.model_name.capitalize()} with id {record_id} does not exist",
+            )
 
         status_code = 200
     else:

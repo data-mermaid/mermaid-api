@@ -15,9 +15,7 @@ def habitat_complexity1(db, benthic_transect1):
 
 @pytest.fixture
 def habitat_complexity2(db, benthic_transect2):
-    return HabitatComplexity.objects.create(
-        transect=benthic_transect2, interval_size=0.5
-    )
+    return HabitatComplexity.objects.create(transect=benthic_transect2, interval_size=0.5)
 
 
 @pytest.fixture

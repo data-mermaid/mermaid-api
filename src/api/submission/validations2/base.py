@@ -28,9 +28,7 @@ class Validation:
     validator: BaseValidator
     paths: List[str]
     validation_level: Literal[RECORD_LEVEL, ROW_LEVEL, FIELD_LEVEL] = FIELD_LEVEL
-    validation_type: Literal[
-        LIST_VALIDATION_TYPE, VALUE_VALIDATION_TYPE
-    ] = VALUE_VALIDATION_TYPE
+    validation_type: Literal[LIST_VALIDATION_TYPE, VALUE_VALIDATION_TYPE] = VALUE_VALIDATION_TYPE
     result: Union[ValidatorResult, List[ValidatorResult], None] = None
     requires_instance: bool = False
 
@@ -45,9 +43,7 @@ class Validation:
         md5_val = hashlib.md5(key.encode("utf-8"))
         return str(md5_val.hexdigest())
 
-    def _assign_validation_id(
-        self, result: Union[ValidatorResult, List[ValidatorResult]]
-    ):
+    def _assign_validation_id(self, result: Union[ValidatorResult, List[ValidatorResult]]):
         if isinstance(result, list):
             for r in result:
                 r.validation_id = self._get_validation_id()
@@ -117,10 +113,7 @@ class ValidationRunner:
                 self.results[key].append([])
 
             try:
-                is_ignored = self._check_is_ignored(
-                    res,
-                    existing_validation_result[n]
-                )
+                is_ignored = self._check_is_ignored(res, existing_validation_result[n])
                 res["status"] = IGNORE if is_ignored else res["status"]
             except (IndexError, TypeError):
                 is_ignored = False
@@ -170,8 +163,7 @@ class ValidationRunner:
         statuses = []
         collect_record_dict = self.serializer(instance=collect_record).data
         existing_validations = (
-            self._get_dotty_value(dotty(collect_record_dict), "validations.results")
-            or dotty()
+            self._get_dotty_value(dotty(collect_record_dict), "validations.results") or dotty()
         )
         for validation in validations:
             if validation.requires_instance is True:
@@ -184,9 +176,7 @@ class ValidationRunner:
         return self.status
 
     def to_dict(self):
-        assert (
-            self.results is not None
-        ), "Cannot call to_dict because nothing has been validated."
+        assert self.results is not None, "Cannot call to_dict because nothing has been validated."
         return {
             "version": self.VERSION,
             "status": self.status,

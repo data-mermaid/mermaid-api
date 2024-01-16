@@ -16,9 +16,7 @@ class ValidateMixin(object):
             last_validated=str(validation_timestamp),
         )
         qry = model.objects.filter(pk=record_id)
-        qry.update(
-            validations=validations, updated_on=validation_timestamp, updated_by=profile
-        )
+        qry.update(validations=validations, updated_on=validation_timestamp, updated_by=profile)
         record = serializer_class(qry.first()).data
 
         return result, record
@@ -40,8 +38,7 @@ class ValidateMixin(object):
             profile = request.user.profile
 
         instances = {
-            str(s.pk): s
-            for s in model_class.objects.filter(project=project_pk, pk__in=record_ids)
+            str(s.pk): s for s in model_class.objects.filter(project=project_pk, pk__in=record_ids)
         }
 
         for record_id in record_ids:

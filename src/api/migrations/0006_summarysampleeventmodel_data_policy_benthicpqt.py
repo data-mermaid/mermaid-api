@@ -4,16 +4,15 @@ from django.db import migrations, models
 
 
 class Migration(migrations.Migration):
-
     dependencies = [
-        ('api', '0005_auto_20221006_2037'),
+        ("api", "0005_auto_20221006_2037"),
     ]
 
     operations = [
         migrations.AddField(
-            model_name='summarysampleeventmodel',
-            name='data_policy_benthicpqt',
-            field=models.CharField(default='public summary', max_length=50),
+            model_name="summarysampleeventmodel",
+            name="data_policy_benthicpqt",
+            field=models.CharField(default="public summary", max_length=50),
             preserve_default=False,
         ),
     ]

@@ -47,7 +47,6 @@ from ..models import (
     HabitatComplexitySUModel,
     HabitatComplexitySUSQLModel,
     Project,
-    SampleEvent,
     SummarySampleEventModel,
     SummarySampleEventSQLModel,
 )
@@ -79,9 +78,7 @@ def _update_records(records, target_model_cls, created_on, skip_updates=False):
 
 
 def _fetch_records(sql_model_cls, project_id):
-    return list(
-        sql_model_cls.objects.all().sql_table(project_id=project_id)
-    )
+    return list(sql_model_cls.objects.all().sql_table(project_id=project_id))
 
 
 def _update_cache(
@@ -119,9 +116,7 @@ def _update_bleaching_qc_summary(project_id, skip_updates):
         _delete_existing_records(project_id, BleachingQCSUModel)
         _delete_existing_records(project_id, BleachingQCSEModel)
 
-    bleaching_colonies_obs = _fetch_records(
-        BleachingQCColoniesBleachedObsSQLModel, project_id
-    )
+    bleaching_colonies_obs = _fetch_records(BleachingQCColoniesBleachedObsSQLModel, project_id)
     bleaching_quad_percent_obs = _fetch_records(
         BleachingQCQuadratBenthicPercentObsSQLModel, project_id
     )
@@ -146,10 +141,7 @@ def _update_bleaching_qc_summary(project_id, skip_updates):
 
 
 def _update_project_summary_sample_event(project_id, skip_test_project=True):
-    if (
-        skip_test_project
-        and Project.objects.filter(pk=project_id, status=Project.TEST).exists()
-    ):
+    if skip_test_project and Project.objects.filter(pk=project_id, status=Project.TEST).exists():
         SummarySampleEventModel.objects.filter(project_id=project_id).delete()
         return
 

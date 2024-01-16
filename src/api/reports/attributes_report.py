@@ -14,7 +14,6 @@ from api.models import (
     Region,
 )
 
-
 FISH_FAMILY_NAME = "Fish Families"
 FISH_GENERA_NAME = "Fish Genera"
 FISH_SPECIES_NAME = "Fish Species"
@@ -76,10 +75,7 @@ def get_regions():
 
 
 def create_regions_row(regions, data_region_ids):
-    return [
-        (YES, YES_COLOR_FILL) if r in data_region_ids else (NO, NO_COLOR_FILL)
-        for r in regions
-    ]
+    return [(YES, YES_COLOR_FILL) if r in data_region_ids else (NO, NO_COLOR_FILL) for r in regions]
 
 
 def write_fish_families(wb, regions):
@@ -172,9 +168,7 @@ def write_fish_species(wb, regions):
                 fish_species.trophic_level,
                 fish_species.vulnerability,
                 fish_species.climate_score,
-                *create_regions_row(
-                    regions, [str(r.id) for r in fish_species.regions.all()]
-                ),
+                *create_regions_row(regions, [str(r.id) for r in fish_species.regions.all()]),
             ]
             for fish_species in FishSpecies.objects.select_related(
                 "genus",
@@ -206,15 +200,11 @@ def write_fish_grouping(wb, regions):
         *[
             [
                 fish_group.name,
-                ",".join(
-                    [str(a.attribute) for a in fish_group.attribute_grouping.all()]
-                ),
+                ",".join([str(a.attribute) for a in fish_group.attribute_grouping.all()]),
                 fish_group.biomass_constant_a,
                 fish_group.biomass_constant_b,
                 fish_group.biomass_constant_c,
-                *create_regions_row(
-                    regions, [str(r.id) for r in fish_group.regions.all()]
-                ),
+                *create_regions_row(regions, [str(r.id) for r in fish_group.regions.all()]),
             ]
             for fish_group in FishGrouping.objects.select_related()
             .filter(status=SUPERUSER_APPROVED)

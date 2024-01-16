@@ -1,10 +1,17 @@
 import pytest
 
-from api.models import QuadratTransect, BenthicPhotoQuadratTransect, ObsBenthicPhotoQuadrat, Observer
+from api.models import (
+    BenthicPhotoQuadratTransect,
+    ObsBenthicPhotoQuadrat,
+    Observer,
+    QuadratTransect,
+)
 
 
 @pytest.fixture
-def quadrat_transect1(db, sample_event1, current1, reef_slope1, relative_depth1, tide1, visibility1):
+def quadrat_transect1(
+    db, sample_event1, current1, reef_slope1, relative_depth1, tide1, visibility1
+):
     return QuadratTransect.objects.create(
         quadrat_size=1,
         num_quadrats=2,
@@ -24,9 +31,8 @@ def quadrat_transect1(db, sample_event1, current1, reef_slope1, relative_depth1,
 
 @pytest.fixture
 def benthic_photo_quadrat_transect1(db, quadrat_transect1):
-    return BenthicPhotoQuadratTransect.objects.create(
-        quadrat_transect=quadrat_transect1
-    )
+    return BenthicPhotoQuadratTransect.objects.create(quadrat_transect=quadrat_transect1)
+
 
 @pytest.fixture
 def observer_benthic_photo_quadrat_transect1(benthic_photo_quadrat_transect1, profile1):
@@ -39,7 +45,7 @@ def obs_benthic_photo_quadrat1_1(db, benthic_photo_quadrat_transect1, benthic_at
         benthic_photo_quadrat_transect=benthic_photo_quadrat_transect1,
         quadrat_number=1,
         attribute=benthic_attribute_1a,
-        num_points=49
+        num_points=49,
     )
 
 
@@ -49,40 +55,46 @@ def obs_benthic_photo_quadrat1_2(db, benthic_photo_quadrat_transect1, benthic_at
         benthic_photo_quadrat_transect=benthic_photo_quadrat_transect1,
         quadrat_number=1,
         attribute=benthic_attribute_2a,
-        num_points=51
+        num_points=51,
     )
 
 
 @pytest.fixture
-def obs_benthic_photo_quadrat1_3(db, benthic_photo_quadrat_transect1, benthic_attribute_2b, growth_form1):
+def obs_benthic_photo_quadrat1_3(
+    db, benthic_photo_quadrat_transect1, benthic_attribute_2b, growth_form1
+):
     return ObsBenthicPhotoQuadrat.objects.create(
         benthic_photo_quadrat_transect=benthic_photo_quadrat_transect1,
         quadrat_number=2,
         attribute=benthic_attribute_2b,
         num_points=25,
-        growth_form=growth_form1
+        growth_form=growth_form1,
     )
 
 
 @pytest.fixture
-def obs_benthic_photo_quadrat1_4(db, benthic_photo_quadrat_transect1, benthic_attribute_2b1, growth_form4):
+def obs_benthic_photo_quadrat1_4(
+    db, benthic_photo_quadrat_transect1, benthic_attribute_2b1, growth_form4
+):
     return ObsBenthicPhotoQuadrat.objects.create(
         benthic_photo_quadrat_transect=benthic_photo_quadrat_transect1,
         quadrat_number=2,
         attribute=benthic_attribute_2b1,
         num_points=25,
-        growth_form=growth_form4
+        growth_form=growth_form4,
     )
 
 
 @pytest.fixture
-def obs_benthic_photo_quadrat1_5(db, benthic_photo_quadrat_transect1, benthic_attribute_3, growth_form4):
+def obs_benthic_photo_quadrat1_5(
+    db, benthic_photo_quadrat_transect1, benthic_attribute_3, growth_form4
+):
     return ObsBenthicPhotoQuadrat.objects.create(
         benthic_photo_quadrat_transect=benthic_photo_quadrat_transect1,
         quadrat_number=2,
         attribute=benthic_attribute_3,
         num_points=50,
-        growth_form=growth_form4
+        growth_form=growth_form4,
     )
 
 
@@ -96,6 +108,6 @@ def benthic_photo_quadrat_transect_project(
     obs_benthic_photo_quadrat1_5,
     observer_benthic_photo_quadrat_transect1,
     project_profile1,
-    project_profile2
+    project_profile2,
 ):
     pass

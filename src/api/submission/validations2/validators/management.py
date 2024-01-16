@@ -120,7 +120,8 @@ class UniqueManagementValidator(BaseValidator):
             return ERROR, self.MANAGEMENT_NOT_FOUND
         try:
             check_uuid(site_id)
-            site = Site.objects.get_or_none(id=site_id)
+            # TODO: Is this needed?
+            _ = Site.objects.get_or_none(id=site_id)
         except ParseError:
             return ERROR, self.SITE_NOT_FOUND
 

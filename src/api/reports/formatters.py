@@ -92,8 +92,10 @@ def to_colonies_bleached(value, field, row, serializer_instance):
     field.key = "percent_bleached_avg"
     percent_bleached_avg = to_protocol_value(value, field, row, serializer_instance)
 
-    return f"Average genera count: {count_genera_avg}, Average normal %: {percent_normal_avg}, " \
-           f"Average pale %: {percent_pale_avg}, Average bleached %: {percent_bleached_avg}"
+    return (
+        f"Average genera count: {count_genera_avg}, Average normal %: {percent_normal_avg}, "
+        f"Average pale %: {percent_pale_avg}, Average bleached %: {percent_bleached_avg}"
+    )
 
 
 @handle_none()
@@ -110,8 +112,10 @@ def to_percent_cover(value, field, row, serializer_instance):
     field.key = "quadrat_count_avg"
     quadrat_count_avg = to_protocol_value(value, field, row, serializer_instance)
 
-    return f"Average quadrat count: {quadrat_count_avg}, Average hard coral %: {percent_hard_avg_avg}, " \
-           f"Average soft coral %: {percent_soft_avg_avg}, Average macroalgae %: {percent_algae_avg_avg}"
+    return (
+        f"Average quadrat count: {quadrat_count_avg}, Average hard coral %: {percent_hard_avg_avg}, "
+        f"Average soft coral %: {percent_soft_avg_avg}, Average macroalgae %: {percent_algae_avg_avg}"
+    )
 
 
 def to_covariate(value, field, row, serializer_instance):

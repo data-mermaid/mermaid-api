@@ -12,9 +12,8 @@ from ..models import (
     GrowthForm,
     Region,
 )
-from ..utils.reports import update_attributes_report
 from ..utils.q import submit_job
-
+from ..utils.reports import update_attributes_report
 
 benthic_models = [BenthicAttribute, GrowthForm, Region]
 fish_models = [FishGrouping, FishFamily, FishGenus, FishSpecies, Region]

@@ -1,7 +1,5 @@
 docker-compose==1.29.2
 fabric==2.4.0
-pylint==1.8.1
-pylint-django==0.8.0
-flake8==3.7.7
 Sphinx==3.5.4
 sphinx-rtd-theme==0.5.2
+pre-commit==3.5.0

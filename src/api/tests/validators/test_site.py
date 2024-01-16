@@ -5,7 +5,7 @@ from django.contrib.gis.geos import Point
 
 from api.models import Site
 from api.resources.collect_record import CollectRecordSerializer
-from api.submission.validations2.validators import OK, ERROR, WARN, UniqueSiteValidator
+from api.submission.validations2.validators import ERROR, OK, WARN, UniqueSiteValidator
 
 
 @pytest.fixture

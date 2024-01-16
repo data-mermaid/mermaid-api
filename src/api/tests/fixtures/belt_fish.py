@@ -211,6 +211,7 @@ def obs_belt_fish2_4(db, belt_fish2, fish_species2):
         beltfish=belt_fish2, fish_attribute=fish_species2, size=10.0, count=5
     )
 
+
 @pytest.fixture
 def obs_belt_fish3_1(db, belt_fish3, fish_species1):
     return ObsBeltFish.objects.create(
@@ -309,6 +310,7 @@ def obs_belt_fish2_3_biomass(db, obs_belt_fish2_3, belt_fish2):
         constant_c=obs_belt_fish2_3.fish_attribute.biomass_constant_c,
     )
 
+
 @pytest.fixture
 def obs_belt_fish2_4_biomass(db, obs_belt_fish2_4, belt_fish2):
     return calc_biomass_density(
@@ -320,7 +322,6 @@ def obs_belt_fish2_4_biomass(db, obs_belt_fish2_4, belt_fish2):
         constant_b=obs_belt_fish2_4.fish_attribute.biomass_constant_b,
         constant_c=obs_belt_fish2_4.fish_attribute.biomass_constant_c,
     )
-    
 
 
 @pytest.fixture

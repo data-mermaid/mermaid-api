@@ -1,4 +1,4 @@
-from .base import OK, ERROR, WARN, BaseValidator, validator_result
+from .base import ERROR, OK, WARN, BaseValidator, validator_result
 
 
 class BenthicLITObservationTotalLengthValidator(BaseValidator):
@@ -10,9 +10,7 @@ class BenthicLITObservationTotalLengthValidator(BaseValidator):
     TOTAL_LENGTH_TOOLARGE = "obs_total_length_toolarge"
     TOTAL_LENGTH_TOOSMALL = "obs_total_length_toosmall"
 
-    def __init__(
-        self, len_surveyed_path, obs_benthiclits_path, **kwargs
-    ):
+    def __init__(self, len_surveyed_path, obs_benthiclits_path, **kwargs):
         self.len_surveyed_path = len_surveyed_path
         self.obs_benthiclits_path = obs_benthiclits_path
         super().__init__(**kwargs)
@@ -20,9 +18,7 @@ class BenthicLITObservationTotalLengthValidator(BaseValidator):
     @validator_result
     def __call__(self, collect_record, **kwargs):
         tolerance = 0.5
-        obs_benthiclits = (
-            self.get_value(collect_record, self.obs_benthiclits_path) or []
-        )
+        obs_benthiclits = self.get_value(collect_record, self.obs_benthiclits_path) or []
 
         len_surveyed = self.get_value(collect_record, self.len_surveyed_path) or 0
         len_surveyed_cm = len_surveyed * 100

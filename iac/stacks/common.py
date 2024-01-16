@@ -1,21 +1,22 @@
+import json
+
 from aws_cdk import (
     Duration,
     RemovalPolicy,
     Stack,
+    aws_certificatemanager as acm,
     aws_ec2 as ec2,
-    aws_rds as rds,
-    aws_s3 as s3,
-    aws_iam as iam,
     aws_ecs as ecs,
+    aws_elasticloadbalancingv2 as elb,
+    aws_iam as iam,
     aws_kms as kms,
     aws_logs as logs,
+    aws_rds as rds,
     aws_route53 as r53,
-    aws_certificatemanager as acm,
+    aws_s3 as s3,
     aws_secretsmanager as sm,
-    aws_elasticloadbalancingv2 as elb,
 )
 from constructs import Construct
-import json
 
 
 class CommonStack(Stack):
@@ -57,9 +58,7 @@ class CommonStack(Stack):
         self.vpc.add_gateway_endpoint(
             "s3-endpoint",
             service=ec2.GatewayVpcEndpointAwsService.S3,
-            subnets=[
-                ec2.SubnetSelection(subnet_type=ec2.SubnetType.PRIVATE_WITH_EGRESS)
-            ],
+            subnets=[ec2.SubnetSelection(subnet_type=ec2.SubnetType.PRIVATE_WITH_EGRESS)],
         )
 
         # create a SG for the ECR endpoints
@@ -102,16 +101,12 @@ class CommonStack(Stack):
             self,
             "PostgresRdsV2",
             vpc=self.vpc,
-            engine=rds.DatabaseInstanceEngine.postgres(
-                version=rds.PostgresEngineVersion.VER_13_7
-            ),
+            engine=rds.DatabaseInstanceEngine.postgres(version=rds.PostgresEngineVersion.VER_13_7),
             instance_type=ec2.InstanceType.of(
                 ec2.InstanceClass.BURSTABLE3,
                 ec2.InstanceSize.SMALL,
             ),
-            vpc_subnets=ec2.SubnetSelection(
-                subnet_type=ec2.SubnetType.PRIVATE_ISOLATED
-            ),
+            vpc_subnets=ec2.SubnetSelection(subnet_type=ec2.SubnetType.PRIVATE_ISOLATED),
             backup_retention=Duration.days(7),
             deletion_protection=True,
             removal_policy=RemovalPolicy.SNAPSHOT,
@@ -192,9 +187,7 @@ class CommonStack(Stack):
         )
         self.load_balancer.add_redirect()
 
-        self.ecs_sg = ec2.SecurityGroup(
-            self, id="EcsSg", vpc=self.vpc, allow_all_outbound=True
-        )
+        self.ecs_sg = ec2.SecurityGroup(self, id="EcsSg", vpc=self.vpc, allow_all_outbound=True)
 
         # Allow ECS tasks to RDS
         self.ecs_sg.connections.allow_to(

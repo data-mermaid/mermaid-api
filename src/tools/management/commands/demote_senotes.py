@@ -1,4 +1,5 @@
 from django.core.management.base import BaseCommand
+
 from api.models.mermaid import SampleEvent
 from api.utils.notes import senotes2sunotes
 
@@ -14,9 +15,16 @@ class Command(BaseCommand):
         self.id = False
 
     def add_arguments(self, parser):
-        parser.add_argument("-d", "--dryrun", action="store_true", default=False,
-                            help="Print affected SEs/SUs instead of committing db changes.")
-        parser.add_argument("id", nargs="?", default=False, help="Only process sample event with this id")
+        parser.add_argument(
+            "-d",
+            "--dryrun",
+            action="store_true",
+            default=False,
+            help="Print affected SEs/SUs instead of committing db changes.",
+        )
+        parser.add_argument(
+            "id", nargs="?", default=False, help="Only process sample event with this id"
+        )
 
     def handle(self, *args, **options):
         self.dryrun = options.get("dryrun")
@@ -27,4 +35,3 @@ class Command(BaseCommand):
             sample_events = sample_events.filter(pk=self.id)
         for se in sample_events:
             senotes2sunotes(se, self.dryrun)
-

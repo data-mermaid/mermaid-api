@@ -3,14 +3,85 @@ from django.contrib import admin, messages
 from django.contrib.admin.utils import unquote
 from django.db.models import Q
 from django.template.response import TemplateResponse
+from django.urls import path, reverse
 from django.utils.html import format_html
 from django.utils.translation import gettext_lazy as _
-from django.urls import path, reverse
 
-from .base import *
-from ..models import *
+from ..models import (
+    PROTOCOL_MAP,
+    ArchivedRecord,
+    AuditRecord,
+    BeltFish,
+    BeltTransectWidth,
+    BeltTransectWidthCondition,
+    BenthicAttribute,
+    BenthicLifeHistory,
+    BenthicLIT,
+    BenthicPhotoQuadratTransect,
+    BenthicPIT,
+    BenthicTransect,
+    BleachingQuadratCollection,
+    CollectRecord,
+    Country,
+    Covariate,
+    Current,
+    FishAttributeView,
+    FishBeltTransect,
+    FishFamily,
+    FishGenus,
+    FishGroupFunction,
+    FishGrouping,
+    FishGroupingRelationship,
+    FishGroupSize,
+    FishGroupTrophic,
+    FishSize,
+    FishSizeBin,
+    FishSpecies,
+    GrowthForm,
+    HabitatComplexity,
+    HabitatComplexityScore,
+    Management,
+    ManagementCompliance,
+    ManagementParty,
+    Notification,
+    ObsBeltFish,
+    ObsBenthicLIT,
+    ObsBenthicPhotoQuadrat,
+    ObsBenthicPIT,
+    ObsColoniesBleached,
+    Observer,
+    ObsHabitatComplexity,
+    ObsQuadratBenthicPercent,
+    Profile,
+    Project,
+    ProjectProfile,
+    QuadratCollection,
+    ReefExposure,
+    ReefSlope,
+    ReefType,
+    ReefZone,
+    Region,
+    RelativeDepth,
+    SampleEvent,
+    SampleUnit,
+    Site,
+    Tag,
+    Tide,
+    Visibility,
+)
 from ..utils import get_subclasses
 from ..utils.notification import add_notification
+from .base import (
+    AttributeAdmin,
+    BaseAdmin,
+    CachedFKInline,
+    ObservationInline,
+    ObserverInline,
+    SampleUnitAdmin,
+    TransectMethodAdmin,
+    get_crs_with_attrib,
+    get_sus_with_attrib,
+)
 
 
 class FishAttributeAdmin(AttributeAdmin):
@@ -45,9 +116,7 @@ class FishAttributeAdmin(AttributeAdmin):
                 sus = get_sus_with_attrib(self.protocols[0].get("model_su"), sqry, s.pk)
                 if crs.count() > 0 or sus.count() > 0:
                     admin_url = reverse(
-                        "admin:{}_fishspecies_change".format(
-                            FishSpecies._meta.app_label
-                        ),
+                        "admin:{}_fishspecies_change".format(FishSpecies._meta.app_label),
                         args=(s.pk,),
                     )
                     sstr = format_html('<a href="{}">{}</a>', admin_url, s)
@@ -92,9 +161,7 @@ class ProjectAdmin(BaseAdmin):
     def _get_admins(self):
         if self._admins:
             return self._admins
-        self._admins = ProjectProfile.objects.filter(
-            role=ProjectProfile.ADMIN
-        ).select_related()
+        self._admins = ProjectProfile.objects.filter(role=ProjectProfile.ADMIN).select_related()
         return self._admins
 
     def admin_list(self, obj):
@@ -260,7 +327,7 @@ class RelativeDepthAdmin(BaseAdmin):
 
 @admin.register(Tide)
 class TideAdmin(BaseAdmin):
-    list_display = ("val", "name",)
+    list_display = ("val", "name")
 
 
 @admin.register(Visibility)
@@ -346,10 +413,7 @@ class ManagementAdmin(BaseAdmin):
                 return super().delete_view(request, object_id, extra_context)
 
             for cr in crs:
-                if (
-                    "sample_event" in cr.data
-                    and "management" in cr.data["sample_event"]
-                ):
+                if "sample_event" in cr.data and "management" in cr.data["sample_event"]:
                     cr.data["sample_event"]["management"] = replacement_obj
                 cr.save()
 
@@ -903,9 +967,7 @@ class BeltFishAdmin(TransectMethodAdmin):
         fish_attributes = FishAttributeView.objects.none()
         size_bins = FishSizeBin.objects.none()
         if obj is not None:
-            fish_attributes = FishAttributeView.objects.only("pk", "name").order_by(
-                "name"
-            )
+            fish_attributes = FishAttributeView.objects.only("pk", "name").order_by("name")
             size_bins = FishSizeBin.objects.order_by("val")
 
         for inline in self.get_inline_instances(request, obj):
@@ -983,14 +1045,10 @@ class TagAdmin(BaseAdmin):
         ps = Project.objects.filter(tags=obj)
         for p in ps:
             admin_url = reverse(
-                "admin:{}_{}_change".format(
-                    Project._meta.app_label, Project._meta.model_name
-                ),
+                "admin:{}_{}_change".format(Project._meta.app_label, Project._meta.model_name),
                 args=(p.pk,),
             )
-            app_url = "{}/projects/{}/project-info".format(
-                settings.DEFAULT_DOMAIN_COLLECT, p.pk
-            )
+            app_url = "{}/projects/{}/project-info".format(settings.DEFAULT_DOMAIN_COLLECT, p.pk)
             pstr = format_html(
                 '<a href="{}">{}</a> [<a href="{}" target="_blank">{}</a>]',
                 admin_url,

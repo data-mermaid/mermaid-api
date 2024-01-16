@@ -1,18 +1,16 @@
-from .base import (
-    SUPERUSER_APPROVED,
-    Profile,
-    BaseModel,
-    AreaMixin,
-    JSONMixin,
-    BaseAttributeModel,
-    BaseChoiceModel,
-    Country,
-    AuthUser,
-    Application,
-)
-from .mermaid import *
-from .revisions import Revision
-from .sql_models import (
+from .base import SUPERUSER_APPROVED  # noqa: F401
+from .base import Application  # noqa: F401
+from .base import AreaMixin  # noqa: F401
+from .base import AuthUser  # noqa: F401
+from .base import BaseAttributeModel  # noqa: F401
+from .base import BaseChoiceModel  # noqa: F401
+from .base import BaseModel  # noqa: F401
+from .base import Country  # noqa: F401
+from .base import JSONMixin  # noqa: F401
+from .base import Profile  # noqa: F401
+from .mermaid import *  # noqa: F403
+from .revisions import Revision  # noqa: F401
+from .sql_models import (  # noqa: F401
     BeltFishObsSQLModel,
     BeltFishSESQLModel,
     BeltFishSUSQLModel,
@@ -33,26 +31,29 @@ from .sql_models import (
     HabitatComplexitySESQLModel,
     HabitatComplexitySUSQLModel,
 )
-from .summary_sample_events import SummarySampleEventModel, SummarySampleEventSQLModel
-from .view_models import *
-from .summaries import (
+from .summaries import (  # noqa: F401
     BeltFishObsModel,
-    BeltFishSUModel,
     BeltFishSEModel,
+    BeltFishSUModel,
     BenthicLITObsModel,
-    BenthicLITSUModel,
     BenthicLITSEModel,
-    BenthicPITObsModel,
-    BenthicPITSUModel,
-    BenthicPITSEModel,
+    BenthicLITSUModel,
     BenthicPhotoQuadratTransectObsModel,
-    BenthicPhotoQuadratTransectSUModel,
     BenthicPhotoQuadratTransectSEModel,
+    BenthicPhotoQuadratTransectSUModel,
+    BenthicPITObsModel,
+    BenthicPITSEModel,
+    BenthicPITSUModel,
     BleachingQCColoniesBleachedObsModel,
     BleachingQCQuadratBenthicPercentObsModel,
-    BleachingQCSUModel,
     BleachingQCSEModel,
+    BleachingQCSUModel,
     HabitatComplexityObsModel,
-    HabitatComplexitySUModel,
     HabitatComplexitySEModel,
+    HabitatComplexitySUModel,
 )
+from .summary_sample_events import (  # noqa: F401
+    SummarySampleEventModel,
+    SummarySampleEventSQLModel,
+)
+from .view_models import *  # noqa: F403

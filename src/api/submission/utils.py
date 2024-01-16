@@ -11,14 +11,17 @@ from ..mocks import MockRequest
 from ..models import (
     BENTHICLIT_PROTOCOL,
     BENTHICPIT_PROTOCOL,
+    BENTHICPQT_PROTOCOL,
+    BLEACHINGQC_PROTOCOL,
     FISHBELT_PROTOCOL,
     HABITATCOMPLEXITY_PROTOCOL,
-    BLEACHINGQC_PROTOCOL,
-    BENTHICPQT_PROTOCOL,
     PROTOCOL_MAP,
     AuditRecord,
     CollectRecord,
 )
+from ..utils.q import submit_job
+from ..utils.sample_unit_methods import create_audit_record
+from ..utils.summary_cache import update_summary_cache
 from .protocol_validations import (
     BenthicLITProtocolValidation,
     BenthicPhotoQuadratTransectProtocolValidation,
@@ -29,13 +32,13 @@ from .protocol_validations import (
 )
 from .validations import ERROR, IGNORE, OK, WARN
 from .validations2 import (
+    ValidationRunner,
     belt_fish,
-    benthic_photo_quadrat_transect,
     benthic_lit,
+    benthic_photo_quadrat_transect,
     benthic_pit,
     bleaching_quadrat_collection,
     habitat_complexity,
-    ValidationRunner
 )
 from .writer import (
     BenthicLITProtocolWriter,
@@ -45,10 +48,6 @@ from .writer import (
     FishbeltProtocolWriter,
     HabitatComplexityProtocolWriter,
 )
-from ..utils.q import submit_job
-from ..utils.sample_unit_methods import create_audit_record
-from ..utils.summary_cache import update_summary_cache
-
 
 SUCCESS_STATUS = 200
 VALIDATION_ERROR_STATUS = 400
@@ -116,9 +115,7 @@ def write_collect_record(collect_record, request, dry_run=False):
             result = format_serializer_errors(ve)
             status = VALIDATION_ERROR_STATUS
         except Exception as err:
-            logger.exception(
-                "write_collect_record: {}".format(getattr(collect_record, "id"))
-            )
+            logger.exception("write_collect_record: {}".format(getattr(collect_record, "id")))
             result = format_exception_errors(err)
             status = ERROR_STATUS
         finally:
@@ -126,9 +123,7 @@ def write_collect_record(collect_record, request, dry_run=False):
                 transaction.savepoint_rollback(sid)
             else:
                 create_audit_record(
-                    request.user.profile,
-                    AuditRecord.SUBMIT_RECORD_EVENT_TYPE,
-                    collect_record
+                    request.user.profile, AuditRecord.SUBMIT_RECORD_EVENT_TYPE, collect_record
                 )
                 collect_record.delete()
                 transaction.savepoint_commit(sid)
@@ -136,7 +131,7 @@ def write_collect_record(collect_record, request, dry_run=False):
                     5,
                     update_summary_cache,
                     project_id=collect_record.project_id,
-                    sample_unit=collect_record.protocol
+                    sample_unit=collect_record.protocol,
                 )
         return status, result
 
@@ -202,40 +197,24 @@ def _validate_collect_record_v2(record, record_serializer, request):
 
     runner = ValidationRunner(serializer=record_serializer)
     if protocol == BENTHICLIT_PROTOCOL:
-        runner.validate(
-            record,
-            benthic_lit.benthic_lit_validations,
-            request=request
-        )
+        runner.validate(record, benthic_lit.benthic_lit_validations, request=request)
     elif protocol == BENTHICPIT_PROTOCOL:
-        runner.validate(
-            record,
-            benthic_pit.benthic_pit_validations,
-            request=request
-        )
+        runner.validate(record, benthic_pit.benthic_pit_validations, request=request)
     elif protocol == FISHBELT_PROTOCOL:
-        runner.validate(
-            record,
-            belt_fish.belt_fish_validations,
-            request=request
-        )
+        runner.validate(record, belt_fish.belt_fish_validations, request=request)
     elif protocol == HABITATCOMPLEXITY_PROTOCOL:
-        runner.validate(
-            record,
-            habitat_complexity.habcomp_validations,
-            request=request
-        )
+        runner.validate(record, habitat_complexity.habcomp_validations, request=request)
     elif protocol == BLEACHINGQC_PROTOCOL:
         runner.validate(
             record,
             bleaching_quadrat_collection.bleaching_quadrat_collection_validations,
-            request=request
+            request=request,
         )
     elif protocol == BENTHICPQT_PROTOCOL:
         runner.validate(
             record,
             benthic_photo_quadrat_transect.benthic_photo_quadrat_transect_validations,
-            request=request
+            request=request,
         )
     return runner.to_dict()
 
@@ -262,9 +241,7 @@ def check_validation_status(results):
     return status
 
 
-def validate_collect_records(
-    profile, record_ids, serializer_class, validation_suppressants=None
-):
+def validate_collect_records(profile, record_ids, serializer_class, validation_suppressants=None):
     output = dict()
     records = CollectRecord.objects.filter(id__in=record_ids)
     request = MockRequest(profile=profile)
@@ -314,11 +291,7 @@ def validate_collect_records_v2(
     records = CollectRecord.objects.filter(id__in=record_ids)
     request = MockRequest(profile=profile)
     for record in records.iterator():
-        validation_output = _validate_collect_record_v2(
-            record,
-            serializer_class,
-            request
-        )
+        validation_output = _validate_collect_record_v2(record, serializer_class, request)
 
         if validation_suppressants:
             print("validation_suppressants not suppported")
@@ -366,9 +339,7 @@ def submit_collect_records(profile, record_ids, validation_suppressants=None):
             status = check_validation_status(validation_output)
 
         if status != OK:
-            output[record_id] = dict(
-                status=status, message=gettext_lazy("Invalid collect record")
-            )
+            output[record_id] = dict(status=status, message=gettext_lazy("Invalid collect record"))
             continue
 
         # If validate comes out all good (status == OK) then
@@ -379,12 +350,8 @@ def submit_collect_records(profile, record_ids, validation_suppressants=None):
             output[record_id] = dict(status=ERROR, message=result)
             continue
         elif status == ERROR_STATUS:
-            logger.error(
-                json.dumps(dict(id=record_id, data=collect_record.data)), result
-            )
-            output[record_id] = dict(
-                status=ERROR, message=gettext_lazy("System failure")
-            )
+            logger.error(json.dumps(dict(id=record_id, data=collect_record.data)), result)
+            output[record_id] = dict(status=ERROR, message=gettext_lazy("System failure"))
             continue
         output[record_id] = dict(status=OK, message=gettext_lazy("Success"))
 
@@ -400,19 +367,13 @@ def submit_collect_records_v2(profile, record_ids, serializer_class, validation_
             output[record_id] = dict(status=ERROR, message=gettext_lazy("Not found"))
             continue
 
-        validation_output = _validate_collect_record_v2(
-            collect_record,
-            serializer_class,
-            request
-        )
+        validation_output = _validate_collect_record_v2(collect_record, serializer_class, request)
         status = validation_output["status"]
         if validation_suppressants:
             print("validation_suppressants not suppported")
 
         if status != OK:
-            output[record_id] = dict(
-                status=status, message=gettext_lazy("Invalid collect record")
-            )
+            output[record_id] = dict(status=status, message=gettext_lazy("Invalid collect record"))
             continue
 
         # If validate comes out all good (status == OK) then
@@ -423,12 +384,8 @@ def submit_collect_records_v2(profile, record_ids, serializer_class, validation_
             output[record_id] = dict(status=ERROR, message=result)
             continue
         elif status == ERROR_STATUS:
-            logger.error(
-                json.dumps(dict(id=record_id, data=collect_record.data)), result
-            )
-            output[record_id] = dict(
-                status=ERROR, message=gettext_lazy("System failure")
-            )
+            logger.error(json.dumps(dict(id=record_id, data=collect_record.data)), result)
+            output[record_id] = dict(status=ERROR, message=gettext_lazy("System failure"))
             continue
         output[record_id] = dict(status=OK, message=gettext_lazy("Success"))
 

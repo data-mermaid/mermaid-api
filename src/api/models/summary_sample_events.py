@@ -2,14 +2,6 @@ from django.contrib.gis.db import models
 
 from sqltables import SQLTableArg, SQLTableManager
 from . import Project
-from .sql_models import (
-    BeltFishSUSQLModel,
-    BenthicLITSUSQLModel,
-    BenthicPITSUSQLModel,
-    BenthicPhotoQuadratTransectSUSQLModel,
-    BleachingQCSUSQLModel,
-    HabitatComplexitySUSQLModel,
-)
 
 
 class SummarySampleEventBaseModel(models.Model):
@@ -51,7 +43,7 @@ class SummarySampleEventBaseModel(models.Model):
 
 
 class SummarySampleEventSQLModel(SummarySampleEventBaseModel):
-    sql = f"""
+    sql = """
         WITH beltfish_su AS (
             SELECT * FROM summary_belt_fish_su WHERE project_id = '%(project_id)s'::uuid
         ),
@@ -135,32 +127,32 @@ class SummarySampleEventSQLModel(SummarySampleEventBaseModel):
                 fbtg.biomass_kgha_trophic_group_avg END),
                 'biomass_kgha_trophic_group_sd', (CASE WHEN project.data_policy_beltfish < 50 THEN NULL ELSE
                 fbtg.biomass_kgha_trophic_group_sd END)
-            )), '{{}}'),
+            )), '{}'),
             'benthiclit', NULLIF(jsonb_strip_nulls(jsonb_build_object(
                 'sample_unit_count', bl.sample_unit_count,
                 'percent_cover_benthic_category_avg', (CASE WHEN project.data_policy_benthiclit < 50 THEN NULL ELSE
                 bl.percent_cover_benthic_category_avg END),
                 'percent_cover_benthic_category_sd', (CASE WHEN project.data_policy_benthiclit < 50 THEN NULL ELSE
                 bl.percent_cover_benthic_category_sd END)
-            )), '{{}}'),
+            )), '{}'),
             'benthicpit', NULLIF(jsonb_strip_nulls(jsonb_build_object(
                 'sample_unit_count', bp.sample_unit_count,
                 'percent_cover_benthic_category_avg', (CASE WHEN project.data_policy_benthicpit < 50 THEN NULL ELSE
                 bp.percent_cover_benthic_category_avg END),
                 'percent_cover_benthic_category_sd', (CASE WHEN project.data_policy_benthicpit < 50 THEN NULL ELSE
                 bp.percent_cover_benthic_category_sd END)
-            )), '{{}}'),
+            )), '{}'),
             'benthicpqt', NULLIF(jsonb_strip_nulls(jsonb_build_object(
                 'sample_unit_count', pqt.sample_unit_count,
                 'percent_cover_benthic_category_avg', (CASE WHEN project.data_policy_benthicpqt < 50 THEN NULL ELSE
                 pqt.percent_cover_benthic_category_avg END),
                 'percent_cover_benthic_category_sd', (CASE WHEN project.data_policy_benthicpqt < 50 THEN NULL ELSE
                 pqt.percent_cover_benthic_category_sd END)
-            )), '{{}}'),
+            )), '{}'),
             'habitatcomplexity', NULLIF(jsonb_strip_nulls(jsonb_build_object(
                 'sample_unit_count', hc.sample_unit_count,
                 'score_avg_avg', (CASE WHEN project.data_policy_habitatcomplexity < 50 THEN NULL ELSE hc.score_avg_avg END)
-            )), '{{}}'),
+            )), '{}'),
             'colonies_bleached', NULLIF(jsonb_strip_nulls(jsonb_build_object(
                 'sample_unit_count', bleachingqc.sample_unit_count,
                 'count_total_avg', (CASE WHEN project.data_policy_bleachingqc < 50 THEN NULL ELSE bleachingqc.count_total_avg
@@ -183,7 +175,7 @@ class SummarySampleEventSQLModel(SummarySampleEventBaseModel):
                 bleachingqc.percent_dead_avg END),
                 'percent_bleached_avg', (CASE WHEN project.data_policy_bleachingqc < 50 THEN NULL ELSE
                 bleachingqc.percent_bleached_avg END)
-            )), '{{}}'),
+            )), '{}'),
             'quadrat_benthic_percent', NULLIF(jsonb_strip_nulls(jsonb_build_object(
                 'sample_unit_count', bleachingqc.sample_unit_count,
                 'percent_hard_avg_avg', (CASE WHEN project.data_policy_bleachingqc < 50 THEN NULL ELSE
@@ -194,7 +186,7 @@ class SummarySampleEventSQLModel(SummarySampleEventBaseModel):
                 bleachingqc.percent_algae_avg_avg END),
                 'quadrat_count_avg', (CASE WHEN project.data_policy_bleachingqc < 50 THEN NULL ELSE
                 bleachingqc.quadrat_count_avg END)
-            )), '{{}}')
+            )), '{}')
         )) AS protocols
 
         FROM sample_event

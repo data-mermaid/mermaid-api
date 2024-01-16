@@ -14,9 +14,7 @@ class FishFamilySubsetValidator(BaseValidator):
         super().__init__(**kwargs)
 
     @validator_result
-    def check_fish_family_subset(
-        self, observation, fish_family_subset, fish_family_lookup
-    ):
+    def check_fish_family_subset(self, observation, fish_family_subset, fish_family_lookup):
         fish_attribute_id = fish_family_lookup.get(observation.get("fish_attribute"))
         status = OK
         code = None
@@ -44,17 +42,14 @@ class FishFamilySubsetValidator(BaseValidator):
             return self._get_ok(observations)
 
         project_data = project.data or {}
-        fish_family_subset = (project_data.get("settings") or {}).get(
-            "fishFamilySubset"
-        )
+        fish_family_subset = (project_data.get("settings") or {}).get("fishFamilySubset")
 
-        if (
-            isinstance(fish_family_subset, list) is False
-            or len(fish_family_subset) == 0
-        ):
+        if isinstance(fish_family_subset, list) is False or len(fish_family_subset) == 0:
             return self._get_ok(observations)
 
-        fish_attribute_ids = {ob.get("fish_attribute") for ob in observations if ob.get("fish_attribute")}
+        fish_attribute_ids = {
+            ob.get("fish_attribute") for ob in observations if ob.get("fish_attribute")
+        }
         fish_family_lookup = {
             str(fa.id): str(fa.id_family)
             for fa in FishAttributeView.objects.filter(id__in=fish_attribute_ids)

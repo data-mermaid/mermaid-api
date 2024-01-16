@@ -15,7 +15,13 @@ class Command(BaseCommand):
 
     def add_arguments(self, parser):
         parser.add_argument("-n", dest="queue_name", default=False, help="Queue name")
-        parser.add_argument("-s", dest="sleep_time", type=int, default=5, help="Number of seconds to sleep between queue calls.")
+        parser.add_argument(
+            "-s",
+            dest="sleep_time",
+            type=int,
+            default=5,
+            help="Number of seconds to sleep between queue calls.",
+        )
 
     def handle(self, *args, **options):
         sleep_time = options.get("sleep_time") or 5
@@ -25,7 +31,7 @@ class Command(BaseCommand):
 
         self.stdout.write(f"Monitoring {queue_name} queue")
         self.queue = Queue(queue_name)
-        
+
         self.stdout.write("\n")
         while True:
             msg = f"\rNumber of jobs: {self.queue.num_jobs()}      "

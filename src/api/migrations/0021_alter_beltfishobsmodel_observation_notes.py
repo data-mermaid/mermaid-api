@@ -4,15 +4,14 @@ from django.db import migrations, models
 
 
 class Migration(migrations.Migration):
-
     dependencies = [
-        ('api', '0020_auto_20230529_1755'),
+        ("api", "0020_auto_20230529_1755"),
     ]
 
     operations = [
         migrations.AlterField(
-            model_name='beltfishobsmodel',
-            name='observation_notes',
+            model_name="beltfishobsmodel",
+            name="observation_notes",
             field=models.TextField(blank=True, null=True),
         ),
     ]

@@ -1,16 +1,16 @@
 import csv
 import datetime
-from django.contrib import admin
+
+from django.conf import settings
+from django.contrib import admin, messages
 from django.contrib.gis.admin import OSMGeoAdmin
+from django.db.models import Count
 from django.http import HttpResponse
 from django.urls import reverse
 from django.utils.html import format_html
-from django.conf import settings
-from django.contrib import messages
-from django.db.models import Count
 
 from api.utils.sample_unit_methods import get_project
-from ..models import Application, AuthUser, Profile, CollectRecord, Observer
+from ..models import Application, AuthUser, CollectRecord, Observer, Profile
 
 
 def lookup_field_from_choices(field_obj, value):
@@ -66,8 +66,7 @@ def export_model_all_as_csv(modeladmin, request, queryset):
     field_list = [
         f.name
         for f in queryset.model._meta.get_fields()
-        if f.concrete
-        and (not f.is_relation or f.one_to_one or (f.many_to_one and f.related_model))
+        if f.concrete and (not f.is_relation or f.one_to_one or (f.many_to_one and f.related_model))
     ]
     if hasattr(modeladmin, "exportable_fields"):
         added_fields = [f for f in modeladmin.exportable_fields if f not in field_list]
@@ -153,9 +152,7 @@ class AttributeAdmin(BaseAdmin):
 
         if not extra_context.get("protected_descendants"):
             # dropdown of other attributes to assign to existing observations before deleting
-            other_objs = self.model_attrib.objects.exclude(id=object_id).order_by(
-                "name"
-            )
+            other_objs = self.model_attrib.objects.exclude(id=object_id).order_by("name")
             if other_objs.count() > 0:
                 extra_context.update({"other_objs": other_objs})
 
@@ -164,7 +161,6 @@ class AttributeAdmin(BaseAdmin):
             collect_records = []
             sample_units = []
             for p in self.protocols:
-
                 # Collect records that use this attribute, about to be deleted
                 crs = get_crs_with_attrib(
                     "data__{}__contains".format(p.get("cr_obs")),
@@ -241,18 +237,14 @@ class AttributeAdmin(BaseAdmin):
             # process reassignment, then hand back to django for deletion
             if request.method == "POST":
                 replacement_obj = request.POST.get("replacement_obj")
-                if (
-                    replacement_obj is None or replacement_obj == ""
-                ) and atleast_one_su:
+                if (replacement_obj is None or replacement_obj == "") and atleast_one_su:
                     self.message_user(
                         request,
                         "To delete, you must select a replacement object to assign to all items "
                         "using this object.",
                         level=messages.ERROR,
                     )
-                    return super().delete_view(
-                        request, object_id, extra_context
-                    )
+                    return super().delete_view(request, object_id, extra_context)
 
                 for cr in protocol_crs:
                     for p in self.protocols:
@@ -263,13 +255,11 @@ class AttributeAdmin(BaseAdmin):
                     cr.save()
 
                 for p in self.protocols:
-                    p.get("model_obs").objects.filter(
-                        **{self.attrib: object_id}
-                    ).update(**{self.attrib: replacement_obj})
+                    p.get("model_obs").objects.filter(**{self.attrib: object_id}).update(
+                        **{self.attrib: replacement_obj}
+                    )
 
-        return super().delete_view(
-            request, object_id, extra_context
-        )
+        return super().delete_view(request, object_id, extra_context)
 
 
 class SampleUnitAdmin(BaseAdmin):
@@ -298,9 +288,7 @@ class SampleUnitAdmin(BaseAdmin):
         return (
             super()
             .get_queryset(request)
-            .select_related(
-                "created_by", "updated_by", "sample_event", "sample_event__site"
-            )
+            .select_related("created_by", "updated_by", "sample_event", "sample_event__site")
         )
 
 
@@ -326,11 +314,7 @@ class ObserverInline(CachedFKInline):
     readonly_fields = ["created_by", "updated_by"]
 
     def get_queryset(self, request):
-        return (
-            super()
-            .get_queryset(request)
-            .select_related("created_by", "updated_by", "profile")
-        )
+        return super().get_queryset(request).select_related("created_by", "updated_by", "profile")
 
 
 class ObservationInline(CachedFKInline):

@@ -1,10 +1,10 @@
 import datetime
+from pathlib import Path
 
 from django.conf import settings
 from django.core.mail import EmailMultiAlternatives
 from django.template.loader import render_to_string
 from maintenance_mode.core import get_maintenance_mode
-from pathlib import Path
 
 from ..models.mermaid import ProjectProfile
 from .q import submit_job
@@ -45,9 +45,7 @@ def _mermaid_email(subject, template, to, context=None, from_email=None, reply_t
 def _to_in_dev_emails(to):
     to_emails = []
     for to_email in to:
-        dev_email_match = [
-            email for email in settings.DEV_EMAILS if to_email.endswith(email)
-        ]
+        dev_email_match = [email for email in settings.DEV_EMAILS if to_email.endswith(email)]
         if dev_email_match:
             to_emails.append(to_email)
     return to_emails

@@ -20,13 +20,10 @@ class SQLTableQuery(Query):
             alias = self.base_table
             self.ref_alias(alias)
         else:
-
             if hasattr(self.model, "sql_args"):
                 try:
                     params = dict(
-                        next(
-                            filter(lambda x: x.level == 0, self.sql_table_params)
-                        ).params.items()
+                        next(filter(lambda x: x.level == 0, self.sql_table_params)).params.items()
                     )
                 except StopIteration:
                     # no parameters were passed from user
@@ -34,9 +31,7 @@ class SQLTableQuery(Query):
                     # in case that they are optional
                     params = {}
 
-                alias = self.join(
-                    SQLTable(self.get_meta().db_table, None, params, self.model_sql)
-                )
+                alias = self.join(SQLTable(self.get_meta().db_table, None, params, self.model_sql))
             else:
                 alias = self.join(BaseTable(self.get_meta().db_table, None))
         return alias
@@ -47,9 +42,7 @@ class SQLTableQuery(Query):
         to be prepared for joining.
         """
         _sql_table_params = []
-        for table_lookup, param_dict in self._sql_table_params_to_groups(
-            sql_table_params
-        ).items():
+        for table_lookup, param_dict in self._sql_table_params_to_groups(sql_table_params).items():
             if not table_lookup:
                 level = 0
                 join_field = None
@@ -74,9 +67,7 @@ class SQLTableQuery(Query):
         # TODO: merge with existing?
         self.sql_table_params = _sql_table_params
 
-    def _sql_table_params_to_groups(
-        self, sql_table_params: Dict[str, Any]
-    ) -> Dict[str, Any]:
+    def _sql_table_params_to_groups(self, sql_table_params: Dict[str, Any]) -> Dict[str, Any]:
         """
         Transfer user specified lookups into groups
         to have all parameters for each table function prepared for joining.
@@ -129,7 +120,12 @@ class SQLTableQuerySet(QuerySet):
         self.query = query or SQLTableQuery(self.model)
 
     def sql_table(self, **sql_table_params: Dict[str, Any]) -> "SQLTableQuerySet":
-        self.query.model_sql = self.query.model_sql.replace("<<__sql_table_args__>>", " AND ".join(["1 = 1", *[self.model.sql_args[field].sql for field  in sql_table_params]]))
+        self.query.model_sql = self.query.model_sql.replace(
+            "<<__sql_table_args__>>",
+            " AND ".join(
+                ["1 = 1", *[self.model.sql_args[field].sql for field in sql_table_params]]
+            ),
+        )
 
         self.query.sql_table(**sql_table_params)
         return self

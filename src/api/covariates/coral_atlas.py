@@ -1,9 +1,9 @@
 import datetime
 from concurrent.futures import ThreadPoolExecutor
 from typing import List, Tuple
-from django.conf import settings
 
 import requests
+from django.conf import settings
 
 from .base import BaseCovariate, CovariateRequestError
 
@@ -26,11 +26,11 @@ class CoralAtlasCovariate(BaseCovariate):
 
         return sorted(_classes, key=lambda x: (x["area"], x["name"]), reverse=True)
 
-    def _fetch(
-        self, x: float, y: float, radius: float, request_datetime: datetime
-    ) -> dict:
+    def _fetch(self, x: float, y: float, radius: float, request_datetime: datetime) -> dict:
         url = f"{self.api_url}/mapping/querypoint/{y}/{x}?radius={radius}&appid={settings.CORAL_ATLAS_APP_ID}"
-        headers = {"User-Agent": "Mozilla/5.0 (X11; Ubuntu; Linux x86_64; rv:91.0) Gecko/20100101 Firefox/91.0"}
+        headers = {
+            "User-Agent": "Mozilla/5.0 (X11; Ubuntu; Linux x86_64; rv:91.0) Gecko/20100101 Firefox/91.0"
+        }
         resp = requests.get(url, headers=headers)
         status_code = resp.status_code
         if status_code != 200:

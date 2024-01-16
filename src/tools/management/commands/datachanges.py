@@ -1,6 +1,5 @@
 import dateutil
 import pytz
-
 from django.contrib.contenttypes.models import ContentType
 from django.core.management.base import BaseCommand
 
@@ -23,9 +22,7 @@ class Command(BaseCommand):
         )
 
     def get_api_model_classes(self):
-        qs = ContentType.objects.filter(app_label="api").exclude(
-            model__in=self.SKIP_MODELS
-        )
+        qs = ContentType.objects.filter(app_label="api").exclude(model__in=self.SKIP_MODELS)
         return [c.model_class() for c in qs if c.model_class() is not None]
 
     def get_record_details(self, record):

@@ -5,13 +5,13 @@ from rest_framework import status
 from rest_framework.response import Response
 
 from ...models import (
+    BenthicLIT,
     BenthicLITObsModel,
     BenthicLITObsSQLModel,
     BenthicLITSEModel,
     BenthicLITSESQLModel,
     BenthicLITSUModel,
     BenthicLITSUSQLModel,
-    BenthicLIT,
     ObsBenthicLIT,
 )
 from ...permissions import ProjectDataReadOnlyPermission, ProjectPublicSummaryPermission
@@ -29,6 +29,7 @@ from ...reports.formatters import (
 )
 from ...reports.report_serializer import ReportSerializer
 from ..base import (
+    BaseAPISerializer,
     BaseProjectApiViewSet,
     BaseSEFilterSet,
     BaseSUObsFilterSet,
@@ -36,7 +37,6 @@ from ..base import (
     BaseSUViewAPISUSerializer,
     BaseViewAPIGeoSerializer,
     BaseViewAPISUGeoSerializer,
-    BaseAPISerializer,
 )
 from ..benthic_transect import BenthicTransectSerializer
 from ..mixins import SampleUnitMethodEditMixin, SampleUnitMethodSummaryReport
@@ -80,7 +80,9 @@ class BenthicLITMethodSerializer(BenthicLITSerializer):
         exclude = []
 
 
-class BenthicLITMethodView(SampleUnitMethodSummaryReport, SampleUnitMethodEditMixin, BaseProjectApiViewSet):
+class BenthicLITMethodView(
+    SampleUnitMethodSummaryReport, SampleUnitMethodEditMixin, BaseProjectApiViewSet
+):
     queryset = (
         BenthicLIT.objects.select_related("transect", "transect__sample_event")
         .all()
@@ -99,9 +101,7 @@ class BenthicLITMethodView(SampleUnitMethodSummaryReport, SampleUnitMethodEditMi
             observers=request.data.get("observers"),
             obs_benthic_lits=request.data.get("obs_benthic_lits"),
         )
-        benthic_lit_data = {
-            k: v for k, v in request.data.items() if k not in nested_data
-        }
+        benthic_lit_data = {k: v for k, v in request.data.items() if k not in nested_data}
         benthic_lit_id = benthic_lit_data["id"]
 
         context = dict(request=request)
@@ -174,9 +174,7 @@ class BenthicLITMethodView(SampleUnitMethodSummaryReport, SampleUnitMethodEditMi
             transaction.savepoint_commit(sid)
 
             benthic_lit = BenthicLIT.objects.get(id=benthic_lit_id)
-            return Response(
-                BenthicLITMethodSerializer(benthic_lit).data, status=status.HTTP_200_OK
-            )
+            return Response(BenthicLITMethodSerializer(benthic_lit).data, status=status.HTTP_200_OK)
 
         except:
             transaction.savepoint_rollback(sid)
@@ -330,9 +328,7 @@ class BenthicLITMethodSUCSVSerializer(ReportSerializer):
         ReportField("transect_len_surveyed", "Transect length surveyed"),
         ReportField("total_length", "Total cm"),
         ReportField("observers", "Observers", to_names),
-        ReportField(
-            "percent_cover_benthic_category", "Percent cover by benthic category"
-        ),
+        ReportField("percent_cover_benthic_category", "Percent cover by benthic category"),
         ReportField("site_notes", "Site notes"),
         ReportField("management_notes", "Management notes"),
         ReportField("sample_unit_notes", "Sample unit notes"),
@@ -511,9 +507,7 @@ class BenthicLITProjectMethodSUView(BaseProjectMethodView):
 class BenthicLITProjectMethodSEView(BaseProjectMethodView):
     drf_label = "benthiclit-se"
     project_policy = "data_policy_benthiclit"
-    permission_classes = [
-        Or(ProjectDataReadOnlyPermission, ProjectPublicSummaryPermission)
-    ]
+    permission_classes = [Or(ProjectDataReadOnlyPermission, ProjectPublicSummaryPermission)]
     model = BenthicLITSEModel
     serializer_class = BenthicLITMethodSESerializer
     serializer_class_geojson = BenthicLITMethodSEGeoSerializer

@@ -20,7 +20,7 @@ class BiomassValidator(BaseValidator):
         obs_fish_attribute_path,
         obs_count_path,
         obs_size_path,
-        **kwargs
+        **kwargs,
     ):
         self.observations_path = observations_path
         self.len_surveyed_path = len_surveyed_path
@@ -49,9 +49,7 @@ class BiomassValidator(BaseValidator):
 
     def _get_fish_attribute_lookup(self, observations):
         fishattribute_ids = [
-            o.get("fish_attribute")
-            for o in observations
-            if o.get("fish_attribute") is not None
+            o.get("fish_attribute") for o in observations if o.get("fish_attribute") is not None
         ]
         return {
             str(fa.id): fa.get_biomass_constants()
@@ -68,16 +66,12 @@ class BiomassValidator(BaseValidator):
 
         fish_attribute = observation.get("fish_attribute")
         constants = fish_attr_lookup.get(fish_attribute) or [None, None, None]
-        return calc_biomass_density(
-            count, size, len_surveyed, width_val, *constants
-        )
+        return calc_biomass_density(count, size, len_surveyed, width_val, *constants)
 
     @validator_result
     def __call__(self, collect_record, **kwargs):
         observations = self.get_value(collect_record, self.observations_path) or []
-        len_surveyed = cast_float(
-            self.get_value(collect_record, self.len_surveyed_path)
-        )
+        len_surveyed = cast_float(self.get_value(collect_record, self.len_surveyed_path))
         width_id = self.get_value(collect_record, self.width_path)
         try:
             _ = check_uuid(width_id)

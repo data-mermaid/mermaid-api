@@ -1,14 +1,11 @@
 import csv
+
 from django.http import HttpResponse
-from rest_framework.decorators import (
-    api_view,
-    permission_classes,
-    authentication_classes,
-)
+from rest_framework.decorators import api_view, authentication_classes, permission_classes
 from rest_framework.permissions import SAFE_METHODS
 
-from ..permissions import UnauthenticatedReadOnlyPermission
 from ..ingest.utils import get_su_serializer
+from ..permissions import UnauthenticatedReadOnlyPermission
 
 
 @api_view(SAFE_METHODS)
@@ -19,9 +16,7 @@ def ingest_schema_csv(request, sample_unit):
     schema_labels = serializer().get_schema_labels()
 
     response = HttpResponse(content_type="text/csv")
-    response[
-        "Content-Disposition"
-    ] = f'attachment; filename="{sample_unit}_template.csv"'
+    response["Content-Disposition"] = f'attachment; filename="{sample_unit}_template.csv"'
     writer = csv.writer(response)
     writer.writerow(schema_labels)
     return response

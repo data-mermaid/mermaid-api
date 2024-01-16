@@ -1,5 +1,7 @@
 from datetime import datetime
+
 from django.test import TestCase
+
 from api.resources.mixins import UpdatesMixin
 
 

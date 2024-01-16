@@ -1,11 +1,11 @@
 from api.resources.collect_record import CollectRecordSerializer
 from api.submission.validations2.validators import (
-    AllAttributesSameCategoryValidator,
-    BenthicIntervalObservationCountValidator,
-    ListRequiredValidator,
     ERROR,
     OK,
     WARN,
+    AllAttributesSameCategoryValidator,
+    BenthicIntervalObservationCountValidator,
+    ListRequiredValidator,
 )
 
 
@@ -18,21 +18,15 @@ def _get_validator():
 
 
 def test_benthicpit_attributes_differentcats(valid_benthic_pit_collect_record):
-    validator = AllAttributesSameCategoryValidator(
-        obs_benthic_path="data.obs_benthic_pits"
-    )
+    validator = AllAttributesSameCategoryValidator(obs_benthic_path="data.obs_benthic_pits")
     record = CollectRecordSerializer(valid_benthic_pit_collect_record).data
 
     result = validator(record)
     assert result.status == OK
 
 
-def test_benthicpit_attributes_allsamecat(
-    valid_benthic_pit_collect_record, benthic_attribute_2
-):
-    validator = AllAttributesSameCategoryValidator(
-        obs_benthic_path="data.obs_benthic_pits"
-    )
+def test_benthicpit_attributes_allsamecat(valid_benthic_pit_collect_record, benthic_attribute_2):
+    validator = AllAttributesSameCategoryValidator(obs_benthic_path="data.obs_benthic_pits")
     record = CollectRecordSerializer(valid_benthic_pit_collect_record).data
     observations = [
         dict(attribute=str(benthic_attribute_2.id), interval=5),
@@ -92,9 +86,7 @@ def test_benthicpit_observation_count_invalid(valid_benthic_pit_collect_record):
 
     result = validator(record)
     assert result.status == ERROR
-    assert (
-            result.code == BenthicIntervalObservationCountValidator.INCORRECT_OBSERVATION_COUNT
-    )
+    assert result.code == BenthicIntervalObservationCountValidator.INCORRECT_OBSERVATION_COUNT
 
 
 def test_benthicpit_observation_count_valid_plusone(

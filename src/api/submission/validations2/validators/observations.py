@@ -1,6 +1,6 @@
 from api.models import BenthicAttribute
-from .base import OK, WARN, BaseValidator, validator_result
 from ..utils import valid_id
+from .base import OK, WARN, BaseValidator, validator_result
 
 
 class ObservationCountValidator(BaseValidator):
@@ -54,9 +54,7 @@ class AllAttributesSameCategoryValidator(BaseValidator):
 
     @validator_result
     def __call__(self, collect_record, **kwargs):
-        obs_benthics = (
-                self.get_value(collect_record, self.obs_benthic_path) or []
-        )
+        obs_benthics = self.get_value(collect_record, self.obs_benthic_path) or []
 
         benthic_attr_ids = []
         for ob in obs_benthics:

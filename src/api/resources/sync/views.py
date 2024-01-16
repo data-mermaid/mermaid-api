@@ -7,6 +7,7 @@ from rest_framework.exceptions import (
 )
 from rest_framework.response import Response
 
+from api import utils
 from api.models import Project
 from api.resources import (
     benthic_attribute,
@@ -21,11 +22,9 @@ from api.resources import (
     project_profile,
     psite,
 )
-from api import utils
+from .pull import get_record, get_serialized_records, serialize_revisions
+from .push import apply_changes, get_request_method
 from .utils import create_view_request
-from .pull import get_serialized_records, serialize_revisions, get_record
-from .push import get_request_method, apply_changes
-
 
 NO_FILTERS = ()
 PROJECT_FILTERS = ("project",)
@@ -201,7 +200,7 @@ def _get_serialized_record(viewset, profile_id, record_id):
         data = serialize_revisions(serializer, [], [record], [])
     else:
         data = serialize_revisions(serializer, [record], [], [])
-    
+
     if data["updates"]:
         return data["updates"][0]
     elif data["deletes"]:
@@ -212,15 +211,11 @@ def _get_serialized_record(viewset, profile_id, record_id):
 
 def _update_source_record(source_type, serializer, record, request, force=False):
     src = _get_source(source_type)
-    vw_request = create_view_request(
-        request, method=get_request_method(record), data=record
-    )
+    vw_request = create_view_request(request, method=get_request_method(record), data=record)
     viewset = src["view"](request=vw_request)
 
     record_id = record.get("id")
-    permission_checks = check_permissions(
-        vw_request, {source_type: record}, [source_type]
-    )
+    permission_checks = check_permissions(vw_request, {source_type: record}, [source_type])
 
     code = permission_checks[source_type]["code"]
     data = permission_checks[source_type]["data"]
@@ -229,9 +224,7 @@ def _update_source_record(source_type, serializer, record, request, force=False)
         return _error(code, exception(), data)
 
     if record_id is None:
-        return _error(
-            400, ValidationError(), data={"id": "This field may not be null."}
-        )
+        return _error(400, ValidationError(), data={"id": "This field may not be null."})
 
     if src["read_only"] is True:
         return _error(405, ReadOnlyError(f"{source_type} is read-only"))
@@ -279,9 +272,7 @@ def _get_source_records(source_type, source_data, request):
     src = _get_source(source_type)
 
     try:
-        req_params = _get_required_parameters(
-            request, source_data, src["required_filters"]
-        )
+        req_params = _get_required_parameters(request, source_data, src["required_filters"])
     except ValueError as ve:
         raise ValidationError(str(ve))
 
@@ -296,14 +287,9 @@ def check_permissions(request, data, source_types, method=False):
         src = _get_source(source_type)
         proj = _get_project(data, source_type)
         try:
-            params = _get_required_parameters(
-                request, data[source_type], src["required_filters"]
-            )
+            params = _get_required_parameters(request, data[source_type], src["required_filters"])
         except ValueError:
-            permission_checks[source_type] = {
-                "data": proj,
-                "code": 403
-            }
+            permission_checks[source_type] = {"data": proj, "code": 403}
             continue
 
         view_request = create_view_request(request, method=method, data=params)
@@ -313,10 +299,7 @@ def check_permissions(request, data, source_types, method=False):
         if source_type == PROJECTS_SOURCE_TYPE:
             vw.kwargs["pk"] = proj.get("project_id")
 
-        permission_check = {
-            "data": proj,
-            "code": 200
-        }
+        permission_check = {"data": proj, "code": 200}
         try:
             vw.check_permissions(view_request)
         except NotAuthenticated:
@@ -341,9 +324,7 @@ def vw_pull(request):
         invalid_types = ", ".join(invalid_source_types)
         raise ValidationError(f"Invalid source types: {invalid_types}")
 
-    permission_checks = check_permissions(
-        request, request_data, source_types, method="GET"
-    )
+    permission_checks = check_permissions(request, request_data, source_types, method="GET")
 
     response_data = {}
     for source_type, source_data in request_data.items():
@@ -357,10 +338,7 @@ def vw_pull(request):
             record_ids.extend(rec["id"] for rec in response["deletes"])
             response["updates"] = []
             response["deletes"] = []
-            response["error"] = {
-                "code": code,
-                "record_ids": record_ids
-            }
+            response["error"] = {"code": code, "record_ids": record_ids}
             response_data[source_type] = response
 
     return Response(response_data)

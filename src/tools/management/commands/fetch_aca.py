@@ -3,9 +3,9 @@ import shutil
 import sys
 from tempfile import NamedTemporaryFile
 from time import sleep
-from .progress_bar_base_command import ProgressBarBaseCommand
-from api.covariates.coral_atlas import CoralAtlasCovariate
 
+from api.covariates.coral_atlas import CoralAtlasCovariate
+from .progress_bar_base_command import ProgressBarBaseCommand
 
 LAT = "latitude"
 LON = "longitude"

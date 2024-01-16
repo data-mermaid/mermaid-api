@@ -1,4 +1,5 @@
 from django.contrib.gis.db import models
+
 from ..mermaid import FishAttribute
 
 
@@ -268,23 +269,15 @@ CREATE UNIQUE INDEX fish_attributes_id
     name_family = models.CharField(max_length=100)
     name_genus = models.CharField(max_length=100)
     name = models.CharField(max_length=100)
-    biomass_constant_a = models.DecimalField(
-        max_digits=7, decimal_places=6, null=True, blank=True
-    )
-    biomass_constant_b = models.DecimalField(
-        max_digits=7, decimal_places=6, null=True, blank=True
-    )
+    biomass_constant_a = models.DecimalField(max_digits=7, decimal_places=6, null=True, blank=True)
+    biomass_constant_b = models.DecimalField(max_digits=7, decimal_places=6, null=True, blank=True)
     biomass_constant_c = models.DecimalField(
         max_digits=7, decimal_places=6, default=1, null=True, blank=True
     )
     trophic_group = models.CharField(max_length=100, blank=True)
-    trophic_level = models.DecimalField(
-        max_digits=3, decimal_places=2, null=True, blank=True
-    )
+    trophic_level = models.DecimalField(max_digits=3, decimal_places=2, null=True, blank=True)
     functional_group = models.CharField(max_length=100, blank=True)
-    vulnerability = models.DecimalField(
-        max_digits=4, decimal_places=2, null=True, blank=True
-    )
+    vulnerability = models.DecimalField(max_digits=4, decimal_places=2, null=True, blank=True)
 
     class Meta:
         db_table = "mv_fish_attributes"

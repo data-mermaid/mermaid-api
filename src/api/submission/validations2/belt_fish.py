@@ -1,3 +1,4 @@
+from ...models import FishAttribute
 from .base import (
     FIELD_LEVEL,
     LIST_VALIDATION_TYPE,
@@ -10,25 +11,24 @@ from .validators import (
     AllEqualValidator,
     BiomassValidator,
     DepthValidator,
+    DrySubmitValidator,
     FishCountValidator,
     FishFamilySubsetValidator,
     FishSizeValidator,
     LenSurveyedValidator,
-    ManagementRuleValidator,
     ListRequiredValidator,
+    ManagementRuleValidator,
     ObservationCountValidator,
     PositiveIntegerValidator,
     RegionValidator,
     RequiredValidator,
     SampleDateValidator,
     SampleTimeValidator,
-    DrySubmitValidator,
     TotalFishCountValidator,
     UniqueFishbeltTransectValidator,
     UniqueManagementValidator,
     UniqueSiteValidator,
 )
-from ...models import FishAttribute
 
 belt_fish_validations = [
     Validation(
@@ -132,7 +132,7 @@ belt_fish_validations = [
         validator=FishSizeValidator(
             observations_path="data.obs_belt_fishes",
             observation_fish_attribute_path="fish_attribute",
-            observation_size_path="size"
+            observation_size_path="size",
         ),
         paths=["data.obs_belt_fishes"],
         validation_level=ROW_LEVEL,
@@ -151,7 +151,7 @@ belt_fish_validations = [
             attribute_model_class=FishAttribute,
             site_path="data.sample_event.site",
             observations_path="data.obs_belt_fishes",
-            observation_attribute_path="fish_attribute"
+            observation_attribute_path="fish_attribute",
         ),
         paths=["data.obs_belt_fishes"],
         validation_level=ROW_LEVEL,
@@ -275,10 +275,7 @@ belt_fish_validations = [
         validation_type=VALUE_VALIDATION_TYPE,
     ),
     Validation(
-        validator=AllEqualValidator(
-            path="data.obs_belt_fishes",
-            ignore_keys=["id"]
-        ),
+        validator=AllEqualValidator(path="data.obs_belt_fishes", ignore_keys=["id"]),
         paths=["data.obs_belt_fishes"],
         validation_level=RECORD_LEVEL,
         validation_type=VALUE_VALIDATION_TYPE,

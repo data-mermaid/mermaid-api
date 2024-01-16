@@ -7,10 +7,10 @@ from api.ingest import utils
 from api.models import (
     BENTHICLIT_PROTOCOL,
     BENTHICPIT_PROTOCOL,
+    BENTHICPQT_PROTOCOL,
     BLEACHINGQC_PROTOCOL,
     FISHBELT_PROTOCOL,
     HABITATCOMPLEXITY_PROTOCOL,
-    BENTHICPQT_PROTOCOL,
 )
 
 BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
@@ -110,9 +110,7 @@ def test_fishbelt_ingest(
     assert observations[2].get("count") == 1
     assert observations[2].get("fish_attribute") == str(fish_species3.id)
 
-    assert new_records[1].data["obs_belt_fishes"][2]["fish_attribute"] == str(
-        fish_species4.id
-    )
+    assert new_records[1].data["obs_belt_fishes"][2]["fish_attribute"] == str(fish_species4.id)
 
 
 def test_benthicpit_ingest(
@@ -230,7 +228,7 @@ def test_bleaching_ingest(
     assert len(obs_quadrat_benthic_percent) == 4
     assert obs_quadrat_benthic_percent[3]["quadrat_number"] == 4
     assert obs_quadrat_benthic_percent[3]["percent_hard"] == 87
-    assert obs_quadrat_benthic_percent[3]["percent_soft"] == None
+    assert obs_quadrat_benthic_percent[3]["percent_soft"] is None
     assert obs_quadrat_benthic_percent[3]["percent_algae"] == 13
 
 

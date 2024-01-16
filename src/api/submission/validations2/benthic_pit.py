@@ -1,3 +1,4 @@
+from ...models import BenthicAttribute
 from .base import (
     FIELD_LEVEL,
     LIST_VALIDATION_TYPE,
@@ -23,11 +24,9 @@ from .validators import (
     SampleDateValidator,
     SampleTimeValidator,
     UniqueBenthicTransectValidator,
-    UniqueSiteValidator,
     UniqueManagementValidator,
+    UniqueSiteValidator,
 )
-from ...models import BenthicAttribute
-
 
 benthic_pit_validations = [
     Validation(
@@ -248,9 +247,7 @@ benthic_pit_validations = [
         validation_type=VALUE_VALIDATION_TYPE,
     ),
     Validation(
-        validator=AllAttributesSameCategoryValidator(
-            obs_benthic_path="data.obs_benthic_pits"
-        ),
+        validator=AllAttributesSameCategoryValidator(obs_benthic_path="data.obs_benthic_pits"),
         paths=["data.obs_benthic_pits"],
         validation_level=RECORD_LEVEL,
         validation_type=VALUE_VALIDATION_TYPE,

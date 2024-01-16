@@ -4,15 +4,14 @@ from django.db import migrations, models
 
 
 class Migration(migrations.Migration):
-
     dependencies = [
-        ('api', '0016_auto_20230405_1218'),
+        ("api", "0016_auto_20230405_1218"),
     ]
 
     operations = [
         migrations.AddField(
-            model_name='tide',
-            name='val',
+            model_name="tide",
+            name="val",
             field=models.PositiveSmallIntegerField(default=10),
             preserve_default=False,
         ),

@@ -54,9 +54,7 @@ class ReportSerializer(object):
             if getattr(self, "show_display_fields", False) is True:
                 prepared_row[field.display] = field.to_representation(row, self)
             else:
-                prepared_row[
-                    field.alias or field.column_path
-                ] = field.to_representation(row, self)
+                prepared_row[field.alias or field.column_path] = field.to_representation(row, self)
 
         return prepared_row
 

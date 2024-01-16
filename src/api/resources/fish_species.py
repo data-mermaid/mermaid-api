@@ -1,20 +1,22 @@
-from django_filters import BaseInFilter
 from django.db.models import F, Value
 from django.db.models.functions import Concat
+from django_filters import BaseInFilter
 from rest_framework import serializers
 
+from ..models import FishSpecies
 from .base import (
     ArrayAggExt,
     BaseAPIFilterSet,
-    BaseAttributeApiViewSet,
     BaseAPISerializer,
+    BaseAttributeApiViewSet,
     RegionsSerializerMixin,
 )
 from .mixins import CreateOrUpdateSerializerMixin
-from ..models import FishSpecies
 
 
-class FishSpeciesSerializer(RegionsSerializerMixin, CreateOrUpdateSerializerMixin, BaseAPISerializer):
+class FishSpeciesSerializer(
+    RegionsSerializerMixin, CreateOrUpdateSerializerMixin, BaseAPISerializer
+):
     status = serializers.ReadOnlyField()
     display_name = serializers.SerializerMethodField()
     biomass_constant_a = serializers.DecimalField(
@@ -75,10 +77,8 @@ class FishSpeciesViewSet(BaseAttributeApiViewSet):
     queryset = (
         FishSpecies.objects.select_related()
         .annotate(
-            regions_=ArrayAggExt(
-                "regions"
-            ),
-            display_name=Concat(F("genus__name"), Value(" "), F("name"))
+            regions_=ArrayAggExt("regions"),
+            display_name=Concat(F("genus__name"), Value(" "), F("name")),
         )
         .order_by("genus", "name")
     )
@@ -94,10 +94,7 @@ class FishSpeciesViewSet(BaseAttributeApiViewSet):
 
         # Need work around because using qs.distinct("id") is causing an error because
         # of the extra "display_name" that is added to the queryset
-        if (
-            "regions" in self.request.query_params
-            and "," in self.request.query_params["regions"]
-        ):
+        if "regions" in self.request.query_params and "," in self.request.query_params["regions"]:
             ids = qs.values_list("id", flat=True).distinct()
             qs = self.get_queryset().filter(id__in=ids)
 

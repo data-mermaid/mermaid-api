@@ -2,10 +2,9 @@ from django.db.models.signals import post_delete, post_save
 from django.dispatch import receiver
 
 from ..models import Management, Project, ProjectProfile, Site, TransectMethod
+from ..utils.q import submit_job
 from ..utils.related import get_related_project
 from ..utils.summary_cache import update_summary_cache
-from ..utils.q import submit_job
-
 
 __all__ = (
     "update_summaries_on_delete_transect_method",
@@ -21,12 +20,7 @@ def update_summaries_on_delete_transect_method(sender, instance, *args, **kwargs
 
     sample_unit = instance.sample_unit
     sample_unit.delete()
-    submit_job(
-        5,
-        update_summary_cache,
-        project_id=project.pk,
-        sample_unit=instance.protocol
-    )
+    submit_job(5, update_summary_cache, project_id=project.pk, sample_unit=instance.protocol)
 
 
 @receiver(post_delete, sender=Management)

@@ -31,7 +31,6 @@ def get_serialized_data(
     relationship=None,
     order_by=None,
 ):
-
     qs = project_api_viewset.limit_to_project(None, None, project_pk=project_pk)
     qs = project_api_viewset.filter_queryset(qs)
 

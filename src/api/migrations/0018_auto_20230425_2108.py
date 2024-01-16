@@ -46,11 +46,8 @@ def revert_tides(apps, schema_editor):
 
 
 class Migration(migrations.Migration):
-
     dependencies = [
-        ('api', '0017_tide_val'),
+        ("api", "0017_tide_val"),
     ]
 
-    operations = [
-        migrations.RunPython(assign_tides, revert_tides)
-    ]
+    operations = [migrations.RunPython(assign_tides, revert_tides)]

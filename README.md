@@ -37,7 +37,18 @@ Note that the following covers only local configuration, not deployment. See the
 2. copy the sample `.env.sample` file and fill in the blanks: 
 - `cp .env.sample .env`
 
-### Local environment intialization
+### Local environment initialization
+
+#### Pre-commit
+
+To maintain code quality, this project uses [pre-commit](https://pre-commit.com/) to run a series of checks on the code before it is committed. To install pre-commit, run the following:
+
+```sh
+virtualenv venv
+source venv/bin/activate
+pip install -r requirements-dev.txt
+pre-commit install
+```
 
 Once Docker is installed and local environment variables set, run the following:
 
