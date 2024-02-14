@@ -1,6 +1,7 @@
 import json
 
 from aws_cdk import (
+    CfnOutput,
     Duration,
     RemovalPolicy,
     Stack,
@@ -113,6 +114,7 @@ class CommonStack(Stack):
             credentials=rds.Credentials.from_secret(database_credentials_secret),
         )
 
+
         self.backup_bucket = s3.Bucket(
             self,
             id="MermaidApiBackupBucket",
@@ -124,6 +126,28 @@ class CommonStack(Stack):
 
         # KMS Key for encrypting logs
         ecs_exec_kms_key = kms.Key(self, "ecsExecKmsKey")
+        ecs_exec_kms_key.add_to_resource_policy(
+            statement=iam.PolicyStatement(
+                actions=["kms:Encrypt*", "kms:Decrypt*", "kms:ReEncrypt*", "kms:GenerateDataKey*", "kms:Describe*"],
+                resources=["*"],
+                principals=[iam.ServicePrincipal("logs.us-east-1.amazonaws.com")],
+                effect=iam.Effect.ALLOW,
+                conditions={
+                    "ArnLike":{
+                        "kms:EncryptionContext:aws:logs:arn":{
+                            "Fn::Join": [
+                                "",
+                                [
+                                    "arn:",
+                                    {"Ref": "AWS::Partition"},
+                                    ":logs:us-east-1:554812291621:*"
+                                ],
+                            ],
+                        },
+                    },
+                },
+            )
+        )
 
         # Pass the KMS key in the `encryptionKey` field to associate the key to the log group
         ecs_exec_log_group = logs.LogGroup(
@@ -205,6 +229,117 @@ class CommonStack(Stack):
 
         create_cdk_bot_user(self, self.account)
 
+        CfnOutput(
+            self,
+            "ExportsOutputRefVpc8378EB38272D6E3A",
+            value=self.vpc.vpc_id,
+            export_name="mermaid-api-infra-common:ExportsOutputRefVpc8378EB38272D6E3A",
+        )
+
+        CfnOutput(
+            self,
+            "ExportsOutputFnGetAttecsExecKmsKey22C03821Arn262DB0C8",
+            value=ecs_exec_kms_key.key_arn,
+            export_name="mermaid-api-infra-common:ExportsOutputFnGetAttecsExecKmsKey22C03821Arn262DB0C8"
+        )
+
+        CfnOutput(
+            self,
+            "ExportsOutputRefECSExecLogGroup95B1C6C87E932D48",
+            value= ecs_exec_log_group.log_group_name,
+            export_name="mermaid-api-infra-common:ExportsOutputRefECSExecLogGroup95B1C6C87E932D48"
+        )
+
+        CfnOutput(
+            self,
+            "ExportsOutputFnGetAttMermaidApiBackupBucket3C31FBC2ArnD4FB466E",
+            value=self.backup_bucket.bucket_arn,
+            export_name="mermaid-api-infra-common:ExportsOutputFnGetAttMermaidApiBackupBucket3C31FBC2ArnD4FB466E"
+        )
+
+        CfnOutput(
+            self,
+            "ExportsOutputFnGetAttMermaidApiLoadBalancer302DB6A0DNSNameB6018BD2",
+            value=self.load_balancer.load_balancer_dns_name,
+            export_name="mermaid-api-infra-common:ExportsOutputFnGetAttMermaidApiLoadBalancer302DB6A0DNSNameB6018BD2"
+        )
+
+        CfnOutput(
+            self,
+            "ExportsOutputRefMermaidApiBackupBucket3C31FBC24D4BC6E3",
+            value=self.backup_bucket.bucket_name,
+            export_name="mermaid-api-infra-common:ExportsOutputRefMermaidApiBackupBucket3C31FBC24D4BC6E3"
+        )
+
+        CfnOutput(
+            self,
+            "ExportsOutputFnGetAttPostgresRdsV2B4B63A33EndpointAddressA3E1344A",
+            value=self.database.db_instance_endpoint_address,
+            export_name="mermaid-api-infra-common:ExportsOutputFnGetAttPostgresRdsV2B4B63A33EndpointAddressA3E1344A"
+        )
+
+        CfnOutput(
+            self,
+            "ExportsOutputRefDBCredentialsSecretAttachment8D28662CBA0EF0C2",
+            value= self.database.as_secret_attachment_target().target_id,
+            export_name="mermaid-api-infra-common:ExportsOutputRefDBCredentialsSecretAttachment8D28662CBA0EF0C2"
+        )
+
+        CfnOutput(
+            self,
+            "ExportsOutputFnGetAttMermaidApiClusterB0854EC6Arn311C07EE",
+            value= self.cluster.cluster_arn,
+            export_name="mermaid-api-infra-common:ExportsOutputFnGetAttMermaidApiClusterB0854EC6Arn311C07EE"
+        )
+
+        CfnOutput(
+            self,
+            "ExportsOutputRefVpcApplicationSubnet1SubnetDBACD68002B54A62",
+            value=self.vpc.select_subnets(subnet_type=ec2.SubnetType.PRIVATE_WITH_EGRESS).subnets[0].subnet_id,
+            export_name="mermaid-api-infra-common:ExportsOutputRefVpcApplicationSubnet1SubnetDBACD68002B54A62"
+        )
+
+        CfnOutput(
+            self,
+            "ExportsOutputRefVpcApplicationSubnet2Subnet171884C2D73013E3",
+            value=self.vpc.select_subnets(subnet_type=ec2.SubnetType.PRIVATE_WITH_EGRESS).subnets[1].subnet_id,
+            export_name="mermaid-api-infra-common:ExportsOutputRefVpcApplicationSubnet2Subnet171884C2D73013E3"
+        )
+
+        CfnOutput(
+            self,
+            "ExportsOutputRefVpcApplicationSubnet3SubnetCDBFDB035B675484",
+            value=self.vpc.select_subnets(subnet_type=ec2.SubnetType.PRIVATE_WITH_EGRESS).subnets[2].subnet_id,
+            export_name="mermaid-api-infra-common:ExportsOutputRefVpcApplicationSubnet3SubnetCDBFDB035B675484"
+        )
+
+        CfnOutput(
+            self,
+            "ExportsOutputFnGetAttEcsSg17B4B0B3GroupIdF7EB5B8E",
+            value=self.ecs_sg.security_group_id,
+            export_name="mermaid-api-infra-common:ExportsOutputFnGetAttEcsSg17B4B0B3GroupIdF7EB5B8E"
+        )
+
+        CfnOutput(
+            self,
+            "ExportsOutputRefMermaidApiClusterB0854EC639332EDF",
+            value=self.cluster.cluster_name,
+            export_name="mermaid-api-infra-common:ExportsOutputRefMermaidApiClusterB0854EC639332EDF"
+        )
+
+        CfnOutput(
+            self,
+            "ExportsOutputFnGetAttMermaidApiLoadBalancer302DB6A0CanonicalHostedZoneIDC5DCD9C8",
+            value=self.load_balancer.load_balancer_canonical_hosted_zone_id,
+            export_name="mermaid-api-infra-common:ExportsOutputFnGetAttMermaidApiLoadBalancer302DB6A0CanonicalHostedZoneIDC5DCD9C8"
+        )
+
+        CfnOutput(
+            self,
+            "ExportsOutputRefMermaidApiLoadBalancerMermaidApiListenerA1568DCDCCBFF169",
+            value=self.load_balancer.listeners[0].listener_arn,
+            export_name="mermaid-api-infra-common:ExportsOutputRefMermaidApiLoadBalancerMermaidApiListenerA1568DCDCCBFF169"
+        )
 
 def create_cdk_bot_user(self, account: str):
     cdk_policy = iam.Policy(
