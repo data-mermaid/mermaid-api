@@ -108,3 +108,7 @@ src/data/
 *.env
 
 .env.host
+
+*.envrc
+
+*cdk.out/*

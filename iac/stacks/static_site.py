@@ -9,7 +9,7 @@ from aws_cdk import (
 )
 from constructs import Construct
 
-from iac.settings import ProjectSettings
+from settings import ProjectSettings
 
 
 class StaticSiteStack(Stack):
