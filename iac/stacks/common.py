@@ -114,7 +114,6 @@ class CommonStack(Stack):
             credentials=rds.Credentials.from_secret(database_credentials_secret),
         )
 
-
         self.backup_bucket = s3.Bucket(
             self,
             id="MermaidApiBackupBucket",
@@ -213,6 +212,18 @@ class CommonStack(Stack):
 
         self.ecs_sg = ec2.SecurityGroup(self, id="EcsSg", vpc=self.vpc, allow_all_outbound=True)
 
+        self.ecs_sg.add_ingress_rule(
+            ec2.Peer.any_ipv4(),
+            # ec2.Peer.security_group_id(self.load_balancer.load_balancer_security_groups[0]),
+            ec2.Port.tcp(8081),
+        )
+
+        self.ecs_sg.add_egress_rule(
+            ec2.Peer.any_ipv4(),
+            # ec2.Peer.security_group_id(self.load_balancer.load_balancer_security_groups[0]),
+            ec2.Port.tcp(8081),
+        )
+
         # Allow ECS tasks to RDS
         self.ecs_sg.connections.allow_to(
             self.database.connections,
@@ -281,16 +292,17 @@ class CommonStack(Stack):
         CfnOutput(
             self,
             "ExportsOutputRefDBCredentialsSecretAttachment8D28662CBA0EF0C2",
-            value= self.database.as_secret_attachment_target().target_id,
+            value=self.database.as_secret_attachment_target().target_id,
             export_name="mermaid-api-infra-common:ExportsOutputRefDBCredentialsSecretAttachment8D28662CBA0EF0C2"
         )
 
         CfnOutput(
             self,
             "ExportsOutputFnGetAttMermaidApiClusterB0854EC6Arn311C07EE",
-            value= self.cluster.cluster_arn,
+            value=self.cluster.cluster_arn,
             export_name="mermaid-api-infra-common:ExportsOutputFnGetAttMermaidApiClusterB0854EC6Arn311C07EE"
         )
+
 
         CfnOutput(
             self,
