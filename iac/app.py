@@ -21,7 +21,7 @@ cdk_env = Environment(
     account=os.getenv("CDK_DEFAULT_ACCOUNT", None),
     region=os.getenv("CDK_DEFAULT_REGION", "us-east-1"),
 )
-env = os.getenv("ENV_NAME", "dev"),
+env_name = os.environ.get("ENV_NAME", "dev")
 
 common_stack = CommonStack(
     app,
@@ -30,7 +30,7 @@ common_stack = CommonStack(
     tags=tags,
 )
 
-if env == "dev":
+if env_name == "dev":
     dev_static_site_stack = StaticSiteStack(
         app,
         "dev-mermaid-static-site",
@@ -54,7 +54,7 @@ if env == "dev":
         api_zone=common_stack.api_zone,
         public_bucket=dev_static_site_stack.site_bucket,
     )
-elif env == "prod":
+elif env_name == "prod":
     prod_static_site_stack = StaticSiteStack(
         app,
         "prod-mermaid-static-site",
