@@ -79,7 +79,7 @@ class QueueWorker(Construct):
         dlq_alarm.add_ok_action(sns_action)
 
         # Fargate Service for Worker Task
-        fargate_service = ecs_patterns.QueueProcessingFargateService(
+        ec2_service = ecs_patterns.QueueProcessingEc2Service(
             self,
             "Service",
             cluster=cluster,
@@ -87,7 +87,7 @@ class QueueWorker(Construct):
             image=ecs.ContainerImage.from_docker_image_asset(image_asset),
             cpu=config.api.sqs_cpu,
             memory_limit_mib=config.api.sqs_memory,
-            security_groups=[container_security_group],
+            # security_groups=[container_security_group],
             secrets=api_secrets,
             environment=environment,
             command=["python", "manage.py", "simpleq_worker"],
@@ -104,7 +104,7 @@ class QueueWorker(Construct):
         )
 
         # allow worker access to public bucket
-        public_bucket.grant_read_write(fargate_service.task_definition.task_role)
+        public_bucket.grant_read_write(ec2_service.task_definition.task_role)
 
         # exports
         self.queue = queue

@@ -149,6 +149,11 @@ class CommonStack(Stack):
             enable_fargate_capacity_providers=True,
             execute_command_configuration=ecs_exec_config,
         )
+        self.cluster.add_capacity(
+            "DefaultAutoScalingGroupCapacity",
+            instance_type=ec2.InstanceType("t4g.medium"),
+            desired_capacity=1,
+        )
 
         self.load_balancer = elb.ApplicationLoadBalancer(
             self,
