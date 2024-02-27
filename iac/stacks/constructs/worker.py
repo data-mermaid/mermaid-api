@@ -12,8 +12,7 @@ from aws_cdk import (
     aws_sqs as sqs,
 )
 from constructs import Construct
-
-from iac.settings.settings import ProjectSettings
+from settings.settings import ProjectSettings
 
 
 class QueueWorker(Construct):

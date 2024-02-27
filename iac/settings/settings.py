@@ -4,8 +4,7 @@ Settings Class
 from dataclasses import dataclass
 
 from aws_cdk import Arn, ArnComponents, ArnFormat, Stack, aws_secretsmanager as secrets
-
-from iac.settings.utils import camel_case
+from settings.utils import camel_case
 
 
 @dataclass
