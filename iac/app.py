@@ -1,7 +1,6 @@
 import os
 
-from aws_cdk import App, Environment, CfnOutput
-
+from aws_cdk import App, CfnOutput, Environment
 from settings.dev import DEV_SETTINGS
 from settings.prod import PROD_SETTINGS
 from stacks.api import ApiStack
