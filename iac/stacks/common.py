@@ -151,7 +151,7 @@ class CommonStack(Stack):
         )
         self.cluster.add_capacity(
             "DefaultAutoScalingGroupCapacity",
-            instance_type=ec2.InstanceType("t4g.medium"),
+            instance_type=ec2.InstanceType("t4g.large"),
             desired_capacity=1,
         )
 
