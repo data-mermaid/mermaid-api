@@ -141,7 +141,7 @@ class CommonStack(Stack):
             logging=ecs.ExecuteCommandLogging.OVERRIDE,
         )
 
-        self.cluster = ecs.Cluster(
+        self.fargate_cluster = ecs.Cluster(
             self,
             "MermaidApiCluster",
             vpc=self.vpc,
@@ -149,10 +149,26 @@ class CommonStack(Stack):
             enable_fargate_capacity_providers=True,
             execute_command_configuration=ecs_exec_config,
         )
-        self.cluster.add_capacity(
+
+        self.ec2_cluster = ecs.Cluster(
+            self,
+            "EC2MermaidApiCluster",
+            vpc=self.vpc,
+            container_insights=True,
+            enable_fargate_capacity_providers=True,
+            execute_command_configuration=ecs_exec_config,
+        )
+        self.ec2_cluster.add_capacity(
             "DefaultAutoScalingGroupCapacity",
-            instance_type=ec2.InstanceType("t4g.large"),
+            instance_type=ec2.InstanceType("t3.medium"),
             desired_capacity=1,
+            max_capacity=6,
+            min_capacity=1,
+            vpc_subnets=ec2.SubnetSelection(
+                subnets=self.ec2_cluster.vpc.select_subnets(
+                    subnet_type=ec2.SubnetType.PRIVATE_WITH_NAT
+                ).subnets
+            ),
         )
 
         self.load_balancer = elb.ApplicationLoadBalancer(

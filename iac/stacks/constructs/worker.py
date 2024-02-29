@@ -79,32 +79,41 @@ class QueueWorker(Construct):
         dlq_alarm.add_ok_action(sns_action)
 
         # Fargate Service for Worker Task
-        ec2_service = ecs_patterns.QueueProcessingEc2Service(
-            self,
-            "Service",
-            cluster=cluster,
-            queue=queue,
-            image=ecs.ContainerImage.from_docker_image_asset(image_asset),
-            cpu=config.api.sqs_cpu,
-            memory_limit_mib=config.api.sqs_memory,
-            # security_groups=[container_security_group],
-            secrets=api_secrets,
-            environment=environment,
-            command=["python", "manage.py", "simpleq_worker"],
-            min_scaling_capacity=0,  # service should only run if ness
-            max_scaling_capacity=1,  # only run one task at a time to process messages
+        worker_params = {
+            "cluster": cluster,
+            "queue": queue,
+            "image": ecs.ContainerImage.from_docker_image_asset(image_asset),
+            "cpu": config.api.sqs_cpu,
+            "memory_limit_mib": config.api.sqs_memory,
+            "secrets": api_secrets,
+            "environment": environment,
+            "command": ["python", "manage.py", "simpleq_worker"],
+            "min_scaling_capacity": 0,  # service should only run if ness
+            "max_scaling_capacity": 1,  # only run one task at a time to process messages
             # this defines how the service shall autoscale based on the
             # SQS queue's ApproximateNumberOfMessagesVisible metric
-            scaling_steps=[
+            "scaling_steps": [
                 # when 0 messages, scale down
                 appscaling.ScalingInterval(upper=0, change=-1),
                 # when >=1 messages, scale up
                 appscaling.ScalingInterval(lower=1, change=+1),
             ],
-        )
+        }
+
+        if config.env_id == "dev":
+            worker_service = ecs_patterns.QueueProcessingEc2Service(
+                self, "EC2WorkerService", **worker_params
+            )
+        else:
+            worker_service = ecs_patterns.QueueProcessingFargateService(
+                self,
+                "Service",
+                security_groups=[container_security_group],
+                **worker_params,
+            )
 
         # allow worker access to public bucket
-        public_bucket.grant_read_write(ec2_service.task_definition.task_role)
+        public_bucket.grant_read_write(worker_service.task_definition.task_role)
 
         # exports
         self.queue = queue

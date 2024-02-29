@@ -5,6 +5,7 @@ from settings.dev import DEV_SETTINGS
 from settings.prod import PROD_SETTINGS
 from stacks.api import ApiStack
 from stacks.common import CommonStack
+from stacks.fargate_api import FargateApiStack
 from stacks.static_site import StaticSiteStack
 
 tags = {
@@ -43,7 +44,7 @@ dev_api_stack = ApiStack(
     env=cdk_env,
     tags=tags,
     config=DEV_SETTINGS,
-    cluster=common_stack.cluster,
+    cluster=common_stack.ec2_cluster,
     database=common_stack.database,
     backup_bucket=common_stack.backup_bucket,
     load_balancer=common_stack.load_balancer,
@@ -61,13 +62,13 @@ prod_static_site_stack = StaticSiteStack(
     default_cert=common_stack.default_cert,
 )
 
-prod_api_stack = ApiStack(
+prod_api_stack = FargateApiStack(
     app,
     "prod-mermaid-api-django",
     env=cdk_env,
     tags=tags,
     config=PROD_SETTINGS,
-    cluster=common_stack.cluster,
+    cluster=common_stack.fargate_cluster,
     database=common_stack.database,
     backup_bucket=common_stack.backup_bucket,
     load_balancer=common_stack.load_balancer,

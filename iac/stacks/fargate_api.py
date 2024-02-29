@@ -20,7 +20,7 @@ from settings import ProjectSettings
 from stacks.constructs.worker import QueueWorker
 
 
-class ApiStack(Stack):
+class FargateApiStack(Stack):
     def __init__(
         self,
         scope: Construct,
@@ -39,8 +39,11 @@ class ApiStack(Stack):
 
         # namespace = sd.PrivateDnsNamespace(self, "Namespace", name=config.private_dns_name, vpc=self.vpc)
 
-        task_definition = ecs.Ec2TaskDefinition(
-            self, id="ApiTaskDefinition", network_mode=ecs.NetworkMode.AWS_VPC
+        task_definition = ecs.FargateTaskDefinition(
+            self,
+            id="FargateTaskDefinition",
+            cpu=config.api.container_cpu,
+            memory_limit_mib=config.api.container_memory,
         )
 
         sys_email = os.environ.get("SYS_EMAIL") or None
@@ -133,19 +136,13 @@ class ApiStack(Stack):
         )
 
         # create a scheduled fargate task
-        backup_task = ecs_patterns.ScheduledEc2Task(
+        backup_task = ecs_patterns.ScheduledFargateTask(
             self,
             "ScheduledBackupTask",
             schedule=appscaling.Schedule.rate(Duration.days(1)),
             cluster=cluster,
-            # vpc=cluster.vpc,
-            subnet_selection=ec2.SubnetSelection(
-                subnets=cluster.vpc.select_subnets(
-                    subnet_type=ec2.SubnetType.PRIVATE_WITH_NAT
-                ).subnets
-            ),
             security_groups=[container_security_group],
-            scheduled_ec2_task_image_options=ecs_patterns.ScheduledEc2TaskImageOptions(
+            scheduled_fargate_task_image_options=ecs_patterns.ScheduledFargateTaskImageOptions(
                 image=ecs.ContainerImage.from_docker_image_asset(image_asset),
                 cpu=config.api.backup_cpu,
                 memory_limit_mib=config.api.backup_memory,
@@ -158,8 +155,6 @@ class ApiStack(Stack):
         task_definition.add_container(
             id="MermaidAPI",
             image=ecs.ContainerImage.from_docker_image_asset(image_asset),
-            cpu=config.api.container_cpu,
-            memory_limit_mib=config.api.container_memory,
             port_mappings=[ecs.PortMapping(container_port=8081)],
             environment=environment,
             secrets=api_secrets,
@@ -175,19 +170,26 @@ class ApiStack(Stack):
             # )
         )
 
-        service = ecs.Ec2Service(
+        service = ecs.FargateService(
             self,
-            id="ApiService",
+            id="Service",
             task_definition=task_definition,
+            platform_version=ecs.FargatePlatformVersion.LATEST,
             cluster=cluster,
             security_groups=[container_security_group],
+            # cloud_map_options=ecs.CloudMapOptions(cloud_map_namespace=namespace, name=self.svc),
             desired_count=config.api.container_count,
             enable_execute_command=True,
-            # vpc_subnets=ec2.SubnetSelection(
-            #     subnets=cluster.vpc.select_subnets(
-            #         subnet_type=ec2.SubnetType.PRIVATE_WITH_NAT
-            #     ).subnets
-            # ),
+            vpc_subnets=ec2.SubnetSelection(
+                subnets=cluster.vpc.select_subnets(
+                    subnet_type=ec2.SubnetType.PRIVATE_WITH_NAT
+                ).subnets
+            ),
+            # capacity_provider_strategies=ecs.CapacityProviderStrategy(
+            #     capacity_provider="FARGATE_SPOT",
+            #     base=1,
+            #     weight=50 # Not sure about this.
+            # ) # Manually set FARGATE_SPOT as deafult in cluster console.
         )
 
         # Grant Secret read to API container & backup task
