@@ -141,6 +141,15 @@ class CommonStack(Stack):
             logging=ecs.ExecuteCommandLogging.OVERRIDE,
         )
 
+        self.fargate_cluster = ecs.Cluster(
+            self,
+            "MermaidApiCluster",
+            vpc=self.vpc,
+            container_insights=True,
+            enable_fargate_capacity_providers=True,
+            execute_command_configuration=ecs_exec_config,
+        )
+
         self.cluster = ecs.Cluster(
             self,
             "EC2MermaidApiCluster",
