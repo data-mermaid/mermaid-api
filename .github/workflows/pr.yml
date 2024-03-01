@@ -22,7 +22,7 @@ jobs:
    
   cdk-diff:
     # environment: dev
-    # needs: [call-test]
+    needs: [call-test]
     runs-on: ubuntu-latest
     steps:
       - uses: actions/setup-node@v3

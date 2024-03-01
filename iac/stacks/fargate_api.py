@@ -172,7 +172,7 @@ class FargateApiStack(Stack):
 
         service = ecs.FargateService(
             self,
-            id="Service",
+            id="FargateService",
             task_definition=task_definition,
             platform_version=ecs.FargatePlatformVersion.LATEST,
             cluster=cluster,
