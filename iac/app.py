@@ -1,12 +1,11 @@
 import os
 
 from aws_cdk import App, Environment
-
-from iac.settings.dev import DEV_SETTINGS
-from iac.settings.prod import PROD_SETTINGS
-from iac.stacks.api import ApiStack
-from iac.stacks.common import CommonStack
-from iac.stacks.static_site import StaticSiteStack
+from settings.dev import DEV_SETTINGS
+from settings.prod import PROD_SETTINGS
+from stacks.api import ApiStack
+from stacks.common import CommonStack
+from stacks.static_site import StaticSiteStack
 
 tags = {
     "Owner": "sysadmin@datamermaid.org",

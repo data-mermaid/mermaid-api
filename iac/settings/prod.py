@@ -1,5 +1,5 @@
 """Settings for production environment"""
-from iac.settings.settings import DatabaseSettings, DjangoSettings, ProjectSettings
+from settings.settings import DatabaseSettings, DjangoSettings, ProjectSettings
 
 PROD_ENV_ID = "prod"
 PROD_SETTINGS = ProjectSettings(
