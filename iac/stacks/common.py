@@ -1,6 +1,7 @@
 import json
 
 from aws_cdk import (
+    CfnOutput,
     Duration,
     RemovalPolicy,
     Stack,
@@ -225,6 +226,21 @@ class CommonStack(Stack):
         )
 
         create_cdk_bot_user(self, self.account)
+
+        # The following are temporary until prod env is upto date.
+        CfnOutput(
+            self,
+            "ExportsOutputFnGetAttMermaidApiClusterB0854EC6Arn311C07EE",
+            value=self.fargate_cluster.cluster_arn,
+            export_name="mermaid-api-infra-common:ExportsOutputFnGetAttMermaidApiClusterB0854EC6Arn311C07EE",
+        )
+
+        CfnOutput(
+            self,
+            "ExportsOutputRefMermaidApiClusterB0854EC639332EDF",
+            value=self.fargate_cluster.cluster_name,
+            export_name="mermaid-api-infra-common:ExportsOutputRefMermaidApiClusterB0854EC639332EDF",
+        )
 
 
 def create_cdk_bot_user(self, account: str):

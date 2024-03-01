@@ -37,8 +37,6 @@ class ApiStack(Stack):
     ) -> None:
         super().__init__(scope, id, **kwargs)
 
-        # namespace = sd.PrivateDnsNamespace(self, "Namespace", name=config.private_dns_name, vpc=self.vpc)
-
         task_definition = ecs.Ec2TaskDefinition(
             self, id="ApiTaskDefinition", network_mode=ecs.NetworkMode.AWS_VPC
         )
@@ -166,13 +164,6 @@ class ApiStack(Stack):
             logging=ecs.LogDrivers.aws_logs(
                 stream_prefix=config.env_id, log_retention=logs.RetentionDays.ONE_MONTH
             ),
-            # health_check=elb.HealthCheck(
-            #     command=["CMD-SHELL", "curl --fail http://localhost:80/v1/health/ || exit 1"],
-            #     interval=Duration.seconds(60),
-            #     retries=5,
-            #     timeout=Duration.seconds(10),
-            #     start_period=Duration.seconds(20),
-            # )
         )
 
         service = ecs.Ec2Service(
@@ -183,11 +174,6 @@ class ApiStack(Stack):
             security_groups=[container_security_group],
             desired_count=config.api.container_count,
             enable_execute_command=True,
-            # vpc_subnets=ec2.SubnetSelection(
-            #     subnets=cluster.vpc.select_subnets(
-            #         subnet_type=ec2.SubnetType.PRIVATE_WITH_NAT
-            #     ).subnets
-            # ),
         )
 
         # Grant Secret read to API container & backup task
