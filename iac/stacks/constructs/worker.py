@@ -28,6 +28,7 @@ class QueueWorker(Construct):
         environment: dict,
         public_bucket: s3.Bucket,
         queue_name: str,
+        command: list[str],
         email: str = None,
         **kwargs,
     ) -> None:
@@ -87,7 +88,7 @@ class QueueWorker(Construct):
             "memory_limit_mib": config.api.sqs_memory,
             "secrets": api_secrets,
             "environment": environment,
-            "command": ["python", "manage.py", "simpleq_worker"],
+            "command": command,
             "min_scaling_capacity": 0,  # service should only run if ness
             "max_scaling_capacity": 1,  # only run one task at a time to process messages
             # this defines how the service shall autoscale based on the
@@ -123,3 +124,5 @@ class QueueWorker(Construct):
 
         # exports
         self.queue = queue
+        self.service = worker_service.service
+        self.task_definition = worker_service.task_definition

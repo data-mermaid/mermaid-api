@@ -33,6 +33,7 @@ class ApiStack(Stack):
         load_balancer: elb.ApplicationLoadBalancer,
         container_security_group: ec2.SecurityGroup,
         api_zone: r53.HostedZone,
+        image_processing_bucket: s3.Bucket,
         **kwargs,
     ) -> None:
         super().__init__(scope, id, **kwargs)
@@ -254,10 +255,32 @@ class ApiStack(Stack):
             public_bucket=public_bucket,
             queue_name=sqs_queue_name,
             email=sys_email,
+            command=["python", "manage.py", "simpleq_worker"]
+        )
+
+        # get monitored queue
+        image_worker = QueueWorker(
+            self,
+            "ImageWorker",
+            config=config,
+            cluster=cluster,
+            image_asset=image_asset,
+            container_security_group=container_security_group,
+            api_secrets=api_secrets,
+            environment=environment,
+            public_bucket=public_bucket,
+            queue_name=sqs_queue_name,
+            email=sys_email,
+            command=["echo", "Hello"]
         )
 
         # allow API to send messages to the queue
         worker.queue.grant_send_messages(service.task_definition.task_role)
+        image_worker.queue.grant_send_messages(service.task_definition.task_role)
 
         # allow API to read/write to the public bucket
         public_bucket.grant_read_write(service.task_definition.task_role)
+
+        # Allow Image Worker to write to image bucket
+        image_processing_bucket.grant_write(image_worker.task_definition.task_role)
+        image_processing_bucket.grant_read(service.task_definition.task_role)
