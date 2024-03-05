@@ -98,6 +98,12 @@ class QueueWorker(Construct):
                 # when >=1 messages, scale up
                 appscaling.ScalingInterval(lower=1, change=+1),
             ],
+            "capacity_provider_strategies": [
+                ecs.CapacityProviderStrategy(
+                    capacity_provider="mermaid-api-infra-common-AsgCapacityProvider760D11D9-iqzBF6LfX313",
+                    weight=100,
+                )
+            ],
         }
 
         if config.env_id == "dev":
