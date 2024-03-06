@@ -355,3 +355,6 @@ ENDPOINT_URL = None if ENVIRONMENT in ("dev", "prod") else "http://sqs:9324"
 
 # AWS S3 bucket for public files
 PUBLIC_BUCKET = os.environ.get("AWS_PUBLIC_BUCKET")
+
+# AWS S3 bucket for image processing files
+IMAGE_PROCESSING_BUCKET = os.environ.get("IMAGE_PROCESSING_BUCKET")
