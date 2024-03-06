@@ -102,6 +102,7 @@ class ApiStack(Stack):
 
         # Envir Vars
         sqs_queue_name = f"mermaid-{config.env_id}-queue"
+        image_sqs_queue_name = f"mermaid-{config.env_id}-image-processing-queue"
         environment = {
             "ENV": config.env_id,
             "ENVIRONMENT": config.env_id,
@@ -121,6 +122,7 @@ class ApiStack(Stack):
             "DB_PORT": config.database.port,
             "SQS_MESSAGE_VISIBILITY": str(config.api.sqs_message_visibility),
             "SQS_QUEUE_NAME": sqs_queue_name,
+            "IMAGE_SQS_QUEUE_NAME": image_sqs_queue_name,
         }
 
         # build image asset to be shared with API and Backup Task
@@ -255,7 +257,7 @@ class ApiStack(Stack):
             public_bucket=public_bucket,
             queue_name=sqs_queue_name,
             email=sys_email,
-            command=["python", "manage.py", "simpleq_worker"]
+            fifo=False,
         )
 
         # get monitored queue
@@ -269,9 +271,9 @@ class ApiStack(Stack):
             api_secrets=api_secrets,
             environment=environment,
             public_bucket=public_bucket,
-            queue_name=sqs_queue_name,
+            queue_name=image_sqs_queue_name,
             email=sys_email,
-            command=["echo", "Hello"]
+            fifo=False,
         )
 
         # allow API to send messages to the queue
@@ -283,4 +285,4 @@ class ApiStack(Stack):
 
         # Allow Image Worker to write to image bucket
         image_processing_bucket.grant_write(image_worker.task_definition.task_role)
-        image_processing_bucket.grant_read(service.task_definition.task_role)
+        image_processing_bucket.grant_read_write(service.task_definition.task_role)

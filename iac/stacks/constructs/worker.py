@@ -28,7 +28,7 @@ class QueueWorker(Construct):
         environment: dict,
         public_bucket: s3.Bucket,
         queue_name: str,
-        command: list[str],
+        fifo: bool = False,
         email: str = None,
         **kwargs,
     ) -> None:
@@ -39,7 +39,7 @@ class QueueWorker(Construct):
             self,
             "DLQ",
             fifo=True,
-            queue_name=f"{queue_name}-dql.fifo",
+            queue_name=f"{queue_name}-dql.fifo" if fifo else f"{queue_name}-dql",
             visibility_timeout=Duration.seconds(config.api.sqs_message_visibility),
             retention_period=Duration.days(7),
         )
@@ -48,8 +48,8 @@ class QueueWorker(Construct):
         queue = sqs.Queue(
             self,
             "Queue",
-            fifo=True,
-            queue_name=f"{queue_name}.fifo",
+            fifo=fifo,
+            queue_name=f"{queue_name}.fifo" if fifo else f"{queue_name}",
             content_based_deduplication=False,
             visibility_timeout=Duration.seconds(config.api.sqs_message_visibility),
             dead_letter_queue=sqs.DeadLetterQueue(max_receive_count=2, queue=dead_letter_queue),
@@ -88,7 +88,7 @@ class QueueWorker(Construct):
             "memory_limit_mib": config.api.sqs_memory,
             "secrets": api_secrets,
             "environment": environment,
-            "command": command,
+            "command": ["python", "manage.py", "simpleq_worker"],
             "min_scaling_capacity": 0,  # service should only run if ness
             "max_scaling_capacity": 1,  # only run one task at a time to process messages
             # this defines how the service shall autoscale based on the
