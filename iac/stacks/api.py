@@ -33,6 +33,7 @@ class ApiStack(Stack):
         load_balancer: elb.ApplicationLoadBalancer,
         container_security_group: ec2.SecurityGroup,
         api_zone: r53.HostedZone,
+        image_processing_bucket: s3.Bucket,
         **kwargs,
     ) -> None:
         super().__init__(scope, id, **kwargs)
@@ -101,6 +102,7 @@ class ApiStack(Stack):
 
         # Envir Vars
         sqs_queue_name = f"mermaid-{config.env_id}-queue"
+        image_sqs_queue_name = f"mermaid-{config.env_id}-image-processing-queue"
         environment = {
             "ENV": config.env_id,
             "ENVIRONMENT": config.env_id,
@@ -110,6 +112,7 @@ class ApiStack(Stack):
             "DEFAULT_DOMAIN_COLLECT": config.api.default_domain_collect,
             "AWS_BACKUP_BUCKET": backup_bucket.bucket_name,
             "AWS_PUBLIC_BUCKET": config.api.public_bucket,
+            "IMAGE_PROCESSING_BUCKET": image_processing_bucket.bucket_name,
             "EMAIL_HOST": config.api.email_host,
             "EMAIL_PORT": config.api.email_port,
             "AUTH0_MANAGEMENT_API_AUDIENCE": config.api.auth0_management_api_audience,
@@ -120,6 +123,7 @@ class ApiStack(Stack):
             "DB_PORT": config.database.port,
             "SQS_MESSAGE_VISIBILITY": str(config.api.sqs_message_visibility),
             "SQS_QUEUE_NAME": sqs_queue_name,
+            "IMAGE_SQS_QUEUE_NAME": image_sqs_queue_name,
         }
 
         # build image asset to be shared with API and Backup Task
@@ -174,14 +178,18 @@ class ApiStack(Stack):
             security_groups=[container_security_group],
             desired_count=config.api.container_count,
             enable_execute_command=True,
+            capacity_provider_strategies=[
+                ecs.CapacityProviderStrategy(
+                    capacity_provider="mermaid-api-infra-common-AsgCapacityProvider760D11D9-iqzBF6LfX313",
+                    weight=100,
+                )
+            ],
         )
 
         # Grant Secret read to API container & backup task
         for _, container_secret in api_secrets.items():
             container_secret.grant_read(service.task_definition.execution_role)
             container_secret.grant_read(backup_task.task_definition.execution_role)
-
-        # add FargateService as target to LoadBalancer/Listener, currently, send all traffic. TODO filter by domain?
 
         target_group = elb.ApplicationTargetGroup(
             self,
@@ -250,10 +258,32 @@ class ApiStack(Stack):
             public_bucket=public_bucket,
             queue_name=sqs_queue_name,
             email=sys_email,
+            fifo=False,
+        )
+
+        # get monitored queue
+        image_worker = QueueWorker(
+            self,
+            "ImageWorker",
+            config=config,
+            cluster=cluster,
+            image_asset=image_asset,
+            container_security_group=container_security_group,
+            api_secrets=api_secrets,
+            environment=environment,
+            public_bucket=public_bucket,
+            queue_name=image_sqs_queue_name,
+            email=sys_email,
+            fifo=False,
         )
 
         # allow API to send messages to the queue
         worker.queue.grant_send_messages(service.task_definition.task_role)
+        image_worker.queue.grant_send_messages(service.task_definition.task_role)
 
         # allow API to read/write to the public bucket
         public_bucket.grant_read_write(service.task_definition.task_role)
+
+        # Allow Image Worker to write to image bucket
+        image_processing_bucket.grant_write(image_worker.task_definition.task_role)
+        image_processing_bucket.grant_read_write(service.task_definition.task_role)

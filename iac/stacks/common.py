@@ -5,6 +5,7 @@ from aws_cdk import (
     Duration,
     RemovalPolicy,
     Stack,
+    aws_autoscaling as autoscale,
     aws_certificatemanager as acm,
     aws_ec2 as ec2,
     aws_ecs as ecs,
@@ -123,6 +124,15 @@ class CommonStack(Stack):
             block_public_access=s3.BlockPublicAccess.BLOCK_ALL,
         )
 
+        self.image_processing_bucket = s3.Bucket(
+            self,
+            id="MermaidImageProcessingBackupBucket",
+            bucket_name="mermaid-image-processing",
+            removal_policy=RemovalPolicy.RETAIN,
+            public_read_access=False,
+            block_public_access=s3.BlockPublicAccess.BLOCK_ALL,
+        )
+
         # KMS Key for encrypting logs
         ecs_exec_kms_key = kms.Key(self, "ecsExecKmsKey")
 
@@ -159,17 +169,33 @@ class CommonStack(Stack):
             enable_fargate_capacity_providers=True,
             execute_command_configuration=ecs_exec_config,
         )
-        self.cluster.add_capacity(
-            "DefaultAutoScalingGroupCapacity",
-            instance_type=ec2.InstanceType("t3.medium"),
-            desired_capacity=1,
-            max_capacity=6,
+
+        auto_scaling_group = autoscale.AutoScalingGroup(
+            self,
+            "ASG",
+            vpc=self.vpc,
+            instance_type=ec2.InstanceType("t3a.large"),
+            machine_image=ecs.EcsOptimizedImage.amazon_linux2(),
             min_capacity=1,
-            vpc_subnets=ec2.SubnetSelection(
-                subnets=self.cluster.vpc.select_subnets(
-                    subnet_type=ec2.SubnetType.PRIVATE_WITH_NAT
-                ).subnets
-            ),
+            max_capacity=4,
+            # NOTE: not setting the desired capacity so ECS can manage it.
+        )
+
+        capacity_provider = ecs.AsgCapacityProvider(
+            self,
+            "AsgCapacityProvider",
+            auto_scaling_group=auto_scaling_group,
+            enable_managed_scaling=True,
+            enable_managed_termination_protection=False,
+        )
+        self.cluster.add_asg_capacity_provider(capacity_provider)
+
+        self.cluster.add_default_capacity_provider_strategy(
+            [
+                ecs.CapacityProviderStrategy(
+                    capacity_provider=capacity_provider.capacity_provider_name, weight=100
+                )
+            ]
         )
 
         self.load_balancer = elb.ApplicationLoadBalancer(
