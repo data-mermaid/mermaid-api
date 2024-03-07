@@ -174,14 +174,18 @@ class ApiStack(Stack):
             security_groups=[container_security_group],
             desired_count=config.api.container_count,
             enable_execute_command=True,
+            capacity_provider_strategies=[
+                ecs.CapacityProviderStrategy(
+                    capacity_provider="mermaid-api-infra-common-AsgCapacityProvider760D11D9-iqzBF6LfX313",
+                    weight=100,
+                )
+            ],
         )
 
         # Grant Secret read to API container & backup task
         for _, container_secret in api_secrets.items():
             container_secret.grant_read(service.task_definition.execution_role)
             container_secret.grant_read(backup_task.task_definition.execution_role)
-
-        # add FargateService as target to LoadBalancer/Listener, currently, send all traffic. TODO filter by domain?
 
         target_group = elb.ApplicationTargetGroup(
             self,
