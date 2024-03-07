@@ -124,6 +124,15 @@ class CommonStack(Stack):
             block_public_access=s3.BlockPublicAccess.BLOCK_ALL,
         )
 
+        self.image_processing_bucket = s3.Bucket(
+            self,
+            id="MermaidImageProcessingBackupBucket",
+            bucket_name="mermaid-image-processing",
+            removal_policy=RemovalPolicy.RETAIN,
+            public_read_access=False,
+            block_public_access=s3.BlockPublicAccess.BLOCK_ALL,
+        )
+
         # KMS Key for encrypting logs
         ecs_exec_kms_key = kms.Key(self, "ecsExecKmsKey")
 

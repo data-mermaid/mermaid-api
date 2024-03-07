@@ -28,6 +28,7 @@ class QueueWorker(Construct):
         environment: dict,
         public_bucket: s3.Bucket,
         queue_name: str,
+        fifo: bool = False,
         email: str = None,
         **kwargs,
     ) -> None:
@@ -37,8 +38,8 @@ class QueueWorker(Construct):
         dead_letter_queue = sqs.Queue(
             self,
             "DLQ",
-            fifo=True,
-            queue_name=f"{queue_name}-dql.fifo",
+            fifo=True if fifo else None, # Known cloudformation issue, set to None for none-fifo
+            queue_name=f"{queue_name}-dql.fifo" if fifo else f"{queue_name}-dql",
             visibility_timeout=Duration.seconds(config.api.sqs_message_visibility),
             retention_period=Duration.days(7),
         )
@@ -47,9 +48,9 @@ class QueueWorker(Construct):
         queue = sqs.Queue(
             self,
             "Queue",
-            fifo=True,
-            queue_name=f"{queue_name}.fifo",
-            content_based_deduplication=False,
+            fifo=True if fifo else None, # Known cloudformation issue, set to None for none-fifo
+            queue_name=f"{queue_name}.fifo" if fifo else f"{queue_name}",
+            content_based_deduplication=None,
             visibility_timeout=Duration.seconds(config.api.sqs_message_visibility),
             dead_letter_queue=sqs.DeadLetterQueue(max_receive_count=2, queue=dead_letter_queue),
         )
@@ -123,3 +124,5 @@ class QueueWorker(Construct):
 
         # exports
         self.queue = queue
+        self.service = worker_service.service
+        self.task_definition = worker_service.task_definition
