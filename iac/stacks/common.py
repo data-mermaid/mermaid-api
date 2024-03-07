@@ -72,20 +72,6 @@ class CommonStack(Stack):
             description="Security group for VPC Endpoints for ECR",
         )
 
-        # create VPC endopoints for ECR
-        self.vpc.add_interface_endpoint(
-            "ecr-api-endpoint",
-            service=ec2.InterfaceVpcEndpointAwsService.ECR,
-            subnets=ec2.SubnetSelection(subnet_type=ec2.SubnetType.PRIVATE_WITH_EGRESS),
-            security_groups=[vpc_ep_ecr_sg],
-        )
-        self.vpc.add_interface_endpoint(
-            "ecr-dkr-endpoint",
-            service=ec2.InterfaceVpcEndpointAwsService.ECR_DOCKER,
-            subnets=ec2.SubnetSelection(subnet_type=ec2.SubnetType.PRIVATE_WITH_EGRESS),
-            security_groups=[vpc_ep_ecr_sg],
-        )
-
         # create a secret so we can manually set the username
         database_credentials_secret = sm.Secret(
             self,

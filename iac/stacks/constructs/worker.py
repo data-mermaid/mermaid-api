@@ -38,7 +38,7 @@ class QueueWorker(Construct):
         dead_letter_queue = sqs.Queue(
             self,
             "DLQ",
-            fifo=True if fifo else None, # Known cloudformation issue, set to None for none-fifo
+            fifo=True if fifo else None,  # Known cloudformation issue, set to None for none-fifo
             queue_name=f"{queue_name}-dql.fifo" if fifo else f"{queue_name}-dql",
             visibility_timeout=Duration.seconds(config.api.sqs_message_visibility),
             retention_period=Duration.days(7),
@@ -48,7 +48,7 @@ class QueueWorker(Construct):
         queue = sqs.Queue(
             self,
             "Queue",
-            fifo=True if fifo else None, # Known cloudformation issue, set to None for none-fifo
+            fifo=True if fifo else None,  # Known cloudformation issue, set to None for none-fifo
             queue_name=f"{queue_name}.fifo" if fifo else f"{queue_name}",
             content_based_deduplication=None,
             visibility_timeout=Duration.seconds(config.api.sqs_message_visibility),
