@@ -121,71 +121,49 @@ class SummarySampleEventSQLModel(SummarySampleEventBaseModel):
         jsonb_strip_nulls(jsonb_build_object(
             'beltfish', NULLIF(jsonb_strip_nulls(jsonb_build_object(
                 'sample_unit_count', fb.sample_unit_count,
-                'biomass_kgha_avg', (CASE WHEN project.data_policy_beltfish < 50 THEN NULL ELSE fb.biomass_kgha_avg END),
-                'biomass_kgha_sd', (CASE WHEN project.data_policy_beltfish < 50 THEN NULL ELSE fb.biomass_kgha_sd END),
-                'biomass_kgha_trophic_group_avg', (CASE WHEN project.data_policy_beltfish < 50 THEN NULL ELSE
-                fbtg.biomass_kgha_trophic_group_avg END),
-                'biomass_kgha_trophic_group_sd', (CASE WHEN project.data_policy_beltfish < 50 THEN NULL ELSE
-                fbtg.biomass_kgha_trophic_group_sd END)
+                'biomass_kgha_avg', fb.biomass_kgha_avg,
+                'biomass_kgha_sd', fb.biomass_kgha_sd,
+                'biomass_kgha_trophic_group_avg', fbtg.biomass_kgha_trophic_group_avg,
+                'biomass_kgha_trophic_group_sd', fbtg.biomass_kgha_trophic_group_sd
             )), '{}'),
             'benthiclit', NULLIF(jsonb_strip_nulls(jsonb_build_object(
                 'sample_unit_count', bl.sample_unit_count,
-                'percent_cover_benthic_category_avg', (CASE WHEN project.data_policy_benthiclit < 50 THEN NULL ELSE
-                bl.percent_cover_benthic_category_avg END),
-                'percent_cover_benthic_category_sd', (CASE WHEN project.data_policy_benthiclit < 50 THEN NULL ELSE
-                bl.percent_cover_benthic_category_sd END)
+                'percent_cover_benthic_category_avg', bl.percent_cover_benthic_category_avg,
+                'percent_cover_benthic_category_sd', bl.percent_cover_benthic_category_sd
             )), '{}'),
             'benthicpit', NULLIF(jsonb_strip_nulls(jsonb_build_object(
                 'sample_unit_count', bp.sample_unit_count,
-                'percent_cover_benthic_category_avg', (CASE WHEN project.data_policy_benthicpit < 50 THEN NULL ELSE
-                bp.percent_cover_benthic_category_avg END),
-                'percent_cover_benthic_category_sd', (CASE WHEN project.data_policy_benthicpit < 50 THEN NULL ELSE
-                bp.percent_cover_benthic_category_sd END)
+                'percent_cover_benthic_category_avg', bp.percent_cover_benthic_category_avg, 
+                'percent_cover_benthic_category_sd', bp.percent_cover_benthic_category_sd
             )), '{}'),
             'benthicpqt', NULLIF(jsonb_strip_nulls(jsonb_build_object(
                 'sample_unit_count', pqt.sample_unit_count,
-                'percent_cover_benthic_category_avg', (CASE WHEN project.data_policy_benthicpqt < 50 THEN NULL ELSE
-                pqt.percent_cover_benthic_category_avg END),
-                'percent_cover_benthic_category_sd', (CASE WHEN project.data_policy_benthicpqt < 50 THEN NULL ELSE
-                pqt.percent_cover_benthic_category_sd END)
+                'percent_cover_benthic_category_avg', pqt.percent_cover_benthic_category_avg,
+                'percent_cover_benthic_category_sd', pqt.percent_cover_benthic_category_sd
             )), '{}'),
             'habitatcomplexity', NULLIF(jsonb_strip_nulls(jsonb_build_object(
                 'sample_unit_count', hc.sample_unit_count,
-                'score_avg_avg', (CASE WHEN project.data_policy_habitatcomplexity < 50 THEN NULL ELSE hc.score_avg_avg END)
+                'score_avg_avg', hc.score_avg_avg
             )), '{}'),
             'colonies_bleached', NULLIF(jsonb_strip_nulls(jsonb_build_object(
                 'sample_unit_count', bleachingqc.sample_unit_count,
-                'count_total_avg', (CASE WHEN project.data_policy_bleachingqc < 50 THEN NULL ELSE bleachingqc.count_total_avg
-                END),
-                'count_genera_avg', (CASE WHEN project.data_policy_bleachingqc < 50 THEN NULL ELSE
-                bleachingqc.count_genera_avg END),
-                'percent_normal_avg', (CASE WHEN project.data_policy_bleachingqc < 50 THEN NULL ELSE
-                bleachingqc.percent_normal_avg END),
-                'percent_pale_avg', (CASE WHEN project.data_policy_bleachingqc < 50 THEN NULL ELSE
-                bleachingqc.percent_pale_avg END),
-                'percent_20_avg', (CASE WHEN project.data_policy_bleachingqc < 50 THEN NULL ELSE
-                bleachingqc.percent_20_avg END),
-                'percent_50_avg', (CASE WHEN project.data_policy_bleachingqc < 50 THEN NULL ELSE
-                bleachingqc.percent_50_avg END),
-                'percent_80_avg', (CASE WHEN project.data_policy_bleachingqc < 50 THEN NULL ELSE
-                bleachingqc.percent_80_avg END),
-                'percent_100_avg', (CASE WHEN project.data_policy_bleachingqc < 50 THEN NULL ELSE
-                bleachingqc.percent_100_avg END),
-                'percent_dead_avg', (CASE WHEN project.data_policy_bleachingqc < 50 THEN NULL ELSE
-                bleachingqc.percent_dead_avg END),
-                'percent_bleached_avg', (CASE WHEN project.data_policy_bleachingqc < 50 THEN NULL ELSE
-                bleachingqc.percent_bleached_avg END)
+                'count_total_avg', bleachingqc.count_total_avg,
+                'count_genera_avg', bleachingqc.count_genera_avg,
+                'percent_normal_avg', bleachingqc.percent_normal_avg,
+                'percent_pale_avg', bleachingqc.percent_pale_avg,
+                'percent_20_avg', bleachingqc.percent_20_avg,
+                'percent_50_avg', bleachingqc.percent_50_avg,
+                'percent_80_avg', bleachingqc.percent_80_avg,
+                'percent_100_avg', bleachingqc.percent_100_avg,
+                'percent_dead_avg', bleachingqc.percent_dead_avg,
+                'percent_bleached_avg', bleachingqc.percent_bleached_avg
             )), '{}'),
             'quadrat_benthic_percent', NULLIF(jsonb_strip_nulls(jsonb_build_object(
                 'sample_unit_count', bleachingqc.sample_unit_count,
-                'percent_hard_avg_avg', (CASE WHEN project.data_policy_bleachingqc < 50 THEN NULL ELSE
-                bleachingqc.percent_hard_avg_avg END),
-                'percent_soft_avg_avg', (CASE WHEN project.data_policy_bleachingqc < 50 THEN NULL ELSE
-                bleachingqc.percent_soft_avg_avg END),
-                'percent_algae_avg_avg', (CASE WHEN project.data_policy_bleachingqc < 50 THEN NULL ELSE
-                bleachingqc.percent_algae_avg_avg END),
-                'quadrat_count_avg', (CASE WHEN project.data_policy_bleachingqc < 50 THEN NULL ELSE
-                bleachingqc.quadrat_count_avg END)
+                'percent_hard_avg_avg', bleachingqc.percent_hard_avg_avg,
+                'percent_soft_avg_avg', bleachingqc.percent_soft_avg_avg,
+                'percent_algae_avg_avg', bleachingqc.percent_algae_avg_avg,
+                'quadrat_count_avg', bleachingqc.quadrat_count_avg
             )), '{}')
         )) AS protocols
 
