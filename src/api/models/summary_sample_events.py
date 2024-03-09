@@ -1,7 +1,38 @@
 from django.contrib.gis.db import models
+from django.db import models as dj_models
 
 from sqltables import SQLTableArg, SQLTableManager
-from . import Project
+from . import Project, ProjectProfile
+
+
+class SummarySampleEventQuerySet(dj_models.QuerySet):
+    PRIVATE_POLICY = "private"
+
+    def _get_policy_lookup(self):
+        lookup = {}
+        for field in Project._meta.fields:
+            if field.choices == Project.DATA_POLICIES:
+                lookup[field.name] = field.name.split("_")[-1]
+
+        return lookup
+
+    def private(self, profile):
+        private_projects = {
+            str(pp.project_id) for pp in ProjectProfile.objects.filter(profile=profile)
+        }
+        lookup = self._get_policy_lookup()
+        for record in super().all():
+            if record.project_id in private_projects:
+                yield record
+            else:
+                for protocol_policy, protocol in lookup.items():
+                    if (
+                        protocol in record.protocols
+                        and getattr(record, protocol_policy) == self.PRIVATE_POLICY
+                    ):
+                        record.protocols[protocol] = None
+
+                yield record
 
 
 class SummarySampleEventBaseModel(models.Model):
@@ -365,3 +396,5 @@ class SummarySampleEventSQLModel(SummarySampleEventBaseModel):
 class SummarySampleEventModel(SummarySampleEventBaseModel):
     class Meta:
         db_table = "summary_sample_event"
+
+    objects = SummarySampleEventQuerySet.as_manager()
