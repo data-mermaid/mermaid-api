@@ -24,6 +24,7 @@ def project1(fish_family1, fish_family2, fish_family3, fish_family4):
     project = Project.objects.create(
         name="Test Project 1",
         status=Project.OPEN,
+        data_policy_beltfish=Project.PRIVATE,
         data={
             "settings": {
                 "fishFamilySubset": [
@@ -105,6 +106,12 @@ def token2(profile2):
 
 
 @pytest.fixture
+def token3(profile3):
+    auth_user = profile3.authusers.first()
+    return tokenutils.create_token(auth_user.user_id)
+
+
+@pytest.fixture
 def project_profile1(project1, profile1):
     return ProjectProfile.objects.create(
         project=project1, profile=profile1, role=ProjectProfile.ADMIN
@@ -115,6 +122,13 @@ def project_profile1(project1, profile1):
 def project_profile2(project1, profile2):
     return ProjectProfile.objects.create(
         project=project1, profile=profile2, role=ProjectProfile.COLLECTOR
+    )
+
+
+@pytest.fixture
+def project_profile3(project3, profile3):
+    return ProjectProfile.objects.create(
+        project=project3, profile=profile3, role=ProjectProfile.COLLECTOR
     )
 
 
@@ -252,4 +266,17 @@ def api_client1(token1, project_profile1):
 def api_client2(token2, project_profile2):
     client = APIClient()
     client.credentials(HTTP_AUTHORIZATION=f"Bearer {token2}")
+    return client
+
+
+@pytest.fixture
+def api_client3(token3, project_profile3):
+    client = APIClient()
+    client.credentials(HTTP_AUTHORIZATION=f"Bearer {token3}")
+    return client
+
+
+@pytest.fixture
+def api_client_public():
+    client = APIClient()
     return client
