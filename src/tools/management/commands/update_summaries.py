@@ -48,6 +48,9 @@ class Command(BaseCommand):
         projects = Project.objects.all()
         if project_id:
             projects = projects.filter(id=project_id)
+            if not projects.exists():
+                print(f"Project with id {project_id} not found")
+                return
 
         for project in projects:
             if in_foreground:
