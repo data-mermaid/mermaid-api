@@ -76,3 +76,47 @@ def test_summary_sample_event(
         benthicpit["percent_cover_benthic_category_avg"][origin]
         == obs_benthic_pit1_benthic_category_avgs[origin]
     )
+
+
+def test_modified_protocols(
+    db_setup,
+    api_client1,
+    api_client3,
+    api_client_public,
+    belt_fish_project,
+    benthic_pit_project,
+    obs_belt_fish1_1_biomass,
+    obs_belt_fish1_2_biomass,
+    obs_belt_fish1_3_biomass,
+    obs_benthic_pit1_benthic_category_avgs,
+    obs_benthic_pit1_3,
+    update_summary_cache,
+):
+    url = reverse("summarysampleevent-list")
+
+    # User has access to the private data
+    request = api_client1.get(url, None, format="json")
+    response_data = request.json()
+    assert response_data["count"] == 2
+    for record in response_data["results"]:
+        protocols = record["protocols"]
+        assert "beltfish" in protocols
+        assert protocols["beltfish"] is not None
+    
+    # User doesn't have access to the private data
+    request = api_client3.get(url, None, format="json")
+    response_data = request.json()
+    assert response_data["count"] == 2
+    for record in response_data["results"]:
+        protocols = record["protocols"]
+        assert "beltfish" in protocols
+        assert protocols["beltfish"] is None
+
+    # Anonymous user doesn't have access to the private data
+    request = api_client_public.get(url, None, format="json")
+    response_data = request.json()
+    assert response_data["count"] == 2
+    for record in response_data["results"]:
+        protocols = record["protocols"]
+        assert "beltfish" in protocols
+        assert protocols["beltfish"] is None

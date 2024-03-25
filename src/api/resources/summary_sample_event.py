@@ -1,5 +1,7 @@
 from django.db.models import CharField, Q
 from django_filters import rest_framework as filters
+from rest_framework import serializers
+from rest_framework.viewsets import ReadOnlyModelViewSet
 
 from ..models import Project, SummarySampleEventModel
 from ..permissions import UnauthenticatedReadOnlyPermission
@@ -23,6 +25,7 @@ from .sampleunitmethods import AggregatedViewMixin, BaseApiViewSet
 class SummarySampleEventSerializer(BaseViewAPISerializer):
     id = None
     updated_by = None
+    protocols = serializers.JSONField(source="modified_protocols")
 
     class Meta(BaseViewAPISerializer.Meta):
         model = SummarySampleEventModel
@@ -33,6 +36,7 @@ class SummarySampleEventSerializer(BaseViewAPISerializer):
 class SummarySampleEventGeoSerializer(BaseViewAPIGeoSerializer):
     id = None
     updated_by = None
+    protocols = serializers.JSONField(source="modified_protocols")
 
     class Meta(BaseViewAPIGeoSerializer.Meta):
         model = SummarySampleEventModel
@@ -41,6 +45,7 @@ class SummarySampleEventGeoSerializer(BaseViewAPIGeoSerializer):
 
 class SummarySampleEventCSVSerializer(ReportSerializer):
     id = None
+    protocols = serializers.JSONField(source="modified_protocols")
 
     fields = [
         ReportField("project_name", "Project name"),
@@ -57,140 +62,140 @@ class SummarySampleEventCSVSerializer(ReportSerializer):
         ReportField("management_name", "Management name"),
         ReportField("management_notes", "Management notes"),
         ReportField(
-            "protocols",
+            "modified_protocols",
             "Fish Belt transect count",
             to_protocol_value,
             protocol="beltfish",
             key="sample_unit_count",
         ),
         ReportField(
-            "protocols",
+            "modified_protocols",
             "Fish Belt average biomass (kg/ha)",
             to_protocol_value,
             protocol="beltfish",
             key="biomass_kgha_avg",
         ),
         ReportField(
-            "protocols",
+            "modified_protocols",
             "Fish Belt biomass (kg/ha) standard deviation",
             to_protocol_value,
             protocol="beltfish",
             key="biomass_kgha_sd",
         ),
         ReportField(
-            "protocols",
+            "modified_protocols",
             "Fish Belt average biomass (kg/ha) by trophic group",
             to_protocol_value,
             protocol="beltfish",
             key="biomass_kgha_trophic_group_avg",
         ),
         ReportField(
-            "protocols",
+            "modified_protocols",
             "Fish Belt biomass (kg/ha) standard deviation by trophic group",
             to_protocol_value,
             protocol="beltfish",
             key="biomass_kgha_trophic_group_sd",
         ),
         ReportField(
-            "protocols",
+            "modified_protocols",
             "Benthic LIT transect count",
             to_protocol_value,
             protocol="benthiclit",
             key="sample_unit_count",
         ),
         ReportField(
-            "protocols",
+            "modified_protocols",
             "Benthic LIT average % cover by benthic category",
             to_protocol_value,
             protocol="benthiclit",
             key="percent_cover_benthic_category_avg",
         ),
         ReportField(
-            "protocols",
+            "modified_protocols",
             "Benthic LIT % cover standard deviation by benthic category",
             to_protocol_value,
             protocol="benthiclit",
             key="percent_cover_benthic_category_sd",
         ),
         ReportField(
-            "protocols",
+            "modified_protocols",
             "Benthic PIT transect count",
             to_protocol_value,
             protocol="benthicpit",
             key="sample_unit_count",
         ),
         ReportField(
-            "protocols",
+            "modified_protocols",
             "Benthic PIT average % cover by benthic category",
             to_protocol_value,
             protocol="benthicpit",
             key="percent_cover_benthic_category_avg",
         ),
         ReportField(
-            "protocols",
+            "modified_protocols",
             "Benthic PIT % cover standard deviation by benthic category",
             to_protocol_value,
             protocol="benthicpit",
             key="percent_cover_benthic_category_sd",
         ),
         ReportField(
-            "protocols",
+            "modified_protocols",
             "Benthic PQT transect count",
             to_protocol_value,
             protocol="benthicpqt",
             key="sample_unit_count",
         ),
         ReportField(
-            "protocols",
+            "modified_protocols",
             "Benthic PQT average % cover by benthic category",
             to_protocol_value,
             protocol="benthicpqt",
             key="percent_cover_benthic_category_avg",
         ),
         ReportField(
-            "protocols",
+            "modified_protocols",
             "Benthic PQT % cover standard deviation by benthic category",
             to_protocol_value,
             protocol="benthicpqt",
             key="percent_cover_benthic_category_sd",
         ),
         ReportField(
-            "protocols",
+            "modified_protocols",
             "Habitat Complexity transect count",
             to_protocol_value,
             protocol="habitatcomplexity",
             key="sample_unit_count",
         ),
         ReportField(
-            "protocols",
+            "modified_protocols",
             "Habitat Complexity average score",
             to_protocol_value,
             protocol="habitatcomplexity",
             key="score_avg_avg",
         ),
         ReportField(
-            "protocols",
+            "modified_protocols",
             "Habitat Complexity score standard deviation",
             to_protocol_value,
             protocol="habitatcomplexity",
             key="score_avg_sd",
         ),
         ReportField(
-            "protocols",
+            "modified_protocols",
             "Bleaching quadrat collection count",
             to_protocol_value,
             protocol="colonies_bleached",
             key="sample_unit_count",
         ),
         ReportField(
-            "protocols",
+            "modified_protocols",
             "Bleaching colonies",
             to_colonies_bleached,
             protocol="colonies_bleached",
             key="percent_bleached",
         ),
         ReportField(
-            "protocols",
+            "modified_protocols",
             "Bleaching % cover",
             to_percent_cover,
             protocol="quadrat_benthic_percent",
@@ -253,12 +258,18 @@ class SummarySampleEventFilterSet(AggregatedViewFilterSet):
         }
 
 
-class SummarySampleEventView(AggregatedViewMixin, BaseApiViewSet):
+class SummarySampleEventView(ReadOnlyModelViewSet, AggregatedViewMixin, BaseApiViewSet):
     drf_label = "summary-sample-event"
     permission_classes = [UnauthenticatedReadOnlyPermission]
     serializer_class = SummarySampleEventSerializer
     serializer_class_geojson = SummarySampleEventGeoSerializer
     serializer_class_csv = SummarySampleEventCSVSerializer
     filterset_class = SummarySampleEventFilterSet
-    queryset = SummarySampleEventModel.objects.filter(~Q(project_status=Project.TEST))
     order_by = ("project_name", "site_name")
+
+    def get_queryset(self):
+        user = self.request.user
+        profile = user.profile if hasattr(user, "profile") else None
+        return SummarySampleEventModel.objects.filter(~Q(project_status=Project.TEST)).privatize(
+            profile=profile
+        )
