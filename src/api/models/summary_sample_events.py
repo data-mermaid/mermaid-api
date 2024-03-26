@@ -482,6 +482,8 @@ class SummarySampleEventSQLModel(SummarySampleEventBaseModel):
 
 
 class SummarySampleEventModel(SummarySampleEventBaseModel):
+    created_on = models.DateTimeField(auto_now_add=True)
+
     class Meta:
         db_table = "summary_sample_event"
 

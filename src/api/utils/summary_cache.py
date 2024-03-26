@@ -1,4 +1,5 @@
 from django.db import transaction
+from django.db.models.fields import DateTimeField
 from django.utils import timezone
 
 from ..models import (
@@ -153,6 +154,7 @@ def _update_project_summary_sample_event(project_id, skip_test_project=True):
         values = {
             field.name: getattr(record, field.name)
             for field in SummarySampleEventModel._meta.fields
+            if not (isinstance(field, DateTimeField) and field.auto_now_add)
         }
         SummarySampleEventModel.objects.create(**values)
 
