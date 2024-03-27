@@ -21,9 +21,22 @@ class Command(BaseCommand):
             help="Include test_projects when running update.",
         )
 
+        parser.add_argument(
+            "--project_id",
+            help="Run for only project.",
+        )
+
+        parser.add_argument(
+            "--foreground",
+            action="store_true",
+            help="Run in the foreground.",
+        )
+
     def handle(self, *args, **options):
         is_forced = options["force"]
         skip_test_project = options["test_projects"] is not True
+        in_foreground = options["foreground"]
+        project_id = options["project_id"]
 
         if settings.ENVIRONMENT not in ("dev", "prod") and is_forced is False:
             print("Skipping update")
@@ -31,10 +44,24 @@ class Command(BaseCommand):
 
         start_time = time()
         print("Updating summaries...")
-        for project in Project.objects.all():
-            submit_job(
-                5, update_summary_cache, project_id=project.pk, skip_test_project=skip_test_project
-            )
+
+        projects = Project.objects.all()
+        if project_id:
+            projects = projects.filter(id=project_id)
+            if not projects.exists():
+                print(f"Project with id {project_id} not found")
+                return
+
+        for project in projects:
+            if in_foreground:
+                update_summary_cache(project_id=project.pk, skip_test_project=skip_test_project)
+            else:
+                submit_job(
+                    5,
+                    update_summary_cache,
+                    project_id=project.pk,
+                    skip_test_project=skip_test_project,
+                )
 
         end_time = time()
         print(f"Done: {end_time - start_time:.3f}s")
