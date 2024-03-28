@@ -22,6 +22,7 @@ from .resources.pmanagement import PManagementViewSet
 from .resources.profile import ProfileViewSet
 from .resources.project import ProjectViewSet
 from .resources.project_profile import ProjectProfileViewSet
+from .resources.project_sample_event_summaries import ProjectSummarySampleEventViewSet
 from .resources.project_tag import ProjectTagViewSet
 from .resources.psite import PSiteViewSet
 from .resources.quadrat_collection import QuadratCollectionViewSet
@@ -95,6 +96,13 @@ router.register(r"fishgroupings", FishGroupingViewSet, "fishgrouping")
 # choices
 router.register(r"choices", ChoiceViewSet, "choice")
 router.register(r"fishsizes", FishSizeViewSet, "fishsizes")
+
+# project sample event summaries
+router.register(
+    r"project_summary_sample_event",
+    ProjectSummarySampleEventViewSet,
+    "project_summary_sample_event",
+)
 
 # PROJECT-SPECIFIC - MERMAID
 project_router = routers.NestedSimpleRouter(router, r"projects", lookup="project")
