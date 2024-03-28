@@ -47,9 +47,12 @@ from ..models import (
     HabitatComplexitySUModel,
     HabitatComplexitySUSQLModel,
     Project,
+    RestrictedProjectSummarySampleEvent,
     SummarySampleEventModel,
     SummarySampleEventSQLModel,
+    UnrestrictedProjectSummarySampleEvent,
 )
+from ..resources.summary_sample_event import SummarySampleEventSerializer
 from ..utils.timer import timing
 
 BATCH_SIZE = 1000
@@ -157,6 +160,40 @@ def _update_project_summary_sample_event(project_id, skip_test_project=True):
         SummarySampleEventModel.objects.create(**values)
 
 
+def _update_project_summary_sample_events(
+        proj_summary_se_model, project_id,
+        skip_test_project=True,
+        has_access="false"
+    ):
+    if skip_test_project and Project.objects.filter(pk=project_id, status=Project.TEST).exists():
+        proj_summary_se_model.objects.filter(project_id=project_id).delete()
+        return
+    qs = SummarySampleEventSQLModel.objects.all().sql_table(project_id=project_id, has_access=has_access)
+    records = SummarySampleEventSerializer(qs, many=True).data
+
+    proj_summary_se_model.objects.filter(project_id=project_id).delete()
+    proj_summary_se_model.objects.create(
+        project_id=project_id,
+        records=records,
+    )
+
+
+def _update_restricted_project_summary_sample_events(project_id, skip_test_project=True):
+    _update_project_summary_sample_events(
+        RestrictedProjectSummarySampleEvent,
+        project_id,
+        skip_test_project
+    )
+
+
+def _update_unrestricted_project_summary_sample_events(project_id, skip_test_project=True):
+    _update_project_summary_sample_events(
+        UnrestrictedProjectSummarySampleEvent,
+        project_id,
+        skip_test_project
+    )
+
+
 @timing
 def update_summary_cache(project_id, sample_unit=None, skip_test_project=True):
     print(f"project {project_id}")
@@ -234,4 +271,7 @@ def update_summary_cache(project_id, sample_unit=None, skip_test_project=True):
                 skip_updates,
             )
 
-        _update_project_summary_sample_event(project_id)
+        _update_project_summary_sample_event(project_id, skip_updates)
+        _update_unrestricted_project_summary_sample_events(project_id, skip_updates)
+        _update_restricted_project_summary_sample_events(project_id, skip_updates)
+ 
