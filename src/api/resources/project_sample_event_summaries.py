@@ -1,6 +1,7 @@
 from django.db.models import Q
 from rest_framework.viewsets import ReadOnlyModelViewSet
 
+from ..auth_backends import AnonymousJWTAuthentication
 from ..models import (
     Project,
     ProjectProfile,
@@ -20,7 +21,7 @@ class ProjectSummarySampleEventSerializer(ExtendedSerializer):
 class ProjectSummarySampleEventViewSet(ReadOnlyModelViewSet):
     serializer_class = ProjectSummarySampleEventSerializer
     permission_classes = [UnauthenticatedReadOnlyPermission]
-    authentication_classes = []
+    authentication_classes = [AnonymousJWTAuthentication]
     pagination_class = StandardResultPagination
 
     def get_queryset(self):
@@ -40,10 +41,10 @@ class ProjectSummarySampleEventViewSet(ReadOnlyModelViewSet):
                 .distinct()
             )
             restricted_qs = RestrictedProjectSummarySampleEvent.objects.filter(
-                ~Q(project_id__in=non_test_project_ids) & Q(project_id__in=project_ids)
+                Q(project_id__in=non_test_project_ids) & Q(project_id__in=project_ids)
             )
             unrestricted_qs = UnrestrictedProjectSummarySampleEvent.objects.filter(
-                Q(project_id__in=non_test_project_ids) | ~Q(project_id__in=project_ids)
+                Q(project_id__in=non_test_project_ids) & ~Q(project_id__in=project_ids)
             )
             qs = restricted_qs.union(unrestricted_qs)
         else:
@@ -51,4 +52,4 @@ class ProjectSummarySampleEventViewSet(ReadOnlyModelViewSet):
                 Q(project_id__in=non_test_project_ids)
             )
 
-        return qs
+        return qs.order_by("project_id")

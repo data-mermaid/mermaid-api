@@ -99,9 +99,9 @@ router.register(r"fishsizes", FishSizeViewSet, "fishsizes")
 
 # project sample event summaries
 router.register(
-    r"project_summary_sample_event",
+    r"projectsummarysampleevent",
     ProjectSummarySampleEventViewSet,
-    "project_summary_sample_event",
+    "projectsummarysampleevent",
 )
 
 # PROJECT-SPECIFIC - MERMAID

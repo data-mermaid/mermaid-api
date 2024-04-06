@@ -161,14 +161,14 @@ def _update_project_summary_sample_event(project_id, skip_test_project=True):
 
 
 def _update_project_summary_sample_events(
-        proj_summary_se_model, project_id,
-        skip_test_project=True,
-        has_access="false"
-    ):
+    proj_summary_se_model, project_id, skip_test_project=True, has_access="false"
+):
     if skip_test_project and Project.objects.filter(pk=project_id, status=Project.TEST).exists():
         proj_summary_se_model.objects.filter(project_id=project_id).delete()
         return
-    qs = SummarySampleEventSQLModel.objects.all().sql_table(project_id=project_id, has_access=has_access)
+    qs = SummarySampleEventSQLModel.objects.all().sql_table(
+        project_id=project_id, has_access=has_access
+    )
     records = SummarySampleEventSerializer(qs, many=True).data
 
     proj_summary_se_model.objects.filter(project_id=project_id).delete()
@@ -180,23 +180,18 @@ def _update_project_summary_sample_events(
 
 def _update_restricted_project_summary_sample_events(project_id, skip_test_project=True):
     _update_project_summary_sample_events(
-        RestrictedProjectSummarySampleEvent,
-        project_id,
-        skip_test_project
+        RestrictedProjectSummarySampleEvent, project_id, skip_test_project, has_access="true"
     )
 
 
 def _update_unrestricted_project_summary_sample_events(project_id, skip_test_project=True):
     _update_project_summary_sample_events(
-        UnrestrictedProjectSummarySampleEvent,
-        project_id,
-        skip_test_project
+        UnrestrictedProjectSummarySampleEvent, project_id, skip_test_project
     )
 
 
 @timing
 def update_summary_cache(project_id, sample_unit=None, skip_test_project=True):
-    print(f"project {project_id}")
     skip_updates = False
     if (
         skip_test_project is True
@@ -274,4 +269,3 @@ def update_summary_cache(project_id, sample_unit=None, skip_test_project=True):
         _update_project_summary_sample_event(project_id, skip_updates)
         _update_unrestricted_project_summary_sample_events(project_id, skip_updates)
         _update_restricted_project_summary_sample_events(project_id, skip_updates)
- 
