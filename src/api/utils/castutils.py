@@ -22,20 +22,3 @@ def cast_str_value(string):
 
     val = to_number(string)
     return val if val is not None else string
-
-
-def iso8601_to_datetime(iso_datetime_str):
-    """
-    Converts an ISO formatted date or datetime string to a datetime object.
-
-    Args:
-    iso_datetime_str (str): A string representing a date or datetime in ISO 8601 format.
-
-    Returns:
-    datetime.datetime: A datetime object representing the given date or datetime.
-    """
-
-    if not iso_datetime_str:
-        return None
-
-    return datetime.fromisoformat(iso_datetime_str)
