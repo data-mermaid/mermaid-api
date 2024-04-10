@@ -69,7 +69,7 @@ class GFCRIndicatorSet(BaseModel):
         verbose_name="Area with pollution mitigation (sq.km)",
         default=0,
     )
-    f2_4_opt1 = models.DecimalField(
+    f2_opt1 = models.DecimalField(
         max_digits=9,
         decimal_places=3,
         verbose_name="Area of non-coral reef ecosystems, e.g., mangroves, seagrass or other associated ecosystems (sq.km)",
@@ -258,7 +258,6 @@ class GFCRFinanceSolution(BaseModel):
         ("marine_protected_areas", "Marine protected areas"),
         ("other_land_based_pollutants_management", "Other land-based pollutants management"),
         ("plastic_waste_management", "Plastic waste management"),
-        ("plastic_waste_management", "Plastic waste management"),
         ("sewage_and_waste_water_treatment", "Sewage and waste-water treatment"),
         ("sustainable_fisheries", "Sustainable fisheries"),
         ("sustainable_mariculture_aquaculture", "Sustainable mariculture/aquaculture"),
@@ -340,7 +339,7 @@ class GFCRRevenue(BaseModel):
         ("interest_investment_returns", "Interest / investment returns"),
         ("marine_resources_sales", "Marine resources sales"),
         ("misc_revenue_streams", "Misc. revenue streams"),
-        ("sustainable_livelihood_mechanims", "Sustainable livelihood mechanims"),
+        ("sustainable_livelihood_mechanisms", "Sustainable livelihood mechanisms"),
         ("water_tariff", "Water tariff"),
     )
 

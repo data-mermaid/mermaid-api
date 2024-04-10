@@ -56,6 +56,7 @@ INSTALLED_APPS = [
     "django_filters",
     "django_extensions",
     "drf_recaptcha",
+    "nested_admin",
     "api.apps.ApiConfig",
     "tools",
     "taggit",
