@@ -16,9 +16,9 @@ class Command(BaseCommand):
             help="Ignores environment check before running update.",
         )
         parser.add_argument(
-            "--test_projects",
+            "--skip_test_projects",
             action="store_true",
-            help="Include test_projects when running update.",
+            help="Skips test projects when running update.",
         )
 
         parser.add_argument(
@@ -34,7 +34,7 @@ class Command(BaseCommand):
 
     def handle(self, *args, **options):
         is_forced = options["force"]
-        skip_test_project = options["test_projects"] is not True
+        skip_test_projects = options["skip_test_projects"] is True
         in_foreground = options["foreground"]
         project_id = options["project_id"]
 
@@ -54,13 +54,13 @@ class Command(BaseCommand):
 
         for project in projects:
             if in_foreground:
-                update_summary_cache(project_id=project.pk, skip_test_project=skip_test_project)
+                update_summary_cache(project_id=project.pk, skip_test_project=skip_test_projects)
             else:
                 submit_job(
                     5,
                     update_summary_cache,
                     project_id=project.pk,
-                    skip_test_project=skip_test_project,
+                    skip_test_project=skip_test_projects,
                 )
 
         end_time = time()

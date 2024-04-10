@@ -192,7 +192,7 @@ def _update_unrestricted_project_summary_sample_events(project_id, timestamp, sk
 
 
 @timing
-def update_summary_cache(project_id, sample_unit=None, skip_test_project=True):
+def update_summary_cache(project_id, sample_unit=None, skip_test_project=False):
     skip_updates = False
     if (
         skip_test_project is True
