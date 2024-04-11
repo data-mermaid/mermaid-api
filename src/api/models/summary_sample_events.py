@@ -392,16 +392,18 @@ class SummarySampleEventModel(SummarySampleEventBaseModel):
         db_table = "summary_sample_event"
 
 
-class RestrictedProjectSummarySampleEvent(models.Model):
+class BaseProjectSummarySampleEvent(models.Model):
     project_id = models.UUIDField(primary_key=True)
     records = models.JSONField()
     created_on = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        abstract = True
+
+class RestrictedProjectSummarySampleEvent(BaseProjectSummarySampleEvent):
     class Meta:
         db_table = "restricted_project_summary_se"
 
-class UnrestrictedProjectSummarySampleEvent(models.Model):
-    project_id = models.UUIDField(primary_key=True)
-    records = models.JSONField()
-    created_on = models.DateTimeField(auto_now_add=True)
+class UnrestrictedProjectSummarySampleEvent(BaseProjectSummarySampleEvent):
     class Meta:
         db_table = "unrestricted_project_summary_se"
