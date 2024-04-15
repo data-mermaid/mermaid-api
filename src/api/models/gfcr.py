@@ -268,7 +268,6 @@ class GFCRFinanceSolution(BaseModel):
         ("blue_bonds", "Blue bonds"),
         ("blue_carbon", "Blue carbon"),
         ("conservation_trust_funds", "Conservation trust funds"),
-        ("conservation_trust_funds", "Conservation trust funds"),
         ("debt_conversion", "Debt conversion"),
         ("incubator_tecnical_assistance", "Incubator / Technical assistance"),
         ("insurance_products", "Insurance products"),
