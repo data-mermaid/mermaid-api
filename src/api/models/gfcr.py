@@ -13,7 +13,7 @@ def validate_unique_elements(value):
 
 class GFCRIndicatorSet(BaseModel):
     INDICATOR_SET_TYPE_CHOICES = (
-        ("actual", "Actual"),
+        ("annual_report", "Annual Report"),
         ("target", "Target"),
     )
 
