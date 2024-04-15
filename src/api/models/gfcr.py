@@ -1,5 +1,6 @@
 from django.contrib.postgres.fields import ArrayField
 from django.core.exceptions import ValidationError
+from django.core.validators import MaxValueValidator, MinValueValidator
 from django.db import models
 
 from .base import BaseModel
@@ -19,6 +20,9 @@ class GFCRIndicatorSet(BaseModel):
 
     title = models.CharField(max_length=100)
     report_date = models.DateField()
+    report_year = models.PositiveSmallIntegerField(
+        validators=[MinValueValidator(1900), MaxValueValidator(2100)]
+    )
     project = models.ForeignKey(Project, on_delete=models.CASCADE)
     indicator_set_type = models.CharField(max_length=50, choices=INDICATOR_SET_TYPE_CHOICES)
     f1_1 = models.DecimalField(
@@ -121,6 +125,8 @@ class GFCRIndicatorSet(BaseModel):
     f4_3 = models.DecimalField(
         max_digits=5, decimal_places=1, verbose_name="Median reef fish biomass (kg/ha)", default=0
     )
+    f4_start_date = models.DateField(auto_now_add=True)
+    f4_end_date = models.DateField(auto_now_add=True)
     f5_1 = models.PositiveSmallIntegerField(
         verbose_name="Number of local communities engaged in meaningful participation and co-development",
         default=0,
@@ -251,10 +257,10 @@ class GFCRFinanceSolution(BaseModel):
         ("coastal_agriculture", "Coastal agriculture"),
         ("coastal_forestry", "Coastal forestry"),
         ("coastal_infrastructure", "Coastal infrastructure"),
-        ("coral_ecosystem Restoration", "Coral ecosystem restoration"),
+        ("coral_ecosystem_restoration", "Coral ecosystem restoration"),
         ("ecotourism", "Ecotourism"),
         ("green_shipping_and_cruise_ships", "Green shipping and cruise ships"),
-        ("invasive_species Management", "Invasive species management"),
+        ("invasive_species_management", "Invasive species management"),
         ("marine_protected_areas", "Marine protected areas"),
         ("other_land_based_pollutants_management", "Other land-based pollutants management"),
         ("plastic_waste_management", "Plastic waste management"),
@@ -317,6 +323,8 @@ class GFCRInvestmentSource(BaseModel):
     investment_amount = models.DecimalField(
         max_digits=12, decimal_places=2, verbose_name="Investment amount in USD"
     )
+    used_gfcr_funded_incubator = models.BooleanField(default=False)
+    gender_smart = models.BooleanField(default=False)
 
     class Meta:
         db_table = "gfcr_investment_source"
