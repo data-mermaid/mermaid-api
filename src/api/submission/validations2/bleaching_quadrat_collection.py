@@ -9,6 +9,7 @@ from .base import (
 )
 from .validators import (
     AllEqualValidator,
+    BleachingPercentValidator,
     ColonyCountValidator,
     DepthValidator,
     DrySubmitValidator,
@@ -221,6 +222,19 @@ bleaching_quadrat_collection_validations = [
         paths=["data.obs_colonies_bleached"],
         validation_level=RECORD_LEVEL,
         validation_type=VALUE_VALIDATION_TYPE,
+    ),
+    Validation(
+        validator=BleachingPercentValidator(
+            obs_quadrat_benthic_percent_path="data.obs_quadrat_benthic_percent",
+            observation_percent_paths=[
+                "percent_hard",
+                "percent_soft",
+                "percent_algae",
+            ],
+        ),
+        paths=["data.obs_quadrat_benthic_percent"],
+        validation_level=ROW_LEVEL,
+        validation_type=LIST_VALIDATION_TYPE,
     ),
     Validation(
         validator=AllEqualValidator(path="data.obs_quadrat_benthic_percent", ignore_keys=["id"]),
