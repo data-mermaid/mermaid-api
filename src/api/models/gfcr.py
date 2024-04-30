@@ -298,6 +298,7 @@ class GFCRFinanceSolution(BaseModel):
         null=True,
         blank=True,
     )
+    gender_smart = models.BooleanField(default=False)
 
     class Meta:
         db_table = "gfcr_finance_solution"
@@ -332,7 +333,6 @@ class GFCRInvestmentSource(BaseModel):
         max_digits=12, decimal_places=2, verbose_name="Investment amount in USD", default=0
     )
     used_gfcr_funded_incubator = models.BooleanField(default=False)
-    gender_smart = models.BooleanField(default=False)
 
     class Meta:
         db_table = "gfcr_investment_source"
