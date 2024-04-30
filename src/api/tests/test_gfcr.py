@@ -183,9 +183,9 @@ def test_coral_health_calculations(
     assert request.status_code == 200
     response_data = request.json()
 
-    assert response_data["f4_1"] == 17.5
-    assert response_data["f4_2"] == 35
-    assert response_data["f4_3"] == 5
+    assert response_data["f4_1_calc"] == 17.5
+    assert response_data["f4_2_calc"] == 35
+    assert response_data["f4_3_calc"] == 5
 
 
 def test_reporting_range(
@@ -211,4 +211,4 @@ def test_reporting_range(
 
     assert request.status_code == 200
     response_data = request.json()
-    assert response_data["f4_3"] is None
+    assert response_data["f4_3_calc"] is None

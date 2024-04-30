@@ -16,8 +16,23 @@ from ..models import (
 from ..permissions import ProjectDataAdminPermission
 from .base import BaseAPISerializer, BaseProjectApiViewSet
 
+BENTHIC_LIT = "benthiclit"
+BENTHIC_PIT = "benthicpit"
+BENTHIC_PQT = "benthicpqt"
+QUADRAT_BENTHIC_PERCENT = "quadrat_benthic_percent"
+
+
+def get_quadrat_benthic_percent_averages(protocols_data, protocol):
+    percent_cover = protocols_data.get(protocol) or {}
+    hard_coral = percent_cover.get("percent_hard_avg_avg")
+    macro_algae = percent_cover.get("percent_algae_avg_avg")
+    return hard_coral, macro_algae
+
 
 def get_benthic_averages(protocols_data, protocol):
+    if protocol == QUADRAT_BENTHIC_PERCENT:
+        return get_quadrat_benthic_percent_averages(protocols_data, protocol)
+
     percent_cover = (protocols_data.get(protocol) or {}).get(
         "percent_cover_benthic_category_avg"
     ) or {}
@@ -36,10 +51,10 @@ def get_coral_reef_health(project_id, start_date, end_date):
     recs = obj.records if obj else []
 
     benthic_protocols = [
-        "benthiclit",
-        "benthicpit",
-        "benthicpqt",
-        "quadrat_benthic_percent",
+        BENTHIC_LIT,
+        BENTHIC_PIT,
+        BENTHIC_PQT,
+        QUADRAT_BENTHIC_PERCENT,
     ]
 
     avg_vals = {
@@ -110,9 +125,9 @@ class GFCRFinanceSolutionSerializer(BaseAPISerializer):
 
 class GFCRIndicatorSetSerializer(BaseAPISerializer):
     finance_solutions = GFCRFinanceSolutionSerializer(many=True, default=list, read_only=True)
-    f4_1 = serializers.ReadOnlyField()
-    f4_2 = serializers.ReadOnlyField()
-    f4_3 = serializers.ReadOnlyField()
+    f4_1_calc = serializers.ReadOnlyField()
+    f4_2_calc = serializers.ReadOnlyField()
+    f4_3_calc = serializers.ReadOnlyField()
 
     class Meta:
         model = GFCRIndicatorSet
@@ -123,9 +138,9 @@ class GFCRIndicatorSetSerializer(BaseAPISerializer):
         hard_coral_median, macro_algae_median, biomass_median = get_coral_reef_health(
             instance.project_id, instance.f4_start_date, instance.f4_end_date
         )
-        ret["f4_1"] = hard_coral_median
-        ret["f4_2"] = macro_algae_median
-        ret["f4_3"] = biomass_median
+        ret["f4_1_calc"] = hard_coral_median
+        ret["f4_2_calc"] = macro_algae_median
+        ret["f4_3_calc"] = biomass_median
 
         return ret
 
@@ -155,45 +170,15 @@ class IndicatorSetViewSet(BaseProjectApiViewSet):
     def _pop_nested_data(self, record, nested_data_key):
         return record.pop(nested_data_key) if nested_data_key in record else []
 
-    @transaction.atomic
-    def create(self, request, project_pk, *args, **kwargs):
-        request.data["project"] = project_pk
-
-        if "id" not in request.data:
-            request.data["id"] = create_id()
-
-        finance_solutions_data = self._pop_nested_data(request.data, "finance_solutions")
-
-        # Save the indicator set
-        indicator_set = self._save_data(request.data, self.serializer_class, request)
-
-        # Save finance solutions
-        for fs_record in finance_solutions_data:
-            investment_sources_data = self._pop_nested_data(fs_record, "investment_sources")
-            revenues_data = self._pop_nested_data(fs_record, "revenues")
-
-            fs_record["indicator_set"] = indicator_set.pk
-            fin_sol_record = self._save_data(fs_record, GFCRFinanceSolutionSerializer, request)
-
-            # Save investment sources
-            for investment_source_record in investment_sources_data:
-                investment_source_record["finance_solution"] = fin_sol_record.pk
-                self._save_data(investment_source_record, GFCRInvestmentSourceSerializer, request)
-
-            # Save revenues
-            for revenue_record in revenues_data:
-                revenue_record["finance_solution"] = fin_sol_record.pk
-                self._save_data(revenue_record, GFCRRevenueSerializer, request)
-
-        output_serializer = self.get_serializer(instance=indicator_set)
-        return Response(output_serializer.data, status=status.HTTP_201_CREATED)
-
-    @transaction.atomic
-    def update(self, request, project_pk, pk=None, *args, **kwargs):
+    def _save(self, request, project_pk, pk=None, *args, **kwargs):
         queryset = self.get_queryset()
-        indicator_set = queryset.get(pk=pk)
-        data = request.data
+        if pk:
+            indicator_set = queryset.get(pk=pk)
+        else:
+            indicator_set = None
 
+        data = request.data
+        data["project"] = project_pk
         finance_solutions_data = self._pop_nested_data(data, "finance_solutions")
 
         # Save the indicator set
@@ -251,4 +236,14 @@ class IndicatorSetViewSet(BaseProjectApiViewSet):
                 )
 
         output_serializer = self.get_serializer(instance=indicator_set)
-        return Response(output_serializer.data, status=status.HTTP_200_OK)
+        return output_serializer.data
+
+    @transaction.atomic
+    def create(self, request, project_pk, *args, **kwargs):
+        data = self._save(request, project_pk)
+        return Response(data, status=status.HTTP_201_CREATED)
+
+    @transaction.atomic
+    def update(self, request, project_pk, pk=None, *args, **kwargs):
+        data = self._save(request, project_pk, pk)
+        return Response(data, status=status.HTTP_200_OK)
