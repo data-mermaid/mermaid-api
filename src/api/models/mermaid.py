@@ -135,6 +135,7 @@ class Project(BaseModel, JSONMixin):
     )
 
     tags = TaggableManager(through=UUIDTaggedItem, blank=True)
+    includes_gfcr = models.BooleanField(default=False)
 
     @property
     def is_open(self):
