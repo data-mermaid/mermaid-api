@@ -47,6 +47,7 @@ class Queue:
     BATCH_SIZE = getattr(settings, "SQS_BATCH_SIZE", 10)
     WAIT_SECONDS = getattr(settings, "SQS_WAIT_SECONDS", 20)
     SQS_MESSAGE_VISIBILITY = getattr(settings, "SQS_MESSAGE_VISIBILITY")
+    USE_FIFO = True if getattr(settings, "USE_FIFO") == "True" else False
     _delayed_jobs = defaultdict(list)
 
     def __init__(self, name, sqs_resource=None):
@@ -95,7 +96,10 @@ class Queue:
         if self._queue:
             return self._queue
 
-        queue_name = f"{self.name}.fifo"
+        if self.USE_FIFO:
+            queue_name = f"{self.name}.fifo"
+        else:
+            queue_name = self.name
 
         try:
             self._queue = self.sqs_resource.get_queue_by_name(QueueName=queue_name)
@@ -105,7 +109,7 @@ class Queue:
                 QueueName=queue_name,
                 Attributes={
                     "VisibilityTimeout": str(self.SQS_MESSAGE_VISIBILITY),
-                    "FifoQueue": "true",
+                    "FifoQueue": "true" if self.USE_FIFO else "false",
                     "ContentBasedDeduplication": "false",
                 },
             )
