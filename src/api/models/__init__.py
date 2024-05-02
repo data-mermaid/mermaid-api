@@ -59,7 +59,9 @@ from .summaries import (  # noqa: F401
     HabitatComplexitySUModel,
 )
 from .summary_sample_events import (  # noqa: F401
+    RestrictedProjectSummarySampleEvent,
     SummarySampleEventModel,
     SummarySampleEventSQLModel,
+    UnrestrictedProjectSummarySampleEvent,
 )
 from .view_models import *  # noqa: F403
