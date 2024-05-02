@@ -1,3 +1,5 @@
+from datetime import date
+
 from django.contrib.postgres.fields import ArrayField
 from django.core.exceptions import ValidationError
 from django.core.validators import MaxValueValidator, MinValueValidator
@@ -125,8 +127,8 @@ class GFCRIndicatorSet(BaseModel):
     f4_3 = models.DecimalField(
         max_digits=5, decimal_places=1, verbose_name="Median reef fish biomass (kg/ha)", default=0
     )
-    f4_start_date = models.DateField(auto_now_add=True)
-    f4_end_date = models.DateField(auto_now_add=True)
+    f4_start_date = models.DateField(default=date.today)
+    f4_end_date = models.DateField(default=date.today)
     f5_1 = models.PositiveSmallIntegerField(
         verbose_name="Number of local communities engaged in meaningful participation and co-development",
         default=0,
@@ -282,7 +284,9 @@ class GFCRFinanceSolution(BaseModel):
         ("sustainable_livelihood_mech", "Sustainable livelihood mechanisms"),
     )
 
-    indicator_set = models.ForeignKey(GFCRIndicatorSet, on_delete=models.CASCADE)
+    indicator_set = models.ForeignKey(
+        GFCRIndicatorSet, on_delete=models.CASCADE, related_name="finance_solutions"
+    )
     name = models.CharField(max_length=255)
     sector = models.CharField(max_length=50, choices=SECTOR_CHOICES)
     used_an_incubator = models.BooleanField(default=False)
@@ -291,7 +295,10 @@ class GFCRFinanceSolution(BaseModel):
         models.CharField(max_length=50, choices=SUSTAINABLE_FINANCE_MECHANISM_CHOICES),
         default=list,
         validators=[validate_unique_elements],
+        null=True,
+        blank=True,
     )
+    gender_smart = models.BooleanField(default=False)
 
     class Meta:
         db_table = "gfcr_finance_solution"
@@ -317,14 +324,15 @@ class GFCRInvestmentSource(BaseModel):
         ("technical_assistance", "Technical assistance"),
     )
 
-    finance_solution = models.ForeignKey(GFCRFinanceSolution, on_delete=models.CASCADE)
+    finance_solution = models.ForeignKey(
+        GFCRFinanceSolution, on_delete=models.CASCADE, related_name="investment_sources"
+    )
     investment_source = models.CharField(max_length=50, choices=INVESTMENT_SOURCE_CHOICES)
     investment_type = models.CharField(max_length=50, choices=INVESTMENT_TYPE_CHOICES)
     investment_amount = models.DecimalField(
-        max_digits=12, decimal_places=2, verbose_name="Investment amount in USD"
+        max_digits=12, decimal_places=2, verbose_name="Investment amount in USD", default=0
     )
     used_gfcr_funded_incubator = models.BooleanField(default=False)
-    gender_smart = models.BooleanField(default=False)
 
     class Meta:
         db_table = "gfcr_investment_source"
@@ -350,11 +358,13 @@ class GFCRRevenue(BaseModel):
         ("water_tariff", "Water tariff"),
     )
 
-    finance_solution = models.ForeignKey(GFCRFinanceSolution, on_delete=models.CASCADE)
+    finance_solution = models.ForeignKey(
+        GFCRFinanceSolution, on_delete=models.CASCADE, related_name="revenues"
+    )
     revenue_type = models.CharField(max_length=50, choices=REVENUE_TYPE_CHOICES)
     sustainable_revenue_stream = models.BooleanField(default=False)
     annual_revenue = models.DecimalField(
-        max_digits=11, decimal_places=2, verbose_name="Annual revenue in USD"
+        max_digits=11, decimal_places=2, verbose_name="Annual revenue in USD", default=0
     )
 
     class Meta:
