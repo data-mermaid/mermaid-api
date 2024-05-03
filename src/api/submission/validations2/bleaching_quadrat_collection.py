@@ -9,8 +9,8 @@ from .base import (
 )
 from .validators import (
     AllEqualValidator,
+    BleachingObsValidator,
     ColonyCountValidator,
-    ColonyValuesValidator,
     DepthValidator,
     DrySubmitValidator,
     DuplicateValidator,
@@ -170,6 +170,28 @@ bleaching_quadrat_collection_validations = [
         validation_type=VALUE_VALIDATION_TYPE,
     ),
     Validation(
+        validator=ListRequiredValidator(
+            list_path="data.obs_colonies_bleached",
+            path="attribute",
+            name_prefix="attribute",
+            unique_identifier_label="observation_id",
+        ),
+        paths=["data.obs_colonies_bleached"],
+        validation_level=ROW_LEVEL,
+        validation_type=LIST_VALIDATION_TYPE,
+    ),
+    Validation(
+        validator=ListRequiredValidator(
+            list_path="data.obs_quadrat_benthic_percent",
+            path="quadrat_number",
+            name_prefix="quadrat_number",
+            unique_identifier_label="observation_id",
+        ),
+        paths=["data.obs_quadrat_benthic_percent"],
+        validation_level=ROW_LEVEL,
+        validation_type=LIST_VALIDATION_TYPE,
+    ),
+    Validation(
         validator=DuplicateValidator(
             list_path="data.obs_quadrat_benthic_percent",
             key_paths=["quadrat_number"],
@@ -197,21 +219,9 @@ bleaching_quadrat_collection_validations = [
         validation_type=VALUE_VALIDATION_TYPE,
     ),
     Validation(
-        validator=ObservationCountValidator(observations_path="data.obs_colonies_bleached"),
-        paths=["data.obs_colonies_bleached"],
-        validation_level=RECORD_LEVEL,
-        validation_type=VALUE_VALIDATION_TYPE,
-    ),
-    Validation(
-        validator=ObservationCountValidator(observations_path="data.obs_quadrat_benthic_percent"),
-        paths=["data.obs_quadrat_benthic_percent"],
-        validation_level=RECORD_LEVEL,
-        validation_type=VALUE_VALIDATION_TYPE,
-    ),
-    Validation(
-        validator=ColonyValuesValidator(
-            obs_colonies_bleached_path="data.obs_colonies_bleached",
-            observation_count_paths=[
+        validator=BleachingObsValidator(
+            obs_path="data.obs_colonies_bleached",
+            observation_field_paths=[
                 "count_normal",
                 "count_pale",
                 "count_20",
@@ -222,6 +232,19 @@ bleaching_quadrat_collection_validations = [
             ],
         ),
         paths=["data.obs_colonies_bleached"],
+        validation_level=ROW_LEVEL,
+        validation_type=LIST_VALIDATION_TYPE,
+    ),
+    Validation(
+        validator=BleachingObsValidator(
+            obs_path="data.obs_quadrat_benthic_percent",
+            observation_field_paths=[
+                "percent_hard",
+                "percent_soft",
+                "percent_algae",
+            ],
+        ),
+        paths=["data.obs_quadrat_benthic_percent"],
         validation_level=ROW_LEVEL,
         validation_type=LIST_VALIDATION_TYPE,
     ),
@@ -241,6 +264,18 @@ bleaching_quadrat_collection_validations = [
         validation_type=VALUE_VALIDATION_TYPE,
     ),
     Validation(
+        validator=ObservationCountValidator(observations_path="data.obs_colonies_bleached"),
+        paths=["data.obs_colonies_bleached"],
+        validation_level=RECORD_LEVEL,
+        validation_type=VALUE_VALIDATION_TYPE,
+    ),
+    Validation(
+        validator=ObservationCountValidator(observations_path="data.obs_quadrat_benthic_percent"),
+        paths=["data.obs_quadrat_benthic_percent"],
+        validation_level=RECORD_LEVEL,
+        validation_type=VALUE_VALIDATION_TYPE,
+    ),
+    Validation(
         validator=AllEqualValidator(path="data.obs_quadrat_benthic_percent", ignore_keys=["id"]),
         paths=["data.obs_quadrat_benthic_percent"],
         validation_level=RECORD_LEVEL,
@@ -251,27 +286,5 @@ bleaching_quadrat_collection_validations = [
         paths=["data.obs_colonies_bleached"],
         validation_level=RECORD_LEVEL,
         validation_type=VALUE_VALIDATION_TYPE,
-    ),
-    Validation(
-        validator=ListRequiredValidator(
-            list_path="data.obs_colonies_bleached",
-            path="attribute",
-            name_prefix="attribute",
-            unique_identifier_label="observation_id",
-        ),
-        paths=["data.obs_colonies_bleached"],
-        validation_level=ROW_LEVEL,
-        validation_type=LIST_VALIDATION_TYPE,
-    ),
-    Validation(
-        validator=ListRequiredValidator(
-            list_path="data.obs_quadrat_benthic_percent",
-            path="quadrat_number",
-            name_prefix="quadrat_number",
-            unique_identifier_label="observation_id",
-        ),
-        paths=["data.obs_quadrat_benthic_percent"],
-        validation_level=ROW_LEVEL,
-        validation_type=LIST_VALIDATION_TYPE,
     ),
 ]

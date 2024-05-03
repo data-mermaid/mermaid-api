@@ -3,8 +3,8 @@ from api.submission.validations2.validators import (
     ERROR,
     OK,
     WARN,
+    BleachingObsValidator,
     ColonyCountValidator,
-    ColonyValuesValidator,
 )
 
 
@@ -22,9 +22,9 @@ def _get_count_validator():
 
 
 def _get_values_validator():
-    return ColonyValuesValidator(
-        obs_colonies_bleached_path="data.obs_colonies_bleached",
-        observation_count_paths=[
+    return BleachingObsValidator(
+        obs_path="data.obs_colonies_bleached",
+        observation_field_paths=[
             "count_normal",
             "count_pale",
             "count_20",
@@ -49,7 +49,6 @@ def test_colony_count_validator_data_invalid(valid_bleaching_qc_collect_record):
 
     record["data"]["obs_colonies_bleached"][0]["count_20"] = 601
     result = validator(record)
-
     assert result.status == WARN
     assert result.code == ColonyCountValidator.EXCEED_TOTAL_COLONIES
 
@@ -57,17 +56,21 @@ def test_colony_count_validator_data_invalid(valid_bleaching_qc_collect_record):
 def test_colony_values_validator_ok(valid_bleaching_qc_collect_record):
     validator = _get_values_validator()
     record = CollectRecordSerializer(valid_bleaching_qc_collect_record).data
-    result = validator(record)
-    assert result[0].status == OK
+    results = validator(record)
+    assert results[0].status == OK
 
 
 def test_colony_values_validator_blanks(valid_bleaching_qc_collect_record):
     validator = _get_values_validator()
     record = CollectRecordSerializer(valid_bleaching_qc_collect_record).data
 
+    record["data"]["obs_colonies_bleached"][0]["count_pale"] = 1001
+    results = validator(record)
+    assert results[0].status == ERROR
+    assert results[0].code == BleachingObsValidator.INVALID_TOTAL
+
     record["data"]["obs_colonies_bleached"][0]["count_pale"] = None
     record["data"]["obs_colonies_bleached"][0]["count_80"] = None
-    result = validator(record)
-
-    assert result[0].status == ERROR
-    assert result[0].context["invalid_paths"] == ["count_pale", "count_80"]
+    results = validator(record)
+    assert results[0].status == ERROR
+    assert results[0].context["invalid_paths"] == ["count_pale", "count_80"]

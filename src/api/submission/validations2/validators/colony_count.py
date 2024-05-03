@@ -1,5 +1,5 @@
 from ....utils import safe_sum
-from .base import ERROR, OK, WARN, BaseValidator, validator_result
+from .base import OK, WARN, BaseValidator, validator_result
 
 
 class ColonyCountValidator(BaseValidator):
@@ -55,36 +55,3 @@ class ColonyCountValidator(BaseValidator):
             return WARN, self.EXCEED_TOTAL_COLONIES
 
         return OK
-
-
-class ColonyValuesValidator(BaseValidator):
-    INVALID_COUNT = "invalid_count"
-
-    def __init__(self, obs_colonies_bleached_path, observation_count_paths, **kwargs):
-        self.obs_colonies_bleached_path = obs_colonies_bleached_path
-        self.observation_count_paths = observation_count_paths
-        super().__init__(**kwargs)
-
-    @validator_result
-    def _check_count(self, obs):
-        status = OK
-        code = None
-        context = {"observation_id": obs.get("id")}
-
-        invalid_paths = []
-        for count_path in self.observation_count_paths:
-            val = self.get_value(obs, count_path)
-            if isinstance(val, int) is False or val < 0:
-                invalid_paths.append(count_path)
-
-        if invalid_paths:
-            status = ERROR
-            code = self.INVALID_COUNT
-            context["invalid_paths"] = invalid_paths
-
-        return status, code, context
-
-    def __call__(self, collect_record, **kwargs):
-        obs = self.get_value(collect_record, self.obs_colonies_bleached_path) or []
-
-        return [self._check_count(ob) for ob in obs]
