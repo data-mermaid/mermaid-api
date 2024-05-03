@@ -6,7 +6,7 @@ from .benthic_transect import (
 )
 from .biomass import BiomassValidator
 from .bleaching_percent import BleachingPercentValidator
-from .colony_count import ColonyCountValidator
+from .colony_count import ColonyCountValidator, ColonyValuesValidator
 from .depth import DepthValidator
 from .dry_submit import DrySubmitValidator
 from .fish_count import FishCountValidator, TotalFishCountValidator

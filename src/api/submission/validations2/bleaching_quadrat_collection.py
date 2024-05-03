@@ -10,6 +10,7 @@ from .base import (
 from .validators import (
     AllEqualValidator,
     ColonyCountValidator,
+    ColonyValuesValidator,
     DepthValidator,
     DrySubmitValidator,
     DuplicateValidator,
@@ -196,16 +197,33 @@ bleaching_quadrat_collection_validations = [
         validation_type=VALUE_VALIDATION_TYPE,
     ),
     Validation(
+        validator=ObservationCountValidator(observations_path="data.obs_colonies_bleached"),
+        paths=["data.obs_colonies_bleached"],
+        validation_level=RECORD_LEVEL,
+        validation_type=VALUE_VALIDATION_TYPE,
+    ),
+    Validation(
         validator=ObservationCountValidator(observations_path="data.obs_quadrat_benthic_percent"),
         paths=["data.obs_quadrat_benthic_percent"],
         validation_level=RECORD_LEVEL,
         validation_type=VALUE_VALIDATION_TYPE,
     ),
     Validation(
-        validator=ObservationCountValidator(observations_path="data.obs_colonies_bleached"),
+        validator=ColonyValuesValidator(
+            obs_colonies_bleached_path="data.obs_colonies_bleached",
+            observation_count_paths=[
+                "count_normal",
+                "count_pale",
+                "count_20",
+                "count_50",
+                "count_80",
+                "count_100",
+                "count_dead",
+            ],
+        ),
         paths=["data.obs_colonies_bleached"],
-        validation_level=RECORD_LEVEL,
-        validation_type=VALUE_VALIDATION_TYPE,
+        validation_level=ROW_LEVEL,
+        validation_type=LIST_VALIDATION_TYPE,
     ),
     Validation(
         validator=ColonyCountValidator(
