@@ -34,6 +34,7 @@ class ApiStack(Stack):
         container_security_group: ec2.SecurityGroup,
         api_zone: r53.HostedZone,
         image_processing_bucket: s3.Bucket,
+        use_fifo_queues: bool,
         **kwargs,
     ) -> None:
         super().__init__(scope, id, **kwargs)
@@ -124,6 +125,7 @@ class ApiStack(Stack):
             "SQS_MESSAGE_VISIBILITY": str(config.api.sqs_message_visibility),
             "SQS_QUEUE_NAME": sqs_queue_name,
             "IMAGE_SQS_QUEUE_NAME": image_sqs_queue_name,
+            "USE_FIFO": use_fifo_queues
         }
 
         # build image asset to be shared with API and Backup Task
