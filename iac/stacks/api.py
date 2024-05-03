@@ -34,7 +34,7 @@ class ApiStack(Stack):
         container_security_group: ec2.SecurityGroup,
         api_zone: r53.HostedZone,
         image_processing_bucket: s3.Bucket,
-        use_fifo_queues: bool,
+        use_fifo_queues: str,
         **kwargs,
     ) -> None:
         super().__init__(scope, id, **kwargs)
