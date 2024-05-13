@@ -3,6 +3,10 @@ import uuid
 from datetime import datetime
 from pickle import dumps, loads
 
+from django.conf import settings
+
+USE_FIFO = getattr(settings, "USE_FIFO") == "True"
+
 
 class Job:
     """An abstraction for a single unit of work (a job!)."""
@@ -44,10 +48,8 @@ class Job:
 
     @property
     def message(self):
-        return dict(
+        msg = dict(
             MessageAttributes={"id": {"StringValue": self.id, "DataType": "String"}},
-            MessageDeduplicationId=self.composite_id,
-            MessageGroupId=self.group,
             MessageBody=codecs.encode(
                 dumps(
                     {
@@ -59,6 +61,11 @@ class Job:
                 "base64",
             ).decode(),
         )
+        if USE_FIFO:
+            msg["MessageDeduplicationId"] = self.composite_id
+            msg["MessageGroupId"] = self.group
+
+        return msg
 
     @classmethod
     def from_message(cls, message):

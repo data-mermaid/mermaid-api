@@ -104,14 +104,17 @@ class Queue:
         try:
             self._queue = self.sqs_resource.get_queue_by_name(QueueName=queue_name)
         except self.sqs_resource.meta.client.exceptions.QueueDoesNotExist:
-            # TODO: leave this for now until we sort out local
+            queue_attributes = {
+                "VisibilityTimeout": str(self.SQS_MESSAGE_VISIBILITY),
+                "FifoQueue": "false",
+            }
+            if self.USE_FIFO:
+                queue_attributes["FifoQueue"] = "true"
+                queue_attributes["ContentBasedDeduplication"] = "false"
+
             self._queue = self.sqs_resource.create_queue(
                 QueueName=queue_name,
-                Attributes={
-                    "VisibilityTimeout": str(self.SQS_MESSAGE_VISIBILITY),
-                    "FifoQueue": "true" if self.USE_FIFO else "false",
-                    "ContentBasedDeduplication": "false",
-                },
+                Attributes=queue_attributes,
             )
 
         return self._queue
