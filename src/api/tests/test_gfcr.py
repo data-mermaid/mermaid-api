@@ -7,6 +7,7 @@ from api.models import (
     GFCRFinanceSolution,
     GFCRIndicatorSet,
     GFCRRevenue,
+    ProjectProfile,
     RestrictedProjectSummarySampleEvent,
 )
 
@@ -109,7 +110,7 @@ def restricted_project_summary_sample_events(
     )
 
 
-def test_create_indicator_set(
+def test_create_indicator_set_admin(
     db_setup,
     api_client1,
     project1,
@@ -141,6 +142,21 @@ def test_create_indicator_set(
     revenue_data = finance_solution_data["revenues"][0]
     assert revenue_data["id"] is not None
     assert str(revenue.pk) == revenue_data["id"]
+
+
+def test_create_indicator_set_non_admin(
+    db_setup,
+    api_client1,
+    project1,
+    project_profile1,
+    create_indicator_set_payload,
+):
+    project_profile1.role = ProjectProfile.COLLECTOR
+    project_profile1.save()
+    url = reverse("indicatorset-list", kwargs={"project_pk": project1.pk})
+    request = api_client1.post(url, data=create_indicator_set_payload, format="json")
+
+    assert request.status_code == 403
 
 
 def test_update_indicator_set(
