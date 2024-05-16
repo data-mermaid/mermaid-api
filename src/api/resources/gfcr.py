@@ -3,6 +3,7 @@ import uuid
 from datetime import datetime
 
 from django.db import transaction
+from rest_condition import Or
 from rest_framework import serializers, status
 from rest_framework.response import Response
 
@@ -13,7 +14,7 @@ from ..models import (
     GFCRRevenue,
     RestrictedProjectSummarySampleEvent,
 )
-from ..permissions import ProjectDataAdminPermission
+from ..permissions import ProjectDataAdminPermission, ProjectDataReadOnlyPermission
 from .base import BaseAPISerializer, BaseProjectApiViewSet
 
 BENTHIC_LIT = "benthiclit"
@@ -151,7 +152,7 @@ class GFCRIndicatorSetSerializer(BaseAPISerializer):
 class IndicatorSetViewSet(BaseProjectApiViewSet):
     serializer_class = GFCRIndicatorSetSerializer
     project_lookup = "project"
-    permission_classes = [ProjectDataAdminPermission]
+    permission_classes = [Or(ProjectDataAdminPermission, ProjectDataReadOnlyPermission)]
 
     def get_queryset(self):
         project_id = self.kwargs.get("project_pk")
