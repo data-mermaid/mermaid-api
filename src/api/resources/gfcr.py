@@ -7,7 +7,6 @@ from rest_condition import Or
 from rest_framework import serializers, status
 from rest_framework.response import Response
 
-
 from ..models import (
     GFCRFinanceSolution,
     GFCRIndicatorSet,
@@ -135,14 +134,17 @@ class GFCRIndicatorSetSerializer(BaseAPISerializer):
         model = GFCRIndicatorSet
         exclude = []
 
+    def _single_digit_precision(self, value):
+        return round(value, 1) if isinstance(value, (int, float)) else None
+
     def to_representation(self, instance):
         ret = super().to_representation(instance)
         hard_coral_median, macro_algae_median, biomass_median = get_coral_reef_health(
             instance.project_id, instance.f4_start_date, instance.f4_end_date
         )
-        ret["f4_1_calc"] = hard_coral_median
-        ret["f4_2_calc"] = macro_algae_median
-        ret["f4_3_calc"] = biomass_median
+        ret["f4_1_calc"] = self._single_digit_precision(hard_coral_median)
+        ret["f4_2_calc"] = self._single_digit_precision(macro_algae_median)
+        ret["f4_3_calc"] = self._single_digit_precision(biomass_median)
 
         return ret
 
@@ -150,15 +152,9 @@ class GFCRIndicatorSetSerializer(BaseAPISerializer):
 class IndicatorSetViewSet(BaseProjectApiViewSet):
     serializer_class = GFCRIndicatorSetSerializer
     project_lookup = "project"
-    permission_classes = [
-        Or(
-            ProjectDataAdminPermission,
-            ProjectDataReadOnlyPermission
-        )
-    ]
+    permission_classes = [Or(ProjectDataAdminPermission, ProjectDataReadOnlyPermission)]
 
     def get_queryset(self):
-        print(self.request.user.profile)
         project_id = self.kwargs.get("project_pk")
         if project_id is None:
             return GFCRIndicatorSet.objects.none()
