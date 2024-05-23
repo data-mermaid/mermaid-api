@@ -2,7 +2,6 @@ from datetime import date
 
 from django.contrib.postgres.fields import ArrayField
 from django.core.exceptions import ValidationError
-from django.core.validators import MaxValueValidator, MinValueValidator
 from django.db import models
 
 from .base import BaseModel
@@ -22,9 +21,6 @@ class GFCRIndicatorSet(BaseModel):
 
     title = models.CharField(max_length=100)
     report_date = models.DateField()
-    report_year = models.PositiveSmallIntegerField(
-        validators=[MinValueValidator(1900), MaxValueValidator(2100)]
-    )
     project = models.ForeignKey(Project, on_delete=models.CASCADE)
     indicator_set_type = models.CharField(max_length=50, choices=INDICATOR_SET_TYPE_CHOICES)
     f1_1 = models.DecimalField(
@@ -33,6 +29,7 @@ class GFCRIndicatorSet(BaseModel):
         verbose_name="Total area of coral reefs in GFCR programming (sq.km)",
         default=0,
     )
+    f1_notes = models.TextField(blank=True)
     f2_1a = models.DecimalField(
         max_digits=9,
         decimal_places=3,
@@ -82,6 +79,7 @@ class GFCRIndicatorSet(BaseModel):
         null=True,
         blank=True,
     )
+    f2_notes = models.TextField(blank=True)
     f3_1 = models.DecimalField(
         max_digits=9,
         decimal_places=3,
@@ -118,17 +116,25 @@ class GFCRIndicatorSet(BaseModel):
         verbose_name="Number of response plans (incl. financial mechanisms, eg., insurance) in place to support coral restoration after severe shocks (e.g,. storms, bleaching)",
         default=0,
     )
+    f3_notes = models.TextField(blank=True)
     f4_1 = models.DecimalField(
-        max_digits=4, decimal_places=1, verbose_name="Average live hard coral cover (%)", default=0
+        max_digits=4,
+        decimal_places=1,
+        verbose_name="Average live hard coral cover (%)",
+        default=0,
     )
     f4_2 = models.DecimalField(
         max_digits=4, decimal_places=1, verbose_name="Average macroalgae (%)", default=0
     )
     f4_3 = models.DecimalField(
-        max_digits=5, decimal_places=1, verbose_name="Median reef fish biomass (kg/ha)", default=0
+        max_digits=5,
+        decimal_places=1,
+        verbose_name="Median reef fish biomass (kg/ha)",
+        default=0,
     )
     f4_start_date = models.DateField(default=date.today)
     f4_end_date = models.DateField(default=date.today)
+    f4_notes = models.TextField(blank=True)
     f5_1 = models.PositiveSmallIntegerField(
         verbose_name="Number of local communities engaged in meaningful participation and co-development",
         default=0,
@@ -167,6 +173,7 @@ class GFCRIndicatorSet(BaseModel):
         verbose_name="Number of national policies linked to GFCR engagement, (e.g., NBSAPs, blue economy policies, national MPA declarations)",
         default=0,
     )
+    f5_notes = models.TextField(blank=True)
     f6_1a = models.PositiveSmallIntegerField(
         verbose_name="Number of direct jobs created (disaggregated by gender, age, Indigenous peoples) [men]",
         default=0,
@@ -203,6 +210,7 @@ class GFCRIndicatorSet(BaseModel):
         null=True,
         blank=True,
     )
+    f6_notes = models.TextField(blank=True)
     f7_1a = models.PositiveSmallIntegerField(
         verbose_name="Total direct beneficiaries (disaggregated by gender, age, Indigenous peoples) [men]",
         default=0,
@@ -247,6 +255,7 @@ class GFCRIndicatorSet(BaseModel):
         verbose_name="Number of governance reforms/policies to support response and recovery to external shocks (e.g., crisis management plans, reforms for temporary alternative employment)",
         default=0,
     )
+    f7_notes = models.TextField(blank=True)
 
     class Meta:
         db_table = "gfcr_indicator_set"
@@ -264,7 +273,10 @@ class GFCRFinanceSolution(BaseModel):
         ("green_shipping_and_cruise_ships", "Green shipping and cruise ships"),
         ("invasive_species_management", "Invasive species management"),
         ("marine_protected_areas", "Marine protected areas"),
-        ("other_land_based_pollutants_management", "Other land-based pollutants management"),
+        (
+            "other_land_based_pollutants_management",
+            "Other land-based pollutants management",
+        ),
         ("plastic_waste_management", "Plastic waste management"),
         ("sewage_and_waste_water_treatment", "Sewage and waste-water treatment"),
         ("sustainable_fisheries", "Sustainable fisheries"),
@@ -284,12 +296,22 @@ class GFCRFinanceSolution(BaseModel):
         ("sustainable_livelihood_mech", "Sustainable livelihood mechanisms"),
     )
 
+    INCUBATOR_CHOICES = (
+        ("GFCR_funded", "GFCR-funded"),
+        ("non_GFCR_funded", "Non-GFCR-funded"),
+    )
+
     indicator_set = models.ForeignKey(
         GFCRIndicatorSet, on_delete=models.CASCADE, related_name="finance_solutions"
     )
     name = models.CharField(max_length=255)
     sector = models.CharField(max_length=50, choices=SECTOR_CHOICES)
-    used_an_incubator = models.BooleanField(default=False)
+    used_an_incubator = models.CharField(
+        max_length=50,
+        choices=INCUBATOR_CHOICES,
+        null=True,
+        blank=True,
+    )
     local_enterprise = models.BooleanField(default=False)
     sustainable_finance_mechanisms = ArrayField(
         models.CharField(max_length=50, choices=SUSTAINABLE_FINANCE_MECHANISM_CHOICES),
@@ -299,6 +321,7 @@ class GFCRFinanceSolution(BaseModel):
         blank=True,
     )
     gender_smart = models.BooleanField(default=False)
+    notes = models.TextField(blank=True)
 
     class Meta:
         db_table = "gfcr_finance_solution"
@@ -330,9 +353,12 @@ class GFCRInvestmentSource(BaseModel):
     investment_source = models.CharField(max_length=50, choices=INVESTMENT_SOURCE_CHOICES)
     investment_type = models.CharField(max_length=50, choices=INVESTMENT_TYPE_CHOICES)
     investment_amount = models.DecimalField(
-        max_digits=12, decimal_places=2, verbose_name="Investment amount in USD", default=0
+        max_digits=12,
+        decimal_places=2,
+        verbose_name="Investment amount in USD",
+        default=0,
     )
-    used_gfcr_funded_incubator = models.BooleanField(default=False)
+    notes = models.TextField(blank=True)
 
     class Meta:
         db_table = "gfcr_investment_source"
@@ -344,7 +370,10 @@ class GFCRRevenue(BaseModel):
         ("biodiversity_offsets", "Biodiversity offsets"),
         ("blue_bonds", "Blue bonds"),
         ("business_incubation_and_investment", "Business incubation and investment"),
-        ("carbon_credits_environmental_services", "Carbon credits / environmental services"),
+        (
+            "carbon_credits_environmental_services",
+            "Carbon credits / environmental services",
+        ),
         ("conservation_trust_funds", "Conservation trust funds"),
         ("debt_conversion", "Debt conversion"),
         ("ecotourism", "Ecotourism"),
@@ -366,6 +395,7 @@ class GFCRRevenue(BaseModel):
     annual_revenue = models.DecimalField(
         max_digits=11, decimal_places=2, verbose_name="Annual revenue in USD", default=0
     )
+    notes = models.TextField(blank=True)
 
     class Meta:
         db_table = "gfcr_revenue"
