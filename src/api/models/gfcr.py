@@ -1,5 +1,7 @@
+import datetime
 from datetime import date
 
+import pytz
 from django.contrib.postgres.fields import ArrayField
 from django.core.exceptions import ValidationError
 from django.core.validators import MaxValueValidator, MinValueValidator
@@ -19,6 +21,7 @@ class GFCRIndicatorSet(BaseModel):
         ("annual_report", "Annual Report"),
         ("target", "Target"),
     )
+    INDICATOR_SET_TYPE_CHOICES_UPDATED_ON = datetime.datetime(2024, 5, 27, 0, 0, 0, 0, pytz.UTC)
 
     title = models.CharField(max_length=100)
     report_date = models.DateField()
@@ -270,6 +273,7 @@ class GFCRFinanceSolution(BaseModel):
         ("sustainable_fisheries", "Sustainable fisheries"),
         ("sustainable_mariculture_aquaculture", "Sustainable mariculture/aquaculture"),
     )
+    SECTOR_CHOICES_UPDATED_ON = datetime.datetime(2024, 5, 27, 0, 0, 0, 0, pytz.UTC)
 
     SUSTAINABLE_FINANCE_MECHANISM_CHOICES = (
         ("biodiversity_offsets", "Biodiversity offsets"),
@@ -283,6 +287,7 @@ class GFCRFinanceSolution(BaseModel):
         ("pay_for_success", "Pay for success"),
         ("sustainable_livelihood_mech", "Sustainable livelihood mechanisms"),
     )
+    SUSTAINABLE_FINANCE_MECHANISM_CHOICES_UPDATED_ON = datetime.datetime(2024, 5, 27, 0, 0, 0, 0, pytz.UTC)
 
     indicator_set = models.ForeignKey(
         GFCRIndicatorSet, on_delete=models.CASCADE, related_name="finance_solutions"
@@ -312,6 +317,7 @@ class GFCRInvestmentSource(BaseModel):
         ("private", "Private"),
         ("public", "Public"),
     )
+    INVESTMENT_SOURCE_CHOICES_UPDATED_ON = datetime.datetime(2024, 5, 27, 0, 0, 0, 0, pytz.UTC)
 
     INVESTMENT_TYPE_CHOICES = (
         ("bond", "Bond"),
@@ -323,6 +329,7 @@ class GFCRInvestmentSource(BaseModel):
         ("public_budget", "Public budget"),
         ("technical_assistance", "Technical assistance"),
     )
+    INVESTMENT_TYPE_CHOICES_UPDATED_ON = datetime.datetime(2024, 5, 27, 0, 0, 0, 0, pytz.UTC)
 
     finance_solution = models.ForeignKey(
         GFCRFinanceSolution, on_delete=models.CASCADE, related_name="investment_sources"
@@ -357,6 +364,7 @@ class GFCRRevenue(BaseModel):
         ("sustainable_livelihood_mechanisms", "Sustainable livelihood mechanisms"),
         ("water_tariff", "Water tariff"),
     )
+    REVENUE_TYPE_CHOICES_UPDATED_ON = datetime.datetime(2024, 5, 27, 0, 0, 0, 0, pytz.UTC)
 
     finance_solution = models.ForeignKey(
         GFCRFinanceSolution, on_delete=models.CASCADE, related_name="revenues"
