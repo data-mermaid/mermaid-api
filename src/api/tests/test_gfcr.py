@@ -41,7 +41,6 @@ def indicator_set(project1):
         project=project1,
         title="Dustin's IS",
         report_date="2024-02-10",
-        report_year=2024,
         indicator_set_type="annual_report",
         f4_start_date=date(1970, 1, 1),
         f4_end_date=date(2024, 4, 19),

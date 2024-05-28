@@ -18,8 +18,8 @@ from ..models import (
     FishGroupTrophic,
     FishSizeBin,
     FishSpecies,
-    GFCRIndicatorSet,
     GFCRFinanceSolution,
+    GFCRIndicatorSet,
     GFCRInvestmentSource,
     GFCRRevenue,
     GrowthForm,
@@ -81,6 +81,16 @@ class ChoiceViewSet(BaseChoiceApiViewSet):
             "fishgrouptrophics": fishgrouptrophics,
             "fishsizebins": fishsizebins,
             "habitatcomplexityscores": habitatcomplexityscores,
+            "incubatortypes": {
+                "data": [
+                    {
+                        "id": c[0],
+                        "name": c[1],
+                        "updated_on": GFCRFinanceSolution.INCUBATOR_CHOICES_UPDATED_ON,
+                    }
+                    for c in GFCRFinanceSolution.INCUBATOR_CHOICES
+                ]
+            },
             "indicatorsettypes": {
                 "data": [
                     {
