@@ -72,7 +72,7 @@ class Migration(migrations.Migration):
             name="used_an_incubator",
             field=models.CharField(
                 blank=True,
-                choices=[("GFCR_funded", "GFCR-funded"), ("non_GFCR_funded", "Non-GFCR-funded")],
+                choices=[("gfcr_funded", "GFCR-funded"), ("non_gfcr_funded", "Non-GFCR-funded")],
                 max_length=50,
                 null=True,
             ),

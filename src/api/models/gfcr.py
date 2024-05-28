@@ -299,12 +299,15 @@ class GFCRFinanceSolution(BaseModel):
         ("pay_for_success", "Pay for success"),
         ("sustainable_livelihood_mech", "Sustainable livelihood mechanisms"),
     )
-    SUSTAINABLE_FINANCE_MECHANISM_CHOICES_UPDATED_ON = datetime.datetime(2024, 5, 27, 0, 0, 0, 0, pytz.UTC)
+    SUSTAINABLE_FINANCE_MECHANISM_CHOICES_UPDATED_ON = datetime.datetime(
+        2024, 5, 27, 0, 0, 0, 0, pytz.UTC
+    )
 
     INCUBATOR_CHOICES = (
-        ("GFCR_funded", "GFCR-funded"),
-        ("non_GFCR_funded", "Non-GFCR-funded"),
+        ("gfcr_funded", "GFCR-funded"),
+        ("non_gfcr_funded", "Non-GFCR-funded"),
     )
+    INCUBATOR_CHOICES_UPDATED_ON = datetime.datetime(2024, 5, 28, 0, 0, 0, 0, pytz.UTC)
 
     indicator_set = models.ForeignKey(
         GFCRIndicatorSet, on_delete=models.CASCADE, related_name="finance_solutions"

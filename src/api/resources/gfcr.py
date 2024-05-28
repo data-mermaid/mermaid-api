@@ -158,7 +158,7 @@ class IndicatorSetViewSet(BaseProjectApiViewSet):
         project_id = self.kwargs.get("project_pk")
         if project_id is None:
             return GFCRIndicatorSet.objects.none()
-        return GFCRIndicatorSet.objects.filter(project_id=project_id)
+        return GFCRIndicatorSet.objects.filter(project_id=project_id, project__includes_gfcr=True)
 
     def _save_data(self, record, serializer, request, instance=None):
         kwargs = {
