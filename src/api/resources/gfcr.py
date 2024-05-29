@@ -171,6 +171,17 @@ class IndicatorSetViewSet(BaseProjectApiViewSet):
         serializer_instance.is_valid(raise_exception=True)
         return serializer_instance.save()
 
+    def _delete_stale_nested_data(self, fk_field_name, fk_id, nested_model, nested_data):
+        if fk_id:
+            filter_args = {fk_field_name: fk_id}
+            existing = {str(fs.pk): fs for fs in nested_model.objects.filter(**filter_args)}
+            submitted = {fs_record["id"] for fs_record in nested_data if "id" in fs_record}
+
+            for fs_id in existing:
+                if fs_id not in submitted:
+                    existing[fs_id].delete()
+
+
     def _pop_nested_data(self, record, nested_data_key):
         return record.pop(nested_data_key) if nested_data_key in record else []
 
@@ -190,6 +201,12 @@ class IndicatorSetViewSet(BaseProjectApiViewSet):
             request.data, self.serializer_class, request, instance=indicator_set
         )
 
+        if pk:
+            # Delete stale finance solutions
+            self._delete_stale_nested_data(
+                "indicator_set", pk, GFCRFinanceSolution, finance_solutions_data
+            )
+
         # Save finance solutions
         for fs_record in finance_solutions_data:
             investment_sources_data = self._pop_nested_data(fs_record, "investment_sources")
@@ -202,6 +219,20 @@ class IndicatorSetViewSet(BaseProjectApiViewSet):
                 )
             else:
                 fs_instance = None
+
+            if fs_instance:
+                # Delete stale investment sources
+                self._delete_stale_nested_data(
+                    "finance_solution",
+                    str(fs_instance.pk),
+                    GFCRInvestmentSource,
+                    investment_sources_data,
+                )
+
+                # Delete stale revenues
+                self._delete_stale_nested_data(
+                    "finance_solution", str(fs_instance.pk), GFCRRevenue, revenues_data
+                )
 
             fin_sol_record = self._save_data(
                 fs_record, GFCRFinanceSolutionSerializer, request, instance=fs_instance
