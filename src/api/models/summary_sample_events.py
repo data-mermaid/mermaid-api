@@ -2,6 +2,7 @@ from django.contrib.gis.db import models
 
 from sqltables import SQLTableArg, SQLTableManager
 from . import Project
+from .base import ExtendedManager
 
 
 class SummarySampleEventBaseModel(models.Model):
@@ -121,70 +122,70 @@ class SummarySampleEventSQLModel(SummarySampleEventBaseModel):
         jsonb_strip_nulls(jsonb_build_object(
             'beltfish', NULLIF(jsonb_strip_nulls(jsonb_build_object(
                 'sample_unit_count', fb.sample_unit_count,
-                'biomass_kgha_avg', (CASE WHEN project.data_policy_beltfish < 50 THEN NULL ELSE fb.biomass_kgha_avg END),
-                'biomass_kgha_sd', (CASE WHEN project.data_policy_beltfish < 50 THEN NULL ELSE fb.biomass_kgha_sd END),
-                'biomass_kgha_trophic_group_avg', (CASE WHEN project.data_policy_beltfish < 50 THEN NULL ELSE
+                'biomass_kgha_avg', (CASE WHEN project.data_policy_beltfish < 50 AND NOT %(has_access)s THEN NULL ELSE fb.biomass_kgha_avg END),
+                'biomass_kgha_sd', (CASE WHEN project.data_policy_beltfish < 50 AND NOT %(has_access)s THEN NULL ELSE fb.biomass_kgha_sd END),
+                'biomass_kgha_trophic_group_avg', (CASE WHEN project.data_policy_beltfish < 50 AND NOT %(has_access)s THEN NULL ELSE
                 fbtg.biomass_kgha_trophic_group_avg END),
-                'biomass_kgha_trophic_group_sd', (CASE WHEN project.data_policy_beltfish < 50 THEN NULL ELSE
+                'biomass_kgha_trophic_group_sd', (CASE WHEN project.data_policy_beltfish < 50 AND NOT %(has_access)s THEN NULL ELSE
                 fbtg.biomass_kgha_trophic_group_sd END)
             )), '{}'),
             'benthiclit', NULLIF(jsonb_strip_nulls(jsonb_build_object(
                 'sample_unit_count', bl.sample_unit_count,
-                'percent_cover_benthic_category_avg', (CASE WHEN project.data_policy_benthiclit < 50 THEN NULL ELSE
+                'percent_cover_benthic_category_avg', (CASE WHEN project.data_policy_benthiclit < 50 AND NOT %(has_access)s THEN NULL ELSE
                 bl.percent_cover_benthic_category_avg END),
-                'percent_cover_benthic_category_sd', (CASE WHEN project.data_policy_benthiclit < 50 THEN NULL ELSE
+                'percent_cover_benthic_category_sd', (CASE WHEN project.data_policy_benthiclit < 50 AND NOT %(has_access)s THEN NULL ELSE
                 bl.percent_cover_benthic_category_sd END)
             )), '{}'),
             'benthicpit', NULLIF(jsonb_strip_nulls(jsonb_build_object(
                 'sample_unit_count', bp.sample_unit_count,
-                'percent_cover_benthic_category_avg', (CASE WHEN project.data_policy_benthicpit < 50 THEN NULL ELSE
+                'percent_cover_benthic_category_avg', (CASE WHEN project.data_policy_benthicpit < 50 AND NOT %(has_access)s THEN NULL ELSE
                 bp.percent_cover_benthic_category_avg END),
-                'percent_cover_benthic_category_sd', (CASE WHEN project.data_policy_benthicpit < 50 THEN NULL ELSE
+                'percent_cover_benthic_category_sd', (CASE WHEN project.data_policy_benthicpit < 50 AND NOT %(has_access)s THEN NULL ELSE
                 bp.percent_cover_benthic_category_sd END)
             )), '{}'),
             'benthicpqt', NULLIF(jsonb_strip_nulls(jsonb_build_object(
                 'sample_unit_count', pqt.sample_unit_count,
-                'percent_cover_benthic_category_avg', (CASE WHEN project.data_policy_benthicpqt < 50 THEN NULL ELSE
+                'percent_cover_benthic_category_avg', (CASE WHEN project.data_policy_benthicpqt < 50 AND NOT %(has_access)s THEN NULL ELSE
                 pqt.percent_cover_benthic_category_avg END),
-                'percent_cover_benthic_category_sd', (CASE WHEN project.data_policy_benthicpqt < 50 THEN NULL ELSE
+                'percent_cover_benthic_category_sd', (CASE WHEN project.data_policy_benthicpqt < 50 AND NOT %(has_access)s THEN NULL ELSE
                 pqt.percent_cover_benthic_category_sd END)
             )), '{}'),
             'habitatcomplexity', NULLIF(jsonb_strip_nulls(jsonb_build_object(
                 'sample_unit_count', hc.sample_unit_count,
-                'score_avg_avg', (CASE WHEN project.data_policy_habitatcomplexity < 50 THEN NULL ELSE hc.score_avg_avg END)
+                'score_avg_avg', (CASE WHEN project.data_policy_habitatcomplexity < 50 AND NOT %(has_access)s THEN NULL ELSE hc.score_avg_avg END)
             )), '{}'),
             'colonies_bleached', NULLIF(jsonb_strip_nulls(jsonb_build_object(
                 'sample_unit_count', bleachingqc.sample_unit_count,
-                'count_total_avg', (CASE WHEN project.data_policy_bleachingqc < 50 THEN NULL ELSE bleachingqc.count_total_avg
+                'count_total_avg', (CASE WHEN project.data_policy_bleachingqc < 50 AND NOT %(has_access)s THEN NULL ELSE bleachingqc.count_total_avg
                 END),
-                'count_genera_avg', (CASE WHEN project.data_policy_bleachingqc < 50 THEN NULL ELSE
+                'count_genera_avg', (CASE WHEN project.data_policy_bleachingqc < 50 AND NOT %(has_access)s THEN NULL ELSE
                 bleachingqc.count_genera_avg END),
-                'percent_normal_avg', (CASE WHEN project.data_policy_bleachingqc < 50 THEN NULL ELSE
+                'percent_normal_avg', (CASE WHEN project.data_policy_bleachingqc < 50 AND NOT %(has_access)s THEN NULL ELSE
                 bleachingqc.percent_normal_avg END),
-                'percent_pale_avg', (CASE WHEN project.data_policy_bleachingqc < 50 THEN NULL ELSE
+                'percent_pale_avg', (CASE WHEN project.data_policy_bleachingqc < 50 AND NOT %(has_access)s THEN NULL ELSE
                 bleachingqc.percent_pale_avg END),
-                'percent_20_avg', (CASE WHEN project.data_policy_bleachingqc < 50 THEN NULL ELSE
+                'percent_20_avg', (CASE WHEN project.data_policy_bleachingqc < 50 AND NOT %(has_access)s THEN NULL ELSE
                 bleachingqc.percent_20_avg END),
-                'percent_50_avg', (CASE WHEN project.data_policy_bleachingqc < 50 THEN NULL ELSE
+                'percent_50_avg', (CASE WHEN project.data_policy_bleachingqc < 50 AND NOT %(has_access)s THEN NULL ELSE
                 bleachingqc.percent_50_avg END),
-                'percent_80_avg', (CASE WHEN project.data_policy_bleachingqc < 50 THEN NULL ELSE
+                'percent_80_avg', (CASE WHEN project.data_policy_bleachingqc < 50 AND NOT %(has_access)s THEN NULL ELSE
                 bleachingqc.percent_80_avg END),
-                'percent_100_avg', (CASE WHEN project.data_policy_bleachingqc < 50 THEN NULL ELSE
+                'percent_100_avg', (CASE WHEN project.data_policy_bleachingqc < 50 AND NOT %(has_access)s THEN NULL ELSE
                 bleachingqc.percent_100_avg END),
-                'percent_dead_avg', (CASE WHEN project.data_policy_bleachingqc < 50 THEN NULL ELSE
+                'percent_dead_avg', (CASE WHEN project.data_policy_bleachingqc < 50 AND NOT %(has_access)s THEN NULL ELSE
                 bleachingqc.percent_dead_avg END),
-                'percent_bleached_avg', (CASE WHEN project.data_policy_bleachingqc < 50 THEN NULL ELSE
+                'percent_bleached_avg', (CASE WHEN project.data_policy_bleachingqc < 50 AND NOT %(has_access)s THEN NULL ELSE
                 bleachingqc.percent_bleached_avg END)
             )), '{}'),
             'quadrat_benthic_percent', NULLIF(jsonb_strip_nulls(jsonb_build_object(
                 'sample_unit_count', bleachingqc.sample_unit_count,
-                'percent_hard_avg_avg', (CASE WHEN project.data_policy_bleachingqc < 50 THEN NULL ELSE
+                'percent_hard_avg_avg', (CASE WHEN project.data_policy_bleachingqc < 50 AND NOT %(has_access)s THEN NULL ELSE
                 bleachingqc.percent_hard_avg_avg END),
-                'percent_soft_avg_avg', (CASE WHEN project.data_policy_bleachingqc < 50 THEN NULL ELSE
+                'percent_soft_avg_avg', (CASE WHEN project.data_policy_bleachingqc < 50 AND NOT %(has_access)s THEN NULL ELSE
                 bleachingqc.percent_soft_avg_avg END),
-                'percent_algae_avg_avg', (CASE WHEN project.data_policy_bleachingqc < 50 THEN NULL ELSE
+                'percent_algae_avg_avg', (CASE WHEN project.data_policy_bleachingqc < 50 AND NOT %(has_access)s THEN NULL ELSE
                 bleachingqc.percent_algae_avg_avg END),
-                'quadrat_count_avg', (CASE WHEN project.data_policy_bleachingqc < 50 THEN NULL ELSE
+                'quadrat_count_avg', (CASE WHEN project.data_policy_bleachingqc < 50 AND NOT %(has_access)s THEN NULL ELSE
                 bleachingqc.quadrat_count_avg END)
             )), '{}')
         )) AS protocols
@@ -381,9 +382,33 @@ class SummarySampleEventSQLModel(SummarySampleEventBaseModel):
         app_label = "api"
 
     objects = SQLTableManager()
-    sql_args = dict(project_id=SQLTableArg(required=True))
+    sql_args = {
+        "project_id": SQLTableArg(required=True),
+        "has_access": SQLTableArg(required=False, default="false"),
+    }
 
 
 class SummarySampleEventModel(SummarySampleEventBaseModel):
     class Meta:
         db_table = "summary_sample_event"
+
+
+class BaseProjectSummarySampleEvent(models.Model):
+    project_id = models.UUIDField(primary_key=True)
+    records = models.JSONField()
+    created_on = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        abstract = True
+
+    objects = ExtendedManager()
+
+
+class RestrictedProjectSummarySampleEvent(BaseProjectSummarySampleEvent):
+    class Meta:
+        db_table = "restricted_project_summary_se"
+
+
+class UnrestrictedProjectSummarySampleEvent(BaseProjectSummarySampleEvent):
+    class Meta:
+        db_table = "unrestricted_project_summary_se"

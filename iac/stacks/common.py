@@ -1,9 +1,11 @@
 import json
 
 from aws_cdk import (
+    CfnOutput,
     Duration,
     RemovalPolicy,
     Stack,
+    aws_autoscaling as autoscale,
     aws_certificatemanager as acm,
     aws_ec2 as ec2,
     aws_ecs as ecs,
@@ -70,20 +72,6 @@ class CommonStack(Stack):
             description="Security group for VPC Endpoints for ECR",
         )
 
-        # create VPC endopoints for ECR
-        self.vpc.add_interface_endpoint(
-            "ecr-api-endpoint",
-            service=ec2.InterfaceVpcEndpointAwsService.ECR,
-            subnets=ec2.SubnetSelection(subnet_type=ec2.SubnetType.PRIVATE_WITH_EGRESS),
-            security_groups=[vpc_ep_ecr_sg],
-        )
-        self.vpc.add_interface_endpoint(
-            "ecr-dkr-endpoint",
-            service=ec2.InterfaceVpcEndpointAwsService.ECR_DOCKER,
-            subnets=ec2.SubnetSelection(subnet_type=ec2.SubnetType.PRIVATE_WITH_EGRESS),
-            security_groups=[vpc_ep_ecr_sg],
-        )
-
         # create a secret so we can manually set the username
         database_credentials_secret = sm.Secret(
             self,
@@ -122,6 +110,15 @@ class CommonStack(Stack):
             block_public_access=s3.BlockPublicAccess.BLOCK_ALL,
         )
 
+        self.image_processing_bucket = s3.Bucket(
+            self,
+            id="MermaidImageProcessingBackupBucket",
+            bucket_name="mermaid-image-processing",
+            removal_policy=RemovalPolicy.RETAIN,
+            public_read_access=False,
+            block_public_access=s3.BlockPublicAccess.BLOCK_ALL,
+        )
+
         # KMS Key for encrypting logs
         ecs_exec_kms_key = kms.Key(self, "ecsExecKmsKey")
 
@@ -141,13 +138,50 @@ class CommonStack(Stack):
             logging=ecs.ExecuteCommandLogging.OVERRIDE,
         )
 
-        self.cluster = ecs.Cluster(
+        self.fargate_cluster = ecs.Cluster(
             self,
             "MermaidApiCluster",
             vpc=self.vpc,
             container_insights=True,
             enable_fargate_capacity_providers=True,
             execute_command_configuration=ecs_exec_config,
+        )
+
+        self.cluster = ecs.Cluster(
+            self,
+            "EC2MermaidApiCluster",
+            vpc=self.vpc,
+            container_insights=True,
+            enable_fargate_capacity_providers=True,
+            execute_command_configuration=ecs_exec_config,
+        )
+
+        auto_scaling_group = autoscale.AutoScalingGroup(
+            self,
+            "ASG",
+            vpc=self.vpc,
+            instance_type=ec2.InstanceType("t3a.large"),
+            machine_image=ecs.EcsOptimizedImage.amazon_linux2(),
+            min_capacity=1,
+            max_capacity=4,
+            # NOTE: not setting the desired capacity so ECS can manage it.
+        )
+
+        capacity_provider = ecs.AsgCapacityProvider(
+            self,
+            "AsgCapacityProvider",
+            auto_scaling_group=auto_scaling_group,
+            enable_managed_scaling=True,
+            enable_managed_termination_protection=False,
+        )
+        self.cluster.add_asg_capacity_provider(capacity_provider)
+
+        self.cluster.add_default_capacity_provider_strategy(
+            [
+                ecs.CapacityProviderStrategy(
+                    capacity_provider=capacity_provider.capacity_provider_name, weight=100
+                )
+            ]
         )
 
         self.load_balancer = elb.ApplicationLoadBalancer(
@@ -204,6 +238,21 @@ class CommonStack(Stack):
         )
 
         create_cdk_bot_user(self, self.account)
+
+        # The following are temporary until prod env is upto date.
+        CfnOutput(
+            self,
+            "ExportsOutputFnGetAttMermaidApiClusterB0854EC6Arn311C07EE",
+            value=self.fargate_cluster.cluster_arn,
+            export_name="mermaid-api-infra-common:ExportsOutputFnGetAttMermaidApiClusterB0854EC6Arn311C07EE",
+        )
+
+        CfnOutput(
+            self,
+            "ExportsOutputRefMermaidApiClusterB0854EC639332EDF",
+            value=self.fargate_cluster.cluster_name,
+            export_name="mermaid-api-infra-common:ExportsOutputRefMermaidApiClusterB0854EC639332EDF",
+        )
 
 
 def create_cdk_bot_user(self, account: str):
