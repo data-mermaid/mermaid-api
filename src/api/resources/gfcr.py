@@ -5,13 +5,16 @@ from datetime import datetime
 from django.db import transaction
 from rest_condition import Or
 from rest_framework import serializers, status
+from rest_framework.exceptions import ValidationError
 from rest_framework.response import Response
+
 
 from ..models import (
     GFCRFinanceSolution,
     GFCRIndicatorSet,
     GFCRInvestmentSource,
     GFCRRevenue,
+    Project,
     RestrictedProjectSummarySampleEvent,
 )
 from ..permissions import ProjectDataAdminPermission, ProjectDataReadOnlyPermission
@@ -171,13 +174,35 @@ class IndicatorSetViewSet(BaseProjectApiViewSet):
         serializer_instance.is_valid(raise_exception=True)
         return serializer_instance.save()
 
+    def _delete_stale_nested_data(self, fk_field_name, fk_id, nested_model, nested_data):
+        if fk_id:
+            filter_args = {fk_field_name: fk_id}
+            existing = {str(fs.pk): fs for fs in nested_model.objects.filter(**filter_args)}
+            submitted = {fs_record["id"] for fs_record in nested_data if "id" in fs_record}
+
+            for fs_id in existing:
+                if fs_id not in submitted:
+                    existing[fs_id].delete()
+
     def _pop_nested_data(self, record, nested_data_key):
         return record.pop(nested_data_key) if nested_data_key in record else []
 
+    @transaction.atomic
     def _save(self, request, project_pk, pk=None, *args, **kwargs):
+        project = Project.objects.get_or_none(pk=project_pk)
+        if project.includes_gfcr is False:
+            raise ValidationError(
+                f"GFCR reporting for project {project.id}: {project.name} has not been enabled."
+            )
+        elif project_pk is None or project is None:
+            return Response(status=status.HTTP_404_NOT_FOUND)
+
         queryset = self.get_queryset()
         if pk:
-            indicator_set = queryset.get(pk=pk)
+            try:
+                indicator_set = queryset.get(pk=pk)
+            except GFCRIndicatorSet.DoesNotExist:
+                return Response(status=status.HTTP_404_NOT_FOUND)
         else:
             indicator_set = None
 
@@ -189,6 +214,12 @@ class IndicatorSetViewSet(BaseProjectApiViewSet):
         indicator_set = self._save_data(
             request.data, self.serializer_class, request, instance=indicator_set
         )
+
+        if pk:
+            # Delete stale finance solutions
+            self._delete_stale_nested_data(
+                "indicator_set", pk, GFCRFinanceSolution, finance_solutions_data
+            )
 
         # Save finance solutions
         for fs_record in finance_solutions_data:
@@ -202,6 +233,20 @@ class IndicatorSetViewSet(BaseProjectApiViewSet):
                 )
             else:
                 fs_instance = None
+
+            if fs_instance:
+                # Delete stale investment sources
+                self._delete_stale_nested_data(
+                    "finance_solution",
+                    str(fs_instance.pk),
+                    GFCRInvestmentSource,
+                    investment_sources_data,
+                )
+
+                # Delete stale revenues
+                self._delete_stale_nested_data(
+                    "finance_solution", str(fs_instance.pk), GFCRRevenue, revenues_data
+                )
 
             fin_sol_record = self._save_data(
                 fs_record, GFCRFinanceSolutionSerializer, request, instance=fs_instance
@@ -242,12 +287,10 @@ class IndicatorSetViewSet(BaseProjectApiViewSet):
         output_serializer = self.get_serializer(instance=indicator_set)
         return output_serializer.data
 
-    @transaction.atomic
     def create(self, request, project_pk, *args, **kwargs):
         data = self._save(request, project_pk)
         return Response(data, status=status.HTTP_201_CREATED)
 
-    @transaction.atomic
     def update(self, request, project_pk, pk=None, *args, **kwargs):
         data = self._save(request, project_pk, pk)
         return Response(data, status=status.HTTP_200_OK)
