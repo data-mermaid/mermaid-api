@@ -5,13 +5,16 @@ from datetime import datetime
 from django.db import transaction
 from rest_condition import Or
 from rest_framework import serializers, status
+from rest_framework.exceptions import ValidationError
 from rest_framework.response import Response
+
 
 from ..models import (
     GFCRFinanceSolution,
     GFCRIndicatorSet,
     GFCRInvestmentSource,
     GFCRRevenue,
+    Project,
     RestrictedProjectSummarySampleEvent,
 )
 from ..permissions import ProjectDataAdminPermission, ProjectDataReadOnlyPermission
@@ -181,14 +184,25 @@ class IndicatorSetViewSet(BaseProjectApiViewSet):
                 if fs_id not in submitted:
                     existing[fs_id].delete()
 
-
     def _pop_nested_data(self, record, nested_data_key):
         return record.pop(nested_data_key) if nested_data_key in record else []
 
+    @transaction.atomic
     def _save(self, request, project_pk, pk=None, *args, **kwargs):
+        project = Project.objects.get_or_none(pk=project_pk)
+        if project.includes_gfcr is False:
+            raise ValidationError(
+                f"GFCR reporting for project {project.id}: {project.name} has not been enabled."
+            )
+        elif project_pk is None or project is None:
+            return Response(status=status.HTTP_404_NOT_FOUND)
+
         queryset = self.get_queryset()
         if pk:
-            indicator_set = queryset.get(pk=pk)
+            try:
+                indicator_set = queryset.get(pk=pk)
+            except GFCRIndicatorSet.DoesNotExist:
+                return Response(status=status.HTTP_404_NOT_FOUND)
         else:
             indicator_set = None
 
@@ -273,12 +287,10 @@ class IndicatorSetViewSet(BaseProjectApiViewSet):
         output_serializer = self.get_serializer(instance=indicator_set)
         return output_serializer.data
 
-    @transaction.atomic
     def create(self, request, project_pk, *args, **kwargs):
         data = self._save(request, project_pk)
         return Response(data, status=status.HTTP_201_CREATED)
 
-    @transaction.atomic
     def update(self, request, project_pk, pk=None, *args, **kwargs):
         data = self._save(request, project_pk, pk)
         return Response(data, status=status.HTTP_200_OK)

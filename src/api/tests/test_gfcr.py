@@ -116,6 +116,9 @@ def test_create_indicator_set_admin(
     project_profile1,
     create_indicator_set_payload,
 ):
+    project1.includes_gfcr = True
+    project1.save()
+
     url = reverse("indicatorset-list", kwargs={"project_pk": project1.pk})
     request = api_client1.post(url, data=create_indicator_set_payload, format="json")
 
@@ -164,6 +167,9 @@ def test_update_indicator_set(
     project1,
     indicator_set,
 ):
+    project1.includes_gfcr = True
+    project1.save()
+
     # Create an indicator set
     url = reverse("indicatorset-detail", kwargs={"project_pk": project1.pk, "pk": indicator_set.id})
     create_request = api_client1.get(url, None, format="json")
@@ -192,6 +198,9 @@ def test_coral_health_calculations(
     indicator_set,
     restricted_project_summary_sample_events,
 ):
+    project1.includes_gfcr = True
+    project1.save()
+
     url = reverse("indicatorset-detail", kwargs={"project_pk": project1.pk, "pk": indicator_set.id})
     request = api_client1.get(url, None, format="json")
 
@@ -211,6 +220,9 @@ def test_reporting_range(
     belt_fish_project,
     update_summary_cache,
 ):
+    project1.includes_gfcr = True
+    project1.save()
+
     url = reverse("indicatorset-list", kwargs={"project_pk": project1.pk})
     request = api_client1.post(url, data=create_indicator_set_payload, format="json")
     assert request.status_code == 201
