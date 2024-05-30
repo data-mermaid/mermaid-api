@@ -33,7 +33,7 @@ class CommonStack(Stack):
         self.vpc = ec2.Vpc(
             self,
             "Vpc",
-            cidr="10.10.0.0/16",
+            ip_addresses=ec2.IpAddresses.cidr("10.10.0.0/16"),
             max_azs=3,
             nat_gateways=1,
             subnet_configuration=[
