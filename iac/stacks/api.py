@@ -125,7 +125,7 @@ class ApiStack(Stack):
             "SQS_MESSAGE_VISIBILITY": str(config.api.sqs_message_visibility),
             "SQS_QUEUE_NAME": sqs_queue_name,
             "IMAGE_SQS_QUEUE_NAME": image_sqs_queue_name,
-            "USE_FIFO": use_fifo_queues
+            "USE_FIFO": use_fifo_queues,
         }
 
         # build image asset to be shared with API and Backup Task
@@ -136,26 +136,38 @@ class ApiStack(Stack):
             file="Dockerfile",
         )
 
+        backup_task_def = ecs.Ec2TaskDefinition(
+            self,
+            "ScheduledBackupTaskDef",
+            network_mode=ecs.NetworkMode.AWS_VPC,
+        )
+        backup_task_def.add_container(
+            "ScheduledBackupContainer",
+            image=ecs.ContainerImage.from_docker_image_asset(image_asset),
+            cpu=config.api.backup_cpu,
+            memory_limit_mib=config.api.backup_memory,
+            secrets=api_secrets,
+            environment=environment,
+            command=["python", "manage.py", "dbbackup", f"{config.env_id}"],
+            logging=ecs.LogDrivers.aws_logs(
+                stream_prefix="ScheduledBackupTask"
+            )
+        )
+
         # create a scheduled fargate task
         backup_task = ecs_patterns.ScheduledEc2Task(
             self,
             "ScheduledBackupTask",
             schedule=appscaling.Schedule.rate(Duration.days(1)),
             cluster=cluster,
-            # vpc=cluster.vpc,
             subnet_selection=ec2.SubnetSelection(
                 subnets=cluster.vpc.select_subnets(
                     subnet_type=ec2.SubnetType.PRIVATE_WITH_NAT
                 ).subnets
             ),
             security_groups=[container_security_group],
-            scheduled_ec2_task_image_options=ecs_patterns.ScheduledEc2TaskImageOptions(
-                image=ecs.ContainerImage.from_docker_image_asset(image_asset),
-                cpu=config.api.backup_cpu,
-                memory_limit_mib=config.api.backup_memory,
-                secrets=api_secrets,
-                environment=environment,
-                command=["python", "manage.py", "dbbackup", f"{config.env_id}"],
+            scheduled_ec2_task_definition_options=ecs_patterns.ScheduledEc2TaskDefinitionOptions(
+                task_definition=backup_task_def
             ),
         )
 
