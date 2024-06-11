@@ -149,6 +149,9 @@ class ApiStack(Stack):
             secrets=api_secrets,
             environment=environment,
             command=["python", "manage.py", "dbbackup", f"{config.env_id}"],
+            logging=ecs.LogDrivers.aws_logs(
+                stream_prefix="ScheduledBackupTask"
+            )
         )
 
         # create a scheduled fargate task
