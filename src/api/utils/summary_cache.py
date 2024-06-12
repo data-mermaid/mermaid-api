@@ -276,5 +276,4 @@ def update_summary_cache(project_id, sample_unit=None, skip_test_project=False):
         _update_project_summary_sample_event(project_id, skip_updates)
         timestamp = timezone.now()
         _update_unrestricted_project_summary_sample_events(project_id, timestamp, skip_updates)
-        print(f"skip_updates {skip_updates}")
         _update_restricted_project_summary_sample_events(project_id, timestamp, skip_updates)
