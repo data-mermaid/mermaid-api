@@ -181,11 +181,17 @@ def _update_project_summary_sample_events(
 
 def _update_restricted_project_summary_sample_events(project_id, timestamp, skip_test_project=True):
     _update_project_summary_sample_events(
-        RestrictedProjectSummarySampleEvent, project_id, skip_test_project, has_access="true"
+        RestrictedProjectSummarySampleEvent,
+        project_id,
+        timestamp,
+        skip_test_project,
+        has_access="true",
     )
 
 
-def _update_unrestricted_project_summary_sample_events(project_id, timestamp, skip_test_project=True):
+def _update_unrestricted_project_summary_sample_events(
+    project_id, timestamp, skip_test_project=True
+):
     _update_project_summary_sample_events(
         UnrestrictedProjectSummarySampleEvent, project_id, timestamp, skip_test_project
     )
@@ -270,4 +276,5 @@ def update_summary_cache(project_id, sample_unit=None, skip_test_project=False):
         _update_project_summary_sample_event(project_id, skip_updates)
         timestamp = timezone.now()
         _update_unrestricted_project_summary_sample_events(project_id, timestamp, skip_updates)
+        print(f"skip_updates {skip_updates}")
         _update_restricted_project_summary_sample_events(project_id, timestamp, skip_updates)
