@@ -529,11 +529,11 @@ class BenthicAttributeAdmin(AttributeAdmin):
 
         return super().delete_view(request, object_id, extra_context)
 
-    list_display = ("name", "fk_link", "life_history", "region_list")
-    exportable_fields = ("name", "parent", "life_history", "region_list")
+    list_display = ("name", "fk_link", "life_history_list", "region_list")
+    exportable_fields = ("name", "parent", "life_history_list", "region_list")
     inlines = [BenthicAttributeInline]
     search_fields = ["name"]
-    list_filter = ("status", "life_history")
+    list_filter = ("status",)
 
     def fk_link(self, obj):
         if obj.parent:
@@ -549,20 +549,27 @@ class BenthicAttributeAdmin(AttributeAdmin):
     def region_list(self, obj):
         return ",".join([r.name for r in obj.regions.all()])
 
+    def life_history_list(self, obj):
+        return ",".join([lh.name for lh in obj.life_histories.all()])
+
     def get_readonly_fields(self, request, obj=None):
         if obj:  # editing an existing object
-            return ("child_life_histories", "child_regions")
+            return ("child_regions", "child_life_histories")
         return ()
 
     def child_life_histories(self, obj):
         proportions = {}
-        # get all non-null life histories of descendants
-        life_histories = [ba.life_history for ba in obj.descendants if ba.life_history]
-        total = float(len(life_histories))
-        for lh in life_histories:
-            if lh.name not in proportions:
-                proportions[lh.name] = 0
-            proportions[lh.name] += 1 / total
+        counts = {}
+        total = 0
+        life_histories_sets = [ba.life_histories.all() for ba in obj.descendants]
+        for lhs in life_histories_sets:
+            for lh in lhs:
+                if lh.name not in counts:
+                    counts[lh.name] = 0
+                counts[lh.name] += 1
+                total += 1
+        for name in counts:
+            proportions[name] = counts[name] / float(total)
 
         return proportions
 
@@ -570,7 +577,6 @@ class BenthicAttributeAdmin(AttributeAdmin):
         proportions = {}
         counts = {}
         total = 0
-        # get all m2m sets of regions for each descendant, then add each region to overall count
         region_sets = [ba.regions.all() for ba in obj.descendants]
         for rs in region_sets:
             for r in rs:

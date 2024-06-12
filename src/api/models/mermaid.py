@@ -821,9 +821,10 @@ class BenthicAttribute(BaseAttributeModel):
         "self", on_delete=models.SET_NULL, null=True, blank=True, related_name="children"
     )
     regions = models.ManyToManyField(Region, blank=True)
-    life_history = models.ForeignKey(
-        BenthicLifeHistory, on_delete=models.SET_NULL, null=True, blank=True
-    )
+    # life_history = models.ForeignKey(
+    #     BenthicLifeHistory, on_delete=models.SET_NULL, null=True, blank=True
+    # )
+    life_histories = models.ManyToManyField(BenthicLifeHistory, blank=True)
 
     # Get *all* descendants of this instance, not just immediate children.
     # This is good for summarizing aggregate descendant properties, but if we need more
@@ -831,14 +832,14 @@ class BenthicAttribute(BaseAttributeModel):
     @property
     def descendants(self):
         sql = """
-            WITH RECURSIVE descendants(id, name, parent_id, life_history_id) AS (
-                SELECT id, name, parent_id, life_history_id FROM benthic_attribute WHERE id = '%s'
+            WITH RECURSIVE descendants(id, name, parent_id) AS (
+                SELECT id, name, parent_id FROM benthic_attribute WHERE id = '%s'
               UNION ALL
-                SELECT a.id, a.name, a.parent_id, a.life_history_id
+                SELECT a.id, a.name, a.parent_id
                 FROM descendants d, benthic_attribute a
                 WHERE a.parent_id = d.id
             )
-            SELECT id, name, parent_id, life_history_id
+            SELECT id, name, parent_id
             FROM descendants
             WHERE id != '%s'
         """ % (self.pk, self.pk)
@@ -847,10 +848,10 @@ class BenthicAttribute(BaseAttributeModel):
     @property
     def origin(self):
         sql = """
-            WITH RECURSIVE parents(id, name, parent_id, life_history_id) AS (
-                SELECT id, name, parent_id, life_history_id FROM benthic_attribute WHERE id = '{}'
+            WITH RECURSIVE parents(id, name, parent_id) AS (
+                SELECT id, name, parent_id FROM benthic_attribute WHERE id = '{}'
                 UNION ALL
-                SELECT a.id, a.name, a.parent_id, a.life_history_id
+                SELECT a.id, a.name, a.parent_id
                 FROM parents as p, benthic_attribute a
                 WHERE a.id = p.parent_id
             )
