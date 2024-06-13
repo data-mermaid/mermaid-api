@@ -52,15 +52,15 @@ class BenthicAttributeSerializer(
 
 class BenthicAttributeFilterSet(BaseAPIFilterSet):
     parent = NullableUUIDFilter(field_name="parent")
-    life_history = NullableUUIDFilter(field_name="life_history")
-    regions = BaseInFilter(field_name="regions", lookup_expr="in")
+    life_history = BaseInFilter(field_name="life_histories", lookup_expr="in")
+    region = BaseInFilter(field_name="regions", lookup_expr="in")
 
     class Meta:
         model = BenthicAttribute
         fields = [
             "parent",
             "life_history",
-            "regions",
+            "region",
         ]
 
 
@@ -76,7 +76,7 @@ class BenthicAttributeViewSet(BaseAttributeApiViewSet):
     def filter_queryset(self, queryset):
         qs = super().filter_queryset(queryset)
 
-        if "regions" in self.request.query_params:
+        if "region" in self.request.query_params or "life_history" in self.request.query_params:
             qs = qs.distinct()
 
         return qs

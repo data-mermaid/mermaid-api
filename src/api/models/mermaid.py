@@ -821,9 +821,6 @@ class BenthicAttribute(BaseAttributeModel):
         "self", on_delete=models.SET_NULL, null=True, blank=True, related_name="children"
     )
     regions = models.ManyToManyField(Region, blank=True)
-    # life_history = models.ForeignKey(
-    #     BenthicLifeHistory, on_delete=models.SET_NULL, null=True, blank=True
-    # )
     life_histories = models.ManyToManyField(BenthicLifeHistory, blank=True)
 
     # Get *all* descendants of this instance, not just immediate children.
