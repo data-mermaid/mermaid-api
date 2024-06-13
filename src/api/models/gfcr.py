@@ -267,6 +267,7 @@ class GFCRIndicatorSet(BaseModel):
 
 class GFCRFinanceSolution(BaseModel):
     SECTOR_CHOICES = (
+        ("banking_and_finance", "Banking and finance"),
         ("clean_energy", "Clean energy"),
         ("coastal_agriculture", "Coastal agriculture"),
         ("coastal_forestry", "Coastal forestry"),
@@ -275,7 +276,10 @@ class GFCRFinanceSolution(BaseModel):
         ("ecotourism", "Ecotourism"),
         ("green_shipping_and_cruise_ships", "Green shipping and cruise ships"),
         ("invasive_species_management", "Invasive species management"),
-        ("marine_protected_areas", "Marine protected areas"),
+        (
+            "marine_protected_areas",
+            "Marine Protected Areas and other effectively managed marine areas",
+        ),
         (
             "other_land_based_pollutants_management",
             "Other land-based pollutants management",
@@ -284,6 +288,7 @@ class GFCRFinanceSolution(BaseModel):
         ("sewage_and_waste_water_treatment", "Sewage and waste-water treatment"),
         ("sustainable_fisheries", "Sustainable fisheries"),
         ("sustainable_mariculture_aquaculture", "Sustainable mariculture/aquaculture"),
+        ("water_provision", "Water provision"),
     )
     SECTOR_CHOICES_UPDATED_ON = datetime.datetime(2024, 5, 27, 0, 0, 0, 0, pytz.UTC)
 
@@ -293,10 +298,14 @@ class GFCRFinanceSolution(BaseModel):
         ("blue_carbon", "Blue carbon"),
         ("conservation_trust_funds", "Conservation trust funds"),
         ("debt_conversion", "Debt conversion"),
-        ("incubator_tecnical_assistance", "Incubator / Technical assistance"),
+        ("economic_instruments", "Economic instruments (fines, penalties, taxes, subsidies, etc.)"),
+        ("financial_guarantees", "Financial guarantees"),
+        ("incubator_tecnical_assistance", "Incubator / Technical assistance facility"),
         ("insurance_products", "Insurance products"),
+        ("microfinance", "Microfinance / Village Savings and Loans"),
         ("mpa_entry_fees", "MPA entry fees"),
         ("pay_for_success", "Pay for success"),
+        ("revolving_finance_facility", "Revolving finance facility"),
         ("sustainable_livelihood_mech", "Sustainable livelihood mechanisms"),
     )
     SUSTAINABLE_FINANCE_MECHANISM_CHOICES_UPDATED_ON = datetime.datetime(
@@ -304,8 +313,8 @@ class GFCRFinanceSolution(BaseModel):
     )
 
     INCUBATOR_CHOICES = (
-        ("gfcr_funded", "GFCR-funded"),
-        ("non_gfcr_funded", "Non-GFCR-funded"),
+        ("gfcr_funded", "Yes: GFCR-funded"),
+        ("non_gfcr_funded", "Yes: Non-GFCR-funded"),
     )
     INCUBATOR_CHOICES_UPDATED_ON = datetime.datetime(2024, 5, 28, 0, 0, 0, 0, pytz.UTC)
 
@@ -379,22 +388,23 @@ class GFCRRevenue(BaseModel):
     REVENUE_TYPE_CHOICES = (
         ("biodiversity_offsets", "Biodiversity offsets"),
         ("blue_bonds", "Blue bonds"),
-        ("business_incubation_and_investment", "Business incubation and investment"),
         (
             "carbon_credits_environmental_services",
             "Carbon credits / environmental services",
         ),
         ("conservation_trust_funds", "Conservation trust funds"),
         ("debt_conversion", "Debt conversion"),
-        ("ecotourism", "Ecotourism"),
-        ("fees_and_payments", "Fees and payments"),
+        ("ecotourism", "Ecotourism sales"),
+        ("fees_and_payments", "Fees, tariffs, penalties, and other payments"),
         ("green_tax", "Green tax"),
         ("insurance_products", "Insurance products"),
-        ("interest_investment_returns", "Interest / investment returns"),
-        ("marine_resources_sales", "Marine resources sales"),
+        (
+            "interest_investment_returns",
+            "Interest / investment returns (e.g., public, private equity)",
+        ),
+        ("marine_resources_sales", "Natural resource sales (e.g., fisheries or aquaculture)"),
         ("misc_revenue_streams", "Misc. revenue streams"),
-        ("sustainable_livelihood_mechanisms", "Sustainable livelihood mechanisms"),
-        ("water_tariff", "Water tariff"),
+        ("sustainable_livelihood_mechanisms", "Other sustainable livelihood mechanisms"),
     )
     REVENUE_TYPE_CHOICES_UPDATED_ON = datetime.datetime(2024, 5, 27, 0, 0, 0, 0, pytz.UTC)
 
