@@ -181,11 +181,17 @@ def _update_project_summary_sample_events(
 
 def _update_restricted_project_summary_sample_events(project_id, timestamp, skip_test_project=True):
     _update_project_summary_sample_events(
-        RestrictedProjectSummarySampleEvent, project_id, skip_test_project, has_access="true"
+        RestrictedProjectSummarySampleEvent,
+        project_id,
+        timestamp,
+        skip_test_project,
+        has_access="true",
     )
 
 
-def _update_unrestricted_project_summary_sample_events(project_id, timestamp, skip_test_project=True):
+def _update_unrestricted_project_summary_sample_events(
+    project_id, timestamp, skip_test_project=True
+):
     _update_project_summary_sample_events(
         UnrestrictedProjectSummarySampleEvent, project_id, timestamp, skip_test_project
     )
