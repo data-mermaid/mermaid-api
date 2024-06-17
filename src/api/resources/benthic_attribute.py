@@ -1,22 +1,25 @@
 from django.db import connection
+from django.db.models import F, OuterRef, Subquery
+from django.db.models.functions import JSONObject
 from django_filters import BaseInFilter
 from rest_framework import serializers
 
-from ..models import BenthicAttribute
+from ..models import BenthicAttribute, BenthicAttributeGrowthFormLifeHistory
 from .base import (
     ArrayAggExt,
     BaseAPIFilterSet,
     BaseAPISerializer,
     BaseAttributeApiViewSet,
+    M2MSerializerMixin,
     NullableUUIDFilter,
-    RegionsSerializerMixin,
 )
 from .mixins import CreateOrUpdateSerializerMixin
 
 
 class BenthicAttributeSerializer(
-    RegionsSerializerMixin, CreateOrUpdateSerializerMixin, BaseAPISerializer
+    M2MSerializerMixin, CreateOrUpdateSerializerMixin, BaseAPISerializer
 ):
+    m2mfields = ["regions", "life_histories", "growth_form_life_histories"]
     status = serializers.ReadOnlyField()
     top_level_category = serializers.SerializerMethodField()
 
@@ -66,8 +69,31 @@ class BenthicAttributeFilterSet(BaseAPIFilterSet):
 
 class BenthicAttributeViewSet(BaseAttributeApiViewSet):
     serializer_class = BenthicAttributeSerializer
-    queryset = BenthicAttribute.objects.select_related().annotate(regions_=ArrayAggExt("regions"))
-
+    queryset = BenthicAttribute.objects.annotate(
+        regions_=Subquery(
+            BenthicAttribute.regions.through.objects.filter(benthicattribute_id=OuterRef("pk"))
+            .values("benthicattribute_id")
+            .annotate(regions_array=ArrayAggExt("region_id"))
+            .values("regions_array")
+        ),
+        life_histories_=Subquery(
+            BenthicAttribute.life_histories.through.objects.filter(
+                benthicattribute_id=OuterRef("pk")
+            )
+            .values("benthicattribute_id")
+            .annotate(life_histories_array=ArrayAggExt("benthiclifehistory_id"))
+            .values("life_histories_array")
+        ),
+        growth_form_life_histories_=Subquery(
+            BenthicAttributeGrowthFormLifeHistory.objects.filter(attribute_id=OuterRef("pk"))
+            .annotate(
+                gf_lh=JSONObject(growth_form=F("growth_form"), life_history=F("life_history"))
+            )
+            .values("attribute_id")
+            .annotate(gf_lhs_array=ArrayAggExt("gf_lh"))
+            .values("gf_lhs_array")
+        ),
+    ).distinct()
     filterset_class = BenthicAttributeFilterSet
     search_fields = [
         "name",

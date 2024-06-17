@@ -15,6 +15,7 @@ from ..models import (
     BeltTransectWidth,
     BeltTransectWidthCondition,
     BenthicAttribute,
+    BenthicAttributeGrowthFormLifeHistory,
     BenthicLifeHistory,
     BenthicLIT,
     BenthicPhotoQuadratTransect,
@@ -464,6 +465,11 @@ class BenthicAttributeInline(admin.StackedInline):
     extra = 0
 
 
+class BenthicAttributeGrowthFormLifeHistoryInline(admin.StackedInline):
+    model = BenthicAttributeGrowthFormLifeHistory
+    extra = 0
+
+
 @admin.register(BenthicAttribute)
 class BenthicAttributeAdmin(AttributeAdmin):
     model_attrib = BenthicAttribute
@@ -531,7 +537,7 @@ class BenthicAttributeAdmin(AttributeAdmin):
 
     list_display = ("name", "fk_link", "life_history_list", "region_list")
     exportable_fields = ("name", "parent", "life_history_list", "region_list")
-    inlines = [BenthicAttributeInline]
+    inlines = [BenthicAttributeGrowthFormLifeHistoryInline, BenthicAttributeInline]
     search_fields = ["name"]
     list_filter = ("status",)
 
