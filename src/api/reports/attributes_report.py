@@ -7,6 +7,7 @@ from openpyxl.utils.cell import coordinate_to_tuple, get_column_letter
 from api.models import (
     SUPERUSER_APPROVED,
     BenthicAttribute,
+    BenthicLifeHistory,
     FishFamily,
     FishGenus,
     FishGrouping,
@@ -70,12 +71,18 @@ def insert_range_and_resize(ws, rng, data):
         ws.column_dimensions[get_column_letter(col)].width = value
 
 
+def get_life_histories():
+    return {str(lh.id): lh.name for lh in BenthicLifeHistory.objects.order_by("name")}
+
+
 def get_regions():
-    return {str(r.id): r.name for r in Region.objects.all().order_by("name")}
+    return {str(r.id): r.name for r in Region.objects.order_by("name")}
 
 
-def create_regions_row(regions, data_region_ids):
-    return [(YES, YES_COLOR_FILL) if r in data_region_ids else (NO, NO_COLOR_FILL) for r in regions]
+def create_m2m_row(lookups, data_ids):
+    return [
+        (YES, YES_COLOR_FILL) if lookup in data_ids else (NO, NO_COLOR_FILL) for lookup in lookups
+    ]
 
 
 def write_fish_families(wb, regions):
@@ -95,7 +102,7 @@ def write_fish_families(wb, regions):
                 fish_family.biomass_constant_a,
                 fish_family.biomass_constant_b,
                 fish_family.biomass_constant_c,
-                *create_regions_row(regions, [str(r) for r in fish_family.regions]),
+                *create_m2m_row(regions, [str(r) for r in fish_family.regions]),
             ]
             for fish_family in FishFamily.objects.filter(status=SUPERUSER_APPROVED).order_by("name")
         ],
@@ -123,7 +130,7 @@ def write_fish_genera(wb, regions):
                 fish_genus.biomass_constant_a,
                 fish_genus.biomass_constant_b,
                 fish_genus.biomass_constant_c,
-                *create_regions_row(regions, [str(r) for r in fish_genus.regions]),
+                *create_m2m_row(regions, [str(r) for r in fish_genus.regions]),
             ]
             for fish_genus in FishGenus.objects.select_related("family")
             .filter(status=SUPERUSER_APPROVED)
@@ -168,7 +175,7 @@ def write_fish_species(wb, regions):
                 fish_species.trophic_level,
                 fish_species.vulnerability,
                 fish_species.climate_score,
-                *create_regions_row(regions, [str(r.id) for r in fish_species.regions.all()]),
+                *create_m2m_row(regions, [str(r.id) for r in fish_species.regions.all()]),
             ]
             for fish_species in FishSpecies.objects.select_related(
                 "genus",
@@ -204,7 +211,7 @@ def write_fish_grouping(wb, regions):
                 fish_group.biomass_constant_a,
                 fish_group.biomass_constant_b,
                 fish_group.biomass_constant_c,
-                *create_regions_row(regions, [str(r.id) for r in fish_group.regions.all()]),
+                *create_m2m_row(regions, [str(r.id) for r in fish_group.regions.all()]),
             ]
             for fish_group in FishGrouping.objects.select_related()
             .filter(status=SUPERUSER_APPROVED)
@@ -215,12 +222,17 @@ def write_fish_grouping(wb, regions):
 
 
 def write_benthic(wb, regions):
+    life_histories = get_life_histories()
+    life_history_names = list(life_histories.values())
     region_names = list(regions.values())
-    COLUMN_NAMES = [
-        "Name",
-        "Parent",
-        "Life History",
-    ] + region_names
+    COLUMN_NAMES = (
+        [
+            "Name",
+            "Parent",
+        ]
+        + life_history_names
+        + region_names
+    )
 
     data = [
         COLUMN_NAMES,
@@ -228,12 +240,10 @@ def write_benthic(wb, regions):
             [
                 ba.name,
                 ba.parent and ba.parent.name,
-                ba.life_history and ba.life_history.name,
-                *create_regions_row(regions, [str(r.id) for r in ba.regions.all()]),
+                *create_m2m_row(life_histories, [str(lh.id) for lh in ba.life_histories.all()]),
+                *create_m2m_row(regions, [str(r.id) for r in ba.regions.all()]),
             ]
-            for ba in BenthicAttribute.objects.select_related("life_history")
-            .filter(status=SUPERUSER_APPROVED)
-            .order_by("name")
+            for ba in BenthicAttribute.objects.filter(status=SUPERUSER_APPROVED).order_by("name")
         ],
     ]
     insert_range_and_resize(wb[BENTHIC_NAME], "A1", data)
