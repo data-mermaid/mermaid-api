@@ -1,3 +1,5 @@
+from collections import defaultdict
+
 from django.conf import settings
 from django.contrib import admin, messages
 from django.contrib.admin.utils import unquote
@@ -563,37 +565,27 @@ class BenthicAttributeAdmin(AttributeAdmin):
             return ("child_regions", "child_life_histories")
         return ()
 
-    def child_life_histories(self, obj):
-        proportions = {}
-        counts = {}
+    def _child_proportions(self, obj, m2mfield):
+        counts = defaultdict(int)
         total = 0
-        life_histories_sets = [ba.life_histories.all() for ba in obj.descendants]
-        for lhs in life_histories_sets:
-            for lh in lhs:
-                if lh.name not in counts:
-                    counts[lh.name] = 0
-                counts[lh.name] += 1
+        m2m_sets = [getattr(ba, m2mfield).all() for ba in obj.descendants]
+
+        for m2ms in m2m_sets:
+            for m2m in m2ms:
+                counts[m2m.name] += 1
                 total += 1
-        for name in counts:
-            proportions[name] = counts[name] / float(total)
+
+        proportions = {
+            name: round(count / float(total), 3) if total else 0 for name, count in counts.items()
+        }
 
         return proportions
+
+    def child_life_histories(self, obj):
+        return self._child_proportions(obj, "life_histories")
 
     def child_regions(self, obj):
-        proportions = {}
-        counts = {}
-        total = 0
-        region_sets = [ba.regions.all() for ba in obj.descendants]
-        for rs in region_sets:
-            for r in rs:
-                if r.name not in counts:
-                    counts[r.name] = 0
-                counts[r.name] += 1
-                total += 1
-        for name in counts:
-            proportions[name] = counts[name] / float(total)
-
-        return proportions
+        return self._child_proportions(obj, "regions")
 
 
 class ObsBenthicLITInline(ObservationInline):
