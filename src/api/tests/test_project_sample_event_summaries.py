@@ -23,7 +23,7 @@ def test_project_se_summary_public(
     obs_benthic_pit1_3,
     update_summary_cache,
 ):
-    url = reverse("projectsummarysampleevent-list")
+    url = reverse("projectsummarysampleevents-list")
 
     request = api_client_public.get(url, None, format="json")
     response_data = request.json()
@@ -56,7 +56,7 @@ def test_project_se_summary_authenticated(
     obs_benthic_pit1_3,
     update_summary_cache,
 ):
-    url = reverse("projectsummarysampleevent-list")
+    url = reverse("projectsummarysampleevents-list")
 
     request = api_client1.get(url, None, format="json")
     response_data = request.json()
@@ -94,7 +94,7 @@ def test_project_se_summary_authenticated_not_project(
     obs_benthic_pit1_3,
     update_summary_cache,
 ):
-    url = reverse("projectsummarysampleevent-list")
+    url = reverse("projectsummarysampleevents-list")
 
     request = api_client3.get(url, None, format="json")
     response_data = request.json()
