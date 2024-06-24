@@ -54,7 +54,12 @@ def replace_sampleunit_objs(find_objs, replace_obj, field, profile):
 
 def replace_collect_record_owner(project_id, from_profile, to_profile, updated_by):
     updated_on = timezone.now()
-    collect_records = CollectRecord.objects.filter(project_id=project_id, profile=from_profile)
+    # replace_collect_record_owner will be called in a transaction, so when we
+    # query collect records we also lock them until the end of the transaction
+    # in order to prevent conflicts.
+    collect_records = CollectRecord.objects.select_for_update().filter(
+        project_id=project_id, profile=from_profile
+    )
     num_collect_records_updated = collect_records.count()
 
     new_collect_records = []
