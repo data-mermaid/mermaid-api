@@ -13,7 +13,7 @@ from django.core.validators import MaxValueValidator, MinValueValidator
 from django.db.models import Avg, F, Max, Q
 from django.forms.models import model_to_dict
 from django.utils import timezone
-from django.utils.translation import gettext_lazy as _
+from django.utils.translation import gettext as _
 from rest_framework.utils.encoders import JSONEncoder
 from taggit.managers import TaggableManager
 from taggit.models import GenericUUIDTaggedItemBase, TagBase
@@ -109,7 +109,11 @@ class Project(BaseModel, JSONMixin):
             "description": "Collected observations are private, but site-level summary statistics are public, "
             "along with metadata for project, protocol and site. This option is the default.",
         },
-        {"id": PUBLIC, "name": "Public", "description": "All collected observations are public."},
+        {
+            "id": PUBLIC,
+            "name": "Public",
+            "description": "All collected observations are public.",
+        },
     )
 
     name = models.CharField(max_length=255, unique=True)
@@ -231,7 +235,10 @@ class Management(BaseModel, JSONMixin, AreaMixin):
     )
     # help_text=_('Optional estimate of level of compliance associated with this management regime'))
     est_year = models.PositiveSmallIntegerField(
-        null=True, blank=True, validators=[validate_max_year], verbose_name=_("year established")
+        null=True,
+        blank=True,
+        validators=[validate_max_year],
+        verbose_name=_("year established"),
     )
     predecessor = models.ForeignKey("self", on_delete=models.SET_NULL, null=True, blank=True)
     # help_text=_('Management regime that preceded this one before a change in name, rules, or boundary'))
@@ -593,7 +600,11 @@ class BeltTransectWidthCondition(BaseChoiceModel):
     )
     operator = models.CharField(max_length=2, choices=OPERATOR_CHOICES, null=True, blank=True)
     size = models.DecimalField(
-        decimal_places=1, max_digits=5, null=True, blank=True, verbose_name=_("fish size (cm)")
+        decimal_places=1,
+        max_digits=5,
+        null=True,
+        blank=True,
+        verbose_name=_("fish size (cm)"),
     )
     val = models.PositiveSmallIntegerField()
 
@@ -606,7 +617,9 @@ class BeltTransectWidthCondition(BaseChoiceModel):
         return str(
             _(
                 "{} {}cm @ {}".format(
-                    str(self.operator or ""), str(self.size or ""), str(self.belttransectwidth)
+                    str(self.operator or ""),
+                    str(self.size or ""),
+                    str(self.belttransectwidth),
                 )
             )
         )
@@ -818,12 +831,14 @@ class GrowthForm(BaseChoiceModel):
 class BenthicAttribute(BaseAttributeModel):
     name = models.CharField(max_length=100)
     parent = models.ForeignKey(
-        "self", on_delete=models.SET_NULL, null=True, blank=True, related_name="children"
+        "self",
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name="children",
     )
     regions = models.ManyToManyField(Region, blank=True)
-    life_history = models.ForeignKey(
-        BenthicLifeHistory, on_delete=models.SET_NULL, null=True, blank=True
-    )
+    life_histories = models.ManyToManyField(BenthicLifeHistory, blank=True)
 
     # Get *all* descendants of this instance, not just immediate children.
     # This is good for summarizing aggregate descendant properties, but if we need more
@@ -831,26 +846,29 @@ class BenthicAttribute(BaseAttributeModel):
     @property
     def descendants(self):
         sql = """
-            WITH RECURSIVE descendants(id, name, parent_id, life_history_id) AS (
-                SELECT id, name, parent_id, life_history_id FROM benthic_attribute WHERE id = '%s'
+            WITH RECURSIVE descendants(id, name, parent_id) AS (
+                SELECT id, name, parent_id FROM benthic_attribute WHERE id = '%s'
               UNION ALL
-                SELECT a.id, a.name, a.parent_id, a.life_history_id
+                SELECT a.id, a.name, a.parent_id
                 FROM descendants d, benthic_attribute a
                 WHERE a.parent_id = d.id
             )
-            SELECT id, name, parent_id, life_history_id
+            SELECT id, name, parent_id
             FROM descendants
             WHERE id != '%s'
-        """ % (self.pk, self.pk)
+        """ % (
+            self.pk,
+            self.pk,
+        )
         return type(self).objects.raw(sql)
 
     @property
     def origin(self):
         sql = """
-            WITH RECURSIVE parents(id, name, parent_id, life_history_id) AS (
-                SELECT id, name, parent_id, life_history_id FROM benthic_attribute WHERE id = '{}'
+            WITH RECURSIVE parents(id, name, parent_id) AS (
+                SELECT id, name, parent_id FROM benthic_attribute WHERE id = '{}'
                 UNION ALL
-                SELECT a.id, a.name, a.parent_id, a.life_history_id
+                SELECT a.id, a.name, a.parent_id
                 FROM parents as p, benthic_attribute a
                 WHERE a.id = p.parent_id
             )
@@ -868,6 +886,20 @@ class BenthicAttribute(BaseAttributeModel):
     def __str__(self):
         return _("%s") % self.name
         # return '%s' % str(self.name)
+
+
+# specific to BA/GF life histories, where >1 per combination possible - not unique BA/GF properties
+class BenthicAttributeGrowthFormLifeHistory(BaseModel):
+    attribute = models.ForeignKey(BenthicAttribute, on_delete=models.PROTECT)
+    growth_form = models.ForeignKey(GrowthForm, on_delete=models.PROTECT)
+    life_history = models.ForeignKey(BenthicLifeHistory, on_delete=models.PROTECT)
+
+    class Meta:
+        db_table = "ba_gf_life_histories"
+        verbose_name_plural = _("benthic attribute growth form life histories")
+
+    def __str__(self):
+        return _(f"{self.attribute.name} - {self.growth_form.name} {self.life_history.name}")
 
 
 class BenthicLIT(TransectMethod):
@@ -930,7 +962,10 @@ class BenthicPIT(TransectMethod):
     )
 
     interval_start = models.DecimalField(
-        max_digits=4, decimal_places=2, default=0.5, verbose_name=_("interval start (m)")
+        max_digits=4,
+        decimal_places=2,
+        default=0.5,
+        verbose_name=_("interval start (m)"),
     )
 
     class Meta:
@@ -1003,7 +1038,9 @@ class ObsHabitatComplexity(BaseModel, JSONMixin):
     project_lookup = "habitatcomplexity__transect__sample_event__site__project"
 
     habitatcomplexity = models.ForeignKey(
-        HabitatComplexity, related_name="habitatcomplexity_set", on_delete=models.CASCADE
+        HabitatComplexity,
+        related_name="habitatcomplexity_set",
+        on_delete=models.CASCADE,
     )
     interval = models.DecimalField(max_digits=7, decimal_places=2)
     score = models.ForeignKey(HabitatComplexityScore, on_delete=models.PROTECT)
@@ -1077,13 +1114,25 @@ class ObsQuadratBenthicPercent(BaseModel, JSONMixin):
     )
     quadrat_number = models.PositiveSmallIntegerField(verbose_name="quadrat number")
     percent_hard = models.DecimalField(
-        max_digits=5, decimal_places=2, verbose_name="hard coral, % cover", null=True, blank=True
+        max_digits=5,
+        decimal_places=2,
+        verbose_name="hard coral, % cover",
+        null=True,
+        blank=True,
     )
     percent_soft = models.DecimalField(
-        max_digits=5, decimal_places=2, verbose_name="soft coral, % cover", null=True, blank=True
+        max_digits=5,
+        decimal_places=2,
+        verbose_name="soft coral, % cover",
+        null=True,
+        blank=True,
     )
     percent_algae = models.DecimalField(
-        max_digits=5, decimal_places=2, verbose_name="macroalgae, % cover", null=True, blank=True
+        max_digits=5,
+        decimal_places=2,
+        verbose_name="macroalgae, % cover",
+        null=True,
+        blank=True,
     )
     notes = models.TextField(blank=True)
 
@@ -1192,7 +1241,11 @@ class FishAttribute(BaseAttributeModel):
         taxon = self._get_taxon()
         if taxon is None:
             return None, None, None
-        return taxon.biomass_constant_a, taxon.biomass_constant_b, taxon.biomass_constant_c
+        return (
+            taxon.biomass_constant_a,
+            taxon.biomass_constant_b,
+            taxon.biomass_constant_c,
+        )
 
     @property
     def regions(self):
@@ -1652,7 +1705,11 @@ class ObsBeltFish(BaseModel, JSONMixin):
     def __str__(self):
         if self._hide_fish_in_repr:
             return ""
-        return _("%s %s x %scm") % (self.fish_attribute.__str__(), self.count, self.size)
+        return _("%s %s x %scm") % (
+            self.fish_attribute.__str__(),
+            self.count,
+            self.size,
+        )
 
     @property
     def observers(self):
@@ -1701,7 +1758,10 @@ class CollectRecord(BaseModel):
     def obs_keys(self):
         protocol_obs_keys = {
             FISHBELT_PROTOCOL: ["obs_belt_fishes"],
-            BLEACHINGQC_PROTOCOL: ["obs_colonies_bleached", "obs_quadrat_benthic_percent"],
+            BLEACHINGQC_PROTOCOL: [
+                "obs_colonies_bleached",
+                "obs_quadrat_benthic_percent",
+            ],
             BENTHICLIT_PROTOCOL: ["obs_benthic_lits"],
             BENTHICPIT_PROTOCOL: ["obs_benthic_pits"],
             HABITATCOMPLEXITY_PROTOCOL: ["obs_habitat_complexities"],
@@ -1713,7 +1773,11 @@ class CollectRecord(BaseModel):
     def sample_unit(self):
         data = self.data or {}
         protocol = self.protocol
-        if protocol in (BENTHICLIT_PROTOCOL, BENTHICPIT_PROTOCOL, HABITATCOMPLEXITY_PROTOCOL):
+        if protocol in (
+            BENTHICLIT_PROTOCOL,
+            BENTHICPIT_PROTOCOL,
+            HABITATCOMPLEXITY_PROTOCOL,
+        ):
             return data.get("benthic_transect") or {}
         elif protocol == FISHBELT_PROTOCOL:
             return data.get("fishbelt_transect") or {}
