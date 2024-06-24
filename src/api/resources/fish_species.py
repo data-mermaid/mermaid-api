@@ -9,14 +9,13 @@ from .base import (
     BaseAPIFilterSet,
     BaseAPISerializer,
     BaseAttributeApiViewSet,
-    RegionsSerializerMixin,
+    M2MSerializerMixin,
 )
 from .mixins import CreateOrUpdateSerializerMixin
 
 
-class FishSpeciesSerializer(
-    RegionsSerializerMixin, CreateOrUpdateSerializerMixin, BaseAPISerializer
-):
+class FishSpeciesSerializer(M2MSerializerMixin, CreateOrUpdateSerializerMixin, BaseAPISerializer):
+    m2mfields = ["regions"]
     status = serializers.ReadOnlyField()
     display_name = serializers.SerializerMethodField()
     biomass_constant_a = serializers.DecimalField(
