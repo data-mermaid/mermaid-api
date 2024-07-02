@@ -50,7 +50,6 @@ dev_api_stack = ApiStack(
     container_security_group=common_stack.ecs_sg,
     api_zone=common_stack.api_zone,
     public_bucket=dev_static_site_stack.site_bucket,
-    image_processing_bucket=common_stack.image_processing_bucket,
     use_fifo_queues="False",
 )
 
@@ -76,7 +75,6 @@ prod_api_stack = ApiStack(
     container_security_group=common_stack.ecs_sg,
     api_zone=common_stack.api_zone,
     public_bucket=prod_static_site_stack.site_bucket,
-    image_processing_bucket=common_stack.image_processing_bucket,
     use_fifo_queues="False",
 )
 

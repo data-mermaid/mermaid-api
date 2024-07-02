@@ -123,6 +123,7 @@ if ENVIRONMENT not in (
     DEBUG_TOOLBAR_CONFIG = {"SHOW_TOOLBAR_CALLBACK": show_toolbar}
     ALLOWED_HOSTS = ["*"]
     DEBUG = True
+    MEDIA_ROOT = os.path.join(BASE_DIR, "media")
 
 # SSL settings
 SECURE_PROXY_SSL_HEADER = ("HTTP_X_FORWARDED_PROTO", "https")
@@ -358,5 +359,17 @@ ENDPOINT_URL = None if ENVIRONMENT in ("dev", "prod") else "http://sqs:9324"
 # AWS S3 bucket for public files
 PUBLIC_BUCKET = os.environ.get("AWS_PUBLIC_BUCKET")
 
-# AWS S3 bucket for image processing files
+# AWS S3 bucket for image processing files (dev and prod)
 IMAGE_PROCESSING_BUCKET = os.environ.get("IMAGE_PROCESSING_BUCKET")
+
+STORAGES = {
+    "images": {
+        "BACKEND": "storages.backends.s3.S3Storage",
+        "OPTIONS": {
+            "bucket_name": IMAGE_PROCESSING_BUCKET,
+            "object_parameters": {},
+            "file_overwrite": False,
+            "location": "",  # A path prefix that will be prepended to all uploads.
+        },
+    },
+}

@@ -31,3 +31,5 @@ rest_condition==1.0.3
 simpleflake==0.1.5
 timezonefinder==6.1.1
 whitenoise==6.2.0
+django-storages[s3]==1.14.3
+pillow==10.4.0
