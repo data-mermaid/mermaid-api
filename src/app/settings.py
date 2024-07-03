@@ -124,6 +124,7 @@ if ENVIRONMENT not in (
     ALLOWED_HOSTS = ["*"]
     DEBUG = True
     MEDIA_ROOT = os.path.join(BASE_DIR, "media")
+    MEDIA_URL = "/media/"
 
 # SSL settings
 SECURE_PROXY_SSL_HEADER = ("HTTP_X_FORWARDED_PROTO", "https")
