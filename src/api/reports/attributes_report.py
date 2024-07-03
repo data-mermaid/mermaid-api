@@ -229,6 +229,7 @@ def write_benthic(wb, regions):
         [
             "Name",
             "Parent",
+            "Category",
         ]
         + life_history_names
         + region_names
@@ -240,6 +241,7 @@ def write_benthic(wb, regions):
             [
                 ba.name,
                 ba.parent and ba.parent.name,
+                ba.origin and ba.origin.name,
                 *create_m2m_row(life_histories, [str(lh.id) for lh in ba.life_histories.all()]),
                 *create_m2m_row(regions, [str(r.id) for r in ba.regions.all()]),
             ]

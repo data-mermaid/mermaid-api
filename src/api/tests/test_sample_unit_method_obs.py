@@ -88,7 +88,7 @@ def test_benthicpit_csv_view(
 
     assert len(rows) == 15
     assert "country_name" in fieldnames
-    assert len(rows[11].keys()) == 50
+    assert len(rows[11].keys()) == 54
     assert rows[11]["site_name"] == site2.name
     assert float(rows[11]["latitude"]) == site2.location.y
     assert float(rows[11]["longitude"]) == site2.location.x
@@ -114,7 +114,7 @@ def test_benthicpit_field_report(
     assert "test_project_1-benthicpit-obs-" in response.headers.get("content-disposition")
     assert len(rows) == 15
     assert "Country" in fieldnames
-    assert len(rows[11].keys()) == 42
+    assert len(rows[11].keys()) == 46
     assert rows[11]["Site"] == site2.name
     assert float(rows[11]["Latitude"]) == site2.location.y
     assert float(rows[11]["Longitude"]) == site2.location.x
