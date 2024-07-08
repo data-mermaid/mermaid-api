@@ -180,6 +180,7 @@ def obs_benthic_pit2_5(db, benthic_pit2, benthic_attribute_3, growth_form4):
 @pytest.fixture
 def benthic_pit_project(
     db,
+    life_histories,
     obs_benthic_pit1_1,
     obs_benthic_pit1_2,
     obs_benthic_pit1_3,

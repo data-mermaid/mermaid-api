@@ -1,6 +1,6 @@
 import pytest
 
-from api.models import BenthicAttribute, GrowthForm
+from api.models import BenthicAttribute, BenthicLifeHistory, GrowthForm
 
 
 @pytest.fixture
@@ -100,6 +100,17 @@ def growth_form4(db):
 
 
 @pytest.fixture
+def life_histories(db):
+    BenthicLifeHistory.objects.create(name="N/A")
+    BenthicLifeHistory.objects.create(name="competitive")
+    BenthicLifeHistory.objects.create(name="generalist")
+    BenthicLifeHistory.objects.create(name="stress-tolerant")
+    BenthicLifeHistory.objects.create(name="weedy")
+
+    return BenthicLifeHistory.objects.all()
+
+
+@pytest.fixture
 def all_test_benthic_attributes(
     db,
     benthic_attribute_1,
@@ -115,5 +126,6 @@ def all_test_benthic_attributes(
     growth_form2,
     growth_form3,
     growth_form4,
+    life_histories,
 ):
     pass

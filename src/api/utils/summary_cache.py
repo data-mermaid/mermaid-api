@@ -82,19 +82,6 @@ def _update_records(records, target_model_cls, created_on, skip_updates=False):
 
 
 def _fetch_records(sql_model_cls, project_id):
-    print(sql_model_cls, project_id)
-    if sql_model_cls == BenthicPITObsSQLModel:
-        obs = list(sql_model_cls.objects.all().sql_table(project_id=project_id))
-        print(obs[0].life_histories)
-        print(
-            sql_model_cls.objects.all().sql_table(project_id=project_id).query,
-            file=open("pitobs_test.sql", "w"),
-        )
-    # if sql_model_cls == BenthicPITSUSQLModel:
-    #     print(sql_model_cls.objects.all().sql_table(project_id=project_id).query, file=open("pitsu_test.sql", "w"))
-    # for obj in list(sql_model_cls.objects.all().sql_table(project_id=project_id)):
-    #     print(obj.sample_unit_ids, obj.percent_cover_life_histories)
-
     return list(sql_model_cls.objects.all().sql_table(project_id=project_id))
 
 
