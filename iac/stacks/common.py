@@ -173,6 +173,15 @@ class CommonStack(Stack):
             machine_image=ecs.EcsOptimizedImage.amazon_linux2(),
             min_capacity=1,
             max_capacity=4,
+            max_instance_lifetime=Duration.days(7),
+            update_policy=autoscale.UpdatePolicy.rolling_update(),
+            init=ec2.CloudFormationInit.from_elements(
+                ec2.InitCommand.shell_command(
+                    shell_command="yum update --security",
+                )),
+            signals=autoscale.Signals.wait_for_all(
+                timeout=Duration.minutes(10)
+            )
             # NOTE: not setting the desired capacity so ECS can manage it.
         )
 
