@@ -1,0 +1,7 @@
+language: "en"
+early_access: false
+reviews:
+  poem: false
+  review_status: true
+  auto_review:
+    enabled: true

@@ -18,6 +18,10 @@ from ..models import (
     FishGroupTrophic,
     FishSizeBin,
     FishSpecies,
+    GFCRFinanceSolution,
+    GFCRIndicatorSet,
+    GFCRInvestmentSource,
+    GFCRRevenue,
     GrowthForm,
     HabitatComplexityScore,
     ManagementCompliance,
@@ -77,6 +81,46 @@ class ChoiceViewSet(BaseChoiceApiViewSet):
             "fishgrouptrophics": fishgrouptrophics,
             "fishsizebins": fishsizebins,
             "habitatcomplexityscores": habitatcomplexityscores,
+            "incubatortypes": {
+                "data": [
+                    {
+                        "id": c[0],
+                        "name": c[1],
+                        "updated_on": GFCRFinanceSolution.INCUBATOR_CHOICES_UPDATED_ON,
+                    }
+                    for c in GFCRFinanceSolution.INCUBATOR_CHOICES
+                ]
+            },
+            "indicatorsettypes": {
+                "data": [
+                    {
+                        "id": c[0],
+                        "name": c[1],
+                        "updated_on": GFCRIndicatorSet.INDICATOR_SET_TYPE_CHOICES_UPDATED_ON,
+                    }
+                    for c in GFCRIndicatorSet.INDICATOR_SET_TYPE_CHOICES
+                ]
+            },
+            "investmentsources": {
+                "data": [
+                    {
+                        "id": c[0],
+                        "name": c[1],
+                        "updated_on": GFCRInvestmentSource.INVESTMENT_SOURCE_CHOICES_UPDATED_ON,
+                    }
+                    for c in GFCRInvestmentSource.INVESTMENT_SOURCE_CHOICES
+                ]
+            },
+            "investmenttypes": {
+                "data": [
+                    {
+                        "id": c[0],
+                        "name": c[1],
+                        "updated_on": GFCRInvestmentSource.INVESTMENT_TYPE_CHOICES_UPDATED_ON,
+                    }
+                    for c in GFCRInvestmentSource.INVESTMENT_TYPE_CHOICES
+                ]
+            },
             "lengthtypes": {
                 "data": [
                     {
@@ -95,6 +139,16 @@ class ChoiceViewSet(BaseChoiceApiViewSet):
             "reefzones": reefzones,
             "regions": regions,
             "relativedepths": relativedepths,
+            "revenuetypes": {
+                "data": [
+                    {
+                        "id": c[0],
+                        "name": c[1],
+                        "updated_on": GFCRRevenue.REVENUE_TYPE_CHOICES_UPDATED_ON,
+                    }
+                    for c in GFCRRevenue.REVENUE_TYPE_CHOICES
+                ]
+            },
             "roles": {
                 "data": [
                     {
@@ -105,6 +159,16 @@ class ChoiceViewSet(BaseChoiceApiViewSet):
                     for c in ProjectProfile.ROLES
                 ]
             },
+            "sectors": {
+                "data": [
+                    {
+                        "id": c[0],
+                        "name": c[1],
+                        "updated_on": GFCRFinanceSolution.SECTOR_CHOICES_UPDATED_ON,
+                    }
+                    for c in GFCRFinanceSolution.SECTOR_CHOICES
+                ]
+            },
             "stages": {
                 "data": [
                     {
@@ -113,6 +177,16 @@ class ChoiceViewSet(BaseChoiceApiViewSet):
                         "updated_on": CollectRecord.STAGE_CHOICES_UPDATED_ON,
                     }
                     for c in CollectRecord.STAGE_CHOICES
+                ]
+            },
+            "sustainablefinancemechanisms": {
+                "data": [
+                    {
+                        "id": c[0],
+                        "name": c[1],
+                        "updated_on": GFCRFinanceSolution.SUSTAINABLE_FINANCE_MECHANISM_CHOICES_UPDATED_ON,
+                    }
+                    for c in GFCRFinanceSolution.SUSTAINABLE_FINANCE_MECHANISM_CHOICES
                 ]
             },
             "tides": tides,

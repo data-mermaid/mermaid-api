@@ -16,9 +16,8 @@ from aws_cdk import (
     aws_s3 as s3,
 )
 from constructs import Construct
-
-from iac.settings import ProjectSettings
-from iac.stacks.constructs.worker import QueueWorker
+from settings import ProjectSettings
+from stacks.constructs.worker import QueueWorker
 
 
 class ApiStack(Stack):
@@ -34,17 +33,14 @@ class ApiStack(Stack):
         load_balancer: elb.ApplicationLoadBalancer,
         container_security_group: ec2.SecurityGroup,
         api_zone: r53.HostedZone,
+        image_processing_bucket: s3.Bucket,
+        use_fifo_queues: str,
         **kwargs,
     ) -> None:
         super().__init__(scope, id, **kwargs)
 
-        # namespace = sd.PrivateDnsNamespace(self, "Namespace", name=config.private_dns_name, vpc=self.vpc)
-
-        task_definition = ecs.FargateTaskDefinition(
-            self,
-            id="FargateTaskDefinition",
-            cpu=config.api.container_cpu,
-            memory_limit_mib=config.api.container_memory,
+        task_definition = ecs.Ec2TaskDefinition(
+            self, id="ApiTaskDefinition", network_mode=ecs.NetworkMode.AWS_VPC
         )
 
         sys_email = os.environ.get("SYS_EMAIL") or None
@@ -107,6 +103,7 @@ class ApiStack(Stack):
 
         # Envir Vars
         sqs_queue_name = f"mermaid-{config.env_id}-queue"
+        image_sqs_queue_name = f"mermaid-{config.env_id}-image-processing-queue"
         environment = {
             "ENV": config.env_id,
             "ENVIRONMENT": config.env_id,
@@ -116,6 +113,7 @@ class ApiStack(Stack):
             "DEFAULT_DOMAIN_COLLECT": config.api.default_domain_collect,
             "AWS_BACKUP_BUCKET": backup_bucket.bucket_name,
             "AWS_PUBLIC_BUCKET": config.api.public_bucket,
+            "IMAGE_PROCESSING_BUCKET": image_processing_bucket.bucket_name,
             "EMAIL_HOST": config.api.email_host,
             "EMAIL_PORT": config.api.email_port,
             "AUTH0_MANAGEMENT_API_AUDIENCE": config.api.auth0_management_api_audience,
@@ -126,6 +124,8 @@ class ApiStack(Stack):
             "DB_PORT": config.database.port,
             "SQS_MESSAGE_VISIBILITY": str(config.api.sqs_message_visibility),
             "SQS_QUEUE_NAME": sqs_queue_name,
+            "IMAGE_SQS_QUEUE_NAME": image_sqs_queue_name,
+            "USE_FIFO": use_fifo_queues,
         }
 
         # build image asset to be shared with API and Backup Task
@@ -136,69 +136,74 @@ class ApiStack(Stack):
             file="Dockerfile",
         )
 
+        backup_task_def = ecs.Ec2TaskDefinition(
+            self,
+            "ScheduledBackupTaskDef",
+            network_mode=ecs.NetworkMode.AWS_VPC,
+        )
+        backup_task_def.add_container(
+            "ScheduledBackupContainer",
+            image=ecs.ContainerImage.from_docker_image_asset(image_asset),
+            cpu=config.api.backup_cpu,
+            memory_limit_mib=config.api.backup_memory,
+            secrets=api_secrets,
+            environment=environment,
+            command=["python", "manage.py", "dbbackup", f"{config.env_id}"],
+            logging=ecs.LogDrivers.aws_logs(
+                stream_prefix="ScheduledBackupTask"
+            )
+        )
+
         # create a scheduled fargate task
-        backup_task = ecs_patterns.ScheduledFargateTask(
+        backup_task = ecs_patterns.ScheduledEc2Task(
             self,
             "ScheduledBackupTask",
             schedule=appscaling.Schedule.rate(Duration.days(1)),
             cluster=cluster,
+            subnet_selection=ec2.SubnetSelection(
+                subnets=cluster.vpc.select_subnets(
+                    subnet_type=ec2.SubnetType.PRIVATE_WITH_NAT
+                ).subnets
+            ),
             security_groups=[container_security_group],
-            scheduled_fargate_task_image_options=ecs_patterns.ScheduledFargateTaskImageOptions(
-                image=ecs.ContainerImage.from_docker_image_asset(image_asset),
-                cpu=config.api.backup_cpu,
-                memory_limit_mib=config.api.backup_memory,
-                secrets=api_secrets,
-                environment=environment,
-                command=["python", "manage.py", "dbbackup", f"{config.env_id}"],
+            scheduled_ec2_task_definition_options=ecs_patterns.ScheduledEc2TaskDefinitionOptions(
+                task_definition=backup_task_def
             ),
         )
 
         task_definition.add_container(
             id="MermaidAPI",
             image=ecs.ContainerImage.from_docker_image_asset(image_asset),
+            cpu=config.api.container_cpu,
+            memory_limit_mib=config.api.container_memory,
             port_mappings=[ecs.PortMapping(container_port=8081)],
             environment=environment,
             secrets=api_secrets,
             logging=ecs.LogDrivers.aws_logs(
                 stream_prefix=config.env_id, log_retention=logs.RetentionDays.ONE_MONTH
             ),
-            # health_check=elb.HealthCheck(
-            #     command=["CMD-SHELL", "curl --fail http://localhost:80/v1/health/ || exit 1"],
-            #     interval=Duration.seconds(60),
-            #     retries=5,
-            #     timeout=Duration.seconds(10),
-            #     start_period=Duration.seconds(20),
-            # )
         )
 
-        service = ecs.FargateService(
+        service = ecs.Ec2Service(
             self,
-            id="FargateService",
+            id="ApiService",
             task_definition=task_definition,
-            platform_version=ecs.FargatePlatformVersion.LATEST,
             cluster=cluster,
             security_groups=[container_security_group],
-            # cloud_map_options=ecs.CloudMapOptions(cloud_map_namespace=namespace, name=self.svc),
             desired_count=config.api.container_count,
             enable_execute_command=True,
-            vpc_subnets=ec2.SubnetSelection(
-                subnets=cluster.vpc.select_subnets(
-                    subnet_type=ec2.SubnetType.PRIVATE_WITH_NAT
-                ).subnets
-            ),
-            # capacity_provider_strategies=ecs.CapacityProviderStrategy(
-            #     capacity_provider="FARGATE_SPOT",
-            #     base=1,
-            #     weight=50 # Not sure about this.
-            # ) # Manually set FARGATE_SPOT as deafult in cluster console.
+            capacity_provider_strategies=[
+                ecs.CapacityProviderStrategy(
+                    capacity_provider="mermaid-api-infra-common-AsgCapacityProvider760D11D9-iqzBF6LfX313",
+                    weight=100,
+                )
+            ],
         )
 
         # Grant Secret read to API container & backup task
         for _, container_secret in api_secrets.items():
             container_secret.grant_read(service.task_definition.execution_role)
             container_secret.grant_read(backup_task.task_definition.execution_role)
-
-        # add FargateService as target to LoadBalancer/Listener, currently, send all traffic. TODO filter by domain?
 
         target_group = elb.ApplicationTargetGroup(
             self,
@@ -267,10 +272,32 @@ class ApiStack(Stack):
             public_bucket=public_bucket,
             queue_name=sqs_queue_name,
             email=sys_email,
+            fifo=False,
+        )
+
+        # get monitored queue
+        image_worker = QueueWorker(
+            self,
+            "ImageWorker",
+            config=config,
+            cluster=cluster,
+            image_asset=image_asset,
+            container_security_group=container_security_group,
+            api_secrets=api_secrets,
+            environment=environment,
+            public_bucket=public_bucket,
+            queue_name=image_sqs_queue_name,
+            email=sys_email,
+            fifo=False,
         )
 
         # allow API to send messages to the queue
         worker.queue.grant_send_messages(service.task_definition.task_role)
+        image_worker.queue.grant_send_messages(service.task_definition.task_role)
 
         # allow API to read/write to the public bucket
         public_bucket.grant_read_write(service.task_definition.task_role)
+
+        # Allow Image Worker to write to image bucket
+        image_processing_bucket.grant_write(image_worker.task_definition.task_role)
+        image_processing_bucket.grant_read_write(service.task_definition.task_role)

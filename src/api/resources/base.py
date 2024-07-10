@@ -686,13 +686,16 @@ class ArrayAggExt(ArrayAgg):
     template = "ARRAY_REMOVE(%(function)s(%(distinct)s%(expressions)s %(ordering)s), NULL)"
 
 
-class RegionsSerializerMixin:
+class M2MSerializerMixin:
     """
-    Assumes that the viewset queryset is using
+    For viewset queryset using e.g.
     `.annotate(regions_=ArrayAgg("regions"))`
     """
 
     def to_representation(self, instance):
-        if hasattr(instance, "regions_"):
-            self.fields["regions"] = serializers.ListField(source="regions_")
+        if hasattr(self, "m2mfields"):
+            for m2mfield in self.m2mfields:
+                m2mfield_private = f"{m2mfield}_"
+                if hasattr(instance, m2mfield_private):
+                    self.fields[m2mfield] = serializers.ListField(source=m2mfield_private)
         return super().to_representation(instance)

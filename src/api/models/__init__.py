@@ -8,6 +8,12 @@ from .base import BaseModel  # noqa: F401
 from .base import Country  # noqa: F401
 from .base import JSONMixin  # noqa: F401
 from .base import Profile  # noqa: F401
+from .gfcr import (  # noqa: F401
+    GFCRFinanceSolution,
+    GFCRIndicatorSet,
+    GFCRInvestmentSource,
+    GFCRRevenue,
+)
 from .mermaid import *  # noqa: F403
 from .revisions import Revision  # noqa: F401
 from .sql_models import (  # noqa: F401
@@ -53,7 +59,9 @@ from .summaries import (  # noqa: F401
     HabitatComplexitySUModel,
 )
 from .summary_sample_events import (  # noqa: F401
+    RestrictedProjectSummarySampleEvent,
     SummarySampleEventModel,
     SummarySampleEventSQLModel,
+    UnrestrictedProjectSummarySampleEvent,
 )
 from .view_models import *  # noqa: F403

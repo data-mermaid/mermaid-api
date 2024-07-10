@@ -12,6 +12,7 @@ from .resources.fish_genus import FishGenusViewSet
 from .resources.fish_grouping import FishGroupingViewSet
 from .resources.fish_size import FishSizeViewSet
 from .resources.fish_species import FishSpeciesViewSet
+from .resources.gfcr import IndicatorSetViewSet
 from .resources.health import health
 from .resources.ingest_schema import ingest_schema_csv
 from .resources.management import ManagementViewSet
@@ -22,6 +23,7 @@ from .resources.pmanagement import PManagementViewSet
 from .resources.profile import ProfileViewSet
 from .resources.project import ProjectViewSet
 from .resources.project_profile import ProjectProfileViewSet
+from .resources.project_sample_event_summaries import ProjectSummarySampleEventViewSet
 from .resources.project_tag import ProjectTagViewSet
 from .resources.psite import PSiteViewSet
 from .resources.quadrat_collection import QuadratCollectionViewSet
@@ -95,6 +97,13 @@ router.register(r"fishgroupings", FishGroupingViewSet, "fishgrouping")
 # choices
 router.register(r"choices", ChoiceViewSet, "choice")
 router.register(r"fishsizes", FishSizeViewSet, "fishsizes")
+
+# project sample event summaries
+router.register(
+    r"projectsummarysampleevents",
+    ProjectSummarySampleEventViewSet,
+    "projectsummarysampleevents",
+)
 
 # PROJECT-SPECIFIC - MERMAID
 project_router = routers.NestedSimpleRouter(router, r"projects", lookup="project")
@@ -238,6 +247,8 @@ project_router.register(
     "benthicphotoquadrattransectmethod",
 )
 project_router.register(r"sampleunitmethods", SampleUnitMethodView, "sampleunitmethod")
+
+project_router.register(r"indicatorsets", IndicatorSetViewSet, "indicatorset")
 
 
 api_urls = (

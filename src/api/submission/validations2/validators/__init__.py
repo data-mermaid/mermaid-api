@@ -5,7 +5,6 @@ from .benthic_transect import (
     UniqueBenthicTransectValidator,
 )
 from .biomass import BiomassValidator
-from .bleaching_percent import BleachingPercentValidator
 from .colony_count import ColonyCountValidator
 from .depth import DepthValidator
 from .dry_submit import DrySubmitValidator
@@ -31,6 +30,7 @@ from .obs_benthic_photo_quadrat import (
     QuadratCountValidator,
     QuadratNumberSequenceValidator,
 )
+from .obs_bleaching import BleachingObsValidator
 from .obs_habcomp import ListScoreValidator, ScoreValidator
 from .observations import AllAttributesSameCategoryValidator, ObservationCountValidator
 from .quadrat_collection import UniqueQuadratCollectionValidator

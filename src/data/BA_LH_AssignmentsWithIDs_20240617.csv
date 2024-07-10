@@ -1,0 +1,385 @@
+ba_id,ba_name,lh_name,lh_id
+d6511689-4a1f-4c28-b5bc-1eaf02b5dfbc,Acanthastrea,stress-tolerant,79372230-f6d7-4a1c-b0af-2a4106a1d86f
+63196133-4adb-41ef-8785-a7f74fbd2256,Acanthastrea echinata,stress-tolerant,79372230-f6d7-4a1c-b0af-2a4106a1d86f
+71f6a8dc-c675-4052-b188-1fe9d93c05f4,Acanthastrea hemprichii,stress-tolerant,79372230-f6d7-4a1c-b0af-2a4106a1d86f
+050c0689-0b01-4a6c-afbf-a5d3ca39c310,Acropora,competitive,3427ae0e-fe8f-4ca2-a215-04272810202c
+223320a6-797b-4e82-8c56-be6a21bc1c18,Acropora aculeus,competitive,3427ae0e-fe8f-4ca2-a215-04272810202c
+ed6e6e7f-6636-4579-9f63-db44908af23c,Acropora acuminata,competitive,3427ae0e-fe8f-4ca2-a215-04272810202c
+e47426c2-b0e8-4058-b420-de06100b5151,Acropora arabensis,competitive,3427ae0e-fe8f-4ca2-a215-04272810202c
+48cb4d65-d4af-477a-94de-715bd73a591c,Acropora abrolhosensis,competitive,3427ae0e-fe8f-4ca2-a215-04272810202c
+808665af-0d4c-4d42-bd42-01deaecf0679,Acropora abrotanoides,competitive,3427ae0e-fe8f-4ca2-a215-04272810202c
+99ef76e6-ee69-41ef-acb1-5eb12001bdc2,Acropora anthocercis,competitive,3427ae0e-fe8f-4ca2-a215-04272810202c
+20ecb3cc-7dc7-40e2-a313-ae6db6e0f0b3,Acropora aspera,competitive,3427ae0e-fe8f-4ca2-a215-04272810202c
+48068023-0778-44bc-af58-609971f17a4d,Acropora austera,competitive,3427ae0e-fe8f-4ca2-a215-04272810202c
+c20e38e5-ac36-41b3-a234-14e8f0de5c16,Acropora cervicornis,competitive,3427ae0e-fe8f-4ca2-a215-04272810202c
+48cb672c-5daa-468a-ae2f-26fe252178e4,Acropora clathrata,competitive,3427ae0e-fe8f-4ca2-a215-04272810202c
+8beb9413-6421-4448-9657-07a426c2835e,Acropora cytherea,competitive,3427ae0e-fe8f-4ca2-a215-04272810202c
+1c6f276f-0860-480e-ac74-9f638b5fb144,Acropora divaricata,competitive,3427ae0e-fe8f-4ca2-a215-04272810202c
+554eebbd-8a83-4939-ba9b-f0e6875cb32f,Acropora downingi,competitive,3427ae0e-fe8f-4ca2-a215-04272810202c
+ac19a49c-675e-41fa-a86c-3e482fb186ea,Acropora elseyi,competitive,3427ae0e-fe8f-4ca2-a215-04272810202c
+daf191b3-f59f-490b-93e9-175cfed7724e,Acropora florida,competitive,3427ae0e-fe8f-4ca2-a215-04272810202c
+1801d522-1556-4915-8ace-92bb1faf39ab,Acropora gemmifera,competitive,3427ae0e-fe8f-4ca2-a215-04272810202c
+e00b1b7a-0871-4a01-9007-fc464c6ad18c,Acropora humilis,competitive,3427ae0e-fe8f-4ca2-a215-04272810202c
+e08d8749-872b-43ce-967c-00fb588c2df9,Acropora hyacinthus,competitive,3427ae0e-fe8f-4ca2-a215-04272810202c
+db86ae28-c260-4f5e-884c-a53bfd10ca98,Acropora loripes,competitive,3427ae0e-fe8f-4ca2-a215-04272810202c
+2f7759c2-3c6d-4011-be49-8423a8c8df94,Acropora millepora,competitive,3427ae0e-fe8f-4ca2-a215-04272810202c
+820f5bfc-25de-4275-8f6e-9aff6058acb3,Acropora monticulosa,competitive,3427ae0e-fe8f-4ca2-a215-04272810202c
+896ba964-bddd-491d-bfb5-43f417431e4a,Acropora muricata,competitive,3427ae0e-fe8f-4ca2-a215-04272810202c
+e42d5e64-b311-4290-968f-5288a7b4b220,Acropora nasuta,competitive,3427ae0e-fe8f-4ca2-a215-04272810202c
+5090e2b1-d85c-40ec-8c70-8b34ea90a7f2,Acropora palmata,competitive,3427ae0e-fe8f-4ca2-a215-04272810202c
+82fd3a24-48d2-43b3-ae69-b449fa6806ca,Acropora pharaonis,competitive,3427ae0e-fe8f-4ca2-a215-04272810202c
+9f6436ae-e654-4845-a853-85344a2f8675,Acropora prolifera,competitive,3427ae0e-fe8f-4ca2-a215-04272810202c
+829f279e-4e76-44d6-8439-b5ebaa645465,Acropora samoensis,competitive,3427ae0e-fe8f-4ca2-a215-04272810202c
+0559c29e-73d6-4771-a947-4091fc1cff8f,Acropora secale,competitive,3427ae0e-fe8f-4ca2-a215-04272810202c
+e45deb07-3df4-4607-aa55-8bdceaf467ab,Acropora spathulata,competitive,3427ae0e-fe8f-4ca2-a215-04272810202c
+31d59308-2f1f-491f-ad35-36057040e4b8,Acropora squarrosa,competitive,3427ae0e-fe8f-4ca2-a215-04272810202c
+5396cdb4-8037-4fa7-9619-7a61b783b18d,Acropora tenuis,competitive,3427ae0e-fe8f-4ca2-a215-04272810202c
+2974a98a-6ada-47c5-877f-edd74d71576c,Acropora tortuosa,competitive,3427ae0e-fe8f-4ca2-a215-04272810202c
+c5ba1d97-7847-4490-9a3d-ff360ee901de,Acropora valida,competitive,3427ae0e-fe8f-4ca2-a215-04272810202c
+a36b36c6-1f9f-4aa1-922c-61e74c786187,Acroporidae,competitive,3427ae0e-fe8f-4ca2-a215-04272810202c
+a36b36c6-1f9f-4aa1-922c-61e74c786187,Acroporidae,generalist,19659766-1d38-4b01-adb4-5f95eeb6e421
+a36b36c6-1f9f-4aa1-922c-61e74c786187,Acroporidae,stress-tolerant,79372230-f6d7-4a1c-b0af-2a4106a1d86f
+a36b36c6-1f9f-4aa1-922c-61e74c786187,Acroporidae,weedy,404afe62-2ab8-4bd0-9156-43b7ced8bbf1
+79a84274-88f2-4135-90dd-8c1a501f87d5,Agaricia,weedy,404afe62-2ab8-4bd0-9156-43b7ced8bbf1
+da503ac3-1c43-49d4-aafa-a7f8c140dec7,Agaricia agaricites,weedy,404afe62-2ab8-4bd0-9156-43b7ced8bbf1
+aeef595c-8a38-4e57-9a32-45676e09edec,Agaricia fragilis,weedy,404afe62-2ab8-4bd0-9156-43b7ced8bbf1
+53cf4a1c-1b45-48b6-a6c0-7a4752ad24b9,Agaricia grahamae,weedy,404afe62-2ab8-4bd0-9156-43b7ced8bbf1
+f781e3c2-11db-40e2-b9a8-be43f54bc40c,Agaricia humilis,weedy,404afe62-2ab8-4bd0-9156-43b7ced8bbf1
+89e34529-a92a-4216-b549-dd2110c07df0,Agaricia lamarcki,weedy,404afe62-2ab8-4bd0-9156-43b7ced8bbf1
+b6bdb216-19dd-47b7-bbd2-4234f9787316,Agaricia tenuifolia,weedy,404afe62-2ab8-4bd0-9156-43b7ced8bbf1
+5a6541ce-7986-4e7a-a2d2-8eff7589c34a,Agaricia undata,weedy,404afe62-2ab8-4bd0-9156-43b7ced8bbf1
+3151a2f4-1f93-41c6-998a-3b5bcbb27717,Agariciidae,competitive,3427ae0e-fe8f-4ca2-a215-04272810202c
+3151a2f4-1f93-41c6-998a-3b5bcbb27717,Agariciidae,generalist,19659766-1d38-4b01-adb4-5f95eeb6e421
+3151a2f4-1f93-41c6-998a-3b5bcbb27717,Agariciidae,stress-tolerant,79372230-f6d7-4a1c-b0af-2a4106a1d86f
+3151a2f4-1f93-41c6-998a-3b5bcbb27717,Agariciidae,weedy,404afe62-2ab8-4bd0-9156-43b7ced8bbf1
+6a813c81-58a1-4fb4-ace8-b62e7c4183ae,Alveopora,stress-tolerant,79372230-f6d7-4a1c-b0af-2a4106a1d86f
+6a813c81-58a1-4fb4-ace8-b62e7c4183ae,Alveopora,weedy,404afe62-2ab8-4bd0-9156-43b7ced8bbf1
+3b610f93-5835-4d84-92df-0f62c3a964de,Alveopora tizardi,stress-tolerant,79372230-f6d7-4a1c-b0af-2a4106a1d86f
+7014b2dd-b0c7-4a03-be8e-c0aed17587f8,Astraeosmilia,stress-tolerant,79372230-f6d7-4a1c-b0af-2a4106a1d86f
+dd6d66d2-f887-4616-aff5-cab940c275ec,Astraeosmilia maxima,stress-tolerant,79372230-f6d7-4a1c-b0af-2a4106a1d86f
+63f29fbf-76db-4a6b-9559-dfb7277ba6b5,Astrea,stress-tolerant,79372230-f6d7-4a1c-b0af-2a4106a1d86f
+d24f3c52-4f1b-43e2-ac42-9c7b42a4f7b8,Astrea annuligera,stress-tolerant,79372230-f6d7-4a1c-b0af-2a4106a1d86f
+00bd8128-58a1-49b3-8ad9-342b8a509b86,Astrea curta,stress-tolerant,79372230-f6d7-4a1c-b0af-2a4106a1d86f
+22e2002e-0d55-4a43-88b3-caf04dbf874f,Astreopora,stress-tolerant,79372230-f6d7-4a1c-b0af-2a4106a1d86f
+e1497d38-2c78-42a5-aa95-57382a91030d,Astreopora gracilis,stress-tolerant,79372230-f6d7-4a1c-b0af-2a4106a1d86f
+47e62b12-99d5-41e6-8689-61fc2f9185b5,Astreopora incrustans,stress-tolerant,79372230-f6d7-4a1c-b0af-2a4106a1d86f
+81faf099-6552-4eea-8489-f3b840d1c777,Astreopora myriophthalma,stress-tolerant,79372230-f6d7-4a1c-b0af-2a4106a1d86f
+c790af84-592d-4dcc-a587-2cfb14d4646e,Astreopora ocellata,stress-tolerant,79372230-f6d7-4a1c-b0af-2a4106a1d86f
+e843a315-fda7-4d97-8f22-ffdb73034199,Astrocoeniidae,stress-tolerant,79372230-f6d7-4a1c-b0af-2a4106a1d86f
+47d77e5a-40f0-49d1-9e0f-de1ab00922bf,Australogyra,stress-tolerant,79372230-f6d7-4a1c-b0af-2a4106a1d86f
+5a1f02f6-d559-4757-b55d-4b83f6fcc76d,Australophyllia,stress-tolerant,79372230-f6d7-4a1c-b0af-2a4106a1d86f
+982ad84a-04ec-4fa9-9a0b-bb7e8ae16d60,Bernardpora,stress-tolerant,79372230-f6d7-4a1c-b0af-2a4106a1d86f
+123d5e37-3561-4873-89fd-fd1a5ccbd3c5,Blastomussa,stress-tolerant,79372230-f6d7-4a1c-b0af-2a4106a1d86f
+5d3abe2c-a9da-4468-8b00-fb5d156cb5be,Catalaphyllia,stress-tolerant,79372230-f6d7-4a1c-b0af-2a4106a1d86f
+5060a1b1-f158-4424-9f79-fcd5af7e6d88,Caulastraea,stress-tolerant,79372230-f6d7-4a1c-b0af-2a4106a1d86f
+57fe1f3e-2641-470a-acc5-6570cff962db,Coelastrea,stress-tolerant,79372230-f6d7-4a1c-b0af-2a4106a1d86f
+05d131ca-deb3-4d7b-b3a1-7c2ff71d9380,Coelastrea aspera,stress-tolerant,79372230-f6d7-4a1c-b0af-2a4106a1d86f
+05d131ca-deb3-4d7b-b3a1-7c2ff71d9380,Coelastrea aspera,weedy,404afe62-2ab8-4bd0-9156-43b7ced8bbf1
+d491765d-5c50-4dcd-9493-2edfa46f0656,Coeloseris,stress-tolerant,79372230-f6d7-4a1c-b0af-2a4106a1d86f
+ef97ec8b-26c3-4baf-aff9-cc6517b52cbd,Coeloseris mayeri,stress-tolerant,79372230-f6d7-4a1c-b0af-2a4106a1d86f
+cb0ddf88-0b4e-460e-a62d-40e6fc9bb1c5,Colpophyllia,stress-tolerant,79372230-f6d7-4a1c-b0af-2a4106a1d86f
+5f0cb866-1e5f-4277-a8a6-ffd31e811c66,Colpophyllia natans,stress-tolerant,79372230-f6d7-4a1c-b0af-2a4106a1d86f
+53b51b8f-3d3d-426a-9316-5057cc57d7f9,Coscinaraea,stress-tolerant,79372230-f6d7-4a1c-b0af-2a4106a1d86f
+319fcee9-ffa7-4fd4-a3e1-c96955ccdbce,Coscinaraea monile,stress-tolerant,79372230-f6d7-4a1c-b0af-2a4106a1d86f
+87749844-9e68-499f-9ee9-1641ed6d092e,Coscinaraeidae,stress-tolerant,79372230-f6d7-4a1c-b0af-2a4106a1d86f
+07e42309-a9b2-4004-93a6-778507313a31,Craterastrea,stress-tolerant,79372230-f6d7-4a1c-b0af-2a4106a1d86f
+6c10a5ed-1e35-4e73-9dff-b6c42fb7bdad,Ctenactis,stress-tolerant,79372230-f6d7-4a1c-b0af-2a4106a1d86f
+fcd4d6d2-aebe-42b5-b97d-c4d0bec16b11,Culicia tenella,stress-tolerant,79372230-f6d7-4a1c-b0af-2a4106a1d86f
+bc8952f9-39d8-47f5-87a1-7c2fb324e665,Cycloseris,generalist,19659766-1d38-4b01-adb4-5f95eeb6e421
+bc8952f9-39d8-47f5-87a1-7c2fb324e665,Cycloseris,stress-tolerant,79372230-f6d7-4a1c-b0af-2a4106a1d86f
+004d8c0e-1d07-488c-aef9-86a4ef33fad4,Cycloseris explanulata,generalist,19659766-1d38-4b01-adb4-5f95eeb6e421
+ac1f96b4-db89-46a3-b35c-d5481f076e59,Cynarina,stress-tolerant,79372230-f6d7-4a1c-b0af-2a4106a1d86f
+88d79d42-3fef-48ab-887e-dae60ae9072a,Cyphastrea,generalist,19659766-1d38-4b01-adb4-5f95eeb6e421
+88d79d42-3fef-48ab-887e-dae60ae9072a,Cyphastrea,stress-tolerant,79372230-f6d7-4a1c-b0af-2a4106a1d86f
+a7d01aad-e061-4d34-a5a6-9b347e0300e3,Cyphastrea agassizi,generalist,19659766-1d38-4b01-adb4-5f95eeb6e421
+04b78e32-e105-407b-a8fa-6384a1100a19,Cyphastrea chalcidicum,generalist,19659766-1d38-4b01-adb4-5f95eeb6e421
+04b78e32-e105-407b-a8fa-6384a1100a19,Cyphastrea chalcidicum,stress-tolerant,79372230-f6d7-4a1c-b0af-2a4106a1d86f
+cfd645e3-c60e-4842-b3ec-97f50684df0e,Cyphastrea microphthalma,generalist,19659766-1d38-4b01-adb4-5f95eeb6e421
+cfd645e3-c60e-4842-b3ec-97f50684df0e,Cyphastrea microphthalma,stress-tolerant,79372230-f6d7-4a1c-b0af-2a4106a1d86f
+d92c3eba-880f-4959-98de-ae43933b900d,Cyphastrea ocellina,generalist,19659766-1d38-4b01-adb4-5f95eeb6e421
+d92c3eba-880f-4959-98de-ae43933b900d,Cyphastrea ocellina,weedy,404afe62-2ab8-4bd0-9156-43b7ced8bbf1
+5b7fd4d7-9657-4069-90bb-2cdfdc7b46ea,Cyphastrea serailia,generalist,19659766-1d38-4b01-adb4-5f95eeb6e421
+5b7fd4d7-9657-4069-90bb-2cdfdc7b46ea,Cyphastrea serailia,stress-tolerant,79372230-f6d7-4a1c-b0af-2a4106a1d86f
+5b81ac21-a261-41f1-9aab-b661a8f4d979,Danafungia,stress-tolerant,79372230-f6d7-4a1c-b0af-2a4106a1d86f
+5e2edbac-e354-498b-af0d-b0455abb0e68,Dendrogyra,competitive,3427ae0e-fe8f-4ca2-a215-04272810202c
+ec59b5b8-479e-403c-b1cf-e24e36c86fdf,Dendrogyra cylindrus,competitive,3427ae0e-fe8f-4ca2-a215-04272810202c
+ecc83aed-4cc2-4aa8-9efd-8570d10343c2,Dendrophylliidae,competitive,3427ae0e-fe8f-4ca2-a215-04272810202c
+ecc83aed-4cc2-4aa8-9efd-8570d10343c2,Dendrophylliidae,generalist,19659766-1d38-4b01-adb4-5f95eeb6e421
+ecc83aed-4cc2-4aa8-9efd-8570d10343c2,Dendrophylliidae,stress-tolerant,79372230-f6d7-4a1c-b0af-2a4106a1d86f
+3c1a5896-0f3a-4f32-81e4-a684596e1e7f,Dichocoenia,stress-tolerant,79372230-f6d7-4a1c-b0af-2a4106a1d86f
+fa6a7aaa-da32-4c0b-bb6b-dbed397f8bbe,Dichocoenia stellaris,stress-tolerant,79372230-f6d7-4a1c-b0af-2a4106a1d86f
+a2935afb-895a-44b8-8f94-c83a14f8f110,Dichocoenia stokesii,stress-tolerant,79372230-f6d7-4a1c-b0af-2a4106a1d86f
+dcbcb1cf-af35-4755-8023-6d1b6f4fd8cf,Diploastrea,stress-tolerant,79372230-f6d7-4a1c-b0af-2a4106a1d86f
+30962e32-ee5f-4e61-a954-dfe0ead2a691,Diploastrea heliopora,stress-tolerant,79372230-f6d7-4a1c-b0af-2a4106a1d86f
+2ddb0978-8a21-497a-b9ea-9835f27b5a02,Diploastreidae,stress-tolerant,79372230-f6d7-4a1c-b0af-2a4106a1d86f
+4e17ca21-b9bd-4d32-8a44-59856b89c38f,Diploria,stress-tolerant,79372230-f6d7-4a1c-b0af-2a4106a1d86f
+194a4c71-0bc7-4f4d-9890-77a1487531a8,Diploria labyrinthiformis,stress-tolerant,79372230-f6d7-4a1c-b0af-2a4106a1d86f
+d41cc126-63b8-4fa7-88d6-9b9b7648ba80,Dipsastraea,stress-tolerant,79372230-f6d7-4a1c-b0af-2a4106a1d86f
+b05577ed-b824-4d32-b934-11becd28a2de,Dipsastraea favus,stress-tolerant,79372230-f6d7-4a1c-b0af-2a4106a1d86f
+7473024c-cbde-46cb-b627-0fa92245aece,Dipsastraea matthaii,stress-tolerant,79372230-f6d7-4a1c-b0af-2a4106a1d86f
+77addeb0-1eca-4b7e-814e-991dea8cd93c,Dipsastraea pallida,stress-tolerant,79372230-f6d7-4a1c-b0af-2a4106a1d86f
+fae1c0c3-05ba-43e0-86f0-5e55ce29531c,Dipsastraea speciosa,stress-tolerant,79372230-f6d7-4a1c-b0af-2a4106a1d86f
+8c5e3a56-3980-4ff3-afbf-67c7cbc8b7a9,Dipsastraea veroni,stress-tolerant,79372230-f6d7-4a1c-b0af-2a4106a1d86f
+c3ecc4fe-071c-42e9-be15-6ddd73bd7e05,Duncanopsammia,generalist,19659766-1d38-4b01-adb4-5f95eeb6e421
+c776fdf1-1518-4268-afe4-8c9faaec2a45,Duncanopsammia peltata,generalist,19659766-1d38-4b01-adb4-5f95eeb6e421
+4111c390-2319-4f7a-a65c-76e9e37c8a45,Echinophyllia,stress-tolerant,79372230-f6d7-4a1c-b0af-2a4106a1d86f
+6176e434-c4be-4085-9191-658e2c34a418,Echinophyllia aspera,stress-tolerant,79372230-f6d7-4a1c-b0af-2a4106a1d86f
+c1e97c98-de9f-4b05-963f-0276784fca2d,Echinopora,stress-tolerant,79372230-f6d7-4a1c-b0af-2a4106a1d86f
+766c5a00-3441-48f6-889e-6aaaf5bd053a,Echinopora lamellosa,generalist,19659766-1d38-4b01-adb4-5f95eeb6e421
+8b706c7f-fcf7-4d03-b271-58a06d77fbb4,Euphyllia,stress-tolerant,79372230-f6d7-4a1c-b0af-2a4106a1d86f
+cd63c27d-8444-44cc-bf2e-9931c04a2361,Euphyllidae,stress-tolerant,79372230-f6d7-4a1c-b0af-2a4106a1d86f
+89e9d072-2079-4032-9779-d936d8dbd937,Eusmilia,stress-tolerant,79372230-f6d7-4a1c-b0af-2a4106a1d86f
+83020a4c-fda8-45aa-9ec5-e886c5b18f3e,Eusmilia fastigiata,stress-tolerant,79372230-f6d7-4a1c-b0af-2a4106a1d86f
+656169f6-2344-423c-845d-9d4c1d14d69d,Favia,stress-tolerant,79372230-f6d7-4a1c-b0af-2a4106a1d86f
+ac80a65f-d18b-4066-8162-2f3624f40e90,Favia fragum,stress-tolerant,79372230-f6d7-4a1c-b0af-2a4106a1d86f
+132ae52b-0cc6-4877-93ca-becbc612ea64,Faviidae,stress-tolerant,79372230-f6d7-4a1c-b0af-2a4106a1d86f
+6d63693c-592d-4da5-88d8-7125832cbd76,Favites,stress-tolerant,79372230-f6d7-4a1c-b0af-2a4106a1d86f
+bb22e0a4-d058-4a34-a125-3630584aa094,Favites abdita,stress-tolerant,79372230-f6d7-4a1c-b0af-2a4106a1d86f
+a832ccb5-cf11-48c2-b0d3-e3bc2e15034a,Favites acuticollis,stress-tolerant,79372230-f6d7-4a1c-b0af-2a4106a1d86f
+38b92cbe-9b6b-485b-bf90-230bdf184170,Favites chinensis,stress-tolerant,79372230-f6d7-4a1c-b0af-2a4106a1d86f
+95bbcdcc-1833-43af-9202-dd12bd3968f2,Favites complanata,stress-tolerant,79372230-f6d7-4a1c-b0af-2a4106a1d86f
+696b4a8a-5d5b-4afa-ba42-dedd852de7b2,Favites flexuosa,stress-tolerant,79372230-f6d7-4a1c-b0af-2a4106a1d86f
+a80b77cb-2300-4566-b24c-68c0e1f70d0e,Favites halicora,stress-tolerant,79372230-f6d7-4a1c-b0af-2a4106a1d86f
+0288ad08-6a69-4993-9234-09033982530e,Favites micropentagonus,stress-tolerant,79372230-f6d7-4a1c-b0af-2a4106a1d86f
+b651065c-5585-405b-b02b-e82ac86419a1,Favites pentagona,stress-tolerant,79372230-f6d7-4a1c-b0af-2a4106a1d86f
+fbb29576-40b8-4f9a-ae6f-d6827896cc7e,Fimbriaphyllia,stress-tolerant,79372230-f6d7-4a1c-b0af-2a4106a1d86f
+c3807ef9-6a47-429f-a63b-fe5e131e1316,Fungia,stress-tolerant,79372230-f6d7-4a1c-b0af-2a4106a1d86f
+2085b131-1ed4-4b5b-9129-fb655a7659bd,Fungiidae,stress-tolerant,79372230-f6d7-4a1c-b0af-2a4106a1d86f
+c91dee81-7cb4-410b-bfce-52d98b67732f,Galaxea,stress-tolerant,79372230-f6d7-4a1c-b0af-2a4106a1d86f
+7546af6d-add6-47ff-a49a-6b9c6eb7694e,Galaxea astreata,stress-tolerant,79372230-f6d7-4a1c-b0af-2a4106a1d86f
+ed69cfb2-51f1-4e58-943f-868c86144f8f,Galaxea fascicularis,stress-tolerant,79372230-f6d7-4a1c-b0af-2a4106a1d86f
+04b943e8-610c-4158-b4c3-9dd884ab9376,Gardineroseris,stress-tolerant,79372230-f6d7-4a1c-b0af-2a4106a1d86f
+8a0b970f-88be-40a1-9461-ed3b80ab3c99,Gardineroseris planulata,stress-tolerant,79372230-f6d7-4a1c-b0af-2a4106a1d86f
+edbc586e-8499-4d31-9025-d15f2648f1fb,Goniastrea,stress-tolerant,79372230-f6d7-4a1c-b0af-2a4106a1d86f
+cc92c3d9-3cde-495c-9a6a-50076fa063ac,Goniastrea retiformis,stress-tolerant,79372230-f6d7-4a1c-b0af-2a4106a1d86f
+a82b807a-e5f5-481a-9b9d-a6c9663f9bcf,Goniastrea stelligera,stress-tolerant,79372230-f6d7-4a1c-b0af-2a4106a1d86f
+5f926f95-6cb8-46a5-9ff4-6777d33964e0,Goniopora,stress-tolerant,79372230-f6d7-4a1c-b0af-2a4106a1d86f
+c142a7f2-5047-4eb8-b2f1-c7ef85ee2ac5,Goniopora lobata,stress-tolerant,79372230-f6d7-4a1c-b0af-2a4106a1d86f
+a4563b4f-d70c-461e-aa92-9c92beb89294,Halomitra,stress-tolerant,79372230-f6d7-4a1c-b0af-2a4106a1d86f
+7c8c69db-30df-40c7-a9ac-9aae24464382,Heliofungia,stress-tolerant,79372230-f6d7-4a1c-b0af-2a4106a1d86f
+c98530b4-80a0-4b3a-9d69-f30f8181aab3,Herpolitha,stress-tolerant,79372230-f6d7-4a1c-b0af-2a4106a1d86f
+dfa09fd6-cb96-42f7-b832-ec7d0bed5bab,Heterocyathus,stress-tolerant,79372230-f6d7-4a1c-b0af-2a4106a1d86f
+73e14096-879a-48b5-b4bd-f06378edd64e,Homophyllia,stress-tolerant,79372230-f6d7-4a1c-b0af-2a4106a1d86f
+af6c43fd-0f41-4103-8ad5-8d1191bd4c9f,Hydnophora,competitive,3427ae0e-fe8f-4ca2-a215-04272810202c
+af6c43fd-0f41-4103-8ad5-8d1191bd4c9f,Hydnophora,generalist,19659766-1d38-4b01-adb4-5f95eeb6e421
+af6c43fd-0f41-4103-8ad5-8d1191bd4c9f,Hydnophora,stress-tolerant,79372230-f6d7-4a1c-b0af-2a4106a1d86f
+349670e2-ca30-4199-a67d-c291fc049b01,Hydnophora pilosa,competitive,3427ae0e-fe8f-4ca2-a215-04272810202c
+9d973ef8-e1bf-4b36-8ed0-043f30cbbb80,Hydnophora rigida,competitive,3427ae0e-fe8f-4ca2-a215-04272810202c
+f61f5b01-9ebd-4f05-9e31-7d14d6fdff49,Isophyllia,weedy,404afe62-2ab8-4bd0-9156-43b7ced8bbf1
+dfed579c-b5d0-41a9-bfc1-e2dbbd94eb7e,Isophyllia rigida,weedy,404afe62-2ab8-4bd0-9156-43b7ced8bbf1
+70635707-407e-4348-b685-3e44f121875f,Isophyllia sinuosa,weedy,404afe62-2ab8-4bd0-9156-43b7ced8bbf1
+8672775c-9167-42bd-b885-f1807f9ac9a4,Isopora,generalist,19659766-1d38-4b01-adb4-5f95eeb6e421
+1a02097a-5a59-4136-8208-c9897e8325cb,Isopora palifera,competitive,3427ae0e-fe8f-4ca2-a215-04272810202c
+1a02097a-5a59-4136-8208-c9897e8325cb,Isopora palifera,generalist,19659766-1d38-4b01-adb4-5f95eeb6e421
+70407def-b048-49d4-9a43-3eb0021f7b68,Leptastrea,generalist,19659766-1d38-4b01-adb4-5f95eeb6e421
+70407def-b048-49d4-9a43-3eb0021f7b68,Leptastrea,stress-tolerant,79372230-f6d7-4a1c-b0af-2a4106a1d86f
+70407def-b048-49d4-9a43-3eb0021f7b68,Leptastrea,weedy,404afe62-2ab8-4bd0-9156-43b7ced8bbf1
+7cc759a3-9d4c-45dc-9e86-73c09ead5e15,Leptastrea purpurea,generalist,19659766-1d38-4b01-adb4-5f95eeb6e421
+7cc759a3-9d4c-45dc-9e86-73c09ead5e15,Leptastrea purpurea,weedy,404afe62-2ab8-4bd0-9156-43b7ced8bbf1
+ac1ef5e0-e022-4b76-a4be-230db922fac9,Leptastrea transversa,generalist,19659766-1d38-4b01-adb4-5f95eeb6e421
+ac1ef5e0-e022-4b76-a4be-230db922fac9,Leptastrea transversa,stress-tolerant,79372230-f6d7-4a1c-b0af-2a4106a1d86f
+23a1cb26-5cff-49fe-923d-cecd75de7547,Leptoria,stress-tolerant,79372230-f6d7-4a1c-b0af-2a4106a1d86f
+9a09ac4e-9641-4125-9d0f-56616dca77df,Leptoria phrygia,stress-tolerant,79372230-f6d7-4a1c-b0af-2a4106a1d86f
+8da49adb-eb3c-4486-a538-42114813b58e,Leptoseris,stress-tolerant,79372230-f6d7-4a1c-b0af-2a4106a1d86f
+2f4f8832-79bd-4127-8ef6-d7e3edd5c9f9,Lithophyllon,stress-tolerant,79372230-f6d7-4a1c-b0af-2a4106a1d86f
+6d6234bf-5b9c-4cd8-b0e5-c8ea767f619c,Lobactis,stress-tolerant,79372230-f6d7-4a1c-b0af-2a4106a1d86f
+38f10f9e-f39d-4135-ae40-6c32f77a2242,Lobactis scutaria,stress-tolerant,79372230-f6d7-4a1c-b0af-2a4106a1d86f
+e3ea5520-1e7f-41c6-a141-6c27327b56a1,Lobophyllia,stress-tolerant,79372230-f6d7-4a1c-b0af-2a4106a1d86f
+e71eea11-ad6e-4ee0-a47c-4c3ff7a6964b,Lobophyllia agaricia,stress-tolerant,79372230-f6d7-4a1c-b0af-2a4106a1d86f
+8044923e-f88a-432d-8492-377489d5331d,Lobophyllia hemprichii,stress-tolerant,79372230-f6d7-4a1c-b0af-2a4106a1d86f
+ead492fc-fab6-4bcf-905a-50e48df34306,Lobophyllia radians,stress-tolerant,79372230-f6d7-4a1c-b0af-2a4106a1d86f
+a24fd27f-7577-4c46-a5fc-68aa3a1bae56,Lobophylliidae,stress-tolerant,79372230-f6d7-4a1c-b0af-2a4106a1d86f
+223860e9-b7b5-412c-bcab-0f16d43928fb,Madracis,weedy,404afe62-2ab8-4bd0-9156-43b7ced8bbf1
+9fc8164a-a7b9-43d4-bf2e-74e2f8a14d66,Madracis auretenra,weedy,404afe62-2ab8-4bd0-9156-43b7ced8bbf1
+be60a317-7fc4-464c-8793-23d07cdba327,Madracis carmabi,weedy,404afe62-2ab8-4bd0-9156-43b7ced8bbf1
+62b87704-ca62-415d-a340-48764e8b6c69,Madracis decactis,weedy,404afe62-2ab8-4bd0-9156-43b7ced8bbf1
+58e425be-7112-4dfb-8568-25806aaf2f4f,Madracis formosa,weedy,404afe62-2ab8-4bd0-9156-43b7ced8bbf1
+9dd277d1-1530-41f0-a33e-4f5ac0871125,Madracis kirbyi,weedy,404afe62-2ab8-4bd0-9156-43b7ced8bbf1
+58ab3128-0e13-4d2e-884b-3d5dab1e18e1,Madracis myriaster,weedy,404afe62-2ab8-4bd0-9156-43b7ced8bbf1
+53c61b6c-68c0-46fe-bfae-e77e6f12d7af,Madracis pharensis,weedy,404afe62-2ab8-4bd0-9156-43b7ced8bbf1
+60f9b62d-0cb0-47dd-9551-3929af847cb7,Madracis senaria,weedy,404afe62-2ab8-4bd0-9156-43b7ced8bbf1
+4d0307f4-8432-4494-ae74-c8c7ce925941,Manicina,weedy,404afe62-2ab8-4bd0-9156-43b7ced8bbf1
+ea0721ea-3c12-42bf-970b-a364016bb5df,Manicina areolata,weedy,404afe62-2ab8-4bd0-9156-43b7ced8bbf1
+af037a13-6f51-4f9a-a237-58326098c94f,Meandrina,stress-tolerant,79372230-f6d7-4a1c-b0af-2a4106a1d86f
+abc83e25-a84f-4660-827f-e40efc38d01f,Meandrina jacksoni,stress-tolerant,79372230-f6d7-4a1c-b0af-2a4106a1d86f
+330fdf21-d50d-4e03-9421-57a66d892d0a,Meandrina meandrites,stress-tolerant,79372230-f6d7-4a1c-b0af-2a4106a1d86f
+de352349-e792-43a2-808f-0fc4f501783d,Meandrinidae,competitive,3427ae0e-fe8f-4ca2-a215-04272810202c
+de352349-e792-43a2-808f-0fc4f501783d,Meandrinidae,stress-tolerant,79372230-f6d7-4a1c-b0af-2a4106a1d86f
+cdee93cc-5434-460e-b1e8-78b4164ab266,Merulina,generalist,19659766-1d38-4b01-adb4-5f95eeb6e421
+094b095b-fe8d-4ed8-bcfb-1c52609fbbea,Merulina scabricula,generalist,19659766-1d38-4b01-adb4-5f95eeb6e421
+469174fe-ca4b-40e3-839f-435bd1b14989,Merulinidae,competitive,3427ae0e-fe8f-4ca2-a215-04272810202c
+469174fe-ca4b-40e3-839f-435bd1b14989,Merulinidae,generalist,19659766-1d38-4b01-adb4-5f95eeb6e421
+469174fe-ca4b-40e3-839f-435bd1b14989,Merulinidae,stress-tolerant,79372230-f6d7-4a1c-b0af-2a4106a1d86f
+25247569-2f0f-438d-8b69-c62ee31150de,Micromussa,stress-tolerant,79372230-f6d7-4a1c-b0af-2a4106a1d86f
+995f68d0-2dec-4e22-916a-cf1f44c1663b,Millepora,competitive,3427ae0e-fe8f-4ca2-a215-04272810202c
+4c173e5b-b34a-4b9d-8fea-9f598673fa33,Millepora alcicornis,competitive,3427ae0e-fe8f-4ca2-a215-04272810202c
+16287ac3-a2c5-4d10-ad2d-eae00c4cc148,Millepora complanata,competitive,3427ae0e-fe8f-4ca2-a215-04272810202c
+9a23a972-cefa-4827-9636-41f8e5a73b77,Millepora squarrosa,competitive,3427ae0e-fe8f-4ca2-a215-04272810202c
+debeddf2-6aaf-42f0-a506-535998922712,Millepora striata,competitive,3427ae0e-fe8f-4ca2-a215-04272810202c
+b43bd5eb-e933-4a93-b054-9abc3082de65,Milleporidae,competitive,3427ae0e-fe8f-4ca2-a215-04272810202c
+e2a62f32-1424-44fa-ba52-fbdd4e9ee6f0,Montastraea,stress-tolerant,79372230-f6d7-4a1c-b0af-2a4106a1d86f
+e8edb2ee-0fc3-445d-8617-b660313c9606,Montastraea cavernosa,stress-tolerant,79372230-f6d7-4a1c-b0af-2a4106a1d86f
+0e0f55db-d15a-479e-9a9f-cbea6046ae7c,Montastraeidae,stress-tolerant,79372230-f6d7-4a1c-b0af-2a4106a1d86f
+db19681c-7729-4405-b3c0-7f0fd0db86ef,Montigyra,stress-tolerant,79372230-f6d7-4a1c-b0af-2a4106a1d86f
+4acaa53b-7ec9-4abd-bb4a-1d96b6224c0d,Montipora,competitive,3427ae0e-fe8f-4ca2-a215-04272810202c
+4acaa53b-7ec9-4abd-bb4a-1d96b6224c0d,Montipora,generalist,19659766-1d38-4b01-adb4-5f95eeb6e421
+4acaa53b-7ec9-4abd-bb4a-1d96b6224c0d,Montipora,stress-tolerant,79372230-f6d7-4a1c-b0af-2a4106a1d86f
+c212d193-6461-4975-bbd5-76454bcacc96,Montipora aequituberculata,competitive,3427ae0e-fe8f-4ca2-a215-04272810202c
+c212d193-6461-4975-bbd5-76454bcacc96,Montipora aequituberculata,generalist,19659766-1d38-4b01-adb4-5f95eeb6e421
+b3b04bf8-b38a-420b-abbb-4ac3d7324d89,Montipora australiensis,generalist,19659766-1d38-4b01-adb4-5f95eeb6e421
+4412ffc1-93ca-42f5-bb58-01c191272fc4,Montipora capitata,competitive,3427ae0e-fe8f-4ca2-a215-04272810202c
+45b6feb0-9516-4ded-9a26-f36c143e5275,Montipora corbettensis,generalist,19659766-1d38-4b01-adb4-5f95eeb6e421
+0703a3e7-3e69-4d0b-9d8a-a86a74723e15,Montipora danae,generalist,19659766-1d38-4b01-adb4-5f95eeb6e421
+0703a3e7-3e69-4d0b-9d8a-a86a74723e15,Montipora danae,stress-tolerant,79372230-f6d7-4a1c-b0af-2a4106a1d86f
+5f3b2966-4ede-43bd-82b2-6cb9a7bc0687,Montipora digitata,competitive,3427ae0e-fe8f-4ca2-a215-04272810202c
+750783b4-ef24-4ea5-b508-d77d20933eb2,Montipora flabellata,stress-tolerant,79372230-f6d7-4a1c-b0af-2a4106a1d86f
+c0d80c78-83b0-4b05-b552-ee69cb816d47,Montipora foliosa,generalist,19659766-1d38-4b01-adb4-5f95eeb6e421
+c0d80c78-83b0-4b05-b552-ee69cb816d47,Montipora foliosa,stress-tolerant,79372230-f6d7-4a1c-b0af-2a4106a1d86f
+abc07859-511a-47ee-9e6f-8537fff36be1,Montipora hoffmeisteri,generalist,19659766-1d38-4b01-adb4-5f95eeb6e421
+869ffa39-8a0a-4125-9f99-c4eec69aa69c,Montipora informis,generalist,19659766-1d38-4b01-adb4-5f95eeb6e421
+9f06b993-7708-43f1-9886-41323155091b,Montipora patula,stress-tolerant,79372230-f6d7-4a1c-b0af-2a4106a1d86f
+c856eacf-7ec9-47b5-b176-1e7ac3a5e96a,Montipora peltiformis,generalist,19659766-1d38-4b01-adb4-5f95eeb6e421
+c856eacf-7ec9-47b5-b176-1e7ac3a5e96a,Montipora peltiformis,stress-tolerant,79372230-f6d7-4a1c-b0af-2a4106a1d86f
+7efc0668-6d2d-4bb7-ba11-a61a4d835536,Montipora spumosa,competitive,3427ae0e-fe8f-4ca2-a215-04272810202c
+7aacdce9-b221-40ea-88bb-0315e892d421,Montipora stellata,competitive,3427ae0e-fe8f-4ca2-a215-04272810202c
+3859ab37-5fe8-43cd-a000-ecb8c459f34e,Montipora verrucosa,generalist,19659766-1d38-4b01-adb4-5f95eeb6e421
+3859ab37-5fe8-43cd-a000-ecb8c459f34e,Montipora verrucosa,stress-tolerant,79372230-f6d7-4a1c-b0af-2a4106a1d86f
+abbc2eed-fa22-434b-a13c-7c2929c3da09,Moseleya,stress-tolerant,79372230-f6d7-4a1c-b0af-2a4106a1d86f
+e5e686e5-5f55-499c-ab8e-dc8aa79db5c4,Mussidae,stress-tolerant,79372230-f6d7-4a1c-b0af-2a4106a1d86f
+e5e686e5-5f55-499c-ab8e-dc8aa79db5c4,Mussidae,weedy,404afe62-2ab8-4bd0-9156-43b7ced8bbf1
+f6f3b5cf-7bc6-483a-8ef7-0c41a6672be2,Mycedium,generalist,19659766-1d38-4b01-adb4-5f95eeb6e421
+d6d74742-d8ed-4954-b164-fc6607c3efa9,Mycetophyllia,weedy,404afe62-2ab8-4bd0-9156-43b7ced8bbf1
+3e7dec2f-33a4-4087-9e8e-c8a3fc987669,Mycetophyllia aliciae,weedy,404afe62-2ab8-4bd0-9156-43b7ced8bbf1
+325f003f-90f0-4961-9b4a-86a875ee2a7f,Mycetophyllia danaana,weedy,404afe62-2ab8-4bd0-9156-43b7ced8bbf1
+17131731-e6c8-431e-9a55-8cc438ec5a23,Mycetophyllia ferox,weedy,404afe62-2ab8-4bd0-9156-43b7ced8bbf1
+fad9ba75-a2b0-44ad-bc67-67b5ade6ad76,Mycetophyllia lamarckiana,weedy,404afe62-2ab8-4bd0-9156-43b7ced8bbf1
+d2b07639-38c2-4258-9f63-290ec7e5f836,Nemenzophyllia,stress-tolerant,79372230-f6d7-4a1c-b0af-2a4106a1d86f
+ab6d461a-6004-4675-8d42-cf63f405c7eb,Oculinidae,stress-tolerant,79372230-f6d7-4a1c-b0af-2a4106a1d86f
+1583ffd5-f3a1-4346-ab3c-ada28292b22d,Orbicella,stress-tolerant,79372230-f6d7-4a1c-b0af-2a4106a1d86f
+9be51ec6-7400-46c7-bdfe-c56eac991cb7,Orbicella annularis,stress-tolerant,79372230-f6d7-4a1c-b0af-2a4106a1d86f
+3f7a3174-94b4-4e50-b4d6-f80724bd0983,Orbicella faveolata,generalist,19659766-1d38-4b01-adb4-5f95eeb6e421
+3f7a3174-94b4-4e50-b4d6-f80724bd0983,Orbicella faveolata,stress-tolerant,79372230-f6d7-4a1c-b0af-2a4106a1d86f
+28373b18-98da-4ffe-b482-c0b1b5d4e82c,Orbicella franksi,generalist,19659766-1d38-4b01-adb4-5f95eeb6e421
+28373b18-98da-4ffe-b482-c0b1b5d4e82c,Orbicella franksi,stress-tolerant,79372230-f6d7-4a1c-b0af-2a4106a1d86f
+190d2f0d-67be-48a3-8ea0-33e66546f3f7,Oulophyllia,stress-tolerant,79372230-f6d7-4a1c-b0af-2a4106a1d86f
+e450c3c2-f3ca-4b81-9b99-aa1928aee1bb,Oxypora,stress-tolerant,79372230-f6d7-4a1c-b0af-2a4106a1d86f
+1ddec0f1-b5f2-43dc-bb3e-8368d6059089,Oxypora echinata,stress-tolerant,79372230-f6d7-4a1c-b0af-2a4106a1d86f
+4d493a0d-6c7e-4f5f-8a71-06bac94a8c53,Pachyseris,generalist,19659766-1d38-4b01-adb4-5f95eeb6e421
+e981cbce-fbb3-4fe0-851b-5e24b16bba3e,Palauastrea,stress-tolerant,79372230-f6d7-4a1c-b0af-2a4106a1d86f
+c1e63c58-ed01-4934-ac1c-e7282ea73c85,Paragoniastrea,stress-tolerant,79372230-f6d7-4a1c-b0af-2a4106a1d86f
+7e4f70be-574f-4971-8a2e-ba8cc25dbb35,Paragoniastrea russelli,stress-tolerant,79372230-f6d7-4a1c-b0af-2a4106a1d86f
+b4566ebe-b395-437b-9703-f693ae4e2582,Paramontastraea,stress-tolerant,79372230-f6d7-4a1c-b0af-2a4106a1d86f
+7c60f58c-0117-4b00-9956-707bdfb39617,Paramontastraea peresi,stress-tolerant,79372230-f6d7-4a1c-b0af-2a4106a1d86f
+108ff93e-9191-42bf-b502-3a437407b22a,Pavona,competitive,3427ae0e-fe8f-4ca2-a215-04272810202c
+108ff93e-9191-42bf-b502-3a437407b22a,Pavona,generalist,19659766-1d38-4b01-adb4-5f95eeb6e421
+108ff93e-9191-42bf-b502-3a437407b22a,Pavona,stress-tolerant,79372230-f6d7-4a1c-b0af-2a4106a1d86f
+42e02821-c8bc-42e5-a793-f23e67136d0b,Pavona bipartita,generalist,19659766-1d38-4b01-adb4-5f95eeb6e421
+af36139c-44a5-4517-83ef-2279a787fb16,Pavona cactus,generalist,19659766-1d38-4b01-adb4-5f95eeb6e421
+3a5b653d-c1da-4e42-aafb-eb640fa961db,Pavona clavus,generalist,19659766-1d38-4b01-adb4-5f95eeb6e421
+3a5b653d-c1da-4e42-aafb-eb640fa961db,Pavona clavus,stress-tolerant,79372230-f6d7-4a1c-b0af-2a4106a1d86f
+6766adfc-b2fa-4d38-9e7b-05886df6263f,Pavona decussata,generalist,19659766-1d38-4b01-adb4-5f95eeb6e421
+6766adfc-b2fa-4d38-9e7b-05886df6263f,Pavona decussata,stress-tolerant,79372230-f6d7-4a1c-b0af-2a4106a1d86f
+e6d5e0ac-be0e-41b0-9b4d-239abd8317d7,Pavona duerdeni,generalist,19659766-1d38-4b01-adb4-5f95eeb6e421
+8d7e7d3c-e2fe-4579-afd4-b8c1f221e345,Pavona explanulata,generalist,19659766-1d38-4b01-adb4-5f95eeb6e421
+08fab4ab-3f43-4acb-8bc1-d7bdc87c4bd7,Pavona maldivensis,generalist,19659766-1d38-4b01-adb4-5f95eeb6e421
+aa9d685f-4d61-425d-af04-71f060eef923,Pavona varians,generalist,19659766-1d38-4b01-adb4-5f95eeb6e421
+aa9d685f-4d61-425d-af04-71f060eef923,Pavona varians,stress-tolerant,79372230-f6d7-4a1c-b0af-2a4106a1d86f
+ac083cae-92d3-4dda-a581-f4a4f1907648,Pavona venosa,generalist,19659766-1d38-4b01-adb4-5f95eeb6e421
+602dc038-8e99-4c55-85e4-f3141ddc0041,Pectinia,generalist,19659766-1d38-4b01-adb4-5f95eeb6e421
+2b1e2403-6391-4017-9044-0f00a7cb9068,Physogyra,stress-tolerant,79372230-f6d7-4a1c-b0af-2a4106a1d86f
+9cd8176f-b5b4-474e-87bc-f2744338fe00,Platygyra,stress-tolerant,79372230-f6d7-4a1c-b0af-2a4106a1d86f
+cdc9cefd-8e5f-473f-acd4-21815febea72,Platygyra crosslandi,stress-tolerant,79372230-f6d7-4a1c-b0af-2a4106a1d86f
+f2025774-f694-4c15-8725-c4dcbdb01cf4,Platygyra daedalea,stress-tolerant,79372230-f6d7-4a1c-b0af-2a4106a1d86f
+61c33a44-2704-4a15-af1e-5411f472a4f8,Platygyra lamellina,stress-tolerant,79372230-f6d7-4a1c-b0af-2a4106a1d86f
+149a3fa6-6b29-4004-aa47-03d7dc3648cc,Platygyra pini,stress-tolerant,79372230-f6d7-4a1c-b0af-2a4106a1d86f
+6d8f7a3b-7486-4829-9d21-f082d3653893,Platygyra sinensis,stress-tolerant,79372230-f6d7-4a1c-b0af-2a4106a1d86f
+eaebab16-9d01-4723-b120-6239314826ab,Plerogyra,stress-tolerant,79372230-f6d7-4a1c-b0af-2a4106a1d86f
+5ab3e132-8c64-4e65-8a5e-25d92f284331,Plesiastrea,stress-tolerant,79372230-f6d7-4a1c-b0af-2a4106a1d86f
+d2b0f823-5641-43d7-872b-a59accf15ac7,Plesiastrea versipora,stress-tolerant,79372230-f6d7-4a1c-b0af-2a4106a1d86f
+31f1f9fc-55ef-4041-b1e4-18763794dd97,Pleuractis,stress-tolerant,79372230-f6d7-4a1c-b0af-2a4106a1d86f
+da1dfe78-f982-4b09-81ae-b38d328bd85e,Pocillopora,competitive,3427ae0e-fe8f-4ca2-a215-04272810202c
+da1dfe78-f982-4b09-81ae-b38d328bd85e,Pocillopora,generalist,19659766-1d38-4b01-adb4-5f95eeb6e421
+da1dfe78-f982-4b09-81ae-b38d328bd85e,Pocillopora,weedy,404afe62-2ab8-4bd0-9156-43b7ced8bbf1
+f5bc01df-3c08-4e3d-8edf-76f536675736,Pocillopora aliciae,generalist,19659766-1d38-4b01-adb4-5f95eeb6e421
+b401b526-6d2f-4f6a-8cc1-10051e0623ff,Pocillopora damicornis,weedy,404afe62-2ab8-4bd0-9156-43b7ced8bbf1
+52c54acc-cde4-444c-8ba3-1b2c8c6ab17f,Pocillopora grandis,competitive,3427ae0e-fe8f-4ca2-a215-04272810202c
+52c54acc-cde4-444c-8ba3-1b2c8c6ab17f,Pocillopora grandis,generalist,19659766-1d38-4b01-adb4-5f95eeb6e421
+47172483-3101-4c6f-96e0-6bc3e43dfaf5,Pocillopora ligulata,generalist,19659766-1d38-4b01-adb4-5f95eeb6e421
+5115c485-0237-450a-a6f8-fdcddd54eeed,Pocillopora meandrina,competitive,3427ae0e-fe8f-4ca2-a215-04272810202c
+5115c485-0237-450a-a6f8-fdcddd54eeed,Pocillopora meandrina,generalist,19659766-1d38-4b01-adb4-5f95eeb6e421
+dd836305-6c6d-4a07-b3cc-9d20fc4899c4,Pocillopora verrucosa,competitive,3427ae0e-fe8f-4ca2-a215-04272810202c
+dd836305-6c6d-4a07-b3cc-9d20fc4899c4,Pocillopora verrucosa,generalist,19659766-1d38-4b01-adb4-5f95eeb6e421
+6580c490-3a3c-4969-b91f-18d7edd82074,Pocilloporidae,competitive,3427ae0e-fe8f-4ca2-a215-04272810202c
+6580c490-3a3c-4969-b91f-18d7edd82074,Pocilloporidae,generalist,19659766-1d38-4b01-adb4-5f95eeb6e421
+6580c490-3a3c-4969-b91f-18d7edd82074,Pocilloporidae,weedy,404afe62-2ab8-4bd0-9156-43b7ced8bbf1
+a89f2635-41fe-4d2f-ae67-880a5707340e,Podabacia,generalist,19659766-1d38-4b01-adb4-5f95eeb6e421
+2b55697f-f26e-433e-9070-f1fe9748bf7b,Porites,stress-tolerant,79372230-f6d7-4a1c-b0af-2a4106a1d86f
+2b55697f-f26e-433e-9070-f1fe9748bf7b,Porites,weedy,404afe62-2ab8-4bd0-9156-43b7ced8bbf1
+d4899f32-d898-472f-ab86-60a42f9509d3,Porites annae,stress-tolerant,79372230-f6d7-4a1c-b0af-2a4106a1d86f
+e288a94f-7117-4a54-9558-7d71144ccdc1,Porites astreoides,weedy,404afe62-2ab8-4bd0-9156-43b7ced8bbf1
+1f590289-ca7e-46a6-b59a-765fb7e980dd,Porites branneri,weedy,404afe62-2ab8-4bd0-9156-43b7ced8bbf1
+b345a2cc-aa56-4752-97e9-b789afb8a4ea,Porites brighami,stress-tolerant,79372230-f6d7-4a1c-b0af-2a4106a1d86f
+b345a2cc-aa56-4752-97e9-b789afb8a4ea,Porites brighami,weedy,404afe62-2ab8-4bd0-9156-43b7ced8bbf1
+07e97dbf-5c07-420f-8045-12fc70866746,Porites colonensis,weedy,404afe62-2ab8-4bd0-9156-43b7ced8bbf1
+05b8e85d-89ca-48dc-8ec9-2214d9103909,Porites compressa,competitive,3427ae0e-fe8f-4ca2-a215-04272810202c
+05b8e85d-89ca-48dc-8ec9-2214d9103909,Porites compressa,weedy,404afe62-2ab8-4bd0-9156-43b7ced8bbf1
+05b8e85d-89ca-48dc-8ec9-2214d9103909,Porites compressa,weedy,404afe62-2ab8-4bd0-9156-43b7ced8bbf1
+53bd7b12-ef70-4c59-ae58-effdd03117ef,Porites cylindrica,weedy,404afe62-2ab8-4bd0-9156-43b7ced8bbf1
+b09cfc80-dd4e-421e-a8ff-c456752f6dc2,Porites divaricata,weedy,404afe62-2ab8-4bd0-9156-43b7ced8bbf1
+5279d3f0-20df-4ac4-ac4a-ca6d21115d7d,Porites evermanni,stress-tolerant,79372230-f6d7-4a1c-b0af-2a4106a1d86f
+5279d3f0-20df-4ac4-ac4a-ca6d21115d7d,Porites evermanni,weedy,404afe62-2ab8-4bd0-9156-43b7ced8bbf1
+dcb64e93-80b1-4e60-a2ec-07489d0cd839,Porites furcata,weedy,404afe62-2ab8-4bd0-9156-43b7ced8bbf1
+9745bb46-f8a8-4d08-b58a-6e1c4dca85d6,Porites harrisoni,weedy,404afe62-2ab8-4bd0-9156-43b7ced8bbf1
+b4c17d65-c779-462e-b9b5-889e009ea737,Porites lichen,stress-tolerant,79372230-f6d7-4a1c-b0af-2a4106a1d86f
+b4c17d65-c779-462e-b9b5-889e009ea737,Porites lichen,weedy,404afe62-2ab8-4bd0-9156-43b7ced8bbf1
+462970b7-3c1d-48a7-9f6f-d657b27a5bef,Porites lobata,stress-tolerant,79372230-f6d7-4a1c-b0af-2a4106a1d86f
+462970b7-3c1d-48a7-9f6f-d657b27a5bef,Porites lobata,weedy,404afe62-2ab8-4bd0-9156-43b7ced8bbf1
+5eb2052b-9787-4148-a230-4d04580f399c,Porites lutea,stress-tolerant,79372230-f6d7-4a1c-b0af-2a4106a1d86f
+5eb2052b-9787-4148-a230-4d04580f399c,Porites lutea,weedy,404afe62-2ab8-4bd0-9156-43b7ced8bbf1
+67d74d0f-3b04-477a-aed7-ac090bfd745e,Porites monticulosa,stress-tolerant,79372230-f6d7-4a1c-b0af-2a4106a1d86f
+67d74d0f-3b04-477a-aed7-ac090bfd745e,Porites monticulosa,weedy,404afe62-2ab8-4bd0-9156-43b7ced8bbf1
+85bbb676-49e3-4621-8296-35c6fc2ec9fe,Porites nodifera,weedy,404afe62-2ab8-4bd0-9156-43b7ced8bbf1
+39aa8616-e9ed-4fda-809a-5f9befc6efc2,Porites porites,weedy,404afe62-2ab8-4bd0-9156-43b7ced8bbf1
+7d41bcd1-d9dd-4b8f-85ab-cd410ae0e1ef,Porites rus,weedy,404afe62-2ab8-4bd0-9156-43b7ced8bbf1
+0df2f2ac-d8b5-41fe-bf1f-7cd2c30a1a2e,Porites superfusa,weedy,404afe62-2ab8-4bd0-9156-43b7ced8bbf1
+cec2b2df-ba65-4634-b371-75ad63428f26,Poritidae,stress-tolerant,79372230-f6d7-4a1c-b0af-2a4106a1d86f
+cec2b2df-ba65-4634-b371-75ad63428f26,Poritidae,weedy,404afe62-2ab8-4bd0-9156-43b7ced8bbf1
+748cb267-f47c-4920-b5b0-39109ade448f,Psammocora,generalist,19659766-1d38-4b01-adb4-5f95eeb6e421
+748cb267-f47c-4920-b5b0-39109ade448f,Psammocora,stress-tolerant,79372230-f6d7-4a1c-b0af-2a4106a1d86f
+748cb267-f47c-4920-b5b0-39109ade448f,Psammocora,weedy,404afe62-2ab8-4bd0-9156-43b7ced8bbf1
+2c9bc345-d7ad-4a51-ac0e-9d9508a5cf17,Psammocora columna,stress-tolerant,79372230-f6d7-4a1c-b0af-2a4106a1d86f
+2169cd62-09dd-4748-aea7-396a134d42e3,Psammocora contigua,generalist,19659766-1d38-4b01-adb4-5f95eeb6e421
+2169cd62-09dd-4748-aea7-396a134d42e3,Psammocora contigua,weedy,404afe62-2ab8-4bd0-9156-43b7ced8bbf1
+ca7fffd2-4f88-4eb8-a7c2-76f960b829e1,Psammocora digitata,generalist,19659766-1d38-4b01-adb4-5f95eeb6e421
+c52c7acb-39a9-4849-8546-60b39fd3a2a8,Psammocora nierstraszi,generalist,19659766-1d38-4b01-adb4-5f95eeb6e421
+c312d18f-fefc-47cb-b5be-a5814e556b12,Psammocora profundacella,generalist,19659766-1d38-4b01-adb4-5f95eeb6e421
+c312d18f-fefc-47cb-b5be-a5814e556b12,Psammocora profundacella,stress-tolerant,79372230-f6d7-4a1c-b0af-2a4106a1d86f
+577244a2-aa83-4721-ab0b-533a82f7a0c9,Psammocora stellata,generalist,19659766-1d38-4b01-adb4-5f95eeb6e421
+5e9d2736-3afd-4c5e-bfe7-97398c50a980,Psammocoridae,generalist,19659766-1d38-4b01-adb4-5f95eeb6e421
+5e9d2736-3afd-4c5e-bfe7-97398c50a980,Psammocoridae,stress-tolerant,79372230-f6d7-4a1c-b0af-2a4106a1d86f
+5e9d2736-3afd-4c5e-bfe7-97398c50a980,Psammocoridae,weedy,404afe62-2ab8-4bd0-9156-43b7ced8bbf1
+10240284-332a-4913-9bca-a96af8380a06,Pseudodiploria,stress-tolerant,79372230-f6d7-4a1c-b0af-2a4106a1d86f
+e7f1d46b-a613-40fe-968f-8fddc7c13c98,Pseudodiploria clivosa,stress-tolerant,79372230-f6d7-4a1c-b0af-2a4106a1d86f
+4b503b74-748b-4773-a788-e16a84f59f81,Pseudodiploria strigosa,stress-tolerant,79372230-f6d7-4a1c-b0af-2a4106a1d86f
+1e98daa8-4101-4890-9bc8-9ca10b59125f,Rhizangiidae,stress-tolerant,79372230-f6d7-4a1c-b0af-2a4106a1d86f
+316eeb46-e24d-449b-a0b7-c0c8c0b803e6,Seriatopora,weedy,404afe62-2ab8-4bd0-9156-43b7ced8bbf1
+33f6866f-cc76-4125-b27d-84ac0110ba94,Siderastrea,stress-tolerant,79372230-f6d7-4a1c-b0af-2a4106a1d86f
+4b404c52-42a0-4efa-a950-2824489c8deb,Siderastrea radians,stress-tolerant,79372230-f6d7-4a1c-b0af-2a4106a1d86f
+4b404c52-42a0-4efa-a950-2824489c8deb,Siderastrea radians,weedy,404afe62-2ab8-4bd0-9156-43b7ced8bbf1
+8aff23ec-5111-4759-b0ec-111da5057a61,Siderastrea savignyana,stress-tolerant,79372230-f6d7-4a1c-b0af-2a4106a1d86f
+8c98a043-b8e4-4d55-8ad2-fbdfcf455af5,Siderastrea siderea,stress-tolerant,79372230-f6d7-4a1c-b0af-2a4106a1d86f
+72aa19cc-c1db-4b20-a794-40a06041aed4,Siderastrea stellata,stress-tolerant,79372230-f6d7-4a1c-b0af-2a4106a1d86f
+c85f376f-a666-4c11-bc95-03e0a9dac856,Stephanocoenia intersepta,stress-tolerant,79372230-f6d7-4a1c-b0af-2a4106a1d86f
+4fddc309-01c7-4040-86b4-f80f0f0235e9,Stylocoeniella,stress-tolerant,79372230-f6d7-4a1c-b0af-2a4106a1d86f
+c3ffe279-fb7b-499e-8fb8-b26403c80710,Stylophora,weedy,404afe62-2ab8-4bd0-9156-43b7ced8bbf1
+d932b38e-8f39-407c-968e-b8401bb1ddc3,Stylophora pistillata,weedy,404afe62-2ab8-4bd0-9156-43b7ced8bbf1
+f87eae02-9123-4931-98a0-8d635670a46b,Symphyllia,stress-tolerant,79372230-f6d7-4a1c-b0af-2a4106a1d86f
+a1150e59-a8fc-4cc7-a62a-2ec9762ddfea,Synarea,weedy,404afe62-2ab8-4bd0-9156-43b7ced8bbf1
+588f63cd-ffd2-4c38-8684-1208109165eb,Turbinaria-coral,competitive,3427ae0e-fe8f-4ca2-a215-04272810202c
+588f63cd-ffd2-4c38-8684-1208109165eb,Turbinaria-coral,generalist,19659766-1d38-4b01-adb4-5f95eeb6e421
+588f63cd-ffd2-4c38-8684-1208109165eb,Turbinaria-coral,stress-tolerant,79372230-f6d7-4a1c-b0af-2a4106a1d86f
+4ec18776-1137-40cc-a62e-63c0d0e352f6,Turbinaria mesenterina,competitive,3427ae0e-fe8f-4ca2-a215-04272810202c
+4ec18776-1137-40cc-a62e-63c0d0e352f6,Turbinaria mesenterina,generalist,19659766-1d38-4b01-adb4-5f95eeb6e421
+1f2875e2-2d46-48ac-9fd9-85f4edac8f89,Turbinaria reniformis,generalist,19659766-1d38-4b01-adb4-5f95eeb6e421
+1f2875e2-2d46-48ac-9fd9-85f4edac8f89,Turbinaria reniformis,stress-tolerant,79372230-f6d7-4a1c-b0af-2a4106a1d86f
+409f9bbd-2431-4ac9-96cb-d7784217260d,Turbinaria stellulata,generalist,19659766-1d38-4b01-adb4-5f95eeb6e421
