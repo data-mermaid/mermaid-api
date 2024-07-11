@@ -68,7 +68,6 @@ def _delete_existing_records(project_id, target_model_cls):
 
 
 def _update_records(records, target_model_cls, created_on, skip_updates=False):
-    # print(records, target_model_cls, created_on, skip_updates)
     if skip_updates or not records:
         return
     idx = 0

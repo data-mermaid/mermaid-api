@@ -5,6 +5,12 @@ import pytest
 from django.urls import reverse
 
 
+def _call(client, token, url):
+    response = client.get(url, HTTP_AUTHORIZATION=f"Bearer {token}")
+    data = response.json()
+    return data["count"], data["results"], response
+
+
 def _get_rows(client, token, url):
     response = client.get(url, HTTP_AUTHORIZATION=f"Bearer {token}")
     print(type(response))
@@ -65,6 +71,43 @@ def test_beltfish_field_report(
     assert float(rows[3]["Latitude"]) == site2.location.y
     assert float(rows[3]["Longitude"]) == site2.location.x
     assert rows[3]["Observers"] == profile2.full_name
+
+
+def test_benthicpit_obs_view(
+    client,
+    db_setup,
+    project1,
+    token1,
+    benthic_pit_project,
+    all_choices,
+    benthic_transect1,
+    obs_benthic_pit1_2,
+    obs_benthic_pit1_4,
+    ba_gf_lh1,
+    update_summary_cache,
+):
+    url = reverse("benthicpitmethod-obs-list", kwargs=dict(project_pk=project1.pk))
+    count, data, _ = _call(client, token1, url)
+
+    assert count == 15
+
+    for record in data:
+        # observation of BA with 4 LHs, no GF LHs
+        if record["id"] == str(obs_benthic_pit1_2.pk):
+            lhs = record["life_histories"]
+            assert len(lhs) == 4
+            for lh in lhs:
+                assert lh["proportion"] == 0.25
+
+        # observation of BA with 2 LHs but also a GF with 1 LH
+        if record["id"] == str(obs_benthic_pit1_4.pk):
+            lhs = record["life_histories"]
+            assert len(lhs) == 4
+            for lh in lhs:
+                if lh["name"] == "weedy":
+                    assert lh["proportion"] == 1
+                else:
+                    assert lh["proportion"] == 0
 
 
 def test_benthicpit_csv_view(
@@ -252,12 +295,14 @@ def test_bleaching_colonies_bleached_csv_view(
 
     assert len(rows) == 5
     assert "country_name" in fieldnames
-    assert len(rows[3].keys()) == 51
-    assert rows[3]["site_name"] == site1.name
-    assert float(rows[3]["latitude"]) == site1.location.y
-    assert float(rows[3]["longitude"]) == site1.location.x
-    assert rows[3]["observers"] == profile1.full_name
-    assert rows[3]["id"] == str(obs_colonies_bleached1_4.id)
+
+    ba_ordered_rownum = 4
+    assert len(rows[ba_ordered_rownum].keys()) == 51
+    assert rows[ba_ordered_rownum]["site_name"] == site1.name
+    assert float(rows[ba_ordered_rownum]["latitude"]) == site1.location.y
+    assert float(rows[ba_ordered_rownum]["longitude"]) == site1.location.x
+    assert rows[ba_ordered_rownum]["observers"] == profile1.full_name
+    assert rows[ba_ordered_rownum]["id"] == str(obs_colonies_bleached1_4.id)
 
 
 def test_bleaching_colonies_bleached_field_report(
@@ -277,12 +322,16 @@ def test_bleaching_colonies_bleached_field_report(
 
     assert len(rows) == 5
     assert "Country" in fieldnames
-    assert len(rows[3].keys()) == 45
-    assert rows[3]["Site"] == site1.name
-    assert float(rows[3]["Latitude"]) == site1.location.y
-    assert float(rows[3]["Longitude"]) == site1.location.x
-    assert rows[3]["Observers"] == profile1.full_name
-    assert rows[3]["20-50% bleached count"] == str(obs_colonies_bleached1_4.count_50)
+
+    ba_ordered_rownum = 4
+    assert len(rows[ba_ordered_rownum].keys()) == 45
+    assert rows[ba_ordered_rownum]["Site"] == site1.name
+    assert float(rows[ba_ordered_rownum]["Latitude"]) == site1.location.y
+    assert float(rows[ba_ordered_rownum]["Longitude"]) == site1.location.x
+    assert rows[ba_ordered_rownum]["Observers"] == profile1.full_name
+    assert rows[ba_ordered_rownum]["20-50% bleached count"] == str(
+        obs_colonies_bleached1_4.count_50
+    )
 
 
 def test_bleaching_quadrat_benthic_percent_csv_view(

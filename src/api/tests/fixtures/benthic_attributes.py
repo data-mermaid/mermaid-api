@@ -1,6 +1,11 @@
 import pytest
 
-from api.models import BenthicAttribute, BenthicLifeHistory, GrowthForm
+from api.models import (
+    BenthicAttribute,
+    BenthicAttributeGrowthFormLifeHistory,
+    BenthicLifeHistory,
+    GrowthForm,
+)
 
 
 @pytest.fixture
@@ -50,9 +55,10 @@ def benthic_attribute_1a(db, benthic_attribute_1, region3):
 
 
 @pytest.fixture
-def benthic_attribute_2a(db, benthic_attribute_2, region2):
+def benthic_attribute_2a(db, benthic_attribute_2, region2, all_life_histories):
     ba = BenthicAttribute.objects.create(name="Acroporidae", parent=benthic_attribute_2)
     ba.regions.add(region2)
+    ba.life_histories.add(*all_life_histories)
 
     return ba
 
@@ -72,11 +78,19 @@ def benthic_attribute_2a1(db, benthic_attribute_2a):
 
 @pytest.fixture
 def benthic_attribute_2b1(db, benthic_attribute_2b, region1, region3):
-    ba = BenthicAttribute.objects.create(name="Erythrastrea", parent=benthic_attribute_2b)
+    ba = BenthicAttribute.objects.create(name="Porites evermanni", parent=benthic_attribute_2b)
     ba.regions.add(region1)
     ba.regions.add(region3)
 
     return ba
+
+
+@pytest.fixture
+def ba_gf_lh1(db, benthic_attribute_2b1, growth_form4, life_history4):
+    ba_gf_lh = BenthicAttributeGrowthFormLifeHistory.objects.create(
+        attribute=benthic_attribute_2b1, growth_form=growth_form4, life_history=life_history4
+    )
+    return ba_gf_lh
 
 
 @pytest.fixture
@@ -100,14 +114,28 @@ def growth_form4(db):
 
 
 @pytest.fixture
-def life_histories(db):
-    BenthicLifeHistory.objects.create(name="N/A")
-    BenthicLifeHistory.objects.create(name="competitive")
-    BenthicLifeHistory.objects.create(name="generalist")
-    BenthicLifeHistory.objects.create(name="stress-tolerant")
-    BenthicLifeHistory.objects.create(name="weedy")
+def life_history1(db):
+    return BenthicLifeHistory.objects.create(name="competitive")
 
-    return BenthicLifeHistory.objects.all()
+
+@pytest.fixture
+def life_history2(db):
+    return BenthicLifeHistory.objects.create(name="generalist")
+
+
+@pytest.fixture
+def life_history3(db):
+    return BenthicLifeHistory.objects.create(name="stress-tolerant")
+
+
+@pytest.fixture
+def life_history4(db):
+    return BenthicLifeHistory.objects.create(name="weedy")
+
+
+@pytest.fixture
+def all_life_histories(db, life_history1, life_history2, life_history3, life_history4):
+    return [life_history1, life_history2, life_history3, life_history4]
 
 
 @pytest.fixture
@@ -126,6 +154,6 @@ def all_test_benthic_attributes(
     growth_form2,
     growth_form3,
     growth_form4,
-    life_histories,
+    all_life_histories,
 ):
     pass
