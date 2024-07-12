@@ -17,7 +17,7 @@ def validate_unique_elements(value):
 
 class GFCRIndicatorSet(BaseModel):
     INDICATOR_SET_TYPE_CHOICES = (
-        ("annual_report", "Annual Report"),
+        ("report", "Report"),
         ("target", "Target"),
     )
     INDICATOR_SET_TYPE_CHOICES_UPDATED_ON = datetime.datetime(2024, 5, 27, 0, 0, 0, 0, pytz.UTC)
