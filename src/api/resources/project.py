@@ -49,14 +49,14 @@ from .base import (
     TagField,
 )
 from .management import ManagementSerializer
-from .mixins import OrFilterSetMixin
+from .mixins import DynamicFieldsMixin, OrFilterSetMixin
 from .project_profile import ProjectProfileSerializer
 from .site import SiteSerializer
 
 logger = logging.getLogger(__name__)
 
 
-class ProjectSerializer(BaseAPISerializer):
+class ProjectSerializer(DynamicFieldsMixin, BaseAPISerializer):
     project_specific_fields = [
         "observer",
         "project_profile",
