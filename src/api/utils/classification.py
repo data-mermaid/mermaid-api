@@ -1,0 +1,136 @@
+import datetime
+import hashlib
+import os
+from io import BytesIO
+from typing import Any, Dict, Optional
+
+import pytz
+from django.contrib.gis.geos import Point
+from django.core.files.base import ContentFile
+from django.db.models.fields.files import ImageFieldFile
+from PIL import ExifTags, Image as PILImage
+
+from ..models import Image
+
+
+def create_image_checksum(image: ImageFieldFile) -> str:
+    if image.closed:
+        image.open("rb")
+    file_hash = hashlib.sha256()
+
+    for chunk in image.chunks():
+        file_hash.update(chunk)
+
+    return file_hash.hexdigest()
+
+
+def create_thumbnail(image: ImageFieldFile) -> ContentFile:
+    img = PILImage.open(image)
+    size = (100, 100)
+    img.thumbnail(size, PILImage.LANCZOS)
+
+    base, ext = os.path.splitext(image.name)
+    thumb_name = f"{base}_thumbnail{ext}"
+
+    thumb_io = BytesIO()
+    img.save(thumb_io, img.format)
+
+    return ContentFile(thumb_io.getvalue(), name=thumb_name)
+
+
+def convert_to_utc(timestamp_str: str) -> datetime:
+    local_time = datetime.fromisoformat(timestamp_str)
+    return local_time.astimezone(pytz.utc)
+
+
+def extract_datetime_stamp(exif_details: Dict[str, Any]) -> Optional[datetime.datetime]:
+    date_stamp = exif_details.get("gps_datestamp")  # str, 2024:04:06
+    time_stamp = exif_details.get("gps_timestamp")  # tuple
+
+    if date_stamp and time_stamp:
+        date_stamp = map(int, date_stamp.split(":"))
+        time_stamp = map(int, time_stamp)
+        return datetime.datetime(*date_stamp, *time_stamp, tzinfo=pytz.UTC)
+
+    date_time_str = exif_details.get("datetime_original")
+    offset_time = exif_details.get("offset_time")
+
+    if date_stamp is None or offset_time is None:
+        return None
+
+    dt = datetime.datetime.strptime(date_time_str, "%Y:%m:%d %H:%M:%S")
+    offset = datetime.timedelta(hours=offset_time)
+    local_tz = datetime.timezone(offset)
+    dt_local = dt.replace(tzinfo=local_tz)
+
+    return dt_local.astimezone(pytz.UTC)
+
+
+def extract_location(exif_details: Dict[str, Any]) -> Optional[Point]:
+    latitude_ref = exif_details.get("gps_latitude_ref")  # N or S
+    latitude_dms = exif_details.get("gps_latitude")  # tuple (DMS)
+    longitude_ref = exif_details.get("gps_longitude_ref")  # E or W
+    longitude_dms = exif_details.get("gps_longitude")  # tuple (DMS)
+
+    if (
+        not all([latitude_ref, latitude_dms, longitude_ref, longitude_dms])
+        and len(latitude_dms) >= 3
+        and len(longitude_dms) >= 3
+    ):
+        return None
+
+    latitude = latitude_dms[0] + latitude_dms[1] / 60 + latitude_dms[2] / 3600
+    longitude = longitude_dms[0] + longitude_dms[1] / 60 + longitude_dms[2] / 3600
+
+    latitude *= -1 if latitude_ref == "S" else 1
+    longitude *= -1 if longitude_ref == "W" else 1
+
+    return Point(longitude, latitude)
+
+
+def correct_image_orientation(image_record: Image):
+    image_file = PILImage.open(image_record.image)
+    image_format = image_file.format
+    try:
+        for orientation in PILImage.ExifTags.TAGS.keys():
+            if PILImage.ExifTags.TAGS[orientation] == "Orientation":
+                break
+
+        exif = dict(image_file._getexif().items())
+
+        if exif[orientation] == 3:
+            image_file = image_file.rotate(180, expand=True)
+        elif exif[orientation] == 6:
+            image_file = image_file.rotate(270, expand=True)
+        elif exif[orientation] == 8:
+            image_file = image_file.rotate(90, expand=True)
+    except (AttributeError, KeyError, IndexError) as _:
+        pass
+
+    img_content = BytesIO()
+    image_file.save(img_content, format=image_format)
+
+    image_record.image = ContentFile(img_content.getvalue(), name=image_record.image.name)
+
+
+def strip_and_store_exif(image_record: Image):
+    img = image_record.image
+
+    pil_img = PILImage.open(img.open())
+    pil_exif = pil_img.getexif()
+    pil_exif[ExifTags.Base.ImageDescription] = f"Project: {image_record.project.id}"
+
+    img_byte_arr = BytesIO()
+    pil_img.save(img_byte_arr, exif=pil_exif, format=pil_img.format)
+
+    img_file = ContentFile(img_byte_arr.getvalue(), name=image_record.image.name)
+
+    image_record.image = img_file
+
+
+def create_points(image):
+    ...
+
+
+def classify_image(image_record_id, background=True):
+    ...

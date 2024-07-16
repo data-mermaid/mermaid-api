@@ -1,13 +1,13 @@
 FROM python:3.10-slim-bullseye
 LABEL maintainer="<sysadmin@datamermaid.org>"
 
-ENV DEBIAN_FRONTEND noninteractive
-ENV LANG C.UTF-8
-ENV LANGUAGE C.UTF-8
-ENV LC_ALL C.UTF-8
+ENV DEBIAN_FRONTEND=noninteractive
+ENV LANG=C.UTF-8
+ENV LANGUAGE=C.UTF-8
+ENV LC_ALL=C.UTF-8
 ENV PYTHONPATH="/var/projects/webapp"
 ENV PATH="/home/webapp/.local/bin:${PATH}"
-ENV PYTHONUNBUFFERED 1
+ENV PYTHONUNBUFFERED=1
 
 # Add any static environment variables needed by Django or your settings file here:
 ENV DJANGO_SETTINGS_MODULE=app.settings

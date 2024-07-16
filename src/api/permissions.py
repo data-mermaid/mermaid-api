@@ -145,10 +145,12 @@ class ProjectPublicSummaryPermission(permissions.BasePermission):
 
 class CollectRecordOwner(permissions.BasePermission):
     def has_permission(self, request, view):
-        record_ids = request.data.get("ids") or []
+        record_ids = request.data.get("ids") or request.data.get("collect_record_id") or []
         pk = view.kwargs.get("pk")
         if pk:
             record_ids = [pk]
+        elif isinstance(record_ids, str):
+            record_ids = [record_ids]
         elif not record_ids:
             return True
 
