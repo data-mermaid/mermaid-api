@@ -87,6 +87,7 @@ def test_benthicpit_se_view(
     sample_event2,
     all_choices,
     site2,
+    ba_gf_lh1,
     management2,
     profile2,
     update_summary_cache,
@@ -107,6 +108,10 @@ def test_benthicpit_se_view(
             assert record["percent_cover_benthic_category_sd"]["Hard coral"] == 14.14
             assert record["percent_cover_benthic_category_avg"]["Rock"] == 10.0
             assert record["percent_cover_benthic_category_sd"]["Rock"] == 14.14
+            assert record["percent_cover_life_histories_avg"]["weedy"] == 12.5
+            assert record["percent_cover_life_histories_avg"]["generalist"] == 2.5
+            assert record["percent_cover_life_histories_avg"]["competitive"] == 2.5
+            assert record["percent_cover_life_histories_avg"]["stress-tolerant"] == 2.5
             n += 1
         elif record["id"] == str(sample_event2.pk):
             assert record["percent_cover_benthic_category_avg"]["Hard coral"] == 60.0

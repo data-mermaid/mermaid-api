@@ -386,7 +386,7 @@ def test_obs_benthic_lit_validation(all_test_benthic_attributes):
 
     obs_benthic_lits3 = [
         {
-            "attribute": BenthicAttribute.objects.get(name="Erythrastrea").id,
+            "attribute": BenthicAttribute.objects.get(name="Porites evermanni").id,
             "length": 9000,
         },
         {
@@ -402,7 +402,7 @@ def test_obs_benthic_lit_validation(all_test_benthic_attributes):
 
     obs_benthic_lits4 = [
         {
-            "attribute": BenthicAttribute.objects.get(name="Erythrastrea").id,
+            "attribute": BenthicAttribute.objects.get(name="Porites evermanni").id,
             "length": 9000,
         },
         {

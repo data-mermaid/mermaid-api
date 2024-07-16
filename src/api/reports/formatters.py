@@ -63,6 +63,19 @@ def to_names(value, field, row, serializer_instance):
 
 
 @handle_none()
+def to_life_history(value, field, row, serializer_instance):
+    if value is None:
+        return None
+
+    proportion = None
+    for lh in value:
+        if "name" in lh and "proportion" in lh and lh["name"] == field.key:
+            proportion = lh["proportion"]
+            break
+    return proportion
+
+
+@handle_none()
 def to_protocol_value(value, field, row, serializer_instance):
     if (
         not hasattr(field, "protocol")
