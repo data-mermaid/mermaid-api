@@ -13,7 +13,7 @@ Script for importing into one mermaid db a csv exported from the benthic_attribu
 
 
 def _val_or_none(val):
-    if val == "NULL" or val is None:
+    if val.upper() == "NULL" or val is None:
         return None
     return val
 
