@@ -254,6 +254,12 @@ AWS_METRICS_BUCKET = "mermaid-user-metrics"
 PUBLIC_BUCKET = os.environ.get("AWS_PUBLIC_BUCKET")
 IMAGE_PROCESSING_BUCKET = os.environ.get("IMAGE_PROCESSING_BUCKET")
 
+# buckets
+AWS_BACKUP_BUCKET = os.environ.get("AWS_BACKUP_BUCKET")
+AWS_METRICS_BUCKET = "mermaid-user-metrics"
+PUBLIC_BUCKET = os.environ.get("AWS_PUBLIC_BUCKET")
+IMAGE_PROCESSING_BUCKET = os.environ.get("IMAGE_PROCESSING_BUCKET")
+
 # ************
 # ** CLIENT **
 # ************
@@ -349,8 +355,6 @@ IMAGE_QUEUE_NAME = os.environ.get("IMAGE_SQS_QUEUE_NAME", "mermaid-image-local")
 USE_FIFO = os.environ.get("USE_FIFO", "True")
 # Override default boto3 url for SQS
 ENDPOINT_URL = None if ENVIRONMENT in ("dev", "prod") else "http://sqs:9324"
-
-
 # AWS S3 bucket for public files
 PUBLIC_BUCKET = os.environ.get("AWS_PUBLIC_BUCKET")
 

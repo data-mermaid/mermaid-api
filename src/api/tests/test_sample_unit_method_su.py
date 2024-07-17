@@ -98,6 +98,7 @@ def test_benthicpit_su_view(
     benthic_transect1,
     benthic_transect1_2,
     benthic_transect2,
+    ba_gf_lh1,
     management2,
     profile2,
     update_summary_cache,
@@ -108,11 +109,14 @@ def test_benthicpit_su_view(
     assert count == 3
     n = 0
     for record in data:
-        print(record["sample_unit_ids"])
         if record["sample_unit_ids"][0] == str(benthic_transect1.pk):
             assert record["percent_cover_benthic_category"]["Macroalgae"] == 20.0
             assert record["percent_cover_benthic_category"]["Hard coral"] == 60.0
             assert record["percent_cover_benthic_category"]["Rock"] == 20.0
+            # generalist (4 BA LHs on 1 obs): 0+0+0+0+.25/5 = 5%
+            # weedy (4 BA LHs on 1 obs, 1 GF LH on 1 obs): 1+0+0+0+.25/5 = 25%
+            assert record["percent_cover_life_histories"]["generalist"] == 5.0
+            assert record["percent_cover_life_histories"]["weedy"] == 25.0
             n += 1
         elif record["sample_unit_ids"][0] == str(benthic_transect1_2.pk):
             assert record["percent_cover_benthic_category"]["Macroalgae"] == 60.0

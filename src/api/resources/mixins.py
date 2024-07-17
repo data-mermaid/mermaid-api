@@ -1,15 +1,18 @@
 import os
+import warnings
 from pathlib import Path
 from tempfile import NamedTemporaryFile
 from zipfile import ZIP_DEFLATED, ZipFile
 
 import pytz
+from django.conf import settings
 from django.db import IntegrityError, transaction
 from django.db.models import ProtectedError, Q
 from django.http import FileResponse
 from django.http.response import HttpResponseBadRequest
 from django.template.defaultfilters import pluralize
 from django.utils.dateparse import parse_datetime
+from django.utils.functional import cached_property
 from rest_framework import exceptions, status
 from rest_framework.decorators import action
 from rest_framework.request import Request
@@ -344,3 +347,100 @@ class CopyRecordsMixin:
 
         transaction.savepoint_commit(save_point_id)
         return Response(new_records)
+
+
+class DynamicFieldsMixin(object):
+    """
+    A serializer mixin that takes an additional `fields` argument that controls
+    which fields should be displayed.
+
+    License:
+    Copyright (c) 2014--2016 Danilo Bargen and contributors
+
+    Permission is hereby granted, free of charge, to any person obtaining a copy of
+    this software and associated documentation files (the "Software"), to deal in
+    the Software without restriction, including without limitation the rights to
+    use, copy, modify, merge, publish, distribute, sublicense, and/or sell copies
+    of the Software, and to permit persons to whom the Software is furnished to do
+    so, subject to the following conditions:
+
+    The above copyright notice and this permission notice shall be included in all
+    copies or substantial portions of the Software.
+
+    THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+    IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+    FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+    AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+    LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+    OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+    SOFTWARE.
+    """
+
+    @cached_property
+    def fields(self):
+        """
+        Filters the fields according to the `fields` query parameter.
+
+        A blank `fields` parameter (?fields) will remove all fields. Not
+        passing `fields` will pass all fields individual fields are comma
+        separated (?fields=id,name,url,email).
+
+        """
+        fields = super(DynamicFieldsMixin, self).fields
+
+        if not hasattr(self, "_context"):
+            # We are being called before a request cycle
+            return fields
+
+        # Only filter if this is the root serializer, or if the parent is the
+        # root serializer with many=True
+        is_root = self.root == self
+        parent_is_list_root = self.parent == self.root and getattr(self.parent, "many", False)
+        if not (is_root or parent_is_list_root):
+            return fields
+
+        try:
+            request = self.context["request"]
+        except KeyError:
+            conf = getattr(settings, "DRF_DYNAMIC_FIELDS", {})
+            if conf.get("SUPPRESS_CONTEXT_WARNING", False) is not True:
+                warnings.warn(
+                    "Context does not have access to request. " "See README for more information."
+                )
+            return fields
+
+        # NOTE: drf test framework builds a request object where the query
+        # parameters are found under the GET attribute.
+        params = getattr(request, "query_params", getattr(request, "GET", None))
+        if params is None:
+            warnings.warn("Request object does not contain query parameters")
+
+        try:
+            filter_fields = params.get("fields", None).split(",")
+        except AttributeError:
+            filter_fields = None
+
+        try:
+            omit_fields = params.get("omit", None).split(",")
+        except AttributeError:
+            omit_fields = []
+
+        # Drop any fields that are not specified in the `fields` argument.
+        existing = set(fields.keys())
+        if filter_fields is None:
+            # no fields param given, don't filter.
+            allowed = existing
+        else:
+            allowed = set(filter(None, filter_fields))
+
+        # omit fields in the `omit` argument.
+        omitted = set(filter(None, omit_fields))
+
+        for field in existing:
+            if field not in allowed:
+                fields.pop(field, None)
+
+            if field in omitted:
+                fields.pop(field, None)
+
+        return fields

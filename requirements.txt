@@ -32,3 +32,4 @@ timezonefinder==6.1.1
 whitenoise==6.2.0
 django-storages[s3]==1.14.3
 pillow==10.4.0
+exif==1.6.0
