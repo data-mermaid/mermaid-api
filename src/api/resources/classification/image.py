@@ -44,10 +44,18 @@ class ImageViewSet(BaseProjectApiViewSet):
         collect_record_id = request.data.get("collect_record_id")
         trigger_classification = truthy(request.data.get("classify", False))
 
-        collect_record = CollectRecord.objects.get(pk=collect_record_id)
+        collect_record = CollectRecord.objects.get_or_none(pk=collect_record_id)
+        if collect_record is None:
+            return Response(
+                {"error": f"[{collect_record_id}] Collect record does not exist."},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+
         if collect_record.protocol != BENTHICPQT_PROTOCOL:
             return Response(
-                {"error": "Image upload is only allowed for Benthic Photo Quadrat sample units."},
+                {
+                    "error": f"[{collect_record.protocol}] Image upload is only allowed for Benthic Photo Quadrat sample units."
+                },
                 status=status.HTTP_400_BAD_REQUEST,
             )
 

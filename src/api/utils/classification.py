@@ -47,7 +47,11 @@ def create_thumbnail(image: ImageFieldFile) -> ContentFile:
     thumb_name = f"{base}_thumbnail{ext}"
 
     thumb_io = BytesIO()
-    img.save(thumb_io, img.format)
+    try:
+        img.save(thumb_io, img.format)
+    except IOError as io_err:
+        print(f"Cannot create thumbnail for [{image.id}]: {io_err}")
+        raise
 
     return ContentFile(thumb_io.getvalue(), name=thumb_name)
 
@@ -69,7 +73,7 @@ def extract_datetime_stamp(exif_details: Dict[str, Any]) -> Optional[datetime.da
     date_time_str = exif_details.get("datetime_original")
     offset_time = exif_details.get("offset_time")
 
-    if date_stamp is None or offset_time is None:
+    if not date_stamp or not date_time_str or offset_time is None:
         return None
 
     dt = datetime.datetime.strptime(date_time_str, "%Y:%m:%d %H:%M:%S")

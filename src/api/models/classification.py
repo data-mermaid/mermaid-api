@@ -47,7 +47,6 @@ class Classifier(BaseModel):
         db_table = "class_classifier"
 
 
-# TODO: Add validation to check that collect record is a photo quadrat
 class Image(BaseModel):
     collect_record_id = models.UUIDField()
     observation = models.ForeignKey(
