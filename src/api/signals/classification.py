@@ -8,8 +8,18 @@ from ..utils import classification as cls_utils
 @receiver(pre_save, sender=Image)
 def strip_exif(sender, instance, **kwargs):
     if not instance.created_on:
+        cls_utils.store_exif(instance)
+        original_image_name = instance.image.name
+        instance.data = instance.data or {}
+        if "original_image_name" not in instance.data:
+            instance.data["original_image_name"] = original_image_name
+
+        image_name = cls_utils.create_unique_image_name(instance.image)
+        instance.name = image_name
+        instance.image.name = image_name
+
         cls_utils.correct_image_orientation(instance)
-        cls_utils.strip_and_store_exif(instance)
+        cls_utils.update_exif(instance)
 
 
 @receiver(post_delete, sender=Image)

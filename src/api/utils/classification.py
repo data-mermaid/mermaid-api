@@ -1,6 +1,8 @@
 import datetime
 import hashlib
 import os
+import uuid
+from enum import Enum
 from io import BytesIO
 from typing import Any, Dict, Optional
 
@@ -8,9 +10,21 @@ import pytz
 from django.contrib.gis.geos import Point
 from django.core.files.base import ContentFile
 from django.db.models.fields.files import ImageFieldFile
+from exif import Image as ExifImage
 from PIL import ExifTags, Image as PILImage
+from PIL.ExifTags import TAGS
 
 from ..models import Image
+
+
+def create_unique_image_name(image: ImageFieldFile) -> str:
+    image_name = image.name
+    image_ext = os.path.splitext(image_name)[1]
+    current_utc_time = datetime.datetime.now(datetime.timezone.utc)
+    uid = str(uuid.uuid4()).replace("-", "")
+    name = f"{uid}{current_utc_time:%Y%m%d_%H%M%S}"
+
+    return f"{name}{image_ext}"
 
 
 def create_image_checksum(image: ImageFieldFile) -> str:
@@ -74,8 +88,8 @@ def extract_location(exif_details: Dict[str, Any]) -> Optional[Point]:
 
     if (
         not all([latitude_ref, latitude_dms, longitude_ref, longitude_dms])
-        and len(latitude_dms) >= 3
-        and len(longitude_dms) >= 3
+        or len(latitude_dms) < 3
+        or len(longitude_dms) < 3
     ):
         return None
 
@@ -92,8 +106,8 @@ def correct_image_orientation(image_record: Image):
     image_file = PILImage.open(image_record.image)
     image_format = image_file.format
     try:
-        for orientation in PILImage.ExifTags.TAGS.keys():
-            if PILImage.ExifTags.TAGS[orientation] == "Orientation":
+        for orientation in TAGS.keys():
+            if TAGS[orientation] == "Orientation":
                 break
 
         exif = dict(image_file._getexif().items())
@@ -113,10 +127,37 @@ def correct_image_orientation(image_record: Image):
     image_record.image = ContentFile(img_content.getvalue(), name=image_record.image.name)
 
 
-def strip_and_store_exif(image_record: Image):
+def store_exif(image_record: Image) -> Dict[str, Any]:
     img = image_record.image
+    if img.closed:
+        img.open("rb")
 
-    pil_img = PILImage.open(img.open())
+    exif_image = ExifImage(img.read())
+
+    if exif_image.has_exif is False:
+        return
+
+    exif_details = {}
+    for k, v in exif_image.get_all().items():
+        if isinstance(v, Enum):
+            v = v.name
+        elif isinstance(v, (int, float, tuple, list)):
+            ...
+        else:
+            v = str(v)
+
+        exif_details[k] = v
+
+    image_record.data = image_record.data or {}
+    image_record.data["exif"] = exif_details
+    image_record.location = extract_location(exif_details)
+    image_record.photo_timestamp = extract_datetime_stamp(exif_details)
+
+    print(f"image_record.location: {image_record.location}")
+
+
+def update_exif(image_record: Image):
+    pil_img = PILImage.open(image_record.image.open())
     pil_exif = pil_img.getexif()
     pil_exif[ExifTags.Base.ImageDescription] = f"Project: {image_record.project.id}"
 

@@ -15,8 +15,6 @@ class PointInline(NestedTabularInline):
 class ImageAdmin(BaseAdmin):
     inlines = [PointInline]
     readonly_fields = [
-        # "collect_record_id",
-        # "image",
         "thumbnail",
         "observation",
         "photo_timestamp",
