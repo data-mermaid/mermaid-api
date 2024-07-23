@@ -1,21 +1,17 @@
 import datetime
-import base64
 import hashlib
 
 import os
-import uuid
 from enum import Enum
 from io import BytesIO
 from typing import Any, Dict, Optional
 
 import pytz
-from cryptography.fernet import Fernet
-from django.conf import settings
 from django.contrib.gis.geos import Point
 from django.core.files.base import ContentFile
 from django.db.models.fields.files import ImageFieldFile
 from exif import Image as ExifImage
-from PIL import ExifTags, Image as PILImage
+from PIL import Image as PILImage
 from PIL.ExifTags import TAGS
 
 from ..models import Image

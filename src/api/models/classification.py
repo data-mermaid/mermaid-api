@@ -95,6 +95,7 @@ class Image(BaseModel):
             if site_id:
                 return Site.objects.get_or_none(id=site_id)
         else:
+            obs = self.observation
             return obs.benthic_photo_quadrat_transect.quadrat_transect.sample_event.site
         
         return None
