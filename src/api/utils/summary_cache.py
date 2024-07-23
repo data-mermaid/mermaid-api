@@ -166,17 +166,20 @@ def _update_project_summary_sample_events(
     if skip_test_project and Project.objects.filter(pk=project_id, status=Project.TEST).exists():
         proj_summary_se_model.objects.filter(project_id=project_id).delete()
         return
-    qs = SummarySampleEventSQLModel.objects.all().sql_table(
-        project_id=project_id, has_access=has_access
-    )
-    records = SummarySampleEventSerializer(qs, many=True).data
+    project = Project.objects.get_or_none(pk=project_id)
+    if project is not None:
+        qs = SummarySampleEventSQLModel.objects.all().sql_table(
+            project_id=project_id, has_access=has_access
+        )
+        records = SummarySampleEventSerializer(qs, many=True).data
 
-    proj_summary_se_model.objects.filter(project_id=project_id).delete()
-    proj_summary_se_model.objects.create(
-        project_id=project_id,
-        records=records,
-        created_on=timestamp,
-    )
+        proj_summary_se_model.objects.filter(project_id=project_id).delete()
+        proj_summary_se_model.objects.create(
+            project_id=project_id,
+            project_name=project.name,
+            records=records,
+            created_on=timestamp,
+        )
 
 
 def _update_restricted_project_summary_sample_events(project_id, timestamp, skip_test_project=True):
