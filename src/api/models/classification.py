@@ -6,7 +6,13 @@ from django.core.files.storage import FileSystemStorage
 from storages.backends.s3 import S3Storage
 
 from .base import BaseModel
-from .mermaid import BenthicAttribute, CollectRecord, GrowthForm, ObsBenthicPhotoQuadrat, Site
+from .mermaid import (
+    BenthicAttribute,
+    CollectRecord,
+    GrowthForm,
+    ObsBenthicPhotoQuadrat,
+    Site,
+)
 
 
 def select_image_storage():
@@ -17,7 +23,7 @@ def select_image_storage():
             bucket_name=settings.IMAGE_PROCESSING_BUCKET,
             access_key=settings.IMAGE_BUCKET_AWS_ACCESS_KEY_ID,
             secret_key=settings.IMAGE_BUCKET_AWS_SECRET_ACCESS_KEY,
-            location=settings.IMAGE_BUCKET_AWS_LOCATION
+            location=settings.IMAGE_BUCKET_AWS_LOCATION,
         )
 
 
@@ -26,11 +32,7 @@ class Label(BaseModel):
         BenthicAttribute, related_name="labels", on_delete=models.CASCADE
     )
     growth_form = models.ForeignKey(
-        GrowthForm,
-        related_name="labels",
-        on_delete=models.CASCADE,
-        null=True,
-        blank=True
+        GrowthForm, related_name="labels", on_delete=models.CASCADE, null=True, blank=True
     )
     description = models.TextField(null=True, blank=True)
 
@@ -60,15 +62,13 @@ class Classifier(BaseModel):
 
 class Image(BaseModel):
     collect_record_id = models.UUIDField(db_index=True)
-    observation = models.ForeignKey(
-        ObsBenthicPhotoQuadrat, null=True, blank=True, on_delete=models.SET_NULL
-    )
 
     image = models.ImageField(upload_to="", storage=select_image_storage)
     original_image_checksum = models.CharField(max_length=64, blank=True, null=True)
     thumbnail = models.ImageField(upload_to="", storage=select_image_storage, null=True, blank=True)
 
     name = models.CharField(max_length=200, blank=True, null=True)
+    original_image_name = models.CharField(max_length=200, blank=True, null=True)
     photo_timestamp = models.DateTimeField(null=True, blank=True)
     location = models.PointField(srid=4326, blank=True, null=True)
     comments = models.TextField(max_length=1000, blank=True, null=True)
@@ -80,6 +80,13 @@ class Image(BaseModel):
     def __str__(self):
         return f"{self.name} - {self.photo_timestamp}"
 
+    def _get_first_observation(self):
+        obs = ObsBenthicPhotoQuadrat.objects.filter(image=self)
+        if obs.exists():
+            return obs[0]
+
+        return None
+
     @property
     def collect_record(self):
         return CollectRecord.objects.get_or_none(id=self.collect_record_id)
@@ -89,10 +96,11 @@ class Image(BaseModel):
         cr = self.collect_record
         if cr:
             return cr.project
-        elif self.observation:
-            obs = self.observation
-            return obs.benthic_photo_quadrat_transect.quadrat_transect.sample_event.site.project
-        
+        else:
+            obs = self._get_first_observation()
+            if obs:
+                return obs.benthic_photo_quadrat_transect.quadrat_transect.sample_event.site.project
+
         return None
 
     @property
@@ -101,10 +109,11 @@ class Image(BaseModel):
             site_id = (self.collect_record.data.get("sample_event") or {}).get("site")
             if site_id:
                 return Site.objects.get_or_none(id=site_id)
-        elif self.observation:
-            obs = self.observation
-            return obs.benthic_photo_quadrat_transect.quadrat_transect.sample_event.site
-        
+        else:
+            obs = self._get_first_observation()
+            if obs:
+                return obs.benthic_photo_quadrat_transect.quadrat_transect.sample_event.site
+
         return None
 
 

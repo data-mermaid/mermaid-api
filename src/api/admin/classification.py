@@ -16,7 +16,6 @@ class ImageAdmin(BaseAdmin):
     inlines = [PointInline]
     readonly_fields = [
         "thumbnail",
-        "observation",
         "photo_timestamp",
         "name",
         "data",

@@ -10,10 +10,7 @@ def strip_exif(sender, instance, **kwargs):
     if not instance.created_on:
         try:
             cls_utils.store_exif(instance)
-            original_image_name = instance.image.name
-            instance.data = instance.data or {}
-            if "original_image_name" not in instance.data:
-                instance.data["original_image_name"] = original_image_name
+            instance.original_image_name = instance.image.name
 
             image_name = cls_utils.create_unique_image_name(instance)
             instance.name = image_name
