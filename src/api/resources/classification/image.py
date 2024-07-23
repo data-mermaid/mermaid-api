@@ -42,7 +42,7 @@ class ImageViewSet(BaseProjectApiViewSet):
     def create(self, request, *args, **kwargs):
         image = request.data.get("image")
         collect_record_id = request.data.get("collect_record_id")
-        trigger_classification = truthy(request.data.get("classify", False))
+        trigger_classification = truthy(request.data.get("classify", True))
 
         collect_record = CollectRecord.objects.get_or_none(pk=collect_record_id)
         if collect_record is None:
@@ -59,7 +59,10 @@ class ImageViewSet(BaseProjectApiViewSet):
                 status=status.HTTP_400_BAD_REQUEST,
             )
 
-        img = Image.objects.create(collect_record_id=collect_record.pk, image=image)
+        try:
+            img = Image.objects.create(collect_record_id=collect_record.pk, image=image)
+        except:
+            return Response(data=data, status=status.HTTP_422_UNPROCESSABLE_ENTITY)
 
         if trigger_classification:
             classify_image(img)

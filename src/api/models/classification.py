@@ -59,7 +59,7 @@ class Image(BaseModel):
         ObsBenthicPhotoQuadrat, null=True, blank=True, on_delete=models.SET_NULL
     )
 
-    image = models.ImageField(upload_to="", storage=select_image_storage)
+    image = models.ImageField(upload_to="mermaid/", storage=select_image_storage)
     original_image_checksum = models.CharField(max_length=64, blank=True, null=True)
     thumbnail = models.ImageField(upload_to="", storage=select_image_storage, null=True, blank=True)
 
@@ -84,9 +84,11 @@ class Image(BaseModel):
         cr = self.collect_record
         if cr:
             return cr.project
-
-        obs = self.observation
-        return obs.benthic_photo_quadrat_transect.quadrat_transect.sample_event.site.project
+        elif self.observation:
+            obs = self.observation
+            return obs.benthic_photo_quadrat_transect.quadrat_transect.sample_event.site.project
+        
+        return None
 
     @property
     def site(self):
@@ -94,7 +96,7 @@ class Image(BaseModel):
             site_id = (self.collect_record.data.get("sample_event") or {}).get("site")
             if site_id:
                 return Site.objects.get_or_none(id=site_id)
-        else:
+        elif self.observation:
             obs = self.observation
             return obs.benthic_photo_quadrat_transect.quadrat_transect.sample_event.site
         

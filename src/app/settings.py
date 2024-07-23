@@ -357,7 +357,7 @@ STORAGES = {
             "bucket_name": IMAGE_PROCESSING_BUCKET,
             "object_parameters": {},
             "file_overwrite": False,
-            "location": "",  # A path prefix that will be prepended to all uploads.
+            "location": "mermaid/",  # A path prefix that will be prepended to all uploads.
         },
     },
 }
