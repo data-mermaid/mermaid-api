@@ -350,14 +350,11 @@ USE_FIFO = os.environ.get("USE_FIFO", "True")
 # Override default boto3 url for SQS
 ENDPOINT_URL = None if ENVIRONMENT in ("dev", "prod") else "http://sqs:9324"
 
-STORAGES = {
-    "images": {
-        "BACKEND": "storages.backends.s3.S3Storage",
-        "OPTIONS": {
-            "bucket_name": IMAGE_PROCESSING_BUCKET,
-            "object_parameters": {},
-            "file_overwrite": False,
-            "location": "mermaid/",  # A path prefix that will be prepended to all uploads.
-        },
-    },
-}
+if ENVIRONMENT == "dev":
+    IMAGE_BUCKET_AWS_ACCESS_KEY_ID = AWS_ACCESS_KEY_ID
+    IMAGE_BUCKET_AWS_SECRET_ACCESS_KEY = AWS_SECRET_ACCESS_KEY
+elif ENVIRONMENT == "prod":
+    IMAGE_BUCKET_AWS_ACCESS_KEY_ID = os.environ.get("IMAGE_BUCKET_AWS_ACCESS_KEY_ID")
+    IMAGE_BUCKET_AWS_SECRET_ACCESS_KEY = os.environ.get("IMAGE_BUCKET_AWS_ACCESS_KEY_ID")
+
+IMAGE_BUCKET_AWS_LOCATION = "mermaid/"

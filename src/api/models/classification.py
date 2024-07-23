@@ -13,7 +13,12 @@ def select_image_storage():
     if settings.DEBUG:
         return FileSystemStorage()
     else:
-        return S3Storage(bucket_name=settings.IMAGE_PROCESSING_BUCKET)
+        return S3Storage(
+            bucket_name=settings.IMAGE_PROCESSING_BUCKET,
+            access_key=settings.IMAGE_BUCKET_AWS_ACCESS_KEY_ID,
+            secret_key=settings.IMAGE_BUCKET_AWS_SECRET_ACCESS_KEY,
+            location=settings.IMAGE_BUCKET_AWS_LOCATION
+        )
 
 
 class Label(BaseModel):
@@ -59,15 +64,15 @@ class Image(BaseModel):
         ObsBenthicPhotoQuadrat, null=True, blank=True, on_delete=models.SET_NULL
     )
 
-    image = models.ImageField(upload_to="mermaid/", storage=select_image_storage)
+    image = models.ImageField(upload_to="", storage=select_image_storage)
     original_image_checksum = models.CharField(max_length=64, blank=True, null=True)
     thumbnail = models.ImageField(upload_to="", storage=select_image_storage, null=True, blank=True)
 
-    name = models.CharField("Name", max_length=200, blank=True, null=True)
+    name = models.CharField(max_length=200, blank=True, null=True)
     photo_timestamp = models.DateTimeField(null=True, blank=True)
     location = models.PointField(srid=4326, blank=True, null=True)
     comments = models.TextField(max_length=1000, blank=True, null=True)
-    data = models.JSONField("Data", null=True, blank=True)
+    data = models.JSONField(null=True, blank=True)
 
     class Meta:
         db_table = "class_image"
