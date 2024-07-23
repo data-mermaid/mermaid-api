@@ -301,16 +301,17 @@ class ApiStack(Stack):
         # allow API to read/write to the public bucket
         public_bucket.grant_read_write(service.task_definition.task_role)
 
-        # Create classification image bucket
-        image_processing_bucket = s3.Bucket(
-            self,
-            id="MermaidImageProcessingBackupBucket",
-            bucket_name=image_bucket_name,
-            removal_policy=RemovalPolicy.RETAIN,
-            public_read_access=False,
-            block_public_access=s3.BlockPublicAccess.BLOCK_ALL,
-        )
+        if config.env_id == "dev":
+            # Create classification image bucket
+            image_processing_bucket = s3.Bucket(
+                self,
+                id="MermaidImageProcessingBackupBucket",
+                bucket_name=image_bucket_name,
+                removal_policy=RemovalPolicy.RETAIN,
+                public_read_access=False,
+                block_public_access=s3.BlockPublicAccess.BLOCK_ALL,
+            )
 
-        # Allow Image Worker to write to image bucket
-        image_processing_bucket.grant_write(image_worker.task_definition.task_role)
-        image_processing_bucket.grant_read_write(service.task_definition.task_role)
+            # Allow Image Worker to write to image bucket
+            image_processing_bucket.grant_write(image_worker.task_definition.task_role)
+            image_processing_bucket.grant_read_write(service.task_definition.task_role)

@@ -1,5 +1,7 @@
 import datetime
+import base64
 import hashlib
+
 import os
 import uuid
 from enum import Enum
@@ -7,6 +9,8 @@ from io import BytesIO
 from typing import Any, Dict, Optional
 
 import pytz
+from cryptography.fernet import Fernet
+from django.conf import settings
 from django.contrib.gis.geos import Point
 from django.core.files.base import ContentFile
 from django.db.models.fields.files import ImageFieldFile
@@ -15,14 +19,21 @@ from PIL import ExifTags, Image as PILImage
 from PIL.ExifTags import TAGS
 
 from ..models import Image
+from .encryption import encrypt_string
 
 
-def create_unique_image_name(image: ImageFieldFile) -> str:
-    image_name = image.name
+def create_unique_image_name(image: Image) -> str:
+    site = image.site
+    if not site:
+        raise ValueError(f"No site is related to image {image.id}")
+
+    site_id = str(site.id)
+    uid_str = f"{site_id}-{image.id}"
+
+    name = encrypt_string(uid_str)
+
+    image_name = image.image.name
     image_ext = os.path.splitext(image_name)[1]
-    current_utc_time = datetime.datetime.now(datetime.timezone.utc)
-    uid = str(uuid.uuid4()).replace("-", "")
-    name = f"{uid}{current_utc_time:%Y%m%d_%H%M%S}"
 
     return f"{name}{image_ext}"
 
@@ -40,7 +51,7 @@ def create_image_checksum(image: ImageFieldFile) -> str:
 
 def create_thumbnail(image: ImageFieldFile) -> ContentFile:
     img = PILImage.open(image)
-    size = (100, 100)
+    size = (500, 500)
     img.thumbnail(size, PILImage.LANCZOS)
 
     base, ext = os.path.splitext(image.name)
@@ -156,21 +167,6 @@ def store_exif(image_record: Image) -> Dict[str, Any]:
     image_record.data["exif"] = exif_details
     image_record.location = extract_location(exif_details)
     image_record.photo_timestamp = extract_datetime_stamp(exif_details)
-
-    print(f"image_record.location: {image_record.location}")
-
-
-def update_exif(image_record: Image):
-    pil_img = PILImage.open(image_record.image.open())
-    pil_exif = pil_img.getexif()
-    pil_exif[ExifTags.Base.ImageDescription] = f"Project: {image_record.project.id}"
-
-    img_byte_arr = BytesIO()
-    pil_img.save(img_byte_arr, exif=pil_exif, format=pil_img.format)
-
-    img_file = ContentFile(img_byte_arr.getvalue(), name=image_record.image.name)
-
-    image_record.image = img_file
 
 
 def create_points(image):

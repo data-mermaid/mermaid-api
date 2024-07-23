@@ -64,6 +64,5 @@ class ImageViewSet(BaseProjectApiViewSet):
         if trigger_classification:
             classify_image(img)
 
-        # Add validation to ensure that image collect record is a photo quadrat
         data = ImageSerializer(instance=img).data
         return Response(data=data, status=status.HTTP_201_CREATED)

@@ -14,12 +14,11 @@ def strip_exif(sender, instance, **kwargs):
         if "original_image_name" not in instance.data:
             instance.data["original_image_name"] = original_image_name
 
-        image_name = cls_utils.create_unique_image_name(instance.image)
+        image_name = cls_utils.create_unique_image_name(instance)
         instance.name = image_name
         instance.image.name = image_name
 
         cls_utils.correct_image_orientation(instance)
-        cls_utils.update_exif(instance)
 
 
 @receiver(post_delete, sender=Image)

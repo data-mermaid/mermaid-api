@@ -6,7 +6,7 @@ from django.core.files.storage import FileSystemStorage
 from storages.backends.s3 import S3Storage
 
 from .base import BaseModel
-from .mermaid import BenthicAttribute, CollectRecord, GrowthForm, ObsBenthicPhotoQuadrat
+from .mermaid import BenthicAttribute, CollectRecord, GrowthForm, ObsBenthicPhotoQuadrat, Site
 
 
 def select_image_storage():
@@ -20,7 +20,13 @@ class Label(BaseModel):
     benthic_attribute = models.ForeignKey(
         BenthicAttribute, related_name="labels", on_delete=models.CASCADE
     )
-    growth_form = models.ForeignKey(GrowthForm, related_name="labels", on_delete=models.CASCADE)
+    growth_form = models.ForeignKey(
+        GrowthForm,
+        related_name="labels",
+        on_delete=models.CASCADE,
+        null=True,
+        blank=True
+    )
     description = models.TextField(null=True, blank=True)
 
     class Meta:
@@ -48,7 +54,7 @@ class Classifier(BaseModel):
 
 
 class Image(BaseModel):
-    collect_record_id = models.UUIDField()
+    collect_record_id = models.UUIDField(db_index=True)
     observation = models.ForeignKey(
         ObsBenthicPhotoQuadrat, null=True, blank=True, on_delete=models.SET_NULL
     )
@@ -82,6 +88,17 @@ class Image(BaseModel):
         obs = self.observation
         return obs.benthic_photo_quadrat_transect.quadrat_transect.sample_event.site.project
 
+    @property
+    def site(self):
+        if self.collect_record:
+            site_id = (self.collect_record.data.get("sample_event") or {}).get("site")
+            if site_id:
+                return Site.objects.get_or_none(id=site_id)
+        else:
+            return obs.benthic_photo_quadrat_transect.quadrat_transect.sample_event.site
+        
+        return None
+
 
 class Point(BaseModel):
     row = models.IntegerField()
@@ -99,7 +116,7 @@ class Annotation(BaseModel):
     classifier = models.ForeignKey(
         Classifier, null=True, on_delete=models.CASCADE, related_name="annotations"
     )
-    score = models.PositiveSmallIntegerField(default=0)
+    score = models.PositiveSmallIntegerField(default=0, null=True, blank=True)
     is_confirmed = models.BooleanField(default=False)
 
     class Meta:
@@ -117,7 +134,7 @@ class Annotation(BaseModel):
 
     @property
     def is_human_created(self):
-        return self.classifier is None and self.is_confirmed
+        return self.classifier is None
 
 
 class ClassificationStatus(models.Model):
