@@ -1179,6 +1179,14 @@ class ObsBenthicPhotoQuadrat(BaseModel, JSONMixin):
     num_points = models.PositiveSmallIntegerField(verbose_name="number of points", default=0)
     notes = models.TextField(blank=True)
 
+    image = models.ForeignKey(
+        "api.Image",
+        null=True,
+        blank=True,
+        on_delete=models.PROTECT,
+        related_name="obs_benthic_photo_quadrats",
+    )
+
     class Meta:
         db_table = "obs_benthic_photo_quadrat"
         verbose_name = _("benthic photo quadrat transect observation")

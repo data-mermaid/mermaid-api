@@ -2,6 +2,7 @@ import os
 
 from aws_cdk import (
     Duration,
+    RemovalPolicy,
     Stack,
     aws_applicationautoscaling as appscaling,
     aws_ec2 as ec2,
@@ -33,7 +34,6 @@ class ApiStack(Stack):
         load_balancer: elb.ApplicationLoadBalancer,
         container_security_group: ec2.SecurityGroup,
         api_zone: r53.HostedZone,
-        image_processing_bucket: s3.Bucket,
         use_fifo_queues: str,
         **kwargs,
     ) -> None:
@@ -104,6 +104,11 @@ class ApiStack(Stack):
         # Envir Vars
         sqs_queue_name = f"mermaid-{config.env_id}-queue"
         image_sqs_queue_name = f"mermaid-{config.env_id}-image-processing-queue"
+        if config.env_id == "prod":
+            image_bucket_name = "benthic-images"
+        else:
+            image_bucket_name = f"benthic-images-{config.env_id}"
+
         environment = {
             "ENV": config.env_id,
             "ENVIRONMENT": config.env_id,
@@ -113,7 +118,7 @@ class ApiStack(Stack):
             "DEFAULT_DOMAIN_COLLECT": config.api.default_domain_collect,
             "AWS_BACKUP_BUCKET": backup_bucket.bucket_name,
             "AWS_PUBLIC_BUCKET": config.api.public_bucket,
-            "IMAGE_PROCESSING_BUCKET": image_processing_bucket.bucket_name,
+            "IMAGE_PROCESSING_BUCKET": image_bucket_name,
             "EMAIL_HOST": config.api.email_host,
             "EMAIL_PORT": config.api.email_port,
             "AUTH0_MANAGEMENT_API_AUDIENCE": config.api.auth0_management_api_audience,
@@ -149,9 +154,7 @@ class ApiStack(Stack):
             secrets=api_secrets,
             environment=environment,
             command=["python", "manage.py", "dbbackup", f"{config.env_id}"],
-            logging=ecs.LogDrivers.aws_logs(
-                stream_prefix="ScheduledBackupTask"
-            )
+            logging=ecs.LogDrivers.aws_logs(stream_prefix="ScheduledBackupTask"),
         )
 
         # create a scheduled fargate task
@@ -298,6 +301,17 @@ class ApiStack(Stack):
         # allow API to read/write to the public bucket
         public_bucket.grant_read_write(service.task_definition.task_role)
 
-        # Allow Image Worker to write to image bucket
-        image_processing_bucket.grant_write(image_worker.task_definition.task_role)
-        image_processing_bucket.grant_read_write(service.task_definition.task_role)
+        if config.env_id == "dev":
+            # Create classification image bucket
+            image_processing_bucket = s3.Bucket(
+                self,
+                id="MermaidImageProcessingBackupBucket",
+                bucket_name=image_bucket_name,
+                removal_policy=RemovalPolicy.RETAIN,
+                public_read_access=False,
+                block_public_access=s3.BlockPublicAccess.BLOCK_ALL,
+            )
+
+            # Allow Image Worker to write to image bucket
+            image_processing_bucket.grant_write(image_worker.task_definition.task_role)
+            image_processing_bucket.grant_read_write(service.task_definition.task_role)

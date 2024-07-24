@@ -4,6 +4,7 @@ from rest_framework_nested import routers
 from .resources.benthic_attribute import BenthicAttributeViewSet
 from .resources.benthic_transect import BenthicTransectViewSet
 from .resources.choices import ChoiceViewSet
+from .resources.classification.image import ImageViewSet
 from .resources.collect_record import CollectRecordViewSet
 from .resources.contact import contact_mermaid, contact_project_admins
 from .resources.fish_belt_transect import FishBeltTransectViewSet
@@ -222,8 +223,12 @@ project_router.register(
     "benthicpqtmethod-sampleevent",
 )
 
+# Classification
+project_router.register(r"classification/images", ImageViewSet, "image")
+
 
 # multi model sample unit method reports
+
 project_router.register(r"beltfishtransectmethods", BeltFishMethodView, "beltfishtransectmethod")
 project_router.register(
     r"benthiclittransectmethods", BenthicLITMethodView, "benthiclittransectmethod"

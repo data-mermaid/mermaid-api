@@ -123,6 +123,8 @@ if ENVIRONMENT not in (
     DEBUG_TOOLBAR_CONFIG = {"SHOW_TOOLBAR_CALLBACK": show_toolbar}
     ALLOWED_HOSTS = ["*"]
     DEBUG = True
+    MEDIA_ROOT = os.path.join(BASE_DIR, "media")
+    MEDIA_URL = "/media/"
 
 # SSL settings
 SECURE_PROXY_SSL_HEADER = ("HTTP_X_FORWARDED_PROTO", "https")
@@ -244,7 +246,7 @@ CORAL_ATLAS_APP_ID = os.environ.get("CORAL_ATLAS_APP_ID")
 # https://github.com/llybin/drf-recaptcha
 DRF_RECAPTCHA_SECRET_KEY = os.environ.get("DRF_RECAPTCHA_SECRET_KEY")
 DRF_RECAPTCHA_TESTING = os.environ.get("DRF_RECAPTCHA_TESTING") or False
-DRF_RECAPTCHA_DEFAULT_V3_SCORE = 0.3
+# DRF_RECAPTCHA_DEFAULT_V3_SCORE = 0.3
 
 # buckets
 AWS_BACKUP_BUCKET = os.environ.get("AWS_BACKUP_BUCKET")
@@ -347,3 +349,12 @@ IMAGE_QUEUE_NAME = os.environ.get("IMAGE_SQS_QUEUE_NAME", "mermaid-image-local")
 USE_FIFO = os.environ.get("USE_FIFO", "True")
 # Override default boto3 url for SQS
 ENDPOINT_URL = None if ENVIRONMENT in ("dev", "prod") else "http://sqs:9324"
+
+if ENVIRONMENT == "dev":
+    IMAGE_BUCKET_AWS_ACCESS_KEY_ID = AWS_ACCESS_KEY_ID
+    IMAGE_BUCKET_AWS_SECRET_ACCESS_KEY = AWS_SECRET_ACCESS_KEY
+elif ENVIRONMENT == "prod":
+    IMAGE_BUCKET_AWS_ACCESS_KEY_ID = os.environ.get("IMAGE_BUCKET_AWS_ACCESS_KEY_ID")
+    IMAGE_BUCKET_AWS_SECRET_ACCESS_KEY = os.environ.get("IMAGE_BUCKET_AWS_ACCESS_KEY_ID")
+
+IMAGE_BUCKET_AWS_LOCATION = "mermaid/"
