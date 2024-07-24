@@ -18,7 +18,7 @@ def create_indicator_set_payload():
         "title": "Dustin's IS",
         "report_date": "2024-02-10",
         "report_year": 2024,
-        "indicator_set_type": "annual_report",
+        "indicator_set_type": "report",
         "f4_start_date": "1970-01-01",
         "f4_end_date": "2024-04-29",
         "finance_solutions": [
@@ -41,7 +41,7 @@ def indicator_set(project1):
         project=project1,
         title="Dustin's IS",
         report_date="2024-02-10",
-        indicator_set_type="annual_report",
+        indicator_set_type="report",
         f4_start_date=date(1970, 1, 1),
         f4_end_date=date(2024, 4, 19),
     )

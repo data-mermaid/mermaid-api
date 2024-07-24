@@ -108,3 +108,4 @@ src/data/
 *.env
 
 .env.host
+src/media/*

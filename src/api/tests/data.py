@@ -150,7 +150,7 @@ class TestDataMixin(object):
             name="Faviidae", parent=self.benthic_attribute2a
         )
         self.benthic_attribute2e, _ = BenthicAttribute.objects.get_or_create(
-            name="Erythrastrea", parent=self.benthic_attribute2d
+            name="Porites evermanni", parent=self.benthic_attribute2d
         )
 
     def unload_benthicattributes(self):

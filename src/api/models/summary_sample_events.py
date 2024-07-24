@@ -395,6 +395,7 @@ class SummarySampleEventModel(SummarySampleEventBaseModel):
 
 class BaseProjectSummarySampleEvent(models.Model):
     project_id = models.UUIDField(primary_key=True)
+    project_name = models.CharField(max_length=255, default="awaiting refresh")
     records = models.JSONField()
     created_on = models.DateTimeField(auto_now_add=True)
 

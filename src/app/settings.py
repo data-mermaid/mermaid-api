@@ -66,14 +66,13 @@ INSTALLED_APPS = [
 
 MIDDLEWARE = [
     "api.middleware.HealthEndpointMiddleware",
+    "corsheaders.middleware.CorsMiddleware",
     "django.middleware.security.SecurityMiddleware",
     "django.middleware.gzip.GZipMiddleware",
     "whitenoise.middleware.WhiteNoiseMiddleware",
-    "corsheaders.middleware.CorsMiddleware",
     "django.contrib.sessions.middleware.SessionMiddleware",
     "django.middleware.common.CommonMiddleware",
     "django.middleware.csrf.CsrfViewMiddleware",
-    "corsheaders.middleware.CorsPostCsrfMiddleware",
     "django.contrib.auth.middleware.AuthenticationMiddleware",
     "django.contrib.messages.middleware.MessageMiddleware",
     "django.middleware.clickjacking.XFrameOptionsMiddleware",
@@ -89,12 +88,13 @@ CONN_MAX_AGE = 0
 CORS_ALLOW_ALL_ORIGINS = True
 CORS_ALLOW_METHODS = list(default_methods) + ["HEAD"]
 CORS_EXPOSE_HEADERS = ["HTTP_API_VERSION"]
-CORS_REPLACE_HTTPS_REFERER = True
+# https://github.com/adamchainz/django-cors-headers#cors_allow_credentials-bool
+CORS_ALLOW_CREDENTIALS = True
+
 EMAIL_BACKEND = "django.core.mail.backends.smtp.EmailBackend"
 _dev_emails = os.environ.get("DEV_EMAILS") or ""
 DEV_EMAILS = [email.strip() for email in _dev_emails.split(",")]
 
-# Setup ALLOWED_HOSTS
 _allowed_hosts = os.environ.get("ALLOWED_HOSTS") or ""
 ALLOWED_HOSTS = [host.strip() for host in _allowed_hosts.split(",")]
 
@@ -123,6 +123,8 @@ if ENVIRONMENT not in (
     DEBUG_TOOLBAR_CONFIG = {"SHOW_TOOLBAR_CALLBACK": show_toolbar}
     ALLOWED_HOSTS = ["*"]
     DEBUG = True
+    MEDIA_ROOT = os.path.join(BASE_DIR, "media")
+    MEDIA_URL = "/media/"
 
 # SSL settings
 SECURE_PROXY_SSL_HEADER = ("HTTP_X_FORWARDED_PROTO", "https")
@@ -224,8 +226,6 @@ MERMAID_API_SIGNING_SECRET = os.environ.get("MERMAID_API_SIGNING_SECRET")
 # ** API **
 # *********
 
-AWS_BACKUP_BUCKET = os.environ.get("AWS_BACKUP_BUCKET")
-AWS_METRICS_BUCKET = "mermaid-user-metrics"
 AWS_ACCESS_KEY_ID = os.environ.get("AWS_ACCESS_KEY_ID")
 AWS_SECRET_ACCESS_KEY = os.environ.get("AWS_SECRET_ACCESS_KEY")
 AWS_REGION = os.environ.get("AWS_REGION") or "us-east-1"
@@ -237,12 +237,6 @@ EMAIL_HOST_USER = os.environ.get("EMAIL_HOST_USER")
 EMAIL_HOST_PASSWORD = os.environ.get("EMAIL_HOST_PASSWORD")
 EMAIL_USE_TLS = True
 DEFAULT_FROM_EMAIL = "MERMAID System <{}>".format(EMAIL_HOST_USER)
-CORS_ORIGIN_ALLOW_ALL = True
-CORS_EXPOSE_HEADERS = ["HTTP_API_VERSION"]
-CORS_ALLOW_ALL_ORIGINS = True
-CORS_REPLACE_HTTPS_REFERER = True
-CORS_ALLOW_CREDENTIALS = True
-CORS_ALLOW_METHODS = list(default_methods) + ["HEAD"]
 WEBCONTACT_EMAIL = f"MERMAID Web Contact <{os.environ.get('WEBCONTACT_EMAIL')}>"
 
 API_NULLQUERY = "null"
@@ -253,6 +247,12 @@ CORAL_ATLAS_APP_ID = os.environ.get("CORAL_ATLAS_APP_ID")
 DRF_RECAPTCHA_SECRET_KEY = os.environ.get("DRF_RECAPTCHA_SECRET_KEY")
 DRF_RECAPTCHA_TESTING = os.environ.get("DRF_RECAPTCHA_TESTING") or False
 # DRF_RECAPTCHA_DEFAULT_V3_SCORE = 0.3
+
+# buckets
+AWS_BACKUP_BUCKET = os.environ.get("AWS_BACKUP_BUCKET")
+AWS_METRICS_BUCKET = "mermaid-user-metrics"
+PUBLIC_BUCKET = os.environ.get("AWS_PUBLIC_BUCKET")
+IMAGE_PROCESSING_BUCKET = os.environ.get("IMAGE_PROCESSING_BUCKET")
 
 # ************
 # ** CLIENT **
@@ -334,29 +334,27 @@ CACHES = {
 }
 
 
-## SIMPLEQ SETTINGS
+# SIMPLEQ SETTINGS
 
 # Max number of messages to fetch in one call.
 SQS_BATCH_SIZE = 10
-
 # Number of seconds to wait in seconds for new messages.
 SQS_WAIT_SECONDS = 20
-
 # Number of seconds before the message is visible again
 # in SQS for other tasks to pull.
 SQS_MESSAGE_VISIBILITY = int(os.environ.get("SQS_MESSAGE_VISIBILITY", "300"))
-
 # Name of queue, if it doesn't exist it will be created.
 QUEUE_NAME = os.environ.get("SQS_QUEUE_NAME", "mermaid-local")  # required
 IMAGE_QUEUE_NAME = os.environ.get("IMAGE_SQS_QUEUE_NAME", "mermaid-image-local")  # required
-
 USE_FIFO = os.environ.get("USE_FIFO", "True")
-
 # Override default boto3 url for SQS
 ENDPOINT_URL = None if ENVIRONMENT in ("dev", "prod") else "http://sqs:9324"
 
-# AWS S3 bucket for public files
-PUBLIC_BUCKET = os.environ.get("AWS_PUBLIC_BUCKET")
+if ENVIRONMENT == "dev":
+    IMAGE_BUCKET_AWS_ACCESS_KEY_ID = AWS_ACCESS_KEY_ID
+    IMAGE_BUCKET_AWS_SECRET_ACCESS_KEY = AWS_SECRET_ACCESS_KEY
+elif ENVIRONMENT == "prod":
+    IMAGE_BUCKET_AWS_ACCESS_KEY_ID = os.environ.get("IMAGE_BUCKET_AWS_ACCESS_KEY_ID")
+    IMAGE_BUCKET_AWS_SECRET_ACCESS_KEY = os.environ.get("IMAGE_BUCKET_AWS_ACCESS_KEY_ID")
 
-# AWS S3 bucket for image processing files
-IMAGE_PROCESSING_BUCKET = os.environ.get("IMAGE_PROCESSING_BUCKET")
+IMAGE_BUCKET_AWS_LOCATION = "mermaid/"

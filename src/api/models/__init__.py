@@ -8,6 +8,14 @@ from .base import BaseModel  # noqa: F401
 from .base import Country  # noqa: F401
 from .base import JSONMixin  # noqa: F401
 from .base import Profile  # noqa: F401
+from .classification import (  # noqa: F401
+    Annotation,
+    ClassificationStatus,
+    Classifier,
+    Image,
+    Label,
+    Point,
+)
 from .gfcr import (  # noqa: F401
     GFCRFinanceSolution,
     GFCRIndicatorSet,
