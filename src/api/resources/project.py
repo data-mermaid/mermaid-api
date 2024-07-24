@@ -57,23 +57,6 @@ logger = logging.getLogger(__name__)
 
 
 class ProjectSerializer(DynamicFieldsMixin, BaseAPISerializer):
-    project_specific_fields = [
-        "observer",
-        "project_profile",
-        "psite",
-        "pmanagement",
-        "sampleevent",
-        "benthictransect",
-        "fishbelttransect",
-        "collectrecords",
-        "beltfishtransectmethod",
-        "benthiclittransectmethod",
-        "benthicphotoquadrattransectmethod",
-        "benthicpittransectmethod",
-        "bleachingquadratcollectionmethod",
-        "habitatcomplexitytransectmethod",
-    ]
-
     countries = serializers.SerializerMethodField()
     num_sites = serializers.SerializerMethodField()
     num_active_sample_units = serializers.SerializerMethodField()
@@ -81,16 +64,6 @@ class ProjectSerializer(DynamicFieldsMixin, BaseAPISerializer):
     tags = serializers.ListField(source="tags.all", child=TagField(), required=False)
     members = serializers.SerializerMethodField()
 
-    def __init__(self, *args, **kwargs):
-        for field in self.project_specific_fields:
-            self._declared_fields.update(
-                {
-                    "%ss" % field: HyperlinkedIdentityField(
-                        lookup_url_kwarg="project_pk", view_name="%s-list" % field
-                    )
-                }
-            )
-        super().__init__(*args, **kwargs)
 
     @transaction.atomic()
     def create(self, validated_data):
