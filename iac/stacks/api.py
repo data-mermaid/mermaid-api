@@ -29,6 +29,7 @@ class ApiStack(Stack):
         cluster: ecs.Cluster,
         database: rds.DatabaseInstance,
         backup_bucket: s3.Bucket,
+        config_bucket: s3.Bucket,
         public_bucket: s3.Bucket,
         load_balancer: elb.ApplicationLoadBalancer,
         container_security_group: ec2.SecurityGroup,
@@ -112,6 +113,7 @@ class ApiStack(Stack):
             "DEFAULT_DOMAIN_API": config.api.default_domain_api,
             "DEFAULT_DOMAIN_COLLECT": config.api.default_domain_collect,
             "AWS_BACKUP_BUCKET": backup_bucket.bucket_name,
+            "AWS_CONFIG_BUCKET": config_bucket.bucket_name,
             "AWS_PUBLIC_BUCKET": config.api.public_bucket,
             "IMAGE_PROCESSING_BUCKET": image_processing_bucket.bucket_name,
             "EMAIL_HOST": config.api.email_host,
@@ -301,3 +303,7 @@ class ApiStack(Stack):
         # Allow Image Worker to write to image bucket
         image_processing_bucket.grant_write(image_worker.task_definition.task_role)
         image_processing_bucket.grant_read_write(service.task_definition.task_role)
+        
+        # Allow Service and Image Worker to read/write config bucket
+        config_bucket.grant_read_write(image_worker.task_definition.task_role)
+        config_bucket.grant_read_write(service.task_definition.task_role)
