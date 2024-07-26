@@ -39,13 +39,37 @@ class Label(BaseModel):
     class Meta:
         unique_together = ("benthic_attribute", "growth_form")
         db_table = "class_label"
+        ordering = ("benthic_attribute", "growth_form")
 
     def __str__(self):
         return self.name
 
     @property
     def name(self):
+        if not self.growth_form:
+            return self.benthic_attribute.name
         return f"{self.benthic_attribute.name} {self.growth_form.name}"
+
+
+class LabelMapping(BaseModel):
+    CORALNET = "CoralNet"
+    REEFCLOUD = "ReefCloud"
+    PROVIDERS = (
+        (CORALNET, CORALNET),
+        (REEFCLOUD, REEFCLOUD),
+    )
+
+    label = models.ForeignKey(Label, related_name="mappings", on_delete=models.CASCADE)
+    provider = models.CharField(max_length=50, choices=PROVIDERS)
+    provider_id = models.CharField(max_length=255)
+    provider_label = models.CharField(max_length=255, blank=True)
+
+    class Meta:
+        unique_together = ("label", "provider_id")
+        db_table = "class_label_mapping"
+
+    def __str__(self):
+        return f"{self.label.name} {self.provider} {self.provider_id}"
 
 
 class Classifier(BaseModel):
