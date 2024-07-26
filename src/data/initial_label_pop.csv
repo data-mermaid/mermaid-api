@@ -1,0 +1,712 @@
+CoralNetID,CoralNetName,Default short code,Functional group,Public sources using,Public annotation count,MERMAID_BA,MERMAID_GF,MermaidBaID,MermaidGfID,CoralFocus3Label
+1869,Asparagopsis taxiformis,AspaTax,Algae,33,1453,Asparagopsis taxiformis,NA,01e79666-c4c0-4f98-967a-993005ac7da7,NA,Macroalgae
+1365,Mussa angulosa,MUSANG,Hard coral,25,6,Mussa angulosa,NA,02160430-8036-41fb-89b3-cf89782c0e3e,NA,Faviidae
+5457,Acropora spp._staghorn,ACSTA,Hard coral,6,442,Acropora,NA,050c0689-0b01-4a6c-afbf-a5d3ca39c310,NA,Acropora
+6870,Padina jamaicensis,Pad.jam,Algae,12,28,Padina,NA,053de64e-a2b9-40b6-b566-cf3a5e95e267,NA,Macroalgae
+444,Porites compressa,PorComp,Hard coral,70,105338,Porites compressa,NA,05b8e85d-89ca-48dc-8ec9-2214d9103909,NA,Remove
+2206,Porites compressa algal overgrowth,Porcom AO,Hard coral,6,124,Porites compressa,NA,05b8e85d-89ca-48dc-8ec9-2214d9103909,NA,Remove
+427,Acanthophora spicifera,ASPIC,Algae,42,1556,Acanthophora spicifera,NA,0600d70e-e956-467e-b0c3-6d5c745f46f6,NA,Macroalgae
+1860,Pavona maldivensis,PavMal,Hard coral,31,2,Pavona maldivensis,NA,08fab4ab-3f43-4acb-8bc1-d7bdc87c4bd7,NA,Pavona
+1804,Branching and calcareous algae,BRAN-CALC,Algae,15,22,Macroalgae,Branching,09226989-50e7-4c40-bd36-5bcef32ee7a1,cf2deca6-53b8-4096-916f-32c2c71d14bf,Macroalgae
+313,Macroalgae: Erect fine branching,MAEF,Algae,9,83,Macroalgae,Branching,09226989-50e7-4c40-bd36-5bcef32ee7a1,cf2deca6-53b8-4096-916f-32c2c71d14bf,Macroalgae
+4938,Boodlea,Boodlea,Algae,26,129,Macroalgae,NA,09226989-50e7-4c40-bd36-5bcef32ee7a1,NA,Macroalgae
+3598,Bryopsis spp.,BrSpp,Algae,8,33,Macroalgae,NA,09226989-50e7-4c40-bd36-5bcef32ee7a1,NA,Macroalgae
+1138,"Green algae, unidentified",GRAL,Algae,9,332,Macroalgae,NA,09226989-50e7-4c40-bd36-5bcef32ee7a1,NA,Macroalgae
+305,Macroalgae: Globose / saccate,MAG,Algae,9,177,Macroalgae,NA,09226989-50e7-4c40-bd36-5bcef32ee7a1,NA,Macroalgae
+301,Macroalgae: Laminate,MALA,Algae,9,295,Macroalgae,NA,09226989-50e7-4c40-bd36-5bcef32ee7a1,NA,Macroalgae
+6871,Padina boergesenii,Pad.boe,Algae,12,1447,Padina boergesenii,NA,093c2a78-a6df-4c6a-9940-d1192d42fba5,NA,Macroalgae
+5925,Niphates erecta,Niphates,Other Invertebrates,12,13,Niphates erecta,NA,0b16aa3e-34e6-4072-a2b2-ed1c4739d38b,NA,Other invertebrates
+7543,Bleached Hard Coral Massive,BHCM,Hard coral,6,44,Bleached coral,Massive,0c854534-f891-4c52-99bf-cf7f617ca0fc,888609b5-b58a-4d57-addc-a6935bba284b,Remove
+7542,Bleached Hard Coral Encrusting,BHCE,Hard coral,6,203,Bleached coral,Encrusting,0c854534-f891-4c52-99bf-cf7f617ca0fc,b406252b-c160-4fd6-b7f9-f61d5e2779a5,Remove
+203,Bleached Acropora branching,BAcroBr,Hard coral,6,253,Bleached coral,Branching,0c854534-f891-4c52-99bf-cf7f617ca0fc,cf2deca6-53b8-4096-916f-32c2c71d14bf,Remove
+7540,Bleached branching coral,BBRA,Hard coral,6,214,Bleached coral,Branching,0c854534-f891-4c52-99bf-cf7f617ca0fc,cf2deca6-53b8-4096-916f-32c2c71d14bf,Remove
+7541,Bleached Hard Coral Digitate,BHCD,Hard coral,7,13,Bleached coral,Digitate,0c854534-f891-4c52-99bf-cf7f617ca0fc,eb67cf91-533d-465c-bace-c7c6d3901516,Remove
+3407,Bleached Pavona duerdeni,BLPDUE,Hard coral,29,8,Bleached coral,NA,0c854534-f891-4c52-99bf-cf7f617ca0fc,NA,Remove
+2193,Montipora patula bleached,Monpat BL,Hard coral,33,490,Bleached coral,NA,0c854534-f891-4c52-99bf-cf7f617ca0fc,NA,Remove
+2194,Pavona varians bleached,Pavvar BL,Hard coral,29,52,Bleached coral,NA,0c854534-f891-4c52-99bf-cf7f617ca0fc,NA,Remove
+2210,Porites evermanni bleached,Poreve BL,Hard coral,30,2,Bleached coral,NA,0c854534-f891-4c52-99bf-cf7f617ca0fc,NA,Remove
+4518,Porites monticulosa bleached,PMON_BL,Hard coral,7,17,Bleached coral,NA,0c854534-f891-4c52-99bf-cf7f617ca0fc,NA,Remove
+4820,Porites superfusa,P-SUPER,Hard coral,34,3649,Porites superfusa,NA,0df2f2ac-d8b5-41fe-bf1f-7cd2c30a1a2e,NA,Remove
+2055,Discosoma,DiscoS,Other Invertebrates,19,275,Discosoma,NA,0e051baa-9822-49a1-abe3-e07fba02c90c,NA,Other invertebrates
+1891,ARMS-CREP-Foraminifera,_FORM,Other Invertebrates,15,1448,Foraminifera,NA,0ec757c1-6ef3-49ce-9711-9e422e3d74a9,NA,Other invertebrates
+1284,CRED-Heliopora spp,*HCOE,Hard coral,9,415,Heliopora,NA,0f18ea18-0e25-42e8-bb96-f4be5f144075,NA,Heliopora
+655,Agelas,A.O,Other Invertebrates,14,58,Agelas,NA,0f549ca9-921b-430e-9230-68e5fd00466a,NA,Other invertebrates
+1301,CRED-Pavona spp_foliose,*PAFO,Hard coral,14,174,Pavona,Foliose,108ff93e-9191-42bf-b502-3a437407b22a,e149db12-9398-4a10-8642-5db70d1a8505,Pavona
+989,Antipatharia,Ant,Other Invertebrates,15,187,Antipatharia,NA,11c3a113-0516-4f62-9030-eaa859846805,NA,Other invertebrates
+3507,CRED-Wire and black coral,*ANTI,Other Invertebrates,6,3,Antipatharia,NA,11c3a113-0516-4f62-9030-eaa859846805,NA,Other invertebrates
+3238,Mussismilia braziliensis,MuBr,Hard coral,6,231,Faviidae,NA,132ae52b-0cc6-4877-93ca-becbc612ea64,NA,Faviidae
+3240,Mussismilia harttii,MuHa,Hard coral,6,226,Faviidae,NA,132ae52b-0cc6-4877-93ca-becbc612ea64,NA,Faviidae
+3239,Mussismilia hispida,MuHi,Hard coral,7,235,Faviidae,NA,132ae52b-0cc6-4877-93ca-becbc612ea64,NA,Faviidae
+3531,Sandalolitha,SANDALTH,Hard coral,12,1,Sandalolitha,NA,14a38ea6-beab-4871-8249-a015b5423268,NA,Fungiidae
+76,Sandolitha,Sando,Hard coral,37,74,Sandalolitha,NA,14a38ea6-beab-4871-8249-a015b5423268,NA,Fungiidae
+1381,Erythropodium caribaeorum,ERYCAR,Other Invertebrates,10,127,Erythropodium caribaeorum,NA,15795086-4e69-4383-b5ca-765c8ef858c0,NA,Soft coral
+1390,Gorgonia spp.,GORSPP,Other Invertebrates,18,5571,Gorgonia,NA,157a194a-f6f6-4b95-893e-407ff303ded4,NA,Soft coral
+1297,CRED-Oulophyllia spp,*OUSP,Hard coral,11,102,Oulophyllia,NA,190d2f0d-67be-48a3-8ea0-33e66546f3f7,NA,Merulinidae
+1318,CRED-Giant clam,*GC,Other Invertebrates,11,406,Tridacna giant clam,NA,1aa38424-a8ab-4c85-b463-10606426e66e,NA,Other invertebrates
+1371,Porites branneri,PorBran,Hard coral,22,7,Porites branneri,NA,1f590289-ca7e-46a6-b59a-765fb7e980dd,NA,Remove
+5954,Turf algae mix,TAM,Algae,6,20,Turf algae,NA,20090bf4-868e-431b-974c-ab9be5bbdb5f,NA,Turf algae
+4927,Turf_filamentous,turalg,Algae,7,472,Turf algae,NA,20090bf4-868e-431b-974c-ab9be5bbdb5f,NA,Turf algae
+1336,CRED-Peyssonnelia spp,*PESP,Algae,17,77041,Peyssonnelia,NA,227f5477-c648-4a08-bec4-e69eb24c0a6c,NA,Macroalgae
+2013,Lyngbya spp.,Lyn_spp,Algae,6,305,Lyngbya,NA,26c3118a-1908-44b9-91d5-5f5a1d28cbb1,NA,Cyanobacteria
+3620,Tunicate (colonial),Tun_col,Other Invertebrates,8,1122,Tunicate,?,281632f0-8fe1-41fc-a854-70434ebcb341,NA,Other invertebrates
+4270,Tunicates,Tunic,Other Invertebrates,9,102,Tunicate,NA,281632f0-8fe1-41fc-a854-70434ebcb341,NA,Other invertebrates
+498,Diadema antillarum,Diad,Other Invertebrates,8,14,Diadema antillarum,NA,2ac051dc-67a5-4bda-892b-a137bbb15310,NA,Other invertebrates
+1386,Muricea spp.,MURSPP,Other Invertebrates,19,906,Muricea,NA,2ac51dda-1e4a-4340-8fec-b7e0a19f8b59,NA,Soft coral
+594,Physogyra,Phys,Hard coral,34,151,Physogyra,NA,2b1e2403-6391-4017-9044-0f00a7cb9068,NA,Hard coral
+7085,Porites algal overgrowth,PorAO,Hard coral,8,8,Porites,NA,2b55697f-f26e-433e-9070-f1fe9748bf7b,NA,Remove
+1973,Porites annae,Por_ann,Hard coral,6,140,Porites,NA,2b55697f-f26e-433e-9070-f1fe9748bf7b,NA,Remove
+3411,Porites hawaiiensis,POHA,Hard coral,28,5,Porites,NA,2b55697f-f26e-433e-9070-f1fe9748bf7b,NA,Remove
+3324,Porites solida,Por_sol,Hard coral,30,8,Porites,NA,2b55697f-f26e-433e-9070-f1fe9748bf7b,NA,Remove
+144,Crown of thorns starfish,COTS,Other Invertebrates,105,27,Acanthaster planci,NA,2bdfc0fe-e0d3-4be2-970b-508ea40e1495,NA,Other invertebrates
+1406,"The crown-of-thorns sea star, Acanthaster pl",MINV_ECN_C,Other Invertebrates,6,1,Acanthaster planci,NA,2bdfc0fe-e0d3-4be2-970b-508ea40e1495,NA,Other invertebrates
+1164,Laurencia spp.,Limu,Algae,36,9,Laurencia,NA,2db1ed39-900e-4ca6-b34d-f681948ee1b4,NA,Macroalgae
+1610,Lithophyllon,Litho,Hard coral,9,11,Lithophyllon,NA,2f4f8832-79bd-4127-8ef6-d7e3edd5c9f9,NA,Fungiidae
+434,Gracilaria salicornia,GSAL,Algae,43,4730,Gracilaria salicornia,NA,2f80ff76-a999-4c8a-b0b7-6e6ca43b7881,NA,Macroalgae
+3638,Branching Soft Coral,BSoC,Soft Substrate,6,4,Soft coral,Branching,30a987e9-b420-4db6-a83a-a1f7cabd14fb,cf2deca6-53b8-4096-916f-32c2c71d14bf,Soft coral
+1343,CRED-Unclassified soft coral,*USC,Other Invertebrates,11,24,Soft coral,NA,30a987e9-b420-4db6-a83a-a1f7cabd14fb,NA,Soft coral
+177,Other soft coral,OTH-SF,Other Invertebrates,11,187,Soft coral,NA,30a987e9-b420-4db6-a83a-a1f7cabd14fb,NA,Soft coral
+109,Agariciidae,AGARICIIDA,Hard coral,7,586,Agariciidae,NA,3151a2f4-1f93-41c6-998a-3b5bcbb27717,NA,Agariciidae
+3457,Hard Coral Corymbose,HcC,Hard coral,7,181,Hard coral,Corymbose,350e9eb4-5e6b-48f5-aeb8-0bfdf023bf1c,1dd23b35-32d7-489f-bee1-3985e17c113f,Hard coral
+632,Non-Acropora submassive,NonAcSub,Hard coral,7,430,Hard coral,Submassive,350e9eb4-5e6b-48f5-aeb8-0bfdf023bf1c,66f2cd86-a949-414e-96ac-5ea1fb702c5c,Hard coral
+3295,Hard Coral plate,HCP,Hard coral,9,329,Hard coral,Plates or tables,350e9eb4-5e6b-48f5-aeb8-0bfdf023bf1c,6b2aabb4-d16f-445e-933f-16341030fdba,Hard coral
+243,Corals: Stony corals: Solitary / mushroom,CSO,Hard coral,8,25,Hard coral,Mushroom coral,350e9eb4-5e6b-48f5-aeb8-0bfdf023bf1c,7a3be72b-a96e-4434-9c42-a817fe3fc765,Hard coral
+1266,CRED-Columnar hard coral,*COL,Hard coral,16,197,Hard coral,Columnar,350e9eb4-5e6b-48f5-aeb8-0bfdf023bf1c,cbff6080-6387-44e5-b7ad-35f35f3db3a7,Hard coral
+630,Non-Acropora foliose,NonAcF,Hard coral,7,80,Hard coral,Foliose,350e9eb4-5e6b-48f5-aeb8-0bfdf023bf1c,e149db12-9398-4a10-8642-5db70d1a8505,Hard coral - Foliose
+1398,Diseased Coral,DISCORAL,Hard coral,6,3,Hard coral,NA,350e9eb4-5e6b-48f5-aeb8-0bfdf023bf1c,NA,Hard coral
+7617,Hard Coral Growth Anomaly,HCGA,Hard coral,10,2,Hard coral,NA,350e9eb4-5e6b-48f5-aeb8-0bfdf023bf1c,NA,Hard coral
+3470,Hard Coral Solitary,HcSo,Hard coral,9,11,Hard coral,NA,350e9eb4-5e6b-48f5-aeb8-0bfdf023bf1c,NA,Hard coral
+6605,Lace Coral,lacecoral,Hard coral,24,39,Hard coral,NA,350e9eb4-5e6b-48f5-aeb8-0bfdf023bf1c,NA,Hard coral
+3806,Live Coral,LICO,Hard coral,18,12346,Hard coral,NA,350e9eb4-5e6b-48f5-aeb8-0bfdf023bf1c,NA,Hard coral
+3435,Plating Coral,PLATEC,Hard coral,6,1559,Hard coral,NA,350e9eb4-5e6b-48f5-aeb8-0bfdf023bf1c,NA,Hard coral
+2165,Recruit,REC,Hard coral,8,4,Hard coral,NA,350e9eb4-5e6b-48f5-aeb8-0bfdf023bf1c,NA,Hard coral
+527,Unidentified Hard Coral,HCoral,Hard coral,13,57,Hard coral,NA,350e9eb4-5e6b-48f5-aeb8-0bfdf023bf1c,NA,Hard coral
+1828,Lobactis scutaria,LobScut,Hard coral,37,15,Lobactis scutaria,NA,38f10f9e-f39d-4135-ae40-6c32f77a2242,NA,Fungiidae
+1377,Solenastrea bournoni,SOLBOU,Hard coral,12,21,Solenastrea bournoni,NA,3a8d7636-166d-4841-9ddb-9c378f9b32ec,NA,Hard coral
+592,Branching Gorgonian,BrGorg,Other Invertebrates,46,9176,Gorgonian,Branching,3aa2e125-3f74-4f91-94f6-fd030319f2b1,cf2deca6-53b8-4096-916f-32c2c71d14bf,Soft coral
+4584,ARMS_OtherMollusk,_OMOL,Other Invertebrates,9,83,Other invertebrates,NA,3dc38d25-ed80-4049-af16-e85f04f97cc6,NA,Other invertebrates
+2482,Benthic Invertebrate,BInv,Other Invertebrates,6,77,Other invertebrates,NA,3dc38d25-ed80-4049-af16-e85f04f97cc6,NA,Other invertebrates
+347,Echinoderms: Ophiuroids,EO,Other Invertebrates,6,13,Other invertebrates,NA,3dc38d25-ed80-4049-af16-e85f04f97cc6,NA,Other invertebrates
+344,Echinoderms: Sea stars,ESS,Other Invertebrates,27,118,Other invertebrates,NA,3dc38d25-ed80-4049-af16-e85f04f97cc6,NA,Other invertebrates
+229,Molluscs,MO,Other Invertebrates,7,13,Other invertebrates,NA,3dc38d25-ed80-4049-af16-e85f04f97cc6,NA,Other invertebrates
+354,Molluscs: Chitons,MOCH,Other Invertebrates,8,1,Other invertebrates,NA,3dc38d25-ed80-4049-af16-e85f04f97cc6,NA,Other invertebrates
+1036,Vermetidae,Verme,Other Invertebrates,7,7,Other invertebrates,NA,3dc38d25-ed80-4049-af16-e85f04f97cc6,NA,Other invertebrates
+1275,CRED-Echinophyllia spp,*ECHL,Hard coral,9,323,Echinophyllia,NA,4111c390-2319-4f7a-a65c-76e9e37c8a45,NA,Remove
+1379,Tubastraea coccinea,TUBCOC,Hard coral,6,7,Tubastraea coccinea,NA,428869c1-da96-4bae-8f1d-d0b81c5ee706,NA,Remove
+1282,CRED-Goniopora/Alveopora spp,*GOAL,Hard coral,10,605,Scleractinia,NA,430912ef-7750-4e71-a976-6da41cfba4b3,NA,Hard coral
+1736,Ircinia sp.,IRCINIA,Other Invertebrates,15,19,Ircinia,NA,43471c27-e415-4559-913f-6d3c3d50e199,NA,Other invertebrates
+1334,CRED-Neomeris spp,*NEOM,Algae,13,69,Neomeris,NA,436b15f7-c235-4124-8eef-4aa2e25f2c4d,NA,Macroalgae
+430,Stypopodium sp.,Styp,Algae,30,449,Stypopodium,NA,43cf8a4f-6523-4dae-8fd5-c34fa4afc8cd,NA,Macroalgae
+438,Montipora capitata,MontiCap,Hard coral,71,94187,Montipora capitata,NA,4412ffc1-93ca-42f5-bb58-01c191272fc4,NA,Montipora
+2182,Montipora capitata algal overgrowth,Moncap AO,Hard coral,14,11,Montipora capitata,NA,4412ffc1-93ca-42f5-bb58-01c191272fc4,NA,Montipora
+89,Porites lobata,PorLob,Hard coral,35,264183,Porites lobata,NA,462970b7-3c1d-48a7-9f6f-d657b27a5bef,NA,Remove
+131,Porites lobata 1,Plob,Hard coral,31,42949,Porites lobata,NA,462970b7-3c1d-48a7-9f6f-d657b27a5bef,NA,Remove
+1316,CRED-Bryozoan,*BRY,Other Invertebrates,13,15,Bryozoan,NA,47347942-7abe-4a3c-882f-20e595c8a261,NA,Other invertebrates
+1864,Montipora studeri,M.studeri,Hard coral,29,2,Montipora,NA,4acaa53b-7ec9-4abd-bb4a-1d96b6224c0d,NA,Montipora
+4494,Montipora verrucosa,MONve,Hard coral,6,5,Montipora,NA,4acaa53b-7ec9-4abd-bb4a-1d96b6224c0d,NA,Montipora
+978,Sabellidae,Sab,Other Invertebrates,7,8,"Worms, sabellid",NA,4b1636d1-b227-494e-b196-11cf4bfa3088,NA,Other invertebrates
+1936,Heliopora coerulea,HelCoe,Other Invertebrates,7,340,Heliopora coerulea,NA,4bb12554-2294-4260-8ce2-1938c5c3736c,NA,Heliopora
+1791,Liagora,LIA,Algae,86,104,Liagora,NA,4dcad109-18e3-4c91-a560-eb0bf34faccc,NA,Macroalgae
+6864,Diploria spp,Diploria,Hard coral,13,53,Diploria,NA,4e17ca21-b9bd-4d32-8a44-59856b89c38f,NA,Mussidae
+2142,Dysidea sp,Dys,Other Invertebrates,8,810,Dysidea,NA,4f390938-8179-4ca2-9024-9d22983bca09,NA,Other invertebrates
+2541,Udotea spp.,UDOT,Algae,20,255,Udotea,NA,50062bd7-949d-45b6-9083-6d2d94c8f31e,NA,Macroalgae
+607,Caulastrea,Caula,Hard coral,21,26,Caulastraea,NA,5060a1b1-f158-4424-9f79-fcd5af7e6d88,NA,Merulinidae
+1797,Clionid spp.,CLIONI,Other Invertebrates,15,626,Porifera,NA,50a5d5d0-1afe-4e48-ab35-3adec6a30f0d,NA,Other invertebrates
+4912,Desmapsama sp.,12345,Other Invertebrates,12,8,Porifera,NA,50a5d5d0-1afe-4e48-ab35-3adec6a30f0d,NA,Other invertebrates
+817,Plakortis,PLAK,Other Invertebrates,12,3,Porifera,NA,50a5d5d0-1afe-4e48-ab35-3adec6a30f0d,NA,Other invertebrates
+1852,Porifera,Prfa,Other Invertebrates,44,2030,Porifera,NA,50a5d5d0-1afe-4e48-ab35-3adec6a30f0d,NA,Other invertebrates
+450,Pocillopora meandrina,PocMea,Hard coral,63,6391,Pocillopora meandrina,NA,5115c485-0237-450a-a6f8-fdcddd54eeed,NA,Pocillopora
+446,Porites evermanni,PorEverm,Hard coral,45,2119,Porites evermanni,NA,5279d3f0-20df-4ac4-ac4a-ca6d21115d7d,NA,Remove
+449,Pocillopora grandis (eydouxi),PocGran,Hard coral,48,837,Pocillopora grandis,NA,52c54acc-cde4-444c-8ba3-1b2c8c6ab17f,NA,Pocillopora
+1784,Madracis pharensis,MadPhar,Hard coral,14,4,Madracis pharensis,NA,53c61b6c-68c0-46fe-bfae-e77e6f12d7af,NA,Madracis
+1035,Psammocora stellata,PsamStell,Hard coral,34,154,Psammocora stellata,NA,577244a2-aa83-4721-ab0b-533a82f7a0c9,NA,Psammocora
+1783,Madracis mirabilis,MAMI,Hard coral,17,57658,Madracis myriaster,NA,58ab3128-0e13-4d2e-884b-3d5dab1e18e1,NA,Madracis
+508,Caulerpa racemosa,CauRac,Algae,20,766,Caulerpa racemosa,NA,5b81b4ba-66b6-4e87-8e2f-b9aa680207a1,NA,Macroalgae
+1571,Porites lutea,PorLut,Hard coral,10,738,Porites lutea,NA,5eb2052b-9787-4148-a230-4d04580f399c,NA,Remove
+2219,CREP-T3a Amansia spp,*AMSP,Algae,34,332,Amansia,NA,5f02c034-b2ae-45f0-824b-1200cb1ecadc,NA,Macroalgae
+1339,CRED-Seagrass,*SG,Algae,13,119,Seagrass,NA,5f1f7956-bc21-4bfd-a409-9740e614b2ac,NA,Seagrass
+197,Scolymia,SCOL,Hard coral,31,30,Scolymia,NA,602a2e9b-abad-48ac-90ec-857dd2fc194f,NA,Mussidae
+196,Pectinia,PEC,Hard coral,40,69,Pectinia,NA,602dc038-8e99-4c55-85e4-f3141ddc0041,NA,Merulinidae
+2458,Madracis senaria,MadSen,Hard coral,16,19,Madracis senaria,NA,60f9b62d-0cb0-47dd-9551-3929af847cb7,NA,Madracis
+2476,Penicillus spp.,PENCIL,Algae,19,32,Penicillus,NA,62731214-41d2-4db6-af05-e76305a0b8ef,NA,Macroalgae
+1579,Pavona decussata,PavDec,Hard coral,7,2298,Pavona decussata,NA,6766adfc-b2fa-4d38-9e7b-05886df6263f,NA,Pavona
+1947,Pavona decussata_divaricata_frondifera,Pav_d_d_f,Hard coral,6,675,Pavona decussata,NA,6766adfc-b2fa-4d38-9e7b-05886df6263f,NA,Pavona
+447,Porites monticulosa,PorMont,Hard coral,34,1379,Porites monticulosa,NA,67d74d0f-3b04-477a-aed7-ac090bfd745e,NA,Remove
+475,Solenastrea hyades,SOL,Hard coral,9,3,Solenastrea hyades,NA,6812b181-49a2-4302-928c-cbdbc8781e88,NA,Hard coral
+300,Macroalgae: Large canopy-forming : Ecklonia,ECKL,Algae,7,1840,Ecklonia,NA,6ac0a8cc-f9e3-4fc4-9b17-9385c02a3b30,NA,Macroalgae
+433,Ventricaria sp.,Vent,Algae,48,58,Ventricaria,NA,6acd6333-fb98-447a-b61f-102641f84b70,NA,Macroalgae
+3616,Sponge (arborescent),SP_arbor,Other Invertebrates,9,1,Sponge,Arborescent,6b9fdd82-685f-4f21-8fa3-883e06be2c30,7e71833a-fc29-4176-91cb-1df6723089ed,Other invertebrates
+281,Sponges: Massive forms: Barrels,SMB,Other Invertebrates,9,89,Sponge,Massive,6b9fdd82-685f-4f21-8fa3-883e06be2c30,888609b5-b58a-4d57-addc-a6935bba284b,Other invertebrates
+1601,"Sponges: Branching, Rope Forms",SINV_SPO_E,Other Invertebrates,13,35,Sponge,Branching,6b9fdd82-685f-4f21-8fa3-883e06be2c30,cf2deca6-53b8-4096-916f-32c2c71d14bf,Other invertebrates
+1191,Rope sponge,ROSP,Other Invertebrates,6,392,Sponge,NA,6b9fdd82-685f-4f21-8fa3-883e06be2c30,NA,Other invertebrates
+1061,"Sponge, unidentified",SPUN,Other Invertebrates,10,57,Sponge,NA,6b9fdd82-685f-4f21-8fa3-883e06be2c30,NA,Other invertebrates
+2089,Sponge: Cliona,SINV_SPO_C,Other Invertebrates,7,118,Sponge,NA,6b9fdd82-685f-4f21-8fa3-883e06be2c30,NA,Other invertebrates
+287,Sponges: Erect forms,SE,Other Invertebrates,11,259,Sponge,NA,6b9fdd82-685f-4f21-8fa3-883e06be2c30,NA,Other invertebrates
+3726,Sponges: Terpios,SINV_SPO_T,Other Invertebrates,7,128,Sponge,NA,6b9fdd82-685f-4f21-8fa3-883e06be2c30,NA,Other invertebrates
+1456,Sponges: Vase,SINV_SPO_V,Other Invertebrates,11,39,Sponge,NA,6b9fdd82-685f-4f21-8fa3-883e06be2c30,NA,Other invertebrates
+1798,Tube or Rod Sponge,SPTU,Other Invertebrates,12,468,Sponge,NA,6b9fdd82-685f-4f21-8fa3-883e06be2c30,NA,Other invertebrates
+795,Vase sponge,SPvase,Other Invertebrates,8,12,Sponge,NA,6b9fdd82-685f-4f21-8fa3-883e06be2c30,NA,Other invertebrates
+3500,CRED-Phymastrea spp,*PHSP,Hard coral,6,371,Favites,NA,6d63693c-592d-4da5-88d8-7125832cbd76,NA,Remove
+1897,ARMS-CREP-Bivalve,_BI,Other Invertebrates,15,5504,Bivalvia,NA,6e481be3-7c13-49a3-9928-6f17259f3047,NA,Other invertebrates
+1829,Bivalve,Bivalve,Other Invertebrates,25,741,Bivalvia,NA,6e481be3-7c13-49a3-9928-6f17259f3047,NA,Other invertebrates
+1315,CRED-Bivalve,*BI,Other Invertebrates,15,30,Bivalvia,NA,6e481be3-7c13-49a3-9928-6f17259f3047,NA,Other invertebrates
+355,Molluscs: Bivalves,MOBI,Other Invertebrates,14,149986,Bivalvia,NA,6e481be3-7c13-49a3-9928-6f17259f3047,NA,Other invertebrates
+1383,Pseudoplexaura spp.,PSESPP,Other Invertebrates,22,10198,Pseudoplexaura,NA,6e773788-5b88-4187-9816-726d9bc673f1,NA,Soft coral
+3954,Holothuroidea,HOL,Other Invertebrates,12,2,Sea cucumber,NA,702a838d-aebd-4547-bc07-e161c3262cbc,NA,Other invertebrates
+465,Dictyopteris,Dictyopter,Algae,43,1515,Dictyopteris,NA,71533bf1-eb8f-4dc9-83db-46728490c81c,NA,Macroalgae
+439,Montipora flabellata,MontiFlab,Hard coral,51,1050,Montipora flabellata,NA,750783b4-ef24-4ea5-b508-d77d20933eb2,NA,Montipora
+1662,Corallina officinalis (substratum),COS,Algae,9,6242,Corallina officinalis,NA,7536f710-d996-488c-a7b5-e87a71b78487,NA,Macroalgae
+425,Cladophora sp.,Cldph,Algae,36,2740,Cladophora,NA,75fff2dd-2361-4112-adec-c9a39fd5c390,NA,Macroalgae
+2962,Agaricia spp.,AG,Hard coral,9,311,Agaricia,NA,79a84274-88f2-4135-90dd-8c1a501f87d5,NA,Agaricia
+2964,Aplysina spp.,AP sp,Other Invertebrates,16,479,Aplysina,NA,7a03b8d8-63bc-4622-bfe8-0a512c51ebbb,NA,Other invertebrates
+1387,Muriceopsis spp.,MURISPP,Other Invertebrates,16,189,Pterogorgiidae,NA,7a4323fc-2e79-4511-82d5-9268fd34ce01,NA,Soft coral
+4242,Exposed Rock,ERK,Other,6,56,Rock,NA,7b351732-5ec1-43c5-b668-15ed24e33aed,NA,Bare substrate
+1329,CRED-Dictyopteris/Dictyota spp,*DICO,Algae,16,1380,Dictyotaceae,NA,7c7704b1-7823-4f09-b048-a6e87e3d05a6,NA,Macroalgae
+1034,Leptastrea purpurea,LPurp,Hard coral,51,695,Leptastrea purpurea,NA,7cc759a3-9d4c-45dc-9e86-73c09ead5e15,NA,Leptastrea
+1342,CRED-Octocoral,*OCTO,Other Invertebrates,44,19615,Octocorallia,NA,7ce46715-080a-465e-94c1-17a51bcd49f0,NA,Soft coral
+104,Octocorallia,Octocoral,Other Invertebrates,14,9371,Octocorallia,NA,7ce46715-080a-465e-94c1-17a51bcd49f0,NA,Soft coral
+1385,Plexaurella spp.,PLEXSPP,Other Invertebrates,23,122,Octocorallia,NA,7ce46715-080a-465e-94c1-17a51bcd49f0,NA,Soft coral
+2456,Stylaster roseus,Fire Sros,Hard coral,21,4,Stylaster,NA,7d649b73-ccd6-4254-8a42-d2b24d25ac5e,NA,Hard coral
+4535,Stylaster Sp.,Stylas,Other Invertebrates,33,62,Stylaster,NA,7d649b73-ccd6-4254-8a42-d2b24d25ac5e,NA,Hard coral
+3453,Obscured,obscured,Other,6,2055,Obscured,NA,7e426637-0aac-4945-913d-6ab23cdcd8c2,NA,Remove
+382,Eusmilia fastigiata,EFAS,Hard coral,32,370,Eusmilia fastigiata,NA,83020a4c-fda8-45aa-9ec5-e886c5b18f3e,NA,Remove
+424,Chrysocystis fragilis,CyFa,Algae,8,571,Chrysocystis fragilis,NA,8446e66d-dc91-4856-a8f9-0f4535536b6e,NA,Macroalgae
+3059,Niphates sp,Niph,Other Invertebrates,13,54,Niphates,NA,84bc2ed1-9309-4b83-b275-f6a55ffc3e47,NA,Other invertebrates
+178,Sea fans/plumes,GORG,Other Invertebrates,10,155,Alcyonacea,NA,8646db92-aded-460d-978d-0248a0ea75b2,NA,Soft coral
+1384,Eunicea spp.,EUNSPP,Other Invertebrates,24,3792,Eunicea,NA,887651ec-32f6-4a25-81a2-d991a04dc130,NA,Soft coral
+2386,Acropora muricata,AcrMur,Hard coral,6,4016,Acropora muricata,NA,896ba964-bddd-491d-bfb5-43f417431e4a,NA,Acropora
+1870,Gardineroseris planulata,GaPlan,Hard coral,8,2,Gardineroseris planulata,NA,8a0b970f-88be-40a1-9461-ed3b80ab3c99,NA,Agariciidae
+1277,CRED-Euphyllia spp,*EUSP,Hard coral,9,12,Euphyllia,NA,8b706c7f-fcf7-4d03-b271-58a06d77fbb4,NA,Hard coral
+6270,Acropora cytheria,cytheria,Hard coral,6,2,Acropora cytherea,NA,8beb9413-6421-4448-9657-07a426c2835e,NA,Acropora
+1288,CRED-Leptoseris spp,*LESP,Hard coral,15,281,Leptoseris,NA,8da49adb-eb3c-4486-a538-42114813b58e,NA,Agariciidae
+1382,Plexaura spp.,PLESPP,Other Invertebrates,23,28317,Plexaura,NA,8e192db3-cec7-4b84-a4b0-1ed01bb1f62d,NA,Soft coral
+436,Hypnea musciformis,HMUS,Algae,32,1160,Hypnea musciformis,NA,95c49cf9-c721-4e62-8882-11870dc46706,NA,Macroalgae
+1789,Scolymia lacera,SCOLA,Hard coral,17,3,Scolymia lacera,NA,970e6f49-9a1a-46e3-bb8d-95c607f6bfdd,NA,Mussidae
+1800,Trididemnum spp.,TRIDI,Other Invertebrates,17,91,Ascidian,NA,98872a8a-e688-4e8e-994e-777ddad439de,NA,Other invertebrates
+1793,Millepora squarrosa,MIS,Other Invertebrates,19,3,Millepora squarrosa,NA,9a23a972-cefa-4827-9636-41f8e5a73b77,NA,Millepora
+440,Montipora patula,MontiPat,Hard coral,53,15246,Montipora patula,NA,9f06b993-7708-43f1-9886-41323155091b,NA,Montipora
+1792,Wrangelia,WRA,Algae,8,18,Wrangelia,NA,9f424659-9e93-43f0-a83b-14eb41c9d253,NA,Macroalgae
+4240,Wrangelia penicillata,Wrangel pe,Algae,12,89,Wrangelia,NA,9f424659-9e93-43f0-a83b-14eb41c9d253,NA,Macroalgae
+432,Avrainvillea,Avrainvil,Algae,40,1017,Avrainvillea,NA,a19c1549-baa0-4bd6-b345-7a30b3383b7c,NA,Macroalgae
+1326,CRED-Avrainvillea spp,*AVSP,Algae,13,155,Avrainvillea,NA,a19c1549-baa0-4bd6-b345-7a30b3383b7c,NA,Macroalgae
+1799,Hydrozoa,HZ,Other Invertebrates,46,400,Hydrozoa,NA,a2070213-37e4-4c7e-a389-e04e96d806d6,NA,Other invertebrates
+624,Halomitra,Hal,Hard coral,49,77,Halomitra,NA,a4563b4f-d70c-461e-aa92-9c92beb89294,NA,Fungiidae
+1918,Caulerpa serrulata,Cau_ser,Algae,16,6,Caulerpa,NA,a769ae7f-afb0-4d84-a915-b7ac7079b771,NA,Macroalgae
+1962,Goniastrea stelligera,GonStell,Hard coral,8,493,Goniastrea stelligera,NA,a82b807a-e5f5-481a-9b9d-a6c9663f9bcf,NA,Goniastrea
+2048,Podabacia,Podbac,Hard coral,16,11,Podabacia,NA,a89f2635-41fe-4d2f-ae67-880a5707340e,NA,Fungiidae
+2418,Holothuria,Holo,Other Invertebrates,13,308,Holothuria,NA,a937983e-4467-4ac2-9992-0b731d3a6bef,NA,Other invertebrates
+442,Pavona varians,PavVar,Hard coral,55,969,Pavona varians,NA,aa9d685f-4d61-425d-af04-71f060eef923,NA,Pavona
+1806,Recently killed coral,RKC,Hard coral,13,62,Dead coral,NA,abde283f-5dd4-4a67-bc0b-e7403ad9c517,NA,Bare substrate
+1557,Leptastrea transversa,LeTran,Hard coral,30,96,Leptastrea transversa,NA,ac1ef5e0-e022-4b76-a4be-230db922fac9,NA,Leptastrea
+1796,Chondrilla spp.,CHON,Other Invertebrates,16,782,Chondrilla,NA,ae613484-5d00-4b6e-a300-617bda6f3a97,NA,Other invertebrates
+1946,Pavona cactus,PavCac,Hard coral,6,1,Pavona cactus,NA,af36139c-44a5-4517-83ef-2279a787fb16,NA,Pavona
+1963,Hydnophora microconos,Hyd_mic,Hard coral,7,61,Hydnophora,NA,af6c43fd-0f41-4103-8ad5-8d1191bd4c9f,NA,Merulinidae
+6614,Mastophora,mastophora,Algae,15,14,Corallinaceae,NA,b10513e5-e5c9-47ab-bef0-2c42b4b9d8b4,NA,Macroalgae
+5359,Mastophora_articulated_calcareous,masarc,Algae,7,18,Corallinaceae,NA,b10513e5-e5c9-47ab-bef0-2c42b4b9d8b4,NA,Macroalgae
+3385,Kelp,KELPA,Algae,11,2305,Phaeophyceae,NA,b1b917a4-df2c-4394-8aa1-e9b480b77cc4,NA,Macroalgae
+3087,Ralfsia expansa,Rae,Algae,7,10,Phaeophyceae,NA,b1b917a4-df2c-4394-8aa1-e9b480b77cc4,NA,Macroalgae
+3742,Rosenvingea sp.,RSVG,Algae,6,12,Phaeophyceae,NA,b1b917a4-df2c-4394-8aa1-e9b480b77cc4,NA,Macroalgae
+443,Porites brighami,PorBrig,Hard coral,34,29,Porites brighami,NA,b345a2cc-aa56-4752-97e9-b789afb8a4ea,NA,Remove
+2147,Soft Bleached,SINV_BLC,Other Invertebrates,7,88,Bleached soft coral,NA,b3648d32-d1fd-4ebe-a4e7-20c34c079d98,NA,Soft coral
+448,Pocillopora damicornis,PocDam,Hard coral,70,14753,Pocillopora damicornis,NA,b401b526-6d2f-4f6a-8cc1-10051e0623ff,NA,Pocillopora
+512,Colpomenia sinuosa,ColSin,Algae,12,15,Colpomenia,NA,b48e2e20-61af-435f-9a94-b8ebce9068a3,NA,Macroalgae
+1389,Pterogorgia,Pterogorg,Other Invertebrates,24,3699,Pterogorgia,NA,b5f4b46c-a779-4786-889b-f1987217ae5b,NA,Soft coral
+1766,Agaricia tenuifolia,AgTen,Hard coral,20,1932,Agaricia tenuifolia,NA,b6bdb216-19dd-47b7-bbd2-4234f9787316,NA,Agaricia
+1906,ARMS-CREP-Unclassified/Unknown,_UNK,Other,14,454,Unknown,NA,b72e02c1-eab3-4781-9eb4-d191bb84e5c7,NA,Remove
+6611,Brown Chrysophyte,chrys_brn,Other,8,2,Unknown,NA,b72e02c1-eab3-4781-9eb4-d191bb84e5c7,NA,Remove
+7007,Hannia,hannia,Other,12,1,Unknown,NA,b72e02c1-eab3-4781-9eb4-d191bb84e5c7,NA,Remove
+4719,Verrucaria,Verrucaria,Other,6,1969,Unknown,NA,b72e02c1-eab3-4781-9eb4-d191bb84e5c7,NA,Remove
+3374,Sandy_Substrate,SDSU,Soft Substrate,8,314,Sand,NA,b76bca12-884b-4404-bb9f-97d505b0fe58,NA,Sand
+1313,CRED-Hydrocoral,*HYCO,Other Invertebrates,11,73,Hydrocoral,NA,b7aade0a-8de3-4a00-a37c-deb65e5188a7,NA,Soft coral
+78,Tubastrea,Tubastrea,Hard coral,57,271,Tubastraea,NA,bbff20b3-6dd9-4be8-aa3e-6619229d2d6b,NA,Remove
+1649,Crinoids.,MINV_CRI,Other Invertebrates,7,3,Crinoid,NA,c08ffd84-5d06-487f-aad7-877cb7da4578,NA,Other invertebrates
+3268,Valonia spp.,Valspp,Algae,52,27,Valonia,NA,c0f0ee39-58b1-4304-961e-6729dd8567d3,NA,Macroalgae
+4447,Valonia ventricosa,Vavent,Algae,15,23,Valonia,NA,c0f0ee39-58b1-4304-961e-6729dd8567d3,NA,Macroalgae
+3073,Psammocora profundacella,PsamProf,Hard coral,7,13,Psammocora profundacella,NA,c312d18f-fefc-47cb-b5be-a5814e556b12,NA,Psammocora
+2967,Verongula sp.,Ver,Other Invertebrates,13,11,Aplysinidae,NA,c387ca1c-b18c-4e18-8ed6-c9d0c1b8e8a8,NA,Other invertebrates
+1866,Psammocora nierstraszi,PsamNier,Hard coral,30,27,Psammocora nierstraszi,NA,c52c7acb-39a9-4849-8546-60b39fd3a2a8,NA,Psammocora
+65,Herpolitha,Herpo,Hard coral,58,260,Herpolitha,NA,c98530b4-80a0-4b3a-9d69-f30f8181aab3,NA,Fungiidae
+1771,Colpophyllia breviserialis,COB,Hard coral,15,3,Colpophyllia,NA,cb0ddf88-0b4e-460e-a62d-40e6fc9bb1c5,NA,Faviidae
+1125,"Anemone, unidentified",ANUN,Other Invertebrates,8,34,Anemone,NA,cbe35e54-4536-4a2d-8ded-8e831625bfd9,NA,Other invertebrates
+4773,Cnidaria: Colonial anemones,CNCA.,Other Invertebrates,10,30,Anemone,NA,cbe35e54-4536-4a2d-8ded-8e831625bfd9,NA,Other invertebrates
+1314,CRED-Anemone,*AMNE,Other Invertebrates,15,286,Anemone,NA,cbe35e54-4536-4a2d-8ded-8e831625bfd9,NA,Other invertebrates
+6916,Erythropodium,erythro,Other Invertebrates,14,3263,Erythropodium,NA,cc081ec3-8953-4f75-b072-60de0a67702d,NA,Soft coral
+1291,CRED-Merulina spp,*MESP,Hard coral,9,451,Merulina,NA,cdee93cc-5434-460e-b1e8-78b4164ab266,NA,Merulinidae
+3831,Dendronephthya,Dend,Other Invertebrates,9,72,Nephtheidae,NA,d1d7eb33-cc43-433f-9ca7-8fbe50a63277,NA,Soft coral
+2426,Nephthya,NEPT,Other Invertebrates,9,171,Nephtheidae,NA,d1d7eb33-cc43-433f-9ca7-8fbe50a63277,NA,Soft coral
+1559,Plesiastrea versipora,PlesVers,Hard coral,7,63,Plesiastrea versipora,NA,d2b0f823-5641-43d7-872b-a59accf15ac7,NA,Hard coral
+1979,Lobophora spp.,Lob_spp,Algae,8,34,Lobophora,NA,d63b491c-adc7-4869-aa6c-6c2a784830d5,NA,Macroalgae
+1268,CRED-Acanthastrea spp,*ACAS,Hard coral,9,329,Acanthastrea,NA,d6511689-4a1f-4c28-b5bc-1eaf02b5dfbc,NA,Remove
+1030,Cyphastrea ocellina,CyphOce,Hard coral,38,70,Cyphastrea ocellina,NA,d92c3eba-880f-4959-98de-ae43933b900d,NA,Merulinidae
+599,Pocillopora verrucosa,PocVer,Hard coral,7,11,Pocillopora verrucosa,NA,dd836305-6c6d-4a07-b3cc-9d20fc4899c4,NA,Pocillopora
+6867,Halimeda copiosa,Hal.cop,Algae,12,14491,Halimeda copiosa,NA,de5d6946-6d36-4b06-93fe-103a6107ba12,NA,Macroalgae
+129,Acropora humilis,AcrHum,Hard coral,9,10,Acropora humilis,NA,e00b1b7a-0871-4a01-9007-fc464c6ad18c,NA,Acropora
+2537,Sargassum spp.,SARG.,Algae,6,330,Sargassum,NA,e1272775-11a6-4f60-9054-956567a961df,NA,Macroalgae
+1859,Syringodium,Syringodiu,Seagrass,12,3253,Syringodium,NA,e3516630-2f26-4557-a06d-1bbf77693a95,NA,Seagrass
+193,Oxypora,Oxyp,Hard coral,53,12,Oxypora,NA,e450c3c2-f3ca-4b81-9b99-aa1928aee1bb,NA,Remove
+266,Hydroids,HYDD,Other Invertebrates,6,121,Hydroid,NA,e58eb448-5c03-4c1d-a7fc-f5c1ef379c77,NA,Other invertebrates
+441,Pavona duerdeni,PavDue,Hard coral,45,229,Pavona duerdeni,NA,e6d5e0ac-be0e-41b0-9b4d-239abd8317d7,NA,Pavona
+6042,Montastrea cavernosa,MoCav,Hard coral,12,194,Montastraea cavernosa,NA,e8edb2ee-0fc3-445d-8617-b660313c9606,NA,Montastraea
+1182,Manicina areolata,MAA,Hard coral,25,3,Manicina areolata,NA,ea0721ea-3c12-42bf-970b-a364016bb5df,NA,Faviidae
+2220,CREP-T3a Galaxaura spp,*GALS,Algae,28,70,Galaxaura,NA,ea24a5b8-a64a-4ee2-8eeb-4afd2254db86,NA,Macroalgae
+1303,CRED-Plerogyra spp,*PLER,Hard coral,11,72,Plerogyra,NA,eaebab16-9d01-4723-b120-6239314826ab,NA,Hard coral
+3209,Hypnea,Hyp,Algae,40,47,Hypnea,NA,ec8b8237-d03f-4373-a92b-3c0cfc903711,NA,Macroalgae
+5380,Oulastrea,ous,Hard coral,7,2,Oulastrea,NA,ed845b8e-4be9-4cb3-8ace-fcb7410a5381,NA,Hard coral
+3532,POLYPHYLLIA,POLPHIL,Hard coral,7,26,Polyphyllia,NA,ee3b17dd-36f3-4a99-bc2d-a95f5d39bac1,NA,Fungiidae
+2536,Acetabularia spp.,ACET,Algae,15,15,Acetabularia,NA,f05b022a-7158-42b9-a592-82418a7a8578,NA,Macroalgae
+3640,Branching Coralline Algae,BranchCA,Algae,7,14,Coralline algae,Branching,f0f8c511-69b9-4bc6-9d54-af9dec4e82bf,cf2deca6-53b8-4096-916f-32c2c71d14bf,Macroalgae
+780,Chlorodesmis sp.,Chlor,Algae,47,137,Chlorodesmis,NA,f1c37a46-327b-4bc7-b2c1-8c1d26b14da8,NA,Macroalgae
+5648,Sargassum fluitans,S-flu,Algae,12,647,Sargassum fluitans,NA,f200ecbf-46fa-4b19-b8c4-b91028460a5d,NA,Macroalgae
+1560,Platygyra daedalea,PlDaed,Hard coral,7,2783,Platygyra daedalea,NA,f2025774-f694-4c15-8725-c4dcbdb01cf4,NA,Platygyra
+1133,"Red algae, crustose coralline",CCRA,Algae,6,479,Crustose coralline algae,NA,f4df7abd-3d51-42fb-8cab-5102b95fad8e,NA,Crustose coralline algae
+194,Mycedium,Myc,Hard coral,66,491,Mycedium,NA,f6f3b5cf-7bc6-483a-8ef7-0c41a6672be2,NA,Remove
+6872,Rhipocephalus phoenix,Rhipo.phoe,Algae,14,34,Rhipocephalus,NA,f7159ae5-d627-4b4f-87a6-521fc36119e0,NA,Macroalgae
+2127,Dasya sp,dasya,Algae,6,183,Rhodophyta,NA,f76a7fb3-ec62-465e-a07c-aac3e0936d71,NA,Macroalgae
+543,Gracilaria/Rhodymenia,GracRho,Algae,6,129,Rhodophyta,NA,f76a7fb3-ec62-465e-a07c-aac3e0936d71,NA,Macroalgae
+437,Kappaphycus sp.,KAPPA,Algae,7,235,Rhodophyta,NA,f76a7fb3-ec62-465e-a07c-aac3e0936d71,NA,Macroalgae
+4404,Scinaia spp,Scinaia,Algae,28,1,Rhodophyta,NA,f76a7fb3-ec62-465e-a07c-aac3e0936d71,NA,Macroalgae
+7006,Trichogloea,tricho,Algae,12,4,Rhodophyta,NA,f76a7fb3-ec62-465e-a07c-aac3e0936d71,NA,Macroalgae
+343,Echinoderms: sea urchin: regular urchins,EURR,Other Invertebrates,8,296,Sea urchin,NA,f7980725-60b3-47c9-abd2-0a006ea30061,NA,Other invertebrates
+1311,CRED-Symphyllia spp,*SYSP,Hard coral,9,71,Symphyllia,NA,f87eae02-9123-4931-98a0-8d635670a46b,NA,Mussidae
+3796,Gorgonia ventalina,Gven,Other Invertebrates,8,657,Gorgonia ventalina,NA,f94197eb-6040-4853-819d-5c0f72bc6804,NA,Soft coral
+1795,Briareum,GORG-BRI,Other Invertebrates,21,124,Briareum,NA,f9480d47-b287-4151-87bc-82377a35651b,NA,Soft coral
+1380,Briareum asbestinum,BRIASB,Other Invertebrates,16,171,Briareum,NA,f9480d47-b287-4151-87bc-82377a35651b,NA,Soft coral
+1867,Halymenia sp.,HALY,Algae,29,4,Halymenia,NA,f9c8f05d-ec7a-4945-a807-6d2ab9bed7c3,NA,Macroalgae
+1786,Mycetophyllia lamarckana,MycetLam,Hard coral,8,3,Mycetophyllia lamarckiana,NA,fad9ba75-a2b0-44ad-bc67-67b5ade6ad76,NA,Mussidae
+3477,Pseudosiderastrea,Pseudosid,Hard coral,7,87,Pseudosiderastrea,NA,fb2bf86e-f1f3-4649-bc3d-3e99cd1a3f98,NA,Hard coral
+1397,Palythoa,PALYTHO,Other Invertebrates,70,8793,Palythoa,NA,fb7f5bc0-519c-4c96-ae7d-8b65fc449b4a,NA,Other invertebrates
+419,Palythoa sp,Paly,Hard coral,6,505,Palythoa,NA,fb7f5bc0-519c-4c96-ae7d-8b65fc449b4a,NA,Other invertebrates
+4201,Rhipilia spp.,Rhp,Algae,31,6582,Rhipilia,NA,fedc7073-fc92-4d4b-a987-c9154db8651f,NA,Macroalgae
+124,Broken coral rubble,C-Rubble,Other,65,81244,Rubble,NA,ed2332ed-0762-45fb-87a3-d315e218faf1,NA,Rubble
+5818,Coral rubble,Rubble_cor,Soft Substrate,6,1696,Rubble,NA,ed2332ed-0762-45fb-87a3-d315e218faf1,NA,Rubble
+1346,CRED-Rubble substrate,*RUB,Hard Substrate,12,2380,Rubble,NA,ed2332ed-0762-45fb-87a3-d315e218faf1,NA,Rubble
+1703,Loose Substrate: Rubble,LSUB_RUB,Soft Substrate,11,54662,Rubble,NA,ed2332ed-0762-45fb-87a3-d315e218faf1,NA,Rubble
+524,Rock Rubble,RockRub,Hard Substrate,12,3605,Rubble,NA,ed2332ed-0762-45fb-87a3-d315e218faf1,NA,Rubble
+1457,Rubble,Rubble,Other,121,77469,Rubble,NA,ed2332ed-0762-45fb-87a3-d315e218faf1,NA,Rubble
+2843,Rubbles,Rubbles,Other,6,24113,Rubble,NA,ed2332ed-0762-45fb-87a3-d315e218faf1,NA,Rubble
+2235,Algal Turf,AlgalTurf,Algae,11,8654,Turf algae,NA,20090bf4-868e-431b-974c-ab9be5bbdb5f,NA,Turf algae
+1348,CRED-Turf growing on hard substrate,*TURFH,Hard Substrate,18,1216402,Turf algae,NA,20090bf4-868e-431b-974c-ab9be5bbdb5f,NA,Turf algae
+1349,CRED-Turf growing on rubble,*TURFR,Hard Substrate,15,38295,Turf algae,NA,20090bf4-868e-431b-974c-ab9be5bbdb5f,NA,Turf algae
+3299,Rock Turf Algae,RCTA,Hard Substrate,16,8055,Turf algae,NA,20090bf4-868e-431b-974c-ab9be5bbdb5f,NA,Turf algae
+1913,Turf  algae,Turf_algae,Algae,23,114600,Turf algae,NA,20090bf4-868e-431b-974c-ab9be5bbdb5f,NA,Turf algae
+82,Turf algae,Turf,Algae,321,5496896,Turf algae,NA,20090bf4-868e-431b-974c-ab9be5bbdb5f,NA,Turf algae
+1561,Turf Algae (macroalgae),MAL_turf,Algae,8,10665,Turf algae,NA,20090bf4-868e-431b-974c-ab9be5bbdb5f,NA,Turf algae
+463,Turf and sand,Turf_sand,Algae,23,75219,Turf algae,NA,20090bf4-868e-431b-974c-ab9be5bbdb5f,NA,Turf algae
+2230,Turf on rubble,Turf_rubbl,Algae,14,3727,Turf algae,NA,20090bf4-868e-431b-974c-ab9be5bbdb5f,NA,Turf algae
+1347,CRED-Sand,*SAND,Soft Substrate,15,89515,Sand,NA,b76bca12-884b-4404-bb9f-97d505b0fe58,NA,Sand
+84,Sand,Sand,Soft Substrate,418,1882701,Sand,NA,b76bca12-884b-4404-bb9f-97d505b0fe58,NA,Sand
+1402,Sand (soft),Sand_soft,Soft Substrate,14,115031,Sand,NA,b76bca12-884b-4404-bb9f-97d505b0fe58,NA,Sand
+4573,Sand / Rubble,SaRub,Other,27,157469,Sand,NA,b76bca12-884b-4404-bb9f-97d505b0fe58,NA,Sand
+106,Sand and sediment,Mix,Soft Substrate,7,7916,Sand,NA,b76bca12-884b-4404-bb9f-97d505b0fe58,NA,Sand
+4158,Sand/Silt,SSI,Soft Substrate,6,9777,Sand,NA,b76bca12-884b-4404-bb9f-97d505b0fe58,NA,Sand
+368,Substrate: Unconsolidated (soft): sand/mud,SUSA,Other Invertebrates,22,1151,Sand,NA,b76bca12-884b-4404-bb9f-97d505b0fe58,NA,Sand
+3011,Leather Coral,LC,Other Invertebrates,32,8010,Soft coral,NA,30a987e9-b420-4db6-a83a-a1f7cabd14fb,NA,Soft coral
+80,Soft Coral,SC,Other Invertebrates,249,75702,Soft coral,NA,30a987e9-b420-4db6-a83a-a1f7cabd14fb,NA,Soft coral
+204,Acropora (branching),Acr_bra,Hard coral,32,9918,Acropora,Branching,050c0689-0b01-4a6c-afbf-a5d3ca39c310,cf2deca6-53b8-4096-916f-32c2c71d14bf,Acropora - Branching
+1269,CRED-Acropora spp_branching,*ACBR,Hard coral,14,33577,Acropora,Branching,050c0689-0b01-4a6c-afbf-a5d3ca39c310,cf2deca6-53b8-4096-916f-32c2c71d14bf,Acropora - Branching
+1146,Bare Rock,BARK,Hard Substrate,29,60974,Rock,NA,7b351732-5ec1-43c5-b668-15ed24e33aed,NA,Bare substrate
+515,Rock,Rock,Hard Substrate,116,117964,Rock,NA,7b351732-5ec1-43c5-b668-15ed24e33aed,NA,Bare substrate
+1306,CRED-Porites spp_massive,*POMA,Hard coral,16,69448,Porites,Massive,2b55697f-f26e-433e-9070-f1fe9748bf7b,888609b5-b58a-4d57-addc-a6935bba284b,Porites - Massive
+1974,Porites (massive),Por_mass,Hard coral,28,28926,Porites,Massive,2b55697f-f26e-433e-9070-f1fe9748bf7b,888609b5-b58a-4d57-addc-a6935bba284b,Porites - Massive
+1883,ARMS-CREP-Red encrusting macroalgae,_RDEN,Algae,14,2730,Macroalgae,Encrusting,09226989-50e7-4c40-bd36-5bcef32ee7a1,b406252b-c160-4fd6-b7f9-f61d5e2779a5,Macroalgae
+2845,Macroalgae:Encrusting:Red:Calcareous:Crustose,MERCC,Algae,32,27,Macroalgae,Encrusting,09226989-50e7-4c40-bd36-5bcef32ee7a1,b406252b-c160-4fd6-b7f9-f61d5e2779a5,Macroalgae
+92,Algae,Algae,Algae,61,29589,Macroalgae,NA,09226989-50e7-4c40-bd36-5bcef32ee7a1,NA,Macroalgae
+642,Algae (filamentous),AL_filam,Algae,17,5245,Macroalgae,NA,09226989-50e7-4c40-bd36-5bcef32ee7a1,NA,Macroalgae
+139,Algae (fleshy),AL_fleshy,Algae,131,10399,Macroalgae,NA,09226989-50e7-4c40-bd36-5bcef32ee7a1,NA,Macroalgae
+636,Algal Assemblage,AA,Algae,11,20533,Macroalgae,NA,09226989-50e7-4c40-bd36-5bcef32ee7a1,NA,Macroalgae
+2461,Benthic Microalgae on Sand,BMA_sand,Algae,11,1106,Macroalgae,NA,09226989-50e7-4c40-bd36-5bcef32ee7a1,NA,Macroalgae
+535,Black crust,BlackCru,Algae,33,14378,Macroalgae,NA,09226989-50e7-4c40-bd36-5bcef32ee7a1,NA,Macroalgae
+6206,Bluegreen algae,BGA,Algae,6,2,Macroalgae,NA,09226989-50e7-4c40-bd36-5bcef32ee7a1,NA,Macroalgae
+564,Blue-Green Algae,BLGR,Algae,17,394,Macroalgae,NA,09226989-50e7-4c40-bd36-5bcef32ee7a1,NA,Macroalgae
+3921,Brillo Spike Pad,BSP,Algae,31,45,Macroalgae,NA,09226989-50e7-4c40-bd36-5bcef32ee7a1,NA,Macroalgae
+1145,"Brown algae, unidentified",BRUN,Algae,15,890,Macroalgae,NA,09226989-50e7-4c40-bd36-5bcef32ee7a1,NA,Macroalgae
+2238,Brown fleshy algae,BrFlesAlg,Algae,47,3240,Macroalgae,NA,09226989-50e7-4c40-bd36-5bcef32ee7a1,NA,Macroalgae
+140,Calcareous algae,CALG,Algae,17,828,Macroalgae,NA,09226989-50e7-4c40-bd36-5bcef32ee7a1,NA,Macroalgae
+1444,Calcifying algae: Other,MACR_Cal_O,Algae,107,1546,Macroalgae,NA,09226989-50e7-4c40-bd36-5bcef32ee7a1,NA,Macroalgae
+2423,Chrysophyta,CHRY,Algae,46,21,Macroalgae,NA,09226989-50e7-4c40-bd36-5bcef32ee7a1,NA,Macroalgae
+1327,CRED-Blue-green macroalga,*BGMA,Algae,45,15466,Macroalgae,NA,09226989-50e7-4c40-bd36-5bcef32ee7a1,NA,Macroalgae
+1324,CRED-Brown macroalgae,*BRMA,Algae,49,806,Macroalgae,NA,09226989-50e7-4c40-bd36-5bcef32ee7a1,NA,Macroalgae
+1323,CRED-Green macroalgae,*GRMA,Algae,59,3814,Macroalgae,NA,09226989-50e7-4c40-bd36-5bcef32ee7a1,NA,Macroalgae
+1325,CRED-Red macroalgae,*RDMA,Algae,51,9886,Macroalgae,NA,09226989-50e7-4c40-bd36-5bcef32ee7a1,NA,Macroalgae
+1338,CRED-Upright macroalgae,*UPMA,Algae,16,7987,Macroalgae,NA,09226989-50e7-4c40-bd36-5bcef32ee7a1,NA,Macroalgae
+6613,Fleshy Calcified Algae,flesh_calc,Algae,15,20766,Macroalgae,NA,09226989-50e7-4c40-bd36-5bcef32ee7a1,NA,Macroalgae
+2472,Green fleshy algae,GFA,Algae,42,3005,Macroalgae,NA,09226989-50e7-4c40-bd36-5bcef32ee7a1,NA,Macroalgae
+81,Macroalgae,MAL,Algae,183,596756,Macroalgae,NA,09226989-50e7-4c40-bd36-5bcef32ee7a1,NA,Macroalgae
+325,Macroalgae: Articulated calcareous,MAAC,Algae,19,69484,Macroalgae,NA,09226989-50e7-4c40-bd36-5bcef32ee7a1,NA,Macroalgae
+326,Macroalgae: Articulated calcareous: red,MAACR,Algae,34,137,Macroalgae,NA,09226989-50e7-4c40-bd36-5bcef32ee7a1,NA,Macroalgae
+309,Macroalgae: Filamentous / filiform,MAF,Algae,13,79641,Macroalgae,NA,09226989-50e7-4c40-bd36-5bcef32ee7a1,NA,Macroalgae
+310,Macroalgae: Filamentous / filiform : red,MAFR,Algae,6,14991,Macroalgae,NA,09226989-50e7-4c40-bd36-5bcef32ee7a1,NA,Macroalgae
+299,Macroalgae: Large canopy-forming : brown,MALCB,Algae,11,889,Macroalgae,NA,09226989-50e7-4c40-bd36-5bcef32ee7a1,NA,Macroalgae
+294,Macroalgae: Sheet-like / membraneous,MAM,Algae,10,130528,Macroalgae,NA,09226989-50e7-4c40-bd36-5bcef32ee7a1,NA,Macroalgae
+5955,Mat Blue-Green Macroalgae,MBGMA,Algae,6,2,Macroalgae,NA,09226989-50e7-4c40-bd36-5bcef32ee7a1,NA,Macroalgae
+3085,Nutrient Indicator Algae,NIA,Algae,14,88,Macroalgae,NA,09226989-50e7-4c40-bd36-5bcef32ee7a1,NA,Macroalgae
+1453,Other Algae,ALG_OTH,Algae,47,4985,Macroalgae,NA,09226989-50e7-4c40-bd36-5bcef32ee7a1,NA,Macroalgae
+3678,Palmophyllum crassum,Palmophyl_,Algae,32,99,Macroalgae,NA,09226989-50e7-4c40-bd36-5bcef32ee7a1,NA,Macroalgae
+597,Red ALgae,RAlg,Algae,6,2594,Macroalgae,NA,09226989-50e7-4c40-bd36-5bcef32ee7a1,NA,Macroalgae
+2473,Red fleshy algae,RFA,Algae,49,3757,Macroalgae,NA,09226989-50e7-4c40-bd36-5bcef32ee7a1,NA,Macroalgae
+522,Red Turf,RedTurf,Algae,9,42579,Macroalgae,NA,09226989-50e7-4c40-bd36-5bcef32ee7a1,NA,Macroalgae
+3591,Unknown macroalgae,UnkMacroa,Algae,9,4929,Macroalgae,NA,09226989-50e7-4c40-bd36-5bcef32ee7a1,NA,Macroalgae
+1903,ARMS-CREP-Sponge,_SP,Other Invertebrates,14,24519,Sponge,NA,6b9fdd82-685f-4f21-8fa3-883e06be2c30,NA,Other invertebrates
+1319,CRED-Sponge,*SP,Other Invertebrates,14,2605,Sponge,NA,6b9fdd82-685f-4f21-8fa3-883e06be2c30,NA,Other invertebrates
+102,Sponge,SP,Other Invertebrates,196,75790,Sponge,NA,6b9fdd82-685f-4f21-8fa3-883e06be2c30,NA,Other invertebrates
+2168,Sponge Other,SpgOth,Other Invertebrates,16,16459,Sponge,NA,6b9fdd82-685f-4f21-8fa3-883e06be2c30,NA,Other invertebrates
+1263,CRED-Massive hard coral,*MASS,Hard coral,16,3293,Hard coral,Massive,350e9eb4-5e6b-48f5-aeb8-0bfdf023bf1c,888609b5-b58a-4d57-addc-a6935bba284b,Hard coral - Massive
+237,Hard Coral (massive),HC_massive,Hard coral,55,23460,Hard coral,Massive,350e9eb4-5e6b-48f5-aeb8-0bfdf023bf1c,888609b5-b58a-4d57-addc-a6935bba284b,Hard coral - Massive
+3297,Hard Coral Massive,HCM,Hard coral,109,3923,Hard coral,Massive,350e9eb4-5e6b-48f5-aeb8-0bfdf023bf1c,888609b5-b58a-4d57-addc-a6935bba284b,Hard coral - Massive
+108,Meandroid (brain) corals,Brain,Hard coral,6,780,Hard coral,Massive,350e9eb4-5e6b-48f5-aeb8-0bfdf023bf1c,888609b5-b58a-4d57-addc-a6935bba284b,Hard coral - Massive
+631,Non-Acropora massive,NonAcM,Hard coral,6,4590,Hard coral,Massive,350e9eb4-5e6b-48f5-aeb8-0bfdf023bf1c,888609b5-b58a-4d57-addc-a6935bba284b,Hard coral - Massive
+1305,CRED-Porites spp_branching,*POBR,Hard coral,16,18046,Porites,Branching,2b55697f-f26e-433e-9070-f1fe9748bf7b,cf2deca6-53b8-4096-916f-32c2c71d14bf,Porites - Branching
+1413,Porites (branching),Por_branch,Hard coral,28,3270,Porites,Branching,2b55697f-f26e-433e-9070-f1fe9748bf7b,cf2deca6-53b8-4096-916f-32c2c71d14bf,Porites - Branching
+3563,Articulated coralline algae,ArtCA,Algae,9,2686,Crustose coralline algae,NA,f4df7abd-3d51-42fb-8cab-5102b95fad8e,NA,Crustose coralline algae
+1403,Calcifying calcareous crustose algae: DHC,CAL_CCA_DC,Algae,10,3766,Crustose coralline algae,NA,f4df7abd-3d51-42fb-8cab-5102b95fad8e,NA,Crustose coralline algae
+101,CCA (crustose coralline algae),CCA,Algae,333,1088719,Crustose coralline algae,NA,f4df7abd-3d51-42fb-8cab-5102b95fad8e,NA,Crustose coralline algae
+792,CCA growing on rubble,CCA_Rub,Algae,11,117,Crustose coralline algae,NA,f4df7abd-3d51-42fb-8cab-5102b95fad8e,NA,Crustose coralline algae
+1458,CCA: On dead coral,*CCADHC,Algae,8,633,Crustose coralline algae,NA,f4df7abd-3d51-42fb-8cab-5102b95fad8e,NA,Crustose coralline algae
+1340,CRED-CCA growing on hard substrate,*CCAH,Hard Substrate,18,288354,Crustose coralline algae,NA,f4df7abd-3d51-42fb-8cab-5102b95fad8e,NA,Crustose coralline algae
+1341,CRED-CCA growing on rubble,*CCAR,Hard Substrate,15,8749,Crustose coralline algae,NA,f4df7abd-3d51-42fb-8cab-5102b95fad8e,NA,Crustose coralline algae
+141,Crustose coralline algae,CCA 1,Algae,26,27014,Crustose coralline algae,NA,f4df7abd-3d51-42fb-8cab-5102b95fad8e,NA,Crustose coralline algae
+3305,Rock Crustose Coralline Algae,RCCA,Hard Substrate,9,736,Crustose coralline algae,NA,f4df7abd-3d51-42fb-8cab-5102b95fad8e,NA,Crustose coralline algae
+4817,Sick CCA,SCCA,Algae,34,13628,Crustose coralline algae,NA,f4df7abd-3d51-42fb-8cab-5102b95fad8e,NA,Crustose coralline algae
+239,Hard Coral (encrusting),HC_encr,Hard coral,50,20789,Hard coral,Encrusting,350e9eb4-5e6b-48f5-aeb8-0bfdf023bf1c,b406252b-c160-4fd6-b7f9-f61d5e2779a5,Hard coral - Encrusting
+3302,Hard Coral_Encrusting,HCE,Hard coral,106,6013,Hard coral,Encrusting,350e9eb4-5e6b-48f5-aeb8-0bfdf023bf1c,b406252b-c160-4fd6-b7f9-f61d5e2779a5,Hard coral - Encrusting
+629,Non-Acropora encrusting,NonAcEnc,Hard coral,7,6338,Hard coral,Encrusting,350e9eb4-5e6b-48f5-aeb8-0bfdf023bf1c,b406252b-c160-4fd6-b7f9-f61d5e2779a5,Hard coral - Encrusting
+606,Acropora (plating),Acr_plat,Hard coral,7,522,Acropora,Plates or tables,050c0689-0b01-4a6c-afbf-a5d3ca39c310,6b2aabb4-d16f-445e-933f-16341030fdba,Acropora - Plates or tables
+187,Acropora (tabulate),Acr_tab,Hard coral,26,10516,Acropora,Plates or tables,050c0689-0b01-4a6c-afbf-a5d3ca39c310,6b2aabb4-d16f-445e-933f-16341030fdba,Acropora - Plates or tables
+1412,Acropora corymbose/tabular/plate,BRA_TAB-Ac,Hard coral,7,954,Acropora,Plates or tables,050c0689-0b01-4a6c-afbf-a5d3ca39c310,6b2aabb4-d16f-445e-933f-16341030fdba,Acropora - Plates or tables
+1270,CRED-Acropora spp_tabulate,*ACTA,Hard coral,14,20947,Acropora,Plates or tables,050c0689-0b01-4a6c-afbf-a5d3ca39c310,6b2aabb4-d16f-445e-933f-16341030fdba,Acropora - Plates or tables
+105,Dead coral,D_coral,Hard Substrate,138,200316,Dead coral,NA,abde283f-5dd4-4a67-bc0b-e7403ad9c517,NA,Bare substrate
+635,Dead coral with algae,DeadAlg,Other,25,22955,Dead coral,NA,abde283f-5dd4-4a67-bc0b-e7403ad9c517,NA,Bare substrate
+2084,Dead Pocillopora,D_Pocillo,Hard coral,6,53,Dead coral,NA,abde283f-5dd4-4a67-bc0b-e7403ad9c517,NA,Bare substrate
+1432,EAM: Dead Hard Coral,EAM_DHC,Algae,13,153688,Dead coral,NA,abde283f-5dd4-4a67-bc0b-e7403ad9c517,NA,Bare substrate
+2479,"Montipora capitata, recently dead",MCAP_RD,Algae,8,8022,Dead coral,NA,abde283f-5dd4-4a67-bc0b-e7403ad9c517,NA,Bare substrate
+2464,"Porites compressa, recently dead",PCOM_RD,Algae,7,923,Dead coral,NA,abde283f-5dd4-4a67-bc0b-e7403ad9c517,NA,Bare substrate
+142,Recent Dead Coral,RD_HC,Hard coral,62,1837,Dead coral,NA,abde283f-5dd4-4a67-bc0b-e7403ad9c517,NA,Bare substrate
+242,Hard Coral (branching),C_branch,Hard coral,57,10907,Hard coral,Branching,350e9eb4-5e6b-48f5-aeb8-0bfdf023bf1c,cf2deca6-53b8-4096-916f-32c2c71d14bf,Hard coral - Branching
+3099,Hard Coral (bushy),HC_bushy,Hard coral,8,5829,Hard coral,Branching,350e9eb4-5e6b-48f5-aeb8-0bfdf023bf1c,cf2deca6-53b8-4096-916f-32c2c71d14bf,Hard coral - Branching
+3298,Hard Coral branching,HCBR,Hard coral,104,4091,Hard coral,Branching,350e9eb4-5e6b-48f5-aeb8-0bfdf023bf1c,cf2deca6-53b8-4096-916f-32c2c71d14bf,Hard coral - Branching
+628,Non-Acropora branching,NonAcBr,Hard coral,9,4822,Hard coral,Branching,350e9eb4-5e6b-48f5-aeb8-0bfdf023bf1c,cf2deca6-53b8-4096-916f-32c2c71d14bf,Hard coral - Branching
+1442,Calcifying algae: Halimeda,MACR_Cal_H,Algae,11,670,Halimeda,NA,51558178-d2da-44ed-905b-db6976f6aa76,NA,Macroalgae
+1331,CRED-Halimeda spp,*HALI,Algae,42,39968,Halimeda,NA,51558178-d2da-44ed-905b-db6976f6aa76,NA,Macroalgae
+403,Halimeda,Halimeda,Algae,108,335282,Halimeda,NA,51558178-d2da-44ed-905b-db6976f6aa76,NA,Macroalgae
+1924,Halimeda spp.,Hal_spp,Algae,8,2749,Halimeda,NA,51558178-d2da-44ed-905b-db6976f6aa76,NA,Macroalgae
+815,Mud,Mud,Soft Substrate,33,7278,Silt,NA,18c4c1ee-a261-493d-b868-4b8a5e42bfc6,NA,Sand
+813,sandy mud,sand_mud,Soft Substrate,8,90,Silt,NA,18c4c1ee-a261-493d-b868-4b8a5e42bfc6,NA,Sand
+3346,silt,SL*,Soft Substrate,12,1574,Silt,NA,18c4c1ee-a261-493d-b868-4b8a5e42bfc6,NA,Sand
+1807,Silt/Clay,Silt,Soft Substrate,57,8614,Silt,NA,18c4c1ee-a261-493d-b868-4b8a5e42bfc6,NA,Sand
+137,Xenia,Xeni,Other Invertebrates,11,2708,Xenia,NA,457699ac-fd34-4640-bce4-070b1d7db3b5,NA,Soft coral
+236,Hard Coral (submassive),HC_submass,Hard coral,19,957,Hard coral,Submassive,350e9eb4-5e6b-48f5-aeb8-0bfdf023bf1c,66f2cd86-a949-414e-96ac-5ea1fb702c5c,Hard coral
+1265,CRED-Foliose hard coral,*FOL,Hard coral,15,1498,Hard coral,Foliose,350e9eb4-5e6b-48f5-aeb8-0bfdf023bf1c,e149db12-9398-4a10-8642-5db70d1a8505,Hard coral - Foliose
+238,Hard Coral (foliose),HC_fol,Hard coral,32,2687,Hard coral,Foliose,350e9eb4-5e6b-48f5-aeb8-0bfdf023bf1c,e149db12-9398-4a10-8642-5db70d1a8505,Hard coral - Foliose
+1294,CRED-Montipora spp_encrusting,*MOEN,Hard coral,15,85826,Montipora,Encrusting,4acaa53b-7ec9-4abd-bb4a-1d96b6224c0d,b406252b-c160-4fd6-b7f9-f61d5e2779a5,Montipora - Encrusting
+621,Montipora (encrusting),Monti_encr,Hard coral,7,3687,Montipora,Encrusting,4acaa53b-7ec9-4abd-bb4a-1d96b6224c0d,b406252b-c160-4fd6-b7f9-f61d5e2779a5,Montipora - Encrusting
+2844,Microbial mats,M.mats,Other,6,1165,Microbial mats,NA,6dfd0b33-db5f-433c-81ce-a625bc923c50,NA,Cyanobacteria
+602,Acropora (digitate),Acr_dig,Hard coral,28,8111,Acropora,Digitate,050c0689-0b01-4a6c-afbf-a5d3ca39c310,eb67cf91-533d-465c-bace-c7c6d3901516,Acropora - Branching
+1885,ARMS-CREP-Coral,_CO,Hard coral,14,3338,Hard coral,NA,350e9eb4-5e6b-48f5-aeb8-0bfdf023bf1c,NA,Hard coral
+184,Coral,Coral,Hard coral,59,15018,Hard coral,NA,350e9eb4-5e6b-48f5-aeb8-0bfdf023bf1c,NA,Hard coral
+91,Hard coral,HC,Hard coral,95,50446,Hard coral,NA,350e9eb4-5e6b-48f5-aeb8-0bfdf023bf1c,NA,Hard coral
+175,Other hard coral,OTH-HC,Hard coral,58,2251,Hard coral,NA,350e9eb4-5e6b-48f5-aeb8-0bfdf023bf1c,NA,Hard coral
+633,Heliopora,Heliop,Other Invertebrates,66,20169,Heliopora,NA,0f18ea18-0e25-42e8-bb96-f4be5f144075,NA,Heliopora
+4574,ARMS-Barnacle,_BAR,Other Invertebrates,12,3206,Other invertebrates,NA,3dc38d25-ed80-4049-af16-e85f04f97cc6,NA,Other invertebrates
+1889,ARMS-CREP-Calcareous Worm Tube,_CAWT,Other Invertebrates,15,14761,Other invertebrates,NA,3dc38d25-ed80-4049-af16-e85f04f97cc6,NA,Other invertebrates
+1894,ARMS-CREP-Soft Worm Tube,_SOWT,Other Invertebrates,14,541,Other invertebrates,NA,3dc38d25-ed80-4049-af16-e85f04f97cc6,NA,Other invertebrates
+988,Barnacles,Barn,Other Invertebrates,8,1720,Other invertebrates,NA,3dc38d25-ed80-4049-af16-e85f04f97cc6,NA,Other invertebrates
+1350,CRED-Mobile fauna,*MOBF,Other,15,2896,Other invertebrates,NA,3dc38d25-ed80-4049-af16-e85f04f97cc6,NA,Other invertebrates
+1321,CRED-Unclassified sessile invertebrate,*UI,Other Invertebrates,43,117,Other invertebrates,NA,3dc38d25-ed80-4049-af16-e85f04f97cc6,NA,Other invertebrates
+357,Crustacea: Barnacles,CRB,Other Invertebrates,14,57201,Other invertebrates,NA,3dc38d25-ed80-4049-af16-e85f04f97cc6,NA,Other invertebrates
+98,Mobile invertebrates,mob,Other Invertebrates,10,111,Other invertebrates,NA,3dc38d25-ed80-4049-af16-e85f04f97cc6,NA,Other invertebrates
+180,Mobile invertebrates	1,MOB-INV,Other Invertebrates,35,1124,Other invertebrates,NA,3dc38d25-ed80-4049-af16-e85f04f97cc6,NA,Other invertebrates
+353,Molluscs: Gastropods,gastropod,Other Invertebrates,21,884,Other invertebrates,NA,3dc38d25-ed80-4049-af16-e85f04f97cc6,NA,Other invertebrates
+982,Other invertebrate,Other Inv,Other Invertebrates,81,2995,Other invertebrates,NA,3dc38d25-ed80-4049-af16-e85f04f97cc6,NA,Other invertebrates
+2232,Other Invertebrates,OR_Invert,Other Invertebrates,112,1897,Other invertebrates,NA,3dc38d25-ed80-4049-af16-e85f04f97cc6,NA,Other invertebrates
+179,Other sessile invertebrates,OTH-SINV,Other Invertebrates,39,2508,Other invertebrates,NA,3dc38d25-ed80-4049-af16-e85f04f97cc6,NA,Other invertebrates
+4015,Polychaeta,POLYCH,Other Invertebrates,6,22,Other invertebrates,NA,3dc38d25-ed80-4049-af16-e85f04f97cc6,NA,Other invertebrates
+360,Worms: Polychaetes,WP,Other Invertebrates,11,120,Other invertebrates,NA,3dc38d25-ed80-4049-af16-e85f04f97cc6,NA,Other invertebrates
+361,Worms: Polychaetes: Tube worms,WPTW,Other Invertebrates,19,3663,Other invertebrates,NA,3dc38d25-ed80-4049-af16-e85f04f97cc6,NA,Other invertebrates
+627,Acropora (submassive),Acr_sub,Hard coral,15,28,Acropora,Submassive,050c0689-0b01-4a6c-afbf-a5d3ca39c310,66f2cd86-a949-414e-96ac-5ea1fb702c5c,Acropora
+1292,CRED-Millepora spp,*MISP,Hard coral,10,2026,Millepora,NA,995f68d0-2dec-4e22-916a-cf1f44c1663b,NA,Millepora
+79,Millepora,Millepora,Other Invertebrates,112,15890,Millepora,NA,995f68d0-2dec-4e22-916a-cf1f44c1663b,NA,Millepora
+1976,Millepora spp.,Mil_spp,Hard coral,10,6975,Millepora,NA,995f68d0-2dec-4e22-916a-cf1f44c1663b,NA,Millepora
+1295,CRED-Montipora spp_foliose,*MOFO,Hard coral,15,21266,Montipora,Foliose,4acaa53b-7ec9-4abd-bb4a-1d96b6224c0d,e149db12-9398-4a10-8642-5db70d1a8505,Montipora - Foliose
+456,Hydroid,Hydra,Other Invertebrates,30,3523,Hydroid,NA,e58eb448-5c03-4c1d-a7fc-f5c1ef379c77,NA,Other invertebrates
+503,Dictyota,Dictyota,Algae,130,206655,Dictyota,NA,987019bd-142e-4333-993a-a820030360a9,NA,Macroalgae
+401,Dictyota spp,Dict,Algae,8,2012,Dictyota,NA,987019bd-142e-4333-993a-a820030360a9,NA,Macroalgae
+1307,CRED-Porites spp_encrusting,*POEN,Hard coral,15,26200,Porites,Encrusting,2b55697f-f26e-433e-9070-f1fe9748bf7b,b406252b-c160-4fd6-b7f9-f61d5e2779a5,Remove
+2051,Sinularia,Sinla,Other Invertebrates,33,12118,Sinularia,NA,ad22bde8-47c5-45dd-9d6e-45dd361b3b06,NA,Soft coral
+1332,CRED-Lobophora spp,*LOBO,Algae,13,5249,Lobophora,NA,d63b491c-adc7-4869-aa6c-6c2a784830d5,NA,Macroalgae
+138,Lobophora,Lobophora,Algae,65,57337,Lobophora,NA,d63b491c-adc7-4869-aa6c-6c2a784830d5,NA,Macroalgae
+59,Acropora,Acropora,Hard coral,105,183326,Acropora,NA,050c0689-0b01-4a6c-afbf-a5d3ca39c310,NA,Acropora
+221,Acropora (corymbose),Acr_corym,Hard coral,12,1391,Acropora,Corymbose,050c0689-0b01-4a6c-afbf-a5d3ca39c310,1dd23b35-32d7-489f-bee1-3985e17c113f,Remove
+1322,CRED-Zoanthid,*ZO,Other Invertebrates,13,1528,Zoanthid,NA,1c0af377-dc41-4025-bc0a-917405f2a56c,NA,Other invertebrates
+133,Zoanthid,Zoanthid,Other Invertebrates,113,7688,Zoanthid,NA,1c0af377-dc41-4025-bc0a-917405f2a56c,NA,Other invertebrates
+2609,Zoanthids,Z,Other Invertebrates,10,1042,Zoanthid,NA,1c0af377-dc41-4025-bc0a-917405f2a56c,NA,Other invertebrates
+3210,Zooanthid,Zoo,Other Invertebrates,25,1176,Zoanthid,NA,1c0af377-dc41-4025-bc0a-917405f2a56c,NA,Other invertebrates
+1267,CRED-Free-living hard coral,*FREE,Hard coral,15,1231,Hard coral,Mushroom coral,350e9eb4-5e6b-48f5-aeb8-0bfdf023bf1c,7a3be72b-a96e-4434-9c42-a817fe3fc765,Hard coral
+3095,Hard Coral (free-living),HC_free,Hard coral,14,155,Hard coral,Mushroom coral,350e9eb4-5e6b-48f5-aeb8-0bfdf023bf1c,7a3be72b-a96e-4434-9c42-a817fe3fc765,Hard coral
+1300,CRED-Pavona spp_encrusting,*PAEN,Hard coral,15,4790,Pavona,Encrusting,108ff93e-9191-42bf-b502-3a437407b22a,b406252b-c160-4fd6-b7f9-f61d5e2779a5,Pavona
+103,All other,Other,Other,107,16814,Other,NA,31c5af16-30d7-4966-97f4-01889a5cf973,NA,Remove
+1886,ARMS-CREP-No Recruitment,_NR,Other,14,28435,Other,NA,31c5af16-30d7-4966-97f4-01889a5cf973,NA,Remove
+2237,Biofilm,biofilm,Soft Substrate,15,5411,Other,NA,31c5af16-30d7-4966-97f4-01889a5cf973,NA,Remove
+4818,Black Fungus Disease (BFD),BFD,Other,35,3644,Other,NA,31c5af16-30d7-4966-97f4-01889a5cf973,NA,Remove
+3283,Boulder,Bold,Hard Substrate,10,12533,Other,NA,31c5af16-30d7-4966-97f4-01889a5cf973,NA,Remove
+3540,Calcium Carbonate,Calc,Other,45,5020,Other,NA,31c5af16-30d7-4966-97f4-01889a5cf973,NA,Remove
+1353,CRED-Shadow,*SHAD,Other,16,60058,Other,NA,31c5af16-30d7-4966-97f4-01889a5cf973,NA,Remove
+1351,CRED-Tape,*TAPE,Other,16,2603,Other,NA,31c5af16-30d7-4966-97f4-01889a5cf973,NA,Remove
+1352,CRED-Wand,*WAND,Other,15,6954,Other,NA,31c5af16-30d7-4966-97f4-01889a5cf973,NA,Remove
+2100,CREP-T1 Tape/Wand,*TW,Other,11,829,Other,NA,31c5af16-30d7-4966-97f4-01889a5cf973,NA,Remove
+3484,Detritus,detritus,Soft Substrate,17,17254,Other,NA,31c5af16-30d7-4966-97f4-01889a5cf973,NA,Remove
+460,Fish,FISH,Other,149,500,Other,NA,31c5af16-30d7-4966-97f4-01889a5cf973,NA,Remove
+1637,Framer,FRM,Other,9,9856,Other,NA,31c5af16-30d7-4966-97f4-01889a5cf973,NA,Remove
+1644,Gravel,GRAV,Soft Substrate,6,5799,Other,NA,31c5af16-30d7-4966-97f4-01889a5cf973,NA,Remove
+85,Off,Off,Other,7,4720,Other,NA,31c5af16-30d7-4966-97f4-01889a5cf973,NA,Remove
+2546,Other,O,Other,179,52633,Other,NA,31c5af16-30d7-4966-97f4-01889a5cf973,NA,Remove
+3123,Others,OTH,Other,13,17281,Other,NA,31c5af16-30d7-4966-97f4-01889a5cf973,NA,Remove
+2513,Pavement,Pavement,Hard Substrate,10,64947,Other,NA,31c5af16-30d7-4966-97f4-01889a5cf973,NA,Remove
+1848,PVC,PVC,Other,15,7290,Other,NA,31c5af16-30d7-4966-97f4-01889a5cf973,NA,Remove
+3603,Quadrat,QUD,Other,8,6872,Other,NA,31c5af16-30d7-4966-97f4-01889a5cf973,NA,Remove
+1911,Rock_Pavement,RckPav,Hard Substrate,13,10264,Other,NA,31c5af16-30d7-4966-97f4-01889a5cf973,NA,Remove
+222,Shadow,SHAD,Other,76,50535,Other,NA,31c5af16-30d7-4966-97f4-01889a5cf973,NA,Remove
+523,Shell/ Shell Hash,Shell,Hard Substrate,16,6640,Other,NA,31c5af16-30d7-4966-97f4-01889a5cf973,NA,Remove
+747,tag/frame/zspar etc,TAG,Other,23,15828,Other,NA,31c5af16-30d7-4966-97f4-01889a5cf973,NA,Remove
+1827,TAPE,TAPE,Other,40,16211,Other,NA,31c5af16-30d7-4966-97f4-01889a5cf973,NA,Remove
+4936,Tape_TWS,taptws,Other,6,2577,Other,NA,31c5af16-30d7-4966-97f4-01889a5cf973,NA,Remove
+107,Transect hardware,Transect,Other,30,11884,Other,NA,31c5af16-30d7-4966-97f4-01889a5cf973,NA,Remove
+2515,Transect Tape,TT,Other,9,3183,Other,NA,31c5af16-30d7-4966-97f4-01889a5cf973,NA,Remove
+638,Trash,Trash,Other,28,128,Other,NA,31c5af16-30d7-4966-97f4-01889a5cf973,NA,Remove
+2545,Wand,WAND,Other,14,2815,Other,NA,31c5af16-30d7-4966-97f4-01889a5cf973,NA,Remove
+461,Water,WATER,Other,28,40233,Other,NA,31c5af16-30d7-4966-97f4-01889a5cf973,NA,Remove
+1335,CRED-Padina spp,*PADI,Algae,14,3595,Padina,NA,053de64e-a2b9-40b6-b566-cf3a5e95e267,NA,Macroalgae
+428,Padina,Padina,Algae,90,50056,Padina,NA,053de64e-a2b9-40b6-b566-cf3a5e95e267,NA,Macroalgae
+1980,Padina spp.,Pad_spp,Algae,37,990,Padina,NA,053de64e-a2b9-40b6-b566-cf3a5e95e267,NA,Macroalgae
+128,Sarcophyton,Sarco,Other Invertebrates,33,1006,Sarcophyton,NA,d19a0d50-6372-4390-922b-cc8e8f7f13eb,NA,Soft coral
+1767,Gorgonian,GOR,Other Invertebrates,10,3185,Gorgonian,NA,3aa2e125-3f74-4f91-94f6-fd030319f2b1,NA,Soft coral
+1802,Gorgoniidae,GORGONII,Other Invertebrates,52,60908,Gorgonian,NA,3aa2e125-3f74-4f91-94f6-fd030319f2b1,NA,Soft coral
+1293,CRED-Montipora spp_branching,*MOBR,Hard coral,16,4190,Montipora,Branching,4acaa53b-7ec9-4abd-bb4a-1d96b6224c0d,cf2deca6-53b8-4096-916f-32c2c71d14bf,Remove
+605,Acropora (encrusting),Acr_enc,Hard coral,19,221,Acropora,Encrusting,050c0689-0b01-4a6c-afbf-a5d3ca39c310,b406252b-c160-4fd6-b7f9-f61d5e2779a5,Remove
+1264,CRED-Encrusting hard coral,*ENC,Hard coral,17,16105,Acropora,Encrusting,050c0689-0b01-4a6c-afbf-a5d3ca39c310,b406252b-c160-4fd6-b7f9-f61d5e2779a5,Remove
+2427,Tubipora,Tubipora,Other Invertebrates,7,83,Tubipora,NA,efae0d72-6980-4c29-be83-63da72812a35,NA,Hard coral
+74,Porites,Porites,Hard coral,124,367911,Porites,NA,2b55697f-f26e-433e-9070-f1fe9748bf7b,NA,Remove
+429,Sargassum,Sargassum,Algae,112,7664,Sargassum,NA,e1272775-11a6-4f60-9054-956567a961df,NA,Macroalgae
+94,Seagrass,Seagrass,Seagrass,71,257609,Seagrass,NA,5f1f7956-bc21-4bfd-a409-9740e614b2ac,NA,Seagrass
+435,Turbinaria (algae),Turbin,Algae,109,3778,Turbinaria-algae,NA,6439edbc-f43a-485f-81b3-e64246c4fc90,NA,Macroalgae
+113,Porites astreoides,PorAstr,Hard coral,53,26248,Porites astreoides,NA,e288a94f-7117-4a54-9558-7d71144ccdc1,NA,Remove
+2050,Lobophytum,Lobphy,Other Invertebrates,13,1454,Lobophytum,NA,d68c54e3-1499-4987-9b31-716a90d4901a,NA,Soft coral
+1368,Orbicella annularis,OrbAnn,Hard coral,33,12246,Orbicella annularis,NA,9be51ec6-7400-46c7-bdfe-c56eac991cb7,NA,Orbicella
+111,Siderastrea siderea,SidSid,Hard coral,43,14742,Siderastrea siderea,NA,8c98a043-b8e4-4d55-8ad2-fbdfcf455af5,NA,Siderastrea
+1788,Porites porites,PorPor,Hard coral,38,2668,Porites porites,NA,39aa8616-e9ed-4fda-809a-5f9befc6efc2,NA,Remove
+532,Peyssonnelia,Peysson,Algae,65,202462,Peyssonnelid algae,NA,7d84ea57-8116-4eba-a39e-5f086b5370db,NA,Crustose coralline algae
+6151,Cover - Abundance of Cyanobacteria,C_A_Cyano,Other,8,922,Cyanobacteria,NA,3218e7ea-8827-4262-96a1-104e5ec50ffc,NA,Cyanobacteria
+2543,Cyanobacteria,CYANOB,Other,95,247654,Cyanobacteria,NA,3218e7ea-8827-4262-96a1-104e5ec50ffc,NA,Cyanobacteria
+143,Cyanobacteria films,CYAN,Other,15,2136,Cyanobacteria,NA,3218e7ea-8827-4262-96a1-104e5ec50ffc,NA,Cyanobacteria
+1439,Cyanobacteria smothering dead coral,CYANO_DHC,Algae,9,296,Cyanobacteria,NA,3218e7ea-8827-4262-96a1-104e5ec50ffc,NA,Cyanobacteria
+2011,Cyanobacterium sp.,Cya_spe,Algae,6,627,Cyanobacteria,NA,3218e7ea-8827-4262-96a1-104e5ec50ffc,NA,Cyanobacteria
+2455,Schizothrix,Cyan red,Other,33,21,Cyanobacteria,NA,3218e7ea-8827-4262-96a1-104e5ec50ffc,NA,Cyanobacteria
+1742,Millepora alcicornis,MILA,Other Invertebrates,38,18622,Millepora alcicornis,NA,4c173e5b-b34a-4b9d-8fea-9f598673fa33,NA,Millepora
+2605,Bleached Porites (massive),B_Por_mass,Hard coral,6,160,Bleached coral,Massive,0c854534-f891-4c52-99bf-cf7f617ca0fc,888609b5-b58a-4d57-addc-a6935bba284b,Remove
+2485,Bleached Acropora,B_Acro,Hard coral,13,51,Bleached coral,NA,0c854534-f891-4c52-99bf-cf7f617ca0fc,NA,Remove
+2496,Bleached Favites,B_Favites,Hard coral,6,10,Bleached coral,NA,0c854534-f891-4c52-99bf-cf7f617ca0fc,NA,Remove
+224,Bleached Goniopora,B_Goniop,Hard coral,6,32,Bleached coral,NA,0c854534-f891-4c52-99bf-cf7f617ca0fc,NA,Remove
+119,Bleached Hard Coral,B_HC,Hard coral,96,7790,Bleached coral,NA,0c854534-f891-4c52-99bf-cf7f617ca0fc,NA,Remove
+212,Bleached Montipora,B_Monti,Hard coral,11,44,Bleached coral,NA,0c854534-f891-4c52-99bf-cf7f617ca0fc,NA,Remove
+2186,Bleached Montipora flabellata,B_MontiFla,Hard coral,33,495,Bleached coral,NA,0c854534-f891-4c52-99bf-cf7f617ca0fc,NA,Remove
+2490,Bleached Pocillopora,B_Pocillo,Hard coral,14,123,Bleached coral,NA,0c854534-f891-4c52-99bf-cf7f617ca0fc,NA,Remove
+4520,Bleached Pocillopora damicornis,B_PocDam,Hard coral,32,33,Bleached coral,NA,0c854534-f891-4c52-99bf-cf7f617ca0fc,NA,Remove
+2201,Bleached Pocillopora meandrina,B_PocMean,Hard coral,35,177,Bleached coral,NA,0c854534-f891-4c52-99bf-cf7f617ca0fc,NA,Remove
+216,Bleached Porites,B_Porit,Hard coral,10,5,Bleached coral,NA,0c854534-f891-4c52-99bf-cf7f617ca0fc,NA,Remove
+2209,Bleached Porites compressa,B_PorComp,Hard coral,37,316,Bleached coral,NA,0c854534-f891-4c52-99bf-cf7f617ca0fc,NA,Remove
+770,Bleached Stylophora pistillata,B_StPis,Hard coral,6,23,Bleached coral,NA,0c854534-f891-4c52-99bf-cf7f617ca0fc,NA,Remove
+2185,Montipora capitata bleached,Moncap BL,Hard coral,36,3850,Bleached coral,NA,0c854534-f891-4c52-99bf-cf7f617ca0fc,NA,Remove
+2217,Porites lobata bleached,Porlob BL,Hard coral,33,1278,Bleached coral,NA,0c854534-f891-4c52-99bf-cf7f617ca0fc,NA,Remove
+603,Acropora (arborescent table),Acr_arbTab,Hard coral,7,159,Acropora,Arborescent,050c0689-0b01-4a6c-afbf-a5d3ca39c310,7e71833a-fc29-4176-91cb-1df6723089ed,Remove
+600,Acropora (arborescent),Acr_arb,Hard coral,17,4445,Acropora,Arborescent,050c0689-0b01-4a6c-afbf-a5d3ca39c310,7e71833a-fc29-4176-91cb-1df6723089ed,Remove
+1369,Orbicella faveolata,OrbFav,Hard coral,37,11724,Orbicella faveolata,NA,3f7a3174-94b4-4e50-b4d6-f80724bd0983,NA,Orbicella
+2826,Thalassia testudinum,ThalTes,Seagrass,16,19164,Thalassia testudinum,NA,8d8e556c-63a5-4aa8-9d25-f265c162b9be,NA,Seagrass
+4051,Ascidiacea,ASCID,Other Invertebrates,7,230,Ascidian,NA,98872a8a-e688-4e8e-994e-777ddad439de,NA,Other invertebrates
+227,Ascidian,ASCD,Other Invertebrates,55,2992,Ascidian,NA,98872a8a-e688-4e8e-994e-777ddad439de,NA,Other invertebrates
+3522,Ascidian (colonial),ASCD_col,Other Invertebrates,8,2262,Ascidian,NA,98872a8a-e688-4e8e-994e-777ddad439de,NA,Other invertebrates
+3521,Ascidian (solitary),ASCD_sol,Other Invertebrates,10,1763,Ascidian,NA,98872a8a-e688-4e8e-994e-777ddad439de,NA,Other invertebrates
+5994,Green diplosoma,g_diplo,Soft Substrate,32,379,Ascidian,NA,98872a8a-e688-4e8e-994e-777ddad439de,NA,Other invertebrates
+1302,CRED-Platygyra spp,*PLSP,Hard coral,9,2247,Platygyra,NA,9cd8176f-b5b4-474e-87bc-f2744338fe00,NA,Platygyra
+116,Platygyra,Platy,Hard coral,76,11473,Platygyra,NA,9cd8176f-b5b4-474e-87bc-f2744338fe00,NA,Platygyra
+1276,CRED-Echinopora spp,*ECHP,Hard coral,9,679,Echinopora,NA,c1e97c98-de9f-4b05-963f-0276784fca2d,NA,Echinopora
+99,Echinopora,Echinopora,Hard coral,64,18034,Echinopora,NA,c1e97c98-de9f-4b05-963f-0276784fca2d,NA,Echinopora
+1299,CRED-Pavona spp_massive,*PAMA,Hard coral,15,2889,Pavona,Massive,108ff93e-9191-42bf-b502-3a437407b22a,888609b5-b58a-4d57-addc-a6935bba284b,Pavona
+1357,Agaricia agaricites,AgAga,Hard coral,37,14005,Agaricia agaricites,NA,da503ac3-1c43-49d4-aafa-a7f8c140dec7,NA,Agaricia
+3459,Hard Coral Tabulate,HcT,Hard coral,9,799,Hard coral,Plates or tables,350e9eb4-5e6b-48f5-aeb8-0bfdf023bf1c,6b2aabb4-d16f-445e-933f-16341030fdba,Hard coral
+2562,Jania,Jania,Algae,56,13972,Jania,NA,788e1ca9-72ee-4872-9b79-a885e1a59c67,NA,Macroalgae
+1304,CRED-Pocillopora spp,*POCS,Hard coral,16,34661,Pocillopora,NA,da1dfe78-f982-4b09-81ae-b38d328bd85e,NA,Pocillopora
+73,Pocillopora,Pocill,Hard coral,118,118076,Pocillopora,NA,da1dfe78-f982-4b09-81ae-b38d328bd85e,NA,Pocillopora
+1743,Millepora complanata,MILC,Other Invertebrates,30,7362,Millepora complanata,NA,16287ac3-a2c5-4d10-ad2d-eae00c4cc148,NA,Millepora
+1281,CRED-Galaxea spp,*GASP,Hard coral,10,1911,Galaxea,NA,c91dee81-7cb4-410b-bfce-52d98b67732f,NA,Galaxea
+760,Galaxea,Galaxea,Hard coral,63,8427,Galaxea,NA,c91dee81-7cb4-410b-bfce-52d98b67732f,NA,Galaxea
+70,Montipora,Monti,Hard coral,104,123868,Montipora,NA,4acaa53b-7ec9-4abd-bb4a-1d96b6224c0d,NA,Montipora
+1768,Acropora cervicornis,AcrCerv,Hard coral,43,1718,Acropora cervicornis,NA,c20e38e5-ac36-41b3-a234-14e8f0de5c16,NA,Acropora
+1868,Galaxaura,Galaxaura,Algae,63,1253,Galaxaura,NA,ea24a5b8-a64a-4ee2-8eeb-4afd2254db86,NA,Macroalgae
+1308,CRED-Porites spp_foliose,*POFO,Hard coral,13,11879,Porites,Foliose,2b55697f-f26e-433e-9070-f1fe9748bf7b,e149db12-9398-4a10-8642-5db70d1a8505,Remove
+1772,Colpophyllia natans,CoNat,Hard coral,42,8358,Colpophyllia natans,NA,5f0cb866-1e5f-4277-a8a6-ffd31e811c66,NA,Faviidae
+1278,CRED-Favia spp,*FASP,Hard coral,10,7897,Favia,NA,656169f6-2344-423c-845d-9d4c1d14d69d,NA,Remove
+4709,Favia,fav,Hard coral,50,2047,Favia,NA,656169f6-2344-423c-845d-9d4c1d14d69d,NA,Remove
+62,Favia (Indo-Pacific),Favia,Hard coral,13,2011,Favia,NA,656169f6-2344-423c-845d-9d4c1d14d69d,NA,Remove
+88,Porites rus,PorRus,Hard coral,84,41907,Porites rus,NA,7d41bcd1-d9dd-4b8f-85ab-cd410ae0e1ef,NA,Remove
+72,Pavona,Pavona,Hard coral,90,31288,Pavona,NA,108ff93e-9191-42bf-b502-3a437407b22a,NA,Pavona
+1968,Galaxea fascicularis,GalFasc,Hard coral,6,100,Galaxea fascicularis,NA,ed69cfb2-51f1-4e58-943f-868c86144f8f,NA,Galaxea
+96,Bare Substrate,Bare-Subst,Hard Substrate,57,160475,Bare substrate,NA,d9086647-3a82-4634-97bc-6e10347af39b,NA,Bare substrate
+2218,Basalt,Basalt,Hard Substrate,32,27,Bare substrate,NA,d9086647-3a82-4634-97bc-6e10347af39b,NA,Bare substrate
+1344,CRED-Fine sediment,*FINE,Soft Substrate,15,5232,Bare substrate,NA,d9086647-3a82-4634-97bc-6e10347af39b,NA,Bare substrate
+1345,CRED-Hard substrate,*HARD,Hard Substrate,13,6340,Bare substrate,NA,d9086647-3a82-4634-97bc-6e10347af39b,NA,Bare substrate
+3438,Hard Substrate,HS,Hard Substrate,33,49714,Bare substrate,NA,d9086647-3a82-4634-97bc-6e10347af39b,NA,Bare substrate
+5118,limestone_stable_substrate,limess,Hard Substrate,35,873,Bare substrate,NA,d9086647-3a82-4634-97bc-6e10347af39b,NA,Bare substrate
+95,Sediment,Sediment,Soft Substrate,22,25657,Bare substrate,NA,d9086647-3a82-4634-97bc-6e10347af39b,NA,Bare substrate
+4114,Substrate: Consolidated (hard),MGSC,Hard Substrate,11,382199,Bare substrate,NA,d9086647-3a82-4634-97bc-6e10347af39b,NA,Bare substrate
+4115,Substrate: Unconsolidated (soft),MGSU,Soft Substrate,9,6445,Bare substrate,NA,d9086647-3a82-4634-97bc-6e10347af39b,NA,Bare substrate
+369,Substrate: Unconsolidated : pebble/gravel,SUPG,Soft Substrate,6,5594,Bare substrate,NA,d9086647-3a82-4634-97bc-6e10347af39b,NA,Bare substrate
+1370,Orbicella franksi,OrbFrank,Hard coral,31,5589,Orbicella franksi,NA,28373b18-98da-4ffe-b482-c0b1b5d4e82c,NA,Orbicella
+423,Caulerpa,Caulerpa,Algae,78,20878,Caulerpa,NA,a769ae7f-afb0-4d84-a915-b7ac7079b771,NA,Macroalgae
+1328,CRED-Caulerpa spp,*CAUL,Algae,39,834,Caulerpa,NA,a769ae7f-afb0-4d84-a915-b7ac7079b771,NA,Macroalgae
+3208,Anemone,Anemone,Other Invertebrates,69,968,Anemone,NA,cbe35e54-4536-4a2d-8ded-8e831625bfd9,NA,Other invertebrates
+4774,Cnidaria: True anemones,CNTR,Other Invertebrates,12,2404,Anemone,NA,cbe35e54-4536-4a2d-8ded-8e831625bfd9,NA,Other invertebrates
+135,Sea anemone,ANEM,Other Invertebrates,7,564,Anemone,NA,cbe35e54-4536-4a2d-8ded-8e831625bfd9,NA,Other invertebrates
+1374,Pseudodiploria strigosa,PseuStrig,Hard coral,38,13952,Pseudodiploria strigosa,NA,4b503b74-748b-4773-a788-e16a84f59f81,NA,Pseudodiploria
+1279,CRED-Favites spp,*FAVS,Hard coral,9,3766,Favites,NA,6d63693c-592d-4da5-88d8-7125832cbd76,NA,Remove
+115,Favites,Favites,Hard coral,75,14966,Favites,NA,6d63693c-592d-4da5-88d8-7125832cbd76,NA,Remove
+110,Montastraea cavernosa,MontaCav,Hard coral,47,32593,Montastraea cavernosa,NA,e8edb2ee-0fc3-445d-8617-b660313c9606,NA,Montastraea
+3458,Hard Coral Digitate,HcD,Hard coral,115,2859,Hard coral,Digitate,350e9eb4-5e6b-48f5-aeb8-0bfdf023bf1c,eb67cf91-533d-465c-bace-c7c6d3901516,Hard coral - Digitate
+1280,CRED-Fungia spp,*FUSP,Hard coral,15,969,Fungia,NA,c3807ef9-6a47-429f-a63b-fe5e131e1316,NA,Fungiidae
+63,Fungia,Fungia,Hard coral,81,5800,Fungia,NA,c3807ef9-6a47-429f-a63b-fe5e131e1316,NA,Fungiidae
+1285,CRED-Hydnophora spp,*HYSP,Hard coral,9,1462,Hydnophora,NA,af6c43fd-0f41-4103-8ad5-8d1191bd4c9f,NA,Merulinidae
+554,Hydnophora,Hydno,Hard coral,63,5442,Hydnophora,NA,af6c43fd-0f41-4103-8ad5-8d1191bd4c9f,NA,Merulinidae
+132,Porites cylindrica,PorCyl,Hard coral,19,20071,Porites cylindrica,NA,53bd7b12-ef70-4c59-ae58-effdd03117ef,NA,Remove
+1591,Amphiroa sp.,Amphi,Algae,69,6090,Amphiroa,NA,6d24961e-18db-4b26-8523-5e612665ebcb,NA,Macroalgae
+1176,Porites furcata,PorFurc,Hard coral,23,1567,Porites furcata,NA,dcb64e93-80b1-4e60-a2ec-07489d0cd839,NA,Remove
+1289,CRED-Lobophyllia spp,*LOBS,Hard coral,9,2234,Lobophyllia,NA,e3ea5520-1e7f-41c6-a141-6c27327b56a1,NA,Lobophyllia
+68,Lobophyllia,Lobophyl,Hard coral,67,1282,Lobophyllia,NA,e3ea5520-1e7f-41c6-a141-6c27327b56a1,NA,Lobophyllia
+1188,Agaricia humilis,AgHum,Hard coral,28,470,Agaricia humilis,NA,f781e3c2-11db-40e2-b9a8-be43f54bc40c,NA,Agaricia
+1330,CRED-Dictyosphaeria spp,*DICT,Algae,41,1612,Dictyosphaeria,NA,c765d8f0-4641-408b-88d6-f4143ddc35db,NA,Macroalgae
+422,Dictyosphaeria,Dictyosph,Algae,31,1446,Dictyosphaeria,NA,c765d8f0-4641-408b-88d6-f4143ddc35db,NA,Macroalgae
+1041,Dictyosphaeria cavernosa,DCav,Algae,52,250,Dictyosphaeria,NA,c765d8f0-4641-408b-88d6-f4143ddc35db,NA,Macroalgae
+1040,Dictyosphaeria versluysii,DVers,Algae,37,161,Dictyosphaeria,NA,c765d8f0-4641-408b-88d6-f4143ddc35db,NA,Macroalgae
+3535,Palythoa caribaeorum,PCAR,Other Invertebrates,22,24478,Palythoa caribaeorum,NA,3914203f-f285-4fa8-8df3-4ffc91444c01,NA,Other invertebrates
+189,Seriatopora,Seriatop,Hard coral,65,1551,Seriatopora,NA,316eeb46-e24d-449b-a0b7-c0c8c0b803e6,NA,Seriatopora
+1283,CRED-Goniastrea spp,*GONS,Hard coral,12,7191,Goniastrea,NA,edbc586e-8499-4d31-9025-d15f2648f1fb,NA,Goniastrea
+117,Goniastrea,Goniastrea,Hard coral,73,23378,Goniastrea,NA,edbc586e-8499-4d31-9025-d15f2648f1fb,NA,Goniastrea
+1312,CRED-Turbinaria spp,*TURS,Hard coral,9,2350,Turbinaria-coral,NA,588f63cd-ffd2-4c38-8684-1208109165eb,NA,Turbinaria-coral
+199,Turbinaria (coral),Turbinaria,Hard coral,74,1551,Turbinaria-coral,NA,588f63cd-ffd2-4c38-8684-1208109165eb,NA,Turbinaria-coral
+1310,CRED-Stylophora spp,*STYS,Hard coral,9,2159,Stylophora,NA,c3ffe279-fb7b-499e-8fb8-b26403c80710,NA,Stylophora
+185,Stylophora,Styloph,Hard coral,72,3907,Stylophora,NA,c3ffe279-fb7b-499e-8fb8-b26403c80710,NA,Stylophora
+1895,ARMS-CREP-Tunicate Colonial,_TUNC,Other Invertebrates,15,23377,Tunicate,NA,281632f0-8fe1-41fc-a854-70434ebcb341,NA,Other invertebrates
+1320,CRED-Tunicate,*TUN,Other Invertebrates,13,1472,Tunicate,NA,281632f0-8fe1-41fc-a854-70434ebcb341,NA,Other invertebrates
+1854,Tunicate,Tunicate,Other Invertebrates,99,4698,Tunicate,NA,281632f0-8fe1-41fc-a854-70434ebcb341,NA,Other invertebrates
+1290,CRED-Leptoria spp,*LPHY,Hard coral,8,2566,Leptoria,NA,23a1cb26-5cff-49fe-923d-cecd75de7547,NA,Merulinidae
+623,Leptoria,Leptoria,Hard coral,69,2705,Leptoria,NA,23a1cb26-5cff-49fe-923d-cecd75de7547,NA,Merulinidae
+1773,Dendrogyra cylindrus,DenCyl,Hard coral,29,572,Dendrogyra cylindrus,NA,ec59b5b8-479e-403c-b1cf-e24e36c86fdf,NA,Remove
+2053,Pachyclavularia,Pachcla,Other Invertebrates,33,8502,Briareum,NA,f9480d47-b287-4151-87bc-82377a35651b,NA,Soft coral
+1378,Stephanocoenia intersepta,StephInt,Hard coral,28,898,Stephanocoenia intersepta,NA,c85f376f-a666-4c11-bc95-03e0a9dac856,NA,Hard coral
+114,Stephanocoenia michellini,SMIC,Hard coral,8,51,Stephanocoenia intersepta,NA,c85f376f-a666-4c11-bc95-03e0a9dac856,NA,Hard coral
+130,Goniopora,Goniopora,Hard coral,77,5648,Goniopora,NA,5f926f95-6cb8-46a5-9ff4-6777d33964e0,NA,Remove
+1274,CRED-Diploastrea spp,*DISP,Hard coral,9,896,Diploastrea,NA,dcbcb1cf-af35-4755-8023-6d1b6f4fd8cf,NA,Diploastrea
+164,Diploastrea,Diplo,Hard coral,63,3727,Diploastrea,NA,dcbcb1cf-af35-4755-8023-6d1b6f4fd8cf,NA,Diploastrea
+1187,Diploria labyrinthiformis,DiplLab,Hard coral,46,2955,Diploria labyrinthiformis,NA,194a4c71-0bc7-4f4d-9890-77a1487531a8,NA,Mussidae
+171,Poritidae (massive),POR_mas,Hard coral,8,2256,Poritidae,Massive,cec2b2df-ba65-4634-b371-75ad63428f26,888609b5-b58a-4d57-addc-a6935bba284b,Remove
+60,Astreopora,Astreo,Hard coral,73,9878,Astreopora,NA,22e2002e-0d55-4a43-88b3-caf04dbf874f,NA,Astreopora
+1271,CRED-Astreopora spp,*ASSP,Hard coral,12,10575,Astreopora,NA,22e2002e-0d55-4a43-88b3-caf04dbf874f,NA,Astreopora
+1286,CRED-Isopora spp,*ISSP,Hard coral,9,2729,Isopora,NA,8672775c-9167-42bd-b885-f1807f9ac9a4,NA,Isopora
+150,Isopora,Isopora,Hard coral,65,18493,Isopora,NA,8672775c-9167-42bd-b885-f1807f9ac9a4,NA,Isopora
+136,Cladiella,Clad,Other Invertebrates,10,531,Cladiella,NA,9c477221-ab35-48f6-ac9f-3b6ca4ac3a05,NA,Soft coral
+134,Corallimorpharia,Collimorph,Other Invertebrates,50,2468,Corallimorpharia,NA,1c3b186a-7e30-4fbb-bd0e-95362416e1dd,NA,Other invertebrates
+1177,Porites divaricata,PorDiv,Hard coral,28,16,Porites divaricata,NA,b09cfc80-dd4e-421e-a8ff-c456752f6dc2,NA,Remove
+1376,Siderastrea radians,SidRad,Hard coral,34,405,Siderastrea radians,NA,4b404c52-42a0-4efa-a950-2824489c8deb,NA,Siderastrea
+1364,Madracis auretenra,MadAure,Hard coral,14,682,Madracis auretenra,NA,9fc8164a-a7b9-43d4-bf2e-74e2f8a14d66,NA,Madracis
+2428,Agaricia,Agaricia,Hard coral,24,85,Agaricia,NA,79a84274-88f2-4135-90dd-8c1a501f87d5,NA,Agaricia
+637,Tridacna: Giant clam,GiCl,Other Invertebrates,53,789,Tridacna giant clam,NA,1aa38424-a8ab-4c85-b463-10606426e66e,NA,Other invertebrates
+3930,Tydemania spp.,Tyd,Algae,46,2096,Tydemania,NA,0ee04957-7c54-4def-b435-f0b8ecaa9632,NA,Macroalgae
+504,Lobophora variegata,LopVar,Algae,66,43319,Lobophora variegata,NA,120bacce-7caf-4a66-a7eb-42241d5ffdc8,NA,Macroalgae
+1769,Acropora palmata,AcrPalm,Hard coral,37,1657,Acropora palmata,NA,5090e2b1-d85c-40ec-8c70-8b34ea90a7f2,NA,Acropora
+201,Merulina,Merulina,Hard coral,61,3333,Merulina,NA,cdee93cc-5434-460e-b1e8-78b4164ab266,NA,Merulinidae
+1273,CRED-Cyphastrea spp,*CYPS,Hard coral,15,1397,Cyphastrea,NA,88d79d42-3fef-48ab-887e-dae60ae9072a,NA,Merulinidae
+61,Cyphastrea,Cypha,Hard coral,74,7211,Cyphastrea,NA,88d79d42-3fef-48ab-887e-dae60ae9072a,NA,Merulinidae
+4319,Sargassum hystrix,SarHys,Algae,12,8394,Sargassum hystrix,NA,a81dc2ce-99cd-4937-b06b-283ab18f0cc0,NA,Macroalgae
+1175,XENIIDAE,XEN,Other Invertebrates,6,15732,Xeniidae,NA,1cf7ce64-c413-490e-a261-e6effe8cbbb8,NA,Other invertebrates
+192,Echinophyllia,Echinophyl,Hard coral,59,436,Echinophyllia,NA,4111c390-2319-4f7a-a65c-76e9e37c8a45,NA,Remove
+1333,CRED-Microdictyon spp,*MICR,Algae,41,20679,Microdictyon,NA,68884c5d-d3d1-4a35-ab5a-4e98e5591d41,NA,Macroalgae
+452,Microdictyon,Microdicty,Algae,37,15908,Microdictyon,NA,68884c5d-d3d1-4a35-ab5a-4e98e5591d41,NA,Macroalgae
+168,Acroporidae (branching),ACR_br,Hard coral,10,12099,Acroporidae,Branching,a36b36c6-1f9f-4aa1-922c-61e74c786187,cf2deca6-53b8-4096-916f-32c2c71d14bf,Remove
+1262,CRED-Branching hard coral,*BR,Hard coral,16,1294,Acroporidae,Branching,a36b36c6-1f9f-4aa1-922c-61e74c786187,cf2deca6-53b8-4096-916f-32c2c71d14bf,Remove
+67,Leptoseris,Leptoseris,Hard coral,67,2253,Leptoseris,NA,8da49adb-eb3c-4486-a538-42114813b58e,NA,Agariciidae
+1863,Leptoseris incrustans,L.incrus,Hard coral,35,55,Leptoseris,NA,8da49adb-eb3c-4486-a538-42114813b58e,NA,Agariciidae
+58,Acanthastrea,Acanth,Hard coral,67,540,Acanthastrea,NA,d6511689-4a1f-4c28-b5bc-1eaf02b5dfbc,NA,Remove
+228,Echinoderms,ECHINODERM,Other Invertebrates,10,14,Other invertebrates,NA,3dc38d25-ed80-4049-af16-e85f04f97cc6,NA,Other invertebrates
+342,Echinoderms: sea urchin,Urchins,Other Invertebrates,160,4120,Sea urchin,NA,f7980725-60b3-47c9-abd2-0a006ea30061,NA,Other invertebrates
+1648,Crown of Thorns Sea Star,COT,Other Invertebrates,38,39,Acanthaster planci,NA,2bdfc0fe-e0d3-4be2-970b-508ea40e1495,NA,Other invertebrates
+190,Coscinaraea,Cosci,Hard coral,58,271,Coscinaraea,NA,53b51b8f-3d3d-426a-9316-5057cc57d7f9,NA,Hard coral
+1272,CRED-Coscinaraea spp,*COSP,Hard coral,16,1073,Coscinaraea,NA,53b51b8f-3d3d-426a-9316-5057cc57d7f9,NA,Hard coral
+1373,Pseudodiploria clivosa,PseuCliv,Hard coral,32,906,Pseudodiploria clivosa,NA,e7f1d46b-a613-40fe-968f-8fddc7c13c98,NA,Pseudodiploria
+69,Montastraea,Montastr,Hard coral,46,998,Montastraea,NA,e2a62f32-1424-44fa-ba52-fbdd4e9ee6f0,NA,Montastraea
+64,Gardineroseris,Gardineros,Hard coral,61,1002,Gardineroseris,NA,04b943e8-610c-4158-b4c3-9dd884ab9376,NA,Agariciidae
+1183,Meandrina meandrites,MM,Hard coral,34,2819,Meandrina meandrites,NA,330fdf21-d50d-4e03-9421-57a66d892d0a,NA,Meandrina meandrites
+1298,CRED-Pachyseris spp,*PACS,Hard coral,11,2611,Pachyseris,NA,4d493a0d-6c7e-4f5f-8a71-06bac94a8c53,NA,Hard coral
+71,Pachyseris,Pachyseris,Hard coral,63,2256,Pachyseris,NA,4d493a0d-6c7e-4f5f-8a71-06bac94a8c53,NA,Hard coral
+1775,Dichocoenia stokesi,Dicho_stok,Hard coral,31,284,Dichocoenia stokesii,NA,a2935afb-895a-44b8-8f94-c83a14f8f110,NA,Remove
+2037,Alveopora,Alveopora,Hard coral,48,52,Alveopora,NA,6a813c81-58a1-4fb4-ace8-b62e7c4183ae,NA,Remove
+220,Codium,Cod,Algae,76,1479,Codium,NA,b8c4efbb-9c72-4711-afa7-869e44a13f1f,NA,Macroalgae
+1609,Dipsastraea,Dipsa,Hard coral,63,12712,Dipsastraea,NA,d41cc126-63b8-4fa7-88d6-9b9b7648ba80,NA,Dipsastraea
+1309,CRED-Psammocora spp,*PSSP,Hard coral,15,712,Psammocora,NA,748cb267-f47c-4920-b5b0-39109ade448f,NA,Psammocora
+75,Psammocora,Psammo,Hard coral,67,6715,Psammocora,NA,748cb267-f47c-4920-b5b0-39109ade448f,NA,Psammocora
+1781,Madracis decactis,MadDeca,Hard coral,32,1547,Madracis decactis,NA,62b87704-ca62-415d-a340-48764e8b6c69,NA,Madracis
+1360,Agaricia lamarcki,AgLam,Hard coral,27,197,Agaricia lamarcki,NA,89e34529-a92a-4216-b549-dd2110c07df0,NA,Agaricia
+1899,ARMS-CREP-Bryozoan,_BRY,Other Invertebrates,15,40729,Bryozoan,NA,47347942-7abe-4a3c-882f-20e595c8a261,NA,Other invertebrates
+1853,Bryozoan,bryozoan,Other Invertebrates,74,1700,Bryozoan,NA,47347942-7abe-4a3c-882f-20e595c8a261,NA,Other invertebrates
+584,Ulva,Ulva,Algae,79,19072,Ulva,NA,4fab6349-d704-4883-bb83-6288e3c7b03f,NA,Macroalgae
+1287,CRED-Leptastrea spp,*LEPT,Hard coral,15,2910,Leptastrea,NA,70407def-b048-49d4-9a43-3eb0021f7b68,NA,Leptastrea
+66,Leptastrea,Lepta,Hard coral,90,14101,Leptastrea,NA,70407def-b048-49d4-9a43-3eb0021f7b68,NA,Leptastrea
+2498,Leptastrea bewickensis,LEBEW,Hard coral,35,18,Leptastrea,NA,70407def-b048-49d4-9a43-3eb0021f7b68,NA,Leptastrea
+610,Euphyllia,Euphyllia,Hard coral,28,10,Euphyllia,NA,8b706c7f-fcf7-4d03-b271-58a06d77fbb4,NA,Hard coral
+1356,Acropora prolifera,AcrPro,Hard coral,23,3,Acropora prolifera,NA,9f6436ae-e654-4845-a853-85344a2f8675,NA,Acropora
+609,Plerogyra,Plero,Hard coral,32,39,Plerogyra,NA,eaebab16-9d01-4723-b120-6239314826ab,NA,Hard coral
+3097,Hard Coral (columnar),HC_column,Hard coral,16,41,Hard coral,Columnar,350e9eb4-5e6b-48f5-aeb8-0bfdf023bf1c,cbff6080-6387-44e5-b7ad-35f35f3db3a7,Hard coral
+218,Asparagopsis,Asparago,Algae,48,646,Asparagopsis,NA,482031e2-dcaf-44ba-af36-fa425bb72533,NA,Macroalgae
+1355,CRED-Asparagopsis spp,*ASPP,Algae,16,1617,Asparagopsis,NA,482031e2-dcaf-44ba-af36-fa425bb72533,NA,Macroalgae
+7005,Halophilia,halphil,Other,13,22229,Halophila,NA,01d8297a-1d37-4ccf-bea5-dea733b1f575,NA,Seagrass
+1777,Favia fragum,FaviaFrag,Hard coral,22,19,Favia fragum,NA,ac80a65f-d18b-4066-8162-2f3624f40e90,NA,Remove
+200,Symphyllia,Symph,Hard coral,59,1196,Symphyllia,NA,f87eae02-9123-4931-98a0-8d635670a46b,NA,Mussidae
+1317,CRED-Corallimorph,*CMOR,Other Invertebrates,17,5792,Coralimorph,NA,a19ad300-fc97-4126-867e-19b79f2d3041,NA,Coralimorph
+390,Mycetophyllia,Mycetophy,Hard coral,21,1,Mycetophyllia,NA,d6d74742-d8ed-4954-b164-fc6607c3efa9,NA,Mussidae
+1362,Isophyllia rigida,IsophRig,Hard coral,14,8,Isophyllia rigida,NA,dfed579c-b5d0-41a9-bfc1-e2dbbd94eb7e,NA,Mussidae
+77,Stylocoeniella,Styloc,Hard coral,55,85,Stylocoeniella,NA,4fddc309-01c7-4040-86b4-f80f0f0235e9,NA,Hard coral
+2457,Helioseris cucullata,HeCuc,Hard coral,22,1,Helioseris cucullata,NA,58c5b3fa-7afc-4f20-8f9e-18e6aa14aeb5,NA,Agariciidae
+145,Sea cucumber,cucumber,Other Invertebrates,28,223,Sea cucumber,NA,702a838d-aebd-4547-bc07-e161c3262cbc,NA,Other invertebrates
+474,Siderastrea,Siderastr,Hard coral,35,2586,Siderastrea,NA,33f6866f-cc76-4125-b27d-84ac0110ba94,NA,Siderastrea
+1877,ARMS-CREP-Green encrusting macroalgae,_GREN,Algae,15,1445,Macroalgae,Encrusting,09226989-50e7-4c40-bd36-5bcef32ee7a1,b406252b-c160-4fd6-b7f9-f61d5e2779a5,Macroalgae
+1337,CRED-Encrusting macroalgae,*EMA,Algae,29,163479,Macroalgae,Encrusting,09226989-50e7-4c40-bd36-5bcef32ee7a1,b406252b-c160-4fd6-b7f9-f61d5e2779a5,Macroalgae
+321,Macroalgae: Encrusting,MAEN,Algae,14,99636,Macroalgae,Encrusting,09226989-50e7-4c40-bd36-5bcef32ee7a1,b406252b-c160-4fd6-b7f9-f61d5e2779a5,Macroalgae
+324,Macroalgae: Encrusting: brown,MAENB,Algae,38,11069,Macroalgae,Encrusting,09226989-50e7-4c40-bd36-5bcef32ee7a1,b406252b-c160-4fd6-b7f9-f61d5e2779a5,Macroalgae
+323,Macroalgae: Encrusting: green,MAENG,Algae,36,10417,Macroalgae,Encrusting,09226989-50e7-4c40-bd36-5bcef32ee7a1,b406252b-c160-4fd6-b7f9-f61d5e2779a5,Macroalgae
+322,Macroalgae: Encrusting: red,MAENR,Algae,17,3858,Macroalgae,Encrusting,09226989-50e7-4c40-bd36-5bcef32ee7a1,b406252b-c160-4fd6-b7f9-f61d5e2779a5,Macroalgae
+183,Sponge (massive),SP_mass,Other Invertebrates,19,243,Sponge,Massive,6b9fdd82-685f-4f21-8fa3-883e06be2c30,888609b5-b58a-4d57-addc-a6935bba284b,Other invertebrates
+608,Ctenactis,Ctena,Hard coral,52,67,Ctenactis,NA,6c10a5ed-1e35-4e73-9dff-b6c42fb7bdad,NA,Fungiidae
+3286,Spyridia filamentosa,SPYR,Algae,9,957,Spyridia filamentosa,NA,42bada38-002f-4636-864f-920bab234329,NA,Macroalgae
+634,Tubipora musica,TubiMus,Other Invertebrates,7,35,Tubipora musica,NA,8a35dc37-8c8b-4f2f-a1e3-725baba09427,NA,Hard coral
+317,Macroalgae: Erect coarse branching,MAEC,Algae,11,29202,Macroalgae,Branching,09226989-50e7-4c40-bd36-5bcef32ee7a1,cf2deca6-53b8-4096-916f-32c2c71d14bf,Macroalgae
+418,Neomeris,Neomeris,Algae,56,201,Neomeris,NA,436b15f7-c235-4124-8eef-4aa2e25f2c4d,NA,Macroalgae
+1933,Neomeris spp.,Neo_spp,Algae,31,4,Neomeris,NA,436b15f7-c235-4124-8eef-4aa2e25f2c4d,NA,Macroalgae
+147,Encrusting sponge,ENSP,Other Invertebrates,61,31409,Sponge,Encrusting,6b9fdd82-685f-4f21-8fa3-883e06be2c30,b406252b-c160-4fd6-b7f9-f61d5e2779a5,Other invertebrates
+387,Madracis,Madracis,Hard coral,25,92,Madracis,NA,223860e9-b7b5-412c-bcab-0f16d43928fb,NA,Madracis
+1887,ARMS-CREP-Unavailable,_UNAV,Other,17,22220,Unknown,NA,b72e02c1-eab3-4781-9eb4-d191bb84e5c7,NA,Remove
+1354,CRED-Unclassified/Unknown,*UNK,Other,21,71647,Unknown,NA,b72e02c1-eab3-4781-9eb4-d191bb84e5c7,NA,Remove
+118,Unclear,Unc,Other,43,63347,Unknown,NA,b72e02c1-eab3-4781-9eb4-d191bb84e5c7,NA,Remove
+4145,Unidentified,UNIden,Other,8,37633,Unknown,NA,b72e02c1-eab3-4781-9eb4-d191bb84e5c7,NA,Remove
+1647,Unknown,Unk,Other,228,23705,Unknown,NA,b72e02c1-eab3-4781-9eb4-d191bb84e5c7,NA,Remove
+643,Algae (foliose),AL_fol,Algae,6,1753,Macroalgae,Foliose,09226989-50e7-4c40-bd36-5bcef32ee7a1,e149db12-9398-4a10-8642-5db70d1a8505,Macroalgae
+3461,Oulophyllia,Ouloph,Hard coral,45,43,Oulophyllia,NA,190d2f0d-67be-48a3-8ea0-33e66546f3f7,NA,Merulinidae
+170,Pocilloporidae,POCIL,Hard coral,10,4379,Pocilloporidae,NA,6580c490-3a3c-4969-b91f-18d7edd82074,NA,Remove
+1363,Isophyllia sinuosa,IsophSin,Hard coral,24,18,Isophyllia sinuosa,NA,70635707-407e-4348-b685-3e44f121875f,NA,Mussidae
+2451,Pseudopterogorgia,Pseudopter,Other Invertebrates,24,10102,Pseudopterogorgia,NA,7f309e4e-54a7-4086-83a0-b61ce0d9476c,NA,Soft coral
+3232,Cycloseris,Cyclo,Hard coral,44,44,Cycloseris,NA,bc8952f9-39d8-47f5-87a1-7c2fb324e665,NA,Fungiidae
+3464,Coeloseris,Coeloseris,Hard coral,20,7,Coeloseris,NA,d491765d-5c50-4dcd-9493-2edfa46f0656,NA,Agariciidae
+1359,Agaricia grahamae,AgGra,Hard coral,19,9,Agaricia grahamae,NA,53cf4a1c-1b45-48b6-a6c0-7a4752ad24b9,NA,Agaricia
+1614,Plesiastrea,Plesiastr,Hard coral,21,103,Plesiastrea,NA,5ab3e132-8c64-4e65-8a5e-25d92f284331,NA,Hard coral
+2616,Astrea,Astrea,Hard coral,47,3530,Astrea,NA,63f29fbf-76db-4a6b-9559-dfb7277ba6b5,NA,Merulinidae
+1358,Agaricia fragilis,AgFra,Hard coral,10,6,Agaricia fragilis,NA,aeef595c-8a38-4e57-9a32-45676e09edec,NA,Agaricia
+2108,Halophila stipulacea,HalophStip,Seagrass,23,176145,Halophila stipulacea,NA,fcf0ddd7-2b6b-4863-b1c8-9bb0ec8277c5,NA,Seagrass
+87,Blastomussa,Blast,Hard coral,12,17,Blastomussa,NA,123d5e37-3561-4873-89fd-fd1a5ccbd3c5,NA,Hard coral
+2659,Orbicella,Orbicella,Hard coral,20,13,Orbicella,NA,1583ffd5-f3a1-4346-ab3c-ada28292b22d,NA,Orbicella
+1367,Mycetophyllia ferox,MycetFer,Hard coral,21,6,Mycetophyllia ferox,NA,17131731-e6c8-431e-9a55-8cc438ec5a23,NA,Mussidae
+1964,Scapophyllia,Scapophyll,Hard coral,27,37,Scapophyllia,NA,17bbf449-3823-4806-9e7c-9cd47f1288e6,NA,Merulinidae
+3482,Halodule wrightii,HalodWri,Seagrass,13,2762,Halodule wrightii,NA,f6f6d632-4bdf-4755-97a6-b2cb3d2d69f8,NA,Seagrass
