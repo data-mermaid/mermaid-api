@@ -14,6 +14,7 @@ from .classification import (  # noqa: F401
     Classifier,
     Image,
     Label,
+    LabelMapping,
     Point,
 )
 from .gfcr import (  # noqa: F401

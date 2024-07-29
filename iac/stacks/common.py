@@ -110,6 +110,15 @@ class CommonStack(Stack):
             block_public_access=s3.BlockPublicAccess.BLOCK_ALL,
         )
 
+        self.config_bucket = s3.Bucket(
+            self,
+            id="MermaidApiConfigBucket",
+            bucket_name="mermaid-config",
+            removal_policy=RemovalPolicy.RETAIN,
+            public_read_access=False,
+            block_public_access=s3.BlockPublicAccess.BLOCK_ALL,
+        )
+
         self.image_processing_bucket = s3.Bucket(
             self,
             id="MermaidImageProcessingBackupBucket",
