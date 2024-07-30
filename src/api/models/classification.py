@@ -23,7 +23,7 @@ def select_image_storage():
             bucket_name=settings.IMAGE_PROCESSING_BUCKET,
             access_key=settings.IMAGE_BUCKET_AWS_ACCESS_KEY_ID,
             secret_key=settings.IMAGE_BUCKET_AWS_SECRET_ACCESS_KEY,
-            location=settings.IMAGE_BUCKET_AWS_LOCATION,
+            location=settings.IMAGE_S3_PATH,
         )
 
 
@@ -74,7 +74,7 @@ class LabelMapping(BaseModel):
 
 class Classifier(BaseModel):
     name = models.CharField(max_length=50)
-    version = models.CharField(max_length=11)
+    version = models.CharField(max_length=11, help_text="Classifier version (pattern: v[Version Number])")
     patch_size = models.IntegerField(help_text="Number of pixels")
     num_points = models.IntegerField(default=25)
     description = models.TextField(max_length=1000, blank=True)
@@ -83,16 +83,21 @@ class Classifier(BaseModel):
     class Meta:
         db_table = "class_classifier"
 
+    @classmethod
+    def latest(self):
+        return self.objects.order_by("-created_on").first()
+
 
 class Image(BaseModel):
     collect_record_id = models.UUIDField(db_index=True)
 
     image = models.ImageField(upload_to="", storage=select_image_storage)
-    original_image_checksum = models.CharField(max_length=64, blank=True, null=True)
     thumbnail = models.ImageField(upload_to="", storage=select_image_storage, null=True, blank=True)
-
     name = models.CharField(max_length=200, blank=True, null=True)
+    original_image_checksum = models.CharField(max_length=64, blank=True, null=True)
     original_image_name = models.CharField(max_length=200, blank=True, null=True)
+    original_image_width = models.PositiveIntegerField(blank=True, null=True)
+    original_image_height = models.PositiveIntegerField(blank=True, null=True)
     photo_timestamp = models.DateTimeField(null=True, blank=True)
     location = models.PointField(srid=4326, blank=True, null=True)
     comments = models.TextField(max_length=1000, blank=True, null=True)
@@ -144,7 +149,6 @@ class Image(BaseModel):
 class Point(BaseModel):
     row = models.IntegerField()
     column = models.IntegerField()
-    point_number = models.IntegerField()
     image = models.ForeignKey(Image, on_delete=models.CASCADE, related_name="points")
 
     class Meta:

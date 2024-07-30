@@ -1,20 +1,31 @@
+import sys
 from django.db.models import Q
 from rest_condition import And
-from rest_framework import status
+from rest_framework import serializers, status
 from rest_framework.response import Response
 
 from ...exceptions import check_uuid
-from ...models import BENTHICPQT_PROTOCOL, CollectRecord, Image, ObsBenthicPhotoQuadrat
+from ...models import BENTHICPQT_PROTOCOL, ClassificationStatus, CollectRecord, Image, ObsBenthicPhotoQuadrat
 from ...permissions import CollectRecordOwner
 from ...utils import truthy
-from ...utils.classification import classify_image
+from ...utils.classification import classify_image_job, create_classification_status
 from ..base import BaseAPISerializer, BaseProjectApiViewSet
+from .image_classification import ClassificationStatusSerializer
 
 
 class ImageSerializer(BaseAPISerializer):
+    classification_status = serializers.SerializerMethodField()
+
     class Meta:
         model = Image
+        additional_fields = ["classification_status"]
         exclude = ["original_image_checksum"]
+    
+    def get_classification_status(self, obj):
+        latest_status = obj.statuses.order_by("-created_on").first()
+        if latest_status:
+            return ClassificationStatusSerializer(latest_status).data
+        return None
 
 
 class ImageViewSet(BaseProjectApiViewSet):
@@ -28,7 +39,7 @@ class ImageViewSet(BaseProjectApiViewSet):
         cr_ids = CollectRecord.objects.filter(project_id=project_pk).values_list("id", flat=True)
         return qs.filter(
             Q(collect_record_id__in=cr_ids)
-            | Q(**{f"observation__{ObsBenthicPhotoQuadrat.project_lookup}": project_pk})
+            | Q(**{f"obs_benthic_photo_quadrats__{ObsBenthicPhotoQuadrat.project_lookup}": project_pk})
         )
 
     @classmethod
@@ -40,7 +51,7 @@ class ImageViewSet(BaseProjectApiViewSet):
         return filtered_actions
 
     def create(self, request, *args, **kwargs):
-        image = request.data.get("image")
+        image_file = request.data.get("image")
         collect_record_id = request.data.get("collect_record_id")
         trigger_classification = truthy(request.data.get("classify", True))
 
@@ -60,12 +71,14 @@ class ImageViewSet(BaseProjectApiViewSet):
             )
 
         try:
-            img = Image.objects.create(collect_record_id=collect_record.pk, image=image)
-        except:
-            return Response(data=data, status=status.HTTP_422_UNPROCESSABLE_ENTITY)
+            image_record = Image.objects.create(collect_record_id=collect_record.pk, image=image_file)
+        except Exception as err:
+            print(f"Create image record: {err}")
+            return Response(data=None, status=status.HTTP_422_UNPROCESSABLE_ENTITY)
 
         if trigger_classification:
-            classify_image(img)
+            create_classification_status(image_record, status=ClassificationStatus.PENDING)
+            classify_image_job(image_record)
 
-        data = ImageSerializer(instance=img).data
+        data = ImageSerializer(instance=image_record).data
         return Response(data=data, status=status.HTTP_201_CREATED)

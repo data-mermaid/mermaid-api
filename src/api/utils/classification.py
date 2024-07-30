@@ -1,21 +1,38 @@
 import datetime
 import hashlib
+import math
 
+from operator import itemgetter
 import os
 from enum import Enum
 from io import BytesIO
-from typing import Any, Dict, Optional
+from pathlib import Path
+from typing import Any, Dict, Optional, Tuple
 
 import pytz
-from django.contrib.gis.geos import Point
+from django.conf import settings
+from django.contrib.gis.geos import Point as GEOSPoint
 from django.core.files.base import ContentFile
 from django.db.models.fields.files import ImageFieldFile
+from django.db import transaction
+from django.utils import timezone
 from exif import Image as ExifImage
 from PIL import Image as PILImage
 from PIL.ExifTags import TAGS
+from spacer.extract_features import EfficientNetExtractor
+from spacer.messages import DataLocation, ClassifyImageMsg
+from spacer.tasks import classify_image as spacer_classify_image
 
-from ..models import Image
+from ..models import Annotation, Classifier, ClassificationStatus, Image, Point
 from .encryption import encrypt_string
+from .q import submit_job
+from .s3 import download_directory
+
+
+CLASSIFIER_CONFIG_S3_PATH = "classifier"
+CLASSIFIER_CONFIG_LOCAL_CACHE_DIR = "/tmp/classifier"
+CLASSIFIER_FILE_NAME = "classifier.pkl"
+WEIGHTS_FILE_NAME = "efficientnet_weights.pt"
 
 
 def create_unique_image_name(image: Image) -> str:
@@ -91,7 +108,7 @@ def extract_datetime_stamp(exif_details: Dict[str, Any]) -> Optional[datetime.da
     return dt_local.astimezone(pytz.UTC)
 
 
-def extract_location(exif_details: Dict[str, Any]) -> Optional[Point]:
+def extract_location(exif_details: Dict[str, Any]) -> Optional[GEOSPoint]:
     latitude_ref = exif_details.get("gps_latitude_ref")  # N or S
     latitude_dms = exif_details.get("gps_latitude")  # tuple (DMS)
     longitude_ref = exif_details.get("gps_longitude_ref")  # E or W
@@ -110,7 +127,7 @@ def extract_location(exif_details: Dict[str, Any]) -> Optional[Point]:
     latitude *= -1 if latitude_ref == "S" else 1
     longitude *= -1 if longitude_ref == "W" else 1
 
-    return Point(longitude, latitude)
+    return GEOSPoint(longitude, latitude)
 
 
 def correct_image_orientation(image_record: Image):
@@ -165,9 +182,151 @@ def store_exif(image_record: Image) -> Dict[str, Any]:
     image_record.photo_timestamp = extract_datetime_stamp(exif_details)
 
 
-def create_points(image):
-    ...
+def create_classification_status(image, status, message=None):
+    try:
+        ClassificationStatus.objects.create(
+            image=image,
+            status=status,
+            message=message
+        )
+    except Exception as err:
+        print(f"Writing classification status Image {image.pk}, status: {status}: {err}")
 
 
-def classify_image(image_record_id, background=True):
-    ...
+# -------------------------------
+
+def generate_points(image: Image, num_points: int, margin: Tuple[int, int]=(0, 0)):
+    assert len(margin) == 2
+
+    h = image.original_image_height
+    w = image.original_image_width
+
+    points_per_side = math.ceil(math.sqrt(num_points)) + 1
+    shift_y = (h - 2 * margin[0]) / points_per_side
+    shift_x = (w - 2 * margin[1]) / points_per_side
+
+    points_per_side -= 1
+
+    start_x = margin[1] + shift_x
+    start_y = margin[0] + shift_y
+    coords = []
+    for y in range(points_per_side):
+        cur_y = int(start_y + (shift_y * y))
+        for x in range(points_per_side):
+            coords.append((cur_y, int(start_x + (shift_x * x))))
+    
+    return coords
+
+
+def _fetch_and_cache_classifier_config(classifier: Classifier):
+    cls_version = classifier.version
+
+    classifier_s3_dir = f"{CLASSIFIER_CONFIG_S3_PATH}/{cls_version}"
+    classifier_local_dir = f"{CLASSIFIER_CONFIG_LOCAL_CACHE_DIR}/{cls_version}"
+    download_directory(settings.AWS_CONFIG_BUCKET, classifier_s3_dir, classifier_local_dir)
+
+
+def _get_classifier_and_weights(classifier:Optional[Classifier] = None) -> Tuple[DataLocation, DataLocation]:
+    # TODO: Handle if classifier configs don't exist for classifier instance.
+    if not classifier:
+        classifier = Classifier.latest()
+
+    cls_version = classifier.version
+    classifier_dir = f"{CLASSIFIER_CONFIG_LOCAL_CACHE_DIR}/{cls_version}"
+    classifier_path = f"{classifier_dir}/{CLASSIFIER_FILE_NAME}"
+    weights_path = f"{classifier_dir}/{WEIGHTS_FILE_NAME}"
+
+    if not Path(classifier_path).exists() or not Path(weights_path).exists():
+        _fetch_and_cache_classifier_config(classifier)
+
+    return (
+        DataLocation("filesystem", classifier_path),
+        DataLocation("filesystem", weights_path),
+    )
+
+
+def _get_image_location(image: Image):
+    if settings.ENVIRONMENT == "local":
+        return DataLocation("filesystem", image.image.path)
+    else:
+        return DataLocation(
+            storage_type="url",
+            key=image.image.name,
+            bucket_name=settings.IMAGE_PROCESSING_BUCKET,
+        )
+
+
+@transaction.atomic
+def _write_classification_results(image, score_sets, label_ids):
+    _annotations = []
+    _points = []
+
+    created_on = timezone.now()
+    for row, col, scores in score_sets:
+        point = Point(
+            row=row,
+            column=col,
+            image=image,
+            created_on=created_on,
+            updated_on=created_on,
+        )
+        _points.append(point)
+
+        top_predictions = reversed(zip(label_ids, scores), key=itemgetter(1))
+        for label_id, score in top_predictions[0:3]:
+            _annotations.append(Annotation(
+                point=point,
+                label_id=label_id,
+                score=score,
+                created_on=created_on,
+                updated_on=created_on,
+            ))
+
+    Point.objects.bulk_create(_points)
+    Annotation.objects.bulk_create(_annotations)
+    
+
+def _classify_image(image_record_id):
+    image = Image.objects.get_or_none(id=image_record_id)
+    if not image:
+        print(f"Image classification skipped, image [{image_record_id}] does not exist.")
+        return
+
+    create_classification_status(image, ClassificationStatus.RUNNING)
+
+    try:
+        data_location = _get_image_location(image)
+        classifier, weights = _get_classifier_and_weights()
+        points = generate_points(image, 25)
+
+        message = ClassifyImageMsg(
+            job_token=image_record_id,
+            image_loc=data_location,
+            extractor=EfficientNetExtractor(
+                data_locations=dict(
+                    weights=weights,
+                ),
+            ),
+            rowcols=points,
+            classifier_loc=classifier,
+        )
+        response_message = spacer_classify_image(message)
+        label_ids = response_message.classes
+        score_sets = response_message.scores
+        _write_classification_results(image, score_sets, label_ids)
+
+        ClassificationStatus.objects.create(
+            image=image,
+            status=ClassificationStatus.COMPLETED
+        )
+        create_classification_status(image, ClassificationStatus.COMPLETED)
+    except Exception as err:
+        create_classification_status(image, ClassificationStatus.FAILED, str(err))
+
+
+def classify_image_job(image_record_id):
+    return submit_job(0, _classify_image, image_record_id=image_record_id)
+
+
+def classify_image(image_record_id):
+    _classify_image(image_record_id)
