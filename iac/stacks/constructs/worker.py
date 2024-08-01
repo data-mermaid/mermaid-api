@@ -90,14 +90,14 @@ class QueueWorker(Construct):
             "environment": environment,
             "command": ["python", "manage.py", "simpleq_worker"],
             "min_scaling_capacity": 0,  # service should only run if ness
-            "max_scaling_capacity": 1,  # only run one task at a time to process messages
+            "max_scaling_capacity": 3,  # only run one task at a time to process messages
             # this defines how the service shall autoscale based on the
             # SQS queue's ApproximateNumberOfMessagesVisible metric
             "scaling_steps": [
-                # when 0 messages, scale down
-                appscaling.ScalingInterval(upper=0, change=-1),
-                # when >=1 messages, scale up
-                appscaling.ScalingInterval(lower=1, change=+1),
+                # when <=50 messages, scale down
+                appscaling.ScalingInterval(upper=50, change=-1),
+                # when >=50 messages, scale up
+                appscaling.ScalingInterval(lower=50, change=+1),
             ],
             "capacity_provider_strategies": [
                 ecs.CapacityProviderStrategy(
