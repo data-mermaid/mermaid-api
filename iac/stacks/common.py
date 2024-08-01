@@ -173,7 +173,7 @@ class CommonStack(Stack):
             machine_image=ecs.EcsOptimizedImage.amazon_linux2(),
             min_capacity=1,
             max_capacity=4,
-            max_instance_lifetime=Duration.hours(1),
+            max_instance_lifetime=Duration.days(1),
             update_policy=autoscale.UpdatePolicy.rolling_update(),
             init=ec2.CloudFormationInit.from_elements(
                 ec2.InitCommand.shell_command(
