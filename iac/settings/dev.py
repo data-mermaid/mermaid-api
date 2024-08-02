@@ -11,8 +11,8 @@ DEV_SETTINGS = ProjectSettings(
         container_memory=1024,
         container_count=1,
         # SQS
-        sqs_cpu=1024,
-        sqs_memory=2048,
+        sqs_cpu=512,
+        sqs_memory=1024,
         # Backup
         backup_cpu=512,
         backup_memory=1024,
