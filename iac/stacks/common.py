@@ -179,6 +179,9 @@ class CommonStack(Stack):
         )
         auto_scaling_group.add_user_data("yum update --security")
 
+        # Note: this will allow any container running on these EC2s to access RDS
+        self.database.connections.allow_default_port_from(auto_scaling_group)
+
         capacity_provider = ecs.AsgCapacityProvider(
             self,
             "AsgCapacityProvider",
