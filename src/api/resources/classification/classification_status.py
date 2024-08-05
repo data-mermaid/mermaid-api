@@ -14,9 +14,9 @@ class ClassificationStatusSerializer(BaseAPISerializer):
 
 
 class ClassificationStatusFilterSet(BaseAPIFilterSet):
-    collect_record = filters.BooleanFilter(field_name="collect_record_id", method="filter_covars")
+    collect_record = filters.BooleanFilter(field_name="collect_record_id", method="filter_collect_record")
 
-    def filter_covars(self, queryset, name, value):
+    def filter_collect_record(self, queryset, name, value):
         return queryset.filter(image__collect_record_id=value)
 
     class Meta:
