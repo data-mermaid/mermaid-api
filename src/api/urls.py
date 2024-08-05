@@ -5,6 +5,7 @@ from .resources.benthic_attribute import BenthicAttributeViewSet
 from .resources.benthic_transect import BenthicTransectViewSet
 from .resources.choices import ChoiceViewSet
 from .resources.classification.image import ImageViewSet
+from .resources.classification.classification_status import ClassificationStatusViewSet
 from .resources.classification.label import LabelMappingViewSet
 from .resources.collect_record import CollectRecordViewSet
 from .resources.contact import contact_mermaid, contact_project_admins
@@ -106,8 +107,6 @@ router.register(
     ProjectSummarySampleEventViewSet,
     "projectsummarysampleevents",
 )
-
-router.register(r"labelmappings", LabelMappingViewSet, "labelmapping")
 
 # PROJECT-SPECIFIC - MERMAID
 project_router = routers.NestedSimpleRouter(router, r"projects", lookup="project")
@@ -228,7 +227,8 @@ project_router.register(
 
 # Classification
 project_router.register(r"classification/images", ImageViewSet, "image")
-
+project_router.register(r"classification/statuses", ClassificationStatusViewSet, "status")
+router.register(r"classification/labelmappings", LabelMappingViewSet, "labelmapping")
 
 # multi model sample unit method reports
 
