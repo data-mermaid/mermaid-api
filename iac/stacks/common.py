@@ -173,8 +173,14 @@ class CommonStack(Stack):
             machine_image=ecs.EcsOptimizedImage.amazon_linux2(),
             min_capacity=1,
             max_capacity=4,
+            max_instance_lifetime=Duration.days(1),
+            update_policy=autoscale.UpdatePolicy.rolling_update(),
             # NOTE: not setting the desired capacity so ECS can manage it.
         )
+        auto_scaling_group.add_user_data("yum update --security")
+
+        # Note: this will allow any container running on these EC2s to access RDS
+        self.database.connections.allow_default_port_from(auto_scaling_group)
 
         capacity_provider = ecs.AsgCapacityProvider(
             self,
