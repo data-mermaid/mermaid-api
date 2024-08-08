@@ -9,13 +9,24 @@ from typing import Any, Dict, Optional
 import pytz
 from django.contrib.gis.geos import Point
 from django.core.files.base import ContentFile
+from django.core.files.images import ImageFile
 from django.db.models.fields.files import ImageFieldFile
 from exif import Image as ExifImage
 from PIL import Image as PILImage
 from PIL.ExifTags import TAGS
+from plum.exceptions import UnpackError
 
 from ..models import Image
 from .encryption import encrypt_string
+
+
+def is_image_valid(image: ImageFieldFile):
+    try:
+        with PILImage.open(image.image) as img:
+            img.verify()
+        return True
+    except (AttributeError, TypeError, IOError, SyntaxError) as e:
+        return False
 
 
 def create_unique_image_name(image: Image) -> str:
@@ -143,9 +154,12 @@ def store_exif(image_record: Image) -> Dict[str, Any]:
     if img.closed:
         img.open("rb")
 
-    exif_image = ExifImage(img.read())
+    try:
+        exif_image = ExifImage(img.read())
+    except UnpackError:
+        exif_image = None
 
-    if exif_image.has_exif is False:
+    if exif_image is None or exif_image.has_exif is False:
         return
 
     exif_details = {}

@@ -61,8 +61,12 @@ class ImageViewSet(BaseProjectApiViewSet):
 
         try:
             img = Image.objects.create(collect_record_id=collect_record.pk, image=image)
-        except:
-            return Response(data=data, status=status.HTTP_422_UNPROCESSABLE_ENTITY)
+        except Exception as err:
+            if hasattr(err, 'message'):
+                msg = err.message
+            else:
+                msg = str(err)
+            return Response(data={"detail": msg}, status=status.HTTP_422_UNPROCESSABLE_ENTITY)
 
         if trigger_classification:
             classify_image(img)

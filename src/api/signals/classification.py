@@ -8,18 +8,20 @@ from ..utils import classification as cls_utils
 @receiver(pre_save, sender=Image)
 def strip_exif(sender, instance, **kwargs):
     if not instance.created_on:
-        try:
-            cls_utils.store_exif(instance)
-            instance.original_image_name = instance.image.name
+        if cls_utils.is_image_valid(instance):
+            try:
+                cls_utils.store_exif(instance)
+                instance.original_image_name = instance.image.name
 
-            image_name = cls_utils.create_unique_image_name(instance)
-            instance.name = image_name
-            instance.image.name = image_name
+                image_name = cls_utils.create_unique_image_name(instance)
+                instance.name = image_name
+                instance.image.name = image_name
 
-            cls_utils.correct_image_orientation(instance)
-        except Exception as err:
-            print(err)
-            raise
+                cls_utils.correct_image_orientation(instance)
+            except Exception as err:
+                raise
+        else:
+            raise ValueError("Invalid image")
 
 
 @receiver(post_delete, sender=Image)
