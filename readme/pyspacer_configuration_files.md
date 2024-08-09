@@ -5,7 +5,7 @@ Location: `s3://mermaid-config/classification/`
 
 ## Versioning
 
-Configuration file versions are stored directories following the pattern of `vX` (examples: v1, v2, ..., vN).  Each version is a directory with the following structure:
+Configuration file versions are stored in directories following the pattern of `vX` (examples: v1, v2, ..., vN).  Each version is a directory with the following structure:
 
 ```bash
 [VERSION (pattern: vX)]
