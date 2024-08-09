@@ -32,7 +32,7 @@ from ..models import (
     Profile,
 )
 from .encryption import encrypt_string
-from .q import submit_job
+from .q import submit_image_job
 from .s3 import download_directory
 
 CLASSIFIER_CONFIG_S3_PATH = "classifier"
@@ -380,7 +380,7 @@ def _classify_image(image_record_id, profile_id=None):
 
 
 def classify_image_job(image_record_id, profile_id=None):
-    return submit_job(0, _classify_image, image_record_id=image_record_id)
+    return submit_image_job(0, _classify_image, image_record_id=image_record_id)
 
 
 def classify_image(image_record_id, profile_id=None):
