@@ -64,7 +64,6 @@ class ImageSerializer(BaseAPISerializer):
 class ImageViewSet(BaseProjectApiViewSet):
     queryset = Image.objects.all()
     serializer_class = ImageSerializer
-    # permission_classes = [And(BaseProjectApiViewSet.permission_classes[0])]
     permission_classes = [And(BaseProjectApiViewSet.permission_classes[0], ImagePermission)]
 
     def limit_to_project(self, request, *args, **kwargs):
