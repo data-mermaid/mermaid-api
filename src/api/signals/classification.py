@@ -11,6 +11,8 @@ def strip_exif(sender, instance, **kwargs):
         try:
             cls_utils.store_exif(instance)
             instance.original_image_name = instance.image.name
+            instance.original_image_width = instance.image.width
+            instance.original_image_height = instance.image.height
 
             image_name = cls_utils.create_unique_image_name(instance)
             instance.name = image_name

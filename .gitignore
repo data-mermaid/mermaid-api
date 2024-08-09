@@ -109,3 +109,5 @@ src/data/
 
 .env.host
 src/media/*
+
+src/_classifiers/*

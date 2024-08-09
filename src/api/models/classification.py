@@ -23,7 +23,7 @@ def select_image_storage():
             bucket_name=settings.IMAGE_PROCESSING_BUCKET,
             access_key=settings.IMAGE_BUCKET_AWS_ACCESS_KEY_ID,
             secret_key=settings.IMAGE_BUCKET_AWS_SECRET_ACCESS_KEY,
-            location=settings.IMAGE_BUCKET_AWS_LOCATION,
+            location=settings.IMAGE_S3_PATH,
         )
 
 
@@ -74,7 +74,9 @@ class LabelMapping(BaseModel):
 
 class Classifier(BaseModel):
     name = models.CharField(max_length=50)
-    version = models.CharField(max_length=11)
+    version = models.CharField(
+        max_length=11, help_text="Classifier version (pattern: v[Version Number])"
+    )
     patch_size = models.IntegerField(help_text="Number of pixels")
     num_points = models.IntegerField(default=25)
     description = models.TextField(max_length=1000, blank=True)
@@ -83,16 +85,21 @@ class Classifier(BaseModel):
     class Meta:
         db_table = "class_classifier"
 
+    @classmethod
+    def latest(self):
+        return self.objects.order_by("-created_on").first()
+
 
 class Image(BaseModel):
     collect_record_id = models.UUIDField(db_index=True)
 
     image = models.ImageField(upload_to="", storage=select_image_storage)
-    original_image_checksum = models.CharField(max_length=64, blank=True, null=True)
     thumbnail = models.ImageField(upload_to="", storage=select_image_storage, null=True, blank=True)
-
     name = models.CharField(max_length=200, blank=True, null=True)
+    original_image_checksum = models.CharField(max_length=64, blank=True, null=True)
     original_image_name = models.CharField(max_length=200, blank=True, null=True)
+    original_image_width = models.PositiveIntegerField(blank=True, null=True)
+    original_image_height = models.PositiveIntegerField(blank=True, null=True)
     photo_timestamp = models.DateTimeField(null=True, blank=True)
     location = models.PointField(srid=4326, blank=True, null=True)
     comments = models.TextField(max_length=1000, blank=True, null=True)
@@ -144,7 +151,6 @@ class Image(BaseModel):
 class Point(BaseModel):
     row = models.IntegerField()
     column = models.IntegerField()
-    point_number = models.IntegerField()
     image = models.ForeignKey(Image, on_delete=models.CASCADE, related_name="points")
 
     class Meta:
@@ -152,8 +158,11 @@ class Point(BaseModel):
 
 
 class Annotation(BaseModel):
-    point = models.ForeignKey(Point, on_delete=models.CASCADE, editable=False)
-    label = models.ForeignKey(Label, related_name="annotations", on_delete=models.CASCADE)
+    point = models.ForeignKey(
+        Point, on_delete=models.CASCADE, editable=False, related_name="annotations"
+    )
+    benthic_attribute = models.ForeignKey(BenthicAttribute, on_delete=models.CASCADE)
+    growth_form = models.ForeignKey(GrowthForm, on_delete=models.CASCADE, null=True, blank=True)
     classifier = models.ForeignKey(
         Classifier, null=True, on_delete=models.CASCADE, related_name="annotations"
     )
@@ -164,14 +173,14 @@ class Annotation(BaseModel):
         db_table = "class_annotation"
         indexes = [
             models.Index(
-                fields=["point", "label"],
+                fields=["point", "benthic_attribute", "growth_form"],
                 name="unq_conf_anno_idx",
                 condition=models.Q(is_confirmed=True),
             )
         ]
 
     def __str__(self):
-        return f"{self.label} - {self.score} - {self.is_confirmed}"
+        return f"{self.benthic_attribute} - {self.growth_form} - {self.score} - {self.is_confirmed}"
 
     @property
     def is_human_created(self):
