@@ -209,8 +209,12 @@ def _modify_file_path(file_path, suffix, new_extension):
 def generate_points(image: Image, num_points: int, margin: Tuple[int, int] = (0, 0)):
     assert len(margin) == 2
 
-    h = image.original_image_height
-    w = image.original_image_width
+    if image.original_image_height and image.original_image_width:
+        h = image.original_image_height
+        w = image.original_image_width
+    else:
+        h = image.image.height
+        w = image.image.width
 
     points_per_side = math.ceil(math.sqrt(num_points)) + 1
     shift_y = (h - 2 * margin[0]) / points_per_side
@@ -289,11 +293,11 @@ def _get_features_location(image: Image):
 def _write_classification_results(image, score_sets, label_ids, classifer_record, profile=None):
     _annotations = []
     _points = []
-
-    created_on = timezone.now()
     label_lookup = {
         str(lbl.pk): [lbl.benthic_attribute_id, lbl.growth_form_id] for lbl in Label.objects.all()
     }
+    created_on = timezone.now()
+
     for row, col, scores in score_sets:
         _label_ids = label_ids[:]
         point = Point(
