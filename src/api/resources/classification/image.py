@@ -1,3 +1,4 @@
+from django.conf import settings
 from django.db.models import Q
 from rest_condition import And
 from rest_framework import permissions, serializers, status
@@ -14,7 +15,7 @@ from ...models import (
     ProjectProfile,
 )
 from ...utils import truthy
-from ...utils.classification import classify_image_job, create_classification_status
+from ...utils.classification import classify_image, classify_image_job, create_classification_status
 from ..base import BaseAPISerializer, BaseProjectApiViewSet
 from .classification_status import ClassificationStatusSerializer
 from .point import PointSerializer
@@ -130,7 +131,10 @@ class ImageViewSet(BaseProjectApiViewSet):
 
         if trigger_classification:
             create_classification_status(image_record, status=ClassificationStatus.PENDING)
-            classify_image_job(image_record.pk)
+            if settings.ENVIRONMENT == "local":
+                classify_image(image_record.pk)
+            else:
+                classify_image_job(image_record.pk)
 
         data = ImageSerializer(instance=image_record).data
         return Response(data=data, status=status.HTTP_201_CREATED)
