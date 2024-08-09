@@ -1,5 +1,3 @@
-import argparse
-
 from PIL import ImageDraw, Image as PILImage
 from django.core.management.base import BaseCommand
 
@@ -26,8 +24,8 @@ class Command(BaseCommand):
     def handle(self, image, output_image, **options):
         img_rec = Image.objects.get_or_none(id=image)
         if img_rec is None:
-            print("Image does not exist")
-            exit(1)
+            self.stderr.write("Image does not exist")
+            self.exit(1)
         
         points = classification.generate_points(img_rec, 25)
         pil_image = PILImage.open(img_rec.image)

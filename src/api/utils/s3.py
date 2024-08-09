@@ -33,6 +33,6 @@ def download_directory(bucket, s3_directory, local_directory):
             s3_key = obj["Key"]
             local_path = os.path.join(local_directory, os.path.relpath(s3_key, s3_directory))
             os.makedirs(os.path.dirname(local_path), exist_ok=True)
-            if os.path.isdir(local_path) and os.path.exists(local_path):
+            if os.path.isdir(local_path):
                 continue
             client.download_file(bucket, s3_key, local_path)
