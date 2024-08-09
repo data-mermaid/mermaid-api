@@ -74,7 +74,9 @@ class LabelMapping(BaseModel):
 
 class Classifier(BaseModel):
     name = models.CharField(max_length=50)
-    version = models.CharField(max_length=11, help_text="Classifier version (pattern: v[Version Number])")
+    version = models.CharField(
+        max_length=11, help_text="Classifier version (pattern: v[Version Number])"
+    )
     patch_size = models.IntegerField(help_text="Number of pixels")
     num_points = models.IntegerField(default=25)
     description = models.TextField(max_length=1000, blank=True)
@@ -156,8 +158,11 @@ class Point(BaseModel):
 
 
 class Annotation(BaseModel):
-    point = models.ForeignKey(Point, on_delete=models.CASCADE, editable=False)
-    label = models.ForeignKey(Label, related_name="annotations", on_delete=models.CASCADE)
+    point = models.ForeignKey(
+        Point, on_delete=models.CASCADE, editable=False, related_name="annotations"
+    )
+    benthic_attribute = models.ForeignKey(BenthicAttribute, on_delete=models.CASCADE)
+    growth_form = models.ForeignKey(GrowthForm, on_delete=models.CASCADE, null=True, blank=True)
     classifier = models.ForeignKey(
         Classifier, null=True, on_delete=models.CASCADE, related_name="annotations"
     )
@@ -168,14 +173,14 @@ class Annotation(BaseModel):
         db_table = "class_annotation"
         indexes = [
             models.Index(
-                fields=["point", "label"],
+                fields=["point", "benthic_attribute", "growth_form"],
                 name="unq_conf_anno_idx",
                 condition=models.Q(is_confirmed=True),
             )
         ]
 
     def __str__(self):
-        return f"{self.label} - {self.score} - {self.is_confirmed}"
+        return f"{self.benthic_attribute} - {self.growth_form} - {self.score} - {self.is_confirmed}"
 
     @property
     def is_human_created(self):
