@@ -29,7 +29,7 @@ from ..base import BaseAPISerializer, BaseProjectApiViewSet
 from ..mixins import DynamicFieldsMixin
 from .annotation import SaveAnnotationSerializer
 from .classification_status import ClassificationStatusSerializer
-from .point import SavePointSerializer, PointSerializer
+from .point import PointSerializer
 
 
 class ImagePermission(permissions.BasePermission):
@@ -218,7 +218,7 @@ class ImageViewSet(BaseProjectApiViewSet):
                     id__in=user_annotation_ids
                 ).delete()
 
-                pnt_serializer = SavePointSerializer(instance=point, data=point_data, context=context)
+                pnt_serializer = PointSerializer(instance=point, data=point_data, context=context)
                 pnt_serializer.is_valid(raise_exception=True)
 
                 for annotation_data in annotations:
