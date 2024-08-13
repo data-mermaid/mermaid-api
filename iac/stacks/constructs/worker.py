@@ -52,7 +52,7 @@ class QueueWorker(Construct):
             queue_name=f"{queue_name}.fifo" if fifo else f"{queue_name}",
             content_based_deduplication=None,
             visibility_timeout=Duration.seconds(config.api.sqs_message_visibility),
-            dead_letter_queue=sqs.DeadLetterQueue(max_receive_count=2, queue=dead_letter_queue),
+            dead_letter_queue=sqs.DeadLetterQueue(max_receive_count=4, queue=dead_letter_queue),
         )
 
         # CloudWatch Alarm for DLQ

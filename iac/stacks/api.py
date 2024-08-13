@@ -126,6 +126,7 @@ class ApiStack(Stack):
             "DB_PORT": config.database.port,
             "SQS_MESSAGE_VISIBILITY": str(config.api.sqs_message_visibility),
             "USE_FIFO": use_fifo_queues,
+            "SQS_QUEUE_NAME": sqs_queue_name,
         }
 
         # build image asset to be shared with API and Backup Task
@@ -258,7 +259,6 @@ class ApiStack(Stack):
         backup_bucket.grant_read_write(backup_task.task_definition.task_role)
 
         # get monitored queue
-        environment["SQS_QUEUE_NAME"] = sqs_queue_name
         worker = QueueWorker(
             self,
             "Worker",
