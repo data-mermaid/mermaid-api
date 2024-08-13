@@ -125,9 +125,8 @@ class ApiStack(Stack):
             "DB_HOST": database.instance_endpoint.hostname,
             "DB_PORT": config.database.port,
             "SQS_MESSAGE_VISIBILITY": str(config.api.sqs_message_visibility),
-            "SQS_QUEUE_NAME": sqs_queue_name,
-            "IMAGE_SQS_QUEUE_NAME": image_sqs_queue_name,
             "USE_FIFO": use_fifo_queues,
+            "SQS_QUEUE_NAME": sqs_queue_name,
         }
 
         # build image asset to be shared with API and Backup Task
@@ -151,9 +150,7 @@ class ApiStack(Stack):
             secrets=api_secrets,
             environment=environment,
             command=["python", "manage.py", "dbbackup", f"{config.env_id}"],
-            logging=ecs.LogDrivers.aws_logs(
-                stream_prefix="ScheduledBackupTask"
-            )
+            logging=ecs.LogDrivers.aws_logs(stream_prefix="ScheduledBackupTask"),
         )
 
         # create a scheduled fargate task
@@ -278,6 +275,7 @@ class ApiStack(Stack):
         )
 
         # get monitored queue
+        environment["SQS_QUEUE_NAME"] = image_sqs_queue_name
         image_worker = QueueWorker(
             self,
             "ImageWorker",
@@ -303,7 +301,7 @@ class ApiStack(Stack):
         # Allow Image Worker to write to image bucket
         image_processing_bucket.grant_write(image_worker.task_definition.task_role)
         image_processing_bucket.grant_read_write(service.task_definition.task_role)
-        
+
         # Allow Service and Image Worker to read/write config bucket
         config_bucket.grant_read_write(image_worker.task_definition.task_role)
         config_bucket.grant_read_write(service.task_definition.task_role)

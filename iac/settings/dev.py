@@ -11,8 +11,8 @@ DEV_SETTINGS = ProjectSettings(
         container_memory=1024,
         container_count=1,
         # SQS
-        sqs_cpu=1024,
-        sqs_memory=2048,
+        sqs_cpu=512,
+        sqs_memory=1024,
         # Backup
         backup_cpu=512,
         backup_memory=1024,
@@ -20,7 +20,7 @@ DEV_SETTINGS = ProjectSettings(
         default_domain_collect="https://dev-app.datamermaid.org",
         mermaid_api_audience="https://dev-api.datamermaid.org",
         public_bucket="dev-public.datamermaid.org",
-        sqs_message_visibility=1800,
+        sqs_message_visibility=600,
         # Secrets
         dev_emails_name="dev/mermaid-api/dev-emails-mUnSDl",
         spa_admin_client_id_name="common/mermaid-api/spa-admin-client-id-FuMVtc",
