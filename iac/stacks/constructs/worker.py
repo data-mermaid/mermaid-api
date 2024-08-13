@@ -94,9 +94,9 @@ class QueueWorker(Construct):
             # this defines how the service shall autoscale based on the
             # SQS queue's ApproximateNumberOfMessagesVisible metric
             "scaling_steps": [
-                # when <=50 messages, scale down
+                # when <=10 messages, scale down
                 appscaling.ScalingInterval(upper=10, change=-1),
-                # when >=50 messages, scale up
+                # when >=10 messages, scale up
                 appscaling.ScalingInterval(lower=10, change=+1),
             ],
             "capacity_provider_strategies": [
