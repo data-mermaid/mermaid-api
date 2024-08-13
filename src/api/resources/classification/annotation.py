@@ -39,7 +39,6 @@ class SaveAnnotationSerializer(BaseAPISerializer):
         model = Annotation
         fields = "__all__"
         read_only_field = ["is_machine_created"]
-    
 
     def check_user_annotation(self, data):
         annotation_id = data.get("id")
@@ -94,4 +93,3 @@ class SaveAnnotationSerializer(BaseAPISerializer):
             instance.save()
 
         return instance
-        

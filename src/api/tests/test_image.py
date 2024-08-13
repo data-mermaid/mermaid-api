@@ -82,6 +82,7 @@ def test_create_user_defined_annotation(
     point,
     annotations,
     benthic_attribute_4,
+    growth_form1,
 ):
     url_kwargs = {
         "project_pk": str(project1.pk),
@@ -92,6 +93,60 @@ def test_create_user_defined_annotation(
     assert request.status_code == 200
 
     data = request.json()
+    
+    bad_data = copy.deepcopy(data)
+    bad_data["points"][0]["annotations"].append({
+        "point": str(point.pk),
+        "benthic_attribute": str(benthic_attribute_4.pk),
+        "growth_form": None,
+        "classifier": None,
+        "is_confirmed": True
+    })
+
+    # Test two annotations with is_confirmed
+    request = api_client1.patch(url, bad_data, format="json")
+    assert request.status_code == 400
+
+    good_data = copy.deepcopy(bad_data)
+
+    # Only have one is_confirmed
+    for annotation in good_data["points"][0]["annotations"]:
+        annotation["is_confirmed"] = False
+    
+    good_data["points"][0]["annotations"][-1]["is_confirmed"] = True
+
+    request = api_client1.patch(url, data, format="json")
+    assert request.status_code == 200
+
+
+def test_two_user_defined_annotation(
+    db_setup,
+    api_client1,
+    project1,
+    image,
+    point,
+    annotations,
+    benthic_attribute_4,
+    growth_form1,
+):
+    url_kwargs = {
+        "project_pk": str(project1.pk),
+        "pk": str(image.pk),
+    }
+    url = reverse("image-detail", kwargs=url_kwargs)
+    request = api_client1.get(url, format="json")
+    assert request.status_code == 200
+
+    data = request.json()
+
+    data["points"][0]["annotations"].append({
+        "point": str(point.pk),
+        "benthic_attribute": str(benthic_attribute_4.pk),
+        "growth_form": str(growth_form1.pk),
+        "classifier": None,
+        "is_confirmed": False
+    })
+
     data["points"][0]["annotations"].append({
         "point": str(point.pk),
         "benthic_attribute": str(benthic_attribute_4.pk),
@@ -100,18 +155,10 @@ def test_create_user_defined_annotation(
         "is_confirmed": True
     })
 
-    # Test 2 annotations with is_confirmed
     request = api_client1.patch(url, data, format="json")
+    data = request.json()
+
     assert request.status_code == 400
-
-    # Only have one is_confirmed
-    for annotation in data["points"][0]["annotations"]:
-        annotation["is_confirmed"] = False
-    
-    data["points"][0]["annotations"][-1]["is_confirmed"] = True
-
-    request = api_client1.patch(url, data, format="json")
-    assert request.status_code == 200
 
 
 def test_edit_machine_annotation(
