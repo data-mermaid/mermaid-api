@@ -421,7 +421,9 @@ class DynamicFieldsMixin(object):
             filter_fields = None
 
         try:
-            omit_fields = params.get("omit", None).split(",")
+            exclude_fields = params.get("exclude", "").split(",")
+            omit_fields = params.get("omit", "").split(",")
+            omit_fields += exclude_fields
         except AttributeError:
             omit_fields = []
 

@@ -325,6 +325,7 @@ def _write_classification_results(image, score_sets, label_ids, classifer_record
                     updated_on=created_on,
                     created_by=profile,
                     updated_by=profile,
+                    is_machine_created=True
                 )
             )
 

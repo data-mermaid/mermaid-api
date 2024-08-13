@@ -1,24 +1,35 @@
+from typing import Any, Dict, List
+
+
 from django.conf import settings
 from django.db.models import Q
+from django.db import transaction
 from rest_condition import And
 from rest_framework import permissions, serializers, status
-from rest_framework.exceptions import MethodNotAllowed
+from rest_framework.exceptions import MethodNotAllowed, ValidationError
 from rest_framework.response import Response
+
+
 
 from ...exceptions import check_uuid
 from ...models import (
     BENTHICPQT_PROTOCOL,
+    Annotation,
     ClassificationStatus,
     CollectRecord,
     Image,
     ObsBenthicPhotoQuadrat,
+    Point,
+    Profile,
     ProjectProfile,
 )
 from ...utils import truthy
 from ...utils.classification import classify_image, classify_image_job, create_classification_status
 from ..base import BaseAPISerializer, BaseProjectApiViewSet
+from ..mixins import DynamicFieldsMixin
+from .annotation import SaveAnnotationSerializer
 from .classification_status import ClassificationStatusSerializer
-from .point import PointSerializer
+from .point import SavePointSerializer, PointSerializer
 
 
 class ImagePermission(permissions.BasePermission):
@@ -30,14 +41,14 @@ class ImagePermission(permissions.BasePermission):
         project_id = view.kwargs["project_pk"]
         image_id = view.kwargs.get("pk")
 
-        cr_ids = CollectRecord.objects.filter(profile=profile, project_id=project_id).values_list(
-            "id", flat=True
-        )
-
-        if request.method in ("PATCH", "PUT", "DELETE"):
+        if request.method == "PUT":
+            return False
+        elif request.method in ("PATCH", "DELETE"):
             if image_id is None:
                 return False
-
+            cr_ids = CollectRecord.objects.filter(profile=profile, project_id=project_id).values_list(
+                "id", flat=True
+            )
             return Image.objects.filter(id=image_id, collect_record_id__in=cr_ids).exists()
         elif request.method == "POST":
             collect_record_id = request.data.get("collect_record_id")
@@ -46,7 +57,7 @@ class ImagePermission(permissions.BasePermission):
             return ProjectProfile.objects.filter(profile=profile, project_id=project_id).exists()
 
 
-class ImageSerializer(BaseAPISerializer):
+class ImageSerializer(DynamicFieldsMixin, BaseAPISerializer):
     classification_status = serializers.SerializerMethodField()
     points = PointSerializer(many=True)
 
@@ -62,8 +73,41 @@ class ImageSerializer(BaseAPISerializer):
         return None
 
 
+class PatchImageSerializer(BaseAPISerializer):
+    # points = SavePointSerializer(many=True)
+
+    class Meta:
+        model = Image
+        fields = ["id", "points"]
+        read_only_fields = ["id", "points"]
+
+    def check_image_points_relationship(self, data):
+        image_id = data.get("id")
+        points = data.get("points") or []
+        point_ids = [pnt.get("id") for pnt in points if "id" in pnt]
+        num_point_instances = Point.objects.filter(id__in=point_ids, image_id=image_id).count()
+        if len(point_ids) != num_point_instances:
+            raise ValidationError("Point does not belong to image")
+    
+    def validate(self, data):
+        self.check_image_points_relationship(data)
+        return super().validate(data)
+
+    # def update(self, instance, validated_data):
+    #     print(f"validated_data: {validated_data}")
+    #     for point_data in validated_data.get("points"):
+    #         serializer = SavePointSerializer(data=point_data, context=self.context)
+
+    #         serializer.is_valid(raise_exception=True)
+    #         point = Point.objects.get(id=point_data.get("id"))
+    #         serializer.update(instance=point, validated_data=serializer.validated_data)
+        
+    #     return instance
+
+
+
 class ImageViewSet(BaseProjectApiViewSet):
-    queryset = Image.objects.all()
+    queryset = Image.objects.prefetch_related("points", "points__annotations").all()
     serializer_class = ImageSerializer
     permission_classes = [And(BaseProjectApiViewSet.permission_classes[0], ImagePermission)]
 
@@ -94,8 +138,8 @@ class ImageViewSet(BaseProjectApiViewSet):
         ]
         return filtered_actions
 
-    def partial_update(self, request, pk=None):
-        raise MethodNotAllowed("PATCH")
+    def update(self, request, pk=None):
+        raise MethodNotAllowed("PUT")
 
     def create(self, request, *args, **kwargs):
         profile = request.user.profile
@@ -139,16 +183,54 @@ class ImageViewSet(BaseProjectApiViewSet):
         data = ImageSerializer(instance=image_record).data
         return Response(data=data, status=status.HTTP_201_CREATED)
 
-    def update(self, request, pk, *args, **kwargs):
-        raise NotImplementedError()
-        # data = request.data
-        # qs = self.limit_to_project(request, pk, *args, **kwargs)
-        # image_record = qs.get(id=pk)
 
-        # if "classification_status" in data:
-        #     data.pop("classification_status")
+    def partial_update(self, request, pk, *args, **kwargs):
+        data = request.data
+        qs = self.limit_to_project(request, pk, *args, **kwargs)
+        image_record = qs.get(id=pk)
 
-        # if "points" in data:
-        #     points_data = data.pop("points")
+        if "points" not in data:
+            raise ValidationError("'points' is required.")
 
-        # return Response()
+        context = {"request": request}
+        with transaction.atomic():
+            points = data.get("points")
+            serializer = PatchImageSerializer(data=data, instance=image_record, context=context)
+            serializer.is_valid(raise_exception=True)
+
+            for point_data in points:
+                if "annotations" not in point_data:
+                    raise ValidationError("'annotations' is required.")
+                
+                point_id = point_data.get("id")
+                point = Point.objects.get_or_none(id=point_data.get("id"), image=pk)
+                if point is None:
+                    raise ValidationError(f"Point ({point_id}) is missing")
+
+                annotations = point_data.get("annotations")
+
+                user_annotation_ids = [
+                    anno.get("id")
+                    for anno in annotations
+                    if not anno.get("is_machine_created") and anno.get("id")
+                ]
+                Annotation.objects.filter(point=point, is_machine_created=False).exclude(
+                    id__in=user_annotation_ids
+                ).delete()
+
+                pnt_serializer = SavePointSerializer(instance=point, data=point_data, context=context)
+                pnt_serializer.is_valid(raise_exception=True)
+
+                for annotation_data in annotations:
+                    anno_id = annotation_data.get("id")
+                    anno_instance = Annotation.objects.get_or_none(id=anno_id, point=point)
+                    anno_serializer = SaveAnnotationSerializer(
+                        instance=anno_instance,
+                        data=annotation_data,
+                        context=context
+                    )
+                    anno_serializer.is_valid(raise_exception=True)
+                    anno = anno_serializer.save(point=point)
+
+        updated_image_record = qs.get(id=pk)
+        return Response(ImageSerializer(instance=updated_image_record).data)
