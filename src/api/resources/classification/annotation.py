@@ -89,11 +89,9 @@ class SaveAnnotationSerializer(BaseAPISerializer):
 
         # Machine defined
         else:
-            # print(validated_data)
             validated_data = self.validated_data
             instance.is_confirmed = validated_data.get("is_confirmed") or False
             instance.save()
-            # print(f"instance: {instance.classifier}")
 
         return instance
         

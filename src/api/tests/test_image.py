@@ -1,3 +1,5 @@
+import copy
+
 import pytest
 from django.core.files import File
 from django.urls import reverse
@@ -18,11 +20,7 @@ def classifier():
 @pytest.fixture
 def image_file():
     return File(open('api/tests/data/test_image.jpg', 'rb'), name='test_image.jpg')
-    # return SimpleUploadedFile(
-    #     name="api/tests/data/test_image2.jpg",
-    #     content=b"file_content",
-    #     content_type="image/jpg"
-    # )
+
 
 @pytest.fixture
 def image(valid_benthic_pq_transect_collect_record, image_file):
@@ -136,19 +134,60 @@ def test_edit_machine_annotation(
     data = request.json()
 
     # Remove classifier
-    bad_data = data.copy()
+    bad_data = copy.deepcopy(data)
     bad_data["points"][0]["annotations"][0]["classifier"] = None
     request = api_client1.patch(url, bad_data, format="json")
     updated_data = request.json()
 
     assert request.status_code == 200
     assert updated_data["points"][0]["annotations"][0]["classifier"] is not None
-    
 
     # No annotation id
-    bad_data = data.copy()
+    bad_data = copy.deepcopy(data)
     bad_data["points"][0]["annotations"][0]["id"] = None
     request = api_client1.patch(url, bad_data, format="json")
     updated_data = request.json()
 
     assert request.status_code == 400
+
+    # Remove Point - Should be ignored because it uses parent point
+    bad_data = copy.deepcopy(data)
+    bad_data["points"][0]["annotations"][0]["point"] = None
+    request = api_client1.patch(url, bad_data, format="json")
+    updated_data = request.json()
+
+    assert request.status_code == 200
+
+    # Edit score - Should be ignored because it uses parent point
+    bad_data = copy.deepcopy(data)
+    bad_data["points"][0]["annotations"][0]["score"] = 0
+    request = api_client1.patch(url, bad_data, format="json")
+    updated_data = request.json()
+
+    assert request.status_code == 200
+    assert updated_data["points"][0]["annotations"][0]["score"] == data["points"][0]["annotations"][0]["score"]
+    
+    # Multiple is_confirmed
+    bad_data = copy.deepcopy(data)
+    bad_data["points"][0]["annotations"][0]["is_confirmed"] = True
+    bad_data["points"][0]["annotations"][1]["is_confirmed"] = True
+    request = api_client1.patch(url, bad_data, format="json")
+    updated_data = request.json()
+
+    assert request.status_code == 400
+    
+    # Change is_confirmed
+    good_data = copy.deepcopy(data)
+    anno_id_1 = good_data["points"][0]["annotations"][0]["id"]
+    anno_id_2 = good_data["points"][0]["annotations"][1]["id"]
+    good_data["points"][0]["annotations"][0]["is_confirmed"] = True
+    good_data["points"][0]["annotations"][1]["is_confirmed"] = False
+    request = api_client1.patch(url, good_data, format="json")
+    updated_data = request.json()
+
+    assert request.status_code == 200
+    for anno in updated_data["points"][0]["annotations"]:
+        if anno_id_1 == anno["id"]:
+            assert anno["is_confirmed"] is True
+        elif anno_id_2 == anno["id"]:
+            assert anno["is_confirmed"] is False

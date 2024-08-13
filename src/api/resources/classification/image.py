@@ -230,7 +230,7 @@ class ImageViewSet(BaseProjectApiViewSet):
                         context=context
                     )
                     anno_serializer.is_valid(raise_exception=True)
-                    anno = anno_serializer.save(point=point)
+                    anno_serializer.save(point=point)
 
         updated_image_record = qs.get(id=pk)
         return Response(ImageSerializer(instance=updated_image_record).data)
