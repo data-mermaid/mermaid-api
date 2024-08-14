@@ -86,8 +86,8 @@ class Classifier(BaseModel):
         db_table = "class_classifier"
 
     @classmethod
-    def latest(self):
-        return self.objects.order_by("-created_on").first()
+    def latest(cls):
+        return cls.objects.order_by("-created_on").first()
 
 
 class Image(BaseModel):
@@ -155,7 +155,7 @@ class Point(BaseModel):
 
     class Meta:
         db_table = "class_point"
-    
+
 
 class Annotation(BaseModel):
     point = models.ForeignKey(

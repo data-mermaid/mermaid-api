@@ -312,22 +312,23 @@ def _write_classification_results(image, score_sets, label_ids, classifer_record
         _points.append(point)
         top_predictions = sorted(zip(_label_ids, scores), key=itemgetter(1), reverse=True)
         for label_id, score in top_predictions[0:3]:
-            ba_id, gf_id = label_lookup.get(label_id)
-            _annotations.append(
-                Annotation(
-                    point=point,
-                    classifier=classifer_record,
-                    benthic_attribute_id=ba_id,
-                    growth_form_id=gf_id,
-                    score=score * 100,
-                    is_confirmed=score >= 0.8,
-                    created_on=created_on,
-                    updated_on=created_on,
-                    created_by=profile,
-                    updated_by=profile,
-                    is_machine_created=True
+            ba_id, gf_id = label_lookup.get(label_id, (None, None))
+            if ba_id:
+                _annotations.append(
+                    Annotation(
+                        point=point,
+                        classifier=classifer_record,
+                        benthic_attribute_id=ba_id,
+                        growth_form_id=gf_id,
+                        score=score * 100,
+                        is_confirmed=score >= 0.8,
+                        created_on=created_on,
+                        updated_on=created_on,
+                        created_by=profile,
+                        updated_by=profile,
+                        is_machine_created=True,
+                    )
                 )
-            )
 
     Point.objects.bulk_create(_points)
     Annotation.objects.bulk_create(_annotations)

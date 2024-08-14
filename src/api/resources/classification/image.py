@@ -1,30 +1,29 @@
-from typing import Any, Dict, List
-
-
 from django.conf import settings
-from django.db.models import Q
 from django.db import transaction
+from django.db.models import Q
 from rest_condition import And
 from rest_framework import permissions, serializers, status
 from rest_framework.exceptions import MethodNotAllowed, ValidationError
 from rest_framework.response import Response
-
-
 
 from ...exceptions import check_uuid
 from ...models import (
     BENTHICPQT_PROTOCOL,
     Annotation,
     ClassificationStatus,
+    Classifier,
     CollectRecord,
     Image,
     ObsBenthicPhotoQuadrat,
     Point,
-    Profile,
     ProjectProfile,
 )
 from ...utils import truthy
-from ...utils.classification import classify_image, classify_image_job, create_classification_status
+from ...utils.classification import (
+    classify_image,
+    classify_image_job,
+    create_classification_status,
+)
 from ..base import BaseAPISerializer, BaseProjectApiViewSet
 from ..mixins import DynamicFieldsMixin
 from .annotation import SaveAnnotationSerializer
@@ -46,9 +45,9 @@ class ImagePermission(permissions.BasePermission):
         elif request.method in ("PATCH", "DELETE"):
             if image_id is None:
                 return False
-            cr_ids = CollectRecord.objects.filter(profile=profile, project_id=project_id).values_list(
-                "id", flat=True
-            )
+            cr_ids = CollectRecord.objects.filter(
+                profile=profile, project_id=project_id
+            ).values_list("id", flat=True)
             return Image.objects.filter(id=image_id, collect_record_id__in=cr_ids).exists()
         elif request.method == "POST":
             collect_record_id = request.data.get("collect_record_id")
@@ -59,6 +58,7 @@ class ImagePermission(permissions.BasePermission):
 
 class ImageSerializer(DynamicFieldsMixin, BaseAPISerializer):
     classification_status = serializers.SerializerMethodField()
+    patch_size = serializers.SerializerMethodField()
     points = PointSerializer(many=True)
 
     class Meta:
@@ -71,6 +71,15 @@ class ImageSerializer(DynamicFieldsMixin, BaseAPISerializer):
         if latest_status:
             return ClassificationStatusSerializer(latest_status).data
         return None
+
+    def get_patch_size(self, obj):
+        classifier = Classifier.latest()
+        first_point = obj.points.first()
+        if first_point:
+            first_annotation = first_point.annotations.first()
+            if first_annotation:
+                classifier = first_annotation.classifier
+        return classifier.patch_size
 
 
 class PatchImageSerializer(BaseAPISerializer):
@@ -88,7 +97,7 @@ class PatchImageSerializer(BaseAPISerializer):
         num_point_instances = Point.objects.filter(id__in=point_ids, image_id=image_id).count()
         if len(point_ids) != num_point_instances:
             raise ValidationError("Point does not belong to image")
-    
+
     def validate(self, data):
         self.check_image_points_relationship(data)
         return super().validate(data)
@@ -101,9 +110,8 @@ class PatchImageSerializer(BaseAPISerializer):
     #         serializer.is_valid(raise_exception=True)
     #         point = Point.objects.get(id=point_data.get("id"))
     #         serializer.update(instance=point, validated_data=serializer.validated_data)
-        
-    #     return instance
 
+    #     return instance
 
 
 class ImageViewSet(BaseProjectApiViewSet):
@@ -183,7 +191,6 @@ class ImageViewSet(BaseProjectApiViewSet):
         data = ImageSerializer(instance=image_record).data
         return Response(data=data, status=status.HTTP_201_CREATED)
 
-
     def partial_update(self, request, pk, *args, **kwargs):
         data = request.data
         qs = self.limit_to_project(request, pk, *args, **kwargs)
@@ -201,7 +208,7 @@ class ImageViewSet(BaseProjectApiViewSet):
             for point_data in points:
                 if "annotations" not in point_data:
                     raise ValidationError("'annotations' is required.")
-                
+
                 point_id = point_data.get("id")
                 point = Point.objects.get_or_none(id=point_data.get("id"), image=pk)
                 if point is None:
@@ -225,9 +232,7 @@ class ImageViewSet(BaseProjectApiViewSet):
                     anno_id = annotation_data.get("id")
                     anno_instance = Annotation.objects.get_or_none(id=anno_id, point=point)
                     anno_serializer = SaveAnnotationSerializer(
-                        instance=anno_instance,
-                        data=annotation_data,
-                        context=context
+                        instance=anno_instance, data=annotation_data, context=context
                     )
                     anno_serializer.is_valid(raise_exception=True)
                     anno_serializer.save(point=point)
