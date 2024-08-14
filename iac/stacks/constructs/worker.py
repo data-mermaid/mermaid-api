@@ -52,7 +52,7 @@ class QueueWorker(Construct):
             queue_name=f"{queue_name}.fifo" if fifo else f"{queue_name}",
             content_based_deduplication=None,
             visibility_timeout=Duration.seconds(config.api.sqs_message_visibility),
-            dead_letter_queue=sqs.DeadLetterQueue(max_receive_count=2, queue=dead_letter_queue),
+            dead_letter_queue=sqs.DeadLetterQueue(max_receive_count=4, queue=dead_letter_queue),
         )
 
         # CloudWatch Alarm for DLQ
@@ -94,9 +94,9 @@ class QueueWorker(Construct):
             # this defines how the service shall autoscale based on the
             # SQS queue's ApproximateNumberOfMessagesVisible metric
             "scaling_steps": [
-                # when <=50 messages, scale down
+                # when <=10 messages, scale down
                 appscaling.ScalingInterval(upper=10, change=-1),
-                # when >=50 messages, scale up
+                # when >=10 messages, scale up
                 appscaling.ScalingInterval(lower=10, change=+1),
             ],
             "capacity_provider_strategies": [
