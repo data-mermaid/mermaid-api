@@ -86,8 +86,8 @@ class Classifier(BaseModel):
         db_table = "class_classifier"
 
     @classmethod
-    def latest(self):
-        return self.objects.order_by("-created_on").first()
+    def latest(cls):
+        return cls.objects.order_by("-created_on").first()
 
 
 class Image(BaseModel):
@@ -168,6 +168,7 @@ class Annotation(BaseModel):
     )
     score = models.PositiveSmallIntegerField(default=0, null=True, blank=True)
     is_confirmed = models.BooleanField(default=False)
+    is_machine_created = models.BooleanField(default=False)
 
     class Meta:
         db_table = "class_annotation"
@@ -181,10 +182,6 @@ class Annotation(BaseModel):
 
     def __str__(self):
         return f"{self.benthic_attribute} - {self.growth_form} - {self.score} - {self.is_confirmed}"
-
-    @property
-    def is_human_created(self):
-        return self.classifier is None
 
 
 class ClassificationStatus(models.Model):

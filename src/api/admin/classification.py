@@ -38,7 +38,23 @@ class ClassifierAdmin(BaseAdmin):
 
 @admin.register(Label)
 class LabelAdmin(BaseAdmin):
+    list_display = [
+        "label_id",
+        "label_name",
+        "benthic_attribute_id",
+        "benthic_attribute",
+        "growth_form_id",
+        "growth_form",
+    ]
     readonly_fields = ["created_by", "updated_by"]
+
+    @admin.display(description="label id", ordering="id")
+    def label_id(self, obj):
+        return obj.pk
+
+    @admin.display(description="label name", ordering="name")
+    def label_name(self, obj):
+        return obj.name
 
 
 @admin.register(LabelMapping)
@@ -66,3 +82,4 @@ class LabelMappingAdmin(BaseAdmin):
 @admin.register(ClassificationStatus)
 class ClassificationStatusAdmin(BaseAdmin):
     readonly_fields = ["created_on", "created_by"]
+    ordering = ["created_on", "image__name"]
