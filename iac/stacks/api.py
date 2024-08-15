@@ -276,6 +276,7 @@ class ApiStack(Stack):
 
         # get monitored queue
         environment["SQS_QUEUE_NAME"] = image_sqs_queue_name
+        environment["IMAGE_SQS_QUEUE_NAME"] = image_sqs_queue_name
         image_worker = QueueWorker(
             self,
             "ImageWorker",
