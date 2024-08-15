@@ -118,8 +118,6 @@ class ImageSerializer(DynamicFieldsMixin, BaseAPISerializer):
 
 
 class PatchImageSerializer(BaseAPISerializer):
-    # points = SavePointSerializer(many=True)
-
     class Meta:
         model = Image
         fields = ["id", "points"]
@@ -136,17 +134,6 @@ class PatchImageSerializer(BaseAPISerializer):
     def validate(self, data):
         self.check_image_points_relationship(data)
         return super().validate(data)
-
-    # def update(self, instance, validated_data):
-    #     print(f"validated_data: {validated_data}")
-    #     for point_data in validated_data.get("points"):
-    #         serializer = SavePointSerializer(data=point_data, context=self.context)
-
-    #         serializer.is_valid(raise_exception=True)
-    #         point = Point.objects.get(id=point_data.get("id"))
-    #         serializer.update(instance=point, validated_data=serializer.validated_data)
-
-    #     return instance
 
 
 class ImageViewSet(BaseProjectApiViewSet):
@@ -181,7 +168,7 @@ class ImageViewSet(BaseProjectApiViewSet):
         ]
         return filtered_actions
 
-    def update(self, request, pk=None):
+    def update(self, request, pk=None, **kwargs):
         raise MethodNotAllowed("PUT")
 
     def create(self, request, *args, **kwargs):
@@ -226,6 +213,27 @@ class ImageViewSet(BaseProjectApiViewSet):
         data = ImageSerializer(instance=image_record).data
         return Response(data=data, status=status.HTTP_201_CREATED)
 
+    def _get_validated_annotations(self, point_data, pk):
+        if "annotations" not in point_data:
+            raise ValidationError("'annotations' is required.")
+
+        point_id = point_data.get("id")
+        point = Point.objects.get_or_none(id=point_data.get("id"), image=pk)
+        if point is None:
+            raise ValidationError(f"Point ({point_id}) is missing")
+
+        return point, point_data.get("annotations")
+
+    def _delete_existing_user_annotations(self, point, annotations):
+        user_annotation_ids = [
+            anno.get("id")
+            for anno in annotations
+            if not anno.get("is_machine_created") and anno.get("id")
+        ]
+        Annotation.objects.filter(point=point, is_machine_created=False).exclude(
+            id__in=user_annotation_ids
+        ).delete()
+
     def partial_update(self, request, pk, *args, **kwargs):
         data = request.data
         qs = self.limit_to_project(request, pk, *args, **kwargs)
@@ -241,25 +249,9 @@ class ImageViewSet(BaseProjectApiViewSet):
             serializer.is_valid(raise_exception=True)
 
             for point_data in points:
-                if "annotations" not in point_data:
-                    raise ValidationError("'annotations' is required.")
-
-                point_id = point_data.get("id")
-                point = Point.objects.get_or_none(id=point_data.get("id"), image=pk)
-                if point is None:
-                    raise ValidationError(f"Point ({point_id}) is missing")
-
-                annotations = point_data.get("annotations")
-
-                user_annotation_ids = [
-                    anno.get("id")
-                    for anno in annotations
-                    if not anno.get("is_machine_created") and anno.get("id")
-                ]
-                Annotation.objects.filter(point=point, is_machine_created=False).exclude(
-                    id__in=user_annotation_ids
-                ).delete()
-
+                point, annotations = self._get_validated_annotations(point_data, pk)
+                self._delete_existing_user_annotations(point, annotations)
+                # Only allow one confirmed annotation per point
                 pnt_serializer = PointSerializer(instance=point, data=point_data, context=context)
                 pnt_serializer.is_valid(raise_exception=True)
 
