@@ -59,6 +59,9 @@ class ImagePermission(permissions.BasePermission):
 class ImageSerializer(DynamicFieldsMixin, BaseAPISerializer):
     classification_status = serializers.SerializerMethodField()
     patch_size = serializers.SerializerMethodField()
+    num_confirmed = serializers.SerializerMethodField()
+    num_unconfirmed = serializers.SerializerMethodField()
+    num_unclassified = serializers.SerializerMethodField()
     points = PointSerializer(many=True)
 
     class Meta:
@@ -80,6 +83,38 @@ class ImageSerializer(DynamicFieldsMixin, BaseAPISerializer):
             if first_annotation:
                 classifier = first_annotation.classifier
         return classifier.patch_size
+
+    def _summarize_counts(self, obj):
+        count_confirmed = 0
+        count_unconfirmed = 0
+        count_unclassified = 0
+        points = obj.points.all().prefetch_related("annotations")
+        for point in points:
+            if point.annotations.exists():
+                if any(annotation.is_confirmed for annotation in point.annotations.all()):
+                    count_confirmed += 1
+                else:
+                    count_unconfirmed += 1
+            else:
+                count_unclassified += 1
+
+        return (
+            count_confirmed,
+            count_unconfirmed,
+            count_unclassified,
+        )
+
+    def get_num_confirmed(self, obj):
+        count_confirmed, _, _ = self._summarize_counts(obj)
+        return count_confirmed
+
+    def get_num_unconfirmed(self, obj):
+        _, count_unconfirmed, _ = self._summarize_counts(obj)
+        return count_unconfirmed
+
+    def get_num_unclassified(self, obj):
+        _, _, count_unclassified = self._summarize_counts(obj)
+        return count_unclassified
 
 
 class PatchImageSerializer(BaseAPISerializer):
