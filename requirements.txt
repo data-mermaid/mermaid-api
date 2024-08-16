@@ -23,7 +23,9 @@ openpyxl==3.0.10
 pillow==10.4.0
 psycopg2-binary==2.9.3
 pyexcelerate==0.10.0
-pyspacer==0.9.0
+#pyspacer==0.9.0
+# Below is temporary to unblock dev work
+./pyspacer-0.9.0.tar.gz
 pytest-cov==3.0.0
 pytest-django==4.5.2
 pytest-rich==0.1.1
