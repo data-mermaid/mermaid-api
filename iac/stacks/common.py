@@ -172,7 +172,7 @@ class CommonStack(Stack):
             instance_type=ec2.InstanceType("t3a.large"),
             machine_image=ecs.EcsOptimizedImage.amazon_linux2(),
             min_capacity=1,
-            max_capacity=4,
+            max_capacity=6,
             max_instance_lifetime=Duration.days(7),
             update_policy=autoscale.UpdatePolicy.rolling_update(),
             # NOTE: not setting the desired capacity so ECS can manage it.
