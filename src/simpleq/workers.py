@@ -1,3 +1,5 @@
+from datetime import datetime
+from sys import stdout
 from time import sleep
 
 
@@ -37,11 +39,18 @@ class Worker:
             jobs then quit?
         """
         while True:
+            start_time = datetime.now()
+            stdout.write(f"Fetching message(s), starting UTC time {start_time}")
             for queue in self.queues:
                 for job in queue.jobs:
                     job.run()
                     if not job.exception:
                         queue.remove_job(job)
+            finish_time = datetime.now()
+            runtime = (finish_time - start_time).total_seconds()
+            stdout.write(
+                f"Finished Processing message(s), UTC time {start_time}, total runtime {runtime}"
+            )
 
             if burst:
                 break
