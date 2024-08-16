@@ -307,7 +307,11 @@ LOGGING = {
         "null": {
             "class": "logging.NullHandler",
         },
-        "console": {"level": DEBUG_LEVEL, "class": "logging.StreamHandler", "stream": sys.stdout},
+        "console": {
+            "level": DEBUG_LEVEL,
+            "class": "logging.StreamHandler",
+            "stream": sys.stdout,
+        },
     },
     "formatters": {
         "file": {
@@ -364,3 +368,9 @@ IMAGE_S3_PATH = "mermaid/"
 AWS_QUERYSTRING_AUTH = False
 AUTOCONFIRM_THRESHOLD = 0.8
 CLASSIFIED_THRESHOLD = 0.1
+SPACER = {
+    "AWS_ACCESS_KEY_ID": AWS_ACCESS_KEY_ID,
+    "AWS_SECRET_ACCESS_KEY": AWS_SECRET_ACCESS_KEY,
+    "AWS_REGION": AWS_REGION,
+    "EXTRACTORS_CACHE_DIR": "/tmp/classifier",
+}

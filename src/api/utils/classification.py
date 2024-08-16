@@ -36,7 +36,8 @@ from .q import submit_image_job
 from .s3 import download_directory
 
 CLASSIFIER_CONFIG_S3_PATH = "classifier"
-CLASSIFIER_CONFIG_LOCAL_CACHE_DIR = "/tmp/classifier"
+CLASSIFIER_CONFIG_LOCAL_CACHE_DIR = settings.SPACER.get("EXTRACTORS_CACHE_DIR")
+assert CLASSIFIER_CONFIG_LOCAL_CACHE_DIR is not None
 CLASSIFIER_FILE_NAME = "classifier.pkl"
 WEIGHTS_FILE_NAME = "efficientnet_weights.pt"
 
@@ -68,19 +69,19 @@ def create_image_checksum(image: ImageFieldFile) -> str:
     return file_hash.hexdigest()
 
 
-def create_thumbnail(image: ImageFieldFile) -> ContentFile:
-    img = PILImage.open(image)
+def create_thumbnail(image_instance: Image) -> ContentFile:
+    img = PILImage.open(image_instance.image)
     size = (500, 500)
     img.thumbnail(size, PILImage.LANCZOS)
 
-    base, ext = os.path.splitext(image.name)
+    base, ext = os.path.splitext(image_instance.name)
     thumb_name = f"{base}_thumbnail{ext}"
 
     thumb_io = BytesIO()
     try:
         img.save(thumb_io, img.format)
     except IOError as io_err:
-        print(f"Cannot create thumbnail for [{image.id}]: {io_err}")
+        print(f"Cannot create thumbnail for [{image_instance.pk}]: {io_err}")
         raise
 
     return ContentFile(thumb_io.getvalue(), name=thumb_name)
@@ -268,8 +269,8 @@ def _get_image_location(image: Image):
         return DataLocation("filesystem", image.image.path)
     else:
         return DataLocation(
-            storage_type="url",
-            key=image.image.name,
+            storage_type="s3",
+            key=f"{settings.IMAGE_S3_PATH}{image.image.name}",
             bucket_name=settings.IMAGE_PROCESSING_BUCKET,
         )
 
@@ -283,7 +284,7 @@ def _get_features_location(image: Image):
         image_name = image.image.name
         features_path = _modify_file_path(image_name, "", "featurevector")
         return DataLocation(
-            storage_type="url",
+            storage_type="s3",
             key=features_path,
             bucket_name=settings.IMAGE_PROCESSING_BUCKET,
         )

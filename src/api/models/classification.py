@@ -93,8 +93,10 @@ class Classifier(BaseModel):
 class Image(BaseModel):
     collect_record_id = models.UUIDField(db_index=True)
 
-    image = models.ImageField(upload_to="", storage=select_image_storage)
-    thumbnail = models.ImageField(upload_to="", storage=select_image_storage, null=True, blank=True)
+    image = models.ImageField(upload_to="", storage=select_image_storage, max_length=255)
+    thumbnail = models.ImageField(
+        upload_to="", storage=select_image_storage, max_length=255, null=True, blank=True
+    )
     name = models.CharField(max_length=200, blank=True, null=True)
     original_image_checksum = models.CharField(max_length=64, blank=True, null=True)
     original_image_name = models.CharField(max_length=200, blank=True, null=True)

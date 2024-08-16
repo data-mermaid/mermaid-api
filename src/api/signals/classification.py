@@ -42,7 +42,7 @@ def post_save_classification_image(sender, instance, created, **kwargs):
         needs_new_thumbnail = img_checksum != original_img_record.original_image_checksum
 
     if needs_new_thumbnail:
-        thumb_file = cls_utils.create_thumbnail(instance.image)
+        thumb_file = cls_utils.create_thumbnail(instance)
         instance.original_image_checksum = cls_utils.create_image_checksum(instance.image)
         # Saving thumbnail (save=True), causes double save but it's necessary
         # to have thumbnail created and saved in the post_save so thumbnails
