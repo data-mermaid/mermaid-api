@@ -1,0 +1,350 @@
+label id,label name,Benthic attribute id,benthic attribute,Growth form id,growth form
+e1c94d41-fd55-41b3-a8b0-69661da09aaf,Acanthaster planci,2bdfc0fe-e0d3-4be2-970b-508ea40e1495,Acanthaster planci,NA,NA
+5672c11d-786e-498f-82af-aba9b3fb4a28,Acanthastrea,d6511689-4a1f-4c28-b5bc-1eaf02b5dfbc,Acanthastrea,NA,NA
+2e5ec142-f2fc-4134-a398-7ea20268ed17,Acanthophora spicifera,0600d70e-e956-467e-b0c3-6d5c745f46f6,Acanthophora spicifera,NA,NA
+e1002d4b-0f41-4f35-b03e-15638f088f26,Acetabularia,f05b022a-7158-42b9-a592-82418a7a8578,Acetabularia,NA,NA
+5e507319-04be-4178-ba55-f687556327b9,Acropora Arborescent,050c0689-0b01-4a6c-afbf-a5d3ca39c310,Acropora,7e71833a-fc29-4176-91cb-1df6723089ed,Arborescent
+7dcb62ef-7897-4f4f-a257-579b9303b824,Acropora Branching,050c0689-0b01-4a6c-afbf-a5d3ca39c310,Acropora,cf2deca6-53b8-4096-916f-32c2c71d14bf,Branching
+dabc9ce4-bf6c-4c0b-96c2-6123de62948f,Acropora Corymbose,050c0689-0b01-4a6c-afbf-a5d3ca39c310,Acropora,1dd23b35-32d7-489f-bee1-3985e17c113f,Corymbose
+2a2628bf-6671-41f7-9d77-2a6ea5b3f91f,Acropora Digitate,050c0689-0b01-4a6c-afbf-a5d3ca39c310,Acropora,eb67cf91-533d-465c-bace-c7c6d3901516,Digitate
+bcf24564-38b8-44a7-8613-324667bde0e7,Acropora Encrusting,050c0689-0b01-4a6c-afbf-a5d3ca39c310,Acropora,b406252b-c160-4fd6-b7f9-f61d5e2779a5,Encrusting
+822c2874-d618-4318-8767-d9d1bcfb10a4,Acropora Plates or tables,050c0689-0b01-4a6c-afbf-a5d3ca39c310,Acropora,6b2aabb4-d16f-445e-933f-16341030fdba,Plates or tables
+c797dfe4-b10b-4ad0-8645-15b737b2e8ad,Acropora Submassive,050c0689-0b01-4a6c-afbf-a5d3ca39c310,Acropora,66f2cd86-a949-414e-96ac-5ea1fb702c5c,Submassive
+fb58c65a-ca32-40d3-9b66-1564fa21bcda,Acropora,050c0689-0b01-4a6c-afbf-a5d3ca39c310,Acropora,NA,NA
+71a5cdfc-344b-4f0f-b8ff-de9dd40e0b0a,Acropora cervicornis,c20e38e5-ac36-41b3-a234-14e8f0de5c16,Acropora cervicornis,NA,NA
+5e266c49-2711-4d83-aa58-5bc89a26b006,Acropora cytherea,8beb9413-6421-4448-9657-07a426c2835e,Acropora cytherea,NA,NA
+c4bc1b9c-e4bd-4b21-89a7-10092579e0cd,Acropora humilis,e00b1b7a-0871-4a01-9007-fc464c6ad18c,Acropora humilis,NA,NA
+00a38d21-e0a2-43b1-b6d2-74fdadf2bfaf,Acropora muricata,896ba964-bddd-491d-bfb5-43f417431e4a,Acropora muricata,NA,NA
+6d24986c-9881-4f60-b1f0-d36b961e0a27,Acropora palmata,5090e2b1-d85c-40ec-8c70-8b34ea90a7f2,Acropora palmata,NA,NA
+c03a6b2e-d899-4891-9c36-a8d52abab8a7,Acropora prolifera,9f6436ae-e654-4845-a853-85344a2f8675,Acropora prolifera,NA,NA
+581b60b4-dbfb-47cf-8b48-86ab8cacac11,Acroporidae Branching,a36b36c6-1f9f-4aa1-922c-61e74c786187,Acroporidae,cf2deca6-53b8-4096-916f-32c2c71d14bf,Branching
+6dd7accc-594c-4bdd-b964-d8d7b9afbf2b,Agaricia,79a84274-88f2-4135-90dd-8c1a501f87d5,Agaricia,NA,NA
+8b4f1b13-977a-4713-99cb-edfdae94517f,Agaricia agaricites,da503ac3-1c43-49d4-aafa-a7f8c140dec7,Agaricia agaricites,NA,NA
+8b3eb442-62e8-4c38-807a-daa10933bb4c,Agaricia fragilis,aeef595c-8a38-4e57-9a32-45676e09edec,Agaricia fragilis,NA,NA
+2dfb447b-5dda-4b96-83ea-8784e00fe34d,Agaricia grahamae,53cf4a1c-1b45-48b6-a6c0-7a4752ad24b9,Agaricia grahamae,NA,NA
+89feed05-b8b0-4ec1-9749-575daa70ef98,Agaricia humilis,f781e3c2-11db-40e2-b9a8-be43f54bc40c,Agaricia humilis,NA,NA
+deb90bb3-f322-4ecf-bcb1-18b8fcce6201,Agaricia lamarcki,89e34529-a92a-4216-b549-dd2110c07df0,Agaricia lamarcki,NA,NA
+7b487f3e-a82d-4cec-8afe-2be261e58fb5,Agaricia tenuifolia,b6bdb216-19dd-47b7-bbd2-4234f9787316,Agaricia tenuifolia,NA,NA
+bf44596a-7c47-422d-9537-8bcc87366967,Agariciidae,3151a2f4-1f93-41c6-998a-3b5bcbb27717,Agariciidae,NA,NA
+1bad2ebe-0704-4164-b0ce-bc4cb06bbab5,Agelas,0f549ca9-921b-430e-9230-68e5fd00466a,Agelas,NA,NA
+583e1e30-cac2-4e17-b82c-a98b8a097786,Alcyonacea,8646db92-aded-460d-978d-0248a0ea75b2,Alcyonacea,NA,NA
+4e81f8e6-ce3b-4d6f-9db3-1cbcbf676ad7,Alveopora,6a813c81-58a1-4fb4-ace8-b62e7c4183ae,Alveopora,NA,NA
+68d80068-3835-472f-ba42-20bd522363fb,Amansia,5f02c034-b2ae-45f0-824b-1200cb1ecadc,Amansia,NA,NA
+8ddac1a2-6736-496f-9c70-97d132eca303,Amphiroa,6d24961e-18db-4b26-8523-5e612665ebcb,Amphiroa,NA,NA
+44fe68c1-78f9-4743-853c-a8ef75d5d660,Anemone,cbe35e54-4536-4a2d-8ded-8e831625bfd9,Anemone,NA,NA
+cc1b971e-addd-437e-bcfe-0c8dd92161e0,Antipatharia,11c3a113-0516-4f62-9030-eaa859846805,Antipatharia,NA,NA
+799ad7c9-c575-4516-ba07-b2c820ab7ace,Aplysina,7a03b8d8-63bc-4622-bfe8-0a512c51ebbb,Aplysina,NA,NA
+0a78de6a-455e-462e-92a5-6f46c1fa3a03,Aplysinidae,c387ca1c-b18c-4e18-8ed6-c9d0c1b8e8a8,Aplysinidae,NA,NA
+4931c192-2304-45ff-8e3d-a6c95f59ce63,Ascidian,98872a8a-e688-4e8e-994e-777ddad439de,Ascidian,NA,NA
+68e65eb6-7df4-4fcc-969e-df0100e6e3e8,Asparagopsis,482031e2-dcaf-44ba-af36-fa425bb72533,Asparagopsis,NA,NA
+fed77bff-55ef-4b2b-9bad-9591f230748d,Asparagopsis taxiformis,01e79666-c4c0-4f98-967a-993005ac7da7,Asparagopsis taxiformis,NA,NA
+ca937e5c-809f-4c6c-80ff-648c5553a028,Astrea,63f29fbf-76db-4a6b-9559-dfb7277ba6b5,Astrea,NA,NA
+3768b61f-f8a0-4795-a6bf-bb96679f55bb,Astreopora,22e2002e-0d55-4a43-88b3-caf04dbf874f,Astreopora,NA,NA
+db566fcd-5a13-4465-b773-eb7703a31d2e,Avrainvillea,a19c1549-baa0-4bd6-b345-7a30b3383b7c,Avrainvillea,NA,NA
+d195e356-78c4-469d-8b80-72a714ed2abe,Bare substrate,d9086647-3a82-4634-97bc-6e10347af39b,Bare substrate,NA,NA
+3e5105e8-2789-44af-9992-f36974a73c81,Bivalvia,6e481be3-7c13-49a3-9928-6f17259f3047,Bivalvia,NA,NA
+8014800c-0daa-4e12-8fe2-4614eb724be8,Blastomussa,123d5e37-3561-4873-89fd-fd1a5ccbd3c5,Blastomussa,NA,NA
+38a77325-dad1-4533-8bd6-097e76349a43,Bleached coral Branching,0c854534-f891-4c52-99bf-cf7f617ca0fc,Bleached coral,cf2deca6-53b8-4096-916f-32c2c71d14bf,Branching
+83df5d10-bed4-4383-8c48-9ddf47765eb0,Bleached coral Digitate,0c854534-f891-4c52-99bf-cf7f617ca0fc,Bleached coral,eb67cf91-533d-465c-bace-c7c6d3901516,Digitate
+6f0c3b6e-8a83-42ba-81d1-44eb5888cd8e,Bleached coral Encrusting,0c854534-f891-4c52-99bf-cf7f617ca0fc,Bleached coral,b406252b-c160-4fd6-b7f9-f61d5e2779a5,Encrusting
+463177ab-83f6-4d78-8328-7ac03897a228,Bleached coral Massive,0c854534-f891-4c52-99bf-cf7f617ca0fc,Bleached coral,888609b5-b58a-4d57-addc-a6935bba284b,Massive
+4e4cb923-60f6-4ecc-ae6e-6cac9966d3f3,Bleached coral,0c854534-f891-4c52-99bf-cf7f617ca0fc,Bleached coral,NA,NA
+ea97d35e-aaa6-4161-8dce-200c35e05879,Bleached soft coral,b3648d32-d1fd-4ebe-a4e7-20c34c079d98,Bleached soft coral,NA,NA
+6c0e3450-3bff-4812-bb6d-b40c03ea988b,Briareum,f9480d47-b287-4151-87bc-82377a35651b,Briareum,NA,NA
+a693919b-7cbc-4ddc-a539-ff1468426499,Bryozoan,47347942-7abe-4a3c-882f-20e595c8a261,Bryozoan,NA,NA
+df8b9f2f-f6c6-49c0-a2a8-50cde0fd3b4b,Caulastraea,5060a1b1-f158-4424-9f79-fcd5af7e6d88,Caulastraea,NA,NA
+ef80fdb5-728e-4702-bea6-4ec43e1af8a3,Caulerpa,a769ae7f-afb0-4d84-a915-b7ac7079b771,Caulerpa,NA,NA
+e4e90d96-c635-4b87-911e-6f1353a7a258,Caulerpa racemosa,5b81b4ba-66b6-4e87-8e2f-b9aa680207a1,Caulerpa racemosa,NA,NA
+fc1a6348-d732-4b37-b62a-4590ae800582,Chlorodesmis,f1c37a46-327b-4bc7-b2c1-8c1d26b14da8,Chlorodesmis,NA,NA
+0ac31e03-cadd-4776-b76e-cdcb77d40774,Chondrilla,ae613484-5d00-4b6e-a300-617bda6f3a97,Chondrilla,NA,NA
+b7d7294b-60a0-4e04-90ea-aa6da838cb4a,Chrysocystis fragilis,8446e66d-dc91-4856-a8f9-0f4535536b6e,Chrysocystis fragilis,NA,NA
+2a43d966-12ad-415f-b874-771346a46a59,Cladiella,9c477221-ab35-48f6-ac9f-3b6ca4ac3a05,Cladiella,NA,NA
+7268bf2f-9f5c-46a5-9e44-b916550fe1bc,Cladophora,75fff2dd-2361-4112-adec-c9a39fd5c390,Cladophora,NA,NA
+dac08e20-3bcf-4686-85f1-85a847d4e155,Codium,b8c4efbb-9c72-4711-afa7-869e44a13f1f,Codium,NA,NA
+3a8211f8-6822-4944-a984-b97f566d1827,Coeloseris,d491765d-5c50-4dcd-9493-2edfa46f0656,Coeloseris,NA,NA
+73d8354d-6f49-4a3d-bf43-befd2c7c773c,Colpomenia,b48e2e20-61af-435f-9a94-b8ebce9068a3,Colpomenia,NA,NA
+faa377f1-8524-4e04-98cb-58e9e943d6e4,Colpophyllia,cb0ddf88-0b4e-460e-a62d-40e6fc9bb1c5,Colpophyllia,NA,NA
+4ca1cffe-294a-4835-90d6-d5e9dfd9f025,Colpophyllia natans,5f0cb866-1e5f-4277-a8a6-ffd31e811c66,Colpophyllia natans,NA,NA
+9c0016fc-27ef-4395-aadc-67a29c793249,Coralimorph,a19ad300-fc97-4126-867e-19b79f2d3041,Coralimorph,NA,NA
+59607983-c585-42d3-b45b-289d6d7d74b9,Corallimorpharia,1c3b186a-7e30-4fbb-bd0e-95362416e1dd,Corallimorpharia,NA,NA
+ca5e8983-c914-43da-913e-de47207fe6a3,Corallina officinalis,7536f710-d996-488c-a7b5-e87a71b78487,Corallina officinalis,NA,NA
+9cd1bc0e-95db-4077-815e-ef0a0dea02f6,Corallinaceae,b10513e5-e5c9-47ab-bef0-2c42b4b9d8b4,Corallinaceae,NA,NA
+df44ea8a-396d-43d5-8851-93d24e8c8088,Coralline algae Branching,f0f8c511-69b9-4bc6-9d54-af9dec4e82bf,Coralline algae,cf2deca6-53b8-4096-916f-32c2c71d14bf,Branching
+e01fdab6-afa4-474f-b2f4-8be43afc55e8,Coscinaraea,53b51b8f-3d3d-426a-9316-5057cc57d7f9,Coscinaraea,NA,NA
+fa7937c4-1980-4edd-81d1-c315d77b8aa2,Crinoid,c08ffd84-5d06-487f-aad7-877cb7da4578,Crinoid,NA,NA
+8b8d6bc0-cb7a-46b0-9c52-286fc6e9a93e,Crustose coralline algae,f4df7abd-3d51-42fb-8cab-5102b95fad8e,Crustose coralline algae,NA,NA
+b8786b92-fb78-4e5d-8cd1-cc0c137ce2a1,Ctenactis,6c10a5ed-1e35-4e73-9dff-b6c42fb7bdad,Ctenactis,NA,NA
+8e3c78d4-2be2-4556-9b3d-2f6e2f72cadc,Cyanobacteria,3218e7ea-8827-4262-96a1-104e5ec50ffc,Cyanobacteria,NA,NA
+238963a5-8bc3-4252-8fc9-9664d063e904,Cycloseris,bc8952f9-39d8-47f5-87a1-7c2fb324e665,Cycloseris,NA,NA
+8a2d0e43-fb00-4f6e-a7a2-739b3d157977,Cyphastrea,88d79d42-3fef-48ab-887e-dae60ae9072a,Cyphastrea,NA,NA
+e0aed054-8140-41f5-9f56-1f396f885263,Cyphastrea ocellina,d92c3eba-880f-4959-98de-ae43933b900d,Cyphastrea ocellina,NA,NA
+b3779b39-d2f6-429b-a936-08482557d25d,Dead coral,abde283f-5dd4-4a67-bc0b-e7403ad9c517,Dead coral,NA,NA
+d0ba01ea-9063-4ba0-91b8-6552dd9f5b5d,Dendrogyra cylindrus,ec59b5b8-479e-403c-b1cf-e24e36c86fdf,Dendrogyra cylindrus,NA,NA
+9af5e518-effc-4cbe-8124-6d71735502d6,Diadema antillarum,2ac051dc-67a5-4bda-892b-a137bbb15310,Diadema antillarum,NA,NA
+05a08252-c7da-4865-ae62-393e323a21d5,Dichocoenia stokesii,a2935afb-895a-44b8-8f94-c83a14f8f110,Dichocoenia stokesii,NA,NA
+341a913a-2cd0-42a1-a4a0-5d117eb64972,Dictyopteris,71533bf1-eb8f-4dc9-83db-46728490c81c,Dictyopteris,NA,NA
+99d6e49a-6e69-4c10-b861-00305bae56d8,Dictyosphaeria,c765d8f0-4641-408b-88d6-f4143ddc35db,Dictyosphaeria,NA,NA
+4edddd7d-14af-4e59-8f21-4b6aee5dbe3b,Dictyota,987019bd-142e-4333-993a-a820030360a9,Dictyota,NA,NA
+35b56377-55d5-49c8-9d87-bdb122806e80,Dictyotaceae,7c7704b1-7823-4f09-b048-a6e87e3d05a6,Dictyotaceae,NA,NA
+ce4fcb88-c440-443b-8afe-9648ee7f3ed1,Diploastrea,dcbcb1cf-af35-4755-8023-6d1b6f4fd8cf,Diploastrea,NA,NA
+bcba5171-3cb4-49ee-91d6-c3d2be1c71ed,Diploria,4e17ca21-b9bd-4d32-8a44-59856b89c38f,Diploria,NA,NA
+63d820cc-90e2-4430-b46d-5c677ccb0ad3,Diploria labyrinthiformis,194a4c71-0bc7-4f4d-9890-77a1487531a8,Diploria labyrinthiformis,NA,NA
+b369daf4-dde0-452f-a11e-ce0a6088e162,Dipsastraea,d41cc126-63b8-4fa7-88d6-9b9b7648ba80,Dipsastraea,NA,NA
+7d190111-85fa-4f8a-b93c-c518074ca155,Discosoma,0e051baa-9822-49a1-abe3-e07fba02c90c,Discosoma,NA,NA
+30c17948-0df1-4928-966e-29ccdde9f50e,Dysidea,4f390938-8179-4ca2-9024-9d22983bca09,Dysidea,NA,NA
+4c55e669-6211-4162-87c5-f33500c42b46,Echinophyllia,4111c390-2319-4f7a-a65c-76e9e37c8a45,Echinophyllia,NA,NA
+37bc32f7-7413-4cd3-9595-1c43fc08fc8f,Echinopora,c1e97c98-de9f-4b05-963f-0276784fca2d,Echinopora,NA,NA
+c8402ba3-73fe-453c-acfc-5291d66f7d1a,Ecklonia,6ac0a8cc-f9e3-4fc4-9b17-9385c02a3b30,Ecklonia,NA,NA
+588e7fb1-1577-453c-a04e-83b5849d45a0,Erythropodium,cc081ec3-8953-4f75-b072-60de0a67702d,Erythropodium,NA,NA
+b60c15c3-c159-4516-9aa1-f272bb009901,Erythropodium caribaeorum,15795086-4e69-4383-b5ca-765c8ef858c0,Erythropodium caribaeorum,NA,NA
+c8d53ffa-3c8b-4eb0-b5a1-6db99e1ae557,Eunicea,887651ec-32f6-4a25-81a2-d991a04dc130,Eunicea,NA,NA
+cf152674-a996-48be-9cd4-617262deb2e4,Euphyllia,8b706c7f-fcf7-4d03-b271-58a06d77fbb4,Euphyllia,NA,NA
+8b902efb-134f-453b-914f-7178473cd837,Eusmilia fastigiata,83020a4c-fda8-45aa-9ec5-e886c5b18f3e,Eusmilia fastigiata,NA,NA
+6eff4131-f2d0-47ec-a928-f9a0c2b12651,Favia,656169f6-2344-423c-845d-9d4c1d14d69d,Favia,NA,NA
+df9a8451-a670-4097-81ba-b1e2ffa56454,Favia fragum,ac80a65f-d18b-4066-8162-2f3624f40e90,Favia fragum,NA,NA
+163ea3a1-938a-49ea-ae55-062432ec778d,Faviidae,132ae52b-0cc6-4877-93ca-becbc612ea64,Faviidae,NA,NA
+2a8aad8d-8156-42a0-b033-2d7e2f4317f8,Favites,6d63693c-592d-4da5-88d8-7125832cbd76,Favites,NA,NA
+d9ff10dc-c5da-45bc-825e-3fad28cec4de,Foraminifera,0ec757c1-6ef3-49ce-9711-9e422e3d74a9,Foraminifera,NA,NA
+a3c141ee-583e-4554-a068-60a346cf4285,Fungia,c3807ef9-6a47-429f-a63b-fe5e131e1316,Fungia,NA,NA
+6174cd7d-db13-464a-8a1d-f11f239697ba,Fungiidae,2085b131-1ed4-4b5b-9129-fb655a7659bd,Fungiidae,NA,NA
+a740a763-923f-49ea-844b-802c9fdc9dc4,Galaxaura,ea24a5b8-a64a-4ee2-8eeb-4afd2254db86,Galaxaura,NA,NA
+57e73437-f4ce-4448-86a7-2803c7e4d63e,Galaxea,c91dee81-7cb4-410b-bfce-52d98b67732f,Galaxea,NA,NA
+45cd44c8-a552-4c25-afdc-76ab3182b647,Galaxea fascicularis,ed69cfb2-51f1-4e58-943f-868c86144f8f,Galaxea fascicularis,NA,NA
+8a2bfb88-99ec-467b-83ee-f29bdcdb580f,Gardineroseris,04b943e8-610c-4158-b4c3-9dd884ab9376,Gardineroseris,NA,NA
+1e94daeb-1b8b-49ac-8e40-033ad1389e38,Gardineroseris planulata,8a0b970f-88be-40a1-9461-ed3b80ab3c99,Gardineroseris planulata,NA,NA
+d0e575d9-3c36-4117-bd9f-fb633f85311f,Goniastrea,edbc586e-8499-4d31-9025-d15f2648f1fb,Goniastrea,NA,NA
+e20145cb-dafa-46ae-8a8d-55fe3c97b0bd,Goniastrea stelligera,a82b807a-e5f5-481a-9b9d-a6c9663f9bcf,Goniastrea stelligera,NA,NA
+070f19d5-0cb3-434e-84b2-51c09194d828,Goniopora,5f926f95-6cb8-46a5-9ff4-6777d33964e0,Goniopora,NA,NA
+ebec7341-db70-4e8e-ba40-d33f9c018580,Gorgonia,157a194a-f6f6-4b95-893e-407ff303ded4,Gorgonia,NA,NA
+075a2726-eb41-4889-a54e-811c92484c36,Gorgonia ventalina,f94197eb-6040-4853-819d-5c0f72bc6804,Gorgonia ventalina,NA,NA
+d515228a-7c89-4e5c-be43-eb4f1a7d1113,Gorgonian Branching,3aa2e125-3f74-4f91-94f6-fd030319f2b1,Gorgonian,cf2deca6-53b8-4096-916f-32c2c71d14bf,Branching
+2c417aef-6f0e-4a05-8819-6e233f8c0b0f,Gorgonian,3aa2e125-3f74-4f91-94f6-fd030319f2b1,Gorgonian,NA,NA
+d96c8225-960d-4efa-964e-89223962d6f5,Gracilaria salicornia,2f80ff76-a999-4c8a-b0b7-6e6ca43b7881,Gracilaria salicornia,NA,NA
+33aea46e-4713-4a66-a4f8-192bccf0ab17,Halimeda,51558178-d2da-44ed-905b-db6976f6aa76,Halimeda,NA,NA
+8ee852bf-48e8-4252-b419-853ce6d1d237,Halimeda copiosa,de5d6946-6d36-4b06-93fe-103a6107ba12,Halimeda copiosa,NA,NA
+32f2a5e2-2be4-4eea-813c-f6900d7c3768,Halodule wrightii,f6f6d632-4bdf-4755-97a6-b2cb3d2d69f8,Halodule wrightii,NA,NA
+3e420311-e41b-45a2-a2d2-b8b86d416e79,Halomitra,a4563b4f-d70c-461e-aa92-9c92beb89294,Halomitra,NA,NA
+42355912-7055-43e7-ab9f-662a896774b1,Halophila,01d8297a-1d37-4ccf-bea5-dea733b1f575,Halophila,NA,NA
+88cd7244-c032-47c9-98ef-882d4a7eb677,Halophila stipulacea,fcf0ddd7-2b6b-4863-b1c8-9bb0ec8277c5,Halophila stipulacea,NA,NA
+bf6948c4-ebe4-4a16-af2b-01ef20c3ca06,Halymenia,f9c8f05d-ec7a-4945-a807-6d2ab9bed7c3,Halymenia,NA,NA
+17dbe822-d107-4c21-a239-751bf9f45912,Hard coral Branching,350e9eb4-5e6b-48f5-aeb8-0bfdf023bf1c,Hard coral,cf2deca6-53b8-4096-916f-32c2c71d14bf,Branching
+7f156171-3f58-4c1c-96e3-5d38ccd21d21,Hard coral Columnar,350e9eb4-5e6b-48f5-aeb8-0bfdf023bf1c,Hard coral,cbff6080-6387-44e5-b7ad-35f35f3db3a7,Columnar
+7d1419f8-a2d9-48bf-b9ec-a63dd960560d,Hard coral Corymbose,350e9eb4-5e6b-48f5-aeb8-0bfdf023bf1c,Hard coral,1dd23b35-32d7-489f-bee1-3985e17c113f,Corymbose
+4a4d4fae-9d9c-4ef1-8a30-a339c58daac1,Hard coral Digitate,350e9eb4-5e6b-48f5-aeb8-0bfdf023bf1c,Hard coral,eb67cf91-533d-465c-bace-c7c6d3901516,Digitate
+ec36871d-9346-415d-abba-d18d2446c493,Hard coral Encrusting,350e9eb4-5e6b-48f5-aeb8-0bfdf023bf1c,Hard coral,b406252b-c160-4fd6-b7f9-f61d5e2779a5,Encrusting
+64da606c-9d5e-4e0d-be5e-2b7b3c18d77d,Hard coral Foliose,350e9eb4-5e6b-48f5-aeb8-0bfdf023bf1c,Hard coral,e149db12-9398-4a10-8642-5db70d1a8505,Foliose
+b2d1f143-02d3-4e9d-a02f-2811efac993e,Hard coral Massive,350e9eb4-5e6b-48f5-aeb8-0bfdf023bf1c,Hard coral,888609b5-b58a-4d57-addc-a6935bba284b,Massive
+0dc9d397-8176-46bb-a43b-d6f72d503600,Hard coral Mushroom coral,350e9eb4-5e6b-48f5-aeb8-0bfdf023bf1c,Hard coral,7a3be72b-a96e-4434-9c42-a817fe3fc765,Mushroom coral
+c90fea24-a8f5-401a-abf3-134c09876c00,Hard coral Plates or tables,350e9eb4-5e6b-48f5-aeb8-0bfdf023bf1c,Hard coral,6b2aabb4-d16f-445e-933f-16341030fdba,Plates or tables
+c16a93f3-94ee-41ba-beb9-232dda04a130,Hard coral Submassive,350e9eb4-5e6b-48f5-aeb8-0bfdf023bf1c,Hard coral,66f2cd86-a949-414e-96ac-5ea1fb702c5c,Submassive
+0ee3a3bb-48aa-41ec-ba75-b827443929ad,Hard coral,350e9eb4-5e6b-48f5-aeb8-0bfdf023bf1c,Hard coral,NA,NA
+afb95b1a-eb95-4468-910f-18a554971384,Heliopora,0f18ea18-0e25-42e8-bb96-f4be5f144075,Heliopora,NA,NA
+e935fe68-452f-43a0-87ac-8a2f6c792c46,Heliopora coerulea,4bb12554-2294-4260-8ce2-1938c5c3736c,Heliopora coerulea,NA,NA
+b9339a53-562c-4a40-a950-5e7084e896c5,Helioseris cucullata,58c5b3fa-7afc-4f20-8f9e-18e6aa14aeb5,Helioseris cucullata,NA,NA
+0aa79a90-03b1-4814-b4f4-68f67a4a0577,Herpolitha,c98530b4-80a0-4b3a-9d69-f30f8181aab3,Herpolitha,NA,NA
+11aa3ea3-b947-4d28-b046-6cbb3061e301,Holothuria,a937983e-4467-4ac2-9992-0b731d3a6bef,Holothuria,NA,NA
+8c9a60a8-3637-41fe-9aca-90e2aeea597f,Hydnophora,af6c43fd-0f41-4103-8ad5-8d1191bd4c9f,Hydnophora,NA,NA
+f0740be7-ba23-4273-b721-065feee8891d,Hydrocoral,b7aade0a-8de3-4a00-a37c-deb65e5188a7,Hydrocoral,NA,NA
+fa9ba945-abed-4637-9a84-ee24d525f6f3,Hydroid,e58eb448-5c03-4c1d-a7fc-f5c1ef379c77,Hydroid,NA,NA
+82801d24-0037-402e-9924-ff9b05abee21,Hydrozoa,a2070213-37e4-4c7e-a389-e04e96d806d6,Hydrozoa,NA,NA
+29de8c26-0085-48ba-8932-0a1808236a16,Hypnea,ec8b8237-d03f-4373-a92b-3c0cfc903711,Hypnea,NA,NA
+eb3aac08-d4f6-490d-b306-6ce6ad0d0d61,Hypnea musciformis,95c49cf9-c721-4e62-8882-11870dc46706,Hypnea musciformis,NA,NA
+ba37968f-d8f2-4b17-a10e-ac104475c6dc,Ircinia,43471c27-e415-4559-913f-6d3c3d50e199,Ircinia,NA,NA
+2425f77c-5854-431f-a5ba-81104ca1828c,Isophyllia rigida,dfed579c-b5d0-41a9-bfc1-e2dbbd94eb7e,Isophyllia rigida,NA,NA
+3323b86d-8bd5-4eb9-8838-931a29acb3d6,Isophyllia sinuosa,70635707-407e-4348-b685-3e44f121875f,Isophyllia sinuosa,NA,NA
+47526e40-022a-4091-a4c8-13aebfb5a2d3,Isopora,8672775c-9167-42bd-b885-f1807f9ac9a4,Isopora,NA,NA
+73ea46b8-32ba-413b-ad99-b3a4a872c6f6,Jania,788e1ca9-72ee-4872-9b79-a885e1a59c67,Jania,NA,NA
+79beeb43-2622-4683-a3a1-1c2609ae9cc0,Laurencia,2db1ed39-900e-4ca6-b34d-f681948ee1b4,Laurencia,NA,NA
+9dd55aa7-4095-4cdb-af8b-60971dc4cc94,Leptastrea,70407def-b048-49d4-9a43-3eb0021f7b68,Leptastrea,NA,NA
+b1befc25-c5cc-4145-b322-db1facee6804,Leptastrea purpurea,7cc759a3-9d4c-45dc-9e86-73c09ead5e15,Leptastrea purpurea,NA,NA
+8ead5dec-72cb-4e6e-83f3-c1eeab6791d0,Leptastrea transversa,ac1ef5e0-e022-4b76-a4be-230db922fac9,Leptastrea transversa,NA,NA
+87b8be97-a1ac-4452-8ff8-4e00e6712d7d,Leptoria,23a1cb26-5cff-49fe-923d-cecd75de7547,Leptoria,NA,NA
+242bd56c-7d8e-47cc-8ec0-1c74cc244a30,Leptoseris,8da49adb-eb3c-4486-a538-42114813b58e,Leptoseris,NA,NA
+88418934-b0b0-4e13-874a-6d0a9c0b29f6,Liagora,4dcad109-18e3-4c91-a560-eb0bf34faccc,Liagora,NA,NA
+805cc985-b000-4458-8f22-70ddc186d3d9,Lithophyllon,2f4f8832-79bd-4127-8ef6-d7e3edd5c9f9,Lithophyllon,NA,NA
+16cf7dd1-ea03-45db-a74f-6c0055ae9f2e,Lobactis scutaria,38f10f9e-f39d-4135-ae40-6c32f77a2242,Lobactis scutaria,NA,NA
+cf1ab053-982e-4e4c-987d-dd0404c63add,Lobophora,d63b491c-adc7-4869-aa6c-6c2a784830d5,Lobophora,NA,NA
+93ee2db7-ae98-4392-970b-57a4215358c1,Lobophora variegata,120bacce-7caf-4a66-a7eb-42241d5ffdc8,Lobophora variegata,NA,NA
+a4cb785c-3f4e-400b-94b2-da9290f3d064,Lobophyllia,e3ea5520-1e7f-41c6-a141-6c27327b56a1,Lobophyllia,NA,NA
+64d308b9-e0cd-4c78-acc8-813dbcbb18d9,Lobophytum,d68c54e3-1499-4987-9b31-716a90d4901a,Lobophytum,NA,NA
+036b5ac6-da29-422d-ba14-70d9dcb5264b,Lyngbya,26c3118a-1908-44b9-91d5-5f5a1d28cbb1,Lyngbya,NA,NA
+4a086497-a3ee-4fc8-b4eb-6cd85807f72a,Macroalgae Branching,09226989-50e7-4c40-bd36-5bcef32ee7a1,Macroalgae,cf2deca6-53b8-4096-916f-32c2c71d14bf,Branching
+30225e78-62df-424b-b228-282f64bf9c16,Macroalgae Encrusting,09226989-50e7-4c40-bd36-5bcef32ee7a1,Macroalgae,b406252b-c160-4fd6-b7f9-f61d5e2779a5,Encrusting
+d7cb966f-a2ee-4126-9b80-a52a438e0571,Macroalgae Foliose,09226989-50e7-4c40-bd36-5bcef32ee7a1,Macroalgae,e149db12-9398-4a10-8642-5db70d1a8505,Foliose
+c39ee4d2-10a0-44f4-9038-93f54a26d6e9,Macroalgae,09226989-50e7-4c40-bd36-5bcef32ee7a1,Macroalgae,NA,NA
+6a6c8706-9528-4486-945a-fde4f43a8ebf,Madracis,223860e9-b7b5-412c-bcab-0f16d43928fb,Madracis,NA,NA
+1f3f5bde-59d4-42c5-91a7-6cf0436a9a6b,Madracis auretenra,9fc8164a-a7b9-43d4-bf2e-74e2f8a14d66,Madracis auretenra,NA,NA
+15cc31e4-fae5-405e-80f4-019c3a8612af,Madracis decactis,62b87704-ca62-415d-a340-48764e8b6c69,Madracis decactis,NA,NA
+5cfe179e-742e-4c74-b065-c3309cc3f16e,Madracis myriaster,58ab3128-0e13-4d2e-884b-3d5dab1e18e1,Madracis myriaster,NA,NA
+6cd522c3-1a86-49d2-8fce-7985d46be49f,Madracis pharensis,53c61b6c-68c0-46fe-bfae-e77e6f12d7af,Madracis pharensis,NA,NA
+a2d291aa-4908-4182-b24b-54c79c9c9f7a,Madracis senaria,60f9b62d-0cb0-47dd-9551-3929af847cb7,Madracis senaria,NA,NA
+56569f78-223b-4bf1-a81e-8011cee0cc30,Manicina areolata,ea0721ea-3c12-42bf-970b-a364016bb5df,Manicina areolata,NA,NA
+58c5fbcb-c404-4502-b5be-393c3d218093,Meandrina meandrites,330fdf21-d50d-4e03-9421-57a66d892d0a,Meandrina meandrites,NA,NA
+6328d869-4717-4233-a505-08811bb3819d,Merulina,cdee93cc-5434-460e-b1e8-78b4164ab266,Merulina,NA,NA
+3637a73f-a214-45c0-a9a4-264972d26669,Merulinidae,469174fe-ca4b-40e3-839f-435bd1b14989,Merulinidae,NA,NA
+a56062e5-8af0-4aa9-9352-87b5e221d194,Microbial mats,6dfd0b33-db5f-433c-81ce-a625bc923c50,Microbial mats,NA,NA
+98cf0eeb-b28f-47c7-9b65-a001ee50e969,Microdictyon,68884c5d-d3d1-4a35-ab5a-4e98e5591d41,Microdictyon,NA,NA
+6daeb7c9-27bb-41aa-94bf-5f92ab40d951,Millepora,995f68d0-2dec-4e22-916a-cf1f44c1663b,Millepora,NA,NA
+ecade355-dcfb-4042-87b6-2cc762878a1d,Millepora alcicornis,4c173e5b-b34a-4b9d-8fea-9f598673fa33,Millepora alcicornis,NA,NA
+31584d4c-4664-45bc-8216-615b7bc843e1,Millepora complanata,16287ac3-a2c5-4d10-ad2d-eae00c4cc148,Millepora complanata,NA,NA
+dc7db729-408a-4f67-8706-8752dd1eaae7,Millepora squarrosa,9a23a972-cefa-4827-9636-41f8e5a73b77,Millepora squarrosa,NA,NA
+e07eb448-65c3-4459-bfe2-1ce15419e32e,Montastraea,e2a62f32-1424-44fa-ba52-fbdd4e9ee6f0,Montastraea,NA,NA
+0f55e412-c4e7-458d-8693-c440cf3a8e8f,Montastraea cavernosa,e8edb2ee-0fc3-445d-8617-b660313c9606,Montastraea cavernosa,NA,NA
+08297327-3aa6-4059-a544-3abe9f236a55,Montipora Branching,4acaa53b-7ec9-4abd-bb4a-1d96b6224c0d,Montipora,cf2deca6-53b8-4096-916f-32c2c71d14bf,Branching
+b9e6f387-bc0d-419d-8c66-34fe0b611112,Montipora Encrusting,4acaa53b-7ec9-4abd-bb4a-1d96b6224c0d,Montipora,b406252b-c160-4fd6-b7f9-f61d5e2779a5,Encrusting
+8f6dfbbd-461a-444b-9264-823cee051ead,Montipora Foliose,4acaa53b-7ec9-4abd-bb4a-1d96b6224c0d,Montipora,e149db12-9398-4a10-8642-5db70d1a8505,Foliose
+3025db54-962a-4700-a710-46b02d2c07b2,Montipora,4acaa53b-7ec9-4abd-bb4a-1d96b6224c0d,Montipora,NA,NA
+b7bfc5c5-f29c-427e-b4f3-2e58c76613f9,Montipora capitata,4412ffc1-93ca-42f5-bb58-01c191272fc4,Montipora capitata,NA,NA
+10f31837-ba58-4f4e-8bd0-673aabee2c88,Montipora flabellata,750783b4-ef24-4ea5-b508-d77d20933eb2,Montipora flabellata,NA,NA
+ef916a03-9c17-49c4-9f17-c1959f659984,Montipora patula,9f06b993-7708-43f1-9886-41323155091b,Montipora patula,NA,NA
+3aa2279c-3406-4dff-aa24-005d74fc81bb,Muricea,2ac51dda-1e4a-4340-8fec-b7e0a19f8b59,Muricea,NA,NA
+21166a0f-b364-4fe7-98a5-b7aaf8965d5c,Mussa angulosa,02160430-8036-41fb-89b3-cf89782c0e3e,Mussa angulosa,NA,NA
+ad6fec42-3bc7-425d-98e8-2267078c481a,Mussidae,e5e686e5-5f55-499c-ab8e-dc8aa79db5c4,Mussidae,NA,NA
+00eb3607-26cc-4d8e-84ca-416b54c1077b,Mycedium,f6f3b5cf-7bc6-483a-8ef7-0c41a6672be2,Mycedium,NA,NA
+47186963-3135-4376-a81e-3fdc052bba65,Mycetophyllia,d6d74742-d8ed-4954-b164-fc6607c3efa9,Mycetophyllia,NA,NA
+ae4260d5-ca69-4c4c-ae02-7cdf708c5bcb,Mycetophyllia ferox,17131731-e6c8-431e-9a55-8cc438ec5a23,Mycetophyllia ferox,NA,NA
+bce011b8-a374-4d26-8b9b-7d24c606f0c0,Mycetophyllia lamarckiana,fad9ba75-a2b0-44ad-bc67-67b5ade6ad76,Mycetophyllia lamarckiana,NA,NA
+3ff450b5-4c47-4a50-8cb6-7d071f296d5f,Neomeris,436b15f7-c235-4124-8eef-4aa2e25f2c4d,Neomeris,NA,NA
+27f81bd9-9a81-46bf-8922-9b838825a957,Nephtheidae,d1d7eb33-cc43-433f-9ca7-8fbe50a63277,Nephtheidae,NA,NA
+74b7521e-13da-433f-a81a-f89f94ed5dba,Niphates,84bc2ed1-9309-4b83-b275-f6a55ffc3e47,Niphates,NA,NA
+f7f2fa5f-81e6-4709-9e7c-94ff88a3e3a3,Niphates erecta,0b16aa3e-34e6-4072-a2b2-ed1c4739d38b,Niphates erecta,NA,NA
+3ecb6b12-3d4b-41f2-81a6-7ebb5077da99,Obscured,7e426637-0aac-4945-913d-6ab23cdcd8c2,Obscured,NA,NA
+de71531e-711e-4167-bc53-3e5b0467d7a4,Octocorallia,7ce46715-080a-465e-94c1-17a51bcd49f0,Octocorallia,NA,NA
+23909de4-69c9-4f57-9be1-0a077b5b2429,Orbicella,1583ffd5-f3a1-4346-ab3c-ada28292b22d,Orbicella,NA,NA
+11db9d6a-6b56-455e-b172-d91c585f8218,Orbicella annularis,9be51ec6-7400-46c7-bdfe-c56eac991cb7,Orbicella annularis,NA,NA
+888c7f98-0c79-4f39-a2a0-e8fc0ef937d1,Orbicella faveolata,3f7a3174-94b4-4e50-b4d6-f80724bd0983,Orbicella faveolata,NA,NA
+c21e731f-1b74-4015-a69a-493052a0d988,Orbicella franksi,28373b18-98da-4ffe-b482-c0b1b5d4e82c,Orbicella franksi,NA,NA
+19ebcdaa-d71f-4621-9275-83d60d118d38,Other,31c5af16-30d7-4966-97f4-01889a5cf973,Other,NA,NA
+9fa6a606-b161-48a1-9eb5-a0058195bd14,Other invertebrates,3dc38d25-ed80-4049-af16-e85f04f97cc6,Other invertebrates,NA,NA
+9d8db11e-357e-475c-8eaf-bb0ecd35621f,Oulastrea,ed845b8e-4be9-4cb3-8ace-fcb7410a5381,Oulastrea,NA,NA
+8127774f-1f68-4250-97a4-57e84cd42986,Oulophyllia,190d2f0d-67be-48a3-8ea0-33e66546f3f7,Oulophyllia,NA,NA
+5c7e83e2-30cc-41ab-a64f-dd92a91617b7,Oxypora,e450c3c2-f3ca-4b81-9b99-aa1928aee1bb,Oxypora,NA,NA
+c1356230-bc93-49b2-9d7d-2bfd05d5f024,Pachyseris,4d493a0d-6c7e-4f5f-8a71-06bac94a8c53,Pachyseris,NA,NA
+c552f01b-2c0e-42e1-ab2e-08cbcc5e6ca8,Padina,053de64e-a2b9-40b6-b566-cf3a5e95e267,Padina,NA,NA
+00455b71-08bd-4cfa-a8b8-9428123f0fc2,Padina boergesenii,093c2a78-a6df-4c6a-9940-d1192d42fba5,Padina boergesenii,NA,NA
+8bfe6247-0fc4-449f-a217-f6356f63ac70,Palythoa,fb7f5bc0-519c-4c96-ae7d-8b65fc449b4a,Palythoa,NA,NA
+b1324fe6-bce4-4f03-8e42-39c27bed2b58,Palythoa caribaeorum,3914203f-f285-4fa8-8df3-4ffc91444c01,Palythoa caribaeorum,NA,NA
+67e186f0-a69b-488d-9270-3ab08f4de1ea,Pavona Encrusting,108ff93e-9191-42bf-b502-3a437407b22a,Pavona,b406252b-c160-4fd6-b7f9-f61d5e2779a5,Encrusting
+d5f9a649-d1fd-4523-9b7e-5743831ac715,Pavona Foliose,108ff93e-9191-42bf-b502-3a437407b22a,Pavona,e149db12-9398-4a10-8642-5db70d1a8505,Foliose
+86a9bdb7-14ef-4dc8-8216-4e2074766d9a,Pavona Massive,108ff93e-9191-42bf-b502-3a437407b22a,Pavona,888609b5-b58a-4d57-addc-a6935bba284b,Massive
+6e2010a0-f8bb-47ca-9d80-cd9d3aece7f1,Pavona,108ff93e-9191-42bf-b502-3a437407b22a,Pavona,NA,NA
+1c406017-eb4a-4a7e-924d-9f1513a64e4e,Pavona cactus,af36139c-44a5-4517-83ef-2279a787fb16,Pavona cactus,NA,NA
+5273701e-5da0-43f2-b5c5-566ab8ff86b3,Pavona decussata,6766adfc-b2fa-4d38-9e7b-05886df6263f,Pavona decussata,NA,NA
+c6da645a-2d01-474f-b8f7-7752aad3424a,Pavona duerdeni,e6d5e0ac-be0e-41b0-9b4d-239abd8317d7,Pavona duerdeni,NA,NA
+aca99933-c027-4b32-9bae-efe20c5b9a83,Pavona maldivensis,08fab4ab-3f43-4acb-8bc1-d7bdc87c4bd7,Pavona maldivensis,NA,NA
+f7df702d-75ab-40f3-bcd2-f163f92ffd35,Pavona varians,aa9d685f-4d61-425d-af04-71f060eef923,Pavona varians,NA,NA
+04a2d3d9-ef9e-400c-920c-3d04772867d6,Pectinia,602dc038-8e99-4c55-85e4-f3141ddc0041,Pectinia,NA,NA
+a4473ad7-50b7-4688-830a-f4d9056e4e16,Penicillus,62731214-41d2-4db6-af05-e76305a0b8ef,Penicillus,NA,NA
+73c833eb-0275-4dd5-8f04-3d37d8e6bc0d,Peyssonnelia,227f5477-c648-4a08-bec4-e69eb24c0a6c,Peyssonnelia,NA,NA
+f52eea4a-db61-4177-b424-36a67bb202e3,Peyssonnelid algae,7d84ea57-8116-4eba-a39e-5f086b5370db,Peyssonnelid algae,NA,NA
+62d65530-36bb-4a40-ae68-ebe85934b198,Phaeophyceae,b1b917a4-df2c-4394-8aa1-e9b480b77cc4,Phaeophyceae,NA,NA
+38c4570e-3651-4a2e-802a-de4d0e966377,Physogyra,2b1e2403-6391-4017-9044-0f00a7cb9068,Physogyra,NA,NA
+e14470c3-f4c8-4e52-83cc-b09e585461a9,Platygyra,9cd8176f-b5b4-474e-87bc-f2744338fe00,Platygyra,NA,NA
+d8027b1f-1537-4774-b530-604a23601251,Platygyra daedalea,f2025774-f694-4c15-8725-c4dcbdb01cf4,Platygyra daedalea,NA,NA
+aa90f8b8-af21-4ea6-ad1a-4e329f157a6f,Plerogyra,eaebab16-9d01-4723-b120-6239314826ab,Plerogyra,NA,NA
+c683db08-292b-4e7b-9158-2555f594b978,Plesiastrea,5ab3e132-8c64-4e65-8a5e-25d92f284331,Plesiastrea,NA,NA
+b1359c93-c0fb-43b4-84ae-f5ae87b93eda,Plesiastrea versipora,d2b0f823-5641-43d7-872b-a59accf15ac7,Plesiastrea versipora,NA,NA
+df1d5be4-017e-4aa3-89e3-4b93882242a2,Plexaura,8e192db3-cec7-4b84-a4b0-1ed01bb1f62d,Plexaura,NA,NA
+ff9478fd-381a-4c2f-b91a-3f1c9732c831,Pocillopora,da1dfe78-f982-4b09-81ae-b38d328bd85e,Pocillopora,NA,NA
+6ad1c259-7168-426e-a328-afa8277dbc07,Pocillopora damicornis,b401b526-6d2f-4f6a-8cc1-10051e0623ff,Pocillopora damicornis,NA,NA
+e70063fe-11b8-4f60-bc91-d1c586319277,Pocillopora grandis,52c54acc-cde4-444c-8ba3-1b2c8c6ab17f,Pocillopora grandis,NA,NA
+c23c67d8-d02d-487b-a3c5-b87fd2bbbfab,Pocillopora meandrina,5115c485-0237-450a-a6f8-fdcddd54eeed,Pocillopora meandrina,NA,NA
+1732fb09-1dc8-49f0-a63e-d96011817813,Pocillopora verrucosa,dd836305-6c6d-4a07-b3cc-9d20fc4899c4,Pocillopora verrucosa,NA,NA
+10437ff7-de86-44ce-8a93-d933179ae3cb,Pocilloporidae,6580c490-3a3c-4969-b91f-18d7edd82074,Pocilloporidae,NA,NA
+bd341e04-2d68-4dd6-ba9b-1ec6e8b5dc86,Podabacia,a89f2635-41fe-4d2f-ae67-880a5707340e,Podabacia,NA,NA
+40b3478d-77eb-4e2e-9a49-7b27302bf010,Polyphyllia,ee3b17dd-36f3-4a99-bc2d-a95f5d39bac1,Polyphyllia,NA,NA
+fb69a368-4789-4a68-a039-ec69bdff4ee5,Porifera,50a5d5d0-1afe-4e48-ab35-3adec6a30f0d,Porifera,NA,NA
+3baac53d-9e7b-4645-bc72-e0b0f110fea3,Porites Branching,2b55697f-f26e-433e-9070-f1fe9748bf7b,Porites,cf2deca6-53b8-4096-916f-32c2c71d14bf,Branching
+831ee75a-c70e-4387-a741-a68596b9f606,Porites Encrusting,2b55697f-f26e-433e-9070-f1fe9748bf7b,Porites,b406252b-c160-4fd6-b7f9-f61d5e2779a5,Encrusting
+0ee5ac2c-14e2-44fd-9d65-1e359c3cdae9,Porites Foliose,2b55697f-f26e-433e-9070-f1fe9748bf7b,Porites,e149db12-9398-4a10-8642-5db70d1a8505,Foliose
+b280e043-1488-44e9-8bda-5cc092a0d81d,Porites Massive,2b55697f-f26e-433e-9070-f1fe9748bf7b,Porites,888609b5-b58a-4d57-addc-a6935bba284b,Massive
+fd73f9f1-0180-40b0-a758-4bc84d33a5d7,Porites,2b55697f-f26e-433e-9070-f1fe9748bf7b,Porites,NA,NA
+37b4d2eb-f1d6-483e-962c-f09540828d06,Porites astreoides,e288a94f-7117-4a54-9558-7d71144ccdc1,Porites astreoides,NA,NA
+948907b9-e21b-40f7-a436-f9ebc970b65f,Porites branneri,1f590289-ca7e-46a6-b59a-765fb7e980dd,Porites branneri,NA,NA
+9dea4ec1-8b21-4482-b01d-8fa74f7d07c9,Porites brighami,b345a2cc-aa56-4752-97e9-b789afb8a4ea,Porites brighami,NA,NA
+bafbc539-0a3e-4feb-8f7f-e0a65f8b8446,Porites compressa,05b8e85d-89ca-48dc-8ec9-2214d9103909,Porites compressa,NA,NA
+961fecdc-27b8-4034-91af-1766871a7551,Porites cylindrica,53bd7b12-ef70-4c59-ae58-effdd03117ef,Porites cylindrica,NA,NA
+f6024bd3-d27c-4545-af13-a3ef151ada09,Porites divaricata,b09cfc80-dd4e-421e-a8ff-c456752f6dc2,Porites divaricata,NA,NA
+a575b49c-e0ce-418e-8096-4f9f5a51bc61,Porites evermanni,5279d3f0-20df-4ac4-ac4a-ca6d21115d7d,Porites evermanni,NA,NA
+643e8fed-6f93-4dd0-9c6b-9098f9e81384,Porites furcata,dcb64e93-80b1-4e60-a2ec-07489d0cd839,Porites furcata,NA,NA
+a7340cfe-d11d-4193-ad1a-4910797a169f,Porites lobata,462970b7-3c1d-48a7-9f6f-d657b27a5bef,Porites lobata,NA,NA
+934cabdc-6791-401e-9bd3-ea537f660dfa,Porites lutea,5eb2052b-9787-4148-a230-4d04580f399c,Porites lutea,NA,NA
+4bd889d9-b52c-48dd-b873-0d87521a11dd,Porites monticulosa,67d74d0f-3b04-477a-aed7-ac090bfd745e,Porites monticulosa,NA,NA
+431b4673-b88b-490f-a363-8514dc46b39e,Porites porites,39aa8616-e9ed-4fda-809a-5f9befc6efc2,Porites porites,NA,NA
+ca149b4a-f152-4a60-a4f6-a0d9f2e9fcbf,Porites rus,7d41bcd1-d9dd-4b8f-85ab-cd410ae0e1ef,Porites rus,NA,NA
+0ee08645-41ac-4119-a651-c573fcbe93d8,Porites superfusa,0df2f2ac-d8b5-41fe-bf1f-7cd2c30a1a2e,Porites superfusa,NA,NA
+f6ea1ef2-d22d-46e7-9229-ce6fdf5cb4c4,Poritidae Massive,cec2b2df-ba65-4634-b371-75ad63428f26,Poritidae,888609b5-b58a-4d57-addc-a6935bba284b,Massive
+eb7b98aa-43b6-4c9d-9d5e-0c978b6993a1,Psammocora,748cb267-f47c-4920-b5b0-39109ade448f,Psammocora,NA,NA
+b0f7b6d5-cec9-4cc9-ba9f-a93675a851f8,Psammocora nierstraszi,c52c7acb-39a9-4849-8546-60b39fd3a2a8,Psammocora nierstraszi,NA,NA
+6ea58a46-db0b-4bc6-ae7e-49bb825941af,Psammocora profundacella,c312d18f-fefc-47cb-b5be-a5814e556b12,Psammocora profundacella,NA,NA
+5ec1dc46-579a-4b82-90bb-f0183b5444a4,Psammocora stellata,577244a2-aa83-4721-ab0b-533a82f7a0c9,Psammocora stellata,NA,NA
+f4c4cd1f-7fb5-44bb-8fab-f59297fada45,Pseudodiploria,10240284-332a-4913-9bca-a96af8380a06,Pseudodiploria,NA,NA
+ccbc6b02-ef52-49c4-b49d-f6d9afbdcd94,Pseudodiploria clivosa,e7f1d46b-a613-40fe-968f-8fddc7c13c98,Pseudodiploria clivosa,NA,NA
+6448a998-3e33-45db-b8f1-8a6e08818be5,Pseudodiploria strigosa,4b503b74-748b-4773-a788-e16a84f59f81,Pseudodiploria strigosa,NA,NA
+6201c3b3-e7a4-4717-ba1d-3fcff8b3c412,Pseudoplexaura,6e773788-5b88-4187-9816-726d9bc673f1,Pseudoplexaura,NA,NA
+4c5ce620-35b8-4a8f-977b-b0cdb5517944,Pseudopterogorgia,7f309e4e-54a7-4086-83a0-b61ce0d9476c,Pseudopterogorgia,NA,NA
+d849bb7b-176d-4dd5-b3e0-5825e04d5d1b,Pseudosiderastrea,fb2bf86e-f1f3-4649-bc3d-3e99cd1a3f98,Pseudosiderastrea,NA,NA
+29abb76c-9644-4ab4-9674-9a58369d8065,Pterogorgia,b5f4b46c-a779-4786-889b-f1987217ae5b,Pterogorgia,NA,NA
+c818ce47-75a3-44d7-996b-750be5078e0e,Pterogorgiidae,7a4323fc-2e79-4511-82d5-9268fd34ce01,Pterogorgiidae,NA,NA
+85d1406c-05d2-4d47-bad0-8c44d3bbb786,Rhipilia,fedc7073-fc92-4d4b-a987-c9154db8651f,Rhipilia,NA,NA
+db3c90c2-0f42-4d53-bc5e-ba1025fc49bf,Rhipocephalus,f7159ae5-d627-4b4f-87a6-521fc36119e0,Rhipocephalus,NA,NA
+826a80f3-12bb-4c9f-8225-432dfebc4ce9,Rhodophyta,f76a7fb3-ec62-465e-a07c-aac3e0936d71,Rhodophyta,NA,NA
+fb8d12bb-5f6e-40c1-8b3b-a070e3832edd,Rock,7b351732-5ec1-43c5-b668-15ed24e33aed,Rock,NA,NA
+10e8a19b-6c16-46a4-9711-ff91ea782f4f,Rubble,ed2332ed-0762-45fb-87a3-d315e218faf1,Rubble,NA,NA
+cef9c39d-3420-4769-be5d-935dcdd27593,Sand,b76bca12-884b-4404-bb9f-97d505b0fe58,Sand,NA,NA
+2be87ed5-a85b-4149-b8ff-7bc9c3d1e017,Sandalolitha,14a38ea6-beab-4871-8249-a015b5423268,Sandalolitha,NA,NA
+97c3c535-0527-4396-9b1d-5201563dcc44,Sarcophyton,d19a0d50-6372-4390-922b-cc8e8f7f13eb,Sarcophyton,NA,NA
+ea1d2953-29ff-4e2a-8a47-755481f35632,Sargassum,e1272775-11a6-4f60-9054-956567a961df,Sargassum,NA,NA
+7f1510f9-27e8-457b-a785-038dcd09dfec,Sargassum fluitans,f200ecbf-46fa-4b19-b8c4-b91028460a5d,Sargassum fluitans,NA,NA
+9be85e59-17f1-4e1b-afbd-f6af99690e41,Sargassum hystrix,a81dc2ce-99cd-4937-b06b-283ab18f0cc0,Sargassum hystrix,NA,NA
+401ad88c-fe05-4873-b4f7-203d86514c0f,Scapophyllia,17bbf449-3823-4806-9e7c-9cd47f1288e6,Scapophyllia,NA,NA
+54d3765f-7cb2-41f6-b8a1-bd756768b966,Scleractinia,430912ef-7750-4e71-a976-6da41cfba4b3,Scleractinia,NA,NA
+0057387d-0913-4089-a145-d68a48cd8001,Scolymia,602a2e9b-abad-48ac-90ec-857dd2fc194f,Scolymia,NA,NA
+7f8e8c69-7b1b-4620-9a95-ad2dbf972278,Scolymia lacera,970e6f49-9a1a-46e3-bb8d-95c607f6bfdd,Scolymia lacera,NA,NA
+2f6dd992-b0c6-4678-bc0c-76d0d79b9392,Sea cucumber,702a838d-aebd-4547-bc07-e161c3262cbc,Sea cucumber,NA,NA
+cd98c967-c20b-413d-942c-507b13b0a917,Sea urchin,f7980725-60b3-47c9-abd2-0a006ea30061,Sea urchin,NA,NA
+dcb8721e-dedb-4047-b7ea-06bfe158d77c,Seagrass,5f1f7956-bc21-4bfd-a409-9740e614b2ac,Seagrass,NA,NA
+4665cb78-ce52-4b6e-bd33-d45ef7b4643d,Seriatopora,316eeb46-e24d-449b-a0b7-c0c8c0b803e6,Seriatopora,NA,NA
+9e287eaf-3277-48ca-a1bc-0773eeec4b68,Siderastrea,33f6866f-cc76-4125-b27d-84ac0110ba94,Siderastrea,NA,NA
+3aef598b-ce9f-4b68-9dde-14f86318a790,Siderastrea radians,4b404c52-42a0-4efa-a950-2824489c8deb,Siderastrea radians,NA,NA
+578d7c8b-7157-4300-9c3f-559327d65e00,Siderastrea siderea,8c98a043-b8e4-4d55-8ad2-fbdfcf455af5,Siderastrea siderea,NA,NA
+4f444bde-ae56-4482-8093-4ea0fb942b53,Silt,18c4c1ee-a261-493d-b868-4b8a5e42bfc6,Silt,NA,NA
+5106e2c3-57b8-44b5-80f4-f09505f33f5a,Sinularia,ad22bde8-47c5-45dd-9d6e-45dd361b3b06,Sinularia,NA,NA
+73cb8a8b-4aec-46a1-bac7-88fe9b105799,Soft coral Branching,30a987e9-b420-4db6-a83a-a1f7cabd14fb,Soft coral,cf2deca6-53b8-4096-916f-32c2c71d14bf,Branching
+13d7cf02-0247-4d82-a2f7-a72224aee36b,Soft coral,30a987e9-b420-4db6-a83a-a1f7cabd14fb,Soft coral,NA,NA
+64bd2636-302c-4e52-98bd-951cf86ed28d,Solenastrea bournoni,3a8d7636-166d-4841-9ddb-9c378f9b32ec,Solenastrea bournoni,NA,NA
+8403d213-025d-42f0-ab2f-61456ecd75bf,Solenastrea hyades,6812b181-49a2-4302-928c-cbdbc8781e88,Solenastrea hyades,NA,NA
+33992b17-31a1-4f4a-83b0-cbb48fe2e450,Sponge Arborescent,6b9fdd82-685f-4f21-8fa3-883e06be2c30,Sponge,7e71833a-fc29-4176-91cb-1df6723089ed,Arborescent
+5142ec66-f897-4c5e-97df-1e63a6206370,Sponge Branching,6b9fdd82-685f-4f21-8fa3-883e06be2c30,Sponge,cf2deca6-53b8-4096-916f-32c2c71d14bf,Branching
+4b801512-924f-45a3-8dbc-94edcb527274,Sponge Encrusting,6b9fdd82-685f-4f21-8fa3-883e06be2c30,Sponge,b406252b-c160-4fd6-b7f9-f61d5e2779a5,Encrusting
+1d61541d-c704-48c8-b2bf-cb99b399c6f2,Sponge Massive,6b9fdd82-685f-4f21-8fa3-883e06be2c30,Sponge,888609b5-b58a-4d57-addc-a6935bba284b,Massive
+227ae057-fd9d-405f-8893-35636c4c4c09,Sponge,6b9fdd82-685f-4f21-8fa3-883e06be2c30,Sponge,NA,NA
+dfcaf267-e058-4cf4-b105-2171b814fe6d,Spyridia filamentosa,42bada38-002f-4636-864f-920bab234329,Spyridia filamentosa,NA,NA
+2dc1d684-7ea5-454a-9550-c096b06b0c7e,Stephanocoenia intersepta,c85f376f-a666-4c11-bc95-03e0a9dac856,Stephanocoenia intersepta,NA,NA
+580bb805-2374-4d89-966b-38434861218d,Stylaster,7d649b73-ccd6-4254-8a42-d2b24d25ac5e,Stylaster,NA,NA
+15d1e754-6e91-48b9-9553-44c6ac86cf40,Stylocoeniella,4fddc309-01c7-4040-86b4-f80f0f0235e9,Stylocoeniella,NA,NA
+9aa72501-16df-4ef5-955f-513cb0cc21b7,Stylophora,c3ffe279-fb7b-499e-8fb8-b26403c80710,Stylophora,NA,NA
+10e93214-6dc2-4099-9419-fd7afab7ab86,Stypopodium,43cf8a4f-6523-4dae-8fd5-c34fa4afc8cd,Stypopodium,NA,NA
+dae23543-d5a1-42fc-9004-834c7775962f,Symphyllia,f87eae02-9123-4931-98a0-8d635670a46b,Symphyllia,NA,NA
+fb805ef7-aaf0-4ea9-8de6-255bec51c699,Syringodium,e3516630-2f26-4557-a06d-1bbf77693a95,Syringodium,NA,NA
+7e3da0a6-da4c-44f5-aefb-7f82ad23a774,Thalassia testudinum,8d8e556c-63a5-4aa8-9d25-f265c162b9be,Thalassia testudinum,NA,NA
+e7cd1c48-c6d0-419f-85dd-f989f244d331,Tridacna giant clam,1aa38424-a8ab-4c85-b463-10606426e66e,Tridacna giant clam,NA,NA
+31340640-5473-4d8a-ac2e-5899713a75d1,Tubastraea,bbff20b3-6dd9-4be8-aa3e-6619229d2d6b,Tubastraea,NA,NA
+bc01a55e-ebb5-4b67-8c7e-e9be7973931b,Tubastraea coccinea,428869c1-da96-4bae-8f1d-d0b81c5ee706,Tubastraea coccinea,NA,NA
+cc5f93b5-6337-40e8-a2da-e00cdf862dc6,Tubipora,efae0d72-6980-4c29-be83-63da72812a35,Tubipora,NA,NA
+a0640ec2-7045-499f-aa6d-06e44693a6b3,Tubipora musica,8a35dc37-8c8b-4f2f-a1e3-725baba09427,Tubipora musica,NA,NA
+ba081182-4c62-43de-a54e-57769c34324e,Tunicate,281632f0-8fe1-41fc-a854-70434ebcb341,Tunicate,NA,NA
+ade1f2fe-5fd8-4af0-bb59-51bb6dcd2e59,Turbinaria-algae,6439edbc-f43a-485f-81b3-e64246c4fc90,Turbinaria-algae,NA,NA
+d3afb52b-eb35-493d-9a5b-05381eefef00,Turbinaria-coral,588f63cd-ffd2-4c38-8684-1208109165eb,Turbinaria-coral,NA,NA
+753465c3-ea5c-4662-beb7-6039ef809a81,Turf algae,20090bf4-868e-431b-974c-ab9be5bbdb5f,Turf algae,NA,NA
+bb07f5a1-fd17-4eec-a0b3-30f6130d1439,Tydemania,0ee04957-7c54-4def-b435-f0b8ecaa9632,Tydemania,NA,NA
+89e4cde9-a3d1-44ae-8964-d4a55afb11b1,Udotea,50062bd7-949d-45b6-9083-6d2d94c8f31e,Udotea,NA,NA
+5130658d-61bf-42a0-bfda-4715e1a078ae,Ulva,4fab6349-d704-4883-bb83-6288e3c7b03f,Ulva,NA,NA
+37d76022-00dc-4cf9-b575-b4278d7de5da,Unknown,b72e02c1-eab3-4781-9eb4-d191bb84e5c7,Unknown,NA,NA
+b0780178-674c-4f17-a5c9-0f51904fdf73,Valonia,c0f0ee39-58b1-4304-961e-6729dd8567d3,Valonia,NA,NA
+cc007960-5431-4f68-86c7-28ae2f157d15,Ventricaria,6acd6333-fb98-447a-b61f-102641f84b70,Ventricaria,NA,NA
+40b772d8-0a8b-4f62-9e4c-3ea64f244b4f,"Worms, sabellid",4b1636d1-b227-494e-b196-11cf4bfa3088,"Worms, sabellid",NA,NA
+46bd9aa3-a5fd-41e3-8f83-7cc0971c341a,Wrangelia,9f424659-9e93-43f0-a83b-14eb41c9d253,Wrangelia,NA,NA
+1d230374-e8c9-4acd-9e65-a89591d90db7,Xenia,457699ac-fd34-4640-bce4-070b1d7db3b5,Xenia,NA,NA
+4d9a00b0-74a8-4cb1-a9bb-492b62d68ca6,Xeniidae,1cf7ce64-c413-490e-a261-e6effe8cbbb8,Xeniidae,NA,NA
+8a3b0137-38f4-4874-9878-e6ba2c5a6cc5,Zoanthid,1c0af377-dc41-4025-bc0a-917405f2a56c,Zoanthid,NA,NA
