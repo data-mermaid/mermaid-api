@@ -6,21 +6,20 @@ from ..utils import classification as cls_utils
 
 
 @receiver(pre_save, sender=Image)
-def strip_exif(sender, instance, **kwargs):
+def pre_image_save(sender, instance, **kwargs):
     if not instance.created_on:
         try:
+            cls_utils.check_if_valid_image(instance)
             cls_utils.store_exif(instance)
             instance.original_image_name = instance.image.name
-            instance.original_image_width = instance.image.width
-            instance.original_image_height = instance.image.height
+            instance.image = cls_utils.convert_image_to_png(instance)
 
-            image_name = cls_utils.create_unique_image_name(instance)
+            image_name = f"{instance.id}.png"
             instance.name = image_name
             instance.image.name = image_name
 
             cls_utils.correct_image_orientation(instance)
-        except Exception as err:
-            print(err)
+        except Exception:
             raise
 
 

@@ -200,8 +200,11 @@ class ImageViewSet(BaseProjectApiViewSet):
                 updated_by=profile,
             )
         except Exception as err:
-            print(f"Create image record: {err}")
-            return Response(data=None, status=status.HTTP_422_UNPROCESSABLE_ENTITY)
+            if hasattr(err, "message"):
+                msg = err.message
+            else:
+                msg = str(err)
+            return Response(data={"detail": msg}, status=status.HTTP_422_UNPROCESSABLE_ENTITY)
 
         if trigger_classification:
             create_classification_status(image_record, status=ClassificationStatus.PENDING)
