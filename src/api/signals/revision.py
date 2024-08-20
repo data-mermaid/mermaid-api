@@ -70,6 +70,13 @@ def delete_project_profile_revisions(sender, instance, *args, **kwargs):
     Revision.create_from_instance(instance.project, related_to_profile_id=instance.profile.pk)
 
 
+@receiver(post_save, sender=ProjectProfile)
+def new_project_profile_revisions(sender, instance, created, *args, **kwargs):
+    if created:
+        Revision.remove_from_instance(instance, related_to_profile_id=instance.profile.pk)
+        Revision.remove_from_instance(instance.project, related_to_profile_id=instance.profile.pk)
+
+
 @receiver(post_save, sender=CollectRecord)
 def new_collect_record_revisions(sender, instance, created, *args, **kwargs):
     if created:
