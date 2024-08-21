@@ -157,3 +157,23 @@ def test_removed_from_project(db_setup, profile1, project_profile1):
     assert len(updates) == 0
     assert len(deletes) == 0
     assert len(removes) == 1
+
+
+def test_added_removed_added_to_project(db_setup, project1, profile1):
+    request = MockRequest(profile=profile1)
+    project_viewset = ProjectViewSet(request=request)
+
+    # Add
+    project_profile1 = ProjectProfile.objects.create(project=project1, profile=profile1, role=ProjectProfile.COLLECTOR)
+    # Delete
+    project_profile1.delete()
+    # Re-Add
+    ProjectProfile.objects.create(project=project1, profile=profile1, role=ProjectProfile.COLLECTOR)
+
+    updates, deletes, removes = get_records(
+        project_viewset, profile1.pk, None
+    )
+    
+    assert len(updates) == 1
+    assert len(deletes) == 0
+    assert len(removes) == 0
