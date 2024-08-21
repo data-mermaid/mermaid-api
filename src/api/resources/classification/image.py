@@ -213,7 +213,7 @@ class ImageViewSet(BaseProjectApiViewSet):
             else:
                 classify_image_job(image_record.pk)
 
-        data = ImageSerializer(instance=image_record).data
+        data = ImageSerializer(instance=image_record, context = {"request": request}).data
         return Response(data=data, status=status.HTTP_201_CREATED)
 
     def _get_validated_annotations(self, point_data, pk):
