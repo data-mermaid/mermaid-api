@@ -62,18 +62,6 @@ def create_image_name(image: Image) -> str:
     return f"{name}{image_ext}"
 
 
-def convert_image_to_png(image: Image):
-    with PILImage.open(image.image) as img:
-        if img.mode != "RGBA":
-            img = img.convert("RGBA")
-        png_image = BytesIO()
-        img.save(png_image, format="PNG", optimize=True, compress_level=6)
-        png_image.seek(0)
-
-        content_file = ContentFile(png_image.read(), name=f"{image.id}.png")
-        return content_file
-
-
 def create_image_checksum(image: ImageFieldFile) -> str:
     if image.closed:
         image.open("rb")
