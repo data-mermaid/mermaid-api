@@ -18,6 +18,7 @@ from django.utils import timezone
 from exif import Image as ExifImage
 from PIL import Image as PILImage
 from PIL.ExifTags import TAGS
+from plum.exceptions import UnpackError
 from spacer.extract_features import EfficientNetExtractor
 from spacer.messages import ClassifyFeaturesMsg, DataLocation, ExtractFeaturesMsg
 from spacer.tasks import classify_features, extract_features
@@ -31,7 +32,6 @@ from ..models import (
     Point,
     Profile,
 )
-from .encryption import encrypt_string
 from .q import submit_image_job
 from .s3 import download_directory
 
@@ -42,16 +42,20 @@ CLASSIFIER_FILE_NAME = "classifier.pkl"
 WEIGHTS_FILE_NAME = "efficientnet_weights.pt"
 
 
-def create_unique_image_name(image: Image) -> str:
-    site = image.site
-    if not site:
-        raise ValueError(f"No site is related to image {image.id}")
+def check_if_valid_image(image: ImageFieldFile):
+    try:
+        with PILImage.open(image.image) as img:
+            img.verify()
+            w, h = img.size
+            if settings.MAX_IMAGE_PIXELS < w * h:
+                raise ValueError(f"Maximum number of pixels is {settings.MAX_IMAGE_PIXELS}.")
+        return
+    except (AttributeError, TypeError, IOError, SyntaxError) as _:
+        raise ValueError("Invalid image.")
 
-    site_id = str(site.id)
-    uid_str = f"{site_id}-{image.id}"
 
-    name = encrypt_string(uid_str)
-
+def create_image_name(image: Image) -> str:
+    name = str(image.id)
     image_name = image.image.name
     image_ext = os.path.splitext(image_name)[1]
 
@@ -167,9 +171,11 @@ def store_exif(image_record: Image) -> Dict[str, Any]:
     if img.closed:
         img.open("rb")
 
-    exif_image = ExifImage(img.read())
-
-    if exif_image.has_exif is False:
+    try:
+        exif_image = ExifImage(img.read())
+        if exif_image.has_exif is False:
+            return
+    except UnpackError:
         return
 
     exif_details = {}
