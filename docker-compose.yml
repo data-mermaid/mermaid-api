@@ -39,6 +39,7 @@ services:
       - $PWD/src:/var/projects/webapp
     ports:
       - 8080:8080
+      - 8081:8081
     command: tail -f /dev/null
     env_file:
       - .env

@@ -1,4 +1,3 @@
-from django.conf import settings
 from django.db import transaction
 from django.db.models import Q
 from rest_condition import And
@@ -19,11 +18,7 @@ from ...models import (
     ProjectProfile,
 )
 from ...utils import truthy
-from ...utils.classification import (
-    classify_image,
-    classify_image_job,
-    create_classification_status,
-)
+from ...utils.classification import classify_image_job, create_classification_status
 from ..base import BaseAPISerializer, BaseProjectApiViewSet
 from ..mixins import DynamicFieldsMixin
 from .annotation import SaveAnnotationSerializer
@@ -208,12 +203,9 @@ class ImageViewSet(BaseProjectApiViewSet):
 
         if trigger_classification:
             create_classification_status(image_record, status=ClassificationStatus.PENDING)
-            if settings.ENVIRONMENT == "local":
-                classify_image(image_record.pk)
-            else:
-                classify_image_job(image_record.pk)
+            classify_image_job(image_record.pk)
 
-        data = ImageSerializer(instance=image_record, context = {"request": request}).data
+        data = ImageSerializer(instance=image_record, context={"request": request}).data
         return Response(data=data, status=status.HTTP_201_CREATED)
 
     def _get_validated_annotations(self, point_data, pk):
