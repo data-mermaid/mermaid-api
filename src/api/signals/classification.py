@@ -12,6 +12,8 @@ def pre_image_save(sender, instance, **kwargs):
             cls_utils.check_if_valid_image(instance)
             cls_utils.store_exif(instance)
             instance.original_image_name = instance.image.name
+            instance.original_image_width = instance.image.width
+            instance.original_image_height = instance.image.height
 
             image_name = f"{instance.id}.png"
             instance.name = image_name
