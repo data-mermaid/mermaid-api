@@ -50,7 +50,7 @@ class Queue:
     USE_FIFO = True if getattr(settings, "USE_FIFO") == "True" else False
     _delayed_jobs = defaultdict(list)
 
-    def __init__(self, name, sqs_resource=None):
+    def __init__(self, name, sqs_resource=None, queue_url=None):
         """
         Initialize an SQS queue.
 
@@ -72,7 +72,9 @@ class Queue:
                 "aws_secret_access_key": settings.AWS_SECRET_ACCESS_KEY,
                 "region_name": settings.AWS_REGION,
             }
-            if settings.ENDPOINT_URL:
+            if queue_url:
+                resource_args["endpoint_url"] = queue_url
+            elif settings.ENDPOINT_URL:
                 resource_args["endpoint_url"] = settings.ENDPOINT_URL
 
             self.sqs_resource = boto3.resource(**resource_args)

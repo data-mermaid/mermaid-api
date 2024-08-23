@@ -13,24 +13,40 @@ class Command(BaseCommand):
         super(Command, self).__init__()
 
     def add_arguments(self, parser):
-        parser.add_argument("-n", dest="queue_name", default=False, help="Queue name")
+        parser.add_argument("-n", dest="queue_name", default=None, help="Queue name")
+        parser.add_argument("--queue_url", dest="queue_url", default=None, help="Queue url")
+
 
     def handle(self, *args, **options):
+        verbosity = options.get("verbosity") or 0
         queue_name = options.get("queue_name") or getattr(settings, "QUEUE_NAME")
+        queue_url = options.get("queue_url")
+
         if not queue_name:
             raise ValueError("Invalid queue_name")
 
-        num_jobs = int(utils.num_jobs(queue_name))
-        callable_summary = defaultdict(int)
-        duplicates = defaultdict(int)
+        queue = utils.get_queue(queue_name=queue_name, queue_url=queue_url)
 
-        jobs = utils.get_jobs(queue_name, num_jobs)
+        num_jobs = int(utils.num_jobs(queue=queue))
+        callable_summary = defaultdict(int)
+        duplicates = {}
+
+        if verbosity > 1:
+            self.stdout.write("INFO: fetching jobs\n")
+
+        jobs = utils.get_jobs(num_jobs, queue=queue)
+
+        if verbosity > 1:
+            self.stdout.write("INFO: summarizing jobs...\n")
         try:
             for job in jobs:
                 job_key = utils.key(job)
                 callable_name = job.callable.__name__
 
-                duplicates[job_key] += 1
+                if job_key not in duplicates:
+                    duplicates[job_key] = 0
+                else:
+                    duplicates[job_key] += 1
                 callable_summary[callable_name] += 1
 
             duplicates = {
@@ -39,32 +55,38 @@ class Command(BaseCommand):
                 if v > 1
             }
 
-            print(f"*** Queue: {queue_name} ***")
-            print("")
+            self.stdout.write(f"\n\n*** Queue: {queue_name} ***\n\n")
 
             if len(callable_summary) == 0:
-                print("No jobs to summarize.")
+                self.stdout.write("No jobs to summarize.\n")
             else:
                 if len(duplicates.values()) == 0:
-                    print("No duplicate jobs\n")
+                    self.stdout.write("No duplicate jobs\n")
                 else:
-                    print("Duplicate Jobs")
-                    print("--------------")
-                    print("")
+                    self.stdout.write("Duplicate Jobs\n")
+                    self.stdout.write("--------------\n")
+                    self.stdout.write("\n")
                     for job_key, val in duplicates.items():
                         if val == 1:
                             continue
-                        print(f"{job_key}\t{val}")
+                        self.stdout.write(f"{utils.deserialize_key(job_key)}\t{val}")
 
-                print("")
-                print("Summary of Job Types")
-                print("--------------------")
-                print("")
+                self.stdout.write("\n")
+                self.stdout.write("Summary of Job Types\n")
+                self.stdout.write("--------------------\n")
+                self.stdout.write("\n")
                 callable_summary = dict(sorted(callable_summary.items(), key=lambda item: item[1]))
                 for job_key, val in callable_summary.items():
-                    print(f"{job_key}\t{val}")
+                    self.stdout.write(f"{job_key}\t{val}\n")
 
-            print("\n-- // --\n")
+            self.stdout.write("\n-- // --\n\n")
         finally:
+            if verbosity > 1:
+                self.stdout.write("INFO: putting jobs back on queue\n")
             for job in jobs:
-                utils.release_job(job, queue_name)
+                try:
+                    utils.release_job(job, queue=queue)
+                except Exception as e:
+                    self.stdout.write(f"WARNING: skipping relase job {e}\n")
+                    # Skip if there's an issue
+                    pass
