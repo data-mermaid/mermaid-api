@@ -8,7 +8,7 @@ from .mermaid import Project
 
 class BaseSummaryModel(models.Model):
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
-    project_id = models.UUIDField()
+    project_id = models.UUIDField(db_index=True)
     project_name = models.CharField(max_length=255)
     project_status = models.PositiveSmallIntegerField(
         choices=Project.STATUSES, default=Project.OPEN
