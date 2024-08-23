@@ -183,6 +183,18 @@ class Queue:
             ]
         )
 
+    def release_job(self, job):
+        try:
+            resp = self.sqs_resource.meta.client.change_message_visibility(
+                QueueUrl=self.queue.url,
+                ReceiptHandle=job._sqs_receipt_handle,
+                VisibilityTimeout=0
+            )
+            return resp["ResponseMetadata"]["HTTPStatusCode"] == 200
+        except Exception as e:
+            print(e)
+            raise e
+
     def _cleanup_duplicate_jobs(self, duplicate_job_groups):
         for duplicate_jobs in duplicate_job_groups.values():
             for duplicate_job in duplicate_jobs:
