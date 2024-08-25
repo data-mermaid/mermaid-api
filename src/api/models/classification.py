@@ -8,6 +8,7 @@ from storages.backends.s3 import S3Storage
 from .base import BaseModel
 from .mermaid import (
     BenthicAttribute,
+    BenthicAttributeGrowthForm,
     CollectRecord,
     GrowthForm,
     ObsBenthicPhotoQuadrat,
@@ -27,6 +28,7 @@ def select_image_storage():
         )
 
 
+# TODO: remove
 class Label(BaseModel):
     benthic_attribute = models.ForeignKey(
         BenthicAttribute, related_name="labels", on_delete=models.CASCADE
@@ -59,13 +61,25 @@ class LabelMapping(BaseModel):
         (REEFCLOUD, REEFCLOUD),
     )
 
-    label = models.ForeignKey(Label, related_name="mappings", on_delete=models.CASCADE)
+    label = models.ForeignKey(
+        Label, related_name="mappings", on_delete=models.SET_NULL, null=True, blank=True
+    )
+    benthic_attribute = models.ForeignKey(
+        BenthicAttribute,
+        related_name="labelmappings",
+        on_delete=models.CASCADE,
+        null=True,
+        blank=True,
+    )
+    growth_form = models.ForeignKey(
+        GrowthForm, related_name="labelmappings", on_delete=models.CASCADE, null=True, blank=True
+    )
     provider = models.CharField(max_length=50, choices=PROVIDERS)
     provider_id = models.CharField(max_length=255)
     provider_label = models.CharField(max_length=255, blank=True)
 
     class Meta:
-        unique_together = ("label", "provider_id")
+        unique_together = ("benthic_attribute", "growth_form", "provider", "provider_id")
         db_table = "class_label_mapping"
 
     def __str__(self):
@@ -80,7 +94,10 @@ class Classifier(BaseModel):
     patch_size = models.IntegerField(help_text="Number of pixels")
     num_points = models.IntegerField(default=25)
     description = models.TextField(max_length=1000, blank=True)
-    labels = models.ManyToManyField(Label, related_name="classifiers")
+    labels = models.ManyToManyField(Label, related_name="classifiers")  # TODO: remove
+    benthic_attribute_growth_forms = models.ManyToManyField(
+        BenthicAttributeGrowthForm, related_name="classifiers"
+    )
 
     class Meta:
         db_table = "class_classifier"
