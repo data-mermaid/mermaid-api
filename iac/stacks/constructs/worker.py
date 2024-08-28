@@ -118,6 +118,14 @@ class QueueWorker(Construct):
                 security_groups=[container_security_group],
                 **worker_params,
             )
+        # Allow workers to send messages.
+        queue.grant(
+            worker_service.service.task_definition.task_role,
+            "sqs:DeleteMessage",
+            "sqs:SendMessage",
+            "sqs:GetQueueAttributes",
+            "sqs:GetQueueUrl",
+        )
 
         # allow worker access to public bucket
         public_bucket.grant_read_write(worker_service.task_definition.task_role)
