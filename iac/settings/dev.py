@@ -7,8 +7,8 @@ DEV_SETTINGS = ProjectSettings(
     database=DatabaseSettings(name=f"mermaid_{DEV_ENV_ID}", port="5432"),
     api=DjangoSettings(
         # API
-        container_cpu=1024,
-        container_memory=2048,
+        container_cpu=512,
+        container_memory=1024,
         container_count=1,
         # SQS
         sqs_cpu=512,
