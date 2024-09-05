@@ -186,6 +186,13 @@ class ImageViewSet(BaseProjectApiViewSet):
                 },
                 status=status.HTTP_400_BAD_REQUEST,
             )
+        elif collect_record.data.get("image_classification") is not True:
+            return Response(
+                {
+                    "error": "Benthic Photo Quadrat sample unit not flagged for image classification."
+                },
+                status=status.HTTP_400_BAD_REQUEST,
+            )
 
         try:
             image_record = Image.objects.create(
