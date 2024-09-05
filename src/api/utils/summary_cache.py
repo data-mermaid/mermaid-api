@@ -174,9 +174,11 @@ def _update_project_summary_sample_events(
         records = SummarySampleEventSerializer(qs, many=True).data
 
         proj_summary_se_model.objects.filter(project_id=project_id).delete()
+        tags = [{"id": str(t.pk), "name": t.name} for t in project.tags.all()]
         proj_summary_se_model.objects.create(
             project_id=project_id,
             project_name=project.name,
+            tags=tags,
             records=records,
             created_on=timestamp,
         )
