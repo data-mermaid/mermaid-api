@@ -905,7 +905,7 @@ class BenthicAttributeGrowthForm(models.Model):
     class Meta:
         unique_together = ("benthic_attribute", "growth_form")
         db_table = "benthic_attribute_growth_form"
-        verbose_name_plural = _("unique BA/GF combinations")
+        verbose_name_plural = _("BA/GF unique combinations")
         ordering = ["benthic_attribute__name", "growth_form__name"]
 
     def __str__(self):

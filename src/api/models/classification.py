@@ -83,7 +83,10 @@ class LabelMapping(BaseModel):
         db_table = "class_label_mapping"
 
     def __str__(self):
-        return f"{self.label.name} {self.provider} {self.provider_id}"
+        label = self.benthic_attribute.name
+        if self.growth_form:
+            label += f" {self.growth_form.name}"
+        return f"{label} {self.provider} {self.provider_id}"
 
 
 class Classifier(BaseModel):
@@ -105,6 +108,9 @@ class Classifier(BaseModel):
     @classmethod
     def latest(cls):
         return cls.objects.order_by("-created_on").first()
+
+    def __str__(self):
+        return self.version
 
 
 class Image(BaseModel):

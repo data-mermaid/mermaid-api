@@ -5,6 +5,7 @@ from .resources.benthic_attribute import BenthicAttributeViewSet
 from .resources.benthic_transect import BenthicTransectViewSet
 from .resources.choices import ChoiceViewSet
 from .resources.classification.classification_status import ClassificationStatusViewSet
+from .resources.classification.classifier import ClassifierViewSet
 from .resources.classification.image import ImageViewSet
 from .resources.classification.label_mapping import LabelMappingViewSet
 from .resources.collect_record import CollectRecordViewSet
@@ -228,6 +229,7 @@ project_router.register(
 # Classification
 project_router.register(r"classification/images", ImageViewSet, "image")
 project_router.register(r"classification/statuses", ClassificationStatusViewSet, "status")
+router.register(r"classification/classifiers", ClassifierViewSet, "classifier")
 router.register(r"classification/labelmappings", LabelMappingViewSet, "labelmapping")
 
 # multi model sample unit method reports

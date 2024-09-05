@@ -3,6 +3,7 @@ from nested_admin import NestedTabularInline
 
 from ..admin import BaseAdmin
 from ..models.classification import (
+    BenthicAttributeGrowthForm,
     ClassificationStatus,
     Classifier,
     Image,
@@ -30,8 +31,19 @@ class ImageAdmin(BaseAdmin):
     ]
 
 
+@admin.register(BenthicAttributeGrowthForm)
+class BenthicAttributeGrowthFormAdmin(BaseAdmin):
+    list_display = [
+        "benthic_attribute_id",
+        "benthic_attribute",
+        "growth_form_id",
+        "growth_form",
+    ]
+
+
 @admin.register(Classifier)
 class ClassifierAdmin(BaseAdmin):
+    list_display = ["version", "name", "patch_size", "num_points"]
     readonly_fields = ["created_by", "updated_by"]
 
 
@@ -46,7 +58,13 @@ class LabelMappingAdmin(BaseAdmin):
         "provider_label",
         "provider_id",
     ]
-    ordering = ["provider", "provider_label", "provider_id"]
+    ordering = [
+        "benthic_attribute__name",
+        "growth_form__name",
+        "provider",
+        "provider_label",
+        "provider_id",
+    ]
 
 
 @admin.register(ClassificationStatus)
