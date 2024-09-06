@@ -19,7 +19,7 @@ from ...models import (
 )
 from ...utils import truthy
 from ...utils.classification import classify_image_job, create_classification_status
-from ..base import BaseAPISerializer, BaseProjectApiViewSet
+from ..base import BaseAPIFilterSet, BaseAPISerializer, BaseProjectApiViewSet
 from ..mixins import DynamicFieldsMixin
 from .annotation import SaveAnnotationSerializer
 from .classification_status import ClassificationStatusSerializer
@@ -131,10 +131,19 @@ class PatchImageSerializer(BaseAPISerializer):
         return super().validate(data)
 
 
+class ImageFilterSet(BaseAPIFilterSet):
+    class Meta:
+        model = Image
+        fields = [
+            "collect_record_id",
+        ]
+
+
 class ImageViewSet(BaseProjectApiViewSet):
     queryset = Image.objects.prefetch_related("points", "points__annotations").all()
     serializer_class = ImageSerializer
     permission_classes = [And(BaseProjectApiViewSet.permission_classes[0], ImagePermission)]
+    filterset_class = ImageFilterSet
 
     def limit_to_project(self, request, *args, **kwargs):
         qs = self.get_queryset()
