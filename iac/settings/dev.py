@@ -7,8 +7,8 @@ DEV_SETTINGS = ProjectSettings(
     database=DatabaseSettings(name=f"mermaid_{DEV_ENV_ID}", port="5432"),
     api=DjangoSettings(
         # API
-        container_cpu=512,
-        container_memory=1024,
+        container_cpu=1024,
+        container_memory=2048,
         container_count=1,
         # SQS
         sqs_cpu=512,
@@ -20,7 +20,7 @@ DEV_SETTINGS = ProjectSettings(
         default_domain_collect="https://dev-app.datamermaid.org",
         mermaid_api_audience="https://dev-api.datamermaid.org",
         public_bucket="dev-public.datamermaid.org",
-        sqs_message_visibility=600,
+        sqs_message_visibility=3000,
         # Secrets
         dev_emails_name="dev/mermaid-api/dev-emails-mUnSDl",
         spa_admin_client_id_name="common/mermaid-api/spa-admin-client-id-FuMVtc",

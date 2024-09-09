@@ -7,22 +7,15 @@ from ..base import BaseAPIFilterSet, BaseAPISerializer, BaseApiViewSet
 
 class LabelMappingSerializer(BaseAPISerializer):
     updated_by = None
-    label_id = serializers.ReadOnlyField(source="label.pk")
-    label_name = serializers.ReadOnlyField(source="label.name")
-    ba_id = serializers.ReadOnlyField(source="label.benthic_attribute.pk")
-    ba_name = serializers.ReadOnlyField(source="label.benthic_attribute.name")
-    gf_id = serializers.SerializerMethodField()
+    ba_name = serializers.ReadOnlyField(source="benthic_attribute.name")
     gf_name = serializers.SerializerMethodField()
 
-    def get_gf_id(self, obj):
-        return obj.label.growth_form.pk if obj.label.growth_form else None
-
     def get_gf_name(self, obj):
-        return obj.label.growth_form.name if obj.label.growth_form else None
+        return obj.growth_form.name if obj.growth_form else None
 
     class Meta:
         model = LabelMapping
-        exclude = ["created_on", "created_by", "updated_on", "updated_by", "label"]
+        exclude = ["created_on", "created_by", "updated_on", "updated_by"]
 
 
 class LabelMappingFilterSet(BaseAPIFilterSet):
@@ -40,6 +33,4 @@ class LabelMappingViewSet(BaseApiViewSet):
     filterset_class = LabelMappingFilterSet
 
     def get_queryset(self):
-        return LabelMapping.objects.select_related(
-            "label", "label__benthic_attribute", "label__growth_form"
-        )
+        return LabelMapping.objects.select_related("benthic_attribute", "growth_form")

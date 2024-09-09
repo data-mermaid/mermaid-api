@@ -307,7 +307,11 @@ LOGGING = {
         "null": {
             "class": "logging.NullHandler",
         },
-        "console": {"level": DEBUG_LEVEL, "class": "logging.StreamHandler", "stream": sys.stdout},
+        "console": {
+            "level": DEBUG_LEVEL,
+            "class": "logging.StreamHandler",
+            "stream": sys.stdout,
+        },
     },
     "formatters": {
         "file": {
@@ -346,7 +350,7 @@ SQS_WAIT_SECONDS = 20
 SQS_MESSAGE_VISIBILITY = int(os.environ.get("SQS_MESSAGE_VISIBILITY", "300"))
 # Name of queue, if it doesn't exist it will be created.
 QUEUE_NAME = os.environ.get("SQS_QUEUE_NAME", "mermaid-local")  # required
-IMAGE_QUEUE_NAME = os.environ.get("IMAGE_SQS_QUEUE_NAME", "mermaid-image-local")  # required
+IMAGE_QUEUE_NAME = os.environ.get("IMAGE_SQS_QUEUE_NAME", "mermaid-local")  # required
 USE_FIFO = os.environ.get("USE_FIFO", "True")
 # Override default boto3 url for SQS
 ENDPOINT_URL = None if ENVIRONMENT in ("dev", "prod") else "http://sqs:9324"
@@ -357,4 +361,19 @@ if ENVIRONMENT == "prod":
     IMAGE_BUCKET_AWS_ACCESS_KEY_ID = os.environ.get("IMAGE_BUCKET_AWS_ACCESS_KEY_ID")
     IMAGE_BUCKET_AWS_SECRET_ACCESS_KEY = os.environ.get("IMAGE_BUCKET_AWS_ACCESS_KEY_ID")
 
+
+# IMAGE CLASSIFICATION SETTINGS
+
 IMAGE_S3_PATH = "mermaid/"
+DATA_UPLOAD_MAX_MEMORY_SIZE = 30 * 1024 * 1024  # 30 MB
+FILE_UPLOAD_MAX_MEMORY_SIZE = 15 * 1024 * 1024  # 15 MB
+MAX_IMAGE_PIXELS = 8000 * 8000
+AWS_QUERYSTRING_AUTH = False
+AUTOCONFIRM_THRESHOLD = 0.8
+CLASSIFIED_THRESHOLD = 0.1
+SPACER = {
+    "AWS_ACCESS_KEY_ID": AWS_ACCESS_KEY_ID,
+    "AWS_SECRET_ACCESS_KEY": AWS_SECRET_ACCESS_KEY,
+    "AWS_REGION": AWS_REGION,
+    "EXTRACTORS_CACHE_DIR": "/tmp/classifier",
+}

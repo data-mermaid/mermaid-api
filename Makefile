@@ -86,6 +86,20 @@ freshinstall:
 runserver:
 	@docker-compose exec $(API_SERVICE) python manage.py runserver 0.0.0.0:8080
 
+worker:
+	@docker-compose exec $(API_SERVICE) python manage.py simpleq_worker
+
+runserverplus:
+	@docker-compose exec $(API_SERVICE) gunicorn app.wsgi \
+  		--bind 0.0.0.0:8081 \
+		--timeout 120 \
+		--workers 2 \
+		--threads 4 \
+		--worker-class gthread \
+		--access-logfile "-" \
+		--error-logfile "-" \
+		--worker-tmp-dir /dev/shm
+
 simpleq:
 	@docker-compose exec $(API_SERVICE) python manage.py simpleq_worker
 

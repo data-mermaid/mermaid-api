@@ -18,39 +18,36 @@ from django.utils import timezone
 from exif import Image as ExifImage
 from PIL import Image as PILImage
 from PIL.ExifTags import TAGS
+from plum.exceptions import UnpackError
 from spacer.extract_features import EfficientNetExtractor
 from spacer.messages import ClassifyFeaturesMsg, DataLocation, ExtractFeaturesMsg
 from spacer.tasks import classify_features, extract_features
 
-from ..models import (
-    Annotation,
-    ClassificationStatus,
-    Classifier,
-    Image,
-    Label,
-    Point,
-    Profile,
-)
-from .encryption import encrypt_string
+from ..models import Annotation, ClassificationStatus, Classifier, Image, Point, Profile
 from .q import submit_image_job
 from .s3 import download_directory
 
 CLASSIFIER_CONFIG_S3_PATH = "classifier"
-CLASSIFIER_CONFIG_LOCAL_CACHE_DIR = "/tmp/classifier"
+CLASSIFIER_CONFIG_LOCAL_CACHE_DIR = settings.SPACER.get("EXTRACTORS_CACHE_DIR")
+assert CLASSIFIER_CONFIG_LOCAL_CACHE_DIR is not None
 CLASSIFIER_FILE_NAME = "classifier.pkl"
 WEIGHTS_FILE_NAME = "efficientnet_weights.pt"
 
 
-def create_unique_image_name(image: Image) -> str:
-    site = image.site
-    if not site:
-        raise ValueError(f"No site is related to image {image.id}")
+def check_if_valid_image(image: ImageFieldFile):
+    try:
+        with PILImage.open(image.image) as img:
+            img.verify()
+            w, h = img.size
+            if settings.MAX_IMAGE_PIXELS < w * h:
+                raise ValueError(f"Maximum number of pixels is {settings.MAX_IMAGE_PIXELS}.")
+        return
+    except (AttributeError, TypeError, IOError, SyntaxError) as _:
+        raise ValueError("Invalid image.")
 
-    site_id = str(site.id)
-    uid_str = f"{site_id}-{image.id}"
 
-    name = encrypt_string(uid_str)
-
+def create_image_name(image: Image) -> str:
+    name = str(image.id)
     image_name = image.image.name
     image_ext = os.path.splitext(image_name)[1]
 
@@ -68,19 +65,19 @@ def create_image_checksum(image: ImageFieldFile) -> str:
     return file_hash.hexdigest()
 
 
-def create_thumbnail(image: ImageFieldFile) -> ContentFile:
-    img = PILImage.open(image)
+def create_thumbnail(image_instance: Image) -> ContentFile:
+    img = PILImage.open(image_instance.image)
     size = (500, 500)
     img.thumbnail(size, PILImage.LANCZOS)
 
-    base, ext = os.path.splitext(image.name)
+    base, ext = os.path.splitext(image_instance.name)
     thumb_name = f"{base}_thumbnail{ext}"
 
     thumb_io = BytesIO()
     try:
         img.save(thumb_io, img.format)
     except IOError as io_err:
-        print(f"Cannot create thumbnail for [{image.id}]: {io_err}")
+        print(f"Cannot create thumbnail for [{image_instance.pk}]: {io_err}")
         raise
 
     return ContentFile(thumb_io.getvalue(), name=thumb_name)
@@ -166,9 +163,11 @@ def store_exif(image_record: Image) -> Dict[str, Any]:
     if img.closed:
         img.open("rb")
 
-    exif_image = ExifImage(img.read())
-
-    if exif_image.has_exif is False:
+    try:
+        exif_image = ExifImage(img.read())
+        if exif_image.has_exif is False:
+            return
+    except UnpackError:
         return
 
     exif_details = {}
@@ -268,8 +267,8 @@ def _get_image_location(image: Image):
         return DataLocation("filesystem", image.image.path)
     else:
         return DataLocation(
-            storage_type="url",
-            key=image.image.name,
+            storage_type="s3",
+            key=f"{settings.IMAGE_S3_PATH}{image.image.name}",
             bucket_name=settings.IMAGE_PROCESSING_BUCKET,
         )
 
@@ -283,7 +282,7 @@ def _get_features_location(image: Image):
         image_name = image.image.name
         features_path = _modify_file_path(image_name, "", "featurevector")
         return DataLocation(
-            storage_type="url",
+            storage_type="s3",
             key=features_path,
             bucket_name=settings.IMAGE_PROCESSING_BUCKET,
         )
@@ -293,9 +292,6 @@ def _get_features_location(image: Image):
 def _write_classification_results(image, score_sets, label_ids, classifer_record, profile=None):
     _annotations = []
     _points = []
-    label_lookup = {
-        str(lbl.pk): [lbl.benthic_attribute_id, lbl.growth_form_id] for lbl in Label.objects.all()
-    }
     created_on = timezone.now()
 
     for row, col, scores in score_sets:
@@ -311,22 +307,24 @@ def _write_classification_results(image, score_sets, label_ids, classifer_record
         )
         _points.append(point)
         top_predictions = sorted(zip(_label_ids, scores), key=itemgetter(1), reverse=True)
-        for label_id, score in top_predictions[0:3]:
-            ba_id, gf_id = label_lookup.get(label_id)
-            _annotations.append(
-                Annotation(
-                    point=point,
-                    classifier=classifer_record,
-                    benthic_attribute_id=ba_id,
-                    growth_form_id=gf_id,
-                    score=score * 100,
-                    is_confirmed=score >= 0.8,
-                    created_on=created_on,
-                    updated_on=created_on,
-                    created_by=profile,
-                    updated_by=profile,
+        for label, score in top_predictions[0:3]:
+            ba_id, gf_id = (label.split("::", 1) + [None])[:2]
+            if score >= settings.CLASSIFIED_THRESHOLD and ba_id is not None:
+                _annotations.append(
+                    Annotation(
+                        point=point,
+                        classifier=classifer_record,
+                        benthic_attribute_id=ba_id,
+                        growth_form_id=gf_id,
+                        score=score * 100,
+                        is_confirmed=score >= settings.AUTOCONFIRM_THRESHOLD,
+                        created_on=created_on,
+                        updated_on=created_on,
+                        created_by=profile,
+                        updated_by=profile,
+                        is_machine_created=True,
+                    )
                 )
-            )
 
     Point.objects.bulk_create(_points)
     Annotation.objects.bulk_create(_annotations)

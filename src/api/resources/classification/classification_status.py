@@ -1,5 +1,6 @@
 from django.db.models import OuterRef, Q, Subquery
 from django_filters import rest_framework as filters
+from rest_framework.exceptions import MethodNotAllowed
 
 from ...exceptions import check_uuid
 from ...models import ClassificationStatus, CollectRecord, ObsBenthicPhotoQuadrat
@@ -14,7 +15,9 @@ class ClassificationStatusSerializer(BaseAPISerializer):
 
 
 class ClassificationStatusFilterSet(BaseAPIFilterSet):
-    collect_record = filters.BooleanFilter(field_name="collect_record_id", method="filter_collect_record")
+    collect_record = filters.CharFilter(
+        field_name="collect_record_id", method="filter_collect_record"
+    )
 
     def filter_collect_record(self, queryset, name, value):
         return queryset.filter(image__collect_record_id=value)
@@ -61,3 +64,15 @@ class ClassificationStatusViewSet(BaseProjectApiViewSet):
                 }
             )
         )
+
+    def create(self, request, **kwargs):
+        raise MethodNotAllowed("POST")
+
+    def update(self, request, pk=None, **kwargs):
+        raise MethodNotAllowed("PUT")
+
+    def partial_update(self, request, pk=None, **kwargs):
+        raise MethodNotAllowed("PATCH")
+
+    def destroy(self, request, pk=None, **kwargs):
+        raise MethodNotAllowed("DELETE")

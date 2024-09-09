@@ -127,6 +127,7 @@ class ApiStack(Stack):
             "SQS_MESSAGE_VISIBILITY": str(config.api.sqs_message_visibility),
             "USE_FIFO": use_fifo_queues,
             "SQS_QUEUE_NAME": sqs_queue_name,
+            "IMAGE_SQS_QUEUE_NAME": image_sqs_queue_name,
         }
 
         # build image asset to be shared with API and Backup Task
@@ -258,7 +259,7 @@ class ApiStack(Stack):
         # Give permission to backup task
         backup_bucket.grant_read_write(backup_task.task_definition.task_role)
 
-        # get monitored queue
+        # Standard Worker
         worker = QueueWorker(
             self,
             "Worker",
@@ -274,8 +275,9 @@ class ApiStack(Stack):
             fifo=False,
         )
 
-        # get monitored queue
-        environment["SQS_QUEUE_NAME"] = image_sqs_queue_name
+        # Image Worker
+        # The below is to force src/simpleq/management/commands/simpleq_worker.py:L18 to pick up the correct SQS name.
+        environment["SQS_QUEUE_NAME"] = environment["IMAGE_SQS_QUEUE_NAME"]
         image_worker = QueueWorker(
             self,
             "ImageWorker",

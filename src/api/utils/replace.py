@@ -70,6 +70,12 @@ def replace_collect_record_owner(project_id, from_profile, to_profile, updated_b
             deleted=False,
             related_to_profile_id=from_profile.pk,
         )
+        Revision.remove_from_instance(
+            instance=collect_record,
+            profile_id=to_profile.pk,
+            deleted=False,
+            related_to_profile_id=to_profile.pk,
+        )
 
         collect_record.pk = None
         collect_record.profile = to_profile
