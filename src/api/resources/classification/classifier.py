@@ -6,15 +6,15 @@ from ..base import BaseAPISerializer, BaseApiViewSet
 
 
 class BenthicAttributeGrowthFormSerializer(BaseAPISerializer):
-    ba_name = serializers.ReadOnlyField(source="benthic_attribute.name")
-    gf_name = serializers.SerializerMethodField()
+    benthic_attribute_name = serializers.ReadOnlyField(source="benthic_attribute.name")
+    growth_form_name = serializers.SerializerMethodField()
 
-    def get_gf_name(self, obj):
+    def get_growth_form_name(self, obj):
         return obj.growth_form.name if obj.growth_form else None
 
     class Meta:
         model = BenthicAttributeGrowthForm
-        fields = ["ba_name", "gf_name"]
+        fields = ["benthic_attribute_name", "growth_form_name"]
 
 
 class ClassifierSerializer(BaseAPISerializer):
