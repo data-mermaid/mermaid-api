@@ -28,31 +28,6 @@ def select_image_storage():
         )
 
 
-# TODO: remove
-class Label(BaseModel):
-    benthic_attribute = models.ForeignKey(
-        BenthicAttribute, related_name="labels", on_delete=models.CASCADE
-    )
-    growth_form = models.ForeignKey(
-        GrowthForm, related_name="labels", on_delete=models.CASCADE, null=True, blank=True
-    )
-    description = models.TextField(null=True, blank=True)
-
-    class Meta:
-        unique_together = ("benthic_attribute", "growth_form")
-        db_table = "class_label"
-        ordering = ("benthic_attribute", "growth_form")
-
-    def __str__(self):
-        return self.name
-
-    @property
-    def name(self):
-        if not self.growth_form:
-            return self.benthic_attribute.name
-        return f"{self.benthic_attribute.name} {self.growth_form.name}"
-
-
 class LabelMapping(BaseModel):
     CORALNET = "CoralNet"
     REEFCLOUD = "ReefCloud"
@@ -61,9 +36,6 @@ class LabelMapping(BaseModel):
         (REEFCLOUD, REEFCLOUD),
     )
 
-    label = models.ForeignKey(
-        Label, related_name="mappings", on_delete=models.SET_NULL, null=True, blank=True
-    )
     benthic_attribute = models.ForeignKey(
         BenthicAttribute,
         related_name="labelmappings",
@@ -97,7 +69,6 @@ class Classifier(BaseModel):
     patch_size = models.IntegerField(help_text="Number of pixels")
     num_points = models.IntegerField(default=25)
     description = models.TextField(max_length=1000, blank=True)
-    labels = models.ManyToManyField(Label, related_name="classifiers")  # TODO: remove
     benthic_attribute_growth_forms = models.ManyToManyField(
         BenthicAttributeGrowthForm, related_name="classifiers"
     )
