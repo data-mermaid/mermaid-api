@@ -15,7 +15,7 @@ class ClassificationStatusSerializer(BaseAPISerializer):
 
 
 class ClassificationStatusFilterSet(BaseAPIFilterSet):
-    collect_record = filters.BooleanFilter(
+    collect_record = filters.CharFilter(
         field_name="collect_record_id", method="filter_collect_record"
     )
 
