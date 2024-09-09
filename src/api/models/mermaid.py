@@ -888,6 +888,33 @@ class BenthicAttribute(BaseAttributeModel):
         # return '%s' % str(self.name)
 
 
+# for storing properties relevant to unique BA/GF combinations
+# combinations only stored when necessary (not every possible combination)
+class BenthicAttributeGrowthForm(models.Model):
+    benthic_attribute = models.ForeignKey(
+        BenthicAttribute, related_name="benthic_attribute_growth_forms", on_delete=models.CASCADE
+    )
+    growth_form = models.ForeignKey(
+        GrowthForm,
+        related_name="benthic_attribute_growth_forms",
+        on_delete=models.CASCADE,
+        null=True,
+        blank=True,
+    )
+
+    class Meta:
+        unique_together = ("benthic_attribute", "growth_form")
+        db_table = "benthic_attribute_growth_form"
+        verbose_name_plural = _("BA/GF unique combinations")
+        ordering = ["benthic_attribute__name", "growth_form__name"]
+
+    def __str__(self):
+        name = self.benthic_attribute.name
+        if self.growth_form:
+            name = f"{name} {self.growth_form.name}"
+        return name
+
+
 # specific to BA/GF life histories, where >1 per combination possible - not unique BA/GF properties
 class BenthicAttributeGrowthFormLifeHistory(BaseModel):
     attribute = models.ForeignKey(BenthicAttribute, on_delete=models.PROTECT)

@@ -23,15 +23,7 @@ from spacer.extract_features import EfficientNetExtractor
 from spacer.messages import ClassifyFeaturesMsg, DataLocation, ExtractFeaturesMsg
 from spacer.tasks import classify_features, extract_features
 
-from ..models import (
-    Annotation,
-    ClassificationStatus,
-    Classifier,
-    Image,
-    Label,
-    Point,
-    Profile,
-)
+from ..models import Annotation, ClassificationStatus, Classifier, Image, Point, Profile
 from .q import submit_image_job
 from .s3 import download_directory
 
@@ -300,9 +292,6 @@ def _get_features_location(image: Image):
 def _write_classification_results(image, score_sets, label_ids, classifer_record, profile=None):
     _annotations = []
     _points = []
-    label_lookup = {
-        str(lbl.pk): [lbl.benthic_attribute_id, lbl.growth_form_id] for lbl in Label.objects.all()
-    }
     created_on = timezone.now()
 
     for row, col, scores in score_sets:
@@ -318,8 +307,8 @@ def _write_classification_results(image, score_sets, label_ids, classifer_record
         )
         _points.append(point)
         top_predictions = sorted(zip(_label_ids, scores), key=itemgetter(1), reverse=True)
-        for label_id, score in top_predictions[0:3]:
-            ba_id, gf_id = label_lookup.get(label_id, (None, None))
+        for label, score in top_predictions[0:3]:
+            ba_id, gf_id = (label.split("::", 1) + [None])[:2]
             if score >= settings.CLASSIFIED_THRESHOLD and ba_id is not None:
                 _annotations.append(
                     Annotation(
