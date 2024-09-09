@@ -13,7 +13,6 @@ from .classification import (  # noqa: F401
     ClassificationStatus,
     Classifier,
     Image,
-    Label,
     LabelMapping,
     Point,
 )
