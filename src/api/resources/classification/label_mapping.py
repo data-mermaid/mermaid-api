@@ -7,10 +7,15 @@ from ..base import BaseAPIFilterSet, BaseAPISerializer, BaseApiViewSet
 
 class LabelMappingSerializer(BaseAPISerializer):
     updated_by = None
-    ba_name = serializers.ReadOnlyField(source="benthic_attribute.name")
-    gf_name = serializers.SerializerMethodField()
+    benthic_attribute_id = serializers.ReadOnlyField(source="benthic_attribute.pk")
+    benthic_attribute_name = serializers.ReadOnlyField(source="benthic_attribute.name")
+    growth_form_id = serializers.SerializerMethodField()
+    growth_form_name = serializers.SerializerMethodField()
 
-    def get_gf_name(self, obj):
+    def get_growth_form_id(self, obj):
+        return obj.growth_form.pk if obj.growth_form else None
+
+    def get_growth_form_name(self, obj):
         return obj.growth_form.name if obj.growth_form else None
 
     class Meta:
