@@ -246,7 +246,7 @@ class BaseSQLModel(models.Model):
     management_id = models.UUIDField()
     management_name = models.CharField(max_length=255)
     management_name_secondary = models.CharField(max_length=255)
-    management_est_year = models.PositiveSmallIntegerField()
+    management_est_year = models.PositiveSmallIntegerField(null=True, blank=True)
     management_size = models.DecimalField(
         max_digits=12,
         decimal_places=3,
@@ -255,7 +255,7 @@ class BaseSQLModel(models.Model):
         blank=True,
     )
     management_parties = models.JSONField(null=True, blank=True)
-    management_compliance = models.CharField(max_length=100)
+    management_compliance = models.CharField(max_length=100, null=True, blank=True)
     management_rules = models.JSONField(null=True, blank=True)
     management_notes = models.TextField(blank=True)
     sample_date = models.DateField()
