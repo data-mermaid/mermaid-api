@@ -25,7 +25,7 @@ def _get_mermaid_email_content(template, context):
     return text_content, html_content
 
 
-def _mermaid_email(subject, template, to, context=None, from_email=None, reply_to=None):
+def send_mermaid_email(subject, template, to, context=None, from_email=None, reply_to=None):
     _subject = f"[MERMAID] {subject}"
     text_content, html_content = _get_mermaid_email_content(template, context)
     from_email = from_email or settings.DEFAULT_FROM_EMAIL
@@ -68,7 +68,7 @@ def mermaid_email(subject, template, to, context=None, from_email=None, reply_to
         if to_emails:
             submit_job(
                 delay=0,
-                callable=_mermaid_email,
+                callable=send_mermaid_email,
                 subject=subject,
                 template=template,
                 to=to_emails,
@@ -77,7 +77,7 @@ def mermaid_email(subject, template, to, context=None, from_email=None, reply_to
                 reply_to=reply_to,
             )
     else:
-        text_content, html_content = _get_mermaid_email_content(template, context)
+        text_content, _ = _get_mermaid_email_content(template, context)
         print(text_content)
 
 
