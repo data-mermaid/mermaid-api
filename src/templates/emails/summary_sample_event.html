@@ -1,0 +1,12 @@
+{% extends "emails/base.html" %}
+{% block title %}Summary Sample Event Report{% endblock %}
+{% block body %}
+<h2>Summary Sample Event Report</h2>
+<p>
+    Your report is ready for download. Please click the link below to download the report.
+    
+    <strong><a href="">{{file_url}}</a></strong>
+
+    <small>Link will be valid for 7 days.</small>
+</p>
+{% endblock %}

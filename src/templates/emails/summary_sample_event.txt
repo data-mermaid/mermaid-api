@@ -1,0 +1,10 @@
+{% extends "emails/base.txt" %}
+{% block body %}
+    Summary Sample Event Report
+
+    Your report is ready for download. Please click the link below to download the report.
+    
+    {{file_url}}
+
+    Link will be valid for 7 days.
+{% endblock %}

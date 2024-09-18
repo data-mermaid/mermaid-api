@@ -2,10 +2,22 @@ import csv
 from typing import Dict, List, Set, Tuple
 
 from django.db.models import QuerySet
-from pyexcelerate import Font, Style, Workbook
+# from pyexcelerate import Font, Style, Workbook
 
+from . import xl
 from ..mocks import MockRequest
-from ..models import Covariate, Site
+from ..models import (
+    BENTHICLIT_PROTOCOL,
+    BENTHICPIT_PROTOCOL,
+    BENTHICPQT_PROTOCOL,
+    BLEACHINGQC_PROTOCOL,
+    FISHBELT_PROTOCOL,
+    HABITATCOMPLEXITY_PROTOCOL,
+    Covariate,
+    Project,
+    ProjectProfile,
+    Site
+)
 from ..resources.sampleunitmethods.beltfishmethod import (
     BeltFishProjectMethodObsView,
     BeltFishProjectMethodSEView,
@@ -203,40 +215,65 @@ def get_viewset_csv_content(view_cls, project_pk, request):
     return filtered_rows
 
 
-def write_data(wb, sheet_name, data):
-    casted_data = []
-    for row in data:
-        casted_row = [cast_str_value(col) for col in row]
-        casted_data.append(casted_row)
+# def write_data(wb, sheet_name, data):
+#     casted_data = []
+#     for row in data:
+#         casted_row = [cast_str_value(col) for col in row]
+#         casted_data.append(casted_row)
 
-    ws = wb.new_sheet(sheet_name, data=casted_data)
-    ws.set_row_style(1, Style(font=Font(bold=True)))
+#     ws = wb.new_sheet(sheet_name, data=casted_data)
+#     ws.set_row_style(1, Style(font=Font(bold=True)))
 
 
 @timing
-def _create_report(request, project_pk, views, sheet_names):
-    wb = Workbook()
+def _create_report(request, project_ids, views, sheet_names, workbook=None, *args, **kwargs):
+    if isinstance(project_ids, list) is False:
+        project_ids = [project_ids]
+
+    wb = xl.get_workbook(workbook)
     for view, sheet_name in zip(views, sheet_names):
-        content = get_viewset_csv_content(view, project_pk, request)
-        write_data(wb, sheet_name, content)
+        strip_first_row = False
+        current_row, current_col = 1, 1
+        for project_pk in project_ids:
+            data = get_viewset_csv_content(view, project_pk, request)
+
+            # Strip column header row if not the first project.
+            if strip_first_row:
+                data = data[1:]
+            
+            current_row, current_col = xl.write_data_to_sheet(wb, sheet_name, data, current_row, current_col)
+            strip_first_row = True
 
     return wb
 
 
-def create_belt_fish_report(request, project_pk):
-    return _create_report(
-        request,
-        project_pk,
-        views=[
+def create_belt_fish_report(request, project_ids, data_policy_level=Project.PRIVATE):
+    wb = xl.get_workbook("su_summary")
+
+    if data_policy_level == Project.PUBLIC_SUMMARY:
+        views = [BeltFishProjectMethodSEView]
+        sheet_names = ["Belt Fish SE",]
+    elif data_policy_level == Project.PUBLIC:
+        views = [
             BeltFishProjectMethodSEView,
             BeltFishProjectMethodSUView,
             BeltFishProjectMethodObsView,
-        ],
-        sheet_names=[
+        ]
+        sheet_names = [
             "Belt Fish SE",
             "Belt Fish SU",
             "Belt Fish Obs",
-        ],
+        ]
+    else:
+        views = []
+        sheet_names = []
+
+    return _create_report(
+        request,
+        project_ids,
+        views=views,
+        sheet_names=sheet_names,
+        workbook=wb,
     )
 
 
@@ -325,3 +362,33 @@ def create_habitat_complexity_report(request, project_pk):
             "Habitat Complexity Obs",
         ],
     )
+
+
+def check_su_method_policy_level(
+    request,
+    protocol,
+    project_ids
+):
+    data_policy_levels = []
+    profile = request.user.profile
+
+    data_policy_field_name = Project.get_sample_unit_method_policy(protocol)
+
+    projects = Project.objects.filter(pk__in=project_ids)
+    project_profiles = ProjectProfile.objects.filter(profile=profile, project__in=projects)
+    project_lookup = [pp.project_id for pp in project_profiles]
+
+    for project in projects:
+        if project.pk in project_lookup:
+            data_policy_levels.append(Project.PUBLIC)
+        else:
+            data_policy_levels.append(getattr(project, data_policy_field_name))
+
+    if Project.PRIVATE in data_policy_levels:
+        return project.PRIVATE
+    elif all(item == Project.PUBLIC for item in data_policy_levels):
+        return project.PUBLIC
+    
+    return project.PUBLIC_SUMMARY
+
+    
