@@ -89,7 +89,7 @@ class SummarySampleEventSQLModel(SummarySampleEventBaseModel):
                 management
             ON (management.id = mps.management_id)
             WHERE
-                management.project_id = '75ef7a5a-c770-4ca6-b9f8-830cab74e425' :: uuid
+                management.project_id = '%(project_id)s' :: uuid
             GROUP BY
                 mps.management_id
         )
