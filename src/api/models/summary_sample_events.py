@@ -1,4 +1,5 @@
 from django.contrib.gis.db import models
+from django.core.serializers.json import DjangoJSONEncoder
 
 from sqltables import SQLTableArg, SQLTableManager
 from . import Project
@@ -467,7 +468,7 @@ class BaseProjectSummarySampleEvent(models.Model):
     project_id = models.UUIDField(primary_key=True)
     project_name = models.CharField(max_length=255, default="awaiting refresh")
     tags = models.JSONField(null=True, blank=True)
-    records = models.JSONField()
+    records = models.JSONField(encoder=DjangoJSONEncoder)
     created_on = models.DateTimeField(auto_now_add=True)
 
     class Meta:
