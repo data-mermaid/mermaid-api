@@ -1,4 +1,5 @@
 from django.contrib.gis.db import models
+from django.core.serializers.json import DjangoJSONEncoder
 
 from sqltables import SQLTableArg, SQLTableManager
 from . import Project
@@ -30,6 +31,17 @@ class SummarySampleEventBaseModel(models.Model):
     sample_date = models.DateField(null=True, blank=True)
     management_id = models.UUIDField()
     management_name = models.CharField(max_length=255)
+    management_est_year = models.PositiveSmallIntegerField(null=True, blank=True)
+    management_size = models.DecimalField(
+        max_digits=12,
+        decimal_places=3,
+        verbose_name="Size (ha)",
+        null=True,
+        blank=True,
+    )
+    management_parties = models.JSONField(null=True, blank=True)
+    management_compliance = models.CharField(max_length=100, null=True, blank=True)
+    management_rules = models.JSONField(null=True, blank=True)
     management_notes = models.TextField(blank=True, null=True)
     protocols = models.JSONField(null=True, blank=True)  # most keys changed inside here
     data_policy_beltfish = models.CharField(max_length=50)
@@ -62,6 +74,25 @@ class SummarySampleEventSQLModel(SummarySampleEventBaseModel):
         ),
         habitatcomplexity_su AS (
             SELECT * FROM summary_habitatcomplexity_su WHERE project_id = '%(project_id)s'::uuid
+        ),
+        parties AS MATERIALIZED (
+            SELECT
+                mps.management_id,
+                jsonb_agg(
+                    mp.name
+                    ORDER BY
+                        mp.name
+                ) AS parties
+            FROM
+                management_parties mps
+            INNER JOIN management_party mp ON mps.managementparty_id = mp.id
+            INNER JOIN
+                management
+            ON (management.id = mps.management_id)
+            WHERE
+                management.project_id = '%(project_id)s' :: uuid
+            GROUP BY
+                mps.management_id
         )
 
         SELECT
@@ -87,6 +118,44 @@ class SummarySampleEventSQLModel(SummarySampleEventBaseModel):
         sample_date,
         m.id AS management_id,
         CASE WHEN m.name_secondary = '' THEN m.name ELSE m.name || ' [' || m.name_secondary || ']' END AS management_name,
+        m.est_year AS management_est_year,
+        m.size AS management_size,
+        parties.parties AS management_parties,
+        mc.name AS management_compliance,
+        array_to_json(
+            array_remove(
+                ARRAY [
+            CASE
+                WHEN m.no_take THEN 'no take'::text
+                ELSE NULL::text
+            END,
+            CASE
+                WHEN m.open_access THEN 'open access'::text
+                ELSE NULL::text
+            END,
+            CASE
+                WHEN m.gear_restriction THEN 'gear restriction'::text
+                ELSE NULL::text
+            END,
+            CASE
+                WHEN m.periodic_closure THEN 'periodic closure'::text
+                ELSE NULL::text
+            END,
+            CASE
+                WHEN m.size_limits THEN 'size limits'::text
+                ELSE NULL::text
+            END,
+            CASE
+                WHEN m.species_restriction THEN 'species restriction'::text
+                ELSE NULL::text
+            END,
+            CASE
+                WHEN m.access_restriction THEN 'access restriction'::text
+                ELSE NULL::text
+            END],
+                NULL :: text
+            )
+        ) :: jsonb AS management_rules,
         NULLIF(m.notes, '') AS management_notes,
         (CASE WHEN project.data_policy_beltfish=10 THEN 'private'
             WHEN project.data_policy_beltfish=50 THEN 'public summary'
@@ -193,6 +262,8 @@ class SummarySampleEventSQLModel(SummarySampleEventBaseModel):
         FROM sample_event
         INNER JOIN site ON (sample_event.site_id = site.id)
         INNER JOIN management m ON (sample_event.management_id = m.id)
+        LEFT JOIN management_compliance mc ON m.compliance_id = mc.id
+        LEFT JOIN parties ON m.id = parties.management_id
         INNER JOIN project ON (site.project_id = project.id)
         INNER JOIN country ON (site.country_id = country.id)
         INNER JOIN api_reeftype ON (site.reef_type_id = api_reeftype.id)
@@ -397,7 +468,7 @@ class BaseProjectSummarySampleEvent(models.Model):
     project_id = models.UUIDField(primary_key=True)
     project_name = models.CharField(max_length=255, default="awaiting refresh")
     tags = models.JSONField(null=True, blank=True)
-    records = models.JSONField()
+    records = models.JSONField(encoder=DjangoJSONEncoder)
     created_on = models.DateTimeField(auto_now_add=True)
 
     class Meta:
