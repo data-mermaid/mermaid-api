@@ -6,6 +6,8 @@ from openpyxl import Workbook, load_workbook
 from openpyxl.worksheet.worksheet import Worksheet 
 from openpyxl.styles import Font
 
+from ..utils.castutils import cast_str_value
+
 
 def _get_xlsx_template(template: str):
     if not template.endswith(".xlsx"):
@@ -13,7 +15,6 @@ def _get_xlsx_template(template: str):
 
     for report_tmpl_dir in settings.REPORT_TEMPLATES:
         tpl_path = os.path.join(report_tmpl_dir, template)
-        print(f"tpl_path: {tpl_path}")
         if os.path.exists(tpl_path):
             return tpl_path
 
@@ -76,7 +77,21 @@ def write_data_to_sheet(workbook: Union[Workbook, str, None], sheet_name: str, d
         current_row = row + n
         for m, col_val in enumerate(row_val):
             current_col = col + m
-            ws.cell(row=current_row, column=current_col).value = col_val
+            ws.cell(row=current_row, column=current_col).value = cast_str_value(col_val)
     
     return current_row, current_col
-    
+
+
+def auto_size_columns(worksheet):
+    for col in worksheet.columns:
+        max_length = 0
+        column = col[0].column_letter
+
+        for cell in col:
+            try:
+                max_length = max(max_length, len(str(cell.value)))
+            except:
+                pass
+
+        adjusted_width = (max_length + 2)
+        worksheet.column_dimensions[column].width = adjusted_width

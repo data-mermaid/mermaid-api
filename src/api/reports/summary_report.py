@@ -18,6 +18,7 @@ from ..models import (
     ProjectProfile,
     Site
 )
+from ..resources.project import ProjectCSVSerializer
 from ..resources.sampleunitmethods.beltfishmethod import (
     BeltFishProjectMethodObsView,
     BeltFishProjectMethodSEView,
@@ -49,7 +50,6 @@ from ..resources.sampleunitmethods.habitatcomplexitymethod import (
     HabitatComplexityProjectMethodSEView,
     HabitatComplexityProjectMethodSUView,
 )
-from ..utils.castutils import cast_str_value
 from ..utils.timer import timing
 
 ACA_BENTHIC_KEY, ACA_BENTHIC_FIELD = Covariate.SUPPORTED_COVARIATES[0]
@@ -215,14 +215,11 @@ def get_viewset_csv_content(view_cls, project_pk, request):
     return filtered_rows
 
 
-# def write_data(wb, sheet_name, data):
-#     casted_data = []
-#     for row in data:
-#         casted_row = [cast_str_value(col) for col in row]
-#         casted_data.append(casted_row)
-
-#     ws = wb.new_sheet(sheet_name, data=casted_data)
-#     ws.set_row_style(1, Style(font=Font(bold=True)))
+def _get_project_metadata(project_ids):
+    projects = Project.objects.filter(pk__in=project_ids)
+    prj_serializer = ProjectCSVSerializer(projects, show_display_fields=True)
+    header = [f.display for f in prj_serializer.fields]
+    return [header] + [r.values() for r in prj_serializer.data]
 
 
 @timing
@@ -231,18 +228,22 @@ def _create_report(request, project_ids, views, sheet_names, workbook=None, *arg
         project_ids = [project_ids]
 
     wb = xl.get_workbook(workbook)
+    project_metadata = _get_project_metadata(project_ids)
+    xl.write_data_to_sheet(wb, "Metadata", project_metadata, 1, 1)
+    xl.auto_size_columns(wb["Metadata"])
     for view, sheet_name in zip(views, sheet_names):
         strip_first_row = False
         current_row, current_col = 1, 1
         for project_pk in project_ids:
             data = get_viewset_csv_content(view, project_pk, request)
-
             # Strip column header row if not the first project.
             if strip_first_row:
                 data = data[1:]
             
             current_row, current_col = xl.write_data_to_sheet(wb, sheet_name, data, current_row, current_col)
             strip_first_row = True
+        
+        xl.auto_size_columns(wb[sheet_name])
 
     return wb
 
@@ -277,90 +278,155 @@ def create_belt_fish_report(request, project_ids, data_policy_level=Project.PRIV
     )
 
 
-def create_benthic_pit_report(request, project_pk):
-    return _create_report(
-        request,
-        project_pk,
-        views=[
+def create_benthic_pit_report(request, project_ids, data_policy_level=Project.PRIVATE):
+    wb = xl.get_workbook("su_summary")
+
+    if data_policy_level == Project.PUBLIC_SUMMARY:
+        views = [BenthicPITProjectMethodSEView]
+        sheet_names = ["Benthic PIT SE"]
+    elif data_policy_level == Project.PUBLIC:
+        views = [
             BenthicPITProjectMethodSEView,
             BenthicPITProjectMethodSUView,
             BenthicPITProjectMethodObsView,
-        ],
-        sheet_names=[
+        ]
+        sheet_names = [
             "Benthic PIT SE",
             "Benthic PIT SU",
             "Benthic PIT Obs",
-        ],
+        ]
+    else:
+        views = []
+        sheet_names = []
+
+    return _create_report(
+        request,
+        project_ids,
+        views=views,
+        sheet_names=sheet_names,
+        workbook=wb,
     )
 
 
-def create_benthic_lit_report(request, project_pk):
-    return _create_report(
-        request,
-        project_pk,
-        views=[
+def create_benthic_lit_report(request, project_ids, data_policy_level=Project.PRIVATE):
+    wb = xl.get_workbook("su_summary")
+
+    if data_policy_level == Project.PUBLIC_SUMMARY:
+        views = [BenthicLITProjectMethodSEView]
+        sheet_names = ["Belt LIT SE"]
+    elif data_policy_level == Project.PUBLIC:
+        views = [
             BenthicLITProjectMethodSEView,
             BenthicLITProjectMethodSUView,
             BenthicLITProjectMethodObsView,
-        ],
-        sheet_names=[
+        ]
+        sheet_names = [
             "Benthic LIT SE",
             "Benthic LIT SU",
             "Benthic LIT Obs",
-        ],
+        ]
+    else:
+        views = []
+        sheet_names = []
+
+    return _create_report(
+        request,
+        project_ids,
+        views=views,
+        sheet_names=sheet_names,
+        workbook=wb,
     )
 
 
-def create_bleaching_qc_report(request, project_pk):
-    return _create_report(
-        request,
-        project_pk,
-        views=[
+def create_bleaching_qc_report(request, project_ids, data_policy_level=Project.PRIVATE):
+    wb = xl.get_workbook("su_summary")
+
+    if data_policy_level == Project.PUBLIC_SUMMARY:
+        views = [BleachingQCProjectMethodSEView]
+        sheet_names = ["Bleaching QT SE"]
+    elif data_policy_level == Project.PUBLIC:
+        views = [
             BleachingQCProjectMethodSEView,
             BleachingQCProjectMethodSUView,
             BleachingQCProjectMethodObsColoniesBleachedView,
             BleachingQCProjectMethodObsQuadratBenthicPercentView,
-        ],
-        sheet_names=[
+        ]
+        sheet_names = [
             "Bleaching QT SE",
             "Bleaching QT SU",
             "BQT Colonies Bleached Obs",
             "BQT Quad Benthic Percent Obs",
-        ],
+        ]
+    else:
+        views = []
+        sheet_names = []
+
+    return _create_report(
+        request,
+        project_ids,
+        views=views,
+        sheet_names=sheet_names,
+        workbook=wb,
     )
 
 
-def create_benthic_pqt_report(request, project_pk):
-    return _create_report(
-        request,
-        project_pk,
-        views=[
+def create_benthic_pqt_report(request, project_ids, data_policy_level=Project.PRIVATE):
+    wb = xl.get_workbook("su_summary")
+
+    if data_policy_level == Project.PUBLIC_SUMMARY:
+        views = [BenthicPQTProjectMethodSEView]
+        sheet_names = ["Benthic PQT SE"]
+    elif data_policy_level == Project.PUBLIC:
+        views = [
             BenthicPQTProjectMethodSEView,
             BenthicPQTProjectMethodSUView,
             BenthicPQTProjectMethodObsView,
-        ],
-        sheet_names=[
+        ]
+        sheet_names = [
             "Benthic PQT SE",
             "Benthic PQT SU",
             "Benthic PQT Obs",
-        ],
+        ]
+    else:
+        views = []
+        sheet_names = []
+
+    return _create_report(
+        request,
+        project_ids,
+        views=views,
+        sheet_names=sheet_names,
+        workbook=wb,
     )
 
 
-def create_habitat_complexity_report(request, project_pk):
-    return _create_report(
-        request,
-        project_pk,
-        views=[
+def create_habitat_complexity_report(request, project_ids, data_policy_level=Project.PRIVATE):
+    wb = xl.get_workbook("su_summary")
+
+    if data_policy_level == Project.PUBLIC_SUMMARY:
+        views = [HabitatComplexityProjectMethodSEView]
+        sheet_names = ["Habitat Complexity SE"]
+    elif data_policy_level == Project.PUBLIC:
+        views = [
             HabitatComplexityProjectMethodSEView,
             HabitatComplexityProjectMethodSUView,
             HabitatComplexityProjectMethodObsView,
-        ],
-        sheet_names=[
+        ]
+        sheet_names = [
             "Habitat Complexity SE",
             "Habitat Complexity SU",
             "Habitat Complexity Obs",
-        ],
+        ]
+    else:
+        views = []
+        sheet_names = []
+
+    return _create_report(
+        request,
+        project_ids,
+        views=views,
+        sheet_names=sheet_names,
+        workbook=wb,
     )
 
 
