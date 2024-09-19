@@ -221,7 +221,10 @@ class SummarySampleEventSQLModel(SummarySampleEventBaseModel):
             )), '{}'),
             'habitatcomplexity', NULLIF(jsonb_strip_nulls(jsonb_build_object(
                 'sample_unit_count', hc.sample_unit_count,
-                'score_avg_avg', (CASE WHEN project.data_policy_habitatcomplexity < 50 AND NOT %(has_access)s THEN NULL ELSE hc.score_avg_avg END)
+                'score_avg_avg', (CASE WHEN project.data_policy_habitatcomplexity < 50 AND NOT %(has_access)s THEN NULL ELSE hc.score_avg_avg END),
+                'score_avg_sd', (CASE WHEN project.data_policy_habitatcomplexity < 50 AND NOT %(has_access)s THEN NULL ELSE hc.score_avg_sd END),
+                'observation_count_avg', (CASE WHEN project.data_policy_habitatcomplexity < 50 AND NOT %(has_access)s THEN NULL ELSE hc.observation_count_avg END),
+                'observation_count_sd', (CASE WHEN project.data_policy_habitatcomplexity < 50 AND NOT %(has_access)s THEN NULL ELSE hc.observation_count_sd END)
             )), '{}'),
             'colonies_bleached', NULLIF(jsonb_strip_nulls(jsonb_build_object(
                 'sample_unit_count', bleachingqc.sample_unit_count,
@@ -415,7 +418,10 @@ class SummarySampleEventSQLModel(SummarySampleEventBaseModel):
         LEFT JOIN (
             SELECT sample_event_id,
             COUNT(pseudosu_id) AS sample_unit_count,
-            ROUND(AVG(score_avg), 2) AS score_avg_avg
+            ROUND(AVG(score_avg), 2) AS score_avg_avg,
+            ROUND(STDDEV(score_avg), 2) AS score_avg_sd,
+            ROUND(AVG(observation_count), 2) AS observation_count_avg,
+            ROUND(STDDEV(observation_count), 2) AS observation_count_sd
             FROM habitatcomplexity_su
             GROUP BY
             sample_event_id

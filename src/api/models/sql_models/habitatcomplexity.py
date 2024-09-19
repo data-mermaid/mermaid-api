@@ -137,7 +137,8 @@ class HabitatComplexitySUSQLModel(BaseSUSQLModel):
         habcomp_su.{_agg_su_fields},
         reef_slope,
         score_avg,
-        score_sd
+        score_sd,
+        observation_count
         FROM (
             SELECT pseudosu_id,
             jsonb_agg(DISTINCT sample_unit_id) AS sample_unit_ids,
@@ -145,7 +146,8 @@ class HabitatComplexitySUSQLModel(BaseSUSQLModel):
             {_su_aggfields_sql},
             string_agg(DISTINCT reef_slope::text, ', '::text ORDER BY (reef_slope::text)) AS reef_slope,
             ROUND(AVG(score), 2) AS score_avg,
-            ROUND(STDDEV(score), 2) AS score_sd
+            ROUND(STDDEV(score), 2) AS score_sd,
+            COUNT(habitatcomplexity_obs.id) AS observation_count
 
             FROM habitatcomplexity_obs
             GROUP BY pseudosu_id,
@@ -179,6 +181,7 @@ class HabitatComplexitySUSQLModel(BaseSUSQLModel):
     reef_slope = models.CharField(max_length=50)
     score_avg = models.DecimalField(decimal_places=2, max_digits=3)
     score_sd = models.DecimalField(decimal_places=2, max_digits=3, null=True, blank=True)
+    observation_count = models.PositiveSmallIntegerField()
     data_policy_habitatcomplexity = models.CharField(max_length=50)
     pseudosu_id = models.UUIDField()
 
@@ -200,7 +203,10 @@ class HabitatComplexitySESQLModel(BaseSQLModel):
         {_su_aggfields_sql},
         COUNT(pseudosu_id) AS sample_unit_count,
         ROUND(AVG(score_avg), 2) AS score_avg_avg,
-        ROUND(STDDEV(score_avg), 2) AS score_avg_sd
+        ROUND(STDDEV(score_avg), 2) AS score_avg_sd,
+        ROUND(AVG(observation_count), 2) AS observation_count_avg,
+        ROUND(STDDEV(observation_count), 2) AS observation_count_sd
+        
         FROM habitatcomplexity_su
         GROUP BY
         {_se_fields},
@@ -229,6 +235,10 @@ class HabitatComplexitySESQLModel(BaseSQLModel):
     visibility_name = models.CharField(max_length=100)
     score_avg_avg = models.DecimalField(decimal_places=2, max_digits=3)
     score_avg_sd = models.DecimalField(decimal_places=2, max_digits=3, blank=True, null=True)
+    observation_count_avg = models.DecimalField(decimal_places=2, max_digits=6)
+    observation_count_sd = models.DecimalField(
+        decimal_places=2, max_digits=6, blank=True, null=True
+    )
     data_policy_habitatcomplexity = models.CharField(max_length=50)
 
     class Meta:
