@@ -184,6 +184,20 @@ class SummarySampleEventCSVSerializer(ReportSerializer):
         ),
         ReportField(
             "protocols",
+            "Habitat Complexity observations count average",
+            to_protocol_value,
+            protocol="habitatcomplexity",
+            key="observation_count_avg",
+        ),
+        ReportField(
+            "protocols",
+            "Habitat Complexity observations count standard deviation",
+            to_protocol_value,
+            protocol="habitatcomplexity",
+            key="observation_count_sd",
+        ),
+        ReportField(
+            "protocols",
             "Bleaching quadrat collection count",
             to_protocol_value,
             protocol="colonies_bleached",

@@ -570,6 +570,7 @@ class HabitatComplexitySUModel(BaseSUModel):
     reef_slope = models.CharField(max_length=50, null=True, blank=True)
     score_avg = models.DecimalField(decimal_places=2, max_digits=3)
     score_sd = models.DecimalField(decimal_places=2, max_digits=3, null=True, blank=True)
+    observation_count = models.PositiveSmallIntegerField()
     data_policy_habitatcomplexity = models.CharField(max_length=50)
     pseudosu_id = models.UUIDField()
 
@@ -594,6 +595,10 @@ class HabitatComplexitySEModel(BaseSummaryModel):
     visibility_name = models.CharField(max_length=100, null=True, blank=True)
     score_avg_avg = models.DecimalField(decimal_places=2, max_digits=3)
     score_avg_sd = models.DecimalField(decimal_places=2, max_digits=3, blank=True, null=True)
+    observation_count_avg = models.DecimalField(decimal_places=2, max_digits=6)
+    observation_count_sd = models.DecimalField(
+        decimal_places=2, max_digits=6, blank=True, null=True
+    )
     data_policy_habitatcomplexity = models.CharField(max_length=50)
 
     class Meta:
