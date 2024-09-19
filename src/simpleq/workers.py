@@ -40,7 +40,7 @@ class Worker:
         """
         while True:
             start_time = datetime.now()
-            stdout.write(f"Fetching message(s), starting UTC time {start_time}")
+            stdout.write(f"Fetching message(s), starting UTC time {start_time}\n")
             for queue in self.queues:
                 for job in queue.jobs:
                     job.run()
@@ -49,7 +49,7 @@ class Worker:
             finish_time = datetime.now()
             runtime = (finish_time - start_time).total_seconds()
             stdout.write(
-                f"Finished Processing message(s), UTC time {start_time}, total runtime {runtime}"
+                f"Finished Processing message(s), UTC time {start_time}, total runtime {runtime}\n"
             )
 
             if burst:
