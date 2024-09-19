@@ -40,7 +40,6 @@ def update_attributes_report():
         s3.upload_file(settings.PUBLIC_BUCKET, tmp.name, "mermaid_attributes.xlsx")
 
 
-
 def create_sample_unit_method_summary_report_background(
     project_ids,
     protocol,
@@ -100,7 +99,6 @@ def create_sample_unit_method_summary_report(
 
     if send_email:
         file_name = f"{settings.ENVIRONMENT}/reports/summary_sample_method_{uuid.uuid4()}.xlsx"
-        print(f"file_name: {file_name}")
         s3.upload_file(settings.AWS_DATA_BUCKET, output_path, file_name)
         file_url = s3.get_presigned_url(settings.AWS_DATA_BUCKET, file_name)
         to = [request.user.profile.email]

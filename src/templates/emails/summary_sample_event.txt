@@ -4,7 +4,7 @@
 
     Your report is ready for download. Please click the link below to download the report.
     
-    {{file_url}}
+    {{file_url|safe}}
 
     Link will be valid for 7 days.
 {% endblock %}

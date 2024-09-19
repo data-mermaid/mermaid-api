@@ -38,8 +38,11 @@ def send_mermaid_email(subject, template, to, context=None, from_email=None, rep
     )
     if html_content:
         msg.attach_alternative(html_content, "text/html")
-
-    msg.send()
+    
+    if get_maintenance_mode() is False:
+        msg.send()
+    else:
+        print(text_content)
 
 
 def _to_in_dev_emails(to):
@@ -60,25 +63,21 @@ def mermaid_email(subject, template, to, context=None, from_email=None, reply_to
     # if dev and not dev email: console
     # if dev and dev email: submit_job
     # if prod: submit_job
-    if get_maintenance_mode() is False:
-        to_emails = to
-        if settings.ENVIRONMENT not in ("prod",):
-            to_emails = _to_in_dev_emails(to)
+    to_emails = to
+    if settings.ENVIRONMENT not in ("prod",):
+        to_emails = _to_in_dev_emails(to)
 
-        if to_emails:
-            submit_job(
-                delay=0,
-                callable=send_mermaid_email,
-                subject=subject,
-                template=template,
-                to=to_emails,
-                context=context,
-                from_email=from_email,
-                reply_to=reply_to,
-            )
-    else:
-        text_content, _ = _get_mermaid_email_content(template, context)
-        print(text_content)
+    if to_emails:
+        submit_job(
+            delay=0,
+            callable=send_mermaid_email,
+            subject=subject,
+            template=template,
+            to=to_emails,
+            context=context,
+            from_email=from_email,
+            reply_to=reply_to,
+        )
 
 
 def email_mermaid_admins(**kwargs):
