@@ -1,3 +1,8 @@
+from api.models import Project
+
+DATA_POLICIES = dict(Project.DATA_POLICIES)
+
+
 def handle_none(default_val=None):
     def decorator(func):
         def wrapper(*args, **kwargs):
@@ -145,3 +150,11 @@ def to_covariate(value, field, row, serializer_instance):
         return values[0]["name"] if values else ""
 
     return ""
+
+
+def to_yesno(value, field, row, serializer_instance):
+    return "Yes" if value else "No"
+
+
+def to_data_policy(value, field, row, serializer_instance):
+    return DATA_POLICIES.get(value, "Unknown")
