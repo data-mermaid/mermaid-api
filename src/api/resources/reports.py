@@ -54,5 +54,7 @@ class MultiProjectReportView(APIView):
                 request=request,
                 send_email=True,
             )
+        else:
+            raise ValidationError(detail=f"{report_type}: Unknown report type")
     
-            return Response({})
+        return Response({report_type: "ok"})

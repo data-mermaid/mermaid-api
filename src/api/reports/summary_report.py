@@ -56,6 +56,45 @@ ACA_BENTHIC_KEY, ACA_BENTHIC_FIELD = Covariate.SUPPORTED_COVARIATES[0]
 ACA_GEOMORPHIC_KEY, ACA_GEOMORPHIC_FIELD = Covariate.SUPPORTED_COVARIATES[1]
 
 
+# Mapping of protocols to their respective views and sheet names
+PROTOCOL_VIEW_MAPPING = {
+    BENTHICLIT_PROTOCOL: {
+        "views": [BenthicLITProjectMethodSEView, BenthicLITProjectMethodSUView, BenthicLITProjectMethodObsView],
+        "sheet_names": ["Benthic LIT SE", "Benthic LIT SU", "Benthic LIT Obs"],
+    },
+    BENTHICPIT_PROTOCOL: {
+        "views": [BenthicPITProjectMethodSEView, BenthicPITProjectMethodSUView, BenthicPITProjectMethodObsView],
+        "sheet_names": ["Benthic PIT SE", "Benthic PIT SU", "Benthic PIT Obs"],
+    },
+    FISHBELT_PROTOCOL: {
+        "views": [BeltFishProjectMethodSEView, BeltFishProjectMethodSUView, BeltFishProjectMethodObsView],
+        "sheet_names": ["Belt Fish SE", "Belt Fish SU", "Belt Fish Obs"],
+    },
+    BLEACHINGQC_PROTOCOL: {
+        "views": [
+            BleachingQCProjectMethodSEView,
+            BleachingQCProjectMethodSUView,
+            BleachingQCProjectMethodObsColoniesBleachedView,
+            BleachingQCProjectMethodObsQuadratBenthicPercentView,
+        ],
+        "sheet_names": [
+            "Bleaching QT SE",
+            "Bleaching QT SU",
+            "BQT Colonies Bleached Obs",
+            "BQT Quad Benthic Percent Obs",
+        ],
+    },
+    BENTHICPQT_PROTOCOL: {
+        "views": [BenthicPQTProjectMethodSEView, BenthicPQTProjectMethodSUView, BenthicPQTProjectMethodObsView],
+        "sheet_names": ["Benthic PQT SE", "Benthic PQT SU", "Benthic PQT Obs"],
+    },
+    HABITATCOMPLEXITY_PROTOCOL: {
+        "views": [HabitatComplexityProjectMethodSEView, HabitatComplexityProjectMethodSUView, HabitatComplexityProjectMethodObsView],
+        "sheet_names": ["Habitat Complexity SE", "Habitat Complexity SU", "Habitat Complexity Obs"],
+    },
+}
+
+
 def _sort_covariate_value(values):
     return sorted(values, key=lambda x: (x.get("area") or 0.0), reverse=True)
 
@@ -222,212 +261,81 @@ def _get_project_metadata(project_ids):
     return [header] + [r.values() for r in prj_serializer.data]
 
 
-@timing
-def _create_report(request, project_ids, views, sheet_names, workbook=None, *args, **kwargs):
-    if isinstance(project_ids, list) is False:
-        project_ids = [project_ids]
-
-    wb = xl.get_workbook(workbook)
-    project_metadata = _get_project_metadata(project_ids)
-    xl.write_data_to_sheet(wb, "Metadata", project_metadata, 1, 1)
-    xl.auto_size_columns(wb["Metadata"])
-    for view, sheet_name in zip(views, sheet_names):
-        strip_first_row = False
-        current_row, current_col = 1, 1
-        for project_pk in project_ids:
-            data = get_viewset_csv_content(view, project_pk, request)
-            # Strip column header row if not the first project.
-            if strip_first_row:
-                data = data[1:]
-            
-            current_row, current_col = xl.write_data_to_sheet(wb, sheet_name, data, current_row, current_col)
-            strip_first_row = True
-        
-        xl.auto_size_columns(wb[sheet_name])
-
-    return wb
-
-
-def create_belt_fish_report(request, project_ids, data_policy_level=Project.PRIVATE):
-    wb = xl.get_workbook("su_summary")
-
-    if data_policy_level == Project.PUBLIC_SUMMARY:
-        views = [BeltFishProjectMethodSEView]
-        sheet_names = ["Belt Fish SE",]
-    elif data_policy_level == Project.PUBLIC:
-        views = [
-            BeltFishProjectMethodSEView,
-            BeltFishProjectMethodSUView,
-            BeltFishProjectMethodObsView,
-        ]
-        sheet_names = [
-            "Belt Fish SE",
-            "Belt Fish SU",
-            "Belt Fish Obs",
-        ]
-    else:
-        views = []
-        sheet_names = []
-
-    return _create_report(
-        request,
-        project_ids,
-        views=views,
-        sheet_names=sheet_names,
-        workbook=wb,
-    )
+def create_benthic_lit_report(request, project_ids, data_policy_level=Project.PRIVATE):
+    return create_protocol_report(request, project_ids, BENTHICLIT_PROTOCOL, data_policy_level)
 
 
 def create_benthic_pit_report(request, project_ids, data_policy_level=Project.PRIVATE):
-    wb = xl.get_workbook("su_summary")
-
-    if data_policy_level == Project.PUBLIC_SUMMARY:
-        views = [BenthicPITProjectMethodSEView]
-        sheet_names = ["Benthic PIT SE"]
-    elif data_policy_level == Project.PUBLIC:
-        views = [
-            BenthicPITProjectMethodSEView,
-            BenthicPITProjectMethodSUView,
-            BenthicPITProjectMethodObsView,
-        ]
-        sheet_names = [
-            "Benthic PIT SE",
-            "Benthic PIT SU",
-            "Benthic PIT Obs",
-        ]
-    else:
-        views = []
-        sheet_names = []
-
-    return _create_report(
-        request,
-        project_ids,
-        views=views,
-        sheet_names=sheet_names,
-        workbook=wb,
-    )
+    return create_protocol_report(request, project_ids, BENTHICPIT_PROTOCOL, data_policy_level)
 
 
-def create_benthic_lit_report(request, project_ids, data_policy_level=Project.PRIVATE):
-    wb = xl.get_workbook("su_summary")
-
-    if data_policy_level == Project.PUBLIC_SUMMARY:
-        views = [BenthicLITProjectMethodSEView]
-        sheet_names = ["Belt LIT SE"]
-    elif data_policy_level == Project.PUBLIC:
-        views = [
-            BenthicLITProjectMethodSEView,
-            BenthicLITProjectMethodSUView,
-            BenthicLITProjectMethodObsView,
-        ]
-        sheet_names = [
-            "Benthic LIT SE",
-            "Benthic LIT SU",
-            "Benthic LIT Obs",
-        ]
-    else:
-        views = []
-        sheet_names = []
-
-    return _create_report(
-        request,
-        project_ids,
-        views=views,
-        sheet_names=sheet_names,
-        workbook=wb,
-    )
+def create_belt_fish_report(request, project_ids, data_policy_level=Project.PRIVATE):
+    return create_protocol_report(request, project_ids, FISHBELT_PROTOCOL, data_policy_level)
 
 
 def create_bleaching_qc_report(request, project_ids, data_policy_level=Project.PRIVATE):
-    wb = xl.get_workbook("su_summary")
-
-    if data_policy_level == Project.PUBLIC_SUMMARY:
-        views = [BleachingQCProjectMethodSEView]
-        sheet_names = ["Bleaching QT SE"]
-    elif data_policy_level == Project.PUBLIC:
-        views = [
-            BleachingQCProjectMethodSEView,
-            BleachingQCProjectMethodSUView,
-            BleachingQCProjectMethodObsColoniesBleachedView,
-            BleachingQCProjectMethodObsQuadratBenthicPercentView,
-        ]
-        sheet_names = [
-            "Bleaching QT SE",
-            "Bleaching QT SU",
-            "BQT Colonies Bleached Obs",
-            "BQT Quad Benthic Percent Obs",
-        ]
-    else:
-        views = []
-        sheet_names = []
-
-    return _create_report(
-        request,
-        project_ids,
-        views=views,
-        sheet_names=sheet_names,
-        workbook=wb,
-    )
+    return create_protocol_report(request, project_ids, BLEACHINGQC_PROTOCOL, data_policy_level)
 
 
 def create_benthic_pqt_report(request, project_ids, data_policy_level=Project.PRIVATE):
-    wb = xl.get_workbook("su_summary")
-
-    if data_policy_level == Project.PUBLIC_SUMMARY:
-        views = [BenthicPQTProjectMethodSEView]
-        sheet_names = ["Benthic PQT SE"]
-    elif data_policy_level == Project.PUBLIC:
-        views = [
-            BenthicPQTProjectMethodSEView,
-            BenthicPQTProjectMethodSUView,
-            BenthicPQTProjectMethodObsView,
-        ]
-        sheet_names = [
-            "Benthic PQT SE",
-            "Benthic PQT SU",
-            "Benthic PQT Obs",
-        ]
-    else:
-        views = []
-        sheet_names = []
-
-    return _create_report(
-        request,
-        project_ids,
-        views=views,
-        sheet_names=sheet_names,
-        workbook=wb,
-    )
-
+    return create_protocol_report(request, project_ids, BENTHICPQT_PROTOCOL, data_policy_level)
+   
 
 def create_habitat_complexity_report(request, project_ids, data_policy_level=Project.PRIVATE):
+    return create_protocol_report(request, project_ids, HABITATCOMPLEXITY_PROTOCOL, data_policy_level)
+
+
+@timing
+def create_protocol_report(request, project_ids, protocol, data_policy_level=Project.PRIVATE):
+    """
+    Generic function to create a report for any protocol based on the provided mapping.
+    """
+    # Get the workbook
     wb = xl.get_workbook("su_summary")
+    
+    # Fetch the appropriate views and sheet names based on the protocol
+    protocol_config = PROTOCOL_VIEW_MAPPING.get(protocol)
+    
+    if not protocol_config:
+        raise ValueError(f"Unknown protocol [{protocol}]")
+
+    views = protocol_config['views']
+    sheet_names = protocol_config['sheet_names']
 
     if data_policy_level == Project.PUBLIC_SUMMARY:
-        views = [HabitatComplexityProjectMethodSEView]
-        sheet_names = ["Habitat Complexity SE"]
-    elif data_policy_level == Project.PUBLIC:
-        views = [
-            HabitatComplexityProjectMethodSEView,
-            HabitatComplexityProjectMethodSUView,
-            HabitatComplexityProjectMethodObsView,
-        ]
-        sheet_names = [
-            "Habitat Complexity SE",
-            "Habitat Complexity SU",
-            "Habitat Complexity Obs",
-        ]
-    else:
+        # Only SE views for public summary
+        views = views[:1]
+        sheet_names = sheet_names[:1]
+    elif data_policy_level == Project.PRIVATE:
+        # No views for private
         views = []
         sheet_names = []
 
-    return _create_report(
-        request,
-        project_ids,
-        views=views,
-        sheet_names=sheet_names,
-        workbook=wb,
-    )
+    # Metadata
+    project_metadata = _get_project_metadata(project_ids)
+    xl.write_data_to_sheet(wb, "Metadata", project_metadata, 1, 1)
+    xl.auto_size_columns(wb["Metadata"])
+
+    # Protocol data
+    for view, sheet_name in zip(views, sheet_names):
+        current_row, current_col = 1, 1
+        strip_first_row = False
+        
+        for project_pk in project_ids:
+            data = get_viewset_csv_content(view, project_pk, request)
+            if strip_first_row:
+                data = data[1:]  # Skip headers for subsequent projects
+            
+            current_row, current_col = xl.write_data_to_sheet(wb, sheet_name, data, current_row, current_col)
+            strip_first_row = True
+
+        xl.auto_size_columns(wb[sheet_name])
+    
+    return wb
+
+
+#------------
+
 
 
 def check_su_method_policy_level(
