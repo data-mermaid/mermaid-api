@@ -15,6 +15,7 @@ def test_project_se_summary_public(
     db_setup,
     project1_private_policies,
     api_client_public,
+    sample_event1,
     belt_fish_project,
     benthic_pit_project,
     obs_belt_fish1_1_biomass,
@@ -30,19 +31,19 @@ def test_project_se_summary_public(
     assert response_data["count"] == 1
 
     results = response_data["results"]
-    record = results[0]["records"][0]
+    for record in results[0]["records"]:
+        if record["sample_event_id"] == str(sample_event1.pk):
+            assert "beltfish" in record["protocols"]
+            assert "benthicpit" in record["protocols"]
 
-    assert "beltfish" in record["protocols"]
-    assert "benthicpit" in record["protocols"]
+            beltfish = record["protocols"]["beltfish"]
+            benthicpit = record["protocols"]["benthicpit"]
 
-    beltfish = record["protocols"]["beltfish"]
-    benthicpit = record["protocols"]["benthicpit"]
+            assert beltfish["sample_unit_count"] == 1
+            assert benthicpit["sample_unit_count"] == 2
 
-    assert beltfish["sample_unit_count"] == 1
-    assert benthicpit["sample_unit_count"] == 2
-
-    assert "biomass_kgha_avg" not in beltfish
-    assert "percent_cover_benthic_category_avg" not in benthicpit
+            assert "biomass_kgha_avg" not in beltfish
+            assert "percent_cover_benthic_category_avg" not in benthicpit
 
 
 def test_project_se_summary_authenticated(
@@ -88,6 +89,7 @@ def test_project_se_summary_authenticated_not_project(
     db_setup,
     api_client3,
     project1_private_policies,
+    sample_event1,
     belt_fish_project,
     benthic_pit_project,
     obs_belt_fish1_1_biomass,
@@ -106,17 +108,16 @@ def test_project_se_summary_authenticated_not_project(
     records = results[0]["records"]
 
     assert len(records) == 2
+    for record in results[0]["records"]:
+        if record["sample_event_id"] == str(sample_event1.pk):
+            assert "beltfish" in record["protocols"]
+            assert "benthicpit" in record["protocols"]
 
-    record = results[0]["records"][0]
+            beltfish = record["protocols"]["beltfish"]
+            benthicpit = record["protocols"]["benthicpit"]
 
-    assert "beltfish" in record["protocols"]
-    assert "benthicpit" in record["protocols"]
+            assert beltfish["sample_unit_count"] == 1
+            assert benthicpit["sample_unit_count"] == 2
 
-    beltfish = record["protocols"]["beltfish"]
-    benthicpit = record["protocols"]["benthicpit"]
-
-    assert beltfish["sample_unit_count"] == 1
-    assert benthicpit["sample_unit_count"] == 2
-
-    assert "biomass_kgha_avg" not in beltfish
-    assert "percent_cover_benthic_category_avg" not in benthicpit
+            assert "biomass_kgha_avg" not in beltfish
+            assert "percent_cover_benthic_category_avg" not in benthicpit
