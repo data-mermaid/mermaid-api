@@ -8,6 +8,7 @@ from storages.backends.s3 import S3Storage
 from .base import BaseModel
 from .mermaid import (
     BenthicAttribute,
+    BenthicAttributeGrowthForm,
     CollectRecord,
     GrowthForm,
     ObsBenthicPhotoQuadrat,
@@ -27,30 +28,6 @@ def select_image_storage():
         )
 
 
-class Label(BaseModel):
-    benthic_attribute = models.ForeignKey(
-        BenthicAttribute, related_name="labels", on_delete=models.CASCADE
-    )
-    growth_form = models.ForeignKey(
-        GrowthForm, related_name="labels", on_delete=models.CASCADE, null=True, blank=True
-    )
-    description = models.TextField(null=True, blank=True)
-
-    class Meta:
-        unique_together = ("benthic_attribute", "growth_form")
-        db_table = "class_label"
-        ordering = ("benthic_attribute", "growth_form")
-
-    def __str__(self):
-        return self.name
-
-    @property
-    def name(self):
-        if not self.growth_form:
-            return self.benthic_attribute.name
-        return f"{self.benthic_attribute.name} {self.growth_form.name}"
-
-
 class LabelMapping(BaseModel):
     CORALNET = "CoralNet"
     REEFCLOUD = "ReefCloud"
@@ -59,17 +36,29 @@ class LabelMapping(BaseModel):
         (REEFCLOUD, REEFCLOUD),
     )
 
-    label = models.ForeignKey(Label, related_name="mappings", on_delete=models.CASCADE)
+    benthic_attribute = models.ForeignKey(
+        BenthicAttribute,
+        related_name="labelmappings",
+        on_delete=models.CASCADE,
+        null=True,
+        blank=True,
+    )
+    growth_form = models.ForeignKey(
+        GrowthForm, related_name="labelmappings", on_delete=models.CASCADE, null=True, blank=True
+    )
     provider = models.CharField(max_length=50, choices=PROVIDERS)
     provider_id = models.CharField(max_length=255)
     provider_label = models.CharField(max_length=255, blank=True)
 
     class Meta:
-        unique_together = ("label", "provider_id")
+        unique_together = ("benthic_attribute", "growth_form", "provider", "provider_id")
         db_table = "class_label_mapping"
 
     def __str__(self):
-        return f"{self.label.name} {self.provider} {self.provider_id}"
+        label = self.benthic_attribute.name
+        if self.growth_form:
+            label += f" {self.growth_form.name}"
+        return f"{label} {self.provider} {self.provider_id}"
 
 
 class Classifier(BaseModel):
@@ -80,7 +69,9 @@ class Classifier(BaseModel):
     patch_size = models.IntegerField(help_text="Number of pixels")
     num_points = models.IntegerField(default=25)
     description = models.TextField(max_length=1000, blank=True)
-    labels = models.ManyToManyField(Label, related_name="classifiers")
+    benthic_attribute_growth_forms = models.ManyToManyField(
+        BenthicAttributeGrowthForm, related_name="classifiers"
+    )
 
     class Meta:
         db_table = "class_classifier"
@@ -88,6 +79,9 @@ class Classifier(BaseModel):
     @classmethod
     def latest(cls):
         return cls.objects.order_by("-created_on").first()
+
+    def __str__(self):
+        return self.version
 
 
 class Image(BaseModel):
