@@ -71,38 +71,6 @@ class BaseProjectSerializer(BaseAPISerializer):
     tags = serializers.ListField(source="tags.all", child=TagField(), required=False)
     members = serializers.SerializerMethodField()
 
-
-    @transaction.atomic()
-    def create(self, validated_data):
-        p = super().create(validated_data)
-        request = self.context.get("request")
-        pp = ProjectProfile(project=p, profile=request.user.profile, role=ProjectProfile.ADMIN)
-        pp.save()
-        return p
-
-    def update(self, instance, validated_data):
-        tags_data = []
-        if "tags" in validated_data:
-            tags_data = validated_data["tags"].get("all") or []
-            del validated_data["tags"]
-        instance = super().update(instance, validated_data)
-
-        tags = [t.name for t in tags_data]
-        existing_tags = [t["name"] for t in Tag.objects.filter(name__in=tags).values("name")]
-        new_tags = [t for t in tags if t not in existing_tags]
-        instance.tags.set(tags)
-
-        if new_tags:
-            request = self.context.get("request")
-            profile = request.user.profile
-            for t in new_tags:
-                tag = Tag.objects.get(name=t)
-                tag.created_by = profile
-                tag.updated_by = profile
-                tag.save()
-
-        return instance
-
     class Meta:
         model = Project
         exclude = []
