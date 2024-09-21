@@ -3,8 +3,7 @@ from typing import Any, List, Optional, Tuple, Union
 
 from django.conf import settings
 from openpyxl import Workbook, load_workbook
-from openpyxl.worksheet.worksheet import Worksheet 
-from openpyxl.styles import Font
+from openpyxl.worksheet.worksheet import Worksheet
 
 from ..utils.castutils import cast_str_value
 
@@ -51,22 +50,6 @@ def get_worksheet(wb: Workbook, name: Optional[str]=None, create: bool=False) ->
         return wb.worksheets[0]
 
 
-def apply_bold_font(
-        ws: Worksheet,
-        row0: int=1,
-        col0:int = 1,
-        row1:int=1,
-        col1:int=1
-) -> None:
-    bold_font = Font(bold=True)
-    height = row1 - row0
-    width = col1 - col0
-    for y in range(height):
-        for x in range(width):
-            bold_font = Font(bold=True)
-            ws.cell(row=row0 + y, column=col0 + x).font = bold_font
-
-
 def write_data_to_sheet(workbook: Union[Workbook, str, None], sheet_name: str, data: List[List[Any]], row: int=1, col: int=1) -> Tuple[int, int]:
     wb = get_workbook(workbook)
     ws = get_worksheet(wb, sheet_name, create=True)
@@ -90,7 +73,8 @@ def auto_size_columns(worksheet):
         for cell in col:
             try:
                 max_length = max(max_length, len(str(cell.value)))
-            except:
+            except Exception as e:
+                print(f"Auto sizing excel columns: {e}")
                 pass
 
         adjusted_width = (max_length + 2)

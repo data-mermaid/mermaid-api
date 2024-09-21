@@ -11,7 +11,6 @@ from rest_framework.response import Response
 from ..reports.fields import ReportField, ReportMethodField
 from ..reports.formatters import (
     to_data_policy,
-    to_join_list,
     to_str,
     to_yesno,
 )

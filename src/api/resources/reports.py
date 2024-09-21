@@ -1,17 +1,16 @@
-# reports/views.py
-from tempfile import NamedTemporaryFile
 from rest_framework.exceptions import ValidationError
 from rest_framework.views import APIView
 from rest_framework.response import Response
-from rest_framework import status
 from rest_framework import serializers
 
 
 from ..models import (
     PROTOCOL_MAP,
-    Project,
 )
-from ..utils.reports import REPORT_TYPES, SAMPLE_UNIT_METHOD_REPORT_TYPE, create_sample_unit_method_summary_report_background
+from ..utils.reports import (
+    REPORT_TYPES, SAMPLE_UNIT_METHOD_REPORT_TYPE,
+    create_sample_unit_method_summary_report_background,
+)
 
 
 class BaseMultiProjectReportSerializer(serializers.Serializer):
@@ -21,9 +20,9 @@ class BaseMultiProjectReportSerializer(serializers.Serializer):
     )
 
 
-class SampleUnitMethodReportReportSerializer(BaseMultiProjectReportSerializer):
+class SampleUnitMethodReportSerializer(BaseMultiProjectReportSerializer):
     protocol = serializers.ChoiceField(
-        choices=[(k, v) for k, v, in PROTOCOL_MAP.items()]
+        choices=[(k, v) for k, v in PROTOCOL_MAP.items()]
     )
 
 
@@ -31,8 +30,8 @@ class MultiProjectReportView(APIView):
 
     def get_serializer(self, *args, **kwargs):
         report_type = kwargs.get("data", {}).get("report_type")
-        if report_type in SAMPLE_UNIT_METHOD_REPORT_TYPE:
-            serializer_class = SampleUnitMethodReportReportSerializer
+        if report_type == SAMPLE_UNIT_METHOD_REPORT_TYPE:
+            serializer_class = SampleUnitMethodReportSerializer
         else:
             raise ValidationError(detail="Unknown report type")
     

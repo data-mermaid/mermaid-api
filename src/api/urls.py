@@ -276,7 +276,6 @@ api_urls = (
         re_path(r"^health/$", health),
         re_path(r"^pull/$", vw_pull),
         re_path(r"^push/$", vw_push),
-        re_path(r"^push/$", vw_push),
         re_path("^reports/$", MultiProjectReportView.as_view(), name="reports"),
     ]
 )

@@ -2,7 +2,6 @@ import csv
 from typing import Dict, List, Set, Tuple
 
 from django.db.models import QuerySet
-# from pyexcelerate import Font, Style, Workbook
 
 from . import xl
 from ..mocks import MockRequest
@@ -334,10 +333,6 @@ def create_protocol_report(request, project_ids, protocol, data_policy_level=Pro
     return wb
 
 
-#------------
-
-
-
 def check_su_method_policy_level(
     request,
     protocol,
@@ -359,10 +354,8 @@ def check_su_method_policy_level(
             data_policy_levels.append(getattr(project, data_policy_field_name))
 
     if Project.PRIVATE in data_policy_levels:
-        return project.PRIVATE
+        return Project.PRIVATE
     elif all(item == Project.PUBLIC for item in data_policy_levels):
-        return project.PUBLIC
+        return Project.PUBLIC
     
-    return project.PUBLIC_SUMMARY
-
-    
+    return Project.PUBLIC_SUMMARY

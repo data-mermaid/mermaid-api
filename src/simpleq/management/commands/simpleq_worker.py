@@ -13,9 +13,6 @@ class Command(BaseCommand):
 
     def __init__(self):
         super(Command, self).__init__()
-    
-    def handle(self, *args, **kwargs):
-        run_with_reloader(self.run_worker)
 
     def add_arguments(self, parser):
         parser.add_argument("-n", dest="queue_name", default=False, help="Queue name")

@@ -11,7 +11,6 @@ from ..models import (
     BLEACHINGQC_PROTOCOL,
     FISHBELT_PROTOCOL,
     HABITATCOMPLEXITY_PROTOCOL,
-    Project,
 )
 from ..reports import attributes_report
 from ..reports.summary_report import (
@@ -65,7 +64,7 @@ def create_sample_unit_method_summary_report(
 ):
     request = request or MockRequest()
 
-    if send_email and hasattr(request, "user") is False or hasattr(request.user, "profile") is False:
+    if send_email and (not hasattr(request, "user") or not hasattr(request.user, "profile")):
         print("No user profile found. Skipping creating report.")
         return None
 
@@ -95,21 +94,30 @@ def create_sample_unit_method_summary_report(
     with NamedTemporaryFile(delete=False) as f:
         output_path = f.name
     
-        wb.save(output_path)
+        try:
+            wb.save(output_path)
+        except Exception as e:
+            print(f"Error saving workbook: {e}")
+            return None
 
     if send_email:
-        file_name = f"{settings.ENVIRONMENT}/reports/summary_sample_method_{uuid.uuid4()}.xlsx"
-        s3.upload_file(settings.AWS_DATA_BUCKET, output_path, file_name)
-        file_url = s3.get_presigned_url(settings.AWS_DATA_BUCKET, file_name)
-        to = [request.user.profile.email]
-        template = "emails/summary_sample_event.html"
-        context = {
-            "file_url": file_url
-        }
-        send_mermaid_email(
-          "Summary Sample Unit Method Report",
-          template,
-          to,
-          context=context,
-        )
+        try:
+            file_name = f"{settings.ENVIRONMENT}/reports/summary_sample_method_{uuid.uuid4()}.xlsx"
+            s3.upload_file(settings.AWS_DATA_BUCKET, output_path, file_name)
+            file_url = s3.get_presigned_url(settings.AWS_DATA_BUCKET, file_name)
+            to = [request.user.profile.email]
+            template = "emails/summary_sample_event.html"
+            context = {
+                "file_url": file_url
+            }
+            send_mermaid_email(
+                "Summary Sample Unit Method Report",
+                template,
+                to,
+                context=context,
+            )
+        except Exception as e:
+            print(f"Error sending email or uploading to S3: {e}")
+            return None
+
     return output_path
