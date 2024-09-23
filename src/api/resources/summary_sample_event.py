@@ -7,6 +7,8 @@ from ..reports.fields import ReportField
 from ..reports.formatters import (
     to_colonies_bleached,
     to_day,
+    to_governance,
+    to_join_list,
     to_latitude,
     to_longitude,
     to_month,
@@ -55,6 +57,11 @@ class SummarySampleEventCSVSerializer(ReportSerializer):
         ReportField("sample_date", "Month", to_month, "sample_date_month"),
         ReportField("sample_date", "Day", to_day, "sample_date_day"),
         ReportField("management_name", "Management name"),
+        ReportField("management_est_year", "Management year established"),
+        ReportField("management_size", "Management size"),
+        ReportField("management_parties", "Governance", to_governance),
+        ReportField("management_compliance", "Estimated compliance"),
+        ReportField("management_rules", "Management rules", to_join_list),
         ReportField("management_notes", "Management notes"),
         ReportField(
             "protocols",
@@ -174,6 +181,20 @@ class SummarySampleEventCSVSerializer(ReportSerializer):
             to_protocol_value,
             protocol="habitatcomplexity",
             key="score_avg_sd",
+        ),
+        ReportField(
+            "protocols",
+            "Habitat Complexity observations count average",
+            to_protocol_value,
+            protocol="habitatcomplexity",
+            key="observation_count_avg",
+        ),
+        ReportField(
+            "protocols",
+            "Habitat Complexity observations count standard deviation",
+            to_protocol_value,
+            protocol="habitatcomplexity",
+            key="observation_count_sd",
         ),
         ReportField(
             "protocols",

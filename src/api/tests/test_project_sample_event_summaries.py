@@ -50,6 +50,8 @@ def test_project_se_summary_authenticated(
     api_client1,
     belt_fish_project,
     benthic_pit_project,
+    sample_event1,
+    sample_event2,
     obs_belt_fish1_1_biomass,
     obs_belt_fish1_2_biomass,
     obs_belt_fish1_3_biomass,
@@ -67,19 +69,19 @@ def test_project_se_summary_authenticated(
 
     assert len(records) == 2
 
-    record = results[0]["records"][0]
+    for record in results[0]["records"]:
+        if record["sample_event_id"] == str(sample_event1.pk):
+            assert "beltfish" in record["protocols"]
+            assert "benthicpit" in record["protocols"]
 
-    assert "beltfish" in record["protocols"]
-    assert "benthicpit" in record["protocols"]
+            beltfish = record["protocols"]["beltfish"]
+            benthicpit = record["protocols"]["benthicpit"]
 
-    beltfish = record["protocols"]["beltfish"]
-    benthicpit = record["protocols"]["benthicpit"]
+            assert beltfish["sample_unit_count"] == 1
+            assert benthicpit["sample_unit_count"] == 2
 
-    assert beltfish["sample_unit_count"] == 1
-    assert benthicpit["sample_unit_count"] == 2
-
-    biomass = obs_belt_fish1_1_biomass + obs_belt_fish1_2_biomass + obs_belt_fish1_3_biomass
-    assert pytest.approx(biomass, 0.1) == beltfish["biomass_kgha_avg"]
+            biomass = obs_belt_fish1_1_biomass + obs_belt_fish1_2_biomass + obs_belt_fish1_3_biomass
+            assert pytest.approx(biomass, 0.1) == beltfish["biomass_kgha_avg"]
 
 
 def test_project_se_summary_authenticated_not_project(
