@@ -1,28 +1,19 @@
+import os
 import uuid
+from pathlib import Path
 from tempfile import NamedTemporaryFile
+from zipfile import ZIP_DEFLATED, ZipFile
 
 from django.conf import settings
 
 from ..mocks import MockRequest
-from ..models import (
-    BENTHICLIT_PROTOCOL,
-    BENTHICPIT_PROTOCOL,
-    BENTHICPQT_PROTOCOL,
-    BLEACHINGQC_PROTOCOL,
-    FISHBELT_PROTOCOL,
-    HABITATCOMPLEXITY_PROTOCOL,
-)
+from ..models import PROTOCOL_MAP
 from ..reports import attributes_report
 from ..reports.summary_report import (
-    create_belt_fish_report,
-    create_benthic_lit_report,
-    create_benthic_pit_report,
-    create_benthic_pqt_report,
-    create_bleaching_qc_report,
-    create_habitat_complexity_report,
+    create_protocol_report,
     check_su_method_policy_level,
 )
-from . import s3
+from . import delete_file, s3
 from .q import submit_job
 from .email import send_mermaid_email
 
@@ -71,53 +62,53 @@ def create_sample_unit_method_summary_report(
     if isinstance(project_ids, list) is False:
         project_ids = [project_ids]
 
-    _data_policy_level = check_su_method_policy_level(
+    data_policy_level = check_su_method_policy_level(
         request,
         protocol,
         project_ids
     )
-    if protocol == BENTHICLIT_PROTOCOL:
-        wb = create_benthic_lit_report(request, project_ids, _data_policy_level)
-    elif protocol == BENTHICPIT_PROTOCOL:
-        wb = create_benthic_pit_report(request, project_ids, _data_policy_level)
-    elif protocol == FISHBELT_PROTOCOL:
-        wb = create_belt_fish_report(request, project_ids, _data_policy_level)
-    elif protocol == HABITATCOMPLEXITY_PROTOCOL:
-        wb = create_habitat_complexity_report(request, project_ids, _data_policy_level)
-    elif protocol == BLEACHINGQC_PROTOCOL:
-        wb = create_bleaching_qc_report(request, project_ids, _data_policy_level)
-    elif protocol == BENTHICPQT_PROTOCOL:
-        wb = create_benthic_pqt_report(request, project_ids, _data_policy_level)
-    else:
-        raise ValueError(f"Unknown protocol [{protocol}]")
-    
+
     with NamedTemporaryFile(delete=False) as f:
-        output_path = f.name
-    
+        output_path = Path(f.name)
+        wb = create_protocol_report(request, project_ids, protocol, data_policy_level, output_path)
         try:
             wb.save(output_path)
         except Exception as e:
             print(f"Error saving workbook: {e}")
             return None
 
-    if send_email:
-        try:
-            file_name = f"{settings.ENVIRONMENT}/reports/summary_sample_method_{uuid.uuid4()}.xlsx"
-            s3.upload_file(settings.AWS_DATA_BUCKET, output_path, file_name)
-            file_url = s3.get_presigned_url(settings.AWS_DATA_BUCKET, file_name)
-            to = [request.user.profile.email]
-            template = "emails/summary_sample_event.html"
-            context = {
-                "file_url": file_url
-            }
-            send_mermaid_email(
-                "Summary Sample Unit Method Report",
-                template,
-                to,
-                context=context,
-            )
-        except Exception as e:
-            print(f"Error sending email or uploading to S3: {e}")
-            return None
+        if send_email:
+            renamed_xlsx_file = None
+            zip_file_path = None
+            try:
+                file_name = f"{protocol}_summary_{uuid.uuid4()}"
+                s3_zip_file_key = f"{settings.ENVIRONMENT}/reports/{file_name}.zip"
 
-    return output_path
+                # Rename temporary file
+                renamed_xlsx_file = output_path.with_name(f"{file_name}.xlsx")
+                os.rename(output_path, renamed_xlsx_file)
+                
+                zip_file_path = output_path.with_name(f"{file_name}.zip")
+                with ZipFile(zip_file_path, "w", compression=ZIP_DEFLATED) as z:
+                    z.write(renamed_xlsx_file, arcname=f"{file_name}.xlsx")
+
+                s3.upload_file(settings.AWS_DATA_BUCKET, zip_file_path, s3_zip_file_key)
+                file_url = s3.get_presigned_url(settings.AWS_DATA_BUCKET, s3_zip_file_key)
+                to = [request.user.profile.email]
+                template = "emails/protocol_report.html"
+                context = {
+                    "protocol": PROTOCOL_MAP.get(protocol) or "",
+                    "file_url": file_url
+                }
+                send_mermaid_email(
+                    "Summary Sample Unit Method Report",
+                    template,
+                    to,
+                    context=context,
+                )
+            except Exception as e:
+                print(f"Error sending email or uploading to S3: {e}")
+                return None
+            finally:
+                delete_file(renamed_xlsx_file)
+                delete_file(zip_file_path)

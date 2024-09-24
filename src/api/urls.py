@@ -279,6 +279,3 @@ api_urls = (
         re_path("^reports/$", MultiProjectReportView.as_view(), name="reports"),
     ]
 )
-# urlpatterns = [
-#     path('create-report/', ReportCreateView.as_view(), name='create-report'),
-# ]

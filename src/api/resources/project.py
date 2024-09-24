@@ -1,6 +1,7 @@
 import logging
 
 import django_filters
+from django.conf import settings
 from django.db import transaction
 from django.db.models import JSONField
 from rest_condition import Or
@@ -142,11 +143,10 @@ class ProjectSerializer(DynamicFieldsMixin, BaseProjectSerializer):
 
 class ProjectCSVSerializer(ReportSerializer, BaseProjectSerializer):
     fields = [
-        ReportField("id", "Project Id", to_str),
         ReportField("name", "Project Name"),
         ReportMethodField("get_num_sites", "Number of Sites"),
-        ReportMethodField("get_num_active_sample_units", "Number of Active Sample Units"),
         ReportMethodField("get_num_sample_units", "Number of Sample Units"),
+        ReportMethodField("get_tags", "Organizations"),
         ReportField("data_policy_beltfish", "Beltfish Data Policy", to_data_policy),
         ReportField("data_policy_benthiclit", "Benthic LIT Data Policy", to_data_policy),
         ReportField("data_policy_benthicpit", "Benthic PIT Data Policy", to_data_policy),
@@ -154,15 +154,25 @@ class ProjectCSVSerializer(ReportSerializer, BaseProjectSerializer):
         ReportField("data_policy_bleachingqc", "Bleaching QC Data Policy", to_data_policy),
         ReportField("data_policy_benthicpqt", "Benthic PQT Data Policy", to_data_policy),
         ReportField("includes_gfcr", "Includes GFCR", to_yesno),
-        ReportMethodField("get_tags", "Tags"),
+        ReportField("notes", "Notes"),
+        ReportMethodField("get_project_admins", "Project Admins"),
+        ReportMethodField("get_contact_link", "Contact link"),
+        ReportField("id", "Project Id", to_str),
     ]
 
     def get_tags(self, obj):
         tags = obj.tags.all().values_list("name", flat=True)
         if tags:
-            return f'\"{", ".join(tags)}\"'
+            return f'{", ".join(tags)}'
         return ""
 
+    def get_contact_link(self, obj):
+        return f"https://{settings.DEFAULT_DOMAIN_API}/contact-project?project_id={obj.id}"
+
+    def get_project_admins(self, obj):
+        admins = obj.profiles.filter(role=ProjectProfile.ADMIN)\
+                .values_list("profile__email", flat=True)
+        return ", ".join(admins)
 
 
 class ProjectFilterSet(BaseAPIFilterSet, OrFilterSetMixin):

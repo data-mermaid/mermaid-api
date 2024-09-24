@@ -260,37 +260,13 @@ def _get_project_metadata(project_ids):
     return [header] + [r.values() for r in prj_serializer.data]
 
 
-def create_benthic_lit_report(request, project_ids, data_policy_level=Project.PRIVATE):
-    return create_protocol_report(request, project_ids, BENTHICLIT_PROTOCOL, data_policy_level)
-
-
-def create_benthic_pit_report(request, project_ids, data_policy_level=Project.PRIVATE):
-    return create_protocol_report(request, project_ids, BENTHICPIT_PROTOCOL, data_policy_level)
-
-
-def create_belt_fish_report(request, project_ids, data_policy_level=Project.PRIVATE):
-    return create_protocol_report(request, project_ids, FISHBELT_PROTOCOL, data_policy_level)
-
-
-def create_bleaching_qc_report(request, project_ids, data_policy_level=Project.PRIVATE):
-    return create_protocol_report(request, project_ids, BLEACHINGQC_PROTOCOL, data_policy_level)
-
-
-def create_benthic_pqt_report(request, project_ids, data_policy_level=Project.PRIVATE):
-    return create_protocol_report(request, project_ids, BENTHICPQT_PROTOCOL, data_policy_level)
-   
-
-def create_habitat_complexity_report(request, project_ids, data_policy_level=Project.PRIVATE):
-    return create_protocol_report(request, project_ids, HABITATCOMPLEXITY_PROTOCOL, data_policy_level)
-
-
 @timing
-def create_protocol_report(request, project_ids, protocol, data_policy_level=Project.PRIVATE):
+def create_protocol_report(request, project_ids, protocol, data_policy_level=Project.PRIVATE, output_path=None):
     """
     Generic function to create a report for any protocol based on the provided mapping.
     """
-    # Get the workbook
-    wb = xl.get_workbook("su_summary")
+
+    wb = xl.get_workbook(f"{protocol}_summary")
     
     # Fetch the appropriate views and sheet names based on the protocol
     protocol_config = PROTOCOL_VIEW_MAPPING.get(protocol)
@@ -317,16 +293,29 @@ def create_protocol_report(request, project_ids, protocol, data_policy_level=Pro
 
     # Protocol data
     for view, sheet_name in zip(views, sheet_names):
-        current_row, current_col = 1, 1
+        current_row = 1
+        existing_row = current_row
         strip_first_row = False
         
         for project_pk in project_ids:
             data = get_viewset_csv_content(view, project_pk, request)
             if strip_first_row:
                 data = data[1:]  # Skip headers for subsequent projects
-            
-            current_row, current_col = xl.write_data_to_sheet(wb, sheet_name, data, current_row, current_col)
+
+            existing_row = current_row
+            current_row, _ = xl.write_data_to_sheet(
+                workbook=wb,
+                sheet_name=sheet_name,
+                data=data,
+                row=existing_row,
+                col=1
+            )
+            if current_row > existing_row:
+                current_row = existing_row + 1
+
             strip_first_row = True
+            if output_path:
+                wb.save(output_path)
 
         xl.auto_size_columns(wb[sheet_name])
     

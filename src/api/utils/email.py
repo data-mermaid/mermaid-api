@@ -64,7 +64,7 @@ def mermaid_email(subject, template, to, context=None, from_email=None, reply_to
     # if dev and dev email: submit_job
     # if prod: submit_job
     to_emails = to
-    if settings.ENVIRONMENT not in ("prod",):
+    if settings.ENVIRONMENT != "prod":
         to_emails = _to_in_dev_emails(to)
 
     if to_emails:
