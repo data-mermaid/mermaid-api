@@ -1,4 +1,3 @@
-import os
 import uuid
 from pathlib import Path
 from tempfile import NamedTemporaryFile
@@ -70,7 +69,7 @@ def create_sample_unit_method_summary_report(
 
     with NamedTemporaryFile(delete=False) as f:
         output_path = Path(f.name)
-        wb = create_protocol_report(request, project_ids, protocol, data_policy_level, output_path)
+        wb = create_protocol_report(request, project_ids, protocol, data_policy_level)
         try:
             wb.save(output_path)
         except Exception as e:
@@ -86,8 +85,8 @@ def create_sample_unit_method_summary_report(
 
                 # Rename temporary file
                 renamed_xlsx_file = output_path.with_name(f"{file_name}.xlsx")
-                os.rename(output_path, renamed_xlsx_file)
-                
+                output_path.rename(renamed_xlsx_file)
+
                 zip_file_path = output_path.with_name(f"{file_name}.zip")
                 with ZipFile(zip_file_path, "w", compression=ZIP_DEFLATED) as z:
                     z.write(renamed_xlsx_file, arcname=f"{file_name}.xlsx")

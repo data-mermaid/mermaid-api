@@ -261,7 +261,7 @@ def _get_project_metadata(project_ids):
 
 
 @timing
-def create_protocol_report(request, project_ids, protocol, data_policy_level=Project.PRIVATE, output_path=None):
+def create_protocol_report(request, project_ids, protocol, data_policy_level=Project.PRIVATE):
     """
     Generic function to create a report for any protocol based on the provided mapping.
     """
@@ -295,11 +295,10 @@ def create_protocol_report(request, project_ids, protocol, data_policy_level=Pro
     for view, sheet_name in zip(views, sheet_names):
         current_row = 1
         existing_row = current_row
-        strip_first_row = False
         
-        for project_pk in project_ids:
-            data = get_viewset_csv_content(view, project_pk, request)
-            if strip_first_row:
+        for project_id in project_ids:
+            data = get_viewset_csv_content(view, project_id, request)
+            if current_row > 1:
                 data = data[1:]  # Skip headers for subsequent projects
 
             existing_row = current_row
@@ -312,10 +311,6 @@ def create_protocol_report(request, project_ids, protocol, data_policy_level=Pro
             )
             if current_row > existing_row:
                 current_row = existing_row + 1
-
-            strip_first_row = True
-            if output_path:
-                wb.save(output_path)
 
         xl.auto_size_columns(wb[sheet_name])
     

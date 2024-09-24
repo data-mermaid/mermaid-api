@@ -37,6 +37,13 @@ def is_json_like(v):
 
 def _flatten_json_columns(content, show_display_fields=False):
     headers = content[0]
+
+    content_size = len(content)
+    if content_size == 0:
+        return []
+    elif content_size == 1:
+        return [headers]
+
     cols = list(zip(*[c.values() for c in content[1:]]))  # transpose rows
     new_columns = []
     new_headers = []
