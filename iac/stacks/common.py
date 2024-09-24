@@ -17,6 +17,7 @@ from aws_cdk import (
     aws_route53 as r53,
     aws_s3 as s3,
     aws_secretsmanager as sm,
+    
 )
 from constructs import Construct
 
@@ -117,6 +118,33 @@ class CommonStack(Stack):
             removal_policy=RemovalPolicy.RETAIN,
             public_read_access=False,
             block_public_access=s3.BlockPublicAccess.BLOCK_ALL,
+        )
+        
+        self.data_bucket = s3.Bucket(
+            self,
+            id="MermaidApiDataBucket",
+            bucket_name="mermaid-data",
+            removal_policy=RemovalPolicy.RETAIN,
+            public_read_access=False,
+            block_public_access=s3.BlockPublicAccess.BLOCK_ALL,
+            lifecycle_rules=[
+                # Rules for cleaning up report files after 14 days.
+                s3.LifecycleRule(
+                    id="LocalReportsLifecycle",
+                    prefix="local/reports/",
+                    expiration=Duration.days(14)
+                ),
+                s3.LifecycleRule(
+                    id="DevReportsLifecycle",
+                    prefix="dev/reports/",
+                    expiration=Duration.days(14)
+                ),
+                s3.LifecycleRule(
+                    id="ProdReportsLifecycle",
+                    prefix="prod/reports/",
+                    expiration=Duration.days(14)
+                ),
+            ]
         )
 
         self.image_processing_bucket = s3.Bucket(

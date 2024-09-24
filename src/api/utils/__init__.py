@@ -4,6 +4,7 @@ import re
 import subprocess
 import uuid
 from datetime import datetime, timezone
+from pathlib import Path
 
 from django.conf import settings
 from django.contrib.admin.utils import NestedObjects
@@ -232,3 +233,14 @@ def is_uuid(val):
         return True
     except (ValueError, TypeError) as _:
         return False
+
+
+def delete_file(file_path):
+    path = Path(file_path)
+    try:
+        if path.exists():
+            Path(file_path).unlink()
+    except Exception as e:
+        print(f"Error deleting file: {e}")
+        return False
+    return True

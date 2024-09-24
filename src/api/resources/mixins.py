@@ -263,7 +263,7 @@ class SampleUnitMethodSummaryReport(object):
 
         try:
             model = self.get_queryset().model
-            with NamedTemporaryFile(delete=False) as f:
+            with NamedTemporaryFile(delete=True) as f:
                 try:
                     protocol = getattr(model, "protocol")
                     create_sample_unit_method_summary_report(

@@ -146,6 +146,9 @@ TEMPLATES = [
         },
     },
 ]
+REPORT_TEMPLATES = [
+    os.path.join(BASE_DIR, "api", "reports", "templates"),
+]
 
 WSGI_APPLICATION = "app.wsgi.application"
 DEFAULT_AUTO_FIELD = "django.db.models.BigAutoField"
@@ -250,6 +253,7 @@ DRF_RECAPTCHA_TESTING = os.environ.get("DRF_RECAPTCHA_TESTING") or False
 
 # buckets
 AWS_CONFIG_BUCKET = "mermaid-config"
+AWS_DATA_BUCKET = "mermaid-data"
 AWS_BACKUP_BUCKET = os.environ.get("AWS_BACKUP_BUCKET")
 AWS_METRICS_BUCKET = "mermaid-user-metrics"
 PUBLIC_BUCKET = os.environ.get("AWS_PUBLIC_BUCKET")

@@ -1,14 +1,21 @@
 import logging
 
 import django_filters
+from django.conf import settings
 from django.db import transaction
 from django.db.models import JSONField
 from rest_condition import Or
 from rest_framework import exceptions, permissions, serializers, status
 from rest_framework.decorators import action
-from rest_framework.relations import HyperlinkedIdentityField
 from rest_framework.response import Response
 
+from ..reports.fields import ReportField, ReportMethodField
+from ..reports.formatters import (
+    to_data_policy,
+    to_str,
+    to_yesno,
+)
+from ..reports.report_serializer import ReportSerializer
 from ..auth_backends import AnonymousJWTAuthentication
 from ..exceptions import check_uuid
 from ..models import (
@@ -56,45 +63,13 @@ from .site import SiteSerializer
 logger = logging.getLogger(__name__)
 
 
-class ProjectSerializer(DynamicFieldsMixin, BaseAPISerializer):
+class BaseProjectSerializer(BaseAPISerializer):
     countries = serializers.SerializerMethodField()
     num_sites = serializers.SerializerMethodField()
     num_active_sample_units = serializers.SerializerMethodField()
     num_sample_units = serializers.SerializerMethodField()
     tags = serializers.ListField(source="tags.all", child=TagField(), required=False)
     members = serializers.SerializerMethodField()
-
-
-    @transaction.atomic()
-    def create(self, validated_data):
-        p = super().create(validated_data)
-        request = self.context.get("request")
-        pp = ProjectProfile(project=p, profile=request.user.profile, role=ProjectProfile.ADMIN)
-        pp.save()
-        return p
-
-    def update(self, instance, validated_data):
-        tags_data = []
-        if "tags" in validated_data:
-            tags_data = validated_data["tags"].get("all") or []
-            del validated_data["tags"]
-        instance = super().update(instance, validated_data)
-
-        tags = [t.name for t in tags_data]
-        existing_tags = [t["name"] for t in Tag.objects.filter(name__in=tags).values("name")]
-        new_tags = [t for t in tags if t not in existing_tags]
-        instance.tags.set(tags)
-
-        if new_tags:
-            request = self.context.get("request")
-            profile = request.user.profile
-            for t in new_tags:
-                tag = Tag.objects.get(name=t)
-                tag.created_by = profile
-                tag.updated_by = profile
-                tag.save()
-
-        return instance
 
     class Meta:
         model = Project
@@ -129,6 +104,75 @@ class ProjectSerializer(DynamicFieldsMixin, BaseAPISerializer):
             num_sample_units += queryset.filter(**qry_filter).count()
 
         return num_sample_units
+
+
+class ProjectSerializer(DynamicFieldsMixin, BaseProjectSerializer):
+ 
+    @transaction.atomic()
+    def create(self, validated_data):
+        p = super().create(validated_data)
+        request = self.context.get("request")
+        pp = ProjectProfile(project=p, profile=request.user.profile, role=ProjectProfile.ADMIN)
+        pp.save()
+        return p
+
+    def update(self, instance, validated_data):
+        tags_data = []
+        if "tags" in validated_data:
+            tags_data = validated_data["tags"].get("all") or []
+            del validated_data["tags"]
+        instance = super().update(instance, validated_data)
+
+        tags = [t.name for t in tags_data]
+        existing_tags = [t["name"] for t in Tag.objects.filter(name__in=tags).values("name")]
+        new_tags = [t for t in tags if t not in existing_tags]
+        instance.tags.set(tags)
+
+        if new_tags:
+            request = self.context.get("request")
+            profile = request.user.profile
+            for t in new_tags:
+                tag = Tag.objects.get(name=t)
+                tag.created_by = profile
+                tag.updated_by = profile
+                tag.save()
+
+        return instance
+
+
+
+class ProjectCSVSerializer(ReportSerializer, BaseProjectSerializer):
+    fields = [
+        ReportField("name", "Project Name"),
+        ReportMethodField("get_num_sites", "Number of Sites"),
+        ReportMethodField("get_num_sample_units", "Number of Sample Units"),
+        ReportMethodField("get_tags", "Organizations"),
+        ReportField("data_policy_beltfish", "Beltfish Data Policy", to_data_policy),
+        ReportField("data_policy_benthiclit", "Benthic LIT Data Policy", to_data_policy),
+        ReportField("data_policy_benthicpit", "Benthic PIT Data Policy", to_data_policy),
+        ReportField("data_policy_habitatcomplexity", "Habitat Complexity Data Policy", to_data_policy),
+        ReportField("data_policy_bleachingqc", "Bleaching QC Data Policy", to_data_policy),
+        ReportField("data_policy_benthicpqt", "Benthic PQT Data Policy", to_data_policy),
+        ReportField("includes_gfcr", "Includes GFCR", to_yesno),
+        ReportField("notes", "Notes"),
+        ReportMethodField("get_project_admins", "Project Admins"),
+        ReportMethodField("get_contact_link", "Contact link"),
+        ReportField("id", "Project Id", to_str),
+    ]
+
+    def get_tags(self, obj):
+        tags = obj.tags.all().values_list("name", flat=True)
+        if tags:
+            return f'{", ".join(tags)}'
+        return ""
+
+    def get_contact_link(self, obj):
+        return f"https://{settings.DEFAULT_DOMAIN_API}/contact-project?project_id={obj.id}"
+
+    def get_project_admins(self, obj):
+        admins = obj.profiles.filter(role=ProjectProfile.ADMIN)\
+                .values_list("profile__email", flat=True)
+        return ", ".join(admins)
 
 
 class ProjectFilterSet(BaseAPIFilterSet, OrFilterSetMixin):

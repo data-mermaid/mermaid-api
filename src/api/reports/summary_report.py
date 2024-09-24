@@ -2,10 +2,22 @@ import csv
 from typing import Dict, List, Set, Tuple
 
 from django.db.models import QuerySet
-from pyexcelerate import Font, Style, Workbook
 
+from . import xl
 from ..mocks import MockRequest
-from ..models import Covariate, Site
+from ..models import (
+    BENTHICLIT_PROTOCOL,
+    BENTHICPIT_PROTOCOL,
+    BENTHICPQT_PROTOCOL,
+    BLEACHINGQC_PROTOCOL,
+    FISHBELT_PROTOCOL,
+    HABITATCOMPLEXITY_PROTOCOL,
+    Covariate,
+    Project,
+    ProjectProfile,
+    Site
+)
+from ..resources.project import ProjectCSVSerializer
 from ..resources.sampleunitmethods.beltfishmethod import (
     BeltFishProjectMethodObsView,
     BeltFishProjectMethodSEView,
@@ -37,11 +49,49 @@ from ..resources.sampleunitmethods.habitatcomplexitymethod import (
     HabitatComplexityProjectMethodSEView,
     HabitatComplexityProjectMethodSUView,
 )
-from ..utils.castutils import cast_str_value
 from ..utils.timer import timing
 
 ACA_BENTHIC_KEY, ACA_BENTHIC_FIELD = Covariate.SUPPORTED_COVARIATES[0]
 ACA_GEOMORPHIC_KEY, ACA_GEOMORPHIC_FIELD = Covariate.SUPPORTED_COVARIATES[1]
+
+
+# Mapping of protocols to their respective views and sheet names
+PROTOCOL_VIEW_MAPPING = {
+    BENTHICLIT_PROTOCOL: {
+        "views": [BenthicLITProjectMethodSEView, BenthicLITProjectMethodSUView, BenthicLITProjectMethodObsView],
+        "sheet_names": ["Benthic LIT SE", "Benthic LIT SU", "Benthic LIT Obs"],
+    },
+    BENTHICPIT_PROTOCOL: {
+        "views": [BenthicPITProjectMethodSEView, BenthicPITProjectMethodSUView, BenthicPITProjectMethodObsView],
+        "sheet_names": ["Benthic PIT SE", "Benthic PIT SU", "Benthic PIT Obs"],
+    },
+    FISHBELT_PROTOCOL: {
+        "views": [BeltFishProjectMethodSEView, BeltFishProjectMethodSUView, BeltFishProjectMethodObsView],
+        "sheet_names": ["Belt Fish SE", "Belt Fish SU", "Belt Fish Obs"],
+    },
+    BLEACHINGQC_PROTOCOL: {
+        "views": [
+            BleachingQCProjectMethodSEView,
+            BleachingQCProjectMethodSUView,
+            BleachingQCProjectMethodObsColoniesBleachedView,
+            BleachingQCProjectMethodObsQuadratBenthicPercentView,
+        ],
+        "sheet_names": [
+            "Bleaching QT SE",
+            "Bleaching QT SU",
+            "BQT Colonies Bleached Obs",
+            "BQT Quad Benthic Percent Obs",
+        ],
+    },
+    BENTHICPQT_PROTOCOL: {
+        "views": [BenthicPQTProjectMethodSEView, BenthicPQTProjectMethodSUView, BenthicPQTProjectMethodObsView],
+        "sheet_names": ["Benthic PQT SE", "Benthic PQT SU", "Benthic PQT Obs"],
+    },
+    HABITATCOMPLEXITY_PROTOCOL: {
+        "views": [HabitatComplexityProjectMethodSEView, HabitatComplexityProjectMethodSUView, HabitatComplexityProjectMethodObsView],
+        "sheet_names": ["Habitat Complexity SE", "Habitat Complexity SU", "Habitat Complexity Obs"],
+    },
+}
 
 
 def _sort_covariate_value(values):
@@ -203,125 +253,93 @@ def get_viewset_csv_content(view_cls, project_pk, request):
     return filtered_rows
 
 
-def write_data(wb, sheet_name, data):
-    casted_data = []
-    for row in data:
-        casted_row = [cast_str_value(col) for col in row]
-        casted_data.append(casted_row)
-
-    ws = wb.new_sheet(sheet_name, data=casted_data)
-    ws.set_row_style(1, Style(font=Font(bold=True)))
+def _get_project_metadata(project_ids):
+    projects = Project.objects.filter(pk__in=project_ids)
+    prj_serializer = ProjectCSVSerializer(projects, show_display_fields=True)
+    header = [f.display for f in prj_serializer.fields]
+    return [header] + [r.values() for r in prj_serializer.data]
 
 
 @timing
-def _create_report(request, project_pk, views, sheet_names):
-    wb = Workbook()
-    for view, sheet_name in zip(views, sheet_names):
-        content = get_viewset_csv_content(view, project_pk, request)
-        write_data(wb, sheet_name, content)
+def create_protocol_report(request, project_ids, protocol, data_policy_level=Project.PRIVATE):
+    """
+    Generic function to create a report for any protocol based on the provided mapping.
+    """
 
+    wb = xl.get_workbook(f"{protocol}_summary")
+    
+    # Fetch the appropriate views and sheet names based on the protocol
+    protocol_config = PROTOCOL_VIEW_MAPPING.get(protocol)
+    
+    if not protocol_config:
+        raise ValueError(f"Unknown protocol [{protocol}]")
+
+    views = protocol_config['views']
+    sheet_names = protocol_config['sheet_names']
+
+    if data_policy_level == Project.PUBLIC_SUMMARY:
+        # Only SE views for public summary
+        views = views[:1]
+        sheet_names = sheet_names[:1]
+    elif data_policy_level == Project.PRIVATE:
+        # No views for private
+        views = []
+        sheet_names = []
+
+    # Metadata
+    project_metadata = _get_project_metadata(project_ids)
+    xl.write_data_to_sheet(wb, "Metadata", project_metadata, 1, 1)
+    xl.auto_size_columns(wb["Metadata"])
+
+    # Protocol data
+    for view, sheet_name in zip(views, sheet_names):
+        current_row = 1
+        existing_row = current_row
+        
+        for project_id in project_ids:
+            data = get_viewset_csv_content(view, project_id, request)
+            if current_row > 1:
+                data = data[1:]  # Skip headers for subsequent projects
+
+            existing_row = current_row
+            current_row, _ = xl.write_data_to_sheet(
+                workbook=wb,
+                sheet_name=sheet_name,
+                data=data,
+                row=existing_row,
+                col=1
+            )
+            if current_row > existing_row:
+                current_row = existing_row + 1
+
+        xl.auto_size_columns(wb[sheet_name])
+    
     return wb
 
 
-def create_belt_fish_report(request, project_pk):
-    return _create_report(
-        request,
-        project_pk,
-        views=[
-            BeltFishProjectMethodSEView,
-            BeltFishProjectMethodSUView,
-            BeltFishProjectMethodObsView,
-        ],
-        sheet_names=[
-            "Belt Fish SE",
-            "Belt Fish SU",
-            "Belt Fish Obs",
-        ],
-    )
+def check_su_method_policy_level(
+    request,
+    protocol,
+    project_ids
+):
+    data_policy_levels = []
+    profile = request.user.profile
 
+    data_policy_field_name = Project.get_sample_unit_method_policy(protocol)
 
-def create_benthic_pit_report(request, project_pk):
-    return _create_report(
-        request,
-        project_pk,
-        views=[
-            BenthicPITProjectMethodSEView,
-            BenthicPITProjectMethodSUView,
-            BenthicPITProjectMethodObsView,
-        ],
-        sheet_names=[
-            "Benthic PIT SE",
-            "Benthic PIT SU",
-            "Benthic PIT Obs",
-        ],
-    )
+    projects = Project.objects.filter(pk__in=project_ids)
+    project_profiles = ProjectProfile.objects.filter(profile=profile, project__in=projects)
+    project_lookup = [pp.project_id for pp in project_profiles]
 
+    for project in projects:
+        if project.pk in project_lookup:
+            data_policy_levels.append(Project.PUBLIC)
+        else:
+            data_policy_levels.append(getattr(project, data_policy_field_name))
 
-def create_benthic_lit_report(request, project_pk):
-    return _create_report(
-        request,
-        project_pk,
-        views=[
-            BenthicLITProjectMethodSEView,
-            BenthicLITProjectMethodSUView,
-            BenthicLITProjectMethodObsView,
-        ],
-        sheet_names=[
-            "Benthic LIT SE",
-            "Benthic LIT SU",
-            "Benthic LIT Obs",
-        ],
-    )
-
-
-def create_bleaching_qc_report(request, project_pk):
-    return _create_report(
-        request,
-        project_pk,
-        views=[
-            BleachingQCProjectMethodSEView,
-            BleachingQCProjectMethodSUView,
-            BleachingQCProjectMethodObsColoniesBleachedView,
-            BleachingQCProjectMethodObsQuadratBenthicPercentView,
-        ],
-        sheet_names=[
-            "Bleaching QT SE",
-            "Bleaching QT SU",
-            "BQT Colonies Bleached Obs",
-            "BQT Quad Benthic Percent Obs",
-        ],
-    )
-
-
-def create_benthic_pqt_report(request, project_pk):
-    return _create_report(
-        request,
-        project_pk,
-        views=[
-            BenthicPQTProjectMethodSEView,
-            BenthicPQTProjectMethodSUView,
-            BenthicPQTProjectMethodObsView,
-        ],
-        sheet_names=[
-            "Benthic PQT SE",
-            "Benthic PQT SU",
-            "Benthic PQT Obs",
-        ],
-    )
-
-
-def create_habitat_complexity_report(request, project_pk):
-    return _create_report(
-        request,
-        project_pk,
-        views=[
-            HabitatComplexityProjectMethodSEView,
-            HabitatComplexityProjectMethodSUView,
-            HabitatComplexityProjectMethodObsView,
-        ],
-        sheet_names=[
-            "Habitat Complexity SE",
-            "Habitat Complexity SU",
-            "Habitat Complexity Obs",
-        ],
-    )
+    if Project.PRIVATE in data_policy_levels:
+        return Project.PRIVATE
+    elif all(item == Project.PUBLIC for item in data_policy_levels):
+        return Project.PUBLIC
+    
+    return Project.PUBLIC_SUMMARY
