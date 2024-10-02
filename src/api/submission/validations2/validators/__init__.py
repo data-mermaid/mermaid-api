@@ -5,6 +5,7 @@ from .benthic_transect import (
     UniqueBenthicTransectValidator,
 )
 from .biomass import BiomassValidator
+from .classification_benthic_photo_quadrat import ImageCountValidator, CollectRecordImagesValidator
 from .colony_count import ColonyCountValidator
 from .depth import DepthValidator
 from .dry_submit import DrySubmitValidator
@@ -36,7 +37,7 @@ from .observations import AllAttributesSameCategoryValidator, ObservationCountVa
 from .quadrat_collection import UniqueQuadratCollectionValidator
 from .quadrat_size import QuadratSizeValidator
 from .quadrat_transect import UniqueQuadratTransectValidator
-from .region import RegionValidator
+from .region import AnnotationRegionValidator, RegionValidator
 from .sample_date import SampleDateValidator
 from .sample_time import SampleTimeValidator
 from .site import UniqueSiteValidator
