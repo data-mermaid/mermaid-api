@@ -1,7 +1,7 @@
 from django.db.models import Count
 
 from ....models import Annotation, Image
-from .base import ERROR, OK, WARN, BaseValidator, validator_result, validate_list
+from .base import OK, WARN, BaseValidator, validate_list, validator_result
 
 
 class ImageCountValidator(BaseValidator):
@@ -70,5 +70,5 @@ class CollectRecordImagesValidator(BaseValidator):
     @validate_list
     def __call__(self, collect_record, **kwargs):
         cr_id = collect_record.get("id")
-        images = Image.objects.filter(collect_record_id=cr_id)
+        images = Image.objects.filter(collect_record_id=cr_id).order_by("created_on")
         return ImageValidator(), images
