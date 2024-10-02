@@ -1,9 +1,11 @@
 import uuid
 
+from django.db.models import Count, F
 from django.utils.translation import gettext_lazy as _
 from rest_framework.exceptions import ValidationError
 
 from api.models import (
+    Annotation,
     BeltFish,
     BenthicLIT,
     BenthicPhotoQuadratTransect,
@@ -414,11 +416,51 @@ class BenthicPhotoQuadratTransectProtocolWriter(ProtocolWriter):
             additional_data={"collect_record_id": collect_record_id},
         )
 
+    def get_and_format_annotations(self, benthic_photo_quadrat_transect_id):
+        collect_record_id = self.collect_record.id
+        observations_data = []
+        annos = (
+            Annotation.objects.filter(
+                is_confired=True, point__image__collect_record_id=collect_record_id
+            )
+            .values(
+                image_id=F("point__image_id"),
+                attribute_id=F("attribute_id"),
+                growth_form_id=F("growth_form_id"),
+            )
+            .annotate(count=Count("id"))
+            .order_by("point__image__created_on")
+        )
+
+        images = {}
+        quadrat_num = 0
+        for anno in annos:
+            if anno.image_id not in images:
+                quadrat_num += 1
+                images[anno.image_id] = None
+
+            observations_data.append(
+                {
+                    "benthic_photo_quadrat_transect": benthic_photo_quadrat_transect_id,
+                    "image_id": anno.image_id,
+                    "attribute": anno.attribute_id,
+                    "growth_form": anno.growth_form_id,
+                    "quadrat_number": quadrat_num,
+                    "num_points": anno.count,
+                }
+            )
+
     def create_obs_benthic_photo_quadrat(self, benthic_photo_quadrat_transect_id):
         observations = []
-        observations_data = get_obs_benthic_photo_quadrat_data(
-            self.collect_record, benthic_photo_quadrat_transect_id
-        )
+        is_image_classification = self.collect_record.data.get("image_classification")
+
+        if is_image_classification is True:
+            observations_data = self.get_and_format_annotations()
+        else:
+            observations_data = get_obs_benthic_photo_quadrat_data(
+                self.collect_record, benthic_photo_quadrat_transect_id
+            )
+
         if not observations_data:
             raise ValidationError(
                 {
