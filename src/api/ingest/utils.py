@@ -27,7 +27,7 @@ from api.models import (
     Site,
 )
 from api.resources.project_profile import ProjectProfileSerializer
-from api.submission.utils import submit_collect_records_v2, validate_collect_records_v2
+from api.submission.utils import submit_collect_records, validate_collect_records_v2
 from api.submission.validations import ERROR, WARN
 from api.utils import tokenutils
 
@@ -208,7 +208,7 @@ def ingest(
             is_bulk_invalid = True
 
     if dry_run is False and bulk_submission and not is_bulk_invalid:
-        submit_output = submit_collect_records_v2(profile, record_ids, validation_suppressants)
+        submit_output = submit_collect_records(profile, record_ids, validation_suppressants)
         output["submit"] = submit_output
 
     return new_records, output

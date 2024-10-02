@@ -24,7 +24,6 @@ from ..permissions import (
 )
 from ..submission.utils import (
     submit_collect_records,
-    submit_collect_records_v2,
     validate_collect_records,
     validate_collect_records_v2,
 )
@@ -86,14 +85,10 @@ class CollectRecordViewSet(BaseProjectApiViewSet):
         permission_classes=cr_permissions,
     )
     def submit(self, request, project_pk):
-        submit_version = request.data.get("version") or "1"
         record_ids = request.data.get("ids")
         profile = request.user.profile
 
-        if str(submit_version) == "2":
-            output = submit_collect_records_v2(profile, record_ids, CollectRecordSerializer)
-        else:
-            output = submit_collect_records(profile, record_ids)
+        output = submit_collect_records(profile, record_ids, CollectRecordSerializer)
 
         return Response(output)
 
