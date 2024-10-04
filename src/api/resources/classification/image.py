@@ -140,7 +140,10 @@ class ImageFilterSet(BaseAPIFilterSet):
 
 
 class ImageViewSet(BaseProjectApiViewSet):
-    queryset = Image.objects.prefetch_related("points", "points__annotations").all()
+    queryset = (
+        Image.objects.prefetch_related("points", "points__annotations").all().order_by("created_on")
+    )
+
     serializer_class = ImageSerializer
     permission_classes = [And(BaseProjectApiViewSet.permission_classes[0], ImagePermission)]
     filterset_class = ImageFilterSet
