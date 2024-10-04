@@ -35,6 +35,7 @@ class ImageValidator(BaseValidator):
         **kwargs,
     ):
         super().__init__(**kwargs)
+        self._cache_quadrat_num_lookup = None
 
     @validator_result
     def __call__(self, *args, **kwargs):
@@ -43,6 +44,13 @@ class ImageValidator(BaseValidator):
             raise ValueError("ImageValidator only accepts Image instances")
 
         image_id = str(image.pk)
+        if self._cache_quadrat_num_lookup is None:
+            self._cache_quadrat_num_lookup = {
+                str(image.id): quad_num + 1
+                for quad_num, image in enumerate(
+                    Image.objects.filter(collect_record_id=image.collect_record_id)
+                )
+            }
         annos = Annotation.objects.select_related("point", "point__image").filter(
             is_confirmed=True, point__image_id=image_id
         )
@@ -54,10 +62,20 @@ class ImageValidator(BaseValidator):
             .exclude(annotation_count=classifier.num_points)
         )
 
-        if not wrong_num_annos:
-            return OK, None, {"image_id": image_id}
+        missing_num_annos = None
+        if wrong_num_annos.exists():
+            missing_num_annos = classifier.num_points - wrong_num_annos[0]["annotation_count"]
 
-        return WARN, self.WRONG_NUM_CONFIRMED_ANNOS, {"image_id": image_id}
+        context = {
+            "image_id": image_id,
+            "quadrat_num": self._cache_quadrat_num_lookup[image_id],
+            "missing_num_annotations": missing_num_annos,
+        }
+
+        if not wrong_num_annos:
+            return OK, None, context
+
+        return WARN, self.WRONG_NUM_CONFIRMED_ANNOS, context
 
 
 class CollectRecordImagesValidator(BaseValidator):

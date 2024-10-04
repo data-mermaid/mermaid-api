@@ -29,9 +29,9 @@ class BaseRegionValidator(BaseValidator):
         return NotImplementedError()
 
     def _get_attribute_region_lookup(self, attribute_ids):
-        return {                                   
+        return {
             str(attr.pk): [str(r) for r in attr.regions]
-            if isinstance(attr.regions, list) 
+            if isinstance(attr.regions, list)
             else [str(r.id) for r in attr.regions.all()]
             for attr in self.attribute_model_class.objects.filter(id__in=attribute_ids)
         }
@@ -124,7 +124,7 @@ class AnnotationRegionValidator(BaseRegionValidator):
                 continue
             observation_ids.append(obs.get("id"))
             attribute_ids.append(obs.get("attribute"))
-        
+
         return observation_ids, attribute_ids
 
     def get_records(self, collect_record, **kwargs):
@@ -132,12 +132,17 @@ class AnnotationRegionValidator(BaseRegionValidator):
         if not collect_record_id:
             return []
 
-        annos = Annotation.objects.select_related("point", "point__image") \
-            .filter(is_confirmed=True, point__image__collect_record_id=collect_record_id)
-        return [
-            {
-                "id": str(anno.point.image.pk),
-                "attribute": str(anno.benthic_attribute.id),
-            }
-            for anno in annos
-        ]
+        annos = Annotation.objects.select_related("point", "point__image").filter(
+            is_confirmed=True, point__image__collect_record_id=collect_record_id
+        )
+
+        records = []
+        for anno in annos:
+            growth_form = ""
+            if anno.growth_form:
+                growth_form = anno.growth_form.pk
+
+            uid = f"{anno.point.image.pk}::{anno.benthic_attribute.id}::{growth_form}"
+            records.append({"id": uid, "attribute": str(anno.benthic_attribute.id)})
+
+        return records
