@@ -211,9 +211,15 @@ def _validate_collect_record_v2(record, record_serializer, request):
             request=request,
         )
     elif protocol == BENTHICPQT_PROTOCOL:
+        is_image_classification = record.data.get("image_classification") or False
+        if is_image_classification:
+            validations = benthic_photo_quadrat_transect.bpqt_classification_validations
+        else:
+            validations = benthic_photo_quadrat_transect.bpqt_non_classification_validations
+
         runner.validate(
             record,
-            benthic_photo_quadrat_transect.benthic_photo_quadrat_transect_validations,
+            validations,
             request=request,
         )
     return runner.to_dict()
@@ -239,49 +245,6 @@ def check_validation_status(results):
                 status = WARN
 
     return status
-
-
-def validate_collect_records(profile, record_ids, serializer_class, validation_suppressants=None):
-    output = dict()
-    records = CollectRecord.objects.filter(id__in=record_ids)
-    request = MockRequest(profile=profile)
-    for record in records.iterator():
-        status, validation_output = _validate_collect_record(record, request)
-
-        if validation_suppressants:
-            validation_output = _apply_validation_suppressants(
-                validation_output, validation_suppressants
-            )
-            status = check_validation_status(validation_output)
-
-        stage = CollectRecord.SAVED_STAGE
-        if status == OK:
-            stage = CollectRecord.VALIDATED_STAGE
-
-        validation_timestamp = timezone.now()
-        validations = dict(
-            version="1",
-            status=status,
-            results=validation_output,
-            last_validated=str(validation_timestamp),
-        )
-        serialized_collect_record = None
-        collect_record = None
-
-        qry = CollectRecord.objects.filter(id=record.pk)
-        # Using update so updated_on and validation_timestamp matches
-        qry.update(
-            stage=stage,
-            validations=validations,
-            updated_on=validation_timestamp,
-            updated_by=profile,
-        )
-        if qry.count() > 0:
-            collect_record = qry[0]
-            serialized_collect_record = serializer_class(collect_record).data
-        output[str(record.pk)] = dict(status=status, record=serialized_collect_record)
-
-    return output
 
 
 def validate_collect_records_v2(
