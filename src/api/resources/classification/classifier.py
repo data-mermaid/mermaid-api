@@ -1,4 +1,8 @@
 from rest_framework import serializers
+from rest_framework.decorators import action
+from rest_framework.exceptions import NotFound
+from rest_framework.permissions import SAFE_METHODS
+from rest_framework.response import Response
 
 from ...models import BenthicAttributeGrowthForm, Classifier
 from ...permissions import UnauthenticatedReadOnlyPermission
@@ -32,3 +36,12 @@ class ClassifierViewSet(BaseApiViewSet):
 
     def get_queryset(self):
         return Classifier.objects.prefetch_related("benthic_attribute_growth_forms").all()
+
+    @action(detail=False, methods=SAFE_METHODS)
+    def latest(self, request, *args, **kwargs):
+        classifier = self.get_queryset().order_by("-created_on").first()
+        if not classifier:
+            raise NotFound("No classifiers found")
+
+        serializer = ClassifierSerializer(instance=classifier)
+        return Response(serializer.data)
