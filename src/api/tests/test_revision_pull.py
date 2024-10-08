@@ -1,3 +1,5 @@
+import uuid
+
 from api.mocks import MockRequest
 from api.models import CollectRecord, Project, ProjectProfile, Revision
 from api.resources.collect_record import CollectRecordSerializer, CollectRecordViewSet
@@ -164,16 +166,46 @@ def test_added_removed_added_to_project(db_setup, project1, profile1):
     project_viewset = ProjectViewSet(request=request)
 
     # Add
-    project_profile1 = ProjectProfile.objects.create(project=project1, profile=profile1, role=ProjectProfile.COLLECTOR)
+    project_profile1 = ProjectProfile.objects.create(
+        project=project1, profile=profile1, role=ProjectProfile.COLLECTOR
+    )
     # Delete
     project_profile1.delete()
     # Re-Add
     ProjectProfile.objects.create(project=project1, profile=profile1, role=ProjectProfile.COLLECTOR)
 
+    updates, deletes, removes = get_records(project_viewset, profile1.pk, None)
+
+    assert len(updates) == 1
+    assert len(deletes) == 0
+    assert len(removes) == 0
+
+
+def test_create_delete_create_collect_record_pull(db_setup, project1, profile1):
+    uid = uuid.uuid4()
+    request = MockRequest(profile=profile1)
+    cr_viewset = CollectRecordViewSet(request=request)
+
+    updates, deletes, removes = get_records(cr_viewset, profile1.pk, None)
+    assert len(updates) == 0
+    assert len(deletes) == 0
+    assert len(removes) == 0
+
+    cr = CollectRecord.objects.create(id=uid, project=project1, profile=profile1, data=dict())
+    assert uid == cr.id
+    cr.data = {"protocol": "fishbelt"}
+    cr.save()
+
+    revision = Revision.objects.get(table_name="api_collectrecord", record_id=uid)
+
+    cr.delete()
+
+    cr = CollectRecord.objects.create(id=uid, project=project1, profile=profile1, data=dict())
+
     updates, deletes, removes = get_records(
-        project_viewset, profile1.pk, None
+        cr_viewset, profile1.pk, {"revision_num": revision.revision_num}
     )
-    
+
     assert len(updates) == 1
     assert len(deletes) == 0
     assert len(removes) == 0

@@ -33,7 +33,6 @@ def transect_method_to_collect_record(serializer, transect_method_instance, prof
         raise TypeError("instance is None")
 
     skip_fields = (
-        "id",
         "created_on",
         "updated_on",
         "created_by",

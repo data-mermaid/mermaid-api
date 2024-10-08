@@ -81,6 +81,26 @@ class BenthicPhotoQuadratTransectMethodView(
     serializer_class = BenthicPhotoQuadratTransectMethodSerializer
     http_method_names = ["get", "put", "head", "delete"]
 
+    def edit_sample_unit(self, request, pk):
+        bpqt_record = self.get_queryset().get(pk=pk)
+        image_classification = bpqt_record.image_classification
+        cr = super().edit_sample_unit(request, pk)
+        if image_classification is True:
+            image_classification = True
+
+            # Observations aren't needed for image classification
+            # collect records.
+            obs_key_fields = cr.obs_keys
+            for obs_key_field in obs_key_fields:
+                if obs_key_field in cr.data:
+                    cr.data.pop(obs_key_field)
+        else:
+            image_classification = False
+
+        cr.data["image_classification"] = image_classification
+
+        return cr
+
 
 class BenthicPQTMethodObsSerializer(BaseSUViewAPISerializer):
     class Meta(BaseSUViewAPISerializer.Meta):
