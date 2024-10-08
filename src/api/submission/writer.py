@@ -409,11 +409,16 @@ class BenthicPhotoQuadratTransectProtocolWriter(ProtocolWriter):
             "quadrat_transect": quadrat_transect_id,
             "id": sample_unit_method_id,
         }
+        is_image_classified = self.collect_record.data.get("image_classification")
+        additional_data = {
+            "collect_record_id": collect_record_id,
+            "image_classification": is_image_classified,
+        }
         return self.get_or_create(
             BenthicPhotoQuadratTransect,
             BenthicPhotoQuadratTransectSerializer,
             benthic_photo_quadrat_transect_data,
-            additional_data={"collect_record_id": collect_record_id},
+            additional_data=additional_data,
         )
 
     def _group_image_annotations(self, collect_record_id):
