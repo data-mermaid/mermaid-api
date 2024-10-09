@@ -409,10 +409,10 @@ class BenthicPhotoQuadratTransectProtocolWriter(ProtocolWriter):
             "quadrat_transect": quadrat_transect_id,
             "id": sample_unit_method_id,
         }
-        is_image_classified = self.collect_record.data.get("image_classification")
+        image_classification = self.collect_record.data.get("image_classification")
         additional_data = {
             "collect_record_id": collect_record_id,
-            "image_classification": is_image_classified,
+            "image_classification": image_classification,
         }
         return self.get_or_create(
             BenthicPhotoQuadratTransect,
@@ -473,9 +473,9 @@ class BenthicPhotoQuadratTransectProtocolWriter(ProtocolWriter):
 
     def create_obs_benthic_photo_quadrat(self, benthic_photo_quadrat_transect_id):
         observations = []
-        is_image_classification = self.collect_record.data.get("image_classification")
+        image_classification = self.collect_record.data.get("image_classification")
 
-        if is_image_classification is True:
+        if image_classification:
             observations_data = self.get_and_format_annotations(benthic_photo_quadrat_transect_id)
         else:
             observations_data = get_obs_benthic_photo_quadrat_data(

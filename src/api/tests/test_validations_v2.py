@@ -208,7 +208,6 @@ def test_benthicpqt_protocol_validation_warn(
         benthic_photo_quadrat_transect.bpqt_non_classification_validations,
         request=profile1_request,
     )
-
     assert overall_status == WARN
 
     results = runner.to_dict()["results"]

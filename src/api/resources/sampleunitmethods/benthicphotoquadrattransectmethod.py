@@ -85,7 +85,7 @@ class BenthicPhotoQuadratTransectMethodView(
         bpqt_record = self.get_queryset().get(pk=pk)
         image_classification = bpqt_record.image_classification
         cr = super().edit_sample_unit(request, pk)
-        if image_classification is True:
+        if image_classification:
             image_classification = True
 
             # Observations aren't needed for image classification

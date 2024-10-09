@@ -247,9 +247,7 @@ def check_validation_status(results):
     return status
 
 
-def validate_collect_records_v2(
-    profile, record_ids, serializer_class, validation_suppressants=None
-):
+def validate_collect_records(profile, record_ids, serializer_class, validation_suppressants=None):
     output = {}
     records = CollectRecord.objects.filter(id__in=record_ids)
     request = MockRequest(profile=profile)
