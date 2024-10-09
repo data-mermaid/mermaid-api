@@ -1,9 +1,11 @@
 import uuid
 
+from django.db.models import Count, F
 from django.utils.translation import gettext_lazy as _
 from rest_framework.exceptions import ValidationError
 
 from api.models import (
+    Annotation,
     BeltFish,
     BenthicLIT,
     BenthicPhotoQuadratTransect,
@@ -407,18 +409,79 @@ class BenthicPhotoQuadratTransectProtocolWriter(ProtocolWriter):
             "quadrat_transect": quadrat_transect_id,
             "id": sample_unit_method_id,
         }
+        image_classification = self.collect_record.data.get("image_classification")
+        additional_data = {
+            "collect_record_id": collect_record_id,
+            "image_classification": image_classification,
+        }
         return self.get_or_create(
             BenthicPhotoQuadratTransect,
             BenthicPhotoQuadratTransectSerializer,
             benthic_photo_quadrat_transect_data,
-            additional_data={"collect_record_id": collect_record_id},
+            additional_data=additional_data,
         )
+
+    def _group_image_annotations(self, collect_record_id):
+        return (
+            Annotation.objects.filter(
+                is_confirmed=True, point__image__collect_record_id=collect_record_id
+            )
+            .values(
+                image_id=F("point__image_id"),
+                attribute_id=F("benthic_attribute_id"),
+                _growth_form_id=F("growth_form_id"),
+            )
+            .annotate(count=Count("id"))
+            .order_by("point__image__created_on")
+        )
+
+    def get_and_format_annotations(self, benthic_photo_quadrat_transect_id):
+        collect_record_id = self.collect_record.id
+        observations_data = []
+        annos = self._group_image_annotations(collect_record_id)
+
+        quadrat_num_start = (self.collect_record.data.get("quadrat_transect") or {}).get(
+            "quadrat_number_start"
+        ) or 1
+
+        images = {}
+        quadrat_num = quadrat_num_start
+        for anno in annos:
+            image_id = anno.get("image_id")
+            attribute_id = anno.get("attribute_id")
+            growth_form_id = anno.get("_growth_form_id")
+            count = anno.get("count") or 0
+
+            if not image_id or not attribute_id:
+                continue
+
+            observations_data.append(
+                {
+                    "benthic_photo_quadrat_transect": benthic_photo_quadrat_transect_id,
+                    "image_id": image_id,
+                    "attribute": attribute_id,
+                    "growth_form": growth_form_id,
+                    "quadrat_number": quadrat_num,
+                    "num_points": count,
+                }
+            )
+            if image_id not in images:
+                quadrat_num += 1
+                images[image_id] = None
+
+        return observations_data
 
     def create_obs_benthic_photo_quadrat(self, benthic_photo_quadrat_transect_id):
         observations = []
-        observations_data = get_obs_benthic_photo_quadrat_data(
-            self.collect_record, benthic_photo_quadrat_transect_id
-        )
+        image_classification = self.collect_record.data.get("image_classification")
+
+        if image_classification:
+            observations_data = self.get_and_format_annotations(benthic_photo_quadrat_transect_id)
+        else:
+            observations_data = get_obs_benthic_photo_quadrat_data(
+                self.collect_record, benthic_photo_quadrat_transect_id
+            )
+
         if not observations_data:
             raise ValidationError(
                 {
