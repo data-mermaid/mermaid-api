@@ -247,9 +247,7 @@ def check_validation_status(results):
     return status
 
 
-def validate_collect_records_v2(
-    profile, record_ids, serializer_class, validation_suppressants=None
-):
+def validate_collect_records(profile, record_ids, serializer_class, validation_suppressants=None):
     output = {}
     records = CollectRecord.objects.filter(id__in=record_ids)
     request = MockRequest(profile=profile)
@@ -285,43 +283,7 @@ def validate_collect_records_v2(
     return output
 
 
-def submit_collect_records(profile, record_ids, validation_suppressants=None):
-    output = {}
-    request = MockRequest(profile=profile)
-    for record_id in record_ids:
-        collect_record = CollectRecord.objects.get_or_none(id=record_id)
-        if collect_record is None:
-            output[record_id] = dict(status=ERROR, message=gettext_lazy("Not found"))
-            continue
-
-        status, validation_output = _validate_collect_record(collect_record, request)
-        if validation_suppressants:
-            validation_output = _apply_validation_suppressants(
-                validation_output, validation_suppressants
-            )
-            status = check_validation_status(validation_output)
-
-        if status != OK:
-            output[record_id] = dict(status=status, message=gettext_lazy("Invalid collect record"))
-            continue
-
-        # If validate comes out all good (status == OK) then
-        # try parsing and saving the collect record into its
-        # components.
-        status, result = write_collect_record(collect_record, request)
-        if status == VALIDATION_ERROR_STATUS:
-            output[record_id] = dict(status=ERROR, message=result)
-            continue
-        elif status == ERROR_STATUS:
-            logger.error(json.dumps(dict(id=record_id, data=collect_record.data)), result)
-            output[record_id] = dict(status=ERROR, message=gettext_lazy("System failure"))
-            continue
-        output[record_id] = dict(status=OK, message=gettext_lazy("Success"))
-
-    return output
-
-
-def submit_collect_records_v2(profile, record_ids, serializer_class, validation_suppressants=None):
+def submit_collect_records(profile, record_ids, serializer_class, validation_suppressants=None):
     output = {}
     request = MockRequest(profile=profile)
     for record_id in record_ids:

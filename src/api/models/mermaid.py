@@ -165,7 +165,7 @@ class Project(BaseModel, JSONMixin):
             self._old_values = {k: v for k, v in self._loaded_values.items() if k in notify_fields}
         self._new_values = model_to_dict(self, fields=notify_fields)
         super(Project, self).save(*args, **kwargs)
-    
+
     @classmethod
     def get_sample_unit_method_policy(cls, protocol):
         su_method = None
@@ -173,7 +173,7 @@ class Project(BaseModel, JSONMixin):
             su_method = "beltfish"
         elif protocol in PROTOCOL_MAP:
             su_method = protocol.lower()
-        
+
         field_name = f"data_policy_{su_method}"
         if not hasattr(cls, field_name):
             raise ValueError(f"No data policy for '{protocol}' protocol.")
@@ -1197,6 +1197,8 @@ class BenthicPhotoQuadratTransect(TransectMethod):
         related_name="benthic_photo_quadrat_transect_method",
         verbose_name=_("benthic photo quadrat transect"),
     )
+    # True: Has used image classification.
+    image_classification = models.BooleanField(default=False)
 
     class Meta:
         db_table = "transectmethod_benthicpqt"

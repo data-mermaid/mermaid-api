@@ -235,21 +235,24 @@ class OrFilterSetMixin(object):
 
 
 class SampleUnitMethodEditMixin(object):
-    @transaction.atomic
-    @action(detail=True, methods=["PUT"], permission_classes=[ProjectDataAdminPermission])
-    def edit(self, request, project_pk, pk):
+    def edit_sample_unit(self, request, pk):
         collect_record_owner = Project.objects.get_or_none(id=request.data.get("owner"))
         if collect_record_owner is None:
             collect_record_owner = request.user.profile
 
-        try:
-            model = self.get_queryset().model
-            if hasattr(model, "protocol") is False:
-                raise ValueError("Unsupported model")
+        model = self.get_queryset().model
+        if hasattr(model, "protocol") is False:
+            raise ValueError("Unsupported model")
 
-            collect_record = edit_transect_method(
-                self.serializer_class, collect_record_owner, request, pk, model.protocol
-            )
+        return edit_transect_method(
+            self.serializer_class, collect_record_owner, request, pk, model.protocol
+        )
+
+    @transaction.atomic
+    @action(detail=True, methods=["PUT"], permission_classes=[ProjectDataAdminPermission])
+    def edit(self, request, project_pk, pk):
+        try:
+            collect_record = self.edit_sample_unit(request, pk)
             return Response({"id": str(collect_record.pk)})
         except Exception as err:
             print(err)
