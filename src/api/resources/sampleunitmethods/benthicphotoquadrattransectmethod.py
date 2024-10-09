@@ -1,5 +1,6 @@
 from django_filters import BaseInFilter, RangeFilter
 from rest_condition import Or
+from rest_framework.exceptions import NotFound
 
 from ...models import (
     BenthicPhotoQuadratTransect,
@@ -82,7 +83,10 @@ class BenthicPhotoQuadratTransectMethodView(
     http_method_names = ["get", "put", "head", "delete"]
 
     def edit_sample_unit(self, request, pk):
-        bpqt_record = self.get_queryset().get(pk=pk)
+        bpqt_record = self.get_queryset().get_or_none(pk=pk)
+        if bpqt_record is None:
+            raise NotFound(f"[{pk}] Benthic PQT record not found.")
+
         image_classification = bpqt_record.image_classification
         cr = super().edit_sample_unit(request, pk)
         if image_classification:
