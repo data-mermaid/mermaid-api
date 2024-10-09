@@ -104,22 +104,38 @@ class BenthicPITObsSQLModel(BaseSUSQLModel):
             FROM ba_gf_life_histories
             GROUP BY attribute_id, growth_form_id
         )
-        SELECT *,
-        (
-            SELECT jsonb_agg(jsonb_build_object(
-                'id', blh.id,
-                'name', blh.name,
-                'proportion', COALESCE(ROUND(1.0 / COALESCE(gf.cnt, ba.cnt), 3), 0)
-            ) ORDER BY blh.name)
-            FROM benthic_lifehistory blh
-            LEFT JOIN ba_gf_life_histories gf_lh ON gf_lh.life_history_id = blh.id
-                AND gf_lh.attribute_id = benthicpit_obs_cte.attribute_id 
-                AND gf_lh.growth_form_id = benthicpit_obs_cte.growth_form_id
-            LEFT JOIN gf_lh_counts gf ON gf_lh.attribute_id = gf.attribute_id AND gf_lh.growth_form_id = gf.growth_form_id
-            LEFT JOIN benthic_attribute_life_histories balh ON balh.benthiclifehistory_id = blh.id
-                AND balh.benthicattribute_id = benthicpit_obs_cte.attribute_id
-            LEFT JOIN ba_lh_counts ba ON balh.benthicattribute_id = ba.benthicattribute_id
-        ) AS life_histories
+        SELECT *, 
+            (
+                WITH life_histories_data AS (
+                    SELECT
+                        blh.id,
+                        blh.name,
+                        COALESCE(ROUND(1.0 / COALESCE(gf.cnt, ba.cnt), 3), 0) AS proportion,
+                        COALESCE(ROUND(1.0 / gf.cnt, 3), 0) AS proportion_gf
+                    FROM benthic_lifehistory blh
+                    LEFT JOIN ba_gf_life_histories gf_lh ON gf_lh.life_history_id = blh.id
+                        AND gf_lh.attribute_id = benthicpit_obs_cte.attribute_id 
+                        AND gf_lh.growth_form_id = benthicpit_obs_cte.growth_form_id
+                    LEFT JOIN gf_lh_counts gf ON gf_lh.attribute_id = gf.attribute_id AND gf_lh.growth_form_id = gf.growth_form_id
+                    LEFT JOIN benthic_attribute_life_histories balh ON balh.benthiclifehistory_id = blh.id
+                        AND balh.benthicattribute_id = benthicpit_obs_cte.attribute_id
+                    LEFT JOIN ba_lh_counts ba ON balh.benthicattribute_id = ba.benthicattribute_id
+                )
+                SELECT jsonb_agg(jsonb_build_object(
+                    'id', lh.id,
+                    'name', lh.name,
+                    'proportion', 
+                        CASE 
+                            WHEN EXISTS (
+                                SELECT 1 FROM life_histories_data lh_sub
+                                WHERE lh_sub.proportion_gf > 0
+                            )
+                            THEN CASE WHEN lh.proportion_gf > 0 THEN lh.proportion ELSE 0 END
+                            ELSE lh.proportion
+                        END
+                ) ORDER BY lh.name)
+                FROM life_histories_data lh
+            ) AS life_histories
         FROM benthicpit_obs_cte
     """
 
