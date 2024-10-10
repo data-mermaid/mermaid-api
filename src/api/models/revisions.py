@@ -2,7 +2,7 @@ from django.contrib.gis.db import models
 from django.db import connection
 from django.utils import timezone
 
-from .base import ExtendedManager
+from .base import ExtendedManager, ExtendedQuerySet
 
 
 class Revision(models.Model):
@@ -15,7 +15,7 @@ class Revision(models.Model):
     deleted = models.BooleanField(default=False, editable=False)
     related_to_profile_id = models.UUIDField(null=True, db_index=True, editable=False)
 
-    objects = ExtendedManager()
+    objects = ExtendedManager.from_queryset(ExtendedQuerySet)()
 
     class Meta:
         db_table = "revision"
@@ -115,8 +115,7 @@ class Revision(models.Model):
         return cls.create(
             table_name, record_id, project_id, profile_id, deleted, related_to_profile_id
         )
-    
-    
+
     @classmethod
     def remove(
         cls,
@@ -135,7 +134,6 @@ class Revision(models.Model):
             deleted=deleted,
             related_to_profile_id=related_to_profile_id,
         ).delete()
-    
 
     @classmethod
     def remove_from_instance(
@@ -148,7 +146,6 @@ class Revision(models.Model):
         return cls.remove(
             table_name, record_id, project_id, profile_id, deleted, related_to_profile_id
         )
-        
 
 
 # -- TRIGGER SQL --

@@ -24,12 +24,16 @@ def validate_max_year(value):
         )
 
 
-class ExtendedManager(models.Manager):
+class ExtendedQuerySet(models.QuerySet):
     def get_or_none(self, *args, **kwargs):
         try:
             return super().get(*args, **kwargs)
         except ObjectDoesNotExist:
             return None
+
+
+class ExtendedManager(models.Manager):
+    pass
 
 
 class ChoicesManager(ExtendedManager):
@@ -56,7 +60,7 @@ class Profile(models.Model):
     last_name = models.CharField(max_length=100, blank=True, null=True)
     picture_url = models.URLField(max_length=2048, blank=True, null=True)
 
-    objects = ExtendedManager()
+    objects = ExtendedManager.from_queryset(ExtendedQuerySet)()
 
     class Meta:
         db_table = "profile"
@@ -108,7 +112,7 @@ class BaseModel(models.Model):
     class Meta:
         abstract = True
 
-    objects = ExtendedManager()
+    objects = ExtendedManager.from_queryset(ExtendedQuerySet)()
 
 
 class AreaMixin(models.Model):

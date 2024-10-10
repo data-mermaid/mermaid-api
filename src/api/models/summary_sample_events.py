@@ -3,7 +3,7 @@ from django.core.serializers.json import DjangoJSONEncoder
 
 from sqltables import SQLTableArg, SQLTableManager
 from . import Project
-from .base import ExtendedManager
+from .base import ExtendedManager, ExtendedQuerySet
 
 
 class SummarySampleEventBaseModel(models.Model):
@@ -480,7 +480,7 @@ class BaseProjectSummarySampleEvent(models.Model):
     class Meta:
         abstract = True
 
-    objects = ExtendedManager()
+    objects = ExtendedManager.from_queryset(ExtendedQuerySet)()
 
 
 class RestrictedProjectSummarySampleEvent(BaseProjectSummarySampleEvent):

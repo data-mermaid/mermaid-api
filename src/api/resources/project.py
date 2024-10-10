@@ -9,13 +9,6 @@ from rest_framework import exceptions, permissions, serializers, status
 from rest_framework.decorators import action
 from rest_framework.response import Response
 
-from ..reports.fields import ReportField, ReportMethodField
-from ..reports.formatters import (
-    to_data_policy,
-    to_str,
-    to_yesno,
-)
-from ..reports.report_serializer import ReportSerializer
 from ..auth_backends import AnonymousJWTAuthentication
 from ..exceptions import check_uuid
 from ..models import (
@@ -35,8 +28,10 @@ from ..permissions import (
     UnauthenticatedReadOnlyPermission,
     get_project,
     get_project_pk,
-    get_project_profile,
 )
+from ..reports.fields import ReportField, ReportMethodField
+from ..reports.formatters import to_data_policy, to_str, to_yesno
+from ..reports.report_serializer import ReportSerializer
 from ..utils import truthy
 from ..utils.project import (
     copy_project_and_resources,
@@ -107,7 +102,6 @@ class BaseProjectSerializer(BaseAPISerializer):
 
 
 class ProjectSerializer(DynamicFieldsMixin, BaseProjectSerializer):
- 
     @transaction.atomic()
     def create(self, validated_data):
         p = super().create(validated_data)
@@ -140,7 +134,6 @@ class ProjectSerializer(DynamicFieldsMixin, BaseProjectSerializer):
         return instance
 
 
-
 class ProjectCSVSerializer(ReportSerializer, BaseProjectSerializer):
     fields = [
         ReportField("name", "Project Name"),
@@ -150,7 +143,9 @@ class ProjectCSVSerializer(ReportSerializer, BaseProjectSerializer):
         ReportField("data_policy_beltfish", "Beltfish Data Policy", to_data_policy),
         ReportField("data_policy_benthiclit", "Benthic LIT Data Policy", to_data_policy),
         ReportField("data_policy_benthicpit", "Benthic PIT Data Policy", to_data_policy),
-        ReportField("data_policy_habitatcomplexity", "Habitat Complexity Data Policy", to_data_policy),
+        ReportField(
+            "data_policy_habitatcomplexity", "Habitat Complexity Data Policy", to_data_policy
+        ),
         ReportField("data_policy_bleachingqc", "Bleaching QC Data Policy", to_data_policy),
         ReportField("data_policy_benthicpqt", "Benthic PQT Data Policy", to_data_policy),
         ReportField("includes_gfcr", "Includes GFCR", to_yesno),
@@ -170,8 +165,9 @@ class ProjectCSVSerializer(ReportSerializer, BaseProjectSerializer):
         return f"https://{settings.DEFAULT_DOMAIN_API}/contact-project?project_id={obj.id}"
 
     def get_project_admins(self, obj):
-        admins = obj.profiles.filter(role=ProjectProfile.ADMIN)\
-                .values_list("profile__email", flat=True)
+        admins = obj.profiles.filter(role=ProjectProfile.ADMIN).values_list(
+            "profile__email", flat=True
+        )
         return ", ".join(admins)
 
 
@@ -212,7 +208,9 @@ class ProjectAuthenticatedUserPermission(permissions.BasePermission):
             if action in ("find_and_replace_sites", "find_and_replace_managements"):
                 pk = get_project_pk(request, view)
                 project = get_project(pk)
-                pp = get_project_profile(project, user.profile)
+                pp = ProjectProfile.objects.get_or_none(project=project, profile=user.profile)
+                if pp is None:
+                    return False
                 return pp.role > ProjectProfile.READONLY
 
         return False
