@@ -1,6 +1,6 @@
 from django.core.exceptions import ObjectDoesNotExist
 from rest_framework import permissions
-from rest_framework.exceptions import NotFound, PermissionDenied
+from rest_framework.exceptions import NotFound
 
 from .exceptions import check_uuid
 from .models import CollectRecord, Project, ProjectProfile
@@ -28,13 +28,6 @@ def get_project(pk):
         return Project.objects.get(pk=check_uuid(pk))
     except Project.DoesNotExist:
         raise NotFound("Not found: project %s" % pk)
-
-
-def get_project_profile(project, profile):
-    try:
-        return ProjectProfile.objects.get(project=project, profile=profile)
-    except ProjectProfile.DoesNotExist:
-        raise PermissionDenied("You are not part of this project.")
 
 
 def data_policy_permission(request, view, project_policy):
@@ -76,7 +69,9 @@ class ProjectDataPermission(permissions.BasePermission):
         pk = get_project_pk(request, view)
 
         project = get_project(pk)
-        _ = get_project_profile(project, user.profile)
+        pp = ProjectProfile.objects.get_or_none(project=project, profile=user.profile)
+        if pp is None:
+            return False
         return True
 
 
@@ -96,7 +91,9 @@ class ProjectDataCollectorPermission(permissions.BasePermission):
         pk = get_project_pk(request, view)
 
         project = get_project(pk)
-        pp = get_project_profile(project, user.profile)
+        pp = ProjectProfile.objects.get_or_none(project=project, profile=user.profile)
+        if pp is None:
+            return False
         if project.is_open:
             return pp.is_collector
         else:
@@ -111,7 +108,9 @@ class ProjectDataAdminPermission(permissions.BasePermission):
         pk = get_project_pk(request, view)
 
         project = get_project(pk)
-        pp = get_project_profile(project, user.profile)
+        pp = ProjectProfile.objects.get_or_none(project=project, profile=user.profile)
+        if pp is None:
+            return False
         return pp.is_admin
 
 
