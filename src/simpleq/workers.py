@@ -41,15 +41,11 @@ class Worker:
             jobs then quit?
         """
 
-        # TODO: Temporary for debugging
-        print(self.queues)
-
         while True:
             start_time = datetime.now()
             logger.info(f"Fetching message(s), starting UTC time {start_time}\n")
             for queue in self.queues:
                 for job in queue.jobs:
-                    print(f"job: {job}")
                     job.run()
                     if not job.exception:
                         queue.remove_job(job)

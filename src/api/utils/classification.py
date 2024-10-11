@@ -331,28 +331,19 @@ def _write_classification_results(image, score_sets, label_ids, classifer_record
 
 
 def _classify_image(image_record_id, profile_id=None):
-    print(f"image_record_id: {image_record_id}")
     profile = Profile.objects.get_or_none(id=profile_id) if profile_id else None
-    print(f"profile: {profile}")
 
     image = Image.objects.get_or_none(id=image_record_id)
-    print(f"image: {image}")
     if not image:
-        print(f"Image classification skipped, image [{image_record_id}] does not exist.")
         return
 
     create_classification_status(image, ClassificationStatus.RUNNING)
-    print("After create_classification_status RUNNING")
 
     try:
         data_location = _get_image_location(image)
-        print(f"data_location: {data_location}")
         feature_location = _get_features_location(image)
-        print(f"feature_location: {feature_location}")
         classifier, weights, classifer_record = _get_classifier_and_weights()
-        print(f"classifier: {classifier}")
         points = generate_points(image, 25)
-        print(f"points: {points}")
 
         extract_features_msg = ExtractFeaturesMsg(
             job_token=image_record_id,
@@ -365,28 +356,20 @@ def _classify_image(image_record_id, profile_id=None):
             image_loc=data_location,
             feature_loc=feature_location,
         )
-        print(f"extract_features_msg: {extract_features_msg}")
         classify_features_msg = ClassifyFeaturesMsg(
             job_token=extract_features_msg.job_token,
             feature_loc=extract_features_msg.feature_loc,
             classifier_loc=classifier,
         )
-        print(f"classify_features_msg: {classify_features_msg}")
         _ = extract_features(extract_features_msg)
         response_message = classify_features(classify_features_msg)
-        print(f"response_message: {response_message}")
         label_ids = response_message.classes
-        print(f"label_ids: {label_ids}")
         score_sets = response_message.scores
-        print(f"score_sets: {score_sets}")
         _write_classification_results(image, score_sets, label_ids, classifer_record, profile)
-        print("After write_classification_results")
 
         create_classification_status(image, ClassificationStatus.COMPLETED)
-        print("After create_classification_status COMPLETED")
     except Exception as err:
         print(err)
-        print("FAILED CLASSIFICATION")
         create_classification_status(image, ClassificationStatus.FAILED, str(err))
 
 
