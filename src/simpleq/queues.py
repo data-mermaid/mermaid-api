@@ -81,7 +81,11 @@ class Queue:
 
     def __repr__(self):
         """Print a human-friendly object representation."""
-        return f'<Queue({"name": "{self.name}", "region": "{self.sqs_resource.region.name}"})>'
+        region_name = ""
+        if hasattr(self.sqs_resource, "region") and self.sqs_resource.region:
+            region_name = self.sqs_resource.region.name
+
+        return f'<Queue({{"name": "{self.name}", "region": "{region_name}"}})>'
 
     @property
     def queue(self):
@@ -186,9 +190,7 @@ class Queue:
     def release_job(self, job):
         try:
             resp = self.sqs_resource.meta.client.change_message_visibility(
-                QueueUrl=self.queue.url,
-                ReceiptHandle=job._sqs_receipt_handle,
-                VisibilityTimeout=0
+                QueueUrl=self.queue.url, ReceiptHandle=job._sqs_receipt_handle, VisibilityTimeout=0
             )
             return resp["ResponseMetadata"]["HTTPStatusCode"] == 200
         except Exception as e:
