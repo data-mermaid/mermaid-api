@@ -17,7 +17,6 @@ from aws_cdk import (
     aws_route53 as r53,
     aws_s3 as s3,
     aws_secretsmanager as sm,
-    
 )
 from constructs import Construct
 
@@ -119,7 +118,7 @@ class CommonStack(Stack):
             public_read_access=False,
             block_public_access=s3.BlockPublicAccess.BLOCK_ALL,
         )
-        
+
         self.data_bucket = s3.Bucket(
             self,
             id="MermaidApiDataBucket",
@@ -132,19 +131,15 @@ class CommonStack(Stack):
                 s3.LifecycleRule(
                     id="LocalReportsLifecycle",
                     prefix="local/reports/",
-                    expiration=Duration.days(14)
+                    expiration=Duration.days(14),
                 ),
                 s3.LifecycleRule(
-                    id="DevReportsLifecycle",
-                    prefix="dev/reports/",
-                    expiration=Duration.days(14)
+                    id="DevReportsLifecycle", prefix="dev/reports/", expiration=Duration.days(14)
                 ),
                 s3.LifecycleRule(
-                    id="ProdReportsLifecycle",
-                    prefix="prod/reports/",
-                    expiration=Duration.days(14)
+                    id="ProdReportsLifecycle", prefix="prod/reports/", expiration=Duration.days(14)
                 ),
-            ]
+            ],
         )
 
         self.image_processing_bucket = s3.Bucket(
@@ -154,6 +149,18 @@ class CommonStack(Stack):
             removal_policy=RemovalPolicy.RETAIN,
             public_read_access=False,
             block_public_access=s3.BlockPublicAccess.BLOCK_ALL,
+            cors=[
+                s3.CorsRule(
+                    allowed_methods=[
+                        s3.HttpMethods.GET,
+                        s3.HttpMethods.HEAD,
+                    ],
+                    allowed_origins=["*"],
+                    allowed_headers=["*"],
+                    exposed_headers=[],
+                    max_age=3000,
+                ),
+            ],
         )
 
         # KMS Key for encrypting logs
