@@ -335,7 +335,6 @@ def _classify_image(image_record_id, profile_id=None):
 
     image = Image.objects.get_or_none(id=image_record_id)
     if not image:
-        print(f"Image classification skipped, image [{image_record_id}] does not exist.")
         return
 
     create_classification_status(image, ClassificationStatus.RUNNING)
@@ -357,16 +356,13 @@ def _classify_image(image_record_id, profile_id=None):
             image_loc=data_location,
             feature_loc=feature_location,
         )
-
         classify_features_msg = ClassifyFeaturesMsg(
             job_token=extract_features_msg.job_token,
             feature_loc=extract_features_msg.feature_loc,
             classifier_loc=classifier,
         )
-
         _ = extract_features(extract_features_msg)
         response_message = classify_features(classify_features_msg)
-
         label_ids = response_message.classes
         score_sets = response_message.scores
         _write_classification_results(image, score_sets, label_ids, classifer_record, profile)

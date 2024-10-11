@@ -1,10 +1,12 @@
 import codecs
+import logging
 import uuid
-from datetime import datetime
+from datetime import datetime, timezone
 from pickle import dumps, loads
 
 from django.conf import settings
 
+logger = logging.getLogger(__name__)
 USE_FIFO = getattr(settings, "USE_FIFO") == "True"
 
 
@@ -95,7 +97,7 @@ class Job:
 
     def run(self):
         """Run this job."""
-        self.start_time = datetime.utcnow()
+        self.start_time = datetime.now(timezone.utc)
         msg = f"Starting job {self.callable.__name__} at {self.start_time.isoformat()}"
 
         if self.callable.__name__ == "update_project_summaries":
@@ -106,10 +108,11 @@ class Job:
         try:
             self.result = self.callable(*self.args, **self.kwargs)
         except Exception as e:
+            logger.error(f"Job {self.callable.__name__} failed to run: {e}")
             self.exception = e
 
         if not self.exception:
-            self.stop_time = datetime.utcnow()
+            self.stop_time = datetime.now(timezone.utc)
             self.run_time = (self.stop_time - self.start_time).total_seconds()
             self.log(
                 f"Finished job {self.callable.__name__} at {self.stop_time.isoformat()} "

@@ -88,7 +88,7 @@ class QueueWorker(Construct):
             "memory_limit_mib": config.api.sqs_memory,
             "secrets": api_secrets,
             "environment": environment,
-            "command": ["python", "manage.py", "simpleq_worker"],
+            "command": ["python", "manage.py", "simpleq_worker", "-n", queue_name],
             "min_scaling_capacity": 1,
             "max_scaling_capacity": 3,
             # this defines how the service shall autoscale based on the

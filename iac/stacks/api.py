@@ -278,8 +278,6 @@ class ApiStack(Stack):
         )
 
         # Image Worker
-        # The below is to force src/simpleq/management/commands/simpleq_worker.py:L18 to pick up the correct SQS name.
-        environment["SQS_QUEUE_NAME"] = environment["IMAGE_SQS_QUEUE_NAME"]
         image_worker = QueueWorker(
             self,
             "ImageWorker",
