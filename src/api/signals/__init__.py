@@ -21,6 +21,7 @@ from .attributes import *  # noqa: F403
 from .classification import *  # noqa: F403
 from .notifications import *  # noqa: F403
 from .revision import *  # noqa: F403
+from .submission import *  # noqa: F403
 from .summaries import *  # noqa: F403
 
 

@@ -1,8 +1,9 @@
 from django.db.models.signals import post_delete, post_save, pre_save
 from django.dispatch import receiver
 
-from ..models import Image
+from ..models import CollectRecord, Image
 from ..utils import classification as cls_utils
+from .submission import post_edit, post_submit
 
 
 @receiver(pre_save, sender=Image)
@@ -30,6 +31,8 @@ def delete_images_on_model_delete(sender, instance, **kwargs):
         instance.image.delete(save=False)
     if instance.thumbnail:
         instance.thumbnail.delete(save=False)
+    if instance.annotations_file:
+        instance.annotations_file.delete(save=False)
 
 
 @receiver(post_save, sender=Image)
@@ -48,3 +51,24 @@ def post_save_classification_image(sender, instance, created, **kwargs):
         # to have thumbnail created and saved in the post_save so thumbnails
         # don't get orphaned if done in a pre_save signal.
         instance.thumbnail.save(thumb_file.name, thumb_file, save=True)
+
+
+@receiver(post_submit, sender=CollectRecord)
+def create_image_annotations_files(sender, instance, **kwargs):
+    if not instance.data.get("image_classification"):
+        return
+
+    for img in Image.objects.filter(collect_record_id=instance.id):
+        img.create_annotations_file()
+
+
+@receiver(post_edit, sender=CollectRecord)
+def delete_image_annotations_files(sender, instance, **kwargs):
+    if not instance.data.get("image_classification"):
+        return
+
+    for img in Image.objects.filter(collect_record_id=instance.id):
+        if img.annotations_file:
+            img.annotations_file.delete(save=False)
+            img.annotations_file = None
+            img.save()

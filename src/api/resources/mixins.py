@@ -22,6 +22,7 @@ from ..exceptions import check_uuid
 from ..models import ArchivedRecord, Project
 from ..notifications import notify_cr_owners_site_mr_deleted
 from ..permissions import ProjectDataAdminPermission
+from ..signals.classification import post_edit
 from ..utils import create_iso_date_string, get_protected_related_objects
 from ..utils.project import get_safe_project_name
 from ..utils.sample_unit_methods import edit_transect_method
@@ -253,6 +254,8 @@ class SampleUnitMethodEditMixin(object):
     def edit(self, request, project_pk, pk):
         try:
             collect_record = self.edit_sample_unit(request, pk)
+            post_edit.send(sender=collect_record.__class__, instance=collect_record)
+
             return Response({"id": str(collect_record.pk)})
         except Exception as err:
             print(err)

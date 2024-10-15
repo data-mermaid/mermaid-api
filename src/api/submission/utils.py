@@ -19,6 +19,7 @@ from ..models import (
     AuditRecord,
     CollectRecord,
 )
+from ..signals import post_submit
 from ..utils.q import submit_job
 from ..utils.sample_unit_methods import create_audit_record
 from ..utils.summary_cache import update_summary_cache
@@ -125,8 +126,16 @@ def write_collect_record(collect_record, request, dry_run=False):
                 create_audit_record(
                     request.user.profile, AuditRecord.SUBMIT_RECORD_EVENT_TYPE, collect_record
                 )
+                collect_record_id = collect_record.id
                 collect_record.delete()
                 transaction.savepoint_commit(sid)
+
+                collect_record.id = collect_record_id
+                post_submit.send(
+                    sender=collect_record.__class__,
+                    instance=collect_record,
+                )
+
                 submit_job(
                     5,
                     update_summary_cache,
@@ -190,7 +199,7 @@ def _validate_collect_record(record, request):
     return result, validations
 
 
-def _validate_collect_record_v2(record, record_serializer, request):
+def _validate_collect_record(record, record_serializer, request):
     protocol = record.data.get("protocol")
     if protocol not in PROTOCOL_MAP:
         raise ValueError(gettext_lazy(f"{protocol} not supported"))
@@ -252,7 +261,7 @@ def validate_collect_records(profile, record_ids, serializer_class, validation_s
     records = CollectRecord.objects.filter(id__in=record_ids)
     request = MockRequest(profile=profile)
     for record in records.iterator():
-        validation_output = _validate_collect_record_v2(record, serializer_class, request)
+        validation_output = _validate_collect_record(record, serializer_class, request)
 
         if validation_suppressants:
             print("validation_suppressants not suppported")
@@ -292,7 +301,7 @@ def submit_collect_records(profile, record_ids, serializer_class, validation_sup
             output[record_id] = dict(status=ERROR, message=gettext_lazy("Not found"))
             continue
 
-        validation_output = _validate_collect_record_v2(collect_record, serializer_class, request)
+        validation_output = _validate_collect_record(collect_record, serializer_class, request)
         status = validation_output["status"]
         if validation_suppressants:
             print("validation_suppressants not suppported")

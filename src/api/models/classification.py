@@ -1,4 +1,6 @@
+import csv
 import uuid
+from io import StringIO
 
 from django.conf import settings
 from django.contrib.gis.db import models
@@ -108,7 +110,7 @@ class Image(BaseModel):
         db_table = "class_image"
 
     def __str__(self):
-        return f"{self.name} - {self.photo_timestamp}"
+        return f"{self.name} - {self.original_image_name}"
 
     def _get_first_observation(self):
         obs = ObsBenthicPhotoQuadrat.objects.filter(image=self)
@@ -145,6 +147,52 @@ class Image(BaseModel):
                 return obs.benthic_photo_quadrat_transect.quadrat_transect.sample_event.site
 
         return None
+
+    def create_annotations_file(self):
+        csv_columns = [
+            "image_id",
+            "row",
+            "col",
+            "benthic_attribute_id",
+            "benthic_attribute_name",
+            "growth_form_id",
+            "growth_form_name",
+        ]
+        annos = (
+            Annotation.objects.select_related("point", "point__image")
+            .filter(is_confirmed=True, point__image__id=self.id)
+            .order_by("point__row", "point__column")
+        )
+
+        if not annos.exists():
+            self.annotations_file.delete()
+            self.annotations_file = None
+            self.save()
+            return
+
+        tmp = StringIO()
+        try:
+            csvwriter = csv.writer(tmp)
+            csvwriter.writerow(csv_columns)
+
+            for anno in annos:
+                csvwriter.writerow(
+                    [
+                        self.id,
+                        anno.point.row,
+                        anno.point.column,
+                        anno.benthic_attribute_id,
+                        anno.benthic_attribute.name,
+                        anno.growth_form_id,
+                        anno.growth_form.name if anno.growth_form else "",
+                    ]
+                )
+            tmp.seek(0)
+            self.annotations_file.save(f"{self.id}_annotations.csv", tmp, save=True)
+            self.save()
+        finally:
+            tmp.close()
+            tmp = None
 
 
 class Point(BaseModel):
