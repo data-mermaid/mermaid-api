@@ -91,6 +91,9 @@ class Image(BaseModel):
     thumbnail = models.ImageField(
         upload_to="", storage=select_image_storage, max_length=255, null=True, blank=True
     )
+    annotations_file = models.FileField(
+        upload_to="", storage=select_image_storage, max_length=255, null=True, blank=True
+    )
     name = models.CharField(max_length=200, blank=True, null=True)
     original_image_checksum = models.CharField(max_length=64, blank=True, null=True)
     original_image_name = models.CharField(max_length=200, blank=True, null=True)
