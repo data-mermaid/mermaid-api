@@ -55,7 +55,7 @@ def post_save_classification_image(sender, instance, created, **kwargs):
 
 @receiver(post_submit, sender=CollectRecord)
 def create_image_annotations_files(sender, instance, **kwargs):
-    if not instance.data.get("image_classification"):
+    if not instance.data or not instance.data.get("image_classification"):
         return
 
     for img in Image.objects.filter(collect_record_id=instance.id):
@@ -64,7 +64,7 @@ def create_image_annotations_files(sender, instance, **kwargs):
 
 @receiver(post_edit, sender=CollectRecord)
 def delete_image_annotations_files(sender, instance, **kwargs):
-    if not instance.data.get("image_classification"):
+    if not instance.data or not instance.data.get("image_classification"):
         return
 
     for img in Image.objects.filter(collect_record_id=instance.id):
