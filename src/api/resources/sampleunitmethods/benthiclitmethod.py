@@ -21,6 +21,7 @@ from ...reports.formatters import (
     to_governance,
     to_join_list,
     to_latitude,
+    to_life_history,
     to_longitude,
     to_month,
     to_names,
@@ -202,6 +203,7 @@ class BenthicLITMethodObsSerializer(BaseSUViewAPISerializer):
                 "benthic_category",
                 "benthic_attribute",
                 "growth_form",
+                "life_histories",
             ]
         )
 
@@ -250,6 +252,30 @@ class ObsBenthicLITCSVSerializer(ReportSerializer):
         ReportField("growth_form", "Growth form"),
         ReportField("length", "LIT (cm)"),
         ReportField("total_length", "Total transect cm"),
+        ReportField(
+            "life_histories",
+            "Competitive",
+            to_life_history,
+            protocol="life_histories",
+            key="competitive",
+        ),
+        ReportField(
+            "life_histories",
+            "Generalist",
+            to_life_history,
+            protocol="life_histories",
+            key="generalist",
+        ),
+        ReportField(
+            "life_histories",
+            "Stress-tolerant",
+            to_life_history,
+            protocol="life_histories",
+            key="stress-tolerant",
+        ),
+        ReportField(
+            "life_histories", "Weedy", to_life_history, protocol="life_histories", key="weedy"
+        ),
         ReportField("site_notes", "Site notes"),
         ReportField("management_notes", "Management notes"),
         ReportField("sample_unit_notes", "Sample unit notes"),
@@ -283,6 +309,7 @@ class BenthicLITMethodSUSerializer(BaseSUViewAPISUSerializer):
                 "depth",
                 "reef_slope",
                 "percent_cover_benthic_category",
+                "percent_cover_life_histories",
                 "data_policy_benthiclit",
             ]
         )
@@ -329,6 +356,7 @@ class BenthicLITMethodSUCSVSerializer(ReportSerializer):
         ReportField("total_length", "Total cm"),
         ReportField("observers", "Observers", to_names),
         ReportField("percent_cover_benthic_category", "Percent cover by benthic category"),
+        ReportField("percent_cover_life_histories", "Percent cover by life history"),
         ReportField("site_notes", "Site notes"),
         ReportField("management_notes", "Management notes"),
         ReportField("sample_unit_notes", "Sample unit notes"),
@@ -360,6 +388,8 @@ class BenthicLITMethodSESerializer(BaseSUViewAPISerializer):
                 "depth_sd",
                 "percent_cover_benthic_category_avg",
                 "percent_cover_benthic_category_sd",
+                "percent_cover_life_histories_avg",
+                "percent_cover_life_histories_sd",
             ]
         )
 
@@ -405,6 +435,10 @@ class BenthicLITMethodSECSVSerializer(ReportSerializer):
         ReportField(
             "percent_cover_benthic_category_sd",
             "Percent cover by benthic category standard deviation",
+        ),
+        ReportField("percent_cover_life_histories_avg", "Percent cover by life history average"),
+        ReportField(
+            "percent_cover_life_histories_sd", "Percent cover by life history standard deviation"
         ),
         ReportField("site_notes", "Site notes"),
         ReportField("management_notes", "Management notes"),

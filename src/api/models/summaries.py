@@ -289,6 +289,7 @@ class BenthicLITObsModel(BaseObsModel):
     benthic_category = models.CharField(max_length=100, null=True, blank=True)
     benthic_attribute = models.CharField(max_length=100, null=True, blank=True)
     growth_form = models.CharField(max_length=100, null=True, blank=True)
+    life_histories = models.JSONField(null=True, blank=True)
     observation_notes = models.TextField(blank=True)
     data_policy_benthiclit = models.CharField(max_length=50)
     pseudosu_id = models.UUIDField()
@@ -306,6 +307,7 @@ class BenthicLITSUModel(BaseSUModel):
     total_length = models.PositiveIntegerField()
     reef_slope = models.CharField(max_length=50, null=True, blank=True)
     percent_cover_benthic_category = models.JSONField(null=True, blank=True)
+    percent_cover_life_histories = models.JSONField(null=True, blank=True)
     data_policy_benthiclit = models.CharField(max_length=50)
     pseudosu_id = models.UUIDField()
 
@@ -330,6 +332,8 @@ class BenthicLITSEModel(BaseSummaryModel):
     visibility_name = models.CharField(max_length=100, null=True, blank=True)
     percent_cover_benthic_category_avg = models.JSONField(null=True, blank=True)
     percent_cover_benthic_category_sd = models.JSONField(null=True, blank=True)
+    percent_cover_life_histories_avg = models.JSONField(null=True, blank=True)
+    percent_cover_life_histories_sd = models.JSONField(null=True, blank=True)
     data_policy_benthiclit = models.CharField(max_length=50)
 
     class Meta:
