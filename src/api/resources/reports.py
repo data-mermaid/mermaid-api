@@ -3,7 +3,7 @@ from rest_framework.exceptions import ValidationError
 from rest_framework.response import Response
 from rest_framework.views import APIView
 
-from ..models import PROTOCOL_MAP
+from ..models import PROTOCOL_MAP, Project
 from ..utils.reports import (
     REPORT_TYPES,
     SAMPLE_UNIT_METHOD_REPORT_TYPE,
@@ -16,6 +16,16 @@ class BaseMultiProjectReportSerializer(serializers.Serializer):
     project_ids = serializers.ListField(
         child=serializers.UUIDField(),
     )
+
+    def validate_project_ids(self, value):
+        if len(value) < 1:
+            raise ValidationError("At least 2 projects are required")
+
+        projects = {str(p.pk): None for p in Project.objects.filter(id__in=value)}
+        for project_id in value:
+            if project_id not in projects:
+                raise ValidationError(f"[{project_id}] Project not found")
+        return value
 
 
 class SampleUnitMethodReportSerializer(BaseMultiProjectReportSerializer):
@@ -41,6 +51,7 @@ class MultiProjectReportView(APIView):
         if report_type == SAMPLE_UNIT_METHOD_REPORT_TYPE:
             project_ids = mp_serializer.validated_data["project_ids"]
             protocol = mp_serializer.validated_data["protocol"]
+
             create_sample_unit_method_summary_report_background(
                 project_ids=project_ids,
                 protocol=protocol,

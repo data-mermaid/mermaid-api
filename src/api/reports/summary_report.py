@@ -3,7 +3,6 @@ from typing import Dict, List, Set, Tuple
 
 from django.db.models import QuerySet
 
-from . import xl
 from ..mocks import MockRequest
 from ..models import (
     BENTHICLIT_PROTOCOL,
@@ -15,7 +14,7 @@ from ..models import (
     Covariate,
     Project,
     ProjectProfile,
-    Site
+    Site,
 )
 from ..resources.project import ProjectCSVSerializer
 from ..resources.sampleunitmethods.beltfishmethod import (
@@ -50,6 +49,7 @@ from ..resources.sampleunitmethods.habitatcomplexitymethod import (
     HabitatComplexityProjectMethodSUView,
 )
 from ..utils.timer import timing
+from . import xl
 
 ACA_BENTHIC_KEY, ACA_BENTHIC_FIELD = Covariate.SUPPORTED_COVARIATES[0]
 ACA_GEOMORPHIC_KEY, ACA_GEOMORPHIC_FIELD = Covariate.SUPPORTED_COVARIATES[1]
@@ -58,15 +58,27 @@ ACA_GEOMORPHIC_KEY, ACA_GEOMORPHIC_FIELD = Covariate.SUPPORTED_COVARIATES[1]
 # Mapping of protocols to their respective views and sheet names
 PROTOCOL_VIEW_MAPPING = {
     BENTHICLIT_PROTOCOL: {
-        "views": [BenthicLITProjectMethodSEView, BenthicLITProjectMethodSUView, BenthicLITProjectMethodObsView],
+        "views": [
+            BenthicLITProjectMethodSEView,
+            BenthicLITProjectMethodSUView,
+            BenthicLITProjectMethodObsView,
+        ],
         "sheet_names": ["Benthic LIT SE", "Benthic LIT SU", "Benthic LIT Obs"],
     },
     BENTHICPIT_PROTOCOL: {
-        "views": [BenthicPITProjectMethodSEView, BenthicPITProjectMethodSUView, BenthicPITProjectMethodObsView],
+        "views": [
+            BenthicPITProjectMethodSEView,
+            BenthicPITProjectMethodSUView,
+            BenthicPITProjectMethodObsView,
+        ],
         "sheet_names": ["Benthic PIT SE", "Benthic PIT SU", "Benthic PIT Obs"],
     },
     FISHBELT_PROTOCOL: {
-        "views": [BeltFishProjectMethodSEView, BeltFishProjectMethodSUView, BeltFishProjectMethodObsView],
+        "views": [
+            BeltFishProjectMethodSEView,
+            BeltFishProjectMethodSUView,
+            BeltFishProjectMethodObsView,
+        ],
         "sheet_names": ["Belt Fish SE", "Belt Fish SU", "Belt Fish Obs"],
     },
     BLEACHINGQC_PROTOCOL: {
@@ -84,11 +96,19 @@ PROTOCOL_VIEW_MAPPING = {
         ],
     },
     BENTHICPQT_PROTOCOL: {
-        "views": [BenthicPQTProjectMethodSEView, BenthicPQTProjectMethodSUView, BenthicPQTProjectMethodObsView],
+        "views": [
+            BenthicPQTProjectMethodSEView,
+            BenthicPQTProjectMethodSUView,
+            BenthicPQTProjectMethodObsView,
+        ],
         "sheet_names": ["Benthic PQT SE", "Benthic PQT SU", "Benthic PQT Obs"],
     },
     HABITATCOMPLEXITY_PROTOCOL: {
-        "views": [HabitatComplexityProjectMethodSEView, HabitatComplexityProjectMethodSUView, HabitatComplexityProjectMethodObsView],
+        "views": [
+            HabitatComplexityProjectMethodSEView,
+            HabitatComplexityProjectMethodSUView,
+            HabitatComplexityProjectMethodObsView,
+        ],
         "sheet_names": ["Habitat Complexity SE", "Habitat Complexity SU", "Habitat Complexity Obs"],
     },
 }
@@ -217,6 +237,11 @@ def get_viewset_csv_content(view_cls, project_pk, request):
     vw.kwargs = kwargs
     vw.request = request
     resp = vw.csv(request)
+
+    if resp.status_code != 200:
+        print(resp.content)
+        raise ValueError(f"Failed to get content for project {project_pk}")
+
     content = list(csv.reader([str(row, "UTF-8").strip() for row in resp.streaming_content]))
     if not isinstance(content, list) or len(content) < 2 or "site_id" not in content[0]:
         return content
@@ -267,15 +292,15 @@ def create_protocol_report(request, project_ids, protocol, data_policy_level=Pro
     """
 
     wb = xl.get_workbook(f"{protocol}_summary")
-    
+
     # Fetch the appropriate views and sheet names based on the protocol
     protocol_config = PROTOCOL_VIEW_MAPPING.get(protocol)
-    
+
     if not protocol_config:
         raise ValueError(f"Unknown protocol [{protocol}]")
 
-    views = protocol_config['views']
-    sheet_names = protocol_config['sheet_names']
+    views = protocol_config["views"]
+    sheet_names = protocol_config["sheet_names"]
 
     if data_policy_level == Project.PUBLIC_SUMMARY:
         # Only SE views for public summary
@@ -295,7 +320,7 @@ def create_protocol_report(request, project_ids, protocol, data_policy_level=Pro
     for view, sheet_name in zip(views, sheet_names):
         current_row = 1
         existing_row = current_row
-        
+
         for project_id in project_ids:
             data = get_viewset_csv_content(view, project_id, request)
             if current_row > 1:
@@ -303,25 +328,17 @@ def create_protocol_report(request, project_ids, protocol, data_policy_level=Pro
 
             existing_row = current_row
             current_row, _ = xl.write_data_to_sheet(
-                workbook=wb,
-                sheet_name=sheet_name,
-                data=data,
-                row=existing_row,
-                col=1
+                workbook=wb, sheet_name=sheet_name, data=data, row=existing_row, col=1
             )
             if current_row > existing_row:
                 current_row = existing_row + 1
 
         xl.auto_size_columns(wb[sheet_name])
-    
+
     return wb
 
 
-def check_su_method_policy_level(
-    request,
-    protocol,
-    project_ids
-):
+def check_su_method_policy_level(request, protocol, project_ids):
     data_policy_levels = []
     profile = request.user.profile
 
@@ -341,5 +358,5 @@ def check_su_method_policy_level(
         return Project.PRIVATE
     elif all(item == Project.PUBLIC for item in data_policy_levels):
         return Project.PUBLIC
-    
+
     return Project.PUBLIC_SUMMARY
