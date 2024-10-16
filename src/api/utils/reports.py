@@ -8,14 +8,10 @@ from django.conf import settings
 from ..mocks import MockRequest
 from ..models import PROTOCOL_MAP
 from ..reports import attributes_report
-from ..reports.summary_report import (
-    create_protocol_report,
-    check_su_method_policy_level,
-)
+from ..reports.summary_report import check_su_method_policy_level, create_protocol_report
 from . import delete_file, s3
-from .q import submit_job
 from .email import send_mermaid_email
-
+from .q import submit_job
 
 SAMPLE_UNIT_METHOD_REPORT_TYPE = "summary_sample_unit_method"
 REPORT_TYPES = [
@@ -44,7 +40,7 @@ def create_sample_unit_method_summary_report_background(
         request=req,
         send_email=send_email,
     )
-    
+
 
 def create_sample_unit_method_summary_report(
     project_ids,
@@ -61,11 +57,7 @@ def create_sample_unit_method_summary_report(
     if isinstance(project_ids, list) is False:
         project_ids = [project_ids]
 
-    data_policy_level = check_su_method_policy_level(
-        request,
-        protocol,
-        project_ids
-    )
+    data_policy_level = check_su_method_policy_level(request, protocol, project_ids)
 
     with NamedTemporaryFile(delete=False) as f:
         output_path = Path(f.name)
@@ -95,10 +87,7 @@ def create_sample_unit_method_summary_report(
                 file_url = s3.get_presigned_url(settings.AWS_DATA_BUCKET, s3_zip_file_key)
                 to = [request.user.profile.email]
                 template = "emails/protocol_report.html"
-                context = {
-                    "protocol": PROTOCOL_MAP.get(protocol) or "",
-                    "file_url": file_url
-                }
+                context = {"protocol": PROTOCOL_MAP.get(protocol) or "", "file_url": file_url}
                 send_mermaid_email(
                     "Summary Sample Unit Method Report",
                     template,
@@ -111,3 +100,5 @@ def create_sample_unit_method_summary_report(
             finally:
                 delete_file(renamed_xlsx_file)
                 delete_file(zip_file_path)
+
+        return output_path
