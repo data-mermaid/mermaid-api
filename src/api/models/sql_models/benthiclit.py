@@ -18,7 +18,7 @@ class BenthicLITObsSQLModel(BaseSUSQLModel):
     _su_fields = BaseSUSQLModel.su_fields_sql
 
     sql = f"""
-        WITH benthiclit_obs AS (
+        WITH benthiclit_obs_cte AS MATERIALIZED (
             WITH se AS (
                 {sample_event_sql_template}
             ),
@@ -45,7 +45,9 @@ class BenthicLITObsSQLModel(BaseSUSQLModel):
                 rs.name AS reef_slope,
                 o.length,
                 cat.name AS benthic_category,
+                b.id AS attribute_id,
                 b.name AS benthic_attribute,
+                gf.id AS growth_form_id,
                 gf.name AS growth_form,
                 o.notes AS observation_notes
             FROM
@@ -104,17 +106,64 @@ class BenthicLITObsSQLModel(BaseSUSQLModel):
                 LEFT JOIN api_visibility v ON su.visibility_id = v.id
                 LEFT JOIN api_relativedepth r ON su.relative_depth_id = r.id
                 LEFT JOIN api_reefslope rs ON su.reef_slope_id = rs.id 
+        ),
+        ba_lh_counts AS (
+            SELECT 
+                benthicattribute_id, 
+                COUNT(*) AS cnt
+            FROM benthic_attribute_life_histories
+            GROUP BY benthicattribute_id
+        ),
+        gf_lh_counts AS (
+            SELECT 
+                attribute_id, 
+                growth_form_id, 
+                COUNT(*) AS cnt
+            FROM ba_gf_life_histories
+            GROUP BY attribute_id, growth_form_id
         )
+
         SELECT
-            benthiclit_obs.*,
-            benthiclit_su.total_length
+            benthiclit_obs_cte.*,
+            benthiclit_su.total_length,
+            (
+                WITH life_histories_data AS (
+                    SELECT
+                        blh.id,
+                        blh.name,
+                        COALESCE(ROUND(1.0 / NULLIF(COALESCE(gf.cnt, ba.cnt), 0), 3), 0) AS proportion,
+                        COALESCE(ROUND(1.0 / NULLIF(gf.cnt, 0), 3), 0) AS proportion_gf
+                    FROM benthic_lifehistory blh
+                    LEFT JOIN ba_gf_life_histories gf_lh ON gf_lh.life_history_id = blh.id
+                        AND gf_lh.attribute_id = benthiclit_obs_cte.attribute_id 
+                        AND gf_lh.growth_form_id = benthiclit_obs_cte.growth_form_id
+                    LEFT JOIN gf_lh_counts gf ON gf_lh.attribute_id = gf.attribute_id AND gf_lh.growth_form_id = gf.growth_form_id
+                    LEFT JOIN benthic_attribute_life_histories balh ON balh.benthiclifehistory_id = blh.id
+                        AND balh.benthicattribute_id = benthiclit_obs_cte.attribute_id
+                    LEFT JOIN ba_lh_counts ba ON balh.benthicattribute_id = ba.benthicattribute_id
+                )
+                SELECT jsonb_agg(jsonb_build_object(
+                    'id', lh.id,
+                    'name', lh.name,
+                    'proportion', 
+                        CASE 
+                            WHEN EXISTS (
+                                SELECT 1 FROM life_histories_data lh_sub
+                                WHERE lh_sub.proportion_gf > 0
+                            )
+                            THEN CASE WHEN lh.proportion_gf > 0 THEN lh.proportion ELSE 0 END
+                            ELSE lh.proportion
+                        END
+                ) ORDER BY lh.name)
+                FROM life_histories_data lh
+            ) AS life_histories
         FROM
-            benthiclit_obs
+            benthiclit_obs_cte
             INNER JOIN (
                 SELECT pseudosu_id, SUM(length) AS total_length
-                FROM benthiclit_obs
+                FROM benthiclit_obs_cte
                 GROUP BY pseudosu_id
-            ) benthiclit_su ON (benthiclit_obs.pseudosu_id = benthiclit_su.pseudosu_id)
+            ) benthiclit_su ON (benthiclit_obs_cte.pseudosu_id = benthiclit_su.pseudosu_id)
     """
 
     sql_args = dict(
@@ -134,7 +183,6 @@ class BenthicLITObsSQLModel(BaseSUSQLModel):
     sample_unit_notes = models.TextField(blank=True)
 
     transect_number = models.PositiveSmallIntegerField()
-    relative_depth = models.CharField(max_length=50)
     transect_len_surveyed = models.PositiveSmallIntegerField(
         verbose_name=_("transect length surveyed (m)")
     )
@@ -144,6 +192,7 @@ class BenthicLITObsSQLModel(BaseSUSQLModel):
     benthic_category = models.CharField(max_length=100)
     benthic_attribute = models.CharField(max_length=100)
     growth_form = models.CharField(max_length=100)
+    life_histories = models.JSONField(null=True, blank=True)
     observation_notes = models.TextField(blank=True)
     data_policy_benthiclit = models.CharField(max_length=50)
     pseudosu_id = models.UUIDField()
@@ -175,28 +224,8 @@ class BenthicLITSUSQLModel(BaseSUSQLModel):
                 GROUP BY pseudosu_id, observers
             ) benthiclit_obs_obs
             GROUP BY pseudosu_id
-        )
-        SELECT NULL AS id,
-            benthiclit_su.pseudosu_id,
-            {_su_fields},
-            benthiclit_su.{_agg_su_fields},
-            benthiclit_su.total_length,
-            reef_slope,
-            percent_cover_benthic_category
-        FROM (
-            SELECT pseudosu_id,
-                jsonb_agg(DISTINCT sample_unit_id) AS sample_unit_ids,
-                SUM(benthiclit_obs.length) AS total_length,
-                {_su_fields_qualified},
-                {_su_aggfields_sql},
-                string_agg(DISTINCT reef_slope::text, ', '::text ORDER BY (reef_slope::text)) AS reef_slope
-                
-            FROM benthiclit_obs
-            GROUP BY pseudosu_id,
-                {_su_fields_qualified}
-        ) benthiclit_su
-        
-        INNER JOIN (
+        ),
+        cat_percents AS (
             WITH cps AS (
                 WITH cps_obs AS (
                     SELECT pseudosu_id,
@@ -236,9 +265,56 @@ class BenthicLITSUSQLModel(BaseSUSQLModel):
                 GROUP BY pseudosu_id
             ) cat_totals ON (cps.pseudosu_id = cat_totals.pseudosu_id)
             GROUP BY cps.pseudosu_id
-        ) cat_percents 
-        ON (benthiclit_su.pseudosu_id = cat_percents.pseudosu_id)
+        ),
+        life_histories_agg AS (
+            SELECT lh.pseudosu_id,
+            jsonb_object_agg(
+                lh.name,
+                CASE WHEN su_length.total_length > 0 THEN ROUND(100 * lh.proportion_sum / su_length.total_length, 2) ELSE 0 END
+            ) AS percent_cover_life_histories
+            FROM (
+                SELECT pseudosu_id,
+                       life_history->>'id' AS id,
+                       life_history->>'name' AS name,
+                        SUM(((life_history->>'proportion')::numeric * benthiclit_obs.length)) AS proportion_sum
+                FROM benthiclit_obs
+                CROSS JOIN jsonb_array_elements(life_histories) AS life_history
+                GROUP BY pseudosu_id, life_history->>'id', life_history->>'name'
+            ) lh
+            INNER JOIN (
+                SELECT pseudosu_id,
+                SUM(benthiclit_obs.length) AS total_length
+                FROM benthiclit_obs
+                GROUP BY pseudosu_id
+            ) su_length
+            ON lh.pseudosu_id = su_length.pseudosu_id
+            GROUP BY lh.pseudosu_id
+        ) 
 
+        SELECT NULL AS id,
+            benthiclit_su.pseudosu_id,
+            {_su_fields},
+            benthiclit_su.{_agg_su_fields},
+            benthiclit_su.total_length,
+            reef_slope,
+            percent_cover_benthic_category,
+            percent_cover_life_histories
+        FROM (
+            SELECT pseudosu_id,
+                jsonb_agg(DISTINCT sample_unit_id) AS sample_unit_ids,
+                SUM(benthiclit_obs.length) AS total_length,
+                {_su_fields_qualified},
+                {_su_aggfields_sql},
+                string_agg(DISTINCT reef_slope::text, ', '::text ORDER BY (reef_slope::text)) AS reef_slope
+                
+            FROM benthiclit_obs
+            GROUP BY pseudosu_id,
+                {_su_fields_qualified}
+        ) benthiclit_su
+        INNER JOIN cat_percents
+        ON (benthiclit_su.pseudosu_id = cat_percents.pseudosu_id)
+        INNER JOIN life_histories_agg
+        ON (benthiclit_su.pseudosu_id = life_histories_agg.pseudosu_id)
         INNER JOIN benthiclit_observers
         ON (benthiclit_su.pseudosu_id = benthiclit_observers.pseudosu_id)
     """
@@ -266,6 +342,7 @@ class BenthicLITSUSQLModel(BaseSUSQLModel):
     total_length = models.PositiveIntegerField()
     reef_slope = models.CharField(max_length=50)
     percent_cover_benthic_category = models.JSONField(null=True, blank=True)
+    percent_cover_life_histories = models.JSONField(null=True, blank=True)
     data_policy_benthiclit = models.CharField(max_length=50)
     pseudosu_id = models.UUIDField()
 
@@ -288,7 +365,9 @@ class BenthicLITSESQLModel(BaseSQLModel):
             { _su_aggfields_sql },
             COUNT(benthiclit_su.pseudosu_id) AS sample_unit_count,
             percent_cover_benthic_category_avg,
-            percent_cover_benthic_category_sd
+            percent_cover_benthic_category_sd,
+            percent_cover_life_histories_avg,
+            percent_cover_life_histories_sd
         FROM
             benthiclit_su
             INNER JOIN (
@@ -313,14 +392,33 @@ class BenthicLITSESQLModel(BaseSQLModel):
                 GROUP BY
                     sample_event_id
             ) AS benthiclit_se_cat_percents ON benthiclit_su.sample_event_id = benthiclit_se_cat_percents.sample_event_id
-        GROUP BY
+            INNER JOIN (
+                SELECT sample_event_id,
+                jsonb_object_agg(benthiclit_su_lh.name, ROUND(proportion_avg :: numeric, 2)) AS percent_cover_life_histories_avg,
+                jsonb_object_agg(benthiclit_su_lh.name, ROUND(proportion_sd :: numeric, 2)) AS percent_cover_life_histories_sd
+                FROM (
+                    SELECT sample_event_id,
+                    life_history.key AS name,
+                    AVG(life_history.value :: float) AS proportion_avg,
+                    STDDEV(life_history.value :: float) AS proportion_sd
+                    FROM benthiclit_su, 
+                    jsonb_each_text(percent_cover_life_histories) AS life_history
+                    GROUP BY sample_event_id, life_history.key
+                ) AS benthiclit_su_lh
+                GROUP BY sample_event_id
+            ) AS benthiclit_se_lhs
+            ON benthiclit_su.sample_event_id = benthiclit_se_lhs.sample_event_id
+
+            GROUP BY
             { ", ".join(
                 [f"benthiclit_su.{f}" for f in BaseSQLModel.se_fields]
             ) },
             data_policy_benthiclit,
             percent_cover_benthic_category_avg,
-            percent_cover_benthic_category_sd
-    """
+            percent_cover_benthic_category_sd,
+            percent_cover_life_histories_avg,
+            percent_cover_life_histories_sd
+            """
     sql_args = dict(
         project_id=SQLTableArg(sql=project_where, required=True),
     )
@@ -343,6 +441,8 @@ class BenthicLITSESQLModel(BaseSQLModel):
     visibility_name = models.CharField(max_length=100)
     percent_cover_benthic_category_avg = models.JSONField(null=True, blank=True)
     percent_cover_benthic_category_sd = models.JSONField(null=True, blank=True)
+    percent_cover_life_histories_avg = models.JSONField(null=True, blank=True)
+    percent_cover_life_histories_sd = models.JSONField(null=True, blank=True)
     data_policy_benthiclit = models.CharField(max_length=50)
 
     class Meta:

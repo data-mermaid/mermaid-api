@@ -101,6 +101,7 @@ def obs_benthic_photo_quadrat1_5(
 @pytest.fixture
 def benthic_photo_quadrat_transect_project(
     db,
+    all_life_histories,
     obs_benthic_photo_quadrat1_1,
     obs_benthic_photo_quadrat1_2,
     obs_benthic_photo_quadrat1_3,

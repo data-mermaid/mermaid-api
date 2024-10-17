@@ -113,6 +113,7 @@ def obs_benthic_lit2_5(benthic_lit2, benthic_attribute_3, growth_form4):
 
 @pytest.fixture
 def benthic_lit_project(
+    all_life_histories,
     obs_benthic_lit1_1,
     obs_benthic_lit1_2,
     obs_benthic_lit1_3,
