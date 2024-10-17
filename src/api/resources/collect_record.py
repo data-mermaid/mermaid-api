@@ -22,12 +22,7 @@ from ..permissions import (
     ProjectDataAdminPermission,
     ProjectDataPermission,
 )
-from ..submission.utils import (
-    submit_collect_records,
-    submit_collect_records_v2,
-    validate_collect_records,
-    validate_collect_records_v2,
-)
+from ..submission.utils import submit_collect_records, validate_collect_records
 from ..utils import truthy
 from .base import BaseAPIFilterSet, BaseAPISerializer, BaseProjectApiViewSet
 from .mixins import CreateOrUpdateSerializerMixin
@@ -67,14 +62,10 @@ class CollectRecordViewSet(BaseProjectApiViewSet):
     )
     def validate(self, request, project_pk):
         output = dict()
-        validation_version = request.data.get("version") or "1"
         record_ids = request.data.get("ids") or []
         profile = request.user.profile
         try:
-            if validation_version == "2":
-                output = validate_collect_records_v2(profile, record_ids, CollectRecordSerializer)
-            else:
-                output = validate_collect_records(profile, record_ids, CollectRecordSerializer)
+            output = validate_collect_records(profile, record_ids, CollectRecordSerializer)
         except ValueError as err:
             raise ParseError(err) from err
 
@@ -86,14 +77,10 @@ class CollectRecordViewSet(BaseProjectApiViewSet):
         permission_classes=cr_permissions,
     )
     def submit(self, request, project_pk):
-        submit_version = request.data.get("version") or "1"
         record_ids = request.data.get("ids")
         profile = request.user.profile
 
-        if str(submit_version) == "2":
-            output = submit_collect_records_v2(profile, record_ids, CollectRecordSerializer)
-        else:
-            output = submit_collect_records(profile, record_ids)
+        output = submit_collect_records(profile, record_ids, CollectRecordSerializer)
 
         return Response(output)
 

@@ -36,3 +36,12 @@ def download_directory(bucket, s3_directory, local_directory):
             if os.path.isdir(local_path):
                 continue
             client.download_file(bucket, s3_key, local_path)
+
+
+def get_presigned_url(bucket, key, expiration=604_800):
+    client = get_client()
+    return client.generate_presigned_url(
+        "get_object",
+        Params={"Bucket": bucket, "Key": key},
+        ExpiresIn=expiration,
+    )

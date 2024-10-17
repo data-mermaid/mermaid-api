@@ -8,7 +8,6 @@ from rest_framework import serializers, status
 from rest_framework.exceptions import ValidationError
 from rest_framework.response import Response
 
-
 from ..models import (
     GFCRFinanceSolution,
     GFCRIndicatorSet,
@@ -17,7 +16,7 @@ from ..models import (
     Project,
     RestrictedProjectSummarySampleEvent,
 )
-from ..permissions import ProjectDataAdminPermission, ProjectDataReadOnlyPermission
+from ..permissions import AuthenticatedReadOnlyPermission, ProjectDataAdminPermission
 from .base import BaseAPISerializer, BaseProjectApiViewSet
 
 BENTHIC_LIT = "benthiclit"
@@ -155,7 +154,7 @@ class GFCRIndicatorSetSerializer(BaseAPISerializer):
 class IndicatorSetViewSet(BaseProjectApiViewSet):
     serializer_class = GFCRIndicatorSetSerializer
     project_lookup = "project"
-    permission_classes = [Or(ProjectDataAdminPermission, ProjectDataReadOnlyPermission)]
+    permission_classes = [Or(ProjectDataAdminPermission, AuthenticatedReadOnlyPermission)]
 
     def get_queryset(self):
         project_id = self.kwargs.get("project_pk")

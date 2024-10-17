@@ -30,6 +30,7 @@ class ApiStack(Stack):
         database: rds.DatabaseInstance,
         backup_bucket: s3.Bucket,
         config_bucket: s3.Bucket,
+        data_bucket: s3.Bucket,
         public_bucket: s3.Bucket,
         load_balancer: elb.ApplicationLoadBalancer,
         container_security_group: ec2.SecurityGroup,
@@ -114,6 +115,7 @@ class ApiStack(Stack):
             "DEFAULT_DOMAIN_COLLECT": config.api.default_domain_collect,
             "AWS_BACKUP_BUCKET": backup_bucket.bucket_name,
             "AWS_CONFIG_BUCKET": config_bucket.bucket_name,
+            "AWS_DATA_BUCKET": data_bucket.bucket_name,
             "AWS_PUBLIC_BUCKET": config.api.public_bucket,
             "IMAGE_PROCESSING_BUCKET": image_processing_bucket.bucket_name,
             "EMAIL_HOST": config.api.email_host,
@@ -276,8 +278,6 @@ class ApiStack(Stack):
         )
 
         # Image Worker
-        # The below is to force src/simpleq/management/commands/simpleq_worker.py:L18 to pick up the correct SQS name.
-        environment["SQS_QUEUE_NAME"] = environment["IMAGE_SQS_QUEUE_NAME"]
         image_worker = QueueWorker(
             self,
             "ImageWorker",
@@ -307,3 +307,7 @@ class ApiStack(Stack):
         # Allow Service and Image Worker to read/write config bucket
         config_bucket.grant_read_write(image_worker.task_definition.task_role)
         config_bucket.grant_read_write(service.task_definition.task_role)
+
+        # Allow Service and Image Worker to read/write config bucket
+        data_bucket.grant_read_write(image_worker.task_definition.task_role)
+        data_bucket.grant_read_write(service.task_definition.task_role)

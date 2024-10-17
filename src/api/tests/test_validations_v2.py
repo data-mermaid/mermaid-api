@@ -191,7 +191,7 @@ def test_benthicpqt_protocol_validation_ok(
     runner = ValidationRunner(serializer=CollectRecordSerializer)
     overall_status = runner.validate(
         valid_benthic_pq_transect_collect_record,
-        benthic_photo_quadrat_transect.benthic_photo_quadrat_transect_validations,
+        benthic_photo_quadrat_transect.bpqt_non_classification_validations,
         request=profile1_request,
     )
     assert overall_status == OK
@@ -205,10 +205,9 @@ def test_benthicpqt_protocol_validation_warn(
     runner = ValidationRunner(serializer=CollectRecordSerializer)
     overall_status = runner.validate(
         valid_benthic_pq_transect_collect_record,
-        benthic_photo_quadrat_transect.benthic_photo_quadrat_transect_validations,
+        benthic_photo_quadrat_transect.bpqt_non_classification_validations,
         request=profile1_request,
     )
-
     assert overall_status == WARN
 
     results = runner.to_dict()["results"]

@@ -31,6 +31,7 @@ from .resources.project_sample_event_summaries import ProjectSummarySampleEventV
 from .resources.project_tag import ProjectTagViewSet
 from .resources.psite import PSiteViewSet
 from .resources.quadrat_collection import QuadratCollectionViewSet
+from .resources.reports import MultiProjectReportView
 from .resources.sample_event import SampleEventViewSet
 from .resources.sampleunitmethods.beltfishmethod import (
     BeltFishMethodView,
@@ -275,5 +276,6 @@ api_urls = (
         re_path(r"^health/$", health),
         re_path(r"^pull/$", vw_pull),
         re_path(r"^push/$", vw_push),
+        re_path("^reports/$", MultiProjectReportView.as_view(), name="reports"),
     ]
 )

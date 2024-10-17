@@ -119,6 +119,29 @@ class CommonStack(Stack):
             block_public_access=s3.BlockPublicAccess.BLOCK_ALL,
         )
 
+        self.data_bucket = s3.Bucket(
+            self,
+            id="MermaidApiDataBucket",
+            bucket_name="mermaid-data",
+            removal_policy=RemovalPolicy.RETAIN,
+            public_read_access=False,
+            block_public_access=s3.BlockPublicAccess.BLOCK_ALL,
+            lifecycle_rules=[
+                # Rules for cleaning up report files after 14 days.
+                s3.LifecycleRule(
+                    id="LocalReportsLifecycle",
+                    prefix="local/reports/",
+                    expiration=Duration.days(14),
+                ),
+                s3.LifecycleRule(
+                    id="DevReportsLifecycle", prefix="dev/reports/", expiration=Duration.days(14)
+                ),
+                s3.LifecycleRule(
+                    id="ProdReportsLifecycle", prefix="prod/reports/", expiration=Duration.days(14)
+                ),
+            ],
+        )
+
         self.image_processing_bucket = s3.Bucket(
             self,
             id="MermaidImageProcessingBackupBucket",
@@ -126,6 +149,18 @@ class CommonStack(Stack):
             removal_policy=RemovalPolicy.RETAIN,
             public_read_access=False,
             block_public_access=s3.BlockPublicAccess.BLOCK_ALL,
+            cors=[
+                s3.CorsRule(
+                    allowed_methods=[
+                        s3.HttpMethods.GET,
+                        s3.HttpMethods.HEAD,
+                    ],
+                    allowed_origins=["*"],
+                    allowed_headers=["*"],
+                    exposed_headers=[],
+                    max_age=3000,
+                ),
+            ],
         )
 
         # KMS Key for encrypting logs

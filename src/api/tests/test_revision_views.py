@@ -130,7 +130,6 @@ def test_push_view_invalid_record(
 
 
 def test_push_view_create(db_setup, api_client1):
-    api_client1
 
     new_id = str(uuid.uuid4())
     project = {"id": new_id, "name": "my new project"}

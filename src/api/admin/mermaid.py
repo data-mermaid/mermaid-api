@@ -156,7 +156,14 @@ class ProjectAdmin(BaseAdmin):
         "notes",
     )
     inlines = [SiteInline]
-    search_fields = ["name", "pk"]
+    search_fields = [
+        "name",
+        "pk",
+        "profiles__profile__email",
+        "profiles__profile__id",
+        "profiles__profile__first_name",
+        "profiles__profile__last_name",
+    ]
     list_filter = ("status", "tags")
     _admins = None
     _sites = None

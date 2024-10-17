@@ -9,9 +9,12 @@ from .base import (
 )
 from .validators import (
     AllEqualValidator,
+    AnnotationRegionValidator,
     DepthValidator,
     DrySubmitValidator,
     DuplicateValidator,
+    CollectRecordImagesValidator,
+    ImageCountValidator,
     LenSurveyedValidator,
     ListRequiredValidator,
     ManagementRuleValidator,
@@ -30,7 +33,7 @@ from .validators import (
     UniqueSiteValidator,
 )
 
-benthic_photo_quadrat_transect_validations = [
+bpqt_base_validations = [
     Validation(
         validator=RequiredValidator(
             path="data.sample_event.site",
@@ -120,39 +123,6 @@ benthic_photo_quadrat_transect_validations = [
         validation_type=VALUE_VALIDATION_TYPE,
     ),
     Validation(
-        validator=ListRequiredValidator(
-            list_path="data.obs_benthic_photo_quadrats",
-            path="quadrat_number",
-            name_prefix="quadrat_number",
-            unique_identifier_label="observation_id",
-        ),
-        paths=["data.obs_benthic_photo_quadrats"],
-        validation_level=ROW_LEVEL,
-        validation_type=LIST_VALIDATION_TYPE,
-    ),
-    Validation(
-        validator=ListRequiredValidator(
-            list_path="data.obs_benthic_photo_quadrats",
-            path="attribute",
-            name_prefix="attribute",
-            unique_identifier_label="observation_id",
-        ),
-        paths=["data.obs_benthic_photo_quadrats"],
-        validation_level=ROW_LEVEL,
-        validation_type=LIST_VALIDATION_TYPE,
-    ),
-    Validation(
-        validator=ListRequiredValidator(
-            list_path="data.obs_benthic_photo_quadrats",
-            path="num_points",
-            name_prefix="num_points",
-            unique_identifier_label="observation_id",
-        ),
-        paths=["data.obs_benthic_photo_quadrats"],
-        validation_level=ROW_LEVEL,
-        validation_type=LIST_VALIDATION_TYPE,
-    ),
-    Validation(
         validator=SampleDateValidator(
             sample_date_path="data.sample_event.sample_date",
             sample_time_path="data.quadrat_transect.sample_time",
@@ -176,23 +146,6 @@ benthic_photo_quadrat_transect_validations = [
         ),
         paths=["data.quadrat_transect.len_surveyed"],
         validation_level=FIELD_LEVEL,
-        validation_type=VALUE_VALIDATION_TYPE,
-    ),
-    Validation(
-        validator=RegionValidator(
-            attribute_model_class=BenthicAttribute,
-            site_path="data.sample_event.site",
-            observations_path="data.obs_benthic_photo_quadrats",
-            observation_attribute_path="attribute",
-        ),
-        paths=["data.obs_benthic_photo_quadrats"],
-        validation_level=ROW_LEVEL,
-        validation_type=LIST_VALIDATION_TYPE,
-    ),
-    Validation(
-        validator=ObservationCountValidator(observations_path="data.obs_benthic_photo_quadrats"),
-        paths=["data.obs_benthic_photo_quadrats"],
-        validation_level=RECORD_LEVEL,
         validation_type=VALUE_VALIDATION_TYPE,
     ),
     Validation(
@@ -237,6 +190,83 @@ benthic_photo_quadrat_transect_validations = [
         validator=QuadratSizeValidator(quadrat_size_path="data.quadrat_transect.quadrat_size"),
         paths=["data.quadrat_transect.quadrat_size"],
         validation_level=FIELD_LEVEL,
+        validation_type=VALUE_VALIDATION_TYPE,
+    ),
+    Validation(
+        validator=UniqueQuadratTransectValidator(
+            protocol_path="data.protocol",
+            label_path="data.quadrat_transect.label",
+            number_path="data.quadrat_transect.number",
+            relative_depth_path="data.quadrat_transect.relative_depth",
+            site_path="data.sample_event.site",
+            management_path="data.sample_event.management",
+            sample_date_path="data.sample_event.sample_date",
+            depth_path="data.quadrat_transect.depth",
+            observers_path="data.observers",
+        ),
+        paths=[
+            "data.quadrat_transect.label",
+            "data.quadrat_transect.number",
+            "data.quadrat_transect.relative_depth",
+            "data.quadrat_transect.depth",
+            "data.sample_event.site",
+            "data.sample_event.management",
+            "data.sample_event.sample_date",
+        ],
+        validation_level=RECORD_LEVEL,
+        validation_type=VALUE_VALIDATION_TYPE,
+    ),
+]
+
+bpqt_non_classification_validations = bpqt_base_validations + [
+    Validation(
+        validator=ListRequiredValidator(
+            list_path="data.obs_benthic_photo_quadrats",
+            path="quadrat_number",
+            name_prefix="quadrat_number",
+            unique_identifier_label="observation_id",
+        ),
+        paths=["data.obs_benthic_photo_quadrats"],
+        validation_level=ROW_LEVEL,
+        validation_type=LIST_VALIDATION_TYPE,
+    ),
+    Validation(
+        validator=ListRequiredValidator(
+            list_path="data.obs_benthic_photo_quadrats",
+            path="attribute",
+            name_prefix="attribute",
+            unique_identifier_label="observation_id",
+        ),
+        paths=["data.obs_benthic_photo_quadrats"],
+        validation_level=ROW_LEVEL,
+        validation_type=LIST_VALIDATION_TYPE,
+    ),
+    Validation(
+        validator=ListRequiredValidator(
+            list_path="data.obs_benthic_photo_quadrats",
+            path="num_points",
+            name_prefix="num_points",
+            unique_identifier_label="observation_id",
+        ),
+        paths=["data.obs_benthic_photo_quadrats"],
+        validation_level=ROW_LEVEL,
+        validation_type=LIST_VALIDATION_TYPE,
+    ),
+    Validation(
+        validator=RegionValidator(
+            attribute_model_class=BenthicAttribute,
+            site_path="data.sample_event.site",
+            observations_path="data.obs_benthic_photo_quadrats",
+            observation_attribute_path="attribute",
+        ),
+        paths=["data.obs_benthic_photo_quadrats"],
+        validation_level=ROW_LEVEL,
+        validation_type=LIST_VALIDATION_TYPE,
+    ),
+    Validation(
+        validator=ObservationCountValidator(observations_path="data.obs_benthic_photo_quadrats"),
+        paths=["data.obs_benthic_photo_quadrats"],
+        validation_level=RECORD_LEVEL,
         validation_type=VALUE_VALIDATION_TYPE,
     ),
     Validation(
@@ -286,28 +316,30 @@ benthic_photo_quadrat_transect_validations = [
         validation_level=RECORD_LEVEL,
         validation_type=VALUE_VALIDATION_TYPE,
     ),
+]
+
+bpqt_classification_validations = bpqt_base_validations + [
     Validation(
-        validator=UniqueQuadratTransectValidator(
-            protocol_path="data.protocol",
-            label_path="data.quadrat_transect.label",
-            number_path="data.quadrat_transect.number",
-            relative_depth_path="data.quadrat_transect.relative_depth",
-            site_path="data.sample_event.site",
-            management_path="data.sample_event.management",
-            sample_date_path="data.sample_event.sample_date",
-            depth_path="data.quadrat_transect.depth",
-            observers_path="data.observers",
+        validator=ImageCountValidator(
+            num_quadrats_path="data.quadrat_transect.num_quadrats",
         ),
-        paths=[
-            "data.quadrat_transect.label",
-            "data.quadrat_transect.number",
-            "data.quadrat_transect.relative_depth",
-            "data.quadrat_transect.depth",
-            "data.sample_event.site",
-            "data.sample_event.management",
-            "data.sample_event.sample_date",
-        ],
+        paths=[],
         validation_level=RECORD_LEVEL,
         validation_type=VALUE_VALIDATION_TYPE,
+    ),
+    Validation(
+        validator=CollectRecordImagesValidator(),
+        paths=["data.obs_benthic_photo_quadrats"],
+        validation_level=ROW_LEVEL,
+        validation_type=LIST_VALIDATION_TYPE,
+    ),
+    Validation(
+        validator=AnnotationRegionValidator(
+            attribute_model_class=BenthicAttribute,
+            site_path="data.sample_event.site",
+        ),
+        paths=["data.obs_benthic_photo_quadrats"],
+        validation_level=ROW_LEVEL,
+        validation_type=LIST_VALIDATION_TYPE,
     ),
 ]

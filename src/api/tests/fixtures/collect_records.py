@@ -1027,6 +1027,7 @@ def valid_benthic_pq_transect_collect_record(
     data = {
         "protocol": BENTHICPQT_PROTOCOL,
         "obs_benthic_photo_quadrats": obs_benthic_photo_quadrats,
+        "image_classification": False,
         "quadrat_transect": {
             "number": 1,
             "quadrat_size": 1,

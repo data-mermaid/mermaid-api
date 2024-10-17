@@ -78,7 +78,10 @@ def validate_list(func):
             if hasattr(instance, "unique_identifier_label"):
                 label = instance.unique_identifier_label or label
 
-            result.context = {label: record.get(uid_key)}
+            if result.context is None:
+                result.context = {}
+
+            result.context.update({label: record.get(uid_key)})
             result.name = class_name(instance)
 
         return result

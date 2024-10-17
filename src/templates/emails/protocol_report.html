@@ -1,0 +1,12 @@
+{% extends "emails/base.html" %}
+{% block title %}{{protocol}} Report{% endblock %}
+{% block body %}
+<h2>{{protocol}} Report</h2>
+<p>
+    Your {{protocol}} report is ready for download. Please click the link below to download the report.
+    
+    <strong><a href="{{file_url|safe}}">{{file_url|safe}}</a></strong>
+
+    <small>Link will be valid for 7 days.</small>
+</p>
+{% endblock %}
