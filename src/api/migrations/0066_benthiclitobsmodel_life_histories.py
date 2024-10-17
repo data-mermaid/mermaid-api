@@ -5,7 +5,7 @@ from django.db import migrations, models
 
 class Migration(migrations.Migration):
     dependencies = [
-        ("api", "0064_benthicphotoquadrattransect_image_classification"),
+        ("api", "0065_image_annotations_file"),
     ]
 
     operations = [
@@ -27,6 +27,26 @@ class Migration(migrations.Migration):
         migrations.AddField(
             model_name="benthiclitsemodel",
             name="percent_cover_life_histories_sd",
+            field=models.JSONField(blank=True, null=True),
+        ),
+        migrations.AddField(
+            model_name="benthicphotoquadrattransectobsmodel",
+            name="life_histories",
+            field=models.JSONField(blank=True, null=True),
+        ),
+        migrations.AddField(
+            model_name="benthicphotoquadrattransectsemodel",
+            name="percent_cover_life_histories_avg",
+            field=models.JSONField(blank=True, null=True),
+        ),
+        migrations.AddField(
+            model_name="benthicphotoquadrattransectsemodel",
+            name="percent_cover_life_histories_sd",
+            field=models.JSONField(blank=True, null=True),
+        ),
+        migrations.AddField(
+            model_name="benthicphotoquadrattransectsumodel",
+            name="percent_cover_life_histories",
             field=models.JSONField(blank=True, null=True),
         ),
     ]
