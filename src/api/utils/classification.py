@@ -6,6 +6,7 @@ from enum import Enum
 from io import BytesIO
 from operator import itemgetter
 from pathlib import Path
+from tempfile import TemporaryDirectory
 from typing import Any, Dict, Optional, Tuple
 
 import pytz
@@ -194,17 +195,6 @@ def create_classification_status(image, status, message=None):
         print(f"Writing classification status Image {image.pk}, status: {status}: {err}")
 
 
-# -------------------------------
-
-
-def _modify_file_path(file_path, suffix, new_extension):
-    directory, filename = os.path.split(file_path)
-    name, _ = os.path.splitext(filename)
-    new_filename = f"{name}{suffix}.{new_extension}"
-    new_file_path = os.path.join(directory, new_filename)
-    return new_file_path
-
-
 def generate_points(image: Image, num_points: int, margin: Tuple[int, int] = (0, 0)):
     assert len(margin) == 2
 
@@ -273,21 +263,6 @@ def _get_image_location(image: Image):
         )
 
 
-def _get_features_location(image: Image):
-    if settings.ENVIRONMENT == "local":
-        image_path = image.image.path
-        features_path = _modify_file_path(image_path, "", "featurevector")
-        return DataLocation("filesystem", features_path)
-    else:
-        image_name = image.image.name
-        features_path = _modify_file_path(image_name, "", "featurevector")
-        return DataLocation(
-            storage_type="s3",
-            key=features_path,
-            bucket_name=settings.IMAGE_PROCESSING_BUCKET,
-        )
-
-
 @transaction.atomic
 def _write_classification_results(image, score_sets, label_ids, classifer_record, profile=None):
     _annotations = []
@@ -340,8 +315,11 @@ def _classify_image(image_record_id, profile_id=None):
     create_classification_status(image, ClassificationStatus.RUNNING)
 
     try:
+        tmp_dir = TemporaryDirectory()
+        tmp_feat_vector_file_path = Path(tmp_dir.name, f"{image.id}.featurevector")
+        feature_location = DataLocation("filesystem", tmp_feat_vector_file_path)
+
         data_location = _get_image_location(image)
-        feature_location = _get_features_location(image)
         classifier, weights, classifer_record = _get_classifier_and_weights()
         points = generate_points(image, 25)
 
@@ -367,10 +345,18 @@ def _classify_image(image_record_id, profile_id=None):
         score_sets = response_message.scores
         _write_classification_results(image, score_sets, label_ids, classifer_record, profile)
 
+        with open(tmp_feat_vector_file_path, "rb") as tmp_feat_vector_file:
+            image.feature_vector_file.save(
+                f"{image.id}_featurevector", tmp_feat_vector_file, save=True
+            )
+
         create_classification_status(image, ClassificationStatus.COMPLETED)
     except Exception as err:
         print(err)
         create_classification_status(image, ClassificationStatus.FAILED, str(err))
+    finally:
+        if Path(tmp_feat_vector_file_path).exists():
+            os.unlink(tmp_feat_vector_file_path)
 
 
 def classify_image_job(image_record_id, profile_id=None):
