@@ -215,9 +215,9 @@ class SummarySampleEventSQLModel(SummarySampleEventBaseModel):
                 bp.percent_cover_benthic_category_avg END),
                 'percent_cover_benthic_category_sd', (CASE WHEN project.data_policy_benthicpit < 50 AND NOT %(has_access)s THEN NULL ELSE
                 bp.percent_cover_benthic_category_sd END),
-                'percent_cover_life_histories_avg', (CASE WHEN project.data_policy_benthiclit < 50 AND NOT %(has_access)s THEN NULL ELSE
+                'percent_cover_life_histories_avg', (CASE WHEN project.data_policy_benthicpit < 50 AND NOT %(has_access)s THEN NULL ELSE
                 bp.percent_cover_life_histories_avg END),
-                'percent_cover_life_histories_sd', (CASE WHEN project.data_policy_benthiclit < 50 AND NOT %(has_access)s THEN NULL ELSE
+                'percent_cover_life_histories_sd', (CASE WHEN project.data_policy_benthicpit < 50 AND NOT %(has_access)s THEN NULL ELSE
                 bp.percent_cover_life_histories_sd END)
             )), '{}'),
             'benthicpqt', NULLIF(jsonb_strip_nulls(jsonb_build_object(
@@ -226,9 +226,9 @@ class SummarySampleEventSQLModel(SummarySampleEventBaseModel):
                 pqt.percent_cover_benthic_category_avg END),
                 'percent_cover_benthic_category_sd', (CASE WHEN project.data_policy_benthicpqt < 50 AND NOT %(has_access)s THEN NULL ELSE
                 pqt.percent_cover_benthic_category_sd END),
-                'percent_cover_life_histories_avg', (CASE WHEN project.data_policy_benthiclit < 50 AND NOT %(has_access)s THEN NULL ELSE
+                'percent_cover_life_histories_avg', (CASE WHEN project.data_policy_benthicpqt < 50 AND NOT %(has_access)s THEN NULL ELSE
                 pqt.percent_cover_life_histories_avg END),
-                'percent_cover_life_histories_sd', (CASE WHEN project.data_policy_benthiclit < 50 AND NOT %(has_access)s THEN NULL ELSE
+                'percent_cover_life_histories_sd', (CASE WHEN project.data_policy_benthicpqt < 50 AND NOT %(has_access)s THEN NULL ELSE
                 pqt.percent_cover_life_histories_sd END)
             )), '{}'),
             'habitatcomplexity', NULLIF(jsonb_strip_nulls(jsonb_build_object(
