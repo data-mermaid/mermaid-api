@@ -382,7 +382,6 @@ class BenthicPITSESQLModel(BaseSQLModel):
             GROUP BY sample_event_id
         ) AS benthicpit_se_cat_percents
         ON benthicpit_su.sample_event_id = benthicpit_se_cat_percents.sample_event_id
-
         INNER JOIN (
             SELECT sample_event_id,
             jsonb_object_agg(benthicpit_su_lh.name, ROUND(proportion_avg :: numeric, 2)) AS percent_cover_life_histories_avg,
