@@ -110,8 +110,8 @@ class BenthicPITObsSQLModel(BaseSUSQLModel):
                     SELECT
                         blh.id,
                         blh.name,
-                        COALESCE(ROUND(1.0 / COALESCE(gf.cnt, ba.cnt), 3), 0) AS proportion,
-                        COALESCE(ROUND(1.0 / gf.cnt, 3), 0) AS proportion_gf
+                        COALESCE(ROUND(1.0 / NULLIF(COALESCE(gf.cnt, ba.cnt), 0), 3), 0) AS proportion,
+                        COALESCE(ROUND(1.0 / NULLIF(gf.cnt, 0), 3), 0) AS proportion_gf
                     FROM benthic_lifehistory blh
                     LEFT JOIN ba_gf_life_histories gf_lh ON gf_lh.life_history_id = blh.id
                         AND gf_lh.attribute_id = benthicpit_obs_cte.attribute_id 
@@ -260,7 +260,7 @@ class BenthicPITSUSQLModel(BaseSUSQLModel):
             SELECT lh.pseudosu_id,
             jsonb_object_agg(
                 lh.name,
-                ROUND(100 * lh.proportion_sum / obs_count.count, 2)
+                CASE WHEN obs_count.count > 0 THEN ROUND(100 * lh.proportion_sum / obs_count.count, 2) ELSE 0 END
             ) AS percent_cover_life_histories
             FROM (
                 SELECT pseudosu_id,
@@ -382,7 +382,6 @@ class BenthicPITSESQLModel(BaseSQLModel):
             GROUP BY sample_event_id
         ) AS benthicpit_se_cat_percents
         ON benthicpit_su.sample_event_id = benthicpit_se_cat_percents.sample_event_id
-
         INNER JOIN (
             SELECT sample_event_id,
             jsonb_object_agg(benthicpit_su_lh.name, ROUND(proportion_avg :: numeric, 2)) AS percent_cover_life_histories_avg,
