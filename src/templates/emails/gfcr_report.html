@@ -1,0 +1,12 @@
+{% extends "emails/base.html" %}
+{% block title %}GFCR Report{% endblock %}
+{% block body %}
+<h2>GFCR Report</h2>
+<p>
+    Your GFCR report is ready for download. Please click the link below to download the report.
+    
+    <strong><a href="{{file_url|safe}}">{{file_url|safe}}</a></strong>
+
+    <small>Link will be valid for 7 days.</small>
+</p>
+{% endblock %}

@@ -4,7 +4,9 @@ from rest_framework.response import Response
 from rest_framework.views import APIView
 
 from ..models import PROTOCOL_MAP, Project
+from ..reports import gfcr
 from ..utils.reports import (
+    GFCR_REPORT_TYPE,
     REPORT_TYPES,
     SAMPLE_UNIT_METHOD_REPORT_TYPE,
     create_sample_unit_method_summary_report_background,
@@ -18,12 +20,12 @@ class BaseMultiProjectReportSerializer(serializers.Serializer):
     )
 
     def validate_project_ids(self, value):
-        if len(value) < 1:
-            raise ValidationError("At least 2 projects are required")
+        if not value:
+            raise ValidationError("Project ids are required")
 
         projects = {str(p.pk): None for p in Project.objects.filter(id__in=value)}
         for project_id in value:
-            if project_id not in projects:
+            if str(project_id) not in projects:
                 raise ValidationError(f"[{project_id}] Project not found")
         return value
 
@@ -37,6 +39,8 @@ class MultiProjectReportView(APIView):
         report_type = kwargs.get("data", {}).get("report_type")
         if report_type == SAMPLE_UNIT_METHOD_REPORT_TYPE:
             serializer_class = SampleUnitMethodReportSerializer
+        elif report_type == GFCR_REPORT_TYPE:
+            serializer_class = BaseMultiProjectReportSerializer
         else:
             raise ValidationError(detail="Unknown report type")
 
@@ -55,6 +59,13 @@ class MultiProjectReportView(APIView):
             create_sample_unit_method_summary_report_background(
                 project_ids=project_ids,
                 protocol=protocol,
+                request=request,
+                send_email=True,
+            )
+        elif report_type == GFCR_REPORT_TYPE:
+            project_ids = mp_serializer.validated_data["project_ids"]
+            gfcr.create_report_background(
+                project_ids=project_ids,
                 request=request,
                 send_email=True,
             )

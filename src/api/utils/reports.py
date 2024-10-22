@@ -14,7 +14,9 @@ from .email import send_mermaid_email
 from .q import submit_job
 
 SAMPLE_UNIT_METHOD_REPORT_TYPE = "summary_sample_unit_method"
+GFCR_REPORT_TYPE = "gfcr"
 REPORT_TYPES = [
+    (GFCR_REPORT_TYPE, "GFCR Report"),
     (SAMPLE_UNIT_METHOD_REPORT_TYPE, "Summary Sample Unit Method Report"),
 ]
 
