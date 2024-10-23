@@ -10,10 +10,10 @@ from .base import (
 from .validators import (
     AllEqualValidator,
     AnnotationRegionValidator,
+    CollectRecordImagesValidator,
     DepthValidator,
     DrySubmitValidator,
     DuplicateValidator,
-    CollectRecordImagesValidator,
     ImageCountValidator,
     LenSurveyedValidator,
     ListRequiredValidator,
@@ -329,7 +329,7 @@ bpqt_classification_validations = bpqt_base_validations + [
     ),
     Validation(
         validator=CollectRecordImagesValidator(),
-        paths=["data.obs_benthic_photo_quadrats"],
+        paths=["data.images"],
         validation_level=ROW_LEVEL,
         validation_type=LIST_VALIDATION_TYPE,
     ),
