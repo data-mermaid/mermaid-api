@@ -19,27 +19,27 @@ def common_columns(indicator_set):
         indicator_set.project.name,
         indicator_set.title,
         indicator_set.report_date,
-        indicator_set.indicator_set_type,
+        indicator_set.get_indicator_set_type_display(),
     ]
 
 
 def _get_indicator_set_field_data(
-    indicator_set, field_label, field_name, additional_column_fields: List[str] = None
+    indicator_set, field_label, field_name, additional_common_fields: List[str] = None
 ):
-    if not additional_column_fields:
-        additional_column_fields = []
+    if not additional_common_fields:
+        additional_common_fields = []
 
     return (
         common_columns(indicator_set)
+        + [getattr(indicator_set, f) for f in additional_common_fields]
         + [
             f"{field_label} {indicator_set._meta.get_field(field_name).verbose_name}",
             getattr(indicator_set, field_name),
         ]
-        + [getattr(indicator_set, f) for f in additional_column_fields]
     )
 
 
-def _get_indicator_sheet_data(indicator_sets, fields, additional_column_fields=None):
+def _get_indicator_sheet_data(indicator_sets, fields, additional_common_fields=None):
     for indicator_set in indicator_sets:
         for field_label, field_name in fields:
             if hasattr(indicator_set, field_name):
@@ -47,7 +47,7 @@ def _get_indicator_sheet_data(indicator_sets, fields, additional_column_fields=N
                     indicator_set,
                     field_label,
                     field_name,
-                    additional_column_fields=additional_column_fields,
+                    additional_common_fields=additional_common_fields,
                 )
 
 
@@ -96,7 +96,7 @@ def f4_data(indicator_sets):
         ("F4.3", "f4_3"),
     )
     return _get_indicator_sheet_data(
-        indicator_sets, fields, additional_column_fields=["f4_start_date", "f4_end_date"]
+        indicator_sets, fields, additional_common_fields=["f4_start_date", "f4_end_date"]
     )
 
 
