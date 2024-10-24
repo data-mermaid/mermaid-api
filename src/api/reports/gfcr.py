@@ -1,5 +1,4 @@
 import logging
-from functools import lru_cache
 from pathlib import Path
 from tempfile import NamedTemporaryFile
 from typing import List
@@ -15,7 +14,6 @@ from . import xl
 logger = logging.getLogger(__name__)
 
 
-@lru_cache
 def common_columns(indicator_set):
     return [
         indicator_set.project.name,
@@ -147,7 +145,6 @@ def f7_data(indicator_sets):
     return _get_indicator_sheet_data(indicator_sets, fields)
 
 
-@lru_cache
 def common_finance_solutions_columns(finance_solution):
     return [
         finance_solution.name,
