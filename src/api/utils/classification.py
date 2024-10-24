@@ -178,7 +178,7 @@ def store_exif(image_record: Image) -> Dict[str, Any]:
         elif isinstance(v, (int, float, tuple, list)):
             ...
         else:
-            v = str(v).strip()
+            v = str(v).strip().replace("\u0000", "")
 
         exif_details[k] = v
 
