@@ -1,7 +1,7 @@
 from django.db.models import Count
 
 from ....models import Annotation, Image
-from .base import OK, WARN, BaseValidator, validate_list, validator_result
+from .base import ERROR, OK, WARN, BaseValidator, validate_list, validator_result
 
 
 class ImageCountValidator(BaseValidator):
@@ -75,7 +75,7 @@ class ImageValidator(BaseValidator):
         if not wrong_num_annos:
             return OK, None, context
 
-        return WARN, self.WRONG_NUM_CONFIRMED_ANNOS, context
+        return ERROR, self.WRONG_NUM_CONFIRMED_ANNOS, context
 
 
 class CollectRecordImagesValidator(BaseValidator):
