@@ -21,3 +21,14 @@ def cast_str_value(string):
 
     val = to_number(string)
     return val if val is not None else string
+
+
+def to_yesno(value: bool):
+    """
+    Casts a boolean value to a "Yes" or "No" string.
+    If the value is None, an empty string is returned.
+    """
+    if value is None:
+        return ""
+
+    return "Yes" if value else "No"

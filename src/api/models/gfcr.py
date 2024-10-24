@@ -312,9 +312,11 @@ class GFCRFinanceSolution(BaseModel):
         2024, 5, 27, 0, 0, 0, 0, pytz.UTC
     )
 
+    GFCR_FUNDED = "gfcr_funded"
+    NON_GFCR_FUNDED = "non_gfcr_funded"
     INCUBATOR_CHOICES = (
-        ("gfcr_funded", "Yes: GFCR-funded"),
-        ("non_gfcr_funded", "Yes: Non-GFCR-funded"),
+        (GFCR_FUNDED, "Yes: GFCR-funded"),
+        (NON_GFCR_FUNDED, "Yes: Non-GFCR-funded"),
     )
     INCUBATOR_CHOICES_UPDATED_ON = datetime.datetime(2024, 5, 28, 0, 0, 0, 0, pytz.UTC)
 
@@ -343,6 +345,11 @@ class GFCRFinanceSolution(BaseModel):
     class Meta:
         db_table = "gfcr_finance_solution"
         ordering = ["created_on"]
+
+    def get_sustainable_finance_mechanisms_display(self):
+        """Returns the display names of the finance mechanisms."""
+        choice_dict = dict(self.SUSTAINABLE_FINANCE_MECHANISM_CHOICES)
+        return [choice_dict.get(value, value) for value in self.sustainable_finance_mechanisms]
 
 
 class GFCRInvestmentSource(BaseModel):
