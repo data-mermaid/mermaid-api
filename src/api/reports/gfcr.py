@@ -1,16 +1,12 @@
-import uuid
 from functools import lru_cache
 from pathlib import Path
 from tempfile import NamedTemporaryFile
 from typing import List
-from zipfile import ZIP_DEFLATED, ZipFile
-
-from django.conf import settings
 
 from ..mocks import MockRequest
 from ..models import GFCRFinanceSolution, GFCRIndicatorSet
-from ..utils import castutils, delete_file, s3
-from ..utils.email import send_mermaid_email
+from ..utils import castutils, delete_file
+from ..utils.email import email_report
 from ..utils.q import submit_job
 from ..utils.timer import timing
 from . import xl
@@ -53,7 +49,7 @@ def _get_indicator_set_field_data(
 def _get_indicator_sheet_data(indicator_sets, fields, additional_column_fields=None):
     for indicator_set in indicator_sets:
         for field_label, field_name in fields:
-            if hasattr(indicator_set, field_name) and getattr(indicator_set, field_name):
+            if hasattr(indicator_set, field_name):
                 yield _get_indicator_set_field_data(
                     indicator_set,
                     field_label,
@@ -237,7 +233,7 @@ def create_report(project_ids, request=None, send_email=None):
         xl.write_data_to_sheet(wb, sheet_name, data, 2, 1)
         xl.auto_size_columns(wb[sheet_name])
 
-    with NamedTemporaryFile(delete=False) as f:
+    with NamedTemporaryFile(delete=False, prefix="gfcr_", suffix=".xlsx") as f:
         output_path = Path(f.name)
         try:
             wb.save(output_path)
@@ -246,39 +242,10 @@ def create_report(project_ids, request=None, send_email=None):
             return None
 
         if send_email:
-            renamed_xlsx_file = None
-            zip_file_path = None
-            try:
-                file_name = f"gfcr_{uuid.uuid4()}"
-                s3_zip_file_key = f"{settings.ENVIRONMENT}/reports/{file_name}.zip"
-
-                # Rename temporary file
-                renamed_xlsx_file = output_path.with_name(f"{file_name}.xlsx")
-                output_path.rename(renamed_xlsx_file)
-
-                zip_file_path = output_path.with_name(f"{file_name}.zip")
-                with ZipFile(zip_file_path, "w", compression=ZIP_DEFLATED) as z:
-                    z.write(renamed_xlsx_file, arcname=f"{file_name}.xlsx")
-
-                s3.upload_file(settings.AWS_DATA_BUCKET, zip_file_path, s3_zip_file_key)
-                file_url = s3.get_presigned_url(settings.AWS_DATA_BUCKET, s3_zip_file_key)
-                to = [request.user.profile.email]
-                template = "emails/gfcr_report.html"
-                context = {"file_url": file_url}
-                send_mermaid_email(
-                    "GFCR Report",
-                    template,
-                    to,
-                    context=context,
-                )
-            except Exception as e:
-                print(f"Error sending email or uploading to S3: {e}")
-                return None
-            finally:
-                delete_file(renamed_xlsx_file)
-                delete_file(zip_file_path)
-
-        return output_path
+            email_report(request.user.profile.email, output_path, "GFCR")
+            delete_file(output_path)
+        else:
+            return output_path
 
 
 def create_report_background(project_ids, request=None, send_email=None):

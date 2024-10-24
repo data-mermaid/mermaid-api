@@ -1,8 +1,8 @@
 {% extends "emails/base.txt" %}
 {% block body %}
-    GFCR Report
+    {{title}} Report
 
-    Your GFCR report is ready for download. Please click the link below to download the report.
+    Your {{title}} report is ready for download. Please click the link below to download the report.
     
     {{file_url|safe}}
 
