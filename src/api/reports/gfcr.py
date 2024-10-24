@@ -1,3 +1,4 @@
+import logging
 from functools import lru_cache
 from pathlib import Path
 from tempfile import NamedTemporaryFile
@@ -11,6 +12,8 @@ from ..utils.q import submit_job
 from ..utils.timer import timing
 from . import xl
 
+logger = logging.getLogger(__name__)
+
 
 @lru_cache
 def common_columns(indicator_set):
@@ -20,14 +23,6 @@ def common_columns(indicator_set):
         indicator_set.report_date,
         indicator_set.indicator_set_type,
     ]
-
-
-def f1_data(indicator_sets):
-    for indicator_set in indicator_sets:
-        yield common_columns(indicator_set) + [
-            indicator_set._meta.get_field("f1_1").verbose_name,
-            indicator_set.f1_1,
-        ]
 
 
 def _get_indicator_set_field_data(
@@ -56,6 +51,15 @@ def _get_indicator_sheet_data(indicator_sets, fields, additional_column_fields=N
                     field_name,
                     additional_column_fields=additional_column_fields,
                 )
+
+
+def f1_data(indicator_sets):
+    for indicator_set in indicator_sets:
+        if hasattr(indicator_set, "f1_1"):
+            yield common_columns(indicator_set) + [
+                indicator_set._meta.get_field("f1_1").verbose_name,
+                indicator_set.f1_1,
+            ]
 
 
 def f2_data(indicator_sets):
@@ -237,8 +241,8 @@ def create_report(project_ids, request=None, send_email=None):
         output_path = Path(f.name)
         try:
             wb.save(output_path)
-        except Exception as e:
-            print(f"Error saving workbook: {e}")
+        except Exception:
+            logger.exception("Error saving workbook")
             return None
 
         if send_email:

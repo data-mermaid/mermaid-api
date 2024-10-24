@@ -131,6 +131,13 @@ def email_project_admins(**kwargs):
 
 
 def email_report(to_email, local_file_path, report_title):
+    if not to_email or "@" not in to_email:
+        raise ValueError("Invalid email address")
+    if not local_file_path or not Path(local_file_path).is_file():
+        raise ValueError("Invalid or missing file path")
+    if not report_title:
+        raise ValueError("Report title is required")
+
     try:
         zip_file_path = None
         local_file_path = Path(local_file_path)
@@ -144,8 +151,9 @@ def email_report(to_email, local_file_path, report_title):
         s3.upload_file(settings.AWS_DATA_BUCKET, zip_file_path, s3_zip_file_key)
     except Exception:
         logger.exception("Uploading report S3")
-        delete_file(zip_file_path)
         return None
+    finally:
+        delete_file(zip_file_path)
 
     try:
         file_url = s3.get_presigned_url(settings.AWS_DATA_BUCKET, s3_zip_file_key)
