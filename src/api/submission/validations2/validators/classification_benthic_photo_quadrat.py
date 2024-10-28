@@ -1,6 +1,6 @@
 from django.db.models import Count
 
-from ....models import Annotation, Image
+from ....models import Annotation, Classifier, Image
 from .base import ERROR, OK, WARN, BaseValidator, validate_list, validator_result
 
 
@@ -55,16 +55,24 @@ class ImageValidator(BaseValidator):
             is_confirmed=True, point__image_id=image_id
         )
 
-        classifier = annos[0].classifier
+        if annos.exists():
+            classifier = annos[0].classifier
+        else:
+            classifier = Classifier.latest()
+
+        num_points = 0
+        if classifier:
+            num_points = classifier.num_points
+
         wrong_num_annos = (
             annos.values("point__image_id")
             .annotate(annotation_count=Count("id"))
-            .exclude(annotation_count=classifier.num_points)
+            .exclude(annotation_count=num_points)
         )
 
         missing_num_annos = None
         if wrong_num_annos.exists():
-            missing_num_annos = classifier.num_points - wrong_num_annos[0]["annotation_count"]
+            missing_num_annos = num_points - wrong_num_annos[0]["annotation_count"]
 
         context = {
             "image_id": image_id,

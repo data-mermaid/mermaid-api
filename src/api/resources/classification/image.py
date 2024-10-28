@@ -71,7 +71,7 @@ class ImageSerializer(DynamicFieldsMixin, BaseAPISerializer):
 
     def get_patch_size(self, obj):
         annotation = Annotation.objects.filter(point__image=obj, classifier__isnull=False).first()
-        if annotation:
+        if annotation and annotation.classifier:
             return annotation.classifier.patch_size
         else:
             return None
