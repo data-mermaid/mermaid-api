@@ -1,3 +1,5 @@
+import logging
+
 from django.db.models.signals import post_delete, post_save, pre_save
 from django.dispatch import receiver
 
@@ -5,13 +7,20 @@ from ..models import Classifier, CollectRecord, Image
 from ..utils import classification as cls_utils
 from .submission import post_edit, post_submit
 
+logger = logging.getLogger(__name__)
+
 
 @receiver(pre_save, sender=Image)
 def pre_image_save(sender, instance, **kwargs):
     if not instance.created_on:
         try:
             cls_utils.check_if_valid_image(instance)
-            cls_utils.store_exif(instance)
+
+            try:
+                cls_utils.store_exif(instance)
+            except Exception:
+                logger.exception("Error storing EXIF data")
+
             instance.original_image_name = instance.image.name
             instance.original_image_width = instance.image.width
             instance.original_image_height = instance.image.height
