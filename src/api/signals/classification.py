@@ -1,9 +1,13 @@
+import logging
+
 from django.db.models.signals import post_delete, post_save, pre_save
 from django.dispatch import receiver
 
-from ..models import CollectRecord, Image
+from ..models import Classifier, CollectRecord, Image
 from ..utils import classification as cls_utils
 from .submission import post_edit, post_submit
+
+logger = logging.getLogger(__name__)
 
 
 @receiver(pre_save, sender=Image)
@@ -11,7 +15,12 @@ def pre_image_save(sender, instance, **kwargs):
     if not instance.created_on:
         try:
             cls_utils.check_if_valid_image(instance)
-            cls_utils.store_exif(instance)
+
+            try:
+                cls_utils.store_exif(instance)
+            except Exception:
+                logger.exception("Error storing EXIF data")
+
             instance.original_image_name = instance.image.name
             instance.original_image_width = instance.image.width
             instance.original_image_height = instance.image.height
@@ -20,7 +29,7 @@ def pre_image_save(sender, instance, **kwargs):
             instance.name = image_name
             instance.image.name = image_name
 
-            cls_utils.correct_image_orientation(instance)
+            cls_utils.save_normalized_imagefile(instance)
         except Exception:
             raise
 
@@ -51,6 +60,21 @@ def post_save_classification_image(sender, instance, created, **kwargs):
         # to have thumbnail created and saved in the post_save so thumbnails
         # don't get orphaned if done in a pre_save signal.
         instance.thumbnail.save(thumb_file.name, thumb_file, save=True)
+
+
+@receiver(pre_save, sender=CollectRecord)
+def assign_classifier(sender, instance, **kwargs):
+    if not instance.data or not instance.data.get("image_classification"):
+        return
+
+    classifier_id = instance.data.get("classifier_id")
+    if classifier_id:
+        return
+
+    classifier = Classifier.latest()
+    if classifier:
+        instance.data["classifier_id"] = str(classifier.id)
+        instance.data["quadrat_transect"]["num_points_per_quadrat"] = classifier.num_points
 
 
 @receiver(post_submit, sender=CollectRecord)

@@ -10,7 +10,6 @@ from ...models import (
     BENTHICPQT_PROTOCOL,
     Annotation,
     ClassificationStatus,
-    Classifier,
     CollectRecord,
     Image,
     ObsBenthicPhotoQuadrat,
@@ -71,13 +70,11 @@ class ImageSerializer(DynamicFieldsMixin, BaseAPISerializer):
         return None
 
     def get_patch_size(self, obj):
-        classifier = Classifier.latest()
-        first_point = obj.points.first()
-        if first_point:
-            first_annotation = first_point.annotations.first()
-            if first_annotation:
-                classifier = first_annotation.classifier
-        return classifier.patch_size
+        annotation = Annotation.objects.filter(point__image=obj, classifier__isnull=False).first()
+        if annotation and annotation.classifier:
+            return annotation.classifier.patch_size
+        else:
+            return None
 
     def _summarize_counts(self, obj):
         count_confirmed = 0
