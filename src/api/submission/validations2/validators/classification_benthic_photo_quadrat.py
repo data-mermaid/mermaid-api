@@ -65,7 +65,7 @@ class ImageValidator(BaseValidator):
             is_confirmed=True, point__image_id=image_id
         )
 
-        classifier = Classifier.object.get_or_none(id=collect_record.get("classifier_id"))
+        classifier = Classifier.objects.get_or_none(id=collect_record.get("classifier_id"))
         if not classifier:
             classifier = Classifier.latest()
             if not classifier:

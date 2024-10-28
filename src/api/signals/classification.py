@@ -71,7 +71,10 @@ def assign_classifier(sender, instance, **kwargs):
     if classifier_id:
         return
 
-    instance.data["classifier_id"] = Classifier.latest().id
+    classifier = Classifier.latest()
+    if classifier:
+        instance.data["classifier_id"] = str(classifier.id)
+        instance.data["quadrat_transect"]["num_points_per_quadrat"] = classifier.num_points
 
 
 @receiver(post_submit, sender=CollectRecord)

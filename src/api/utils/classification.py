@@ -153,6 +153,8 @@ def correct_image_orientation(image_record: Image):
     except (AttributeError, KeyError, IndexError) as _:
         pass
 
+    # Saving the orientated image back to the image record
+    # strips out the EXIF data, which is intentional.
     img_content = BytesIO()
     image_file.save(img_content, format=image_format)
 
