@@ -134,7 +134,7 @@ def extract_location(exif_details: Dict[str, Any]) -> Optional[GEOSPoint]:
     return GEOSPoint(longitude, latitude)
 
 
-def correct_image_orientation(image_record: Image):
+def save_normalized_imagefile(image_record: Image):
     image_file = PILImage.open(image_record.image)
     image_format = image_file.format
     try:

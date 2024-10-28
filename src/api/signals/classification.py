@@ -29,7 +29,7 @@ def pre_image_save(sender, instance, **kwargs):
             instance.name = image_name
             instance.image.name = image_name
 
-            cls_utils.correct_image_orientation(instance)
+            cls_utils.save_normalized_imagefile(instance)
         except Exception:
             raise
 

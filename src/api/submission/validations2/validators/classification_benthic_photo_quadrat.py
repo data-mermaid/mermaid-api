@@ -69,13 +69,13 @@ class ImageValidator(BaseValidator):
         if not classifier:
             classifier = Classifier.latest()
             if not classifier:
-                return OK, None, [context]
+                return OK, None, context
 
         num_points = classifier.num_points
 
         if not annos.exists():
             context["missing_num_annotations"] = num_points
-            return ERROR, self.WRONG_NUM_CONFIRMED_ANNOS, [context]
+            return ERROR, self.WRONG_NUM_CONFIRMED_ANNOS, context
 
         wrong_num_annos = (
             annos.values("point__image_id")
