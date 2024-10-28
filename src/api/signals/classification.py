@@ -1,7 +1,7 @@
 from django.db.models.signals import post_delete, post_save, pre_save
 from django.dispatch import receiver
 
-from ..models import CollectRecord, Image
+from ..models import Classifier, CollectRecord, Image
 from ..utils import classification as cls_utils
 from .submission import post_edit, post_submit
 
@@ -51,6 +51,18 @@ def post_save_classification_image(sender, instance, created, **kwargs):
         # to have thumbnail created and saved in the post_save so thumbnails
         # don't get orphaned if done in a pre_save signal.
         instance.thumbnail.save(thumb_file.name, thumb_file, save=True)
+
+
+@receiver(pre_save, sender=CollectRecord)
+def assign_classifier(sender, instance, **kwargs):
+    if not instance.data or not instance.data.get("image_classification"):
+        return
+
+    classifier_id = instance.data.get("classifier_id")
+    if classifier_id:
+        return
+
+    instance.data["classifier_id"] = Classifier.latest().id
 
 
 @receiver(post_submit, sender=CollectRecord)

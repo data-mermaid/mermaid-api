@@ -1,3 +1,6 @@
+from itertools import repeat
+from typing import Tuple
+
 from django.db.models import Count
 
 from ....models import Annotation, Classifier, Image
@@ -38,8 +41,8 @@ class ImageValidator(BaseValidator):
         self._cache_quadrat_num_lookup = None
 
     @validator_result
-    def __call__(self, *args, **kwargs):
-        image = args[0]
+    def __call__(self, collect_record_image: Tuple[dict, Image], **kwargs):
+        collect_record, image = collect_record_image
         if isinstance(image, Image) is False:
             raise ValueError("ImageValidator only accepts Image instances")
 
@@ -51,18 +54,28 @@ class ImageValidator(BaseValidator):
                     Image.objects.filter(collect_record_id=image.collect_record_id)
                 )
             }
+
+        context = {
+            "image_id": image_id,
+            "quadrat_num": self._cache_quadrat_num_lookup[image_id],
+            "missing_num_annotations": None,
+        }
+
         annos = Annotation.objects.select_related("point", "point__image").filter(
             is_confirmed=True, point__image_id=image_id
         )
 
-        if annos.exists():
-            classifier = annos[0].classifier
-        else:
+        classifier = Classifier.object.get_or_none(id=collect_record.get("classifier_id"))
+        if not classifier:
             classifier = Classifier.latest()
+            if not classifier:
+                return OK, None, [context]
 
-        num_points = 0
-        if classifier:
-            num_points = classifier.num_points
+        num_points = classifier.num_points
+
+        if not annos.exists():
+            context["missing_num_annotations"] = num_points
+            return ERROR, self.WRONG_NUM_CONFIRMED_ANNOS, [context]
 
         wrong_num_annos = (
             annos.values("point__image_id")
@@ -70,20 +83,11 @@ class ImageValidator(BaseValidator):
             .exclude(annotation_count=num_points)
         )
 
-        missing_num_annos = None
         if wrong_num_annos.exists():
-            missing_num_annos = num_points - wrong_num_annos[0]["annotation_count"]
+            context["missing_num_annotations"] = num_points - wrong_num_annos[0]["annotation_count"]
+            return ERROR, self.WRONG_NUM_CONFIRMED_ANNOS, context
 
-        context = {
-            "image_id": image_id,
-            "quadrat_num": self._cache_quadrat_num_lookup[image_id],
-            "missing_num_annotations": missing_num_annos,
-        }
-
-        if not wrong_num_annos:
-            return OK, None, context
-
-        return ERROR, self.WRONG_NUM_CONFIRMED_ANNOS, context
+        return OK, None, context
 
 
 class CollectRecordImagesValidator(BaseValidator):
@@ -97,4 +101,4 @@ class CollectRecordImagesValidator(BaseValidator):
     def __call__(self, collect_record, **kwargs):
         cr_id = collect_record.get("id")
         images = Image.objects.filter(collect_record_id=cr_id).order_by("created_on")
-        return ImageValidator(), images
+        return ImageValidator(), zip(repeat(collect_record), images)
