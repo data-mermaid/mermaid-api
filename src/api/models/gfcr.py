@@ -75,12 +75,11 @@ class GFCRIndicatorSet(BaseModel):
         verbose_name="Area with pollution mitigation (sq.km)",
         default=0,
     )
-    f2_opt1 = models.DecimalField(
+    f2_5 = models.DecimalField(
         max_digits=9,
         decimal_places=3,
         verbose_name="Area of non-coral reef ecosystems, e.g., mangroves, seagrass or other associated ecosystems (sq.km)",
-        null=True,
-        blank=True,
+        default=0,
     )
     f2_notes = models.TextField(blank=True)
     f3_1 = models.DecimalField(

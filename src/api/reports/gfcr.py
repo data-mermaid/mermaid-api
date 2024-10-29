@@ -69,7 +69,7 @@ def f2_data(indicator_sets):
         ("F2.3a", "f2_3a"),
         ("F2.3b", "f2_3b"),
         ("F2.4", "f2_4"),
-        ("F2 Optional:", "f2_opt1"),
+        ("F2.5:", "f2_5"),
     )
     return _get_indicator_sheet_data(indicator_sets, fields)
 
