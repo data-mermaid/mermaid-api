@@ -96,7 +96,7 @@ class Job:
         Write the given message to standard out (STDOUT).
         """
 
-        print(f"simpleq: {message}")
+        print(f"[{self.id}]: {message}")
 
     def run(self):
         """Run this job."""
