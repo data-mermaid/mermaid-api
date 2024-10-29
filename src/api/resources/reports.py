@@ -1,3 +1,6 @@
+import os
+
+from django.http import FileResponse
 from rest_framework import serializers
 from rest_framework.exceptions import ValidationError
 from rest_framework.response import Response
@@ -5,10 +8,12 @@ from rest_framework.views import APIView
 
 from ..models import PROTOCOL_MAP, Project
 from ..reports import gfcr
+from ..utils import zip_file
 from ..utils.reports import (
     GFCR_REPORT_TYPE,
     REPORT_TYPES,
     SAMPLE_UNIT_METHOD_REPORT_TYPE,
+    create_sample_unit_method_summary_report,
     create_sample_unit_method_summary_report_background,
 )
 
@@ -18,6 +23,7 @@ class BaseMultiProjectReportSerializer(serializers.Serializer):
     project_ids = serializers.ListField(
         child=serializers.UUIDField(),
     )
+    background = serializers.BooleanField(default=True)
 
     def validate_project_ids(self, value):
         if not value:
@@ -51,25 +57,59 @@ class MultiProjectReportView(APIView):
         mp_serializer = self.get_serializer(data=request.data)
         mp_serializer.is_valid(raise_exception=True)
         report_type = mp_serializer.validated_data.pop("report_type")
+        background = mp_serializer.validated_data.pop("background")
 
         if report_type == SAMPLE_UNIT_METHOD_REPORT_TYPE:
             project_ids = mp_serializer.validated_data["project_ids"]
             protocol = mp_serializer.validated_data["protocol"]
 
-            create_sample_unit_method_summary_report_background(
-                project_ids=project_ids,
-                protocol=protocol,
-                request=request,
-                send_email=True,
-            )
+            if background:
+                create_sample_unit_method_summary_report_background(
+                    project_ids=project_ids,
+                    protocol=protocol,
+                    request=request,
+                    send_email=True,
+                )
+            else:
+                output_path = create_sample_unit_method_summary_report(
+                    project_ids=project_ids,
+                    protocol=protocol,
+                    request=request,
+                    send_email=False,
+                )
+
         elif report_type == GFCR_REPORT_TYPE:
             project_ids = mp_serializer.validated_data["project_ids"]
-            gfcr.create_report_background(
-                project_ids=project_ids,
-                request=request,
-                send_email=True,
-            )
+
+            if background:
+                gfcr.create_report_background(
+                    project_ids=project_ids,
+                    request=request,
+                    send_email=True,
+                )
+            else:
+                output_path = gfcr.create_report(
+                    project_ids=project_ids,
+                    request=request,
+                    send_email=False,
+                )
         else:
             raise ValidationError(detail=f"{report_type}: Unknown report type")
 
-        return Response({report_type: "ok"})
+        if background:
+            return Response({report_type: "ok"})
+        else:
+            try:
+                if not output_path:
+                    raise ValidationError("Error creating report")
+
+                zip_file_path = zip_file(output_path, output_path.stem)
+                z_file = open(zip_file_path, "rb")
+                response = FileResponse(z_file, content_type="application/zip")
+                response["Content-Length"] = os.fstat(z_file.fileno()).st_size
+                response["Content-Disposition"] = f'attachment; filename="{zip_file_path.stem}.zip"'
+
+                return response
+            finally:
+                output_path.unlink()
+                zip_file_path.unlink()
