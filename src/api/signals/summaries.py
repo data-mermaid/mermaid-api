@@ -20,7 +20,7 @@ def update_summaries_on_delete_transect_method(sender, instance, *args, **kwargs
 
     sample_unit = instance.sample_unit
     sample_unit.delete()
-    submit_job(5, update_summary_cache, project_id=project.pk, sample_unit=instance.protocol)
+    submit_job(5, True, update_summary_cache, project_id=project.pk, sample_unit=instance.protocol)
 
 
 @receiver(post_delete, sender=Management)
@@ -35,4 +35,4 @@ def update_summaries(sender, instance, *args, **kwargs):
     project = get_related_project(instance)
     if project is None:
         return
-    submit_job(5, update_summary_cache, project_id=project.pk)
+    submit_job(5, True, update_summary_cache, project_id=project.pk)

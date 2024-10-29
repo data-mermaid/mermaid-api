@@ -13,7 +13,7 @@ USE_FIFO = getattr(settings, "USE_FIFO") == "True"
 class Job:
     """An abstraction for a single unit of work (a job!)."""
 
-    def __init__(self, job_id, group, callable, *args, **kwargs):
+    def __init__(self, job_id, group, loggable, callable, *args, **kwargs):
         """
         Create a new Job,
 
@@ -21,6 +21,7 @@ class Job:
         """
         self._id = job_id if job_id is not None else str(uuid.uuid4())
         self.group = group or "mermaid"
+        self.loggable = loggable or False
         self.start_time = None
         self.stop_time = None
         self.run_time = None
@@ -55,6 +56,7 @@ class Job:
             MessageBody=codecs.encode(
                 dumps(
                     {
+                        "loggable": self.loggable,
                         "callable": self.callable,
                         "args": self.args,
                         "kwargs": self.kwargs,
@@ -81,8 +83,9 @@ class Job:
         message_attributes = message.message_attributes or dict()
         group = (message.attributes or dict()).get("MessageGroupId")
         job_id = (message_attributes.get("id") or dict()).get("StringValue")
+        loggable = data.get("loggable") or False
 
-        job = cls(job_id, group, data["callable"], *data["args"], **data["kwargs"])
+        job = cls(job_id, group, loggable, data["callable"], *data["args"], **data["kwargs"])
         job._sqs_message_id = message.message_id
         job._sqs_receipt_handle = message.receipt_handle
 
@@ -98,10 +101,10 @@ class Job:
     def run(self):
         """Run this job."""
         self.start_time = datetime.now(timezone.utc)
-        msg = f"Starting job {self.callable.__name__} at {self.start_time.isoformat()}"
-
-        if self.callable.__name__ == "update_project_summaries":
-            msg = f"Starting job {self.callable.__name__} with args [{self.kwargs}] at {self.start_time.isoformat()}"
+        if self.loggable:
+            msg = f"Starting job {self.callable.__name__} with args [{self.args}] and kwargs [{self.kwargs}] at {self.start_time.isoformat()}"
+        else:
+            msg = f"Starting job {self.callable.__name__} at {self.start_time.isoformat()}"
 
         self.log(msg)
 

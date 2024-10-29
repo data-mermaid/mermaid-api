@@ -38,7 +38,7 @@ def send_mermaid_email(subject, template, to, context=None, from_email=None, rep
     )
     if html_content:
         msg.attach_alternative(html_content, "text/html")
-    
+
     if get_maintenance_mode() is False:
         msg.send()
     else:
@@ -70,6 +70,7 @@ def mermaid_email(subject, template, to, context=None, from_email=None, reply_to
     if to_emails:
         submit_job(
             delay=0,
+            loggable=False,
             callable=send_mermaid_email,
             subject=subject,
             template=template,

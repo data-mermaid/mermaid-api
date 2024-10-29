@@ -34,6 +34,7 @@ def create_sample_unit_method_summary_report_background(
     req = MockRequest.load_request(request)
     submit_job(
         0,
+        True,
         create_sample_unit_method_summary_report,
         project_ids,
         protocol,

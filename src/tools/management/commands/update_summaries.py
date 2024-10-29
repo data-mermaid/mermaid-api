@@ -58,6 +58,7 @@ class Command(BaseCommand):
             else:
                 submit_job(
                     5,
+                    True,
                     update_summary_cache,
                     project_id=project.pk,
                     skip_test_project=skip_test_projects,
