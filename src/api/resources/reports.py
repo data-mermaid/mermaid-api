@@ -29,10 +29,11 @@ class BaseMultiProjectReportSerializer(serializers.Serializer):
         if not value:
             raise ValidationError("Project ids are required")
 
-        projects = {str(p.pk): None for p in Project.objects.filter(id__in=value)}
-        for project_id in value:
-            if str(project_id) not in projects:
-                raise ValidationError(f"[{project_id}] Project not found")
+        existing_ids = set(Project.objects.filter(id__in=value).values_list("id", flat=True))
+        invalid_ids = [str(pid) for pid in value if pid not in existing_ids]
+        if invalid_ids:
+            raise ValidationError(f"Projects not found: {', '.join(invalid_ids)}")
+
         return value
 
 

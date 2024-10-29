@@ -151,7 +151,7 @@ def email_report(to_email, local_file_path, report_title):
         s3.upload_file(settings.AWS_DATA_BUCKET, zip_file_path, s3_zip_file_key)
     except Exception:
         logger.exception("Uploading report S3")
-        return None
+        return False
     finally:
         delete_file(zip_file_path)
 
@@ -166,6 +166,7 @@ def email_report(to_email, local_file_path, report_title):
             to,
             context=context,
         )
+        return True
     except Exception:
         logger.exception("Emailing report")
-        return None
+        return False
