@@ -409,7 +409,7 @@ class BenthicPhotoQuadratTransectProtocolWriter(ProtocolWriter):
             "quadrat_transect": quadrat_transect_id,
             "id": sample_unit_method_id,
         }
-        image_classification = self.collect_record.data.get("image_classification")
+        image_classification = self.collect_record.data.get("image_classification") or False
         additional_data = {
             "collect_record_id": collect_record_id,
             "image_classification": image_classification,
