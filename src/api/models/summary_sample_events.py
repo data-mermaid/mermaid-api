@@ -196,7 +196,11 @@ class SummarySampleEventSQLModel(SummarySampleEventBaseModel):
                 'biomass_kgha_trophic_group_avg', (CASE WHEN project.data_policy_beltfish < 50 AND NOT %(has_access)s THEN NULL ELSE
                 fbtg.biomass_kgha_trophic_group_avg END),
                 'biomass_kgha_trophic_group_sd', (CASE WHEN project.data_policy_beltfish < 50 AND NOT %(has_access)s THEN NULL ELSE
-                fbtg.biomass_kgha_trophic_group_sd END)
+                fbtg.biomass_kgha_trophic_group_sd END),
+                'biomass_kgha_fish_family_avg', (CASE WHEN project.data_policy_beltfish < 50 AND NOT %(has_access)s THEN NULL ELSE
+                fbff.biomass_kgha_fish_family_avg END),
+                'biomass_kgha_fish_family_sd', (CASE WHEN project.data_policy_beltfish < 50 AND NOT %(has_access)s THEN NULL ELSE
+                fbff.biomass_kgha_fish_family_sd END)
             )), '{}'),
             'benthiclit', NULLIF(jsonb_strip_nulls(jsonb_build_object(
                 'sample_unit_count', bl.sample_unit_count,
@@ -342,6 +346,32 @@ class SummarySampleEventSQLModel(SummarySampleEventBaseModel):
             ) beltfish_su_tg
             GROUP BY sample_event_id
         ) fbtg ON (sample_event.id = fbtg.sample_event_id)
+        LEFT JOIN (
+            SELECT sample_event_id,
+            jsonb_object_agg(
+                ff,
+                ROUND(biomass_kgha_avg::numeric, 2)
+            ) FILTER (WHERE biomass_kgha_avg > 0) AS biomass_kgha_fish_family_avg,
+            jsonb_object_agg(
+                ff,
+                ROUND(biomass_kgha_sd::numeric, 2)
+            ) FILTER (WHERE biomass_kgha_avg > 0) AS biomass_kgha_fish_family_sd
+            FROM (
+                SELECT meta_su_ffs.sample_event_id, ff,
+                AVG(biomass_kgha) AS biomass_kgha_avg,
+                STDDEV(biomass_kgha) AS biomass_kgha_sd
+                FROM (
+                    SELECT sample_event_id, pseudosu_id, ffdata.key AS ff,
+                    SUM(ffdata.value::double precision) AS biomass_kgha
+                    FROM beltfish_su,
+                    LATERAL jsonb_each_text(biomass_kgha_fish_family_zeroes) ffdata(key, value)
+                    GROUP BY sample_event_id, pseudosu_id, ffdata.key
+                ) meta_su_ffs
+                GROUP BY meta_su_ffs.sample_event_id, ff
+            ) beltfish_su_ff
+            GROUP BY sample_event_id
+        ) AS fbff
+        ON sample_event.id = fbff.sample_event_id
 
         LEFT JOIN (
             SELECT benthiclit_su.sample_event_id,
