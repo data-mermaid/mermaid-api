@@ -1,10 +1,8 @@
-from itertools import repeat
-from typing import Tuple
-
-from django.db.models import Count
+from collections import defaultdict
 
 from ....models import Annotation, Classifier, Image
 from .base import ERROR, OK, WARN, BaseValidator, validate_list, validator_result
+from .region import BaseRegionValidator
 
 
 class ImageCountValidator(BaseValidator):
@@ -30,67 +28,126 @@ class ImageCountValidator(BaseValidator):
         return OK
 
 
-class ImageValidator(BaseValidator):
-    WRONG_NUM_CONFIRMED_ANNOS = "wrong_num_confirmed_annos"
+class BaseAnnotationValidator(BaseValidator):
+    def get_rows(self, collect_record, **kwargs):
+        cr_id = collect_record.get("id")
 
-    def __init__(
-        self,
-        **kwargs,
-    ):
-        super().__init__(**kwargs)
-        self._cache_quadrat_num_lookup = None
+        num_points_per_quadrat = (collect_record["data"].get("quadrat_transect") or {}).get(
+            "num_points_per_quadrat"
+        )
+        if not num_points_per_quadrat:
+            num_points_per_quadrat = Classifier.latest().num_points
+
+        annos = (
+            Annotation.objects.select_related("point", "point__image")
+            .filter(point__image__collect_record_id=cr_id)
+            .order_by(
+                "point__image__created_on",
+                "point_id",
+                "-is_confirmed",
+                "-score",
+                "benthic_attribute__name",
+                "growth_form__name",
+            )
+        )
+
+        images = defaultdict(
+            lambda: defaultdict(
+                lambda: {
+                    "image_id": None,
+                    "attribute": None,
+                    "growth_form": None,
+                    "confirmed": 0,
+                    "unconfirmed": 0,
+                }
+            )
+        )
+        points = set()
+
+        for anno in annos:
+            image_id = str(anno.point.image_id)
+            point_id = str(anno.point_id)
+            benthic_attribute_id = str(anno.benthic_attribute_id)
+            growth_form_id = str(anno.growth_form.id) if anno.growth_form else ""
+            uid = f"{image_id}::{benthic_attribute_id}::{growth_form_id}"
+
+            images[image_id][uid]["image_id"] = image_id
+            if anno.is_confirmed:
+                images[image_id][uid]["confirmed"] += 1
+                images[image_id][uid]["benthic_attribute"] = anno.benthic_attribute.id
+                images[image_id][uid]["growth_form"] = (
+                    anno.growth_form.id if anno.growth_form else ""
+                )
+                points.add(point_id)
+            elif point_id not in points:
+                images[image_id][uid]["unconfirmed"] += 1
+                images[image_id][uid]["attribute"] = anno.benthic_attribute.id
+                images[image_id][uid]["growth_form"] = (
+                    anno.growth_form.id if anno.growth_form else ""
+                )
+                points.add(point_id)
+
+        rows = []
+        for image_id, groups in images.items():
+            num_unconfirmed = 0
+            num_confirmed = 0
+            image_rows = []
+            for uid, values in groups.items():
+                image_rows.append(
+                    {
+                        "id": uid,
+                        "image_id": image_id,
+                        "attribute": values["attribute"],
+                        "growth_form": values["growth_form"],
+                        "confirmed": values["confirmed"],
+                        "unconfirmed": values["unconfirmed"],
+                        "is_unclassified": False,
+                    }
+                )
+                if values["unconfirmed"] > 0:
+                    num_unconfirmed += values["unconfirmed"]
+                else:
+                    num_confirmed += values["confirmed"]
+
+            unclassified = num_points_per_quadrat - num_unconfirmed - num_confirmed
+
+            if unclassified != 0:
+                uid = f"{image_id}::::"
+                image_rows.append(
+                    {
+                        "id": uid,
+                        "image_id": image_id,
+                        "attribute": values["attribute"],
+                        "growth_form": values["growth_form"],
+                        "confirmed": values["confirmed"],
+                        "unconfirmed": values["unconfirmed"],
+                        "is_unclassified": True,
+                    }
+                )
+
+            rows.extend(image_rows)
+
+        return rows
+
+
+class AnnotationConfirmedValidator(BaseValidator):
+    UNCONFIRMED_ANNOTATION = "unconfirmed_annotation"
+    unique_identifier_key = "id"
+    group_key = "image_id"
 
     @validator_result
-    def __call__(self, collect_record_image: Tuple[dict, Image], **kwargs):
-        collect_record, image = collect_record_image
-        if isinstance(image, Image) is False:
-            raise ValueError("ImageValidator only accepts Image instances")
-
-        image_id = str(image.pk)
-        if self._cache_quadrat_num_lookup is None:
-            self._cache_quadrat_num_lookup = {
-                str(image.id): quad_num + 1
-                for quad_num, image in enumerate(
-                    Image.objects.filter(collect_record_id=image.collect_record_id)
-                )
-            }
-
+    def __call__(self, record, **kwargs):
         context = {
-            "image_id": image_id,
-            "quadrat_num": self._cache_quadrat_num_lookup[image_id],
-            "missing_num_annotations": None,
+            "observation_id": record[self.unique_identifier_key],
+            "group_id": record[self.group_key],
         }
-
-        annos = Annotation.objects.select_related("point", "point__image").filter(
-            is_confirmed=True, point__image_id=image_id
-        )
-
-        classifier = Classifier.objects.get_or_none(id=collect_record.get("classifier_id"))
-        if not classifier:
-            classifier = Classifier.latest()
-            if not classifier:
-                return OK, None, context
-
-        num_points = classifier.num_points
-
-        if not annos.exists():
-            context["missing_num_annotations"] = num_points
-            return ERROR, self.WRONG_NUM_CONFIRMED_ANNOS, context
-
-        wrong_num_annos = (
-            annos.values("point__image_id")
-            .annotate(annotation_count=Count("id"))
-            .exclude(annotation_count=num_points)
-        )
-
-        if wrong_num_annos.exists():
-            context["missing_num_annotations"] = num_points - wrong_num_annos[0]["annotation_count"]
-            return ERROR, self.WRONG_NUM_CONFIRMED_ANNOS, context
+        if record["unconfirmed"] > 0:
+            return ERROR, self.UNCONFIRMED_ANNOTATION, context
 
         return OK, None, context
 
 
-class CollectRecordImagesValidator(BaseValidator):
+class ListAnnotationConfirmedValidator(BaseAnnotationValidator):
     def __init__(
         self,
         **kwargs,
@@ -99,6 +156,61 @@ class CollectRecordImagesValidator(BaseValidator):
 
     @validate_list
     def __call__(self, collect_record, **kwargs):
-        cr_id = collect_record.get("id")
-        images = Image.objects.filter(collect_record_id=cr_id).order_by("created_on")
-        return ImageValidator(), zip(repeat(collect_record), images)
+        rows = self.get_rows(collect_record)
+        return AnnotationConfirmedValidator(), rows
+
+
+class AnnotationUnclassifiedValidator(BaseValidator):
+    UNCLASSIFIED_ANNOTATION = "unclassified_annotation"
+    unique_identifier_key = "id"
+    group_key = "image_id"
+
+    @validator_result
+    def __call__(self, record, **kwargs):
+        context = {
+            "observation_id": record[self.unique_identifier_key],
+            "group_id": record[self.group_key],
+        }
+        if record["is_unclassified"]:
+            return ERROR, self.UNCLASSIFIED_ANNOTATION, context
+
+        return OK, None, context
+
+
+class ListAnnotationUnclassifiedValidator(BaseAnnotationValidator):
+    def __init__(
+        self,
+        **kwargs,
+    ):
+        super().__init__(**kwargs)
+
+    @validate_list
+    def __call__(self, collect_record, **kwargs):
+        rows = self.get_rows(collect_record)
+        return AnnotationUnclassifiedValidator(), rows
+
+
+class AnnotationRegionValidator(BaseAnnotationValidator, BaseRegionValidator):
+    group_context_key = "image_id"
+
+    def __init__(
+        self,
+        attribute_model_class,
+        site_path,
+        **kwargs,
+    ):
+        super().__init__(attribute_model_class, site_path, **kwargs)
+
+    def get_observation_ids_and_attribute_ids(self, observations):
+        observation_ids = []
+        attribute_ids = []
+        for obs in observations:
+            if not obs.get("id"):
+                continue
+            observation_ids.append(obs.get("id"))
+            attribute_ids.append(obs.get("attribute"))
+
+        return observation_ids, attribute_ids
+
+    def get_records(self, collect_record, **kwargs):
+        return self.get_rows(collect_record)
