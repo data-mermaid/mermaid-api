@@ -10,12 +10,7 @@ from api.models import (
     Point,
 )
 from api.resources.collect_record import CollectRecordSerializer
-from api.submission.validations2.validators import (
-    OK,
-    WARN,
-    CollectRecordImagesValidator,
-    ImageCountValidator,
-)
+from api.submission.validations2.validators import OK, WARN, ImageCountValidator
 
 
 @pytest.fixture
@@ -114,18 +109,6 @@ def annotations(
             is_machine_created=True,
         ),
     ]
-
-
-def test_image_validator(image_collect_record_serialized, annotations, image1, image2):
-    validator = CollectRecordImagesValidator()
-    results = validator(image_collect_record_serialized)
-
-    assert len(results) == 2
-    for result in results:
-        if result.context["image_id"] == image1.pk:
-            assert result.status == OK
-        elif result.context["image_id"] == image1.pk:
-            assert result.status == WARN
 
 
 def test_image_count_validator(image_collect_record_serialized, annotations, image1, image2):

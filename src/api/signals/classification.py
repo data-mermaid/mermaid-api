@@ -73,7 +73,7 @@ def assign_classifier(sender, instance, **kwargs):
         return
 
     classifier = Classifier.latest()
-    if classifier:
+    if "classifier_id" not in instance.data and classifier:
         instance.data["classifier_id"] = str(classifier.id)
         instance.data["quadrat_transect"]["num_points_per_quadrat"] = classifier.num_points
 
