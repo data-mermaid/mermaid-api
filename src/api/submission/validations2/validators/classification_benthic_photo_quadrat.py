@@ -74,7 +74,7 @@ class BaseAnnotationValidator(BaseValidator):
             images[image_id][uid]["image_id"] = image_id
             if anno.is_confirmed:
                 images[image_id][uid]["confirmed"] += 1
-                images[image_id][uid]["benthic_attribute"] = anno.benthic_attribute.id
+                images[image_id][uid]["attribute"] = anno.benthic_attribute.id
                 images[image_id][uid]["growth_form"] = (
                     anno.growth_form.id if anno.growth_form else ""
                 )
@@ -117,10 +117,10 @@ class BaseAnnotationValidator(BaseValidator):
                     {
                         "id": uid,
                         "image_id": image_id,
-                        "attribute": values["attribute"],
-                        "growth_form": values["growth_form"],
-                        "confirmed": values["confirmed"],
-                        "unconfirmed": values["unconfirmed"],
+                        "attribute": None,
+                        "growth_form": None,
+                        "confirmed": 0,
+                        "unconfirmed": 0,
                         "is_unclassified": True,
                     }
                 )
@@ -192,14 +192,6 @@ class ListAnnotationUnclassifiedValidator(BaseAnnotationValidator):
 
 class AnnotationRegionValidator(BaseAnnotationValidator, BaseRegionValidator):
     group_context_key = "image_id"
-
-    def __init__(
-        self,
-        attribute_model_class,
-        site_path,
-        **kwargs,
-    ):
-        super().__init__(attribute_model_class, site_path, **kwargs)
 
     def get_observation_ids_and_attribute_ids(self, observations):
         observation_ids = []
