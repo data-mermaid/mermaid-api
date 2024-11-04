@@ -63,7 +63,6 @@ class BaseAnnotationValidator(BaseValidator):
             )
         )
         points = set()
-
         for anno in annos:
             image_id = str(anno.point.image_id)
             point_id = str(anno.point_id)
@@ -107,7 +106,8 @@ class BaseAnnotationValidator(BaseValidator):
                 )
                 if values["unconfirmed"] > 0:
                     num_unconfirmed += values["unconfirmed"]
-                else:
+
+                if values["confirmed"] > 0:
                     num_confirmed += values["confirmed"]
 
             unclassified = num_points_per_quadrat - num_unconfirmed - num_confirmed
