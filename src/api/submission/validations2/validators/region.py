@@ -1,13 +1,14 @@
 from rest_framework.exceptions import ParseError
 
 from ....exceptions import check_uuid
-from ....models import Annotation, Region, Site
+from ....models import Region, Site
 from ..utils import valid_id
 from .base import OK, WARN, BaseValidator, validator_result
 
 
 class BaseRegionValidator(BaseValidator):
     NO_REGION_MATCH = "no_region_match"
+    group_context_key = None
 
     def __init__(
         self,
@@ -37,10 +38,13 @@ class BaseRegionValidator(BaseValidator):
         }
 
     @validator_result
-    def check_region(self, observation_id, site_region, attribute_id, attribute_regions):
+    def check_region(self, observation_id, site_region, attribute_id, attribute_regions, obs):
         status = OK
         code = None
         context = {"observation_id": observation_id}
+        if self.group_context_key:
+            context["group_id"] = obs[self.group_context_key]
+
         if attribute_id is None:
             # Skip
             ...
@@ -74,8 +78,8 @@ class BaseRegionValidator(BaseValidator):
         attr_lookup = self._get_attribute_region_lookup(set(attribute_ids))
 
         return [
-            self.check_region(observation_id, site_region_id, attribute_id, attr_lookup)
-            for observation_id, attribute_id in zip(observation_ids, attribute_ids)
+            self.check_region(observation_id, site_region_id, attribute_id, attr_lookup, obs)
+            for observation_id, attribute_id, obs in zip(observation_ids, attribute_ids, records)
         ]
 
 
@@ -105,44 +109,3 @@ class RegionValidator(BaseRegionValidator):
 
     def get_records(self, collect_record, **kwargs):
         return self.get_value(collect_record, self.observations_path) or []
-
-
-class AnnotationRegionValidator(BaseRegionValidator):
-    def __init__(
-        self,
-        attribute_model_class,
-        site_path,
-        **kwargs,
-    ):
-        super().__init__(attribute_model_class, site_path, **kwargs)
-
-    def get_observation_ids_and_attribute_ids(self, observations):
-        observation_ids = []
-        attribute_ids = []
-        for obs in observations:
-            if not obs.get("id") or not obs.get("attribute"):
-                continue
-            observation_ids.append(obs.get("id"))
-            attribute_ids.append(obs.get("attribute"))
-
-        return observation_ids, attribute_ids
-
-    def get_records(self, collect_record, **kwargs):
-        collect_record_id = collect_record.get("id")
-        if not collect_record_id:
-            return []
-
-        annos = Annotation.objects.select_related("point", "point__image").filter(
-            is_confirmed=True, point__image__collect_record_id=collect_record_id
-        )
-
-        records = []
-        for anno in annos:
-            growth_form = ""
-            if anno.growth_form:
-                growth_form = anno.growth_form.pk
-
-            uid = f"{anno.point.image.pk}::{anno.benthic_attribute.id}::{growth_form}"
-            records.append({"id": uid, "attribute": str(anno.benthic_attribute.id)})
-
-        return records
