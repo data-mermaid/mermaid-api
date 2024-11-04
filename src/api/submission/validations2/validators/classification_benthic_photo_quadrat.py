@@ -110,7 +110,7 @@ class BaseAnnotationValidator(BaseValidator):
                 else:
                     num_confirmed += values["confirmed"]
 
-            unclassified = num_points_per_quadrat - num_unconfirmed
+            unclassified = num_points_per_quadrat - num_unconfirmed - num_confirmed
 
             if unclassified != 0:
                 uid = f"{image_id}::::"
