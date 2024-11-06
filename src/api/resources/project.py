@@ -514,7 +514,7 @@ class ProjectViewSet(BaseApiViewSet):
 
     def destroy(self, request, *args, **kwargs):
         instance = self.get_object()
-        submit_job(0, delete_project, instance.pk)
+        submit_job(0, True, delete_project, instance.pk)
 
         return Response(
             data="Project has been flagged for deletion",

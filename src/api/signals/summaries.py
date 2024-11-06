@@ -1,5 +1,6 @@
 from django.db.models.signals import post_delete, post_save
 from django.dispatch import receiver
+from django.utils import timezone
 
 from ..models import Management, Project, ProjectProfile, Site, TransectMethod
 from ..utils.q import submit_job
@@ -20,7 +21,14 @@ def update_summaries_on_delete_transect_method(sender, instance, *args, **kwargs
 
     sample_unit = instance.sample_unit
     sample_unit.delete()
-    submit_job(5, update_summary_cache, project_id=project.pk, sample_unit=instance.protocol)
+    submit_job(
+        5,
+        True,
+        update_summary_cache,
+        project_id=project.pk,
+        sample_unit=instance.protocol,
+        timestamp=timezone.now(),
+    )
 
 
 @receiver(post_delete, sender=Management)
@@ -35,4 +43,4 @@ def update_summaries(sender, instance, *args, **kwargs):
     project = get_related_project(instance)
     if project is None:
         return
-    submit_job(5, update_summary_cache, project_id=project.pk)
+    submit_job(5, True, update_summary_cache, project_id=project.pk, timestamp=timezone.now())

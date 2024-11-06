@@ -89,7 +89,7 @@ def apply_changes(request, serializer, record, force=False):
 
             # If deleting a project, deliberately delete all protected objects!
             if model_class == Project:
-                submit_job(0, delete_project, record_id)
+                submit_job(0, True, delete_project, record_id)
                 Revision.create_from_instance(instance, deleted=True)
                 return 202, "Project has been flagged for deletion", None
 

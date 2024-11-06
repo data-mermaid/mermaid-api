@@ -45,4 +45,4 @@ def refresh_attribute_views(sender, instance, **kwargs):
         or isinstance(instance, GrowthForm)
         or instance.status == SUPERUSER_APPROVED
     ):
-        submit_job(10, update_attributes_report)
+        submit_job(10, True, update_attributes_report)
