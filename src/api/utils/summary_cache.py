@@ -1,3 +1,5 @@
+from datetime import timedelta
+
 from django.db import transaction
 from django.utils import timezone
 
@@ -56,6 +58,7 @@ from ..resources.summary_sample_event import SummarySampleEventSerializer
 from ..utils.timer import timing
 
 BATCH_SIZE = 1000
+BUFFER_TIME = 3  # in seconds
 
 
 def _set_created_on(created_on, records):
@@ -84,6 +87,19 @@ def _fetch_records(sql_model_cls, project_id):
     return list(sql_model_cls.objects.all().sql_table(project_id=project_id))
 
 
+def _is_update_required(timestamp, project_id, model_cls):
+    if timestamp is None:
+        return True
+
+    ts = timestamp - timedelta(seconds=BUFFER_TIME)
+    rec = model_cls.objects.filter(project_id=project_id).order_by("-created_on").first()
+
+    if rec is None:
+        return True
+
+    return rec.created_on > ts
+
+
 def _update_cache(
     project_id,
     obs_sql_model,
@@ -93,25 +109,36 @@ def _update_cache(
     se_sql_model,
     se_model,
     skip_updates,
+    timestamp=None,
 ):
-    created_on = timezone.now()
+    if not _is_update_required(timestamp, project_id, obs_model):
+        return
+
     if skip_updates is not True:
         _delete_existing_records(project_id, obs_model)
         _delete_existing_records(project_id, su_model)
         _delete_existing_records(project_id, se_model)
 
     obs_records = _fetch_records(obs_sql_model, project_id)
-    _update_records(obs_records, obs_model, created_on, skip_updates)
-
     su_records = _fetch_records(su_sql_model, project_id)
-    _update_records(su_records, su_model, created_on, skip_updates)
-
     se_records = _fetch_records(se_sql_model, project_id)
+
+    created_on = timezone.now()
+
+    _update_records(obs_records, obs_model, created_on, skip_updates)
+    _update_records(su_records, su_model, created_on, skip_updates)
     _update_records(se_records, se_model, created_on, skip_updates)
 
 
-def _update_bleaching_qc_summary(project_id, skip_updates):
+def _update_bleaching_qc_summary(
+    project_id,
+    skip_updates,
+    timestamp=None,
+):
     created_on = timezone.now()
+
+    if not _is_update_required(timestamp, project_id, BleachingQCColoniesBleachedObsModel):
+        return
 
     if not skip_updates:
         _delete_existing_records(project_id, BleachingQCColoniesBleachedObsModel)
@@ -203,7 +230,7 @@ def _update_unrestricted_project_summary_sample_events(
 
 
 @timing
-def update_summary_cache(project_id, sample_unit=None, skip_test_project=False):
+def update_summary_cache(project_id, sample_unit=None, skip_test_project=False, timestamp=None):
     skip_updates = False
     if (
         skip_test_project is True
@@ -222,6 +249,7 @@ def update_summary_cache(project_id, sample_unit=None, skip_test_project=False):
                 BeltFishSESQLModel,
                 BeltFishSEModel,
                 skip_updates,
+                timestamp,
             )
 
         if sample_unit is None or sample_unit == BENTHICLIT_PROTOCOL:
@@ -234,6 +262,7 @@ def update_summary_cache(project_id, sample_unit=None, skip_test_project=False):
                 BenthicLITSESQLModel,
                 BenthicLITSEModel,
                 skip_updates,
+                timestamp,
             )
 
         if sample_unit is None or sample_unit == BENTHICPIT_PROTOCOL:
@@ -246,6 +275,7 @@ def update_summary_cache(project_id, sample_unit=None, skip_test_project=False):
                 BenthicPITSESQLModel,
                 BenthicPITSEModel,
                 skip_updates,
+                timestamp,
             )
 
         if sample_unit is None or sample_unit == BENTHICPQT_PROTOCOL:
@@ -258,12 +288,14 @@ def update_summary_cache(project_id, sample_unit=None, skip_test_project=False):
                 BenthicPhotoQuadratTransectSESQLModel,
                 BenthicPhotoQuadratTransectSEModel,
                 skip_updates,
+                timestamp,
             )
 
         if sample_unit is None or sample_unit == BLEACHINGQC_PROTOCOL:
             _update_bleaching_qc_summary(
                 project_id,
                 skip_updates,
+                timestamp,
             )
 
         if sample_unit is None or sample_unit == HABITATCOMPLEXITY_PROTOCOL:
@@ -276,6 +308,7 @@ def update_summary_cache(project_id, sample_unit=None, skip_test_project=False):
                 HabitatComplexitySESQLModel,
                 HabitatComplexitySEModel,
                 skip_updates,
+                timestamp,
             )
 
         _update_project_summary_sample_event(project_id, skip_updates)
