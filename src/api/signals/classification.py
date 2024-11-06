@@ -22,14 +22,15 @@ def pre_image_save(sender, instance, **kwargs):
                 logger.exception("Error storing EXIF data")
 
             instance.original_image_name = instance.image.name
-            instance.original_image_width = instance.image.width
-            instance.original_image_height = instance.image.height
-
             image_name = f"{instance.id}.png"
             instance.name = image_name
             instance.image.name = image_name
 
             cls_utils.save_normalized_imagefile(instance)
+            # original_* dimensions refer to width/height after correcting for orientation
+            # i.e. original width/height of the image taken with a 'camera on its side'
+            instance.original_image_width = instance.image.width
+            instance.original_image_height = instance.image.height
         except Exception:
             raise
 
@@ -72,7 +73,7 @@ def assign_classifier(sender, instance, **kwargs):
         return
 
     classifier = Classifier.latest()
-    if classifier:
+    if "classifier_id" not in instance.data and classifier:
         instance.data["classifier_id"] = str(classifier.id)
         instance.data["quadrat_transect"]["num_points_per_quadrat"] = classifier.num_points
 

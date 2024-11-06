@@ -5,6 +5,7 @@ import subprocess
 import uuid
 from datetime import datetime, timezone
 from pathlib import Path
+from zipfile import ZIP_DEFLATED, ZipFile
 
 from django.conf import settings
 from django.contrib.admin.utils import NestedObjects
@@ -244,3 +245,11 @@ def delete_file(file_path):
         print(f"Error deleting file: {e}")
         return False
     return True
+
+
+def zip_file(file_path, zip_name):
+    zip_file_path = file_path.with_name(f"{zip_name}.zip")
+    with ZipFile(zip_file_path, "w", compression=ZIP_DEFLATED) as z:
+        z.write(file_path, arcname=file_path.name)
+
+    return zip_file_path
