@@ -10,7 +10,7 @@ from simpleq.jobs import Job
 from simpleq.queues import Queue
 
 
-def _submit_job(queue, delay, callable, *args, **kwargs):
+def _submit_job(queue, delay, loggable, callable, *args, **kwargs):
     if settings.TESTING:
         callable(*args, **kwargs)
         return
@@ -19,18 +19,18 @@ def _submit_job(queue, delay, callable, *args, **kwargs):
     kwargs = kwargs or {}
     q = Queue(queue)
     job_id = generate_job_id(delay, callable, *args, **kwargs)
-    job = Job(job_id, None, callable, *args, **kwargs)
+    job = Job(job_id, None, loggable, callable, *args, **kwargs)
     q.add_job(job, delay=delay)
 
     return job_id
 
 
-def submit_job(delay, callable, *args, **kwargs):
-    return _submit_job(settings.QUEUE_NAME, delay, callable, *args, **kwargs)
+def submit_job(delay, loggable, callable, *args, **kwargs):
+    return _submit_job(settings.QUEUE_NAME, delay, loggable, callable, *args, **kwargs)
 
 
-def submit_image_job(delay, callable, *args, **kwargs):
-    return _submit_job(settings.IMAGE_QUEUE_NAME, delay, callable, *args, **kwargs)
+def submit_image_job(delay, loggable, callable, *args, **kwargs):
+    return _submit_job(settings.IMAGE_QUEUE_NAME, delay, loggable, callable, *args, **kwargs)
 
 
 def generate_job_id(delay, callable, *args, **kwargs):

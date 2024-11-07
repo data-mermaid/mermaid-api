@@ -2,6 +2,7 @@ from time import time
 
 from django.conf import settings
 from django.core.management.base import BaseCommand
+from django.utils import timezone
 
 from api.models import Project
 from api.utils.q import submit_job
@@ -58,9 +59,11 @@ class Command(BaseCommand):
             else:
                 submit_job(
                     5,
+                    True,
                     update_summary_cache,
                     project_id=project.pk,
                     skip_test_project=skip_test_projects,
+                    timestamp=timezone.now(),
                 )
 
         end_time = time()

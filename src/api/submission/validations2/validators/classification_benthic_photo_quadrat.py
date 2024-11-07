@@ -63,7 +63,6 @@ class BaseAnnotationValidator(BaseValidator):
             )
         )
         points = set()
-
         for anno in annos:
             image_id = str(anno.point.image_id)
             point_id = str(anno.point_id)
@@ -71,8 +70,8 @@ class BaseAnnotationValidator(BaseValidator):
             growth_form_id = str(anno.growth_form.id) if anno.growth_form else ""
             uid = f"{image_id}::{benthic_attribute_id}::{growth_form_id}"
 
-            images[image_id][uid]["image_id"] = image_id
             if anno.is_confirmed:
+                images[image_id][uid]["image_id"] = image_id
                 images[image_id][uid]["confirmed"] += 1
                 images[image_id][uid]["attribute"] = anno.benthic_attribute.id
                 images[image_id][uid]["growth_form"] = (
@@ -80,6 +79,7 @@ class BaseAnnotationValidator(BaseValidator):
                 )
                 points.add(point_id)
             elif point_id not in points:
+                images[image_id][uid]["image_id"] = image_id
                 images[image_id][uid]["unconfirmed"] += 1
                 images[image_id][uid]["attribute"] = anno.benthic_attribute.id
                 images[image_id][uid]["growth_form"] = (
@@ -106,7 +106,8 @@ class BaseAnnotationValidator(BaseValidator):
                 )
                 if values["unconfirmed"] > 0:
                     num_unconfirmed += values["unconfirmed"]
-                else:
+
+                if values["confirmed"] > 0:
                     num_confirmed += values["confirmed"]
 
             unclassified = num_points_per_quadrat - num_unconfirmed - num_confirmed
@@ -124,7 +125,6 @@ class BaseAnnotationValidator(BaseValidator):
                         "is_unclassified": True,
                     }
                 )
-
             rows.extend(image_rows)
 
         return rows

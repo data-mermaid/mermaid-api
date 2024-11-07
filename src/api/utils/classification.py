@@ -362,7 +362,7 @@ def _classify_image(image_record_id, profile_id=None):
 
 
 def classify_image_job(image_record_id, profile_id=None):
-    return submit_image_job(0, _classify_image, image_record_id=image_record_id)
+    return submit_image_job(0, True, _classify_image, image_record_id=image_record_id)
 
 
 def classify_image(image_record_id, profile_id=None):

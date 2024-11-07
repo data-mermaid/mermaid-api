@@ -9,7 +9,7 @@ def update_cache(apps, schema_editor):
     Project = apps.get_model("api", "Project")
     for project in Project.objects.all():
         print(f"project {project.pk}")
-        submit_job(5, update_summary_cache, project_id=project.pk, skip_test_project=True)
+        submit_job(5, True, update_summary_cache, project_id=project.pk, skip_test_project=True)
 
 
 class Migration(migrations.Migration):
