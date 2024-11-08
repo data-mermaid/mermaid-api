@@ -28,7 +28,7 @@ from .base import BaseAPIFilterSet, BaseAPISerializer, BaseProjectApiViewSet
 from .mixins import CreateOrUpdateSerializerMixin
 
 logger = logging.getLogger(__name__)
-cr_permissions = [And(BaseProjectApiViewSet.permission_classes[0], CollectRecordOwner)]
+cr_permissions = [And(ProjectDataPermission, CollectRecordOwner)]
 
 
 class CollectRecordSerializer(CreateOrUpdateSerializerMixin, BaseAPISerializer):
