@@ -461,6 +461,7 @@ def valid_collect_record(
     site1,
     sample_date1,
     belt_transect_width_5m,
+    belt_transect_width_condition2,
     fish_species1,
     project1,
     profile1,

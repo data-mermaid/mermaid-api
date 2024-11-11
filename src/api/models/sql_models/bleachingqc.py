@@ -356,10 +356,20 @@ class BleachingQCSESQLModel(BaseSQLModel):
     sql = f"""
         WITH bleachingqc_su AS (
             {BleachingQCSUSQLModel.sql}
+        ),
+        se_observers AS (
+            SELECT sample_event_id,
+            jsonb_agg(DISTINCT observer ORDER BY observer) AS observers
+            FROM (
+                SELECT sample_event_id, jsonb_array_elements(observers) AS observer
+                FROM bleachingqc_su
+            ) AS su_observers
+            GROUP BY sample_event_id
         )
-        SELECT sample_event_id AS id,
+        SELECT bleachingqc_su.sample_event_id AS id,
         {_se_fields},
         data_policy_bleachingqc,
+        se_observers.observers,
         {_su_aggfields_sql},
         COUNT(pseudosu_id) AS sample_unit_count,
         ROUND(AVG(quadrat_size), 1) AS quadrat_size_avg,
@@ -392,9 +402,11 @@ class BleachingQCSESQLModel(BaseSQLModel):
         ROUND(STDDEV(percent_algae_avg), 1) AS percent_algae_avg_sd
 
         FROM bleachingqc_su
+        INNER JOIN se_observers ON (bleachingqc_su.sample_event_id = se_observers.sample_event_id)
         GROUP BY
         {_se_fields},
-        data_policy_bleachingqc
+        data_policy_bleachingqc,
+        se_observers.observers
     """
 
     sql_args = dict(
@@ -414,6 +426,7 @@ class BleachingQCSESQLModel(BaseSQLModel):
         blank=True,
         null=True,
     )
+    observers = models.JSONField(null=True, blank=True)
     current_name = models.CharField(max_length=100)
     tide_name = models.CharField(max_length=100)
     visibility_name = models.CharField(max_length=100)

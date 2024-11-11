@@ -1,6 +1,7 @@
 from django_filters import BaseInFilter, RangeFilter
 from rest_condition import Or
 from rest_framework.exceptions import NotFound
+from rest_framework.serializers import SerializerMethodField
 
 from ...models import (
     BenthicPhotoQuadratTransect,
@@ -10,6 +11,7 @@ from ...models import (
     BenthicPhotoQuadratTransectSESQLModel,
     BenthicPhotoQuadratTransectSUModel,
     BenthicPhotoQuadratTransectSUSQLModel,
+    Image,
     ObsBenthicPhotoQuadrat,
 )
 from ...permissions import ProjectDataReadOnlyPermission, ProjectPublicSummaryPermission
@@ -35,6 +37,7 @@ from ..base import (
     BaseViewAPIGeoSerializer,
     BaseViewAPISUGeoSerializer,
 )
+from ..classification.image import ImageSerializer
 from ..mixins import SampleUnitMethodEditMixin, SampleUnitMethodSummaryReport
 from ..observer import ObserverSerializer
 from ..quadrat_transect import QuadratTransectSerializer
@@ -61,6 +64,12 @@ class ObsBenthicPhotoQuadratSerializer(BaseAPISerializer):
         }
 
 
+class PQTImageSerializer(ImageSerializer):
+    class Meta:
+        model = Image
+        fields = ["id", "image", "thumbnail", "original_image_name"]
+
+
 class BenthicPhotoQuadratTransectMethodSerializer(BenthicPhotoQuadratTransectSerializer):
     sample_event = SampleEventSerializer(source="quadrat_transect.sample_event")
     quadrat_transect = QuadratTransectSerializer()
@@ -68,6 +77,16 @@ class BenthicPhotoQuadratTransectMethodSerializer(BenthicPhotoQuadratTransectSer
     obs_benthic_photo_quadrats = ObsBenthicPhotoQuadratSerializer(
         many=True, source="obsbenthicphotoquadrat_set"
     )
+    images = SerializerMethodField()
+
+    def get_images(self, obj):
+        if obj.image_classification is True:
+            images = Image.objects.filter(collect_record_id=obj.collect_record_id)
+            if images:
+                serialized_images = PQTImageSerializer(images, many=True)
+                return serialized_images.data
+
+        return None
 
     class Meta:
         model = BenthicPhotoQuadratTransect
@@ -366,6 +385,7 @@ class BenthicPQTMethodSECSVSerializer(ReportSerializer):
             "Estimated compliance",
         ),
         ReportField("management_rules", "Management rules", to_join_list),
+        ReportField("observers", "Observers", to_names),
         ReportField("sample_unit_count", "Sample unit count"),
         ReportField("num_points_nonother", "Number of non-Other points"),
         ReportField(

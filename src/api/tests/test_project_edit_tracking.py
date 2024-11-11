@@ -10,9 +10,13 @@ def test_project_edit_tracking(valid_collect_record, profile1_request):
     with Testing():
         project_id = valid_collect_record.project_id
         write_collect_record(valid_collect_record, profile1_request)
-        summary_se_count = SummarySampleEventModel.objects.filter(project_id=project_id).count()
 
-        assert summary_se_count == 1
+        summary_ses = SummarySampleEventModel.objects.filter(project_id=project_id)
+        assert summary_ses.count() == 1
+
+        sse = summary_ses.first()
+        beltfish_su_count = sse.protocols["beltfish"]["sample_unit_count"]
+        assert beltfish_su_count == 1
 
 
 def test_edit_transect_method(belt_fish_project, belt_fish1, profile1, profile1_request):

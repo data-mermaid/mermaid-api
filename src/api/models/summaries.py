@@ -170,6 +170,7 @@ class BeltFishSEModel(BaseSummaryModel):
         blank=True,
         null=True,
     )
+    observers = models.JSONField(null=True, blank=True)
     current_name = models.CharField(max_length=100, null=True, blank=True)
     tide_name = models.CharField(max_length=100, null=True, blank=True)
     visibility_name = models.CharField(max_length=100, null=True, blank=True)
@@ -263,6 +264,7 @@ class BenthicPITSEModel(BaseSummaryModel):
         blank=True,
         null=True,
     )
+    observers = models.JSONField(null=True, blank=True)
     current_name = models.CharField(max_length=100, null=True, blank=True)
     tide_name = models.CharField(max_length=100, null=True, blank=True)
     visibility_name = models.CharField(max_length=100, null=True, blank=True)
@@ -327,6 +329,7 @@ class BenthicLITSEModel(BaseSummaryModel):
         blank=True,
         null=True,
     )
+    observers = models.JSONField(null=True, blank=True)
     current_name = models.CharField(max_length=100, null=True, blank=True)
     tide_name = models.CharField(max_length=100, null=True, blank=True)
     visibility_name = models.CharField(max_length=100, null=True, blank=True)
@@ -396,6 +399,7 @@ class BenthicPhotoQuadratTransectSEModel(BaseSummaryModel):
         blank=True,
         null=True,
     )
+    observers = models.JSONField(null=True, blank=True)
     current_name = models.CharField(max_length=100, null=True, blank=True)
     tide_name = models.CharField(max_length=100, null=True, blank=True)
     visibility_name = models.CharField(max_length=100, null=True, blank=True)
@@ -502,6 +506,7 @@ class BleachingQCSEModel(BaseSummaryModel):
         blank=True,
         null=True,
     )
+    observers = models.JSONField(null=True, blank=True)
     current_name = models.CharField(max_length=100, null=True, blank=True)
     tide_name = models.CharField(max_length=100, null=True, blank=True)
     visibility_name = models.CharField(max_length=100, null=True, blank=True)
@@ -598,6 +603,7 @@ class HabitatComplexitySEModel(BaseSummaryModel):
         blank=True,
         null=True,
     )
+    observers = models.JSONField(null=True, blank=True)
     current_name = models.CharField(max_length=100, null=True, blank=True)
     tide_name = models.CharField(max_length=100, null=True, blank=True)
     visibility_name = models.CharField(max_length=100, null=True, blank=True)
