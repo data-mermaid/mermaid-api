@@ -385,6 +385,7 @@ class BenthicPQTMethodSECSVSerializer(ReportSerializer):
             "Estimated compliance",
         ),
         ReportField("management_rules", "Management rules", to_join_list),
+        ReportField("observers", "Observers", to_names),
         ReportField("sample_unit_count", "Sample unit count"),
         ReportField("num_points_nonother", "Number of non-Other points"),
         ReportField(

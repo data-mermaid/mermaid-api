@@ -43,6 +43,7 @@ class SummarySampleEventBaseModel(models.Model):
     management_compliance = models.CharField(max_length=100, null=True, blank=True)
     management_rules = models.JSONField(null=True, blank=True)
     management_notes = models.TextField(blank=True, null=True)
+    observers = models.JSONField(null=True, blank=True)
     protocols = models.JSONField(null=True, blank=True)  # most keys changed inside here
     data_policy_beltfish = models.CharField(max_length=50)
     data_policy_benthiclit = models.CharField(max_length=50)
@@ -93,6 +94,30 @@ class SummarySampleEventSQLModel(SummarySampleEventBaseModel):
                 management.project_id = '%(project_id)s' :: uuid
             GROUP BY
                 mps.management_id
+        ),
+        se_observers AS (
+            SELECT sample_event_id,
+            jsonb_agg(DISTINCT observer ORDER BY observer) AS observers
+            FROM (
+                SELECT sample_event_id, jsonb_array_elements(observers) AS observer
+                FROM beltfish_su
+                UNION ALL
+                SELECT sample_event_id, jsonb_array_elements(observers) AS observer
+                FROM benthiclit_su
+                UNION ALL
+                SELECT sample_event_id, jsonb_array_elements(observers) AS observer
+                FROM benthicpit_su
+                UNION ALL
+                SELECT sample_event_id, jsonb_array_elements(observers) AS observer
+                FROM benthicpqt_su
+                UNION ALL
+                SELECT sample_event_id, jsonb_array_elements(observers) AS observer
+                FROM bleachingqc_su
+                UNION ALL
+                SELECT sample_event_id, jsonb_array_elements(observers) AS observer
+                FROM habitatcomplexity_su
+            ) AS su_observers
+            GROUP BY sample_event_id
         )
 
         SELECT
@@ -187,6 +212,7 @@ class SummarySampleEventSQLModel(SummarySampleEventBaseModel):
             WHEN project.data_policy_benthicpqt=100 THEN 'public'
             ELSE ''
         END) AS data_policy_benthicpqt,
+        se_observers.observers,
 
         jsonb_strip_nulls(jsonb_build_object(
             'beltfish', NULLIF(jsonb_strip_nulls(jsonb_build_object(
@@ -196,7 +222,11 @@ class SummarySampleEventSQLModel(SummarySampleEventBaseModel):
                 'biomass_kgha_trophic_group_avg', (CASE WHEN project.data_policy_beltfish < 50 AND NOT %(has_access)s THEN NULL ELSE
                 fbtg.biomass_kgha_trophic_group_avg END),
                 'biomass_kgha_trophic_group_sd', (CASE WHEN project.data_policy_beltfish < 50 AND NOT %(has_access)s THEN NULL ELSE
-                fbtg.biomass_kgha_trophic_group_sd END)
+                fbtg.biomass_kgha_trophic_group_sd END),
+                'biomass_kgha_fish_family_avg', (CASE WHEN project.data_policy_beltfish < 50 AND NOT %(has_access)s THEN NULL ELSE
+                fbff.biomass_kgha_fish_family_avg END),
+                'biomass_kgha_fish_family_sd', (CASE WHEN project.data_policy_beltfish < 50 AND NOT %(has_access)s THEN NULL ELSE
+                fbff.biomass_kgha_fish_family_sd END)
             )), '{}'),
             'benthiclit', NULLIF(jsonb_strip_nulls(jsonb_build_object(
                 'sample_unit_count', bl.sample_unit_count,
@@ -300,6 +330,8 @@ class SummarySampleEventSQLModel(SummarySampleEventBaseModel):
             AND role >= 90
             GROUP BY project_id
         ) pa ON (project.id = pa.project_id)
+        
+        INNER JOIN se_observers ON (sample_event.id = se_observers.sample_event_id)
 
         LEFT JOIN (
             SELECT project.id,
@@ -342,6 +374,32 @@ class SummarySampleEventSQLModel(SummarySampleEventBaseModel):
             ) beltfish_su_tg
             GROUP BY sample_event_id
         ) fbtg ON (sample_event.id = fbtg.sample_event_id)
+        LEFT JOIN (
+            SELECT sample_event_id,
+            jsonb_object_agg(
+                ff,
+                ROUND(biomass_kgha_avg::numeric, 2)
+            ) FILTER (WHERE biomass_kgha_avg > 0) AS biomass_kgha_fish_family_avg,
+            jsonb_object_agg(
+                ff,
+                ROUND(biomass_kgha_sd::numeric, 2)
+            ) FILTER (WHERE biomass_kgha_avg > 0) AS biomass_kgha_fish_family_sd
+            FROM (
+                SELECT meta_su_ffs.sample_event_id, ff,
+                AVG(biomass_kgha) AS biomass_kgha_avg,
+                STDDEV(biomass_kgha) AS biomass_kgha_sd
+                FROM (
+                    SELECT sample_event_id, pseudosu_id, ffdata.key AS ff,
+                    SUM(ffdata.value::double precision) AS biomass_kgha
+                    FROM beltfish_su,
+                    LATERAL jsonb_each_text(biomass_kgha_fish_family_zeroes) ffdata(key, value)
+                    GROUP BY sample_event_id, pseudosu_id, ffdata.key
+                ) meta_su_ffs
+                GROUP BY meta_su_ffs.sample_event_id, ff
+            ) beltfish_su_ff
+            GROUP BY sample_event_id
+        ) AS fbff
+        ON sample_event.id = fbff.sample_event_id
 
         LEFT JOIN (
             SELECT benthiclit_su.sample_event_id,
