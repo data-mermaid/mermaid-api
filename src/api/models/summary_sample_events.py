@@ -101,19 +101,19 @@ class SummarySampleEventSQLModel(SummarySampleEventBaseModel):
             FROM (
                 SELECT sample_event_id, jsonb_array_elements(observers) AS observer
                 FROM beltfish_su
-                UNION 
+                UNION ALL
                 SELECT sample_event_id, jsonb_array_elements(observers) AS observer
                 FROM benthiclit_su
-                UNION
+                UNION ALL
                 SELECT sample_event_id, jsonb_array_elements(observers) AS observer
                 FROM benthicpit_su
-                UNION
+                UNION ALL
                 SELECT sample_event_id, jsonb_array_elements(observers) AS observer
                 FROM benthicpqt_su
-                UNION
+                UNION ALL
                 SELECT sample_event_id, jsonb_array_elements(observers) AS observer
                 FROM bleachingqc_su
-                UNION
+                UNION ALL
                 SELECT sample_event_id, jsonb_array_elements(observers) AS observer
                 FROM habitatcomplexity_su
             ) AS su_observers
