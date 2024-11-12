@@ -138,9 +138,11 @@ def write_collect_record(collect_record, request, dry_run=False):
 
                 submit_job(
                     5,
+                    True,
                     update_summary_cache,
                     project_id=collect_record.project_id,
                     sample_unit=collect_record.protocol,
+                    timestamp=timezone.now(),
                 )
         return status, result
 

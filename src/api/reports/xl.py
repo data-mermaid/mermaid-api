@@ -30,17 +30,17 @@ def get_workbook(workbook: Union[Workbook, str, None] = None) -> Workbook:
         wb = Workbook()
         # Remove the default sheet
         wb.remove(wb.active)
-    
+
     return wb
 
 
-def get_worksheet(wb: Workbook, name: Optional[str]=None, create: bool=False) -> Worksheet:
+def get_worksheet(wb: Workbook, name: Optional[str] = None, create: bool = False) -> Worksheet:
     if name:
         name = name.lower()
         for ws in wb.worksheets:
             if ws.title.lower() == name:
                 return ws
-        
+
         if create:
             return wb.create_sheet(title=name)
 
@@ -50,7 +50,13 @@ def get_worksheet(wb: Workbook, name: Optional[str]=None, create: bool=False) ->
         return wb.worksheets[0]
 
 
-def write_data_to_sheet(workbook: Union[Workbook, str, None], sheet_name: str, data: List[List[Any]], row: int=1, col: int=1) -> Tuple[int, int]:
+def write_data_to_sheet(
+    workbook: Union[Workbook, str, None],
+    sheet_name: str,
+    data: List[List[Any]],
+    row: int = 1,
+    col: int = 1,
+) -> Tuple[int, int]:
     wb = get_workbook(workbook)
     ws = get_worksheet(wb, sheet_name, create=True)
 
@@ -61,7 +67,7 @@ def write_data_to_sheet(workbook: Union[Workbook, str, None], sheet_name: str, d
         for m, col_val in enumerate(row_val):
             current_col = col + m
             ws.cell(row=current_row, column=current_col).value = cast_str_value(col_val)
-    
+
     return current_row, current_col
 
 
@@ -77,5 +83,5 @@ def auto_size_columns(worksheet):
                 print(f"Auto sizing excel columns: {e}")
                 pass
 
-        adjusted_width = (max_length + 2)
+        adjusted_width = max_length + 2
         worksheet.column_dimensions[column].width = adjusted_width

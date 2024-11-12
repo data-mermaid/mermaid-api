@@ -353,10 +353,20 @@ class BenthicPITSESQLModel(BaseSQLModel):
     sql = f"""
         WITH benthicpit_su AS (
             {BenthicPITSUSQLModel.sql}
+        ),
+        se_observers AS (
+            SELECT sample_event_id,
+            jsonb_agg(DISTINCT observer ORDER BY observer) AS observers
+            FROM (
+                SELECT sample_event_id, jsonb_array_elements(observers) AS observer
+                FROM benthicpit_su
+            ) AS su_observers
+            GROUP BY sample_event_id
         )
         SELECT benthicpit_su.sample_event_id AS id,
         {_se_fields},
         data_policy_benthicpit,
+        se_observers.observers,
         {_su_aggfields_sql},
         COUNT(benthicpit_su.pseudosu_id) AS sample_unit_count,
         percent_cover_benthic_category_avg,
@@ -398,6 +408,7 @@ class BenthicPITSESQLModel(BaseSQLModel):
             GROUP BY sample_event_id
         ) AS benthicpit_se_lhs
         ON benthicpit_su.sample_event_id = benthicpit_se_lhs.sample_event_id
+        INNER JOIN se_observers ON (benthicpit_su.sample_event_id = se_observers.sample_event_id)
 
         GROUP BY
         {_se_fields},
@@ -405,7 +416,8 @@ class BenthicPITSESQLModel(BaseSQLModel):
         percent_cover_benthic_category_avg,
         percent_cover_benthic_category_sd,
         percent_cover_life_histories_avg,
-        percent_cover_life_histories_sd
+        percent_cover_life_histories_sd,
+        se_observers.observers
     """
 
     sql_args = dict(
@@ -425,6 +437,7 @@ class BenthicPITSESQLModel(BaseSQLModel):
         blank=True,
         null=True,
     )
+    observers = models.JSONField(null=True, blank=True)
     current_name = models.CharField(max_length=100)
     tide_name = models.CharField(max_length=100)
     visibility_name = models.CharField(max_length=100)

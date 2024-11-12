@@ -134,7 +134,7 @@ def extract_location(exif_details: Dict[str, Any]) -> Optional[GEOSPoint]:
     return GEOSPoint(longitude, latitude)
 
 
-def correct_image_orientation(image_record: Image):
+def save_normalized_imagefile(image_record: Image):
     image_file = PILImage.open(image_record.image)
     image_format = image_file.format
     try:
@@ -153,6 +153,8 @@ def correct_image_orientation(image_record: Image):
     except (AttributeError, KeyError, IndexError) as _:
         pass
 
+    # Saving the orientated image back to the image record
+    # strips out the EXIF data, which is intentional.
     img_content = BytesIO()
     image_file.save(img_content, format=image_format)
 
@@ -178,7 +180,7 @@ def store_exif(image_record: Image) -> Dict[str, Any]:
         elif isinstance(v, (int, float, tuple, list)):
             ...
         else:
-            v = str(v).strip()
+            v = str(v).strip().replace("\u0000", "")
 
         exif_details[k] = v
 
@@ -360,7 +362,7 @@ def _classify_image(image_record_id, profile_id=None):
 
 
 def classify_image_job(image_record_id, profile_id=None):
-    return submit_image_job(0, _classify_image, image_record_id=image_record_id)
+    return submit_image_job(0, True, _classify_image, image_record_id=image_record_id)
 
 
 def classify_image(image_record_id, profile_id=None):

@@ -77,7 +77,7 @@ class ProjectDataPermission(permissions.BasePermission):
 
 class ProjectDataReadOnlyPermission(ProjectDataPermission):
     def has_permission(self, request, view):
-        permission_check = super(ProjectDataReadOnlyPermission, self).has_permission(request, view)
+        permission_check = super().has_permission(request, view)
         return permission_check is True and request.method in permissions.SAFE_METHODS
 
 

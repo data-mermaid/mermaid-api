@@ -196,10 +196,20 @@ class HabitatComplexitySESQLModel(BaseSQLModel):
     sql = f"""
         WITH habitatcomplexity_su AS (
             {HabitatComplexitySUSQLModel.sql}
+        ),
+        se_observers AS (
+            SELECT sample_event_id,
+            jsonb_agg(DISTINCT observer ORDER BY observer) AS observers
+            FROM (
+                SELECT sample_event_id, jsonb_array_elements(observers) AS observer
+                FROM habitatcomplexity_su
+            ) AS su_observers
+            GROUP BY sample_event_id
         )
-        SELECT sample_event_id AS id,
+        SELECT habitatcomplexity_su.sample_event_id AS id,
         {_se_fields},
         data_policy_habitatcomplexity,
+        se_observers.observers,
         {_su_aggfields_sql},
         COUNT(pseudosu_id) AS sample_unit_count,
         ROUND(AVG(score_avg), 2) AS score_avg_avg,
@@ -208,9 +218,11 @@ class HabitatComplexitySESQLModel(BaseSQLModel):
         ROUND(STDDEV(observation_count), 2) AS observation_count_sd
         
         FROM habitatcomplexity_su
+        INNER JOIN se_observers ON (habitatcomplexity_su.sample_event_id = se_observers.sample_event_id)
         GROUP BY
         {_se_fields},
-        data_policy_habitatcomplexity
+        data_policy_habitatcomplexity,
+        se_observers.observers
     """
 
     sql_args = dict(
@@ -230,6 +242,7 @@ class HabitatComplexitySESQLModel(BaseSQLModel):
         blank=True,
         null=True,
     )
+    observers = models.JSONField(null=True, blank=True)
     current_name = models.CharField(max_length=100)
     tide_name = models.CharField(max_length=100)
     visibility_name = models.CharField(max_length=100)

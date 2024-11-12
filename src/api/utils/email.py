@@ -1,5 +1,7 @@
 import datetime
+import logging
 from pathlib import Path
+from zipfile import ZIP_DEFLATED, ZipFile
 
 from django.conf import settings
 from django.core.mail import EmailMultiAlternatives
@@ -7,7 +9,10 @@ from django.template.loader import render_to_string
 from maintenance_mode.core import get_maintenance_mode
 
 from ..models.mermaid import ProjectProfile
+from . import delete_file, s3
 from .q import submit_job
+
+logger = logging.getLogger(__name__)
 
 
 def _get_mermaid_email_content(template, context):
@@ -38,7 +43,7 @@ def send_mermaid_email(subject, template, to, context=None, from_email=None, rep
     )
     if html_content:
         msg.attach_alternative(html_content, "text/html")
-    
+
     if get_maintenance_mode() is False:
         msg.send()
     else:
@@ -70,6 +75,7 @@ def mermaid_email(subject, template, to, context=None, from_email=None, reply_to
     if to_emails:
         submit_job(
             delay=0,
+            loggable=False,
             callable=send_mermaid_email,
             subject=subject,
             template=template,
@@ -123,3 +129,45 @@ def email_project_admins(**kwargs):
             from_email=settings.WEBCONTACT_EMAIL,
             reply_to=from_email,
         )
+
+
+def email_report(to_email, local_file_path, report_title):
+    if not to_email or "@" not in to_email:
+        raise ValueError("Invalid email address")
+    if not local_file_path or not Path(local_file_path).is_file():
+        raise ValueError("Invalid or missing file path")
+    if not report_title:
+        raise ValueError("Report title is required")
+
+    try:
+        zip_file_path = None
+        local_file_path = Path(local_file_path)
+        file_name = local_file_path.name
+        s3_zip_file_key = f"{settings.ENVIRONMENT}/reports/{file_name}.zip"
+
+        zip_file_path = local_file_path.with_name(f"{file_name}.zip")
+        with ZipFile(zip_file_path, "w", compression=ZIP_DEFLATED) as z:
+            z.write(local_file_path, arcname=file_name)
+
+        s3.upload_file(settings.AWS_DATA_BUCKET, zip_file_path, s3_zip_file_key)
+    except Exception:
+        logger.exception("Uploading report S3")
+        return False
+    finally:
+        delete_file(zip_file_path)
+
+    try:
+        file_url = s3.get_presigned_url(settings.AWS_DATA_BUCKET, s3_zip_file_key)
+        to = [to_email]
+        template = "emails/report.html"
+        context = {"file_url": file_url, "title": report_title}
+        send_mermaid_email(
+            f"{report_title} Report",
+            template,
+            to,
+            context=context,
+        )
+        return True
+    except Exception:
+        logger.exception("Emailing report")
+        return False

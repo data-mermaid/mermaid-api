@@ -574,6 +574,7 @@ class BleachingQCMethodSECSVSerializer(ReportSerializer):
         ReportField("management_parties", "Governance", to_governance),
         ReportField("management_compliance", "Estimated compliance"),
         ReportField("management_rules", "Management rules", to_join_list),
+        ReportField("observers", "Observers", to_names),
         ReportField("sample_unit_count", "Sample unit count"),
         ReportField("count_total_avg", "Total count average"),
         ReportField("count_total_sd", "Total count standard deviation"),

@@ -1,6 +1,6 @@
 from django.db import transaction
 from django.db.models import Q
-from rest_condition import And
+from rest_condition import Or
 from rest_framework import permissions, serializers, status
 from rest_framework.exceptions import MethodNotAllowed, ValidationError
 from rest_framework.response import Response
@@ -10,7 +10,6 @@ from ...models import (
     BENTHICPQT_PROTOCOL,
     Annotation,
     ClassificationStatus,
-    Classifier,
     CollectRecord,
     Image,
     ObsBenthicPhotoQuadrat,
@@ -71,13 +70,11 @@ class ImageSerializer(DynamicFieldsMixin, BaseAPISerializer):
         return None
 
     def get_patch_size(self, obj):
-        classifier = Classifier.latest()
-        first_point = obj.points.first()
-        if first_point:
-            first_annotation = first_point.annotations.first()
-            if first_annotation:
-                classifier = first_annotation.classifier
-        return classifier.patch_size
+        annotation = Annotation.objects.filter(point__image=obj, classifier__isnull=False).first()
+        if annotation and annotation.classifier:
+            return annotation.classifier.patch_size
+        else:
+            return None
 
     def _summarize_counts(self, obj):
         count_confirmed = 0
@@ -145,7 +142,7 @@ class ImageViewSet(BaseProjectApiViewSet):
     )
 
     serializer_class = ImageSerializer
-    permission_classes = [And(BaseProjectApiViewSet.permission_classes[0], ImagePermission)]
+    permission_classes = [Or(BaseProjectApiViewSet.permission_classes[0], ImagePermission)]
     filterset_class = ImageFilterSet
 
     def limit_to_project(self, request, *args, **kwargs):
@@ -158,7 +155,7 @@ class ImageViewSet(BaseProjectApiViewSet):
         cr_ids = CollectRecord.objects.filter(project_id=project_pk, profile=profile).values_list(
             "id", flat=True
         )
-        return qs.filter(
+        self.queryset = qs.filter(
             Q(collect_record_id__in=cr_ids)
             | Q(
                 **{
@@ -166,6 +163,7 @@ class ImageViewSet(BaseProjectApiViewSet):
                 }
             )
         )
+        return self.queryset
 
     @classmethod
     def get_extra_actions(cls):

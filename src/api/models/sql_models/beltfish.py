@@ -373,12 +373,23 @@ class BeltFishSESQLModel(BaseSQLModel):
     sql = f"""
         WITH beltfish_su AS (
             {BeltFishSUSQLModel.sql}
+        ),
+        se_observers AS (
+            SELECT sample_event_id,
+            jsonb_agg(DISTINCT observer ORDER BY observer) AS observers
+            FROM (
+                SELECT sample_event_id, jsonb_array_elements(observers) AS observer
+                FROM beltfish_su
+            ) AS su_observers
+            GROUP BY sample_event_id
         )
+        
         -- For each SE, summarize biomass by 1) avg
         -- of transects and 2) avg of transects' trophic groups
         SELECT beltfish_su.sample_event_id AS id,
         {_se_fields},
         data_policy_beltfish,
+        se_observers.observers,
         {_su_aggfields_sql},
         COUNT(beltfish_su.pseudosu_id) AS sample_unit_count,
         ROUND(AVG(beltfish_su.biomass_kgha), 2) AS biomass_kgha_avg,
@@ -445,6 +456,8 @@ class BeltFishSESQLModel(BaseSQLModel):
             GROUP BY sample_event_id
         ) AS beltfish_se_fish_families
         ON beltfish_su.sample_event_id = beltfish_se_fish_families.sample_event_id
+        
+        INNER JOIN se_observers ON (beltfish_su.sample_event_id = se_observers.sample_event_id)
 
         GROUP BY
         {_se_fields},
@@ -452,7 +465,8 @@ class BeltFishSESQLModel(BaseSQLModel):
         biomass_kgha_trophic_group_avg,
         biomass_kgha_trophic_group_sd,
         biomass_kgha_fish_family_avg,
-        biomass_kgha_fish_family_sd
+        biomass_kgha_fish_family_sd,
+        se_observers.observers
     """
 
     sql_args = dict(
@@ -472,6 +486,7 @@ class BeltFishSESQLModel(BaseSQLModel):
         blank=True,
         null=True,
     )
+    observers = models.JSONField(null=True, blank=True)
     current_name = models.CharField(max_length=100)
     tide_name = models.CharField(max_length=100)
     visibility_name = models.CharField(max_length=100)

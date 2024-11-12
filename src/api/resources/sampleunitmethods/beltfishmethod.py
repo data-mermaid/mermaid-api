@@ -439,6 +439,7 @@ class BeltFishMethodSECSVSerializer(ReportSerializer):
         ReportField("management_parties", "Governance", to_governance),
         ReportField("management_compliance", "Estimated compliance"),
         ReportField("management_rules", "Management rules", to_join_list),
+        ReportField("observers", "Observers", to_names),
         ReportField("sample_unit_count", "Sample unit count"),
         ReportField("biomass_kgha_avg", "Biomass kg/ha average"),
         ReportField("biomass_kgha_sd", "Biomass kg/ha standard deviation"),

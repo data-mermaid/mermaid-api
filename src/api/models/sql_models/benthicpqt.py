@@ -358,10 +358,20 @@ class BenthicPhotoQuadratTransectSESQLModel(BaseSQLModel):
     sql = f"""
         WITH benthicpqt_su AS (
             {BenthicPhotoQuadratTransectSUSQLModel.sql}
+        ),
+        se_observers AS (
+            SELECT sample_event_id,
+            jsonb_agg(DISTINCT observer ORDER BY observer) AS observers
+            FROM (
+                SELECT sample_event_id, jsonb_array_elements(observers) AS observer
+                FROM benthicpqt_su
+            ) AS su_observers
+            GROUP BY sample_event_id
         )
         SELECT benthicpqt_su.sample_event_id AS id,
         {_se_fields},
         data_policy_benthicpqt,
+        se_observers.observers,
         {_su_aggfields_sql},
         COUNT(benthicpqt_su.pseudosu_id) AS sample_unit_count,
         SUM(benthicpqt_su.num_points_nonother) AS num_points_nonother,
@@ -403,6 +413,7 @@ class BenthicPhotoQuadratTransectSESQLModel(BaseSQLModel):
             GROUP BY sample_event_id
         ) AS benthicpqt_se_lhs
         ON benthicpqt_su.sample_event_id = benthicpqt_se_lhs.sample_event_id
+        INNER JOIN se_observers ON (benthicpqt_su.sample_event_id = se_observers.sample_event_id)
 
         GROUP BY
         {_se_fields},
@@ -410,7 +421,8 @@ class BenthicPhotoQuadratTransectSESQLModel(BaseSQLModel):
         percent_cover_benthic_category_avg,
         percent_cover_benthic_category_sd,
         percent_cover_life_histories_avg,
-        percent_cover_life_histories_sd        
+        percent_cover_life_histories_sd,
+        se_observers.observers
     """
 
     sql_args = dict(
@@ -430,6 +442,7 @@ class BenthicPhotoQuadratTransectSESQLModel(BaseSQLModel):
         blank=True,
         null=True,
     )
+    observers = models.JSONField(null=True, blank=True)
     current_name = models.CharField(max_length=100)
     tide_name = models.CharField(max_length=100)
     visibility_name = models.CharField(max_length=100)

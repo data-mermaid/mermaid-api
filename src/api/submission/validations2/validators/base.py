@@ -88,7 +88,8 @@ def validate_list(func):
 
     def inner(instance, *args, **kwargs):
         validator_instance, records = func(instance, *args, **kwargs)
-        return [_validate(instance, validator_instance, r) for r in records]
+        arr = [_validate(instance, validator_instance, r) for r in records]
+        return arr
 
     return inner
 

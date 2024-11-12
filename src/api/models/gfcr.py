@@ -29,7 +29,7 @@ class GFCRIndicatorSet(BaseModel):
     f1_1 = models.DecimalField(
         max_digits=9,
         decimal_places=3,
-        verbose_name="Total area of coral reefs in GFCR programming (sq.km)",
+        verbose_name="Total area of coral reefs in GFCR Programme (sq.km)",
         default=0,
     )
     f1_notes = models.TextField(blank=True)
@@ -75,12 +75,11 @@ class GFCRIndicatorSet(BaseModel):
         verbose_name="Area with pollution mitigation (sq.km)",
         default=0,
     )
-    f2_opt1 = models.DecimalField(
+    f2_5 = models.DecimalField(
         max_digits=9,
         decimal_places=3,
         verbose_name="Area of non-coral reef ecosystems, e.g., mangroves, seagrass or other associated ecosystems (sq.km)",
-        null=True,
-        blank=True,
+        default=0,
     )
     f2_notes = models.TextField(blank=True)
     f3_1 = models.DecimalField(
@@ -90,33 +89,33 @@ class GFCRIndicatorSet(BaseModel):
         default=0,
     )
     f3_2 = models.PositiveSmallIntegerField(
-        verbose_name="Number of in situ coral restoration projects", default=0
+        verbose_name="Number of in situ coral reef restoration projects", default=0
     )
     f3_3 = models.PositiveSmallIntegerField(
-        verbose_name="Number of coral restoration plans, technologies, strategies or guidelines developed",
+        verbose_name="Number of coral reef restoration plans, technologies, strategies or guidelines developed",
         default=0,
     )
     f3_4 = models.PositiveSmallIntegerField(
-        verbose_name="Number of coral restoration trainings", default=0
+        verbose_name="Number of coral reef restoration trainings", default=0
     )
     f3_5a = models.PositiveSmallIntegerField(
-        verbose_name="Number of people engaged in coral restoration [men]", default=0
+        verbose_name="Number of people engaged in coral reef restoration [men]", default=0
     )
     f3_5b = models.PositiveSmallIntegerField(
-        verbose_name="Number of people engaged in coral restoration [women]", default=0
+        verbose_name="Number of people engaged in coral reef restoration [women]", default=0
     )
     f3_5c = models.PositiveSmallIntegerField(
-        verbose_name="Number of people engaged in coral restoration [youth]",
+        verbose_name="Number of people engaged in coral reef restoration [youth]",
         null=True,
         blank=True,
     )
     f3_5d = models.PositiveSmallIntegerField(
-        verbose_name="Number of people engaged in coral restoration [indigenous]",
+        verbose_name="Number of people engaged in coral reef restoration [indigenous]",
         null=True,
         blank=True,
     )
     f3_6 = models.PositiveSmallIntegerField(
-        verbose_name="Number of response plans (incl. financial mechanisms, eg., insurance) in place to support coral restoration after severe shocks (e.g,. storms, bleaching)",
+        verbose_name="Number of response plans to support coral reef restoration after severe shocks",
         default=0,
     )
     f3_notes = models.TextField(blank=True)
@@ -127,12 +126,12 @@ class GFCRIndicatorSet(BaseModel):
         default=0,
     )
     f4_2 = models.DecimalField(
-        max_digits=4, decimal_places=1, verbose_name="Average macroalgae (%)", default=0
+        max_digits=4, decimal_places=1, verbose_name="Average macroalgae cover (%)", default=0
     )
     f4_3 = models.DecimalField(
         max_digits=5,
         decimal_places=1,
-        verbose_name="Median reef fish biomass (kg/ha)",
+        verbose_name="Average reef fish biomass (kg/ha)",
         default=0,
     )
     f4_start_date = models.DateField(default=date.today)
@@ -147,115 +146,115 @@ class GFCRIndicatorSet(BaseModel):
         default=0,
     )
     f5_3 = models.PositiveSmallIntegerField(
-        verbose_name="Number of local scientific/research partners involved in strengthening capacity for participation and co-development (e.g., national universities, regional science organizations)",
+        verbose_name="Number of local scientific/research partners involved in strengthening capacity for participation and co-development",
         default=0,
     )
     f5_4a = models.PositiveSmallIntegerField(
-        verbose_name="Number of local practitioners trained / supported in coral reef conservation (e.g. community rangers) [men]",
+        verbose_name="Number of local practitioners trained / supported in coral reef conservation and management [men]",
         default=0,
     )
     f5_4b = models.PositiveSmallIntegerField(
-        verbose_name="Number of local practitioners trained / supported in coral reef conservation (e.g. community rangers) [women]",
+        verbose_name="Number of local practitioners trained / supported in coral reef conservation and management [women]",
         default=0,
     )
     f5_4c = models.PositiveSmallIntegerField(
-        verbose_name="Number of local practitioners trained / supported in coral reef conservation (e.g. community rangers) [youth]",
+        verbose_name="Number of local practitioners trained / supported in coral reef conservation and management [youth]",
         null=True,
         blank=True,
     )
     f5_4d = models.PositiveSmallIntegerField(
-        verbose_name="Number of local practitioners trained / supported in coral reef conservation (e.g. community rangers) [indigenous]",
+        verbose_name="Number of local practitioners trained / supported in coral reef conservation and management [indigenous]",
         null=True,
         blank=True,
     )
     f5_5 = models.PositiveSmallIntegerField(
-        verbose_name="Number of agreements with local authorities or fishing cooperatives to manage marine resources (e.g., LMMAs, MPAs, OECMs)",
+        verbose_name="Number of agreements with local authorities or fishing cooperatives to manage marine resources",
         default=0,
     )
     f5_6 = models.PositiveSmallIntegerField(
-        verbose_name="Number of national policies linked to GFCR engagement, (e.g., NBSAPs, blue economy policies, national MPA declarations)",
+        verbose_name="Number of national policies linked to GFCR engagement",
         default=0,
     )
     f5_notes = models.TextField(blank=True)
     f6_1a = models.PositiveSmallIntegerField(
-        verbose_name="Number of direct jobs created (disaggregated by gender, age, Indigenous peoples) [men]",
+        verbose_name="Number of direct jobs created (disaggregated by gender, age, youth, Indigenous peoples) [men]",
         default=0,
     )
     f6_1b = models.PositiveSmallIntegerField(
-        verbose_name="Number of direct jobs created (disaggregated by gender, age, Indigenous peoples) [women]",
+        verbose_name="Number of direct jobs created (disaggregated by gender, age, youth, Indigenous peoples) [women]",
         default=0,
     )
     f6_1c = models.PositiveSmallIntegerField(
-        verbose_name="Number of direct jobs created (disaggregated by gender, age, Indigenous peoples) [youth]",
+        verbose_name="Number of direct jobs created (disaggregated by gender, age, youth, Indigenous peoples) [youth]",
         null=True,
         blank=True,
     )
     f6_1d = models.PositiveSmallIntegerField(
-        verbose_name="Number of direct jobs created (disaggregated by gender, age, Indigenous peoples) [indigenous]",
+        verbose_name="Number of direct jobs created (disaggregated by gender, age, youth, Indigenous peoples) [indigenous]",
         null=True,
         blank=True,
     )
     f6_2a = models.PositiveSmallIntegerField(
-        verbose_name="Number of people with increased income and/or nutrition from GFCR support (disaggregated by gender, age, Indigenous peoples) [men]",
+        verbose_name="Number of people with increased income and/or nutrition from GFCR support (disaggregated by gender, age, youth, Indigenous peoples) [men]",
         default=0,
     )
     f6_2b = models.PositiveSmallIntegerField(
-        verbose_name="Number of people with increased income and/or nutrition from GFCR support (disaggregated by gender, age, Indigenous peoples) [women]",
+        verbose_name="Number of people with increased income and/or nutrition from GFCR support (disaggregated by gender, age, youth, Indigenous peoples) [women]",
         default=0,
     )
     f6_2c = models.PositiveSmallIntegerField(
-        verbose_name="Number of people with increased income and/or nutrition from GFCR support (disaggregated by gender, age, Indigenous peoples) [youth]",
+        verbose_name="Number of people with increased income and/or nutrition from GFCR support (disaggregated by gender, age, youth, Indigenous peoples) [youth]",
         null=True,
         blank=True,
     )
     f6_2d = models.PositiveSmallIntegerField(
-        verbose_name="Number of people with increased income and/or nutrition from GFCR support (disaggregated by gender, age, Indigenous peoples) [indigenous]",
+        verbose_name="Number of people with increased income and/or nutrition from GFCR support (disaggregated by gender, age, youth, Indigenous peoples) [indigenous]",
         null=True,
         blank=True,
     )
     f6_notes = models.TextField(blank=True)
     f7_1a = models.PositiveSmallIntegerField(
-        verbose_name="Total direct beneficiaries (disaggregated by gender, age, Indigenous peoples) [men]",
+        verbose_name="Total direct beneficiaries (disaggregated by gender, age, youth, Indigenous peoples) [men]",
         default=0,
     )
     f7_1b = models.PositiveSmallIntegerField(
-        verbose_name="Total direct beneficiaries (disaggregated by gender, age, Indigenous peoples) [women]",
+        verbose_name="Total direct beneficiaries (disaggregated by gender, age, youth, Indigenous peoples) [women]",
         default=0,
     )
     f7_1c = models.PositiveSmallIntegerField(
-        verbose_name="Total direct beneficiaries (disaggregated by gender, age, Indigenous peoples) [youth]",
+        verbose_name="Total direct beneficiaries (disaggregated by gender, age, youth, Indigenous peoples) [youth]",
         null=True,
         blank=True,
     )
     f7_1d = models.PositiveSmallIntegerField(
-        verbose_name="Total direct beneficiaries (disaggregated by gender, age, Indigenous peoples) [indigenous]",
+        verbose_name="Total direct beneficiaries (disaggregated by gender, age, youth, Indigenous peoples) [indigenous]",
         null=True,
         blank=True,
     )
     f7_2a = models.PositiveSmallIntegerField(
-        verbose_name="Total indirect beneficiaries (disaggregated by gender, age, Indigenous peoples) [men]",
+        verbose_name="Total indirect beneficiaries (disaggregated by gender, age, youth, Indigenous peoples) [men]",
         default=0,
     )
     f7_2b = models.PositiveSmallIntegerField(
-        verbose_name="Total indirect beneficiaries (disaggregated by gender, age, Indigenous peoples) [women]",
+        verbose_name="Total indirect beneficiaries (disaggregated by gender, age, youth, Indigenous peoples) [women]",
         default=0,
     )
     f7_2c = models.PositiveSmallIntegerField(
-        verbose_name="Total indirect beneficiaries (disaggregated by gender, age, Indigenous peoples) [youth]",
+        verbose_name="Total indirect beneficiaries (disaggregated by gender, age, youth, Indigenous peoples) [youth]",
         null=True,
         blank=True,
     )
     f7_2d = models.PositiveSmallIntegerField(
-        verbose_name="Total indirect beneficiaries (disaggregated by gender, age, Indigenous peoples) [indigenous]",
+        verbose_name="Total indirect beneficiaries (disaggregated by gender, age, youth, Indigenous peoples) [indigenous]",
         null=True,
         blank=True,
     )
     f7_3 = models.PositiveSmallIntegerField(
-        verbose_name="Number of financial mechanisms/reforms to help coastal communities respond and recover from external shocks (e.g., insurance, loans, village savings, restoration crisis plans, etc)",
+        verbose_name="Number of financial mechanisms/reforms to help coastal communities respond and recover from external shocks",
         default=0,
     )
     f7_4 = models.PositiveSmallIntegerField(
-        verbose_name="Number of governance reforms/policies to support response and recovery to external shocks (e.g., crisis management plans, reforms for temporary alternative employment)",
+        verbose_name="Number of governance reforms/policies to support response and recovery to external shocks",
         default=0,
     )
     f7_notes = models.TextField(blank=True)
@@ -312,9 +311,11 @@ class GFCRFinanceSolution(BaseModel):
         2024, 5, 27, 0, 0, 0, 0, pytz.UTC
     )
 
+    GFCR_FUNDED = "gfcr_funded"
+    NON_GFCR_FUNDED = "non_gfcr_funded"
     INCUBATOR_CHOICES = (
-        ("gfcr_funded", "Yes: GFCR-funded"),
-        ("non_gfcr_funded", "Yes: Non-GFCR-funded"),
+        (GFCR_FUNDED, "Yes: GFCR-funded"),
+        (NON_GFCR_FUNDED, "Yes: Non-GFCR-funded"),
     )
     INCUBATOR_CHOICES_UPDATED_ON = datetime.datetime(2024, 5, 28, 0, 0, 0, 0, pytz.UTC)
 
@@ -343,6 +344,11 @@ class GFCRFinanceSolution(BaseModel):
     class Meta:
         db_table = "gfcr_finance_solution"
         ordering = ["created_on"]
+
+    def get_sustainable_finance_mechanisms_display(self):
+        """Returns the display names of the finance mechanisms."""
+        choice_dict = dict(self.SUSTAINABLE_FINANCE_MECHANISM_CHOICES)
+        return [choice_dict.get(value, value) for value in self.sustainable_finance_mechanisms]
 
 
 class GFCRInvestmentSource(BaseModel):
@@ -413,8 +419,8 @@ class GFCRRevenue(BaseModel):
     )
     revenue_type = models.CharField(max_length=50, choices=REVENUE_TYPE_CHOICES)
     sustainable_revenue_stream = models.BooleanField(default=False)
-    annual_revenue = models.DecimalField(
-        max_digits=11, decimal_places=2, verbose_name="Annual revenue in USD", default=0
+    revenue_amount = models.DecimalField(
+        max_digits=11, decimal_places=2, verbose_name="Revenue amount in USD", default=0
     )
     notes = models.TextField(blank=True)
 
