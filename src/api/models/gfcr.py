@@ -29,7 +29,7 @@ class GFCRIndicatorSet(BaseModel):
     f1_1 = models.DecimalField(
         max_digits=9,
         decimal_places=3,
-        verbose_name="Total area of coral reefs in GFCR programming (sq.km)",
+        verbose_name="Total area of coral reefs in GFCR Programme (sq.km)",
         default=0,
     )
     f1_notes = models.TextField(blank=True)
@@ -89,33 +89,33 @@ class GFCRIndicatorSet(BaseModel):
         default=0,
     )
     f3_2 = models.PositiveSmallIntegerField(
-        verbose_name="Number of in situ coral restoration projects", default=0
+        verbose_name="Number of in situ coral reef restoration projects", default=0
     )
     f3_3 = models.PositiveSmallIntegerField(
-        verbose_name="Number of coral restoration plans, technologies, strategies or guidelines developed",
+        verbose_name="Number of coral reef restoration plans, technologies, strategies or guidelines developed",
         default=0,
     )
     f3_4 = models.PositiveSmallIntegerField(
-        verbose_name="Number of coral restoration trainings", default=0
+        verbose_name="Number of coral reef restoration trainings", default=0
     )
     f3_5a = models.PositiveSmallIntegerField(
-        verbose_name="Number of people engaged in coral restoration [men]", default=0
+        verbose_name="Number of people engaged in coral reef restoration [men]", default=0
     )
     f3_5b = models.PositiveSmallIntegerField(
-        verbose_name="Number of people engaged in coral restoration [women]", default=0
+        verbose_name="Number of people engaged in coral reef restoration [women]", default=0
     )
     f3_5c = models.PositiveSmallIntegerField(
-        verbose_name="Number of people engaged in coral restoration [youth]",
+        verbose_name="Number of people engaged in coral reef restoration [youth]",
         null=True,
         blank=True,
     )
     f3_5d = models.PositiveSmallIntegerField(
-        verbose_name="Number of people engaged in coral restoration [indigenous]",
+        verbose_name="Number of people engaged in coral reef restoration [indigenous]",
         null=True,
         blank=True,
     )
     f3_6 = models.PositiveSmallIntegerField(
-        verbose_name="Number of response plans (incl. financial mechanisms, eg., insurance) in place to support coral restoration after severe shocks (e.g,. storms, bleaching)",
+        verbose_name="Number of response plans to support coral reef restoration after severe shocks",
         default=0,
     )
     f3_notes = models.TextField(blank=True)
@@ -126,7 +126,7 @@ class GFCRIndicatorSet(BaseModel):
         default=0,
     )
     f4_2 = models.DecimalField(
-        max_digits=4, decimal_places=1, verbose_name="Average macroalgae (%)", default=0
+        max_digits=4, decimal_places=1, verbose_name="Average macroalgae cover (%)", default=0
     )
     f4_3 = models.DecimalField(
         max_digits=5,
@@ -150,20 +150,20 @@ class GFCRIndicatorSet(BaseModel):
         default=0,
     )
     f5_4a = models.PositiveSmallIntegerField(
-        verbose_name="Number of local practitioners trained / supported in coral reef conservation (e.g. community rangers) [men]",
+        verbose_name="Number of local practitioners trained / supported in coral reef conservation and management [men]",
         default=0,
     )
     f5_4b = models.PositiveSmallIntegerField(
-        verbose_name="Number of local practitioners trained / supported in coral reef conservation (e.g. community rangers) [women]",
+        verbose_name="Number of local practitioners trained / supported in coral reef conservation and management [women]",
         default=0,
     )
     f5_4c = models.PositiveSmallIntegerField(
-        verbose_name="Number of local practitioners trained / supported in coral reef conservation (e.g. community rangers) [youth]",
+        verbose_name="Number of local practitioners trained / supported in coral reef conservation and management [youth]",
         null=True,
         blank=True,
     )
     f5_4d = models.PositiveSmallIntegerField(
-        verbose_name="Number of local practitioners trained / supported in coral reef conservation (e.g. community rangers) [indigenous]",
+        verbose_name="Number of local practitioners trained / supported in coral reef conservation and management [indigenous]",
         null=True,
         blank=True,
     )
@@ -254,7 +254,7 @@ class GFCRIndicatorSet(BaseModel):
         default=0,
     )
     f7_4 = models.PositiveSmallIntegerField(
-        verbose_name="Number of governance reforms/policies to support response and recovery to external shocks (e.g., crisis management plans, reforms for temporary alternative employment)",
+        verbose_name="Number of governance reforms/policies to support response and recovery to external shocks",
         default=0,
     )
     f7_notes = models.TextField(blank=True)
@@ -419,8 +419,8 @@ class GFCRRevenue(BaseModel):
     )
     revenue_type = models.CharField(max_length=50, choices=REVENUE_TYPE_CHOICES)
     sustainable_revenue_stream = models.BooleanField(default=False)
-    annual_revenue = models.DecimalField(
-        max_digits=11, decimal_places=2, verbose_name="Annual revenue in USD", default=0
+    revenue_amount = models.DecimalField(
+        max_digits=11, decimal_places=2, verbose_name="Revenue amount in USD", default=0
     )
     notes = models.TextField(blank=True)
 

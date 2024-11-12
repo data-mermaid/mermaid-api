@@ -198,7 +198,7 @@ def revenue_data(indicator_sets):
                     + [
                         rev.get_revenue_type_display(),
                         castutils.to_yesno(rev.sustainable_revenue_stream),
-                        rev.annual_revenue,
+                        rev.revenue_amount,
                     ]
                 )
 
