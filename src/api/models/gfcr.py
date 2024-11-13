@@ -177,75 +177,75 @@ class GFCRIndicatorSet(BaseModel):
     )
     f5_notes = models.TextField(blank=True)
     f6_1a = models.PositiveSmallIntegerField(
-        verbose_name="Number of direct jobs created (disaggregated by gender, age, youth, Indigenous peoples) [men]",
+        verbose_name="Number of direct jobs created (disaggregated by gender, youth, Indigenous peoples) [men]",
         default=0,
     )
     f6_1b = models.PositiveSmallIntegerField(
-        verbose_name="Number of direct jobs created (disaggregated by gender, age, youth, Indigenous peoples) [women]",
+        verbose_name="Number of direct jobs created (disaggregated by gender, youth, Indigenous peoples) [women]",
         default=0,
     )
     f6_1c = models.PositiveSmallIntegerField(
-        verbose_name="Number of direct jobs created (disaggregated by gender, age, youth, Indigenous peoples) [youth]",
+        verbose_name="Number of direct jobs created (disaggregated by gender, youth, Indigenous peoples) [youth]",
         null=True,
         blank=True,
     )
     f6_1d = models.PositiveSmallIntegerField(
-        verbose_name="Number of direct jobs created (disaggregated by gender, age, youth, Indigenous peoples) [indigenous]",
+        verbose_name="Number of direct jobs created (disaggregated by gender, youth, Indigenous peoples) [indigenous]",
         null=True,
         blank=True,
     )
     f6_2a = models.PositiveSmallIntegerField(
-        verbose_name="Number of people with increased income and/or nutrition from GFCR support (disaggregated by gender, age, youth, Indigenous peoples) [men]",
+        verbose_name="Number of people with increased income and/or nutrition from GFCR support (disaggregated by gender, youth, Indigenous peoples) [men]",
         default=0,
     )
     f6_2b = models.PositiveSmallIntegerField(
-        verbose_name="Number of people with increased income and/or nutrition from GFCR support (disaggregated by gender, age, youth, Indigenous peoples) [women]",
+        verbose_name="Number of people with increased income and/or nutrition from GFCR support (disaggregated by gender, youth, Indigenous peoples) [women]",
         default=0,
     )
     f6_2c = models.PositiveSmallIntegerField(
-        verbose_name="Number of people with increased income and/or nutrition from GFCR support (disaggregated by gender, age, youth, Indigenous peoples) [youth]",
+        verbose_name="Number of people with increased income and/or nutrition from GFCR support (disaggregated by gender, youth, Indigenous peoples) [youth]",
         null=True,
         blank=True,
     )
     f6_2d = models.PositiveSmallIntegerField(
-        verbose_name="Number of people with increased income and/or nutrition from GFCR support (disaggregated by gender, age, youth, Indigenous peoples) [indigenous]",
+        verbose_name="Number of people with increased income and/or nutrition from GFCR support (disaggregated by gender, youth, Indigenous peoples) [indigenous]",
         null=True,
         blank=True,
     )
     f6_notes = models.TextField(blank=True)
     f7_1a = models.PositiveSmallIntegerField(
-        verbose_name="Total direct beneficiaries (disaggregated by gender, age, youth, Indigenous peoples) [men]",
+        verbose_name="Total direct beneficiaries (disaggregated by gender, youth, Indigenous peoples) [men]",
         default=0,
     )
     f7_1b = models.PositiveSmallIntegerField(
-        verbose_name="Total direct beneficiaries (disaggregated by gender, age, youth, Indigenous peoples) [women]",
+        verbose_name="Total direct beneficiaries (disaggregated by gender, youth, Indigenous peoples) [women]",
         default=0,
     )
     f7_1c = models.PositiveSmallIntegerField(
-        verbose_name="Total direct beneficiaries (disaggregated by gender, age, youth, Indigenous peoples) [youth]",
+        verbose_name="Total direct beneficiaries (disaggregated by gender, youth, Indigenous peoples) [youth]",
         null=True,
         blank=True,
     )
     f7_1d = models.PositiveSmallIntegerField(
-        verbose_name="Total direct beneficiaries (disaggregated by gender, age, youth, Indigenous peoples) [indigenous]",
+        verbose_name="Total direct beneficiaries (disaggregated by gender, youth, Indigenous peoples) [indigenous]",
         null=True,
         blank=True,
     )
     f7_2a = models.PositiveSmallIntegerField(
-        verbose_name="Total indirect beneficiaries (disaggregated by gender, age, youth, Indigenous peoples) [men]",
+        verbose_name="Total indirect beneficiaries (disaggregated by gender, youth, Indigenous peoples) [men]",
         default=0,
     )
     f7_2b = models.PositiveSmallIntegerField(
-        verbose_name="Total indirect beneficiaries (disaggregated by gender, age, youth, Indigenous peoples) [women]",
+        verbose_name="Total indirect beneficiaries (disaggregated by gender, youth, Indigenous peoples) [women]",
         default=0,
     )
     f7_2c = models.PositiveSmallIntegerField(
-        verbose_name="Total indirect beneficiaries (disaggregated by gender, age, youth, Indigenous peoples) [youth]",
+        verbose_name="Total indirect beneficiaries (disaggregated by gender, youth, Indigenous peoples) [youth]",
         null=True,
         blank=True,
     )
     f7_2d = models.PositiveSmallIntegerField(
-        verbose_name="Total indirect beneficiaries (disaggregated by gender, age, youth, Indigenous peoples) [indigenous]",
+        verbose_name="Total indirect beneficiaries (disaggregated by gender, youth, Indigenous peoples) [indigenous]",
         null=True,
         blank=True,
     )
