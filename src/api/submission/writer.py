@@ -458,7 +458,7 @@ class BenthicPhotoQuadratTransectProtocolWriter(ProtocolWriter):
             observations_data.append(
                 {
                     "benthic_photo_quadrat_transect": benthic_photo_quadrat_transect_id,
-                    "image_id": image_id,
+                    "image": image_id,
                     "attribute": attribute_id,
                     "growth_form": growth_form_id,
                     "quadrat_number": quadrat_num,
