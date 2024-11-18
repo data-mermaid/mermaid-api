@@ -240,6 +240,7 @@ class CommonStack(Stack):
             vpc=self.vpc,
             internet_facing=True,
             deletion_protection=True,
+            idle_timeout=Duration.seconds(300),  # To match webserver timeout
         )
 
         # DNS setup
