@@ -200,8 +200,36 @@ class CommonStack(Stack):
         )
         auto_scaling_group.add_user_data("yum update --security")
 
+        user_data_linux = ec2.UserData.for_linux()
+        user_data_linux.add_commands("yum update --security")
+
+        launch_template = ec2.LaunchTemplate(
+            self,
+            "ASGLaunchTempalte",
+            security_group=self.ecs_sg,
+            instance_type=ec2.InstanceType("t3a.large"),
+            machine_image=ecs.EcsOptimizedImage.amazon_linux2(),
+            # spot_options=ec2.LaunchTemplateSpotOptions(
+            #     interruption_behavior=ec2.SpotInstanceInterruption.STOP,
+            # ),
+            user_data=user_data_linux,
+        )
+
+        auto_scaling_group_lt = autoscale.AutoScalingGroup(
+            self,
+            "AsgLT",
+            vpc=self.vpc,
+            launch_template=launch_template,
+            min_capacity=1,
+            max_capacity=6,
+            max_instance_lifetime=Duration.days(7),
+            update_policy=autoscale.UpdatePolicy.rolling_update(),
+            # NOTE: not setting the desired capacity so ECS can manage it.
+        )
+
         # Note: this will allow any container running on these EC2s to access RDS
         self.database.connections.allow_default_port_from(auto_scaling_group)
+        self.database.connections.allow_default_port_from(auto_scaling_group_lt)
 
         capacity_provider = ecs.AsgCapacityProvider(
             self,
@@ -209,14 +237,28 @@ class CommonStack(Stack):
             auto_scaling_group=auto_scaling_group,
             enable_managed_scaling=True,
             enable_managed_termination_protection=False,
+            machine_image_type=ecs.MachineImageType.AMAZON_LINUX_2,
         )
         self.cluster.add_asg_capacity_provider(capacity_provider)
+
+        capacity_provider_lt = ecs.AsgCapacityProvider(
+            self,
+            "AsgCapacityProviderLT",
+            auto_scaling_group=auto_scaling_group_lt,
+            enable_managed_scaling=True,
+            enable_managed_termination_protection=False,
+            machine_image_type=ecs.MachineImageType.AMAZON_LINUX_2,
+        )
+        self.cluster.add_asg_capacity_provider(capacity_provider_lt)
 
         self.cluster.add_default_capacity_provider_strategy(
             [
                 ecs.CapacityProviderStrategy(
                     capacity_provider=capacity_provider.capacity_provider_name, weight=100
-                )
+                ),
+                ecs.CapacityProviderStrategy(
+                    capacity_provider=capacity_provider_lt.capacity_provider_name, weight=50
+                ),
             ]
         )
 
