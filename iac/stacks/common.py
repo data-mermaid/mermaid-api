@@ -1,7 +1,6 @@
 import json
 
 from aws_cdk import (
-    CfnOutput,
     Duration,
     RemovalPolicy,
     Stack,
@@ -61,15 +60,6 @@ class CommonStack(Stack):
             "s3-endpoint",
             service=ec2.GatewayVpcEndpointAwsService.S3,
             subnets=[ec2.SubnetSelection(subnet_type=ec2.SubnetType.PRIVATE_WITH_EGRESS)],
-        )
-
-        # create a SG for the ECR endpoints
-        vpc_ep_ecr_sg = ec2.SecurityGroup(
-            self,
-            id="VPCEndpointsSecurityGroup",
-            vpc=self.vpc,
-            allow_all_outbound=True,
-            description="Security group for VPC Endpoints for ECR",
         )
 
         # create a secret so we can manually set the username
@@ -182,15 +172,6 @@ class CommonStack(Stack):
             logging=ecs.ExecuteCommandLogging.OVERRIDE,
         )
 
-        self.fargate_cluster = ecs.Cluster(
-            self,
-            "MermaidApiCluster",
-            vpc=self.vpc,
-            container_insights=True,
-            enable_fargate_capacity_providers=True,
-            execute_command_configuration=ecs_exec_config,
-        )
-
         self.cluster = ecs.Cluster(
             self,
             "EC2MermaidApiCluster",
@@ -199,6 +180,11 @@ class CommonStack(Stack):
             enable_fargate_capacity_providers=True,
             execute_command_configuration=ecs_exec_config,
         )
+
+        self.ecs_sg = ec2.SecurityGroup(self, id="EcsSg", vpc=self.vpc, allow_all_outbound=True)
+
+        # Allow ECS tasks to RDS
+        self.database.connections.allow_default_port_from(self.ecs_sg)
 
         auto_scaling_group = autoscale.AutoScalingGroup(
             self,
@@ -272,38 +258,7 @@ class CommonStack(Stack):
         )
         self.load_balancer.add_redirect()
 
-        self.ecs_sg = ec2.SecurityGroup(self, id="EcsSg", vpc=self.vpc, allow_all_outbound=True)
-
-        # Allow ECS tasks to RDS
-        self.ecs_sg.connections.allow_to(
-            self.database.connections,
-            port_range=ec2.Port.tcp(5432),
-            description="Allow ECS tasks to RDS",
-        )
-
-        # Allow ECS tasks to ECR VPC endpoints
-        self.ecs_sg.connections.allow_to(
-            vpc_ep_ecr_sg.connections,
-            port_range=ec2.Port.tcp(443),
-            description="Allow ECS tasks to ECR VPC endpoints",
-        )
-
         create_cdk_bot_user(self, self.account)
-
-        # The following are temporary until prod env is upto date.
-        CfnOutput(
-            self,
-            "ExportsOutputFnGetAttMermaidApiClusterB0854EC6Arn311C07EE",
-            value=self.fargate_cluster.cluster_arn,
-            export_name="mermaid-api-infra-common:ExportsOutputFnGetAttMermaidApiClusterB0854EC6Arn311C07EE",
-        )
-
-        CfnOutput(
-            self,
-            "ExportsOutputRefMermaidApiClusterB0854EC639332EDF",
-            value=self.fargate_cluster.cluster_name,
-            export_name="mermaid-api-infra-common:ExportsOutputRefMermaidApiClusterB0854EC639332EDF",
-        )
 
 
 def create_cdk_bot_user(self, account: str):
