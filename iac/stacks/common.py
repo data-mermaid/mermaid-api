@@ -63,15 +63,6 @@ class CommonStack(Stack):
             subnets=[ec2.SubnetSelection(subnet_type=ec2.SubnetType.PRIVATE_WITH_EGRESS)],
         )
 
-        # create a SG for the ECR endpoints
-        vpc_ep_ecr_sg = ec2.SecurityGroup(
-            self,
-            id="VPCEndpointsSecurityGroup",
-            vpc=self.vpc,
-            allow_all_outbound=True,
-            description="Security group for VPC Endpoints for ECR",
-        )
-
         # create a secret so we can manually set the username
         database_credentials_secret = sm.Secret(
             self,
@@ -200,6 +191,11 @@ class CommonStack(Stack):
             execute_command_configuration=ecs_exec_config,
         )
 
+        self.ecs_sg = ec2.SecurityGroup(self, id="EcsSg", vpc=self.vpc, allow_all_outbound=True)
+
+        # Allow ECS tasks to RDS
+        self.database.connections.allow_default_port_from(self.ecs_sg)
+
         auto_scaling_group = autoscale.AutoScalingGroup(
             self,
             "ASG",
@@ -271,22 +267,6 @@ class CommonStack(Stack):
             certificates=[self.default_cert],
         )
         self.load_balancer.add_redirect()
-
-        self.ecs_sg = ec2.SecurityGroup(self, id="EcsSg", vpc=self.vpc, allow_all_outbound=True)
-
-        # Allow ECS tasks to RDS
-        self.ecs_sg.connections.allow_to(
-            self.database.connections,
-            port_range=ec2.Port.tcp(5432),
-            description="Allow ECS tasks to RDS",
-        )
-
-        # Allow ECS tasks to ECR VPC endpoints
-        self.ecs_sg.connections.allow_to(
-            vpc_ep_ecr_sg.connections,
-            port_range=ec2.Port.tcp(443),
-            description="Allow ECS tasks to ECR VPC endpoints",
-        )
 
         create_cdk_bot_user(self, self.account)
 
