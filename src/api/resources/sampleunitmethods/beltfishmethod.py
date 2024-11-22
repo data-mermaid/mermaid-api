@@ -56,7 +56,9 @@ class BeltFishSerializer(BaseAPISerializer):
 
 
 class ObsBeltFishSerializer(BaseAPISerializer):
-    size = serializers.DecimalField(max_digits=5, decimal_places=1, coerce_to_string=False)
+    size = serializers.DecimalField(
+        max_digits=5, decimal_places=1, min_value=0, coerce_to_string=False
+    )
 
     class Meta:
         model = ObsBeltFish
@@ -68,6 +70,11 @@ class ObsBeltFishSerializer(BaseAPISerializer):
                 }
             }
         }
+
+    def validate_size(self, value):
+        if value is not None and value < 0:
+            raise serializers.ValidationError("Size must be greater than or equal to 0.")
+        return value
 
 
 class BeltFishMethodSerializer(BeltFishSerializer):

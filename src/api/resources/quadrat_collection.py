@@ -1,9 +1,19 @@
+from rest_framework import serializers
+
 from ..models import QuadratCollection
 from .base import BaseProjectApiViewSet
 from .sample_units_base import SampleUnitFilterSet, SampleUnitSerializer
 
 
 class QuadratCollectionSerializer(SampleUnitSerializer):
+    quadrat_size = serializers.DecimalField(
+        max_digits=6,
+        decimal_places=2,
+        coerce_to_string=False,
+        min_value=0,
+        error_messages={"null": "Quadrat size is required"},
+    )
+
     class Meta:
         model = QuadratCollection
         exclude = []

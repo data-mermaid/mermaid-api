@@ -2,7 +2,7 @@ import django_filters
 from rest_framework import serializers
 
 from ..exceptions import check_uuid
-from ..models import Management, Project
+from ..models import Management, Project, validate_max_year
 from ..permissions import AuthenticatedReadOnlyPermission
 from .base import (
     BaseAPIFilterSet,
@@ -53,7 +53,12 @@ class ManagementSerializer(BaseAPISerializer):
     rules = serializers.SerializerMethodField(source="get_rules")
     project_name = serializers.SerializerMethodField()
     size = serializers.DecimalField(
-        max_digits=12, decimal_places=3, coerce_to_string=False, allow_null=True, required=False
+        max_digits=12,
+        decimal_places=3,
+        coerce_to_string=False,
+        allow_null=True,
+        required=False,
+        min_value=0,
     )
 
     class Meta:
@@ -67,6 +72,16 @@ class ManagementSerializer(BaseAPISerializer):
 
     def get_project_name(self, obj):
         return obj.project.name
+
+    def validate_est_year(self, value):
+        if value is None:
+            return value
+
+        if value < 0:
+            raise serializers.ValidationError("Year must be a positive integer")
+
+        validate_max_year(value)
+        return value
 
 
 class ManagementFilterSet(BaseAPIFilterSet):

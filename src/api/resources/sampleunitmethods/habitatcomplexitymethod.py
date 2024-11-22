@@ -53,6 +53,8 @@ class HabitatComplexitySerializer(BaseAPISerializer):
         max_digits=4,
         decimal_places=2,
         coerce_to_string=False,
+        min_value=0,
+        max_value=10,
         error_messages={"null": "Interval size is required"},
     )
 
