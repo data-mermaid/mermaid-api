@@ -16,9 +16,9 @@ from aws_cdk import (
     aws_s3 as s3,
 )
 from constructs import Construct
-from settings import ProjectSettings
-from stacks.constructs.worker import QueueWorker
 
+from iac.settings import ProjectSettings
+from iac.stacks.constructs.worker import QueueWorker
 
 class ApiStack(Stack):
     def __init__(
