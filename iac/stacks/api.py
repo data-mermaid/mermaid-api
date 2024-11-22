@@ -104,8 +104,8 @@ class ApiStack(Stack):
             )
 
         # Envir Vars
-        sqs_queue_name = f"mermaid-{config.env_id}-queue"
-        image_sqs_queue_name = f"mermaid-{config.env_id}-image-processing-queue"
+        sqs_queue_name = f"mermaid-{config.env_id}-general"
+        image_sqs_queue_name = f"mermaid-{config.env_id}-image-processing"
         environment = {
             "ENV": config.env_id,
             "ENVIRONMENT": config.env_id,
@@ -156,7 +156,7 @@ class ApiStack(Stack):
             logging=ecs.LogDrivers.aws_logs(stream_prefix="ScheduledBackupTask"),
         )
 
-        # create a scheduled fargate task
+        # create a scheduled task
         backup_task = ecs_patterns.ScheduledEc2Task(
             self,
             "ScheduledBackupTask",
@@ -264,11 +264,10 @@ class ApiStack(Stack):
         # Standard Worker
         worker = QueueWorker(
             self,
-            "Worker",
+            "General",
             config=config,
             cluster=cluster,
-            image_asset=image_asset,
-            container_security_group=container_security_group,
+            image_asset=ecs.ContainerImage.from_docker_image_asset(image_asset),
             api_secrets=api_secrets,
             environment=environment,
             public_bucket=public_bucket,
@@ -280,11 +279,10 @@ class ApiStack(Stack):
         # Image Worker
         image_worker = QueueWorker(
             self,
-            "ImageWorker",
+            "ImageProcess",
             config=config,
             cluster=cluster,
-            image_asset=image_asset,
-            container_security_group=container_security_group,
+            image_asset=ecs.ContainerImage.from_docker_image_asset(image_asset),
             api_secrets=api_secrets,
             environment=environment,
             public_bucket=public_bucket,
