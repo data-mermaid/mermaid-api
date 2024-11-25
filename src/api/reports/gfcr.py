@@ -253,6 +253,7 @@ def create_report_background(project_ids, request=None, send_email=None):
     req = MockRequest.load_request(request)
     submit_job(
         0,
+        True,
         create_report,
         project_ids,
         request=req,
