@@ -132,6 +132,7 @@ class CollectRecordViewSet(BaseProjectApiViewSet):
         profile = request.user.profile
         dryrun = truthy(request.data.get("dryrun"))
         clearexisting = truthy(request.data.get("clearexisting"))
+        validate = truthy(request.data.get("validate"))
 
         validate_config = None
         try:
@@ -164,7 +165,7 @@ class CollectRecordViewSet(BaseProjectApiViewSet):
                 None,
                 dry_run=dryrun,
                 clear_existing=clearexisting,
-                bulk_validation=False,
+                bulk_validation=validate,
                 bulk_submission=False,
                 validation_suppressants=validate_config,
                 serializer_class=CollectRecordSerializer,
@@ -179,6 +180,8 @@ class CollectRecordViewSet(BaseProjectApiViewSet):
         if "errors" in ingest_output:
             errors = ingest_output["errors"]
             return Response(errors, status=400)
+        elif "validate" in ingest_output:
+            return Response(ingest_output["validate"], status=400)
 
         return Response(CollectRecordSerializer(records, many=True).data)
 
