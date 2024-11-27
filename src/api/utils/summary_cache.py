@@ -212,12 +212,25 @@ def _update_project_summary_sample_events(
             project_name=project.name,
             project_admins=project_admins,
             project_notes=project.notes,
-            data_policy_beltfish=data_policies.get(project.data_policy_beltfish),
-            data_policy_benthiclit=data_policies.get(project.data_policy_benthiclit),
-            data_policy_benthicpit=data_policies.get(project.data_policy_benthicpit),
-            data_policy_habitatcomplexity=data_policies.get(project.data_policy_habitatcomplexity),
-            data_policy_bleachingqc=data_policies.get(project.data_policy_bleachingqc),
-            data_policy_benthicpqt=data_policies.get(project.data_policy_benthicpqt),
+            data_policy_beltfish=data_policies.get(
+                project.data_policy_beltfish, Project.data_policy_beltfish.field.default
+            ),
+            data_policy_benthiclit=data_policies.get(
+                project.data_policy_benthiclit, Project.data_policy_benthiclit.field.default
+            ),
+            data_policy_benthicpit=data_policies.get(
+                project.data_policy_benthicpit, Project.data_policy_benthicpit.field.default
+            ),
+            data_policy_habitatcomplexity=data_policies.get(
+                project.data_policy_habitatcomplexity,
+                Project.data_policy_habitatcomplexity.field.default,
+            ),
+            data_policy_bleachingqc=data_policies.get(
+                project.data_policy_bleachingqc, Project.data_policy_bleachingqc.field.default
+            ),
+            data_policy_benthicpqt=data_policies.get(
+                project.data_policy_benthicpqt, Project.data_policy_benthicpqt.field.default
+            ),
             tags=tags,
             records=records,
             created_on=timestamp,
