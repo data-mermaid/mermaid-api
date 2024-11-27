@@ -289,7 +289,11 @@ class SummarySampleEventSQLModel(SummarySampleEventBaseModel):
                 'percent_dead_avg', (CASE WHEN project.data_policy_bleachingqc < 50 AND NOT %(has_access)s THEN NULL ELSE
                 bleachingqc.percent_dead_avg END),
                 'percent_bleached_avg', (CASE WHEN project.data_policy_bleachingqc < 50 AND NOT %(has_access)s THEN NULL ELSE
-                bleachingqc.percent_bleached_avg END)
+                bleachingqc.percent_bleached_avg END),
+                'percent_cover_life_histories_avg', (CASE WHEN project.data_policy_bleachingqc < 50 AND NOT %(has_access)s THEN NULL ELSE
+                bleachingqc.percent_cover_life_histories_avg END),
+                'percent_cover_life_histories_sd', (CASE WHEN project.data_policy_bleachingqc < 50 AND NOT %(has_access)s THEN NULL ELSE
+                bleachingqc.percent_cover_life_histories_sd END)
             )), '{}'),
             'quadrat_benthic_percent', NULLIF(jsonb_strip_nulls(jsonb_build_object(
                 'sample_unit_count', bleachingqc.sample_unit_count,
@@ -558,7 +562,7 @@ class SummarySampleEventSQLModel(SummarySampleEventBaseModel):
         ) hc ON (sample_event.id = hc.sample_event_id)
 
         LEFT JOIN (
-            SELECT sample_event_id, 
+            SELECT bleachingqc_su.sample_event_id, 
             COUNT(pseudosu_id) AS sample_unit_count,
             ROUND(AVG(quadrat_size), 1) AS quadrat_size_avg,
             ROUND(AVG(count_total), 1) AS count_total_avg,
@@ -574,10 +578,30 @@ class SummarySampleEventSQLModel(SummarySampleEventBaseModel):
             ROUND(AVG(quadrat_count), 1) AS quadrat_count_avg,
             ROUND(AVG(percent_hard_avg), 1) AS percent_hard_avg_avg,
             ROUND(AVG(percent_soft_avg), 1) AS percent_soft_avg_avg,
-            ROUND(AVG(percent_algae_avg), 1) AS percent_algae_avg_avg
+            ROUND(AVG(percent_algae_avg), 1) AS percent_algae_avg_avg,
+            percent_cover_life_histories_avg,
+            percent_cover_life_histories_sd
             FROM bleachingqc_su
+            INNER JOIN (
+                SELECT sample_event_id,
+                jsonb_object_agg(bleachingqc_su_lh.name, ROUND(proportion_avg :: numeric, 2)) AS percent_cover_life_histories_avg,
+                jsonb_object_agg(bleachingqc_su_lh.name, ROUND(proportion_sd :: numeric, 2)) AS percent_cover_life_histories_sd
+                FROM (
+                    SELECT sample_event_id,
+                    life_history.key AS name,
+                    AVG(life_history.value :: float) AS proportion_avg,
+                    STDDEV(life_history.value :: float) AS proportion_sd
+                    FROM bleachingqc_su, 
+                    jsonb_each_text(percent_cover_life_histories) AS life_history
+                    GROUP BY sample_event_id, life_history.key
+                ) AS bleachingqc_su_lh
+                GROUP BY sample_event_id
+            ) AS benthicpit_se_lhs
+            ON bleachingqc_su.sample_event_id = benthicpit_se_lhs.sample_event_id
             GROUP BY
-            sample_event_id
+            bleachingqc_su.sample_event_id,
+            percent_cover_life_histories_avg,
+            percent_cover_life_histories_sd
         ) bleachingqc ON (sample_event.id = bleachingqc.sample_event_id)
 
         WHERE site.project_id = '%(project_id)s'::uuid
