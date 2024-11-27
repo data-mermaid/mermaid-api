@@ -596,8 +596,8 @@ class SummarySampleEventSQLModel(SummarySampleEventBaseModel):
                     GROUP BY sample_event_id, life_history.key
                 ) AS bleachingqc_su_lh
                 GROUP BY sample_event_id
-            ) AS benthicpit_se_lhs
-            ON bleachingqc_su.sample_event_id = benthicpit_se_lhs.sample_event_id
+            ) AS bleachingqc_se_lhs
+            ON bleachingqc_su.sample_event_id = bleachingqc_se_lhs.sample_event_id
             GROUP BY
             bleachingqc_su.sample_event_id,
             percent_cover_life_histories_avg,
