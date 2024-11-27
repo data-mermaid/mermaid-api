@@ -98,7 +98,7 @@ def _is_update_required(timestamp, project_id, model_cls):
     if rec is None:
         return True
 
-    return rec.created_on > ts
+    return rec.created_on < ts
 
 
 def _update_cache(
