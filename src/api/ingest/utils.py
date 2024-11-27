@@ -205,6 +205,7 @@ def ingest(
         finally:
             if dry_run is True or successful_save is False:
                 transaction.savepoint_rollback(sid)
+                record_ids = []
             else:
                 transaction.savepoint_commit(sid)
 

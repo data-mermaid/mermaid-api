@@ -2,8 +2,9 @@ import django_filters
 from rest_framework import serializers
 
 from ..exceptions import check_uuid
-from ..models import Management, Project, validate_max_year
+from ..models import Management, Project
 from ..permissions import AuthenticatedReadOnlyPermission
+from ..utils import validate_max_year
 from .base import (
     BaseAPIFilterSet,
     BaseAPISerializer,
@@ -58,7 +59,7 @@ class ManagementSerializer(BaseAPISerializer):
         coerce_to_string=False,
         allow_null=True,
         required=False,
-        min_value=0,
+        min_value=0.001,
     )
 
     class Meta:

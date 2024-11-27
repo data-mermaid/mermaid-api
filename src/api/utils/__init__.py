@@ -3,7 +3,6 @@ import numbers
 import re
 import subprocess
 import uuid
-from datetime import datetime, timezone
 from pathlib import Path
 from zipfile import ZIP_DEFLATED, ZipFile
 
@@ -13,6 +12,9 @@ from django.core.exceptions import ObjectDoesNotExist
 from django.db import IntegrityError, router
 from django.db.models.deletion import ProtectedError
 from django.db.models.fields.related import OneToOneRel
+from django.utils import timezone
+from django.utils.translation import gettext_lazy as _
+from rest_framework.exceptions import ValidationError
 
 IGNORE: str = "ignore"
 ERROR: str = "error"
@@ -172,11 +174,11 @@ def truthy(val):
 
 def create_iso_date_string(delimiter="-"):
     date_format = f"%y{delimiter}%m{delimiter}%d"
-    return datetime.now(timezone.utc).strftime(date_format)
+    return timezone.now().strftime(date_format)
 
 
 def create_timestamp(ttl=0):
-    return datetime.now(timezone.utc).timestamp() + ttl
+    return timezone.now().timestamp() + ttl
 
 
 def expired_timestamp(timestamp):
@@ -253,3 +255,12 @@ def zip_file(file_path, zip_name):
         z.write(file_path, arcname=file_path.name)
 
     return zip_file_path
+
+
+def validate_max_year(value):
+    current_year = timezone.now().year
+    if value > current_year:
+        raise ValidationError(
+            _("%(value)s is in the future"),
+            params={"value": value},
+        )

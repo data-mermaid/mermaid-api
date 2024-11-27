@@ -10,7 +10,7 @@ class QuadratCollectionSerializer(SampleUnitSerializer):
         max_digits=6,
         decimal_places=2,
         coerce_to_string=False,
-        min_value=0,
+        min_value=0.01,
         error_messages={"null": "Quadrat size is required"},
     )
 

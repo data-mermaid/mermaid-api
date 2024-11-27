@@ -190,14 +190,12 @@ class ValidationRunner:
         self.status = self._get_overall_status_level(statuses)
         if self.status in (OK, WARN):
             statuses.extend(
-                statuses.append(
-                    self._validate(
-                        validation,
-                        collect_record,
-                        collect_record_dict,
-                        request,
-                        existing_validations,
-                    )
+                self._validate(
+                    validation,
+                    collect_record,
+                    collect_record_dict,
+                    request,
+                    existing_validations,
                 )
                 for validation in delayed_validations
             )
