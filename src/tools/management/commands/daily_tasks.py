@@ -1,8 +1,6 @@
 from django.core.management import call_command
 from django.core.management.base import BaseCommand
 
-call_command("my_command", "foo", bar="baz")
-
 
 class Command(BaseCommand):
     help = """
@@ -10,5 +8,13 @@ class Command(BaseCommand):
     """
 
     def handle(self, **options):
-        call_command("dbbackup")
-        call_command("update_metrics")
+        try:
+            call_command("dbbackup")
+        except Exception as e:
+            self.stderr.write(f"Database backup error: {str(e)}")
+
+        try:
+            # Update metrics for the previous day (UTC)
+            call_command("update_metrics")
+        except Exception as e:
+            self.stderr.write(f"Update metrics error: {str(e)}")

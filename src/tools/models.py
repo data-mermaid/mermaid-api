@@ -29,10 +29,10 @@ class UserMetrics(models.Model):
     last_name = models.CharField(max_length=50, null=True, blank=True)
     email = models.CharField(max_length=50, null=True, blank=True)
     project_status = models.CharField(max_length=10)
-    num_submitted = models.IntegerField(default=0)
-    num_summary_views = models.IntegerField(default=0)
-    num_project_calls = models.IntegerField(default=0)
-    num_image_uploads = models.IntegerField(default=0)
+    num_submitted = models.PositiveIntegerField(default=0)
+    num_summary_views = models.PositiveIntegerField(default=0)
+    num_project_calls = models.PositiveIntegerField(default=0)
+    num_image_uploads = models.PositiveIntegerField(default=0)
     profiles = models.JSONField(null=True, blank=True)
 
     class Meta:

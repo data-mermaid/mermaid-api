@@ -20,8 +20,7 @@ class Command(BaseCommand):
                 datetime.strptime(date_str, "%Y-%m-%d"), timezone.get_current_timezone()
             )
         except ValueError:
-            self.stderr.write(self.style.ERROR("Invalid date format. Use YYYY-MM-DD."))
-            return
+            raise CommandError(f"Invalid date format for '{date_str}'. Use YYYY-MM-DD.")
 
     def handle(self, **options):
         start_date_str = options["start_date"]

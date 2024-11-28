@@ -5,7 +5,7 @@ from .models import UserMetrics
 
 
 @admin.register(UserMetrics)
-class ProjectAdmin(BaseAdmin):
+class UserMetricsAdmin(BaseAdmin):
     list_per_page = 50
     list_display = (
         "date",
