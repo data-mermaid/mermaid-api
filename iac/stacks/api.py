@@ -3,6 +3,7 @@ import os
 from aws_cdk import (
     Duration,
     Stack,
+    TimeZone,
     aws_applicationautoscaling as appscaling,
     aws_ec2 as ec2,
     aws_ecr_assets as ecr_assets,
@@ -152,7 +153,7 @@ class ApiStack(Stack):
             memory_limit_mib=config.api.backup_memory,
             secrets=api_secrets,
             environment=environment,
-            command=["python", "manage.py", "dbbackup", f"{config.env_id}"],
+            command=["python", "manage.py", "daily_tasks"],
             logging=ecs.LogDrivers.aws_logs(stream_prefix="ScheduledBackupTask"),
         )
 
@@ -160,7 +161,8 @@ class ApiStack(Stack):
         backup_task = ecs_patterns.ScheduledEc2Task(
             self,
             "ScheduledBackupTask",
-            schedule=appscaling.Schedule.rate(Duration.days(1)),
+            schedule=appscaling.Schedule.cron(hour="0", minute="0"),
+            time_zone=TimeZone.ETC_UTC,
             cluster=cluster,
             subnet_selection=ec2.SubnetSelection(
                 subnets=cluster.vpc.select_subnets(
