@@ -70,8 +70,6 @@ class DjangoSettings:
     mc_api_list_id_name: str = "common/mermaid-api/mc-api-list-id-Am5u1G"
     drf_recaptcha_secret_key_name: str = "common/mermaid-api/drf-recaptcha-secret-key-MdFr2W"
 
-    
-
 
 @dataclass
 class ProjectSettings:
