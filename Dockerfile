@@ -40,6 +40,7 @@ RUN rm ${APP_DIR}/requirements.txt
 
 ADD ./src .
 ADD ./iac/settings ./iac/settings
+ADD ./scripts/ ./scripts
 RUN chown -R ${APP_USER}:${APP_USER} ${APP_DIR}
 
 # Run everything from here forward as non-root
