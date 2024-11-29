@@ -71,11 +71,6 @@ class ObsBeltFishSerializer(BaseAPISerializer):
             }
         }
 
-    def validate_size(self, value):
-        if value is not None and value <= 0:
-            raise serializers.ValidationError("Size must be greater than or equal to 0.")
-        return value
-
 
 class BeltFishMethodSerializer(BeltFishSerializer):
     sample_event = SampleEventSerializer(source="transect.sample_event")
