@@ -3,7 +3,6 @@ import os
 from aws_cdk import (
     Duration,
     Stack,
-    TimeZone,
     aws_applicationautoscaling as appscaling,
     aws_ec2 as ec2,
     aws_ecr_assets as ecr_assets,
@@ -162,7 +161,6 @@ class ApiStack(Stack):
             self,
             "ScheduledBackupTask",
             schedule=appscaling.Schedule.cron(hour="0", minute="0"),
-            time_zone=TimeZone.ETC_UTC,
             cluster=cluster,
             subnet_selection=ec2.SubnetSelection(
                 subnets=cluster.vpc.select_subnets(
