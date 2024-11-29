@@ -178,8 +178,7 @@ class CollectRecordViewSet(BaseProjectApiViewSet):
             )
 
         if "errors" in ingest_output:
-            errors = ingest_output["errors"]
-            return Response(errors, status=400)
+            return Response(ingest_output["errors"], status=400)
         elif "validate" in ingest_output:
             return Response(ingest_output["validate"], status=400)
 
