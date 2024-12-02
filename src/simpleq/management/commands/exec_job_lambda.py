@@ -1,6 +1,10 @@
-import os
+import json
 
 from django.core.management.base import BaseCommand
+
+from simpleq.jobs import Job
+
+# TODO configure logger and format
 
 
 class Command(BaseCommand):
@@ -11,15 +15,15 @@ class Command(BaseCommand):
 
     def add_arguments(self, parser):
         parser.add_argument(
-            "-s",
-            dest="sleep_time",
-            type=int,
-            default=0,
-            help="Number of seconds to sleep between queue calls.",
+            "-m",
+            dest="message",
+            type=str,
+            help="SQS message from lambda.",
         )
 
     def handle(self, *args, **options):
-        # sleep_time = options.get("sleep_time")
-        print("LAMBDA -> EXEC")
-        print(os.environ["DB_PASSWORD"])
-        print(os.environ["SECRET_KEY"])
+        message = options.get("message")
+        print(json.dumps(message))
+
+        job = Job.from_message(message)
+        job.run()

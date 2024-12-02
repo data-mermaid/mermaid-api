@@ -1,5 +1,3 @@
-version: '3.9'
-
 volumes:
   pg_data:
 
@@ -34,6 +32,7 @@ services:
     build:
         context: .
         dockerfile: Dockerfile
+        target: main
     image: wcs/mermaid-api:latest
     volumes:
       - $PWD/src:/var/projects/webapp

@@ -39,11 +39,15 @@ class LambdaWorker(Construct):
             email=email,
         )
 
+        image = aws_lambda.DockerImageCode.from_image_asset(
+            directory="../", file="Dockerfile", target="lambda_function"
+        )
+
         # Lambda update_summary worker
         worker_function = aws_lambda.DockerImageFunction(
             self,
             "WorkerFunction",
-            code=aws_lambda.DockerImageCode.from_ecr(image_asset.repository),
+            code=image,
             environment=environment,
             vpc=vpc,
             memory_size=config.api.sqs_memory,
@@ -52,6 +56,7 @@ class LambdaWorker(Construct):
                 subnets=vpc.select_subnets(subnet_type=ec2.SubnetType.PRIVATE_WITH_EGRESS).subnets
             ),
         )
+        # TODO: limit number of functions
 
         # Create an SQS event source for Lambda
         sqs_event_source = lambda_event_source.SqsEventSource(job_queue.queue)

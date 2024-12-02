@@ -7,6 +7,7 @@ import boto3
 from iac.settings.dev import DEV_SETTINGS
 from iac.settings.prod import PROD_ENV_ID, PROD_SETTINGS
 
+# TODO move these to env var so this script is more generic
 REQUIRED_ENV_VARS = [
     "DB_USER",
     "DB_PASSWORD",
@@ -80,11 +81,12 @@ def get_env_or_secret(env_var_name: str):
         return response["SecretString"]
 
 
-if __name__ == "__main__":
+def lambda_handler(event, context):
     load_env()
     # TODO pass args to this script so it can be used for other django commands
     result = subprocess.run(
-        ["python", "manage.py", "exec_job_lambda"],
+        ["python", "manage.py", "exec_job_lambda", "-m", event],
+        # stdin=
         stdout=subprocess.PIPE,
         stderr=subprocess.STDOUT,
         # capture_output=True,
