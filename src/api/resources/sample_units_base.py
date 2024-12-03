@@ -21,6 +21,8 @@ class SampleUnitSerializer(BaseAPISerializer):
         max_digits=3,
         decimal_places=1,
         coerce_to_string=False,
+        min_value=0,
+        max_value=40,
         error_messages={"null": "Depth is required"},
     )
 

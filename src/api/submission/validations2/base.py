@@ -31,6 +31,7 @@ class Validation:
     validation_type: Literal[LIST_VALIDATION_TYPE, VALUE_VALIDATION_TYPE] = VALUE_VALIDATION_TYPE
     result: Union[ValidatorResult, List[ValidatorResult], None] = None
     requires_instance: bool = False
+    delay_validation: bool = False  # Only run if there are no errors from other validations.
 
     def _get_validation_id(self):
         parts = [
@@ -159,20 +160,47 @@ class ValidationRunner:
 
         return OK
 
+    def _validate(
+        self, validation, collect_record, collect_record_dict, request, existing_validations
+    ):
+        if validation.requires_instance is True:
+            validation.run(collect_record, request=request)
+        else:
+            validation.run(collect_record_dict, request=request)
+        return self.set_validator_result(validation, existing_validations)
+
     def validate(self, collect_record, validations, request):
+        delayed_validations = []
         statuses = []
         collect_record_dict = self.serializer(instance=collect_record).data
         existing_validations = (
             self._get_dotty_value(dotty(collect_record_dict), "validations.results") or dotty()
         )
         for validation in validations:
-            if validation.requires_instance is True:
-                validation.run(collect_record, request=request)
-            else:
-                validation.run(collect_record_dict, request=request)
-            statuses.append(self.set_validator_result(validation, existing_validations))
+            if validation.delay_validation:
+                delayed_validations.append(validation)
+                continue
+
+            statuses.append(
+                self._validate(
+                    validation, collect_record, collect_record_dict, request, existing_validations
+                )
+            )
 
         self.status = self._get_overall_status_level(statuses)
+        if self.status in (OK, WARN):
+            statuses.extend(
+                self._validate(
+                    validation,
+                    collect_record,
+                    collect_record_dict,
+                    request,
+                    existing_validations,
+                )
+                for validation in delayed_validations
+            )
+            self.status = self._get_overall_status_level(statuses)
+
         return self.status
 
     def to_dict(self):

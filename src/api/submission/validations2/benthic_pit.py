@@ -258,5 +258,6 @@ benthic_pit_validations = [
         validation_level=RECORD_LEVEL,
         validation_type=VALUE_VALIDATION_TYPE,
         requires_instance=True,
+        delay_validation=True,
     ),
 ]

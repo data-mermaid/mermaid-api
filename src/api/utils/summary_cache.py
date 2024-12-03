@@ -49,6 +49,7 @@ from ..models import (
     HabitatComplexitySUModel,
     HabitatComplexitySUSQLModel,
     Project,
+    ProjectProfile,
     RestrictedProjectSummarySampleEvent,
     SummarySampleEventModel,
     SummarySampleEventSQLModel,
@@ -97,7 +98,7 @@ def _is_update_required(timestamp, project_id, model_cls):
     if rec is None:
         return True
 
-    return rec.created_on > ts
+    return rec.created_on < ts
 
 
 def _update_cache(
@@ -202,9 +203,34 @@ def _update_project_summary_sample_events(
 
         proj_summary_se_model.objects.filter(project_id=project_id).delete()
         tags = [{"id": str(t.pk), "name": t.name} for t in project.tags.all()]
+        admins = project.profiles.filter(role=ProjectProfile.ADMIN)
+        project_admins = [{"id": str(pa.pk), "name": pa.profile_name} for pa in admins]
+        data_policies = dict(Project.DATA_POLICIES)
+
         proj_summary_se_model.objects.create(
             project_id=project_id,
             project_name=project.name,
+            project_admins=project_admins,
+            project_notes=project.notes,
+            data_policy_beltfish=data_policies.get(
+                project.data_policy_beltfish, Project.data_policy_beltfish.field.default
+            ),
+            data_policy_benthiclit=data_policies.get(
+                project.data_policy_benthiclit, Project.data_policy_benthiclit.field.default
+            ),
+            data_policy_benthicpit=data_policies.get(
+                project.data_policy_benthicpit, Project.data_policy_benthicpit.field.default
+            ),
+            data_policy_habitatcomplexity=data_policies.get(
+                project.data_policy_habitatcomplexity,
+                Project.data_policy_habitatcomplexity.field.default,
+            ),
+            data_policy_bleachingqc=data_policies.get(
+                project.data_policy_bleachingqc, Project.data_policy_bleachingqc.field.default
+            ),
+            data_policy_benthicpqt=data_policies.get(
+                project.data_policy_benthicpqt, Project.data_policy_benthicpqt.field.default
+            ),
             tags=tags,
             records=records,
             created_on=timestamp,
