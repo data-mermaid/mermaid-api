@@ -1,5 +1,7 @@
-from django.db.models import Q
+from django.db.models import CharField, Q
+from django_filters import BaseInFilter, CharFilter
 from rest_framework.viewsets import ReadOnlyModelViewSet
+from rest_framework_gis.filters import GeoFilterSet
 
 from ..auth_backends import AnonymousJWTAuthentication
 from ..models import (
@@ -10,6 +12,7 @@ from ..models import (
 )
 from ..permissions import UnauthenticatedReadOnlyPermission
 from .base import ExtendedSerializer, StandardResultPagination
+from .mixins import OrFilterSetMixin
 
 
 class ProjectSummarySampleEventSerializer(ExtendedSerializer):
@@ -18,11 +21,39 @@ class ProjectSummarySampleEventSerializer(ExtendedSerializer):
         exclude = []
 
 
+class ProjectSummarySampleEventFilterSet(OrFilterSetMixin, GeoFilterSet):
+    project_id = BaseInFilter(method="id_lookup")
+    project_name = BaseInFilter(method="char_lookup")
+    project_admins = BaseInFilter(method="json_name_lookup")
+
+    class Meta:
+        model = UnrestrictedProjectSummarySampleEvent
+        fields = [
+            "project_id",
+            "project_name",
+            "project_admins",
+            "data_policy_beltfish",
+            "data_policy_benthiclit",
+            "data_policy_benthicpit",
+            "data_policy_habitatcomplexity",
+            "data_policy_bleachingqc",
+            "data_policy_benthicpqt",
+        ]
+
+        filter_overrides = {
+            CharField: {
+                "filter_class": CharFilter,
+                "extra": lambda f: {"lookup_expr": "icontains"},
+            }
+        }
+
+
 class ProjectSummarySampleEventViewSet(ReadOnlyModelViewSet):
     serializer_class = ProjectSummarySampleEventSerializer
     permission_classes = [UnauthenticatedReadOnlyPermission]
     authentication_classes = [AnonymousJWTAuthentication]
     pagination_class = StandardResultPagination
+    filterset_class = ProjectSummarySampleEventFilterSet
 
     def get_queryset(self):
         user = self.request.user
