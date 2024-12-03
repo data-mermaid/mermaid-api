@@ -297,7 +297,7 @@ def test_bleaching_colonies_bleached_csv_view(
     assert "country_name" in fieldnames
 
     ba_ordered_rownum = 4
-    assert len(rows[ba_ordered_rownum].keys()) == 51
+    assert len(rows[ba_ordered_rownum].keys()) == 55
     assert rows[ba_ordered_rownum]["site_name"] == site1.name
     assert float(rows[ba_ordered_rownum]["latitude"]) == site1.location.y
     assert float(rows[ba_ordered_rownum]["longitude"]) == site1.location.x
@@ -324,7 +324,7 @@ def test_bleaching_colonies_bleached_field_report(
     assert "Country" in fieldnames
 
     ba_ordered_rownum = 4
-    assert len(rows[ba_ordered_rownum].keys()) == 45
+    assert len(rows[ba_ordered_rownum].keys()) == 49
     assert rows[ba_ordered_rownum]["Site"] == site1.name
     assert float(rows[ba_ordered_rownum]["Latitude"]) == site1.location.y
     assert float(rows[ba_ordered_rownum]["Longitude"]) == site1.location.x
