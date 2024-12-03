@@ -39,12 +39,41 @@ class FishSpeciesSerializer(M2MSerializerMixin, CreateOrUpdateSerializerMixin, B
         required=False,
         allow_null=True,
     )
+    vulnerability = serializers.DecimalField(
+        max_digits=4,
+        decimal_places=2,
+        coerce_to_string=False,
+        required=False,
+        allow_null=True,
+        min_value=0,
+        max_value=100,
+    )
+    max_length = serializers.DecimalField(
+        max_digits=6,
+        decimal_places=2,
+        coerce_to_string=False,
+        required=False,
+        allow_null=True,
+        min_value=1,
+        max_value=2000,
+    )
+    trophic_level = serializers.DecimalField(
+        max_digits=3,
+        decimal_places=2,
+        coerce_to_string=False,
+        required=False,
+        allow_null=True,
+        min_value=1,
+        max_value=5,
+    )
     climate_score = serializers.DecimalField(
         max_digits=10,
         decimal_places=9,
         coerce_to_string=False,
         required=False,
         allow_null=True,
+        min_value=0,
+        max_value=1,
     )
 
     class Meta:
