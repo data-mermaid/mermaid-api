@@ -419,6 +419,7 @@ class BenthicPhotoQuadratTransectSEModel(BaseSummaryModel):
 class BleachingQCColoniesBleachedObsModel(BaseObsModel):
     sample_unit_id = models.UUIDField()
     quadrat_size = models.DecimalField(decimal_places=2, max_digits=6)
+    benthic_category = models.CharField(max_length=100, null=True, blank=True)
     benthic_attribute = models.CharField(max_length=100, null=True, blank=True)
     growth_form = models.CharField(max_length=100, null=True, blank=True)
     count_normal = models.PositiveSmallIntegerField(verbose_name="normal", default=0)
@@ -428,6 +429,7 @@ class BleachingQCColoniesBleachedObsModel(BaseObsModel):
     count_80 = models.PositiveSmallIntegerField(verbose_name="50-80% bleached", default=0)
     count_100 = models.PositiveSmallIntegerField(verbose_name="80-100% bleached", default=0)
     count_dead = models.PositiveSmallIntegerField(verbose_name="recently dead", default=0)
+    life_histories = models.JSONField(null=True, blank=True)
     observation_notes = models.TextField(blank=True)
     data_policy_bleachingqc = models.CharField(max_length=50)
 
@@ -487,6 +489,7 @@ class BleachingQCSUModel(BaseSUModel):
     percent_algae_sd = models.DecimalField(
         max_digits=4, decimal_places=1, default=0, null=True, blank=True
     )
+    percent_cover_life_histories = models.JSONField(null=True, blank=True)
     data_policy_bleachingqc = models.CharField(max_length=50)
     pseudosu_id = models.UUIDField()
 
@@ -546,6 +549,8 @@ class BleachingQCSEModel(BaseSummaryModel):
     percent_algae_avg_sd = models.DecimalField(
         max_digits=4, decimal_places=1, null=True, blank=True
     )
+    percent_cover_life_histories_avg = models.JSONField(null=True, blank=True)
+    percent_cover_life_histories_sd = models.JSONField(null=True, blank=True)
     data_policy_bleachingqc = models.CharField(max_length=50)
 
     class Meta:
