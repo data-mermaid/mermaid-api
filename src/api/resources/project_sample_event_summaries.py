@@ -10,6 +10,7 @@ from ..models import (
     RestrictedProjectSummarySampleEvent,
     UnrestrictedProjectSummarySampleEvent,
 )
+from ..models.summary_sample_events import BaseProjectSummarySampleEvent
 from ..permissions import UnauthenticatedReadOnlyPermission
 from .base import ExtendedSerializer, StandardResultPagination
 from .mixins import OrFilterSetMixin
@@ -27,7 +28,7 @@ class ProjectSummarySampleEventFilterSet(OrFilterSetMixin, GeoFilterSet):
     project_admins = BaseInFilter(method="json_name_lookup")
 
     class Meta:
-        model = UnrestrictedProjectSummarySampleEvent
+        model = BaseProjectSummarySampleEvent
         fields = [
             "project_id",
             "project_name",

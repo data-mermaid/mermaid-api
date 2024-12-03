@@ -306,6 +306,9 @@ LOGGING = {
         "require_not_maintenance_mode_503": {
             "()": "maintenance_mode.logging.RequireNotMaintenanceMode503",
         },
+        "require_debug_false": {
+            "()": "django.utils.log.RequireDebugFalse",
+        },
     },
     "handlers": {
         "null": {
@@ -315,6 +318,11 @@ LOGGING = {
             "level": DEBUG_LEVEL,
             "class": "logging.StreamHandler",
             "stream": sys.stdout,
+        },
+        "mail_admins_specific_exceptions": {
+            "level": "ERROR",
+            "filters": ["require_debug_false"],
+            "class": "django.utils.log.AdminEmailHandler",
         },
     },
     "formatters": {
@@ -330,6 +338,11 @@ LOGGING = {
         },
         "django.security.DisallowedHost": {
             "handlers": ["null"],
+            "propagate": False,
+        },
+        "api.exceptions.UpdateSummariesException": {
+            "handlers": ["mail_admins_specific_exceptions"],
+            "level": "ERROR",
             "propagate": False,
         },
     },

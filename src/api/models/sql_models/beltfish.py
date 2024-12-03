@@ -149,7 +149,7 @@ class BeltFishObsSQLModel(BaseSUSQLModel):
     )
     count = models.PositiveIntegerField(default=1, null=True, blank=True)
     biomass_kgha = models.DecimalField(
-        max_digits=9,
+        max_digits=11,
         decimal_places=2,
         verbose_name=_("biomass (kg/ha)"),
         null=True,
@@ -348,7 +348,7 @@ class BeltFishSUSQLModel(BaseSUSQLModel):
     reef_slope = models.CharField(max_length=50)
     size_bin = models.CharField(max_length=100)
     biomass_kgha = models.DecimalField(
-        max_digits=8,
+        max_digits=13,
         decimal_places=2,
         verbose_name=_("biomass (kg/ha)"),
         null=True,
@@ -491,14 +491,14 @@ class BeltFishSESQLModel(BaseSQLModel):
     tide_name = models.CharField(max_length=100)
     visibility_name = models.CharField(max_length=100)
     biomass_kgha_avg = models.DecimalField(
-        max_digits=8,
+        max_digits=13,
         decimal_places=2,
         verbose_name=_("biomass mean (kg/ha)"),
         null=True,
         blank=True,
     )
     biomass_kgha_sd = models.DecimalField(
-        max_digits=8,
+        max_digits=13,
         decimal_places=2,
         verbose_name=_("biomass standard deviation (kg/ha)"),
         blank=True,
