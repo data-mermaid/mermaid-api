@@ -1,3 +1,4 @@
+import re
 import uuid
 
 from api.models import AuthUser, Project
@@ -26,6 +27,7 @@ SUMMARY_URL_SUFFIXES = (
 )
 SUBMIT_URL_SUFFIX = "/submit/"
 PROJECT_URL_PREFIX = "/v1/projects/"
+IMAGE_URL_REGEX = re.compile(r"^/v1/projects/([0-9a-fA-F-]{36})/classification/images/$")
 SUMMARY_EVENT_TYPE = "summary"
 PROJECT_EVENT_TYPE = "project"
 SUBMIT_EVENT_TYPE = "submit"
@@ -141,6 +143,7 @@ def create_agg_entry(log_event, profile_lookup, project_lookup):
         "num_submitted": 0,
         "num_summary_views": 0,
         "num_project_calls": 0,
+        "num_image_uploads": 0,
         "role": role,
     }
     agg |= profile
@@ -150,6 +153,7 @@ def create_agg_entry(log_event, profile_lookup, project_lookup):
 
 
 def agg_log_events(log_events=None):
+    log_events = log_events or []
     filtered_log_events = []
     for log_event in log_events:
         status_code = log_event.event.get("status_code") or None
@@ -176,10 +180,15 @@ def agg_log_events(log_events=None):
             agg[key] = create_agg_entry(log_event, profile_lookup, project_lookup)
 
         event_type = log_event.meta.get("event_type")
+        path = log_event.event.get("path")
+        method = log_event.event.get("method", "").upper()
+
         if event_type == SUBMIT_EVENT_TYPE:
             agg[key]["num_submitted"] += 1
         elif event_type == PROJECT_EVENT_TYPE:
             agg[key]["num_project_calls"] += 1
+            if IMAGE_URL_REGEX.match(path) and method == "POST":
+                agg[key]["num_image_uploads"] += 1
         elif event_type == SUMMARY_EVENT_TYPE:
             agg[key]["num_summary_views"] += 1
 
