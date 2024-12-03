@@ -56,7 +56,9 @@ class BeltFishSerializer(BaseAPISerializer):
 
 
 class ObsBeltFishSerializer(BaseAPISerializer):
-    size = serializers.DecimalField(max_digits=5, decimal_places=1, coerce_to_string=False)
+    size = serializers.DecimalField(
+        max_digits=5, decimal_places=1, coerce_to_string=False, min_value=0.1
+    )
 
     class Meta:
         model = ObsBeltFish

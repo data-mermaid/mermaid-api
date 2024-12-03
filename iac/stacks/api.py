@@ -140,27 +140,27 @@ class ApiStack(Stack):
             file="Dockerfile",
         )
 
-        backup_task_def = ecs.Ec2TaskDefinition(
+        daily_task_def = ecs.Ec2TaskDefinition(
             self,
             "ScheduledBackupTaskDef",
             network_mode=ecs.NetworkMode.AWS_VPC,
         )
-        backup_task_def.add_container(
+        daily_task_def.add_container(
             "ScheduledBackupContainer",
             image=ecs.ContainerImage.from_docker_image_asset(image_asset),
             cpu=config.api.backup_cpu,
             memory_limit_mib=config.api.backup_memory,
             secrets=api_secrets,
             environment=environment,
-            command=["python", "manage.py", "dbbackup", f"{config.env_id}"],
+            command=["python", "manage.py", "daily_tasks"],
             logging=ecs.LogDrivers.aws_logs(stream_prefix="ScheduledBackupTask"),
         )
 
         # create a scheduled fargate task
-        backup_task = ecs_patterns.ScheduledEc2Task(
+        daily_task = ecs_patterns.ScheduledEc2Task(
             self,
             "ScheduledBackupTask",
-            schedule=appscaling.Schedule.rate(Duration.days(1)),
+            schedule=appscaling.Schedule.cron(hour="0", minute="0"),
             cluster=cluster,
             subnet_selection=ec2.SubnetSelection(
                 subnets=cluster.vpc.select_subnets(
@@ -169,7 +169,7 @@ class ApiStack(Stack):
             ),
             security_groups=[container_security_group],
             scheduled_ec2_task_definition_options=ecs_patterns.ScheduledEc2TaskDefinitionOptions(
-                task_definition=backup_task_def
+                task_definition=daily_task_def
             ),
         )
 
@@ -205,7 +205,7 @@ class ApiStack(Stack):
         # Grant Secret read to API container & backup task
         for _, container_secret in api_secrets.items():
             container_secret.grant_read(service.task_definition.execution_role)
-            container_secret.grant_read(backup_task.task_definition.execution_role)
+            container_secret.grant_read(daily_task.task_definition.execution_role)
 
         target_group = elb.ApplicationTargetGroup(
             self,
@@ -259,7 +259,7 @@ class ApiStack(Stack):
         backup_bucket.grant_read_write(service.task_definition.task_role)
 
         # Give permission to backup task
-        backup_bucket.grant_read_write(backup_task.task_definition.task_role)
+        backup_bucket.grant_read_write(daily_task.task_definition.task_role)
 
         # Standard Worker
         worker = QueueWorker(

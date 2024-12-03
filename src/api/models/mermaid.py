@@ -9,7 +9,6 @@ from decimal import Decimal
 import pytz
 from django.contrib.gis.db import models
 from django.contrib.postgres.aggregates import ArrayAgg
-from django.core.validators import MaxValueValidator, MinValueValidator
 from django.db.models import Avg, F, Max, Q
 from django.forms.models import model_to_dict
 from django.utils import timezone
@@ -29,7 +28,6 @@ from .base import (
     Country,
     JSONMixin,
     Profile,
-    validate_max_year,
 )
 
 INCLUDE_OBS_TEXT = _("include observation in aggregations/analyses?")
@@ -251,7 +249,6 @@ class Management(BaseModel, JSONMixin, AreaMixin):
     est_year = models.PositiveSmallIntegerField(
         null=True,
         blank=True,
-        validators=[validate_max_year],
         verbose_name=_("year established"),
     )
     predecessor = models.ForeignKey("self", on_delete=models.SET_NULL, null=True, blank=True)
@@ -264,7 +261,6 @@ class Management(BaseModel, JSONMixin, AreaMixin):
         verbose_name=_("Size (ha)"),
         null=True,
         blank=True,
-        validators=[MinValueValidator(0)],
     )
     # These might be abstracted into separate model detailing all choices
     no_take = models.BooleanField(verbose_name=_("no-take zone"), default=False)
@@ -489,7 +485,6 @@ class SampleUnit(BaseModel):
         max_digits=3,
         decimal_places=1,
         verbose_name=_("depth (m)"),
-        validators=[MinValueValidator(0), MaxValueValidator(40)],
     )
     visibility = models.ForeignKey(Visibility, on_delete=models.SET_NULL, null=True, blank=True)
     current = models.ForeignKey(Current, on_delete=models.SET_NULL, null=True, blank=True)
@@ -688,7 +683,6 @@ class BaseQuadrat(SampleUnit):
         max_digits=6,
         verbose_name=_("single quadrat area (m2)"),
         default=1,
-        validators=[MinValueValidator(0)],
     )
 
     class Meta:
@@ -718,7 +712,6 @@ class QuadratTransect(Transect):
         max_digits=6,
         verbose_name=_("single quadrat area (m2)"),
         default=1,
-        validators=[MinValueValidator(0)],
     )
     num_quadrats = models.PositiveSmallIntegerField()
     num_points_per_quadrat = models.PositiveSmallIntegerField()
@@ -998,7 +991,6 @@ class BenthicPIT(TransectMethod):
         max_digits=4,
         decimal_places=2,
         default=0.5,
-        validators=[MinValueValidator(0), MaxValueValidator(10)],
         verbose_name=_("interval size (m)"),
     )
 
@@ -1054,7 +1046,6 @@ class HabitatComplexity(TransectMethod):
         max_digits=4,
         decimal_places=2,
         default=0.5,
-        validators=[MinValueValidator(0), MaxValueValidator(10)],
         verbose_name=_("interval size (m)"),
     )
 
@@ -1644,7 +1635,6 @@ class FishSpecies(FishAttribute):
         decimal_places=2,
         null=True,
         blank=True,
-        validators=[MinValueValidator(0), MaxValueValidator(100)],
     )
     max_length = models.DecimalField(
         max_digits=6,
@@ -1652,14 +1642,12 @@ class FishSpecies(FishAttribute):
         verbose_name=_("maximum length (cm)"),
         null=True,
         blank=True,
-        validators=[MinValueValidator(1), MaxValueValidator(2000)],
     )  # Rhincodon typus is world's largest fish
     trophic_level = models.DecimalField(
         max_digits=3,
         decimal_places=2,
         null=True,
         blank=True,
-        validators=[MinValueValidator(1), MaxValueValidator(5)],
     )
     max_length_type = models.CharField(max_length=50, choices=LENGTH_TYPES, blank=True)
     group_size = models.ForeignKey(FishGroupSize, on_delete=models.SET_NULL, null=True, blank=True)
@@ -1674,7 +1662,6 @@ class FishSpecies(FishAttribute):
         decimal_places=9,
         blank=True,
         null=True,
-        validators=[MinValueValidator(0), MaxValueValidator(1)],
     )
     notes = models.TextField(blank=True)
 
@@ -1740,7 +1727,6 @@ class ObsBeltFish(BaseModel, JSONMixin):
         max_digits=5,
         decimal_places=1,
         verbose_name=_("size (cm)"),
-        validators=[MinValueValidator(0)],
     )
     count = models.PositiveIntegerField(default=1)
     include = models.BooleanField(default=True, verbose_name=INCLUDE_OBS_TEXT)
