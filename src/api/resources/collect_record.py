@@ -1,3 +1,4 @@
+import csv
 import json
 import logging
 import uuid
@@ -29,6 +30,72 @@ from .mixins import CreateOrUpdateSerializerMixin
 
 logger = logging.getLogger(__name__)
 cr_permissions = [And(ProjectDataPermission, CollectRecordOwner)]
+
+
+def get_unicode_error(uploaded_file, byte_position, chunk_size=8192):
+    error_message = "Character encoding error; CSV file should be encoded as UTF-8."
+
+    if not isinstance(byte_position, int) or byte_position < 0:
+        return f"{error_message} Problematic character at position {byte_position}."
+
+    uploaded_file.seek(0)
+    cumulative_byte_count = 0
+
+    while True:
+        chunk = uploaded_file.read(chunk_size)
+        if not chunk:
+            break  # End of file
+
+        chunk_start_byte = cumulative_byte_count
+        chunk_end_byte = cumulative_byte_count + len(chunk)
+
+        if chunk_start_byte <= byte_position < chunk_end_byte:
+            partially_decoded = chunk.decode("utf-8-sig", errors="replace")
+            lines = partially_decoded.splitlines()
+            problematic_cell_content = None
+            problematic_row_index = 0
+            problematic_column_index = 0
+
+            for row_index, line in enumerate(lines):
+                encoded_line = line.encode("utf-8")  # Re-encode to match byte positions
+                line_start_byte = cumulative_byte_count
+                line_end_byte = line_start_byte + len(encoded_line)
+
+                if line_start_byte <= byte_position < line_end_byte:
+                    # The problematic byte is in this line
+                    problematic_row_index = row_index
+                    reader = csv.reader([line])  # Parse the line as CSV
+                    row = next(reader)
+
+                    # Locate the specific cell
+                    cell_start_byte = line_start_byte
+                    for column_index, cell in enumerate(row):
+                        encoded_cell = cell.encode("utf-8")
+                        cell_end_byte = cell_start_byte + len(encoded_cell)
+
+                        if cell_start_byte <= byte_position < cell_end_byte:
+                            problematic_cell_content = cell
+                            problematic_column_index = column_index
+                            break
+
+                        cell_start_byte = cell_end_byte + 1  # Account for the comma separator
+                    break
+
+                cumulative_byte_count += len(encoded_line) + 1  # Include newline byte
+
+            if problematic_cell_content is None:
+                return f"{error_message} Unable to locate the problematic character in the chunk."
+
+            return (
+                f"{error_message} Problematic character occurs in row {problematic_row_index + 1}, "
+                f"column {problematic_column_index + 1}: {problematic_cell_content}"
+            )
+
+        # Move cumulative count to the next chunk
+        cumulative_byte_count = chunk_end_byte
+
+    # If we reach here, the problematic byte was not found
+    return f"{error_message} Problematic byte position {byte_position} not found in the file."
 
 
 class CollectRecordSerializer(CreateOrUpdateSerializerMixin, BaseAPISerializer):
@@ -140,22 +207,27 @@ class CollectRecordViewSet(BaseProjectApiViewSet):
             if config:
                 validate_config = json.loads(config)
         except (ValueError, TypeError):
-            return Response("Invalid validate_config", status=400)
+            return Response("Invalid validate_config", status=drf_status.HTTP_400_BAD_REQUEST)
 
         if protocol is None:
-            return Response("Missing protocol", status=400)
+            return Response("Missing protocol", status=drf_status.HTTP_400_BAD_REQUEST)
 
         if uploaded_file is None:
-            return Response("Missing file", status=400)
+            return Response("Missing file", status=drf_status.HTTP_400_BAD_REQUEST)
 
         if protocol not in PROTOCOL_MAP:
-            return Response("Protocol not supported", status=400)
+            return Response("Protocol not supported", status=drf_status.HTTP_400_BAD_REQUEST)
 
         content_type = uploaded_file.content_type
         if content_type not in supported_content_types:
-            return Response("File type not supported", status=400)
+            return Response("File type not supported", status=drf_status.HTTP_400_BAD_REQUEST)
 
-        decoded_file = uploaded_file.read().decode("utf-8-sig").splitlines()
+        try:
+            decoded_file = uploaded_file.read().decode("utf-8-sig").splitlines()
+        except UnicodeDecodeError as e:
+            error_message = get_unicode_error(uploaded_file, e.start)
+            return Response(error_message, status=drf_status.HTTP_400_BAD_REQUEST)
+
         try:
             records, ingest_output = ingest(
                 protocol,
@@ -174,13 +246,13 @@ class CollectRecordViewSet(BaseProjectApiViewSet):
             missing_required_fields = schema_error.errors
             return Response(
                 f"Missing required fields: {', '.join(missing_required_fields)}",
-                status=400,
+                status=drf_status.HTTP_400_BAD_REQUEST,
             )
 
         if "errors" in ingest_output:
-            return Response(ingest_output["errors"], status=400)
+            return Response(ingest_output["errors"], status=drf_status.HTTP_400_BAD_REQUEST)
         elif "validate" in ingest_output:
-            return Response(ingest_output["validate"], status=400)
+            return Response(ingest_output["validate"], status=drf_status.HTTP_400_BAD_REQUEST)
 
         return Response(CollectRecordSerializer(records, many=True).data)
 
