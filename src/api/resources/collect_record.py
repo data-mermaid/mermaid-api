@@ -50,10 +50,7 @@ def get_unicode_error(uploaded_file, byte_position, chunk_size=8192):
         chunk_end_byte = cumulative_byte_count + len(chunk)
 
         if chunk_start_byte <= byte_position < chunk_end_byte:
-            # Extract the relevant portion of the chunk up to the problematic byte
-            relevant_chunk = chunk[: byte_position - chunk_start_byte + 1]
-            partially_decoded = relevant_chunk.decode("utf-8-sig", errors="replace")
-
+            partially_decoded = chunk.decode("utf-8-sig", errors="replace")
             lines = partially_decoded.splitlines()
             problematic_cell_content = None
             problematic_row_index = 0
@@ -66,6 +63,7 @@ def get_unicode_error(uploaded_file, byte_position, chunk_size=8192):
 
                 if line_start_byte <= byte_position < line_end_byte:
                     # The problematic byte is in this line
+                    problematic_row_index = row_index
                     reader = csv.reader([line])  # Parse the line as CSV
                     row = next(reader)
 
@@ -85,18 +83,13 @@ def get_unicode_error(uploaded_file, byte_position, chunk_size=8192):
 
                 cumulative_byte_count += len(encoded_line) + 1  # Include newline byte
 
-            # Construct the error message
-            if problematic_cell_content is not None:
-                error_message = (
-                    f"{error_message} Problematic character occurs in row {problematic_row_index + 1}, "
-                    f"column {problematic_column_index + 1}: {problematic_cell_content}"
-                )
-            else:
-                error_message = (
-                    f"{error_message} Unable to locate the problematic character in the chunk."
-                )
+            if problematic_cell_content is None:
+                return f"{error_message} Unable to locate the problematic character in the chunk."
 
-            return error_message
+            return (
+                f"{error_message} Problematic character occurs in row {problematic_row_index + 1}, "
+                f"column {problematic_column_index + 1}: {problematic_cell_content}"
+            )
 
         # Move cumulative count to the next chunk
         cumulative_byte_count = chunk_end_byte
