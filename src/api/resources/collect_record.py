@@ -1,3 +1,4 @@
+import csv
 import json
 import logging
 import uuid
@@ -29,6 +30,51 @@ from .mixins import CreateOrUpdateSerializerMixin
 
 logger = logging.getLogger(__name__)
 cr_permissions = [And(ProjectDataPermission, CollectRecordOwner)]
+
+
+def get_unicode_error(uploaded_file, byte_position):
+    uploaded_file.seek(0)
+    binary_content = uploaded_file.read()
+    partially_decoded = binary_content.decode("utf-8-sig", errors="replace")
+    lines = partially_decoded.splitlines()
+    problematic_cell_content = None
+    problematic_row_index = 0
+    problematic_column_index = 0
+
+    cumulative_byte_count = 0
+    for row_index, line in enumerate(lines):
+        encoded_line = line.encode("utf-8")  # Get the actual byte representation of the line
+        line_length = len(encoded_line)
+
+        if cumulative_byte_count <= byte_position < cumulative_byte_count + line_length:
+            # The problematic character is in this line
+            problematic_row_index = row_index
+            reader = csv.reader([line])  # Parse the line as CSV
+            row = next(reader)
+
+            # Locate the specific cell
+            cell_start_byte = cumulative_byte_count
+            for column_index, cell in enumerate(row):
+                encoded_cell = cell.encode("utf-8")
+                cell_end_byte = cell_start_byte + len(encoded_cell)
+
+                if cell_start_byte <= byte_position < cell_end_byte:
+                    problematic_cell_content = cell
+                    problematic_column_index = column_index
+                    break
+
+                cell_start_byte = cell_end_byte + 1  # Account for the comma separator
+
+            break
+
+        cumulative_byte_count += line_length + 1  # Include newline byte
+
+    error_message = (
+        f"Character encoding error; csv file should be encoded as utf-8. "
+        f"Problematic character occurs in row {problematic_row_index + 1}, "
+        f"column {problematic_column_index + 1}: {problematic_cell_content}"
+    )
+    return error_message
 
 
 class CollectRecordSerializer(CreateOrUpdateSerializerMixin, BaseAPISerializer):
@@ -140,22 +186,27 @@ class CollectRecordViewSet(BaseProjectApiViewSet):
             if config:
                 validate_config = json.loads(config)
         except (ValueError, TypeError):
-            return Response("Invalid validate_config", status=400)
+            return Response("Invalid validate_config", status=drf_status.HTTP_400_BAD_REQUEST)
 
         if protocol is None:
-            return Response("Missing protocol", status=400)
+            return Response("Missing protocol", status=drf_status.HTTP_400_BAD_REQUEST)
 
         if uploaded_file is None:
-            return Response("Missing file", status=400)
+            return Response("Missing file", status=drf_status.HTTP_400_BAD_REQUEST)
 
         if protocol not in PROTOCOL_MAP:
-            return Response("Protocol not supported", status=400)
+            return Response("Protocol not supported", status=drf_status.HTTP_400_BAD_REQUEST)
 
         content_type = uploaded_file.content_type
         if content_type not in supported_content_types:
-            return Response("File type not supported", status=400)
+            return Response("File type not supported", status=drf_status.HTTP_400_BAD_REQUEST)
 
-        decoded_file = uploaded_file.read().decode("utf-8-sig").splitlines()
+        try:
+            decoded_file = uploaded_file.read().decode("utf-8-sig").splitlines()
+        except UnicodeDecodeError as e:
+            error_message = get_unicode_error(uploaded_file, e.start)
+            return Response(error_message, status=drf_status.HTTP_400_BAD_REQUEST)
+
         try:
             records, ingest_output = ingest(
                 protocol,
@@ -174,13 +225,13 @@ class CollectRecordViewSet(BaseProjectApiViewSet):
             missing_required_fields = schema_error.errors
             return Response(
                 f"Missing required fields: {', '.join(missing_required_fields)}",
-                status=400,
+                status=drf_status.HTTP_400_BAD_REQUEST,
             )
 
         if "errors" in ingest_output:
-            return Response(ingest_output["errors"], status=400)
+            return Response(ingest_output["errors"], status=drf_status.HTTP_400_BAD_REQUEST)
         elif "validate" in ingest_output:
-            return Response(ingest_output["validate"], status=400)
+            return Response(ingest_output["validate"], status=drf_status.HTTP_400_BAD_REQUEST)
 
         return Response(CollectRecordSerializer(records, many=True).data)
 
