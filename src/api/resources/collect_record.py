@@ -110,11 +110,13 @@ class CollectRecordFilterSet(BaseAPIFilterSet):
     is_invalid = filters.BooleanFilter(field_name="is_invalid", method="filter_is_invalid")
 
     def filter_is_invalid(self, queryset, name, value):
-        # return queryset
-        return queryset.filter(
-            Q(validations__contains={"status": "error"})
-            | Q(validations__contains={"status": "warning"})
-        )
+        if value is True:
+            return queryset.filter(
+                Q(validations__contains={"status": "error"})
+                | Q(validations__contains={"status": "warning"})
+            )
+        elif value is False:
+            return queryset.filter(validations__contains={"status": "ok"})
 
     class Meta:
         model = CollectRecord
