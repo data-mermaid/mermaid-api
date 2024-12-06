@@ -4,6 +4,8 @@ import logging
 import uuid
 
 from django.db import connection
+from django.db.models import Q
+from django_filters import rest_framework as filters
 from rest_condition import And
 from rest_framework import status as drf_status
 from rest_framework.decorators import action
@@ -105,9 +107,20 @@ class CollectRecordSerializer(CreateOrUpdateSerializerMixin, BaseAPISerializer):
 
 
 class CollectRecordFilterSet(BaseAPIFilterSet):
+    is_invalid = filters.BooleanFilter(field_name="is_invalid", method="filter_is_invalid")
+
+    def filter_is_invalid(self, queryset, name, value):
+        if value is True:
+            return queryset.filter(
+                Q(validations__contains={"status": "error"})
+                | Q(validations__contains={"status": "warning"})
+            )
+        elif value is False:
+            return queryset.filter(validations__contains={"status": "ok"})
+
     class Meta:
         model = CollectRecord
-        fields = ["stage"]
+        fields = ["stage", "is_invalid"]
 
 
 class CollectRecordViewSet(BaseProjectApiViewSet):
@@ -117,10 +130,11 @@ class CollectRecordViewSet(BaseProjectApiViewSet):
     permission_classes = cr_permissions
 
     def filter_queryset(self, queryset):
+        qs = super().filter_queryset(queryset)
         user = self.request.user
         profile = user.profile
 
-        return queryset.filter(profile=profile)
+        return qs.filter(profile=profile)
 
     @action(
         detail=False,
