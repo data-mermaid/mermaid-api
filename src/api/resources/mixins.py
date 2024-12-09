@@ -22,7 +22,7 @@ from ..models import ArchivedRecord, Project
 from ..notifications import notify_cr_owners_site_mr_deleted
 from ..permissions import ProjectDataAdminPermission
 from ..signals.classification import post_edit
-from ..utils import create_iso_date_string, get_protected_related_objects
+from ..utils import create_iso_date_string, get_protected_related_objects, truthy
 from ..utils.project import get_safe_project_name
 from ..utils.sample_unit_methods import edit_transect_method
 
@@ -428,6 +428,14 @@ class DynamicFieldsMixin(object):
             omit_fields += exclude_fields
         except AttributeError:
             omit_fields = []
+
+        try:
+            show_hidden = truthy(params.get("show_hidden", False))
+        except AttributeError:
+            show_hidden = False
+        if not show_hidden:
+            if hasattr(self, "Meta") and hasattr(self.Meta, "hidden_fields"):
+                omit_fields += self.Meta.hidden_fields
 
         # Drop any fields that are not specified in the `fields` argument.
         existing = set(fields.keys())

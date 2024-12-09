@@ -39,7 +39,11 @@ from ..utils.project import (
     create_submitted_summary,
     delete_project,
     email_members_of_new_project,
+    get_citation_retrieved_text,
+    get_default_citation,
+    get_profiles,
     get_sample_unit_field,
+    get_suggested_citation,
 )
 from ..utils.q import submit_job
 from ..utils.replace import replace_collect_record_owner, replace_sampleunit_objs
@@ -58,18 +62,39 @@ from .site import SiteSerializer
 logger = logging.getLogger(__name__)
 
 
-class BaseProjectSerializer(BaseAPISerializer):
+class BaseProjectSerializer(DynamicFieldsMixin, BaseAPISerializer):
     countries = serializers.SerializerMethodField()
     num_sites = serializers.SerializerMethodField()
     num_active_sample_units = serializers.SerializerMethodField()
     num_sample_units = serializers.SerializerMethodField()
     tags = serializers.ListField(source="tags.all", child=TagField(), required=False)
     members = serializers.SerializerMethodField()
+    default_citation = serializers.SerializerMethodField()
+    suggested_citation = serializers.SerializerMethodField()
+    citation_retrieved_text = serializers.SerializerMethodField()
 
     class Meta:
         model = Project
         exclude = []
+        hidden_fields = ["default_citation", "user_citation", "citation_retrieved_text"]
         additional_fields = ["countries", "num_sites"]
+
+    @staticmethod
+    def _get_profiles(obj):
+        if not hasattr(obj, "_cached_profiles"):
+            obj._cached_profiles = get_profiles(obj)
+        return obj._cached_profiles
+
+    def get_citation_retrieved_text(self, obj):
+        return get_citation_retrieved_text(obj.name)
+
+    def get_default_citation(self, obj):
+        profiles = self._get_profiles(obj)
+        return get_default_citation(obj, profiles)
+
+    def get_suggested_citation(self, obj):
+        profiles = self._get_profiles(obj)
+        return f"{get_suggested_citation(obj, profiles)} {get_citation_retrieved_text(obj.name)}"
 
     def get_countries(self, obj):
         sites = obj.sites.all()
@@ -80,7 +105,8 @@ class BaseProjectSerializer(BaseAPISerializer):
         return sites.count()
 
     def get_members(self, obj):
-        return [pp.profile_id for pp in obj.profiles.all()]
+        profiles = self._get_profiles(obj)
+        return [pp.profile_id for pp in profiles]
 
     def get_num_active_sample_units(self, obj):
         return obj.collect_records.count()
@@ -101,7 +127,7 @@ class BaseProjectSerializer(BaseAPISerializer):
         return num_sample_units
 
 
-class ProjectSerializer(DynamicFieldsMixin, BaseProjectSerializer):
+class ProjectSerializer(BaseProjectSerializer):
     @transaction.atomic()
     def create(self, validated_data):
         p = super().create(validated_data)

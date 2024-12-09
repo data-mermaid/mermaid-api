@@ -1,5 +1,6 @@
 from django.db.models import CharField, Q
 from django_filters import rest_framework as filters
+from rest_framework.serializers import SerializerMethodField
 
 from ..models import Project, SummarySampleEventModel
 from ..permissions import UnauthenticatedReadOnlyPermission
@@ -18,6 +19,7 @@ from ..reports.formatters import (
     to_year,
 )
 from ..reports.report_serializer import ReportSerializer
+from ..utils.project import get_citation_retrieved_text
 from .base import AggregatedViewFilterSet, BaseViewAPIGeoSerializer, BaseViewAPISerializer
 from .sampleunitmethods import AggregatedViewMixin, BaseApiViewSet
 
@@ -25,6 +27,10 @@ from .sampleunitmethods import AggregatedViewMixin, BaseApiViewSet
 class SummarySampleEventSerializer(BaseViewAPISerializer):
     id = None
     updated_by = None
+    suggested_citation = SerializerMethodField()
+
+    def get_suggested_citation(self, obj):
+        return f"{obj.suggested_citation} {get_citation_retrieved_text(obj.project_name)}"
 
     class Meta(BaseViewAPISerializer.Meta):
         model = SummarySampleEventModel
@@ -303,6 +309,7 @@ class SummarySampleEventCSVSerializer(ReportSerializer):
             "Photo Quadrat Transect data sharing policy",
         ),
         ReportField("project_notes", "Project notes"),
+        ReportField("suggested_citation", "Suggested citation"),
         ReportField("site_notes", "Site notes"),
     ]
 
