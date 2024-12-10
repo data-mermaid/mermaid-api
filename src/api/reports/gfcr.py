@@ -214,7 +214,7 @@ def report_data(indicator_sets):
     sheet_data["F7"] = f7_data(indicator_sets)
     sheet_data["BusinessesFinanceSolutions"] = businesses_finance_solutions_data(indicator_sets)
     sheet_data["Investments"] = investments_data(indicator_sets)
-    sheet_data["Revenue"] = revenue_data(indicator_sets)
+    sheet_data["Revenues"] = revenue_data(indicator_sets)
 
     return sheet_data
 
