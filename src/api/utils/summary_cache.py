@@ -223,6 +223,9 @@ def _update_project_summary_sample_events(
             project_id=project_id, has_access=has_access
         )
         records = SummarySampleEventSerializer(qs, many=True).data
+        suggested_citation = _get_suggested_citation(project_id)
+        for record in records:
+            record["suggested_citation"] = suggested_citation
 
         proj_summary_se_model.objects.filter(project_id=project_id).delete()
         tags = [{"id": str(t.pk), "name": t.name} for t in project.tags.all()]

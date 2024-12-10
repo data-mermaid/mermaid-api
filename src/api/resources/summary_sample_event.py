@@ -30,7 +30,10 @@ class SummarySampleEventSerializer(BaseViewAPISerializer):
     suggested_citation = SerializerMethodField()
 
     def get_suggested_citation(self, obj):
-        return f"{obj.suggested_citation} {get_citation_retrieved_text(obj.project_name)}"
+        suggested_citation = ""
+        if obj.suggested_citation != "":
+            suggested_citation = f"{obj.suggested_citation} "
+        return f"{suggested_citation}{get_citation_retrieved_text(obj.project_name)}"
 
     class Meta(BaseViewAPISerializer.Meta):
         model = SummarySampleEventModel

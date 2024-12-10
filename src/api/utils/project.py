@@ -312,14 +312,6 @@ def get_default_citation(project, profiles=None):
     return f"{', '.join(admin_names)}. {year}{project.name}. MERMAID."
 
 
-# TODO: tests
-# project.user_citation = "" and beltfishsuview suggested_citation is default_citation
-# project.user_citation != "" and beltfishsuview suggested_citation = it
-# beltfishsuview suggested_citation in serializer last bit of text is equal to retrieved text with today's date
-# TODO: coderabbit
-# TODO: document for FE devs, Sharla
-
-
 def get_suggested_citation(project, profiles=None):
     if project.user_citation != "":
         return project.user_citation

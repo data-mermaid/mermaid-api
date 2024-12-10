@@ -20,9 +20,18 @@ from .mixins import OrFilterSetMixin
 
 class ProjectSummarySampleEventSerializer(ExtendedSerializer):
     suggested_citation = SerializerMethodField()
+    records = SerializerMethodField()
 
     def get_suggested_citation(self, obj):
-        return f"{obj.suggested_citation} {get_citation_retrieved_text(obj.project_name)}"
+        suggested_citation = ""
+        if obj.suggested_citation != "":
+            suggested_citation = f"{obj.suggested_citation} "
+        return f"{suggested_citation}{get_citation_retrieved_text(obj.project_name)}"
+
+    def get_records(self, obj):
+        for se in obj.records:
+            se["suggested_citation"] += f' {get_citation_retrieved_text(se["project_name"])}'
+        return obj.records
 
     class Meta:
         model = UnrestrictedProjectSummarySampleEvent
