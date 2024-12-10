@@ -1,10 +1,10 @@
 from collections import defaultdict
-from datetime import date
 
 from django.conf import settings
 from django.db import transaction
 from django.db.models import Q
 from django.db.models.fields.related import OneToOneField
+from django.utils import timezone
 from django.utils.text import slugify
 
 from ..models import (
@@ -292,7 +292,7 @@ def get_profiles(project):
 
 
 def get_citation_retrieved_text(project_name):
-    date_text = date.today().strftime("%B %-d, %Y")
+    date_text = timezone.localdate().strftime("%B %-d, %Y")
     domain = settings.DEFAULT_DOMAIN_DASHBOARD
     return f"Retrieved {date_text} from {domain}?project={project_name}."
 
@@ -313,8 +313,10 @@ def get_default_citation(project, profiles=None):
 
 
 def get_suggested_citation(project, profiles=None):
-    if project.user_citation != "":
-        return project.user_citation
+    if project is None:
+        raise ValueError("Project cannot be None")
+    if project.user_citation and project.user_citation.strip():
+        return project.user_citation.strip()
     return get_default_citation(project, profiles)
 
 

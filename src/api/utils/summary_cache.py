@@ -231,7 +231,6 @@ def _update_project_summary_sample_events(
         tags = [{"id": str(t.pk), "name": t.name} for t in project.tags.all()]
         admins = project.profiles.filter(role=ProjectProfile.ADMIN)
         project_admins = [{"id": str(pa.pk), "name": pa.profile_name} for pa in admins]
-        suggested_citation = _get_suggested_citation(project_id)
         data_policies = dict(Project.DATA_POLICIES)
 
         proj_summary_se_model.objects.create(

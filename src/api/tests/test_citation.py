@@ -1,6 +1,5 @@
-from datetime import date
-
 from django.urls import reverse
+from django.utils import timezone
 
 from api.utils import Testing
 from api.utils.summary_cache import update_summary_cache
@@ -24,7 +23,7 @@ def test_project_view_citation(
     url = reverse("project-detail", kwargs=dict(pk=project1.pk))
 
     data = _call(client, token1, f"{url}?showall=true")
-    date_text = date.today().strftime("%B %-d, %Y")
+    date_text = timezone.localdate().strftime("%B %-d, %Y")
     assert project1.user_citation == ""
     assert data["suggested_citation"].startswith(profile1.last_name)
     assert date_text in data["suggested_citation"]
@@ -54,7 +53,7 @@ def test_obsbenthicpit_view_citation(
         update_summary_cache(project1.pk)
         data = _call(client, token1, url)
 
-        date_text = date.today().strftime("%B %-d, %Y")
+        date_text = timezone.localdate().strftime("%B %-d, %Y")
         assert project1.user_citation == ""
         assert data["suggested_citation"].startswith(profile1.last_name)
         assert date_text in data["suggested_citation"]
@@ -83,7 +82,7 @@ def test_project_se_summary_citation(
         response_data = request.json()
         assert response_data["count"] == 1
 
-        date_text = date.today().strftime("%B %-d, %Y")
+        date_text = timezone.localdate().strftime("%B %-d, %Y")
         result = response_data["results"][0]
         assert project1.user_citation == ""
         assert result["suggested_citation"].startswith(profile1.last_name)
