@@ -117,7 +117,7 @@ def has_duplicate_sample_events(site, management, sample_date):
 
 
 def consolidate_sample_events(*args, dryrun=False, **kwargs):
-    suclasses = get_subclasses(SampleUnit)
+    suclasses = list(get_subclasses(SampleUnit))
 
     if "sample_event_data" in kwargs:
         qryset = SampleEvent.objects.filter(**kwargs["sample_event_data"])
@@ -155,7 +155,7 @@ def consolidate_sample_events(*args, dryrun=False, **kwargs):
                             se.notes += "\n\n{}".format(notes)
                             se.save()
                         sus.update(sample_event=se)  # no signals fired
-                        print("Changed SE from {} to {}".format(d.pk, se_pk))
+                        print(f"Changed {suclass.__name__} SE from {d.pk} to {se_pk}")
 
                     print("Deleting SE {}".format(d.pk))
                     d.delete()
