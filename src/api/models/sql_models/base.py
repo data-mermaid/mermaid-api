@@ -64,6 +64,7 @@ sample_event_sql_template = """
         project.name AS project_name,
         project.status AS project_status,
         project.notes AS project_notes,
+        project.user_citation,
         'https://datamermaid.org/contact-project?project_id=' :: text ||
             COALESCE(project.id :: text, '' :: text) AS contact_link,
         project_admins.project_admins,
@@ -184,6 +185,7 @@ class BaseSQLModel(models.Model):
         "project_name",
         "project_status",
         "project_notes",
+        "user_citation",
         "project_admins",
         "contact_link",
         "tags",
@@ -229,6 +231,7 @@ class BaseSQLModel(models.Model):
         choices=Project.STATUSES, default=Project.OPEN
     )
     project_notes = models.TextField(blank=True)
+    user_citation = models.TextField(blank=True)
     project_admins = models.JSONField(null=True, blank=True)
     contact_link = models.CharField(max_length=255)
     tags = models.JSONField(null=True, blank=True)

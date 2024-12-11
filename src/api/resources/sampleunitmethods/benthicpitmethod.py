@@ -296,6 +296,7 @@ class ObsBenthicPITCSVSerializer(ReportSerializer):
         ReportField("management_notes", "Management notes"),
         ReportField("sample_unit_notes", "Sample unit notes"),
         ReportField("project_notes", "Project notes"),
+        ReportField("suggested_citation", "Suggested citation"),
         ReportField("data_policy_benthicpit", "Benthic PIT data policy"),
         ReportField("site_id"),
     ]
@@ -381,6 +382,7 @@ class BenthicPITMethodSUCSVSerializer(ReportSerializer):
         ReportField("management_notes", "Management notes"),
         ReportField("sample_unit_notes", "Sample unit notes"),
         ReportField("project_notes", "Project notes"),
+        ReportField("suggested_citation", "Suggested citation"),
         ReportField("data_policy_benthicpit", "Benthic PIT data policy"),
         ReportField("site_id"),
     ]
@@ -464,6 +466,7 @@ class BenthicPITMethodSECSVSerializer(ReportSerializer):
         ReportField("site_notes", "Site notes"),
         ReportField("management_notes", "Management notes"),
         ReportField("project_notes", "Project notes"),
+        ReportField("suggested_citation", "Suggested citation"),
         ReportField("data_policy_benthicpit", "Benthic PIT data policy"),
         ReportField("site_id"),
     ]

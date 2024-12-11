@@ -37,6 +37,9 @@ ADMINS = [("Datamermaid admin", admin.strip()) for admin in _admins.split(",")]
 SUPERUSER = ("Datamermaid superuser", os.environ.get("SUPERUSER"))
 DEFAULT_DOMAIN_API = os.environ.get("DEFAULT_DOMAIN_API")
 DEFAULT_DOMAIN_COLLECT = os.environ.get("DEFAULT_DOMAIN_COLLECT")
+DEFAULT_DOMAIN_DASHBOARD = os.environ.get(
+    "DEFAULT_DOMAIN_DASHBOARD", "https://dashboard.datamermaid.org"
+)
 
 # Application definition
 

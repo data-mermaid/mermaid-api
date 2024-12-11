@@ -138,6 +138,7 @@ class Project(BaseModel, JSONMixin):
 
     tags = TaggableManager(through=UUIDTaggedItem, blank=True)
     includes_gfcr = models.BooleanField(default=False)
+    user_citation = models.TextField(blank=True)
 
     @property
     def is_open(self):

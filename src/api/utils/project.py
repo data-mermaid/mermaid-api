@@ -1,8 +1,10 @@
 from collections import defaultdict
 
+from django.conf import settings
 from django.db import transaction
 from django.db.models import Q
 from django.db.models.fields.related import OneToOneField
+from django.utils import timezone
 from django.utils.text import slugify
 
 from ..models import (
@@ -12,6 +14,7 @@ from ..models import (
     Management,
     Project,
     ProjectProfile,
+    SampleEvent,
     SampleUnit,
     Site,
     TransectMethod,
@@ -282,6 +285,39 @@ def get_safe_project_name(project_id):
         return slugify(project.name, allow_unicode=True).replace("-", "_")
     except Project.DoesNotExist as e:
         raise ValueError(f"Project with id '{project_id}' does not exist") from e
+
+
+def get_profiles(project):
+    return project.profiles.order_by("profile__last_name", "profile__first_name")
+
+
+def citation_retrieved_text(project_name):
+    date_text = timezone.localdate().strftime("%B %-d, %Y")
+    domain = settings.DEFAULT_DOMAIN_DASHBOARD
+    return f"Retrieved {date_text} from {domain}?project={project_name}."
+
+
+def default_citation(project, profiles=None):
+    if profiles is None:
+        profiles = get_profiles(project)
+    admin_names = [
+        p.profile.citation_name
+        for p in profiles
+        if p.is_admin is True and p.profile.citation_name is not None
+    ]
+    year = ""
+    latest_se = SampleEvent.objects.filter(site__project=project).order_by("-sample_date").first()
+    if latest_se and latest_se.sample_date:
+        year = f"{latest_se.sample_date.year}. "
+    return f"{', '.join(admin_names)}. {year}{project.name}. MERMAID."
+
+
+def suggested_citation(project, profiles=None):
+    if project is None:
+        raise ValueError("Project cannot be None")
+    if project.user_citation and project.user_citation.strip():
+        return project.user_citation.strip()
+    return default_citation(project, profiles)
 
 
 def delete_project(pk):

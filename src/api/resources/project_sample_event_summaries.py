@@ -1,5 +1,6 @@
 from django.db.models import CharField, Q
 from django_filters import BaseInFilter, CharFilter
+from rest_framework.serializers import SerializerMethodField
 from rest_framework.viewsets import ReadOnlyModelViewSet
 from rest_framework_gis.filters import GeoFilterSet
 
@@ -12,11 +13,26 @@ from ..models import (
 )
 from ..models.summary_sample_events import BaseProjectSummarySampleEvent
 from ..permissions import UnauthenticatedReadOnlyPermission
+from ..utils.project import citation_retrieved_text
 from .base import ExtendedSerializer, StandardResultPagination
 from .mixins import OrFilterSetMixin
 
 
 class ProjectSummarySampleEventSerializer(ExtendedSerializer):
+    suggested_citation = SerializerMethodField()
+    records = SerializerMethodField()
+
+    def get_suggested_citation(self, obj):
+        suggested_citation = ""
+        if obj.suggested_citation != "":
+            suggested_citation = f"{obj.suggested_citation} "
+        return f"{suggested_citation}{citation_retrieved_text(obj.project_name)}"
+
+    def get_records(self, obj):
+        for se in obj.records:
+            se["suggested_citation"] += f' {citation_retrieved_text(se["project_name"])}'
+        return obj.records
+
     class Meta:
         model = UnrestrictedProjectSummarySampleEvent
         exclude = []

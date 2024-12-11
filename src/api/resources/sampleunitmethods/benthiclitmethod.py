@@ -280,6 +280,7 @@ class ObsBenthicLITCSVSerializer(ReportSerializer):
         ReportField("management_notes", "Management notes"),
         ReportField("sample_unit_notes", "Sample unit notes"),
         ReportField("project_notes", "Project notes"),
+        ReportField("suggested_citation", "Suggested citation"),
         ReportField("data_policy_benthiclit", "Benthic LIT data policy"),
         ReportField("site_id"),
     ]
@@ -361,6 +362,7 @@ class BenthicLITMethodSUCSVSerializer(ReportSerializer):
         ReportField("management_notes", "Management notes"),
         ReportField("sample_unit_notes", "Sample unit notes"),
         ReportField("project_notes", "Project notes"),
+        ReportField("suggested_citation", "Suggested citation"),
         ReportField("data_policy_benthiclit", "Benthic LIT data policy"),
         ReportField("site_id"),
     ]
@@ -444,6 +446,7 @@ class BenthicLITMethodSECSVSerializer(ReportSerializer):
         ReportField("site_notes", "Site notes"),
         ReportField("management_notes", "Management notes"),
         ReportField("project_notes", "Project notes"),
+        ReportField("suggested_citation", "Suggested citation"),
         ReportField("data_policy_benthiclit", "Benthic LIT data policy"),
         ReportField("site_id"),
     ]

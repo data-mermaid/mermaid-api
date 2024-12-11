@@ -34,12 +34,16 @@ from ..reports.formatters import to_data_policy, to_str, to_yesno
 from ..reports.report_serializer import ReportSerializer
 from ..utils import truthy
 from ..utils.project import (
+    citation_retrieved_text,
     copy_project_and_resources,
     create_collecting_summary,
     create_submitted_summary,
+    default_citation,
     delete_project,
     email_members_of_new_project,
+    get_profiles,
     get_sample_unit_field,
+    suggested_citation,
 )
 from ..utils.q import submit_job
 from ..utils.replace import replace_collect_record_owner, replace_sampleunit_objs
@@ -58,18 +62,42 @@ from .site import SiteSerializer
 logger = logging.getLogger(__name__)
 
 
-class BaseProjectSerializer(BaseAPISerializer):
+class BaseProjectSerializer(DynamicFieldsMixin, BaseAPISerializer):
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self._cached_profiles = None
+
     countries = serializers.SerializerMethodField()
     num_sites = serializers.SerializerMethodField()
     num_active_sample_units = serializers.SerializerMethodField()
     num_sample_units = serializers.SerializerMethodField()
     tags = serializers.ListField(source="tags.all", child=TagField(), required=False)
     members = serializers.SerializerMethodField()
+    default_citation = serializers.SerializerMethodField()
+    suggested_citation = serializers.SerializerMethodField()
+    citation_retrieved_text = serializers.SerializerMethodField()
 
     class Meta:
         model = Project
         exclude = []
+        hidden_fields = ["default_citation", "user_citation", "citation_retrieved_text"]
         additional_fields = ["countries", "num_sites"]
+
+    def _get_profiles(self, obj):
+        if self._cached_profiles is None:
+            self._cached_profiles = get_profiles(obj)
+        return self._cached_profiles
+
+    def get_citation_retrieved_text(self, obj):
+        return citation_retrieved_text(obj.name)
+
+    def get_default_citation(self, obj):
+        profiles = self._get_profiles(obj)
+        return default_citation(obj, profiles)
+
+    def get_suggested_citation(self, obj):
+        profiles = self._get_profiles(obj)
+        return f"{suggested_citation(obj, profiles)} {citation_retrieved_text(obj.name)}"
 
     def get_countries(self, obj):
         sites = obj.sites.all()
@@ -80,7 +108,8 @@ class BaseProjectSerializer(BaseAPISerializer):
         return sites.count()
 
     def get_members(self, obj):
-        return [pp.profile_id for pp in obj.profiles.all()]
+        profiles = self._get_profiles(obj)
+        return [pp.profile_id for pp in profiles]
 
     def get_num_active_sample_units(self, obj):
         return obj.collect_records.count()
@@ -101,7 +130,7 @@ class BaseProjectSerializer(BaseAPISerializer):
         return num_sample_units
 
 
-class ProjectSerializer(DynamicFieldsMixin, BaseProjectSerializer):
+class ProjectSerializer(BaseProjectSerializer):
     @transaction.atomic()
     def create(self, validated_data):
         p = super().create(validated_data)
