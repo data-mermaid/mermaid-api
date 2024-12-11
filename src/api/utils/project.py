@@ -291,13 +291,13 @@ def get_profiles(project):
     return project.profiles.order_by("profile__last_name", "profile__first_name")
 
 
-def get_citation_retrieved_text(project_name):
+def citation_retrieved_text(project_name):
     date_text = timezone.localdate().strftime("%B %-d, %Y")
     domain = settings.DEFAULT_DOMAIN_DASHBOARD
     return f"Retrieved {date_text} from {domain}?project={project_name}."
 
 
-def get_default_citation(project, profiles=None):
+def default_citation(project, profiles=None):
     if profiles is None:
         profiles = get_profiles(project)
     admin_names = [
@@ -312,12 +312,12 @@ def get_default_citation(project, profiles=None):
     return f"{', '.join(admin_names)}. {year}{project.name}. MERMAID."
 
 
-def get_suggested_citation(project, profiles=None):
+def suggested_citation(project, profiles=None):
     if project is None:
         raise ValueError("Project cannot be None")
     if project.user_citation and project.user_citation.strip():
         return project.user_citation.strip()
-    return get_default_citation(project, profiles)
+    return default_citation(project, profiles)
 
 
 def delete_project(pk):

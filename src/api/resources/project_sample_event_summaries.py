@@ -13,7 +13,7 @@ from ..models import (
 )
 from ..models.summary_sample_events import BaseProjectSummarySampleEvent
 from ..permissions import UnauthenticatedReadOnlyPermission
-from ..utils.project import get_citation_retrieved_text
+from ..utils.project import citation_retrieved_text
 from .base import ExtendedSerializer, StandardResultPagination
 from .mixins import OrFilterSetMixin
 
@@ -26,11 +26,11 @@ class ProjectSummarySampleEventSerializer(ExtendedSerializer):
         suggested_citation = ""
         if obj.suggested_citation != "":
             suggested_citation = f"{obj.suggested_citation} "
-        return f"{suggested_citation}{get_citation_retrieved_text(obj.project_name)}"
+        return f"{suggested_citation}{citation_retrieved_text(obj.project_name)}"
 
     def get_records(self, obj):
         for se in obj.records:
-            se["suggested_citation"] += f' {get_citation_retrieved_text(se["project_name"])}'
+            se["suggested_citation"] += f' {citation_retrieved_text(se["project_name"])}'
         return obj.records
 
     class Meta:

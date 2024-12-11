@@ -19,7 +19,7 @@ from ..reports.formatters import (
     to_year,
 )
 from ..reports.report_serializer import ReportSerializer
-from ..utils.project import get_citation_retrieved_text
+from ..utils.project import citation_retrieved_text
 from .base import AggregatedViewFilterSet, BaseViewAPIGeoSerializer, BaseViewAPISerializer
 from .sampleunitmethods import AggregatedViewMixin, BaseApiViewSet
 
@@ -33,7 +33,7 @@ class SummarySampleEventSerializer(BaseViewAPISerializer):
         suggested_citation = ""
         if obj.suggested_citation != "":
             suggested_citation = f"{obj.suggested_citation} "
-        return f"{suggested_citation}{get_citation_retrieved_text(obj.project_name)}"
+        return f"{suggested_citation}{citation_retrieved_text(obj.project_name)}"
 
     class Meta(BaseViewAPISerializer.Meta):
         model = SummarySampleEventModel

@@ -34,16 +34,16 @@ from ..reports.formatters import to_data_policy, to_str, to_yesno
 from ..reports.report_serializer import ReportSerializer
 from ..utils import truthy
 from ..utils.project import (
+    citation_retrieved_text,
     copy_project_and_resources,
     create_collecting_summary,
     create_submitted_summary,
+    default_citation,
     delete_project,
     email_members_of_new_project,
-    get_citation_retrieved_text,
-    get_default_citation,
     get_profiles,
     get_sample_unit_field,
-    get_suggested_citation,
+    suggested_citation,
 )
 from ..utils.q import submit_job
 from ..utils.replace import replace_collect_record_owner, replace_sampleunit_objs
@@ -89,15 +89,15 @@ class BaseProjectSerializer(DynamicFieldsMixin, BaseAPISerializer):
         return self._cached_profiles
 
     def get_citation_retrieved_text(self, obj):
-        return get_citation_retrieved_text(obj.name)
+        return citation_retrieved_text(obj.name)
 
     def get_default_citation(self, obj):
         profiles = self._get_profiles(obj)
-        return get_default_citation(obj, profiles)
+        return default_citation(obj, profiles)
 
     def get_suggested_citation(self, obj):
         profiles = self._get_profiles(obj)
-        return f"{get_suggested_citation(obj, profiles)} {get_citation_retrieved_text(obj.name)}"
+        return f"{suggested_citation(obj, profiles)} {citation_retrieved_text(obj.name)}"
 
     def get_countries(self, obj):
         sites = obj.sites.all()

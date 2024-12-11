@@ -58,7 +58,7 @@ from ..models import (
     UnrestrictedProjectSummarySampleEvent,
 )
 from ..resources.summary_sample_event import SummarySampleEventSerializer
-from ..utils.project import get_suggested_citation
+from ..utils.project import suggested_citation as get_suggested_citation
 from ..utils.timer import timing
 
 BATCH_SIZE = 1000
