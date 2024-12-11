@@ -2,7 +2,7 @@
 
 from django.db import migrations, models
 
-import api.models.base
+from api.utils import validate_max_year
 
 
 class Migration(migrations.Migration):
@@ -17,7 +17,7 @@ class Migration(migrations.Migration):
             field=models.PositiveSmallIntegerField(
                 blank=True,
                 null=True,
-                validators=[api.models.base.validate_max_year],
+                validators=[validate_max_year],
                 verbose_name="year established",
             ),
         ),

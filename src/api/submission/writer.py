@@ -446,8 +446,8 @@ class BenthicPhotoQuadratTransectProtocolWriter(ProtocolWriter):
             "quadrat_number_start"
         ) or 1
 
-        images = {}
-        quadrat_num = quadrat_num_start
+        seen_images = []
+        quadrat_num = quadrat_num_start - 1
         for anno in annos:
             image_id = anno.get("image_id")
             attribute_id = anno.get("attribute_id")
@@ -456,6 +456,9 @@ class BenthicPhotoQuadratTransectProtocolWriter(ProtocolWriter):
 
             if not image_id or not attribute_id:
                 continue
+            if image_id not in seen_images:
+                seen_images.append(image_id)
+                quadrat_num += 1
 
             observations_data.append(
                 {
@@ -467,9 +470,6 @@ class BenthicPhotoQuadratTransectProtocolWriter(ProtocolWriter):
                     "num_points": count,
                 }
             )
-            if image_id not in images:
-                quadrat_num += 1
-                images[image_id] = None
 
         return observations_data
 

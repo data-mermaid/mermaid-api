@@ -23,6 +23,7 @@ class PManagementSerializer(CreateOrUpdateSerializerMixin, BaseAPISerializer):
         coerce_to_string=False,
         required=False,
         allow_null=True,
+        min_value=0.001,
     )
 
     class Meta:

@@ -274,9 +274,9 @@ class BenthicLITSUSQLModel(BaseSUSQLModel):
             ) AS percent_cover_life_histories
             FROM (
                 SELECT pseudosu_id,
-                       life_history->>'id' AS id,
-                       life_history->>'name' AS name,
-                        SUM(((life_history->>'proportion')::numeric * benthiclit_obs.length)) AS proportion_sum
+                    life_history->>'id' AS id,
+                    life_history->>'name' AS name,
+                    SUM(((life_history->>'proportion')::numeric * benthiclit_obs.length)) AS proportion_sum
                 FROM benthiclit_obs
                 CROSS JOIN jsonb_array_elements(life_histories) AS life_history
                 GROUP BY pseudosu_id, life_history->>'id', life_history->>'name'

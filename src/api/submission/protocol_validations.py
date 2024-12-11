@@ -112,7 +112,7 @@ class ProtocolValidation(object):
 
 
 class SampleUnitValidation(ProtocolValidation):
-    DEPTH_RANGE = (1, 30)
+    DEPTH_RANGE = (1, 40)
     DATE_TIME_RANGE = (datetime.time(6, 0), datetime.time(19, 0))
     DEPTH_MSG = str(_("Depth value outside range of {} and {}".format(*DEPTH_RANGE)))
     DATE_TIME_MSG = str(_("Sample time outside of range {} and {}".format(*DATE_TIME_RANGE)))
