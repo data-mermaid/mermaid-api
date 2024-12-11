@@ -26,6 +26,7 @@ from api.resources.quadrat_collection import QuadratCollectionSerializer
 from api.resources.quadrat_transect import QuadratTransectSerializer
 from api.resources.sample_event import SampleEventSerializer
 from api.utils import combine_into
+from ..resources.sampleunitmethods import clean_sample_event_models
 from ..resources.sampleunitmethods.beltfishmethod import (
     BeltFishSerializer,
     ObsBeltFishSerializer,
@@ -105,6 +106,7 @@ class ProtocolWriter(BaseWriter):
 
     def get_or_create_sample_event(self):
         sample_event_data = get_sample_event_data(self.collect_record)
+        clean_sample_event_models(sample_event_data)
         return self.get_or_create(SampleEvent, SampleEventSerializer, sample_event_data)
 
     def create_observers(self, sample_unit_method_id):
