@@ -7,6 +7,7 @@ from django.utils import timezone
 from django.utils.translation import gettext_lazy
 from rest_framework.exceptions import ValidationError
 
+from ..exceptions import check_uuid
 from ..mocks import MockRequest
 from ..models import (
     BENTHICLIT_PROTOCOL,
@@ -260,6 +261,9 @@ def check_validation_status(results):
 
 def validate_collect_records(profile, record_ids, serializer_class, validation_suppressants=None):
     output = {}
+    for record_id in record_ids:
+        check_uuid(record_id)
+
     records = CollectRecord.objects.filter(id__in=record_ids)
     request = MockRequest(profile=profile)
     for record in records.iterator():
