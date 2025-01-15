@@ -1,4 +1,4 @@
-FROM python:3.10-slim-bullseye as main
+FROM python:3.10-slim-bullseye AS main
 LABEL maintainer="<sysadmin@datamermaid.org>"
 
 ENV DEBIAN_FRONTEND=noninteractive
@@ -51,13 +51,14 @@ RUN SECRET_KEY='abc' python manage.py collectstatic --noinput
 CMD ["/var/projects/webapp/docker-entry.sh"]
 
 
-FROM main as lambda_function
-
-ADD ./iac/settings ./iac/settings
-ADD ./scripts/ ./scripts
+FROM main AS lambda_function
 
 # Install AWS lambda RIC
-RUN pip install awslambdaric
+RUN pip install -t . awslambdaric boto3
 
+
+ADD ./iac/settings ./iac/settings
+ADD ./worker_function/ ./worker_function/
+ENV PYTHONPATH=${APP_DIR}/iac/
 ENTRYPOINT [ "python", "-m", "awslambdaric" ]
 CMD [ "worker_function.run_cmd_w_env.lambda_handler" ]
