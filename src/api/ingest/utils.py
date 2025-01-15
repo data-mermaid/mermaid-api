@@ -176,8 +176,11 @@ def ingest(
         output["errors"] = errors[0:1000]
         return None, output
 
+    record_ids = []
+    is_bulk_invalid = False
     with transaction.atomic():
         sid = transaction.savepoint()
+
         new_records = None
         successful_save = False
         try:
@@ -189,23 +192,22 @@ def ingest(
 
             new_records = s.save()
             successful_save = True
+
+            if bulk_validation or bulk_submission:
+                record_ids = [str(r.pk) for r in new_records]
+                validation_output = validate_collect_records(
+                    profile, record_ids, serializer_class, validation_suppressants
+                )
+                output["validate"] = validation_output
+                statuses = [v.get("status") for v in validation_output.values()]
+                if WARN in statuses or ERROR in statuses:
+                    is_bulk_invalid = True
         finally:
             if dry_run is True or successful_save is False:
                 transaction.savepoint_rollback(sid)
+                record_ids = []
             else:
                 transaction.savepoint_commit(sid)
-
-    is_bulk_invalid = False
-    record_ids = []
-    if dry_run is False and bulk_validation or bulk_submission:
-        record_ids = [str(r.pk) for r in new_records]
-        validation_output = validate_collect_records(
-            profile, record_ids, serializer_class, validation_suppressants
-        )
-        output["validate"] = validation_output
-        statuses = [v.get("status") for v in validation_output.values()]
-        if WARN in statuses or ERROR in statuses:
-            is_bulk_invalid = True
 
     if dry_run is False and bulk_submission and not is_bulk_invalid:
         submit_output = submit_collect_records(profile, record_ids, validation_suppressants)

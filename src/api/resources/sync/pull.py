@@ -1,6 +1,8 @@
 from django.core.exceptions import MultipleObjectsReturned, ObjectDoesNotExist
 from django.db import connection
 
+from ...mocks import MockRequest
+
 
 def _get_subquery(queryset, pk_field_name):
     cur = connection.cursor()
@@ -207,7 +209,10 @@ def serialize_revisions(serializer, updates, deletes, removes, skip_deletes=Fals
     serialized_removes = []
     serialized_deletes = []
 
-    serialized_updates = serializer(updates, many=True, context={"request": None}).data
+    # ensure push/pull deals with all fields, including hidden
+    request_get = {"show_hidden": "true"}
+    request = MockRequest(query_params=request_get, GET=request_get)
+    serialized_updates = serializer(updates, many=True, context={"request": request}).data
     for n, rec in enumerate(updates):
         rev_num = rec.revision_revision_num
 

@@ -22,6 +22,7 @@ from api.resources import (
     project_profile,
     psite,
 )
+from ...exceptions import ReadOnlyError
 from .pull import get_record, get_serialized_records, serialize_revisions
 from .push import apply_changes, get_request_method
 from .utils import create_view_request
@@ -49,11 +50,6 @@ CACHEABLE_SOURCE_TYPES = (
     FISH_GROUPINGS_SOURCE_TYPE,
     FISH_SPECIES_SOURCE_TYPE,
 )
-
-
-class ReadOnlyError(Exception):
-    pass
-
 
 project_sources = {
     COLLECT_RECORDS_SOURCE_TYPE: {

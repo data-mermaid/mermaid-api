@@ -53,6 +53,8 @@ class HabitatComplexitySerializer(BaseAPISerializer):
         max_digits=4,
         decimal_places=2,
         coerce_to_string=False,
+        min_value=0.01,
+        max_value=10,
         error_messages={"null": "Interval size is required"},
     )
 
@@ -253,6 +255,7 @@ class ObsHabitatComplexityCSVSerializer(ReportSerializer):
         ReportField("management_notes", "Management notes"),
         ReportField("sample_unit_notes", "Sample unit notes"),
         ReportField("project_notes", "Project notes"),
+        ReportField("suggested_citation", "Suggested citation"),
         ReportField("data_policy_habitatcomplexity", "Habitat complexity data policy"),
         ReportField("site_id"),
     ]
@@ -333,6 +336,7 @@ class HabitatComplexityMethodSUCSVSerializer(ReportSerializer):
         ReportField("management_notes", "Management notes"),
         ReportField("sample_unit_notes", "Sample unit notes"),
         ReportField("project_notes", "Project notes"),
+        ReportField("suggested_citation", "Suggested citation"),
         ReportField("data_policy_habitatcomplexity", "Habitat complexity data policy"),
         ReportField("site_id"),
     ]
@@ -404,6 +408,7 @@ class HabitatComplexityMethodSECSVSerializer(ReportSerializer):
         ReportField("site_notes", "Site notes"),
         ReportField("management_notes", "Management notes"),
         ReportField("project_notes", "Project notes"),
+        ReportField("suggested_citation", "Suggested citation"),
         ReportField("data_policy_habitatcomplexity", "Habitat complexity data policy"),
         ReportField("site_id"),
     ]

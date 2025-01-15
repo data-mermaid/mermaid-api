@@ -1,9 +1,8 @@
 import uuid
 
 from django.contrib.gis.db.models.fields import MultiPolygonField, PolygonField
-from django.core.exceptions import ObjectDoesNotExist, ValidationError
+from django.core.exceptions import ObjectDoesNotExist
 from django.db import models
-from django.utils import timezone
 from django.utils.translation import gettext_lazy as _
 
 PROPOSED = 10
@@ -13,15 +12,6 @@ APPROVAL_STATUSES = (
     # (50, _('project admin approved')),
     (PROPOSED, _("proposed")),
 )
-
-
-def validate_max_year(value):
-    current_year = timezone.now().year
-    if value > current_year:
-        raise ValidationError(
-            _("%(value)s is in the future"),
-            params={"value": value},
-        )
 
 
 class ExtendedQuerySet(models.QuerySet):
@@ -83,6 +73,17 @@ class Profile(models.Model):
                 return self.email.split("@")[0]
             except IndexError:
                 return "N/A"
+
+    @property
+    def citation_name(self):  # noqa
+        if self.first_name and self.last_name:
+            return f"{self.last_name} {self.first_name[:1]}"
+        elif self.first_name:
+            return self.first_name
+        elif self.last_name:
+            return self.last_name
+        else:
+            return None
 
     @property
     def num_account_connections(self):

@@ -24,6 +24,7 @@ from ...reports.formatters import (
     to_day,
     to_governance,
     to_join_list,
+    to_life_history,
     to_month,
     to_names,
     to_str,
@@ -241,6 +242,7 @@ class BleachingQCMethodObsColoniesBleachedSerializer(BaseSUViewAPISerializer):
                 "count_100",
                 "count_dead",
                 "data_policy_bleachingqc",
+                "life_histories",
             ]
         )
 
@@ -291,10 +293,35 @@ class ObsBleachingQCColoniesBleachedCSVSerializer(ReportSerializer):
         ReportField("count_80", "50-80% bleached count"),
         ReportField("count_100", "80-100% bleached count"),
         ReportField("count_dead", "Recently dead count"),
+        ReportField(
+            "life_histories",
+            "Competitive",
+            to_life_history,
+            protocol="life_histories",
+            key="competitive",
+        ),
+        ReportField(
+            "life_histories",
+            "Generalist",
+            to_life_history,
+            protocol="life_histories",
+            key="generalist",
+        ),
+        ReportField(
+            "life_histories",
+            "Stress-tolerant",
+            to_life_history,
+            protocol="life_histories",
+            key="stress-tolerant",
+        ),
+        ReportField(
+            "life_histories", "Weedy", to_life_history, protocol="life_histories", key="weedy"
+        ),
         ReportField("site_notes", "Site notes"),
         ReportField("management_notes", "Management notes"),
         ReportField("sample_unit_notes", "Sample unit notes"),
         ReportField("project_notes", "Project notes"),
+        ReportField("suggested_citation", "Suggested citation"),
         ReportField("data_policy_bleachingqc", "Bleaching data policy"),
         ReportField("site_id"),
     ]
@@ -377,6 +404,7 @@ class ObsQuadratBenthicPercentCSVSerializer(ReportSerializer):
         ReportField("management_notes", "Management notes"),
         ReportField("sample_unit_notes", "Sample unit notes"),
         ReportField("project_notes", "Project notes"),
+        ReportField("suggested_citation", "Suggested citation"),
         ReportField("data_policy_bleachingqc", "Bleaching data policy"),
         ReportField("site_id"),
     ]
@@ -420,6 +448,7 @@ class BleachingQCMethodSUSerializer(BaseSUViewAPISUSerializer):
                 "percent_soft_sd",
                 "percent_algae_avg",
                 "percent_algae_sd",
+                "percent_cover_life_histories",
                 "data_policy_bleachingqc",
             ]
         )
@@ -479,10 +508,12 @@ class BleachingQCMethodSUCSVSerializer(ReportSerializer):
         ReportField("percent_soft_sd", "Soft Coral (% cover) standard deviation"),
         ReportField("percent_algae_avg", "Average Macroalgae (% cover)"),
         ReportField("percent_algae_sd", "Macroalgae (% cover) standard deviation"),
+        ReportField("percent_cover_life_histories", "Percent cover by life history"),
         ReportField("site_notes", "Site notes"),
         ReportField("management_notes", "Management notes"),
         ReportField("sample_unit_notes", "Sample unit notes"),
         ReportField("project_notes", "Project notes"),
+        ReportField("suggested_citation", "Suggested citation"),
         ReportField("data_policy_bleachingqc", "Bleaching data policy"),
         ReportField("site_id"),
     ]
@@ -535,6 +566,8 @@ class BleachingQCMethodSESerializer(BaseSUViewAPISerializer):
                 "percent_soft_avg_sd",
                 "percent_algae_avg_avg",
                 "percent_algae_avg_sd",
+                "percent_cover_life_histories_avg",
+                "percent_cover_life_histories_sd",
                 "data_policy_bleachingqc",
             ]
         )
@@ -603,9 +636,14 @@ class BleachingQCMethodSECSVSerializer(ReportSerializer):
         ReportField("percent_soft_avg_sd", "Average Soft Coral (% cover) standard deviation"),
         ReportField("percent_algae_avg_avg", "Average Macroalgae (% cover) average"),
         ReportField("percent_algae_avg_sd", "Average Macroalgae (% cover) standard deviation"),
+        ReportField("percent_cover_life_histories_avg", "Percent cover by life history average"),
+        ReportField(
+            "percent_cover_life_histories_sd", "Percent cover by life history standard deviation"
+        ),
         ReportField("site_notes", "Site notes"),
         ReportField("management_notes", "Management notes"),
         ReportField("project_notes", "Project notes"),
+        ReportField("suggested_citation", "Suggested citation"),
         ReportField("data_policy_bleachingqc", "Bleaching data policy"),
         ReportField("site_id"),
     ]

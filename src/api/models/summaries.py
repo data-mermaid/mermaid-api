@@ -14,6 +14,7 @@ class BaseSummaryModel(models.Model):
         choices=Project.STATUSES, default=Project.OPEN
     )
     project_notes = models.TextField(blank=True)
+    suggested_citation = models.TextField(blank=True)
     project_admins = models.JSONField(null=True, blank=True)
     contact_link = models.CharField(max_length=255)
     tags = models.JSONField(null=True, blank=True)
@@ -116,7 +117,7 @@ class BeltFishObsModel(BaseObsModel):
     )
     count = models.PositiveIntegerField(default=1, null=True, blank=True)
     biomass_kgha = models.DecimalField(
-        max_digits=9,
+        max_digits=11,
         decimal_places=2,
         verbose_name=_("biomass (kg/ha)"),
         null=True,
@@ -141,7 +142,7 @@ class BeltFishSUModel(BaseSUModel):
     reef_slope = models.CharField(max_length=50, null=True, blank=True)
     size_bin = models.CharField(max_length=100)
     biomass_kgha = models.DecimalField(
-        max_digits=8,
+        max_digits=13,
         decimal_places=2,
         verbose_name=_("biomass (kg/ha)"),
         null=True,
@@ -175,14 +176,14 @@ class BeltFishSEModel(BaseSummaryModel):
     tide_name = models.CharField(max_length=100, null=True, blank=True)
     visibility_name = models.CharField(max_length=100, null=True, blank=True)
     biomass_kgha_avg = models.DecimalField(
-        max_digits=8,
+        max_digits=13,
         decimal_places=2,
         verbose_name=_("biomass mean (kg/ha)"),
         null=True,
         blank=True,
     )
     biomass_kgha_sd = models.DecimalField(
-        max_digits=8,
+        max_digits=13,
         decimal_places=2,
         verbose_name=_("biomass standard deviation (kg/ha)"),
         blank=True,
@@ -419,6 +420,7 @@ class BenthicPhotoQuadratTransectSEModel(BaseSummaryModel):
 class BleachingQCColoniesBleachedObsModel(BaseObsModel):
     sample_unit_id = models.UUIDField()
     quadrat_size = models.DecimalField(decimal_places=2, max_digits=6)
+    benthic_category = models.CharField(max_length=100, null=True, blank=True)
     benthic_attribute = models.CharField(max_length=100, null=True, blank=True)
     growth_form = models.CharField(max_length=100, null=True, blank=True)
     count_normal = models.PositiveSmallIntegerField(verbose_name="normal", default=0)
@@ -428,6 +430,7 @@ class BleachingQCColoniesBleachedObsModel(BaseObsModel):
     count_80 = models.PositiveSmallIntegerField(verbose_name="50-80% bleached", default=0)
     count_100 = models.PositiveSmallIntegerField(verbose_name="80-100% bleached", default=0)
     count_dead = models.PositiveSmallIntegerField(verbose_name="recently dead", default=0)
+    life_histories = models.JSONField(null=True, blank=True)
     observation_notes = models.TextField(blank=True)
     data_policy_bleachingqc = models.CharField(max_length=50)
 
@@ -487,6 +490,7 @@ class BleachingQCSUModel(BaseSUModel):
     percent_algae_sd = models.DecimalField(
         max_digits=4, decimal_places=1, default=0, null=True, blank=True
     )
+    percent_cover_life_histories = models.JSONField(null=True, blank=True)
     data_policy_bleachingqc = models.CharField(max_length=50)
     pseudosu_id = models.UUIDField()
 
@@ -546,6 +550,8 @@ class BleachingQCSEModel(BaseSummaryModel):
     percent_algae_avg_sd = models.DecimalField(
         max_digits=4, decimal_places=1, null=True, blank=True
     )
+    percent_cover_life_histories_avg = models.JSONField(null=True, blank=True)
+    percent_cover_life_histories_sd = models.JSONField(null=True, blank=True)
     data_policy_bleachingqc = models.CharField(max_length=50)
 
     class Meta:

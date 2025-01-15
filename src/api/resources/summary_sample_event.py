@@ -1,5 +1,6 @@
 from django.db.models import CharField, Q
 from django_filters import rest_framework as filters
+from rest_framework.serializers import SerializerMethodField
 
 from ..models import Project, SummarySampleEventModel
 from ..permissions import UnauthenticatedReadOnlyPermission
@@ -18,6 +19,7 @@ from ..reports.formatters import (
     to_year,
 )
 from ..reports.report_serializer import ReportSerializer
+from ..utils.project import citation_retrieved_text
 from .base import AggregatedViewFilterSet, BaseViewAPIGeoSerializer, BaseViewAPISerializer
 from .sampleunitmethods import AggregatedViewMixin, BaseApiViewSet
 
@@ -25,6 +27,13 @@ from .sampleunitmethods import AggregatedViewMixin, BaseApiViewSet
 class SummarySampleEventSerializer(BaseViewAPISerializer):
     id = None
     updated_by = None
+    suggested_citation = SerializerMethodField()
+
+    def get_suggested_citation(self, obj):
+        suggested_citation = ""
+        if obj.suggested_citation != "":
+            suggested_citation = f"{obj.suggested_citation} "
+        return f"{suggested_citation}{citation_retrieved_text(obj.project_name)}"
 
     class Meta(BaseViewAPISerializer.Meta):
         model = SummarySampleEventModel
@@ -100,6 +109,20 @@ class SummarySampleEventCSVSerializer(ReportSerializer):
         ),
         ReportField(
             "protocols",
+            "Fish Belt average biomass (kg/ha) by family",
+            to_protocol_value,
+            protocol="beltfish",
+            key="biomass_kgha_fish_family_avg",
+        ),
+        ReportField(
+            "protocols",
+            "Fish Belt biomass (kg/ha) standard deviation by family",
+            to_protocol_value,
+            protocol="beltfish",
+            key="biomass_kgha_fish_family_sd",
+        ),
+        ReportField(
+            "protocols",
             "Benthic LIT transect count",
             to_protocol_value,
             protocol="benthiclit",
@@ -107,7 +130,7 @@ class SummarySampleEventCSVSerializer(ReportSerializer):
         ),
         ReportField(
             "protocols",
-            "Benthic LIT average % cover by benthic category",
+            "Benthic LIT % cover average by benthic category",
             to_protocol_value,
             protocol="benthiclit",
             key="percent_cover_benthic_category_avg",
@@ -121,6 +144,20 @@ class SummarySampleEventCSVSerializer(ReportSerializer):
         ),
         ReportField(
             "protocols",
+            "Benthic LIT % cover average by life history",
+            to_protocol_value,
+            protocol="benthiclit",
+            key="percent_cover_life_histories_avg",
+        ),
+        ReportField(
+            "protocols",
+            "Benthic LIT % cover standard deviation by life history",
+            to_protocol_value,
+            protocol="benthiclit",
+            key="percent_cover_life_histories_sd",
+        ),
+        ReportField(
+            "protocols",
             "Benthic PIT transect count",
             to_protocol_value,
             protocol="benthicpit",
@@ -128,7 +165,7 @@ class SummarySampleEventCSVSerializer(ReportSerializer):
         ),
         ReportField(
             "protocols",
-            "Benthic PIT average % cover by benthic category",
+            "Benthic PIT % cover average by benthic category",
             to_protocol_value,
             protocol="benthicpit",
             key="percent_cover_benthic_category_avg",
@@ -142,6 +179,20 @@ class SummarySampleEventCSVSerializer(ReportSerializer):
         ),
         ReportField(
             "protocols",
+            "Benthic PIT % cover average by life history",
+            to_protocol_value,
+            protocol="benthicpit",
+            key="percent_cover_life_histories_avg",
+        ),
+        ReportField(
+            "protocols",
+            "Benthic PIT % cover standard deviation by life history",
+            to_protocol_value,
+            protocol="benthicpit",
+            key="percent_cover_life_histories_sd",
+        ),
+        ReportField(
+            "protocols",
             "Benthic PQT transect count",
             to_protocol_value,
             protocol="benthicpqt",
@@ -149,7 +200,7 @@ class SummarySampleEventCSVSerializer(ReportSerializer):
         ),
         ReportField(
             "protocols",
-            "Benthic PQT average % cover by benthic category",
+            "Benthic PQT % cover average by benthic category",
             to_protocol_value,
             protocol="benthicpqt",
             key="percent_cover_benthic_category_avg",
@@ -160,6 +211,20 @@ class SummarySampleEventCSVSerializer(ReportSerializer):
             to_protocol_value,
             protocol="benthicpqt",
             key="percent_cover_benthic_category_sd",
+        ),
+        ReportField(
+            "protocols",
+            "Benthic PQT % cover average by life history",
+            to_protocol_value,
+            protocol="benthicpqt",
+            key="percent_cover_life_histories_avg",
+        ),
+        ReportField(
+            "protocols",
+            "Benthic PQT % cover standard deviation by life history",
+            to_protocol_value,
+            protocol="benthicpqt",
+            key="percent_cover_life_histories_sd",
         ),
         ReportField(
             "protocols",
@@ -217,6 +282,20 @@ class SummarySampleEventCSVSerializer(ReportSerializer):
             protocol="quadrat_benthic_percent",
             key="percent_cover",
         ),
+        ReportField(
+            "protocols",
+            "Bleaching % cover average by life history",
+            to_protocol_value,
+            protocol="colonies_bleached",
+            key="percent_cover_life_histories_avg",
+        ),
+        ReportField(
+            "protocols",
+            "Bleaching % cover standard deviation by life history",
+            to_protocol_value,
+            protocol="colonies_bleached",
+            key="percent_cover_life_histories_sd",
+        ),
         ReportField("contact_link", "Contact link"),
         ReportField("tags", "Organizations", to_names),
         ReportField("project_admins", "Project administrators", to_names),
@@ -233,6 +312,7 @@ class SummarySampleEventCSVSerializer(ReportSerializer):
             "Photo Quadrat Transect data sharing policy",
         ),
         ReportField("project_notes", "Project notes"),
+        ReportField("suggested_citation", "Suggested citation"),
         ReportField("site_notes", "Site notes"),
     ]
 

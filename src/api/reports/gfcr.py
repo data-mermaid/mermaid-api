@@ -214,7 +214,7 @@ def report_data(indicator_sets):
     sheet_data["F7"] = f7_data(indicator_sets)
     sheet_data["BusinessesFinanceSolutions"] = businesses_finance_solutions_data(indicator_sets)
     sheet_data["Investments"] = investments_data(indicator_sets)
-    sheet_data["Revenue"] = revenue_data(indicator_sets)
+    sheet_data["Revenues"] = revenue_data(indicator_sets)
 
     return sheet_data
 
@@ -253,6 +253,7 @@ def create_report_background(project_ids, request=None, send_email=None):
     req = MockRequest.load_request(request)
     submit_job(
         0,
+        True,
         create_report,
         project_ids,
         request=req,

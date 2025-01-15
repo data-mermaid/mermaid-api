@@ -54,6 +54,8 @@ class BenthicPITSerializer(BaseAPISerializer):
         max_digits=4,
         decimal_places=2,
         coerce_to_string=False,
+        min_value=0.01,
+        max_value=10,
         error_messages={"null": "Interval size is required"},
     )
 
@@ -294,6 +296,7 @@ class ObsBenthicPITCSVSerializer(ReportSerializer):
         ReportField("management_notes", "Management notes"),
         ReportField("sample_unit_notes", "Sample unit notes"),
         ReportField("project_notes", "Project notes"),
+        ReportField("suggested_citation", "Suggested citation"),
         ReportField("data_policy_benthicpit", "Benthic PIT data policy"),
         ReportField("site_id"),
     ]
@@ -379,6 +382,7 @@ class BenthicPITMethodSUCSVSerializer(ReportSerializer):
         ReportField("management_notes", "Management notes"),
         ReportField("sample_unit_notes", "Sample unit notes"),
         ReportField("project_notes", "Project notes"),
+        ReportField("suggested_citation", "Suggested citation"),
         ReportField("data_policy_benthicpit", "Benthic PIT data policy"),
         ReportField("site_id"),
     ]
@@ -462,6 +466,7 @@ class BenthicPITMethodSECSVSerializer(ReportSerializer):
         ReportField("site_notes", "Site notes"),
         ReportField("management_notes", "Management notes"),
         ReportField("project_notes", "Project notes"),
+        ReportField("suggested_citation", "Suggested citation"),
         ReportField("data_policy_benthicpit", "Benthic PIT data policy"),
         ReportField("site_id"),
     ]

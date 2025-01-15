@@ -10,6 +10,7 @@ class BleachingQCColoniesBleachedObsSQLModel(BaseSUSQLModel):
     _su_fields = BaseSUSQLModel.su_fields_sql
 
     sql = f"""
+    WITH obs_colonies_bleached_cte AS MATERIALIZED (
         WITH se AS (
             {sample_event_sql_template}
         )
@@ -18,7 +19,10 @@ class BleachingQCColoniesBleachedObsSQLModel(BaseSUSQLModel):
             { _su_fields },
             se.data_policy_bleachingqc,
             su.quadrat_size,
+            cat.name AS benthic_category,
+            b.id AS attribute_id,
             b.name AS benthic_attribute,
+            gf.id AS growth_form_id,
             gf.name AS growth_form,
             o.count_normal,
             o.count_pale,
@@ -51,12 +55,77 @@ class BleachingQCColoniesBleachedObsSQLModel(BaseSUSQLModel):
                 GROUP BY
                     tt_1.quadrat_id
             ) observers ON su.id = observers.quadrat_id
+            JOIN ( WITH RECURSIVE tree(child, root) AS (
+                        SELECT c_1.id,
+                            c_1.id
+                        FROM benthic_attribute c_1
+                            LEFT JOIN benthic_attribute p ON c_1.parent_id = p.id
+                        WHERE p.id IS NULL
+                        UNION
+                        SELECT benthic_attribute.id,
+                            tree_1.root
+                        FROM tree tree_1
+                            JOIN benthic_attribute ON tree_1.child = benthic_attribute.parent_id
+                        )
+                SELECT tree.child,
+                    tree.root
+                FROM tree) category ON o.attribute_id = category.child
+            JOIN benthic_attribute cat ON category.root = cat.id
             JOIN benthic_attribute b ON o.attribute_id = b.id
             LEFT JOIN growth_form gf ON o.growth_form_id = gf.id
             LEFT JOIN api_current c ON su.current_id = c.id
             LEFT JOIN api_tide t ON su.tide_id = t.id
             LEFT JOIN api_visibility v ON su.visibility_id = v.id
             LEFT JOIN api_relativedepth r ON su.relative_depth_id = r.id
+    ),
+    ba_lh_counts AS (
+        SELECT 
+            benthicattribute_id, 
+            COUNT(*) AS cnt
+        FROM benthic_attribute_life_histories
+        GROUP BY benthicattribute_id
+    ),
+    gf_lh_counts AS (
+        SELECT 
+            attribute_id, 
+            growth_form_id, 
+            COUNT(*) AS cnt
+        FROM ba_gf_life_histories
+        GROUP BY attribute_id, growth_form_id
+    )
+    SELECT *, 
+    (
+        WITH life_histories_data AS (
+            SELECT
+                blh.id,
+                blh.name,
+                COALESCE(ROUND(1.0 / NULLIF(COALESCE(gf.cnt, ba.cnt), 0), 3), 0) AS proportion,
+                COALESCE(ROUND(1.0 / NULLIF(gf.cnt, 0), 3), 0) AS proportion_gf
+            FROM benthic_lifehistory blh
+            LEFT JOIN ba_gf_life_histories gf_lh ON gf_lh.life_history_id = blh.id
+                AND gf_lh.attribute_id = obs_colonies_bleached_cte.attribute_id 
+                AND gf_lh.growth_form_id = obs_colonies_bleached_cte.growth_form_id
+            LEFT JOIN gf_lh_counts gf ON gf_lh.attribute_id = gf.attribute_id AND gf_lh.growth_form_id = gf.growth_form_id
+            LEFT JOIN benthic_attribute_life_histories balh ON balh.benthiclifehistory_id = blh.id
+                AND balh.benthicattribute_id = obs_colonies_bleached_cte.attribute_id
+            LEFT JOIN ba_lh_counts ba ON balh.benthicattribute_id = ba.benthicattribute_id
+        )
+        SELECT jsonb_agg(jsonb_build_object(
+            'id', lh.id,
+            'name', lh.name,
+            'proportion', 
+                CASE 
+                    WHEN EXISTS (
+                        SELECT 1 FROM life_histories_data lh_sub
+                        WHERE lh_sub.proportion_gf > 0
+                    )
+                    THEN CASE WHEN lh.proportion_gf > 0 THEN lh.proportion ELSE 0 END
+                    ELSE lh.proportion
+                END
+        ) ORDER BY lh.name)
+        FROM life_histories_data lh
+    ) AS life_histories
+    FROM obs_colonies_bleached_cte
     """
 
     sql_args = dict(
@@ -76,8 +145,10 @@ class BleachingQCColoniesBleachedObsSQLModel(BaseSUSQLModel):
     sample_unit_notes = models.TextField(blank=True)
 
     quadrat_size = models.DecimalField(decimal_places=2, max_digits=6)
+    benthic_category = models.CharField(max_length=100)
     benthic_attribute = models.CharField(max_length=100)
     growth_form = models.CharField(max_length=100)
+    life_histories = models.JSONField(null=True, blank=True)
     count_normal = models.PositiveSmallIntegerField(verbose_name="normal", default=0)
     count_pale = models.PositiveSmallIntegerField(verbose_name="pale", default=0)
     count_20 = models.PositiveSmallIntegerField(verbose_name="0-20% bleached", default=0)
@@ -185,7 +256,8 @@ class BleachingQCSUSQLModel(BaseSUSQLModel):
     # SU fields and observers pieces both rely on being the same for both types of QC observations
     sql = f"""
         WITH bleachingqc_colonies_bleached_obs AS (
-            {BleachingQCColoniesBleachedObsSQLModel.sql}
+            SELECT * FROM ({BleachingQCColoniesBleachedObsSQLModel.sql}) AS bleachingqc_colonies_bleached_obs_core WHERE project_id = '%(project_id)s'::uuid          
+            AND benthic_category != 'Other'
         ),
         bleachingqc_quadrat_benthic_percent_obs AS (
             {BleachingQCQuadratBenthicPercentObsSQLModel.sql}
@@ -216,7 +288,62 @@ class BleachingQCSUSQLModel(BaseSUSQLModel):
                 GROUP BY pseudosu_id, observers
             ) bleachingqc_obs_obs
             GROUP BY pseudosu_id
-        )
+        ),
+        qbp AS (
+            SELECT pseudosu_id,
+            COUNT(quadrat_number) AS quadrat_count,
+            ROUND(AVG(percent_hard), 1) AS percent_hard_avg,
+            ROUND(STDDEV(percent_hard), 1) AS percent_hard_sd,
+            ROUND(AVG(percent_soft), 1) AS percent_soft_avg,
+            ROUND(STDDEV(percent_soft), 1) AS percent_soft_sd,
+            ROUND(AVG(percent_algae), 1) AS percent_algae_avg,
+            ROUND(STDDEV(percent_algae), 1) AS percent_algae_sd
+            FROM bleachingqc_quadrat_benthic_percent_obs
+            INNER JOIN pseudosu_su 
+                ON(bleachingqc_quadrat_benthic_percent_obs.sample_unit_id = pseudosu_su.sample_unit_id)
+            GROUP BY pseudosu_id
+        ),
+        life_histories_agg AS (
+            SELECT lh.pseudosu_id,
+            jsonb_object_agg(
+                lh.name,
+                ROUND(
+                    COALESCE(qbp.percent_hard_avg, 0) *
+                    (
+                        CASE WHEN colony_count.su_colony_count > 0 
+                        THEN lh.proportion_sum / colony_count.su_colony_count
+                        ELSE 0 END
+                    ), 2
+                )
+            ) AS percent_cover_life_histories
+            FROM (
+                SELECT pseudosu_id,
+                       life_history->>'id' AS id,
+                       life_history->>'name' AS name,
+                       SUM((life_history->>'proportion')::numeric * 
+                           (count_normal + count_pale + count_20 + count_50 + count_80 + count_100 + count_dead)
+                       ) AS proportion_sum
+                FROM bleachingqc_colonies_bleached_obs
+                INNER JOIN pseudosu_su 
+                ON(bleachingqc_colonies_bleached_obs.sample_unit_id = pseudosu_su.sample_unit_id)
+                CROSS JOIN jsonb_array_elements(life_histories) AS life_history
+                WHERE benthic_category = 'Hard coral'
+                GROUP BY pseudosu_id, life_history->>'id', life_history->>'name'
+            ) lh
+            INNER JOIN (
+                SELECT pseudosu_id, 
+                SUM(count_normal + count_pale + count_20 + count_50 + count_80 + count_100 + count_dead) AS su_colony_count
+                FROM bleachingqc_colonies_bleached_obs
+                INNER JOIN pseudosu_su 
+                ON(bleachingqc_colonies_bleached_obs.sample_unit_id = pseudosu_su.sample_unit_id)
+                WHERE benthic_category = 'Hard coral'
+                GROUP BY pseudosu_id
+            ) colony_count
+            ON lh.pseudosu_id = colony_count.pseudosu_id
+            LEFT JOIN qbp ON lh.pseudosu_id = qbp.pseudosu_id
+            GROUP BY lh.pseudosu_id
+        ) 
+
         SELECT NULL AS id,
         bleachingqc_su.pseudosu_id,
         {_su_fields},
@@ -237,7 +364,8 @@ class BleachingQCSUSQLModel(BaseSUSQLModel):
         percent_soft_avg,
         percent_soft_sd,
         percent_algae_avg,
-        percent_algae_sd
+        percent_algae_sd,
+        percent_cover_life_histories
         FROM (
             SELECT pseudosu_id,
             jsonb_agg(DISTINCT pseudosu_su.sample_unit_id) AS sample_unit_ids,
@@ -283,22 +411,11 @@ class BleachingQCSUSQLModel(BaseSUSQLModel):
             GROUP BY pseudosu_id,
             {_su_fields_qualified}
         ) bleachingqc_su
+        INNER JOIN life_histories_agg
+        ON (bleachingqc_su.pseudosu_id = life_histories_agg.pseudosu_id)
         INNER JOIN bleachingqc_observers
             ON (bleachingqc_su.pseudosu_id = bleachingqc_observers.pseudosu_id)
-        LEFT JOIN (
-            SELECT pseudosu_id,
-            COUNT(quadrat_number) AS quadrat_count,
-            ROUND(AVG(percent_hard), 1) AS percent_hard_avg,
-            ROUND(STDDEV(percent_hard), 1) AS percent_hard_sd,
-            ROUND(AVG(percent_soft), 1) AS percent_soft_avg,
-            ROUND(STDDEV(percent_soft), 1) AS percent_soft_sd,
-            ROUND(AVG(percent_algae), 1) AS percent_algae_avg,
-            ROUND(STDDEV(percent_algae), 1) AS percent_algae_sd
-            FROM bleachingqc_quadrat_benthic_percent_obs
-            INNER JOIN pseudosu_su 
-                ON(bleachingqc_quadrat_benthic_percent_obs.sample_unit_id = pseudosu_su.sample_unit_id)
-            GROUP BY pseudosu_id
-        ) bp ON bleachingqc_su.pseudosu_id = bp.pseudosu_id
+        LEFT JOIN qbp ON bleachingqc_su.pseudosu_id = qbp.pseudosu_id
     """
 
     sql_args = dict(
@@ -341,6 +458,7 @@ class BleachingQCSUSQLModel(BaseSUSQLModel):
     percent_algae_sd = models.DecimalField(
         max_digits=4, decimal_places=1, default=0, null=True, blank=True
     )
+    percent_cover_life_histories = models.JSONField(null=True, blank=True)
     data_policy_bleachingqc = models.CharField(max_length=50)
     pseudosu_id = models.UUIDField()
 
@@ -399,14 +517,34 @@ class BleachingQCSESQLModel(BaseSQLModel):
         ROUND(AVG(percent_soft_avg), 1) AS percent_soft_avg_avg,
         ROUND(STDDEV(percent_soft_avg), 1) AS percent_soft_avg_sd,
         ROUND(AVG(percent_algae_avg), 1) AS percent_algae_avg_avg,
-        ROUND(STDDEV(percent_algae_avg), 1) AS percent_algae_avg_sd
+        ROUND(STDDEV(percent_algae_avg), 1) AS percent_algae_avg_sd,
+        percent_cover_life_histories_avg,
+        percent_cover_life_histories_sd
 
         FROM bleachingqc_su
         INNER JOIN se_observers ON (bleachingqc_su.sample_event_id = se_observers.sample_event_id)
+        INNER JOIN (
+            SELECT sample_event_id,
+            jsonb_object_agg(bleachingqc_su_lh.name, ROUND(proportion_avg :: numeric, 2)) AS percent_cover_life_histories_avg,
+            jsonb_object_agg(bleachingqc_su_lh.name, ROUND(proportion_sd :: numeric, 2)) AS percent_cover_life_histories_sd
+            FROM (
+                SELECT sample_event_id,
+                life_history.key AS name,
+                AVG(life_history.value :: float) AS proportion_avg,
+                STDDEV(life_history.value :: float) AS proportion_sd
+                FROM bleachingqc_su, 
+                jsonb_each_text(percent_cover_life_histories) AS life_history
+                GROUP BY sample_event_id, life_history.key
+            ) AS bleachingqc_su_lh
+            GROUP BY sample_event_id
+        ) AS bleachingqc_se_lhs
+        ON bleachingqc_su.sample_event_id = bleachingqc_se_lhs.sample_event_id
         GROUP BY
         {_se_fields},
         data_policy_bleachingqc,
-        se_observers.observers
+        se_observers.observers,
+        percent_cover_life_histories_avg,
+        percent_cover_life_histories_sd
     """
 
     sql_args = dict(
@@ -466,6 +604,8 @@ class BleachingQCSESQLModel(BaseSQLModel):
     percent_algae_avg_sd = models.DecimalField(
         max_digits=4, decimal_places=1, null=True, blank=True
     )
+    percent_cover_life_histories_avg = models.JSONField(null=True, blank=True)
+    percent_cover_life_histories_sd = models.JSONField(null=True, blank=True)
     data_policy_bleachingqc = models.CharField(max_length=50)
 
     class Meta:

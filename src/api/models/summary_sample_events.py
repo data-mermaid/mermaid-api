@@ -19,6 +19,7 @@ class SummarySampleEventBaseModel(models.Model):
         choices=Project.STATUSES, default=Project.OPEN
     )
     project_notes = models.TextField(blank=True)
+    suggested_citation = models.TextField(blank=True)
     sample_event_notes = models.TextField(blank=True, null=True)
     contact_link = models.CharField(max_length=255)
     tags = models.JSONField(null=True, blank=True)
@@ -26,7 +27,7 @@ class SummarySampleEventBaseModel(models.Model):
     country_name = models.CharField(max_length=50)
     reef_type = models.CharField(max_length=50)
     reef_zone = models.CharField(max_length=50)
-    reef_exposure = models.CharField(max_length=50)  # name change
+    reef_exposure = models.CharField(max_length=50)
     project_admins = models.JSONField(null=True, blank=True)
     sample_date = models.DateField(null=True, blank=True)
     management_id = models.UUIDField()
@@ -131,6 +132,7 @@ class SummarySampleEventSQLModel(SummarySampleEventBaseModel):
         project.name AS project_name,
         project.status AS project_status,
         project.notes AS project_notes,
+        '' AS suggested_citation,
         sample_event.notes AS sample_event_notes,
         'https://datamermaid.org/contact-project?project_id=' || COALESCE(project.id::text, '') AS contact_link,
         country.id AS country_id,
@@ -289,7 +291,11 @@ class SummarySampleEventSQLModel(SummarySampleEventBaseModel):
                 'percent_dead_avg', (CASE WHEN project.data_policy_bleachingqc < 50 AND NOT %(has_access)s THEN NULL ELSE
                 bleachingqc.percent_dead_avg END),
                 'percent_bleached_avg', (CASE WHEN project.data_policy_bleachingqc < 50 AND NOT %(has_access)s THEN NULL ELSE
-                bleachingqc.percent_bleached_avg END)
+                bleachingqc.percent_bleached_avg END),
+                'percent_cover_life_histories_avg', (CASE WHEN project.data_policy_bleachingqc < 50 AND NOT %(has_access)s THEN NULL ELSE
+                bleachingqc.percent_cover_life_histories_avg END),
+                'percent_cover_life_histories_sd', (CASE WHEN project.data_policy_bleachingqc < 50 AND NOT %(has_access)s THEN NULL ELSE
+                bleachingqc.percent_cover_life_histories_sd END)
             )), '{}'),
             'quadrat_benthic_percent', NULLIF(jsonb_strip_nulls(jsonb_build_object(
                 'sample_unit_count', bleachingqc.sample_unit_count,
@@ -558,7 +564,7 @@ class SummarySampleEventSQLModel(SummarySampleEventBaseModel):
         ) hc ON (sample_event.id = hc.sample_event_id)
 
         LEFT JOIN (
-            SELECT sample_event_id, 
+            SELECT bleachingqc_su.sample_event_id, 
             COUNT(pseudosu_id) AS sample_unit_count,
             ROUND(AVG(quadrat_size), 1) AS quadrat_size_avg,
             ROUND(AVG(count_total), 1) AS count_total_avg,
@@ -574,10 +580,30 @@ class SummarySampleEventSQLModel(SummarySampleEventBaseModel):
             ROUND(AVG(quadrat_count), 1) AS quadrat_count_avg,
             ROUND(AVG(percent_hard_avg), 1) AS percent_hard_avg_avg,
             ROUND(AVG(percent_soft_avg), 1) AS percent_soft_avg_avg,
-            ROUND(AVG(percent_algae_avg), 1) AS percent_algae_avg_avg
+            ROUND(AVG(percent_algae_avg), 1) AS percent_algae_avg_avg,
+            percent_cover_life_histories_avg,
+            percent_cover_life_histories_sd
             FROM bleachingqc_su
+            INNER JOIN (
+                SELECT sample_event_id,
+                jsonb_object_agg(bleachingqc_su_lh.name, ROUND(proportion_avg :: numeric, 2)) AS percent_cover_life_histories_avg,
+                jsonb_object_agg(bleachingqc_su_lh.name, ROUND(proportion_sd :: numeric, 2)) AS percent_cover_life_histories_sd
+                FROM (
+                    SELECT sample_event_id,
+                    life_history.key AS name,
+                    AVG(life_history.value :: float) AS proportion_avg,
+                    STDDEV(life_history.value :: float) AS proportion_sd
+                    FROM bleachingqc_su, 
+                    jsonb_each_text(percent_cover_life_histories) AS life_history
+                    GROUP BY sample_event_id, life_history.key
+                ) AS bleachingqc_su_lh
+                GROUP BY sample_event_id
+            ) AS bleachingqc_se_lhs
+            ON bleachingqc_su.sample_event_id = bleachingqc_se_lhs.sample_event_id
             GROUP BY
-            sample_event_id
+            bleachingqc_su.sample_event_id,
+            percent_cover_life_histories_avg,
+            percent_cover_life_histories_sd
         ) bleachingqc ON (sample_event.id = bleachingqc.sample_event_id)
 
         WHERE site.project_id = '%(project_id)s'::uuid
@@ -603,6 +629,15 @@ class SummarySampleEventModel(SummarySampleEventBaseModel):
 class BaseProjectSummarySampleEvent(models.Model):
     project_id = models.UUIDField(primary_key=True)
     project_name = models.CharField(max_length=255, default="awaiting refresh")
+    project_admins = models.JSONField(null=True, blank=True)
+    project_notes = models.TextField(blank=True)
+    suggested_citation = models.TextField(blank=True)
+    data_policy_beltfish = models.CharField(max_length=50, default="awaiting refresh")
+    data_policy_benthiclit = models.CharField(max_length=50, default="awaiting refresh")
+    data_policy_benthicpit = models.CharField(max_length=50, default="awaiting refresh")
+    data_policy_habitatcomplexity = models.CharField(max_length=50, default="awaiting refresh")
+    data_policy_bleachingqc = models.CharField(max_length=50, default="awaiting refresh")
+    data_policy_benthicpqt = models.CharField(max_length=50, default="awaiting refresh")
     tags = models.JSONField(null=True, blank=True)
     records = models.JSONField(encoder=DjangoJSONEncoder)
     created_on = models.DateTimeField(auto_now_add=True)

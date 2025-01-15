@@ -142,7 +142,7 @@ class FishBeltCSVSerializer(CollectRecordCSVSerializer):
         help_text="Size of fish observed, in cm (e.g. 4.5 or 5-10).",
     )
     data__obs_belt_fishes__count = serializers.IntegerField(
-        min_value=0,
+        min_value=1,
         label="Count",
         help_text="Number of fish observed, with the same name and size, as integer (e.g. 7).",
     )
