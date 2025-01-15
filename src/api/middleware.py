@@ -92,7 +92,7 @@ class MetricsMiddleware:
         except Exception as e:
             response = None
             status_code = 500
-            exception = str(e)
+            exception = e
         finally:
             duration = (time.time_ns() - s) / 1_000_000  # ms
 
@@ -114,7 +114,7 @@ class MetricsMiddleware:
                     "token_type": token_type,
                     "auth_type": auth_type,
                     "user_id": user_id or "",
-                    "exception": exception or "",
+                    "exception": str(exception) or "",
                 },
             )
 
