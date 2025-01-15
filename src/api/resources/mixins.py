@@ -5,6 +5,7 @@ from zipfile import ZIP_DEFLATED, ZipFile
 
 import pytz
 from django.conf import settings
+from django.core.exceptions import ObjectDoesNotExist
 from django.db import IntegrityError, transaction
 from django.db.models import ProtectedError, Q
 from django.http import FileResponse
@@ -256,8 +257,10 @@ class SampleUnitMethodEditMixin(object):
             post_edit.send(sender=collect_record.__class__, instance=collect_record)
 
             return Response({"id": str(collect_record.pk)})
-        except Exception as err:
-            return Response(str(err), status=500)
+        except ObjectDoesNotExist:
+            return Response(
+                f"{self.get_queryset().model.__name__} with id {pk} not found", status=404
+            )
 
 
 class SampleUnitMethodSummaryReport(object):
