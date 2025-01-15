@@ -7,8 +7,8 @@ from aws_cdk import (
 )
 from constructs import Construct
 
-from iac.settings.settings import ProjectSettings
-from iac.stacks.constructs.queue import JobQueue
+from settings.settings import ProjectSettings
+from stacks.constructs.queue import JobQueue
 
 
 class LambdaWorker(Construct):
@@ -18,7 +18,6 @@ class LambdaWorker(Construct):
         id: str,
         config: ProjectSettings,
         vpc: ec2.IVpc,
-        image_asset: ecr_assets.DockerImageAsset,
         container_security_group: ec2.SecurityGroup,
         api_secrets: dict,  # TODO manage secrets.
         environment: dict,

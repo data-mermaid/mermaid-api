@@ -22,9 +22,9 @@ from aws_cdk import (
 )
 from constructs import Construct
 
-from iac.settings import ProjectSettings
-from iac.stacks.constructs.lambda_queue_worker import LambdaWorker
-from iac.stacks.constructs.worker import QueueWorker
+from settings.settings import ProjectSettings
+from stacks.constructs.lambda_queue_worker import LambdaWorker
+from stacks.constructs.worker import QueueWorker
 
 
 def camel_case(string: str) -> str:
@@ -167,6 +167,7 @@ class ApiStack(Stack):
             "ApiImage",
             directory="../",
             file="Dockerfile",
+            target="main",
         )
 
         backup_task_def = ecs.Ec2TaskDefinition(
@@ -345,12 +346,11 @@ class ApiStack(Stack):
             "GeneralLambdaWorker",
             config=config,
             vpc=cluster.vpc,
-            image_asset=image_asset,
             container_security_group=container_security_group,
             api_secrets=self.api_secrets,  # TODO handle secrets
             environment=environment,
             public_bucket=public_bucket,
-            queue_name=image_sqs_queue_name,
+            queue_name="poc-lambda-worker",
             email=sys_email,
             fifo=False,
         )

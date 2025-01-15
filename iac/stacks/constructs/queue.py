@@ -8,7 +8,7 @@ from aws_cdk import (
 )
 from constructs import Construct
 
-from iac.settings.settings import ProjectSettings
+from settings.settings import ProjectSettings
 
 
 class JobQueue(Construct):

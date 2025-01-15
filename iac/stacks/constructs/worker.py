@@ -6,8 +6,8 @@ from aws_cdk import (
 )
 from constructs import Construct
 
-from iac.settings.settings import ProjectSettings
-from iac.stacks.constructs.queue import JobQueue
+from settings.settings import ProjectSettings
+from stacks.constructs.queue import JobQueue
 
 
 class QueueWorker(Construct):
