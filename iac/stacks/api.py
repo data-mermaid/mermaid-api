@@ -21,9 +21,8 @@ from aws_cdk import (
     aws_secretsmanager as secrets,
 )
 from constructs import Construct
-
-from iac.settings import ProjectSettings
-from iac.stacks.constructs.worker import QueueWorker
+from settings.settings import ProjectSettings
+from stacks.constructs.worker import QueueWorker
 
 
 def camel_case(string: str) -> str:
