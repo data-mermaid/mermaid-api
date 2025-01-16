@@ -77,38 +77,48 @@ class MetricsMiddleware:
 
     def __call__(self, request):
         url_path = request.path
-        response = self.get_response(request)
-
         if settings.DISABLE_METRICS or self._ignore_url_path(url_path):
-            return response
+            return self.get_response(request)
 
         method = request.method
         token_type, auth_type, user_id = self.parse_token(request.headers.get("Authorization"))
 
         s = time.time_ns()
+        exception = None
+        status_code = 200
+        try:
+            response = self.get_response(request)
+            status_code = response.status_code
+        except Exception as e:
+            response = None
+            status_code = 500
+            exception = e
+        finally:
+            duration = (time.time_ns() - s) / 1_000_000  # ms
 
-        response_status_code = response.status_code
-        duration = (time.time_ns() - s) / 1_000_000  # ms
+            query_params = dict(request.GET)
+            self._obfuscate(query_params)
 
-        query_params = dict(request.GET)
-        self._obfuscate(query_params)
+            now = timezone.now()
+            writer = self.metrics_logger.log if settings.WRITE_METRICS_TO_DB else print
+            writer(
+                now,
+                {
+                    "type": "mermaid-metrics",
+                    "timestamp": now.timestamp(),
+                    "method": method,
+                    "path": url_path,
+                    "query_params": query_params,
+                    "status_code": status_code,
+                    "duration_ms": duration,
+                    "token_type": token_type,
+                    "auth_type": auth_type,
+                    "user_id": user_id or "",
+                    "exception": str(exception) or "",
+                },
+            )
 
-        now = timezone.now()
-        writer = self.metrics_logger.log if settings.WRITE_METRICS_TO_DB else print
-        writer(
-            now,
-            {
-                "type": "mermaid-metrics",
-                "timestamp": now.timestamp(),
-                "method": method,
-                "path": url_path,
-                "query_params": query_params,
-                "status_code": response_status_code,
-                "duration_ms": duration,
-                "token_type": token_type,
-                "auth_type": auth_type,
-                "user_id": user_id or "",
-            },
-        )
+        if exception:
+            raise
 
         return response

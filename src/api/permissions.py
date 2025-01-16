@@ -152,6 +152,9 @@ class CollectRecordOwner(permissions.BasePermission):
         elif not record_ids:
             return True
 
+        for record_id in record_ids:
+            check_uuid(record_id)
+
         profile = getattr(request.user, "profile")
         count = CollectRecord.objects.filter(id__in=record_ids, profile=profile).count()
         return count == len(record_ids)

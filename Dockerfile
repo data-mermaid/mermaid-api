@@ -39,7 +39,6 @@ RUN su ${APP_USER} -c "pip install --no-cache-dir -r requirements.txt"
 RUN rm ${APP_DIR}/requirements.txt
 
 ADD ./src .
-
 RUN chown -R ${APP_USER}:${APP_USER} ${APP_DIR}
 
 # Run everything from here forward as non-root

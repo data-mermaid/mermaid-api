@@ -1,7 +1,11 @@
 import os
 import re
+import re
 
 from aws_cdk import (
+    Arn,
+    ArnComponents,
+    ArnFormat,
     Arn,
     ArnComponents,
     ArnFormat,
@@ -19,12 +23,18 @@ from aws_cdk import (
     aws_route53_targets as r53_targets,
     aws_s3 as s3,
     aws_secretsmanager as secrets,
+    aws_secretsmanager as secrets,
 )
 from constructs import Construct
 
 from settings.settings import ProjectSettings
 from stacks.constructs.lambda_queue_worker import LambdaWorker
 from stacks.constructs.worker import QueueWorker
+
+
+def camel_case(string: str) -> str:
+    s = re.sub(r"(_|-)+", " ", string).title().replace(" ", "")
+    return "".join([s[0].lower(), s[1:]])
 
 
 def camel_case(string: str) -> str:
@@ -78,51 +88,85 @@ class ApiStack(Stack):
                 ),
             )
 
+        def get_secret_object(stack: Stack, secret_name: str):
+            """Return secret object from name and field"""
+            id = f'{camel_case(secret_name.split("/")[-1])}'
+            return secrets.Secret.from_secret_complete_arn(
+                stack,
+                id=f"SSM-{id}",
+                secret_complete_arn=Arn.format(
+                    components=ArnComponents(
+                        region=stack.region,
+                        account=stack.account,
+                        partition=stack.partition,
+                        resource="secret",
+                        service="secretsmanager",
+                        resource_name=secret_name,
+                        arn_format=ArnFormat.COLON_RESOURCE_NAME,
+                    )
+                ),
+            )
+
         # Secrets
+        self.api_secrets = {
         self.api_secrets = {
             "DB_USER": ecs.Secret.from_secrets_manager(database.secret, "username"),
             "DB_PASSWORD": ecs.Secret.from_secrets_manager(database.secret, "password"),
             "PGPASSWORD": ecs.Secret.from_secrets_manager(database.secret, "password"),
             "DRF_RECAPTCHA_SECRET_KEY": ecs.Secret.from_secrets_manager(
                 get_secret_object(self, config.api.drf_recaptcha_secret_key_name)
+                get_secret_object(self, config.api.drf_recaptcha_secret_key_name)
             ),
             "EMAIL_HOST_USER": ecs.Secret.from_secrets_manager(
+                get_secret_object(self, config.api.email_host_user_name)
                 get_secret_object(self, config.api.email_host_user_name)
             ),
             "EMAIL_HOST_PASSWORD": ecs.Secret.from_secrets_manager(
                 get_secret_object(self, config.api.email_host_password_name)
+                get_secret_object(self, config.api.email_host_password_name)
             ),
             "SECRET_KEY": ecs.Secret.from_secrets_manager(
+                get_secret_object(self, config.api.secret_key_name)
                 get_secret_object(self, config.api.secret_key_name)
             ),
             "MERMAID_API_SIGNING_SECRET": ecs.Secret.from_secrets_manager(
                 get_secret_object(self, config.api.mermaid_api_signing_secret_name)
+                get_secret_object(self, config.api.mermaid_api_signing_secret_name)
             ),
             "SPA_ADMIN_CLIENT_ID": ecs.Secret.from_secrets_manager(
+                get_secret_object(self, config.api.spa_admin_client_id_name)
                 get_secret_object(self, config.api.spa_admin_client_id_name)
             ),
             "SPA_ADMIN_CLIENT_SECRET": ecs.Secret.from_secrets_manager(
                 get_secret_object(self, config.api.spa_admin_client_secret_name)
+                get_secret_object(self, config.api.spa_admin_client_secret_name)
             ),
             "MERMAID_MANAGEMENT_API_CLIENT_ID": ecs.Secret.from_secrets_manager(
+                get_secret_object(self, config.api.mermaid_management_api_client_id_name)
                 get_secret_object(self, config.api.mermaid_management_api_client_id_name)
             ),
             "MERMAID_MANAGEMENT_API_CLIENT_SECRET": ecs.Secret.from_secrets_manager(
                 get_secret_object(self, config.api.mermaid_management_api_client_secret_name)
+                get_secret_object(self, config.api.mermaid_management_api_client_secret_name)
             ),
             "MC_API_KEY": ecs.Secret.from_secrets_manager(
+                get_secret_object(self, config.api.mc_api_key_name)
                 get_secret_object(self, config.api.mc_api_key_name)
             ),
             "MC_LIST_ID": ecs.Secret.from_secrets_manager(
                 get_secret_object(self, config.api.mc_api_list_id_name)
+                get_secret_object(self, config.api.mc_api_list_id_name)
             ),
             "ADMINS": ecs.Secret.from_secrets_manager(
+                get_secret_object(self, config.api.admins_name)
                 get_secret_object(self, config.api.admins_name)
             ),
             "SUPERUSER": ecs.Secret.from_secrets_manager(
                 get_secret_object(self, config.api.superuser_name)
+                get_secret_object(self, config.api.superuser_name)
             ),
             "AUTH0_DOMAIN": ecs.Secret.from_secrets_manager(
+                get_secret_object(self, config.api.auth0_domain)
                 get_secret_object(self, config.api.auth0_domain)
             ),
         }
@@ -130,9 +174,13 @@ class ApiStack(Stack):
         if config.env_id == "dev":
             self.api_secrets["DEV_EMAILS"] = ecs.Secret.from_secrets_manager(
                 get_secret_object(self, config.api.dev_emails_name)
+            self.api_secrets["DEV_EMAILS"] = ecs.Secret.from_secrets_manager(
+                get_secret_object(self, config.api.dev_emails_name)
             )
 
         # Envir Vars
+        sqs_queue_name = f"mermaid-{config.env_id}-general"
+        image_sqs_queue_name = f"mermaid-{config.env_id}-image-processing"
         sqs_queue_name = f"mermaid-{config.env_id}-general"
         image_sqs_queue_name = f"mermaid-{config.env_id}-image-processing"
         environment = {
@@ -181,6 +229,7 @@ class ApiStack(Stack):
             cpu=config.api.backup_cpu,
             memory_limit_mib=config.api.backup_memory,
             secrets=self.api_secrets,
+            secrets=self.api_secrets,
             environment=environment,
             command=["python", "manage.py", "dbbackup", f"{config.env_id}"],
             logging=ecs.LogDrivers.aws_logs(stream_prefix="ScheduledBackupTask"),
@@ -211,6 +260,7 @@ class ApiStack(Stack):
             port_mappings=[ecs.PortMapping(container_port=8081)],
             environment=environment,
             secrets=self.api_secrets,
+            secrets=self.api_secrets,
             logging=ecs.LogDrivers.aws_logs(
                 stream_prefix=config.env_id, log_retention=logs.RetentionDays.ONE_MONTH
             ),
@@ -233,6 +283,7 @@ class ApiStack(Stack):
         )
 
         # Grant Secret read to API container & backup task
+        for _, container_secret in self.api_secrets.items():
         for _, container_secret in self.api_secrets.items():
             container_secret.grant_read(service.task_definition.execution_role)
             container_secret.grant_read(backup_task.task_definition.execution_role)
@@ -295,8 +346,11 @@ class ApiStack(Stack):
         worker = QueueWorker(
             self,
             "General",
+            "General",
             config=config,
             cluster=cluster,
+            image_asset=ecs.ContainerImage.from_docker_image_asset(image_asset),
+            api_secrets=self.api_secrets,
             image_asset=ecs.ContainerImage.from_docker_image_asset(image_asset),
             api_secrets=self.api_secrets,
             environment=environment,
@@ -310,8 +364,11 @@ class ApiStack(Stack):
         image_worker = QueueWorker(
             self,
             "ImageProcess",
+            "ImageProcess",
             config=config,
             cluster=cluster,
+            image_asset=ecs.ContainerImage.from_docker_image_asset(image_asset),
+            api_secrets=self.api_secrets,
             image_asset=ecs.ContainerImage.from_docker_image_asset(image_asset),
             api_secrets=self.api_secrets,
             environment=environment,
