@@ -4,6 +4,7 @@ from aws_cdk import (
     aws_lambda,
     aws_lambda_event_sources as lambda_event_source,
     aws_s3 as s3,
+    aws_iam as iam,
 )
 from constructs import Construct
 
@@ -42,6 +43,7 @@ class LambdaWorker(Construct):
             directory="../", file="Dockerfile", target="lambda_function"
         )
 
+
         # Lambda update_summary worker
         worker_function = aws_lambda.DockerImageFunction(
             self,
@@ -54,6 +56,19 @@ class LambdaWorker(Construct):
             vpc_subnets=ec2.SubnetSelection(
                 subnets=vpc.select_subnets(subnet_type=ec2.SubnetType.PRIVATE_WITH_EGRESS).subnets
             ),
+        )
+        secret_arns = []
+        for _, secret in api_secrets.items():
+            secret.grant_read(worker_function)
+            secret_arns.append(secret.arn)
+
+
+        # Attach the policy to the Lambda's execution role to allow access to Secrets Manager
+        worker_function.add_to_role_policy(
+            statement=iam.PolicyStatement(
+                actions=["secretsmanager:GetSecretValue", "secretsmanager:DescribeSecret"],  # Allow access to the Secret
+                resources=secret_arns,  # Specify which secret the Lambda can access
+            )
         )
         # TODO: limit number of functions
 
