@@ -1,6 +1,10 @@
 import os
+import re
 
 from aws_cdk import (
+    Arn,
+    ArnComponents,
+    ArnFormat,
     Duration,
     Stack,
     aws_applicationautoscaling as appscaling,
@@ -14,10 +18,16 @@ from aws_cdk import (
     aws_route53 as r53,
     aws_route53_targets as r53_targets,
     aws_s3 as s3,
+    aws_secretsmanager as secrets,
 )
 from constructs import Construct
-from settings import ProjectSettings
+from settings.settings import ProjectSettings
 from stacks.constructs.worker import QueueWorker
+
+
+def camel_case(string: str) -> str:
+    s = re.sub(r"(_|-)+", " ", string).title().replace(" ", "")
+    return "".join([s[0].lower(), s[1:]])
 
 
 class ApiStack(Stack):
@@ -47,65 +57,82 @@ class ApiStack(Stack):
 
         sys_email = os.environ.get("SYS_EMAIL") or None
 
+        def get_secret_object(stack: Stack, secret_name: str):
+            """Return secret object from name and field"""
+            id = f'{camel_case(secret_name.split("/")[-1])}'
+            return secrets.Secret.from_secret_complete_arn(
+                stack,
+                id=f"SSM-{id}",
+                secret_complete_arn=Arn.format(
+                    components=ArnComponents(
+                        region=stack.region,
+                        account=stack.account,
+                        partition=stack.partition,
+                        resource="secret",
+                        service="secretsmanager",
+                        resource_name=secret_name,
+                        arn_format=ArnFormat.COLON_RESOURCE_NAME,
+                    )
+                ),
+            )
+
         # Secrets
-        api_secrets = {
+        self.api_secrets = {
             "DB_USER": ecs.Secret.from_secrets_manager(database.secret, "username"),
             "DB_PASSWORD": ecs.Secret.from_secrets_manager(database.secret, "password"),
             "PGPASSWORD": ecs.Secret.from_secrets_manager(database.secret, "password"),
             "DRF_RECAPTCHA_SECRET_KEY": ecs.Secret.from_secrets_manager(
-                config.api.get_secret_object(self, config.api.drf_recaptcha_secret_key_name)
+                get_secret_object(self, config.api.drf_recaptcha_secret_key_name)
             ),
             "EMAIL_HOST_USER": ecs.Secret.from_secrets_manager(
-                config.api.get_secret_object(self, config.api.email_host_user_name)
+                get_secret_object(self, config.api.email_host_user_name)
             ),
             "EMAIL_HOST_PASSWORD": ecs.Secret.from_secrets_manager(
-                config.api.get_secret_object(self, config.api.email_host_password_name)
+                get_secret_object(self, config.api.email_host_password_name)
             ),
             "SECRET_KEY": ecs.Secret.from_secrets_manager(
-                config.api.get_secret_object(self, config.api.secret_key_name)
+                get_secret_object(self, config.api.secret_key_name)
             ),
             "MERMAID_API_SIGNING_SECRET": ecs.Secret.from_secrets_manager(
-                config.api.get_secret_object(self, config.api.mermaid_api_signing_secret_name)
+                get_secret_object(self, config.api.mermaid_api_signing_secret_name)
             ),
             "SPA_ADMIN_CLIENT_ID": ecs.Secret.from_secrets_manager(
-                config.api.get_secret_object(self, config.api.spa_admin_client_id_name)
+                get_secret_object(self, config.api.spa_admin_client_id_name)
             ),
             "SPA_ADMIN_CLIENT_SECRET": ecs.Secret.from_secrets_manager(
-                config.api.get_secret_object(self, config.api.spa_admin_client_secret_name)
+                get_secret_object(self, config.api.spa_admin_client_secret_name)
             ),
             "MERMAID_MANAGEMENT_API_CLIENT_ID": ecs.Secret.from_secrets_manager(
-                config.api.get_secret_object(self, config.api.mermaid_management_api_client_id_name)
+                get_secret_object(self, config.api.mermaid_management_api_client_id_name)
             ),
             "MERMAID_MANAGEMENT_API_CLIENT_SECRET": ecs.Secret.from_secrets_manager(
-                config.api.get_secret_object(
-                    self, config.api.mermaid_management_api_client_secret_name
-                )
+                get_secret_object(self, config.api.mermaid_management_api_client_secret_name)
             ),
             "MC_API_KEY": ecs.Secret.from_secrets_manager(
-                config.api.get_secret_object(self, config.api.mc_api_key_name)
+                get_secret_object(self, config.api.mc_api_key_name)
             ),
             "MC_LIST_ID": ecs.Secret.from_secrets_manager(
-                config.api.get_secret_object(self, config.api.mc_api_list_id_name)
+                get_secret_object(self, config.api.mc_api_list_id_name)
             ),
             "ADMINS": ecs.Secret.from_secrets_manager(
-                config.api.get_secret_object(self, config.api.admins_name)
+                get_secret_object(self, config.api.admins_name)
             ),
             "SUPERUSER": ecs.Secret.from_secrets_manager(
-                config.api.get_secret_object(self, config.api.superuser_name)
+                get_secret_object(self, config.api.superuser_name)
             ),
             "AUTH0_DOMAIN": ecs.Secret.from_secrets_manager(
-                config.api.get_secret_object(self, config.api.auth0_domain)
+                get_secret_object(self, config.api.auth0_domain)
             ),
         }
 
         if config.env_id == "dev":
-            api_secrets["DEV_EMAILS"] = ecs.Secret.from_secrets_manager(
-                config.api.get_secret_object(self, config.api.dev_emails_name)
+            self.api_secrets["DEV_EMAILS"] = ecs.Secret.from_secrets_manager(
+                get_secret_object(self, config.api.dev_emails_name)
             )
 
         # Envir Vars
-        sqs_queue_name = f"mermaid-{config.env_id}-queue"
-        image_sqs_queue_name = f"mermaid-{config.env_id}-image-processing-queue"
+        sqs_queue_name = f"mermaid-{config.env_id}-general"
+        image_sqs_queue_name = f"mermaid-{config.env_id}-image-processing"
         environment = {
             "ENV": config.env_id,
             "ENVIRONMENT": config.env_id,
@@ -150,14 +177,14 @@ class ApiStack(Stack):
             image=ecs.ContainerImage.from_docker_image_asset(image_asset),
             cpu=config.api.backup_cpu,
             memory_limit_mib=config.api.backup_memory,
-            secrets=api_secrets,
+            secrets=self.api_secrets,
             environment=environment,
             command=["python", "manage.py", "daily_tasks"],
             logging=ecs.LogDrivers.aws_logs(stream_prefix="ScheduledBackupTask"),
         )
 
-        # create a scheduled fargate task
-        daily_task = ecs_patterns.ScheduledEc2Task(
+        # create a scheduled task
+        daily_backup_task = ecs_patterns.ScheduledEc2Task(
             self,
             "ScheduledBackupTask",
             schedule=appscaling.Schedule.cron(hour="0", minute="0"),
@@ -180,7 +207,7 @@ class ApiStack(Stack):
             memory_limit_mib=config.api.container_memory,
             port_mappings=[ecs.PortMapping(container_port=8081)],
             environment=environment,
-            secrets=api_secrets,
+            secrets=self.api_secrets,
             logging=ecs.LogDrivers.aws_logs(
                 stream_prefix=config.env_id, log_retention=logs.RetentionDays.ONE_MONTH
             ),
@@ -203,9 +230,9 @@ class ApiStack(Stack):
         )
 
         # Grant Secret read to API container & backup task
-        for _, container_secret in api_secrets.items():
+        for _, container_secret in self.api_secrets.items():
             container_secret.grant_read(service.task_definition.execution_role)
-            container_secret.grant_read(daily_task.task_definition.execution_role)
+            container_secret.grant_read(daily_backup_task.task_definition.execution_role)
 
         target_group = elb.ApplicationTargetGroup(
             self,
@@ -259,17 +286,16 @@ class ApiStack(Stack):
         backup_bucket.grant_read_write(service.task_definition.task_role)
 
         # Give permission to backup task
-        backup_bucket.grant_read_write(daily_task.task_definition.task_role)
+        backup_bucket.grant_read_write(daily_backup_task.task_definition.task_role)
 
         # Standard Worker
         worker = QueueWorker(
             self,
-            "Worker",
+            "General",
             config=config,
             cluster=cluster,
-            image_asset=image_asset,
-            container_security_group=container_security_group,
-            api_secrets=api_secrets,
+            image_asset=ecs.ContainerImage.from_docker_image_asset(image_asset),
+            api_secrets=self.api_secrets,
             environment=environment,
             public_bucket=public_bucket,
             queue_name=sqs_queue_name,
@@ -280,12 +306,11 @@ class ApiStack(Stack):
         # Image Worker
         image_worker = QueueWorker(
             self,
-            "ImageWorker",
+            "ImageProcess",
             config=config,
             cluster=cluster,
-            image_asset=image_asset,
-            container_security_group=container_security_group,
-            api_secrets=api_secrets,
+            image_asset=ecs.ContainerImage.from_docker_image_asset(image_asset),
+            api_secrets=self.api_secrets,
             environment=environment,
             public_bucket=public_bucket,
             queue_name=image_sqs_queue_name,
