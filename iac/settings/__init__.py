@@ -1,1 +1,1 @@
-from settings.settings import ProjectSettings  # noqa: F401
+from iac.settings.settings import ProjectSettings  # noqa: F401
