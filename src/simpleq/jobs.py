@@ -117,9 +117,21 @@ class Job:
         if not self.exception:
             self.stop_time = datetime.now(timezone.utc)
             self.run_time = (self.stop_time - self.start_time).total_seconds()
-            self.log(
-                f"Finished job {self.callable.__name__} at {self.stop_time.isoformat()} "
-                f"in {self.run_time} seconds."
-            )
+            if self.loggable:
+                msg = (
+                    f"Finished job {self.callable.__name__} at {self.stop_time.isoformat()} "
+                    f"with args [{self.args}] and kwargs [{self.kwargs}] in {self.run_time} seconds."
+                )
+            else:
+                msg = (
+                    f"Finished job {self.callable.__name__} at {self.stop_time.isoformat()} "
+                    f"in {self.run_time} seconds."
+                )
+
+            self.log(msg)
         else:
-            self.log(f"Job {self.callable.__name__} failed to run: {self.exception}")
+            if self.loggable:
+                msg = f"Job {self.callable.__name__} with args [{self.args}] and kwargs [{self.kwargs}] failed to run: {self.exception}"
+            else:
+                msg = f"Job {self.callable.__name__} failed to run: {self.exception}"
+            self.log(msg)
