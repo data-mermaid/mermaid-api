@@ -4,8 +4,9 @@ from django.utils.dateparse import parse_datetime
 from timezonefinder import TimezoneFinder
 
 from ....models import Site
+from ..statuses import ERROR, OK, WARN
 from ..utils import valid_id
-from .base import ERROR, OK, WARN, BaseValidator, validator_result
+from .base import BaseValidator, validator_result
 
 
 class SampleDateValidator(BaseValidator):

@@ -1838,7 +1838,10 @@ class CollectRecord(BaseModel):
         if ignore_stage is False:
             self.stage = self.SAVED_STAGE
             self.validations = self.validations or {}
-            self.validations["status"] = "stale"
+
+            from ..submission.validations.statuses import STALE
+
+            self.validations["status"] = STALE
 
         self.ensure_obs_ids()
 
