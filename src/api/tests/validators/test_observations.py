@@ -1,5 +1,6 @@
 from api.resources.collect_record import CollectRecordSerializer
-from api.submission.validations2.validators import OK, WARN, ObservationCountValidator
+from api.submission.validations import OK, WARN
+from api.submission.validations.validators import ObservationCountValidator
 
 
 def _get_validator():
