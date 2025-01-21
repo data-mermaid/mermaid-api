@@ -276,8 +276,41 @@ class GFCRFinanceSolution(BaseModel):
         ("sustainable_fisheries", "Sustainable fisheries"),
         ("sustainable_mariculture_aquaculture", "Sustainable mariculture/aquaculture"),
         ("water_provision", "Water provision"),
+        # new sectors
+        (
+            "ce_pollution_mitigation",
+            "Circular Economy and Pollution Management - Pollution Mitigation",
+        ),
+        (
+            "ce_sustainable_infrastructure",
+            "Circular Economy and Pollution Management - Sustainable Infrastructure",
+        ),
+        ("ce_waste_management", "Circular Economy and Pollution Management - Waste Management"),
+        ("fm_biodiversity_credits", "Financial Mechanisms - Biodiversity Credits"),
+        ("fm_blue_carbon_credits", "Financial Mechanisms - Blue Carbon Credits"),
+        ("fm_conservation_trust_fund", "Financial Mechanisms - Conservation Trust Fund"),
+        ("fm_insurance_mechanisms", "Financial Mechanisms - Insurance Mechanisms"),
+        ("fm_mpa_user_fee", "Financial Mechanisms - MPA User Fee"),
+        ("fm_resilience_credits", "Financial Mechanisms - Resilience Credits"),
+        ("sc_coastal_infrastructure", "Sustainable Coastal Development - Coastal Infrastructure"),
+        (
+            "sc_coral_restoration_revenue_models",
+            "Sustainable Coastal Development - Coral Restoration Revenue Models",
+        ),
+        ("sc_ecotourism", "Sustainable Coastal Development - Ecotourism"),
+        ("so_aquaculture", "Sustainable Ocean Production - Aquaculture"),
+        ("so_fisheries", "Sustainable Ocean Production - Fisheries"),
+        (
+            "so_marine_biotechnology_products",
+            "Sustainable Ocean Production - Marine Biotechnology Products",
+        ),
+        ("so_other", "Sustainable Ocean Production - Other"),
+        (
+            "so_sustainable_small_scale_fisheries",
+            "Sustainable Ocean Production - Sustainable Small-Scale Fisheries",
+        ),
     )
-    SECTOR_CHOICES_UPDATED_ON = datetime.datetime(2024, 5, 27, 0, 0, 0, 0, pytz.UTC)
+    SECTOR_CHOICES_UPDATED_ON = datetime.datetime(2025, 1, 17, 0, 0, 0, 0, pytz.UTC)
 
     SUSTAINABLE_FINANCE_MECHANISM_CHOICES = (
         ("biodiversity_offsets", "Biodiversity offsets"),
