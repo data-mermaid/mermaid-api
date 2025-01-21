@@ -75,6 +75,17 @@ class Profile(models.Model):
                 return "N/A"
 
     @property
+    def citation_name(self):  # noqa
+        if self.first_name and self.last_name:
+            return f"{self.last_name} {self.first_name[:1]}"
+        elif self.first_name:
+            return self.first_name
+        elif self.last_name:
+            return self.last_name
+        else:
+            return None
+
+    @property
     def num_account_connections(self):
         return self.authusers.count()
 

@@ -40,7 +40,7 @@ def test_beltfish_csv_view(
     assert "test_project_1-beltfish-obs-" in response.headers.get("content-disposition")
     assert len(rows) == 7
     assert "country_name" in fieldnames
-    assert len(rows[3].keys()) == 60
+    assert len(rows[3].keys()) == 61
     assert rows[3]["site_name"] == site2.name
     assert float(rows[3]["latitude"]) == site2.location.y
     assert float(rows[3]["longitude"]) == site2.location.x
@@ -66,7 +66,7 @@ def test_beltfish_field_report(
     assert "test_project_1-beltfish-obs-" in response.headers.get("content-disposition")
     assert len(rows) == 7
     assert "Country" in fieldnames
-    assert len(rows[3].keys()) == 54
+    assert len(rows[3].keys()) == 55
     assert rows[3]["Site"] == site2.name
     assert float(rows[3]["Latitude"]) == site2.location.y
     assert float(rows[3]["Longitude"]) == site2.location.x
@@ -131,7 +131,7 @@ def test_benthicpit_csv_view(
 
     assert len(rows) == 15
     assert "country_name" in fieldnames
-    assert len(rows[11].keys()) == 54
+    assert len(rows[11].keys()) == 55
     assert rows[11]["site_name"] == site2.name
     assert float(rows[11]["latitude"]) == site2.location.y
     assert float(rows[11]["longitude"]) == site2.location.x
@@ -157,7 +157,7 @@ def test_benthicpit_field_report(
     assert "test_project_1-benthicpit-obs-" in response.headers.get("content-disposition")
     assert len(rows) == 15
     assert "Country" in fieldnames
-    assert len(rows[11].keys()) == 46
+    assert len(rows[11].keys()) == 47
     assert rows[11]["Site"] == site2.name
     assert float(rows[11]["Latitude"]) == site2.location.y
     assert float(rows[11]["Longitude"]) == site2.location.x
@@ -189,7 +189,7 @@ def test_benthiclit_csv_view(
 
     assert len(rows) == 10
     assert "country_name" in fieldnames
-    assert len(rows[6].keys()) == 53
+    assert len(rows[6].keys()) == 54
     assert rows[6]["site_name"] == site2.name
     assert float(rows[6]["latitude"]) == site2.location.y
     assert float(rows[6]["longitude"]) == site2.location.x
@@ -220,7 +220,7 @@ def test_benthiclit_field_report(
     assert "test_project_1-benthiclit-obs-" in response.headers.get("content-disposition")
     assert len(rows) == 10
     assert "Country" in fieldnames
-    assert len(rows[6].keys()) == 47
+    assert len(rows[6].keys()) == 48
     assert rows[6]["Site"] == site2.name
     assert float(rows[6]["Latitude"]) == site2.location.y
     assert float(rows[6]["Longitude"]) == site2.location.x
@@ -245,7 +245,7 @@ def test_habitatcomplexity_csv_view(
 
     assert len(rows) == 6
     assert "country_name" in fieldnames
-    assert len(rows[3].keys()) == 48
+    assert len(rows[3].keys()) == 49
     assert rows[3]["site_name"] == site2.name
     assert float(rows[3]["latitude"]) == site2.location.y
     assert float(rows[3]["longitude"]) == site2.location.x
@@ -270,7 +270,7 @@ def test_habitatcomplexity_field_report(
 
     assert len(rows) == 6
     assert "Country" in fieldnames
-    assert len(rows[3].keys()) == 41
+    assert len(rows[3].keys()) == 42
     assert rows[3]["Site"] == site2.name
     assert float(rows[3]["Latitude"]) == site2.location.y
     assert float(rows[3]["Longitude"]) == site2.location.x
@@ -297,7 +297,7 @@ def test_bleaching_colonies_bleached_csv_view(
     assert "country_name" in fieldnames
 
     ba_ordered_rownum = 4
-    assert len(rows[ba_ordered_rownum].keys()) == 55
+    assert len(rows[ba_ordered_rownum].keys()) == 57
     assert rows[ba_ordered_rownum]["site_name"] == site1.name
     assert float(rows[ba_ordered_rownum]["latitude"]) == site1.location.y
     assert float(rows[ba_ordered_rownum]["longitude"]) == site1.location.x
@@ -324,7 +324,7 @@ def test_bleaching_colonies_bleached_field_report(
     assert "Country" in fieldnames
 
     ba_ordered_rownum = 4
-    assert len(rows[ba_ordered_rownum].keys()) == 49
+    assert len(rows[ba_ordered_rownum].keys()) == 51
     assert rows[ba_ordered_rownum]["Site"] == site1.name
     assert float(rows[ba_ordered_rownum]["Latitude"]) == site1.location.y
     assert float(rows[ba_ordered_rownum]["Longitude"]) == site1.location.x
@@ -351,7 +351,7 @@ def test_bleaching_quadrat_benthic_percent_csv_view(
 
     assert len(rows) == 5
     assert "country_name" in fieldnames
-    assert len(rows[3].keys()) == 46
+    assert len(rows[3].keys()) == 47
     assert rows[3]["site_name"] == site1.name
     assert float(rows[3]["latitude"]) == site1.location.y
     assert float(rows[3]["longitude"]) == site1.location.x
@@ -376,7 +376,7 @@ def test_bleaching_quadrat_benthic_percent_field_report(
 
     assert len(rows) == 5
     assert "Country" in fieldnames
-    assert len(rows[3].keys()) == 40
+    assert len(rows[3].keys()) == 41
     assert rows[3]["Site"] == site1.name
     assert float(rows[3]["Latitude"]) == site1.location.y
     assert float(rows[3]["Longitude"]) == site1.location.x

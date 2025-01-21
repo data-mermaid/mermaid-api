@@ -1,10 +1,8 @@
 """
 Settings Class
 """
-from dataclasses import dataclass
 
-from aws_cdk import Arn, ArnComponents, ArnFormat, Stack, aws_secretsmanager as secrets
-from settings.utils import camel_case
+from dataclasses import dataclass
 
 
 @dataclass
@@ -71,25 +69,6 @@ class DjangoSettings:
     mc_api_key_name: str = "common/mermaid-api/mc-api-key-xSsQOk"
     mc_api_list_id_name: str = "common/mermaid-api/mc-api-list-id-Am5u1G"
     drf_recaptcha_secret_key_name: str = "common/mermaid-api/drf-recaptcha-secret-key-MdFr2W"
-
-    def get_secret_object(self, stack: Stack, secret_name: str):
-        """Return secret object from name and field"""
-        id = f'{camel_case(secret_name.split("/")[-1])}'
-        return secrets.Secret.from_secret_complete_arn(
-            stack,
-            id=f"SSM-{id}",
-            secret_complete_arn=Arn.format(
-                components=ArnComponents(
-                    region=stack.region,
-                    account=stack.account,
-                    partition=stack.partition,
-                    resource="secret",
-                    service="secretsmanager",
-                    resource_name=secret_name,
-                    arn_format=ArnFormat.COLON_RESOURCE_NAME,
-                )
-            ),
-        )
 
 
 @dataclass

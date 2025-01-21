@@ -232,6 +232,7 @@ class BleachingQCMethodObsColoniesBleachedSerializer(BaseSUViewAPISerializer):
                 "quadrat_size",
                 "depth",
                 "observers",
+                "benthic_category",
                 "benthic_attribute",
                 "growth_form",
                 "count_normal",
@@ -284,6 +285,7 @@ class ObsBleachingQCColoniesBleachedCSVSerializer(ReportSerializer):
         ReportField("management_rules", "Management rules", to_join_list),
         ReportField("observers", "Observers", to_names),
         ReportField("label", "Quadrat collection label"),
+        ReportField("benthic_category", "Benthic category"),
         ReportField("benthic_attribute", "Benthic attribute"),
         ReportField("growth_form", "Growth form"),
         ReportField("count_normal", "Normal count"),
@@ -321,6 +323,7 @@ class ObsBleachingQCColoniesBleachedCSVSerializer(ReportSerializer):
         ReportField("management_notes", "Management notes"),
         ReportField("sample_unit_notes", "Sample unit notes"),
         ReportField("project_notes", "Project notes"),
+        ReportField("suggested_citation", "Suggested citation"),
         ReportField("data_policy_bleachingqc", "Bleaching data policy"),
         ReportField("site_id"),
     ]
@@ -403,6 +406,7 @@ class ObsQuadratBenthicPercentCSVSerializer(ReportSerializer):
         ReportField("management_notes", "Management notes"),
         ReportField("sample_unit_notes", "Sample unit notes"),
         ReportField("project_notes", "Project notes"),
+        ReportField("suggested_citation", "Suggested citation"),
         ReportField("data_policy_bleachingqc", "Bleaching data policy"),
         ReportField("site_id"),
     ]
@@ -511,6 +515,7 @@ class BleachingQCMethodSUCSVSerializer(ReportSerializer):
         ReportField("management_notes", "Management notes"),
         ReportField("sample_unit_notes", "Sample unit notes"),
         ReportField("project_notes", "Project notes"),
+        ReportField("suggested_citation", "Suggested citation"),
         ReportField("data_policy_bleachingqc", "Bleaching data policy"),
         ReportField("site_id"),
     ]
@@ -640,6 +645,7 @@ class BleachingQCMethodSECSVSerializer(ReportSerializer):
         ReportField("site_notes", "Site notes"),
         ReportField("management_notes", "Management notes"),
         ReportField("project_notes", "Project notes"),
+        ReportField("suggested_citation", "Suggested citation"),
         ReportField("data_policy_bleachingqc", "Bleaching data policy"),
         ReportField("site_id"),
     ]

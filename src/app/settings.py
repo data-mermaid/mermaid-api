@@ -37,6 +37,9 @@ ADMINS = [("Datamermaid admin", admin.strip()) for admin in _admins.split(",")]
 SUPERUSER = ("Datamermaid superuser", os.environ.get("SUPERUSER"))
 DEFAULT_DOMAIN_API = os.environ.get("DEFAULT_DOMAIN_API")
 DEFAULT_DOMAIN_COLLECT = os.environ.get("DEFAULT_DOMAIN_COLLECT")
+DEFAULT_DOMAIN_DASHBOARD = os.environ.get(
+    "DEFAULT_DOMAIN_DASHBOARD", "https://dashboard.datamermaid.org"
+)
 
 # Application definition
 
@@ -386,8 +389,8 @@ DATA_UPLOAD_MAX_MEMORY_SIZE = 30 * 1024 * 1024  # 30 MB
 FILE_UPLOAD_MAX_MEMORY_SIZE = 15 * 1024 * 1024  # 15 MB
 MAX_IMAGE_PIXELS = 8000 * 8000
 AWS_QUERYSTRING_AUTH = False
-AUTOCONFIRM_THRESHOLD = 0.8
-CLASSIFIED_THRESHOLD = 0.1
+AUTOCONFIRM_THRESHOLD = 0.9
+CLASSIFIED_THRESHOLD = 0.5
 SPACER = {
     "AWS_ACCESS_KEY_ID": AWS_ACCESS_KEY_ID,
     "AWS_SECRET_ACCESS_KEY": AWS_SECRET_ACCESS_KEY,

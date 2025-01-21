@@ -58,6 +58,8 @@ from ..models import (
     UnrestrictedProjectSummarySampleEvent,
 )
 from ..resources.summary_sample_event import SummarySampleEventSerializer
+from ..utils.dbutils import LockedAtomicTransaction
+from ..utils.project import suggested_citation as get_suggested_citation
 from ..utils.timer import timing
 
 BATCH_SIZE = 1000
@@ -69,17 +71,31 @@ def _set_created_on(created_on, records):
         record.created_on = created_on
 
 
+def _get_suggested_citation(project_id):
+    suggested_citation = ""
+    project = Project.objects.get_or_none(id=project_id)
+    if project:
+        suggested_citation = get_suggested_citation(project)
+    return suggested_citation
+
+
+def _set_suggested_citation(suggested_citation, records):
+    for record in records:
+        record.suggested_citation = suggested_citation
+
+
 def _delete_existing_records(project_id, target_model_cls):
     target_model_cls.objects.filter(project_id=project_id).delete()
 
 
-def _update_records(records, target_model_cls, created_on, skip_updates=False):
+def _update_records(records, target_model_cls, created_on, suggested_citation, skip_updates=False):
     if skip_updates or not records:
         return
     idx = 0
     while True:
         batch = records[idx : idx + BATCH_SIZE]
         _set_created_on(created_on, batch)
+        _set_suggested_citation(suggested_citation, batch)
         if not batch:
             break
         target_model_cls.objects.bulk_create(batch, batch_size=BATCH_SIZE)
@@ -127,10 +143,11 @@ def _update_cache(
     se_records = _fetch_records(se_sql_model, project_id)
 
     created_on = timezone.now()
+    suggested_citation = _get_suggested_citation(project_id)
 
-    _update_records(obs_records, obs_model, created_on, skip_updates)
-    _update_records(su_records, su_model, created_on, skip_updates)
-    _update_records(se_records, se_model, created_on, skip_updates)
+    _update_records(obs_records, obs_model, created_on, suggested_citation, skip_updates)
+    _update_records(su_records, su_model, created_on, suggested_citation, skip_updates)
+    _update_records(se_records, se_model, created_on, suggested_citation, skip_updates)
 
 
 def _update_bleaching_qc_summary(
@@ -139,6 +156,7 @@ def _update_bleaching_qc_summary(
     timestamp=None,
 ):
     created_on = timezone.now()
+    suggested_citation = _get_suggested_citation(project_id)
 
     if not _is_update_required(timestamp, project_id, BleachingQCColoniesBleachedObsModel):
         return
@@ -157,20 +175,22 @@ def _update_bleaching_qc_summary(
         bleaching_colonies_obs,
         BleachingQCColoniesBleachedObsModel,
         created_on,
+        suggested_citation,
         skip_updates,
     )
     _update_records(
         bleaching_quad_percent_obs,
         BleachingQCQuadratBenthicPercentObsModel,
         created_on,
+        suggested_citation,
         skip_updates,
     )
 
     bleaching_su = _fetch_records(BleachingQCSUSQLModel, project_id)
-    _update_records(bleaching_su, BleachingQCSUModel, created_on, skip_updates)
+    _update_records(bleaching_su, BleachingQCSUModel, created_on, suggested_citation, skip_updates)
 
     bleaching_se = _fetch_records(BleachingQCSESQLModel, project_id)
-    _update_records(bleaching_se, BleachingQCSEModel, created_on, skip_updates)
+    _update_records(bleaching_se, BleachingQCSEModel, created_on, suggested_citation, skip_updates)
 
 
 def _update_project_summary_sample_event(project_id, skip_test_project=True):
@@ -182,11 +202,13 @@ def _update_project_summary_sample_event(project_id, skip_test_project=True):
         SummarySampleEventSQLModel.objects.all().sql_table(project_id=project_id)
     )
     SummarySampleEventModel.objects.filter(project_id=project_id).delete()
+    suggested_citation = _get_suggested_citation(project_id)
     for record in summary_sample_events:
         values = {
             field.name: getattr(record, field.name)
             for field in SummarySampleEventModel._meta.fields
         }
+        values["suggested_citation"] = suggested_citation
         SummarySampleEventModel.objects.create(**values)
 
 
@@ -202,6 +224,9 @@ def _update_project_summary_sample_events(
             project_id=project_id, has_access=has_access
         )
         records = SummarySampleEventSerializer(qs, many=True).data
+        suggested_citation = _get_suggested_citation(project_id)
+        for record in records:
+            record["suggested_citation"] = suggested_citation
 
         proj_summary_se_model.objects.filter(project_id=project_id).delete()
         tags = [{"id": str(t.pk), "name": t.name} for t in project.tags.all()]
@@ -214,6 +239,7 @@ def _update_project_summary_sample_events(
             project_name=project.name,
             project_admins=project_admins,
             project_notes=project.notes,
+            suggested_citation=suggested_citation,
             data_policy_beltfish=data_policies.get(
                 project.data_policy_beltfish, Project.data_policy_beltfish.field.default
             ),
@@ -340,7 +366,9 @@ def update_summary_cache(project_id, sample_unit=None, skip_test_project=False, 
                     timestamp,
                 )
 
-            _update_project_summary_sample_event(project_id, skip_updates)
+            with LockedAtomicTransaction(SummarySampleEventModel):
+                _update_project_summary_sample_event(project_id, skip_updates)
+
             timestamp = timezone.now()
             _update_unrestricted_project_summary_sample_events(project_id, timestamp, skip_updates)
             _update_restricted_project_summary_sample_events(project_id, timestamp, skip_updates)

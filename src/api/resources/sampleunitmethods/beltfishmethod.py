@@ -282,6 +282,7 @@ class ObsBeltFishCSVSerializer(ReportSerializer):
         ReportField("management_notes", "Management notes"),
         ReportField("sample_unit_notes", "Sample unit notes"),
         ReportField("project_notes", "Project notes"),
+        ReportField("suggested_citation", "Suggested citation"),
         ReportField("data_policy_beltfish", "Fish belt data policy"),
         ReportField("site_id"),
     ]
@@ -373,6 +374,7 @@ class BeltFishMethodSUCSVSerializer(ReportSerializer):
         ReportField("management_notes", "Management notes"),
         ReportField("sample_unit_notes", "Sample unit notes"),
         ReportField("project_notes", "Project notes"),
+        ReportField("suggested_citation", "Suggested citation"),
         ReportField("data_policy_beltfish", "Fish belt data policy"),
         ReportField("site_id"),
     ]
@@ -454,6 +456,7 @@ class BeltFishMethodSECSVSerializer(ReportSerializer):
         ReportField("site_notes", "Site notes"),
         ReportField("management_notes", "Management notes"),
         ReportField("project_notes", "Project notes"),
+        ReportField("suggested_citation", "Suggested citation"),
         ReportField("data_policy_beltfish", "Fish belt data policy"),
         ReportField("site_id"),
     ]

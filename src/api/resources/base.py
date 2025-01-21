@@ -46,6 +46,7 @@ from ..permissions import (
     UnauthenticatedReadOnlyPermission,
 )
 from ..utils.auth0utils import get_jwt_token, get_unverified_profile
+from ..utils.project import citation_retrieved_text
 from .mixins import MethodAuthenticationMixin, OrFilterSetMixin, UpdatesMixin
 
 
@@ -165,6 +166,7 @@ class BaseViewAPISerializer(BaseAPISerializer):
     updated_by = None
     latitude = SerializerMethodField()
     longitude = SerializerMethodField()
+    suggested_citation = SerializerMethodField()
 
     class Meta:
         exclude = ["project_status", "sample_event_notes"]
@@ -179,6 +181,12 @@ class BaseViewAPISerializer(BaseAPISerializer):
             return obj.location.x
         return None
 
+    def get_suggested_citation(self, obj):
+        suggested_citation = ""
+        if obj.suggested_citation != "":
+            suggested_citation = f"{obj.suggested_citation} "
+        return f"{suggested_citation}{citation_retrieved_text(obj.project_name)}"
+
 
 class BaseSUViewAPISerializer(BaseViewAPISerializer):
     class Meta(BaseViewAPISerializer.Meta):
@@ -191,6 +199,7 @@ class BaseSUViewAPISerializer(BaseViewAPISerializer):
             "project_id",
             "project_name",
             "project_notes",
+            "suggested_citation",
             "project_admins",
             "contact_link",
             "tags",
