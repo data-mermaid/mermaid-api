@@ -121,10 +121,6 @@ def f6_data(indicator_sets):
         ("F6.1b", "f6_1b"),
         ("F6.1c", "f6_1c"),
         ("F6.1d", "f6_1d"),
-        ("F6.2a", "f6_2a"),
-        ("F6.2b", "f6_2b"),
-        ("F6.2c", "f6_2c"),
-        ("F6.2d", "f6_2d"),
     )
     return _get_indicator_sheet_data(indicator_sets, fields)
 
