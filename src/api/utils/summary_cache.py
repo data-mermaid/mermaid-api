@@ -374,4 +374,4 @@ def update_summary_cache(project_id, sample_unit=None, skip_test_project=False, 
             _update_restricted_project_summary_sample_events(project_id, timestamp, skip_updates)
 
     except (DataError, IntegrityError) as e:
-        raise UpdateSummariesException() from e
+        raise UpdateSummariesException(message=str(e)) from e
