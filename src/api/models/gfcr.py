@@ -286,20 +286,24 @@ class GFCRFinanceSolution(BaseModel):
             "Circular Economy and Pollution Management - Sustainable Infrastructure",
         ),
         ("ce_waste_management", "Circular Economy and Pollution Management - Waste Management"),
+        ("ce_other", "Circular Economy and Pollution Management - Other"),
         ("fm_biodiversity_credits", "Financial Mechanisms - Biodiversity Credits"),
         ("fm_blue_carbon_credits", "Financial Mechanisms - Blue Carbon Credits"),
         ("fm_conservation_trust_fund", "Financial Mechanisms - Conservation Trust Fund"),
         ("fm_insurance_mechanisms", "Financial Mechanisms - Insurance Mechanisms"),
         ("fm_mpa_user_fee", "Financial Mechanisms - MPA User Fee"),
         ("fm_resilience_credits", "Financial Mechanisms - Resilience Credits"),
+        ("fm_other", "Financial Mechanisms - Other"),
         ("sc_coastal_infrastructure", "Sustainable Coastal Development - Coastal Infrastructure"),
         (
             "sc_coral_restoration_revenue_models",
             "Sustainable Coastal Development - Coral Restoration Revenue Models",
         ),
         ("sc_ecotourism", "Sustainable Coastal Development - Ecotourism"),
+        ("sc_other", "Sustainable Coastal Development - Other"),
         ("so_aquaculture", "Sustainable Ocean Production - Aquaculture"),
         ("so_fisheries", "Sustainable Ocean Production - Fisheries"),
+        ("so_mariculture", "Sustainable Ocean Production - Mariculture"),
         (
             "so_marine_biotechnology_products",
             "Sustainable Ocean Production - Marine Biotechnology Products",
@@ -310,7 +314,7 @@ class GFCRFinanceSolution(BaseModel):
             "Sustainable Ocean Production - Sustainable Small-Scale Fisheries",
         ),
     )
-    SECTOR_CHOICES_UPDATED_ON = datetime.datetime(2025, 1, 17, 0, 0, 0, 0, pytz.UTC)
+    SECTOR_CHOICES_UPDATED_ON = datetime.datetime(2025, 1, 22, 0, 0, 0, 0, pytz.UTC)
 
     SUSTAINABLE_FINANCE_MECHANISM_CHOICES = (
         ("biodiversity_offsets", "Biodiversity offsets"),
