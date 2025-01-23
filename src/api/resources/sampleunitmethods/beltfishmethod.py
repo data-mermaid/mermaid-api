@@ -366,7 +366,7 @@ class BeltFishMethodSUCSVSerializer(ReportSerializer):
         ReportField("transect_width_name", "Transect width"),
         ReportField("observers", "Observers", to_names),
         ReportField("size_bin", "Size bin"),
-        ReportField("total_abundance", "Total abundance"),
+        ReportField("total_abundance", "Total abundance (ind)"),
         ReportField("biomass_kgha", "Biomass kg/ha"),
         ReportField("biomass_kgha_trophic_group", "Biomass kg/ha by trophic group"),
         ReportField("biomass_kgha_fish_family", "Biomass kg/ha by family"),

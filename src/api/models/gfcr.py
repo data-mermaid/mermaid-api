@@ -188,22 +188,6 @@ class GFCRIndicatorSet(BaseModel):
         verbose_name="Number of direct jobs created (disaggregated by gender, youth, Indigenous peoples) [indigenous]",
         default=0,
     )
-    f6_2a = models.IntegerField(
-        verbose_name="Number of people with increased income and/or nutrition from GFCR support (disaggregated by gender, youth, Indigenous peoples) [men]",
-        default=0,
-    )
-    f6_2b = models.IntegerField(
-        verbose_name="Number of people with increased income and/or nutrition from GFCR support (disaggregated by gender, youth, Indigenous peoples) [women]",
-        default=0,
-    )
-    f6_2c = models.IntegerField(
-        verbose_name="Number of people with increased income and/or nutrition from GFCR support (disaggregated by gender, youth, Indigenous peoples) [youth]",
-        default=0,
-    )
-    f6_2d = models.IntegerField(
-        verbose_name="Number of people with increased income and/or nutrition from GFCR support (disaggregated by gender, youth, Indigenous peoples) [indigenous]",
-        default=0,
-    )
     f6_notes = models.TextField(blank=True)
     f7_1a = models.IntegerField(
         verbose_name="Total direct beneficiaries (disaggregated by gender, youth, Indigenous peoples) [men]",
