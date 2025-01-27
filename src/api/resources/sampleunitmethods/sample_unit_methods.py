@@ -87,7 +87,7 @@ class SampleUnitMethodSerializer(BaseAPISerializer):
 
     def get_sample_event(self, o):
         se = self._get_sample_event(o)
-        return str(se.pk)
+        return str(se.pk) if se else None
 
     def get_sample_unit_number(self, o):
         sample_unit = o.sample_unit
