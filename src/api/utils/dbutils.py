@@ -3,6 +3,8 @@ import shlex
 import subprocess
 
 from django.conf import settings
+from django.db import DEFAULT_DB_ALIAS
+from django.db.transaction import Atomic, get_connection
 
 sql_dir = os.path.join(os.path.sep, "tmp", "mermaid")
 db_params = {
@@ -71,3 +73,31 @@ def view_unpickle(view_name):
     _run(command)
 
     _run(shlex.split("rm {}".format(sql_file)))
+
+
+class LockedAtomicTransaction(Atomic):
+    """
+    Does a atomic transaction, but also locks the entire table for any transactions,
+    for the duration of this transaction. Although this is the only way to avoid
+    concurrency issues in certain situations, it should be used with
+    caution, since it has impacts on performance, for obvious reasons...
+    """
+
+    def __init__(self, model, using=None, savepoint=None, durable=False):
+        if using is None:
+            using = DEFAULT_DB_ALIAS
+        super().__init__(using, savepoint, durable)
+        self.model = model
+
+    def __enter__(self):
+        super(LockedAtomicTransaction, self).__enter__()
+
+        # Make sure not to lock, when sqlite is used, or you'll run into problems while running tests!!!
+        if settings.DATABASES[self.using]["ENGINE"] != "django.db.backends.sqlite3":
+            cursor = None
+            try:
+                cursor = get_connection(self.using).cursor()
+                cursor.execute(f"LOCK TABLE {self.model._meta.db_table}")
+            finally:
+                if cursor and not cursor.closed:
+                    cursor.close()

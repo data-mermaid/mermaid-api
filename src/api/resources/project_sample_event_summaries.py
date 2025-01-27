@@ -30,6 +30,8 @@ class ProjectSummarySampleEventSerializer(ExtendedSerializer):
 
     def get_records(self, obj):
         for se in obj.records:
+            if "suggested_citation" not in se:
+                se["suggested_citation"] = ""
             se["suggested_citation"] += f' {citation_retrieved_text(se["project_name"])}'
         return obj.records
 

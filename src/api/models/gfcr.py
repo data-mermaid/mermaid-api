@@ -188,22 +188,6 @@ class GFCRIndicatorSet(BaseModel):
         verbose_name="Number of direct jobs created (disaggregated by gender, youth, Indigenous peoples) [indigenous]",
         default=0,
     )
-    f6_2a = models.IntegerField(
-        verbose_name="Number of people with increased income and/or nutrition from GFCR support (disaggregated by gender, youth, Indigenous peoples) [men]",
-        default=0,
-    )
-    f6_2b = models.IntegerField(
-        verbose_name="Number of people with increased income and/or nutrition from GFCR support (disaggregated by gender, youth, Indigenous peoples) [women]",
-        default=0,
-    )
-    f6_2c = models.IntegerField(
-        verbose_name="Number of people with increased income and/or nutrition from GFCR support (disaggregated by gender, youth, Indigenous peoples) [youth]",
-        default=0,
-    )
-    f6_2d = models.IntegerField(
-        verbose_name="Number of people with increased income and/or nutrition from GFCR support (disaggregated by gender, youth, Indigenous peoples) [indigenous]",
-        default=0,
-    )
     f6_notes = models.TextField(blank=True)
     f7_1a = models.IntegerField(
         verbose_name="Total direct beneficiaries (disaggregated by gender, youth, Indigenous peoples) [men]",
@@ -276,8 +260,45 @@ class GFCRFinanceSolution(BaseModel):
         ("sustainable_fisheries", "Sustainable fisheries"),
         ("sustainable_mariculture_aquaculture", "Sustainable mariculture/aquaculture"),
         ("water_provision", "Water provision"),
+        # new sectors
+        (
+            "ce_pollution_mitigation",
+            "Circular Economy and Pollution Management - Pollution Mitigation",
+        ),
+        (
+            "ce_sustainable_infrastructure",
+            "Circular Economy and Pollution Management - Sustainable Infrastructure",
+        ),
+        ("ce_waste_management", "Circular Economy and Pollution Management - Waste Management"),
+        ("ce_other", "Circular Economy and Pollution Management - Other"),
+        ("fm_biodiversity_credits", "Financial Mechanisms - Biodiversity Credits"),
+        ("fm_blue_carbon_credits", "Financial Mechanisms - Blue Carbon Credits"),
+        ("fm_conservation_trust_fund", "Financial Mechanisms - Conservation Trust Fund"),
+        ("fm_insurance_mechanisms", "Financial Mechanisms - Insurance Mechanisms"),
+        ("fm_mpa_user_fee", "Financial Mechanisms - MPA User Fee"),
+        ("fm_resilience_credits", "Financial Mechanisms - Resilience Credits"),
+        ("fm_other", "Financial Mechanisms - Other"),
+        ("sc_coastal_infrastructure", "Sustainable Coastal Development - Coastal Infrastructure"),
+        (
+            "sc_coral_restoration_revenue_models",
+            "Sustainable Coastal Development - Coral Restoration Revenue Models",
+        ),
+        ("sc_ecotourism", "Sustainable Coastal Development - Ecotourism"),
+        ("sc_other", "Sustainable Coastal Development - Other"),
+        ("so_aquaculture", "Sustainable Ocean Production - Aquaculture"),
+        ("so_fisheries", "Sustainable Ocean Production - Fisheries"),
+        ("so_mariculture", "Sustainable Ocean Production - Mariculture"),
+        (
+            "so_marine_biotechnology_products",
+            "Sustainable Ocean Production - Marine Biotechnology Products",
+        ),
+        ("so_other", "Sustainable Ocean Production - Other"),
+        (
+            "so_sustainable_small_scale_fisheries",
+            "Sustainable Ocean Production - Sustainable Small-Scale Fisheries",
+        ),
     )
-    SECTOR_CHOICES_UPDATED_ON = datetime.datetime(2024, 5, 27, 0, 0, 0, 0, pytz.UTC)
+    SECTOR_CHOICES_UPDATED_ON = datetime.datetime(2025, 1, 22, 0, 0, 0, 0, pytz.UTC)
 
     SUSTAINABLE_FINANCE_MECHANISM_CHOICES = (
         ("biodiversity_offsets", "Biodiversity offsets"),
