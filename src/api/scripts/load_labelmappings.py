@@ -4,7 +4,17 @@ from pathlib import Path
 from api.models import LabelMapping
 
 
-def run(*args):
+def run(*args: str) -> None:
+    """Load label mappings from a CSV file into the database.
+
+    Args:
+        args: Command-line arguments. Expected format:
+            args[0]: Path to the CSV file
+            args[1]: Provider value that must exist in LabelMapping.PROVIDERS
+
+    Returns:
+        None
+    """
     if len(args) < 2:
         print("Usage: runscript load_labelmappings --script-args <csv_path> <provider_value>")
         return
