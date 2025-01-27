@@ -103,7 +103,6 @@ scratch/
 ci_cd/VERSION.txt
 src/VERSION.txt
 src/growthform/
-src/data/
 
 *.env
 
