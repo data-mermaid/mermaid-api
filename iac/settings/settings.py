@@ -36,6 +36,9 @@ class DjangoSettings:
     backup_cpu: int
     backup_memory: int
 
+    summary_cpu: int
+    summary_memory: int
+
     default_domain_api: str
     default_domain_collect: str
     mermaid_api_audience: str

@@ -17,6 +17,9 @@ PROD_SETTINGS = ProjectSettings(
         # Backup
         backup_cpu=1024,
         backup_memory=2048,
+        # Summary
+        summary_cpu=1024,
+        summary_memory=2048,
         default_domain_api="api.datamermaid.org",
         default_domain_collect="https://app.datamermaid.org",
         mermaid_api_audience="https://api.datamermaid.org",

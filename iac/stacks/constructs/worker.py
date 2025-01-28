@@ -53,9 +53,9 @@ class QueueWorker(Construct):
             # SQS queue's ApproximateNumberOfMessagesVisible metric
             scaling_steps=[
                 # when <=10 messages, scale down
-                appscaling.ScalingInterval(upper=10, change=-1),
+                appscaling.ScalingInterval(upper=100, change=-1),
                 # when >=10 messages, scale up
-                appscaling.ScalingInterval(lower=10, change=+1),
+                appscaling.ScalingInterval(lower=100, change=+1),
             ],
             capacity_provider_strategies=[
                 ecs.CapacityProviderStrategy(

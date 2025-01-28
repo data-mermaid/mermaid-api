@@ -1,6 +1,6 @@
 import os
 from concurrent.futures import ThreadPoolExecutor
-from time import time
+from time import sleep
 
 from django.core.management.base import BaseCommand
 from django.db import connection
@@ -11,6 +11,7 @@ from api.utils.summary_cache import update_summary_cache
 
 class Command(BaseCommand):
     LOCK_ID = 8080
+    WAIT_SECONDS = 5
 
     def acquire_lock(self):
         with connection.cursor() as cursor:
@@ -38,8 +39,7 @@ class Command(BaseCommand):
 
     def process_tasks(self, tasks):
         with ThreadPoolExecutor(max_workers=min(os.cpu_count() - 1, 3)) as executor:
-            results = list(executor.map(self._process_tasks, tasks))
-        return len(results)
+            executor.map(self._process_tasks, tasks)
 
     def handle(self, *args, **options):
         if not self.acquire_lock():
@@ -47,16 +47,12 @@ class Command(BaseCommand):
             return
 
         try:
-            start_time = time()
-            print("Processing summary tasks")
-            count = 0
             while True:
                 tasks = SummaryCacheQueue.objects.filter(attempts__lt=3).order_by("created_on")
                 if not tasks.exists():
-                    break
-                count += self.process_tasks(tasks)
+                    sleep(self.WAIT_SECONDS)
+                else:
+                    self.process_tasks(tasks)
 
-            end_time = time()
-            print(f"Summary tasks processed {count} in {end_time - start_time:.3f}s.")
         finally:
             self.release_lock()
