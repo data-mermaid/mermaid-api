@@ -58,7 +58,6 @@ from ..models import (
     UnrestrictedProjectSummarySampleEvent,
 )
 from ..resources.summary_sample_event import SummarySampleEventSerializer
-from ..utils.dbutils import LockedAtomicTransaction
 from ..utils.project import suggested_citation as get_suggested_citation
 from ..utils.timer import timing
 
@@ -366,8 +365,7 @@ def update_summary_cache(project_id, sample_unit=None, skip_test_project=False, 
                     timestamp,
                 )
 
-            with LockedAtomicTransaction(SummarySampleEventModel):
-                _update_project_summary_sample_event(project_id, skip_updates)
+            _update_project_summary_sample_event(project_id, skip_updates)
 
             timestamp = timezone.now()
             _update_unrestricted_project_summary_sample_events(project_id, timestamp, skip_updates)
