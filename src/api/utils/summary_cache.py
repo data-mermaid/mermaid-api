@@ -1,3 +1,4 @@
+import uuid
 from datetime import timedelta
 
 from django.db import connection, transaction
@@ -284,6 +285,11 @@ def _update_unrestricted_project_summary_sample_events(
 
 
 def add_project_to_queue(project_id, skip_test_project=False):
+    try:
+        uuid.UUID(project_id)
+    except (ValueError, TypeError, AttributeError):
+        raise ValueError(f"Invalid project_id: {project_id}")
+
     with connection.cursor() as cursor:
         if skip_test_project and Project.objects.filter(status=Project.TEST).exists():
             print(f"Skipping test project {project_id}")

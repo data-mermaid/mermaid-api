@@ -204,7 +204,7 @@ class ApiStack(Stack):
 
         summary_cache_task_def = ecs.Ec2TaskDefinition(
             self,
-            "ScheduledBackupTaskDef",
+            "ScheduledSummaryCacheTaskDef",
             network_mode=ecs.NetworkMode.AWS_VPC,
         )
         summary_cache_task_def.add_container(
@@ -221,7 +221,7 @@ class ApiStack(Stack):
         # create a scheduled fargate task
         summary_cache_task = ecs_patterns.ScheduledEc2Task(
             self,
-            "ScheduledBackupTask",
+            "ScheduledSummaryCacheTask",
             schedule=appscaling.Schedule.rate(Duration.minutes(5)),
             cluster=cluster,
             subnet_selection=ec2.SubnetSelection(
