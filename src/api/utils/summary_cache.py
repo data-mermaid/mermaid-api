@@ -1,6 +1,6 @@
 from datetime import timedelta
 
-from django.db import transaction
+from django.db import connection, transaction
 from django.db.utils import DataError, IntegrityError
 from django.utils import timezone
 
@@ -53,12 +53,12 @@ from ..models import (
     Project,
     ProjectProfile,
     RestrictedProjectSummarySampleEvent,
+    SummaryCacheQueue,
     SummarySampleEventModel,
     SummarySampleEventSQLModel,
     UnrestrictedProjectSummarySampleEvent,
 )
 from ..resources.summary_sample_event import SummarySampleEventSerializer
-from ..utils.dbutils import LockedAtomicTransaction
 from ..utils.project import suggested_citation as get_suggested_citation
 from ..utils.timer import timing
 
@@ -283,6 +283,23 @@ def _update_unrestricted_project_summary_sample_events(
     )
 
 
+def add_project_to_queue(project_id, skip_test_project=False):
+    with connection.cursor() as cursor:
+        if skip_test_project and Project.objects.filter(status=Project.TEST).exists():
+            print(f"Skipping test project {project_id}")
+            return
+
+        sql = f"""
+        INSERT INTO "{SummaryCacheQueue._meta.db_table}"
+        ("project_id", "processing", "attempts", "created_on")
+        VALUES (%s, false, 0, now())
+        ON CONFLICT (project_id, processing)
+        DO NOTHING;
+        """
+
+        cursor.execute(sql, [project_id])
+
+
 @timing
 def update_summary_cache(project_id, sample_unit=None, skip_test_project=False, timestamp=None):
     skip_updates = False
@@ -293,6 +310,7 @@ def update_summary_cache(project_id, sample_unit=None, skip_test_project=False, 
         skip_updates = True
 
     try:
+        sample_unit = sample_unit or None
         with transaction.atomic():
             if sample_unit is None or sample_unit == FISHBELT_PROTOCOL:
                 _update_cache(
@@ -366,8 +384,7 @@ def update_summary_cache(project_id, sample_unit=None, skip_test_project=False, 
                     timestamp,
                 )
 
-            with LockedAtomicTransaction(SummarySampleEventModel):
-                _update_project_summary_sample_event(project_id, skip_updates)
+            _update_project_summary_sample_event(project_id, skip_updates)
 
             timestamp = timezone.now()
             _update_unrestricted_project_summary_sample_events(project_id, timestamp, skip_updates)
