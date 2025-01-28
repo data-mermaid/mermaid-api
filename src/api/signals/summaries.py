@@ -19,7 +19,10 @@ def update_summaries_on_delete_transect_method(sender, instance, *args, **kwargs
 
     sample_unit = instance.sample_unit
     sample_unit.delete()
-    add_project_to_queue(project.pk)
+    try:
+        add_project_to_queue(project.pk)
+    except Exception as e:
+        print(f"Failed to queue summary update for project {project.pk}: {e}")
 
 
 @receiver(post_delete, sender=Management)
@@ -35,4 +38,7 @@ def update_summaries(sender, instance, *args, **kwargs):
     if project is None:
         return
 
-    add_project_to_queue(project.pk)
+    try:
+        add_project_to_queue(project.pk)
+    except Exception as e:
+        print(f"Failed to queue summary update for project {project.pk}: {e}")

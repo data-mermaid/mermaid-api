@@ -7,7 +7,7 @@ from .mermaid import Project
 
 
 class SummaryCacheQueue(models.Model):
-    project_id = models.UUIDField(unique=True)
+    project_id = models.UUIDField()
     processing = models.BooleanField(default=False)
     attempts = models.PositiveSmallIntegerField(default=0)
     created_on = models.DateTimeField(auto_now_add=True)
