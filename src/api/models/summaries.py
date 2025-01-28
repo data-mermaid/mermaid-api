@@ -6,6 +6,20 @@ from django.utils.translation import gettext_lazy as _
 from .mermaid import Project
 
 
+class SummaryCacheQueue(models.Model):
+    project_id = models.UUIDField(unique=True)
+    processing = models.BooleanField(default=False)
+    attempts = models.PositiveSmallIntegerField(default=0)
+    created_on = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        db_table = "summary_cache_queue"
+        unique_together = (
+            "project_id",
+            "processing",
+        )
+
+
 class BaseSummaryModel(models.Model):
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
     project_id = models.UUIDField(db_index=True)
