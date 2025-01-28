@@ -286,7 +286,8 @@ def _update_unrestricted_project_summary_sample_events(
 
 def add_project_to_queue(project_id, skip_test_project=False):
     try:
-        uuid.UUID(project_id)
+        if isinstance(project_id, uuid.UUID) is False:
+            uuid.UUID(project_id)
     except (ValueError, TypeError, AttributeError):
         raise ValueError(f"Invalid project_id: {project_id}")
 
