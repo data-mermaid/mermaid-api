@@ -200,6 +200,41 @@ class ApiStack(Stack):
             ),
         )
 
+        # --- Summary Cache Update Task ---
+
+        summary_cache_task_def = ecs.Ec2TaskDefinition(
+            self,
+            "ScheduledBackupTaskDef",
+            network_mode=ecs.NetworkMode.AWS_VPC,
+        )
+        summary_cache_task_def.add_container(
+            "ScheduledSummaryCacheUpdateContainer",
+            image=ecs.ContainerImage.from_docker_image_asset(image_asset),
+            cpu=config.api.backup_cpu,
+            memory_limit_mib=config.api.backup_memory,
+            secrets=self.api_secrets,
+            environment=environment,
+            command=["python", "manage.py", "process_summaries"],
+            logging=ecs.LogDrivers.aws_logs(stream_prefix="ScheduledSummaryCacheUpdateContainer"),
+        )
+
+        # create a scheduled fargate task
+        summary_cache_task = ecs_patterns.ScheduledEc2Task(
+            self,
+            "ScheduledBackupTask",
+            schedule=appscaling.Schedule.rate(Duration.minutes(5)),
+            cluster=cluster,
+            subnet_selection=ec2.SubnetSelection(
+                subnets=cluster.vpc.select_subnets(
+                    subnet_type=ec2.SubnetType.PRIVATE_WITH_NAT
+                ).subnets
+            ),
+            security_groups=[container_security_group],
+            scheduled_ec2_task_definition_options=ecs_patterns.ScheduledEc2TaskDefinitionOptions(
+                task_definition=summary_cache_task_def
+            ),
+        )
+
         task_definition.add_container(
             id="MermaidAPI",
             image=ecs.ContainerImage.from_docker_image_asset(image_asset),
@@ -233,6 +268,7 @@ class ApiStack(Stack):
         for _, container_secret in self.api_secrets.items():
             container_secret.grant_read(service.task_definition.execution_role)
             container_secret.grant_read(daily_backup_task.task_definition.execution_role)
+            container_secret.grant_read(summary_cache_task.task_definition.execution_role)
 
         target_group = elb.ApplicationTargetGroup(
             self,
