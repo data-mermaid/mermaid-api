@@ -11,6 +11,8 @@ class DatabaseSettings:
 
     name: str
     port: str
+    password_name: str = "common/mermaid-db/creds"
+    username: str = "common/mermaid-db/creds"
 
 
 @dataclass

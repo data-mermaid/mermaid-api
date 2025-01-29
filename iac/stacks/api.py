@@ -23,6 +23,7 @@ from aws_cdk import (
 from constructs import Construct
 from settings.settings import ProjectSettings
 from stacks.constructs.worker import QueueWorker
+from stacks.constructs.lambda_queue_worker import LambdaWorker
 
 
 def camel_case(string: str) -> str:
@@ -165,29 +166,30 @@ class ApiStack(Stack):
             "ApiImage",
             directory="../",
             file="Dockerfile",
+            target="main",
         )
 
-        daily_task_def = ecs.Ec2TaskDefinition(
+        backup_task_def = ecs.Ec2TaskDefinition(
             self,
             "ScheduledBackupTaskDef",
             network_mode=ecs.NetworkMode.AWS_VPC,
         )
-        daily_task_def.add_container(
+        backup_task_def.add_container(
             "ScheduledBackupContainer",
             image=ecs.ContainerImage.from_docker_image_asset(image_asset),
             cpu=config.api.backup_cpu,
             memory_limit_mib=config.api.backup_memory,
             secrets=self.api_secrets,
             environment=environment,
-            command=["python", "manage.py", "daily_tasks"],
+            command=["python", "manage.py", "dbbackup", f"{config.env_id}"],
             logging=ecs.LogDrivers.aws_logs(stream_prefix="ScheduledBackupTask"),
         )
 
         # create a scheduled task
-        daily_backup_task = ecs_patterns.ScheduledEc2Task(
+        backup_task = ecs_patterns.ScheduledEc2Task(
             self,
             "ScheduledBackupTask",
-            schedule=appscaling.Schedule.cron(hour="0", minute="0"),
+            schedule=appscaling.Schedule.rate(Duration.days(1)),
             cluster=cluster,
             subnet_selection=ec2.SubnetSelection(
                 subnets=cluster.vpc.select_subnets(
@@ -196,7 +198,7 @@ class ApiStack(Stack):
             ),
             security_groups=[container_security_group],
             scheduled_ec2_task_definition_options=ecs_patterns.ScheduledEc2TaskDefinitionOptions(
-                task_definition=daily_task_def
+                task_definition=backup_task_def
             ),
         )
 
@@ -232,7 +234,7 @@ class ApiStack(Stack):
         # Grant Secret read to API container & backup task
         for _, container_secret in self.api_secrets.items():
             container_secret.grant_read(service.task_definition.execution_role)
-            container_secret.grant_read(daily_backup_task.task_definition.execution_role)
+            container_secret.grant_read(backup_task.task_definition.execution_role)
 
         target_group = elb.ApplicationTargetGroup(
             self,
@@ -286,7 +288,7 @@ class ApiStack(Stack):
         backup_bucket.grant_read_write(service.task_definition.task_role)
 
         # Give permission to backup task
-        backup_bucket.grant_read_write(daily_backup_task.task_definition.task_role)
+        backup_bucket.grant_read_write(backup_task.task_definition.task_role)
 
         # Standard Worker
         worker = QueueWorker(
@@ -336,3 +338,22 @@ class ApiStack(Stack):
         # Allow Service and Image Worker to read/write config bucket
         data_bucket.grant_read_write(image_worker.task_definition.task_role)
         data_bucket.grant_read_write(service.task_definition.task_role)
+
+        if config.env_id == "dev":
+            ### POC ###
+            lambda_worker = LambdaWorker(
+                self,
+                "GeneralLambdaWorker",
+                config=config,
+                vpc=cluster.vpc,
+                container_security_group=container_security_group,
+                api_secrets=self.api_secrets,  # TODO handle secrets
+                environment=environment,
+                public_bucket=public_bucket,
+                queue_name="poc-lambda-worker",
+                email=sys_email,
+                fifo=False,
+            )
+            lambda_worker.queue.grant_send_messages(service.task_definition.task_role)
+            # TODO: handle secrets with Lambda
+            # TODO: Write a command/handler for processing a message.

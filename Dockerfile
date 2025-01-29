@@ -1,4 +1,4 @@
-FROM python:3.10-slim-bullseye
+FROM python:3.10-slim-bullseye AS main
 LABEL maintainer="<sysadmin@datamermaid.org>"
 
 ENV DEBIAN_FRONTEND=noninteractive
@@ -39,7 +39,6 @@ RUN su ${APP_USER} -c "pip install --no-cache-dir -r requirements.txt"
 RUN rm ${APP_DIR}/requirements.txt
 
 ADD ./src .
-ADD ./iac/settings ./iac/settings
 RUN chown -R ${APP_USER}:${APP_USER} ${APP_DIR}
 
 # Run everything from here forward as non-root
@@ -49,3 +48,17 @@ USER ${APP_USER}:${APP_USER}
 RUN SECRET_KEY='abc' python manage.py collectstatic --noinput
 
 CMD ["/var/projects/webapp/docker-entry.sh"]
+
+
+FROM main AS lambda_function
+
+# Install AWS lambda RIC
+RUN pip install -t . awslambdaric boto3
+
+ADD ./iac/settings ./iac/settings
+ADD ./worker_function/ ./worker_function/
+
+ENV PYTHONPATH=${APP_DIR}/iac/:/home/webapp/.local/lib/python3.10/site-packages
+
+ENTRYPOINT [ "python", "-m", "awslambdaric" ]
+CMD [ "worker_function.run_cmd_w_env.lambda_handler" ]

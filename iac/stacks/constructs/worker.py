@@ -5,6 +5,7 @@ from aws_cdk import (
     aws_s3 as s3,
 )
 from constructs import Construct
+
 from settings.settings import ProjectSettings
 from stacks.constructs.queue import JobQueue
 
