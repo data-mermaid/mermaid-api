@@ -339,20 +339,21 @@ class ApiStack(Stack):
         data_bucket.grant_read_write(image_worker.task_definition.task_role)
         data_bucket.grant_read_write(service.task_definition.task_role)
 
-        ### POC ###
-        lambda_worker = LambdaWorker(
-            self,
-            "GeneralLambdaWorker",
-            config=config,
-            vpc=cluster.vpc,
-            container_security_group=container_security_group,
-            api_secrets=self.api_secrets,  # TODO handle secrets
-            environment=environment,
-            public_bucket=public_bucket,
-            queue_name="poc-lambda-worker",
-            email=sys_email,
-            fifo=False,
-        )
-        lambda_worker.queue.grant_send_messages(service.task_definition.task_role)
-        # TODO: handle secrets with Lambda
-        # TODO: Write a command/handler for processing a message.
+        if config.env_id == "dev":
+            ### POC ###
+            lambda_worker = LambdaWorker(
+                self,
+                "GeneralLambdaWorker",
+                config=config,
+                vpc=cluster.vpc,
+                container_security_group=container_security_group,
+                api_secrets=self.api_secrets,  # TODO handle secrets
+                environment=environment,
+                public_bucket=public_bucket,
+                queue_name="poc-lambda-worker",
+                email=sys_email,
+                fifo=False,
+            )
+            lambda_worker.queue.grant_send_messages(service.task_definition.task_role)
+            # TODO: handle secrets with Lambda
+            # TODO: Write a command/handler for processing a message.
