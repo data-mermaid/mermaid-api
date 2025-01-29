@@ -11,7 +11,6 @@ from iac.settings.prod import PROD_ENV_ID, PROD_SETTINGS
 REQUIRED_ENV_VARS = [
     "DB_USER",
     "DB_PASSWORD",
-    "PGPASSWORD",
     # "DRF_RECAPTCHA_SECRET_KEY",
     # "EMAIL_HOST_USER",
     # "EMAIL_HOST_PASSWORD",
@@ -37,34 +36,31 @@ else:
 
 def load_env():
     for env_var in REQUIRED_ENV_VARS:
-        print(env_var)
-        env_var_value = get_env_or_secret(env_var)
 
+        env_var_value = get_env_or_secret(env_var)
         if env_var_value:
             os.environ[env_var] = env_var_value
 
 
 def get_env_or_secret(env_var_name: str):
     if env_var_name in os.environ.keys() and os.environ.get(env_var_name):
-        print("Env Var exists")
         return None
-
-    print("Fetch from SecretsManager")
 
     env_var_name_name = ""
     if not env_var_name.lower().endswith("name"):
         env_var_name_name = env_var_name + "_NAME"
-    print(env_var_name_name)
 
-    if hasattr(hosted_settings.api, env_var_name_name.lower()):
-        secretsmanager_name = getattr(hosted_settings.api, env_var_name_name.lower())
+    if env_var_name_name in ["DB_USER_NAME", "DB_USER", "DB_USERNAME"]:
+        secretsmanager_name = getattr(hosted_settings.database, "username")
+        env_var_name = "DB_USERNAME"
     elif hasattr(hosted_settings.database, env_var_name_name.lstrip("DB_").lower()):
         secretsmanager_name = getattr(
             hosted_settings.database, env_var_name_name.lstrip("DB_").lower()
         )
+    elif hasattr(hosted_settings.api, env_var_name_name.lower()):
+        secretsmanager_name = getattr(hosted_settings.api, env_var_name_name.lower())
     else:
         raise ValueError
-    print(secretsmanager_name)
 
     ssm = boto3.client("secretsmanager", region_name=os.environ.get("AWS_REGION"))
 
@@ -75,17 +71,22 @@ def get_env_or_secret(env_var_name: str):
     response = ssm.get_secret_value(SecretId="/".join(secretsmanager_name_parts))
 
     try:
+        if env_var_name == "SECRET_KEY":
+            return response["SecretString"]
         field = env_var_name.lstrip("DB_").lower()
-        return json.loads(response["SecretString"])[field]
+        value = json.loads(response["SecretString"])[field]
+        return value
     except json.decoder.JSONDecodeError:
         return response["SecretString"]
 
 
 def lambda_handler(event, context):
     load_env()
+    print("Env loaded")
+    print(event)
     # TODO pass args to this script so it can be used for other django commands
     result = subprocess.run(
-        ["python", "manage.py", "exec_job_lambda", "-m", event],
+        ["python", "manage.py", "exec_job_lambda", "-m", event["Records"][0]["body"]],
         # stdin=
         stdout=subprocess.PIPE,
         stderr=subprocess.STDOUT,
