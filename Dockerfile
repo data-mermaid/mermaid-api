@@ -55,9 +55,10 @@ FROM main AS lambda_function
 # Install AWS lambda RIC
 RUN pip install -t . awslambdaric boto3
 
-
 ADD ./iac/settings ./iac/settings
 ADD ./worker_function/ ./worker_function/
-ENV PYTHONPATH=${APP_DIR}/iac/
+
+ENV PYTHONPATH=${APP_DIR}/iac/:/home/webapp/.local/lib/python3.10/site-packages
+
 ENTRYPOINT [ "python", "-m", "awslambdaric" ]
 CMD [ "worker_function.run_cmd_w_env.lambda_handler" ]
