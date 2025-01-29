@@ -82,8 +82,6 @@ def get_env_or_secret(env_var_name: str):
 
 def lambda_handler(event, context):
     load_env()
-    print("Env loaded")
-    print(event)
     # TODO pass args to this script so it can be used for other django commands
     result = subprocess.run(
         ["python", "manage.py", "exec_job_lambda", "-m", event["Records"][0]["body"]],
