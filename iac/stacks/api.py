@@ -224,11 +224,6 @@ class ApiStack(Stack):
             cluster=cluster,
             security_groups=[container_security_group],
             enable_execute_command=True,
-            subnet_selection=ec2.SubnetSelection(
-                subnets=cluster.vpc.select_subnets(
-                    subnet_type=ec2.SubnetType.PRIVATE_WITH_NAT
-                ).subnets
-            ),
             capacity_provider_strategies=[
                 ecs.CapacityProviderStrategy(
                     capacity_provider="mermaid-api-infra-common-AsgCapacityProvider760D11D9-iqzBF6LfX313",
