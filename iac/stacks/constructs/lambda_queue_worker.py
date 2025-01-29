@@ -1,4 +1,5 @@
 from aws_cdk import (
+    Duration,
     aws_ec2 as ec2,
     aws_ecr_assets as ecr_assets,
     aws_lambda,
@@ -56,6 +57,7 @@ class LambdaWorker(Construct):
             vpc_subnets=ec2.SubnetSelection(
                 subnets=vpc.select_subnets(subnet_type=ec2.SubnetType.PRIVATE_WITH_EGRESS).subnets
             ),
+            timeout=Duration.seconds(300),
         )
         secret_arns = []
         for _, secret in api_secrets.items():
