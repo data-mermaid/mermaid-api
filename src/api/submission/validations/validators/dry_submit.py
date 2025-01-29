@@ -1,5 +1,6 @@
 from ... import utils
-from .base import ERROR, OK, WARN, BaseValidator, validator_result
+from ..statuses import ERROR, OK, WARN
+from .base import BaseValidator, validator_result
 
 
 class DrySubmitValidator(BaseValidator):

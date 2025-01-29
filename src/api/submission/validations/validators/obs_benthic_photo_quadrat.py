@@ -3,7 +3,8 @@ from collections import defaultdict
 from django.core.validators import MaxValueValidator
 
 from ....models.mermaid import QuadratTransect
-from .base import ERROR, OK, WARN, BaseValidator, validator_result
+from ..statuses import ERROR, OK, WARN
+from .base import BaseValidator, validator_result
 
 
 class PointsPerQuadratValidator(BaseValidator):

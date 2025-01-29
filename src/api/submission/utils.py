@@ -24,16 +24,10 @@ from ..signals import post_submit
 from ..utils.q import submit_job
 from ..utils.sample_unit_methods import create_audit_record
 from ..utils.summary_cache import update_summary_cache
-from .protocol_validations import (
-    BenthicLITProtocolValidation,
-    BenthicPhotoQuadratTransectProtocolValidation,
-    BenthicPITProtocolValidation,
-    BleachingQuadratCollectionProtocolValidation,
-    FishBeltProtocolValidation,
-    HabitatComplexityProtocolValidation,
-)
-from .validations import ERROR, IGNORE, OK, WARN
-from .validations2 import (
+from .validations import (
+    ERROR,
+    OK,
+    WARN,
     ValidationRunner,
     belt_fish,
     benthic_lit,
@@ -42,6 +36,7 @@ from .validations2 import (
     bleaching_quadrat_collection,
     habitat_complexity,
 )
+from .validations.statuses import IGNORE
 from .writer import (
     BenthicLITProtocolWriter,
     BenthicPhotoQuadratTransectProtocolWriter,
@@ -176,30 +171,6 @@ def validate(validator_cls, model_cls, qry_params=None):
         model_cls.objects.filter(id=record.id).update(
             validations=validations, updated_on=validation_timestamp
         )
-
-
-def _validate_collect_record(record, request):
-    protocol = record.data.get("protocol")
-    if protocol not in PROTOCOL_MAP:
-        raise ValueError(gettext_lazy(f"{protocol} not supported"))
-
-    if protocol == BENTHICLIT_PROTOCOL:
-        validator = BenthicLITProtocolValidation(record, request)
-    elif protocol == BENTHICPIT_PROTOCOL:
-        validator = BenthicPITProtocolValidation(record, request)
-    elif protocol == FISHBELT_PROTOCOL:
-        validator = FishBeltProtocolValidation(record, request)
-    elif protocol == HABITATCOMPLEXITY_PROTOCOL:
-        validator = HabitatComplexityProtocolValidation(record, request)
-    elif protocol == BLEACHINGQC_PROTOCOL:
-        validator = BleachingQuadratCollectionProtocolValidation(record, request)
-    elif protocol == BENTHICPQT_PROTOCOL:
-        validator = BenthicPhotoQuadratTransectProtocolValidation(record, request)
-
-    result = validator.validate()
-    validations = validator.validations
-
-    return result, validations
 
 
 def _validate_collect_record(record, record_serializer, request):

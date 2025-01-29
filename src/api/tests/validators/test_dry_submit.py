@@ -1,4 +1,5 @@
-from api.submission.validations2.validators import ERROR, OK, DrySubmitValidator
+from api.submission.validations import ERROR, OK
+from api.submission.validations.validators import DrySubmitValidator
 
 
 def test_dry_submit_validator_ok(valid_collect_record, profile1_request):

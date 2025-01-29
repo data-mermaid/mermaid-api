@@ -16,12 +16,6 @@ from django.utils import timezone
 from django.utils.translation import gettext_lazy as _
 from rest_framework.exceptions import ValidationError
 
-IGNORE: str = "ignore"
-ERROR: str = "error"
-WARN: str = "warning"
-OK: str = "ok"
-STALE: str = "stale"
-
 
 class Testing:
     def __enter__(self):

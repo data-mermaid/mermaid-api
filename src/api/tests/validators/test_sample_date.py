@@ -3,7 +3,8 @@ from datetime import timedelta
 from django.utils import timezone
 
 from api.resources.collect_record import CollectRecordSerializer
-from api.submission.validations2.validators import ERROR, OK, WARN, SampleDateValidator
+from api.submission.validations import ERROR, OK, WARN
+from api.submission.validations.validators import SampleDateValidator
 
 
 def _get_validator():

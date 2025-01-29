@@ -1,5 +1,5 @@
 # flake8: noqa
-from .base import ERROR, IGNORE, OK, STALE, WARN, BaseValidator, ValidatorResult
+from .base import BaseValidator, ValidatorResult
 from .benthic_transect import (
     BenthicIntervalObservationCountValidator,
     UniqueBenthicTransectValidator,

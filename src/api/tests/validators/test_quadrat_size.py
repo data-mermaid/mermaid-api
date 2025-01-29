@@ -1,6 +1,7 @@
 import pytest
 
-from api.submission.validations2.validators import ERROR, OK, QuadratSizeValidator
+from api.submission.validations import ERROR, OK
+from api.submission.validations.validators import QuadratSizeValidator
 
 
 @pytest.fixture

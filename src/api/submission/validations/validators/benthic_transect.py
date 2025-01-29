@@ -6,7 +6,8 @@ from rest_framework.exceptions import ParseError
 from ....exceptions import check_uuid
 from ....models import BenthicTransect
 from ....utils import get_related_transect_methods
-from .base import ERROR, OK, BaseValidator, validator_result
+from ..statuses import ERROR, OK
+from .base import BaseValidator, validator_result
 
 
 class UniqueBenthicTransectValidator(BaseValidator):

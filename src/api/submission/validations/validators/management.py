@@ -2,7 +2,8 @@ from rest_framework.exceptions import ParseError
 
 from ....exceptions import check_uuid
 from ....models import Management, Site
-from .base import ERROR, OK, WARN, BaseValidator, validator_result
+from ..statuses import ERROR, OK, WARN
+from .base import BaseValidator, validator_result
 
 
 class UniqueManagementValidator(BaseValidator):
