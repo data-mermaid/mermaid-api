@@ -1,11 +1,8 @@
-import uuid
-from datetime import timedelta
-
 from django.db import connection, transaction
 from django.db.utils import DataError, IntegrityError
 from django.utils import timezone
 
-from ..exceptions import UpdateSummariesException
+from ..exceptions import UpdateSummariesException, check_uuid
 from ..models import (
     BENTHICLIT_PROTOCOL,
     BENTHICPIT_PROTOCOL,
@@ -107,19 +104,6 @@ def _fetch_records(sql_model_cls, project_id):
     return list(sql_model_cls.objects.all().sql_table(project_id=project_id))
 
 
-def _is_update_required(timestamp, project_id, model_cls):
-    if timestamp is None:
-        return True
-
-    ts = timestamp - timedelta(seconds=BUFFER_TIME)
-    rec = model_cls.objects.filter(project_id=project_id).order_by("-created_on").first()
-
-    if rec is None:
-        return True
-
-    return rec.created_on < ts
-
-
 def _update_cache(
     project_id,
     obs_sql_model,
@@ -129,11 +113,7 @@ def _update_cache(
     se_sql_model,
     se_model,
     skip_updates,
-    timestamp=None,
 ):
-    if not _is_update_required(timestamp, project_id, obs_model):
-        return
-
     if skip_updates is not True:
         _delete_existing_records(project_id, obs_model)
         _delete_existing_records(project_id, su_model)
@@ -154,13 +134,9 @@ def _update_cache(
 def _update_bleaching_qc_summary(
     project_id,
     skip_updates,
-    timestamp=None,
 ):
     created_on = timezone.now()
     suggested_citation = _get_suggested_citation(project_id)
-
-    if not _is_update_required(timestamp, project_id, BleachingQCColoniesBleachedObsModel):
-        return
 
     if not skip_updates:
         _delete_existing_records(project_id, BleachingQCColoniesBleachedObsModel)
@@ -285,14 +261,13 @@ def _update_unrestricted_project_summary_sample_events(
 
 
 def add_project_to_queue(project_id, skip_test_project=False):
-    try:
-        if isinstance(project_id, uuid.UUID) is False:
-            uuid.UUID(project_id)
-    except (ValueError, TypeError, AttributeError):
-        raise ValueError(f"Invalid project_id: {project_id}")
+    check_uuid(project_id)
 
     with connection.cursor() as cursor:
-        if skip_test_project and Project.objects.filter(status=Project.TEST).exists():
+        if (
+            skip_test_project
+            and Project.objects.filter(project_id=project_id, status=Project.TEST).exists()
+        ):
             print(f"Skipping test project {project_id}")
             return
 
@@ -308,7 +283,7 @@ def add_project_to_queue(project_id, skip_test_project=False):
 
 
 @timing
-def update_summary_cache(project_id, sample_unit=None, skip_test_project=False, timestamp=None):
+def update_summary_cache(project_id, sample_unit=None, skip_test_project=False):
     skip_updates = False
     if (
         skip_test_project is True
@@ -317,7 +292,6 @@ def update_summary_cache(project_id, sample_unit=None, skip_test_project=False, 
         skip_updates = True
 
     try:
-        sample_unit = sample_unit or None
         with transaction.atomic():
             if sample_unit is None or sample_unit == FISHBELT_PROTOCOL:
                 _update_cache(
@@ -329,7 +303,6 @@ def update_summary_cache(project_id, sample_unit=None, skip_test_project=False, 
                     BeltFishSESQLModel,
                     BeltFishSEModel,
                     skip_updates,
-                    timestamp,
                 )
 
             if sample_unit is None or sample_unit == BENTHICLIT_PROTOCOL:
@@ -342,7 +315,6 @@ def update_summary_cache(project_id, sample_unit=None, skip_test_project=False, 
                     BenthicLITSESQLModel,
                     BenthicLITSEModel,
                     skip_updates,
-                    timestamp,
                 )
 
             if sample_unit is None or sample_unit == BENTHICPIT_PROTOCOL:
@@ -355,7 +327,6 @@ def update_summary_cache(project_id, sample_unit=None, skip_test_project=False, 
                     BenthicPITSESQLModel,
                     BenthicPITSEModel,
                     skip_updates,
-                    timestamp,
                 )
 
             if sample_unit is None or sample_unit == BENTHICPQT_PROTOCOL:
@@ -368,14 +339,12 @@ def update_summary_cache(project_id, sample_unit=None, skip_test_project=False, 
                     BenthicPhotoQuadratTransectSESQLModel,
                     BenthicPhotoQuadratTransectSEModel,
                     skip_updates,
-                    timestamp,
                 )
 
             if sample_unit is None or sample_unit == BLEACHINGQC_PROTOCOL:
                 _update_bleaching_qc_summary(
                     project_id,
                     skip_updates,
-                    timestamp,
                 )
 
             if sample_unit is None or sample_unit == HABITATCOMPLEXITY_PROTOCOL:
@@ -388,7 +357,6 @@ def update_summary_cache(project_id, sample_unit=None, skip_test_project=False, 
                     HabitatComplexitySESQLModel,
                     HabitatComplexitySEModel,
                     skip_updates,
-                    timestamp,
                 )
 
             _update_project_summary_sample_event(project_id, skip_updates)

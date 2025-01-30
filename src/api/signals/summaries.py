@@ -1,3 +1,5 @@
+import logging
+
 from django.db.models.signals import post_delete, post_save
 from django.dispatch import receiver
 
@@ -10,6 +12,8 @@ __all__ = (
     "update_summaries",
 )
 
+logger = logging.getLogger(__name__)
+
 
 @receiver(post_delete, sender=TransectMethod)
 def update_summaries_on_delete_transect_method(sender, instance, *args, **kwargs):
@@ -21,8 +25,8 @@ def update_summaries_on_delete_transect_method(sender, instance, *args, **kwargs
     sample_unit.delete()
     try:
         add_project_to_queue(project.pk)
-    except Exception as e:
-        print(f"Failed to queue summary update for project {project.pk}: {e}")
+    except Exception:
+        logger.exception(f"Failed to queue summary update for project {project.pk}")
 
 
 @receiver(post_delete, sender=Management)

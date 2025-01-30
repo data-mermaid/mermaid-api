@@ -1,3 +1,4 @@
+import logging
 import os
 from concurrent.futures import ThreadPoolExecutor
 from time import sleep
@@ -8,20 +9,32 @@ from django.db import connection
 from api.models import SummaryCacheQueue
 from api.utils.summary_cache import update_summary_cache
 
+logger = logging.getLogger(__name__)
+
 
 class Command(BaseCommand):
     LOCK_ID = 8080
     WAIT_SECONDS = 5
 
     def acquire_lock(self):
-        with connection.cursor() as cursor:
-            cursor.execute("SELECT pg_try_advisory_lock(%s);", [self.LOCK_ID])
-            locked = cursor.fetchone()[0]
-        return locked
+        try:
+            with connection.cursor() as cursor:
+                cursor.execute("SELECT pg_try_advisory_lock(%s);", [self.LOCK_ID])
+                locked = cursor.fetchone()[0]
+            return locked
+        except Exception:
+            logger.exception("Error acquire_lock")
+            return False
 
     def release_lock(self):
-        with connection.cursor() as cursor:
-            cursor.execute("SELECT pg_advisory_unlock(%s);", [self.LOCK_ID])
+        try:
+            with connection.cursor() as cursor:
+                cursor.execute("SELECT pg_advisory_unlock(%s);", [self.LOCK_ID])
+                unlocked = cursor.fetchone()[0]
+            return unlocked
+        except Exception:
+            logger.exception("Error release_lock")
+            return False
 
     def _process_tasks(self, task):
         try:
@@ -30,20 +43,20 @@ class Command(BaseCommand):
             update_summary_cache(task.project_id)
             task.delete()
             return True
-        except Exception as e:
-            print(f"Error update_summary_cache[Project id: {task.project_id}]: {e}")
+        except Exception:
+            logger.exception(f"Error update_summary_cache[Project id: {task.project_id}]")
             task.processing = False
             task.attempts += 1
             task.save()
             return False
 
     def process_tasks(self, tasks):
-        with ThreadPoolExecutor(max_workers=min(os.cpu_count() - 1, 3)) as executor:
+        with ThreadPoolExecutor(max_workers=max(os.cpu_count(), 2)) as executor:
             executor.map(self._process_tasks, tasks)
 
     def handle(self, *args, **options):
         if not self.acquire_lock():
-            print("Another process is already working on tasks.")
+            logger.warning("Another process is already working on tasks.")
             return
 
         try:
