@@ -17,6 +17,9 @@ DEV_SETTINGS = ProjectSettings(
         # Backup
         backup_cpu=512,
         backup_memory=1024,
+        # Summary
+        summary_cpu=512,
+        summary_memory=1024,
         default_domain_api="dev-api.datamermaid.org",
         default_domain_collect="https://dev-app.datamermaid.org",
         mermaid_api_audience="https://dev-api.datamermaid.org",

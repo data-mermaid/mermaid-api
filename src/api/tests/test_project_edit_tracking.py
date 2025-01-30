@@ -11,6 +11,8 @@ def test_project_edit_tracking(valid_collect_record, profile1_request):
         project_id = valid_collect_record.project_id
         write_collect_record(valid_collect_record, profile1_request)
 
+        update_summary_cache(project_id)
+
         summary_ses = SummarySampleEventModel.objects.filter(project_id=project_id)
         assert summary_ses.count() == 1
 
@@ -36,6 +38,8 @@ def test_edit_transect_method(belt_fish_project, belt_fish1, profile1, profile1_
             FISHBELT_PROTOCOL,
         )
 
+        update_summary_cache(project_id)
+
         summary_se_count = SummarySampleEventModel.objects.filter(project_id=project_id).count()
 
         assert summary_se_count == 1
@@ -52,6 +56,8 @@ def test_edit_site(belt_fish_project, site1):
 
         site1.name = "Changing my name"
         site1.save()
+
+        update_summary_cache(project_id)
 
         assert (
             SummarySampleEventModel.objects.filter(site_name=original_site_name).exists() is False
@@ -73,6 +79,8 @@ def test_edit_management(belt_fish_project, management1):
         management1.name = "Changing my name"
         management1.save()
 
+        update_summary_cache(project_id)
+
         assert (
             SummarySampleEventModel.objects.filter(
                 management_name=original_management_name
@@ -93,6 +101,8 @@ def test_edit_project_profile(belt_fish_project, project_profile1):
         project_profile1.role = ProjectProfile.COLLECTOR
         project_profile1.save()
 
+        update_summary_cache(project_id)
+
         for ssm in SummarySampleEventModel.objects.all():
             assert len(ssm.project_admins) == 0
 
@@ -104,6 +114,8 @@ def test_edit_project(belt_fish_project, project1):
         new_name = "Change the name"
         project1.name = new_name
         project1.save()
+
+        update_summary_cache(project1.pk)
 
         for ssm in SummarySampleEventModel.objects.all():
             assert ssm.project_name == new_name

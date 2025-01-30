@@ -21,9 +21,8 @@ from ..models import (
     CollectRecord,
 )
 from ..signals import post_submit
-from ..utils.q import submit_job
 from ..utils.sample_unit_methods import create_audit_record
-from ..utils.summary_cache import update_summary_cache
+from ..utils.summary_cache import add_project_to_queue
 from .protocol_validations import (
     BenthicLITProtocolValidation,
     BenthicPhotoQuadratTransectProtocolValidation,
@@ -137,14 +136,7 @@ def write_collect_record(collect_record, request, dry_run=False):
                     instance=collect_record,
                 )
 
-                submit_job(
-                    5,
-                    True,
-                    update_summary_cache,
-                    project_id=collect_record.project_id,
-                    sample_unit=collect_record.protocol,
-                    timestamp=timezone.now(),
-                )
+                add_project_to_queue(collect_record.project_id)
         return status, result
 
 

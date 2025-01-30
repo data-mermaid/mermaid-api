@@ -200,6 +200,40 @@ class ApiStack(Stack):
             ),
         )
 
+        # --- Summary Cache Update Task ---
+
+        summary_cache_task_def = ecs.Ec2TaskDefinition(
+            self,
+            "ScheduledSummaryCacheTaskDef",
+            network_mode=ecs.NetworkMode.AWS_VPC,
+        )
+        summary_cache_task_def.add_container(
+            "ScheduledSummaryCacheUpdateContainer",
+            image=ecs.ContainerImage.from_docker_image_asset(image_asset),
+            cpu=config.api.summary_cpu,
+            memory_limit_mib=config.api.summary_memory,
+            secrets=self.api_secrets,
+            environment=environment,
+            command=["python", "manage.py", "process_summaries"],
+            logging=ecs.LogDrivers.aws_logs(stream_prefix="ScheduledSummaryCacheUpdateContainer"),
+        )
+        summary_cache_service = ecs.Ec2Service(
+            self,
+            id="ScheduledSummaryCacheService",
+            task_definition=summary_cache_task_def,
+            cluster=cluster,
+            security_groups=[container_security_group],
+            enable_execute_command=True,
+            capacity_provider_strategies=[
+                ecs.CapacityProviderStrategy(
+                    capacity_provider="mermaid-api-infra-common-AsgCapacityProvider760D11D9-iqzBF6LfX313",
+                    weight=100,
+                )
+            ],
+        )
+
+        # --- API Service ---
+
         task_definition.add_container(
             id="MermaidAPI",
             image=ecs.ContainerImage.from_docker_image_asset(image_asset),
@@ -233,6 +267,7 @@ class ApiStack(Stack):
         for _, container_secret in self.api_secrets.items():
             container_secret.grant_read(service.task_definition.execution_role)
             container_secret.grant_read(daily_backup_task.task_definition.execution_role)
+            container_secret.grant_read(summary_cache_service.task_definition.execution_role)
 
         target_group = elb.ApplicationTargetGroup(
             self,
