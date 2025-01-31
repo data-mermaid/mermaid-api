@@ -1,7 +1,8 @@
 import logging
 import os
+import signal
+import threading
 from concurrent.futures import ThreadPoolExecutor
-from time import sleep
 
 from django.core.management.base import BaseCommand
 from django.db import connection
@@ -13,18 +14,8 @@ logger = logging.getLogger(__name__)
 
 
 class Command(BaseCommand):
-    LOCK_ID = 8080
     WAIT_SECONDS = 5
-
-    def acquire_lock(self):
-        try:
-            with connection.cursor() as cursor:
-                cursor.execute("SELECT pg_try_advisory_lock(%s);", [self.LOCK_ID])
-                locked = cursor.fetchone()[0]
-            return locked
-        except Exception:
-            logger.exception("Error acquire_lock")
-            return False
+    stop_event = threading.Event()
 
     def release_lock(self):
         try:
@@ -33,7 +24,7 @@ class Command(BaseCommand):
                 unlocked = cursor.fetchone()[0]
             return unlocked
         except Exception:
-            logger.exception("Error release_lock")
+            logger.exception("Error releasing lock")
             return False
 
     def _process_tasks(self, task):
@@ -44,7 +35,7 @@ class Command(BaseCommand):
             task.delete()
             return True
         except Exception:
-            logger.exception(f"Error update_summary_cache[Project id: {task.project_id}]")
+            logger.exception(f"Error update_summary_cache [Project id: {task.project_id}]")
             task.processing = False
             task.attempts += 1
             task.save()
@@ -55,17 +46,18 @@ class Command(BaseCommand):
             executor.map(self._process_tasks, tasks)
 
     def handle(self, *args, **options):
-        if not self.acquire_lock():
-            logger.warning("Another process is already working on tasks.")
-            return
+        logger.info("Starting process_summaries")
 
-        try:
-            while True:
-                tasks = SummaryCacheQueue.objects.filter(attempts__lt=3).order_by("created_on")
-                if not tasks.exists():
-                    sleep(self.WAIT_SECONDS)
-                else:
-                    self.process_tasks(tasks)
+        signal.signal(signal.SIGINT, self.handle_stop_signal)
+        signal.signal(signal.SIGTERM, self.handle_stop_signal)
 
-        finally:
-            self.release_lock()
+        while not self.stop_event.is_set():
+            tasks = SummaryCacheQueue.objects.filter(attempts__lt=3).order_by("created_on")
+            if not tasks.exists():
+                self.stop_event.wait(self.WAIT_SECONDS)
+            else:
+                self.process_tasks(tasks)
+
+    def handle_stop_signal(self, signum, frame):
+        logger.info("Shutting down gracefully...")
+        self.stop_event.set()
