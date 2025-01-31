@@ -204,32 +204,26 @@ class ApiStack(Stack):
 
         summary_cache_task_def = ecs.Ec2TaskDefinition(
             self,
-            "ScheduledSummaryCacheTaskDef",
+            "SummaryCacheTaskDef",
             network_mode=ecs.NetworkMode.AWS_VPC,
         )
         summary_cache_task_def.add_container(
-            "ScheduledSummaryCacheUpdateContainer",
+            "SummaryCacheUpdateContainer",
             image=ecs.ContainerImage.from_docker_image_asset(image_asset),
             cpu=config.api.summary_cpu,
             memory_limit_mib=config.api.summary_memory,
             secrets=self.api_secrets,
             environment=environment,
             command=["python", "manage.py", "process_summaries"],
-            logging=ecs.LogDrivers.aws_logs(stream_prefix="ScheduledSummaryCacheUpdateContainer"),
+            logging=ecs.LogDrivers.aws_logs(stream_prefix="SummaryCacheUpdateContainer"),
         )
         summary_cache_service = ecs.Ec2Service(
             self,
-            id="ScheduledSummaryCacheService",
+            id="SummaryCacheService",
             task_definition=summary_cache_task_def,
             cluster=cluster,
             security_groups=[container_security_group],
             enable_execute_command=True,
-            capacity_provider_strategies=[
-                ecs.CapacityProviderStrategy(
-                    capacity_provider="mermaid-api-infra-common-AsgCapacityProvider760D11D9-iqzBF6LfX313",
-                    weight=100,
-                )
-            ],
         )
 
         # --- API Service ---
