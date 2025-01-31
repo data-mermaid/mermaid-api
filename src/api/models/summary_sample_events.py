@@ -122,7 +122,7 @@ class SummarySampleEventSQLModel(SummarySampleEventBaseModel):
         )
 
         SELECT
-        NULL AS id,
+        uuid_generate_v4() AS id,
         sample_event.id as sample_event_id,
         site.id AS site_id,
         site.name AS site_name,
