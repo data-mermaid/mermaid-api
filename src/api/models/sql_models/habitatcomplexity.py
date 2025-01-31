@@ -131,7 +131,7 @@ class HabitatComplexitySUSQLModel(BaseSUSQLModel):
             ) habcomp_obs_obs
             GROUP BY pseudosu_id
         )
-        SELECT NULL AS id,
+        SELECT uuid_generate_v4() AS id,
         habcomp_su.pseudosu_id,
         {_su_fields},
         habcomp_su.{_agg_su_fields},
