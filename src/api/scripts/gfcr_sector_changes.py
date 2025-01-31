@@ -56,6 +56,14 @@ def run():
             "invasive_species_management",
             "sewage_and_waste_water_treatment",
             "water_provision",
+            #
+            "coastal_infrastructure",
+            "ecotourism",
+            "marine_protected_areas",
+            "other_land_based_pollutants_management",
+            "plastic_waste_management",
+            "sustainable_fisheries",
+            "sustainable_mariculture_aquaculture",
         ],
         # indicator_set__project__status__gte=Project.OPEN
     )
