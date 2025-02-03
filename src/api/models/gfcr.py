@@ -238,29 +238,6 @@ class GFCRIndicatorSet(BaseModel):
 
 class GFCRFinanceSolution(BaseModel):
     SECTOR_CHOICES = (
-        ("banking_and_finance", "Banking and finance"),
-        ("clean_energy", "Clean energy"),
-        ("coastal_agriculture", "Coastal agriculture"),
-        ("coastal_forestry", "Coastal forestry"),
-        ("coastal_infrastructure", "Coastal infrastructure"),
-        ("coral_ecosystem_restoration", "Coral ecosystem restoration"),
-        ("ecotourism", "Ecotourism"),
-        ("green_shipping_and_cruise_ships", "Green shipping and cruise ships"),
-        ("invasive_species_management", "Invasive species management"),
-        (
-            "marine_protected_areas",
-            "Marine Protected Areas and other effectively managed marine areas",
-        ),
-        (
-            "other_land_based_pollutants_management",
-            "Other land-based pollutants management",
-        ),
-        ("plastic_waste_management", "Plastic waste management"),
-        ("sewage_and_waste_water_treatment", "Sewage and waste-water treatment"),
-        ("sustainable_fisheries", "Sustainable fisheries"),
-        ("sustainable_mariculture_aquaculture", "Sustainable mariculture/aquaculture"),
-        ("water_provision", "Water provision"),
-        # new sectors
         (
             "ce_pollution_mitigation",
             "Circular Economy and Pollution Management - Pollution Mitigation",
@@ -298,7 +275,7 @@ class GFCRFinanceSolution(BaseModel):
             "Sustainable Ocean Production - Sustainable Small-Scale Fisheries",
         ),
     )
-    SECTOR_CHOICES_UPDATED_ON = datetime.datetime(2025, 1, 22, 0, 0, 0, 0, pytz.UTC)
+    SECTOR_CHOICES_UPDATED_ON = datetime.datetime(2025, 2, 3, 0, 0, 0, 0, pytz.UTC)
 
     SUSTAINABLE_FINANCE_MECHANISM_CHOICES = (
         ("biodiversity_offsets", "Biodiversity offsets"),
