@@ -63,7 +63,7 @@ class QueueWorker(Construct):
                     weight=100,
                 )
             ],
-            circuit_breaker=ecs.DeploymentCircuitBreaker(enable=True, rollback=True),
+            # circuit_breaker=ecs.DeploymentCircuitBreaker(enable=True, rollback=True),
         )
         # Allow workers to send messages.
         job_queue.queue.grant(
