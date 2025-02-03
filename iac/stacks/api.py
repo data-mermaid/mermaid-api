@@ -51,10 +51,6 @@ class ApiStack(Stack):
     ) -> None:
         super().__init__(scope, id, **kwargs)
 
-        task_definition = ecs.Ec2TaskDefinition(
-            self, id="ApiTaskDefinition", network_mode=ecs.NetworkMode.AWS_VPC
-        )
-
         sys_email = os.environ.get("SYS_EMAIL") or None
 
         def get_secret_object(stack: Stack, secret_name: str):
@@ -167,6 +163,8 @@ class ApiStack(Stack):
             file="Dockerfile",
         )
 
+        # --- Scheduled Backup Task ---
+
         daily_task_def = ecs.Ec2TaskDefinition(
             self,
             "ScheduledBackupTaskDef",
@@ -182,8 +180,6 @@ class ApiStack(Stack):
             command=["python", "manage.py", "daily_tasks"],
             logging=ecs.LogDrivers.aws_logs(stream_prefix="ScheduledBackupTask"),
         )
-
-        # create a scheduled task
         daily_backup_task = ecs_patterns.ScheduledEc2Task(
             self,
             "ScheduledBackupTask",
@@ -200,6 +196,38 @@ class ApiStack(Stack):
             ),
         )
 
+        # --- Summary Cache Update Task ---
+
+        summary_cache_task_def = ecs.Ec2TaskDefinition(
+            self,
+            "SummaryCacheTaskDef",
+            network_mode=ecs.NetworkMode.AWS_VPC,
+        )
+        summary_cache_task_def.add_container(
+            "SummaryCacheUpdateContainer",
+            image=ecs.ContainerImage.from_docker_image_asset(image_asset),
+            cpu=config.api.summary_cpu,
+            memory_limit_mib=config.api.summary_memory,
+            secrets=self.api_secrets,
+            environment=environment,
+            command=["python", "manage.py", "process_summaries"],
+            logging=ecs.LogDrivers.aws_logs(stream_prefix="SummaryCacheUpdateContainer"),
+        )
+        summary_cache_service = ecs.Ec2Service(
+            self,
+            id="SummaryCacheService",
+            task_definition=summary_cache_task_def,
+            cluster=cluster,
+            security_groups=[container_security_group],
+            enable_execute_command=True,
+            circuit_breaker=ecs.DeploymentCircuitBreaker(enable=True, rollback=True),
+        )
+
+        # --- API Service ---
+
+        task_definition = ecs.Ec2TaskDefinition(
+            self, id="ApiTaskDefinition", network_mode=ecs.NetworkMode.AWS_VPC
+        )
         task_definition.add_container(
             id="MermaidAPI",
             image=ecs.ContainerImage.from_docker_image_asset(image_asset),
@@ -212,7 +240,6 @@ class ApiStack(Stack):
                 stream_prefix=config.env_id, log_retention=logs.RetentionDays.ONE_MONTH
             ),
         )
-
         service = ecs.Ec2Service(
             self,
             id="ApiService",
@@ -221,18 +248,14 @@ class ApiStack(Stack):
             security_groups=[container_security_group],
             desired_count=config.api.container_count,
             enable_execute_command=True,
-            capacity_provider_strategies=[
-                ecs.CapacityProviderStrategy(
-                    capacity_provider="mermaid-api-infra-common-AsgCapacityProvider760D11D9-iqzBF6LfX313",
-                    weight=100,
-                )
-            ],
+            circuit_breaker=ecs.DeploymentCircuitBreaker(enable=True, rollback=True),
         )
 
         # Grant Secret read to API container & backup task
         for _, container_secret in self.api_secrets.items():
             container_secret.grant_read(service.task_definition.execution_role)
             container_secret.grant_read(daily_backup_task.task_definition.execution_role)
+            container_secret.grant_read(summary_cache_service.task_definition.execution_role)
 
         target_group = elb.ApplicationTargetGroup(
             self,
