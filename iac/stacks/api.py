@@ -220,7 +220,7 @@ class ApiStack(Stack):
             cluster=cluster,
             security_groups=[container_security_group],
             enable_execute_command=True,
-            circuit_breaker=ecs.DeploymentCircuitBreaker(enable=True, rollback=True),
+            # circuit_breaker=ecs.DeploymentCircuitBreaker(enable=True, rollback=True),
         )
 
         # --- API Service ---
@@ -248,7 +248,7 @@ class ApiStack(Stack):
             security_groups=[container_security_group],
             desired_count=config.api.container_count,
             enable_execute_command=True,
-            circuit_breaker=ecs.DeploymentCircuitBreaker(enable=True, rollback=True),
+            # circuit_breaker=ecs.DeploymentCircuitBreaker(enable=True, rollback=True),
         )
 
         # Grant Secret read to API container & backup task
