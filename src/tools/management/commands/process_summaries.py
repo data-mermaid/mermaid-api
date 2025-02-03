@@ -5,7 +5,6 @@ import threading
 from concurrent.futures import ThreadPoolExecutor
 
 from django.core.management.base import BaseCommand
-from django.db import connection
 
 from api.models import SummaryCacheQueue
 from api.utils.summary_cache import update_summary_cache
@@ -16,16 +15,6 @@ logger = logging.getLogger(__name__)
 class Command(BaseCommand):
     WAIT_SECONDS = 5
     stop_event = threading.Event()
-
-    def release_lock(self):
-        try:
-            with connection.cursor() as cursor:
-                cursor.execute("SELECT pg_advisory_unlock(%s);", [self.LOCK_ID])
-                unlocked = cursor.fetchone()[0]
-            return unlocked
-        except Exception:
-            logger.exception("Error releasing lock")
-            return False
 
     def _process_tasks(self, task):
         try:
