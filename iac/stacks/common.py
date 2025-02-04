@@ -186,22 +186,38 @@ class CommonStack(Stack):
         # Allow ECS tasks to RDS
         self.database.connections.allow_default_port_from(self.ecs_sg)
 
+        user_data = ec2.UserData.for_linux()
+        user_data.add_commands(
+            "yum update --security",
+        )
+
         auto_scaling_group = autoscale.AutoScalingGroup(
             self,
             "ASG",
             vpc=self.vpc,
-            instance_type=ec2.InstanceType("t3a.large"),
-            machine_image=ecs.EcsOptimizedImage.amazon_linux2(),
+            launch_template=ec2.LaunchTemplate(
+                self,
+                "LTemp",
+                instance_type=ec2.InstanceType("t3a.large"),
+                machine_image=ecs.EcsOptimizedImage.amazon_linux2(),
+                block_devices=[
+                    ec2.BlockDevice(
+                        device_name="/dev/xvda",
+                        volume=ec2.BlockDeviceVolume.ebs(100),
+                    ),
+                ],
+                user_data=user_data,
+                security_group=self.ecs_sg,
+                role=iam.Role(
+                    self, "AsgInstance", assumed_by=iam.ServicePrincipal("ec2.amazonaws.com")
+                ),
+            ),
             min_capacity=1,
             max_capacity=6,
             max_instance_lifetime=Duration.days(7),
             update_policy=autoscale.UpdatePolicy.rolling_update(),
             # NOTE: not setting the desired capacity so ECS can manage it.
         )
-        auto_scaling_group.add_user_data("yum update --security")
-
-        # Note: this will allow any container running on these EC2s to access RDS
-        self.database.connections.allow_default_port_from(auto_scaling_group)
 
         capacity_provider = ecs.AsgCapacityProvider(
             self,
