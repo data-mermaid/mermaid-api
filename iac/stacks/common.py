@@ -186,14 +186,28 @@ class CommonStack(Stack):
         # Allow ECS tasks to RDS
         self.database.connections.allow_default_port_from(self.ecs_sg)
 
+        auto_scaling_group = autoscale.AutoScalingGroup(
+            self,
+            "ASG",
+            vpc=self.vpc,
+            instance_type=ec2.InstanceType("t3a.large"),
+            machine_image=ecs.EcsOptimizedImage.amazon_linux2(),
+            min_capacity=1,
+            max_capacity=6,
+            max_instance_lifetime=Duration.days(7),
+            update_policy=autoscale.UpdatePolicy.rolling_update(),
+            # NOTE: not setting the desired capacity so ECS can manage it.
+        )
+        auto_scaling_group.add_user_data("yum update --security")
+
         user_data = ec2.UserData.for_linux()
         user_data.add_commands(
             "yum update --security",
         )
 
-        auto_scaling_group = autoscale.AutoScalingGroup(
+        auto_scaling_group_lt = autoscale.AutoScalingGroup(
             self,
-            "ASG",
+            "ASG2",
             vpc=self.vpc,
             launch_template=ec2.LaunchTemplate(
                 self,
@@ -228,11 +242,24 @@ class CommonStack(Stack):
         )
         self.cluster.add_asg_capacity_provider(capacity_provider)
 
+        capacity_provider_lt = ecs.AsgCapacityProvider(
+            self,
+            "AsgCapacityProviderLt",
+            auto_scaling_group=auto_scaling_group_lt,
+            enable_managed_scaling=True,
+            enable_managed_termination_protection=False,
+        )
+        self.cluster.add_asg_capacity_provider(capacity_provider_lt)
+
+        #
         self.cluster.add_default_capacity_provider_strategy(
             [
                 ecs.CapacityProviderStrategy(
-                    capacity_provider=capacity_provider.capacity_provider_name, weight=100
-                )
+                    capacity_provider=capacity_provider.capacity_provider_name, weight=50
+                ),
+                ecs.CapacityProviderStrategy(
+                    capacity_provider=capacity_provider_lt.capacity_provider_name, weight=50
+                ),
             ]
         )
 
