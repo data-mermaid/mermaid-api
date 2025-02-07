@@ -251,41 +251,47 @@ def check_validation_status(results):
     return status
 
 
+def validate_collect_record(profile, record, serializer_class, validation_suppressants=None):
+    request = MockRequest(profile=profile)
+    validation_output = _validate_collect_record(record, serializer_class, request)
+    if validation_suppressants:
+        print("validation_suppressants not suppported")
+
+    stage = CollectRecord.SAVED_STAGE
+    status = validation_output["status"]
+    if status == OK:
+        stage = CollectRecord.VALIDATED_STAGE
+
+    validation_timestamp = timezone.now()
+    validation_output["last_validated"] = str(validation_timestamp)
+    serialized_collect_record = None
+    collect_record = None
+
+    qry = CollectRecord.objects.filter(id=record.pk)
+    # Using update so updated_on and validation_timestamp matches
+    qry.update(
+        stage=stage,
+        validations=validation_output,
+        updated_on=validation_timestamp,
+        updated_by=profile,
+    )
+    if qry.count() > 0:
+        collect_record = qry[0]
+        serialized_collect_record = serializer_class(collect_record).data
+
+    return dict(status=status, record=serialized_collect_record)
+
+
 def validate_collect_records(profile, record_ids, serializer_class, validation_suppressants=None):
     output = {}
     for record_id in record_ids:
         check_uuid(record_id)
 
     records = CollectRecord.objects.filter(id__in=record_ids)
-    request = MockRequest(profile=profile)
     for record in records.iterator():
-        validation_output = _validate_collect_record(record, serializer_class, request)
-
-        if validation_suppressants:
-            print("validation_suppressants not suppported")
-
-        stage = CollectRecord.SAVED_STAGE
-        status = validation_output["status"]
-        if status == OK:
-            stage = CollectRecord.VALIDATED_STAGE
-
-        validation_timestamp = timezone.now()
-        validation_output["last_validated"] = str(validation_timestamp)
-        serialized_collect_record = None
-        collect_record = None
-
-        qry = CollectRecord.objects.filter(id=record.pk)
-        # Using update so updated_on and validation_timestamp matches
-        qry.update(
-            stage=stage,
-            validations=validation_output,
-            updated_on=validation_timestamp,
-            updated_by=profile,
+        output[str(record.pk)] = validate_collect_record(
+            profile, record, serializer_class, validation_suppressants
         )
-        if qry.count() > 0:
-            collect_record = qry[0]
-            serialized_collect_record = serializer_class(collect_record).data
-        output[str(record.pk)] = dict(status=status, record=serialized_collect_record)
 
     return output
 
@@ -299,13 +305,13 @@ def submit_collect_records(profile, record_ids, serializer_class, validation_sup
             output[record_id] = dict(status=ERROR, message=gettext_lazy("Not found"))
             continue
 
-        validation_output = _validate_collect_record(collect_record, serializer_class, request)
+        validation_output = validate_collect_record(
+            profile, collect_record, serializer_class, validation_suppressants
+        )
         status = validation_output["status"]
-        if validation_suppressants:
-            print("validation_suppressants not suppported")
 
         if status != OK:
-            output[record_id] = dict(status=status, message=gettext_lazy("Invalid collect record"))
+            output[record_id] = validation_output
             continue
 
         # If validate comes out all good (status == OK) then
