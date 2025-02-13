@@ -25,6 +25,7 @@ from ...reports.formatters import (
     to_names,
     to_str,
     to_year,
+    to_yesno,
 )
 from ...reports.report_serializer import ReportSerializer
 from ..base import (
@@ -233,7 +234,7 @@ class ObsBenthicPQTCSVSerializer(ReportSerializer):
         ReportField("management_notes", "Management notes"),
         ReportField("sample_unit_notes", "Sample unit notes"),
         ReportField("project_notes", "Project notes"),
-        ReportField("project_includes_gfcr", "Project includes GFCR"),
+        ReportField("project_includes_gfcr", "Project includes GFCR", to_yesno),
         ReportField("suggested_citation", "Suggested citation"),
         ReportField("data_policy_benthicpqt", "Benthic PQT data policy"),
         ReportField("site_id"),
@@ -319,7 +320,7 @@ class BenthicPQTMethodSUCSVSerializer(ReportSerializer):
         ReportField("management_notes", "Management notes"),
         ReportField("sample_unit_notes", "Sample unit notes"),
         ReportField("project_notes", "Project notes"),
-        ReportField("project_includes_gfcr", "Project includes GFCR"),
+        ReportField("project_includes_gfcr", "Project includes GFCR", to_yesno),
         ReportField("suggested_citation", "Suggested citation"),
         ReportField("data_policy_benthicpqt", "Benthic PQT data policy"),
     ]
@@ -407,7 +408,7 @@ class BenthicPQTMethodSECSVSerializer(ReportSerializer):
         ReportField("site_notes", "Site notes"),
         ReportField("management_notes", "Management notes"),
         ReportField("project_notes", "Project notes"),
-        ReportField("project_includes_gfcr", "Project includes GFCR"),
+        ReportField("project_includes_gfcr", "Project includes GFCR", to_yesno),
         ReportField("suggested_citation", "Suggested citation"),
         ReportField("data_policy_benthicpqt", "Benthic PQT data policy"),
         ReportField("site_id"),

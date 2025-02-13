@@ -29,6 +29,7 @@ from ...reports.formatters import (
     to_names,
     to_str,
     to_year,
+    to_yesno,
 )
 from ...reports.report_serializer import ReportSerializer
 from ..base import (
@@ -323,7 +324,7 @@ class ObsBleachingQCColoniesBleachedCSVSerializer(ReportSerializer):
         ReportField("management_notes", "Management notes"),
         ReportField("sample_unit_notes", "Sample unit notes"),
         ReportField("project_notes", "Project notes"),
-        ReportField("project_includes_gfcr", "Project includes GFCR"),
+        ReportField("project_includes_gfcr", "Project includes GFCR", to_yesno),
         ReportField("suggested_citation", "Suggested citation"),
         ReportField("data_policy_bleachingqc", "Bleaching data policy"),
         ReportField("site_id"),
@@ -407,7 +408,7 @@ class ObsQuadratBenthicPercentCSVSerializer(ReportSerializer):
         ReportField("management_notes", "Management notes"),
         ReportField("sample_unit_notes", "Sample unit notes"),
         ReportField("project_notes", "Project notes"),
-        ReportField("project_includes_gfcr", "Project includes GFCR"),
+        ReportField("project_includes_gfcr", "Project includes GFCR", to_yesno),
         ReportField("suggested_citation", "Suggested citation"),
         ReportField("data_policy_bleachingqc", "Bleaching data policy"),
         ReportField("site_id"),
@@ -517,7 +518,7 @@ class BleachingQCMethodSUCSVSerializer(ReportSerializer):
         ReportField("management_notes", "Management notes"),
         ReportField("sample_unit_notes", "Sample unit notes"),
         ReportField("project_notes", "Project notes"),
-        ReportField("project_includes_gfcr", "Project includes GFCR"),
+        ReportField("project_includes_gfcr", "Project includes GFCR", to_yesno),
         ReportField("suggested_citation", "Suggested citation"),
         ReportField("data_policy_bleachingqc", "Bleaching data policy"),
         ReportField("site_id"),
@@ -648,7 +649,7 @@ class BleachingQCMethodSECSVSerializer(ReportSerializer):
         ReportField("site_notes", "Site notes"),
         ReportField("management_notes", "Management notes"),
         ReportField("project_notes", "Project notes"),
-        ReportField("project_includes_gfcr", "Project includes GFCR"),
+        ReportField("project_includes_gfcr", "Project includes GFCR", to_yesno),
         ReportField("suggested_citation", "Suggested citation"),
         ReportField("data_policy_bleachingqc", "Bleaching data policy"),
         ReportField("site_id"),
