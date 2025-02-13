@@ -19,6 +19,7 @@ class SummarySampleEventBaseModel(models.Model):
         choices=Project.STATUSES, default=Project.OPEN
     )
     project_notes = models.TextField(blank=True)
+    project_includes_gfcr = models.BooleanField(default=False)
     suggested_citation = models.TextField(blank=True)
     sample_event_notes = models.TextField(blank=True, null=True)
     contact_link = models.CharField(max_length=255)
@@ -132,6 +133,7 @@ class SummarySampleEventSQLModel(SummarySampleEventBaseModel):
         project.name AS project_name,
         project.status AS project_status,
         project.notes AS project_notes,
+        project.includes_gfcr AS project_includes_gfcr,
         '' AS suggested_citation,
         sample_event.notes AS sample_event_notes,
         'https://datamermaid.org/contact-project?project_id=' || COALESCE(project.id::text, '') AS contact_link,
