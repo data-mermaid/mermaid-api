@@ -186,6 +186,11 @@ class CommonStack(Stack):
         # Allow ECS tasks to RDS
         self.database.connections.allow_default_port_from(self.ecs_sg)
 
+        # FIX - add each subnet CIDR block.
+        selection = self.vpc.select_subnets(subnet_type=ec2.SubnetType.PRIVATE_WITH_EGRESS)
+        for subnet in selection.subnets:
+            self.database.connections.allow_default_port_from(ec2.Peer.ipv4(subnet.ipv4_cidr_block))
+
         auto_scaling_group = autoscale.AutoScalingGroup(
             self,
             "ASG",
@@ -227,7 +232,7 @@ class CommonStack(Stack):
                 ),
             ),
             min_capacity=1,
-            max_capacity=6,
+            max_capacity=10,
             max_instance_lifetime=Duration.days(7),
             update_policy=autoscale.UpdatePolicy.rolling_update(),
             # NOTE: not setting the desired capacity so ECS can manage it.
