@@ -266,7 +266,7 @@ def add_project_to_queue(project_id, skip_test_project=False):
     with connection.cursor() as cursor:
         if (
             skip_test_project
-            and Project.objects.filter(project_id=project_id, status=Project.TEST).exists()
+            and Project.objects.filter(id=project_id, status=Project.TEST).exists()
         ):
             print(f"Skipping test project {project_id}")
             return
