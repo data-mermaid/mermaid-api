@@ -260,10 +260,10 @@ class CommonStack(Stack):
         self.cluster.add_default_capacity_provider_strategy(
             [
                 ecs.CapacityProviderStrategy(
-                    capacity_provider=capacity_provider.capacity_provider_name, weight=50
+                    capacity_provider=capacity_provider.capacity_provider_name, weight=0
                 ),
                 ecs.CapacityProviderStrategy(
-                    capacity_provider=capacity_provider_lt.capacity_provider_name, weight=50
+                    capacity_provider=capacity_provider_lt.capacity_provider_name, weight=100
                 ),
             ]
         )
