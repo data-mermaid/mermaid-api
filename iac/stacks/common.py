@@ -191,20 +191,6 @@ class CommonStack(Stack):
         for subnet in selection.subnets:
             self.database.connections.allow_default_port_from(ec2.Peer.ipv4(subnet.ipv4_cidr_block))
 
-        auto_scaling_group = autoscale.AutoScalingGroup(
-            self,
-            "ASG",
-            vpc=self.vpc,
-            instance_type=ec2.InstanceType("t3a.large"),
-            machine_image=ecs.EcsOptimizedImage.amazon_linux2(),
-            min_capacity=1,
-            max_capacity=6,
-            max_instance_lifetime=Duration.days(7),
-            update_policy=autoscale.UpdatePolicy.rolling_update(),
-            # NOTE: not setting the desired capacity so ECS can manage it.
-        )
-        auto_scaling_group.add_user_data("yum update --security")
-
         user_data = ec2.UserData.for_linux()
         user_data.add_commands(
             "yum update --security",
@@ -238,15 +224,6 @@ class CommonStack(Stack):
             # NOTE: not setting the desired capacity so ECS can manage it.
         )
 
-        capacity_provider = ecs.AsgCapacityProvider(
-            self,
-            "AsgCapacityProvider",
-            auto_scaling_group=auto_scaling_group,
-            enable_managed_scaling=True,
-            enable_managed_termination_protection=False,
-        )
-        self.cluster.add_asg_capacity_provider(capacity_provider)
-
         capacity_provider_lt = ecs.AsgCapacityProvider(
             self,
             "AsgCapacityProviderLt",
@@ -256,12 +233,8 @@ class CommonStack(Stack):
         )
         self.cluster.add_asg_capacity_provider(capacity_provider_lt)
 
-        #
         self.cluster.add_default_capacity_provider_strategy(
             [
-                ecs.CapacityProviderStrategy(
-                    capacity_provider=capacity_provider.capacity_provider_name, weight=0
-                ),
                 ecs.CapacityProviderStrategy(
                     capacity_provider=capacity_provider_lt.capacity_provider_name, weight=100
                 ),
