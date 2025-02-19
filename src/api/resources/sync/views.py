@@ -209,6 +209,8 @@ def _update_source_record(source_type, serializer, record, request, force=False)
     src = _get_source(source_type)
     vw_request = create_view_request(request, method=get_request_method(record), data=record)
     viewset = src["view"](request=vw_request)
+    vw_request.query_params = vw_request.query_params or {}
+    vw_request.query_params["show_hidden"] = "true"
 
     record_id = record.get("id")
     permission_checks = check_permissions(vw_request, {source_type: record}, [source_type])
