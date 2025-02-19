@@ -17,6 +17,7 @@ from ..reports.formatters import (
     to_percent_cover,
     to_protocol_value,
     to_year,
+    to_yesno,
 )
 from ..reports.report_serializer import ReportSerializer
 from ..utils.project import citation_retrieved_text
@@ -312,6 +313,7 @@ class SummarySampleEventCSVSerializer(ReportSerializer):
             "Photo Quadrat Transect data sharing policy",
         ),
         ReportField("project_notes", "Project notes"),
+        ReportField("project_includes_gfcr", "Project includes GFCR", to_yesno),
         ReportField("suggested_citation", "Suggested citation"),
         ReportField("site_notes", "Site notes"),
     ]

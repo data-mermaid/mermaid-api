@@ -633,6 +633,7 @@ class BaseProjectSummarySampleEvent(models.Model):
     project_name = models.CharField(max_length=255, default="awaiting refresh")
     project_admins = models.JSONField(null=True, blank=True)
     project_notes = models.TextField(blank=True)
+    project_includes_gfcr = models.BooleanField(default=False)
     suggested_citation = models.TextField(blank=True)
     data_policy_beltfish = models.CharField(max_length=50, default="awaiting refresh")
     data_policy_benthiclit = models.CharField(max_length=50, default="awaiting refresh")
