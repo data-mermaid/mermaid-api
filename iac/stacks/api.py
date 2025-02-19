@@ -220,6 +220,7 @@ class ApiStack(Stack):
             cluster=cluster,
             security_groups=[container_security_group],
             enable_execute_command=True,
+            capacity_provider_strategies=cluster.default_capacity_provider_strategy,
             # circuit_breaker=ecs.DeploymentCircuitBreaker(enable=True, rollback=True),
         )
 
@@ -248,6 +249,7 @@ class ApiStack(Stack):
             security_groups=[container_security_group],
             desired_count=config.api.container_count,
             enable_execute_command=True,
+            capacity_provider_strategies=cluster.default_capacity_provider_strategy,
             # circuit_breaker=ecs.DeploymentCircuitBreaker(enable=True, rollback=True),
         )
 
