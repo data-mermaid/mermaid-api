@@ -216,6 +216,7 @@ def _update_project_summary_sample_events(
             project_name=project.name,
             project_admins=project_admins,
             project_notes=project.notes,
+            project_includes_gfcr=project.includes_gfcr,
             suggested_citation=suggested_citation,
             data_policy_beltfish=data_policies.get(
                 project.data_policy_beltfish, Project.data_policy_beltfish.field.default
