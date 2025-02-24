@@ -65,7 +65,7 @@ logger = logging.getLogger(__name__)
 class BaseProjectSerializer(DynamicFieldsMixin, BaseAPISerializer):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
-        self._cached_profiles = None
+        self._cached_profiles = {}
 
     countries = serializers.SerializerMethodField()
     num_sites = serializers.SerializerMethodField()
@@ -84,9 +84,10 @@ class BaseProjectSerializer(DynamicFieldsMixin, BaseAPISerializer):
         additional_fields = ["countries", "num_sites"]
 
     def _get_profiles(self, obj):
-        if self._cached_profiles is None:
-            self._cached_profiles = get_profiles(obj)
-        return self._cached_profiles
+        project_id = str(obj.id)
+        if project_id not in self._cached_profiles or self._cached_profiles[project_id] is None:
+            self._cached_profiles[project_id] = get_profiles(obj)
+        return self._cached_profiles[project_id]
 
     def get_citation_retrieved_text(self, obj):
         return citation_retrieved_text(obj.name)
