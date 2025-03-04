@@ -326,6 +326,7 @@ def _update_project_summary_sample_events(
             project_name=project.name,
             project_admins=project_admins,
             project_notes=project.notes,
+            project_includes_gfcr=project.includes_gfcr,
             suggested_citation=suggested_citation,
             data_policy_beltfish=data_policies.get(
                 project.data_policy_beltfish, Project.data_policy_beltfish.field.default
@@ -376,7 +377,7 @@ def add_project_to_queue(project_id, skip_test_project=False):
     with connection.cursor() as cursor:
         if (
             skip_test_project
-            and Project.objects.filter(project_id=project_id, status=Project.TEST).exists()
+            and Project.objects.filter(id=project_id, status=Project.TEST).exists()
         ):
             print(f"Skipping test project {project_id}")
             return

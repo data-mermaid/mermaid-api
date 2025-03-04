@@ -57,13 +57,8 @@ class QueueWorker(Construct):
                 # when >=10 messages, scale up
                 appscaling.ScalingInterval(lower=100, change=+1),
             ],
-            capacity_provider_strategies=[
-                ecs.CapacityProviderStrategy(
-                    capacity_provider="mermaid-api-infra-common-AsgCapacityProvider760D11D9-iqzBF6LfX313",
-                    weight=100,
-                )
-            ],
-            circuit_breaker=ecs.DeploymentCircuitBreaker(enable=True, rollback=True),
+            capacity_provider_strategies=cluster.default_capacity_provider_strategy,
+            # circuit_breaker=ecs.DeploymentCircuitBreaker(enable=True, rollback=True),
         )
         # Allow workers to send messages.
         job_queue.queue.grant(
