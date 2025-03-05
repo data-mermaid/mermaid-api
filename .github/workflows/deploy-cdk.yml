@@ -60,7 +60,7 @@ jobs:
           aws-region: us-east-1
           role-skip-session-tagging: true
       - name: CDK Deploy DEV
-        if: startsWith(github.ref, 'refs/heads/dev') || startsWith(github.ref, 'refs/heads/165-gh-actions')
+        if: startsWith(github.ref, 'refs/heads/dev')
         env:
           DEPLOY_AWS_ROLE: ${{ secrets.DEPLOY_AWS_ROLE }}
           SYS_EMAIL: ${{ secrets.SYS_EMAIL }}
