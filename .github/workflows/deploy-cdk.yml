@@ -4,6 +4,7 @@ on:
   push:
     branches:
       - dev
+      - 165-gh-actions
     tags:
       - 'v[0-9]+.[0-9]+'        # eg: v1.1
       - 'v[0-9]+.[0-9]+.[0-9]+' # eg: v1.1.1
@@ -53,7 +54,12 @@ jobs:
           echo "TARGET=prod" >> "$GITHUB_ENV"
           echo "${{ github.ref_name }}" > src/VERSION.txt
           cat src/VERSION.txt
-
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v4.1.0
+        with:
+          role-to-assume: arn:aws:iam::${{ secrets.DEPLOY_AWS_ACCT }}:role/${{ secrets.DEPLOY_AWS_ROLE }}
+          aws-region: us-east-1
+          role-skip-session-tagging: true
       - name: CDK Deploy
         env:
           DEPLOY_AWS_ROLE: ${{ secrets.DEPLOY_AWS_ROLE }}
