@@ -80,7 +80,7 @@ jobs:
             --require-approval never \
             "${{ env.TARGET }}"-mermaid-api-django \
             "${{ env.TARGET }}"-mermaid-static-site \
-            "mermaid-api-infra-common" \
-            "GithubAccess"
+            mermaid-api-infra-common \
+            GithubAccess
 
 
