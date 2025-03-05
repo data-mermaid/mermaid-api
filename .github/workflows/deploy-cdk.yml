@@ -4,7 +4,6 @@ on:
   push:
     branches:
       - dev
-      - 165-gh-actions
     tags:
       - 'v[0-9]+.[0-9]+'        # eg: v1.1
       - 'v[0-9]+.[0-9]+.[0-9]+' # eg: v1.1.1
