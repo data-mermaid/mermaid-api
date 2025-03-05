@@ -74,7 +74,7 @@ jobs:
           cd iac && cdk deploy \
             --require-approval never \
             GithubAccess \
-            mermaid-api-infra-common
+            mermaid-api-infra-common \
             dev-mermaid-api-django \
             dev-mermaid-static-site
       - name: CDK Deploy PROD
@@ -91,7 +91,7 @@ jobs:
           cd iac && cdk deploy \
             --require-approval never \
             GithubAccess \
-            mermaid-api-infra-common
+            mermaid-api-infra-common \
             prod-mermaid-api-django \
             prod-mermaid-static-site
 
