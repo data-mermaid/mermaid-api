@@ -28,7 +28,7 @@ jobs:
     needs: [call-test]
     runs-on: ubuntu-20.04
     steps:
-      - uses: actions/setup-node@v3
+      - uses: actions/setup-node@v4.2.0
         with:
           node-version: '18'
 
