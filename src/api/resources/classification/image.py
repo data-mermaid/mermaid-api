@@ -162,7 +162,7 @@ class ImageViewSet(BaseProjectApiViewSet):
                     f"obs_benthic_photo_quadrats__{ObsBenthicPhotoQuadrat.project_lookup}": project_pk
                 }
             )
-        )
+        ).distinct()
         return self.queryset
 
     @classmethod
