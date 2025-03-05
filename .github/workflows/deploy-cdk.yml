@@ -81,7 +81,6 @@ jobs:
             "${{ env.TARGET }}"-mermaid-api-django \
             "${{ env.TARGET }}"-mermaid-static-site \
             "mermaid-api-infra-common" \
-            "GithubAccess" \
-            -r "${{ env.DEPLOY_AWS_ROLE}}"
+            "GithubAccess"
 
 
