@@ -56,8 +56,11 @@ jobs:
           cat src/VERSION.txt
       - name: Configure AWS credentials
         uses: aws-actions/configure-aws-credentials@v4.1.0
+        env:
+          CDK_DEFAULT_ACCOUNT: ${{ secrets.CDK_DEFAULT_ACCOUNT }}
+          DEPLOY_AWS_ROLE: ${{ secrets.DEPLOY_AWS_ROLE }}
         with:
-          role-to-assume: arn:aws:iam::${{ secrets.DEPLOY_AWS_ACCT }}:role/${{ secrets.DEPLOY_AWS_ROLE }}
+          role-to-assume: arn:aws:iam::${{ secrets.CDK_DEFAULT_ACCOUNT }}:role/${{ secrets.DEPLOY_AWS_ROLE }}
           aws-region: us-east-1
           role-skip-session-tagging: true
       - name: CDK Deploy
@@ -65,13 +68,16 @@ jobs:
           DEPLOY_AWS_ROLE: ${{ secrets.DEPLOY_AWS_ROLE }}
           SYS_EMAIL: ${{ secrets.SYS_EMAIL }}
           PYTHONPATH: ${{ github.workspace }}
-          DEPLOY_AWS_ACCT: ${{ secrets.DEPLOY_AWS_ACCT }}
+          CDK_DEFAULT_ACCOUNT: ${{ secrets.CDK_DEFAULT_ACCOUNT }}
+          CDK_DEFAULT_REGION: us-east-1
+          TARGET: ${{ env.TARGET }}
         run: |
           cd iac && cdk deploy \
             --require-approval never \
             "${{ env.TARGET }}"-mermaid-api-django \
             "${{ env.TARGET }}"-mermaid-static-site \
             "mermaid-api-infra-common" \
-            "GithubAccess"
+            "GithubAccess" \
+            -r "${{ env.DEPLOY_AWS_ROLE}}"
 
 
