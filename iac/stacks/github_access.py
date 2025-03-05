@@ -29,3 +29,7 @@ class GithubAccessStack(Stack):
             ),
             max_session_duration=Duration.hours(3),
         )
+
+        self.github_access_role.add_managed_policy(
+            iam.ManagedPolicy.from_aws_managed_policy_name("AdministratorAccess")
+        )
