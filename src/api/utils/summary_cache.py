@@ -189,113 +189,12 @@ def _sql_update_project_summary_sample_event(project_id, skip_updates):
         cur.execute("".join(sql))
 
 
-# -------
-
-
-def _set_created_on(created_on, records):
-    for record in records:
-        record.created_on = created_on
-
-
 def _get_suggested_citation(project_id):
     suggested_citation = ""
     project = Project.objects.get_or_none(id=project_id)
     if project:
         suggested_citation = get_suggested_citation(project)
     return suggested_citation
-
-
-def _set_suggested_citation(suggested_citation, records):
-    for record in records:
-        record.suggested_citation = suggested_citation
-
-
-def _delete_existing_records(project_id, target_model_cls):
-    target_model_cls.objects.filter(project_id=project_id).delete()
-
-
-def _update_records(records, target_model_cls, created_on, suggested_citation, skip_updates=False):
-    if skip_updates or not records:
-        return
-    idx = 0
-    while True:
-        batch = records[idx : idx + BATCH_SIZE]
-        _set_created_on(created_on, batch)
-        _set_suggested_citation(suggested_citation, batch)
-        if not batch:
-            break
-        target_model_cls.objects.bulk_create(batch, batch_size=BATCH_SIZE)
-        idx += BATCH_SIZE
-
-
-def _fetch_records(sql_model_cls, project_id):
-    return list(sql_model_cls.objects.all().sql_table(project_id=project_id))
-
-
-def _update_cache(
-    project_id,
-    obs_sql_model,
-    obs_model,
-    su_sql_model,
-    su_model,
-    se_sql_model,
-    se_model,
-    skip_updates,
-):
-    if skip_updates is not True:
-        _delete_existing_records(project_id, obs_model)
-        _delete_existing_records(project_id, su_model)
-        _delete_existing_records(project_id, se_model)
-
-    obs_records = _fetch_records(obs_sql_model, project_id)
-    su_records = _fetch_records(su_sql_model, project_id)
-    se_records = _fetch_records(se_sql_model, project_id)
-
-    created_on = timezone.now()
-    suggested_citation = _get_suggested_citation(project_id)
-
-    _update_records(obs_records, obs_model, created_on, suggested_citation, skip_updates)
-    _update_records(su_records, su_model, created_on, suggested_citation, skip_updates)
-    _update_records(se_records, se_model, created_on, suggested_citation, skip_updates)
-
-
-def _update_bleaching_qc_summary(
-    project_id,
-    skip_updates,
-):
-    created_on = timezone.now()
-    suggested_citation = _get_suggested_citation(project_id)
-
-    if not skip_updates:
-        _delete_existing_records(project_id, BleachingQCColoniesBleachedObsModel)
-        _delete_existing_records(project_id, BleachingQCQuadratBenthicPercentObsModel)
-        _delete_existing_records(project_id, BleachingQCSUModel)
-        _delete_existing_records(project_id, BleachingQCSEModel)
-
-    bleaching_colonies_obs = _fetch_records(BleachingQCColoniesBleachedObsSQLModel, project_id)
-    bleaching_quad_percent_obs = _fetch_records(
-        BleachingQCQuadratBenthicPercentObsSQLModel, project_id
-    )
-    _update_records(
-        bleaching_colonies_obs,
-        BleachingQCColoniesBleachedObsModel,
-        created_on,
-        suggested_citation,
-        skip_updates,
-    )
-    _update_records(
-        bleaching_quad_percent_obs,
-        BleachingQCQuadratBenthicPercentObsModel,
-        created_on,
-        suggested_citation,
-        skip_updates,
-    )
-
-    bleaching_su = _fetch_records(BleachingQCSUSQLModel, project_id)
-    _update_records(bleaching_su, BleachingQCSUModel, created_on, suggested_citation, skip_updates)
-
-    bleaching_se = _fetch_records(BleachingQCSESQLModel, project_id)
-    _update_records(bleaching_se, BleachingQCSEModel, created_on, suggested_citation, skip_updates)
 
 
 def _update_project_summary_sample_events(
