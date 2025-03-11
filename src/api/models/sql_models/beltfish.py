@@ -284,7 +284,7 @@ class BeltFishSUSQLModel(BaseSUSQLModel):
             GROUP BY pseudosu_id
         )
         
-        SELECT NULL AS id,
+        SELECT uuid_generate_v4() AS id,
         beltfish_su.pseudosu_id,
         {_su_fields},
         beltfish_su.{_agg_su_fields},
