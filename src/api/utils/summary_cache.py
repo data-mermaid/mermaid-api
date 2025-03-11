@@ -281,6 +281,12 @@ def add_project_to_queue(project_id, skip_test_project=False):
             print(f"Skipping test project {project_id}")
             return
 
+        scq_qry = SummaryCacheQueue.objects.filter(
+            project_id=project_id, processing=False, attempts=3
+        )
+        if scq_qry.exists():
+            scq_qry.delete()
+
         sql = f"""
         INSERT INTO "{SummaryCacheQueue._meta.db_table}"
         ("project_id", "processing", "attempts", "created_on")
