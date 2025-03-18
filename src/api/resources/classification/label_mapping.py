@@ -30,7 +30,15 @@ class LabelMappingSerializer(BaseAPISerializer):
 class LabelMappingFilterSet(BaseAPIFilterSet):
     class Meta:
         model = LabelMapping
-        fields = "__all__"
+        fields = [
+            "benthic_attribute",
+            "benthic_attribute__name",
+            "growth_form",
+            "growth_form__name",
+            "provider",
+            "provider_id",
+            "provider_label",
+        ]
 
 
 # TODO: add csv route
