@@ -24,7 +24,7 @@ def create_indicator_set_payload():
         "finance_solutions": [
             {
                 "name": "My FS",
-                "sector": "green_shipping_and_cruise_ships",
+                "sector": "ce_waste_management",
                 "revenues": [{"revenue_type": "debt_conversion"}],
                 "investment_sources": [
                     {"investment_source": "public", "investment_type": "concessional_loan"},
@@ -52,7 +52,7 @@ def finance_solution(indicator_set):
     return GFCRFinanceSolution.objects.create(
         indicator_set=indicator_set,
         name="My FS",
-        sector="green_shipping_and_cruise_ships",
+        sector="ce_waste_management",
     )
 
 
@@ -121,6 +121,7 @@ def test_create_indicator_set_admin(
 
     url = reverse("indicatorset-list", kwargs={"project_pk": project1.pk})
     request = api_client1.post(url, data=create_indicator_set_payload, format="json")
+    print(create_indicator_set_payload)
 
     assert request.status_code == 201
     response_data = request.json()
