@@ -139,7 +139,7 @@ def email_report(to_email, local_file_path, protocol, data_policy_level):
     if not local_file_path or not Path(local_file_path).is_file():
         raise ValueError("Invalid or missing file path")
     if not protocol:
-        raise ValueError("protocol is required")
+        raise ValueError("Report title is required")
 
     try:
         zip_file_path = None
