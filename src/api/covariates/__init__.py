@@ -1,7 +1,7 @@
 from django.conf import settings
 
-from ..decorators import run_in_thread
 from ..models import Covariate
+from ..utils.q import submit_job
 from .coral_atlas import CoralAtlasCovariate
 from .vibrant_oceans import VibrantOceansThreatsCovariate
 
@@ -119,6 +119,5 @@ def update_site_covariates(site):
         update_site_vot_covariates(site)
 
 
-@run_in_thread
-def update_site_covariates_threaded(site):
-    update_site_covariates(site)
+def update_site_covariates_bg_process(site):
+    submit_job(0, True, update_site_covariates, site)
