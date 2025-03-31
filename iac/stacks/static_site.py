@@ -58,8 +58,8 @@ class StaticSiteStack(Stack):
 
         behaviour_options = cf.BehaviorOptions(
             cache_policy=cf.CachePolicy.CACHING_DISABLED,
-            origin=cf_origins.S3StaticWebsiteOrigin(
-                self.site_bucket,
+            origin=cf_origins.S3BucketOrigin.with_origin_access_identity(
+                bucket=self.site_bucket,
                 origin_access_identity=cloudfront_OAI,
             ),
             allowed_methods=cf.AllowedMethods.ALLOW_GET_HEAD_OPTIONS,
