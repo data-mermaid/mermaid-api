@@ -5,6 +5,7 @@ from settings.dev import DEV_SETTINGS
 from settings.prod import PROD_SETTINGS
 from stacks.api import ApiStack
 from stacks.common import CommonStack
+from stacks.github_access import GithubAccessStack
 from stacks.static_site import StaticSiteStack
 
 tags = {
@@ -20,6 +21,15 @@ cdk_env = Environment(
     account=os.getenv("CDK_DEFAULT_ACCOUNT", None),
     region=os.getenv("CDK_DEFAULT_REGION", "us-east-1"),
 )
+
+gh_access_stack = GithubAccessStack(
+    app,
+    "GithubAccess",
+    env=cdk_env,
+    tags={"Env": "Common"},
+    cross_region_references=True,
+)
+
 
 common_stack = CommonStack(
     app,
