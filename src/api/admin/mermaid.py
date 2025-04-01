@@ -857,7 +857,13 @@ class FishGenusInline(admin.StackedInline):
 
 @admin.register(FishFamily)
 class FishFamilyAdmin(FishAttributeGroupingAdmin):
-    list_display = ("name",)
+    list_display = (
+        "name",
+        "biomass_constant_a",
+        "biomass_constant_b",
+        "biomass_constant_c",
+        "max_length",
+    )
     inlines = (FishGenusInline,)
     search_fields = ["name"]
 
@@ -870,7 +876,14 @@ class FishSpeciesInline(admin.StackedInline):
 
 @admin.register(FishGenus)
 class FishGenusAdmin(FishAttributeGroupingAdmin):
-    list_display = ("name", "fk_link")
+    list_display = (
+        "name",
+        "fk_link",
+        "biomass_constant_a",
+        "biomass_constant_b",
+        "biomass_constant_c",
+        "max_length",
+    )
     inlines = (FishSpeciesInline,)
     search_fields = ["name", "family__name"]
     exportable_fields = ("name", "family")
