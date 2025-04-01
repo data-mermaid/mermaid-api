@@ -291,7 +291,7 @@ class BenthicLITSUSQLModel(BaseSUSQLModel):
             GROUP BY lh.pseudosu_id
         ) 
 
-        SELECT NULL AS id,
+        SELECT uuid_generate_v4() AS id,
             benthiclit_su.pseudosu_id,
             {_su_fields},
             benthiclit_su.{_agg_su_fields},
