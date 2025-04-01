@@ -9,7 +9,6 @@ on:
       - ready_for_review
     branches:
       - dev
-      - 165-gh-actions
 
 permissions:
   actions: write
