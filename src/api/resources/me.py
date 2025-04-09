@@ -4,6 +4,7 @@ from rest_framework.exceptions import NotFound, ValidationError
 from rest_framework.response import Response
 
 from api.auth0_management import Auth0DatabaseAuthenticationAPI, Auth0Users
+from tools.models import MERMAIDFeature, UserMERMAIDFeature
 from ..models import Profile, ProjectProfile
 from .base import BaseAPISerializer
 
@@ -11,6 +12,7 @@ from .base import BaseAPISerializer
 class MeSerializer(BaseAPISerializer):
     picture = serializers.ReadOnlyField(source="picture_url")
     projects = serializers.SerializerMethodField()
+    optional_features = serializers.SerializerMethodField()
 
     class Meta:
         model = Profile
@@ -24,6 +26,7 @@ class MeSerializer(BaseAPISerializer):
             "updated_on",
             "picture",
             "projects",
+            "optional_features",
         ]
 
     def get_projects(self, o):
@@ -42,6 +45,30 @@ class MeSerializer(BaseAPISerializer):
             }
             for pp in qry
         ]
+
+    def get_optional_features(self, profile):
+        all_features = MERMAIDFeature.objects.all()
+        user_features = {
+            uf.feature_id: uf for uf in UserMERMAIDFeature.objects.filter(profile=profile)
+        }
+
+        result = []
+        for feature in all_features:
+            user_feature = user_features.get(feature.id)
+            enabled = (
+                user_feature.enabled if user_feature and user_feature.enabled else feature.enabled
+            )
+
+            result.append(
+                {
+                    "id": feature.id,
+                    "label": feature.label,
+                    "name": feature.name,
+                    "enabled": enabled,
+                }
+            )
+
+        return result
 
 
 class AuthenticatedMePermission(permissions.BasePermission):

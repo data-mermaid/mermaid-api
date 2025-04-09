@@ -10,6 +10,7 @@ from django.urls import reverse
 from django.utils.html import format_html
 
 from api.utils.sample_unit_methods import get_project
+from tools.models import MERMAIDFeature, UserMERMAIDFeature
 from ..models import Application, AuthUser, CollectRecord, Observer, Profile
 
 
@@ -119,6 +120,18 @@ class ProfileAdmin(BaseAdmin):
         qs = super().get_queryset(request)
         qs = qs.annotate(Count("projects"))
         return qs
+
+
+class UserMERMAIDFeatureInline(admin.TabularInline):
+    model = UserMERMAIDFeature
+    extra = 0
+
+
+@admin.register(MERMAIDFeature)
+class MermaidFeatureAdmin(BaseAdmin):
+    list_display = ("id", "label", "enabled")
+    list_display_links = ("id", "label")
+    inlines = [UserMERMAIDFeatureInline]
 
 
 def get_crs_with_attrib(query, attrib_val):

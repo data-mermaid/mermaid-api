@@ -1,6 +1,32 @@
 from django.db import models
 
 
+class MERMAIDFeature(models.Model):
+    label = models.CharField(max_length=255)
+    name = models.CharField(max_length=255)
+    enabled = models.BooleanField(default=False)
+
+    class Meta:
+        db_table = "mermaid_feature"
+        verbose_name = "MERMAID Feature"
+
+    def __str__(self):
+        return self.name
+
+
+class UserMERMAIDFeature(models.Model):
+    feature = models.ForeignKey(MERMAIDFeature, on_delete=models.CASCADE)
+    profile = models.ForeignKey("api.Profile", on_delete=models.CASCADE)
+    enabled = models.BooleanField(default=False)
+
+    class Meta:
+        db_table = "user_mermaid_feature"
+        verbose_name = "User MERMAID Feature"
+
+    def __str__(self):
+        return f"{self.profile}: {self.feature}"
+
+
 class LogEvent(models.Model):
     timestamp = models.DateTimeField()
     event = models.JSONField(null=True, blank=True)
