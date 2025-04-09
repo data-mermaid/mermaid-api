@@ -133,13 +133,13 @@ def email_project_admins(**kwargs):
         )
 
 
-def email_report(to_email, local_file_path, protocol, data_policy_level):
+def email_report(to_email, local_file_path, protocol, data_policy_level=None):
     if not to_email or "@" not in to_email:
         raise ValueError("Invalid email address")
     if not local_file_path or not Path(local_file_path).is_file():
         raise ValueError("Invalid or missing file path")
     if not protocol:
-        raise ValueError("Report title is required")
+        raise ValueError("Report protocol is required")
 
     try:
         zip_file_path = None
