@@ -27,64 +27,64 @@ class GFCRIndicatorSet(BaseModel):
     project = models.ForeignKey(Project, on_delete=models.CASCADE)
     indicator_set_type = models.CharField(max_length=50, choices=INDICATOR_SET_TYPE_CHOICES)
     f1_1 = models.DecimalField(
-        max_digits=9,
-        decimal_places=3,
+        max_digits=11,
+        decimal_places=5,
         verbose_name="Total area of coral reefs in GFCR Programme (sq.km)",
         default=0,
     )
     f1_notes = models.TextField(blank=True)
     f2_1a = models.DecimalField(
-        max_digits=9,
-        decimal_places=3,
+        max_digits=11,
+        decimal_places=5,
         verbose_name="Area of MPAs and OECMs (as aligned to GBF Target 3) [coralreef] (sq.km)",
         default=0,
     )
     f2_1b = models.DecimalField(
-        max_digits=9,
-        decimal_places=3,
+        max_digits=11,
+        decimal_places=5,
         verbose_name="Area of MPAs and OECMs (as aligned to GBF Target 3) [total] (sq.km)",
         default=0,
     )
     f2_2a = models.DecimalField(
-        max_digits=9,
-        decimal_places=3,
+        max_digits=11,
+        decimal_places=5,
         verbose_name="Area of locally managed areas / co-managed areas [coralreef] (sq.km)",
         default=0,
     )
     f2_2b = models.DecimalField(
-        max_digits=9,
-        decimal_places=3,
+        max_digits=11,
+        decimal_places=5,
         verbose_name="Area of locally managed areas / co-managed areas [total] (sq.km)",
         default=0,
     )
     f2_3a = models.DecimalField(
-        max_digits=9,
-        decimal_places=3,
+        max_digits=11,
+        decimal_places=5,
         verbose_name="Area of fisheries management [coralreef] (sq.km)",
         default=0,
     )
     f2_3b = models.DecimalField(
-        max_digits=9,
-        decimal_places=3,
+        max_digits=11,
+        decimal_places=5,
         verbose_name="Area of fisheries management [total] (sq.km)",
         default=0,
     )
     f2_4 = models.DecimalField(
-        max_digits=9,
-        decimal_places=3,
+        max_digits=11,
+        decimal_places=5,
         verbose_name="Area with pollution mitigation (sq.km)",
         default=0,
     )
     f2_5 = models.DecimalField(
-        max_digits=9,
-        decimal_places=3,
+        max_digits=11,
+        decimal_places=5,
         verbose_name="Area of non-coral reef ecosystems, e.g., mangroves, seagrass or other associated ecosystems (sq.km)",
         default=0,
     )
     f2_notes = models.TextField(blank=True)
     f3_1 = models.DecimalField(
-        max_digits=9,
-        decimal_places=3,
+        max_digits=11,
+        decimal_places=5,
         verbose_name="Area of effective coral reef restoration (sq.km)",
         default=0,
     )

@@ -79,10 +79,11 @@ def get_regions():
     return {str(r.id): r.name for r in Region.objects.order_by("name")}
 
 
-def create_m2m_row(lookups, data_ids):
-    return [
-        (YES, YES_COLOR_FILL) if lookup in data_ids else (NO, NO_COLOR_FILL) for lookup in lookups
-    ]
+def create_m2m_row(lookups, data):
+    if data is None:
+        return []
+    ids = [str(pk) for pk in data]
+    return [(YES, YES_COLOR_FILL) if lookup in ids else (NO, NO_COLOR_FILL) for lookup in lookups]
 
 
 def write_fish_families(wb, regions):
@@ -130,7 +131,7 @@ def write_fish_genera(wb, regions):
                 fish_genus.biomass_constant_a,
                 fish_genus.biomass_constant_b,
                 fish_genus.biomass_constant_c,
-                *create_m2m_row(regions, [str(r) for r in fish_genus.regions]),
+                *create_m2m_row(regions, fish_genus.regions),
             ]
             for fish_genus in FishGenus.objects.select_related("family")
             .filter(status=SUPERUSER_APPROVED)
@@ -175,7 +176,7 @@ def write_fish_species(wb, regions):
                 fish_species.trophic_level,
                 fish_species.vulnerability,
                 fish_species.climate_score,
-                *create_m2m_row(regions, [str(r.id) for r in fish_species.regions.all()]),
+                *create_m2m_row(regions, fish_species.regions.all()),
             ]
             for fish_species in FishSpecies.objects.select_related(
                 "genus",
@@ -211,7 +212,7 @@ def write_fish_grouping(wb, regions):
                 fish_group.biomass_constant_a,
                 fish_group.biomass_constant_b,
                 fish_group.biomass_constant_c,
-                *create_m2m_row(regions, [str(r.id) for r in fish_group.regions.all()]),
+                *create_m2m_row(regions, fish_group.regions.all()),
             ]
             for fish_group in FishGrouping.objects.select_related()
             .filter(status=SUPERUSER_APPROVED)
@@ -242,8 +243,8 @@ def write_benthic(wb, regions):
                 ba.name,
                 ba.parent and ba.parent.name,
                 ba.origin and ba.origin.name,
-                *create_m2m_row(life_histories, [str(lh.id) for lh in ba.life_histories.all()]),
-                *create_m2m_row(regions, [str(r.id) for r in ba.regions.all()]),
+                *create_m2m_row(life_histories, ba.life_histories.all()),
+                *create_m2m_row(regions, ba.regions.all()),
             ]
             for ba in BenthicAttribute.objects.filter(status=SUPERUSER_APPROVED).order_by("name")
         ],
