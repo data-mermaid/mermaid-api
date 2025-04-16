@@ -64,7 +64,10 @@ def create_sample_unit_method_summary_report(
 
     output_file_paths = []
     for data_policy_level, project_ids in project_groups.items():
-        with NamedTemporaryFile(prefix=f"{data_policy_level}_", suffix=".xlsx", delete=False) as f:
+        if not project_ids:
+            continue
+        prefix = f"{data_policy_level}_"
+        with NamedTemporaryFile(prefix=prefix, suffix=".xlsx", delete=False) as f:
             output_path = Path(f.name)
             wb = create_protocol_report(request, project_ids, protocol, data_policy_level)
             try:

@@ -245,6 +245,7 @@ def delete_file(file_path):
     if isinstance(file_path, (str, Path)):
         file_path = [file_path]
 
+    success = True
     for fp in file_path:
         path = Path(fp)
         try:
@@ -252,8 +253,8 @@ def delete_file(file_path):
                 path.unlink()
         except Exception as e:
             print(f"Error deleting file: {e}")
-            return False
-        return True
+            success = False
+        return success
 
 
 def zip_file(file_path, zip_name):

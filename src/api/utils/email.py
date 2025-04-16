@@ -144,7 +144,7 @@ def email_report(to_email, local_file_path, protocol):
     try:
         zip_file_path = None
         local_file_path = Path(local_file_path)
-        file_name = f"{create_iso_date_string()}_{protocol}.xlsx"
+        file_name = f"{create_iso_date_string()}_{protocol}"
         s3_zip_file_key = f"{settings.ENVIRONMENT}/reports/{file_name}.zip"
 
         if is_zipfile(local_file_path):
@@ -152,7 +152,7 @@ def email_report(to_email, local_file_path, protocol):
         else:
             zip_file_path = local_file_path.with_name(f"{file_name}.zip")
             with ZipFile(zip_file_path, "w", compression=ZIP_DEFLATED) as z:
-                z.write(local_file_path, arcname=file_name)
+                z.write(local_file_path, arcname=f"{file_name}.xlsx")
 
         s3.upload_file(settings.AWS_DATA_BUCKET, zip_file_path, s3_zip_file_key)
     except Exception:
