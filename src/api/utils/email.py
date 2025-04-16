@@ -1,7 +1,7 @@
 import datetime
 import logging
 from pathlib import Path
-from zipfile import ZIP_DEFLATED, ZipFile
+from zipfile import ZIP_DEFLATED, ZipFile, is_zipfile
 
 from django.conf import settings
 from django.core.mail import EmailMultiAlternatives
@@ -9,7 +9,7 @@ from django.template.loader import render_to_string
 from maintenance_mode.core import get_maintenance_mode
 
 from ..models import PROTOCOL_MAP
-from ..models.mermaid import Project, ProjectProfile
+from ..models.mermaid import ProjectProfile
 from ..utils import create_iso_date_string
 from . import delete_file, s3
 from .q import submit_job
@@ -133,7 +133,7 @@ def email_project_admins(**kwargs):
         )
 
 
-def email_report(to_email, local_file_path, protocol, data_policy_level=None):
+def email_report(to_email, local_file_path, protocol):
     if not to_email or "@" not in to_email:
         raise ValueError("Invalid email address")
     if not local_file_path or not Path(local_file_path).is_file():
@@ -144,21 +144,15 @@ def email_report(to_email, local_file_path, protocol, data_policy_level=None):
     try:
         zip_file_path = None
         local_file_path = Path(local_file_path)
-        dpl = next(
-            (
-                label.replace(" ", "_")
-                for level, label in Project.DATA_POLICIES
-                if level == data_policy_level
-            ),
-            None,
-        )
-        data_policy = f"_{dpl}" if dpl is not None else ""
-        file_name = f"{create_iso_date_string()}_{protocol}{data_policy}.xlsx"
+        file_name = f"{create_iso_date_string()}_{protocol}.xlsx"
         s3_zip_file_key = f"{settings.ENVIRONMENT}/reports/{file_name}.zip"
 
-        zip_file_path = local_file_path.with_name(f"{file_name}.zip")
-        with ZipFile(zip_file_path, "w", compression=ZIP_DEFLATED) as z:
-            z.write(local_file_path, arcname=file_name)
+        if is_zipfile(local_file_path):
+            zip_file_path = local_file_path
+        else:
+            zip_file_path = local_file_path.with_name(f"{file_name}.zip")
+            with ZipFile(zip_file_path, "w", compression=ZIP_DEFLATED) as z:
+                z.write(local_file_path, arcname=file_name)
 
         s3.upload_file(settings.AWS_DATA_BUCKET, zip_file_path, s3_zip_file_key)
     except Exception:
