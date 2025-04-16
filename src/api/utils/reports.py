@@ -1,5 +1,5 @@
 from pathlib import Path
-from tempfile import NamedTemporaryFile
+from tempfile import NamedTemporaryFile, TemporaryDirectory
 
 from django.conf import settings
 
@@ -9,7 +9,7 @@ from ..reports.summary_report import (
     create_protocol_report,
     group_projects_by_policy_level,
 )
-from . import delete_file, s3, zip_file
+from . import create_iso_date_string, delete_file, s3, zip_file
 from .email import email_report
 from .q import submit_job
 
@@ -66,16 +66,18 @@ def create_sample_unit_method_summary_report(
     for data_policy_level, project_ids in project_groups.items():
         if not project_ids:
             continue
-        prefix = f"{data_policy_level}_"
-        with NamedTemporaryFile(prefix=prefix, suffix=".xlsx", delete=False) as f:
-            output_path = Path(f.name)
-            wb = create_protocol_report(request, project_ids, protocol, data_policy_level)
-            try:
-                wb.save(output_path)
-            except Exception as e:
-                print(f"Error saving workbook: {e}")
-                return None
-            output_file_paths.append(output_path)
+
+        temp_dir = TemporaryDirectory()
+        output_path = Path(
+            temp_dir.name, f"{create_iso_date_string()}_{protocol}_{data_policy_level}.xlsx"
+        )
+        wb = create_protocol_report(request, project_ids, protocol, data_policy_level)
+        try:
+            wb.save(output_path)
+        except Exception as e:
+            print(f"Error saving workbook: {e}")
+            return None
+        output_file_paths.append(output_path)
 
     zip_output_path = zip_file(output_file_paths, protocol)
     delete_file(output_file_paths)
@@ -83,5 +85,6 @@ def create_sample_unit_method_summary_report(
     if send_email:
         email_report(request.user.profile.email, zip_output_path, protocol)
         delete_file(zip_output_path)
+        temp_dir.cleanup()
     else:
         return zip_output_path
