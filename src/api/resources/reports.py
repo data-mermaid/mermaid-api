@@ -97,6 +97,7 @@ class MultiProjectReportView(APIView):
         else:
             raise ValidationError(detail=f"{report_type}: Unknown report type")
 
+        zip_file_path = None
         if background:
             return Response({report_type: "ok"})
         else:
@@ -112,5 +113,7 @@ class MultiProjectReportView(APIView):
 
                 return response
             finally:
-                output_path.unlink()
-                zip_file_path.unlink()
+                if output_path:
+                    output_path.unlink()
+                if zip_file_path:
+                    zip_file_path.unlink()

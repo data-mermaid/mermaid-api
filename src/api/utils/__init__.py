@@ -266,7 +266,7 @@ def zip_file(file_path, zip_name):
     if not _file_paths:
         return None
 
-    zip_file_path = Path(file_path[0]).with_name(f"{zip_name}.zip")
+    zip_file_path = Path(_file_paths[0]).with_name(f"{zip_name}.zip")
 
     with ZipFile(zip_file_path, "w", compression=ZIP_DEFLATED) as z:
         for fp in _file_paths:
