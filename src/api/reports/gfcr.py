@@ -246,11 +246,11 @@ def create_report(project_ids, request=None, send_email=None):
             logger.exception("Error saving workbook")
             return None
 
-    if send_email:
-        email_report(request.user.profile.email, output_path, "GFCR")
-        delete_file(output_path)
-    else:
-        return output_path
+        if send_email:
+            email_report(request.user.profile.email, output_path, "GFCR")
+            delete_file(output_path)
+        else:
+            return output_path
 
 
 def create_report_background(project_ids, request=None, send_email=None):

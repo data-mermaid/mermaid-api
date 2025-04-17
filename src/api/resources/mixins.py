@@ -1,6 +1,5 @@
 import os
 import warnings
-from pathlib import Path
 
 import pytz
 from django.conf import settings
@@ -271,9 +270,12 @@ class SampleUnitMethodSummaryReport(object):
             model = self.get_queryset().model
             try:
                 protocol = getattr(model, "protocol")
-                output_path: Path = create_sample_unit_method_summary_report(
+                output_path = create_sample_unit_method_summary_report(
                     project_ids=[project_pk], protocol=protocol, request=request
                 )
+                if output_path is None:
+                    raise exceptions.ValidationError("Error creating report")
+
             except AttributeError as ae:
                 raise exceptions.ValidationError("Unknown protocol") from ae
             except ValueError as ve:
@@ -293,10 +295,12 @@ class SampleUnitMethodSummaryReport(object):
 
                 return response
             finally:
+                if z_file:
+                    z_file.close()
                 # Directory is a temporary directory,
                 # so we need to clean it up.
                 if output_path.exists():
-                    output_path.parent.unlink()
+                    output_path.parent.rmdir()
         except Exception as err:
             print(err)
             return Response(str(err), status=500)

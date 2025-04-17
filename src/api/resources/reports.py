@@ -60,6 +60,9 @@ class MultiProjectReportView(APIView):
         report_type = mp_serializer.validated_data.pop("report_type")
         background = mp_serializer.validated_data.pop("background")
 
+        output_path = None
+        zip_file_path = None
+
         if report_type == SAMPLE_UNIT_METHOD_REPORT_TYPE:
             project_ids = mp_serializer.validated_data["project_ids"]
             protocol = mp_serializer.validated_data["protocol"]
@@ -97,7 +100,6 @@ class MultiProjectReportView(APIView):
         else:
             raise ValidationError(detail=f"{report_type}: Unknown report type")
 
-        zip_file_path = None
         if background:
             return Response({report_type: "ok"})
         else:
