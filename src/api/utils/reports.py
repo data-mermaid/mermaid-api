@@ -63,11 +63,11 @@ def create_sample_unit_method_summary_report(
     project_groups = group_projects_by_policy_level(request, protocol, project_ids)
 
     output_file_paths = []
+    temp_dir = TemporaryDirectory()
     for data_policy_level, project_ids in project_groups.items():
         if not project_ids:
             continue
 
-        temp_dir = TemporaryDirectory()
         output_path = Path(
             temp_dir.name, f"{create_iso_date_string()}_{protocol}_{data_policy_level}.xlsx"
         )
