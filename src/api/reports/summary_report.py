@@ -338,11 +338,10 @@ def create_protocol_report(request, project_ids, protocol, data_policy_level=Pro
     return wb
 
 
-def check_su_method_policy_level(request, protocol, project_ids):
-    data_policy_levels = []
+def group_projects_by_policy_level(request, protocol, project_ids):
+    grouped_projects = {k: [] for k, _ in Project.DATA_POLICIES}
+    policy_names = {k: v.replace(" ", "_") for k, v in Project.DATA_POLICIES}
     profile = request.user.profile
-
-    data_policy_field_name = Project.get_sample_unit_method_policy(protocol)
 
     projects = Project.objects.filter(pk__in=project_ids)
     project_profiles = ProjectProfile.objects.filter(profile=profile, project__in=projects)
@@ -350,13 +349,10 @@ def check_su_method_policy_level(request, protocol, project_ids):
 
     for project in projects:
         if project.pk in project_lookup:
-            data_policy_levels.append(Project.PUBLIC)
+            grouped_projects[Project.PUBLIC].append(project.pk)
         else:
-            data_policy_levels.append(getattr(project, data_policy_field_name))
+            data_policy_field_name = Project.get_sample_unit_method_policy(protocol)
+            data_policy = getattr(project, data_policy_field_name)
+            grouped_projects[data_policy].append(project.pk)
 
-    if Project.PRIVATE in data_policy_levels:
-        return Project.PRIVATE
-    elif all(item == Project.PUBLIC for item in data_policy_levels):
-        return Project.PUBLIC
-
-    return Project.PUBLIC_SUMMARY
+    return {policy_names[gp]: v for gp, v in grouped_projects.items()}
