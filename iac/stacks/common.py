@@ -22,6 +22,19 @@ from constructs import Construct
 
 class CommonStack(Stack):
     def _database(self, id: str, version: rds.PostgresEngineVersion) -> rds.DatabaseInstance:
+        # create a secret so we can manually set the username
+        database_credentials_secret = sm.Secret(
+            self,
+            f"{id}Secret",
+            secret_name=f"common/mermaid-db/creds-{id}",
+            generate_secret_string=sm.SecretStringGenerator(
+                secret_string_template=json.dumps({"username": "mermaid_admin"}),
+                generate_string_key="password",
+                exclude_punctuation=True,
+                include_space=False,
+            ),
+        )
+
         return rds.DatabaseInstance(
             self,
             id,
@@ -35,7 +48,7 @@ class CommonStack(Stack):
             backup_retention=Duration.days(7),
             deletion_protection=True,
             removal_policy=RemovalPolicy.SNAPSHOT,
-            credentials=rds.Credentials.from_secret(self.database_credentials_secret),
+            credentials=rds.Credentials.from_secret(database_credentials_secret),
         )
 
     def __init__(
@@ -77,19 +90,6 @@ class CommonStack(Stack):
             "s3-endpoint",
             service=ec2.GatewayVpcEndpointAwsService.S3,
             subnets=[ec2.SubnetSelection(subnet_type=ec2.SubnetType.PRIVATE_WITH_EGRESS)],
-        )
-
-        # create a secret so we can manually set the username
-        self.database_credentials_secret = sm.Secret(
-            self,
-            "DBCredentialsSecret",
-            secret_name="common/mermaid-db/creds",
-            generate_secret_string=sm.SecretStringGenerator(
-                secret_string_template=json.dumps({"username": "mermaid_admin"}),
-                generate_string_key="password",
-                exclude_punctuation=True,
-                include_space=False,
-            ),
         )
 
         self.dev_database = self._database(
