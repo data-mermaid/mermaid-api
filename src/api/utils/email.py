@@ -9,7 +9,7 @@ from django.template.loader import render_to_string
 from maintenance_mode.core import get_maintenance_mode
 
 from ..models import PROTOCOL_MAP
-from ..models.mermaid import Project, ProjectProfile
+from ..models.mermaid import ProjectProfile
 from ..utils import create_iso_date_string
 from . import delete_file, s3
 from .q import submit_job
@@ -133,27 +133,16 @@ def email_project_admins(**kwargs):
         )
 
 
-def email_report(to_email, local_file_path, protocol, data_policy_level=None):
+def email_report(to_email, local_file_path, protocol):
     if not to_email or "@" not in to_email:
         raise ValueError("Invalid email address")
     if not local_file_path or not Path(local_file_path).is_file():
         raise ValueError("Invalid or missing file path")
-    if not protocol:
-        raise ValueError("Report protocol is required")
 
     try:
         zip_file_path = None
         local_file_path = Path(local_file_path)
-        dpl = next(
-            (
-                label.replace(" ", "_")
-                for level, label in Project.DATA_POLICIES
-                if level == data_policy_level
-            ),
-            None,
-        )
-        data_policy = f"_{dpl}" if dpl is not None else ""
-        file_name = f"{create_iso_date_string()}_{protocol}{data_policy}.xlsx"
+        file_name = f"{create_iso_date_string()}_{protocol}.xlsx"
         s3_zip_file_key = f"{settings.ENVIRONMENT}/reports/{file_name}.zip"
 
         zip_file_path = local_file_path.with_name(f"{file_name}.zip")
