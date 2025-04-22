@@ -291,22 +291,23 @@ def _inject_protocol_viewability(header, data, viewable_levels):
     # Insert columns for Sample Events, Sample Units, Observations, and Export user in project
     for n, _ in enumerate(data):
         project_id = _find_project_id(header, data[n])
+        viewable_level = viewable_levels.get(project_id)
         if project_id is None:
             data[n].insert(4, "-")
             data[n].insert(5, "-")
             data[n].insert(6, "-")
             data[n].insert(7, "-")
-        elif viewable_levels[project_id] == Project.PUBLIC:
+        elif viewable_level == Project.PUBLIC:
             data[n].insert(4, "Yes")
             data[n].insert(5, "Yes")
             data[n].insert(6, "Yes")
             data[n].insert(7, "No")
-        elif viewable_levels[project_id] == PROJECT_MEMBER:
+        elif viewable_level == PROJECT_MEMBER:
             data[n].insert(4, "Yes")
             data[n].insert(5, "Yes")
             data[n].insert(6, "Yes")
             data[n].insert(7, "Yes")
-        elif viewable_levels[project_id] == Project.PUBLIC_SUMMARY:
+        elif viewable_level == Project.PUBLIC_SUMMARY:
             data[n].insert(4, "Yes")
             data[n].insert(5, "No")
             data[n].insert(6, "No")
@@ -377,8 +378,8 @@ def create_protocol_report(request, project_ids, protocol):
         project_id = str(project_id)
         config = report_config[project_id]
         views = config["views"]
-        sheet_names = config["sheet_names"]
-        for view, sheet_name in zip(views, sheet_names):
+        project_sheet_names = config["sheet_names"]
+        for view, sheet_name in zip(views, project_sheet_names):
             data = get_viewset_csv_content(view, project_id, request)
             if current_rows[sheet_name] > 1:
                 data = data[1:]  # Skip headers for subsequent projects
