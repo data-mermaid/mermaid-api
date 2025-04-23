@@ -15,8 +15,7 @@
 
 ## Local Development Workflow
 
-Common workflow tasks are wrapped up using [Fabric](http://www.fabfile.org/) commands. Refer to `fabfile.py` for the 
-current commands. Add commands as required.
+Common workflow tasks are wrapped up using gnu's [make](https://makefiletutorial.com/) command. Refer to `Makefile` for the current commands. Add commands as required.
 
 ## Local Development Setup
 
@@ -42,10 +41,16 @@ Note that the following covers only local configuration, not deployment. See the
 #### Pre-commit
 
 To maintain code quality, this project uses [pre-commit](https://pre-commit.com/) to run a series of checks on the code before it is committed. To install pre-commit, run the following:
+`pip install pre-commit`
 
+To use:
 ```sh
+## Create a virtual environment
 virtualenv venv
-source venv/bin/activate
+source venv/bin/activate  #Mac
+source venv/Scripts/activate #Windows
+
+## Install packages
 pip install -r requirements-dev.txt
 pre-commit install
 ```
@@ -55,8 +60,8 @@ When updating the local development python environment, be sure to run `pre-comm
 Once Docker is installed and local environment variables set, run the following:
 
 ```sh
-$ fab build
-$ fab up
+$ make build
+$ make up
 ```
 
 If this is the first time running the up command, the api image will be built and postgis image will be downloaded. 
@@ -64,23 +69,23 @@ Then the containers will be started.
 
 With a database already created and persisted in an S3 bucket via 
 ```sh
-$ fab dbbackup
+$ make dbbackup
 ``` 
-,
+
 ```sh
-$ fab dbrestore
+$ make dbrestore
 ``` 
-will recreate and populate the local database with the latest dump. Without the S3 dump (i.e. running for the first time),
- you'll need to create a local database and then run 
+will recreate and populate the local database with the latest dump. Without the S3 dump (i.e. running for the first time), you'll need to create a local database and then run 
+
  ```sh
-$ fab migrate
+$ make migrate
 ``` 
 to create its schema.
 
 A shortcut for the above steps, once S3 is set up, is available via:
 
-```
-$ fab freshinstall:[env]
+```sh
+$ make freshinstall:[env]
 
 env: local (default), dev, prod
 ```
@@ -90,7 +95,7 @@ env: local (default), dev, prod
 Once everything is installed, run the following to have the API server running in the background:
 
 ```sh
-$ fab runserver
+$ make runserver
 ```
 
 ### Further
@@ -98,13 +103,13 @@ $ fab runserver
 The project directory `api` is mounted to the container, so any changes you make outside the container (e.g. using 
 an IDE installed on your host OS) are available inside the container.
 
-Please note that running `fab up` does NOT rebuild the image. So if you are making changes to the Dockerfile, for 
+Please note that running `make up` does NOT rebuild the image. So if you are making changes to the Dockerfile, for 
 example adding a dependency to the `requirement.txt` file, you will need to do the following:
 
 ```
-$ fab down  // Stops and Removes the containers
-$ fab build  // Builds a new image
-$ fab up
+$ make down  // Stops and Removes the containers
+$ make build  // Builds a new image
+$ make up
 ```
 
 > Note: this will delete your local database; all data will be lost.
@@ -112,7 +117,7 @@ $ fab up
 ### Database commands
 
 ```
-$ fab dbbackup:<env>
+$ make dbbackup:<env>
 
 env: local, dev, prod
 ```
@@ -120,7 +125,7 @@ env: local, dev, prod
 Backup the database from a named S3 key
 
 ```
-$ fab dbrestore:<env>
+$ make dbrestore:<env>
 
 env: local, dev, prod
 ```
