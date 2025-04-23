@@ -5,7 +5,7 @@ from typing import List
 
 from ..mocks import MockRequest
 from ..models import GFCRFinanceSolution, GFCRIndicatorSet
-from ..utils import castutils, delete_file
+from ..utils import castutils, create_iso_date_string, delete_file
 from ..utils.email import email_report
 from ..utils.project import citation_retrieved_text, get_profiles, suggested_citation
 from ..utils.q import submit_job
@@ -236,7 +236,7 @@ def create_report(project_ids, request=None, send_email=None):
         xl.auto_size_columns(wb[sheet_name])
 
     with NamedTemporaryFile(delete=False) as f:
-        output_path = Path(f.name)
+        output_path = Path(f.name).rename(f"{create_iso_date_string()}_gfcr.xlsx")
         try:
             wb.save(output_path)
         except Exception:
