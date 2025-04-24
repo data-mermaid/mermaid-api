@@ -4,9 +4,8 @@ from tempfile import NamedTemporaryFile
 from django.conf import settings
 
 from ..mocks import MockRequest
-from ..models import PROTOCOL_MAP
 from ..reports import attributes_report
-from ..reports.summary_report import check_su_method_policy_level, create_protocol_report
+from ..reports.summary_report import create_protocol_report
 from . import delete_file, s3
 from .email import email_report
 from .q import submit_job
@@ -58,11 +57,9 @@ def create_sample_unit_method_summary_report(
     if isinstance(project_ids, list) is False:
         project_ids = [project_ids]
 
-    data_policy_level = check_su_method_policy_level(request, protocol, project_ids)
-
-    with NamedTemporaryFile(delete=False, prefix=f"{protocol}_", suffix=".xlsx") as f:
+    with NamedTemporaryFile(delete=False) as f:
         output_path = Path(f.name)
-        wb = create_protocol_report(request, project_ids, protocol, data_policy_level)
+        wb = create_protocol_report(request, project_ids, protocol)
         try:
             wb.save(output_path)
         except Exception as e:
@@ -70,7 +67,7 @@ def create_sample_unit_method_summary_report(
             return None
 
         if send_email:
-            email_report(request.user.profile.email, output_path, PROTOCOL_MAP.get(protocol) or "")
+            email_report(request.user.profile.email, output_path, protocol)
             delete_file(output_path)
         else:
             return output_path
