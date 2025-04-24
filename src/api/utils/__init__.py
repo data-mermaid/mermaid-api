@@ -239,20 +239,38 @@ def is_uuid(val):
 
 
 def delete_file(file_path):
-    path = Path(file_path)
-    try:
-        if path.exists():
-            Path(file_path).unlink()
-    except Exception as e:
-        print(f"Error deleting file: {e}")
-        return False
-    return True
+    if file_path is None:
+        return True
+
+    if isinstance(file_path, (str, Path)):
+        file_path = [file_path]
+
+    success = True
+    for fp in file_path:
+        path = Path(fp)
+        try:
+            if path.exists():
+                path.unlink()
+        except Exception as e:
+            print(f"Error deleting file: {e}")
+            success = False
+        return success
 
 
 def zip_file(file_path, zip_name):
-    zip_file_path = file_path.with_name(f"{zip_name}.zip")
+    if file_path is None or zip_name is None:
+        return None
+
+    _file_paths = [file_path] if isinstance(file_path, (str, Path)) else file_path
+
+    if not _file_paths:
+        return None
+
+    zip_file_path = Path(_file_paths[0]).with_name(f"{zip_name}.zip")
+
     with ZipFile(zip_file_path, "w", compression=ZIP_DEFLATED) as z:
-        z.write(file_path, arcname=file_path.name)
+        for fp in _file_paths:
+            z.write(fp, arcname=Path(fp).name)
 
     return zip_file_path
 

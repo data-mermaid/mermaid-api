@@ -5,8 +5,9 @@ from typing import List
 
 from ..mocks import MockRequest
 from ..models import GFCRFinanceSolution, GFCRIndicatorSet
-from ..utils import castutils, delete_file
+from ..utils import castutils, create_iso_date_string, delete_file
 from ..utils.email import email_report
+from ..utils.project import citation_retrieved_text, get_profiles, suggested_citation
 from ..utils.q import submit_job
 from ..utils.timer import timing
 from . import xl
@@ -15,11 +16,15 @@ logger = logging.getLogger(__name__)
 
 
 def common_columns(indicator_set):
+    project = indicator_set.project
+    profiles = get_profiles(project)
+    citation = f"{suggested_citation(project, profiles)} {citation_retrieved_text(project.name)}"
     return [
         indicator_set.project.name,
         indicator_set.title,
         indicator_set.report_date,
         indicator_set.get_indicator_set_type_display(),
+        citation,
     ]
 
 
@@ -230,8 +235,11 @@ def create_report(project_ids, request=None, send_email=None):
         xl.write_data_to_sheet(wb, sheet_name, data, 2, 1)
         xl.auto_size_columns(wb[sheet_name])
 
-    with NamedTemporaryFile(delete=False, prefix="gfcr_", suffix=".xlsx") as f:
-        output_path = Path(f.name)
+    with NamedTemporaryFile(delete=False) as f:
+        temp_file_name = Path(f.name).name
+        output_path = Path(f.name).with_name(
+            f"gfcr_{create_iso_date_string()}_{temp_file_name}.xlsx"
+        )
         try:
             wb.save(output_path)
         except Exception:

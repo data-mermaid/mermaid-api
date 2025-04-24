@@ -60,6 +60,9 @@ class MultiProjectReportView(APIView):
         report_type = mp_serializer.validated_data.pop("report_type")
         background = mp_serializer.validated_data.pop("background")
 
+        output_path = None
+        zip_file_path = None
+
         if report_type == SAMPLE_UNIT_METHOD_REPORT_TYPE:
             project_ids = mp_serializer.validated_data["project_ids"]
             protocol = mp_serializer.validated_data["protocol"]
@@ -112,5 +115,7 @@ class MultiProjectReportView(APIView):
 
                 return response
             finally:
-                output_path.unlink()
-                zip_file_path.unlink()
+                if output_path:
+                    output_path.unlink()
+                if zip_file_path:
+                    zip_file_path.unlink()
