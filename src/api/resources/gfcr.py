@@ -17,6 +17,12 @@ from ..models import (
     RestrictedProjectSummarySampleEvent,
 )
 from ..permissions import AuthenticatedReadOnlyPermission, ProjectDataAdminPermission
+from ..utils.project import (
+    citation_retrieved_text,
+    default_citation,
+    get_profiles,
+    suggested_citation,
+)
 from .base import BaseAPISerializer, BaseProjectApiViewSet
 
 BENTHIC_LIT = "benthiclit"
@@ -127,10 +133,15 @@ class GFCRFinanceSolutionSerializer(BaseAPISerializer):
 
 
 class GFCRIndicatorSetSerializer(BaseAPISerializer):
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self._cached_profiles = {}
+
     finance_solutions = GFCRFinanceSolutionSerializer(many=True, default=list, read_only=True)
     f4_1_calc = serializers.ReadOnlyField()
     f4_2_calc = serializers.ReadOnlyField()
     f4_3_calc = serializers.ReadOnlyField()
+    suggested_citation = serializers.SerializerMethodField()
 
     class Meta:
         model = GFCRIndicatorSet
@@ -138,6 +149,25 @@ class GFCRIndicatorSetSerializer(BaseAPISerializer):
 
     def _single_digit_precision(self, value):
         return round(value, 1) if isinstance(value, (int, float)) else None
+
+    def _get_profiles(self, obj):
+        project_id = str(obj.id)
+        if project_id not in self._cached_profiles or self._cached_profiles[project_id] is None:
+            self._cached_profiles[project_id] = get_profiles(obj)
+        return self._cached_profiles[project_id]
+
+    def get_citation_retrieved_text(self, obj):
+        return citation_retrieved_text(obj.project.name)
+
+    def get_default_citation(self, obj):
+        project = obj.project
+        profiles = self._get_profiles(project)
+        return default_citation(project, profiles)
+
+    def get_suggested_citation(self, obj):
+        project = obj.project
+        profiles = self._get_profiles(project)
+        return f"{suggested_citation(project, profiles)} {citation_retrieved_text(project.name)}"
 
     def to_representation(self, instance):
         ret = super().to_representation(instance)
