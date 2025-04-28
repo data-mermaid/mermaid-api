@@ -1,6 +1,7 @@
 from django.db import connection, transaction
 from django.db.utils import DataError, IntegrityError
 from django.utils import timezone
+from psycopg2.extensions import adapt
 
 from ..exceptions import UpdateSummariesException, check_uuid
 from ..models import (
@@ -79,10 +80,11 @@ def _columns(model_cls):
 
 
 def _insert(model_cls, sql, suggested_citation):
+    escaped_suggested_citation = adapt(suggested_citation).getquoted().decode("utf-8").strip("'")
     cols = _columns(model_cls)
     extras = {
         "created_on": "now()",
-        "suggested_citation": f"'{suggested_citation}'",
+        "suggested_citation": f"'{escaped_suggested_citation}'",
     }
 
     insert_cols = ", ".join(cols)
