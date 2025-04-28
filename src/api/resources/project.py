@@ -192,7 +192,7 @@ class ProjectCSVSerializer(ReportSerializer, BaseProjectSerializer):
         return ""
 
     def get_contact_link(self, obj):
-        return f"https://{settings.DEFAULT_DOMAIN_API}/contact-project?project_id={obj.id}"
+        return f"{settings.DEFAULT_DOMAIN_MARKETING}/contact-project?project_id={obj.id}"
 
     def get_project_admins(self, obj):
         admins = obj.profiles.filter(role=ProjectProfile.ADMIN).values_list(
