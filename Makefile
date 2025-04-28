@@ -55,7 +55,7 @@ dbbackup:
 	$(DOCKER_COMPOSE) exec $(API_SERVICE) python manage.py dbbackup local
 
 dbrestore:
-	$(DOCKER_COMPOSE) exec $(API_SERVICE) python manage.py dbrestore local
+	$(DOCKER_COMPOSE) exec $(API_SERVICE) python manage.py dbrestore dev
 
 migrate:
 	$(DOCKER_COMPOSE) exec $(API_SERVICE) python manage.py migrate

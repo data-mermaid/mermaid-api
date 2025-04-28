@@ -18,12 +18,12 @@ drf-recaptcha==2.2.1
 exif==1.6.0
 gunicorn==20.1.0
 mailchimp3==3.0.17
-natsort==8.1.0
+natsort==8.4.0
 openpyxl==3.0.10
 pillow==10.4.0
 psycopg2-binary==2.9.3
 pyexcelerate==0.10.0
-pyspacer==0.10.0
+pyspacer==0.12.0
 pytest-cov==3.0.0
 pytest-django==4.5.2
 pytest-rich==0.1.1
