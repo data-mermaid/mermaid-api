@@ -35,6 +35,7 @@ MAINTENANCE_MODE_IGNORE_SUPERUSER = os.environ.get("MAINTENANCE_MODE_IGNORE_SUPE
 _admins = os.environ.get("ADMINS") or ""
 ADMINS = [("Datamermaid admin", admin.strip()) for admin in _admins.split(",")]
 SUPERUSER = ("Datamermaid superuser", os.environ.get("SUPERUSER"))
+DEFAULT_DOMAIN_MARKETING = os.environ.get("DEFAULT_DOMAIN_MARKETING", "https://datamermaid.org")
 DEFAULT_DOMAIN_API = os.environ.get("DEFAULT_DOMAIN_API")
 DEFAULT_DOMAIN_COLLECT = os.environ.get("DEFAULT_DOMAIN_COLLECT")
 DEFAULT_DOMAIN_DASHBOARD = os.environ.get(
