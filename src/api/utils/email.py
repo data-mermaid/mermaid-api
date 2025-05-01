@@ -142,7 +142,7 @@ def email_report(to_email, local_file_path, protocol):
     try:
         zip_file_path = None
         local_file_path = Path(local_file_path)
-        file_name = f"{create_iso_date_string()}_{protocol}.xlsx"
+        file_name = f"{create_iso_date_string(include_time=True)}_{protocol}.xlsx"
         s3_zip_file_key = f"{settings.ENVIRONMENT}/reports/{file_name}.zip"
 
         zip_file_path = local_file_path.with_name(f"{file_name}.zip")

@@ -172,9 +172,13 @@ def truthy(val):
     return val in ("t", "T", "true", "True", True, 1)
 
 
-def create_iso_date_string(delimiter="-"):
+def create_iso_date_string(delimiter="-", include_time=False):
+    now = timezone.now()
     date_format = f"%y{delimiter}%m{delimiter}%d"
-    return timezone.now().strftime(date_format)
+    if include_time:
+        milliseconds = int(now.microsecond / 1000)
+        date_format += f"_%H%M%S_{milliseconds:03d}"
+    return now.strftime(date_format)
 
 
 def create_timestamp(ttl=0):
