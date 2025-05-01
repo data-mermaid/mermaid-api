@@ -1,3 +1,5 @@
+from django.contrib.gis.geos import MultiPoint
+from django.db.models import Prefetch
 from rest_framework import permissions, serializers, viewsets
 from rest_framework.decorators import action
 from rest_framework.exceptions import NotFound, ValidationError
@@ -5,12 +7,26 @@ from rest_framework.response import Response
 
 from api.auth0_management import Auth0DatabaseAuthenticationAPI, Auth0Users
 from tools.models import MERMAIDFeature, UserMERMAIDFeature
-from ..models import Profile, ProjectProfile
+from ..models import Profile, ProjectProfile, Site
 from .base import BaseAPISerializer
+
+
+def calculate_bbox_centroid(site_locations):
+    """Given a list of Point objects, return the center of the bounding box."""
+    if not site_locations:
+        return None
+
+    multipoint = MultiPoint(site_locations)
+    bbox = multipoint.envelope.extent  # [xmin, ymin, xmax, ymax]
+    return {
+        "lat": round((bbox[1] + bbox[3]) / 2, 3),
+        "lng": round((bbox[0] + bbox[2]) / 2, 3),
+    }
 
 
 class MeSerializer(BaseAPISerializer):
     picture = serializers.ReadOnlyField(source="picture_url")
+    projects_centroid_latlng = serializers.SerializerMethodField()
     projects = serializers.SerializerMethodField()
     optional_features = serializers.SerializerMethodField()
 
@@ -25,26 +41,53 @@ class MeSerializer(BaseAPISerializer):
             "created_on",
             "updated_on",
             "picture",
+            "projects_centroid_latlng",
             "projects",
             "optional_features",
         ]
 
-    def get_projects(self, o):
-        qry = ProjectProfile.objects.select_related("project")
-        qry = qry.prefetch_related("project__collect_records")
-        qry = qry.filter(profile=o)
+    def get_queryset(self, o):
+        if not hasattr(self, "_project_profiles_cache"):
+            self._project_profiles_cache = (
+                ProjectProfile.objects.select_related("project")
+                .prefetch_related(
+                    Prefetch("project__sites", queryset=Site.objects.only("id", "location")),
+                    "project__collect_records",
+                )
+                .filter(profile=o)
+            )
+        return self._project_profiles_cache
 
-        return [
-            {
-                "id": pp.project_id,
-                "name": pp.project.name,
-                "role": pp.role,
-                "num_active_sample_units": pp.project.collect_records.filter(
-                    profile=pp.profile
-                ).count(),
-            }
-            for pp in qry
-        ]
+    def get_projects(self, o):
+        qry = self.get_queryset(o)
+
+        projects = []
+        for pp in qry:
+            site_locations = [site.location for site in pp.project.sites.all() if site.location]
+            projects.append(
+                {
+                    "id": pp.project_id,
+                    "name": pp.project.name,
+                    "role": pp.role,
+                    "num_active_sample_units": pp.project.collect_records.filter(
+                        profile=pp.profile
+                    ).count(),
+                    "centroid_latlng": calculate_bbox_centroid(site_locations),
+                }
+            )
+
+        return projects
+
+    def get_projects_centroid_latlng(self, o):
+        qry = self.get_queryset(o)
+
+        all_site_locations = []
+        for pp in qry:
+            all_site_locations.extend(
+                site.location for site in pp.project.sites.all() if site.location
+            )
+
+        return calculate_bbox_centroid(all_site_locations)
 
     def get_optional_features(self, profile):
         all_features = MERMAIDFeature.objects.all()
