@@ -42,7 +42,7 @@ class CommonStack(Stack):
             engine=rds.DatabaseInstanceEngine.postgres(version=version),
             instance_type=ec2.InstanceType.of(
                 ec2.InstanceClass.BURSTABLE3,
-                ec2.InstanceSize.SMALL,
+                ec2.InstanceSize.MEDIUM,
             ),
             vpc_subnets=ec2.SubnetSelection(subnet_type=ec2.SubnetType.PRIVATE_ISOLATED),
             backup_retention=Duration.days(7),
@@ -93,11 +93,11 @@ class CommonStack(Stack):
         )
 
         self.dev_database = self._database(
-            id="DevDatabase", version=rds.PostgresEngineVersion.VER_16_3
+            id="PostgresRdsV2Dev", version=rds.PostgresEngineVersion.VER_16_3
         )
 
         self.prod_database = self._database(
-            id="ProdDatabase", version=rds.PostgresEngineVersion.VER_13_7
+            id="PostgresRdsV2", version=rds.PostgresEngineVersion.VER_13_7
         )
 
         self.backup_bucket = s3.Bucket(
