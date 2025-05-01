@@ -7,7 +7,7 @@ from rest_framework.response import Response
 
 from api.auth0_management import Auth0DatabaseAuthenticationAPI, Auth0Users
 from tools.models import MERMAIDFeature, UserMERMAIDFeature
-from ..models import Profile, Project, ProjectProfile, Site
+from ..models import Profile, ProjectProfile
 from .base import BaseAPISerializer
 
 
@@ -15,10 +15,13 @@ def calculate_bbox_centroid(extent):
     """Given an extent [xmin, ymin, xmax, ymax], return center point."""
     if not extent or None in extent:
         return None
-    xmin, ymin, xmax, ymax = extent
+    xmin, ymin, xmax, ymax = map(float, extent)  # ensure numeric floats
+    lat = (ymin + ymax) / 2
+    lng = (xmin + xmax) / 2
+
     return {
-        "lat": round((ymin + ymax) / 2, 3),
-        "lng": round((xmin + xmax) / 2, 3),
+        "lat": round(lat, 3),
+        "lng": round(lng, 3),
     }
 
 
@@ -75,10 +78,14 @@ class MeSerializer(BaseAPISerializer):
         ]
 
     def get_projects_centroid_latlng(self, o):
-        projects = Project.objects.filter(profiles__profile=o)
-        extent = Site.objects.filter(project__in=projects).aggregate(extent=Extent("location"))[
-            "extent"
-        ]
+        extents = [pp.extent for pp in self.get_queryset(o) if pp.extent]
+        if not extents:
+            return None
+        xmin = min(e[0] for e in extents)
+        ymin = min(e[1] for e in extents)
+        xmax = max(e[2] for e in extents)
+        ymax = max(e[3] for e in extents)
+        extent = (xmin, ymin, xmax, ymax)
         return calculate_bbox_centroid(extent)
 
     def get_optional_features(self, profile):
