@@ -83,7 +83,7 @@ class BaseProjectSerializer(DynamicFieldsMixin, BaseAPISerializer):
         model = Project
         exclude = []
         hidden_fields = ["default_citation", "user_citation", "citation_retrieved_text"]
-        additional_fields = ["countries", "num_sites"]
+        additional_fields = ["countries", "num_sites", "bbox"]
 
     def _get_profiles(self, obj):
         project_id = str(obj.id)

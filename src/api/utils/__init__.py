@@ -271,13 +271,23 @@ def validate_max_year(value):
 
 
 def get_extent(extent):
-    if not extent or None in extent:
+    if not extent:
         return None
-    xmin, ymin, xmax, ymax = [round(float(x), 3) for x in extent]
+
+    # If extent is a string like 'BOX(xmin ymin,xmax ymax)'
+    if isinstance(extent, str) and extent.startswith("BOX("):
+        match = re.match(r"BOX\(([-\d.]+) ([-\d.]+),([-\d.]+) ([-\d.]+)\)", extent)
+        if not match:
+            return None
+        xmin, ymin, xmax, ymax = map(float, match.groups())
+    elif isinstance(extent, (tuple, list)) and len(extent) == 4:
+        xmin, ymin, xmax, ymax = map(float, extent)
+    else:
+        return None
 
     return {
-        "xmin": xmin,
-        "ymin": ymin,
-        "xmax": xmax,
-        "ymax": ymax,
+        "xmin": round(xmin, 3),
+        "ymin": round(ymin, 3),
+        "xmax": round(xmax, 3),
+        "ymax": round(ymax, 3),
     }
