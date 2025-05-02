@@ -268,3 +268,16 @@ def validate_max_year(value):
             _("%(value)s is in the future"),
             params={"value": value},
         )
+
+
+def get_extent(extent):
+    if not extent or None in extent:
+        return None
+    xmin, ymin, xmax, ymax = [round(float(x), 3) for x in extent]
+
+    return {
+        "xmin": xmin,
+        "ymin": ymin,
+        "xmax": xmax,
+        "ymax": ymax,
+    }

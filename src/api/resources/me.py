@@ -8,20 +8,8 @@ from rest_framework.response import Response
 from api.auth0_management import Auth0DatabaseAuthenticationAPI, Auth0Users
 from tools.models import MERMAIDFeature, UserMERMAIDFeature
 from ..models import Profile, ProjectProfile
+from ..utils import get_extent
 from .base import BaseAPISerializer
-
-
-def get_extent(extent):
-    if not extent or None in extent:
-        return None
-    xmin, ymin, xmax, ymax = [round(float(x), 3) for x in extent]
-
-    return {
-        "xmin": xmin,
-        "ymin": ymin,
-        "xmax": xmax,
-        "ymax": ymax,
-    }
 
 
 class MeSerializer(BaseAPISerializer):
@@ -71,7 +59,6 @@ class MeSerializer(BaseAPISerializer):
                 "name": pp.project.name,
                 "role": pp.role,
                 "num_active_sample_units": pp.num_active_sample_units,
-                "bbox": get_extent(pp.extent),
             }
             for pp in project_profiles
         ]
