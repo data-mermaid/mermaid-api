@@ -11,23 +11,22 @@ from ..models import Profile, ProjectProfile
 from .base import BaseAPISerializer
 
 
-def calculate_bbox_centroid(extent):
-    """Given an extent [xmin, ymin, xmax, ymax], return center point."""
+def get_extent(extent):
     if not extent or None in extent:
         return None
-    xmin, ymin, xmax, ymax = map(float, extent)  # ensure numeric floats
-    lat = (ymin + ymax) / 2
-    lng = (xmin + xmax) / 2
+    xmin, ymin, xmax, ymax = [round(float(x), 3) for x in extent]
 
     return {
-        "lat": round(lat, 3),
-        "lng": round(lng, 3),
+        "xmin": xmin,
+        "ymin": ymin,
+        "xmax": xmax,
+        "ymax": ymax,
     }
 
 
 class MeSerializer(BaseAPISerializer):
     picture = serializers.ReadOnlyField(source="picture_url")
-    projects_centroid_latlng = serializers.SerializerMethodField()
+    projects_bbox = serializers.SerializerMethodField()
     projects = serializers.SerializerMethodField()
     optional_features = serializers.SerializerMethodField()
 
@@ -42,7 +41,7 @@ class MeSerializer(BaseAPISerializer):
             "created_on",
             "updated_on",
             "picture",
-            "projects_centroid_latlng",
+            "projects_bbox",
             "projects",
             "optional_features",
         ]
@@ -54,7 +53,7 @@ class MeSerializer(BaseAPISerializer):
                 .annotate(
                     num_active_sample_units=Count(
                         "project__collect_records",
-                        filter=Q(project__collect_records__profile=o.id),
+                        filter=Q(project__collect_records__profile=o),
                         distinct=True,
                     ),
                     extent=Extent("project__sites__location"),
@@ -72,12 +71,12 @@ class MeSerializer(BaseAPISerializer):
                 "name": pp.project.name,
                 "role": pp.role,
                 "num_active_sample_units": pp.num_active_sample_units,
-                "centroid_latlng": calculate_bbox_centroid(pp.extent),
+                "bbox": get_extent(pp.extent),
             }
             for pp in project_profiles
         ]
 
-    def get_projects_centroid_latlng(self, o):
+    def get_projects_bbox(self, o):
         extents = [pp.extent for pp in self.get_queryset(o) if pp.extent]
         if not extents:
             return None
@@ -86,7 +85,7 @@ class MeSerializer(BaseAPISerializer):
         xmax = max(e[2] for e in extents)
         ymax = max(e[3] for e in extents)
         extent = (xmin, ymin, xmax, ymax)
-        return calculate_bbox_centroid(extent)
+        return get_extent(extent)
 
     def get_optional_features(self, profile):
         all_features = MERMAIDFeature.objects.all()
