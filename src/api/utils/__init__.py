@@ -172,9 +172,13 @@ def truthy(val):
     return val in ("t", "T", "true", "True", True, 1)
 
 
-def create_iso_date_string(delimiter="-"):
+def create_iso_date_string(delimiter="-", include_time=False):
+    now = timezone.now()
     date_format = f"%y{delimiter}%m{delimiter}%d"
-    return timezone.now().strftime(date_format)
+    if include_time:
+        milliseconds = int(now.microsecond / 1000)
+        date_format += f"_%H%M%S_{milliseconds:03d}"
+    return now.strftime(date_format)
 
 
 def create_timestamp(ttl=0):
@@ -264,3 +268,26 @@ def validate_max_year(value):
             _("%(value)s is in the future"),
             params={"value": value},
         )
+
+
+def get_extent(extent):
+    if not extent:
+        return None
+
+    # If extent is a string like 'BOX(xmin ymin,xmax ymax)'
+    if isinstance(extent, str) and extent.startswith("BOX("):
+        match = re.match(r"BOX\(([-\d.]+) ([-\d.]+),([-\d.]+) ([-\d.]+)\)", extent)
+        if not match:
+            return None
+        xmin, ymin, xmax, ymax = map(float, match.groups())
+    elif isinstance(extent, (tuple, list)) and len(extent) == 4:
+        xmin, ymin, xmax, ymax = map(float, extent)
+    else:
+        return None
+
+    return {
+        "xmin": round(xmin, 3),
+        "ymin": round(ymin, 3),
+        "xmax": round(xmax, 3),
+        "ymax": round(ymax, 3),
+    }

@@ -16,15 +16,11 @@ logger = logging.getLogger(__name__)
 
 
 def common_columns(indicator_set):
-    project = indicator_set.project
-    profiles = get_profiles(project)
-    citation = f"{suggested_citation(project, profiles)} {citation_retrieved_text(project.name)}"
     return [
         indicator_set.project.name,
         indicator_set.title,
         indicator_set.report_date,
         indicator_set.get_indicator_set_type_display(),
-        citation,
     ]
 
 
@@ -59,9 +55,16 @@ def _get_indicator_sheet_data(indicator_sets, fields, additional_common_fields=N
 def f1_data(indicator_sets):
     for indicator_set in indicator_sets:
         if hasattr(indicator_set, "f1_1"):
+            project = indicator_set.project
+            profiles = get_profiles(project)
+            citation = (
+                f"{suggested_citation(project, profiles)} {citation_retrieved_text(project.name)}"
+            )
+
             yield common_columns(indicator_set) + [
                 indicator_set._meta.get_field("f1_1").verbose_name,
                 indicator_set.f1_1,
+                citation,
             ]
 
 
@@ -101,7 +104,9 @@ def f4_data(indicator_sets):
         ("F4.3", "f4_3"),
     )
     return _get_indicator_sheet_data(
-        indicator_sets, fields, additional_common_fields=["f4_start_date", "f4_end_date"]
+        indicator_sets,
+        fields,
+        additional_common_fields=["f4_start_date", "f4_end_date"],
     )
 
 
@@ -236,8 +241,9 @@ def create_report(project_ids, request=None, send_email=None):
         xl.auto_size_columns(wb[sheet_name])
 
     with NamedTemporaryFile(delete=False) as f:
-        output_path = Path(f.name).rename(f"{create_iso_date_string()}_gfcr.xlsx")
         try:
+            temppath = Path(f.name)
+            output_path = temppath.rename(f"{temppath.parent}/{create_iso_date_string()}_gfcr.xlsx")
             wb.save(output_path)
         except Exception:
             logger.exception("Error saving workbook")
