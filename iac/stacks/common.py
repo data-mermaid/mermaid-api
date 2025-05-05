@@ -21,7 +21,9 @@ from constructs import Construct
 
 
 class CommonStack(Stack):
-    def _database(self, id: str, version: rds.PostgresEngineVersion) -> rds.DatabaseInstance:
+    def _database(
+        self, id: str, version: rds.PostgresEngineVersion, instance_size: ec2.InstanceSize
+    ) -> rds.DatabaseInstance:
         # create a secret so we can manually set the username
         database_credentials_secret = sm.Secret(
             self,
@@ -42,7 +44,7 @@ class CommonStack(Stack):
             engine=rds.DatabaseInstanceEngine.postgres(version=version),
             instance_type=ec2.InstanceType.of(
                 ec2.InstanceClass.BURSTABLE3,
-                ec2.InstanceSize.MEDIUM,
+                instance_size,
             ),
             vpc_subnets=ec2.SubnetSelection(subnet_type=ec2.SubnetType.PRIVATE_ISOLATED),
             backup_retention=Duration.days(7),
@@ -93,11 +95,15 @@ class CommonStack(Stack):
         )
 
         self.dev_database = self._database(
-            id="PostgresRdsV2Dev", version=rds.PostgresEngineVersion.VER_16_3
+            id="PostgresRdsV2Dev",
+            version=rds.PostgresEngineVersion.VER_16_3,
+            instance_size=ec2.InstanceSize.MEDIUM,
         )
 
         self.prod_database = self._database(
-            id="PostgresRdsV2", version=rds.PostgresEngineVersion.VER_13_7
+            id="PostgresRdsV2",
+            version=rds.PostgresEngineVersion.VER_13_7,
+            instance_size=ec2.InstanceSize.MEDIUM,
         )
 
         self.backup_bucket = s3.Bucket(
