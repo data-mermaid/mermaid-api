@@ -2,6 +2,7 @@ import logging
 
 import django_filters
 from django.conf import settings
+from django.contrib.gis.db.models import Extent
 from django.db import transaction
 from django.db.models import JSONField
 from rest_condition import Or
@@ -32,7 +33,7 @@ from ..permissions import (
 from ..reports.fields import ReportField, ReportMethodField
 from ..reports.formatters import to_data_policy, to_str, to_yesno
 from ..reports.report_serializer import ReportSerializer
-from ..utils import truthy
+from ..utils import get_extent, truthy
 from ..utils.project import (
     citation_retrieved_text,
     copy_project_and_resources,
@@ -76,12 +77,13 @@ class BaseProjectSerializer(DynamicFieldsMixin, BaseAPISerializer):
     default_citation = serializers.SerializerMethodField()
     suggested_citation = serializers.SerializerMethodField()
     citation_retrieved_text = serializers.SerializerMethodField()
+    bbox = serializers.SerializerMethodField()
 
     class Meta:
         model = Project
         exclude = []
         hidden_fields = ["default_citation", "user_citation", "citation_retrieved_text"]
-        additional_fields = ["countries", "num_sites"]
+        additional_fields = ["countries", "num_sites", "bbox"]
 
     def _get_profiles(self, obj):
         project_id = str(obj.id)
@@ -129,6 +131,10 @@ class BaseProjectSerializer(DynamicFieldsMixin, BaseAPISerializer):
             num_sample_units += queryset.filter(**qry_filter).count()
 
         return num_sample_units
+
+    def get_bbox(self, obj):
+        extent = getattr(obj, "extent", None)
+        return get_extent(extent)
 
 
 class ProjectSerializer(BaseProjectSerializer):
@@ -260,9 +266,21 @@ class ProjectViewSet(BaseApiViewSet):
     search_fields = ["$name", "$sites__country__name"]
 
     def get_queryset(self):
-        qs = Project.objects.select_related("created_by", "updated_by")
-        qs = qs.prefetch_related("profiles", "sites", "sites__country")
-        qs = qs.all().order_by("name")
+        qs = (
+            Project.objects.select_related(
+                "created_by",
+                "updated_by",
+            )
+            .prefetch_related(
+                "profiles",
+                "sites",
+                "sites__country",
+            )
+            .annotate(
+                extent=Extent("sites__location"),
+            )
+            .order_by("name")
+        )
         user = self.request.user
         show_all = "showall" in self.request.query_params
 

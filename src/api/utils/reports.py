@@ -59,7 +59,9 @@ def create_sample_unit_method_summary_report(
 
     with NamedTemporaryFile(delete=False) as f:
         temppath = Path(f.name)
-        output_path = temppath.rename(f"{temppath.parent}/{create_iso_date_string()}_gfcr.xlsx")
+        output_path = temppath.rename(
+            f"{temppath.parent}/{create_iso_date_string()}_{protocol}.xlsx"
+        )
         wb = create_protocol_report(request, project_ids, protocol)
         try:
             wb.save(output_path)
