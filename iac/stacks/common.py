@@ -21,38 +21,6 @@ from constructs import Construct
 
 
 class CommonStack(Stack):
-    # def _database(
-    #     self, id: str, version: rds.PostgresEngineVersion, instance_size: ec2.InstanceSize
-    # ) -> rds.DatabaseInstance:
-    #     # create a secret so we can manually set the username
-    #     database_credentials_secret = sm.Secret(
-    #         self,
-    #         f"{id}Secret",
-    #         secret_name=f"common/mermaid-db/creds-{id}",
-    #         generate_secret_string=sm.SecretStringGenerator(
-    #             secret_string_template=json.dumps({"username": "mermaid_admin"}),
-    #             generate_string_key="password",
-    #             exclude_punctuation=True,
-    #             include_space=False,
-    #         ),
-    #     )
-
-    #     return rds.DatabaseInstance(
-    #         self,
-    #         id,
-    #         vpc=self.vpc,
-    #         engine=rds.DatabaseInstanceEngine.postgres(version=version),
-    #         instance_type=ec2.InstanceType.of(
-    #             ec2.InstanceClass.BURSTABLE3,
-    #             instance_size,
-    #         ),
-    #         vpc_subnets=ec2.SubnetSelection(subnet_type=ec2.SubnetType.PRIVATE_ISOLATED),
-    #         backup_retention=Duration.days(7),
-    #         deletion_protection=True,
-    #         removal_policy=RemovalPolicy.SNAPSHOT,
-    #         credentials=rds.Credentials.from_secret(database_credentials_secret),
-    #     )
-
     def __init__(
         self,
         scope: Construct,
