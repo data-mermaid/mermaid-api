@@ -1,7 +1,11 @@
+import logging
 import os
 
 import boto3
+import botocore
 from django.conf import settings
+
+logger = logging.getLogger(__name__)
 
 
 def get_client():
@@ -13,14 +17,51 @@ def get_client():
     return session.client("s3")
 
 
-def upload_file(bucket, local_file_path, blob_name):
+def get_object(bucket, key):
     client = get_client()
-    client.upload_file(local_file_path, bucket, blob_name)
+    return client.get_object(Bucket=bucket, Key=key)
+
+
+def delete_file(bucket, blob_name):
+    client = get_client()
+    try:
+        client.delete_object(Bucket=bucket, Key=blob_name)
+        return True
+    except botocore.exceptions.ClientError as e:
+        if e.response["Error"]["Code"] == "NoSuchKey":
+            return False
+        raise
+    except Exception as e:
+        logger.error(f"Error deleting file {blob_name} from bucket {bucket}: {e}")
+        return False
+
+
+def upload_file(bucket, local_file_path, blob_name, content_type=None, content_encoding=None):
+    client = get_client()
+
+    extra_args = {}
+    if content_type:
+        extra_args["ContentType"] = content_type
+    if content_encoding:
+        extra_args["ContentEncoding"] = content_encoding
+
+    client.upload_file(local_file_path, bucket, blob_name, ExtraArgs=extra_args)
 
 
 def download_file(bucket, blob_name, local_file_path):
     client = get_client()
     client.download_file(bucket, blob_name, local_file_path)
+
+
+def file_exists(bucket, blob_name):
+    client = get_client()
+    try:
+        client.head_object(Bucket=bucket, Key=blob_name)
+        return True
+    except botocore.exceptions.ClientError as e:
+        if e.response["Error"]["Code"] == "404":
+            return False
+        raise
 
 
 def download_directory(bucket, s3_directory, local_directory):

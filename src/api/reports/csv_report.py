@@ -1,6 +1,6 @@
-from datetime import datetime
-
 from django.http import StreamingHttpResponse
+from django.utils import timezone
+from django.utils.text import slugify
 
 from api.reports import RawCSVReport
 
@@ -64,14 +64,24 @@ def _flatten_json_columns(content, show_display_fields=False):
     return [existing_headers] + list(zip(*existing_columns))  # transpose columns
 
 
-def _get_csv_response(file_name, fields, data, show_display_fields=False):
+def get_formatted_data(
+    data, serializer_class, include_additional_fields=False, show_display_fields=False
+):
+    fields = get_fields(
+        serializer_class,
+        include_additional_fields=include_additional_fields,
+        show_display_fields=show_display_fields,
+    )
+    serialized_data = get_data(
+        serializer_class,
+        data,
+        include_additional_fields=include_additional_fields,
+        show_display_fields=show_display_fields,
+    )
     report = RawCSVReport()
-    fdata = report.data(fields, data)
-    data = _flatten_json_columns(fdata, show_display_fields=show_display_fields)
-    response = StreamingHttpResponse(report.stream_list(data[0], data[1:]), content_type="text/csv")
-    response["Content-Disposition"] = f'attachment; filename="{file_name}"'
-
-    return response
+    fdata = report.data(fields, serialized_data)
+    formatted_data = _flatten_json_columns(fdata, show_display_fields=show_display_fields)
+    return formatted_data[0], formatted_data[1:]
 
 
 def get_csv_response(
@@ -81,19 +91,19 @@ def get_csv_response(
     include_additional_fields=False,
     show_display_fields=False,
 ):
-    fields = get_fields(
-        serializer_class,
-        include_additional_fields=include_additional_fields,
-        show_display_fields=show_display_fields,
-    )
-    serialized_data = get_data(
-        serializer_class,
+    time_stamp = timezone.now().strftime("%Y%m%d")
+    file_name = f"{slugify(file_name_prefix)}-{time_stamp}.csv"
+
+    columns, rows = get_formatted_data(
         queryset,
+        serializer_class,
         include_additional_fields=include_additional_fields,
         show_display_fields=show_display_fields,
     )
-    time_stamp = datetime.utcnow().strftime("%Y%m%d")
-    file_name = f"{file_name_prefix}-{time_stamp}.csv".lower()
-    return _get_csv_response(
-        file_name, fields, serialized_data, show_display_fields=show_display_fields
+
+    response = StreamingHttpResponse(
+        RawCSVReport().stream_list(columns, rows), content_type="text/csv"
     )
+    response["Content-Disposition"] = f'attachment; filename="{file_name}"'
+
+    return response

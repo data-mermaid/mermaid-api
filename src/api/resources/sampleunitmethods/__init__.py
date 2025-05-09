@@ -16,7 +16,7 @@ from ...permissions import (
 )
 from ...reports import csv_report
 from ...resources.base import BaseApiViewSet, BaseProjectApiViewSet
-from ...utils import truthy
+from ...utils import cached, truthy
 from ...utils.sample_units import consolidate_sample_events, has_duplicate_sample_events
 
 
@@ -128,6 +128,25 @@ class AggregatedViewMixin(BaseApiViewSet):
         file_name_prefix = f"{self.drf_label}"
         if "file_name_prefix" in kwargs:
             file_name_prefix = kwargs["file_name_prefix"]
+
+        project_id = self.kwargs.get("project_pk")
+        if project_id:
+            key = cached.make_viewset_cache_key(
+                self,
+                project_id,
+                include_additional_fields=include_additional_fields,
+                show_display_fields=show_display_fields,
+            )
+            if cached.exists(key):
+                response = cached.streaming_response(
+                    request=request,
+                    key=key,
+                    file_name=f"{file_name_prefix}.csv",
+                    content_type="text/csv",
+                    content_encoding="gzip",
+                )
+                if response:
+                    return response
 
         queryset = self.filter_queryset(self.get_queryset())
         return csv_report.get_csv_response(
