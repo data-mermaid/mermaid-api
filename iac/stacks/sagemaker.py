@@ -105,14 +105,14 @@ class SagemakerStack(cdk.Stack):
 
     def create_sm_sources_bucket(self) -> s3.Bucket:
         return self._create_bucket(
-            id=f"{self.prefix}S3Bucket",
-            bucket_name=f"{self.prefix}-sm-sources",
+            id=f"{self.prefix}SourcesBucket",
+            bucket_name=f"{self.prefix}-mermaid-sm-sources",
         )
 
     def create_data_bucket(self) -> s3.Bucket:
         return self._create_bucket(
             id=f"{self.prefix}DataBucket",
-            bucket_name=f"{self.prefix}-sm-data",
+            bucket_name=f"{self.prefix}-mermaid-sm-data",
         )
 
     def _create_bucket(self, id: str, bucket_name: str) -> s3.Bucket:
@@ -131,6 +131,7 @@ class SagemakerStack(cdk.Stack):
             enforce_ssl=True,
             # Encryption
             encryption=s3.BucketEncryption.S3_MANAGED,
+            # Lifecycle rules
             lifecycle_rules=[
                 s3.LifecycleRule(
                     expiration=cdk.Duration.days(90),
