@@ -57,7 +57,6 @@ class SagemakerStack(cdk.Stack):
             app_network_access_type="PublicInternetOnly",
             vpc_id=self.vpc.vpc_id,
             subnet_ids=public_subnet_ids,
-            tags=[cdk.CfnTag(key="project", value="example-pipelines")],
         )
 
         # Create SageMaker Studio default user profile
@@ -98,7 +97,6 @@ class SagemakerStack(cdk.Stack):
             self,
             id=f"{self.prefix}SourcesBucket",
             bucket_name=f"{self.prefix}-sm-sources",
-            lifecycle_rules=[],
             versioned=False,
             removal_policy=cdk.RemovalPolicy.DESTROY,
             auto_delete_objects=True,
@@ -110,6 +108,17 @@ class SagemakerStack(cdk.Stack):
             enforce_ssl=True,
             # Encryption
             encryption=s3.BucketEncryption.S3_MANAGED,
+            lifecycle_rules=[
+                s3.LifecycleRule(
+                    expiration=cdk.Duration.days(90),
+                    transitions=[
+                        s3.Transition(
+                            storage_class=s3.StorageClass.INFREQUENT_ACCESS,
+                            transition_after=cdk.Duration.days(30),
+                        )
+                    ],
+                )
+            ],
         )
 
     def create_data_bucket(self) -> s3.Bucket:
@@ -117,7 +126,6 @@ class SagemakerStack(cdk.Stack):
             self,
             id=f"{self.prefix}DataBucket",
             bucket_name=f"{self.prefix}-sm-data",
-            lifecycle_rules=[],
             versioned=False,
             removal_policy=cdk.RemovalPolicy.DESTROY,
             auto_delete_objects=True,
@@ -129,4 +137,15 @@ class SagemakerStack(cdk.Stack):
             enforce_ssl=True,
             # Encryption
             encryption=s3.BucketEncryption.S3_MANAGED,
+            lifecycle_rules=[
+                s3.LifecycleRule(
+                    expiration=cdk.Duration.days(90),
+                    transitions=[
+                        s3.Transition(
+                            storage_class=s3.StorageClass.INFREQUENT_ACCESS,
+                            transition_after=cdk.Duration.days(30),
+                        )
+                    ],
+                )
+            ],
         )
