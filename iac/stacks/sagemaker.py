@@ -112,7 +112,7 @@ class SagemakerStack(cdk.Stack):
             encryption=s3.BucketEncryption.S3_MANAGED,
         )
 
-    def create_data_bucket(self):
+    def create_data_bucket(self) -> s3.Bucket:
         return s3.Bucket(
             self,
             id=f"{self.prefix}DataBucket",
