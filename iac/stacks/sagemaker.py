@@ -1,16 +1,25 @@
 import aws_cdk as cdk
 from aws_cdk import (
-    aws_sagemaker as sm,
+    aws_ecs as ecs,
     aws_iam as iam,
     aws_s3 as s3,
+    aws_sagemaker as sm,
     aws_ssm as ssm,
-    aws_ecs as ecs,
 )
 from constructs import Construct
 from settings.settings import ProjectSettings
 
 
 class SagemakerStack(cdk.Stack):
+    """
+    A CloudFormation stack for provisioning AWS SageMaker resources.
+    This stack sets up the necessary infrastructure for SageMaker projects, including:
+    - IAM roles for SageMaker execution.
+    - S3 buckets for storing SageMaker code and data.
+    - SageMaker Studio domain and user profile.
+    It integrates with an existing ECS cluster to fetch VPC and subnet information.
+    """
+
     def __init__(
         self, scope: Construct, id: str, config: ProjectSettings, cluster: ecs.Cluster, **kwargs
     ) -> None:
@@ -43,18 +52,20 @@ class SagemakerStack(cdk.Stack):
 
         # Fetch VPC information
         self.vpc = cluster.vpc
-        public_subnet_ids = [public_subnet.subnet_id for public_subnet in self.vpc.public_subnets]
+        public_subnet_ids = [
+            private_subnet.subnet_id for private_subnet in self.vpc.private_subnets
+        ]
 
         # Create SageMaker Studio domain
         self.domain = sm.CfnDomain(
             self,
             f"{self.prefix}SagemakerDomain",
-            auth_mode="IAM",
+            auth_mode="SSO",
             domain_name=f"{self.prefix}-SG-Project",
             default_user_settings=sm.CfnDomain.UserSettingsProperty(
                 execution_role=self.sm_execution_role.role_arn
             ),
-            app_network_access_type="PublicInternetOnly",
+            app_network_access_type="VpcOnly",
             vpc_id=self.vpc.vpc_id,
             subnet_ids=public_subnet_ids,
         )
@@ -93,39 +104,22 @@ class SagemakerStack(cdk.Stack):
         return role
 
     def create_sm_sources_bucket(self) -> s3.Bucket:
-        return s3.Bucket(
-            self,
-            id=f"{self.prefix}SourcesBucket",
+        return self._create_bucket(
+            id=f"{self.prefix}S3Bucket",
             bucket_name=f"{self.prefix}-sm-sources",
-            versioned=False,
-            removal_policy=cdk.RemovalPolicy.DESTROY,
-            auto_delete_objects=True,
-            # Access
-            access_control=s3.BucketAccessControl.PRIVATE,
-            block_public_access=s3.BlockPublicAccess.BLOCK_ALL,
-            public_read_access=False,
-            object_ownership=s3.ObjectOwnership.OBJECT_WRITER,
-            enforce_ssl=True,
-            # Encryption
-            encryption=s3.BucketEncryption.S3_MANAGED,
-            lifecycle_rules=[
-                s3.LifecycleRule(
-                    expiration=cdk.Duration.days(90),
-                    transitions=[
-                        s3.Transition(
-                            storage_class=s3.StorageClass.INFREQUENT_ACCESS,
-                            transition_after=cdk.Duration.days(30),
-                        )
-                    ],
-                )
-            ],
         )
 
     def create_data_bucket(self) -> s3.Bucket:
-        return s3.Bucket(
-            self,
+        return self._create_bucket(
             id=f"{self.prefix}DataBucket",
             bucket_name=f"{self.prefix}-sm-data",
+        )
+
+    def _create_bucket(self, id: str, bucket_name: str) -> s3.Bucket:
+        return s3.Bucket(
+            self,
+            id=id,
+            bucket_name=bucket_name,
             versioned=False,
             removal_policy=cdk.RemovalPolicy.DESTROY,
             auto_delete_objects=True,
