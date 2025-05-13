@@ -5,6 +5,7 @@ from aws_cdk import (
     aws_s3 as s3,
     aws_sagemaker as sm,
     aws_ssm as ssm,
+    CfnOutput,
 )
 from constructs import Construct
 from settings.settings import ProjectSettings
@@ -33,12 +34,12 @@ class SagemakerStack(cdk.Stack):
         # Create S3 bucket for SageMaker code sources
         self.sm_sources_bucket = self.create_sm_sources_bucket()
 
-        ssm.StringParameter(
+        CfnOutput(
             self,
             f"{self.prefix}SourcesBucketName",
-            string_value=self.sm_sources_bucket.bucket_name,
-            parameter_name=f"/{self.prefix}/SourcesBucketName",
+            value=self.sm_sources_bucket.bucket_name,
             description="SageMaker Sources Bucket Name",
+            export_name=f"{self.prefix}-SourcesBucketName",
         )
 
         # Grant read access to SageMaker execution role
@@ -75,12 +76,20 @@ class SagemakerStack(cdk.Stack):
             ),
         )
 
-        ssm.StringParameter(
+        # ssm.StringParameter(
+        #     self,
+        #     f"{self.prefix}SagemakerDomainUrl",
+        #     string_value=self.domain.attr_url,
+        #     parameter_name=f"/{self.prefix}/SagemakerDomainUrl",
+        #     description="SageMaker Domain URL",
+        # )
+
+        CfnOutput(
             self,
             f"{self.prefix}SagemakerDomainUrl",
-            string_value=self.domain.attr_url,
-            parameter_name=f"/{self.prefix}/SagemakerDomainUrl",
+            value=self.domain.attr_url,
             description="SageMaker Domain URL",
+            export_name=f"{self.prefix}-SagemakerDomainUrl",
         )
 
     def create_execution_role(self) -> iam.Role:
@@ -97,12 +106,19 @@ class SagemakerStack(cdk.Stack):
                 ),
             ],
         )
-        ssm.StringParameter(
+        # ssm.StringParameter(
+        #     self,
+        #     f"{self.prefix}SagemakerExecutionRoleArn",
+        #     string_value=role.role_arn,
+        #     parameter_name=f"/{self.prefix}/SagemakerExecutionRoleArn",
+        #     description="SageMaker Execution Role ARN",
+        # )
+        CfnOutput(
             self,
             f"{self.prefix}SagemakerExecutionRoleArn",
-            string_value=role.role_arn,
-            parameter_name=f"/{self.prefix}/SagemakerExecutionRoleArn",
+            value=role.role_arn,
             description="SageMaker Execution Role ARN",
+            export_name=f"{self.prefix}-SagemakerExecutionRoleArn",
         )
 
         return role
