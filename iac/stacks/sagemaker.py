@@ -4,7 +4,6 @@ from aws_cdk import (
     aws_iam as iam,
     aws_s3 as s3,
     aws_sagemaker as sm,
-    aws_ssm as ssm,
     CfnOutput,
 )
 from constructs import Construct
@@ -76,14 +75,6 @@ class SagemakerStack(cdk.Stack):
             ),
         )
 
-        # ssm.StringParameter(
-        #     self,
-        #     f"{self.prefix}SagemakerDomainUrl",
-        #     string_value=self.domain.attr_url,
-        #     parameter_name=f"/{self.prefix}/SagemakerDomainUrl",
-        #     description="SageMaker Domain URL",
-        # )
-
         CfnOutput(
             self,
             f"{self.prefix}SagemakerDomainUrl",
@@ -106,13 +97,7 @@ class SagemakerStack(cdk.Stack):
                 ),
             ],
         )
-        # ssm.StringParameter(
-        #     self,
-        #     f"{self.prefix}SagemakerExecutionRoleArn",
-        #     string_value=role.role_arn,
-        #     parameter_name=f"/{self.prefix}/SagemakerExecutionRoleArn",
-        #     description="SageMaker Execution Role ARN",
-        # )
+
         CfnOutput(
             self,
             f"{self.prefix}SagemakerExecutionRoleArn",
