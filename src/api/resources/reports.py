@@ -59,12 +59,12 @@ class MultiProjectReportView(APIView):
         mp_serializer.is_valid(raise_exception=True)
         report_type = mp_serializer.validated_data.pop("report_type")
         background = mp_serializer.validated_data.pop("background")
+        project_ids = mp_serializer.validated_data["project_ids"]
 
         output_path = None
         zip_file_path = None
 
         if report_type == SAMPLE_UNIT_METHOD_REPORT_TYPE:
-            project_ids = mp_serializer.validated_data["project_ids"]
             protocol = mp_serializer.validated_data["protocol"]
 
             if background:
@@ -83,8 +83,6 @@ class MultiProjectReportView(APIView):
                 )
 
         elif report_type == GFCR_REPORT_TYPE:
-            project_ids = mp_serializer.validated_data["project_ids"]
-
             if background:
                 gfcr.create_report_background(
                     project_ids=project_ids,
@@ -103,10 +101,9 @@ class MultiProjectReportView(APIView):
         if background:
             return Response({report_type: "ok"})
         else:
+            if not output_path:
+                raise ValidationError("Error creating report")
             try:
-                if not output_path:
-                    raise ValidationError("Error creating report")
-
                 zip_file_path = zip_file(output_path, output_path.stem)
                 z_file = open(zip_file_path, "rb")
                 response = FileResponse(z_file, content_type="application/zip")

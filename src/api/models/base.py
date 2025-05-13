@@ -77,11 +77,11 @@ class Profile(models.Model):
     @property
     def citation_name(self):  # noqa
         if self.first_name and self.last_name:
-            return f"{self.last_name.capitalize()} {self.first_name[:1].capitalize()}"
+            return f"{self.last_name.title()} {self.first_name[:1].title()}"
         elif self.first_name:
-            return self.first_name.capitalize()
+            return self.first_name.title()
         elif self.last_name:
-            return self.last_name.capitalize()
+            return self.last_name.title()
         else:
             return None
 

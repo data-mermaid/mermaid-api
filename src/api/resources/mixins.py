@@ -1,5 +1,7 @@
 import os
 import warnings
+from pathlib import Path
+from zipfile import ZIP_DEFLATED, ZipFile
 
 import pytz
 from django.conf import settings
@@ -16,7 +18,7 @@ from rest_framework.decorators import action
 from rest_framework.request import Request
 from rest_framework.response import Response
 
-from ..exceptions import check_uuid
+from ..exceptions import UnknownProtocolError, check_uuid
 from ..models import ArchivedRecord, Project
 from ..notifications import notify_cr_owners_site_mr_deleted
 from ..permissions import ProjectDataAdminPermission
@@ -266,6 +268,7 @@ class SampleUnitMethodSummaryReport(object):
     def xlsx(self, request, project_pk):
         from ..utils.reports import create_sample_unit_method_summary_report
 
+        output_path = None
         try:
             model = self.get_queryset().model
             try:
@@ -273,34 +276,32 @@ class SampleUnitMethodSummaryReport(object):
                 output_path = create_sample_unit_method_summary_report(
                     project_ids=[project_pk], protocol=protocol, request=request
                 )
-                if output_path is None:
-                    raise exceptions.ValidationError("Error creating report")
-
-            except AttributeError as ae:
-                raise exceptions.ValidationError("Unknown protocol") from ae
-            except ValueError as ve:
-                raise exceptions.ValidationError(f"{protocol} protocol not supported") from ve
+            except UnknownProtocolError as upe:
+                raise exceptions.ValidationError(f"Unknown protocol '{protocol}'") from upe
 
             try:
                 base_file_name = f"{get_safe_project_name(project_pk)}_{protocol}_{create_iso_date_string(delimiter='_')}"
+                xlsx_file_name = f"{base_file_name}.xlsx"
                 zip_file_name = f"{base_file_name}.zip"
             except ValueError as e:
                 raise exceptions.ValidationError(f"[{project_pk}] Project does not exist") from e
 
             try:
-                z_file = open(output_path, "rb")
+                with ZipFile(zip_file_name, "w", compression=ZIP_DEFLATED) as z:
+                    z.write(output_path, arcname=xlsx_file_name)
+
+                z_file = open(zip_file_name, "rb")
                 response = FileResponse(z_file, content_type="application/zip")
                 response["Content-Length"] = os.fstat(z_file.fileno()).st_size
                 response["Content-Disposition"] = f'attachment; filename="{zip_file_name}"'
 
                 return response
             finally:
-                if z_file:
-                    z_file.close()
-                # Directory is a temporary directory,
-                # so we need to clean it up.
-                if output_path.exists():
-                    output_path.parent.rmdir()
+                if zip_file_name:
+                    Path(zip_file_name).unlink(missing_ok=True)
+
+                if output_path:
+                    Path(output_path).unlink(missing_ok=True)
         except Exception as err:
             print(err)
             return Response(str(err), status=500)

@@ -1,7 +1,7 @@
 import datetime
 import logging
 from pathlib import Path
-from zipfile import ZIP_DEFLATED, ZipFile, is_zipfile
+from zipfile import ZIP_DEFLATED, ZipFile
 
 from django.conf import settings
 from django.core.mail import EmailMultiAlternatives
@@ -138,21 +138,16 @@ def email_report(to_email, local_file_path, protocol):
         raise ValueError("Invalid email address")
     if not local_file_path or not Path(local_file_path).is_file():
         raise ValueError("Invalid or missing file path")
-    if not protocol:
-        raise ValueError("Report protocol is required")
 
     try:
         zip_file_path = None
         local_file_path = Path(local_file_path)
-        file_name = f"{create_iso_date_string()}_{protocol}"
+        file_name = f"{create_iso_date_string(include_time=True)}_{protocol}.xlsx"
         s3_zip_file_key = f"{settings.ENVIRONMENT}/reports/{file_name}.zip"
 
-        if is_zipfile(local_file_path):
-            zip_file_path = local_file_path
-        else:
-            zip_file_path = local_file_path.with_name(f"{file_name}.zip")
-            with ZipFile(zip_file_path, "w", compression=ZIP_DEFLATED) as z:
-                z.write(local_file_path, arcname=f"{file_name}.xlsx")
+        zip_file_path = local_file_path.with_name(f"{file_name}.zip")
+        with ZipFile(zip_file_path, "w", compression=ZIP_DEFLATED) as z:
+            z.write(local_file_path, arcname=file_name)
 
         s3.upload_file(settings.AWS_DATA_BUCKET, zip_file_path, s3_zip_file_key)
     except Exception:

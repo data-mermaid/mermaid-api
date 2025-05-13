@@ -3,6 +3,7 @@ import numbers
 import re
 import subprocess
 import uuid
+from gzip import GzipFile
 from pathlib import Path
 from zipfile import ZIP_DEFLATED, ZipFile
 
@@ -172,9 +173,13 @@ def truthy(val):
     return val in ("t", "T", "true", "True", True, 1)
 
 
-def create_iso_date_string(delimiter="-"):
+def create_iso_date_string(delimiter="-", include_time=False):
+    now = timezone.now()
     date_format = f"%y{delimiter}%m{delimiter}%d"
-    return timezone.now().strftime(date_format)
+    if include_time:
+        milliseconds = int(now.microsecond / 1000)
+        date_format += f"_%H%M%S_{milliseconds:03d}"
+    return now.strftime(date_format)
 
 
 def create_timestamp(ttl=0):
@@ -275,6 +280,15 @@ def zip_file(file_path, zip_name):
     return zip_file_path
 
 
+def gzip_file(file_path, gzip_name):
+    gzip_file_path = Path(file_path).with_name(f"{gzip_name}.gz")
+    with GzipFile(gzip_file_path, mode="w", compresslevel=5) as gz:
+        with open(file_path, "rb") as f:
+            gz.write(f.read())
+
+    return gzip_file_path
+
+
 def validate_max_year(value):
     current_year = timezone.now().year
     if value > current_year:
@@ -282,3 +296,26 @@ def validate_max_year(value):
             _("%(value)s is in the future"),
             params={"value": value},
         )
+
+
+def get_extent(extent):
+    if not extent:
+        return None
+
+    # If extent is a string like 'BOX(xmin ymin,xmax ymax)'
+    if isinstance(extent, str) and extent.startswith("BOX("):
+        match = re.match(r"BOX\(([-\d.]+) ([-\d.]+),([-\d.]+) ([-\d.]+)\)", extent)
+        if not match:
+            return None
+        xmin, ymin, xmax, ymax = map(float, match.groups())
+    elif isinstance(extent, (tuple, list)) and len(extent) == 4:
+        xmin, ymin, xmax, ymax = map(float, extent)
+    else:
+        return None
+
+    return {
+        "xmin": round(xmin, 3),
+        "ymin": round(ymin, 3),
+        "xmax": round(xmax, 3),
+        "ymax": round(ymax, 3),
+    }
