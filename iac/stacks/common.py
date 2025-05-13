@@ -63,7 +63,7 @@ class CommonStack(Stack):
         )
 
         # create a secret so we can manually set the username
-        database_credentials_secret = sm.Secret(
+        prod_database_credentials_secret = sm.Secret(
             self,
             "DBCredentialsSecret",
             secret_name="common/mermaid-db/creds",
@@ -75,20 +75,48 @@ class CommonStack(Stack):
             ),
         )
 
-        self.database = rds.DatabaseInstance(
+        self.prod_database = rds.DatabaseInstance(
             self,
-            "PostgresRdsV2",
+            id="PostgresRdsV2",
             vpc=self.vpc,
             engine=rds.DatabaseInstanceEngine.postgres(version=rds.PostgresEngineVersion.VER_13_7),
             instance_type=ec2.InstanceType.of(
                 ec2.InstanceClass.BURSTABLE3,
-                ec2.InstanceSize.SMALL,
+                ec2.InstanceSize.MEDIUM,
             ),
             vpc_subnets=ec2.SubnetSelection(subnet_type=ec2.SubnetType.PRIVATE_ISOLATED),
             backup_retention=Duration.days(7),
             deletion_protection=True,
             removal_policy=RemovalPolicy.SNAPSHOT,
-            credentials=rds.Credentials.from_secret(database_credentials_secret),
+            credentials=rds.Credentials.from_secret(prod_database_credentials_secret),
+        )
+
+        dev_database_credentials_secret = sm.Secret(
+            self,
+            "DevDBCredentialsSecret",
+            secret_name="dev/mermaid-db/creds",
+            generate_secret_string=sm.SecretStringGenerator(
+                secret_string_template=json.dumps({"username": "mermaid_admin"}),
+                generate_string_key="password",
+                exclude_punctuation=True,
+                include_space=False,
+            ),
+        )
+
+        self.dev_database = rds.DatabaseInstance(
+            self,
+            id="PostgresRdsV2Dev",
+            vpc=self.vpc,
+            engine=rds.DatabaseInstanceEngine.postgres(version=rds.PostgresEngineVersion.VER_16_3),
+            instance_type=ec2.InstanceType.of(
+                ec2.InstanceClass.BURSTABLE3,
+                ec2.InstanceSize.MEDIUM,
+            ),
+            vpc_subnets=ec2.SubnetSelection(subnet_type=ec2.SubnetType.PRIVATE_ISOLATED),
+            backup_retention=Duration.days(7),
+            deletion_protection=True,
+            removal_policy=RemovalPolicy.SNAPSHOT,
+            credentials=rds.Credentials.from_secret(dev_database_credentials_secret),
         )
 
         self.backup_bucket = s3.Bucket(
@@ -184,12 +212,18 @@ class CommonStack(Stack):
         self.ecs_sg = ec2.SecurityGroup(self, id="EcsSg", vpc=self.vpc, allow_all_outbound=True)
 
         # Allow ECS tasks to RDS
-        self.database.connections.allow_default_port_from(self.ecs_sg)
+        self.dev_database.connections.allow_default_port_from(self.ecs_sg)
+        self.prod_database.connections.allow_default_port_from(self.ecs_sg)
 
         # FIX - add each subnet CIDR block.
         selection = self.vpc.select_subnets(subnet_type=ec2.SubnetType.PRIVATE_WITH_EGRESS)
         for subnet in selection.subnets:
-            self.database.connections.allow_default_port_from(ec2.Peer.ipv4(subnet.ipv4_cidr_block))
+            self.dev_database.connections.allow_default_port_from(
+                ec2.Peer.ipv4(subnet.ipv4_cidr_block)
+            )
+            self.prod_database.connections.allow_default_port_from(
+                ec2.Peer.ipv4(subnet.ipv4_cidr_block)
+            )
 
         user_data = ec2.UserData.for_linux()
         user_data.add_commands(
