@@ -363,3 +363,5 @@ class ApiStack(Stack):
         data_bucket.grant_read_write(image_worker.task_definition.task_role)
         data_bucket.grant_read_write(worker.task_definition.task_role)
         data_bucket.grant_read_write(service.task_definition.task_role)
+        data_bucket.grant_read_write(summary_cache_service.task_definition.task_role)
+        data_bucket.grant_delete(summary_cache_service.task_definition.task_role)
