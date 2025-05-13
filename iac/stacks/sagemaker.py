@@ -52,7 +52,7 @@ class SagemakerStack(cdk.Stack):
 
         # Fetch VPC information
         self.vpc = cluster.vpc
-        public_subnet_ids = [
+        private_subnet_ids = [
             private_subnet.subnet_id for private_subnet in self.vpc.private_subnets
         ]
 
@@ -67,7 +67,7 @@ class SagemakerStack(cdk.Stack):
             ),
             app_network_access_type="VpcOnly",
             vpc_id=self.vpc.vpc_id,
-            subnet_ids=public_subnet_ids,
+            subnet_ids=private_subnet_ids,
             domain_settings=sm.CfnDomain.DomainSettingsProperty(
                 docker_settings=sm.CfnDomain.DockerSettingsProperty(
                     enable_docker_access="ENABLED",
