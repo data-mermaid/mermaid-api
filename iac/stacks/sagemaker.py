@@ -73,6 +73,20 @@ class SagemakerStack(cdk.Stack):
                     enable_docker_access="ENABLED",
                 ),
             ),
+            default_space_settings=sm.CfnDomain.DefaultSpaceSettingsProperty(
+                execution_role=self.sm_execution_role.role_arn,
+                space_storage_settings=sm.CfnDomain.DefaultSpaceStorageSettingsProperty(
+                    default_ebs_storage_settings=sm.CfnDomain.DefaultEbsStorageSettingsProperty(
+                        default_ebs_volume_size_in_gb=50,
+                        maximum_ebs_volume_size_in_gb=1000,
+                    ),
+                ),
+                jupyter_lab_app_settings=sm.CfnDomain.JupyterLabAppSettingsProperty(
+                    default_resource_spec=sm.CfnDomain.ResourceSpecProperty(
+                        instance_type="ml.t3.medium",
+                    ),
+                ),
+            ),
         )
 
         CfnOutput(
