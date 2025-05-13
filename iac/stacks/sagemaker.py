@@ -69,6 +69,13 @@ class SagemakerStack(cdk.Stack):
             vpc_id=self.vpc.vpc_id,
             subnet_ids=public_subnet_ids,
         )
+        ssm.StringParameter(
+            self,
+            f"{self.prefix}SagemakerDomainUrl",
+            string_value=self.domain.attr_url,
+            parameter_name=f"/{self.prefix}/SagemakerDomainUrl",
+            description="SageMaker Domain URL",
+        )
 
         # Create SageMaker Studio default user profile
         self.user = sm.CfnUserProfile(
@@ -77,7 +84,10 @@ class SagemakerStack(cdk.Stack):
             domain_id=self.domain.attr_domain_id,
             user_profile_name="default-user",
             user_settings=sm.CfnUserProfile.UserSettingsProperty(),
+            single_sign_on_user_identifier="UserName",  # or "UserProfileName", depending on your SSO setup
+            single_sign_on_user_value="mehul@datamermaid.org",  # set this to the SSO user's username
         )
+
 
     def create_execution_role(self) -> iam.Role:
         role = iam.Role(
@@ -106,13 +116,13 @@ class SagemakerStack(cdk.Stack):
     def create_sm_sources_bucket(self) -> s3.Bucket:
         return self._create_bucket(
             id=f"{self.prefix}SourcesBucket",
-            bucket_name=f"{self.prefix}-mermaid-sm-sources",
+            bucket_name=f"{self.prefix}-datamermaid-sm-sources",
         )
 
     def create_data_bucket(self) -> s3.Bucket:
         return self._create_bucket(
             id=f"{self.prefix}DataBucket",
-            bucket_name=f"{self.prefix}-mermaid-sm-data",
+            bucket_name=f"{self.prefix}-datamermaid-sm-data",
         )
 
     def _create_bucket(self, id: str, bucket_name: str) -> s3.Bucket:
