@@ -16,7 +16,7 @@ class SagemakerStack(cdk.Stack):
     This stack sets up the necessary infrastructure for SageMaker projects, including:
     - IAM roles for SageMaker execution.
     - S3 buckets for storing SageMaker code and data.
-    - SageMaker Studio domain and user profile.
+    - SageMaker Studio domain.
     It integrates with an existing ECS cluster to fetch VPC and subnet information.
     """
 
@@ -68,7 +68,13 @@ class SagemakerStack(cdk.Stack):
             app_network_access_type="VpcOnly",
             vpc_id=self.vpc.vpc_id,
             subnet_ids=public_subnet_ids,
+            domain_settings=sm.CfnDomain.DomainSettingsProperty(
+                docker_settings=sm.CfnDomain.DockerSettingsProperty(
+                    enable_docker_access="ENABLED",
+                ),
+            ),
         )
+
         ssm.StringParameter(
             self,
             f"{self.prefix}SagemakerDomainUrl",
@@ -76,18 +82,6 @@ class SagemakerStack(cdk.Stack):
             parameter_name=f"/{self.prefix}/SagemakerDomainUrl",
             description="SageMaker Domain URL",
         )
-
-        # Create SageMaker Studio default user profile
-        self.user = sm.CfnUserProfile(
-            self,
-            f"{self.prefix}SageMakerStudioUserProfile",
-            domain_id=self.domain.attr_domain_id,
-            user_profile_name="default-user",
-            user_settings=sm.CfnUserProfile.UserSettingsProperty(),
-            single_sign_on_user_identifier="UserName",  # or "UserProfileName", depending on your SSO setup
-            single_sign_on_user_value="mehul@datamermaid.org",  # set this to the SSO user's username
-        )
-
 
     def create_execution_role(self) -> iam.Role:
         role = iam.Role(
