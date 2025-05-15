@@ -5,6 +5,8 @@ from aws_cdk import (
     aws_s3 as s3,
     aws_sagemaker as sm,
     CfnOutput,
+    aws_ec2 as ec2,
+    aws_rds as rds,
 )
 from constructs import Construct
 from settings.settings import ProjectSettings
@@ -21,7 +23,13 @@ class SagemakerStack(cdk.Stack):
     """
 
     def __init__(
-        self, scope: Construct, id: str, config: ProjectSettings, cluster: ecs.Cluster, **kwargs
+        self,
+        scope: Construct,
+        id: str,
+        config: ProjectSettings,
+        cluster: ecs.Cluster,
+        database: rds.DatabaseInstance,
+        **kwargs,
     ) -> None:
         super().__init__(scope, id, **kwargs)
 
@@ -49,12 +57,22 @@ class SagemakerStack(cdk.Stack):
 
         # Grant read/write access to SageMaker execution role
         self.sm_data_bucket.grant_read_write(self.sm_execution_role)
+        database.grant_connect(self.sm_execution_role)
+        database.secret.grant_read(self.sm_execution_role)
 
         # Fetch VPC information
         self.vpc = cluster.vpc
         private_subnet_ids = [
             private_subnet.subnet_id for private_subnet in self.vpc.private_subnets
         ]
+
+        self.security_group = ec2.SecurityGroup(
+            self,
+            f"{self.prefix}SagemakerSecurityGroup",
+            vpc=self.vpc,
+            allow_all_outbound=True,
+            description="Security group for SageMaker Studio",
+        )
 
         # Create SageMaker Studio domain
         self.domain = sm.CfnDomain(
@@ -72,6 +90,9 @@ class SagemakerStack(cdk.Stack):
                 docker_settings=sm.CfnDomain.DockerSettingsProperty(
                     enable_docker_access="ENABLED",
                 ),
+                security_group_ids=[
+                    self.security_group.security_group_id,
+                ],
             ),
             default_space_settings=sm.CfnDomain.DefaultSpaceSettingsProperty(
                 execution_role=self.sm_execution_role.role_arn,
