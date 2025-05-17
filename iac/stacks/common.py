@@ -283,10 +283,10 @@ class CommonStack(Stack):
 
         self.security_group = ec2.SecurityGroup(
             self,
-            "SagemakerSecurityGroup",
+            "VPCEndpointSagemaker",
             vpc=self.vpc,
             allow_all_outbound=True,
-            description="Security group for SageMaker Studio",
+            description="Security group for SageMaker VPC endpoints",
         )
 
         for service_name in [
@@ -306,7 +306,7 @@ class CommonStack(Stack):
                     subnet_type=ec2.SubnetType.PRIVATE_WITH_EGRESS,
                     one_per_az=True,
                 ),
-                security_groups=[self.ecs_sg, self.security_group],
+                security_groups=[self.security_group],
                 dns_record_ip_type=ec2.VpcEndpointDnsRecordIpType.IPV4,
                 ip_address_type=ec2.VpcEndpointIpAddressType.IPV4,
                 private_dns_enabled=True,

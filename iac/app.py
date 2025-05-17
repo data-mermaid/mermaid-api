@@ -74,7 +74,6 @@ dev_sagemaker_stack = SagemakerStack(
     tags=tags,
     config=DEV_SETTINGS,
     cluster=common_stack.cluster,
-    database=common_stack.database,
 )
 
 prod_static_site_stack = StaticSiteStack(

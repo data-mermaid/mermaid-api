@@ -6,7 +6,6 @@ from aws_cdk import (
     aws_sagemaker as sm,
     CfnOutput,
     aws_ec2 as ec2,
-    aws_rds as rds,
 )
 from constructs import Construct
 from settings.settings import ProjectSettings
@@ -28,7 +27,6 @@ class SagemakerStack(cdk.Stack):
         id: str,
         config: ProjectSettings,
         cluster: ecs.Cluster,
-        database: rds.DatabaseInstance,
         **kwargs,
     ) -> None:
         super().__init__(scope, id, **kwargs)
@@ -57,8 +55,6 @@ class SagemakerStack(cdk.Stack):
 
         # Grant read/write access to SageMaker execution role
         self.sm_data_bucket.grant_read_write(self.sm_execution_role)
-        database.grant_connect(self.sm_execution_role)
-        database.secret.grant_read(self.sm_execution_role)
 
         # Fetch VPC information
         self.vpc = cluster.vpc
@@ -81,7 +77,10 @@ class SagemakerStack(cdk.Stack):
             auth_mode="SSO",
             domain_name=f"{self.prefix}-SG-Project",
             default_user_settings=sm.CfnDomain.UserSettingsProperty(
-                execution_role=self.sm_execution_role.role_arn
+                execution_role=self.sm_execution_role.role_arn,
+                security_groups=[
+                    self.security_group.security_group_id,
+                ],
             ),
             app_network_access_type="VpcOnly",
             vpc_id=self.vpc.vpc_id,
@@ -107,6 +106,9 @@ class SagemakerStack(cdk.Stack):
                         instance_type="ml.t3.medium",
                     ),
                 ),
+                security_groups=[
+                    self.security_group.security_group_id,
+                ],
             ),
         )
 
@@ -129,6 +131,11 @@ class SagemakerStack(cdk.Stack):
                     self,
                     id="SagemakerFullAccess",
                     managed_policy_arn="arn:aws:iam::aws:policy/AmazonSageMakerFullAccess",
+                ),
+                iam.ManagedPolicy.from_managed_policy_arn(
+                    self,
+                    id="SageMakerStudioFullAccess",
+                    managed_policy_arn="arn:aws:iam::aws:policy/SageMakerStudioFullAccess",
                 ),
             ],
         )
