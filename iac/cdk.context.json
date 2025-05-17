@@ -23,5 +23,37 @@
   },
   "acknowledged-issue-numbers": [
     32775
+  ],
+  "endpoint-service-availability-zones:account=554812291621:region=us-east-1:serviceName=com.amazonaws.us-east-1.sagemaker.api": [
+    "us-east-1a",
+    "us-east-1b",
+    "us-east-1c",
+    "us-east-1d",
+    "us-east-1e",
+    "us-east-1f"
+  ],
+  "endpoint-service-availability-zones:account=554812291621:region=us-east-1:serviceName=aws.sagemaker.us-east-1.notebook": [
+    "us-east-1a",
+    "us-east-1b",
+    "us-east-1c",
+    "us-east-1d",
+    "us-east-1e",
+    "us-east-1f"
+  ],
+  "endpoint-service-availability-zones:account=554812291621:region=us-east-1:serviceName=com.amazonaws.us-east-1.sagemaker.runtime": [
+    "us-east-1a",
+    "us-east-1b",
+    "us-east-1c",
+    "us-east-1d",
+    "us-east-1e",
+    "us-east-1f"
+  ],
+  "endpoint-service-availability-zones:account=554812291621:region=us-east-1:serviceName=aws.sagemaker.us-east-1.studio": [
+    "us-east-1a",
+    "us-east-1b",
+    "us-east-1c",
+    "us-east-1d",
+    "us-east-1e",
+    "us-east-1f"
   ]
 }
