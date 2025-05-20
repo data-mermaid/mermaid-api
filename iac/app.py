@@ -6,6 +6,7 @@ from settings.prod import PROD_SETTINGS
 from stacks.api import ApiStack
 from stacks.common import CommonStack
 from stacks.github_access import GithubAccessStack
+from stacks.sagemaker import SagemakerStack
 from stacks.static_site import StaticSiteStack
 
 tags = {
@@ -64,6 +65,15 @@ dev_api_stack = ApiStack(
     public_bucket=dev_static_site_stack.site_bucket,
     image_processing_bucket=common_stack.image_processing_bucket,
     use_fifo_queues="False",
+)
+
+dev_sagemaker_stack = SagemakerStack(
+    app,
+    "dev-mermaid-sagemaker",
+    env=cdk_env,
+    tags=tags,
+    config=DEV_SETTINGS,
+    cluster=common_stack.cluster,
 )
 
 prod_static_site_stack = StaticSiteStack(

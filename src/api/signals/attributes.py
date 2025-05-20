@@ -1,3 +1,5 @@
+import logging
+
 from django.core.management import call_command
 from django.db.models.signals import post_delete, post_save
 from django.dispatch import receiver
@@ -15,6 +17,7 @@ from ..models import (
 from ..utils.q import submit_job
 from ..utils.reports import update_attributes_report
 
+logger = logging.getLogger(__name__)
 benthic_models = [BenthicAttribute, GrowthForm, Region]
 fish_models = [FishGrouping, FishFamily, FishGenus, FishSpecies, Region]
 
@@ -34,11 +37,11 @@ fish_models = [FishGrouping, FishFamily, FishGenus, FishSpecies, Region]
 @receiver(post_save, sender=GrowthForm)
 def refresh_attribute_views(sender, instance, **kwargs):
     if sender in fish_models:
-        print("refresh fish")
+        logger.info("refresh fish")
         call_command("refresh_view", "mv_fish_attributes")
 
     if sender in benthic_models:
-        print("refresh benthic")
+        logger.info("refresh benthic")
 
     if (
         isinstance(instance, Region)

@@ -59,11 +59,14 @@ from ..models import (
     UnrestrictedProjectSummarySampleEvent,
 )
 from ..resources.summary_sample_event import SummarySampleEventSerializer
+from ..utils import summary_csv_cache
 from ..utils.project import suggested_citation as get_suggested_citation
 from ..utils.timer import timing
 
 BATCH_SIZE = 1000
 BUFFER_TIME = 3  # in seconds
+
+logger = logging.getLogger(__name__)
 
 
 logger = logging.getLogger(__name__)
@@ -293,7 +296,9 @@ def add_project_to_queue(project_id, skip_test_project=False):
 
 
 @timing
-def update_summary_cache(project_id, sample_unit=None, skip_test_project=False):
+def update_summary_cache(
+    project_id, sample_unit=None, skip_test_project=False, skip_cached_files=False
+):
     skip_updates = False
     if (
         skip_test_project is True
@@ -374,6 +379,15 @@ def update_summary_cache(project_id, sample_unit=None, skip_test_project=False):
             timestamp = timezone.now()
             _update_unrestricted_project_summary_sample_events(project_id, timestamp, skip_updates)
             _update_restricted_project_summary_sample_events(project_id, timestamp, skip_updates)
+
+            if skip_cached_files:
+                logger.info("Skipping cached files update")
+            else:
+                summary_csv_cache.update_summary_csv_cache(
+                    project_id,
+                    sample_unit=sample_unit,
+                    skip_test_project=skip_test_project,
+                )
 
     except (DataError, IntegrityError) as e:
         raise UpdateSummariesException(message=str(e)) from e

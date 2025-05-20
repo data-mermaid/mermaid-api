@@ -4,6 +4,10 @@ from django.utils.translation import gettext as _
 from rest_framework.exceptions import ParseError
 
 
+class UnknownProtocolError(Exception):
+    pass
+
+
 class ReadOnlyError(Exception):
     pass
 

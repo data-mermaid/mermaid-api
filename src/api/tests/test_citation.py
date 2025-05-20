@@ -50,7 +50,7 @@ def test_obsbenthicpit_view_citation(
             kwargs=dict(project_pk=project1.pk, pk=obs_benthic_pit1_1.pk),
         )
 
-        update_summary_cache(project1.pk)
+        update_summary_cache(project1.pk, skip_cached_files=True)
         data = _call(client, token1, url)
 
         date_text = timezone.localdate().strftime("%B %-d, %Y")
@@ -60,7 +60,7 @@ def test_obsbenthicpit_view_citation(
 
         project1.user_citation = CUSTOM_CITATION_TEXT
         project1.save()
-        update_summary_cache(project1.pk)
+        update_summary_cache(project1.pk, skip_cached_files=True)
         data = _call(client, token1, url)
         assert data["suggested_citation"].startswith(CUSTOM_CITATION_TEXT)
         assert date_text in data["suggested_citation"]
@@ -77,7 +77,7 @@ def test_project_se_summary_citation(
     with Testing():
         url = reverse("projectsummarysampleevents-list")
 
-        update_summary_cache(project1.pk)
+        update_summary_cache(project1.pk, skip_cached_files=True)
         request = api_client1.get(url, None, format="json")
         response_data = request.json()
         assert response_data["count"] == 1
@@ -93,7 +93,7 @@ def test_project_se_summary_citation(
 
         project1.user_citation = CUSTOM_CITATION_TEXT
         project1.save()
-        update_summary_cache(project1.pk)
+        update_summary_cache(project1.pk, skip_cached_files=True)
         request = api_client1.get(url, None, format="json")
         response_data = request.json()
         result = response_data["results"][0]
