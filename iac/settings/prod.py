@@ -25,6 +25,8 @@ PROD_SETTINGS = ProjectSettings(
         mermaid_api_audience="https://api.datamermaid.org",
         public_bucket="public.datamermaid.org",
         sqs_message_visibility=3000,
+        # Image classification
+        ic_bucket_name="coral-reef-training",
         # Secrets
         spa_admin_client_id_name="prod/mermaid-api/spa-admin-client-id-8GJ1mU",
         spa_admin_client_secret_name="prod/mermaid-api/spa-admin-client-secret-5oMItZ",

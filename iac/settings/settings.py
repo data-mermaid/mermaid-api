@@ -45,6 +45,8 @@ class DjangoSettings:
     public_bucket: str
     sqs_message_visibility: int
 
+    ic_bucket_name: str
+
     # Dynamic Secrets
     spa_admin_client_id_name: str
     spa_admin_client_secret_name: str
@@ -72,6 +74,9 @@ class DjangoSettings:
     mc_api_key_name: str = "common/mermaid-api/mc-api-key-xSsQOk"
     mc_api_list_id_name: str = "common/mermaid-api/mc-api-list-id-Am5u1G"
     drf_recaptcha_secret_key_name: str = "common/mermaid-api/drf-recaptcha-secret-key-MdFr2W"
+
+    image_bucket_aws_access_key_id: str = "image_bucket_aws_access_key_id-4oRuiU"
+    image_bucket_aws_secret_access_key: str = "image_bucket_aws_secret_access_key-OqLDWR"
 
 
 @dataclass

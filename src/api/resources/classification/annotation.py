@@ -31,7 +31,7 @@ class SaveAnnotationSerializer(BaseAPISerializer):
             return Annotation.objects.create(
                 point=validated_data["point"],
                 benthic_attribute=validated_data["benthic_attribute"],
-                growth_form=validated_data["growth_form"],
+                growth_form=validated_data.get("growth_form"),
                 is_confirmed=validated_data["is_confirmed"],
                 score=100,
                 classifier=None,
@@ -46,7 +46,7 @@ class SaveAnnotationSerializer(BaseAPISerializer):
         if not instance.is_machine_created:
             profile = self.context["request"].user.profile
             instance.benthic_attribute = validated_data["benthic_attribute"]
-            instance.growth_form = validated_data["growth_form"]
+            instance.growth_form = validated_data.get("growth_form")
             instance.is_confirmed = validated_data["is_confirmed"]
             instance.score = 100
             instance.classifier = None

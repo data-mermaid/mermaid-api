@@ -15,12 +15,12 @@ def to_number(string, max_digits=None, precision=None):
         return None
 
 
-def cast_str_value(string):
-    if not isinstance(string, str):
-        return string
+def cast_str_value(s):
+    if not isinstance(s, str):
+        return s
 
-    val = to_number(string)
-    return val if val is not None else string
+    val = to_number(s)
+    return val if val is not None else s
 
 
 def to_yesno(value: bool):

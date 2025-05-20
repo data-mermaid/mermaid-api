@@ -153,13 +153,16 @@ class Image(BaseModel):
 
     def create_annotations_file(self):
         csv_columns = [
+            "id",
             "image_id",
+            "point_id",
             "row",
             "col",
             "benthic_attribute_id",
             "benthic_attribute_name",
             "growth_form_id",
             "growth_form_name",
+            "updated_on",
         ]
         annos = (
             Annotation.objects.select_related("point", "point__image")
@@ -181,13 +184,16 @@ class Image(BaseModel):
             for anno in annos:
                 csvwriter.writerow(
                     [
+                        anno.id,
                         self.id,
+                        anno.point.id,
                         anno.point.row,
                         anno.point.column,
                         anno.benthic_attribute_id,
                         anno.benthic_attribute.name,
                         anno.growth_form_id,
                         anno.growth_form.name if anno.growth_form else "",
+                        anno.updated_on,
                     ]
                 )
             tmp.seek(0)

@@ -18,3 +18,8 @@ class Command(BaseCommand):
             call_command("update_metrics")
         except Exception as e:
             self.stderr.write(f"Update metrics error: {str(e)}")
+
+        try:
+            call_command("export_annotations_parquet")
+        except Exception as e:
+            self.stderr.write(f"Export annotations parquet error: {str(e)}")
