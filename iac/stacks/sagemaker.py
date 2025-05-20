@@ -61,7 +61,7 @@ class SagemakerStack(cdk.Stack):
             f"{self.prefix}ImageProcessingBucket",
             bucket_arn="arn:aws:s3:::mermaid-image-processing",
         )
-        # Grant read/write access to SageMaker execution role
+        # Grant read access to SageMaker execution role
         self.mermaid_image_processing_bucket.grant_read(self.sm_execution_role)
 
         # Fetch VPC information
