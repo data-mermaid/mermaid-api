@@ -119,6 +119,12 @@ class ApiStack(Stack):
             "AUTH0_DOMAIN": ecs.Secret.from_secrets_manager(
                 get_secret_object(self, config.api.auth0_domain)
             ),
+            "IMAGE_BUCKET_AWS_ACCESS_KEY_ID": ecs.Secret.from_secrets_manager(
+                get_secret_object(self, config.api.image_bucket_aws_access_key_id)
+            ),
+            "IMAGE_BUCKET_AWS_SECRET_ACCESS_KEY": ecs.Secret.from_secrets_manager(
+                get_secret_object(self, config.api.image_bucket_aws_secret_access_key)
+            ),
         }
 
         if config.env_id == "dev":
@@ -140,7 +146,7 @@ class ApiStack(Stack):
             "AWS_CONFIG_BUCKET": config_bucket.bucket_name,
             "AWS_DATA_BUCKET": data_bucket.bucket_name,
             "AWS_PUBLIC_BUCKET": config.api.public_bucket,
-            "IMAGE_PROCESSING_BUCKET": image_processing_bucket.bucket_name,
+            "IMAGE_PROCESSING_BUCKET": config.api.ic_bucket_name,
             "EMAIL_HOST": config.api.email_host,
             "EMAIL_PORT": config.api.email_port,
             "AUTH0_MANAGEMENT_API_AUDIENCE": config.api.auth0_management_api_audience,

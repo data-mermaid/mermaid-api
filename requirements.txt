@@ -20,8 +20,10 @@ gunicorn==20.1.0
 mailchimp3==3.0.17
 natsort==8.1.0
 openpyxl==3.0.10
+pandas==2.2.3
 pillow==10.4.0
 psycopg2-binary==2.9.3
+pyarrow==20.0.0
 pyexcelerate==0.10.0
 pyspacer==0.10.0
 pytest-cov==3.0.0

@@ -25,6 +25,8 @@ DEV_SETTINGS = ProjectSettings(
         mermaid_api_audience="https://dev-api.datamermaid.org",
         public_bucket="dev-public.datamermaid.org",
         sqs_message_visibility=3000,
+        # Image classification
+        ic_bucket_name="mermaid-image-processing",
         # Secrets
         dev_emails_name="dev/mermaid-api/dev-emails-mUnSDl",
         spa_admin_client_id_name="common/mermaid-api/spa-admin-client-id-FuMVtc",
