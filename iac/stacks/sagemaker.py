@@ -177,7 +177,7 @@ class SagemakerStack(cdk.Stack):
             id=id,
             bucket_name=bucket_name,
             versioned=False,
-            removal_policy=cdk.RemovalPolicy.DESTROY,
+            removal_policy=cdk.RemovalPolicy.RETAIN,
             # Access
             access_control=s3.BucketAccessControl.PRIVATE,
             block_public_access=s3.BlockPublicAccess.BLOCK_ALL,
