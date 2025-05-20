@@ -3,6 +3,7 @@ import numbers
 import re
 import subprocess
 import uuid
+from gzip import GzipFile
 from pathlib import Path
 from zipfile import ZIP_DEFLATED, ZipFile
 
@@ -259,6 +260,15 @@ def zip_file(file_path, zip_name):
         z.write(file_path, arcname=file_path.name)
 
     return zip_file_path
+
+
+def gzip_file(file_path, gzip_name):
+    gzip_file_path = Path(file_path).with_name(f"{gzip_name}.gz")
+    with GzipFile(gzip_file_path, mode="w", compresslevel=5) as gz:
+        with open(file_path, "rb") as f:
+            gz.write(f.read())
+
+    return gzip_file_path
 
 
 def validate_max_year(value):

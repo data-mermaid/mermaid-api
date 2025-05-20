@@ -21,6 +21,7 @@ REPORT_TYPES = [
 def update_attributes_report():
     with NamedTemporaryFile() as tmp:
         attributes_report.write_attribute_reference(tmp.name)
+        tmp.flush()
         s3.upload_file(settings.PUBLIC_BUCKET, tmp.name, "mermaid_attributes.xlsx")
 
 

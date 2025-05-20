@@ -4,6 +4,7 @@ from typing import Dict, List, Set, Tuple
 
 from django.db.models import QuerySet
 
+from ..exceptions import UnknownProtocolError
 from ..mocks import MockRequest
 from ..models import (
     BENTHICLIT_PROTOCOL,
@@ -49,6 +50,7 @@ from ..resources.sampleunitmethods.habitatcomplexitymethod import (
     HabitatComplexityProjectMethodSEView,
     HabitatComplexityProjectMethodSUView,
 )
+from ..utils import cached
 from ..utils.timer import timing
 from . import xl
 
@@ -232,6 +234,19 @@ def _filter_columns(
 
 
 def get_viewset_csv_content(view_cls, project_pk, request):
+    key = cached.make_viewset_cache_key(
+        view_cls,
+        project_pk,
+        include_additional_fields=False,
+        show_display_fields=True,
+    )
+    cached_file = cached.get_cached_textfile(key)
+    if cached_file:
+        for row in csv.reader(cached_file):
+            yield row
+
+        return
+
     # Mocking a required request object so we can call viewset action.
     request = MockRequest()
     request.query_params["field_report"] = True
@@ -277,7 +292,7 @@ def get_viewset_csv_content(view_cls, project_pk, request):
 
     new_rows = _transpose(new_cols)
     filtered_rows = [new_headers] + new_rows
-    return filtered_rows
+    yield from filtered_rows
 
 
 def _find_project_id(headers, data_row):
@@ -346,7 +361,7 @@ def create_protocol_report(request, project_ids, protocol):
     protocol_config = PROTOCOL_VIEW_MAPPING.get(protocol)
 
     if not protocol_config:
-        raise ValueError(f"Unknown protocol [{protocol}]")
+        raise UnknownProtocolError(f"Unknown protocol [{protocol}]")
 
     views = protocol_config["views"]
     sheet_names = protocol_config["sheet_names"]
@@ -382,7 +397,10 @@ def create_protocol_report(request, project_ids, protocol):
         for view, sheet_name in zip(views, project_sheet_names):
             data = get_viewset_csv_content(view, project_id, request)
             if current_rows[sheet_name] > 1:
-                data = data[1:]  # Skip headers for subsequent projects
+                try:
+                    next(data)  # Skip headers for subsequent projects
+                except StopIteration:
+                    continue
 
             existing_row = current_rows[sheet_name]
             row, _ = xl.write_data_to_sheet(
