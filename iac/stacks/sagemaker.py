@@ -59,20 +59,10 @@ class SagemakerStack(cdk.Stack):
         self.mermaid_image_processing_bucket = s3.Bucket.from_bucket_arn(
             self,
             f"{self.prefix}ImageProcessingBucket",
-            bucket_arn="arn:aws:s3:::datamermaid-image-processing",
+            bucket_arn="arn:aws:s3:::mermaid-image-processing",
         )
         # Grant read/write access to SageMaker execution role
         self.mermaid_image_processing_bucket.grant_read(self.sm_execution_role)
-
-        self.coral_reef_training_bucket = s3.Bucket.from_bucket_arn(
-            self,
-            f"{self.prefix}CoralReefTrainingBucket",
-            bucket_arn="arn:aws:s3:::datamermaid-coral-reef-training",
-        )
-        # Grant read/write access to SageMaker execution role
-        self.coral_reef_training_bucket.grant_read(
-            identity=self.sm_execution_role, objects_key_pattern="mermaid/*"
-        )
 
         # Fetch VPC information
         self.vpc = cluster.vpc
@@ -110,6 +100,7 @@ class SagemakerStack(cdk.Stack):
                 security_group_ids=[
                     self.security_group.security_group_id,
                 ],
+
             ),
             default_space_settings=sm.CfnDomain.DefaultSpaceSettingsProperty(
                 execution_role=self.sm_execution_role.role_arn,
