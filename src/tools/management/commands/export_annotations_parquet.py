@@ -20,3 +20,4 @@ class Command(BaseCommand):
             self.stdout.write(self.style.SUCCESS("Export completed successfully."))
         except Exception as e:
             self.stderr.write(self.style.ERROR(f"Export failed: {e}"))
+            raise SystemExit(1)

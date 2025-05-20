@@ -8,10 +8,12 @@ from django.conf import settings
 logger = logging.getLogger(__name__)
 
 
-def get_client(
-    aws_access_key_id=settings.AWS_ACCESS_KEY_ID,
-    aws_secret_access_key=settings.AWS_SECRET_ACCESS_KEY,
-):
+def get_client(aws_access_key_id=None, aws_secret_access_key=None):
+    if aws_access_key_id is None:
+        aws_access_key_id = settings.AWS_ACCESS_KEY_ID
+    if aws_secret_access_key is None:
+        aws_secret_access_key = settings.AWS_SECRET_ACCESS_KEY
+
     session = boto3.session.Session(
         aws_access_key_id=aws_access_key_id,
         aws_secret_access_key=aws_secret_access_key,
@@ -20,24 +22,24 @@ def get_client(
     return session.client("s3")
 
 
-def get_object(
-    bucket,
-    key,
-    aws_access_key_id=settings.AWS_ACCESS_KEY_ID,
-    aws_secret_access_key=settings.AWS_SECRET_ACCESS_KEY,
-):
+def get_object(bucket, key, aws_access_key_id=None, aws_secret_access_key=None):
+    if aws_access_key_id is None:
+        aws_access_key_id = settings.AWS_ACCESS_KEY_ID
+    if aws_secret_access_key is None:
+        aws_secret_access_key = settings.AWS_SECRET_ACCESS_KEY
+
     client = get_client(
         aws_access_key_id=aws_access_key_id, aws_secret_access_key=aws_secret_access_key
     )
     return client.get_object(Bucket=bucket, Key=key)
 
 
-def delete_file(
-    bucket,
-    blob_name,
-    aws_access_key_id=settings.AWS_ACCESS_KEY_ID,
-    aws_secret_access_key=settings.AWS_SECRET_ACCESS_KEY,
-):
+def delete_file(bucket, blob_name, aws_access_key_id=None, aws_secret_access_key=None):
+    if aws_access_key_id is None:
+        aws_access_key_id = settings.AWS_ACCESS_KEY_ID
+    if aws_secret_access_key is None:
+        aws_secret_access_key = settings.AWS_SECRET_ACCESS_KEY
+
     client = get_client(
         aws_access_key_id=aws_access_key_id, aws_secret_access_key=aws_secret_access_key
     )
@@ -59,9 +61,14 @@ def upload_file(
     blob_name,
     content_type=None,
     content_encoding=None,
-    aws_access_key_id=settings.AWS_ACCESS_KEY_ID,
-    aws_secret_access_key=settings.AWS_SECRET_ACCESS_KEY,
+    aws_access_key_id=None,
+    aws_secret_access_key=None,
 ):
+    if aws_access_key_id is None:
+        aws_access_key_id = settings.AWS_ACCESS_KEY_ID
+    if aws_secret_access_key is None:
+        aws_secret_access_key = settings.AWS_SECRET_ACCESS_KEY
+
     client = get_client(
         aws_access_key_id=aws_access_key_id, aws_secret_access_key=aws_secret_access_key
     )
@@ -76,24 +83,25 @@ def upload_file(
 
 
 def download_file(
-    bucket,
-    blob_name,
-    local_file_path,
-    aws_access_key_id=settings.AWS_ACCESS_KEY_ID,
-    aws_secret_access_key=settings.AWS_SECRET_ACCESS_KEY,
+    bucket, blob_name, local_file_path, aws_access_key_id=None, aws_secret_access_key=None
 ):
+    if aws_access_key_id is None:
+        aws_access_key_id = settings.AWS_ACCESS_KEY_ID
+    if aws_secret_access_key is None:
+        aws_secret_access_key = settings.AWS_SECRET_ACCESS_KEY
+
     client = get_client(
         aws_access_key_id=aws_access_key_id, aws_secret_access_key=aws_secret_access_key
     )
     client.download_file(bucket, blob_name, local_file_path)
 
 
-def file_exists(
-    bucket,
-    blob_name,
-    aws_access_key_id=settings.AWS_ACCESS_KEY_ID,
-    aws_secret_access_key=settings.AWS_SECRET_ACCESS_KEY,
-):
+def file_exists(bucket, blob_name, aws_access_key_id=None, aws_secret_access_key=None):
+    if aws_access_key_id is None:
+        aws_access_key_id = settings.AWS_ACCESS_KEY_ID
+    if aws_secret_access_key is None:
+        aws_secret_access_key = settings.AWS_SECRET_ACCESS_KEY
+
     client = get_client(
         aws_access_key_id=aws_access_key_id, aws_secret_access_key=aws_secret_access_key
     )
@@ -107,12 +115,13 @@ def file_exists(
 
 
 def download_directory(
-    bucket,
-    s3_directory,
-    local_directory,
-    aws_access_key_id=settings.AWS_ACCESS_KEY_ID,
-    aws_secret_access_key=settings.AWS_SECRET_ACCESS_KEY,
+    bucket, s3_directory, local_directory, aws_access_key_id=None, aws_secret_access_key=None
 ):
+    if aws_access_key_id is None:
+        aws_access_key_id = settings.AWS_ACCESS_KEY_ID
+    if aws_secret_access_key is None:
+        aws_secret_access_key = settings.AWS_SECRET_ACCESS_KEY
+
     client = get_client(
         aws_access_key_id=aws_access_key_id, aws_secret_access_key=aws_secret_access_key
     )
@@ -130,12 +139,13 @@ def download_directory(
 
 
 def get_presigned_url(
-    bucket,
-    key,
-    expiration=604_800,
-    aws_access_key_id=settings.AWS_ACCESS_KEY_ID,
-    aws_secret_access_key=settings.AWS_SECRET_ACCESS_KEY,
+    bucket, key, expiration=604_800, aws_access_key_id=None, aws_secret_access_key=None
 ):
+    if aws_access_key_id is None:
+        aws_access_key_id = settings.AWS_ACCESS_KEY_ID
+    if aws_secret_access_key is None:
+        aws_secret_access_key = settings.AWS_SECRET_ACCESS_KEY
+
     client = get_client(
         aws_access_key_id=aws_access_key_id, aws_secret_access_key=aws_secret_access_key
     )
