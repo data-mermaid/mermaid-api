@@ -3,6 +3,7 @@ import logging
 from django.db import connection, transaction
 from django.db.utils import DataError, IntegrityError
 from django.utils import timezone
+from psycopg2.extensions import adapt
 
 from ..exceptions import UpdateSummariesException, check_uuid
 from ..models import (
@@ -69,9 +70,130 @@ BUFFER_TIME = 3  # in seconds
 logger = logging.getLogger(__name__)
 
 
-def _set_created_on(created_on, records):
-    for record in records:
-        record.created_on = created_on
+# -- SQL Update ---
+def _convert_to_sql(queryset):
+    with connection.cursor() as cur:
+        qry = queryset.query
+        template_sql, params = qry.sql_with_params()
+        sql = cur.mogrify(template_sql, params)
+
+    return sql.decode()
+
+
+def _columns(model_cls):
+    return [field.name for field in model_cls._meta.fields]
+
+
+def _insert(model_cls, sql, suggested_citation):
+    escaped_suggested_citation = adapt(suggested_citation).getquoted().decode("utf-8").strip("'")
+    cols = _columns(model_cls)
+    extras = {
+        "created_on": "now()",
+        "suggested_citation": f"'{escaped_suggested_citation}'",
+    }
+
+    insert_cols = ", ".join(cols)
+
+    # update any columns from cols that are in extras
+    updated_cols = []
+    for col in cols:
+        if col not in extras:
+            updated_cols.append(col)
+        else:
+            updated_cols.append(f"{extras[col]} AS {col}")
+
+    select_cols = ", ".join(updated_cols)
+
+    return f"""
+        INSERT INTO {model_cls._meta.db_table}
+        ({insert_cols})
+        SELECT {select_cols} FROM ({sql}) AS foo;
+    """
+
+
+def _delete(model_cls, project_id):
+    return f"DELETE FROM {model_cls._meta.db_table} WHERE project_id = '{project_id}';"
+
+
+def _sql_update_cache(
+    project_id,
+    obs_sql_model,
+    obs_model,
+    su_sql_model,
+    su_model,
+    se_sql_model,
+    se_model,
+    skip_updates,
+):
+    suggested_citation = _get_suggested_citation(project_id)
+
+    sql = []
+    if skip_updates is not True:
+        sql.append(_delete(obs_model, project_id))
+        sql.append(_delete(su_model, project_id))
+        sql.append(_delete(se_model, project_id))
+
+    obs_sql = _convert_to_sql(obs_sql_model.objects.all().sql_table(project_id=project_id))
+    sql.append(_insert(obs_model, obs_sql, suggested_citation))
+
+    su_sql = _convert_to_sql(su_sql_model.objects.all().sql_table(project_id=project_id))
+    sql.append(_insert(su_model, su_sql, suggested_citation))
+
+    se_sql = _convert_to_sql(se_sql_model.objects.all().sql_table(project_id=project_id))
+    sql.append(_insert(se_model, se_sql, suggested_citation))
+
+    with connection.cursor() as cur:
+        cur.execute("".join(sql))
+
+
+def _sql_update_bleaching_qc_summary(
+    project_id,
+    skip_updates,
+):
+    suggested_citation = _get_suggested_citation(project_id)
+
+    sql = []
+    if not skip_updates:
+        sql.append(_delete(BleachingQCColoniesBleachedObsModel, project_id))
+        sql.append(_delete(BleachingQCQuadratBenthicPercentObsModel, project_id))
+        sql.append(_delete(BleachingQCSUModel, project_id))
+        sql.append(_delete(BleachingQCSEModel, project_id))
+
+    colonies_obs_sql = _convert_to_sql(
+        BleachingQCColoniesBleachedObsSQLModel.objects.all().sql_table(project_id=project_id)
+    )
+    sql.append(_insert(BleachingQCColoniesBleachedObsModel, colonies_obs_sql, suggested_citation))
+
+    colonies_obs_sql = _convert_to_sql(
+        BleachingQCQuadratBenthicPercentObsSQLModel.objects.all().sql_table(project_id=project_id)
+    )
+    sql.append(
+        _insert(BleachingQCQuadratBenthicPercentObsModel, colonies_obs_sql, suggested_citation)
+    )
+
+    su_sql = _convert_to_sql(BleachingQCSUSQLModel.objects.all().sql_table(project_id=project_id))
+    sql.append(_insert(BleachingQCSUModel, su_sql, suggested_citation))
+
+    se_sql = _convert_to_sql(BleachingQCSESQLModel.objects.all().sql_table(project_id=project_id))
+    sql.append(_insert(BleachingQCSEModel, se_sql, suggested_citation))
+
+    with connection.cursor() as cur:
+        cur.execute("".join(sql))
+
+
+def _sql_update_project_summary_sample_event(project_id, skip_updates):
+    suggested_citation = _get_suggested_citation(project_id)
+    sql = []
+    if skip_updates is not True:
+        sql.append(_delete(SummarySampleEventModel, project_id))
+
+    sse_sql = _convert_to_sql(
+        SummarySampleEventSQLModel.objects.all().sql_table(project_id=project_id)
+    )
+    sql.append(_insert(SummarySampleEventModel, sse_sql, suggested_citation))
+
+    with connection.cursor() as cur:
+        cur.execute("".join(sql))
 
 
 def _get_suggested_citation(project_id):
@@ -82,124 +204,13 @@ def _get_suggested_citation(project_id):
     return suggested_citation
 
 
-def _set_suggested_citation(suggested_citation, records):
-    for record in records:
-        record.suggested_citation = suggested_citation
-
-
-def _delete_existing_records(project_id, target_model_cls):
-    target_model_cls.objects.filter(project_id=project_id).delete()
-
-
-def _update_records(records, target_model_cls, created_on, suggested_citation, skip_updates=False):
-    if skip_updates or not records:
-        return
-    idx = 0
-    while True:
-        batch = records[idx : idx + BATCH_SIZE]
-        _set_created_on(created_on, batch)
-        _set_suggested_citation(suggested_citation, batch)
-        if not batch:
-            break
-        target_model_cls.objects.bulk_create(batch, batch_size=BATCH_SIZE)
-        idx += BATCH_SIZE
-
-
-def _fetch_records(sql_model_cls, project_id):
-    return list(sql_model_cls.objects.all().sql_table(project_id=project_id))
-
-
-def _update_cache(
-    project_id,
-    obs_sql_model,
-    obs_model,
-    su_sql_model,
-    su_model,
-    se_sql_model,
-    se_model,
-    skip_updates,
-):
-    if skip_updates is not True:
-        _delete_existing_records(project_id, obs_model)
-        _delete_existing_records(project_id, su_model)
-        _delete_existing_records(project_id, se_model)
-
-    obs_records = _fetch_records(obs_sql_model, project_id)
-    su_records = _fetch_records(su_sql_model, project_id)
-    se_records = _fetch_records(se_sql_model, project_id)
-
-    created_on = timezone.now()
-    suggested_citation = _get_suggested_citation(project_id)
-
-    _update_records(obs_records, obs_model, created_on, suggested_citation, skip_updates)
-    _update_records(su_records, su_model, created_on, suggested_citation, skip_updates)
-    _update_records(se_records, se_model, created_on, suggested_citation, skip_updates)
-
-
-def _update_bleaching_qc_summary(
-    project_id,
-    skip_updates,
-):
-    created_on = timezone.now()
-    suggested_citation = _get_suggested_citation(project_id)
-
-    if not skip_updates:
-        _delete_existing_records(project_id, BleachingQCColoniesBleachedObsModel)
-        _delete_existing_records(project_id, BleachingQCQuadratBenthicPercentObsModel)
-        _delete_existing_records(project_id, BleachingQCSUModel)
-        _delete_existing_records(project_id, BleachingQCSEModel)
-
-    bleaching_colonies_obs = _fetch_records(BleachingQCColoniesBleachedObsSQLModel, project_id)
-    bleaching_quad_percent_obs = _fetch_records(
-        BleachingQCQuadratBenthicPercentObsSQLModel, project_id
-    )
-    _update_records(
-        bleaching_colonies_obs,
-        BleachingQCColoniesBleachedObsModel,
-        created_on,
-        suggested_citation,
-        skip_updates,
-    )
-    _update_records(
-        bleaching_quad_percent_obs,
-        BleachingQCQuadratBenthicPercentObsModel,
-        created_on,
-        suggested_citation,
-        skip_updates,
-    )
-
-    bleaching_su = _fetch_records(BleachingQCSUSQLModel, project_id)
-    _update_records(bleaching_su, BleachingQCSUModel, created_on, suggested_citation, skip_updates)
-
-    bleaching_se = _fetch_records(BleachingQCSESQLModel, project_id)
-    _update_records(bleaching_se, BleachingQCSEModel, created_on, suggested_citation, skip_updates)
-
-
-def _update_project_summary_sample_event(project_id, skip_test_project=True):
-    if skip_test_project and Project.objects.filter(pk=project_id, status=Project.TEST).exists():
-        SummarySampleEventModel.objects.filter(project_id=project_id).delete()
-        return
-
-    summary_sample_events = list(
-        SummarySampleEventSQLModel.objects.all().sql_table(project_id=project_id)
-    )
-    SummarySampleEventModel.objects.filter(project_id=project_id).delete()
-    suggested_citation = _get_suggested_citation(project_id)
-    for record in summary_sample_events:
-        values = {
-            field.name: getattr(record, field.name)
-            for field in SummarySampleEventModel._meta.fields
-        }
-        values["suggested_citation"] = suggested_citation
-        SummarySampleEventModel.objects.create(**values)
-
-
 def _update_project_summary_sample_events(
     proj_summary_se_model, project_id, timestamp, skip_test_project=True, has_access="false"
 ):
     if skip_test_project and Project.objects.filter(pk=project_id, status=Project.TEST).exists():
         proj_summary_se_model.objects.filter(project_id=project_id).delete()
         return
+
     project = Project.objects.get_or_none(pk=project_id)
     if project is not None:
         qs = SummarySampleEventSQLModel.objects.all().sql_table(
@@ -277,6 +288,12 @@ def add_project_to_queue(project_id, skip_test_project=False):
             print(f"Skipping test project {project_id}")
             return
 
+        scq_qry = SummaryCacheQueue.objects.filter(
+            project_id=project_id, processing=False, attempts=3
+        )
+        if scq_qry.exists():
+            scq_qry.delete()
+
         sql = f"""
         INSERT INTO "{SummaryCacheQueue._meta.db_table}"
         ("project_id", "processing", "attempts", "created_on")
@@ -302,7 +319,7 @@ def update_summary_cache(
     try:
         with transaction.atomic():
             if sample_unit is None or sample_unit == FISHBELT_PROTOCOL:
-                _update_cache(
+                _sql_update_cache(
                     project_id,
                     BeltFishObsSQLModel,
                     BeltFishObsModel,
@@ -314,7 +331,7 @@ def update_summary_cache(
                 )
 
             if sample_unit is None or sample_unit == BENTHICLIT_PROTOCOL:
-                _update_cache(
+                _sql_update_cache(
                     project_id,
                     BenthicLITObsSQLModel,
                     BenthicLITObsModel,
@@ -326,7 +343,7 @@ def update_summary_cache(
                 )
 
             if sample_unit is None or sample_unit == BENTHICPIT_PROTOCOL:
-                _update_cache(
+                _sql_update_cache(
                     project_id,
                     BenthicPITObsSQLModel,
                     BenthicPITObsModel,
@@ -338,7 +355,7 @@ def update_summary_cache(
                 )
 
             if sample_unit is None or sample_unit == BENTHICPQT_PROTOCOL:
-                _update_cache(
+                _sql_update_cache(
                     project_id,
                     BenthicPhotoQuadratTransectObsSQLModel,
                     BenthicPhotoQuadratTransectObsModel,
@@ -350,13 +367,13 @@ def update_summary_cache(
                 )
 
             if sample_unit is None or sample_unit == BLEACHINGQC_PROTOCOL:
-                _update_bleaching_qc_summary(
+                _sql_update_bleaching_qc_summary(
                     project_id,
                     skip_updates,
                 )
 
             if sample_unit is None or sample_unit == HABITATCOMPLEXITY_PROTOCOL:
-                _update_cache(
+                _sql_update_cache(
                     project_id,
                     HabitatComplexityObsSQLModel,
                     HabitatComplexityObsModel,
@@ -367,7 +384,7 @@ def update_summary_cache(
                     skip_updates,
                 )
 
-            _update_project_summary_sample_event(project_id, skip_updates)
+            _sql_update_project_summary_sample_event(project_id, skip_updates)
 
             timestamp = timezone.now()
             _update_unrestricted_project_summary_sample_events(project_id, timestamp, skip_updates)

@@ -344,7 +344,7 @@ class BleachingQCSUSQLModel(BaseSUSQLModel):
             GROUP BY lh.pseudosu_id
         ) 
 
-        SELECT NULL AS id,
+        SELECT uuid_generate_v4() AS id,
         bleachingqc_su.pseudosu_id,
         {_su_fields},
         bleachingqc_su.{_agg_su_fields},
