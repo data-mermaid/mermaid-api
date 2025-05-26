@@ -3,9 +3,9 @@ import logging
 import django_filters
 import psycopg2
 from django.conf import settings
-from django.contrib.gis.db.models import Extent
 from django.db import IntegrityError, transaction
 from django.db.models import JSONField
+from django.db.models.expressions import RawSQL
 from rest_condition import Or
 from rest_framework import exceptions, permissions, serializers, status
 from rest_framework.decorators import action
@@ -278,7 +278,17 @@ class ProjectViewSet(BaseApiViewSet):
                 "sites__country",
             )
             .annotate(
-                extent=Extent("sites__location"),
+                # need to cast to text to avoid box2d equality operator error
+                extent=RawSQL(
+                    """
+                    (
+                        SELECT ST_Extent(site.location)::text
+                        FROM site
+                        WHERE site.project_id = project.id
+                    )
+                    """,
+                    [],
+                )
             )
             .order_by("name")
         )
