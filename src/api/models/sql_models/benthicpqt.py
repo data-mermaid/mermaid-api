@@ -289,7 +289,7 @@ class BenthicPhotoQuadratTransectSUSQLModel(BaseSUSQLModel):
             ON lh.pseudosu_id = su_points.pseudosu_id
             GROUP BY lh.pseudosu_id
         )        
-        SELECT NULL AS id,
+        SELECT uuid_generate_v4() AS id,
         benthicpqt_su.pseudosu_id,
         {_su_fields},
         benthicpqt_su.{_agg_su_fields},
