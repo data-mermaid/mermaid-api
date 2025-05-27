@@ -21,16 +21,12 @@ __all__ = (
 )
 
 
-# send email if a new attribute/tag/etc. is created (not updated), AND it was created by a user (not via ingestion),
+# send email if a new attribute/tag is created (not updated), AND it was created by a user,
 # AND it was not created by an admin
 def email_superadmin_on_new(sender, instance, created, **kwargs):
     admin_emails = [e[1] for e in settings.ADMINS] + [settings.SUPERUSER[1]]
     instance_label = sender._meta.verbose_name or "instance"
-    if (
-        (created is False and sender != Tag)
-        or instance.updated_by is None
-        or instance.updated_by.email in admin_emails
-    ):
+    if created is False or instance.updated_by is None or instance.updated_by.email in admin_emails:
         return
 
     subject = f"New {instance_label} proposed for MERMAID by {instance.updated_by.full_name}"
