@@ -6,9 +6,12 @@ from enum import Enum
 from io import BytesIO
 from operator import itemgetter
 from pathlib import Path
-from tempfile import TemporaryDirectory
+from tempfile import NamedTemporaryFile, TemporaryDirectory
 from typing import Any, Dict, Optional, Tuple
 
+import pandas as pd
+import pyarrow as pa
+import pyarrow.parquet as pq
 import pytz
 from django.conf import settings
 from django.contrib.gis.geos import Point as GEOSPoint
@@ -24,15 +27,25 @@ from spacer.extract_features import EfficientNetExtractor
 from spacer.messages import ClassifyFeaturesMsg, DataLocation, ExtractFeaturesMsg
 from spacer.tasks import classify_features, extract_features
 
-from ..models import Annotation, ClassificationStatus, Classifier, Image, Point, Profile
+from ..models import (
+    Annotation,
+    ClassificationStatus,
+    Classifier,
+    Image,
+    Point,
+    Profile,
+    Region,
+    Site,
+)
 from .q import submit_image_job
-from .s3 import download_directory
+from .s3 import download_directory, upload_file
 
 CLASSIFIER_CONFIG_S3_PATH = "classifier"
 CLASSIFIER_CONFIG_LOCAL_CACHE_DIR = settings.SPACER.get("EXTRACTORS_CACHE_DIR")
 assert CLASSIFIER_CONFIG_LOCAL_CACHE_DIR is not None
 CLASSIFIER_FILE_NAME = "classifier.pkl"
 WEIGHTS_FILE_NAME = "efficientnet_weights.pt"
+ANNOTATIONS_PARQUET_FILE_NAME = "mermaid_confirmed_annotations.parquet"
 
 
 def check_if_valid_image(image: ImageFieldFile):
@@ -367,3 +380,136 @@ def classify_image_job(image_record_id, profile_id=None):
 
 def classify_image(image_record_id, profile_id=None):
     _classify_image(image_record_id)
+
+
+def chunked_queryset_dataframe(qs, chunk_size=10000):
+    buffer = []
+    for obj in qs.iterator(chunk_size=chunk_size):
+        buffer.append(obj)
+        if len(buffer) >= chunk_size:
+            yield pd.DataFrame(buffer)
+            buffer.clear()
+    if buffer:
+        yield pd.DataFrame(buffer)
+
+
+def get_site_regions(site_ids):
+    sites = Site.objects.filter(id__in=site_ids).exclude(location__isnull=True)
+
+    site_to_region = {}
+    for site in sites:
+        region = Region.objects.filter(geom__intersects=site.location).first()
+        if region:
+            site_to_region[str(site.id)] = {
+                "region_id": str(region.id),
+                "region_name": region.name,
+            }
+        else:
+            site_to_region[str(site.id)] = {
+                "region_id": None,
+                "region_name": None,
+            }
+
+    return site_to_region
+
+
+def _process_annotations_df(df):
+    df.rename(
+        columns={
+            "point__image_id": "image_id",
+            "point__row": "row",
+            "point__column": "col",
+            "benthic_attribute__name": "benthic_attribute_name",
+            "growth_form__name": "growth_form_name",
+        },
+        inplace=True,
+    )
+
+    uuid_cols = ["id", "image_id", "point_id", "benthic_attribute_id", "growth_form_id"]
+    for col in uuid_cols:
+        if col in df.columns:
+            df[col] = df[col].astype(str)
+
+    image_ids = df["image_id"].unique().tolist()
+    images = Image.objects.filter(id__in=image_ids)
+    image_to_site = {str(image.id): str(image.site.id) for image in images if image.site}
+
+    site_to_region = get_site_regions(image_to_site.values())
+
+    def get_region_info(image_id):
+        site_id = image_to_site.get(image_id)
+        region = site_to_region.get(site_id, {"region_id": None, "region_name": None})
+        return pd.Series([region["region_id"], region["region_name"]])
+
+    df[["region_id", "region_name"]] = df["image_id"].apply(get_region_info).apply(pd.Series)
+
+    return df
+
+
+def export_annotations_to_parquet_streaming(output_path, chunk_size=10000):
+    qs = (
+        Annotation.objects.select_related(
+            "point", "point__image", "benthic_attribute", "growth_form"
+        )
+        .filter(is_confirmed=True)
+        .order_by("point__image__id", "point__row", "point__column")
+        .values(
+            "id",
+            "point__image_id",
+            "point_id",
+            "point__row",
+            "point__column",
+            "benthic_attribute_id",
+            "benthic_attribute__name",
+            "growth_form_id",
+            "growth_form__name",
+            "updated_on",
+        )
+    )
+    if not qs.exists():
+        print("No confirmed annotations found. Nothing to export.")
+        return None
+
+    writer = None
+    total = 0
+
+    try:
+        for df in chunked_queryset_dataframe(qs, chunk_size):
+            df = _process_annotations_df(df)
+            table = pa.Table.from_pandas(df)
+            if writer is None:
+                writer = pq.ParquetWriter(output_path, table.schema)
+            writer.write_table(table)
+            total += len(df)
+    finally:
+        if writer:
+            writer.close()
+
+    print(f"Exported {total} annotations to {output_path}")
+    return Path(output_path)
+
+
+def export_annotations_parquet(chunk_size=10000):
+    with NamedTemporaryFile(mode="wb", delete=False) as tmp:
+        tmp_path = Path(tmp.name)
+
+    try:
+        output = export_annotations_to_parquet_streaming(tmp_path, chunk_size)
+
+        if output and output.exists():
+            upload_file(
+                settings.IMAGE_PROCESSING_BUCKET,
+                output,
+                f"{settings.IMAGE_S3_PATH}{ANNOTATIONS_PARQUET_FILE_NAME}",
+                content_type="application/x-parquet",
+                aws_access_key_id=settings.IMAGE_BUCKET_AWS_ACCESS_KEY_ID,
+                aws_secret_access_key=settings.IMAGE_BUCKET_AWS_SECRET_ACCESS_KEY,
+            )
+
+            print(
+                f"Uploaded to {settings.IMAGE_PROCESSING_BUCKET}: {ANNOTATIONS_PARQUET_FILE_NAME}"
+            )
+
+    finally:
+        if tmp_path.exists():
+            tmp_path.unlink()

@@ -1,10 +1,11 @@
 import logging
 
 import django_filters
+import psycopg2
 from django.conf import settings
-from django.contrib.gis.db.models import Extent
-from django.db import transaction
+from django.db import IntegrityError, transaction
 from django.db.models import JSONField
+from django.db.models.expressions import RawSQL
 from rest_condition import Or
 from rest_framework import exceptions, permissions, serializers, status
 from rest_framework.decorators import action
@@ -277,7 +278,17 @@ class ProjectViewSet(BaseApiViewSet):
                 "sites__country",
             )
             .annotate(
-                extent=Extent("sites__location"),
+                # need to cast to text to avoid box2d equality operator error
+                extent=RawSQL(
+                    """
+                    (
+                        SELECT ST_Extent(site.location)::text
+                        FROM site
+                        WHERE site.project_id = project.id
+                    )
+                    """,
+                    [],
+                )
             )
             .order_by("name")
         )
@@ -575,33 +586,42 @@ class ProjectViewSet(BaseApiViewSet):
         permission_classes=[ProjectDataAdminPermission],
     )
     def add_profile(self, request, pk, *args, **kwargs):
-        email = request.data.get("email").lower()
+        email = request.data.get("email")
+        if email is None:
+            raise exceptions.ValidationError(detail={"email": "Email is required"})
+
+        email = email.lower()
+
         try:
             role = int(request.data.get("role"))
         except (TypeError, ValueError):
             role = ProjectProfile.COLLECTOR
+
         admin_profile = request.user.profile
 
-        if email is None:
-            raise exceptions.ValidationError(detail={"email": "Email is required"})
+        profile, _ = Profile.objects.get_or_create(email=email)
 
         try:
-            profile = Profile.objects.get(email=email)
-        except Profile.DoesNotExist:
-            profile = Profile.objects.create(email=email)
-
-        if ProjectProfile.objects.filter(project_id=pk, profile=profile).exists() is False:
-            project_profile = ProjectProfile.objects.create(
+            project_profile, created = ProjectProfile.objects.get_or_create(
                 project_id=pk,
                 profile=profile,
                 role=role,
                 created_by=admin_profile,
                 updated_by=admin_profile,
             )
-        else:
-            raise exceptions.ValidationError(
-                detail={"email": "Profile has already been added to project"}
-            )
+            if not created:
+                raise exceptions.ValidationError(
+                    detail={"email": "Profile has already been added to project"}
+                )
+        except IntegrityError as ie:
+            if (
+                hasattr(ie.__cause__, "pgcode")
+                and ie.__cause__.pgcode == psycopg2.errorcodes.UNIQUE_VIOLATION
+            ):
+                raise exceptions.ValidationError(
+                    detail={"email": "Profile has already been added to project"}
+                )
+            raise
 
         return Response(ProjectProfileSerializer(instance=project_profile).data)
 
