@@ -17,6 +17,7 @@ from django.conf import settings
 from django.contrib.gis.geos import Point as GEOSPoint
 from django.core.files.base import ContentFile
 from django.db import transaction
+from django.db.models import Exists, OuterRef
 from django.db.models.fields.files import ImageFieldFile
 from django.utils import timezone
 from exif import Image as ExifImage
@@ -32,8 +33,10 @@ from ..models import (
     ClassificationStatus,
     Classifier,
     Image,
+    ObsBenthicPhotoQuadrat,
     Point,
     Profile,
+    Project,
     Region,
     Site,
 )
@@ -447,11 +450,27 @@ def _process_annotations_df(df):
 
 
 def export_annotations_to_parquet_streaming(output_path, chunk_size=10000):
+    valid_image_ids = (
+        Image.objects.annotate(
+            has_valid_obs=Exists(
+                ObsBenthicPhotoQuadrat.objects.filter(
+                    image=OuterRef("pk"),
+                    **{f"{ObsBenthicPhotoQuadrat.project_lookup}__status__gt": Project.TEST},
+                )
+            )
+        )
+        .filter(has_valid_obs=True)
+        .values_list("id", flat=True)
+    )
+
     qs = (
         Annotation.objects.select_related(
             "point", "point__image", "benthic_attribute", "growth_form"
         )
-        .filter(is_confirmed=True)
+        .filter(
+            is_confirmed=True,
+            point__image_id__in=valid_image_ids,
+        )
         .order_by("point__image__id", "point__row", "point__column")
         .values(
             "id",

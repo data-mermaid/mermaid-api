@@ -267,25 +267,29 @@ def _update_unrestricted_project_summary_sample_events(
 
 
 def add_project_to_queue(project_id, skip_test_project=False):
-    check_uuid(project_id)
+    try:
+        check_uuid(project_id)
 
-    with connection.cursor() as cursor:
-        if (
-            skip_test_project
-            and Project.objects.filter(id=project_id, status=Project.TEST).exists()
-        ):
-            print(f"Skipping test project {project_id}")
-            return
+        with connection.cursor() as cursor:
+            if (
+                skip_test_project
+                and Project.objects.filter(id=project_id, status=Project.TEST).exists()
+            ):
+                print(f"Skipping test project {project_id}")
+                return
 
-        sql = f"""
-        INSERT INTO "{SummaryCacheQueue._meta.db_table}"
-        ("project_id", "processing", "attempts", "created_on")
-        VALUES (%s, false, 0, now())
-        ON CONFLICT (project_id, processing)
-        DO NOTHING;
-        """
+            sql = f"""
+            INSERT INTO "{SummaryCacheQueue._meta.db_table}"
+            ("project_id", "processing", "attempts", "created_on")
+            VALUES (%s, false, 0, now())
+            ON CONFLICT (project_id, processing)
+            DO NOTHING;
+            """
 
-        cursor.execute(sql, [project_id])
+            cursor.execute(sql, [project_id])
+
+    except Exception:
+        logger.exception(f"Failed to queue summary update for project {project_id}")
 
 
 @timing
