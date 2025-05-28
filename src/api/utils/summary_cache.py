@@ -69,9 +69,6 @@ BUFFER_TIME = 3  # in seconds
 logger = logging.getLogger(__name__)
 
 
-logger = logging.getLogger(__name__)
-
-
 def _set_created_on(created_on, records):
     for record in records:
         record.created_on = created_on
