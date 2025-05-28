@@ -274,6 +274,8 @@ def _get_image_location(image: Image):
     if settings.ENVIRONMENT == "local":
         return DataLocation("filesystem", image.image.path)
     else:
+        print(f"{settings.IMAGE_S3_PATH}{image.image.name}")
+        print(settings.IMAGE_PROCESSING_BUCKET)
         return DataLocation(
             storage_type="s3",
             key=f"{settings.IMAGE_S3_PATH}{image.image.name}",
