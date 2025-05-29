@@ -103,7 +103,6 @@ def delete_image_annotations_files(sender, instance, **kwargs):
 
 @receiver(post_delete, sender=CollectRecord)
 def delete_image_files(sender, instance, **kwargs):
-    print(instance.data)
     if not instance.data or not instance.data.get("image_classification"):
         return
 
