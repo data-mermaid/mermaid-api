@@ -122,10 +122,6 @@ def download_directory(
     if aws_secret_access_key is None:
         aws_secret_access_key = settings.AWS_SECRET_ACCESS_KEY
 
-    print(bucket)
-    print(s3_directory)
-    print(aws_access_key_id)
-    print(aws_secret_access_key)
     client = get_client(
         aws_access_key_id=aws_access_key_id, aws_secret_access_key=aws_secret_access_key
     )

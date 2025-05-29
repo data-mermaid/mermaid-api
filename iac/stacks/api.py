@@ -372,3 +372,13 @@ class ApiStack(Stack):
         data_bucket.grant_read_write(service.task_definition.task_role)
         data_bucket.grant_read_write(summary_cache_service.task_definition.task_role)
         data_bucket.grant_delete(summary_cache_service.task_definition.task_role)
+
+        # Prod bucket needs to read from coral-reef-training bucket.
+        # There is some issue with assumed-role reading from public bucket,
+        # addinf read permission to the task role seems to fix it.
+        coral_reef_training_bucket = s3.Bucket.from_bucket_name(
+            self,
+            "CoralReefBucket",
+            bucket_name="coral-reef-training",
+        )
+        coral_reef_training_bucket.grant_read(service.task_definition.task_role)
