@@ -41,6 +41,8 @@ def delete_images_on_model_delete(sender, instance, **kwargs):
         instance.image.delete(save=False)
     if instance.thumbnail:
         instance.thumbnail.delete(save=False)
+    if instance.feature_vector_file:
+        instance.feature_vector_file.delete(save=False)
     if instance.annotations_file:
         instance.annotations_file.delete(save=False)
 
@@ -97,3 +99,12 @@ def delete_image_annotations_files(sender, instance, **kwargs):
             img.annotations_file.delete(save=False)
             img.annotations_file = None
             img.save()
+
+
+@receiver(post_delete, sender=CollectRecord)
+def delete_image_files(sender, instance, **kwargs):
+    print(instance.data)
+    if not instance.data or not instance.data.get("image_classification"):
+        return
+
+    Image.objects.filter(collect_record_id=instance.id).delete()
