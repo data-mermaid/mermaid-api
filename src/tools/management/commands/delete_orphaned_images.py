@@ -18,11 +18,16 @@ class Command(BaseCommand):
         dry_run = options["dry_run"]
         self.stdout.write("Finding orphaned images...")
 
-        valid_collect_ids = CollectRecord.objects.values_list("id", flat=True)
         orphaned_images = (
-            Image.objects.filter(~Q(collect_record_id__in=valid_collect_ids))
-            .annotate(is_used=Exists(ObsBenthicPhotoQuadrat.objects.filter(image=OuterRef("pk"))))
-            .filter(is_used=False)
+            Image.objects.annotate(
+                has_collect_record=Exists(
+                    CollectRecord.objects.filter(id=OuterRef("collect_record_id"))
+                ),
+                is_used=Exists(
+                    ObsBenthicPhotoQuadrat.objects.filter(image=OuterRef("pk"))
+                )
+            )
+            .filter(has_collect_record=False, is_used=False)
         )
 
         count = orphaned_images.count()
