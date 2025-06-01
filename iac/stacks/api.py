@@ -381,3 +381,5 @@ class ApiStack(Stack):
             bucket_name=config.api.ic_bucket_name,
         )
         coral_reef_training_bucket.grant_read(service.task_definition.task_role)
+        coral_reef_training_bucket.grant_read(image_worker.task_definition.task_role)
+        coral_reef_training_bucket.grant_read(worker.task_definition.task_role)
