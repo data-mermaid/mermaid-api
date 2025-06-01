@@ -99,11 +99,3 @@ def delete_image_annotations_files(sender, instance, **kwargs):
             img.annotations_file.delete(save=False)
             img.annotations_file = None
             img.save()
-
-
-@receiver(post_delete, sender=CollectRecord)
-def delete_image_files(sender, instance, **kwargs):
-    if not instance.data or not instance.data.get("image_classification"):
-        return
-
-    Image.objects.filter(collect_record_id=instance.id).delete()
