@@ -157,7 +157,11 @@ def email_report(to_email, local_file_path, protocol):
         delete_file(zip_file_path)
 
     try:
-        file_url = s3.get_presigned_url(settings.AWS_DATA_BUCKET, s3_zip_file_key)
+        file_url = s3.get_presigned_url(
+            settings.AWS_DATA_BUCKET,
+            s3_zip_file_key,
+            aws_access_key_id=settings.REPORT_S3_ACCESS_KEY_ID,
+            aws_secret_access_key=settings.REPORT_S3_SECRET_ACCESS_KEY,)
         to = [to_email]
         template = "emails/report.html"
         report_title = PROTOCOL_MAP.get(protocol) or ""

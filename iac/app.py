@@ -65,6 +65,7 @@ dev_api_stack = ApiStack(
     public_bucket=dev_static_site_stack.site_bucket,
     image_processing_bucket=common_stack.image_processing_bucket,
     use_fifo_queues="False",
+    report_s3_creds=common_stack.report_s3_creds,
 )
 
 dev_sagemaker_stack = SagemakerStack(
@@ -102,6 +103,7 @@ prod_api_stack = ApiStack(
     public_bucket=prod_static_site_stack.site_bucket,
     image_processing_bucket=common_stack.image_processing_bucket,
     use_fifo_queues="False",
+    report_s3_creds=common_stack.report_s3_creds,
 )
 
 
