@@ -1,5 +1,7 @@
-docker-compose==1.29.2
+# docker-compose==1.29.2 #legacy for python support
 fabric==2.4.0
 Sphinx==3.5.4
 sphinx-rtd-theme==0.5.2
 pre-commit==3.5.0
+six==1.16.0
+lexicon==3.4.0
