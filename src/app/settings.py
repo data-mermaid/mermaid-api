@@ -397,3 +397,7 @@ SPACER = {
     "AWS_REGION": AWS_REGION,
     "EXTRACTORS_CACHE_DIR": "/tmp/classifier",
 }
+
+# Reporting S3 credentials
+REPORT_S3_ACCESS_KEY_ID = os.environ.get("REPORT_S3_ACCESS_KEY_ID")
+REPORT_S3_SECRET_ACCESS_KEY = os.environ.get("REPORT_S3_SECRET_ACCESS_KEY")
