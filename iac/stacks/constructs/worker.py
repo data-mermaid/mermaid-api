@@ -58,7 +58,6 @@ class QueueWorker(Construct):
                 appscaling.ScalingInterval(lower=100, change=+1),
             ],
             capacity_provider_strategies=cluster.default_capacity_provider_strategy,
-            # circuit_breaker=ecs.DeploymentCircuitBreaker(enable=True, rollback=True),
         )
         # Allow workers to send messages.
         job_queue.queue.grant(
