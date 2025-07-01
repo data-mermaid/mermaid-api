@@ -3,6 +3,7 @@ boto3==1.26.120
 django_extensions==3.2.1
 django_filter==22.1
 django-cors-headers==4.3.1
+django-cte==2.0.0
 django-debug-toolbar==3.6.0
 django-maintenance-mode==0.16.3
 django-storages[s3]==1.14.3

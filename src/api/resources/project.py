@@ -4,8 +4,10 @@ import django_filters
 import psycopg2
 from django.conf import settings
 from django.db import IntegrityError, transaction
-from django.db.models import JSONField
+from django.db.models import CharField, JSONField
 from django.db.models.expressions import RawSQL
+from django.db.models.functions import Cast
+from django_cte import CTE, with_cte
 from rest_condition import Or
 from rest_framework import exceptions, permissions, serializers, status
 from rest_framework.decorators import action
@@ -267,31 +269,21 @@ class ProjectViewSet(BaseApiViewSet):
     search_fields = ["$name", "$sites__country__name"]
 
     def get_queryset(self):
-        qs = (
-            Project.objects.select_related(
-                "created_by",
-                "updated_by",
-            )
-            .prefetch_related(
-                "profiles",
-                "sites",
-                "sites__country",
-            )
-            .annotate(
-                # need to cast to text to avoid box2d equality operator error
-                extent=RawSQL(
-                    """
-                    (
-                        SELECT ST_Extent(site.location)::text
-                        FROM site
-                        WHERE site.project_id = project.id
-                    )
-                    """,
-                    [],
-                )
-            )
-            .order_by("name")
+        extent_cte = CTE(
+            Site.objects.values("project_id")
+            .annotate(extent_geom=RawSQL("ST_Extent(location)", []))
+            .annotate(extent=Cast("extent_geom", output_field=CharField()))
         )
+
+        qs = with_cte(
+            extent_cte,
+            select=extent_cte.join(Project, id=extent_cte.col.project_id)
+            .annotate(extent=extent_cte.col.extent)
+            .select_related("created_by", "updated_by")
+            .prefetch_related("profiles", "sites", "sites__country")
+            .order_by("name"),
+        )
+
         user = self.request.user
         show_all = "showall" in self.request.query_params
 
