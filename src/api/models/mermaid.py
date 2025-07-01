@@ -163,6 +163,9 @@ class Project(BaseModel, JSONMixin):
         if hasattr(self, "_loaded_values"):
             self._old_values = {k: v for k, v in self._loaded_values.items() if k in notify_fields}
         self._new_values = model_to_dict(self, fields=notify_fields)
+
+        if self.name is not None:
+            self.name = self.name.strip()
         super(Project, self).save(*args, **kwargs)
 
     @classmethod
