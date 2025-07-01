@@ -85,13 +85,14 @@ freshinstall:
 	@make migrate
 
 runserver:
-	$(DOCKER_COMPOSE) exec $(API_SERVICE) python manage.py runserver 0.0.0.0:8080
+	$(DOCKER_COMPOSE) exec -e NEW_RELIC_CONFIG_FILE=newrelic.ini $(API_SERVICE) \
+  newrelic-admin run-program python manage.py runserver 0.0.0.0:8080
 
 worker:
-	$(DOCKER_COMPOSE) exec $(API_SERVICE) python manage.py simpleq_worker
+	$(DOCKER_COMPOSE) exec -e NEW_RELIC_CONFIG_FILE=newrelic.ini $(API_SERVICE) newrelic-admin run-program python manage.py simpleq_worker
 
 runserverplus:
-	$(DOCKER_COMPOSE) exec $(API_SERVICE) gunicorn app.wsgi \
+	$(DOCKER_COMPOSE) exec -e NEW_RELIC_CONFIG_FILE=newrelic.ini $(API_SERVICE) newrelic-admin run-program gunicorn app.wsgi \
   		--bind 0.0.0.0:8081 \
 		--timeout 120 \
 		--workers 2 \
@@ -102,7 +103,7 @@ runserverplus:
 		--worker-tmp-dir /dev/shm
 
 simpleq:
-	$(DOCKER_COMPOSE) exec $(API_SERVICE) python manage.py simpleq_worker
+	$(DOCKER_COMPOSE) exec -e NEW_RELIC_CONFIG_FILE=newrelic.ini $(API_SERVICE) newrelic-admin run-program python manage.py simpleq_worker
 
 shellplus:
 	$(DOCKER_COMPOSE) exec $(API_SERVICE) python manage.py shell_plus
