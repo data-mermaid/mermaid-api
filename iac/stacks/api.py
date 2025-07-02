@@ -51,10 +51,6 @@ class ApiStack(Stack):
     ) -> None:
         super().__init__(scope, id, **kwargs)
 
-        task_definition = ecs.Ec2TaskDefinition(
-            self, id="ApiTaskDefinition", network_mode=ecs.NetworkMode.AWS_VPC
-        )
-
         sys_email = os.environ.get("SYS_EMAIL") or None
 
         def get_secret_object(stack: Stack, secret_name: str):
@@ -123,6 +119,12 @@ class ApiStack(Stack):
             "AUTH0_DOMAIN": ecs.Secret.from_secrets_manager(
                 get_secret_object(self, config.api.auth0_domain)
             ),
+            "IMAGE_BUCKET_AWS_ACCESS_KEY_ID": ecs.Secret.from_secrets_manager(
+                get_secret_object(self, config.api.image_bucket_aws_access_key_id)
+            ),
+            "IMAGE_BUCKET_AWS_SECRET_ACCESS_KEY": ecs.Secret.from_secrets_manager(
+                get_secret_object(self, config.api.image_bucket_aws_secret_access_key)
+            ),
         }
 
         if config.env_id == "dev":
@@ -144,7 +146,8 @@ class ApiStack(Stack):
             "AWS_CONFIG_BUCKET": config_bucket.bucket_name,
             "AWS_DATA_BUCKET": data_bucket.bucket_name,
             "AWS_PUBLIC_BUCKET": config.api.public_bucket,
-            "IMAGE_PROCESSING_BUCKET": image_processing_bucket.bucket_name,
+            "IMAGE_PROCESSING_BUCKET": config.api.ic_bucket_name,
+            "IMAGE_PROCESSING_BUCKET_DUMMY": image_processing_bucket.bucket_name,
             "EMAIL_HOST": config.api.email_host,
             "EMAIL_PORT": config.api.email_port,
             "AUTH0_MANAGEMENT_API_AUDIENCE": config.api.auth0_management_api_audience,
@@ -167,6 +170,8 @@ class ApiStack(Stack):
             file="Dockerfile",
         )
 
+        # --- Scheduled Backup Task ---
+
         daily_task_def = ecs.Ec2TaskDefinition(
             self,
             "ScheduledBackupTaskDef",
@@ -182,8 +187,6 @@ class ApiStack(Stack):
             command=["python", "manage.py", "daily_tasks"],
             logging=ecs.LogDrivers.aws_logs(stream_prefix="ScheduledBackupTask"),
         )
-
-        # create a scheduled task
         daily_backup_task = ecs_patterns.ScheduledEc2Task(
             self,
             "ScheduledBackupTask",
@@ -200,6 +203,39 @@ class ApiStack(Stack):
             ),
         )
 
+        # --- Summary Cache Update Task ---
+
+        summary_cache_task_def = ecs.Ec2TaskDefinition(
+            self,
+            "SummaryCacheTaskDef",
+            network_mode=ecs.NetworkMode.AWS_VPC,
+        )
+        summary_cache_task_def.add_container(
+            "SummaryCacheUpdateContainer",
+            image=ecs.ContainerImage.from_docker_image_asset(image_asset),
+            cpu=config.api.summary_cpu,
+            memory_limit_mib=config.api.summary_memory,
+            secrets=self.api_secrets,
+            environment=environment,
+            command=["python", "manage.py", "process_summaries"],
+            logging=ecs.LogDrivers.aws_logs(stream_prefix="SummaryCacheUpdateContainer"),
+        )
+        summary_cache_service = ecs.Ec2Service(
+            self,
+            id="SummaryCacheService",
+            task_definition=summary_cache_task_def,
+            cluster=cluster,
+            security_groups=[container_security_group],
+            enable_execute_command=True,
+            capacity_provider_strategies=cluster.default_capacity_provider_strategy,
+            # circuit_breaker=ecs.DeploymentCircuitBreaker(enable=True, rollback=True),
+        )
+
+        # --- API Service ---
+
+        task_definition = ecs.Ec2TaskDefinition(
+            self, id="ApiTaskDefinition", network_mode=ecs.NetworkMode.AWS_VPC
+        )
         task_definition.add_container(
             id="MermaidAPI",
             image=ecs.ContainerImage.from_docker_image_asset(image_asset),
@@ -212,7 +248,6 @@ class ApiStack(Stack):
                 stream_prefix=config.env_id, log_retention=logs.RetentionDays.ONE_MONTH
             ),
         )
-
         service = ecs.Ec2Service(
             self,
             id="ApiService",
@@ -221,18 +256,15 @@ class ApiStack(Stack):
             security_groups=[container_security_group],
             desired_count=config.api.container_count,
             enable_execute_command=True,
-            capacity_provider_strategies=[
-                ecs.CapacityProviderStrategy(
-                    capacity_provider="mermaid-api-infra-common-AsgCapacityProvider760D11D9-iqzBF6LfX313",
-                    weight=100,
-                )
-            ],
+            capacity_provider_strategies=cluster.default_capacity_provider_strategy,
+            # circuit_breaker=ecs.DeploymentCircuitBreaker(enable=True, rollback=True),
         )
 
         # Grant Secret read to API container & backup task
         for _, container_secret in self.api_secrets.items():
             container_secret.grant_read(service.task_definition.execution_role)
             container_secret.grant_read(daily_backup_task.task_definition.execution_role)
+            container_secret.grant_read(summary_cache_service.task_definition.execution_role)
 
         target_group = elb.ApplicationTargetGroup(
             self,
@@ -331,8 +363,23 @@ class ApiStack(Stack):
 
         # Allow Service and Image Worker to read/write config bucket
         config_bucket.grant_read_write(image_worker.task_definition.task_role)
+        config_bucket.grant_read_write(worker.task_definition.task_role)
         config_bucket.grant_read_write(service.task_definition.task_role)
 
         # Allow Service and Image Worker to read/write config bucket
         data_bucket.grant_read_write(image_worker.task_definition.task_role)
+        data_bucket.grant_read_write(worker.task_definition.task_role)
         data_bucket.grant_read_write(service.task_definition.task_role)
+        data_bucket.grant_read_write(summary_cache_service.task_definition.task_role)
+        data_bucket.grant_delete(summary_cache_service.task_definition.task_role)
+        # Prod bucket needs to read from coral-reef-training bucket.
+        # There is some issue with assumed-role reading from public bucket,
+        # adding read permission to the task role seems to fix it.
+        coral_reef_training_bucket = s3.Bucket.from_bucket_name(
+            self,
+            "CoralReefBucket",
+            bucket_name=config.api.ic_bucket_name,
+        )
+        coral_reef_training_bucket.grant_read(service.task_definition.task_role)
+        coral_reef_training_bucket.grant_read(image_worker.task_definition.task_role)
+        coral_reef_training_bucket.grant_read(worker.task_definition.task_role)

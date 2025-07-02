@@ -65,6 +65,7 @@ from .summaries import (  # noqa: F401
     HabitatComplexityObsModel,
     HabitatComplexitySEModel,
     HabitatComplexitySUModel,
+    SummaryCacheQueue,
 )
 from .summary_sample_events import (  # noqa: F401
     RestrictedProjectSummarySampleEvent,

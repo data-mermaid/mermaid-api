@@ -6,7 +6,7 @@ from django.core import serializers
 from django.db.models.signals import post_delete, post_save, pre_save
 from django.dispatch import receiver
 
-from ..covariates import update_site_covariates_threaded
+from ..covariates import update_site_covariates_bg_process
 from ..models import (
     ArchivedRecord,
     BaseModel,
@@ -123,6 +123,6 @@ def run_management_validation(sender, instance, *args, **kwargs):
         instance.updated_on = mgmt.updated_on
 
 
-@receiver(pre_save, sender=Site)
+@receiver(post_save, sender=Site)
 def update_with_covariates(sender, instance, *args, **kwargs):
-    update_site_covariates_threaded(instance)
+    update_site_covariates_bg_process(instance)

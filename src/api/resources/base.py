@@ -199,6 +199,7 @@ class BaseSUViewAPISerializer(BaseViewAPISerializer):
             "project_id",
             "project_name",
             "project_notes",
+            "project_includes_gfcr",
             "suggested_citation",
             "project_admins",
             "contact_link",

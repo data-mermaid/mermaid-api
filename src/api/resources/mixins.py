@@ -15,7 +15,7 @@ from rest_framework.decorators import action
 from rest_framework.request import Request
 from rest_framework.response import Response
 
-from ..exceptions import check_uuid
+from ..exceptions import UnknownProtocolError, check_uuid
 from ..models import Project
 from ..notifications import notify_cr_owners_site_mr_deleted
 from ..permissions import ProjectDataAdminPermission
@@ -165,6 +165,7 @@ class SampleUnitMethodSummaryReport(object):
     def xlsx(self, request, project_pk):
         from ..utils.reports import create_sample_unit_method_summary_report
 
+        output_path = None
         try:
             model = self.get_queryset().model
             try:
@@ -172,10 +173,8 @@ class SampleUnitMethodSummaryReport(object):
                 output_path = create_sample_unit_method_summary_report(
                     project_ids=[project_pk], protocol=protocol, request=request
                 )
-            except AttributeError as ae:
-                raise exceptions.ValidationError("Unknown protocol") from ae
-            except ValueError as ve:
-                raise exceptions.ValidationError(f"{protocol} protocol not supported") from ve
+            except UnknownProtocolError as upe:
+                raise exceptions.ValidationError(f"Unknown protocol '{protocol}'") from upe
 
             try:
                 base_file_name = f"{get_safe_project_name(project_pk)}_{protocol}_{create_iso_date_string(delimiter='_')}"
@@ -195,8 +194,11 @@ class SampleUnitMethodSummaryReport(object):
 
                 return response
             finally:
-                if zip_file_name and Path(zip_file_name).exists():
-                    os.remove(zip_file_name)
+                if zip_file_name:
+                    Path(zip_file_name).unlink(missing_ok=True)
+
+                if output_path:
+                    Path(output_path).unlink(missing_ok=True)
         except Exception as err:
             print(err)
             return Response(str(err), status=500)

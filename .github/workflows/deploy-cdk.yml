@@ -16,55 +16,77 @@ on:
 concurrency:
   group: api-deployment-${{ github.ref }}
 
+permissions:
+  id-token: write # This is required for requesting the JWT
+  contents: read  # This is required for actions/checkout
+
 jobs:
   call-test:
     uses: ./.github/workflows/_test.yml
 
   deploy:
     needs: [call-test]
-    runs-on: ubuntu-20.04
+    runs-on: ubuntu-latest
     steps:
-      - uses: actions/setup-node@v3
+      - uses: actions/setup-node@v4.4.0
         with:
-          node-version: '18'
-      
-      - name: Setup Python
-        uses: actions/setup-python@v2
-        with:
-          python-version: "3.10"
+          node-version: '^22.11.0'
 
-      - uses: actions/checkout@v3
-      
+      - name: Setup Python
+        uses: actions/setup-python@v5.6.0
+        with:
+          python-version: "^3.12.0"
+
+      - uses: actions/checkout@v4.2.2
+
       - name: Install CDK
         run: |
           iac/install_cdk.sh
 
-      - name: Set target and version for dev
-        if: startsWith(github.ref, 'refs/heads/dev')
-        run: |
-          echo "TARGET=dev" >> "$GITHUB_ENV"
-          short_sha=$(git rev-parse --short ${{ github.sha }})
-          echo "$short_sha" > src/VERSION.txt
-          cat src/VERSION.txt
-
-      - name: Set target and version for prod
-        if: startsWith(github.ref, 'refs/tags')
-        run: |
-          echo "TARGET=prod" >> "$GITHUB_ENV"
-          echo "${{ github.ref_name }}" > src/VERSION.txt
-          cat src/VERSION.txt
-
-      - name: CDK Deploy
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v4.2.1
         env:
-          AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID_CDK }}
-          AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY_CDK }}
+          CDK_DEFAULT_ACCOUNT: ${{ secrets.CDK_DEFAULT_ACCOUNT }}
+          DEPLOY_AWS_ROLE: ${{ secrets.DEPLOY_AWS_ROLE }}
+        with:
+          role-to-assume: arn:aws:iam::${{ secrets.CDK_DEFAULT_ACCOUNT }}:role/${{ secrets.DEPLOY_AWS_ROLE }}
+          aws-region: us-east-1
+          role-skip-session-tagging: true
+      - name: CDK Deploy DEV
+        if: startsWith(github.ref, 'refs/heads/dev')
+        env:
+          DEPLOY_AWS_ROLE: ${{ secrets.DEPLOY_AWS_ROLE }}
           SYS_EMAIL: ${{ secrets.SYS_EMAIL }}
           PYTHONPATH: ${{ github.workspace }}
-          DEPLOY_AWS_ACCT: ${{ secrets.DEPLOY_AWS_ACCT }}
+          CDK_DEFAULT_ACCOUNT: ${{ secrets.CDK_DEFAULT_ACCOUNT }}
+          CDK_DEFAULT_REGION: us-east-1
         run: |
+          short_sha=$(git rev-parse --short ${{ github.sha }}) && \
+          echo "$short_sha" > src/VERSION.txt && \
+          cat src/VERSION.txt && \
           cd iac && cdk deploy \
             --require-approval never \
-            "${{ env.TARGET }}"-mermaid-api-django \
-            "${{ env.TARGET }}"-mermaid-static-site
+            GithubAccess \
+            mermaid-api-infra-common \
+            dev-mermaid-api-django \
+            dev-mermaid-static-site
+      - name: CDK Deploy PROD
+        if: startsWith(github.ref, 'refs/tags')
+        env:
+          DEPLOY_AWS_ROLE: ${{ secrets.DEPLOY_AWS_ROLE }}
+          SYS_EMAIL: ${{ secrets.SYS_EMAIL }}
+          PYTHONPATH: ${{ github.workspace }}
+          CDK_DEFAULT_ACCOUNT: ${{ secrets.CDK_DEFAULT_ACCOUNT }}
+          CDK_DEFAULT_REGION: us-east-1
+        run: |
+          echo "${{ github.ref_name }}" > src/VERSION.txt && \
+          cat src/VERSION.txt && \
+          cd iac && cdk deploy \
+            --require-approval never \
+            GithubAccess \
+            mermaid-api-infra-common \
+            prod-mermaid-api-django \
+            prod-mermaid-static-site
 
-      
+
+

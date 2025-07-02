@@ -186,37 +186,58 @@ class CommonStack(Stack):
         # Allow ECS tasks to RDS
         self.database.connections.allow_default_port_from(self.ecs_sg)
 
-        auto_scaling_group = autoscale.AutoScalingGroup(
+        # FIX - add each subnet CIDR block.
+        selection = self.vpc.select_subnets(subnet_type=ec2.SubnetType.PRIVATE_WITH_EGRESS)
+        for subnet in selection.subnets:
+            self.database.connections.allow_default_port_from(ec2.Peer.ipv4(subnet.ipv4_cidr_block))
+
+        user_data = ec2.UserData.for_linux()
+        user_data.add_commands(
+            "yum update --security",
+        )
+
+        auto_scaling_group_lt = autoscale.AutoScalingGroup(
             self,
-            "ASG",
+            "ASG2",
             vpc=self.vpc,
-            instance_type=ec2.InstanceType("t3a.large"),
-            machine_image=ecs.EcsOptimizedImage.amazon_linux2(),
+            launch_template=ec2.LaunchTemplate(
+                self,
+                "LTemp",
+                instance_type=ec2.InstanceType("t3a.large"),
+                machine_image=ecs.EcsOptimizedImage.amazon_linux2(),
+                block_devices=[
+                    ec2.BlockDevice(
+                        device_name="/dev/xvda",
+                        volume=ec2.BlockDeviceVolume.ebs(100),
+                    ),
+                ],
+                user_data=user_data,
+                security_group=self.ecs_sg,
+                role=iam.Role(
+                    self, "AsgInstance", assumed_by=iam.ServicePrincipal("ec2.amazonaws.com")
+                ),
+            ),
             min_capacity=1,
-            max_capacity=6,
+            max_capacity=10,
             max_instance_lifetime=Duration.days(7),
             update_policy=autoscale.UpdatePolicy.rolling_update(),
             # NOTE: not setting the desired capacity so ECS can manage it.
         )
-        auto_scaling_group.add_user_data("yum update --security")
 
-        # Note: this will allow any container running on these EC2s to access RDS
-        self.database.connections.allow_default_port_from(auto_scaling_group)
-
-        capacity_provider = ecs.AsgCapacityProvider(
+        capacity_provider_lt = ecs.AsgCapacityProvider(
             self,
-            "AsgCapacityProvider",
-            auto_scaling_group=auto_scaling_group,
+            "AsgCapacityProviderLt",
+            auto_scaling_group=auto_scaling_group_lt,
             enable_managed_scaling=True,
             enable_managed_termination_protection=False,
         )
-        self.cluster.add_asg_capacity_provider(capacity_provider)
+        self.cluster.add_asg_capacity_provider(capacity_provider_lt)
 
         self.cluster.add_default_capacity_provider_strategy(
             [
                 ecs.CapacityProviderStrategy(
-                    capacity_provider=capacity_provider.capacity_provider_name, weight=100
-                )
+                    capacity_provider=capacity_provider_lt.capacity_provider_name, weight=100
+                ),
             ]
         )
 
@@ -259,6 +280,39 @@ class CommonStack(Stack):
         self.load_balancer.add_redirect()
 
         create_cdk_bot_user(self, self.account)
+
+        self.security_group = ec2.SecurityGroup(
+            self,
+            "VPCEndpointSagemaker",
+            vpc=self.vpc,
+            allow_all_outbound=True,
+            description="Security group for SageMaker VPC endpoints",
+        )
+
+        for service_name in [
+            "SAGEMAKER_API",
+            "SAGEMAKER_NOTEBOOK",
+            "SAGEMAKER_RUNTIME",
+            "SAGEMAKER_STUDIO",
+        ]:
+            self.vpc.add_interface_endpoint(
+                f"{service_name}VpcEndpoint",
+                service=getattr(
+                    ec2.InterfaceVpcEndpointAwsService,
+                    service_name,
+                ),
+                lookup_supported_azs=True,
+                subnets=ec2.SubnetSelection(
+                    subnet_type=ec2.SubnetType.PRIVATE_WITH_EGRESS,
+                    one_per_az=True,
+                ),
+                security_groups=[self.security_group],
+                dns_record_ip_type=ec2.VpcEndpointDnsRecordIpType.IPV4,
+                ip_address_type=ec2.VpcEndpointIpAddressType.IPV4,
+                private_dns_enabled=True,
+                open=True,
+            )
+
 
 
 def create_cdk_bot_user(self, account: str):

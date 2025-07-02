@@ -4,10 +4,9 @@ from tempfile import NamedTemporaryFile
 from django.conf import settings
 
 from ..mocks import MockRequest
-from ..models import PROTOCOL_MAP
 from ..reports import attributes_report
-from ..reports.summary_report import check_su_method_policy_level, create_protocol_report
-from . import delete_file, s3
+from ..reports.summary_report import create_protocol_report
+from . import create_iso_date_string, delete_file, s3
 from .email import email_report
 from .q import submit_job
 
@@ -22,6 +21,7 @@ REPORT_TYPES = [
 def update_attributes_report():
     with NamedTemporaryFile() as tmp:
         attributes_report.write_attribute_reference(tmp.name)
+        tmp.flush()
         s3.upload_file(settings.PUBLIC_BUCKET, tmp.name, "mermaid_attributes.xlsx")
 
 
@@ -58,11 +58,12 @@ def create_sample_unit_method_summary_report(
     if isinstance(project_ids, list) is False:
         project_ids = [project_ids]
 
-    data_policy_level = check_su_method_policy_level(request, protocol, project_ids)
-
-    with NamedTemporaryFile(delete=False, prefix=f"{protocol}_", suffix=".xlsx") as f:
-        output_path = Path(f.name)
-        wb = create_protocol_report(request, project_ids, protocol, data_policy_level)
+    with NamedTemporaryFile(delete=False) as f:
+        temppath = Path(f.name)
+        output_path = temppath.rename(
+            f"{temppath.parent}/{create_iso_date_string()}_{protocol}.xlsx"
+        )
+        wb = create_protocol_report(request, project_ids, protocol)
         try:
             wb.save(output_path)
         except Exception as e:
@@ -70,7 +71,7 @@ def create_sample_unit_method_summary_report(
             return None
 
         if send_email:
-            email_report(request.user.profile.email, output_path, PROTOCOL_MAP.get(protocol) or "")
+            email_report(request.user.profile.email, output_path, protocol)
             delete_file(output_path)
         else:
             return output_path

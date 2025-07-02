@@ -1,5 +1,4 @@
 import functools
-import threading
 import time
 
 from django.utils.translation import gettext as _
@@ -30,11 +29,3 @@ def needs_instance(message):
         return wrapped
 
     return _needs_instance
-
-
-def run_in_thread(fn):
-    def run(*k, **kw):
-        t = threading.Thread(target=fn, args=k, kwargs=kw)
-        t.start()
-
-    return run

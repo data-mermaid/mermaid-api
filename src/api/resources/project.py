@@ -1,9 +1,11 @@
 import logging
 
 import django_filters
+import psycopg2
 from django.conf import settings
-from django.db import transaction
+from django.db import IntegrityError, transaction
 from django.db.models import JSONField
+from django.db.models.expressions import RawSQL
 from rest_condition import Or
 from rest_framework import exceptions, permissions, serializers, status
 from rest_framework.decorators import action
@@ -31,7 +33,7 @@ from ..permissions import (
 from ..reports.fields import ReportField, ReportMethodField
 from ..reports.formatters import to_data_policy, to_str, to_yesno
 from ..reports.report_serializer import ReportSerializer
-from ..utils import truthy
+from ..utils import get_extent, truthy
 from ..utils.project import (
     citation_retrieved_text,
     copy_project_and_resources,
@@ -64,7 +66,7 @@ logger = logging.getLogger(__name__)
 class BaseProjectSerializer(DynamicFieldsMixin, BaseAPISerializer):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
-        self._cached_profiles = None
+        self._cached_profiles = {}
 
     countries = serializers.SerializerMethodField()
     num_sites = serializers.SerializerMethodField()
@@ -75,17 +77,19 @@ class BaseProjectSerializer(DynamicFieldsMixin, BaseAPISerializer):
     default_citation = serializers.SerializerMethodField()
     suggested_citation = serializers.SerializerMethodField()
     citation_retrieved_text = serializers.SerializerMethodField()
+    bbox = serializers.SerializerMethodField()
 
     class Meta:
         model = Project
         exclude = []
         hidden_fields = ["default_citation", "user_citation", "citation_retrieved_text"]
-        additional_fields = ["countries", "num_sites"]
+        additional_fields = ["countries", "num_sites", "bbox"]
 
     def _get_profiles(self, obj):
-        if self._cached_profiles is None:
-            self._cached_profiles = get_profiles(obj)
-        return self._cached_profiles
+        project_id = str(obj.id)
+        if project_id not in self._cached_profiles or self._cached_profiles[project_id] is None:
+            self._cached_profiles[project_id] = get_profiles(obj)
+        return self._cached_profiles[project_id]
 
     def get_citation_retrieved_text(self, obj):
         return citation_retrieved_text(obj.name)
@@ -127,6 +131,10 @@ class BaseProjectSerializer(DynamicFieldsMixin, BaseAPISerializer):
             num_sample_units += queryset.filter(**qry_filter).count()
 
         return num_sample_units
+
+    def get_bbox(self, obj):
+        extent = getattr(obj, "extent", None)
+        return get_extent(extent)
 
 
 class ProjectSerializer(BaseProjectSerializer):
@@ -190,7 +198,7 @@ class ProjectCSVSerializer(ReportSerializer, BaseProjectSerializer):
         return ""
 
     def get_contact_link(self, obj):
-        return f"https://{settings.DEFAULT_DOMAIN_API}/contact-project?project_id={obj.id}"
+        return f"{settings.DEFAULT_DOMAIN_MARKETING}/contact-project?project_id={obj.id}"
 
     def get_project_admins(self, obj):
         admins = obj.profiles.filter(role=ProjectProfile.ADMIN).values_list(
@@ -258,9 +266,31 @@ class ProjectViewSet(BaseApiViewSet):
     search_fields = ["$name", "$sites__country__name"]
 
     def get_queryset(self):
-        qs = Project.objects.select_related("created_by", "updated_by")
-        qs = qs.prefetch_related("profiles", "sites", "sites__country")
-        qs = qs.all().order_by("name")
+        qs = (
+            Project.objects.select_related(
+                "created_by",
+                "updated_by",
+            )
+            .prefetch_related(
+                "profiles",
+                "sites",
+                "sites__country",
+            )
+            .annotate(
+                # need to cast to text to avoid box2d equality operator error
+                extent=RawSQL(
+                    """
+                    (
+                        SELECT ST_Extent(site.location)::text
+                        FROM site
+                        WHERE site.project_id = project.id
+                    )
+                    """,
+                    [],
+                )
+            )
+            .order_by("name")
+        )
         user = self.request.user
         show_all = "showall" in self.request.query_params
 
@@ -511,33 +541,42 @@ class ProjectViewSet(BaseApiViewSet):
         permission_classes=[ProjectDataAdminPermission],
     )
     def add_profile(self, request, pk, *args, **kwargs):
-        email = request.data.get("email").lower()
+        email = request.data.get("email")
+        if email is None:
+            raise exceptions.ValidationError(detail={"email": "Email is required"})
+
+        email = email.lower()
+
         try:
             role = int(request.data.get("role"))
         except (TypeError, ValueError):
             role = ProjectProfile.COLLECTOR
+
         admin_profile = request.user.profile
 
-        if email is None:
-            raise exceptions.ValidationError(detail={"email": "Email is required"})
+        profile, _ = Profile.objects.get_or_create(email=email)
 
         try:
-            profile = Profile.objects.get(email=email)
-        except Profile.DoesNotExist:
-            profile = Profile.objects.create(email=email)
-
-        if ProjectProfile.objects.filter(project_id=pk, profile=profile).exists() is False:
-            project_profile = ProjectProfile.objects.create(
+            project_profile, created = ProjectProfile.objects.get_or_create(
                 project_id=pk,
                 profile=profile,
                 role=role,
                 created_by=admin_profile,
                 updated_by=admin_profile,
             )
-        else:
-            raise exceptions.ValidationError(
-                detail={"email": "Profile has already been added to project"}
-            )
+            if not created:
+                raise exceptions.ValidationError(
+                    detail={"email": "Profile has already been added to project"}
+                )
+        except IntegrityError as ie:
+            if (
+                hasattr(ie.__cause__, "pgcode")
+                and ie.__cause__.pgcode == psycopg2.errorcodes.UNIQUE_VIOLATION
+            ):
+                raise exceptions.ValidationError(
+                    detail={"email": "Profile has already been added to project"}
+                )
+            raise
 
         return Response(ProjectProfileSerializer(instance=project_profile).data)
 

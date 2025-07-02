@@ -11,6 +11,8 @@ def test_project_edit_tracking(valid_collect_record, profile1_request):
         project_id = valid_collect_record.project_id
         write_collect_record(valid_collect_record, profile1_request)
 
+        update_summary_cache(project_id, skip_cached_files=True)
+
         summary_ses = SummarySampleEventModel.objects.filter(project_id=project_id)
         assert summary_ses.count() == 1
 
@@ -23,7 +25,7 @@ def test_edit_transect_method(belt_fish_project, belt_fish1, profile1, profile1_
     with Testing():
         project_id = belt_fish1.transect.sample_event.site.project_id
 
-        update_summary_cache(project_id)
+        update_summary_cache(project_id, skip_cached_files=True)
         summary_se_count = SummarySampleEventModel.objects.filter(project_id=project_id).count()
 
         assert summary_se_count == 2
@@ -36,6 +38,8 @@ def test_edit_transect_method(belt_fish_project, belt_fish1, profile1, profile1_
             FISHBELT_PROTOCOL,
         )
 
+        update_summary_cache(project_id, skip_cached_files=True)
+
         summary_se_count = SummarySampleEventModel.objects.filter(project_id=project_id).count()
 
         assert summary_se_count == 1
@@ -44,7 +48,7 @@ def test_edit_transect_method(belt_fish_project, belt_fish1, profile1, profile1_
 def test_edit_site(belt_fish_project, site1):
     with Testing():
         project_id = site1.project_id
-        update_summary_cache(project_id)
+        update_summary_cache(project_id, skip_cached_files=True)
 
         original_site_name = site1.name
 
@@ -52,6 +56,8 @@ def test_edit_site(belt_fish_project, site1):
 
         site1.name = "Changing my name"
         site1.save()
+
+        update_summary_cache(project_id, skip_cached_files=True)
 
         assert (
             SummarySampleEventModel.objects.filter(site_name=original_site_name).exists() is False
@@ -62,7 +68,7 @@ def test_edit_site(belt_fish_project, site1):
 def test_edit_management(belt_fish_project, management1):
     with Testing():
         project_id = management1.project_id
-        update_summary_cache(project_id)
+        update_summary_cache(project_id, skip_cached_files=True)
 
         original_management_name = management1.name
 
@@ -72,6 +78,8 @@ def test_edit_management(belt_fish_project, management1):
 
         management1.name = "Changing my name"
         management1.save()
+
+        update_summary_cache(project_id, skip_cached_files=True)
 
         assert (
             SummarySampleEventModel.objects.filter(
@@ -85,7 +93,7 @@ def test_edit_management(belt_fish_project, management1):
 def test_edit_project_profile(belt_fish_project, project_profile1):
     with Testing():
         project_id = project_profile1.project_id
-        update_summary_cache(project_id)
+        update_summary_cache(project_id, skip_cached_files=True)
 
         for ssm in SummarySampleEventModel.objects.all():
             assert len(ssm.project_admins) == 1
@@ -93,17 +101,21 @@ def test_edit_project_profile(belt_fish_project, project_profile1):
         project_profile1.role = ProjectProfile.COLLECTOR
         project_profile1.save()
 
+        update_summary_cache(project_id, skip_cached_files=True)
+
         for ssm in SummarySampleEventModel.objects.all():
             assert len(ssm.project_admins) == 0
 
 
 def test_edit_project(belt_fish_project, project1):
     with Testing():
-        update_summary_cache(project1.pk)
+        update_summary_cache(project1.pk, skip_cached_files=True)
 
         new_name = "Change the name"
         project1.name = new_name
         project1.save()
+
+        update_summary_cache(project1.pk, skip_cached_files=True)
 
         for ssm in SummarySampleEventModel.objects.all():
             assert ssm.project_name == new_name

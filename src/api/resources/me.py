@@ -1,16 +1,22 @@
+from django.contrib.gis.db.models import Extent
+from django.db.models import Count, Q
 from rest_framework import permissions, serializers, viewsets
 from rest_framework.decorators import action
 from rest_framework.exceptions import NotFound, ValidationError
 from rest_framework.response import Response
 
 from api.auth0_management import Auth0DatabaseAuthenticationAPI, Auth0Users
+from tools.models import MERMAIDFeature, UserMERMAIDFeature
 from ..models import Profile, ProjectProfile
+from ..utils import get_extent
 from .base import BaseAPISerializer
 
 
 class MeSerializer(BaseAPISerializer):
     picture = serializers.ReadOnlyField(source="picture_url")
+    projects_bbox = serializers.SerializerMethodField()
     projects = serializers.SerializerMethodField()
+    optional_features = serializers.SerializerMethodField()
 
     class Meta:
         model = Profile
@@ -23,25 +29,74 @@ class MeSerializer(BaseAPISerializer):
             "created_on",
             "updated_on",
             "picture",
+            "projects_bbox",
             "projects",
+            "optional_features",
         ]
 
+    def get_queryset(self, o):
+        if not hasattr(self, "_projects_cache"):
+            self._projects_cache = (
+                ProjectProfile.objects.select_related("project")
+                .annotate(
+                    num_active_sample_units=Count(
+                        "project__collect_records",
+                        filter=Q(project__collect_records__profile=o),
+                        distinct=True,
+                    ),
+                    extent=Extent("project__sites__location"),
+                )
+                .filter(profile=o)
+            )
+        return self._projects_cache
+
     def get_projects(self, o):
-        qry = ProjectProfile.objects.select_related("project")
-        qry = qry.prefetch_related("project__collect_records")
-        qry = qry.filter(profile=o)
+        project_profiles = self.get_queryset(o)
 
         return [
             {
                 "id": pp.project_id,
                 "name": pp.project.name,
                 "role": pp.role,
-                "num_active_sample_units": pp.project.collect_records.filter(
-                    profile=pp.profile
-                ).count(),
+                "num_active_sample_units": pp.num_active_sample_units,
             }
-            for pp in qry
+            for pp in project_profiles
         ]
+
+    def get_projects_bbox(self, o):
+        extents = [pp.extent for pp in self.get_queryset(o) if pp.extent]
+        if not extents:
+            return None
+        xmin = min(e[0] for e in extents)
+        ymin = min(e[1] for e in extents)
+        xmax = max(e[2] for e in extents)
+        ymax = max(e[3] for e in extents)
+        extent = (xmin, ymin, xmax, ymax)
+        return get_extent(extent)
+
+    def get_optional_features(self, profile):
+        all_features = MERMAIDFeature.objects.all()
+        user_features = {
+            uf.feature_id: uf for uf in UserMERMAIDFeature.objects.filter(profile=profile)
+        }
+
+        result = []
+        for feature in all_features:
+            user_feature = user_features.get(feature.id)
+            enabled = (
+                user_feature.enabled if user_feature and user_feature.enabled else feature.enabled
+            )
+
+            result.append(
+                {
+                    "id": feature.id,
+                    "label": feature.label,
+                    "name": feature.name,
+                    "enabled": enabled,
+                }
+            )
+
+        return result
 
 
 class AuthenticatedMePermission(permissions.BasePermission):

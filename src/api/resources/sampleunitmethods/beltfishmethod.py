@@ -25,6 +25,7 @@ from ...reports.formatters import (
     to_names,
     to_str,
     to_year,
+    to_yesno,
 )
 from ...reports.report_serializer import ReportSerializer
 from ..base import (
@@ -282,6 +283,7 @@ class ObsBeltFishCSVSerializer(ReportSerializer):
         ReportField("management_notes", "Management notes"),
         ReportField("sample_unit_notes", "Sample unit notes"),
         ReportField("project_notes", "Project notes"),
+        ReportField("project_includes_gfcr", "Project includes GFCR", to_yesno),
         ReportField("suggested_citation", "Suggested citation"),
         ReportField("data_policy_beltfish", "Fish belt data policy"),
         ReportField("site_id"),
@@ -366,7 +368,7 @@ class BeltFishMethodSUCSVSerializer(ReportSerializer):
         ReportField("transect_width_name", "Transect width"),
         ReportField("observers", "Observers", to_names),
         ReportField("size_bin", "Size bin"),
-        ReportField("total_abundance", "Total abundance"),
+        ReportField("total_abundance", "Total abundance (ind)"),
         ReportField("biomass_kgha", "Biomass kg/ha"),
         ReportField("biomass_kgha_trophic_group", "Biomass kg/ha by trophic group"),
         ReportField("biomass_kgha_fish_family", "Biomass kg/ha by family"),
@@ -374,6 +376,7 @@ class BeltFishMethodSUCSVSerializer(ReportSerializer):
         ReportField("management_notes", "Management notes"),
         ReportField("sample_unit_notes", "Sample unit notes"),
         ReportField("project_notes", "Project notes"),
+        ReportField("project_includes_gfcr", "Project includes GFCR", to_yesno),
         ReportField("suggested_citation", "Suggested citation"),
         ReportField("data_policy_beltfish", "Fish belt data policy"),
         ReportField("site_id"),
@@ -456,6 +459,7 @@ class BeltFishMethodSECSVSerializer(ReportSerializer):
         ReportField("site_notes", "Site notes"),
         ReportField("management_notes", "Management notes"),
         ReportField("project_notes", "Project notes"),
+        ReportField("project_includes_gfcr", "Project includes GFCR", to_yesno),
         ReportField("suggested_citation", "Suggested citation"),
         ReportField("data_policy_beltfish", "Fish belt data policy"),
         ReportField("site_id"),

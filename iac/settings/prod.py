@@ -12,16 +12,21 @@ PROD_SETTINGS = ProjectSettings(
         container_memory=3000,
         container_count=1,
         # SQS
-        sqs_cpu=1024,
-        sqs_memory=2048,
+        sqs_cpu=2048,
+        sqs_memory=4096,
         # Backup
         backup_cpu=1024,
         backup_memory=2048,
+        # Summary
+        summary_cpu=1024,
+        summary_memory=4096,
         default_domain_api="api.datamermaid.org",
         default_domain_collect="https://app.datamermaid.org",
         mermaid_api_audience="https://api.datamermaid.org",
         public_bucket="public.datamermaid.org",
         sqs_message_visibility=3000,
+        # Image classification
+        ic_bucket_name="coral-reef-training",
         # Secrets
         spa_admin_client_id_name="prod/mermaid-api/spa-admin-client-id-8GJ1mU",
         spa_admin_client_secret_name="prod/mermaid-api/spa-admin-client-secret-5oMItZ",

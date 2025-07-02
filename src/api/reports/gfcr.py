@@ -5,8 +5,9 @@ from typing import List
 
 from ..mocks import MockRequest
 from ..models import GFCRFinanceSolution, GFCRIndicatorSet
-from ..utils import castutils, delete_file
+from ..utils import castutils, create_iso_date_string, delete_file
 from ..utils.email import email_report
+from ..utils.project import citation_retrieved_text, get_profiles, suggested_citation
 from ..utils.q import submit_job
 from ..utils.timer import timing
 from . import xl
@@ -54,9 +55,16 @@ def _get_indicator_sheet_data(indicator_sets, fields, additional_common_fields=N
 def f1_data(indicator_sets):
     for indicator_set in indicator_sets:
         if hasattr(indicator_set, "f1_1"):
+            project = indicator_set.project
+            profiles = get_profiles(project)
+            citation = (
+                f"{suggested_citation(project, profiles)} {citation_retrieved_text(project.name)}"
+            )
+
             yield common_columns(indicator_set) + [
                 indicator_set._meta.get_field("f1_1").verbose_name,
                 indicator_set.f1_1,
+                citation,
             ]
 
 
@@ -96,7 +104,9 @@ def f4_data(indicator_sets):
         ("F4.3", "f4_3"),
     )
     return _get_indicator_sheet_data(
-        indicator_sets, fields, additional_common_fields=["f4_start_date", "f4_end_date"]
+        indicator_sets,
+        fields,
+        additional_common_fields=["f4_start_date", "f4_end_date"],
     )
 
 
@@ -121,10 +131,6 @@ def f6_data(indicator_sets):
         ("F6.1b", "f6_1b"),
         ("F6.1c", "f6_1c"),
         ("F6.1d", "f6_1d"),
-        ("F6.2a", "f6_2a"),
-        ("F6.2b", "f6_2b"),
-        ("F6.2c", "f6_2c"),
-        ("F6.2d", "f6_2d"),
     )
     return _get_indicator_sheet_data(indicator_sets, fields)
 
@@ -234,9 +240,10 @@ def create_report(project_ids, request=None, send_email=None):
         xl.write_data_to_sheet(wb, sheet_name, data, 2, 1)
         xl.auto_size_columns(wb[sheet_name])
 
-    with NamedTemporaryFile(delete=False, prefix="gfcr_", suffix=".xlsx") as f:
-        output_path = Path(f.name)
+    with NamedTemporaryFile(delete=False) as f:
         try:
+            temppath = Path(f.name)
+            output_path = temppath.rename(f"{temppath.parent}/{create_iso_date_string()}_gfcr.xlsx")
             wb.save(output_path)
         except Exception:
             logger.exception("Error saving workbook")

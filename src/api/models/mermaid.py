@@ -1412,16 +1412,20 @@ class FishFamily(FishAttribute):
         self._biomass_b = None
         self._biomass_c = None
         self._max_length = None
-        if family.get("biomass_constant_a") is not None:
-            self._biomass_a = round(family.get("biomass_constant_a"), 6)
-        if family.get("biomass_constant_b") is not None:
-            self._biomass_b = round(family.get("biomass_constant_b"), 6)
-        if family.get("biomass_constant_c") is not None:
-            self._biomass_c = round(family.get("biomass_constant_c"), 6)
-        if family.get("max_length") is not None:
-            self._max_length = round(family.get("max_length"), 6)
+        self._regions = []
 
-        self._regions = FishFamily.regions_agg.get(str(self.pk))
+        if family is not None:
+            if family.get("biomass_constant_a") is not None:
+                self._biomass_a = round(family.get("biomass_constant_a"), 6)
+            if family.get("biomass_constant_b") is not None:
+                self._biomass_b = round(family.get("biomass_constant_b"), 6)
+            if family.get("biomass_constant_c") is not None:
+                self._biomass_c = round(family.get("biomass_constant_c"), 6)
+            if family.get("max_length") is not None:
+                self._max_length = round(family.get("max_length"), 6)
+
+        if FishFamily.regions_agg is not None:
+            self._regions = FishFamily.regions_agg.get(str(self.pk), [])
 
         return FishFamily.species_agg
 
@@ -1513,16 +1517,19 @@ class FishGenus(FishAttribute):
         self._biomass_b = None
         self._biomass_c = None
         self._max_length = None
-        if genus.get("biomass_constant_a") is not None:
-            self._biomass_a = round(genus.get("biomass_constant_a"), 6)
-        if genus.get("biomass_constant_b") is not None:
-            self._biomass_b = round(genus.get("biomass_constant_b"), 6)
-        if genus.get("biomass_constant_c") is not None:
-            self._biomass_c = round(genus.get("biomass_constant_c"), 6)
-        if genus.get("max_length") is not None:
-            self._max_length = genus.get("max_length")
+        self._regions = None
+        if genus is not None:
+            if genus.get("biomass_constant_a") is not None:
+                self._biomass_a = round(genus.get("biomass_constant_a"), 6)
+            if genus.get("biomass_constant_b") is not None:
+                self._biomass_b = round(genus.get("biomass_constant_b"), 6)
+            if genus.get("biomass_constant_c") is not None:
+                self._biomass_c = round(genus.get("biomass_constant_c"), 6)
+            if genus.get("max_length") is not None:
+                self._max_length = genus.get("max_length")
 
-        self._regions = FishGenus.regions_agg.get(str(self.pk))
+        if FishGenus.regions_agg is not None:
+            self._regions = FishGenus.regions_agg.get(str(self.pk))
 
         return FishGenus.species_agg
 

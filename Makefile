@@ -125,9 +125,11 @@ test:
 # Assume local profile name in ~/.aws/config is `mermaid`
 
 cloudshell:
-	$(eval taskid=$(shell aws ecs list-tasks --profile mermaid --cluster $(MERMAID_CLUSTER) --service-name $(MERMAID_SERVICE) --output text | awk -F'/' '{print $$3}'))
+	$(eval taskid=$(shell aws ecs list-tasks --region us-east-1 --profile mermaid --cluster $(MERMAID_CLUSTER) --service-name $(MERMAID_SERVICE) --output text | awk -F'/' '{print $$3}'))
+	echo $(taskid)
 	aws ecs execute-command  \
 		--profile mermaid \
+		--region us-east-1 \
 		--cluster $(MERMAID_CLUSTER) \
 		--task $(taskid) \
 		--container MermaidAPI \

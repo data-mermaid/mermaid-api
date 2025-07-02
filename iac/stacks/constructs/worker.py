@@ -53,16 +53,12 @@ class QueueWorker(Construct):
             # SQS queue's ApproximateNumberOfMessagesVisible metric
             scaling_steps=[
                 # when <=10 messages, scale down
-                appscaling.ScalingInterval(upper=10, change=-1),
+                appscaling.ScalingInterval(upper=100, change=-1),
                 # when >=10 messages, scale up
-                appscaling.ScalingInterval(lower=10, change=+1),
+                appscaling.ScalingInterval(lower=100, change=+1),
             ],
-            capacity_provider_strategies=[
-                ecs.CapacityProviderStrategy(
-                    capacity_provider="mermaid-api-infra-common-AsgCapacityProvider760D11D9-iqzBF6LfX313",
-                    weight=100,
-                )
-            ],
+            capacity_provider_strategies=cluster.default_capacity_provider_strategy,
+            # circuit_breaker=ecs.DeploymentCircuitBreaker(enable=True, rollback=True),
         )
         # Allow workers to send messages.
         job_queue.queue.grant(

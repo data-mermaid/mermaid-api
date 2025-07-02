@@ -2,11 +2,9 @@ from time import time
 
 from django.conf import settings
 from django.core.management.base import BaseCommand
-from django.utils import timezone
 
 from api.models import Project
-from api.utils.q import submit_job
-from api.utils.summary_cache import update_summary_cache
+from api.utils.summary_cache import add_project_to_queue, update_summary_cache
 
 
 class Command(BaseCommand):
@@ -57,14 +55,7 @@ class Command(BaseCommand):
             if in_foreground:
                 update_summary_cache(project_id=project.pk, skip_test_project=skip_test_projects)
             else:
-                submit_job(
-                    5,
-                    True,
-                    update_summary_cache,
-                    project_id=project.pk,
-                    skip_test_project=skip_test_projects,
-                    timestamp=timezone.now(),
-                )
+                add_project_to_queue(project.pk, skip_test_projects)
 
         end_time = time()
         print(f"Done: {end_time - start_time:.3f}s")
