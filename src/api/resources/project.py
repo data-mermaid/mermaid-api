@@ -147,26 +147,26 @@ class ProjectSerializer(BaseProjectSerializer):
         return p
 
     def update(self, instance, validated_data):
+        request = self.context.get("request")
+        profile = request.user.profile
+
         tags_data = []
         if "tags" in validated_data:
             tags_data = validated_data["tags"].get("all") or []
             del validated_data["tags"]
         instance = super().update(instance, validated_data)
 
-        tags = [t.name for t in tags_data]
-        existing_tags = [t["name"] for t in Tag.objects.filter(name__in=tags).values("name")]
-        new_tags = [t for t in tags if t not in existing_tags]
-        instance.tags.set(tags)
-
-        if new_tags:
-            request = self.context.get("request")
-            profile = request.user.profile
-            for t in new_tags:
-                tag = Tag.objects.get(name=t)
-                tag.created_by = profile
-                tag.updated_by = profile
+        # Pre-create any missing tags with created_by/updated_by, ensuring post-save signal triggers email
+        tag_names = [t.name for t in tags_data]
+        existing_tags = Tag.objects.filter(name__in=tag_names)
+        existing_names = set(t.name for t in existing_tags)
+        for name in tag_names:
+            if name not in existing_names:
+                tag = Tag(name=name, created_by=profile, updated_by=profile)
                 tag.save()
 
+        # all tags now exist and have metadata
+        instance.tags.set(tag_names)
         return instance
 
 

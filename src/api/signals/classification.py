@@ -41,6 +41,8 @@ def delete_images_on_model_delete(sender, instance, **kwargs):
         instance.image.delete(save=False)
     if instance.thumbnail:
         instance.thumbnail.delete(save=False)
+    if instance.feature_vector_file:
+        instance.feature_vector_file.delete(save=False)
     if instance.annotations_file:
         instance.annotations_file.delete(save=False)
 
