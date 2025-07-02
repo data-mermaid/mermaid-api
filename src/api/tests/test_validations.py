@@ -1,6 +1,9 @@
 from api.resources.collect_record import CollectRecordSerializer
-from api.submission.validations import ERROR, IGNORE, OK, WARN
-from api.submission.validations2 import (
+from api.submission.validations import (
+    ERROR,
+    IGNORE,
+    OK,
+    WARN,
     ValidationRunner,
     belt_fish,
     benthic_lit,

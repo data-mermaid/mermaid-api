@@ -17,7 +17,7 @@ from rest_framework.utils.encoders import JSONEncoder
 from taggit.managers import TaggableManager
 from taggit.models import GenericUUIDTaggedItemBase, TagBase
 
-from ..utils import STALE, create_timestamp, expired_timestamp, get_sample_unit_number
+from ..utils import create_timestamp, expired_timestamp, get_sample_unit_number
 from ..utils.related import get_related_project
 from .base import (
     APPROVAL_STATUSES,
@@ -1848,6 +1848,9 @@ class CollectRecord(BaseModel):
         if ignore_stage is False:
             self.stage = self.SAVED_STAGE
             self.validations = self.validations or {}
+
+            from ..submission.validations.statuses import STALE
+
             self.validations["status"] = STALE
 
         self.ensure_obs_ids()
