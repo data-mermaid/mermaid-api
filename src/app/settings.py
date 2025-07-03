@@ -282,10 +282,7 @@ boto3_client = boto3.client(
     region_name=AWS_REGION,
 )
 
-# ***************
-# ** MAILCHIMP **
-# ***************
-
+# MAILCHIMP
 MC_API_KEY = os.environ.get("MC_API_KEY")
 MC_USER = os.environ.get("MC_USER")
 MC_LIST_ID = os.environ.get("MC_LIST_ID")
