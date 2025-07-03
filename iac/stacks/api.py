@@ -47,6 +47,7 @@ class ApiStack(Stack):
         api_zone: r53.HostedZone,
         image_processing_bucket: s3.Bucket,
         use_fifo_queues: str,
+        report_s3_creds: secrets.Secret,
         **kwargs,
     ) -> None:
         super().__init__(scope, id, **kwargs)
@@ -124,6 +125,12 @@ class ApiStack(Stack):
             ),
             "IMAGE_BUCKET_AWS_SECRET_ACCESS_KEY": ecs.Secret.from_secrets_manager(
                 get_secret_object(self, config.api.image_bucket_aws_secret_access_key)
+            ),
+            "REPORT_S3_ACCESS_KEY_ID": ecs.Secret.from_secrets_manager(
+                report_s3_creds, "access_key"
+            ),
+            "REPORT_S3_SECRET_ACCESS_KEY": ecs.Secret.from_secrets_manager(
+                report_s3_creds, "secret_key"
             ),
         }
 

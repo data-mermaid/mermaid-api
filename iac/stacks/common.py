@@ -313,6 +313,48 @@ class CommonStack(Stack):
                 open=True,
             )
 
+        self.report_s3_user = iam.User(
+            self,
+            "ReportS3User",
+            user_name="report_s3_user",
+        )
+        report_s3_policy = iam.Policy(
+            self,
+            "ReportS3UserPolicy",
+            statements=[
+                iam.PolicyStatement(
+                    actions=["s3:GetObject", "s3:PutObject"],
+                    effect=iam.Effect.ALLOW,
+                    resources=[f"{self.data_bucket.bucket_arn}/*"],
+                ),
+            ],
+        )
+        self.report_s3_user.attach_inline_policy(report_s3_policy)
+
+        access_key = iam.CfnAccessKey(
+            self,
+            "ReportS3UserAccessKey",
+            user_name=self.report_s3_user.user_name,
+        )
+        self.report_s3_user_access_key = access_key.ref
+        self.report_s3_user_secret_key = access_key.attr_secret_access_key
+
+        # Create secret for the report S3 user credentials
+        self.report_s3_creds = sm.Secret(
+            self,
+            "ReportS3UserSecret",
+            secret_name="common/report-s3-user/creds",
+            generate_secret_string=sm.SecretStringGenerator(
+                secret_string_template=json.dumps(
+                    {
+                        "username": self.report_s3_user.user_name,
+                        "access_key": self.report_s3_user_access_key,
+                        "secret_key": self.report_s3_user_secret_key,
+                    }
+                ),
+                generate_string_key="password",
+            ),
+        )
 
 
 def create_cdk_bot_user(self, account: str):

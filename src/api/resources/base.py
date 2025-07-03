@@ -47,7 +47,7 @@ from ..permissions import (
 )
 from ..utils.auth0utils import get_jwt_token, get_unverified_profile
 from ..utils.project import citation_retrieved_text
-from .mixins import MethodAuthenticationMixin, OrFilterSetMixin, UpdatesMixin
+from .mixins import MethodAuthenticationMixin, OrFilterSetMixin
 
 
 class ModelNameReadOnlyField(serializers.Field):
@@ -519,7 +519,7 @@ class BaseSUObsFilterSet(BaseSEFilterSet):
         ]
 
 
-class BaseApiViewSet(MethodAuthenticationMixin, viewsets.ModelViewSet, UpdatesMixin):
+class BaseApiViewSet(MethodAuthenticationMixin, viewsets.ModelViewSet):
     """
     Include this as mixin to make your ListAPIView paginated & give it the ability to order by field name
     """

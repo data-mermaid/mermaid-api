@@ -4,7 +4,7 @@ from typing import Literal, Optional, Tuple, Union
 
 from dotty_dict import dotty
 
-from ....utils import ERROR, IGNORE, OK, STALE, WARN
+from api.submission.validations.statuses import ERROR, IGNORE, OK, STALE, WARN
 
 STATUSES: Tuple[str] = (ERROR, IGNORE, OK, WARN, STALE)
 

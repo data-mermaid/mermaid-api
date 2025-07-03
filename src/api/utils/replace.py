@@ -62,7 +62,6 @@ def replace_collect_record_owner(project_id, from_profile, to_profile, updated_b
     )
     num_collect_records_updated = collect_records.count()
 
-    new_collect_records = []
     for collect_record in collect_records:
         Revision.create_from_instance(
             instance=collect_record,
@@ -77,15 +76,11 @@ def replace_collect_record_owner(project_id, from_profile, to_profile, updated_b
             related_to_profile_id=to_profile.pk,
         )
 
-        collect_record.pk = None
-        collect_record.profile = to_profile
-        collect_record.updated_on = updated_on
-        collect_record.updated_by = updated_by
-
-        new_collect_records.append(collect_record)
-
-    CollectRecord.objects.bulk_create(new_collect_records)
-    collect_records.delete()
+    collect_records.update(
+        profile=to_profile,
+        updated_by=updated_by,
+        updated_on=updated_on,
+    )
 
     # Trigger new revision for project profiles
     from_project_profile = from_profile.projects.get(project_id=project_id)
