@@ -2,11 +2,8 @@ import pytest
 
 from api.models import BenthicTransect, HabitatComplexity, Observer
 from api.resources.collect_record import CollectRecordSerializer
-from api.submission.validations2.validators import (
-    ERROR,
-    OK,
-    UniqueBenthicTransectValidator,
-)
+from api.submission.validations import ERROR, OK
+from api.submission.validations.validators import UniqueBenthicTransectValidator
 
 
 def _get_validator():

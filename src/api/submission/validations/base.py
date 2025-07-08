@@ -4,7 +4,8 @@ from typing import List, Literal, Union
 
 from dotty_dict import dotty
 
-from .validators import ERROR, IGNORE, OK, WARN, BaseValidator, ValidatorResult
+from .statuses import ERROR, IGNORE, OK, WARN
+from .validators import BaseValidator, ValidatorResult
 
 RECORD_KEY = "$record"
 RECORD_LEVEL = "record"

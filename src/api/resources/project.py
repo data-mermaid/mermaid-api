@@ -14,7 +14,6 @@ from rest_framework.response import Response
 from ..auth_backends import AnonymousJWTAuthentication
 from ..exceptions import check_uuid
 from ..models import (
-    ArchivedRecord,
     Management,
     Profile,
     Project,
@@ -148,26 +147,26 @@ class ProjectSerializer(BaseProjectSerializer):
         return p
 
     def update(self, instance, validated_data):
+        request = self.context.get("request")
+        profile = request.user.profile
+
         tags_data = []
         if "tags" in validated_data:
             tags_data = validated_data["tags"].get("all") or []
             del validated_data["tags"]
         instance = super().update(instance, validated_data)
 
-        tags = [t.name for t in tags_data]
-        existing_tags = [t["name"] for t in Tag.objects.filter(name__in=tags).values("name")]
-        new_tags = [t for t in tags if t not in existing_tags]
-        instance.tags.set(tags)
-
-        if new_tags:
-            request = self.context.get("request")
-            profile = request.user.profile
-            for t in new_tags:
-                tag = Tag.objects.get(name=t)
-                tag.created_by = profile
-                tag.updated_by = profile
+        # Pre-create any missing tags with created_by/updated_by, ensuring post-save signal triggers email
+        tag_names = [t.name for t in tags_data]
+        existing_tags = Tag.objects.filter(name__in=tag_names)
+        existing_names = set(t.name for t in existing_tags)
+        for name in tag_names:
+            if name not in existing_names:
+                tag = Tag(name=name, created_by=profile, updated_by=profile)
                 tag.save()
 
+        # all tags now exist and have metadata
+        instance.tags.set(tag_names)
         return instance
 
 
@@ -444,50 +443,6 @@ class ProjectViewSet(BaseApiViewSet):
         except Exception as err:
             print(err)
             raise exceptions.APIException(detail=f"[{type(err).__name__}] Copying project") from err
-
-    def get_updates(self, request, *args, **kwargs):
-        added, updated, deleted = super().get_updates(request, *args, **kwargs)
-
-        if request.user is None or hasattr(request.user, "profile") is False:
-            return added, updated, deleted
-
-        # Need to track changes to Project profile to decide if projects should be
-        # added or removed from list
-        serializer = self.get_serializer_class()
-        context = {"request": request}
-        timestamp = self.get_update_timestamp(request)
-        added_filter = dict()
-        removed_filter = dict(app_label="api", model="projectprofile")
-        removed_filter["record__fields__profile"] = str(request.user.profile.id)
-
-        # Additions
-        self.apply_query_param(added_filter, "created_on__gte", timestamp)
-        added_filter["profile"] = request.user.profile
-        updated_ons = []
-        projects = []
-        project_profiles = ProjectProfile.objects.select_related("project")
-        project_profiles = project_profiles.prefetch_related(
-            "project__sites", "project__sites__country"
-        )
-        project_profiles = project_profiles.filter(**added_filter)
-        for pp in project_profiles:
-            updated_ons.append(pp.updated_on)
-            projects.append(pp.project)
-
-        serialized_recs = serializer(projects, many=True, context=context).data
-        additions = list(zip(updated_ons, serialized_recs))
-
-        added.extend(additions)
-
-        # Deletions
-        self.apply_query_param(removed_filter, "created_on__gte", timestamp)
-        removed = [
-            (ar.created_on, dict(id=ar.project_pk, timestamp=ar.created_on))
-            for ar in ArchivedRecord.objects.filter(**removed_filter)
-        ]
-        deleted.extend(removed)
-
-        return added, updated, deleted
 
     def _find_and_replace_objs(self, request, pk, obj_cls, field, *args, **kwargs):
         project_id = pk
