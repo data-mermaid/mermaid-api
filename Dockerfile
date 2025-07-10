@@ -13,16 +13,22 @@ ENV PYTHONUNBUFFERED=1
 ENV DJANGO_SETTINGS_MODULE=app.settings
 
 # Install OS dependencies
-RUN apt-get update && apt-get upgrade -y
-RUN apt-get install -y --no-install-recommends \
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    wget gnupg lsb-release ca-certificates \
+ && echo "deb http://apt.postgresql.org/pub/repos/apt $(lsb_release -cs)-pgdg main" > /etc/apt/sources.list.d/pgdg.list \
+ && wget --quiet -O - https://www.postgresql.org/media/keys/ACCC4CF8.asc | apt-key add - \
+ && apt-get update \
+ && apt-get install -y --no-install-recommends  \
     git \
     gnupg \
     build-essential \
     libpq-dev \
     python3-dev \
-    postgresql-client-13 \
+    postgresql-client-16 \
     gdal-bin \
-    python3-gdal
+    python3-gdal \
+ && apt-get purge -y --auto-remove gnupg lsb-release \
+ && rm -rf /var/lib/apt/lists/*
 
 # gunicorn will listen on this port
 EXPOSE 8081

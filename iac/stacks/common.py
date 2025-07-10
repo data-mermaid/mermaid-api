@@ -79,10 +79,11 @@ class CommonStack(Stack):
             self,
             "PostgresRdsV2",
             vpc=self.vpc,
-            engine=rds.DatabaseInstanceEngine.postgres(version=rds.PostgresEngineVersion.VER_13_7),
+            engine=rds.DatabaseInstanceEngine.postgres(version=rds.PostgresEngineVersion.VER_16_9),
+            allow_major_version_upgrade=True,
             instance_type=ec2.InstanceType.of(
                 ec2.InstanceClass.BURSTABLE3,
-                ec2.InstanceSize.SMALL,
+                ec2.InstanceSize.MEDIUM,
             ),
             vpc_subnets=ec2.SubnetSelection(subnet_type=ec2.SubnetType.PRIVATE_ISOLATED),
             backup_retention=Duration.days(7),

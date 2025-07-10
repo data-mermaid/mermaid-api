@@ -11,7 +11,7 @@ services:
 
   api_db:
     container_name: api_db
-    image: postgis/postgis:13-3.2-alpine
+    image: postgis/postgis:16-3.5-alpine
     volumes:
       - pg_data:/var/lib/postgresql/data
     environment:
