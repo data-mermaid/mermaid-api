@@ -80,6 +80,7 @@ class CommonStack(Stack):
             "PostgresRdsV2",
             vpc=self.vpc,
             engine=rds.DatabaseInstanceEngine.postgres(version=rds.PostgresEngineVersion.VER_16_9),
+            allow_major_version_upgrade=True,
             instance_type=ec2.InstanceType.of(
                 ec2.InstanceClass.BURSTABLE3,
                 ec2.InstanceSize.MEDIUM,
