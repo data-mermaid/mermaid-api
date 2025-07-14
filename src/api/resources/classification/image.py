@@ -61,7 +61,7 @@ class ImageSerializer(DynamicFieldsMixin, BaseAPISerializer):
     class Meta:
         model = Image
         additional_fields = ["classification_status"]
-        exclude = ["original_image_checksum"]
+        exclude = []
 
     def get_classification_status(self, obj):
         latest_status = obj.statuses.order_by("-created_on").first()

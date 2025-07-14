@@ -1,6 +1,8 @@
 from collections import defaultdict
 
-from ....models import Annotation, Classifier, Image
+from django.db.models import Prefetch
+
+from ....models import Annotation, Classifier, Image, ObsBenthicPhotoQuadrat
 from .base import ERROR, OK, WARN, BaseValidator, validate_list, validator_result
 from .region import BaseRegionValidator
 
@@ -26,6 +28,71 @@ class ImageCountValidator(BaseValidator):
             return WARN, self.DIFFERENT_NUMBER_OF_IMAGES
 
         return OK
+
+
+class DuplicateImageValidator(BaseValidator):
+    DUPLICATE_IMAGES = "duplicate_images"
+
+    def __init__(self, **kwargs):
+        super().__init__(**kwargs)
+
+    @validator_result
+    def __call__(self, collect_record, **kwargs):
+        cr_id = collect_record.get("id")
+        project_id = collect_record.get("project")
+        if not project_id:
+            return OK
+        cr_images = Image.objects.filter(collect_record_id=cr_id)
+        if len(cr_images) < 2:
+            return OK
+
+        # Preload all duplicate candidates in project with matching checksums
+        checksums = set(img.original_image_checksum for img in cr_images)
+        duplicate_images = (
+            Image.objects.filter(
+                original_image_checksum__in=checksums,
+                **{
+                    f"obs_benthic_photo_quadrats__{ObsBenthicPhotoQuadrat.project_lookup}": project_id
+                },
+            )
+            .prefetch_related(
+                Prefetch(
+                    "obs_benthic_photo_quadrats",
+                    queryset=ObsBenthicPhotoQuadrat.objects.only(
+                        "image_id", "benthic_photo_quadrat_transect_id"
+                    ),
+                )
+            )
+            .distinct()
+        )
+
+        duplicates_by_checksum = defaultdict(list)
+        for img in duplicate_images:
+            benthicpqt_id = ""
+            if img.obs_benthic_photo_quadrats.all():
+                benthicpqt_id = str(
+                    img.obs_benthic_photo_quadrats.all()[0].benthic_photo_quadrat_transect_id
+                )
+
+            duplicates_by_checksum[img.original_image_checksum].append(
+                {
+                    "image_id": str(img.id),
+                    "benthicpqt_id": benthicpqt_id,
+                    "original_image_name": img.original_image_name,
+                    "original_image_checksum": img.original_image_checksum,
+                }
+            )
+
+        duplicates = defaultdict(list)
+        for cr_image in cr_images:
+            dups = duplicates_by_checksum.get(cr_image.original_image_checksum, [])
+            for dup in dups:
+                duplicates[str(cr_image.id)].append(dup)
+
+        if not duplicates:
+            return OK
+
+        return WARN, self.DUPLICATE_IMAGES, {"duplicates": duplicates}
 
 
 class BaseAnnotationValidator(BaseValidator):

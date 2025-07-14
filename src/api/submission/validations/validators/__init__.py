@@ -7,6 +7,7 @@ from .benthic_transect import (
 from .biomass import BiomassValidator
 from .classification_benthic_photo_quadrat import (
     AnnotationRegionValidator,
+    DuplicateImageValidator,
     ImageCountValidator,
     ListAnnotationConfirmedValidator,
     ListAnnotationUnclassifiedValidator,
