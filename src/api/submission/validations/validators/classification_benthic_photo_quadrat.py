@@ -43,7 +43,7 @@ class DuplicateImageValidator(BaseValidator):
         if not project_id:
             return OK
         cr_images = Image.objects.filter(collect_record_id=cr_id)
-        if len(cr_images) < 2:
+        if cr_images.count() < 2:
             return OK
 
         # Preload all duplicate candidates in project with matching checksums
