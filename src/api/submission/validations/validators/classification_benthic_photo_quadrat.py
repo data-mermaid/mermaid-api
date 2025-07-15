@@ -1,8 +1,14 @@
 from collections import defaultdict
 
-from django.db.models import Prefetch
+from django.db.models import Prefetch, Q
 
-from ....models import Annotation, Classifier, Image, ObsBenthicPhotoQuadrat
+from ....models import (
+    Annotation,
+    Classifier,
+    CollectRecord,
+    Image,
+    ObsBenthicPhotoQuadrat,
+)
 from .base import ERROR, OK, WARN, BaseValidator, validate_list, validator_result
 from .region import BaseRegionValidator
 
@@ -49,11 +55,18 @@ class DuplicateImageValidator(BaseValidator):
         # Preload all duplicate candidates in project with matching checksums
         checksums = set(img.original_image_checksum for img in cr_images)
         duplicate_images = (
-            Image.objects.filter(
-                original_image_checksum__in=checksums,
-                **{
-                    f"obs_benthic_photo_quadrats__{ObsBenthicPhotoQuadrat.project_lookup}": project_id
-                },
+            Image.objects.filter(original_image_checksum__in=checksums)
+            .filter(
+                Q(
+                    **{
+                        f"obs_benthic_photo_quadrats__{ObsBenthicPhotoQuadrat.project_lookup}": project_id
+                    }
+                )
+                | Q(
+                    collect_record_id__in=CollectRecord.objects.filter(
+                        project_id=project_id
+                    ).values("id")
+                )
             )
             .prefetch_related(
                 Prefetch(
@@ -65,7 +78,6 @@ class DuplicateImageValidator(BaseValidator):
             )
             .distinct()
         )
-
         duplicates_by_checksum = defaultdict(list)
         for img in duplicate_images:
             benthicpqt_id = ""
@@ -73,11 +85,15 @@ class DuplicateImageValidator(BaseValidator):
                 benthicpqt_id = str(
                     img.obs_benthic_photo_quadrats.all()[0].benthic_photo_quadrat_transect_id
                 )
+            collect_record_id = ""
+            if img.collect_record_id:
+                collect_record_id = str(img.collect_record_id)
 
             duplicates_by_checksum[img.original_image_checksum].append(
                 {
                     "image_id": str(img.id),
                     "benthicpqt_id": benthicpqt_id,
+                    "collect_record_id": collect_record_id,
                     "original_image_name": img.original_image_name,
                     "original_image_checksum": img.original_image_checksum,
                 }
@@ -87,7 +103,9 @@ class DuplicateImageValidator(BaseValidator):
         for cr_image in cr_images:
             dups = duplicates_by_checksum.get(cr_image.original_image_checksum, [])
             for dup in dups:
-                duplicates[str(cr_image.id)].append(dup)
+                cr_image_id = str(cr_image.id)
+                if dup["image_id"] != cr_image_id:
+                    duplicates[cr_image_id].append(dup)
 
         if not duplicates:
             return OK
