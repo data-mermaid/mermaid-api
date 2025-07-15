@@ -3,9 +3,6 @@ import uuid
 
 from django.conf import settings
 from django.contrib.postgres.aggregates import ArrayAgg
-from django.core.exceptions import FieldDoesNotExist
-from django.db.models.fields.related import ForeignObjectRel
-from django.db.models.sql.constants import ORDER_PATTERN
 from django_filters import (
     BaseInFilter,
     CharFilter,
@@ -376,55 +373,6 @@ class BaseAPIFilterSet(FilterSet):
         fields = ["created_on", "updated_on", "created_by", "updated_by"]
 
 
-class RelatedOrderingFilter(OrderingFilter):
-    """
-    Extends OrderingFilter to support ordering by fields in related models
-    using the Django ORM __ notation
-    https://github.com/tomchristie/django-rest-framework/issues/1005
-    """
-
-    # ensure unique pagination when not enough ordering fields are specified; requires "id" field
-    def get_ordering(self, request, queryset, view):
-        ordering = super().get_ordering(request, queryset, view) or []
-        if "id" not in ordering:
-            ordering.append("id")
-        return ordering
-
-    def is_valid_field(self, model, field_name):
-        """
-        Return true if the field exists within the model (or in the related
-        model specified using the Django ORM __ notation)
-        """
-        components = field_name.split("__", 1)
-        try:
-            field = model._meta.get_field(components[0])
-
-            # reverse relation
-            if isinstance(field, ForeignObjectRel) and len(components) == 2:
-                return self.is_valid_field(field.related_model, components[1])
-
-            # foreign key
-            if field.related_model and len(components) == 2:
-                return self.is_valid_field(field.related_model, components[1])
-            return True
-        except FieldDoesNotExist:
-            return False
-
-    def remove_invalid_fields(self, queryset, fields, view, request):
-        valid_fields = [
-            item[0] for item in self.get_valid_fields(queryset, view, {"request": request})
-        ]
-        valid_model_fields = [
-            term for term in fields if self.is_valid_field(queryset.model, term.lstrip("-"))
-        ]
-        valid_fields = set(valid_fields + valid_model_fields)
-        return [
-            term
-            for term in fields
-            if term.lstrip("-") in valid_fields and ORDER_PATTERN.match(term)
-        ]
-
-
 class SafeSearchFilter(SearchFilter):
     def _check_search_terms(self, search_fields, search_terms):
         if not search_fields or not search_terms or "$" not in [sf[0] for sf in search_fields]:
@@ -526,7 +474,7 @@ class BaseApiViewSet(MethodAuthenticationMixin, viewsets.ModelViewSet):
 
     pagination_class = StandardResultPagination
 
-    filter_backends = (DjangoFilterBackend, RelatedOrderingFilter, SafeSearchFilter)
+    filter_backends = (DjangoFilterBackend, OrderingFilter, SafeSearchFilter)
 
     _serializer_class_for_fields = {}
 

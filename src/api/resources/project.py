@@ -1,7 +1,7 @@
 import logging
 
 import django_filters
-import psycopg2
+import psycopg
 from django.conf import settings
 from django.db import IntegrityError, transaction
 from django.db.models import JSONField
@@ -571,7 +571,7 @@ class ProjectViewSet(BaseApiViewSet):
         except IntegrityError as ie:
             if (
                 hasattr(ie.__cause__, "pgcode")
-                and ie.__cause__.pgcode == psycopg2.errorcodes.UNIQUE_VIOLATION
+                and ie.__cause__.pgcode == psycopg.errorcodes.UNIQUE_VIOLATION
             ):
                 raise exceptions.ValidationError(
                     detail={"email": "Profile has already been added to project"}

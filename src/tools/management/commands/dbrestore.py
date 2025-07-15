@@ -13,6 +13,7 @@ class Command(BaseCommand):
     requires_system_checks = False
 
     def __init__(self):
+        self.requires_system_checks = []
         super(Command, self).__init__()
         self.env = os.environ.get("ENV", "none").lower()
         self.restore = self.env

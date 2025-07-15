@@ -4,8 +4,8 @@ import random
 import string
 from urllib.request import urlopen
 
-from auth0.v3.authentication import GetToken
-from auth0.v3.management import Auth0
+from auth0.authentication import GetToken
+from auth0.management import Auth0
 from django.utils.encoding import smart_str
 from django.utils.translation import gettext as _
 from jose import jws, jwt

@@ -24,7 +24,7 @@ from exif import Image as ExifImage
 from PIL import Image as PILImage
 from PIL.ExifTags import TAGS
 from plum.exceptions import UnpackError
-from spacer.extract_features import EfficientNetExtractor
+from spacer.extractors import EfficientNetExtractor
 from spacer.messages import ClassifyFeaturesMsg, DataLocation, ExtractFeaturesMsg
 from spacer.tasks import classify_features, extract_features
 
