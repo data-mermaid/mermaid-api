@@ -123,3 +123,13 @@ class BaseValidator:
             return data[key]
         except KeyError:
             return None
+
+    def get_numeric_value(self, record, key):
+        data = dotty(record)
+        try:
+            value = data[key]
+            if value in (None, ""):
+                return 0
+            return value
+        except KeyError:
+            return 0

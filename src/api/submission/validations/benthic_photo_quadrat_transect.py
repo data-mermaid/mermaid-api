@@ -12,6 +12,7 @@ from .validators import (
     AnnotationRegionValidator,
     DepthValidator,
     DrySubmitValidator,
+    DuplicateImageValidator,
     DuplicateValidator,
     ImageCountValidator,
     LenSurveyedValidator,
@@ -325,6 +326,12 @@ bpqt_classification_validations = bpqt_base_validations + [
         validator=ImageCountValidator(
             num_quadrats_path="data.quadrat_transect.num_quadrats",
         ),
+        paths=[],
+        validation_level=RECORD_LEVEL,
+        validation_type=VALUE_VALIDATION_TYPE,
+    ),
+    Validation(
+        validator=DuplicateImageValidator(),
         paths=[],
         validation_level=RECORD_LEVEL,
         validation_type=VALUE_VALIDATION_TYPE,

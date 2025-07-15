@@ -72,13 +72,16 @@ def create_image_name(image: Image) -> str:
 
 
 def create_image_checksum(image: ImageFieldFile) -> str:
-    if image.closed:
-        image.open("rb")
-    file_hash = hashlib.sha256()
+    if not image.closed:
+        image.close()
+    image.open("rb")
+    image.seek(0)
 
-    for chunk in image.chunks():
+    file_hash = hashlib.sha256()
+    for chunk in image.chunks(chunk_size=8192):
         file_hash.update(chunk)
 
+    image.close()
     return file_hash.hexdigest()
 
 
