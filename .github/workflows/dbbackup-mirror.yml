@@ -8,7 +8,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: rclone copy
-        uses: data-mermaid/backup/rclone@v1
+        uses: data-mermaid/backup/rclone@v2
         env:
           RCLONE_CONF: ${{ secrets.RCLONE_CONF }}
         with:
