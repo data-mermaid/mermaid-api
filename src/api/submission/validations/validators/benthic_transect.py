@@ -122,8 +122,8 @@ class BenthicIntervalObservationCountValidator(BaseValidator):
         tolerance = 1
         observations = self.get_value(collect_record, self.observations_path) or []
         observations_count = len(observations)
-        len_surveyed = self.get_value(collect_record, self.len_surveyed_path) or 0
-        interval_size = self.get_value(collect_record, self.interval_size_path) or 0
+        len_surveyed = self.get_numeric_value(collect_record, self.len_surveyed_path)
+        interval_size = self.get_numeric_value(collect_record, self.interval_size_path)
 
         if len_surveyed <= 0:
             return ERROR, self.NON_POSITIVE.format("len_surveyed")

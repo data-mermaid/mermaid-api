@@ -12,7 +12,7 @@ class IntervalStartValidator(BaseValidator):
 
     @validator_result
     def __call__(self, collect_record, **kwargs):
-        interval_start = self.get_value(collect_record, self.interval_start_path) or 0
+        interval_start = self.get_numeric_value(collect_record, self.interval_start_path)
         try:
             interval_start = float(interval_start)
         except (TypeError, ValueError):

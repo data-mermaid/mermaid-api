@@ -12,7 +12,7 @@ class IntervalSizeValidator(BaseValidator):
 
     @validator_result
     def __call__(self, collect_record, **kwargs):
-        interval_size = self.get_value(collect_record, self.interval_size_path) or 0
+        interval_size = self.get_numeric_value(collect_record, self.interval_size_path)
         try:
             interval_size = float(interval_size)
         except (TypeError, ValueError):

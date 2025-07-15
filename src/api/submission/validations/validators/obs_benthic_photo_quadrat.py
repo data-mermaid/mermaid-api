@@ -33,7 +33,7 @@ class PointsPerQuadratValidator(BaseValidator):
         for obs in observations:
             quadrat_number = self.get_value(obs, self.observation_quadrat_number_path)
             try:
-                num_points = self.get_value(obs, self.observation_num_points_path) or 0
+                num_points = self.get_numeric_value(obs, self.observation_num_points_path)
             except (TypeError, ValueError):
                 continue
 
@@ -112,7 +112,7 @@ class QuadratNumberSequenceValidator(BaseValidator):
             if isinstance(validator, MaxValueValidator):
                 num_quadrats_max = validator.limit_value
 
-        num_quadrats = self.get_value(collect_record, self.num_quadrats_path) or 0
+        num_quadrats = self.get_numeric_value(collect_record, self.num_quadrats_path)
         # bail out early if num_quadrats will cause list(range()) below to crash server
         if num_quadrats > num_quadrats_max:
             return ERROR, self.LARGE_NUM_QUADRATS, {"max_value": num_quadrats_max}
