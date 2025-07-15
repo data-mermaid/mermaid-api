@@ -16,7 +16,7 @@ class DepthValidator(BaseValidator):
 
     @validator_result
     def __call__(self, collect_record, **kwargs):
-        depth = self.get_value(collect_record, self.depth_path) or 0
+        depth = self.get_numeric_value(collect_record, self.depth_path)
         try:
             depth = Decimal(str(depth))
         except (TypeError, ValueError, InvalidOperation):
