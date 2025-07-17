@@ -19,6 +19,7 @@ exif==1.6.0
 gunicorn==20.1.0
 mailchimp3==3.0.17
 natsort==8.1.0
+newrelic
 openpyxl==3.0.10
 pandas==2.2.3
 pillow==10.4.0
