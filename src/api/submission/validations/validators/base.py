@@ -130,6 +130,14 @@ class BaseValidator:
             value = data[key]
             if value in (None, ""):
                 return 0
+            if isinstance(value, str):
+                # Coerce only if value is a string
+                try:
+                    if "." in value:
+                        return float(value)
+                    return int(value)
+                except ValueError:
+                    return 0
             return value
         except KeyError:
             return 0
