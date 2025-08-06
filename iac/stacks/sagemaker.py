@@ -53,13 +53,11 @@ class SagemakerStack(cdk.Stack):
             export_name=f"{self.prefix}-SourcesBucketName",
         )
 
-        # Grant read access to SageMaker execution role
         self.sm_sources_bucket.grant_read(self.sm_execution_role)
 
         # Create S3 bucket for SageMaker data
         self.sm_data_bucket = self.create_data_bucket()
 
-        # Grant read/write access to SageMaker execution role
         self.sm_data_bucket.grant_read_write(self.sm_execution_role)
 
         self.mermaid_image_processing_bucket = s3.Bucket.from_bucket_arn(
@@ -68,7 +66,6 @@ class SagemakerStack(cdk.Stack):
             bucket_arn="arn:aws:s3:::mermaid-image-processing",
         )
 
-        # Grant read access to SageMaker execution role
         self.mermaid_image_processing_bucket.grant_read(self.sm_execution_role)
 
         self.mermaid_config = s3.Bucket.from_bucket_arn(
@@ -76,7 +73,7 @@ class SagemakerStack(cdk.Stack):
             f"{self.prefix}MermaidConfigBucket",
             bucket_arn="arn:aws:s3:::mermaid-config",
         )
-        # Grant read access to SageMaker execution role
+
         self.mermaid_config.grant_read_write(self.sm_execution_role)
 
         self.coralnet_public_sources = s3.Bucket.from_bucket_arn(
@@ -84,7 +81,7 @@ class SagemakerStack(cdk.Stack):
             f"{self.prefix}CoralnetPublicSourcesBucket",
             bucket_arn="arn:aws:s3:::2310-coralnet-public-sources",
         )
-        # Grant read access to SageMaker execution role
+
         self.coralnet_public_sources.grant_read(self.sm_execution_role)
 
         self.pyspacer_test = s3.Bucket.from_bucket_arn(
@@ -92,7 +89,7 @@ class SagemakerStack(cdk.Stack):
             f"{self.prefix}PyspacerTestBucket",
             bucket_arn="arn:aws:s3:::pyspacer-test",
         )
-        # Grant read access to SageMaker execution role
+
         self.pyspacer_test.grant_read(self.sm_execution_role)
 
         self.security_group = ec2.SecurityGroup(
@@ -174,14 +171,16 @@ class SagemakerStack(cdk.Stack):
         )
 
         role.attach_inline_policy(
-            iam.Policy(self, "MlflowRolePolicy",
+            iam.Policy(
+                self,
+                "MlflowRolePolicy",
                 statements=[
                     iam.PolicyStatement(
                         effect=iam.Effect.ALLOW,
                         actions=["sagemaker-mlflow:*"],
                         resources=["*"],
                     )
-                ]
+                ],
             )
         )
 
