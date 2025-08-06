@@ -67,8 +67,33 @@ class SagemakerStack(cdk.Stack):
             f"{self.prefix}ImageProcessingBucket",
             bucket_arn="arn:aws:s3:::mermaid-image-processing",
         )
+
         # Grant read access to SageMaker execution role
         self.mermaid_image_processing_bucket.grant_read(self.sm_execution_role)
+
+        self.mermaid_config = s3.Bucket.from_bucket_arn(
+            self,
+            f"{self.prefix}MermaidConfigBucket",
+            bucket_arn="arn:aws:s3:::mermaid-config",
+        )
+        # Grant read access to SageMaker execution role
+        self.mermaid_config.grant_read_write(self.sm_execution_role)
+
+        self.coralnet_public_sources = s3.Bucket.from_bucket_arn(
+            self,
+            f"{self.prefix}CoralnetPublicSourcesBucket",
+            bucket_arn="arn:aws:s3:::2310-coralnet-public-sources",
+        )
+        # Grant read access to SageMaker execution role
+        self.coralnet_public_sources.grant_read(self.sm_execution_role)
+
+        self.pyspacer_test = s3.Bucket.from_bucket_arn(
+            self,
+            f"{self.prefix}PyspacerTestBucket",
+            bucket_arn="arn:aws:s3:::pyspacer-test",
+        )
+        # Grant read access to SageMaker execution role
+        self.pyspacer_test.grant_read(self.sm_execution_role)
 
         self.security_group = ec2.SecurityGroup(
             self,
