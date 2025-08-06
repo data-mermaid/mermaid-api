@@ -1,11 +1,11 @@
 import aws_cdk as cdk
 from aws_cdk import (
+    CfnOutput,
+    aws_ec2 as ec2,
     aws_ecs as ecs,
     aws_iam as iam,
     aws_s3 as s3,
     aws_sagemaker as sm,
-    CfnOutput,
-    aws_ec2 as ec2,
 )
 from constructs import Construct
 from settings.settings import ProjectSettings
@@ -32,6 +32,12 @@ class SagemakerStack(cdk.Stack):
         super().__init__(scope, id, **kwargs)
 
         self.prefix = config.env_id
+
+        # Fetch VPC information
+        self.vpc = cluster.vpc
+        private_subnet_ids = [
+            private_subnet.subnet_id for private_subnet in self.vpc.private_subnets
+        ]
 
         # Create IAM role for SageMaker Users
         self.sm_execution_role = self.create_execution_role()
@@ -64,12 +70,6 @@ class SagemakerStack(cdk.Stack):
         # Grant read access to SageMaker execution role
         self.mermaid_image_processing_bucket.grant_read(self.sm_execution_role)
 
-        # Fetch VPC information
-        self.vpc = cluster.vpc
-        private_subnet_ids = [
-            private_subnet.subnet_id for private_subnet in self.vpc.private_subnets
-        ]
-
         self.security_group = ec2.SecurityGroup(
             self,
             f"{self.prefix}SagemakerSecurityGroup",
@@ -100,7 +100,6 @@ class SagemakerStack(cdk.Stack):
                 security_group_ids=[
                     self.security_group.security_group_id,
                 ],
-
             ),
             default_space_settings=sm.CfnDomain.DefaultSpaceSettingsProperty(
                 execution_role=self.sm_execution_role.role_arn,
@@ -147,6 +146,18 @@ class SagemakerStack(cdk.Stack):
                     managed_policy_arn="arn:aws:iam::aws:policy/SageMakerStudioFullAccess",
                 ),
             ],
+        )
+
+        role.attach_inline_policy(
+            iam.Policy(self, "MlflowRolePolicy",
+                statements=[
+                    iam.PolicyStatement(
+                        effect=iam.Effect.ALLOW,
+                        actions=["sagemaker-mlflow:*"],
+                        resources=["*"],
+                    )
+                ]
+            )
         )
 
         CfnOutput(
