@@ -36,3 +36,4 @@ rest_condition==1.0.3
 simpleflake==0.1.5
 timezonefinder==6.1.1
 whitenoise==6.2.0
+sentry-sdk[django]==2.34.1

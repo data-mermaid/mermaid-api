@@ -132,6 +132,9 @@ class ApiStack(Stack):
             "REPORT_S3_SECRET_ACCESS_KEY": ecs.Secret.from_secrets_manager(
                 report_s3_creds, "secret_key"
             ),
+            "SENTRY_DSN": ecs.Secret.from_secrets_manager(
+                config.api.get_secret_object(self, config.api.sentry_dsn)
+            ),
         }
 
         if config.env_id == "dev":
