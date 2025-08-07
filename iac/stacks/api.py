@@ -133,7 +133,7 @@ class ApiStack(Stack):
                 report_s3_creds, "secret_key"
             ),
             "SENTRY_DSN": ecs.Secret.from_secrets_manager(
-                config.api.get_secret_object(self, config.api.sentry_dsn)
+                get_secret_object(self, config.api.sentry_dsn)
             ),
         }
 
