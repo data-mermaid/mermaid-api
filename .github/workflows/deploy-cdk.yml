@@ -50,6 +50,7 @@ jobs:
           DEPLOY_AWS_ROLE: ${{ secrets.DEPLOY_AWS_ROLE }}
         with:
           role-to-assume: arn:aws:iam::${{ secrets.CDK_DEFAULT_ACCOUNT }}:role/${{ secrets.DEPLOY_AWS_ROLE }}
+          role-duration-seconds: 43200
           aws-region: us-east-1
           role-skip-session-tagging: true
       - name: CDK Deploy DEV
