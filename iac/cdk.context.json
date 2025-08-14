@@ -56,5 +56,10 @@
     "us-east-1d",
     "us-east-1e",
     "us-east-1f"
+  ],
+  "endpoint-service-availability-zones:account=554812291621:region=us-east-1:serviceName=aws.sagemaker.us-east-1.experiments": [
+    "us-east-1a",
+    "us-east-1b",
+    "us-east-1d"
   ]
 }

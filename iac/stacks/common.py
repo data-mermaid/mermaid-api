@@ -295,6 +295,7 @@ class CommonStack(Stack):
             "SAGEMAKER_NOTEBOOK",
             "SAGEMAKER_RUNTIME",
             "SAGEMAKER_STUDIO",
+            "SAGEMAKER_EXPERIMENTS",
         ]:
             self.vpc.add_interface_endpoint(
                 f"{service_name}VpcEndpoint",
