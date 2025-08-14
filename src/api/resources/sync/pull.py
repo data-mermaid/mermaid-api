@@ -14,7 +14,7 @@ def _get_subquery(queryset, pk_field_name):
         sql = cur.mogrify(template_sql, params)
     finally:
         cur.close()
-    return sql.decode()
+    return sql
 
 
 def _get_records(viewset, profile_id, filters):
@@ -22,7 +22,7 @@ def _get_records(viewset, profile_id, filters):
     model_class = queryset.model
     pk_field_name = model_class._meta.pk.column
     sub_query = _get_subquery(queryset, pk_field_name)
-    table_name = model_class._meta.db_table
+    table_name = model_class._meta.db_table.replace("'", "''")
 
     # UPDATES
     updates_filters = [

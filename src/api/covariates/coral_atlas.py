@@ -63,7 +63,7 @@ class CoralAtlasCovariate(BaseCovariate):
     def fetch(self, points: List[Tuple[float, float]]) -> List[dict]:
         futures = []
         response = []
-        request_datetime = datetime.datetime.utcnow()
+        request_datetime = datetime.datetime.now(datetime.UTC)
         with ThreadPoolExecutor(max_workers=self.num_threads) as exc:
             for point in points:
                 x, y = point

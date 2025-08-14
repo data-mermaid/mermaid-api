@@ -28,7 +28,10 @@ class Command(BaseCommand):
             self.exit(1)
 
         points = classification.generate_points(img_rec, 25)
-        pil_image = PILImage.open(img_rec.image)
+
+        with img_rec.image.open("rb") as f:
+            pil_image = PILImage.open(f).copy()
+
         draw = ImageDraw.Draw(pil_image)
         for point in points:
             draw.rectangle(

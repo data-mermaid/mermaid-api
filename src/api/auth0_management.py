@@ -1,8 +1,8 @@
 import os
 import time
 
-from auth0.authentication import Database, GetToken
-from auth0.management import Auth0
+from auth0.v3.authentication import Database, GetToken
+from auth0.v3.management import Auth0
 from django.conf import settings
 
 

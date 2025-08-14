@@ -32,6 +32,9 @@ def test_beltfish_su_view(
     url = reverse("beltfishmethod-sampleunit-list", kwargs=dict(project_pk=project1.pk))
     count, data, _ = _call(client, token1, url)
 
+    print("beltfishmethod-sampleunit-list data")
+    print(data)
+
     assert count == 2
     n = 0
     for record in data:
@@ -51,7 +54,12 @@ def test_beltfish_su_view(
             )
 
             biomass_kgha_2 = sum(
-                [obs_belt_fish2_1_biomass, obs_belt_fish2_2_biomass, obs_belt_fish2_3_biomass]
+                [
+                    obs_belt_fish2_1_biomass,
+                    obs_belt_fish2_2_biomass,
+                    obs_belt_fish2_3_biomass,
+                    obs_belt_fish2_4_biomass,
+                ]
             )
 
             assert data[1]["biomass_kgha"] == pytest.approx(biomass_kgha_2, 0.1)

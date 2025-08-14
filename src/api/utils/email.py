@@ -23,7 +23,7 @@ def _get_mermaid_email_content(template, context):
     template_html = f"{path}.html"
     template_text = f"{path}.txt"
     context = context or {}
-    context["timestamp"] = datetime.datetime.utcnow().replace(microsecond=0).isoformat()
+    context["timestamp"] = datetime.datetime.now(datetime.UTC).replace(microsecond=0).isoformat()
 
     text_content = render_to_string(template_text, context=context)
     html_content = None
@@ -161,7 +161,8 @@ def email_report(to_email, local_file_path, protocol):
             settings.AWS_DATA_BUCKET,
             s3_zip_file_key,
             aws_access_key_id=settings.REPORT_S3_ACCESS_KEY_ID,
-            aws_secret_access_key=settings.REPORT_S3_SECRET_ACCESS_KEY,)
+            aws_secret_access_key=settings.REPORT_S3_SECRET_ACCESS_KEY,
+        )
         to = [to_email]
         template = "emails/report.html"
         report_title = PROTOCOL_MAP.get(protocol) or ""

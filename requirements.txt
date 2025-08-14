@@ -1,5 +1,5 @@
-auth0-python==4.10.0
-boto3==1.39.4
+auth0-python==3.23.1
+boto3==1.26.120
 Django==4.2.23
 djangorestframework==3.16.0
 djangorestframework-gis==1.2.0

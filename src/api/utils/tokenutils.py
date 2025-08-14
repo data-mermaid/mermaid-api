@@ -1,11 +1,14 @@
-from datetime import datetime
+import datetime
 
 from django.conf import settings
 from jose import jwt
 
 
 def timestamp():
-    return (datetime.utcnow() - datetime(1970, 1, 1)).total_seconds()
+    return (
+        datetime.datetime.now(datetime.timezone.utc)
+        - datetime.datetime(1970, 1, 1, tzinfo=datetime.timezone.utc)
+    ).total_seconds()
 
 
 def create_token(auth_user_id):
