@@ -3,6 +3,7 @@ import sys
 
 import boto3
 import requests
+import sentry_sdk
 from corsheaders.defaults import default_methods
 
 # Options: None, DEV, PROD
@@ -275,6 +276,14 @@ boto3_client = boto3.client(
 MC_API_KEY = os.environ.get("MC_API_KEY")
 MC_USER = os.environ.get("MC_USER")
 MC_LIST_ID = os.environ.get("MC_LIST_ID")
+
+
+sentry_sdk.init(
+    dsn=os.environ.get("SENTRY_DSN"),
+    traces_sample_rate=1.0,
+    environment=ENVIRONMENT,
+)
+
 
 # ************************
 # ** METRICS MIDDLEWARE **

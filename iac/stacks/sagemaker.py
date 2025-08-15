@@ -1,11 +1,11 @@
 import aws_cdk as cdk
 from aws_cdk import (
+    CfnOutput,
+    aws_ec2 as ec2,
     aws_ecs as ecs,
     aws_iam as iam,
     aws_s3 as s3,
     aws_sagemaker as sm,
-    CfnOutput,
-    aws_ec2 as ec2,
 )
 from constructs import Construct
 from settings.settings import ProjectSettings
@@ -33,6 +33,12 @@ class SagemakerStack(cdk.Stack):
 
         self.prefix = config.env_id
 
+        # Fetch VPC information
+        self.vpc = cluster.vpc
+        private_subnet_ids = [
+            private_subnet.subnet_id for private_subnet in self.vpc.private_subnets
+        ]
+
         # Create IAM role for SageMaker Users
         self.sm_execution_role = self.create_execution_role()
 
@@ -47,13 +53,11 @@ class SagemakerStack(cdk.Stack):
             export_name=f"{self.prefix}-SourcesBucketName",
         )
 
-        # Grant read access to SageMaker execution role
         self.sm_sources_bucket.grant_read(self.sm_execution_role)
 
         # Create S3 bucket for SageMaker data
         self.sm_data_bucket = self.create_data_bucket()
 
-        # Grant read/write access to SageMaker execution role
         self.sm_data_bucket.grant_read_write(self.sm_execution_role)
 
         self.mermaid_image_processing_bucket = s3.Bucket.from_bucket_arn(
@@ -61,14 +65,32 @@ class SagemakerStack(cdk.Stack):
             f"{self.prefix}ImageProcessingBucket",
             bucket_arn="arn:aws:s3:::mermaid-image-processing",
         )
-        # Grant read access to SageMaker execution role
+
         self.mermaid_image_processing_bucket.grant_read(self.sm_execution_role)
 
-        # Fetch VPC information
-        self.vpc = cluster.vpc
-        private_subnet_ids = [
-            private_subnet.subnet_id for private_subnet in self.vpc.private_subnets
-        ]
+        self.mermaid_config = s3.Bucket.from_bucket_arn(
+            self,
+            f"{self.prefix}MermaidConfigBucket",
+            bucket_arn="arn:aws:s3:::mermaid-config",
+        )
+
+        self.mermaid_config.grant_read_write(self.sm_execution_role)
+
+        self.coralnet_public_sources = s3.Bucket.from_bucket_arn(
+            self,
+            f"{self.prefix}CoralnetPublicSourcesBucket",
+            bucket_arn="arn:aws:s3:::2310-coralnet-public-sources",
+        )
+
+        self.coralnet_public_sources.grant_read(self.sm_execution_role)
+
+        self.pyspacer_test = s3.Bucket.from_bucket_arn(
+            self,
+            f"{self.prefix}PyspacerTestBucket",
+            bucket_arn="arn:aws:s3:::pyspacer-test",
+        )
+
+        self.pyspacer_test.grant_read(self.sm_execution_role)
 
         self.security_group = ec2.SecurityGroup(
             self,
@@ -100,7 +122,6 @@ class SagemakerStack(cdk.Stack):
                 security_group_ids=[
                     self.security_group.security_group_id,
                 ],
-
             ),
             default_space_settings=sm.CfnDomain.DefaultSpaceSettingsProperty(
                 execution_role=self.sm_execution_role.role_arn,
@@ -147,6 +168,20 @@ class SagemakerStack(cdk.Stack):
                     managed_policy_arn="arn:aws:iam::aws:policy/SageMakerStudioFullAccess",
                 ),
             ],
+        )
+
+        role.attach_inline_policy(
+            iam.Policy(
+                self,
+                "MlflowRolePolicy",
+                statements=[
+                    iam.PolicyStatement(
+                        effect=iam.Effect.ALLOW,
+                        actions=["sagemaker-mlflow:*"],
+                        resources=["*"],
+                    )
+                ],
+            )
         )
 
         CfnOutput(

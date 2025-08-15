@@ -78,6 +78,8 @@ class DjangoSettings:
     image_bucket_aws_access_key_id: str = "image_bucket_aws_access_key_id-4oRuiU"
     image_bucket_aws_secret_access_key: str = "image_bucket_aws_secret_access_key-OqLDWR"
 
+    sentry_dsn: str = "common/mermaid-api/sentry-FG7fGC"
+
 
 @dataclass
 class ProjectSettings:
