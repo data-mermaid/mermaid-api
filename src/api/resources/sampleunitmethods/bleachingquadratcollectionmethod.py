@@ -818,7 +818,8 @@ class BleachingQCProjectMethodObsColoniesBleachedView(BaseProjectMethodView):
     serializer_class_geojson = BleachingQCMethodObsColoniesBleachedGeoSerializer
     serializer_class_csv = ObsBleachingQCColoniesBleachedCSVSerializer
     filterset_class = BleachingQCMethodColoniesBleachedObsFilterSet
-    order_by = ("site_name", "sample_date", "label", "benthic_attribute", "growth_form")
+    ordering_fields = ["site_name", "sample_date", "label", "benthic_attribute", "growth_form"]
+    ordering = ["site_name", "sample_date", "label", "benthic_attribute", "growth_form"]
 
 
 class BleachingQCProjectMethodObsQuadratBenthicPercentView(BaseProjectMethodView):
@@ -829,7 +830,8 @@ class BleachingQCProjectMethodObsQuadratBenthicPercentView(BaseProjectMethodView
     serializer_class_geojson = BleachingQCMethodObsQuadratBenthicPercentGeoSerializer
     serializer_class_csv = ObsQuadratBenthicPercentCSVSerializer
     filterset_class = BleachingQCMethodQuadratBenthicPercentObsFilterSet
-    order_by = ("site_name", "sample_date", "label", "quadrat_number")
+    ordering_fields = ["site_name", "sample_date", "label", "quadrat_number"]
+    ordering = ["site_name", "sample_date", "label", "quadrat_number"]
 
 
 class BleachingQCProjectMethodSUView(BaseProjectMethodView):
@@ -840,7 +842,8 @@ class BleachingQCProjectMethodSUView(BaseProjectMethodView):
     serializer_class_geojson = BleachingQCMethodSUGeoSerializer
     serializer_class_csv = BleachingQCMethodSUCSVSerializer
     filterset_class = BleachingQCMethodSUFilterSet
-    order_by = ("site_name", "sample_date", "label")
+    ordering_fields = ["site_name", "sample_date", "label"]
+    ordering = ["site_name", "sample_date", "label"]
 
 
 class BleachingQCProjectMethodSEView(BaseProjectMethodView):
@@ -852,4 +855,5 @@ class BleachingQCProjectMethodSEView(BaseProjectMethodView):
     serializer_class_geojson = BleachingQCMethodSEGeoSerializer
     serializer_class_csv = BleachingQCMethodSECSVSerializer
     filterset_class = BleachingQCMethodSEFilterSet
-    order_by = ("site_name", "sample_date")
+    ordering_fields = ["site_name", "sample_date"]
+    ordering = ["site_name", "sample_date"]

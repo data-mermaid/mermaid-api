@@ -31,7 +31,7 @@ pytest==8.4.1
 python-jose==3.5.0
 requests==2.32.4
 rest_condition==1.0.3
+sentry-sdk[django]==2.34.1
 simpleflake==0.1.5
 timezonefinder==6.5.9
 whitenoise==6.9.0
-sentry-sdk[django]==2.34.1

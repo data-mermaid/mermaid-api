@@ -115,7 +115,11 @@ def create_thumbnail(image_instance: Image) -> ContentFile:
     thumb_name = f"{base}_thumbnail{ext}"
 
     thumb_io = BytesIO()
-    img.save(thumb_io, img.format)
+    try:
+        img.save(thumb_io, img.format)
+    except IOError as io_err:
+        print(f"Cannot create thumbnail for [{image_instance.pk}]: {io_err}")
+        raise
 
     return ContentFile(thumb_io.getvalue(), name=thumb_name)
 

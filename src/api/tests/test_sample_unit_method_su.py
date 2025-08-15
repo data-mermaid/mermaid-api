@@ -32,9 +32,6 @@ def test_beltfish_su_view(
     url = reverse("beltfishmethod-sampleunit-list", kwargs=dict(project_pk=project1.pk))
     count, data, _ = _call(client, token1, url)
 
-    print("beltfishmethod-sampleunit-list data")
-    print(data)
-
     assert count == 2
     n = 0
     for record in data:

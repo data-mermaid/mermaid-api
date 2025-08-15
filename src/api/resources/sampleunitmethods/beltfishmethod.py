@@ -563,7 +563,7 @@ class BeltFishProjectMethodObsView(BaseProjectMethodView):
     serializer_class_geojson = BeltFishMethodObsGeoSerializer
     serializer_class_csv = ObsBeltFishCSVSerializer
     filterset_class = BeltFishMethodObsFilterSet
-    order_by = (
+    ordering_fields = [
         "site_name",
         "sample_date",
         "transect_number",
@@ -572,7 +572,17 @@ class BeltFishProjectMethodObsView(BaseProjectMethodView):
         "fish_genus",
         "fish_taxon",
         "size",
-    )
+    ]
+    ordering = [
+        "site_name",
+        "sample_date",
+        "transect_number",
+        "label",
+        "fish_family",
+        "fish_genus",
+        "fish_taxon",
+        "size",
+    ]
 
     def get_queryset(self):
         qs = super().get_queryset()
@@ -591,7 +601,8 @@ class BeltFishProjectMethodSUView(BaseProjectMethodView):
     serializer_class_geojson = BeltFishMethodSUGeoSerializer
     serializer_class_csv = BeltFishMethodSUCSVSerializer
     filterset_class = BeltFishMethodSUFilterSet
-    order_by = ("site_name", "sample_date", "transect_number")
+    ordering_fields = ["site_name", "sample_date", "transect_number"]
+    ordering = ["site_name", "sample_date", "transect_number"]
 
 
 class BeltFishProjectMethodSEView(BaseProjectMethodView):
@@ -603,4 +614,5 @@ class BeltFishProjectMethodSEView(BaseProjectMethodView):
     serializer_class_geojson = BeltFishMethodSEGeoSerializer
     serializer_class_csv = BeltFishMethodSECSVSerializer
     filterset_class = BeltFishMethodSEFilterSet
-    order_by = ("site_name", "sample_date")
+    ordering_fields = ["site_name", "sample_date"]
+    ordering = ["site_name", "sample_date"]

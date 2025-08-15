@@ -1,11 +1,11 @@
 import logging
 
 import django_filters
-import psycopg
 from django.conf import settings
 from django.db import IntegrityError, transaction
 from django.db.models import JSONField
 from django.db.models.expressions import RawSQL
+from psycopg.errors import UniqueViolation
 from rest_condition import Or
 from rest_framework import exceptions, permissions, serializers, status
 from rest_framework.decorators import action
@@ -569,10 +569,7 @@ class ProjectViewSet(BaseApiViewSet):
                     detail={"email": "Profile has already been added to project"}
                 )
         except IntegrityError as ie:
-            if (
-                hasattr(ie.__cause__, "pgcode")
-                and ie.__cause__.pgcode == psycopg.errorcodes.UNIQUE_VIOLATION
-            ):
+            if isinstance(ie.__cause__, UniqueViolation):
                 raise exceptions.ValidationError(
                     detail={"email": "Profile has already been added to project"}
                 )

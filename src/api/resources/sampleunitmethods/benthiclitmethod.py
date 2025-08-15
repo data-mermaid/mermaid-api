@@ -532,7 +532,8 @@ class BenthicLITProjectMethodObsView(BaseProjectMethodView):
     serializer_class_geojson = BenthicLITMethodObsGeoSerializer
     serializer_class_csv = ObsBenthicLITCSVSerializer
     filterset_class = BenthicLITMethodObsFilterSet
-    order_by = ("site_name", "sample_date", "transect_number", "label", "id")
+    ordering_fields = ["site_name", "sample_date", "transect_number", "label", "id"]
+    ordering = ["site_name", "sample_date", "transect_number", "label", "id"]
 
 
 class BenthicLITProjectMethodSUView(BaseProjectMethodView):
@@ -543,7 +544,8 @@ class BenthicLITProjectMethodSUView(BaseProjectMethodView):
     serializer_class_geojson = BenthicLITMethodSUGeoSerializer
     serializer_class_csv = BenthicLITMethodSUCSVSerializer
     filterset_class = BenthicLITMethodSUFilterSet
-    order_by = ("site_name", "sample_date", "transect_number")
+    ordering_fields = ["site_name", "sample_date", "transect_number"]
+    ordering = ["site_name", "sample_date", "transect_number"]
 
 
 class BenthicLITProjectMethodSEView(BaseProjectMethodView):
@@ -555,4 +557,5 @@ class BenthicLITProjectMethodSEView(BaseProjectMethodView):
     serializer_class_geojson = BenthicLITMethodSEGeoSerializer
     serializer_class_csv = BenthicLITMethodSECSVSerializer
     filterset_class = BenthicLITMethodSEFilterSet
-    order_by = ("site_name", "sample_date")
+    ordering_fields = ["site_name", "sample_date"]
+    ordering = ["site_name", "sample_date"]

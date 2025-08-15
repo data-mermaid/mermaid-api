@@ -503,7 +503,8 @@ class HabitatComplexityProjectMethodObsView(BaseProjectMethodView):
     serializer_class_geojson = HabitatComplexityMethodObsGeoSerializer
     serializer_class_csv = ObsHabitatComplexityCSVSerializer
     filterset_class = HabitatComplexityMethodObsFilterSet
-    order_by = ("site_name", "sample_date", "transect_number", "label", "interval")
+    ordering_fields = ["site_name", "sample_date", "transect_number", "label", "interval"]
+    ordering = ["site_name", "sample_date", "transect_number", "label", "interval"]
 
 
 class HabitatComplexityProjectMethodSUView(BaseProjectMethodView):
@@ -514,7 +515,8 @@ class HabitatComplexityProjectMethodSUView(BaseProjectMethodView):
     serializer_class_geojson = HabitatComplexityMethodSUGeoSerializer
     serializer_class_csv = HabitatComplexityMethodSUCSVSerializer
     filterset_class = HabitatComplexityMethodSUFilterSet
-    order_by = ("site_name", "sample_date", "transect_number")
+    ordering_fields = ["site_name", "sample_date", "transect_number"]
+    ordering = ["site_name", "sample_date", "transect_number"]
 
 
 class HabitatComplexityProjectMethodSEView(BaseProjectMethodView):
@@ -526,4 +528,5 @@ class HabitatComplexityProjectMethodSEView(BaseProjectMethodView):
     serializer_class_geojson = HabitatComplexityMethodSEGeoSerializer
     serializer_class_csv = HabitatComplexityMethodSECSVSerializer
     filterset_class = HabitatComplexityMethodSEFilterSet
-    order_by = ("site_name", "sample_date")
+    ordering_fields = ["site_name", "sample_date"]
+    ordering = ["site_name", "sample_date"]
