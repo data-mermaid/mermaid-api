@@ -217,7 +217,13 @@ class SagemakerStack(cdk.Stack):
                             "glue:CancelStatement",
                         ],
                         resources=[f"arn:aws:glue:{cdk.Aws.REGION}:{cdk.Aws.ACCOUNT_ID}:session/*"],
-                    )
+                    ),
+                    iam.PolicyStatement(
+                        effect=iam.Effect.ALLOW,
+                        actions=["iam:PassRole"],
+                        resources=[role.role_arn],
+                        conditions={"StringEquals": {"iam:PassedToService": "glue.amazonaws.com"}},
+                    ),
                 ],
             )
         )
@@ -269,6 +275,15 @@ class SagemakerStack(cdk.Stack):
                             transition_after=cdk.Duration.days(30),
                         )
                     ],
-                )
+                ),
+                s3.LifecycleRule(
+                    noncurrent_version_expiration=cdk.Duration.days(180),
+                    noncurrent_version_transitions=[
+                        s3.NoncurrentVersionTransition(
+                            storage_class=s3.StorageClass.INFREQUENT_ACCESS,
+                            transition_after=cdk.Duration.days(30),
+                        )
+                    ],
+                ),
             ],
         )
