@@ -142,8 +142,6 @@ class SagemakerStack(cdk.Stack):
             ),
         )
 
-        self.sm_execution_role.attach_inline_policy
-
         CfnOutput(
             self,
             f"{self.prefix}SagemakerDomainUrl",
