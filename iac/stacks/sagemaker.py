@@ -53,7 +53,7 @@ class SagemakerStack(cdk.Stack):
             export_name=f"{self.prefix}-SourcesBucketName",
         )
 
-        self.sm_sources_bucket.grant_read(self.sm_execution_role)
+        self.sm_sources_bucket.grant_read_write(self.sm_execution_role)
 
         # Create S3 bucket for SageMaker data
         self.sm_data_bucket = self.create_data_bucket()
@@ -183,6 +183,45 @@ class SagemakerStack(cdk.Stack):
                 ],
             )
         )
+        role.attach_inline_policy(
+            iam.Policy(
+                self,
+                "SagemakerStartSessionPolicy",
+                statements=[
+                    iam.PolicyStatement(
+                        effect=iam.Effect.ALLOW,
+                        actions=["sagemaker:*"],
+                        resources=[
+                            f"arn:aws:sagemaker:{cdk.Aws.REGION}:{cdk.Aws.ACCOUNT_ID}:space/*",
+                            f"arn:aws:sagemaker:{cdk.Aws.REGION}:{cdk.Aws.ACCOUNT_ID}:user-profile/*",
+                            f"arn:aws:sagemaker:{cdk.Aws.REGION}:{cdk.Aws.ACCOUNT_ID}:domain/*",
+                        ],
+                    )
+                ],
+            )
+        )
+
+        role.attach_inline_policy(
+            iam.Policy(
+                self,
+                "GlueSessionPolicy",
+                statements=[
+                    iam.PolicyStatement(
+                        effect=iam.Effect.ALLOW,
+                        actions=[
+                            "glue:*",
+                        ],
+                        resources=[f"arn:aws:glue:{cdk.Aws.REGION}:{cdk.Aws.ACCOUNT_ID}:session/*"],
+                    ),
+                    iam.PolicyStatement(
+                        effect=iam.Effect.ALLOW,
+                        actions=["iam:PassRole"],
+                        resources=[role.role_arn],
+                        conditions={"StringEquals": {"iam:PassedToService": "glue.amazonaws.com"}},
+                    ),
+                ],
+            )
+        )
 
         CfnOutput(
             self,
@@ -231,6 +270,15 @@ class SagemakerStack(cdk.Stack):
                             transition_after=cdk.Duration.days(30),
                         )
                     ],
-                )
+                ),
+                s3.LifecycleRule(
+                    noncurrent_version_expiration=cdk.Duration.days(180),
+                    noncurrent_version_transitions=[
+                        s3.NoncurrentVersionTransition(
+                            storage_class=s3.StorageClass.INFREQUENT_ACCESS,
+                            transition_after=cdk.Duration.days(30),
+                        )
+                    ],
+                ),
             ],
         )
