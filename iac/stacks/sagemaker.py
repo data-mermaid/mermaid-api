@@ -142,6 +142,8 @@ class SagemakerStack(cdk.Stack):
             ),
         )
 
+        self.sm_execution_role.attach_inline_policy
+
         CfnOutput(
             self,
             f"{self.prefix}SagemakerDomainUrl",
@@ -190,7 +192,7 @@ class SagemakerStack(cdk.Stack):
                 statements=[
                     iam.PolicyStatement(
                         effect=iam.Effect.ALLOW,
-                        actions=["sagemaker:StartSession"],
+                        actions=["sagemaker:*"],
                         resources=[
                             f"arn:aws:sagemaker:{cdk.Aws.REGION}:{cdk.Aws.ACCOUNT_ID}:space/*",
                             f"arn:aws:sagemaker:{cdk.Aws.REGION}:{cdk.Aws.ACCOUNT_ID}:user-profile/*",
@@ -209,12 +211,7 @@ class SagemakerStack(cdk.Stack):
                     iam.PolicyStatement(
                         effect=iam.Effect.ALLOW,
                         actions=[
-                            "glue:CreateSession",
-                            "glue:GetSession",
-                            "glue:DeleteSession",
-                            "glue:RunStatement",
-                            "glue:GetStatement",
-                            "glue:CancelStatement",
+                            "glue:*",
                         ],
                         resources=[f"arn:aws:glue:{cdk.Aws.REGION}:{cdk.Aws.ACCOUNT_ID}:session/*"],
                     ),
