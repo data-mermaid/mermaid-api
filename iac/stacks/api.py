@@ -172,22 +172,22 @@ class ApiStack(Stack):
             self.api_secrets["DEV_EMAILS"] = ecs.Secret.from_secrets_manager(
                 get_secret_object(self, config.api.dev_emails_name)
             )
-            edb_sercret = secrets.Secret.from_secret_name_v2(
+            edb_secret = secrets.Secret.from_secret_name_v2(
                 self,
                 id="DBSecret",
                 secret_name="dev/edb/pgpassword",
             )
 
-            self.api_secrets["DB_USER"] = ecs.Secret.from_secrets_manager(edb_sercret, "username")
+            self.api_secrets["DB_USER"] = ecs.Secret.from_secrets_manager(edb_secret, "username")
             self.api_secrets["DB_PASSWORD"] = ecs.Secret.from_secrets_manager(
-                edb_sercret, "password"
+                edb_secret, "password"
             )
             self.api_secrets["PGPASSWORD"] = ecs.Secret.from_secrets_manager(
-                edb_sercret, "password"
+                edb_secret, "password"
             )
-            self.api_secrets["DB_NAME"] = ecs.Secret.from_secrets_manager(edb_sercret, "dbName")
-            self.api_secrets["DB_HOST"] = ecs.Secret.from_secrets_manager(edb_sercret, "host")
-            self.api_secrets["DB_PORT"] = ecs.Secret.from_secrets_manager(edb_sercret, "port")
+            self.api_secrets["DB_NAME"] = ecs.Secret.from_secrets_manager(edb_secret, "dbName")
+            self.api_secrets["DB_HOST"] = ecs.Secret.from_secrets_manager(edb_secret, "host")
+            self.api_secrets["DB_PORT"] = ecs.Secret.from_secrets_manager(edb_secret, "port")
 
             environment.pop("DB_NAME", None)
             environment.pop("DB_HOST", None)
