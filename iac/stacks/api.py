@@ -137,11 +137,6 @@ class ApiStack(Stack):
             ),
         }
 
-        if config.env_id == "dev":
-            self.api_secrets["DEV_EMAILS"] = ecs.Secret.from_secrets_manager(
-                get_secret_object(self, config.api.dev_emails_name)
-            )
-
         # Envir Vars
         sqs_queue_name = f"mermaid-{config.env_id}-general"
         image_sqs_queue_name = f"mermaid-{config.env_id}-image-processing"
@@ -171,6 +166,32 @@ class ApiStack(Stack):
             "SQS_QUEUE_NAME": sqs_queue_name,
             "IMAGE_SQS_QUEUE_NAME": image_sqs_queue_name,
         }
+
+        # For the dev environment, Use the EDB deployment
+        if config.env_id == "dev":
+            self.api_secrets["DEV_EMAILS"] = ecs.Secret.from_secrets_manager(
+                get_secret_object(self, config.api.dev_emails_name)
+            )
+            edb_sercret = secrets.Secret.from_secret_name_v2(
+                self,
+                id="DBSecret",
+                secret_name="dev/edb/pgpassword",
+            )
+
+            self.api_secrets["DB_USER"] = ecs.Secret.from_secrets_manager(edb_sercret, "username")
+            self.api_secrets["DB_PASSWORD"] = ecs.Secret.from_secrets_manager(
+                edb_sercret, "password"
+            )
+            self.api_secrets["PGPASSWORD"] = ecs.Secret.from_secrets_manager(
+                edb_sercret, "password"
+            )
+            self.api_secrets["DB_NAME"] = ecs.Secret.from_secrets_manager(edb_sercret, "dbName")
+            self.api_secrets["DB_HOST"] = ecs.Secret.from_secrets_manager(edb_sercret, "host")
+            self.api_secrets["DB_PORT"] = ecs.Secret.from_secrets_manager(edb_sercret, "port")
+
+            environment.pop("DB_NAME", None)
+            environment.pop("DB_HOST", None)
+            environment.pop("DB_PORT", None)
 
         # build image asset to be shared with API and Backup Task
         image_asset = ecr_assets.DockerImageAsset(
