@@ -423,7 +423,7 @@ def create_protocol_report(request, project_ids, protocol):
             xl.write_data_to_sheet(
                 workbook=wb, sheet_name=sheet_name, data=_df_to_rows(combined_df), row=1, col=1
             )
-        xl.auto_size_columns(wb[sheet_name])
+            xl.auto_size_columns(wb[sheet_name])
 
     return wb
 
