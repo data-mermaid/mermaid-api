@@ -263,7 +263,9 @@ def get_viewset_csv_content(view_cls, project_pk, request):
 
     content = list(csv.reader([str(row, "UTF-8").strip() for row in resp.streaming_content]))
     if not isinstance(content, list) or len(content) < 2 or "site_id" not in content[0]:
-        return content
+        if isinstance(content, list):
+            yield from content
+        return
 
     headers = content[0]
     cols = _transpose(content[1:])
