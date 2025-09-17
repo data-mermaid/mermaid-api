@@ -2,6 +2,7 @@ import csv
 from collections import defaultdict
 from typing import Dict, List, Set, Tuple
 
+import pandas as pd
 from django.db.models import QuerySet
 
 from ..exceptions import UnknownProtocolError
@@ -349,6 +350,12 @@ def _get_project_metadata(project_ids, viewable_levels):
     return [header] + data
 
 
+def _df_to_rows(df):
+    yield list(df.columns)
+    for _, row in df.iterrows():
+        yield row.tolist()
+
+
 @timing
 def create_protocol_report(request, project_ids, protocol):
     """
@@ -387,8 +394,10 @@ def create_protocol_report(request, project_ids, protocol):
     xl.write_data_to_sheet(wb, "Metadata", project_metadata, 1, 1)
     xl.auto_size_columns(wb["Metadata"])
 
-    # Protocol data
-    current_rows = {s: 1 for s in sheet_names}
+    # Protocol data - collect all data first, then concatenate and write
+    sheet_data = {sheet_name: [] for sheet_name in sheet_names}
+
+    # Collect data for each project and view
     for project_id in project_ids:
         project_id = str(project_id)
         config = report_config[project_id]
@@ -396,19 +405,22 @@ def create_protocol_report(request, project_ids, protocol):
         project_sheet_names = config["sheet_names"]
         for view, sheet_name in zip(views, project_sheet_names):
             data = get_viewset_csv_content(view, project_id, request)
-            if current_rows[sheet_name] > 1:
-                try:
-                    next(data)  # Skip headers for subsequent projects
-                except StopIteration:
-                    continue
+            rows = list(data)
+            if rows:
+                df = (
+                    pd.DataFrame(rows[1:], columns=rows[0])
+                    if len(rows) > 1
+                    else pd.DataFrame(columns=rows[0])
+                )
+                sheet_data[sheet_name].append(df)
 
-            existing_row = current_rows[sheet_name]
-            row, _ = xl.write_data_to_sheet(
-                workbook=wb, sheet_name=sheet_name, data=data, row=existing_row, col=1
-            )
-            current_rows[sheet_name] = row + 1
-
+    # Concatenate data for each sheet and write to workbook
     for sheet_name in sheet_names:
+        if sheet_data[sheet_name]:
+            combined_df = pd.concat(sheet_data[sheet_name], ignore_index=True)
+            xl.write_data_to_sheet(
+                workbook=wb, sheet_name=sheet_name, data=_df_to_rows(combined_df), row=1, col=1
+            )
         xl.auto_size_columns(wb[sheet_name])
 
     return wb
