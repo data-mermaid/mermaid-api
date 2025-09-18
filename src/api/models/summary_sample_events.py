@@ -1,4 +1,5 @@
 from django.contrib.gis.db import models
+from django.contrib.postgres.indexes import GinIndex
 from django.core.serializers.json import DjangoJSONEncoder
 
 from sqltables import SQLTableArg, SQLTableManager
@@ -647,6 +648,9 @@ class BaseProjectSummarySampleEvent(models.Model):
 
     class Meta:
         abstract = True
+        indexes = [
+            GinIndex(name="records_gin", fields=["records"]),
+        ]
 
     objects = ExtendedManager.from_queryset(ExtendedQuerySet)()
 
