@@ -659,3 +659,11 @@ class RestrictedProjectSummarySampleEvent(BaseProjectSummarySampleEvent):
 class UnrestrictedProjectSummarySampleEvent(BaseProjectSummarySampleEvent):
     class Meta:
         db_table = "unrestricted_project_summary_se"
+
+
+class ProjectSummarySampleEventView(BaseProjectSummarySampleEvent):
+    access = models.CharField(max_length=15, default="restricted")
+
+    class Meta:
+        managed = False
+        db_table = "vw_project_summary_sample_events"
