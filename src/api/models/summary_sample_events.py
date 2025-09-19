@@ -668,6 +668,19 @@ class UnrestrictedProjectSummarySampleEvent(BaseProjectSummarySampleEvent):
 class ProjectSummarySampleEventView(BaseProjectSummarySampleEvent):
     access = models.CharField(max_length=15, default="restricted")
 
+    forward_sql = """
+        CREATE VIEW vw_project_summary_sample_events AS
+        SELECT *, 'restricted'::text AS access
+        FROM restricted_project_summary_se
+        UNION ALL
+        SELECT *, 'unrestricted'::text AS access
+        FROM unrestricted_project_summary_se;
+    """
+
+    reverse_sql = """
+        DROP VIEW IF EXISTS vw_project_summary_sample_events;
+    """
+
     class Meta:
         managed = False
         db_table = "vw_project_summary_sample_events"

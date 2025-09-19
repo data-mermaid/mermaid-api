@@ -2,17 +2,14 @@
 
 from django.db import migrations
 
-forward_sql = """
-CREATE VIEW vw_project_summary_sample_events AS
-SELECT *, 'restricted'::text AS access
-FROM restricted_project_summary_se
-UNION ALL
-SELECT *, 'unrestricted'::text AS access
-FROM unrestricted_project_summary_se;
-"""
-reverse_sql = """
-DROP VIEW IF EXISTS vw_project_summary_sample_events;
-"""
+try:
+    from api.models.summary_sample_events import ProjectSummarySampleEventView
+
+    forward_sql = ProjectSummarySampleEventView.forward_sql
+    reverse_sql = ProjectSummarySampleEventView.reverse_sql
+except ImportError:
+    forward_sql = ""
+    reverse_sql = ""
 
 
 class Migration(migrations.Migration):
