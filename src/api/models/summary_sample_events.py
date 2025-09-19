@@ -649,7 +649,7 @@ class BaseProjectSummarySampleEvent(models.Model):
     class Meta:
         abstract = True
         indexes = [
-            GinIndex(name="records_gin", fields=["records"]),
+            GinIndex(fields=["records"]),
         ]
 
     objects = ExtendedManager.from_queryset(ExtendedQuerySet)()

@@ -100,11 +100,9 @@ class ProjectSummarySampleEventViewSet(ReadOnlyModelViewSet):
 
         if profile:
             proj_ids = ProjectProfile.objects.filter(profile=profile).values("project_id")
-            qs = qs.filter(
+            return qs.filter(
                 ~Q(project_id__in=Subquery(proj_ids)) & Q(access="unrestricted")
                 | Q(access="restricted") & Q(project_id__in=Subquery(proj_ids))
             )
-            print(qs.query)
-            return qs
         else:
             return qs.filter(access="unrestricted")
