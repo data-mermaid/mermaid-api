@@ -648,9 +648,6 @@ class BaseProjectSummarySampleEvent(models.Model):
 
     class Meta:
         abstract = True
-        indexes = [
-            GinIndex(fields=["records"]),
-        ]
 
     objects = ExtendedManager.from_queryset(ExtendedQuerySet)()
 
@@ -658,11 +655,17 @@ class BaseProjectSummarySampleEvent(models.Model):
 class RestrictedProjectSummarySampleEvent(BaseProjectSummarySampleEvent):
     class Meta:
         db_table = "restricted_project_summary_se"
+        indexes = [
+            GinIndex(fields=["records"]),
+        ]
 
 
 class UnrestrictedProjectSummarySampleEvent(BaseProjectSummarySampleEvent):
     class Meta:
         db_table = "unrestricted_project_summary_se"
+        indexes = [
+            GinIndex(fields=["records"]),
+        ]
 
 
 class ProjectSummarySampleEventView(BaseProjectSummarySampleEvent):
