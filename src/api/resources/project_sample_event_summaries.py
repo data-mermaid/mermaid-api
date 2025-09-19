@@ -36,17 +36,12 @@ class ProjectSummarySampleEventSerializer(ExtendedSerializer):
 
 
 class ProjectSummarySampleEventFilterSet(OrFilterSetMixin, GeoFilterSet):
-    project_id = BaseInFilter(method="id_lookup")
     project_name = BaseInFilter(method="char_lookup")
     project_admins = BaseInFilter(method="json_name_lookup")
     country_name = BaseInFilter(method="records_lookup")
-    site_id = BaseInFilter(method="records_lookup")
     site_name = BaseInFilter(method="records_lookup")
-    country_id = BaseInFilter(method="records_lookup")
     country_name = BaseInFilter(method="records_lookup")
-    tag_id = BaseInFilter(field_name="tags", method="records_lookup")
     tag_name = BaseInFilter(field_name="tags", method="records_lookup")
-    management_id = BaseInFilter(method="records_lookup")
     management_name = BaseInFilter(method="records_lookup")
 
     def records_lookup(self, queryset, name, value):
