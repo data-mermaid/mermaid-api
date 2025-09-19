@@ -95,11 +95,13 @@ class ProjectSummarySampleEventViewSet(ReadOnlyModelViewSet):
         user = self.request.user
         profile = getattr(user, "profile", None)
 
-        non_test_projects = Project.objects.exclude(status=Project.TEST).values("id")
+        non_test_projects = Project.objects.exclude(status=Project.TEST).values("id").distinct()
         qs = qs.filter(project_id__in=Subquery(non_test_projects))
 
         if profile:
-            proj_ids = ProjectProfile.objects.filter(profile=profile).values("project_id")
+            proj_ids = (
+                ProjectProfile.objects.filter(profile=profile).values("project_id").distinct()
+            )
             return qs.filter(
                 ~Q(project_id__in=Subquery(proj_ids)) & Q(access="unrestricted")
                 | Q(access="restricted") & Q(project_id__in=Subquery(proj_ids))
