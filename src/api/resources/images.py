@@ -1,10 +1,36 @@
 from django.db.models import Q, Subquery
-from rest_framework import permissions
+from django_filters import CharFilter
+from rest_framework import permissions, serializers
 from rest_framework.exceptions import MethodNotAllowed
 
 from ..models import Image, ObsBenthicPhotoQuadrat, ProjectProfile
-from .base import BaseApiViewSet
+from .base import BaseAPIFilterSet, BaseApiViewSet
 from .classification.image import ImageSerializer
+
+
+class ImageExtSerializer(ImageSerializer):
+    project_id = serializers.SerializerMethodField()
+    project_name = serializers.SerializerMethodField()
+
+    def get_project_id(self, obj):
+        obs = obj.obs_benthic_photo_quadrats.first()
+        if obs and obs.benthic_photo_quadrat_transect:
+            transect = obs.benthic_photo_quadrat_transect
+            if transect.quadrat_transect and transect.quadrat_transect.sample_event:
+                site = transect.quadrat_transect.sample_event.site
+                if site and site.project:
+                    return str(site.project.id)
+        return None
+
+    def get_project_name(self, obj):
+        obs = obj.obs_benthic_photo_quadrats.first()
+        if obs and obs.benthic_photo_quadrat_transect:
+            transect = obs.benthic_photo_quadrat_transect
+            if transect.quadrat_transect and transect.quadrat_transect.sample_event:
+                site = transect.quadrat_transect.sample_event.site
+                if site and site.project:
+                    return site.project.name
+        return None
 
 
 class AllImagesPermission(permissions.BasePermission):
@@ -29,26 +55,37 @@ class AllImagesPermission(permissions.BasePermission):
         return False
 
 
-# class AllImagesFilterSet(BaseAPIFilterSet):
-#     """
-#     FilterSet for all images accessible to the user.
-#     """
-#     class Meta:
-#         model = Image
-#         fields = [
-#             "created_on",
-#             "updated_on",
-#         ]
+class AllImagesFilterSet(BaseAPIFilterSet):
+    project_id = CharFilter(
+        field_name="obs_benthic_photo_quadrats__benthic_photo_quadrat_transect__quadrat_transect__sample_event__site__project__id",
+        lookup_expr="iexact",
+    )
+    project_name = CharFilter(
+        field_name="obs_benthic_photo_quadrats__benthic_photo_quadrat_transect__quadrat_transect__sample_event__site__project__name",
+        lookup_expr="iexact",
+    )
+
+    class Meta:
+        model = Image
+        fields = [
+            "project_id",
+            "project_name",
+        ]
 
 
 class AllImagesViewSet(BaseApiViewSet):
-    serializer_class = ImageSerializer
+    serializer_class = ImageExtSerializer
     permission_classes = [permissions.IsAuthenticated, AllImagesPermission]
-    # filterset_class = AllImagesFilterSetkj
+    filterset_class = AllImagesFilterSet
 
     def get_queryset(self):
         qs = (
-            Image.objects.prefetch_related("points", "points__annotations", "statuses")
+            Image.objects.prefetch_related(
+                "points",
+                "points__annotations",
+                "statuses",
+                "obs_benthic_photo_quadrats__benthic_photo_quadrat_transect__quadrat_transect__sample_event__site__project",
+            )
             .all()
             .order_by("-created_on")
         )
