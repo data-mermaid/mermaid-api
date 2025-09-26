@@ -13,10 +13,12 @@ class ImageExtSerializer(ImageSerializer):
     project_name = serializers.SerializerMethodField()
 
     def get_project_id(self, obj):
-        return obj.project.id
+        project = obj.project
+        return project.id if project else None
 
     def get_project_name(self, obj):
-        return obj.project.name
+        project = obj.project
+        return project.name if project else None
 
 
 class AllImagesPermission(permissions.BasePermission):
@@ -32,11 +34,10 @@ class AllImagesPermission(permissions.BasePermission):
         if profile is None:
             return False
 
-        if hasattr(obj, "obs_benthic_photo_quadrats"):
-            if ProjectProfile.objects.filter(profile=profile, project=obj.project).exists():
-                return True
-
-        return False
+        project = getattr(obj, "project", None)
+        if not project:
+            return False
+        return ProjectProfile.objects.filter(profile=profile, project=project).exists()
 
 
 class AllImagesFilterSet(BaseAPIFilterSet):

@@ -1,4 +1,5 @@
 import uuid
+from pathlib import Path
 
 import pytest
 from django.contrib.gis.geos import Point
@@ -53,9 +54,15 @@ def sample_event_other(management_other, site_other, sample_date1):
 
 @pytest.fixture
 def image_file():
+    # return SimpleUploadedFile(
+    #     name="test_image.jpg",
+    #     content=open("api/tests/data/test_image.jpg", "rb").read(),
+    #     content_type="image/jpeg",
+    # )
+    data_path = Path(__file__).resolve().parent / "data" / "test_image.jpg"
     return SimpleUploadedFile(
-        name="test_image.jpg",
-        content=open("api/tests/data/test_image.jpg", "rb").read(),
+        name=data_path.name,
+        content=data_path.read_bytes(),
         content_type="image/jpeg",
     )
 
