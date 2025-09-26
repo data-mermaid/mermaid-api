@@ -13,24 +13,10 @@ class ImageExtSerializer(ImageSerializer):
     project_name = serializers.SerializerMethodField()
 
     def get_project_id(self, obj):
-        obs = obj.obs_benthic_photo_quadrats.first()
-        if obs and obs.benthic_photo_quadrat_transect:
-            transect = obs.benthic_photo_quadrat_transect
-            if transect.quadrat_transect and transect.quadrat_transect.sample_event:
-                site = transect.quadrat_transect.sample_event.site
-                if site and site.project:
-                    return str(site.project.id)
-        return None
+        return obj.project.id
 
     def get_project_name(self, obj):
-        obs = obj.obs_benthic_photo_quadrats.first()
-        if obs and obs.benthic_photo_quadrat_transect:
-            transect = obs.benthic_photo_quadrat_transect
-            if transect.quadrat_transect and transect.quadrat_transect.sample_event:
-                site = transect.quadrat_transect.sample_event.site
-                if site and site.project:
-                    return site.project.name
-        return None
+        return obj.project.name
 
 
 class AllImagesPermission(permissions.BasePermission):
@@ -47,10 +33,8 @@ class AllImagesPermission(permissions.BasePermission):
             return False
 
         if hasattr(obj, "obs_benthic_photo_quadrats"):
-            for obs in obj.obs_benthic_photo_quadrats.all():
-                project_id = getattr(obs, ObsBenthicPhotoQuadrat.project_lookup.split("__")[0]).id
-                if ProjectProfile.objects.filter(profile=profile, project_id=project_id).exists():
-                    return True
+            if ProjectProfile.objects.filter(profile=profile, project=obj.project).exists():
+                return True
 
         return False
 
@@ -84,7 +68,10 @@ class AllImagesViewSet(BaseApiViewSet):
                 "points",
                 "points__annotations",
                 "statuses",
-                "obs_benthic_photo_quadrats__benthic_photo_quadrat_transect__quadrat_transect__sample_event__site__project",
+                (
+                    "obs_benthic_photo_quadrats__benthic_photo_"
+                    "quadrat_transect__quadrat_transect__sample_event__site__project"
+                ),
             )
             .all()
             .order_by("-created_on")
@@ -95,6 +82,7 @@ class AllImagesViewSet(BaseApiViewSet):
             return qs.none()
 
         user_project_ids = ProjectProfile.objects.filter(profile=profile).values("project_id")
+
         return qs.filter(
             Q(
                 **{
