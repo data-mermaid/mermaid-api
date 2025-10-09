@@ -209,6 +209,16 @@ def management2(project1):
 
 
 @pytest.fixture
+def management3(project3):
+    return Management.objects.create(
+        project=project3,
+        est_year=2000,
+        name="Management 3",
+        notes="Hey what's up, from management3!!",
+    )
+
+
+@pytest.fixture
 def sample_event1(management1, site1, sample_date1):
     return SampleEvent.objects.create(
         management=management1,
