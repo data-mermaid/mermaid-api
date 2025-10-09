@@ -68,6 +68,7 @@ from .summaries import (  # noqa: F401
     SummaryCacheQueue,
 )
 from .summary_sample_events import (  # noqa: F401
+    ProjectSummarySampleEventView,
     RestrictedProjectSummarySampleEvent,
     SummarySampleEventModel,
     SummarySampleEventSQLModel,

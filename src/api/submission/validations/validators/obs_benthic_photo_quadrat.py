@@ -3,6 +3,7 @@ from collections import defaultdict
 from django.core.validators import MaxValueValidator
 
 from ....models.mermaid import QuadratTransect
+from ....utils import cast_int
 from ..statuses import ERROR, OK, WARN
 from .base import BaseValidator, validator_result
 
@@ -118,10 +119,12 @@ class QuadratNumberSequenceValidator(BaseValidator):
             return ERROR, self.LARGE_NUM_QUADRATS, {"max_value": num_quadrats_max}
 
         observations = self.get_value(collect_record, self.obs_benthic_photo_quadrats_path) or []
-        quadrat_number_start = self.get_value(collect_record, self.quadrat_number_start_path) or 1
+        quadrat_number_start = (
+            cast_int(self.get_value(collect_record, self.quadrat_number_start_path)) or 1
+        )
         quadrat_numbers = []
         for o in observations:
-            quadrat_number = self.get_value(o, self.observation_quadrat_number_path)
+            quadrat_number = cast_int(self.get_value(o, self.observation_quadrat_number_path))
             if quadrat_number is None:
                 continue
             quadrat_numbers.append(quadrat_number)

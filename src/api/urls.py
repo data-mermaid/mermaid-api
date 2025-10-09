@@ -18,6 +18,7 @@ from .resources.fish_size import FishSizeViewSet
 from .resources.fish_species import FishSpeciesViewSet
 from .resources.gfcr import IndicatorSetViewSet
 from .resources.health import health
+from .resources.images import AllImagesViewSet
 from .resources.ingest_schema import ingest_schema_csv
 from .resources.management import ManagementViewSet
 from .resources.me import MeViewSet
@@ -102,6 +103,9 @@ router.register(r"fishgroupings", FishGroupingViewSet, "fishgrouping")
 # choices
 router.register(r"choices", ChoiceViewSet, "choice")
 router.register(r"fishsizes", FishSizeViewSet, "fishsizes")
+
+# images
+router.register(r"images", AllImagesViewSet, "images")
 
 # project sample event summaries
 router.register(

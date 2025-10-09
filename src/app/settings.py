@@ -288,12 +288,12 @@ MC_API_KEY = os.environ.get("MC_API_KEY")
 MC_USER = os.environ.get("MC_USER")
 MC_LIST_ID = os.environ.get("MC_LIST_ID")
 
-
-sentry_sdk.init(
-    dsn=os.environ.get("SENTRY_DSN"),
-    traces_sample_rate=1.0,
-    environment=ENVIRONMENT,
-)
+if ENVIRONMENT == "prod":
+    sentry_sdk.init(
+        dsn=os.environ.get("SENTRY_DSN"),
+        traces_sample_rate=1.0,
+        environment=ENVIRONMENT,
+    )
 
 
 # ************************

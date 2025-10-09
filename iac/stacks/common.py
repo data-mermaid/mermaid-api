@@ -177,7 +177,7 @@ class CommonStack(Stack):
             self,
             "EC2MermaidApiCluster",
             vpc=self.vpc,
-            container_insights=True,
+            container_insights_v2=ecs.ContainerInsights.ENABLED,
             enable_fargate_capacity_providers=True,
             execute_command_configuration=ecs_exec_config,
         )

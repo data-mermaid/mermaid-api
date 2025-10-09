@@ -128,13 +128,11 @@ class Image(BaseModel):
 
     @property
     def project(self):
-        cr = self.collect_record
-        if cr:
-            return cr.project
-        else:
-            obs = self._get_first_observation()
-            if obs:
-                return obs.benthic_photo_quadrat_transect.quadrat_transect.sample_event.site.project
+        obs = self._get_first_observation()
+        if obs:
+            return obs.benthic_photo_quadrat_transect.quadrat_transect.sample_event.site.project
+        elif self.collect_record:
+            return self.collect_record.project
 
         return None
 
