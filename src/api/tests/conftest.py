@@ -3,6 +3,7 @@ from django.conf import settings
 from django.db import connection
 
 from api.models import revisions
+from api.models.summary_sample_events import ProjectSummarySampleEventView
 from api.models.view_models import model_view_migrations
 from .fixtures import *  # noqa: F403
 
@@ -18,6 +19,7 @@ def django_db_setup(django_db_setup, django_db_blocker):
             cursor.execute(f"ALTER DATABASE {db_name} SET jit TO false;")
             cursor.execute(model_view_migrations.forward_sql())
             cursor.execute(revisions.forward_sql)
+            cursor.execute(ProjectSummarySampleEventView.forward_sql)
 
 
 @pytest.fixture(autouse=True)

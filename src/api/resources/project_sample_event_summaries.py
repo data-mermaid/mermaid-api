@@ -1,17 +1,12 @@
-from django.db.models import CharField, Q
+from django.db.models import CharField, JSONField, Q, Subquery
 from django_filters import BaseInFilter, CharFilter
 from rest_framework.serializers import SerializerMethodField
 from rest_framework.viewsets import ReadOnlyModelViewSet
 from rest_framework_gis.filters import GeoFilterSet
 
 from ..auth_backends import AnonymousJWTAuthentication
-from ..models import (
-    Project,
-    ProjectProfile,
-    RestrictedProjectSummarySampleEvent,
-    UnrestrictedProjectSummarySampleEvent,
-)
-from ..models.summary_sample_events import BaseProjectSummarySampleEvent
+from ..models import Project, ProjectProfile
+from ..models.summary_sample_events import ProjectSummarySampleEventView
 from ..permissions import UnauthenticatedReadOnlyPermission
 from ..utils.project import citation_retrieved_text
 from .base import ExtendedSerializer, StandardResultPagination
@@ -36,17 +31,28 @@ class ProjectSummarySampleEventSerializer(ExtendedSerializer):
         return obj.records
 
     class Meta:
-        model = UnrestrictedProjectSummarySampleEvent
+        model = ProjectSummarySampleEventView
         exclude = []
 
 
 class ProjectSummarySampleEventFilterSet(OrFilterSetMixin, GeoFilterSet):
-    project_id = BaseInFilter(method="id_lookup")
     project_name = BaseInFilter(method="char_lookup")
     project_admins = BaseInFilter(method="json_name_lookup")
+    country_name = BaseInFilter(method="records_lookup")
+    site_name = BaseInFilter(method="records_lookup")
+    country_name = BaseInFilter(method="records_lookup")
+    tag_name = BaseInFilter(field_name="tags", method="records_lookup")
+    management_name = BaseInFilter(method="records_lookup")
+
+    def records_lookup(self, queryset, name, value):
+        q = Q()
+        for v in set(value):
+            if v is not None and v != "":
+                q |= Q(**{"records__contains": [{name: str(v).strip()}]})
+        return queryset.filter(q).distinct()
 
     class Meta:
-        model = BaseProjectSummarySampleEvent
+        model = ProjectSummarySampleEventView
         fields = [
             "project_id",
             "project_name",
@@ -63,7 +69,11 @@ class ProjectSummarySampleEventFilterSet(OrFilterSetMixin, GeoFilterSet):
             CharField: {
                 "filter_class": CharFilter,
                 "extra": lambda f: {"lookup_expr": "icontains"},
-            }
+            },
+            JSONField: {
+                "filter_class": CharFilter,
+                "extra": lambda f: {"lookup_expr": "icontains"},
+            },
         }
 
 
@@ -73,33 +83,23 @@ class ProjectSummarySampleEventViewSet(ReadOnlyModelViewSet):
     authentication_classes = [AnonymousJWTAuthentication]
     pagination_class = StandardResultPagination
     filterset_class = ProjectSummarySampleEventFilterSet
+    queryset = ProjectSummarySampleEventView.objects.all().order_by("project_id")
 
     def get_queryset(self):
+        qs = super().get_queryset()
         user = self.request.user
-        if hasattr(user, "profile"):
-            profile = user.profile
-        else:
-            profile = None
+        profile = getattr(user, "profile", None)
 
-        non_test_project_ids = Project.objects.filter(~Q(status=Project.TEST)).values_list(
-            "id", flat=True
-        )
+        non_test_projects = Project.objects.exclude(status=Project.TEST).values("id").distinct()
+        qs = qs.filter(project_id__in=Subquery(non_test_projects))
+
         if profile:
-            project_ids = (
-                ProjectProfile.objects.filter(profile=profile)
-                .values_list("project_id", flat=True)
-                .distinct()
+            proj_ids = (
+                ProjectProfile.objects.filter(profile=profile).values("project_id").distinct()
             )
-            restricted_qs = RestrictedProjectSummarySampleEvent.objects.filter(
-                Q(project_id__in=non_test_project_ids) & Q(project_id__in=project_ids)
+            return qs.filter(
+                ~Q(project_id__in=Subquery(proj_ids)) & Q(access="unrestricted")
+                | Q(access="restricted") & Q(project_id__in=Subquery(proj_ids))
             )
-            unrestricted_qs = UnrestrictedProjectSummarySampleEvent.objects.filter(
-                Q(project_id__in=non_test_project_ids) & ~Q(project_id__in=project_ids)
-            )
-            qs = restricted_qs.union(unrestricted_qs)
         else:
-            qs = UnrestrictedProjectSummarySampleEvent.objects.filter(
-                Q(project_id__in=non_test_project_ids)
-            )
-
-        return qs.order_by("project_id")
+            return qs.filter(access="unrestricted")
