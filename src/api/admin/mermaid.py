@@ -674,7 +674,7 @@ class ObsHabitatComplexityInline(ObservationInline):
 
 @admin.register(HabitatComplexity)
 class HabitatComplexityAdmin(TransectMethodAdmin):
-    list_display = ("name", "len_surveyed", "interval_size", "depth")
+    list_display = ("name", "len_surveyed", "interval_size", "interval_start", "depth")
     inlines = (ObserverInline, ObsHabitatComplexityInline)
 
     def get_queryset(self, request):

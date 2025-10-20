@@ -1053,6 +1053,13 @@ class HabitatComplexity(TransectMethod):
         verbose_name=_("interval size (m)"),
     )
 
+    interval_start = models.DecimalField(
+        max_digits=4,
+        decimal_places=2,
+        default=0.5,
+        verbose_name=_("interval start (m)"),
+    )
+
     class Meta:
         db_table = "transectmethod_habitatcomplexity"
         verbose_name = _("habitat complexity transect")
