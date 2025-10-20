@@ -240,3 +240,143 @@ def test_reporting_range(
     assert request.status_code == 200
     response_data = request.json()
     assert response_data["f4_3_calc"] is None
+
+
+def test_notes_in_report_export(
+    db_setup,
+    project1,
+):
+    """Test that all notes fields are included in the GFCR report export."""
+    from openpyxl import load_workbook
+
+    from api.reports.gfcr import create_report
+
+    project1.includes_gfcr = True
+    project1.save()
+
+    # Create indicator set with all notes fields populated
+    indicator_set = GFCRIndicatorSet.objects.create(
+        project=project1,
+        title="Test Indicator Set",
+        report_date="2024-02-10",
+        indicator_set_type="report",
+        f1_notes="F1 test notes",
+        f2_notes="F2 test notes",
+        f3_notes="F3 test notes",
+        f4_notes="F4 test notes",
+        f4_start_date=date(1970, 1, 1),
+        f4_end_date=date(2024, 4, 19),
+        f5_notes="F5 test notes",
+        f6_notes="F6 test notes",
+        f7_notes="F7 test notes",
+    )
+
+    # Create finance solution with notes
+    finance_solution = GFCRFinanceSolution.objects.create(
+        indicator_set=indicator_set,
+        name="Test Finance Solution",
+        sector="ce_waste_management",
+        notes="Finance solution notes",
+    )
+
+    # Create investment with notes
+    from api.models import GFCRInvestmentSource
+
+    GFCRInvestmentSource.objects.create(
+        finance_solution=finance_solution,
+        investment_source="public",
+        investment_type="grant",
+        investment_amount=10000,
+        notes="Investment notes",
+    )
+
+    # Create revenue with notes
+    GFCRRevenue.objects.create(
+        finance_solution=finance_solution,
+        revenue_type="ecotourism",
+        revenue_amount=5000,
+        notes="Revenue notes",
+    )
+
+    # Generate report
+    report_path = create_report([project1.id])
+    assert report_path is not None
+
+    # Load the workbook and verify notes are present
+    wb = load_workbook(report_path)
+
+    # Check F1 sheet - should have notes in column 8
+    f1_sheet = wb["F1"]
+    f1_row = list(f1_sheet.iter_rows(min_row=2, max_row=2, values_only=True))[0]
+    assert f1_row[7] == "F1 test notes", f"F1 notes not found. Row: {f1_row}"
+
+    # Check F2 sheet - should have notes in column 7
+    f2_sheet = wb["F2"]
+    f2_rows = list(f2_sheet.iter_rows(min_row=2, values_only=True))
+    # All F2 rows should have the same notes
+    for row in f2_rows:
+        if row[0] is not None:  # Skip empty rows
+            assert row[6] == "F2 test notes", f"F2 notes not found in row: {row}"
+            break
+
+    # Check F3 sheet - should have notes in column 7
+    f3_sheet = wb["F3"]
+    f3_rows = list(f3_sheet.iter_rows(min_row=2, values_only=True))
+    for row in f3_rows:
+        if row[0] is not None:
+            assert row[6] == "F3 test notes", f"F3 notes not found in row: {row}"
+            break
+
+    # Check F4 sheet - should have notes in column 9
+    f4_sheet = wb["F4"]
+    f4_rows = list(f4_sheet.iter_rows(min_row=2, values_only=True))
+    for row in f4_rows:
+        if row[0] is not None:
+            assert row[8] == "F4 test notes", f"F4 notes not found in row: {row}"
+            break
+
+    # Check F5 sheet - should have notes in column 7
+    f5_sheet = wb["F5"]
+    f5_rows = list(f5_sheet.iter_rows(min_row=2, values_only=True))
+    for row in f5_rows:
+        if row[0] is not None:
+            assert row[6] == "F5 test notes", f"F5 notes not found in row: {row}"
+            break
+
+    # Check F6 sheet - should have notes in column 7
+    f6_sheet = wb["F6"]
+    f6_rows = list(f6_sheet.iter_rows(min_row=2, values_only=True))
+    for row in f6_rows:
+        if row[0] is not None:
+            assert row[6] == "F6 test notes", f"F6 notes not found in row: {row}"
+            break
+
+    # Check F7 sheet - should have notes in column 7
+    f7_sheet = wb["F7"]
+    f7_rows = list(f7_sheet.iter_rows(min_row=2, values_only=True))
+    for row in f7_rows:
+        if row[0] is not None:
+            assert row[6] == "F7 test notes", f"F7 notes not found in row: {row}"
+            break
+
+    # Check BusinessesFinanceSolutions sheet - should have notes in column 12
+    bfs_sheet = wb["BusinessesFinanceSolutions"]
+    bfs_row = list(bfs_sheet.iter_rows(min_row=2, max_row=2, values_only=True))[0]
+    assert (
+        bfs_row[11] == "Finance solution notes"
+    ), f"Finance solution notes not found. Row: {bfs_row}"
+
+    # Check Investments sheet - should have notes in column 11
+    inv_sheet = wb["Investments"]
+    inv_row = list(inv_sheet.iter_rows(min_row=2, max_row=2, values_only=True))[0]
+    assert inv_row[10] == "Investment notes", f"Investment notes not found. Row: {inv_row}"
+
+    # Check Revenues sheet - should have notes in column 11
+    rev_sheet = wb["Revenues"]
+    rev_row = list(rev_sheet.iter_rows(min_row=2, max_row=2, values_only=True))[0]
+    assert rev_row[10] == "Revenue notes", f"Revenue notes not found. Row: {rev_row}"
+
+    # Clean up
+    import os
+
+    os.remove(report_path)
