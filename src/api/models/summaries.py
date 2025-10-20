@@ -584,6 +584,12 @@ class HabitatComplexityObsModel(BaseObsModel):
     interval_size = models.DecimalField(
         max_digits=4, decimal_places=2, default=0.5, verbose_name=_("interval size (m)")
     )
+    interval_start = models.DecimalField(
+        max_digits=4,
+        decimal_places=2,
+        default=0.5,
+        verbose_name=_("interval start (m)"),
+    )
     interval = models.DecimalField(max_digits=7, decimal_places=2)
     observation_notes = models.TextField(blank=True)
     score = models.PositiveSmallIntegerField()
@@ -602,6 +608,15 @@ class HabitatComplexitySUModel(BaseSUModel):
         verbose_name=_("transect length surveyed (m)")
     )
     reef_slope = models.CharField(max_length=50, null=True, blank=True)
+    interval_size = models.DecimalField(
+        max_digits=4, decimal_places=2, default=0.5, verbose_name=_("interval size (m)")
+    )
+    interval_start = models.DecimalField(
+        max_digits=4,
+        decimal_places=2,
+        default=0.5,
+        verbose_name=_("interval start (m)"),
+    )
     score_avg = models.DecimalField(decimal_places=2, max_digits=3)
     score_sd = models.DecimalField(decimal_places=2, max_digits=3, null=True, blank=True)
     observation_count = models.PositiveSmallIntegerField()

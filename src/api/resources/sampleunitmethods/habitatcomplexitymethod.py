@@ -59,6 +59,13 @@ class HabitatComplexitySerializer(BaseAPISerializer):
         error_messages={"null": "Interval size is required"},
     )
 
+    interval_start = serializers.DecimalField(
+        max_digits=4,
+        decimal_places=2,
+        coerce_to_string=False,
+        error_messages={"null": "Interval start is required"},
+    )
+
     class Meta:
         model = HabitatComplexity
         exclude = []
@@ -270,6 +277,7 @@ class ObsHabitatComplexityCSVSerializer(ReportSerializer):
         ReportField("sample_event_id"),
         ReportField("sample_unit_id"),
         ReportField("interval_size"),
+        ReportField("interval_start"),
     ]
 
 
@@ -331,6 +339,8 @@ class HabitatComplexityMethodSUCSVSerializer(ReportSerializer):
         ReportField("transect_number", "Transect number"),
         ReportField("label", "Transect label"),
         ReportField("transect_len_surveyed", "Transect length surveyed"),
+        ReportField("interval_size", "Interval size"),
+        ReportField("interval_start", "Interval start"),
         ReportField("observers", "Observers", to_names),
         ReportField("score_avg", "Average score"),
         ReportField("score_sd", "Score standard deviation"),

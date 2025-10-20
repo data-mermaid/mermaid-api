@@ -245,7 +245,7 @@ def test_habitatcomplexity_csv_view(
 
     assert len(rows) == 6
     assert "country_name" in fieldnames
-    assert len(rows[3].keys()) == 50
+    assert len(rows[3].keys()) == 51
     assert rows[3]["site_name"] == site2.name
     assert float(rows[3]["latitude"]) == site2.location.y
     assert float(rows[3]["longitude"]) == site2.location.x
