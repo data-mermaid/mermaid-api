@@ -10,6 +10,8 @@ def backfill_interval_start(apps, schema_editor):
     """
     HabitatComplexity = apps.get_model("api", "HabitatComplexity")
     for hc in HabitatComplexity.objects.all():
+        if hc.interval_start is not None:
+            continue
         hc.interval_start = hc.interval_size
         hc.save(update_fields=["interval_start"])
 
