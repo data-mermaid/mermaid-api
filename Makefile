@@ -117,7 +117,7 @@ shellplusroot:
 	$(DOCKER_COMPOSE) exec --user=root $(API_SERVICE) python manage.py shell_plus
 
 test:
-	$(DOCKER_COMPOSE) exec $(API_SERVICE) pytest -v --no-migrations --rich api/tests
+	$(DOCKER_COMPOSE) exec $(API_SERVICE) pytest -v --no-migrations api/tests
 
 # -----------------
 # Fargate Maintenance (docker exec)
