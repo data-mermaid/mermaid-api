@@ -395,11 +395,16 @@ class ProjectViewSet(BaseApiViewSet):
             )
 
         unique_id = ""
+        tries = 0
         while True:
             unique_id = "".join(random.choices(string.ascii_letters + string.digits, k=4))
             project_name = f"Demo - {unique_id}"
             if not Project.objects.filter(name=project_name).exists():
                 break
+
+            tries += 1
+            if tries == 1_000_000:
+                raise exceptions.APIException(detail="Could not generate unique demo project name")
 
         request.data["original_project_id"] = settings.DEMO_PROJECT_ID
         request.data["notify_users"] = False
