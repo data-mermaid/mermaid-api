@@ -8,6 +8,7 @@ from stacks.common import CommonStack
 from stacks.github_access import GithubAccessStack
 from stacks.sagemaker import SagemakerStack
 from stacks.static_site import StaticSiteStack
+from stacks.cloudtrail import CloudTrailStack
 
 tags = {
     "Owner": "sysadmin@datamermaid.org",
@@ -75,6 +76,13 @@ dev_sagemaker_stack = SagemakerStack(
     tags=tags,
     config=DEV_SETTINGS,
     cluster=common_stack.cluster,
+)
+
+dev_cloudtrail_stack = CloudTrailStack(
+    app,
+    "dev-mermaid-cloudtrail",
+    env=cdk_env,
+    tags=tags,
 )
 
 prod_static_site_stack = StaticSiteStack(
