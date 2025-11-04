@@ -1,4 +1,4 @@
-from typing import List
+
 
 from aws_cdk import CfnOutput, Duration, RemovalPolicy, Stack
 from aws_cdk import aws_cloudtrail as cloudtrail
@@ -32,7 +32,7 @@ class CloudTrailStack(Stack):
             lifecycle_rules=[
                 s3.LifecycleRule(
                     enabled=True,
-                    expiration=Duration.days(365 * 7 * 3),
+                    expiration=Duration.days(365 * 3),
                     id="Expire old CloudTrail logs after 3 years",
                 )
             ],

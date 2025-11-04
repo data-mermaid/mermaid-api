@@ -114,5 +114,11 @@ prod_api_stack = ApiStack(
     report_s3_creds=common_stack.report_s3_creds,
 )
 
+prod_cloudtrail_stack = CloudTrailStack(
+    app,
+    "prod-mermaid-cloudtrail",
+    env=cdk_env,
+    tags=tags,
+)
 
 app.synth()
