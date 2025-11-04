@@ -452,6 +452,10 @@ class ProjectViewSet(BaseApiViewSet):
             raise exceptions.ParseError(
                 detail="Original project does not exist or you are not a member"
             ) from not_exist_err
+        except Project.DoesNotExist as demo_project_not_exist_err:
+            raise exceptions.ParseError(
+                detail="Demo project does not exist"
+            ) from demo_project_not_exist_err
 
         notify_users = truthy(data.get("notify_users"))
 
