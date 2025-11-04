@@ -1,4 +1,6 @@
 import logging
+import random
+import string
 
 import django_filters
 import psycopg2
@@ -386,6 +388,29 @@ class ProjectViewSet(BaseApiViewSet):
         methods=["post"],
         permission_classes=[ProjectAuthenticatedUserPermission],
     )
+    def create_demo(self, request):
+        if Project.objects.filter(created_by=request.user.profile, is_demo=True).exists():
+            raise exceptions.ValidationError(
+                detail="You have already created a demo project. Only one demo project is allowed per user."
+            )
+
+        unique_id = ""
+        while True:
+            unique_id = "".join(random.choices(string.ascii_letters + string.digits, k=4))
+            project_name = f"Demo - {unique_id}"
+            if not Project.objects.filter(name=project_name).exists():
+                break
+
+        request.data["original_project_id"] = settings.DEMO_PROJECT_ID
+        request.data["notify_users"] = False
+        request.data["new_project_name"] = project_name
+        return self.copy_project(request)
+
+    @action(
+        detail=False,
+        methods=["post"],
+        permission_classes=[ProjectAuthenticatedUserPermission],
+    )
     def copy_project(self, request):
         """
         Payload schema:
@@ -414,9 +439,13 @@ class ProjectViewSet(BaseApiViewSet):
             original_project_id = data["original_project_id"]
             if original_project_id and str(original_project_id).strip() != "":
                 check_uuid(original_project_id)
-            original_project = ProjectProfile.objects.get(
-                project_id=original_project_id, profile=profile
-            ).project
+
+            if str(original_project_id) == str(settings.DEMO_PROJECT_ID):
+                original_project = Project.objects.get(id=settings.DEMO_PROJECT_ID)
+            else:
+                original_project = ProjectProfile.objects.get(
+                    project_id=original_project_id, profile=profile
+                ).project
         except KeyError as e:
             raise exceptions.ParseError(detail="'original_project_id' is required") from e
         except ProjectProfile.DoesNotExist as not_exist_err:
