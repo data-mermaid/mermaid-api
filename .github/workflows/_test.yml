@@ -2,11 +2,13 @@ name: 🧪 Test
 
 on: workflow_call
 
+permissions:
+  contents: read
 jobs:
   test:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v5.0.0
 
       - name: Run Tests
         run: echo "No tests"

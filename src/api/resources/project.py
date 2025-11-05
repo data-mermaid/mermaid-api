@@ -201,10 +201,9 @@ class ProjectCSVSerializer(ReportSerializer, BaseProjectSerializer):
         return f"{settings.DEFAULT_DOMAIN_MARKETING}/contact-project?project_id={obj.id}"
 
     def get_project_admins(self, obj):
-        admins = obj.profiles.filter(role=ProjectProfile.ADMIN).values_list(
-            "profile__email", flat=True
-        )
-        return ", ".join(admins)
+        admin_profiles = obj.profiles.filter(role=ProjectProfile.ADMIN).select_related("profile")
+        admin_names = [pp.profile.full_name for pp in admin_profiles]
+        return ", ".join(admin_names)
 
 
 class ProjectFilterSet(BaseAPIFilterSet, OrFilterSetMixin):

@@ -112,3 +112,4 @@ src/media/*
 src/_classifiers/*
 mynotes.md
 requirements_backup.txt
+generate_token.py
