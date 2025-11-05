@@ -9,6 +9,7 @@ from stacks.github_access import GithubAccessStack
 from stacks.sagemaker import SagemakerStack
 from stacks.static_site import StaticSiteStack
 from stacks.cloudtrail import CloudTrailStack
+from stacks.guardduty import GuardDutyStack
 
 tags = {
     "Owner": "sysadmin@datamermaid.org",
@@ -78,13 +79,6 @@ dev_sagemaker_stack = SagemakerStack(
     cluster=common_stack.cluster,
 )
 
-dev_cloudtrail_stack = CloudTrailStack(
-    app,
-    "dev-mermaid-cloudtrail",
-    env=cdk_env,
-    tags=tags,
-)
-
 prod_static_site_stack = StaticSiteStack(
     app,
     "prod-mermaid-static-site",
@@ -114,11 +108,46 @@ prod_api_stack = ApiStack(
     report_s3_creds=common_stack.report_s3_creds,
 )
 
-prod_cloudtrail_stack = CloudTrailStack(
+CloudTrailStack(
     app,
-    "prod-mermaid-cloudtrail",
+    "mermaid-cloudtrail",
     env=cdk_env,
-    tags=tags,
+    tags={"Env": "Common"},
+)
+
+GuardDutyStack(
+    app,
+    f"mermaid-guardduty-{cdk_env.region}",
+    env=cdk_env,
+    tags={"Env": "Common"},
+    s3_buckets=[
+        "2310-coralnet-public-sources",
+        "amazon-sagemaker-554812291621-us-east-1-b5cebdff17fb",
+        "assets.datamermaid.org",
+        "collect-turndown.datamermaid.org",
+        "config-bucket-554812291621",
+        "dashboard2.datamermaid.org",
+        "dev-dashboard2.datamermaid.org",
+        "dev-datamermaid-sm-data",
+        "dev-datamermaid-sm-sources",
+        "dev-explore.datamermaid.org",
+        "dev-mermaid-cloudtrail-cloudtrailbucket98b0bfe1-qwlw3gr5rvvm",
+        "dev-public.datamermaid.org",
+        "dev.app2.datamermaid.org",
+        "dev.dashboard3.datamermaid.org",
+        "explore.datamermaid.org",
+        "mermaid-api-v2-backups",
+        "mermaid-config",
+        "mermaid-data",
+        "mermaid-image-processing",
+        "mermaid-user-metrics",
+        "prod.app2.datamermaid.org",
+        "public.datamermaid.org",
+        "pyspacer-test",
+        "sagemaker-studio-554812291621-moo6nyhibza",
+        "sagemaker-us-east-1-554812291621",
+        "vpcflowlogs.admin.datamermaid.org",
+    ],
 )
 
 app.synth()
