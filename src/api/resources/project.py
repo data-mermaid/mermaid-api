@@ -1,6 +1,4 @@
 import logging
-import random
-import string
 
 import django_filters
 import psycopg2
@@ -394,15 +392,14 @@ class ProjectViewSet(BaseApiViewSet):
                 detail="You have already created a demo project. Only one demo project is allowed per user."
             )
 
-        unique_id = ""
         tries = 0
+        profile = request.user.profile
+        project_name = f"Demo - {profile.full_name}"
         while True:
-            unique_id = "".join(random.choices(string.ascii_letters + string.digits, k=4))
-            project_name = f"Demo - {unique_id}"
             if not Project.objects.filter(name=project_name).exists():
                 break
-
             tries += 1
+            project_name = f"Demo - {profile.full_name} ({tries})"
             if tries == 1_000_000:
                 raise exceptions.APIException(detail="Could not generate unique demo project name")
 
