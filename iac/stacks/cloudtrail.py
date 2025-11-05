@@ -100,7 +100,7 @@ class CloudTrailStack(Stack):
         delete_topic = sns.Topic(
             self, "CloudTrailDeleteTopic", display_name="CloudTrail Delete Events Topic"
         )
-        delete_topic.add_subscription(subs.EmailSubscription("system@datamermaid.org"))
+        delete_topic.add_subscription(subs.EmailSubscription("sysadmin@datamermaid.org"))
 
         CfnOutput(self, "DeleteTopicArn", value=delete_topic.topic_arn)
 
