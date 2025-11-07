@@ -8,11 +8,11 @@ from operator import itemgetter
 from pathlib import Path
 from tempfile import NamedTemporaryFile, TemporaryDirectory
 from typing import Any, Dict, Optional, Tuple
+from zoneinfo import ZoneInfo
 
 import pandas as pd
 import pyarrow as pa
 import pyarrow.parquet as pq
-import pytz
 from django.conf import settings
 from django.contrib.gis.geos import Point as GEOSPoint
 from django.core.files.base import ContentFile
@@ -126,7 +126,7 @@ def create_thumbnail(image_instance: Image) -> ContentFile:
 
 def convert_to_utc(timestamp_str: str) -> datetime:
     local_time = datetime.fromisoformat(timestamp_str)
-    return local_time.astimezone(pytz.utc)
+    return local_time.astimezone(ZoneInfo("UTC"))
 
 
 def extract_datetime_stamp(exif_details: Dict[str, Any]) -> Optional[datetime.datetime]:
@@ -136,7 +136,7 @@ def extract_datetime_stamp(exif_details: Dict[str, Any]) -> Optional[datetime.da
     if date_stamp and time_stamp:
         date_stamp = map(int, date_stamp.split(":"))
         time_stamp = map(int, time_stamp)
-        return datetime.datetime(*date_stamp, *time_stamp, tzinfo=pytz.UTC)
+        return datetime.datetime(*date_stamp, *time_stamp, tzinfo=ZoneInfo("UTC"))
 
     date_time_str = exif_details.get("datetime_original")
     offset_time = exif_details.get("offset_time")
@@ -149,7 +149,7 @@ def extract_datetime_stamp(exif_details: Dict[str, Any]) -> Optional[datetime.da
     local_tz = datetime.timezone(offset)
     dt_local = dt.replace(tzinfo=local_tz)
 
-    return dt_local.astimezone(pytz.UTC)
+    return dt_local.astimezone(ZoneInfo("UTC"))
 
 
 def extract_location(exif_details: Dict[str, Any]) -> Optional[GEOSPoint]:

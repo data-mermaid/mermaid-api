@@ -1,6 +1,6 @@
 from operator import itemgetter
+from zoneinfo import ZoneInfo
 
-import pytz
 from django.http.response import HttpResponseBadRequest
 from django.utils.dateparse import parse_datetime
 from natsort import natsorted
@@ -212,7 +212,7 @@ class ChoiceViewSet(BaseChoiceApiViewSet):
             timestamp = None
 
         if timestamp:
-            timestamp = timestamp.replace(tzinfo=pytz.utc)
+            timestamp = timestamp.replace(tzinfo=ZoneInfo("UTC"))
 
         choices = self.get_choices()
         for key, choice_set in choices.items():
