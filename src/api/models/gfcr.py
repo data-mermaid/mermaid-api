@@ -1,7 +1,7 @@
 import datetime
 from datetime import date
+from zoneinfo import ZoneInfo
 
-import pytz
 from django.contrib.postgres.fields import ArrayField
 from django.core.exceptions import ValidationError
 from django.db import models
@@ -20,7 +20,7 @@ class GFCRIndicatorSet(BaseModel):
         ("report", "Report"),
         ("target", "Target"),
     )
-    INDICATOR_SET_TYPE_CHOICES_UPDATED_ON = datetime.datetime(2024, 5, 27, 0, 0, 0, 0, pytz.UTC)
+    INDICATOR_SET_TYPE_CHOICES_UPDATED_ON = datetime.datetime(2024, 5, 27, 0, 0, 0, 0, tzinfo=ZoneInfo("UTC"))
 
     title = models.CharField(max_length=100)
     report_date = models.DateField()
@@ -275,7 +275,7 @@ class GFCRFinanceSolution(BaseModel):
             "Sustainable Ocean Production - Sustainable Small-Scale Fisheries",
         ),
     )
-    SECTOR_CHOICES_UPDATED_ON = datetime.datetime(2025, 2, 3, 0, 0, 0, 0, pytz.UTC)
+    SECTOR_CHOICES_UPDATED_ON = datetime.datetime(2025, 2, 3, 0, 0, 0, 0, tzinfo=ZoneInfo("UTC"))
 
     SUSTAINABLE_FINANCE_MECHANISM_CHOICES = (
         ("biodiversity_offsets", "Biodiversity offsets"),
@@ -294,7 +294,7 @@ class GFCRFinanceSolution(BaseModel):
         ("sustainable_livelihood_mech", "Sustainable livelihood mechanisms"),
     )
     SUSTAINABLE_FINANCE_MECHANISM_CHOICES_UPDATED_ON = datetime.datetime(
-        2024, 5, 27, 0, 0, 0, 0, pytz.UTC
+        2024, 5, 27, 0, 0, 0, 0, tzinfo=ZoneInfo("UTC")
     )
 
     GFCR_FUNDED = "gfcr_funded"
@@ -303,7 +303,7 @@ class GFCRFinanceSolution(BaseModel):
         (GFCR_FUNDED, "Yes: GFCR-funded"),
         (NON_GFCR_FUNDED, "Yes: Non-GFCR-funded"),
     )
-    INCUBATOR_CHOICES_UPDATED_ON = datetime.datetime(2024, 5, 28, 0, 0, 0, 0, pytz.UTC)
+    INCUBATOR_CHOICES_UPDATED_ON = datetime.datetime(2024, 5, 28, 0, 0, 0, 0, tzinfo=ZoneInfo("UTC"))
 
     indicator_set = models.ForeignKey(
         GFCRIndicatorSet, on_delete=models.CASCADE, related_name="finance_solutions"
@@ -344,7 +344,7 @@ class GFCRInvestmentSource(BaseModel):
         ("private", "Private"),
         ("public", "Public"),
     )
-    INVESTMENT_SOURCE_CHOICES_UPDATED_ON = datetime.datetime(2024, 5, 27, 0, 0, 0, 0, pytz.UTC)
+    INVESTMENT_SOURCE_CHOICES_UPDATED_ON = datetime.datetime(2024, 5, 27, 0, 0, 0, 0, tzinfo=ZoneInfo("UTC"))
 
     INVESTMENT_TYPE_CHOICES = (
         ("bond", "Bond"),
@@ -356,7 +356,7 @@ class GFCRInvestmentSource(BaseModel):
         ("public_budget", "Public budget"),
         ("technical_assistance", "Technical assistance"),
     )
-    INVESTMENT_TYPE_CHOICES_UPDATED_ON = datetime.datetime(2024, 5, 27, 0, 0, 0, 0, pytz.UTC)
+    INVESTMENT_TYPE_CHOICES_UPDATED_ON = datetime.datetime(2024, 5, 27, 0, 0, 0, 0, tzinfo=ZoneInfo("UTC"))
 
     finance_solution = models.ForeignKey(
         GFCRFinanceSolution, on_delete=models.CASCADE, related_name="investment_sources"
@@ -398,7 +398,7 @@ class GFCRRevenue(BaseModel):
         ("misc_revenue_streams", "Misc. revenue streams"),
         ("sustainable_livelihood_mechanisms", "Other sustainable livelihood mechanisms"),
     )
-    REVENUE_TYPE_CHOICES_UPDATED_ON = datetime.datetime(2024, 5, 27, 0, 0, 0, 0, pytz.UTC)
+    REVENUE_TYPE_CHOICES_UPDATED_ON = datetime.datetime(2024, 5, 27, 0, 0, 0, 0, tzinfo=ZoneInfo("UTC"))
 
     finance_solution = models.ForeignKey(
         GFCRFinanceSolution, on_delete=models.CASCADE, related_name="revenues"

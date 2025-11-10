@@ -3,6 +3,8 @@ import uuid
 
 from django.conf import settings
 from django.contrib.postgres.aggregates import ArrayAgg
+from django.core.exceptions import FieldDoesNotExist
+from django.db.models.fields.related import ForeignObjectRel
 from django_filters import (
     BaseInFilter,
     CharFilter,
@@ -373,6 +375,69 @@ class BaseAPIFilterSet(FilterSet):
         fields = ["created_on", "updated_on", "created_by", "updated_by"]
 
 
+class RelatedOrderingFilter(OrderingFilter):
+    """
+    Extends OrderingFilter to support ordering by fields in related models
+    using the Django ORM __ notation, and ensures deterministic pagination
+    by automatically including 'id' in the ordering.
+
+    https://github.com/tomchristie/django-rest-framework/issues/1005
+    """
+
+    def get_ordering(self, request, queryset, view):
+        """
+        Ensure unique pagination when not enough ordering fields are specified.
+        Automatically appends 'id' if not present.
+        """
+        ordering = super().get_ordering(request, queryset, view)
+        if ordering:
+            ordering = list(ordering)
+            # Add 'id' if not already present (in any form)
+            if "id" not in ordering and "-id" not in ordering:
+                ordering.append("id")
+            return ordering
+        return ordering
+
+    def is_valid_field(self, model, field_name):
+        """
+        Return true if the field exists within the model (or in the related
+        model specified using the Django ORM __ notation).
+        """
+        components = field_name.split("__", 1)
+        try:
+            field = model._meta.get_field(components[0])
+
+            # If there are more components, recursively check the related model
+            if len(components) == 2:
+                # Reverse relation
+                if isinstance(field, ForeignObjectRel):
+                    return self.is_valid_field(field.related_model, components[1])
+                # Foreign key or other relation
+                if hasattr(field, "related_model") and field.related_model:
+                    return self.is_valid_field(field.related_model, components[1])
+
+            return True
+        except FieldDoesNotExist:
+            return False
+
+    def remove_invalid_fields(self, queryset, fields, view, request):
+        # Get the base valid fields from the parent class
+        valid_fields = [
+            item[0] for item in self.get_valid_fields(queryset, view, {"request": request})
+        ]
+
+        # Also check model fields (including related fields with __)
+        valid_model_fields = [
+            term for term in fields if self.is_valid_field(queryset.model, term.lstrip("-"))
+        ]
+
+        # Combine both sets
+        all_valid_fields = set(valid_fields) | set(valid_model_fields)
+
+        # Filter the requested fields
+        return [term for term in fields if term.lstrip("-") in all_valid_fields]
+
+
 class SafeSearchFilter(SearchFilter):
     def _check_search_terms(self, search_fields, search_terms):
         if not search_fields or not search_terms or "$" not in [sf[0] for sf in search_fields]:
@@ -474,7 +539,7 @@ class BaseApiViewSet(MethodAuthenticationMixin, viewsets.ModelViewSet):
 
     pagination_class = StandardResultPagination
 
-    filter_backends = (DjangoFilterBackend, OrderingFilter, SafeSearchFilter)
+    filter_backends = (DjangoFilterBackend, RelatedOrderingFilter, SafeSearchFilter)
 
     _serializer_class_for_fields = {}
 

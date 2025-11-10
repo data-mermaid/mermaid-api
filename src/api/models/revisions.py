@@ -19,7 +19,12 @@ class Revision(models.Model):
 
     class Meta:
         db_table = "revision"
-        unique_together = ("table_name", "record_id", "related_to_profile_id")
+        constraints = [
+            models.UniqueConstraint(
+                fields=["table_name", "record_id", "related_to_profile_id"],
+                name="unique_revision_table_record_profile"
+            )
+        ]
 
     def __str__(self):
         return f"[{self.revision_num}] {self.table_name} {self.record_id}"
