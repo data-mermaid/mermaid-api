@@ -26,7 +26,6 @@ pyexcelerate==0.13.0
 pyspacer==0.12.0
 pytest-cov==6.2.1
 pytest-django==4.11.1
-pytest-rich==0.2.0
 pytest==8.4.1
 python-jose==3.5.0
 requests==2.32.4

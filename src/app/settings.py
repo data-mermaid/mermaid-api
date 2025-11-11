@@ -396,3 +396,9 @@ SPACER = {
 # Reporting S3 credentials
 REPORT_S3_ACCESS_KEY_ID = os.environ.get("REPORT_S3_ACCESS_KEY_ID")
 REPORT_S3_SECRET_ACCESS_KEY = os.environ.get("REPORT_S3_SECRET_ACCESS_KEY")
+
+# Demo Projects
+if ENVIRONMENT == "prod":
+    DEMO_PROJECT_ID = "65f312d2-7261-41ce-8e7d-1256b51dd7f0"
+else:
+    DEMO_PROJECT_ID = "8c213ce8-7973-47a5-9359-3a0ef12ed201"

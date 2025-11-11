@@ -53,24 +53,14 @@ def sample_event_other(management_other, site_other, sample_date1):
 
 
 @pytest.fixture
-def image_file():
-    # return SimpleUploadedFile(
-    #     name="test_image.jpg",
-    #     content=open("api/tests/data/test_image.jpg", "rb").read(),
-    #     content_type="image/jpeg",
-    # )
+def image_bpq_project1(db, benthic_photo_quadrat_transect1, obs_benthic_photo_quadrat1_1, profile1):
     data_path = Path(__file__).resolve().parent / "data" / "test_image.jpg"
-    return SimpleUploadedFile(
+    image_file = SimpleUploadedFile(
         name=data_path.name,
         content=data_path.read_bytes(),
         content_type="image/jpeg",
     )
 
-
-@pytest.fixture
-def image_bpq_project1(
-    db, benthic_photo_quadrat_transect1, obs_benthic_photo_quadrat1_1, profile1, image_file
-):
     image = Image.objects.create(
         name="BPQ Image Project 1",
         image=image_file,
@@ -95,11 +85,17 @@ def image_bpq_project_other(
     db,
     profile3,
     sample_event_other,
-    image_file,
     project_profile3,
     benthic_attribute_1a,
     benthic_attribute_2a,
 ):
+    data_path = Path(__file__).resolve().parent / "data" / "test_image.jpg"
+    image_file = SimpleUploadedFile(
+        name=data_path.name,
+        content=data_path.read_bytes(),
+        content_type="image/jpeg",
+    )
+
     quadrat_transect = QuadratTransect.objects.create(
         quadrat_size=1,
         num_quadrats=1,
