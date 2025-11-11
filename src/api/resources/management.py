@@ -61,7 +61,7 @@ class ManagementSerializer(BaseAPISerializer):
         coerce_to_string=False,
         allow_null=True,
         required=False,
-        min_value=Decimal(0.001),
+        min_value=Decimal("0.001"),
     )
 
     class Meta:

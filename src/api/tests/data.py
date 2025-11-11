@@ -46,7 +46,7 @@ class MockRequest:
 
 class TestDataMixin(object):
     def timestamp(self):
-        return (dt.datetime.now(dt.UTC) - dt.datetime(1970, 1, 1)).total_seconds()
+        return (dt.datetime.now(dt.UTC) - dt.datetime(1970, 1, 1, tzinfo=dt.UTC)).total_seconds()
 
     def create_token(self, sub):
         token_header = {"typ": "JWT", "alg": "HS256"}

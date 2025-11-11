@@ -60,7 +60,7 @@ class BeltFishSerializer(BaseAPISerializer):
 
 class ObsBeltFishSerializer(BaseAPISerializer):
     size = serializers.DecimalField(
-        max_digits=5, decimal_places=1, coerce_to_string=False, min_value=Decimal(0.1)
+        max_digits=5, decimal_places=1, coerce_to_string=False, min_value=Decimal("0.1")
     )
 
     class Meta:
