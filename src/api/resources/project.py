@@ -14,10 +14,20 @@ from rest_framework.response import Response
 from ..auth_backends import AnonymousJWTAuthentication
 from ..exceptions import check_uuid
 from ..models import (
+    BeltFish,
+    BenthicLIT,
+    BenthicPhotoQuadratTransect,
+    BenthicPIT,
+    BenthicTransect,
+    BleachingQuadratCollection,
+    HabitatComplexity,
     Management,
     Profile,
     Project,
     ProjectProfile,
+    QuadratCollection,
+    QuadratTransect,
+    SampleEvent,
     Site,
     Tag,
 )
@@ -252,6 +262,20 @@ class ProjectViewSet(BaseApiViewSet):
     search_fields = ["$name", "$sites__country__name"]
 
     def get_queryset(self):
+        # Get dynamic table names from model metadata
+        project_table = Project._meta.db_table
+        site_table = Site._meta.db_table
+        sample_event_table = SampleEvent._meta.db_table
+        benthic_transect_table = BenthicTransect._meta.db_table
+        benthiclit_table = BenthicLIT._meta.db_table
+        benthicpit_table = BenthicPIT._meta.db_table
+        habitatcomplexity_table = HabitatComplexity._meta.db_table
+        bleachingqc_table = BleachingQuadratCollection._meta.db_table
+        quadrat_collection_table = QuadratCollection._meta.db_table
+        benthicpqt_table = BenthicPhotoQuadratTransect._meta.db_table
+        quadrat_transect_table = QuadratTransect._meta.db_table
+        beltfish_table = BeltFish._meta.db_table
+
         qs = (
             Project.objects.select_related(
                 "created_by",
@@ -265,11 +289,11 @@ class ProjectViewSet(BaseApiViewSet):
             .annotate(
                 # need to cast to text to avoid box2d equality operator error
                 extent=RawSQL(
-                    """
+                    f"""
                     (
-                        SELECT ST_Extent(site.location)::text
-                        FROM site
-                        WHERE site.project_id = project.id
+                        SELECT ST_Extent({site_table}.location)::text
+                        FROM {site_table}
+                        WHERE {site_table}.project_id = {project_table}.id
                     )
                     """,
                     [],
@@ -277,66 +301,66 @@ class ProjectViewSet(BaseApiViewSet):
                 # Count sample units across all TransectMethod types using a CTE
                 # This replaces the N+1 query pattern in get_num_sample_units
                 num_sample_units=RawSQL(
-                    """
+                    f"""
                     (
                         WITH sample_unit_counts AS (
                             -- BenthicLIT
                             SELECT COUNT(*) as su_count
-                            FROM transectmethod_benthiclit t
-                            JOIN transect_benthic bt ON t.transect_id = bt.id
-                            JOIN sample_event se ON bt.sample_event_id = se.id
-                            JOIN site ON se.site_id = site.id
-                            WHERE site.project_id = project.id
+                            FROM {benthiclit_table} t
+                            JOIN {benthic_transect_table} bt ON t.transect_id = bt.id
+                            JOIN {sample_event_table} se ON bt.sample_event_id = se.id
+                            JOIN {site_table} ON se.site_id = {site_table}.id
+                            WHERE {site_table}.project_id = {project_table}.id
 
                             UNION ALL
 
                             -- BenthicPIT
                             SELECT COUNT(*) as su_count
-                            FROM transectmethod_benthicpit t
-                            JOIN transect_benthic bt ON t.transect_id = bt.id
-                            JOIN sample_event se ON bt.sample_event_id = se.id
-                            JOIN site ON se.site_id = site.id
-                            WHERE site.project_id = project.id
+                            FROM {benthicpit_table} t
+                            JOIN {benthic_transect_table} bt ON t.transect_id = bt.id
+                            JOIN {sample_event_table} se ON bt.sample_event_id = se.id
+                            JOIN {site_table} ON se.site_id = {site_table}.id
+                            WHERE {site_table}.project_id = {project_table}.id
 
                             UNION ALL
 
                             -- HabitatComplexity
                             SELECT COUNT(*) as su_count
-                            FROM transectmethod_habitatcomplexity t
-                            JOIN transect_benthic bt ON t.transect_id = bt.id
-                            JOIN sample_event se ON bt.sample_event_id = se.id
-                            JOIN site ON se.site_id = site.id
-                            WHERE site.project_id = project.id
+                            FROM {habitatcomplexity_table} t
+                            JOIN {benthic_transect_table} bt ON t.transect_id = bt.id
+                            JOIN {sample_event_table} se ON bt.sample_event_id = se.id
+                            JOIN {site_table} ON se.site_id = {site_table}.id
+                            WHERE {site_table}.project_id = {project_table}.id
 
                             UNION ALL
 
                             -- BleachingQuadratCollection
                             SELECT COUNT(*) as su_count
-                            FROM transectmethod_bleaching_quadrat_collection t
-                            JOIN quadrat_collection qc ON t.quadrat_id = qc.id
-                            JOIN sample_event se ON qc.sample_event_id = se.id
-                            JOIN site ON se.site_id = site.id
-                            WHERE site.project_id = project.id
+                            FROM {bleachingqc_table} t
+                            JOIN {quadrat_collection_table} qc ON t.quadrat_id = qc.id
+                            JOIN {sample_event_table} se ON qc.sample_event_id = se.id
+                            JOIN {site_table} ON se.site_id = {site_table}.id
+                            WHERE {site_table}.project_id = {project_table}.id
 
                             UNION ALL
 
                             -- BenthicPhotoQuadratTransect
                             SELECT COUNT(*) as su_count
-                            FROM transectmethod_benthicpqt t
-                            JOIN quadrat_transect qt ON t.quadrat_transect_id = qt.id
-                            JOIN sample_event se ON qt.sample_event_id = se.id
-                            JOIN site ON se.site_id = site.id
-                            WHERE site.project_id = project.id
+                            FROM {benthicpqt_table} t
+                            JOIN {quadrat_transect_table} qt ON t.quadrat_transect_id = qt.id
+                            JOIN {sample_event_table} se ON qt.sample_event_id = se.id
+                            JOIN {site_table} ON se.site_id = {site_table}.id
+                            WHERE {site_table}.project_id = {project_table}.id
 
                             UNION ALL
 
                             -- BeltFish
                             SELECT COUNT(*) as su_count
-                            FROM transectmethod_transectbeltfish t
-                            JOIN transect_benthic bt ON t.transect_id = bt.id
-                            JOIN sample_event se ON bt.sample_event_id = se.id
-                            JOIN site ON se.site_id = site.id
-                            WHERE site.project_id = project.id
+                            FROM {beltfish_table} t
+                            JOIN {benthic_transect_table} bt ON t.transect_id = bt.id
+                            JOIN {sample_event_table} se ON bt.sample_event_id = se.id
+                            JOIN {site_table} ON se.site_id = {site_table}.id
+                            WHERE {site_table}.project_id = {project_table}.id
                         )
                         SELECT COALESCE(SUM(su_count), 0)
                         FROM sample_unit_counts
