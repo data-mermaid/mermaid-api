@@ -117,6 +117,7 @@ class Project(BaseModel, JSONMixin):
     name = models.CharField(max_length=255, unique=True)
     notes = models.TextField(blank=True)
     status = models.PositiveSmallIntegerField(choices=STATUSES, default=OPEN)
+    is_demo = models.BooleanField(default=False)
     data_policy_beltfish = models.PositiveSmallIntegerField(
         choices=DATA_POLICIES, default=PUBLIC_SUMMARY
     )
@@ -155,6 +156,9 @@ class Project(BaseModel, JSONMixin):
         return instance
 
     def save(self, *args, **kwargs):
+        if self.is_demo:
+            self.status = self.TEST
+
         notify_fields = [
             f.name
             for f in self._meta.get_fields(include_parents=False, include_hidden=False)
@@ -185,6 +189,13 @@ class Project(BaseModel, JSONMixin):
     class Meta:
         db_table = "project"
         ordering = ["name"]
+        constraints = [
+            models.UniqueConstraint(
+                fields=["created_by"],
+                condition=models.Q(is_demo=True),
+                name="unique_demo_project_per_user",
+            )
+        ]
 
     def __str__(self):
         return _("%s") % self.name

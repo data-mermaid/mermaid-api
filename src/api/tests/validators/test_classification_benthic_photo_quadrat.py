@@ -1,5 +1,4 @@
 import pytest
-from django.core.files import File
 
 from api.models import (
     BENTHICPQT_PROTOCOL,
@@ -43,17 +42,28 @@ def image_collect_record_serialized(image_collect_record):
 
 
 @pytest.fixture
-def image_file():
-    return File(open("api/tests/data/test_image.jpg", "rb"), name="test_image.jpg")
+def image1(image_collect_record):
+    from django.core.files.uploadedfile import SimpleUploadedFile
 
+    with open("api/tests/data/test_image.jpg", "rb") as f:
+        content = f.read()
 
-@pytest.fixture
-def image1(image_collect_record, image_file):
+    image_file = SimpleUploadedFile(
+        name="test_image.jpg", content=content, content_type="image/jpeg"
+    )
     return Image.objects.create(collect_record_id=image_collect_record.pk, image=image_file)
 
 
 @pytest.fixture
-def image2(image_collect_record, image_file):
+def image2(image_collect_record):
+    from django.core.files.uploadedfile import SimpleUploadedFile
+
+    with open("api/tests/data/test_image.jpg", "rb") as f:
+        content = f.read()
+
+    image_file = SimpleUploadedFile(
+        name="test_image.jpg", content=content, content_type="image/jpeg"
+    )
     return Image.objects.create(collect_record_id=image_collect_record.pk, image=image_file)
 
 

@@ -232,6 +232,8 @@ def copy_project_and_resources(owner_profile, new_project_name, original_project
     new_project = Project.objects.get(id=original_project.pk)
     new_project.id = None
     new_project.name = new_project_name
+    new_project.created_by = owner_profile
+    new_project.updated_by = owner_profile
     new_project.save()
 
     new_project.tags.add(*original_project.tags.all())
