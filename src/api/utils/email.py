@@ -1,4 +1,3 @@
-import datetime
 import logging
 from pathlib import Path
 from zipfile import ZIP_DEFLATED, ZipFile
@@ -6,6 +5,7 @@ from zipfile import ZIP_DEFLATED, ZipFile
 from django.conf import settings
 from django.core.mail import EmailMultiAlternatives
 from django.template.loader import render_to_string
+from django.utils import timezone
 from maintenance_mode.core import get_maintenance_mode
 
 from ..models import PROTOCOL_MAP
@@ -23,7 +23,7 @@ def _get_mermaid_email_content(template, context):
     template_html = f"{path}.html"
     template_text = f"{path}.txt"
     context = context or {}
-    context["timestamp"] = datetime.datetime.now(datetime.UTC).replace(microsecond=0).isoformat()
+    context["timestamp"] = timezone.now().replace(microsecond=0).isoformat()
 
     text_content = render_to_string(template_text, context=context)
     html_content = None

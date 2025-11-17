@@ -20,6 +20,7 @@ from ..models import (
     BenthicPIT,
     BenthicTransect,
     BleachingQuadratCollection,
+    FishBeltTransect,
     HabitatComplexity,
     Management,
     Profile,
@@ -29,7 +30,7 @@ from ..models import (
     QuadratTransect,
     SampleEvent,
     Site,
-    Tag, FishBeltTransect,
+    Tag,
 )
 from ..notifications import notify_crs_transferred
 from ..permissions import (

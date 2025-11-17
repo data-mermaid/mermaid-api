@@ -1,13 +1,13 @@
 import datetime
 
 from django.conf import settings
+from django.utils import timezone
 from jose import jwt
 
 
 def timestamp():
     return (
-        datetime.datetime.now(datetime.timezone.utc)
-        - datetime.datetime(1970, 1, 1, tzinfo=datetime.timezone.utc)
+        timezone.now() - datetime.datetime(1970, 1, 1, tzinfo=datetime.timezone.utc)
     ).total_seconds()
 
 

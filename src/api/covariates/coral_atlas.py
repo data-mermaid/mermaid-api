@@ -4,6 +4,7 @@ from typing import List, Tuple
 
 import requests
 from django.conf import settings
+from django.utils import timezone
 
 from .base import BaseCovariate, CovariateRequestError
 
@@ -63,7 +64,7 @@ class CoralAtlasCovariate(BaseCovariate):
     def fetch(self, points: List[Tuple[float, float]]) -> List[dict]:
         futures = []
         response = []
-        request_datetime = datetime.datetime.now(datetime.UTC)
+        request_datetime = timezone.now()
         with ThreadPoolExecutor(max_workers=self.num_threads) as exc:
             for point in points:
                 x, y = point

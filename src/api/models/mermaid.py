@@ -5,7 +5,6 @@ import logging
 import operator as pyoperator
 import uuid
 from decimal import Decimal
-from zoneinfo import ZoneInfo
 
 from django.contrib.gis.db import models
 from django.contrib.postgres.aggregates import ArrayAgg
@@ -91,7 +90,9 @@ class Project(BaseModel, JSONMixin):
         (PUBLIC, _("public")),
     )
 
-    DATA_POLICY_CHOICES_UPDATED_ON = datetime.datetime(2019, 2, 2, 0, 0, 0, 0, tzinfo=ZoneInfo("UTC"))
+    DATA_POLICY_CHOICES_UPDATED_ON = datetime.datetime(
+        2019, 2, 2, 0, 0, 0, 0, tzinfo=datetime.timezone.utc
+    )
 
     DATA_POLICY_CHOICES = (
         {
@@ -388,7 +389,7 @@ class ProjectProfile(BaseModel):
         (COLLECTOR, _("collector")),  # add/edit
         (READONLY, _("read-only")),
     )
-    ROLES_UPDATED_ON = datetime.datetime(2019, 2, 2, 0, 0, 0, 0, tzinfo=ZoneInfo("UTC"))
+    ROLES_UPDATED_ON = datetime.datetime(2019, 2, 2, 0, 0, 0, 0, tzinfo=datetime.timezone.utc)
 
     project = models.ForeignKey(Project, related_name="profiles", on_delete=models.CASCADE)
     profile = models.ForeignKey(Profile, related_name="projects", on_delete=models.CASCADE)
@@ -427,10 +428,7 @@ class ProjectProfile(BaseModel):
         db_table = "project_profile"
         ordering = ("project", "profile")
         constraints = [
-            models.UniqueConstraint(
-                fields=["project", "profile"],
-                name="unique_project_profile"
-            )
+            models.UniqueConstraint(fields=["project", "profile"], name="unique_project_profile")
         ]
 
 
@@ -641,7 +639,7 @@ class BeltTransectWidthCondition(BaseChoiceModel):
         constraints = [
             models.UniqueConstraint(
                 fields=["belttransectwidth", "operator", "size"],
-                name="unique_belt_width_operator_size"
+                name="unique_belt_width_operator_size",
             )
         ]
 
@@ -1659,7 +1657,9 @@ class FishSpecies(FishAttribute):
         ("total length", "total length"),
         ("wing diameter", "wing diameter"),
     )
-    LENGTH_TYPES_CHOICES_UPDATED_ON = datetime.datetime(2020, 1, 21, 0, 0, 0, 0, tzinfo=ZoneInfo("UTC"))
+    LENGTH_TYPES_CHOICES_UPDATED_ON = datetime.datetime(
+        2020, 1, 21, 0, 0, 0, 0, tzinfo=datetime.timezone.utc
+    )
 
     name = models.CharField(max_length=100)
     genus = models.ForeignKey(FishGenus, on_delete=models.CASCADE)
@@ -1813,7 +1813,9 @@ class CollectRecord(BaseModel):
         (SUBMITTING_STAGE, _("Submitting")),
         (SUBMITTED_STAGE, _("Submitted")),
     )
-    STAGE_CHOICES_UPDATED_ON = datetime.datetime(2019, 2, 2, 0, 0, 0, 0, tzinfo=ZoneInfo("UTC"))
+    STAGE_CHOICES_UPDATED_ON = datetime.datetime(
+        2019, 2, 2, 0, 0, 0, 0, tzinfo=datetime.timezone.utc
+    )
 
     project = models.ForeignKey(Project, related_name="collect_records", on_delete=models.CASCADE)
     profile = models.ForeignKey(Profile, on_delete=models.CASCADE, related_name="collect_records")

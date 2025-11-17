@@ -1,5 +1,5 @@
+import datetime
 from operator import itemgetter
-from zoneinfo import ZoneInfo
 
 from django.http.response import HttpResponseBadRequest
 from django.utils.dateparse import parse_datetime
@@ -212,7 +212,7 @@ class ChoiceViewSet(BaseChoiceApiViewSet):
             timestamp = None
 
         if timestamp:
-            timestamp = timestamp.replace(tzinfo=ZoneInfo("UTC"))
+            timestamp = timestamp.replace(tzinfo=datetime.timezone.utc)
 
         choices = self.get_choices()
         for key, choice_set in choices.items():

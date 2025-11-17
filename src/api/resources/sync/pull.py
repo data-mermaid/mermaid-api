@@ -22,7 +22,7 @@ def _get_records(viewset, profile_id, filters):
     model_class = queryset.model
     pk_field_name = model_class._meta.pk.column
     sub_query = _get_subquery(queryset, pk_field_name)
-    table_name = model_class._meta.db_table.replace("'", "''")
+    table_name = model_class._meta.db_table
 
     # UPDATES
     updates_filters = [

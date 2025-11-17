@@ -3,6 +3,7 @@ from concurrent.futures import ThreadPoolExecutor
 from typing import List, Tuple
 
 from django.db import connection
+from django.utils import timezone
 
 from .base import BaseCovariate
 
@@ -111,7 +112,7 @@ class VibrantOceansThreatsCovariate(BaseCovariate):
     def fetch(self, points: List[Tuple[float, float]]) -> List[dict]:
         futures = []
         results = []
-        request_datetime = datetime.datetime.now(datetime.UTC)
+        request_datetime = timezone.now()
         with ThreadPoolExecutor(max_workers=self.num_threads) as exc:
             for point in points:
                 x, y = point
