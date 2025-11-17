@@ -29,7 +29,7 @@ from ..models import (
     QuadratTransect,
     SampleEvent,
     Site,
-    Tag,
+    Tag, FishBeltTransect,
 )
 from ..notifications import notify_crs_transferred
 from ..permissions import (
@@ -275,6 +275,7 @@ class ProjectViewSet(BaseApiViewSet):
         benthicpqt_table = BenthicPhotoQuadratTransect._meta.db_table
         quadrat_transect_table = QuadratTransect._meta.db_table
         beltfish_table = BeltFish._meta.db_table
+        fishbelt_transect_table = FishBeltTransect._meta.db_table
 
         qs = (
             Project.objects.select_related(
@@ -357,7 +358,7 @@ class ProjectViewSet(BaseApiViewSet):
                             -- BeltFish
                             SELECT COUNT(*) as su_count
                             FROM {beltfish_table} t
-                            JOIN {benthic_transect_table} bt ON t.transect_id = bt.id
+                            JOIN {fishbelt_transect_table} bt ON t.transect_id = bt.id
                             JOIN {sample_event_table} se ON bt.sample_event_id = se.id
                             JOIN {site_table} ON se.site_id = {site_table}.id
                             WHERE {site_table}.project_id = {project_table}.id
