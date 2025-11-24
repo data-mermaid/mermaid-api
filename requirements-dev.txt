@@ -1,5 +1,3 @@
-docker-compose==1.29.2
-fabric==2.4.0
-Sphinx==3.5.4
-sphinx-rtd-theme==0.5.2
-pre-commit==3.5.0
+Sphinx==8.2.3
+sphinx-rtd-theme==3.0.2
+pre-commit==4.2.0

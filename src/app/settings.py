@@ -113,19 +113,9 @@ if IN_ECS:
     ALLOWED_HOSTS.append(container_metadata["Networks"][0]["IPv4Addresses"][0])
     ALLOWED_HOSTS.append(".datamermaid.org")
 
-if ENVIRONMENT not in (
-    "dev",
-    "prod",
-):
-
-    def show_toolbar(request):
-        return True
-
+if ENVIRONMENT not in ("dev", "prod"):
     DEBUG_LEVEL = "DEBUG"
     EMAIL_BACKEND = "django.core.mail.backends.console.EmailBackend"
-    INSTALLED_APPS.append("debug_toolbar")
-    MIDDLEWARE.append("debug_toolbar.middleware.DebugToolbarMiddleware")
-    DEBUG_TOOLBAR_CONFIG = {"SHOW_TOOLBAR_CALLBACK": show_toolbar}
     ALLOWED_HOSTS = ["*"]
     DEBUG = True
     MEDIA_ROOT = os.path.join(BASE_DIR, "media")
@@ -211,7 +201,6 @@ AUTH_PASSWORD_VALIDATORS = [
 LANGUAGE_CODE = "en-us"
 TIME_ZONE = "UTC"
 USE_I18N = True
-USE_L10N = True
 USE_TZ = True
 
 # Static files (CSS, JavaScript, Images)

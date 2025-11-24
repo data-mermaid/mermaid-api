@@ -1,4 +1,5 @@
 import os
+import sys
 import warnings
 from pathlib import Path
 from zipfile import ZIP_DEFLATED, ZipFile
@@ -305,6 +306,13 @@ class DynamicFieldsMixin(object):
         try:
             request = self.context["request"]
         except KeyError:
+            is_testing = (
+                getattr(settings, "TEST", False)
+                or "pytest" in sys.modules
+                or "unittest" in sys.modules
+            )
+            if is_testing:
+                return fields
             conf = getattr(settings, "DRF_DYNAMIC_FIELDS", {})
             if conf.get("SUPPRESS_CONTEXT_WARNING", False) is not True:
                 warnings.warn(
