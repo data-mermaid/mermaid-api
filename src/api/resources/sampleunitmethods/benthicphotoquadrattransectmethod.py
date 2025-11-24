@@ -498,13 +498,14 @@ class BenthicPQTProjectMethodObsView(BaseProjectMethodView):
     serializer_class_geojson = BenthicPQTMethodObsGeoSerializer
     serializer_class_csv = ObsBenthicPQTCSVSerializer
     filterset_class = BenthicPQTMethodObsFilterSet
-    order_by = (
+    ordering = [
         "site_name",
         "sample_date",
         "transect_number",
         "label",
         "quadrat_number",
-    )
+    ]
+    ordering_fields = ordering
 
 
 class BenthicPQTProjectMethodSUView(BaseProjectMethodView):
@@ -515,7 +516,8 @@ class BenthicPQTProjectMethodSUView(BaseProjectMethodView):
     serializer_class_geojson = BenthicPQTMethodSUGeoSerializer
     serializer_class_csv = BenthicPQTMethodSUCSVSerializer
     filterset_class = BenthicPQTMethodSUFilterSet
-    order_by = ("site_name", "sample_date", "transect_number")
+    ordering = ["site_name", "sample_date", "transect_number"]
+    ordering_fields = ordering
 
 
 class BenthicPQTProjectMethodSEView(BaseProjectMethodView):
@@ -527,4 +529,5 @@ class BenthicPQTProjectMethodSEView(BaseProjectMethodView):
     serializer_class_geojson = BenthicPQTMethodSEGeoSerializer
     serializer_class_csv = BenthicPQTMethodSECSVSerializer
     filterset_class = BenthicPQTMethodSEFilterSet
-    order_by = ("site_name", "sample_date")
+    ordering = ["site_name", "sample_date"]
+    ordering_fields = ordering

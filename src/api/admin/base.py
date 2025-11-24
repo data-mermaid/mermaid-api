@@ -3,7 +3,7 @@ import datetime
 
 from django.conf import settings
 from django.contrib import admin, messages
-from django.contrib.gis.admin import OSMGeoAdmin
+from django.contrib.gis.admin import GISModelAdmin
 from django.db.models import Count
 from django.http import HttpResponse
 from django.urls import reverse
@@ -84,7 +84,7 @@ export_model_all_as_csv.short_description = (
 )
 
 
-class BaseAdmin(OSMGeoAdmin):
+class BaseAdmin(GISModelAdmin):
     actions = (export_model_display_as_csv, export_model_all_as_csv)
 
 

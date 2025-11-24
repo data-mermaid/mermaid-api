@@ -1,3 +1,5 @@
+from decimal import Decimal
+
 from django.db import transaction
 from django_filters import BaseInFilter, RangeFilter
 from rest_condition import Or
@@ -55,7 +57,7 @@ class BenthicPITSerializer(BaseAPISerializer):
         max_digits=4,
         decimal_places=2,
         coerce_to_string=False,
-        min_value=0.01,
+        min_value=Decimal("0.01"),
         max_value=10,
         error_messages={"null": "Interval size is required"},
     )
@@ -556,7 +558,8 @@ class BenthicPITProjectMethodObsView(BaseProjectMethodView):
     serializer_class_geojson = BenthicPITMethodObsGeoSerializer
     serializer_class_csv = ObsBenthicPITCSVSerializer
     filterset_class = BenthicPITMethodObsFilterSet
-    order_by = ("site_name", "sample_date", "transect_number", "label", "interval")
+    ordering = ["site_name", "sample_date", "transect_number", "label", "interval"]
+    ordering_fields = ordering
 
 
 class BenthicPITProjectMethodSUView(BaseProjectMethodView):
@@ -567,7 +570,8 @@ class BenthicPITProjectMethodSUView(BaseProjectMethodView):
     serializer_class_geojson = BenthicPITMethodSUGeoSerializer
     serializer_class_csv = BenthicPITMethodSUCSVSerializer
     filterset_class = BenthicPITMethodSUFilterSet
-    order_by = ("site_name", "sample_date", "transect_number")
+    ordering = ["site_name", "sample_date", "transect_number"]
+    ordering_fields = ordering
 
 
 class BenthicPITProjectMethodSEView(BaseProjectMethodView):
@@ -579,4 +583,5 @@ class BenthicPITProjectMethodSEView(BaseProjectMethodView):
     serializer_class_geojson = BenthicPITMethodSEGeoSerializer
     serializer_class_csv = BenthicPITMethodSECSVSerializer
     filterset_class = BenthicPITMethodSEFilterSet
-    order_by = ("site_name", "sample_date")
+    ordering = ["site_name", "sample_date"]
+    ordering_fields = ordering

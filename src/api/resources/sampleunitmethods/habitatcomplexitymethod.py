@@ -1,3 +1,5 @@
+from decimal import Decimal
+
 from django.db import transaction
 from django_filters import BaseInFilter, RangeFilter
 from rest_condition import Or
@@ -54,7 +56,7 @@ class HabitatComplexitySerializer(BaseAPISerializer):
         max_digits=4,
         decimal_places=2,
         coerce_to_string=False,
-        min_value=0.01,
+        min_value=Decimal("0.01"),
         max_value=10,
         error_messages={"null": "Interval size is required"},
     )
@@ -511,7 +513,8 @@ class HabitatComplexityProjectMethodObsView(BaseProjectMethodView):
     serializer_class_geojson = HabitatComplexityMethodObsGeoSerializer
     serializer_class_csv = ObsHabitatComplexityCSVSerializer
     filterset_class = HabitatComplexityMethodObsFilterSet
-    order_by = ("site_name", "sample_date", "transect_number", "label", "interval")
+    ordering = ["site_name", "sample_date", "transect_number", "label", "interval"]
+    ordering_fields = ordering
 
 
 class HabitatComplexityProjectMethodSUView(BaseProjectMethodView):
@@ -522,7 +525,8 @@ class HabitatComplexityProjectMethodSUView(BaseProjectMethodView):
     serializer_class_geojson = HabitatComplexityMethodSUGeoSerializer
     serializer_class_csv = HabitatComplexityMethodSUCSVSerializer
     filterset_class = HabitatComplexityMethodSUFilterSet
-    order_by = ("site_name", "sample_date", "transect_number")
+    ordering = ["site_name", "sample_date", "transect_number"]
+    ordering_fields = ordering
 
 
 class HabitatComplexityProjectMethodSEView(BaseProjectMethodView):
@@ -534,4 +538,5 @@ class HabitatComplexityProjectMethodSEView(BaseProjectMethodView):
     serializer_class_geojson = HabitatComplexityMethodSEGeoSerializer
     serializer_class_csv = HabitatComplexityMethodSECSVSerializer
     filterset_class = HabitatComplexityMethodSEFilterSet
-    order_by = ("site_name", "sample_date")
+    ordering = ["site_name", "sample_date"]
+    ordering_fields = ordering
