@@ -273,6 +273,7 @@ class HabitatComplexityProtocolWriter(BenthicProtocolWriter):
             "id": sample_unit_method_id,
             "transect": benthic_transect_id,
             "interval_size": self.collect_record.data.get("interval_size"),
+            "interval_start": self.collect_record.data.get("interval_start"),
         }
         return self.get_or_create(
             HabitatComplexity,

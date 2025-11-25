@@ -18,14 +18,13 @@
 
 
 API_SERVICE="api_service"
-DOCKER_COMPOSE := $(shell command -v docker-compose >/dev/null 2>&1 && echo docker-compose || echo docker compose)
 
 
 down:
-	$(DOCKER_COMPOSE) down
+	docker compose down
 
 downnocache:
-	$(DOCKER_COMPOSE) down -v
+	docker compose down -v
 
 stop:
 	@make down
@@ -34,31 +33,31 @@ buildnocache:
 	$(eval short_sha=$(shell git rev-parse --short HEAD))
 	@echo $(short_sha) > src/VERSION.txt
 	@cat src/VERSION.txt
-	$(DOCKER_COMPOSE) build --no-cache --pull
+	docker compose build --no-cache --pull
 
 build:
 	$(eval short_sha=$(shell git rev-parse --short HEAD))
 	@echo $(short_sha) > src/VERSION.txt
 	@cat src/VERSION.txt
-	$(DOCKER_COMPOSE) build
+	docker compose build
 
 up:
-	$(DOCKER_COMPOSE) up -d
+	docker compose up -d
 
 start:
 	@make up
 
 logs:
-	$(DOCKER_COMPOSE) logs -f $(API_SERVICE)
+	docker compose logs -f $(API_SERVICE)
 
 dbbackup:
-	$(DOCKER_COMPOSE) exec $(API_SERVICE) python manage.py dbbackup local
+	docker compose exec $(API_SERVICE) python manage.py dbbackup local
 
 dbrestore:
-	$(DOCKER_COMPOSE) exec $(API_SERVICE) python manage.py dbrestore local
+	docker compose exec $(API_SERVICE) python manage.py dbrestore local
 
 migrate:
-	$(DOCKER_COMPOSE) exec $(API_SERVICE) python manage.py migrate
+	docker compose exec $(API_SERVICE) python manage.py migrate
 
 install:
 	@echo "\n--- Shutting down existing stack ---\n"
@@ -85,13 +84,13 @@ freshinstall:
 	@make migrate
 
 runserver:
-	$(DOCKER_COMPOSE) exec $(API_SERVICE) python manage.py runserver 0.0.0.0:8080
+	docker compose exec $(API_SERVICE) python manage.py runserver 0.0.0.0:8080
 
 worker:
-	$(DOCKER_COMPOSE) exec $(API_SERVICE) python manage.py simpleq_worker
+	docker compose exec $(API_SERVICE) python manage.py simpleq_worker
 
 runserverplus:
-	$(DOCKER_COMPOSE) exec $(API_SERVICE) gunicorn app.wsgi \
+	docker compose exec $(API_SERVICE) gunicorn app.wsgi \
   		--bind 0.0.0.0:8081 \
 		--timeout 120 \
 		--workers 2 \
@@ -102,22 +101,22 @@ runserverplus:
 		--worker-tmp-dir /dev/shm
 
 simpleq:
-	$(DOCKER_COMPOSE) exec $(API_SERVICE) python manage.py simpleq_worker
+	docker compose exec $(API_SERVICE) python manage.py simpleq_worker
 
 shellplus:
-	$(DOCKER_COMPOSE) exec $(API_SERVICE) python manage.py shell_plus
+	docker compose exec $(API_SERVICE) python manage.py shell_plus
 
 shell:
-	$(DOCKER_COMPOSE) exec $(API_SERVICE) /bin/bash
+	docker compose exec $(API_SERVICE) /bin/bash
 
 shellroot:
-	$(DOCKER_COMPOSE) exec --user=root $(API_SERVICE) /bin/bash
+	docker compose exec --user=root $(API_SERVICE) /bin/bash
 
 shellplusroot:
-	$(DOCKER_COMPOSE) exec --user=root $(API_SERVICE) python manage.py shell_plus
+	docker compose exec --user=root $(API_SERVICE) python manage.py shell_plus
 
 test:
-	$(DOCKER_COMPOSE) exec $(API_SERVICE) pytest -v --no-migrations --rich api/tests
+	docker compose exec $(API_SERVICE) pytest -v --no-migrations api/tests
 
 # -----------------
 # Fargate Maintenance (docker exec)

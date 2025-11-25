@@ -1,3 +1,5 @@
+from decimal import Decimal
+
 from django.db import transaction
 from django.db.models import Q
 from django_filters import BaseInFilter, RangeFilter
@@ -58,7 +60,7 @@ class BeltFishSerializer(BaseAPISerializer):
 
 class ObsBeltFishSerializer(BaseAPISerializer):
     size = serializers.DecimalField(
-        max_digits=5, decimal_places=1, coerce_to_string=False, min_value=0.1
+        max_digits=5, decimal_places=1, coerce_to_string=False, min_value=Decimal("0.1")
     )
 
     class Meta:
@@ -561,7 +563,7 @@ class BeltFishProjectMethodObsView(BaseProjectMethodView):
     serializer_class_geojson = BeltFishMethodObsGeoSerializer
     serializer_class_csv = ObsBeltFishCSVSerializer
     filterset_class = BeltFishMethodObsFilterSet
-    order_by = (
+    ordering = [
         "site_name",
         "sample_date",
         "transect_number",
@@ -570,7 +572,8 @@ class BeltFishProjectMethodObsView(BaseProjectMethodView):
         "fish_genus",
         "fish_taxon",
         "size",
-    )
+    ]
+    ordering_fields = ordering
 
     def get_queryset(self):
         qs = super().get_queryset()
@@ -589,7 +592,8 @@ class BeltFishProjectMethodSUView(BaseProjectMethodView):
     serializer_class_geojson = BeltFishMethodSUGeoSerializer
     serializer_class_csv = BeltFishMethodSUCSVSerializer
     filterset_class = BeltFishMethodSUFilterSet
-    order_by = ("site_name", "sample_date", "transect_number")
+    ordering = ["site_name", "sample_date", "transect_number"]
+    ordering_fields = ordering
 
 
 class BeltFishProjectMethodSEView(BaseProjectMethodView):
@@ -601,4 +605,5 @@ class BeltFishProjectMethodSEView(BaseProjectMethodView):
     serializer_class_geojson = BeltFishMethodSEGeoSerializer
     serializer_class_csv = BeltFishMethodSECSVSerializer
     filterset_class = BeltFishMethodSEFilterSet
-    order_by = ("site_name", "sample_date")
+    ordering = ["site_name", "sample_date"]
+    ordering_fields = ordering

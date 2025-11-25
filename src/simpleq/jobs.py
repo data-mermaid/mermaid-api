@@ -1,10 +1,10 @@
 import codecs
 import logging
 import uuid
-from datetime import datetime, timezone
 from pickle import dumps, loads
 
 from django.conf import settings
+from django.utils import timezone
 
 logger = logging.getLogger(__name__)
 USE_FIFO = getattr(settings, "USE_FIFO") == "True"
@@ -100,7 +100,7 @@ class Job:
 
     def run(self):
         """Run this job."""
-        self.start_time = datetime.now(timezone.utc)
+        self.start_time = timezone.now()
         if self.loggable:
             msg = f"Starting job {self.callable.__name__} with args [{self.args}] and kwargs [{self.kwargs}] at {self.start_time.isoformat()}"
         else:
@@ -115,7 +115,7 @@ class Job:
             self.exception = e
 
         if not self.exception:
-            self.stop_time = datetime.now(timezone.utc)
+            self.stop_time = timezone.now()
             self.run_time = (self.stop_time - self.start_time).total_seconds()
             if self.loggable:
                 msg = (

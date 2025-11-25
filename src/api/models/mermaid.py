@@ -6,7 +6,6 @@ import operator as pyoperator
 import uuid
 from decimal import Decimal
 
-import pytz
 from django.contrib.gis.db import models
 from django.contrib.postgres.aggregates import ArrayAgg
 from django.db.models import Avg, F, Max, Q
@@ -91,7 +90,9 @@ class Project(BaseModel, JSONMixin):
         (PUBLIC, _("public")),
     )
 
-    DATA_POLICY_CHOICES_UPDATED_ON = datetime.datetime(2019, 2, 2, 0, 0, 0, 0, pytz.UTC)
+    DATA_POLICY_CHOICES_UPDATED_ON = datetime.datetime(
+        2019, 2, 2, 0, 0, 0, 0, tzinfo=datetime.timezone.utc
+    )
 
     DATA_POLICY_CHOICES = (
         {
@@ -117,6 +118,7 @@ class Project(BaseModel, JSONMixin):
     name = models.CharField(max_length=255, unique=True)
     notes = models.TextField(blank=True)
     status = models.PositiveSmallIntegerField(choices=STATUSES, default=OPEN)
+    is_demo = models.BooleanField(default=False)
     data_policy_beltfish = models.PositiveSmallIntegerField(
         choices=DATA_POLICIES, default=PUBLIC_SUMMARY
     )
@@ -155,6 +157,9 @@ class Project(BaseModel, JSONMixin):
         return instance
 
     def save(self, *args, **kwargs):
+        if self.is_demo:
+            self.status = self.TEST
+
         notify_fields = [
             f.name
             for f in self._meta.get_fields(include_parents=False, include_hidden=False)
@@ -185,6 +190,13 @@ class Project(BaseModel, JSONMixin):
     class Meta:
         db_table = "project"
         ordering = ["name"]
+        constraints = [
+            models.UniqueConstraint(
+                fields=["created_by"],
+                condition=models.Q(is_demo=True),
+                name="unique_demo_project_per_user",
+            )
+        ]
 
     def __str__(self):
         return _("%s") % self.name
@@ -377,7 +389,7 @@ class ProjectProfile(BaseModel):
         (COLLECTOR, _("collector")),  # add/edit
         (READONLY, _("read-only")),
     )
-    ROLES_UPDATED_ON = datetime.datetime(2019, 2, 2, 0, 0, 0, 0, pytz.UTC)
+    ROLES_UPDATED_ON = datetime.datetime(2019, 2, 2, 0, 0, 0, 0, tzinfo=datetime.timezone.utc)
 
     project = models.ForeignKey(Project, related_name="profiles", on_delete=models.CASCADE)
     profile = models.ForeignKey(Profile, related_name="projects", on_delete=models.CASCADE)
@@ -415,7 +427,9 @@ class ProjectProfile(BaseModel):
     class Meta:
         db_table = "project_profile"
         ordering = ("project", "profile")
-        unique_together = ("project", "profile")
+        constraints = [
+            models.UniqueConstraint(fields=["project", "profile"], name="unique_project_profile")
+        ]
 
 
 class Visibility(BaseChoiceModel):
@@ -622,7 +636,12 @@ class BeltTransectWidthCondition(BaseChoiceModel):
     val = models.PositiveSmallIntegerField()
 
     class Meta:
-        unique_together = ("belttransectwidth", "operator", "size")
+        constraints = [
+            models.UniqueConstraint(
+                fields=["belttransectwidth", "operator", "size"],
+                name="unique_belt_width_operator_size",
+            )
+        ]
 
     def __str__(self):
         if self.operator is None or self.size is None:
@@ -1051,6 +1070,13 @@ class HabitatComplexity(TransectMethod):
         decimal_places=2,
         default=0.5,
         verbose_name=_("interval size (m)"),
+    )
+
+    interval_start = models.DecimalField(
+        max_digits=4,
+        decimal_places=2,
+        default=0.5,
+        verbose_name=_("interval start (m)"),
     )
 
     class Meta:
@@ -1631,7 +1657,9 @@ class FishSpecies(FishAttribute):
         ("total length", "total length"),
         ("wing diameter", "wing diameter"),
     )
-    LENGTH_TYPES_CHOICES_UPDATED_ON = datetime.datetime(2020, 1, 21, 0, 0, 0, 0, pytz.UTC)
+    LENGTH_TYPES_CHOICES_UPDATED_ON = datetime.datetime(
+        2020, 1, 21, 0, 0, 0, 0, tzinfo=datetime.timezone.utc
+    )
 
     name = models.CharField(max_length=100)
     genus = models.ForeignKey(FishGenus, on_delete=models.CASCADE)
@@ -1785,7 +1813,9 @@ class CollectRecord(BaseModel):
         (SUBMITTING_STAGE, _("Submitting")),
         (SUBMITTED_STAGE, _("Submitted")),
     )
-    STAGE_CHOICES_UPDATED_ON = datetime.datetime(2019, 2, 2, 0, 0, 0, 0, pytz.UTC)
+    STAGE_CHOICES_UPDATED_ON = datetime.datetime(
+        2019, 2, 2, 0, 0, 0, 0, tzinfo=datetime.timezone.utc
+    )
 
     project = models.ForeignKey(Project, related_name="collect_records", on_delete=models.CASCADE)
     profile = models.ForeignKey(Profile, on_delete=models.CASCADE, related_name="collect_records")

@@ -14,7 +14,7 @@ def _get_subquery(queryset, pk_field_name):
         sql = cur.mogrify(template_sql, params)
     finally:
         cur.close()
-    return sql.decode()
+    return sql
 
 
 def _get_records(viewset, profile_id, filters):

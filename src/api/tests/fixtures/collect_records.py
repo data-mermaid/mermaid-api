@@ -807,6 +807,7 @@ def valid_habitat_complexity_collect_record(
         obs_habitat_complexities=observations,
         benthic_transect=dict(depth=1, number=2, len_surveyed=30),
         interval_size=5,
+        interval_start=5,
         sample_event=dict(
             management=str(management1.id),
             site=str(site1.id),
@@ -846,6 +847,7 @@ def invalid_habitat_complexity_collect_record(
         obs_habitat_complexities=observations,
         benthic_transect=dict(depth=1, number=2, len_surveyed=30),
         interval_size=5,
+        interval_start=5,
         sample_event=dict(
             management=str(management1.id),
             site=str(site1.id),
