@@ -232,6 +232,10 @@ def store_exif(instance: Image) -> Dict[str, Any]:
 
 def create_classification_status(image, status, message=None):
     try:
+        # Re-fetch the image to ensure it still exists before creating status
+        if not Image.objects.filter(id=image.id).exists():
+            print(f"Image {image.pk} was deleted, skipping status update")
+            return
         ClassificationStatus.objects.create(image=image, status=status, message=message)
     except Exception as err:
         print(f"Writing classification status Image {image.pk}, status: {status}: {err}")
