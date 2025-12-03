@@ -1,11 +1,11 @@
 import logging
 
 import django_filters
-import psycopg2
 from django.conf import settings
 from django.db import IntegrityError, transaction
 from django.db.models import JSONField
 from django.db.models.expressions import RawSQL
+from psycopg.errors import UniqueViolation
 from rest_condition import Or
 from rest_framework import exceptions, permissions, serializers, status
 from rest_framework.decorators import action
@@ -14,13 +14,23 @@ from rest_framework.response import Response
 from ..auth_backends import AnonymousJWTAuthentication
 from ..exceptions import check_uuid
 from ..models import (
+    BeltFish,
+    BenthicLIT,
+    BenthicPhotoQuadratTransect,
+    BenthicPIT,
+    BenthicTransect,
+    BleachingQuadratCollection,
+    FishBeltTransect,
+    HabitatComplexity,
     Management,
     Profile,
     Project,
     ProjectProfile,
+    QuadratCollection,
+    QuadratTransect,
+    SampleEvent,
     Site,
     Tag,
-    TransectMethod,
 )
 from ..notifications import notify_crs_transferred
 from ..permissions import (
@@ -43,7 +53,6 @@ from ..utils.project import (
     delete_project,
     email_members_of_new_project,
     get_profiles,
-    get_sample_unit_field,
     suggested_citation,
 )
 from ..utils.q import submit_job
@@ -118,19 +127,8 @@ class BaseProjectSerializer(DynamicFieldsMixin, BaseAPISerializer):
         return obj.collect_records.count()
 
     def get_num_sample_units(self, obj):
-        sample_unit_methods = TransectMethod.__subclasses__()
-        num_sample_units = 0
-        for sample_unit_method in sample_unit_methods:
-            sample_unit_name = get_sample_unit_field(sample_unit_method)
-            qry_filter = {f"{sample_unit_name}__sample_event__site__project_id": obj}
-            queryset = sample_unit_method.objects.select_related(
-                f"{sample_unit_name}",
-                f"{sample_unit_name}__sample_event",
-                f"{sample_unit_name}__sample_event__site",
-            )
-            num_sample_units += queryset.filter(**qry_filter).count()
-
-        return num_sample_units
+        num_sample_units = getattr(obj, "num_sample_units", None)
+        return num_sample_units if num_sample_units is not None else 0
 
     def get_bbox(self, obj):
         extent = getattr(obj, "extent", None)
@@ -265,6 +263,21 @@ class ProjectViewSet(BaseApiViewSet):
     search_fields = ["$name", "$sites__country__name"]
 
     def get_queryset(self):
+        # Get dynamic table names from model metadata
+        project_table = Project._meta.db_table
+        site_table = Site._meta.db_table
+        sample_event_table = SampleEvent._meta.db_table
+        benthic_transect_table = BenthicTransect._meta.db_table
+        benthiclit_table = BenthicLIT._meta.db_table
+        benthicpit_table = BenthicPIT._meta.db_table
+        habitatcomplexity_table = HabitatComplexity._meta.db_table
+        bleachingqc_table = BleachingQuadratCollection._meta.db_table
+        quadrat_collection_table = QuadratCollection._meta.db_table
+        benthicpqt_table = BenthicPhotoQuadratTransect._meta.db_table
+        quadrat_transect_table = QuadratTransect._meta.db_table
+        beltfish_table = BeltFish._meta.db_table
+        fishbelt_transect_table = FishBeltTransect._meta.db_table
+
         qs = (
             Project.objects.select_related(
                 "created_by",
@@ -278,15 +291,85 @@ class ProjectViewSet(BaseApiViewSet):
             .annotate(
                 # need to cast to text to avoid box2d equality operator error
                 extent=RawSQL(
-                    """
+                    f"""
                     (
-                        SELECT ST_Extent(site.location)::text
-                        FROM site
-                        WHERE site.project_id = project.id
+                        SELECT ST_Extent({site_table}.location)::text
+                        FROM {site_table}
+                        WHERE {site_table}.project_id = {project_table}.id
                     )
                     """,
                     [],
-                )
+                ),
+                # Count sample units across all TransectMethod types using a CTE
+                # This replaces the N+1 query pattern in get_num_sample_units
+                num_sample_units=RawSQL(
+                    f"""
+                    (
+                        WITH sample_unit_counts AS (
+                            -- BenthicLIT
+                            SELECT COUNT(*) as su_count
+                            FROM {benthiclit_table} t
+                            JOIN {benthic_transect_table} bt ON t.transect_id = bt.id
+                            JOIN {sample_event_table} se ON bt.sample_event_id = se.id
+                            JOIN {site_table} ON se.site_id = {site_table}.id
+                            WHERE {site_table}.project_id = {project_table}.id
+
+                            UNION ALL
+
+                            -- BenthicPIT
+                            SELECT COUNT(*) as su_count
+                            FROM {benthicpit_table} t
+                            JOIN {benthic_transect_table} bt ON t.transect_id = bt.id
+                            JOIN {sample_event_table} se ON bt.sample_event_id = se.id
+                            JOIN {site_table} ON se.site_id = {site_table}.id
+                            WHERE {site_table}.project_id = {project_table}.id
+
+                            UNION ALL
+
+                            -- HabitatComplexity
+                            SELECT COUNT(*) as su_count
+                            FROM {habitatcomplexity_table} t
+                            JOIN {benthic_transect_table} bt ON t.transect_id = bt.id
+                            JOIN {sample_event_table} se ON bt.sample_event_id = se.id
+                            JOIN {site_table} ON se.site_id = {site_table}.id
+                            WHERE {site_table}.project_id = {project_table}.id
+
+                            UNION ALL
+
+                            -- BleachingQuadratCollection
+                            SELECT COUNT(*) as su_count
+                            FROM {bleachingqc_table} t
+                            JOIN {quadrat_collection_table} qc ON t.quadrat_id = qc.id
+                            JOIN {sample_event_table} se ON qc.sample_event_id = se.id
+                            JOIN {site_table} ON se.site_id = {site_table}.id
+                            WHERE {site_table}.project_id = {project_table}.id
+
+                            UNION ALL
+
+                            -- BenthicPhotoQuadratTransect
+                            SELECT COUNT(*) as su_count
+                            FROM {benthicpqt_table} t
+                            JOIN {quadrat_transect_table} qt ON t.quadrat_transect_id = qt.id
+                            JOIN {sample_event_table} se ON qt.sample_event_id = se.id
+                            JOIN {site_table} ON se.site_id = {site_table}.id
+                            WHERE {site_table}.project_id = {project_table}.id
+
+                            UNION ALL
+
+                            -- BeltFish
+                            SELECT COUNT(*) as su_count
+                            FROM {beltfish_table} t
+                            JOIN {fishbelt_transect_table} bt ON t.transect_id = bt.id
+                            JOIN {sample_event_table} se ON bt.sample_event_id = se.id
+                            JOIN {site_table} ON se.site_id = {site_table}.id
+                            WHERE {site_table}.project_id = {project_table}.id
+                        )
+                        SELECT COALESCE(SUM(su_count), 0)
+                        FROM sample_unit_counts
+                    )
+                    """,
+                    [],
+                ),
             )
             .order_by("name")
         )
@@ -603,10 +686,7 @@ class ProjectViewSet(BaseApiViewSet):
                     detail={"email": "Profile has already been added to project"}
                 )
         except IntegrityError as ie:
-            if (
-                hasattr(ie.__cause__, "pgcode")
-                and ie.__cause__.pgcode == psycopg2.errorcodes.UNIQUE_VIOLATION
-            ):
+            if isinstance(ie.__cause__, UniqueViolation):
                 raise exceptions.ValidationError(
                     detail={"email": "Profile has already been added to project"}
                 )

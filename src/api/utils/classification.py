@@ -12,7 +12,6 @@ from typing import Any, Dict, Optional, Tuple
 import pandas as pd
 import pyarrow as pa
 import pyarrow.parquet as pq
-import pytz
 from django.conf import settings
 from django.contrib.gis.geos import Point as GEOSPoint
 from django.core.files.base import ContentFile
@@ -24,7 +23,7 @@ from exif import Image as ExifImage
 from PIL import Image as PILImage
 from PIL.ExifTags import TAGS
 from plum.exceptions import UnpackError
-from spacer.extract_features import EfficientNetExtractor
+from spacer.extractors import EfficientNetExtractor
 from spacer.messages import ClassifyFeaturesMsg, DataLocation, ExtractFeaturesMsg
 from spacer.tasks import classify_features, extract_features
 
@@ -51,9 +50,26 @@ WEIGHTS_FILE_NAME = "efficientnet_weights.pt"
 ANNOTATIONS_PARQUET_FILE_NAME = "mermaid_confirmed_annotations.parquet"
 
 
-def check_if_valid_image(image: ImageFieldFile):
+def _get_file_for_reading(image_fieldfile: ImageFieldFile):
+    """
+    Return a readable file object from an ImageFieldFile, regardless of whether
+    it's already open, in-memory, or needs reopening from storage.
+    """
     try:
-        with PILImage.open(image.image) as img:
+        file_obj = image_fieldfile.file
+        file_obj.seek(0)
+        return file_obj
+    except ValueError:
+        # File is closed and can't be reopened in-memory — fetch from storage
+        image_fieldfile.open("rb")
+        return image_fieldfile.file
+
+
+def check_if_valid_image(instance):
+    file_obj = _get_file_for_reading(instance.image)
+
+    try:
+        with PILImage.open(file_obj) as img:
             img.verify()
             w, h = img.size
             if settings.MAX_IMAGE_PIXELS < w * h:
@@ -86,9 +102,13 @@ def create_image_checksum(image: ImageFieldFile) -> str:
 
 
 def create_thumbnail(image_instance: Image) -> ContentFile:
-    img = PILImage.open(image_instance.image)
     size = (500, 500)
-    img.thumbnail(size, PILImage.LANCZOS)
+
+    with image_instance.image.open("rb") as f:
+        img = PILImage.open(f)
+        img.load()
+
+    img.thumbnail(size, PILImage.Resampling.LANCZOS)
 
     base, ext = os.path.splitext(image_instance.name)
     thumb_name = f"{base}_thumbnail{ext}"
@@ -105,7 +125,7 @@ def create_thumbnail(image_instance: Image) -> ContentFile:
 
 def convert_to_utc(timestamp_str: str) -> datetime:
     local_time = datetime.fromisoformat(timestamp_str)
-    return local_time.astimezone(pytz.utc)
+    return local_time.astimezone(datetime.timezone.utc)
 
 
 def extract_datetime_stamp(exif_details: Dict[str, Any]) -> Optional[datetime.datetime]:
@@ -115,7 +135,7 @@ def extract_datetime_stamp(exif_details: Dict[str, Any]) -> Optional[datetime.da
     if date_stamp and time_stamp:
         date_stamp = map(int, date_stamp.split(":"))
         time_stamp = map(int, time_stamp)
-        return datetime.datetime(*date_stamp, *time_stamp, tzinfo=pytz.UTC)
+        return datetime.datetime(*date_stamp, *time_stamp, tzinfo=datetime.timezone.utc)
 
     date_time_str = exif_details.get("datetime_original")
     offset_time = exif_details.get("offset_time")
@@ -128,7 +148,7 @@ def extract_datetime_stamp(exif_details: Dict[str, Any]) -> Optional[datetime.da
     local_tz = datetime.timezone(offset)
     dt_local = dt.replace(tzinfo=local_tz)
 
-    return dt_local.astimezone(pytz.UTC)
+    return dt_local.astimezone(datetime.timezone.utc)
 
 
 def extract_location(exif_details: Dict[str, Any]) -> Optional[GEOSPoint]:
@@ -153,44 +173,45 @@ def extract_location(exif_details: Dict[str, Any]) -> Optional[GEOSPoint]:
     return GEOSPoint(longitude, latitude)
 
 
-def save_normalized_imagefile(image_record: Image):
-    image_file = PILImage.open(image_record.image)
-    image_format = image_file.format
-    try:
-        for orientation in TAGS.keys():
-            if TAGS[orientation] == "Orientation":
-                break
+def save_normalized_imagefile(instance: Image):
+    file_obj = _get_file_for_reading(instance.image)
 
-        exif = dict(image_file._getexif().items())
+    with PILImage.open(file_obj) as image_file:
+        image_format = image_file.format
+        try:
+            for orientation in TAGS.keys():
+                if TAGS[orientation] == "Orientation":
+                    break
 
-        if exif[orientation] == 3:
-            image_file = image_file.rotate(180, expand=True)
-        elif exif[orientation] == 6:
-            image_file = image_file.rotate(270, expand=True)
-        elif exif[orientation] == 8:
-            image_file = image_file.rotate(90, expand=True)
-    except (AttributeError, KeyError, IndexError) as _:
-        pass
+            exif = dict(image_file._getexif().items())
 
-    # Saving the orientated image back to the image record
-    # strips out the EXIF data, which is intentional.
-    img_content = BytesIO()
-    image_file.save(img_content, format=image_format)
+            if exif[orientation] == 3:
+                image_file = image_file.rotate(180, expand=True)
+            elif exif[orientation] == 6:
+                image_file = image_file.rotate(270, expand=True)
+            elif exif[orientation] == 8:
+                image_file = image_file.rotate(90, expand=True)
+        except (AttributeError, KeyError, IndexError) as _:
+            pass
 
-    image_record.image = ContentFile(img_content.getvalue(), name=image_record.image.name)
+        # Saving the orientated image back to the image record
+        # strips out the EXIF data, which is intentional.
+        img_content = BytesIO()
+        image_file.save(img_content, format=image_format)
+
+        instance.image = ContentFile(img_content.getvalue(), name=instance.image.name)
 
 
-def store_exif(image_record: Image) -> Dict[str, Any]:
-    img = image_record.image
-    if img.closed:
-        img.open("rb")
+def store_exif(instance: Image) -> Dict[str, Any]:
+    file_obj = _get_file_for_reading(instance.image)
 
-    try:
-        exif_image = ExifImage(img.read())
-        if exif_image.has_exif is False:
+    with PILImage.open(file_obj) as img:
+        try:
+            exif_image = ExifImage(img.read())
+            if exif_image.has_exif is False:
+                return
+        except UnpackError:
             return
-    except UnpackError:
-        return
 
     exif_details = {}
     for k, v in exif_image.get_all().items():
@@ -203,10 +224,10 @@ def store_exif(image_record: Image) -> Dict[str, Any]:
 
         exif_details[k] = v
 
-    image_record.data = image_record.data or {}
-    image_record.data["exif"] = exif_details
-    image_record.location = extract_location(exif_details)
-    image_record.photo_timestamp = extract_datetime_stamp(exif_details)
+    instance.data = instance.data or {}
+    instance.data["exif"] = exif_details
+    instance.location = extract_location(exif_details)
+    instance.photo_timestamp = extract_datetime_stamp(exif_details)
 
 
 def create_classification_status(image, status, message=None):

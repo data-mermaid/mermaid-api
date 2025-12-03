@@ -1,5 +1,6 @@
+import datetime
+
 import dateutil
-import pytz
 from django.contrib.contenttypes.models import ContentType
 from django.core.management.base import BaseCommand
 
@@ -36,7 +37,7 @@ class Command(BaseCommand):
         return [self.get_record_details(rec) for rec in queryset]
 
     def handle(self, *args, **kwargs):
-        start_date = kwargs.get("date").replace(tzinfo=pytz.utc)
+        start_date = kwargs.get("date").replace(tzinfo=datetime.timezone.utc)
         show_details = kwargs.get("show_details") or False
 
         api_model_classes = self.get_api_model_classes()
