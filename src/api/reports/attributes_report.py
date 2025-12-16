@@ -103,7 +103,9 @@ def write_fish_families(wb, regions):
                 fish_family.biomass_constant_a,
                 fish_family.biomass_constant_b,
                 fish_family.biomass_constant_c,
-                *create_m2m_row(regions, [str(r) for r in fish_family.regions]),
+                *create_m2m_row(
+                    regions, [str(r) for r in fish_family.regions] if fish_family.regions else None
+                ),
             ]
             for fish_family in FishFamily.objects.filter(status=SUPERUSER_APPROVED).order_by("name")
         ],
@@ -131,7 +133,9 @@ def write_fish_genera(wb, regions):
                 fish_genus.biomass_constant_a,
                 fish_genus.biomass_constant_b,
                 fish_genus.biomass_constant_c,
-                *create_m2m_row(regions, fish_genus.regions),
+                *create_m2m_row(
+                    regions, [str(r) for r in fish_genus.regions] if fish_genus.regions else None
+                ),
             ]
             for fish_genus in FishGenus.objects.select_related("family")
             .filter(status=SUPERUSER_APPROVED)
@@ -176,7 +180,7 @@ def write_fish_species(wb, regions):
                 fish_species.trophic_level,
                 fish_species.vulnerability,
                 fish_species.climate_score,
-                *create_m2m_row(regions, fish_species.regions.all()),
+                *create_m2m_row(regions, fish_species.regions.values_list("id", flat=True)),
             ]
             for fish_species in FishSpecies.objects.select_related(
                 "genus",
@@ -212,7 +216,7 @@ def write_fish_grouping(wb, regions):
                 fish_group.biomass_constant_a,
                 fish_group.biomass_constant_b,
                 fish_group.biomass_constant_c,
-                *create_m2m_row(regions, fish_group.regions.all()),
+                *create_m2m_row(regions, fish_group.regions.values_list("id", flat=True)),
             ]
             for fish_group in FishGrouping.objects.select_related()
             .filter(status=SUPERUSER_APPROVED)
@@ -243,8 +247,8 @@ def write_benthic(wb, regions):
                 ba.name,
                 ba.parent and ba.parent.name,
                 ba.origin and ba.origin.name,
-                *create_m2m_row(life_histories, ba.life_histories.all()),
-                *create_m2m_row(regions, ba.regions.all()),
+                *create_m2m_row(life_histories, ba.life_histories.values_list("id", flat=True)),
+                *create_m2m_row(regions, ba.regions.values_list("id", flat=True)),
             ]
             for ba in BenthicAttribute.objects.filter(status=SUPERUSER_APPROVED).order_by("name")
         ],
