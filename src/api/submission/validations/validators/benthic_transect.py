@@ -5,7 +5,7 @@ from rest_framework.exceptions import ParseError
 
 from ....exceptions import check_uuid
 from ....models import BenthicTransect
-from ....utils import get_related_transect_methods
+from ....utils import cast_float, get_related_transect_methods
 from ..statuses import ERROR, OK
 from .base import BaseValidator, validator_result
 
@@ -139,6 +139,130 @@ class BenthicIntervalObservationCountValidator(BaseValidator):
                 ERROR,
                 self.INCORRECT_OBSERVATION_COUNT,
                 {"expected_count": calc_obs_count},
+            )
+
+        return OK
+
+
+class IntervalSequenceValidator(BaseValidator):
+    MISSING_INTERVALS = "missing_intervals"
+
+    def __init__(
+        self,
+        len_surveyed_path,
+        interval_size_path,
+        interval_start_path,
+        observations_path,
+        observation_interval_path,
+        **kwargs,
+    ):
+        self.len_surveyed_path = len_surveyed_path
+        self.interval_size_path = interval_size_path
+        self.interval_start_path = interval_start_path
+        self.observations_path = observations_path
+        self.observation_interval_path = observation_interval_path
+        super().__init__(**kwargs)
+
+    @validator_result
+    def __call__(self, collect_record, **kwargs):
+        len_surveyed = self.get_numeric_value(collect_record, self.len_surveyed_path)
+        interval_size = self.get_numeric_value(collect_record, self.interval_size_path)
+        interval_start = self.get_numeric_value(collect_record, self.interval_start_path)
+        observations = self.get_value(collect_record, self.observations_path) or []
+
+        # Skip validation if required values are missing or invalid
+        if len_surveyed is None or len_surveyed <= 0:
+            return OK
+        if interval_size is None or interval_size <= 0:
+            return OK
+        if interval_start is None or interval_start < 0:
+            return OK
+
+        actual_intervals = []
+        for obs in observations:
+            interval = cast_float(self.get_value(obs, self.observation_interval_path))
+            if interval is not None:
+                actual_intervals.append(interval)
+        actual_intervals = set(actual_intervals)
+
+        expected_intervals = []
+        current_interval = interval_start
+        while current_interval <= len_surveyed:
+            expected_intervals.append(current_interval)
+            current_interval += interval_size
+
+        missing_intervals = [
+            interval for interval in expected_intervals if interval not in actual_intervals
+        ]
+
+        if missing_intervals:
+            return (
+                ERROR,
+                self.MISSING_INTERVALS,
+                {"missing_intervals": missing_intervals},
+            )
+
+        return OK
+
+
+class IntervalAlignmentValidator(BaseValidator):
+    INVALID_INTERVALS = "invalid_intervals"
+
+    def __init__(
+        self,
+        interval_size_path,
+        interval_start_path,
+        observations_path,
+        observation_interval_path,
+        **kwargs,
+    ):
+        self.interval_size_path = interval_size_path
+        self.interval_start_path = interval_start_path
+        self.observations_path = observations_path
+        self.observation_interval_path = observation_interval_path
+        super().__init__(**kwargs)
+
+    @validator_result
+    def __call__(self, collect_record, **kwargs):
+        interval_size = self.get_numeric_value(collect_record, self.interval_size_path)
+        interval_start = self.get_numeric_value(collect_record, self.interval_start_path)
+        observations = self.get_value(collect_record, self.observations_path) or []
+
+        # Skip validation if required values are missing or invalid
+        if interval_size is None or interval_size <= 0:
+            return OK
+        if interval_start is None or interval_start < 0:
+            return OK
+
+        # Check that each interval is aligned to the grid: interval_start + n × interval_size
+        invalid_intervals = []
+        for obs in observations:
+            interval = cast_float(self.get_value(obs, self.observation_interval_path))
+            if interval is None:
+                continue
+
+            offset = interval - interval_start
+            # Check if offset is a multiple of interval_size (within floating point tolerance)
+            if offset < 0:
+                # Interval is before start
+                invalid_intervals.append(interval)
+            else:
+                # Check if offset/interval_size is close to an integer
+                quotient = offset / interval_size
+                remainder = abs(quotient - round(quotient))
+                # Use small tolerance for floating point comparison
+                if remainder > 0.0001:
+                    invalid_intervals.append(interval)
+
+        if invalid_intervals:
+            return (
+                ERROR,
+                self.INVALID_INTERVALS,
+                {
+                    "invalid_intervals": invalid_intervals,
+                    "interval_start": interval_start,
+                    "interval_size": interval_size,
+                },
             )
 
         return OK

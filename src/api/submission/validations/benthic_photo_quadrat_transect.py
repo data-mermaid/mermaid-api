@@ -30,6 +30,7 @@ from .validators import (
     RequiredValidator,
     SampleDateValidator,
     SampleTimeValidator,
+    SimilarDateSampleUnitsValidator,
     UniqueManagementValidator,
     UniqueQuadratTransectValidator,
     UniqueSiteValidator,
@@ -132,6 +133,17 @@ bpqt_base_validations = [
         ),
         paths=["data.sample_event.sample_date"],
         validation_level=FIELD_LEVEL,
+        validation_type=VALUE_VALIDATION_TYPE,
+    ),
+    Validation(
+        validator=SimilarDateSampleUnitsValidator(
+            protocol_path="data.protocol",
+            site_path="data.sample_event.site",
+            management_path="data.sample_event.management",
+            sample_date_path="data.sample_event.sample_date",
+        ),
+        paths=["data.sample_event.sample_date"],
+        validation_level=RECORD_LEVEL,
         validation_type=VALUE_VALIDATION_TYPE,
     ),
     Validation(
