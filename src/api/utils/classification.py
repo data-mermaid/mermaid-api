@@ -15,7 +15,7 @@ import pyarrow.parquet as pq
 from django.conf import settings
 from django.contrib.gis.geos import Point as GEOSPoint
 from django.core.files.base import ContentFile
-from django.db import transaction
+from django.db import IntegrityError, transaction
 from django.db.models import Exists, OuterRef
 from django.db.models.fields.files import ImageFieldFile
 from django.utils import timezone
@@ -232,7 +232,15 @@ def store_exif(instance: Image) -> Dict[str, Any]:
 
 def create_classification_status(image, status, message=None):
     try:
-        ClassificationStatus.objects.create(image=image, status=status, message=message)
+        with transaction.atomic():
+            # Lock and verify image exists
+            if not Image.objects.filter(id=image.pk).select_for_update().exists():
+                print(f"Image {image.pk} was deleted, skipping status update")
+                return
+            ClassificationStatus.objects.create(image=image, status=status, message=message)
+    except IntegrityError:
+        # Image was deleted after check but before create
+        print(f"Image {image.pk} was deleted during status update")
     except Exception as err:
         print(f"Writing classification status Image {image.pk}, status: {status}: {err}")
 
