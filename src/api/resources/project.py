@@ -83,6 +83,7 @@ class BaseProjectSerializer(DynamicFieldsMixin, BaseAPISerializer):
     num_sample_units = serializers.SerializerMethodField()
     tags = serializers.ListField(source="tags.all", child=TagField(), required=False)
     members = serializers.SerializerMethodField()
+    project_admins = serializers.SerializerMethodField()
     default_citation = serializers.SerializerMethodField()
     suggested_citation = serializers.SerializerMethodField()
     citation_retrieved_text = serializers.SerializerMethodField()
@@ -122,6 +123,10 @@ class BaseProjectSerializer(DynamicFieldsMixin, BaseAPISerializer):
     def get_members(self, obj):
         profiles = self._get_profiles(obj)
         return [pp.profile_id for pp in profiles]
+
+    def get_project_admins(self, obj):
+        admin_profiles = obj.profiles.filter(role=ProjectProfile.ADMIN).select_related("profile")
+        return [{"id": str(pp.profile.id), "name": pp.profile.full_name} for pp in admin_profiles]
 
     def get_num_active_sample_units(self, obj):
         return obj.collect_records.count()
@@ -184,7 +189,7 @@ class ProjectCSVSerializer(ReportSerializer, BaseProjectSerializer):
         ReportField("data_policy_benthicpqt", "Benthic PQT Data Policy", to_data_policy),
         ReportField("includes_gfcr", "Includes GFCR", to_yesno),
         ReportField("notes", "Notes"),
-        ReportMethodField("get_project_admins", "Project Admins"),
+        ReportMethodField("get_project_admins_csv", "Project Admins"),
         ReportMethodField("get_contact_link", "Contact link"),
         ReportField("id", "Project Id", to_str),
     ]
@@ -195,13 +200,12 @@ class ProjectCSVSerializer(ReportSerializer, BaseProjectSerializer):
             return f'{", ".join(tags)}'
         return ""
 
+    def get_project_admins_csv(self, obj):
+        admins = super().get_project_admins(obj)
+        return ", ".join([admin["name"] for admin in admins])
+
     def get_contact_link(self, obj):
         return f"{settings.DEFAULT_DOMAIN_MARKETING}/contact-project?project_id={obj.id}"
-
-    def get_project_admins(self, obj):
-        admin_profiles = obj.profiles.filter(role=ProjectProfile.ADMIN).select_related("profile")
-        admin_names = [pp.profile.full_name for pp in admin_profiles]
-        return ", ".join(admin_names)
 
 
 class ProjectFilterSet(BaseAPIFilterSet, OrFilterSetMixin):
