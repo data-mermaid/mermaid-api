@@ -122,12 +122,13 @@ class BenthicIntervalObservationCountValidator(BaseValidator):
         tolerance = 1
         observations = self.get_value(collect_record, self.observations_path) or []
         observations_count = len(observations)
-        len_surveyed = self.get_numeric_value(collect_record, self.len_surveyed_path)
-        interval_size = self.get_numeric_value(collect_record, self.interval_size_path)
+        len_surveyed = cast_float(self.get_value(collect_record, self.len_surveyed_path))
+        interval_size = cast_float(self.get_value(collect_record, self.interval_size_path))
 
-        if len_surveyed <= 0:
+        # Treat None as invalid (not positive)
+        if len_surveyed is None or len_surveyed <= 0:
             return ERROR, self.NON_POSITIVE.format("len_surveyed")
-        if interval_size <= 0:
+        if interval_size is None or interval_size <= 0:
             return ERROR, self.NON_POSITIVE.format("interval_size")
 
         calc_obs_count = int(math.ceil(len_surveyed / interval_size))
@@ -166,9 +167,9 @@ class IntervalSequenceValidator(BaseValidator):
 
     @validator_result
     def __call__(self, collect_record, **kwargs):
-        len_surveyed = self.get_numeric_value(collect_record, self.len_surveyed_path)
-        interval_size = self.get_numeric_value(collect_record, self.interval_size_path)
-        interval_start = self.get_numeric_value(collect_record, self.interval_start_path)
+        len_surveyed = cast_float(self.get_value(collect_record, self.len_surveyed_path))
+        interval_size = cast_float(self.get_value(collect_record, self.interval_size_path))
+        interval_start = cast_float(self.get_value(collect_record, self.interval_start_path))
         observations = self.get_value(collect_record, self.observations_path) or []
 
         # Skip validation if required values are missing or invalid
@@ -229,8 +230,8 @@ class IntervalAlignmentValidator(BaseValidator):
 
     @validator_result
     def __call__(self, collect_record, **kwargs):
-        interval_size = self.get_numeric_value(collect_record, self.interval_size_path)
-        interval_start = self.get_numeric_value(collect_record, self.interval_start_path)
+        interval_size = cast_float(self.get_value(collect_record, self.interval_size_path))
+        interval_start = cast_float(self.get_value(collect_record, self.interval_start_path))
         observations = self.get_value(collect_record, self.observations_path) or []
 
         # Skip validation if required values are missing or invalid
