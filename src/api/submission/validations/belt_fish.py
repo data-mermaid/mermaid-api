@@ -147,6 +147,7 @@ belt_fish_validations = [
             observations_path="data.obs_belt_fishes",
             observation_fish_attribute_path="fish_attribute",
             observation_size_path="size",
+            fishbelt_transect_path="data.fishbelt_transect",
         ),
         paths=["data.obs_belt_fishes"],
         validation_level=ROW_LEVEL,
