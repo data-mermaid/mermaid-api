@@ -428,7 +428,9 @@ class RelatedOrderingFilter(OrderingFilter):
 
         # Also check model fields (including related fields with __)
         valid_model_fields = [
-            term for term in fields if self.is_valid_field(queryset.model, term.lstrip("-"))
+            term.lstrip("-")
+            for term in fields
+            if self.is_valid_field(queryset.model, term.lstrip("-"))
         ]
 
         # Combine both sets

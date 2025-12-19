@@ -2,35 +2,9 @@ from django.utils.dateparse import parse_date
 from rest_framework.exceptions import ParseError
 
 from ....exceptions import check_uuid
-from ....models import (
-    BenthicLIT,
-    BenthicPhotoQuadratTransect,
-    BenthicPIT,
-    BleachingQuadratCollection,
-    FishBeltTransect,
-    HabitatComplexity,
-)
 from ..statuses import ERROR, OK, WARN
-from ..utils import valid_id
+from ..utils import PROTOCOL_MODEL_MAP, PROTOCOL_SAMPLE_EVENT_PATH, valid_id
 from .base import BaseValidator, validator_result
-
-PROTOCOL_MODEL_MAP = {
-    "benthiclit": BenthicLIT,
-    "benthicpit": BenthicPIT,
-    "fishbelt": FishBeltTransect,
-    "habitatcomplexity": HabitatComplexity,
-    "bleachingqc": BleachingQuadratCollection,
-    "benthicpqt": BenthicPhotoQuadratTransect,
-}
-
-PROTOCOL_SAMPLE_EVENT_PATH = {
-    "benthiclit": "transect__sample_event",
-    "benthicpit": "transect__sample_event",
-    "fishbelt": "transect__sample_event",
-    "habitatcomplexity": "transect__sample_event",
-    "bleachingqc": "quadrat__sample_event",
-    "benthicpqt": "quadrat_transect__sample_event",
-}
 
 
 class SimilarDateSampleUnitsValidator(BaseValidator):
@@ -87,6 +61,7 @@ class SimilarDateSampleUnitsValidator(BaseValidator):
         ).select_related(sample_event_path)
 
         parts = sample_event_path.split("__")
+        similar_dates = []
         for su in queryset:
             su_sample_event = su
             for part in parts:
@@ -98,14 +73,19 @@ class SimilarDateSampleUnitsValidator(BaseValidator):
             # Only warn if date difference is between 1 and threshold days (inclusive)
             # Same day (0 days) should not trigger a warning
             if 1 <= days_difference <= self.days_threshold:
-                return (
-                    WARN,
-                    self.SIMILAR_DATE_SAMPLE_UNIT,
-                    {
-                        "protocol": protocol,
-                        "similar_date": str(su_date),
-                        "days_difference": days_difference,
-                    },
-                )
+                similar_dates.append({"date": str(su_date), "days_difference": days_difference})
+
+        if similar_dates:
+            # Find the minimum days difference (closest match)
+            min_days_difference = min(sd["days_difference"] for sd in similar_dates)
+            return (
+                WARN,
+                self.SIMILAR_DATE_SAMPLE_UNIT,
+                {
+                    "protocol": protocol,
+                    "days_difference": min_days_difference,
+                    "similar_dates": similar_dates,
+                },
+            )
 
         return OK

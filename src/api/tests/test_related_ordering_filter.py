@@ -6,128 +6,97 @@ The RelatedOrderingFilter extends DRF's OrderingFilter to:
 2. Automatically append 'id' to ensure deterministic pagination
 """
 
-import pytest
 from rest_framework.test import APIClient
 
-from api.models import FishSpecies, Profile
+from api.models import FishSpecies
 from api.resources.base import RelatedOrderingFilter
 
 
-@pytest.mark.django_db
-class TestRelatedOrderingFilter:
-    @pytest.fixture
-    def profile1(self):
-        return Profile.objects.create(email="user1@example.com")
+def test_related_field_validation():
+    """Test that is_valid_field correctly validates related fields."""
+    filter = RelatedOrderingFilter()
 
-    def test_related_field_validation(self):
-        """Test that is_valid_field correctly validates related fields."""
-        filter = RelatedOrderingFilter()
+    assert filter.is_valid_field(FishSpecies, "name") is True
+    assert filter.is_valid_field(FishSpecies, "genus__name") is True
+    assert filter.is_valid_field(FishSpecies, "genus__family__name") is True
+    assert filter.is_valid_field(FishSpecies, "nonexistent") is False
+    assert filter.is_valid_field(FishSpecies, "nonexistent__field") is False
 
-        # Test simple field
-        assert filter.is_valid_field(FishSpecies, "name") is True
 
-        # Test related field
-        assert filter.is_valid_field(FishSpecies, "genus__name") is True
+def test_related_field_ordering_works(profile1, all_test_fish_attributes):
+    genera_lookup = {str(f.genus.pk): f.genus.name for f in FishSpecies.objects.all()}
+    client = APIClient()
+    client.force_authenticate(user=type("User", (), {"profile": profile1})())
 
-        # Test deeply nested related field
-        assert filter.is_valid_field(FishSpecies, "genus__family__name") is True
+    response = client.get("/v1/fishspecies/?ordering=genus__name&limit=5")
 
-        # Test invalid field
-        assert filter.is_valid_field(FishSpecies, "nonexistent") is False
+    assert response.status_code == 200
+    data = response.json()
+    results = data["results"]
 
-        # Test invalid related field
-        assert filter.is_valid_field(FishSpecies, "nonexistent__field") is False
+    assert len(results) > 1
+    genus_names = [genera_lookup.get(r["genus"]) for r in results]
+    # Check that it's sorted (allowing for ties due to duplicate genus names)
+    for i in range(len(genus_names) - 1):
+        assert genus_names[i] <= genus_names[i + 1], "Results should be ordered by genus name"
 
-    def test_related_field_ordering_works(self, profile1):
-        """Test that ordering by related field (genus__name) works via API."""
-        # Skip if no fish species exist in the test database
-        if FishSpecies.objects.count() == 0:
-            pytest.skip("No fish species in database to test ordering")
 
-        client = APIClient()
-        client.force_authenticate(user=type("User", (), {"profile": profile1})())
+def test_descending_related_field_ordering(profile1, all_test_fish_attributes):
+    genera_lookup = {str(f.genus.pk): f.genus.name for f in FishSpecies.objects.all()}
+    client = APIClient()
+    client.force_authenticate(user=type("User", (), {"profile": profile1})())
 
-        # Order by related field genus__name
-        response = client.get("/v1/fishspecies/?ordering=genus__name&limit=5")
+    response = client.get("/v1/fishspecies/?ordering=-genus__name&limit=5")
 
-        assert response.status_code == 200
-        data = response.json()
-        results = data["results"]
+    assert response.status_code == 200
+    data = response.json()
+    results = data["results"]
 
-        # If there are results, verify they're ordered
-        if len(results) > 1:
-            genus_names = [r["genus"]["name"] for r in results]
-            # Check that it's sorted (allowing for ties due to duplicate genus names)
-            for i in range(len(genus_names) - 1):
-                assert genus_names[i] <= genus_names[i + 1], "Results should be ordered by genus name"
+    assert len(results) > 1
+    genus_names = [genera_lookup.get(r["genus"]) for r in results]
+    for i in range(len(genus_names) - 1):
+        assert genus_names[i] >= genus_names[i + 1], "Results should be ordered descending"
 
-    def test_descending_related_field_ordering(self, profile1):
-        """Test that descending ordering by related field works."""
-        if FishSpecies.objects.count() == 0:
-            pytest.skip("No fish species in database to test ordering")
 
-        client = APIClient()
-        client.force_authenticate(user=type("User", (), {"profile": profile1})())
+def test_invalid_related_field_rejected(profile1):
+    client = APIClient()
+    client.force_authenticate(user=type("User", (), {"profile": profile1})())
 
-        # Order by related field genus__name descending
-        response = client.get("/v1/fishspecies/?ordering=-genus__name&limit=5")
+    # Try to order by invalid field - should not error
+    response = client.get("/v1/fishspecies/?ordering=nonexistent__field&limit=5")
 
-        assert response.status_code == 200
-        data = response.json()
-        results = data["results"]
+    assert response.status_code == 200
 
-        # If there are results, verify they're ordered descending
-        if len(results) > 1:
-            genus_names = [r["genus"]["name"] for r in results]
-            for i in range(len(genus_names) - 1):
-                assert genus_names[i] >= genus_names[i + 1], "Results should be ordered descending"
 
-    def test_invalid_related_field_rejected(self, profile1):
-        """Test that invalid related field names are rejected and don't cause errors."""
-        client = APIClient()
-        client.force_authenticate(user=type("User", (), {"profile": profile1})())
+def test_deeply_nested_related_field(profile1, all_test_fish_attributes):
+    client = APIClient()
+    client.force_authenticate(user=type("User", (), {"profile": profile1})())
 
-        # Try to order by invalid field - should not error
-        response = client.get("/v1/fishspecies/?ordering=nonexistent__field&limit=5")
+    # Order by nested related field - should not error
+    response = client.get("/v1/fishspecies/?ordering=genus__family__name&limit=5")
 
-        assert response.status_code == 200
-        # Invalid ordering should be ignored, not cause an error
+    assert response.status_code == 200
 
-    def test_deeply_nested_related_field(self, profile1):
-        """Test that deeply nested related fields work (genus__family__name)."""
-        if FishSpecies.objects.count() == 0:
-            pytest.skip("No fish species in database to test ordering")
 
-        client = APIClient()
-        client.force_authenticate(user=type("User", (), {"profile": profile1})())
+def test_deterministic_pagination(profile1, all_test_fish_attributes):
+    """
+    Test that pagination is deterministic by automatically including 'id'.
 
-        # Order by nested related field - should not error
-        response = client.get("/v1/fishspecies/?ordering=genus__family__name&limit=5")
+    When ordering by fields with duplicate values, 'id' should be automatically
+    appended to ensure consistent pagination results.
+    """
+    client = APIClient()
+    client.force_authenticate(user=type("User", (), {"profile": profile1})())
 
-        assert response.status_code == 200
+    # Make multiple requests with the same ordering
+    response1 = client.get("/v1/fishspecies/?ordering=genus__name&limit=10")
+    response2 = client.get("/v1/fishspecies/?ordering=genus__name&limit=10")
 
-    def test_deterministic_pagination(self, profile1):
-        """
-        Test that pagination is deterministic by automatically including 'id'.
+    assert response1.status_code == 200
+    assert response2.status_code == 200
 
-        When ordering by fields with duplicate values, 'id' should be automatically
-        appended to ensure consistent pagination results.
-        """
-        if FishSpecies.objects.count() < 2:
-            pytest.skip("Need at least 2 fish species to test pagination")
+    # Results should be identical (deterministic)
+    ids1 = [r["id"] for r in response1.json()["results"]]
+    ids2 = [r["id"] for r in response2.json()["results"]]
 
-        client = APIClient()
-        client.force_authenticate(user=type("User", (), {"profile": profile1})())
-
-        # Make multiple requests with the same ordering
-        response1 = client.get("/v1/fishspecies/?ordering=genus__name&limit=10")
-        response2 = client.get("/v1/fishspecies/?ordering=genus__name&limit=10")
-
-        assert response1.status_code == 200
-        assert response2.status_code == 200
-
-        # Results should be identical (deterministic)
-        ids1 = [r["id"] for r in response1.json()["results"]]
-        ids2 = [r["id"] for r in response2.json()["results"]]
-
-        assert ids1 == ids2, "Pagination should be deterministic across multiple requests"
+    assert ids1 == ids2, "Pagination should be deterministic across multiple requests"

@@ -2,6 +2,8 @@
 Validators for checking consistency of sample unit attributes within the same sample event.
 """
 
+from django.utils.dateparse import parse_date
+
 from ....models import (
     BENTHICLIT_PROTOCOL,
     BENTHICPIT_PROTOCOL,
@@ -40,11 +42,14 @@ class SampleEventConsistencyValidator(BaseValidator):
 
         if not site_id or not management_id or not sample_date_str:
             return None
+        sample_date = parse_date(sample_date_str)
+        if sample_date is None:
+            return None  # Let other validators handle invalid dates
 
         sample_event = SampleEvent.objects.filter(
             site_id=site_id,
             management_id=management_id,
-            sample_date=sample_date_str,
+            sample_date=sample_date,
         ).first()
 
         return sample_event
@@ -157,18 +162,21 @@ class DifferentTransectWidthValidator(SampleEventConsistencyValidator):
         queryset = FishBeltTransect.objects.filter(sample_event=sample_event).select_related(
             "width"
         )
-
         for fb_su in queryset:
             other_width_id = valid_id(fb_su.width_id)
-            if other_width_id != width_id:
-                return (
-                    WARN,
-                    self.DIFFERENT_TRANSECT_WIDTH,
-                    {
-                        "width": str(width_id),
-                        "other_width": str(other_width_id),
-                    },
-                )
+            if other_width_id:
+                other_width_id = str(other_width_id)
+                width_id = str(width_id)
+
+                if other_width_id != width_id:
+                    return (
+                        WARN,
+                        self.DIFFERENT_TRANSECT_WIDTH,
+                        {
+                            "width": width_id,
+                            "other_width": other_width_id,
+                        },
+                    )
 
         return OK
 
@@ -234,7 +242,7 @@ class DifferentTransectLengthValidator(SampleEventConsistencyValidator):
                     {
                         "protocol": protocol,
                         "len_surveyed": len_surveyed,
-                        "other_len_surveyed": float(other_len_surveyed),
+                        "other_len_surveyed": other_len_surveyed,
                     },
                 )
 
@@ -272,7 +280,7 @@ class DifferentQuadratSizeValidator(SampleEventConsistencyValidator):
                     self.DIFFERENT_QUADRAT_SIZE,
                     {
                         "quadrat_size": quadrat_size,
-                        "other_quadrat_size": float(other_quadrat_size),
+                        "other_quadrat_size": other_quadrat_size,
                     },
                 )
 

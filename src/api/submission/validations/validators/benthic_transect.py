@@ -146,6 +146,7 @@ class BenthicIntervalObservationCountValidator(BaseValidator):
 
 class IntervalSequenceValidator(BaseValidator):
     MISSING_INTERVALS = "missing_intervals"
+    TOLERANCE = 0.0001
 
     def __init__(
         self,
@@ -183,17 +184,20 @@ class IntervalSequenceValidator(BaseValidator):
             interval = cast_float(self.get_value(obs, self.observation_interval_path))
             if interval is not None:
                 actual_intervals.append(interval)
-        actual_intervals = set(actual_intervals)
 
         expected_intervals = []
         current_interval = interval_start
-        while current_interval <= len_surveyed:
+        # Use tolerance to handle floating point precision in the boundary check
+        while current_interval <= len_surveyed + self.TOLERANCE:
             expected_intervals.append(current_interval)
             current_interval += interval_size
 
-        missing_intervals = [
-            interval for interval in expected_intervals if interval not in actual_intervals
-        ]
+        missing_intervals = []
+        for expected in expected_intervals:
+            # Check if any actual interval is close enough to this expected interval
+            found = any(abs(actual - expected) <= self.TOLERANCE for actual in actual_intervals)
+            if not found:
+                missing_intervals.append(expected)
 
         if missing_intervals:
             return (
@@ -207,6 +211,7 @@ class IntervalSequenceValidator(BaseValidator):
 
 class IntervalAlignmentValidator(BaseValidator):
     INVALID_INTERVALS = "invalid_intervals"
+    TOLERANCE = 0.0001
 
     def __init__(
         self,
@@ -250,8 +255,8 @@ class IntervalAlignmentValidator(BaseValidator):
                 # Check if offset/interval_size is close to an integer
                 quotient = offset / interval_size
                 remainder = abs(quotient - round(quotient))
-                # Use small tolerance for floating point comparison
-                if remainder > 0.0001:
+                is_aligned = remainder <= self.TOLERANCE
+                if not is_aligned:
                     invalid_intervals.append(interval)
 
         if invalid_intervals:

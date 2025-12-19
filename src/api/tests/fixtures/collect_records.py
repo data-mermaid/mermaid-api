@@ -795,12 +795,12 @@ def valid_habitat_complexity_collect_record(
     project_profile1,
 ):
     observations = [
-        dict(score=str(habitat_complexity_score1.id), interval=0),
         dict(score=str(habitat_complexity_score1.id), interval=5),
         dict(score=str(habitat_complexity_score1.id), interval=10),
         dict(score=str(habitat_complexity_score1.id), interval=15),
         dict(score=str(habitat_complexity_score1.id), interval=20),
         dict(score=str(habitat_complexity_score1.id), interval=25),
+        dict(score=str(habitat_complexity_score1.id), interval=30),
     ]
     data = dict(
         protocol="habitatcomplexity",
@@ -835,12 +835,12 @@ def invalid_habitat_complexity_collect_record(
     project_profile1,
 ):
     observations = [
-        dict(score="invalid score id", interval=0),
-        dict(score=str(habitat_complexity_score1.id), interval=5),
+        dict(score="invalid score id", interval=5),
         dict(score=str(habitat_complexity_score1.id), interval=10),
         dict(score=str(habitat_complexity_score1.id), interval=15),
         dict(score=str(habitat_complexity_score1.id), interval=20),
         dict(score=str(habitat_complexity_score1.id), interval=25),
+        dict(score=str(habitat_complexity_score1.id), interval=30),
     ]
     data = dict(
         protocol="habitatcomplexity",
