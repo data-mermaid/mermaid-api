@@ -11,6 +11,8 @@ from .validators import (
     AllEqualValidator,
     BiomassValidator,
     DepthValidator,
+    DifferentTransectLengthValidator,
+    DifferentTransectWidthValidator,
     DrySubmitValidator,
     FishCountValidator,
     FishFamilySubsetValidator,
@@ -305,5 +307,28 @@ belt_fish_validations = [
         validation_type=VALUE_VALIDATION_TYPE,
         requires_instance=True,
         delay_validation=True,
+    ),
+    Validation(
+        validator=DifferentTransectWidthValidator(
+            site_path="data.sample_event.site",
+            management_path="data.sample_event.management",
+            sample_date_path="data.sample_event.sample_date",
+            width_path="data.fishbelt_transect.width",
+        ),
+        paths=["data.fishbelt_transect.width"],
+        validation_level=RECORD_LEVEL,
+        validation_type=VALUE_VALIDATION_TYPE,
+    ),
+    Validation(
+        validator=DifferentTransectLengthValidator(
+            protocol_path="data.protocol",
+            site_path="data.sample_event.site",
+            management_path="data.sample_event.management",
+            sample_date_path="data.sample_event.sample_date",
+            len_surveyed_path="data.fishbelt_transect.len_surveyed",
+        ),
+        paths=["data.fishbelt_transect.len_surveyed"],
+        validation_level=RECORD_LEVEL,
+        validation_type=VALUE_VALIDATION_TYPE,
     ),
 ]
