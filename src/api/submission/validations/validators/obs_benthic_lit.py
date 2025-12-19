@@ -1,3 +1,4 @@
+from ....utils import cast_float
 from ..statuses import ERROR, OK, WARN
 from .base import BaseValidator, validator_result
 
@@ -21,7 +22,12 @@ class BenthicLITObservationTotalLengthValidator(BaseValidator):
         tolerance = 0.5
         obs_benthiclits = self.get_value(collect_record, self.obs_benthiclits_path) or []
 
-        len_surveyed = self.get_numeric_value(collect_record, self.len_surveyed_path)
+        len_surveyed = cast_float(self.get_value(collect_record, self.len_surveyed_path))
+
+        # Skip validation if value is missing
+        if len_surveyed is None:
+            return OK
+
         len_surveyed_cm = len_surveyed * 100
         obs_len = sum(float(ob.get("length") or 0.0) for ob in obs_benthiclits)
         context = {"total_obs_length": obs_len, "len_surveyed": len_surveyed}

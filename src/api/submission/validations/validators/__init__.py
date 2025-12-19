@@ -2,6 +2,8 @@
 from .base import BaseValidator, ValidatorResult
 from .benthic_transect import (
     BenthicIntervalObservationCountValidator,
+    IntervalAlignmentValidator,
+    IntervalSequenceValidator,
     UniqueBenthicTransectValidator,
 )
 from .biomass import BiomassValidator
@@ -46,4 +48,12 @@ from .quadrat_transect import UniqueQuadratTransectValidator
 from .region import RegionValidator
 from .sample_date import SampleDateValidator
 from .sample_time import SampleTimeValidator
+from .sample_unit_consistency import (
+    DifferentNumPointsPerQuadratValidator,
+    DifferentNumQuadratsValidator,
+    DifferentQuadratSizeValidator,
+    DifferentTransectLengthValidator,
+    DifferentTransectWidthValidator,
+)
+from .similar_date_sample_unit import SimilarDateSampleUnitsValidator
 from .site import UniqueSiteValidator

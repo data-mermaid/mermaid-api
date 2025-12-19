@@ -38,6 +38,11 @@ def belt_transect_width_5m(db):
 
 
 @pytest.fixture
+def belt_transect_width_10m(db):
+    return BeltTransectWidth.objects.create(name="10m")
+
+
+@pytest.fixture
 def belt_transect_width_condition1(db, belt_transect_width_2m):
     return BeltTransectWidthCondition.objects.create(
         belttransectwidth=belt_transect_width_2m, val=2

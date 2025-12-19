@@ -12,8 +12,11 @@ from .validators import (
     AllEqualValidator,
     BenthicIntervalObservationCountValidator,
     DepthValidator,
+    DifferentTransectLengthValidator,
     DrySubmitValidator,
     DuplicateValidator,
+    IntervalAlignmentValidator,
+    IntervalSequenceValidator,
     IntervalSizeValidator,
     IntervalStartValidator,
     LenSurveyedValidator,
@@ -23,6 +26,7 @@ from .validators import (
     RequiredValidator,
     SampleDateValidator,
     SampleTimeValidator,
+    SimilarDateSampleUnitsValidator,
     UniqueBenthicTransectValidator,
     UniqueManagementValidator,
     UniqueSiteValidator,
@@ -61,6 +65,17 @@ benthic_pit_validations = [
         ),
         paths=["data.sample_event.sample_date"],
         validation_level=FIELD_LEVEL,
+        validation_type=VALUE_VALIDATION_TYPE,
+    ),
+    Validation(
+        validator=SimilarDateSampleUnitsValidator(
+            protocol_path="data.protocol",
+            site_path="data.sample_event.site",
+            management_path="data.sample_event.management",
+            sample_date_path="data.sample_event.sample_date",
+        ),
+        paths=["data.sample_event.sample_date"],
+        validation_level=RECORD_LEVEL,
         validation_type=VALUE_VALIDATION_TYPE,
     ),
     Validation(
@@ -199,6 +214,29 @@ benthic_pit_validations = [
         validation_type=VALUE_VALIDATION_TYPE,
     ),
     Validation(
+        validator=IntervalSequenceValidator(
+            len_surveyed_path="data.benthic_transect.len_surveyed",
+            interval_size_path="data.interval_size",
+            interval_start_path="data.interval_start",
+            observations_path="data.obs_benthic_pits",
+            observation_interval_path="interval",
+        ),
+        paths=["data.obs_benthic_pits"],
+        validation_level=RECORD_LEVEL,
+        validation_type=VALUE_VALIDATION_TYPE,
+    ),
+    Validation(
+        validator=IntervalAlignmentValidator(
+            interval_size_path="data.interval_size",
+            interval_start_path="data.interval_start",
+            observations_path="data.obs_benthic_pits",
+            observation_interval_path="interval",
+        ),
+        paths=["data.obs_benthic_pits"],
+        validation_level=RECORD_LEVEL,
+        validation_type=VALUE_VALIDATION_TYPE,
+    ),
+    Validation(
         validator=ListRequiredValidator(
             list_path="data.obs_benthic_pits",
             path="interval",
@@ -259,5 +297,17 @@ benthic_pit_validations = [
         validation_type=VALUE_VALIDATION_TYPE,
         requires_instance=True,
         delay_validation=True,
+    ),
+    Validation(
+        validator=DifferentTransectLengthValidator(
+            protocol_path="data.protocol",
+            site_path="data.sample_event.site",
+            management_path="data.sample_event.management",
+            sample_date_path="data.sample_event.sample_date",
+            len_surveyed_path="data.benthic_transect.len_surveyed",
+        ),
+        paths=["data.benthic_transect.len_surveyed"],
+        validation_level=RECORD_LEVEL,
+        validation_type=VALUE_VALIDATION_TYPE,
     ),
 ]
