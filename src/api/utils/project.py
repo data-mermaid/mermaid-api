@@ -234,6 +234,8 @@ def copy_project_and_resources(owner_profile, new_project_name, original_project
     new_project.name = new_project_name
     new_project.created_by = owner_profile
     new_project.updated_by = owner_profile
+    if str(original_project.pk) == str(settings.DEMO_PROJECT_ID):
+        new_project.is_demo = True
     new_project.save()
 
     new_project.tags.add(*original_project.tags.all())
