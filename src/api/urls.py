@@ -26,6 +26,7 @@ from .resources.notification import NotificationViewSet
 from .resources.observer import ObserverViewSet
 from .resources.pmanagement import PManagementViewSet
 from .resources.profile import ProfileViewSet
+from .resources.profile_app_settings import ProfileAppSettingsViewSet
 from .resources.project import ProjectViewSet
 from .resources.project_profile import ProjectProfileViewSet
 from .resources.project_sample_event_summaries import ProjectSummarySampleEventViewSet
@@ -80,6 +81,7 @@ from .resources.sync import vw_pull, vw_push
 router = routers.DefaultRouter()
 
 router.register(r"me", MeViewSet, "me")
+router.register(r"profileappsettings", ProfileAppSettingsViewSet, "profileappsettings")
 router.register(r"profiles", ProfileViewSet, "profile")
 
 

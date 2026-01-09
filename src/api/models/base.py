@@ -90,6 +90,24 @@ class Profile(models.Model):
         return self.authusers.count()
 
 
+class ProfileAppSettings(models.Model):
+    profile = models.OneToOneField(
+        "Profile",
+        on_delete=models.CASCADE,
+        related_name="app_settings",
+    )
+    demo_project_prompt_dismissed = models.BooleanField(default=False)
+
+    created_on = models.DateTimeField(auto_now_add=True)
+    updated_on = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        db_table = "profile_app_settings"
+
+    def __str__(self):
+        return f"App settings for {self.profile.email}"
+
+
 class BaseModel(models.Model):
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
 
