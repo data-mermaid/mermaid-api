@@ -7,7 +7,7 @@ from rest_framework.response import Response
 
 from api.auth0_management import Auth0DatabaseAuthenticationAPI, Auth0Users
 from tools.models import MERMAIDFeature, UserMERMAIDFeature
-from ..models import Profile, ProjectProfile
+from ..models import Profile, ProfileAppSettings, ProjectProfile
 from ..utils import get_extent
 from .base import BaseAPISerializer
 
@@ -17,6 +17,7 @@ class MeSerializer(BaseAPISerializer):
     projects_bbox = serializers.SerializerMethodField()
     projects = serializers.SerializerMethodField()
     optional_features = serializers.SerializerMethodField()
+    app_settings = serializers.SerializerMethodField()
 
     class Meta:
         model = Profile
@@ -32,6 +33,7 @@ class MeSerializer(BaseAPISerializer):
             "projects_bbox",
             "projects",
             "optional_features",
+            "app_settings",
         ]
 
     def get_queryset(self, o):
@@ -97,6 +99,13 @@ class MeSerializer(BaseAPISerializer):
             )
 
         return result
+
+    def get_app_settings(self, profile):
+        settings, _ = ProfileAppSettings.objects.get_or_create(profile=profile)
+        return {
+            "id": str(settings.id),
+            "demo_project_prompt_dismissed": settings.demo_project_prompt_dismissed,
+        }
 
 
 class AuthenticatedMePermission(permissions.BasePermission):

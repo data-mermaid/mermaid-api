@@ -11,7 +11,14 @@ from django.utils.html import format_html
 
 from api.utils.sample_unit_methods import get_project
 from tools.models import MERMAIDFeature, UserMERMAIDFeature
-from ..models import Application, AuthUser, CollectRecord, Observer, Profile
+from ..models import (
+    Application,
+    AuthUser,
+    CollectRecord,
+    Observer,
+    Profile,
+    ProfileAppSettings,
+)
 
 
 def lookup_field_from_choices(field_obj, value):
@@ -120,6 +127,18 @@ class ProfileAdmin(BaseAdmin):
         qs = super().get_queryset(request)
         qs = qs.annotate(Count("projects"))
         return qs
+
+
+@admin.register(ProfileAppSettings)
+class ProfileAppSettingsAdmin(BaseAdmin):
+    list_display = ("profile_email", "demo_project_prompt_dismissed", "created_on", "updated_on")
+    search_fields = ["profile__email", "profile__first_name", "profile__last_name"]
+    readonly_fields = ["created_on", "updated_on"]
+    autocomplete_fields = ["profile"]
+
+    @admin.display(description="Profile Email", ordering="profile__email")
+    def profile_email(self, obj):
+        return obj.profile.email
 
 
 class UserMERMAIDFeatureInline(admin.TabularInline):
