@@ -241,8 +241,8 @@ class DifferentTransectLengthValidator(SampleEventConsistencyValidator):
                     self.DIFFERENT_TRANSECT_LENGTH,
                     {
                         "protocol": protocol,
-                        "len_surveyed": len_surveyed,
-                        "other_len_surveyed": other_len_surveyed,
+                        "len_surveyed": float(len_surveyed),
+                        "other_len_surveyed": float(other_len_surveyed),
                     },
                 )
 
@@ -279,8 +279,8 @@ class DifferentQuadratSizeValidator(SampleEventConsistencyValidator):
                     WARN,
                     self.DIFFERENT_QUADRAT_SIZE,
                     {
-                        "quadrat_size": quadrat_size,
-                        "other_quadrat_size": other_quadrat_size,
+                        "quadrat_size": float(quadrat_size),
+                        "other_quadrat_size": float(other_quadrat_size),
                     },
                 )
 
