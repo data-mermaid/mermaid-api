@@ -105,7 +105,7 @@ class AuthUserAdmin(BaseAdmin):
 
 @admin.register(Profile)
 class ProfileAdmin(BaseAdmin):
-    list_display = ("first_name", "last_name", "linked_email", "project_count")
+    list_display = ("first_name", "last_name", "linked_email", "project_count", "has_app_settings")
     search_fields = ["first_name", "last_name", "email"]
 
     @admin.display(description="Email", ordering="email")
@@ -115,6 +115,10 @@ class ProfileAdmin(BaseAdmin):
     @admin.display(description="Project membership count", ordering="projects__count")
     def project_count(self, obj):
         return obj.projects__count
+
+    @admin.display(description="Has App Settings", boolean=True)
+    def has_app_settings(self, obj):
+        return bool(obj.app_settings)
 
     def get_queryset(self, request):
         qs = super().get_queryset(request)
