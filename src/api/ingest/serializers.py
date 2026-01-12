@@ -120,15 +120,15 @@ class CollectRecordCSVListSerializer(ListSerializer):
         # Convert data to a list if it's an iterator (e.g., csv.DictReader)
         data_list = list(data) if not isinstance(data, list) else data
 
+        header_map = {}
         # Create header_map for child serializers that need to access original column names
         # This maps field names to original CSV column headers
         if data_list:
-            header_map = {}
             first_row = data_list[0]
             for csv_header in first_row.keys():
                 field_name = self.child.get_schemafield(csv_header)[0]
                 header_map[field_name] = csv_header
-            self.child.header_map = header_map
+        self.child.header_map = header_map
 
         # Store original data for child serializers that need to access it
         self.child.original_data = data_list
