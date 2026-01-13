@@ -17,15 +17,15 @@ def get_me(client, url):
     return client.get(url, format="json")
 
 
-def test_me_patch_updates_app_settings(db_setup, api_client1, me_url):
+def test_me_patch_updates_state_fields(db_setup, api_client1, me_url):
+    """Test that collect_state and explore_state can be updated independently"""
+    # Update collect_state
     response = patch_me(
         api_client1,
         {
-            "app_settings": {
-                "collect": {
-                    "demo_project_prompt_dismissed": True,
-                    "onboarding_completed": True,
-                }
+            "collect_state": {
+                "demo_project_prompt_dismissed": True,
+                "onboarding_completed": True,
             }
         },
         me_url,
@@ -33,85 +33,85 @@ def test_me_patch_updates_app_settings(db_setup, api_client1, me_url):
 
     assert response.status_code == 200
     data = response.json()
-    assert data["app_settings"]["collect"]["demo_project_prompt_dismissed"] is True
-    assert data["app_settings"]["collect"]["onboarding_completed"] is True
+    assert data["collect_state"]["demo_project_prompt_dismissed"] is True
+    assert data["collect_state"]["onboarding_completed"] is True
+
+    # Update explore_state (should not affect collect_state)
+    response = patch_me(
+        api_client1,
+        {
+            "explore_state": {
+                "filters": {"status": "open"},
+                "view_mode": "grid",
+            }
+        },
+        me_url,
+    )
+
+    assert response.status_code == 200
+    data = response.json()
+    assert data["explore_state"]["filters"]["status"] == "open"
+    assert data["explore_state"]["view_mode"] == "grid"
+    # collect_state should still be present
+    assert data["collect_state"]["demo_project_prompt_dismissed"] is True
+    assert data["collect_state"]["onboarding_completed"] is True
 
     # Verify persistence
     data = get_me(api_client1, me_url).json()
-    assert data["app_settings"]["collect"]["demo_project_prompt_dismissed"] is True
-    assert data["app_settings"]["collect"]["onboarding_completed"] is True
+    assert data["collect_state"]["demo_project_prompt_dismissed"] is True
+    assert data["collect_state"]["onboarding_completed"] is True
+    assert data["explore_state"]["filters"]["status"] == "open"
+    assert data["explore_state"]["view_mode"] == "grid"
 
 
-def test_me_patch_merges_app_settings(db_setup, api_client1, me_url):
-    """Test that PATCH merges app_settings at app-level (preserves other apps)"""
-    # Collect app sets its settings
-    patch_me(api_client1, {"app_settings": {"collect": {"setting1": True}}}, me_url)
+def test_me_patch_replaces_state_field(db_setup, api_client1, me_url):
+    """Test that updating a state field replaces it entirely (all or nothing)"""
+    # Set initial collect_state with two keys
+    patch_me(api_client1, {"collect_state": {"setting1": True, "setting2": "old"}}, me_url)
 
-    # Explore app sets its settings (should preserve collect's settings)
-    response = patch_me(api_client1, {"app_settings": {"explore": {"setting2": False}}}, me_url)
-
-    assert response.status_code == 200
-    data = response.json()
-    # Both app settings should be present
-    assert data["app_settings"]["collect"]["setting1"] is True
-    assert data["app_settings"]["explore"]["setting2"] is False
-
-
-def test_me_patch_updates_single_app(db_setup, api_client1, me_url):
-    """Test that updating one app replaces that app's settings, not merges"""
-    # Set initial collect settings with two keys
-    patch_me(
-        api_client1, {"app_settings": {"collect": {"setting1": True, "setting2": "old"}}}, me_url
-    )
-
-    # Update collect settings with only one key (should replace, not merge)
-    response = patch_me(api_client1, {"app_settings": {"collect": {"setting1": False}}}, me_url)
+    # Update collect_state with only one key (should replace entire field)
+    response = patch_me(api_client1, {"collect_state": {"setting1": False}}, me_url)
 
     assert response.status_code == 200
     data = response.json()
-    assert data["app_settings"]["collect"]["setting1"] is False
-    assert "setting2" not in data["app_settings"]["collect"]
+    assert data["collect_state"]["setting1"] is False
+    # setting2 should be gone since we replaced the entire field
+    assert "setting2" not in data["collect_state"]
 
 
-def test_me_patch_clears_single_app(db_setup, api_client1, me_url):
-    """Test that a single app's settings can be cleared while preserving others"""
+def test_me_patch_clears_state_field(db_setup, api_client1, me_url):
+    """Test that a state field can be cleared independently"""
+    # Set both state fields
     patch_me(
         api_client1,
-        {"app_settings": {"collect": {"setting": True}, "explore": {"other": "value"}}},
+        {"collect_state": {"setting": True}, "explore_state": {"other": "value"}},
         me_url,
     )
 
-    # Clear only collect's settings
-    response = patch_me(api_client1, {"app_settings": {"collect": {}}}, me_url)
+    # Clear only collect_state
+    response = patch_me(api_client1, {"collect_state": {}}, me_url)
 
     assert response.status_code == 200
     data = response.json()
-    assert data["app_settings"]["collect"] == {}
-    assert data["app_settings"]["explore"]["other"] == "value"
-
-
-def test_me_patch_clear_all_app_settings(db_setup, api_client1, me_url):
-    """Test that all app_settings can be cleared with empty dict"""
-    patch_me(
-        api_client1,
-        {"app_settings": {"collect": {"setting": True}, "explore": {"other": "value"}}},
-        me_url,
-    )
-
-    response = patch_me(api_client1, {"app_settings": {}}, me_url)
-
-    assert response.status_code == 200
-    assert response.json()["app_settings"] == {}
+    assert data["collect_state"] == {}
+    # explore_state should be unaffected
+    assert data["explore_state"]["other"] == "value"
 
 
 @patch("api.resources.me.Auth0Users")
-def test_me_patch_other_fields_preserves_app_settings(mock_auth0, db_setup, api_client1, me_url):
-    """Test that updating other fields preserves app_settings"""
-    patch_me(api_client1, {"app_settings": {"collect": {"setting": True}}}, me_url)
+def test_me_patch_other_fields_preserves_state(mock_auth0, db_setup, api_client1, me_url):
+    """Test that updating other fields preserves state fields"""
+    patch_me(
+        api_client1,
+        {"collect_state": {"setting": True}, "explore_state": {"other": "value"}},
+        me_url,
+    )
 
     response = patch_me(api_client1, {"first_name": "Updated"}, me_url)
 
     assert response.status_code == 200
     data = response.json()
     assert data["first_name"] == "Updated"
-    assert data["app_settings"]["collect"]["setting"] is True
+    # Both state fields should be preserved
+    assert data["collect_state"]["setting"] is True
+    assert data["explore_state"]["other"] == "value"

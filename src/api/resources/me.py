@@ -17,7 +17,8 @@ class MeSerializer(BaseAPISerializer):
     projects_bbox = serializers.SerializerMethodField()
     projects = serializers.SerializerMethodField()
     optional_features = serializers.SerializerMethodField()
-    app_settings = serializers.JSONField(required=False)
+    collect_state = serializers.JSONField(required=False)
+    explore_state = serializers.JSONField(required=False)
 
     class Meta:
         model = Profile
@@ -33,7 +34,8 @@ class MeSerializer(BaseAPISerializer):
             "projects_bbox",
             "projects",
             "optional_features",
-            "app_settings",
+            "collect_state",
+            "explore_state",
         ]
         read_only_fields = ["id", "created_on", "updated_on", "full_name"]
 
@@ -152,21 +154,8 @@ class MeViewSet(viewsets.ModelViewSet):
         # Used for updating a user's own profile details
         profile = self._get_profile(request)
 
-        # For partial updates with app_settings, merge at app-level instead of replacing
-        data = request.data
-        if partial and "app_settings" in data:
-            new_app_settings = data.get("app_settings", {})
-            existing_app_settings = profile.app_settings or {}
-            # Special case: empty dict {} clears all settings (explicit clear)
-            # Otherwise: merge at app-level (update only the app keys provided, preserve others)
-            if new_app_settings == {}:
-                merged_settings = {}
-            else:
-                merged_settings = {**existing_app_settings, **new_app_settings}
-            data = {**data, "app_settings": merged_settings}
-
         me_serializer = MeSerializer(
-            instance=profile, data=data, partial=partial, context={"request": request}
+            instance=profile, data=request.data, partial=partial, context={"request": request}
         )
         if not me_serializer.is_valid():
             raise ValidationError(me_serializer.errors)

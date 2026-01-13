@@ -11,7 +11,12 @@ class Migration(migrations.Migration):
     operations = [
         migrations.AddField(
             model_name="profile",
-            name="app_settings",
+            name="collect_state",
+            field=models.JSONField(blank=True, default=dict),
+        ),
+        migrations.AddField(
+            model_name="profile",
+            name="explore_state",
             field=models.JSONField(blank=True, default=dict),
         ),
     ]

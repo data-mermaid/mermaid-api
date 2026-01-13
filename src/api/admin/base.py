@@ -105,7 +105,14 @@ class AuthUserAdmin(BaseAdmin):
 
 @admin.register(Profile)
 class ProfileAdmin(BaseAdmin):
-    list_display = ("first_name", "last_name", "linked_email", "project_count", "has_app_settings")
+    list_display = (
+        "first_name",
+        "last_name",
+        "linked_email",
+        "project_count",
+        "has_collect_state",
+        "has_explore_state",
+    )
     search_fields = ["first_name", "last_name", "email"]
 
     @admin.display(description="Email", ordering="email")
@@ -116,9 +123,13 @@ class ProfileAdmin(BaseAdmin):
     def project_count(self, obj):
         return obj.projects__count
 
-    @admin.display(description="Has App Settings", boolean=True)
-    def has_app_settings(self, obj):
-        return bool(obj.app_settings)
+    @admin.display(description="Has Collect State", boolean=True)
+    def has_collect_state(self, obj):
+        return bool(obj.collect_state)
+
+    @admin.display(description="Has Explore State", boolean=True)
+    def has_explore_state(self, obj):
+        return bool(obj.explore_state)
 
     def get_queryset(self, request):
         qs = super().get_queryset(request)
