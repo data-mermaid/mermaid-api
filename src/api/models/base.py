@@ -49,6 +49,8 @@ class Profile(models.Model):
     first_name = models.CharField(max_length=100, blank=True, null=True)
     last_name = models.CharField(max_length=100, blank=True, null=True)
     picture_url = models.URLField(max_length=2048, blank=True, null=True)
+    collect_state = models.JSONField(blank=True, default=dict)
+    explore_state = models.JSONField(blank=True, default=dict)
 
     objects = ExtendedManager.from_queryset(ExtendedQuerySet)()
 
