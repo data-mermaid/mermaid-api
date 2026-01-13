@@ -161,10 +161,12 @@ class MeViewSet(viewsets.ModelViewSet):
             raise ValidationError(me_serializer.errors)
 
         if any(k in request.data for k in ["email", "first_name", "last_name"]):
-            # For partial updates, use existing values as fallback
-            email = me_serializer.validated_data.get("email") or profile.email
-            first_name = me_serializer.validated_data.get("first_name") or profile.first_name
-            last_name = me_serializer.validated_data.get("last_name") or profile.last_name
+            validated = me_serializer.validated_data
+            email = validated["email"] if "email" in validated else profile.email
+            first_name = (
+                validated["first_name"] if "first_name" in validated else profile.first_name
+            )
+            last_name = validated["last_name"] if "last_name" in validated else profile.last_name
             self._sync_auth0_metadata(profile, email, first_name, last_name)
 
         me_serializer.save()
