@@ -154,3 +154,19 @@ def get_presigned_url(
         Params={"Bucket": bucket, "Key": key},
         ExpiresIn=expiration,
     )
+
+
+def copy_object(bucket, source_key, dest_key, aws_access_key_id=None, aws_secret_access_key=None):
+    if aws_access_key_id is None:
+        aws_access_key_id = settings.AWS_ACCESS_KEY_ID
+    if aws_secret_access_key is None:
+        aws_secret_access_key = settings.AWS_SECRET_ACCESS_KEY
+
+    client = get_client(
+        aws_access_key_id=aws_access_key_id, aws_secret_access_key=aws_secret_access_key
+    )
+    client.copy_object(
+        Bucket=bucket,
+        CopySource={"Bucket": bucket, "Key": source_key},
+        Key=dest_key,
+    )
