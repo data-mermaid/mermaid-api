@@ -19,10 +19,14 @@ REPORT_TYPES = [
 
 
 def update_attributes_report():
+    canonical_filename = "mermaid_attributes.xlsx"
+    dated_filename = f"mermaid_attributes_{create_iso_date_string()}.xlsx"
+
     with NamedTemporaryFile() as tmp:
         attributes_report.write_attribute_reference(tmp.name)
         tmp.flush()
-        s3.upload_file(settings.PUBLIC_BUCKET, tmp.name, "mermaid_attributes.xlsx")
+        s3.upload_file(settings.PUBLIC_BUCKET, tmp.name, canonical_filename)
+        s3.copy_object(settings.PUBLIC_BUCKET, canonical_filename, dated_filename)
 
 
 def create_sample_unit_method_summary_report_background(
