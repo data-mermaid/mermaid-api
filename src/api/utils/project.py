@@ -1,3 +1,7 @@
+import copy
+import logging
+import re
+import uuid
 from collections import defaultdict
 
 from django.conf import settings
@@ -10,17 +14,134 @@ from django.utils.text import slugify
 from ..models import (
     BLEACHINGQC_PROTOCOL,
     PROTOCOL_MAP,
+    BeltFish,
+    BenthicLIT,
+    BenthicPhotoQuadratTransect,
+    BenthicPIT,
+    BenthicTransect,
+    BleachingQuadratCollection,
     CollectRecord,
+    FishBeltTransect,
+    HabitatComplexity,
     Management,
+    ObsBeltFish,
+    ObsBenthicLIT,
+    ObsBenthicPhotoQuadrat,
+    ObsBenthicPIT,
+    ObsColoniesBleached,
+    Observer,
+    ObsHabitatComplexity,
+    ObsQuadratBenthicPercent,
     Project,
     ProjectProfile,
+    QuadratCollection,
+    QuadratTransect,
     SampleEvent,
     SampleUnit,
     Site,
     TransectMethod,
 )
-from . import delete_instance_and_related_objects, get_value, is_uuid
+from ..models.classification import Annotation, Image, Point
+from . import delete_instance_and_related_objects, get_value, is_uuid, s3 as s3_utils
 from .email import mermaid_email
+
+logger = logging.getLogger(__name__)
+
+UUID_PATTERN = re.compile(r"[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}")
+
+
+def _generate_new_image_path(old_path, new_image_id):
+    # Replace the UUID in the filename portion with the new image ID
+    parts = old_path.rsplit("/", 1)
+    if len(parts) == 2:
+        directory, filename = parts
+        new_filename = UUID_PATTERN.sub(str(new_image_id), filename, count=1)
+        return f"{directory}/{new_filename}"
+    else:
+        return UUID_PATTERN.sub(str(new_image_id), old_path, count=1)
+
+
+def _copy_s3_image_file(source_path, new_image_id):
+    if not source_path:
+        return None
+
+    new_path = _generate_new_image_path(source_path, new_image_id)
+
+    try:
+        s3_utils.copy_object(
+            bucket=settings.IMAGE_PROCESSING_BUCKET,
+            source_key=source_path,
+            dest_key=new_path,
+            aws_access_key_id=settings.IMAGE_BUCKET_AWS_ACCESS_KEY_ID,
+            aws_secret_access_key=settings.IMAGE_BUCKET_AWS_SECRET_ACCESS_KEY,
+        )
+        return new_path
+    except Exception as e:
+        logger.warning(f"Failed to copy S3 file {source_path} to {new_path}: {e}")
+        return None
+
+
+def _copy_image(source_image, owner_profile):
+    """Copy an Image record and its S3 files, including Points and Annotations."""
+    old_image_id = source_image.id
+    new_image_id = uuid.uuid4()
+
+    # Copy S3 files (skip annotations_file - will be regenerated)
+    new_image_path = _copy_s3_image_file(
+        source_image.image.name if source_image.image else None, new_image_id
+    )
+    new_thumbnail_path = _copy_s3_image_file(
+        source_image.thumbnail.name if source_image.thumbnail else None, new_image_id
+    )
+    new_feature_vector_path = _copy_s3_image_file(
+        source_image.feature_vector_file.name if source_image.feature_vector_file else None,
+        new_image_id,
+    )
+
+    # Use the new image ID as collect_record_id since this is copied submitted data
+    # (the original collect record no longer exists for the copied project)
+    new_image = Image(
+        id=new_image_id,
+        collect_record_id=new_image_id,
+        name=source_image.name,
+        original_image_checksum=source_image.original_image_checksum,
+        original_image_name=source_image.original_image_name,
+        original_image_width=source_image.original_image_width,
+        original_image_height=source_image.original_image_height,
+        photo_timestamp=source_image.photo_timestamp,
+        location=source_image.location,
+        comments=source_image.comments,
+        data=copy.deepcopy(source_image.data) if source_image.data else None,
+        created_by=owner_profile,
+        updated_by=owner_profile,
+    )
+
+    if new_image_path:
+        new_image.image.name = new_image_path
+    if new_thumbnail_path:
+        new_image.thumbnail.name = new_thumbnail_path
+    if new_feature_vector_path:
+        new_image.feature_vector_file.name = new_feature_vector_path
+
+    new_image.save()
+
+    for point in Point.objects.filter(image_id=old_image_id):
+        old_point_id = point.id
+        point.id = None
+        point.image_id = new_image.id
+        point.save()
+
+        annotations_to_create = []
+        for annotation in Annotation.objects.filter(point_id=old_point_id):
+            annotation.id = None
+            annotation.point_id = point.id
+            annotations_to_create.append(annotation)
+        if annotations_to_create:
+            Annotation.objects.bulk_create(annotations_to_create)
+
+    new_image.create_annotations_file()
+
+    return new_image
 
 
 def _get_sample_unit_method_label(sample_unit_method, sample_unit_name):
@@ -227,14 +348,40 @@ def create_collecting_summary(project):
     return list(protocols), summary
 
 
+def _copy_related_objects(queryset, new_project, track_ids=False):
+    """
+    If track_ids=True, returns a dict mapping old IDs to new IDs.
+    If track_ids=False, uses bulk_create for performance.
+    """
+    if track_ids:
+        id_map = {}
+        for obj in queryset:
+            old_id = str(obj.id)
+            obj.id = None
+            obj.project = new_project
+            obj.save()
+            id_map[old_id] = str(obj.id)
+        return id_map
+    else:
+        objects = []
+        for obj in queryset:
+            obj.id = None
+            obj.project = new_project
+            objects.append(obj)
+        type(queryset.first()).objects.bulk_create(objects) if objects else None
+        return {}
+
+
 @transaction.atomic()
 def copy_project_and_resources(owner_profile, new_project_name, original_project):
+    is_demo = str(original_project.pk) == str(settings.DEMO_PROJECT_ID)
+
     new_project = Project.objects.get(id=original_project.pk)
     new_project.id = None
     new_project.name = new_project_name
     new_project.created_by = owner_profile
     new_project.updated_by = owner_profile
-    if str(original_project.pk) == str(settings.DEMO_PROJECT_ID):
+    if is_demo:
         new_project.is_demo = True
     new_project.save()
 
@@ -251,21 +398,250 @@ def copy_project_and_resources(owner_profile, new_project_name, original_project
         project_profiles.append(pp)
     ProjectProfile.objects.bulk_create(project_profiles)
 
-    new_sites = []
-    for site in original_project.sites.all():
-        site.id = None
-        site.project = new_project
-        new_sites.append(site)
-    Site.objects.bulk_create(new_sites)
+    site_id_map = _copy_related_objects(
+        original_project.sites.all(), new_project, track_ids=is_demo
+    )
+    management_id_map = _copy_related_objects(
+        original_project.management_set.all(), new_project, track_ids=is_demo
+    )
 
-    new_management_regimes = []
-    for mr in original_project.management_set.all():
-        mr.id = None
-        mr.project = new_project
-        new_management_regimes.append(mr)
-    Management.objects.bulk_create(new_management_regimes)
+    if is_demo:
+        original_project_fresh = Project.objects.get(id=settings.DEMO_PROJECT_ID)
+        copy_project_data(
+            original_project=original_project_fresh,
+            new_project=new_project,
+            owner_profile=owner_profile,
+            site_id_map=site_id_map,
+            management_id_map=management_id_map,
+        )
 
     return new_project
+
+
+def copy_project_data(original_project, new_project, owner_profile, site_id_map, management_id_map):
+    _copy_collect_records(
+        original_project, new_project, owner_profile, site_id_map, management_id_map
+    )
+    _copy_submitted_data(owner_profile, site_id_map, management_id_map)
+
+
+def _copy_collect_records(
+    original_project, new_project, owner_profile, site_id_map, management_id_map
+):
+    for cr in original_project.collect_records.all():
+        new_data = copy.deepcopy(cr.data) if cr.data else {}
+
+        if new_data.get("sample_event"):
+            old_site = new_data["sample_event"].get("site")
+            if old_site and str(old_site) in site_id_map:
+                new_data["sample_event"]["site"] = site_id_map[str(old_site)]
+
+            old_mgmt = new_data["sample_event"].get("management")
+            if old_mgmt and str(old_mgmt) in management_id_map:
+                new_data["sample_event"]["management"] = management_id_map[str(old_mgmt)]
+
+        if new_data.get("observers") is not None:
+            new_data["observers"] = [{"profile": str(owner_profile.id)}]
+
+        CollectRecord.objects.create(
+            project=new_project,
+            profile=owner_profile,
+            data=new_data,
+            validations=copy.deepcopy(cr.validations) if cr.validations else None,
+            stage=cr.stage,
+            created_by=owner_profile,
+            updated_by=owner_profile,
+        )
+
+
+def _copy_submitted_data(owner_profile, site_id_map, management_id_map):
+    old_site_ids = [uuid.UUID(k) for k in site_id_map.keys()]
+    sample_event_id_map = {}
+
+    for se in SampleEvent.objects.filter(site_id__in=old_site_ids):
+        old_se_id = str(se.id)
+        se.id = None
+        se.site_id = uuid.UUID(site_id_map[str(se.site_id)])
+        se.management_id = uuid.UUID(management_id_map[str(se.management_id)])
+        se.created_by = owner_profile
+        se.updated_by = owner_profile
+        se.save()
+        sample_event_id_map[old_se_id] = str(se.id)
+
+    _copy_benthic_transects(sample_event_id_map, owner_profile)
+    _copy_fish_belt_transects(sample_event_id_map, owner_profile)
+    _copy_quadrat_collections(sample_event_id_map, owner_profile)
+    _copy_quadrat_transects(sample_event_id_map, owner_profile)
+
+
+def _copy_benthic_transects(sample_event_id_map, owner_profile):
+    """Copy BenthicTransect hierarchy (BenthicLIT, BenthicPIT, HabitatComplexity)."""
+    old_se_ids = [uuid.UUID(k) for k in sample_event_id_map.keys()]
+
+    for bt in BenthicTransect.objects.filter(sample_event_id__in=old_se_ids):
+        old_bt_id = bt.id
+        bt.id = None
+        bt.sample_event_id = uuid.UUID(sample_event_id_map[str(bt.sample_event_id)])
+        bt.collect_record_id = None
+        bt.created_by = owner_profile
+        bt.updated_by = owner_profile
+        bt.save()
+
+        for lit in BenthicLIT.objects.filter(transect_id=old_bt_id):
+            _copy_transect_method(lit, bt.id, owner_profile, ObsBenthicLIT, "benthiclit")
+
+        for pit in BenthicPIT.objects.filter(transect_id=old_bt_id):
+            _copy_transect_method(pit, bt.id, owner_profile, ObsBenthicPIT, "benthicpit")
+
+        for hc in HabitatComplexity.objects.filter(transect_id=old_bt_id):
+            _copy_transect_method(
+                hc, bt.id, owner_profile, ObsHabitatComplexity, "habitatcomplexity"
+            )
+
+
+def _copy_fish_belt_transects(sample_event_id_map, owner_profile):
+    """Copy FishBeltTransect hierarchy (BeltFish)."""
+    old_se_ids = [uuid.UUID(k) for k in sample_event_id_map.keys()]
+
+    for fbt in FishBeltTransect.objects.filter(sample_event_id__in=old_se_ids):
+        old_fbt_id = fbt.id
+        fbt.id = None
+        fbt.sample_event_id = uuid.UUID(sample_event_id_map[str(fbt.sample_event_id)])
+        fbt.collect_record_id = None
+        fbt.created_by = owner_profile
+        fbt.updated_by = owner_profile
+        fbt.save()
+
+        for bf in BeltFish.objects.filter(transect_id=old_fbt_id):
+            _copy_transect_method(bf, fbt.id, owner_profile, ObsBeltFish, "beltfish")
+
+
+def _copy_quadrat_collections(sample_event_id_map, owner_profile):
+    """Copy QuadratCollection hierarchy (BleachingQuadratCollection)."""
+    old_se_ids = [uuid.UUID(k) for k in sample_event_id_map.keys()]
+
+    for qc in QuadratCollection.objects.filter(sample_event_id__in=old_se_ids):
+        old_qc_id = qc.id
+        qc.id = None
+        qc.sample_event_id = uuid.UUID(sample_event_id_map[str(qc.sample_event_id)])
+        qc.collect_record_id = None
+        qc.created_by = owner_profile
+        qc.updated_by = owner_profile
+        qc.save()
+
+        for bqc in BleachingQuadratCollection.objects.filter(quadrat_id=old_qc_id):
+            old_bqc_id = bqc.id
+            bqc.pk = None
+            bqc.id = None
+            # Clear the parent pointer for multi-table inheritance
+            bqc.transectmethod_ptr_id = None
+            bqc.quadrat_id = qc.id
+            bqc.collect_record_id = None
+            bqc.created_by = owner_profile
+            bqc.updated_by = owner_profile
+            bqc.save()
+
+            _copy_observations(
+                ObsColoniesBleached,
+                "bleachingquadratcollection_id",
+                old_bqc_id,
+                bqc.id,
+                owner_profile,
+            )
+            _copy_observations(
+                ObsQuadratBenthicPercent,
+                "bleachingquadratcollection_id",
+                old_bqc_id,
+                bqc.id,
+                owner_profile,
+            )
+            _copy_observer(old_bqc_id, bqc.id, owner_profile)
+
+
+def _copy_quadrat_transects(sample_event_id_map, owner_profile):
+    """Copy QuadratTransect hierarchy (BenthicPhotoQuadratTransect) with images."""
+    old_se_ids = [uuid.UUID(k) for k in sample_event_id_map.keys()]
+
+    for qt in QuadratTransect.objects.filter(sample_event_id__in=old_se_ids):
+        old_qt_id = qt.id
+        qt.id = None
+        qt.sample_event_id = uuid.UUID(sample_event_id_map[str(qt.sample_event_id)])
+        qt.collect_record_id = None
+        qt.created_by = owner_profile
+        qt.updated_by = owner_profile
+        qt.save()
+
+        for bpqt in BenthicPhotoQuadratTransect.objects.filter(quadrat_transect_id=old_qt_id):
+            old_bpqt_id = bpqt.id
+            bpqt.pk = None
+            bpqt.id = None
+            # Clear the parent pointer for multi-table inheritance
+            bpqt.transectmethod_ptr_id = None
+            bpqt.quadrat_transect_id = qt.id
+            bpqt.collect_record_id = None
+            bpqt.created_by = owner_profile
+            bpqt.updated_by = owner_profile
+            bpqt.save()
+
+            # Build image ID map to avoid copying the same image multiple times
+            # (multiple observations can reference the same image)
+            image_id_map = {}
+
+            for obs in ObsBenthicPhotoQuadrat.objects.filter(
+                benthic_photo_quadrat_transect_id=old_bpqt_id
+            ):
+                old_image_id = obs.image_id
+                new_image_id = None
+
+                if old_image_id:
+                    if old_image_id not in image_id_map:
+                        new_image = _copy_image(obs.image, owner_profile)
+                        image_id_map[old_image_id] = new_image.id
+                    new_image_id = image_id_map[old_image_id]
+
+                obs.id = None
+                obs.benthic_photo_quadrat_transect_id = bpqt.id
+                obs.image_id = new_image_id
+                obs.created_by = owner_profile
+                obs.updated_by = owner_profile
+                obs.save()
+
+            _copy_observer(old_bpqt_id, bpqt.id, owner_profile)
+
+
+def _copy_transect_method(tm, new_transect_id, owner_profile, obs_model, obs_fk_name):
+    old_tm_id = tm.id
+    tm.pk = None
+    tm.id = None
+    # Clear the parent pointer for multi-table inheritance
+    tm.transectmethod_ptr_id = None
+    tm.transect_id = new_transect_id
+    tm.collect_record_id = None
+    tm.created_by = owner_profile
+    tm.updated_by = owner_profile
+    tm.save()
+
+    _copy_observations(obs_model, f"{obs_fk_name}_id", old_tm_id, tm.id, owner_profile)
+    _copy_observer(old_tm_id, tm.id, owner_profile)
+
+
+def _copy_observations(obs_model, fk_field, old_parent_id, new_parent_id, owner_profile):
+    for obs in obs_model.objects.filter(**{fk_field: old_parent_id}):
+        obs.id = None
+        setattr(obs, fk_field, new_parent_id)
+        obs.created_by = owner_profile
+        obs.updated_by = owner_profile
+        obs.save()
+
+
+def _copy_observer(old_tm_id, new_tm_id, owner_profile):
+    Observer.objects.create(
+        transectmethod_id=new_tm_id,
+        profile=owner_profile,
+        rank=1,
+        created_by=owner_profile,
+        updated_by=owner_profile,
+    )
 
 
 def email_members_of_new_project(project, owner_profile):
