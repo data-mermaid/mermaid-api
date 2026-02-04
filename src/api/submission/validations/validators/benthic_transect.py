@@ -187,11 +187,15 @@ class IntervalSequenceValidator(BaseValidator):
                 actual_intervals.append(interval)
 
         expected_intervals = []
-        current_interval = interval_start
-        # Use tolerance to handle floating point precision in the boundary check
-        while current_interval <= len_surveyed + self.TOLERANCE:
-            expected_intervals.append(current_interval)
-            current_interval += interval_size
+        n = 0
+        # Calculate each interval independently to avoid floating-point accumulation errors
+        while True:
+            interval = interval_start + n * interval_size
+            if interval > len_surveyed + self.TOLERANCE:
+                break
+            # Round to avoid floating-point representation issues in error messages
+            expected_intervals.append(round(interval, 10))
+            n += 1
 
         missing_intervals = []
         for expected in expected_intervals:
