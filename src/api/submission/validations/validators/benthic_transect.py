@@ -173,11 +173,11 @@ class IntervalSequenceValidator(BaseValidator):
         observations = self.get_value(collect_record, self.observations_path) or []
 
         # Skip validation if required values are missing or invalid
-        if len_surveyed is None or len_surveyed <= 0:
+        if len_surveyed is None or len_surveyed <= 0 or not math.isfinite(len_surveyed):
             return OK
-        if interval_size is None or interval_size <= 0:
+        if interval_size is None or interval_size <= 0 or not math.isfinite(interval_size):
             return OK
-        if interval_start is None or interval_start < 0:
+        if interval_start is None or interval_start < 0 or not math.isfinite(interval_start):
             return OK
 
         actual_intervals = []
@@ -187,11 +187,15 @@ class IntervalSequenceValidator(BaseValidator):
                 actual_intervals.append(interval)
 
         expected_intervals = []
-        current_interval = interval_start
-        # Use tolerance to handle floating point precision in the boundary check
-        while current_interval <= len_surveyed + self.TOLERANCE:
-            expected_intervals.append(current_interval)
-            current_interval += interval_size
+        n = 0
+        # Calculate each interval independently to avoid floating-point accumulation errors
+        while True:
+            interval = interval_start + n * interval_size
+            if interval > len_surveyed + self.TOLERANCE:
+                break
+            # Round to avoid floating-point representation issues in error messages
+            expected_intervals.append(round(interval, 10))
+            n += 1
 
         missing_intervals = []
         for expected in expected_intervals:
