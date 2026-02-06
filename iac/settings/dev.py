@@ -24,7 +24,7 @@ DEV_SETTINGS = ProjectSettings(
         default_domain_collect="https://dev-app.datamermaid.org",
         mermaid_api_audience="https://dev-api.datamermaid.org",
         public_bucket="dev-public.datamermaid.org",
-        sqs_message_visibility=3000,
+        sqs_message_visibility=60,
         # Image classification
         ic_bucket_name="mermaid-image-processing",
         # Secrets
