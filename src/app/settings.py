@@ -295,6 +295,7 @@ DB_LOGGER_BATCH_WRITE_SIZE = 100
 # Uses Python's startswith() to match routes
 METRICS_IGNORE_ROUTES = [
     "/v1/health/",
+    "/health/",
 ]
 
 
