@@ -37,6 +37,7 @@ common_stack = CommonStack(
     "mermaid-api-infra-common",
     env=cdk_env,
     tags=tags,
+    enable_vpc_flow_logs=True,
 )
 
 dev_static_site_stack = StaticSiteStack(

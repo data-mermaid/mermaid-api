@@ -16,6 +16,8 @@ from aws_cdk import (
     aws_route53 as r53,
     aws_s3 as s3,
     aws_secretsmanager as sm,
+    aws_glue as glue,
+    aws_athena as athena,
 )
 from constructs import Construct
 
@@ -25,6 +27,7 @@ class CommonStack(Stack):
         self,
         scope: Construct,
         id: str,
+        enable_vpc_flow_logs: bool = False,
         **kwargs,
     ) -> None:
         super().__init__(scope, id, **kwargs)
@@ -54,6 +57,227 @@ class CommonStack(Stack):
                 ),
             ],
         )
+        # VPC Flow Logs with Glue and Athena Integration
+        if enable_vpc_flow_logs:
+            # Create S3 bucket for VPC Flow Logs
+            vpc_flow_logs_bucket = s3.Bucket(
+                self,
+                "VpcFlowLogsBucket",
+                bucket_name="mermaid-vpc-flow-logs",
+                removal_policy=RemovalPolicy.RETAIN,
+                public_read_access=False,
+                block_public_access=s3.BlockPublicAccess.BLOCK_ALL,
+                lifecycle_rules=[
+                    s3.LifecycleRule(
+                        id="VpcFlowLogsArchive",
+                        prefix="vpc-flow-logs/",
+                        transitions=[
+                            s3.Transition(
+                                storage_class=s3.StorageClass.GLACIER,
+                                transition_after=Duration.days(30),
+                            ),
+                        ],
+                        expiration=Duration.days(90),
+                    ),
+                ],
+            )
+
+            # Create CloudWatch Log Group for VPC Flow Logs
+            vpc_flow_logs_group = logs.LogGroup(
+                self,
+                "VpcFlowLogsGroup",
+                log_group_name="/aws/vpc/flowlogs/mermaid",
+                retention=logs.RetentionDays.ONE_MONTH,
+            )
+
+            # Create IAM Role for VPC Flow Logs
+            vpc_flow_logs_role = iam.Role(
+                self,
+                "VpcFlowLogsRole",
+                assumed_by=iam.ServicePrincipal("vpc-flow-logs.amazonaws.com"),
+            )
+
+            vpc_flow_logs_role.add_to_policy(
+                iam.PolicyStatement(
+                    effect=iam.Effect.ALLOW,
+                    actions=[
+                        "logs:CreateLogGroup",
+                        "logs:CreateLogStream",
+                        "logs:PutLogEvents",
+                        "logs:DescribeLogGroups",
+                        "logs:DescribeLogStreams",
+                    ],
+                    resources=[vpc_flow_logs_group.log_group_arn],
+                )
+            )
+
+            # Enable VPC Flow Logs to CloudWatch
+            ec2.FlowLog(
+                self,
+                "VpcFlowLogsCloudWatch",
+                resource_type=ec2.FlowLogResourceType.from_vpc(self.vpc),
+                traffic_type=ec2.FlowLogTrafficType.ALL,
+                destination=ec2.FlowLogDestination.to_cloud_watch_logs(
+                    vpc_flow_logs_group, vpc_flow_logs_role
+                ),
+            )
+
+            # Enable VPC Flow Logs to S3 for Athena analysis
+            ec2.FlowLog(
+                self,
+                "VpcFlowLogsS3",
+                resource_type=ec2.FlowLogResourceType.from_vpc(self.vpc),
+                traffic_type=ec2.FlowLogTrafficType.ALL,
+                destination=ec2.FlowLogDestination.to_s3(
+                    bucket=vpc_flow_logs_bucket,
+                    key_prefix="vpc-flow-logs/",
+                    file_format=ec2.FlowLogFileFormat.PARQUET,
+                    hive_compatible_partitions=True,
+                ),
+            )
+
+            # Create Glue Database
+            glue_database = glue.CfnDatabase(
+                self,
+                "VpcFlowLogsDatabase",
+                catalog_id=self.account,
+                database_input=glue.CfnDatabase.DatabaseInputProperty(
+                    name="vpc_flow_logs",
+                    description="Glue database for VPC Flow Logs analysis",
+                ),
+            )
+
+            # Create Glue Table
+            glue.CfnTable(
+                self,
+                "VpcFlowLogsTable",
+                catalog_id=self.account,
+                database_name="vpc_flow_logs",
+                table_input=glue.CfnTable.TableInputProperty(
+                    name="vpc_flow_logs",
+                    storage_descriptor=glue.CfnTable.StorageDescriptorProperty(
+                        columns=[
+                            glue.CfnTable.ColumnProperty(name="version", type="bigint"),
+                            glue.CfnTable.ColumnProperty(name="account_id", type="string"),
+                            glue.CfnTable.ColumnProperty(name="interface_id", type="string"),
+                            glue.CfnTable.ColumnProperty(name="srcaddr", type="string"),
+                            glue.CfnTable.ColumnProperty(name="dstaddr", type="string"),
+                            glue.CfnTable.ColumnProperty(name="srcport", type="bigint"),
+                            glue.CfnTable.ColumnProperty(name="dstport", type="bigint"),
+                            glue.CfnTable.ColumnProperty(name="protocol", type="bigint"),
+                            glue.CfnTable.ColumnProperty(name="packets", type="bigint"),
+                            glue.CfnTable.ColumnProperty(name="bytes", type="bigint"),
+                            glue.CfnTable.ColumnProperty(name="start", type="bigint"),
+                            glue.CfnTable.ColumnProperty(name="end", type="bigint"),
+                            glue.CfnTable.ColumnProperty(name="action", type="string"),
+                            glue.CfnTable.ColumnProperty(name="log_status", type="string"),
+                            glue.CfnTable.ColumnProperty(name="vpc_id", type="string"),
+                            glue.CfnTable.ColumnProperty(name="subnet_id", type="string"),
+                            glue.CfnTable.ColumnProperty(name="instance_id", type="string"),
+                            glue.CfnTable.ColumnProperty(name="tcp_flags", type="bigint"),
+                            glue.CfnTable.ColumnProperty(name="type", type="string"),
+                            glue.CfnTable.ColumnProperty(name="pkt_srcaddr", type="string"),
+                            glue.CfnTable.ColumnProperty(name="pkt_dstaddr", type="string"),
+                            glue.CfnTable.ColumnProperty(name="region", type="string"),
+                            glue.CfnTable.ColumnProperty(name="flow_log_id", type="string"),
+                        ],
+                        location=f"s3://{vpc_flow_logs_bucket.bucket_name}/vpc-flow-logs/",
+                        input_format="org.apache.hadoop.hive.parquet.MapredParquetInputFormat",
+                        output_format="org.apache.hadoop.hive.parquet.MapredParquetOutputFormat",
+                        serde_info=glue.CfnTable.SerdeInfoProperty(
+                            serialization_library="org.apache.hadoop.hive.parquet.serde.ParquetHiveSerDe",
+                        ),
+                        stored_as_sub_directories=True,
+                    ),
+                    partition_keys=[
+                        glue.CfnTable.ColumnProperty(name="year", type="string"),
+                        glue.CfnTable.ColumnProperty(name="month", type="string"),
+                        glue.CfnTable.ColumnProperty(name="day", type="string"),
+                        glue.CfnTable.ColumnProperty(name="hour", type="string"),
+                    ],
+                ),
+            )
+
+            # Create IAM Role for Athena
+            athena_role = iam.Role(
+                self,
+                "AthenaRole",
+                assumed_by=iam.ServicePrincipal("athena.amazonaws.com"),
+            )
+
+            athena_role.add_to_policy(
+                iam.PolicyStatement(
+                    effect=iam.Effect.ALLOW,
+                    actions=[
+                        "s3:GetObject",
+                        "s3:ListBucket",
+                    ],
+                    resources=[
+                        vpc_flow_logs_bucket.bucket_arn,
+                        vpc_flow_logs_bucket.arn_for_objects("*"),
+                    ],
+                )
+            )
+
+            athena_role.add_to_policy(
+                iam.PolicyStatement(
+                    effect=iam.Effect.ALLOW,
+                    actions=[
+                        "glue:GetDatabase",
+                        "glue:GetTable",
+                        "glue:GetPartitions",
+                    ],
+                    resources=["*"],
+                )
+            )
+
+            # Create S3 bucket for Athena query results
+            athena_results_bucket = s3.Bucket(
+                self,
+                "AthenaResultsBucket",
+                bucket_name="mermaid-athena-results",
+                removal_policy=RemovalPolicy.RETAIN,
+                public_read_access=False,
+                block_public_access=s3.BlockPublicAccess.BLOCK_ALL,
+                lifecycle_rules=[
+                    s3.LifecycleRule(
+                        id="AthenaResultsCleanup",
+                        expiration=Duration.days(7),
+                    ),
+                ],
+            )
+
+            athena_role.add_to_policy(
+                iam.PolicyStatement(
+                    effect=iam.Effect.ALLOW,
+                    actions=[
+                        "s3:PutObject",
+                        "s3:GetObject",
+                        "s3:DeleteObject",
+                    ],
+                    resources=[athena_results_bucket.arn_for_objects("*")],
+                )
+            )
+
+            # Create Athena WorkGroup
+            athena.CfnWorkGroup(
+                self,
+                "VpcFlowLogsWorkGroup",
+                name="vpc-flow-logs",
+                recursive_delete_option=True,
+                work_group_configuration=athena.CfnWorkGroup.WorkGroupConfigurationProperty(
+                    result_configuration=athena.CfnWorkGroup.ResultConfigurationProperty(
+                        output_location=f"s3://{athena_results_bucket.bucket_name}/",
+                    ),
+                    enforce_work_group_configuration=True,
+                    publish_cloud_watch_metrics_enabled=True,
+                ),
+                description="WorkGroup for querying VPC Flow Logs",
+                tags=[
+                    {"key": "Environment", "value": "common"},
+                    {"key": "Purpose", "value": "VPC Flow Logs Analysis"},
+                ],
+            )
 
         # create s3 gateway endpoint
         self.vpc.add_gateway_endpoint(
