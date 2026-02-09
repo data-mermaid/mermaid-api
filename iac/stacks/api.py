@@ -157,6 +157,9 @@ class ApiStack(Stack):
             "AWS_DATA_BUCKET": data_bucket.bucket_name,
             "AWS_PUBLIC_BUCKET": config.api.public_bucket,
             "IMAGE_PROCESSING_BUCKET": config.api.ic_bucket_name,
+            "IMAGE_PROCESSING_BUCKET_TEST": config.api.ic_bucket_name_test
+            or config.api.ic_bucket_name,
+            "IMAGE_S3_PATH_TEST": config.api.ic_s3_path_test or "mermaid/",
             "IMAGE_PROCESSING_BUCKET_DUMMY": image_processing_bucket.bucket_name,
             "EMAIL_HOST": config.api.email_host,
             "EMAIL_PORT": config.api.email_port,
@@ -370,6 +373,8 @@ class ApiStack(Stack):
         # Allow Image Worker to write to image bucket
         image_processing_bucket.grant_write(image_worker.task_definition.task_role)
         image_processing_bucket.grant_read_write(service.task_definition.task_role)
+        # General worker needs read/write for image migration jobs between buckets
+        image_processing_bucket.grant_read_write(worker.task_definition.task_role)
 
         # Allow Service and Image Worker to read/write config bucket
         config_bucket.grant_read_write(image_worker.task_definition.task_role)
@@ -392,4 +397,4 @@ class ApiStack(Stack):
         )
         coral_reef_training_bucket.grant_read(service.task_definition.task_role)
         coral_reef_training_bucket.grant_read(image_worker.task_definition.task_role)
-        coral_reef_training_bucket.grant_read(worker.task_definition.task_role)
+        coral_reef_training_bucket.grant_read_write(worker.task_definition.task_role)

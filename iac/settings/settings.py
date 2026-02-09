@@ -46,6 +46,8 @@ class DjangoSettings:
     sqs_message_visibility: int
 
     ic_bucket_name: str
+    ic_bucket_name_test: str = ""
+    ic_s3_path_test: str = ""
 
     # Dynamic Secrets
     spa_admin_client_id_name: str

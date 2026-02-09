@@ -16,6 +16,7 @@ from ...models import (
     Point,
     ProjectProfile,
 )
+from ...models.classification import get_image_bucket
 from ...utils import truthy
 from ...utils.classification import classify_image_job, create_classification_status
 from ..base import BaseAPIFilterSet, BaseAPISerializer, BaseProjectApiViewSet
@@ -205,9 +206,13 @@ class ImageViewSet(BaseProjectApiViewSet):
             )
 
         try:
+            project = collect_record.project
+            bucket = get_image_bucket(project)
+
             image_record = Image.objects.create(
                 collect_record_id=collect_record.pk,
                 image=image_file,
+                image_bucket=bucket,
                 created_by=profile,
                 updated_by=profile,
             )

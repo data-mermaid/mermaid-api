@@ -160,6 +160,11 @@ class Project(BaseModel, JSONMixin):
         if self.is_demo:
             self.status = self.TEST
 
+        # Detect status change for image migration
+        old_status = None
+        if self.pk and hasattr(self, "_loaded_values"):
+            old_status = self._loaded_values.get("status")
+
         notify_fields = [
             f.name
             for f in self._meta.get_fields(include_parents=False, include_hidden=False)
@@ -172,6 +177,16 @@ class Project(BaseModel, JSONMixin):
             self.name = self.name.strip()
         self._new_values = model_to_dict(self, fields=notify_fields)
         super(Project, self).save(*args, **kwargs)
+
+        if old_status is not None and old_status != self.status:
+            from .classification import get_image_bucket_for_status
+
+            old_bucket = get_image_bucket_for_status(old_status)
+            new_bucket = get_image_bucket_for_status(self.status)
+            if old_bucket != new_bucket:
+                from ..utils.image_migration import queue_image_migration
+
+                queue_image_migration(self.pk, old_bucket, new_bucket)
 
     @classmethod
     def get_sample_unit_method_policy(cls, protocol):

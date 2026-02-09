@@ -34,6 +34,10 @@ def pre_image_save(sender, instance, **kwargs):
         except Exception:
             raise
 
+    # Re-apply per-instance storage after normalization replaced file fields
+    if instance.image_bucket:
+        instance._apply_storage()
+
 
 @receiver(post_delete, sender=Image)
 def delete_images_on_model_delete(sender, instance, **kwargs):

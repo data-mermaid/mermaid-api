@@ -22,18 +22,32 @@ from api.signals.classification import post_save_classification_image, pre_image
 from api.utils.project import copy_project_and_resources
 
 
+def _apply_mock_settings(mock_obj, project):
+    mock_obj.DEMO_PROJECT_ID = str(project.pk)
+    mock_obj.IMAGE_PROCESSING_BUCKET = "test-bucket"
+    mock_obj.IMAGE_PROCESSING_BUCKET_TEST = "test-bucket"
+    mock_obj.IMAGE_BUCKET_AWS_ACCESS_KEY_ID = "test-key"
+    mock_obj.IMAGE_BUCKET_AWS_SECRET_ACCESS_KEY = "test-secret"
+    mock_obj.AWS_ACCESS_KEY_ID = "test-key"
+    mock_obj.AWS_SECRET_ACCESS_KEY = "test-secret"
+    mock_obj.IMAGE_S3_PATH = "mermaid/"
+    mock_obj.IMAGE_S3_PATH_TEST = "mermaid/"
+    mock_obj.ENVIRONMENT = "local"
+
+
 @contextmanager
 def mock_demo_project(project, mock_s3=False):
     """Context manager to mock settings for demo project copy."""
-    with patch("api.utils.project.settings") as mock_settings:
-        mock_settings.DEMO_PROJECT_ID = str(project.pk)
-        mock_settings.IMAGE_PROCESSING_BUCKET = "test-bucket"
-        mock_settings.IMAGE_BUCKET_AWS_ACCESS_KEY_ID = "test-key"
-        mock_settings.IMAGE_BUCKET_AWS_SECRET_ACCESS_KEY = "test-secret"
+    with (
+        patch("api.utils.project.settings") as mock_settings,
+        patch("api.models.classification.settings") as mock_cls_settings,
+    ):
+        _apply_mock_settings(mock_settings, project)
+        _apply_mock_settings(mock_cls_settings, project)
 
         if mock_s3:
-            with patch("api.utils.project.s3_utils.copy_object") as mock_copy:
-                yield mock_settings, mock_copy
+            with patch("api.utils.project.s3_utils.move_file_cross_account") as mock_move:
+                yield mock_settings, mock_move
         else:
             yield mock_settings
 
@@ -134,12 +148,15 @@ def test_copy_demo_project_copies_collect_records(
     assert new_project.collect_records.count() == 1
     new_cr = new_project.collect_records.first()
 
-    assert new_cr.profile == owner_profile
+    # Original profile and observers are preserved
+    assert new_cr.profile == collect_record4.profile
     assert new_cr.data["sample_event"]["site"] == str(new_project.sites.first().pk)
     assert new_cr.data["sample_event"]["management"] == str(new_project.management_set.first().pk)
-    assert new_cr.data["observers"] == [{"profile": str(owner_profile.id)}]
+    assert new_cr.data["observers"] == collect_record4.data["observers"]
     assert new_cr.stage == collect_record4.stage
     assert new_cr.validations is not None
+    assert new_cr.created_by == collect_record4.created_by
+    assert new_cr.updated_by == collect_record4.updated_by
 
 
 def test_copy_demo_project_copies_submitted_sample_units(
@@ -181,18 +198,40 @@ def test_copy_demo_project_copies_submitted_sample_units(
     )
 
 
-def test_copy_demo_project_observers_are_new_owner(
-    project1, project_profile1, belt_fish_project, belt_fish1, observer_belt_fish1
+def test_copy_demo_project_preserves_original_observers(
+    project1, project_profile1, project_profile2, belt_fish_project, belt_fish1, observer_belt_fish1
 ):
-    owner_profile = project_profile1.profile
+    """Original observers are preserved instead of being replaced with the new owner."""
+    # Use profile2 as owner (different from observer_belt_fish1 which uses profile1)
+    owner_profile = project_profile2.profile
+    original_observer_profile = observer_belt_fish1.profile
+
+    # Verify precondition: owner is different from the original observer
+    assert owner_profile.pk != original_observer_profile.pk
+
+    # Collect all original observer profiles before copy
+    original_belt_fish = BeltFish.objects.filter(transect__sample_event__site__project=project1)
+    all_original_observer_profiles = set()
+    for bf in original_belt_fish:
+        all_original_observer_profiles.update(bf.observers.values_list("profile", flat=True))
 
     with mock_demo_project(project1):
         new_project = copy_project_and_resources(owner_profile, "demo copy", project1)
 
+    # Get copied belt fish and their observers
     new_belt_fish = BeltFish.objects.filter(transect__sample_event__site__project=new_project)
     assert new_belt_fish.count() > 0
+
+    # Collect all copied observer profiles
+    all_copied_observer_profiles = set()
     for bf in new_belt_fish:
-        assert list(bf.observers.values_list("profile", flat=True)) == [owner_profile.pk]
+        all_copied_observer_profiles.update(bf.observers.values_list("profile", flat=True))
+
+    # Verify all original observer profiles are preserved in the copy
+    assert all_original_observer_profiles == all_copied_observer_profiles, (
+        f"Original observers {all_original_observer_profiles} should match "
+        f"copied observers {all_copied_observer_profiles}"
+    )
 
 
 def test_copy_non_demo_project_does_not_copy_data(
@@ -261,9 +300,9 @@ def test_copy_demo_project_copies_photo_quadrat_transects_with_images(
             "annotations": Annotation.objects.count(),
         }
 
-        with mock_demo_project(project1, mock_s3=True) as (mock_settings, mock_copy):
+        with mock_demo_project(project1, mock_s3=True) as (mock_settings, mock_move):
             new_project = copy_project_and_resources(owner_profile, "demo copy", project1)
-            assert mock_copy.call_count == 2  # image + thumbnail
+            assert mock_move.call_count == 2  # image + thumbnail
 
         # Verify transects and observations were copied
         assert (
@@ -281,9 +320,15 @@ def test_copy_demo_project_copies_photo_quadrat_transects_with_images(
             == original_counts["observations"]
         )
 
-        # Verify observers are new owner
+        # Verify original observers are preserved (not replaced with new owner)
+        original_bpqt = BenthicPhotoQuadratTransect.objects.filter(
+            quadrat_transect__sample_event__site__project=project1
+        ).first()
+        original_observer_profiles = list(original_bpqt.observers.values_list("profile", flat=True))
         for bpqt in new_bpqts:
-            assert list(bpqt.observers.values_list("profile", flat=True)) == [owner_profile.pk]
+            assert (
+                list(bpqt.observers.values_list("profile", flat=True)) == original_observer_profiles
+            )
 
         # Verify images, points, and annotations were copied
         assert Image.objects.count() == original_counts["images"] + 1
@@ -297,6 +342,9 @@ def test_copy_demo_project_copies_photo_quadrat_transects_with_images(
         ).first()
         assert new_obs.image.id != test_image.id
         assert str(new_obs.image.id) in new_obs.image.image.name
+
+        # Verify image_bucket is set on the copied image
+        assert new_obs.image.image_bucket == "test-bucket"
     finally:
         pre_save.connect(pre_image_save, sender=Image)
         post_save.connect(post_save_classification_image, sender=Image)
