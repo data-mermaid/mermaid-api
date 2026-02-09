@@ -182,10 +182,11 @@ class ApiStack(Stack):
 
         # --- Scheduled Backup Task ---
 
-        daily_task_def = ecs.Ec2TaskDefinition(
+        daily_task_def = ecs.FargateTaskDefinition(
             self,
             "ScheduledBackupTaskDef",
-            network_mode=ecs.NetworkMode.AWS_VPC,
+            cpu=config.api.backup_cpu,
+            memory_limit_mib=config.api.backup_memory,
         )
         daily_task_def.add_container(
             "ScheduledBackupContainer",
@@ -197,18 +198,18 @@ class ApiStack(Stack):
             command=["python", "manage.py", "daily_tasks"],
             logging=ecs.LogDrivers.aws_logs(stream_prefix="ScheduledBackupTask"),
         )
-        daily_backup_task = ecs_patterns.ScheduledEc2Task(
+        daily_backup_task = ecs_patterns.ScheduledFargateTask(
             self,
             "ScheduledBackupTask",
             schedule=appscaling.Schedule.cron(hour="0", minute="0"),
             cluster=cluster,
             subnet_selection=ec2.SubnetSelection(
                 subnets=cluster.vpc.select_subnets(
-                    subnet_type=ec2.SubnetType.PRIVATE_WITH_NAT
+                    subnet_type=ec2.SubnetType.PRIVATE_WITH_EGRESS
                 ).subnets
             ),
             security_groups=[container_security_group],
-            scheduled_ec2_task_definition_options=ecs_patterns.ScheduledEc2TaskDefinitionOptions(
+            scheduled_fargate_task_definition_options=ecs_patterns.ScheduledFargateTaskDefinitionOptions(
                 task_definition=daily_task_def
             ),
         )
