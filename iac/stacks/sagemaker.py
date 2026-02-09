@@ -260,25 +260,4 @@ class SagemakerStack(cdk.Stack):
             enforce_ssl=True,
             # Encryption
             encryption=s3.BucketEncryption.S3_MANAGED,
-            # Lifecycle rules
-            lifecycle_rules=[
-                s3.LifecycleRule(
-                    expiration=cdk.Duration.days(90),
-                    transitions=[
-                        s3.Transition(
-                            storage_class=s3.StorageClass.INFREQUENT_ACCESS,
-                            transition_after=cdk.Duration.days(30),
-                        )
-                    ],
-                ),
-                s3.LifecycleRule(
-                    noncurrent_version_expiration=cdk.Duration.days(180),
-                    noncurrent_version_transitions=[
-                        s3.NoncurrentVersionTransition(
-                            storage_class=s3.StorageClass.INFREQUENT_ACCESS,
-                            transition_after=cdk.Duration.days(30),
-                        )
-                    ],
-                ),
-            ],
         )

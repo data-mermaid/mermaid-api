@@ -295,6 +295,7 @@ DB_LOGGER_BATCH_WRITE_SIZE = 100
 # Uses Python's startswith() to match routes
 METRICS_IGNORE_ROUTES = [
     "/v1/health/",
+    "/health/",
 ]
 
 
@@ -363,7 +364,7 @@ SQS_BATCH_SIZE = 10
 SQS_WAIT_SECONDS = 20
 # Number of seconds before the message is visible again
 # in SQS for other tasks to pull.
-SQS_MESSAGE_VISIBILITY = int(os.environ.get("SQS_MESSAGE_VISIBILITY", "300"))
+SQS_MESSAGE_VISIBILITY = int(os.environ.get("SQS_MESSAGE_VISIBILITY", "60"))
 # Name of queue, if it doesn't exist it will be created.
 QUEUE_NAME = os.environ.get("SQS_QUEUE_NAME", "mermaid-local")  # required
 IMAGE_QUEUE_NAME = os.environ.get("IMAGE_SQS_QUEUE_NAME", "mermaid-local")  # required
