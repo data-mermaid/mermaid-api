@@ -56,7 +56,7 @@ class ApiStack(Stack):
 
         def get_secret_object(stack: Stack, secret_name: str):
             """Return secret object from name and field"""
-            id = f'{camel_case(secret_name.split("/")[-1])}'
+            id = f"{camel_case(secret_name.split('/')[-1])}"
             return secrets.Secret.from_secret_complete_arn(
                 stack,
                 id=f"SSM-{id}",
