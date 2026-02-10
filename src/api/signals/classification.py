@@ -101,5 +101,4 @@ def delete_image_annotations_files(sender, instance, **kwargs):
     for img in Image.objects.filter(collect_record_id=instance.id):
         if img.annotations_file:
             img.annotations_file.delete(save=False)
-            img.annotations_file = None
-            img.save()
+            Image.objects.filter(id=img.id).update(annotations_file="")

@@ -211,6 +211,9 @@ def _copy_image(source_image, s3_tracker, dest_bucket=None):
     if new_feature_vector_path:
         new_image.feature_vector_file.name = new_feature_vector_path
 
+    # Set created_on so pre_image_save signal skips validation/normalization
+    # (copied images are already processed; auto_now_add will override this for the DB insert)
+    new_image.created_on = source_image.created_on
     new_image.save()
 
     for point in Point.objects.filter(image_id=source_image_id):
