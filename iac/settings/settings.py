@@ -47,14 +47,6 @@ class DjangoSettings:
 
     ic_bucket_name: str
 
-    # Dynamic Secrets
-    spa_admin_client_id_name: str
-    spa_admin_client_secret_name: str
-    mermaid_api_signing_secret_name: str
-    mermaid_management_api_client_id_name: str
-    mermaid_management_api_client_secret_name: str
-    dev_emails_name: str = ""
-
     # Common Attrs (defaults)
     maintenance_mode: str = "False"
     auth0_management_api_audience: str = "https://datamermaid.auth0.com/api/v2/"
