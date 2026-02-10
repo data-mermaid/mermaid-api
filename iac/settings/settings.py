@@ -62,23 +62,8 @@ class DjangoSettings:
     email_port: str = "587"
     mc_user: str = "Mermaid"
 
-    # Common Secrets
-    superuser_name: str = "common/mermaid-api/superuser-u3SSj4"
-    admins_name: str = "common/mermaid-api/admins-z5Y80V"
-    secret_key_name: str = "common/mermaid-api/secret-OcuWCl"
-    email_host_user_name: str = "common/mermaid-api/email-host-user-afLrHz"
-    email_host_password_name: str = "common/mermaid-api/email-host-password-CI6hBI"
-
-    auth0_domain: str = "common/mermaid-api/auth0_domain-K9a7w2"
-
-    mc_api_key_name: str = "common/mermaid-api/mc-api-key-xSsQOk"
-    mc_api_list_id_name: str = "common/mermaid-api/mc-api-list-id-Am5u1G"
-    drf_recaptcha_secret_key_name: str = "common/mermaid-api/drf-recaptcha-secret-key-MdFr2W"
-
-    image_bucket_aws_access_key_id: str = "image_bucket_aws_access_key_id-4oRuiU"
-    image_bucket_aws_secret_access_key: str = "image_bucket_aws_secret_access_key-OqLDWR"
-
-    sentry_dsn: str = "common/mermaid-api/sentry-FG7fGC"
+    # Secrets
+    env_secret: str
 
 
 @dataclass
