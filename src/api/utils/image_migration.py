@@ -64,7 +64,7 @@ def migrate_project_images(project_id, old_bucket, new_bucket, skip_delete=False
 def _move_image_files(image, source_config, dest_config, skip_delete=False):
     """Move all file fields for a single image between buckets.
 
-    Uses a two-pass approach: first copy all files, then delete sources.
+    Two-pass approach: first copy all files, then delete sources.
     This prevents split-brain state if a copy fails partway through.
     """
     # Pass 1: Copy all files to destination (no source deletion)
