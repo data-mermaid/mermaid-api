@@ -47,15 +47,15 @@ class DjangoSettings:
 
     ic_bucket_name: str
 
+    # Secrets
+    env_secret: str
+
     # Common Attrs (defaults)
     maintenance_mode: str = "False"
     auth0_management_api_audience: str = "https://datamermaid.auth0.com/api/v2/"
     email_host: str = "smtp.gmail.com"
     email_port: str = "587"
     mc_user: str = "Mermaid"
-
-    # Secrets
-    env_secret: str
 
 
 @dataclass
