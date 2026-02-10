@@ -46,8 +46,6 @@ class DjangoSettings:
     sqs_message_visibility: int
 
     ic_bucket_name: str
-    ic_bucket_name_test: str = ""
-    ic_s3_path_test: str = ""
 
     # Dynamic Secrets
     spa_admin_client_id_name: str
@@ -56,6 +54,8 @@ class DjangoSettings:
     mermaid_management_api_client_id_name: str
     mermaid_management_api_client_secret_name: str
     dev_emails_name: str = ""
+    ic_bucket_name_test: str = ""
+    ic_s3_path_test: str = ""
 
     # Common Attrs (defaults)
     maintenance_mode: str = "False"

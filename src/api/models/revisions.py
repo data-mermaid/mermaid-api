@@ -45,7 +45,7 @@ class Revision(models.Model):
         return self.revision_num == other.revision_num
 
     def __hash__(self):
-        return super().__hash__()
+        return hash(self.revision_num)
 
     @classmethod
     def create(

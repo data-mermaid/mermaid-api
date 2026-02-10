@@ -54,7 +54,9 @@ from .email import mermaid_email
 
 logger = logging.getLogger(__name__)
 
-UUID_PATTERN = re.compile(r"[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}")
+UUID_PATTERN = re.compile(
+    r"[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}", re.IGNORECASE
+)
 
 
 class ImageCopyError(Exception):
@@ -557,9 +559,25 @@ def _copy_submitted_data(site_id_map, management_id_map, s3_tracker, dest_bucket
         old_se_id = str(se.id)
         old_se_created_by = se.created_by
         old_se_updated_by = se.updated_by
+
+        new_site_id = site_id_map.get(str(se.site_id))
+        if new_site_id is None:
+            logger.error(f"SampleEvent {old_se_id}: site_id {se.site_id} not found in site_id_map")
+            raise ValueError(f"SampleEvent {old_se_id} references unmapped site {se.site_id}")
+
+        new_management_id = management_id_map.get(str(se.management_id))
+        if new_management_id is None:
+            logger.error(
+                f"SampleEvent {old_se_id}: management_id {se.management_id} "
+                f"not found in management_id_map"
+            )
+            raise ValueError(
+                f"SampleEvent {old_se_id} references unmapped management {se.management_id}"
+            )
+
         se.id = None
-        se.site_id = uuid.UUID(site_id_map[str(se.site_id)])
-        se.management_id = uuid.UUID(management_id_map[str(se.management_id)])
+        se.site_id = uuid.UUID(new_site_id)
+        se.management_id = uuid.UUID(new_management_id)
         se.created_by = old_se_created_by
         se.updated_by = old_se_updated_by
         se.save()

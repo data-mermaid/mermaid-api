@@ -62,7 +62,13 @@ def migrate_project_images(project_id, old_bucket, new_bucket, skip_delete=False
 
 
 def _move_image_files(image, source_config, dest_config, skip_delete=False):
-    """Move all file fields for a single image between buckets."""
+    """Move all file fields for a single image between buckets.
+
+    Uses a two-pass approach: first copy all files, then delete sources.
+    This prevents split-brain state if a copy fails partway through.
+    """
+    # Pass 1: Copy all files to destination (no source deletion)
+    copied_keys = []
     for field_name in FILE_FIELDS:
         field_file = getattr(image, field_name, None)
         if field_file and field_file.name:
@@ -78,7 +84,18 @@ def _move_image_files(image, source_config, dest_config, skip_delete=False):
                 dest_key=dest_key,
                 dest_access_key=dest_config["access_key"],
                 dest_secret_key=dest_config["secret_key"],
-                delete_source=not skip_delete,
+                delete_source=False,
+            )
+            copied_keys.append(source_key)
+
+    # Pass 2: Delete source files only after all copies succeed
+    if not skip_delete:
+        for source_key in copied_keys:
+            s3_utils.delete_file(
+                bucket=source_config["bucket"],
+                blob_name=source_key,
+                aws_access_key_id=source_config["access_key"],
+                aws_secret_access_key=source_config["secret_key"],
             )
 
 
