@@ -4,6 +4,7 @@ import re
 import uuid
 from collections import defaultdict
 
+import botocore.exceptions
 from django.conf import settings
 from django.db import transaction
 from django.db.models import Q
@@ -56,6 +57,12 @@ logger = logging.getLogger(__name__)
 UUID_PATTERN = re.compile(r"[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}")
 
 
+class ImageCopyError(Exception):
+    """Raised when source image files cannot be found in S3 during project copy."""
+
+    pass
+
+
 def _generate_new_image_path(old_path, new_image_id):
     # Replace the UUID in the filename portion with the new image ID
     parts = old_path.rsplit("/", 1)
@@ -96,17 +103,24 @@ class S3CopyTracker:
         dest_key = f"{dest_config['s3_path']}{new_path}"
 
         # Use cross-account move (without delete) when credentials differ
-        s3_utils.move_file_cross_account(
-            source_bucket=source_bucket,
-            source_key=source_key,
-            source_access_key=source_config["access_key"],
-            source_secret_key=source_config["secret_key"],
-            dest_bucket=dest_config["bucket"],
-            dest_key=dest_key,
-            dest_access_key=dest_config["access_key"],
-            dest_secret_key=dest_config["secret_key"],
-            delete_source=False,
-        )
+        try:
+            s3_utils.move_file_cross_account(
+                source_bucket=source_bucket,
+                source_key=source_key,
+                source_access_key=source_config["access_key"],
+                source_secret_key=source_config["secret_key"],
+                dest_bucket=dest_config["bucket"],
+                dest_key=dest_key,
+                dest_access_key=dest_config["access_key"],
+                dest_secret_key=dest_config["secret_key"],
+                delete_source=False,
+            )
+        except botocore.exceptions.ClientError as e:
+            if e.response["Error"]["Code"] == "NoSuchKey":
+                raise ImageCopyError(
+                    f"Source image file not found: {source_key} in bucket {source_bucket}"
+                ) from e
+            raise
         self.copied_files.append((dest_config, new_path))
         return new_path
 

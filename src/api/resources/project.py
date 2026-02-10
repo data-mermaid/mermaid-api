@@ -45,6 +45,7 @@ from ..reports.formatters import to_data_policy, to_str, to_yesno
 from ..reports.report_serializer import ReportSerializer
 from ..utils import get_extent, truthy
 from ..utils.project import (
+    ImageCopyError,
     citation_retrieved_text,
     copy_project_and_resources,
     create_collecting_summary,
@@ -561,6 +562,8 @@ class ProjectViewSet(BaseApiViewSet):
             context = {"request": request}
             project_serializer = ProjectSerializer(instance=new_project, context=context)
             return Response(project_serializer.data)
+        except ImageCopyError as err:
+            raise exceptions.ValidationError(detail=str(err)) from err
         except Exception as err:
             print(err)
             raise exceptions.APIException(detail=f"[{type(err).__name__}] Copying project") from err
