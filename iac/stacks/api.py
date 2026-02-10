@@ -209,7 +209,7 @@ class ApiStack(Stack):
 
         if config.env_id == "dev":
             self.api_secrets["DEV_EMAILS"] = ecs.Secret.from_secrets_manager(
-                get_secret_object(self, config.api.env_secret, "dev_emails")
+                get_secret_object(self, config.api.env_secret), "dev_emails"
             )
 
         # Envir Vars
