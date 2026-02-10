@@ -74,6 +74,7 @@ class ApiStack(Stack):
             )
 
         # Secrets
+        env_secret_object = get_secret_object(self, config.api.env_secret)
         self.api_secrets = {
             # Created by CDK
             "DB_USER": ecs.Secret.from_secrets_manager(database.secret, "username"),
@@ -87,129 +88,78 @@ class ApiStack(Stack):
             ),
             # Created Manually
             "DRF_RECAPTCHA_SECRET_KEY": ecs.Secret.from_secrets_manager(
-                get_secret_object(
-                    self,
-                    config.api.env_secret,
-                ),
+                env_secret_object,
                 "drf_recaptcha_secret_key",
             ),
             "EMAIL_HOST_USER": ecs.Secret.from_secrets_manager(
-                get_secret_object(
-                    self,
-                    config.api.env_secret,
-                ),
+                env_secret_object,
                 "email_host_user",
             ),
             "EMAIL_HOST_PASSWORD": ecs.Secret.from_secrets_manager(
-                get_secret_object(
-                    self,
-                    config.api.env_secret,
-                ),
+                env_secret_object,
                 "email_host_password",
             ),
             "SECRET_KEY": ecs.Secret.from_secrets_manager(
-                get_secret_object(
-                    self,
-                    config.api.env_secret,
-                ),
+                env_secret_object,
                 "secret_key",
             ),
             "MERMAID_API_SIGNING_SECRET": ecs.Secret.from_secrets_manager(
-                get_secret_object(
-                    self,
-                    config.api.env_secret,
-                ),
+                env_secret_object,
                 "mermaid_api_signing_secret",
             ),
             "SPA_ADMIN_CLIENT_ID": ecs.Secret.from_secrets_manager(
-                get_secret_object(
-                    self,
-                    config.api.env_secret,
-                ),
+                env_secret_object,
                 "spa_admin_client_id",
             ),
             "SPA_ADMIN_CLIENT_SECRET": ecs.Secret.from_secrets_manager(
-                get_secret_object(
-                    self,
-                    config.api.env_secret,
-                ),
+                env_secret_object,
                 "spa_admin_client_secret",
             ),
             "MERMAID_MANAGEMENT_API_CLIENT_ID": ecs.Secret.from_secrets_manager(
-                get_secret_object(
-                    self,
-                    config.api.env_secret,
-                ),
+                env_secret_object,
                 "mermaid_management_api_client_id",
             ),
             "MERMAID_MANAGEMENT_API_CLIENT_SECRET": ecs.Secret.from_secrets_manager(
-                get_secret_object(
-                    self,
-                    config.api.env_secret,
-                ),
+                env_secret_object,
                 "mermaid_management_api_client_secret",
             ),
             "MC_API_KEY": ecs.Secret.from_secrets_manager(
-                get_secret_object(
-                    self,
-                    config.api.env_secret,
-                ),
+                env_secret_object,
                 "mc_api_key",
             ),
             "MC_LIST_ID": ecs.Secret.from_secrets_manager(
-                get_secret_object(
-                    self,
-                    config.api.env_secret,
-                ),
+                env_secret_object,
                 "mc_list_id",
             ),
             "ADMINS": ecs.Secret.from_secrets_manager(
-                get_secret_object(
-                    self,
-                    config.api.env_secret,
-                ),
+                env_secret_object,
                 "admins",
             ),
             "SUPERUSER": ecs.Secret.from_secrets_manager(
-                get_secret_object(
-                    self,
-                    config.api.env_secret,
-                ),
+                env_secret_object,
                 "superuser",
             ),
             "AUTH0_DOMAIN": ecs.Secret.from_secrets_manager(
-                get_secret_object(
-                    self,
-                    config.api.env_secret,
-                ),
+                env_secret_object,
                 "auth0_domain",
             ),
             "IMAGE_BUCKET_AWS_ACCESS_KEY_ID": ecs.Secret.from_secrets_manager(
-                get_secret_object(
-                    self,
-                    config.api.env_secret,
-                ),
+                env_secret_object,
                 "image_bucket_aws_access_key_id",
             ),
             "IMAGE_BUCKET_AWS_SECRET_ACCESS_KEY": ecs.Secret.from_secrets_manager(
-                get_secret_object(
-                    self,
-                    config.api.env_secret,
-                ),
+                env_secret_object,
                 "image_bucket_aws_secret_access_key",
             ),
             "SENTRY_DSN": ecs.Secret.from_secrets_manager(
-                get_secret_object(
-                    self,
-                    config.api.env_secret,
-                ),
+                env_secret_object,
                 "sentry_dsn",
             ),
         }
 
         if config.env_id == "dev":
             self.api_secrets["DEV_EMAILS"] = ecs.Secret.from_secrets_manager(
-                get_secret_object(self, config.api.env_secret), "dev_emails"
+                env_secret_object, "dev_emails"
             )
 
         # Envir Vars
