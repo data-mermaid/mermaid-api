@@ -39,6 +39,7 @@ from ..models import (
     Region,
     Site,
 )
+from ..models.classification import get_image_storage_config
 from .q import submit_image_job
 from .s3 import download_directory, upload_file
 
@@ -306,10 +307,11 @@ def _get_image_location(image: Image):
     if settings.ENVIRONMENT == "local":
         return DataLocation("filesystem", image.image.path)
     else:
+        config = get_image_storage_config(image.image_bucket)
         return DataLocation(
             storage_type="s3",
-            key=f"{settings.IMAGE_S3_PATH}{image.image.name}",
-            bucket_name=settings.IMAGE_PROCESSING_BUCKET,
+            key=f"{config['s3_path']}{image.image.name}",
+            bucket_name=config["bucket"],
         )
 
 

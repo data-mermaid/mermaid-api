@@ -170,3 +170,28 @@ def copy_object(bucket, source_key, dest_key, aws_access_key_id=None, aws_secret
         CopySource={"Bucket": bucket, "Key": source_key},
         Key=dest_key,
     )
+
+
+def move_file_cross_account(
+    source_bucket,
+    source_key,
+    source_access_key,
+    source_secret_key,
+    dest_bucket,
+    dest_key,
+    dest_access_key,
+    dest_secret_key,
+    delete_source=True,
+):
+    """Move a file between buckets that may require different AWS credentials."""
+    source_client = get_client(source_access_key, source_secret_key)
+    dest_client = get_client(dest_access_key, dest_secret_key)
+
+    response = source_client.get_object(Bucket=source_bucket, Key=source_key)
+    body = response["Body"].read()
+    content_type = response.get("ContentType", "application/octet-stream")
+
+    dest_client.put_object(Bucket=dest_bucket, Key=dest_key, Body=body, ContentType=content_type)
+
+    if delete_source:
+        source_client.delete_object(Bucket=source_bucket, Key=source_key)
