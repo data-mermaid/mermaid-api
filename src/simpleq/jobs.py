@@ -13,11 +13,12 @@ USE_FIFO = getattr(settings, "USE_FIFO") == "True"
 class Job:
     """An abstraction for a single unit of work (a job!)."""
 
-    def __init__(self, job_id, group, loggable, callable, *args, **kwargs):
+    def __init__(self, job_id, group, loggable, callable, *args, visibility_timeout=None, **kwargs):
         """
         Create a new Job,
 
         :param obj callable: [optional] A callable to run.
+        :param int visibility_timeout: [optional] Per-job SQS visibility timeout in seconds.
         """
         self._id = job_id if job_id is not None else str(uuid.uuid4())
         self.group = group or "mermaid"
@@ -30,6 +31,7 @@ class Job:
         self.callable = callable
         self.args = args
         self.kwargs = kwargs
+        self.visibility_timeout = visibility_timeout
         self._sqs_message_id = None
         self._sqs_receipt_handle = None
 
@@ -60,6 +62,7 @@ class Job:
                         "callable": self.callable,
                         "args": self.args,
                         "kwargs": self.kwargs,
+                        "visibility_timeout": self.visibility_timeout,
                     }
                 ),
                 "base64",
@@ -85,7 +88,15 @@ class Job:
         job_id = (message_attributes.get("id") or dict()).get("StringValue")
         loggable = data.get("loggable") or False
 
-        job = cls(job_id, group, loggable, data["callable"], *data["args"], **data["kwargs"])
+        job = cls(
+            job_id,
+            group,
+            loggable,
+            data["callable"],
+            *data["args"],
+            visibility_timeout=data.get("visibility_timeout"),
+            **data["kwargs"],
+        )
         job._sqs_message_id = message.message_id
         job._sqs_receipt_handle = message.receipt_handle
 

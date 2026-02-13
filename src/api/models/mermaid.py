@@ -8,6 +8,7 @@ from decimal import Decimal
 
 from django.contrib.gis.db import models
 from django.contrib.postgres.aggregates import ArrayAgg
+from django.db import transaction
 from django.db.models import Avg, F, Max, Q
 from django.forms.models import model_to_dict
 from django.utils import timezone
@@ -186,7 +187,8 @@ class Project(BaseModel, JSONMixin):
             if old_bucket != new_bucket:
                 from ..utils.image_migration import queue_image_migration
 
-                queue_image_migration(self.pk, old_bucket, new_bucket)
+                pk = self.pk
+                transaction.on_commit(lambda: queue_image_migration(pk, old_bucket, new_bucket))
 
     @classmethod
     def get_sample_unit_method_policy(cls, protocol):

@@ -50,9 +50,11 @@ def migrate_project_images(project_id, old_bucket, new_bucket, skip_delete=False
             continue
 
         try:
-            _move_image_files(image, source_config, dest_config, skip_delete=skip_delete)
+            copied_keys = _copy_image_files(image, source_config, dest_config)
             image.image_bucket = new_bucket
             image.save(update_fields=["image_bucket"])
+            if not skip_delete:
+                _delete_source_files(copied_keys, source_config)
             count += 1
         except Exception:
             logger.exception(f"Failed to migrate image {image.id}")
@@ -61,13 +63,11 @@ def migrate_project_images(project_id, old_bucket, new_bucket, skip_delete=False
     return count
 
 
-def _move_image_files(image, source_config, dest_config, skip_delete=False):
-    """Move all file fields for a single image between buckets.
+def _copy_image_files(image, source_config, dest_config):
+    """Copy all file fields for a single image to the destination bucket.
 
-    Two-pass approach: first copy all files, then delete sources.
-    This prevents split-brain state if a copy fails partway through.
+    Returns the list of source keys that were copied, for later deletion.
     """
-    # Pass 1: Copy all files to destination (no source deletion)
     copied_keys = []
     for field_name in FILE_FIELDS:
         field_file = getattr(image, field_name, None)
@@ -87,16 +87,18 @@ def _move_image_files(image, source_config, dest_config, skip_delete=False):
                 delete_source=False,
             )
             copied_keys.append(source_key)
+    return copied_keys
 
-    # Pass 2: Delete source files only after all copies succeed
-    if not skip_delete:
-        for source_key in copied_keys:
-            s3_utils.delete_file(
-                bucket=source_config["bucket"],
-                blob_name=source_key,
-                aws_access_key_id=source_config["access_key"],
-                aws_secret_access_key=source_config["secret_key"],
-            )
+
+def _delete_source_files(copied_keys, source_config):
+    """Delete source files after a successful copy and DB update."""
+    for source_key in copied_keys:
+        s3_utils.delete_file(
+            bucket=source_config["bucket"],
+            blob_name=source_key,
+            aws_access_key_id=source_config["access_key"],
+            aws_secret_access_key=source_config["secret_key"],
+        )
 
 
 def queue_image_migration(project_id, old_bucket, new_bucket):
@@ -109,6 +111,7 @@ def queue_image_migration(project_id, old_bucket, new_bucket):
         0,
         True,
         migrate_project_images,
+        visibility_timeout=14400,  # 4 hours — large projects may have thousands of images
         project_id=str(project_id),
         old_bucket=old_bucket,
         new_bucket=new_bucket,
