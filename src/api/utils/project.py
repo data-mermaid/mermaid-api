@@ -44,6 +44,7 @@ from ..models import (
 )
 from ..models.classification import (
     Annotation,
+    ClassificationStatus,
     Image,
     Point,
     get_image_bucket,
@@ -234,6 +235,17 @@ def _copy_image(source_image, s3_tracker, dest_bucket=None, collect_record_id=No
             Annotation.objects.bulk_create(annotations_to_create)
 
     new_image.create_annotations_file()
+
+    # Copy the latest ClassificationStatus so the webapp knows the image has been processed
+    latest_status = source_image.statuses.order_by("-created_on").first()
+    if latest_status:
+        ClassificationStatus.objects.create(
+            image=new_image,
+            status=latest_status.status,
+            message=latest_status.message,
+            data=copy.deepcopy(latest_status.data) if latest_status.data else None,
+            created_by=latest_status.created_by,
+        )
 
     return new_image
 
