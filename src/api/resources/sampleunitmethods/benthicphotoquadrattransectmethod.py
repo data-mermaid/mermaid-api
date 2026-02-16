@@ -84,10 +84,9 @@ class BenthicPhotoQuadratTransectMethodSerializer(BenthicPhotoQuadratTransectSer
         if obj.image_classification is True:
             images = Image.objects.filter(collect_record_id=obj.collect_record_id)
             if images:
-                serialized_images = PQTImageSerializer(images, many=True)
-                return serialized_images.data
+                return PQTImageSerializer(images, many=True).data
 
-        return None
+        return []
 
     class Meta:
         model = BenthicPhotoQuadratTransect

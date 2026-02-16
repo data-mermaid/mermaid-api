@@ -141,13 +141,15 @@ class S3CopyTracker:
                 logger.error(f"Failed to cleanup S3 file {path}: {e}")
 
 
-def _copy_image(source_image, s3_tracker, dest_bucket=None):
+def _copy_image(source_image, s3_tracker, dest_bucket=None, collect_record_id=None):
     """Copy an Image record and its S3 files, including Annotations.
 
     Args:
         source_image: The Image instance to copy
         s3_tracker: S3CopyTracker instance for tracking copied files
         dest_bucket: Target bucket name for the new image
+        collect_record_id: UUID to use as the collect_record_id on the copied image.
+            If None, falls back to the new image's own ID.
 
     Raises:
         Exception: If S3 copy fails (propagates to trigger cleanup)
@@ -185,11 +187,12 @@ def _copy_image(source_image, s3_tracker, dest_bucket=None):
         dest_config=dest_config,
     )
 
-    # Use the new image ID as collect_record_id since this is copied submitted data
-    # (the original collect record no longer exists for the copied project)
+    # Use the provided collect_record_id so that all images for a copied BPQ share the
+    # same value, allowing the serializer to look them up.  Falls back to the new image's
+    # own ID for non-BPQ copies where the linkage isn't needed.
     new_image = Image(
         id=new_image_id,
-        collect_record_id=new_image_id,
+        collect_record_id=collect_record_id or new_image_id,
         image_bucket=dest_bucket or settings.IMAGE_PROCESSING_BUCKET,
         name=source_image.name,
         original_image_checksum=source_image.original_image_checksum,
@@ -699,12 +702,15 @@ def _copy_quadrat_transects(sample_event_id_map, s3_tracker, dest_bucket=None):
             old_bpqt_id = bpqt.id
             old_bpqt_created_by = bpqt.created_by
             old_bpqt_updated_by = bpqt.updated_by
+            # Generate a synthetic collect_record_id so that the serializer can
+            # look up copied images via Image.collect_record_id == bpqt.collect_record_id.
+            synthetic_cr_id = uuid.uuid4()
             bpqt.pk = None
             bpqt.id = None
             # Clear the parent pointer for multi-table inheritance
             bpqt.transectmethod_ptr_id = None
             bpqt.quadrat_transect_id = qt.id
-            bpqt.collect_record_id = None
+            bpqt.collect_record_id = synthetic_cr_id
             bpqt.created_by = old_bpqt_created_by
             bpqt.updated_by = old_bpqt_updated_by
             bpqt.save()
@@ -723,7 +729,12 @@ def _copy_quadrat_transects(sample_event_id_map, s3_tracker, dest_bucket=None):
 
                 if old_image_id:
                     if old_image_id not in image_id_map:
-                        new_image = _copy_image(obs.image, s3_tracker, dest_bucket=dest_bucket)
+                        new_image = _copy_image(
+                            obs.image,
+                            s3_tracker,
+                            dest_bucket=dest_bucket,
+                            collect_record_id=synthetic_cr_id,
+                        )
                         image_id_map[old_image_id] = new_image.id
                     new_image_id = image_id_map[old_image_id]
 
