@@ -46,6 +46,8 @@ class Worker:
             logger.info(f"Fetching message(s), starting UTC time {start_time}\n")
             for queue in self.queues:
                 for job in queue.jobs:
+                    if job.visibility_timeout:
+                        queue.extend_job_visibility(job, job.visibility_timeout)
                     job.run()
                     if not job.exception:
                         queue.remove_job(job)

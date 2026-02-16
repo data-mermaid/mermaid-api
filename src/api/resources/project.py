@@ -43,8 +43,9 @@ from ..permissions import (
 from ..reports.fields import ReportField, ReportMethodField
 from ..reports.formatters import to_data_policy, to_str, to_yesno
 from ..reports.report_serializer import ReportSerializer
-from ..utils import get_extent, truthy
+from ..utils import delete_instance_and_related_objects, get_extent, truthy
 from ..utils.project import (
+    ImageCopyError,
     citation_retrieved_text,
     copy_project_and_resources,
     create_collecting_summary,
@@ -474,10 +475,18 @@ class ProjectViewSet(BaseApiViewSet):
         permission_classes=[ProjectAuthenticatedUserPermission],
     )
     def create_demo(self, request):
-        if Project.objects.filter(created_by=request.user.profile, is_demo=True).exists():
-            raise exceptions.ValidationError(
-                detail="You have already created a demo project. Only one demo project is allowed per user."
+        # Delete any existing demo project for this user instead of rejecting.
+        # select_for_update() ensures we wait for any in-progress async delete to finish:
+        # if the row is locked by the async worker, we block until it commits (row gone),
+        # and if it hasn't started, we lock the row and delete it here (async job will no-op).
+        with transaction.atomic():
+            existing_demo = (
+                Project.objects.select_for_update()
+                .filter(created_by=request.user.profile, is_demo=True)
+                .first()
             )
+            if existing_demo:
+                delete_instance_and_related_objects(existing_demo)
 
         tries = 0
         profile = request.user.profile
@@ -561,6 +570,8 @@ class ProjectViewSet(BaseApiViewSet):
             context = {"request": request}
             project_serializer = ProjectSerializer(instance=new_project, context=context)
             return Response(project_serializer.data)
+        except ImageCopyError as err:
+            raise exceptions.ValidationError(detail=str(err)) from err
         except Exception as err:
             print(err)
             raise exceptions.APIException(detail=f"[{type(err).__name__}] Copying project") from err
