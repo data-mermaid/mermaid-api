@@ -111,7 +111,7 @@ class Job:
         try:
             self.result = self.callable(*self.args, **self.kwargs)
         except Exception as e:
-            logger.error(f"Job {self.callable.__name__} failed to run: {e}")
+            logger.exception(f"Job {self.callable.__name__} failed to run: {e}")
             self.exception = e
 
         if not self.exception:

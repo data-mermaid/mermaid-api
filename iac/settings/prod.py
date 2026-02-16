@@ -24,7 +24,7 @@ PROD_SETTINGS = ProjectSettings(
         default_domain_collect="https://app.datamermaid.org",
         mermaid_api_audience="https://api.datamermaid.org",
         public_bucket="public.datamermaid.org",
-        sqs_message_visibility=3000,
+        sqs_message_visibility=60,
         # Image classification
         ic_bucket_name="coral-reef-training",
         # Secrets
