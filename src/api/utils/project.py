@@ -102,6 +102,10 @@ class S3CopyTracker:
         if source_bucket is None:
             source_bucket = source_config["bucket"]
 
+        if not source_bucket or not dest_config.get("bucket"):
+            # S3 not configured (e.g. local development); skip copy
+            return None
+
         source_key = f"{source_config['s3_path']}{source_path}"
         dest_key = f"{dest_config['s3_path']}{new_path}"
 
