@@ -502,7 +502,15 @@ class ProjectViewSet(BaseApiViewSet):
         request.data["original_project_id"] = settings.DEMO_PROJECT_ID
         request.data["notify_users"] = False
         request.data["new_project_name"] = project_name
-        return self.copy_project(request)
+        try:
+            return self.copy_project(request)
+        except IntegrityError:
+            # A concurrent create_demo request already committed a demo for this user; return it.
+            demo = Project.objects.filter(created_by=profile, is_demo=True).first()
+            if demo:
+                context = {"request": request}
+                return Response(ProjectSerializer(instance=demo, context=context).data)
+            raise exceptions.APIException(detail="Demo project creation conflict")
 
     @action(
         detail=False,
@@ -572,6 +580,8 @@ class ProjectViewSet(BaseApiViewSet):
             return Response(project_serializer.data)
         except ImageCopyError as err:
             raise exceptions.ValidationError(detail=str(err)) from err
+        except IntegrityError:
+            raise
         except Exception as err:
             print(err)
             raise exceptions.APIException(detail=f"[{type(err).__name__}] Copying project") from err
