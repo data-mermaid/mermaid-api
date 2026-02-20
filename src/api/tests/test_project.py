@@ -46,8 +46,8 @@ def mock_demo_project(project, mock_s3=False):
         _apply_mock_settings(mock_cls_settings, project)
 
         if mock_s3:
-            with patch("api.utils.project.s3_utils.move_file_cross_account") as mock_move:
-                yield mock_settings, mock_move
+            with patch("api.utils.project.s3_utils.copy_object_server_side") as mock_copy:
+                yield mock_settings, mock_copy
         else:
             yield mock_settings
 
@@ -300,9 +300,9 @@ def test_copy_demo_project_copies_photo_quadrat_transects_with_images(
             "annotations": Annotation.objects.count(),
         }
 
-        with mock_demo_project(project1, mock_s3=True) as (mock_settings, mock_move):
+        with mock_demo_project(project1, mock_s3=True) as (mock_settings, mock_copy):
             new_project = copy_project_and_resources(owner_profile, "demo copy", project1)
-            assert mock_move.call_count == 2  # image + thumbnail
+            assert mock_copy.call_count == 2  # image + thumbnail
 
         # Verify transects and observations were copied
         assert (

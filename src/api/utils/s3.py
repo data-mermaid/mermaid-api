@@ -172,6 +172,24 @@ def copy_object(bucket, source_key, dest_key, aws_access_key_id=None, aws_secret
     )
 
 
+def copy_object_server_side(
+    source_bucket,
+    source_key,
+    dest_bucket,
+    dest_key,
+    aws_access_key_id=None,
+    aws_secret_access_key=None,
+):
+    """Server-side S3 copy — no data transits through the app server.
+    Both buckets must be accessible with the same credentials (same account)."""
+    client = get_client(aws_access_key_id, aws_secret_access_key)
+    client.copy_object(
+        Bucket=dest_bucket,
+        CopySource={"Bucket": source_bucket, "Key": source_key},
+        Key=dest_key,
+    )
+
+
 def move_file_cross_account(
     source_bucket,
     source_key,

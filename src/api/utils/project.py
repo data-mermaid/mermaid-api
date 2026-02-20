@@ -52,6 +52,7 @@ from ..models.classification import (
 )
 from . import delete_instance_and_related_objects, get_value, is_uuid, s3 as s3_utils
 from .email import mermaid_email
+from .q import submit_job
 
 logger = logging.getLogger(__name__)
 
@@ -109,19 +110,34 @@ class S3CopyTracker:
         source_key = f"{source_config['s3_path']}{source_path}"
         dest_key = f"{dest_config['s3_path']}{new_path}"
 
-        # Use cross-account move (without delete) when credentials differ
+        # Use server-side copy when credentials match (same account); otherwise
+        # fall back to get+put via move_file_cross_account (cross-account, e.g.
+        # when migrating images between project statuses).
+        same_credentials = source_config.get("access_key") == dest_config.get(
+            "access_key"
+        ) and source_config.get("secret_key") == dest_config.get("secret_key")
         try:
-            s3_utils.move_file_cross_account(
-                source_bucket=source_bucket,
-                source_key=source_key,
-                source_access_key=source_config["access_key"],
-                source_secret_key=source_config["secret_key"],
-                dest_bucket=dest_config["bucket"],
-                dest_key=dest_key,
-                dest_access_key=dest_config["access_key"],
-                dest_secret_key=dest_config["secret_key"],
-                delete_source=False,
-            )
+            if same_credentials:
+                s3_utils.copy_object_server_side(
+                    source_bucket=source_bucket,
+                    source_key=source_key,
+                    dest_bucket=dest_config["bucket"],
+                    dest_key=dest_key,
+                    aws_access_key_id=dest_config.get("access_key"),
+                    aws_secret_access_key=dest_config.get("secret_key"),
+                )
+            else:
+                s3_utils.move_file_cross_account(
+                    source_bucket=source_bucket,
+                    source_key=source_key,
+                    source_access_key=source_config["access_key"],
+                    source_secret_key=source_config["secret_key"],
+                    dest_bucket=dest_config["bucket"],
+                    dest_key=dest_key,
+                    dest_access_key=dest_config["access_key"],
+                    dest_secret_key=dest_config["secret_key"],
+                    delete_source=False,
+                )
         except botocore.exceptions.ClientError as e:
             if e.response["Error"]["Code"] == "NoSuchKey":
                 raise ImageCopyError(
@@ -144,6 +160,14 @@ class S3CopyTracker:
                 logger.info(f"Cleaned up S3 file: {path}")
             except Exception as e:
                 logger.error(f"Failed to cleanup S3 file {path}: {e}")
+
+
+def _create_annotations_file_job(image_id):
+    try:
+        image = Image.objects.get(id=image_id)
+        image.create_annotations_file()
+    except Exception:
+        logger.error(f"Failed to create annotations file for image {image_id}", exc_info=True)
 
 
 def _copy_image(source_image, s3_tracker, dest_bucket=None, collect_record_id=None):
@@ -238,7 +262,8 @@ def _copy_image(source_image, s3_tracker, dest_bucket=None, collect_record_id=No
         if annotations_to_create:
             Annotation.objects.bulk_create(annotations_to_create)
 
-    new_image.create_annotations_file()
+    image_id = new_image.id
+    transaction.on_commit(lambda: submit_job(0, True, _create_annotations_file_job, image_id))
 
     # Copy the latest ClassificationStatus so the webapp knows the image has been processed
     latest_status = source_image.statuses.order_by("-created_on").first()
