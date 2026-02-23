@@ -87,6 +87,16 @@ class S3CopyTracker:
 
     def __init__(self):
         self.copied_files = []
+        self._clients = {}
+
+    def _get_client(self, access_key, secret_key):
+        # Normalize None to actual defaults so identical credentials share one client
+        actual_key = access_key or settings.AWS_ACCESS_KEY_ID
+        actual_secret = secret_key or settings.AWS_SECRET_ACCESS_KEY
+        cache_key = (actual_key, actual_secret)
+        if cache_key not in self._clients:
+            self._clients[cache_key] = s3_utils.get_client(actual_key, actual_secret)
+        return self._clients[cache_key]
 
     def copy_file(
         self, source_path, new_image_id, source_bucket=None, source_config=None, dest_config=None
@@ -118,13 +128,15 @@ class S3CopyTracker:
         ) and source_config.get("secret_key") == dest_config.get("secret_key")
         try:
             if same_credentials:
+                client = self._get_client(
+                    dest_config.get("access_key"), dest_config.get("secret_key")
+                )
                 s3_utils.copy_object_server_side(
                     source_bucket=source_bucket,
                     source_key=source_key,
                     dest_bucket=dest_config["bucket"],
                     dest_key=dest_key,
-                    aws_access_key_id=dest_config.get("access_key"),
-                    aws_secret_access_key=dest_config.get("secret_key"),
+                    client=client,
                 )
             else:
                 s3_utils.move_file_cross_account(
@@ -248,19 +260,34 @@ def _copy_image(source_image, s3_tracker, dest_bucket=None, collect_record_id=No
     new_image.created_on = source_image.created_on
     new_image.save()
 
-    for point in Point.objects.filter(image_id=source_image_id):
-        old_point_id = point.id
-        point.id = None
-        point.image_id = new_image.id
-        point.save()
+    old_points = list(Point.objects.filter(image_id=source_image_id))
+    if old_points:
+        old_point_ids = [p.id for p in old_points]
 
-        annotations_to_create = []
-        for annotation in Annotation.objects.filter(point_id=old_point_id):
-            annotation.id = None
-            annotation.point_id = point.id
-            annotations_to_create.append(annotation)
-        if annotations_to_create:
-            Annotation.objects.bulk_create(annotations_to_create)
+        # Fetch all annotations for all points in one query
+        annotations_by_point = defaultdict(list)
+        for ann in Annotation.objects.filter(point_id__in=old_point_ids):
+            annotations_by_point[ann.point_id].append(ann)
+
+        # Build new Point objects and bulk-insert; PostgreSQL returns PKs via RETURNING
+        new_points = []
+        for p in old_points:
+            new_p = copy.copy(p)
+            new_p.id = None
+            new_p.image_id = new_image.id
+            new_points.append(new_p)
+        created_points = Point.objects.bulk_create(new_points)
+
+        # Build all new Annotation objects and bulk-insert in one shot
+        all_new_annotations = []
+        for old_p, new_p in zip(old_points, created_points):
+            for ann in annotations_by_point.get(old_p.id, []):
+                new_ann = copy.copy(ann)
+                new_ann.id = None
+                new_ann.point_id = new_p.id
+                all_new_annotations.append(new_ann)
+        if all_new_annotations:
+            Annotation.objects.bulk_create(all_new_annotations)
 
     image_id = new_image.id
     transaction.on_commit(lambda: submit_job(0, True, _create_annotations_file_job, image_id))
@@ -760,7 +787,7 @@ def _copy_quadrat_transects(sample_event_id_map, s3_tracker, dest_bucket=None):
             # (multiple observations can reference the same image)
             image_id_map = {}
 
-            for obs in ObsBenthicPhotoQuadrat.objects.filter(
+            for obs in ObsBenthicPhotoQuadrat.objects.select_related("image").filter(
                 benthic_photo_quadrat_transect_id=old_bpqt_id
             ):
                 old_image_id = obs.image_id

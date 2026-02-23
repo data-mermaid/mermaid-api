@@ -179,10 +179,13 @@ def copy_object_server_side(
     dest_key,
     aws_access_key_id=None,
     aws_secret_access_key=None,
+    client=None,
 ):
     """Server-side S3 copy — no data transits through the app server.
-    Both buckets must be accessible with the same credentials (same account)."""
-    client = get_client(aws_access_key_id, aws_secret_access_key)
+    Both buckets must be accessible with the same credentials (same account).
+    Pass a pre-created client to avoid repeated session instantiation."""
+    if client is None:
+        client = get_client(aws_access_key_id, aws_secret_access_key)
     client.copy_object(
         Bucket=dest_bucket,
         CopySource={"Bucket": source_bucket, "Key": source_key},
