@@ -5,7 +5,7 @@ from django.db.models import Q
 
 from ..models import CollectRecord, Notification, ProjectProfile
 from ..utils.email import mermaid_email
-from ..utils.notification import add_notification
+from ..utils.notification import _suppress_notifications, add_notification
 
 
 def notify_project_users(
@@ -17,6 +17,8 @@ def notify_project_users(
     user_filters=None,
     extra_profiles=None,
 ):
+    if _suppress_notifications.get():
+        return
     filters = Q(project_id=project)
     if user_filters:
         filters &= user_filters

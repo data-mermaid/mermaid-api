@@ -44,6 +44,7 @@ from ..reports.fields import ReportField, ReportMethodField
 from ..reports.formatters import to_data_policy, to_str, to_yesno
 from ..reports.report_serializer import ReportSerializer
 from ..utils import delete_instance_and_related_objects, get_extent, truthy
+from ..utils.notification import suppress_all_notifications
 from ..utils.project import (
     ImageCopyError,
     citation_retrieved_text,
@@ -475,42 +476,45 @@ class ProjectViewSet(BaseApiViewSet):
         permission_classes=[ProjectAuthenticatedUserPermission],
     )
     def create_demo(self, request):
-        # Delete any existing demo project for this user instead of rejecting.
-        # select_for_update() ensures we wait for any in-progress async delete to finish:
-        # if the row is locked by the async worker, we block until it commits (row gone),
-        # and if it hasn't started, we lock the row and delete it here (async job will no-op).
-        with transaction.atomic():
-            existing_demo = (
-                Project.objects.select_for_update()
-                .filter(created_by=request.user.profile, is_demo=True)
-                .first()
-            )
-            if existing_demo:
-                delete_instance_and_related_objects(existing_demo)
+        with suppress_all_notifications():
+            # Delete any existing demo project for this user instead of rejecting.
+            # select_for_update() ensures we wait for any in-progress async delete to finish:
+            # if the row is locked by the async worker, we block until it commits (row gone),
+            # and if it hasn't started, we lock the row and delete it here (async job will no-op).
+            with transaction.atomic():
+                existing_demo = (
+                    Project.objects.select_for_update()
+                    .filter(created_by=request.user.profile, is_demo=True)
+                    .first()
+                )
+                if existing_demo:
+                    delete_instance_and_related_objects(existing_demo)
 
-        tries = 0
-        profile = request.user.profile
-        project_name = f"Demo - {profile.full_name}"
-        while True:
-            if not Project.objects.filter(name=project_name).exists():
-                break
-            tries += 1
-            project_name = f"Demo - {profile.full_name} ({tries})"
-            if tries == 1_000_000:
-                raise exceptions.APIException(detail="Could not generate unique demo project name")
+            tries = 0
+            profile = request.user.profile
+            project_name = f"Demo - {profile.full_name}"
+            while True:
+                if not Project.objects.filter(name=project_name).exists():
+                    break
+                tries += 1
+                project_name = f"Demo - {profile.full_name} ({tries})"
+                if tries == 1_000_000:
+                    raise exceptions.APIException(
+                        detail="Could not generate unique demo project name"
+                    )
 
-        request.data["original_project_id"] = settings.DEMO_PROJECT_ID
-        request.data["notify_users"] = False
-        request.data["new_project_name"] = project_name
-        try:
-            return self.copy_project(request)
-        except IntegrityError:
-            # A concurrent create_demo request already committed a demo for this user; return it.
-            demo = Project.objects.filter(created_by=profile, is_demo=True).first()
-            if demo:
-                context = {"request": request}
-                return Response(ProjectSerializer(instance=demo, context=context).data)
-            raise exceptions.APIException(detail="Demo project creation conflict")
+            request.data["original_project_id"] = settings.DEMO_PROJECT_ID
+            request.data["notify_users"] = False
+            request.data["new_project_name"] = project_name
+            try:
+                return self.copy_project(request)
+            except IntegrityError:
+                # A concurrent create_demo request already committed a demo for this user; return it.
+                demo = Project.objects.filter(created_by=profile, is_demo=True).first()
+                if demo:
+                    context = {"request": request}
+                    return Response(ProjectSerializer(instance=demo, context=context).data)
+                raise exceptions.APIException(detail="Demo project creation conflict")
 
     @action(
         detail=False,

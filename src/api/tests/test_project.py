@@ -10,6 +10,7 @@ from api.models import (
     BenthicAttribute,
     BenthicLIT,
     BenthicPhotoQuadratTransect,
+    Notification,
     ObsBenthicLIT,
     ObsBenthicPhotoQuadrat,
     Profile,
@@ -50,6 +51,22 @@ def mock_demo_project(project, mock_s3=False):
                 yield mock_settings, mock_copy
         else:
             yield mock_settings
+
+
+def test_remove_profile_sets_correct_admin_in_notification(
+    api_client1, project1, project_profile1, project_profile2
+):
+    """Removing a user should attribute the removal to the requesting admin."""
+    url = reverse(
+        "project_profile-detail",
+        kwargs={"project_pk": project1.pk, "pk": project_profile2.pk},
+    )
+    with patch("api.signals.notifications.notify_project_users") as mock_notify:
+        response = api_client1.delete(url)
+    assert response.status_code == 204
+    mock_notify.assert_called_once()
+    context = mock_notify.call_args[0][4]  # 5th positional arg to notify_project_users
+    assert context["admin_profile"] == project_profile1.profile
 
 
 def test_add_profile_new_user(client, base_project, project1, token1):
@@ -348,3 +365,49 @@ def test_copy_demo_project_copies_photo_quadrat_transects_with_images(
     finally:
         pre_save.connect(pre_image_save, sender=Image)
         post_save.connect(post_save_classification_image, sender=Image)
+
+
+def _mock_demo_settings(mock_obj, project):
+    """Patch api.resources.project.settings for the create_demo endpoint."""
+    _apply_mock_settings(mock_obj, project)
+
+
+def test_create_demo_suppresses_notifications(api_client1, project_profile1):
+    """create_demo should not create Notification objects or send emails."""
+    url = reverse("project-create-demo")
+    count_before = Notification.objects.count()
+    with (
+        mock_demo_project(project_profile1.project),
+        patch("api.resources.project.settings") as mock_settings,
+        patch("api.notifications.mermaid_email") as mock_email,
+    ):
+        _apply_mock_settings(mock_settings, project_profile1.project)
+        response = api_client1.post(url)
+    assert response.status_code == 200
+    assert Notification.objects.count() == count_before
+    mock_email.assert_not_called()
+
+
+def test_create_demo_suppresses_notifications_on_replacement(api_client1, project_profile1):
+    """Replacing an existing demo (delete + create) should not create Notification objects or send emails."""
+    url = reverse("project-create-demo")
+    # Create first demo
+    with (
+        mock_demo_project(project_profile1.project),
+        patch("api.resources.project.settings") as mock_settings,
+    ):
+        _apply_mock_settings(mock_settings, project_profile1.project)
+        api_client1.post(url)
+
+    # Second call: existing demo is deleted then a new one is created
+    count_before = Notification.objects.count()
+    with (
+        mock_demo_project(project_profile1.project),
+        patch("api.resources.project.settings") as mock_settings,
+        patch("api.notifications.mermaid_email") as mock_email,
+    ):
+        _apply_mock_settings(mock_settings, project_profile1.project)
+        response = api_client1.post(url)
+    assert response.status_code == 200
+    assert Notification.objects.count() == count_before
+    mock_email.assert_not_called()
