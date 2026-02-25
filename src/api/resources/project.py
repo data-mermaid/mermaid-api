@@ -43,8 +43,10 @@ from ..permissions import (
 from ..reports.fields import ReportField, ReportMethodField
 from ..reports.formatters import to_data_policy, to_str, to_yesno
 from ..reports.report_serializer import ReportSerializer
-from ..utils import get_extent, truthy
+from ..utils import delete_instance_and_related_objects, get_extent, truthy
+from ..utils.notification import suppress_all_notifications
 from ..utils.project import (
+    ImageCopyError,
     citation_retrieved_text,
     copy_project_and_resources,
     create_collecting_summary,
@@ -83,6 +85,7 @@ class BaseProjectSerializer(DynamicFieldsMixin, BaseAPISerializer):
     num_sample_units = serializers.SerializerMethodField()
     tags = serializers.ListField(source="tags.all", child=TagField(), required=False)
     members = serializers.SerializerMethodField()
+    project_admins = serializers.SerializerMethodField()
     default_citation = serializers.SerializerMethodField()
     suggested_citation = serializers.SerializerMethodField()
     citation_retrieved_text = serializers.SerializerMethodField()
@@ -122,6 +125,10 @@ class BaseProjectSerializer(DynamicFieldsMixin, BaseAPISerializer):
     def get_members(self, obj):
         profiles = self._get_profiles(obj)
         return [pp.profile_id for pp in profiles]
+
+    def get_project_admins(self, obj):
+        admin_profiles = obj.profiles.filter(role=ProjectProfile.ADMIN).select_related("profile")
+        return [{"id": str(pp.profile.id), "name": pp.profile.full_name} for pp in admin_profiles]
 
     def get_num_active_sample_units(self, obj):
         return obj.collect_records.count()
@@ -184,7 +191,7 @@ class ProjectCSVSerializer(ReportSerializer, BaseProjectSerializer):
         ReportField("data_policy_benthicpqt", "Benthic PQT Data Policy", to_data_policy),
         ReportField("includes_gfcr", "Includes GFCR", to_yesno),
         ReportField("notes", "Notes"),
-        ReportMethodField("get_project_admins", "Project Admins"),
+        ReportMethodField("get_project_admins_csv", "Project Admins"),
         ReportMethodField("get_contact_link", "Contact link"),
         ReportField("id", "Project Id", to_str),
     ]
@@ -195,13 +202,12 @@ class ProjectCSVSerializer(ReportSerializer, BaseProjectSerializer):
             return f'{", ".join(tags)}'
         return ""
 
+    def get_project_admins_csv(self, obj):
+        admins = super().get_project_admins(obj)
+        return ", ".join([admin["name"] for admin in admins])
+
     def get_contact_link(self, obj):
         return f"{settings.DEFAULT_DOMAIN_MARKETING}/contact-project?project_id={obj.id}"
-
-    def get_project_admins(self, obj):
-        admin_profiles = obj.profiles.filter(role=ProjectProfile.ADMIN).select_related("profile")
-        admin_names = [pp.profile.full_name for pp in admin_profiles]
-        return ", ".join(admin_names)
 
 
 class ProjectFilterSet(BaseAPIFilterSet, OrFilterSetMixin):
@@ -470,26 +476,50 @@ class ProjectViewSet(BaseApiViewSet):
         permission_classes=[ProjectAuthenticatedUserPermission],
     )
     def create_demo(self, request):
-        if Project.objects.filter(created_by=request.user.profile, is_demo=True).exists():
-            raise exceptions.ValidationError(
-                detail="You have already created a demo project. Only one demo project is allowed per user."
-            )
+        with suppress_all_notifications():
+            # Delete any existing demo project for this user instead of rejecting.
+            # select_for_update() ensures we wait for any in-progress async delete to finish:
+            # if the row is locked by the async worker, we block until it commits (row gone),
+            # and if it hasn't started, we lock the row and delete it here (async job will no-op).
+            with transaction.atomic():
+                existing_demo = (
+                    Project.objects.select_for_update()
+                    .filter(created_by=request.user.profile, is_demo=True)
+                    .first()
+                )
+                if existing_demo:
+                    # Lock all sites to prevent a background covariate-update job from
+                    # inserting new covariate rows between our cascade-deletion of
+                    # covariates and deletion of the sites themselves, which would
+                    # violate the api_covariate.site_id FK constraint.
+                    list(Site.objects.select_for_update().filter(project=existing_demo))
+                    delete_instance_and_related_objects(existing_demo)
 
-        tries = 0
-        profile = request.user.profile
-        project_name = f"Demo - {profile.full_name}"
-        while True:
-            if not Project.objects.filter(name=project_name).exists():
-                break
-            tries += 1
-            project_name = f"Demo - {profile.full_name} ({tries})"
-            if tries == 1_000_000:
-                raise exceptions.APIException(detail="Could not generate unique demo project name")
+            tries = 0
+            profile = request.user.profile
+            project_name = f"Demo - {profile.full_name}"
+            while True:
+                if not Project.objects.filter(name=project_name).exists():
+                    break
+                tries += 1
+                project_name = f"Demo - {profile.full_name} ({tries})"
+                if tries == 1_000_000:
+                    raise exceptions.APIException(
+                        detail="Could not generate unique demo project name"
+                    )
 
-        request.data["original_project_id"] = settings.DEMO_PROJECT_ID
-        request.data["notify_users"] = False
-        request.data["new_project_name"] = project_name
-        return self.copy_project(request)
+            request.data["original_project_id"] = settings.DEMO_PROJECT_ID
+            request.data["notify_users"] = False
+            request.data["new_project_name"] = project_name
+            try:
+                return self.copy_project(request)
+            except IntegrityError:
+                # A concurrent create_demo request already committed a demo for this user; return it.
+                demo = Project.objects.filter(created_by=profile, is_demo=True).first()
+                if demo:
+                    context = {"request": request}
+                    return Response(ProjectSerializer(instance=demo, context=context).data)
+                raise exceptions.APIException(detail="Demo project creation conflict")
 
     @action(
         detail=False,
@@ -557,6 +587,10 @@ class ProjectViewSet(BaseApiViewSet):
             context = {"request": request}
             project_serializer = ProjectSerializer(instance=new_project, context=context)
             return Response(project_serializer.data)
+        except ImageCopyError as err:
+            raise exceptions.ValidationError(detail=str(err)) from err
+        except IntegrityError:
+            raise
         except Exception as err:
             print(err)
             raise exceptions.APIException(detail=f"[{type(err).__name__}] Copying project") from err

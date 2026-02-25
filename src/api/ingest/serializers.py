@@ -116,7 +116,24 @@ class CollectRecordCSVListSerializer(ListSerializer):
         choices_sets = {k: v for k, v in self.get_choices_sets().items() if k != "data__observers"}
         protocol = self.child.protocol
         self._row_index = dict()
-        for n, row in enumerate(data):
+
+        # Convert data to a list if it's an iterator (e.g., csv.DictReader)
+        data_list = list(data) if not isinstance(data, list) else data
+
+        header_map = {}
+        # Create header_map for child serializers that need to access original column names
+        # This maps field names to original CSV column headers
+        if data_list:
+            first_row = data_list[0]
+            for csv_header in first_row.keys():
+                field_name = self.child.get_schemafield(csv_header)[0]
+                header_map[field_name] = csv_header
+        self.child.header_map = header_map
+
+        # Store original data for child serializers that need to access it
+        self.child.original_data = data_list
+
+        for n, row in enumerate(data_list):
             fmt_row = self.map_column_names(row)
             pk = str(uuid.uuid4())
             self._row_index[pk] = n + 1 + error_row_offset

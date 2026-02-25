@@ -3,7 +3,7 @@ from collections import defaultdict
 from django.core.validators import MaxValueValidator
 
 from ....models.mermaid import QuadratTransect
-from ....utils import cast_int
+from ....utils import cast_float, cast_int
 from ..statuses import ERROR, OK, WARN
 from .base import BaseValidator, validator_result
 
@@ -33,12 +33,9 @@ class PointsPerQuadratValidator(BaseValidator):
         quadrat_number_groups = defaultdict(int)
         for obs in observations:
             quadrat_number = self.get_value(obs, self.observation_quadrat_number_path)
-            try:
-                num_points = self.get_numeric_value(obs, self.observation_num_points_path)
-            except (TypeError, ValueError):
-                continue
+            num_points = cast_float(self.get_value(obs, self.observation_num_points_path))
 
-            if quadrat_number is None:
+            if quadrat_number is None or num_points is None:
                 continue
             quadrat_number_groups[quadrat_number] += num_points
 
@@ -113,7 +110,12 @@ class QuadratNumberSequenceValidator(BaseValidator):
             if isinstance(validator, MaxValueValidator):
                 num_quadrats_max = validator.limit_value
 
-        num_quadrats = self.get_numeric_value(collect_record, self.num_quadrats_path)
+        num_quadrats = cast_int(self.get_value(collect_record, self.num_quadrats_path))
+
+        # Skip validation if value is missing or zero
+        if num_quadrats is None or num_quadrats <= 0:
+            return OK
+
         # bail out early if num_quadrats will cause list(range()) below to crash server
         if num_quadrats > num_quadrats_max:
             return ERROR, self.LARGE_NUM_QUADRATS, {"max_value": num_quadrats_max}

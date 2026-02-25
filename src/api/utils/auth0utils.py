@@ -9,9 +9,11 @@ from auth0.v3.management import Auth0
 from django.utils.encoding import smart_str
 from django.utils.translation import gettext as _
 from jose import jws, jwt
+from requests.exceptions import ConnectionError, ReadTimeout, Timeout
 from rest_framework import exceptions
 from rest_framework.authentication import get_authorization_header
 
+from api.exceptions import Auth0ServiceUnavailable
 from api.models import Application, AuthUser
 from app import settings
 
@@ -88,9 +90,13 @@ class Auth0ManagementAPI(object):
     def get_token(self):
         audience = settings.AUTH0_MANAGEMENT_API_AUDIENCE
         get_token = GetToken(self.domain)
-        token = get_token.client_credentials(self.client_id, self.client_secret, audience)
-        mgmt_api_token = token["access_token"]
-        return mgmt_api_token
+        try:
+            token = get_token.client_credentials(self.client_id, self.client_secret, audience)
+            mgmt_api_token = token["access_token"]
+            return mgmt_api_token
+        except (ReadTimeout, Timeout, ConnectionError) as e:
+            logger.error(f"Auth0 service timeout/connection error when getting token: {e}")
+            raise Auth0ServiceUnavailable()
 
 
 def is_hs_token(token):
@@ -150,7 +156,14 @@ def get_user_info(user_id):
 
     token = auth.get_token()
     auth_user = Auth0UserInfo(domain, token)
-    ui = auth_user.get_userinfo(user_id)
+    try:
+        ui = auth_user.get_userinfo(user_id)
+    except (ReadTimeout, Timeout, ConnectionError) as e:
+        logger.error(
+            f"Auth0 service timeout/connection error when getting user info for {user_id}: {e}"
+        )
+        raise Auth0ServiceUnavailable()
+
     um = ui.get("user_metadata") or {}
 
     return dict(

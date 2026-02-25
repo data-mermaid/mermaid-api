@@ -205,7 +205,7 @@ class CommonStack(Stack):
                 self,
                 "LTemp",
                 instance_type=ec2.InstanceType("t3a.large"),
-                machine_image=ecs.EcsOptimizedImage.amazon_linux2(),
+                machine_image=ecs.EcsOptimizedImage.amazon_linux2023(),
                 block_devices=[
                     ec2.BlockDevice(
                         device_name="/dev/xvda",

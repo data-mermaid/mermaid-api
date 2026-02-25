@@ -14,6 +14,7 @@ logger = logging.getLogger(__name__)
 
 class Command(BaseCommand):
     WAIT_SECONDS = 5
+    MAX_ATTEMPTS = 2
     stop_event = threading.Event()
 
     def _process_tasks(self, task):
@@ -41,7 +42,9 @@ class Command(BaseCommand):
         signal.signal(signal.SIGTERM, self.handle_stop_signal)
 
         while not self.stop_event.is_set():
-            tasks = SummaryCacheQueue.objects.filter(attempts__lt=3).order_by("created_on")
+            tasks = SummaryCacheQueue.objects.filter(attempts__lt=self.MAX_ATTEMPTS).order_by(
+                "created_on"
+            )
             if not tasks.exists():
                 self.stop_event.wait(self.WAIT_SECONDS)
             else:

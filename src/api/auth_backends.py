@@ -107,23 +107,25 @@ class JWTAuthentication(BaseAuthentication):
                     try:
                         client = MailChimp(mc_api=settings.MC_API_KEY, mc_user=settings.MC_USER)
 
+                        merge_fields = {"API": "yes"}
+                        if profile.first_name and profile.first_name.strip():
+                            merge_fields["FNAME"] = profile.first_name.strip()
+                        if profile.last_name and profile.last_name.strip():
+                            merge_fields["LNAME"] = profile.last_name.strip()
+
                         client.lists.members.create_or_update(
                             settings.MC_LIST_ID,
                             get_subscriber_hash(profile.email),
                             {
                                 "email_address": profile.email,
                                 "status_if_new": "pending",
-                                "merge_fields": {
-                                    "FNAME": profile.first_name,
-                                    "LNAME": profile.last_name,
-                                    "API": "yes",
-                                },
+                                "merge_fields": merge_fields,
                             },
                         )
-                    except Exception as _:  # Don't ever fail because subscription didn't work
+                    except Exception as err:  # Don't ever fail because subscription didn't work
                         logger.error(
-                            "Unable to create mailchimp member {} {} <{}>".format(
-                                profile.first_name, profile.last_name, profile.email
+                            "Unable to create mailchimp member {} {} <{}>: {}".format(
+                                profile.first_name, profile.last_name, profile.email, str(err)
                             )
                         )
 

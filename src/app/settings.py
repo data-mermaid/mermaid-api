@@ -252,6 +252,9 @@ AWS_BACKUP_BUCKET = os.environ.get("AWS_BACKUP_BUCKET")
 AWS_METRICS_BUCKET = "mermaid-user-metrics"
 PUBLIC_BUCKET = os.environ.get("AWS_PUBLIC_BUCKET")
 IMAGE_PROCESSING_BUCKET = os.environ.get("IMAGE_PROCESSING_BUCKET")
+IMAGE_PROCESSING_BUCKET_TEST = (
+    os.environ.get("IMAGE_PROCESSING_BUCKET_TEST") or IMAGE_PROCESSING_BUCKET
+)
 
 # ************
 # ** CLIENT **
@@ -295,6 +298,7 @@ DB_LOGGER_BATCH_WRITE_SIZE = 100
 # Uses Python's startswith() to match routes
 METRICS_IGNORE_ROUTES = [
     "/v1/health/",
+    "/health/",
 ]
 
 
@@ -363,7 +367,7 @@ SQS_BATCH_SIZE = 10
 SQS_WAIT_SECONDS = 20
 # Number of seconds before the message is visible again
 # in SQS for other tasks to pull.
-SQS_MESSAGE_VISIBILITY = int(os.environ.get("SQS_MESSAGE_VISIBILITY", "300"))
+SQS_MESSAGE_VISIBILITY = int(os.environ.get("SQS_MESSAGE_VISIBILITY", "60"))
 # Name of queue, if it doesn't exist it will be created.
 QUEUE_NAME = os.environ.get("SQS_QUEUE_NAME", "mermaid-local")  # required
 IMAGE_QUEUE_NAME = os.environ.get("IMAGE_SQS_QUEUE_NAME", "mermaid-local")  # required
@@ -380,6 +384,7 @@ if ENVIRONMENT == "prod":
     IMAGE_BUCKET_AWS_ACCESS_KEY_ID = os.environ.get("IMAGE_BUCKET_AWS_ACCESS_KEY_ID")
     IMAGE_BUCKET_AWS_SECRET_ACCESS_KEY = os.environ.get("IMAGE_BUCKET_AWS_SECRET_ACCESS_KEY")
 IMAGE_S3_PATH = "mermaid/"
+IMAGE_S3_PATH_TEST = os.environ.get("IMAGE_S3_PATH_TEST") or IMAGE_S3_PATH
 DATA_UPLOAD_MAX_MEMORY_SIZE = 30 * 1024 * 1024  # 30 MB
 FILE_UPLOAD_MAX_MEMORY_SIZE = 15 * 1024 * 1024  # 15 MB
 MAX_IMAGE_PIXELS = 8000 * 8000
@@ -401,4 +406,4 @@ REPORT_S3_SECRET_ACCESS_KEY = os.environ.get("REPORT_S3_SECRET_ACCESS_KEY")
 if ENVIRONMENT == "prod":
     DEMO_PROJECT_ID = "65f312d2-7261-41ce-8e7d-1256b51dd7f0"
 else:
-    DEMO_PROJECT_ID = "8c213ce8-7973-47a5-9359-3a0ef12ed201"
+    DEMO_PROJECT_ID = "89235586-dd9f-4ad7-9e89-e11ea70c03f4"

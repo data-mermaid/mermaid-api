@@ -1,7 +1,8 @@
 import uuid
 
 from django.utils.translation import gettext as _
-from rest_framework.exceptions import ParseError
+from rest_framework import status
+from rest_framework.exceptions import APIException, ParseError
 
 
 class UnknownProtocolError(Exception):
@@ -16,6 +17,12 @@ class UpdateSummariesException(Exception):
     def __init__(self, message="Error updating summaries", errors=None):
         super().__init__(message)
         self.errors = errors
+
+
+class Auth0ServiceUnavailable(APIException):
+    status_code = status.HTTP_503_SERVICE_UNAVAILABLE
+    default_detail = _("Authentication service temporarily unavailable. Please try again.")
+    default_code = "auth_service_unavailable"
 
 
 def check_uuid(pk):
