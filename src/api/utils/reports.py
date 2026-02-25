@@ -26,7 +26,9 @@ def update_attributes_report():
         attributes_report.write_attribute_reference(tmp.name)
         tmp.flush()
         s3.upload_file(settings.PUBLIC_BUCKET, tmp.name, canonical_filename)
-        s3.copy_object(settings.PUBLIC_BUCKET, canonical_filename, dated_filename)
+        s3.copy_object_server_side(
+            settings.PUBLIC_BUCKET, canonical_filename, settings.PUBLIC_BUCKET, dated_filename
+        )
 
 
 def create_sample_unit_method_summary_report_background(
