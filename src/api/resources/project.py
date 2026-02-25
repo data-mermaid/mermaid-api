@@ -488,6 +488,11 @@ class ProjectViewSet(BaseApiViewSet):
                     .first()
                 )
                 if existing_demo:
+                    # Lock all sites to prevent a background covariate-update job from
+                    # inserting new covariate rows between our cascade-deletion of
+                    # covariates and deletion of the sites themselves, which would
+                    # violate the api_covariate.site_id FK constraint.
+                    list(Site.objects.select_for_update().filter(project=existing_demo))
                     delete_instance_and_related_objects(existing_demo)
 
             tries = 0
