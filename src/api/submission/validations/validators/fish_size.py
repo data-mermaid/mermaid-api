@@ -39,7 +39,8 @@ class FishSizeValidator(BaseValidator):
                 # If fish_size_bins are available, find which bin this observation falls into
                 if fish_size_bins:
                     for fish_size_bin in fish_size_bins:
-                        if fish_size_bin.min_val <= fish_size <= fish_size_bin.max_val:
+                        max_ok = fish_size_bin.max_val is None or fish_size <= fish_size_bin.max_val
+                        if fish_size_bin.min_val <= fish_size and max_ok:
                             # Use the minimum value of the bin for comparison
                             comparison_size = fish_size_bin.min_val
                             break

@@ -152,6 +152,30 @@ def test_fish_size_validator_with_size_bin_1_continuous(
     assert results[0].code == FishSizeValidator.MAX_FISH_SIZE
 
 
+def test_fish_size_validator_with_open_ended_bin(
+    valid_collect_record, fish_species4, fish_size_bin_5
+):
+    """
+    Test that open-ended bins (max_val=None, e.g. "+50 cm") don't raise TypeError.
+
+    Scenario:
+    - Size bin "5" with an open-ended "+50" bin (min_val=50, max_val=None)
+    - Observation size: 55 (falls in the +50 bin)
+    - Species max: 100 cm
+    - Expected: OK (55 is in the +50 bin, comparison_size=50, 50 <= 100)
+    """
+    _setup_fish_size_bin(fish_size_bin_5, "+50", 50.0, 50.0, None)
+    fish_species4.max_length = 100.0
+    fish_species4.save()
+
+    _setup_observation(valid_collect_record, fish_size_bin_5, 55, fish_species4)
+
+    validator = _get_validator()
+    record = CollectRecordSerializer(instance=valid_collect_record).data
+    results = validator(record)
+    assert results[0].status == OK
+
+
 def test_fish_size_validator_size_not_in_any_bin(
     valid_collect_record, fish_species4, fish_size_bin_5
 ):
