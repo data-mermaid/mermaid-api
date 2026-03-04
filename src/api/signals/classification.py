@@ -53,6 +53,12 @@ def delete_images_on_model_delete(sender, instance, **kwargs):
 
 @receiver(post_save, sender=Image)
 def post_save_classification_image(sender, instance, created, **kwargs):
+    # After FileField.pre_save saves the file, it calls setattr(instance, field.attname, name_str)
+    # which resets the FieldFile to a plain string, losing the custom storage set by _apply_storage.
+    # Re-applying here ensures the correct bucket storage is used when reading back the image.
+    if instance.image_bucket:
+        instance._apply_storage()
+
     if not instance.thumbnail:
         needs_new_thumbnail = True
     else:
