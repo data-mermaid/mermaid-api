@@ -934,5 +934,6 @@ def delete_project(pk):
                 transaction.savepoint_commit(sid)
                 print("project deleted")
             except Exception as err:
-                print(f"Delete Project: {err}")
+                logger.exception("Delete Project: %s", err)
                 transaction.savepoint_rollback(sid)
+                raise
