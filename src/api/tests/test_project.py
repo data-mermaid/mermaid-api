@@ -411,3 +411,26 @@ def test_create_demo_suppresses_notifications_on_replacement(api_client1, projec
     assert response.status_code == 200
     assert Notification.objects.count() == count_before
     mock_email.assert_not_called()
+
+
+def test_delete_demo_project_suppresses_notifications(api_client1, project_profile1):
+    """Deleting a demo project explicitly should not create Notification objects or send emails."""
+    # First create a demo project
+    create_url = reverse("project-create-demo")
+    with (
+        mock_demo_project(project_profile1.project),
+        patch("api.resources.project.settings") as mock_settings,
+    ):
+        _apply_mock_settings(mock_settings, project_profile1.project)
+        response = api_client1.post(create_url)
+    assert response.status_code == 200
+    demo_pk = response.data["id"]
+
+    # Now delete it and verify no notifications are produced
+    delete_url = reverse("project-detail", kwargs={"pk": demo_pk})
+    count_before = Notification.objects.count()
+    with patch("api.notifications.mermaid_email") as mock_email:
+        response = api_client1.delete(delete_url)
+    assert response.status_code == 202
+    assert Notification.objects.count() == count_before
+    mock_email.assert_not_called()
