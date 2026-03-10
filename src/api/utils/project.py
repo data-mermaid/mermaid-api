@@ -268,8 +268,12 @@ def _copy_image(source_image, s3_tracker, dest_bucket=None, collect_record_id=No
 
     # Set created_on so pre_image_save signal skips validation/normalization
     # (copied images are already processed; auto_now_add will override this for the DB insert)
+    # Set _is_copy so post_save_classification_image skips thumbnail/checksum work
     new_image.created_on = source_image.created_on
+    new_image._is_copy = True
+    _t_db = time.monotonic()
     new_image.save()
+    _t_image_save = time.monotonic()
 
     old_points = list(Point.objects.filter(image_id=source_image_id))
     if old_points:
@@ -299,6 +303,7 @@ def _copy_image(source_image, s3_tracker, dest_bucket=None, collect_record_id=No
                 all_new_annotations.append(new_ann)
         if all_new_annotations:
             Annotation.objects.bulk_create(all_new_annotations)
+    _t_points_annotations = time.monotonic()
 
     image_id = new_image.id
     transaction.on_commit(lambda: submit_job(0, True, _create_annotations_file_job, image_id))
@@ -313,6 +318,14 @@ def _copy_image(source_image, s3_tracker, dest_bucket=None, collect_record_id=No
             data=copy.deepcopy(latest_status.data) if latest_status.data else None,
             created_by=latest_status.created_by,
         )
+    _t_done = time.monotonic()
+    logger.warning(
+        "_copy_image %s: db_breakdown image_save=%.2fs points_annotations=%.2fs classification_status=%.2fs",
+        source_image_id,
+        _t_image_save - _t_db,
+        _t_points_annotations - _t_image_save,
+        _t_done - _t_points_annotations,
+    )
 
     return new_image
 
