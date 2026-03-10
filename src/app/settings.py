@@ -88,7 +88,7 @@ MIDDLEWARE = [
 
 DEBUG = False
 TESTING = False
-DEBUG_LEVEL = "ERROR"
+DEBUG_LEVEL = "WARNING"
 CONN_MAX_AGE = 0
 CORS_ALLOW_ALL_ORIGINS = True
 CORS_ALLOW_METHODS = list(default_methods) + ["HEAD"]
@@ -338,6 +338,11 @@ LOGGING = {
             "handlers": ["console"],
             "level": "ERROR",
             "propagate": True,
+        },
+        "api": {
+            "handlers": ["console"],
+            "level": "WARNING",
+            "propagate": False,
         },
         "django.security.DisallowedHost": {
             "handlers": ["null"],
