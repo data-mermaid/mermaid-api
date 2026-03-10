@@ -230,7 +230,7 @@ def _copy_image(source_image, s3_tracker, dest_bucket=None, collect_record_id=No
         dest_config=dest_config,
     )
     _t_s3_done = time.monotonic()
-    logger.info(
+    logger.warning(
         "_copy_image %s: s3_copy=%.2fs (same_creds=%s src_bucket=%s dst_bucket=%s)",
         source_image_id,
         _t_s3_done - _t_s3,
@@ -642,6 +642,7 @@ def copy_project_and_resources(owner_profile, new_project_name, original_project
         original_project_fresh = Project.objects.get(id=settings.DEMO_PROJECT_ID)
         dest_bucket = get_image_bucket(new_project)
         s3_tracker = S3CopyTracker()
+        _t_copy_start = time.monotonic()
         try:
             copy_project_data(
                 original_project=original_project_fresh,
@@ -656,6 +657,11 @@ def copy_project_and_resources(owner_profile, new_project_name, original_project
             logger.error("Project copy failed, cleaning up S3 files")
             s3_tracker.cleanup()
             raise
+        logger.warning(
+            "copy_project_and_resources total=%.2fs new_project=%s",
+            time.monotonic() - _t_copy_start,
+            new_project.pk,
+        )
 
     return new_project
 
@@ -668,7 +674,7 @@ def copy_project_data(
     t1 = time.monotonic()
     _copy_submitted_data(site_id_map, management_id_map, s3_tracker, dest_bucket=dest_bucket)
     t2 = time.monotonic()
-    logger.info(
+    logger.warning(
         "copy_project_data timing: collect_records=%.2fs submitted_data=%.2fs total=%.2fs",
         t1 - t0,
         t2 - t1,
@@ -898,7 +904,7 @@ def _copy_quadrat_transects(sample_event_id_map, s3_tracker, dest_bucket=None):
                 t_obs_save += time.monotonic() - _t
                 obs_count += 1
 
-            logger.info(
+            logger.warning(
                 "_copy_quadrat_transects bpqt=%s: image_copy=%.2fs obs_saves=%.2fs "
                 "(%d unique images, %d obs)",
                 old_bpqt_id,
