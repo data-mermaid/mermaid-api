@@ -74,11 +74,12 @@ class LabelMappingResource(resources.ModelResource):
 
     def before_import_row(self, row, **kwargs):
         label = row.get("provider_label") or ""
-        row["provider_label"] = " ".join(unicodedata.normalize("NFKC", label).split())
-
-    def after_import_instance(self, instance, new, row_number=None, **kwargs):
-        if not instance.provider_label:
-            raise Exception(f"Row {row_number}: provider_label is required")
+        normalized = " ".join(unicodedata.normalize("NFKC", label).split())
+        if not normalized:
+            raise ValueError(
+                f"provider_label is required (provider={row.get('provider')!r}, provider_id={row.get('provider_id')!r})"
+            )
+        row["provider_label"] = normalized
 
 
 @admin.register(LabelMapping)
