@@ -1,6 +1,7 @@
 import copy
 import logging
 import re
+import time
 import uuid
 from collections import defaultdict
 from contextlib import ExitStack
@@ -208,6 +209,7 @@ def _copy_image(source_image, s3_tracker, dest_bucket=None, collect_record_id=No
 
     # Copy S3 files - raises on failure (triggers rollback + cleanup)
     # Skip annotations_file - will be regenerated
+    _t_s3 = time.monotonic()
     new_image_path = s3_tracker.copy_file(
         source_image.image.name if source_image.image else None,
         new_image_id,
@@ -228,6 +230,15 @@ def _copy_image(source_image, s3_tracker, dest_bucket=None, collect_record_id=No
         source_bucket=source_bucket,
         source_config=source_config,
         dest_config=dest_config,
+    )
+    _t_s3_done = time.monotonic()
+    logger.info(
+        "_copy_image %s: s3_copy=%.2fs (same_creds=%s src_bucket=%s dst_bucket=%s)",
+        source_image_id,
+        _t_s3_done - _t_s3,
+        source_config.get("access_key") == dest_config.get("access_key"),
+        source_bucket,
+        dest_config.get("bucket"),
     )
 
     # Use the provided collect_record_id so that all images for a copied BPQ share the
@@ -306,6 +317,63 @@ def _copy_image(source_image, s3_tracker, dest_bucket=None, collect_record_id=No
         )
 
     return new_image
+
+
+def collect_project_pqt_image_ids(project):
+    """Return Image IDs linked to a project's PQT observations.
+
+    Call BEFORE deleting the project so the ObsBenthicPhotoQuadrat rows still exist.
+    """
+    return list(
+        ObsBenthicPhotoQuadrat.objects.filter(
+            benthic_photo_quadrat_transect__quadrat_transect__sample_event__site__project=project,
+            image__isnull=False,
+        )
+        .values_list("image_id", flat=True)
+        .distinct()
+    )
+
+
+def delete_collected_pqt_images(image_ids):
+    """Delete Image records and schedule S3 file cleanup.
+
+    Call AFTER the project's cascade-delete has run (ObsBenthicPhotoQuadrat rows are
+    gone), so the PROTECT constraint on ObsBenthicPhotoQuadrat.image no longer blocks
+    Image deletion.  S3 file deletion is deferred to transaction.on_commit so that a
+    DB rollback never leaves S3 files permanently orphaned.
+    """
+    if not image_ids:
+        return
+
+    images = list(Image.objects.filter(id__in=image_ids))
+
+    cleanup_items = []
+    for image in images:
+        config = get_image_storage_config(image.image_bucket)
+        for field_name in ("image", "thumbnail", "feature_vector_file", "annotations_file"):
+            field_file = getattr(image, field_name)
+            if field_file and field_file.name:
+                cleanup_items.append((config, field_file.name))
+
+    Image.objects.filter(id__in=image_ids).delete()
+
+    def _cleanup_s3():
+        for config, path in cleanup_items:
+            try:
+                full_key = f"{config['s3_path']}{path}"
+                s3_utils.delete_file(
+                    bucket=config["bucket"],
+                    blob_name=full_key,
+                    aws_access_key_id=config["access_key"],
+                    aws_secret_access_key=config["secret_key"],
+                )
+            except Exception:
+                logger.error(
+                    f"Failed to delete S3 file during demo project cleanup: {path}",
+                    exc_info=True,
+                )
+
+    transaction.on_commit(_cleanup_s3)
 
 
 def _get_sample_unit_method_label(sample_unit_method, sample_unit_name):
@@ -597,8 +665,17 @@ def copy_project_and_resources(owner_profile, new_project_name, original_project
 def copy_project_data(
     original_project, new_project, site_id_map, management_id_map, s3_tracker, dest_bucket=None
 ):
+    t0 = time.monotonic()
     _copy_collect_records(original_project, new_project, site_id_map, management_id_map)
+    t1 = time.monotonic()
     _copy_submitted_data(site_id_map, management_id_map, s3_tracker, dest_bucket=dest_bucket)
+    t2 = time.monotonic()
+    logger.info(
+        "copy_project_data timing: collect_records=%.2fs submitted_data=%.2fs total=%.2fs",
+        t1 - t0,
+        t2 - t1,
+        t2 - t0,
+    )
 
 
 def _copy_collect_records(original_project, new_project, site_id_map, management_id_map):
@@ -788,6 +865,9 @@ def _copy_quadrat_transects(sample_event_id_map, s3_tracker, dest_bucket=None):
             # Build image ID map to avoid copying the same image multiple times
             # (multiple observations can reference the same image)
             image_id_map = {}
+            t_image_copy = 0.0
+            t_obs_save = 0.0
+            obs_count = 0
 
             for obs in ObsBenthicPhotoQuadrat.objects.select_related("image").filter(
                 benthic_photo_quadrat_transect_id=old_bpqt_id
@@ -799,22 +879,36 @@ def _copy_quadrat_transects(sample_event_id_map, s3_tracker, dest_bucket=None):
 
                 if old_image_id:
                     if old_image_id not in image_id_map:
+                        _t = time.monotonic()
                         new_image = _copy_image(
                             obs.image,
                             s3_tracker,
                             dest_bucket=dest_bucket,
                             collect_record_id=synthetic_cr_id,
                         )
+                        t_image_copy += time.monotonic() - _t
                         image_id_map[old_image_id] = new_image.id
                     new_image_id = image_id_map[old_image_id]
 
+                _t = time.monotonic()
                 obs.id = None
                 obs.benthic_photo_quadrat_transect_id = bpqt.id
                 obs.image_id = new_image_id
                 obs.created_by = old_obs_created_by
                 obs.updated_by = old_obs_updated_by
                 obs.save()
+                t_obs_save += time.monotonic() - _t
+                obs_count += 1
 
+            logger.info(
+                "_copy_quadrat_transects bpqt=%s: image_copy=%.2fs obs_saves=%.2fs "
+                "(%d unique images, %d obs)",
+                old_bpqt_id,
+                t_image_copy,
+                t_obs_save,
+                len(image_id_map),
+                obs_count,
+            )
             _copy_observers(old_bpqt_id, bpqt.id)
 
 
