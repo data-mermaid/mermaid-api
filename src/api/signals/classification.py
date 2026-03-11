@@ -59,6 +59,10 @@ def post_save_classification_image(sender, instance, created, **kwargs):
     if instance.image_bucket:
         instance._apply_storage()
 
+    # Copied images already have correct thumbnail and checksum — skip the S3 read and re-check.
+    if getattr(instance, "_is_copy", False):
+        return
+
     if not instance.thumbnail:
         needs_new_thumbnail = True
     else:

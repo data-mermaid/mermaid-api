@@ -232,7 +232,7 @@ def _copy_image(source_image, s3_tracker, dest_bucket=None, collect_record_id=No
         dest_config=dest_config,
     )
     _t_s3_done = time.monotonic()
-    logger.info(
+    logger.warning(
         "_copy_image %s: s3_copy=%.2fs (same_creds=%s src_bucket=%s dst_bucket=%s)",
         source_image_id,
         _t_s3_done - _t_s3,
@@ -270,8 +270,12 @@ def _copy_image(source_image, s3_tracker, dest_bucket=None, collect_record_id=No
 
     # Set created_on so pre_image_save signal skips validation/normalization
     # (copied images are already processed; auto_now_add will override this for the DB insert)
+    # Set _is_copy so post_save_classification_image skips thumbnail/checksum work
     new_image.created_on = source_image.created_on
+    new_image._is_copy = True
+    _t_db = time.monotonic()
     new_image.save()
+    _t_image_save = time.monotonic()
 
     old_points = list(Point.objects.filter(image_id=source_image_id))
     if old_points:
@@ -301,6 +305,7 @@ def _copy_image(source_image, s3_tracker, dest_bucket=None, collect_record_id=No
                 all_new_annotations.append(new_ann)
         if all_new_annotations:
             Annotation.objects.bulk_create(all_new_annotations)
+    _t_points_annotations = time.monotonic()
 
     image_id = new_image.id
     transaction.on_commit(lambda: submit_job(0, True, _create_annotations_file_job, image_id))
@@ -315,6 +320,14 @@ def _copy_image(source_image, s3_tracker, dest_bucket=None, collect_record_id=No
             data=copy.deepcopy(latest_status.data) if latest_status.data else None,
             created_by=latest_status.created_by,
         )
+    _t_done = time.monotonic()
+    logger.warning(
+        "_copy_image %s: db_breakdown image_save=%.2fs points_annotations=%.2fs classification_status=%.2fs",
+        source_image_id,
+        _t_image_save - _t_db,
+        _t_points_annotations - _t_image_save,
+        _t_done - _t_points_annotations,
+    )
 
     return new_image
 
@@ -644,6 +657,7 @@ def copy_project_and_resources(owner_profile, new_project_name, original_project
         original_project_fresh = Project.objects.get(id=settings.DEMO_PROJECT_ID)
         dest_bucket = get_image_bucket(new_project)
         s3_tracker = S3CopyTracker()
+        _t_copy_start = time.monotonic()
         try:
             copy_project_data(
                 original_project=original_project_fresh,
@@ -658,6 +672,11 @@ def copy_project_and_resources(owner_profile, new_project_name, original_project
             logger.error("Project copy failed, cleaning up S3 files")
             s3_tracker.cleanup()
             raise
+        logger.warning(
+            "copy_project_and_resources total=%.2fs new_project=%s",
+            time.monotonic() - _t_copy_start,
+            new_project.pk,
+        )
 
     return new_project
 
@@ -670,7 +689,7 @@ def copy_project_data(
     t1 = time.monotonic()
     _copy_submitted_data(site_id_map, management_id_map, s3_tracker, dest_bucket=dest_bucket)
     t2 = time.monotonic()
-    logger.info(
+    logger.warning(
         "copy_project_data timing: collect_records=%.2fs submitted_data=%.2fs total=%.2fs",
         t1 - t0,
         t2 - t1,
@@ -866,16 +885,13 @@ def _copy_quadrat_transects(sample_event_id_map, s3_tracker, dest_bucket=None):
             # (multiple observations can reference the same image)
             image_id_map = {}
             t_image_copy = 0.0
-            t_obs_save = 0.0
             obs_count = 0
+            new_obs_list = []
 
             for obs in ObsBenthicPhotoQuadrat.objects.select_related("image").filter(
                 benthic_photo_quadrat_transect_id=old_bpqt_id
             ):
                 old_image_id = obs.image_id
-                old_obs_created_by = obs.created_by
-                old_obs_updated_by = obs.updated_by
-                new_image_id = None
 
                 if old_image_id:
                     if old_image_id not in image_id_map:
@@ -888,19 +904,18 @@ def _copy_quadrat_transects(sample_event_id_map, s3_tracker, dest_bucket=None):
                         )
                         t_image_copy += time.monotonic() - _t
                         image_id_map[old_image_id] = new_image.id
-                    new_image_id = image_id_map[old_image_id]
 
-                _t = time.monotonic()
                 obs.id = None
                 obs.benthic_photo_quadrat_transect_id = bpqt.id
-                obs.image_id = new_image_id
-                obs.created_by = old_obs_created_by
-                obs.updated_by = old_obs_updated_by
-                obs.save()
-                t_obs_save += time.monotonic() - _t
+                obs.image_id = image_id_map.get(old_image_id) if old_image_id else None
+                new_obs_list.append(obs)
                 obs_count += 1
 
-            logger.info(
+            _t = time.monotonic()
+            ObsBenthicPhotoQuadrat.objects.bulk_create(new_obs_list)
+            t_obs_save = time.monotonic() - _t
+
+            logger.warning(
                 "_copy_quadrat_transects bpqt=%s: image_copy=%.2fs obs_saves=%.2fs "
                 "(%d unique images, %d obs)",
                 old_bpqt_id,
