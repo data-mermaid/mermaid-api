@@ -883,16 +883,13 @@ def _copy_quadrat_transects(sample_event_id_map, s3_tracker, dest_bucket=None):
             # (multiple observations can reference the same image)
             image_id_map = {}
             t_image_copy = 0.0
-            t_obs_save = 0.0
             obs_count = 0
+            new_obs_list = []
 
             for obs in ObsBenthicPhotoQuadrat.objects.select_related("image").filter(
                 benthic_photo_quadrat_transect_id=old_bpqt_id
             ):
                 old_image_id = obs.image_id
-                old_obs_created_by = obs.created_by
-                old_obs_updated_by = obs.updated_by
-                new_image_id = None
 
                 if old_image_id:
                     if old_image_id not in image_id_map:
@@ -905,17 +902,16 @@ def _copy_quadrat_transects(sample_event_id_map, s3_tracker, dest_bucket=None):
                         )
                         t_image_copy += time.monotonic() - _t
                         image_id_map[old_image_id] = new_image.id
-                    new_image_id = image_id_map[old_image_id]
 
-                _t = time.monotonic()
                 obs.id = None
                 obs.benthic_photo_quadrat_transect_id = bpqt.id
-                obs.image_id = new_image_id
-                obs.created_by = old_obs_created_by
-                obs.updated_by = old_obs_updated_by
-                obs.save()
-                t_obs_save += time.monotonic() - _t
+                obs.image_id = image_id_map.get(old_image_id) if old_image_id else None
+                new_obs_list.append(obs)
                 obs_count += 1
+
+            _t = time.monotonic()
+            ObsBenthicPhotoQuadrat.objects.bulk_create(new_obs_list)
+            t_obs_save = time.monotonic() - _t
 
             logger.warning(
                 "_copy_quadrat_transects bpqt=%s: image_copy=%.2fs obs_saves=%.2fs "
