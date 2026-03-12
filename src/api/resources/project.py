@@ -527,7 +527,8 @@ class ProjectViewSet(BaseApiViewSet):
                 if demo:
                     context = {"request": request}
                     return Response(ProjectSerializer(instance=demo, context=context).data)
-                raise exceptions.APIException(detail="Demo project creation conflict")
+                # No demo found means this was a real copy failure, not a concurrency race.
+                raise
 
     @action(
         detail=False,

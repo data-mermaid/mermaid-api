@@ -1,9 +1,11 @@
 import copy
 import logging
 import re
+import threading
 import time
 import uuid
 from collections import defaultdict
+from concurrent.futures import ThreadPoolExecutor, as_completed
 from contextlib import ExitStack
 
 import botocore.exceptions
@@ -91,15 +93,17 @@ class S3CopyTracker:
     def __init__(self):
         self.copied_files = []
         self._clients = {}
+        self._lock = threading.Lock()
 
     def _get_client(self, access_key, secret_key):
         # Normalize None to actual defaults so identical credentials share one client
         actual_key = access_key or settings.AWS_ACCESS_KEY_ID
         actual_secret = secret_key or settings.AWS_SECRET_ACCESS_KEY
         cache_key = (actual_key, actual_secret)
-        if cache_key not in self._clients:
-            self._clients[cache_key] = s3_utils.get_client(actual_key, actual_secret)
-        return self._clients[cache_key]
+        with self._lock:
+            if cache_key not in self._clients:
+                self._clients[cache_key] = s3_utils.get_client(actual_key, actual_secret)
+            return self._clients[cache_key]
 
     def copy_file(
         self, source_path, new_image_id, source_bucket=None, source_config=None, dest_config=None
@@ -159,7 +163,8 @@ class S3CopyTracker:
                     f"Source image file not found: {source_key} in bucket {source_bucket}"
                 ) from e
             raise
-        self.copied_files.append((dest_config, new_path))
+        with self._lock:
+            self.copied_files.append((dest_config, new_path))
         return new_path
 
     def cleanup(self):
@@ -185,29 +190,18 @@ def _create_annotations_file_job(image_id):
         logger.error(f"Failed to create annotations file for image {image_id}", exc_info=True)
 
 
-def _copy_image(source_image, s3_tracker, dest_bucket=None, collect_record_id=None):
-    """Copy an Image record and its S3 files, including Annotations.
+def _copy_image_s3(source_image, new_image_id, s3_tracker, dest_bucket=None):
+    """Copy S3 files for an image. Safe to call from worker threads (no DB access).
 
-    Args:
-        source_image: The Image instance to copy
-        s3_tracker: S3CopyTracker instance for tracking copied files
-        dest_bucket: Target bucket name for the new image
-        collect_record_id: UUID to use as the collect_record_id on the copied image.
-            If None, falls back to the new image's own ID.
-
-    Raises:
-        Exception: If S3 copy fails (propagates to trigger cleanup)
+    Returns (new_image_path, new_thumbnail_path, new_feature_vector_path).
+    Raises on S3 failure.
     """
-    source_image_id = source_image.id
-    new_image_id = uuid.uuid4()
-
     source_bucket = source_image.image_bucket or settings.IMAGE_PROCESSING_BUCKET
     source_config = get_image_storage_config(source_bucket)
     dest_config = (
         get_image_storage_config(dest_bucket) if dest_bucket else get_image_storage_config()
     )
 
-    # Copy S3 files - raises on failure (triggers rollback + cleanup)
     # Skip annotations_file - will be regenerated
     _t_s3 = time.monotonic()
     new_image_path = s3_tracker.copy_file(
@@ -231,15 +225,31 @@ def _copy_image(source_image, s3_tracker, dest_bucket=None, collect_record_id=No
         source_config=source_config,
         dest_config=dest_config,
     )
-    _t_s3_done = time.monotonic()
     logger.warning(
-        "_copy_image %s: s3_copy=%.2fs (same_creds=%s src_bucket=%s dst_bucket=%s)",
-        source_image_id,
-        _t_s3_done - _t_s3,
+        "_copy_image_s3 %s: s3_copy=%.2fs (same_creds=%s src_bucket=%s dst_bucket=%s)",
+        source_image.id,
+        time.monotonic() - _t_s3,
         source_config.get("access_key") == dest_config.get("access_key"),
         source_bucket,
         dest_config.get("bucket"),
     )
+    return new_image_path, new_thumbnail_path, new_feature_vector_path
+
+
+def _copy_image_db(
+    source_image,
+    new_image_id,
+    new_image_path,
+    new_thumbnail_path,
+    new_feature_vector_path,
+    dest_bucket=None,
+    collect_record_id=None,
+):
+    """Create DB records for a copied image. Must be called from the main thread (in transaction).
+
+    Returns the new Image instance.
+    """
+    source_image_id = source_image.id
 
     # Use the provided collect_record_id so that all images for a copied BPQ share the
     # same value, allowing the serializer to look them up.  Falls back to the new image's
@@ -322,7 +332,7 @@ def _copy_image(source_image, s3_tracker, dest_bucket=None, collect_record_id=No
         )
     _t_done = time.monotonic()
     logger.warning(
-        "_copy_image %s: db_breakdown image_save=%.2fs points_annotations=%.2fs classification_status=%.2fs",
+        "_copy_image_db %s: image_save=%.2fs points_annotations=%.2fs classification_status=%.2fs",
         source_image_id,
         _t_image_save - _t_db,
         _t_points_annotations - _t_image_save,
@@ -368,6 +378,12 @@ def delete_collected_pqt_images(image_ids):
             if field_file and field_file.name:
                 cleanup_items.append((config, field_file.name))
 
+    # Blank file fields before deleting so the post_delete signal
+    # (delete_images_on_model_delete) sees nothing to delete from S3.
+    # S3 cleanup is handled exclusively via transaction.on_commit below.
+    Image.objects.filter(id__in=image_ids).update(
+        image="", thumbnail="", feature_vector_file="", annotations_file=""
+    )
     Image.objects.filter(id__in=image_ids).delete()
 
     def _cleanup_s3():
@@ -881,45 +897,66 @@ def _copy_quadrat_transects(sample_event_id_map, s3_tracker, dest_bucket=None):
             bpqt.updated_by = old_bpqt_updated_by
             bpqt.save()
 
-            # Build image ID map to avoid copying the same image multiple times
-            # (multiple observations can reference the same image)
-            image_id_map = {}
-            t_image_copy = 0.0
-            obs_count = 0
+            # Collect observations and unique images for this bpqt
+            obs_list = list(
+                ObsBenthicPhotoQuadrat.objects.select_related("image").filter(
+                    benthic_photo_quadrat_transect_id=old_bpqt_id
+                )
+            )
+            # Map old_image_id -> (source_image, new_image_id) for unique images only
+            copy_plans = {}
+            for obs in obs_list:
+                if obs.image_id and obs.image_id not in copy_plans:
+                    copy_plans[obs.image_id] = (obs.image, uuid.uuid4())
+
+            # Phase 1: copy S3 files for all unique images in parallel
+            _t_s3_start = time.monotonic()
+            s3_results = {}  # old_image_id -> (new_image_path, new_thumbnail_path, new_feature_vector_path)
+            if copy_plans:
+                with ThreadPoolExecutor(max_workers=min(len(copy_plans), 20)) as executor:
+                    futures = {
+                        executor.submit(
+                            _copy_image_s3, source_image, new_image_id, s3_tracker, dest_bucket
+                        ): old_image_id
+                        for old_image_id, (source_image, new_image_id) in copy_plans.items()
+                    }
+                    for future in as_completed(futures):
+                        old_image_id = futures[future]
+                        s3_results[old_image_id] = future.result()  # re-raises on error
+            t_image_copy = time.monotonic() - _t_s3_start
+
+            # Phase 2: create DB records for all copied images (main thread, in transaction)
+            _t_db_start = time.monotonic()
+            image_id_map = {}  # old_image_id -> new_image.id
+            for old_image_id, (source_image, new_image_id) in copy_plans.items():
+                new_image = _copy_image_db(
+                    source_image,
+                    new_image_id,
+                    *s3_results[old_image_id],
+                    dest_bucket=dest_bucket,
+                    collect_record_id=synthetic_cr_id,
+                )
+                image_id_map[old_image_id] = new_image.id
+            t_image_db = time.monotonic() - _t_db_start
+
+            # Phase 3: bulk-insert observations
+            obs_count = len(obs_list)
             new_obs_list = []
-
-            for obs in ObsBenthicPhotoQuadrat.objects.select_related("image").filter(
-                benthic_photo_quadrat_transect_id=old_bpqt_id
-            ):
-                old_image_id = obs.image_id
-
-                if old_image_id:
-                    if old_image_id not in image_id_map:
-                        _t = time.monotonic()
-                        new_image = _copy_image(
-                            obs.image,
-                            s3_tracker,
-                            dest_bucket=dest_bucket,
-                            collect_record_id=synthetic_cr_id,
-                        )
-                        t_image_copy += time.monotonic() - _t
-                        image_id_map[old_image_id] = new_image.id
-
+            for obs in obs_list:
                 obs.id = None
                 obs.benthic_photo_quadrat_transect_id = bpqt.id
-                obs.image_id = image_id_map.get(old_image_id) if old_image_id else None
+                obs.image_id = image_id_map.get(obs.image_id) if obs.image_id else None
                 new_obs_list.append(obs)
-                obs_count += 1
-
             _t = time.monotonic()
             ObsBenthicPhotoQuadrat.objects.bulk_create(new_obs_list)
             t_obs_save = time.monotonic() - _t
 
             logger.warning(
-                "_copy_quadrat_transects bpqt=%s: image_copy=%.2fs obs_saves=%.2fs "
+                "_copy_quadrat_transects bpqt=%s: s3_parallel=%.2fs image_db=%.2fs obs_bulk=%.2fs "
                 "(%d unique images, %d obs)",
                 old_bpqt_id,
                 t_image_copy,
+                t_image_db,
                 t_obs_save,
                 len(image_id_map),
                 obs_count,
