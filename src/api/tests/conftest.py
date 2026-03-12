@@ -14,7 +14,6 @@ def django_db_setup(django_db_setup, django_db_blocker):
     db_name = settings.DATABASES["default"]["NAME"]
     with django_db_blocker.unblock():
         with connection.cursor() as cursor:
-            cursor.execute("CREATE EXTENSION IF NOT EXISTS pg_trgm;")
             cursor.execute('CREATE EXTENSION IF NOT EXISTS "uuid-ossp";')
             cursor.execute(f"ALTER DATABASE {db_name} SET jit TO false;")
             cursor.execute(model_view_migrations.forward_sql())
