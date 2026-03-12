@@ -62,9 +62,15 @@ jobs:
           CDK_DEFAULT_ACCOUNT: ${{ secrets.CDK_DEFAULT_ACCOUNT }}
           CDK_DEFAULT_REGION: us-east-1
         run: |
-          short_sha=$(git rev-parse --short ${{ github.sha }}) && \
-          echo "$short_sha" > src/VERSION.txt && \
-          cat src/VERSION.txt && \
+          # Only generate VERSION.txt if src/, requirements.txt, or Dockerfile changed
+          if git diff HEAD~1..HEAD --name-only | grep -qE '^(src/|requirements\.txt|Dockerfile|config/)'; then
+            short_sha=$(git rev-parse --short ${{ github.sha }})
+            echo "$short_sha" > src/VERSION.txt
+            echo "Code changes detected, VERSION.txt generated"
+            cat src/VERSION.txt
+          else
+            echo "No code changes detected in src/, requirements.txt, or Dockerfile"
+          fi && \
           cd iac && cdk deploy \
             --require-approval never \
             GithubAccess \
@@ -80,7 +86,9 @@ jobs:
           CDK_DEFAULT_ACCOUNT: ${{ secrets.CDK_DEFAULT_ACCOUNT }}
           CDK_DEFAULT_REGION: us-east-1
         run: |
-          echo "${{ github.ref_name }}" > src/VERSION.txt && \
+          # Always generate VERSION.txt for prod releases
+          echo "${{ github.ref_name }}" > src/VERSION.txt
+          echo "PROD release: ${{ github.ref_name }}"
           cat src/VERSION.txt && \
           cd iac && cdk deploy \
             --require-approval never \
