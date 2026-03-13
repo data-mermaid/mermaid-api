@@ -28,3 +28,8 @@ class Command(BaseCommand):
             call_command("export_annotations_parquet")
         except Exception as e:
             self.stderr.write(f"Export annotations parquet error: {str(e)}")
+
+        try:
+            call_command("auto_test_projects")
+        except Exception as e:
+            self.stderr.write(f"Auto test projects error: {str(e)}")
