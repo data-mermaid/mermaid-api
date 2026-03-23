@@ -19,7 +19,7 @@ from ..models import (
     ProjectProfile,
     Site,
 )
-from ..resources.project import ProjectCSVSerializer
+from ..resources.project import ProjectCSVSerializer, annotate_num_sample_units
 from ..resources.sampleunitmethods.beltfishmethod import (
     BeltFishProjectMethodObsView,
     BeltFishProjectMethodSEView,
@@ -344,7 +344,7 @@ def _inject_protocol_viewability(header, data, viewable_levels):
 
 
 def _get_project_metadata(project_ids, viewable_levels):
-    projects = Project.objects.filter(pk__in=project_ids)
+    projects = annotate_num_sample_units(Project.objects.filter(pk__in=project_ids))
     prj_serializer = ProjectCSVSerializer(projects, show_display_fields=True)
     header = [f.display for f in prj_serializer.fields]
     data = [list(r.values()) for r in prj_serializer.data]
