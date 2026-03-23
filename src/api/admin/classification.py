@@ -64,11 +64,29 @@ class LabelMappingResource(resources.ModelResource):
         attribute="growth_form",
         widget=ForeignKeyWidget(GrowthForm, field="id"),
     )
+    benthic_attribute_name = fields.Field(
+        column_name="benthic_attribute_name",
+        attribute="benthic_attribute__name",
+        readonly=True,
+    )
+    growth_form_name = fields.Field(
+        column_name="growth_form_name",
+        attribute="growth_form__name",
+        readonly=True,
+    )
 
     class Meta:
         model = LabelMapping
         import_id_fields = ["provider", "provider_id"]
-        fields = ["provider", "provider_id", "provider_label", "benthic_attribute", "growth_form"]
+        fields = [
+            "provider",
+            "provider_id",
+            "provider_label",
+            "benthic_attribute",
+            "benthic_attribute_name",
+            "growth_form",
+            "growth_form_name",
+        ]
         skip_unchanged = True
         use_transactions = True
 
