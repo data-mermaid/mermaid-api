@@ -63,6 +63,7 @@ class Command(BaseCommand):
         dry_run = options["dry_run"]
         require_updated_by = options["require_updated_by"]
         one_year_ago = timezone.now() - timedelta(days=INACTIVITY_THRESHOLD_DAYS)
+        self.stdout.write("auto_test_projects: starting")
 
         zero_su_projects, candidates = self._build_querysets(require_updated_by, one_year_ago)
         candidate_ids = list(candidates.values_list("id", flat=True))
