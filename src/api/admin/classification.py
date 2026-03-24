@@ -90,6 +90,9 @@ class LabelMappingResource(resources.ModelResource):
         skip_unchanged = True
         use_transactions = True
 
+    def get_import_fields(self):
+        return [f for f in super().get_import_fields() if not f.readonly]
+
     def before_import_row(self, row, **kwargs):
         label = row.get("provider_label") or ""
         normalized = " ".join(unicodedata.normalize("NFKC", label).split())
