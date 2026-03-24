@@ -400,9 +400,13 @@ class ApiStack(Stack):
         coral_reef_training_bucket.grant_read_write(worker.task_definition.task_role)
         # Backup task needs read/write on the primary image bucket for delete_orphaned_images
         # and export_annotations_parquet (dev: mermaid-image-processing, prod: coral-reef-training).
-        coral_reef_training_bucket.grant_read_write(daily_backup_task.task_definition.task_role)
+        # Scoped to the app-managed prefix (IMAGE_S3_PATH = "mermaid/").
+        coral_reef_training_bucket.grant_read_write(
+            daily_backup_task.task_definition.task_role, "mermaid/*"
+        )
         # In prod, mermaid-image-processing (the test-project image bucket) is separate from
         # coral-reef-training; grant the backup task role access to it for orphaned test images.
+        # Scoped to IMAGE_S3_PATH_TEST (ic_s3_path_test = "mermaid-production-test/").
         if config.api.ic_bucket_name_test:
             image_processing_test_bucket = s3.Bucket.from_bucket_name(
                 self,
@@ -410,5 +414,6 @@ class ApiStack(Stack):
                 bucket_name=config.api.ic_bucket_name_test,
             )
             image_processing_test_bucket.grant_read_write(
-                daily_backup_task.task_definition.task_role
+                daily_backup_task.task_definition.task_role,
+                f"{config.api.ic_s3_path_test}*",
             )
