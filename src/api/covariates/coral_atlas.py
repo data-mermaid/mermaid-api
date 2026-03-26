@@ -1,17 +1,23 @@
 import datetime
+import logging
 from concurrent.futures import ThreadPoolExecutor
 from typing import List, Tuple
 
 import requests
+from requests import RequestException
 from django.conf import settings
 from django.utils import timezone
 
 from .base import BaseCovariate, CovariateRequestError
 
 
+logger = logging.getLogger(__name__)
+
+
 class CoralAtlasCovariate(BaseCovariate):
     api_url = "https://allencoralatlas.org"
     num_threads = 3
+    request_timeout_seconds = (3.05, 10)
     BENTHIC_CLASS_TYPE = "benthic"
     GEOMORPHIC_CLASS_TYPE = "geomorphic"
 
@@ -32,12 +38,22 @@ class CoralAtlasCovariate(BaseCovariate):
         headers = {
             "User-Agent": "Mozilla/5.0 (X11; Ubuntu; Linux x86_64; rv:91.0) Gecko/20100101 Firefox/91.0"
         }
-        resp = requests.get(url, headers=headers)
+        try:
+            resp = requests.get(url, headers=headers, timeout=self.request_timeout_seconds)
+        except RequestException as err:
+            logger.warning("Coral Atlas request failed: %s", err)
+            raise CovariateRequestError("Coral Atlas request failed") from err
+
         status_code = resp.status_code
         if status_code != 200:
             raise CovariateRequestError(resp.text)
 
-        data = (resp.json() or {}).get("data")
+        try:
+            data = (resp.json() or {}).get("data")
+        except ValueError as err:
+            logger.warning("Coral Atlas returned invalid JSON")
+            raise CovariateRequestError("Coral Atlas invalid response") from err
+
         stats = (data or {}).get("stats")
         map_assets = (stats or {}).get("map_assets") or []
         output = {"aca_benthic": None, "aca_geomorphic": None}
