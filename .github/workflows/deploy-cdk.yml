@@ -38,6 +38,8 @@ jobs:
           python-version: "^3.12.0"
 
       - uses: actions/checkout@v6.0.2
+        with:
+          fetch-depth: 2
 
       - name: Install CDK
         run: |
@@ -63,7 +65,12 @@ jobs:
           CDK_DEFAULT_REGION: us-east-1
         run: |
           # Only generate VERSION.txt if src/, requirements.txt, or Dockerfile changed
-          if git diff HEAD~1..HEAD --name-only | grep -qE '^(src/|requirements\.txt|Dockerfile|config/)'; then
+          if git rev-parse HEAD~1 >/dev/null 2>&1; then
+            CHANGED=$(git diff HEAD~1..HEAD --name-only)
+          else
+            CHANGED=$(git diff --name-only)
+          fi
+          if echo "$CHANGED" | grep -qE '^(src/|requirements\.txt|Dockerfile|config/)'; then
             short_sha=$(git rev-parse --short ${{ github.sha }})
             echo "$short_sha" > src/VERSION.txt
             echo "Code changes detected, VERSION.txt generated"
