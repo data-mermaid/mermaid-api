@@ -558,8 +558,19 @@ class BaseApiViewSet(MethodAuthenticationMixin, viewsets.ModelViewSet):
         if fields in self._serializer_class_for_fields:
             return self._serializer_class_for_fields[fields]
 
+        # Validate that all requested field names are known to this serializer.
+        valid_fields = set(serializer_class._declared_fields.keys())
+        model = getattr(getattr(serializer_class, "Meta", None), "model", None)
+        if model is not None:
+            valid_fields |= {f.name for f in model._meta.get_fields()}
+        invalid_fields = [f for f in fields if f not in valid_fields]
+        if invalid_fields:
+            raise ValidationError({"fields": f"Invalid field names: {', '.join(invalid_fields)}"})
+
         # Doing this because a simple copy.copy() doesn't work here.
-        meta = type("Meta", (serializer_class.Meta, object), {"fields": fields})
+        # Set fields and explicitly clear exclude to avoid DRF's assertion that
+        # both cannot be set simultaneously (exclude may be inherited from parent Meta).
+        meta = type("Meta", (serializer_class.Meta, object), {"fields": fields, "exclude": None})
         limited_fields_serializer = type(
             "LimitedFieldsSerializer", (serializer_class,), {"Meta": meta}
         )

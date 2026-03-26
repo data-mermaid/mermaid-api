@@ -87,4 +87,5 @@ class ProjectProfileViewSet(BaseProjectApiViewSet):
             raise ValidationError(
                 "You are the last admin of this project! Create another admin before you relinquish."
             )
+        instance.updated_by = self._set_updated_by(self.request)
         instance.delete()
