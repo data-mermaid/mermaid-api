@@ -4,11 +4,13 @@ from aws_cdk import (
     Duration,
     RemovalPolicy,
     Stack,
+    aws_athena as athena,
     aws_autoscaling as autoscale,
     aws_certificatemanager as acm,
     aws_ec2 as ec2,
     aws_ecs as ecs,
     aws_elasticloadbalancingv2 as elb,
+    aws_glue as glue,
     aws_iam as iam,
     aws_kms as kms,
     aws_logs as logs,
@@ -16,8 +18,6 @@ from aws_cdk import (
     aws_route53 as r53,
     aws_s3 as s3,
     aws_secretsmanager as sm,
-    aws_glue as glue,
-    aws_athena as athena,
 )
 from constructs import Construct
 
@@ -102,12 +102,21 @@ class CommonStack(Stack):
                     effect=iam.Effect.ALLOW,
                     actions=[
                         "logs:CreateLogGroup",
-                        "logs:CreateLogStream",
-                        "logs:PutLogEvents",
                         "logs:DescribeLogGroups",
                         "logs:DescribeLogStreams",
                     ],
-                    resources=[vpc_flow_logs_group.log_group_arn],
+                    resources=["*"],
+                )
+            )
+
+            vpc_flow_logs_role.add_to_policy(
+                iam.PolicyStatement(
+                    effect=iam.Effect.ALLOW,
+                    actions=[
+                        "logs:CreateLogStream",
+                        "logs:PutLogEvents",
+                    ],
+                    resources=[f"{vpc_flow_logs_group.log_group_arn}:*"],
                 )
             )
 
@@ -148,11 +157,11 @@ class CommonStack(Stack):
             )
 
             # Create Glue Table
-            glue.CfnTable(
+            vpc_flow_logs_table = glue.CfnTable(
                 self,
                 "VpcFlowLogsTable",
                 catalog_id=self.account,
-                database_name="vpc_flow_logs",
+                database_name=glue_database.ref,
                 table_input=glue.CfnTable.TableInputProperty(
                     name="vpc_flow_logs",
                     storage_descriptor=glue.CfnTable.StorageDescriptorProperty(
@@ -197,12 +206,13 @@ class CommonStack(Stack):
                     ],
                 ),
             )
+            vpc_flow_logs_table.add_dependency(glue_database)
 
-            # Create IAM Role for Athena
+            # Create IAM Role for Athena queries
             athena_role = iam.Role(
                 self,
                 "AthenaRole",
-                assumed_by=iam.ServicePrincipal("athena.amazonaws.com"),
+                assumed_by=iam.AccountPrincipal(self.account),
             )
 
             athena_role.add_to_policy(
@@ -227,7 +237,11 @@ class CommonStack(Stack):
                         "glue:GetTable",
                         "glue:GetPartitions",
                     ],
-                    resources=["*"],
+                    resources=[
+                        f"arn:aws:glue:{self.region}:{self.account}:catalog",
+                        f"arn:aws:glue:{self.region}:{self.account}:database/{glue_database.ref}",
+                        f"arn:aws:glue:{self.region}:{self.account}:table/{glue_database.ref}/*",
+                    ],
                 )
             )
 
@@ -254,8 +268,13 @@ class CommonStack(Stack):
                         "s3:PutObject",
                         "s3:GetObject",
                         "s3:DeleteObject",
+                        "s3:ListBucket",
+                        "s3:GetBucketLocation",
                     ],
-                    resources=[athena_results_bucket.arn_for_objects("*")],
+                    resources=[
+                        athena_results_bucket.bucket_arn,
+                        athena_results_bucket.arn_for_objects("*"),
+                    ],
                 )
             )
 
@@ -264,7 +283,7 @@ class CommonStack(Stack):
                 self,
                 "VpcFlowLogsWorkGroup",
                 name="vpc-flow-logs",
-                recursive_delete_option=True,
+                recursive_delete_option=False,
                 work_group_configuration=athena.CfnWorkGroup.WorkGroupConfigurationProperty(
                     result_configuration=athena.CfnWorkGroup.ResultConfigurationProperty(
                         output_location=f"s3://{athena_results_bucket.bucket_name}/",
