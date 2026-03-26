@@ -56,6 +56,8 @@ class DjangoSettings:
     email_host: str = "smtp.gmail.com"
     email_port: str = "587"
     mc_user: str = "Mermaid"
+    ic_bucket_name_test: str = ""
+    ic_s3_path_test: str = ""
 
 
 @dataclass

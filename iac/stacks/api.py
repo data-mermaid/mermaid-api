@@ -437,3 +437,4 @@ class ApiStack(Stack):
                 daily_backup_task.task_definition.task_role,
                 f"{config.api.ic_s3_path_test}*",
             )
+
