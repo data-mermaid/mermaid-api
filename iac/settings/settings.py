@@ -48,7 +48,7 @@ class DjangoSettings:
     ic_bucket_name: str
 
     # Secrets
-    env_secret: str
+    env_secret_name: str
 
     # Common Attrs (defaults)
     maintenance_mode: str = "False"

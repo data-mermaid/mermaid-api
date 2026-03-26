@@ -30,6 +30,6 @@ PROD_SETTINGS = ProjectSettings(
         ic_bucket_name_test="mermaid-image-processing",
         ic_s3_path_test="mermaid-production-test/",
         # Secrets
-        env_secret="prod/mermaid-api-GUqRBj",
+        env_secret_name="prod/mermaid-api-GUqRBj",
     ),
 )

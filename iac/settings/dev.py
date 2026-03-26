@@ -28,6 +28,6 @@ DEV_SETTINGS = ProjectSettings(
         # Image classification
         ic_bucket_name="mermaid-image-processing",
         # Secrets
-        env_secret="dev/mermaid-api-MzD7rS",
+        env_secret_name="dev/mermaid-api-MzD7rS",
     ),
 )

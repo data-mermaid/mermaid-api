@@ -56,10 +56,10 @@ class ApiStack(Stack):
 
         def get_secret_object(stack: Stack, secret_name: str):
             """Return secret object from name and field"""
-            id = f"{camel_case(secret_name.split('/')[-1])}"
+            construct_id = f"{camel_case(secret_name.split('/')[-1])}"
             return secrets.Secret.from_secret_complete_arn(
                 stack,
-                id=f"SSM-{id}",
+                id=f"SM-{construct_id}",
                 secret_complete_arn=Arn.format(
                     components=ArnComponents(
                         region=stack.region,
@@ -74,7 +74,7 @@ class ApiStack(Stack):
             )
 
         # Secrets
-        env_secret_object = get_secret_object(self, config.api.env_secret)
+        env_secret_object = get_secret_object(self, config.api.env_secret_name)
         self.api_secrets = {
             # Created by CDK
             "DB_USER": ecs.Secret.from_secrets_manager(database.secret, "username"),
