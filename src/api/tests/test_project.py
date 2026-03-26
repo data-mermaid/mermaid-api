@@ -14,13 +14,14 @@ from api.models import (
     ObsBenthicLIT,
     ObsBenthicPhotoQuadrat,
     Profile,
+    Project,
     ProjectProfile,
     QuadratTransect,
     SampleEvent,
 )
 from api.models.classification import Annotation, Image, Point
 from api.signals.classification import post_save_classification_image, pre_image_save
-from api.utils.project import copy_project_and_resources
+from api.utils.project import copy_project_and_resources, delete_project
 
 
 def _apply_mock_settings(mock_obj, project):
@@ -409,5 +410,25 @@ def test_create_demo_suppresses_notifications_on_replacement(api_client1, projec
         _apply_mock_settings(mock_settings, project_profile1.project)
         response = api_client1.post(url)
     assert response.status_code == 200
+    assert Notification.objects.count() == count_before
+    mock_email.assert_not_called()
+
+
+def test_delete_demo_project_suppresses_notifications(project_profile1):
+    """delete_project on a demo project should not create Notification objects or send emails."""
+    profile = project_profile1.profile
+    demo = Project.objects.create(
+        name="Test Demo Delete Notifications",
+        is_demo=True,
+        created_by=profile,
+        updated_by=profile,
+    )
+    ProjectProfile.objects.create(project=demo, profile=profile, role=ProjectProfile.ADMIN)
+
+    count_before = Notification.objects.count()
+    with patch("api.notifications.mermaid_email") as mock_email:
+        delete_project(str(demo.pk))
+
+    assert not Project.objects.filter(pk=demo.pk).exists()
     assert Notification.objects.count() == count_before
     mock_email.assert_not_called()

@@ -60,6 +60,7 @@ INSTALLED_APPS = [
     "rest_framework_gis",
     "django_filters",
     "django_extensions",
+    "import_export",
     "drf_recaptcha",
     "nested_admin",
     "api.apps.ApiConfig",

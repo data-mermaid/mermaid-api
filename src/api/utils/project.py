@@ -6,6 +6,7 @@ import time
 import uuid
 from collections import defaultdict
 from concurrent.futures import ThreadPoolExecutor, as_completed
+from contextlib import ExitStack
 
 import botocore.exceptions
 from django.conf import settings
@@ -55,6 +56,7 @@ from ..models.classification import (
 )
 from . import delete_instance_and_related_objects, get_value, is_uuid, s3 as s3_utils
 from .email import mermaid_email
+from .notification import suppress_all_notifications
 from .q import submit_job
 
 logger = logging.getLogger(__name__)
@@ -1068,12 +1070,16 @@ def delete_project(pk):
         print(f"project {pk} does not exist")
         return
 
-    with transaction.atomic():
-        sid = transaction.savepoint()
-        try:
-            delete_instance_and_related_objects(instance)
-            transaction.savepoint_commit(sid)
-            print("project deleted")
-        except Exception as err:
-            print(f"Delete Project: {err}")
-            transaction.savepoint_rollback(sid)
+    with ExitStack() as stack:
+        if instance.is_demo:
+            stack.enter_context(suppress_all_notifications())
+        with transaction.atomic():
+            sid = transaction.savepoint()
+            try:
+                delete_instance_and_related_objects(instance)
+                transaction.savepoint_commit(sid)
+                print("project deleted")
+            except Exception as err:
+                logger.exception("Delete Project: %s", err)
+                transaction.savepoint_rollback(sid)
+                raise
