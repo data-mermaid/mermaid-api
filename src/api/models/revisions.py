@@ -22,7 +22,7 @@ class Revision(models.Model):
         constraints = [
             models.UniqueConstraint(
                 fields=["table_name", "record_id", "related_to_profile_id"],
-                name="unique_revision_table_record_profile"
+                name="unique_revision_table_record_profile",
             )
         ]
 
@@ -43,6 +43,9 @@ class Revision(models.Model):
 
     def __eq__(self, other):
         return self.revision_num == other.revision_num
+
+    def __hash__(self):
+        return hash(self.revision_num)
 
     @classmethod
     def create(

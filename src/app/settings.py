@@ -60,6 +60,7 @@ INSTALLED_APPS = [
     "rest_framework_gis",
     "django_filters",
     "django_extensions",
+    "import_export",
     "drf_recaptcha",
     "nested_admin",
     "api.apps.ApiConfig",
@@ -88,7 +89,7 @@ MIDDLEWARE = [
 
 DEBUG = False
 TESTING = False
-DEBUG_LEVEL = "ERROR"
+DEBUG_LEVEL = "WARNING"
 CONN_MAX_AGE = 0
 CORS_ALLOW_ALL_ORIGINS = True
 CORS_ALLOW_METHODS = list(default_methods) + ["HEAD"]
@@ -252,6 +253,9 @@ AWS_BACKUP_BUCKET = os.environ.get("AWS_BACKUP_BUCKET")
 AWS_METRICS_BUCKET = "mermaid-user-metrics"
 PUBLIC_BUCKET = os.environ.get("AWS_PUBLIC_BUCKET")
 IMAGE_PROCESSING_BUCKET = os.environ.get("IMAGE_PROCESSING_BUCKET")
+IMAGE_PROCESSING_BUCKET_TEST = (
+    os.environ.get("IMAGE_PROCESSING_BUCKET_TEST") or IMAGE_PROCESSING_BUCKET
+)
 
 # ************
 # ** CLIENT **
@@ -336,6 +340,11 @@ LOGGING = {
             "level": "ERROR",
             "propagate": True,
         },
+        "api": {
+            "handlers": ["console"],
+            "level": "WARNING",
+            "propagate": False,
+        },
         "django.security.DisallowedHost": {
             "handlers": ["null"],
             "propagate": False,
@@ -381,6 +390,7 @@ if ENVIRONMENT == "prod":
     IMAGE_BUCKET_AWS_ACCESS_KEY_ID = os.environ.get("IMAGE_BUCKET_AWS_ACCESS_KEY_ID")
     IMAGE_BUCKET_AWS_SECRET_ACCESS_KEY = os.environ.get("IMAGE_BUCKET_AWS_SECRET_ACCESS_KEY")
 IMAGE_S3_PATH = "mermaid/"
+IMAGE_S3_PATH_TEST = os.environ.get("IMAGE_S3_PATH_TEST") or IMAGE_S3_PATH
 DATA_UPLOAD_MAX_MEMORY_SIZE = 30 * 1024 * 1024  # 30 MB
 FILE_UPLOAD_MAX_MEMORY_SIZE = 15 * 1024 * 1024  # 15 MB
 MAX_IMAGE_PIXELS = 8000 * 8000
@@ -400,6 +410,6 @@ REPORT_S3_SECRET_ACCESS_KEY = os.environ.get("REPORT_S3_SECRET_ACCESS_KEY")
 
 # Demo Projects
 if ENVIRONMENT == "prod":
-    DEMO_PROJECT_ID = "65f312d2-7261-41ce-8e7d-1256b51dd7f0"
+    DEMO_PROJECT_ID = "a5829898-2fc0-45b1-9492-654d4e6f4169"
 else:
     DEMO_PROJECT_ID = "89235586-dd9f-4ad7-9e89-e11ea70c03f4"
