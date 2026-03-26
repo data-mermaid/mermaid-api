@@ -27,6 +27,8 @@ PROD_SETTINGS = ProjectSettings(
         sqs_message_visibility=60,
         # Image classification
         ic_bucket_name="coral-reef-training",
+        ic_bucket_name_test="mermaid-image-processing",
+        ic_s3_path_test="mermaid-production-test/",
         # Secrets
         spa_admin_client_id_name="prod/mermaid-api/spa-admin-client-id-8GJ1mU",
         spa_admin_client_secret_name="prod/mermaid-api/spa-admin-client-secret-5oMItZ",

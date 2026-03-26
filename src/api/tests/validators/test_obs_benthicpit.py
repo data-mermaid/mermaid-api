@@ -119,6 +119,32 @@ def test_benthicpit_interval_sequence_valid(valid_benthic_pit_collect_record):
     assert result.status == OK
 
 
+def test_benthicpit_interval_sequence_floating_point_precision(valid_benthic_pit_collect_record):
+    """
+    Regression test for floating-point accumulation bug.
+    With 10m transect, 0.1m intervals, and 100 observations starting at 0.1,
+    this should NOT report missing intervals like "9.999999999998".
+    """
+    validator = _get_interval_sequence_validator()
+    record = CollectRecordSerializer(valid_benthic_pit_collect_record).data
+
+    # Set up: 10m transect, 0.1m intervals, starting at 0.1
+    record["data"]["benthic_transect"]["len_surveyed"] = 10
+    record["data"]["interval_size"] = 0.1
+    record["data"]["interval_start"] = 0.1
+
+    # Create 100 observations at 0.1, 0.2, 0.3, ..., 10.0
+    observations = []
+    for i in range(1, 101):
+        observations.append({"interval": round(i * 0.1, 1), "attribute": "test"})
+    record["data"]["obs_benthic_pits"] = observations
+
+    result = validator(record)
+    assert (
+        result.status == OK
+    ), f"Expected OK but got {result.status} with context: {result.context}"
+
+
 def test_benthicpit_interval_sequence_missing_intervals(valid_benthic_pit_collect_record):
     validator = _get_interval_sequence_validator()
     record = CollectRecordSerializer(valid_benthic_pit_collect_record).data
