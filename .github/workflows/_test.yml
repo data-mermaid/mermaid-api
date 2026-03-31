@@ -4,11 +4,55 @@ on: workflow_call
 
 permissions:
   contents: read
+
 jobs:
   test:
     runs-on: ubuntu-latest
+
+    services:
+      postgres:
+        image: postgis/postgis:16-3.4
+        env:
+          POSTGRES_DB: mermaid
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: postgres
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U postgres"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+
+    env:
+      SECRET_KEY: ci-test-secret-key
+      DB_NAME: mermaid
+      DB_USER: postgres
+      DB_PASSWORD: postgres
+      DB_HOST: localhost
+      DB_PORT: "5432"
+      DJANGO_SETTINGS_MODULE: app.settings
+      DRF_RECAPTCHA_TESTING: "True"
+
     steps:
       - uses: actions/checkout@v6.0.2
 
-      - name: Run Tests
-        run: echo "No tests"
+      - name: Setup Python
+        uses: actions/setup-python@v6.2.0
+        with:
+          python-version: "3.12"
+
+      - name: Install system dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y --no-install-recommends \
+            libpq-dev \
+            gdal-bin \
+            python3-gdal
+
+      - name: Install Python dependencies
+        run: pip install -r requirements.txt
+
+      - name: Run tests
+        working-directory: src
+        run: pytest --cov --cov-report=term-missing -q
