@@ -318,7 +318,7 @@ class FishIngester(BaseAttributeIngester):
 
         if not allow_multiword_species:
             bad_rows = [
-                i + 2 for i, row in enumerate(rows) if " " in row.get("Species", "").strip()
+                i + 2 for i, row in enumerate(rows) if " " in (row.get("Species") or "").strip()
             ]
             if bad_rows:
                 raise ValueError(
