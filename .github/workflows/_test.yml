@@ -30,6 +30,7 @@ jobs:
 
     env:
       SECRET_KEY: ci-test-secret-key
+      ENV: local
       DB_NAME: mermaid
       DB_USER: postgres
       DB_PASSWORD: postgres
@@ -40,6 +41,9 @@ jobs:
       MERMAID_API_SIGNING_SECRET: ci-test-signing-secret
       MERMAID_API_AUDIENCE: https://ci-test-api.datamermaid.org
       AUTH0_MANAGEMENT_API_AUDIENCE: https://ci-test-management.datamermaid.org
+      AUTH0_DOMAIN: ci-test.auth0.com
+      DEFAULT_DOMAIN_API: localhost:8080
+      DEFAULT_DOMAIN_COLLECT: localhost:8888
       SQS_ENDPOINT_URL: http://localhost:9324
       AWS_ACCESS_KEY_ID: testing
       AWS_SECRET_ACCESS_KEY: testing

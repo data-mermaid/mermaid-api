@@ -1,4 +1,6 @@
 import pytest
+from unittest.mock import patch
+
 from django.conf import settings
 from django.db import connection
 
@@ -25,3 +27,9 @@ def django_db_setup(django_db_setup, django_db_blocker):
 @pytest.fixture(autouse=True)
 def db_setup(db):
     pass
+
+
+@pytest.fixture(autouse=True)
+def no_s3_cache():
+    with patch("api.utils.cached.exists", return_value=False):
+        yield
