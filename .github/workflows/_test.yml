@@ -55,4 +55,4 @@ jobs:
 
       - name: Run tests
         working-directory: src
-        run: pytest --cov --cov-report=term-missing -q
+        run: pytest --no-migrations --cov --cov-report=term-missing -q
