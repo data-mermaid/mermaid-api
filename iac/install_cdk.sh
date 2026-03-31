@@ -10,3 +10,6 @@ npm install -g aws-cdk@$CDK_CLI_VERSION
 echo "Installing AWS CDK Python Libs"
 pip install aws-cdk-lib==$CDK_LIB_VERSION
 
+echo "Installing cdk-nag"
+pip install cdk-nag
+
