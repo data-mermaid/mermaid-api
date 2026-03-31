@@ -2,6 +2,8 @@ from decimal import ROUND_HALF_DOWN, Decimal, localcontext
 
 
 def to_number(string, max_digits=None, precision=None):
+    if string == "" or string is None:
+        return None
     try:
         if max_digits is None or precision is None:
             num = float(string)
@@ -11,7 +13,7 @@ def to_number(string, max_digits=None, precision=None):
                 ctx.prec = max_digits
                 places = Decimal(10) ** (precision * -1)
                 return Decimal(string).quantize(places, ROUND_HALF_DOWN)
-    except (TypeError, ValueError) as _:
+    except (TypeError, ValueError, ArithmeticError) as _:
         return None
 
 
