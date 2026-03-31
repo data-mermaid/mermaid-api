@@ -14,6 +14,7 @@ permissions:
   actions: write
   contents: read
   id-token: write
+  pull-requests: write
 
 env:
   ENV: dev
@@ -56,16 +57,66 @@ jobs:
           role-skip-session-tagging: true
 
       - name: CDK Nag
+        id: cdk-nag
         env:
           CDK_DEFAULT_ACCOUNT: ${{ secrets.CDK_DEFAULT_ACCOUNT }}
           PYTHONPATH: ${{ github.workspace }}
         run: |
+          set -o pipefail
           cd iac && cdk synth --quiet 2>&1 | tee /tmp/cdk-nag.log
           if grep -q '^\[Error' /tmp/cdk-nag.log; then
-            echo "::error::cdk-nag found unsuppressed errors"
-            grep '^\[Error' /tmp/cdk-nag.log
-            exit 1
+            echo "has_errors=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "has_errors=false" >> "$GITHUB_OUTPUT"
           fi
+
+      - name: Post CDK Nag results to PR
+        if: always() && steps.cdk-nag.outcome == 'success'
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const fs = require('fs');
+            const log = fs.readFileSync('/tmp/cdk-nag.log', 'utf8');
+            const errors = log.split('\n').filter(l => l.startsWith('[Error'));
+            const warnings = log.split('\n').filter(l => l.startsWith('[Warning'));
+            let body = '## cdk-nag report\n\n';
+            if (errors.length === 0) {
+              body += ':white_check_mark: **No unsuppressed errors.**\n';
+            } else {
+              body += `:x: **${errors.length} unsuppressed error(s):**\n\n`;
+              body += '```\n' + errors.join('\n') + '\n```\n';
+            }
+            if (warnings.length > 0) {
+              body += `\n:warning: ${warnings.length} warning(s)\n`;
+            }
+            body += '\n---\n*See `iac/nag_suppressions.py` to add suppressions for accepted risks.*';
+            const { data: comments } = await github.rest.issues.listComments({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              issue_number: context.issue.number,
+            });
+            const existing = comments.find(c => c.body.includes('## cdk-nag report'));
+            if (existing) {
+              await github.rest.issues.updateComment({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                comment_id: existing.id,
+                body,
+              });
+            } else {
+              await github.rest.issues.createComment({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                issue_number: context.issue.number,
+                body,
+              });
+            }
+
+      - name: Fail on CDK Nag errors
+        if: steps.cdk-nag.outputs.has_errors == 'true'
+        run: |
+          echo "::error::cdk-nag found unsuppressed errors — see PR comment for details"
+          exit 1
 
       - name: CDK Diff
         env:

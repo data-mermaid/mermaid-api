@@ -1,6 +1,9 @@
 """
 Centralized cdk-nag suppressions for all stacks.
 
+Suppressions are resource-scoped (by construct path) so that new resources
+added to a stack are NOT automatically covered — the PR gate will catch them.
+
 Each suppression documents the reason and whether the finding is:
   - ACCEPTED: The current configuration is intentional and appropriate.
   - TODO: Should be addressed in a future ticket.
@@ -17,18 +20,28 @@ ACCEPTED = "ACCEPTED"
 TODO = "TODO"
 
 
-def _suppress_stack(stack: Stack, suppressions: list[NagPackSuppression]) -> None:
-    NagSuppressions.add_stack_suppressions(stack, suppressions)
+def _suppress_by_path(
+    stack: Stack,
+    path: str,
+    suppressions: list[NagPackSuppression],
+) -> None:
+    """Suppress findings on a specific construct by its path relative to the stack."""
+    NagSuppressions.add_resource_suppressions_by_path(
+        stack,
+        f"/{stack.stack_name}/{path}",
+        suppressions,
+    )
 
 
 # ---------------------------------------------------------------------------
-# Per-stack suppression functions
+# GithubAccessStack
 # ---------------------------------------------------------------------------
 
 
 def suppress_github_access(stack: Stack) -> None:
-    _suppress_stack(
+    _suppress_by_path(
         stack,
+        "GithubAccessRole/Resource",
         [
             NagPackSuppression(
                 id="AwsSolutions-IAM4",
@@ -42,22 +55,42 @@ def suppress_github_access(stack: Stack) -> None:
     )
 
 
+# ---------------------------------------------------------------------------
+# CommonStack
+# ---------------------------------------------------------------------------
+
+
 def suppress_common(stack: Stack) -> None:
-    _suppress_stack(
+    # --- VPC ---
+    _suppress_by_path(
         stack,
+        "Vpc/Resource",
         [
-            # --- VPC ---
             NagPackSuppression(
                 id="AwsSolutions-VPC7",
                 reason=f"{TODO}: Enable VPC Flow Logs for network traffic auditing.",
             ),
-            # --- Secrets Manager ---
-            NagPackSuppression(
-                id="AwsSolutions-SMG4",
-                reason=f"{TODO}: Configure automatic rotation for DB credentials "
-                "and report S3 user secret.",
-            ),
-            # --- RDS ---
+        ],
+    )
+
+    # --- Secrets Manager ---
+    for secret_path in ["DBCredentialsSecret/Resource", "ReportS3UserSecret/Resource"]:
+        _suppress_by_path(
+            stack,
+            secret_path,
+            [
+                NagPackSuppression(
+                    id="AwsSolutions-SMG4",
+                    reason=f"{TODO}: Configure automatic rotation for this secret.",
+                ),
+            ],
+        )
+
+    # --- RDS ---
+    _suppress_by_path(
+        stack,
+        "PostgresRdsV2/Resource",
+        [
             NagPackSuppression(
                 id="AwsSolutions-RDS2",
                 reason=f"{TODO}: Enable storage encryption on the RDS instance. "
@@ -73,28 +106,66 @@ def suppress_common(stack: Stack) -> None:
                 reason=f"{ACCEPTED}: Port obfuscation provides minimal security "
                 "benefit; the database is in a private isolated subnet.",
             ),
-            # --- S3 ---
-            NagPackSuppression(
-                id="AwsSolutions-S1",
-                reason=f"{TODO}: Enable server access logging on all S3 buckets.",
-            ),
-            NagPackSuppression(
-                id="AwsSolutions-S10",
-                reason=f"{TODO}: Add aws:SecureTransport condition to bucket policies.",
-            ),
-            # --- KMS ---
+        ],
+    )
+
+    # --- S3 Buckets ---
+    s3_bucket_paths = [
+        "MermaidApiBackupBucket/Resource",
+        "MermaidApiConfigBucket/Resource",
+        "MermaidApiDataBucket/Resource",
+        "MermaidImageProcessingBackupBucket/Resource",
+    ]
+    for bucket_path in s3_bucket_paths:
+        _suppress_by_path(
+            stack,
+            bucket_path,
+            [
+                NagPackSuppression(
+                    id="AwsSolutions-S1",
+                    reason=f"{TODO}: Enable server access logging on this S3 bucket.",
+                ),
+                NagPackSuppression(
+                    id="AwsSolutions-S10",
+                    reason=f"{TODO}: Add aws:SecureTransport condition to the bucket policy.",
+                ),
+            ],
+        )
+
+    # --- KMS ---
+    _suppress_by_path(
+        stack,
+        "ecsExecKmsKey/Resource",
+        [
             NagPackSuppression(
                 id="AwsSolutions-KMS5",
                 reason=f"{TODO}: Enable automatic key rotation on the ECS exec KMS key.",
             ),
-            # --- IAM wildcards (CDK-generated grants) ---
+        ],
+    )
+
+    # --- ASG Instance role (CDK-managed ECS instance policy) ---
+    _suppress_by_path(
+        stack,
+        "AsgInstance/DefaultPolicy/Resource",
+        [
             NagPackSuppression(
                 id="AwsSolutions-IAM5",
                 reason=f"{ACCEPTED}: Wildcard permissions are generated by CDK "
-                "grant helpers (e.g. bucket.grant_read_write) and are scoped "
-                "to specific resource ARNs.",
+                "for the ECS container instance role (ecs:Submit*, Resource::*).",
+                applies_to=[
+                    "Action::ecs:Submit*",
+                    "Resource::*",
+                ],
             ),
-            # --- ASG / EC2 ---
+        ],
+    )
+
+    # --- ASG ---
+    _suppress_by_path(
+        stack,
+        "ASG2/ASG",
+        [
             NagPackSuppression(
                 id="AwsSolutions-EC26",
                 reason=f"{TODO}: Enable EBS encryption on the ASG launch template.",
@@ -103,7 +174,14 @@ def suppress_common(stack: Stack) -> None:
                 id="AwsSolutions-AS3",
                 reason=f"{TODO}: Configure SNS notifications for all ASG scaling events.",
             ),
-            # --- Lambda (CDK-managed ASG drain hook) ---
+        ],
+    )
+
+    # --- CDK-managed ASG drain-hook Lambda ---
+    _suppress_by_path(
+        stack,
+        "ASG2/DrainECSHook/Function/ServiceRole/Resource",
+        [
             NagPackSuppression(
                 id="AwsSolutions-IAM4",
                 reason=f"{ACCEPTED}: AWSLambdaBasicExecutionRole is the standard "
@@ -112,22 +190,58 @@ def suppress_common(stack: Stack) -> None:
                     "Policy::arn:<AWS::Partition>:iam::aws:policy/service-role/AWSLambdaBasicExecutionRole",
                 ],
             ),
+        ],
+    )
+    _suppress_by_path(
+        stack,
+        "ASG2/DrainECSHook/Function/ServiceRole/DefaultPolicy/Resource",
+        [
+            NagPackSuppression(
+                id="AwsSolutions-IAM5",
+                reason=f"{ACCEPTED}: Wildcard permissions for the drain-hook Lambda "
+                "are CDK-generated to manage the ASG lifecycle.",
+            ),
+        ],
+    )
+    _suppress_by_path(
+        stack,
+        "ASG2/DrainECSHook/Function/Resource",
+        [
             NagPackSuppression(
                 id="AwsSolutions-L1",
                 reason=f"{ACCEPTED}: The drain-hook Lambda runtime is managed by "
                 "the CDK ECS construct and auto-updated on CDK upgrades.",
             ),
-            # --- SNS ---
+        ],
+    )
+
+    # --- ASG Lifecycle SNS Topic ---
+    _suppress_by_path(
+        stack,
+        "ASG2/LifecycleHookDrainHook/Topic/Resource",
+        [
             NagPackSuppression(
                 id="AwsSolutions-SNS3",
-                reason=f"{TODO}: Add aws:SecureTransport condition to SNS topic policies.",
+                reason=f"{TODO}: Add aws:SecureTransport condition to the SNS topic policy.",
             ),
-            # --- ELB ---
+        ],
+    )
+
+    # --- ALB ---
+    _suppress_by_path(
+        stack,
+        "MermaidApiLoadBalancer/Resource",
+        [
             NagPackSuppression(
                 id="AwsSolutions-ELB2",
                 reason=f"{TODO}: Enable access logging on the Application Load Balancer.",
             ),
-            # --- ALB Security Group ---
+        ],
+    )
+    _suppress_by_path(
+        stack,
+        "MermaidApiLoadBalancer/SecurityGroup/Resource",
+        [
             NagPackSuppression(
                 id="AwsSolutions-EC23",
                 reason=f"{ACCEPTED}: The ALB is internet-facing and must allow "
@@ -136,19 +250,77 @@ def suppress_common(stack: Stack) -> None:
         ],
     )
 
-
-def suppress_static_site(stack: Stack) -> None:
-    _suppress_stack(
+    # --- VPC Endpoint SG (validation failure - intrinsic ref) ---
+    _suppress_by_path(
         stack,
+        "VPCEndpointSagemaker/Resource",
         [
             NagPackSuppression(
-                id="AwsSolutions-S1",
-                reason=f"{TODO}: Enable server access logging on the static site bucket.",
+                id="CdkNagValidationFailure",
+                reason=f"{ACCEPTED}: AwsSolutions-EC23 cannot validate CIDR "
+                "from intrinsic Fn::GetAtt on VPC CidrBlock.",
             ),
+        ],
+    )
+
+    # --- CICD Bot / CDK Role Policy ---
+    _suppress_by_path(
+        stack,
+        "CDKRolePolicy/Resource",
+        [
             NagPackSuppression(
-                id="AwsSolutions-S10",
-                reason=f"{TODO}: Add aws:SecureTransport condition to the bucket policy.",
+                id="AwsSolutions-IAM5",
+                reason=f"{ACCEPTED}: Wildcard on cdk-* roles is required for CDK "
+                "bootstrapped deployments via the CICD_Bot user.",
+                applies_to=[
+                    "Resource::arn:aws:iam::554812291621:role/cdk-*",
+                ],
             ),
+        ],
+    )
+
+    # --- Report S3 User Policy ---
+    _suppress_by_path(
+        stack,
+        "ReportS3UserPolicy/Resource",
+        [
+            NagPackSuppression(
+                id="AwsSolutions-IAM5",
+                reason=f"{ACCEPTED}: Wildcard on object key (/*) is required for "
+                "the report user to read/write objects in the data bucket.",
+            ),
+        ],
+    )
+
+
+# ---------------------------------------------------------------------------
+# StaticSiteStack
+# ---------------------------------------------------------------------------
+
+
+def suppress_static_site(stack: Stack) -> None:
+    # --- S3 Bucket ---
+    for path in ["Bucket/Resource", "Bucket/Policy/Resource"]:
+        _suppress_by_path(
+            stack,
+            path,
+            [
+                NagPackSuppression(
+                    id="AwsSolutions-S1",
+                    reason=f"{TODO}: Enable server access logging on the static site bucket.",
+                ),
+                NagPackSuppression(
+                    id="AwsSolutions-S10",
+                    reason=f"{TODO}: Add aws:SecureTransport condition to the bucket policy.",
+                ),
+            ],
+        )
+
+    # --- CloudFront Distribution ---
+    _suppress_by_path(
+        stack,
+        "Distribution/Resource",
+        [
             NagPackSuppression(
                 id="AwsSolutions-CFR1",
                 reason=f"{ACCEPTED}: Geo restrictions are not required — "
@@ -171,40 +343,97 @@ def suppress_static_site(stack: Stack) -> None:
     )
 
 
+# ---------------------------------------------------------------------------
+# ApiStack
+# ---------------------------------------------------------------------------
+
+# Common IAM5 suppression for CDK-generated S3/SQS grant wildcards on task roles.
+_API_IAM5_SUPPRESSION = NagPackSuppression(
+    id="AwsSolutions-IAM5",
+    reason=f"{ACCEPTED}: Wildcard permissions are generated by CDK grant helpers "
+    "(grant_read_write, grant_send_messages) and scoped to specific bucket/log-group ARNs.",
+)
+
+_API_ECS2_SUPPRESSION = NagPackSuppression(
+    id="AwsSolutions-ECS2",
+    reason=f"{ACCEPTED}: Only non-sensitive configuration values "
+    "(ENV_ID, BRANCH_NAME, queue URLs, etc.) are passed as "
+    "environment variables. Secrets use Secrets Manager.",
+)
+
+_API_EXEC_ROLE_IAM5 = NagPackSuppression(
+    id="AwsSolutions-IAM5",
+    reason=f"{ACCEPTED}: Execution role wildcard (Resource::*) is CDK-generated "
+    "for pulling ECR images and reading Secrets Manager.",
+)
+
+
 def suppress_api(stack: Stack) -> None:
-    _suppress_stack(
+    # Task definition groups: each has TaskRole, Resource, and ExecutionRole paths
+    task_def_ids = [
+        "ScheduledBackupTaskDef",
+        "SummaryCacheTaskDef",
+        "ApiTaskDefinition",
+        "General/Worker/QueueProcessingTaskDef",
+        "ImageProcess/Worker/QueueProcessingTaskDef",
+    ]
+
+    for td in task_def_ids:
+        # Task role default policy (IAM5 wildcards from CDK grants)
+        _suppress_by_path(stack, f"{td}/TaskRole/DefaultPolicy/Resource", [_API_IAM5_SUPPRESSION])
+        # Task definition resource (ECS2 - env vars)
+        _suppress_by_path(stack, f"{td}/Resource", [_API_ECS2_SUPPRESSION])
+        # Execution role default policy (IAM5 - ECR/Secrets wildcard)
+        _suppress_by_path(stack, f"{td}/ExecutionRole/DefaultPolicy/Resource", [_API_EXEC_ROLE_IAM5])
+
+    # Scheduled backup events role
+    _suppress_by_path(
         stack,
+        "ScheduledBackupTaskDef/EventsRole/DefaultPolicy/Resource",
         [
-            # --- IAM wildcards (CDK grants) ---
             NagPackSuppression(
                 id="AwsSolutions-IAM5",
-                reason=f"{ACCEPTED}: Wildcard permissions are generated by CDK "
-                "grant helpers and are scoped to specific bucket/log-group ARNs.",
-            ),
-            # --- ECS env vars ---
-            NagPackSuppression(
-                id="AwsSolutions-ECS2",
-                reason=f"{ACCEPTED}: Only non-sensitive configuration values "
-                "(ENV_ID, BRANCH_NAME, queue URLs, etc.) are passed as "
-                "environment variables. Secrets use Secrets Manager.",
-            ),
-            # --- SQS ---
-            NagPackSuppression(
-                id="AwsSolutions-SQS4",
-                reason=f"{TODO}: Add aws:SecureTransport condition to SQS queue policies.",
-            ),
-            # --- SNS ---
-            NagPackSuppression(
-                id="AwsSolutions-SNS3",
-                reason=f"{TODO}: Add aws:SecureTransport condition to SNS topic policies.",
+                reason=f"{ACCEPTED}: Events role wildcard is CDK-generated for "
+                "launching scheduled ECS tasks in the cluster.",
             ),
         ],
     )
 
+    # --- SQS Queues (General + ImageProcess workers) ---
+    for worker_id in ["General", "ImageProcess"]:
+        for queue_path in ["ECSWorker/DLQ/Resource", "ECSWorker/Queue/Resource"]:
+            _suppress_by_path(
+                stack,
+                f"{worker_id}/{queue_path}",
+                [
+                    NagPackSuppression(
+                        id="AwsSolutions-SQS4",
+                        reason=f"{TODO}: Add aws:SecureTransport condition to the SQS queue policy.",
+                    ),
+                ],
+            )
+        _suppress_by_path(
+            stack,
+            f"{worker_id}/ECSWorker/Topic/Resource",
+            [
+                NagPackSuppression(
+                    id="AwsSolutions-SNS3",
+                    reason=f"{TODO}: Add aws:SecureTransport condition to the SNS topic policy.",
+                ),
+            ],
+        )
 
-def suppress_sagemaker(stack: Stack) -> None:
-    _suppress_stack(
+
+# ---------------------------------------------------------------------------
+# SagemakerStack (dev only)
+# ---------------------------------------------------------------------------
+
+
+def suppress_sagemaker(stack: Stack, prefix: str) -> None:
+    # --- SageMaker Execution Role ---
+    _suppress_by_path(
         stack,
+        f"{prefix}SagemakerExecutionRole/Resource",
         [
             NagPackSuppression(
                 id="AwsSolutions-IAM4",
@@ -215,18 +444,53 @@ def suppress_sagemaker(stack: Stack) -> None:
                     "Policy::arn:aws:iam::aws:policy/SageMakerStudioFullAccess",
                 ],
             ),
+        ],
+    )
+    _suppress_by_path(
+        stack,
+        f"{prefix}SagemakerExecutionRole/DefaultPolicy/Resource",
+        [
             NagPackSuppression(
                 id="AwsSolutions-IAM5",
                 reason=f"{ACCEPTED}: Wildcard permissions are generated by CDK "
-                "grant helpers and scoped to specific bucket ARNs. SageMaker "
-                "and Glue wildcards are required for interactive notebook sessions.",
-            ),
-            NagPackSuppression(
-                id="AwsSolutions-S1",
-                reason=f"{TODO}: Enable server access logging on SageMaker S3 buckets.",
+                "grant helpers and scoped to specific bucket ARNs.",
             ),
         ],
     )
+
+    # --- Inline IAM policies ---
+    for policy_path in [
+        "MlflowRolePolicy/Resource",
+        "SagemakerStartSessionPolicy/Resource",
+        "GlueSessionPolicy/Resource",
+    ]:
+        _suppress_by_path(
+            stack,
+            policy_path,
+            [
+                NagPackSuppression(
+                    id="AwsSolutions-IAM5",
+                    reason=f"{ACCEPTED}: SageMaker, MLflow, and Glue wildcards are "
+                    "required for interactive notebook sessions.",
+                ),
+            ],
+        )
+
+    # --- SageMaker S3 Buckets ---
+    for bucket_path in [
+        f"{prefix}SourcesBucket/Resource",
+        f"{prefix}DataBucket/Resource",
+    ]:
+        _suppress_by_path(
+            stack,
+            bucket_path,
+            [
+                NagPackSuppression(
+                    id="AwsSolutions-S1",
+                    reason=f"{TODO}: Enable server access logging on this SageMaker S3 bucket.",
+                ),
+            ],
+        )
 
 
 # ---------------------------------------------------------------------------
@@ -252,4 +516,4 @@ def apply_all(
     for api_stack in [dev_api_stack, prod_api_stack]:
         suppress_api(api_stack)
 
-    suppress_sagemaker(dev_sagemaker_stack)
+    suppress_sagemaker(dev_sagemaker_stack, prefix="dev")
