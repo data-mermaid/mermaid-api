@@ -239,6 +239,12 @@ class BenthicIngester(BaseAttributeIngester):
             if dry_run or not is_successful:
                 transaction.set_rollback(True)
 
+        if not is_successful:
+            self.log = [e for e in self.log if e.startswith("ERROR")]
+            self.write_log("ROLLED_BACK", "All changes rolled back due to errors above.")
+        elif dry_run:
+            self.write_log("DRY_RUN", "No changes committed.")
+
         return is_successful, self.log
 
 
@@ -378,6 +384,12 @@ class FishIngester(BaseAttributeIngester):
 
             if dry_run or not is_successful:
                 transaction.set_rollback(True)
+
+        if not is_successful:
+            self.log = [e for e in self.log if e.startswith("ERROR")]
+            self.write_log("ROLLED_BACK", "All changes rolled back due to errors above.")
+        elif dry_run:
+            self.write_log("DRY_RUN", "No changes committed.")
 
         return is_successful, self.log
 

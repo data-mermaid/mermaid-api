@@ -13,7 +13,7 @@ def to_number(string, max_digits=None, precision=None):
                 ctx.prec = max_digits
                 places = Decimal(10) ** (precision * -1)
                 return Decimal(string).quantize(places, ROUND_HALF_DOWN)
-    except (TypeError, ValueError, ArithmeticError) as _:
+    except (TypeError, ValueError, ArithmeticError):
         return None
 
 
