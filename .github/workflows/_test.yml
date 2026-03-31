@@ -23,6 +23,10 @@ jobs:
           --health-interval 10s
           --health-timeout 5s
           --health-retries 5
+      sqs:
+        image: softwaremill/elasticmq-native
+        ports:
+          - 9324:9324
 
     env:
       SECRET_KEY: ci-test-secret-key
@@ -33,6 +37,11 @@ jobs:
       DB_PORT: "5432"
       DJANGO_SETTINGS_MODULE: app.settings
       DRF_RECAPTCHA_TESTING: "True"
+      MERMAID_API_SIGNING_SECRET: ci-test-signing-secret
+      SQS_ENDPOINT_URL: http://localhost:9324
+      AWS_ACCESS_KEY_ID: testing
+      AWS_SECRET_ACCESS_KEY: testing
+      AWS_REGION: us-east-1
 
     steps:
       - uses: actions/checkout@v6.0.2
