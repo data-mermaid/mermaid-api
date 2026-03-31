@@ -55,6 +55,18 @@ jobs:
           aws-region: us-east-1
           role-skip-session-tagging: true
 
+      - name: CDK Nag
+        env:
+          CDK_DEFAULT_ACCOUNT: ${{ secrets.CDK_DEFAULT_ACCOUNT }}
+          PYTHONPATH: ${{ github.workspace }}
+        run: |
+          cd iac && cdk synth --quiet 2>&1 | tee /tmp/cdk-nag.log
+          if grep -q '^\[Error' /tmp/cdk-nag.log; then
+            echo "::error::cdk-nag found unsuppressed errors"
+            grep '^\[Error' /tmp/cdk-nag.log
+            exit 1
+          fi
+
       - name: CDK Diff
         env:
           CDK_DEFAULT_ACCOUNT: ${{ secrets.CDK_DEFAULT_ACCOUNT }}
