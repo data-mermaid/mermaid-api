@@ -38,6 +38,8 @@ jobs:
       DJANGO_SETTINGS_MODULE: app.settings
       DRF_RECAPTCHA_TESTING: "True"
       MERMAID_API_SIGNING_SECRET: ci-test-signing-secret
+      MERMAID_API_AUDIENCE: https://ci-test-api.datamermaid.org
+      AUTH0_MANAGEMENT_API_AUDIENCE: https://ci-test-management.datamermaid.org
       SQS_ENDPOINT_URL: http://localhost:9324
       AWS_ACCESS_KEY_ID: testing
       AWS_SECRET_ACCESS_KEY: testing
