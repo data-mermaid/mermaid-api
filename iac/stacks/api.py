@@ -55,7 +55,7 @@ class ApiStack(Stack):
         sys_email = os.environ.get("SYS_EMAIL") or None
 
         def get_secret_object(stack: Stack, secret_name: str):
-            """Return secret object from name and field"""
+            """Return secret object from secret name"""
             construct_id = f"{camel_case(secret_name.split('/')[-1])}"
             return secrets.Secret.from_secret_complete_arn(
                 stack,
