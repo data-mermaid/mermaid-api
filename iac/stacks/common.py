@@ -67,6 +67,7 @@ class CommonStack(Stack):
                 removal_policy=RemovalPolicy.RETAIN,
                 public_read_access=False,
                 block_public_access=s3.BlockPublicAccess.BLOCK_ALL,
+                encryption=s3.BucketEncryption.S3_MANAGED,
                 lifecycle_rules=[
                     s3.LifecycleRule(
                         id="VpcFlowLogsArchive",
@@ -88,6 +89,7 @@ class CommonStack(Stack):
                 "VpcFlowLogsGroup",
                 log_group_name="/aws/vpc/flowlogs/mermaid",
                 retention=logs.RetentionDays.ONE_MONTH,
+                removal_policy=RemovalPolicy.RETAIN,
             )
 
             # Create IAM Role for VPC Flow Logs
@@ -241,6 +243,21 @@ class CommonStack(Stack):
                         f"arn:aws:glue:{self.region}:{self.account}:catalog",
                         f"arn:aws:glue:{self.region}:{self.account}:database/{glue_database.ref}",
                         f"arn:aws:glue:{self.region}:{self.account}:table/{glue_database.ref}/*",
+                    ],
+                )
+            )
+
+            athena_role.add_to_policy(
+                iam.PolicyStatement(
+                    effect=iam.Effect.ALLOW,
+                    actions=[
+                        "athena:StartQueryExecution",
+                        "athena:GetQueryExecution",
+                        "athena:GetQueryResults",
+                        "athena:GetWorkGroup",
+                    ],
+                    resources=[
+                        f"arn:aws:athena:{self.region}:{self.account}:workgroup/vpc-flow-logs",
                     ],
                 )
             )
