@@ -181,6 +181,7 @@ class ApiStack(Stack):
             "ApiImage",
             directory="../",
             file="Dockerfile",
+            target="runtime",
         )
 
         # --- Scheduled Backup Task ---
