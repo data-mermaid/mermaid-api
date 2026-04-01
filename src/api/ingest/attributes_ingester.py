@@ -27,13 +27,15 @@ class BaseAttributeIngester(object):
 
     def _map_field(self, key, val, field_map, lookups, casts):
         val = val.strip()
+        if val.upper() == "NA":
+            val = ""
         mapped_key = field_map.get(key)
 
         if mapped_key in lookups:
             if val:
-                _val = lookups[field_map[key]][val]
+                _val = lookups[field_map[key]][val.lower()]
             else:
-                _val = val
+                _val = None
         else:
             _val = val
 
@@ -64,9 +66,14 @@ class BaseAttributeIngester(object):
         self.log.append(log_msg)
 
     def _update_regions(self, attribute, region_names, is_combined=True):
-        new_regions = [
-            self.regions.get(region.strip().lower()) for region in region_names.split(",")
-        ]
+        if not region_names:
+            return False, None
+        new_regions = []
+        for region in region_names.split(","):
+            region_name = region.strip().lower()
+            if region_name not in self.regions:
+                raise ValueError(f"Unknown region: '{region.strip()}'")
+            new_regions.append(self.regions[region_name])
 
         existing_regions = set(attribute.regions.all())
         if existing_regions == set(new_regions):
@@ -304,12 +311,24 @@ class FishIngester(BaseAttributeIngester):
             functional_group=fish_group_functions,
         )
 
-    def ingest(self, dry_run=False):
+    def ingest(self, dry_run=False, allow_multiword_species=False):
         self.log = []
         csvreader = csv.DictReader(self._file, delimiter=",")
+        rows = list(csvreader)
+
+        if not allow_multiword_species:
+            bad_rows = [
+                i + 2 for i, row in enumerate(rows) if " " in (row.get("Species") or "").strip()
+            ]
+            if bad_rows:
+                raise ValueError(
+                    f"Species column contains spaces (genus prefix?) in rows: {bad_rows}. "
+                    f"Expected single-word species epithets. Use --allow-multiword-species to override."
+                )
+
         n = 2
         is_successful = True
-        for row in csvreader:
+        for row in rows:
             try:
                 with transaction.atomic():
                     sid = transaction.savepoint()
