@@ -13,6 +13,7 @@ from aws_cdk import (
     aws_ecs as ecs,
     aws_ecs_patterns as ecs_patterns,
     aws_elasticloadbalancingv2 as elb,
+    aws_iam as iam,
     aws_logs as logs,
     aws_rds as rds,
     aws_route53 as r53,
@@ -22,6 +23,7 @@ from aws_cdk import (
 )
 from constructs import Construct
 from settings.settings import ProjectSettings
+from stacks.constructs.dashboard import MonitoringDashboard
 from stacks.constructs.worker import QueueWorker
 
 
@@ -173,7 +175,37 @@ class ApiStack(Stack):
             "USE_FIFO": use_fifo_queues,
             "SQS_QUEUE_NAME": sqs_queue_name,
             "IMAGE_SQS_QUEUE_NAME": image_sqs_queue_name,
+            # OpenTelemetry / X-Ray
+            "OTEL_TRACES_EXPORTER": "otlp",
+            "OTEL_EXPORTER_OTLP_ENDPOINT": "http://localhost:4317",
+            "OTEL_SERVICE_NAME": f"mermaid-api-{config.env_id}",
+            "OTEL_PROPAGATORS": "xray",
+            "OTEL_PYTHON_ID_GENERATOR": "xray",
         }
+
+        adot_image = ecs.ContainerImage.from_registry(
+            "public.ecr.aws/aws-observability/aws-otel-collector:latest"
+        )
+        xray_policy = iam.ManagedPolicy.from_aws_managed_policy_name(
+            "AWSXRayDaemonWriteAccess"
+        )
+
+        def add_adot_sidecar(task_def: ecs.Ec2TaskDefinition, name: str) -> None:
+            task_def.add_container(
+                f"{name}AdotCollector",
+                image=adot_image,
+                cpu=32,
+                memory_limit_mib=256,
+                essential=False,
+                command=["--config=/etc/ecs/ecs-xray.yaml"],
+                port_mappings=[
+                    ecs.PortMapping(container_port=4317, protocol=ecs.Protocol.TCP),
+                    ecs.PortMapping(container_port=4318, protocol=ecs.Protocol.TCP),
+                    ecs.PortMapping(container_port=2000, protocol=ecs.Protocol.UDP),
+                ],
+                logging=ecs.LogDrivers.aws_logs(stream_prefix=f"{name}-adot"),
+            )
+            task_def.task_role.add_managed_policy(xray_policy)
 
         # build image asset to be shared with API and Backup Task
         image_asset = ecr_assets.DockerImageAsset(
@@ -197,9 +229,11 @@ class ApiStack(Stack):
             memory_limit_mib=config.api.backup_memory,
             secrets=self.api_secrets,
             environment=environment,
-            command=["python", "manage.py", "daily_tasks"],
+            command=["opentelemetry-instrument", "python", "manage.py", "daily_tasks"],
             logging=ecs.LogDrivers.aws_logs(stream_prefix="ScheduledBackupTask"),
         )
+        add_adot_sidecar(daily_task_def, "Backup")
+
         daily_backup_task = ecs_patterns.ScheduledEc2Task(
             self,
             "ScheduledBackupTask",
@@ -230,9 +264,11 @@ class ApiStack(Stack):
             memory_limit_mib=config.api.summary_memory,
             secrets=self.api_secrets,
             environment=environment,
-            command=["python", "manage.py", "process_summaries"],
+            command=["opentelemetry-instrument", "python", "manage.py", "process_summaries"],
             logging=ecs.LogDrivers.aws_logs(stream_prefix="SummaryCacheUpdateContainer"),
         )
+        add_adot_sidecar(summary_cache_task_def, "SummaryCache")
+
         summary_cache_service = ecs.Ec2Service(
             self,
             id="SummaryCacheService",
@@ -261,6 +297,8 @@ class ApiStack(Stack):
                 stream_prefix=config.env_id, log_retention=logs.RetentionDays.ONE_MONTH
             ),
         )
+        add_adot_sidecar(task_definition, "Api")
+
         service = ecs.Ec2Service(
             self,
             id="ApiService",
@@ -417,3 +455,21 @@ class ApiStack(Stack):
                 daily_backup_task.task_definition.task_role,
                 f"{config.api.ic_s3_path_test}*",
             )
+
+        # ── CloudWatch Dashboard ─────────────────────────────────────
+
+        MonitoringDashboard(
+            self,
+            "Monitoring",
+            env_id=config.env_id,
+            load_balancer=load_balancer,
+            api_service=service,
+            summary_cache_service=summary_cache_service,
+            general_worker_service=worker.service,
+            image_worker_service=image_worker.service,
+            database=database,
+            general_queue=worker.queue,
+            general_dlq_queue=worker.dead_letter_queue,
+            image_queue=image_worker.queue,
+            image_dlq_queue=image_worker.dead_letter_queue,
+        )

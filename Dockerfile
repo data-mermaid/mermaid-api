@@ -39,7 +39,7 @@ RUN groupadd ${APP_USER} && useradd -m --no-log-init -g ${APP_USER} ${APP_USER}
 WORKDIR ${APP_DIR}
 
 ADD requirements.txt .
-RUN su ${APP_USER} -c "pip install --upgrade pip && pip install --no-cache-dir -r requirements.txt"
+RUN su ${APP_USER} -c "pip install --upgrade pip && pip install --no-cache-dir -r requirements.txt && opentelemetry-bootstrap -a install"
 RUN rm ${APP_DIR}/requirements.txt
 
 ADD ./src .
