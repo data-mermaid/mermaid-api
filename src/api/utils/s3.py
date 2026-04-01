@@ -156,17 +156,47 @@ def get_presigned_url(
     )
 
 
-def copy_object(bucket, source_key, dest_key, aws_access_key_id=None, aws_secret_access_key=None):
-    if aws_access_key_id is None:
-        aws_access_key_id = settings.AWS_ACCESS_KEY_ID
-    if aws_secret_access_key is None:
-        aws_secret_access_key = settings.AWS_SECRET_ACCESS_KEY
-
-    client = get_client(
-        aws_access_key_id=aws_access_key_id, aws_secret_access_key=aws_secret_access_key
-    )
+def copy_object_server_side(
+    source_bucket,
+    source_key,
+    dest_bucket,
+    dest_key,
+    aws_access_key_id=None,
+    aws_secret_access_key=None,
+    client=None,
+):
+    """Server-side S3 copy — no data transits through the app server.
+    Both buckets must be accessible with the same credentials (same account).
+    Pass a pre-created client to avoid repeated session instantiation."""
+    if client is None:
+        client = get_client(aws_access_key_id, aws_secret_access_key)
     client.copy_object(
-        Bucket=bucket,
-        CopySource={"Bucket": bucket, "Key": source_key},
+        Bucket=dest_bucket,
+        CopySource={"Bucket": source_bucket, "Key": source_key},
         Key=dest_key,
     )
+
+
+def move_file_cross_account(
+    source_bucket,
+    source_key,
+    source_access_key,
+    source_secret_key,
+    dest_bucket,
+    dest_key,
+    dest_access_key,
+    dest_secret_key,
+    delete_source=True,
+):
+    """Move a file between buckets that may require different AWS credentials."""
+    source_client = get_client(source_access_key, source_secret_key)
+    dest_client = get_client(dest_access_key, dest_secret_key)
+
+    response = source_client.get_object(Bucket=source_bucket, Key=source_key)
+    body = response["Body"].read()
+    content_type = response.get("ContentType", "application/octet-stream")
+
+    dest_client.put_object(Bucket=dest_bucket, Key=dest_key, Body=body, ContentType=content_type)
+
+    if delete_source:
+        source_client.delete_object(Bucket=source_bucket, Key=source_key)

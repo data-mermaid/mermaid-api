@@ -141,6 +141,11 @@ class UserMERMAIDFeatureInline(admin.TabularInline):
     model = UserMERMAIDFeature
     extra = 0
 
+    def formfield_for_foreignkey(self, db_field, request, **kwargs):
+        if db_field.name == "profile":
+            kwargs["queryset"] = Profile.objects.order_by("last_name", "first_name")
+        return super().formfield_for_foreignkey(db_field, request, **kwargs)
+
 
 @admin.register(MERMAIDFeature)
 class MermaidFeatureAdmin(BaseAdmin):
