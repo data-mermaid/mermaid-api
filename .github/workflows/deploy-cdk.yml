@@ -68,7 +68,7 @@ jobs:
           if git rev-parse HEAD~1 >/dev/null 2>&1; then
             CHANGED=$(git diff HEAD~1..HEAD --name-only)
           else
-            CHANGED=$(git diff --name-only)
+            CHANGED=$(git ls-files)
           fi
           if echo "$CHANGED" | grep -qE '^(src/|requirements\.txt|Dockerfile|config/)'; then
             short_sha=$(git rev-parse --short ${{ github.sha }})
