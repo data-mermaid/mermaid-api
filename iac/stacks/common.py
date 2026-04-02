@@ -225,6 +225,8 @@ class CommonStack(Stack):
             # NOTE: not setting the desired capacity so ECS can manage it.
         )
 
+        self.auto_scaling_group = auto_scaling_group_lt
+
         capacity_provider_lt = ecs.AsgCapacityProvider(
             self,
             "AsgCapacityProviderLt",

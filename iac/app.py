@@ -64,6 +64,9 @@ dev_api_stack = ApiStack(
     api_zone=common_stack.api_zone,
     public_bucket=dev_static_site_stack.site_bucket,
     image_processing_bucket=common_stack.image_processing_bucket,
+    auto_scaling_group=common_stack.auto_scaling_group,
+    distribution=dev_static_site_stack.distribution,
+    sagemaker_domain_name=f"{DEV_SETTINGS.env_id}-SG-Project",
     use_fifo_queues="False",
     report_s3_creds=common_stack.report_s3_creds,
 )
@@ -102,6 +105,9 @@ prod_api_stack = ApiStack(
     api_zone=common_stack.api_zone,
     public_bucket=prod_static_site_stack.site_bucket,
     image_processing_bucket=common_stack.image_processing_bucket,
+    auto_scaling_group=common_stack.auto_scaling_group,
+    distribution=prod_static_site_stack.distribution,
+    sagemaker_domain_name=f"{PROD_SETTINGS.env_id}-SG-Project",
     use_fifo_queues="False",
     report_s3_creds=common_stack.report_s3_creds,
 )
