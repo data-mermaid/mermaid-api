@@ -1,9 +1,13 @@
 from aws_cdk import (
     Duration,
+    aws_autoscaling as autoscale,
+    aws_cloudfront as cf,
     aws_cloudwatch as cw,
+    aws_ec2 as ec2,
     aws_ecs as ecs,
     aws_elasticloadbalancingv2 as elb,
     aws_rds as rds,
+    aws_s3 as s3,
     aws_sqs as sqs,
 )
 from constructs import Construct
@@ -28,6 +32,11 @@ class MonitoringDashboard(Construct):
         general_dlq_queue: sqs.IQueue,
         image_queue: sqs.IQueue,
         image_dlq_queue: sqs.IQueue,
+        auto_scaling_group: autoscale.AutoScalingGroup,
+        vpc: ec2.IVpc,
+        buckets: list[s3.Bucket],
+        distribution: cf.Distribution,
+        sagemaker_domain_name: str,
         **kwargs,
     ) -> None:
         super().__init__(scope, id, **kwargs)
@@ -197,3 +206,233 @@ class MonitoringDashboard(Construct):
             cw.TextWidget(markdown="## SQS", width=24, height=1),
         )
         dashboard.add_widgets(sqs_depth, sqs_messages, sqs_dlq)
+
+        # ── NAT Gateway Widgets ──────────────────────────────────────
+
+        # VPC has a single NAT gateway; use metric search to avoid
+        # hard-coding the NAT Gateway ID.
+        nat_ns = "AWS/NATGateway"
+
+        nat_connections = cw.GraphWidget(
+            title="NAT Gateway Active Connections",
+            left=[
+                cw.Metric(
+                    namespace=nat_ns,
+                    metric_name="ActiveConnectionCount",
+                    statistic="Maximum",
+                ),
+            ],
+            width=8,
+        )
+
+        nat_bytes = cw.GraphWidget(
+            title="NAT Gateway Bytes Processed",
+            left=[
+                cw.Metric(
+                    namespace=nat_ns,
+                    metric_name="BytesInFromSource",
+                    statistic="Sum",
+                    label="In (source)",
+                ),
+                cw.Metric(
+                    namespace=nat_ns,
+                    metric_name="BytesOutToDestination",
+                    statistic="Sum",
+                    label="Out (destination)",
+                ),
+            ],
+            width=8,
+        )
+
+        nat_errors = cw.GraphWidget(
+            title="NAT Gateway Errors & Drops",
+            left=[
+                cw.Metric(
+                    namespace=nat_ns,
+                    metric_name="ErrorPortAllocation",
+                    statistic="Sum",
+                    label="Port Allocation Errors",
+                ),
+                cw.Metric(
+                    namespace=nat_ns,
+                    metric_name="PacketsDropCount",
+                    statistic="Sum",
+                    label="Packets Dropped",
+                ),
+            ],
+            width=8,
+        )
+
+        dashboard.add_widgets(
+            cw.TextWidget(markdown="## NAT Gateway", width=24, height=1),
+        )
+        dashboard.add_widgets(nat_connections, nat_bytes, nat_errors)
+
+        # ── ASG Widgets ──────────────────────────────────────────────
+
+        asg_dims = {"AutoScalingGroupName": auto_scaling_group.auto_scaling_group_name}
+
+        asg_capacity = cw.GraphWidget(
+            title="ASG Instance Count",
+            left=[
+                cw.Metric(
+                    namespace="AWS/AutoScaling",
+                    metric_name="GroupInServiceInstances",
+                    dimensions_map=asg_dims,
+                    statistic="Average",
+                    label="In Service",
+                ),
+                cw.Metric(
+                    namespace="AWS/AutoScaling",
+                    metric_name="GroupDesiredCapacity",
+                    dimensions_map=asg_dims,
+                    statistic="Average",
+                    label="Desired",
+                ),
+            ],
+            width=12,
+        )
+
+        asg_activity = cw.GraphWidget(
+            title="ASG Scaling Activity",
+            left=[
+                cw.Metric(
+                    namespace="AWS/AutoScaling",
+                    metric_name="GroupPendingInstances",
+                    dimensions_map=asg_dims,
+                    statistic="Average",
+                    label="Pending",
+                ),
+                cw.Metric(
+                    namespace="AWS/AutoScaling",
+                    metric_name="GroupTerminatingInstances",
+                    dimensions_map=asg_dims,
+                    statistic="Average",
+                    label="Terminating",
+                ),
+            ],
+            width=12,
+        )
+
+        dashboard.add_widgets(
+            cw.TextWidget(markdown="## Auto Scaling Group", width=24, height=1),
+        )
+        dashboard.add_widgets(asg_capacity, asg_activity)
+
+        # ── S3 Widgets ───────────────────────────────────────────────
+        # BucketSizeBytes and NumberOfObjects are daily storage metrics
+        # emitted automatically (no request metrics configuration needed).
+
+        s3_size = cw.GraphWidget(
+            title="S3 Bucket Size (bytes)",
+            left=[
+                cw.Metric(
+                    namespace="AWS/S3",
+                    metric_name="BucketSizeBytes",
+                    statistic="Average",
+                    label=bucket.bucket_name,
+                    dimensions_map={
+                        "BucketName": bucket.bucket_name,
+                        "StorageType": "StandardStorage",
+                    },
+                    period=Duration.days(1),
+                )
+                for bucket in buckets
+            ],
+            width=12,
+        )
+
+        s3_objects = cw.GraphWidget(
+            title="S3 Object Count",
+            left=[
+                cw.Metric(
+                    namespace="AWS/S3",
+                    metric_name="NumberOfObjects",
+                    statistic="Average",
+                    label=bucket.bucket_name,
+                    dimensions_map={
+                        "BucketName": bucket.bucket_name,
+                        "StorageType": "AllStorageTypes",
+                    },
+                    period=Duration.days(1),
+                )
+                for bucket in buckets
+            ],
+            width=12,
+        )
+
+        dashboard.add_widgets(
+            cw.TextWidget(markdown="## S3", width=24, height=1),
+        )
+        dashboard.add_widgets(s3_size, s3_objects)
+
+        # ── CloudFront Widgets ───────────────────────────────────────
+
+        cf_requests = cw.GraphWidget(
+            title="CloudFront Requests",
+            left=[
+                distribution.metric_requests(statistic="Sum"),
+            ],
+            width=8,
+        )
+
+        cf_errors = cw.GraphWidget(
+            title="CloudFront Error Rate (%)",
+            left=[
+                distribution.metric("4xxErrorRate", statistic="Average", label="4xx"),
+                distribution.metric("5xxErrorRate", statistic="Average", label="5xx"),
+            ],
+            width=8,
+        )
+
+        cf_bytes = cw.GraphWidget(
+            title="CloudFront Bytes Transferred",
+            left=[
+                distribution.metric("BytesDownloaded", statistic="Sum", label="Downloaded"),
+                distribution.metric("BytesUploaded", statistic="Sum", label="Uploaded"),
+            ],
+            width=8,
+        )
+
+        dashboard.add_widgets(
+            cw.TextWidget(markdown="## CloudFront", width=24, height=1),
+        )
+        dashboard.add_widgets(cf_requests, cf_errors, cf_bytes)
+
+        # ── SageMaker Widgets ────────────────────────────────────────
+        # SageMaker Studio domain metrics — track active usage.
+
+        sm_ns = "/aws/sagemaker/Domains"
+
+        sm_apps = cw.GraphWidget(
+            title="SageMaker Running Apps",
+            left=[
+                cw.Metric(
+                    namespace=sm_ns,
+                    metric_name="RunningAppCount",
+                    statistic="Maximum",
+                    dimensions_map={"DomainName": sagemaker_domain_name},
+                    label="Running Apps",
+                ),
+            ],
+            width=12,
+        )
+
+        sm_instances = cw.GraphWidget(
+            title="SageMaker Running Instances",
+            left=[
+                cw.Metric(
+                    namespace=sm_ns,
+                    metric_name="RunningInstanceCount",
+                    statistic="Maximum",
+                    dimensions_map={"DomainName": sagemaker_domain_name},
+                    label="Running Instances",
+                ),
+            ],
+            width=12,
+        )
+
+        dashboard.add_widgets(
+            cw.TextWidget(markdown="## SageMaker", width=24, height=1),
+        )
+        dashboard.add_widgets(sm_apps, sm_instances)
