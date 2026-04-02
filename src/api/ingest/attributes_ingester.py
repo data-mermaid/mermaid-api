@@ -33,7 +33,10 @@ class BaseAttributeIngester(object):
 
         if mapped_key in lookups:
             if val:
-                _val = lookups[field_map[key]][val.lower()]
+                lookup = lookups[field_map[key]]
+                if val.lower() not in lookup:
+                    raise ValueError(f"Unknown value '{val}' for field '{mapped_key}'")
+                _val = lookup[val.lower()]
             else:
                 _val = None
         else:
@@ -222,24 +225,25 @@ class BenthicIngester(BaseAttributeIngester):
         csvreader = csv.DictReader(self._file, delimiter=",")
         n = 2
         is_successful = True
-        for row in csvreader:
-            try:
-                with transaction.atomic():
-                    sid = transaction.savepoint()
-                    self._ingest_benthic(row)
+        with transaction.atomic():
+            for row in csvreader:
+                try:
+                    with transaction.atomic():
+                        self._ingest_benthic(row)
+                except Exception as err:
+                    self.write_log(self.ERROR, f"Row {n} - {str(err)}")
+                    is_successful = False
+                finally:
+                    n = n + 1
 
-                    if dry_run or is_successful is False:
-                        transaction.savepoint_rollback(sid)
-                    else:
-                        transaction.savepoint_commit(sid)
+            if dry_run or not is_successful:
+                transaction.set_rollback(True)
 
-            except Exception as err:
-                transaction.savepoint_rollback(sid)
-                err_msg = f"Row {n} - {str(err)}"
-                self.write_log(self.ERROR, err_msg)
-                is_successful = False
-            finally:
-                n = n + 1
+        if not is_successful:
+            self.log = [e for e in self.log if e.startswith("ERROR")]
+            self.write_log("ROLLED_BACK", "All changes rolled back due to errors above.")
+        elif dry_run:
+            self.write_log("DRY_RUN", "No changes committed.")
 
         return is_successful, self.log
 
@@ -263,6 +267,12 @@ class FishIngester(BaseAttributeIngester):
     fish_family_field_map = {"Family": "name"}
 
     fish_genus_field_map = {"Genus": "name"}
+
+    required_species_fields = {
+        "biomass_constant_a",
+        "biomass_constant_b",
+        "biomass_constant_c",
+    }
 
     fish_species_field_map = {
         "Species": "name",
@@ -311,6 +321,31 @@ class FishIngester(BaseAttributeIngester):
             functional_group=fish_group_functions,
         )
 
+    def _prevalidate_rows(self, rows):
+        """Check all lookup and region values without touching the DB. Returns list of error strings."""
+        errors = []
+        for i, row in enumerate(rows, start=2):
+            try:
+                mapped = self._map_fields(
+                    row,
+                    self.fish_species_field_map,
+                    lookups=self.fish_species_lookups,
+                    casts=self.fish_species_casts,
+                )
+            except Exception as err:
+                errors.append(f"Row {i} - {str(err)}")
+                continue
+            for field in self.required_species_fields:
+                if mapped.get(field) is None:
+                    errors.append(f"Row {i} - Missing required value for field '{field}'")
+            region_names = (row.get("regions") or "").strip()
+            if region_names:
+                for region in region_names.split(","):
+                    name = region.strip().lower()
+                    if name and name not in self.regions:
+                        errors.append(f"Row {i} - Unknown region: '{region.strip()}'")
+        return errors
+
     def ingest(self, dry_run=False, allow_multiword_species=False):
         self.log = []
         csvreader = csv.DictReader(self._file, delimiter=",")
@@ -326,28 +361,35 @@ class FishIngester(BaseAttributeIngester):
                     f"Expected single-word species epithets. Use --allow-multiword-species to override."
                 )
 
+        prevalidation_errors = self._prevalidate_rows(rows)
+        for err in prevalidation_errors:
+            self.write_log(self.ERROR, err)
+        if prevalidation_errors:
+            return False, self.log
+
         n = 2
         is_successful = True
-        for row in rows:
-            try:
-                with transaction.atomic():
-                    sid = transaction.savepoint()
+        with transaction.atomic():
+            for row in rows:
+                try:
                     fish_family = self._ingest_fish_family(row)
                     fish_genus = self._ingest_fish_genus(row, fish_family=fish_family)
                     self._ingest_fish_species(row, fish_genus=fish_genus)
+                except Exception as err:
+                    self.write_log(self.ERROR, f"Row {n} - {str(err)}")
+                    is_successful = False
+                    break
+                finally:
+                    n = n + 1
 
-                    if dry_run or is_successful is False:
-                        transaction.savepoint_rollback(sid)
-                    else:
-                        transaction.savepoint_commit(sid)
+            if dry_run or not is_successful:
+                transaction.set_rollback(True)
 
-            except Exception as err:
-                transaction.savepoint_rollback(sid)
-                err_msg = f"Row {n} - {str(err)}"
-                self.write_log(self.ERROR, err_msg)
-                is_successful = False
-            finally:
-                n = n + 1
+        if not is_successful:
+            self.log = [e for e in self.log if e.startswith("ERROR")]
+            self.write_log("ROLLED_BACK", "All changes rolled back due to errors above.")
+        elif dry_run:
+            self.write_log("DRY_RUN", "No changes committed.")
 
         return is_successful, self.log
 
