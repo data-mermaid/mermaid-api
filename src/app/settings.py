@@ -379,7 +379,10 @@ QUEUE_NAME = os.environ.get("SQS_QUEUE_NAME", "mermaid-local")  # required
 IMAGE_QUEUE_NAME = os.environ.get("IMAGE_SQS_QUEUE_NAME", "mermaid-local")  # required
 USE_FIFO = os.environ.get("USE_FIFO", "True")
 # Override default boto3 url for SQS
-ENDPOINT_URL = None if ENVIRONMENT in ("dev", "prod") else "http://sqs:9324"
+ENDPOINT_URL = os.environ.get(
+    "SQS_ENDPOINT_URL",
+    None if ENVIRONMENT in ("dev", "prod") else "http://sqs:9324",
+)
 
 
 # IMAGE CLASSIFICATION SETTINGS

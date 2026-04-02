@@ -4,11 +4,70 @@ on: workflow_call
 
 permissions:
   contents: read
+
 jobs:
   test:
     runs-on: ubuntu-latest
+
+    services:
+      postgres:
+        image: postgis/postgis:16-3.4
+        env:
+          POSTGRES_DB: mermaid
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: postgres
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U postgres"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+      sqs:
+        image: softwaremill/elasticmq-native
+        ports:
+          - 9324:9324
+
+    env:
+      SECRET_KEY: ci-test-secret-key
+      ENV: local
+      DB_NAME: mermaid
+      DB_USER: postgres
+      DB_PASSWORD: postgres
+      DB_HOST: localhost
+      DB_PORT: "5432"
+      DJANGO_SETTINGS_MODULE: app.settings
+      DRF_RECAPTCHA_TESTING: "True"
+      MERMAID_API_SIGNING_SECRET: ci-test-signing-secret
+      MERMAID_API_AUDIENCE: https://ci-test-api.datamermaid.org
+      AUTH0_MANAGEMENT_API_AUDIENCE: https://ci-test-management.datamermaid.org
+      AUTH0_DOMAIN: ci-test.auth0.com
+      DEFAULT_DOMAIN_API: localhost:8080
+      DEFAULT_DOMAIN_COLLECT: localhost:8888
+      SQS_ENDPOINT_URL: http://localhost:9324
+      AWS_ACCESS_KEY_ID: testing
+      AWS_SECRET_ACCESS_KEY: testing
+      AWS_REGION: us-east-1
+
     steps:
       - uses: actions/checkout@v6.0.2
 
-      - name: Run Tests
-        run: echo "No tests"
+      - name: Setup Python
+        uses: actions/setup-python@v6.2.0
+        with:
+          python-version: "3.12"
+
+      - name: Install system dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y --no-install-recommends \
+            libpq-dev \
+            gdal-bin \
+            python3-gdal
+
+      - name: Install Python dependencies
+        run: pip install -r requirements.txt
+
+      - name: Run tests
+        working-directory: src
+        run: pytest --no-migrations --cov --cov-report=term-missing -q
