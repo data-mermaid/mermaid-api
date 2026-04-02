@@ -1,8 +1,19 @@
 .git
 .gitignore
+.env
+.secrets.env
 
 src/api/tests/__pycache__/*
 *.pyc
+**/__pycache__
 
 **/cdk.out
 .direnv
+
+# Not needed in image
+docs/
+examples/
+readme/
+*.md
+LICENSE
+mermaid_api.insomnia_collection.json
