@@ -205,14 +205,15 @@ def save_normalized_imagefile(instance: Image):
 
 def store_exif(instance: Image) -> Dict[str, Any]:
     file_obj = _get_file_for_reading(instance.image)
+    raw_bytes = file_obj.read()
+    file_obj.seek(0)
 
-    with PILImage.open(file_obj) as img:
-        try:
-            exif_image = ExifImage(img.read())
-            if exif_image.has_exif is False:
-                return
-        except UnpackError:
+    try:
+        exif_image = ExifImage(raw_bytes)
+        if exif_image.has_exif is False:
             return
+    except UnpackError:
+        return
 
     exif_details = {}
     for k, v in exif_image.get_all().items():
