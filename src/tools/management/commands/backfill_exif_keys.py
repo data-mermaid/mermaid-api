@@ -127,10 +127,17 @@ _EXIF_LIB_TO_PIL = {
 def _is_old_format(exif_dict: dict) -> bool:
     """Return True if the stored EXIF dict uses old exif-library snake_case keys.
 
+    Underscore-prefixed keys (e.g. '_exif_ifd_pointer') are also treated as legacy.
     Keys that are numeric strings (e.g. '34853', stored as fallback tag IDs by PIL)
     are treated as neither old nor new format and do not trigger migration.
+    Empty or non-string keys are skipped safely.
     """
-    return any(k[0].isalpha() and k[0].islower() for k in exif_dict)
+    return any(
+        isinstance(k, str)
+        and len(k) > 0
+        and (k.startswith("_") or (k[0].isalpha() and k[0].islower()))
+        for k in exif_dict
+    )
 
 
 def _migrate_exif_dict(exif_dict: dict) -> tuple[dict, list[str]]:
@@ -145,6 +152,7 @@ def _migrate_exif_dict(exif_dict: dict) -> tuple[dict, list[str]]:
     for old_key, value in exif_dict.items():
         if old_key not in _EXIF_LIB_TO_PIL:
             unknown.append(old_key)
+            result[old_key] = value
             continue
         new_key = _EXIF_LIB_TO_PIL[old_key]
         if new_key is None:
@@ -187,6 +195,12 @@ class Command(BaseCommand):
 
         for image in qs.iterator():
             exif_dict = image.data.get("exif", {})
+            if not isinstance(exif_dict, dict):
+                self.stderr.write(
+                    f"  WARNING {image.pk}: exif value is not a dict ({type(exif_dict).__name__}), skipping"
+                )
+                skipped += 1
+                continue
             if not _is_old_format(exif_dict):
                 skipped += 1
                 continue
