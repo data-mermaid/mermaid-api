@@ -74,7 +74,8 @@ def test_store_exif_png_with_exif_chunk():
     # old exif library since it only understood JPEG byte streams.
     with open("api/tests/data/test_image.jpg", "rb") as f:
         jpeg_bytes = f.read()
-    exif_bytes = PILImage.open(io.BytesIO(jpeg_bytes)).info.get("exif", b"")
+    with PILImage.open(io.BytesIO(jpeg_bytes)) as img:
+        exif_bytes = img.info.get("exif", b"")
     assert exif_bytes, "test JPEG must carry EXIF data for this fixture to be valid"
 
     instance = _make_instance(_make_png_with_exif(exif_bytes))
@@ -126,3 +127,4 @@ def test_store_exif_tiff():
 
     instance = _make_instance(buf.getvalue())
     store_exif(instance)  # must not raise
+    assert instance.data is not None  # plain TIFF has structural tags stored

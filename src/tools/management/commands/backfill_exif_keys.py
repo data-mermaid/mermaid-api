@@ -125,20 +125,33 @@ _EXIF_LIB_TO_PIL = {
 
 
 def _is_old_format(exif_dict: dict) -> bool:
-    """Return True if the stored EXIF dict uses old exif-library snake_case keys."""
-    return any(k[0].islower() for k in exif_dict)
+    """Return True if the stored EXIF dict uses old exif-library snake_case keys.
+
+    Keys that are numeric strings (e.g. '34853', stored as fallback tag IDs by PIL)
+    are treated as neither old nor new format and do not trigger migration.
+    """
+    return any(k[0].isalpha() and k[0].islower() for k in exif_dict)
 
 
-def _migrate_exif_dict(exif_dict: dict) -> dict:
-    """Return a new dict with keys renamed from exif-lib to PIL CamelCase."""
+def _migrate_exif_dict(exif_dict: dict) -> tuple[dict, list[str]]:
+    """Return (migrated_dict, unknown_keys) from exif-lib to PIL CamelCase.
+
+    Explicitly dropped keys (internal pointer fields mapped to None) are silently
+    discarded.  Keys not present in _EXIF_LIB_TO_PIL at all are returned separately
+    as unknown_keys so callers can log or inspect them.
+    """
     result = {}
+    unknown = []
     for old_key, value in exif_dict.items():
-        new_key = _EXIF_LIB_TO_PIL.get(old_key)
+        if old_key not in _EXIF_LIB_TO_PIL:
+            unknown.append(old_key)
+            continue
+        new_key = _EXIF_LIB_TO_PIL[old_key]
         if new_key is None:
-            # Either explicitly dropped (internal pointer) or unknown — skip
+            # Explicitly dropped internal pointer field — discard silently
             continue
         result[new_key] = value
-    return result
+    return result, unknown
 
 
 class Command(BaseCommand):
@@ -178,7 +191,12 @@ class Command(BaseCommand):
                 skipped += 1
                 continue
 
-            new_exif = _migrate_exif_dict(exif_dict)
+            new_exif, unknown_keys = _migrate_exif_dict(exif_dict)
+            if unknown_keys:
+                self.stderr.write(
+                    f"  WARNING {image.pk}: {len(unknown_keys)} unmapped key(s): "
+                    + ", ".join(unknown_keys)
+                )
             if dry_run:
                 self.stdout.write(
                     f"  [dry-run] {image.pk}: would rename "
