@@ -1,0 +1,209 @@
+"""
+Migrate stored EXIF data from the old exif-library snake_case key format to
+PIL CamelCase tag names.
+
+Background: before M1855, store_exif used the `exif` Python library whose
+attribute names differed from PIL's.  For example, PIL uses "DateTimeOriginal"
+while the exif library used "datetime_original".  The 3,000+ JPEG images
+uploaded before the fix have old-format keys stored in class_image.data["exif"].
+This command renames those keys in-place; no S3 access is required.
+
+Usage:
+    python manage.py backfill_exif_keys [--dry-run] [--batch-size N]
+"""
+
+from django.core.management.base import BaseCommand
+from django.db import transaction
+
+from api.models import Image
+
+# Maps every exif-library attribute name that has appeared in production data
+# to its PIL.ExifTags equivalent.  Internal pointer fields (prefixed with _)
+# are dropped — they are byte offsets, not meaningful EXIF values.
+#
+# Where the exif library and PIL use different *semantic* names for the same
+# tag (e.g. photographic_sensitivity vs ISOSpeedRatings), the PIL name wins
+# because it matches the EXIF spec tag name more closely.
+_EXIF_LIB_TO_PIL = {
+    # ── dropped internal pointer fields ──────────────────────────────────────
+    "_exif_ifd_pointer": None,
+    "_gps_ifd_pointer": None,
+    # ── datetime / offset ────────────────────────────────────────────────────
+    "datetime": "DateTime",
+    "datetime_original": "DateTimeOriginal",
+    "datetime_digitized": "DateTimeDigitized",
+    "offset_time": "OffsetTime",
+    "offset_time_original": "OffsetTimeOriginal",
+    "offset_time_digitized": "OffsetTimeDigitized",
+    "subsec_time": "SubsecTime",
+    "subsec_time_original": "SubsecTimeOriginal",
+    "subsec_time_digitized": "SubsecTimeDigitized",
+    # ── camera identity ───────────────────────────────────────────────────────
+    "make": "Make",
+    "model": "Model",
+    "software": "Software",
+    "image_description": "ImageDescription",
+    "artist": "Artist",
+    "copyright": "Copyright",
+    "body_serial_number": "BodySerialNumber",
+    "camera_owner_name": "CameraOwnerName",
+    "lens_make": "LensMake",
+    "lens_model": "LensModel",
+    "lens_serial_number": "LensSerialNumber",
+    "lens_specification": "LensSpecification",
+    "xp_author": "XPAuthor",
+    # ── image geometry / resolution ───────────────────────────────────────────
+    "orientation": "Orientation",
+    "x_resolution": "XResolution",
+    "y_resolution": "YResolution",
+    "resolution_unit": "ResolutionUnit",
+    "y_and_c_positioning": "YCbCrPositioning",  # PIL name differs
+    "pixel_x_dimension": "ExifImageWidth",  # PIL name differs
+    "pixel_y_dimension": "ExifImageHeight",  # PIL name differs
+    "compression": "Compression",
+    "compressed_bits_per_pixel": "CompressedBitsPerPixel",
+    "jpeg_interchange_format": "JpegIFOffset",  # PIL name differs
+    "jpeg_interchange_format_length": "JpegIFByteCount",  # PIL name differs
+    # ── exposure / photometry ─────────────────────────────────────────────────
+    "exposure_time": "ExposureTime",
+    "f_number": "FNumber",
+    "exposure_program": "ExposureProgram",
+    "photographic_sensitivity": "ISOSpeedRatings",  # PIL name differs
+    "sensitivity_type": "SensitivityType",
+    "recommended_exposure_index": "RecommendedExposureIndex",
+    "shutter_speed_value": "ShutterSpeedValue",
+    "aperture_value": "ApertureValue",
+    "brightness_value": "BrightnessValue",
+    "exposure_bias_value": "ExposureBiasValue",
+    "max_aperture_value": "MaxApertureValue",
+    "subject_distance": "SubjectDistance",
+    "metering_mode": "MeteringMode",
+    "light_source": "LightSource",
+    "flash": "Flash",
+    "focal_length": "FocalLength",
+    "exposure_mode": "ExposureMode",
+    "white_balance": "WhiteBalance",
+    "digital_zoom_ratio": "DigitalZoomRatio",
+    "focal_length_in_35mm_film": "FocalLengthIn35mmFilm",
+    "scene_capture_type": "SceneCaptureType",
+    "gain_control": "GainControl",
+    "contrast": "Contrast",
+    "saturation": "Saturation",
+    "sharpness": "Sharpness",
+    "subject_distance_range": "SubjectDistanceRange",
+    "custom_rendered": "CustomRendered",
+    "exposure_index": "ExposureIndex",
+    "sensing_method": "SensingMethod",
+    "subject_area": "SubjectLocation",  # PIL name differs
+    # ── colour / rendering ────────────────────────────────────────────────────
+    "color_space": "ColorSpace",
+    "exif_version": "ExifVersion",
+    "user_comment": "UserComment",
+    # ── optics ───────────────────────────────────────────────────────────────
+    "focal_plane_x_resolution": "FocalPlaneXResolution",
+    "focal_plane_y_resolution": "FocalPlaneYResolution",
+    "focal_plane_resolution_unit": "FocalPlaneResolutionUnit",
+    # ── GPS ──────────────────────────────────────────────────────────────────
+    "gps_version_id": "GPSVersionID",
+    "gps_latitude_ref": "GPSLatitudeRef",
+    "gps_latitude": "GPSLatitude",
+    "gps_longitude_ref": "GPSLongitudeRef",
+    "gps_longitude": "GPSLongitude",
+    "gps_altitude_ref": "GPSAltitudeRef",
+    "gps_altitude": "GPSAltitude",
+    "gps_timestamp": "GPSTimeStamp",
+    "gps_datestamp": "GPSDateStamp",
+    "gps_speed_ref": "GPSSpeedRef",
+    "gps_speed": "GPSSpeed",
+    "gps_img_direction_ref": "GPSImgDirectionRef",
+    "gps_img_direction": "GPSImgDirection",
+    "gps_dest_bearing_ref": "GPSDestBearingRef",
+    "gps_dest_bearing": "GPSDestBearing",
+    "gps_horizontal_positioning_error": "GPSHPositioningError",  # PIL name shorter
+    "gps_status": "GPSStatus",
+}
+
+
+def _is_old_format(exif_dict: dict) -> bool:
+    """Return True if the stored EXIF dict uses old exif-library snake_case keys."""
+    return any(k[0].islower() for k in exif_dict)
+
+
+def _migrate_exif_dict(exif_dict: dict) -> dict:
+    """Return a new dict with keys renamed from exif-lib to PIL CamelCase."""
+    result = {}
+    for old_key, value in exif_dict.items():
+        new_key = _EXIF_LIB_TO_PIL.get(old_key)
+        if new_key is None:
+            # Either explicitly dropped (internal pointer) or unknown — skip
+            continue
+        result[new_key] = value
+    return result
+
+
+class Command(BaseCommand):
+    help = (
+        "Rename EXIF keys in class_image.data from the old exif-library snake_case "
+        "format (e.g. 'datetime_original') to PIL CamelCase (e.g. 'DateTimeOriginal'). "
+        "Affects images uploaded before M1855.  No S3 access required."
+    )
+
+    def add_arguments(self, parser):
+        parser.add_argument(
+            "--dry-run",
+            action="store_true",
+            help="Report what would change without writing to the database.",
+        )
+        parser.add_argument(
+            "--batch-size",
+            type=int,
+            default=200,
+            help="Number of images to update per transaction (default: 200).",
+        )
+
+    def handle(self, *args, **options):
+        dry_run = options["dry_run"]
+        batch_size = options["batch_size"]
+
+        qs = Image.objects.filter(data__has_key="exif")
+        total = qs.count()
+        self.stdout.write(f"Found {total} images with stored EXIF data.")
+
+        updated = skipped = 0
+        batch = []
+
+        for image in qs.iterator():
+            exif_dict = image.data.get("exif", {})
+            if not _is_old_format(exif_dict):
+                skipped += 1
+                continue
+
+            new_exif = _migrate_exif_dict(exif_dict)
+            if dry_run:
+                self.stdout.write(
+                    f"  [dry-run] {image.pk}: would rename "
+                    f"{len(exif_dict)} → {len(new_exif)} keys"
+                )
+                updated += 1
+                continue
+
+            image.data["exif"] = new_exif
+            batch.append(image)
+            updated += 1
+
+            if len(batch) >= batch_size:
+                self._flush(batch)
+                batch = []
+
+        if batch:
+            self._flush(batch)
+
+        status = "Would update" if dry_run else "Updated"
+        self.stdout.write(
+            self.style.SUCCESS(f"{status} {updated} images; skipped {skipped} already-current.")
+        )
+
+    def _flush(self, batch):
+        with transaction.atomic():
+            Image.objects.bulk_update(batch, ["data"])
+        self.stdout.write(f"  flushed {len(batch)} records")
