@@ -367,29 +367,31 @@ class FishIngester(BaseAttributeIngester):
         if prevalidation_errors:
             return False, self.log
 
+        if dry_run:
+            self.write_log("DRY_RUN", "No changes committed.")
+            return True, self.log
+
         n = 2
         is_successful = True
-        with transaction.atomic():
-            for row in rows:
-                try:
+        for row in rows:
+            try:
+                with transaction.atomic():
                     fish_family = self._ingest_fish_family(row)
                     fish_genus = self._ingest_fish_genus(row, fish_family=fish_family)
                     self._ingest_fish_species(row, fish_genus=fish_genus)
-                except Exception as err:
-                    self.write_log(self.ERROR, f"Row {n} - {str(err)}")
-                    is_successful = False
-                    break
-                finally:
-                    n = n + 1
-
-            if dry_run or not is_successful:
-                transaction.set_rollback(True)
+            except Exception as err:
+                self.write_log(self.ERROR, f"Row {n} - {str(err)}")
+                is_successful = False
+                break
+            finally:
+                n = n + 1
 
         if not is_successful:
             self.log = [e for e in self.log if e.startswith("ERROR")]
-            self.write_log("ROLLED_BACK", "All changes rolled back due to errors above.")
-        elif dry_run:
-            self.write_log("DRY_RUN", "No changes committed.")
+            self.write_log(
+                "ABORTED",
+                "Processing stopped due to error above. Successfully processed rows were committed.",
+            )
 
         return is_successful, self.log
 
