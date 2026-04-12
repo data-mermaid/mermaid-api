@@ -136,7 +136,8 @@ _GPS_DATESTAMP = 29  # "YYYY:MM:DD"
 
 # EXIF sub-IFD tag IDs (PIL.ExifTags.TAGS)
 _DATETIME_ORIGINAL = 36867  # "YYYY:MM:DD HH:MM:SS"
-_OFFSET_TIME = 36880  # "+HH:MM"
+_OFFSET_TIME = 36880  # "+HH:MM" — UTC offset for DateTime
+_OFFSET_TIME_ORIGINAL = 36881  # "+HH:MM" — UTC offset for DateTimeOriginal
 
 # Top-level IFD pointer tag IDs
 _GPS_IFD_TAG = 0x8825  # 34853
@@ -174,9 +175,11 @@ def extract_datetime_stamp(
         except (ValueError, TypeError):
             pass
 
-    # Fall back to EXIF datetime + UTC offset
+    # Fall back to EXIF datetime + UTC offset.
+    # Prefer OffsetTimeOriginal (semantically paired with DateTimeOriginal) but
+    # accept OffsetTime as a fallback for cameras that only write the general tag.
     date_time_str = exif_ifd.get(_DATETIME_ORIGINAL)  # "YYYY:MM:DD HH:MM:SS"
-    offset_str = exif_ifd.get(_OFFSET_TIME)  # "+HH:MM" or "-HH:MM"
+    offset_str = exif_ifd.get(_OFFSET_TIME_ORIGINAL) or exif_ifd.get(_OFFSET_TIME)  # "+HH:MM"
 
     if not date_time_str or offset_str is None:
         return None

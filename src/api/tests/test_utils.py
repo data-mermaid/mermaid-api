@@ -142,6 +142,14 @@ def test_extract_datetime_stamp_no_offset():
     assert extract_datetime_stamp(exif_ifd, {}) is None
 
 
+def test_extract_datetime_stamp_offset_time_original():
+    # Cameras that write OffsetTimeOriginal (36881) but not OffsetTime (36880)
+    # must still produce a correct UTC timestamp.
+    exif_ifd = {36867: "2017:09:06 10:17:33", 36881: "+13:00"}  # OffsetTimeOriginal only
+    result = extract_datetime_stamp(exif_ifd, {})
+    assert result == datetime.datetime(2017, 9, 5, 21, 17, 33, tzinfo=datetime.timezone.utc)
+
+
 def test_extract_datetime_stamp_malformed_gps_falls_through():
     # Malformed GPS timestamp triggers except and falls through to EXIF fallback.
     gps_ifd = {29: "not-a-date", 7: ("bad", "data", "here")}
