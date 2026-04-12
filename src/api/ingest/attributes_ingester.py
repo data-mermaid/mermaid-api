@@ -252,6 +252,7 @@ class FishIngester(BaseAttributeIngester):
     ERROR = "ERROR"
     EXISTING_FAMILY = "EXISTING_FAMILY"
     NEW_FAMILY = "NEW_FAMILY"
+    DUPLICATE_FAMILY = "DUPLICATE_FAMILY"
 
     EXISTING_GENUS = "EXISTING_GENUS"
     NEW_GENUS = "NEW_GENUS"
@@ -322,8 +323,10 @@ class FishIngester(BaseAttributeIngester):
         )
 
     def _prevalidate_rows(self, rows):
-        """Check all lookup and region values without touching the DB. Returns list of error strings."""
+        """Validate all rows before any writes. Returns list of error strings."""
         errors = []
+
+        # Per-row field/lookup/region checks
         for i, row in enumerate(rows, start=2):
             try:
                 mapped = self._map_fields(
@@ -344,6 +347,39 @@ class FishIngester(BaseAttributeIngester):
                     name = region.strip().lower()
                     if name and name not in self.regions:
                         errors.append(f"Row {i} - Unknown region: '{region.strip()}'")
+
+        # Check for duplicate family names in the DB — these would cause silent skips
+        csv_family_names = {
+            (row.get("Family") or "").strip() for row in rows if (row.get("Family") or "").strip()
+        }
+        for name in sorted(csv_family_names):
+            if FishFamily.objects.filter(name__iexact=name).count() > 1:
+                errors.append(
+                    f"Family '{name}': multiple entries with this name exist in the database"
+                )
+
+        # Check for duplicate genus names (per family) in the DB
+        csv_genera_by_family = {}
+        for row in rows:
+            family = (row.get("Family") or "").strip()
+            genus = (row.get("Genus") or "").strip()
+            if family and genus:
+                csv_genera_by_family.setdefault(family, set()).add(genus)
+
+        for family_name, genus_names in sorted(csv_genera_by_family.items()):
+            try:
+                family = FishFamily.objects.get(name__iexact=family_name)
+            except FishFamily.DoesNotExist:
+                continue  # new family — no existing genera to check
+            except FishFamily.MultipleObjectsReturned:
+                continue  # already flagged as a duplicate family above
+            for genus_name in sorted(genus_names):
+                if FishGenus.objects.filter(name__iexact=genus_name, family=family).count() > 1:
+                    errors.append(
+                        f"Genus '{genus_name}' under family '{family_name}': "
+                        f"multiple entries with this name exist in the database"
+                    )
+
         return errors
 
     def ingest(self, dry_run=False, allow_multiword_species=False):
@@ -412,6 +448,8 @@ class FishIngester(BaseAttributeIngester):
         return fish_family
 
     def _ingest_fish_genus(self, row, fish_family):
+        if fish_family is None:
+            return None
         genus_row = self._map_fields(row, self.fish_genus_field_map, self.fish_genus_lookups)
         genus_name = genus_row["name"]
         try:
@@ -426,6 +464,8 @@ class FishIngester(BaseAttributeIngester):
         return genus
 
     def _ingest_fish_species(self, row, fish_genus):
+        if fish_genus is None:
+            return
         species_row = self._map_fields(
             row,
             self.fish_species_field_map,
@@ -437,7 +477,7 @@ class FishIngester(BaseAttributeIngester):
         try:
             species = FishSpecies.objects.get(name__iexact=species_name, genus=fish_genus)
             has_edits = False
-            region_names = species_row.pop("regions")
+            region_names = species_row.pop("regions", None)
             updates = []
             for k, v in species_row.items():
                 original_val = getattr(species, k)
@@ -462,7 +502,7 @@ class FishIngester(BaseAttributeIngester):
                 self.write_log(self.EXISTING_SPECIES, f"{genus_name}-{species_name}")
 
         except FishSpecies.DoesNotExist:
-            region_names = species_row.pop("regions")
+            region_names = species_row.pop("regions", None)
             species = FishSpecies.objects.create(genus=fish_genus, **species_row)
             self._update_regions(species, region_names, is_combined=False)
 
