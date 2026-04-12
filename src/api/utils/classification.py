@@ -147,14 +147,16 @@ def _normalize_exif_value(value):
     """Convert a PIL EXIF value to a JSON-serializable Python type."""
     if isinstance(value, bytes):
         return None  # skip binary blobs (MakerNote, UserComment raw bytes, etc.)
-    if hasattr(value, "numerator"):  # PIL.Image.IFDRational
+    if isinstance(value, (int, float)):
+        return value  # must come before hasattr(numerator) — Python int has .numerator
+    if hasattr(value, "numerator"):  # PIL.TiffImagePlugin.IFDRational
         return float(value)
     if isinstance(value, tuple):
         normalized = tuple(_normalize_exif_value(v) for v in value)
         return normalized if any(v is not None for v in normalized) else None
     if isinstance(value, str):
         return value.strip().replace("\u0000", "")
-    return value  # int, float
+    return None  # skip unrecognized types (nested IFDs, custom objects, etc.)
 
 
 def extract_datetime_stamp(
@@ -221,7 +223,7 @@ def save_normalized_imagefile(instance: Image):
                 if TAGS[orientation] == "Orientation":
                     break
 
-            exif = dict(image_file._getexif().items())
+            exif = dict(image_file.getexif().items())
 
             if exif[orientation] == 3:
                 image_file = image_file.rotate(180, expand=True)
@@ -252,7 +254,11 @@ def store_exif(instance: Image) -> None:
     gps_ifd = exif.get_ifd(_GPS_IFD_TAG)
     exif_ifd = exif.get_ifd(_EXIF_IFD_TAG)
 
-    # Build a flat dict of all EXIF tags using PIL string names, skipping IFD pointers
+    # Build a flat dict of all EXIF tags using PIL string names, skipping IFD pointers.
+    # We iterate three sources in order: IFD0 (top-level) → GPS sub-IFD → EXIF sub-IFD.
+    # If the same tag name appears in more than one IFD (e.g. "DateTime" can exist in
+    # both IFD0 and the EXIF sub-IFD), the later source wins.  Sub-IFD values are more
+    # specific (DateTimeOriginal vs DateTime) so this ordering is intentional.
     ifd_pointer_tags = {_GPS_IFD_TAG, _EXIF_IFD_TAG}
     exif_details = {}
 

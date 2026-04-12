@@ -1,21 +1,15 @@
 """
-Migrate stored EXIF data from the old exif-library snake_case key format to
-PIL CamelCase tag names.
+Data migration: rename EXIF keys stored by the old `exif` library (snake_case)
+to PIL CamelCase tag names.
 
-Background: before M1855, store_exif used the `exif` Python library whose
-attribute names differed from PIL's.  For example, PIL uses "DateTimeOriginal"
-while the exif library used "datetime_original".  The 3,000+ JPEG images
-uploaded before the fix have old-format keys stored in class_image.data["exif"].
-This command renames those keys in-place; no S3 access is required.
-
-Usage:
-    python manage.py backfill_exif_keys [--dry-run] [--batch-size N]
+Before M1855, store_exif used the `exif` Python library whose attribute names
+differed from PIL's — e.g. PIL uses "DateTimeOriginal" while the exif library
+used "datetime_original".  Images uploaded before M1855 have old-format keys
+in class_image.data["exif"].  This migration renames those keys in-place; no
+S3 access is required.
 """
 
-from django.core.management.base import BaseCommand
-from django.db import transaction
-
-from api.models import Image
+from django.db import migrations, transaction
 
 # Maps every exif-library attribute name that has appeared in production data
 # to its PIL.ExifTags equivalent.  Internal pointer fields (prefixed with _)
@@ -57,18 +51,18 @@ _EXIF_LIB_TO_PIL = {
     "x_resolution": "XResolution",
     "y_resolution": "YResolution",
     "resolution_unit": "ResolutionUnit",
-    "y_and_c_positioning": "YCbCrPositioning",  # PIL name differs
-    "pixel_x_dimension": "ExifImageWidth",  # PIL name differs
-    "pixel_y_dimension": "ExifImageHeight",  # PIL name differs
+    "y_and_c_positioning": "YCbCrPositioning",
+    "pixel_x_dimension": "ExifImageWidth",
+    "pixel_y_dimension": "ExifImageHeight",
     "compression": "Compression",
     "compressed_bits_per_pixel": "CompressedBitsPerPixel",
-    "jpeg_interchange_format": "JpegIFOffset",  # PIL name differs
-    "jpeg_interchange_format_length": "JpegIFByteCount",  # PIL name differs
+    "jpeg_interchange_format": "JpegIFOffset",
+    "jpeg_interchange_format_length": "JpegIFByteCount",
     # ── exposure / photometry ─────────────────────────────────────────────────
     "exposure_time": "ExposureTime",
     "f_number": "FNumber",
     "exposure_program": "ExposureProgram",
-    "photographic_sensitivity": "ISOSpeedRatings",  # PIL name differs
+    "photographic_sensitivity": "ISOSpeedRatings",
     "sensitivity_type": "SensitivityType",
     "recommended_exposure_index": "RecommendedExposureIndex",
     "shutter_speed_value": "ShutterSpeedValue",
@@ -94,7 +88,7 @@ _EXIF_LIB_TO_PIL = {
     "custom_rendered": "CustomRendered",
     "exposure_index": "ExposureIndex",
     "sensing_method": "SensingMethod",
-    "subject_area": "SubjectLocation",  # PIL name differs
+    "subject_area": "SubjectLocation",
     # ── colour / rendering ────────────────────────────────────────────────────
     "color_space": "ColorSpace",
     "exif_version": "ExifVersion",
@@ -119,7 +113,7 @@ _EXIF_LIB_TO_PIL = {
     "gps_img_direction": "GPSImgDirection",
     "gps_dest_bearing_ref": "GPSDestBearingRef",
     "gps_dest_bearing": "GPSDestBearing",
-    "gps_horizontal_positioning_error": "GPSHPositioningError",  # PIL name shorter
+    "gps_horizontal_positioning_error": "GPSHPositioningError",
     "gps_status": "GPSStatus",
 }
 
@@ -140,7 +134,7 @@ def _is_old_format(exif_dict: dict) -> bool:
     )
 
 
-def _migrate_exif_dict(exif_dict: dict) -> tuple[dict, list[str]]:
+def _migrate_exif_dict(exif_dict: dict) -> tuple:
     """Return (migrated_dict, unknown_keys) from exif-lib to PIL CamelCase.
 
     Explicitly dropped keys (internal pointer fields mapped to None) are silently
@@ -156,86 +150,48 @@ def _migrate_exif_dict(exif_dict: dict) -> tuple[dict, list[str]]:
             continue
         new_key = _EXIF_LIB_TO_PIL[old_key]
         if new_key is None:
-            # Explicitly dropped internal pointer field — discard silently
             continue
         result[new_key] = value
     return result, unknown
 
 
-class Command(BaseCommand):
-    help = (
-        "Rename EXIF keys in class_image.data from the old exif-library snake_case "
-        "format (e.g. 'datetime_original') to PIL CamelCase (e.g. 'DateTimeOriginal'). "
-        "Affects images uploaded before M1855.  No S3 access required."
-    )
+def backfill_exif_keys(apps, schema_editor):
+    Image = apps.get_model("api", "Image")
+    batch_size = 200
 
-    def add_arguments(self, parser):
-        parser.add_argument(
-            "--dry-run",
-            action="store_true",
-            help="Report what would change without writing to the database.",
-        )
-        parser.add_argument(
-            "--batch-size",
-            type=int,
-            default=200,
-            help="Number of images to update per transaction (default: 200).",
-        )
+    qs = Image.objects.filter(data__has_key="exif").only("id", "data")
+    batch = []
 
-    def handle(self, *args, **options):
-        dry_run = options["dry_run"]
-        batch_size = options["batch_size"]
+    for image in qs.iterator(chunk_size=batch_size):
+        exif_dict = image.data.get("exif", {})
+        if not isinstance(exif_dict, dict) or not _is_old_format(exif_dict):
+            continue
 
-        qs = Image.objects.filter(data__has_key="exif")
-        total = qs.count()
-        self.stdout.write(f"Found {total} images with stored EXIF data.")
+        new_exif, unknown_keys = _migrate_exif_dict(exif_dict)
+        if unknown_keys:
+            print(
+                f"  WARNING {image.pk}: {len(unknown_keys)} unmapped key(s): "
+                + ", ".join(repr(k) for k in unknown_keys)
+            )
 
-        updated = skipped = 0
-        batch = []
+        image.data["exif"] = new_exif
+        batch.append(image)
 
-        for image in qs.iterator():
-            exif_dict = image.data.get("exif", {})
-            if not isinstance(exif_dict, dict):
-                self.stderr.write(
-                    f"  WARNING {image.pk}: exif value is not a dict ({type(exif_dict).__name__}), skipping"
-                )
-                skipped += 1
-                continue
-            if not _is_old_format(exif_dict):
-                skipped += 1
-                continue
+        if len(batch) >= batch_size:
+            with transaction.atomic():
+                Image.objects.bulk_update(batch, ["data"])
+            batch = []
 
-            new_exif, unknown_keys = _migrate_exif_dict(exif_dict)
-            if unknown_keys:
-                self.stderr.write(
-                    f"  WARNING {image.pk}: {len(unknown_keys)} unmapped key(s): "
-                    + ", ".join(unknown_keys)
-                )
-            if dry_run:
-                self.stdout.write(
-                    f"  [dry-run] {image.pk}: would rename "
-                    f"{len(exif_dict)} → {len(new_exif)} keys"
-                )
-                updated += 1
-                continue
-
-            image.data["exif"] = new_exif
-            batch.append(image)
-            updated += 1
-
-            if len(batch) >= batch_size:
-                self._flush(batch)
-                batch = []
-
-        if batch:
-            self._flush(batch)
-
-        status = "Would update" if dry_run else "Updated"
-        self.stdout.write(
-            self.style.SUCCESS(f"{status} {updated} images; skipped {skipped} already-current.")
-        )
-
-    def _flush(self, batch):
+    if batch:
         with transaction.atomic():
             Image.objects.bulk_update(batch, ["data"])
-        self.stdout.write(f"  flushed {len(batch)} records")
+
+
+class Migration(migrations.Migration):
+    dependencies = [
+        ("api", "0103_allow_null_collect_explore_state"),
+    ]
+
+    operations = [
+        migrations.RunPython(backfill_exif_keys, migrations.RunPython.noop),
+    ]
