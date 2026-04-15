@@ -452,6 +452,7 @@ class FishIngester(BaseAttributeIngester):
             return None
         genus_row = self._map_fields(row, self.fish_genus_field_map, self.fish_genus_lookups)
         genus_name = genus_row["name"]
+        genus = None
         try:
             genus = FishGenus.objects.get(name__iexact=genus_name, family=fish_family)
             self.write_log(self.EXISTING_GENUS, genus_name)
