@@ -16,7 +16,7 @@ ARG APP_USER=webapp
 RUN groupadd ${APP_USER} && useradd -m --no-log-init -g ${APP_USER} ${APP_USER}
 
 WORKDIR /var/projects/${APP_USER}
-ADD requirements.txt .
+COPY requirements.txt .
 # Pre-install CPU-only PyTorch before requirements.txt so pyspacer
 # (which depends on torch) picks up the lighter wheel (~280 MB vs ~2 GB).
 # ECS tasks run on t3a instances with no GPU.
@@ -31,9 +31,14 @@ RUN su ${APP_USER} -c "\
 RUN find /home/${APP_USER}/.local -type d -name '__pycache__' -exec rm -rf {} + \
  && find /home/${APP_USER}/.local -type d -name 'tests' \
         ! -path '*/django/contrib/admin/tests' \
+        ! -path '*/pandas/tests*' \
+        ! -path '*/pandas/_testing*' \
         -exec rm -rf {} + \
  && find /home/${APP_USER}/.local -name '*.pyc' -delete \
  && find /home/${APP_USER}/.local -name '*.pyo' -delete
+
+# Smoke-test: verify top-level dependencies import successfully after cleanup
+RUN su ${APP_USER} -c "python -c 'import django; import torch; import torchvision; import pandas; import spacer'"
 
 # ============================================================
 # Stage 2: Runtime — lean production image
@@ -75,8 +80,8 @@ COPY --from=builder --chown=${APP_USER}:${APP_USER} /home/${APP_USER}/.local /ho
 
 WORKDIR ${APP_DIR}
 
-ADD ./src .
-ADD ./iac/settings ./iac/settings
+COPY ./src .
+COPY ./iac/settings ./iac/settings
 RUN chown -R ${APP_USER}:${APP_USER} ${APP_DIR}
 
 # Run everything from here forward as non-root
@@ -94,7 +99,7 @@ FROM runtime AS dev
 
 ARG APP_USER=webapp
 USER root
-ADD requirements-dev.txt /tmp/requirements-dev.txt
+COPY requirements-dev.txt /tmp/requirements-dev.txt
 RUN su ${APP_USER} -c "pip install --no-cache-dir -r /tmp/requirements-dev.txt" \
  && rm /tmp/requirements-dev.txt
 USER ${APP_USER}:${APP_USER}
