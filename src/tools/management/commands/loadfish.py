@@ -24,10 +24,16 @@ class Command(BaseCommand):
             help="Fish species data CSV file",
         )
 
-    def handle(self, fishdata, dry_run, **options):
+        parser.add_argument(
+            "--allow-multiword-species",
+            action="store_true",
+            help="Skip the check that rejects species names containing spaces (e.g. subspecies).",
+        )
+
+    def handle(self, fishdata, dry_run, allow_multiword_species, **options):
         try:
             ingester = FishIngester(fishdata)
-            _, logs = ingester.ingest(dry_run)
+            _, logs = ingester.ingest(dry_run, allow_multiword_species=allow_multiword_species)
             for log in logs:
                 print(f"{log}")
         finally:
