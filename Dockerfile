@@ -1,7 +1,7 @@
 # ============================================================
 # Stage 1: Builder — install build deps and compile pip pkgs
 # ============================================================
-FROM python:3.12-slim-bookworm AS builder
+FROM python:3.13-slim-bookworm AS builder
 
 ENV DEBIAN_FRONTEND=noninteractive
 
@@ -20,10 +20,11 @@ ADD requirements.txt .
 # Pre-install CPU-only PyTorch before requirements.txt so pyspacer
 # (which depends on torch) picks up the lighter wheel (~280 MB vs ~2 GB).
 # ECS tasks run on t3a instances with no GPU.
+# Versions pinned to match pyspacer==0.12.0 constraints (torch>=2.6,<2.7).
 RUN su ${APP_USER} -c "\
     pip install --upgrade pip \
  && pip install --no-cache-dir --no-compile \
-        torch torchvision --index-url https://download.pytorch.org/whl/cpu \
+        torch==2.6.0 torchvision==0.21.0 --index-url https://download.pytorch.org/whl/cpu \
  && pip install --no-cache-dir --no-compile -r requirements.txt"
 
 # Strip unnecessary files from installed packages to shrink the layer
@@ -37,7 +38,7 @@ RUN find /home/${APP_USER}/.local -type d -name '__pycache__' -exec rm -rf {} + 
 # ============================================================
 # Stage 2: Runtime — lean production image
 # ============================================================
-FROM python:3.12-slim-bookworm AS runtime
+FROM python:3.13-slim-bookworm AS runtime
 LABEL maintainer="<sysadmin@datamermaid.org>"
 
 ENV DEBIAN_FRONTEND=noninteractive
@@ -51,15 +52,15 @@ ENV DJANGO_SETTINGS_MODULE=app.settings
 
 # Install runtime-only OS deps (no build-essential, libpq-dev, python3-dev)
 RUN apt-get update && apt-get install -y --no-install-recommends \
-    wget gnupg lsb-release ca-certificates \
- && echo "deb http://apt.postgresql.org/pub/repos/apt $(lsb_release -cs)-pgdg main" > /etc/apt/sources.list.d/pgdg.list \
- && wget --quiet -O - https://www.postgresql.org/media/keys/ACCC4CF8.asc | apt-key add - \
+    wget ca-certificates \
+ && wget --quiet -O /usr/share/keyrings/pgdg.asc https://www.postgresql.org/media/keys/ACCC4CF8.asc \
+ && echo "deb [signed-by=/usr/share/keyrings/pgdg.asc] https://apt.postgresql.org/pub/repos/apt bookworm-pgdg main" > /etc/apt/sources.list.d/pgdg.list \
  && apt-get update \
  && apt-get install -y --no-install-recommends \
     postgresql-client-16 \
     gdal-bin \
     python3-gdal \
- && apt-get purge -y --auto-remove wget gnupg lsb-release \
+ && apt-get purge -y --auto-remove wget \
  && rm -rf /var/lib/apt/lists/*
 
 # gunicorn will listen on this port
