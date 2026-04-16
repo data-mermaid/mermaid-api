@@ -277,12 +277,13 @@ class CommonStack(Stack):
         self.web_acl = wafv2.CfnWebACL(
             self,
             "ApiWebAcl",
+            name=f"{self.stack_name}-waf",
             default_action=wafv2.CfnWebACL.DefaultActionProperty(allow={}),
             scope="REGIONAL",
             visibility_config=wafv2.CfnWebACL.VisibilityConfigProperty(
                 cloud_watch_metrics_enabled=True,
                 metric_name="MermaidApiWafMetric",
-                sampled_requests_enabled=True,
+                sampled_requests_enabled=False,
             ),
             rules=[
                 wafv2.CfnWebACL.RuleProperty(
@@ -298,7 +299,7 @@ class CommonStack(Stack):
                     visibility_config=wafv2.CfnWebACL.VisibilityConfigProperty(
                         cloud_watch_metrics_enabled=True,
                         metric_name="MermaidApiCommonRules",
-                        sampled_requests_enabled=True,
+                        sampled_requests_enabled=False,
                     ),
                 ),
                 wafv2.CfnWebACL.RuleProperty(
@@ -314,7 +315,7 @@ class CommonStack(Stack):
                     visibility_config=wafv2.CfnWebACL.VisibilityConfigProperty(
                         cloud_watch_metrics_enabled=True,
                         metric_name="MermaidApiSQLiRules",
-                        sampled_requests_enabled=True,
+                        sampled_requests_enabled=False,
                     ),
                 ),
                 wafv2.CfnWebACL.RuleProperty(
@@ -330,7 +331,7 @@ class CommonStack(Stack):
                     visibility_config=wafv2.CfnWebACL.VisibilityConfigProperty(
                         cloud_watch_metrics_enabled=True,
                         metric_name="MermaidApiKnownBadInputs",
-                        sampled_requests_enabled=True,
+                        sampled_requests_enabled=False,
                     ),
                 ),
                 wafv2.CfnWebACL.RuleProperty(
@@ -346,7 +347,7 @@ class CommonStack(Stack):
                     visibility_config=wafv2.CfnWebACL.VisibilityConfigProperty(
                         cloud_watch_metrics_enabled=True,
                         metric_name="MermaidApiRateLimit",
-                        sampled_requests_enabled=True,
+                        sampled_requests_enabled=False,
                     ),
                 ),
             ],
