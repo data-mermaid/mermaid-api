@@ -2,7 +2,6 @@ import datetime
 import hashlib
 import math
 import os
-from enum import Enum
 from io import BytesIO
 from operator import itemgetter
 from pathlib import Path
@@ -19,10 +18,8 @@ from django.db import IntegrityError, transaction
 from django.db.models import Exists, OuterRef
 from django.db.models.fields.files import ImageFieldFile
 from django.utils import timezone
-from exif import Image as ExifImage
 from PIL import Image as PILImage
-from PIL.ExifTags import TAGS
-from plum.exceptions import UnpackError
+from PIL.ExifTags import GPSTAGS, TAGS
 from spacer.extractors import EfficientNetExtractor
 from spacer.messages import ClassifyFeaturesMsg, DataLocation, ExtractFeaturesMsg
 from spacer.tasks import classify_features, extract_features
@@ -129,44 +126,89 @@ def convert_to_utc(timestamp_str: str) -> datetime:
     return local_time.astimezone(datetime.timezone.utc)
 
 
-def extract_datetime_stamp(exif_details: Dict[str, Any]) -> Optional[datetime.datetime]:
-    date_stamp = exif_details.get("gps_datestamp")  # str, 2024:04:06
-    time_stamp = exif_details.get("gps_timestamp")  # tuple
+# GPS sub-IFD tag IDs (PIL.ExifTags.GPSTAGS)
+_GPS_LATITUDE_REF = 1
+_GPS_LATITUDE = 2
+_GPS_LONGITUDE_REF = 3
+_GPS_LONGITUDE = 4
+_GPS_TIMESTAMP = 7  # (H, M, S) as rationals, UTC
+_GPS_DATESTAMP = 29  # "YYYY:MM:DD"
 
-    if date_stamp and time_stamp:
-        date_stamp = map(int, date_stamp.split(":"))
-        time_stamp = map(int, time_stamp)
-        return datetime.datetime(*date_stamp, *time_stamp, tzinfo=datetime.timezone.utc)
+# EXIF sub-IFD tag IDs (PIL.ExifTags.TAGS)
+_DATETIME_ORIGINAL = 36867  # "YYYY:MM:DD HH:MM:SS"
+_OFFSET_TIME = 36880  # "+HH:MM" — UTC offset for DateTime
+_OFFSET_TIME_ORIGINAL = 36881  # "+HH:MM" — UTC offset for DateTimeOriginal
 
-    date_time_str = exif_details.get("datetime_original")
-    offset_time = exif_details.get("offset_time")
+# Top-level IFD pointer tag IDs
+_GPS_IFD_TAG = 0x8825  # 34853
+_EXIF_IFD_TAG = 0x8769  # 34665
 
-    if not date_stamp or not date_time_str or offset_time is None:
+
+def _normalize_exif_value(value):
+    """Convert a PIL EXIF value to a JSON-serializable Python type."""
+    if isinstance(value, bytes):
+        return None  # skip binary blobs (MakerNote, UserComment raw bytes, etc.)
+    if isinstance(value, (int, float)):
+        return value  # must come before hasattr(numerator) — Python int has .numerator
+    if hasattr(value, "numerator"):  # PIL.TiffImagePlugin.IFDRational
+        return float(value)
+    if isinstance(value, tuple):
+        normalized = tuple(_normalize_exif_value(v) for v in value)
+        return normalized if any(v is not None for v in normalized) else None
+    if isinstance(value, str):
+        return value.strip().replace("\u0000", "")
+    return None  # skip unrecognized types (nested IFDs, custom objects, etc.)
+
+
+def extract_datetime_stamp(
+    exif_ifd: Dict[int, Any], gps_ifd: Dict[int, Any]
+) -> Optional[datetime.datetime]:
+    # GPS date+time is already UTC — use it if present
+    date_stamp = gps_ifd.get(_GPS_DATESTAMP)  # "YYYY:MM:DD"
+    time_stamp = gps_ifd.get(_GPS_TIMESTAMP)  # (H, M, S) as IFDRationals
+
+    if date_stamp and time_stamp and len(time_stamp) >= 3:
+        try:
+            y, mo, d = map(int, date_stamp.split(":"))
+            h, mi, s = int(time_stamp[0]), int(time_stamp[1]), int(time_stamp[2])
+            return datetime.datetime(y, mo, d, h, mi, s, tzinfo=datetime.timezone.utc)
+        except (ValueError, TypeError):
+            pass
+
+    # Fall back to EXIF datetime + UTC offset.
+    # Prefer OffsetTimeOriginal (semantically paired with DateTimeOriginal) but
+    # accept OffsetTime as a fallback for cameras that only write the general tag.
+    date_time_str = exif_ifd.get(_DATETIME_ORIGINAL)  # "YYYY:MM:DD HH:MM:SS"
+    offset_str = exif_ifd.get(_OFFSET_TIME_ORIGINAL) or exif_ifd.get(_OFFSET_TIME)  # "+HH:MM"
+
+    if not date_time_str or offset_str is None:
         return None
 
-    dt = datetime.datetime.strptime(date_time_str, "%Y:%m:%d %H:%M:%S")
-    offset = datetime.timedelta(hours=offset_time)
-    local_tz = datetime.timezone(offset)
-    dt_local = dt.replace(tzinfo=local_tz)
-
-    return dt_local.astimezone(datetime.timezone.utc)
-
-
-def extract_location(exif_details: Dict[str, Any]) -> Optional[GEOSPoint]:
-    latitude_ref = exif_details.get("gps_latitude_ref")  # N or S
-    latitude_dms = exif_details.get("gps_latitude")  # tuple (DMS)
-    longitude_ref = exif_details.get("gps_longitude_ref")  # E or W
-    longitude_dms = exif_details.get("gps_longitude")  # tuple (DMS)
-
-    if (
-        not all([latitude_ref, latitude_dms, longitude_ref, longitude_dms])
-        or len(latitude_dms) < 3
-        or len(longitude_dms) < 3
-    ):
+    try:
+        dt = datetime.datetime.strptime(date_time_str, "%Y:%m:%d %H:%M:%S")
+        sign = -1 if offset_str.startswith("-") else 1
+        h, m = map(int, offset_str[1:].split(":"))
+        offset = datetime.timedelta(hours=sign * h, minutes=sign * m)
+        return dt.replace(tzinfo=datetime.timezone(offset)).astimezone(datetime.timezone.utc)
+    except (ValueError, AttributeError):
         return None
 
-    latitude = latitude_dms[0] + latitude_dms[1] / 60 + latitude_dms[2] / 3600
-    longitude = longitude_dms[0] + longitude_dms[1] / 60 + longitude_dms[2] / 3600
+
+def extract_location(gps_ifd: Dict[int, Any]) -> Optional[GEOSPoint]:
+    latitude_ref = gps_ifd.get(_GPS_LATITUDE_REF)  # "N" or "S"
+    latitude_dms = gps_ifd.get(_GPS_LATITUDE)  # tuple of 3 IFDRationals
+    longitude_ref = gps_ifd.get(_GPS_LONGITUDE_REF)  # "E" or "W"
+    longitude_dms = gps_ifd.get(_GPS_LONGITUDE)  # tuple of 3 IFDRationals
+
+    if not all([latitude_ref, latitude_dms, longitude_ref, longitude_dms]):
+        return None
+    if len(latitude_dms) < 3 or len(longitude_dms) < 3:
+        return None
+
+    latitude = float(latitude_dms[0]) + float(latitude_dms[1]) / 60 + float(latitude_dms[2]) / 3600
+    longitude = (
+        float(longitude_dms[0]) + float(longitude_dms[1]) / 60 + float(longitude_dms[2]) / 3600
+    )
 
     latitude *= -1 if latitude_ref == "S" else 1
     longitude *= -1 if longitude_ref == "W" else 1
@@ -184,7 +226,7 @@ def save_normalized_imagefile(instance: Image):
                 if TAGS[orientation] == "Orientation":
                     break
 
-            exif = dict(image_file._getexif().items())
+            exif = dict(image_file.getexif().items())
 
             if exif[orientation] == 3:
                 image_file = image_file.rotate(180, expand=True)
@@ -203,32 +245,47 @@ def save_normalized_imagefile(instance: Image):
         instance.image = ContentFile(img_content.getvalue(), name=instance.image.name)
 
 
-def store_exif(instance: Image) -> Dict[str, Any]:
+def store_exif(instance: Image) -> None:
     file_obj = _get_file_for_reading(instance.image)
 
     with PILImage.open(file_obj) as img:
-        try:
-            exif_image = ExifImage(img.read())
-            if exif_image.has_exif is False:
-                return
-        except UnpackError:
-            return
+        exif = img.getexif()
 
+    if not exif:
+        return
+
+    gps_ifd = exif.get_ifd(_GPS_IFD_TAG)
+    exif_ifd = exif.get_ifd(_EXIF_IFD_TAG)
+
+    # Build a flat dict of all EXIF tags using PIL string names, skipping IFD pointers.
+    # We iterate three sources in order: IFD0 (top-level) → GPS sub-IFD → EXIF sub-IFD.
+    # If the same tag name appears in more than one IFD (e.g. "DateTime" can exist in
+    # both IFD0 and the EXIF sub-IFD), the later source wins.  Sub-IFD values are more
+    # specific (DateTimeOriginal vs DateTime) so this ordering is intentional.
+    ifd_pointer_tags = {_GPS_IFD_TAG, _EXIF_IFD_TAG}
     exif_details = {}
-    for k, v in exif_image.get_all().items():
-        if isinstance(v, Enum):
-            v = v.name
-        elif isinstance(v, (int, float, tuple, list)):
-            ...
-        else:
-            v = str(v).strip().replace("\u0000", "")
 
-        exif_details[k] = v
+    for tag_id, value in exif.items():
+        if tag_id in ifd_pointer_tags:
+            continue
+        v = _normalize_exif_value(value)
+        if v is not None:
+            exif_details[TAGS.get(tag_id, str(tag_id))] = v
+
+    for tag_id, value in gps_ifd.items():
+        v = _normalize_exif_value(value)
+        if v is not None:
+            exif_details[GPSTAGS.get(tag_id, str(tag_id))] = v
+
+    for tag_id, value in exif_ifd.items():
+        v = _normalize_exif_value(value)
+        if v is not None:
+            exif_details[TAGS.get(tag_id, str(tag_id))] = v
 
     instance.data = instance.data or {}
     instance.data["exif"] = exif_details
-    instance.location = extract_location(exif_details)
-    instance.photo_timestamp = extract_datetime_stamp(exif_details)
+    instance.location = extract_location(gps_ifd)
+    instance.photo_timestamp = extract_datetime_stamp(exif_ifd, gps_ifd)
 
 
 def create_classification_status(image, status, message=None):
