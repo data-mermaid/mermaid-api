@@ -63,7 +63,7 @@ class CommonStack(Stack):
             vpc_flow_logs_bucket = s3.Bucket(
                 self,
                 "VpcFlowLogsBucket",
-                bucket_name="mermaid-vpc-flow-logs",
+                bucket_name=f"mermaid-vpc-flow-logs-{self.account}-{self.region}",
                 removal_policy=RemovalPolicy.RETAIN,
                 public_read_access=False,
                 block_public_access=s3.BlockPublicAccess.BLOCK_ALL,
@@ -78,7 +78,7 @@ class CommonStack(Stack):
                                 transition_after=Duration.days(30),
                             ),
                         ],
-                        expiration=Duration.days(90),
+                        expiration=Duration.days(180),
                     ),
                 ],
             )
@@ -105,7 +105,6 @@ class CommonStack(Stack):
                     actions=[
                         "logs:CreateLogGroup",
                         "logs:DescribeLogGroups",
-                        "logs:DescribeLogStreams",
                     ],
                     resources=["*"],
                 )
@@ -117,8 +116,12 @@ class CommonStack(Stack):
                     actions=[
                         "logs:CreateLogStream",
                         "logs:PutLogEvents",
+                        "logs:DescribeLogStreams",
                     ],
-                    resources=[f"{vpc_flow_logs_group.log_group_arn}:*"],
+                    resources=[
+                        vpc_flow_logs_group.log_group_arn,
+                        f"{vpc_flow_logs_group.log_group_arn}:*",
+                    ],
                 )
             )
 
@@ -266,7 +269,7 @@ class CommonStack(Stack):
             athena_results_bucket = s3.Bucket(
                 self,
                 "AthenaResultsBucket",
-                bucket_name="mermaid-athena-results",
+                bucket_name=f"mermaid-athena-results-{self.account}-{self.region}",
                 removal_policy=RemovalPolicy.RETAIN,
                 public_read_access=False,
                 block_public_access=s3.BlockPublicAccess.BLOCK_ALL,
