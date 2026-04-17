@@ -175,7 +175,9 @@ class ApiStack(Stack):
             "IMAGE_SQS_QUEUE_NAME": image_sqs_queue_name,
         }
 
-        # build image asset to be shared with API and Backup Task
+        # Shared image asset used by ALL ECS task definitions:
+        # API, ScheduledBackupTask, SummaryCacheTask, QueueWorker General,
+        # and QueueWorker ImageProcess. Changing `target` affects every service.
         image_asset = ecr_assets.DockerImageAsset(
             self,
             "ApiImage",

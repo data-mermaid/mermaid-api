@@ -13,7 +13,8 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
  && rm -rf /var/lib/apt/lists/*
 
 ARG APP_USER=webapp
-RUN groupadd ${APP_USER} && useradd -m --no-log-init -g ${APP_USER} ${APP_USER}
+ARG APP_UID=1000
+RUN groupadd ${APP_USER} && useradd -m --no-log-init --uid ${APP_UID} -g ${APP_USER} ${APP_USER}
 
 WORKDIR /var/projects/${APP_USER}
 COPY requirements.txt .
@@ -33,12 +34,14 @@ RUN find /home/${APP_USER}/.local -type d -name '__pycache__' -exec rm -rf {} + 
         ! -path '*/django/contrib/admin/tests' \
         ! -path '*/pandas/tests*' \
         ! -path '*/pandas/_testing*' \
+        ! -path '*/psycopg/tests*' \
+        ! -path '*/pyarrow/tests*' \
         -exec rm -rf {} + \
  && find /home/${APP_USER}/.local -name '*.pyc' -delete \
  && find /home/${APP_USER}/.local -name '*.pyo' -delete
 
 # Smoke-test: verify top-level dependencies import successfully after cleanup
-RUN su ${APP_USER} -c "python -c 'import django; import torch; import torchvision; import pandas; import spacer'"
+RUN su ${APP_USER} -c "python -c 'import django; import torch; import torchvision; import pandas; import psycopg; import pyarrow; import spacer'"
 
 # ============================================================
 # Stage 2: Runtime — lean production image
@@ -57,32 +60,33 @@ ENV DJANGO_SETTINGS_MODULE=app.settings
 
 # Install runtime-only OS deps (no build-essential, libpq-dev, python3-dev)
 RUN apt-get update && apt-get install -y --no-install-recommends \
-    wget ca-certificates \
+    wget gnupg ca-certificates \
  && wget --quiet -O /usr/share/keyrings/pgdg.asc https://www.postgresql.org/media/keys/ACCC4CF8.asc \
+ && gpg --dry-run --import --import-options show-only /usr/share/keyrings/pgdg.asc | grep -q 'B97B0AFCAA1A47F044F244A07FCC7D46ACCC4CF8' \
  && echo "deb [signed-by=/usr/share/keyrings/pgdg.asc] https://apt.postgresql.org/pub/repos/apt bookworm-pgdg main" > /etc/apt/sources.list.d/pgdg.list \
  && apt-get update \
  && apt-get install -y --no-install-recommends \
     postgresql-client-16 \
     gdal-bin \
     python3-gdal \
- && apt-get purge -y --auto-remove wget \
+ && apt-get purge -y --auto-remove wget gnupg \
  && rm -rf /var/lib/apt/lists/*
 
 # gunicorn will listen on this port
 EXPOSE 8081
 
 ARG APP_USER=webapp
+ARG APP_UID=1000
 ARG APP_DIR=/var/projects/${APP_USER}
-RUN groupadd ${APP_USER} && useradd -m --no-log-init -g ${APP_USER} ${APP_USER}
+RUN groupadd ${APP_USER} && useradd -m --no-log-init --uid ${APP_UID} -g ${APP_USER} ${APP_USER}
 
 # Copy only the installed Python packages from the builder stage
 COPY --from=builder --chown=${APP_USER}:${APP_USER} /home/${APP_USER}/.local /home/${APP_USER}/.local
 
 WORKDIR ${APP_DIR}
 
-COPY ./src .
-COPY ./iac/settings ./iac/settings
-RUN chown -R ${APP_USER}:${APP_USER} ${APP_DIR}
+COPY --chown=${APP_USER}:${APP_USER} ./src .
+COPY --chown=${APP_USER}:${APP_USER} ./iac/settings ./iac/settings
 
 # Run everything from here forward as non-root
 USER ${APP_USER}:${APP_USER}
@@ -100,6 +104,6 @@ FROM runtime AS dev
 ARG APP_USER=webapp
 USER root
 COPY requirements-dev.txt /tmp/requirements-dev.txt
-RUN su ${APP_USER} -c "pip install --no-cache-dir -r /tmp/requirements-dev.txt" \
+RUN su -l ${APP_USER} -c "pip install --no-cache-dir -r /tmp/requirements-dev.txt" \
  && rm /tmp/requirements-dev.txt
 USER ${APP_USER}:${APP_USER}
