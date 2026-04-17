@@ -28,7 +28,7 @@ from .point import PointSerializer
 
 class ImagePermission(permissions.BasePermission):
     def has_permission(self, request, view):
-        profile = getattr(request.user, "profile")
+        profile = getattr(request.user, "profile", None)
         if profile is None:
             return False
 
@@ -148,7 +148,7 @@ class ImageViewSet(BaseProjectApiViewSet):
 
     def limit_to_project(self, request, *args, **kwargs):
         qs = self.get_queryset()
-        profile = getattr(request.user, "profile")
+        profile = getattr(request.user, "profile", None)
         if profile is None:
             return qs.none()
 
