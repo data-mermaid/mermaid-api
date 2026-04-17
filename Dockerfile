@@ -22,26 +22,26 @@ COPY requirements.txt .
 # (which depends on torch) picks up the lighter wheel (~280 MB vs ~2 GB).
 # ECS tasks run on t3a instances with no GPU.
 # Versions pinned to match pyspacer==0.12.0 constraints (torch>=2.6,<2.7).
-RUN su ${APP_USER} -c "\
+RUN su -l ${APP_USER} -c "\
     pip install --upgrade pip \
  && pip install --no-cache-dir --no-compile \
         torch==2.6.0 torchvision==0.21.0 --index-url https://download.pytorch.org/whl/cpu \
- && pip install --no-cache-dir --no-compile -r requirements.txt"
+ && pip install --no-cache-dir --no-compile -r /var/projects/${APP_USER}/requirements.txt"
 
 # Strip unnecessary files from installed packages to shrink the layer
 RUN find /home/${APP_USER}/.local -type d -name '__pycache__' -exec rm -rf {} + \
  && find /home/${APP_USER}/.local -type d -name 'tests' \
         ! -path '*/django/contrib/admin/tests' \
-        ! -path '*/pandas/tests*' \
-        ! -path '*/pandas/_testing*' \
-        ! -path '*/psycopg/tests*' \
-        ! -path '*/pyarrow/tests*' \
+        ! -path '*/pandas/tests*'       `# pandas imports from its own tests module` \
+        ! -path '*/pandas/_testing*'     `# pandas._testing used by internal imports` \
+        ! -path '*/psycopg/tests*'       `# psycopg may reference tests at import time` \
+        ! -path '*/pyarrow/tests*'       `# pyarrow imports from tests in some code paths` \
         -exec rm -rf {} + \
  && find /home/${APP_USER}/.local -name '*.pyc' -delete \
  && find /home/${APP_USER}/.local -name '*.pyo' -delete
 
 # Smoke-test: verify top-level dependencies import successfully after cleanup
-RUN su ${APP_USER} -c "python -c 'import django; import torch; import torchvision; import pandas; import psycopg; import pyarrow; import spacer'"
+RUN su -l ${APP_USER} -c "python -c 'import django; import torch; import torchvision; import pandas; import psycopg; import pyarrow; import spacer'"
 
 # ============================================================
 # Stage 2: Runtime — lean production image
@@ -62,7 +62,9 @@ ENV DJANGO_SETTINGS_MODULE=app.settings
 RUN apt-get update && apt-get install -y --no-install-recommends \
     wget gnupg ca-certificates \
  && wget --quiet -O /usr/share/keyrings/pgdg.asc https://www.postgresql.org/media/keys/ACCC4CF8.asc \
- && gpg --dry-run --import --import-options show-only /usr/share/keyrings/pgdg.asc | grep -q 'B97B0AFCAA1A47F044F244A07FCC7D46ACCC4CF8' \
+ && gpg --dry-run --import --import-options show-only --with-colons /usr/share/keyrings/pgdg.asc \
+      | awk -F: '/^fpr:/ {print $10}' \
+      | grep -qx 'B97B0AFCAA1A47F044F244A07FCC7D46ACCC4CF8' \
  && echo "deb [signed-by=/usr/share/keyrings/pgdg.asc] https://apt.postgresql.org/pub/repos/apt bookworm-pgdg main" > /etc/apt/sources.list.d/pgdg.list \
  && apt-get update \
  && apt-get install -y --no-install-recommends \
