@@ -281,23 +281,24 @@ class GFCRFinanceSolution(BaseModel):
     )
 
     SUSTAINABLE_FINANCE_MECHANISM_CHOICES = (
-        ("biodiversity_offsets", "Biodiversity offsets"),
+        ("biodiversity_offsets", "Biodiversity credits"),
         ("blue_bonds", "Blue bonds"),
-        ("blue_carbon", "Blue carbon"),
+        ("blue_carbon", "Blue carbon credits"),
         ("conservation_trust_funds", "Conservation trust funds"),
         ("debt_conversion", "Debt conversion"),
         ("economic_instruments", "Economic instruments (fines, penalties, taxes, subsidies, etc.)"),
         ("financial_guarantees", "Financial guarantees"),
         ("incubator_tecnical_assistance", "Incubator / Technical assistance facility"),
         ("insurance_products", "Insurance products"),
-        ("microfinance", "Microfinance / Village Savings and Loans"),
+        ("microfinance", "Microfinance / village savings and loans"),
         ("mpa_entry_fees", "MPA entry fees"),
         ("pay_for_success", "Pay for success"),
+        ("resilience_credits", "Resilience credits"),
         ("revolving_finance_facility", "Revolving finance facility"),
         ("sustainable_livelihood_mech", "Sustainable livelihood mechanisms"),
     )
     SUSTAINABLE_FINANCE_MECHANISM_CHOICES_UPDATED_ON = datetime.datetime(
-        2024, 5, 27, 0, 0, 0, 0, tzinfo=datetime.timezone.utc
+        2026, 4, 17, 0, 0, 0, 0, tzinfo=datetime.timezone.utc
     )
 
     GFCR_FUNDED = "gfcr_funded"
@@ -361,10 +362,10 @@ class GFCRInvestmentSource(BaseModel):
         ("financial_guarantee", "Financial guarantee"),
         ("grant", "Grant"),
         ("public_budget", "Public budget"),
-        ("technical_assistance", "Technical assistance"),
+        ("technical_assistance", "Technical assistance / in-kind"),
     )
     INVESTMENT_TYPE_CHOICES_UPDATED_ON = datetime.datetime(
-        2024, 5, 27, 0, 0, 0, 0, tzinfo=datetime.timezone.utc
+        2026, 4, 17, 0, 0, 0, 0, tzinfo=datetime.timezone.utc
     )
 
     finance_solution = models.ForeignKey(
@@ -387,11 +388,11 @@ class GFCRInvestmentSource(BaseModel):
 
 class GFCRRevenue(BaseModel):
     REVENUE_TYPE_CHOICES = (
-        ("biodiversity_offsets", "Biodiversity offsets"),
+        ("biodiversity_offsets", "Biodiversity credits"),
         ("blue_bonds", "Blue bonds"),
         (
             "carbon_credits_environmental_services",
-            "Carbon credits / environmental services",
+            "Blue carbon credits / environmental services",
         ),
         ("conservation_trust_funds", "Conservation trust funds"),
         ("debt_conversion", "Debt conversion"),
@@ -408,7 +409,7 @@ class GFCRRevenue(BaseModel):
         ("sustainable_livelihood_mechanisms", "Other sustainable livelihood mechanisms"),
     )
     REVENUE_TYPE_CHOICES_UPDATED_ON = datetime.datetime(
-        2024, 5, 27, 0, 0, 0, 0, tzinfo=datetime.timezone.utc
+        2026, 4, 17, 0, 0, 0, 0, tzinfo=datetime.timezone.utc
     )
 
     finance_solution = models.ForeignKey(
