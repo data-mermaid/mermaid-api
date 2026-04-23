@@ -1,6 +1,8 @@
 import os
 
-from aws_cdk import App, Environment
+from aws_cdk import App, Aspects, Environment
+from cdk_nag import AwsSolutionsChecks
+import nag_suppressions
 from settings.dev import DEV_SETTINGS
 from settings.prod import PROD_SETTINGS
 from stacks.api import ApiStack
@@ -17,6 +19,7 @@ tags = {
 
 
 app = App()
+Aspects.of(app).add(AwsSolutionsChecks(verbose=True))
 
 cdk_env = Environment(
     account=os.getenv("CDK_DEFAULT_ACCOUNT", None),
@@ -106,5 +109,14 @@ prod_api_stack = ApiStack(
     report_s3_creds=common_stack.report_s3_creds,
 )
 
+nag_suppressions.apply_all(
+    gh_access_stack=gh_access_stack,
+    common_stack=common_stack,
+    dev_static_site_stack=dev_static_site_stack,
+    prod_static_site_stack=prod_static_site_stack,
+    dev_api_stack=dev_api_stack,
+    prod_api_stack=prod_api_stack,
+    dev_sagemaker_stack=dev_sagemaker_stack,
+)
 
 app.synth()
