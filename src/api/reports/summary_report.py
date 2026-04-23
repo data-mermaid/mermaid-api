@@ -1,4 +1,5 @@
 import csv
+import gzip
 from collections import defaultdict
 from typing import Dict, List, Set, Tuple
 
@@ -261,7 +262,10 @@ def get_viewset_csv_content(view_cls, project_pk, request):
         print(resp.content)
         raise ValueError(f"Failed to get content for project {project_pk}")
 
-    content = list(csv.reader([str(row, "UTF-8").strip() for row in resp.streaming_content]))
+    raw_bytes = b"".join(resp.streaming_content)
+    if resp.get("Content-Encoding") == "gzip":
+        raw_bytes = gzip.decompress(raw_bytes)
+    content = list(csv.reader(raw_bytes.decode("UTF-8").splitlines()))
     if not isinstance(content, list) or len(content) < 2 or "site_id" not in content[0]:
         if isinstance(content, list):
             yield from content
