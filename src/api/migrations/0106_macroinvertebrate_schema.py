@@ -656,13 +656,19 @@ class Migration(migrations.Migration):
                 (
                     "group_of_interest",
                     models.ForeignKey(
-                        on_delete=django.db.models.deletion.PROTECT, to="api.invertgroupofinterest"
+                        blank=True,
+                        null=True,
+                        on_delete=django.db.models.deletion.PROTECT,
+                        to="api.invertgroupofinterest",
                     ),
                 ),
                 (
                     "harvest_type",
                     models.ForeignKey(
-                        on_delete=django.db.models.deletion.PROTECT, to="api.invertharvesttype"
+                        blank=True,
+                        null=True,
+                        on_delete=django.db.models.deletion.PROTECT,
+                        to="api.invertharvesttype",
                     ),
                 ),
             ],

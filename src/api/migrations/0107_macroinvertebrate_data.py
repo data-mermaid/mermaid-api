@@ -1602,8 +1602,8 @@ def seed_macroinvertebrate_data(apps, schema_editor):
     family_map = {}
     genus_map = {}
 
-    # Approval status: use approved (0) from BaseAttributeModel
-    APPROVED = 0
+    # Approval status: SUPERUSER_APPROVED = 90 from BaseAttributeModel
+    APPROVED = 90
 
     for row in INVERT_SPECIES:
         (
