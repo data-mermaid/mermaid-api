@@ -158,7 +158,9 @@ class CommonStack(Stack):
             )
 
             # Enable VPC Flow Logs to S3 for Athena analysis
-            ec2.FlowLog(
+            # CDK bug: FlowLogDestination.to_s3() emits DestinationOptions keys in camelCase
+            # but CloudFormation requires PascalCase — override via escape hatch.
+            vpc_flow_logs_s3 = ec2.FlowLog(
                 self,
                 "VpcFlowLogsS3",
                 resource_type=ec2.FlowLogResourceType.from_vpc(self.vpc),
@@ -166,9 +168,15 @@ class CommonStack(Stack):
                 destination=ec2.FlowLogDestination.to_s3(
                     bucket=vpc_flow_logs_bucket,
                     key_prefix="vpc-flow-logs/",
-                    file_format=ec2.FlowLogFileFormat.PARQUET,
-                    hive_compatible_partitions=True,
                 ),
+            )
+            vpc_flow_logs_s3.node.default_child.add_property_override(
+                "DestinationOptions",
+                {
+                    "FileFormat": "parquet",
+                    "HiveCompatiblePartitions": True,
+                    "PerHourPartition": True,
+                },
             )
 
             # Create Glue Database
