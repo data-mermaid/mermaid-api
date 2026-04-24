@@ -119,13 +119,53 @@ jobs:
           exit 1
 
       - name: CDK Diff
+        id: cdk-diff
         env:
           CDK_DEFAULT_ACCOUNT: ${{ secrets.CDK_DEFAULT_ACCOUNT }}
           PYTHONPATH: ${{ github.workspace }}
-          GITHUB_EVENT_NAME: ${{ github.event_name }}
-          GITHUB_EVENT_PATH: ${{ github.event_path }}
-          GITHUB_TOKEN: ${{ github.token }}
-          GITHUB_WORKFLOW: ${{ github.workflow }}
           SYS_EMAIL: ${{ secrets.SYS_EMAIL }}
         run: |
           cd iac && ./cdk_diff.sh
+
+      - name: Post CDK Diff results to PR
+        if: always() && steps.cdk-diff.outcome != 'skipped'
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const fs = require('fs');
+            const log = fs.readFileSync('/tmp/cdk-diff.log', 'utf8');
+            const status = '${{ steps.cdk-diff.outcome }}' === 'success' ? 'Success' : 'Failed';
+            const icon = status === 'Success' ? ':white_check_mark:' : ':x:';
+            const body = [
+              `#### \`cdk diff\` ${icon} ${status}`,
+              '<details><summary>Show Output</summary>',
+              '',
+              '```',
+              log,
+              '```',
+              '',
+              '</details>',
+              '',
+              `*Workflow: \`${{ github.workflow }}\`*`,
+            ].join('\n');
+            const { data: comments } = await github.rest.issues.listComments({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              issue_number: context.issue.number,
+            });
+            const existing = comments.find(c => c.body.includes('#### `cdk diff`'));
+            if (existing) {
+              await github.rest.issues.updateComment({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                comment_id: existing.id,
+                body,
+              });
+            } else {
+              await github.rest.issues.createComment({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                issue_number: context.issue.number,
+                body,
+              });
+            }
