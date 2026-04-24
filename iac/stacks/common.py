@@ -59,6 +59,24 @@ class CommonStack(Stack):
         )
         # VPC Flow Logs with Glue and Athena Integration
         if enable_vpc_flow_logs:
+            # Dedicated access logs bucket for all VPC flow logs infrastructure buckets
+            vpc_flow_logs_access_logs_bucket = s3.Bucket(
+                self,
+                "VpcFlowLogsAccessLogsBucket",
+                bucket_name=f"mermaid-vpc-flow-logs-access-logs-{self.account}-{self.region}",
+                removal_policy=RemovalPolicy.RETAIN,
+                public_read_access=False,
+                block_public_access=s3.BlockPublicAccess.BLOCK_ALL,
+                encryption=s3.BucketEncryption.S3_MANAGED,
+                enforce_ssl=True,
+                lifecycle_rules=[
+                    s3.LifecycleRule(
+                        id="AccessLogsExpiry",
+                        expiration=Duration.days(90),
+                    ),
+                ],
+            )
+
             # Create S3 bucket for VPC Flow Logs
             vpc_flow_logs_bucket = s3.Bucket(
                 self,
@@ -68,6 +86,9 @@ class CommonStack(Stack):
                 public_read_access=False,
                 block_public_access=s3.BlockPublicAccess.BLOCK_ALL,
                 encryption=s3.BucketEncryption.S3_MANAGED,
+                enforce_ssl=True,
+                server_access_logs_bucket=vpc_flow_logs_access_logs_bucket,
+                server_access_logs_prefix="vpc-flow-logs-bucket/",
                 lifecycle_rules=[
                     s3.LifecycleRule(
                         id="VpcFlowLogsArchive",
@@ -273,6 +294,9 @@ class CommonStack(Stack):
                 removal_policy=RemovalPolicy.RETAIN,
                 public_read_access=False,
                 block_public_access=s3.BlockPublicAccess.BLOCK_ALL,
+                enforce_ssl=True,
+                server_access_logs_bucket=vpc_flow_logs_access_logs_bucket,
+                server_access_logs_prefix="athena-results-bucket/",
                 lifecycle_rules=[
                     s3.LifecycleRule(
                         id="AthenaResultsCleanup",
