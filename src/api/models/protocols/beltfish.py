@@ -450,7 +450,7 @@ class FishGenus(FishAttribute):
         self._biomass_b = None
         self._biomass_c = None
         self._max_length = None
-        self._regions = None
+        self._regions = []
         if genus is not None:
             if genus.get("biomass_constant_a") is not None:
                 self._biomass_a = round(genus.get("biomass_constant_a"), 6)
@@ -462,7 +462,7 @@ class FishGenus(FishAttribute):
                 self._max_length = genus.get("max_length")
 
         if FishGenus.regions_agg is not None:
-            self._regions = FishGenus.regions_agg.get(str(self.pk))
+            self._regions = FishGenus.regions_agg.get(str(self.pk), [])
 
         return FishGenus.species_agg
 
