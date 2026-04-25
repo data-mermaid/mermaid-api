@@ -196,6 +196,9 @@ class Project(BaseModel, JSONMixin):
         elif protocol in PROTOCOL_MAP:
             su_method = protocol.lower()
 
+        if su_method is None:
+            raise ValueError(f"Unknown protocol '{protocol}'.")
+
         field_name = f"data_policy_{su_method}"
         if not hasattr(cls, field_name):
             raise ValueError(f"No data policy for '{protocol}' protocol.")
@@ -537,9 +540,6 @@ class SampleUnit(BaseModel):
         raise NameError("Sample unit method field can't be found")
 
     def __str__(self):
-        if hasattr(self, "transect") or hasattr(self, "quadrat"):
-            return _("%s") % self.__str__()
-
         return _("sample unit")
 
 
@@ -756,7 +756,7 @@ class CollectRecord(BaseModel):
             for obs_key in self.obs_keys:
                 self.data[obs_key] = [self._assign_id(r) for r in self.data.get(obs_key) or []]
 
-    def save(self, ignore_stage=False, **kwargs):
+    def save(self, *args, ignore_stage=False, **kwargs):
         if ignore_stage is False:
             self.stage = self.SAVED_STAGE
             self.validations = self.validations or {}
@@ -767,7 +767,7 @@ class CollectRecord(BaseModel):
 
         self.ensure_obs_ids()
 
-        super(CollectRecord, self).save(**kwargs)
+        super(CollectRecord, self).save(*args, **kwargs)
 
 
 class ArchivedRecord(models.Model):

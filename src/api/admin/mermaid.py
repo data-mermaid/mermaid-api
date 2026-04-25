@@ -256,14 +256,11 @@ class ManagementAdmin(BaseAdmin):
         crs = CollectRecord.objects.filter(data__sample_event__management=obj.pk)
         if crs.count() > 0:
             for cr in crs:
-                project_id = cr.project.id
                 admin_url = reverse(
                     "admin:{}_collectrecord_change".format(SampleEvent._meta.app_label),
                     args=(cr.pk,),
                 )
                 crstr = format_html('<a href="{}">{}</a>', admin_url, cr)
-                if project_id is not None:
-                    crstr = format_html('<a href="{}">{}</a>', admin_url, cr)
                 collect_records.append(crstr)
 
         ses = SampleEvent.objects.filter(management=obj).distinct()

@@ -81,7 +81,7 @@ class BenthicAttribute(BaseAttributeModel):
     def descendants(self):
         sql = """
             WITH RECURSIVE descendants(id, name, parent_id) AS (
-                SELECT id, name, parent_id FROM benthic_attribute WHERE id = '%s'
+                SELECT id, name, parent_id FROM benthic_attribute WHERE id = %s
               UNION ALL
                 SELECT a.id, a.name, a.parent_id
                 FROM descendants d, benthic_attribute a
@@ -89,18 +89,15 @@ class BenthicAttribute(BaseAttributeModel):
             )
             SELECT id, name, parent_id
             FROM descendants
-            WHERE id != '%s'
-        """ % (
-            self.pk,
-            self.pk,
-        )
-        return type(self).objects.raw(sql)
+            WHERE id != %s
+        """
+        return type(self).objects.raw(sql, [self.pk, self.pk])
 
     @property
     def origin(self):
         sql = """
             WITH RECURSIVE parents(id, name, parent_id) AS (
-                SELECT id, name, parent_id FROM benthic_attribute WHERE id = '{}'
+                SELECT id, name, parent_id FROM benthic_attribute WHERE id = %s
                 UNION ALL
                 SELECT a.id, a.name, a.parent_id
                 FROM parents as p, benthic_attribute a
@@ -110,8 +107,8 @@ class BenthicAttribute(BaseAttributeModel):
             FROM parents
             WHERE parent_id IS NULL
             LIMIT 1
-        """.format(self.pk)
-        return type(self).objects.raw(sql)[0]
+        """
+        return type(self).objects.raw(sql, [self.pk])[0]
 
     class Meta:
         db_table = "benthic_attribute"
@@ -156,7 +153,11 @@ class BenthicAttributeGrowthFormLifeHistory(BaseModel):
         verbose_name_plural = _("benthic attribute growth form life histories")
 
     def __str__(self):
-        return _(f"{self.attribute.name} - {self.growth_form.name} {self.life_history.name}")
+        return _("%s - %s %s") % (
+            self.attribute.name,
+            self.growth_form.name,
+            self.life_history.name,
+        )
 
 
 class BenthicLIT(TransectMethod):

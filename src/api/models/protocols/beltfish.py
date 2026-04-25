@@ -1,3 +1,4 @@
+import datetime as _datetime
 import itertools
 import operator as pyoperator
 from decimal import Decimal
@@ -141,8 +142,6 @@ class BeltTransectWidthCondition(BaseChoiceModel):
             "operator": self.operator,
             "val": self.val,
         }
-        if hasattr(self, "val"):
-            ret["val"] = self.val
         return ret
 
 
@@ -550,8 +549,6 @@ class FishGroupFunction(BaseChoiceModel):
 
 
 class FishSpecies(FishAttribute):
-    import datetime as _datetime
-
     LENGTH_TYPES = (
         ("fork length", "fork length"),
         ("standard length", "standard length"),

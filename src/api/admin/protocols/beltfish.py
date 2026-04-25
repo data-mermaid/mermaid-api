@@ -59,19 +59,21 @@ class FishAttributeAdmin(AttributeAdmin):
 
             species = FishSpecies.objects.filter(**{query: object_id})
             for s in species:
-                cqry = "data__{}__contains".format(self.protocols[0].get("cr_obs"))
-                crs = get_crs_with_attrib(cqry, {self.attrib: str(s.pk)})
-                sqry = "{}__{}".format(self.protocols[0].get("su_obs"), self.attrib)
-                sus = get_sus_with_attrib(self.protocols[0].get("model_su"), sqry, s.pk)
-                if crs.count() > 0 or sus.count() > 0:
-                    admin_url = reverse(
-                        "admin:{}_fishspecies_change".format(FishSpecies._meta.app_label),
-                        args=(s.pk,),
-                    )
-                    sstr = format_html('<a href="{}">{}</a>', admin_url, s)
-                    protected_descendants.add(sstr)
+                for p in self.protocols:
+                    cqry = "data__{}__contains".format(p.get("cr_obs"))
+                    crs = get_crs_with_attrib(cqry, {self.attrib: str(s.pk)})
+                    sqry = "{}__{}".format(p.get("su_obs"), self.attrib)
+                    sus = get_sus_with_attrib(p.get("model_su"), sqry, s.pk)
+                    if crs.count() > 0 or sus.count() > 0:
+                        admin_url = reverse(
+                            "admin:{}_fishspecies_change".format(FishSpecies._meta.app_label),
+                            args=(s.pk,),
+                        )
+                        sstr = format_html('<a href="{}">{}</a>', admin_url, s)
+                        protected_descendants.add(sstr)
 
-            extra_context.update({"protected_descendants": protected_descendants})
+            if protected_descendants:
+                extra_context.update({"protected_descendants": protected_descendants})
 
         return super().delete_view(request, object_id, extra_context)
 

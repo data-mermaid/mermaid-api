@@ -108,23 +108,23 @@ class BenthicAttributeAdmin(AttributeAdmin):
         extra_context = extra_context or {}
         protected_descendants = set()
         obj = self.get_object(request, object_id)
-        if obj.descendants:
-            for d in obj.descendants:
-                for p in self.protocols:
-                    cqry = "data__{}__contains".format(p.get("cr_obs"))
-                    crs = get_crs_with_attrib(cqry, {self.attrib: str(d.pk)})
-                    sqry = "{}__{}".format(p.get("su_obs"), self.attrib)
-                    sus = get_sus_with_attrib(p.get("model_su"), sqry, d.pk)
-                    if crs.count() > 0 or sus.count() > 0:
-                        admin_url = reverse(
-                            "admin:{}_benthicattribute_change".format(
-                                self.model_attrib._meta.app_label
-                            ),
-                            args=(d.pk,),
-                        )
-                        sstr = format_html('<a href="{}">{}</a>', admin_url, d)
-                        protected_descendants.add(sstr)
+        for d in obj.descendants:
+            for p in self.protocols:
+                cqry = "data__{}__contains".format(p.get("cr_obs"))
+                crs = get_crs_with_attrib(cqry, {self.attrib: str(d.pk)})
+                sqry = "{}__{}".format(p.get("su_obs"), self.attrib)
+                sus = get_sus_with_attrib(p.get("model_su"), sqry, d.pk)
+                if crs.count() > 0 or sus.count() > 0:
+                    admin_url = reverse(
+                        "admin:{}_benthicattribute_change".format(
+                            self.model_attrib._meta.app_label
+                        ),
+                        args=(d.pk,),
+                    )
+                    sstr = format_html('<a href="{}">{}</a>', admin_url, d)
+                    protected_descendants.add(sstr)
 
+        if protected_descendants:
             extra_context.update({"protected_descendants": protected_descendants})
 
         return super().delete_view(request, object_id, extra_context)
