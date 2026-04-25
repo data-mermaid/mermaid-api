@@ -277,7 +277,7 @@ class FishSpeciesAdmin(FishAttributeAdmin):
     def fish_family(self, obj):
         return obj.genus.family.name
 
-    fish_family.admin_order_field = "genus.family.name"
+    fish_family.admin_order_field = "genus__family__name"
     fish_family.short_description = "Family"
 
     def region_list(self, obj):

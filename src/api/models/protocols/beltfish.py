@@ -220,10 +220,16 @@ class FishAttribute(BaseAttributeModel):
 
     @property
     def regions(self):
-        return self._get_taxon().regions
+        taxon = self._get_taxon()
+        if taxon is None:
+            return Region.objects.none()
+        return taxon.regions
 
     def get_max_length(self):
-        return self._get_taxon().max_length
+        taxon = self._get_taxon()
+        if taxon is None:
+            return None
+        return taxon.max_length
 
 
 class FishGrouping(FishAttribute):
@@ -284,7 +290,7 @@ class FishGrouping(FishAttribute):
         ordering = ("name",)
 
     def __str__(self):
-        return _("%s") % self.name or ""
+        return _("%s") % (self.name or "")
 
 
 class FishGroupingRelationship(models.Model):

@@ -177,6 +177,9 @@ class Project(BaseModel, JSONMixin):
         self._new_values = model_to_dict(self, fields=notify_fields)
         super(Project, self).save(*args, **kwargs)
 
+        if hasattr(self, "_loaded_values"):
+            self._loaded_values["status"] = self.status
+
         if old_status is not None and old_status != self.status:
             from .classification import get_image_bucket_for_status
 

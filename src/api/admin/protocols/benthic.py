@@ -318,7 +318,7 @@ class BenthicPhotoQuadratTransectAdmin(BaseAdmin):
     def depth(self, obj):
         return obj.quadrat_transect.depth
 
-    depth.admin_order_field = "quadrat_transect__sample_event__depth"
+    depth.admin_order_field = "quadrat_transect__depth"
 
     def cr_id(self, obj):
         return obj.quadrat_transect.collect_record_id
