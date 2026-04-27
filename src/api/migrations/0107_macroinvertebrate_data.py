@@ -420,7 +420,7 @@ INVERT_SPECIES = [
         50.0,
         "SeaLifeBase – species",
         "https://www.sealifebase.se/summary/Hippopus-hippopus.html",
-        "shell length",
+        "shell length/diameter",
         "Protected / Conservation Value",
     ),
     (
@@ -434,7 +434,7 @@ INVERT_SPECIES = [
         15.0,
         "SeaLifeBase – species",
         "https://www.sealifebase.se/summary/Tridacna-crocea.html",
-        "shell length",
+        "shell length/diameter",
         "Protected / Conservation Value",
     ),
     (
@@ -448,7 +448,7 @@ INVERT_SPECIES = [
         41.7,
         "SeaLifeBase – species",
         "https://www.sealifebase.se/summary/Tridacna-maxima.html",
-        "shell length",
+        "shell length/diameter",
         "Protected / Conservation Value",
     ),
     (
@@ -462,7 +462,7 @@ INVERT_SPECIES = [
         45.0,
         "SeaLifeBase – species",
         "https://www.sealifebase.se/summary/Tridacna-squamosa.html",
-        "shell length",
+        "shell length/diameter",
         "Protected / Conservation Value",
     ),
     (
@@ -504,7 +504,7 @@ INVERT_SPECIES = [
         30.0,
         "SeaLifeBase – species",
         "https://www.sealifebase.se/summary/Hyotissa-hyotis.html",
-        "shell length",
+        "shell length/diameter",
         "Food Subsistence / Local Use",
     ),
     (
@@ -518,7 +518,7 @@ INVERT_SPECIES = [
         6.0,
         "Reeflex",
         "https://www.reeflex.net/tiere/3416_Pedum_spondyloideum.htm",
-        "shell length",
+        "shell length/diameter",
         "Food Subsistence / Local Use",
     ),
     (
@@ -532,7 +532,7 @@ INVERT_SPECIES = [
         9.0,
         "SeaLifeBase – species",
         "https://www.sealifebase.se/summary/Periglypta-reticulata.html",
-        "shell length",
+        "shell length/diameter",
         "Food Subsistence / Local Use",
     ),
     (
@@ -546,7 +546,7 @@ INVERT_SPECIES = [
         50.0,
         "SeaLifeBase – species",
         "https://www.sealifebase.se/summary/Pinna-bicolor.html",
-        "shell length",
+        "shell length/diameter",
         "Food Subsistence / Local Use",
     ),
     (
@@ -560,7 +560,7 @@ INVERT_SPECIES = [
         20.0,
         "Reeflex",
         "https://www.reeflex.net/tiere/1014_Spondylus_varius.htm",
-        "shell length",
+        "shell length/diameter",
         "Food Subsistence / Local Use",
     ),
     (
@@ -588,7 +588,7 @@ INVERT_SPECIES = [
         8.8,
         "SeaLifeBase – species",
         "https://www.sealifebase.se/summary/Pinctada-imbricata.html",
-        "shell length",
+        "shell length/diameter",
         "Food Subsistence / Local Use",
     ),
     (
@@ -602,7 +602,7 @@ INVERT_SPECIES = [
         9.8,
         "SeaLifeBase – species",
         "https://www.sealifebase.se/summary/Pinctada-margaritifera.html",
-        "shell length",
+        "shell length/diameter",
         "Food Subsistence / Local Use",
     ),
     (
@@ -616,7 +616,7 @@ INVERT_SPECIES = [
         30.0,
         "SeaLifeBase – species",
         "https://www.sealifebase.se/summary/Pteria-penguin.html",
-        "shell length",
+        "shell length/diameter",
         "Food Subsistence / Local Use",
     ),
     (

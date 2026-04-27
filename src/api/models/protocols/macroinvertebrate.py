@@ -186,6 +186,11 @@ class InvertClass(InvertMaxLengthMixin, InvertAttribute):
         ordering = ("name",)
         verbose_name = _("macroinvertebrate class")
         verbose_name_plural = _("macroinvertebrate classes")
+        constraints = [
+            models.UniqueConstraint(
+                fields=["name", "phylum"], name="unique_invertclass_name_phylum"
+            )
+        ]
 
 
 class InvertOrder(InvertMaxLengthMixin, InvertAttribute):
@@ -202,6 +207,11 @@ class InvertOrder(InvertMaxLengthMixin, InvertAttribute):
         ordering = ("name",)
         verbose_name = _("macroinvertebrate order")
         verbose_name_plural = _("macroinvertebrate orders")
+        constraints = [
+            models.UniqueConstraint(
+                fields=["name", "invert_class"], name="unique_invertorder_name_invert_class"
+            )
+        ]
 
 
 class InvertFamily(InvertMaxLengthMixin, InvertAttribute):
@@ -218,6 +228,9 @@ class InvertFamily(InvertMaxLengthMixin, InvertAttribute):
         ordering = ("name",)
         verbose_name = _("macroinvertebrate family")
         verbose_name_plural = _("macroinvertebrate families")
+        constraints = [
+            models.UniqueConstraint(fields=["name", "order"], name="unique_invertfamily_name_order")
+        ]
 
 
 class InvertGenus(InvertMaxLengthMixin, InvertAttribute):
@@ -234,6 +247,11 @@ class InvertGenus(InvertMaxLengthMixin, InvertAttribute):
         ordering = ("name",)
         verbose_name = _("macroinvertebrate genus")
         verbose_name_plural = _("macroinvertebrate genera")
+        constraints = [
+            models.UniqueConstraint(
+                fields=["name", "family"], name="unique_invertgenus_name_family"
+            )
+        ]
 
 
 class InvertSpecies(InvertAttribute):
@@ -295,6 +313,11 @@ class InvertSpecies(InvertAttribute):
         ordering = ("genus", "name")
         verbose_name = _("macroinvertebrate species")
         verbose_name_plural = _("macroinvertebrate species")
+        constraints = [
+            models.UniqueConstraint(
+                fields=["name", "genus"], name="unique_invertspecies_name_genus"
+            )
+        ]
 
 
 class InvertBeltTransect(Transect):

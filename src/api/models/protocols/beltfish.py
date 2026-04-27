@@ -24,7 +24,7 @@ class BeltTransectWidth(BaseChoiceModel):
     name = models.CharField(unique=True, max_length=100, null=True, blank=True)
 
     def __str__(self):
-        return _("%s") % self.name
+        return _("%s") % (self.name or "")
 
     @property
     def choice(self):

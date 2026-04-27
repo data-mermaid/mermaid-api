@@ -730,4 +730,34 @@ class Migration(migrations.Migration):
                 to="api.invertphylum",
             ),
         ),
+        migrations.AddConstraint(
+            model_name="invertclass",
+            constraint=models.UniqueConstraint(
+                fields=("name", "phylum"), name="unique_invertclass_name_phylum"
+            ),
+        ),
+        migrations.AddConstraint(
+            model_name="invertfamily",
+            constraint=models.UniqueConstraint(
+                fields=("name", "order"), name="unique_invertfamily_name_order"
+            ),
+        ),
+        migrations.AddConstraint(
+            model_name="invertgenus",
+            constraint=models.UniqueConstraint(
+                fields=("name", "family"), name="unique_invertgenus_name_family"
+            ),
+        ),
+        migrations.AddConstraint(
+            model_name="invertorder",
+            constraint=models.UniqueConstraint(
+                fields=("name", "invert_class"), name="unique_invertorder_name_invert_class"
+            ),
+        ),
+        migrations.AddConstraint(
+            model_name="invertspecies",
+            constraint=models.UniqueConstraint(
+                fields=("name", "genus"), name="unique_invertspecies_name_genus"
+            ),
+        ),
     ]
