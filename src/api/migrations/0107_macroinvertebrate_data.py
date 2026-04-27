@@ -1581,20 +1581,28 @@ def seed_macroinvertebrate_data(apps, schema_editor):
     InvertSpecies = apps.get_model("api", "InvertSpecies")
 
     for w in INVERT_BELT_TRANSECT_WIDTHS:
-        InvertBeltTransectWidth.objects.create(val=w["val"], name=w["name"])
+        InvertBeltTransectWidth.objects.get_or_create(name=w["name"], defaults={"val": w["val"]})
 
     for bin_data in INVERT_SIZE_BINS:
-        sb = InvertSizeBin.objects.create(val=bin_data["val"])
+        sb, _ = InvertSizeBin.objects.get_or_create(val=bin_data["val"])
         for size in bin_data["sizes"]:
-            InvertSize.objects.create(invert_bin_size=sb, **size)
+            InvertSize.objects.get_or_create(
+                invert_bin_size=sb,
+                name=size["name"],
+                defaults={
+                    "val": size["val"],
+                    "min_val": size["min_val"],
+                    "max_val": size["max_val"],
+                },
+            )
 
     goi_map = {}
     for name in GROUPS_OF_INTEREST:
-        goi_map[name] = InvertGroupOfInterest.objects.create(name=name)
+        goi_map[name], _ = InvertGroupOfInterest.objects.get_or_create(name=name)
 
     ht_map = {}
     for name in HARVEST_TYPES:
-        ht_map[name] = InvertHarvestType.objects.create(name=name)
+        ht_map[name], _ = InvertHarvestType.objects.get_or_create(name=name)
 
     phylum_map = {}
     class_map = {}
@@ -1622,47 +1630,51 @@ def seed_macroinvertebrate_data(apps, schema_editor):
         ) = row
 
         if phylum_name not in phylum_map:
-            phylum_map[phylum_name] = InvertPhylum.objects.create(name=phylum_name, status=APPROVED)
+            phylum_map[phylum_name], _ = InvertPhylum.objects.get_or_create(
+                name=phylum_name, defaults={"status": APPROVED}
+            )
 
         phylum = phylum_map[phylum_name]
         class_key = (phylum_name, class_name)
         if class_key not in class_map:
-            class_map[class_key] = InvertClass.objects.create(
-                name=class_name, phylum=phylum, status=APPROVED
+            class_map[class_key], _ = InvertClass.objects.get_or_create(
+                name=class_name, phylum=phylum, defaults={"status": APPROVED}
             )
 
         invert_class = class_map[class_key]
         order_key = (phylum_name, class_name, order_name)
         if order_key not in order_map:
-            order_map[order_key] = InvertOrder.objects.create(
-                name=order_name, invert_class=invert_class, status=APPROVED
+            order_map[order_key], _ = InvertOrder.objects.get_or_create(
+                name=order_name, invert_class=invert_class, defaults={"status": APPROVED}
             )
 
         invert_order = order_map[order_key]
         family_key = (phylum_name, class_name, order_name, family_name)
         if family_key not in family_map:
-            family_map[family_key] = InvertFamily.objects.create(
-                name=family_name, order=invert_order, status=APPROVED
+            family_map[family_key], _ = InvertFamily.objects.get_or_create(
+                name=family_name, order=invert_order, defaults={"status": APPROVED}
             )
 
         invert_family = family_map[family_key]
         genus_key = (phylum_name, class_name, order_name, family_name, genus_name)
         if genus_key not in genus_map:
-            genus_map[genus_key] = InvertGenus.objects.create(
-                name=genus_name, family=invert_family, status=APPROVED
+            genus_map[genus_key], _ = InvertGenus.objects.get_or_create(
+                name=genus_name, family=invert_family, defaults={"status": APPROVED}
             )
 
         invert_genus = genus_map[genus_key]
-        InvertSpecies.objects.create(
+        InvertSpecies.objects.get_or_create(
             name=species_name,
             genus=invert_genus,
-            status=APPROVED,
-            max_length=max_length,
-            max_length_source=max_length_source,
-            max_length_url=max_length_url,
-            max_length_type=max_length_type,
-            group_of_interest=goi_map.get(goi_name),
-            harvest_type=ht_map.get(harvest_type_name),
+            defaults={
+                "status": APPROVED,
+                "max_length": max_length,
+                "max_length_source": max_length_source,
+                "max_length_url": max_length_url,
+                "max_length_type": max_length_type,
+                "group_of_interest": goi_map.get(goi_name),
+                "harvest_type": ht_map.get(harvest_type_name),
+            },
         )
 
 

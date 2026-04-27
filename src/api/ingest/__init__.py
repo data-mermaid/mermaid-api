@@ -14,3 +14,7 @@ ingest_serializers = [
     FishBeltCSVSerializer,
     HabitatComplexityCSVSerializer,
 ]
+
+# Protocols in PROTOCOL_MAP that do not yet have ingest/submission support.
+# Tests and endpoints that require a full ingest implementation should skip these.
+INGEST_PROTOCOLS_NOT_YET_IMPLEMENTED = frozenset(["macroinvertebrate"])
