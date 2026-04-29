@@ -28,7 +28,15 @@ def get_model_value(model, lookups):
     return obj
 
 
-def get_related_project(model):
+def get_related_project(model, _visited=None):
+    if _visited is None:
+        _visited = set()
+
+    obj_id = id(model)
+    if obj_id in _visited:
+        return None
+    _visited.add(obj_id)
+
     if isinstance(model, models.Project):
         return model
 
@@ -44,11 +52,14 @@ def get_related_project(model):
 
     for f in model._meta.get_fields():
         if isinstance(f, ForeignKey):
-            rel_obj = getattr(model, f.name)
+            try:
+                rel_obj = getattr(model, f.name)
+            except Exception:
+                continue
             if rel_obj is not None:
                 if isinstance(rel_obj, models.Project):
                     return rel_obj
-                rel_obj = get_related_project(rel_obj)
+                rel_obj = get_related_project(rel_obj, _visited)
                 if rel_obj:
                     return rel_obj
     return None
