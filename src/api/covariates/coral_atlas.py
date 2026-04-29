@@ -33,14 +33,19 @@ class CoralAtlasCovariate(BaseCovariate):
         headers = {
             "User-Agent": "Mozilla/5.0 (X11; Ubuntu; Linux x86_64; rv:91.0) Gecko/20100101 Firefox/91.0"
         }
+        last_error = None
         for attempt in range(3):
-            resp = requests.get(url, headers=headers)
-            if resp.status_code == 200:
-                break
+            try:
+                resp = requests.get(url, headers=headers, timeout=(3.05, 15))
+                if resp.status_code == 200:
+                    break
+                last_error = resp.text
+            except requests.RequestException as e:
+                last_error = str(e)
             if attempt < 2:
                 time.sleep(2**attempt)
         else:
-            raise CovariateRequestError(resp.text)
+            raise CovariateRequestError(last_error)
 
         data = (resp.json() or {}).get("data")
         stats = (data or {}).get("stats")
