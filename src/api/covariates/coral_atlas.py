@@ -1,4 +1,5 @@
 import datetime
+import time
 from concurrent.futures import ThreadPoolExecutor
 from typing import List, Tuple
 
@@ -32,9 +33,13 @@ class CoralAtlasCovariate(BaseCovariate):
         headers = {
             "User-Agent": "Mozilla/5.0 (X11; Ubuntu; Linux x86_64; rv:91.0) Gecko/20100101 Firefox/91.0"
         }
-        resp = requests.get(url, headers=headers)
-        status_code = resp.status_code
-        if status_code != 200:
+        for attempt in range(3):
+            resp = requests.get(url, headers=headers)
+            if resp.status_code == 200:
+                break
+            if attempt < 2:
+                time.sleep(2**attempt)
+        else:
             raise CovariateRequestError(resp.text)
 
         data = (resp.json() or {}).get("data")
