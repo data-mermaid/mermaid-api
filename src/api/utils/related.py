@@ -1,3 +1,4 @@
+from django.core.exceptions import ObjectDoesNotExist
 from django.db.models.fields.related import ForeignKey
 
 from api import models
@@ -32,10 +33,11 @@ def get_related_project(model, _visited=None):
     if _visited is None:
         _visited = set()
 
-    obj_id = id(model)
-    if obj_id in _visited:
+    pk = getattr(model, "pk", None)
+    obj_key = (model.__class__, pk) if pk is not None else id(model)
+    if obj_key in _visited:
         return None
-    _visited.add(obj_id)
+    _visited.add(obj_key)
 
     if isinstance(model, models.Project):
         return model
@@ -54,7 +56,7 @@ def get_related_project(model, _visited=None):
         if isinstance(f, ForeignKey):
             try:
                 rel_obj = getattr(model, f.name)
-            except Exception:
+            except ObjectDoesNotExist:
                 continue
             if rel_obj is not None:
                 if isinstance(rel_obj, models.Project):
