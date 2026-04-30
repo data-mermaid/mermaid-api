@@ -25,6 +25,7 @@ from aws_cdk import (
 )
 from constructs import Construct
 from settings.settings import ProjectSettings
+from stacks.constructs.adot import add_adot_sidecar
 from stacks.constructs.dashboard import MonitoringDashboard
 from stacks.constructs.worker import QueueWorker
 
@@ -203,34 +204,9 @@ class ApiStack(Stack):
             # OpenTelemetry / X-Ray
             "OTEL_TRACES_EXPORTER": "otlp",
             "OTEL_EXPORTER_OTLP_ENDPOINT": "http://localhost:4317",
-            "OTEL_SERVICE_NAME": f"mermaid-api-{config.env_id}",
             "OTEL_PROPAGATORS": "xray",
             "OTEL_PYTHON_ID_GENERATOR": "xray",
         }
-
-        adot_image = ecs.ContainerImage.from_registry(
-            "public.ecr.aws/aws-observability/aws-otel-collector:latest"
-        )
-        xray_policy = iam.ManagedPolicy.from_aws_managed_policy_name(
-            "AWSXRayDaemonWriteAccess"
-        )
-
-        def add_adot_sidecar(task_def: ecs.Ec2TaskDefinition, name: str) -> None:
-            task_def.add_container(
-                f"{name}AdotCollector",
-                image=adot_image,
-                cpu=32,
-                memory_limit_mib=256,
-                essential=False,
-                command=["--config=/etc/ecs/ecs-xray.yaml"],
-                port_mappings=[
-                    ecs.PortMapping(container_port=4317, protocol=ecs.Protocol.TCP),
-                    ecs.PortMapping(container_port=4318, protocol=ecs.Protocol.TCP),
-                    ecs.PortMapping(container_port=2000, protocol=ecs.Protocol.UDP),
-                ],
-                logging=ecs.LogDrivers.aws_logs(stream_prefix=f"{name}-adot"),
-            )
-            task_def.task_role.add_managed_policy(xray_policy)
 
         # build image asset to be shared with API and Backup Task
         image_asset = ecr_assets.DockerImageAsset(
@@ -254,7 +230,7 @@ class ApiStack(Stack):
             cpu=config.api.backup_cpu,
             memory_limit_mib=config.api.backup_memory,
             secrets=self.api_secrets,
-            environment=environment,
+            environment={**environment, "OTEL_SERVICE_NAME": f"mermaid-backup-{config.env_id}"},
             command=["opentelemetry-instrument", "python", "manage.py", "daily_tasks"],
             logging=ecs.LogDrivers.aws_logs(stream_prefix="ScheduledBackupTask"),
         )
@@ -289,7 +265,7 @@ class ApiStack(Stack):
             cpu=config.api.summary_cpu,
             memory_limit_mib=config.api.summary_memory,
             secrets=self.api_secrets,
-            environment=environment,
+            environment={**environment, "OTEL_SERVICE_NAME": f"mermaid-summary-cache-{config.env_id}"},
             command=["opentelemetry-instrument", "python", "manage.py", "process_summaries"],
             logging=ecs.LogDrivers.aws_logs(stream_prefix="SummaryCacheUpdateContainer"),
         )
@@ -317,7 +293,7 @@ class ApiStack(Stack):
             cpu=config.api.container_cpu,
             memory_limit_mib=config.api.container_memory,
             port_mappings=[ecs.PortMapping(container_port=8081)],
-            environment=environment,
+            environment={**environment, "OTEL_SERVICE_NAME": f"mermaid-api-{config.env_id}"},
             secrets=self.api_secrets,
             logging=ecs.LogDrivers.aws_logs(
                 stream_prefix=config.env_id, log_retention=logs.RetentionDays.ONE_MONTH
@@ -405,7 +381,7 @@ class ApiStack(Stack):
             cluster=cluster,
             image_asset=ecs.ContainerImage.from_docker_image_asset(image_asset),
             api_secrets=self.api_secrets,
-            environment=environment,
+            environment={**environment, "OTEL_SERVICE_NAME": f"mermaid-worker-{config.env_id}"},
             public_bucket=public_bucket,
             queue_name=sqs_queue_name,
             email=sys_email,
@@ -420,7 +396,7 @@ class ApiStack(Stack):
             cluster=cluster,
             image_asset=ecs.ContainerImage.from_docker_image_asset(image_asset),
             api_secrets=self.api_secrets,
-            environment=environment,
+            environment={**environment, "OTEL_SERVICE_NAME": f"mermaid-image-worker-{config.env_id}"},
             public_bucket=public_bucket,
             queue_name=image_sqs_queue_name,
             email=sys_email,
