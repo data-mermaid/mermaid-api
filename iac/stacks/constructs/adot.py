@@ -7,7 +7,6 @@ def add_adot_sidecar(task_def: ecs.TaskDefinition, name: str) -> None:
     task_def.add_container(
         f"{name}AdotCollector",
         image=ecs.ContainerImage.from_registry(ADOT_IMAGE),
-        cpu=32,
         memory_limit_mib=256,
         essential=False,
         command=["--config=/etc/ecs/ecs-xray.yaml"],
