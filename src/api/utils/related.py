@@ -42,8 +42,14 @@ def get_related_project(model, _visited=None):
     if isinstance(model, models.Project):
         return model
 
-    if hasattr(model, "project") and isinstance(model.project, models.Project):
-        return model.project
+    try:
+        proj = model.project
+        if isinstance(proj, models.Project):
+            return proj
+    except ObjectDoesNotExist:
+        return None
+    except AttributeError:
+        pass
 
     if hasattr(model, "project_lookup"):
         project_lookup = getattr(model, "project_lookup")
