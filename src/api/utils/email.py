@@ -8,8 +8,7 @@ from django.template.loader import render_to_string
 from django.utils import timezone
 from maintenance_mode.core import get_maintenance_mode
 
-from ..models import PROTOCOL_MAP
-from ..models.mermaid import ProjectProfile
+from ..models import PROTOCOL_MAP, ProjectProfile
 from ..utils import create_iso_date_string
 from . import delete_file, s3
 from .notification import _suppress_notifications
