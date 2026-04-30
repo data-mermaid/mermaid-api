@@ -15,6 +15,7 @@ from ..auth_backends import AnonymousJWTAuthentication
 from ..exceptions import check_uuid
 from ..models import (
     BeltFish,
+    BeltInvert,
     BenthicLIT,
     BenthicPhotoQuadratTransect,
     BenthicPIT,
@@ -22,6 +23,7 @@ from ..models import (
     BleachingQuadratCollection,
     FishBeltTransect,
     HabitatComplexity,
+    InvertBeltTransect,
     Management,
     Profile,
     Project,
@@ -271,6 +273,8 @@ def annotate_num_sample_units(qs):
     quadrat_transect_table = QuadratTransect._meta.db_table
     beltfish_table = BeltFish._meta.db_table
     fishbelt_transect_table = FishBeltTransect._meta.db_table
+    beltinvert_table = BeltInvert._meta.db_table
+    invert_belt_transect_table = InvertBeltTransect._meta.db_table
 
     return qs.annotate(
         num_sample_units=RawSQL(
@@ -331,6 +335,16 @@ def annotate_num_sample_units(qs):
                     SELECT COUNT(*) as su_count
                     FROM {beltfish_table} t
                     JOIN {fishbelt_transect_table} bt ON t.transect_id = bt.id
+                    JOIN {sample_event_table} se ON bt.sample_event_id = se.id
+                    JOIN {site_table} ON se.site_id = {site_table}.id
+                    WHERE {site_table}.project_id = {project_table}.id
+
+                    UNION ALL
+
+                    -- BeltInvert
+                    SELECT COUNT(*) as su_count
+                    FROM {beltinvert_table} t
+                    JOIN {invert_belt_transect_table} bt ON t.transect_id = bt.id
                     JOIN {sample_event_table} se ON bt.sample_event_id = se.id
                     JOIN {site_table} ON se.site_id = {site_table}.id
                     WHERE {site_table}.project_id = {project_table}.id

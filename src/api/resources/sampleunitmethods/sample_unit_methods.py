@@ -8,8 +8,17 @@ from django.db.models.functions import Cast, Concat
 from rest_framework import exceptions, serializers
 
 from ...exceptions import check_uuid
-from ...models import mermaid
-from ...models.mermaid import SampleEvent, TransectMethod
+from ...models import (
+    BENTHICLIT_PROTOCOL,
+    BENTHICPIT_PROTOCOL,
+    BENTHICPQT_PROTOCOL,
+    BLEACHINGQC_PROTOCOL,
+    FISHBELT_PROTOCOL,
+    HABITATCOMPLEXITY_PROTOCOL,
+    Observer,
+    SampleEvent,
+    TransectMethod,
+)
 from ..base import BaseAPIFilterSet, BaseAPISerializer, BaseProjectApiViewSet
 
 
@@ -115,7 +124,7 @@ class SampleUnitMethodSerializer(BaseAPISerializer):
 
     def get_size(self, o):
         protocol = o.protocol
-        if protocol == mermaid.FISHBELT_PROTOCOL:
+        if protocol == FISHBELT_PROTOCOL:
             sample_unit = o.sample_unit
 
             return dict(
@@ -125,13 +134,13 @@ class SampleUnitMethodSerializer(BaseAPISerializer):
                 len_surveyed_units="m",
             )
         elif protocol in (
-            mermaid.BENTHICLIT_PROTOCOL,
-            mermaid.BENTHICPIT_PROTOCOL,
-            mermaid.HABITATCOMPLEXITY_PROTOCOL,
+            BENTHICLIT_PROTOCOL,
+            BENTHICPIT_PROTOCOL,
+            HABITATCOMPLEXITY_PROTOCOL,
         ):
             sample_unit = o.sample_unit
             return dict(len_surveyed=sample_unit.len_surveyed, len_surveyed_units="m")
-        elif protocol == mermaid.BLEACHINGQC_PROTOCOL:
+        elif protocol == BLEACHINGQC_PROTOCOL:
             sample_unit = o.sample_unit
             return dict(quadrat_size=sample_unit.quadrat_size, quadrat_size_units="m")
         return None
@@ -186,20 +195,20 @@ class SampleUnitMethodView(BaseProjectApiViewSet):
         qs = self.queryset
 
         protocol_condition = Case(
-            When(benthiclit__id__isnull=False, then=Value(mermaid.BENTHICLIT_PROTOCOL)),
-            When(benthicpit__id__isnull=False, then=Value(mermaid.BENTHICPIT_PROTOCOL)),
+            When(benthiclit__id__isnull=False, then=Value(BENTHICLIT_PROTOCOL)),
+            When(benthicpit__id__isnull=False, then=Value(BENTHICPIT_PROTOCOL)),
             When(
                 habitatcomplexity__id__isnull=False,
-                then=Value(mermaid.HABITATCOMPLEXITY_PROTOCOL),
+                then=Value(HABITATCOMPLEXITY_PROTOCOL),
             ),
             When(
                 bleachingquadratcollection__id__isnull=False,
-                then=Value(mermaid.BLEACHINGQC_PROTOCOL),
+                then=Value(BLEACHINGQC_PROTOCOL),
             ),
-            When(beltfish__id__isnull=False, then=Value(mermaid.FISHBELT_PROTOCOL)),
+            When(beltfish__id__isnull=False, then=Value(FISHBELT_PROTOCOL)),
             When(
                 benthicphotoquadrattransect__id__isnull=False,
-                then=Value(mermaid.BENTHICPQT_PROTOCOL),
+                then=Value(BENTHICPQT_PROTOCOL),
             ),
             output_field=CharField(),
         )
@@ -427,7 +436,7 @@ class SampleUnitMethodView(BaseProjectApiViewSet):
             )
         }
 
-        observers = mermaid.Observer.objects.select_related("profile").filter(
+        observers = Observer.objects.select_related("profile").filter(
             transectmethod_id__in=transect_method_ids
         )
         observer_lookup = defaultdict(list)
