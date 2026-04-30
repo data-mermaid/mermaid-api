@@ -48,6 +48,7 @@ class QueueWorker(Construct):
             secrets=api_secrets,
             environment=environment,
             command=["opentelemetry-instrument", "python", "manage.py", "simpleq_worker", "-n", queue_name],
+            min_healthy_percent=0,
             min_scaling_capacity=1,
             max_scaling_capacity=3,
             # this defines how the service shall autoscale based on the
