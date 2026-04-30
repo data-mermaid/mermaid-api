@@ -24,6 +24,10 @@ from ..models import (
     GFCRRevenue,
     GrowthForm,
     HabitatComplexityScore,
+    InvertBeltTransectWidth,
+    InvertGroupOfInterest,
+    InvertHarvestType,
+    InvertSizeBin,
     ManagementCompliance,
     ManagementParty,
     Project,
@@ -43,6 +47,13 @@ from .base import BaseChoiceApiViewSet
 class ChoiceViewSet(BaseChoiceApiViewSet):
     def get_choices(self):
         belttransectwidths = dict(data=BeltTransectWidth.objects.choices(order_by="name"))
+        invertbelttransectwidths = dict(
+            data=InvertBeltTransectWidth.objects.choices(order_by="val")
+        )
+        invertsizebins = dict(data=InvertSizeBin.objects.choices(order_by="val"))
+        invertsizebins["data"] = natsorted(invertsizebins["data"], key=itemgetter(*["name"]))
+        invertgroupsofinterest = dict(data=InvertGroupOfInterest.objects.choices(order_by="name"))
+        invertharvesttypes = dict(data=InvertHarvestType.objects.choices(order_by="name"))
         benthiclifehistories = dict(data=BenthicLifeHistory.objects.choices(order_by="name"))
         growthforms = dict(data=GrowthForm.objects.choices(order_by="name"))
         countries = dict(data=Country.objects.choices(order_by="name"))
@@ -66,6 +77,10 @@ class ChoiceViewSet(BaseChoiceApiViewSet):
 
         return {
             "belttransectwidths": belttransectwidths,
+            "invertbelttransectwidths": invertbelttransectwidths,
+            "invertsizebins": invertsizebins,
+            "invertgroupsofinterest": invertgroupsofinterest,
+            "invertharvesttypes": invertharvesttypes,
             "benthiclifehistories": benthiclifehistories,
             "growthforms": growthforms,
             "countries": countries,

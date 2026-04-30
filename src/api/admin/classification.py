@@ -7,6 +7,7 @@ from import_export.widgets import ForeignKeyWidget
 from nested_admin import NestedTabularInline
 
 from ..admin import BaseAdmin
+from ..models import BenthicAttribute, GrowthForm
 from ..models.classification import (
     BenthicAttributeGrowthForm,
     ClassificationStatus,
@@ -15,7 +16,6 @@ from ..models.classification import (
     LabelMapping,
     Point,
 )
-from ..models.mermaid import BenthicAttribute, GrowthForm
 
 
 class PointInline(NestedTabularInline):

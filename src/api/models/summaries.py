@@ -3,7 +3,7 @@ import uuid
 from django.contrib.gis.db import models
 from django.utils.translation import gettext_lazy as _
 
-from .mermaid import Project
+from .core import Project
 
 
 class SummaryCacheQueue(models.Model):

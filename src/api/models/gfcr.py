@@ -6,7 +6,7 @@ from django.core.exceptions import ValidationError
 from django.db import models
 
 from .base import BaseModel
-from .mermaid import Project
+from .core import Project
 
 
 def validate_unique_elements(value):
