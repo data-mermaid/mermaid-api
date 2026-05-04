@@ -6,12 +6,12 @@ from ...models import (
     InvertBeltTransect,
     InvertBeltTransectWidth,
     InvertClass,
+    InvertClassGroupOfInterest,
     InvertFamily,
     InvertGenus,
     InvertGroupOfInterest,
     InvertHarvestType,
     InvertOrder,
-    InvertPhylum,
     InvertSize,
     InvertSizeBin,
     InvertSpecies,
@@ -53,34 +53,34 @@ class InvertHarvestTypeAdmin(BaseAdmin):
     search_fields = ("name",)
 
 
-class InvertClassInline(admin.TabularInline):
-    model = InvertClass
-    fk_name = "phylum"
-    extra = 0
-    fields = ("name",)
-    show_change_link = True
-
-
-@admin.register(InvertPhylum)
-class InvertPhylumAdmin(BaseAdmin):
-    list_display = ("name",)
-    search_fields = ("name",)
-    inlines = [InvertClassInline]
-
-
-class InvertOrderInline(admin.TabularInline):
-    model = InvertOrder
+class InvertClassGroupOfInterestInline(admin.TabularInline):
+    model = InvertClassGroupOfInterest
     fk_name = "invert_class"
     extra = 0
-    fields = ("name",)
+    fields = ("group_of_interest",)
     show_change_link = True
 
 
 @admin.register(InvertClass)
 class InvertClassAdmin(BaseAdmin):
-    list_display = ("name", "phylum")
-    list_filter = ("phylum",)
-    search_fields = ("name", "phylum__name")
+    list_display = ("name",)
+    search_fields = ("name",)
+    inlines = [InvertClassGroupOfInterestInline]
+
+
+class InvertOrderInline(admin.TabularInline):
+    model = InvertOrder
+    fk_name = "class_goi"
+    extra = 0
+    fields = ("name",)
+    show_change_link = True
+
+
+@admin.register(InvertClassGroupOfInterest)
+class InvertClassGroupOfInterestAdmin(BaseAdmin):
+    list_display = ("invert_class", "group_of_interest")
+    list_filter = ("invert_class", "group_of_interest")
+    search_fields = ("invert_class__name", "group_of_interest__name")
     inlines = [InvertOrderInline]
 
 
@@ -94,8 +94,8 @@ class InvertFamilyInline(admin.TabularInline):
 
 @admin.register(InvertOrder)
 class InvertOrderAdmin(BaseAdmin):
-    list_display = ("name", "invert_class")
-    search_fields = ("name", "invert_class__name")
+    list_display = ("name", "class_goi")
+    search_fields = ("name", "class_goi__invert_class__name")
     inlines = [InvertFamilyInline]
 
 
@@ -118,7 +118,7 @@ class InvertSpeciesInline(admin.TabularInline):
     model = InvertSpecies
     fk_name = "genus"
     extra = 0
-    fields = ("name", "group_of_interest", "harvest_type", "max_length")
+    fields = ("name", "group_of_interest", "max_length")
     show_change_link = True
 
 
@@ -135,11 +135,10 @@ class InvertSpeciesAdmin(BaseAdmin):
         "name",
         "genus",
         "group_of_interest",
-        "harvest_type",
         "max_length",
         "max_length_type",
     )
-    list_filter = ("group_of_interest", "harvest_type")
+    list_filter = ("group_of_interest",)
     search_fields = ("name", "genus__name", "genus__family__name")
 
 
@@ -165,8 +164,10 @@ class BeltInvertAdmin(TransectMethodAdmin):
 
     def get_formsets_with_inlines(self, request, obj=None):
         qs = InvertAttribute.objects.select_related(
-            "invertphylum",
             "invertclass",
+            "invertclassgroupofinterest",
+            "invertclassgroupofinterest__invert_class",
+            "invertclassgroupofinterest__group_of_interest",
             "invertorder",
             "invertfamily",
             "invertgenus",
