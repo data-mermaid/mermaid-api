@@ -1,6 +1,6 @@
 from django.contrib.gis.db import models
 
-from ..mermaid import FishAttribute
+from ..protocols.beltfish import FishAttribute
 
 
 class FishAttributeView(FishAttribute):

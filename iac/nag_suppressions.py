@@ -263,6 +263,65 @@ def suppress_common(stack: Stack) -> None:
         ],
     )
 
+    # --- VPC Flow Logs ---
+    _suppress_by_path(
+        stack,
+        "VpcFlowLogsAccessLogsBucket/Resource",
+        [
+            NagPackSuppression(
+                id="AwsSolutions-S1",
+                reason=f"{ACCEPTED}: This bucket IS the access logs target — enabling "
+                "server access logging on it would be circular.",
+            ),
+        ],
+    )
+
+    _suppress_by_path(
+        stack,
+        "VpcFlowLogsRole/DefaultPolicy/Resource",
+        [
+            NagPackSuppression(
+                id="AwsSolutions-IAM5",
+                reason=f"{ACCEPTED}: logs:CreateLogGroup and logs:DescribeLogGroups do not "
+                "support resource-level permissions; Resource::* is required by CloudWatch Logs.",
+                applies_to=["Resource::*"],
+            ),
+            NagPackSuppression(
+                id="AwsSolutions-IAM5",
+                reason=f"{ACCEPTED}: Log-stream wildcard (<LogGroup.Arn>:*) is required for "
+                "VPC Flow Logs to create and write to individual log streams.",
+                applies_to=["Resource::<VpcFlowLogsGroupC5F6A8C5.Arn>:*"],
+            ),
+        ],
+    )
+
+    _suppress_by_path(
+        stack,
+        "AthenaRole/DefaultPolicy/Resource",
+        [
+            NagPackSuppression(
+                id="AwsSolutions-IAM5",
+                reason=f"{ACCEPTED}: S3 object-level actions (GetObject/ListBucket) require "
+                "the /* wildcard on the VPC flow logs bucket.",
+                applies_to=["Resource::<VpcFlowLogsBucket3B29CF33.Arn>/*"],
+            ),
+            NagPackSuppression(
+                id="AwsSolutions-IAM5",
+                reason=f"{ACCEPTED}: Glue table wildcard is required to query all tables in "
+                "the vpc_flow_logs database via Athena.",
+                applies_to=[
+                    "Resource::arn:aws:glue:us-east-1:554812291621:table/<VpcFlowLogsDatabase>/*"
+                ],
+            ),
+            NagPackSuppression(
+                id="AwsSolutions-IAM5",
+                reason=f"{ACCEPTED}: S3 object-level actions on Athena results bucket require "
+                "the /* wildcard to read/write/delete individual query result objects.",
+                applies_to=["Resource::<AthenaResultsBucket879938FA.Arn>/*"],
+            ),
+        ],
+    )
+
     # --- CICD Bot / CDK Role Policy ---
     _suppress_by_path(
         stack,

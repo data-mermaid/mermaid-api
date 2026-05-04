@@ -18,6 +18,7 @@ from aws_cdk import (
     aws_route53 as r53,
     aws_s3 as s3,
     aws_secretsmanager as sm,
+    aws_wafv2 as wafv2,
 )
 from constructs import Construct
 
@@ -59,6 +60,24 @@ class CommonStack(Stack):
         )
         # VPC Flow Logs with Glue and Athena Integration
         if enable_vpc_flow_logs:
+            # Dedicated access logs bucket for all VPC flow logs infrastructure buckets
+            vpc_flow_logs_access_logs_bucket = s3.Bucket(
+                self,
+                "VpcFlowLogsAccessLogsBucket",
+                bucket_name=f"mermaid-vpc-flow-logs-access-logs-{self.account}-{self.region}",
+                removal_policy=RemovalPolicy.RETAIN,
+                public_read_access=False,
+                block_public_access=s3.BlockPublicAccess.BLOCK_ALL,
+                encryption=s3.BucketEncryption.S3_MANAGED,
+                enforce_ssl=True,
+                lifecycle_rules=[
+                    s3.LifecycleRule(
+                        id="AccessLogsExpiry",
+                        expiration=Duration.days(90),
+                    ),
+                ],
+            )
+
             # Create S3 bucket for VPC Flow Logs
             vpc_flow_logs_bucket = s3.Bucket(
                 self,
@@ -68,6 +87,9 @@ class CommonStack(Stack):
                 public_read_access=False,
                 block_public_access=s3.BlockPublicAccess.BLOCK_ALL,
                 encryption=s3.BucketEncryption.S3_MANAGED,
+                enforce_ssl=True,
+                server_access_logs_bucket=vpc_flow_logs_access_logs_bucket,
+                server_access_logs_prefix="vpc-flow-logs-bucket/",
                 lifecycle_rules=[
                     s3.LifecycleRule(
                         id="VpcFlowLogsArchive",
@@ -137,7 +159,9 @@ class CommonStack(Stack):
             )
 
             # Enable VPC Flow Logs to S3 for Athena analysis
-            ec2.FlowLog(
+            # CDK bug: FlowLogDestination.to_s3() emits DestinationOptions keys in camelCase
+            # but CloudFormation requires PascalCase — override via escape hatch.
+            vpc_flow_logs_s3 = ec2.FlowLog(
                 self,
                 "VpcFlowLogsS3",
                 resource_type=ec2.FlowLogResourceType.from_vpc(self.vpc),
@@ -145,9 +169,15 @@ class CommonStack(Stack):
                 destination=ec2.FlowLogDestination.to_s3(
                     bucket=vpc_flow_logs_bucket,
                     key_prefix="vpc-flow-logs/",
-                    file_format=ec2.FlowLogFileFormat.PARQUET,
-                    hive_compatible_partitions=True,
                 ),
+            )
+            vpc_flow_logs_s3.node.default_child.add_property_override(
+                "DestinationOptions",
+                {
+                    "FileFormat": "parquet",
+                    "HiveCompatiblePartitions": True,
+                    "PerHourPartition": True,
+                },
             )
 
             # Create Glue Database
@@ -273,6 +303,9 @@ class CommonStack(Stack):
                 removal_policy=RemovalPolicy.RETAIN,
                 public_read_access=False,
                 block_public_access=s3.BlockPublicAccess.BLOCK_ALL,
+                enforce_ssl=True,
+                server_access_logs_bucket=vpc_flow_logs_access_logs_bucket,
+                server_access_logs_prefix="athena-results-bucket/",
                 lifecycle_rules=[
                     s3.LifecycleRule(
                         id="AthenaResultsCleanup",
@@ -533,6 +566,94 @@ class CommonStack(Stack):
             self,
             "DefaultSSLCert",
             certificate_arn=f"arn:aws:acm:us-east-1:{self.account}:certificate/783d7a91-1ebd-4387-9518-e28521086db6",
+        )
+
+        # WAFv2 WebACL — all rules start in COUNT mode for safe rollout
+        self.web_acl = wafv2.CfnWebACL(
+            self,
+            "ApiWebAcl",
+            name=f"{self.stack_name}-waf",
+            default_action=wafv2.CfnWebACL.DefaultActionProperty(allow={}),
+            scope="REGIONAL",
+            visibility_config=wafv2.CfnWebACL.VisibilityConfigProperty(
+                cloud_watch_metrics_enabled=True,
+                metric_name="MermaidApiWafMetric",
+                sampled_requests_enabled=False,
+            ),
+            rules=[
+                wafv2.CfnWebACL.RuleProperty(
+                    name="AWSManagedRulesCommonRuleSet",
+                    priority=1,
+                    override_action=wafv2.CfnWebACL.OverrideActionProperty(count={}),
+                    statement=wafv2.CfnWebACL.StatementProperty(
+                        managed_rule_group_statement=wafv2.CfnWebACL.ManagedRuleGroupStatementProperty(
+                            vendor_name="AWS",
+                            name="AWSManagedRulesCommonRuleSet",
+                        ),
+                    ),
+                    visibility_config=wafv2.CfnWebACL.VisibilityConfigProperty(
+                        cloud_watch_metrics_enabled=True,
+                        metric_name="MermaidApiCommonRules",
+                        sampled_requests_enabled=False,
+                    ),
+                ),
+                wafv2.CfnWebACL.RuleProperty(
+                    name="AWSManagedRulesSQLiRuleSet",
+                    priority=2,
+                    override_action=wafv2.CfnWebACL.OverrideActionProperty(count={}),
+                    statement=wafv2.CfnWebACL.StatementProperty(
+                        managed_rule_group_statement=wafv2.CfnWebACL.ManagedRuleGroupStatementProperty(
+                            vendor_name="AWS",
+                            name="AWSManagedRulesSQLiRuleSet",
+                        ),
+                    ),
+                    visibility_config=wafv2.CfnWebACL.VisibilityConfigProperty(
+                        cloud_watch_metrics_enabled=True,
+                        metric_name="MermaidApiSQLiRules",
+                        sampled_requests_enabled=False,
+                    ),
+                ),
+                wafv2.CfnWebACL.RuleProperty(
+                    name="AWSManagedRulesKnownBadInputsRuleSet",
+                    priority=3,
+                    override_action=wafv2.CfnWebACL.OverrideActionProperty(count={}),
+                    statement=wafv2.CfnWebACL.StatementProperty(
+                        managed_rule_group_statement=wafv2.CfnWebACL.ManagedRuleGroupStatementProperty(
+                            vendor_name="AWS",
+                            name="AWSManagedRulesKnownBadInputsRuleSet",
+                        ),
+                    ),
+                    visibility_config=wafv2.CfnWebACL.VisibilityConfigProperty(
+                        cloud_watch_metrics_enabled=True,
+                        metric_name="MermaidApiKnownBadInputs",
+                        sampled_requests_enabled=False,
+                    ),
+                ),
+                wafv2.CfnWebACL.RuleProperty(
+                    name="RateLimitPerIP",
+                    priority=4,
+                    action=wafv2.CfnWebACL.RuleActionProperty(count={}),
+                    statement=wafv2.CfnWebACL.StatementProperty(
+                        rate_based_statement=wafv2.CfnWebACL.RateBasedStatementProperty(
+                            limit=2000,
+                            aggregate_key_type="IP",
+                        ),
+                    ),
+                    visibility_config=wafv2.CfnWebACL.VisibilityConfigProperty(
+                        cloud_watch_metrics_enabled=True,
+                        metric_name="MermaidApiRateLimit",
+                        sampled_requests_enabled=False,
+                    ),
+                ),
+            ],
+        )
+
+        # Associate WAF WebACL with the ALB
+        wafv2.CfnWebACLAssociation(
+            self,
+            "ApiWebAclAssociation",
+            resource_arn=self.load_balancer.load_balancer_arn,
+            web_acl_arn=self.web_acl.attr_arn,
         )
 
         self.load_balancer.add_listener(

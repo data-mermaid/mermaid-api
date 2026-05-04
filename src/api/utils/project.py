@@ -20,6 +20,7 @@ from ..models import (
     BLEACHINGQC_PROTOCOL,
     PROTOCOL_MAP,
     BeltFish,
+    BeltInvert,
     BenthicLIT,
     BenthicPhotoQuadratTransect,
     BenthicPIT,
@@ -28,8 +29,10 @@ from ..models import (
     CollectRecord,
     FishBeltTransect,
     HabitatComplexity,
+    InvertBeltTransect,
     Management,
     ObsBeltFish,
+    ObsBeltInvert,
     ObsBenthicLIT,
     ObsBenthicPhotoQuadrat,
     ObsBenthicPIT,
@@ -773,6 +776,7 @@ def _copy_submitted_data(site_id_map, management_id_map, s3_tracker, dest_bucket
 
     _copy_benthic_transects(sample_event_id_map)
     _copy_fish_belt_transects(sample_event_id_map)
+    _copy_invert_belt_transects(sample_event_id_map)
     _copy_quadrat_collections(sample_event_id_map)
     _copy_quadrat_transects(sample_event_id_map, s3_tracker, dest_bucket=dest_bucket)
 
@@ -819,6 +823,25 @@ def _copy_fish_belt_transects(sample_event_id_map):
 
         for bf in BeltFish.objects.filter(transect_id=old_fbt_id):
             _copy_transect_method(bf, fbt.id, ObsBeltFish, "beltfish")
+
+
+def _copy_invert_belt_transects(sample_event_id_map):
+    """Copy InvertBeltTransect hierarchy (BeltInvert)."""
+    old_se_ids = [uuid.UUID(k) for k in sample_event_id_map.keys()]
+
+    for ibt in InvertBeltTransect.objects.filter(sample_event_id__in=old_se_ids):
+        old_ibt_id = ibt.id
+        old_ibt_created_by = ibt.created_by
+        old_ibt_updated_by = ibt.updated_by
+        ibt.id = None
+        ibt.sample_event_id = uuid.UUID(sample_event_id_map[str(ibt.sample_event_id)])
+        ibt.collect_record_id = None
+        ibt.created_by = old_ibt_created_by
+        ibt.updated_by = old_ibt_updated_by
+        ibt.save()
+
+        for bi in BeltInvert.objects.filter(transect_id=old_ibt_id):
+            _copy_transect_method(bi, ibt.id, ObsBeltInvert, "beltinvert")
 
 
 def _copy_quadrat_collections(sample_event_id_map):
