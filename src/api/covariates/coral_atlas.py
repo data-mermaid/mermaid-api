@@ -36,7 +36,7 @@ class CoralAtlasCovariate(BaseCovariate):
         last_error = None
         for attempt in range(3):
             try:
-                resp = requests.get(url, headers=headers, timeout=(3.05, 15))
+                resp = requests.get(url, headers=headers, timeout=(3.05, 10))
                 if resp.status_code == 200:
                     break
                 last_error = resp.text
