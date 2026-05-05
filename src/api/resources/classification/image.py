@@ -78,24 +78,28 @@ class ImageSerializer(DynamicFieldsMixin, BaseAPISerializer):
             return None
 
     def _summarize_counts(self, obj):
+        if not hasattr(self, "_counts_cache"):
+            self._counts_cache = {}
+        if obj.pk in self._counts_cache:
+            return self._counts_cache[obj.pk]
+
         count_confirmed = 0
         count_unconfirmed = 0
         count_unclassified = 0
-        points = obj.points.all().prefetch_related("annotations")
-        for point in points:
-            if point.annotations.exists():
-                if any(annotation.is_confirmed for annotation in point.annotations.all()):
+        for point in obj.points.all():
+            # Use list() to hit the prefetch cache instead of issuing a new exists() query
+            annotations = list(point.annotations.all())
+            if annotations:
+                if any(annotation.is_confirmed for annotation in annotations):
                     count_confirmed += 1
                 else:
                     count_unconfirmed += 1
             else:
                 count_unclassified += 1
 
-        return (
-            count_confirmed,
-            count_unconfirmed,
-            count_unclassified,
-        )
+        result = (count_confirmed, count_unconfirmed, count_unclassified)
+        self._counts_cache[obj.pk] = result
+        return result
 
     def get_num_confirmed(self, obj):
         count_confirmed, _, _ = self._summarize_counts(obj)
