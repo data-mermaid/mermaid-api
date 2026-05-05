@@ -1,3 +1,4 @@
+from django.conf import settings
 from django.db import transaction
 from django.db.models import Q
 from rest_condition import Or
@@ -65,17 +66,18 @@ class ImageSerializer(DynamicFieldsMixin, BaseAPISerializer):
         exclude = []
 
     def get_classification_status(self, obj):
-        latest_status = obj.statuses.order_by("-created_on").first()
-        if latest_status:
-            return ClassificationStatusSerializer(latest_status).data
+        statuses = obj.statuses.all()
+        latest = max(statuses, key=lambda s: s.created_on, default=None)
+        if latest:
+            return ClassificationStatusSerializer(latest).data
         return None
 
     def get_patch_size(self, obj):
-        annotation = Annotation.objects.filter(point__image=obj, classifier__isnull=False).first()
-        if annotation and annotation.classifier:
-            return annotation.classifier.patch_size
-        else:
-            return None
+        for point in obj.points.all():
+            for annotation in point.annotations.all():
+                if annotation.classifier_id is not None:
+                    return annotation.classifier.patch_size
+        return None
 
     def _summarize_counts(self, obj):
         if not hasattr(self, "_counts_cache"):
@@ -87,7 +89,6 @@ class ImageSerializer(DynamicFieldsMixin, BaseAPISerializer):
         count_unconfirmed = 0
         count_unclassified = 0
         for point in obj.points.all():
-            # Use list() to hit the prefetch cache instead of issuing a new exists() query
             annotations = list(point.annotations.all())
             if annotations:
                 if any(annotation.is_confirmed for annotation in annotations):
@@ -143,7 +144,14 @@ class ImageFilterSet(BaseAPIFilterSet):
 
 class ImageViewSet(BaseProjectApiViewSet):
     queryset = (
-        Image.objects.prefetch_related("points", "points__annotations").all().order_by("created_on")
+        Image.objects.prefetch_related(
+            "points",
+            "points__annotations",
+            "points__annotations__classifier",
+            "statuses",
+        )
+        .all()
+        .order_by("created_on")
     )
 
     serializer_class = ImageSerializer
@@ -186,6 +194,13 @@ class ImageViewSet(BaseProjectApiViewSet):
         image_file = request.data.get("image")
         collect_record_id = request.data.get("collect_record_id")
         trigger_classification = truthy(request.data.get("classify", True))
+
+        if image_file and image_file.size > settings.MAX_IMAGE_FILE_SIZE:
+            mb = settings.MAX_IMAGE_FILE_SIZE // (1024 * 1024)
+            return Response(
+                {"error": f"Image exceeds the {mb} MB size limit."},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
 
         collect_record = CollectRecord.objects.get_or_none(pk=collect_record_id)
         if collect_record is None:

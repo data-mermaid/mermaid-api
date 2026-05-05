@@ -63,16 +63,22 @@ def post_save_classification_image(sender, instance, created, **kwargs):
     if getattr(instance, "_is_copy", False):
         return
 
+    buf = getattr(instance, "_normalized_image_buf", None)
+
     if not instance.thumbnail:
         needs_new_thumbnail = True
     else:
-        img_checksum = cls_utils.create_image_checksum(instance.image)
+        img_checksum = cls_utils.create_image_checksum(instance.image, image_buf=buf)
         original_img_record = Image.objects.get(pk=instance.pk)
         needs_new_thumbnail = img_checksum != original_img_record.original_image_checksum
 
     if needs_new_thumbnail:
-        thumb_file = cls_utils.create_thumbnail(instance)
-        instance.original_image_checksum = cls_utils.create_image_checksum(instance.image)
+        thumb_file = cls_utils.create_thumbnail(instance, image_buf=buf)
+        instance.original_image_checksum = cls_utils.create_image_checksum(
+            instance.image, image_buf=buf
+        )
+        if buf is not None:
+            del instance._normalized_image_buf
         # Saving thumbnail (save=True), causes double save but it's necessary
         # to have thumbnail created and saved in the post_save so thumbnails
         # don't get orphaned if done in a pre_save signal.
