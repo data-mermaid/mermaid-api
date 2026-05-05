@@ -1,6 +1,6 @@
 from django.core.management.base import BaseCommand
 
-from api.models.mermaid import SampleEvent
+from api.models import SampleEvent
 from api.utils.notes import senotes2sunotes
 
 

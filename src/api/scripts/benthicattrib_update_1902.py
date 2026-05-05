@@ -1,4 +1,4 @@
-from api.models.mermaid import BenthicAttribute
+from api.models import BenthicAttribute
 
 
 class BenthicAttributeUpdateGenerator(object):

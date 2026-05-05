@@ -162,6 +162,8 @@ def _normalize_exif_value(value):
     if isinstance(value, (int, float)):
         return value  # must come before hasattr(numerator) — Python int has .numerator
     if hasattr(value, "numerator"):  # PIL.TiffImagePlugin.IFDRational
+        if hasattr(value, "denominator") and value.denominator == 0:
+            return None
         return float(value)
     if isinstance(value, tuple):
         normalized = tuple(_normalize_exif_value(v) for v in value)

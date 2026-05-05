@@ -8,14 +8,12 @@ from django.core.files.storage import FileSystemStorage
 from storages.backends.s3 import S3Storage
 
 from .base import BaseModel
-from .mermaid import (
+from .core import CollectRecord, Project, Site
+from .protocols.benthic import (
     BenthicAttribute,
     BenthicAttributeGrowthForm,
-    CollectRecord,
     GrowthForm,
     ObsBenthicPhotoQuadrat,
-    Project,
-    Site,
 )
 
 

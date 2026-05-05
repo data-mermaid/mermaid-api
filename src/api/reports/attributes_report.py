@@ -12,6 +12,7 @@ from api.models import (
     FishGenus,
     FishGrouping,
     FishSpecies,
+    InvertSpecies,
     Region,
 )
 
@@ -20,6 +21,7 @@ FISH_GENERA_NAME = "Fish Genera"
 FISH_SPECIES_NAME = "Fish Species"
 FISH_GROUPINGS_NAME = "Fish Groupings"
 BENTHIC_NAME = "Benthic"
+INVERT_SPECIES_NAME = "Invert Species"
 YES = "Yes"
 NO = "No"
 YES_COLOR = Color(rgb="EAF7f0")
@@ -36,6 +38,7 @@ def create_workbook_template():
         FISH_SPECIES_NAME,
         FISH_GROUPINGS_NAME,
         BENTHIC_NAME,
+        INVERT_SPECIES_NAME,
     ]
     wb = Workbook()
     DEFAULT_FONT.name = "Arial"
@@ -256,6 +259,56 @@ def write_benthic(wb, regions):
     insert_range_and_resize(wb[BENTHIC_NAME], "A1", data)
 
 
+def write_invert_species(wb):
+    COLUMN_NAMES = [
+        "Class",
+        "Order",
+        "Family",
+        "Genus",
+        "Species",
+        "Group of Interest",
+        "Max Size (cm)",
+        "Measurement Type",
+        "Size Source",
+        "Size Source URL",
+    ]
+
+    data = [
+        COLUMN_NAMES,
+        *[
+            [
+                sp.genus.family.order.class_goi.invert_class.name,
+                sp.genus.family.order.name,
+                sp.genus.family.name,
+                sp.genus.name,
+                sp.name,
+                sp.group_of_interest and sp.group_of_interest.name,
+                sp.max_length,
+                sp.max_length_type,
+                sp.max_length_source,
+                sp.max_length_url,
+            ]
+            for sp in InvertSpecies.objects.select_related(
+                "genus",
+                "genus__family",
+                "genus__family__order",
+                "genus__family__order__class_goi",
+                "genus__family__order__class_goi__invert_class",
+                "group_of_interest",
+            )
+            .filter(status=SUPERUSER_APPROVED)
+            .order_by(
+                "genus__family__order__class_goi__invert_class__name",
+                "genus__family__order__name",
+                "genus__family__name",
+                "genus__name",
+                "name",
+            )
+        ],
+    ]
+    insert_range_and_resize(wb[INVERT_SPECIES_NAME], "A1", data)
+
+
 def write_attribute_reference(output_path):
     wb = create_workbook_template()
     regions = get_regions()
@@ -264,5 +317,6 @@ def write_attribute_reference(output_path):
     write_fish_species(wb, regions)
     write_fish_grouping(wb, regions)
     write_benthic(wb, regions)
+    write_invert_species(wb)
 
     wb.save(output_path)

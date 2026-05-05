@@ -6,8 +6,9 @@ from rest_framework.exceptions import ValidationError
 from rest_framework.response import Response
 from rest_framework.views import APIView
 
-from ..models import PROTOCOL_MAP, Project
+from ..models import Project
 from ..reports import gfcr
+from ..reports.summary_report import PROTOCOL_VIEW_MAPPING
 from ..utils import zip_file
 from ..utils.reports import (
     GFCR_REPORT_TYPE,
@@ -38,7 +39,7 @@ class BaseMultiProjectReportSerializer(serializers.Serializer):
 
 
 class SampleUnitMethodReportSerializer(BaseMultiProjectReportSerializer):
-    protocol = serializers.ChoiceField(choices=[(k, v) for k, v in PROTOCOL_MAP.items()])
+    protocol = serializers.ChoiceField(choices=[(k, v) for k, v in PROTOCOL_VIEW_MAPPING.items()])
 
 
 class MultiProjectReportView(APIView):

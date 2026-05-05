@@ -1,4 +1,6 @@
 import csv
+import gzip
+import logging
 from collections import defaultdict
 from typing import Dict, List, Set, Tuple
 
@@ -54,6 +56,8 @@ from ..resources.sampleunitmethods.habitatcomplexitymethod import (
 from ..utils import cached
 from ..utils.timer import timing
 from . import xl
+
+logger = logging.getLogger(__name__)
 
 ACA_BENTHIC_KEY, ACA_BENTHIC_FIELD = Covariate.SUPPORTED_COVARIATES[0]
 ACA_GEOMORPHIC_KEY, ACA_GEOMORPHIC_FIELD = Covariate.SUPPORTED_COVARIATES[1]
@@ -258,10 +262,17 @@ def get_viewset_csv_content(view_cls, project_pk, request):
     resp = vw.csv(request)
 
     if resp.status_code != 200:
-        print(resp.content)
+        logger.error(
+            "Failed to get CSV content for project %s: %s",
+            project_pk,
+            b"".join(resp.streaming_content),
+        )
         raise ValueError(f"Failed to get content for project {project_pk}")
 
-    content = list(csv.reader([str(row, "UTF-8").strip() for row in resp.streaming_content]))
+    raw_bytes = b"".join(resp.streaming_content)
+    if resp.get("Content-Encoding") == "gzip":
+        raw_bytes = gzip.decompress(raw_bytes)
+    content = list(csv.reader(raw_bytes.decode("utf-8").splitlines()))
     if not isinstance(content, list) or len(content) < 2 or "site_id" not in content[0]:
         if isinstance(content, list):
             yield from content
