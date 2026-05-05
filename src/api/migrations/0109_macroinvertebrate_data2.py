@@ -71,8 +71,9 @@ def migrate_macroinvertebrate_taxonomy(apps, schema_editor):
     # ------------------------------------------------------------------ #
     # Step 0: rename InvertGroupOfInterest entries to lowercase form.     #
     # ------------------------------------------------------------------ #
+    goi_renames_lower = {k.lower(): v for k, v in GOI_RENAMES.items()}
     for goi in InvertGroupOfInterest.objects.all():
-        new_name = GOI_RENAMES.get(goi.name, goi.name)
+        new_name = goi_renames_lower.get(goi.name.lower(), goi.name)
         if new_name != goi.name:
             goi.name = new_name
             goi.save(update_fields=["name"])
