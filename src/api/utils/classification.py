@@ -13,7 +13,7 @@ import pyarrow as pa
 import pyarrow.parquet as pq
 from django.conf import settings
 from django.contrib.gis.geos import Point as GEOSPoint
-from django.core.files.base import ContentFile
+from django.core.files.base import ContentFile, File
 from django.db import IntegrityError, transaction
 from django.db.models import Exists, OuterRef
 from django.db.models.fields.files import ImageFieldFile
@@ -85,7 +85,14 @@ def create_image_name(image: Image) -> str:
     return f"{name}{image_ext}"
 
 
-def create_image_checksum(image: ImageFieldFile) -> str:
+def create_image_checksum(image: ImageFieldFile, image_buf: Optional[BytesIO] = None) -> str:
+    if image_buf is not None:
+        image_buf.seek(0)
+        file_hash = hashlib.sha256()
+        while chunk := image_buf.read(8192):
+            file_hash.update(chunk)
+        return file_hash.hexdigest()
+
     if not image.closed:
         image.close()
     image.open("rb")
@@ -99,12 +106,17 @@ def create_image_checksum(image: ImageFieldFile) -> str:
     return file_hash.hexdigest()
 
 
-def create_thumbnail(image_instance: Image) -> ContentFile:
+def create_thumbnail(image_instance: Image, image_buf: Optional[BytesIO] = None) -> ContentFile:
     size = (500, 500)
 
-    with image_instance.image.open("rb") as f:
-        img = PILImage.open(f)
+    if image_buf is not None:
+        image_buf.seek(0)
+        img = PILImage.open(image_buf)
         img.load()
+    else:
+        with image_instance.image.open("rb") as f:
+            img = PILImage.open(f)
+            img.load()
 
     img.thumbnail(size, PILImage.Resampling.LANCZOS)
 
@@ -244,7 +256,12 @@ def save_normalized_imagefile(instance: Image):
         img_content = BytesIO()
         image_file.save(img_content, format=image_format)
 
-        instance.image = ContentFile(img_content.getvalue(), name=instance.image.name)
+        # Wrap the BytesIO directly (no copy) and stash it for post_save so
+        # thumbnail creation and checksum can read from the buffer already in
+        # memory instead of fetching the file back from S3.
+        img_content.seek(0)
+        instance.image = File(img_content, name=instance.image.name)
+        instance._normalized_image_buf = img_content
 
 
 def store_exif(instance: Image) -> None:
