@@ -656,6 +656,37 @@ class CommonStack(Stack):
             web_acl_arn=self.web_acl.attr_arn,
         )
 
+        # WAF logging — log group name must start with aws-waf-logs-
+        waf_log_group = logs.LogGroup(
+            self,
+            "WafLogGroup",
+            log_group_name="aws-waf-logs-mermaid-api",
+            retention=logs.RetentionDays.THREE_MONTHS,
+            removal_policy=RemovalPolicy.RETAIN,
+        )
+        # WAF requires an explicit resource policy to write to CloudWatch Logs
+        logs.ResourcePolicy(
+            self,
+            "WafLogGroupPolicy",
+            policy_statements=[
+                iam.PolicyStatement(
+                    actions=["logs:CreateLogStream", "logs:PutLogEvents"],
+                    principals=[iam.ServicePrincipal("delivery.logs.amazonaws.com")],
+                    resources=[f"{waf_log_group.log_group_arn}:*"],
+                    conditions={
+                        "StringEquals": {"aws:SourceAccount": self.account},
+                        "ArnLike": {"aws:SourceArn": f"arn:aws:logs:{self.region}:{self.account}:*"},
+                    },
+                )
+            ],
+        )
+        wafv2.CfnLoggingConfiguration(
+            self,
+            "WafLoggingConfig",
+            log_destination_configs=[waf_log_group.log_group_arn],
+            resource_arn=self.web_acl.attr_arn,
+        )
+
         self.load_balancer.add_listener(
             id="MermaidApiListener",
             protocol=elb.ApplicationProtocol.HTTPS,
