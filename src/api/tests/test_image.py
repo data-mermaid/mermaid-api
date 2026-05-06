@@ -2,6 +2,7 @@ import copy
 
 import pytest
 from django.core.files.uploadedfile import SimpleUploadedFile
+from django.test import override_settings
 from django.urls import reverse
 
 from api.models import Annotation, Classifier, Image, Point
@@ -243,3 +244,38 @@ def test_edit_machine_annotation(
             assert anno["is_confirmed"] is True
         elif anno_id_2 == anno["id"]:
             assert anno["is_confirmed"] is False
+
+
+@override_settings(MAX_IMAGE_FILE_SIZE=10)
+def test_upload_image_exceeding_size_limit(
+    db_setup,
+    api_client1,
+    project1,
+    valid_benthic_pq_transect_collect_record,
+):
+    url = reverse("image-list", kwargs={"project_pk": str(project1.pk)})
+    oversized_file = SimpleUploadedFile(
+        name="big.jpg", content=b"x" * 11, content_type="image/jpeg"
+    )
+    response = api_client1.post(
+        url,
+        {
+            "image": oversized_file,
+            "collect_record_id": str(valid_benthic_pq_transect_collect_record.pk),
+        },
+        format="multipart",
+    )
+    assert response.status_code == 400
+    assert "size limit" in response.json()["error"]
+
+
+def test_classification_status_is_none_when_no_statuses(
+    db_setup,
+    api_client1,
+    project1,
+    image,
+):
+    url = reverse("image-detail", kwargs={"project_pk": str(project1.pk), "pk": str(image.pk)})
+    response = api_client1.get(url, format="json")
+    assert response.status_code == 200
+    assert response.json()["classification_status"] is None

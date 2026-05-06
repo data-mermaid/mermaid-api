@@ -65,6 +65,10 @@ class ImageSerializer(DynamicFieldsMixin, BaseAPISerializer):
         additional_fields = ["classification_status"]
         exclude = []
 
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self._counts_cache = {}
+
     def get_classification_status(self, obj):
         statuses = obj.statuses.all()
         latest = max(statuses, key=lambda s: s.created_on, default=None)
@@ -82,8 +86,6 @@ class ImageSerializer(DynamicFieldsMixin, BaseAPISerializer):
         return None
 
     def _summarize_counts(self, obj):
-        if not hasattr(self, "_counts_cache"):
-            self._counts_cache = {}
         if obj.pk in self._counts_cache:
             return self._counts_cache[obj.pk]
 

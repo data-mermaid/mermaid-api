@@ -83,8 +83,11 @@ def post_save_classification_image(sender, instance, created, **kwargs):
         # buf is intentionally still set here so the recursive post_save can
         # use it for the checksum comparison, avoiding an S3 read.
         instance.thumbnail.save(thumb_file.name, thumb_file, save=True)
-        if buf is not None:
-            del instance._normalized_image_buf
+
+    # Always release the buffer — covers the needs_new_thumbnail=False path and any
+    # early-return callers (e.g. _is_copy). The recursive post_save may have already
+    # popped it, so use pop to avoid AttributeError.
+    instance.__dict__.pop("_normalized_image_buf", None)
 
 
 @receiver(pre_save, sender=CollectRecord)
