@@ -112,10 +112,11 @@ def create_thumbnail(image_instance: Image, image_buf: Optional[BytesIO] = None)
     if image_buf is not None:
         image_buf.seek(0)
         img = PILImage.open(image_buf)
+        img.load()
     else:
         with image_instance.image.open("rb") as f:
             img = PILImage.open(f)
-    img.load()
+            img.load()
 
     img.thumbnail(size, PILImage.Resampling.LANCZOS)
 

@@ -77,12 +77,14 @@ def post_save_classification_image(sender, instance, created, **kwargs):
         instance.original_image_checksum = cls_utils.create_image_checksum(
             instance.image, image_buf=buf
         )
-        if buf is not None:
-            del instance._normalized_image_buf
         # Saving thumbnail (save=True), causes double save but it's necessary
         # to have thumbnail created and saved in the post_save so thumbnails
         # don't get orphaned if done in a pre_save signal.
+        # buf is intentionally still set here so the recursive post_save can
+        # use it for the checksum comparison, avoiding an S3 read.
         instance.thumbnail.save(thumb_file.name, thumb_file, save=True)
+        if buf is not None:
+            del instance._normalized_image_buf
 
 
 @receiver(pre_save, sender=CollectRecord)
