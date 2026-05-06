@@ -83,8 +83,8 @@ class InvertHarvestType(BaseChoiceModel):
 
 
 class InvertAttribute(BaseAttributeModel):
-    PHYLUM_RANK = "phylum"
     CLASS_RANK = "class"
+    CLASS_GOI_RANK = "class_goi"
     ORDER_RANK = "order"
     FAMILY_RANK = "family"
     GENUS_RANK = "genus"
@@ -94,10 +94,13 @@ class InvertAttribute(BaseAttributeModel):
         db_table = "invert_attribute"
 
     def __str__(self):
-        if hasattr(self, "invertphylum"):
-            return _("%s") % self.invertphylum.name
-        elif hasattr(self, "invertclass"):
+        if hasattr(self, "invertclass"):
             return _("%s") % self.invertclass.name
+        elif hasattr(self, "invertclassgroupofinterest"):
+            return _("%s (%s)") % (
+                self.invertclassgroupofinterest.invert_class.name,
+                self.invertclassgroupofinterest.group_of_interest.name,
+            )
         elif hasattr(self, "invertorder"):
             return _("%s") % self.invertorder.name
         elif hasattr(self, "invertfamily"):
@@ -110,10 +113,10 @@ class InvertAttribute(BaseAttributeModel):
 
     @property
     def taxonomic_rank(self):
-        if hasattr(self, "invertphylum"):
-            return self.PHYLUM_RANK
-        elif hasattr(self, "invertclass"):
+        if hasattr(self, "invertclass"):
             return self.CLASS_RANK
+        elif hasattr(self, "invertclassgroupofinterest"):
+            return self.CLASS_GOI_RANK
         elif hasattr(self, "invertorder"):
             return self.ORDER_RANK
         elif hasattr(self, "invertfamily"):
@@ -157,26 +160,11 @@ class InvertMaxLengthMixin:
         return self._max_length
 
 
-class InvertPhylum(InvertMaxLengthMixin, InvertAttribute):
-    _species_join_path = "genus__family__order__invert_class__phylum"
+class InvertClass(InvertMaxLengthMixin, InvertAttribute):
+    # Path from InvertSpecies up through InvertClassGroupOfInterest to InvertClass.
+    _species_join_path = "genus__family__order__class_goi__invert_class"
 
     name = models.CharField(max_length=100, unique=True)
-
-    def __str__(self):
-        return _("%s") % self.name
-
-    class Meta:
-        db_table = "invert_phylum"
-        ordering = ("name",)
-        verbose_name = _("macroinvertebrate phylum")
-        verbose_name_plural = _("macroinvertebrate phyla")
-
-
-class InvertClass(InvertMaxLengthMixin, InvertAttribute):
-    _species_join_path = "genus__family__order__invert_class"
-
-    name = models.CharField(max_length=100)
-    phylum = models.ForeignKey(InvertPhylum, on_delete=models.PROTECT, related_name="classes")
 
     def __str__(self):
         return _("%s") % self.name
@@ -186,9 +174,31 @@ class InvertClass(InvertMaxLengthMixin, InvertAttribute):
         ordering = ("name",)
         verbose_name = _("macroinvertebrate class")
         verbose_name_plural = _("macroinvertebrate classes")
+
+
+class InvertClassGroupOfInterest(InvertMaxLengthMixin, InvertAttribute):
+    # Path from InvertSpecies up to InvertClassGroupOfInterest via InvertOrder.class_goi.
+    _species_join_path = "genus__family__order__class_goi"
+
+    invert_class = models.ForeignKey(
+        InvertClass, on_delete=models.PROTECT, related_name="class_gois"
+    )
+    group_of_interest = models.ForeignKey(
+        InvertGroupOfInterest, on_delete=models.PROTECT, related_name="class_gois"
+    )
+
+    def __str__(self):
+        return _("%s (%s)") % (self.invert_class.name, self.group_of_interest.name)
+
+    class Meta:
+        db_table = "invert_class_goi"
+        ordering = ("invert_class__name", "group_of_interest__name")
+        verbose_name = _("macroinvertebrate class / group of interest")
+        verbose_name_plural = _("macroinvertebrate class / groups of interest")
         constraints = [
             models.UniqueConstraint(
-                fields=["name", "phylum"], name="unique_invertclass_name_phylum"
+                fields=["invert_class", "group_of_interest"],
+                name="unique_invert_class_goi",
             )
         ]
 
@@ -197,7 +207,9 @@ class InvertOrder(InvertMaxLengthMixin, InvertAttribute):
     _species_join_path = "genus__family__order"
 
     name = models.CharField(max_length=100)
-    invert_class = models.ForeignKey(InvertClass, on_delete=models.PROTECT, related_name="orders")
+    class_goi = models.ForeignKey(
+        InvertClassGroupOfInterest, on_delete=models.PROTECT, related_name="orders"
+    )
 
     def __str__(self):
         return _("%s") % self.name
@@ -209,7 +221,7 @@ class InvertOrder(InvertMaxLengthMixin, InvertAttribute):
         verbose_name_plural = _("macroinvertebrate orders")
         constraints = [
             models.UniqueConstraint(
-                fields=["name", "invert_class"], name="unique_invertorder_name_invert_class"
+                fields=["name", "class_goi"], name="unique_invertorder_name_class_goi"
             )
         ]
 
@@ -297,12 +309,6 @@ class InvertSpecies(InvertAttribute):
         null=True,
         blank=True,
     )
-    harvest_type = models.ForeignKey(
-        InvertHarvestType,
-        on_delete=models.PROTECT,
-        null=True,
-        blank=True,
-    )
     notes = models.TextField(blank=True)
 
     def __str__(self):
@@ -332,6 +338,8 @@ class InvertBeltTransect(Transect):
         InvertSizeBin,
         on_delete=models.PROTECT,
         verbose_name=_("size bin (cm)"),
+        null=True,
+        blank=True,
     )
 
     class Meta:

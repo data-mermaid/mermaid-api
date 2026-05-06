@@ -1,9 +1,14 @@
+import logging
+
 from django.conf import settings
 
 from ..models import Covariate
 from ..utils.q import submit_job
+from .base import CovariateRequestError
 from .coral_atlas import CoralAtlasCovariate
 from .vibrant_oceans import VibrantOceansThreatsCovariate
+
+logger = logging.getLogger(__name__)
 
 
 def location_checks(site):
@@ -26,7 +31,11 @@ def update_site_aca_covariates(site):
     site_pk = site.pk
     point = site.location
 
-    results = coral_atlas.fetch([(point.x, point.y)])
+    try:
+        results = coral_atlas.fetch([(point.x, point.y)])
+    except CovariateRequestError as e:
+        logger.warning("ACA covariate fetch failed for site %s after retries: %s", site_pk, e)
+        return
 
     if not results:
         return
