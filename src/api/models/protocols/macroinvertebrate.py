@@ -303,12 +303,6 @@ class InvertSpecies(InvertAttribute):
         blank=True,
         verbose_name=_("size source URL"),
     )
-    group_of_interest = models.ForeignKey(
-        InvertGroupOfInterest,
-        on_delete=models.PROTECT,
-        null=True,
-        blank=True,
-    )
     notes = models.TextField(blank=True)
 
     def __str__(self):
