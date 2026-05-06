@@ -73,24 +73,13 @@ class ImageSerializer(DynamicFieldsMixin, BaseAPISerializer):
         return None
 
     def get_patch_size(self, obj):
-        if not hasattr(self, "_patch_size_cache"):
-            self._patch_size_cache = {}
-        if obj.pk in self._patch_size_cache:
-            return self._patch_size_cache[obj.pk]
-
         # All machine annotations on an image share one classifier, so the
         # first one found is authoritative.
-        result = None
         for point in obj.points.all():
             for annotation in point.annotations.all():
                 if annotation.classifier_id is not None:
-                    result = annotation.classifier.patch_size
-                    break
-            if result is not None:
-                break
-
-        self._patch_size_cache[obj.pk] = result
-        return result
+                    return annotation.classifier.patch_size
+        return None
 
     def _summarize_counts(self, obj):
         if not hasattr(self, "_counts_cache"):
