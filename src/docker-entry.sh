@@ -11,6 +11,8 @@ exec opentelemetry-instrument gunicorn app.wsgi \
   --workers 2 \
   --threads 4 \
   --worker-class gthread \
+  --max-requests 2000 \
+  --max-requests-jitter 200 \
   --access-logfile "-" \
   --error-logfile "-" \
   --worker-tmp-dir /dev/shm

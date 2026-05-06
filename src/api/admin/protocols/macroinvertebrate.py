@@ -118,7 +118,7 @@ class InvertSpeciesInline(admin.TabularInline):
     model = InvertSpecies
     fk_name = "genus"
     extra = 0
-    fields = ("name", "group_of_interest", "max_length")
+    fields = ("name", "max_length")
     show_change_link = True
 
 
@@ -134,11 +134,10 @@ class InvertSpeciesAdmin(BaseAdmin):
     list_display = (
         "name",
         "genus",
-        "group_of_interest",
         "max_length",
         "max_length_type",
     )
-    list_filter = ("group_of_interest",)
+    list_filter = []
     search_fields = ("name", "genus__name", "genus__family__name")
 
 
