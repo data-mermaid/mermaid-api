@@ -282,7 +282,7 @@ def write_invert_species(wb):
                 sp.genus.family.name,
                 sp.genus.name,
                 sp.name,
-                sp.group_of_interest and sp.group_of_interest.name,
+                sp.genus.family.order.class_goi.group_of_interest.name,
                 sp.max_length,
                 sp.max_length_type,
                 sp.max_length_source,
@@ -294,7 +294,7 @@ def write_invert_species(wb):
                 "genus__family__order",
                 "genus__family__order__class_goi",
                 "genus__family__order__class_goi__invert_class",
-                "group_of_interest",
+                "genus__family__order__class_goi__group_of_interest",
             )
             .filter(status=SUPERUSER_APPROVED)
             .order_by(
