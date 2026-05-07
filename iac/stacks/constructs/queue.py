@@ -33,6 +33,8 @@ class JobQueue(Construct):
             retention_period=Duration.days(7),
         )
 
+        self.dead_letter_queue = dead_letter_queue
+
         # FIFO Queue
         self.queue = sqs.Queue(
             self,

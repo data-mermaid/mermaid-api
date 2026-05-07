@@ -437,8 +437,18 @@ def suppress_api(stack: Stack) -> None:
         "ImageProcess/Worker/QueueProcessingTaskDef",
     ]
 
+    _xray_iam4 = NagPackSuppression(
+        id="AwsSolutions-IAM4",
+        reason=f"{ACCEPTED}: AWSXRayDaemonWriteAccess is the least-privilege AWS managed "
+        "policy for X-Ray tracing; no customer-managed equivalent exists.",
+        applies_to=[
+            "Policy::arn:<AWS::Partition>:iam::aws:policy/AWSXRayDaemonWriteAccess",
+        ],
+    )
+
     for td in task_def_ids:
-        # Task role default policy (IAM5 wildcards from CDK grants)
+        # Task role: IAM4 for X-Ray managed policy, IAM5 wildcards from CDK grants
+        _suppress_by_path(stack, f"{td}/TaskRole/Resource", [_xray_iam4])
         _suppress_by_path(stack, f"{td}/TaskRole/DefaultPolicy/Resource", [_API_IAM5_SUPPRESSION])
         # Task definition resource (ECS2 - env vars)
         _suppress_by_path(stack, f"{td}/Resource", [_API_ECS2_SUPPRESSION])

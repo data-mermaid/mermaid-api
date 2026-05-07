@@ -5,7 +5,7 @@ echo "Starting Django Migrations"
 python manage.py migrate --noinput
 
 # exec "$@"
-gunicorn app.wsgi \
+exec opentelemetry-instrument gunicorn app.wsgi \
   --bind 0.0.0.0:8081 \
   --timeout 120 \
   --workers 2 \
