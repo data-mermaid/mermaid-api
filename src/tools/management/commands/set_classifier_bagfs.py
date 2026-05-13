@@ -78,5 +78,5 @@ class Command(BaseCommand):
 
             classifier.benthic_attribute_growth_forms.set(bagfs)
             self.stdout.write(
-                self.style.SUCCESS(f"Done. Classifier now has {len(bagfs)} BA/GF(s).")
+                self.style.SUCCESS(f"Done. Classifier now has {len(incoming)} BA/GF(s).")
             )
