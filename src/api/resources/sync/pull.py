@@ -111,6 +111,9 @@ def _get_records(viewset, profile_id, filters, generate_visibility_removes=False
             "revision.related_to_profile_id is null",
             *filters,
         ]
+        # sub_query is produced by _get_subquery() via cursor.mogrify(), so all ORM
+        # parameters are fully escaped before being inlined here — no injection risk.
+        # Any future changes to _get_subquery() must preserve mogrify() parameterization.
         vis_removes_sql = f"""
             WITH model_select AS (
                 {sub_query}
@@ -120,9 +123,11 @@ def _get_records(viewset, profile_id, filters, generate_visibility_removes=False
                 "revision"."revision_num"
             FROM
                 "revision"
+            LEFT JOIN
+                model_select ON "revision"."record_id" = model_select."__pk__"
             WHERE
                 {" AND ".join(vis_remove_filters)}
-                AND "revision"."record_id" NOT IN (SELECT "__pk__" FROM model_select)
+                AND model_select."__pk__" IS NULL
         """
         try:
             cur = connection.cursor()
