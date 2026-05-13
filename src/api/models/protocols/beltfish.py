@@ -358,7 +358,7 @@ class FishFamily(FishAttribute):
                 self._max_length = round(family.get("max_length"), 6)
 
         if FishFamily.regions_agg is not None:
-            self._regions = FishFamily.regions_agg.get(str(self.pk), [])
+            self._regions = FishFamily.regions_agg.get(str(self.pk)) or []
 
         return FishFamily.species_agg
 
@@ -462,7 +462,7 @@ class FishGenus(FishAttribute):
                 self._max_length = genus.get("max_length")
 
         if FishGenus.regions_agg is not None:
-            self._regions = FishGenus.regions_agg.get(str(self.pk), [])
+            self._regions = FishGenus.regions_agg.get(str(self.pk)) or []
 
         return FishGenus.species_agg
 
