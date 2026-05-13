@@ -30,12 +30,16 @@ class BaseRegionValidator(BaseValidator):
         return NotImplementedError()
 
     def _get_attribute_region_lookup(self, attribute_ids):
-        return {
-            str(attr.pk): [str(r) for r in attr.regions]
-            if isinstance(attr.regions, list)
-            else [str(r.id) for r in attr.regions.all()]
-            for attr in self.attribute_model_class.objects.filter(id__in=attribute_ids)
-        }
+        result = {}
+        for attr in self.attribute_model_class.objects.filter(id__in=attribute_ids):
+            regions = attr.regions
+            if isinstance(regions, list):
+                result[str(attr.pk)] = [str(r) for r in regions]
+            elif regions is not None:
+                result[str(attr.pk)] = [str(r.id) for r in regions.all()]
+            else:
+                result[str(attr.pk)] = []
+        return result
 
     @validator_result
     def check_region(self, observation_id, site_region, attribute_id, attribute_regions, obs):
