@@ -1,6 +1,8 @@
 import os
 
-from aws_cdk import App, Environment
+from aws_cdk import App, Aspects, Environment
+from cdk_nag import AwsSolutionsChecks
+import nag_suppressions
 from settings.dev import DEV_SETTINGS
 from settings.prod import PROD_SETTINGS
 from stacks.api import ApiStack
@@ -17,6 +19,7 @@ tags = {
 
 
 app = App()
+Aspects.of(app).add(AwsSolutionsChecks(verbose=True))
 
 cdk_env = Environment(
     account=os.getenv("CDK_DEFAULT_ACCOUNT", None),
@@ -37,6 +40,7 @@ common_stack = CommonStack(
     "mermaid-api-infra-common",
     env=cdk_env,
     tags=tags,
+    enable_vpc_flow_logs=os.getenv("ENABLE_VPC_FLOW_LOGS", "true").lower() == "true",
 )
 
 dev_static_site_stack = StaticSiteStack(
@@ -64,6 +68,9 @@ dev_api_stack = ApiStack(
     api_zone=common_stack.api_zone,
     public_bucket=dev_static_site_stack.site_bucket,
     image_processing_bucket=common_stack.image_processing_bucket,
+    auto_scaling_group=common_stack.auto_scaling_group,
+    distribution=dev_static_site_stack.distribution,
+    sagemaker_domain_name=f"{DEV_SETTINGS.env_id}-SG-Project",
     use_fifo_queues="False",
     report_s3_creds=common_stack.report_s3_creds,
 )
@@ -102,9 +109,21 @@ prod_api_stack = ApiStack(
     api_zone=common_stack.api_zone,
     public_bucket=prod_static_site_stack.site_bucket,
     image_processing_bucket=common_stack.image_processing_bucket,
+    auto_scaling_group=common_stack.auto_scaling_group,
+    distribution=prod_static_site_stack.distribution,
+    sagemaker_domain_name=f"{PROD_SETTINGS.env_id}-SG-Project",
     use_fifo_queues="False",
     report_s3_creds=common_stack.report_s3_creds,
 )
 
+nag_suppressions.apply_all(
+    gh_access_stack=gh_access_stack,
+    common_stack=common_stack,
+    dev_static_site_stack=dev_static_site_stack,
+    prod_static_site_stack=prod_static_site_stack,
+    dev_api_stack=dev_api_stack,
+    prod_api_stack=prod_api_stack,
+    dev_sagemaker_stack=dev_sagemaker_stack,
+)
 
 app.synth()

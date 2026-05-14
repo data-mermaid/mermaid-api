@@ -5,8 +5,7 @@ from django.conf import settings
 from django.contrib.gis.geos import Point
 from jose import jwt
 
-from api.models.base import AuthUser, Profile
-from api.models.mermaid import (
+from api.models import (
     BeltTransectWidth,
     BeltTransectWidthCondition,
     BenthicAttribute,
@@ -31,6 +30,7 @@ from api.models.mermaid import (
     Tide,
     Visibility,
 )
+from api.models.base import AuthUser, Profile
 
 
 class MockRequest:

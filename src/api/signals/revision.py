@@ -12,8 +12,10 @@ from ..models import (
     FishGenus,
     FishGrouping,
     FishSpecies,
+    InvertBeltTransect,
     Management,
     ObsBeltFish,
+    ObsBeltInvert,
     ObsBenthicLIT,
     ObsBenthicPhotoQuadrat,
     ObsBenthicPIT,
@@ -96,10 +98,14 @@ def deleted_collect_record_revisions(sender, instance, *args, **kwargs):
 @receiver(post_save, sender=CollectRecord)
 @receiver(post_delete, sender=FishBeltTransect)
 @receiver(post_save, sender=FishBeltTransect)
+@receiver(post_delete, sender=InvertBeltTransect)
+@receiver(post_save, sender=InvertBeltTransect)
 @receiver(post_delete, sender=Management)
 @receiver(post_save, sender=Management)
 @receiver(post_delete, sender=ObsBeltFish)
 @receiver(post_save, sender=ObsBeltFish)
+@receiver(post_delete, sender=ObsBeltInvert)
+@receiver(post_save, sender=ObsBeltInvert)
 @receiver(post_delete, sender=ObsBenthicPhotoQuadrat)
 @receiver(post_save, sender=ObsBenthicPhotoQuadrat)
 @receiver(post_delete, sender=ObsBenthicLIT)

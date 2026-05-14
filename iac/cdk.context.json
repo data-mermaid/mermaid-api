@@ -23,7 +23,8 @@
   },
   "acknowledged-issue-numbers": [
     32775,
-    34892
+    34892,
+    37013
   ],
   "endpoint-service-availability-zones:account=554812291621:region=us-east-1:serviceName=com.amazonaws.us-east-1.sagemaker.api": [
     "us-east-1a",

@@ -1,4 +1,4 @@
-from ....models.mermaid import FishAttribute, FishSize
+from ....models import FishAttribute, FishSize
 from .base import ERROR, OK, WARN, BaseValidator, validator_result
 
 
