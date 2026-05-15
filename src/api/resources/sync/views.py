@@ -17,6 +17,7 @@ from api.resources import (
     fish_genus,
     fish_grouping,
     fish_species,
+    invert_attribute,
     pmanagement,
     project,
     project_profile,
@@ -41,6 +42,7 @@ FISH_FAMILIES_SOURCE_TYPE = "fish_families"
 FISH_GENERA_SOURCE_TYPE = "fish_genera"
 FISH_GROUPINGS_SOURCE_TYPE = "fish_groupings"
 FISH_SPECIES_SOURCE_TYPE = "fish_species"
+INVERT_ATTRIBUTES_SOURCE_TYPE = "invert_attributes"
 CHOICES_SOURCE_TYPE = "choices"
 
 CACHEABLE_SOURCE_TYPES = (
@@ -49,6 +51,7 @@ CACHEABLE_SOURCE_TYPES = (
     FISH_GENERA_SOURCE_TYPE,
     FISH_GROUPINGS_SOURCE_TYPE,
     FISH_SPECIES_SOURCE_TYPE,
+    INVERT_ATTRIBUTES_SOURCE_TYPE,
 )
 
 project_sources = {
@@ -104,6 +107,12 @@ non_project_sources = {
         "view": fish_species.FishSpeciesViewSet,
         "required_filters": NO_FILTERS,
         "read_only": False,
+    },
+    INVERT_ATTRIBUTES_SOURCE_TYPE: {
+        "view": invert_attribute.InvertAttributeViewSet,
+        "required_filters": NO_FILTERS,
+        "read_only": False,
+        "visibility_filtered": True,
     },
     CHOICES_SOURCE_TYPE: {
         "view": choices.ChoiceViewSet,
