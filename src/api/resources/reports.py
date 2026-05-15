@@ -39,7 +39,7 @@ class BaseMultiProjectReportSerializer(serializers.Serializer):
 
 
 class SampleUnitMethodReportSerializer(BaseMultiProjectReportSerializer):
-    protocol = serializers.ChoiceField(choices=[(k, v) for k, v in PROTOCOL_VIEW_MAPPING.items()])
+    protocol = serializers.ChoiceField(choices=[(k, k) for k in PROTOCOL_VIEW_MAPPING])
 
 
 class MultiProjectReportView(APIView):
