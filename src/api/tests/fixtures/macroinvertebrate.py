@@ -33,6 +33,11 @@ def invert_size_bin_1(db):
 
 
 @pytest.fixture
+def invert_size_bin_2(db):
+    return InvertSizeBin.objects.create(val="2")
+
+
+@pytest.fixture
 def invert_group_of_interest_1(db):
     return InvertGroupOfInterest.objects.create(name="Sea urchins")
 

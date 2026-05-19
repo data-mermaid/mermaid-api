@@ -22,11 +22,11 @@ class InvertBeltTransectSerializer(SampleUnitSerializer):
         model = InvertBeltTransect
         exclude = []
         extra_kwargs = {
+            **SampleUnitSerializer.extra_kwargs,
             "number": {"error_messages": {"null": "Transect number is required"}},
             "len_surveyed": {"error_messages": {"null": "Transect length surveyed is required"}},
             "width": {"error_messages": {"null": "Width is required"}},
         }
-        extra_kwargs.update(SampleUnitSerializer.extra_kwargs)
 
 
 class InvertBeltTransectFilterSet(SampleUnitFilterSet):

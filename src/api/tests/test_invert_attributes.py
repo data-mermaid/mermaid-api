@@ -137,6 +137,73 @@ def test_invert_belt_transect_delete(db_setup, api_client1, project1, invert_bel
     assert not InvertBeltTransect.objects.filter(pk=pk).exists()
 
 
+def test_invertbelttransect_not_accessible_cross_project(
+    db_setup, api_client3, project1, invert_belt_transect1
+):
+    """User with no membership in project1 cannot read project1's invertbelttransects."""
+    response = api_client3.get(f"/v1/projects/{project1.pk}/invertbelttransects/", format="json")
+    assert response.status_code == 403
+
+
+def test_invertbelttransect_filter_len_surveyed(
+    db_setup, api_client1, project1, invert_belt_transect1
+):
+    """len_surveyed RangeFilter includes and excludes the transect correctly."""
+    url = f"/v1/projects/{project1.pk}/invertbelttransects/"
+    resp = api_client1.get(url, {"len_surveyed_min": 50}, format="json")
+    assert resp.status_code == 200
+    assert resp.json()["count"] == 1
+
+    resp = api_client1.get(url, {"len_surveyed_min": 100}, format="json")
+    assert resp.status_code == 200
+    assert resp.json()["count"] == 0
+
+
+def test_invertbelttransect_filter_depth(db_setup, api_client1, project1, invert_belt_transect1):
+    """depth RangeFilter includes and excludes the transect correctly."""
+    url = f"/v1/projects/{project1.pk}/invertbelttransects/"
+    resp = api_client1.get(url, {"depth_max": 5}, format="json")
+    assert resp.status_code == 200
+    assert resp.json()["count"] == 1
+
+    resp = api_client1.get(url, {"depth_max": 1}, format="json")
+    assert resp.status_code == 200
+    assert resp.json()["count"] == 0
+
+
+def test_invertbelttransect_filter_width(
+    db_setup,
+    api_client1,
+    project1,
+    invert_belt_transect1,
+    invert_belt_transect_width_1m,
+    invert_belt_transect_width_2m,
+):
+    """width filter matches the assigned width and excludes a different one."""
+    url = f"/v1/projects/{project1.pk}/invertbelttransects/"
+    resp = api_client1.get(url, {"width": str(invert_belt_transect_width_1m.pk)}, format="json")
+    assert resp.status_code == 200
+    assert resp.json()["count"] == 1
+
+    resp = api_client1.get(url, {"width": str(invert_belt_transect_width_2m.pk)}, format="json")
+    assert resp.status_code == 200
+    assert resp.json()["count"] == 0
+
+
+def test_invertbelttransect_filter_size_bin(
+    db_setup, api_client1, project1, invert_belt_transect1, invert_size_bin_1, invert_size_bin_2
+):
+    """size_bin filter matches the assigned bin and excludes a different one."""
+    url = f"/v1/projects/{project1.pk}/invertbelttransects/"
+    resp = api_client1.get(url, {"size_bin": str(invert_size_bin_1.pk)}, format="json")
+    assert resp.status_code == 200
+    assert resp.json()["count"] == 1
+
+    resp = api_client1.get(url, {"size_bin": str(invert_size_bin_2.pk)}, format="json")
+    assert resp.status_code == 200
+    assert resp.json()["count"] == 0
+
+
 def test_sample_unit_method_search_fields_include_beltinvert():
     """SearchNonFieldFilter.SEARCH_FIELDS includes beltinvert observer name paths."""
     from api.resources.sampleunitmethods.sample_unit_methods import SearchNonFieldFilter
