@@ -2,6 +2,7 @@ import aws_cdk as cdk
 from aws_cdk import (
     CfnOutput,
     aws_ec2 as ec2,
+    aws_ecr as ecr,
     aws_ecs as ecs,
     aws_iam as iam,
     aws_s3 as s3,
@@ -84,6 +85,17 @@ class SagemakerStack(cdk.Stack):
 
         self.coralnet_public_sources.grant_read(self.sm_execution_role)
 
+        # Feature-vector bucket used as the input store for the SageMaker
+        # training launcher (mermaid-classifier). Holds per-source .fv files
+        # produced by the feature-extraction pipeline.
+        self.coralnet_feature_vectors = s3.Bucket.from_bucket_arn(
+            self,
+            f"{self.prefix}CoralnetFeatureVectorsBucket",
+            bucket_arn="arn:aws:s3:::2605-coralnet-public-sources",
+        )
+
+        self.coralnet_feature_vectors.grant_read(self.sm_execution_role)
+
         self.pyspacer_test = s3.Bucket.from_bucket_arn(
             self,
             f"{self.prefix}PyspacerTestBucket",
@@ -91,6 +103,11 @@ class SagemakerStack(cdk.Stack):
         )
 
         self.pyspacer_test.grant_read(self.sm_execution_role)
+
+        # ECR repository + IAM role for the mermaid-classifier SageMaker
+        # training launcher.
+        self.classifier_training_repo = self.create_classifier_training_repo()
+        self.classifier_launcher_role = self.create_classifier_launcher_role()
 
         self.security_group = ec2.SecurityGroup(
             self,
@@ -223,12 +240,209 @@ class SagemakerStack(cdk.Stack):
             )
         )
 
+        # Allow this role to be passed as the SageMaker TrainingJob execution
+        # role. Required by the mermaid-classifier launcher which calls
+        # CreateTrainingJob with RoleArn = dev-sm-execution-role.
+        role.attach_inline_policy(
+            iam.Policy(
+                self,
+                "SagemakerPassSelfPolicy",
+                statements=[
+                    iam.PolicyStatement(
+                        effect=iam.Effect.ALLOW,
+                        actions=["iam:PassRole"],
+                        resources=[role.role_arn],
+                        conditions={
+                            "StringEquals": {"iam:PassedToService": "sagemaker.amazonaws.com"}
+                        },
+                    ),
+                ],
+            )
+        )
+
         CfnOutput(
             self,
             f"{self.prefix}SagemakerExecutionRoleArn",
             value=role.role_arn,
             description="SageMaker Execution Role ARN",
             export_name=f"{self.prefix}-SagemakerExecutionRoleArn",
+        )
+
+        return role
+
+    def create_classifier_training_repo(self) -> ecr.Repository:
+        """ECR repository for the mermaid-classifier SageMaker training image.
+
+        Image tags are promoted by the launcher operator (`smoke`, `latest`,
+        date-stamped, etc.); only the most recent few tags need to live in
+        the registry, so an image lifecycle rule keeps history bounded.
+        """
+        repo = ecr.Repository(
+            self,
+            f"{self.prefix}MermaidClassifierTrainingRepo",
+            repository_name="mermaid-classifier-training",
+            image_scan_on_push=True,
+            removal_policy=cdk.RemovalPolicy.RETAIN,
+            lifecycle_rules=[
+                ecr.LifecycleRule(
+                    description="Keep last 10 images",
+                    max_image_count=10,
+                    rule_priority=1,
+                ),
+            ],
+        )
+
+        CfnOutput(
+            self,
+            f"{self.prefix}MermaidClassifierTrainingRepoUri",
+            value=repo.repository_uri,
+            description="ECR URI for the mermaid-classifier training image",
+            export_name=f"{self.prefix}-MermaidClassifierTrainingRepoUri",
+        )
+
+        return repo
+
+    def create_classifier_launcher_role(self) -> iam.Role:
+        """IAM role for operators driving the mermaid-classifier launcher.
+
+        Trust: any principal in this account whose ARN matches the
+        SageMaker SSO permission set (so the role is assumable directly
+        from a `wcs-sm`-style profile via role-chaining).
+
+        Permissions: scoped to what the launcher actually needs --
+        push/pull on the `mermaid-classifier-*` ECR repos, submit and
+        observe SageMaker TrainingJobs, pass the existing SageMaker
+        execution role as the job's RoleArn, and read/write the
+        run-scoped prefix in the SageMaker data bucket.
+        """
+        sso_principal = iam.PrincipalWithConditions(
+            iam.AccountPrincipal(cdk.Aws.ACCOUNT_ID),
+            conditions={
+                "ArnLike": {
+                    "aws:PrincipalArn": (
+                        f"arn:aws:iam::{cdk.Aws.ACCOUNT_ID}"
+                        ":role/aws-reserved/sso.amazonaws.com"
+                        "/AWSReservedSSO_SageMaker_*"
+                    ),
+                },
+            },
+        )
+
+        role = iam.Role(
+            self,
+            f"{self.prefix}MermaidClassifierLauncherRole",
+            assumed_by=sso_principal,
+            role_name=f"{self.prefix}-mermaid-classifier-launcher-role",
+            max_session_duration=cdk.Duration.hours(8),
+        )
+
+        # ECR: token + push/pull/manage on mermaid-classifier-* repos in
+        # this account. GetAuthorizationToken must be on '*' (AWS rule).
+        role.attach_inline_policy(
+            iam.Policy(
+                self,
+                "MermaidClassifierLauncherEcrPolicy",
+                statements=[
+                    iam.PolicyStatement(
+                        effect=iam.Effect.ALLOW,
+                        actions=["ecr:GetAuthorizationToken"],
+                        resources=["*"],
+                    ),
+                    iam.PolicyStatement(
+                        effect=iam.Effect.ALLOW,
+                        actions=[
+                            "ecr:BatchCheckLayerAvailability",
+                            "ecr:BatchGetImage",
+                            "ecr:GetDownloadUrlForLayer",
+                            "ecr:DescribeImages",
+                            "ecr:DescribeRepositories",
+                            "ecr:ListImages",
+                            "ecr:InitiateLayerUpload",
+                            "ecr:UploadLayerPart",
+                            "ecr:CompleteLayerUpload",
+                            "ecr:PutImage",
+                            "ecr:BatchDeleteImage",
+                            "ecr:DeleteRepository",
+                        ],
+                        resources=[
+                            f"arn:aws:ecr:{cdk.Aws.REGION}:{cdk.Aws.ACCOUNT_ID}"
+                            ":repository/mermaid-classifier-*",
+                        ],
+                    ),
+                ],
+            )
+        )
+
+        # SageMaker: submit + observe training jobs the launcher creates.
+        role.attach_inline_policy(
+            iam.Policy(
+                self,
+                "MermaidClassifierLauncherSagemakerPolicy",
+                statements=[
+                    iam.PolicyStatement(
+                        effect=iam.Effect.ALLOW,
+                        actions=[
+                            "sagemaker:CreateTrainingJob",
+                            "sagemaker:DescribeTrainingJob",
+                            "sagemaker:StopTrainingJob",
+                            "sagemaker:ListTrainingJobs",
+                            "sagemaker:AddTags",
+                            "sagemaker:ListTags",
+                        ],
+                        resources=[
+                            f"arn:aws:sagemaker:{cdk.Aws.REGION}:{cdk.Aws.ACCOUNT_ID}"
+                            ":training-job/*",
+                        ],
+                    ),
+                    # ListTrainingJobs ignores the resource scope but
+                    # requires the action on '*'. Same for the MLflow
+                    # presigned-URL helper if the operator wants to
+                    # spot-check the UI.
+                    iam.PolicyStatement(
+                        effect=iam.Effect.ALLOW,
+                        actions=[
+                            "sagemaker:ListTrainingJobs",
+                            "sagemaker:ListMlflowApps",
+                            "sagemaker:DescribeMlflowApp",
+                            "sagemaker:CreatePresignedMlflowAppUrl",
+                            "sagemaker-mlflow:*",
+                        ],
+                        resources=["*"],
+                    ),
+                ],
+            )
+        )
+
+        # iam:PassRole on the existing SageMaker execution role -- required
+        # to call CreateTrainingJob with RoleArn = sm_execution_role.
+        role.attach_inline_policy(
+            iam.Policy(
+                self,
+                "MermaidClassifierLauncherPassRolePolicy",
+                statements=[
+                    iam.PolicyStatement(
+                        effect=iam.Effect.ALLOW,
+                        actions=["iam:PassRole"],
+                        resources=[self.sm_execution_role.role_arn],
+                        conditions={
+                            "StringEquals": {"iam:PassedToService": "sagemaker.amazonaws.com"}
+                        },
+                    ),
+                ],
+            )
+        )
+
+        # S3: launcher syncs the per-run config dir into the data bucket
+        # under runs/<run-id>/config/ and reads back log output from
+        # runs/<run-id>/output/. Scope tightly to that prefix.
+        self.sm_data_bucket.grant_read_write(role, "runs/*")
+
+        CfnOutput(
+            self,
+            f"{self.prefix}MermaidClassifierLauncherRoleArn",
+            value=role.role_arn,
+            description="IAM role for operators driving the mermaid-classifier launcher",
+            export_name=f"{self.prefix}-MermaidClassifierLauncherRoleArn",
         )
 
         return role

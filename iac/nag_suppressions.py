@@ -532,6 +532,7 @@ def suppress_sagemaker(stack: Stack, prefix: str) -> None:
         "MlflowRolePolicy/Resource",
         "SagemakerStartSessionPolicy/Resource",
         "GlueSessionPolicy/Resource",
+        "SagemakerPassSelfPolicy/Resource",
     ]:
         _suppress_by_path(
             stack,
@@ -541,6 +542,31 @@ def suppress_sagemaker(stack: Stack, prefix: str) -> None:
                     id="AwsSolutions-IAM5",
                     reason=f"{ACCEPTED}: SageMaker, MLflow, and Glue wildcards are "
                     "required for interactive notebook sessions.",
+                ),
+            ],
+        )
+
+    # --- Mermaid classifier launcher role's inline policies ---
+    # ECR / SageMaker / S3 wildcards are scoped to specific repos
+    # (mermaid-classifier-*), training jobs in this account, and the
+    # runs/* prefix of the SageMaker data bucket. Required by the
+    # launcher scripts to pull the training image, launch training jobs, and read/write
+    # training data and logs.
+    for policy_path in [
+        "MermaidClassifierLauncherEcrPolicy/Resource",
+        "MermaidClassifierLauncherSagemakerPolicy/Resource",
+        "MermaidClassifierLauncherPassRolePolicy/Resource",
+        f"{prefix}MermaidClassifierLauncherRole/DefaultPolicy/Resource",
+    ]:
+        _suppress_by_path(
+            stack,
+            policy_path,
+            [
+                NagPackSuppression(
+                    id="AwsSolutions-IAM5",
+                    reason=f"{ACCEPTED}: Wildcards are scoped to mermaid-classifier-* "
+                    "ECR repos, SageMaker training jobs in this account, and the "
+                    "runs/* prefix of the SageMaker data bucket.",
                 ),
             ],
         )
