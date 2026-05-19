@@ -6,6 +6,7 @@ from ..models import (
     BLEACHINGQC_PROTOCOL,
     FISHBELT_PROTOCOL,
     HABITATCOMPLEXITY_PROTOCOL,
+    MACROINVERTEBRATE_PROTOCOL,
     SampleEvent,
     SampleUnit,
     TransectMethod,
@@ -90,6 +91,8 @@ def migrate_collect_record_sample_event(collect_record):
         sample_unit_attribute = "fishbelt_transect"
     elif protocol == BLEACHINGQC_PROTOCOL:
         sample_unit_attribute = "quadrat_collection"
+    elif protocol == MACROINVERTEBRATE_PROTOCOL:
+        sample_unit_attribute = "beltinvert_transect"
     else:
         return
 

@@ -16,6 +16,7 @@ from ..models import (
     BLEACHINGQC_PROTOCOL,
     FISHBELT_PROTOCOL,
     HABITATCOMPLEXITY_PROTOCOL,
+    MACROINVERTEBRATE_PROTOCOL,
     PROTOCOL_MAP,
     AuditRecord,
     CollectRecord,
@@ -26,6 +27,7 @@ from ..utils.summary_cache import add_project_to_queue
 from .validations import (
     ValidationRunner,
     belt_fish,
+    belt_invert,
     benthic_lit,
     benthic_photo_quadrat_transect,
     benthic_pit,
@@ -34,6 +36,7 @@ from .validations import (
 )
 from .validations.statuses import ERROR, IGNORE, OK, WARN
 from .writer import (
+    BeltInvertProtocolWriter,
     BenthicLITProtocolWriter,
     BenthicPhotoQuadratTransectProtocolWriter,
     BenthicPITProtocolWriter,
@@ -71,6 +74,9 @@ def get_writer(collect_record, context):
 
     elif protocol == BLEACHINGQC_PROTOCOL:
         return BleachingQuadratCollectionProtocolWriter(collect_record, context)
+
+    elif protocol == MACROINVERTEBRATE_PROTOCOL:
+        return BeltInvertProtocolWriter(collect_record, context)
 
 
 def format_serializer_errors(validationerror):
@@ -194,6 +200,8 @@ def _validate_collect_record(record, record_serializer, request):
             validations,
             request=request,
         )
+    elif protocol == MACROINVERTEBRATE_PROTOCOL:
+        runner.validate(record, belt_invert.belt_invert_validations, request=request)
     return runner.to_dict()
 
 

@@ -10,13 +10,16 @@ from ....models import (
     BENTHICPQT_PROTOCOL,
     FISHBELT_PROTOCOL,
     HABITATCOMPLEXITY_PROTOCOL,
+    MACROINVERTEBRATE_PROTOCOL,
     BeltFish,
+    BeltInvert,
     BenthicLIT,
     BenthicPhotoQuadratTransect,
     BenthicPIT,
     BleachingQuadratCollection,
     FishBeltTransect,
     HabitatComplexity,
+    InvertBeltTransect,
     SampleEvent,
 )
 from ..statuses import OK, WARN
@@ -181,6 +184,47 @@ class DifferentTransectWidthValidator(SampleEventConsistencyValidator):
         return OK
 
 
+class DifferentInvertTransectWidthValidator(SampleEventConsistencyValidator):
+    """
+    Validates that the transect width in a macroinvertebrate belt sample unit matches that of other
+    macroinvertebrate belt sample units in the same sample event.
+    """
+
+    DIFFERENT_TRANSECT_WIDTH = "different_transect_width_se"
+
+    def __init__(self, site_path, management_path, sample_date_path, width_path, **kwargs):
+        super().__init__(site_path, management_path, sample_date_path, **kwargs)
+        self.width_path = width_path
+
+    @validator_result
+    def __call__(self, collect_record, **kwargs):
+        sample_event = self._get_sample_event(collect_record)
+        width_id = valid_id(self.get_value(collect_record, self.width_path))
+        if not sample_event or not width_id:
+            return OK
+
+        queryset = InvertBeltTransect.objects.filter(sample_event=sample_event).select_related(
+            "width"
+        )
+        for su in queryset:
+            other_width_id = valid_id(su.width_id)
+            if other_width_id:
+                other_width_id = str(other_width_id)
+                width_id = str(width_id)
+
+                if other_width_id != width_id:
+                    return (
+                        WARN,
+                        self.DIFFERENT_TRANSECT_WIDTH,
+                        {
+                            "width": width_id,
+                            "other_width": other_width_id,
+                        },
+                    )
+
+        return OK
+
+
 class DifferentTransectLengthValidator(SampleEventConsistencyValidator):
     """
     Validates that the transect length in a transect-based sample unit matches that of other sample
@@ -196,6 +240,7 @@ class DifferentTransectLengthValidator(SampleEventConsistencyValidator):
         BENTHICPQT_PROTOCOL: (BenthicPhotoQuadratTransect, "quadrat_transect__sample_event"),
         FISHBELT_PROTOCOL: (BeltFish, "transect__sample_event"),
         HABITATCOMPLEXITY_PROTOCOL: (HabitatComplexity, "transect__sample_event"),
+        MACROINVERTEBRATE_PROTOCOL: (BeltInvert, "transect__sample_event"),
     }
 
     def __init__(

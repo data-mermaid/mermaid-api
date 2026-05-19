@@ -31,6 +31,15 @@ from .generic import (
 )
 from .interval_size import IntervalSizeValidator
 from .interval_start import IntervalStartValidator
+from .invert_belt_transect import UniqueInvertBeltTransectValidator
+from .invert_obs import (
+    AllObsExcludedValidator,
+    InvertCountValidator,
+    InvertDensityValidator,
+    InvertObsCountHighValidator,
+    InvertSizeBinRequiredValidator,
+    InvertSizeValidator,
+)
 from .len_surveyed import LenSurveyedValidator
 from .management import ManagementRuleValidator, UniqueManagementValidator
 from .obs_benthic_lit import BenthicLITObservationTotalLengthValidator
@@ -49,6 +58,7 @@ from .region import RegionValidator
 from .sample_date import SampleDateValidator
 from .sample_time import SampleTimeValidator
 from .sample_unit_consistency import (
+    DifferentInvertTransectWidthValidator,
     DifferentNumPointsPerQuadratValidator,
     DifferentNumQuadratsValidator,
     DifferentQuadratSizeValidator,

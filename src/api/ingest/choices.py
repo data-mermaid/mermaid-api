@@ -5,6 +5,13 @@ from ..models import (
     FishSizeBin,
     GrowthForm,
     HabitatComplexityScore,
+    InvertBeltTransectWidth,
+    InvertClassGroupOfInterest,
+    InvertFamily,
+    InvertGenus,
+    InvertOrder,
+    InvertSizeBin,
+    InvertSpecies,
     ReefSlope,
     RelativeDepth,
     Tide,
@@ -59,3 +66,35 @@ def score_choices():
 
 def visibility_choices():
     return build_choices(Visibility.objects.choices(order_by="val"))
+
+
+def invert_attributes_choices():
+    choices = []
+    for obj in InvertClassGroupOfInterest.objects.select_related(
+        "invert_class", "group_of_interest"
+    ):
+        choices.append((str(obj.pk), f"{obj.invert_class.name} ({obj.group_of_interest.name})"))
+    for obj in InvertOrder.objects.all():
+        choices.append((str(obj.pk), obj.name))
+    for obj in InvertFamily.objects.all():
+        choices.append((str(obj.pk), obj.name))
+    for obj in InvertGenus.objects.all():
+        choices.append((str(obj.pk), obj.name))
+    for obj in InvertSpecies.objects.select_related("genus"):
+        choices.append((str(obj.pk), f"{obj.genus.name} {obj.name}"))
+    return sorted(choices, key=lambda x: x[1])
+
+
+def invert_belt_transect_widths_choices():
+    return sorted(
+        [
+            (str(w.pk), w.name)
+            for w in InvertBeltTransectWidth.objects.all().order_by("name")
+            if w.name
+        ],
+        key=lambda x: x[1],
+    )
+
+
+def invert_size_bins_choices():
+    return build_choices(InvertSizeBin.objects.choices(order_by="val"), "val")
