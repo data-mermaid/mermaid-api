@@ -6,7 +6,6 @@ from api.models import (
     InvertBeltTransect,
     InvertBeltTransectWidth,
     InvertClass,
-    InvertClassGroupOfInterest,
     InvertFamily,
     InvertGenus,
     InvertGroupOfInterest,
@@ -33,29 +32,25 @@ def invert_size_bin_1(db):
 
 
 @pytest.fixture
+def invert_size_bin_2(db):
+    return InvertSizeBin.objects.create(val="2")
+
+
+@pytest.fixture
 def invert_group_of_interest_1(db):
-    return InvertGroupOfInterest.objects.create(name="Sea urchins")
+    return InvertGroupOfInterest.objects.create(name="Sea urchins", status=SUPERUSER_APPROVED)
 
 
 @pytest.fixture
 def invert_class_1(db):
-    return InvertClass.objects.create(name="Echinoidea")
+    return InvertClass.objects.create(name="Echinoidea", status=SUPERUSER_APPROVED)
 
 
 @pytest.fixture
-def invert_class_goi_1(db, invert_class_1, invert_group_of_interest_1):
-    return InvertClassGroupOfInterest.objects.create(
-        invert_class=invert_class_1,
-        group_of_interest=invert_group_of_interest_1,
-        status=SUPERUSER_APPROVED,
-    )
-
-
-@pytest.fixture
-def invert_order_1(db, invert_class_goi_1):
+def invert_order_1(db, invert_class_1):
     return InvertOrder.objects.create(
         name="Camarodonta",
-        class_goi=invert_class_goi_1,
+        invert_class=invert_class_1,
         status=SUPERUSER_APPROVED,
     )
 
@@ -70,10 +65,11 @@ def invert_family_1(db, invert_order_1):
 
 
 @pytest.fixture
-def invert_genus_1(db, invert_family_1):
+def invert_genus_1(db, invert_family_1, invert_group_of_interest_1):
     return InvertGenus.objects.create(
         name="Strongylocentrotus",
         family=invert_family_1,
+        group_of_interest=invert_group_of_interest_1,
         status=SUPERUSER_APPROVED,
     )
 
@@ -91,10 +87,29 @@ def invert_species_1(db, invert_genus_1):
 
 
 @pytest.fixture
+def invert_goi_attribute_1(db, invert_group_of_interest_1):
+    # InvertGroupOfInterest is now an InvertAttribute subclass; the fixture
+    # returns the GoI record, which IS the attribute.
+    return invert_group_of_interest_1
+
+
+@pytest.fixture
 def all_test_invert_attributes(
-    invert_class_goi_1, invert_order_1, invert_family_1, invert_genus_1, invert_species_1
+    invert_goi_attribute_1,
+    invert_class_1,
+    invert_order_1,
+    invert_family_1,
+    invert_genus_1,
+    invert_species_1,
 ):
-    return [invert_class_goi_1, invert_order_1, invert_family_1, invert_genus_1, invert_species_1]
+    return [
+        invert_goi_attribute_1,
+        invert_class_1,
+        invert_order_1,
+        invert_family_1,
+        invert_genus_1,
+        invert_species_1,
+    ]
 
 
 @pytest.fixture

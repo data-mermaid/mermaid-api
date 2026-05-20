@@ -11,7 +11,7 @@ class InvertAttributeSerializer(CreateOrUpdateSerializerMixin, BaseAPISerializer
     name = serializers.SerializerMethodField()
     max_length = serializers.SerializerMethodField()
     parent = serializers.SerializerMethodField()
-    class_goi = serializers.SerializerMethodField()
+    group_of_interest = serializers.SerializerMethodField()
     max_length_type = serializers.SerializerMethodField()
     max_length_source = serializers.SerializerMethodField()
     max_length_url = serializers.SerializerMethodField()
@@ -30,7 +30,7 @@ class InvertAttributeSerializer(CreateOrUpdateSerializerMixin, BaseAPISerializer
             "invertgenus",
             "invertfamily",
             "invertorder",
-            "invertclassgroupofinterest",
+            "invertclass",
         ):
             taxon = getattr(obj, attr, None)
             if taxon is not None:
@@ -53,25 +53,22 @@ class InvertAttributeSerializer(CreateOrUpdateSerializerMixin, BaseAPISerializer
             return family.order_id
         order = getattr(obj, "invertorder", None)
         if order is not None:
-            return order.class_goi_id
+            return order.invert_class_id
         return None
 
-    def get_class_goi(self, obj):
+    def get_group_of_interest(self, obj):
+        goi = getattr(obj, "invertgroupofinterest", None)
+        if goi is not None:
+            return obj.pk
+
         species = getattr(obj, "invertspecies", None)
         if species is not None:
-            return species.genus.family.order.class_goi_id
+            return species.genus.group_of_interest_id
+
         genus = getattr(obj, "invertgenus", None)
         if genus is not None:
-            return genus.family.order.class_goi_id
-        family = getattr(obj, "invertfamily", None)
-        if family is not None:
-            return family.order.class_goi_id
-        order = getattr(obj, "invertorder", None)
-        if order is not None:
-            return order.class_goi_id
-        class_goi = getattr(obj, "invertclassgroupofinterest", None)
-        if class_goi is not None:
-            return class_goi.pk
+            return genus.group_of_interest_id
+
         return None
 
     def get_max_length_type(self, obj):
@@ -99,19 +96,14 @@ class InvertAttributeFilterSet(BaseAPIFilterSet):
 
 class InvertAttributeViewSet(BaseAttributeApiViewSet):
     serializer_class = InvertAttributeSerializer
-    # Exclude internal InvertClass nodes — user-visible hierarchy is
-    # ClassGroupOfInterest → Order → Family → Genus → Species.
-    # select_related pre-fetches full chain to class_goi for the class_goi field.
-    queryset = (
-        InvertAttribute.objects.select_related(
-            "invertclassgroupofinterest__invert_class",
-            "invertclassgroupofinterest__group_of_interest",
-            "invertorder__class_goi",
-            "invertfamily__order__class_goi",
-            "invertgenus__family__order__class_goi",
-            "invertspecies__genus__family__order__class_goi",
-        )
-        .filter(invertclass__isnull=True)
-        .order_by("id")
-    )
+    queryset = InvertAttribute.objects.select_related(
+        "invertgroupofinterest",
+        "invertclass",
+        "invertorder__invert_class",
+        "invertfamily__order__invert_class",
+        "invertgenus__family__order__invert_class",
+        "invertgenus__group_of_interest",
+        "invertspecies__genus__family__order__invert_class",
+        "invertspecies__genus__group_of_interest",
+    ).order_by("id")
     filterset_class = InvertAttributeFilterSet
