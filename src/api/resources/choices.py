@@ -52,7 +52,12 @@ class ChoiceViewSet(BaseChoiceApiViewSet):
         )
         invertsizebins = dict(data=InvertSizeBin.objects.choices(order_by="val"))
         invertsizebins["data"] = natsorted(invertsizebins["data"], key=itemgetter(*["name"]))
-        invertgroupsofinterest = dict(data=InvertGroupOfInterest.objects.choices(order_by="name"))
+        invertgroupsofinterest = dict(
+            data=[
+                {"id": goi.pk, "name": goi.name, "updated_on": goi.updated_on}
+                for goi in InvertGroupOfInterest.objects.order_by("name")
+            ]
+        )
         invertharvesttypes = dict(data=InvertHarvestType.objects.choices(order_by="name"))
         benthiclifehistories = dict(data=BenthicLifeHistory.objects.choices(order_by="name"))
         growthforms = dict(data=GrowthForm.objects.choices(order_by="name"))
