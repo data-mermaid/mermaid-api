@@ -1,7 +1,7 @@
 import django_filters
 from rest_framework.exceptions import MethodNotAllowed
 
-from ..models import FishBeltTransect
+from ..models import InvertBeltTransect
 from .base import BaseProjectApiViewSet, ModelValReadOnlyField
 from .sample_units_base import (
     SampleUnitExtendedSerializer,
@@ -10,45 +10,45 @@ from .sample_units_base import (
 )
 
 
-class FishBeltTransectExtendedSerializer(SampleUnitExtendedSerializer):
+class InvertBeltTransectExtendedSerializer(SampleUnitExtendedSerializer):
     width = ModelValReadOnlyField()
 
     class Meta:
-        model = FishBeltTransect
+        model = InvertBeltTransect
         exclude = []
 
 
-class FishBeltTransectSerializer(SampleUnitSerializer):
+class InvertBeltTransectSerializer(SampleUnitSerializer):
     class Meta:
-        model = FishBeltTransect
+        model = InvertBeltTransect
         exclude = []
         extra_kwargs = {
+            **SampleUnitSerializer.extra_kwargs,
             "number": {"error_messages": {"null": "Transect number is required"}},
             "len_surveyed": {"error_messages": {"null": "Transect length surveyed is required"}},
             "width": {"error_messages": {"null": "Width is required"}},
-            "size_bin": {"error_messages": {"null": "Fish size bin is required"}},
         }
-        extra_kwargs.update(SampleUnitSerializer.extra_kwargs)
 
 
-class FishBeltTransectFilterSet(SampleUnitFilterSet):
+class InvertBeltTransectFilterSet(SampleUnitFilterSet):
     len_surveyed = django_filters.RangeFilter(field_name="len_surveyed")
 
     class Meta:
-        model = FishBeltTransect
+        model = InvertBeltTransect
         fields = [
-            "beltfish_method",
+            "beltinvert_method",
             "sample_event",
             "len_surveyed",
             "width",
+            "size_bin",
             "depth",
         ] + SampleUnitFilterSet.fields
 
 
-class FishBeltTransectViewSet(BaseProjectApiViewSet):
-    serializer_class = FishBeltTransectSerializer
-    queryset = FishBeltTransect.objects.all()
-    filterset_class = FishBeltTransectFilterSet
+class InvertBeltTransectViewSet(BaseProjectApiViewSet):
+    serializer_class = InvertBeltTransectSerializer
+    queryset = InvertBeltTransect.objects.order_by("id")
+    filterset_class = InvertBeltTransectFilterSet
 
     def update(self, request, *args, **kwargs):
         raise MethodNotAllowed("PUT")
