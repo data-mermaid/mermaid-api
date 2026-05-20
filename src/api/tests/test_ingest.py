@@ -68,7 +68,7 @@ def test_fishbelt_ingest(
     relative_depth1,
     visibility1,
 ):
-    new_records, output = utils.ingest(
+    new_records, _ = utils.ingest(
         protocol=FISHBELT_PROTOCOL,
         datafile=fishbelt_file,
         project_id=project1.pk,
@@ -129,7 +129,7 @@ def test_benthicpit_ingest(
     site1,
     management1,
 ):
-    new_records, output = utils.ingest(
+    new_records, _ = utils.ingest(
         protocol=BENTHICPIT_PROTOCOL,
         datafile=benthicpit_file,
         project_id=project1.pk,
@@ -184,7 +184,7 @@ def test_bleaching_ingest(
     site1,
     management1,
 ):
-    new_records, output = utils.ingest(
+    new_records, _ = utils.ingest(
         protocol=BLEACHINGQC_PROTOCOL,
         datafile=bleaching_file,
         project_id=project1.pk,
@@ -263,7 +263,7 @@ def test_benthiclit_ingest(
     growth_form3,
     growth_form4,
 ):
-    new_records, output = utils.ingest(
+    new_records, _ = utils.ingest(
         protocol=BENTHICLIT_PROTOCOL,
         datafile=benthiclit_file,
         project_id=project1.pk,
@@ -331,7 +331,7 @@ def test_habitatcomplexity_ingest(
     habitat_complexity_score2,
     habitat_complexity_score3,
 ):
-    new_records, output = utils.ingest(
+    new_records, _ = utils.ingest(
         protocol=HABITATCOMPLEXITY_PROTOCOL,
         datafile=habitatcomplexity_file,
         project_id=project1.pk,
@@ -453,7 +453,7 @@ def test_macroinvertebrate_ingest(
     site2,
     management1,
 ):
-    new_records, output = utils.ingest(
+    new_records, _ = utils.ingest(
         protocol=MACROINVERTEBRATE_PROTOCOL,
         datafile=macroinvertebrate_file,
         project_id=project1.pk,

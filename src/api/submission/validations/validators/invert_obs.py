@@ -121,7 +121,7 @@ class TotalMacroinvertCountValidator(BaseValidator):
             len_surveyed = float(transect.get("len_surveyed") or 0)
             width_val = float(InvertBeltTransectWidth.objects.get(pk=width_id).val)
             area_m2 = width_val * len_surveyed
-        except Exception:
+        except (InvertBeltTransectWidth.DoesNotExist, TypeError, ValueError):
             return OK
 
         if area_m2 <= 0:
