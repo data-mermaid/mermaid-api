@@ -35,10 +35,10 @@ from .invert_belt_transect import UniqueInvertBeltTransectValidator
 from .invert_obs import (
     AllObsExcludedValidator,
     InvertCountValidator,
-    InvertDensityValidator,
     InvertObsCountHighValidator,
     InvertSizeBinRequiredValidator,
     InvertSizeValidator,
+    TotalMacroinvertCountValidator,
 )
 from .len_surveyed import LenSurveyedValidator
 from .management import ManagementRuleValidator, UniqueManagementValidator

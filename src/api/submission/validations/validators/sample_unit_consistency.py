@@ -203,16 +203,14 @@ class DifferentInvertTransectWidthValidator(SampleEventConsistencyValidator):
         if not sample_event or not width_id:
             return OK
 
+        width_id = str(width_id)
         queryset = InvertBeltTransect.objects.filter(sample_event=sample_event).select_related(
             "width"
         )
         for su in queryset:
             other_width_id = valid_id(su.width_id)
             if other_width_id:
-                other_width_id = str(other_width_id)
-                width_id = str(width_id)
-
-                if other_width_id != width_id:
+                if str(other_width_id) != width_id:
                     return (
                         WARN,
                         self.DIFFERENT_TRANSECT_WIDTH,

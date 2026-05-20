@@ -15,7 +15,6 @@ from .validators import (
     DrySubmitValidator,
     DuplicateValidator,
     InvertCountValidator,
-    InvertDensityValidator,
     InvertObsCountHighValidator,
     InvertSizeBinRequiredValidator,
     InvertSizeValidator,
@@ -28,6 +27,7 @@ from .validators import (
     SampleDateValidator,
     SampleTimeValidator,
     SimilarDateSampleUnitsValidator,
+    TotalMacroinvertCountValidator,
     UniqueInvertBeltTransectValidator,
     UniqueManagementValidator,
     UniqueSiteValidator,
@@ -205,7 +205,7 @@ belt_invert_validations = [
     ),
     # ── Record level: metric checks ──────────────────────────────────────────
     Validation(
-        validator=InvertDensityValidator(
+        validator=TotalMacroinvertCountValidator(
             observations_path="data.obs_belt_inverts",
             transect_path="data.beltinvert_transect",
         ),

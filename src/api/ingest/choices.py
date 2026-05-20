@@ -6,9 +6,9 @@ from ..models import (
     GrowthForm,
     HabitatComplexityScore,
     InvertBeltTransectWidth,
-    InvertClassGroupOfInterest,
     InvertFamily,
     InvertGenus,
+    InvertGroupOfInterest,
     InvertOrder,
     InvertSizeBin,
     InvertSpecies,
@@ -70,10 +70,8 @@ def visibility_choices():
 
 def invert_attributes_choices():
     choices = []
-    for obj in InvertClassGroupOfInterest.objects.select_related(
-        "invert_class", "group_of_interest"
-    ):
-        choices.append((str(obj.pk), f"{obj.invert_class.name} ({obj.group_of_interest.name})"))
+    for obj in InvertGroupOfInterest.objects.all():
+        choices.append((str(obj.pk), obj.name))
     for obj in InvertOrder.objects.all():
         choices.append((str(obj.pk), obj.name))
     for obj in InvertFamily.objects.all():
@@ -86,14 +84,7 @@ def invert_attributes_choices():
 
 
 def invert_belt_transect_widths_choices():
-    return sorted(
-        [
-            (str(w.pk), w.name)
-            for w in InvertBeltTransectWidth.objects.all().order_by("name")
-            if w.name
-        ],
-        key=lambda x: x[1],
-    )
+    return [(str(w.pk), w.name) for w in InvertBeltTransectWidth.objects.all().order_by("name")]
 
 
 def invert_size_bins_choices():

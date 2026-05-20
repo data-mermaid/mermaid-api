@@ -146,6 +146,7 @@ class InvertMaxLengthMixin:
 
 class InvertGroupOfInterest(InvertAttribute):
     name = models.CharField(max_length=100, unique=True)
+    density_upper_bound = models.PositiveIntegerField()
 
     def __str__(self):
         return self.name
@@ -217,7 +218,9 @@ class InvertGenus(InvertMaxLengthMixin, InvertAttribute):
 
     name = models.CharField(max_length=100)
     family = models.ForeignKey(InvertFamily, on_delete=models.PROTECT, related_name="genera")
-    group_of_interest = models.ForeignKey(InvertGroupOfInterest, on_delete=models.PROTECT)
+    group_of_interest = models.ForeignKey(
+        InvertGroupOfInterest, on_delete=models.PROTECT, related_name="genera"
+    )
 
     def __str__(self):
         return _("%s") % self.name

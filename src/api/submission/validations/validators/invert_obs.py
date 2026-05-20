@@ -1,4 +1,5 @@
-from ....models import InvertBeltTransectWidth, InvertSpecies
+from ....models import InvertAttribute, InvertBeltTransectWidth, InvertGroupOfInterest
+from ....utils.invert_goi import invert_attribute_goi_distribution
 from .base import ERROR, OK, WARN, BaseValidator, validator_result
 
 
@@ -100,11 +101,10 @@ class InvertSizeBinRequiredValidator(BaseValidator):
         return [self.check_size_bin(obs, size_bin) for obs in observations]
 
 
-class InvertDensityValidator(BaseValidator):
-    """Warns when total macroinvertebrate density across the transect exceeds MAX_DENSITY_PER_HA."""
+class TotalMacroinvertCountValidator(BaseValidator):
+    """Warns when density for any group of interest exceeds its upper bound (ind/ha)."""
 
-    DENSITY_EXCEEDS_LIMIT = "density_exceeds_limit"
-    MAX_DENSITY_PER_HA = 5000
+    EXCEED_DENSITY_PER_GOI = "exceed_density_per_goi"
 
     def __init__(self, observations_path, transect_path, **kwargs):
         self.observations_path = observations_path
@@ -127,21 +127,47 @@ class InvertDensityValidator(BaseValidator):
         if area_m2 <= 0:
             return OK
 
-        try:
-            total_count = sum(int(obs.get("count") or 0) for obs in observations)
-        except (TypeError, ValueError):
+        attr_ids = {
+            obs.get("invert_attribute") for obs in observations if obs.get("invert_attribute")
+        }
+        distributions = {
+            attr_id: invert_attribute_goi_distribution(attr_id) for attr_id in attr_ids
+        }
+
+        goi_counts = {}
+        for obs in observations:
+            if not obs.get("include", True):
+                continue
+            attr_id = obs.get("invert_attribute")
+            if not attr_id:
+                continue
+            try:
+                count = float(obs.get("count") or 0)
+            except (TypeError, ValueError):
+                continue
+            for goi_id, weight in (distributions.get(str(attr_id)) or {}).items():
+                goi_counts[str(goi_id)] = goi_counts.get(str(goi_id), 0.0) + count * weight
+
+        if not goi_counts:
             return OK
 
-        density_per_ha = (total_count / area_m2) * 10_000
-        if density_per_ha > self.MAX_DENSITY_PER_HA:
-            return (
-                WARN,
-                self.DENSITY_EXCEEDS_LIMIT,
-                {
-                    "density": round(density_per_ha, 1),
-                    "max_density": self.MAX_DENSITY_PER_HA,
-                },
-            )
+        goi_qs = InvertGroupOfInterest.objects.filter(pk__in=goi_counts.keys())
+        exceeded = []
+        for goi in goi_qs:
+            total_count = goi_counts.get(str(goi.pk), 0.0)
+            density_per_ha = (total_count / area_m2) * 10_000
+            if density_per_ha > goi.density_upper_bound:
+                exceeded.append(
+                    {
+                        "goi_id": str(goi.pk),
+                        "density": round(density_per_ha, 1),
+                        "threshold": goi.density_upper_bound,
+                    }
+                )
+
+        if exceeded:
+            return WARN, self.EXCEED_DENSITY_PER_GOI, {"exceeded": exceeded}
+
         return OK
 
 
@@ -186,11 +212,28 @@ class InvertSizeValidator(BaseValidator):
             {self.get_value(obs, self.observation_attribute_path) for obs in observations}
         )
 
-        # Only species-level attributes have a direct max_length field.
-        # TODO: extend to higher-level taxa via InvertMaxLengthMixin once needed.
+        attr_instances = InvertAttribute.objects.select_related(
+            "invertspecies",
+            "invertgenus",
+            "invertfamily",
+            "invertorder",
+            "invertclass",
+        ).filter(pk__in=[a for a in attr_ids if a])
+
         max_length_lookup = {}
-        for sp in InvertSpecies.objects.filter(pk__in=[a for a in attr_ids if a]):
-            if sp.max_length is not None:
-                max_length_lookup[str(sp.pk)] = float(sp.max_length)
+        for attr in attr_instances:
+            for subattr_name in (
+                "invertspecies",
+                "invertgenus",
+                "invertfamily",
+                "invertorder",
+                "invertclass",
+            ):
+                subattr = getattr(attr, subattr_name, None)
+                if subattr is not None:
+                    ml = subattr.max_length
+                    if ml is not None:
+                        max_length_lookup[str(attr.pk)] = float(ml)
+                    break
 
         return [self.check_invert_size(obs, max_length_lookup) for obs in observations]

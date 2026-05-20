@@ -136,7 +136,7 @@ class MacroInvertebrateCSVSerializer(CollectRecordCSVSerializer):
     data__obs_belt_inverts__invert_attribute = LazyChoiceField(
         choices=invert_attributes_choices,
         label="Invert name",
-        help_text="Name of the macroinvertebrate species, genus, family, order, or class/group of interest observed. See relevant tab on ingestion template for choices.",
+        help_text="Name of the macroinvertebrate species, genus, family, order, class, or group of interest observed. See relevant tab on ingestion template for choices.",
     )
     data__obs_belt_inverts__count = serializers.IntegerField(
         min_value=0,
@@ -164,7 +164,3 @@ class MacroInvertebrateCSVSerializer(CollectRecordCSVSerializer):
         label="Observation notes",
         help_text="Notes for this observation",
     )
-
-    def validate(self, data):
-        data = super().validate(data)
-        return data

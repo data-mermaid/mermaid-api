@@ -388,15 +388,19 @@ def test_belt_invert_duplicate_taxon_error(valid_belt_invert_collect_record, pro
     assert _get_result_status(results["$record"], "duplicate_validator") == ERROR
 
 
-def test_belt_invert_density_warn(
-    valid_belt_invert_collect_record, profile1_request, invert_belt_transect_width_1m
+def test_belt_invert_density_per_goi_warn(
+    valid_belt_invert_collect_record,
+    profile1_request,
+    invert_species_1,
+    invert_belt_transect_width_1m,
 ):
-    # 1m wide × 50m long = 50 m²; 5000 ind/ha threshold → 25 individuals needed to exceed it
-    # 26 individuals across 1 obs → 26/50 × 10000 = 5200 ind/ha > 5000
+    # invert_species_1 links to invert_genus_1 → invert_group_of_interest_1 (sea urchins, 5500/ha).
+    # 1m wide × 50m long = 50 m²; need > 5500/ha → >27.5 individuals → 28 individuals.
+    # Set all obs to 1 then bump first to 28; total = 28+5 = 33 → 6600/ha > 5500.
     data = valid_belt_invert_collect_record.data
     for obs in data["obs_belt_inverts"]:
         obs["count"] = 1
-    data["obs_belt_inverts"][0]["count"] = 26  # total = 31 → density = 6200 ind/ha
+    data["obs_belt_inverts"][0]["count"] = 28  # total = 33 → 6600 ind/ha
     valid_belt_invert_collect_record.data = data
     valid_belt_invert_collect_record.save()
 
@@ -408,4 +412,61 @@ def test_belt_invert_density_warn(
     )
     results = runner.to_dict()["results"]
     assert overall_status == WARN
-    assert _get_result_status(results["$record"], "invert_density_validator") == WARN
+    assert _get_result_status(results["$record"], "total_macroinvert_count_validator") == WARN
+
+
+def test_belt_invert_density_two_goi_warn(
+    valid_belt_invert_collect_record,
+    profile1_request,
+    invert_group_of_interest_1,
+    invert_group_of_interest_2,
+    invert_belt_transect_width_1m,
+):
+    # Species obs → goi_1 (sea urchins, 5500/ha): counts 28+5=33 → 6600/ha (exceeds).
+    # Direct GoI obs → goi_2 (COTS, 125/ha): count=1 → 200/ha (exceeds).
+    # Transect: 1m × 50m = 50m².
+    data = valid_belt_invert_collect_record.data
+    for obs in data["obs_belt_inverts"]:
+        obs["count"] = 1
+    data["obs_belt_inverts"][0]["count"] = 28
+    data["obs_belt_inverts"].append(
+        dict(invert_attribute=str(invert_group_of_interest_2.pk), count=1, include=True)
+    )
+    valid_belt_invert_collect_record.data = data
+    valid_belt_invert_collect_record.save()
+
+    runner = ValidationRunner(serializer=CollectRecordSerializer)
+    runner.validate(
+        valid_belt_invert_collect_record,
+        belt_invert.belt_invert_validations,
+        request=profile1_request,
+    )
+    record_results = runner.to_dict()["results"]["$record"]
+    result = next(r for r in record_results if r["name"] == "total_macroinvert_count_validator")
+    exceeded_ids = {e["goi_id"] for e in result["context"]["exceeded"]}
+    assert str(invert_group_of_interest_1.pk) in exceeded_ids
+    assert str(invert_group_of_interest_2.pk) in exceeded_ids
+
+
+def test_goi_observation_passes_validation(valid_belt_invert_collect_record_goi, profile1_request):
+    """A GoI-level invert observation is valid — no size error, GoI resolves to itself."""
+    runner = ValidationRunner(serializer=CollectRecordSerializer)
+    overall_status = runner.validate(
+        valid_belt_invert_collect_record_goi,
+        belt_invert.belt_invert_validations,
+        request=profile1_request,
+    )
+    assert overall_status == OK
+
+
+def test_family_observation_passes_validation(
+    valid_belt_invert_collect_record_family, profile1_request
+):
+    """A family-level invert observation is valid."""
+    runner = ValidationRunner(serializer=CollectRecordSerializer)
+    overall_status = runner.validate(
+        valid_belt_invert_collect_record_family,
+        belt_invert.belt_invert_validations,
+        request=profile1_request,
+    )
+    assert overall_status == OK
