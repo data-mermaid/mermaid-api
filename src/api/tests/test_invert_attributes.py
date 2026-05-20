@@ -1,3 +1,5 @@
+from decimal import Decimal
+
 from api.models import InvertBeltTransect
 
 
@@ -23,7 +25,7 @@ def test_invert_attribute_species_fields(
     data = response.json()
 
     species_rec = next(r for r in data["results"] if r["taxonomic_rank"] == "species")
-    assert float(species_rec["max_length"]) == float(invert_species_1.max_length)
+    assert Decimal(str(species_rec["max_length"])) == Decimal(str(invert_species_1.max_length))
     assert species_rec["max_length_type"] == invert_species_1.max_length_type
     assert species_rec["notes"] == invert_species_1.notes
 
@@ -78,7 +80,7 @@ def test_invert_attribute_detail(db_setup, api_client1, invert_species_1):
     assert response.status_code == 200
     data = response.json()
     assert data["taxonomic_rank"] == "species"
-    assert float(data["max_length"]) == float(invert_species_1.max_length)
+    assert Decimal(str(data["max_length"])) == Decimal(str(invert_species_1.max_length))
 
 
 def test_invert_goi_attribute_detail(db_setup, api_client1, invert_group_of_interest_1):
