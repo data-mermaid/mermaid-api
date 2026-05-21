@@ -1,5 +1,4 @@
 import django_filters
-from rest_framework.exceptions import MethodNotAllowed
 
 from ..models import BenthicTransect
 from .base import BaseProjectApiViewSet
@@ -32,12 +31,7 @@ class BenthicTransectFilterSet(SampleUnitFilterSet):
 
 
 class BenthicTransectViewSet(BaseProjectApiViewSet):
+    http_method_names = ["get", "post", "delete", "head", "options"]
     serializer_class = BenthicTransectSerializer
     queryset = BenthicTransect.objects.all()
     filterset_class = BenthicTransectFilterSet
-
-    def update(self, request, *args, **kwargs):
-        raise MethodNotAllowed("PUT")
-
-    def partial_update(self, request, *args, **kwargs):
-        raise MethodNotAllowed("PATCH")

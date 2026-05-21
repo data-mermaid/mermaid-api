@@ -1,5 +1,4 @@
 import django_filters
-from rest_framework.exceptions import MethodNotAllowed
 
 from ..models import FishBeltTransect
 from .base import BaseProjectApiViewSet, ModelValReadOnlyField
@@ -46,12 +45,7 @@ class FishBeltTransectFilterSet(SampleUnitFilterSet):
 
 
 class FishBeltTransectViewSet(BaseProjectApiViewSet):
+    http_method_names = ["get", "post", "delete", "head", "options"]
     serializer_class = FishBeltTransectSerializer
     queryset = FishBeltTransect.objects.all()
     filterset_class = FishBeltTransectFilterSet
-
-    def update(self, request, *args, **kwargs):
-        raise MethodNotAllowed("PUT")
-
-    def partial_update(self, request, *args, **kwargs):
-        raise MethodNotAllowed("PATCH")
