@@ -47,6 +47,8 @@ class SearchNonFieldFilter(django_filters.Filter):
         "habitatcomplexity__observers__profile__last_name",
         "bleachingquadratcollection__observers__profile__first_name",
         "bleachingquadratcollection__observers__profile__last_name",
+        "beltinvert__observers__profile__first_name",
+        "beltinvert__observers__profile__last_name",
     ]
 
     def filter(self, qs, value):
