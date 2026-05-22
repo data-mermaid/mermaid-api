@@ -362,19 +362,19 @@ def test_notes_in_report_export(
 
     # Check FacilitiesSolutions sheet - notes are now at column 16 (index 15)
     bfs_sheet = wb["FacilitiesSolutions"]
-    bfs_row = list(bfs_sheet.iter_rows(min_row=2, max_row=2, values_only=True))[0]
+    bfs_row = next(bfs_sheet.iter_rows(min_row=2, max_row=2, values_only=True))
     assert (
         bfs_row[15] == "Finance solution notes"
     ), f"Finance solution notes not found. Row: {bfs_row}"
 
     # Check Investments sheet - notes are now at column 15 (index 14)
     inv_sheet = wb["Investments"]
-    inv_row = list(inv_sheet.iter_rows(min_row=2, max_row=2, values_only=True))[0]
+    inv_row = next(inv_sheet.iter_rows(min_row=2, max_row=2, values_only=True))
     assert inv_row[14] == "Investment notes", f"Investment notes not found. Row: {inv_row}"
 
     # Check Revenues sheet - notes are now at column 15 (index 14)
     rev_sheet = wb["Revenues"]
-    rev_row = list(rev_sheet.iter_rows(min_row=2, max_row=2, values_only=True))[0]
+    rev_row = next(rev_sheet.iter_rows(min_row=2, max_row=2, values_only=True))
     assert rev_row[14] == "Revenue notes", f"Revenue notes not found. Row: {rev_row}"
 
     # Clean up

@@ -1,3 +1,5 @@
+import argparse
+import uuid
 from collections import defaultdict
 from datetime import date, datetime
 
@@ -33,10 +35,13 @@ _ALL_VALID_TITLES = _REPORT_TITLES | _TARGET_TITLES
 
 
 def _md_table(headers, rows):
+    def _cell(v):
+        return str(v).replace("|", "&#124;").replace("\n", "<br>")
+
     sep = "| " + " | ".join(["---"] * len(headers)) + " |"
-    lines = ["| " + " | ".join(headers) + " |", sep]
+    lines = ["| " + " | ".join(_cell(h) for h in headers) + " |", sep]
     for row in rows:
-        lines.append("| " + " | ".join(str(c) for c in row) + " |")
+        lines.append("| " + " | ".join(_cell(c) for c in row) + " |")
     return "\n".join(lines)
 
 
@@ -44,7 +49,15 @@ class Command(BaseCommand):
     help = "Audit GFCR data for Phase 4 readiness. Restores prod DB locally before running."
 
     def add_arguments(self, parser):
-        parser.add_argument("--project-id", type=str, help="Scope output to a single project UUID")
+        def _uuid(value):
+            try:
+                return uuid.UUID(value)
+            except ValueError:
+                raise argparse.ArgumentTypeError(f"Invalid UUID: {value!r}")
+
+        parser.add_argument(
+            "--project-id", type=_uuid, help="Scope output to a single project UUID"
+        )
         parser.add_argument("--output", type=str, help="Override default output file path")
 
     def handle(self, *args, **options):
@@ -87,6 +100,10 @@ class Command(BaseCommand):
         if project_id:
             fs_qs = fs_qs.filter(indicator_set__project_id=project_id)
 
+        scanned_projects = {iset.project.name for iset in is_qs} | {
+            fs.indicator_set.project.name for fs in fs_qs
+        }
+
         per_project = defaultdict(
             lambda: {"indicator_sets": [], "finance_solutions": [], "investment_sources": []}
         )
@@ -115,7 +132,7 @@ class Command(BaseCommand):
             scope = "all projects"
 
         total = sum(counts.values())
-        n_projects = len(per_project)
+        n_projects = len(scanned_projects)
 
         lines = [
             f"# GFCR Data Audit — {today_str}",
