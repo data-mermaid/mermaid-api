@@ -38,7 +38,6 @@ from .invert_obs import (
     InvertObsCountHighValidator,
     InvertSizeBinRequiredValidator,
     InvertSizeValidator,
-    TotalMacroinvertCountValidator,
 )
 from .len_surveyed import LenSurveyedValidator
 from .management import ManagementRuleValidator, UniqueManagementValidator

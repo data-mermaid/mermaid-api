@@ -38,15 +38,13 @@ def invert_size_bin_2(db):
 
 @pytest.fixture
 def invert_group_of_interest_1(db):
-    return InvertGroupOfInterest.objects.create(
-        name="Sea urchins", density_upper_bound=5500, status=SUPERUSER_APPROVED
-    )
+    return InvertGroupOfInterest.objects.create(name="Sea urchins", status=SUPERUSER_APPROVED)
 
 
 @pytest.fixture
 def invert_group_of_interest_2(db):
     return InvertGroupOfInterest.objects.create(
-        name="Crown-of-thorns starfish (COTS)", density_upper_bound=125, status=SUPERUSER_APPROVED
+        name="Crown-of-thorns starfish (COTS)", status=SUPERUSER_APPROVED
     )
 
 

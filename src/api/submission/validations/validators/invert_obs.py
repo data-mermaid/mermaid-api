@@ -1,5 +1,4 @@
-from ....models import InvertAttribute, InvertBeltTransectWidth, InvertGroupOfInterest
-from ....utils.invert_goi import invert_attribute_goi_distribution
+from ....models import InvertAttribute
 from .base import ERROR, OK, WARN, BaseValidator, validator_result
 
 
@@ -101,76 +100,6 @@ class InvertSizeBinRequiredValidator(BaseValidator):
         return [self.check_size_bin(obs, size_bin) for obs in observations]
 
 
-class TotalMacroinvertCountValidator(BaseValidator):
-    """Warns when density for any group of interest exceeds its upper bound (ind/ha)."""
-
-    EXCEED_DENSITY_PER_GOI = "exceed_density_per_goi"
-
-    def __init__(self, observations_path, transect_path, **kwargs):
-        self.observations_path = observations_path
-        self.transect_path = transect_path
-        super().__init__(**kwargs)
-
-    @validator_result
-    def __call__(self, collect_record, **kwargs):
-        observations = self.get_value(collect_record, self.observations_path) or []
-        transect = self.get_value(collect_record, self.transect_path) or {}
-
-        try:
-            width_id = transect.get("width")
-            len_surveyed = float(transect.get("len_surveyed") or 0)
-            width_val = float(InvertBeltTransectWidth.objects.get(pk=width_id).val)
-            area_m2 = width_val * len_surveyed
-        except (InvertBeltTransectWidth.DoesNotExist, TypeError, ValueError):
-            return OK
-
-        if area_m2 <= 0:
-            return OK
-
-        attr_ids = {
-            obs.get("invert_attribute") for obs in observations if obs.get("invert_attribute")
-        }
-        distributions = {
-            attr_id: invert_attribute_goi_distribution(attr_id) for attr_id in attr_ids
-        }
-
-        goi_counts = {}
-        for obs in observations:
-            if not obs.get("include", True):
-                continue
-            attr_id = obs.get("invert_attribute")
-            if not attr_id:
-                continue
-            try:
-                count = float(obs.get("count") or 0)
-            except (TypeError, ValueError):
-                continue
-            for goi_id, weight in (distributions.get(str(attr_id)) or {}).items():
-                goi_counts[str(goi_id)] = goi_counts.get(str(goi_id), 0.0) + count * weight
-
-        if not goi_counts:
-            return OK
-
-        goi_qs = InvertGroupOfInterest.objects.filter(pk__in=goi_counts.keys())
-        exceeded = []
-        for goi in goi_qs:
-            total_count = goi_counts.get(str(goi.pk), 0.0)
-            density_per_ha = (total_count / area_m2) * 10_000
-            if density_per_ha > goi.density_upper_bound:
-                exceeded.append(
-                    {
-                        "goi_id": str(goi.pk),
-                        "density": round(density_per_ha, 1),
-                        "threshold": goi.density_upper_bound,
-                    }
-                )
-
-        if exceeded:
-            return WARN, self.EXCEED_DENSITY_PER_GOI, {"exceeded": exceeded}
-
-        return OK
-
-
 class InvertSizeValidator(BaseValidator):
     SIZE_EXCEEDS_MAXIMUM = "invert_size_exceeds_maximum"
 
@@ -201,7 +130,7 @@ class InvertSizeValidator(BaseValidator):
             return OK
 
         max_length = max_length_lookup.get(str(attr_id)) if attr_id else None
-        if max_length is not None and size > max_length:
+        if max_length is not None and size > max_length * 1.5:
             return WARN, self.SIZE_EXCEEDS_MAXIMUM, {**context, "max_length": max_length}
 
         return OK

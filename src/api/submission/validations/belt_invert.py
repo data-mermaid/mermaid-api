@@ -27,7 +27,6 @@ from .validators import (
     SampleDateValidator,
     SampleTimeValidator,
     SimilarDateSampleUnitsValidator,
-    TotalMacroinvertCountValidator,
     UniqueInvertBeltTransectValidator,
     UniqueManagementValidator,
     UniqueSiteValidator,
@@ -68,6 +67,12 @@ belt_invert_validations = [
     Validation(
         validator=RequiredValidator(path="data.beltinvert_transect.width"),
         paths=["data.beltinvert_transect.width"],
+        validation_level=FIELD_LEVEL,
+        validation_type=VALUE_VALIDATION_TYPE,
+    ),
+    Validation(
+        validator=RequiredValidator(path="data.beltinvert_transect.len_surveyed"),
+        paths=["data.beltinvert_transect.len_surveyed"],
         validation_level=FIELD_LEVEL,
         validation_type=VALUE_VALIDATION_TYPE,
     ),
@@ -202,16 +207,6 @@ belt_invert_validations = [
         paths=["data.obs_belt_inverts"],
         validation_level=ROW_LEVEL,
         validation_type=LIST_VALIDATION_TYPE,
-    ),
-    # ── Record level: metric checks ──────────────────────────────────────────
-    Validation(
-        validator=TotalMacroinvertCountValidator(
-            observations_path="data.obs_belt_inverts",
-            transect_path="data.beltinvert_transect",
-        ),
-        paths=["data.obs_belt_inverts"],
-        validation_level=RECORD_LEVEL,
-        validation_type=VALUE_VALIDATION_TYPE,
     ),
     # ── Record level: duplicate prevention ───────────────────────────────────
     Validation(

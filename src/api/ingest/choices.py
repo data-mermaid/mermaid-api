@@ -6,6 +6,7 @@ from ..models import (
     GrowthForm,
     HabitatComplexityScore,
     InvertBeltTransectWidth,
+    InvertClass,
     InvertFamily,
     InvertGenus,
     InvertGroupOfInterest,
@@ -71,6 +72,8 @@ def visibility_choices():
 def invert_attributes_choices():
     choices = []
     for obj in InvertGroupOfInterest.objects.all():
+        choices.append((str(obj.pk), obj.name))
+    for obj in InvertClass.objects.all():
         choices.append((str(obj.pk), obj.name))
     for obj in InvertOrder.objects.all():
         choices.append((str(obj.pk), obj.name))

@@ -139,7 +139,7 @@ class MacroInvertebrateCSVSerializer(CollectRecordCSVSerializer):
         help_text="Name of the macroinvertebrate species, genus, family, order, class, or group of interest observed. See relevant tab on ingestion template for choices.",
     )
     data__obs_belt_inverts__count = serializers.IntegerField(
-        min_value=0,
+        min_value=1,
         label="Count",
         help_text="Number of individuals observed, as integer (e.g. 3).",
     )

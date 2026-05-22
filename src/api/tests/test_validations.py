@@ -269,7 +269,7 @@ def test_belt_invert_size_exceeds_max_warn(
     valid_belt_invert_collect_record, profile1_request, invert_species_1
 ):
     data = valid_belt_invert_collect_record.data
-    # invert_species_1 has max_length=8; set a size above it
+    # invert_species_1 has max_length=8; threshold is 8 * 1.5 = 12; set a size above it
     data["obs_belt_inverts"][0]["size"] = 50
     valid_belt_invert_collect_record.data = data
     valid_belt_invert_collect_record.save()
@@ -386,66 +386,6 @@ def test_belt_invert_duplicate_taxon_error(valid_belt_invert_collect_record, pro
     results = runner.to_dict()["results"]
     assert overall_status == ERROR
     assert _get_result_status(results["$record"], "duplicate_validator") == ERROR
-
-
-def test_belt_invert_density_per_goi_warn(
-    valid_belt_invert_collect_record,
-    profile1_request,
-    invert_species_1,
-    invert_belt_transect_width_1m,
-):
-    # invert_species_1 links to invert_genus_1 → invert_group_of_interest_1 (sea urchins, 5500/ha).
-    # 1m wide × 50m long = 50 m²; need > 5500/ha → >27.5 individuals → 28 individuals.
-    # Set all obs to 1 then bump first to 28; total = 28+5 = 33 → 6600/ha > 5500.
-    data = valid_belt_invert_collect_record.data
-    for obs in data["obs_belt_inverts"]:
-        obs["count"] = 1
-    data["obs_belt_inverts"][0]["count"] = 28  # total = 33 → 6600 ind/ha
-    valid_belt_invert_collect_record.data = data
-    valid_belt_invert_collect_record.save()
-
-    runner = ValidationRunner(serializer=CollectRecordSerializer)
-    overall_status = runner.validate(
-        valid_belt_invert_collect_record,
-        belt_invert.belt_invert_validations,
-        request=profile1_request,
-    )
-    results = runner.to_dict()["results"]
-    assert overall_status == WARN
-    assert _get_result_status(results["$record"], "total_macroinvert_count_validator") == WARN
-
-
-def test_belt_invert_density_two_goi_warn(
-    valid_belt_invert_collect_record,
-    profile1_request,
-    invert_group_of_interest_1,
-    invert_group_of_interest_2,
-    invert_belt_transect_width_1m,
-):
-    # Species obs → goi_1 (sea urchins, 5500/ha): counts 28+5=33 → 6600/ha (exceeds).
-    # Direct GoI obs → goi_2 (COTS, 125/ha): count=1 → 200/ha (exceeds).
-    # Transect: 1m × 50m = 50m².
-    data = valid_belt_invert_collect_record.data
-    for obs in data["obs_belt_inverts"]:
-        obs["count"] = 1
-    data["obs_belt_inverts"][0]["count"] = 28
-    data["obs_belt_inverts"].append(
-        dict(invert_attribute=str(invert_group_of_interest_2.pk), count=1, include=True)
-    )
-    valid_belt_invert_collect_record.data = data
-    valid_belt_invert_collect_record.save()
-
-    runner = ValidationRunner(serializer=CollectRecordSerializer)
-    runner.validate(
-        valid_belt_invert_collect_record,
-        belt_invert.belt_invert_validations,
-        request=profile1_request,
-    )
-    record_results = runner.to_dict()["results"]["$record"]
-    result = next(r for r in record_results if r["name"] == "total_macroinvert_count_validator")
-    exceeded_ids = {e["goi_id"] for e in result["context"]["exceeded"]}
-    assert str(invert_group_of_interest_1.pk) in exceeded_ids
-    assert str(invert_group_of_interest_2.pk) in exceeded_ids
 
 
 def test_goi_observation_passes_validation(valid_belt_invert_collect_record_goi, profile1_request):
