@@ -66,7 +66,7 @@ class Command(BaseCommand):
                 )
             }
 
-        has_type_col = "type" in cols
+        has_type_col = "fs_type" in cols
         has_geo = "geographical_coverage" in cols
         has_taf = "taf_name" in cols
         has_num = "number_of_solutions_supported_by" in cols
@@ -252,7 +252,7 @@ class Command(BaseCommand):
                 )
                 fs_type = None
             else:
-                fs_type = getattr(fs, "type", None)
+                fs_type = getattr(fs, "fs_type", None)
                 if fs_type is None:
                     yield (
                         pname,
@@ -305,8 +305,7 @@ class Command(BaseCommand):
                         "fs_cross",
                     )
 
-                # used_an_incubator: pre-Phase-2 can be None (null=True); post-Phase-2 is "" (null=False, default="").
-                # Both "" and None mean "not set" for FS-6 and FS-8.
+                # used_an_incubator is null=True through Phase 4; both None and "" mean "not set".
                 used_incubator = fs.used_an_incubator
                 if fs_type not in ("business", "financial_mechanism") and used_incubator not in (
                     "",
