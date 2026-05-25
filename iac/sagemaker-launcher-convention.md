@@ -17,7 +17,7 @@ All resources below live in this account/region.
 ## Identity Center permission set
 
 Users sign in via SSO to the `SageMaker` Identity Center permission set.
-Its inline policy contains exactly these two statements (paste verbatim
+Its inline policy contains exactly these statements (paste verbatim
 if missing):
 
 ```json
@@ -31,16 +31,24 @@ if missing):
       "Resource": "arn:aws:iam::554812291621:role/dev-mermaid-sagemaker-launcher-role"
     },
     {
-      "Sid": "CloudWatchLogsForSagemakerJobs",
+      "Sid": "DescribeAllLogGroups",
+      "Effect": "Allow",
+      "Action": "logs:DescribeLogGroups",
+      "Resource": "*"
+    },
+    {
+      "Sid": "ReadSagemakerJobLogs",
       "Effect": "Allow",
       "Action": [
-        "logs:DescribeLogGroups",
         "logs:DescribeLogStreams",
         "logs:GetLogEvents",
         "logs:FilterLogEvents",
         "logs:StartLiveTail"
       ],
-      "Resource": "arn:aws:logs:us-east-1:554812291621:log-group:/aws/sagemaker/*"
+      "Resource": [
+        "arn:aws:logs:us-east-1:554812291621:log-group:/aws/sagemaker/*",
+        "arn:aws:logs:us-east-1:554812291621:log-group:/aws/sagemaker/*:*"
+      ]
     }
   ]
 }

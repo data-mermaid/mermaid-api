@@ -402,7 +402,6 @@ class SagemakerStack(cdk.Stack):
                             "ecr:CompleteLayerUpload",
                             "ecr:PutImage",
                             "ecr:BatchDeleteImage",
-                            "ecr:DeleteRepository",
                         ],
                         resources=[
                             f"arn:aws:ecr:{cdk.Aws.REGION}:{cdk.Aws.ACCOUNT_ID}"
