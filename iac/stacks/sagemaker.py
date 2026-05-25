@@ -413,11 +413,11 @@ class SagemakerStack(cdk.Stack):
             )
         )
 
-        # SageMaker: submit + observe training jobs the launcher creates.
+        # SageMaker: submit + observe both Training and Processing jobs.
         role.attach_inline_policy(
             iam.Policy(
                 self,
-                "MermaidClassifierLauncherSagemakerPolicy",
+                "MermaidSagemakerLauncherSagemakerPolicy",
                 statements=[
                     iam.PolicyStatement(
                         effect=iam.Effect.ALLOW,
@@ -425,23 +425,27 @@ class SagemakerStack(cdk.Stack):
                             "sagemaker:CreateTrainingJob",
                             "sagemaker:DescribeTrainingJob",
                             "sagemaker:StopTrainingJob",
-                            "sagemaker:ListTrainingJobs",
+                            "sagemaker:CreateProcessingJob",
+                            "sagemaker:DescribeProcessingJob",
+                            "sagemaker:StopProcessingJob",
                             "sagemaker:AddTags",
                             "sagemaker:ListTags",
                         ],
                         resources=[
                             f"arn:aws:sagemaker:{cdk.Aws.REGION}:{cdk.Aws.ACCOUNT_ID}"
                             ":training-job/*",
+                            f"arn:aws:sagemaker:{cdk.Aws.REGION}:{cdk.Aws.ACCOUNT_ID}"
+                            ":processing-job/*",
                         ],
                     ),
-                    # ListTrainingJobs ignores the resource scope but
-                    # requires the action on '*'. Same for the MLflow
-                    # presigned-URL helper if the operator wants to
-                    # spot-check the UI.
+                    # List* actions ignore the resource scope but require
+                    # the action on '*'. Same for the MLflow presigned-URL
+                    # helper if the operator wants to spot-check the UI.
                     iam.PolicyStatement(
                         effect=iam.Effect.ALLOW,
                         actions=[
                             "sagemaker:ListTrainingJobs",
+                            "sagemaker:ListProcessingJobs",
                             "sagemaker:ListMlflowApps",
                             "sagemaker:DescribeMlflowApp",
                             "sagemaker:CreatePresignedMlflowAppUrl",
