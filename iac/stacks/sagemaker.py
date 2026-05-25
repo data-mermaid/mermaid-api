@@ -460,6 +460,40 @@ class SagemakerStack(cdk.Stack):
             )
         )
 
+        # CloudWatch Logs: tail TrainingJob + ProcessingJob logs from the
+        # operator's laptop. The launcher prints CloudWatch URLs at job
+        # submission time; `aws logs tail` works from the assumed-role
+        # session via these grants. DescribeLogGroups must be on '*' --
+        # the CloudWatch API rejects scoped DescribeLogGroups by design.
+        role.attach_inline_policy(
+            iam.Policy(
+                self,
+                "MermaidSagemakerLauncherLogsPolicy",
+                statements=[
+                    iam.PolicyStatement(
+                        effect=iam.Effect.ALLOW,
+                        actions=["logs:DescribeLogGroups"],
+                        resources=["*"],
+                    ),
+                    iam.PolicyStatement(
+                        effect=iam.Effect.ALLOW,
+                        actions=[
+                            "logs:DescribeLogStreams",
+                            "logs:GetLogEvents",
+                            "logs:FilterLogEvents",
+                            "logs:StartLiveTail",
+                        ],
+                        resources=[
+                            f"arn:aws:logs:{cdk.Aws.REGION}:{cdk.Aws.ACCOUNT_ID}"
+                            ":log-group:/aws/sagemaker/*",
+                            f"arn:aws:logs:{cdk.Aws.REGION}:{cdk.Aws.ACCOUNT_ID}"
+                            ":log-group:/aws/sagemaker/*:*",
+                        ],
+                    ),
+                ],
+            )
+        )
+
         # iam:PassRole on the existing SageMaker execution role -- required
         # to call CreateTrainingJob with RoleArn = sm_execution_role.
         role.attach_inline_policy(
