@@ -104,8 +104,10 @@ class SagemakerStack(cdk.Stack):
 
         self.pyspacer_test.grant_read(self.sm_execution_role)
 
-        # ECR repository + IAM role for the mermaid-classifier SageMaker
-        # training launcher.
+        # ECR repositories + shared IAM role for the mermaid-* SageMaker
+        # launchers (both classifier and segmentation, both Training and
+        # Processing jobs). See iac/sagemaker-launcher-convention.md for
+        # the cross-repo contract.
         self.classifier_jobs_repo = self.create_classifier_jobs_repo()
         self.segmentation_jobs_repo = self.create_segmentation_jobs_repo()
         self.classifier_launcher_role = self.create_classifier_launcher_role()
@@ -277,8 +279,8 @@ class SagemakerStack(cdk.Stack):
         Tag-based separation (`:training-latest`, `:features-latest`,
         `:user-<name>-...`) within a single repo; the launcher role's ECR
         resource pattern is `mermaid-*-jobs` to cover both this and the
-        segmentation repo. Tagging conventions documented in the convention
-        doc.
+        segmentation repo. Tagging conventions documented in
+        `iac/sagemaker-launcher-convention.md`.
         """
         repo = ecr.Repository(
             self,
