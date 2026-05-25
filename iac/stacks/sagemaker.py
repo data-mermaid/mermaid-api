@@ -107,6 +107,7 @@ class SagemakerStack(cdk.Stack):
         # ECR repository + IAM role for the mermaid-classifier SageMaker
         # training launcher.
         self.classifier_training_repo = self.create_classifier_training_repo()
+        self.segmentation_jobs_repo = self.create_segmentation_jobs_repo()
         self.classifier_launcher_role = self.create_classifier_launcher_role()
 
         self.security_group = ec2.SecurityGroup(
@@ -298,6 +299,39 @@ class SagemakerStack(cdk.Stack):
             value=repo.repository_uri,
             description="ECR URI for the mermaid-classifier training image",
             export_name=f"{self.prefix}-MermaidClassifierTrainingRepoUri",
+        )
+
+        return repo
+
+    def create_segmentation_jobs_repo(self) -> ecr.Repository:
+        """ECR repository for the mermaid-segmentation SageMaker job image.
+
+        Mirrors the classifier-jobs repo: shared `mermaid-*-jobs` naming so
+        the launcher role's ECR resource pattern covers both. Tag-based
+        separation (e.g. `:training-latest`, `:processing-latest`,
+        `:user-<name>-...`) is documented in the convention doc.
+        """
+        repo = ecr.Repository(
+            self,
+            f"{self.prefix}MermaidSegmentationJobsRepo",
+            repository_name="mermaid-segmentation-jobs",
+            image_scan_on_push=True,
+            removal_policy=cdk.RemovalPolicy.RETAIN,
+            lifecycle_rules=[
+                ecr.LifecycleRule(
+                    description="Keep last 10 images",
+                    max_image_count=10,
+                    rule_priority=1,
+                ),
+            ],
+        )
+
+        CfnOutput(
+            self,
+            f"{self.prefix}MermaidSegmentationJobsRepoUri",
+            value=repo.repository_uri,
+            description="ECR URI for the mermaid-segmentation jobs image",
+            export_name=f"{self.prefix}-MermaidSegmentationJobsRepoUri",
         )
 
         return repo
