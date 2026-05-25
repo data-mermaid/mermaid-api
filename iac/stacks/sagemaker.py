@@ -501,11 +501,11 @@ class SagemakerStack(cdk.Stack):
         )
 
         # iam:PassRole on the existing SageMaker execution role -- required
-        # to call CreateTrainingJob with RoleArn = sm_execution_role.
+        # to call CreateTraining/ProcessingJob with RoleArn = sm_execution_role.
         role.attach_inline_policy(
             iam.Policy(
                 self,
-                "MermaidClassifierLauncherPassRolePolicy",
+                "MermaidSagemakerLauncherPassRolePolicy",
                 statements=[
                     iam.PolicyStatement(
                         effect=iam.Effect.ALLOW,
