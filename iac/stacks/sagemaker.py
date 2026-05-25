@@ -478,11 +478,17 @@ class SagemakerStack(cdk.Stack):
                     iam.PolicyStatement(
                         effect=iam.Effect.ALLOW,
                         actions=[
+                            # Read/query actions:
                             "logs:DescribeLogStreams",
                             "logs:GetLogEvents",
                             "logs:FilterLogEvents",
+                            # Interactive streaming (separate IAM action):
                             "logs:StartLiveTail",
                         ],
+                        # Two-form ARN: the bare log-group ARN covers
+                        # the group itself; the `:*` suffix covers its
+                        # streams. StartLiveTail/GetLogEvents require
+                        # the stream-level form.
                         resources=[
                             f"arn:aws:logs:{cdk.Aws.REGION}:{cdk.Aws.ACCOUNT_ID}"
                             ":log-group:/aws/sagemaker/*",
