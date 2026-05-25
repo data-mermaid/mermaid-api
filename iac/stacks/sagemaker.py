@@ -306,8 +306,10 @@ class SagemakerStack(cdk.Stack):
     def create_segmentation_jobs_repo(self) -> ecr.Repository:
         """ECR repository for the mermaid-segmentation SageMaker job image.
 
-        Mirrors the classifier-jobs repo: shared `mermaid-*-jobs` naming so
-        the launcher role's ECR resource pattern covers both. Tag-based
+        Sibling of `create_classifier_training_repo` (renamed to
+        `create_classifier_jobs_repo` later in this PR). Both repos share
+        the `mermaid-*-jobs` naming pattern so the launcher role's ECR
+        resource ARN can target them with a single wildcard. Tag-based
         separation (e.g. `:training-latest`, `:processing-latest`,
         `:user-<name>-...`) is documented in the convention doc.
         """
