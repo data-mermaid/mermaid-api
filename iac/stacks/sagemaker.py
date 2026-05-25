@@ -104,10 +104,13 @@ class SagemakerStack(cdk.Stack):
 
         self.pyspacer_test.grant_read(self.sm_execution_role)
 
-        # ECR repository + IAM role for the mermaid-classifier SageMaker
-        # training launcher.
-        self.classifier_training_repo = self.create_classifier_training_repo()
-        self.classifier_launcher_role = self.create_classifier_launcher_role()
+        # ECR repositories + shared IAM role for the mermaid-* SageMaker
+        # launchers (both classifier and segmentation, both Training and
+        # Processing jobs). See iac/sagemaker-launcher-convention.md for
+        # the cross-repo contract.
+        self.classifier_jobs_repo = self.create_classifier_jobs_repo()
+        self.segmentation_jobs_repo = self.create_segmentation_jobs_repo()
+        self.sagemaker_launcher_role = self.create_sagemaker_launcher_role()
 
         self.security_group = ec2.SecurityGroup(
             self,
@@ -240,9 +243,10 @@ class SagemakerStack(cdk.Stack):
             )
         )
 
-        # Allow this role to be passed as the SageMaker TrainingJob execution
-        # role. Required by the mermaid-classifier launcher which calls
-        # CreateTrainingJob with RoleArn = dev-sm-execution-role.
+        # Allow this role to be passed as the SageMaker Training/Processing
+        # job execution role. Required by the mermaid-* launchers (classifier
+        # and segmentation) which call Create{Training,Processing}Job with
+        # RoleArn = dev-sm-execution-role.
         role.attach_inline_policy(
             iam.Policy(
                 self,
@@ -270,17 +274,19 @@ class SagemakerStack(cdk.Stack):
 
         return role
 
-    def create_classifier_training_repo(self) -> ecr.Repository:
-        """ECR repository for the mermaid-classifier SageMaker training image.
+    def create_classifier_jobs_repo(self) -> ecr.Repository:
+        """ECR repository for the mermaid-classifier SageMaker job image.
 
-        Image tags are promoted by the launcher operator (`smoke`, `latest`,
-        date-stamped, etc.); only the most recent few tags need to live in
-        the registry, so an image lifecycle rule keeps history bounded.
+        Tag-based separation (`:training-latest`, `:features-latest`,
+        `:user-<name>-...`) within a single repo; the launcher role's ECR
+        resource pattern is `mermaid-*-jobs` to cover both this and the
+        segmentation repo. Tagging conventions documented in
+        `iac/sagemaker-launcher-convention.md`.
         """
         repo = ecr.Repository(
             self,
-            f"{self.prefix}MermaidClassifierTrainingRepo",
-            repository_name="mermaid-classifier-training",
+            f"{self.prefix}MermaidClassifierJobsRepo",
+            repository_name="mermaid-classifier-jobs",
             image_scan_on_push=True,
             removal_policy=cdk.RemovalPolicy.RETAIN,
             lifecycle_rules=[
@@ -294,26 +300,60 @@ class SagemakerStack(cdk.Stack):
 
         CfnOutput(
             self,
-            f"{self.prefix}MermaidClassifierTrainingRepoUri",
+            f"{self.prefix}MermaidClassifierJobsRepoUri",
             value=repo.repository_uri,
-            description="ECR URI for the mermaid-classifier training image",
-            export_name=f"{self.prefix}-MermaidClassifierTrainingRepoUri",
+            description="ECR URI for the mermaid-classifier jobs image",
+            export_name=f"{self.prefix}-MermaidClassifierJobsRepoUri",
         )
 
         return repo
 
-    def create_classifier_launcher_role(self) -> iam.Role:
-        """IAM role for operators driving the mermaid-classifier launcher.
+    def create_segmentation_jobs_repo(self) -> ecr.Repository:
+        """ECR repository for the mermaid-segmentation SageMaker job image.
 
+        Sibling of `create_classifier_jobs_repo`. Both repos share
+        the `mermaid-*-jobs` naming pattern so the launcher role's ECR
+        resource ARN can target them with a single wildcard. Tag-based
+        separation (e.g. `:training-latest`, `:processing-latest`,
+        `:user-<name>-...`) is documented in the convention doc.
+        """
+        repo = ecr.Repository(
+            self,
+            f"{self.prefix}MermaidSegmentationJobsRepo",
+            repository_name="mermaid-segmentation-jobs",
+            image_scan_on_push=True,
+            removal_policy=cdk.RemovalPolicy.RETAIN,
+            lifecycle_rules=[
+                ecr.LifecycleRule(
+                    description="Keep last 10 images",
+                    max_image_count=10,
+                    rule_priority=1,
+                ),
+            ],
+        )
+
+        CfnOutput(
+            self,
+            f"{self.prefix}MermaidSegmentationJobsRepoUri",
+            value=repo.repository_uri,
+            description="ECR URI for the mermaid-segmentation jobs image",
+            export_name=f"{self.prefix}-MermaidSegmentationJobsRepoUri",
+        )
+
+        return repo
+
+    def create_sagemaker_launcher_role(self) -> iam.Role:
+        """IAM role for operators driving the mermaid-* launchers.
+
+        Single shared role used by both mermaid-classifier and
+        mermaid-segmentation launcher scripts (training + processing jobs).
         Trust: any principal in this account whose ARN matches the
-        SageMaker SSO permission set (so the role is assumable directly
-        from a `wcs-sm`-style profile via role-chaining).
+        SageMaker SSO permission set.
 
-        Permissions: scoped to what the launcher actually needs --
-        push/pull on the `mermaid-classifier-*` ECR repos, submit and
-        observe SageMaker TrainingJobs, pass the existing SageMaker
-        execution role as the job's RoleArn, and read/write the
-        run-scoped prefix in the SageMaker data bucket.
+        Permissions: push/pull on the `mermaid-*-jobs` ECR repos, submit and
+        observe SageMaker Training+Processing jobs, pass the existing
+        SageMaker execution role as the job's RoleArn, read/write the
+        run-scoped prefix in the SageMaker data bucket, tail CloudWatch logs.
         """
         sso_principal = iam.PrincipalWithConditions(
             iam.AccountPrincipal(cdk.Aws.ACCOUNT_ID),
@@ -330,18 +370,18 @@ class SagemakerStack(cdk.Stack):
 
         role = iam.Role(
             self,
-            f"{self.prefix}MermaidClassifierLauncherRole",
+            f"{self.prefix}MermaidSagemakerLauncherRole",
             assumed_by=sso_principal,
-            role_name=f"{self.prefix}-mermaid-classifier-launcher-role",
+            role_name=f"{self.prefix}-mermaid-sagemaker-launcher-role",
             max_session_duration=cdk.Duration.hours(8),
         )
 
-        # ECR: token + push/pull/manage on mermaid-classifier-* repos in
-        # this account. GetAuthorizationToken must be on '*' (AWS rule).
+        # ECR: token + push/pull/manage on mermaid-*-jobs repos in this
+        # account. GetAuthorizationToken must be on '*' (AWS rule).
         role.attach_inline_policy(
             iam.Policy(
                 self,
-                "MermaidClassifierLauncherEcrPolicy",
+                "MermaidSagemakerLauncherEcrPolicy",
                 statements=[
                     iam.PolicyStatement(
                         effect=iam.Effect.ALLOW,
@@ -362,22 +402,21 @@ class SagemakerStack(cdk.Stack):
                             "ecr:CompleteLayerUpload",
                             "ecr:PutImage",
                             "ecr:BatchDeleteImage",
-                            "ecr:DeleteRepository",
                         ],
                         resources=[
                             f"arn:aws:ecr:{cdk.Aws.REGION}:{cdk.Aws.ACCOUNT_ID}"
-                            ":repository/mermaid-classifier-*",
+                            ":repository/mermaid-*-jobs",
                         ],
                     ),
                 ],
             )
         )
 
-        # SageMaker: submit + observe training jobs the launcher creates.
+        # SageMaker: submit + observe both Training and Processing jobs.
         role.attach_inline_policy(
             iam.Policy(
                 self,
-                "MermaidClassifierLauncherSagemakerPolicy",
+                "MermaidSagemakerLauncherSagemakerPolicy",
                 statements=[
                     iam.PolicyStatement(
                         effect=iam.Effect.ALLOW,
@@ -385,23 +424,30 @@ class SagemakerStack(cdk.Stack):
                             "sagemaker:CreateTrainingJob",
                             "sagemaker:DescribeTrainingJob",
                             "sagemaker:StopTrainingJob",
-                            "sagemaker:ListTrainingJobs",
+                            "sagemaker:CreateProcessingJob",
+                            "sagemaker:DescribeProcessingJob",
+                            "sagemaker:StopProcessingJob",
+                            # AddTags/ListTags apply to both job types,
+                            # so they're kept on this resource-scoped
+                            # statement rather than the unscoped one below.
                             "sagemaker:AddTags",
                             "sagemaker:ListTags",
                         ],
                         resources=[
                             f"arn:aws:sagemaker:{cdk.Aws.REGION}:{cdk.Aws.ACCOUNT_ID}"
                             ":training-job/*",
+                            f"arn:aws:sagemaker:{cdk.Aws.REGION}:{cdk.Aws.ACCOUNT_ID}"
+                            ":processing-job/*",
                         ],
                     ),
-                    # ListTrainingJobs ignores the resource scope but
-                    # requires the action on '*'. Same for the MLflow
-                    # presigned-URL helper if the operator wants to
-                    # spot-check the UI.
+                    # List* actions ignore the resource scope but require
+                    # the action on '*'. Same for the MLflow presigned-URL
+                    # helper if the operator wants to spot-check the UI.
                     iam.PolicyStatement(
                         effect=iam.Effect.ALLOW,
                         actions=[
                             "sagemaker:ListTrainingJobs",
+                            "sagemaker:ListProcessingJobs",
                             "sagemaker:ListMlflowApps",
                             "sagemaker:DescribeMlflowApp",
                             "sagemaker:CreatePresignedMlflowAppUrl",
@@ -413,12 +459,52 @@ class SagemakerStack(cdk.Stack):
             )
         )
 
-        # iam:PassRole on the existing SageMaker execution role -- required
-        # to call CreateTrainingJob with RoleArn = sm_execution_role.
+        # CloudWatch Logs: tail TrainingJob + ProcessingJob logs from the
+        # operator's laptop. The launcher prints CloudWatch URLs at job
+        # submission time; `aws logs tail` works from the assumed-role
+        # session via these grants. DescribeLogGroups must be on '*' --
+        # the CloudWatch API rejects scoped DescribeLogGroups by design.
         role.attach_inline_policy(
             iam.Policy(
                 self,
-                "MermaidClassifierLauncherPassRolePolicy",
+                "MermaidSagemakerLauncherLogsPolicy",
+                statements=[
+                    iam.PolicyStatement(
+                        effect=iam.Effect.ALLOW,
+                        actions=["logs:DescribeLogGroups"],
+                        resources=["*"],
+                    ),
+                    iam.PolicyStatement(
+                        effect=iam.Effect.ALLOW,
+                        actions=[
+                            # Read/query actions:
+                            "logs:DescribeLogStreams",
+                            "logs:GetLogEvents",
+                            "logs:FilterLogEvents",
+                            # Interactive streaming (separate IAM action):
+                            "logs:StartLiveTail",
+                        ],
+                        # Two-form ARN: the bare log-group ARN covers
+                        # the group itself; the `:*` suffix covers its
+                        # streams. StartLiveTail/GetLogEvents require
+                        # the stream-level form.
+                        resources=[
+                            f"arn:aws:logs:{cdk.Aws.REGION}:{cdk.Aws.ACCOUNT_ID}"
+                            ":log-group:/aws/sagemaker/*",
+                            f"arn:aws:logs:{cdk.Aws.REGION}:{cdk.Aws.ACCOUNT_ID}"
+                            ":log-group:/aws/sagemaker/*:*",
+                        ],
+                    ),
+                ],
+            )
+        )
+
+        # iam:PassRole on the existing SageMaker execution role -- required
+        # to call CreateTraining/ProcessingJob with RoleArn = sm_execution_role.
+        role.attach_inline_policy(
+            iam.Policy(
+                self,
+                "MermaidSagemakerLauncherPassRolePolicy",
                 statements=[
                     iam.PolicyStatement(
                         effect=iam.Effect.ALLOW,
@@ -439,10 +525,10 @@ class SagemakerStack(cdk.Stack):
 
         CfnOutput(
             self,
-            f"{self.prefix}MermaidClassifierLauncherRoleArn",
+            f"{self.prefix}MermaidSagemakerLauncherRoleArn",
             value=role.role_arn,
-            description="IAM role for operators driving the mermaid-classifier launcher",
-            export_name=f"{self.prefix}-MermaidClassifierLauncherRoleArn",
+            description="IAM role for operators driving the mermaid-* launchers",
+            export_name=f"{self.prefix}-MermaidSagemakerLauncherRoleArn",
         )
 
         return role
