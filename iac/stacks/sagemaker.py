@@ -428,6 +428,9 @@ class SagemakerStack(cdk.Stack):
                             "sagemaker:CreateProcessingJob",
                             "sagemaker:DescribeProcessingJob",
                             "sagemaker:StopProcessingJob",
+                            # AddTags/ListTags apply to both job types,
+                            # so they're kept on this resource-scoped
+                            # statement rather than the unscoped one below.
                             "sagemaker:AddTags",
                             "sagemaker:ListTags",
                         ],
