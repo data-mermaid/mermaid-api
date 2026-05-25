@@ -243,9 +243,10 @@ class SagemakerStack(cdk.Stack):
             )
         )
 
-        # Allow this role to be passed as the SageMaker TrainingJob execution
-        # role. Required by the mermaid-classifier launcher which calls
-        # CreateTrainingJob with RoleArn = dev-sm-execution-role.
+        # Allow this role to be passed as the SageMaker Training/Processing
+        # job execution role. Required by the mermaid-* launchers (classifier
+        # and segmentation) which call Create{Training,Processing}Job with
+        # RoleArn = dev-sm-execution-role.
         role.attach_inline_policy(
             iam.Policy(
                 self,
