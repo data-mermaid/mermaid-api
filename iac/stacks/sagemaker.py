@@ -106,7 +106,7 @@ class SagemakerStack(cdk.Stack):
 
         # ECR repository + IAM role for the mermaid-classifier SageMaker
         # training launcher.
-        self.classifier_training_repo = self.create_classifier_training_repo()
+        self.classifier_jobs_repo = self.create_classifier_jobs_repo()
         self.segmentation_jobs_repo = self.create_segmentation_jobs_repo()
         self.classifier_launcher_role = self.create_classifier_launcher_role()
 
@@ -271,17 +271,19 @@ class SagemakerStack(cdk.Stack):
 
         return role
 
-    def create_classifier_training_repo(self) -> ecr.Repository:
-        """ECR repository for the mermaid-classifier SageMaker training image.
+    def create_classifier_jobs_repo(self) -> ecr.Repository:
+        """ECR repository for the mermaid-classifier SageMaker job image.
 
-        Image tags are promoted by the launcher operator (`smoke`, `latest`,
-        date-stamped, etc.); only the most recent few tags need to live in
-        the registry, so an image lifecycle rule keeps history bounded.
+        Tag-based separation (`:training-latest`, `:features-latest`,
+        `:user-<name>-...`) within a single repo; the launcher role's ECR
+        resource pattern is `mermaid-*-jobs` to cover both this and the
+        segmentation repo. Tagging conventions documented in the convention
+        doc.
         """
         repo = ecr.Repository(
             self,
-            f"{self.prefix}MermaidClassifierTrainingRepo",
-            repository_name="mermaid-classifier-training",
+            f"{self.prefix}MermaidClassifierJobsRepo",
+            repository_name="mermaid-classifier-jobs",
             image_scan_on_push=True,
             removal_policy=cdk.RemovalPolicy.RETAIN,
             lifecycle_rules=[
@@ -295,10 +297,10 @@ class SagemakerStack(cdk.Stack):
 
         CfnOutput(
             self,
-            f"{self.prefix}MermaidClassifierTrainingRepoUri",
+            f"{self.prefix}MermaidClassifierJobsRepoUri",
             value=repo.repository_uri,
-            description="ECR URI for the mermaid-classifier training image",
-            export_name=f"{self.prefix}-MermaidClassifierTrainingRepoUri",
+            description="ECR URI for the mermaid-classifier jobs image",
+            export_name=f"{self.prefix}-MermaidClassifierJobsRepoUri",
         )
 
         return repo
@@ -306,8 +308,7 @@ class SagemakerStack(cdk.Stack):
     def create_segmentation_jobs_repo(self) -> ecr.Repository:
         """ECR repository for the mermaid-segmentation SageMaker job image.
 
-        Sibling of `create_classifier_training_repo` (renamed to
-        `create_classifier_jobs_repo` later in this PR). Both repos share
+        Sibling of `create_classifier_jobs_repo`. Both repos share
         the `mermaid-*-jobs` naming pattern so the launcher role's ECR
         resource ARN can target them with a single wildcard. Tag-based
         separation (e.g. `:training-latest`, `:processing-latest`,
