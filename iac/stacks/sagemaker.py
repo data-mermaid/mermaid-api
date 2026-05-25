@@ -110,7 +110,7 @@ class SagemakerStack(cdk.Stack):
         # the cross-repo contract.
         self.classifier_jobs_repo = self.create_classifier_jobs_repo()
         self.segmentation_jobs_repo = self.create_segmentation_jobs_repo()
-        self.classifier_launcher_role = self.create_classifier_launcher_role()
+        self.sagemaker_launcher_role = self.create_sagemaker_launcher_role()
 
         self.security_group = ec2.SecurityGroup(
             self,
@@ -341,18 +341,18 @@ class SagemakerStack(cdk.Stack):
 
         return repo
 
-    def create_classifier_launcher_role(self) -> iam.Role:
-        """IAM role for operators driving the mermaid-classifier launcher.
+    def create_sagemaker_launcher_role(self) -> iam.Role:
+        """IAM role for operators driving the mermaid-* launchers.
 
+        Single shared role used by both mermaid-classifier and
+        mermaid-segmentation launcher scripts (training + processing jobs).
         Trust: any principal in this account whose ARN matches the
-        SageMaker SSO permission set (so the role is assumable directly
-        from a `wcs-sm`-style profile via role-chaining).
+        SageMaker SSO permission set.
 
-        Permissions: scoped to what the launcher actually needs --
-        push/pull on the `mermaid-classifier-*` ECR repos, submit and
-        observe SageMaker TrainingJobs, pass the existing SageMaker
-        execution role as the job's RoleArn, and read/write the
-        run-scoped prefix in the SageMaker data bucket.
+        Permissions: push/pull on the `mermaid-*-jobs` ECR repos, submit and
+        observe SageMaker Training+Processing jobs, pass the existing
+        SageMaker execution role as the job's RoleArn, read/write the
+        run-scoped prefix in the SageMaker data bucket, tail CloudWatch logs.
         """
         sso_principal = iam.PrincipalWithConditions(
             iam.AccountPrincipal(cdk.Aws.ACCOUNT_ID),
@@ -369,18 +369,18 @@ class SagemakerStack(cdk.Stack):
 
         role = iam.Role(
             self,
-            f"{self.prefix}MermaidClassifierLauncherRole",
+            f"{self.prefix}MermaidSagemakerLauncherRole",
             assumed_by=sso_principal,
-            role_name=f"{self.prefix}-mermaid-classifier-launcher-role",
+            role_name=f"{self.prefix}-mermaid-sagemaker-launcher-role",
             max_session_duration=cdk.Duration.hours(8),
         )
 
-        # ECR: token + push/pull/manage on mermaid-classifier-* repos in
-        # this account. GetAuthorizationToken must be on '*' (AWS rule).
+        # ECR: token + push/pull/manage on mermaid-*-jobs repos in this
+        # account. GetAuthorizationToken must be on '*' (AWS rule).
         role.attach_inline_policy(
             iam.Policy(
                 self,
-                "MermaidClassifierLauncherEcrPolicy",
+                "MermaidSagemakerLauncherEcrPolicy",
                 statements=[
                     iam.PolicyStatement(
                         effect=iam.Effect.ALLOW,
@@ -405,7 +405,7 @@ class SagemakerStack(cdk.Stack):
                         ],
                         resources=[
                             f"arn:aws:ecr:{cdk.Aws.REGION}:{cdk.Aws.ACCOUNT_ID}"
-                            ":repository/mermaid-classifier-*",
+                            ":repository/mermaid-*-jobs",
                         ],
                     ),
                 ],
@@ -478,10 +478,10 @@ class SagemakerStack(cdk.Stack):
 
         CfnOutput(
             self,
-            f"{self.prefix}MermaidClassifierLauncherRoleArn",
+            f"{self.prefix}MermaidSagemakerLauncherRoleArn",
             value=role.role_arn,
-            description="IAM role for operators driving the mermaid-classifier launcher",
-            export_name=f"{self.prefix}-MermaidClassifierLauncherRoleArn",
+            description="IAM role for operators driving the mermaid-* launchers",
+            export_name=f"{self.prefix}-MermaidSagemakerLauncherRoleArn",
         )
 
         return role
