@@ -85,16 +85,17 @@ class SagemakerStack(cdk.Stack):
 
         self.coralnet_public_sources.grant_read(self.sm_execution_role)
 
-        # Feature-vector bucket used as the input store for the SageMaker
-        # training launcher (mermaid-classifier). Holds per-source .fv files
-        # produced by the feature-extraction pipeline.
+        # Feature-vector bucket used by two mermaid-classifier launchers:
+        # the feature-extraction ProcessingJob writes per-source .fv files
+        # and annotations.csv into it; the training launcher reads them back.
+        # Hence read+write, not read-only.
         self.coralnet_feature_vectors = s3.Bucket.from_bucket_arn(
             self,
             f"{self.prefix}CoralnetFeatureVectorsBucket",
             bucket_arn="arn:aws:s3:::2605-coralnet-public-sources",
         )
 
-        self.coralnet_feature_vectors.grant_read(self.sm_execution_role)
+        self.coralnet_feature_vectors.grant_read_write(self.sm_execution_role)
 
         self.pyspacer_test = s3.Bucket.from_bucket_arn(
             self,
