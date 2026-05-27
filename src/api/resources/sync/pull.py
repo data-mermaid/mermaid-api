@@ -17,7 +17,7 @@ def _get_subquery(queryset, pk_field_name):
     return sql
 
 
-def _get_records(viewset, profile_id, filters):
+def _get_records(viewset, profile_id, filters, generate_visibility_removes=False):
     queryset = viewset.get_queryset()
     model_class = queryset.model
     pk_field_name = model_class._meta.pk.column
@@ -104,7 +104,39 @@ def _get_records(viewset, profile_id, filters):
     finally:
         cur.close()
 
-    return updates, deletes, removes
+    visibility_removes = []
+    if generate_visibility_removes:
+        vis_remove_filters = [
+            "revision.deleted = false",
+            "revision.related_to_profile_id is null",
+            *filters,
+        ]
+        # sub_query is produced by _get_subquery() via cursor.mogrify(), so all ORM
+        # parameters are fully escaped before being inlined here — no injection risk.
+        # Any future changes to _get_subquery() must preserve mogrify() parameterization.
+        vis_removes_sql = f"""
+            WITH model_select AS (
+                {sub_query}
+            )
+            SELECT
+                "revision"."record_id",
+                "revision"."revision_num"
+            FROM
+                "revision"
+            LEFT JOIN
+                model_select ON "revision"."record_id" = model_select."__pk__"
+            WHERE
+                {" AND ".join(vis_remove_filters)}
+                AND model_select."__pk__" IS NULL
+        """
+        try:
+            cur = connection.cursor()
+            cur.execute(vis_removes_sql)
+            visibility_removes = [{"id": row[0], "revision_num": row[1]} for row in cur.fetchall()]
+        finally:
+            cur.close()
+
+    return updates, deletes, removes + visibility_removes
 
 
 def get_record(viewset, profile_id, record_id):
@@ -136,7 +168,7 @@ def get_record(viewset, profile_id, record_id):
     raise MultipleObjectsReturned()
 
 
-def get_records(viewset, profile_id, required_params=None):
+def get_records(viewset, profile_id, required_params=None, generate_visibility_removes=False):
     """Fetch model records with optional filters:
         * revision numbers greater than `revision_num`
         * `project` uuid
@@ -181,7 +213,7 @@ def get_records(viewset, profile_id, required_params=None):
     if rp_revision_num is not None:
         filters.append(f"revision.revision_num > {rp_revision_num}")
 
-    return _get_records(viewset, profile_id, filters)
+    return _get_records(viewset, profile_id, filters, generate_visibility_removes)
 
 
 def serialize_revisions(serializer, updates, deletes, removes, skip_deletes=False):
@@ -248,7 +280,9 @@ def serialize_revisions(serializer, updates, deletes, removes, skip_deletes=Fals
     }
 
 
-def get_serialized_records(viewset, profile_id, required_params=None):
+def get_serialized_records(
+    viewset, profile_id, required_params=None, generate_visibility_removes=False
+):
     """Convenience that wraps get_records and serialize_revisions.  If no updates
     are found, last_revision_num is set to revision_num.
 
@@ -267,7 +301,9 @@ def get_serialized_records(viewset, profile_id, required_params=None):
     serializer = viewset.serializer_class
     revision_num = required_params.get("revision_num")
 
-    updates, deletes, removes = get_records(viewset, profile_id, required_params)
+    updates, deletes, removes = get_records(
+        viewset, profile_id, required_params, generate_visibility_removes
+    )
 
     serialized_revisions = serialize_revisions(
         serializer, updates, deletes, removes, skip_deletes=revision_num is None

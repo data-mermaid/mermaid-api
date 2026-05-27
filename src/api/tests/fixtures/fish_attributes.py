@@ -1,6 +1,12 @@
 import pytest
 
-from api.models import FishFamily, FishGenus, FishGroupTrophic, FishSpecies
+from api.models import (
+    SUPERUSER_APPROVED,
+    FishFamily,
+    FishGenus,
+    FishGroupTrophic,
+    FishSpecies,
+)
 
 
 @pytest.fixture
@@ -10,42 +16,50 @@ def fish_group_trophic_1():
 
 @pytest.fixture
 def fish_family1():
-    return FishFamily.objects.create(name="Fish Family 1")
+    return FishFamily.objects.create(name="Fish Family 1", status=SUPERUSER_APPROVED)
 
 
 @pytest.fixture
 def fish_family2():
-    return FishFamily.objects.create(name="Fish Family 2")
+    return FishFamily.objects.create(name="Fish Family 2", status=SUPERUSER_APPROVED)
 
 
 @pytest.fixture
 def fish_family3():
-    return FishFamily.objects.create(name="Fish Family 3")
+    return FishFamily.objects.create(name="Fish Family 3", status=SUPERUSER_APPROVED)
 
 
 @pytest.fixture
 def fish_family4():
-    return FishFamily.objects.create(name="Clown Fish Family")
+    return FishFamily.objects.create(name="Clown Fish Family", status=SUPERUSER_APPROVED)
 
 
 @pytest.fixture
 def fish_genus1(fish_family1):
-    return FishGenus.objects.create(name="Fish Genus 1", family=fish_family1)
+    return FishGenus.objects.create(
+        name="Fish Genus 1", family=fish_family1, status=SUPERUSER_APPROVED
+    )
 
 
 @pytest.fixture
 def fish_genus2(fish_family2):
-    return FishGenus.objects.create(name="Fish Genus 2", family=fish_family2)
+    return FishGenus.objects.create(
+        name="Fish Genus 2", family=fish_family2, status=SUPERUSER_APPROVED
+    )
 
 
 @pytest.fixture
 def fish_genus3(fish_family3):
-    return FishGenus.objects.create(name="Fish Genus 3", family=fish_family3)
+    return FishGenus.objects.create(
+        name="Fish Genus 3", family=fish_family3, status=SUPERUSER_APPROVED
+    )
 
 
 @pytest.fixture
 def fish_genus4(fish_family4):
-    return FishGenus.objects.create(name="Clown Fish Genus", family=fish_family4)
+    return FishGenus.objects.create(
+        name="Clown Fish Genus", family=fish_family4, status=SUPERUSER_APPROVED
+    )
 
 
 @pytest.fixture
@@ -58,6 +72,7 @@ def fish_species1(fish_genus1, fish_group_trophic_1, region1, region3):
         biomass_constant_c=1.0,
         trophic_group=fish_group_trophic_1,
         max_length=41,
+        status=SUPERUSER_APPROVED,
     )
     fs.regions.add(region1)
     fs.regions.add(region3)
@@ -74,6 +89,7 @@ def fish_species2(fish_genus2, region2):
         biomass_constant_b=3.020000,
         biomass_constant_c=1.0,
         max_length=32,
+        status=SUPERUSER_APPROVED,
     )
     fs.regions.add(region2)
 
@@ -89,6 +105,7 @@ def fish_species3(fish_genus3, region2, region3):
         biomass_constant_b=3.030000,
         biomass_constant_c=1.0,
         max_length=55,
+        status=SUPERUSER_APPROVED,
     )
     fs.regions.add(region2)
     fs.regions.add(region3)
@@ -105,6 +122,7 @@ def fish_species4(fish_genus3, region2):
         biomass_constant_b=3.06,
         biomass_constant_c=1.0,
         max_length=21,
+        status=SUPERUSER_APPROVED,
     )
     fs.regions.add(region2)
 
