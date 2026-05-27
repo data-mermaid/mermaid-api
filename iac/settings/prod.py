@@ -31,5 +31,8 @@ PROD_SETTINGS = ProjectSettings(
         ic_s3_path_test="mermaid-production-test/",
         # Secrets
         env_secret_name="prod/mermaid-api-GUqRBj",
+        # Slack alerts via AWS Chatbot — fill in after connecting workspace in console
+        slack_workspace_id="",
+        slack_channel_id="",
     ),
 )

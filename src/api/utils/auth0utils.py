@@ -5,6 +5,7 @@ import string
 from urllib.request import urlopen
 
 from auth0.v3.authentication import GetToken
+from auth0.v3.exceptions import Auth0Error
 from auth0.v3.management import Auth0
 from django.utils.encoding import smart_str
 from django.utils.translation import gettext as _
@@ -94,8 +95,14 @@ class Auth0ManagementAPI(object):
             token = get_token.client_credentials(self.client_id, self.client_secret, audience)
             mgmt_api_token = token["access_token"]
             return mgmt_api_token
+        except Auth0Error as e:
+            if e.status_code == 429:
+                logger.warning("[auth0.rate_limit] Management API rate limit hit: %s", e)
+            else:
+                logger.error("[auth0.service_unavailable] Management API error status=%s: %s", e.status_code, e)
+            raise Auth0ServiceUnavailable()
         except (ReadTimeout, Timeout, ConnectionError) as e:
-            logger.error(f"Auth0 service timeout/connection error when getting token: {e}")
+            logger.error("[auth0.service_unavailable] Management API timeout/connection error: %s", e)
             raise Auth0ServiceUnavailable()
 
 
@@ -158,10 +165,14 @@ def get_user_info(user_id):
     auth_user = Auth0UserInfo(domain, token)
     try:
         ui = auth_user.get_userinfo(user_id)
+    except Auth0Error as e:
+        if e.status_code == 429:
+            logger.warning("[auth0.rate_limit] User info API rate limit hit for %s: %s", user_id, e)
+        else:
+            logger.error("[auth0.service_unavailable] User info API error status=%s for %s: %s", e.status_code, user_id, e)
+        raise Auth0ServiceUnavailable()
     except (ReadTimeout, Timeout, ConnectionError) as e:
-        logger.error(
-            f"Auth0 service timeout/connection error when getting user info for {user_id}: {e}"
-        )
+        logger.error("[auth0.service_unavailable] User info API timeout/connection error for %s: %s", user_id, e)
         raise Auth0ServiceUnavailable()
 
     um = ui.get("user_metadata") or {}
