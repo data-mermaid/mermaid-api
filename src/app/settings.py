@@ -108,11 +108,19 @@ ALLOWED_HOSTS = [host.strip() for host in _allowed_hosts.split(",")]
 METADATA_URI = os.getenv("ECS_CONTAINER_METADATA_URI", None)
 IN_ECS = METADATA_URI is not None
 
+ECS_TASK_ARN = ""
+ECS_CONTAINER_ID = ""
 if IN_ECS:
     container_metadata = requests.get(METADATA_URI).json()
     # allow container IPs for ALB health checks
     ALLOWED_HOSTS.append(container_metadata["Networks"][0]["IPv4Addresses"][0])
     ALLOWED_HOSTS.append(".datamermaid.org")
+    try:
+        _task_metadata = requests.get(f"{METADATA_URI}/task").json()
+        ECS_TASK_ARN = _task_metadata.get("TaskARN", "")
+    except Exception:
+        pass
+    ECS_CONTAINER_ID = container_metadata.get("DockerId", "")[:12]
 
 if ENVIRONMENT not in ("dev", "prod"):
     DEBUG_LEVEL = "DEBUG"
@@ -281,12 +289,29 @@ MC_API_KEY = os.environ.get("MC_API_KEY")
 MC_USER = os.environ.get("MC_USER")
 MC_LIST_ID = os.environ.get("MC_LIST_ID")
 
-if ENVIRONMENT == "prod":
+
+def _sentry_traces_sampler(sampling_context):
+    path = sampling_context.get("wsgi_environ", {}).get("PATH_INFO", "")
+    if path in ("/health/", "/v1/health/"):
+        return 0
+    return 0.3 if ENVIRONMENT == "prod" else 0.1
+
+
+if ENVIRONMENT in ("dev", "prod"):
     sentry_sdk.init(
         dsn=os.environ.get("SENTRY_DSN"),
-        traces_sample_rate=1.0,
         environment=ENVIRONMENT,
+        release=API_VERSION,
+        traces_sampler=_sentry_traces_sampler,
+        # Profile 10% of sampled transactions (prod: ~3% of requests, dev: ~1%)
+        profiles_sample_rate=0.1,
+        # Attach a stack trace to logger.error() calls that have no exception
+        attach_stacktrace=True,
     )
+    # Static ECS context — set once on the global scope for every event
+    if ECS_TASK_ARN:
+        sentry_sdk.set_tag("ecs.task_arn", ECS_TASK_ARN)
+        sentry_sdk.set_tag("ecs.container_id", ECS_CONTAINER_ID)
 
 
 # ************************
