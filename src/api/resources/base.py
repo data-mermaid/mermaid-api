@@ -4,6 +4,7 @@ import uuid
 from django.conf import settings
 from django.contrib.postgres.aggregates import ArrayAgg
 from django.core.exceptions import FieldDoesNotExist
+from django.db.models import Q
 from django.db.models.fields.related import ForeignObjectRel
 from django_filters import (
     BaseInFilter,
@@ -35,7 +36,7 @@ from rest_framework_gis.filterset import GeoFilterSet
 from rest_framework_gis.serializers import GeoFeatureModelSerializer
 
 from ..exceptions import check_uuid
-from ..models import APPROVAL_STATUSES, Tag
+from ..models import APPROVAL_STATUSES, SUPERUSER_APPROVED, Tag
 from ..permissions import (
     AttributeAuthenticatedUserPermission,
     DefaultPermission,
@@ -612,6 +613,18 @@ class BaseAttributeApiViewSet(BaseApiViewSet):
     ]
 
     method_authentication_classes = {"GET": []}
+
+    def get_queryset(self):
+        # GET requests have no authenticators (method_authentication_classes = {"GET": []}),
+        # so is_authenticated is always False on the public REST API — only sync pull (POST)
+        # reaches the created_by branch.
+        qs = super().get_queryset()
+        request = self.request
+        if not request or not hasattr(request, "user"):
+            return qs.filter(status=SUPERUSER_APPROVED)
+        if request.user and getattr(request.user, "is_authenticated", False):
+            return qs.filter(Q(status=SUPERUSER_APPROVED) | Q(created_by=request.user.profile))
+        return qs.filter(status=SUPERUSER_APPROVED)
 
     def perform_create(self, serializer):
         # Here is where we could set status based on user role

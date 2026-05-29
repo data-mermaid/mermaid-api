@@ -1,3 +1,19 @@
+def test_fish_grouping_empty_attributes_returns_zero_aggs(
+    db_setup, all_test_fish_attributes, region1, region2
+):
+    from api.models import FishGrouping
+
+    grouping = FishGrouping.objects.create(name="Empty Grouping")
+    grouping.regions.add(region1, region2)
+
+    aggs = grouping._get_attribute_aggs()
+
+    assert aggs["biomass_constant_a"] == 0
+    assert aggs["biomass_constant_b"] == 0
+    assert aggs["biomass_constant_c"] == 0
+    assert aggs["max_length"] is None
+
+
 def test_filter_fish_species_by_region(
     db_setup, api_client1, all_test_fish_attributes, all_regions, region1, region2, region3
 ):

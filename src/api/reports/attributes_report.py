@@ -277,12 +277,12 @@ def write_invert_species(wb):
         COLUMN_NAMES,
         *[
             [
-                sp.genus.family.order.class_goi.invert_class.name,
+                sp.genus.family.order.invert_class.name,
                 sp.genus.family.order.name,
                 sp.genus.family.name,
                 sp.genus.name,
                 sp.name,
-                sp.genus.family.order.class_goi.group_of_interest.name,
+                sp.genus.group_of_interest.name,
                 sp.max_length,
                 sp.max_length_type,
                 sp.max_length_source,
@@ -290,15 +290,14 @@ def write_invert_species(wb):
             ]
             for sp in InvertSpecies.objects.select_related(
                 "genus",
+                "genus__group_of_interest",
                 "genus__family",
                 "genus__family__order",
-                "genus__family__order__class_goi",
-                "genus__family__order__class_goi__invert_class",
-                "genus__family__order__class_goi__group_of_interest",
+                "genus__family__order__invert_class",
             )
             .filter(status=SUPERUSER_APPROVED)
             .order_by(
-                "genus__family__order__class_goi__invert_class__name",
+                "genus__family__order__invert_class__name",
                 "genus__family__order__name",
                 "genus__family__name",
                 "genus__name",
