@@ -6,6 +6,7 @@ from api.submission.validations import (
     WARN,
     ValidationRunner,
     belt_fish,
+    belt_invert,
     benthic_lit,
     benthic_photo_quadrat_transect,
     benthic_pit,
@@ -229,6 +230,183 @@ def test_habcomp_protocol_validation_ok(valid_habitat_complexity_collect_record,
     overall_status = runner.validate(
         valid_habitat_complexity_collect_record,
         habitat_complexity.habcomp_validations,
+        request=profile1_request,
+    )
+    assert overall_status == OK
+
+
+def test_belt_invert_protocol_validation_ok(valid_belt_invert_collect_record, profile1_request):
+    runner = ValidationRunner(serializer=CollectRecordSerializer)
+    overall_status = runner.validate(
+        valid_belt_invert_collect_record,
+        belt_invert.belt_invert_validations,
+        request=profile1_request,
+    )
+    assert overall_status == OK
+
+
+def test_belt_invert_all_excluded_warn(
+    valid_belt_invert_collect_record, profile1_request, project1
+):
+    data = valid_belt_invert_collect_record.data
+    for obs in data["obs_belt_inverts"]:
+        obs["include"] = False
+    valid_belt_invert_collect_record.data = data
+    valid_belt_invert_collect_record.save()
+
+    runner = ValidationRunner(serializer=CollectRecordSerializer)
+    overall_status = runner.validate(
+        valid_belt_invert_collect_record,
+        belt_invert.belt_invert_validations,
+        request=profile1_request,
+    )
+    results = runner.to_dict()["results"]
+    assert overall_status == WARN
+    assert _get_result_status(results["$record"], "all_obs_excluded_validator") == WARN
+
+
+def test_belt_invert_size_exceeds_max_warn(
+    valid_belt_invert_collect_record, profile1_request, invert_species_1
+):
+    data = valid_belt_invert_collect_record.data
+    # invert_species_1 has max_length=8; threshold is 8 * 1.5 = 12; set a size above it
+    data["obs_belt_inverts"][0]["size"] = 50
+    valid_belt_invert_collect_record.data = data
+    valid_belt_invert_collect_record.save()
+
+    runner = ValidationRunner(serializer=CollectRecordSerializer)
+    overall_status = runner.validate(
+        valid_belt_invert_collect_record,
+        belt_invert.belt_invert_validations,
+        request=profile1_request,
+    )
+    results = runner.to_dict()["results"]
+    assert overall_status == WARN
+    obs_results = results["data"]["obs_belt_inverts"]
+    assert _get_result_status(obs_results[0], "invert_size_validator") == WARN
+
+
+def test_belt_invert_missing_required_fields_error(
+    valid_belt_invert_collect_record, profile1_request
+):
+    data = valid_belt_invert_collect_record.data
+    data["beltinvert_transect"]["depth"] = None
+    data["beltinvert_transect"]["width"] = None
+    valid_belt_invert_collect_record.data = data
+    valid_belt_invert_collect_record.save()
+
+    runner = ValidationRunner(serializer=CollectRecordSerializer)
+    overall_status = runner.validate(
+        valid_belt_invert_collect_record,
+        belt_invert.belt_invert_validations,
+        request=profile1_request,
+    )
+    assert overall_status == ERROR
+
+
+def test_belt_invert_count_zero_error(valid_belt_invert_collect_record, profile1_request):
+    data = valid_belt_invert_collect_record.data
+    data["obs_belt_inverts"][0]["count"] = 0
+    valid_belt_invert_collect_record.data = data
+    valid_belt_invert_collect_record.save()
+
+    runner = ValidationRunner(serializer=CollectRecordSerializer)
+    overall_status = runner.validate(
+        valid_belt_invert_collect_record,
+        belt_invert.belt_invert_validations,
+        request=profile1_request,
+    )
+    results = runner.to_dict()["results"]
+    assert overall_status == ERROR
+    assert (
+        _get_result_status(results["data"]["obs_belt_inverts"][0], "invert_count_validator")
+        == ERROR
+    )
+
+
+def test_belt_invert_count_high_warn(valid_belt_invert_collect_record, profile1_request):
+    data = valid_belt_invert_collect_record.data
+    data["obs_belt_inverts"][0]["count"] = 51
+    valid_belt_invert_collect_record.data = data
+    valid_belt_invert_collect_record.save()
+
+    runner = ValidationRunner(serializer=CollectRecordSerializer)
+    overall_status = runner.validate(
+        valid_belt_invert_collect_record,
+        belt_invert.belt_invert_validations,
+        request=profile1_request,
+    )
+    results = runner.to_dict()["results"]
+    assert overall_status == WARN
+    assert (
+        _get_result_status(
+            results["data"]["obs_belt_inverts"][0], "invert_obs_count_high_validator"
+        )
+        == WARN
+    )
+
+
+def test_belt_invert_size_bin_required_error(valid_belt_invert_collect_record, profile1_request):
+    data = valid_belt_invert_collect_record.data
+    data["beltinvert_transect"]["size_bin"] = None
+    data["obs_belt_inverts"][0]["size"] = 4.5
+    valid_belt_invert_collect_record.data = data
+    valid_belt_invert_collect_record.save()
+
+    runner = ValidationRunner(serializer=CollectRecordSerializer)
+    overall_status = runner.validate(
+        valid_belt_invert_collect_record,
+        belt_invert.belt_invert_validations,
+        request=profile1_request,
+    )
+    results = runner.to_dict()["results"]
+    assert overall_status == ERROR
+    assert (
+        _get_result_status(
+            results["data"]["obs_belt_inverts"][0], "invert_size_bin_required_validator"
+        )
+        == ERROR
+    )
+
+
+def test_belt_invert_duplicate_taxon_error(valid_belt_invert_collect_record, profile1_request):
+    data = valid_belt_invert_collect_record.data
+    attr_id = data["obs_belt_inverts"][0]["invert_attribute"]
+    data["obs_belt_inverts"][1]["invert_attribute"] = attr_id
+    data["obs_belt_inverts"][1]["size"] = data["obs_belt_inverts"][0]["size"]
+    valid_belt_invert_collect_record.data = data
+    valid_belt_invert_collect_record.save()
+
+    runner = ValidationRunner(serializer=CollectRecordSerializer)
+    overall_status = runner.validate(
+        valid_belt_invert_collect_record,
+        belt_invert.belt_invert_validations,
+        request=profile1_request,
+    )
+    results = runner.to_dict()["results"]
+    assert overall_status == ERROR
+    assert _get_result_status(results["$record"], "duplicate_validator") == ERROR
+
+
+def test_goi_observation_passes_validation(valid_belt_invert_collect_record_goi, profile1_request):
+    """A GoI-level invert observation is valid — no size error, GoI resolves to itself."""
+    runner = ValidationRunner(serializer=CollectRecordSerializer)
+    overall_status = runner.validate(
+        valid_belt_invert_collect_record_goi,
+        belt_invert.belt_invert_validations,
+        request=profile1_request,
+    )
+    assert overall_status == OK
+
+
+def test_family_observation_passes_validation(
+    valid_belt_invert_collect_record_family, profile1_request
+):
+    """A family-level invert observation is valid."""
+    runner = ValidationRunner(serializer=CollectRecordSerializer)
+    overall_status = runner.validate(
+        valid_belt_invert_collect_record_family,
+        belt_invert.belt_invert_validations,
         request=profile1_request,
     )
     assert overall_status == OK
