@@ -45,7 +45,7 @@ class InvertBeltTransectFilterSet(SampleUnitFilterSet):
 
 
 class InvertBeltTransectViewSet(BaseProjectApiViewSet):
-    http_method_names = ["get", "post", "delete", "head", "options"]
+    http_method_names = ["get", "post", "head", "delete"]
     serializer_class = InvertBeltTransectSerializer
     queryset = InvertBeltTransect.objects.order_by("id")
     filterset_class = InvertBeltTransectFilterSet
