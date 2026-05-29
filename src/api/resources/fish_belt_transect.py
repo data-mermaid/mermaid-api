@@ -45,6 +45,7 @@ class FishBeltTransectFilterSet(SampleUnitFilterSet):
 
 
 class FishBeltTransectViewSet(BaseProjectApiViewSet):
+    http_method_names = ["get", "post", "head", "delete"]
     serializer_class = FishBeltTransectSerializer
     queryset = FishBeltTransect.objects.all()
     filterset_class = FishBeltTransectFilterSet
