@@ -432,7 +432,9 @@ def test_benthicpqt_ingest(
 
 @pytest.fixture
 def macroinvertebrate_file(db):
-    return open(os.path.join(csv_data_dir, "macroinvertebrate.csv"))
+    f = open(os.path.join(csv_data_dir, "macroinvertebrate.csv"))
+    yield f
+    f.close()
 
 
 def test_macroinvertebrate_ingest(

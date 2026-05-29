@@ -216,7 +216,7 @@ class DifferentInvertTransectWidthValidator(SampleEventConsistencyValidator):
                         self.DIFFERENT_TRANSECT_WIDTH,
                         {
                             "width": width_id,
-                            "other_width": other_width_id,
+                            "other_width": str(other_width_id),
                         },
                     )
 

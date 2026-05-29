@@ -8,12 +8,12 @@ from .base import (
 )
 from .validators import (
     AllEqualValidator,
-    AllObsExcludedValidator,
     DepthValidator,
     DifferentInvertTransectWidthValidator,
     DifferentTransectLengthValidator,
     DrySubmitValidator,
     DuplicateValidator,
+    InvertAllObsExcludedValidator,
     InvertCountValidator,
     InvertObsCountHighValidator,
     InvertSizeBinRequiredValidator,
@@ -253,7 +253,7 @@ belt_invert_validations = [
         validation_type=VALUE_VALIDATION_TYPE,
     ),
     Validation(
-        validator=AllObsExcludedValidator(observations_path="data.obs_belt_inverts"),
+        validator=InvertAllObsExcludedValidator(observations_path="data.obs_belt_inverts"),
         paths=["data.obs_belt_inverts"],
         validation_level=RECORD_LEVEL,
         validation_type=VALUE_VALIDATION_TYPE,

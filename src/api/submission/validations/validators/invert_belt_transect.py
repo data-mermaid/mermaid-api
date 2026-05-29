@@ -90,7 +90,7 @@ class UniqueInvertBeltTransectValidator(BaseValidator):
         except ParseError:
             return ERROR, self.INVALID_DATA
 
-        queryset = InvertBeltTransect.objects.select_related().filter(**qry)
+        queryset = InvertBeltTransect.objects.select_related("beltinvert_method").filter(**qry)
 
         for profile in profiles:
             queryset = queryset.filter(beltinvert_method__observers__profile_id=profile)

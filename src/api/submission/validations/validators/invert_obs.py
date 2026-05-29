@@ -2,7 +2,7 @@ from ....models import InvertAttribute
 from .base import ERROR, OK, WARN, BaseValidator, validator_result
 
 
-class AllObsExcludedValidator(BaseValidator):
+class InvertAllObsExcludedValidator(BaseValidator):
     ALL_EXCLUDED = "all_observations_excluded"
 
     def __init__(self, observations_path, **kwargs):
