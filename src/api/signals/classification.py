@@ -63,20 +63,31 @@ def post_save_classification_image(sender, instance, created, **kwargs):
     if getattr(instance, "_is_copy", False):
         return
 
+    buf = getattr(instance, "_normalized_image_buf", None)
+
     if not instance.thumbnail:
         needs_new_thumbnail = True
     else:
-        img_checksum = cls_utils.create_image_checksum(instance.image)
+        img_checksum = cls_utils.create_image_checksum(instance.image, image_buf=buf)
         original_img_record = Image.objects.get(pk=instance.pk)
         needs_new_thumbnail = img_checksum != original_img_record.original_image_checksum
 
     if needs_new_thumbnail:
-        thumb_file = cls_utils.create_thumbnail(instance)
-        instance.original_image_checksum = cls_utils.create_image_checksum(instance.image)
+        thumb_file = cls_utils.create_thumbnail(instance, image_buf=buf)
+        instance.original_image_checksum = cls_utils.create_image_checksum(
+            instance.image, image_buf=buf
+        )
         # Saving thumbnail (save=True), causes double save but it's necessary
         # to have thumbnail created and saved in the post_save so thumbnails
         # don't get orphaned if done in a pre_save signal.
+        # buf is intentionally still set here so the recursive post_save can
+        # use it for the checksum comparison, avoiding an S3 read.
         instance.thumbnail.save(thumb_file.name, thumb_file, save=True)
+
+    # Always release the buffer — covers the needs_new_thumbnail=False path and any
+    # early-return callers (e.g. _is_copy). The recursive post_save may have already
+    # popped it, so use pop to avoid AttributeError.
+    instance.__dict__.pop("_normalized_image_buf", None)
 
 
 @receiver(pre_save, sender=CollectRecord)

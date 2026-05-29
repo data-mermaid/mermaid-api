@@ -66,7 +66,7 @@ class StaticSiteStack(Stack):
             viewer_protocol_policy=cf.ViewerProtocolPolicy.REDIRECT_TO_HTTPS,
         )
 
-        _ = cf.Distribution(
+        self.distribution = cf.Distribution(
             self,
             id="Distribution",
             certificate=default_cert,

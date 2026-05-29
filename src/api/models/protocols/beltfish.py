@@ -240,13 +240,17 @@ class FishGrouping(FishAttribute):
         if hasattr(self, "_attribute_aggs"):
             return self._attribute_aggs
 
-        q = Q()
-        for a in self.attribute_grouping.all():
-            q |= Q(pk=a.attribute.pk)
-            q |= Q(genus=a.attribute)
-            q |= Q(genus__family=a.attribute)
-        q &= Q(regions__in=self.regions.all())
-        species = FishSpecies.objects.filter(q).distinct()
+        attributes = list(self.attribute_grouping.all())
+        if not attributes:
+            species = FishSpecies.objects.none()
+        else:
+            q = Q()
+            for a in attributes:
+                q |= Q(pk=a.attribute.pk)
+                q |= Q(genus=a.attribute)
+                q |= Q(genus__family=a.attribute)
+            q &= Q(regions__in=self.regions.all())
+            species = FishSpecies.objects.filter(q).distinct()
 
         fishattr_aggs = list(
             species.aggregate(
@@ -358,7 +362,7 @@ class FishFamily(FishAttribute):
                 self._max_length = round(family.get("max_length"), 6)
 
         if FishFamily.regions_agg is not None:
-            self._regions = FishFamily.regions_agg.get(str(self.pk), [])
+            self._regions = FishFamily.regions_agg.get(str(self.pk)) or []
 
         return FishFamily.species_agg
 
@@ -462,7 +466,7 @@ class FishGenus(FishAttribute):
                 self._max_length = genus.get("max_length")
 
         if FishGenus.regions_agg is not None:
-            self._regions = FishGenus.regions_agg.get(str(self.pk), [])
+            self._regions = FishGenus.regions_agg.get(str(self.pk)) or []
 
         return FishGenus.species_agg
 

@@ -56,19 +56,6 @@ class InvertSize(BaseModel):
         verbose_name_plural = _("macroinvertebrate sizes")
 
 
-class InvertGroupOfInterest(BaseChoiceModel):
-    name = models.CharField(max_length=100, unique=True)
-
-    def __str__(self):
-        return _("%s") % self.name
-
-    class Meta:
-        db_table = "invert_group_of_interest"
-        ordering = ("name",)
-        verbose_name = _("macroinvertebrate group of interest")
-        verbose_name_plural = _("macroinvertebrate groups of interest")
-
-
 class InvertHarvestType(BaseChoiceModel):
     name = models.CharField(max_length=100, unique=True)
 
@@ -83,7 +70,7 @@ class InvertHarvestType(BaseChoiceModel):
 
 
 class InvertAttribute(BaseAttributeModel):
-    PHYLUM_RANK = "phylum"
+    GOI_RANK = "goi"
     CLASS_RANK = "class"
     ORDER_RANK = "order"
     FAMILY_RANK = "family"
@@ -94,10 +81,10 @@ class InvertAttribute(BaseAttributeModel):
         db_table = "invert_attribute"
 
     def __str__(self):
-        if hasattr(self, "invertphylum"):
-            return _("%s") % self.invertphylum.name
-        elif hasattr(self, "invertclass"):
+        if hasattr(self, "invertclass"):
             return _("%s") % self.invertclass.name
+        elif hasattr(self, "invertgroupofinterest"):
+            return self.invertgroupofinterest.name
         elif hasattr(self, "invertorder"):
             return _("%s") % self.invertorder.name
         elif hasattr(self, "invertfamily"):
@@ -110,10 +97,10 @@ class InvertAttribute(BaseAttributeModel):
 
     @property
     def taxonomic_rank(self):
-        if hasattr(self, "invertphylum"):
-            return self.PHYLUM_RANK
-        elif hasattr(self, "invertclass"):
+        if hasattr(self, "invertclass"):
             return self.CLASS_RANK
+        elif hasattr(self, "invertgroupofinterest"):
+            return self.GOI_RANK
         elif hasattr(self, "invertorder"):
             return self.ORDER_RANK
         elif hasattr(self, "invertfamily"):
@@ -157,26 +144,23 @@ class InvertMaxLengthMixin:
         return self._max_length
 
 
-class InvertPhylum(InvertMaxLengthMixin, InvertAttribute):
-    _species_join_path = "genus__family__order__invert_class__phylum"
-
+class InvertGroupOfInterest(InvertAttribute):
     name = models.CharField(max_length=100, unique=True)
 
     def __str__(self):
-        return _("%s") % self.name
+        return self.name
 
     class Meta:
-        db_table = "invert_phylum"
+        db_table = "invert_group_of_interest"
         ordering = ("name",)
-        verbose_name = _("macroinvertebrate phylum")
-        verbose_name_plural = _("macroinvertebrate phyla")
+        verbose_name = _("macroinvertebrate group of interest")
+        verbose_name_plural = _("macroinvertebrate groups of interest")
 
 
 class InvertClass(InvertMaxLengthMixin, InvertAttribute):
     _species_join_path = "genus__family__order__invert_class"
 
-    name = models.CharField(max_length=100)
-    phylum = models.ForeignKey(InvertPhylum, on_delete=models.PROTECT, related_name="classes")
+    name = models.CharField(max_length=100, unique=True)
 
     def __str__(self):
         return _("%s") % self.name
@@ -186,11 +170,6 @@ class InvertClass(InvertMaxLengthMixin, InvertAttribute):
         ordering = ("name",)
         verbose_name = _("macroinvertebrate class")
         verbose_name_plural = _("macroinvertebrate classes")
-        constraints = [
-            models.UniqueConstraint(
-                fields=["name", "phylum"], name="unique_invertclass_name_phylum"
-            )
-        ]
 
 
 class InvertOrder(InvertMaxLengthMixin, InvertAttribute):
@@ -238,6 +217,7 @@ class InvertGenus(InvertMaxLengthMixin, InvertAttribute):
 
     name = models.CharField(max_length=100)
     family = models.ForeignKey(InvertFamily, on_delete=models.PROTECT, related_name="genera")
+    group_of_interest = models.ForeignKey(InvertGroupOfInterest, on_delete=models.PROTECT)
 
     def __str__(self):
         return _("%s") % self.name
@@ -291,18 +271,6 @@ class InvertSpecies(InvertAttribute):
         blank=True,
         verbose_name=_("size source URL"),
     )
-    group_of_interest = models.ForeignKey(
-        InvertGroupOfInterest,
-        on_delete=models.PROTECT,
-        null=True,
-        blank=True,
-    )
-    harvest_type = models.ForeignKey(
-        InvertHarvestType,
-        on_delete=models.PROTECT,
-        null=True,
-        blank=True,
-    )
     notes = models.TextField(blank=True)
 
     def __str__(self):
@@ -332,6 +300,8 @@ class InvertBeltTransect(Transect):
         InvertSizeBin,
         on_delete=models.PROTECT,
         verbose_name=_("size bin (cm)"),
+        null=True,
+        blank=True,
     )
 
     class Meta:

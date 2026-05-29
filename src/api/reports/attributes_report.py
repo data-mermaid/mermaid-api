@@ -261,14 +261,12 @@ def write_benthic(wb, regions):
 
 def write_invert_species(wb):
     COLUMN_NAMES = [
-        "Phylum",
         "Class",
         "Order",
         "Family",
         "Genus",
         "Species",
         "Group of Interest",
-        "Harvest Type",
         "Max Size (cm)",
         "Measurement Type",
         "Size Source",
@@ -279,14 +277,12 @@ def write_invert_species(wb):
         COLUMN_NAMES,
         *[
             [
-                sp.genus.family.order.invert_class.phylum.name,
                 sp.genus.family.order.invert_class.name,
                 sp.genus.family.order.name,
                 sp.genus.family.name,
                 sp.genus.name,
                 sp.name,
-                sp.group_of_interest and sp.group_of_interest.name,
-                sp.harvest_type and sp.harvest_type.name,
+                sp.genus.group_of_interest.name,
                 sp.max_length,
                 sp.max_length_type,
                 sp.max_length_source,
@@ -294,16 +290,13 @@ def write_invert_species(wb):
             ]
             for sp in InvertSpecies.objects.select_related(
                 "genus",
+                "genus__group_of_interest",
                 "genus__family",
                 "genus__family__order",
                 "genus__family__order__invert_class",
-                "genus__family__order__invert_class__phylum",
-                "group_of_interest",
-                "harvest_type",
             )
             .filter(status=SUPERUSER_APPROVED)
             .order_by(
-                "genus__family__order__invert_class__phylum__name",
                 "genus__family__order__invert_class__name",
                 "genus__family__order__name",
                 "genus__family__name",

@@ -6,6 +6,7 @@ from aws_cdk import (
 )
 from constructs import Construct
 from settings.settings import ProjectSettings
+from stacks.constructs.adot import add_adot_sidecar
 from stacks.constructs.queue import JobQueue
 
 
@@ -46,7 +47,8 @@ class QueueWorker(Construct):
             memory_limit_mib=config.api.sqs_memory,
             secrets=api_secrets,
             environment=environment,
-            command=["python", "manage.py", "simpleq_worker", "-n", queue_name],
+            command=["opentelemetry-instrument", "python", "manage.py", "simpleq_worker", "-n", queue_name],
+            min_healthy_percent=0,
             min_scaling_capacity=1,
             max_scaling_capacity=3,
             # this defines how the service shall autoscale based on the
@@ -69,10 +71,14 @@ class QueueWorker(Construct):
             "sqs:GetQueueUrl",
         )
 
+        # ADOT X-Ray sidecar
+        add_adot_sidecar(worker_service.task_definition, "Worker")
+
         # allow worker access to public bucket
         public_bucket.grant_read_write(worker_service.task_definition.task_role)
 
         # exports
         self.queue = job_queue.queue
+        self.dead_letter_queue = job_queue.dead_letter_queue
         self.service = worker_service.service
         self.task_definition = worker_service.task_definition
