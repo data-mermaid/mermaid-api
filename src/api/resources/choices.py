@@ -26,7 +26,6 @@ from ..models import (
     HabitatComplexityScore,
     InvertBeltTransectWidth,
     InvertGroupOfInterest,
-    InvertHarvestType,
     InvertSizeBin,
     ManagementCompliance,
     ManagementParty,
@@ -58,7 +57,6 @@ class ChoiceViewSet(BaseChoiceApiViewSet):
                 for goi in InvertGroupOfInterest.objects.order_by("name")
             ]
         )
-        invertharvesttypes = dict(data=InvertHarvestType.objects.choices(order_by="name"))
         benthiclifehistories = dict(data=BenthicLifeHistory.objects.choices(order_by="name"))
         growthforms = dict(data=GrowthForm.objects.choices(order_by="name"))
         countries = dict(data=Country.objects.choices(order_by="name"))
@@ -85,7 +83,6 @@ class ChoiceViewSet(BaseChoiceApiViewSet):
             "invertbelttransectwidths": invertbelttransectwidths,
             "invertsizebins": invertsizebins,
             "invertgroupsofinterest": invertgroupsofinterest,
-            "invertharvesttypes": invertharvesttypes,
             "benthiclifehistories": benthiclifehistories,
             "growthforms": growthforms,
             "countries": countries,
