@@ -262,7 +262,7 @@ def test_belt_invert_all_excluded_warn(
     )
     results = runner.to_dict()["results"]
     assert overall_status == WARN
-    assert _get_result_status(results["$record"], "all_obs_excluded_validator") == WARN
+    assert _get_result_status(results["$record"], "invert_all_obs_excluded_validator") == WARN
 
 
 def test_belt_invert_size_exceeds_max_warn(

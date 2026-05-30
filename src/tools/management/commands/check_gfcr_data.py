@@ -94,7 +94,7 @@ class Command(BaseCommand):
 
         fs_qs = (
             GFCRFinanceSolution.objects.select_related("indicator_set__project")
-            .prefetch_related("investment_sources")
+            .prefetch_related("investment_sources", "revenues")
             .order_by("indicator_set__project__name", "name")
         )
         if project_id:
@@ -154,6 +154,7 @@ class Command(BaseCommand):
                     ["Indicator set titles", counts["is_titles"]],
                     ["Finance solutions — type not set", counts["fs_type"]],
                     ["Finance solutions — cross-field violations", counts["fs_cross"]],
+                    ["Finance solutions — PCF with revenues", counts["fs_pcf"]],
                     ["Finance solutions — removed sector values", counts["fs_sector"]],
                     ["Finance solutions — removed SFM values", counts["fs_sfm"]],
                     ["Investment sources — removed investment type", counts["inv_type"]],
@@ -385,7 +386,7 @@ class Command(BaseCommand):
                     )
 
                 if (
-                    fs_type == "taf"
+                    fs_type in ("taf", "ctf", "financial_facility")
                     and has_num
                     and getattr(fs, "number_of_solutions_supported_by", 0) == 0
                 ):
@@ -394,12 +395,12 @@ class Command(BaseCommand):
                         name,
                         "finance_solutions",
                         "FS-11",
-                        "Set number of solutions supported (required for TAF)",
+                        "Set number of solutions supported (required for TAF, CTF, and Financial facility)",
                         "fs_cross",
                     )
 
                 if (
-                    fs_type != "taf"
+                    fs_type not in ("taf", "ctf", "financial_facility")
                     and has_num
                     and getattr(fs, "number_of_solutions_supported_by", 0) != 0
                 ):
@@ -420,6 +421,16 @@ class Command(BaseCommand):
                         "FS-13",
                         "Manually clear sustainable finance mechanisms",
                         "fs_cross",
+                    )
+
+                if fs_type == "programmatic_co_financing" and fs.revenues.exists():
+                    yield (
+                        pname,
+                        name,
+                        "finance_solutions",
+                        "FS-16",
+                        "Delete revenues — PCF type disables revenue access via Collect",
+                        "fs_pcf",
                     )
 
             # Removed-value checks (always run, regardless of whether type is set)

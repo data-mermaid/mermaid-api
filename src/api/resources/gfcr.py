@@ -167,13 +167,13 @@ class GFCRFinanceSolutionSerializer(BaseAPISerializer):
         if type_val not in ("business", "financial_mechanism"):
             data["gender_smart"] = False
 
-        # number_of_solutions_supported_by: only TAF, and must be > 0 — error if missing.
-        if type_val != "taf":
+        # number_of_solutions_supported_by: TAF, CTF, and Financial facility — must be > 0.
+        if type_val not in ("taf", "ctf", "financial_facility"):
             data["number_of_solutions_supported_by"] = 0
         elif data.get("number_of_solutions_supported_by", 0) == 0:
             errors[
                 "number_of_solutions_supported_by"
-            ] = "number_of_solutions_supported_by must be > 0 for TAF"
+            ] = "number_of_solutions_supported_by must be > 0"
 
         # sustainable_finance_mechanisms: only Financial mechanism.
         if type_val != "financial_mechanism":
