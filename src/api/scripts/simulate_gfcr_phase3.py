@@ -74,7 +74,7 @@ def run():
     _print_log(log, errors)
 
     print("Phase 4 readiness:")
-    _assert_phase4_ready()
+    _assert_phase4_ready(errors)
 
 
 # ---------------------------------------------------------------------------
@@ -129,7 +129,7 @@ def _assign_types(log, errors):
         num = fs.number_of_solutions_supported_by
         if fs_type == "business" and not sector:
             sector = "ce_other"
-        elif fs_type == "taf" and num == 0:
+        elif fs_type in ("taf", "ctf", "financial_facility") and num == 0:
             num = 1
 
         data = {
@@ -211,10 +211,20 @@ def _print_log(log, errors):
         print()
 
 
-def _assert_phase4_ready():
+def _assert_phase4_ready(simulation_errors=None):
     issues = []
 
-    for fs in GFCRFinanceSolution.objects.select_related("indicator_set__project"):
+    if simulation_errors:
+        error_count = sum(len(v) for v in simulation_errors.values())
+        if error_count:
+            issues.append(
+                f"{error_count} finance solution(s) had coercion errors during simulation"
+                " and were not migrated — re-check the ERROR entries above"
+            )
+
+    for fs in GFCRFinanceSolution.objects.select_related("indicator_set__project").prefetch_related(
+        "revenues"
+    ):
         pname = fs.indicator_set.project.name
         name = fs.name
         if not fs.fs_type:
@@ -224,6 +234,8 @@ def _assert_phase4_ready():
         for sfm in fs.sustainable_finance_mechanisms or []:
             if sfm in _REMOVED_SFM_VALUES:
                 issues.append(f"[{pname}] FS {name!r}: deprecated SFM {sfm!r}")
+        if fs.fs_type == "programmatic_co_financing" and fs.revenues.exists():
+            issues.append(f"[{pname}] FS {name!r}: PCF type still has revenues")
 
     for inv in GFCRInvestmentSource.objects.select_related(
         "finance_solution__indicator_set__project"

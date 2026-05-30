@@ -4,7 +4,7 @@ from collections import defaultdict
 from datetime import date, datetime
 
 from django.core.management import call_command
-from django.core.management.base import BaseCommand
+from django.core.management.base import BaseCommand, CommandError
 from django.db import connection, connections
 
 from api.models import GFCRFinanceSolution, GFCRIndicatorSet, Project
@@ -85,6 +85,9 @@ class Command(BaseCommand):
         has_num = "number_of_solutions_supported_by" in cols
 
         project_id = options.get("project_id")
+
+        if project_id and not Project.objects.filter(pk=project_id).exists():
+            raise CommandError(f"Project {project_id} not found.")
 
         is_qs = GFCRIndicatorSet.objects.select_related("project").order_by(
             "project__name", "title"
@@ -271,7 +274,7 @@ class Command(BaseCommand):
                 fs_type = None
             else:
                 fs_type = getattr(fs, "fs_type", None)
-                if fs_type is None:
+                if not fs_type:
                     yield (
                         pname,
                         name,
@@ -282,7 +285,7 @@ class Command(BaseCommand):
                     )
 
             # Cross-field checks — only when type column exists and type is set on this record
-            if has_type_col and fs_type is not None:
+            if has_type_col and fs_type:
                 if fs_type == "business" and fs.sector == "":
                     yield (
                         pname,
