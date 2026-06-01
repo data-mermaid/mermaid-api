@@ -484,6 +484,20 @@ _FS_BASE = {
             {"fs_type": "taf", "number_of_solutions_supported_by": 0},
             "number_of_solutions_supported_by",
         ),
+        # same constraint applies to CTF (geographical_coverage supplied to avoid that error)
+        (
+            {
+                "fs_type": "ctf",
+                "geographical_coverage": "national",
+                "number_of_solutions_supported_by": 0,
+            },
+            "number_of_solutions_supported_by",
+        ),
+        # same constraint applies to Financial facility
+        (
+            {"fs_type": "financial_facility", "number_of_solutions_supported_by": 0},
+            "number_of_solutions_supported_by",
+        ),
     ],
 )
 def test_finance_solution_validate_errors(
@@ -638,9 +652,9 @@ def test_report_new_columns_and_sheet_name(db_setup, project1):
     assert "BusinessesFinanceSolutions" not in [ws.title for ws in wb.worksheets]
 
     fs_sheet = wb["FacilitiesSolutions"]
-    row = list(fs_sheet.iter_rows(min_row=2, max_row=2, values_only=True))[0]
+    row = next(fs_sheet.iter_rows(min_row=2, max_row=2, values_only=True))
     # type is at index 4, geographical_coverage at index 8
     assert row[4] == "Conservation trust fund (CTF)", f"Expected CTF display, got: {row}"
-    assert row[8] == "national", f"Expected 'national', got: {row}"
+    assert row[8] == "National", f"Expected 'National', got: {row}"
 
     os.remove(report_path)

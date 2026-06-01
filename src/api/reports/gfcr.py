@@ -171,7 +171,7 @@ def common_finance_solutions_columns(finance_solution):
         finance_solution.name,
         ",".join(finance_solution.get_sustainable_finance_mechanisms_display()),
         finance_solution.get_sector_display(),
-        finance_solution.geographical_coverage,
+        finance_solution.get_geographical_coverage_display(),
         finance_solution.taf_name,
         finance_solution.number_of_solutions_supported_by,
     ]
