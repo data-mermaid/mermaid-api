@@ -280,7 +280,7 @@ class Annotation(BaseModel):
     point = models.ForeignKey(
         Point, on_delete=models.CASCADE, editable=False, related_name="annotations"
     )
-    benthic_attribute = models.ForeignKey(BenthicAttribute, on_delete=models.CASCADE)
+    benthic_attribute = models.ForeignKey(BenthicAttribute, on_delete=models.PROTECT)
     growth_form = models.ForeignKey(GrowthForm, on_delete=models.CASCADE, null=True, blank=True)
     classifier = models.ForeignKey(
         Classifier, null=True, on_delete=models.CASCADE, related_name="annotations"
