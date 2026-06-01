@@ -4,6 +4,7 @@ import datetime
 from django.conf import settings
 from django.contrib import admin, messages
 from django.contrib.gis.admin import GISModelAdmin
+from django.db import transaction
 from django.db.models import Count
 from django.http import HttpResponse
 from django.urls import reverse
@@ -286,21 +287,22 @@ class AttributeAdmin(BaseAdmin):
                     )
                     return super().delete_view(request, object_id, extra_context)
 
-                for cr in protocol_crs:
+                with transaction.atomic():
+                    for cr in protocol_crs:
+                        for p in self.protocols:
+                            observations = cr.data.get(p.get("cr_obs")) or []
+                            for obs in observations:
+                                if self.attrib in obs and obs[self.attrib] == object_id:
+                                    obs[self.attrib] = replacement_obj
+                        cr.save()
+
                     for p in self.protocols:
-                        observations = cr.data.get(p.get("cr_obs")) or []
-                        for obs in observations:
-                            if self.attrib in obs and obs[self.attrib] == object_id:
-                                obs[self.attrib] = replacement_obj
-                    cr.save()
+                        p.get("model_obs").objects.filter(**{self.attrib: object_id}).update(
+                            **{self.attrib: replacement_obj}
+                        )
 
-                for p in self.protocols:
-                    p.get("model_obs").objects.filter(**{self.attrib: object_id}).update(
-                        **{self.attrib: replacement_obj}
-                    )
-
-                if replacement_obj:
-                    annotation_qs.update(benthic_attribute_id=replacement_obj)
+                    if replacement_obj:
+                        annotation_qs.update(benthic_attribute_id=replacement_obj)
 
         return super().delete_view(request, object_id, extra_context)
 
