@@ -186,6 +186,36 @@ class ChoiceViewSet(BaseChoiceApiViewSet):
                     for c in GFCRFinanceSolution.SECTOR_CHOICES
                 ]
             },
+            "financesolutiontypes": {
+                "data": [
+                    {
+                        "id": c[0],
+                        "name": c[1],
+                        "updated_on": GFCRFinanceSolution.TYPE_CHOICES_UPDATED_ON,
+                    }
+                    for c in GFCRFinanceSolution.TYPE_CHOICES
+                ]
+            },
+            "geographicalcoverage": {
+                "data": [
+                    {
+                        "id": c[0],
+                        "name": c[1],
+                        "updated_on": GFCRFinanceSolution.GEOGRAPHICAL_COVERAGE_CHOICES_UPDATED_ON,
+                    }
+                    for c in GFCRFinanceSolution.GEOGRAPHICAL_COVERAGE_CHOICES
+                ]
+            },
+            "indicatorsettitles": {
+                "data": [
+                    {
+                        "id": c[0],
+                        "name": c[1],
+                        "updated_on": GFCRIndicatorSet.TITLE_CHOICES_UPDATED_ON,
+                    }
+                    for c in GFCRIndicatorSet.TITLE_CHOICES
+                ]
+            },
             "stages": {
                 "data": [
                     {
