@@ -203,7 +203,11 @@ class ApiStack(Stack):
             "SQS_QUEUE_NAME": sqs_queue_name,
             "IMAGE_SQS_QUEUE_NAME": image_sqs_queue_name,
             # OpenTelemetry / X-Ray
+            # ecs-xray.yaml only configures a traces pipeline; disable metrics and
+            # logs exporters to suppress UNIMPLEMENTED errors from the ADOT sidecar.
             "OTEL_TRACES_EXPORTER": "otlp",
+            "OTEL_METRICS_EXPORTER": "none",
+            "OTEL_LOGS_EXPORTER": "none",
             "OTEL_EXPORTER_OTLP_ENDPOINT": "http://localhost:4317",
             "OTEL_PROPAGATORS": "xray",
             "OTEL_PYTHON_ID_GENERATOR": "xray",
@@ -281,7 +285,7 @@ class ApiStack(Stack):
             enable_execute_command=True,
             min_healthy_percent=0,
             capacity_provider_strategies=cluster.default_capacity_provider_strategy,
-            # circuit_breaker=ecs.DeploymentCircuitBreaker(enable=True, rollback=True),
+            circuit_breaker=ecs.DeploymentCircuitBreaker(enable=True, rollback=True),
         )
 
         # --- API Service ---
@@ -320,7 +324,7 @@ class ApiStack(Stack):
             enable_execute_command=True,
             min_healthy_percent=0,
             capacity_provider_strategies=cluster.default_capacity_provider_strategy,
-            # circuit_breaker=ecs.DeploymentCircuitBreaker(enable=True, rollback=True),
+            circuit_breaker=ecs.DeploymentCircuitBreaker(enable=True, rollback=True),
         )
 
         # Grant Secret read to API container & backup task

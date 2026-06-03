@@ -747,7 +747,7 @@ class CollectRecord(BaseModel):
         elif protocol == BLEACHINGQC_PROTOCOL:
             return data.get("quadrat_collection") or {}
         elif protocol == MACROINVERTEBRATE_PROTOCOL:
-            return data.get("invert_belt_transect") or {}
+            return data.get("beltinvert_transect") or {}
         return None
 
     def _assign_id(self, record):

@@ -39,6 +39,17 @@
 
 - Update `annotate_num_sample_units()` in `src/api/resources/project.py` with a new UNION ALL branch counting sample units for the new protocol (joining through method → transect → sample event → site → project)
 
+## Attribute Taxonomy API (if protocol has its own MTI taxonomy)
+
+If the protocol introduces its own attribute/taxonomy hierarchy (Django MTI from `BaseAttributeModel`), add:
+
+- A viewset (`BaseAttributeApiViewSet`) with a serializer that exposes all taxonomy levels and the full ancestry chain (e.g. `parent`, `class_goi`); use `select_related` across all MTI subtypes to avoid N+1 queries — see `InvertAttributeViewSet` for the implementation pattern and `test_invert_attributes.py::test_list_invert_attributes_returns_user_visible_hierarchy` for the corresponding test pattern
+- Register the viewset in `urls.py` (global router, alongside `benthicattributes`)
+- Register in `src/api/resources/sync/views.py` `non_project_sources` so offline clients sync the taxonomy:
+  - `"read_only": False` — enables the propose-new-attribute flow for authenticated users
+  - `"visibility_filtered": True` — filters nodes based on status/visibility so only approved entries are synced to clients
+  - Add the source type constant to `CACHEABLE_SOURCE_TYPES` so pull responses are cached
+
 ## Choices Endpoint
 
 - Import new lookup models in `src/api/resources/choices.py`

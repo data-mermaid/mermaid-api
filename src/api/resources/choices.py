@@ -26,7 +26,6 @@ from ..models import (
     HabitatComplexityScore,
     InvertBeltTransectWidth,
     InvertGroupOfInterest,
-    InvertHarvestType,
     InvertSizeBin,
     ManagementCompliance,
     ManagementParty,
@@ -52,8 +51,12 @@ class ChoiceViewSet(BaseChoiceApiViewSet):
         )
         invertsizebins = dict(data=InvertSizeBin.objects.choices(order_by="val"))
         invertsizebins["data"] = natsorted(invertsizebins["data"], key=itemgetter(*["name"]))
-        invertgroupsofinterest = dict(data=InvertGroupOfInterest.objects.choices(order_by="name"))
-        invertharvesttypes = dict(data=InvertHarvestType.objects.choices(order_by="name"))
+        invertgroupsofinterest = dict(
+            data=[
+                {"id": goi.pk, "name": goi.name, "updated_on": goi.updated_on}
+                for goi in InvertGroupOfInterest.objects.order_by("name")
+            ]
+        )
         benthiclifehistories = dict(data=BenthicLifeHistory.objects.choices(order_by="name"))
         growthforms = dict(data=GrowthForm.objects.choices(order_by="name"))
         countries = dict(data=Country.objects.choices(order_by="name"))
@@ -80,7 +83,6 @@ class ChoiceViewSet(BaseChoiceApiViewSet):
             "invertbelttransectwidths": invertbelttransectwidths,
             "invertsizebins": invertsizebins,
             "invertgroupsofinterest": invertgroupsofinterest,
-            "invertharvesttypes": invertharvesttypes,
             "benthiclifehistories": benthiclifehistories,
             "growthforms": growthforms,
             "countries": countries,
@@ -182,6 +184,36 @@ class ChoiceViewSet(BaseChoiceApiViewSet):
                         "updated_on": GFCRFinanceSolution.SECTOR_CHOICES_UPDATED_ON,
                     }
                     for c in GFCRFinanceSolution.SECTOR_CHOICES
+                ]
+            },
+            "financesolutiontypes": {
+                "data": [
+                    {
+                        "id": c[0],
+                        "name": c[1],
+                        "updated_on": GFCRFinanceSolution.TYPE_CHOICES_UPDATED_ON,
+                    }
+                    for c in GFCRFinanceSolution.TYPE_CHOICES
+                ]
+            },
+            "geographicalcoverage": {
+                "data": [
+                    {
+                        "id": c[0],
+                        "name": c[1],
+                        "updated_on": GFCRFinanceSolution.GEOGRAPHICAL_COVERAGE_CHOICES_UPDATED_ON,
+                    }
+                    for c in GFCRFinanceSolution.GEOGRAPHICAL_COVERAGE_CHOICES
+                ]
+            },
+            "indicatorsettitles": {
+                "data": [
+                    {
+                        "id": c[0],
+                        "name": c[1],
+                        "updated_on": GFCRIndicatorSet.TITLE_CHOICES_UPDATED_ON,
+                    }
+                    for c in GFCRIndicatorSet.TITLE_CHOICES
                 ]
             },
             "stages": {

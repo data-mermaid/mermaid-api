@@ -11,6 +11,7 @@ from api.ingest import (
     BleachingCSVSerializer,
     FishBeltCSVSerializer,
     HabitatComplexityCSVSerializer,
+    MacroInvertebrateCSVSerializer,
     ingest_serializers,
 )
 from api.models import (
@@ -20,6 +21,7 @@ from api.models import (
     BLEACHINGQC_PROTOCOL,
     FISHBELT_PROTOCOL,
     HABITATCOMPLEXITY_PROTOCOL,
+    MACROINVERTEBRATE_PROTOCOL,
     CollectRecord,
     Management,
     Profile,
@@ -154,6 +156,8 @@ def ingest(
         serializer = BleachingCSVSerializer
     elif protocol == BENTHICPQT_PROTOCOL:
         serializer = BenthicPhotoQTCSVSerializer
+    elif protocol == MACROINVERTEBRATE_PROTOCOL:
+        serializer = MacroInvertebrateCSVSerializer
     else:
         return None, output
 
