@@ -1,6 +1,6 @@
 from rest_framework import serializers
 
-from ..models import InvertAttribute
+from ..models import InvertAttribute, InvertSpecies
 from .base import BaseAPIFilterSet, BaseAPISerializer, BaseAttributeApiViewSet
 from .mixins import CreateOrUpdateSerializerMixin
 
@@ -107,3 +107,38 @@ class InvertAttributeViewSet(BaseAttributeApiViewSet):
         "invertspecies__genus__group_of_interest",
     ).order_by("id")
     filterset_class = InvertAttributeFilterSet
+
+
+class InvertSpeciesSerializer(CreateOrUpdateSerializerMixin, BaseAPISerializer):
+    status = serializers.ReadOnlyField()
+    display_name = serializers.SerializerMethodField()
+    max_length = serializers.DecimalField(
+        max_digits=6,
+        decimal_places=1,
+        coerce_to_string=False,
+        required=False,
+        allow_null=True,
+    )
+
+    class Meta:
+        model = InvertSpecies
+        exclude = []
+
+    def get_display_name(self, obj):
+        return f"{obj.genus.name} {obj.name}"
+
+
+class InvertSpeciesFilterSet(BaseAPIFilterSet):
+    class Meta:
+        model = InvertSpecies
+        fields = ["genus", "genus__family", "genus__group_of_interest", "status"]
+
+
+class InvertSpeciesViewSet(BaseAttributeApiViewSet):
+    serializer_class = InvertSpeciesSerializer
+    queryset = InvertSpecies.objects.select_related(
+        "genus__family__order__invert_class",
+        "genus__group_of_interest",
+    ).order_by("genus", "name")
+    filterset_class = InvertSpeciesFilterSet
+    search_fields = ["name", "genus__name", "genus__family__name"]

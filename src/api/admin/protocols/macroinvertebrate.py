@@ -113,7 +113,7 @@ class InvertSpeciesAdmin(BaseAdmin):
         "max_length",
         "max_length_type",
     )
-    list_filter = []
+    list_filter = ["status"]
     search_fields = ("name", "genus__name", "genus__family__name")
 
 
