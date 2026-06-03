@@ -1,6 +1,7 @@
 """Settings for development environments"""
 
 from settings.settings import DatabaseSettings, DjangoSettings, ProjectSettings
+import os
 
 DEV_ENV_ID = "dev"
 DEV_SETTINGS = ProjectSettings(
@@ -30,7 +31,7 @@ DEV_SETTINGS = ProjectSettings(
         # Secrets
         env_secret_name="dev/mermaid-api-MzD7rS",
         # Slack alerts via AWS Chatbot — fill in after connecting workspace in console
-        slack_workspace_id="",
-        slack_channel_id="",
+        slack_workspace_id=os.getenv("SLACK_WORKSPACE_ID", ""),
+        slack_channel_id=os.getenv("SLACK_WORKSPACE_ID", ""),
     ),
 )
