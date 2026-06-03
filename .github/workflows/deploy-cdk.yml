@@ -61,6 +61,8 @@ jobs:
           PYTHONPATH: ${{ github.workspace }}
           CDK_DEFAULT_ACCOUNT: ${{ secrets.CDK_DEFAULT_ACCOUNT }}
           CDK_DEFAULT_REGION: us-east-1
+          SLACK_CHANNEL_ID: ${{ secrets.SLACK_CHANNEL_ID }}
+          SLACK_WORKSPACE_ID: ${{ secrets.SLACK_WORKSPACE_ID }}
         run: |
           short_sha=$(git rev-parse --short ${{ github.sha }}) && \
           echo "$short_sha" > src/VERSION.txt && \
@@ -80,6 +82,8 @@ jobs:
           PYTHONPATH: ${{ github.workspace }}
           CDK_DEFAULT_ACCOUNT: ${{ secrets.CDK_DEFAULT_ACCOUNT }}
           CDK_DEFAULT_REGION: us-east-1
+          SLACK_CHANNEL_ID: ${{ secrets.SLACK_CHANNEL_ID }}
+          SLACK_WORKSPACE_ID: ${{ secrets.SLACK_WORKSPACE_ID }}
         run: |
           echo "${{ github.ref_name }}" > src/VERSION.txt && \
           cat src/VERSION.txt && \
