@@ -5,6 +5,7 @@ from aws_cdk import (
     aws_cloudwatch_actions as cw_actions,
     aws_ecs as ecs,
     aws_elasticloadbalancingv2 as elb,
+    aws_iam as iam,
     aws_logs as logs,
     aws_rds as rds,
     aws_sns as sns,
@@ -133,6 +134,27 @@ class MonitoringAlerts(Construct):
                 evaluation_periods=2,
                 comparison_operator=cw.ComparisonOperator.GREATER_THAN_THRESHOLD,
                 treat_missing_data=cw.TreatMissingData.NOT_BREACHING,
+            )
+        )
+
+        alarms.append(
+            cw.Alarm(
+                self,
+                "EcsTaskStoppedAlarm",
+                alarm_name=f"mermaid-{env_id}-ecs-no-running-tasks",
+                alarm_description=(
+                    "API ECS service has 0 running tasks for 2 consecutive minutes — "
+                    "deployment failure or crash loop"
+                ),
+                metric=api_service.metric(
+                    "RunningTaskCount",
+                    statistic="Minimum",
+                    period=Duration.minutes(1),
+                ),
+                threshold=1,
+                evaluation_periods=2,
+                comparison_operator=cw.ComparisonOperator.LESS_THAN_THRESHOLD,
+                treat_missing_data=cw.TreatMissingData.BREACHING,
             )
         )
 
@@ -306,6 +328,17 @@ class MonitoringAlerts(Construct):
         # The workspace ID is then visible in the Chatbot console.
 
         if slack_workspace_id and slack_channel_id:
+            slack_channel_role = iam.Role(
+                self,
+                "SlackChannelConfigurationRole",
+                assumed_by=iam.ServicePrincipal("chatbot.amazonaws.com"),
+                managed_policies=[
+                    # Enables Amazon Q Developer natural-language queries in Slack
+                    iam.ManagedPolicy.from_aws_managed_policy_name("AmazonQDeveloperAccess"),
+                    # Allows Q to answer read-only questions about stacks, alarms, ECS, RDS, etc.
+                    iam.ManagedPolicy.from_aws_managed_policy_name("ReadOnlyAccess"),
+                ],
+            )
             chatbot.SlackChannelConfiguration(
                 self,
                 "SlackChannel",
@@ -313,6 +346,10 @@ class MonitoringAlerts(Construct):
                 slack_workspace_id=slack_workspace_id,
                 slack_channel_id=slack_channel_id,
                 notification_topics=[self.topic],
-                # Notification-only — no interactive Chatbot commands needed
-                guardrail_policies=[],
+                role=slack_channel_role,
+                # Guardrail caps the effective permissions even if role ever widens
+                guardrail_policies=[
+                    iam.ManagedPolicy.from_aws_managed_policy_name("AmazonQDeveloperAccess"),
+                    iam.ManagedPolicy.from_aws_managed_policy_name("ReadOnlyAccess"),
+                ],
             )

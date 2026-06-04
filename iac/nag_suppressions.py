@@ -508,6 +508,24 @@ def suppress_api(stack: Stack) -> None:
         ],
     )
 
+    # --- Chatbot Slack channel role ---
+    _suppress_by_path(
+        stack,
+        "Alerts/SlackChannelConfigurationRole/Resource",
+        [
+            NagPackSuppression(
+                id="AwsSolutions-IAM4",
+                reason=f"{ACCEPTED}: AmazonQDeveloperAccess and ReadOnlyAccess are AWS managed "
+                "policies with no customer-managed equivalents for Chatbot/Amazon Q integration. "
+                "ReadOnlyAccess is further constrained by the guardrail policy.",
+                applies_to=[
+                    "Policy::arn:<AWS::Partition>:iam::aws:policy/AmazonQDeveloperAccess",
+                    "Policy::arn:<AWS::Partition>:iam::aws:policy/ReadOnlyAccess",
+                ],
+            ),
+        ],
+    )
+
 
 # ---------------------------------------------------------------------------
 # SagemakerStack (dev only)
