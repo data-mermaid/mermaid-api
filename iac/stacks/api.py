@@ -26,6 +26,7 @@ from aws_cdk import (
 from constructs import Construct
 from settings.settings import ProjectSettings
 from stacks.constructs.adot import add_adot_sidecar
+from stacks.constructs.alerts import MonitoringAlerts
 from stacks.constructs.dashboard import MonitoringDashboard
 from stacks.constructs.worker import QueueWorker
 
@@ -292,6 +293,11 @@ class ApiStack(Stack):
         task_definition = ecs.Ec2TaskDefinition(
             self, id="ApiTaskDefinition", network_mode=ecs.NetworkMode.AWS_VPC
         )
+        api_log_group = logs.LogGroup.from_log_group_name(
+            self,
+            "ApiLogGroup",
+            f"/mermaid/{config.env_id}/api",
+        )
         task_definition.add_container(
             id="MermaidAPI",
             image=ecs.ContainerImage.from_docker_image_asset(image_asset),
@@ -301,7 +307,8 @@ class ApiStack(Stack):
             environment={**environment, "OTEL_SERVICE_NAME": f"mermaid-api-{config.env_id}"},
             secrets=self.api_secrets,
             logging=ecs.LogDrivers.aws_logs(
-                stream_prefix=config.env_id, log_retention=logs.RetentionDays.ONE_MONTH
+                stream_prefix=config.env_id,
+                log_group=api_log_group,
             ),
         )
         add_adot_sidecar(task_definition, "Api")
@@ -484,4 +491,20 @@ class ApiStack(Stack):
             buckets=[backup_bucket, config_bucket, data_bucket, image_processing_bucket],
             distribution=distribution,
             sagemaker_domain_name=sagemaker_domain_name,
+        )
+
+        # ── CloudWatch Alarms + Slack (AWS Chatbot) ──────────────────
+        MonitoringAlerts(
+            self,
+            "Alerts",
+            env_id=config.env_id,
+            load_balancer=load_balancer,
+            api_service=service,
+            database=database,
+            general_dlq=worker.dead_letter_queue,
+            image_dlq=image_worker.dead_letter_queue,
+            api_log_group=api_log_group,
+            sagemaker_domain_name=sagemaker_domain_name,
+            slack_workspace_id=config.api.slack_workspace_id or None,
+            slack_channel_id=config.api.slack_channel_id or None,
         )
