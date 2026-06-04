@@ -136,9 +136,6 @@ class InvertSpeciesFilterSet(BaseAPIFilterSet):
 
 class InvertSpeciesViewSet(BaseAttributeApiViewSet):
     serializer_class = InvertSpeciesSerializer
-    queryset = InvertSpecies.objects.select_related(
-        "genus__family__order__invert_class",
-        "genus__group_of_interest",
-    ).order_by("genus", "name")
+    queryset = InvertSpecies.objects.select_related("genus").order_by("genus__name", "name")
     filterset_class = InvertSpeciesFilterSet
     search_fields = ["name", "genus__name", "genus__family__name"]
