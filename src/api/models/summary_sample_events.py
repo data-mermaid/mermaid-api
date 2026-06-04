@@ -54,6 +54,7 @@ class SummarySampleEventBaseModel(models.Model):
     data_policy_habitatcomplexity = models.CharField(max_length=50)
     data_policy_bleachingqc = models.CharField(max_length=50)
     data_policy_benthicpqt = models.CharField(max_length=50)
+    data_policy_macroinvertebrate = models.CharField(max_length=50, default="")
 
     class Meta:
         abstract = True
@@ -78,6 +79,9 @@ class SummarySampleEventSQLModel(SummarySampleEventBaseModel):
         ),
         habitatcomplexity_su AS (
             SELECT * FROM summary_habitatcomplexity_su WHERE project_id = '%(project_id)s'::uuid
+        ),
+        beltinvert_su AS (
+            SELECT * FROM summary_belt_invert_su WHERE project_id = '%(project_id)s'::uuid
         ),
         parties AS MATERIALIZED (
             SELECT
@@ -119,6 +123,9 @@ class SummarySampleEventSQLModel(SummarySampleEventBaseModel):
                 UNION ALL
                 SELECT sample_event_id, jsonb_array_elements(observers) AS observer
                 FROM habitatcomplexity_su
+                UNION ALL
+                SELECT sample_event_id, jsonb_array_elements(observers) AS observer
+                FROM beltinvert_su
             ) AS su_observers
             GROUP BY sample_event_id
         )
@@ -217,6 +224,11 @@ class SummarySampleEventSQLModel(SummarySampleEventBaseModel):
             WHEN project.data_policy_benthicpqt=100 THEN 'public'
             ELSE ''
         END) AS data_policy_benthicpqt,
+        (CASE WHEN project.data_policy_macroinvertebrate=10 THEN 'private'
+            WHEN project.data_policy_macroinvertebrate=50 THEN 'public summary'
+            WHEN project.data_policy_macroinvertebrate=100 THEN 'public'
+            ELSE ''
+        END) AS data_policy_macroinvertebrate,
         se_observers.observers,
 
         jsonb_strip_nulls(jsonb_build_object(
@@ -310,6 +322,15 @@ class SummarySampleEventSQLModel(SummarySampleEventBaseModel):
                 bleachingqc.percent_algae_avg_avg END),
                 'quadrat_count_avg', (CASE WHEN project.data_policy_bleachingqc < 50 AND NOT %(has_access)s THEN NULL ELSE
                 bleachingqc.quadrat_count_avg END)
+            )), '{}'),
+            'macroinvertebrate', NULLIF(jsonb_strip_nulls(jsonb_build_object(
+                'sample_unit_count', mi.sample_unit_count,
+                'count_total_avg', (CASE WHEN project.data_policy_macroinvertebrate < 50 AND NOT %(has_access)s THEN NULL ELSE mi.count_total_avg END),
+                'count_total_sd', (CASE WHEN project.data_policy_macroinvertebrate < 50 AND NOT %(has_access)s THEN NULL ELSE mi.count_total_sd END),
+                'density_indha_avg', (CASE WHEN project.data_policy_macroinvertebrate < 50 AND NOT %(has_access)s THEN NULL ELSE mi.density_indha_avg END),
+                'density_indha_sd', (CASE WHEN project.data_policy_macroinvertebrate < 50 AND NOT %(has_access)s THEN NULL ELSE mi.density_indha_sd END),
+                'density_indha_group_interest_avg', (CASE WHEN project.data_policy_macroinvertebrate < 50 AND NOT %(has_access)s THEN NULL ELSE migoi.density_indha_group_interest_avg END),
+                'density_indha_group_interest_sd', (CASE WHEN project.data_policy_macroinvertebrate < 50 AND NOT %(has_access)s THEN NULL ELSE migoi.density_indha_group_interest_sd END)
             )), '{}')
         )) AS protocols
 
@@ -609,6 +630,38 @@ class SummarySampleEventSQLModel(SummarySampleEventBaseModel):
             percent_cover_life_histories_sd
         ) bleachingqc ON (sample_event.id = bleachingqc.sample_event_id)
 
+        LEFT JOIN (
+            SELECT sample_event_id,
+            COUNT(pseudosu_id) AS sample_unit_count,
+            ROUND(AVG(total_abundance), 1) AS count_total_avg,
+            ROUND(STDDEV(total_abundance), 1) AS count_total_sd,
+            ROUND(AVG(density_indha), 2) AS density_indha_avg,
+            ROUND(STDDEV(density_indha), 2) AS density_indha_sd
+            FROM beltinvert_su
+            GROUP BY sample_event_id
+        ) mi ON (sample_event.id = mi.sample_event_id)
+        LEFT JOIN (
+            SELECT sample_event_id,
+            jsonb_object_agg(goi, ROUND(density_avg::numeric, 2))
+                FILTER (WHERE density_avg > 0) AS density_indha_group_interest_avg,
+            jsonb_object_agg(goi, ROUND(density_sd::numeric, 2))
+                FILTER (WHERE density_avg > 0) AS density_indha_group_interest_sd
+            FROM (
+                SELECT sample_event_id, goi,
+                AVG(density) AS density_avg,
+                STDDEV(density) AS density_sd
+                FROM (
+                    SELECT sample_event_id, pseudosu_id, gdata.key AS goi,
+                    SUM(gdata.value::double precision) AS density
+                    FROM beltinvert_su,
+                    LATERAL jsonb_each_text(density_indha_group_interest_zeroes) gdata(key, value)
+                    GROUP BY sample_event_id, pseudosu_id, gdata.key
+                ) mi_goi_su
+                GROUP BY sample_event_id, goi
+            ) mi_goi
+            GROUP BY sample_event_id
+        ) migoi ON (sample_event.id = migoi.sample_event_id)
+
         WHERE site.project_id = '%(project_id)s'::uuid
     """
 
@@ -642,6 +695,7 @@ class BaseProjectSummarySampleEvent(models.Model):
     data_policy_habitatcomplexity = models.CharField(max_length=50, default="awaiting refresh")
     data_policy_bleachingqc = models.CharField(max_length=50, default="awaiting refresh")
     data_policy_benthicpqt = models.CharField(max_length=50, default="awaiting refresh")
+    data_policy_macroinvertebrate = models.CharField(max_length=50, default="awaiting refresh")
     tags = models.JSONField(null=True, blank=True)
     records = models.JSONField(encoder=DjangoJSONEncoder)
     created_on = models.DateTimeField(auto_now_add=True)

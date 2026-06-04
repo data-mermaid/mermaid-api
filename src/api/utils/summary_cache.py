@@ -12,12 +12,19 @@ from ..models import (
     BLEACHINGQC_PROTOCOL,
     FISHBELT_PROTOCOL,
     HABITATCOMPLEXITY_PROTOCOL,
+    MACROINVERTEBRATE_PROTOCOL,
     BeltFishObsModel,
     BeltFishObsSQLModel,
     BeltFishSEModel,
     BeltFishSESQLModel,
     BeltFishSUModel,
     BeltFishSUSQLModel,
+    BeltInvertObsModel,
+    BeltInvertObsSQLModel,
+    BeltInvertSEModel,
+    BeltInvertSESQLModel,
+    BeltInvertSUModel,
+    BeltInvertSUSQLModel,
     BenthicLITObsModel,
     BenthicLITObsSQLModel,
     BenthicLITSEModel,
@@ -242,6 +249,10 @@ def _update_project_summary_sample_events(
             data_policy_benthicpqt=data_policies.get(
                 project.data_policy_benthicpqt, Project.data_policy_benthicpqt.field.default
             ),
+            data_policy_macroinvertebrate=data_policies.get(
+                project.data_policy_macroinvertebrate,
+                Project.data_policy_macroinvertebrate.field.default,
+            ),
             tags=tags,
             records=records,
             created_on=timestamp,
@@ -368,6 +379,18 @@ def update_summary_cache(
                     HabitatComplexitySUModel,
                     HabitatComplexitySESQLModel,
                     HabitatComplexitySEModel,
+                    skip_updates,
+                )
+
+            if sample_unit is None or sample_unit == MACROINVERTEBRATE_PROTOCOL:
+                _update_cache(
+                    project_id,
+                    BeltInvertObsSQLModel,
+                    BeltInvertObsModel,
+                    BeltInvertSUSQLModel,
+                    BeltInvertSUModel,
+                    BeltInvertSESQLModel,
+                    BeltInvertSEModel,
                     skip_updates,
                 )
 

@@ -11,6 +11,7 @@ from ..models import (
     BLEACHINGQC_PROTOCOL,
     FISHBELT_PROTOCOL,
     HABITATCOMPLEXITY_PROTOCOL,
+    MACROINVERTEBRATE_PROTOCOL,
     Project,
 )
 from ..reports import csv_report
@@ -18,6 +19,11 @@ from ..resources.sampleunitmethods.beltfishmethod import (
     BeltFishProjectMethodObsView,
     BeltFishProjectMethodSEView,
     BeltFishProjectMethodSUView,
+)
+from ..resources.sampleunitmethods.beltinvertmethod import (
+    BeltInvertProjectMethodObsView,
+    BeltInvertProjectMethodSEView,
+    BeltInvertProjectMethodSUView,
 )
 from ..resources.sampleunitmethods.benthiclitmethod import (
     BenthicLITProjectMethodObsView,
@@ -156,6 +162,11 @@ def update_summary_csv_cache(project_id, sample_unit=None, skip_test_project=Fal
             _update_cached_csvs(project_id, HabitatComplexityProjectMethodObsView, skip_updates)
             _update_cached_csvs(project_id, HabitatComplexityProjectMethodSUView, skip_updates)
             _update_cached_csvs(project_id, HabitatComplexityProjectMethodSEView, skip_updates)
+
+        if sample_unit is None or sample_unit == MACROINVERTEBRATE_PROTOCOL:
+            _update_cached_csvs(project_id, BeltInvertProjectMethodObsView, skip_updates)
+            _update_cached_csvs(project_id, BeltInvertProjectMethodSUView, skip_updates)
+            _update_cached_csvs(project_id, BeltInvertProjectMethodSEView, skip_updates)
 
         _update_cached_csvs(project_id, SummarySampleEventView, skip_updates)
 

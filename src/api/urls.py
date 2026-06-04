@@ -42,6 +42,12 @@ from .resources.sampleunitmethods.beltfishmethod import (
     BeltFishProjectMethodSEView,
     BeltFishProjectMethodSUView,
 )
+from .resources.sampleunitmethods.beltinvertmethod import (
+    BeltInvertMethodView,
+    BeltInvertProjectMethodObsView,
+    BeltInvertProjectMethodSEView,
+    BeltInvertProjectMethodSUView,
+)
 from .resources.sampleunitmethods.benthiclitmethod import (
     BenthicLITMethodView,
     BenthicLITProjectMethodObsView,
@@ -235,6 +241,22 @@ project_router.register(
     "benthicpqtmethod-sampleevent",
 )
 
+project_router.register(
+    r"beltinverts/obstransectbeltinverts",
+    BeltInvertProjectMethodObsView,
+    "beltinvertmethod-obs",
+)
+project_router.register(
+    r"beltinverts/sampleunits",
+    BeltInvertProjectMethodSUView,
+    "beltinvertmethod-sampleunit",
+)
+project_router.register(
+    r"beltinverts/sampleevents",
+    BeltInvertProjectMethodSEView,
+    "beltinvertmethod-sampleevent",
+)
+
 # Classification
 project_router.register(r"classification/images", ImageViewSet, "image")
 project_router.register(r"classification/statuses", ClassificationStatusViewSet, "status")
@@ -244,6 +266,9 @@ router.register(r"classification/labelmappings", LabelMappingViewSet, "labelmapp
 # multi model sample unit method reports
 
 project_router.register(r"beltfishtransectmethods", BeltFishMethodView, "beltfishtransectmethod")
+project_router.register(
+    r"beltinverttransectmethods", BeltInvertMethodView, "beltinverttransectmethod"
+)
 project_router.register(
     r"benthiclittransectmethods", BenthicLITMethodView, "benthiclittransectmethod"
 )

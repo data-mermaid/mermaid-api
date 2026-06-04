@@ -161,7 +161,13 @@ sample_event_sql_template = """
             WHEN project.data_policy_benthicpqt = 50 THEN 'public summary' :: text
             WHEN project.data_policy_benthicpqt = 100 THEN 'public' :: text
             ELSE '' :: text
-        END AS data_policy_benthicpqt
+        END AS data_policy_benthicpqt,
+        CASE
+            WHEN project.data_policy_macroinvertebrate = 10 THEN 'private' :: text
+            WHEN project.data_policy_macroinvertebrate = 50 THEN 'public summary' :: text
+            WHEN project.data_policy_macroinvertebrate = 100 THEN 'public' :: text
+            ELSE '' :: text
+        END AS data_policy_macroinvertebrate
     FROM
         sample_event se
         JOIN site ON se.site_id = site.id
