@@ -363,15 +363,49 @@ class MonitoringAlerts(Construct):
         # The workspace ID is then visible in the Chatbot console.
 
         if slack_workspace_id and slack_channel_id:
+            # Scoped read-only policy: observability services only, no broad account enumeration.
+            # Used on both the channel role and as the guardrail so effective permissions
+            # are the intersection — scoped reads + Q Developer, nothing else.
+            _observability_actions = [
+                "cloudwatch:Describe*",
+                "cloudwatch:Get*",
+                "cloudwatch:List*",
+                "logs:Describe*",
+                "logs:Get*",
+                "logs:List*",
+                "logs:FilterLogEvents",
+                "logs:StartQuery",
+                "logs:StopQuery",
+                "ecs:Describe*",
+                "ecs:List*",
+                "rds:Describe*",
+                "rds:List*",
+                "cloudformation:Describe*",
+                "cloudformation:List*",
+                "cloudformation:Get*",
+                "sns:Get*",
+                "sns:List*",
+                "sqs:Get*",
+                "sqs:List*",
+            ]
+            observability_policy = iam.ManagedPolicy(
+                self,
+                "SlackObservabilityPolicy",
+                managed_policy_name=f"mermaid-{env_id}-slack-observability",
+                statements=[
+                    iam.PolicyStatement(
+                        actions=_observability_actions,
+                        resources=["*"],
+                    )
+                ],
+            )
             slack_channel_role = iam.Role(
                 self,
                 "SlackChannelConfigurationRole",
                 assumed_by=iam.ServicePrincipal("chatbot.amazonaws.com"),
                 managed_policies=[
-                    # Enables Amazon Q Developer natural-language queries in Slack
                     iam.ManagedPolicy.from_aws_managed_policy_name("AmazonQDeveloperAccess"),
-                    # Allows Q to answer read-only questions about stacks, alarms, ECS, RDS, etc.
-                    iam.ManagedPolicy.from_aws_managed_policy_name("ReadOnlyAccess"),
+                    observability_policy,
                 ],
             )
             chatbot.SlackChannelConfiguration(
@@ -382,9 +416,9 @@ class MonitoringAlerts(Construct):
                 slack_channel_id=slack_channel_id,
                 notification_topics=[self.topic],
                 role=slack_channel_role,
-                # Guardrail caps the effective permissions even if role ever widens
+                # Guardrail = hard ceiling on effective permissions
                 guardrail_policies=[
                     iam.ManagedPolicy.from_aws_managed_policy_name("AmazonQDeveloperAccess"),
-                    iam.ManagedPolicy.from_aws_managed_policy_name("ReadOnlyAccess"),
+                    observability_policy,
                 ],
             )

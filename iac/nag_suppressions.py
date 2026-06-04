@@ -515,13 +515,23 @@ def suppress_api(stack: Stack) -> None:
         [
             NagPackSuppression(
                 id="AwsSolutions-IAM4",
-                reason=f"{ACCEPTED}: AmazonQDeveloperAccess and ReadOnlyAccess are AWS managed "
-                "policies with no customer-managed equivalents for Chatbot/Amazon Q integration. "
-                "ReadOnlyAccess is further constrained by the guardrail policy.",
+                reason=f"{ACCEPTED}: AmazonQDeveloperAccess is an AWS managed policy with no "
+                "customer-managed equivalent for Amazon Q Developer in Slack.",
                 applies_to=[
                     "Policy::arn:<AWS::Partition>:iam::aws:policy/AmazonQDeveloperAccess",
-                    "Policy::arn:<AWS::Partition>:iam::aws:policy/ReadOnlyAccess",
                 ],
+            ),
+        ],
+    )
+    _suppress_by_path(
+        stack,
+        "Alerts/SlackObservabilityPolicy/Resource",
+        [
+            NagPackSuppression(
+                id="AwsSolutions-IAM5",
+                reason=f"{ACCEPTED}: Observability read actions (cloudwatch:Get*, ecs:List*, etc.) "
+                "operate on account-wide resources by design — CloudWatch metrics and ECS services "
+                "cannot be scoped to a single ARN without breaking Describe/List semantics.",
             ),
         ],
     )
