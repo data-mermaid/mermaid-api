@@ -1,6 +1,7 @@
 """Settings for production environment"""
 
 from settings.settings import DatabaseSettings, DjangoSettings, ProjectSettings
+import os
 
 PROD_ENV_ID = "prod"
 PROD_SETTINGS = ProjectSettings(
@@ -31,5 +32,8 @@ PROD_SETTINGS = ProjectSettings(
         ic_s3_path_test="mermaid-production-test/",
         # Secrets
         env_secret_name="prod/mermaid-api-GUqRBj",
+        # Slack alerts via AWS Chatbot — fill in after connecting workspace in console
+        slack_workspace_id=os.getenv("SLACK_WORKSPACE_ID", ""),
+        slack_channel_id=os.getenv("SLACK_CHANNEL_ID", ""),
     ),
 )

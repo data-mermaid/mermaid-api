@@ -58,6 +58,11 @@ class DjangoSettings:
     mc_user: str = "Mermaid"
     ic_bucket_name_test: str = ""
     ic_s3_path_test: str = ""
+    # AWS Chatbot Slack integration (leave empty to disable)
+    # workspace ID: AWS Console → Chatbot → Configured clients → Slack
+    # channel ID: right-click channel in Slack → View channel details → bottom of About tab
+    slack_workspace_id: str = ""
+    slack_channel_id: str = ""
 
 
 @dataclass

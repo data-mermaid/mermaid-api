@@ -492,6 +492,22 @@ def suppress_api(stack: Stack) -> None:
             ],
         )
 
+    # --- MonitoringAlerts SNS topic ---
+    _suppress_by_path(
+        stack,
+        "Alerts/AlertsTopic/Resource",
+        [
+            NagPackSuppression(
+                id="AwsSolutions-SNS2",
+                reason=f"{TODO}: Encrypt the alerts SNS topic with a KMS CMK.",
+            ),
+            NagPackSuppression(
+                id="AwsSolutions-SNS3",
+                reason=f"{TODO}: Add aws:SecureTransport condition to the alerts SNS topic policy.",
+            ),
+        ],
+    )
+
 
 # ---------------------------------------------------------------------------
 # SagemakerStack (dev only)

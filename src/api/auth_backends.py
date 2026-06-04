@@ -14,6 +14,11 @@ from api.utils.auth0utils import decode, get_jwt_token, get_user_info, is_hs_tok
 logger = logging.getLogger(__name__)
 
 
+def _get_client_ip(request):
+    xff = request.META.get("HTTP_X_FORWARDED_FOR", "")
+    return xff.split(",")[0].strip() if xff else request.META.get("REMOTE_ADDR", "unknown")
+
+
 class JWTAuthentication(BaseAuthentication):
     """
     Token based authentication using the JSON Web Token standard.
@@ -39,8 +44,17 @@ class JWTAuthentication(BaseAuthentication):
             logger.debug("Invalid Token: {}".format(jwt_token))
             return None
 
-        payload = decode(jwt_token)
-        profile = self._authenticate_profile(payload)
+        try:
+            payload = decode(jwt_token)
+            profile = self._authenticate_profile(payload)
+        except (exceptions.AuthenticationFailed, exceptions.ValidationError) as exc:
+            logger.warning(
+                "[auth0.failed_auth] reason=%s ip=%s path=%s",
+                str(exc),
+                _get_client_ip(request),
+                request.path,
+            )
+            raise
 
         # use a dummy Django user. (it doesn't stop you from scaling
         # to any number of instances as well).
