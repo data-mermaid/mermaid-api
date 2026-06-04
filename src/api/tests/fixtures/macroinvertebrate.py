@@ -42,6 +42,13 @@ def invert_group_of_interest_1(db):
 
 
 @pytest.fixture
+def invert_group_of_interest_2(db):
+    return InvertGroupOfInterest.objects.create(
+        name="Crown-of-thorns starfish (COTS)", status=SUPERUSER_APPROVED
+    )
+
+
+@pytest.fixture
 def invert_class_1(db):
     return InvertClass.objects.create(name="Echinoidea", status=SUPERUSER_APPROVED)
 

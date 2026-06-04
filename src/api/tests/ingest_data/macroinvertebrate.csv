@@ -1,0 +1,13 @@
+Site *,Management *,Observer emails *,Sample date: Year *,Sample date: Month *,Sample date: Day *,Depth *,Transect number *,Transect label,Transect length surveyed *,Width *,Size bin,Visibility,Relative depth,Reef slope,Current,Tide,Sample unit notes,Invert name *,Count *,Size,Include,Observation notes,Sample time
+Site 1,Management 1,profile1@mermaidcollect.org,2021,4,10,5,1,,50,1m,1,Near,Shallow,flat,Weak,Low,SU notes,Strongylocentrotus purpuratus,3,4.5,True,,09:00:00
+Site 1,Management 1,profile1@mermaidcollect.org,2021,4,10,5,1,,50,1m,1,Near,Shallow,flat,Weak,Low,SU notes,Strongylocentrotus purpuratus,5,3.0,True,,09:00:00
+Site 1,Management 1,profile1@mermaidcollect.org,2021,4,10,5,1,,50,1m,1,Near,Shallow,flat,Weak,Low,SU notes,Strongylocentrotus purpuratus,2,6.0,True,,09:00:00
+Site 1,Management 1,profile1@mermaidcollect.org,2021,4,10,5,1,,50,1m,1,Near,Shallow,flat,Weak,Low,SU notes,Strongylocentrotus purpuratus,1,5.5,True,,09:00:00
+Site 1,Management 1,profile1@mermaidcollect.org,2021,4,10,5,1,,50,1m,1,Near,Shallow,flat,Weak,Low,SU notes,Strongylocentrotus purpuratus,4,2.0,True,,09:00:00
+Site 1,Management 1,profile1@mermaidcollect.org,2021,4,10,5,1,,50,1m,1,Near,Shallow,flat,Weak,Low,SU notes,Strongylocentrotus purpuratus,2,7.5,False,,09:00:00
+Site 2,Management 1,profile1@mermaidcollect.org,2021,4,10,5,1,,50,1m,1,Near,Shallow,flat,Weak,Low,SU notes,Strongylocentrotus purpuratus,6,4.0,True,,09:00:00
+Site 2,Management 1,profile1@mermaidcollect.org,2021,4,10,5,1,,50,1m,1,Near,Shallow,flat,Weak,Low,SU notes,Strongylocentrotus purpuratus,3,3.5,True,,09:00:00
+Site 2,Management 1,profile1@mermaidcollect.org,2021,4,10,5,1,,50,1m,1,Near,Shallow,flat,Weak,Low,SU notes,Strongylocentrotus purpuratus,1,5.0,True,,09:00:00
+Site 2,Management 1,profile1@mermaidcollect.org,2021,4,10,5,1,,50,1m,1,Near,Shallow,flat,Weak,Low,SU notes,Strongylocentrotus purpuratus,2,4.5,True,,09:00:00
+Site 2,Management 1,profile1@mermaidcollect.org,2021,4,10,5,1,,50,1m,1,Near,Shallow,flat,Weak,Low,SU notes,Strongylocentrotus purpuratus,4,6.5,True,,09:00:00
+Site 2,Management 1,profile1@mermaidcollect.org,2021,4,10,5,1,,50,1m,1,Near,Shallow,flat,Weak,Low,SU notes,Strongylocentrotus purpuratus,1,2.5,False,,09:00:00
