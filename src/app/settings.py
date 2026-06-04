@@ -308,12 +308,24 @@ def _sentry_traces_sampler(sampling_context):
     return 0.3 if ENVIRONMENT == "prod" else 0.1
 
 
+def _sentry_before_send(event, hint):
+    import logging as _logging
+
+    level = event.get("level", "error")
+    transaction = event.get("transaction") or event.get("culprit") or "unknown"
+    _logging.getLogger(__name__).warning(
+        "[sentry.error_captured] level=%s transaction=%s", level, transaction
+    )
+    return event
+
+
 if ENVIRONMENT in ("dev", "prod"):
     sentry_sdk.init(
         dsn=os.environ.get("SENTRY_DSN"),
         environment=ENVIRONMENT,
         release=API_VERSION,
         traces_sampler=_sentry_traces_sampler,
+        before_send=_sentry_before_send,
         # Profile 10% of sampled transactions (prod: ~3% of requests, dev: ~1%)
         profiles_sample_rate=0.1,
         # Attach a stack trace to logger.error() calls that have no exception

@@ -317,6 +317,41 @@ class MonitoringAlerts(Construct):
             )
         )
 
+        # ── Sentry (before_send hook → CloudWatch → SNS → Slack) ────────
+        # _sentry_before_send in settings.py emits [sentry.error_captured] on
+        # every event forwarded to Sentry, routing error counts through the
+        # existing CloudWatch → SNS → Chatbot pipeline at no extra cost.
+
+        sentry_metric = logs.MetricFilter(
+            self,
+            "SentryErrorMetricFilter",
+            log_group=api_log_group,
+            filter_pattern=logs.FilterPattern.literal('"[sentry.error_captured]"'),
+            metric_namespace=f"MERMAID/{env_id}/Sentry",
+            metric_name="ErrorsCaptured",
+            metric_value="1",
+            default_value=0,
+        )
+        alarms.append(
+            cw.Alarm(
+                self,
+                "SentryErrorAlarm",
+                alarm_name=f"mermaid-{env_id}-sentry-errors",
+                alarm_description=(
+                    "Sentry captured more than 10 errors in 5 minutes — "
+                    "check Sentry dashboard for details"
+                ),
+                metric=sentry_metric.metric(
+                    statistic="Sum",
+                    period=Duration.minutes(5),
+                ),
+                threshold=10,
+                evaluation_periods=1,
+                comparison_operator=cw.ComparisonOperator.GREATER_THAN_THRESHOLD,
+                treat_missing_data=cw.TreatMissingData.NOT_BREACHING,
+            )
+        )
+
         # Wire all alarms to the shared topic (alarm and recovery notifications)
         for alarm in alarms:
             alarm.add_alarm_action(sns_action)
