@@ -49,6 +49,8 @@ If the protocol introduces its own attribute/taxonomy hierarchy (Django MTI from
   - `"read_only": False` — enables the propose-new-attribute flow for authenticated users
   - `"visibility_filtered": True` — filters nodes based on status/visibility so only approved entries are synced to clients
   - Add the source type constant to `CACHEABLE_SOURCE_TYPES` so pull responses are cached
+- Add a DB trigger for the new attribute table in `src/api/models/revisions.py` `forward_sql` and `reverse_sql` (follow the `invert_attribute_trigger` pattern); without this the pull endpoint's INNER JOIN on the revision table returns nothing and `last_revision_num` is always null
+- Create a migration that: (1) installs the trigger via `RunSQL`, then (2) backfills revision records for any rows already seeded by data migrations via `RunPython` touching `updated_on` — data migrations run before the trigger migration, so seeded rows have no revision entries
 
 ## Choices Endpoint
 
