@@ -61,6 +61,8 @@ jobs:
         env:
           CDK_DEFAULT_ACCOUNT: ${{ secrets.CDK_DEFAULT_ACCOUNT }}
           PYTHONPATH: ${{ github.workspace }}
+          SLACK_CHANNEL_ID: ${{ secrets.SLACK_CHANNEL_ID }}
+          SLACK_WORKSPACE_ID: ${{ secrets.SLACK_WORKSPACE_ID }}
         run: |
           set -o pipefail
           cd iac && cdk synth --quiet 2>&1 | tee /tmp/cdk-nag.log
@@ -124,6 +126,8 @@ jobs:
           CDK_DEFAULT_ACCOUNT: ${{ secrets.CDK_DEFAULT_ACCOUNT }}
           PYTHONPATH: ${{ github.workspace }}
           SYS_EMAIL: ${{ secrets.SYS_EMAIL }}
+          SLACK_CHANNEL_ID: ${{ secrets.SLACK_CHANNEL_ID }}
+          SLACK_WORKSPACE_ID: ${{ secrets.SLACK_WORKSPACE_ID }}
         run: |
           cd iac && ./cdk_diff.sh
 
