@@ -99,11 +99,17 @@ class Auth0ManagementAPI(object):
             if e.status_code == 429:
                 logger.warning("[auth0.rate_limit] Management API rate limit hit: %s", e)
             else:
-                logger.error("[auth0.service_unavailable] Management API error status=%s: %s", e.status_code, e)
-            raise Auth0ServiceUnavailable()
+                logger.error(
+                    "[auth0.service_unavailable] Management API error status=%s: %s",
+                    e.status_code,
+                    e,
+                )
+            raise Auth0ServiceUnavailable() from e
         except (ReadTimeout, Timeout, ConnectionError) as e:
-            logger.error("[auth0.service_unavailable] Management API timeout/connection error: %s", e)
-            raise Auth0ServiceUnavailable()
+            logger.error(
+                "[auth0.service_unavailable] Management API timeout/connection error: %s", e
+            )
+            raise Auth0ServiceUnavailable() from e
 
 
 def is_hs_token(token):
@@ -142,7 +148,7 @@ def get_jwt_token(request):
 
         token = auth[1]
     elif len(auth) > 2:
-        msg = _("Invalid Authorization header. Credentials string " "should not contain spaces.")
+        msg = _("Invalid Authorization header. Credentials string should not contain spaces.")
         raise exceptions.AuthenticationFailed(msg)
     else:
         token = request.query_params.get("access_token")
@@ -169,11 +175,20 @@ def get_user_info(user_id):
         if e.status_code == 429:
             logger.warning("[auth0.rate_limit] User info API rate limit hit for %s: %s", user_id, e)
         else:
-            logger.error("[auth0.service_unavailable] User info API error status=%s for %s: %s", e.status_code, user_id, e)
-        raise Auth0ServiceUnavailable()
+            logger.error(
+                "[auth0.service_unavailable] User info API error status=%s for %s: %s",
+                e.status_code,
+                user_id,
+                e,
+            )
+        raise Auth0ServiceUnavailable() from e
     except (ReadTimeout, Timeout, ConnectionError) as e:
-        logger.error("[auth0.service_unavailable] User info API timeout/connection error for %s: %s", user_id, e)
-        raise Auth0ServiceUnavailable()
+        logger.error(
+            "[auth0.service_unavailable] User info API timeout/connection error for %s: %s",
+            user_id,
+            e,
+        )
+        raise Auth0ServiceUnavailable() from e
 
     um = ui.get("user_metadata") or {}
 
