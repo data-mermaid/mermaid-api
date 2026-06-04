@@ -111,16 +111,27 @@ IN_ECS = METADATA_URI is not None
 ECS_TASK_ARN = ""
 ECS_CONTAINER_ID = ""
 if IN_ECS:
-    container_metadata = requests.get(METADATA_URI).json()
-    # allow container IPs for ALB health checks
-    ALLOWED_HOSTS.append(container_metadata["Networks"][0]["IPv4Addresses"][0])
-    ALLOWED_HOSTS.append(".datamermaid.org")
+    import logging as _logging
+
+    _ecs_logger = _logging.getLogger(__name__)
     try:
-        _task_metadata = requests.get(f"{METADATA_URI}/task").json()
-        ECS_TASK_ARN = _task_metadata.get("TaskARN", "")
-    except Exception:
-        pass
-    ECS_CONTAINER_ID = container_metadata.get("DockerId", "")[:12]
+        _container_resp = requests.get(METADATA_URI, timeout=2)
+        _container_resp.raise_for_status()
+        container_metadata = _container_resp.json()
+        # allow container IPs for ALB health checks
+        _ip = container_metadata["Networks"][0]["IPv4Addresses"][0]
+        ALLOWED_HOSTS.append(_ip)
+        ALLOWED_HOSTS.append(".datamermaid.org")
+        ECS_CONTAINER_ID = container_metadata.get("DockerId", "")[:12]
+    except (requests.RequestException, KeyError, IndexError, ValueError) as e:
+        _ecs_logger.warning("ECS container metadata fetch failed: %s", e)
+
+    try:
+        _task_resp = requests.get(f"{METADATA_URI}/task", timeout=2)
+        _task_resp.raise_for_status()
+        ECS_TASK_ARN = _task_resp.json().get("TaskARN", "")
+    except (requests.RequestException, KeyError, ValueError) as e:
+        _ecs_logger.warning("ECS task metadata fetch failed: %s", e)
 
 if ENVIRONMENT not in ("dev", "prod"):
     DEBUG_LEVEL = "DEBUG"
