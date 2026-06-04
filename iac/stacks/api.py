@@ -293,11 +293,10 @@ class ApiStack(Stack):
         task_definition = ecs.Ec2TaskDefinition(
             self, id="ApiTaskDefinition", network_mode=ecs.NetworkMode.AWS_VPC
         )
-        api_log_group = logs.LogGroup(
+        api_log_group = logs.LogGroup.from_log_group_name(
             self,
             "ApiLogGroup",
-            log_group_name=f"/mermaid/{config.env_id}/api",
-            retention=logs.RetentionDays.ONE_MONTH,
+            f"/mermaid/{config.env_id}/api",
         )
         task_definition.add_container(
             id="MermaidAPI",
