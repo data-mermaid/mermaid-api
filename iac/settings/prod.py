@@ -34,6 +34,6 @@ PROD_SETTINGS = ProjectSettings(
         env_secret_name="prod/mermaid-api-GUqRBj",
         # Slack alerts via AWS Chatbot — fill in after connecting workspace in console
         slack_workspace_id=os.getenv("SLACK_WORKSPACE_ID", ""),
-        slack_channel_id=os.getenv("SLACK_WORKSPACE_ID", ""),
+        slack_channel_id=os.getenv("SLACK_CHANNEL_ID", ""),
     ),
 )
