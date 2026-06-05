@@ -446,9 +446,9 @@ class SampleUnitMethodView(BaseProjectApiViewSet):
 
         return qs
 
-    def limit_to_project(self, request, *args, **kwargs):
-        prj_pk = check_uuid(kwargs["project_pk"])
-        self.queryset = self.get_queryset().filter(
+    @staticmethod
+    def _project_q(prj_pk):
+        return (
             Q(benthiclit__transect__sample_event__site__project=prj_pk)
             | Q(benthicpit__transect__sample_event__site__project=prj_pk)
             | Q(habitatcomplexity__transect__sample_event__site__project=prj_pk)
@@ -457,6 +457,10 @@ class SampleUnitMethodView(BaseProjectApiViewSet):
             | Q(benthicphotoquadrattransect__quadrat_transect__sample_event__site__project=prj_pk)
             | Q(beltinvert__transect__sample_event__site__project=prj_pk)
         )
+
+    def limit_to_project(self, request, *args, **kwargs):
+        prj_pk = check_uuid(kwargs["project_pk"])
+        self.queryset = self.get_queryset().filter(self._project_q(prj_pk))
         return self.queryset
 
     def get_serializer_context(self):
@@ -482,17 +486,7 @@ class SampleUnitMethodView(BaseProjectApiViewSet):
             When(beltinvert__id__isnull=False, then="beltinvert__transect__sample_event_id"),
         )
         rows = (
-            TransectMethod.objects.filter(
-                Q(benthiclit__transect__sample_event__site__project=prj_pk)
-                | Q(benthicpit__transect__sample_event__site__project=prj_pk)
-                | Q(habitatcomplexity__transect__sample_event__site__project=prj_pk)
-                | Q(bleachingquadratcollection__quadrat__sample_event__site__project=prj_pk)
-                | Q(beltfish__transect__sample_event__site__project=prj_pk)
-                | Q(
-                    benthicphotoquadrattransect__quadrat_transect__sample_event__site__project=prj_pk
-                )
-                | Q(beltinvert__transect__sample_event__site__project=prj_pk)
-            )
+            TransectMethod.objects.filter(self._project_q(prj_pk))
             .annotate(_se_id=sample_event_id_case)
             .values_list("id", "_se_id")
         )
@@ -501,7 +495,8 @@ class SampleUnitMethodView(BaseProjectApiViewSet):
         sample_event_ids = []
         for tm_id, se_id in rows:
             transect_method_ids.append(tm_id)
-            sample_event_ids.append(se_id)
+            if se_id is not None:
+                sample_event_ids.append(se_id)
 
         context["sample_events"] = {
             str(se.id): se
