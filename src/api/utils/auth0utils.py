@@ -7,6 +7,7 @@ from urllib.request import urlopen
 from auth0.v3.authentication import GetToken
 from auth0.v3.exceptions import Auth0Error
 from auth0.v3.management import Auth0
+from django.core.cache import cache
 from django.utils.encoding import smart_str
 from django.utils.translation import gettext as _
 from jose import jws, jwt
@@ -205,18 +206,27 @@ def get_token_algorithm(token):
     return unverified_header.get("alg")
 
 
+_JWKS_CACHE_KEY = "auth0_jwks"
+_JWKS_CACHE_TTL = 86400  # 24 hours; restart or cache flush handles key rotation
+
+
 def get_jwks():
-    jwks = {}
+    cached = cache.get(_JWKS_CACHE_KEY)
+    if cached is not None:
+        return cached
+
     url = "https://{}/.well-known/jwks.json".format(settings.AUTH0_DOMAIN)
     resp = urlopen(url)
     if resp.getcode() != 200:
         return None
 
+    jwks = {}
     keys = json.loads(resp.read()).get("keys") or []
     for key in keys:
         jwks[key["kid"]] = dict(
             kty=key["kty"], kid=key["kid"], use=key["use"], n=key["n"], e=key["e"]
         )
+    cache.set(_JWKS_CACHE_KEY, jwks, _JWKS_CACHE_TTL)
     return jwks
 
 

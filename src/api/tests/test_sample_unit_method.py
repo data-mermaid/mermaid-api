@@ -3,6 +3,25 @@ from django.urls import reverse
 from api.models import AuditRecord, BeltFish, CollectRecord, Revision
 
 
+def test_sampleunitmethods_list_includes_macroinvertebrate(
+    client,
+    db_setup,
+    project1,
+    token1,
+    belt_invert1,
+):
+    url = reverse("sampleunitmethod-list", kwargs={"project_pk": str(project1.pk)})
+    response = client.get(
+        f"{url}?protocol=macroinvertebrate",
+        HTTP_AUTHORIZATION=f"Bearer {token1}",
+    )
+    data = response.json()
+
+    assert response.status_code == 200
+    assert data["count"] == 1
+    assert data["results"][0]["protocol"] == "macroinvertebrate"
+
+
 def _get_latest_proj_revision():
     revision_num = (
         Revision.objects.filter(table_name="project").order_by("-revision_num")[0].revision_num
