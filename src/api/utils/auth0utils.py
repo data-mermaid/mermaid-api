@@ -2,6 +2,7 @@ import json
 import logging
 import random
 import string
+import time
 from urllib.request import urlopen
 
 from auth0.v3.authentication import GetToken
@@ -207,13 +208,16 @@ def get_token_algorithm(token):
 
 
 _JWKS_CACHE_KEY = "auth0_jwks"
-_JWKS_CACHE_TTL = 86400  # 24 hours; restart or cache flush handles key rotation
+_JWKS_CACHE_TTL = 86400  # 24 hours
+_JWKS_MIN_REFRESH_INTERVAL = 300  # seconds between forced refreshes on kid-miss
+_JWKS_LAST_FORCED_REFRESH = 0.0  # module-level; per-process, not exact
 
 
-def get_jwks():
-    cached = cache.get(_JWKS_CACHE_KEY)
-    if cached is not None:
-        return cached
+def get_jwks(force_refresh=False):
+    if not force_refresh:
+        cached = cache.get(_JWKS_CACHE_KEY)
+        if cached is not None:
+            return cached
 
     url = "https://{}/.well-known/jwks.json".format(settings.AUTH0_DOMAIN)
     resp = urlopen(url)
@@ -231,9 +235,16 @@ def get_jwks():
 
 
 def decode_rsa(token):
+    global _JWKS_LAST_FORCED_REFRESH
     unverified_header = jwt.get_unverified_header(token)
     jwks = get_jwks()
-    rsa_key = jwks.get(unverified_header["kid"])
+    rsa_key = jwks.get(unverified_header["kid"]) if jwks else None
+    if rsa_key is None:
+        now = time.monotonic()
+        if now - _JWKS_LAST_FORCED_REFRESH >= _JWKS_MIN_REFRESH_INTERVAL:
+            _JWKS_LAST_FORCED_REFRESH = now
+            jwks = get_jwks(force_refresh=True)
+            rsa_key = jwks.get(unverified_header["kid"]) if jwks else None
     if rsa_key is None:
         msg = "Unable to find appropriate key"
         raise exceptions.ValidationError(msg, code=400)
