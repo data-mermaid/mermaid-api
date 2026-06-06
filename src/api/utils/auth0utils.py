@@ -244,8 +244,11 @@ def decode_rsa(token):
     unverified_header = jwt.get_unverified_header(token)
     jwks = get_jwks()
     rsa_key = jwks.get(unverified_header["kid"]) if jwks else None
-    if rsa_key is None and cache.add(_JWKS_REFRESH_LOCK_KEY, True, _JWKS_MIN_REFRESH_INTERVAL):
-        jwks = get_jwks(force_refresh=True)
+    if rsa_key is None:
+        if cache.add(_JWKS_REFRESH_LOCK_KEY, True, _JWKS_MIN_REFRESH_INTERVAL):
+            jwks = get_jwks(force_refresh=True)
+        else:
+            jwks = get_jwks()
         rsa_key = jwks.get(unverified_header["kid"]) if jwks else None
     if rsa_key is None:
         msg = "Unable to find appropriate key"
