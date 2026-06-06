@@ -23,6 +23,7 @@ from api.resources import (
     project_profile,
     psite,
 )
+from api.resources.invert_attribute import InvertSpeciesViewSet
 from ...exceptions import ReadOnlyError
 from .pull import get_record, get_serialized_records, serialize_revisions
 from .push import apply_changes, get_request_method
@@ -43,6 +44,7 @@ FISH_GENERA_SOURCE_TYPE = "fish_genera"
 FISH_GROUPINGS_SOURCE_TYPE = "fish_groupings"
 FISH_SPECIES_SOURCE_TYPE = "fish_species"
 INVERT_ATTRIBUTES_SOURCE_TYPE = "invert_attributes"
+INVERT_SPECIES_SOURCE_TYPE = "invert_species"
 CHOICES_SOURCE_TYPE = "choices"
 
 CACHEABLE_SOURCE_TYPES = (
@@ -52,6 +54,7 @@ CACHEABLE_SOURCE_TYPES = (
     FISH_GROUPINGS_SOURCE_TYPE,
     FISH_SPECIES_SOURCE_TYPE,
     INVERT_ATTRIBUTES_SOURCE_TYPE,
+    INVERT_SPECIES_SOURCE_TYPE,
 )
 
 project_sources = {
@@ -115,6 +118,12 @@ non_project_sources = {
     },
     INVERT_ATTRIBUTES_SOURCE_TYPE: {
         "view": invert_attribute.InvertAttributeViewSet,
+        "required_filters": NO_FILTERS,
+        "read_only": True,
+        "visibility_filtered": True,
+    },
+    INVERT_SPECIES_SOURCE_TYPE: {
+        "view": InvertSpeciesViewSet,
         "required_filters": NO_FILTERS,
         "read_only": False,
         "visibility_filtered": True,

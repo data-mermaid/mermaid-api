@@ -1,6 +1,7 @@
 from decimal import Decimal
 
-from api.models import InvertBeltTransect
+from api.models import InvertBeltTransect, InvertSpecies
+from api.models.base import PROPOSED
 
 
 def test_list_invert_attributes_returns_user_visible_hierarchy(
@@ -217,6 +218,17 @@ def test_invertbelttransect_filter_size_bin(
     resp = api_client1.get(url, {"size_bin": str(invert_size_bin_2.pk)}, format="json")
     assert resp.status_code == 200
     assert resp.json()["count"] == 0
+
+
+def test_post_invert_species_creates_proposed(db_setup, api_client1, invert_genus_1):
+    """POST /v1/invertspecies/ creates a proposed InvertSpecies owned by the authenticated user."""
+    payload = {"name": "newspecies", "genus": str(invert_genus_1.pk)}
+    response = api_client1.post("/v1/invertspecies/", data=payload, format="json")
+    assert response.status_code == 201
+    data = response.json()
+    assert data["status"] == PROPOSED
+    assert data["display_name"] == f"{invert_genus_1.name} newspecies"
+    assert InvertSpecies.objects.filter(name="newspecies", genus=invert_genus_1).exists()
 
 
 def test_sample_unit_method_search_fields_include_beltinvert():
