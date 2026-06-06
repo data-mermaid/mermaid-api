@@ -1,7 +1,9 @@
 import json
 import logging
 import random
+import socket
 import string
+from urllib.error import HTTPError, URLError
 from urllib.request import urlopen
 
 from auth0.v3.authentication import GetToken
@@ -219,12 +221,17 @@ def get_jwks(force_refresh=False):
             return cached
 
     url = "https://{}/.well-known/jwks.json".format(settings.AUTH0_DOMAIN)
-    resp = urlopen(url)
-    if resp.getcode() != 200:
+    try:
+        resp = urlopen(url, timeout=10)
+        if resp.getcode() != 200:
+            logger.warning("[auth0.jwks] Unexpected status %s fetching JWKS", resp.getcode())
+            return None
+        keys = json.loads(resp.read()).get("keys") or []
+    except (URLError, HTTPError, socket.timeout, json.JSONDecodeError) as e:
+        logger.warning("[auth0.jwks] Failed to fetch JWKS: %s", e)
         return None
 
     jwks = {}
-    keys = json.loads(resp.read()).get("keys") or []
     for key in keys:
         jwks[key["kid"]] = dict(
             kty=key["kty"], kid=key["kid"], use=key["use"], n=key["n"], e=key["e"]
@@ -237,8 +244,7 @@ def decode_rsa(token):
     unverified_header = jwt.get_unverified_header(token)
     jwks = get_jwks()
     rsa_key = jwks.get(unverified_header["kid"]) if jwks else None
-    if rsa_key is None and not cache.get(_JWKS_REFRESH_LOCK_KEY):
-        cache.set(_JWKS_REFRESH_LOCK_KEY, True, _JWKS_MIN_REFRESH_INTERVAL)
+    if rsa_key is None and cache.add(_JWKS_REFRESH_LOCK_KEY, True, _JWKS_MIN_REFRESH_INTERVAL):
         jwks = get_jwks(force_refresh=True)
         rsa_key = jwks.get(unverified_header["kid"]) if jwks else None
     if rsa_key is None:
