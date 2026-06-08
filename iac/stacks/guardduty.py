@@ -60,7 +60,7 @@ def handler(event, context):
                             },
                             {
                                 'Name': 'ECS_FARGATE_AGENT_MANAGEMENT',
-                                'Status': 'ENABLED'
+                                'Status': 'DISABLED'
                             }
                         ]
                     }
@@ -103,7 +103,7 @@ def handler(event, context):
                             name="EC2_AGENT_MANAGEMENT", status="ENABLED"
                         ),
                         guardduty.CfnDetector.CFNFeatureAdditionalConfigurationProperty(
-                            name="ECS_FARGATE_AGENT_MANAGEMENT", status="ENABLED"
+                            name="ECS_FARGATE_AGENT_MANAGEMENT", status="DISABLED"
                         ),
                     ],
                 ),
@@ -114,7 +114,7 @@ def handler(event, context):
                     name="RDS_LOGIN_EVENTS", status="ENABLED"
                 ),
                 guardduty.CfnDetector.CFNFeatureConfigurationProperty(
-                    name="LAMBDA_NETWORK_LOGS", status="ENABLED"
+                    name="LAMBDA_NETWORK_LOGS", status="DISABLED"
                 ),
                 guardduty.CfnDetector.CFNFeatureConfigurationProperty(
                     name="EKS_AUDIT_LOGS", status="DISABLED"
@@ -133,9 +133,23 @@ def handler(event, context):
             ),
             managed_policies=[
                 iam.ManagedPolicy.from_aws_managed_policy_name("AmazonGuardDutyFullAccess_v2"),
-                iam.ManagedPolicy.from_aws_managed_policy_name("AmazonS3FullAccess"),
             ],
             role_name=guardduty_role_name,
+        )
+
+        guardduty_role.add_to_policy(
+            iam.PolicyStatement(
+                actions=[
+                    "s3:GetObject",
+                    "s3:GetObjectTagging",
+                    "s3:PutObjectTagging",
+                    "s3:GetBucketLocation",
+                ],
+                resources=(
+                    [f"arn:aws:s3:::{b}" for b in s3_buckets]
+                    + [f"arn:aws:s3:::{b}/*" for b in s3_buckets]
+                ),
+            )
         )
 
         guardduty_role.add_to_policy(

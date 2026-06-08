@@ -82,18 +82,11 @@ class CloudTrailStack(Stack):
             cloud_watch_logs_retention=logs.RetentionDays.THREE_YEARS,
             enable_file_validation=True,
             include_global_service_events=True,
-            insight_types=[
-                cloudtrail.InsightType.API_CALL_RATE,
-                cloudtrail.InsightType.API_ERROR_RATE,
-            ],
             is_multi_region_trail=True,
             management_events=cloudtrail.ReadWriteType.ALL,
             send_to_cloud_watch_logs=True,
             sns_topic=delivery_topic,
         )
-        trail.log_all_lambda_data_events()
-        trail.log_all_s3_data_events()
-
         CfnOutput(self, "CloudTrailBucketName", value=trail_bucket.bucket_name)
         CfnOutput(self, "CloudTrailDeliveryTopicArn", value=delivery_topic.topic_arn)
 

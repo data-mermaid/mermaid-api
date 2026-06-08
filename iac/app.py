@@ -118,14 +118,14 @@ prod_api_stack = ApiStack(
     report_s3_creds=common_stack.report_s3_creds,
 )
 
-CloudTrailStack(
+cloudtrail_stack = CloudTrailStack(
     app,
     "mermaid-cloudtrail",
     env=cdk_env,
     tags={"Env": "Common"},
 )
 
-GuardDutyStack(
+guardduty_stack = GuardDutyStack(
     app,
     f"mermaid-guardduty-{cdk_env.region}",
     env=cdk_env,
@@ -168,7 +168,8 @@ nag_suppressions.apply_all(
     dev_api_stack=dev_api_stack,
     prod_api_stack=prod_api_stack,
     dev_sagemaker_stack=dev_sagemaker_stack,
-
+    cloudtrail_stack=cloudtrail_stack,
+    guardduty_stack=guardduty_stack,
 )
 
 app.synth()
