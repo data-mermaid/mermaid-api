@@ -447,25 +447,37 @@ class SampleUnitMethodView(BaseProjectApiViewSet):
         return qs
 
     @staticmethod
-    def _project_q(prj_pk):
-        return (
-            Q(benthiclit__transect__sample_event__site__project=prj_pk)
-            | Q(benthicpit__transect__sample_event__site__project=prj_pk)
-            | Q(habitatcomplexity__transect__sample_event__site__project=prj_pk)
-            | Q(beltfish__transect__sample_event__site__project=prj_pk)
-            | Q(bleachingquadratcollection__quadrat__sample_event__site__project=prj_pk)
-            | Q(benthicphotoquadrattransect__quadrat_transect__sample_event__site__project=prj_pk)
-            | Q(beltinvert__transect__sample_event__site__project=prj_pk)
+    def _matching_transect_method_ids(prj_pk):
+        # OR-ing a *_sample_event__site__project=prj_pk condition per subtype against
+        # self.queryset (select_related + annotated) makes Postgres build every
+        # subtype's full join chain for the whole table before filtering — slow to
+        # list and slow to COUNT for pagination. Narrowing to the project's
+        # sample_event ids first lets each subtype be filtered independently by
+        # __in on a lean queryset; limit_to_project then applies the resulting ids
+        # to self.queryset via cheap id__in.
+        sample_event_ids = SampleEvent.objects.filter(site__project_id=prj_pk).values_list(
+            "id", flat=True
         )
+        q = (
+            Q(benthiclit__transect__sample_event_id__in=sample_event_ids)
+            | Q(benthicpit__transect__sample_event_id__in=sample_event_ids)
+            | Q(habitatcomplexity__transect__sample_event_id__in=sample_event_ids)
+            | Q(beltfish__transect__sample_event_id__in=sample_event_ids)
+            | Q(bleachingquadratcollection__quadrat__sample_event_id__in=sample_event_ids)
+            | Q(benthicphotoquadrattransect__quadrat_transect__sample_event_id__in=sample_event_ids)
+            | Q(beltinvert__transect__sample_event_id__in=sample_event_ids)
+        )
+        return list(TransectMethod.objects.filter(q).distinct().values_list("id", flat=True))
 
     def limit_to_project(self, request, *args, **kwargs):
         prj_pk = check_uuid(kwargs["project_pk"])
-        self.queryset = self.get_queryset().filter(self._project_q(prj_pk))
+        self._project_transect_method_ids = self._matching_transect_method_ids(prj_pk)
+        self.queryset = self.get_queryset().filter(id__in=self._project_transect_method_ids)
         return self.queryset
 
     def get_serializer_context(self):
         context = super(SampleUnitMethodView, self).get_serializer_context()
-        prj_pk = check_uuid(self.kwargs["project_pk"])
+        transect_method_ids = self._project_transect_method_ids
 
         sample_event_id_case = Case(
             When(benthiclit__id__isnull=False, then="benthiclit__transect__sample_event_id"),
@@ -486,17 +498,12 @@ class SampleUnitMethodView(BaseProjectApiViewSet):
             When(beltinvert__id__isnull=False, then="beltinvert__transect__sample_event_id"),
         )
         rows = (
-            TransectMethod.objects.filter(self._project_q(prj_pk))
+            TransectMethod.objects.filter(id__in=transect_method_ids)
             .annotate(_se_id=sample_event_id_case)
             .values_list("id", "_se_id")
         )
 
-        transect_method_ids = []
-        sample_event_ids = []
-        for tm_id, se_id in rows:
-            transect_method_ids.append(tm_id)
-            if se_id is not None:
-                sample_event_ids.append(se_id)
+        sample_event_ids = [se_id for _, se_id in rows if se_id is not None]
 
         context["sample_events"] = {
             str(se.id): se
