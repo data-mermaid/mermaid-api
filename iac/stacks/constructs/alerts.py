@@ -158,6 +158,29 @@ class MonitoringAlerts(Construct):
             )
         )
 
+        alarms.append(
+            cw.Alarm(
+                self,
+                "ApiMemoryAlarm",
+                alarm_name=f"mermaid-{env_id}-api-memory",
+                alarm_description="API ECS service memory utilization exceeded 85% for 10 minutes",
+                metric=cw.Metric(
+                    namespace="ECS/ContainerInsights",
+                    metric_name="MemoryUtilization",
+                    dimensions_map={
+                        "ClusterName": api_service.cluster.cluster_name,
+                        "ServiceName": api_service.service_name,
+                    },
+                    statistic="Average",
+                    period=Duration.minutes(5),
+                ),
+                threshold=85,
+                evaluation_periods=2,
+                comparison_operator=cw.ComparisonOperator.GREATER_THAN_THRESHOLD,
+                treat_missing_data=cw.TreatMissingData.NOT_BREACHING,
+            )
+        )
+
         # ── SQS DLQs ─────────────────────────────────────────────────
         # queue.py also has per-queue DLQ alarms wired to email topics; these
         # are separate alarms on the same metric, wired to this shared Slack topic.
