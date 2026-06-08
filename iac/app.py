@@ -158,8 +158,9 @@ GuardDutyStack(
         "sagemaker-us-east-1-554812291621",
         "vpcflowlogs.admin.datamermaid.org",
     ],
+)
 
-  nag_suppressions.apply_all(
+nag_suppressions.apply_all(
     gh_access_stack=gh_access_stack,
     common_stack=common_stack,
     dev_static_site_stack=dev_static_site_stack,
