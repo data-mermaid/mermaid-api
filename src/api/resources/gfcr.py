@@ -131,6 +131,18 @@ class GFCRFinanceSolutionSerializer(BaseAPISerializer):
         model = GFCRFinanceSolution
         exclude = []
 
+    def to_internal_value(self, data):
+        # "" breaks BooleanField validation before validate() can run; also
+        # normalizes used_an_incubator "" → null for the fs_type=None early-return
+        # path where validate() doesn't coerce it.
+        data = data.copy()
+        for field_name in ("local_enterprise", "gender_smart"):
+            if data.get(field_name) == "":
+                data[field_name] = False
+        if data.get("used_an_incubator") == "":
+            data["used_an_incubator"] = None
+        return super().to_internal_value(data)
+
     def validate(self, data):
         type_val = data.get("fs_type")
         if type_val is None:
