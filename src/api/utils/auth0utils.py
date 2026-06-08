@@ -1,15 +1,12 @@
 import json
 import logging
 import random
-import socket
 import string
-from urllib.error import HTTPError, URLError
 from urllib.request import urlopen
 
 from auth0.v3.authentication import GetToken
 from auth0.v3.exceptions import Auth0Error
 from auth0.v3.management import Auth0
-from django.core.cache import cache
 from django.utils.encoding import smart_str
 from django.utils.translation import gettext as _
 from jose import jws, jwt
@@ -208,48 +205,25 @@ def get_token_algorithm(token):
     return unverified_header.get("alg")
 
 
-_JWKS_CACHE_KEY = "auth0_jwks"
-_JWKS_CACHE_TTL = 86400  # 24 hours
-_JWKS_MIN_REFRESH_INTERVAL = 300  # seconds between forced refreshes on kid-miss
-_JWKS_REFRESH_LOCK_KEY = "auth0_jwks_refresh_lock"  # cluster-wide rate-limit gate
-
-
-def get_jwks(force_refresh=False):
-    if not force_refresh:
-        cached = cache.get(_JWKS_CACHE_KEY)
-        if cached is not None:
-            return cached
-
+def get_jwks():
+    jwks = {}
     url = "https://{}/.well-known/jwks.json".format(settings.AUTH0_DOMAIN)
-    try:
-        resp = urlopen(url, timeout=10)
-        if resp.getcode() != 200:
-            logger.warning("[auth0.jwks] Unexpected status %s fetching JWKS", resp.getcode())
-            return None
-        keys = json.loads(resp.read()).get("keys") or []
-    except (URLError, HTTPError, socket.timeout, json.JSONDecodeError) as e:
-        logger.warning("[auth0.jwks] Failed to fetch JWKS: %s", e)
+    resp = urlopen(url)
+    if resp.getcode() != 200:
         return None
 
-    jwks = {}
+    keys = json.loads(resp.read()).get("keys") or []
     for key in keys:
         jwks[key["kid"]] = dict(
             kty=key["kty"], kid=key["kid"], use=key["use"], n=key["n"], e=key["e"]
         )
-    cache.set(_JWKS_CACHE_KEY, jwks, _JWKS_CACHE_TTL)
     return jwks
 
 
 def decode_rsa(token):
     unverified_header = jwt.get_unverified_header(token)
     jwks = get_jwks()
-    rsa_key = jwks.get(unverified_header["kid"]) if jwks else None
-    if rsa_key is None:
-        if cache.add(_JWKS_REFRESH_LOCK_KEY, True, _JWKS_MIN_REFRESH_INTERVAL):
-            jwks = get_jwks(force_refresh=True)
-        else:
-            jwks = get_jwks()
-        rsa_key = jwks.get(unverified_header["kid"]) if jwks else None
+    rsa_key = jwks.get(unverified_header["kid"])
     if rsa_key is None:
         msg = "Unable to find appropriate key"
         raise exceptions.ValidationError(msg, code=400)
