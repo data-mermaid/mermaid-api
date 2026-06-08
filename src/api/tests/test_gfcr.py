@@ -596,6 +596,37 @@ def test_finance_solution_validate_coercion(
     assert response.json()["finance_solutions"][0][coerced_field] == expected_value
 
 
+def test_finance_solution_normalizes_empty_strings_for_hidden_fields(
+    db_setup,
+    api_client1,
+    project1,
+    project_profile1,
+    indicator_set,
+):
+    # "" for boolean fields must not produce a 400 before validate() runs.
+    project1.includes_gfcr = True
+    project1.save()
+    fs = {
+        **_FS_BASE,
+        "fs_type": "taf",
+        "local_enterprise": "",
+        "gender_smart": "",
+        "used_an_incubator": "",
+        "number_of_solutions_supported_by": 1,
+    }
+    url = reverse("indicatorset-detail", kwargs={"project_pk": project1.pk, "pk": indicator_set.id})
+    response = api_client1.put(
+        url, data=_fs_put_payload(indicator_set, project1, fs), format="json"
+    )
+    assert (
+        response.status_code == 200
+    ), f"Expected 200, got {response.status_code}: {response.json()}"
+    fs_data = response.json()["finance_solutions"][0]
+    assert fs_data["local_enterprise"] is False
+    assert fs_data["gender_smart"] is False
+    assert fs_data["used_an_incubator"] is None
+
+
 def test_choices_new_gfcr_keys(db_setup, api_client1):
     url = reverse("choice-list")
     response = api_client1.get(url, format="json")
