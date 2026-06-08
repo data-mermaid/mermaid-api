@@ -114,6 +114,14 @@ If the protocol introduces its own attribute/taxonomy hierarchy (Django MTI from
 - Add new function to support new protocol in summary report [summary_report.py](src/api/reports/summary_report.py)
 - Create a sample unit method endpoint viewset, example:
   - BenthicPhotoQuadratTransectMethodView
+- Update `src/api/resources/sampleunitmethods/sample_unit_methods.py` to include the new protocol in `SampleUnitMethodView`:
+  - Add `MACROINVERTEBRATE_PROTOCOL` (or equivalent) to the import from `...models`
+  - Add `select_related` entries for the new method and its transect/quadrat to `queryset`
+  - Add a `When(newmethod__id__isnull=False, then=Value(NEW_PROTOCOL))` to each of the seven `Case` annotations: `protocol_condition`, `site_name_condition`, `management_name_condition`, `sample_unit_number_condition`, `depth_condition`, `sample_date_condition`, `size_condition`
+  - Add a `When(newmethod__id__isnull=False, then="newmethod__transect__sample_event_id")` branch to the `sample_event_id_case` `Case` annotation in `get_serializer_context()` (used to populate `context["sample_events"]`)
+  - Add the `Q(newmethod__transect__sample_event_id__in=sample_event_ids)` branch to the `Q` filter in `_matching_transect_method_ids()`
+  - Handle the new protocol in `SampleUnitMethodSerializer.get_size()` to return the appropriate size dict
+  - Add an integration test in `src/api/tests/test_sample_unit_method.py` that GETs `sampleunitmethods/?protocol=<new_protocol>` and asserts `count == 1` and `results[0]["protocol"] == "<new_protocol>"`
 - Update api/urls.py with new viewsets, example:
 
 ```
