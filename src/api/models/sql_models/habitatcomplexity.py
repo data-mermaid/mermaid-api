@@ -33,6 +33,7 @@ class HabitatComplexityObsSQLModel(BaseSUSQLModel):
         su.len_surveyed AS transect_len_surveyed,
         rs.name AS reef_slope,
         tt.interval_size,
+        tt.interval_start,
         o."interval",
         s.val AS score,
         s.name AS score_name,
@@ -88,6 +89,12 @@ class HabitatComplexityObsSQLModel(BaseSUSQLModel):
     interval_size = models.DecimalField(
         max_digits=4, decimal_places=2, default=0.5, verbose_name=_("interval size (m)")
     )
+    interval_start = models.DecimalField(
+        max_digits=4,
+        decimal_places=2,
+        default=0.5,
+        verbose_name=_("interval start (m)"),
+    )
     interval = models.DecimalField(max_digits=7, decimal_places=2)
     observation_notes = models.TextField(blank=True)
     score = models.PositiveSmallIntegerField()
@@ -107,6 +114,7 @@ class HabitatComplexitySUSQLModel(BaseSUSQLModel):
         "transect_number",
         "transect_len_surveyed",
         "interval_size",
+        "interval_start",
         "data_policy_habitatcomplexity",
     ]
 
@@ -179,6 +187,15 @@ class HabitatComplexitySUSQLModel(BaseSUSQLModel):
         verbose_name=_("transect length surveyed (m)")
     )
     reef_slope = models.CharField(max_length=50)
+    interval_size = models.DecimalField(
+        max_digits=4, decimal_places=2, default=0.5, verbose_name=_("interval size (m)")
+    )
+    interval_start = models.DecimalField(
+        max_digits=4,
+        decimal_places=2,
+        default=0.5,
+        verbose_name=_("interval start (m)"),
+    )
     score_avg = models.DecimalField(decimal_places=2, max_digits=3)
     score_sd = models.DecimalField(decimal_places=2, max_digits=3, null=True, blank=True)
     observation_count = models.PositiveSmallIntegerField()

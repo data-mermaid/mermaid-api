@@ -8,26 +8,66 @@ from django.core.files.storage import FileSystemStorage
 from storages.backends.s3 import S3Storage
 
 from .base import BaseModel
-from .mermaid import (
+from .core import CollectRecord, Project, Site
+from .protocols.benthic import (
     BenthicAttribute,
     BenthicAttributeGrowthForm,
-    CollectRecord,
     GrowthForm,
     ObsBenthicPhotoQuadrat,
-    Site,
 )
 
 
 def select_image_storage():
-    if settings.DEBUG:
+    if settings.ENVIRONMENT not in ("dev", "prod"):
         return FileSystemStorage()
-    else:
-        return S3Storage(
-            bucket_name=settings.IMAGE_PROCESSING_BUCKET,
-            access_key=settings.IMAGE_BUCKET_AWS_ACCESS_KEY_ID,
-            secret_key=settings.IMAGE_BUCKET_AWS_SECRET_ACCESS_KEY,
-            location=settings.IMAGE_S3_PATH,
-        )
+    return S3Storage(
+        bucket_name=settings.IMAGE_PROCESSING_BUCKET,
+        access_key=settings.IMAGE_BUCKET_AWS_ACCESS_KEY_ID,
+        secret_key=settings.IMAGE_BUCKET_AWS_SECRET_ACCESS_KEY,
+        location=settings.IMAGE_S3_PATH,
+    )
+
+
+def get_image_bucket(project):
+    """Return the correct bucket name for a project's images."""
+    if project and project.status == Project.TEST:
+        return settings.IMAGE_PROCESSING_BUCKET_TEST
+    return settings.IMAGE_PROCESSING_BUCKET
+
+
+def get_image_bucket_for_status(status):
+    """Return the correct bucket name for a given project status value."""
+    if status == Project.TEST:
+        return settings.IMAGE_PROCESSING_BUCKET_TEST
+    return settings.IMAGE_PROCESSING_BUCKET
+
+
+def get_image_storage_config(bucket=None):
+    """Return bucket/creds/prefix config for a given bucket.
+
+    In production, the test bucket uses the default AWS creds (main account),
+    while the production image bucket uses the image-specific creds (separate account).
+    In dev/local, IMAGE_PROCESSING_BUCKET_TEST == IMAGE_PROCESSING_BUCKET and
+    IMAGE_BUCKET_AWS_* == AWS_*, so both branches return equivalent values.
+    """
+    is_test_bucket = (
+        bucket
+        and bucket == settings.IMAGE_PROCESSING_BUCKET_TEST
+        and bucket != settings.IMAGE_PROCESSING_BUCKET
+    )
+    if is_test_bucket:
+        return {
+            "bucket": settings.IMAGE_PROCESSING_BUCKET_TEST,
+            "access_key": settings.AWS_ACCESS_KEY_ID,
+            "secret_key": settings.AWS_SECRET_ACCESS_KEY,
+            "s3_path": settings.IMAGE_S3_PATH_TEST,
+        }
+    return {
+        "bucket": settings.IMAGE_PROCESSING_BUCKET,
+        "access_key": settings.IMAGE_BUCKET_AWS_ACCESS_KEY_ID,
+        "secret_key": settings.IMAGE_BUCKET_AWS_SECRET_ACCESS_KEY,
+        "s3_path": settings.IMAGE_S3_PATH,
+    }
 
 
 class LabelMapping(BaseModel):
@@ -57,7 +97,7 @@ class LabelMapping(BaseModel):
         db_table = "class_label_mapping"
 
     def __str__(self):
-        label = self.benthic_attribute.name
+        label = self.benthic_attribute.name if self.benthic_attribute else "(unmapped)"
         if self.growth_form:
             label += f" {self.growth_form.name}"
         return f"{label} {self.provider} {self.provider_id}"
@@ -88,6 +128,7 @@ class Classifier(BaseModel):
 
 class Image(BaseModel):
     collect_record_id = models.UUIDField(db_index=True)
+    image_bucket = models.CharField(max_length=255, blank=True, default="")
 
     image = models.ImageField(upload_to="", storage=select_image_storage, max_length=255)
     thumbnail = models.ImageField(
@@ -112,8 +153,33 @@ class Image(BaseModel):
     class Meta:
         db_table = "class_image"
 
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        if self.image_bucket:
+            self._apply_storage()
+
     def __str__(self):
         return f"{self.name} - {self.original_image_name}"
+
+    def get_storage(self):
+        """Return a storage backend configured for this image's bucket."""
+        if settings.ENVIRONMENT not in ("dev", "prod"):
+            return FileSystemStorage()
+        config = get_image_storage_config(self.image_bucket)
+        return S3Storage(
+            bucket_name=config["bucket"],
+            access_key=config["access_key"],
+            secret_key=config["secret_key"],
+            location=config["s3_path"],
+        )
+
+    def _apply_storage(self):
+        """Set the correct storage backend on all file fields for this instance."""
+        storage = self.get_storage()
+        for field_name in ("image", "thumbnail", "annotations_file", "feature_vector_file"):
+            field_file = getattr(self, field_name, None)
+            if field_file is not None:
+                field_file.storage = storage
 
     def _get_first_observation(self):
         obs = ObsBenthicPhotoQuadrat.objects.filter(image=self)
@@ -196,7 +262,6 @@ class Image(BaseModel):
                 )
             tmp.seek(0)
             self.annotations_file.save(f"{self.id}_annotations.csv", tmp, save=True)
-            self.save()
         finally:
             tmp.close()
             tmp = None
@@ -215,7 +280,7 @@ class Annotation(BaseModel):
     point = models.ForeignKey(
         Point, on_delete=models.CASCADE, editable=False, related_name="annotations"
     )
-    benthic_attribute = models.ForeignKey(BenthicAttribute, on_delete=models.CASCADE)
+    benthic_attribute = models.ForeignKey(BenthicAttribute, on_delete=models.PROTECT)
     growth_form = models.ForeignKey(GrowthForm, on_delete=models.CASCADE, null=True, blank=True)
     classifier = models.ForeignKey(
         Classifier, null=True, on_delete=models.CASCADE, related_name="annotations"

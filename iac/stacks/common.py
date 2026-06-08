@@ -4,11 +4,13 @@ from aws_cdk import (
     Duration,
     RemovalPolicy,
     Stack,
+    aws_athena as athena,
     aws_autoscaling as autoscale,
     aws_certificatemanager as acm,
     aws_ec2 as ec2,
     aws_ecs as ecs,
     aws_elasticloadbalancingv2 as elb,
+    aws_glue as glue,
     aws_iam as iam,
     aws_kms as kms,
     aws_logs as logs,
@@ -16,6 +18,7 @@ from aws_cdk import (
     aws_route53 as r53,
     aws_s3 as s3,
     aws_secretsmanager as sm,
+    aws_wafv2 as wafv2,
 )
 from constructs import Construct
 
@@ -25,6 +28,7 @@ class CommonStack(Stack):
         self,
         scope: Construct,
         id: str,
+        enable_vpc_flow_logs: bool = False,
         **kwargs,
     ) -> None:
         super().__init__(scope, id, **kwargs)
@@ -54,6 +58,298 @@ class CommonStack(Stack):
                 ),
             ],
         )
+        # VPC Flow Logs with Glue and Athena Integration
+        if enable_vpc_flow_logs:
+            # Dedicated access logs bucket for all VPC flow logs infrastructure buckets
+            vpc_flow_logs_access_logs_bucket = s3.Bucket(
+                self,
+                "VpcFlowLogsAccessLogsBucket",
+                bucket_name=f"mermaid-vpc-flow-logs-access-logs-{self.account}-{self.region}",
+                removal_policy=RemovalPolicy.RETAIN,
+                public_read_access=False,
+                block_public_access=s3.BlockPublicAccess.BLOCK_ALL,
+                encryption=s3.BucketEncryption.S3_MANAGED,
+                enforce_ssl=True,
+                lifecycle_rules=[
+                    s3.LifecycleRule(
+                        id="AccessLogsExpiry",
+                        expiration=Duration.days(90),
+                    ),
+                ],
+            )
+
+            # Create S3 bucket for VPC Flow Logs
+            vpc_flow_logs_bucket = s3.Bucket(
+                self,
+                "VpcFlowLogsBucket",
+                bucket_name=f"mermaid-vpc-flow-logs-{self.account}-{self.region}",
+                removal_policy=RemovalPolicy.RETAIN,
+                public_read_access=False,
+                block_public_access=s3.BlockPublicAccess.BLOCK_ALL,
+                encryption=s3.BucketEncryption.S3_MANAGED,
+                enforce_ssl=True,
+                server_access_logs_bucket=vpc_flow_logs_access_logs_bucket,
+                server_access_logs_prefix="vpc-flow-logs-bucket/",
+                lifecycle_rules=[
+                    s3.LifecycleRule(
+                        id="VpcFlowLogsArchive",
+                        prefix="vpc-flow-logs/",
+                        transitions=[
+                            s3.Transition(
+                                storage_class=s3.StorageClass.GLACIER,
+                                transition_after=Duration.days(30),
+                            ),
+                        ],
+                        expiration=Duration.days(180),
+                    ),
+                ],
+            )
+
+            # Create CloudWatch Log Group for VPC Flow Logs
+            vpc_flow_logs_group = logs.LogGroup(
+                self,
+                "VpcFlowLogsGroup",
+                log_group_name="/aws/vpc/flowlogs/mermaid",
+                retention=logs.RetentionDays.ONE_MONTH,
+                removal_policy=RemovalPolicy.RETAIN,
+            )
+
+            # Create IAM Role for VPC Flow Logs
+            vpc_flow_logs_role = iam.Role(
+                self,
+                "VpcFlowLogsRole",
+                assumed_by=iam.ServicePrincipal("vpc-flow-logs.amazonaws.com"),
+            )
+
+            vpc_flow_logs_role.add_to_policy(
+                iam.PolicyStatement(
+                    effect=iam.Effect.ALLOW,
+                    actions=[
+                        "logs:CreateLogGroup",
+                        "logs:DescribeLogGroups",
+                    ],
+                    resources=["*"],
+                )
+            )
+
+            vpc_flow_logs_role.add_to_policy(
+                iam.PolicyStatement(
+                    effect=iam.Effect.ALLOW,
+                    actions=[
+                        "logs:CreateLogStream",
+                        "logs:PutLogEvents",
+                        "logs:DescribeLogStreams",
+                    ],
+                    resources=[
+                        vpc_flow_logs_group.log_group_arn,
+                        f"{vpc_flow_logs_group.log_group_arn}:*",
+                    ],
+                )
+            )
+
+            # Enable VPC Flow Logs to CloudWatch
+            ec2.FlowLog(
+                self,
+                "VpcFlowLogsCloudWatch",
+                resource_type=ec2.FlowLogResourceType.from_vpc(self.vpc),
+                traffic_type=ec2.FlowLogTrafficType.ALL,
+                destination=ec2.FlowLogDestination.to_cloud_watch_logs(
+                    vpc_flow_logs_group, vpc_flow_logs_role
+                ),
+            )
+
+            # Enable VPC Flow Logs to S3 for Athena analysis
+            # CDK bug: FlowLogDestination.to_s3() emits DestinationOptions keys in camelCase
+            # but CloudFormation requires PascalCase — override via escape hatch.
+            vpc_flow_logs_s3 = ec2.FlowLog(
+                self,
+                "VpcFlowLogsS3",
+                resource_type=ec2.FlowLogResourceType.from_vpc(self.vpc),
+                traffic_type=ec2.FlowLogTrafficType.ALL,
+                destination=ec2.FlowLogDestination.to_s3(
+                    bucket=vpc_flow_logs_bucket,
+                    key_prefix="vpc-flow-logs/",
+                ),
+            )
+            vpc_flow_logs_s3.node.default_child.add_property_override(
+                "DestinationOptions",
+                {
+                    "FileFormat": "parquet",
+                    "HiveCompatiblePartitions": True,
+                    "PerHourPartition": True,
+                },
+            )
+
+            # Create Glue Database
+            glue_database = glue.CfnDatabase(
+                self,
+                "VpcFlowLogsDatabase",
+                catalog_id=self.account,
+                database_input=glue.CfnDatabase.DatabaseInputProperty(
+                    name="vpc_flow_logs",
+                    description="Glue database for VPC Flow Logs analysis",
+                ),
+            )
+
+            # Create Glue Table
+            vpc_flow_logs_table = glue.CfnTable(
+                self,
+                "VpcFlowLogsTable",
+                catalog_id=self.account,
+                database_name=glue_database.ref,
+                table_input=glue.CfnTable.TableInputProperty(
+                    name="vpc_flow_logs",
+                    storage_descriptor=glue.CfnTable.StorageDescriptorProperty(
+                        columns=[
+                            glue.CfnTable.ColumnProperty(name="version", type="bigint"),
+                            glue.CfnTable.ColumnProperty(name="account_id", type="string"),
+                            glue.CfnTable.ColumnProperty(name="interface_id", type="string"),
+                            glue.CfnTable.ColumnProperty(name="srcaddr", type="string"),
+                            glue.CfnTable.ColumnProperty(name="dstaddr", type="string"),
+                            glue.CfnTable.ColumnProperty(name="srcport", type="bigint"),
+                            glue.CfnTable.ColumnProperty(name="dstport", type="bigint"),
+                            glue.CfnTable.ColumnProperty(name="protocol", type="bigint"),
+                            glue.CfnTable.ColumnProperty(name="packets", type="bigint"),
+                            glue.CfnTable.ColumnProperty(name="bytes", type="bigint"),
+                            glue.CfnTable.ColumnProperty(name="start", type="bigint"),
+                            glue.CfnTable.ColumnProperty(name="end", type="bigint"),
+                            glue.CfnTable.ColumnProperty(name="action", type="string"),
+                            glue.CfnTable.ColumnProperty(name="log_status", type="string"),
+                            glue.CfnTable.ColumnProperty(name="vpc_id", type="string"),
+                            glue.CfnTable.ColumnProperty(name="subnet_id", type="string"),
+                            glue.CfnTable.ColumnProperty(name="instance_id", type="string"),
+                            glue.CfnTable.ColumnProperty(name="tcp_flags", type="bigint"),
+                            glue.CfnTable.ColumnProperty(name="type", type="string"),
+                            glue.CfnTable.ColumnProperty(name="pkt_srcaddr", type="string"),
+                            glue.CfnTable.ColumnProperty(name="pkt_dstaddr", type="string"),
+                            glue.CfnTable.ColumnProperty(name="region", type="string"),
+                            glue.CfnTable.ColumnProperty(name="flow_log_id", type="string"),
+                        ],
+                        location=f"s3://{vpc_flow_logs_bucket.bucket_name}/vpc-flow-logs/",
+                        input_format="org.apache.hadoop.hive.parquet.MapredParquetInputFormat",
+                        output_format="org.apache.hadoop.hive.parquet.MapredParquetOutputFormat",
+                        serde_info=glue.CfnTable.SerdeInfoProperty(
+                            serialization_library="org.apache.hadoop.hive.parquet.serde.ParquetHiveSerDe",
+                        ),
+                        stored_as_sub_directories=True,
+                    ),
+                    partition_keys=[
+                        glue.CfnTable.ColumnProperty(name="year", type="string"),
+                        glue.CfnTable.ColumnProperty(name="month", type="string"),
+                        glue.CfnTable.ColumnProperty(name="day", type="string"),
+                        glue.CfnTable.ColumnProperty(name="hour", type="string"),
+                    ],
+                ),
+            )
+            vpc_flow_logs_table.add_dependency(glue_database)
+
+            # Create IAM Role for Athena queries
+            athena_role = iam.Role(
+                self,
+                "AthenaRole",
+                assumed_by=iam.AccountPrincipal(self.account),
+            )
+
+            athena_role.add_to_policy(
+                iam.PolicyStatement(
+                    effect=iam.Effect.ALLOW,
+                    actions=[
+                        "s3:GetObject",
+                        "s3:ListBucket",
+                    ],
+                    resources=[
+                        vpc_flow_logs_bucket.bucket_arn,
+                        vpc_flow_logs_bucket.arn_for_objects("*"),
+                    ],
+                )
+            )
+
+            athena_role.add_to_policy(
+                iam.PolicyStatement(
+                    effect=iam.Effect.ALLOW,
+                    actions=[
+                        "glue:GetDatabase",
+                        "glue:GetTable",
+                        "glue:GetPartitions",
+                    ],
+                    resources=[
+                        f"arn:aws:glue:{self.region}:{self.account}:catalog",
+                        f"arn:aws:glue:{self.region}:{self.account}:database/{glue_database.ref}",
+                        f"arn:aws:glue:{self.region}:{self.account}:table/{glue_database.ref}/*",
+                    ],
+                )
+            )
+
+            athena_role.add_to_policy(
+                iam.PolicyStatement(
+                    effect=iam.Effect.ALLOW,
+                    actions=[
+                        "athena:StartQueryExecution",
+                        "athena:GetQueryExecution",
+                        "athena:GetQueryResults",
+                        "athena:GetWorkGroup",
+                    ],
+                    resources=[
+                        f"arn:aws:athena:{self.region}:{self.account}:workgroup/vpc-flow-logs",
+                    ],
+                )
+            )
+
+            # Create S3 bucket for Athena query results
+            athena_results_bucket = s3.Bucket(
+                self,
+                "AthenaResultsBucket",
+                bucket_name=f"mermaid-athena-results-{self.account}-{self.region}",
+                removal_policy=RemovalPolicy.RETAIN,
+                public_read_access=False,
+                block_public_access=s3.BlockPublicAccess.BLOCK_ALL,
+                enforce_ssl=True,
+                server_access_logs_bucket=vpc_flow_logs_access_logs_bucket,
+                server_access_logs_prefix="athena-results-bucket/",
+                lifecycle_rules=[
+                    s3.LifecycleRule(
+                        id="AthenaResultsCleanup",
+                        expiration=Duration.days(7),
+                    ),
+                ],
+            )
+
+            athena_role.add_to_policy(
+                iam.PolicyStatement(
+                    effect=iam.Effect.ALLOW,
+                    actions=[
+                        "s3:PutObject",
+                        "s3:GetObject",
+                        "s3:DeleteObject",
+                        "s3:ListBucket",
+                        "s3:GetBucketLocation",
+                    ],
+                    resources=[
+                        athena_results_bucket.bucket_arn,
+                        athena_results_bucket.arn_for_objects("*"),
+                    ],
+                )
+            )
+
+            # Create Athena WorkGroup
+            athena.CfnWorkGroup(
+                self,
+                "VpcFlowLogsWorkGroup",
+                name="vpc-flow-logs",
+                recursive_delete_option=False,
+                work_group_configuration=athena.CfnWorkGroup.WorkGroupConfigurationProperty(
+                    result_configuration=athena.CfnWorkGroup.ResultConfigurationProperty(
+                        output_location=f"s3://{athena_results_bucket.bucket_name}/",
+                    ),
+                    enforce_work_group_configuration=True,
+                    publish_cloud_watch_metrics_enabled=True,
+                ),
+                description="WorkGroup for querying VPC Flow Logs",
+                tags=[
+                    {"key": "Environment", "value": "common"},
+                    {"key": "Purpose", "value": "VPC Flow Logs Analysis"},
+                ],
+            )
 
         # create s3 gateway endpoint
         self.vpc.add_gateway_endpoint(
@@ -205,7 +501,7 @@ class CommonStack(Stack):
                 self,
                 "LTemp",
                 instance_type=ec2.InstanceType("t3a.large"),
-                machine_image=ecs.EcsOptimizedImage.amazon_linux2(),
+                machine_image=ecs.EcsOptimizedImage.amazon_linux2023(),
                 block_devices=[
                     ec2.BlockDevice(
                         device_name="/dev/xvda",
@@ -224,6 +520,8 @@ class CommonStack(Stack):
             update_policy=autoscale.UpdatePolicy.rolling_update(),
             # NOTE: not setting the desired capacity so ECS can manage it.
         )
+
+        self.auto_scaling_group = auto_scaling_group_lt
 
         capacity_provider_lt = ecs.AsgCapacityProvider(
             self,
@@ -270,6 +568,125 @@ class CommonStack(Stack):
             self,
             "DefaultSSLCert",
             certificate_arn=f"arn:aws:acm:us-east-1:{self.account}:certificate/783d7a91-1ebd-4387-9518-e28521086db6",
+        )
+
+        # WAFv2 WebACL — all rules start in COUNT mode for safe rollout
+        self.web_acl = wafv2.CfnWebACL(
+            self,
+            "ApiWebAcl",
+            name=f"{self.stack_name}-waf",
+            default_action=wafv2.CfnWebACL.DefaultActionProperty(allow={}),
+            scope="REGIONAL",
+            visibility_config=wafv2.CfnWebACL.VisibilityConfigProperty(
+                cloud_watch_metrics_enabled=True,
+                metric_name="MermaidApiWafMetric",
+                sampled_requests_enabled=False,
+            ),
+            rules=[
+                wafv2.CfnWebACL.RuleProperty(
+                    name="AWSManagedRulesCommonRuleSet",
+                    priority=1,
+                    override_action=wafv2.CfnWebACL.OverrideActionProperty(count={}),
+                    statement=wafv2.CfnWebACL.StatementProperty(
+                        managed_rule_group_statement=wafv2.CfnWebACL.ManagedRuleGroupStatementProperty(
+                            vendor_name="AWS",
+                            name="AWSManagedRulesCommonRuleSet",
+                        ),
+                    ),
+                    visibility_config=wafv2.CfnWebACL.VisibilityConfigProperty(
+                        cloud_watch_metrics_enabled=True,
+                        metric_name="MermaidApiCommonRules",
+                        sampled_requests_enabled=False,
+                    ),
+                ),
+                wafv2.CfnWebACL.RuleProperty(
+                    name="AWSManagedRulesSQLiRuleSet",
+                    priority=2,
+                    override_action=wafv2.CfnWebACL.OverrideActionProperty(count={}),
+                    statement=wafv2.CfnWebACL.StatementProperty(
+                        managed_rule_group_statement=wafv2.CfnWebACL.ManagedRuleGroupStatementProperty(
+                            vendor_name="AWS",
+                            name="AWSManagedRulesSQLiRuleSet",
+                        ),
+                    ),
+                    visibility_config=wafv2.CfnWebACL.VisibilityConfigProperty(
+                        cloud_watch_metrics_enabled=True,
+                        metric_name="MermaidApiSQLiRules",
+                        sampled_requests_enabled=False,
+                    ),
+                ),
+                wafv2.CfnWebACL.RuleProperty(
+                    name="AWSManagedRulesKnownBadInputsRuleSet",
+                    priority=3,
+                    override_action=wafv2.CfnWebACL.OverrideActionProperty(count={}),
+                    statement=wafv2.CfnWebACL.StatementProperty(
+                        managed_rule_group_statement=wafv2.CfnWebACL.ManagedRuleGroupStatementProperty(
+                            vendor_name="AWS",
+                            name="AWSManagedRulesKnownBadInputsRuleSet",
+                        ),
+                    ),
+                    visibility_config=wafv2.CfnWebACL.VisibilityConfigProperty(
+                        cloud_watch_metrics_enabled=True,
+                        metric_name="MermaidApiKnownBadInputs",
+                        sampled_requests_enabled=False,
+                    ),
+                ),
+                wafv2.CfnWebACL.RuleProperty(
+                    name="RateLimitPerIP",
+                    priority=4,
+                    action=wafv2.CfnWebACL.RuleActionProperty(count={}),
+                    statement=wafv2.CfnWebACL.StatementProperty(
+                        rate_based_statement=wafv2.CfnWebACL.RateBasedStatementProperty(
+                            limit=2000,
+                            aggregate_key_type="IP",
+                        ),
+                    ),
+                    visibility_config=wafv2.CfnWebACL.VisibilityConfigProperty(
+                        cloud_watch_metrics_enabled=True,
+                        metric_name="MermaidApiRateLimit",
+                        sampled_requests_enabled=False,
+                    ),
+                ),
+            ],
+        )
+
+        # Associate WAF WebACL with the ALB
+        wafv2.CfnWebACLAssociation(
+            self,
+            "ApiWebAclAssociation",
+            resource_arn=self.load_balancer.load_balancer_arn,
+            web_acl_arn=self.web_acl.attr_arn,
+        )
+
+        # WAF logging — log group name must start with aws-waf-logs-
+        waf_log_group = logs.LogGroup(
+            self,
+            "WafLogGroup",
+            log_group_name="aws-waf-logs-mermaid-api",
+            retention=logs.RetentionDays.THREE_MONTHS,
+            removal_policy=RemovalPolicy.RETAIN,
+        )
+        # WAF requires an explicit resource policy to write to CloudWatch Logs
+        logs.ResourcePolicy(
+            self,
+            "WafLogGroupPolicy",
+            policy_statements=[
+                iam.PolicyStatement(
+                    actions=["logs:CreateLogStream", "logs:PutLogEvents"],
+                    principals=[iam.ServicePrincipal("delivery.logs.amazonaws.com")],
+                    resources=[f"{waf_log_group.log_group_arn}:*"],
+                    conditions={
+                        "StringEquals": {"aws:SourceAccount": self.account},
+                        "ArnLike": {"aws:SourceArn": f"arn:aws:logs:{self.region}:{self.account}:*"},
+                    },
+                )
+            ],
+        )
+        wafv2.CfnLoggingConfiguration(
+            self,
+            "WafLoggingConfig",
+            log_destination_configs=[waf_log_group.log_group_arn],
+            resource_arn=self.web_acl.attr_arn,
         )
 
         self.load_balancer.add_listener(

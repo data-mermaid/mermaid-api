@@ -1,4 +1,3 @@
-import datetime
 import logging
 from pathlib import Path
 from zipfile import ZIP_DEFLATED, ZipFile
@@ -6,12 +5,13 @@ from zipfile import ZIP_DEFLATED, ZipFile
 from django.conf import settings
 from django.core.mail import EmailMultiAlternatives
 from django.template.loader import render_to_string
+from django.utils import timezone
 from maintenance_mode.core import get_maintenance_mode
 
-from ..models import PROTOCOL_MAP
-from ..models.mermaid import ProjectProfile
+from ..models import PROTOCOL_MAP, ProjectProfile
 from ..utils import create_iso_date_string
 from . import delete_file, s3
+from .notification import _suppress_notifications
 from .q import submit_job
 
 logger = logging.getLogger(__name__)
@@ -23,7 +23,7 @@ def _get_mermaid_email_content(template, context):
     template_html = f"{path}.html"
     template_text = f"{path}.txt"
     context = context or {}
-    context["timestamp"] = datetime.datetime.utcnow().replace(microsecond=0).isoformat()
+    context["timestamp"] = timezone.now().replace(microsecond=0).isoformat()
 
     text_content = render_to_string(template_text, context=context)
     html_content = None
@@ -62,6 +62,9 @@ def _to_in_dev_emails(to):
 
 
 def mermaid_email(subject, template, to, context=None, from_email=None, reply_to=None):
+    if _suppress_notifications.get():
+        return
+
     # if maintenance mode is on: console
     # if local and not dev email and pytest: console
     # if local and not dev email and not pytest: console
@@ -161,7 +164,8 @@ def email_report(to_email, local_file_path, protocol):
             settings.AWS_DATA_BUCKET,
             s3_zip_file_key,
             aws_access_key_id=settings.REPORT_S3_ACCESS_KEY_ID,
-            aws_secret_access_key=settings.REPORT_S3_SECRET_ACCESS_KEY,)
+            aws_secret_access_key=settings.REPORT_S3_SECRET_ACCESS_KEY,
+        )
         to = [to_email]
         template = "emails/report.html"
         report_title = PROTOCOL_MAP.get(protocol) or ""

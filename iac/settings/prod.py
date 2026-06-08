@@ -1,6 +1,7 @@
 """Settings for production environment"""
 
 from settings.settings import DatabaseSettings, DjangoSettings, ProjectSettings
+import os
 
 PROD_ENV_ID = "prod"
 PROD_SETTINGS = ProjectSettings(
@@ -24,14 +25,15 @@ PROD_SETTINGS = ProjectSettings(
         default_domain_collect="https://app.datamermaid.org",
         mermaid_api_audience="https://api.datamermaid.org",
         public_bucket="public.datamermaid.org",
-        sqs_message_visibility=3000,
+        sqs_message_visibility=60,
         # Image classification
         ic_bucket_name="coral-reef-training",
+        ic_bucket_name_test="mermaid-image-processing",
+        ic_s3_path_test="mermaid-production-test/",
         # Secrets
-        spa_admin_client_id_name="prod/mermaid-api/spa-admin-client-id-8GJ1mU",
-        spa_admin_client_secret_name="prod/mermaid-api/spa-admin-client-secret-5oMItZ",
-        mermaid_api_signing_secret_name="prod/mermaid-api/mermaid-api-signing-secret-3625sz",
-        mermaid_management_api_client_id_name="prod/mermaid-api/mermaid-management-api-client-id-Kb3Sty",
-        mermaid_management_api_client_secret_name="prod/mermaid-api/mermaid-management-api-client-secret-HHVBL1",
+        env_secret_name="prod/mermaid-api-GUqRBj",
+        # Slack alerts via AWS Chatbot — fill in after connecting workspace in console
+        slack_workspace_id=os.getenv("SLACK_WORKSPACE_ID", ""),
+        slack_channel_id=os.getenv("SLACK_CHANNEL_ID", ""),
     ),
 )

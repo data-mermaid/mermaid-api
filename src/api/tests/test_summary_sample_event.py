@@ -1,5 +1,6 @@
 import pytest
 from django.urls import reverse
+from rest_framework import status
 
 
 @pytest.fixture
@@ -76,3 +77,28 @@ def test_summary_sample_event(
         benthicpit["percent_cover_benthic_category_avg"][origin]
         == obs_benthic_pit1_benthic_category_avgs[origin]
     )
+
+
+def test_summary_sample_event_fields_param_invalid(api_client_public):
+    # percent_cover_benthic_category_avg is nested inside protocols JSON, not a
+    # top-level field on SummarySampleEventModel, so it should be rejected with 400.
+    url = reverse("summarysampleevent-list")
+    response = api_client_public.get(
+        url,
+        {"fields": "latitude,longitude,percent_cover_benthic_category_avg"},
+        format="json",
+    )
+    assert response.status_code == status.HTTP_400_BAD_REQUEST
+    assert "percent_cover_benthic_category_avg" in response.json()["fields"]
+
+
+def test_summary_sample_event_fields_param_valid(api_client_public):
+    # Valid top-level fields should return 200 (even with empty results).
+    url = reverse("summarysampleevent-list")
+    response = api_client_public.get(
+        url,
+        {"fields": "latitude,longitude,sample_date,data_policy_benthicpit"},
+        format="json",
+    )
+    assert response.status_code == status.HTTP_200_OK
+    assert "results" in response.json()

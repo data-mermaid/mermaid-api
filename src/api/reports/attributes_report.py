@@ -12,6 +12,7 @@ from api.models import (
     FishGenus,
     FishGrouping,
     FishSpecies,
+    InvertSpecies,
     Region,
 )
 
@@ -20,6 +21,7 @@ FISH_GENERA_NAME = "Fish Genera"
 FISH_SPECIES_NAME = "Fish Species"
 FISH_GROUPINGS_NAME = "Fish Groupings"
 BENTHIC_NAME = "Benthic"
+INVERT_SPECIES_NAME = "Invert Species"
 YES = "Yes"
 NO = "No"
 YES_COLOR = Color(rgb="EAF7f0")
@@ -36,6 +38,7 @@ def create_workbook_template():
         FISH_SPECIES_NAME,
         FISH_GROUPINGS_NAME,
         BENTHIC_NAME,
+        INVERT_SPECIES_NAME,
     ]
     wb = Workbook()
     DEFAULT_FONT.name = "Arial"
@@ -103,7 +106,9 @@ def write_fish_families(wb, regions):
                 fish_family.biomass_constant_a,
                 fish_family.biomass_constant_b,
                 fish_family.biomass_constant_c,
-                *create_m2m_row(regions, [str(r) for r in fish_family.regions]),
+                *create_m2m_row(
+                    regions, [str(r) for r in fish_family.regions] if fish_family.regions else None
+                ),
             ]
             for fish_family in FishFamily.objects.filter(status=SUPERUSER_APPROVED).order_by("name")
         ],
@@ -131,7 +136,9 @@ def write_fish_genera(wb, regions):
                 fish_genus.biomass_constant_a,
                 fish_genus.biomass_constant_b,
                 fish_genus.biomass_constant_c,
-                *create_m2m_row(regions, fish_genus.regions),
+                *create_m2m_row(
+                    regions, [str(r) for r in fish_genus.regions] if fish_genus.regions else None
+                ),
             ]
             for fish_genus in FishGenus.objects.select_related("family")
             .filter(status=SUPERUSER_APPROVED)
@@ -176,7 +183,7 @@ def write_fish_species(wb, regions):
                 fish_species.trophic_level,
                 fish_species.vulnerability,
                 fish_species.climate_score,
-                *create_m2m_row(regions, fish_species.regions.all()),
+                *create_m2m_row(regions, fish_species.regions.values_list("id", flat=True)),
             ]
             for fish_species in FishSpecies.objects.select_related(
                 "genus",
@@ -212,7 +219,7 @@ def write_fish_grouping(wb, regions):
                 fish_group.biomass_constant_a,
                 fish_group.biomass_constant_b,
                 fish_group.biomass_constant_c,
-                *create_m2m_row(regions, fish_group.regions.all()),
+                *create_m2m_row(regions, fish_group.regions.values_list("id", flat=True)),
             ]
             for fish_group in FishGrouping.objects.select_related()
             .filter(status=SUPERUSER_APPROVED)
@@ -243,13 +250,62 @@ def write_benthic(wb, regions):
                 ba.name,
                 ba.parent and ba.parent.name,
                 ba.origin and ba.origin.name,
-                *create_m2m_row(life_histories, ba.life_histories.all()),
-                *create_m2m_row(regions, ba.regions.all()),
+                *create_m2m_row(life_histories, ba.life_histories.values_list("id", flat=True)),
+                *create_m2m_row(regions, ba.regions.values_list("id", flat=True)),
             ]
             for ba in BenthicAttribute.objects.filter(status=SUPERUSER_APPROVED).order_by("name")
         ],
     ]
     insert_range_and_resize(wb[BENTHIC_NAME], "A1", data)
+
+
+def write_invert_species(wb):
+    COLUMN_NAMES = [
+        "Class",
+        "Order",
+        "Family",
+        "Genus",
+        "Species",
+        "Group of Interest",
+        "Max Size (cm)",
+        "Measurement Type",
+        "Size Source",
+        "Size Source URL",
+    ]
+
+    data = [
+        COLUMN_NAMES,
+        *[
+            [
+                sp.genus.family.order.invert_class.name,
+                sp.genus.family.order.name,
+                sp.genus.family.name,
+                sp.genus.name,
+                sp.name,
+                sp.genus.group_of_interest.name,
+                sp.max_length,
+                sp.max_length_type,
+                sp.max_length_source,
+                sp.max_length_url,
+            ]
+            for sp in InvertSpecies.objects.select_related(
+                "genus",
+                "genus__group_of_interest",
+                "genus__family",
+                "genus__family__order",
+                "genus__family__order__invert_class",
+            )
+            .filter(status=SUPERUSER_APPROVED)
+            .order_by(
+                "genus__family__order__invert_class__name",
+                "genus__family__order__name",
+                "genus__family__name",
+                "genus__name",
+                "name",
+            )
+        ],
+    ]
+    insert_range_and_resize(wb[INVERT_SPECIES_NAME], "A1", data)
 
 
 def write_attribute_reference(output_path):
@@ -260,5 +316,6 @@ def write_attribute_reference(output_path):
     write_fish_species(wb, regions)
     write_fish_grouping(wb, regions)
     write_benthic(wb, regions)
+    write_invert_species(wb)
 
     wb.save(output_path)

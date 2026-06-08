@@ -19,7 +19,12 @@ class Revision(models.Model):
 
     class Meta:
         db_table = "revision"
-        unique_together = ("table_name", "record_id", "related_to_profile_id")
+        constraints = [
+            models.UniqueConstraint(
+                fields=["table_name", "record_id", "related_to_profile_id"],
+                name="unique_revision_table_record_profile",
+            )
+        ]
 
     def __str__(self):
         return f"[{self.revision_num}] {self.table_name} {self.record_id}"
@@ -39,6 +44,9 @@ class Revision(models.Model):
     def __eq__(self, other):
         return self.revision_num == other.revision_num
 
+    def __hash__(self):
+        return hash(self.revision_num)
+
     @classmethod
     def create(
         cls,
@@ -51,37 +59,101 @@ class Revision(models.Model):
     ):
         cursor = connection.cursor()
         try:
+            timestamp = timezone.now()
             sql = "SELECT nextval('revision_seq_num');"
             cursor.execute(sql)
             revision_num = cursor.fetchone()[0]
 
-            revision = Revision.objects.get_or_none(
-                table_name=table_name,
-                record_id=record_id,
-                related_to_profile_id=related_to_profile_id,
+            if related_to_profile_id is None:
+                upsert_sql = """
+                    INSERT INTO revision (
+                        "table_name",
+                        "record_id",
+                        "project_id",
+                        "profile_id",
+                        "revision_num",
+                        "updated_on",
+                        "deleted",
+                        "related_to_profile_id"
+                    )
+                    VALUES (%s, %s, %s, %s, %s, %s, %s, %s)
+                    ON CONFLICT (table_name, record_id)
+                    WHERE related_to_profile_id IS NULL
+                    DO UPDATE SET
+                        -- Use GREATEST to ensure revision_num and updated_on only ever increase
+                        -- in the case of concurrent updates.
+                        "revision_num" = GREATEST(revision.revision_num, EXCLUDED.revision_num),
+                        "updated_on" = GREATEST(revision.updated_on, EXCLUDED.updated_on),
+                        -- Only update metadata columns if incoming revision is newer
+                        "project_id" = CASE
+                            WHEN EXCLUDED.revision_num > revision.revision_num THEN EXCLUDED.project_id
+                            WHEN EXCLUDED.revision_num = revision.revision_num AND EXCLUDED.updated_on > revision.updated_on THEN EXCLUDED.project_id
+                            ELSE revision.project_id
+                        END,
+                        "profile_id" = CASE
+                            WHEN EXCLUDED.revision_num > revision.revision_num THEN EXCLUDED.profile_id
+                            WHEN EXCLUDED.revision_num = revision.revision_num AND EXCLUDED.updated_on > revision.updated_on THEN EXCLUDED.profile_id
+                            ELSE revision.profile_id
+                        END,
+                        "deleted" = CASE
+                            WHEN EXCLUDED.revision_num > revision.revision_num THEN EXCLUDED.deleted
+                            WHEN EXCLUDED.revision_num = revision.revision_num AND EXCLUDED.updated_on > revision.updated_on THEN EXCLUDED.deleted
+                            ELSE revision.deleted
+                        END
+                    RETURNING id;
+                """
+            else:
+                upsert_sql = """
+                    INSERT INTO revision (
+                        "table_name",
+                        "record_id",
+                        "project_id",
+                        "profile_id",
+                        "revision_num",
+                        "updated_on",
+                        "deleted",
+                        "related_to_profile_id"
+                    )
+                    VALUES (%s, %s, %s, %s, %s, %s, %s, %s)
+                    ON CONFLICT (table_name, record_id, related_to_profile_id)
+                    DO UPDATE SET
+                        "revision_num" = GREATEST(revision.revision_num, EXCLUDED.revision_num),
+                        "updated_on" = GREATEST(revision.updated_on, EXCLUDED.updated_on),
+                        -- Only update metadata columns if incoming revision is newer
+                        "project_id" = CASE
+                            WHEN EXCLUDED.revision_num > revision.revision_num THEN EXCLUDED.project_id
+                            WHEN EXCLUDED.revision_num = revision.revision_num AND EXCLUDED.updated_on > revision.updated_on THEN EXCLUDED.project_id
+                            ELSE revision.project_id
+                        END,
+                        "profile_id" = CASE
+                            WHEN EXCLUDED.revision_num > revision.revision_num THEN EXCLUDED.profile_id
+                            WHEN EXCLUDED.revision_num = revision.revision_num AND EXCLUDED.updated_on > revision.updated_on THEN EXCLUDED.profile_id
+                            ELSE revision.profile_id
+                        END,
+                        "deleted" = CASE
+                            WHEN EXCLUDED.revision_num > revision.revision_num THEN EXCLUDED.deleted
+                            WHEN EXCLUDED.revision_num = revision.revision_num AND EXCLUDED.updated_on > revision.updated_on THEN EXCLUDED.deleted
+                            ELSE revision.deleted
+                        END
+                    RETURNING id;
+                """
+
+            cursor.execute(
+                upsert_sql,
+                [
+                    table_name,
+                    record_id,
+                    project_id,
+                    profile_id,
+                    revision_num,
+                    timestamp,
+                    deleted,
+                    related_to_profile_id,
+                ],
             )
 
-            if revision is None:
-                return Revision.objects.create(
-                    table_name=table_name,
-                    record_id=record_id,
-                    project_id=project_id,
-                    profile_id=profile_id,
-                    updated_on=timezone.now(),
-                    deleted=deleted,
-                    revision_num=revision_num,
-                    related_to_profile_id=related_to_profile_id,
-                )
-
-            revision.project_id = project_id
-            revision.profile_id = profile_id
-            revision.updated_on = timezone.now()
-            revision.deleted = deleted
-            revision.revision_num = revision_num
-            revision.related_to_profile_id = related_to_profile_id
-            revision.save()
-
-            return revision
+            revision_id = cursor.fetchone()[0]
+            return Revision.objects.get(id=revision_id)
 
         finally:
             if cursor:
@@ -249,11 +321,24 @@ forward_sql = """
         ON CONFLICT (table_name, record_id)
         WHERE related_to_profile_id IS NULL
         DO UPDATE SET
-            "revision_num" = rev_num,
-            "updated_on" = updated_on_val,
-            "project_id" = project_id_val,
-            "profile_id" = profile_id_val,
-            "deleted" = is_deleted;
+            "revision_num" = GREATEST(revision.revision_num, rev_num),
+            "updated_on" = GREATEST(revision.updated_on, updated_on_val),
+            -- Only update metadata columns if incoming revision is newer
+            "project_id" = CASE
+                WHEN rev_num > revision.revision_num THEN project_id_val
+                WHEN rev_num = revision.revision_num AND updated_on_val > revision.updated_on THEN project_id_val
+                ELSE revision.project_id
+            END,
+            "profile_id" = CASE
+                WHEN rev_num > revision.revision_num THEN profile_id_val
+                WHEN rev_num = revision.revision_num AND updated_on_val > revision.updated_on THEN profile_id_val
+                ELSE revision.profile_id
+            END,
+            "deleted" = CASE
+                WHEN rev_num > revision.revision_num THEN is_deleted
+                WHEN rev_num = revision.revision_num AND updated_on_val > revision.updated_on THEN is_deleted
+                ELSE revision.deleted
+            END;
 
         RETURN NULL;
 
@@ -316,6 +401,14 @@ forward_sql = """
     UPDATE
         OR DELETE ON "fish_grouping" FOR EACH ROW EXECUTE FUNCTION write_revision();
 
+    DROP TRIGGER IF EXISTS invert_attribute_trigger ON invert_attribute;
+    CREATE TRIGGER invert_attribute_trigger
+    AFTER
+    INSERT
+        OR
+    UPDATE
+        OR DELETE ON "invert_attribute" FOR EACH ROW EXECUTE FUNCTION write_revision();
+
     DROP TRIGGER IF EXISTS site_trigger ON site;
     CREATE TRIGGER site_trigger
     AFTER
@@ -349,6 +442,7 @@ reverse_sql = """
     DROP TRIGGER fish_genus_trigger ON fish_genus;
     DROP TRIGGER fish_family_trigger ON fish_family;
     DROP TRIGGER fish_grouping_trigger ON fish_grouping;
+    DROP TRIGGER invert_attribute_trigger ON invert_attribute;
     DROP TRIGGER site_trigger ON site;
     DROP TRIGGER project_profile_trigger ON project_profile;
     DROP TRIGGER project_trigger ON project;

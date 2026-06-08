@@ -11,6 +11,8 @@ from .validators import (
     AllEqualValidator,
     BiomassValidator,
     DepthValidator,
+    DifferentTransectLengthValidator,
+    DifferentTransectWidthValidator,
     DrySubmitValidator,
     FishCountValidator,
     FishFamilySubsetValidator,
@@ -24,6 +26,7 @@ from .validators import (
     RequiredValidator,
     SampleDateValidator,
     SampleTimeValidator,
+    SimilarDateSampleUnitsValidator,
     TotalFishCountValidator,
     UniqueFishbeltTransectValidator,
     UniqueManagementValidator,
@@ -104,6 +107,17 @@ belt_fish_validations = [
         validation_type=VALUE_VALIDATION_TYPE,
     ),
     Validation(
+        validator=SimilarDateSampleUnitsValidator(
+            protocol_path="data.protocol",
+            site_path="data.sample_event.site",
+            management_path="data.sample_event.management",
+            sample_date_path="data.sample_event.sample_date",
+        ),
+        paths=["data.sample_event.sample_date"],
+        validation_level=RECORD_LEVEL,
+        validation_type=VALUE_VALIDATION_TYPE,
+    ),
+    Validation(
         validator=SampleTimeValidator(
             sample_time_path="data.fishbelt_transect.sample_time",
         ),
@@ -133,6 +147,7 @@ belt_fish_validations = [
             observations_path="data.obs_belt_fishes",
             observation_fish_attribute_path="fish_attribute",
             observation_size_path="size",
+            fishbelt_transect_path="data.fishbelt_transect",
         ),
         paths=["data.obs_belt_fishes"],
         validation_level=ROW_LEVEL,
@@ -293,5 +308,28 @@ belt_fish_validations = [
         validation_type=VALUE_VALIDATION_TYPE,
         requires_instance=True,
         delay_validation=True,
+    ),
+    Validation(
+        validator=DifferentTransectWidthValidator(
+            site_path="data.sample_event.site",
+            management_path="data.sample_event.management",
+            sample_date_path="data.sample_event.sample_date",
+            width_path="data.fishbelt_transect.width",
+        ),
+        paths=["data.fishbelt_transect.width"],
+        validation_level=RECORD_LEVEL,
+        validation_type=VALUE_VALIDATION_TYPE,
+    ),
+    Validation(
+        validator=DifferentTransectLengthValidator(
+            protocol_path="data.protocol",
+            site_path="data.sample_event.site",
+            management_path="data.sample_event.management",
+            sample_date_path="data.sample_event.sample_date",
+            len_surveyed_path="data.fishbelt_transect.len_surveyed",
+        ),
+        paths=["data.fishbelt_transect.len_surveyed"],
+        validation_level=RECORD_LEVEL,
+        validation_type=VALUE_VALIDATION_TYPE,
     ),
 ]

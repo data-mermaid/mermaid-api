@@ -112,3 +112,5 @@ src/media/*
 src/_classifiers/*
 mynotes.md
 generate_token.py
+.reviews/
+.claude/

@@ -28,23 +28,23 @@ jobs:
     needs: [call-test]
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/setup-node@v5.0.0
+      - uses: actions/setup-node@v6.2.0
         with:
           node-version: '^22.11.0'
 
       - name: Setup Python
-        uses: actions/setup-python@v6.0.0
+        uses: actions/setup-python@v6.2.0
         with:
           python-version: "^3.12.0"
 
-      - uses: actions/checkout@v5.0.0
+      - uses: actions/checkout@v6.0.2
 
       - name: Install CDK
         run: |
           iac/install_cdk.sh
 
       - name: Configure AWS credentials
-        uses: aws-actions/configure-aws-credentials@v5.0.0
+        uses: aws-actions/configure-aws-credentials@v5.1.1
         env:
           CDK_DEFAULT_ACCOUNT: ${{ secrets.CDK_DEFAULT_ACCOUNT }}
           DEPLOY_AWS_ROLE: ${{ secrets.DEPLOY_AWS_ROLE }}
@@ -61,6 +61,8 @@ jobs:
           PYTHONPATH: ${{ github.workspace }}
           CDK_DEFAULT_ACCOUNT: ${{ secrets.CDK_DEFAULT_ACCOUNT }}
           CDK_DEFAULT_REGION: us-east-1
+          SLACK_CHANNEL_ID: ${{ secrets.SLACK_CHANNEL_ID }}
+          SLACK_WORKSPACE_ID: ${{ secrets.SLACK_WORKSPACE_ID }}
         run: |
           short_sha=$(git rev-parse --short ${{ github.sha }}) && \
           echo "$short_sha" > src/VERSION.txt && \
@@ -70,7 +72,8 @@ jobs:
             GithubAccess \
             mermaid-api-infra-common \
             dev-mermaid-api-django \
-            dev-mermaid-static-site
+            dev-mermaid-static-site \
+            dev-mermaid-sagemaker
       - name: CDK Deploy PROD
         if: startsWith(github.ref, 'refs/tags')
         env:
@@ -79,6 +82,8 @@ jobs:
           PYTHONPATH: ${{ github.workspace }}
           CDK_DEFAULT_ACCOUNT: ${{ secrets.CDK_DEFAULT_ACCOUNT }}
           CDK_DEFAULT_REGION: us-east-1
+          SLACK_CHANNEL_ID: ${{ secrets.SLACK_CHANNEL_ID }}
+          SLACK_WORKSPACE_ID: ${{ secrets.SLACK_WORKSPACE_ID }}
         run: |
           echo "${{ github.ref_name }}" > src/VERSION.txt && \
           cat src/VERSION.txt && \

@@ -3,7 +3,8 @@ import datetime
 
 from django.conf import settings
 from django.contrib import admin, messages
-from django.contrib.gis.admin import OSMGeoAdmin
+from django.contrib.gis.admin import GISModelAdmin
+from django.db import transaction
 from django.db.models import Count
 from django.http import HttpResponse
 from django.urls import reverse
@@ -12,6 +13,7 @@ from django.utils.html import format_html
 from api.utils.sample_unit_methods import get_project
 from tools.models import MERMAIDFeature, UserMERMAIDFeature
 from ..models import Application, AuthUser, CollectRecord, Observer, Profile
+from ..models.classification import Annotation
 
 
 def lookup_field_from_choices(field_obj, value):
@@ -84,7 +86,7 @@ export_model_all_as_csv.short_description = (
 )
 
 
-class BaseAdmin(OSMGeoAdmin):
+class BaseAdmin(GISModelAdmin):
     actions = (export_model_display_as_csv, export_model_all_as_csv)
 
 
@@ -105,7 +107,14 @@ class AuthUserAdmin(BaseAdmin):
 
 @admin.register(Profile)
 class ProfileAdmin(BaseAdmin):
-    list_display = ("first_name", "last_name", "linked_email", "project_count")
+    list_display = (
+        "first_name",
+        "last_name",
+        "linked_email",
+        "project_count",
+        "has_collect_state",
+        "has_explore_state",
+    )
     search_fields = ["first_name", "last_name", "email"]
 
     @admin.display(description="Email", ordering="email")
@@ -115,6 +124,14 @@ class ProfileAdmin(BaseAdmin):
     @admin.display(description="Project membership count", ordering="projects__count")
     def project_count(self, obj):
         return obj.projects__count
+
+    @admin.display(description="Has Collect State", boolean=True)
+    def has_collect_state(self, obj):
+        return bool(obj.collect_state)
+
+    @admin.display(description="Has Explore State", boolean=True)
+    def has_explore_state(self, obj):
+        return bool(obj.explore_state)
 
     def get_queryset(self, request):
         qs = super().get_queryset(request)
@@ -126,6 +143,11 @@ class UserMERMAIDFeatureInline(admin.TabularInline):
     model = UserMERMAIDFeature
     extra = 0
 
+    def formfield_for_foreignkey(self, db_field, request, **kwargs):
+        if db_field.name == "profile":
+            kwargs["queryset"] = Profile.objects.order_by("last_name", "first_name")
+        return super().formfield_for_foreignkey(db_field, request, **kwargs)
+
 
 @admin.register(MERMAIDFeature)
 class MermaidFeatureAdmin(BaseAdmin):
@@ -136,12 +158,12 @@ class MermaidFeatureAdmin(BaseAdmin):
 
 def get_crs_with_attrib(query, attrib_val):
     cr_filter = {query: [attrib_val]}
-    return CollectRecord.objects.filter(**cr_filter)
+    return CollectRecord.objects.filter(**cr_filter).select_related("project")
 
 
 def get_sus_with_attrib(model_su, query, attrib_id):
     su_filter = {query: attrib_id}
-    return model_su.objects.filter(**su_filter).distinct()
+    return model_su.objects.filter(**su_filter).select_related(model_su.project_lookup).distinct()
 
 
 class AttributeAdmin(BaseAdmin):
@@ -166,8 +188,7 @@ class AttributeAdmin(BaseAdmin):
         if not extra_context.get("protected_descendants"):
             # dropdown of other attributes to assign to existing observations before deleting
             other_objs = self.model_attrib.objects.exclude(id=object_id).order_by("name")
-            if other_objs.count() > 0:
-                extra_context.update({"other_objs": other_objs})
+            extra_context.update({"other_objs": other_objs})
 
             protocol_crs = CollectRecord.objects.none()
             atleast_one_su = False
@@ -247,6 +268,13 @@ class AttributeAdmin(BaseAdmin):
             if sample_units:
                 extra_context.update({"objects_that_use": sample_units})
 
+            # Annotations that reference this attribute directly
+            annotation_qs = Annotation.objects.filter(benthic_attribute_id=object_id)
+            annotation_count = annotation_qs.count()
+            if annotation_count > 0:
+                atleast_one_su = True
+                extra_context.update({"annotation_count": annotation_count})
+
             # process reassignment, then hand back to django for deletion
             if request.method == "POST":
                 replacement_obj = request.POST.get("replacement_obj")
@@ -259,18 +287,22 @@ class AttributeAdmin(BaseAdmin):
                     )
                     return super().delete_view(request, object_id, extra_context)
 
-                for cr in protocol_crs:
-                    for p in self.protocols:
-                        observations = cr.data.get(p.get("cr_obs")) or []
-                        for obs in observations:
-                            if self.attrib in obs and obs[self.attrib] == object_id:
-                                obs[self.attrib] = replacement_obj
-                    cr.save()
+                with transaction.atomic():
+                    for cr in protocol_crs:
+                        for p in self.protocols:
+                            observations = cr.data.get(p.get("cr_obs")) or []
+                            for obs in observations:
+                                if self.attrib in obs and obs[self.attrib] == object_id:
+                                    obs[self.attrib] = replacement_obj
+                        cr.save()
 
-                for p in self.protocols:
-                    p.get("model_obs").objects.filter(**{self.attrib: object_id}).update(
-                        **{self.attrib: replacement_obj}
-                    )
+                    for p in self.protocols:
+                        p.get("model_obs").objects.filter(**{self.attrib: object_id}).update(
+                            **{self.attrib: replacement_obj}
+                        )
+
+                    if replacement_obj:
+                        annotation_qs.update(benthic_attribute_id=replacement_obj)
 
         return super().delete_view(request, object_id, extra_context)
 

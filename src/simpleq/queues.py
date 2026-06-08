@@ -197,6 +197,18 @@ class Queue:
             print(e)
             raise e
 
+    def extend_job_visibility(self, job, timeout):
+        """Extend a job's visibility timeout to prevent re-delivery during long-running jobs."""
+        try:
+            self.sqs_resource.meta.client.change_message_visibility(
+                QueueUrl=self.queue.url,
+                ReceiptHandle=job._sqs_receipt_handle,
+                VisibilityTimeout=timeout,
+            )
+        except Exception as e:
+            print(f"Failed to extend visibility for job {job}: {e}")
+            raise
+
     def _cleanup_duplicate_jobs(self, duplicate_job_groups):
         for duplicate_jobs in duplicate_job_groups.values():
             for duplicate_job in duplicate_jobs:

@@ -1,6 +1,6 @@
+import datetime
 from operator import itemgetter
 
-import pytz
 from django.http.response import HttpResponseBadRequest
 from django.utils.dateparse import parse_datetime
 from natsort import natsorted
@@ -24,6 +24,9 @@ from ..models import (
     GFCRRevenue,
     GrowthForm,
     HabitatComplexityScore,
+    InvertBeltTransectWidth,
+    InvertGroupOfInterest,
+    InvertSizeBin,
     ManagementCompliance,
     ManagementParty,
     Project,
@@ -43,6 +46,17 @@ from .base import BaseChoiceApiViewSet
 class ChoiceViewSet(BaseChoiceApiViewSet):
     def get_choices(self):
         belttransectwidths = dict(data=BeltTransectWidth.objects.choices(order_by="name"))
+        invertbelttransectwidths = dict(
+            data=InvertBeltTransectWidth.objects.choices(order_by="val")
+        )
+        invertsizebins = dict(data=InvertSizeBin.objects.choices(order_by="val"))
+        invertsizebins["data"] = natsorted(invertsizebins["data"], key=itemgetter(*["name"]))
+        invertgroupsofinterest = dict(
+            data=[
+                {"id": goi.pk, "name": goi.name, "updated_on": goi.updated_on}
+                for goi in InvertGroupOfInterest.objects.order_by("name")
+            ]
+        )
         benthiclifehistories = dict(data=BenthicLifeHistory.objects.choices(order_by="name"))
         growthforms = dict(data=GrowthForm.objects.choices(order_by="name"))
         countries = dict(data=Country.objects.choices(order_by="name"))
@@ -66,6 +80,9 @@ class ChoiceViewSet(BaseChoiceApiViewSet):
 
         return {
             "belttransectwidths": belttransectwidths,
+            "invertbelttransectwidths": invertbelttransectwidths,
+            "invertsizebins": invertsizebins,
+            "invertgroupsofinterest": invertgroupsofinterest,
             "benthiclifehistories": benthiclifehistories,
             "growthforms": growthforms,
             "countries": countries,
@@ -169,6 +186,36 @@ class ChoiceViewSet(BaseChoiceApiViewSet):
                     for c in GFCRFinanceSolution.SECTOR_CHOICES
                 ]
             },
+            "financesolutiontypes": {
+                "data": [
+                    {
+                        "id": c[0],
+                        "name": c[1],
+                        "updated_on": GFCRFinanceSolution.TYPE_CHOICES_UPDATED_ON,
+                    }
+                    for c in GFCRFinanceSolution.TYPE_CHOICES
+                ]
+            },
+            "geographicalcoverage": {
+                "data": [
+                    {
+                        "id": c[0],
+                        "name": c[1],
+                        "updated_on": GFCRFinanceSolution.GEOGRAPHICAL_COVERAGE_CHOICES_UPDATED_ON,
+                    }
+                    for c in GFCRFinanceSolution.GEOGRAPHICAL_COVERAGE_CHOICES
+                ]
+            },
+            "indicatorsettitles": {
+                "data": [
+                    {
+                        "id": c[0],
+                        "name": c[1],
+                        "updated_on": GFCRIndicatorSet.TITLE_CHOICES_UPDATED_ON,
+                    }
+                    for c in GFCRIndicatorSet.TITLE_CHOICES
+                ]
+            },
             "stages": {
                 "data": [
                     {
@@ -212,7 +259,7 @@ class ChoiceViewSet(BaseChoiceApiViewSet):
             timestamp = None
 
         if timestamp:
-            timestamp = timestamp.replace(tzinfo=pytz.utc)
+            timestamp = timestamp.replace(tzinfo=datetime.timezone.utc)
 
         choices = self.get_choices()
         for key, choice_set in choices.items():

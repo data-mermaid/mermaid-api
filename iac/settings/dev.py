@@ -1,6 +1,7 @@
 """Settings for development environments"""
 
 from settings.settings import DatabaseSettings, DjangoSettings, ProjectSettings
+import os
 
 DEV_ENV_ID = "dev"
 DEV_SETTINGS = ProjectSettings(
@@ -24,15 +25,13 @@ DEV_SETTINGS = ProjectSettings(
         default_domain_collect="https://dev-app.datamermaid.org",
         mermaid_api_audience="https://dev-api.datamermaid.org",
         public_bucket="dev-public.datamermaid.org",
-        sqs_message_visibility=3000,
+        sqs_message_visibility=60,
         # Image classification
         ic_bucket_name="mermaid-image-processing",
         # Secrets
-        dev_emails_name="dev/mermaid-api/dev-emails-mUnSDl",
-        spa_admin_client_id_name="common/mermaid-api/spa-admin-client-id-FuMVtc",
-        spa_admin_client_secret_name="common/mermaid-api/spa-admin-client-secret-kYccw0",
-        mermaid_api_signing_secret_name="common/mermaid-api/mermaid-api-signing-secret-FM7ATI",
-        mermaid_management_api_client_id_name="common/mermaid-api/mermaid-management-api-client-id-nIWaxV",
-        mermaid_management_api_client_secret_name="common/mermaid-api/mermaid-management-api-client-secret-HNVoT0",
+        env_secret_name="dev/mermaid-api-MzD7rS",
+        # Slack alerts via AWS Chatbot — fill in after connecting workspace in console
+        slack_workspace_id=os.getenv("SLACK_WORKSPACE_ID", ""),
+        slack_channel_id=os.getenv("SLACK_CHANNEL_ID", ""),
     ),
 )

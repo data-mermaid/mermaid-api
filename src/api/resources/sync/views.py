@@ -17,11 +17,13 @@ from api.resources import (
     fish_genus,
     fish_grouping,
     fish_species,
+    invert_attribute,
     pmanagement,
     project,
     project_profile,
     psite,
 )
+from api.resources.invert_attribute import InvertSpeciesViewSet
 from ...exceptions import ReadOnlyError
 from .pull import get_record, get_serialized_records, serialize_revisions
 from .push import apply_changes, get_request_method
@@ -41,6 +43,8 @@ FISH_FAMILIES_SOURCE_TYPE = "fish_families"
 FISH_GENERA_SOURCE_TYPE = "fish_genera"
 FISH_GROUPINGS_SOURCE_TYPE = "fish_groupings"
 FISH_SPECIES_SOURCE_TYPE = "fish_species"
+INVERT_ATTRIBUTES_SOURCE_TYPE = "invert_attributes"
+INVERT_SPECIES_SOURCE_TYPE = "invert_species"
 CHOICES_SOURCE_TYPE = "choices"
 
 CACHEABLE_SOURCE_TYPES = (
@@ -49,6 +53,8 @@ CACHEABLE_SOURCE_TYPES = (
     FISH_GENERA_SOURCE_TYPE,
     FISH_GROUPINGS_SOURCE_TYPE,
     FISH_SPECIES_SOURCE_TYPE,
+    INVERT_ATTRIBUTES_SOURCE_TYPE,
+    INVERT_SPECIES_SOURCE_TYPE,
 )
 
 project_sources = {
@@ -84,26 +90,43 @@ non_project_sources = {
         "view": benthic_attribute.BenthicAttributeViewSet,
         "required_filters": NO_FILTERS,
         "read_only": False,
+        "visibility_filtered": True,
     },
     FISH_FAMILIES_SOURCE_TYPE: {
         "view": fish_family.FishFamilyViewSet,
         "required_filters": NO_FILTERS,
         "read_only": True,
+        "visibility_filtered": True,
     },
     FISH_GENERA_SOURCE_TYPE: {
         "view": fish_genus.FishGenusViewSet,
         "required_filters": NO_FILTERS,
         "read_only": True,
+        "visibility_filtered": True,
     },
     FISH_GROUPINGS_SOURCE_TYPE: {
         "view": fish_grouping.FishGroupingViewSet,
         "required_filters": NO_FILTERS,
         "read_only": True,
+        "visibility_filtered": True,
     },
     FISH_SPECIES_SOURCE_TYPE: {
         "view": fish_species.FishSpeciesViewSet,
         "required_filters": NO_FILTERS,
         "read_only": False,
+        "visibility_filtered": True,
+    },
+    INVERT_ATTRIBUTES_SOURCE_TYPE: {
+        "view": invert_attribute.InvertAttributeViewSet,
+        "required_filters": NO_FILTERS,
+        "read_only": True,
+        "visibility_filtered": True,
+    },
+    INVERT_SPECIES_SOURCE_TYPE: {
+        "view": InvertSpeciesViewSet,
+        "required_filters": NO_FILTERS,
+        "read_only": False,
+        "visibility_filtered": True,
     },
     CHOICES_SOURCE_TYPE: {
         "view": choices.ChoiceViewSet,
@@ -276,7 +299,13 @@ def _get_source_records(source_type, source_data, request):
 
     viewset = src["view"](request=request)
     profile_id = _get_profile_id(request)
-    return get_serialized_records(viewset, profile_id, required_params=req_params)
+    generate_visibility_removes = src.get("visibility_filtered", False)
+    return get_serialized_records(
+        viewset,
+        profile_id,
+        required_params=req_params,
+        generate_visibility_removes=generate_visibility_removes,
+    )
 
 
 def check_permissions(request, data, source_types, method=False):

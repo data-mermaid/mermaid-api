@@ -17,6 +17,8 @@ class MeSerializer(BaseAPISerializer):
     projects_bbox = serializers.SerializerMethodField()
     projects = serializers.SerializerMethodField()
     optional_features = serializers.SerializerMethodField()
+    collect_state = serializers.JSONField(required=False)
+    explore_state = serializers.JSONField(required=False)
 
     class Meta:
         model = Profile
@@ -32,7 +34,10 @@ class MeSerializer(BaseAPISerializer):
             "projects_bbox",
             "projects",
             "optional_features",
+            "collect_state",
+            "explore_state",
         ]
+        read_only_fields = ["id", "created_on", "updated_on", "full_name"]
 
     def get_queryset(self, o):
         if not hasattr(self, "_projects_cache"):
@@ -122,28 +127,16 @@ class MeViewSet(viewsets.ModelViewSet):
 
         return Response(self.serializer_class(profile).data)
 
-    def put(self, request, *args, **kwargs):
-        """
-        Used for updating a user's own profile details
-        """
-        user = self.request.user
+    def _get_profile(self, request):
+        user = request.user
         profile = user.profile
         if profile is None:
             raise NotFound()
+        return profile
 
-        me_serializer = MeSerializer(
-            data=request.data, instance=profile, context={"request": request}
-        )
-
-        if me_serializer.is_valid() is False:
-            errors = {"Profile": me_serializer.errors}
-            raise ValidationError(errors)
-
+    def _sync_auth0_metadata(self, profile, email, first_name, last_name):
         auth_user_ids = [au.user_id for au in profile.authusers.all()]
         auth_users_client = Auth0Users()
-        email = me_serializer.validated_data.get("email")
-        first_name = me_serializer.validated_data.get("first_name")
-        last_name = me_serializer.validated_data.get("last_name")
 
         for user_id in auth_user_ids:
             auth_users_client.update(
@@ -156,8 +149,34 @@ class MeViewSet(viewsets.ModelViewSet):
                     },
                 }
             )
+
+    def _update_profile(self, request, partial=False):
+        # Used for updating a user's own profile details
+        profile = self._get_profile(request)
+
+        me_serializer = MeSerializer(
+            instance=profile, data=request.data, partial=partial, context={"request": request}
+        )
+        if not me_serializer.is_valid():
+            raise ValidationError(me_serializer.errors)
+
+        if any(k in request.data for k in ["email", "first_name", "last_name"]):
+            validated = me_serializer.validated_data
+            email = validated["email"] if "email" in validated else profile.email
+            first_name = (
+                validated["first_name"] if "first_name" in validated else profile.first_name
+            )
+            last_name = validated["last_name"] if "last_name" in validated else profile.last_name
+            self._sync_auth0_metadata(profile, email, first_name, last_name)
+
         me_serializer.save()
-        return Response(me_serializer.validated_data)
+        return Response(me_serializer.data)
+
+    def put(self, request, *args, **kwargs):
+        return self._update_profile(request, partial=False)
+
+    def patch(self, request, *args, **kwargs):
+        return self._update_profile(request, partial=True)
 
     def _get_email(self, profile):
         auth_user_ids = [au.user_id for au in profile.authusers.all()]

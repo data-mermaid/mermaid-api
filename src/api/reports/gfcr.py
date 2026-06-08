@@ -25,12 +25,16 @@ def common_columns(indicator_set):
 
 
 def _get_indicator_set_field_data(
-    indicator_set, field_label, field_name, additional_common_fields: List[str] = None
+    indicator_set,
+    field_label,
+    field_name,
+    additional_common_fields: List[str] = None,
+    notes_field: str = None,
 ):
     if not additional_common_fields:
         additional_common_fields = []
 
-    return (
+    row_data = (
         common_columns(indicator_set)
         + [getattr(indicator_set, f) for f in additional_common_fields]
         + [
@@ -39,8 +43,15 @@ def _get_indicator_set_field_data(
         ]
     )
 
+    if notes_field:
+        row_data = row_data + [getattr(indicator_set, notes_field)]
 
-def _get_indicator_sheet_data(indicator_sets, fields, additional_common_fields=None):
+    return row_data
+
+
+def _get_indicator_sheet_data(
+    indicator_sets, fields, additional_common_fields=None, notes_field=None
+):
     for indicator_set in indicator_sets:
         for field_label, field_name in fields:
             if hasattr(indicator_set, field_name):
@@ -49,6 +60,7 @@ def _get_indicator_sheet_data(indicator_sets, fields, additional_common_fields=N
                     field_label,
                     field_name,
                     additional_common_fields=additional_common_fields,
+                    notes_field=notes_field,
                 )
 
 
@@ -65,6 +77,7 @@ def f1_data(indicator_sets):
                 indicator_set._meta.get_field("f1_1").verbose_name,
                 indicator_set.f1_1,
                 citation,
+                indicator_set.f1_notes,
             ]
 
 
@@ -79,7 +92,7 @@ def f2_data(indicator_sets):
         ("F2.4", "f2_4"),
         ("F2.5:", "f2_5"),
     )
-    return _get_indicator_sheet_data(indicator_sets, fields)
+    return _get_indicator_sheet_data(indicator_sets, fields, notes_field="f2_notes")
 
 
 def f3_data(indicator_sets):
@@ -94,7 +107,7 @@ def f3_data(indicator_sets):
         ("F3.5d", "f3_5d"),
         ("F3.6", "f3_6"),
     )
-    return _get_indicator_sheet_data(indicator_sets, fields)
+    return _get_indicator_sheet_data(indicator_sets, fields, notes_field="f3_notes")
 
 
 def f4_data(indicator_sets):
@@ -107,6 +120,7 @@ def f4_data(indicator_sets):
         indicator_sets,
         fields,
         additional_common_fields=["f4_start_date", "f4_end_date"],
+        notes_field="f4_notes",
     )
 
 
@@ -122,7 +136,7 @@ def f5_data(indicator_sets):
         ("F5.5", "f5_5"),
         ("F5.6", "f5_6"),
     )
-    return _get_indicator_sheet_data(indicator_sets, fields)
+    return _get_indicator_sheet_data(indicator_sets, fields, notes_field="f5_notes")
 
 
 def f6_data(indicator_sets):
@@ -132,7 +146,7 @@ def f6_data(indicator_sets):
         ("F6.1c", "f6_1c"),
         ("F6.1d", "f6_1d"),
     )
-    return _get_indicator_sheet_data(indicator_sets, fields)
+    return _get_indicator_sheet_data(indicator_sets, fields, notes_field="f6_notes")
 
 
 def f7_data(indicator_sets):
@@ -148,18 +162,22 @@ def f7_data(indicator_sets):
         ("F7.3", "f7_3"),
         ("F7.4", "f7_4"),
     )
-    return _get_indicator_sheet_data(indicator_sets, fields)
+    return _get_indicator_sheet_data(indicator_sets, fields, notes_field="f7_notes")
 
 
 def common_finance_solutions_columns(finance_solution):
     return [
+        finance_solution.get_fs_type_display(),
         finance_solution.name,
         ",".join(finance_solution.get_sustainable_finance_mechanisms_display()),
         finance_solution.get_sector_display(),
+        finance_solution.get_geographical_coverage_display(),
+        finance_solution.taf_name,
+        finance_solution.number_of_solutions_supported_by,
     ]
 
 
-def businesses_finance_solutions_data(indicator_sets):
+def finance_solutions_data(indicator_sets):
     for indicator_set in indicator_sets:
         com_cols = common_columns(indicator_set)
         for fs in indicator_set.finance_solutions.all():
@@ -171,6 +189,7 @@ def businesses_finance_solutions_data(indicator_sets):
                     castutils.to_yesno(fs.used_an_incubator == GFCRFinanceSolution.GFCR_FUNDED),
                     castutils.to_yesno(fs.local_enterprise),
                     castutils.to_yesno(fs.gender_smart),
+                    fs.notes,
                 ]
             )
 
@@ -188,6 +207,7 @@ def investments_data(indicator_sets):
                         investment.get_investment_source_display(),
                         investment.get_investment_type_display(),
                         investment.investment_amount,
+                        investment.notes,
                     ]
                 )
 
@@ -205,6 +225,7 @@ def revenue_data(indicator_sets):
                         rev.get_revenue_type_display(),
                         castutils.to_yesno(rev.sustainable_revenue_stream),
                         rev.revenue_amount,
+                        rev.notes,
                     ]
                 )
 
@@ -218,7 +239,7 @@ def report_data(indicator_sets):
     sheet_data["F5"] = f5_data(indicator_sets)
     sheet_data["F6"] = f6_data(indicator_sets)
     sheet_data["F7"] = f7_data(indicator_sets)
-    sheet_data["BusinessesFinanceSolutions"] = businesses_finance_solutions_data(indicator_sets)
+    sheet_data["FacilitiesSolutions"] = finance_solutions_data(indicator_sets)
     sheet_data["Investments"] = investments_data(indicator_sets)
     sheet_data["Revenues"] = revenue_data(indicator_sets)
 

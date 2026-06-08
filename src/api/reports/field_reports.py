@@ -1,7 +1,6 @@
-from datetime import datetime
-
 from django.db.models.query import QuerySet
 from django.http import HttpResponseBadRequest, StreamingHttpResponse
+from django.utils import timezone
 from django.utils.text import get_valid_filename
 
 from api.models import Project
@@ -78,7 +77,7 @@ def get_csv_response(
     fields = [f.display for f in serializer_class.get_fields()]
 
     project_name = get_valid_filename(project.name)[:100]
-    time_stamp = datetime.utcnow().strftime("%Y%m%d")
+    time_stamp = timezone.now().strftime("%Y%m%d")
 
     file_name = f"{project_name}-{time_stamp}.csv"
     if file_name_prefix:

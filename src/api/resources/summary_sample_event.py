@@ -364,4 +364,5 @@ class SummarySampleEventView(AggregatedViewMixin, BaseApiViewSet):
     serializer_class_csv = SummarySampleEventCSVSerializer
     filterset_class = SummarySampleEventFilterSet
     queryset = SummarySampleEventModel.objects.filter(~Q(project_status=Project.TEST))
-    order_by = ("project_name", "site_name")
+    ordering_fields = ["project_name", "site_name"]
+    ordering = ["project_name", "site_name"]

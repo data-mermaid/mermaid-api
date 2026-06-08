@@ -16,13 +16,14 @@ from .classification import (  # noqa: F401
     LabelMapping,
     Point,
 )
+from .core import *  # noqa: F401, F403
 from .gfcr import (  # noqa: F401
     GFCRFinanceSolution,
     GFCRIndicatorSet,
     GFCRInvestmentSource,
     GFCRRevenue,
 )
-from .mermaid import *  # noqa: F403
+from .protocols import *  # noqa: F401, F403
 from .revisions import Revision  # noqa: F401
 from .sql_models import (  # noqa: F401
     BeltFishObsSQLModel,

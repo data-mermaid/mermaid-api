@@ -1,8 +1,10 @@
 import csv
+import gzip
+import itertools
+import logging
 from collections import defaultdict
 from typing import Dict, List, Set, Tuple
 
-import pandas as pd
 from django.db.models import QuerySet
 
 from ..exceptions import UnknownProtocolError
@@ -19,7 +21,7 @@ from ..models import (
     ProjectProfile,
     Site,
 )
-from ..resources.project import ProjectCSVSerializer
+from ..resources.project import ProjectCSVSerializer, annotate_num_sample_units
 from ..resources.sampleunitmethods.beltfishmethod import (
     BeltFishProjectMethodObsView,
     BeltFishProjectMethodSEView,
@@ -54,6 +56,8 @@ from ..resources.sampleunitmethods.habitatcomplexitymethod import (
 from ..utils import cached
 from ..utils.timer import timing
 from . import xl
+
+logger = logging.getLogger(__name__)
 
 ACA_BENTHIC_KEY, ACA_BENTHIC_FIELD = Covariate.SUPPORTED_COVARIATES[0]
 ACA_GEOMORPHIC_KEY, ACA_GEOMORPHIC_FIELD = Covariate.SUPPORTED_COVARIATES[1]
@@ -258,10 +262,17 @@ def get_viewset_csv_content(view_cls, project_pk, request):
     resp = vw.csv(request)
 
     if resp.status_code != 200:
-        print(resp.content)
+        logger.error(
+            "Failed to get CSV content for project %s: %s",
+            project_pk,
+            b"".join(resp.streaming_content),
+        )
         raise ValueError(f"Failed to get content for project {project_pk}")
 
-    content = list(csv.reader([str(row, "UTF-8").strip() for row in resp.streaming_content]))
+    raw_bytes = b"".join(resp.streaming_content)
+    if resp.get("Content-Encoding") == "gzip":
+        raw_bytes = gzip.decompress(raw_bytes)
+    content = list(csv.reader(raw_bytes.decode("utf-8").splitlines()))
     if not isinstance(content, list) or len(content) < 2 or "site_id" not in content[0]:
         if isinstance(content, list):
             yield from content
@@ -344,18 +355,12 @@ def _inject_protocol_viewability(header, data, viewable_levels):
 
 
 def _get_project_metadata(project_ids, viewable_levels):
-    projects = Project.objects.filter(pk__in=project_ids)
+    projects = annotate_num_sample_units(Project.objects.filter(pk__in=project_ids))
     prj_serializer = ProjectCSVSerializer(projects, show_display_fields=True)
     header = [f.display for f in prj_serializer.fields]
     data = [list(r.values()) for r in prj_serializer.data]
     _inject_protocol_viewability(header, data, viewable_levels)
     return [header] + data
-
-
-def _df_to_rows(df):
-    yield list(df.columns)
-    for _, row in df.iterrows():
-        yield row.tolist()
 
 
 @timing
@@ -396,33 +401,38 @@ def create_protocol_report(request, project_ids, protocol):
     xl.write_data_to_sheet(wb, "Metadata", project_metadata, 1, 1)
     xl.auto_size_columns(wb["Metadata"])
 
-    # Protocol data - collect all data first, then concatenate and write
-    sheet_data = {sheet_name: [] for sheet_name in sheet_names}
+    # Protocol data - stream each project directly to workbook
+    sheet_rows = {sheet_name: 1 for sheet_name in sheet_names}
+    headers_written = set()
 
-    # Collect data for each project and view
     for project_id in project_ids:
         project_id = str(project_id)
         config = report_config[project_id]
-        views = config["views"]
-        project_sheet_names = config["sheet_names"]
-        for view, sheet_name in zip(views, project_sheet_names):
-            data = get_viewset_csv_content(view, project_id, request)
-            rows = list(data)
-            if rows:
-                df = (
-                    pd.DataFrame(rows[1:], columns=rows[0])
-                    if len(rows) > 1
-                    else pd.DataFrame(columns=rows[0])
-                )
-                sheet_data[sheet_name].append(df)
-
-    # Concatenate data for each sheet and write to workbook
-    for sheet_name in sheet_names:
-        if sheet_data[sheet_name]:
-            combined_df = pd.concat(sheet_data[sheet_name], ignore_index=True)
-            xl.write_data_to_sheet(
-                workbook=wb, sheet_name=sheet_name, data=_df_to_rows(combined_df), row=1, col=1
+        for view, sheet_name in zip(config["views"], config["sheet_names"]):
+            rows_iter = iter(get_viewset_csv_content(view, project_id, request))
+            first_row = next(rows_iter, None)
+            if first_row is None:
+                continue
+            if sheet_name not in headers_written:
+                headers_written.add(sheet_name)
+                rows_to_write = itertools.chain([first_row], rows_iter)
+            else:
+                # first_row is the header; skip it and check for data
+                data_first = next(rows_iter, None)
+                if data_first is None:
+                    continue
+                rows_to_write = itertools.chain([data_first], rows_iter)
+            last_row, _ = xl.write_data_to_sheet(
+                workbook=wb,
+                sheet_name=sheet_name,
+                data=rows_to_write,
+                row=sheet_rows[sheet_name],
+                col=1,
             )
+            sheet_rows[sheet_name] = last_row + 1
+
+    for sheet_name in sheet_names:
+        if sheet_name in wb.sheetnames:
             xl.auto_size_columns(wb[sheet_name])
 
     return wb

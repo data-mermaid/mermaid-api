@@ -1,10 +1,10 @@
 import os
 import shlex
-from datetime import datetime, timezone
 
 import boto3
 from django.conf import settings
 from django.core.management.base import BaseCommand
+from django.utils import timezone
 from simpleflake import simpleflake
 
 from api.utils import run_subprocess
@@ -17,7 +17,7 @@ class Command(BaseCommand):
 
     def __init__(self):
         super(Command, self).__init__()
-        self.now = datetime.now(timezone.utc)
+        self.now = timezone.now()
         self.env = os.environ.get("ENV", "none").lower()
         self.backup = self.env
         self.local_file_location = os.path.join(os.path.sep, "tmp", "mermaid")

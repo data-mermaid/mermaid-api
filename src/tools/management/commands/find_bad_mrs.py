@@ -1,10 +1,10 @@
 import csv
 import os
-from datetime import datetime
 
 from django.conf import settings
 from django.core.management.base import BaseCommand
 from django.db.models import Q
+from django.utils import timezone
 
 from api.models import Management, Project, ProjectProfile
 
@@ -58,7 +58,7 @@ class Command(BaseCommand):
         )
 
     def write_csv(self, filelabel, mrs):
-        ts = datetime.utcnow().strftime("%Y%m%d")
+        ts = timezone.now().strftime("%Y%m%d")
         basefilename = "suspect_mrs_{}_{}.csv"
         mr_path = os.path.join(self.outpath, basefilename.format(filelabel, ts))
 

@@ -1,4 +1,4 @@
-FROM python:3.10-slim-bullseye
+FROM python:3.12-slim-bookworm
 LABEL maintainer="<sysadmin@datamermaid.org>"
 
 ENV DEBIAN_FRONTEND=noninteractive
@@ -8,8 +8,6 @@ ENV LC_ALL=C.UTF-8
 ENV PYTHONPATH="/var/projects/webapp"
 ENV PATH="/home/webapp/.local/bin:${PATH}"
 ENV PYTHONUNBUFFERED=1
-
-# Add any static environment variables needed by Django or your settings file here:
 ENV DJANGO_SETTINGS_MODULE=app.settings
 
 # Install OS dependencies
@@ -41,7 +39,7 @@ RUN groupadd ${APP_USER} && useradd -m --no-log-init -g ${APP_USER} ${APP_USER}
 WORKDIR ${APP_DIR}
 
 ADD requirements.txt .
-RUN su ${APP_USER} -c "pip install --no-cache-dir -r requirements.txt"
+RUN su ${APP_USER} -c "pip install --upgrade pip && pip install --no-cache-dir -r requirements.txt"
 RUN rm ${APP_DIR}/requirements.txt
 
 ADD ./src .

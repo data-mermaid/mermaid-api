@@ -3,6 +3,7 @@ import pytest
 from api.models import (
     BENTHICPQT_PROTOCOL,
     FISHBELT_PROTOCOL,
+    MACROINVERTEBRATE_PROTOCOL,
     CollectRecord,
     ProjectProfile,
 )
@@ -636,6 +637,173 @@ def invalid_collect_record_error(
 
 
 @pytest.fixture
+def valid_belt_invert_collect_record(
+    management1,
+    site1,
+    sample_date1,
+    invert_belt_transect_width_1m,
+    invert_size_bin_1,
+    invert_species_1,
+    project1,
+    profile1,
+    project_profile1,
+    current1,
+    reef_slope1,
+    relative_depth1,
+    visibility1,
+    tide1,
+):
+    observations = [
+        dict(invert_attribute=str(invert_species_1.id), count=3, size=4.5, include=True),
+        dict(invert_attribute=str(invert_species_1.id), count=5, size=3.0, include=True),
+        dict(invert_attribute=str(invert_species_1.id), count=2, size=6.0, include=True),
+        dict(invert_attribute=str(invert_species_1.id), count=1, size=5.5, include=True),
+        dict(invert_attribute=str(invert_species_1.id), count=4, size=2.0, include=True),
+        dict(invert_attribute=str(invert_species_1.id), count=2, size=7.5, include=True),
+    ]
+
+    data = dict(
+        protocol=MACROINVERTEBRATE_PROTOCOL,
+        obs_belt_inverts=observations,
+        beltinvert_transect=dict(
+            current=str(current1.pk),
+            reef_slope=str(reef_slope1.pk),
+            relative_depth=str(relative_depth1.pk),
+            size_bin=str(invert_size_bin_1.pk),
+            tide=str(tide1.pk),
+            visibility=str(visibility1.pk),
+            width=str(invert_belt_transect_width_1m.pk),
+            depth=5,
+            len_surveyed=50,
+            sample_time="09:00:00",
+            number=1,
+        ),
+        sample_event=dict(
+            management=str(management1.id),
+            site=str(site1.id),
+            sample_date=f"{sample_date1.year}-{sample_date1.month}-{sample_date1.day}",
+        ),
+        observers=[{"profile": str(project_profile1.profile.id)}],
+    )
+    return CollectRecord.objects.create(
+        project=project1,
+        profile=profile1,
+        stage=CollectRecord.VALIDATED_STAGE,
+        data=data,
+    )
+
+
+@pytest.fixture
+def valid_belt_invert_collect_record_goi(
+    management1,
+    site1,
+    sample_date1,
+    invert_belt_transect_width_1m,
+    invert_size_bin_1,
+    invert_group_of_interest_1,
+    project1,
+    profile1,
+    project_profile1,
+    current1,
+    reef_slope1,
+    relative_depth1,
+    visibility1,
+    tide1,
+):
+    observations = [
+        dict(invert_attribute=str(invert_group_of_interest_1.pk), count=1, size=5.0, include=True),
+        dict(invert_attribute=str(invert_group_of_interest_1.pk), count=1, size=8.0, include=True),
+        dict(invert_attribute=str(invert_group_of_interest_1.pk), count=1, size=10.0, include=True),
+        dict(invert_attribute=str(invert_group_of_interest_1.pk), count=1, size=12.0, include=True),
+        dict(invert_attribute=str(invert_group_of_interest_1.pk), count=1, size=15.0, include=True),
+    ]
+    data = dict(
+        protocol=MACROINVERTEBRATE_PROTOCOL,
+        obs_belt_inverts=observations,
+        beltinvert_transect=dict(
+            current=str(current1.pk),
+            reef_slope=str(reef_slope1.pk),
+            relative_depth=str(relative_depth1.pk),
+            size_bin=str(invert_size_bin_1.pk),
+            tide=str(tide1.pk),
+            visibility=str(visibility1.pk),
+            width=str(invert_belt_transect_width_1m.pk),
+            depth=5,
+            len_surveyed=50,
+            sample_time="09:00:00",
+            number=1,
+        ),
+        sample_event=dict(
+            management=str(management1.id),
+            site=str(site1.id),
+            sample_date=f"{sample_date1.year}-{sample_date1.month}-{sample_date1.day}",
+        ),
+        observers=[{"profile": str(project_profile1.profile.id)}],
+    )
+    return CollectRecord.objects.create(
+        project=project1,
+        profile=profile1,
+        stage=CollectRecord.VALIDATED_STAGE,
+        data=data,
+    )
+
+
+@pytest.fixture
+def valid_belt_invert_collect_record_family(
+    management1,
+    site1,
+    sample_date1,
+    invert_belt_transect_width_1m,
+    invert_size_bin_1,
+    invert_family_1,
+    project1,
+    profile1,
+    project_profile1,
+    current1,
+    reef_slope1,
+    relative_depth1,
+    visibility1,
+    tide1,
+):
+    observations = [
+        dict(invert_attribute=str(invert_family_1.pk), count=1, size=5.0, include=True),
+        dict(invert_attribute=str(invert_family_1.pk), count=1, size=8.0, include=True),
+        dict(invert_attribute=str(invert_family_1.pk), count=1, size=10.0, include=True),
+        dict(invert_attribute=str(invert_family_1.pk), count=1, size=12.0, include=True),
+        dict(invert_attribute=str(invert_family_1.pk), count=1, size=15.0, include=True),
+    ]
+    data = dict(
+        protocol=MACROINVERTEBRATE_PROTOCOL,
+        obs_belt_inverts=observations,
+        beltinvert_transect=dict(
+            current=str(current1.pk),
+            reef_slope=str(reef_slope1.pk),
+            relative_depth=str(relative_depth1.pk),
+            size_bin=str(invert_size_bin_1.pk),
+            tide=str(tide1.pk),
+            visibility=str(visibility1.pk),
+            width=str(invert_belt_transect_width_1m.pk),
+            depth=5,
+            len_surveyed=50,
+            sample_time="09:00:00",
+            number=1,
+        ),
+        sample_event=dict(
+            management=str(management1.id),
+            site=str(site1.id),
+            sample_date=f"{sample_date1.year}-{sample_date1.month}-{sample_date1.day}",
+        ),
+        observers=[{"profile": str(project_profile1.profile.id)}],
+    )
+    return CollectRecord.objects.create(
+        project=project1,
+        profile=profile1,
+        stage=CollectRecord.VALIDATED_STAGE,
+        data=data,
+    )
+
+
+@pytest.fixture
 def valid_benthic_lit_collect_record(
     benthic_attribute_3,
     benthic_attribute_4,
@@ -795,18 +963,19 @@ def valid_habitat_complexity_collect_record(
     project_profile1,
 ):
     observations = [
-        dict(score=str(habitat_complexity_score1.id), interval=0),
         dict(score=str(habitat_complexity_score1.id), interval=5),
         dict(score=str(habitat_complexity_score1.id), interval=10),
         dict(score=str(habitat_complexity_score1.id), interval=15),
         dict(score=str(habitat_complexity_score1.id), interval=20),
         dict(score=str(habitat_complexity_score1.id), interval=25),
+        dict(score=str(habitat_complexity_score1.id), interval=30),
     ]
     data = dict(
         protocol="habitatcomplexity",
         obs_habitat_complexities=observations,
         benthic_transect=dict(depth=1, number=2, len_surveyed=30),
         interval_size=5,
+        interval_start=5,
         sample_event=dict(
             management=str(management1.id),
             site=str(site1.id),
@@ -834,18 +1003,19 @@ def invalid_habitat_complexity_collect_record(
     project_profile1,
 ):
     observations = [
-        dict(score="invalid score id", interval=0),
-        dict(score=str(habitat_complexity_score1.id), interval=5),
+        dict(score="invalid score id", interval=5),
         dict(score=str(habitat_complexity_score1.id), interval=10),
         dict(score=str(habitat_complexity_score1.id), interval=15),
         dict(score=str(habitat_complexity_score1.id), interval=20),
         dict(score=str(habitat_complexity_score1.id), interval=25),
+        dict(score=str(habitat_complexity_score1.id), interval=30),
     ]
     data = dict(
         protocol="habitatcomplexity",
         obs_habitat_complexities=observations,
         benthic_transect=dict(depth=1, number=2, len_surveyed=30),
         interval_size=5,
+        interval_start=5,
         sample_event=dict(
             management=str(management1.id),
             site=str(site1.id),

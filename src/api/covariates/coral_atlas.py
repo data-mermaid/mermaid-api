@@ -1,9 +1,11 @@
 import datetime
+import time
 from concurrent.futures import ThreadPoolExecutor
 from typing import List, Tuple
 
 import requests
 from django.conf import settings
+from django.utils import timezone
 
 from .base import BaseCovariate, CovariateRequestError
 
@@ -31,10 +33,19 @@ class CoralAtlasCovariate(BaseCovariate):
         headers = {
             "User-Agent": "Mozilla/5.0 (X11; Ubuntu; Linux x86_64; rv:91.0) Gecko/20100101 Firefox/91.0"
         }
-        resp = requests.get(url, headers=headers)
-        status_code = resp.status_code
-        if status_code != 200:
-            raise CovariateRequestError(resp.text)
+        last_error = None
+        for attempt in range(3):
+            try:
+                resp = requests.get(url, headers=headers, timeout=(3.05, 10))
+                if resp.status_code == 200:
+                    break
+                last_error = resp.text
+            except requests.RequestException as e:
+                last_error = str(e)
+            if attempt < 2:
+                time.sleep(2**attempt)
+        else:
+            raise CovariateRequestError(last_error)
 
         data = (resp.json() or {}).get("data")
         stats = (data or {}).get("stats")
@@ -63,7 +74,7 @@ class CoralAtlasCovariate(BaseCovariate):
     def fetch(self, points: List[Tuple[float, float]]) -> List[dict]:
         futures = []
         response = []
-        request_datetime = datetime.datetime.utcnow()
+        request_datetime = timezone.now()
         with ThreadPoolExecutor(max_workers=self.num_threads) as exc:
             for point in points:
                 x, y = point

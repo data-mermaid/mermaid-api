@@ -7,6 +7,7 @@ from rest_framework.exceptions import ValidationError
 from api.models import (
     Annotation,
     BeltFish,
+    BeltInvert,
     BenthicLIT,
     BenthicPhotoQuadratTransect,
     BenthicPIT,
@@ -14,6 +15,7 @@ from api.models import (
     BleachingQuadratCollection,
     FishBeltTransect,
     HabitatComplexity,
+    InvertBeltTransect,
     Observer,
     QuadratCollection,
     QuadratTransect,
@@ -21,6 +23,7 @@ from api.models import (
 )
 from api.resources.benthic_transect import BenthicTransectSerializer
 from api.resources.fish_belt_transect import FishBeltTransectSerializer
+from api.resources.invert_belt_transect import InvertBeltTransectSerializer
 from api.resources.observer import ObserverSerializer
 from api.resources.quadrat_collection import QuadratCollectionSerializer
 from api.resources.quadrat_transect import QuadratTransectSerializer
@@ -30,6 +33,10 @@ from ..resources.sampleunitmethods import clean_sample_event_models
 from ..resources.sampleunitmethods.beltfishmethod import (
     BeltFishSerializer,
     ObsBeltFishSerializer,
+)
+from ..resources.sampleunitmethods.beltinvertmethod import (
+    BeltInvertSerializer,
+    ObsBeltInvertSerializer,
 )
 from ..resources.sampleunitmethods.benthiclitmethod import (
     BenthicLITSerializer,
@@ -55,10 +62,12 @@ from ..resources.sampleunitmethods.habitatcomplexitymethod import (
 from .parser import (
     get_benthic_transect_data,
     get_fishbelt_transect_data,
+    get_invertbelt_transect_data,
     get_obs_benthic_photo_quadrat_data,
     get_obs_colonies_bleached_data,
     get_obs_quadrat_benthic_percent_data,
     get_obsbeltfish_data,
+    get_obsbeltinvert_data,
     get_obsbenthiclit_data,
     get_obsbenthicpit_data,
     get_observers_data,
@@ -273,6 +282,7 @@ class HabitatComplexityProtocolWriter(BenthicProtocolWriter):
             "id": sample_unit_method_id,
             "transect": benthic_transect_id,
             "interval_size": self.collect_record.data.get("interval_size"),
+            "interval_start": self.collect_record.data.get("interval_start"),
         }
         return self.get_or_create(
             HabitatComplexity,
@@ -514,3 +524,45 @@ class BenthicPhotoQuadratTransectProtocolWriter(ProtocolWriter):
         )
         _ = self.create_observers(benthic_photo_quadrat_transect.id)
         _ = self.create_obs_benthic_photo_quadrat(benthic_photo_quadrat_transect.id)
+
+
+class BeltInvertProtocolWriter(ProtocolWriter):
+    def get_or_create_invertbelt_transect(self, sample_event_id):
+        invertbelt_transect_data = get_invertbelt_transect_data(
+            self.collect_record, sample_event_id
+        )
+        return self.get_or_create(
+            InvertBeltTransect, InvertBeltTransectSerializer, invertbelt_transect_data
+        )
+
+    def get_or_create_beltinvert(
+        self, collect_record_id, invertbelt_transect_id, sample_unit_method_id=None
+    ):
+        beltinvert_data = {"transect": invertbelt_transect_id, "id": sample_unit_method_id}
+        return self.get_or_create(
+            BeltInvert,
+            BeltInvertSerializer,
+            beltinvert_data,
+            additional_data={"collect_record_id": collect_record_id},
+        )
+
+    def create_obsbeltinvert(self, belt_invert_id):
+        observation_beltinverts = []
+        observations_data = get_obsbeltinvert_data(self.collect_record, belt_invert_id)
+
+        for observation_data in observations_data:
+            observation_data["id"] = observation_data.get("id") or uuid.uuid4()
+            serializer = self.validate_data(ObsBeltInvertSerializer, observation_data)
+            observation_beltinverts.append(serializer.save())
+
+        return observation_beltinverts
+
+    def write(self):
+        sample_unit_method_id = self.get_sample_unit_method_id()
+        sample_event = self.get_or_create_sample_event()
+        invertbelt_transect = self.get_or_create_invertbelt_transect(sample_event.id)
+        belt_invert = self.get_or_create_beltinvert(
+            self.collect_record.id, invertbelt_transect.id, sample_unit_method_id
+        )
+        _ = self.create_observers(belt_invert.id)
+        _ = self.create_obsbeltinvert(belt_invert.id)

@@ -1,34 +1,31 @@
 import copy
 
 import pytest
-from django.core.files import File
+from django.core.files.uploadedfile import SimpleUploadedFile
+from django.test import override_settings
 from django.urls import reverse
-
 
 from api.models import Annotation, Classifier, Image, Point
 
 
 @pytest.fixture
 def classifier():
-    return Classifier.objects.create(
-        name="Test classifier",
-        version="v0",
-        patch_size=144
+    return Classifier.objects.create(name="Test classifier", version="v0", patch_size=144)
+
+
+@pytest.fixture
+def image(valid_benthic_pq_transect_collect_record):
+    with open("api/tests/data/test_image.jpg", "rb") as f:
+        content = f.read()
+
+    image_file = SimpleUploadedFile(
+        name="test_image.jpg", content=content, content_type="image/jpeg"
     )
 
-
-@pytest.fixture
-def image_file():
-    return File(open('api/tests/data/test_image.jpg', 'rb'), name='test_image.jpg')
-
-
-@pytest.fixture
-def image(valid_benthic_pq_transect_collect_record, image_file):
     return Image.objects.create(
         collect_record_id=valid_benthic_pq_transect_collect_record.pk,
         image=image_file,
-        thumbnail=image_file,
-        name="Test image"
+        name="Test image",
     )
 
 
@@ -50,7 +47,7 @@ def annotations(classifier, point, benthic_attribute_1, benthic_attribute_2, ben
             benthic_attribute=benthic_attribute_1,
             growth_form=None,
             score=4,
-            is_confirmed =False,
+            is_confirmed=False,
             is_machine_created=True,
         ),
         Annotation.objects.create(
@@ -59,7 +56,7 @@ def annotations(classifier, point, benthic_attribute_1, benthic_attribute_2, ben
             benthic_attribute=benthic_attribute_2,
             growth_form=None,
             score=80,
-            is_confirmed =True,
+            is_confirmed=True,
             is_machine_created=True,
         ),
         Annotation.objects.create(
@@ -68,7 +65,7 @@ def annotations(classifier, point, benthic_attribute_1, benthic_attribute_2, ben
             benthic_attribute=benthic_attribute_3,
             growth_form=None,
             score=1,
-            is_confirmed =False,
+            is_confirmed=False,
             is_machine_created=True,
         ),
     ]
@@ -93,15 +90,17 @@ def test_create_user_defined_annotation(
     assert request.status_code == 200
 
     data = request.json()
-    
+
     bad_data = copy.deepcopy(data)
-    bad_data["points"][0]["annotations"].append({
-        "point": str(point.pk),
-        "benthic_attribute": str(benthic_attribute_4.pk),
-        "growth_form": None,
-        "classifier": None,
-        "is_confirmed": True
-    })
+    bad_data["points"][0]["annotations"].append(
+        {
+            "point": str(point.pk),
+            "benthic_attribute": str(benthic_attribute_4.pk),
+            "growth_form": None,
+            "classifier": None,
+            "is_confirmed": True,
+        }
+    )
 
     # Test two annotations with is_confirmed
     request = api_client1.patch(url, bad_data, format="json")
@@ -112,7 +111,7 @@ def test_create_user_defined_annotation(
     # Only have one is_confirmed
     for annotation in good_data["points"][0]["annotations"]:
         annotation["is_confirmed"] = False
-    
+
     good_data["points"][0]["annotations"][-1]["is_confirmed"] = True
 
     request = api_client1.patch(url, data, format="json")
@@ -139,21 +138,25 @@ def test_two_user_defined_annotation(
 
     data = request.json()
 
-    data["points"][0]["annotations"].append({
-        "point": str(point.pk),
-        "benthic_attribute": str(benthic_attribute_4.pk),
-        "growth_form": str(growth_form1.pk),
-        "classifier": None,
-        "is_confirmed": False
-    })
+    data["points"][0]["annotations"].append(
+        {
+            "point": str(point.pk),
+            "benthic_attribute": str(benthic_attribute_4.pk),
+            "growth_form": str(growth_form1.pk),
+            "classifier": None,
+            "is_confirmed": False,
+        }
+    )
 
-    data["points"][0]["annotations"].append({
-        "point": str(point.pk),
-        "benthic_attribute": str(benthic_attribute_4.pk),
-        "growth_form": None,
-        "classifier": None,
-        "is_confirmed": True
-    })
+    data["points"][0]["annotations"].append(
+        {
+            "point": str(point.pk),
+            "benthic_attribute": str(benthic_attribute_4.pk),
+            "growth_form": None,
+            "classifier": None,
+            "is_confirmed": True,
+        }
+    )
 
     request = api_client1.patch(url, data, format="json")
     data = request.json()
@@ -212,8 +215,11 @@ def test_edit_machine_annotation(
     updated_data = request.json()
 
     assert request.status_code == 200
-    assert updated_data["points"][0]["annotations"][0]["score"] == data["points"][0]["annotations"][0]["score"]
-    
+    assert (
+        updated_data["points"][0]["annotations"][0]["score"]
+        == data["points"][0]["annotations"][0]["score"]
+    )
+
     # Multiple is_confirmed
     bad_data = copy.deepcopy(data)
     bad_data["points"][0]["annotations"][0]["is_confirmed"] = True
@@ -222,7 +228,7 @@ def test_edit_machine_annotation(
     updated_data = request.json()
 
     assert request.status_code == 400
-    
+
     # Change is_confirmed
     good_data = copy.deepcopy(data)
     anno_id_1 = good_data["points"][0]["annotations"][0]["id"]
@@ -238,3 +244,38 @@ def test_edit_machine_annotation(
             assert anno["is_confirmed"] is True
         elif anno_id_2 == anno["id"]:
             assert anno["is_confirmed"] is False
+
+
+@override_settings(MAX_IMAGE_FILE_SIZE=10)
+def test_upload_image_exceeding_size_limit(
+    db_setup,
+    api_client1,
+    project1,
+    valid_benthic_pq_transect_collect_record,
+):
+    url = reverse("image-list", kwargs={"project_pk": str(project1.pk)})
+    oversized_file = SimpleUploadedFile(
+        name="big.jpg", content=b"x" * 11, content_type="image/jpeg"
+    )
+    response = api_client1.post(
+        url,
+        {
+            "image": oversized_file,
+            "collect_record_id": str(valid_benthic_pq_transect_collect_record.pk),
+        },
+        format="multipart",
+    )
+    assert response.status_code == 400
+    assert "size limit" in response.json()["error"]
+
+
+def test_classification_status_is_none_when_no_statuses(
+    db_setup,
+    api_client1,
+    project1,
+    image,
+):
+    url = reverse("image-detail", kwargs={"project_pk": str(project1.pk), "pk": str(image.pk)})
+    response = api_client1.get(url, format="json")
+    assert response.status_code == 200
+    assert response.json()["classification_status"] is None

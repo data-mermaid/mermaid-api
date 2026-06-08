@@ -14,6 +14,7 @@ permissions:
   actions: write
   contents: read
   id-token: write
+  pull-requests: write
 
 env:
   ENV: dev
@@ -30,23 +31,23 @@ jobs:
     needs: [call-test]
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/setup-node@v5.0.0
+      - uses: actions/setup-node@v6.2.0
         with:
           node-version: '^22.11.0'
 
       - name: Setup Python
-        uses: actions/setup-python@v6.0.0
+        uses: actions/setup-python@v6.2.0
         with:
           python-version: "^3.12.0"
 
-      - uses: actions/checkout@v5.0.0
+      - uses: actions/checkout@v6.0.2
 
       - name: Install CDK
         run: |
           cd iac && ./install_cdk.sh
 
       - name: Configure AWS credentials
-        uses: aws-actions/configure-aws-credentials@v5.0.0
+        uses: aws-actions/configure-aws-credentials@v5.1.1
         env:
           CDK_DEFAULT_ACCOUNT: ${{ secrets.CDK_DEFAULT_ACCOUNT }}
           DEPLOY_AWS_ROLE: ${{ secrets.DEPLOY_AWS_ROLE }}
@@ -55,14 +56,120 @@ jobs:
           aws-region: us-east-1
           role-skip-session-tagging: true
 
-      - name: CDK Diff
+      - name: CDK Nag
+        id: cdk-nag
         env:
           CDK_DEFAULT_ACCOUNT: ${{ secrets.CDK_DEFAULT_ACCOUNT }}
           PYTHONPATH: ${{ github.workspace }}
-          GITHUB_EVENT_NAME: ${{ github.event_name }}
-          GITHUB_EVENT_PATH: ${{ github.event_path }}
-          GITHUB_TOKEN: ${{ github.token }}
-          GITHUB_WORKFLOW: ${{ github.workflow }}
+          SLACK_CHANNEL_ID: ${{ secrets.SLACK_CHANNEL_ID }}
+          SLACK_WORKSPACE_ID: ${{ secrets.SLACK_WORKSPACE_ID }}
+        run: |
+          set -o pipefail
+          cd iac && cdk synth --quiet 2>&1 | tee /tmp/cdk-nag.log
+          if grep -q '^\[Error' /tmp/cdk-nag.log; then
+            echo "has_errors=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "has_errors=false" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Post CDK Nag results to PR
+        if: always() && steps.cdk-nag.outcome == 'success'
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const fs = require('fs');
+            const log = fs.readFileSync('/tmp/cdk-nag.log', 'utf8');
+            const errors = log.split('\n').filter(l => l.startsWith('[Error'));
+            const warnings = log.split('\n').filter(l => l.startsWith('[Warning'));
+            let body = '## cdk-nag report\n\n';
+            if (errors.length === 0) {
+              body += ':white_check_mark: **No unsuppressed errors.**\n';
+            } else {
+              body += `:x: **${errors.length} unsuppressed error(s):**\n\n`;
+              body += '```\n' + errors.join('\n') + '\n```\n';
+            }
+            if (warnings.length > 0) {
+              body += `\n:warning: ${warnings.length} warning(s)\n`;
+            }
+            body += '\n---\n*See `iac/nag_suppressions.py` to add suppressions for accepted risks.*';
+            const { data: comments } = await github.rest.issues.listComments({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              issue_number: context.issue.number,
+            });
+            const existing = comments.find(c => c.body.includes('## cdk-nag report'));
+            if (existing) {
+              await github.rest.issues.updateComment({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                comment_id: existing.id,
+                body,
+              });
+            } else {
+              await github.rest.issues.createComment({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                issue_number: context.issue.number,
+                body,
+              });
+            }
+
+      - name: Fail on CDK Nag errors
+        if: steps.cdk-nag.outputs.has_errors == 'true'
+        run: |
+          echo "::error::cdk-nag found unsuppressed errors — see PR comment for details"
+          exit 1
+
+      - name: CDK Diff
+        id: cdk-diff
+        env:
+          CDK_DEFAULT_ACCOUNT: ${{ secrets.CDK_DEFAULT_ACCOUNT }}
+          PYTHONPATH: ${{ github.workspace }}
           SYS_EMAIL: ${{ secrets.SYS_EMAIL }}
+          SLACK_CHANNEL_ID: ${{ secrets.SLACK_CHANNEL_ID }}
+          SLACK_WORKSPACE_ID: ${{ secrets.SLACK_WORKSPACE_ID }}
         run: |
           cd iac && ./cdk_diff.sh
+
+      - name: Post CDK Diff results to PR
+        if: always() && steps.cdk-diff.outcome != 'skipped'
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const fs = require('fs');
+            const log = fs.readFileSync('/tmp/cdk-diff.log', 'utf8');
+            const status = '${{ steps.cdk-diff.outcome }}' === 'success' ? 'Success' : 'Failed';
+            const icon = status === 'Success' ? ':white_check_mark:' : ':x:';
+            const body = [
+              `#### \`cdk diff\` ${icon} ${status}`,
+              '<details><summary>Show Output</summary>',
+              '',
+              '```',
+              log,
+              '```',
+              '',
+              '</details>',
+              '',
+              `*Workflow: \`${{ github.workflow }}\`*`,
+            ].join('\n');
+            const { data: comments } = await github.rest.issues.listComments({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              issue_number: context.issue.number,
+            });
+            const existing = comments.find(c => c.body.includes('#### `cdk diff`'));
+            if (existing) {
+              await github.rest.issues.updateComment({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                comment_id: existing.id,
+                body,
+              });
+            } else {
+              await github.rest.issues.createComment({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                issue_number: context.issue.number,
+                body,
+              });
+            }

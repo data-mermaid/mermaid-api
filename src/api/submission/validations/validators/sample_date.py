@@ -54,9 +54,8 @@ class SampleDateValidator(BaseValidator):
             return False
         sample_date = sample_date.replace(tzinfo=tzinfo)
         todays_date = timezone.now().astimezone(tzinfo)
-        delta = todays_date - sample_date
 
-        return delta.days < 0
+        return sample_date.date() > todays_date.date()
 
     @validator_result
     def __call__(self, collect_record, **kwargs):

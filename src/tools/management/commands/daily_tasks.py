@@ -20,11 +20,18 @@ class Command(BaseCommand):
             self.stderr.write(f"Update metrics error: {str(e)}")
 
         try:
-            call_command("delete_orphaned_images")
-        except Exception as e:
-            self.stderr.write(f"Delete orphaned images error: {str(e)}")
-
-        try:
             call_command("export_annotations_parquet")
         except Exception as e:
             self.stderr.write(f"Export annotations parquet error: {str(e)}")
+
+        try:
+            call_command("auto_test_projects")
+        except Exception as e:
+            self.stderr.write(f"Auto test projects error: {str(e)}")
+
+        # Run last; if many images, this could cause a sigkill for the container
+        # (but remaining images will get picked up the following day)
+        try:
+            call_command("delete_orphaned_images")
+        except Exception as e:
+            self.stderr.write(f"Delete orphaned images error: {str(e)}")

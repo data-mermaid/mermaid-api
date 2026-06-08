@@ -1,4 +1,5 @@
 import csv
+import datetime
 from collections import defaultdict
 
 from dateutil.relativedelta import relativedelta
@@ -27,8 +28,8 @@ def count_by_date(model):
         objs = model.objects.filter(**proj_filter).order_by("created_on")
     first_year = min(obj.created_on for obj in objs).year
     end_year = max(obj.created_on for obj in objs).year + 1
-    start_date = timezone.datetime(first_year, 1, 1, tzinfo=timezone.utc)
-    end_date = timezone.datetime(end_year, 1, 1, tzinfo=timezone.utc)
+    start_date = timezone.make_aware(datetime.datetime(first_year, 1, 1))
+    end_date = timezone.make_aware(datetime.datetime(end_year, 1, 1))
     current_date = start_date
     bin_counter = []
 

@@ -4,8 +4,8 @@ import uuid
 from django.conf import settings
 from django.contrib.postgres.aggregates import ArrayAgg
 from django.core.exceptions import FieldDoesNotExist
+from django.db.models import Q
 from django.db.models.fields.related import ForeignObjectRel
-from django.db.models.sql.constants import ORDER_PATTERN
 from django_filters import (
     BaseInFilter,
     CharFilter,
@@ -36,7 +36,7 @@ from rest_framework_gis.filterset import GeoFilterSet
 from rest_framework_gis.serializers import GeoFeatureModelSerializer
 
 from ..exceptions import check_uuid
-from ..models import APPROVAL_STATUSES, Tag
+from ..models import APPROVAL_STATUSES, SUPERUSER_APPROVED, Tag
 from ..permissions import (
     AttributeAuthenticatedUserPermission,
     DefaultPermission,
@@ -379,50 +379,66 @@ class BaseAPIFilterSet(FilterSet):
 class RelatedOrderingFilter(OrderingFilter):
     """
     Extends OrderingFilter to support ordering by fields in related models
-    using the Django ORM __ notation
+    using the Django ORM __ notation, and ensures deterministic pagination
+    by automatically including 'id' in the ordering.
+
     https://github.com/tomchristie/django-rest-framework/issues/1005
     """
 
-    # ensure unique pagination when not enough ordering fields are specified; requires "id" field
     def get_ordering(self, request, queryset, view):
-        ordering = super().get_ordering(request, queryset, view) or []
-        if "id" not in ordering:
-            ordering.append("id")
+        """
+        Ensure unique pagination when not enough ordering fields are specified.
+        Automatically appends 'id' if not present.
+        """
+        ordering = super().get_ordering(request, queryset, view)
+        if ordering:
+            ordering = list(ordering)
+            # Add 'id' if not already present (in any form)
+            if "id" not in ordering and "-id" not in ordering:
+                ordering.append("id")
+            return ordering
         return ordering
 
     def is_valid_field(self, model, field_name):
         """
         Return true if the field exists within the model (or in the related
-        model specified using the Django ORM __ notation)
+        model specified using the Django ORM __ notation).
         """
         components = field_name.split("__", 1)
         try:
             field = model._meta.get_field(components[0])
 
-            # reverse relation
-            if isinstance(field, ForeignObjectRel) and len(components) == 2:
-                return self.is_valid_field(field.related_model, components[1])
+            # If there are more components, recursively check the related model
+            if len(components) == 2:
+                # Reverse relation
+                if isinstance(field, ForeignObjectRel):
+                    return self.is_valid_field(field.related_model, components[1])
+                # Foreign key or other relation
+                if hasattr(field, "related_model") and field.related_model:
+                    return self.is_valid_field(field.related_model, components[1])
 
-            # foreign key
-            if field.related_model and len(components) == 2:
-                return self.is_valid_field(field.related_model, components[1])
             return True
         except FieldDoesNotExist:
             return False
 
     def remove_invalid_fields(self, queryset, fields, view, request):
+        # Get the base valid fields from the parent class
         valid_fields = [
             item[0] for item in self.get_valid_fields(queryset, view, {"request": request})
         ]
+
+        # Also check model fields (including related fields with __)
         valid_model_fields = [
-            term for term in fields if self.is_valid_field(queryset.model, term.lstrip("-"))
-        ]
-        valid_fields = set(valid_fields + valid_model_fields)
-        return [
-            term
+            term.lstrip("-")
             for term in fields
-            if term.lstrip("-") in valid_fields and ORDER_PATTERN.match(term)
+            if self.is_valid_field(queryset.model, term.lstrip("-"))
         ]
+
+        # Combine both sets
+        all_valid_fields = set(valid_fields) | set(valid_model_fields)
+
+        # Filter the requested fields
+        return [term for term in fields if term.lstrip("-") in all_valid_fields]
 
 
 class SafeSearchFilter(SearchFilter):
@@ -543,8 +559,19 @@ class BaseApiViewSet(MethodAuthenticationMixin, viewsets.ModelViewSet):
         if fields in self._serializer_class_for_fields:
             return self._serializer_class_for_fields[fields]
 
+        # Validate that all requested field names are known to this serializer.
+        valid_fields = set(serializer_class._declared_fields.keys())
+        model = getattr(getattr(serializer_class, "Meta", None), "model", None)
+        if model is not None:
+            valid_fields |= {f.name for f in model._meta.get_fields()}
+        invalid_fields = [f for f in fields if f not in valid_fields]
+        if invalid_fields:
+            raise ValidationError({"fields": f"Invalid field names: {', '.join(invalid_fields)}"})
+
         # Doing this because a simple copy.copy() doesn't work here.
-        meta = type("Meta", (serializer_class.Meta, object), {"fields": fields})
+        # Set fields and explicitly clear exclude to avoid DRF's assertion that
+        # both cannot be set simultaneously (exclude may be inherited from parent Meta).
+        meta = type("Meta", (serializer_class.Meta, object), {"fields": fields, "exclude": None})
         limited_fields_serializer = type(
             "LimitedFieldsSerializer", (serializer_class,), {"Meta": meta}
         )
@@ -586,6 +613,18 @@ class BaseAttributeApiViewSet(BaseApiViewSet):
     ]
 
     method_authentication_classes = {"GET": []}
+
+    def get_queryset(self):
+        # GET requests have no authenticators (method_authentication_classes = {"GET": []}),
+        # so is_authenticated is always False on the public REST API — only sync pull (POST)
+        # reaches the created_by branch.
+        qs = super().get_queryset()
+        request = self.request
+        if not request or not hasattr(request, "user"):
+            return qs.filter(status=SUPERUSER_APPROVED)
+        if request.user and getattr(request.user, "is_authenticated", False):
+            return qs.filter(Q(status=SUPERUSER_APPROVED) | Q(created_by=request.user.profile))
+        return qs.filter(status=SUPERUSER_APPROVED)
 
     def perform_create(self, serializer):
         # Here is where we could set status based on user role

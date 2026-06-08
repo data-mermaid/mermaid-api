@@ -1,11 +1,11 @@
 import logging
 
 import django_filters
-import psycopg2
 from django.conf import settings
 from django.db import IntegrityError, transaction
 from django.db.models import JSONField
 from django.db.models.expressions import RawSQL
+from psycopg.errors import UniqueViolation
 from rest_condition import Or
 from rest_framework import exceptions, permissions, serializers, status
 from rest_framework.decorators import action
@@ -14,13 +14,25 @@ from rest_framework.response import Response
 from ..auth_backends import AnonymousJWTAuthentication
 from ..exceptions import check_uuid
 from ..models import (
+    BeltFish,
+    BeltInvert,
+    BenthicLIT,
+    BenthicPhotoQuadratTransect,
+    BenthicPIT,
+    BenthicTransect,
+    BleachingQuadratCollection,
+    FishBeltTransect,
+    HabitatComplexity,
+    InvertBeltTransect,
     Management,
     Profile,
     Project,
     ProjectProfile,
+    QuadratCollection,
+    QuadratTransect,
+    SampleEvent,
     Site,
     Tag,
-    TransectMethod,
 )
 from ..notifications import notify_crs_transferred
 from ..permissions import (
@@ -33,17 +45,20 @@ from ..permissions import (
 from ..reports.fields import ReportField, ReportMethodField
 from ..reports.formatters import to_data_policy, to_str, to_yesno
 from ..reports.report_serializer import ReportSerializer
-from ..utils import get_extent, truthy
+from ..utils import delete_instance_and_related_objects, get_extent, truthy
+from ..utils.notification import suppress_all_notifications
 from ..utils.project import (
+    ImageCopyError,
     citation_retrieved_text,
+    collect_project_pqt_image_ids,
     copy_project_and_resources,
     create_collecting_summary,
     create_submitted_summary,
     default_citation,
+    delete_collected_pqt_images,
     delete_project,
     email_members_of_new_project,
     get_profiles,
-    get_sample_unit_field,
     suggested_citation,
 )
 from ..utils.q import submit_job
@@ -74,6 +89,7 @@ class BaseProjectSerializer(DynamicFieldsMixin, BaseAPISerializer):
     num_sample_units = serializers.SerializerMethodField()
     tags = serializers.ListField(source="tags.all", child=TagField(), required=False)
     members = serializers.SerializerMethodField()
+    project_admins = serializers.SerializerMethodField()
     default_citation = serializers.SerializerMethodField()
     suggested_citation = serializers.SerializerMethodField()
     citation_retrieved_text = serializers.SerializerMethodField()
@@ -114,23 +130,16 @@ class BaseProjectSerializer(DynamicFieldsMixin, BaseAPISerializer):
         profiles = self._get_profiles(obj)
         return [pp.profile_id for pp in profiles]
 
+    def get_project_admins(self, obj):
+        admin_profiles = obj.profiles.filter(role=ProjectProfile.ADMIN).select_related("profile")
+        return [{"id": str(pp.profile.id), "name": pp.profile.full_name} for pp in admin_profiles]
+
     def get_num_active_sample_units(self, obj):
         return obj.collect_records.count()
 
     def get_num_sample_units(self, obj):
-        sample_unit_methods = TransectMethod.__subclasses__()
-        num_sample_units = 0
-        for sample_unit_method in sample_unit_methods:
-            sample_unit_name = get_sample_unit_field(sample_unit_method)
-            qry_filter = {f"{sample_unit_name}__sample_event__site__project_id": obj}
-            queryset = sample_unit_method.objects.select_related(
-                f"{sample_unit_name}",
-                f"{sample_unit_name}__sample_event",
-                f"{sample_unit_name}__sample_event__site",
-            )
-            num_sample_units += queryset.filter(**qry_filter).count()
-
-        return num_sample_units
+        num_sample_units = getattr(obj, "num_sample_units", None)
+        return num_sample_units if num_sample_units is not None else 0
 
     def get_bbox(self, obj):
         extent = getattr(obj, "extent", None)
@@ -186,7 +195,7 @@ class ProjectCSVSerializer(ReportSerializer, BaseProjectSerializer):
         ReportField("data_policy_benthicpqt", "Benthic PQT Data Policy", to_data_policy),
         ReportField("includes_gfcr", "Includes GFCR", to_yesno),
         ReportField("notes", "Notes"),
-        ReportMethodField("get_project_admins", "Project Admins"),
+        ReportMethodField("get_project_admins_csv", "Project Admins"),
         ReportMethodField("get_contact_link", "Contact link"),
         ReportField("id", "Project Id", to_str),
     ]
@@ -197,13 +206,12 @@ class ProjectCSVSerializer(ReportSerializer, BaseProjectSerializer):
             return f'{", ".join(tags)}'
         return ""
 
+    def get_project_admins_csv(self, obj):
+        admins = super().get_project_admins(obj)
+        return ", ".join([admin["name"] for admin in admins])
+
     def get_contact_link(self, obj):
         return f"{settings.DEFAULT_DOMAIN_MARKETING}/contact-project?project_id={obj.id}"
-
-    def get_project_admins(self, obj):
-        admin_profiles = obj.profiles.filter(role=ProjectProfile.ADMIN).select_related("profile")
-        admin_names = [pp.profile.full_name for pp in admin_profiles]
-        return ", ".join(admin_names)
 
 
 class ProjectFilterSet(BaseAPIFilterSet, OrFilterSetMixin):
@@ -251,6 +259,105 @@ class ProjectAuthenticatedUserPermission(permissions.BasePermission):
         return False
 
 
+def annotate_num_sample_units(qs):
+    project_table = Project._meta.db_table
+    site_table = Site._meta.db_table
+    sample_event_table = SampleEvent._meta.db_table
+    benthic_transect_table = BenthicTransect._meta.db_table
+    benthiclit_table = BenthicLIT._meta.db_table
+    benthicpit_table = BenthicPIT._meta.db_table
+    habitatcomplexity_table = HabitatComplexity._meta.db_table
+    bleachingqc_table = BleachingQuadratCollection._meta.db_table
+    quadrat_collection_table = QuadratCollection._meta.db_table
+    benthicpqt_table = BenthicPhotoQuadratTransect._meta.db_table
+    quadrat_transect_table = QuadratTransect._meta.db_table
+    beltfish_table = BeltFish._meta.db_table
+    fishbelt_transect_table = FishBeltTransect._meta.db_table
+    beltinvert_table = BeltInvert._meta.db_table
+    invert_belt_transect_table = InvertBeltTransect._meta.db_table
+
+    return qs.annotate(
+        num_sample_units=RawSQL(
+            f"""
+            (
+                WITH sample_unit_counts AS (
+                    -- BenthicLIT
+                    SELECT COUNT(*) as su_count
+                    FROM {benthiclit_table} t
+                    JOIN {benthic_transect_table} bt ON t.transect_id = bt.id
+                    JOIN {sample_event_table} se ON bt.sample_event_id = se.id
+                    JOIN {site_table} ON se.site_id = {site_table}.id
+                    WHERE {site_table}.project_id = {project_table}.id
+
+                    UNION ALL
+
+                    -- BenthicPIT
+                    SELECT COUNT(*) as su_count
+                    FROM {benthicpit_table} t
+                    JOIN {benthic_transect_table} bt ON t.transect_id = bt.id
+                    JOIN {sample_event_table} se ON bt.sample_event_id = se.id
+                    JOIN {site_table} ON se.site_id = {site_table}.id
+                    WHERE {site_table}.project_id = {project_table}.id
+
+                    UNION ALL
+
+                    -- HabitatComplexity
+                    SELECT COUNT(*) as su_count
+                    FROM {habitatcomplexity_table} t
+                    JOIN {benthic_transect_table} bt ON t.transect_id = bt.id
+                    JOIN {sample_event_table} se ON bt.sample_event_id = se.id
+                    JOIN {site_table} ON se.site_id = {site_table}.id
+                    WHERE {site_table}.project_id = {project_table}.id
+
+                    UNION ALL
+
+                    -- BleachingQuadratCollection
+                    SELECT COUNT(*) as su_count
+                    FROM {bleachingqc_table} t
+                    JOIN {quadrat_collection_table} qc ON t.quadrat_id = qc.id
+                    JOIN {sample_event_table} se ON qc.sample_event_id = se.id
+                    JOIN {site_table} ON se.site_id = {site_table}.id
+                    WHERE {site_table}.project_id = {project_table}.id
+
+                    UNION ALL
+
+                    -- BenthicPhotoQuadratTransect
+                    SELECT COUNT(*) as su_count
+                    FROM {benthicpqt_table} t
+                    JOIN {quadrat_transect_table} qt ON t.quadrat_transect_id = qt.id
+                    JOIN {sample_event_table} se ON qt.sample_event_id = se.id
+                    JOIN {site_table} ON se.site_id = {site_table}.id
+                    WHERE {site_table}.project_id = {project_table}.id
+
+                    UNION ALL
+
+                    -- BeltFish
+                    SELECT COUNT(*) as su_count
+                    FROM {beltfish_table} t
+                    JOIN {fishbelt_transect_table} bt ON t.transect_id = bt.id
+                    JOIN {sample_event_table} se ON bt.sample_event_id = se.id
+                    JOIN {site_table} ON se.site_id = {site_table}.id
+                    WHERE {site_table}.project_id = {project_table}.id
+
+                    UNION ALL
+
+                    -- BeltInvert
+                    SELECT COUNT(*) as su_count
+                    FROM {beltinvert_table} t
+                    JOIN {invert_belt_transect_table} bt ON t.transect_id = bt.id
+                    JOIN {sample_event_table} se ON bt.sample_event_id = se.id
+                    JOIN {site_table} ON se.site_id = {site_table}.id
+                    WHERE {site_table}.project_id = {project_table}.id
+                )
+                SELECT COALESCE(SUM(su_count), 0)
+                FROM sample_unit_counts
+            )
+            """,
+            [],
+        )
+    )
+
+
 class ProjectViewSet(BaseApiViewSet):
     serializer_class = ProjectSerializer
     permission_classes = [
@@ -265,6 +372,9 @@ class ProjectViewSet(BaseApiViewSet):
     search_fields = ["$name", "$sites__country__name"]
 
     def get_queryset(self):
+        site_table = Site._meta.db_table
+        project_table = Project._meta.db_table
+
         qs = (
             Project.objects.select_related(
                 "created_by",
@@ -278,18 +388,19 @@ class ProjectViewSet(BaseApiViewSet):
             .annotate(
                 # need to cast to text to avoid box2d equality operator error
                 extent=RawSQL(
-                    """
+                    f"""
                     (
-                        SELECT ST_Extent(site.location)::text
-                        FROM site
-                        WHERE site.project_id = project.id
+                        SELECT ST_Extent({site_table}.location)::text
+                        FROM {site_table}
+                        WHERE {site_table}.project_id = {project_table}.id
                     )
                     """,
                     [],
-                )
+                ),
             )
             .order_by("name")
         )
+        qs = annotate_num_sample_units(qs)
         user = self.request.user
         show_all = "showall" in self.request.query_params
 
@@ -386,6 +497,64 @@ class ProjectViewSet(BaseApiViewSet):
         methods=["post"],
         permission_classes=[ProjectAuthenticatedUserPermission],
     )
+    def create_demo(self, request):
+        with suppress_all_notifications():
+            # Delete any existing demo project for this user instead of rejecting.
+            # select_for_update() ensures we wait for any in-progress async delete to finish:
+            # if the row is locked by the async worker, we block until it commits (row gone),
+            # and if it hasn't started, we lock the row and delete it here (async job will no-op).
+            with transaction.atomic():
+                existing_demo = (
+                    Project.objects.select_for_update()
+                    .filter(created_by=request.user.profile, is_demo=True)
+                    .first()
+                )
+                if existing_demo:
+                    # Collect PQT image IDs before the cascade-delete removes the
+                    # ObsBenthicPhotoQuadrat rows that link back to them.
+                    pqt_image_ids = collect_project_pqt_image_ids(existing_demo)
+                    # Lock all sites to prevent a background covariate-update job from
+                    # inserting new covariate rows between our cascade-deletion of
+                    # covariates and deletion of the sites themselves, which would
+                    # violate the api_covariate.site_id FK constraint.
+                    list(Site.objects.select_for_update().filter(project=existing_demo))
+                    delete_instance_and_related_objects(existing_demo)
+                    # Now that ObsBenthicPhotoQuadrat rows are gone (PROTECT lifted),
+                    # delete the orphaned Image records and schedule S3 cleanup.
+                    delete_collected_pqt_images(pqt_image_ids)
+
+            tries = 0
+            profile = request.user.profile
+            project_name = f"Demo - {profile.full_name}"
+            while True:
+                if not Project.objects.filter(name=project_name).exists():
+                    break
+                tries += 1
+                project_name = f"Demo - {profile.full_name} ({tries})"
+                if tries == 1_000_000:
+                    raise exceptions.APIException(
+                        detail="Could not generate unique demo project name"
+                    )
+
+            request.data["original_project_id"] = settings.DEMO_PROJECT_ID
+            request.data["notify_users"] = False
+            request.data["new_project_name"] = project_name
+            try:
+                return self.copy_project(request)
+            except IntegrityError:
+                # A concurrent create_demo request already committed a demo for this user; return it.
+                demo = Project.objects.filter(created_by=profile, is_demo=True).first()
+                if demo:
+                    context = {"request": request}
+                    return Response(ProjectSerializer(instance=demo, context=context).data)
+                # No demo found means this was a real copy failure, not a concurrency race.
+                raise
+
+    @action(
+        detail=False,
+        methods=["post"],
+        permission_classes=[ProjectAuthenticatedUserPermission],
+    )
     def copy_project(self, request):
         """
         Payload schema:
@@ -414,15 +583,23 @@ class ProjectViewSet(BaseApiViewSet):
             original_project_id = data["original_project_id"]
             if original_project_id and str(original_project_id).strip() != "":
                 check_uuid(original_project_id)
-            original_project = ProjectProfile.objects.get(
-                project_id=original_project_id, profile=profile
-            ).project
+
+            if str(original_project_id) == str(settings.DEMO_PROJECT_ID):
+                original_project = Project.objects.get(id=settings.DEMO_PROJECT_ID)
+            else:
+                original_project = ProjectProfile.objects.get(
+                    project_id=original_project_id, profile=profile
+                ).project
         except KeyError as e:
             raise exceptions.ParseError(detail="'original_project_id' is required") from e
         except ProjectProfile.DoesNotExist as not_exist_err:
             raise exceptions.ParseError(
                 detail="Original project does not exist or you are not a member"
             ) from not_exist_err
+        except Project.DoesNotExist as demo_project_not_exist_err:
+            raise exceptions.ParseError(
+                detail="Demo project does not exist"
+            ) from demo_project_not_exist_err
 
         notify_users = truthy(data.get("notify_users"))
 
@@ -439,6 +616,10 @@ class ProjectViewSet(BaseApiViewSet):
             context = {"request": request}
             project_serializer = ProjectSerializer(instance=new_project, context=context)
             return Response(project_serializer.data)
+        except ImageCopyError as err:
+            raise exceptions.ValidationError(detail=str(err)) from err
+        except IntegrityError:
+            raise
         except Exception as err:
             print(err)
             raise exceptions.APIException(detail=f"[{type(err).__name__}] Copying project") from err
@@ -568,10 +749,7 @@ class ProjectViewSet(BaseApiViewSet):
                     detail={"email": "Profile has already been added to project"}
                 )
         except IntegrityError as ie:
-            if (
-                hasattr(ie.__cause__, "pgcode")
-                and ie.__cause__.pgcode == psycopg2.errorcodes.UNIQUE_VIOLATION
-            ):
+            if isinstance(ie.__cause__, UniqueViolation):
                 raise exceptions.ValidationError(
                     detail={"email": "Profile has already been added to project"}
                 )

@@ -72,6 +72,12 @@ class HabitatComplexityCSVSerializer(CollectRecordCSVSerializer):
         label="Interval size",
         help_text="Distance between observations on a transect, in meters. May include decimal (e.g. 0.5).",
     )
+    data__interval_start = serializers.DecimalField(
+        max_digits=4,
+        decimal_places=2,
+        label="Interval start",
+        help_text="Interval counted as first observation on a transect, in meters. May include decimal (e.g. 0.5). UI default is interval size.",
+    )
     data__benthic_transect__reef_slope = LazyChoiceField(
         choices=reef_slopes_choices,
         required=False,

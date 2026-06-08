@@ -8,8 +8,18 @@ from django.db.models.functions import Cast, Concat
 from rest_framework import exceptions, serializers
 
 from ...exceptions import check_uuid
-from ...models import mermaid
-from ...models.mermaid import SampleEvent, TransectMethod
+from ...models import (
+    BENTHICLIT_PROTOCOL,
+    BENTHICPIT_PROTOCOL,
+    BENTHICPQT_PROTOCOL,
+    BLEACHINGQC_PROTOCOL,
+    FISHBELT_PROTOCOL,
+    HABITATCOMPLEXITY_PROTOCOL,
+    MACROINVERTEBRATE_PROTOCOL,
+    Observer,
+    SampleEvent,
+    TransectMethod,
+)
 from ..base import BaseAPIFilterSet, BaseAPISerializer, BaseProjectApiViewSet
 
 
@@ -38,6 +48,8 @@ class SearchNonFieldFilter(django_filters.Filter):
         "habitatcomplexity__observers__profile__last_name",
         "bleachingquadratcollection__observers__profile__first_name",
         "bleachingquadratcollection__observers__profile__last_name",
+        "beltinvert__observers__profile__first_name",
+        "beltinvert__observers__profile__last_name",
     ]
 
     def filter(self, qs, value):
@@ -115,23 +127,23 @@ class SampleUnitMethodSerializer(BaseAPISerializer):
 
     def get_size(self, o):
         protocol = o.protocol
-        if protocol == mermaid.FISHBELT_PROTOCOL:
+        if protocol in (FISHBELT_PROTOCOL, MACROINVERTEBRATE_PROTOCOL):
             sample_unit = o.sample_unit
 
             return dict(
-                width=sample_unit.width.id,
+                width=sample_unit.width_id,
                 width_units="m",
                 len_surveyed=sample_unit.len_surveyed,
                 len_surveyed_units="m",
             )
         elif protocol in (
-            mermaid.BENTHICLIT_PROTOCOL,
-            mermaid.BENTHICPIT_PROTOCOL,
-            mermaid.HABITATCOMPLEXITY_PROTOCOL,
+            BENTHICLIT_PROTOCOL,
+            BENTHICPIT_PROTOCOL,
+            HABITATCOMPLEXITY_PROTOCOL,
         ):
             sample_unit = o.sample_unit
             return dict(len_surveyed=sample_unit.len_surveyed, len_surveyed_units="m")
-        elif protocol == mermaid.BLEACHINGQC_PROTOCOL:
+        elif protocol == BLEACHINGQC_PROTOCOL:
             sample_unit = o.sample_unit
             return dict(quadrat_size=sample_unit.quadrat_size, quadrat_size_units="m")
         return None
@@ -159,17 +171,20 @@ class SampleUnitMethodView(BaseProjectApiViewSet):
         "beltfish",
         "bleachingquadratcollection",
         "benthicphotoquadrattransect",
+        "beltinvert",
         "benthicpit__transect",
         "benthiclit__transect",
         "beltfish__transect",
         "habitatcomplexity__transect",
         "bleachingquadratcollection__quadrat",
         "benthicphotoquadrattransect__quadrat_transect",
+        "beltinvert__transect",
     ).all()
 
     filterset_class = SampleUnitMethodFilterSet
     serializer_class = SampleUnitMethodSerializer
     http_method_names = ["get", "head"]
+    _project_transect_method_ids = []
 
     ordering_fields = (
         "management_name",
@@ -186,20 +201,24 @@ class SampleUnitMethodView(BaseProjectApiViewSet):
         qs = self.queryset
 
         protocol_condition = Case(
-            When(benthiclit__id__isnull=False, then=Value(mermaid.BENTHICLIT_PROTOCOL)),
-            When(benthicpit__id__isnull=False, then=Value(mermaid.BENTHICPIT_PROTOCOL)),
+            When(benthiclit__id__isnull=False, then=Value(BENTHICLIT_PROTOCOL)),
+            When(benthicpit__id__isnull=False, then=Value(BENTHICPIT_PROTOCOL)),
             When(
                 habitatcomplexity__id__isnull=False,
-                then=Value(mermaid.HABITATCOMPLEXITY_PROTOCOL),
+                then=Value(HABITATCOMPLEXITY_PROTOCOL),
             ),
             When(
                 bleachingquadratcollection__id__isnull=False,
-                then=Value(mermaid.BLEACHINGQC_PROTOCOL),
+                then=Value(BLEACHINGQC_PROTOCOL),
             ),
-            When(beltfish__id__isnull=False, then=Value(mermaid.FISHBELT_PROTOCOL)),
+            When(beltfish__id__isnull=False, then=Value(FISHBELT_PROTOCOL)),
             When(
                 benthicphotoquadrattransect__id__isnull=False,
-                then=Value(mermaid.BENTHICPQT_PROTOCOL),
+                then=Value(BENTHICPQT_PROTOCOL),
+            ),
+            When(
+                beltinvert__id__isnull=False,
+                then=Value(MACROINVERTEBRATE_PROTOCOL),
             ),
             output_field=CharField(),
         )
@@ -229,6 +248,10 @@ class SampleUnitMethodView(BaseProjectApiViewSet):
                 benthicphotoquadrattransect__quadrat_transect__sample_event__site__name__isnull=False,
                 then="benthicphotoquadrattransect__quadrat_transect__sample_event__site__name",
             ),
+            When(
+                beltinvert__transect__sample_event__site__name__isnull=False,
+                then="beltinvert__transect__sample_event__site__name",
+            ),
         )
 
         management_name_condition = Case(
@@ -256,6 +279,10 @@ class SampleUnitMethodView(BaseProjectApiViewSet):
                 benthicphotoquadrattransect__quadrat_transect__sample_event__management__name__isnull=False,
                 then="benthicphotoquadrattransect__quadrat_transect__sample_event__management__name",
             ),
+            When(
+                beltinvert__transect__sample_event__management__name__isnull=False,
+                then="beltinvert__transect__sample_event__management__name",
+            ),
         )
 
         sample_unit_number_condition = Case(
@@ -278,6 +305,10 @@ class SampleUnitMethodView(BaseProjectApiViewSet):
             When(
                 benthicphotoquadrattransect__quadrat_transect__number__isnull=False,
                 then="benthicphotoquadrattransect__quadrat_transect__number",
+            ),
+            When(
+                beltinvert__transect__number__isnull=False,
+                then="beltinvert__transect__number",
             ),
         )
 
@@ -306,6 +337,10 @@ class SampleUnitMethodView(BaseProjectApiViewSet):
                 benthicphotoquadrattransect__quadrat_transect__depth__isnull=False,
                 then="benthicphotoquadrattransect__quadrat_transect__depth",
             ),
+            When(
+                beltinvert__transect__depth__isnull=False,
+                then="beltinvert__transect__depth",
+            ),
         )
 
         sample_date_condition = Case(
@@ -332,6 +367,10 @@ class SampleUnitMethodView(BaseProjectApiViewSet):
             When(
                 benthicphotoquadrattransect__quadrat_transect__sample_event__sample_date__isnull=False,
                 then="benthicphotoquadrattransect__quadrat_transect__sample_event__sample_date",
+            ),
+            When(
+                beltinvert__transect__sample_event__sample_date__isnull=False,
+                then="beltinvert__transect__sample_event__sample_date",
             ),
         )
 
@@ -375,6 +414,14 @@ class SampleUnitMethodView(BaseProjectApiViewSet):
                     Value("m"),
                 ),
             ),
+            When(
+                beltinvert__id__isnull=False,
+                then=Concat(
+                    Cast("beltinvert__transect__len_surveyed", CharField()),
+                    Value("m x "),
+                    Cast("beltinvert__transect__width__name", CharField()),
+                ),
+            ),
         )
 
         observers = StringAgg(
@@ -400,25 +447,64 @@ class SampleUnitMethodView(BaseProjectApiViewSet):
 
         return qs
 
+    @staticmethod
+    def _matching_transect_method_ids(prj_pk):
+        # OR-ing a *_sample_event__site__project=prj_pk condition per subtype against
+        # self.queryset (select_related + annotated) makes Postgres build every
+        # subtype's full join chain for the whole table before filtering — slow to
+        # list and slow to COUNT for pagination. Narrowing to the project's
+        # sample_event ids first lets each subtype be filtered independently by
+        # __in on a lean queryset; limit_to_project then applies the resulting ids
+        # to self.queryset via cheap id__in.
+        sample_event_ids = SampleEvent.objects.filter(site__project_id=prj_pk).values_list(
+            "id", flat=True
+        )
+        q = (
+            Q(benthiclit__transect__sample_event_id__in=sample_event_ids)
+            | Q(benthicpit__transect__sample_event_id__in=sample_event_ids)
+            | Q(habitatcomplexity__transect__sample_event_id__in=sample_event_ids)
+            | Q(beltfish__transect__sample_event_id__in=sample_event_ids)
+            | Q(bleachingquadratcollection__quadrat__sample_event_id__in=sample_event_ids)
+            | Q(benthicphotoquadrattransect__quadrat_transect__sample_event_id__in=sample_event_ids)
+            | Q(beltinvert__transect__sample_event_id__in=sample_event_ids)
+        )
+        return list(TransectMethod.objects.filter(q).distinct().values_list("id", flat=True))
+
     def limit_to_project(self, request, *args, **kwargs):
         prj_pk = check_uuid(kwargs["project_pk"])
-        self.queryset = self.get_queryset().filter(
-            Q(benthiclit__transect__sample_event__site__project=prj_pk)
-            | Q(benthicpit__transect__sample_event__site__project=prj_pk)
-            | Q(habitatcomplexity__transect__sample_event__site__project=prj_pk)
-            | Q(beltfish__transect__sample_event__site__project=prj_pk)
-            | Q(bleachingquadratcollection__quadrat__sample_event__site__project=prj_pk)
-            | Q(benthicphotoquadrattransect__quadrat_transect__sample_event__site__project=prj_pk)
-        )
+        self._project_transect_method_ids = self._matching_transect_method_ids(prj_pk)
+        self.queryset = self.get_queryset().filter(id__in=self._project_transect_method_ids)
         return self.queryset
 
     def get_serializer_context(self):
         context = super(SampleUnitMethodView, self).get_serializer_context()
-        transect_method_ids = []
-        sample_event_ids = []
-        for r in self.get_queryset():
-            transect_method_ids.append(r.id)
-            sample_event_ids.append(r.sample_unit.sample_event_id)
+        transect_method_ids = self._project_transect_method_ids
+
+        sample_event_id_case = Case(
+            When(benthiclit__id__isnull=False, then="benthiclit__transect__sample_event_id"),
+            When(benthicpit__id__isnull=False, then="benthicpit__transect__sample_event_id"),
+            When(
+                habitatcomplexity__id__isnull=False,
+                then="habitatcomplexity__transect__sample_event_id",
+            ),
+            When(
+                bleachingquadratcollection__id__isnull=False,
+                then="bleachingquadratcollection__quadrat__sample_event_id",
+            ),
+            When(beltfish__id__isnull=False, then="beltfish__transect__sample_event_id"),
+            When(
+                benthicphotoquadrattransect__id__isnull=False,
+                then="benthicphotoquadrattransect__quadrat_transect__sample_event_id",
+            ),
+            When(beltinvert__id__isnull=False, then="beltinvert__transect__sample_event_id"),
+        )
+        rows = (
+            TransectMethod.objects.filter(id__in=transect_method_ids)
+            .annotate(_se_id=sample_event_id_case)
+            .values_list("id", "_se_id")
+        )
+
+        sample_event_ids = [se_id for _, se_id in rows if se_id is not None]
 
         context["sample_events"] = {
             str(se.id): se
@@ -427,7 +513,7 @@ class SampleUnitMethodView(BaseProjectApiViewSet):
             )
         }
 
-        observers = mermaid.Observer.objects.select_related("profile").filter(
+        observers = Observer.objects.select_related("profile").filter(
             transectmethod_id__in=transect_method_ids
         )
         observer_lookup = defaultdict(list)

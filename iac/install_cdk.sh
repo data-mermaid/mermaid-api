@@ -1,12 +1,16 @@
 #!/bin/sh
 set -e
 
-CDK_CLI_VERSION=2.1029.1
-CDK_LIB_VERSION=2.215.0
+CDK_CLI_VERSION=2.1104.0
+CDK_LIB_VERSION=2.237.1
+CDK_NAG_VERSION=2.37.55
 
 echo "Installing AWS CDK CLI"
 npm install -g aws-cdk@$CDK_CLI_VERSION
 
 echo "Installing AWS CDK Python Libs"
 pip install aws-cdk-lib==$CDK_LIB_VERSION
+
+echo "Installing cdk-nag"
+pip install cdk-nag==$CDK_NAG_VERSION
 
