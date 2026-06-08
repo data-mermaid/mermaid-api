@@ -19,7 +19,13 @@ def test_sampleunitmethods_list_includes_macroinvertebrate(
 
     assert response.status_code == 200
     assert data["count"] == 1
-    assert data["results"][0]["protocol"] == "macroinvertebrate"
+
+    result = data["results"][0]
+    assert result["protocol"] == "macroinvertebrate"
+    assert result["sample_date"] is not None
+    assert result["site_name"] is not None
+    assert result["size"]["width"] is not None
+    assert result["size"]["len_surveyed"] is not None
 
 
 def _get_latest_proj_revision():

@@ -184,6 +184,7 @@ class SampleUnitMethodView(BaseProjectApiViewSet):
     filterset_class = SampleUnitMethodFilterSet
     serializer_class = SampleUnitMethodSerializer
     http_method_names = ["get", "head"]
+    _project_transect_method_ids = []
 
     ordering_fields = (
         "management_name",
