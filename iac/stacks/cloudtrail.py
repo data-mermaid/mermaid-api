@@ -52,7 +52,7 @@ class CloudTrailStack(Stack):
         log_group = logs.LogGroup(
             self,
             "CloudTrailLogGroup",
-            retention=logs.RetentionDays.ONE_YEAR,
+            retention=logs.RetentionDays.THREE_YEARS,
             removal_policy=RemovalPolicy.RETAIN,
         )
 
@@ -107,8 +107,6 @@ class CloudTrailStack(Stack):
                     "eventName": [
                         {"prefix": "Delete"},
                         {"prefix": "Terminate"},
-                        {"prefix": "Remove"},
-                        {"prefix": "Destroy"},
                     ],
                 },
             ),

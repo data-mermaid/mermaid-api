@@ -140,15 +140,19 @@ def handler(event, context):
         guardduty_role.add_to_policy(
             iam.PolicyStatement(
                 actions=[
-                    "s3:GetObject",
-                    "s3:GetObjectTagging",
-                    "s3:PutObjectTagging",
+                    "s3:ListBucket",
                     "s3:GetBucketLocation",
                 ],
-                resources=(
-                    [f"arn:aws:s3:::{b}" for b in s3_buckets]
-                    + [f"arn:aws:s3:::{b}/*" for b in s3_buckets]
-                ),
+                resources=[f"arn:aws:s3:::{b}" for b in s3_buckets],
+            )
+        )
+        guardduty_role.add_to_policy(
+            iam.PolicyStatement(
+                actions=[
+                    "s3:GetObject*",
+                    "s3:PutObjectTagging",
+                ],
+                resources=[f"arn:aws:s3:::{b}/*" for b in s3_buckets],
             )
         )
 
