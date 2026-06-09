@@ -108,11 +108,30 @@ ALLOWED_HOSTS = [host.strip() for host in _allowed_hosts.split(",")]
 METADATA_URI = os.getenv("ECS_CONTAINER_METADATA_URI", None)
 IN_ECS = METADATA_URI is not None
 
+ECS_TASK_ARN = ""
+ECS_CONTAINER_ID = ""
 if IN_ECS:
-    container_metadata = requests.get(METADATA_URI).json()
-    # allow container IPs for ALB health checks
-    ALLOWED_HOSTS.append(container_metadata["Networks"][0]["IPv4Addresses"][0])
-    ALLOWED_HOSTS.append(".datamermaid.org")
+    import logging as _logging
+
+    _ecs_logger = _logging.getLogger(__name__)
+    try:
+        _container_resp = requests.get(METADATA_URI, timeout=2)
+        _container_resp.raise_for_status()
+        container_metadata = _container_resp.json()
+        # allow container IPs for ALB health checks
+        _ip = container_metadata["Networks"][0]["IPv4Addresses"][0]
+        ALLOWED_HOSTS.append(_ip)
+        ALLOWED_HOSTS.append(".datamermaid.org")
+        ECS_CONTAINER_ID = container_metadata.get("DockerId", "")[:12]
+    except (requests.RequestException, KeyError, IndexError, ValueError) as e:
+        _ecs_logger.warning("ECS container metadata fetch failed: %s", e)
+
+    try:
+        _task_resp = requests.get(f"{METADATA_URI}/task", timeout=2)
+        _task_resp.raise_for_status()
+        ECS_TASK_ARN = _task_resp.json().get("TaskARN", "")
+    except (requests.RequestException, KeyError, ValueError) as e:
+        _ecs_logger.warning("ECS task metadata fetch failed: %s", e)
 
 if ENVIRONMENT not in ("dev", "prod"):
     DEBUG_LEVEL = "DEBUG"
@@ -281,12 +300,41 @@ MC_API_KEY = os.environ.get("MC_API_KEY")
 MC_USER = os.environ.get("MC_USER")
 MC_LIST_ID = os.environ.get("MC_LIST_ID")
 
-if ENVIRONMENT == "prod":
+
+def _sentry_traces_sampler(sampling_context):
+    path = sampling_context.get("wsgi_environ", {}).get("PATH_INFO", "")
+    if path in ("/health/", "/v1/health/"):
+        return 0
+    return 0.3 if ENVIRONMENT == "prod" else 0.1
+
+
+def _sentry_before_send(event, hint):
+    import logging as _logging
+
+    level = event.get("level", "error")
+    transaction = event.get("transaction") or event.get("culprit") or "unknown"
+    _logging.getLogger(__name__).warning(
+        "[sentry.error_captured] level=%s transaction=%s", level, transaction
+    )
+    return event
+
+
+if ENVIRONMENT in ("dev", "prod"):
     sentry_sdk.init(
         dsn=os.environ.get("SENTRY_DSN"),
-        traces_sample_rate=1.0,
         environment=ENVIRONMENT,
+        release=API_VERSION,
+        traces_sampler=_sentry_traces_sampler,
+        before_send=_sentry_before_send,
+        # Profile 10% of sampled transactions (prod: ~3% of requests, dev: ~1%)
+        profiles_sample_rate=0.1,
+        # Attach a stack trace to logger.error() calls that have no exception
+        attach_stacktrace=True,
     )
+    # Static ECS context — set once on the global scope for every event
+    if ECS_TASK_ARN:
+        sentry_sdk.set_tag("ecs.task_arn", ECS_TASK_ARN)
+        sentry_sdk.set_tag("ecs.container_id", ECS_CONTAINER_ID)
 
 
 # ************************

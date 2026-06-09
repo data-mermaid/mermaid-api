@@ -62,3 +62,10 @@ No output means all findings are suppressed.
 
 - There is a Postgres username called `project_admins_reader` that needs to be manually created after RDS is deployed. I had to manually create an EC2 bastion host and set it up so I could talk to RDS and add the user role. This had to be done prior to running a `dbrestore`. I'm not sure why this user/role is not part of the SQL dump?
 - When first launching an environment, you have to manually run a `dbrestore` on the corresponding environment. This can be achived by manually running a `ScheduledBackupTask` Task Definition and modifying the command (CMD) to run `dbrestore` instead of `dbbackup`. Once run, the DB will be available and the API will start working. Until that happens, you will see the Fargate service continually try to spin up the API task.
+- **Slack alarm notifications (one-time setup per AWS account):** The CDK stack creates an AWS Chatbot Slack channel configuration, but Chatbot requires the Slack workspace to be authorized in the AWS Console before CloudFormation can create the resource. If the `SLACK_WORKSPACE_ID` and `SLACK_CHANNEL_ID` env vars are set and the workspace is not yet authorized, the deploy will fail with `InvalidRequestException`. To authorize:
+  1. Open **AWS Console → AWS Chatbot → Configure new client → Slack**.
+  2. Click **Allow** to grant AWS access to the workspace. The workspace ID (`T0XXXXXXX`) appears in the Chatbot console after authorization.
+  3. In Slack, add the **Amazon Q** app to the target channel: open the channel → **Integrations** → **Add apps** → search **Amazon Q** → **Add**.
+  4. Get the channel ID from Slack: right-click the channel name → **View channel details** → copy the ID at the bottom (`C0XXXXXXX`).
+  5. Set `SLACK_WORKSPACE_ID` and `SLACK_CHANNEL_ID` in GitHub Actions secrets (or local env), then redeploy.
+  This is a one-time step per AWS account — subsequent environment deploys and stack updates do not require it again.

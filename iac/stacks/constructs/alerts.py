@@ -5,6 +5,7 @@ from aws_cdk import (
     aws_cloudwatch_actions as cw_actions,
     aws_ecs as ecs,
     aws_elasticloadbalancingv2 as elb,
+    aws_iam as iam,
     aws_logs as logs,
     aws_rds as rds,
     aws_sns as sns,
@@ -38,6 +39,7 @@ class MonitoringAlerts(Construct):
         sagemaker_domain_name: str | None = None,
         slack_workspace_id: str | None = None,
         slack_channel_id: str | None = None,
+        cost_alerts_topic: sns.ITopic | None = None,
         **kwargs,
     ) -> None:
         super().__init__(scope, id, **kwargs)
@@ -129,6 +131,50 @@ class MonitoringAlerts(Construct):
                 alarm_name=f"mermaid-{env_id}-api-cpu",
                 alarm_description="API ECS service CPU utilization exceeded 85% for 10 minutes",
                 metric=api_service.metric_cpu_utilization(period=Duration.minutes(5)),
+                threshold=85,
+                evaluation_periods=2,
+                comparison_operator=cw.ComparisonOperator.GREATER_THAN_THRESHOLD,
+                treat_missing_data=cw.TreatMissingData.NOT_BREACHING,
+            )
+        )
+
+        alarms.append(
+            cw.Alarm(
+                self,
+                "EcsTaskStoppedAlarm",
+                alarm_name=f"mermaid-{env_id}-ecs-no-running-tasks",
+                alarm_description=(
+                    "API ECS service has 0 running tasks for 2 consecutive minutes — "
+                    "deployment failure or crash loop"
+                ),
+                metric=api_service.metric(
+                    "RunningTaskCount",
+                    statistic="Minimum",
+                    period=Duration.minutes(1),
+                ),
+                threshold=1,
+                evaluation_periods=2,
+                comparison_operator=cw.ComparisonOperator.LESS_THAN_THRESHOLD,
+                treat_missing_data=cw.TreatMissingData.BREACHING,
+            )
+        )
+
+        alarms.append(
+            cw.Alarm(
+                self,
+                "ApiMemoryAlarm",
+                alarm_name=f"mermaid-{env_id}-api-memory",
+                alarm_description="API ECS service memory utilization exceeded 85% for 10 minutes",
+                metric=cw.Metric(
+                    namespace="ECS/ContainerInsights",
+                    metric_name="MemoryUtilization",
+                    dimensions_map={
+                        "ClusterName": api_service.cluster.cluster_name,
+                        "ServiceName": api_service.service_name,
+                    },
+                    statistic="Average",
+                    period=Duration.minutes(5),
+                ),
                 threshold=85,
                 evaluation_periods=2,
                 comparison_operator=cw.ComparisonOperator.GREATER_THAN_THRESHOLD,
@@ -295,6 +341,41 @@ class MonitoringAlerts(Construct):
             )
         )
 
+        # ── Sentry (before_send hook → CloudWatch → SNS → Slack) ────────
+        # _sentry_before_send in settings.py emits [sentry.error_captured] on
+        # every event forwarded to Sentry, routing error counts through the
+        # existing CloudWatch → SNS → Chatbot pipeline at no extra cost.
+
+        sentry_metric = logs.MetricFilter(
+            self,
+            "SentryErrorMetricFilter",
+            log_group=api_log_group,
+            filter_pattern=logs.FilterPattern.literal('"[sentry.error_captured]"'),
+            metric_namespace=f"MERMAID/{env_id}/Sentry",
+            metric_name="ErrorsCaptured",
+            metric_value="1",
+            default_value=0,
+        )
+        alarms.append(
+            cw.Alarm(
+                self,
+                "SentryErrorAlarm",
+                alarm_name=f"mermaid-{env_id}-sentry-errors",
+                alarm_description=(
+                    "Sentry captured more than 10 errors in 5 minutes — "
+                    "check Sentry dashboard for details"
+                ),
+                metric=sentry_metric.metric(
+                    statistic="Sum",
+                    period=Duration.minutes(5),
+                ),
+                threshold=10,
+                evaluation_periods=1,
+                comparison_operator=cw.ComparisonOperator.GREATER_THAN_THRESHOLD,
+                treat_missing_data=cw.TreatMissingData.NOT_BREACHING,
+            )
+        )
+
         # Wire all alarms to the shared topic (alarm and recovery notifications)
         for alarm in alarms:
             alarm.add_alarm_action(sns_action)
@@ -306,13 +387,63 @@ class MonitoringAlerts(Construct):
         # The workspace ID is then visible in the Chatbot console.
 
         if slack_workspace_id and slack_channel_id:
+            # Scoped read-only policy: observability services only, no broad account enumeration.
+            # Used on both the channel role and as the guardrail so effective permissions
+            # are the intersection — scoped reads + Q Developer, nothing else.
+            _observability_actions = [
+                "cloudwatch:Describe*",
+                "cloudwatch:Get*",
+                "cloudwatch:List*",
+                "logs:Describe*",
+                "logs:Get*",
+                "logs:List*",
+                "logs:FilterLogEvents",
+                "logs:StartQuery",
+                "logs:StopQuery",
+                "ecs:Describe*",
+                "ecs:List*",
+                "rds:Describe*",
+                "rds:List*",
+                "cloudformation:Describe*",
+                "cloudformation:List*",
+                "cloudformation:Get*",
+                "sns:Get*",
+                "sns:List*",
+                "sqs:Get*",
+                "sqs:List*",
+            ]
+            observability_policy = iam.ManagedPolicy(
+                self,
+                "SlackObservabilityPolicy",
+                managed_policy_name=f"mermaid-{env_id}-slack-observability",
+                statements=[
+                    iam.PolicyStatement(
+                        actions=_observability_actions,
+                        resources=["*"],
+                    )
+                ],
+            )
+            slack_channel_role = iam.Role(
+                self,
+                "SlackChannelConfigurationRole",
+                assumed_by=iam.ServicePrincipal("chatbot.amazonaws.com"),
+                managed_policies=[
+                    iam.ManagedPolicy.from_aws_managed_policy_name("AmazonQDeveloperAccess"),
+                    observability_policy,
+                ],
+            )
             chatbot.SlackChannelConfiguration(
                 self,
                 "SlackChannel",
                 slack_channel_configuration_name=f"mermaid-{env_id}-alerts",
                 slack_workspace_id=slack_workspace_id,
                 slack_channel_id=slack_channel_id,
-                notification_topics=[self.topic],
-                # Notification-only — no interactive Chatbot commands needed
-                guardrail_policies=[],
+                notification_topics=[self.topic] + ([cost_alerts_topic] if cost_alerts_topic else []),
+                role=slack_channel_role,
+                # Guardrail = hard ceiling on effective permissions
+                guardrail_policies=[
+                    iam.ManagedPolicy.from_aws_managed_policy_name("AmazonQDeveloperAccess"),
+                    observability_policy,
+                ],
             )
+

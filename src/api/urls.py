@@ -20,7 +20,7 @@ from .resources.gfcr import IndicatorSetViewSet
 from .resources.health import health
 from .resources.images import AllImagesViewSet
 from .resources.ingest_schema import ingest_schema_csv
-from .resources.invert_attribute import InvertAttributeViewSet
+from .resources.invert_attribute import InvertAttributeViewSet, InvertSpeciesViewSet
 from .resources.invert_belt_transect import InvertBeltTransectViewSet
 from .resources.management import ManagementViewSet
 from .resources.me import MeViewSet
@@ -104,6 +104,7 @@ router.register(r"notifications", NotificationViewSet, "notification")
 # observation attributes
 router.register(r"benthicattributes", BenthicAttributeViewSet, "benthicattribute")
 router.register(r"invertattributes", InvertAttributeViewSet, "invertattribute")
+router.register(r"invertspecies", InvertSpeciesViewSet, "invertspecies")
 router.register(r"fishfamilies", FishFamilyViewSet, "fishfamily")
 router.register(r"fishgenera", FishGenusViewSet, "fishgenus")
 router.register(r"fishspecies", FishSpeciesViewSet, "fishspecies")
