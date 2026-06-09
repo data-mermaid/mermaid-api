@@ -338,6 +338,22 @@ def suppress_common(stack: Stack) -> None:
         ],
     )
 
+    # --- Cost Anomaly Detection SNS topic ---
+    _suppress_by_path(
+        stack,
+        "CostAlertsTopic/Resource",
+        [
+            NagPackSuppression(
+                id="AwsSolutions-SNS2",
+                reason=f"{TODO}: Encrypt the cost alerts SNS topic with a KMS CMK.",
+            ),
+            NagPackSuppression(
+                id="AwsSolutions-SNS3",
+                reason=f"{TODO}: Add aws:SecureTransport condition to the cost alerts SNS topic policy.",
+            ),
+        ],
+    )
+
 
 # ---------------------------------------------------------------------------
 # StaticSiteStack

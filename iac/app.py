@@ -75,6 +75,7 @@ dev_api_stack = ApiStack(
     sagemaker_domain_name=f"{DEV_SETTINGS.env_id}-SG-Project",
     use_fifo_queues="False",
     report_s3_creds=common_stack.report_s3_creds,
+    cost_alerts_topic=common_stack.cost_alerts_topic,
 )
 
 dev_sagemaker_stack = SagemakerStack(
@@ -116,6 +117,7 @@ prod_api_stack = ApiStack(
     sagemaker_domain_name=f"{PROD_SETTINGS.env_id}-SG-Project",
     use_fifo_queues="False",
     report_s3_creds=common_stack.report_s3_creds,
+    cost_alerts_topic=common_stack.cost_alerts_topic,
 )
 
 cloudtrail_stack = CloudTrailStack(
