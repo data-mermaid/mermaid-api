@@ -791,6 +791,16 @@ class CommonStack(Stack):
             display_name="mermaid-cost-anomaly-alerts",
             topic_name="mermaid-cost-anomaly-alerts",
         )
+        # Cost Anomaly Detection publishes via the costalerts service principal.
+        self.cost_alerts_topic.add_to_resource_policy(
+            iam.PolicyStatement(
+                sid="AllowCostAnomalyDetectionPublish",
+                effect=iam.Effect.ALLOW,
+                principals=[iam.ServicePrincipal("costalerts.amazonaws.com")],
+                actions=["sns:Publish"],
+                resources=[self.cost_alerts_topic.topic_arn],
+            )
+        )
 
         cost_monitor = ce.CfnAnomalyMonitor(
             self,
@@ -812,7 +822,8 @@ class CommonStack(Stack):
                 )
             ],
             threshold_expression='{"Dimensions":{"Key":"ANOMALY_TOTAL_IMPACT_ABSOLUTE","MatchOptions":["GREATER_THAN_OR_EQUAL"],"Values":["100"]}}',
-            frequency="DAILY",
+            # SNS subscribers require IMMEDIATE; DAILY/WEEKLY are EMAIL-only.
+            frequency="IMMEDIATE",
         )
 
 
