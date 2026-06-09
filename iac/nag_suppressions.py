@@ -654,17 +654,6 @@ def suppress_cloudtrail(stack: Stack) -> None:
             ),
         ],
     )
-    for topic_path in ["CloudTrailDeliveryTopic/Resource", "CloudTrailDeleteTopic/Resource"]:
-        _suppress_by_path(
-            stack,
-            topic_path,
-            [
-                NagPackSuppression(
-                    id="AwsSolutions-SNS3",
-                    reason=f"{TODO}: Add aws:SecureTransport condition to the CloudTrail SNS topic policy.",
-                ),
-            ],
-        )
 
 
 # ---------------------------------------------------------------------------

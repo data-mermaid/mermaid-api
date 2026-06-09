@@ -30,7 +30,7 @@ class CommonStack(Stack):
         self,
         scope: Construct,
         id: str,
-        enable_vpc_flow_logs: bool = False,
+        enable_vpc_flow_logs: bool = True,
         **kwargs,
     ) -> None:
         super().__init__(scope, id, **kwargs)
@@ -582,7 +582,7 @@ class CommonStack(Stack):
             visibility_config=wafv2.CfnWebACL.VisibilityConfigProperty(
                 cloud_watch_metrics_enabled=True,
                 metric_name="MermaidApiWafMetric",
-                sampled_requests_enabled=False,
+                sampled_requests_enabled=True,
             ),
             rules=[
                 wafv2.CfnWebACL.RuleProperty(
@@ -598,7 +598,7 @@ class CommonStack(Stack):
                     visibility_config=wafv2.CfnWebACL.VisibilityConfigProperty(
                         cloud_watch_metrics_enabled=True,
                         metric_name="MermaidApiCommonRules",
-                        sampled_requests_enabled=False,
+                        sampled_requests_enabled=True,
                     ),
                 ),
                 wafv2.CfnWebACL.RuleProperty(
@@ -614,7 +614,7 @@ class CommonStack(Stack):
                     visibility_config=wafv2.CfnWebACL.VisibilityConfigProperty(
                         cloud_watch_metrics_enabled=True,
                         metric_name="MermaidApiSQLiRules",
-                        sampled_requests_enabled=False,
+                        sampled_requests_enabled=True,
                     ),
                 ),
                 wafv2.CfnWebACL.RuleProperty(
@@ -630,7 +630,7 @@ class CommonStack(Stack):
                     visibility_config=wafv2.CfnWebACL.VisibilityConfigProperty(
                         cloud_watch_metrics_enabled=True,
                         metric_name="MermaidApiKnownBadInputs",
-                        sampled_requests_enabled=False,
+                        sampled_requests_enabled=True,
                     ),
                 ),
                 wafv2.CfnWebACL.RuleProperty(
@@ -646,7 +646,7 @@ class CommonStack(Stack):
                     visibility_config=wafv2.CfnWebACL.VisibilityConfigProperty(
                         cloud_watch_metrics_enabled=True,
                         metric_name="MermaidApiRateLimit",
-                        sampled_requests_enabled=False,
+                        sampled_requests_enabled=True,
                     ),
                 ),
             ],

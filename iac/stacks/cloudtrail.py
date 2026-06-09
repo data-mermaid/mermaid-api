@@ -62,7 +62,8 @@ class CloudTrailStack(Stack):
             "CloudTrailDeliveryTopic",
             display_name="CloudTrail Log Delivery Notifications",
         )
-        # Allow CloudTrail service to publish
+        # Allow CloudTrail service to publish — scoped to this account's trails
+        # to prevent the confused-deputy problem.
         delivery_topic.add_to_resource_policy(
             iam.PolicyStatement(
                 sid="AllowCloudTrailPublish",
@@ -70,6 +71,23 @@ class CloudTrailStack(Stack):
                 principals=[iam.ServicePrincipal("cloudtrail.amazonaws.com")],
                 actions=["sns:Publish"],
                 resources=[delivery_topic.topic_arn],
+                conditions={
+                    "StringEquals": {"aws:SourceAccount": self.account},
+                    "ArnLike": {
+                        "aws:SourceArn": f"arn:aws:cloudtrail:*:{self.account}:trail/*"
+                    },
+                },
+            )
+        )
+        # Deny any non-TLS access to the topic.
+        delivery_topic.add_to_resource_policy(
+            iam.PolicyStatement(
+                sid="DenyInsecureTransport",
+                effect=iam.Effect.DENY,
+                principals=[iam.AnyPrincipal()],
+                actions=["sns:Publish", "sns:Subscribe"],
+                resources=[delivery_topic.topic_arn],
+                conditions={"Bool": {"aws:SecureTransport": "false"}},
             )
         )
 
@@ -92,6 +110,17 @@ class CloudTrailStack(Stack):
 
         delete_topic = sns.Topic(
             self, "CloudTrailDeleteTopic", display_name="CloudTrail Delete Events Topic"
+        )
+        # Deny any non-TLS access to the topic.
+        delete_topic.add_to_resource_policy(
+            iam.PolicyStatement(
+                sid="DenyInsecureTransport",
+                effect=iam.Effect.DENY,
+                principals=[iam.AnyPrincipal()],
+                actions=["sns:Publish", "sns:Subscribe"],
+                resources=[delete_topic.topic_arn],
+                conditions={"Bool": {"aws:SecureTransport": "false"}},
+            )
         )
         delete_topic.add_subscription(subs.EmailSubscription("sysadmin@datamermaid.org"))
 
