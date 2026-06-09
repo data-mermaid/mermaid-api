@@ -39,6 +39,7 @@ class MonitoringAlerts(Construct):
         sagemaker_domain_name: str | None = None,
         slack_workspace_id: str | None = None,
         slack_channel_id: str | None = None,
+        cost_alerts_topic: sns.ITopic | None = None,
         **kwargs,
     ) -> None:
         super().__init__(scope, id, **kwargs)
@@ -437,7 +438,7 @@ class MonitoringAlerts(Construct):
                 slack_channel_configuration_name=f"mermaid-{env_id}-alerts",
                 slack_workspace_id=slack_workspace_id,
                 slack_channel_id=slack_channel_id,
-                notification_topics=[self.topic],
+                notification_topics=[self.topic] + ([cost_alerts_topic] if cost_alerts_topic else []),
                 role=slack_channel_role,
                 # Guardrail = hard ceiling on effective permissions
                 guardrail_policies=[
@@ -445,3 +446,4 @@ class MonitoringAlerts(Construct):
                     observability_policy,
                 ],
             )
+

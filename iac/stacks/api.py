@@ -22,6 +22,7 @@ from aws_cdk import (
     aws_route53_targets as r53_targets,
     aws_s3 as s3,
     aws_secretsmanager as secrets,
+    aws_sns as sns,
 )
 from constructs import Construct
 from settings.settings import ProjectSettings
@@ -57,6 +58,7 @@ class ApiStack(Stack):
         sagemaker_domain_name: str,
         use_fifo_queues: str,
         report_s3_creds: secrets.Secret,
+        cost_alerts_topic: sns.ITopic | None = None,
         **kwargs,
     ) -> None:
         super().__init__(scope, id, **kwargs)
@@ -507,4 +509,5 @@ class ApiStack(Stack):
             sagemaker_domain_name=sagemaker_domain_name,
             slack_workspace_id=config.api.slack_workspace_id or None,
             slack_channel_id=config.api.slack_channel_id or None,
+            cost_alerts_topic=cost_alerts_topic,
         )
