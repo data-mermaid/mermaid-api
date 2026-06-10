@@ -192,7 +192,7 @@ class BeltInvertMethodObsSerializer(BaseSUViewAPISerializer):
     class Meta(BaseSUViewAPISerializer.Meta):
         model = BeltInvertObsModel
         exclude = BaseSUViewAPISerializer.Meta.exclude.copy()
-        exclude.extend(["location"])
+        exclude.extend(["location", "include"])
         header_order = ["id"] + BaseSUViewAPISerializer.Meta.header_order.copy()
         header_order.extend(
             [
@@ -212,7 +212,6 @@ class BeltInvertMethodObsSerializer(BaseSUViewAPISerializer):
                 "invert_attribute_name",
                 "count",
                 "size",
-                "include",
             ]
         )
 
@@ -220,6 +219,8 @@ class BeltInvertMethodObsSerializer(BaseSUViewAPISerializer):
 class BeltInvertMethodObsGeoSerializer(BaseViewAPIGeoSerializer):
     class Meta(BaseViewAPIGeoSerializer.Meta):
         model = BeltInvertObsModel
+        exclude = BaseViewAPIGeoSerializer.Meta.exclude.copy()
+        exclude.append("include")
 
 
 class ObsBeltInvertCSVSerializer(ReportSerializer):
@@ -260,7 +261,6 @@ class ObsBeltInvertCSVSerializer(ReportSerializer):
         ReportField("size_bin", "Size bin"),
         ReportField("size", "Size"),
         ReportField("count", "Count"),
-        ReportField("include", "Include"),
         ReportField("site_notes", "Site notes"),
         ReportField("management_notes", "Management notes"),
         ReportField("sample_unit_notes", "Sample unit notes"),
