@@ -25,6 +25,7 @@ jobs:
   call-test:
     if: github.event.pull_request.draft == false
     uses: ./.github/workflows/_test.yml
+    secrets: inherit
 
   cdk-diff:
     # environment: dev
