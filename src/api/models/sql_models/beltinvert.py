@@ -203,26 +203,30 @@ class BeltInvertSUSQLModel(BaseSUSQLModel):
             SELECT a.pseudosu_id, a.goi_name, COALESCE(g.goi_count, 0) AS goi_count
             FROM (
                 SELECT DISTINCT o.pseudosu_id, igoi.name AS goi_name
-                FROM belt_invert_obs o CROSS JOIN invert_group_of_interest igoi
+                FROM belt_invert_obs_all o CROSS JOIN invert_group_of_interest igoi
             ) a
             LEFT JOIN su_goi g USING (pseudosu_id, goi_name)
         ),
-        su_goi_density AS MATERIALIZED (
-            SELECT z.pseudosu_id,
-                jsonb_object_agg(z.goi_name,
-                    ROUND(z.goi_count::numeric / (sa.len_surveyed * sa.width_m) * 10000, 2)
-                ) FILTER (WHERE z.goi_count > 0) AS density_indha_group_interest,
-                jsonb_object_agg(z.goi_name,
-                    ROUND(z.goi_count::numeric / (sa.len_surveyed * sa.width_m) * 10000, 2)
-                ) AS density_indha_group_interest_zeroes
+        su_goi_density_values AS MATERIALIZED (
+            SELECT z.pseudosu_id, z.goi_name, z.goi_count,
+                ROUND(
+                    z.goi_count::numeric / NULLIF(sa.len_surveyed * sa.width_m, 0) * 10000, 2
+                ) AS density
             FROM su_goi_zeroes z
             JOIN (
                 SELECT pseudosu_id,
                     MAX(transect_len_surveyed)::numeric AS len_surveyed,
                     MAX(width_m)::numeric AS width_m
-                FROM belt_invert_obs GROUP BY pseudosu_id
+                FROM belt_invert_obs_all GROUP BY pseudosu_id
             ) sa USING (pseudosu_id)
-            GROUP BY z.pseudosu_id
+        ),
+        su_goi_density AS MATERIALIZED (
+            SELECT pseudosu_id,
+                jsonb_object_agg(goi_name, density)
+                    FILTER (WHERE goi_count > 0) AS density_indha_group_interest,
+                jsonb_object_agg(goi_name, density) AS density_indha_group_interest_zeroes
+            FROM su_goi_density_values
+            GROUP BY pseudosu_id
         ),
         beltinvert_observers AS (
             SELECT pseudosu_id,
