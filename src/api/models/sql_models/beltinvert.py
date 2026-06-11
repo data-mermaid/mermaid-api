@@ -8,7 +8,12 @@ from .base import BaseSQLModel, BaseSUSQLModel, project_where, sample_event_sql_
 class BeltInvertObsSQLModel(BaseSUSQLModel):
     _se_fields = ", ".join([f"se.{f}" for f in BaseSUSQLModel.se_fields])
     _su_fields = BaseSUSQLModel.su_fields_sql
-    _transect_su_fields = ", ".join(BaseSUSQLModel.transect_su_fields)
+    # Pseudo-SU grouping must also separate transects that share the same
+    # sample_event/depth/number/len_surveyed but differ in width or size bin,
+    # since density_indha divides by MAX(width_m) for the pseudo-SU.
+    _transect_su_fields = ", ".join(
+        [*BaseSUSQLModel.transect_su_fields, "su.width_id", "su.size_bin_id"]
+    )
 
     sql = f"""
         WITH se AS (
