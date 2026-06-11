@@ -115,13 +115,21 @@ class BeltInvertMethodView(
             obs_belt_inverts=request.data.get("obs_belt_inverts"),
         )
         belt_invert_data = {k: v for k, v in request.data.items() if k not in nested_data}
-        belt_invert_id = belt_invert_data["id"]
+        belt_invert_id = pk
+        belt_invert_data["id"] = belt_invert_id
 
         context = dict(request=request)
 
         sid = transaction.savepoint()
         try:
-            belt_invert = BeltInvert.objects.get(id=belt_invert_id)
+            try:
+                belt_invert = BeltInvert.objects.get(
+                    id=belt_invert_id,
+                    transect__sample_event__site__project_id=project_pk,
+                )
+            except BeltInvert.DoesNotExist:
+                transaction.savepoint_rollback(sid)
+                return Response(status=status.HTTP_404_NOT_FOUND)
 
             check, errs = save_one_to_many(
                 foreign_key=("transectmethod", belt_invert_id),
@@ -183,7 +191,7 @@ class BeltInvertMethodView(
             belt_invert = BeltInvert.objects.get(id=belt_invert_id)
             return Response(BeltInvertMethodSerializer(belt_invert).data, status=status.HTTP_200_OK)
 
-        except:
+        except Exception:
             transaction.savepoint_rollback(sid)
             raise
 
