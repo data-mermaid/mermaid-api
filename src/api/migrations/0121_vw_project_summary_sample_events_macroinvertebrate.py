@@ -3,10 +3,16 @@ from django.db import migrations, models
 forward_sql = """
 DROP VIEW IF EXISTS vw_project_summary_sample_events;
 CREATE VIEW vw_project_summary_sample_events AS
-SELECT *, 'restricted'::text AS access
+SELECT project_id, project_name, project_admins, project_notes, project_includes_gfcr,
+    suggested_citation, data_policy_beltfish, data_policy_benthiclit, data_policy_benthicpit,
+    data_policy_habitatcomplexity, data_policy_bleachingqc, data_policy_benthicpqt,
+    data_policy_macroinvertebrate, tags, records, created_on, 'restricted'::text AS access
 FROM restricted_project_summary_se
 UNION ALL
-SELECT *, 'unrestricted'::text AS access
+SELECT project_id, project_name, project_admins, project_notes, project_includes_gfcr,
+    suggested_citation, data_policy_beltfish, data_policy_benthiclit, data_policy_benthicpit,
+    data_policy_habitatcomplexity, data_policy_bleachingqc, data_policy_benthicpqt,
+    data_policy_macroinvertebrate, tags, records, created_on, 'unrestricted'::text AS access
 FROM unrestricted_project_summary_se;
 """
 

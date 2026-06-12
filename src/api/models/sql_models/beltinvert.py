@@ -228,7 +228,7 @@ class BeltInvertSUSQLModel(BaseSUSQLModel):
         su_goi_density AS MATERIALIZED (
             SELECT pseudosu_id,
                 jsonb_object_agg(goi_name, density)
-                    FILTER (WHERE goi_count > 0) AS density_indha_group_interest,
+                    FILTER (WHERE density > 0) AS density_indha_group_interest,
                 jsonb_object_agg(goi_name, density) AS density_indha_group_interest_zeroes
             FROM su_goi_density_values
             GROUP BY pseudosu_id
@@ -347,9 +347,9 @@ class BeltInvertSESQLModel(BaseSQLModel):
         LEFT JOIN (
             SELECT sample_event_id,
             jsonb_object_agg(goi, ROUND(density_avg::numeric, 2))
-                FILTER (WHERE density_avg > 0) AS density_indha_group_interest_avg,
+                FILTER (WHERE ROUND(density_avg::numeric, 2) > 0) AS density_indha_group_interest_avg,
             jsonb_object_agg(goi, ROUND(density_sd::numeric, 2))
-                FILTER (WHERE density_avg > 0) AS density_indha_group_interest_sd
+                FILTER (WHERE ROUND(density_avg::numeric, 2) > 0) AS density_indha_group_interest_sd
             FROM (
                 SELECT sample_event_id, goi,
                 AVG(density) AS density_avg,

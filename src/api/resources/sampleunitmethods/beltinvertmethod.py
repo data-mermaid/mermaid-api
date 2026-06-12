@@ -115,8 +115,7 @@ class BeltInvertMethodView(
             obs_belt_inverts=request.data.get("obs_belt_inverts"),
         )
         belt_invert_data = {k: v for k, v in request.data.items() if k not in nested_data}
-        belt_invert_id = pk
-        belt_invert_data["id"] = belt_invert_id
+        belt_invert_id = belt_invert_data["id"]
 
         context = dict(request=request)
 

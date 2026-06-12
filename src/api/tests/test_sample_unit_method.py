@@ -35,8 +35,8 @@ def test_sampleunitmethods_list_includes_macroinvertebrate(
     assert result["size"]["len_surveyed"] is not None
 
 
-def test_update_belt_invert_transect_method(db_setup, api_client1, project1, belt_invert1):
-    belt_invert_id = str(belt_invert1.pk)
+def test_update_belt_invert_transect_method(db_setup, api_client1, project1, belt_invert1_with_obs):
+    belt_invert_id = str(belt_invert1_with_obs.pk)
     url_kwargs = {"project_pk": str(project1.pk), "pk": belt_invert_id}
     detail_url = reverse("beltinverttransectmethod-detail", kwargs=url_kwargs)
 
@@ -46,7 +46,21 @@ def test_update_belt_invert_transect_method(db_setup, api_client1, project1, bel
 
     put_response = api_client1.put(detail_url, data, format="json")
     assert put_response.status_code == 200
-    assert put_response.json()["id"] == belt_invert_id
+    put_data = put_response.json()
+    assert put_data["id"] == belt_invert_id
+
+    assert (
+        put_data["beltinvert_transect"]["len_surveyed"]
+        == data["beltinvert_transect"]["len_surveyed"]
+    )
+    assert put_data["beltinvert_transect"]["depth"] == data["beltinvert_transect"]["depth"]
+
+    assert len(put_data["obs_belt_inverts"]) == 1
+    put_obs = put_data["obs_belt_inverts"][0]
+    original_obs = data["obs_belt_inverts"][0]
+    assert put_obs["invert_attribute"] == original_obs["invert_attribute"]
+    assert put_obs["count"] == original_obs["count"]
+    assert put_obs["size"] == original_obs["size"]
 
 
 def test_update_belt_invert_transect_method_cross_project_id_rejected(

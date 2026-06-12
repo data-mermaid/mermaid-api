@@ -54,7 +54,7 @@ class SummarySampleEventBaseModel(models.Model):
     data_policy_habitatcomplexity = models.CharField(max_length=50)
     data_policy_bleachingqc = models.CharField(max_length=50)
     data_policy_benthicpqt = models.CharField(max_length=50)
-    data_policy_macroinvertebrate = models.CharField(max_length=50, default="")
+    data_policy_macroinvertebrate = models.CharField(max_length=50)
 
     class Meta:
         abstract = True
@@ -387,8 +387,14 @@ class SummarySampleEventSQLModel(SummarySampleEventBaseModel):
         ) fb ON (sample_event.id = fb.sample_event_id)
         LEFT JOIN (
             SELECT sample_event_id,
-            jsonb_object_agg(tg, ROUND(biomass_kgha_avg::numeric, 2)) AS biomass_kgha_trophic_group_avg,
-            jsonb_object_agg(tg, ROUND(biomass_kgha_sd::numeric, 2)) AS biomass_kgha_trophic_group_sd
+            jsonb_object_agg(
+                tg,
+                ROUND(biomass_kgha_avg::numeric, 2)
+            ) FILTER (WHERE biomass_kgha_avg > 0) AS biomass_kgha_trophic_group_avg,
+            jsonb_object_agg(
+                tg,
+                ROUND(biomass_kgha_sd::numeric, 2)
+            ) FILTER (WHERE biomass_kgha_avg > 0) AS biomass_kgha_trophic_group_sd
             FROM (
                 SELECT meta_su_tgs.sample_event_id, tg,
                 AVG(biomass_kgha) AS biomass_kgha_avg,
@@ -397,7 +403,7 @@ class SummarySampleEventSQLModel(SummarySampleEventBaseModel):
                     SELECT sample_event_id, pseudosu_id, tgdata.key AS tg,
                     SUM(tgdata.value::double precision) AS biomass_kgha
                     FROM beltfish_su,
-                    LATERAL jsonb_each_text(biomass_kgha_trophic_group) tgdata(key, value)
+                    LATERAL jsonb_each_text(biomass_kgha_trophic_group_zeroes) tgdata(key, value)
                     GROUP BY sample_event_id, pseudosu_id, tgdata.key
                 ) meta_su_tgs
                 GROUP BY meta_su_tgs.sample_event_id, tg
@@ -643,9 +649,9 @@ class SummarySampleEventSQLModel(SummarySampleEventBaseModel):
         LEFT JOIN (
             SELECT sample_event_id,
             jsonb_object_agg(goi, ROUND(density_avg::numeric, 2))
-                FILTER (WHERE density_avg > 0) AS density_indha_group_interest_avg,
+                FILTER (WHERE ROUND(density_avg::numeric, 2) > 0) AS density_indha_group_interest_avg,
             jsonb_object_agg(goi, ROUND(density_sd::numeric, 2))
-                FILTER (WHERE density_avg > 0) AS density_indha_group_interest_sd
+                FILTER (WHERE ROUND(density_avg::numeric, 2) > 0) AS density_indha_group_interest_sd
             FROM (
                 SELECT sample_event_id, goi,
                 AVG(density) AS density_avg,

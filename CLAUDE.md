@@ -132,7 +132,7 @@ src/
 
 **1. Protocol-Based Data Collection**
 
-MERMAID supports multiple survey protocols (Belt Fish, Benthic LIT, Benthic PIT, Benthic PQT, Bleaching QC, Habitat Complexity). Each protocol has:
+MERMAID supports multiple survey protocols (Belt Fish, Benthic LIT, Benthic PIT, Benthic PQT, Bleaching QC, Habitat Complexity). Belt Invertebrate (Macroinvertebrate) exists in resources and models but does not yet have SQL summary models. Each protocol has:
 - A sample unit method model (defines the survey method)
 - Observation models (actual survey data)
 - SQL models for data summaries (Observation, Sample Unit, Sample Event levels)
@@ -184,9 +184,36 @@ Uses Auth0 JWT tokens via custom `JWTAuthentication` backend in `api/auth_backen
 - **Test DB:** Uses separate `test_mermaid` database
 - **Views:** Some models are database views (see `view_models/`)
 
+**7. User Roles, Project Status, and Data Sharing**
+
+**Project membership roles** (`ProjectProfile.role` in `src/api/models/core.py`):
+- `ADMIN` (90) — full access; manages project settings, members, and all data; can delete anything
+- `COLLECTOR` (50) — can create/edit data but not delete project-level records; `is_collector` is true for both COLLECTOR and ADMIN (role >= 50)
+- `READONLY` (10) — project member with read-only access
+
+Key behavior: on a LOCKED project, COLLECTORs are downgraded to read-only. COLLECTORs can only touch their own collect records (`CollectRecordOwner` permission). A project must always retain at least one ADMIN.
+
+**Project status** (`Project.status` in `src/api/models/core.py`):
+- `OPEN` (90) — normal active project
+- `TEST` (80) — test project; also considered `is_open` (TEST > LOCKED)
+- `LOCKED` (10) — frozen; no writes allowed even for admins
+
+**Per-protocol data sharing policies** (set per-project, per-protocol):
+- `PRIVATE` (10) — only project members can access data
+- `PUBLIC_SUMMARY` (50) — default; unauthenticated users can access sample-event-level summaries
+- `PUBLIC` (100) — unauthenticated users can access full observation-level data
+
+Every protocol has its own policy field: `data_policy_beltfish`, `data_policy_benthiclit`, `data_policy_benthicpit`, `data_policy_benthicpqt`, `data_policy_bleachingqc`, `data_policy_habitatcomplexity`, `data_policy_macroinvertebrate`. Default is `PUBLIC_SUMMARY`.
+
+Permission classes are in `src/api/permissions.py`. Key ones: `ProjectDataReadOnlyPermission`, `ProjectDataCollectorPermission`, `ProjectDataAdminPermission`, `ProjectPublicPermission`, `ProjectPublicSummaryPermission`.
+
+**8. GFCR (Global Fund for Coral Reefs)**
+
+GFCR is a separate feature from the survey protocols. Models are in `src/api/models/gfcr.py` (`GFCRIndicatorSet` and related), endpoints in `src/api/resources/gfcr.py`. GFCR data is associated with projects and has its own indicator set structure (report vs. target types, annual indicators).
+
 ### Adding a New Protocol
 
-See `new_protocol_readme.md` for a comprehensive checklist covering:
+See `readme/new_protocol_readme.md` for a comprehensive checklist covering:
 - Models (sample unit, observations, SQL models)
 - Admin configuration
 - CSV ingest schema

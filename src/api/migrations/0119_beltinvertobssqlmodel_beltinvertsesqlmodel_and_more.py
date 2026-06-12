@@ -590,7 +590,8 @@ class Migration(migrations.Migration):
         migrations.AddField(
             model_name="summarysampleeventmodel",
             name="data_policy_macroinvertebrate",
-            field=models.CharField(default="", max_length=50),
+            field=models.CharField(default="public summary", max_length=50),
+            preserve_default=False,
         ),
         migrations.AddField(
             model_name="unrestrictedprojectsummarysampleevent",
