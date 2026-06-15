@@ -16,6 +16,7 @@ from ..models import (
     BLEACHINGQC_PROTOCOL,
     FISHBELT_PROTOCOL,
     HABITATCOMPLEXITY_PROTOCOL,
+    MACROINVERTEBRATE_PROTOCOL,
     Covariate,
     Project,
     ProjectProfile,
@@ -26,6 +27,11 @@ from ..resources.sampleunitmethods.beltfishmethod import (
     BeltFishProjectMethodObsView,
     BeltFishProjectMethodSEView,
     BeltFishProjectMethodSUView,
+)
+from ..resources.sampleunitmethods.beltinvertmethod import (
+    BeltInvertProjectMethodObsView,
+    BeltInvertProjectMethodSEView,
+    BeltInvertProjectMethodSUView,
 )
 from ..resources.sampleunitmethods.benthiclitmethod import (
     BenthicLITProjectMethodObsView,
@@ -120,6 +126,14 @@ PROTOCOL_VIEW_MAPPING = {
             HabitatComplexityProjectMethodObsView,
         ],
         "sheet_names": ["Habitat Complexity SE", "Habitat Complexity SU", "Habitat Complexity Obs"],
+    },
+    MACROINVERTEBRATE_PROTOCOL: {
+        "views": [
+            BeltInvertProjectMethodSEView,
+            BeltInvertProjectMethodSUView,
+            BeltInvertProjectMethodObsView,
+        ],
+        "sheet_names": ["Macroinvertebrate SE", "Macroinvertebrate SU", "Macroinvertebrate Obs"],
     },
 }
 

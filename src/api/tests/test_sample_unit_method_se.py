@@ -77,6 +77,35 @@ def test_beltfish_se_view(
         assert False, f"Wrong number of sample events, {n} should be {count}"
 
 
+def test_beltinvert_se_view_group_of_interest(
+    client,
+    db_setup,
+    project1,
+    token1,
+    sample_event1,
+    invert_belt_transect1,
+    belt_invert1_with_goi_obs,
+    invert_group_of_interest_1,
+    invert_group_of_interest_2,
+    update_summary_cache,
+):
+    # Single pseudo-SU, so the SE average for each GoI equals its SU density:
+    # GoI 1 = 1600.0 (3 direct + half of the 10 family-level obs), GoI 2 = 1000.0
+    # (half of the 10 family-level obs).
+    url = reverse("beltinvertmethod-sampleevent-list", kwargs=dict(project_pk=project1.pk))
+    count, data, _ = _call(client, token1, url)
+
+    assert count == 1
+    record = data[0]
+    assert record["id"] == str(sample_event1.pk)
+    assert record["sample_unit_count"] == 1
+    assert record["density_indha_avg"] == pytest.approx(2600.0, 0.01)
+
+    goi_avg = record["density_indha_group_interest_avg"]
+    assert goi_avg[invert_group_of_interest_1.name] == pytest.approx(1600.0, 0.01)
+    assert goi_avg[invert_group_of_interest_2.name] == pytest.approx(1000.0, 0.01)
+
+
 def test_benthicpit_se_view(
     client,
     db_setup,
