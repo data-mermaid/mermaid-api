@@ -132,7 +132,7 @@ src/
 
 **1. Protocol-Based Data Collection**
 
-MERMAID supports multiple survey protocols (Belt Fish, Benthic LIT, Benthic PIT, Benthic PQT, Bleaching QC, Habitat Complexity). Belt Invertebrate (Macroinvertebrate) exists in resources and models but does not yet have SQL summary models. Each protocol has:
+MERMAID supports multiple survey protocols (Belt Fish, Benthic LIT, Benthic PIT, Benthic PQT, Bleaching QC, Habitat Complexity, Macroinvertebrate). Each protocol has:
 - A sample unit method model (defines the survey method)
 - Observation models (actual survey data)
 - SQL models for data summaries (Observation, Sample Unit, Sample Event levels)
