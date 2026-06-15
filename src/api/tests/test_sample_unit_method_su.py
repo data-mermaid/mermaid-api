@@ -93,6 +93,33 @@ def test_beltfish_su_view(
         assert False, f"Wrong number of sample units, {n} should be {count}"
 
 
+def test_beltinvert_su_view_group_of_interest(
+    client,
+    db_setup,
+    project1,
+    token1,
+    invert_belt_transect1,
+    belt_invert1_with_goi_obs,
+    invert_group_of_interest_1,
+    invert_group_of_interest_2,
+    update_summary_cache,
+):
+    # invert_genus_1 (count=3) attributes fully to GoI 1; invert_family_1 (count=10)
+    # splits 50/50 between GoI 1 and GoI 2 (one genus per GoI in that family).
+    # density_indha = count / (len_surveyed * width_m) * 10000 = count * 200
+    url = reverse("beltinvertmethod-sampleunit-list", kwargs=dict(project_pk=project1.pk))
+    count, data, _ = _call(client, token1, url)
+
+    assert count == 1
+    record = data[0]
+    assert record["total_abundance"] == 13
+    assert record["density_indha"] == pytest.approx(2600.0, 0.01)
+
+    goi_density = record["density_indha_group_interest"]
+    assert goi_density[invert_group_of_interest_1.name] == pytest.approx(1600.0, 0.01)
+    assert goi_density[invert_group_of_interest_2.name] == pytest.approx(1000.0, 0.01)
+
+
 def test_benthicpit_su_view(
     client,
     db_setup,
