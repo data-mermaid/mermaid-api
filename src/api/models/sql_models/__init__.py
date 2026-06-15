@@ -4,6 +4,11 @@ from .beltfish import (  # noqa: F401
     BeltFishSESQLModel,
     BeltFishSUSQLModel,
 )
+from .beltinvert import (  # noqa: F401
+    BeltInvertObsSQLModel,
+    BeltInvertSESQLModel,
+    BeltInvertSUSQLModel,
+)
 from .benthiclit import (  # noqa: F401
     BenthicLITObsSQLModel,
     BenthicLITSESQLModel,

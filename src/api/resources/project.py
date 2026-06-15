@@ -193,6 +193,9 @@ class ProjectCSVSerializer(ReportSerializer, BaseProjectSerializer):
         ),
         ReportField("data_policy_bleachingqc", "Bleaching QC Data Policy", to_data_policy),
         ReportField("data_policy_benthicpqt", "Benthic PQT Data Policy", to_data_policy),
+        ReportField(
+            "data_policy_macroinvertebrate", "Macroinvertebrate Data Policy", to_data_policy
+        ),
         ReportField("includes_gfcr", "Includes GFCR", to_yesno),
         ReportField("notes", "Notes"),
         ReportMethodField("get_project_admins_csv", "Project Admins"),
