@@ -351,6 +351,22 @@ def suppress_common(stack: Stack) -> None:
         ],
     )
 
+    # --- Cost Anomaly Detection SNS topic ---
+    _suppress_by_path(
+        stack,
+        "CostAlertsTopic/Resource",
+        [
+            NagPackSuppression(
+                id="AwsSolutions-SNS2",
+                reason=f"{TODO}: Encrypt the cost alerts SNS topic with a KMS CMK.",
+            ),
+            NagPackSuppression(
+                id="AwsSolutions-SNS3",
+                reason=f"{TODO}: Add aws:SecureTransport condition to the cost alerts SNS topic policy.",
+            ),
+        ],
+    )
+
 
 # ---------------------------------------------------------------------------
 # StaticSiteStack
@@ -491,6 +507,50 @@ def suppress_api(stack: Stack) -> None:
                 ),
             ],
         )
+
+    # --- MonitoringAlerts SNS topic ---
+    _suppress_by_path(
+        stack,
+        "Alerts/AlertsTopic/Resource",
+        [
+            NagPackSuppression(
+                id="AwsSolutions-SNS2",
+                reason=f"{TODO}: Encrypt the alerts SNS topic with a KMS CMK.",
+            ),
+            NagPackSuppression(
+                id="AwsSolutions-SNS3",
+                reason=f"{TODO}: Add aws:SecureTransport condition to the alerts SNS topic policy.",
+            ),
+        ],
+    )
+
+    # --- Chatbot Slack channel role ---
+    _suppress_by_path(
+        stack,
+        "Alerts/SlackChannelConfigurationRole/Resource",
+        [
+            NagPackSuppression(
+                id="AwsSolutions-IAM4",
+                reason=f"{ACCEPTED}: AmazonQDeveloperAccess is an AWS managed policy with no "
+                "customer-managed equivalent for Amazon Q Developer in Slack.",
+                applies_to=[
+                    "Policy::arn:<AWS::Partition>:iam::aws:policy/AmazonQDeveloperAccess",
+                ],
+            ),
+        ],
+    )
+    _suppress_by_path(
+        stack,
+        "Alerts/SlackObservabilityPolicy/Resource",
+        [
+            NagPackSuppression(
+                id="AwsSolutions-IAM5",
+                reason=f"{ACCEPTED}: Observability read actions (cloudwatch:Get*, ecs:List*, etc.) "
+                "operate on account-wide resources by design — CloudWatch metrics and ECS services "
+                "cannot be scoped to a single ARN without breaking Describe/List semantics.",
+            ),
+        ],
+    )
 
 
 # ---------------------------------------------------------------------------

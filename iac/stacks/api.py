@@ -22,10 +22,12 @@ from aws_cdk import (
     aws_route53_targets as r53_targets,
     aws_s3 as s3,
     aws_secretsmanager as secrets,
+    aws_sns as sns,
 )
 from constructs import Construct
 from settings.settings import ProjectSettings
 from stacks.constructs.adot import add_adot_sidecar
+from stacks.constructs.alerts import MonitoringAlerts
 from stacks.constructs.dashboard import MonitoringDashboard
 from stacks.constructs.worker import QueueWorker
 
@@ -56,6 +58,7 @@ class ApiStack(Stack):
         sagemaker_domain_name: str,
         use_fifo_queues: str,
         report_s3_creds: secrets.Secret,
+        cost_alerts_topic: sns.ITopic | None = None,
         **kwargs,
     ) -> None:
         super().__init__(scope, id, **kwargs)
@@ -202,7 +205,11 @@ class ApiStack(Stack):
             "SQS_QUEUE_NAME": sqs_queue_name,
             "IMAGE_SQS_QUEUE_NAME": image_sqs_queue_name,
             # OpenTelemetry / X-Ray
+            # ecs-xray.yaml only configures a traces pipeline; disable metrics and
+            # logs exporters to suppress UNIMPLEMENTED errors from the ADOT sidecar.
             "OTEL_TRACES_EXPORTER": "otlp",
+            "OTEL_METRICS_EXPORTER": "none",
+            "OTEL_LOGS_EXPORTER": "none",
             "OTEL_EXPORTER_OTLP_ENDPOINT": "http://localhost:4317",
             "OTEL_PROPAGATORS": "xray",
             "OTEL_PYTHON_ID_GENERATOR": "xray",
@@ -280,13 +287,18 @@ class ApiStack(Stack):
             enable_execute_command=True,
             min_healthy_percent=0,
             capacity_provider_strategies=cluster.default_capacity_provider_strategy,
-            # circuit_breaker=ecs.DeploymentCircuitBreaker(enable=True, rollback=True),
+            circuit_breaker=ecs.DeploymentCircuitBreaker(enable=True, rollback=True),
         )
 
         # --- API Service ---
 
         task_definition = ecs.Ec2TaskDefinition(
             self, id="ApiTaskDefinition", network_mode=ecs.NetworkMode.AWS_VPC
+        )
+        api_log_group = logs.LogGroup.from_log_group_name(
+            self,
+            "ApiLogGroup",
+            f"/mermaid/{config.env_id}/api",
         )
         task_definition.add_container(
             id="MermaidAPI",
@@ -297,7 +309,8 @@ class ApiStack(Stack):
             environment={**environment, "OTEL_SERVICE_NAME": f"mermaid-api-{config.env_id}"},
             secrets=self.api_secrets,
             logging=ecs.LogDrivers.aws_logs(
-                stream_prefix=config.env_id, log_retention=logs.RetentionDays.ONE_MONTH
+                stream_prefix=config.env_id,
+                log_group=api_log_group,
             ),
         )
         add_adot_sidecar(task_definition, "Api")
@@ -312,7 +325,7 @@ class ApiStack(Stack):
             enable_execute_command=True,
             min_healthy_percent=0,
             capacity_provider_strategies=cluster.default_capacity_provider_strategy,
-            # circuit_breaker=ecs.DeploymentCircuitBreaker(enable=True, rollback=True),
+            circuit_breaker=ecs.DeploymentCircuitBreaker(enable=True, rollback=True),
         )
 
         # Grant Secret read to API container & backup task
@@ -480,4 +493,21 @@ class ApiStack(Stack):
             buckets=[backup_bucket, config_bucket, data_bucket, image_processing_bucket],
             distribution=distribution,
             sagemaker_domain_name=sagemaker_domain_name,
+        )
+
+        # ── CloudWatch Alarms + Slack (AWS Chatbot) ──────────────────
+        MonitoringAlerts(
+            self,
+            "Alerts",
+            env_id=config.env_id,
+            load_balancer=load_balancer,
+            api_service=service,
+            database=database,
+            general_dlq=worker.dead_letter_queue,
+            image_dlq=image_worker.dead_letter_queue,
+            api_log_group=api_log_group,
+            sagemaker_domain_name=sagemaker_domain_name,
+            slack_workspace_id=config.api.slack_workspace_id or None,
+            slack_channel_id=config.api.slack_channel_id or None,
+            cost_alerts_topic=cost_alerts_topic,
         )

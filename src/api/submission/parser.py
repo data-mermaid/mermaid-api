@@ -1,10 +1,12 @@
 __all__ = (
     "get_benthic_transect_data",
     "get_fishbelt_transect_data",
+    "get_invertbelt_transect_data",
     "get_management_id",
     "get_obs_colonies_bleached_data",
     "get_obs_quadrat_benthic_percent_data",
     "get_obsbeltfish_data",
+    "get_obsbeltinvert_data",
     "get_obsbenthiclit_data",
     "get_obsbenthicpit_data",
     "get_observers_data",
@@ -92,6 +94,48 @@ def get_obsbeltfish_data(collect_record, belt_fish_id=None):
                 fish_attribute=observation.get("fish_attribute"),
                 count=observation.get("count"),
                 size=_cast_decimal_to_str(observation.get("size")),
+                notes=observation.get("notes", ""),
+            )
+        )
+
+    return observations_data
+
+
+def get_invertbelt_transect_data(collect_record, sample_event_id=None):
+    data = collect_record.data or dict()
+    beltinvert_transect_data = data.get("beltinvert_transect") or dict()
+
+    return dict(
+        sample_event=sample_event_id,
+        number=beltinvert_transect_data.get("number"),
+        label=beltinvert_transect_data.get("label") or "",
+        width=beltinvert_transect_data.get("width"),
+        len_surveyed=_cast_decimal_to_str(beltinvert_transect_data.get("len_surveyed")),
+        size_bin=beltinvert_transect_data.get("size_bin") or None,
+        reef_slope=beltinvert_transect_data.get("reef_slope") or None,
+        collect_record_id=collect_record.id,
+        sample_time=beltinvert_transect_data.get("sample_time") or None,
+        depth=_cast_decimal_to_str(beltinvert_transect_data.get("depth")),
+        visibility=beltinvert_transect_data.get("visibility") or None,
+        current=beltinvert_transect_data.get("current") or None,
+        relative_depth=beltinvert_transect_data.get("relative_depth") or None,
+        tide=beltinvert_transect_data.get("tide") or None,
+        notes=beltinvert_transect_data.get("notes", ""),
+    )
+
+
+def get_obsbeltinvert_data(collect_record, belt_invert_id=None):
+    observations_data = []
+    data = collect_record.data or dict()
+    observations = data.get("obs_belt_inverts") or []
+    for observation in observations:
+        observations_data.append(
+            dict(
+                beltinvert=belt_invert_id,
+                invert_attribute=observation.get("invert_attribute"),
+                count=observation.get("count"),
+                size=_cast_decimal_to_str(observation.get("size")),
+                include=observation.get("include", True),
                 notes=observation.get("notes", ""),
             )
         )

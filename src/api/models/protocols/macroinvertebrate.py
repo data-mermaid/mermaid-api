@@ -56,19 +56,6 @@ class InvertSize(BaseModel):
         verbose_name_plural = _("macroinvertebrate sizes")
 
 
-class InvertHarvestType(BaseChoiceModel):
-    name = models.CharField(max_length=100, unique=True)
-
-    def __str__(self):
-        return _("%s") % self.name
-
-    class Meta:
-        db_table = "invert_harvest_type"
-        ordering = ("name",)
-        verbose_name = _("macroinvertebrate harvest type")
-        verbose_name_plural = _("macroinvertebrate harvest types")
-
-
 class InvertAttribute(BaseAttributeModel):
     GOI_RANK = "goi"
     CLASS_RANK = "class"
@@ -217,7 +204,9 @@ class InvertGenus(InvertMaxLengthMixin, InvertAttribute):
 
     name = models.CharField(max_length=100)
     family = models.ForeignKey(InvertFamily, on_delete=models.PROTECT, related_name="genera")
-    group_of_interest = models.ForeignKey(InvertGroupOfInterest, on_delete=models.PROTECT)
+    group_of_interest = models.ForeignKey(
+        InvertGroupOfInterest, on_delete=models.PROTECT, related_name="genera"
+    )
 
     def __str__(self):
         return _("%s") % self.name

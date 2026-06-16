@@ -49,6 +49,9 @@ If the protocol introduces its own attribute/taxonomy hierarchy (Django MTI from
   - `"read_only": False` — enables the propose-new-attribute flow for authenticated users
   - `"visibility_filtered": True` — filters nodes based on status/visibility so only approved entries are synced to clients
   - Add the source type constant to `CACHEABLE_SOURCE_TYPES` so pull responses are cached
+- Add a DB trigger for the new attribute table in `src/api/models/revisions.py` `forward_sql` and `reverse_sql` (follow the `invert_attribute_trigger` pattern); without this the pull endpoint's INNER JOIN on the revision table returns nothing and `last_revision_num` is always null
+- Create a migration that: (1) installs the trigger via `RunSQL`, then (2) backfills revision records for any rows already seeded by data migrations via `RunPython` touching `updated_on` — data migrations run before the trigger migration, so seeded rows have no revision entries
+- If the attribute endpoint serves the full taxonomy hierarchy (e.g. `InvertAttributeViewSet` returning all taxa in a flat list with `SerializerMethodField`s for computed fields), register it as `read_only: True` and add a **separate** `invert_species` source using the leaf-node viewset (e.g. `InvertSpeciesViewSet`) with `read_only: False` — the hierarchy serializer has all taxonomy-specific fields as read-only `SerializerMethodField`s and `Meta.model = <parent>`, so if the write path goes through it the push silently saves a bare parent row (losing `name`/`genus`/etc.) and the `email_superadmin_on_new` signal raises `NoReverseMatch` (the parent `InvertAttribute` is not registered in admin; only its leaf subclasses are). Note: overriding `get_serializer_class()` does NOT fix this — the sync push/pull infrastructure accesses `.serializer_class` directly and bypasses `get_serializer_class()` entirely. Add the leaf-node source type to both `non_project_sources` and `CACHEABLE_SOURCE_TYPES`; the frontend pushes proposed species to this new source
 
 ## Choices Endpoint
 
@@ -111,6 +114,14 @@ If the protocol introduces its own attribute/taxonomy hierarchy (Django MTI from
 - Add new function to support new protocol in summary report [summary_report.py](src/api/reports/summary_report.py)
 - Create a sample unit method endpoint viewset, example:
   - BenthicPhotoQuadratTransectMethodView
+- Update `src/api/resources/sampleunitmethods/sample_unit_methods.py` to include the new protocol in `SampleUnitMethodView`:
+  - Add `MACROINVERTEBRATE_PROTOCOL` (or equivalent) to the import from `...models`
+  - Add `select_related` entries for the new method and its transect/quadrat to `queryset`
+  - Add a `When(newmethod__id__isnull=False, then=Value(NEW_PROTOCOL))` to each of the seven `Case` annotations: `protocol_condition`, `site_name_condition`, `management_name_condition`, `sample_unit_number_condition`, `depth_condition`, `sample_date_condition`, `size_condition`
+  - Add a `When(newmethod__id__isnull=False, then="newmethod__transect__sample_event_id")` branch to the `sample_event_id_case` `Case` annotation in `get_serializer_context()` (used to populate `context["sample_events"]`)
+  - Add the `Q(newmethod__transect__sample_event_id__in=sample_event_ids)` branch to the `Q` filter in `_matching_transect_method_ids()`
+  - Handle the new protocol in `SampleUnitMethodSerializer.get_size()` to return the appropriate size dict
+  - Add an integration test in `src/api/tests/test_sample_unit_method.py` that GETs `sampleunitmethods/?protocol=<new_protocol>` and asserts `count == 1` and `results[0]["protocol"] == "<new_protocol>"`
 - Update api/urls.py with new viewsets, example:
 
 ```

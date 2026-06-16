@@ -6,6 +6,7 @@ from aws_cdk import (
     Stack,
     aws_athena as athena,
     aws_autoscaling as autoscale,
+    aws_ce as ce,
     aws_certificatemanager as acm,
     aws_ec2 as ec2,
     aws_ecs as ecs,
@@ -18,6 +19,7 @@ from aws_cdk import (
     aws_route53 as r53,
     aws_s3 as s3,
     aws_secretsmanager as sm,
+    aws_sns as sns,
     aws_wafv2 as wafv2,
 )
 from constructs import Construct
@@ -773,6 +775,55 @@ class CommonStack(Stack):
                 ),
                 generate_string_key="password",
             ),
+        )
+
+        # ── AWS Cost Anomaly Detection ────────────────────────────────
+        # Account-wide monitor covering all AWS services. Deployed in
+        # CommonStack so it is created once (not per-env) and can be
+        # validated in dev before prod rollout.
+        # Alerts when any service spend deviates by more than $100 from
+        # expected. Notifications route to self.cost_alerts_topic; each
+        # env's Chatbot subscribes to this topic to forward alerts to Slack.
+
+        self.cost_alerts_topic = sns.Topic(
+            self,
+            "CostAlertsTopic",
+            display_name="mermaid-cost-anomaly-alerts",
+            topic_name="mermaid-cost-anomaly-alerts",
+        )
+        # Cost Anomaly Detection publishes via the costalerts service principal.
+        self.cost_alerts_topic.add_to_resource_policy(
+            iam.PolicyStatement(
+                sid="AllowCostAnomalyDetectionPublish",
+                effect=iam.Effect.ALLOW,
+                principals=[iam.ServicePrincipal("costalerts.amazonaws.com")],
+                actions=["sns:Publish"],
+                resources=[self.cost_alerts_topic.topic_arn],
+            )
+        )
+
+        cost_monitor = ce.CfnAnomalyMonitor(
+            self,
+            "CostAnomalyMonitor",
+            monitor_name="mermaid-cost-anomaly-monitor",
+            monitor_type="DIMENSIONAL",
+            monitor_dimension="SERVICE",
+        )
+
+        ce.CfnAnomalySubscription(
+            self,
+            "CostAnomalySubscription",
+            subscription_name="mermaid-cost-anomaly-alerts",
+            monitor_arn_list=[cost_monitor.attr_monitor_arn],
+            subscribers=[
+                ce.CfnAnomalySubscription.SubscriberProperty(
+                    address=self.cost_alerts_topic.topic_arn,
+                    type="SNS",
+                )
+            ],
+            threshold_expression='{"Dimensions":{"Key":"ANOMALY_TOTAL_IMPACT_ABSOLUTE","MatchOptions":["GREATER_THAN_OR_EQUAL"],"Values":["100"]}}',
+            # SNS subscribers require IMMEDIATE; DAILY/WEEKLY are EMAIL-only.
+            frequency="IMMEDIATE",
         )
 
 

@@ -3,6 +3,7 @@ from rest_framework.exceptions import ParseError
 from ...exceptions import check_uuid
 from ...models import (
     BeltFish,
+    BeltInvert,
     BenthicLIT,
     BenthicPhotoQuadratTransect,
     BenthicPIT,
@@ -18,6 +19,7 @@ PROTOCOL_MODEL_MAP = {
     "habitatcomplexity": HabitatComplexity,
     "bleachingqc": BleachingQuadratCollection,
     "benthicpqt": BenthicPhotoQuadratTransect,
+    "macroinvertebrate": BeltInvert,
 }
 
 PROTOCOL_SAMPLE_EVENT_PATH = {
@@ -27,6 +29,7 @@ PROTOCOL_SAMPLE_EVENT_PATH = {
     "habitatcomplexity": "transect__sample_event",
     "bleachingqc": "quadrat__sample_event",
     "benthicpqt": "quadrat_transect__sample_event",
+    "macroinvertebrate": "transect__sample_event",
 }
 
 

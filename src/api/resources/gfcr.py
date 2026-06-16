@@ -131,6 +131,71 @@ class GFCRFinanceSolutionSerializer(BaseAPISerializer):
         model = GFCRFinanceSolution
         exclude = []
 
+    def to_internal_value(self, data):
+        # "" breaks BooleanField validation before validate() can run; also
+        # normalizes used_an_incubator "" → null for the fs_type=None early-return
+        # path where validate() doesn't coerce it.
+        data = data.copy()
+        for field_name in ("local_enterprise", "gender_smart"):
+            if data.get(field_name) == "":
+                data[field_name] = False
+        if data.get("used_an_incubator") == "":
+            data["used_an_incubator"] = None
+        return super().to_internal_value(data)
+
+    def validate(self, data):
+        type_val = data.get("fs_type")
+        if type_val is None:
+            return data
+
+        errors = {}
+
+        # Sector: only Business — coerce clear for all other types; error if missing for Business.
+        if type_val != "business":
+            data["sector"] = ""
+        elif not data.get("sector", ""):
+            errors["sector"] = "sector required for Business solution"
+
+        # Geographical coverage: only CTF — coerce clear; error if missing for CTF.
+        if type_val != "ctf":
+            data["geographical_coverage"] = ""
+        elif not data.get("geographical_coverage", ""):
+            errors["geographical_coverage"] = "geographical_coverage required for CTF"
+
+        # used_an_incubator + taf_name: only Business and Financial mechanism.
+        # field is still nullable (null→"" deferred to Phase 4); both None and "" mean not set.
+        if type_val not in ("business", "financial_mechanism"):
+            data["used_an_incubator"] = None
+            data["taf_name"] = ""
+        elif not (data.get("used_an_incubator") or ""):
+            # taf_name requires used_an_incubator — coerce clear if not set.
+            data["taf_name"] = ""
+
+        # local_enterprise: only Financial facility, Business, Financial mechanism.
+        if type_val not in ("financial_facility", "business", "financial_mechanism"):
+            data["local_enterprise"] = False
+
+        # gender_smart: only Business and Financial mechanism.
+        if type_val not in ("business", "financial_mechanism"):
+            data["gender_smart"] = False
+
+        # number_of_solutions_supported_by: TAF, CTF, and Financial facility — must be > 0.
+        if type_val not in ("taf", "ctf", "financial_facility"):
+            data["number_of_solutions_supported_by"] = 0
+        elif (data.get("number_of_solutions_supported_by") or 0) == 0:
+            errors[
+                "number_of_solutions_supported_by"
+            ] = "number_of_solutions_supported_by must be > 0"
+
+        # sustainable_finance_mechanisms: only Financial mechanism.
+        if type_val != "financial_mechanism":
+            data["sustainable_finance_mechanisms"] = []
+
+        if errors:
+            raise ValidationError(errors)
+
+        return data
+
 
 class GFCRIndicatorSetSerializer(BaseAPISerializer):
     def __init__(self, *args, **kwargs):

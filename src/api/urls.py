@@ -20,7 +20,7 @@ from .resources.gfcr import IndicatorSetViewSet
 from .resources.health import health
 from .resources.images import AllImagesViewSet
 from .resources.ingest_schema import ingest_schema_csv
-from .resources.invert_attribute import InvertAttributeViewSet
+from .resources.invert_attribute import InvertAttributeViewSet, InvertSpeciesViewSet
 from .resources.invert_belt_transect import InvertBeltTransectViewSet
 from .resources.management import ManagementViewSet
 from .resources.me import MeViewSet
@@ -41,6 +41,12 @@ from .resources.sampleunitmethods.beltfishmethod import (
     BeltFishProjectMethodObsView,
     BeltFishProjectMethodSEView,
     BeltFishProjectMethodSUView,
+)
+from .resources.sampleunitmethods.beltinvertmethod import (
+    BeltInvertMethodView,
+    BeltInvertProjectMethodObsView,
+    BeltInvertProjectMethodSEView,
+    BeltInvertProjectMethodSUView,
 )
 from .resources.sampleunitmethods.benthiclitmethod import (
     BenthicLITMethodView,
@@ -98,6 +104,7 @@ router.register(r"notifications", NotificationViewSet, "notification")
 # observation attributes
 router.register(r"benthicattributes", BenthicAttributeViewSet, "benthicattribute")
 router.register(r"invertattributes", InvertAttributeViewSet, "invertattribute")
+router.register(r"invertspecies", InvertSpeciesViewSet, "invertspecies")
 router.register(r"fishfamilies", FishFamilyViewSet, "fishfamily")
 router.register(r"fishgenera", FishGenusViewSet, "fishgenus")
 router.register(r"fishspecies", FishSpeciesViewSet, "fishspecies")
@@ -235,6 +242,22 @@ project_router.register(
     "benthicpqtmethod-sampleevent",
 )
 
+project_router.register(
+    r"beltinverts/obstransectbeltinverts",
+    BeltInvertProjectMethodObsView,
+    "beltinvertmethod-obs",
+)
+project_router.register(
+    r"beltinverts/sampleunits",
+    BeltInvertProjectMethodSUView,
+    "beltinvertmethod-sampleunit",
+)
+project_router.register(
+    r"beltinverts/sampleevents",
+    BeltInvertProjectMethodSEView,
+    "beltinvertmethod-sampleevent",
+)
+
 # Classification
 project_router.register(r"classification/images", ImageViewSet, "image")
 project_router.register(r"classification/statuses", ClassificationStatusViewSet, "status")
@@ -244,6 +267,9 @@ router.register(r"classification/labelmappings", LabelMappingViewSet, "labelmapp
 # multi model sample unit method reports
 
 project_router.register(r"beltfishtransectmethods", BeltFishMethodView, "beltfishtransectmethod")
+project_router.register(
+    r"beltinverttransectmethods", BeltInvertMethodView, "beltinverttransectmethod"
+)
 project_router.register(
     r"benthiclittransectmethods", BenthicLITMethodView, "benthiclittransectmethod"
 )
