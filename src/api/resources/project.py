@@ -123,19 +123,23 @@ class BaseProjectSerializer(DynamicFieldsMixin, BaseAPISerializer):
         return sorted(list(set([s.country.name for s in sites if s.country is not None])))
 
     def get_num_sites(self, obj):
-        sites = obj.sites.all()
-        return sites.count()
+        # len() over the prefetched set; .count() would issue a fresh query per project
+        return len(obj.sites.all())
 
     def get_members(self, obj):
         profiles = self._get_profiles(obj)
         return [pp.profile_id for pp in profiles]
 
     def get_project_admins(self, obj):
-        admin_profiles = obj.profiles.filter(role=ProjectProfile.ADMIN).select_related("profile")
-        return [{"id": str(pp.profile.id), "name": pp.profile.full_name} for pp in admin_profiles]
+        # iterate the prefetched profiles; .filter() would bypass the prefetch cache
+        return [
+            {"id": str(pp.profile.id), "name": pp.profile.full_name}
+            for pp in obj.profiles.all()
+            if pp.role == ProjectProfile.ADMIN
+        ]
 
     def get_num_active_sample_units(self, obj):
-        return obj.collect_records.count()
+        return len(obj.collect_records.all())
 
     def get_num_sample_units(self, obj):
         num_sample_units = getattr(obj, "num_sample_units", None)
@@ -385,8 +389,10 @@ class ProjectViewSet(BaseApiViewSet):
             )
             .prefetch_related(
                 "profiles",
+                "profiles__profile",
                 "sites",
                 "sites__country",
+                "collect_records",
             )
             .annotate(
                 # need to cast to text to avoid box2d equality operator error
