@@ -139,7 +139,9 @@ class BaseProjectSerializer(DynamicFieldsMixin, BaseAPISerializer):
         ]
 
     def get_num_active_sample_units(self, obj):
-        return len(obj.collect_records.all())
+        # count() at the DB — collect_records carry large JSON; len(.all()) would
+        # hydrate every row just to count them.
+        return obj.collect_records.count()
 
     def get_num_sample_units(self, obj):
         num_sample_units = getattr(obj, "num_sample_units", None)
@@ -392,7 +394,6 @@ class ProjectViewSet(BaseApiViewSet):
                 "profiles__profile",
                 "sites",
                 "sites__country",
-                "collect_records",
             )
             .annotate(
                 # need to cast to text to avoid box2d equality operator error
