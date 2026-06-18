@@ -220,12 +220,12 @@ class BeltInvertMethodObsSerializer(BaseSUViewAPISerializer):
                 "invert_family",
                 "invert_genus",
                 "invert_taxon",
+                "invert_group_of_interest",
                 "size_bin",
                 "count",
                 "size",
                 "density_indha",
                 "observation_notes",
-                "invert_group_of_interest",
             ]
         )
 
@@ -276,11 +276,11 @@ class ObsBeltInvertCSVSerializer(ReportSerializer):
         ReportField("invert_family", "Macroinvertebrate family"),
         ReportField("invert_genus", "Macroinvertebrate genus"),
         ReportField("invert_taxon", "Macroinvertebrate taxon"),
+        ReportField("invert_group_of_interest", "Group of interest"),
         ReportField("size_bin", "Size bin"),
         ReportField("size", "Size"),
         ReportField("count", "Count"),
         ReportField("density_indha", "Density ind/ha"),
-        ReportField("invert_group_of_interest", "Group of interest"),
         ReportField("observation_notes", "Observation notes"),
         ReportField("site_notes", "Site notes"),
         ReportField("management_notes", "Management notes"),

@@ -12,6 +12,7 @@ from ..models import (
     FishGrouping,
     FishSpecies,
     GrowthForm,
+    InvertAttribute,
     InvertClass,
     InvertFamily,
     InvertGenus,
@@ -27,6 +28,7 @@ logger = logging.getLogger(__name__)
 benthic_models = [BenthicAttribute, GrowthForm, Region]
 fish_models = [FishGrouping, FishFamily, FishGenus, FishSpecies, Region]
 invert_models = [
+    InvertAttribute,
     InvertGroupOfInterest,
     InvertClass,
     InvertOrder,
@@ -46,6 +48,8 @@ invert_models = [
 @receiver(post_save, sender=FishGrouping)
 @receiver(post_delete, sender=FishSpecies)
 @receiver(post_save, sender=FishSpecies)
+@receiver(post_delete, sender=InvertAttribute)
+@receiver(post_save, sender=InvertAttribute)
 @receiver(post_delete, sender=InvertClass)
 @receiver(post_save, sender=InvertClass)
 @receiver(post_delete, sender=InvertFamily)
