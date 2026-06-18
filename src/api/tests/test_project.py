@@ -435,13 +435,20 @@ def test_delete_demo_project_suppresses_notifications(project_profile1):
 
 
 def test_project_serializer_member_and_admin_fields(
-    api_client1, base_project, project1, project_profile1, project_profile2
+    api_client1,
+    base_project,
+    project1,
+    project_profile1,
+    project_profile2,
+    collect_record1,
+    collect_record2,
 ):
-    """ProjectSerializer reports sites/members/admins correctly.
+    """ProjectSerializer reports sites/members/admins/collect-records correctly.
 
-    Guards the prefetch-based refactor of get_num_sites / get_members /
-    get_project_admins: project_admins must include ONLY ADMIN-role members
-    (project_profile1), not COLLECTORs (project_profile2).
+    Guards the prefetch/annotation refactor of get_num_sites / get_members /
+    get_project_admins / get_num_active_sample_units: project_admins must include
+    ONLY ADMIN-role members (project_profile1), not COLLECTORs (project_profile2),
+    and num_active_sample_units must reflect the DB-level collect_records count.
     """
     response = api_client1.get(f"/v1/projects/{project1.pk}/", format="json")
     assert response.status_code == 200
@@ -449,8 +456,8 @@ def test_project_serializer_member_and_admin_fields(
 
     # base_project provides site1, site2, site3 on project1
     assert data["num_sites"] == 3
-    # no collect records created
-    assert data["num_active_sample_units"] == 0
+    # collect_record1 + collect_record2 on project1, via the count annotation
+    assert data["num_active_sample_units"] == 2
 
     # members = every project profile (admin + collector)
     assert set(data["members"]) == {

@@ -21,6 +21,7 @@ from ..models import (
     BenthicPIT,
     BenthicTransect,
     BleachingQuadratCollection,
+    CollectRecord,
     FishBeltTransect,
     HabitatComplexity,
     InvertBeltTransect,
@@ -139,9 +140,13 @@ class BaseProjectSerializer(DynamicFieldsMixin, BaseAPISerializer):
         ]
 
     def get_num_active_sample_units(self, obj):
-        # count() at the DB — collect_records carry large JSON; len(.all()) would
-        # hydrate every row just to count them.
-        return obj.collect_records.count()
+        # Use the DB-level annotation from the list/retrieve queryset (no N+1).
+        # Falls back to a count() when the serializer is given a non-annotated
+        # instance (e.g. copy_project / create_project responses).
+        count = getattr(obj, "collect_records_count", None)
+        if count is None:
+            count = obj.collect_records.count()
+        return count
 
     def get_num_sample_units(self, obj):
         num_sample_units = getattr(obj, "num_sample_units", None)
@@ -383,6 +388,7 @@ class ProjectViewSet(BaseApiViewSet):
     def get_queryset(self):
         site_table = Site._meta.db_table
         project_table = Project._meta.db_table
+        collect_record_table = CollectRecord._meta.db_table
 
         qs = (
             Project.objects.select_related(
@@ -403,6 +409,18 @@ class ProjectViewSet(BaseApiViewSet):
                         SELECT ST_Extent({site_table}.location)::text
                         FROM {site_table}
                         WHERE {site_table}.project_id = {project_table}.id
+                    )
+                    """,
+                    [],
+                ),
+                # count collect records at the DB to avoid an N+1 count() per project
+                # (correlated subquery, like extent — no GROUP BY on the main query)
+                collect_records_count=RawSQL(
+                    f"""
+                    (
+                        SELECT COUNT(*)
+                        FROM {collect_record_table}
+                        WHERE {collect_record_table}.project_id = {project_table}.id
                     )
                     """,
                     [],
