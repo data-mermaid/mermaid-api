@@ -23,6 +23,7 @@ permissions:
 jobs:
   call-test:
     uses: ./.github/workflows/_test.yml
+    secrets: inherit
 
   deploy:
     needs: [call-test]
