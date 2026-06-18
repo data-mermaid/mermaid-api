@@ -27,7 +27,9 @@ jobs:
     uses: ./.github/workflows/_test.yml
 
   cdk-diff:
-    # environment: dev
+    # PR diffs/nag run against dev — select the dev environment so its
+    # SLACK_CHANNEL_ID / SLACK_WORKSPACE_ID resolve and the diff matches reality.
+    environment: dev
     needs: [call-test]
     runs-on: ubuntu-latest
     steps:
