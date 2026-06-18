@@ -199,7 +199,7 @@ class BeltInvertMethodObsSerializer(BaseSUViewAPISerializer):
     class Meta(BaseSUViewAPISerializer.Meta):
         model = BeltInvertObsModel
         exclude = BaseSUViewAPISerializer.Meta.exclude.copy()
-        exclude.extend(["location", "include"])
+        exclude.extend(["location", "include", "invert_species"])
         header_order = ["id"] + BaseSUViewAPISerializer.Meta.header_order.copy()
         header_order.extend(
             [
@@ -212,21 +212,20 @@ class BeltInvertMethodObsSerializer(BaseSUViewAPISerializer):
                 "transect_len_surveyed",
                 "transect_width_name",
                 "width_m",
-                "size_bin",
                 "observers",
                 "data_policy_macroinvertebrate",
                 "invert_attribute_id",
-                "invert_taxon",
-                "invert_group_of_interest",
                 "invert_class",
                 "invert_order",
                 "invert_family",
                 "invert_genus",
-                "invert_species",
+                "invert_taxon",
+                "size_bin",
                 "count",
                 "size",
                 "density_indha",
                 "observation_notes",
+                "invert_group_of_interest",
             ]
         )
 
@@ -235,7 +234,7 @@ class BeltInvertMethodObsGeoSerializer(BaseViewAPIGeoSerializer):
     class Meta(BaseViewAPIGeoSerializer.Meta):
         model = BeltInvertObsModel
         exclude = BaseViewAPIGeoSerializer.Meta.exclude.copy()
-        exclude.append("include")
+        exclude.extend(["include", "invert_species"])
 
 
 class ObsBeltInvertCSVSerializer(ReportSerializer):
@@ -272,17 +271,16 @@ class ObsBeltInvertCSVSerializer(ReportSerializer):
         ReportField("transect_len_surveyed", "Transect length surveyed"),
         ReportField("transect_width_name", "Transect width"),
         ReportField("observers", "Observers", to_names),
+        ReportField("invert_class", "Macroinvertebrate class"),
+        ReportField("invert_order", "Macroinvertebrate order"),
+        ReportField("invert_family", "Macroinvertebrate family"),
+        ReportField("invert_genus", "Macroinvertebrate genus"),
         ReportField("invert_taxon", "Macroinvertebrate taxon"),
-        ReportField("invert_group_of_interest", "Group of interest"),
-        ReportField("invert_class", "Class"),
-        ReportField("invert_order", "Order"),
-        ReportField("invert_family", "Family"),
-        ReportField("invert_genus", "Genus"),
-        ReportField("invert_species", "Species"),
         ReportField("size_bin", "Size bin"),
         ReportField("size", "Size"),
         ReportField("count", "Count"),
         ReportField("density_indha", "Density ind/ha"),
+        ReportField("invert_group_of_interest", "Group of interest"),
         ReportField("observation_notes", "Observation notes"),
         ReportField("site_notes", "Site notes"),
         ReportField("management_notes", "Management notes"),
