@@ -432,3 +432,32 @@ def test_delete_demo_project_suppresses_notifications(project_profile1):
     assert not Project.objects.filter(pk=demo.pk).exists()
     assert Notification.objects.count() == count_before
     mock_email.assert_not_called()
+
+
+def test_project_serializer_member_and_admin_fields(
+    api_client1, base_project, project1, project_profile1, project_profile2
+):
+    """ProjectSerializer reports sites/members/admins correctly.
+
+    Guards the prefetch-based refactor of get_num_sites / get_members /
+    get_project_admins: project_admins must include ONLY ADMIN-role members
+    (project_profile1), not COLLECTORs (project_profile2).
+    """
+    response = api_client1.get(f"/v1/projects/{project1.pk}/", format="json")
+    assert response.status_code == 200
+    data = response.json()
+
+    # base_project provides site1, site2, site3 on project1
+    assert data["num_sites"] == 3
+    # no collect records created
+    assert data["num_active_sample_units"] == 0
+
+    # members = every project profile (admin + collector)
+    assert set(data["members"]) == {
+        str(project_profile1.profile_id),
+        str(project_profile2.profile_id),
+    }
+
+    # project_admins = ADMIN role only; the COLLECTOR (project_profile2) is excluded
+    assert [a["id"] for a in data["project_admins"]] == [str(project_profile1.profile_id)]
+    assert data["project_admins"][0]["name"] == project_profile1.profile.full_name
