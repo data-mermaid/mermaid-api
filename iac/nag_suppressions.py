@@ -267,19 +267,6 @@ def suppress_common(stack: Stack) -> None:
         ],
     )
 
-    # --- VPC Endpoint SG (validation failure - intrinsic ref) ---
-    _suppress_by_path(
-        stack,
-        "VPCEndpointSagemaker/Resource",
-        [
-            NagPackSuppression(
-                id="CdkNagValidationFailure",
-                reason=f"{ACCEPTED}: AwsSolutions-EC23 cannot validate CIDR "
-                "from intrinsic Fn::GetAtt on VPC CidrBlock.",
-            ),
-        ],
-    )
-
     # --- VPC Flow Logs ---
     _suppress_by_path(
         stack,
@@ -673,6 +660,194 @@ def suppress_sagemaker(stack: Stack, prefix: str) -> None:
 
 
 # ---------------------------------------------------------------------------
+# CloudTrailStack
+# ---------------------------------------------------------------------------
+
+
+def suppress_cloudtrail(stack: Stack) -> None:
+    _suppress_by_path(
+        stack,
+        "CloudTrailBucket/Resource",
+        [
+            NagPackSuppression(
+                id="AwsSolutions-S1",
+                reason=f"{TODO}: Enable server access logging on the CloudTrail S3 bucket.",
+            ),
+        ],
+    )
+
+
+# ---------------------------------------------------------------------------
+# GuardDutyStack
+# ---------------------------------------------------------------------------
+
+
+def suppress_guardduty(stack: Stack) -> None:
+    # --- CreateGuardDutySLR Lambda ---
+    _suppress_by_path(
+        stack,
+        "CreateGuardDutySLR/ServiceRole/Resource",
+        [
+            NagPackSuppression(
+                id="AwsSolutions-IAM4",
+                reason=f"{ACCEPTED}: AWSLambdaBasicExecutionRole is the standard managed policy "
+                "for Lambda CloudWatch logging; no customer-managed equivalent exists.",
+                applies_to=[
+                    "Policy::arn:<AWS::Partition>:iam::aws:policy/service-role/AWSLambdaBasicExecutionRole",
+                ],
+            ),
+        ],
+    )
+    _suppress_by_path(
+        stack,
+        "CreateGuardDutySLR/ServiceRole/DefaultPolicy/Resource",
+        [
+            NagPackSuppression(
+                id="AwsSolutions-IAM5",
+                reason=f"{ACCEPTED}: iam:CreateServiceLinkedRole and guardduty:UpdateDetector "
+                "do not support resource-level scoping; Resource::* is required.",
+                applies_to=["Resource::*"],
+            ),
+        ],
+    )
+    _suppress_by_path(
+        stack,
+        "CreateGuardDutySLR/Resource",
+        [
+            NagPackSuppression(
+                id="AwsSolutions-L1",
+                reason=f"{ACCEPTED}: Runtime is PYTHON_3_13 (latest); cdk-nag may lag behind "
+                "the actual latest runtime release.",
+            ),
+        ],
+    )
+
+    # --- CDK custom resource provider framework Lambda ---
+    _suppress_by_path(
+        stack,
+        "GuardDutySLRProvider/framework-onEvent/ServiceRole/Resource",
+        [
+            NagPackSuppression(
+                id="AwsSolutions-IAM4",
+                reason=f"{ACCEPTED}: AWSLambdaBasicExecutionRole on CDK-generated provider "
+                "framework Lambda; no customer-managed equivalent.",
+                applies_to=[
+                    "Policy::arn:<AWS::Partition>:iam::aws:policy/service-role/AWSLambdaBasicExecutionRole",
+                ],
+            ),
+        ],
+    )
+    _suppress_by_path(
+        stack,
+        "GuardDutySLRProvider/framework-onEvent/ServiceRole/DefaultPolicy/Resource",
+        [
+            NagPackSuppression(
+                id="AwsSolutions-IAM5",
+                reason=f"{ACCEPTED}: CDK-generated provider framework policy; wildcard on "
+                "the onEvent Lambda ARN is required for invoking the custom resource handler.",
+            ),
+        ],
+    )
+    _suppress_by_path(
+        stack,
+        "GuardDutySLRProvider/framework-onEvent/Resource",
+        [
+            NagPackSuppression(
+                id="AwsSolutions-L1",
+                reason=f"{ACCEPTED}: CDK custom resource provider framework Lambda; "
+                "runtime is managed by CDK and updated on CDK version upgrades.",
+            ),
+        ],
+    )
+
+    # --- GuardDuty service role ---
+    _suppress_by_path(
+        stack,
+        "GuardDutyServiceRole/Resource",
+        [
+            NagPackSuppression(
+                id="AwsSolutions-IAM4",
+                reason=f"{ACCEPTED}: AmazonGuardDutyFullAccess_v2 is the AWS-managed policy "
+                "required for GuardDuty malware protection plan operations; no scoped equivalent exists.",
+                applies_to=[
+                    "Policy::arn:<AWS::Partition>:iam::aws:policy/AmazonGuardDutyFullAccess_v2",
+                ],
+            ),
+        ],
+    )
+    _suppress_by_path(
+        stack,
+        "GuardDutyServiceRole/DefaultPolicy/Resource",
+        [
+            NagPackSuppression(
+                id="AwsSolutions-IAM5",
+                reason=f"{ACCEPTED}: EventBridge rule ARNs cannot be pre-determined at deploy time; "
+                "Resource::* is required for GuardDuty to manage its own event rules. "
+                "S3 object wildcards (bucket/*) are scoped to the specific protected buckets.",
+            ),
+        ],
+    )
+
+    # --- EC2 instance role (SSM + CloudWatch agent) ---
+    _suppress_by_path(
+        stack,
+        "EC2SSMRole/Resource",
+        [
+            NagPackSuppression(
+                id="AwsSolutions-IAM4",
+                reason=f"{ACCEPTED}: AmazonSSMManagedInstanceCore and CloudWatchAgentServerPolicy "
+                "are standard managed policies for EC2 SSM and CloudWatch agent; "
+                "no customer-managed equivalents exist.",
+                applies_to=[
+                    "Policy::arn:<AWS::Partition>:iam::aws:policy/AmazonSSMManagedInstanceCore",
+                    "Policy::arn:<AWS::Partition>:iam::aws:policy/CloudWatchAgentServerPolicy",
+                ],
+            ),
+        ],
+    )
+    _suppress_by_path(
+        stack,
+        "EC2SSMRole/DefaultPolicy/Resource",
+        [
+            NagPackSuppression(
+                id="AwsSolutions-IAM5",
+                reason=f"{ACCEPTED}: guardduty:CreateDetector and UpdateDetector do not "
+                "support resource-level scoping; Resource::* is required.",
+                applies_to=["Resource::*"],
+            ),
+        ],
+    )
+
+    # --- ECS execution role ---
+    _suppress_by_path(
+        stack,
+        "ECSExecRole/Resource",
+        [
+            NagPackSuppression(
+                id="AwsSolutions-IAM4",
+                reason=f"{ACCEPTED}: AmazonECSTaskExecutionRolePolicy is the standard managed "
+                "policy for ECS task execution; no customer-managed equivalent exists.",
+                applies_to=[
+                    "Policy::arn:<AWS::Partition>:iam::aws:policy/service-role/AmazonECSTaskExecutionRolePolicy",
+                ],
+            ),
+        ],
+    )
+    _suppress_by_path(
+        stack,
+        "ECSExecRole/DefaultPolicy/Resource",
+        [
+            NagPackSuppression(
+                id="AwsSolutions-IAM5",
+                reason=f"{ACCEPTED}: guardduty:CreateDetector and UpdateDetector do not "
+                "support resource-level scoping; Resource::* is required.",
+                applies_to=["Resource::*"],
+            ),
+        ],
+    )
+
+
+# ---------------------------------------------------------------------------
 # Main entry point — call from app.py after all stacks are created.
 # ---------------------------------------------------------------------------
 
@@ -685,6 +860,8 @@ def apply_all(
     dev_api_stack: Stack,
     prod_api_stack: Stack,
     dev_sagemaker_stack: Stack,
+    cloudtrail_stack: Stack | None = None,
+    guardduty_stack: Stack | None = None,
 ) -> None:
     suppress_github_access(gh_access_stack)
     suppress_common(common_stack)
@@ -696,3 +873,8 @@ def apply_all(
         suppress_api(api_stack)
 
     suppress_sagemaker(dev_sagemaker_stack, prefix="dev")
+
+    if cloudtrail_stack:
+        suppress_cloudtrail(cloudtrail_stack)
+    if guardduty_stack:
+        suppress_guardduty(guardduty_stack)
