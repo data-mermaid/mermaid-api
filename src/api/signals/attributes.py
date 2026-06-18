@@ -12,6 +12,13 @@ from ..models import (
     FishGrouping,
     FishSpecies,
     GrowthForm,
+    InvertAttribute,
+    InvertClass,
+    InvertFamily,
+    InvertGenus,
+    InvertGroupOfInterest,
+    InvertOrder,
+    InvertSpecies,
     Region,
 )
 from ..utils.q import submit_job
@@ -20,6 +27,15 @@ from ..utils.reports import update_attributes_report
 logger = logging.getLogger(__name__)
 benthic_models = [BenthicAttribute, GrowthForm, Region]
 fish_models = [FishGrouping, FishFamily, FishGenus, FishSpecies, Region]
+invert_models = [
+    InvertAttribute,
+    InvertGroupOfInterest,
+    InvertClass,
+    InvertOrder,
+    InvertFamily,
+    InvertGenus,
+    InvertSpecies,
+]
 
 
 @receiver(post_delete, sender=BenthicAttribute)
@@ -32,6 +48,20 @@ fish_models = [FishGrouping, FishFamily, FishGenus, FishSpecies, Region]
 @receiver(post_save, sender=FishGrouping)
 @receiver(post_delete, sender=FishSpecies)
 @receiver(post_save, sender=FishSpecies)
+@receiver(post_delete, sender=InvertAttribute)
+@receiver(post_save, sender=InvertAttribute)
+@receiver(post_delete, sender=InvertClass)
+@receiver(post_save, sender=InvertClass)
+@receiver(post_delete, sender=InvertFamily)
+@receiver(post_save, sender=InvertFamily)
+@receiver(post_delete, sender=InvertGenus)
+@receiver(post_save, sender=InvertGenus)
+@receiver(post_delete, sender=InvertGroupOfInterest)
+@receiver(post_save, sender=InvertGroupOfInterest)
+@receiver(post_delete, sender=InvertOrder)
+@receiver(post_save, sender=InvertOrder)
+@receiver(post_delete, sender=InvertSpecies)
+@receiver(post_save, sender=InvertSpecies)
 @receiver(post_delete, sender=Region)
 @receiver(post_save, sender=Region)
 @receiver(post_save, sender=GrowthForm)
@@ -39,6 +69,10 @@ def refresh_attribute_views(sender, instance, **kwargs):
     if sender in fish_models:
         logger.info("refresh fish")
         call_command("refresh_view", "mv_fish_attributes")
+
+    if sender in invert_models:
+        logger.info("refresh invert")
+        call_command("refresh_view", "mv_invert_attributes")
 
     if sender in benthic_models:
         logger.info("refresh benthic")
