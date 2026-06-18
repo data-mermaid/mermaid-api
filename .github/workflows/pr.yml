@@ -27,9 +27,11 @@ jobs:
     uses: ./.github/workflows/_test.yml
 
   cdk-diff:
-    # PR diffs/nag run against dev — select the dev environment so its
-    # SLACK_CHANNEL_ID / SLACK_WORKSPACE_ID resolve and the diff matches reality.
-    environment: dev
+    # No environment here on purpose: GitHub treats `environment:` as a deploy
+    # gate, and dev's protection rules block PR merge refs. cdk-diff is a
+    # read-only diff, so it runs un-gated. SLACK_* are repo-level secrets (dev
+    # values) so the diff is accurate; the per-env deploy jobs override them
+    # with environment secrets.
     needs: [call-test]
     runs-on: ubuntu-latest
     steps:
