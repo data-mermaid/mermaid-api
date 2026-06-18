@@ -55,6 +55,8 @@ def send_mermaid_email(subject, template, to, context=None, from_email=None, rep
 def _to_in_dev_emails(to):
     to_emails = []
     for to_email in to:
+        if not to_email:
+            continue
         dev_email_match = [email for email in settings.DEV_EMAILS if to_email.endswith(email)]
         if dev_email_match:
             to_emails.append(to_email)

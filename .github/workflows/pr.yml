@@ -22,13 +22,15 @@ env:
 
 jobs:
 
-  call-test:
-    if: github.event.pull_request.draft == false
-    uses: ./.github/workflows/_test.yml
-
+  # Tests run before deploys (see deploy-cdk.yml), not on every PR. PRs only
+  # surface the cdk diff + nag report.
   cdk-diff:
-    # environment: dev
-    needs: [call-test]
+    if: github.event.pull_request.draft == false
+    # No environment here on purpose: GitHub treats `environment:` as a deploy
+    # gate, and dev's protection rules block PR merge refs. cdk-diff is a
+    # read-only diff, so it runs un-gated. SLACK_* are repo-level secrets (dev
+    # values) so the diff is accurate; the per-env deploy jobs override them
+    # with environment secrets.
     runs-on: ubuntu-latest
     steps:
       - uses: actions/setup-node@v6.2.0
