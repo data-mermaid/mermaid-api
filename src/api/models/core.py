@@ -43,7 +43,7 @@ PROTOCOL_MAP = {
     FISHBELT_PROTOCOL: "Fish Belt",
     HABITATCOMPLEXITY_PROTOCOL: "Habitat Complexity",
     BLEACHINGQC_PROTOCOL: "Bleaching Quadrat Collection",
-    MACROINVERTEBRATE_PROTOCOL: "Macroinvertebrate Belt Transect",
+    MACROINVERTEBRATE_PROTOCOL: "Macroinvertebrate Belt",
 }
 
 
