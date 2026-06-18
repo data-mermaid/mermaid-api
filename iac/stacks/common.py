@@ -30,7 +30,7 @@ class CommonStack(Stack):
         self,
         scope: Construct,
         id: str,
-        enable_vpc_flow_logs: bool = False,
+        enable_vpc_flow_logs: bool = True,
         **kwargs,
     ) -> None:
         super().__init__(scope, id, **kwargs)
@@ -582,7 +582,7 @@ class CommonStack(Stack):
             visibility_config=wafv2.CfnWebACL.VisibilityConfigProperty(
                 cloud_watch_metrics_enabled=True,
                 metric_name="MermaidApiWafMetric",
-                sampled_requests_enabled=False,
+                sampled_requests_enabled=True,
             ),
             rules=[
                 wafv2.CfnWebACL.RuleProperty(
@@ -598,7 +598,7 @@ class CommonStack(Stack):
                     visibility_config=wafv2.CfnWebACL.VisibilityConfigProperty(
                         cloud_watch_metrics_enabled=True,
                         metric_name="MermaidApiCommonRules",
-                        sampled_requests_enabled=False,
+                        sampled_requests_enabled=True,
                     ),
                 ),
                 wafv2.CfnWebACL.RuleProperty(
@@ -614,7 +614,7 @@ class CommonStack(Stack):
                     visibility_config=wafv2.CfnWebACL.VisibilityConfigProperty(
                         cloud_watch_metrics_enabled=True,
                         metric_name="MermaidApiSQLiRules",
-                        sampled_requests_enabled=False,
+                        sampled_requests_enabled=True,
                     ),
                 ),
                 wafv2.CfnWebACL.RuleProperty(
@@ -630,7 +630,7 @@ class CommonStack(Stack):
                     visibility_config=wafv2.CfnWebACL.VisibilityConfigProperty(
                         cloud_watch_metrics_enabled=True,
                         metric_name="MermaidApiKnownBadInputs",
-                        sampled_requests_enabled=False,
+                        sampled_requests_enabled=True,
                     ),
                 ),
                 wafv2.CfnWebACL.RuleProperty(
@@ -646,7 +646,7 @@ class CommonStack(Stack):
                     visibility_config=wafv2.CfnWebACL.VisibilityConfigProperty(
                         cloud_watch_metrics_enabled=True,
                         metric_name="MermaidApiRateLimit",
-                        sampled_requests_enabled=False,
+                        sampled_requests_enabled=True,
                     ),
                 ),
             ],
@@ -700,39 +700,6 @@ class CommonStack(Stack):
         self.load_balancer.add_redirect()
 
         create_cdk_bot_user(self, self.account)
-
-        self.security_group = ec2.SecurityGroup(
-            self,
-            "VPCEndpointSagemaker",
-            vpc=self.vpc,
-            allow_all_outbound=True,
-            description="Security group for SageMaker VPC endpoints",
-        )
-
-        for service_name in [
-            "SAGEMAKER_API",
-            "SAGEMAKER_NOTEBOOK",
-            "SAGEMAKER_RUNTIME",
-            "SAGEMAKER_STUDIO",
-            "SAGEMAKER_EXPERIMENTS",
-        ]:
-            self.vpc.add_interface_endpoint(
-                f"{service_name}VpcEndpoint",
-                service=getattr(
-                    ec2.InterfaceVpcEndpointAwsService,
-                    service_name,
-                ),
-                lookup_supported_azs=True,
-                subnets=ec2.SubnetSelection(
-                    subnet_type=ec2.SubnetType.PRIVATE_WITH_EGRESS,
-                    one_per_az=True,
-                ),
-                security_groups=[self.security_group],
-                dns_record_ip_type=ec2.VpcEndpointDnsRecordIpType.IPV4,
-                ip_address_type=ec2.VpcEndpointIpAddressType.IPV4,
-                private_dns_enabled=True,
-                open=True,
-            )
 
         self.report_s3_user = iam.User(
             self,

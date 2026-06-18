@@ -43,6 +43,8 @@ jobs:
           python-version: "^3.12.0"
 
       - uses: actions/checkout@v6.0.2
+        with:
+          persist-credentials: false
 
       - name: Install CDK
         run: |
@@ -76,6 +78,8 @@ jobs:
             --require-approval never \
             GithubAccess \
             mermaid-api-infra-common \
+            mermaid-cloudtrail \
+            "mermaid-guardduty-us-east-1" \
             dev-mermaid-api-django \
             dev-mermaid-static-site \
             dev-mermaid-sagemaker
@@ -96,6 +100,8 @@ jobs:
             --require-approval never \
             GithubAccess \
             mermaid-api-infra-common \
+            mermaid-cloudtrail \
+            "mermaid-guardduty-us-east-1" \
             prod-mermaid-api-django \
             prod-mermaid-static-site
 
