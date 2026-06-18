@@ -33,6 +33,23 @@ def _suppress_by_path(
     )
 
 
+def _path_exists(stack: Stack, path: str) -> bool:
+    """True if a construct exists at `path` (slash-separated) relative to the stack.
+
+    Used to gate suppressions for *optional* resources — e.g. the Slack Chatbot
+    config, which is only created when both Slack workspace and channel IDs are
+    set. Without this guard, cdk-nag raises "suppression path did not match any
+    resource" and synth fails whenever Slack is unconfigured.
+    """
+    node = stack
+    for segment in path.split("/"):
+        child = node.node.try_find_child(segment)
+        if child is None:
+            return False
+        node = child
+    return True
+
+
 # ---------------------------------------------------------------------------
 # GithubAccessStack
 # ---------------------------------------------------------------------------
@@ -525,32 +542,36 @@ def suppress_api(stack: Stack) -> None:
     )
 
     # --- Chatbot Slack channel role ---
-    _suppress_by_path(
-        stack,
-        "Alerts/SlackChannelConfigurationRole/Resource",
-        [
-            NagPackSuppression(
-                id="AwsSolutions-IAM4",
-                reason=f"{ACCEPTED}: AmazonQDeveloperAccess is an AWS managed policy with no "
-                "customer-managed equivalent for Amazon Q Developer in Slack.",
-                applies_to=[
-                    "Policy::arn:<AWS::Partition>:iam::aws:policy/AmazonQDeveloperAccess",
-                ],
-            ),
-        ],
-    )
-    _suppress_by_path(
-        stack,
-        "Alerts/SlackObservabilityPolicy/Resource",
-        [
-            NagPackSuppression(
-                id="AwsSolutions-IAM5",
-                reason=f"{ACCEPTED}: Observability read actions (cloudwatch:Get*, ecs:List*, etc.) "
-                "operate on account-wide resources by design — CloudWatch metrics and ECS services "
-                "cannot be scoped to a single ARN without breaking Describe/List semantics.",
-            ),
-        ],
-    )
+    # The Slack Chatbot config (and its role/policy) is only created when both
+    # Slack workspace and channel IDs are configured, so gate these suppressions
+    # on the resource actually existing.
+    if _path_exists(stack, "Alerts/SlackChannelConfigurationRole/Resource"):
+        _suppress_by_path(
+            stack,
+            "Alerts/SlackChannelConfigurationRole/Resource",
+            [
+                NagPackSuppression(
+                    id="AwsSolutions-IAM4",
+                    reason=f"{ACCEPTED}: AmazonQDeveloperAccess is an AWS managed policy with no "
+                    "customer-managed equivalent for Amazon Q Developer in Slack.",
+                    applies_to=[
+                        "Policy::arn:<AWS::Partition>:iam::aws:policy/AmazonQDeveloperAccess",
+                    ],
+                ),
+            ],
+        )
+        _suppress_by_path(
+            stack,
+            "Alerts/SlackObservabilityPolicy/Resource",
+            [
+                NagPackSuppression(
+                    id="AwsSolutions-IAM5",
+                    reason=f"{ACCEPTED}: Observability read actions (cloudwatch:Get*, ecs:List*, etc.) "
+                    "operate on account-wide resources by design — CloudWatch metrics and ECS services "
+                    "cannot be scoped to a single ARN without breaking Describe/List semantics.",
+                ),
+            ],
+        )
 
 
 # ---------------------------------------------------------------------------
