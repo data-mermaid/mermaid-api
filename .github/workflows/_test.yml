@@ -91,11 +91,17 @@ jobs:
 
       - name: Run tests
         working-directory: src
-        run: pytest --no-migrations --cov --cov-report=term-missing --cov-report=xml:coverage.xml --cov-fail-under=80 -q
+        # Scope to api/tests to match `make test`. Coverage reports:
+        #   term-missing → uncovered lines printed in this job's log (human-readable)
+        #   html         → browsable report, uploaded as an artifact below
+        #   xml          → machine-readable, for coverage tooling (Codecov, etc.)
+        run: pytest --no-migrations --cov --cov-report=term-missing --cov-report=html:htmlcov --cov-report=xml:coverage.xml --cov-fail-under=80 -q api/tests
 
       - name: Upload coverage report
         if: always()
         uses: actions/upload-artifact@v7.0.1
         with:
           name: coverage-report
-          path: src/coverage.xml
+          path: |
+            src/coverage.xml
+            src/htmlcov

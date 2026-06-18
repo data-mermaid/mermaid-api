@@ -40,12 +40,6 @@ def _disable_s3_cache(request):
 
 
 @pytest.fixture
-def no_s3_cache():
-    with patch("api.utils.cached.exists", return_value=False):
-        yield
-
-
-@pytest.fixture
 def s3_cache_hit():
     """Opt-in fixture to mock S3 cache as available, for testing cache-hit paths."""
     with patch("api.utils.cached.exists", return_value=True):
