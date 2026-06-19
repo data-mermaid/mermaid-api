@@ -1,5 +1,7 @@
 import logging
+import time
 
+from django.conf import settings
 from django.db import connection, transaction
 from django.db.utils import DataError, IntegrityError
 from django.utils import timezone
@@ -301,6 +303,40 @@ def add_project_to_queue(project_id, skip_test_project=False):
 
     except Exception:
         logger.exception(f"Failed to queue summary update for project {project_id}")
+
+
+# The report job uses a 120s SQS visibility timeout; SUMMARY_CACHE_MAX_WAIT +
+# post-wait work (~30s for report generation, S3 upload, email dispatch) must
+# stay under that.
+SUMMARY_CACHE_POLL_INTERVAL = 5  # seconds
+SUMMARY_CACHE_MAX_WAIT = 80  # seconds
+
+
+def wait_for_summary_cache(project_ids):
+    """Block until SummaryCacheQueue entries for project_ids are cleared, or timeout.
+
+    Returns True if the wait timed out (data may be stale), False if all entries cleared.
+    """
+    if settings.TESTING:
+        return False
+
+    deadline = time.monotonic() + SUMMARY_CACHE_MAX_WAIT
+    while True:
+        pending_ids = list(
+            SummaryCacheQueue.objects.filter(project_id__in=project_ids).values_list(
+                "project_id", flat=True
+            )
+        )
+        if not pending_ids:
+            return False
+        if time.monotonic() >= deadline:
+            logger.warning(
+                "Timed out waiting for summary cache to update for projects %s. "
+                "Report may contain stale data.",
+                pending_ids,
+            )
+            return True
+        time.sleep(SUMMARY_CACHE_POLL_INTERVAL)
 
 
 @timing
