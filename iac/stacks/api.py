@@ -510,4 +510,10 @@ class ApiStack(Stack):
             slack_workspace_id=config.api.slack_workspace_id or None,
             slack_channel_id=config.api.slack_channel_id or None,
             cost_alerts_topic=cost_alerts_topic,
+            # dev is low-traffic: p99 = the single slowest request, so a lone slow
+            # probe trips a 5s threshold. Relax dev; keep prod strict.
+            p99_latency_threshold=5 if config.env_id == "prod" else 10,
+            # RDS instance is shared across envs — only prod owns its alarms to
+            # avoid both envs paging on the same instance event.
+            monitor_shared_rds=config.env_id == "prod",
         )
