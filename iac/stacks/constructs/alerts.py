@@ -40,6 +40,8 @@ class MonitoringAlerts(Construct):
         slack_workspace_id: str | None = None,
         slack_channel_id: str | None = None,
         cost_alerts_topic: sns.ITopic | None = None,
+        p99_latency_threshold: float = 5,
+        monitor_shared_rds: bool = True,
         **kwargs,
     ) -> None:
         super().__init__(scope, id, **kwargs)
@@ -79,12 +81,12 @@ class MonitoringAlerts(Construct):
                 self,
                 "AlbLatencyAlarm",
                 alarm_name=f"mermaid-{env_id}-alb-p99-latency",
-                alarm_description="ALB p99 response latency exceeded 5 seconds",
+                alarm_description=f"ALB p99 response latency exceeded {p99_latency_threshold} seconds",
                 metric=load_balancer.metrics.target_response_time(
                     statistic="p99",
                     period=Duration.minutes(5),
                 ),
-                threshold=5,
+                threshold=p99_latency_threshold,
                 evaluation_periods=2,
                 comparison_operator=cw.ComparisonOperator.GREATER_THAN_THRESHOLD,
                 treat_missing_data=cw.TreatMissingData.NOT_BREACHING,
@@ -92,35 +94,38 @@ class MonitoringAlerts(Construct):
         )
 
         # ── RDS ──────────────────────────────────────────────────────
-
-        alarms.append(
-            cw.Alarm(
-                self,
-                "RdsCpuAlarm",
-                alarm_name=f"mermaid-{env_id}-rds-cpu",
-                alarm_description="RDS CPU utilization exceeded 80% for 10 minutes",
-                metric=database.metric_cpu_utilization(period=Duration.minutes(5)),
-                threshold=80,
-                evaluation_periods=2,
-                comparison_operator=cw.ComparisonOperator.GREATER_THAN_THRESHOLD,
-                treat_missing_data=cw.TreatMissingData.NOT_BREACHING,
+        # The RDS instance is shared across envs (lives in the common stack), so
+        # only the primary env owns these alarms — otherwise both dev and prod page
+        # on the same instance event.
+        if monitor_shared_rds:
+            alarms.append(
+                cw.Alarm(
+                    self,
+                    "RdsCpuAlarm",
+                    alarm_name=f"mermaid-{env_id}-rds-cpu",
+                    alarm_description="RDS CPU utilization exceeded 80% for 10 minutes",
+                    metric=database.metric_cpu_utilization(period=Duration.minutes(5)),
+                    threshold=80,
+                    evaluation_periods=2,
+                    comparison_operator=cw.ComparisonOperator.GREATER_THAN_THRESHOLD,
+                    treat_missing_data=cw.TreatMissingData.NOT_BREACHING,
+                )
             )
-        )
 
-        # db.t3.medium has ~170 max_connections by default; 100 is a reasonable warning threshold
-        alarms.append(
-            cw.Alarm(
-                self,
-                "RdsConnectionsAlarm",
-                alarm_name=f"mermaid-{env_id}-rds-connections",
-                alarm_description="RDS database connections exceeded 100 for 10 minutes",
-                metric=database.metric_database_connections(period=Duration.minutes(5)),
-                threshold=100,
-                evaluation_periods=2,
-                comparison_operator=cw.ComparisonOperator.GREATER_THAN_THRESHOLD,
-                treat_missing_data=cw.TreatMissingData.NOT_BREACHING,
+            # db.t3.medium has ~170 max_connections by default; 100 is a reasonable warning threshold
+            alarms.append(
+                cw.Alarm(
+                    self,
+                    "RdsConnectionsAlarm",
+                    alarm_name=f"mermaid-{env_id}-rds-connections",
+                    alarm_description="RDS database connections exceeded 100 for 10 minutes",
+                    metric=database.metric_database_connections(period=Duration.minutes(5)),
+                    threshold=100,
+                    evaluation_periods=2,
+                    comparison_operator=cw.ComparisonOperator.GREATER_THAN_THRESHOLD,
+                    treat_missing_data=cw.TreatMissingData.NOT_BREACHING,
+                )
             )
-        )
 
         # ── ECS API ──────────────────────────────────────────────────
 
@@ -147,8 +152,16 @@ class MonitoringAlerts(Construct):
                     "API ECS service has 0 running tasks for 2 consecutive minutes — "
                     "deployment failure or crash loop"
                 ),
-                metric=api_service.metric(
-                    "RunningTaskCount",
+                # RunningTaskCount is published by Container Insights (ECS/ContainerInsights),
+                # not the default AWS/ECS namespace — api_service.metric() would point at a
+                # metric that never has data and (with BREACHING) alarm forever.
+                metric=cw.Metric(
+                    namespace="ECS/ContainerInsights",
+                    metric_name="RunningTaskCount",
+                    dimensions_map={
+                        "ClusterName": api_service.cluster.cluster_name,
+                        "ServiceName": api_service.service_name,
+                    },
                     statistic="Minimum",
                     period=Duration.minutes(1),
                 ),
@@ -197,7 +210,7 @@ class MonitoringAlerts(Construct):
                     period=Duration.minutes(5),
                 ),
                 threshold=1,
-                evaluation_periods=1,
+                evaluation_periods=2,
                 comparison_operator=cw.ComparisonOperator.GREATER_THAN_OR_EQUAL_TO_THRESHOLD,
                 treat_missing_data=cw.TreatMissingData.NOT_BREACHING,
             )
@@ -214,7 +227,7 @@ class MonitoringAlerts(Construct):
                     period=Duration.minutes(5),
                 ),
                 threshold=1,
-                evaluation_periods=1,
+                evaluation_periods=2,
                 comparison_operator=cw.ComparisonOperator.GREATER_THAN_OR_EQUAL_TO_THRESHOLD,
                 treat_missing_data=cw.TreatMissingData.NOT_BREACHING,
             )
