@@ -145,9 +145,6 @@ class GFCRFinanceSolutionSerializer(BaseAPISerializer):
 
     def validate(self, data):
         type_val = data.get("fs_type")
-        if type_val is None:
-            return data
-
         errors = {}
 
         # Sector: only Business — coerce clear for all other types; error if missing for Business.
@@ -190,6 +187,12 @@ class GFCRFinanceSolutionSerializer(BaseAPISerializer):
         # sustainable_finance_mechanisms: only Financial mechanism.
         if type_val != "financial_mechanism":
             data["sustainable_finance_mechanisms"] = []
+        else:
+            valid_sfm = {c[0] for c in GFCRFinanceSolution.SUSTAINABLE_FINANCE_MECHANISM_CHOICES}
+            sfm = data.get("sustainable_finance_mechanisms") or []
+            invalid = [v for v in sfm if v not in valid_sfm]
+            if invalid:
+                errors["sustainable_finance_mechanisms"] = f"Invalid or removed choices: {invalid}"
 
         if errors:
             raise ValidationError(errors)
@@ -201,6 +204,17 @@ class GFCRIndicatorSetSerializer(BaseAPISerializer):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
         self._cached_profiles = {}
+
+    def validate(self, data):
+        title = data.get("title", "")
+        indicator_set_type = data.get("indicator_set_type", "")
+        report_titles = {c[0] for c in GFCRIndicatorSet.REPORT_TITLE_CHOICES}
+        target_titles = {c[0] for c in GFCRIndicatorSet.TARGET_TITLE_CHOICES}
+        if indicator_set_type == "report" and title not in report_titles:
+            raise ValidationError({"title": "title must be a valid report title"})
+        if indicator_set_type == "target" and title not in target_titles:
+            raise ValidationError({"title": "title must be a valid target title"})
+        return data
 
     finance_solutions = GFCRFinanceSolutionSerializer(many=True, default=list, read_only=True)
     f4_1_calc = serializers.ReadOnlyField()
