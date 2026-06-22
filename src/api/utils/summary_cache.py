@@ -305,9 +305,8 @@ def add_project_to_queue(project_id, skip_test_project=False):
         logger.exception(f"Failed to queue summary update for project {project_id}")
 
 
-# The report job uses a 120s SQS visibility timeout; SUMMARY_CACHE_MAX_WAIT +
-# post-wait work (~30s for report generation, S3 upload, email dispatch) must
-# stay under that.
+# The report job uses a 180s SQS visibility timeout. Budget: SUMMARY_CACHE_MAX_WAIT
+# (80s) + report generation/S3/email (~30s typical, ~70s headroom for large projects).
 SUMMARY_CACHE_POLL_INTERVAL = 5  # seconds
 SUMMARY_CACHE_MAX_WAIT = 80  # seconds
 
@@ -316,6 +315,10 @@ def wait_for_summary_cache(project_ids):
     """Block until SummaryCacheQueue entries for project_ids are cleared, or timeout.
 
     Returns True if the wait timed out (data may be stale), False if all entries cleared.
+
+    Note: there is an inherent TOCTOU race — a submission queued between the final poll
+    returning empty and the caller generating the report will be missed. Callers should
+    re-check the queue immediately before generating to narrow that window.
     """
     if settings.TESTING:
         return False
@@ -336,6 +339,7 @@ def wait_for_summary_cache(project_ids):
                 pending_ids,
             )
             return True
+        connection.close()
         time.sleep(SUMMARY_CACHE_POLL_INTERVAL)
 
 
