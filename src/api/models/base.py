@@ -193,10 +193,6 @@ class AuthUser(BaseModel):
 
     class Meta:
         db_table = "authuser"
-        unique_together = (
-            "profile",
-            "user_id",
-        )
 
     def __str__(self):
         return _("%s") % self.profile.full_name
@@ -209,7 +205,6 @@ class Application(BaseModel):
 
     class Meta:
         db_table = "applications"
-        unique_together = ("profile", "client_id")
 
     def __str__(self):
         return "{} - {}".format(self.profile, self.client_id)

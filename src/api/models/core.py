@@ -667,7 +667,11 @@ class Observer(BaseModel):
 
     class Meta:
         db_table = "observer"
-        unique_together = ("transectmethod", "profile")
+        constraints = [
+            models.UniqueConstraint(
+                fields=["transectmethod", "profile"], name="unique_observer_transectmethod_profile"
+            )
+        ]
 
     def __str__(self):
         return _("%s") % (self.profile)
@@ -814,10 +818,9 @@ class Covariate(BaseModel, JSONMixin):
     value = models.JSONField(null=True, blank=True)
 
     class Meta:
-        unique_together = (
-            "site",
-            "name",
-        )
+        constraints = [
+            models.UniqueConstraint(fields=["site", "name"], name="unique_sitecovariate_site_name")
+        ]
 
     def __str__(self):
         return f"{self.site.name} - {self.name}"
