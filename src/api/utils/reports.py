@@ -4,11 +4,13 @@ from tempfile import NamedTemporaryFile
 from django.conf import settings
 
 from ..mocks import MockRequest
+from ..models import SummaryCacheQueue
 from ..reports import attributes_report
 from ..reports.summary_report import create_protocol_report
 from . import create_iso_date_string, delete_file, s3
 from .email import email_report
 from .q import submit_job
+from .summary_cache import wait_for_summary_cache
 
 SAMPLE_UNIT_METHOD_REPORT_TYPE = "summary_sample_unit_method"
 GFCR_REPORT_TYPE = "gfcr"
@@ -55,6 +57,8 @@ def create_sample_unit_method_summary_report_background(
         protocol,
         request=req,
         send_email=send_email,
+        wait_for_cache=True,
+        visibility_timeout=180,
     )
 
 
@@ -63,6 +67,7 @@ def create_sample_unit_method_summary_report(
     protocol,
     request=None,
     send_email=None,
+    wait_for_cache=False,
 ):
     request = request or MockRequest()
 
@@ -72,6 +77,14 @@ def create_sample_unit_method_summary_report(
 
     if isinstance(project_ids, list) is False:
         project_ids = [project_ids]
+
+    data_may_be_stale = wait_for_summary_cache(project_ids) if wait_for_cache else False
+
+    # Narrow the TOCTOU window: re-check for submissions that raced in after the
+    # wait cleared but before we generate.
+    if wait_for_cache and not data_may_be_stale:
+        if SummaryCacheQueue.objects.filter(project_id__in=project_ids).exists():
+            data_may_be_stale = True
 
     with NamedTemporaryFile(delete=False) as f:
         temppath = Path(f.name)
@@ -86,7 +99,12 @@ def create_sample_unit_method_summary_report(
             return None
 
         if send_email:
-            email_report(request.user.profile.email, output_path, protocol)
+            email_report(
+                request.user.profile.email,
+                output_path,
+                protocol,
+                data_may_be_stale=data_may_be_stale,
+            )
             delete_file(output_path)
         else:
             return output_path

@@ -138,7 +138,7 @@ def email_project_admins(**kwargs):
         )
 
 
-def email_report(to_email, local_file_path, protocol):
+def email_report(to_email, local_file_path, protocol, data_may_be_stale=False):
     if not to_email or "@" not in to_email:
         raise ValueError("Invalid email address")
     if not local_file_path or not Path(local_file_path).is_file():
@@ -171,7 +171,11 @@ def email_report(to_email, local_file_path, protocol):
         to = [to_email]
         template = "emails/report.html"
         report_title = PROTOCOL_MAP.get(protocol) or ""
-        context = {"file_url": file_url, "title": report_title}
+        context = {
+            "file_url": file_url,
+            "title": report_title,
+            "data_may_be_stale": data_may_be_stale,
+        }
         send_mermaid_email(
             f"{report_title} Report",
             template,
