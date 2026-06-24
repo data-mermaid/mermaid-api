@@ -52,4 +52,16 @@ USER ${APP_USER}:${APP_USER}
 # Call collectstatic (customize the following line with the minimal environment variables needed for manage.py to run):
 RUN SECRET_KEY='abc' python manage.py collectstatic --noinput
 
+# Container health check for the API web server. Probes the DB-independent
+# liveness path served by HealthEndpointMiddleware (returns before auth/DB), via
+# the already-installed wget. start-period covers migrations + gunicorn boot.
+#
+# Used by local Docker / `docker compose`. ECS uses the task definition's own
+# healthCheck and ignores this image-level one; the scheduled tasks
+# (ScheduledBackupTask, SummaryCacheTask) override CMD with a management command
+# and run to completion, so their health signal is the container exit code, not
+# an HTTP probe (see ticket evaluation).
+HEALTHCHECK --interval=30s --timeout=5s --start-period=90s --retries=3 \
+  CMD wget --quiet --tries=1 --spider http://localhost:8081/health/ || exit 1
+
 CMD ["/var/projects/webapp/docker-entry.sh"]
