@@ -66,6 +66,24 @@ class DjangoSettings:
 
 
 @dataclass
+class InferenceSettings:
+    """Settings for the pyspacer inference Lambda (compute lane).
+
+    image_version is the pinned mermaid-inference semver = the ECR image tag.
+    Roll forward by editing this value and redeploying (git-tracked).
+    """
+
+    image_version: str
+    config_bucket: str = "mermaid-config"
+    image_bucket: str = "mermaid-image-processing"
+    memory_mb: int = 10240
+    timeout_minutes: int = 10
+    ephemeral_storage_gb: int = 2
+    reserved_concurrency: int = 20
+    num_threads: int = 6
+
+
+@dataclass
 class ProjectSettings:
     """Settings Class for Project Envs"""
 
@@ -73,3 +91,4 @@ class ProjectSettings:
     env_id: str
     database: DatabaseSettings
     api: DjangoSettings
+    inference: "InferenceSettings | None" = None

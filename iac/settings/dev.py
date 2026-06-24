@@ -1,6 +1,6 @@
 """Settings for development environments"""
 
-from settings.settings import DatabaseSettings, DjangoSettings, ProjectSettings
+from settings.settings import DatabaseSettings, DjangoSettings, InferenceSettings, ProjectSettings
 import os
 
 DEV_ENV_ID = "dev"
@@ -34,4 +34,5 @@ DEV_SETTINGS = ProjectSettings(
         slack_workspace_id=os.getenv("SLACK_WORKSPACE_ID", ""),
         slack_channel_id=os.getenv("SLACK_CHANNEL_ID", ""),
     ),
+    inference=InferenceSettings(image_version="0.2.0"),
 )
