@@ -9,6 +9,7 @@ from aws_cdk import (
     aws_ce as ce,
     aws_certificatemanager as acm,
     aws_ec2 as ec2,
+    aws_ecr as ecr,
     aws_ecs as ecs,
     aws_elasticloadbalancingv2 as elb,
     aws_glue as glue,
@@ -406,6 +407,27 @@ class CommonStack(Stack):
             removal_policy=RemovalPolicy.RETAIN,
             public_read_access=False,
             block_public_access=s3.BlockPublicAccess.BLOCK_ALL,
+        )
+
+        # Shared (dev/prod) ECR repo for the pyspacer inference Lambda image.
+        # Image is model-agnostic — versioned by mermaid-inference semver, never
+        # by model vN. Tag immutability guarantees a tag can't be silently
+        # repointed, so the Lambda's stored digest is an authoritative record of
+        # what is deployed. Built/pushed by the mermaid-inference build-push CI.
+        self.inference_repo = ecr.Repository(
+            self,
+            "MermaidInferencePyspacerRepo",
+            repository_name="mermaid-inference-pyspacer",
+            image_tag_mutability=ecr.TagMutability.IMMUTABLE,
+            image_scan_on_push=True,
+            removal_policy=RemovalPolicy.RETAIN,
+            lifecycle_rules=[
+                ecr.LifecycleRule(
+                    description="Keep last 15 images",
+                    max_image_count=15,
+                    rule_priority=1,
+                ),
+            ],
         )
 
         self.data_bucket = s3.Bucket(
