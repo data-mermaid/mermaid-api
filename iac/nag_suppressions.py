@@ -54,6 +54,19 @@ def suppress_github_access(stack: Stack) -> None:
         ],
     )
 
+    _suppress_by_path(
+        stack,
+        "InferenceImagePushPolicy/Resource",
+        [
+            NagPackSuppression(
+                id="AwsSolutions-IAM5",
+                reason=f"{ACCEPTED}: ecr:GetAuthorizationToken does not support "
+                "resource-level permissions — Resource::* is required by the ECR API.",
+                applies_to=["Resource::*"],
+            ),
+        ],
+    )
+
 
 # ---------------------------------------------------------------------------
 # CommonStack
