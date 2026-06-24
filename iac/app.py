@@ -8,6 +8,7 @@ from settings.prod import PROD_SETTINGS
 from stacks.api import ApiStack
 from stacks.common import CommonStack
 from stacks.github_access import GithubAccessStack
+from stacks.inference import InferenceStack
 from stacks.sagemaker import SagemakerStack
 from stacks.static_site import StaticSiteStack
 
@@ -85,6 +86,17 @@ dev_sagemaker_stack = SagemakerStack(
     cluster=common_stack.cluster,
 )
 
+dev_inference_stack = InferenceStack(
+    app,
+    "dev-mermaid-inference",
+    env=cdk_env,
+    tags=tags,
+    config=DEV_SETTINGS,
+    inference_repo=common_stack.inference_repo,
+    config_bucket=common_stack.config_bucket,
+    image_bucket=common_stack.image_processing_bucket,
+)
+
 prod_static_site_stack = StaticSiteStack(
     app,
     "prod-mermaid-static-site",
@@ -126,6 +138,7 @@ nag_suppressions.apply_all(
     dev_api_stack=dev_api_stack,
     prod_api_stack=prod_api_stack,
     dev_sagemaker_stack=dev_sagemaker_stack,
+    dev_inference_stack=dev_inference_stack,
 )
 
 app.synth()

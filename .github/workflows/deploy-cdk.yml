@@ -73,7 +73,8 @@ jobs:
             mermaid-api-infra-common \
             dev-mermaid-api-django \
             dev-mermaid-static-site \
-            dev-mermaid-sagemaker
+            dev-mermaid-sagemaker \
+            dev-mermaid-inference
       - name: CDK Deploy PROD
         if: startsWith(github.ref, 'refs/tags')
         env:
