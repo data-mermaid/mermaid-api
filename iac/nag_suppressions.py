@@ -693,9 +693,9 @@ def suppress_inference(stack: Stack) -> None:
         [
             NagPackSuppression(
                 id="AwsSolutions-IAM5",
-                reason=f"{ACCEPTED}: Resource::* is CDK-generated for ECR image pull "
-                "(ecr:GetAuthorizationToken has no resource scope). "
-                "S3 wildcards are scoped to specific bucket ARNs via CDK grant_read.",
+                reason=f"{ACCEPTED}: xray:PutTraceSegments / xray:PutTelemetryRecords do not "
+                "support resource-level permissions, so Resource::* is required by the X-Ray API "
+                "(added by Lambda tracing=ACTIVE).",
                 applies_to=["Resource::*"],
             ),
             NagPackSuppression(
