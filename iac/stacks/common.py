@@ -373,11 +373,26 @@ class CommonStack(Stack):
             ),
         )
 
+        postgres_engine = rds.DatabaseInstanceEngine.postgres(
+            version=rds.PostgresEngineVersion.VER_16_9
+        )
+
+        # Reject any non-SSL connection to the database.
+        # NOTE: associating a parameter group requires an instance reboot to take effect.
+        db_parameter_group = rds.ParameterGroup(
+            self,
+            "PostgresRdsV2ParameterGroup",
+            engine=postgres_engine,
+            description="Enforce SSL on all connections to the MERMAID RDS instance",
+            parameters={"rds.force_ssl": "1"},
+        )
+
         self.database = rds.DatabaseInstance(
             self,
             "PostgresRdsV2",
             vpc=self.vpc,
-            engine=rds.DatabaseInstanceEngine.postgres(version=rds.PostgresEngineVersion.VER_16_9),
+            engine=postgres_engine,
+            parameter_group=db_parameter_group,
             allow_major_version_upgrade=True,
             instance_type=ec2.InstanceType.of(
                 ec2.InstanceClass.BURSTABLE3,

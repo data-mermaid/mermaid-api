@@ -183,6 +183,11 @@ REST_FRAMEWORK = {
     "DEFAULT_SCHEMA_CLASS": "rest_framework.schemas.openapi.AutoSchema",
 }
 
+# RDS enforces SSL (rds.force_ssl=1) in dev/prod, so require it there. Local and
+# CI Postgres have no SSL, so fall back to "prefer" (uses SSL if available).
+# Override explicitly with DB_SSLMODE if needed.
+DB_SSLMODE = os.environ.get("DB_SSLMODE") or ("require" if ENVIRONMENT in ("dev", "prod") else "prefer")
+
 DATABASES = {
     "default": {
         "ENGINE": "django.contrib.gis.db.backends.postgis",
@@ -191,6 +196,7 @@ DATABASES = {
         "PASSWORD": os.environ.get("DB_PASSWORD") or "postgres",
         "HOST": os.environ.get("DB_HOST") or "localhost",
         "PORT": os.environ.get("DB_PORT") or "5432",
+        "OPTIONS": {"sslmode": DB_SSLMODE},
         "TEST": {
             "NAME": "test_mermaid",  # explicitly setting default
         },
