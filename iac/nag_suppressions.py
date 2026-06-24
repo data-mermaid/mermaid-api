@@ -80,6 +80,7 @@ def suppress_github_access(stack: Stack) -> None:
                     "Action::s3:GetObject*",
                     "Action::s3:GetBucket*",
                     "Action::s3:List*",
+                    "Action::s3:PutObject*",
                     "Action::s3:DeleteObject*",
                     "Action::s3:Abort*",
                     "Resource::arn:aws:s3:::dev-datamermaid-sm-data/mlflow/*",
