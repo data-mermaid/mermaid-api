@@ -118,9 +118,11 @@ class InvertSizeValidator(BaseValidator):
         comparison_size = size
         if invert_size_bins:
             for invert_size_bin in invert_size_bins:
+                min_ok = invert_size_bin.min_val is None or invert_size_bin.min_val <= size
                 max_ok = invert_size_bin.max_val is None or size <= invert_size_bin.max_val
-                if invert_size_bin.min_val <= size and max_ok:
-                    comparison_size = invert_size_bin.min_val
+                if min_ok and max_ok:
+                    if invert_size_bin.min_val is not None:
+                        comparison_size = invert_size_bin.min_val
                     break
 
         max_length = max_length_lookup.get(str(attr_id)) if attr_id else None
