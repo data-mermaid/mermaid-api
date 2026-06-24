@@ -41,17 +41,18 @@ class BeltInvertObsSQLModel(BaseSUSQLModel):
             w.name AS transect_width_name,
             w.val AS width_m,
             sb.val AS size_bin,
-            COALESCE(
-                igoi.name,
-                iclass.name,
-                iord.name,
-                ifam.name,
-                ige.name,
-                ispg.name || ' ' || isp.name
-            ) AS invert_attribute_name,
+            ia.name AS invert_taxon,
+            ia.name_goi AS invert_group_of_interest,
+            ia.name_class AS invert_class,
+            ia.name_order AS invert_order,
+            ia.name_family AS invert_family,
+            ia.name_genus AS invert_genus,
+            ia.name_species AS invert_species,
             o.invert_attribute_id,
             o.count,
             o.size,
+            ROUND(o.count::numeric / NULLIF(su.len_surveyed * w.val, 0) * 10000, 2) AS density_indha,
+            o.notes AS observation_notes,
             o.include
         FROM obs_transectbeltinvert o
             RIGHT JOIN transectmethod_transectbeltinvert tt ON o.beltinvert_id = tt.transectmethod_ptr_id
@@ -60,13 +61,7 @@ class BeltInvertObsSQLModel(BaseSUSQLModel):
             JOIN pseudosu_su ON (su.id = pseudosu_su.sample_unit_id)
             JOIN invert_belt_transect_width w ON su.width_id = w.id
             LEFT JOIN invert_size_bin sb ON su.size_bin_id = sb.id
-            LEFT JOIN invert_group_of_interest igoi ON o.invert_attribute_id = igoi.invertattribute_ptr_id
-            LEFT JOIN invert_class iclass ON o.invert_attribute_id = iclass.invertattribute_ptr_id
-            LEFT JOIN invert_order iord ON o.invert_attribute_id = iord.invertattribute_ptr_id
-            LEFT JOIN invert_family ifam ON o.invert_attribute_id = ifam.invertattribute_ptr_id
-            LEFT JOIN invert_genus ige ON o.invert_attribute_id = ige.invertattribute_ptr_id
-            LEFT JOIN invert_species isp ON o.invert_attribute_id = isp.invertattribute_ptr_id
-            LEFT JOIN invert_genus ispg ON isp.genus_id = ispg.invertattribute_ptr_id
+            LEFT JOIN mv_invert_attributes ia ON o.invert_attribute_id = ia.id
             JOIN (
                 SELECT tt_1.transect_id,
                     jsonb_agg(jsonb_build_object(
@@ -109,9 +104,17 @@ class BeltInvertObsSQLModel(BaseSUSQLModel):
     width_m = models.DecimalField(max_digits=4, decimal_places=1, null=True, blank=True)
     size_bin = models.CharField(max_length=100, null=True, blank=True)
     invert_attribute_id = models.UUIDField(null=True, blank=True)
-    invert_attribute_name = models.CharField(max_length=200, null=True, blank=True)
+    invert_taxon = models.CharField(max_length=200, null=True, blank=True)
+    invert_group_of_interest = models.CharField(max_length=200, null=True, blank=True)
+    invert_class = models.CharField(max_length=200, null=True, blank=True)
+    invert_order = models.CharField(max_length=200, null=True, blank=True)
+    invert_family = models.CharField(max_length=200, null=True, blank=True)
+    invert_genus = models.CharField(max_length=200, null=True, blank=True)
+    invert_species = models.CharField(max_length=200, null=True, blank=True)
     count = models.PositiveIntegerField(null=True, blank=True)
     size = models.DecimalField(max_digits=5, decimal_places=1, null=True, blank=True)
+    density_indha = models.DecimalField(max_digits=11, decimal_places=2, null=True, blank=True)
+    observation_notes = models.TextField(null=True, blank=True)
     include = models.BooleanField(null=True, blank=True)
     data_policy_macroinvertebrate = models.CharField(max_length=50)
     pseudosu_id = models.UUIDField()

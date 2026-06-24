@@ -1,0 +1,6 @@
+version: 2
+secret:
+  # _test.yml only configures an ephemeral CI Postgres service container.
+  # POSTGRES_PASSWORD: postgres is a throwaway test credential, not a real secret.
+  ignored-paths:
+    - ".github/workflows/_test.yml"
