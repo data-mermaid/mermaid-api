@@ -64,3 +64,14 @@ def test_function_role_can_read_both_buckets():
             }
         },
     )
+
+
+def test_errors_and_throttles_alarms_exist():
+    template = _template()
+    template.resource_count_is("AWS::CloudWatch::Alarm", 2)
+    template.has_resource_properties(
+        "AWS::CloudWatch::Alarm", {"MetricName": "Errors", "Namespace": "AWS/Lambda"}
+    )
+    template.has_resource_properties(
+        "AWS::CloudWatch::Alarm", {"MetricName": "Throttles", "Namespace": "AWS/Lambda"}
+    )
