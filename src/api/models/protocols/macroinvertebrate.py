@@ -4,13 +4,7 @@ from django.utils.translation import gettext as _
 
 from ...utils import create_timestamp, expired_timestamp
 from ..base import BaseAttributeModel, BaseChoiceModel, BaseModel, JSONMixin
-from ..core import (
-    INCLUDE_OBS_TEXT,
-    MACROINVERTEBRATE_PROTOCOL,
-    Observer,
-    Transect,
-    TransectMethod,
-)
+from ..core import MACROINVERTEBRATE_PROTOCOL, Observer, Transect, TransectMethod
 
 
 class InvertBeltTransectWidth(BaseChoiceModel):
@@ -336,7 +330,6 @@ class ObsBeltInvert(BaseModel, JSONMixin):
         null=True,
         blank=True,
     )
-    include = models.BooleanField(default=True, verbose_name=INCLUDE_OBS_TEXT)
     notes = models.TextField(blank=True)
 
     def __str__(self):

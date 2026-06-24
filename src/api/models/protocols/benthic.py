@@ -7,7 +7,6 @@ from ..core import (
     BENTHICPIT_PROTOCOL,
     BENTHICPQT_PROTOCOL,
     HABITATCOMPLEXITY_PROTOCOL,
-    INCLUDE_OBS_TEXT,
     Region,
     Transect,
     TransectMethod,
@@ -189,7 +188,6 @@ class ObsBenthicLIT(BaseModel, JSONMixin):
     attribute = models.ForeignKey(BenthicAttribute, on_delete=models.PROTECT)
     growth_form = models.ForeignKey(GrowthForm, on_delete=models.SET_NULL, null=True, blank=True)
     length = models.PositiveSmallIntegerField(verbose_name=_("length (cm)"))
-    include = models.BooleanField(default=True, verbose_name=INCLUDE_OBS_TEXT)
     notes = models.TextField(blank=True)
 
     class Meta:
@@ -242,7 +240,6 @@ class ObsBenthicPIT(BaseModel, JSONMixin):
     attribute = models.ForeignKey(BenthicAttribute, on_delete=models.PROTECT)
     growth_form = models.ForeignKey(GrowthForm, on_delete=models.SET_NULL, null=True, blank=True)
     interval = models.DecimalField(max_digits=7, decimal_places=2)
-    include = models.BooleanField(default=True, verbose_name=INCLUDE_OBS_TEXT)
     notes = models.TextField(blank=True)
 
     class Meta:
@@ -305,7 +302,6 @@ class ObsHabitatComplexity(BaseModel, JSONMixin):
     )
     interval = models.DecimalField(max_digits=7, decimal_places=2)
     score = models.ForeignKey(HabitatComplexityScore, on_delete=models.PROTECT)
-    include = models.BooleanField(default=True, verbose_name=INCLUDE_OBS_TEXT)
     notes = models.TextField(blank=True)
 
     class Meta:

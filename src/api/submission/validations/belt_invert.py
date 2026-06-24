@@ -13,7 +13,6 @@ from .validators import (
     DifferentTransectLengthValidator,
     DrySubmitValidator,
     DuplicateValidator,
-    InvertAllObsExcludedValidator,
     InvertCountValidator,
     InvertObsCountHighValidator,
     InvertSizeBinRequiredValidator,
@@ -203,6 +202,7 @@ belt_invert_validations = [
             observations_path="data.obs_belt_inverts",
             observation_attribute_path="invert_attribute",
             observation_size_path="size",
+            beltinvert_transect_path="data.beltinvert_transect",
         ),
         paths=["data.obs_belt_inverts"],
         validation_level=ROW_LEVEL,
@@ -248,12 +248,6 @@ belt_invert_validations = [
     # ── Record level: observation counts ─────────────────────────────────────
     Validation(
         validator=ObservationCountValidator(observations_path="data.obs_belt_inverts"),
-        paths=["data.obs_belt_inverts"],
-        validation_level=RECORD_LEVEL,
-        validation_type=VALUE_VALIDATION_TYPE,
-    ),
-    Validation(
-        validator=InvertAllObsExcludedValidator(observations_path="data.obs_belt_inverts"),
         paths=["data.obs_belt_inverts"],
         validation_level=RECORD_LEVEL,
         validation_type=VALUE_VALIDATION_TYPE,

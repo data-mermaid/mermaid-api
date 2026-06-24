@@ -60,7 +60,7 @@ def get_biomass_kg_ha(obs, fish_attributes, project_beltfishs, project_beltfish_
     beltfish_transect = lookup('id', beltfish['transect'], project_beltfish_transects['results'])
     width = lookup('id', beltfish_transect['width'], widths['data'])
 
-    if obs['include'] and fish_attribute and beltfish:
+    if fish_attribute and beltfish:
         size = float(obs['size'])
         count = obs['count']
         a = fish_attribute['biomass_constant_a'] or 0

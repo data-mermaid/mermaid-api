@@ -1,22 +1,5 @@
-from ....models import InvertAttribute
+from ....models import InvertAttribute, InvertSize
 from .base import ERROR, OK, WARN, BaseValidator, validator_result
-
-
-class InvertAllObsExcludedValidator(BaseValidator):
-    ALL_EXCLUDED = "all_observations_excluded"
-
-    def __init__(self, observations_path, **kwargs):
-        self.observations_path = observations_path
-        super().__init__(**kwargs)
-
-    @validator_result
-    def __call__(self, collect_record, **kwargs):
-        observations = self.get_value(collect_record, self.observations_path) or []
-        if not observations:
-            return OK
-        if all(not obs.get("include", True) for obs in observations):
-            return WARN, self.ALL_EXCLUDED
-        return OK
 
 
 class InvertCountValidator(BaseValidator):
@@ -74,8 +57,8 @@ class InvertObsCountHighValidator(BaseValidator):
 
 class InvertSizeBinRequiredValidator(BaseValidator):
     """
-    Errors per observation row when a size is recorded but the transect has no size_bin set.
-    size_bin is transect-level; the error is reported on the observation that triggered it.
+    Errors on any observation that has a size when size_bin is not set on the transect.
+    Observations without a size are always valid regardless of size_bin.
     """
 
     SIZE_BIN_REQUIRED = "size_bin_required"
@@ -90,7 +73,8 @@ class InvertSizeBinRequiredValidator(BaseValidator):
     def check_size_bin(self, obs, size_bin):
         context = {"observation_id": obs.get("id")}
         size = self.get_value(obs, self.size_path)
-        if size is not None and size != "" and not size_bin:
+        size_present = size is not None and size != ""
+        if size_present and not size_bin:
             return ERROR, self.SIZE_BIN_REQUIRED, context
         return OK
 
@@ -108,15 +92,17 @@ class InvertSizeValidator(BaseValidator):
         observations_path,
         observation_attribute_path,
         observation_size_path,
+        beltinvert_transect_path=None,
         **kwargs,
     ):
         self.observations_path = observations_path
         self.observation_attribute_path = observation_attribute_path
         self.observation_size_path = observation_size_path
+        self.beltinvert_transect_path = beltinvert_transect_path
         super().__init__(**kwargs)
 
     @validator_result
-    def check_invert_size(self, obs, max_length_lookup):
+    def check_invert_size(self, obs, max_length_lookup, invert_size_bins=None):
         context = {"observation_id": obs.get("id")}
         attr_id = self.get_value(obs, self.observation_attribute_path)
         size_raw = self.get_value(obs, self.observation_size_path)
@@ -129,8 +115,16 @@ class InvertSizeValidator(BaseValidator):
         except (TypeError, ValueError):
             return OK
 
+        comparison_size = size
+        if invert_size_bins:
+            for invert_size_bin in invert_size_bins:
+                max_ok = invert_size_bin.max_val is None or size <= invert_size_bin.max_val
+                if invert_size_bin.min_val <= size and max_ok:
+                    comparison_size = invert_size_bin.min_val
+                    break
+
         max_length = max_length_lookup.get(str(attr_id)) if attr_id else None
-        if max_length is not None and size > max_length * 1.5:
+        if max_length is not None and comparison_size > max_length * 1.5:
             return WARN, self.SIZE_EXCEEDS_MAXIMUM, {**context, "max_length": max_length}
 
         return OK
@@ -165,4 +159,14 @@ class InvertSizeValidator(BaseValidator):
                         max_length_lookup[str(attr.pk)] = float(ml)
                     break
 
-        return [self.check_invert_size(obs, max_length_lookup) for obs in observations]
+        invert_size_bins = None
+        if self.beltinvert_transect_path:
+            size_bin_id = self.get_value(
+                collect_record, f"{self.beltinvert_transect_path}.size_bin"
+            )
+            if size_bin_id:
+                invert_size_bins = list(InvertSize.objects.filter(invert_bin_size_id=size_bin_id))
+
+        return [
+            self.check_invert_size(obs, max_length_lookup, invert_size_bins) for obs in observations
+        ]

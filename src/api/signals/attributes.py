@@ -1,6 +1,8 @@
 import logging
+import sys
 
 from django.core.management import call_command
+from django.db import connection, transaction
 from django.db.models.signals import post_delete, post_save
 from django.dispatch import receiver
 
@@ -25,6 +27,23 @@ from ..utils.q import submit_job
 from ..utils.reports import update_attributes_report
 
 logger = logging.getLogger(__name__)
+
+
+def _schedule_refresh(view_name):
+    if "pytest" in sys.modules:
+        call_command("refresh_view", view_name)
+        return
+    attr = f"_pending_refresh_{view_name}"
+    if not getattr(connection, attr, False):
+        setattr(connection, attr, True)
+
+        def _do_refresh():
+            setattr(connection, attr, False)
+            call_command("refresh_view", view_name)
+
+        transaction.on_commit(_do_refresh)
+
+
 benthic_models = [BenthicAttribute, GrowthForm, Region]
 fish_models = [FishGrouping, FishFamily, FishGenus, FishSpecies, Region]
 invert_models = [
@@ -68,11 +87,11 @@ invert_models = [
 def refresh_attribute_views(sender, instance, **kwargs):
     if sender in fish_models:
         logger.info("refresh fish")
-        call_command("refresh_view", "mv_fish_attributes")
+        _schedule_refresh("mv_fish_attributes")
 
     if sender in invert_models:
         logger.info("refresh invert")
-        call_command("refresh_view", "mv_invert_attributes")
+        _schedule_refresh("mv_invert_attributes")
 
     if sender in benthic_models:
         logger.info("refresh benthic")
