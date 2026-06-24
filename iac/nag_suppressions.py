@@ -53,6 +53,42 @@ def suppress_github_access(stack: Stack) -> None:
             ),
         ],
     )
+    _suppress_by_path(
+        stack,
+        "ClassifierReleaseMlflowPolicy/Resource",
+        [
+            NagPackSuppression(
+                id="AwsSolutions-IAM5",
+                reason=f"{ACCEPTED}: sagemaker-mlflow exposes no resource-level "
+                "ARNs; the release role is scoped liberally to the project's "
+                "SageMaker-Studio MLflow apps by design.",
+                applies_to=["Action::sagemaker-mlflow:*", "Resource::*"],
+            ),
+        ],
+    )
+    _suppress_by_path(
+        stack,
+        "MermaidClassifierReleaseRole/DefaultPolicy/Resource",
+        [
+            NagPackSuppression(
+                id="AwsSolutions-IAM5",
+                reason=f"{ACCEPTED}: release-role S3 access is prefix-scoped to "
+                "dev-datamermaid-sm-data/mlflow/* (read) and "
+                "mermaid-config/classifier/* (read+write); the object-level and "
+                "ListBucket wildcards are the minimal set the CDK grants emit.",
+                applies_to=[
+                    "Action::s3:GetObject*",
+                    "Action::s3:GetBucket*",
+                    "Action::s3:List*",
+                    "Action::s3:PutObject*",
+                    "Action::s3:DeleteObject*",
+                    "Action::s3:Abort*",
+                    "Resource::arn:aws:s3:::dev-datamermaid-sm-data/mlflow/*",
+                    "Resource::arn:aws:s3:::mermaid-config/classifier/*",
+                ],
+            ),
+        ],
+    )
 
 
 # ---------------------------------------------------------------------------
