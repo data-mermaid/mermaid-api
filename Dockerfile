@@ -62,6 +62,6 @@ RUN SECRET_KEY='abc' python manage.py collectstatic --noinput
 # and run to completion, so their health signal is the container exit code, not
 # an HTTP probe (see ticket evaluation).
 HEALTHCHECK --interval=30s --timeout=5s --start-period=90s --retries=3 \
-  CMD wget --quiet --tries=1 --spider http://localhost:8081/health/ || exit 1
+  CMD wget --quiet --tries=1 --timeout=3 --spider http://localhost:8081/health/ || exit 1
 
 CMD ["/var/projects/webapp/docker-entry.sh"]

@@ -39,10 +39,12 @@ services:
     ports:
       - 8080:8080
       - 8081:8081
-    # The container idles on `tail` and the server is started manually
-    # (make runserver/:8080 or runserverplus/:8081), so the image HEALTHCHECK
-    # (probes :8081) would read unhealthy during normal dev. Disable it here;
-    # the image-level HEALTHCHECK still governs ECS/real `docker run`.
+    # Local-dev override only. The container idles on `tail` and the server is
+    # started manually (make runserver/:8080 or runserverplus/:8081), so the
+    # image HEALTHCHECK (probes :8081) would read unhealthy during normal dev.
+    # This disables it for local compose only — it still applies to a plain
+    # `docker run` of the image. ECS ignores the image HEALTHCHECK entirely and
+    # uses the task definition's healthCheck instead.
     healthcheck:
       disable: true
     command: tail -f /dev/null
