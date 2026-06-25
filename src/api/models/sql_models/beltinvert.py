@@ -52,8 +52,7 @@ class BeltInvertObsSQLModel(BaseSUSQLModel):
             o.count,
             o.size,
             ROUND(o.count::numeric / NULLIF(su.len_surveyed * w.val, 0) * 10000, 2) AS density_indha,
-            o.notes AS observation_notes,
-            o.include
+            o.notes AS observation_notes
         FROM obs_transectbeltinvert o
             RIGHT JOIN transectmethod_transectbeltinvert tt ON o.beltinvert_id = tt.transectmethod_ptr_id
             JOIN transect_belt_invert su ON tt.transect_id = su.id
@@ -115,7 +114,6 @@ class BeltInvertObsSQLModel(BaseSUSQLModel):
     size = models.DecimalField(max_digits=5, decimal_places=1, null=True, blank=True)
     density_indha = models.DecimalField(max_digits=11, decimal_places=2, null=True, blank=True)
     observation_notes = models.TextField(null=True, blank=True)
-    include = models.BooleanField(null=True, blank=True)
     data_policy_macroinvertebrate = models.CharField(max_length=50)
     pseudosu_id = models.UUIDField()
 
@@ -133,16 +131,13 @@ class BeltInvertSUSQLModel(BaseSUSQLModel):
     ]
 
     _su_fields = ", ".join(su_fields)
-    _su_fields_qualified = ", ".join([f"belt_invert_obs_all.{f}" for f in su_fields])
+    _su_fields_qualified = ", ".join([f"belt_invert_obs.{f}" for f in su_fields])
     _agg_su_fields = ", ".join(BaseSUSQLModel.agg_su_fields)
     _su_aggfields_sql = BaseSUSQLModel.su_aggfields_sql
 
     sql = f"""
-        WITH belt_invert_obs_all AS (
+        WITH belt_invert_obs AS (
             {BeltInvertObsSQLModel.sql}
-        ),
-        belt_invert_obs AS (
-            SELECT * FROM belt_invert_obs_all WHERE include = TRUE
         ),
         goi_weights_by_family AS MATERIALIZED (
             SELECT ig.family_id, goi.name AS goi_name,
@@ -211,7 +206,7 @@ class BeltInvertSUSQLModel(BaseSUSQLModel):
             SELECT a.pseudosu_id, a.goi_name, COALESCE(g.goi_count, 0) AS goi_count
             FROM (
                 SELECT DISTINCT o.pseudosu_id, igoi.name AS goi_name
-                FROM belt_invert_obs_all o CROSS JOIN invert_group_of_interest igoi
+                FROM belt_invert_obs o CROSS JOIN invert_group_of_interest igoi
             ) a
             LEFT JOIN su_goi g USING (pseudosu_id, goi_name)
         ),
@@ -225,7 +220,7 @@ class BeltInvertSUSQLModel(BaseSUSQLModel):
                 SELECT pseudosu_id,
                     MAX(transect_len_surveyed)::numeric AS len_surveyed,
                     MAX(width_m)::numeric AS width_m
-                FROM belt_invert_obs_all GROUP BY pseudosu_id
+                FROM belt_invert_obs GROUP BY pseudosu_id
             ) sa USING (pseudosu_id)
         ),
         su_goi_density AS MATERIALIZED (
@@ -242,7 +237,7 @@ class BeltInvertSUSQLModel(BaseSUSQLModel):
             FROM (
                 SELECT pseudosu_id,
                 jsonb_array_elements(observers) AS observer
-                FROM belt_invert_obs_all
+                FROM belt_invert_obs
                 GROUP BY pseudosu_id, observers
             ) beltinvert_obs_obs
             GROUP BY pseudosu_id
@@ -262,9 +257,9 @@ class BeltInvertSUSQLModel(BaseSUSQLModel):
         FROM (
             SELECT pseudosu_id,
             jsonb_agg(DISTINCT sample_unit_id) AS sample_unit_ids,
-            COALESCE(SUM(count) FILTER (WHERE include = TRUE), 0) AS total_abundance,
+            COALESCE(SUM(count), 0) AS total_abundance,
             ROUND(
-                COALESCE(SUM(count) FILTER (WHERE include = TRUE), 0)::numeric /
+                COALESCE(SUM(count), 0)::numeric /
                 NULLIF((MAX(transect_len_surveyed) * MAX(width_m)), 0) * 10000, 2
             ) AS density_indha,
             {_su_fields_qualified},
@@ -274,7 +269,7 @@ class BeltInvertSUSQLModel(BaseSUSQLModel):
             string_agg(DISTINCT size_bin::text, ', '::text
                 ORDER BY (size_bin::text)) AS size_bin
 
-            FROM belt_invert_obs_all
+            FROM belt_invert_obs
             GROUP BY pseudosu_id,
             {_su_fields_qualified}
         ) beltinvert_su

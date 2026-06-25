@@ -615,10 +615,11 @@ class BaseAttributeApiViewSet(BaseApiViewSet):
     method_authentication_classes = {"GET": []}
 
     def get_queryset(self):
-        # GET requests have no authenticators (method_authentication_classes = {"GET": []}),
-        # so is_authenticated is always False on the public REST API — only sync pull (POST)
-        # reaches the created_by branch.
         qs = super().get_queryset()
+        if getattr(self, "action", None) == "retrieve":
+            # UUID lookups bypass the status filter so a user can resolve attributes
+            # referenced in submitted records they have access to but didn't create.
+            return qs
         request = self.request
         if not request or not hasattr(request, "user"):
             return qs.filter(status=SUPERUSER_APPROVED)
