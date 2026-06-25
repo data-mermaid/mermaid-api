@@ -103,6 +103,10 @@ class JWTAuthentication(BaseAuthentication):
                     profile.picture_url = user_info["picture"]
                     profile.save()
                 except exceptions.APIException:
+                    # Bump updated_on so we don't re-enter (and re-fail) the refresh
+                    # on every subsequent request while Auth0 is unavailable. Retry
+                    # naturally on the next >24h window.
+                    profile.save(update_fields=["updated_on"])
                     logger.warning(
                         "[auth0.refresh_skipped] picture refresh failed for %s; "
                         "serving cached profile",

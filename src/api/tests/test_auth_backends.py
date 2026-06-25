@@ -28,3 +28,5 @@ def test_validate_profile_stale_refresh_survives_auth0_outage(profile1):
     assert result.pk == profile1.pk
     profile1.refresh_from_db()
     assert profile1.picture_url == "https://old.example/pic.png"
+    # updated_on bumped so the next request backs off instead of re-failing
+    assert (timezone.now() - profile1.updated_on).total_seconds() < 60
