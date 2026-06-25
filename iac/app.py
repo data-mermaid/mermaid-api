@@ -8,7 +8,9 @@ from settings.prod import PROD_SETTINGS
 from stacks.api import ApiStack
 from stacks.common import CommonStack
 from stacks.github_access import GithubAccessStack
-from stacks.inference import InferenceStack
+# STAGED DEPLOY (mermaid-classifier #53): re-enable in PR2 once the inference
+# image is in ECR. See the dev_inference_stack block below.
+# from stacks.inference import InferenceStack
 from stacks.sagemaker import SagemakerStack
 from stacks.static_site import StaticSiteStack
 
@@ -86,17 +88,24 @@ dev_sagemaker_stack = SagemakerStack(
     cluster=common_stack.cluster,
 )
 
-dev_inference_stack = InferenceStack(
-    app,
-    "dev-mermaid-inference",
-    env=cdk_env,
-    tags=tags,
-    config=DEV_SETTINGS,
-    inference_repo=common_stack.inference_repo,
-    config_bucket=common_stack.config_bucket,
-    image_bucket=common_stack.image_processing_bucket,
-    alerts_topic=dev_api_stack.alerts_topic,
-)
+# STAGED DEPLOY (mermaid-classifier #53): the inference function is a container
+# Lambda — it cannot deploy until its image exists in ECR, and the dev pipeline
+# would fail on this stack. PR1 ships only the prerequisites that DO deploy: the
+# ECR repo (common_stack.inference_repo) and the OIDC push role (GithubAccess).
+# After the mermaid-inference CI pushes the image, PR2 re-enables this block, the
+# `from stacks.inference import InferenceStack` import above, the apply_all arg
+# below, and the dev-mermaid-inference line in .github/workflows/deploy-cdk.yml.
+# dev_inference_stack = InferenceStack(
+#     app,
+#     "dev-mermaid-inference",
+#     env=cdk_env,
+#     tags=tags,
+#     config=DEV_SETTINGS,
+#     inference_repo=common_stack.inference_repo,
+#     config_bucket=common_stack.config_bucket,
+#     image_bucket=common_stack.image_processing_bucket,
+#     alerts_topic=dev_api_stack.alerts_topic,
+# )
 
 prod_static_site_stack = StaticSiteStack(
     app,
@@ -139,7 +148,8 @@ nag_suppressions.apply_all(
     dev_api_stack=dev_api_stack,
     prod_api_stack=prod_api_stack,
     dev_sagemaker_stack=dev_sagemaker_stack,
-    dev_inference_stack=dev_inference_stack,
+    # STAGED DEPLOY (mermaid-classifier #53): re-enable in PR2 with the block above.
+    # dev_inference_stack=dev_inference_stack,
 )
 
 app.synth()

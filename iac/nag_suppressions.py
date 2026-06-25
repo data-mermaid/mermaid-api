@@ -744,7 +744,7 @@ def apply_all(
     dev_api_stack: Stack,
     prod_api_stack: Stack,
     dev_sagemaker_stack: Stack,
-    dev_inference_stack: Stack,
+    dev_inference_stack: Stack | None = None,
 ) -> None:
     suppress_github_access(gh_access_stack)
     suppress_common(common_stack)
@@ -756,4 +756,7 @@ def apply_all(
         suppress_api(api_stack)
 
     suppress_sagemaker(dev_sagemaker_stack, prefix="dev")
-    suppress_inference(dev_inference_stack)
+    # Deferred during staged deploy (mermaid-classifier #53): the inference stack
+    # is not instantiated until its image exists in ECR (see app.py).
+    if dev_inference_stack is not None:
+        suppress_inference(dev_inference_stack)
