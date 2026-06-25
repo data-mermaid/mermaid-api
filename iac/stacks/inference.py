@@ -22,8 +22,8 @@ class InferenceStack(Stack):
     A non-VPC container Lambda that runs EfficientNet extraction + the portable
     TorchScript classifier head. The image is model-agnostic: it resolves model
     files from the request's classifier_version against the config bucket at
-    runtime. The image tag (config.inference.image_version) is a mermaid-inference
-    semver pinned here in IaC — git history is the deploy log.
+    runtime. The image tag (config.inference.image_tag) is the model-build tag
+    `vN-K` pinned here in IaC — git history is the deploy log.
 
     Alarms publish to the shared per-env alerts topic owned by ApiStack's
     MonitoringAlerts construct; that construct's single Chatbot config delivers
@@ -62,7 +62,7 @@ class InferenceStack(Stack):
             function_name=f"{config.env_id}-mermaid-inference-pyspacer",
             code=lambda_.DockerImageCode.from_ecr(
                 repository=inference_repo,
-                tag_or_digest=inf.image_version,
+                tag_or_digest=inf.image_tag,
             ),
             log_group=log_group,
             architecture=lambda_.Architecture.ARM_64,

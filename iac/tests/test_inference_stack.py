@@ -131,3 +131,11 @@ def test_function_log_group_has_retention():
             "RetentionInDays": 30,
         },
     )
+
+
+def test_inference_settings_use_model_build_tag():
+    from settings.dev import DEV_SETTINGS
+
+    # The image tag is the model-build tag vN-K, not a semver.
+    assert DEV_SETTINGS.inference.image_tag == "v2-1"
+    assert not hasattr(DEV_SETTINGS.inference, "image_version")

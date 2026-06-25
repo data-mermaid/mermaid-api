@@ -69,11 +69,12 @@ class DjangoSettings:
 class InferenceSettings:
     """Settings for the pyspacer inference Lambda (compute lane).
 
-    image_version is the pinned mermaid-inference semver = the ECR image tag.
-    Roll forward by editing this value and redeploying (git-tracked).
+    image_tag is the model-build ECR tag `vN-K` (vN = model version, K = serving build).
+    Bump K for a code/lib fix, vN for a retrain. Roll forward by editing this value
+    and redeploying (git-tracked).
     """
 
-    image_version: str
+    image_tag: str
     config_bucket: str = "mermaid-config"
     image_bucket: str = "mermaid-image-processing"
     memory_mb: int = 10240
