@@ -1,4 +1,6 @@
 # mermaid-api/iac/tests/test_inference_stack.py
+import json
+
 import aws_cdk as cdk
 from aws_cdk import aws_ecr as ecr, aws_s3 as s3, aws_sns as sns
 from aws_cdk.assertions import Match, Template
@@ -51,21 +53,19 @@ def test_function_config():
 
 def test_function_role_can_read_both_buckets():
     template = _template()
-    # The function role gets s3:GetObject on classifier/* and the image bucket.
-    template.has_resource_properties(
-        "AWS::IAM::Policy",
-        {
-            "PolicyDocument": {
-                "Statement": Match.array_with(
-                    [
-                        Match.object_like(
-                            {"Action": Match.array_with(["s3:GetObject*"])}
-                        )
-                    ]
-                )
-            }
-        },
-    )
+    # The function role must read BOTH buckets: the config bucket scoped to the
+    # classifier/* prefix, and the image bucket. grant_read emits one s3 read
+    # statement per bucket, so two distinct statements must be present and the
+    # config grant must carry the classifier/* prefix — neither can silently drop.
+    read_stmts = [
+        stmt
+        for policy in template.find_resources("AWS::IAM::Policy").values()
+        for stmt in policy["Properties"]["PolicyDocument"]["Statement"]
+        if "s3:GetObject*"
+        in (stmt["Action"] if isinstance(stmt["Action"], list) else [stmt["Action"]])
+    ]
+    assert len(read_stmts) >= 2, "expected a read grant for each of the two buckets"
+    assert "classifier/*" in json.dumps(read_stmts), "config bucket must be classifier/*-scoped"
 
 
 def test_errors_and_throttles_alarms_exist():

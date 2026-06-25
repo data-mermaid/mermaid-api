@@ -422,9 +422,16 @@ class CommonStack(Stack):
             image_scan_on_push=True,
             removal_policy=RemovalPolicy.RETAIN,
             lifecycle_rules=[
+                # Expire only UNTAGGED images (orphaned manifests) after 14 days.
+                # Release images are immutably tagged (:<semver> + :<sha>) and a
+                # deployed Lambda pins a tag's digest; a count-based "keep last N"
+                # rule on tagged images could delete a digest still referenced by a
+                # dev/prod deployment and break the function on cold start. So we
+                # never count-prune tagged releases — they are kept indefinitely.
                 ecr.LifecycleRule(
-                    description="Keep last 15 images",
-                    max_image_count=15,
+                    description="Expire untagged images after 14 days",
+                    tag_status=ecr.TagStatus.UNTAGGED,
+                    max_image_age=Duration.days(14),
                     rule_priority=1,
                 ),
             ],
