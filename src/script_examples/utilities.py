@@ -57,19 +57,20 @@ def get_year_from_obs(obs, project_beltfishs, project_beltfish_transects, sample
 def get_biomass_kg_ha(obs, fish_attributes, project_beltfishs, project_beltfish_transects, widths):
     fish_attribute = lookup('id', obs['fish_attribute'], fish_attributes)
     beltfish = lookup('id', obs['beltfish'], project_beltfishs['results'])
-    beltfish_transect = lookup('id', beltfish['transect'], project_beltfish_transects['results'])
-    width = lookup('id', beltfish_transect['width'], widths['data'])
 
-    if obs['include'] and fish_attribute and beltfish:
-        size = float(obs['size'])
-        count = obs['count']
-        a = fish_attribute['biomass_constant_a'] or 0
-        b = fish_attribute['biomass_constant_b'] or 0
-        length = beltfish_transect['len_surveyed']
-        width = width['val']
+    if fish_attribute and beltfish:
+        beltfish_transect = lookup('id', beltfish['transect'], project_beltfish_transects['results'])
+        if beltfish_transect:
+            width = lookup('id', beltfish_transect['width'], widths['data'])
+            size = float(obs['size'])
+            count = obs['count']
+            a = fish_attribute['biomass_constant_a'] or 0
+            b = fish_attribute['biomass_constant_b'] or 0
+            length = beltfish_transect['len_surveyed']
+            width = width['val']
 
-        biomass = count * (float(a) * pow(size, float(b))) / 1000.0
-        area = (length * width) / 10000.0  # m2 to hectares
-        return round(biomass / area, 2)
+            biomass = count * (float(a) * pow(size, float(b))) / 1000.0
+            area = (length * width) / 10000.0  # m2 to hectares
+            return round(biomass / area, 2)
 
     return 0

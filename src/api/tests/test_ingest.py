@@ -497,5 +497,3 @@ def test_macroinvertebrate_ingest(
     assert len(observations) == 6
     assert observations[0].get("invert_attribute") == str(invert_species_1.id)
     assert observations[0].get("count") == 3
-    assert observations[0].get("include") is True
-    assert observations[5].get("include") is False

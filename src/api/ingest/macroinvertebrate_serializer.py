@@ -151,12 +151,6 @@ class MacroInvertebrateCSVSerializer(CollectRecordCSVSerializer):
         label="Size",
         help_text="Size of individual observed, in cm (e.g. 4.5).",
     )
-    data__obs_belt_inverts__include = serializers.BooleanField(
-        required=False,
-        default=True,
-        label="Include",
-        help_text="Whether to include this observation in aggregations (True/False). Defaults to True.",
-    )
     data__obs_belt_inverts__notes = serializers.CharField(
         required=False,
         allow_blank=True,
