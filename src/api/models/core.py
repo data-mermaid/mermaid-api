@@ -24,8 +24,6 @@ from .base import (
     Profile,
 )
 
-INCLUDE_OBS_TEXT = _("include observation in aggregations/analyses?")
-
 logger = logging.getLogger(__name__)
 
 BENTHICLIT_PROTOCOL = "benthiclit"
@@ -43,7 +41,7 @@ PROTOCOL_MAP = {
     FISHBELT_PROTOCOL: "Fish Belt",
     HABITATCOMPLEXITY_PROTOCOL: "Habitat Complexity",
     BLEACHINGQC_PROTOCOL: "Bleaching Quadrat Collection",
-    MACROINVERTEBRATE_PROTOCOL: "Macroinvertebrate Belt Transect",
+    MACROINVERTEBRATE_PROTOCOL: "Macroinvertebrate Belt",
 }
 
 

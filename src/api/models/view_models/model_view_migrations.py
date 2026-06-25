@@ -1,9 +1,11 @@
 from .fish_attributes import FishAttributeView
+from .invert_attributes import InvertAttributeView
 
 
 def forward_sql():
     sql = [
         FishAttributeView.sql,
+        InvertAttributeView.sql,
     ]
     output = []
     for s in sql:
@@ -19,6 +21,7 @@ def forward_sql():
 def reverse_sql():
     sql = [
         FishAttributeView.reverse_sql,
+        InvertAttributeView.reverse_sql,
     ]
 
     output = []

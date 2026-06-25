@@ -364,7 +364,6 @@ class ObserverInline(CachedFKInline):
 
 class ObservationInline(CachedFKInline):
     extra = 0
-    exclude = ("include",)
     readonly_fields = ["created_by", "updated_by"]
 
 

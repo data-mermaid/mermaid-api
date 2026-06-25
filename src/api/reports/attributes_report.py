@@ -21,7 +21,7 @@ FISH_GENERA_NAME = "Fish Genera"
 FISH_SPECIES_NAME = "Fish Species"
 FISH_GROUPINGS_NAME = "Fish Groupings"
 BENTHIC_NAME = "Benthic"
-INVERT_SPECIES_NAME = "Invert Species"
+INVERT_SPECIES_NAME = "Macroinvertebrate Species"
 YES = "Yes"
 NO = "No"
 YES_COLOR = Color(rgb="EAF7f0")
