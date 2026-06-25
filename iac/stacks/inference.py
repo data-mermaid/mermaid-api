@@ -1,12 +1,14 @@
 # mermaid-api/iac/stacks/inference.py
 from aws_cdk import (
     Duration,
+    RemovalPolicy,
     Size,
     Stack,
     aws_cloudwatch as cw,
     aws_cloudwatch_actions as cw_actions,
     aws_ecr as ecr,
     aws_lambda as lambda_,
+    aws_logs as logs,
     aws_s3 as s3,
     aws_sns as sns,
 )
@@ -15,7 +17,7 @@ from settings.settings import ProjectSettings
 
 
 class InferenceStack(Stack):
-    """The pyspacer inference compute lane (issue #53).
+    """The pyspacer inference compute lane (mermaid-classifier issue #53).
 
     A non-VPC container Lambda that runs EfficientNet extraction + the portable
     TorchScript classifier head. The image is model-agnostic: it resolves model
@@ -44,6 +46,16 @@ class InferenceStack(Stack):
 
         inf = config.inference
 
+        # Explicit log group — otherwise Lambda auto-creates /aws/lambda/<fn>
+        # with "Never expire" retention and an orphaned-on-stack-delete group.
+        log_group = logs.LogGroup(
+            self,
+            "PyspacerInferenceFunctionLogGroup",
+            log_group_name=f"/aws/lambda/{config.env_id}-mermaid-inference-pyspacer",
+            retention=logs.RetentionDays.ONE_MONTH,
+            removal_policy=RemovalPolicy.DESTROY,
+        )
+
         self.function = lambda_.DockerImageFunction(
             self,
             "PyspacerInferenceFunction",
@@ -52,6 +64,7 @@ class InferenceStack(Stack):
                 repository=inference_repo,
                 tag_or_digest=inf.image_version,
             ),
+            log_group=log_group,
             architecture=lambda_.Architecture.ARM_64,
             memory_size=inf.memory_mb,
             timeout=Duration.minutes(inf.timeout_minutes),

@@ -85,3 +85,16 @@ def test_no_local_delivery_infrastructure():
     # its own SNS topic nor a second Chatbot config.
     template.resource_count_is("AWS::SNS::Topic", 0)
     template.resource_count_is("AWS::Chatbot::SlackChannelConfiguration", 0)
+
+
+def test_function_log_group_has_retention():
+    template = _template()
+    # An explicit log group with finite retention (not Lambda's never-expire
+    # default), removed with the stack.
+    template.has_resource_properties(
+        "AWS::Logs::LogGroup",
+        {
+            "LogGroupName": "/aws/lambda/dev-mermaid-inference-pyspacer",
+            "RetentionInDays": 30,
+        },
+    )

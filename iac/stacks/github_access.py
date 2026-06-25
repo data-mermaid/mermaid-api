@@ -42,10 +42,12 @@ class GithubAccessStack(Stack):
         self, oidc_provider: iam.OpenIdConnectProvider
     ) -> iam.Role:
         """Least-privilege role assumed by the mermaid-inference build-push
-        workflow (Issue #53) via GitHub OIDC.
+        workflow (mermaid-classifier issue #53) via GitHub OIDC.
 
         Pushes the pyspacer inference image to the mermaid-inference-pyspacer
-        ECR repo. Trust is repo-wide (any ref in mermaid-inference).
+        ECR repo. Trust is scoped to the refs that actually publish — the
+        `main` branch and `v*` release tags (the build-push workflow's only
+        triggers) — so feature branches and PRs cannot assume this role.
         """
         role = iam.Role(
             self,
@@ -58,9 +60,10 @@ class GithubAccessStack(Stack):
                         "token.actions.githubusercontent.com:aud": "sts.amazonaws.com"
                     },
                     "StringLike": {
-                        "token.actions.githubusercontent.com:sub": (
-                            "repo:data-mermaid/mermaid-inference:*"
-                        )
+                        "token.actions.githubusercontent.com:sub": [
+                            "repo:data-mermaid/mermaid-inference:ref:refs/heads/main",
+                            "repo:data-mermaid/mermaid-inference:ref:refs/tags/v*",
+                        ]
                     },
                 },
             ),
