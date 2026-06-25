@@ -20,10 +20,11 @@ class InferenceStack(Stack):
     """The pyspacer inference compute lane (mermaid-classifier issue #53).
 
     A non-VPC container Lambda that runs EfficientNet extraction + the portable
-    TorchScript classifier head. The image is model-agnostic: it resolves model
-    files from the request's classifier_version against the config bucket at
-    runtime. The image tag (config.inference.image_tag) is the model-build tag
-    `vN-K` pinned here in IaC — git history is the deploy log.
+    TorchScript classifier head. The function serves the single model version
+    baked into its image at build time (CLASSIFIER_VERSION), resolving
+    `classifier/<version>/` from the config bucket at runtime. The image tag
+    (config.inference.image_tag) is the model-build tag `vN-K` (model version +
+    serving build) pinned here in IaC — git history is the deploy log.
 
     Alarms publish to the shared per-env alerts topic owned by ApiStack's
     MonitoringAlerts construct; that construct's single Chatbot config delivers
