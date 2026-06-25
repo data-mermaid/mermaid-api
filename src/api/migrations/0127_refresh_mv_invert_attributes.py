@@ -8,7 +8,7 @@ class Migration(migrations.Migration):
 
     operations = [
         migrations.RunSQL(
-            "REFRESH MATERIALIZED VIEW mv_invert_attributes",
+            "REFRESH MATERIALIZED VIEW CONCURRENTLY mv_invert_attributes",
             reverse_sql=migrations.RunSQL.noop,
         ),
     ]
