@@ -1,6 +1,6 @@
 # mermaid-api/iac/tests/test_inference_stack.py
 import aws_cdk as cdk
-from aws_cdk import aws_ecr as ecr, aws_s3 as s3
+from aws_cdk import aws_ecr as ecr, aws_s3 as s3, aws_sns as sns
 from aws_cdk.assertions import Match, Template
 from settings.dev import DEV_SETTINGS
 from stacks.inference import InferenceStack
@@ -13,6 +13,7 @@ def _template():
     repo = ecr.Repository(deps, "Repo", repository_name="mermaid-inference-pyspacer")
     config_bucket = s3.Bucket(deps, "Config", bucket_name="mermaid-config")
     image_bucket = s3.Bucket(deps, "Img", bucket_name="mermaid-image-processing")
+    alerts_topic = sns.Topic(deps, "Alerts")
     stack = InferenceStack(
         app,
         "dev-mermaid-inference",
@@ -21,6 +22,7 @@ def _template():
         inference_repo=repo,
         config_bucket=config_bucket,
         image_bucket=image_bucket,
+        alerts_topic=alerts_topic,
     )
     return Template.from_stack(stack)
 
@@ -75,3 +77,11 @@ def test_errors_and_throttles_alarms_exist():
     template.has_resource_properties(
         "AWS::CloudWatch::Alarm", {"MetricName": "Throttles", "Namespace": "AWS/Lambda"}
     )
+
+
+def test_no_local_delivery_infrastructure():
+    template = _template()
+    # Alarms publish to ApiStack's shared topic — InferenceStack creates neither
+    # its own SNS topic nor a second Chatbot config.
+    template.resource_count_is("AWS::SNS::Topic", 0)
+    template.resource_count_is("AWS::Chatbot::SlackChannelConfiguration", 0)

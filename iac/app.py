@@ -95,6 +95,7 @@ dev_inference_stack = InferenceStack(
     inference_repo=common_stack.inference_repo,
     config_bucket=common_stack.config_bucket,
     image_bucket=common_stack.image_processing_bucket,
+    alerts_topic=dev_api_stack.alerts_topic,
 )
 
 prod_static_site_stack = StaticSiteStack(

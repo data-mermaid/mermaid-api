@@ -496,7 +496,7 @@ class ApiStack(Stack):
         )
 
         # ── CloudWatch Alarms + Slack (AWS Chatbot) ──────────────────
-        MonitoringAlerts(
+        monitoring_alerts = MonitoringAlerts(
             self,
             "Alerts",
             env_id=config.env_id,
@@ -511,3 +511,6 @@ class ApiStack(Stack):
             slack_channel_id=config.api.slack_channel_id or None,
             cost_alerts_topic=cost_alerts_topic,
         )
+        # Exposed so sibling stacks (e.g. InferenceStack) can publish alarms to
+        # the same per-env topic this stack's Chatbot config already delivers.
+        self.alerts_topic = monitoring_alerts.topic

@@ -730,35 +730,6 @@ def suppress_inference(stack: Stack) -> None:
         ],
     )
 
-    # --- Inference alerts SNS topic: no SSL-only policy yet ---
-    _suppress_by_path(
-        stack,
-        "InferenceAlertsTopic/Resource",
-        [
-            NagPackSuppression(
-                id="AwsSolutions-SNS3",
-                reason=f"{TODO}: Add aws:SecureTransport condition to the inference "
-                "alerts SNS topic policy.",
-            ),
-        ],
-    )
-
-    # --- Slack Chatbot role: AmazonQDeveloperAccess managed policy ---
-    _suppress_by_path(
-        stack,
-        "InferenceSlackRole/Resource",
-        [
-            NagPackSuppression(
-                id="AwsSolutions-IAM4",
-                reason=f"{ACCEPTED}: AmazonQDeveloperAccess is an AWS managed policy "
-                "with no customer-managed equivalent for Amazon Q Developer in Slack.",
-                applies_to=[
-                    "Policy::arn:<AWS::Partition>:iam::aws:policy/AmazonQDeveloperAccess",
-                ],
-            ),
-        ],
-    )
-
 
 # ---------------------------------------------------------------------------
 # Main entry point — call from app.py after all stacks are created.
