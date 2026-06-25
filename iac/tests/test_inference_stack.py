@@ -70,12 +70,45 @@ def test_function_role_can_read_both_buckets():
 
 def test_errors_and_throttles_alarms_exist():
     template = _template()
-    template.resource_count_is("AWS::CloudWatch::Alarm", 2)
+    # Errors + Throttles (AWS/Lambda) + ProcessingErrors (log-metric-filter) = 3.
+    template.resource_count_is("AWS::CloudWatch::Alarm", 3)
     template.has_resource_properties(
         "AWS::CloudWatch::Alarm", {"MetricName": "Errors", "Namespace": "AWS/Lambda"}
     )
     template.has_resource_properties(
         "AWS::CloudWatch::Alarm", {"MetricName": "Throttles", "Namespace": "AWS/Lambda"}
+    )
+
+
+def test_processing_errors_alarm_from_log_metric_filter():
+    template = _template()
+    # A metric filter turns the handler's "[classify.processing_error]" marker
+    # into a counted metric in a MERMAID/<env>/Inference namespace.
+    template.has_resource_properties(
+        "AWS::Logs::MetricFilter",
+        {
+            "FilterPattern": '"[classify.processing_error]"',
+            "MetricTransformations": Match.array_with(
+                [
+                    Match.object_like(
+                        {
+                            "MetricName": "ProcessingErrors",
+                            "MetricNamespace": "MERMAID/dev/Inference",
+                        }
+                    )
+                ]
+            ),
+        },
+    )
+    # ...alarmed on a count threshold (>=5 in a 5-minute window).
+    template.has_resource_properties(
+        "AWS::CloudWatch::Alarm",
+        {
+            "MetricName": "ProcessingErrors",
+            "Namespace": "MERMAID/dev/Inference",
+            "Threshold": 5,
+            "ComparisonOperator": "GreaterThanOrEqualToThreshold",
+        },
     )
 
 

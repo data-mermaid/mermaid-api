@@ -115,3 +115,41 @@ class InferenceStack(Stack):
             )
             alarm.add_alarm_action(sns_action)
             alarm.add_ok_action(sns_action)
+
+        # Processing-error visibility (the Errors metric can't see these).
+        # The handler returns model/infra failures as PROCESSING_ERROR envelopes
+        # rather than raising, so the Lambda Errors metric stays 0. It logs a
+        # stable "[classify.processing_error]" marker (NOT on the validation path);
+        # this metric filter turns that marker into a count, alarmed on a
+        # threshold so a systemic failure (bad artifact, unresolvable version)
+        # pages, while a single bad image does not. Mirrors the Auth0/Sentry
+        # log-metric-filter pattern in stacks/constructs/alerts.py.
+        processing_error_metric = logs.MetricFilter(
+            self,
+            "ProcessingErrorMetricFilter",
+            log_group=log_group,
+            filter_pattern=logs.FilterPattern.literal('"[classify.processing_error]"'),
+            metric_namespace=f"MERMAID/{config.env_id}/Inference",
+            metric_name="ProcessingErrors",
+            metric_value="1",
+            default_value=0,
+        )
+        processing_errors_alarm = cw.Alarm(
+            self,
+            "ProcessingErrorsAlarm",
+            alarm_name=f"mermaid-{config.env_id}-inference-processing-errors",
+            alarm_description=(
+                "Inference Lambda returned PROCESSING_ERROR envelopes (model/infra "
+                "failures invisible to the Errors metric) — 5 or more in a 5-minute "
+                "window, e.g. a bad model artifact or unresolvable classifier_version"
+            ),
+            metric=processing_error_metric.metric(
+                statistic="Sum", period=Duration.minutes(5)
+            ),
+            threshold=5,
+            evaluation_periods=1,
+            comparison_operator=cw.ComparisonOperator.GREATER_THAN_OR_EQUAL_TO_THRESHOLD,
+            treat_missing_data=cw.TreatMissingData.NOT_BREACHING,
+        )
+        processing_errors_alarm.add_alarm_action(sns_action)
+        processing_errors_alarm.add_ok_action(sns_action)
