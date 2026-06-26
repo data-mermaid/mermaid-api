@@ -87,11 +87,24 @@ def invert_genus_1(db, invert_family_1, invert_group_of_interest_1):
 @pytest.fixture
 def invert_genus_2(db, invert_family_1, invert_group_of_interest_2):
     # Second genus in invert_family_1, mapped to a different GoI than invert_genus_1.
-    # Used to test proportional GoI weighting for family-level observations.
+    # Used to test equal-split GoI attribution for family-level observations.
     return InvertGenus.objects.create(
         name="Acanthaster",
         family=invert_family_1,
         group_of_interest=invert_group_of_interest_2,
+        status=SUPERUSER_APPROVED,
+    )
+
+
+@pytest.fixture
+def invert_genus_3(db, invert_family_1, invert_group_of_interest_1):
+    # Third genus in invert_family_1, same GoI as invert_genus_1. Makes the family
+    # 2:1 across GoI_1 vs GoI_2 so that equal-split (1/2 each) and genus-proportion
+    # (2/3 vs 1/3) produce different numbers — allowing tests to discriminate them.
+    return InvertGenus.objects.create(
+        name="Paracentrotus",
+        family=invert_family_1,
+        group_of_interest=invert_group_of_interest_1,
         status=SUPERUSER_APPROVED,
     )
 
@@ -180,11 +193,15 @@ def belt_invert1_with_obs(db, belt_invert1, invert_genus_1):
 
 
 @pytest.fixture
-def belt_invert1_with_goi_obs(db, belt_invert1, invert_genus_1, invert_genus_2, invert_family_1):
-    # invert_genus_1 -> GoI 1 ("Sea urchins"), invert_genus_2 -> GoI 2 ("COTS"), both
-    # in invert_family_1. A genus-level obs is attributed directly to its GoI; a
-    # family-level obs is split proportionally across the GoIs of the genera in
-    # that family (50/50 here, since each GoI has exactly one genus in the family).
+def belt_invert1_with_goi_obs(
+    db, belt_invert1, invert_genus_1, invert_genus_2, invert_genus_3, invert_family_1
+):
+    # invert_genus_1 and invert_genus_3 -> GoI 1 ("Sea urchins"); invert_genus_2 ->
+    # GoI 2 ("COTS"). All three are in invert_family_1, giving a 2:1 genus ratio.
+    # Equal-split sees 2 distinct GoIs → weight 0.5 each (density 1600/1000).
+    # Genus-proportion would give weights 2/3 vs 1/3 (density ~1933/~667) — so the
+    # assertions below only pass under equal-split, catching a regression to the old logic.
+    # invert_genus_3 is not directly observed; it exists only to set the 2:1 ratio.
     ObsBeltInvert.objects.create(
         beltinvert=belt_invert1,
         invert_attribute=invert_genus_1,

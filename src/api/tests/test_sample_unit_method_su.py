@@ -105,7 +105,9 @@ def test_beltinvert_su_view_group_of_interest(
     update_summary_cache,
 ):
     # invert_genus_1 (count=3) attributes fully to GoI 1; invert_family_1 (count=10)
-    # splits 50/50 between GoI 1 and GoI 2 (one genus per GoI in that family).
+    # splits equally between GoI 1 and GoI 2 (2 distinct GoIs → 50/50).
+    # invert_genus_3 is a second GoI-1 genus in the family (2:1 ratio) so the
+    # expected values only hold under equal-split, not genus-proportion weighting.
     # density_indha = count / (len_surveyed * width_m) * 10000 = count * 200
     url = reverse("beltinvertmethod-sampleunit-list", kwargs=dict(project_pk=project1.pk))
     count, data, _ = _call(client, token1, url)
