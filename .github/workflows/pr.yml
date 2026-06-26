@@ -11,10 +11,7 @@ on:
       - dev
 
 permissions:
-  actions: write
   contents: read
-  id-token: write
-  pull-requests: write
 
 env:
   ENV: dev
@@ -22,10 +19,48 @@ env:
 
 jobs:
 
+  # Lint Python. Tool versions pinned to match .pre-commit-config.yaml.
+  lint:
+    if: github.event.pull_request.draft == false
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    steps:
+      - name: Harden the runner (Audit all outbound calls)
+        uses: step-security/harden-runner@9af89fc71515a100421586dfdb3dc9c984fbf411  # v2.19.4
+        with:
+          egress-policy: audit
+
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd  # v6.0.2
+        with:
+          persist-credentials: false
+
+      - name: isort
+        uses: isort/isort-action@24d8a7a51d33ca7f36c3f23598dafa33f7071326  # v1.1.1
+        with:
+          isort-version: "5.12.0"
+
+      - name: ruff check
+        uses: astral-sh/ruff-action@0ce1b0bf8b818ef400413f810f8a11cdbda0034b  # v4.0.0
+        with:
+          version: "0.1.6"
+          args: "check"
+
+      - name: ruff format
+        uses: astral-sh/ruff-action@0ce1b0bf8b818ef400413f810f8a11cdbda0034b  # v4.0.0
+        with:
+          version: "0.1.6"
+          args: "format --check"
+
   # Tests run before deploys (see deploy-cdk.yml), not on every PR. PRs only
   # surface the cdk diff + nag report.
   cdk-diff:
     if: github.event.pull_request.draft == false
+    permissions:
+      actions: write
+      contents: read
+      id-token: write
+      pull-requests: write
     # No environment here on purpose: GitHub treats `environment:` as a deploy
     # gate, and dev's protection rules block PR merge refs. cdk-diff is a
     # read-only diff, so it runs un-gated. SLACK_* are repo-level secrets (dev
