@@ -64,8 +64,25 @@ def test_function_role_can_read_both_buckets():
         if "s3:GetObject*"
         in (stmt["Action"] if isinstance(stmt["Action"], list) else [stmt["Action"]])
     ]
-    assert len(read_stmts) >= 2, "expected a read grant for each of the two buckets"
-    assert "classifier/*" in json.dumps(read_stmts), "config bucket must be classifier/*-scoped"
+    assert len(read_stmts) == 2, "expected exactly one s3 read grant per bucket"
+    # Map each grant to (bucket ARN token -> object-key suffix). grant_read emits
+    # a bucket ARN plus a "<bucketArn><suffix>" object ARN; the suffix carries the
+    # prefix scoping. Keying on the bucket token proves the two grants target two
+    # *distinct* buckets — a duplicated config grant (image grant dropped) would
+    # collapse to a single key and fail here.
+    grants = {}
+    for stmt in read_stmts:
+        join = next(r for r in stmt["Resource"] if isinstance(r, dict) and "Fn::Join" in r)
+        bucket_token, suffix = join["Fn::Join"][1]
+        grants[json.dumps(bucket_token)] = suffix
+    assert len(grants) == 2, "the two read grants must target two distinct buckets"
+    # config bucket (fixture id "Config") is scoped to classifier/*; image bucket
+    # (fixture id "Img") covers the whole bucket. Catches the prefixes being
+    # swapped or either grant silently widening/narrowing.
+    config_token = next(t for t in grants if "Config" in t)
+    image_token = next(t for t in grants if "Img" in t)
+    assert grants[config_token] == "/classifier/*", "config read must be classifier/*-scoped"
+    assert grants[image_token] == "/*", "image read must cover the whole image bucket"
 
 
 def test_errors_and_throttles_alarms_exist():

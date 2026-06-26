@@ -5,14 +5,40 @@ from aws_cdk.assertions import Match, Template
 from stacks.github_access import GithubAccessStack
 
 
+def _inference_push_policy(template):
+    """The single inline policy attached to MermaidInferenceImagePushRole.
+
+    Scoping the action assertions to this specific policy (rather than scanning
+    every AWS::IAM::Policy) ensures they fail if InferenceImagePushPolicy itself
+    regresses — they can't be satisfied by some unrelated policy that happens to
+    grant the same ECR action.
+    """
+    roles = {
+        lid: r
+        for lid, r in template.find_resources("AWS::IAM::Role").items()
+        if r["Properties"].get("RoleName") == "mermaid-inference-image-push-role"
+    }
+    assert len(roles) == 1, f"expected exactly one push role, found {list(roles)}"
+    (role_lid,) = roles
+    policies = [
+        p
+        for p in template.find_resources("AWS::IAM::Policy").values()
+        if any(
+            isinstance(ref, dict) and ref.get("Ref") == role_lid
+            for ref in p["Properties"].get("Roles", [])
+        )
+    ]
+    assert len(policies) == 1, f"expected one policy on the push role, found {len(policies)}"
+    return policies[0]
+
+
 def _statements_with(template, action):
-    """All IAM policy statements (across every AWS::IAM::Policy) granting `action`."""
+    """Statements of the inference push policy granting `action`."""
     out = []
-    for policy in template.find_resources("AWS::IAM::Policy").values():
-        for stmt in policy["Properties"]["PolicyDocument"]["Statement"]:
-            actions = stmt["Action"] if isinstance(stmt["Action"], list) else [stmt["Action"]]
-            if action in actions:
-                out.append(stmt)
+    for stmt in _inference_push_policy(template)["Properties"]["PolicyDocument"]["Statement"]:
+        actions = stmt["Action"] if isinstance(stmt["Action"], list) else [stmt["Action"]]
+        if action in actions:
+            out.append(stmt)
     return out
 
 

@@ -410,10 +410,11 @@ class CommonStack(Stack):
         )
 
         # Shared (dev/prod) ECR repo for the pyspacer inference Lambda image.
-        # Image is model-agnostic — versioned by mermaid-inference semver, never
-        # by model vN. Tag immutability guarantees a tag can't be silently
-        # repointed, so the Lambda's stored digest is an authoritative record of
-        # what is deployed. Built/pushed by the mermaid-inference build-push CI.
+        # Images are tagged with the model-build tag vN-K (vN = model version,
+        # K = serving build) that InferenceSettings.image_tag pins. Tag
+        # immutability guarantees a tag can't be silently repointed, so the
+        # Lambda's stored digest is an authoritative record of what is deployed.
+        # Built/pushed by the mermaid-inference build-push CI.
         self.inference_repo = ecr.Repository(
             self,
             "MermaidInferencePyspacerRepo",
@@ -423,9 +424,9 @@ class CommonStack(Stack):
             removal_policy=RemovalPolicy.RETAIN,
             lifecycle_rules=[
                 # Expire only UNTAGGED images (orphaned manifests) after 14 days.
-                # Release images are immutably tagged (:<semver> + :<sha>) and a
-                # deployed Lambda pins a tag's digest; a count-based "keep last N"
-                # rule on tagged images could delete a digest still referenced by a
+                # Release images are immutably tagged (:vN-K) and a deployed
+                # Lambda pins a tag's digest; a count-based "keep last N" rule on
+                # tagged images could delete a digest still referenced by a
                 # dev/prod deployment and break the function on cold start. So we
                 # never count-prune tagged releases — they are kept indefinitely.
                 ecr.LifecycleRule(
