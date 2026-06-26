@@ -679,7 +679,9 @@ class CommonStack(Stack):
                     resources=[f"{waf_log_group.log_group_arn}:*"],
                     conditions={
                         "StringEquals": {"aws:SourceAccount": self.account},
-                        "ArnLike": {"aws:SourceArn": f"arn:aws:logs:{self.region}:{self.account}:*"},
+                        "ArnLike": {
+                            "aws:SourceArn": f"arn:aws:logs:{self.region}:{self.account}:*"
+                        },
                     },
                 )
             ],

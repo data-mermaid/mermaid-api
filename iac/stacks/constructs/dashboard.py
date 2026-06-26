@@ -95,19 +95,13 @@ class MonitoringDashboard(Construct):
 
         ecs_cpu = cw.GraphWidget(
             title="ECS CPU Utilization",
-            left=[
-                svc.metric_cpu_utilization(label=name)
-                for name, svc in ecs_services.items()
-            ],
+            left=[svc.metric_cpu_utilization(label=name) for name, svc in ecs_services.items()],
             width=12,
         )
 
         ecs_memory = cw.GraphWidget(
             title="ECS Memory Utilization",
-            left=[
-                svc.metric_memory_utilization(label=name)
-                for name, svc in ecs_services.items()
-            ],
+            left=[svc.metric_memory_utilization(label=name) for name, svc in ecs_services.items()],
             width=12,
         )
 
@@ -154,15 +148,11 @@ class MonitoringDashboard(Construct):
         sqs_messages = cw.GraphWidget(
             title="SQS Messages Sent / Received",
             left=[
-                general_queue.metric_number_of_messages_sent(
-                    label="General Sent", statistic="Sum"
-                ),
+                general_queue.metric_number_of_messages_sent(label="General Sent", statistic="Sum"),
                 general_queue.metric_number_of_messages_received(
                     label="General Received", statistic="Sum"
                 ),
-                image_queue.metric_number_of_messages_sent(
-                    label="Image Sent", statistic="Sum"
-                ),
+                image_queue.metric_number_of_messages_sent(label="Image Sent", statistic="Sum"),
                 image_queue.metric_number_of_messages_received(
                     label="Image Received", statistic="Sum"
                 ),

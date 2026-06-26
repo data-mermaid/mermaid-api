@@ -33,6 +33,6 @@ class Command(BaseCommand):
         self.stdout.write(
             f"Worker finished processing from {queue_name} queue, UTC time {finish_time}, total runtime {runtime}"
         )
-    
+
     def handle(self, *args, **options):
         run_with_reloader(self.run_worker, *args, **options)

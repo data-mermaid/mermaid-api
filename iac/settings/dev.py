@@ -1,7 +1,8 @@
 """Settings for development environments"""
 
-from settings.settings import DatabaseSettings, DjangoSettings, ProjectSettings
 import os
+
+from settings.settings import DatabaseSettings, DjangoSettings, ProjectSettings
 
 DEV_ENV_ID = "dev"
 DEV_SETTINGS = ProjectSettings(

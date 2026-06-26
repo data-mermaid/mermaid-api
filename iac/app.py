@@ -1,17 +1,17 @@
 import os
 
+import nag_suppressions
 from aws_cdk import App, Aspects, Environment
 from cdk_nag import AwsSolutionsChecks
-import nag_suppressions
 from settings.dev import DEV_SETTINGS
 from settings.prod import PROD_SETTINGS
 from stacks.api import ApiStack
+from stacks.cloudtrail import CloudTrailStack
 from stacks.common import CommonStack
 from stacks.github_access import GithubAccessStack
+from stacks.guardduty import GuardDutyStack
 from stacks.sagemaker import SagemakerStack
 from stacks.static_site import StaticSiteStack
-from stacks.cloudtrail import CloudTrailStack
-from stacks.guardduty import GuardDutyStack
 
 tags = {
     "Owner": "sysadmin@datamermaid.org",
