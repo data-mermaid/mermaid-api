@@ -75,6 +75,7 @@ class BenthicAttribute(BaseAttributeModel):
     )
     regions = models.ManyToManyField(Region, blank=True)
     life_histories = models.ManyToManyField(BenthicLifeHistory, blank=True)
+    notes = models.TextField(blank=True)
 
     @property
     def descendants(self):

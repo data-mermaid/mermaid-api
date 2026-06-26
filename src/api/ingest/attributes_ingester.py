@@ -111,6 +111,7 @@ class BenthicIngester(BaseAttributeIngester):
         "level3": "level3",
         "level4": "level4",
         "regions": "regions",
+        "notes": "notes",
     }
 
     def __init__(self, file_obj):
@@ -124,6 +125,7 @@ class BenthicIngester(BaseAttributeIngester):
         benthic_row = self._map_fields(row, self.benthic_field_map, self.benthic_lookups)
 
         region_names = benthic_row.get("regions")
+        notes = benthic_row.get("notes", "")
         level1 = benthic_row.get("level1")
         level2 = benthic_row.get("level2")
         level3 = benthic_row.get("level3")
@@ -140,7 +142,9 @@ class BenthicIngester(BaseAttributeIngester):
             else:
                 self.write_log(self.EXISTING_BENTHIC, f"Level 1 - {parent1.name}")
         except BenthicAttribute.DoesNotExist:
-            parent1 = BenthicAttribute.objects.create(name=level1, status=self.approval_status)
+            parent1 = BenthicAttribute.objects.create(
+                name=level1, notes=notes, status=self.approval_status
+            )
             self._update_regions(parent1, region_names)
             self.write_log(self.NEW_BENTHIC, f"Level 1 - {parent1.name}")
 
@@ -162,7 +166,7 @@ class BenthicIngester(BaseAttributeIngester):
                 )
         except BenthicAttribute.DoesNotExist:
             parent2 = BenthicAttribute.objects.create(
-                name=level2, parent=parent1, status=self.approval_status
+                name=level2, parent=parent1, notes=notes, status=self.approval_status
             )
             self._update_regions(parent2, region_names)
             self.write_log(
@@ -188,7 +192,7 @@ class BenthicIngester(BaseAttributeIngester):
                 )
         except BenthicAttribute.DoesNotExist:
             parent3 = BenthicAttribute.objects.create(
-                name=level3, parent=parent2, status=self.approval_status
+                name=level3, parent=parent2, notes=notes, status=self.approval_status
             )
             self._update_regions(parent3, region_names)
             self.write_log(
@@ -214,7 +218,7 @@ class BenthicIngester(BaseAttributeIngester):
                 )
         except BenthicAttribute.DoesNotExist:
             parent4 = BenthicAttribute.objects.create(
-                name=level4, parent=parent3, status=self.approval_status
+                name=level4, parent=parent3, notes=notes, status=self.approval_status
             )
             self._update_regions(parent3, region_names)
             self.write_log(
