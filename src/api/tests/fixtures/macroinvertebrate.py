@@ -75,6 +75,17 @@ def invert_family_1(db, invert_order_1):
 
 
 @pytest.fixture
+def invert_family_2(db, invert_order_1):
+    # A family with no genera in the DB — used to test that family-level observations
+    # whose family has no GoI-linked genera are absent from density_indha_group_interest.
+    return InvertFamily.objects.create(
+        name="Orphan family",
+        order=invert_order_1,
+        status=SUPERUSER_APPROVED,
+    )
+
+
+@pytest.fixture
 def invert_genus_1(db, invert_family_1, invert_group_of_interest_1):
     return InvertGenus.objects.create(
         name="Strongylocentrotus",
@@ -188,6 +199,19 @@ def belt_invert1_with_obs(db, belt_invert1, invert_genus_1):
         invert_attribute=invert_genus_1,
         count=3,
         size=Decimal("2.5"),
+    )
+    return belt_invert1
+
+
+@pytest.fixture
+def belt_invert1_with_no_goi_family_obs(db, belt_invert1, invert_family_2):
+    # Family has no genera → goi_weights_by_family produces no rows for it → count
+    # contributes to total_abundance/density_indha but not density_indha_group_interest.
+    ObsBeltInvert.objects.create(
+        beltinvert=belt_invert1,
+        invert_attribute=invert_family_2,
+        count=5,
+        size=Decimal("2.0"),
     )
     return belt_invert1
 
