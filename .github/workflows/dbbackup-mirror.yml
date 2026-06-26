@@ -3,18 +3,27 @@ on:
   schedule:
     - cron: "0 0 * * *"  # Runs daily
   workflow_dispatch:
+
+permissions:
+  contents: read
+
 jobs:
   rclone:
     runs-on: ubuntu-latest
     steps:
+      - name: Harden the runner (Audit all outbound calls)
+        uses: step-security/harden-runner@9af89fc71515a100421586dfdb3dc9c984fbf411  # v2.19.4
+        with:
+          egress-policy: audit
+
       - name: rclone copy
-        uses: data-mermaid/backup/rclone@v2
+        uses: data-mermaid/backup/rclone@88636e5f40149629fa67015a94426db1460e739d  # v2
         env:
           RCLONE_CONF: ${{ secrets.RCLONE_CONF }}
         with:
           args: copy --verbose dbbackups-s3:mermaid-api-v2-backups dbbackups-drive:mermaid-db-backups-mirror
       - name: rclone delete
-        uses: data-mermaid/backup/rclone@v2
+        uses: data-mermaid/backup/rclone@88636e5f40149629fa67015a94426db1460e739d  # v2
         env:
           RCLONE_CONF: ${{ secrets.RCLONE_CONF }}
         with:
