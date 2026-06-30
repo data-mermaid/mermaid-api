@@ -115,6 +115,10 @@ class InvertSpeciesAdmin(BaseAdmin):
     )
     list_filter = ["status"]
     search_fields = ("name", "genus__name", "genus__family__name")
+    exportable_fields = ("name", "genus", "max_length", "max_length_type", "notes")
+
+    def get_queryset(self, request):
+        return super().get_queryset(request).select_related("genus")
 
 
 class ObsBeltInvertInline(ObservationInline):
