@@ -126,7 +126,7 @@ class BenthicIngester(BaseAttributeIngester):
         has_region_edits, region_updates = self._update_regions(attribute, region_names)
         if has_region_edits:
             updates.append(region_updates)
-        if notes and notes != attribute.notes:
+        if notes is not None and notes != attribute.notes:
             attribute.notes = notes
             attribute.save()
             updates.append(f"notes -> {notes!r}")
@@ -139,7 +139,7 @@ class BenthicIngester(BaseAttributeIngester):
         benthic_row = self._map_fields(row, self.benthic_field_map, self.benthic_lookups)
 
         region_names = benthic_row.get("regions")
-        notes = benthic_row.get("notes", "")
+        notes = benthic_row.get("notes")
         level1 = benthic_row.get("level1")
         level2 = benthic_row.get("level2")
         level3 = benthic_row.get("level3")
