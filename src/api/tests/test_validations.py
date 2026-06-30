@@ -273,9 +273,11 @@ def test_belt_invert_size_exceeds_max_warn_with_size_bin(
     # 5cm size bin. The value 1000 matches the open-ended "50+" bin (min_val=50,
     # max_val=None). Previously the validator substituted min_val (50) for the actual
     # entry (1000), so 50 < threshold suppressed the warning even though 1000 >> threshold.
+    invert_species_1.max_length = 60
+    invert_species_1.save()
+
     data = valid_belt_invert_collect_record.data
     data["beltinvert_transect"]["size_bin"] = str(invert_size_bin_5cm.pk)
-    # invert_species_1 max_length=8; threshold=12; 1000 must warn
     data["obs_belt_inverts"][0]["size"] = 1000
     valid_belt_invert_collect_record.data = data
     valid_belt_invert_collect_record.save()
