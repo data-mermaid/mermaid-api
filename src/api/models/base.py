@@ -193,10 +193,9 @@ class AuthUser(BaseModel):
 
     class Meta:
         db_table = "authuser"
-        unique_together = (
-            "profile",
-            "user_id",
-        )
+        # unique=True on user_id is globally unique (stronger than the former unique_together
+        # ("profile", "user_id")). No separate UniqueConstraint is needed, but if unique=True
+        # is ever relaxed, per-profile uniqueness must be restored explicitly.
 
     def __str__(self):
         return _("%s") % self.profile.full_name
@@ -209,7 +208,9 @@ class Application(BaseModel):
 
     class Meta:
         db_table = "applications"
-        unique_together = ("profile", "client_id")
+        # unique=True on client_id is globally unique (stronger than the former unique_together
+        # ("profile", "client_id")). No separate UniqueConstraint is needed, but if unique=True
+        # is ever relaxed, per-profile uniqueness must be restored explicitly.
 
     def __str__(self):
         return "{} - {}".format(self.profile, self.client_id)
