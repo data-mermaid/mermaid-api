@@ -164,7 +164,7 @@ def apply_changes(request, serializer, record, force=False):
             instance is not None
             and isinstance(instance, ProjectProfile)
             and instance.role == ProjectProfile.ADMIN
-            and record.get("role") != ProjectProfile.ADMIN
+            and s.validated_data.get("role", instance.role) != ProjectProfile.ADMIN
             and not ProjectProfile.objects.select_for_update()
             .filter(project=instance.project, role=ProjectProfile.ADMIN)
             .exclude(pk=instance.pk)
