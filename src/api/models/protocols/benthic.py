@@ -131,10 +131,15 @@ class BenthicAttributeGrowthForm(models.Model):
     )
 
     class Meta:
-        unique_together = ("benthic_attribute", "growth_form")
         db_table = "benthic_attribute_growth_form"
         verbose_name_plural = _("BA/GF unique combinations")
         ordering = ["benthic_attribute__name", "growth_form__name"]
+        constraints = [
+            models.UniqueConstraint(
+                fields=["benthic_attribute", "growth_form"],
+                name="unique_benthicattributegrowthform_attribute_growthform",
+            )
+        ]
 
     def __str__(self):
         name = self.benthic_attribute.name
@@ -245,9 +250,13 @@ class ObsBenthicPIT(BaseModel, JSONMixin):
 
     class Meta:
         db_table = "obs_benthicpit"
-        unique_together = ("benthicpit", "interval")
         verbose_name = _("benthic PIT observation")
         ordering = ["interval"]
+        constraints = [
+            models.UniqueConstraint(
+                fields=["benthicpit", "interval"], name="unique_obsbenthicpit_pit_interval"
+            )
+        ]
 
     def __str__(self):
         return _("%s") % self.interval
@@ -307,9 +316,14 @@ class ObsHabitatComplexity(BaseModel, JSONMixin):
 
     class Meta:
         db_table = "obs_habitatcomplexity"
-        unique_together = ("habitatcomplexity", "interval")
         verbose_name = _("habitat complexity transect observation")
         ordering = ["interval"]
+        constraints = [
+            models.UniqueConstraint(
+                fields=["habitatcomplexity", "interval"],
+                name="unique_obshabitatcomplexity_habitatcomplexity_interval",
+            )
+        ]
 
     def __str__(self):
         return _("%s") % self.interval
@@ -360,13 +374,18 @@ class ObsBenthicPhotoQuadrat(BaseModel, JSONMixin):
     class Meta:
         db_table = "obs_benthic_photo_quadrat"
         verbose_name = _("benthic photo quadrat transect observation")
-        unique_together = (
-            "benthic_photo_quadrat_transect",
-            "quadrat_number",
-            "attribute",
-            "growth_form",
-        )
         ordering = ["created_on"]
+        constraints = [
+            models.UniqueConstraint(
+                fields=[
+                    "benthic_photo_quadrat_transect",
+                    "quadrat_number",
+                    "attribute",
+                    "growth_form",
+                ],
+                name="unique_obsbenthicphotoquadrat_pqt_quadrat_attribute_growthform",
+            )
+        ]
 
     def __str__(self):
         return str(self.quadrat_number)

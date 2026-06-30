@@ -138,6 +138,7 @@ class FishAttributeGroupingAdmin(FishAttributeAdmin):
                 "biomass_constant_a",
                 "biomass_constant_b",
                 "biomass_constant_c",
+                "max_length",
                 "region_list",
             )
         return ()
