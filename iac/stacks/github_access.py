@@ -34,13 +34,9 @@ class GithubAccessStack(Stack):
             iam.ManagedPolicy.from_aws_managed_policy_name("AdministratorAccess")
         )
 
-        self.classifier_release_role = self._create_classifier_release_role(
-            externalOidcProvider
-        )
+        self.classifier_release_role = self._create_classifier_release_role(externalOidcProvider)
 
-    def _create_classifier_release_role(
-        self, oidc_provider: iam.OpenIdConnectProvider
-    ) -> iam.Role:
+    def _create_classifier_release_role(self, oidc_provider: iam.OpenIdConnectProvider) -> iam.Role:
         """Least-privilege role assumed by the mermaid-classifier release
         workflow (Issue #50) via GitHub OIDC.
 

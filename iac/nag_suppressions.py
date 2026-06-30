@@ -509,7 +509,9 @@ def suppress_api(stack: Stack) -> None:
         # Task definition resource (ECS2 - env vars)
         _suppress_by_path(stack, f"{td}/Resource", [_API_ECS2_SUPPRESSION])
         # Execution role default policy (IAM5 - ECR/Secrets wildcard)
-        _suppress_by_path(stack, f"{td}/ExecutionRole/DefaultPolicy/Resource", [_API_EXEC_ROLE_IAM5])
+        _suppress_by_path(
+            stack, f"{td}/ExecutionRole/DefaultPolicy/Resource", [_API_EXEC_ROLE_IAM5]
+        )
 
     # Scheduled backup events role
     _suppress_by_path(

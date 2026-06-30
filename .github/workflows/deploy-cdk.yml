@@ -17,32 +17,44 @@ concurrency:
   group: api-deployment-${{ github.ref }}
 
 permissions:
-  id-token: write # This is required for requesting the JWT
   contents: read  # This is required for actions/checkout
 
 jobs:
   call-test:
     uses: ./.github/workflows/_test.yml
-    secrets: inherit
+    # Pass only the secrets _test.yml declares, instead of inheriting all.
+    secrets:
+      TEST_SECRET_KEY: ${{ secrets.TEST_SECRET_KEY }}
+      TEST_POSTGRES_PASSWORD: ${{ secrets.TEST_POSTGRES_PASSWORD }}
+      TEST_MERMAID_API_SIGNING_SECRET: ${{ secrets.TEST_MERMAID_API_SIGNING_SECRET }}
+      TEST_AWS_SECRET_ACCESS_KEY: ${{ secrets.TEST_AWS_SECRET_ACCESS_KEY }}
 
   deploy:
     needs: [call-test]
     runs-on: ubuntu-latest
+    permissions:
+      id-token: write  # required for requesting the OIDC JWT (AWS role assume)
+      contents: read   # required for actions/checkout
     # Tag pushes deploy prod; dev-branch pushes deploy dev. Selecting the matching
     # GitHub Environment resolves that env's SLACK_CHANNEL_ID / SLACK_WORKSPACE_ID
     # (and any other environment-scoped secrets); repo-level secrets still resolve.
     environment: ${{ startsWith(github.ref, 'refs/tags') && 'prod' || 'dev' }}
     steps:
-      - uses: actions/setup-node@v6.2.0
+      - name: Harden the runner (Audit all outbound calls)
+        uses: step-security/harden-runner@9af89fc71515a100421586dfdb3dc9c984fbf411  # v2.19.4
+        with:
+          egress-policy: audit
+
+      - uses: actions/setup-node@6044e13b5dc448c55e2357c09f80417699197238  # v6.2.0  # zizmor: ignore[cache-poisoning] no `cache:` input set, so no cache is restored
         with:
           node-version: '^22.11.0'
 
       - name: Setup Python
-        uses: actions/setup-python@v6.2.0
+        uses: actions/setup-python@a309ff8b426b58ec0e2a45f0f869d46889d02405  # v6.2.0
         with:
           python-version: "^3.12.0"
 
-      - uses: actions/checkout@v6.0.2
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd  # v6.0.2
         with:
           persist-credentials: false
 
@@ -51,7 +63,7 @@ jobs:
           iac/install_cdk.sh
 
       - name: Configure AWS credentials
-        uses: aws-actions/configure-aws-credentials@v5.1.1
+        uses: aws-actions/configure-aws-credentials@61815dcd50bd041e203e49132bacad1fd04d2708  # v5.1.1
         env:
           CDK_DEFAULT_ACCOUNT: ${{ secrets.CDK_DEFAULT_ACCOUNT }}
           DEPLOY_AWS_ROLE: ${{ secrets.DEPLOY_AWS_ROLE }}
@@ -93,8 +105,9 @@ jobs:
           CDK_DEFAULT_REGION: us-east-1
           SLACK_CHANNEL_ID: ${{ secrets.SLACK_CHANNEL_ID }}
           SLACK_WORKSPACE_ID: ${{ secrets.SLACK_WORKSPACE_ID }}
+          REF_NAME: ${{ github.ref_name }}
         run: |
-          echo "${{ github.ref_name }}" > src/VERSION.txt && \
+          echo "$REF_NAME" > src/VERSION.txt && \
           cat src/VERSION.txt && \
           cd iac && cdk deploy \
             --require-approval never \
