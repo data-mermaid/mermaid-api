@@ -14,10 +14,12 @@ class SummaryCacheQueue(models.Model):
 
     class Meta:
         db_table = "summary_cache_queue"
-        unique_together = (
-            "project_id",
-            "processing",
-        )
+        constraints = [
+            models.UniqueConstraint(
+                fields=["project_id", "processing"],
+                name="unique_summarycachequeue_project_processing",
+            )
+        ]
 
 
 class BaseSummaryModel(models.Model):
