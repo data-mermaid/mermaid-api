@@ -159,6 +159,19 @@ def apply_changes(request, serializer, record, force=False):
     if s.is_valid() is False:
         return 400, "Validation Error", s.errors
 
-    s.save()
+    with transaction.atomic():
+        if (
+            instance is not None
+            and isinstance(instance, ProjectProfile)
+            and instance.role == ProjectProfile.ADMIN
+            and record.get("role") != ProjectProfile.ADMIN
+            and not ProjectProfile.objects.select_for_update()
+            .filter(project=instance.project, role=ProjectProfile.ADMIN)
+            .exclude(pk=instance.pk)
+            .exists()
+        ):
+            return 400, "Last admin cannot be removed", None
+
+        s.save()
 
     return status_code, "", None
