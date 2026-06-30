@@ -10,14 +10,7 @@ from django.utils.translation import gettext as _
 
 from ...utils import create_timestamp, expired_timestamp
 from ..base import BaseAttributeModel, BaseChoiceModel, BaseModel, JSONMixin
-from ..core import (
-    FISHBELT_PROTOCOL,
-    INCLUDE_OBS_TEXT,
-    Observer,
-    Region,
-    Transect,
-    TransectMethod,
-)
+from ..core import FISHBELT_PROTOCOL, Observer, Region, Transect, TransectMethod
 
 
 class BeltTransectWidth(BaseChoiceModel):
@@ -669,7 +662,6 @@ class ObsBeltFish(BaseModel, JSONMixin):
         verbose_name=_("size (cm)"),
     )
     count = models.PositiveIntegerField(default=1)
-    include = models.BooleanField(default=True, verbose_name=INCLUDE_OBS_TEXT)
     notes = models.TextField(blank=True)
 
     _hide_fish_in_repr = False

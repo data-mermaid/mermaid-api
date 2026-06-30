@@ -24,8 +24,6 @@ from .base import (
     Profile,
 )
 
-INCLUDE_OBS_TEXT = _("include observation in aggregations/analyses?")
-
 logger = logging.getLogger(__name__)
 
 BENTHICLIT_PROTOCOL = "benthiclit"

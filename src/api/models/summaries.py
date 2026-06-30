@@ -120,7 +120,6 @@ class BeltInvertObsModel(BaseObsModel):
     size = models.DecimalField(max_digits=5, decimal_places=1, null=True, blank=True)
     density_indha = models.DecimalField(max_digits=11, decimal_places=2, null=True, blank=True)
     observation_notes = models.TextField(null=True, blank=True)
-    include = models.BooleanField(null=True, blank=True)
     data_policy_macroinvertebrate = models.CharField(max_length=50)
     pseudosu_id = models.UUIDField()
 

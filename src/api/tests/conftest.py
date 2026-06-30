@@ -12,6 +12,7 @@ from .fixtures import *  # noqa: F403
 
 @pytest.fixture(scope="session")
 def django_db_setup(django_db_setup, django_db_blocker):
+    settings.TESTING = True
     # https://docs.djangoproject.com/en/4.1/ref/settings/#std-setting-DATABASE-TEST
     db_name = settings.DATABASES["default"]["NAME"]
     with django_db_blocker.unblock():
