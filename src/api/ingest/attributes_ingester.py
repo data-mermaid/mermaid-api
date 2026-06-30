@@ -111,6 +111,7 @@ class BenthicIngester(BaseAttributeIngester):
         "level3": "level3",
         "level4": "level4",
         "regions": "regions",
+        "notes": "notes",
     }
 
     def __init__(self, file_obj):
@@ -120,10 +121,25 @@ class BenthicIngester(BaseAttributeIngester):
     def _create_benthic_lookups(self):
         return dict()
 
+    def _update_benthic_attribute(self, attribute, region_names, notes, label):
+        updates = []
+        has_region_edits, region_updates = self._update_regions(attribute, region_names)
+        if has_region_edits:
+            updates.append(region_updates)
+        if notes is not None and notes != attribute.notes:
+            attribute.notes = notes
+            attribute.save()
+            updates.append(f"notes -> {notes!r}")
+        if updates:
+            self.write_log(self.UPDATE_BENTHIC, f"{label}: {', '.join(updates)}")
+        else:
+            self.write_log(self.EXISTING_BENTHIC, label)
+
     def _ingest_benthic(self, row):
         benthic_row = self._map_fields(row, self.benthic_field_map, self.benthic_lookups)
 
         region_names = benthic_row.get("regions")
+        notes = benthic_row.get("notes")
         level1 = benthic_row.get("level1")
         level2 = benthic_row.get("level2")
         level3 = benthic_row.get("level3")
@@ -134,13 +150,13 @@ class BenthicIngester(BaseAttributeIngester):
 
         try:
             parent1 = BenthicAttribute.objects.get(name__iexact=level1)
-            has_region_edits, region_updates = self._update_regions(parent1, region_names)
-            if has_region_edits:
-                self.write_log(self.UPDATE_BENTHIC, f"Level 1 - {parent1.name}: {region_updates}")
-            else:
-                self.write_log(self.EXISTING_BENTHIC, f"Level 1 - {parent1.name}")
+            self._update_benthic_attribute(
+                parent1, region_names, notes, f"Level 1 - {parent1.name}"
+            )
         except BenthicAttribute.DoesNotExist:
-            parent1 = BenthicAttribute.objects.create(name=level1, status=self.approval_status)
+            parent1 = BenthicAttribute.objects.create(
+                name=level1, notes=notes, status=self.approval_status
+            )
             self._update_regions(parent1, region_names)
             self.write_log(self.NEW_BENTHIC, f"Level 1 - {parent1.name}")
 
@@ -149,20 +165,12 @@ class BenthicIngester(BaseAttributeIngester):
 
         try:
             parent2 = BenthicAttribute.objects.get(name__iexact=level2, parent=parent1)
-            has_region_edits, region_updates = self._update_regions(parent2, region_names)
-            if has_region_edits:
-                self.write_log(
-                    self.UPDATE_BENTHIC,
-                    f"Level 1 - {parent1.name} - Level 2 - {parent2.name}: {region_updates}",
-                )
-            else:
-                self.write_log(
-                    self.EXISTING_BENTHIC,
-                    f"Level 1 - {parent1.name} - Level 2 - {parent2.name}",
-                )
+            self._update_benthic_attribute(
+                parent2, region_names, notes, f"Level 1 - {parent1.name} - Level 2 - {parent2.name}"
+            )
         except BenthicAttribute.DoesNotExist:
             parent2 = BenthicAttribute.objects.create(
-                name=level2, parent=parent1, status=self.approval_status
+                name=level2, parent=parent1, notes=notes, status=self.approval_status
             )
             self._update_regions(parent2, region_names)
             self.write_log(
@@ -175,20 +183,15 @@ class BenthicIngester(BaseAttributeIngester):
 
         try:
             parent3 = BenthicAttribute.objects.get(name__iexact=level3, parent=parent2)
-            has_region_edits, region_updates = self._update_regions(parent3, region_names)
-            if has_region_edits:
-                self.write_log(
-                    self.UPDATE_BENTHIC,
-                    f"Level 1 - {parent1.name} - Level 2 - {parent2.name} - Level 3 - {parent3.name}: {region_updates}",
-                )
-            else:
-                self.write_log(
-                    self.EXISTING_BENTHIC,
-                    f"Level 1 - {parent1.name} - Level 2 - {parent2.name} - Level 3 - {parent3.name}",
-                )
+            self._update_benthic_attribute(
+                parent3,
+                region_names,
+                notes,
+                f"Level 1 - {parent1.name} - Level 2 - {parent2.name} - Level 3 - {parent3.name}",
+            )
         except BenthicAttribute.DoesNotExist:
             parent3 = BenthicAttribute.objects.create(
-                name=level3, parent=parent2, status=self.approval_status
+                name=level3, parent=parent2, notes=notes, status=self.approval_status
             )
             self._update_regions(parent3, region_names)
             self.write_log(
@@ -201,20 +204,15 @@ class BenthicIngester(BaseAttributeIngester):
 
         try:
             parent4 = BenthicAttribute.objects.get(name__iexact=level4, parent=parent3)
-            has_region_edits, region_updates = self._update_regions(parent4, region_names)
-            if has_region_edits:
-                self.write_log(
-                    self.UPDATE_BENTHIC,
-                    f"Level 1 - {parent1.name} - Level 2 - {parent2.name} - Level 3 - {parent3.name} - Level 4 - {parent4.name}: {region_updates}",
-                )
-            else:
-                self.write_log(
-                    self.EXISTING_BENTHIC,
-                    f"Level 1 - {parent1.name} - Level 2 - {parent2.name} - Level 3 - {parent3.name} - Level 4 - {parent4.name}",
-                )
+            self._update_benthic_attribute(
+                parent4,
+                region_names,
+                notes,
+                f"Level 1 - {parent1.name} - Level 2 - {parent2.name} - Level 3 - {parent3.name} - Level 4 - {parent4.name}",
+            )
         except BenthicAttribute.DoesNotExist:
             parent4 = BenthicAttribute.objects.create(
-                name=level4, parent=parent3, status=self.approval_status
+                name=level4, parent=parent3, notes=notes, status=self.approval_status
             )
             self._update_regions(parent3, region_names)
             self.write_log(
