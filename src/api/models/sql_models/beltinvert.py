@@ -140,32 +140,35 @@ class BeltInvertSUSQLModel(BaseSUSQLModel):
             {BeltInvertObsSQLModel.sql}
         ),
         goi_weights_by_family AS MATERIALIZED (
-            SELECT ig.family_id, goi.name AS goi_name,
-                COUNT(ig.invertattribute_ptr_id)::float /
-                SUM(COUNT(ig.invertattribute_ptr_id)) OVER (PARTITION BY ig.family_id) AS weight
-            FROM invert_genus ig
-            JOIN invert_group_of_interest goi ON ig.group_of_interest_id = goi.invertattribute_ptr_id
-            GROUP BY ig.family_id, ig.group_of_interest_id, goi.name
+            SELECT family_id, goi_name,
+                1.0 / COUNT(*) OVER (PARTITION BY family_id) AS weight
+            FROM (
+                SELECT DISTINCT ig.family_id, goi.name AS goi_name
+                FROM invert_genus ig
+                JOIN invert_group_of_interest goi ON ig.group_of_interest_id = goi.invertattribute_ptr_id
+            ) distinct_family_gois
         ),
         goi_weights_by_order AS MATERIALIZED (
-            SELECT io.invertattribute_ptr_id AS order_id, goi.name AS goi_name,
-                COUNT(ig.invertattribute_ptr_id)::float /
-                SUM(COUNT(ig.invertattribute_ptr_id)) OVER (PARTITION BY io.invertattribute_ptr_id) AS weight
-            FROM invert_genus ig
-            JOIN invert_family f ON ig.family_id = f.invertattribute_ptr_id
-            JOIN invert_order io ON f.order_id = io.invertattribute_ptr_id
-            JOIN invert_group_of_interest goi ON ig.group_of_interest_id = goi.invertattribute_ptr_id
-            GROUP BY io.invertattribute_ptr_id, ig.group_of_interest_id, goi.name
+            SELECT order_id, goi_name,
+                1.0 / COUNT(*) OVER (PARTITION BY order_id) AS weight
+            FROM (
+                SELECT DISTINCT io.invertattribute_ptr_id AS order_id, goi.name AS goi_name
+                FROM invert_genus ig
+                JOIN invert_family f ON ig.family_id = f.invertattribute_ptr_id
+                JOIN invert_order io ON f.order_id = io.invertattribute_ptr_id
+                JOIN invert_group_of_interest goi ON ig.group_of_interest_id = goi.invertattribute_ptr_id
+            ) distinct_order_gois
         ),
         goi_weights_by_class AS MATERIALIZED (
-            SELECT io.invert_class_id, goi.name AS goi_name,
-                COUNT(ig.invertattribute_ptr_id)::float /
-                SUM(COUNT(ig.invertattribute_ptr_id)) OVER (PARTITION BY io.invert_class_id) AS weight
-            FROM invert_genus ig
-            JOIN invert_family f ON ig.family_id = f.invertattribute_ptr_id
-            JOIN invert_order io ON f.order_id = io.invertattribute_ptr_id
-            JOIN invert_group_of_interest goi ON ig.group_of_interest_id = goi.invertattribute_ptr_id
-            GROUP BY io.invert_class_id, ig.group_of_interest_id, goi.name
+            SELECT invert_class_id, goi_name,
+                1.0 / COUNT(*) OVER (PARTITION BY invert_class_id) AS weight
+            FROM (
+                SELECT DISTINCT io.invert_class_id, goi.name AS goi_name
+                FROM invert_genus ig
+                JOIN invert_family f ON ig.family_id = f.invertattribute_ptr_id
+                JOIN invert_order io ON f.order_id = io.invertattribute_ptr_id
+                JOIN invert_group_of_interest goi ON ig.group_of_interest_id = goi.invertattribute_ptr_id
+            ) distinct_class_gois
         ),
         obs_goi AS (
             SELECT o.pseudosu_id, goi.name AS goi_name, o.count::float AS attributed_count
@@ -183,6 +186,10 @@ class BeltInvertSUSQLModel(BaseSUSQLModel):
             JOIN invert_genus g ON o.invert_attribute_id = g.invertattribute_ptr_id
             JOIN invert_group_of_interest goi ON g.group_of_interest_id = goi.invertattribute_ptr_id
             UNION ALL
+            -- NOTE: If a family/order/class taxon has no genera with GoI assignments in the
+            -- taxonomy DB, the JOIN below produces no rows and the observation's count is
+            -- silently absent from density_indha_group_interest while still counted in
+            -- total_abundance and density_indha, making those fields inconsistent.
             SELECT o.pseudosu_id, w.goi_name, o.count * w.weight
             FROM belt_invert_obs o
             JOIN invert_family fam ON o.invert_attribute_id = fam.invertattribute_ptr_id
