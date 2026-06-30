@@ -121,7 +121,10 @@ class InvertSizeValidator(BaseValidator):
                 min_ok = invert_size_bin.min_val is None or invert_size_bin.min_val <= size
                 max_ok = invert_size_bin.max_val is None or size <= invert_size_bin.max_val
                 if min_ok and max_ok:
-                    if invert_size_bin.min_val is not None:
+                    # For bounded bins, use min_val as a conservative lower bound.
+                    # For open-ended bins (no max_val), the entered value may exceed the
+                    # bin floor by an arbitrary amount, so keep the actual size.
+                    if invert_size_bin.min_val is not None and invert_size_bin.max_val is not None:
                         comparison_size = invert_size_bin.min_val
                     break
 
