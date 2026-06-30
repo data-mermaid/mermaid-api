@@ -93,8 +93,13 @@ class LabelMapping(BaseModel):
     provider_label = models.CharField(max_length=255, blank=True)
 
     class Meta:
-        unique_together = ("benthic_attribute", "growth_form", "provider", "provider_id")
         db_table = "class_label_mapping"
+        constraints = [
+            models.UniqueConstraint(
+                fields=["benthic_attribute", "growth_form", "provider", "provider_id"],
+                name="unique_labelmapping_attribute_growthform_provider",
+            )
+        ]
 
     def __str__(self):
         label = self.benthic_attribute.name if self.benthic_attribute else "(unmapped)"
