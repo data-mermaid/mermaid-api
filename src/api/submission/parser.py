@@ -135,7 +135,6 @@ def get_obsbeltinvert_data(collect_record, belt_invert_id=None):
                 invert_attribute=observation.get("invert_attribute"),
                 count=observation.get("count"),
                 size=_cast_decimal_to_str(observation.get("size")),
-                include=observation.get("include", True),
                 notes=observation.get("notes", ""),
             )
         )
