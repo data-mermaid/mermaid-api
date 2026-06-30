@@ -1,3 +1,4 @@
+from django.conf import settings
 from drf_recaptcha.fields import ReCaptchaV3Field
 from rest_framework import serializers, status
 from rest_framework.decorators import api_view, authentication_classes, permission_classes
@@ -24,7 +25,7 @@ class ContactProjectAdminsSerializer(ContactSerializer):
     project = serializers.UUIDField()
 
 
-def _process_contact_request(serializer, email_function):
+def _process_contact_request(serializer, email_function, source=None):
     serializer.is_valid(raise_exception=True)
     project_id = serializer.validated_data.get("project")
     project = None
@@ -44,6 +45,8 @@ def _process_contact_request(serializer, email_function):
         "message": serializer.validated_data.get("message"),
         "project": project,
     }
+    if source is not None:
+        kwargs["source"] = source
     email_function(**kwargs)
 
     return Response(status=status.HTTP_200_OK)
@@ -54,7 +57,9 @@ def _process_contact_request(serializer, email_function):
 @permission_classes((AllowAny,))
 def contact_mermaid(request):
     serializer = ContactMERMAIDSerializer(data=request.data, context={"request": request})
-    return _process_contact_request(serializer, email_mermaid_admins)
+    return _process_contact_request(
+        serializer, email_mermaid_admins, source=settings.DEFAULT_DOMAIN_MARKETING
+    )
 
 
 @api_view(["POST"])
