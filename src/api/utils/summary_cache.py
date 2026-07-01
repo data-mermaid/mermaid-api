@@ -209,6 +209,7 @@ def _update_project_summary_sample_events(
     if skip_test_project and Project.objects.filter(pk=project_id, status=Project.TEST).exists():
         proj_summary_se_model.objects.filter(project_id=project_id).delete()
         return
+    proj_summary_se_model.objects.filter(project_id=project_id).delete()
     project = Project.objects.get_or_none(pk=project_id)
     if project is not None:
         qs = SummarySampleEventSQLModel.objects.all().sql_table(
@@ -219,7 +220,6 @@ def _update_project_summary_sample_events(
         for record in records:
             record["suggested_citation"] = suggested_citation
 
-        proj_summary_se_model.objects.filter(project_id=project_id).delete()
         tags = [{"id": str(t.pk), "name": t.name} for t in project.tags.all()]
         admins = project.profiles.filter(role=ProjectProfile.ADMIN)
         project_admins = [{"id": str(pa.pk), "name": pa.profile_name} for pa in admins]
