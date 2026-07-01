@@ -250,6 +250,7 @@ def write_benthic(wb, regions):
         ]
         + life_history_names
         + region_names
+        + ["Notes"]
     )
 
     data = [
@@ -261,6 +262,7 @@ def write_benthic(wb, regions):
                 ba.origin and ba.origin.name,
                 *create_m2m_row(life_histories, ba.life_histories.values_list("id", flat=True)),
                 *create_m2m_row(regions, ba.regions.values_list("id", flat=True)),
+                ba.notes,
             ]
             for ba in BenthicAttribute.objects.filter(status=SUPERUSER_APPROVED).order_by("name")
         ],
