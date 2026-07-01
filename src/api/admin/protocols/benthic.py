@@ -156,7 +156,7 @@ class BenthicAttributeAdmin(AttributeAdmin):
         return super().delete_view(request, object_id, extra_context)
 
     list_display = ("name", "fk_link", "life_history_list", "region_list")
-    exportable_fields = ("name", "parent", "life_history_list", "region_list")
+    exportable_fields = ("name", "parent", "life_history_list", "region_list", "notes")
     inlines = [BenthicAttributeGrowthFormLifeHistoryInline, BenthicAttributeInline]
     search_fields = ["name"]
     list_filter = ("status",)

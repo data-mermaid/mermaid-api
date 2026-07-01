@@ -96,6 +96,7 @@ def write_fish_families(wb, regions):
         "Biomass Constant A",
         "Biomass Constant B",
         "Biomass Constant C",
+        "Max Length (cm)",
     ] + region_names
 
     data = [
@@ -106,6 +107,7 @@ def write_fish_families(wb, regions):
                 fish_family.biomass_constant_a,
                 fish_family.biomass_constant_b,
                 fish_family.biomass_constant_c,
+                fish_family.max_length,
                 *create_m2m_row(
                     regions, [str(r) for r in fish_family.regions] if fish_family.regions else None
                 ),
@@ -125,6 +127,7 @@ def write_fish_genera(wb, regions):
         "Biomass Constant A",
         "Biomass Constant B",
         "Biomass Constant C",
+        "Max Length (cm)",
     ] + region_names
 
     data = [
@@ -136,6 +139,7 @@ def write_fish_genera(wb, regions):
                 fish_genus.biomass_constant_a,
                 fish_genus.biomass_constant_b,
                 fish_genus.biomass_constant_c,
+                fish_genus.max_length,
                 *create_m2m_row(
                     regions, [str(r) for r in fish_genus.regions] if fish_genus.regions else None
                 ),
@@ -150,21 +154,25 @@ def write_fish_genera(wb, regions):
 
 def write_fish_species(wb, regions):
     region_names = list(regions.values())
-    COLUMN_NAMES = [
-        "Family",
-        "Name",
-        "Biomass Constant A",
-        "Biomass Constant B",
-        "Biomass Constant C",
-        "Trophic Group",
-        "Functional Group",
-        "Max Length (cm)",
-        "Max Type",
-        "Group Size",
-        "Trophic Level",
-        "Vulnerability",
-        "Climate Score",
-    ] + region_names
+    COLUMN_NAMES = (
+        [
+            "Family",
+            "Name",
+            "Biomass Constant A",
+            "Biomass Constant B",
+            "Biomass Constant C",
+            "Trophic Group",
+            "Functional Group",
+            "Max Length (cm)",
+            "Max Type",
+            "Group Size",
+            "Trophic Level",
+            "Vulnerability",
+            "Climate Score",
+        ]
+        + region_names
+        + ["Notes"]
+    )
 
     data = [
         COLUMN_NAMES,
@@ -184,6 +192,7 @@ def write_fish_species(wb, regions):
                 fish_species.vulnerability,
                 fish_species.climate_score,
                 *create_m2m_row(regions, fish_species.regions.values_list("id", flat=True)),
+                fish_species.notes,
             ]
             for fish_species in FishSpecies.objects.select_related(
                 "genus",
@@ -241,6 +250,7 @@ def write_benthic(wb, regions):
         ]
         + life_history_names
         + region_names
+        + ["Notes"]
     )
 
     data = [
@@ -252,6 +262,7 @@ def write_benthic(wb, regions):
                 ba.origin and ba.origin.name,
                 *create_m2m_row(life_histories, ba.life_histories.values_list("id", flat=True)),
                 *create_m2m_row(regions, ba.regions.values_list("id", flat=True)),
+                ba.notes,
             ]
             for ba in BenthicAttribute.objects.filter(status=SUPERUSER_APPROVED).order_by("name")
         ],
@@ -271,6 +282,7 @@ def write_invert_species(wb):
         "Measurement Type",
         "Size Source",
         "Size Source URL",
+        "Notes",
     ]
 
     data = [
@@ -287,6 +299,7 @@ def write_invert_species(wb):
                 sp.max_length_type,
                 sp.max_length_source,
                 sp.max_length_url,
+                sp.notes,
             ]
             for sp in InvertSpecies.objects.select_related(
                 "genus",

@@ -121,11 +121,15 @@ class FishGroupSizeAdmin(BaseAdmin):
 
 class FishAttributeGroupingAdmin(FishAttributeAdmin):
     def region_list(self, obj):
-        if not hasattr(obj, "regions"):
-            return []
-        region_ids = obj.regions.values_list("pk", flat=True)
+        regions = getattr(obj, "regions", None)
+        if hasattr(regions, "all"):
+            # .order_by() bypasses the prefetch cache; sorted() preserves it
+            return ", ".join(r.name for r in sorted(regions.all(), key=lambda r: r.name))
+        # Cached list of UUIDs (FishFamily/FishGenus computed property)
+        if not regions:
+            return ""
         return ", ".join(
-            [r.name for r in Region.objects.filter(pk__in=region_ids).order_by("name")]
+            r.name for r in sorted(Region.objects.filter(pk__in=regions), key=lambda r: r.name)
         )
 
     def get_readonly_fields(self, request, obj=None):
@@ -134,6 +138,7 @@ class FishAttributeGroupingAdmin(FishAttributeAdmin):
                 "biomass_constant_a",
                 "biomass_constant_b",
                 "biomass_constant_c",
+                "max_length",
                 "region_list",
             )
         return ()
@@ -175,6 +180,9 @@ class FishGroupingAdmin(FishAttributeGroupingAdmin):
         if obj:
             return ("biomass_constant_a", "biomass_constant_b", "biomass_constant_c")
         return ()
+
+    def get_queryset(self, request):
+        return super().get_queryset(request).prefetch_related("regions")
 
     def get_formsets_with_inlines(self, request, obj=None):
         fish_attributes = FishAttributeView.objects.all().order_by("name")
@@ -222,6 +230,9 @@ class FishGenusAdmin(FishAttributeGroupingAdmin):
     search_fields = ["name", "family__name"]
     exportable_fields = ("name", "family")
 
+    def get_queryset(self, request):
+        return super().get_queryset(request).select_related("family")
+
     def fk_link(self, obj):
         link = reverse("admin:api_fishfamily_change", args=[obj.family.pk])
         return format_html('<a href="{}">{}</a>', link, obj.family.name)
@@ -264,7 +275,16 @@ class FishSpeciesAdmin(FishAttributeAdmin):
         "trophic_level",
         "vulnerability",
         "region_list",
+        "notes",
     )
+
+    def get_queryset(self, request):
+        return (
+            super()
+            .get_queryset(request)
+            .select_related("genus__family")
+            .prefetch_related("regions")
+        )
 
     def fk_link(self, obj):
         link = reverse("admin:api_fishgenus_change", args=[obj.genus.pk])
@@ -281,7 +301,7 @@ class FishSpeciesAdmin(FishAttributeAdmin):
     fish_family.short_description = "Family"
 
     def region_list(self, obj):
-        return ", ".join([r.name for r in obj.regions.all()])
+        return ", ".join(r.name for r in sorted(obj.regions.all(), key=lambda r: r.name))
 
 
 class ObsTransectBeltFishInline(ObservationInline):

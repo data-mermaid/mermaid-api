@@ -93,13 +93,14 @@ def mermaid_email(subject, template, to, context=None, from_email=None, reply_to
         )
 
 
-def email_mermaid_admins(**kwargs):
+def email_mermaid_admins(source=None, **kwargs):
     template = "emails/contact_mermaid_admins.html"
     from_email = kwargs["from_email"]
     context = {
         "message": kwargs["message"],
         "name": kwargs["name"],
         "from_email": from_email,
+        "source": source,
     }
 
     mermaid_email(
@@ -127,7 +128,7 @@ def email_project_admins(**kwargs):
     ).select_related("profile")
     project_admin_emails = [p.profile.email for p in project_admins]
 
-    if project_admins.count() > 0:
+    if project_admin_emails:
         mermaid_email(
             kwargs["subject"],
             template,

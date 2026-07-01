@@ -11,7 +11,9 @@ from api.models import (
 
 @pytest.fixture
 def benthic_attribute_1(db, region1, region2):
-    ba = BenthicAttribute.objects.create(status=SUPERUSER_APPROVED, name="Macroalgae")
+    ba = BenthicAttribute.objects.create(
+        status=SUPERUSER_APPROVED, name="Macroalgae", notes="Test benthic attribute notes"
+    )
     ba.regions.add(region1)
     ba.regions.add(region2)
 
