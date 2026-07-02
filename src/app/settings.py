@@ -183,6 +183,27 @@ REST_FRAMEWORK = {
     "DEFAULT_SCHEMA_CLASS": "rest_framework.schemas.openapi.AutoSchema",
 }
 
+# Database SSL. RDS enforces SSL (rds.force_ssl=1) in dev/prod.
+# Precedence for the mode:
+#   1. explicit DB_SSLMODE env var, else
+#   2. "verify-full" when a CA bundle (DB_SSLROOTCERT) is provided — encrypts AND
+#      verifies the server identity against the CA (MITM protection), else
+#   3. "require" in dev/prod (encrypt only), else
+#   4. "prefer" locally/CI (no SSL on those Postgres).
+DB_SSLROOTCERT = os.environ.get("DB_SSLROOTCERT")
+if os.environ.get("DB_SSLMODE"):
+    DB_SSLMODE = os.environ["DB_SSLMODE"]
+elif DB_SSLROOTCERT:
+    DB_SSLMODE = "verify-full"
+elif ENVIRONMENT in ("dev", "prod"):
+    DB_SSLMODE = "require"
+else:
+    DB_SSLMODE = "prefer"
+
+_db_options = {"sslmode": DB_SSLMODE}
+if DB_SSLROOTCERT:
+    _db_options["sslrootcert"] = DB_SSLROOTCERT
+
 DATABASES = {
     "default": {
         "ENGINE": "django.contrib.gis.db.backends.postgis",
@@ -191,6 +212,7 @@ DATABASES = {
         "PASSWORD": os.environ.get("DB_PASSWORD") or "postgres",
         "HOST": os.environ.get("DB_HOST") or "localhost",
         "PORT": os.environ.get("DB_PORT") or "5432",
+        "OPTIONS": _db_options,
         "TEST": {
             "NAME": "test_mermaid",  # explicitly setting default
         },
