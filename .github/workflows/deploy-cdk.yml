@@ -83,6 +83,12 @@ jobs:
             dev-mermaid-api-django \
             dev-mermaid-static-site \
             dev-mermaid-sagemaker
+          # STAGED DEPLOY (mermaid-classifier #53): dev-mermaid-inference is a
+          # container Lambda and cannot deploy until its image exists in ECR.
+          # PR1 deploys the ECR repo (CommonStack) + push role (GithubAccess) only.
+          # PR2 (after the mermaid-inference CI pushes the image): add a trailing
+          # '\' to the dev-mermaid-sagemaker line above and uncomment the line below.
+          #           dev-mermaid-inference
       - name: CDK Deploy PROD
         if: startsWith(github.ref, 'refs/tags')
         env:

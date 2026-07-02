@@ -1,10 +1,11 @@
 from collections import defaultdict
 
 from django.core.exceptions import ObjectDoesNotExist
+from django.db import transaction
 from django.db.models.deletion import ProtectedError
 from django.forms.models import model_to_dict
 
-from api.models import Project, Revision, SampleEvent
+from api.models import Project, ProjectProfile, Revision, SampleEvent
 from api.resources.sampleunitmethods.sample_unit_methods import SampleUnitMethodView
 from api.utils.sample_unit_methods import get_project
 from ...utils.project import delete_project
@@ -93,7 +94,22 @@ def apply_changes(request, serializer, record, force=False):
                 Revision.create_from_instance(instance, deleted=True)
                 return 202, "Project has been flagged for deletion", None
 
-            instance.delete()
+            with transaction.atomic():
+                if isinstance(instance, ProjectProfile) and instance.role == ProjectProfile.ADMIN:
+                    if (
+                        not ProjectProfile.objects.select_for_update()
+                        .filter(project=instance.project, role=ProjectProfile.ADMIN)
+                        .exclude(pk=instance.pk)
+                        .exists()
+                    ):
+                        return 400, "Last admin cannot be removed", None
+
+                if hasattr(instance, "updated_by_id"):
+                    try:
+                        instance.updated_by = request.user.profile
+                    except AttributeError:
+                        pass
+                instance.delete()
 
         except ProtectedError as err:
             protected_objects = defaultdict(list)
@@ -143,6 +159,19 @@ def apply_changes(request, serializer, record, force=False):
     if s.is_valid() is False:
         return 400, "Validation Error", s.errors
 
-    s.save()
+    with transaction.atomic():
+        if (
+            instance is not None
+            and isinstance(instance, ProjectProfile)
+            and instance.role == ProjectProfile.ADMIN
+            and s.validated_data.get("role", instance.role) != ProjectProfile.ADMIN
+            and not ProjectProfile.objects.select_for_update()
+            .filter(project=instance.project, role=ProjectProfile.ADMIN)
+            .exclude(pk=instance.pk)
+            .exists()
+        ):
+            return 400, "Last admin cannot be removed", None
+
+        s.save()
 
     return status_code, "", None

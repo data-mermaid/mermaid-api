@@ -245,12 +245,12 @@ def test_belt_invert_protocol_validation_ok(valid_belt_invert_collect_record, pr
     assert overall_status == OK
 
 
-def test_belt_invert_all_excluded_warn(
-    valid_belt_invert_collect_record, profile1_request, project1
+def test_belt_invert_size_exceeds_max_warn(
+    valid_belt_invert_collect_record, profile1_request, invert_species_1
 ):
     data = valid_belt_invert_collect_record.data
-    for obs in data["obs_belt_inverts"]:
-        obs["include"] = False
+    # invert_species_1 has max_length=8; threshold is 8 * 1.5 = 12; set a size above it
+    data["obs_belt_inverts"][0]["size"] = 50
     valid_belt_invert_collect_record.data = data
     valid_belt_invert_collect_record.save()
 
@@ -262,15 +262,23 @@ def test_belt_invert_all_excluded_warn(
     )
     results = runner.to_dict()["results"]
     assert overall_status == WARN
-    assert _get_result_status(results["$record"], "invert_all_obs_excluded_validator") == WARN
+    obs_results = results["data"]["obs_belt_inverts"]
+    assert _get_result_status(obs_results[0], "invert_size_validator") == WARN
 
 
-def test_belt_invert_size_exceeds_max_warn(
-    valid_belt_invert_collect_record, profile1_request, invert_species_1
+def test_belt_invert_size_exceeds_max_warn_with_size_bin(
+    valid_belt_invert_collect_record, profile1_request, invert_species_1, invert_size_bin_5cm
 ):
+    # Regression: user enters a large raw size (e.g. 1000) while the transect uses a
+    # 5cm size bin. The value 1000 matches the open-ended "50+" bin (min_val=50,
+    # max_val=None). Previously the validator substituted min_val (50) for the actual
+    # entry (1000), so 50 < threshold suppressed the warning even though 1000 >> threshold.
+    invert_species_1.max_length = 60
+    invert_species_1.save()
+
     data = valid_belt_invert_collect_record.data
-    # invert_species_1 has max_length=8; threshold is 8 * 1.5 = 12; set a size above it
-    data["obs_belt_inverts"][0]["size"] = 50
+    data["beltinvert_transect"]["size_bin"] = str(invert_size_bin_5cm.pk)
+    data["obs_belt_inverts"][0]["size"] = 1000
     valid_belt_invert_collect_record.data = data
     valid_belt_invert_collect_record.save()
 
@@ -367,6 +375,31 @@ def test_belt_invert_size_bin_required_error(valid_belt_invert_collect_record, p
         )
         == ERROR
     )
+
+
+def test_belt_invert_partial_size_ok(valid_belt_invert_collect_record, profile1_request):
+    data = valid_belt_invert_collect_record.data
+    data["obs_belt_inverts"][0]["size"] = None
+    valid_belt_invert_collect_record.data = data
+    valid_belt_invert_collect_record.save()
+
+    runner = ValidationRunner(serializer=CollectRecordSerializer)
+    overall_status = runner.validate(
+        valid_belt_invert_collect_record,
+        belt_invert.belt_invert_validations,
+        request=profile1_request,
+    )
+    assert overall_status == OK
+
+
+def test_belt_invert_no_size_no_bin_ok(valid_belt_invert_collect_record_no_size, profile1_request):
+    runner = ValidationRunner(serializer=CollectRecordSerializer)
+    overall_status = runner.validate(
+        valid_belt_invert_collect_record_no_size,
+        belt_invert.belt_invert_validations,
+        request=profile1_request,
+    )
+    assert overall_status == OK
 
 
 def test_belt_invert_duplicate_taxon_error(valid_belt_invert_collect_record, profile1_request):

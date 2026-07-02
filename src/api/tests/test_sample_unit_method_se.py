@@ -89,9 +89,9 @@ def test_beltinvert_se_view_group_of_interest(
     invert_group_of_interest_2,
     update_summary_cache,
 ):
-    # Single pseudo-SU, so the SE average for each GoI equals its SU density:
-    # GoI 1 = 1600.0 (3 direct + half of the 10 family-level obs), GoI 2 = 1000.0
-    # (half of the 10 family-level obs).
+    # Single pseudo-SU, so the SE average equals the SU density. Family has a 2:1 genus
+    # ratio (invert_genus_3 adds a second GoI-1 genus) so these values only hold under
+    # equal-split: GoI 1 = 1600.0 (3 direct + 5 family), GoI 2 = 1000.0 (5 family).
     url = reverse("beltinvertmethod-sampleevent-list", kwargs=dict(project_pk=project1.pk))
     count, data, _ = _call(client, token1, url)
 

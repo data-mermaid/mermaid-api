@@ -1,5 +1,7 @@
 import logging
+import time
 
+from django.conf import settings
 from django.db import connection, transaction
 from django.db.utils import DataError, IntegrityError
 from django.utils import timezone
@@ -301,6 +303,44 @@ def add_project_to_queue(project_id, skip_test_project=False):
 
     except Exception:
         logger.exception(f"Failed to queue summary update for project {project_id}")
+
+
+# The report job uses a 180s SQS visibility timeout. Budget: SUMMARY_CACHE_MAX_WAIT
+# (80s) + report generation/S3/email (~30s typical, ~70s headroom for large projects).
+SUMMARY_CACHE_POLL_INTERVAL = 5  # seconds
+SUMMARY_CACHE_MAX_WAIT = 80  # seconds
+
+
+def wait_for_summary_cache(project_ids):
+    """Block until SummaryCacheQueue entries for project_ids are cleared, or timeout.
+
+    Returns True if the wait timed out (data may be stale), False if all entries cleared.
+
+    Note: there is an inherent TOCTOU race — a submission queued between the final poll
+    returning empty and the caller generating the report will be missed. Callers should
+    re-check the queue immediately before generating to narrow that window.
+    """
+    if settings.TESTING:
+        return False
+
+    deadline = time.monotonic() + SUMMARY_CACHE_MAX_WAIT
+    while True:
+        pending_ids = list(
+            SummaryCacheQueue.objects.filter(project_id__in=project_ids).values_list(
+                "project_id", flat=True
+            )
+        )
+        if not pending_ids:
+            return False
+        if time.monotonic() >= deadline:
+            logger.warning(
+                "Timed out waiting for summary cache to update for projects %s. "
+                "Report may contain stale data.",
+                pending_ids,
+            )
+            return True
+        connection.close()
+        time.sleep(SUMMARY_CACHE_POLL_INTERVAL)
 
 
 @timing
