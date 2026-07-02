@@ -145,7 +145,7 @@ class JWTAuthentication(BaseAuthentication):
                             get_subscriber_hash(profile.email),
                             {
                                 "email_address": profile.email,
-                                "status_if_new": "pending",
+                                "status_if_new": "subscribed",
                                 "merge_fields": merge_fields,
                             },
                         )
