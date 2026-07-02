@@ -170,9 +170,13 @@ class BenthicAttributeAdmin(AttributeAdmin):
         )
 
     def get_formsets_with_inlines(self, request, obj=None):
-        regions = list(Region.objects.values_list("pk", "name"))
-        life_histories = list(BenthicLifeHistory.objects.values_list("pk", "name"))
-        growth_forms = list(GrowthForm.objects.values_list("pk", "name"))
+        regions = []
+        life_histories = []
+        growth_forms = []
+        if obj is not None:
+            regions = list(Region.objects.values_list("pk", "name"))
+            life_histories = list(BenthicLifeHistory.objects.values_list("pk", "name"))
+            growth_forms = list(GrowthForm.objects.values_list("pk", "name"))
 
         for inline in self.get_inline_instances(request, obj):
             if isinstance(inline, BenthicAttributeInline):
