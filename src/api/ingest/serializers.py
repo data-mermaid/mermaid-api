@@ -38,6 +38,8 @@ class CollectRecordCSVListSerializer(ListSerializer):
         return {self.child.get_schemafield(k)[0]: v for k, v in row.items()}
 
     def assign_choices(self, row, choices_sets):
+        # choices_sets values are pre-normalized (see get_choices_sets) so this
+        # only needs to normalize the row value, not rebuild the choices dict.
         for name, field in self.child.fields.items():
             raw_val = field.get_value(row)
             choices = choices_sets.get(name)
@@ -45,7 +47,6 @@ class CollectRecordCSVListSerializer(ListSerializer):
                 continue
             try:
                 val = self._normalize(raw_val)
-                choices = {self._normalize(label): value for label, value in choices.items()}
                 # Fall back to the original (unnormalized) value, not the
                 # lowercased/stripped one, so an unresolved value still shows
                 # the user's actual input if it surfaces in an error message.
@@ -83,13 +84,16 @@ class CollectRecordCSVListSerializer(ListSerializer):
     def _get_reverse_choices(self, field):
         return dict((v, k) for k, v in field.choices.items())
 
+    def _normalize_choices(self, choices):
+        return {self._normalize(label): value for label, value in choices.items()}
+
     def get_choices_sets(self):
         choices = dict()
         for name, field in self.child.fields.items():
             if hasattr(field, "choices"):
-                choices[name] = self._get_reverse_choices(field)
+                choices[name] = self._normalize_choices(self._get_reverse_choices(field))
             elif hasattr(self.child, "project_choices") and name in self.child.project_choices:
-                choices[name] = self.child.project_choices[name]
+                choices[name] = self._normalize_choices(self.child.project_choices[name])
 
         return choices
 
@@ -338,16 +342,19 @@ class CollectRecordCSVSerializer(Serializer):
                 raise ValidationError("{} doesn't exist".format(email))
         return val
 
+    _valid_project_choice_ids = None
+
     def _validate_project_choice(self, choices_key, val, label):
         # assign_choices() resolves a matching name to its id; if it didn't
         # match, val is still the raw name from the CSV. Valid ids are cached
         # on the instance since this runs once per row but project_choices
         # itself is fixed for the lifetime of this (per-request) serializer.
-        cache_attr = "_valid_ids__{}".format(choices_key)
-        valid_ids = getattr(self, cache_attr, None)
+        if self._valid_project_choice_ids is None:
+            self._valid_project_choice_ids = {}
+        valid_ids = self._valid_project_choice_ids.get(choices_key)
         if valid_ids is None:
             valid_ids = set((self.project_choices.get(choices_key) or {}).values())
-            setattr(self, cache_attr, valid_ids)
+            self._valid_project_choice_ids[choices_key] = valid_ids
         if val not in valid_ids:
             raise ValidationError('{} "{}" does not exist in this project'.format(label, val))
         return val
