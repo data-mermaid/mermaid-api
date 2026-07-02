@@ -149,6 +149,13 @@ class GithubAccessStack(Stack):
         # sagemaker-mlflow exposes no resource-level ARNs, so '*' is required;
         # the sagemaker:* MLflow-app actions let the client resolve/auth the
         # mlflow-app tracking ARN. Mirrors the SageMaker launcher role.
+        #
+        # sagemaker:CallMlflowAppApi is the data-plane action that authorizes
+        # REST calls (search_experiments, artifact-URI resolution, ...) against
+        # an mlflow-app resource. The sagemaker-mlflow:* namespace only governs
+        # the older MLflow *tracking servers*, so without CallMlflowAppApi the
+        # SigV4-signed REST calls to an mlflow-app 403 ("Request is not
+        # authorized") even though sagemaker-mlflow:* is granted.
         role.attach_inline_policy(
             iam.Policy(
                 self,
@@ -158,6 +165,7 @@ class GithubAccessStack(Stack):
                         effect=iam.Effect.ALLOW,
                         actions=[
                             "sagemaker-mlflow:*",
+                            "sagemaker:CallMlflowAppApi",
                             "sagemaker:DescribeMlflowApp",
                             "sagemaker:ListMlflowApps",
                             "sagemaker:CreatePresignedMlflowAppUrl",
