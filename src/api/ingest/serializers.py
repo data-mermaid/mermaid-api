@@ -39,14 +39,17 @@ class CollectRecordCSVListSerializer(ListSerializer):
 
     def assign_choices(self, row, choices_sets):
         for name, field in self.child.fields.items():
-            val = field.get_value(row)
+            raw_val = field.get_value(row)
             choices = choices_sets.get(name)
             if choices is None:
                 continue
             try:
-                val = self._lower(val)
-                choices = {label.lower(): value for label, value in choices.items()}
-                row[name] = choices.get(val) or val
+                val = self._normalize(raw_val)
+                choices = {self._normalize(label): value for label, value in choices.items()}
+                # Fall back to the original (unnormalized) value, not the
+                # lowercased/stripped one, so an unresolved value still shows
+                # the user's actual input if it surfaces in an error message.
+                row[name] = choices.get(val, raw_val)
             except (ValueError, TypeError):
                 row[name] = None
 
@@ -72,9 +75,9 @@ class CollectRecordCSVListSerializer(ListSerializer):
         for name in diff_keys:
             del row[name]
 
-    def _lower(self, val):
+    def _normalize(self, val):
         if isinstance(val, str):
-            return val.lower()
+            return val.strip().lower()
         return val
 
     def _get_reverse_choices(self, field):
@@ -334,6 +337,26 @@ class CollectRecordCSVSerializer(Serializer):
             if email.lower() not in project_profiles:
                 raise ValidationError("{} doesn't exist".format(email))
         return val
+
+    def _validate_project_choice(self, choices_key, val, label):
+        # assign_choices() resolves a matching name to its id; if it didn't
+        # match, val is still the raw name from the CSV. Valid ids are cached
+        # on the instance since this runs once per row but project_choices
+        # itself is fixed for the lifetime of this (per-request) serializer.
+        cache_attr = "_valid_ids__{}".format(choices_key)
+        valid_ids = getattr(self, cache_attr, None)
+        if valid_ids is None:
+            valid_ids = set((self.project_choices.get(choices_key) or {}).values())
+            setattr(self, cache_attr, valid_ids)
+        if val not in valid_ids:
+            raise ValidationError('{} "{}" does not exist in this project'.format(label, val))
+        return val
+
+    def validate_data__sample_event__site(self, val):
+        return self._validate_project_choice("data__sample_event__site", val, "Site")
+
+    def validate_data__sample_event__management(self, val):
+        return self._validate_project_choice("data__sample_event__management", val, "Management")
 
     def validate(self, data):
         # Validate common Transect level fields
