@@ -215,12 +215,15 @@ class ApiStack(Stack):
             "OTEL_PYTHON_ID_GENERATOR": "xray",
         }
 
-        # build image asset to be shared with API and Backup Task
+        # Shared image asset used by ALL ECS task definitions:
+        # API, ScheduledBackupTask, SummaryCacheTask, QueueWorker General,
+        # and QueueWorker ImageProcess. Changing `target` affects every service.
         image_asset = ecr_assets.DockerImageAsset(
             self,
             "ApiImage",
             directory="../",
             file="Dockerfile",
+            target="runtime",
         )
 
         # --- Scheduled Backup Task ---
