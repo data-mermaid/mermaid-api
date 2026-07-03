@@ -135,12 +135,19 @@ class LabelMapping(BaseModel):
 
 
 class Classifier(BaseModel):
+    CLASSIFIER_TYPES = (
+        ("pyspacer", "pyspacer"),
+        ("segmentation", "segmentation"),
+    )
+
     name = models.CharField(max_length=50)
     version = models.CharField(
-        max_length=11, help_text="Classifier version (pattern: v[Version Number])"
+        max_length=11,
+        unique=True,
+        help_text="Classifier version (pattern: v[Version Number])",
     )
-    patch_size = models.IntegerField(help_text="Number of pixels")
-    num_points = models.IntegerField(default=25)
+    classifier_type = models.CharField(max_length=20, choices=CLASSIFIER_TYPES, default="pyspacer")
+    config = models.JSONField(default=dict, blank=True)
     description = models.TextField(max_length=1000, blank=True)
     benthic_attribute_growth_forms = models.ManyToManyField(
         BenthicAttributeGrowthForm, related_name="classifiers"
@@ -148,6 +155,10 @@ class Classifier(BaseModel):
 
     class Meta:
         db_table = "class_classifier"
+
+    @property
+    def patch_size(self):
+        return self.config.get("patch_size")
 
     @classmethod
     def latest(cls):

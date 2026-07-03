@@ -10,10 +10,10 @@ def test_setting_default_is_25():
 
 @override_settings(INFERENCE_DEFAULT_NUM_POINTS=37)
 def test_assign_classifier_signal_seeds_num_points_from_setting(project1, profile1):
-    # At this task the Classifier model still has the num_points column (dropped in
-    # Task 3). Give the classifier a num_points that DIFFERS from the setting so the
-    # test proves the seeded value comes from the setting, not the classifier column.
-    Classifier.objects.create(name="c", version="v-seed", patch_size=128, num_points=99)
+    # The Classifier model no longer has a num_points column (dropped in Task 3);
+    # nothing on the classifier can supply num_points_per_quadrat, so this proves
+    # the seeded value comes from the setting.
+    Classifier.objects.create(name="c", version="v-seed", config={"patch_size": 128})
 
     cr = CollectRecord.objects.create(
         project=project1,

@@ -10,7 +10,9 @@ from api.models import Annotation, Classifier, Image, Point
 
 @pytest.fixture
 def classifier():
-    return Classifier.objects.create(name="Test classifier", version="v0", patch_size=144)
+    return Classifier.objects.create(
+        name="Test classifier", version="v0", config={"patch_size": 144}
+    )
 
 
 @pytest.fixture

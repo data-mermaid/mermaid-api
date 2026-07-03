@@ -18,8 +18,7 @@ def classifier():
     return Classifier.objects.create(
         name="Test",
         version="v1",
-        patch_size=128,
-        num_points=2,
+        config={"patch_size": 128},
     )
 
 
