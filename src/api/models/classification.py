@@ -5,6 +5,7 @@ from io import StringIO
 from django.conf import settings
 from django.contrib.gis.db import models
 from django.core.files.storage import FileSystemStorage
+from pydantic import BaseModel as PydanticBaseModel, ConfigDict
 from storages.backends.s3 import S3Storage
 
 from .base import BaseModel
@@ -15,6 +16,31 @@ from .protocols.benthic import (
     GrowthForm,
     ObsBenthicPhotoQuadrat,
 )
+
+
+class ClassifierRegistrationError(Exception):
+    """Raised when a model.json manifest cannot be ingested by Classifier.register()."""
+
+
+SUPPORTED_MANIFEST_SCHEMA_VERSION = 1
+
+# Maps a model.json `task` discriminator to a Classifier.classifier_type.
+TASK_TO_CLASSIFIER_TYPE = {
+    "pyspacer_mlp_classifier": "pyspacer",
+}
+
+
+class PyspacerConfig(PydanticBaseModel):
+    """Validates the `config` object in a pyspacer model.json manifest."""
+
+    model_config = ConfigDict(extra="forbid")
+    patch_size: int
+
+
+# Per-classifier-type pydantic schema used by Classifier.register() to validate `config`.
+CONFIG_SCHEMAS = {
+    "pyspacer": PyspacerConfig,
+}
 
 
 def select_image_storage():
