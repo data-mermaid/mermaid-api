@@ -164,6 +164,10 @@ admin@datamermaid.org.
 - su webapp
 - bash
 
+### Deploying a new classifier version
+
+- [Deploying a new classifier version](docs/deploy-classifier-version.md) — release a classifier from MLflow and cut it over to the inference Lambda (classifier release → inference image build → CDK deploy).
+
 ## Sagemaker AI
 
 1. Dev URL: https://d-5ls5xpurmpfg.studio.us-east-1.sagemaker.aws/
