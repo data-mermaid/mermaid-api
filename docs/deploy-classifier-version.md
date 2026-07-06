@@ -84,21 +84,27 @@ to the ECR repo `mermaid-inference-pyspacer` tagged **`vN-K`**.
 
 ## Step 3 — Point the Lambda at the new image
 
-The Lambda's image tag is pinned in this repo's CDK config — building the image
-in step 2 does **not** by itself update the running Lambda. Bump the tag and
-deploy:
+The Lambda's image tag is pinned in this repo's CDK config **per environment**
+(`InferenceSettings.image_tag`) — building the image in step 2 does **not** by
+itself update any running Lambda. Roll the tag out dev-first, then prod; each
+environment has its own settings file and its own stack
+(`dev-mermaid-inference` / `prod-mermaid-inference`).
 
-1. Edit [`iac/settings/dev.py`](../iac/settings/dev.py) and set the inference
-   image tag to the `vN-K` from step 2:
+1. **Dev.** Edit [`iac/settings/dev.py`](../iac/settings/dev.py), set the
+   inference image tag to the `vN-K` from step 2, and merge to `dev` (via PR):
 
    ```python
    inference=InferenceSettings(image_tag="v3-2"),
    ```
 
-2. Commit the change to `dev` (via PR).
-3. Run **[Deploy CDK](https://github.com/data-mermaid/mermaid-api/actions/workflows/deploy-cdk.yml)**.
-   Deploying `InferenceStack` updates `PyspacerInferenceFunction` to serve the
-   new image. Git history of `dev.py` is the deploy log.
+   Merging to `dev` triggers **[Deploy CDK](https://github.com/data-mermaid/mermaid-api/actions/workflows/deploy-cdk.yml)**,
+   which updates `dev-mermaid-inference`'s `PyspacerInferenceFunction` to serve
+   the new image. Validate on dev.
 
-Once the deploy completes, the inference Lambda serves the new classifier
-version.
+2. **Prod.** Make the same edit in
+   [`iac/settings/prod.py`](../iac/settings/prod.py), merge it to `dev`, then cut
+   a release tag (e.g. `v1.2`). The tag triggers the **Deploy CDK** PROD job,
+   which updates `prod-mermaid-inference` the same way.
+
+Git history of `dev.py` / `prod.py` is the deploy log. Once the prod deploy
+completes, the production inference Lambda serves the new classifier version.
