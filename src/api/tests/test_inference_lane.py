@@ -3,8 +3,13 @@ from django.core.files.uploadedfile import SimpleUploadedFile
 from django.test import override_settings
 
 from api.models import Image
+from api.models.classification import get_image_storage_config
 from api.utils import inference
-from api.utils.inference import InferenceError, classify_via_lambda
+from api.utils.inference import (
+    InferenceError,
+    build_pyspacer_request,
+    classify_via_lambda,
+)
 
 
 @pytest.fixture
@@ -40,6 +45,20 @@ def _ok_payload(version="v2"):
             },
         ],
     }
+
+
+def test_build_pyspacer_request_shape(image):
+    traceparent = "00-0af7651916cd43dd8448eb211c80319c-b7ad6b7169203331-01"
+    req = build_pyspacer_request(image, [(1, 2), (3, 4)], traceparent)
+
+    config = get_image_storage_config(image.image_bucket)
+
+    assert req["classifier_type"] == "pyspacer"
+    assert req["image"]["bucket"] == config["bucket"]
+    assert req["image"]["key"] == f"{config['s3_path']}{image.image.name}"
+    assert req["points"] == [[1, 2], [3, 4]]
+    assert req["traceparent"] == traceparent
+    assert "classifier_version" not in req
 
 
 @override_settings(INFERENCE_CLASSIFIER_VERSION="v2")
