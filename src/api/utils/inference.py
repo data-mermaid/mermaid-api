@@ -2,6 +2,15 @@ import json
 
 import boto3
 from django.conf import settings
+from mermaid_inference_contract import (
+    PyspacerRequest,
+    S3Location,
+    format_traceparent,
+    new_traceparent,
+    parse_classify_response,
+)
+
+from api.models.classification import get_image_storage_config
 
 
 class InferenceError(Exception):
@@ -35,3 +44,45 @@ def invoke_pyspacer(payload: dict) -> dict:
         detail = raw.decode("utf-8", errors="replace")[:500]
         raise InferenceError(f"Lambda FunctionError ({response['FunctionError']}): {detail}")
     return json.loads(raw)
+
+
+def build_pyspacer_request(image, points, traceparent) -> dict:
+    config = get_image_storage_config(image.image_bucket)
+    request = PyspacerRequest(
+        classifier_type="pyspacer",
+        image=S3Location(bucket=config["bucket"], key=f"{config['s3_path']}{image.image.name}"),
+        points=[(int(row), int(col)) for row, col in points],
+        traceparent=traceparent,
+    )
+    return request.model_dump(mode="json")
+
+
+def response_to_point_predictions(response):
+    """PyspacerResponse -> normalized [(row, col, [(label, score), ...ranked])]."""
+    return [
+        (pr.row, pr.col, [(ps.label, ps.score) for ps in pr.scores])
+        for pr in response.point_results
+    ]
+
+
+def classify_via_lambda(image, points):
+    """Invoke the pyspacer Lambda for an image and return normalized point predictions.
+
+    Raises InferenceError on an ErrorEnvelope payload or a version-drift mismatch.
+    """
+    traceparent = format_traceparent(new_traceparent())
+    payload = invoke_pyspacer(build_pyspacer_request(image, points, traceparent))
+
+    if "error_code" in payload:
+        raise InferenceError(payload.get("message") or "inference error")
+
+    response = parse_classify_response(payload)
+
+    expected = settings.INFERENCE_CLASSIFIER_VERSION
+    if expected and response.classifier_version != expected:
+        raise InferenceError(
+            f"Classifier version drift: Lambda served {response.classifier_version!r}, "
+            f"expected {expected!r}"
+        )
+
+    return response_to_point_predictions(response)
