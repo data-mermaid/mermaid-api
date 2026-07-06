@@ -104,7 +104,8 @@ jobs:
             mermaid-cloudtrail \
             "mermaid-guardduty-us-east-1" \
             prod-mermaid-api-django \
-            prod-mermaid-static-site
+            prod-mermaid-static-site \
+            prod-mermaid-inference
 
 
 

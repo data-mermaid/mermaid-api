@@ -137,6 +137,24 @@ prod_api_stack = ApiStack(
     cost_alerts_topic=common_stack.cost_alerts_topic,
 )
 
+# The pyspacer inference compute lane for prod (mermaid-classifier #53, #55).
+# Mirrors dev-mermaid-inference: a container Lambda serving the same shared
+# mermaid-inference-pyspacer image (config.inference.image_tag) already in ECR.
+# Groundwork only — it creates the function + alarms and changes nothing in the
+# prod API (no lane router / settings wired here); alarms publish to prod
+# ApiStack's shared alerts topic.
+prod_inference_stack = InferenceStack(
+    app,
+    "prod-mermaid-inference",
+    env=cdk_env,
+    tags=tags,
+    config=PROD_SETTINGS,
+    inference_repo=common_stack.inference_repo,
+    config_bucket=common_stack.config_bucket,
+    image_bucket=common_stack.image_processing_bucket,
+    alerts_topic=prod_api_stack.alerts_topic,
+)
+
 cloudtrail_stack = CloudTrailStack(
     app,
     "mermaid-cloudtrail",
@@ -190,6 +208,7 @@ nag_suppressions.apply_all(
     cloudtrail_stack=cloudtrail_stack,
     guardduty_stack=guardduty_stack,
     dev_inference_stack=dev_inference_stack,
+    prod_inference_stack=prod_inference_stack,
 )
 
 app.synth()
