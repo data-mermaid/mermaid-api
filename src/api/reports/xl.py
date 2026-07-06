@@ -71,7 +71,7 @@ def write_data_to_sheet(
     return current_row, current_col
 
 
-def auto_size_columns(worksheet):
+def auto_size_columns(worksheet, max_width=60):
     for col in worksheet.columns:
         max_length = 0
         column = col[0].column_letter
@@ -83,5 +83,5 @@ def auto_size_columns(worksheet):
                 print(f"Auto sizing excel columns: {e}")
                 pass
 
-        adjusted_width = max_length + 2
+        adjusted_width = min(max_length + 2, max_width)
         worksheet.column_dimensions[column].width = adjusted_width

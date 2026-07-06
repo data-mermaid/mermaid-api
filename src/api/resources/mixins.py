@@ -13,7 +13,6 @@ from django.template.defaultfilters import pluralize
 from django.utils.functional import cached_property
 from rest_framework import exceptions, status
 from rest_framework.decorators import action
-from rest_framework.request import Request
 from rest_framework.response import Response
 
 from ..exceptions import UnknownProtocolError, check_uuid
@@ -85,23 +84,13 @@ class MethodAuthenticationMixin(object):
     # }
 
     def initialize_request(self, request, *args, **kwargs):
-        parser_context = self.get_parser_context(request)
-
+        request = super().initialize_request(request, *args, **kwargs)
         method = request.method.upper()
         if hasattr(self, "method_authentication_classes") and isinstance(
             self.method_authentication_classes.get(method), (list, tuple)
         ):
-            authenticators = [auth() for auth in self.method_authentication_classes[method]]
-        else:
-            authenticators = self.get_authenticators()
-
-        return Request(
-            request,
-            parsers=self.get_parsers(),
-            authenticators=authenticators,
-            negotiator=self.get_content_negotiator(),
-            parser_context=parser_context,
-        )
+            request.authenticators = [auth() for auth in self.method_authentication_classes[method]]
+        return request
 
 
 class OrFilterSetMixin(object):

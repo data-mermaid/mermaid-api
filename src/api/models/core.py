@@ -24,8 +24,6 @@ from .base import (
     Profile,
 )
 
-INCLUDE_OBS_TEXT = _("include observation in aggregations/analyses?")
-
 logger = logging.getLogger(__name__)
 
 BENTHICLIT_PROTOCOL = "benthiclit"
@@ -43,7 +41,7 @@ PROTOCOL_MAP = {
     FISHBELT_PROTOCOL: "Fish Belt",
     HABITATCOMPLEXITY_PROTOCOL: "Habitat Complexity",
     BLEACHINGQC_PROTOCOL: "Bleaching Quadrat Collection",
-    MACROINVERTEBRATE_PROTOCOL: "Macroinvertebrate Belt Transect",
+    MACROINVERTEBRATE_PROTOCOL: "Macroinvertebrate Belt",
 }
 
 
@@ -667,7 +665,11 @@ class Observer(BaseModel):
 
     class Meta:
         db_table = "observer"
-        unique_together = ("transectmethod", "profile")
+        constraints = [
+            models.UniqueConstraint(
+                fields=["transectmethod", "profile"], name="unique_observer_transectmethod_profile"
+            )
+        ]
 
     def __str__(self):
         return _("%s") % (self.profile)
@@ -814,10 +816,9 @@ class Covariate(BaseModel, JSONMixin):
     value = models.JSONField(null=True, blank=True)
 
     class Meta:
-        unique_together = (
-            "site",
-            "name",
-        )
+        constraints = [
+            models.UniqueConstraint(fields=["site", "name"], name="unique_sitecovariate_site_name")
+        ]
 
     def __str__(self):
         return f"{self.site.name} - {self.name}"

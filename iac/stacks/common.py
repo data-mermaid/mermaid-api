@@ -9,6 +9,7 @@ from aws_cdk import (
     aws_ce as ce,
     aws_certificatemanager as acm,
     aws_ec2 as ec2,
+    aws_ecr as ecr,
     aws_ecs as ecs,
     aws_elasticloadbalancingv2 as elb,
     aws_glue as glue,
@@ -30,7 +31,7 @@ class CommonStack(Stack):
         self,
         scope: Construct,
         id: str,
-        enable_vpc_flow_logs: bool = False,
+        enable_vpc_flow_logs: bool = True,
         **kwargs,
     ) -> None:
         super().__init__(scope, id, **kwargs)
@@ -408,6 +409,35 @@ class CommonStack(Stack):
             block_public_access=s3.BlockPublicAccess.BLOCK_ALL,
         )
 
+        # Shared (dev/prod) ECR repo for the pyspacer inference Lambda image.
+        # Images are tagged with the model-build tag vN-K (vN = model version,
+        # K = serving build) that InferenceSettings.image_tag pins. Tag
+        # immutability guarantees a tag can't be silently repointed, so the
+        # Lambda's stored digest is an authoritative record of what is deployed.
+        # Built/pushed by the mermaid-inference build-push CI.
+        self.inference_repo = ecr.Repository(
+            self,
+            "MermaidInferencePyspacerRepo",
+            repository_name="mermaid-inference-pyspacer",
+            image_tag_mutability=ecr.TagMutability.IMMUTABLE,
+            image_scan_on_push=True,
+            removal_policy=RemovalPolicy.RETAIN,
+            lifecycle_rules=[
+                # Expire only UNTAGGED images (orphaned manifests) after 14 days.
+                # Release images are immutably tagged (:vN-K) and a deployed
+                # Lambda pins a tag's digest; a count-based "keep last N" rule on
+                # tagged images could delete a digest still referenced by a
+                # dev/prod deployment and break the function on cold start. So we
+                # never count-prune tagged releases — they are kept indefinitely.
+                ecr.LifecycleRule(
+                    description="Expire untagged images after 14 days",
+                    tag_status=ecr.TagStatus.UNTAGGED,
+                    max_image_age=Duration.days(14),
+                    rule_priority=1,
+                ),
+            ],
+        )
+
         self.data_bucket = s3.Bucket(
             self,
             id="MermaidApiDataBucket",
@@ -582,7 +612,7 @@ class CommonStack(Stack):
             visibility_config=wafv2.CfnWebACL.VisibilityConfigProperty(
                 cloud_watch_metrics_enabled=True,
                 metric_name="MermaidApiWafMetric",
-                sampled_requests_enabled=False,
+                sampled_requests_enabled=True,
             ),
             rules=[
                 wafv2.CfnWebACL.RuleProperty(
@@ -598,7 +628,7 @@ class CommonStack(Stack):
                     visibility_config=wafv2.CfnWebACL.VisibilityConfigProperty(
                         cloud_watch_metrics_enabled=True,
                         metric_name="MermaidApiCommonRules",
-                        sampled_requests_enabled=False,
+                        sampled_requests_enabled=True,
                     ),
                 ),
                 wafv2.CfnWebACL.RuleProperty(
@@ -614,7 +644,7 @@ class CommonStack(Stack):
                     visibility_config=wafv2.CfnWebACL.VisibilityConfigProperty(
                         cloud_watch_metrics_enabled=True,
                         metric_name="MermaidApiSQLiRules",
-                        sampled_requests_enabled=False,
+                        sampled_requests_enabled=True,
                     ),
                 ),
                 wafv2.CfnWebACL.RuleProperty(
@@ -630,7 +660,7 @@ class CommonStack(Stack):
                     visibility_config=wafv2.CfnWebACL.VisibilityConfigProperty(
                         cloud_watch_metrics_enabled=True,
                         metric_name="MermaidApiKnownBadInputs",
-                        sampled_requests_enabled=False,
+                        sampled_requests_enabled=True,
                     ),
                 ),
                 wafv2.CfnWebACL.RuleProperty(
@@ -646,7 +676,7 @@ class CommonStack(Stack):
                     visibility_config=wafv2.CfnWebACL.VisibilityConfigProperty(
                         cloud_watch_metrics_enabled=True,
                         metric_name="MermaidApiRateLimit",
-                        sampled_requests_enabled=False,
+                        sampled_requests_enabled=True,
                     ),
                 ),
             ],
@@ -700,39 +730,6 @@ class CommonStack(Stack):
         self.load_balancer.add_redirect()
 
         create_cdk_bot_user(self, self.account)
-
-        self.security_group = ec2.SecurityGroup(
-            self,
-            "VPCEndpointSagemaker",
-            vpc=self.vpc,
-            allow_all_outbound=True,
-            description="Security group for SageMaker VPC endpoints",
-        )
-
-        for service_name in [
-            "SAGEMAKER_API",
-            "SAGEMAKER_NOTEBOOK",
-            "SAGEMAKER_RUNTIME",
-            "SAGEMAKER_STUDIO",
-            "SAGEMAKER_EXPERIMENTS",
-        ]:
-            self.vpc.add_interface_endpoint(
-                f"{service_name}VpcEndpoint",
-                service=getattr(
-                    ec2.InterfaceVpcEndpointAwsService,
-                    service_name,
-                ),
-                lookup_supported_azs=True,
-                subnets=ec2.SubnetSelection(
-                    subnet_type=ec2.SubnetType.PRIVATE_WITH_EGRESS,
-                    one_per_az=True,
-                ),
-                security_groups=[self.security_group],
-                dns_record_ip_type=ec2.VpcEndpointDnsRecordIpType.IPV4,
-                ip_address_type=ec2.VpcEndpointIpAddressType.IPV4,
-                private_dns_enabled=True,
-                open=True,
-            )
 
         self.report_s3_user = iam.User(
             self,

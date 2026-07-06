@@ -96,9 +96,22 @@ class JWTAuthentication(BaseAuthentication):
             profile = auth_user.profile
 
             if (now_datetime - profile.updated_on).total_seconds() > SECS_PER_DAY:
-                user_info = get_user_info(user_id)
-                profile.picture_url = user_info["picture"]
-                profile.save()
+                # ponytail: cosmetic picture refresh — a transient Auth0 hiccup must
+                # not 503 an already-authenticated user. Keep the cached profile.
+                try:
+                    user_info = get_user_info(user_id)
+                    profile.picture_url = user_info["picture"]
+                    profile.save()
+                except exceptions.APIException:
+                    # Bump updated_on so we don't re-enter (and re-fail) the refresh
+                    # on every subsequent request while Auth0 is unavailable. Retry
+                    # naturally on the next >24h window.
+                    profile.save(update_fields=["updated_on"])
+                    logger.warning(
+                        "[auth0.refresh_skipped] picture refresh failed for %s; "
+                        "serving cached profile",
+                        user_id,
+                    )
         except AuthUser.DoesNotExist:
             user_info = get_user_info(user_id)
             profile, is_new = get_or_create_safeish(Profile, email=user_info["email"])

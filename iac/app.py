@@ -8,8 +8,11 @@ from settings.prod import PROD_SETTINGS
 from stacks.api import ApiStack
 from stacks.common import CommonStack
 from stacks.github_access import GithubAccessStack
+from stacks.inference import InferenceStack
 from stacks.sagemaker import SagemakerStack
 from stacks.static_site import StaticSiteStack
+from stacks.cloudtrail import CloudTrailStack
+from stacks.guardduty import GuardDutyStack
 
 tags = {
     "Owner": "sysadmin@datamermaid.org",
@@ -85,6 +88,22 @@ dev_sagemaker_stack = SagemakerStack(
     cluster=common_stack.cluster,
 )
 
+# The pyspacer inference compute lane (mermaid-classifier #53). A container
+# Lambda whose image (config.inference.image_tag) is published to the
+# mermaid-inference-pyspacer ECR repo by the mermaid-inference build-push CI
+# before this stack deploys. Alarms publish to ApiStack's shared alerts topic.
+dev_inference_stack = InferenceStack(
+    app,
+    "dev-mermaid-inference",
+    env=cdk_env,
+    tags=tags,
+    config=DEV_SETTINGS,
+    inference_repo=common_stack.inference_repo,
+    config_bucket=common_stack.config_bucket,
+    image_bucket=common_stack.image_processing_bucket,
+    alerts_topic=dev_api_stack.alerts_topic,
+)
+
 prod_static_site_stack = StaticSiteStack(
     app,
     "prod-mermaid-static-site",
@@ -118,6 +137,48 @@ prod_api_stack = ApiStack(
     cost_alerts_topic=common_stack.cost_alerts_topic,
 )
 
+cloudtrail_stack = CloudTrailStack(
+    app,
+    "mermaid-cloudtrail",
+    env=cdk_env,
+    tags={"Env": "Common"},
+)
+
+guardduty_stack = GuardDutyStack(
+    app,
+    f"mermaid-guardduty-{cdk_env.region}",
+    env=cdk_env,
+    tags={"Env": "Common"},
+    s3_buckets=[
+        "2310-coralnet-public-sources",
+        "amazon-sagemaker-554812291621-us-east-1-b5cebdff17fb",
+        "assets.datamermaid.org",
+        "collect-turndown.datamermaid.org",
+        "config-bucket-554812291621",
+        "dashboard2.datamermaid.org",
+        "dev-dashboard2.datamermaid.org",
+        "dev-datamermaid-sm-data",
+        "dev-datamermaid-sm-sources",
+        "dev-explore.datamermaid.org",
+        "dev-mermaid-cloudtrail-cloudtrailbucket98b0bfe1-qwlw3gr5rvvm",
+        "dev-public.datamermaid.org",
+        "dev.app2.datamermaid.org",
+        "dev.dashboard3.datamermaid.org",
+        "explore.datamermaid.org",
+        "mermaid-api-v2-backups",
+        "mermaid-config",
+        "mermaid-data",
+        "mermaid-image-processing",
+        "mermaid-user-metrics",
+        "prod.app2.datamermaid.org",
+        "public.datamermaid.org",
+        "pyspacer-test",
+        "sagemaker-studio-554812291621-moo6nyhibza",
+        "sagemaker-us-east-1-554812291621",
+        "vpcflowlogs.admin.datamermaid.org",
+    ],
+)
+
 nag_suppressions.apply_all(
     gh_access_stack=gh_access_stack,
     common_stack=common_stack,
@@ -126,6 +187,9 @@ nag_suppressions.apply_all(
     dev_api_stack=dev_api_stack,
     prod_api_stack=prod_api_stack,
     dev_sagemaker_stack=dev_sagemaker_stack,
+    cloudtrail_stack=cloudtrail_stack,
+    guardduty_stack=guardduty_stack,
+    dev_inference_stack=dev_inference_stack,
 )
 
 app.synth()

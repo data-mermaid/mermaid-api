@@ -72,6 +72,7 @@ def fish_species1(fish_genus1, fish_group_trophic_1, region1, region3):
         biomass_constant_c=1.0,
         trophic_group=fish_group_trophic_1,
         max_length=41,
+        notes="Test fish species notes",
         status=SUPERUSER_APPROVED,
     )
     fs.regions.add(region1)

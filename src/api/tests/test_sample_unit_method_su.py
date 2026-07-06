@@ -105,7 +105,9 @@ def test_beltinvert_su_view_group_of_interest(
     update_summary_cache,
 ):
     # invert_genus_1 (count=3) attributes fully to GoI 1; invert_family_1 (count=10)
-    # splits 50/50 between GoI 1 and GoI 2 (one genus per GoI in that family).
+    # splits equally between GoI 1 and GoI 2 (2 distinct GoIs → 50/50).
+    # invert_genus_3 is a second GoI-1 genus in the family (2:1 ratio) so the
+    # expected values only hold under equal-split, not genus-proportion weighting.
     # density_indha = count / (len_surveyed * width_m) * 10000 = count * 200
     url = reverse("beltinvertmethod-sampleunit-list", kwargs=dict(project_pk=project1.pk))
     count, data, _ = _call(client, token1, url)
@@ -118,6 +120,32 @@ def test_beltinvert_su_view_group_of_interest(
     goi_density = record["density_indha_group_interest"]
     assert goi_density[invert_group_of_interest_1.name] == pytest.approx(1600.0, 0.01)
     assert goi_density[invert_group_of_interest_2.name] == pytest.approx(1000.0, 0.01)
+
+
+def test_beltinvert_su_view_family_no_goi(
+    client,
+    db_setup,
+    project1,
+    token1,
+    invert_belt_transect1,
+    belt_invert1_with_no_goi_family_obs,
+    invert_group_of_interest_1,
+    update_summary_cache,
+):
+    # A family-level obs whose family has no genera in the DB produces no rows in
+    # goi_weights_by_family. Even though invert_group_of_interest_1 exists, the obs
+    # count is not attributed to any GoI: all densities are 0.0, which are stripped by
+    # FILTER (WHERE density > 0), so density_indha_group_interest is NULL.
+    # The count still appears in total_abundance and density_indha.
+    # density_indha = 5 / (50 * 1) * 10000 = 1000.0
+    url = reverse("beltinvertmethod-sampleunit-list", kwargs=dict(project_pk=project1.pk))
+    count, data, _ = _call(client, token1, url)
+
+    assert count == 1
+    record = data[0]
+    assert record["total_abundance"] == 5
+    assert record["density_indha"] == pytest.approx(1000.0, 0.01)
+    assert record["density_indha_group_interest"] is None
 
 
 def test_benthicpit_su_view(

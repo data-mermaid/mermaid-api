@@ -41,18 +41,18 @@ class BeltInvertObsSQLModel(BaseSUSQLModel):
             w.name AS transect_width_name,
             w.val AS width_m,
             sb.val AS size_bin,
-            COALESCE(
-                igoi.name,
-                iclass.name,
-                iord.name,
-                ifam.name,
-                ige.name,
-                ispg.name || ' ' || isp.name
-            ) AS invert_attribute_name,
+            ia.name AS invert_taxon,
+            ia.name_goi AS invert_group_of_interest,
+            ia.name_class AS invert_class,
+            ia.name_order AS invert_order,
+            ia.name_family AS invert_family,
+            ia.name_genus AS invert_genus,
+            ia.name_species AS invert_species,
             o.invert_attribute_id,
             o.count,
             o.size,
-            o.include
+            ROUND(o.count::numeric / NULLIF(su.len_surveyed * w.val, 0) * 10000, 2) AS density_indha,
+            o.notes AS observation_notes
         FROM obs_transectbeltinvert o
             RIGHT JOIN transectmethod_transectbeltinvert tt ON o.beltinvert_id = tt.transectmethod_ptr_id
             JOIN transect_belt_invert su ON tt.transect_id = su.id
@@ -60,13 +60,7 @@ class BeltInvertObsSQLModel(BaseSUSQLModel):
             JOIN pseudosu_su ON (su.id = pseudosu_su.sample_unit_id)
             JOIN invert_belt_transect_width w ON su.width_id = w.id
             LEFT JOIN invert_size_bin sb ON su.size_bin_id = sb.id
-            LEFT JOIN invert_group_of_interest igoi ON o.invert_attribute_id = igoi.invertattribute_ptr_id
-            LEFT JOIN invert_class iclass ON o.invert_attribute_id = iclass.invertattribute_ptr_id
-            LEFT JOIN invert_order iord ON o.invert_attribute_id = iord.invertattribute_ptr_id
-            LEFT JOIN invert_family ifam ON o.invert_attribute_id = ifam.invertattribute_ptr_id
-            LEFT JOIN invert_genus ige ON o.invert_attribute_id = ige.invertattribute_ptr_id
-            LEFT JOIN invert_species isp ON o.invert_attribute_id = isp.invertattribute_ptr_id
-            LEFT JOIN invert_genus ispg ON isp.genus_id = ispg.invertattribute_ptr_id
+            LEFT JOIN mv_invert_attributes ia ON o.invert_attribute_id = ia.id
             JOIN (
                 SELECT tt_1.transect_id,
                     jsonb_agg(jsonb_build_object(
@@ -109,10 +103,17 @@ class BeltInvertObsSQLModel(BaseSUSQLModel):
     width_m = models.DecimalField(max_digits=4, decimal_places=1, null=True, blank=True)
     size_bin = models.CharField(max_length=100, null=True, blank=True)
     invert_attribute_id = models.UUIDField(null=True, blank=True)
-    invert_attribute_name = models.CharField(max_length=200, null=True, blank=True)
+    invert_taxon = models.CharField(max_length=200, null=True, blank=True)
+    invert_group_of_interest = models.CharField(max_length=200, null=True, blank=True)
+    invert_class = models.CharField(max_length=200, null=True, blank=True)
+    invert_order = models.CharField(max_length=200, null=True, blank=True)
+    invert_family = models.CharField(max_length=200, null=True, blank=True)
+    invert_genus = models.CharField(max_length=200, null=True, blank=True)
+    invert_species = models.CharField(max_length=200, null=True, blank=True)
     count = models.PositiveIntegerField(null=True, blank=True)
     size = models.DecimalField(max_digits=5, decimal_places=1, null=True, blank=True)
-    include = models.BooleanField(null=True, blank=True)
+    density_indha = models.DecimalField(max_digits=11, decimal_places=2, null=True, blank=True)
+    observation_notes = models.TextField(null=True, blank=True)
     data_policy_macroinvertebrate = models.CharField(max_length=50)
     pseudosu_id = models.UUIDField()
 
@@ -130,44 +131,44 @@ class BeltInvertSUSQLModel(BaseSUSQLModel):
     ]
 
     _su_fields = ", ".join(su_fields)
-    _su_fields_qualified = ", ".join([f"belt_invert_obs_all.{f}" for f in su_fields])
+    _su_fields_qualified = ", ".join([f"belt_invert_obs.{f}" for f in su_fields])
     _agg_su_fields = ", ".join(BaseSUSQLModel.agg_su_fields)
     _su_aggfields_sql = BaseSUSQLModel.su_aggfields_sql
 
     sql = f"""
-        WITH belt_invert_obs_all AS (
+        WITH belt_invert_obs AS (
             {BeltInvertObsSQLModel.sql}
         ),
-        belt_invert_obs AS (
-            SELECT * FROM belt_invert_obs_all WHERE include = TRUE
-        ),
         goi_weights_by_family AS MATERIALIZED (
-            SELECT ig.family_id, goi.name AS goi_name,
-                COUNT(ig.invertattribute_ptr_id)::float /
-                SUM(COUNT(ig.invertattribute_ptr_id)) OVER (PARTITION BY ig.family_id) AS weight
-            FROM invert_genus ig
-            JOIN invert_group_of_interest goi ON ig.group_of_interest_id = goi.invertattribute_ptr_id
-            GROUP BY ig.family_id, ig.group_of_interest_id, goi.name
+            SELECT family_id, goi_name,
+                1.0 / COUNT(*) OVER (PARTITION BY family_id) AS weight
+            FROM (
+                SELECT DISTINCT ig.family_id, goi.name AS goi_name
+                FROM invert_genus ig
+                JOIN invert_group_of_interest goi ON ig.group_of_interest_id = goi.invertattribute_ptr_id
+            ) distinct_family_gois
         ),
         goi_weights_by_order AS MATERIALIZED (
-            SELECT io.invertattribute_ptr_id AS order_id, goi.name AS goi_name,
-                COUNT(ig.invertattribute_ptr_id)::float /
-                SUM(COUNT(ig.invertattribute_ptr_id)) OVER (PARTITION BY io.invertattribute_ptr_id) AS weight
-            FROM invert_genus ig
-            JOIN invert_family f ON ig.family_id = f.invertattribute_ptr_id
-            JOIN invert_order io ON f.order_id = io.invertattribute_ptr_id
-            JOIN invert_group_of_interest goi ON ig.group_of_interest_id = goi.invertattribute_ptr_id
-            GROUP BY io.invertattribute_ptr_id, ig.group_of_interest_id, goi.name
+            SELECT order_id, goi_name,
+                1.0 / COUNT(*) OVER (PARTITION BY order_id) AS weight
+            FROM (
+                SELECT DISTINCT io.invertattribute_ptr_id AS order_id, goi.name AS goi_name
+                FROM invert_genus ig
+                JOIN invert_family f ON ig.family_id = f.invertattribute_ptr_id
+                JOIN invert_order io ON f.order_id = io.invertattribute_ptr_id
+                JOIN invert_group_of_interest goi ON ig.group_of_interest_id = goi.invertattribute_ptr_id
+            ) distinct_order_gois
         ),
         goi_weights_by_class AS MATERIALIZED (
-            SELECT io.invert_class_id, goi.name AS goi_name,
-                COUNT(ig.invertattribute_ptr_id)::float /
-                SUM(COUNT(ig.invertattribute_ptr_id)) OVER (PARTITION BY io.invert_class_id) AS weight
-            FROM invert_genus ig
-            JOIN invert_family f ON ig.family_id = f.invertattribute_ptr_id
-            JOIN invert_order io ON f.order_id = io.invertattribute_ptr_id
-            JOIN invert_group_of_interest goi ON ig.group_of_interest_id = goi.invertattribute_ptr_id
-            GROUP BY io.invert_class_id, ig.group_of_interest_id, goi.name
+            SELECT invert_class_id, goi_name,
+                1.0 / COUNT(*) OVER (PARTITION BY invert_class_id) AS weight
+            FROM (
+                SELECT DISTINCT io.invert_class_id, goi.name AS goi_name
+                FROM invert_genus ig
+                JOIN invert_family f ON ig.family_id = f.invertattribute_ptr_id
+                JOIN invert_order io ON f.order_id = io.invertattribute_ptr_id
+                JOIN invert_group_of_interest goi ON ig.group_of_interest_id = goi.invertattribute_ptr_id
+            ) distinct_class_gois
         ),
         obs_goi AS (
             SELECT o.pseudosu_id, goi.name AS goi_name, o.count::float AS attributed_count
@@ -185,6 +186,10 @@ class BeltInvertSUSQLModel(BaseSUSQLModel):
             JOIN invert_genus g ON o.invert_attribute_id = g.invertattribute_ptr_id
             JOIN invert_group_of_interest goi ON g.group_of_interest_id = goi.invertattribute_ptr_id
             UNION ALL
+            -- NOTE: If a family/order/class taxon has no genera with GoI assignments in the
+            -- taxonomy DB, the JOIN below produces no rows and the observation's count is
+            -- silently absent from density_indha_group_interest while still counted in
+            -- total_abundance and density_indha, making those fields inconsistent.
             SELECT o.pseudosu_id, w.goi_name, o.count * w.weight
             FROM belt_invert_obs o
             JOIN invert_family fam ON o.invert_attribute_id = fam.invertattribute_ptr_id
@@ -208,7 +213,7 @@ class BeltInvertSUSQLModel(BaseSUSQLModel):
             SELECT a.pseudosu_id, a.goi_name, COALESCE(g.goi_count, 0) AS goi_count
             FROM (
                 SELECT DISTINCT o.pseudosu_id, igoi.name AS goi_name
-                FROM belt_invert_obs_all o CROSS JOIN invert_group_of_interest igoi
+                FROM belt_invert_obs o CROSS JOIN invert_group_of_interest igoi
             ) a
             LEFT JOIN su_goi g USING (pseudosu_id, goi_name)
         ),
@@ -222,7 +227,7 @@ class BeltInvertSUSQLModel(BaseSUSQLModel):
                 SELECT pseudosu_id,
                     MAX(transect_len_surveyed)::numeric AS len_surveyed,
                     MAX(width_m)::numeric AS width_m
-                FROM belt_invert_obs_all GROUP BY pseudosu_id
+                FROM belt_invert_obs GROUP BY pseudosu_id
             ) sa USING (pseudosu_id)
         ),
         su_goi_density AS MATERIALIZED (
@@ -239,7 +244,7 @@ class BeltInvertSUSQLModel(BaseSUSQLModel):
             FROM (
                 SELECT pseudosu_id,
                 jsonb_array_elements(observers) AS observer
-                FROM belt_invert_obs_all
+                FROM belt_invert_obs
                 GROUP BY pseudosu_id, observers
             ) beltinvert_obs_obs
             GROUP BY pseudosu_id
@@ -259,9 +264,9 @@ class BeltInvertSUSQLModel(BaseSUSQLModel):
         FROM (
             SELECT pseudosu_id,
             jsonb_agg(DISTINCT sample_unit_id) AS sample_unit_ids,
-            COALESCE(SUM(count) FILTER (WHERE include = TRUE), 0) AS total_abundance,
+            COALESCE(SUM(count), 0) AS total_abundance,
             ROUND(
-                COALESCE(SUM(count) FILTER (WHERE include = TRUE), 0)::numeric /
+                COALESCE(SUM(count), 0)::numeric /
                 NULLIF((MAX(transect_len_surveyed) * MAX(width_m)), 0) * 10000, 2
             ) AS density_indha,
             {_su_fields_qualified},
@@ -271,7 +276,7 @@ class BeltInvertSUSQLModel(BaseSUSQLModel):
             string_agg(DISTINCT size_bin::text, ', '::text
                 ORDER BY (size_bin::text)) AS size_bin
 
-            FROM belt_invert_obs_all
+            FROM belt_invert_obs
             GROUP BY pseudosu_id,
             {_su_fields_qualified}
         ) beltinvert_su

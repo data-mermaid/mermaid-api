@@ -177,3 +177,11 @@ admin@datamermaid.org.
 9. dev-datamermaid-sm-data: http://us-east-1.console.aws.amazon.com/s3/buckets/dev-datamermaid-sm-data?region=us-east-1&tab=objects&bucketType=general
 10. To add bucket access either pre existing one or creating a new one, depending on the requirements allow the sagemaker execution to read and/or write to the bucket. Examples can be found in `iac/stacks/sagemaker.py`
 11. Currently we have a single dev deployment: https://us-east-1.console.aws.amazon.com/cloudformation/home?region=us-east-1#/stacks/stackinfo?filteringText=&filteringStatus=active&viewNested=true&stackId=arn%3Aaws%3Acloudformation%3Aus-east-1%3A554812291621%3Astack%2Fdev-mermaid-sagemaker%2Fb124dad0-32b4-11f0-bc6d-0affe30c0943
+
+
+## PR test workflow
+
+1. `.github/workflows/_test.yml` runs the tests against local docker compose.
+2. Gitguardian was gflagging the test secrets in the env vars for docker.
+3. To counter that we have TEST_AWS_SECRET_ACCESS_KEY, TEST_MERMAID_API_SIGNING_SECRET, TEST_POSTGRES_PASSWORD, TEST_SECRET_KEY which contain fake values.
+4. These fake secrets are now being used in the test workflow.

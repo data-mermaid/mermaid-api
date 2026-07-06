@@ -55,6 +55,8 @@ def send_mermaid_email(subject, template, to, context=None, from_email=None, rep
 def _to_in_dev_emails(to):
     to_emails = []
     for to_email in to:
+        if not to_email:
+            continue
         dev_email_match = [email for email in settings.DEV_EMAILS if to_email.endswith(email)]
         if dev_email_match:
             to_emails.append(to_email)
@@ -91,13 +93,14 @@ def mermaid_email(subject, template, to, context=None, from_email=None, reply_to
         )
 
 
-def email_mermaid_admins(**kwargs):
+def email_mermaid_admins(source=None, **kwargs):
     template = "emails/contact_mermaid_admins.html"
     from_email = kwargs["from_email"]
     context = {
         "message": kwargs["message"],
         "name": kwargs["name"],
         "from_email": from_email,
+        "source": source,
     }
 
     mermaid_email(
@@ -125,7 +128,7 @@ def email_project_admins(**kwargs):
     ).select_related("profile")
     project_admin_emails = [p.profile.email for p in project_admins]
 
-    if project_admins.count() > 0:
+    if project_admin_emails:
         mermaid_email(
             kwargs["subject"],
             template,
@@ -136,7 +139,7 @@ def email_project_admins(**kwargs):
         )
 
 
-def email_report(to_email, local_file_path, protocol):
+def email_report(to_email, local_file_path, protocol, data_may_be_stale=False):
     if not to_email or "@" not in to_email:
         raise ValueError("Invalid email address")
     if not local_file_path or not Path(local_file_path).is_file():
@@ -169,7 +172,11 @@ def email_report(to_email, local_file_path, protocol):
         to = [to_email]
         template = "emails/report.html"
         report_title = PROTOCOL_MAP.get(protocol) or ""
-        context = {"file_url": file_url, "title": report_title}
+        context = {
+            "file_url": file_url,
+            "title": report_title,
+            "data_may_be_stale": data_may_be_stale,
+        }
         send_mermaid_email(
             f"{report_title} Report",
             template,

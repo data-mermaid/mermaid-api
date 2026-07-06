@@ -1,3 +1,10 @@
+def test_fish_species_notes(db_setup, api_client1, fish_species1):
+    """GET /v1/fishspecies/{id}/ includes the notes field."""
+    response = api_client1.get(f"/v1/fishspecies/{fish_species1.pk}/", format="json")
+    assert response.status_code == 200
+    assert response.json()["notes"] == fish_species1.notes
+
+
 def test_fish_grouping_empty_attributes_returns_zero_aggs(
     db_setup, all_test_fish_attributes, region1, region2
 ):

@@ -10,14 +10,7 @@ from django.utils.translation import gettext as _
 
 from ...utils import create_timestamp, expired_timestamp
 from ..base import BaseAttributeModel, BaseChoiceModel, BaseModel, JSONMixin
-from ..core import (
-    FISHBELT_PROTOCOL,
-    INCLUDE_OBS_TEXT,
-    Observer,
-    Region,
-    Transect,
-    TransectMethod,
-)
+from ..core import FISHBELT_PROTOCOL, Observer, Region, Transect, TransectMethod
 
 
 class BeltTransectWidth(BaseChoiceModel):
@@ -362,7 +355,9 @@ class FishFamily(FishAttribute):
                 self._max_length = round(family.get("max_length"), 6)
 
         if FishFamily.regions_agg is not None:
-            self._regions = FishFamily.regions_agg.get(str(self.pk)) or []
+            self._regions = [
+                r for r in (FishFamily.regions_agg.get(str(self.pk)) or []) if r is not None
+            ]
 
         return FishFamily.species_agg
 
@@ -466,7 +461,9 @@ class FishGenus(FishAttribute):
                 self._max_length = genus.get("max_length")
 
         if FishGenus.regions_agg is not None:
-            self._regions = FishGenus.regions_agg.get(str(self.pk)) or []
+            self._regions = [
+                r for r in (FishGenus.regions_agg.get(str(self.pk)) or []) if r is not None
+            ]
 
         return FishGenus.species_agg
 
@@ -669,7 +666,6 @@ class ObsBeltFish(BaseModel, JSONMixin):
         verbose_name=_("size (cm)"),
     )
     count = models.PositiveIntegerField(default=1)
-    include = models.BooleanField(default=True, verbose_name=INCLUDE_OBS_TEXT)
     notes = models.TextField(blank=True)
 
     _hide_fish_in_repr = False
