@@ -10,6 +10,7 @@ from django.db import transaction
 from pydantic import BaseModel as PydanticBaseModel, ConfigDict
 from storages.backends.s3 import S3Storage
 
+from ..utils import s3
 from .base import BaseModel
 from .core import CollectRecord, Project, Site
 from .protocols.benthic import (
@@ -174,13 +175,6 @@ class Classifier(BaseModel):
         `ba_uuid::gf_uuid` class into the BA+GF M2M. Raises ClassifierRegistrationError
         on any malformed/mismatched manifest, applying nothing.
         """
-        from api.models.protocols.benthic import (
-            BenthicAttribute,
-            BenthicAttributeGrowthForm,
-            GrowthForm,
-        )
-        from api.utils import s3
-
         key = f"classifier/{version}/model.json"
         manifest = s3.read_json_object(settings.AWS_CONFIG_BUCKET, key)
 
