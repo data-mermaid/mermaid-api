@@ -4,7 +4,9 @@ from io import StringIO
 
 from django.conf import settings
 from django.contrib.gis.db import models
+from django.core.exceptions import ValidationError
 from django.core.files.storage import FileSystemStorage
+from django.db import transaction
 from pydantic import BaseModel as PydanticBaseModel, ConfigDict
 from storages.backends.s3 import S3Storage
 
@@ -163,6 +165,89 @@ class Classifier(BaseModel):
     @classmethod
     def latest(cls):
         return cls.objects.order_by("-created_on").first()
+
+    @classmethod
+    def register(cls, version, *, name=None, description=None):
+        """Ingest s3://<config-bucket>/classifier/<version>/model.json into this row.
+
+        Validates config via the per-type pydantic schema and resolves each
+        `ba_uuid::gf_uuid` class into the BA+GF M2M. Raises ClassifierRegistrationError
+        on any malformed/mismatched manifest, applying nothing.
+        """
+        from api.models.protocols.benthic import (
+            BenthicAttribute,
+            BenthicAttributeGrowthForm,
+            GrowthForm,
+        )
+        from api.utils import s3
+
+        key = f"classifier/{version}/model.json"
+        manifest = s3.read_json_object(settings.AWS_CONFIG_BUCKET, key)
+
+        schema_version = manifest.get("schema_version")
+        if schema_version != SUPPORTED_MANIFEST_SCHEMA_VERSION:
+            raise ClassifierRegistrationError(
+                f"Unsupported model.json schema_version {schema_version!r} for {version}"
+            )
+
+        task = manifest.get("task")
+        classifier_type = TASK_TO_CLASSIFIER_TYPE.get(task)
+        if classifier_type is None:
+            raise ClassifierRegistrationError(f"Unknown task {task!r} in model.json for {version}")
+
+        config_schema = CONFIG_SCHEMAS[classifier_type]
+        try:
+            validated_config = config_schema(**(manifest.get("config") or {}))
+        except Exception as e:
+            raise ClassifierRegistrationError(
+                f"Invalid config in model.json for {version}: {e}"
+            ) from e
+        config = validated_config.model_dump()
+
+        with transaction.atomic():
+            resolved = []
+            for label in manifest.get("classes", []):
+                ba_uuid, _, gf_uuid = label.partition("::")
+                try:
+                    ba = BenthicAttribute.objects.get(pk=ba_uuid)
+                except (BenthicAttribute.DoesNotExist, ValueError, ValidationError) as e:
+                    raise ClassifierRegistrationError(
+                        f"Unknown benthic attribute {ba_uuid!r} in class {label!r}"
+                    ) from e
+                gf = None
+                if gf_uuid:
+                    try:
+                        gf = GrowthForm.objects.get(pk=gf_uuid)
+                    except (GrowthForm.DoesNotExist, ValueError, ValidationError) as e:
+                        raise ClassifierRegistrationError(
+                            f"Unknown growth form {gf_uuid!r} in class {label!r}"
+                        ) from e
+                bagf, _ = BenthicAttributeGrowthForm.objects.get_or_create(
+                    benthic_attribute=ba, growth_form=gf
+                )
+                resolved.append(bagf)
+
+            classifier, created = cls.objects.get_or_create(
+                version=version,
+                defaults={
+                    "name": name or version,
+                    "classifier_type": classifier_type,
+                    "config": config,
+                    "description": description or "",
+                },
+            )
+            if not created:
+                classifier.classifier_type = classifier_type
+                classifier.config = config
+                if name is not None:
+                    classifier.name = name
+                if description is not None:
+                    classifier.description = description
+                classifier.save()
+
+            classifier.benthic_attribute_growth_forms.set(resolved)
+
+        return classifier
 
     def __str__(self):
         return self.version
