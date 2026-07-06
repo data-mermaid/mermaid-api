@@ -391,14 +391,23 @@ def _get_image_location(image: Image):
         )
 
 
+def _legacy_point_predictions(label_ids, score_sets):
+    """Adapt in-process pyspacer output (global label_ids + per-point score vectors)
+    into the normalized [(row, col, ranked)] structure shared by both lanes."""
+    predictions = []
+    for row, col, scores in score_sets:
+        ranked = sorted(zip(label_ids, scores), key=itemgetter(1), reverse=True)
+        predictions.append((row, col, ranked))
+    return predictions
+
+
 @transaction.atomic
-def _write_classification_results(image, score_sets, label_ids, classifer_record, profile=None):
+def _write_classification_results(image, point_predictions, classifer_record, profile=None):
     _annotations = []
     _points = []
     created_on = timezone.now()
 
-    for row, col, scores in score_sets:
-        _label_ids = label_ids[:]
+    for row, col, ranked in point_predictions:
         point = Point(
             row=row,
             column=col,
@@ -409,10 +418,10 @@ def _write_classification_results(image, score_sets, label_ids, classifer_record
             updated_by=profile,
         )
         _points.append(point)
-        top_predictions = sorted(zip(_label_ids, scores), key=itemgetter(1), reverse=True)
-        for label, score in top_predictions[0:3]:
+        for label, score in ranked[0:3]:
             ba_id, gf_id = (label.split("::", 1) + [None])[:2]
-            if score >= settings.CLASSIFIED_THRESHOLD and ba_id is not None:
+            gf_id = gf_id or None  # empty growth form ("ba::") -> None FK
+            if score >= settings.CLASSIFIED_THRESHOLD and ba_id:
                 _annotations.append(
                     Annotation(
                         point=point,
@@ -471,7 +480,8 @@ def _classify_image(image_record_id, profile_id=None):
         response_message = classify_features(classify_features_msg)
         label_ids = response_message.classes
         score_sets = response_message.scores
-        _write_classification_results(image, score_sets, label_ids, classifer_record, profile)
+        point_predictions = _legacy_point_predictions(label_ids, score_sets)
+        _write_classification_results(image, point_predictions, classifer_record, profile)
 
         with open(tmp_feat_vector_file_path, "rb") as tmp_feat_vector_file:
             image.feature_vector_file.save(
