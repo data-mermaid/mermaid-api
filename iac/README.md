@@ -30,6 +30,10 @@ You can run a `cdk diff` from this directory and see the changes that will be ap
 
 This should be handled through the CI/CD configuration.
 
+## Deploying a new Classifier Model
+
+[Detailed Instructions](docs/deploy-classifier-version.md)
+
 ## cdk-nag
 
 [cdk-nag](https://github.com/cdklabs/cdk-nag) runs `AwsSolutionsChecks` during every `cdk synth`. It validates all stacks against the [AWS Solutions](https://github.com/cdklabs/cdk-nag/blob/main/RULES.md#awssolutions) rule pack and **fails synthesis if there are unsuppressed errors**.
