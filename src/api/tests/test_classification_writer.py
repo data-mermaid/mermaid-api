@@ -56,3 +56,24 @@ def test_writer_creates_points_and_thresholded_annotations(
     assert annos[0].score == pytest.approx(80.0)
     assert annos[0].is_confirmed is False  # 0.8 < AUTOCONFIRM_THRESHOLD (1.0)
     assert annos[0].is_machine_created is True
+
+
+@override_settings(CLASSIFIED_THRESHOLD=0.5, AUTOCONFIRM_THRESHOLD=1.0)
+def test_writer_empty_growth_form_label_maps_to_none(classifier, benthic_attribute_1, image):
+    ba1 = str(benthic_attribute_1.pk)
+    # Trailing-separator label "ba::" -> split yields gf_id == "" which the writer's
+    # `gf_id = gf_id or None` guard must convert to a None FK (an empty string would
+    # otherwise break the growth_form_id FK write).
+    point_predictions = [(10, 20, [(f"{ba1}::", 0.8)])]
+
+    _write_classification_results(image, point_predictions, classifier, profile=None)
+
+    points = list(Point.objects.filter(image=image))
+    assert len(points) == 1
+    annos = list(Annotation.objects.filter(point=points[0]))
+    assert len(annos) == 1
+    assert str(annos[0].benthic_attribute_id) == ba1
+    assert annos[0].growth_form_id is None
+    assert annos[0].score == pytest.approx(80.0)
+    assert annos[0].is_confirmed is False
+    assert annos[0].is_machine_created is True
