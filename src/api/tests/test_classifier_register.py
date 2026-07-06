@@ -1,6 +1,6 @@
 import pytest
 
-from api.models import Classifier
+from api.models import BenthicAttributeGrowthForm, Classifier
 from api.models.classification import ClassifierRegistrationError
 
 
@@ -87,8 +87,36 @@ def test_register_rejects_invalid_config(stub_manifest, benthic_attribute_1):
 
 def test_register_rejects_unknown_benthic_attribute_atomically(stub_manifest, benthic_attribute_1):
     bad = "00000000-0000-0000-0000-000000000000"
+    # Valid label FIRST, then the bad one, so the junction row for the valid
+    # label is created inside the atomic block before the failure — proving it
+    # gets rolled back (rather than never being created due to ordering alone).
     stub_manifest(_manifest(classes=[f"{benthic_attribute_1.pk}::", f"{bad}::"]))
+
+    assert not BenthicAttributeGrowthForm.objects.filter(
+        benthic_attribute=benthic_attribute_1, growth_form=None
+    ).exists()
+
     with pytest.raises(ClassifierRegistrationError):
         Classifier.register("v9")
-    # nothing partially applied
+
+    # nothing partially applied: neither the Classifier row nor the junction
+    # row for the earlier valid label survives the rollback.
+    assert not Classifier.objects.filter(version="v9").exists()
+    assert not BenthicAttributeGrowthForm.objects.filter(
+        benthic_attribute=benthic_attribute_1, growth_form=None
+    ).exists()
+
+
+def test_register_rejects_unknown_growth_form(stub_manifest, benthic_attribute_1):
+    bad = "00000000-0000-0000-0000-000000000000"
+    stub_manifest(_manifest(classes=[f"{benthic_attribute_1.pk}::{bad}"]))
+    with pytest.raises(ClassifierRegistrationError):
+        Classifier.register("v9")
+    assert not Classifier.objects.filter(version="v9").exists()
+
+
+def test_register_rejects_unsupported_schema_version(stub_manifest, benthic_attribute_1):
+    stub_manifest(_manifest(classes=[f"{benthic_attribute_1.pk}::"], schema_version=999))
+    with pytest.raises(ClassifierRegistrationError):
+        Classifier.register("v9")
     assert not Classifier.objects.filter(version="v9").exists()
