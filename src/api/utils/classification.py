@@ -37,6 +37,7 @@ from ..models import (
     Site,
 )
 from ..models.classification import get_image_storage_config
+from .inference import InferenceError, classify_via_lambda  # noqa: F401
 from .q import submit_image_job
 from .s3 import download_directory, upload_file
 
@@ -379,6 +380,13 @@ def _get_classifier_and_weights(
     )
 
 
+def _resolve_active_classifier() -> Classifier:
+    version = settings.INFERENCE_CLASSIFIER_VERSION
+    if version:
+        return Classifier.objects.get(version=version)
+    return Classifier.latest()
+
+
 def _get_image_location(image: Image):
     if settings.ENVIRONMENT == "local":
         return DataLocation("filesystem", image.image.path)
@@ -442,31 +450,17 @@ def _write_classification_results(image, point_predictions, classifer_record, pr
     Annotation.objects.bulk_create(_annotations)
 
 
-def _classify_image(image_record_id, profile_id=None):
-    profile = Profile.objects.get_or_none(id=profile_id) if profile_id else None
-
-    image = Image.objects.get_or_none(id=image_record_id)
-    if not image:
-        return
-
-    create_classification_status(image, ClassificationStatus.RUNNING)
-
+def _classify_in_process(image, points, classifer_record, profile):
+    tmp_dir = TemporaryDirectory()
+    tmp_feat_vector_file_path = Path(tmp_dir.name, f"{image.id}.featurevector")
+    feature_location = DataLocation("filesystem", tmp_feat_vector_file_path)
     try:
-        tmp_dir = TemporaryDirectory()
-        tmp_feat_vector_file_path = Path(tmp_dir.name, f"{image.id}.featurevector")
-        feature_location = DataLocation("filesystem", tmp_feat_vector_file_path)
-
         data_location = _get_image_location(image)
-        classifier, weights, classifer_record = _get_classifier_and_weights()
-        points = generate_points(image, 25)
+        classifier, weights, _ = _get_classifier_and_weights(classifer_record)
 
         extract_features_msg = ExtractFeaturesMsg(
-            job_token=image_record_id,
-            extractor=EfficientNetExtractor(
-                data_locations=dict(
-                    weights=weights,
-                ),
-            ),
+            job_token=str(image.id),
+            extractor=EfficientNetExtractor(data_locations=dict(weights=weights)),
             rowcols=points,
             image_loc=data_location,
             feature_loc=feature_location,
@@ -476,29 +470,57 @@ def _classify_image(image_record_id, profile_id=None):
             feature_loc=extract_features_msg.feature_loc,
             classifier_loc=classifier,
         )
-        _ = extract_features(extract_features_msg)
+        extract_features(extract_features_msg)
         response_message = classify_features(classify_features_msg)
-        label_ids = response_message.classes
-        score_sets = response_message.scores
-        point_predictions = _legacy_point_predictions(label_ids, score_sets)
+        point_predictions = _legacy_point_predictions(
+            response_message.classes, response_message.scores
+        )
         _write_classification_results(image, point_predictions, classifer_record, profile)
 
         with open(tmp_feat_vector_file_path, "rb") as tmp_feat_vector_file:
             image.feature_vector_file.save(
                 f"{image.id}_featurevector", tmp_feat_vector_file, save=True
             )
-
-        create_classification_status(image, ClassificationStatus.COMPLETED)
-    except Exception as err:
-        print(err)
-        create_classification_status(image, ClassificationStatus.FAILED, str(err))
     finally:
         if Path(tmp_feat_vector_file_path).exists():
             os.unlink(tmp_feat_vector_file_path)
 
 
-def classify_image_job(image_record_id, profile_id=None):
-    return submit_image_job(0, True, _classify_image, image_record_id=image_record_id)
+def _classify_image(image_record_id, profile_id=None, num_points=None):
+    profile = Profile.objects.get_or_none(id=profile_id) if profile_id else None
+
+    image = Image.objects.get_or_none(id=image_record_id)
+    if not image:
+        return
+
+    create_classification_status(image, ClassificationStatus.RUNNING)
+    num_points = num_points or settings.INFERENCE_DEFAULT_NUM_POINTS
+
+    try:
+        classifer_record = _resolve_active_classifier()
+        points = generate_points(image, num_points)
+
+        if settings.INFERENCE_LAMBDA_PYSPACER:
+            point_predictions = classify_via_lambda(image, points)
+            _write_classification_results(image, point_predictions, classifer_record, profile)
+        else:
+            _classify_in_process(image, points, classifer_record, profile)
+
+        create_classification_status(image, ClassificationStatus.COMPLETED)
+    except Exception as err:
+        print(err)
+        create_classification_status(image, ClassificationStatus.FAILED, str(err))
+
+
+def classify_image_job(image_record_id, profile_id=None, num_points=None):
+    return submit_image_job(
+        0,
+        True,
+        _classify_image,
+        image_record_id=image_record_id,
+        profile_id=profile_id,
+        num_points=num_points,
+    )
 
 
 def classify_image(image_record_id, profile_id=None):

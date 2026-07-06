@@ -199,6 +199,18 @@ class ImageViewSet(BaseProjectApiViewSet):
         collect_record_id = request.data.get("collect_record_id")
         trigger_classification = truthy(request.data.get("classify", True))
 
+        num_points = request.data.get("num_points")
+        if num_points is not None:
+            try:
+                num_points = int(num_points)
+                if num_points <= 0:
+                    raise ValueError
+            except (TypeError, ValueError):
+                return Response(
+                    {"error": "num_points must be a positive integer."},
+                    status=status.HTTP_400_BAD_REQUEST,
+                )
+
         if image_file and image_file.size > settings.MAX_IMAGE_FILE_SIZE:
             mb = settings.MAX_IMAGE_FILE_SIZE // (1024 * 1024)
             return Response(
@@ -248,7 +260,7 @@ class ImageViewSet(BaseProjectApiViewSet):
 
         if trigger_classification:
             create_classification_status(image_record, status=ClassificationStatus.PENDING)
-            classify_image_job(image_record.pk)
+            classify_image_job(image_record.pk, profile_id=profile.pk, num_points=num_points)
 
         data = ImageSerializer(instance=image_record, context={"request": request}).data
         return Response(data=data, status=status.HTTP_201_CREATED)
