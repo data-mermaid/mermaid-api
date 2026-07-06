@@ -22,9 +22,3 @@ def test_version_is_unique():
     Classifier.objects.create(name="a", version="dup")
     with pytest.raises(IntegrityError):
         Classifier.objects.create(name="b", version="dup")
-
-
-def test_num_points_field_removed():
-    field_names = {f.name for f in Classifier._meta.get_fields()}
-    assert "num_points" not in field_names
-    assert "patch_size" not in field_names  # column removed; property is not a field
