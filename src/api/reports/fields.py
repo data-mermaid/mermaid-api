@@ -1,4 +1,3 @@
-
 class BaseReportField:
     def __init__(self, display=None, alias=None, **kwargs):
         self._display = None

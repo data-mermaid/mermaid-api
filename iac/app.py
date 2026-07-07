@@ -1,18 +1,18 @@
 import os
 
+import nag_suppressions
 from aws_cdk import App, Aspects, Environment
 from cdk_nag import AwsSolutionsChecks
-import nag_suppressions
 from settings.dev import DEV_SETTINGS
 from settings.prod import PROD_SETTINGS
 from stacks.api import ApiStack
+from stacks.cloudtrail import CloudTrailStack
 from stacks.common import CommonStack
 from stacks.github_access import GithubAccessStack
+from stacks.guardduty import GuardDutyStack
 from stacks.inference import InferenceStack
 from stacks.sagemaker import SagemakerStack
 from stacks.static_site import StaticSiteStack
-from stacks.cloudtrail import CloudTrailStack
-from stacks.guardduty import GuardDutyStack
 
 tags = {
     "Owner": "sysadmin@datamermaid.org",
@@ -137,6 +137,20 @@ prod_api_stack = ApiStack(
     cost_alerts_topic=common_stack.cost_alerts_topic,
 )
 
+# The pyspacer inference compute lane for prod.
+# Alarms publish to prod ApiStack's shared alerts topic.
+prod_inference_stack = InferenceStack(
+    app,
+    "prod-mermaid-inference",
+    env=cdk_env,
+    tags=tags,
+    config=PROD_SETTINGS,
+    inference_repo=common_stack.inference_repo,
+    config_bucket=common_stack.config_bucket,
+    image_bucket=common_stack.image_processing_bucket,
+    alerts_topic=prod_api_stack.alerts_topic,
+)
+
 cloudtrail_stack = CloudTrailStack(
     app,
     "mermaid-cloudtrail",
@@ -190,6 +204,7 @@ nag_suppressions.apply_all(
     cloudtrail_stack=cloudtrail_stack,
     guardduty_stack=guardduty_stack,
     dev_inference_stack=dev_inference_stack,
+    prod_inference_stack=prod_inference_stack,
 )
 
 app.synth()
