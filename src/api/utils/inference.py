@@ -69,7 +69,8 @@ def response_to_point_predictions(response):
 def classify_via_lambda(image, points):
     """Invoke the pyspacer Lambda for an image and return normalized point predictions.
 
-    Raises InferenceError on an ErrorEnvelope payload or a version-drift mismatch.
+    Raises InferenceError on an ErrorEnvelope payload, a classifier-version drift
+    mismatch, or a contract-version mismatch.
     """
     traceparent = format_traceparent(new_traceparent())
     payload = invoke_pyspacer(build_pyspacer_request(image, points, traceparent))
