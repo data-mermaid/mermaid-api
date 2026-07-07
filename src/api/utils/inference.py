@@ -1,6 +1,7 @@
 import json
 
 import boto3
+import mermaid_inference_contract
 from django.conf import settings
 from mermaid_inference_contract import (
     PyspacerRequest,
@@ -83,6 +84,13 @@ def classify_via_lambda(image, points):
         raise InferenceError(
             f"Classifier version drift: Lambda served {response.classifier_version!r}, "
             f"expected {expected!r}"
+        )
+
+    installed = mermaid_inference_contract.__version__
+    if response.contract_version and response.contract_version != installed:
+        raise InferenceError(
+            f"Contract version mismatch: Lambda reported {response.contract_version!r}, "
+            f"API has {installed!r} — pin mermaid-inference-contract to the deployed image's tag"
         )
 
     return response_to_point_predictions(response)

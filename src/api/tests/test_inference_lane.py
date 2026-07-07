@@ -83,3 +83,32 @@ def test_classify_via_lambda_drift_guard(monkeypatch, image):
     with pytest.raises(InferenceError) as exc:
         classify_via_lambda(image, [(1, 2)])
     assert "drift" in str(exc.value).lower()
+
+
+@override_settings(INFERENCE_CLASSIFIER_VERSION="v2")
+def test_classify_via_lambda_contract_version_mismatch_raises(monkeypatch, image):
+    payload = _ok_payload("v2")
+    payload["contract_version"] = "9.9.9"  # != installed
+    monkeypatch.setattr(inference, "invoke_pyspacer", lambda p: payload)
+    with pytest.raises(InferenceError) as exc:
+        classify_via_lambda(image, [(1, 2)])
+    assert "contract" in str(exc.value).lower()
+
+
+@override_settings(INFERENCE_CLASSIFIER_VERSION="v2")
+def test_classify_via_lambda_contract_version_match_ok(monkeypatch, image):
+    import mermaid_inference_contract as contract
+
+    payload = _ok_payload("v2")
+    payload["contract_version"] = contract.__version__  # matches installed
+    monkeypatch.setattr(inference, "invoke_pyspacer", lambda p: payload)
+    preds = classify_via_lambda(image, [(1, 2)])
+    assert preds == [(1, 2, [("ba1::", 0.9), ("ba2::", 0.1)])]
+
+
+@override_settings(INFERENCE_CLASSIFIER_VERSION="v2")
+def test_classify_via_lambda_missing_contract_version_tolerated(monkeypatch, image):
+    payload = _ok_payload("v2")  # no contract_version key -> None (older Lambda)
+    monkeypatch.setattr(inference, "invoke_pyspacer", lambda p: payload)
+    preds = classify_via_lambda(image, [(1, 2)])  # must NOT raise
+    assert preds == [(1, 2, [("ba1::", 0.9), ("ba2::", 0.1)])]
