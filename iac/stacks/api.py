@@ -15,7 +15,6 @@ from aws_cdk import (
     aws_ecs as ecs,
     aws_ecs_patterns as ecs_patterns,
     aws_elasticloadbalancingv2 as elb,
-    aws_iam as iam,
     aws_logs as logs,
     aws_rds as rds,
     aws_route53 as r53,
@@ -272,7 +271,10 @@ class ApiStack(Stack):
             cpu=config.api.summary_cpu,
             memory_limit_mib=config.api.summary_memory,
             secrets=self.api_secrets,
-            environment={**environment, "OTEL_SERVICE_NAME": f"mermaid-summary-cache-{config.env_id}"},
+            environment={
+                **environment,
+                "OTEL_SERVICE_NAME": f"mermaid-summary-cache-{config.env_id}",
+            },
             command=["opentelemetry-instrument", "python", "manage.py", "process_summaries"],
             logging=ecs.LogDrivers.aws_logs(stream_prefix="SummaryCacheUpdateContainer"),
         )
@@ -411,7 +413,10 @@ class ApiStack(Stack):
             cluster=cluster,
             image_asset=ecs.ContainerImage.from_docker_image_asset(image_asset),
             api_secrets=self.api_secrets,
-            environment={**environment, "OTEL_SERVICE_NAME": f"mermaid-image-worker-{config.env_id}"},
+            environment={
+                **environment,
+                "OTEL_SERVICE_NAME": f"mermaid-image-worker-{config.env_id}",
+            },
             public_bucket=public_bucket,
             queue_name=image_sqs_queue_name,
             email=sys_email,

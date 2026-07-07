@@ -1,7 +1,13 @@
 """Settings for production environment"""
 
-from settings.settings import DatabaseSettings, DjangoSettings, InferenceSettings, ProjectSettings
 import os
+
+from settings.settings import (
+    DatabaseSettings,
+    DjangoSettings,
+    InferenceSettings,
+    ProjectSettings,
+)
 
 PROD_ENV_ID = "prod"
 PROD_SETTINGS = ProjectSettings(

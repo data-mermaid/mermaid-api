@@ -451,7 +451,8 @@ class MonitoringAlerts(Construct):
                 slack_channel_configuration_name=f"mermaid-{env_id}-alerts",
                 slack_workspace_id=slack_workspace_id,
                 slack_channel_id=slack_channel_id,
-                notification_topics=[self.topic] + ([cost_alerts_topic] if cost_alerts_topic else []),
+                notification_topics=[self.topic]
+                + ([cost_alerts_topic] if cost_alerts_topic else []),
                 role=slack_channel_role,
                 # Guardrail = hard ceiling on effective permissions
                 guardrail_policies=[
@@ -459,4 +460,3 @@ class MonitoringAlerts(Construct):
                     observability_policy,
                 ],
             )
-
