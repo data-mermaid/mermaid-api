@@ -40,7 +40,7 @@ class MonitoringAlerts(Construct):
         slack_workspace_id: str | None = None,
         slack_channel_id: str | None = None,
         cost_alerts_topic: sns.ITopic | None = None,
-        p99_latency_threshold: float = 5,
+        p95_latency_threshold: float = 5,
         monitor_shared_rds: bool = True,
         **kwargs,
     ) -> None:
@@ -80,13 +80,13 @@ class MonitoringAlerts(Construct):
             cw.Alarm(
                 self,
                 "AlbLatencyAlarm",
-                alarm_name=f"mermaid-{env_id}-alb-p99-latency",
-                alarm_description=f"ALB p99 response latency exceeded {p99_latency_threshold} seconds",
+                alarm_name=f"mermaid-{env_id}-alb-p95-latency",
+                alarm_description=f"ALB p95 response latency exceeded {p95_latency_threshold} seconds",
                 metric=load_balancer.metrics.target_response_time(
-                    statistic="p99",
+                    statistic="p95",
                     period=Duration.minutes(5),
                 ),
-                threshold=p99_latency_threshold,
+                threshold=p95_latency_threshold,
                 evaluation_periods=2,
                 comparison_operator=cw.ComparisonOperator.GREATER_THAN_THRESHOLD,
                 treat_missing_data=cw.TreatMissingData.NOT_BREACHING,
