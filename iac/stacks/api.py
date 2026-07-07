@@ -176,6 +176,15 @@ class ApiStack(Stack):
         # Envir Vars
         sqs_queue_name = f"mermaid-{config.env_id}-general"
         image_sqs_queue_name = f"mermaid-{config.env_id}-image-processing"
+
+        # Inference Lambda (pyspacer compute lane). Built from config.env_id rather than
+        # imported from InferenceStack to avoid a cross-stack ApiStack<->InferenceStack dependency.
+        inference_settings = getattr(config, "inference", None)
+        inference_function_name = f"{config.env_id}-mermaid-inference-pyspacer"
+        inference_function_arn = (
+            f"arn:aws:lambda:{self.region}:{self.account}:function:{inference_function_name}"
+        )
+
         environment = {
             "ENV": config.env_id,
             "ENVIRONMENT": config.env_id,
@@ -213,6 +222,10 @@ class ApiStack(Stack):
             "OTEL_EXPORTER_OTLP_ENDPOINT": "http://localhost:4317",
             "OTEL_PROPAGATORS": "xray",
             "OTEL_PYTHON_ID_GENERATOR": "xray",
+            "INFERENCE_LAMBDA_PYSPACER": inference_function_name if inference_settings else "",
+            "INFERENCE_CLASSIFIER_VERSION": (
+                inference_settings.classifier_version if inference_settings else ""
+            ),
         }
 
         # build image asset to be shared with API and Backup Task
@@ -272,7 +285,10 @@ class ApiStack(Stack):
             cpu=config.api.summary_cpu,
             memory_limit_mib=config.api.summary_memory,
             secrets=self.api_secrets,
-            environment={**environment, "OTEL_SERVICE_NAME": f"mermaid-summary-cache-{config.env_id}"},
+            environment={
+                **environment,
+                "OTEL_SERVICE_NAME": f"mermaid-summary-cache-{config.env_id}",
+            },
             command=["opentelemetry-instrument", "python", "manage.py", "process_summaries"],
             logging=ecs.LogDrivers.aws_logs(stream_prefix="SummaryCacheUpdateContainer"),
         )
@@ -411,7 +427,10 @@ class ApiStack(Stack):
             cluster=cluster,
             image_asset=ecs.ContainerImage.from_docker_image_asset(image_asset),
             api_secrets=self.api_secrets,
-            environment={**environment, "OTEL_SERVICE_NAME": f"mermaid-image-worker-{config.env_id}"},
+            environment={
+                **environment,
+                "OTEL_SERVICE_NAME": f"mermaid-image-worker-{config.env_id}",
+            },
             public_bucket=public_bucket,
             queue_name=image_sqs_queue_name,
             email=sys_email,
@@ -421,6 +440,15 @@ class ApiStack(Stack):
         # allow API to send messages to the queue
         worker.queue.grant_send_messages(service.task_definition.task_role)
         image_worker.queue.grant_send_messages(service.task_definition.task_role)
+
+        # Allow the worker task roles to invoke the inference Lambda (pyspacer compute lane)
+        if inference_settings:
+            invoke_inference_stmt = iam.PolicyStatement(
+                actions=["lambda:InvokeFunction"],
+                resources=[inference_function_arn],
+            )
+            worker.task_definition.task_role.add_to_principal_policy(invoke_inference_stmt)
+            image_worker.task_definition.task_role.add_to_principal_policy(invoke_inference_stmt)
 
         # allow API to read/write to the public bucket
         public_bucket.grant_read_write(service.task_definition.task_role)

@@ -82,6 +82,7 @@ class InferenceSettings:
     ephemeral_storage_gb: int = 2
     reserved_concurrency: int = 20
     num_threads: int = 6
+    classifier_version: str = ""
 
 
 @dataclass
