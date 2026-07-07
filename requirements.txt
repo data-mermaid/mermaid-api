@@ -59,5 +59,4 @@ opentelemetry-instrumentation-psycopg==0.52b0
 opentelemetry-instrumentation-requests==0.52b0
 opentelemetry-instrumentation-urllib3==0.52b0
 
-# TODO(cutover): replace SHA with a proper vX-Y release tag once cut on mermaid-inference
-mermaid-inference-contract @ git+https://github.com/data-mermaid/mermaid-inference.git@9e58c9feadf730bbb4f30b38b01bbe68625cd689#subdirectory=packages/mermaid-inference-contract
+mermaid-inference-contract @ git+https://github.com/data-mermaid/mermaid-inference.git@v2-2#subdirectory=packages/mermaid-inference-contract
