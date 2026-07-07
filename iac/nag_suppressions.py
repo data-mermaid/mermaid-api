@@ -522,7 +522,9 @@ def suppress_api(stack: Stack) -> None:
         # Task definition resource (ECS2 - env vars)
         _suppress_by_path(stack, f"{td}/Resource", [_API_ECS2_SUPPRESSION])
         # Execution role default policy (IAM5 - ECR/Secrets wildcard)
-        _suppress_by_path(stack, f"{td}/ExecutionRole/DefaultPolicy/Resource", [_API_EXEC_ROLE_IAM5])
+        _suppress_by_path(
+            stack, f"{td}/ExecutionRole/DefaultPolicy/Resource", [_API_EXEC_ROLE_IAM5]
+        )
 
     # Scheduled backup events role
     _suppress_by_path(
@@ -979,6 +981,7 @@ def apply_all(
     cloudtrail_stack: Stack | None = None,
     guardduty_stack: Stack | None = None,
     dev_inference_stack: Stack | None = None,
+    prod_inference_stack: Stack | None = None,
 ) -> None:
     suppress_github_access(gh_access_stack)
     suppress_common(common_stack)
@@ -1000,3 +1003,5 @@ def apply_all(
     # is not instantiated until its image exists in ECR (see app.py).
     if dev_inference_stack is not None:
         suppress_inference(dev_inference_stack)
+    if prod_inference_stack is not None:
+        suppress_inference(prod_inference_stack)

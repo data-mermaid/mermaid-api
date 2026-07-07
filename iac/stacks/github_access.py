@@ -38,9 +38,7 @@ class GithubAccessStack(Stack):
             externalOidcProvider
         )
 
-        self.classifier_release_role = self._create_classifier_release_role(
-            externalOidcProvider
-        )
+        self.classifier_release_role = self._create_classifier_release_role(externalOidcProvider)
 
     def _create_inference_image_push_role(
         self, oidc_provider: iam.OpenIdConnectProvider
@@ -75,8 +73,7 @@ class GithubAccessStack(Stack):
         )
 
         repo_arn = (
-            f"arn:aws:ecr:{self.region}:{self.account}:"
-            "repository/mermaid-inference-pyspacer"
+            f"arn:aws:ecr:{self.region}:{self.account}:" "repository/mermaid-inference-pyspacer"
         )
         role.attach_inline_policy(
             iam.Policy(
@@ -114,9 +111,7 @@ class GithubAccessStack(Stack):
 
         return role
 
-    def _create_classifier_release_role(
-        self, oidc_provider: iam.OpenIdConnectProvider
-    ) -> iam.Role:
+    def _create_classifier_release_role(self, oidc_provider: iam.OpenIdConnectProvider) -> iam.Role:
         """Least-privilege role assumed by the mermaid-classifier release
         workflow (Issue #50) via GitHub OIDC.
 
