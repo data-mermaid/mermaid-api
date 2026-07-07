@@ -33,7 +33,6 @@ from .interval_size import IntervalSizeValidator
 from .interval_start import IntervalStartValidator
 from .invert_belt_transect import UniqueInvertBeltTransectValidator
 from .invert_obs import (
-    InvertAllObsExcludedValidator,
     InvertCountValidator,
     InvertObsCountHighValidator,
     InvertSizeBinRequiredValidator,

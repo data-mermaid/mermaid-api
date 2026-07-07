@@ -15,7 +15,6 @@ from aws_cdk import (
     aws_ecs as ecs,
     aws_ecs_patterns as ecs_patterns,
     aws_elasticloadbalancingv2 as elb,
-    aws_iam as iam,
     aws_logs as logs,
     aws_rds as rds,
     aws_route53 as r53,
@@ -272,7 +271,10 @@ class ApiStack(Stack):
             cpu=config.api.summary_cpu,
             memory_limit_mib=config.api.summary_memory,
             secrets=self.api_secrets,
-            environment={**environment, "OTEL_SERVICE_NAME": f"mermaid-summary-cache-{config.env_id}"},
+            environment={
+                **environment,
+                "OTEL_SERVICE_NAME": f"mermaid-summary-cache-{config.env_id}",
+            },
             command=["opentelemetry-instrument", "python", "manage.py", "process_summaries"],
             logging=ecs.LogDrivers.aws_logs(stream_prefix="SummaryCacheUpdateContainer"),
         )
@@ -323,7 +325,12 @@ class ApiStack(Stack):
             security_groups=[container_security_group],
             desired_count=config.api.container_count,
             enable_execute_command=True,
-            min_healthy_percent=0,
+            # Zero-downtime rolling deploy: keep the old task serving until the new
+            # one is healthy, then drain it. Avoids the 0-running-tasks window that
+            # otherwise fires mermaid-{env}-ecs-no-running-tasks on every deploy.
+            # Needs room for one extra API task during a deploy (cluster has it).
+            min_healthy_percent=100,
+            max_healthy_percent=200,
             capacity_provider_strategies=cluster.default_capacity_provider_strategy,
             circuit_breaker=ecs.DeploymentCircuitBreaker(enable=True, rollback=True),
         )
@@ -411,7 +418,10 @@ class ApiStack(Stack):
             cluster=cluster,
             image_asset=ecs.ContainerImage.from_docker_image_asset(image_asset),
             api_secrets=self.api_secrets,
-            environment={**environment, "OTEL_SERVICE_NAME": f"mermaid-image-worker-{config.env_id}"},
+            environment={
+                **environment,
+                "OTEL_SERVICE_NAME": f"mermaid-image-worker-{config.env_id}",
+            },
             public_bucket=public_bucket,
             queue_name=image_sqs_queue_name,
             email=sys_email,
@@ -496,7 +506,7 @@ class ApiStack(Stack):
         )
 
         # ── CloudWatch Alarms + Slack (AWS Chatbot) ──────────────────
-        MonitoringAlerts(
+        monitoring_alerts = MonitoringAlerts(
             self,
             "Alerts",
             env_id=config.env_id,
@@ -510,10 +520,13 @@ class ApiStack(Stack):
             slack_workspace_id=config.api.slack_workspace_id or None,
             slack_channel_id=config.api.slack_channel_id or None,
             cost_alerts_topic=cost_alerts_topic,
-            # dev is low-traffic: p99 = the single slowest request, so a lone slow
-            # probe trips a 5s threshold. Relax dev; keep prod strict.
-            p99_latency_threshold=5 if config.env_id == "prod" else 10,
+            # dev is low-traffic: p95 = a single slow request among few, so a lone
+            # slow probe trips a 5s threshold. Relax dev; keep prod strict.
+            p95_latency_threshold=5 if config.env_id == "prod" else 10,
             # RDS instance is shared across envs — only prod owns its alarms to
             # avoid both envs paging on the same instance event.
             monitor_shared_rds=config.env_id == "prod",
         )
+        # Exposed so sibling stacks (e.g. InferenceStack) can publish alarms to
+        # the same per-env topic this stack's Chatbot config already delivers.
+        self.alerts_topic = monitoring_alerts.topic

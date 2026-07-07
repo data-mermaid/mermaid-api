@@ -38,15 +38,19 @@ class CollectRecordCSVListSerializer(ListSerializer):
         return {self.child.get_schemafield(k)[0]: v for k, v in row.items()}
 
     def assign_choices(self, row, choices_sets):
+        # choices_sets values are pre-normalized (see get_choices_sets) so this
+        # only needs to normalize the row value, not rebuild the choices dict.
         for name, field in self.child.fields.items():
-            val = field.get_value(row)
+            raw_val = field.get_value(row)
             choices = choices_sets.get(name)
             if choices is None:
                 continue
             try:
-                val = self._lower(val)
-                choices = {label.lower(): value for label, value in choices.items()}
-                row[name] = choices.get(val) or val
+                val = self._normalize(raw_val)
+                # Fall back to the original (unnormalized) value, not the
+                # lowercased/stripped one, so an unresolved value still shows
+                # the user's actual input if it surfaces in an error message.
+                row[name] = choices.get(val, raw_val)
             except (ValueError, TypeError):
                 row[name] = None
 
@@ -72,21 +76,24 @@ class CollectRecordCSVListSerializer(ListSerializer):
         for name in diff_keys:
             del row[name]
 
-    def _lower(self, val):
+    def _normalize(self, val):
         if isinstance(val, str):
-            return val.lower()
+            return val.strip().lower()
         return val
 
     def _get_reverse_choices(self, field):
         return dict((v, k) for k, v in field.choices.items())
 
+    def _normalize_choices(self, choices):
+        return {self._normalize(label): value for label, value in choices.items()}
+
     def get_choices_sets(self):
         choices = dict()
         for name, field in self.child.fields.items():
             if hasattr(field, "choices"):
-                choices[name] = self._get_reverse_choices(field)
+                choices[name] = self._normalize_choices(self._get_reverse_choices(field))
             elif hasattr(self.child, "project_choices") and name in self.child.project_choices:
-                choices[name] = self.child.project_choices[name]
+                choices[name] = self._normalize_choices(self.child.project_choices[name])
 
         return choices
 
@@ -334,6 +341,29 @@ class CollectRecordCSVSerializer(Serializer):
             if email.lower() not in project_profiles:
                 raise ValidationError("{} doesn't exist".format(email))
         return val
+
+    _valid_project_choice_ids = None
+
+    def _validate_project_choice(self, choices_key, val, label):
+        # assign_choices() resolves a matching name to its id; if it didn't
+        # match, val is still the raw name from the CSV. Valid ids are cached
+        # on the instance since this runs once per row but project_choices
+        # itself is fixed for the lifetime of this (per-request) serializer.
+        if self._valid_project_choice_ids is None:
+            self._valid_project_choice_ids = {}
+        valid_ids = self._valid_project_choice_ids.get(choices_key)
+        if valid_ids is None:
+            valid_ids = set((self.project_choices.get(choices_key) or {}).values())
+            self._valid_project_choice_ids[choices_key] = valid_ids
+        if val not in valid_ids:
+            raise ValidationError('{} "{}" does not exist in this project'.format(label, val))
+        return val
+
+    def validate_data__sample_event__site(self, val):
+        return self._validate_project_choice("data__sample_event__site", val, "Site")
+
+    def validate_data__sample_event__management(self, val):
+        return self._validate_project_choice("data__sample_event__management", val, "Management")
 
     def validate(self, data):
         # Validate common Transect level fields

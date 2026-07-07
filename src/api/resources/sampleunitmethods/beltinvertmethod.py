@@ -199,7 +199,7 @@ class BeltInvertMethodObsSerializer(BaseSUViewAPISerializer):
     class Meta(BaseSUViewAPISerializer.Meta):
         model = BeltInvertObsModel
         exclude = BaseSUViewAPISerializer.Meta.exclude.copy()
-        exclude.extend(["location", "include", "invert_species"])
+        exclude.extend(["location", "invert_species"])
         header_order = ["id"] + BaseSUViewAPISerializer.Meta.header_order.copy()
         header_order.extend(
             [
@@ -234,7 +234,7 @@ class BeltInvertMethodObsGeoSerializer(BaseViewAPIGeoSerializer):
     class Meta(BaseViewAPIGeoSerializer.Meta):
         model = BeltInvertObsModel
         exclude = BaseViewAPIGeoSerializer.Meta.exclude.copy()
-        exclude.extend(["include", "invert_species"])
+        exclude.extend(["invert_species"])
 
 
 class ObsBeltInvertCSVSerializer(ReportSerializer):

@@ -21,6 +21,12 @@ REPORT_TYPES = [
 
 
 def update_attributes_report(local_output_dir=None):
+    # Skip in tests: submit_job runs inline under settings.TESTING, so every
+    # approved-attribute save would otherwise build + upload the report to S3
+    # (None bucket in CI -> TypeError; real bucket locally -> pollutes prod).
+    if settings.TESTING and local_output_dir is None:
+        return
+
     canonical_filename = "mermaid_attributes.xlsx"
     dated_filename = f"mermaid_attributes_{create_iso_date_string()}.xlsx"
 

@@ -4,20 +4,19 @@ from django.db import migrations, models
 
 
 class Migration(migrations.Migration):
-
     dependencies = [
-        ('api', '0049_auto_20240723_2136'),
+        ("api", "0049_auto_20240723_2136"),
     ]
 
     operations = [
         migrations.AddField(
-            model_name='image',
-            name='original_image_height',
+            model_name="image",
+            name="original_image_height",
             field=models.PositiveIntegerField(blank=True, null=True),
         ),
         migrations.AddField(
-            model_name='image',
-            name='original_image_width',
+            model_name="image",
+            name="original_image_width",
             field=models.PositiveIntegerField(blank=True, null=True),
         ),
     ]

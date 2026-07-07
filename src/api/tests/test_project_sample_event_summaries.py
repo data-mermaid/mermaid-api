@@ -2,6 +2,11 @@ import pytest
 from django.urls import reverse
 
 from api.models import Project
+from api.models.summary_sample_events import (
+    RestrictedProjectSummarySampleEvent,
+    UnrestrictedProjectSummarySampleEvent,
+)
+from api.utils.summary_cache import update_summary_cache as _update_summary_cache
 
 
 @pytest.fixture
@@ -121,3 +126,15 @@ def test_project_se_summary_authenticated_not_project(
 
             assert "biomass_kgha_avg" not in beltfish
             assert "percent_cover_benthic_category_avg" not in benthicpit
+
+
+def test_project_se_summary_cleaned_up_after_project_deleted(db_setup, project1):
+    project_id = project1.pk
+    RestrictedProjectSummarySampleEvent.objects.create(project_id=project_id, records=[])
+    UnrestrictedProjectSummarySampleEvent.objects.create(project_id=project_id, records=[])
+
+    project1.delete()
+    _update_summary_cache(project_id, skip_cached_files=True)
+
+    assert not RestrictedProjectSummarySampleEvent.objects.filter(project_id=project_id).exists()
+    assert not UnrestrictedProjectSummarySampleEvent.objects.filter(project_id=project_id).exists()
