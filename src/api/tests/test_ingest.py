@@ -114,6 +114,51 @@ def test_fishbelt_ingest(
     assert new_records[1].data["obs_belt_fishes"][2]["fish_attribute"] == str(fish_species4.id)
 
 
+def test_fishbelt_ingest_missing_site_and_management(
+    db_setup,
+    fishbelt_file,
+    project1,
+    profile1,
+    project_profile1,
+    all_test_fish_attributes,
+    belt_transect_width_5m,
+    fish_size_bin_1,
+    tide2,
+    current2,
+    fish_species3,
+    fish_species4,
+    reef_slope1,
+    relative_depth1,
+    visibility1,
+):
+    # Note: unlike test_fishbelt_ingest, this test deliberately avoids the
+    # base_project fixture (which creates site1/site2/management1/management2),
+    # so the site/management names referenced in fishbelt_file don't exist in
+    # project1. project_profile1 is still needed so the observer email check passes.
+    new_records, ingest_output = utils.ingest(
+        protocol=FISHBELT_PROTOCOL,
+        datafile=fishbelt_file,
+        project_id=project1.pk,
+        profile_id=profile1.pk,
+        request=None,
+        dry_run=False,
+        clear_existing=False,
+        bulk_validation=False,
+        bulk_submission=False,
+        validation_suppressants=None,
+        serializer_class=None,
+    )
+
+    assert new_records is None
+    assert "errors" in ingest_output
+
+    errors = ingest_output["errors"]
+    assert len(errors) > 0
+    error_fields = {field for error in errors for field in error}
+    assert "data__sample_event__site" in error_fields
+    assert "data__sample_event__management" in error_fields
+
+
 def test_benthicpit_ingest(
     db_setup,
     benthicpit_file,

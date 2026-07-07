@@ -96,8 +96,13 @@ class ObsQuadratBenthicPercent(BaseModel, JSONMixin):
     class Meta:
         db_table = "obs_quadrat_benthic_percent"
         verbose_name = _("bleaching quadrat collection percent benthic cover observation")
-        unique_together = ("bleachingquadratcollection", "quadrat_number")
         ordering = ["created_on"]
+        constraints = [
+            models.UniqueConstraint(
+                fields=["bleachingquadratcollection", "quadrat_number"],
+                name="unique_obsquadratbenthicpercent_collection_quadrat",
+            )
+        ]
 
     def __str__(self):
         return _("%s") % self.quadrat_number

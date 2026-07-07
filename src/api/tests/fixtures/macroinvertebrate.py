@@ -12,6 +12,7 @@ from api.models import (
     InvertGenus,
     InvertGroupOfInterest,
     InvertOrder,
+    InvertSize,
     InvertSizeBin,
     InvertSpecies,
     ObsBeltInvert,
@@ -37,6 +38,19 @@ def invert_size_bin_1(db):
 @pytest.fixture
 def invert_size_bin_2(db):
     return InvertSizeBin.objects.create(val="2")
+
+
+@pytest.fixture
+def invert_size_bin_5cm(db):
+    """5cm size bin with InvertSize entries (0-5, 5-10, 10-15, …)."""
+    sb = InvertSizeBin.objects.create(val="5")
+    InvertSize.objects.create(invert_bin_size=sb, name="0 - 5", val=2.5, min_val=0.0, max_val=5.0)
+    InvertSize.objects.create(invert_bin_size=sb, name="5 - 10", val=7.5, min_val=5.0, max_val=10.0)
+    InvertSize.objects.create(
+        invert_bin_size=sb, name="10 - 15", val=12.5, min_val=10.0, max_val=15.0
+    )
+    InvertSize.objects.create(invert_bin_size=sb, name="50 +", val=50.0, min_val=50.0, max_val=None)
+    return sb
 
 
 @pytest.fixture

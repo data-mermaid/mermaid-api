@@ -2,7 +2,12 @@
 
 import os
 
-from settings.settings import DatabaseSettings, DjangoSettings, ProjectSettings
+from settings.settings import (
+    DatabaseSettings,
+    DjangoSettings,
+    InferenceSettings,
+    ProjectSettings,
+)
 
 PROD_ENV_ID = "prod"
 PROD_SETTINGS = ProjectSettings(
@@ -37,4 +42,5 @@ PROD_SETTINGS = ProjectSettings(
         slack_workspace_id=os.getenv("SLACK_WORKSPACE_ID", ""),
         slack_channel_id=os.getenv("SLACK_CHANNEL_ID", ""),
     ),
+    inference=InferenceSettings(image_tag="v2-1"),
 )

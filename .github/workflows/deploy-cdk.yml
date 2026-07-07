@@ -94,7 +94,8 @@ jobs:
             "mermaid-guardduty-us-east-1" \
             dev-mermaid-api-django \
             dev-mermaid-static-site \
-            dev-mermaid-sagemaker
+            dev-mermaid-sagemaker \
+            dev-mermaid-inference
       - name: CDK Deploy PROD
         if: startsWith(github.ref, 'refs/tags')
         env:
@@ -116,7 +117,8 @@ jobs:
             mermaid-cloudtrail \
             "mermaid-guardduty-us-east-1" \
             prod-mermaid-api-django \
-            prod-mermaid-static-site
+            prod-mermaid-static-site \
+            prod-mermaid-inference
 
 
 

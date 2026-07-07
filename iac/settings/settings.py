@@ -66,6 +66,25 @@ class DjangoSettings:
 
 
 @dataclass
+class InferenceSettings:
+    """Settings for the pyspacer inference Lambda (compute lane).
+
+    image_tag is the model-build ECR tag `vN-K` (vN = model version, K = serving build).
+    Bump K for a code/lib fix, vN for a retrain. Roll forward by editing this value
+    and redeploying (git-tracked).
+    """
+
+    image_tag: str
+    config_bucket: str = "mermaid-config"
+    image_bucket: str = "mermaid-image-processing"
+    memory_mb: int = 10240
+    timeout_minutes: int = 10
+    ephemeral_storage_gb: int = 2
+    reserved_concurrency: int = 20
+    num_threads: int = 6
+
+
+@dataclass
 class ProjectSettings:
     """Settings Class for Project Envs"""
 
@@ -73,3 +92,4 @@ class ProjectSettings:
     env_id: str
     database: DatabaseSettings
     api: DjangoSettings
+    inference: "InferenceSettings | None" = None
