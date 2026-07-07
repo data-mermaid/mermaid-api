@@ -979,6 +979,7 @@ def apply_all(
     cloudtrail_stack: Stack | None = None,
     guardduty_stack: Stack | None = None,
     dev_inference_stack: Stack | None = None,
+    prod_inference_stack: Stack | None = None,
 ) -> None:
     suppress_github_access(gh_access_stack)
     suppress_common(common_stack)
@@ -1000,3 +1001,5 @@ def apply_all(
     # is not instantiated until its image exists in ECR (see app.py).
     if dev_inference_stack is not None:
         suppress_inference(dev_inference_stack)
+    if prod_inference_stack is not None:
+        suppress_inference(prod_inference_stack)
