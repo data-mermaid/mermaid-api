@@ -15,6 +15,7 @@ from aws_cdk import (
     aws_ecs as ecs,
     aws_ecs_patterns as ecs_patterns,
     aws_elasticloadbalancingv2 as elb,
+    aws_iam as iam,
     aws_logs as logs,
     aws_rds as rds,
     aws_route53 as r53,
