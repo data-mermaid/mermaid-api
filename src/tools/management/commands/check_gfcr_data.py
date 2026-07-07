@@ -389,20 +389,6 @@ class Command(BaseCommand):
                     )
 
                 if (
-                    fs_type in ("taf", "ctf", "financial_facility")
-                    and has_num
-                    and getattr(fs, "number_of_solutions_supported_by", 0) == 0
-                ):
-                    yield (
-                        pname,
-                        name,
-                        "finance_solutions",
-                        "FS-11",
-                        "Set number of solutions supported (required for TAF, CTF, and Financial facility)",
-                        "fs_cross",
-                    )
-
-                if (
                     fs_type not in ("taf", "ctf", "financial_facility")
                     and has_num
                     and getattr(fs, "number_of_solutions_supported_by", 0) != 0
