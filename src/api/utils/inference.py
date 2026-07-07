@@ -1,4 +1,5 @@
 import json
+import logging
 
 import boto3
 import mermaid_inference_contract
@@ -6,12 +7,16 @@ from django.conf import settings
 from mermaid_inference_contract import (
     PyspacerRequest,
     S3Location,
+    Traceparent,
     format_traceparent,
     new_traceparent,
     parse_classify_response,
 )
+from opentelemetry import trace as otel_trace
 
 from api.models.classification import get_image_storage_config
+
+logger = logging.getLogger(__name__)
 
 
 class InferenceError(Exception):
@@ -58,6 +63,24 @@ def build_pyspacer_request(image, points, traceparent) -> dict:
     return request.model_dump(mode="json")
 
 
+def _current_traceparent() -> str:
+    """W3C traceparent for the active OTEL span, or a fresh one if there is no valid span.
+
+    OTEL span-context ids are already 128-bit trace / 64-bit span, i.e. W3C-shaped, so no
+    X-Ray-format conversion is needed here; ADOT handles the X-Ray mapping at export.
+    """
+    ctx = otel_trace.get_current_span().get_span_context()
+    if ctx.is_valid:
+        return format_traceparent(
+            Traceparent(
+                trace_id=format(ctx.trace_id, "032x"),
+                parent_id=format(ctx.span_id, "016x"),
+                flags="01" if ctx.trace_flags.sampled else "00",
+            )
+        )
+    return format_traceparent(new_traceparent())
+
+
 def response_to_point_predictions(response):
     """PyspacerResponse -> normalized [(row, col, [(label, score), ...ranked])]."""
     return [
@@ -72,26 +95,41 @@ def classify_via_lambda(image, points):
     Raises InferenceError on an ErrorEnvelope payload, a classifier-version drift
     mismatch, or a contract-version mismatch.
     """
-    traceparent = format_traceparent(new_traceparent())
-    payload = invoke_pyspacer(build_pyspacer_request(image, points, traceparent))
+    tracer = otel_trace.get_tracer("api.inference")
+    with tracer.start_as_current_span("pyspacer.classify_via_lambda"):
+        traceparent = _current_traceparent()
+        logger.info("pyspacer inference invoke", extra={"traceparent": traceparent})
+        payload = invoke_pyspacer(build_pyspacer_request(image, points, traceparent))
 
-    if "error_code" in payload:
-        raise InferenceError(payload.get("message") or "inference error")
+        if "error_code" in payload:
+            logger.error(
+                "pyspacer inference error envelope",
+                extra={"traceparent": traceparent, "error_code": payload.get("error_code")},
+            )
+            raise InferenceError(payload.get("message") or "inference error")
 
-    response = parse_classify_response(payload)
+        response = parse_classify_response(payload)
 
-    expected = settings.INFERENCE_CLASSIFIER_VERSION
-    if expected and response.classifier_version != expected:
-        raise InferenceError(
-            f"Classifier version drift: Lambda served {response.classifier_version!r}, "
-            f"expected {expected!r}"
-        )
+        expected = settings.INFERENCE_CLASSIFIER_VERSION
+        if expected and response.classifier_version != expected:
+            logger.error(
+                "pyspacer classifier version drift",
+                extra={"traceparent": traceparent},
+            )
+            raise InferenceError(
+                f"Classifier version drift: Lambda served {response.classifier_version!r}, "
+                f"expected {expected!r}"
+            )
 
-    installed = mermaid_inference_contract.__version__
-    if response.contract_version and response.contract_version != installed:
-        raise InferenceError(
-            f"Contract version mismatch: Lambda reported {response.contract_version!r}, "
-            f"API has {installed!r} — pin mermaid-inference-contract to the deployed image's tag"
-        )
+        installed = mermaid_inference_contract.__version__
+        if response.contract_version and response.contract_version != installed:
+            logger.error(
+                "pyspacer contract version mismatch",
+                extra={"traceparent": traceparent},
+            )
+            raise InferenceError(
+                f"Contract version mismatch: Lambda reported {response.contract_version!r}, "
+                f"API has {installed!r} — pin mermaid-inference-contract to the deployed image's tag"
+            )
 
-    return response_to_point_predictions(response)
+        return response_to_point_predictions(response)
