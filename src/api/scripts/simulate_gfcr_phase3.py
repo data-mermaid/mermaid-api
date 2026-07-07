@@ -8,8 +8,8 @@ What it does:
   1. Normalizes indicator set titles to valid TITLE_CHOICES values.
   2. Assigns an fs_type to every finance solution, cycling through all six types so
      every coercion path is exercised at least once. Required fields for each type
-     (sector for business, geographical_coverage for ctf, number_of_solutions_supported_by
-     for taf) are pre-filled with safe defaults before the coercion runs.
+     (sector for business, geographical_coverage for ctf) are pre-filled with safe
+     defaults before the coercion runs.
   3. Replaces deprecated choice values (fm_* sectors → ce_other, removed SFMs dropped,
      public_budget investment type → grant).
   4. All finance solution changes go through GFCRFinanceSolutionSerializer.validate() so
@@ -129,8 +129,6 @@ def _assign_types(log, errors):
         num = fs.number_of_solutions_supported_by
         if fs_type == "business" and not sector:
             sector = "ce_other"
-        elif fs_type in ("taf", "ctf", "financial_facility") and num == 0:
-            num = 1
 
         data = {
             "fs_type": fs_type,
