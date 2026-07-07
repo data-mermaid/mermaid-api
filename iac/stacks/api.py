@@ -183,6 +183,11 @@ class ApiStack(Stack):
         inference_function_arn = (
             f"arn:aws:lambda:{self.region}:{self.account}:function:{inference_function_name}"
         )
+        # Whether THIS env's API worker routes classification to the Lambda lane.
+        # The InferenceStack still deploys the function image regardless of this flag;
+        # it only flips the API between the Lambda lane and the legacy in-process path.
+        # Flip use_lambda=True for an env (+ deploy) to cut it over.
+        use_inference_lambda = bool(inference_settings and inference_settings.use_lambda)
 
         environment = {
             "ENV": config.env_id,
@@ -221,9 +226,9 @@ class ApiStack(Stack):
             "OTEL_EXPORTER_OTLP_ENDPOINT": "http://localhost:4317",
             "OTEL_PROPAGATORS": "xray",
             "OTEL_PYTHON_ID_GENERATOR": "xray",
-            "INFERENCE_LAMBDA_PYSPACER": inference_function_name if inference_settings else "",
+            "INFERENCE_LAMBDA_PYSPACER": inference_function_name if use_inference_lambda else "",
             "INFERENCE_CLASSIFIER_VERSION": (
-                inference_settings.classifier_version if inference_settings else ""
+                inference_settings.classifier_version if use_inference_lambda else ""
             ),
         }
 
@@ -445,8 +450,9 @@ class ApiStack(Stack):
         worker.queue.grant_send_messages(service.task_definition.task_role)
         image_worker.queue.grant_send_messages(service.task_definition.task_role)
 
-        # Allow the worker task roles to invoke the inference Lambda (pyspacer compute lane)
-        if inference_settings:
+        # Allow the worker task roles to invoke the inference Lambda (pyspacer compute lane),
+        # only for an env actually using the Lambda lane (least privilege; flip use_lambda to grant).
+        if use_inference_lambda:
             invoke_inference_stmt = iam.PolicyStatement(
                 actions=["lambda:InvokeFunction"],
                 resources=[inference_function_arn],

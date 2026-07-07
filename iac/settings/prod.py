@@ -42,5 +42,5 @@ PROD_SETTINGS = ProjectSettings(
         slack_workspace_id=os.getenv("SLACK_WORKSPACE_ID", ""),
         slack_channel_id=os.getenv("SLACK_CHANNEL_ID", ""),
     ),
-    inference=InferenceSettings(image_tag="v2-1"),
+    inference=InferenceSettings(image_tag="v2-2", classifier_version="v2", use_lambda=False),
 )

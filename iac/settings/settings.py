@@ -83,6 +83,10 @@ class InferenceSettings:
     reserved_concurrency: int = 20
     num_threads: int = 6
     classifier_version: str = ""
+    # False keeps this env's API on the legacy in-process classify path; the
+    # InferenceStack still deploys the function image. Flip to True (+ deploy) to
+    # route the API worker to the Lambda lane at classifier_version.
+    use_lambda: bool = False
 
 
 @dataclass
