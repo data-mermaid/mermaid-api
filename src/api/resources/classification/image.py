@@ -199,17 +199,10 @@ class ImageViewSet(BaseProjectApiViewSet):
         collect_record_id = request.data.get("collect_record_id")
         trigger_classification = truthy(request.data.get("classify", True))
 
-        num_points = request.data.get("num_points")
-        if num_points is not None:
-            try:
-                num_points = int(num_points)
-                if num_points <= 0:
-                    raise ValueError
-            except (TypeError, ValueError):
-                return Response(
-                    {"error": "num_points must be a positive integer."},
-                    status=status.HTTP_400_BAD_REQUEST,
-                )
+        # num_points is frozen to the server default for now — a per-request override
+        # is intentionally NOT exposed yet. To enable it later, replace this line by
+        # reading and validating request.data.get("num_points") (a positive int) here.
+        num_points = settings.INFERENCE_DEFAULT_NUM_POINTS
 
         if image_file and image_file.size > settings.MAX_IMAGE_FILE_SIZE:
             mb = settings.MAX_IMAGE_FILE_SIZE // (1024 * 1024)
