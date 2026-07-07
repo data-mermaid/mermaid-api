@@ -61,7 +61,9 @@ class ClassifierViewSet(BaseApiViewSet):
     filterset_class = ClassifierFilterSet
 
     def get_queryset(self):
-        return Classifier.objects.prefetch_related("benthic_attribute_growth_forms").all()
+        return Classifier.objects.prefetch_related("benthic_attribute_growth_forms").order_by(
+            "-created_on"
+        )
 
     @action(detail=False, methods=SAFE_METHODS)
     def latest(self, request, *args, **kwargs):
