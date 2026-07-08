@@ -1,14 +1,17 @@
-
-
-from aws_cdk import CfnOutput, Duration, RemovalPolicy, Stack
-from aws_cdk import aws_cloudtrail as cloudtrail
-from aws_cdk import aws_events as events
-from aws_cdk import aws_events_targets as targets
-from aws_cdk import aws_iam as iam
-from aws_cdk import aws_logs as logs
-from aws_cdk import aws_s3 as s3
-from aws_cdk import aws_sns as sns
-from aws_cdk import aws_sns_subscriptions as subs
+from aws_cdk import (
+    CfnOutput,
+    Duration,
+    RemovalPolicy,
+    Stack,
+    aws_cloudtrail as cloudtrail,
+    aws_events as events,
+    aws_events_targets as targets,
+    aws_iam as iam,
+    aws_logs as logs,
+    aws_s3 as s3,
+    aws_sns as sns,
+    aws_sns_subscriptions as subs,
+)
 from constructs import Construct
 
 
@@ -73,9 +76,7 @@ class CloudTrailStack(Stack):
                 resources=[delivery_topic.topic_arn],
                 conditions={
                     "StringEquals": {"aws:SourceAccount": self.account},
-                    "ArnLike": {
-                        "aws:SourceArn": f"arn:aws:cloudtrail:*:{self.account}:trail/*"
-                    },
+                    "ArnLike": {"aws:SourceArn": f"arn:aws:cloudtrail:*:{self.account}:trail/*"},
                 },
             )
         )
@@ -92,7 +93,7 @@ class CloudTrailStack(Stack):
         )
 
         # Trail with SNS notification delivery enabled
-        trail = cloudtrail.Trail(
+        cloudtrail.Trail(
             self,
             "CloudTrail",
             bucket=trail_bucket,

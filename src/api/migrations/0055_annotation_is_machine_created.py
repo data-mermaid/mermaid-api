@@ -4,15 +4,14 @@ from django.db import migrations, models
 
 
 class Migration(migrations.Migration):
-
     dependencies = [
-        ('api', '0054_auto_20240808_2117'),
+        ("api", "0054_auto_20240808_2117"),
     ]
 
     operations = [
         migrations.AddField(
-            model_name='annotation',
-            name='is_machine_created',
+            model_name="annotation",
+            name="is_machine_created",
             field=models.BooleanField(default=False),
         ),
     ]
