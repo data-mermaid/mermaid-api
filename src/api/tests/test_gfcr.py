@@ -441,6 +441,7 @@ def test_finance_solution_requires_fs_type(
     url = reverse("indicatorset-detail", kwargs={"project_pk": project1.pk, "pk": indicator_set.id})
     response = api_client1.put(url, data=payload, format="json")
     assert response.status_code == 400
+    assert "fs_type" in str(response.json())
 
 
 def _fs_put_payload(indicator_set, project, fs_fields):
@@ -774,6 +775,33 @@ def test_indicator_set_rejects_invalid_title_for_type(
     response = api_client1.put(url, data=payload, format="json")
     assert response.status_code == 400
     assert "title" in str(response.json())
+
+
+def test_indicator_set_serializer_validates_title_on_partial_update(db_setup, indicator_set):
+    # Regression: a partial update omitting a field must fall back to the instance's
+    # existing value for that field, not skip the title/type check entirely. The API
+    # doesn't currently issue partial=True saves itself (IndicatorSetViewSet always
+    # writes the full record), but the serializer must still be correct in isolation
+    # since it's the actual boundary that enforces this invariant.
+    from api.resources.gfcr import GFCRIndicatorSetSerializer
+
+    assert indicator_set.indicator_set_type == "report"
+    assert indicator_set.title == "Baseline"
+
+    # indicator_set_type omitted — must fall back to the instance's "report" type,
+    # which makes this target-only title invalid.
+    serializer = GFCRIndicatorSetSerializer(
+        instance=indicator_set, data={"title": "Phase 1 target"}, partial=True
+    )
+    assert serializer.is_valid() is False
+    assert "title" in serializer.errors
+
+    # title omitted — must fall back to the instance's existing valid "Baseline" title
+    # rather than treating a missing title as invalid.
+    serializer = GFCRIndicatorSetSerializer(
+        instance=indicator_set, data={"indicator_set_type": "report"}, partial=True
+    )
+    assert serializer.is_valid() is True
 
 
 def test_choices_removes_deprecated_values(db_setup, api_client1):

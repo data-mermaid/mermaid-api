@@ -201,8 +201,10 @@ class GFCRIndicatorSetSerializer(BaseAPISerializer):
         self._cached_profiles = {}
 
     def validate(self, data):
-        title = data.get("title", "")
-        indicator_set_type = data.get("indicator_set_type", "")
+        instance_title = self.instance.title if self.instance else ""
+        instance_type = self.instance.indicator_set_type if self.instance else ""
+        title = data.get("title", instance_title)
+        indicator_set_type = data.get("indicator_set_type", instance_type)
         report_titles = {c[0] for c in GFCRIndicatorSet.REPORT_TITLE_CHOICES}
         target_titles = {c[0] for c in GFCRIndicatorSet.TARGET_TITLE_CHOICES}
         if indicator_set_type == "report" and title not in report_titles:

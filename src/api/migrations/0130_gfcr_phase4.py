@@ -5,7 +5,7 @@ import api.models.gfcr
 
 
 def assert_phase4_preconditions(apps, schema_editor):
-    from django.db import connection
+    connection = schema_editor.connection
 
     REMOVED_SECTORS = (
         "fm_biodiversity_credits",
@@ -27,11 +27,25 @@ def assert_phase4_preconditions(apps, schema_editor):
 
     violations = []
 
+    VALID_TYPES = (
+        "taf",
+        "ctf",
+        "financial_facility",
+        "business",
+        "financial_mechanism",
+        "programmatic_co_financing",
+    )
+
     with connection.cursor() as cursor:
-        cursor.execute("SELECT COUNT(*) FROM gfcr_finance_solution WHERE fs_type IS NULL")
+        type_placeholders = ",".join(["%s"] * len(VALID_TYPES))
+        cursor.execute(
+            "SELECT COUNT(*) FROM gfcr_finance_solution"
+            f" WHERE fs_type IS NULL OR fs_type = '' OR fs_type NOT IN ({type_placeholders})",
+            list(VALID_TYPES),
+        )
         count = cursor.fetchone()[0]
         if count:
-            violations.append(f"{count} finance solution(s) have fs_type IS NULL")
+            violations.append(f"{count} finance solution(s) have a null, blank, or invalid fs_type")
 
         placeholders = ",".join(["%s"] * len(REMOVED_SECTORS))
         cursor.execute(
