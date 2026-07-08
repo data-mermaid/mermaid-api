@@ -1,6 +1,8 @@
 import django.contrib.postgres.fields
 from django.db import migrations, models
 
+import api.models.gfcr
+
 
 def assert_phase4_preconditions(apps, schema_editor):
     from django.db import connection
@@ -98,7 +100,7 @@ def assert_phase4_preconditions(apps, schema_editor):
 
 class Migration(migrations.Migration):
     dependencies = [
-        ("api", "0124_mv_invert_attributes_goi_family_order_class"),
+        ("api", "0129_merge_20260701_1228"),
     ]
 
     operations = [
@@ -192,6 +194,7 @@ class Migration(migrations.Migration):
                 default=list,
                 null=True,
                 size=None,
+                validators=[api.models.gfcr.validate_unique_elements],
             ),
         ),
         migrations.AlterField(

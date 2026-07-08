@@ -477,25 +477,6 @@ _FS_BASE = {
         ({"fs_type": "business", "sector": ""}, "sector"),
         # geographical_coverage is required for CTF — no value to coerce to
         ({"fs_type": "ctf", "geographical_coverage": ""}, "geographical_coverage"),
-        # number_of_solutions_supported_by must be > 0 for TAF — no value to coerce to
-        (
-            {"fs_type": "taf", "number_of_solutions_supported_by": 0},
-            "number_of_solutions_supported_by",
-        ),
-        # same constraint applies to CTF (geographical_coverage supplied to avoid that error)
-        (
-            {
-                "fs_type": "ctf",
-                "geographical_coverage": "national",
-                "number_of_solutions_supported_by": 0,
-            },
-            "number_of_solutions_supported_by",
-        ),
-        # same constraint applies to Financial facility
-        (
-            {"fs_type": "financial_facility", "number_of_solutions_supported_by": 0},
-            "number_of_solutions_supported_by",
-        ),
     ],
 )
 def test_finance_solution_validate_errors(
@@ -563,6 +544,26 @@ def test_finance_solution_validate_errors(
             "number_of_solutions_supported_by",
             0,
         ),
+        # 0 is a valid, saveable value for TAF/CTF/Financial facility — not coerced away
+        (
+            {"fs_type": "taf", "number_of_solutions_supported_by": 0},
+            "number_of_solutions_supported_by",
+            0,
+        ),
+        (
+            {
+                "fs_type": "ctf",
+                "geographical_coverage": "national",
+                "number_of_solutions_supported_by": 0,
+            },
+            "number_of_solutions_supported_by",
+            0,
+        ),
+        (
+            {"fs_type": "financial_facility", "number_of_solutions_supported_by": 0},
+            "number_of_solutions_supported_by",
+            0,
+        ),
         # sustainable_finance_mechanisms cleared for non-Financial mechanism types
         (
             {"fs_type": "business", "sustainable_finance_mechanisms": ["blue_bonds"]},
@@ -592,6 +593,29 @@ def test_finance_solution_validate_coercion(
         response.status_code == 200
     ), f"Expected 200, got {response.status_code}: {response.json()}"
     assert response.json()["finance_solutions"][0][coerced_field] == expected_value
+
+
+@pytest.mark.parametrize("fs_type", ["taf", "ctf", "financial_facility"])
+@pytest.mark.parametrize("bad_value", [None, ""])
+def test_finance_solution_number_of_solutions_rejects_null_and_blank(
+    db_setup, api_client1, project1, project_profile1, indicator_set, fs_type, bad_value
+):
+    # 0 is valid (see test_finance_solution_validate_coercion), but null/"" are still
+    # rejected by DRF's default IntegerField behavior on a non-nullable model field.
+    project1.includes_gfcr = True
+    project1.save()
+    fs = {
+        **_FS_BASE,
+        "fs_type": fs_type,
+        "geographical_coverage": "national",
+        "number_of_solutions_supported_by": bad_value,
+    }
+    url = reverse("indicatorset-detail", kwargs={"project_pk": project1.pk, "pk": indicator_set.id})
+    response = api_client1.put(
+        url, data=_fs_put_payload(indicator_set, project1, fs), format="json"
+    )
+    assert response.status_code == 400
+    assert "number_of_solutions_supported_by" in str(response.json())
 
 
 def test_finance_solution_normalizes_empty_strings_for_hidden_fields(
