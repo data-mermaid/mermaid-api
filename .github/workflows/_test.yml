@@ -1,6 +1,16 @@
 name: 🧪 Test
 
-on: workflow_call
+on:
+  workflow_call:
+    secrets:
+      TEST_SECRET_KEY:
+        required: true
+      TEST_POSTGRES_PASSWORD:
+        required: true
+      TEST_MERMAID_API_SIGNING_SECRET:
+        required: true
+      TEST_AWS_SECRET_ACCESS_KEY:
+        required: true
 
 permissions:
   contents: read
@@ -24,7 +34,7 @@ jobs:
           --health-timeout 5s
           --health-retries 5
       sqs:
-        image: softwaremill/elasticmq-native
+        image: softwaremill/elasticmq-native@sha256:e4580ab9ad1bd5cd37b4ba04911bc5ccc8cd2d9ab4de56ece65acee71c24e05c
         ports:
           - 9324:9324
 
@@ -50,7 +60,14 @@ jobs:
       AWS_REGION: us-east-1
 
     steps:
-      - uses: actions/checkout@v6.0.2
+      - name: Harden the runner (Audit all outbound calls)
+        uses: step-security/harden-runner@9af89fc71515a100421586dfdb3dc9c984fbf411  # v2.19.4
+        with:
+          egress-policy: audit
+
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd  # v6.0.2
+        with:
+          persist-credentials: false
 
       - name: Wait for SQS service
         run: |
@@ -66,7 +83,7 @@ jobs:
           exit 1
 
       - name: Setup Python
-        uses: actions/setup-python@v6.2.0
+        uses: actions/setup-python@a309ff8b426b58ec0e2a45f0f869d46889d02405  # v6.2.0
         with:
           python-version: "3.12"
 
@@ -79,7 +96,7 @@ jobs:
             python3-gdal
 
       - name: Cache pip packages
-        uses: actions/cache@v5.0.5
+        uses: actions/cache@27d5ce7f107fe9357f9df03efb73ab90386fccae  # v5.0.5
         with:
           path: ~/.cache/pip
           key: ${{ runner.os }}-pip-${{ hashFiles('**/requirements.txt') }}
@@ -99,7 +116,7 @@ jobs:
 
       - name: Upload coverage report
         if: always()
-        uses: actions/upload-artifact@v7.0.1
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a  # v7.0.1
         with:
           name: coverage-report
           path: |

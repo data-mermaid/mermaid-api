@@ -38,6 +38,7 @@ from ..models import (
 )
 from ..utils import get_subclasses
 from ..utils.notification import add_notification
+from ..utils.project import delete_project
 from .base import BaseAdmin, CachedFKInline
 
 
@@ -127,6 +128,16 @@ class ProjectAdmin(BaseAdmin):
                     suclass.objects.filter(sample_event=se).delete()
         return super(ProjectAdmin, self).delete_view(request, object_id, extra_context)
 
+    def delete_model(self, request, obj):
+        # Route through the app's own deletion path (transaction + savepoint, handles
+        # PROTECTed relations like images) instead of Django's raw cascade .delete(),
+        # so a partial failure rolls back instead of leaving an orphaned project.
+        delete_project(obj.pk)
+
+    def delete_queryset(self, request, queryset):
+        for obj in queryset:
+            delete_project(obj.pk)
+
     def get_formsets_with_inlines(self, request, obj=None):
         countries = Country.objects.none()
         reef_types = ReefType.objects.none()
@@ -162,6 +173,24 @@ class ProjectProfileAdmin(BaseAdmin):
         "profile__id",
     ]
     list_filter = ("role",)
+
+    def _is_last_admin(self, obj):
+        if obj.role != ProjectProfile.ADMIN:
+            return False
+        return (
+            not ProjectProfile.objects.filter(project=obj.project, role=ProjectProfile.ADMIN)
+            .exclude(pk=obj.pk)
+            .exists()
+        )
+
+    def has_delete_permission(self, request, obj=None):
+        # Mirrors ProjectProfileViewSet.is_last_admin() / sync push.py, which only guard
+        # the API and mobile-sync paths — Django admin's default delete has no such check.
+        if not super().has_delete_permission(request, obj):
+            return False
+        if obj is not None and self._is_last_admin(obj):
+            return False
+        return True
 
 
 @admin.register(Region)

@@ -103,6 +103,9 @@ DEV_EMAILS = [email.strip() for email in _dev_emails.split(",")]
 
 _allowed_hosts = os.environ.get("ALLOWED_HOSTS") or ""
 ALLOWED_HOSTS = [host.strip() for host in _allowed_hosts.split(",")]
+# In-container health probes hit http://localhost:8081/health/ (Host: localhost).
+# Allow it so it doesn't raise DisallowedHost on every probe.
+ALLOWED_HOSTS += ["localhost", "127.0.0.1"]
 
 # Look for Fargate IP, for health checks.
 METADATA_URI = os.getenv("ECS_CONTAINER_METADATA_URI", None)
@@ -320,6 +323,12 @@ def _sentry_before_send(event, hint):
 
 
 if ENVIRONMENT in ("dev", "prod"):
+    from sentry_sdk.integrations.logging import ignore_logger
+
+    # DisallowedHost is unactionable noise (health probes + bots with bogus Host
+    # headers) and was the top error by volume, blowing the Sentry error quota.
+    ignore_logger("django.security.DisallowedHost")
+
     sentry_sdk.init(
         dsn=os.environ.get("SENTRY_DSN"),
         environment=ENVIRONMENT,

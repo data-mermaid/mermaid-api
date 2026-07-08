@@ -15,9 +15,7 @@ def test_validate_profile_stale_refresh_survives_auth0_outage(profile1):
     profile1.picture_url = "https://old.example/pic.png"
     profile1.save()
     # bypass auto_now to make the profile stale (>1 day)
-    Profile.objects.filter(pk=profile1.pk).update(
-        updated_on=timezone.now() - timedelta(days=2)
-    )
+    Profile.objects.filter(pk=profile1.pk).update(updated_on=timezone.now() - timedelta(days=2))
 
     with patch(
         "api.auth_backends.get_user_info", side_effect=Auth0ServiceUnavailable()

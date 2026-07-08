@@ -38,9 +38,7 @@ class GithubAccessStack(Stack):
             externalOidcProvider
         )
 
-        self.classifier_release_role = self._create_classifier_release_role(
-            externalOidcProvider
-        )
+        self.classifier_release_role = self._create_classifier_release_role(externalOidcProvider)
 
     def _create_inference_image_push_role(
         self, oidc_provider: iam.OpenIdConnectProvider
@@ -75,8 +73,7 @@ class GithubAccessStack(Stack):
         )
 
         repo_arn = (
-            f"arn:aws:ecr:{self.region}:{self.account}:"
-            "repository/mermaid-inference-pyspacer"
+            f"arn:aws:ecr:{self.region}:{self.account}:" "repository/mermaid-inference-pyspacer"
         )
         role.attach_inline_policy(
             iam.Policy(
@@ -114,9 +111,7 @@ class GithubAccessStack(Stack):
 
         return role
 
-    def _create_classifier_release_role(
-        self, oidc_provider: iam.OpenIdConnectProvider
-    ) -> iam.Role:
+    def _create_classifier_release_role(self, oidc_provider: iam.OpenIdConnectProvider) -> iam.Role:
         """Least-privilege role assumed by the mermaid-classifier release
         workflow (Issue #50) via GitHub OIDC.
 
@@ -149,6 +144,13 @@ class GithubAccessStack(Stack):
         # sagemaker-mlflow exposes no resource-level ARNs, so '*' is required;
         # the sagemaker:* MLflow-app actions let the client resolve/auth the
         # mlflow-app tracking ARN. Mirrors the SageMaker launcher role.
+        #
+        # sagemaker:CallMlflowAppApi is the data-plane action that authorizes
+        # REST calls (search_experiments, artifact-URI resolution, ...) against
+        # an mlflow-app resource. The sagemaker-mlflow:* namespace only governs
+        # the older MLflow *tracking servers*, so without CallMlflowAppApi the
+        # SigV4-signed REST calls to an mlflow-app 403 ("Request is not
+        # authorized") even though sagemaker-mlflow:* is granted.
         role.attach_inline_policy(
             iam.Policy(
                 self,
@@ -158,6 +160,7 @@ class GithubAccessStack(Stack):
                         effect=iam.Effect.ALLOW,
                         actions=[
                             "sagemaker-mlflow:*",
+                            "sagemaker:CallMlflowAppApi",
                             "sagemaker:DescribeMlflowApp",
                             "sagemaker:ListMlflowApps",
                             "sagemaker:CreatePresignedMlflowAppUrl",

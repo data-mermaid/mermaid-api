@@ -1,20 +1,18 @@
 import os
 
+import nag_suppressions
 from aws_cdk import App, Aspects, Environment
 from cdk_nag import AwsSolutionsChecks
-import nag_suppressions
 from settings.dev import DEV_SETTINGS
 from settings.prod import PROD_SETTINGS
 from stacks.api import ApiStack
+from stacks.cloudtrail import CloudTrailStack
 from stacks.common import CommonStack
 from stacks.github_access import GithubAccessStack
-# STAGED DEPLOY (mermaid-classifier #53): re-enable in PR2 once the inference
-# image is in ECR. See the dev_inference_stack block below.
-# from stacks.inference import InferenceStack
+from stacks.guardduty import GuardDutyStack
+from stacks.inference import InferenceStack
 from stacks.sagemaker import SagemakerStack
 from stacks.static_site import StaticSiteStack
-from stacks.cloudtrail import CloudTrailStack
-from stacks.guardduty import GuardDutyStack
 
 tags = {
     "Owner": "sysadmin@datamermaid.org",
@@ -90,24 +88,21 @@ dev_sagemaker_stack = SagemakerStack(
     cluster=common_stack.cluster,
 )
 
-# STAGED DEPLOY (mermaid-classifier #53): the inference function is a container
-# Lambda — it cannot deploy until its image exists in ECR, and the dev pipeline
-# would fail on this stack. PR1 ships only the prerequisites that DO deploy: the
-# ECR repo (common_stack.inference_repo) and the OIDC push role (GithubAccess).
-# After the mermaid-inference CI pushes the image, PR2 re-enables this block, the
-# `from stacks.inference import InferenceStack` import above, the apply_all arg
-# below, and the dev-mermaid-inference line in .github/workflows/deploy-cdk.yml.
-# dev_inference_stack = InferenceStack(
-#     app,
-#     "dev-mermaid-inference",
-#     env=cdk_env,
-#     tags=tags,
-#     config=DEV_SETTINGS,
-#     inference_repo=common_stack.inference_repo,
-#     config_bucket=common_stack.config_bucket,
-#     image_bucket=common_stack.image_processing_bucket,
-#     alerts_topic=dev_api_stack.alerts_topic,
-# )
+# The pyspacer inference compute lane (mermaid-classifier #53). A container
+# Lambda whose image (config.inference.image_tag) is published to the
+# mermaid-inference-pyspacer ECR repo by the mermaid-inference build-push CI
+# before this stack deploys. Alarms publish to ApiStack's shared alerts topic.
+dev_inference_stack = InferenceStack(
+    app,
+    "dev-mermaid-inference",
+    env=cdk_env,
+    tags=tags,
+    config=DEV_SETTINGS,
+    inference_repo=common_stack.inference_repo,
+    config_bucket=common_stack.config_bucket,
+    image_bucket=common_stack.image_processing_bucket,
+    alerts_topic=dev_api_stack.alerts_topic,
+)
 
 prod_static_site_stack = StaticSiteStack(
     app,
@@ -140,6 +135,20 @@ prod_api_stack = ApiStack(
     use_fifo_queues="False",
     report_s3_creds=common_stack.report_s3_creds,
     cost_alerts_topic=common_stack.cost_alerts_topic,
+)
+
+# The pyspacer inference compute lane for prod.
+# Alarms publish to prod ApiStack's shared alerts topic.
+prod_inference_stack = InferenceStack(
+    app,
+    "prod-mermaid-inference",
+    env=cdk_env,
+    tags=tags,
+    config=PROD_SETTINGS,
+    inference_repo=common_stack.inference_repo,
+    config_bucket=common_stack.config_bucket,
+    image_bucket=common_stack.image_processing_bucket,
+    alerts_topic=prod_api_stack.alerts_topic,
 )
 
 cloudtrail_stack = CloudTrailStack(
@@ -194,8 +203,8 @@ nag_suppressions.apply_all(
     dev_sagemaker_stack=dev_sagemaker_stack,
     cloudtrail_stack=cloudtrail_stack,
     guardduty_stack=guardduty_stack,
-    # STAGED DEPLOY (mermaid-classifier #53): re-enable in PR2 with the block above.
-    # dev_inference_stack=dev_inference_stack,
+    dev_inference_stack=dev_inference_stack,
+    prod_inference_stack=prod_inference_stack,
 )
 
 app.synth()

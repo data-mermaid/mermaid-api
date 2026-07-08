@@ -22,10 +22,12 @@ from ...models import (
     ObsBenthicPIT,
     ObsColoniesBleached,
     ObsHabitatComplexity,
+    Region,
 )
 from ..base import (
     AttributeAdmin,
     BaseAdmin,
+    CachedFKInline,
     ObservationInline,
     ObserverInline,
     SampleUnitAdmin,
@@ -58,11 +60,35 @@ class BenthicLifeHistoryAdmin(BaseAdmin):
 class BenthicAttributeInline(admin.StackedInline):
     model = BenthicAttribute
     extra = 0
+    autocomplete_fields = ("parent",)
+
+    def get_queryset(self, request):
+        return (
+            super()
+            .get_queryset(request)
+            .select_related("parent")
+            .prefetch_related("regions", "life_histories")
+        )
+
+    def formfield_for_manytomany(self, db_field, request, **kwargs):
+        field = super().formfield_for_manytomany(db_field, request, **kwargs)
+        if db_field.name == "regions" and hasattr(self, "cached_regions"):
+            field.choices = self.cached_regions
+        elif db_field.name == "life_histories" and hasattr(self, "cached_life_histories"):
+            field.choices = self.cached_life_histories
+        return field
 
 
-class BenthicAttributeGrowthFormLifeHistoryInline(admin.StackedInline):
+class BenthicAttributeGrowthFormLifeHistoryInline(CachedFKInline):
     model = BenthicAttributeGrowthFormLifeHistory
     extra = 0
+    cache_fields = ["growth_form", "life_history"]
+    autocomplete_fields = ("attribute",)
+
+    def get_queryset(self, request):
+        return (
+            super().get_queryset(request).select_related("attribute", "growth_form", "life_history")
+        )
 
 
 @admin.register(BenthicAttribute)
@@ -135,6 +161,33 @@ class BenthicAttributeAdmin(AttributeAdmin):
     search_fields = ["name"]
     list_filter = ("status",)
 
+    def get_queryset(self, request):
+        return (
+            super()
+            .get_queryset(request)
+            .select_related("parent")
+            .prefetch_related("regions", "life_histories")
+        )
+
+    def get_formsets_with_inlines(self, request, obj=None):
+        regions = []
+        life_histories = []
+        growth_forms = []
+        if obj is not None:
+            regions = list(Region.objects.values_list("pk", "name"))
+            life_histories = list(BenthicLifeHistory.objects.values_list("pk", "name"))
+            growth_forms = list(GrowthForm.objects.values_list("pk", "name"))
+
+        for inline in self.get_inline_instances(request, obj):
+            if isinstance(inline, BenthicAttributeInline):
+                inline.cached_regions = regions
+                inline.cached_life_histories = life_histories
+            elif isinstance(inline, BenthicAttributeGrowthFormLifeHistoryInline):
+                inline.cached_growth_forms = growth_forms
+                # CachedFKInline uses f"cached_{field}s" so life_history → cached_life_historys
+                inline.cached_life_historys = life_histories
+            yield inline.get_formset(request, obj), inline
+
     def fk_link(self, obj):
         if obj.parent:
             link = reverse("admin:api_benthicattribute_change", args=[obj.parent.pk])
@@ -160,10 +213,10 @@ class BenthicAttributeAdmin(AttributeAdmin):
     def _child_proportions(self, obj, m2mfield):
         counts = defaultdict(int)
         total = 0
-        m2m_sets = [getattr(ba, m2mfield).all() for ba in obj.descendants]
-
-        for m2ms in m2m_sets:
-            for m2m in m2ms:
+        descendant_ids = [d.pk for d in obj.descendants]
+        children = BenthicAttribute.objects.filter(pk__in=descendant_ids).prefetch_related(m2mfield)
+        for ba in children:
+            for m2m in getattr(ba, m2mfield).all():
                 counts[m2m.name] += 1
                 total += 1
 
