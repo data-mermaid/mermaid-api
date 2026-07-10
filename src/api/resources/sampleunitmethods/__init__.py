@@ -3,7 +3,6 @@ import uuid
 from django.http import HttpResponseBadRequest
 from django.utils.text import get_valid_filename
 from django.utils.translation import gettext_lazy as _
-from rest_condition import Or
 from rest_framework.decorators import action
 from rest_framework_gis.pagination import GeoJsonPagination
 
@@ -13,6 +12,7 @@ from ...permissions import (
     ObjectDoesNotExist,
     ProjectDataReadOnlyPermission,
     ProjectPublicPermission,
+    ProjectPublicSummaryPermission,
 )
 from ...reports import csv_report
 from ...resources.base import BaseApiViewSet, BaseProjectApiViewSet
@@ -159,7 +159,7 @@ class AggregatedViewMixin(BaseApiViewSet):
 
 
 class BaseProjectMethodView(AggregatedViewMixin, BaseProjectApiViewSet):
-    permission_classes = [Or(ProjectDataReadOnlyPermission, ProjectPublicPermission)]
+    permission_classes = [ProjectDataReadOnlyPermission | ProjectPublicPermission]
 
     def __init__(self, **kwargs):
         super().__init__(**kwargs)
@@ -188,3 +188,10 @@ class BaseProjectMethodView(AggregatedViewMixin, BaseProjectApiViewSet):
         if self.sql_model and self.use_cached is False:
             return self.model.objects.all().sql_table(project_id=project_id)
         return self.model.objects.filter(project_id=project_id)
+
+
+class BaseProjectMethodSEView(BaseProjectMethodView):
+    """Sample-event-level view for a protocol method. Data is visible under either
+    project membership or the protocol's public-summary data sharing policy."""
+
+    permission_classes = [ProjectDataReadOnlyPermission | ProjectPublicSummaryPermission]
