@@ -35,7 +35,13 @@ class BaseRegionValidator(BaseValidator):
             # FishAttribute.regions resolves through multi-table-inheritance
             # subclasses (see FishAttribute._get_taxon); without this, each
             # instance triggers a separate query per subclass table.
-            qs = qs.select_related("fishgrouping", "fishfamily", "fishgenus", "fishspecies")
+            # FishGrouping/FishSpecies.regions are direct M2M fields (unlike
+            # FishFamily/FishGenus, whose .regions is a class-level-cached
+            # list, not a per-instance query), so also prefetch those to avoid
+            # a further per-instance query when .regions.all() is called below.
+            qs = qs.select_related(
+                "fishgrouping", "fishfamily", "fishgenus", "fishspecies"
+            ).prefetch_related("fishgrouping__regions", "fishspecies__regions")
 
         result = {}
         for attr in qs:

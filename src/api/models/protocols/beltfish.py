@@ -20,11 +20,17 @@ from ..core import FISHBELT_PROTOCOL, Observer, Region, Transect, TransectMethod
 
 
 class BeltTransectWidthManager(ChoicesManager):
-    def get_queryset(self):
+    def choices(self, order_by, *args, **kwargs):
         # BeltTransectWidthCondition.Meta.ordering (val) matches what .choice
-        # needs, so a plain prefetch lets `self.conditions.all()` hit the
+        # needs, so prefetching here lets `self.conditions.all()` hit the
         # prefetch cache instead of re-querying per BeltTransectWidth row.
-        return super().get_queryset().prefetch_related("conditions")
+        # Scoped to choices() (not get_queryset()) so other callers - e.g.
+        # BeltTransectWidth.objects.get(id=...) in the biomass validator,
+        # which only needs get_condition()'s own differently-ordered query -
+        # aren't charged for a conditions prefetch they never use.
+        return [
+            c.choice for c in self.get_queryset().order_by(order_by).prefetch_related("conditions")
+        ]
 
 
 class BeltTransectWidth(BaseChoiceModel):

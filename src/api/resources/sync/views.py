@@ -231,6 +231,19 @@ def _get_serialized_record(viewset, profile_id, record_id):
     return None
 
 
+def _invalidate_project_caches(request):
+    """Clear the request-scoped Project/ProjectProfile caches (see
+    permissions._cached_lookup, sync.utils.create_view_request). A push batch
+    can write a project's status or a profile's role and then rely on that
+    change for permission checks on later records in the same batch (e.g.
+    vw_push always processes PROJECTS_SOURCE_TYPE first) - without this, those
+    later checks would keep reusing the pre-write cached instance."""
+    for attr in ("_project_cache", "_project_profile_cache"):
+        cache = getattr(request, attr, None)
+        if cache is not None:
+            cache.clear()
+
+
 def _update_source_record(source_type, serializer, record, request, force=False):
     src = _get_source(source_type)
     vw_request = create_view_request(request, method=get_request_method(record), data=record)
@@ -256,6 +269,8 @@ def _update_source_record(source_type, serializer, record, request, force=False)
     try:
         profile_id = _get_profile_id(request)
         status_code, msg, errors = apply_changes(vw_request, serializer, record, force=force)
+        if source_type in (PROJECTS_SOURCE_TYPE, PROJECT_PROFILES_SOURCE_TYPE):
+            _invalidate_project_caches(request)
         if status_code == 400:
             data = _format_errors(errors)
         elif status_code == 409:
