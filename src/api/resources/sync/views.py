@@ -8,7 +8,7 @@ from rest_framework.exceptions import (
 from rest_framework.response import Response
 
 from api import utils
-from api.models import Project
+from api.permissions import get_project
 from api.resources import (
     benthic_attribute,
     choices,
@@ -140,7 +140,7 @@ def _get_source(source_type):
     return project_sources.get(source_type) or non_project_sources.get(source_type)
 
 
-def _get_project(data, source_type):
+def _get_project(request, data, source_type):
     projid = None
     projname = "NO PROJECT"
     if "project" in data[source_type]:
@@ -151,9 +151,12 @@ def _get_project(data, source_type):
     if projid:
         try:
             if utils.is_uuid(projid) is True:
-                proj = Project.objects.get(pk=projid)
+                # get_project memoizes per-request (see permissions._cached_lookup)
+                # so repeated source types/records referencing the same project
+                # don't each re-query it.
+                proj = get_project(projid, request=request)
                 projname = proj.name
-        except Project.DoesNotExist:
+        except NotFound:
             pass
 
     return {"project_id": projid, "project_name": projname}
@@ -310,9 +313,14 @@ def _get_source_records(source_type, source_data, request):
 
 def check_permissions(request, data, source_types, method=False):
     permission_checks = {}
+    # _get_project/create_view_request lazily set up per-request project and
+    # project-profile caches on `request` (see permissions._cached_lookup and
+    # sync.utils.create_view_request) so that repeated source types - and, for
+    # push, repeated records - referencing the same project only hit the
+    # database once for it.
     for source_type in source_types:
         src = _get_source(source_type)
-        proj = _get_project(data, source_type)
+        proj = _get_project(request, data, source_type)
         try:
             params = _get_required_parameters(request, data[source_type], src["required_filters"])
         except ValueError:

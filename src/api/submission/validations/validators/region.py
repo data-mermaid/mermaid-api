@@ -1,7 +1,7 @@
 from rest_framework.exceptions import ParseError
 
 from ....exceptions import check_uuid
-from ....models import Region, Site
+from ....models import FishAttribute, Region, Site
 from ..utils import valid_id
 from .base import OK, WARN, BaseValidator, validator_result
 
@@ -30,8 +30,15 @@ class BaseRegionValidator(BaseValidator):
         return NotImplementedError()
 
     def _get_attribute_region_lookup(self, attribute_ids):
+        qs = self.attribute_model_class.objects.filter(id__in=attribute_ids)
+        if self.attribute_model_class is FishAttribute:
+            # FishAttribute.regions resolves through multi-table-inheritance
+            # subclasses (see FishAttribute._get_taxon); without this, each
+            # instance triggers a separate query per subclass table.
+            qs = qs.select_related("fishgrouping", "fishfamily", "fishgenus", "fishspecies")
+
         result = {}
-        for attr in self.attribute_model_class.objects.filter(id__in=attribute_ids):
+        for attr in qs:
             regions = attr.regions
             if isinstance(regions, list):
                 result[str(attr.pk)] = [str(r) for r in regions]

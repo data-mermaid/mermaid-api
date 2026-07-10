@@ -9,12 +9,28 @@ from django.db.models import Avg, F, Max, Q
 from django.utils.translation import gettext as _
 
 from ...utils import create_timestamp, expired_timestamp
-from ..base import BaseAttributeModel, BaseChoiceModel, BaseModel, JSONMixin
+from ..base import (
+    BaseAttributeModel,
+    BaseChoiceModel,
+    BaseModel,
+    ChoicesManager,
+    JSONMixin,
+)
 from ..core import FISHBELT_PROTOCOL, Observer, Region, Transect, TransectMethod
+
+
+class BeltTransectWidthManager(ChoicesManager):
+    def get_queryset(self):
+        # BeltTransectWidthCondition.Meta.ordering (val) matches what .choice
+        # needs, so a plain prefetch lets `self.conditions.all()` hit the
+        # prefetch cache instead of re-querying per BeltTransectWidth row.
+        return super().get_queryset().prefetch_related("conditions")
 
 
 class BeltTransectWidth(BaseChoiceModel):
     name = models.CharField(unique=True, max_length=100, null=True, blank=True)
+
+    objects = BeltTransectWidthManager()
 
     def __str__(self):
         return _("%s") % (self.name or "")
@@ -25,7 +41,7 @@ class BeltTransectWidth(BaseChoiceModel):
             "id": self.pk,
             "name": self.__str__(),
             "updated_on": self.updated_on,
-            "conditions": [cnd.choice for cnd in self.conditions.all().order_by("val")],
+            "conditions": [cnd.choice for cnd in self.conditions.all()],
         }
 
         return ret
@@ -89,6 +105,7 @@ class BeltTransectWidthCondition(BaseChoiceModel):
     val = models.PositiveSmallIntegerField()
 
     class Meta:
+        ordering = ("val",)
         constraints = [
             models.UniqueConstraint(
                 fields=["belttransectwidth", "operator", "size"],
