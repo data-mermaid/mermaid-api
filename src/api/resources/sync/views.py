@@ -8,7 +8,7 @@ from rest_framework.exceptions import (
 from rest_framework.response import Response
 
 from api import utils
-from api.permissions import get_project
+from api.permissions import REQUEST_CACHE_ATTRS, get_project
 from api.resources import (
     benthic_attribute,
     choices,
@@ -238,7 +238,7 @@ def _invalidate_project_caches(request):
     change for permission checks on later records in the same batch (e.g.
     vw_push always processes PROJECTS_SOURCE_TYPE first) - without this, those
     later checks would keep reusing the pre-write cached instance."""
-    for attr in ("_project_cache", "_project_profile_cache"):
+    for attr in REQUEST_CACHE_ATTRS:
         cache = getattr(request, attr, None)
         if cache is not None:
             cache.clear()

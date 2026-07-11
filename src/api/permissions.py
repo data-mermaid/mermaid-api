@@ -23,6 +23,15 @@ class UnauthenticatedReadOnlyPermission(permissions.BasePermission):
         return request.method in permissions.SAFE_METHODS
 
 
+PROJECT_CACHE_ATTR = "_project_cache"
+PROJECT_PROFILE_CACHE_ATTR = "_project_profile_cache"
+# Request-scoped memoization cache attrs used by get_project/get_project_profile.
+# Shared by sync/utils.create_view_request (to propagate the caches onto
+# derived ViewRequests) and sync/views._invalidate_project_caches (to clear
+# them after a write) - import from here rather than re-declaring the names.
+REQUEST_CACHE_ATTRS = (PROJECT_CACHE_ATTR, PROJECT_PROFILE_CACHE_ATTR)
+
+
 def _cached_lookup(request, cache_attr, key, loader):
     """Fetch `key` via `loader()`, memoizing on a dict stored as `cache_attr`
     on `request`. The dict is created lazily on `request` itself on first use
@@ -54,7 +63,7 @@ def get_project(pk, request=None):
         except Project.DoesNotExist:
             raise NotFound("Not found: project %s" % pk)
 
-    return _cached_lookup(request, "_project_cache", pk, _load)
+    return _cached_lookup(request, PROJECT_CACHE_ATTR, pk, _load)
 
 
 def get_project_profile(project, profile, request=None):
@@ -64,7 +73,7 @@ def get_project_profile(project, profile, request=None):
     request."""
     return _cached_lookup(
         request,
-        "_project_profile_cache",
+        PROJECT_PROFILE_CACHE_ATTR,
         (project.pk, profile.pk),
         lambda: ProjectProfile.objects.get_or_none(project=project, profile=profile),
     )
