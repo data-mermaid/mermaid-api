@@ -314,6 +314,23 @@ class BenthicPITObsModel(BaseObsModel):
 
     class Meta:
         db_table = "summary_benthicpit_obs"
+        indexes = [
+            # Supports the obs endpoint's WHERE project_id + full ORDER BY, so
+            # deep-offset pages (LIMIT/OFFSET) do an ordered index scan instead
+            # of re-sorting all of a project's rows on every page.
+            models.Index(
+                fields=[
+                    "project_id",
+                    "site_name",
+                    "sample_date",
+                    "transect_number",
+                    "label",
+                    "interval",
+                    "id",
+                ],
+                name="bpit_obs_proj_sort_idx",
+            ),
+        ]
 
 
 class BenthicPITSUModel(BaseSUModel):
