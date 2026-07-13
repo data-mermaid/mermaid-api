@@ -185,13 +185,13 @@ def test_update_indicator_set(
         "indicatorset-detail", kwargs={"project_pk": project1.pk, "pk": indicator_set.id}
     )
     update_payload = response_data
-    update_payload["title"] = "Baseline"
+    update_payload["title"] = "Mid-year report"
     update_request = api_client1.put(update_url, data=update_payload, format="json")
     assert update_request.status_code == 200
     updated_response_data = update_request.json()
 
     # Verify the updated indicator set
-    assert updated_response_data["title"] == "Baseline"
+    assert updated_response_data["title"] == "Mid-year report"
     assert updated_response_data["id"] == str(indicator_set.id)
 
 
@@ -648,6 +648,28 @@ def test_finance_solution_normalizes_empty_strings_for_hidden_fields(
     assert fs_data["local_enterprise"] is False
     assert fs_data["gender_smart"] is False
     assert fs_data["used_an_incubator"] is None
+
+
+def test_finance_solution_rejects_revenues_on_programmatic_co_financing(
+    db_setup,
+    api_client1,
+    project1,
+    project_profile1,
+    indicator_set,
+):
+    project1.includes_gfcr = True
+    project1.save()
+    fs = {
+        **_FS_BASE,
+        "fs_type": "programmatic_co_financing",
+        "revenues": [{"revenue_type": "debt_conversion"}],
+    }
+    url = reverse("indicatorset-detail", kwargs={"project_pk": project1.pk, "pk": indicator_set.id})
+    response = api_client1.put(
+        url, data=_fs_put_payload(indicator_set, project1, fs), format="json"
+    )
+    assert response.status_code == 400
+    assert GFCRRevenue.objects.count() == 0
 
 
 def test_choices_new_gfcr_keys(db_setup, api_client1):

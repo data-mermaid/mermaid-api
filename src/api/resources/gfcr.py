@@ -389,6 +389,14 @@ class IndicatorSetViewSet(BaseProjectApiViewSet):
                     revenue_record, GFCRRevenueSerializer, request, instance=rev_instance
                 )
 
+            if (
+                fin_sol_record.fs_type == "programmatic_co_financing"
+                and fin_sol_record.revenues.exists()
+            ):
+                raise ValidationError(
+                    "Programmatic co-financing finance solutions cannot have revenues."
+                )
+
         output_serializer = self.get_serializer(instance=indicator_set)
         return output_serializer.data
 
