@@ -510,7 +510,6 @@ class ApiStack(Stack):
             self,
             "Alerts",
             env_id=config.env_id,
-            load_balancer=load_balancer,
             target_group=target_group,
             api_service=service,
             database=database,

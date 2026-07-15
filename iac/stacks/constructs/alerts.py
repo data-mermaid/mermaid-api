@@ -30,7 +30,6 @@ class MonitoringAlerts(Construct):
         id: str,
         *,
         env_id: str,
-        load_balancer: elb.IApplicationLoadBalancer,
         target_group: elb.IApplicationTargetGroup,
         api_service: ecs.Ec2Service,
         database: rds.DatabaseInstance,
@@ -65,7 +64,9 @@ class MonitoringAlerts(Construct):
                 "Alb5xxAlarm",
                 alarm_name=f"mermaid-{env_id}-alb-5xx-errors",
                 alarm_description="ALB Target 5xx errors exceeded 10 in a 5-minute window",
-                metric=load_balancer.metrics.http_code_target(
+                # Per-env target group, not the shared ALB (whose 5xx count
+                # aggregates both envs).
+                metric=target_group.metrics.http_code_target(
                     code=elb.HttpCodeTarget.TARGET_5XX_COUNT,
                     statistic="Sum",
                     period=Duration.minutes(5),
