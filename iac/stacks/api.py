@@ -511,6 +511,7 @@ class ApiStack(Stack):
             "Alerts",
             env_id=config.env_id,
             load_balancer=load_balancer,
+            target_group=target_group,
             api_service=service,
             database=database,
             general_dlq=worker.dead_letter_queue,

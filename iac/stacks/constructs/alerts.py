@@ -31,6 +31,7 @@ class MonitoringAlerts(Construct):
         *,
         env_id: str,
         load_balancer: elb.IApplicationLoadBalancer,
+        target_group: elb.IApplicationTargetGroup,
         api_service: ecs.Ec2Service,
         database: rds.DatabaseInstance,
         general_dlq: sqs.IQueue,
@@ -76,10 +77,10 @@ class MonitoringAlerts(Construct):
             )
         )
 
-        # The ALB is shared across envs (one load balancer, target_response_time is
-        # the same metric for dev and prod), and dev is too low-traffic for a stable
-        # p95 — a single slow request dominates the window and flaps the alarm. So
-        # only prod owns the latency alarm (same rationale as the shared-RDS alarms).
+        # dev is too low-traffic for a stable p95 — a single slow request dominates
+        # the window and flaps the alarm — so only prod owns the latency alarm (same
+        # rationale as the shared-RDS alarms). Measured on this env's target group
+        # (not the shared ALB, whose target_response_time aggregates both envs).
         if env_id == "prod":
             alarms.append(
                 cw.Alarm(
@@ -89,7 +90,7 @@ class MonitoringAlerts(Construct):
                     alarm_description=(
                         f"ALB p95 response latency exceeded {p95_latency_threshold} seconds"
                     ),
-                    metric=load_balancer.metrics.target_response_time(
+                    metric=target_group.metrics.target_response_time(
                         statistic="p95",
                         period=Duration.minutes(5),
                     ),
