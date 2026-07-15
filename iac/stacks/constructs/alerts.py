@@ -76,22 +76,29 @@ class MonitoringAlerts(Construct):
             )
         )
 
-        alarms.append(
-            cw.Alarm(
-                self,
-                "AlbLatencyAlarm",
-                alarm_name=f"mermaid-{env_id}-alb-p95-latency",
-                alarm_description=f"ALB p95 response latency exceeded {p95_latency_threshold} seconds",
-                metric=load_balancer.metrics.target_response_time(
-                    statistic="p95",
-                    period=Duration.minutes(5),
-                ),
-                threshold=p95_latency_threshold,
-                evaluation_periods=2,
-                comparison_operator=cw.ComparisonOperator.GREATER_THAN_THRESHOLD,
-                treat_missing_data=cw.TreatMissingData.NOT_BREACHING,
+        # The ALB is shared across envs (one load balancer, target_response_time is
+        # the same metric for dev and prod), and dev is too low-traffic for a stable
+        # p95 — a single slow request dominates the window and flaps the alarm. So
+        # only prod owns the latency alarm (same rationale as the shared-RDS alarms).
+        if env_id == "prod":
+            alarms.append(
+                cw.Alarm(
+                    self,
+                    "AlbLatencyAlarm",
+                    alarm_name=f"mermaid-{env_id}-alb-p95-latency",
+                    alarm_description=(
+                        f"ALB p95 response latency exceeded {p95_latency_threshold} seconds"
+                    ),
+                    metric=load_balancer.metrics.target_response_time(
+                        statistic="p95",
+                        period=Duration.minutes(5),
+                    ),
+                    threshold=p95_latency_threshold,
+                    evaluation_periods=2,
+                    comparison_operator=cw.ComparisonOperator.GREATER_THAN_THRESHOLD,
+                    treat_missing_data=cw.TreatMissingData.NOT_BREACHING,
+                )
             )
-        )
 
         # ── RDS ──────────────────────────────────────────────────────
         # The RDS instance is shared across envs (lives in the common stack), so
