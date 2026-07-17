@@ -733,7 +733,7 @@ class BaseChoiceApiViewSet(MethodAuthenticationMixin, viewsets.ViewSet):
 
 
 class ArrayAggExt(ArrayAgg):
-    template = "ARRAY_REMOVE(%(function)s(%(distinct)s%(expressions)s %(ordering)s), NULL)"
+    template = "ARRAY_REMOVE(%(function)s(%(distinct)s%(expressions)s %(order_by)s), NULL)"
 
 
 class M2MSerializerMixin:
