@@ -510,7 +510,7 @@ class ApiStack(Stack):
             self,
             "Alerts",
             env_id=config.env_id,
-            load_balancer=load_balancer,
+            target_group=target_group,
             api_service=service,
             database=database,
             general_dlq=worker.dead_letter_queue,
@@ -520,9 +520,9 @@ class ApiStack(Stack):
             slack_workspace_id=config.api.slack_workspace_id or None,
             slack_channel_id=config.api.slack_channel_id or None,
             cost_alerts_topic=cost_alerts_topic,
-            # dev is low-traffic: p95 = a single slow request among few, so a lone
-            # slow probe trips a 5s threshold. Relax dev; keep prod strict.
-            p95_latency_threshold=5 if config.env_id == "prod" else 10,
+            # ALB latency alarm is prod-only (see MonitoringAlerts) — dev is too
+            # low-traffic for a stable p95. This threshold applies to prod only.
+            p95_latency_threshold=5,
             # RDS instance is shared across envs — only prod owns its alarms to
             # avoid both envs paging on the same instance event.
             monitor_shared_rds=config.env_id == "prod",
