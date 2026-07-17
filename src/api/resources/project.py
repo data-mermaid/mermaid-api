@@ -191,6 +191,10 @@ class ProjectSerializer(BaseProjectSerializer):
 
 
 class ProjectCSVSerializer(ReportSerializer, BaseProjectSerializer):
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self._cached_profiles = {}
+
     fields = [
         ReportField("name", "Project Name"),
         ReportMethodField("get_num_sites", "Number of Sites"),
@@ -209,6 +213,7 @@ class ProjectCSVSerializer(ReportSerializer, BaseProjectSerializer):
         ),
         ReportField("includes_gfcr", "Includes GFCR", to_yesno),
         ReportField("notes", "Notes"),
+        ReportMethodField("get_suggested_citation", "Suggested Citation"),
         ReportMethodField("get_project_admins_csv", "Project Admins"),
         ReportMethodField("get_contact_link", "Contact link"),
         ReportField("id", "Project Id", to_str),
