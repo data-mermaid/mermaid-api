@@ -25,7 +25,9 @@ def fishbelt_file(db):
 
 @pytest.fixture
 def fishbelt_month_day_swap_file(db):
-    return open(os.path.join(csv_data_dir, "fishbelt_month_day_swap.csv"))
+    file = open(os.path.join(csv_data_dir, "fishbelt_month_day_swap.csv"))
+    yield file
+    file.close()
 
 
 @pytest.fixture
