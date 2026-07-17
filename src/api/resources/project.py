@@ -264,7 +264,7 @@ class ProjectAuthenticatedUserPermission(permissions.BasePermission):
             action = view.action_map["put"]
             if action in ("find_and_replace_sites", "find_and_replace_managements"):
                 pk = get_project_pk(request, view)
-                project = get_project(pk)
+                project = get_project(pk, request=request)
                 pp = ProjectProfile.objects.get_or_none(project=project, profile=user.profile)
                 if pp is None:
                     return False

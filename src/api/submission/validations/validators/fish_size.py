@@ -68,7 +68,7 @@ class FishSizeValidator(BaseValidator):
             str(fa.pk): fa.get_max_length()
             for fa in FishAttribute.objects.filter(
                 id__in=[fai for fai in fish_attribute_ids if fai]
-            )
+            ).select_related("fishgrouping", "fishfamily", "fishgenus", "fishspecies")
         }
 
         # Pre-fetch FishSize records for the size bin if available

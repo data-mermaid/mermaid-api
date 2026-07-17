@@ -8,7 +8,7 @@ from rest_framework.exceptions import (
 from rest_framework.response import Response
 
 from api import utils
-from api.models import Project
+from api.permissions import get_project
 from api.resources import (
     benthic_attribute,
     choices,
@@ -140,7 +140,7 @@ def _get_source(source_type):
     return project_sources.get(source_type) or non_project_sources.get(source_type)
 
 
-def _get_project(data, source_type):
+def _get_project(request, data, source_type):
     projid = None
     projname = "NO PROJECT"
     if "project" in data[source_type]:
@@ -151,9 +151,12 @@ def _get_project(data, source_type):
     if projid:
         try:
             if utils.is_uuid(projid) is True:
-                proj = Project.objects.get(pk=projid)
+                # get_project memoizes per-request (see permissions._cached_lookup)
+                # so repeated source types/records referencing the same project
+                # don't each re-query it.
+                proj = get_project(projid, request=request)
                 projname = proj.name
-        except Project.DoesNotExist:
+        except NotFound:
             pass
 
     return {"project_id": projid, "project_name": projname}
@@ -228,6 +231,19 @@ def _get_serialized_record(viewset, profile_id, record_id):
     return None
 
 
+def _invalidate_project_caches(request):
+    """Clear the request-scoped Project/ProjectProfile caches (see
+    permissions._cached_lookup, sync.utils.create_view_request). A push batch
+    can write a project's status or a profile's role and then rely on that
+    change for permission checks on later records in the same batch (e.g.
+    vw_push always processes PROJECTS_SOURCE_TYPE first) - without this, those
+    later checks would keep reusing the pre-write cached instance."""
+    for attr in ("_project_cache", "_project_profile_cache"):
+        cache = getattr(request, attr, None)
+        if cache is not None:
+            cache.clear()
+
+
 def _update_source_record(source_type, serializer, record, request, force=False):
     src = _get_source(source_type)
     vw_request = create_view_request(request, method=get_request_method(record), data=record)
@@ -253,6 +269,8 @@ def _update_source_record(source_type, serializer, record, request, force=False)
     try:
         profile_id = _get_profile_id(request)
         status_code, msg, errors = apply_changes(vw_request, serializer, record, force=force)
+        if source_type in (PROJECTS_SOURCE_TYPE, PROJECT_PROFILES_SOURCE_TYPE):
+            _invalidate_project_caches(request)
         if status_code == 400:
             data = _format_errors(errors)
         elif status_code == 409:
@@ -310,9 +328,14 @@ def _get_source_records(source_type, source_data, request):
 
 def check_permissions(request, data, source_types, method=False):
     permission_checks = {}
+    # _get_project/create_view_request lazily set up per-request project and
+    # project-profile caches on `request` (see permissions._cached_lookup and
+    # sync.utils.create_view_request) so that repeated source types - and, for
+    # push, repeated records - referencing the same project only hit the
+    # database once for it.
     for source_type in source_types:
         src = _get_source(source_type)
-        proj = _get_project(data, source_type)
+        proj = _get_project(request, data, source_type)
         try:
             params = _get_required_parameters(request, data[source_type], src["required_filters"])
         except ValueError:
