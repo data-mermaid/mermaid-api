@@ -3,13 +3,12 @@ import time
 from django.conf import settings
 from django.http import HttpResponse
 from django.utils import timezone
-from django.utils.deprecation import MiddlewareMixin
 
 from tools.logger import DatabaseLogger
 from .utils.auth0utils import decode
 
 
-class APIVersionMiddleware(MiddlewareMixin):
+class APIVersionMiddleware:
     def __init__(self, get_response):
         self.get_response = get_response
 
@@ -23,10 +22,15 @@ class APIVersionMiddleware(MiddlewareMixin):
 # This /health/ endpoint bypasses all other middleware. This is required
 # to allow the Application Load Balancer (ALB) to determine health on the
 # targets in the Target Group
-class HealthEndpointMiddleware(MiddlewareMixin):
-    def process_request(self, request):
+class HealthEndpointMiddleware:
+    def __init__(self, get_response):
+        self.get_response = get_response
+
+    def __call__(self, request):
         if request.META["PATH_INFO"] == "/health/":
             return HttpResponse(f"OK ({settings.ENVIRONMENT})")
+
+        return self.get_response(request)
 
 
 class MetricsMiddleware:

@@ -1,4 +1,4 @@
-from django.urls import re_path
+from django.urls import path
 from rest_framework_nested import routers
 
 from .resources.benthic_attribute import BenthicAttributeViewSet
@@ -300,16 +300,16 @@ api_urls = (
     router.urls
     + project_router.urls
     + [
-        re_path(r"^contactmermaid/$", contact_mermaid, name="contactmermaid"),
-        re_path(r"^contactprojectadmins/$", contact_project_admins, name="contactprojectadmins"),
-        re_path(
-            r"^ingest_schema_csv/(?P<sample_unit>\w+)/$",
+        path("contactmermaid/", contact_mermaid, name="contactmermaid"),
+        path("contactprojectadmins/", contact_project_admins, name="contactprojectadmins"),
+        path(
+            "ingest_schema_csv/<str:sample_unit>/",
             ingest_schema_csv,
             name="ingest-schemas-csv",
         ),
-        re_path(r"^health/$", health),
-        re_path(r"^pull/$", vw_pull),
-        re_path(r"^push/$", vw_push),
-        re_path("^reports/$", MultiProjectReportView.as_view(), name="reports"),
+        path("health/", health),
+        path("pull/", vw_pull),
+        path("push/", vw_push),
+        path("reports/", MultiProjectReportView.as_view(), name="reports"),
     ]
 )
