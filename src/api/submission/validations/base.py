@@ -2,8 +2,7 @@ import hashlib
 from dataclasses import dataclass
 from typing import List, Literal, Union
 
-from dotty_dict import dotty
-
+from api.utils import get_value, set_value
 from .statuses import ERROR, IGNORE, OK, WARN
 from .validators import BaseValidator, ValidatorResult
 
@@ -86,14 +85,6 @@ class ValidationRunner:
     def __init__(self, serializer):
         self.serializer = serializer
 
-    def _get_dotty_value(self, data, key):
-        try:
-            if isinstance(data, dict):
-                data = dotty(data)
-            return data.get(key)
-        except (TypeError, KeyError):
-            return None
-
     def _check_is_ignored(
         self,
         new_validator_result: dict,
@@ -108,11 +99,19 @@ class ValidationRunner:
             for existing_vr in existing_validator_results
         )
 
-    def _set_validator_list_result(self, key, result, existing_validation_result):
+    def _get_or_create_results_list(self, key):
+        self.results = self.results if self.results is not None else {}
+        results_list = get_value(self.results, key, delimiter=".")
+        if results_list is None:
+            results_list = []
+            set_value(self.results, key, results_list, delimiter=".")
+        return results_list
+
+    def _set_validator_list_result(self, results_list, result, existing_validation_result):
         statuses = []
         for n, res in enumerate(result):
-            if len(self.results[key]) == n:
-                self.results[key].append([])
+            if len(results_list) == n:
+                results_list.append([])
 
             try:
                 is_ignored = self._check_is_ignored(res, existing_validation_result[n])
@@ -121,13 +120,12 @@ class ValidationRunner:
                 is_ignored = False
 
             statuses.append(res["status"])
-            self.results[key][n].append(res)
+            results_list[n].append(res)
         return self._get_overall_status_level(statuses)
 
     def set_validator_result(self, validation: Validation, existing_validations: dict):
         status = OK
 
-        self.results = self.results or dotty()
         result = validation.to_validation_result()
         validation_level = validation.validation_level
 
@@ -140,16 +138,18 @@ class ValidationRunner:
 
         key = RECORD_KEY if validation_level == RECORD_LEVEL else validation.paths[0]
 
-        self.results.setdefault(key, [])
-        existing_validation_result = self._get_dotty_value(existing_validations, key)
+        results_list = self._get_or_create_results_list(key)
+        existing_validation_result = get_value(existing_validations, key, delimiter=".")
         if validation_type == LIST_VALIDATION_TYPE:
-            status = self._set_validator_list_result(key, result, existing_validation_result)
+            status = self._set_validator_list_result(
+                results_list, result, existing_validation_result
+            )
         else:
             is_ignored = self._check_is_ignored(result, existing_validation_result)
             if is_ignored:
                 result["status"] = IGNORE
             status = result["status"]
-            self.results[key].append(result)
+            results_list.append(result)
 
         return status
 
@@ -175,7 +175,7 @@ class ValidationRunner:
         statuses = []
         collect_record_dict = self.serializer(instance=collect_record).data
         existing_validations = (
-            self._get_dotty_value(dotty(collect_record_dict), "validations.results") or dotty()
+            get_value(collect_record_dict, "validations.results", delimiter=".") or {}
         )
         for validation in validations:
             if validation.delay_validation:
@@ -209,5 +209,5 @@ class ValidationRunner:
         return {
             "version": self.VERSION,
             "status": self.status,
-            "results": self.results.to_dict(),
+            "results": self.results,
         }

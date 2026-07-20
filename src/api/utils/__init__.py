@@ -151,6 +151,8 @@ def get_value(dictionary, keys, delimiter="__"):
         keys = keys.split(delimiter)
     if not keys or dictionary is None:
         return dictionary
+    if not isinstance(dictionary, dict):
+        return None
     return get_value(dictionary.get(keys[0]), keys[1:])
 
 
