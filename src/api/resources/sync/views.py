@@ -273,6 +273,8 @@ def _update_source_record(source_type, serializer, record, request, force=False)
             _invalidate_project_caches(request)
         if status_code == 400:
             data = _format_errors(errors)
+        elif status_code == 404:
+            data = errors
         elif status_code == 409:
             data = _get_serialized_record(viewset, profile_id, record_id)
         elif status_code == 418:  # other custom error output
