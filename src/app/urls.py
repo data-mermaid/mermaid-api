@@ -11,7 +11,7 @@ admin.autodiscover()
 
 
 urlpatterns = [
-    path("v1/", include(api_urls), name="api-root"),
+    path("v1/", include(api_urls)),
     path(
         "admin/password_reset/", auth_views.PasswordResetView.as_view(), name="admin_password_reset"
     ),

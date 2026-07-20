@@ -1,6 +1,6 @@
 import json
 import logging
-import random
+import secrets
 import string
 from urllib.request import urlopen
 
@@ -41,11 +41,13 @@ class Auth0ClientManager(object):
         return self.auth0.clients.list()
 
     def change_secret(self, client_id):
-        c = [random.choice(self._chars) for x in range(self._secret_len)]
+        c = [secrets.choice(self._chars) for x in range(self._secret_len)]
         secret = "".join(c)
         return self.auth0.clients.update(client_id, client_secret=secret)
 
-    def create_non_interactive_client(self, name, description=None, callbacks=[]):
+    def create_non_interactive_client(self, name, description=None, callbacks=None):
+        if callbacks is None:
+            callbacks = []
         return self.auth0.clients.create(
             name=name,
             app_type="non_interactive",

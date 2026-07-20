@@ -27,7 +27,7 @@ class HealthEndpointMiddleware:
         self.get_response = get_response
 
     def __call__(self, request):
-        if request.META["PATH_INFO"] == "/health/":
+        if request.path_info == "/health/":
             return HttpResponse(f"OK ({settings.ENVIRONMENT})")
 
         return self.get_response(request)

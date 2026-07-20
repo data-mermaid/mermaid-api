@@ -100,7 +100,7 @@ class ValidationRunner:
         )
 
     def _get_or_create_results_list(self, key):
-        self.results = self.results if self.results is not None else {}
+        self.results = self.results or {}
         results_list = get_value(self.results, key, delimiter=".")
         if results_list is None:
             results_list = []

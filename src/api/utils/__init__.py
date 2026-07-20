@@ -151,9 +151,17 @@ def get_value(dictionary, keys, delimiter="__"):
         keys = keys.split(delimiter)
     if not keys or dictionary is None:
         return dictionary
+    key = keys[0]
+    if isinstance(dictionary, list):
+        if not (isinstance(key, str) and key.isdigit()):
+            return None
+        index = int(key)
+        if index >= len(dictionary):
+            return None
+        return get_value(dictionary[index], keys[1:])
     if not isinstance(dictionary, dict):
         return None
-    return get_value(dictionary.get(keys[0]), keys[1:])
+    return get_value(dictionary.get(key), keys[1:])
 
 
 def set_value(dic, keys, value, delimiter="__"):
