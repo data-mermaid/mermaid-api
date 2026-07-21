@@ -50,9 +50,15 @@ def test_apply_changes_duplicate_create_race(db_setup, profile1, project1):
     status_code, _, _ = apply_changes(request, CollectRecordSerializer, dict(record))
     assert status_code == 201
 
-    status_code, _, _ = apply_changes(request, CollectRecordSerializer, dict(record))
+    # Second push carries different data; status_code alone can't distinguish
+    # a plain create from the update-fallback (both return 201), so assert on
+    # the persisted data to confirm the fallback actually updated in place.
+    record_v2 = dict(record)
+    record_v2["data"] = {"marker": "second"}
+    status_code, _, _ = apply_changes(request, CollectRecordSerializer, record_v2)
     assert status_code == 201
     assert CollectRecord.objects.filter(id=record["id"]).count() == 1
+    assert CollectRecord.objects.get(id=record["id"]).data["marker"] == "second"
 
 
 def test_sync_push_blocks_deleting_last_admin(
