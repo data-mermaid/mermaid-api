@@ -17,7 +17,7 @@ from ...models import (
     ProjectProfile,
 )
 from ...models.classification import get_image_bucket
-from ...permissions import _cached_lookup
+from ...permissions import cached_lookup
 from ...utils import truthy
 from ...utils.classification import classify_image_job, create_classification_status
 from ..base import (
@@ -30,6 +30,8 @@ from ..mixins import DynamicFieldsMixin
 from .annotation import SaveAnnotationSerializer
 from .classification_status import ClassificationStatusSerializer
 from .point import PointSerializer
+
+IMAGE_PERMISSION_CACHE_ATTR = "_image_permission_cache"
 
 
 class ImagePermission(permissions.BasePermission):
@@ -62,7 +64,7 @@ class ImagePermission(permissions.BasePermission):
 
         # PATCH/DELETE/GET (has_permission) is re-checked by DRF's OR.has_object_permission
         # (see BaseProjectApiViewSet.permission_classes) on every detail-level request, so
-        # memoize per-request the same way api.permissions._cached_lookup does for
+        # memoize per-request the same way api.permissions.cached_lookup does for
         # get_project/get_project_profile - otherwise a non-project-member's image access
         # (the whole reason this permission exists) re-runs these queries a second time.
         cache_key = (
@@ -72,7 +74,7 @@ class ImagePermission(permissions.BasePermission):
             request.data.get("collect_record_id") if request.method == "POST" else None,
             str(profile.pk),
         )
-        return _cached_lookup(request, "_image_permission_cache", cache_key, _load)
+        return cached_lookup(request, IMAGE_PERMISSION_CACHE_ATTR, cache_key, _load)
 
 
 class ImageSerializer(DynamicFieldsMixin, BaseAPISerializer):

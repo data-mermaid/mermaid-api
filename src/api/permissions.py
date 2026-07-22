@@ -1,6 +1,9 @@
+from typing import Any, Callable
+
 from django.core.exceptions import ObjectDoesNotExist
 from rest_framework import permissions
 from rest_framework.exceptions import NotFound
+from rest_framework.request import Request
 
 from .exceptions import check_uuid
 from .models import CollectRecord, Project, ProjectProfile
@@ -32,7 +35,9 @@ PROJECT_PROFILE_CACHE_ATTR = "_project_profile_cache"
 REQUEST_CACHE_ATTRS = (PROJECT_CACHE_ATTR, PROJECT_PROFILE_CACHE_ATTR)
 
 
-def _cached_lookup(request, cache_attr, key, loader):
+def cached_lookup(
+    request: Request | None, cache_attr: str, key: Any, loader: Callable[[], Any]
+) -> Any:
     """Fetch `key` via `loader()`, memoizing on a dict stored as `cache_attr`
     on `request`. The dict is created lazily on `request` itself on first use
     (and shared with any derived request objects that copy the attribute
@@ -63,15 +68,15 @@ def get_project(pk, request=None):
         except Project.DoesNotExist:
             raise NotFound("Not found: project %s" % pk)
 
-    return _cached_lookup(request, PROJECT_CACHE_ATTR, pk, _load)
+    return cached_lookup(request, PROJECT_CACHE_ATTR, pk, _load)
 
 
 def get_project_profile(project, profile, request=None):
     """Like ProjectProfile.objects.get_or_none(project=project, profile=profile),
-    but memoized per-request (see _cached_lookup) since permission classes
+    but memoized per-request (see cached_lookup) since permission classes
     commonly look up the same (project, profile) pair multiple times per
     request."""
-    return _cached_lookup(
+    return cached_lookup(
         request,
         PROJECT_PROFILE_CACHE_ATTR,
         (project.pk, profile.pk),

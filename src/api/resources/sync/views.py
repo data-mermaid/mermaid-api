@@ -151,7 +151,7 @@ def _get_project(request, data, source_type):
     if projid:
         try:
             if utils.is_uuid(projid) is True:
-                # get_project memoizes per-request (see permissions._cached_lookup)
+                # get_project memoizes per-request (see permissions.cached_lookup)
                 # so repeated source types/records referencing the same project
                 # don't each re-query it.
                 proj = get_project(projid, request=request)
@@ -233,7 +233,7 @@ def _get_serialized_record(viewset, profile_id, record_id):
 
 def _invalidate_project_caches(request):
     """Clear the request-scoped Project/ProjectProfile caches (see
-    permissions._cached_lookup, sync.utils.create_view_request). A push batch
+    permissions.cached_lookup, sync.utils.create_view_request). A push batch
     can write a project's status or a profile's role and then rely on that
     change for permission checks on later records in the same batch (e.g.
     vw_push always processes PROJECTS_SOURCE_TYPE first) - without this, those
@@ -329,7 +329,7 @@ def _get_source_records(source_type, source_data, request):
 def check_permissions(request, data, source_types, method=False):
     permission_checks = {}
     # _get_project/create_view_request lazily set up per-request project and
-    # project-profile caches on `request` (see permissions._cached_lookup and
+    # project-profile caches on `request` (see permissions.cached_lookup and
     # sync.utils.create_view_request) so that repeated source types - and, for
     # push, repeated records - referencing the same project only hit the
     # database once for it.
