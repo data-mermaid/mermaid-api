@@ -3,7 +3,7 @@ from django.db import transaction
 from django.db.models import Q
 from rest_condition import Or
 from rest_framework import permissions, serializers, status
-from rest_framework.exceptions import MethodNotAllowed, ValidationError
+from rest_framework.exceptions import MethodNotAllowed, NotFound, ValidationError
 from rest_framework.response import Response
 
 from ...exceptions import check_uuid
@@ -169,7 +169,10 @@ class ImageViewSet(BaseProjectApiViewSet):
         # Django's delete-collector query and the final DELETE, causing an
         # IntegrityError on the class_status FK.
         with transaction.atomic():
-            locked_instance = Image.objects.select_for_update().get(pk=instance.pk)
+            try:
+                locked_instance = Image.objects.select_for_update().get(pk=instance.pk)
+            except Image.DoesNotExist:
+                raise NotFound()
             locked_instance.delete()
 
     def limit_to_project(self, request, *args, **kwargs):
