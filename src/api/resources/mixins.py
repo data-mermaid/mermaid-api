@@ -11,7 +11,7 @@ from django.db.models import ProtectedError, Q
 from django.http import FileResponse
 from django.template.defaultfilters import pluralize
 from django.utils.functional import cached_property
-from rest_framework import exceptions, status
+from rest_framework import exceptions, serializers, status
 from rest_framework.decorators import action
 from rest_framework.response import Response
 
@@ -21,6 +21,12 @@ from ..notifications import notify_cr_owners_site_mr_deleted
 from ..permissions import ProjectDataAdminPermission
 from ..signals.classification import post_edit
 from ..utils import create_iso_date_string, get_protected_related_objects, truthy
+from ..utils.duplicates import (
+    NOT_UNIQUE_SITE_CODE,
+    SIMILAR_NAME_CODE,
+    find_duplicate_managements,
+    find_duplicate_sites,
+)
 from ..utils.project import get_safe_project_name
 from ..utils.sample_unit_methods import edit_transect_method
 
@@ -66,6 +72,106 @@ class CreateOrUpdateSerializerMixin(object):
                 instance = ModelClass.objects.get(id=validated_data["id"])
                 return self.update(instance, validated_data)
             raise
+
+
+class _DuplicateCheckMixin:
+    """
+    Shared machinery for SiteDuplicateCheckMixin/ManagementDuplicateCheckMixin
+    below: reject creation of a row that duplicates an existing, data-bearing
+    row in the same project, with an "ignore_duplicate_warning": true escape
+    hatch in the request body.
+
+    ignore_duplicate_warning has to be injected via get_fields() rather than
+    declared as a normal class-level serializer field: DRF's metaclass only
+    collects declared fields from bases that are themselves already-processed
+    Serializer subclasses, and this is a plain mixin, so a class-level Field
+    here would silently never reach validated_data.
+
+    The check itself runs in validate() rather than create(): it needs to
+    raise before .save() so every caller's existing is_valid()-based error
+    handling (create_project's per-item error accumulation, sync push's
+    apply_changes) catches it correctly instead of it escaping as an
+    uncaught exception mid-save.
+    """
+
+    def get_fields(self):
+        fields = super().get_fields()
+        fields["ignore_duplicate_warning"] = serializers.BooleanField(
+            write_only=True, required=False, default=False
+        )
+        return fields
+
+    def _should_check_duplicates(self, attrs):
+        ignore_duplicate_warning = attrs.pop("ignore_duplicate_warning", False)
+        return self.instance is None and not ignore_duplicate_warning
+
+    def _reject_if_duplicate(self, duplicates, message, code):
+        if duplicates:
+            # code/matches are nested under "duplicate" (rather than sibling
+            # keys next to "name") so DRF's error-detail normalization -- which
+            # wraps any non-list/dict value in a list -- doesn't turn code into
+            # a single-item list; nesting them in a dict value sidesteps that.
+            raise exceptions.ValidationError(
+                {
+                    "name": [message],
+                    "duplicate": {"code": code, "matches": [str(d.id) for d in duplicates[:3]]},
+                }
+            )
+
+
+class SiteDuplicateCheckMixin(_DuplicateCheckMixin):
+    """
+    Rejects Site creation when a similarly-named, nearby Site with submitted
+    data already exists in the same project -- see find_duplicate_sites. Pass
+    "ignore_duplicate_warning": true in the request body to skip the check
+    and create anyway.
+    """
+
+    def validate(self, attrs):
+        attrs = super().validate(attrs)
+
+        if self._should_check_duplicates(attrs):
+            duplicates = find_duplicate_sites(
+                project_id=attrs["project"].pk,
+                name=attrs.get("name"),
+                location=attrs.get("location"),
+                exclude_id=attrs.get("id"),
+            )
+            self._reject_if_duplicate(
+                duplicates,
+                "A site with a similar name and submitted data already exists nearby. "
+                "Pass ignore_duplicate_warning=true to create anyway.",
+                NOT_UNIQUE_SITE_CODE,
+            )
+
+        return attrs
+
+
+class ManagementDuplicateCheckMixin(_DuplicateCheckMixin):
+    """
+    Rejects Management creation when a name-matching Management with
+    submitted data already exists in the same project -- see
+    find_duplicate_managements. Pass "ignore_duplicate_warning": true in the
+    request body to skip the check and create anyway.
+    """
+
+    def validate(self, attrs):
+        attrs = super().validate(attrs)
+
+        if self._should_check_duplicates(attrs):
+            duplicates = find_duplicate_managements(
+                project_id=attrs["project"].pk,
+                name=attrs.get("name"),
+                exclude_id=attrs.get("id"),
+            )
+            self._reject_if_duplicate(
+                duplicates,
+                "A management regime with a matching name and submitted data already "
+                "exists. Pass ignore_duplicate_warning=true to create anyway.",
+                SIMILAR_NAME_CODE,
+            )
+
+        return attrs
 
 
 # Use this to override DRF DEFAULT_AUTHENTICATION_CLASSES (in settings) from ViewSet for specific methods
