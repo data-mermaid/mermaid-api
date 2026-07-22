@@ -5,8 +5,9 @@ judgment call is being made. Only rows with at
 least one submitted sample unit are candidates (an idle row can't produce a
 duplicate summary sample event), TEST-status projects are excluded, rows are
 grouped by (project, name), and a group is "exact" only if every content field
-matches across all rows (1m tolerance on site location / management boundary
-geometry, order-independent set comparison for management parties).
+matches across all rows (1m tolerance on site location; management boundary
+must match exactly as WKT text, with null boundaries only considered equal to
+other nulls; order-independent set comparison for management parties).
 
 Merging itself is delegated entirely to the existing
 `api.utils.replace.replace_sampleunit_objs` -- the same function backing
