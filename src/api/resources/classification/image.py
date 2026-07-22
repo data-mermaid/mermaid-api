@@ -162,6 +162,16 @@ class ImageViewSet(BaseProjectApiViewSet):
     permission_classes = [Or(BaseProjectApiViewSet.permission_classes[0], ImagePermission)]
     filterset_class = ImageFilterSet
 
+    def perform_destroy(self, instance):
+        # Lock the row so this serializes against create_classification_status(),
+        # which also locks via select_for_update(). Without this, the async
+        # classification worker can insert a new ClassificationStatus between
+        # Django's delete-collector query and the final DELETE, causing an
+        # IntegrityError on the class_status FK.
+        with transaction.atomic():
+            locked_instance = Image.objects.select_for_update().get(pk=instance.pk)
+            locked_instance.delete()
+
     def limit_to_project(self, request, *args, **kwargs):
         qs = self.get_queryset()
         profile = getattr(request.user, "profile", None)
