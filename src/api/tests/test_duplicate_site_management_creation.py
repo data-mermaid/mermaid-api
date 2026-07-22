@@ -283,3 +283,15 @@ def test_sync_push_management_duplicate_returns_400_not_500(
     result = resp.json()["project_managements"][0]
     assert result["status_code"] == 400
     assert result["data"]["duplicate"]["code"] == "similar_name"
+
+
+def test_sync_push_management_duplicate_override_flag_allows_creation(
+    api_client1, project1, management1, benthic_transect1
+):
+    payload = _management_payload(project1, "management-1")
+    payload["ignore_duplicate_warning"] = True
+    resp = api_client1.post("/v1/push/", {"project_managements": [payload]}, format="json")
+
+    assert resp.status_code == 200
+    result = resp.json()["project_managements"][0]
+    assert result["status_code"] == 201
