@@ -8,7 +8,7 @@ from rest_framework.exceptions import (
 from rest_framework.response import Response
 
 from api import utils
-from api.permissions import get_project
+from api.permissions import get_project, invalidate_project, invalidate_project_profile
 from api.resources import (
     benthic_attribute,
     choices,
@@ -231,17 +231,23 @@ def _get_serialized_record(viewset, profile_id, record_id):
     return None
 
 
-def _invalidate_project_caches(request):
-    """Clear the request-scoped Project/ProjectProfile caches (see
-    permissions._cached_lookup, sync.utils.create_view_request). A push batch
-    can write a project's status or a profile's role and then rely on that
-    change for permission checks on later records in the same batch (e.g.
-    vw_push always processes PROJECTS_SOURCE_TYPE first) - without this, those
-    later checks would keep reusing the pre-write cached instance."""
-    for attr in ("_project_cache", "_project_profile_cache"):
-        cache = getattr(request, attr, None)
-        if cache is not None:
-            cache.clear()
+def _invalidate_project_caches(request, source_type, record):
+    """Clear just the cache entry `record` touched (see
+    permissions.invalidate_project/invalidate_project_profile), not the whole
+    per-request cache. A push batch can write a project's status or a
+    profile's role and rely on that for permission checks on later records
+    in the same batch - without this, those checks would reuse stale data."""
+    if source_type == PROJECTS_SOURCE_TYPE:
+        project_id = record.get("id")
+        if project_id is not None:
+            invalidate_project(request, project_id)
+    elif source_type == PROJECT_PROFILES_SOURCE_TYPE:
+        project_id = record.get("project")
+        # get_project_profile is only ever looked up by request.user.profile,
+        # never a record's own "profile" field - the only one that can be stale.
+        profile = getattr(request.user, "profile", None)
+        if project_id is not None and profile is not None:
+            invalidate_project_profile(request, project_id, profile)
 
 
 def _update_source_record(source_type, serializer, record, request, force=False):
@@ -270,7 +276,7 @@ def _update_source_record(source_type, serializer, record, request, force=False)
         profile_id = _get_profile_id(request)
         status_code, msg, errors = apply_changes(vw_request, serializer, record, force=force)
         if source_type in (PROJECTS_SOURCE_TYPE, PROJECT_PROFILES_SOURCE_TYPE):
-            _invalidate_project_caches(request)
+            _invalidate_project_caches(request, source_type, record)
         if status_code == 400:
             data = _format_errors(errors)
         elif status_code == 409:

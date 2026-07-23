@@ -42,6 +42,7 @@ from ..permissions import (
     UnauthenticatedReadOnlyPermission,
     get_project,
     get_project_pk,
+    get_project_profile,
 )
 from ..reports.fields import ReportField, ReportMethodField
 from ..reports.formatters import to_data_policy, to_str, to_yesno
@@ -265,7 +266,7 @@ class ProjectAuthenticatedUserPermission(permissions.BasePermission):
             if action in ("find_and_replace_sites", "find_and_replace_managements"):
                 pk = get_project_pk(request, view)
                 project = get_project(pk, request=request)
-                pp = ProjectProfile.objects.get_or_none(project=project, profile=user.profile)
+                pp = get_project_profile(project, user.profile, request=request)
                 if pp is None:
                     return False
                 return pp.role > ProjectProfile.READONLY

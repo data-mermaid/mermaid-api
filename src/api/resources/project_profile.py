@@ -1,3 +1,4 @@
+from django.db import transaction
 from rest_condition import Or
 from rest_framework import permissions, serializers
 from rest_framework.exceptions import ValidationError
@@ -68,25 +69,21 @@ class ProjectProfileViewSet(BaseProjectApiViewSet):
     ]
     filterset_class = ProjectProfileFilterSet
 
-    def is_last_admin(self):
-        obj = self.get_object()
-        existing_project = obj.project
-        admin_profiles = ProjectProfile.objects.filter(
-            project=existing_project, role=ProjectProfile.ADMIN
-        )
-        return admin_profiles.count() < 2 and obj.pk == admin_profiles[0].pk
-
     def perform_update(self, serializer):
-        if self.is_last_admin():
-            raise ValidationError(
-                "You are the last admin of this project! Create another admin before you relinquish."
-            )
-        serializer.save()
+        instance = serializer.instance
+        new_role = serializer.validated_data.get("role", instance.role)
+        with transaction.atomic():
+            if new_role != ProjectProfile.ADMIN and instance.is_last_admin(for_update=True):
+                raise ValidationError(
+                    "You are the last admin of this project! Create another admin before you relinquish."
+                )
+            serializer.save()
 
     def perform_destroy(self, instance):
-        if self.is_last_admin():
-            raise ValidationError(
-                "You are the last admin of this project! Create another admin before you relinquish."
-            )
-        instance.updated_by = self._set_updated_by(self.request)
-        instance.delete()
+        with transaction.atomic():
+            if instance.is_last_admin(for_update=True):
+                raise ValidationError(
+                    "You are the last admin of this project! Create another admin before you relinquish."
+                )
+            instance.updated_by = self._set_updated_by(self.request)
+            instance.delete()
