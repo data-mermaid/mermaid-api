@@ -17,7 +17,6 @@ from django_filters import (
 )
 from django_filters.fields import Lookup
 from django_filters.rest_framework import DjangoFilterBackend
-from rest_condition import Or
 from rest_framework import exceptions, serializers, viewsets
 from rest_framework.decorators import action
 from rest_framework.exceptions import MethodNotAllowed, NotFound, ValidationError
@@ -608,9 +607,7 @@ class BaseApiViewSet(MethodAuthenticationMixin, viewsets.ModelViewSet):
 
 
 class BaseAttributeApiViewSet(BaseApiViewSet):
-    permission_classes = [
-        Or(UnauthenticatedReadOnlyPermission, AttributeAuthenticatedUserPermission)
-    ]
+    permission_classes = [UnauthenticatedReadOnlyPermission | AttributeAuthenticatedUserPermission]
 
     method_authentication_classes = {"GET": []}
 
@@ -636,16 +633,15 @@ class BaseAttributeApiViewSet(BaseApiViewSet):
         serializer.save(status=APPROVAL_STATUSES[-1][0])
 
 
+PROJECT_DATA_PERMISSION = (
+    ProjectDataReadOnlyPermission | ProjectDataCollectorPermission | ProjectDataAdminPermission
+)
+
+
 class BaseProjectApiViewSet(BaseApiViewSet):
     project_lookup = None
 
-    permission_classes = [
-        Or(
-            ProjectDataReadOnlyPermission,
-            ProjectDataCollectorPermission,
-            ProjectDataAdminPermission,
-        )
-    ]
+    permission_classes = [PROJECT_DATA_PERMISSION]
 
     def perform_update(self, serializer):
         requested_project = uuid.UUID(check_uuid(self.request.data.get("project")))
@@ -733,7 +729,7 @@ class BaseChoiceApiViewSet(MethodAuthenticationMixin, viewsets.ViewSet):
 
 
 class ArrayAggExt(ArrayAgg):
-    template = "ARRAY_REMOVE(%(function)s(%(distinct)s%(expressions)s %(ordering)s), NULL)"
+    template = "ARRAY_REMOVE(%(function)s(%(distinct)s%(expressions)s %(order_by)s), NULL)"
 
 
 class M2MSerializerMixin:
