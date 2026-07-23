@@ -1,5 +1,6 @@
 from django.core.exceptions import MultipleObjectsReturned, ObjectDoesNotExist
 from django.db import connection
+from django.db.models.expressions import RawSQL
 
 from ...mocks import MockRequest
 
@@ -8,7 +9,7 @@ def _get_subquery(queryset, pk_field_name):
     cur = connection.cursor()
     try:
         table_name = queryset.model._meta.db_table
-        queryset = queryset.extra(select={"__pk__": f'"{table_name}"."{pk_field_name}"'})
+        queryset = queryset.annotate(_pk_=RawSQL(f'"{table_name}"."{pk_field_name}"', []))
         qry = queryset.query
         template_sql, params = qry.sql_with_params()
         sql = cur.mogrify(template_sql, params)
@@ -46,7 +47,7 @@ def _get_records(viewset, profile_id, filters, generate_visibility_removes=False
         INNER JOIN
             revision
         ON
-            revision.record_id = model_select."__pk__"
+            revision.record_id = model_select."_pk_"
         WHERE
             {" AND ".join(updates_filters)}
         ORDER BY
@@ -124,10 +125,10 @@ def _get_records(viewset, profile_id, filters, generate_visibility_removes=False
             FROM
                 "revision"
             LEFT JOIN
-                model_select ON "revision"."record_id" = model_select."__pk__"
+                model_select ON "revision"."record_id" = model_select."_pk_"
             WHERE
                 {" AND ".join(vis_remove_filters)}
-                AND model_select."__pk__" IS NULL
+                AND model_select."_pk_" IS NULL
         """
         try:
             cur = connection.cursor()
