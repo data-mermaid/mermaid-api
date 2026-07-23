@@ -8,7 +8,7 @@ from rest_framework.exceptions import (
 from rest_framework.response import Response
 
 from api import utils
-from api.permissions import get_project
+from api.permissions import REQUEST_CACHE_ATTRS, get_project
 from api.resources import (
     benthic_attribute,
     choices,
@@ -151,7 +151,7 @@ def _get_project(request, data, source_type):
     if projid:
         try:
             if utils.is_uuid(projid) is True:
-                # get_project memoizes per-request (see permissions._cached_lookup)
+                # get_project memoizes per-request (see permissions.cached_lookup)
                 # so repeated source types/records referencing the same project
                 # don't each re-query it.
                 proj = get_project(projid, request=request)
@@ -233,12 +233,12 @@ def _get_serialized_record(viewset, profile_id, record_id):
 
 def _invalidate_project_caches(request):
     """Clear the request-scoped Project/ProjectProfile caches (see
-    permissions._cached_lookup, sync.utils.create_view_request). A push batch
+    permissions.cached_lookup, sync.utils.create_view_request). A push batch
     can write a project's status or a profile's role and then rely on that
     change for permission checks on later records in the same batch (e.g.
     vw_push always processes PROJECTS_SOURCE_TYPE first) - without this, those
     later checks would keep reusing the pre-write cached instance."""
-    for attr in ("_project_cache", "_project_profile_cache"):
+    for attr in REQUEST_CACHE_ATTRS:
         cache = getattr(request, attr, None)
         if cache is not None:
             cache.clear()
@@ -331,7 +331,7 @@ def _get_source_records(source_type, source_data, request):
 def check_permissions(request, data, source_types, method=False):
     permission_checks = {}
     # _get_project/create_view_request lazily set up per-request project and
-    # project-profile caches on `request` (see permissions._cached_lookup and
+    # project-profile caches on `request` (see permissions.cached_lookup and
     # sync.utils.create_view_request) so that repeated source types - and, for
     # push, repeated records - referencing the same project only hit the
     # database once for it.

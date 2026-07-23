@@ -2,7 +2,6 @@ from decimal import Decimal
 
 from django.db import transaction
 from django_filters import BaseInFilter, RangeFilter
-from rest_condition import Or
 from rest_framework import serializers, status
 from rest_framework.response import Response
 
@@ -16,7 +15,6 @@ from ...models import (
     BenthicPITSUSQLModel,
     ObsBenthicPIT,
 )
-from ...permissions import ProjectDataReadOnlyPermission, ProjectPublicSummaryPermission
 from ...reports.fields import ReportField
 from ...reports.formatters import (
     to_day,
@@ -45,6 +43,7 @@ from ..mixins import SampleUnitMethodEditMixin, SampleUnitMethodSummaryReport
 from ..observer import ObserverSerializer
 from ..sample_event import SampleEventSerializer
 from . import (
+    BaseProjectMethodSEView,
     BaseProjectMethodView,
     clean_sample_event_models,
     save_model,
@@ -574,10 +573,9 @@ class BenthicPITProjectMethodSUView(BaseProjectMethodView):
     ordering_fields = ordering
 
 
-class BenthicPITProjectMethodSEView(BaseProjectMethodView):
+class BenthicPITProjectMethodSEView(BaseProjectMethodSEView):
     drf_label = "benthicpit-se"
     project_policy = "data_policy_benthicpit"
-    permission_classes = [Or(ProjectDataReadOnlyPermission, ProjectPublicSummaryPermission)]
     model = BenthicPITSEModel
     serializer_class = BenthicPITMethodSESerializer
     serializer_class_geojson = BenthicPITMethodSEGeoSerializer

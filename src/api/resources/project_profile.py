@@ -1,4 +1,3 @@
-from rest_condition import Or
 from rest_framework import permissions, serializers
 from rest_framework.exceptions import ValidationError
 
@@ -60,11 +59,9 @@ class ProjectProfileViewSet(BaseProjectApiViewSet):
     serializer_class = ProjectProfileSerializer
     queryset = ProjectProfile.objects.all()
     permission_classes = [
-        Or(
-            ProjectDataReadOnlyPermission,
-            ProjectProfileCollectorPermission,
-            ProjectDataAdminPermission,
-        )
+        ProjectDataReadOnlyPermission
+        | ProjectProfileCollectorPermission
+        | ProjectDataAdminPermission
     ]
     filterset_class = ProjectProfileFilterSet
 

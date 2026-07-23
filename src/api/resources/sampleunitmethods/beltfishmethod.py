@@ -3,7 +3,6 @@ from decimal import Decimal
 from django.db import transaction
 from django.db.models import Q
 from django_filters import BaseInFilter, RangeFilter
-from rest_condition import Or
 from rest_framework import serializers, status
 from rest_framework.response import Response
 
@@ -17,7 +16,6 @@ from ...models import (
     BeltFishSUSQLModel,
     ObsBeltFish,
 )
-from ...permissions import ProjectDataReadOnlyPermission, ProjectPublicSummaryPermission
 from ...reports.fields import ReportField
 from ...reports.formatters import (
     to_day,
@@ -45,6 +43,7 @@ from ..mixins import SampleUnitMethodEditMixin, SampleUnitMethodSummaryReport
 from ..observer import ObserverSerializer
 from ..sample_event import SampleEventSerializer
 from . import (
+    BaseProjectMethodSEView,
     BaseProjectMethodView,
     clean_sample_event_models,
     save_model,
@@ -596,10 +595,9 @@ class BeltFishProjectMethodSUView(BaseProjectMethodView):
     ordering_fields = ordering
 
 
-class BeltFishProjectMethodSEView(BaseProjectMethodView):
+class BeltFishProjectMethodSEView(BaseProjectMethodSEView):
     drf_label = "beltfish-se"
     project_policy = "data_policy_beltfish"
-    permission_classes = [Or(ProjectDataReadOnlyPermission, ProjectPublicSummaryPermission)]
     model = BeltFishSEModel
     serializer_class = BeltFishMethodSESerializer
     serializer_class_geojson = BeltFishMethodSEGeoSerializer

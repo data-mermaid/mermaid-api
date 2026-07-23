@@ -29,7 +29,6 @@ pytest-django==4.12.0
 pytest==9.1.1
 python-jose==3.5.0
 requests==2.34.2
-rest_condition==1.0.3
 sentry-sdk[django]==2.66.0
 simpleflake==0.1.5
 timezonefinder==8.2.5
