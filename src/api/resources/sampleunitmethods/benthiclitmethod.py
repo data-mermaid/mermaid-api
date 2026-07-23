@@ -1,6 +1,5 @@
 from django.db import transaction
 from django_filters import BaseInFilter, RangeFilter
-from rest_condition import Or
 from rest_framework import status
 from rest_framework.response import Response
 
@@ -14,7 +13,6 @@ from ...models import (
     BenthicLITSUSQLModel,
     ObsBenthicLIT,
 )
-from ...permissions import ProjectDataReadOnlyPermission, ProjectPublicSummaryPermission
 from ...reports.fields import ReportField
 from ...reports.formatters import (
     to_day,
@@ -45,6 +43,7 @@ from ..mixins import SampleUnitMethodEditMixin, SampleUnitMethodSummaryReport
 from ..observer import ObserverSerializer
 from ..sample_event import SampleEventSerializer
 from . import (
+    BaseProjectMethodSEView,
     BaseProjectMethodView,
     clean_sample_event_models,
     save_model,
@@ -548,10 +547,9 @@ class BenthicLITProjectMethodSUView(BaseProjectMethodView):
     ordering_fields = ordering
 
 
-class BenthicLITProjectMethodSEView(BaseProjectMethodView):
+class BenthicLITProjectMethodSEView(BaseProjectMethodSEView):
     drf_label = "benthiclit-se"
     project_policy = "data_policy_benthiclit"
-    permission_classes = [Or(ProjectDataReadOnlyPermission, ProjectPublicSummaryPermission)]
     model = BenthicLITSEModel
     serializer_class = BenthicLITMethodSESerializer
     serializer_class_geojson = BenthicLITMethodSEGeoSerializer
