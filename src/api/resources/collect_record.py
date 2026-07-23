@@ -5,6 +5,7 @@ import uuid
 
 from django.db import connection
 from django.db.models import Q
+from django.db.models.expressions import RawSQL
 from django_filters import rest_framework as filters
 from rest_framework import status as drf_status
 from rest_framework.decorators import action
@@ -184,7 +185,7 @@ class CollectRecordViewSet(BaseProjectApiViewSet):
         table_name = qs.model._meta.db_table
         pk_name = qs.model._meta.pk.get_attname_column()[1]
 
-        qs = qs.extra(select={"_pk_": '"{}"."{}"'.format(table_name, pk_name)})
+        qs = qs.annotate(_pk_=RawSQL('"{}"."{}"'.format(table_name, pk_name), []))
 
         sql, params = qs.query.get_compiler(using=qs.db).as_sql()
 
