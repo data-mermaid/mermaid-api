@@ -1,6 +1,8 @@
 from decimal import Decimal
 
 import django_filters
+from django.db.models import BooleanField
+from django.db.models.expressions import RawSQL
 from rest_framework import serializers
 
 from ..exceptions import check_uuid
@@ -169,12 +171,14 @@ class ManagementFilterSet(BaseAPIFilterSet):
                         GROUP BY {}
                     ) AS agg_managements
                     WHERE
-                        NOT('{}' = ANY(agg_managements.project_ids))
+                        NOT(%s = ANY(agg_managements.project_ids))
                 ) AS management_ids
             )
-        """.format(group_by, project_id)
+        """.format(group_by)
 
-        return queryset.extra(where=[sql])
+        return queryset.alias(
+            _is_unique_management=RawSQL(sql, [project_id], output_field=BooleanField())
+        ).filter(_is_unique_management=True)
 
     def filter_not_projects(self, queryset, name, value):
         value_list = [check_uuid(v.strip()) for v in value.split(",")]

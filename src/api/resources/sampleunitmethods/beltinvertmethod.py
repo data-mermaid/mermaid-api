@@ -2,7 +2,6 @@ from decimal import Decimal
 
 from django.db import transaction
 from django_filters import RangeFilter
-from rest_condition import Or
 from rest_framework import serializers, status
 from rest_framework.response import Response
 
@@ -16,7 +15,6 @@ from ...models import (
     BeltInvertSUSQLModel,
     ObsBeltInvert,
 )
-from ...permissions import ProjectDataReadOnlyPermission, ProjectPublicSummaryPermission
 from ...reports.fields import ReportField
 from ...reports.formatters import (
     to_day,
@@ -44,6 +42,7 @@ from ..mixins import SampleUnitMethodEditMixin, SampleUnitMethodSummaryReport
 from ..observer import ObserverSerializer
 from ..sample_event import SampleEventSerializer
 from . import (
+    BaseProjectMethodSEView,
     BaseProjectMethodView,
     clean_sample_event_models,
     save_model,
@@ -570,10 +569,9 @@ class BeltInvertProjectMethodSUView(BaseProjectMethodView):
     ordering_fields = ordering
 
 
-class BeltInvertProjectMethodSEView(BaseProjectMethodView):
+class BeltInvertProjectMethodSEView(BaseProjectMethodSEView):
     drf_label = "beltinvert-se"
     project_policy = "data_policy_macroinvertebrate"
-    permission_classes = [Or(ProjectDataReadOnlyPermission, ProjectPublicSummaryPermission)]
     model = BeltInvertSEModel
     serializer_class = BeltInvertMethodSESerializer
     serializer_class_geojson = BeltInvertMethodSEGeoSerializer

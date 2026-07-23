@@ -2,7 +2,6 @@ from decimal import Decimal
 
 from django.db import transaction
 from django_filters import BaseInFilter, RangeFilter
-from rest_condition import Or
 from rest_framework import serializers, status
 from rest_framework.response import Response
 
@@ -16,7 +15,6 @@ from ...models import (
     HabitatComplexitySUSQLModel,
     ObsHabitatComplexity,
 )
-from ...permissions import ProjectDataReadOnlyPermission, ProjectPublicSummaryPermission
 from ...reports.fields import ReportField
 from ...reports.formatters import (
     to_day,
@@ -44,6 +42,7 @@ from ..mixins import SampleUnitMethodEditMixin, SampleUnitMethodSummaryReport
 from ..observer import ObserverSerializer
 from ..sample_event import SampleEventSerializer
 from . import (
+    BaseProjectMethodSEView,
     BaseProjectMethodView,
     clean_sample_event_models,
     save_model,
@@ -529,10 +528,9 @@ class HabitatComplexityProjectMethodSUView(BaseProjectMethodView):
     ordering_fields = ordering
 
 
-class HabitatComplexityProjectMethodSEView(BaseProjectMethodView):
+class HabitatComplexityProjectMethodSEView(BaseProjectMethodSEView):
     drf_label = "habitatcomplexity-se"
     project_policy = "data_policy_habitatcomplexity"
-    permission_classes = [Or(ProjectDataReadOnlyPermission, ProjectPublicSummaryPermission)]
     model = HabitatComplexitySEModel
     serializer_class = HabitatComplexityMethodSESerializer
     serializer_class_geojson = HabitatComplexityMethodSEGeoSerializer

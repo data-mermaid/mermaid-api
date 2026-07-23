@@ -65,7 +65,8 @@ class NotifyDeletedSiteMRMixin(ProtectedResourceMixin):
 class CreateOrUpdateSerializerMixin(object):
     def create(self, validated_data):
         try:
-            return super().create(validated_data)
+            with transaction.atomic():
+                return super().create(validated_data)
         except IntegrityError as err:
             if "violates unique constraint" in str(err).lower():
                 ModelClass = self.Meta.model
