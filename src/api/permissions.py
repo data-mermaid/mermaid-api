@@ -1,8 +1,10 @@
 import uuid
+from typing import Any, Callable
 
 from django.core.exceptions import ObjectDoesNotExist
 from rest_framework import permissions
 from rest_framework.exceptions import NotFound, ParseError
+from rest_framework.request import Request
 
 from .exceptions import check_uuid
 from .models import CollectRecord, Project, ProjectProfile
@@ -25,7 +27,18 @@ class UnauthenticatedReadOnlyPermission(permissions.BasePermission):
         return request.method in permissions.SAFE_METHODS
 
 
-def _cached_lookup(request, cache_attr, key, loader):
+PROJECT_CACHE_ATTR = "_project_cache"
+PROJECT_PROFILE_CACHE_ATTR = "_project_profile_cache"
+# Request-scoped memoization cache attrs used by get_project/get_project_profile.
+# Shared by sync/utils.create_view_request (to propagate the caches onto
+# derived ViewRequests) and sync/views._invalidate_project_caches (to clear
+# them after a write) - import from here rather than re-declaring the names.
+REQUEST_CACHE_ATTRS = (PROJECT_CACHE_ATTR, PROJECT_PROFILE_CACHE_ATTR)
+
+
+def cached_lookup(
+    request: Request | None, cache_attr: str, key: Any, loader: Callable[[], Any]
+) -> Any:
     """Fetch `key` via `loader()`, memoizing on a dict stored as `cache_attr`
     on `request`. The dict is created lazily on `request` itself on first use
     (and shared with any derived request objects that copy the attribute
@@ -56,20 +69,20 @@ def get_project(pk, request=None):
         except Project.DoesNotExist:
             raise NotFound("Not found: project %s" % pk)
 
-    return _cached_lookup(request, "_project_cache", pk, _load)
+    return cached_lookup(request, PROJECT_CACHE_ATTR, pk, _load)
 
 
 def get_project_profile(project, profile, request=None):
     """Like ProjectProfile.objects.get_or_none(project=project, profile=profile),
-    but memoized per-request (see _cached_lookup) since permission classes
+    but memoized per-request (see cached_lookup) since permission classes
     commonly look up the same (project, profile) pair multiple times per
     request."""
     if project is None or profile is None:
         return None
 
-    return _cached_lookup(
+    return cached_lookup(
         request,
-        "_project_profile_cache",
+        PROJECT_PROFILE_CACHE_ATTR,
         (project.pk, profile.pk),
         lambda: ProjectProfile.objects.get_or_none(project=project, profile=profile),
     )
@@ -79,7 +92,7 @@ def invalidate_project(request, pk):
     """Drop the cached Project for `pk` (see get_project) so a later lookup
     re-fetches it instead of reusing a pre-write instance - e.g. after a
     sync push writes a project's own fields."""
-    cache = getattr(request, "_project_cache", None)
+    cache = getattr(request, PROJECT_CACHE_ATTR, None)
     if cache is None:
         return
     try:
@@ -95,7 +108,7 @@ def invalidate_project_profile(request, project_pk, profile):
     push writes a profile's own role. `profile` must be a real model
     instance: get_project_profile is only ever looked up by
     request.user.profile, never a record's own "profile" field."""
-    cache = getattr(request, "_project_profile_cache", None)
+    cache = getattr(request, PROJECT_PROFILE_CACHE_ATTR, None)
     if cache is None or profile is None:
         return
     try:

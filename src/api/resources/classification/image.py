@@ -1,7 +1,6 @@
 from django.conf import settings
 from django.db import transaction
 from django.db.models import Q
-from rest_condition import Or
 from rest_framework import permissions, serializers, status
 from rest_framework.exceptions import MethodNotAllowed, ValidationError
 from rest_framework.response import Response
@@ -18,13 +17,21 @@ from ...models import (
     ProjectProfile,
 )
 from ...models.classification import get_image_bucket
+from ...permissions import cached_lookup
 from ...utils import truthy
 from ...utils.classification import classify_image_job, create_classification_status
-from ..base import BaseAPIFilterSet, BaseAPISerializer, BaseProjectApiViewSet
+from ..base import (
+    PROJECT_DATA_PERMISSION,
+    BaseAPIFilterSet,
+    BaseAPISerializer,
+    BaseProjectApiViewSet,
+)
 from ..mixins import DynamicFieldsMixin
 from .annotation import SaveAnnotationSerializer
 from .classification_status import ClassificationStatusSerializer
 from .point import PointSerializer
+
+IMAGE_PERMISSION_CACHE_ATTR = "_image_permission_cache"
 
 
 class ImagePermission(permissions.BasePermission):
@@ -38,18 +45,36 @@ class ImagePermission(permissions.BasePermission):
 
         if request.method == "PUT":
             return False
-        elif request.method in ("PATCH", "DELETE"):
-            if image_id is None:
-                return False
-            cr_ids = CollectRecord.objects.filter(
-                profile=profile, project_id=project_id
-            ).values_list("id", flat=True)
-            return Image.objects.filter(id=image_id, collect_record_id__in=cr_ids).exists()
-        elif request.method == "POST":
-            collect_record_id = request.data.get("collect_record_id")
-            return CollectRecord.objects.filter(id=collect_record_id, profile=profile).exists()
-        else:
-            return ProjectProfile.objects.filter(profile=profile, project_id=project_id).exists()
+
+        def _load():
+            if request.method in ("PATCH", "DELETE"):
+                if image_id is None:
+                    return False
+                cr_ids = CollectRecord.objects.filter(
+                    profile=profile, project_id=project_id
+                ).values_list("id", flat=True)
+                return Image.objects.filter(id=image_id, collect_record_id__in=cr_ids).exists()
+            elif request.method == "POST":
+                collect_record_id = request.data.get("collect_record_id")
+                return CollectRecord.objects.filter(id=collect_record_id, profile=profile).exists()
+            else:
+                return ProjectProfile.objects.filter(
+                    profile=profile, project_id=project_id
+                ).exists()
+
+        # PATCH/DELETE/GET (has_permission) is re-checked by DRF's OR.has_object_permission
+        # (see BaseProjectApiViewSet.permission_classes) on every detail-level request, so
+        # memoize per-request the same way api.permissions.cached_lookup does for
+        # get_project/get_project_profile - otherwise a non-project-member's image access
+        # (the whole reason this permission exists) re-runs these queries a second time.
+        cache_key = (
+            request.method,
+            project_id,
+            image_id,
+            request.data.get("collect_record_id") if request.method == "POST" else None,
+            str(profile.pk),
+        )
+        return cached_lookup(request, IMAGE_PERMISSION_CACHE_ATTR, cache_key, _load)
 
 
 class ImageSerializer(DynamicFieldsMixin, BaseAPISerializer):
@@ -159,7 +184,7 @@ class ImageViewSet(BaseProjectApiViewSet):
     )
 
     serializer_class = ImageSerializer
-    permission_classes = [Or(BaseProjectApiViewSet.permission_classes[0], ImagePermission)]
+    permission_classes = [PROJECT_DATA_PERMISSION | ImagePermission]
     filterset_class = ImageFilterSet
 
     def limit_to_project(self, request, *args, **kwargs):

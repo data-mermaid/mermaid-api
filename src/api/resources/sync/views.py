@@ -151,7 +151,7 @@ def _get_project(request, data, source_type):
     if projid:
         try:
             if utils.is_uuid(projid) is True:
-                # get_project memoizes per-request (see permissions._cached_lookup)
+                # get_project memoizes per-request (see permissions.cached_lookup)
                 # so repeated source types/records referencing the same project
                 # don't each re-query it.
                 proj = get_project(projid, request=request)
@@ -279,6 +279,8 @@ def _update_source_record(source_type, serializer, record, request, force=False)
             _invalidate_project_caches(request, source_type, record)
         if status_code == 400:
             data = _format_errors(errors)
+        elif status_code == 404:
+            data = errors
         elif status_code == 409:
             data = _get_serialized_record(viewset, profile_id, record_id)
         elif status_code == 418:  # other custom error output
@@ -335,7 +337,7 @@ def _get_source_records(source_type, source_data, request):
 def check_permissions(request, data, source_types, method=False):
     permission_checks = {}
     # _get_project/create_view_request lazily set up per-request project and
-    # project-profile caches on `request` (see permissions._cached_lookup and
+    # project-profile caches on `request` (see permissions.cached_lookup and
     # sync.utils.create_view_request) so that repeated source types - and, for
     # push, repeated records - referencing the same project only hit the
     # database once for it.

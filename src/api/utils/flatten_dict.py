@@ -2,8 +2,6 @@
 import os.path
 from collections.abc import Mapping
 
-import six
-
 
 def tuple_reducer(k1, k2):
     if k1 is None:
@@ -57,7 +55,7 @@ def flatten(d, reducer="dot", inverse=False):
     flat_dict = {}
 
     def _flatten(d, parent=None):
-        for key, val in six.viewitems(d):
+        for key, val in d.items():
             flat_key = reducer(parent, key)
             if isinstance(val, Mapping):
                 _flatten(val, flat_key)

@@ -1,3 +1,6 @@
+from ...permissions import REQUEST_CACHE_ATTRS
+
+
 class ViewRequest:
     def __init__(self, user, headers, method="GET"):
         self.user = user
@@ -7,15 +10,6 @@ class ViewRequest:
         self.META = {}
         self.method = method
         self.headers = headers
-
-
-# Per-request memoization caches used by api.permissions (get_project,
-# get_project_profile). Pull/push build a fresh ViewRequest per source type
-# (and, for push, per record), so these are lazily created on the original
-# `request` here and shared by reference with every derived ViewRequest -
-# otherwise each derived request would start with an empty cache and repeated
-# permission checks against the same project/profile would re-query every time.
-_REQUEST_CACHE_ATTRS = ("_project_cache", "_project_profile_cache")
 
 
 def create_view_request(request, method=None, data=None):
@@ -30,7 +24,13 @@ def create_view_request(request, method=None, data=None):
     vw_request.authenticators = request.authenticators
     vw_request.successful_authenticator = request.successful_authenticator
 
-    for attr in _REQUEST_CACHE_ATTRS:
+    # Per-request memoization caches used by api.permissions (get_project,
+    # get_project_profile). Pull/push build a fresh ViewRequest per source type
+    # (and, for push, per record), so these are lazily created on the original
+    # `request` here and shared by reference with every derived ViewRequest -
+    # otherwise each derived request would start with an empty cache and repeated
+    # permission checks against the same project/profile would re-query every time.
+    for attr in REQUEST_CACHE_ATTRS:
         if getattr(request, attr, None) is None:
             setattr(request, attr, {})
         setattr(vw_request, attr, getattr(request, attr))
