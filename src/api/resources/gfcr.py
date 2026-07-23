@@ -3,7 +3,6 @@ import uuid
 from datetime import datetime
 
 from django.db import transaction
-from rest_condition import Or
 from rest_framework import serializers, status
 from rest_framework.exceptions import ValidationError
 from rest_framework.response import Response
@@ -245,7 +244,7 @@ class GFCRIndicatorSetSerializer(BaseAPISerializer):
 class IndicatorSetViewSet(BaseProjectApiViewSet):
     serializer_class = GFCRIndicatorSetSerializer
     project_lookup = "project"
-    permission_classes = [Or(ProjectDataAdminPermission, AuthenticatedReadOnlyPermission)]
+    permission_classes = [ProjectDataAdminPermission | AuthenticatedReadOnlyPermission]
 
     def get_queryset(self):
         project_id = self.kwargs.get("project_pk")

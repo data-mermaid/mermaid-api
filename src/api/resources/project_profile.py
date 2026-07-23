@@ -1,4 +1,3 @@
-from rest_condition import Or
 from rest_framework import permissions, serializers
 from rest_framework.exceptions import ValidationError
 
@@ -8,6 +7,7 @@ from ..permissions import (
     ProjectDataReadOnlyPermission,
     get_project,
     get_project_pk,
+    get_project_profile,
 )
 from .base import BaseAPIFilterSet, BaseAPISerializer, BaseProjectApiViewSet
 
@@ -48,8 +48,8 @@ class ProjectProfileCollectorPermission(permissions.BasePermission):
             return False
         pk = get_project_pk(request, view)
 
-        project = get_project(pk)
-        pp = ProjectProfile.objects.get_or_none(project=project, profile=user.profile)
+        project = get_project(pk, request=request)
+        pp = get_project_profile(project, user.profile, request=request)
         if pp is None:
             return False
         return project.is_open and pp.is_collector
@@ -59,11 +59,9 @@ class ProjectProfileViewSet(BaseProjectApiViewSet):
     serializer_class = ProjectProfileSerializer
     queryset = ProjectProfile.objects.all()
     permission_classes = [
-        Or(
-            ProjectDataReadOnlyPermission,
-            ProjectProfileCollectorPermission,
-            ProjectDataAdminPermission,
-        )
+        ProjectDataReadOnlyPermission
+        | ProjectProfileCollectorPermission
+        | ProjectDataAdminPermission
     ]
     filterset_class = ProjectProfileFilterSet
 

@@ -1,6 +1,9 @@
+from typing import Any, Callable
+
 from django.core.exceptions import ObjectDoesNotExist
 from rest_framework import permissions
 from rest_framework.exceptions import NotFound
+from rest_framework.request import Request
 
 from .exceptions import check_uuid
 from .models import CollectRecord, Project, ProjectProfile
@@ -23,11 +26,62 @@ class UnauthenticatedReadOnlyPermission(permissions.BasePermission):
         return request.method in permissions.SAFE_METHODS
 
 
-def get_project(pk):
-    try:
-        return Project.objects.get(pk=check_uuid(pk))
-    except Project.DoesNotExist:
-        raise NotFound("Not found: project %s" % pk)
+PROJECT_CACHE_ATTR = "_project_cache"
+PROJECT_PROFILE_CACHE_ATTR = "_project_profile_cache"
+# Request-scoped memoization cache attrs used by get_project/get_project_profile.
+# Shared by sync/utils.create_view_request (to propagate the caches onto
+# derived ViewRequests) and sync/views._invalidate_project_caches (to clear
+# them after a write) - import from here rather than re-declaring the names.
+REQUEST_CACHE_ATTRS = (PROJECT_CACHE_ATTR, PROJECT_PROFILE_CACHE_ATTR)
+
+
+def cached_lookup(
+    request: Request | None, cache_attr: str, key: Any, loader: Callable[[], Any]
+) -> Any:
+    """Fetch `key` via `loader()`, memoizing on a dict stored as `cache_attr`
+    on `request`. The dict is created lazily on `request` itself on first use
+    (and shared with any derived request objects that copy the attribute
+    reference, see sync/utils.create_view_request), so repeated permission
+    checks against the same request object avoid re-running `loader` for the
+    same key."""
+    if request is None:
+        return loader()
+
+    cache = getattr(request, cache_attr, None)
+    if cache is None:
+        cache = {}
+        setattr(request, cache_attr, cache)
+    elif key in cache:
+        return cache[key]
+
+    value = loader()
+    cache[key] = value
+    return value
+
+
+def get_project(pk, request=None):
+    pk = check_uuid(pk)
+
+    def _load():
+        try:
+            return Project.objects.get(pk=pk)
+        except Project.DoesNotExist:
+            raise NotFound("Not found: project %s" % pk)
+
+    return cached_lookup(request, PROJECT_CACHE_ATTR, pk, _load)
+
+
+def get_project_profile(project, profile, request=None):
+    """Like ProjectProfile.objects.get_or_none(project=project, profile=profile),
+    but memoized per-request (see cached_lookup) since permission classes
+    commonly look up the same (project, profile) pair multiple times per
+    request."""
+    return cached_lookup(
+        request,
+        PROJECT_PROFILE_CACHE_ATTR,
+        (project.pk, profile.pk),
+        lambda: ProjectProfile.objects.get_or_none(project=project, profile=profile),
+    )
 
 
 def data_policy_permission(request, view, project_policy):
@@ -35,7 +89,7 @@ def data_policy_permission(request, view, project_policy):
         return False
 
     pk = get_project_pk(request, view)
-    project = get_project(pk)
+    project = get_project(pk, request=request)
 
     policy = getattr(project, view.project_policy, None)
     if policy and policy >= project_policy:
@@ -68,8 +122,8 @@ class ProjectDataPermission(permissions.BasePermission):
             return False
         pk = get_project_pk(request, view)
 
-        project = get_project(pk)
-        pp = ProjectProfile.objects.get_or_none(project=project, profile=user.profile)
+        project = get_project(pk, request=request)
+        pp = get_project_profile(project, user.profile, request=request)
         if pp is None:
             return False
         return True
@@ -90,8 +144,8 @@ class ProjectDataCollectorPermission(permissions.BasePermission):
             return False
         pk = get_project_pk(request, view)
 
-        project = get_project(pk)
-        pp = ProjectProfile.objects.get_or_none(project=project, profile=user.profile)
+        project = get_project(pk, request=request)
+        pp = get_project_profile(project, user.profile, request=request)
         if pp is None:
             return False
         if project.is_open:
@@ -107,8 +161,8 @@ class ProjectDataAdminPermission(permissions.BasePermission):
             return False
         pk = get_project_pk(request, view)
 
-        project = get_project(pk)
-        pp = ProjectProfile.objects.get_or_none(project=project, profile=user.profile)
+        project = get_project(pk, request=request)
+        pp = get_project_profile(project, user.profile, request=request)
         if pp is None:
             return False
         return pp.is_admin
