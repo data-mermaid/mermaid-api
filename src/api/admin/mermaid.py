@@ -201,12 +201,16 @@ class ProjectProfileAdmin(BaseAdmin):
         # Check the whole selected batch per project at once, not row-by-row -
         # none of the batch is deleted yet while checking, so e.g. selecting
         # both of a project's two remaining admins would pass a per-row check.
+        # Track every selected pk regardless of its role here: that read is
+        # unlocked, so a row that looks like a non-admin now could still be
+        # concurrently promoted to ADMIN before the locked check below runs -
+        # would_leave_project_without_admin is what determines actual admin
+        # status safely, under lock.
         with transaction.atomic():
-            selected_admin_pks_by_project = {}
+            selected_pks_by_project = {}
             for obj in queryset:
-                if obj.role == ProjectProfile.ADMIN:
-                    selected_admin_pks_by_project.setdefault(obj.project_id, set()).add(obj.pk)
-            for project_id, excluded_pks in selected_admin_pks_by_project.items():
+                selected_pks_by_project.setdefault(obj.project_id, set()).add(obj.pk)
+            for project_id, excluded_pks in selected_pks_by_project.items():
                 if ProjectProfile.would_leave_project_without_admin(
                     project_id, excluded_pks, for_update=True
                 ):
