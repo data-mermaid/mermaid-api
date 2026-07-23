@@ -2,7 +2,7 @@ from django.conf import settings
 from django.conf.urls.static import static
 from django.contrib import admin
 from django.contrib.auth import views as auth_views
-from django.urls import include, path, re_path
+from django.urls import include, path
 from rest_framework.schemas import get_schema_view
 
 from api.urls import api_urls
@@ -11,7 +11,7 @@ admin.autodiscover()
 
 
 urlpatterns = [
-    re_path(r"^v1/", include(api_urls), name="api-root"),
+    path("v1/", include(api_urls)),
     path(
         "admin/password_reset/", auth_views.PasswordResetView.as_view(), name="admin_password_reset"
     ),

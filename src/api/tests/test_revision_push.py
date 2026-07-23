@@ -31,6 +31,36 @@ def test_apply_changes(db_setup, serialized_tracked_collect_record, profile1, pr
     assert CollectRecord.objects.filter(id=new_collect_record["id"]).exists() is True
 
 
+def test_apply_changes_duplicate_create_race(db_setup, profile1, project1):
+    # A client can push the same brand-new record twice before it has
+    # recorded a _last_revision_num locally (e.g. two closely-timed pushes
+    # for a new benthic PQT sample unit with image classification): the
+    # second push arrives as another create (no _last_revision_num) for an
+    # id that now already exists, racing CollectRecord's unique constraint.
+    # CreateOrUpdateSerializerMixin.create should recover by falling back to
+    # an update rather than leaving the surrounding transaction broken.
+    request = MockRequest(profile=profile1)
+    record = {
+        "id": str(uuid.uuid4()),
+        "profile": str(profile1.pk),
+        "project": str(project1.pk),
+        "data": dict(),
+    }
+
+    status_code, _, _ = apply_changes(request, CollectRecordSerializer, dict(record))
+    assert status_code == 201
+
+    # Second push carries different data; status_code alone can't distinguish
+    # a plain create from the update-fallback (both return 201), so assert on
+    # the persisted data to confirm the fallback actually updated in place.
+    record_v2 = dict(record)
+    record_v2["data"] = {"marker": "second"}
+    status_code, _, _ = apply_changes(request, CollectRecordSerializer, record_v2)
+    assert status_code == 201
+    assert CollectRecord.objects.filter(id=record["id"]).count() == 1
+    assert CollectRecord.objects.get(id=record["id"]).data["marker"] == "second"
+
+
 def test_sync_push_blocks_deleting_last_admin(
     db_setup, project_profile1, project_profile2, profile1
 ):
