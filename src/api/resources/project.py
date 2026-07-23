@@ -6,7 +6,6 @@ from django.db import IntegrityError, transaction
 from django.db.models import JSONField
 from django.db.models.expressions import RawSQL
 from psycopg.errors import UniqueViolation
-from rest_condition import Or
 from rest_framework import exceptions, permissions, serializers, status
 from rest_framework.decorators import action
 from rest_framework.response import Response
@@ -264,7 +263,7 @@ class ProjectAuthenticatedUserPermission(permissions.BasePermission):
             action = view.action_map["put"]
             if action in ("find_and_replace_sites", "find_and_replace_managements"):
                 pk = get_project_pk(request, view)
-                project = get_project(pk)
+                project = get_project(pk, request=request)
                 pp = ProjectProfile.objects.get_or_none(project=project, profile=user.profile)
                 if pp is None:
                     return False
@@ -375,11 +374,9 @@ def annotate_num_sample_units(qs):
 class ProjectViewSet(BaseApiViewSet):
     serializer_class = ProjectSerializer
     permission_classes = [
-        Or(
-            UnauthenticatedReadOnlyPermission,
-            ProjectAuthenticatedUserPermission,
-            ProjectDataAdminPermission,
-        )
+        UnauthenticatedReadOnlyPermission
+        | ProjectAuthenticatedUserPermission
+        | ProjectDataAdminPermission
     ]
     method_authentication_classes = {"GET": [AnonymousJWTAuthentication]}
     filterset_class = ProjectFilterSet
