@@ -405,7 +405,7 @@ def delete_collected_pqt_images(image_ids):
                 )
             except Exception:
                 logger.error(
-                    f"Failed to delete S3 file during demo project cleanup: {path}",
+                    f"Failed to delete S3 file during project deletion: {path}",
                     exc_info=True,
                 )
 

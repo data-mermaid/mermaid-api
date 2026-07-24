@@ -270,7 +270,7 @@ def test_upload_image_exceeding_size_limit(
     assert "size limit" in response.json()["error"]
 
 
-def test_destroy_returns_404_when_image_deleted_concurrently(
+def test_destroy_returns_404_when_image_deleted_before_locked_refetch(
     db_setup,
     api_client1,
     project1,
