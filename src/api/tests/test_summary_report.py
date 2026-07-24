@@ -7,9 +7,9 @@ import pytest
 from django.http import StreamingHttpResponse
 
 from api.reports.summary_report import _get_project_metadata, get_viewset_csv_content
+from api.utils.project import citation_retrieved_text, get_profiles, suggested_citation
 
 
-@pytest.mark.django_db
 def test_get_project_metadata_num_sample_units(project1, benthic_lit1):
     rows = _get_project_metadata([project1.pk], {})
     header = rows[0]
@@ -17,6 +17,17 @@ def test_get_project_metadata_num_sample_units(project1, benthic_lit1):
 
     idx = header.index("Number of Sample Units")
     assert data[idx] == 1
+
+
+def test_get_project_metadata_suggested_citation(project1, benthic_lit1):
+    rows = _get_project_metadata([project1.pk], {})
+    header = rows[0]
+    data = rows[1]
+
+    idx = header.index("Suggested Citation")
+    profiles = get_profiles(project1)
+    expected = f"{suggested_citation(project1, profiles)} {citation_retrieved_text(project1.name)}"
+    assert data[idx] == expected
 
 
 # No site_id column — these tests exercise only the early-return / pass-through path.
