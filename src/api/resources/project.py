@@ -6,7 +6,6 @@ from django.db import IntegrityError, transaction
 from django.db.models import JSONField
 from django.db.models.expressions import RawSQL
 from psycopg.errors import UniqueViolation
-from rest_condition import Or
 from rest_framework import exceptions, permissions, serializers, status
 from rest_framework.decorators import action
 from rest_framework.response import Response
@@ -191,6 +190,10 @@ class ProjectSerializer(BaseProjectSerializer):
 
 
 class ProjectCSVSerializer(ReportSerializer, BaseProjectSerializer):
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self._cached_profiles = {}
+
     fields = [
         ReportField("name", "Project Name"),
         ReportMethodField("get_num_sites", "Number of Sites"),
@@ -209,6 +212,7 @@ class ProjectCSVSerializer(ReportSerializer, BaseProjectSerializer):
         ),
         ReportField("includes_gfcr", "Includes GFCR", to_yesno),
         ReportField("notes", "Notes"),
+        ReportMethodField("get_suggested_citation", "Suggested Citation"),
         ReportMethodField("get_project_admins_csv", "Project Admins"),
         ReportMethodField("get_contact_link", "Contact link"),
         ReportField("id", "Project Id", to_str),
@@ -264,7 +268,7 @@ class ProjectAuthenticatedUserPermission(permissions.BasePermission):
             action = view.action_map["put"]
             if action in ("find_and_replace_sites", "find_and_replace_managements"):
                 pk = get_project_pk(request, view)
-                project = get_project(pk)
+                project = get_project(pk, request=request)
                 pp = ProjectProfile.objects.get_or_none(project=project, profile=user.profile)
                 if pp is None:
                     return False
@@ -375,11 +379,9 @@ def annotate_num_sample_units(qs):
 class ProjectViewSet(BaseApiViewSet):
     serializer_class = ProjectSerializer
     permission_classes = [
-        Or(
-            UnauthenticatedReadOnlyPermission,
-            ProjectAuthenticatedUserPermission,
-            ProjectDataAdminPermission,
-        )
+        UnauthenticatedReadOnlyPermission
+        | ProjectAuthenticatedUserPermission
+        | ProjectDataAdminPermission
     ]
     method_authentication_classes = {"GET": [AnonymousJWTAuthentication]}
     filterset_class = ProjectFilterSet

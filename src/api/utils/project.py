@@ -189,6 +189,10 @@ def _create_annotations_file_job(image_id):
     try:
         image = Image.objects.get(id=image_id)
         image.create_annotations_file()
+    except Image.DoesNotExist:
+        # Expected when the image's project (e.g. a demo project) was deleted/recreated
+        # before this async job ran. Not an error worth reporting to Sentry.
+        logger.info(f"Skipping annotations file for image {image_id}: image no longer exists")
     except Exception:
         logger.error(f"Failed to create annotations file for image {image_id}", exc_info=True)
 
