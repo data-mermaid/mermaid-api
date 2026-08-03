@@ -62,6 +62,7 @@ def cached_lookup(
 
 def get_project(pk, request=None):
     pk = check_uuid(pk)
+    cache_key = uuid.UUID(str(pk))
 
     def _load():
         try:
@@ -69,7 +70,7 @@ def get_project(pk, request=None):
         except Project.DoesNotExist:
             raise NotFound("Not found: project %s" % pk)
 
-    return cached_lookup(request, PROJECT_CACHE_ATTR, pk, _load)
+    return cached_lookup(request, PROJECT_CACHE_ATTR, cache_key, _load)
 
 
 def get_project_profile(project, profile, request=None):
@@ -96,10 +97,10 @@ def invalidate_project(request, pk):
     if cache is None:
         return
     try:
-        pk = check_uuid(pk)
+        cache_key = uuid.UUID(str(check_uuid(pk)))
     except ParseError:
         return
-    cache.pop(pk, None)
+    cache.pop(cache_key, None)
 
 
 def invalidate_project_profile(request, project_pk, profile):

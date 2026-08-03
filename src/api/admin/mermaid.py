@@ -125,15 +125,33 @@ class ProjectAdmin(BaseAdmin):
         # from a Project (e.g. SampleEvent.site) as fully blocking, so real
         # survey data would never reach delete_model()/delete_queryset() -
         # even though delete_project() below already resolves those
-        # relations itself, atomically. Skip the generic protected gate here.
+        # relations itself, atomically. Run the collector via super() so
+        # perms_needed/model_count reflect cascaded models (Site, Management,
+        # ProjectProfile, ...) instead of just Project, then drop its nested
+        # tree and protected list: for a real project the tree can run to
+        # hundreds/thousands of formatted rows (e.g. one per Site/Covariate),
+        # and the protected list is exactly what we're bypassing.
+        #
+        # Caveat: PROTECTed models (SampleEvent.site/.management) still stop
+        # the collector's own recursion, so anything cascading *below*
+        # SampleEvent (observations, transects, ...) is invisible to both
+        # model_count and perms_needed here - same as vanilla Django admin.
+        # delete_project() still deletes it; this page just can't preview or
+        # permission-check that part. That's fine in practice because
+        # has_delete_permission below already restricts this whole action to
+        # superusers.
+        _to_delete, model_count, perms_needed, _protected = super().get_deleted_objects(
+            objs, request
+        )
         to_delete = [str(obj) for obj in objs]
-        model_count = {self.model._meta.verbose_name_plural: len(objs)}
-        perms_needed = {
-            self.model._meta.verbose_name
-            for obj in objs
-            if not self.has_delete_permission(request, obj)
-        }
         return to_delete, model_count, perms_needed, []
+
+    def has_delete_permission(self, request, obj=None):
+        # Project deletion cascades to all of a project's survey data.
+        # delete_project() resolves PROTECTed relations itself rather than
+        # relying on Django's collector to block them (see get_deleted_objects
+        # above), so this is the only gate left - restrict it to superusers.
+        return request.user.is_superuser
 
     def delete_model(self, request, obj):
         # Route through the app's own deletion path (transaction + savepoint, handles
