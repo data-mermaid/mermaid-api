@@ -106,15 +106,15 @@ class _DuplicateCheckMixin:
         ignore_duplicate_warning = attrs.pop("ignore_duplicate_warning", False)
         return self.instance is None and not ignore_duplicate_warning
 
-    def _reject_if_duplicate(self, duplicates, message, code):
+    def _reject_if_duplicate(self, duplicates, message, code, field="name"):
         if duplicates:
             # code/matches are nested under "duplicate" (rather than sibling
-            # keys next to "name") so DRF's error-detail normalization -- which
+            # keys next to `field`) so DRF's error-detail normalization -- which
             # wraps any non-list/dict value in a list -- doesn't turn code into
             # a single-item list; nesting them in a dict value sidesteps that.
             raise exceptions.ValidationError(
                 {
-                    "name": [message],
+                    field: [message],
                     "duplicate": {"code": code, "matches": [str(d.id) for d in duplicates[:3]]},
                 }
             )

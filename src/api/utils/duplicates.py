@@ -37,7 +37,8 @@ def _has_submitted_sample_unit_q(prefix):
     """
     Q object matching rows with at least one submitted sample unit,
     reachable via the reverse-FK lookup path `prefix` to SampleEvent (e.g.
-    "sample_events" from Site, "sampleevent" from Management).
+    "sample_events" from Site). Management uses the raw-SQL equivalent,
+    submitted_sample_unit_sql, instead.
     """
     q = Q()
     for suclass in get_subclasses(SampleUnit):
@@ -81,6 +82,7 @@ def find_duplicate_sites(project_id, name, location, exclude_id):
         qry.filter(location__distance_lt=(location, Distance(m=SITE_BUFFER_M)))
         .annotate(similarity=TrigramSimilarity("name", name))
         .filter(similarity__gte=SITE_NAME_MATCH_PERCENT)
+        .order_by("-similarity")
     )
 
     return list(qry.distinct())
