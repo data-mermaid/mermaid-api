@@ -1,7 +1,7 @@
 from api.models import BenthicAttribute
 
 
-class BenthicAttributeUpdateGenerator(object):
+class BenthicAttributeUpdateGenerator:
     def __init__(self):
         self.macroalgae = BenthicAttribute.objects.get(name="Fleshy macroalgae")
         self.coralline_algae = BenthicAttribute.objects.get(name="Coralline algae")

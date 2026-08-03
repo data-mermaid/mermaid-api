@@ -332,7 +332,7 @@ class CollectRecordCSVSerializer(Serializer):
     def many_init(cls, *args, **kwargs):
         if "data" in kwargs and isinstance(kwargs["data"], (dict, OrderedDict)):
             kwargs["data"] = [kwargs["data"]]
-        return super(CollectRecordCSVSerializer, cls).many_init(*args, **kwargs)
+        return super().many_init(*args, **kwargs)
 
     def get_initial(self):
         if not isinstance(self.original_data, Mapping):

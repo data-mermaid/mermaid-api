@@ -16,7 +16,7 @@ class Command(BaseCommand):
     help = "Kill local processes running runserver command"
 
     def __init__(self):
-        super(Command, self).__init__()
+        super().__init__()
         self.now = timezone.now()
         self.env = os.environ.get("ENV", "none").lower()
         self.backup = self.env

@@ -37,7 +37,7 @@ class Command(BaseCommand):
         return [self.get_record_details(rec) for rec in queryset]
 
     def handle(self, *args, **kwargs):
-        start_date = kwargs.get("date").replace(tzinfo=datetime.timezone.utc)
+        start_date = kwargs.get("date").replace(tzinfo=datetime.UTC)
         show_details = kwargs.get("show_details") or False
 
         api_model_classes = self.get_api_model_classes()

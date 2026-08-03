@@ -73,7 +73,7 @@ def check_if_valid_image(instance):
             if settings.MAX_IMAGE_PIXELS < w * h:
                 raise ValueError(f"Maximum number of pixels is {settings.MAX_IMAGE_PIXELS}.")
         return
-    except (AttributeError, TypeError, IOError, SyntaxError) as _:
+    except (OSError, AttributeError, TypeError, SyntaxError) as _:
         raise ValueError("Invalid image.")
 
 
@@ -126,16 +126,11 @@ def create_thumbnail(image_instance: Image, image_buf: Optional[BytesIO] = None)
     thumb_io = BytesIO()
     try:
         img.save(thumb_io, img.format)
-    except IOError as io_err:
+    except OSError as io_err:
         print(f"Cannot create thumbnail for [{image_instance.pk}]: {io_err}")
         raise
 
     return ContentFile(thumb_io.getvalue(), name=thumb_name)
-
-
-def convert_to_utc(timestamp_str: str) -> datetime:
-    local_time = datetime.fromisoformat(timestamp_str)
-    return local_time.astimezone(datetime.timezone.utc)
 
 
 # GPS sub-IFD tag IDs (PIL.ExifTags.GPSTAGS)
@@ -185,7 +180,7 @@ def extract_datetime_stamp(
         try:
             y, mo, d = map(int, date_stamp.split(":"))
             h, mi, s = int(time_stamp[0]), int(time_stamp[1]), int(time_stamp[2])
-            return datetime.datetime(y, mo, d, h, mi, s, tzinfo=datetime.timezone.utc)
+            return datetime.datetime(y, mo, d, h, mi, s, tzinfo=datetime.UTC)
         except (ValueError, TypeError):
             pass
 
@@ -203,7 +198,7 @@ def extract_datetime_stamp(
         sign = -1 if offset_str.startswith("-") else 1
         h, m = map(int, offset_str[1:].split(":"))
         offset = datetime.timedelta(hours=sign * h, minutes=sign * m)
-        return dt.replace(tzinfo=datetime.timezone(offset)).astimezone(datetime.timezone.utc)
+        return dt.replace(tzinfo=datetime.timezone(offset)).astimezone(datetime.UTC)
     except (ValueError, AttributeError):
         return None
 

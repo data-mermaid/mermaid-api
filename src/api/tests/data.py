@@ -44,7 +44,7 @@ class MockRequest:
             self.META = {}
 
 
-class TestDataMixin(object):
+class TestDataMixin:
     def timestamp(self):
         return (dt.datetime.now(dt.UTC) - dt.datetime(1970, 1, 1, tzinfo=dt.UTC)).total_seconds()
 

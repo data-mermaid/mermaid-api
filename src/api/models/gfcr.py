@@ -20,7 +20,7 @@ class GFCRIndicatorSet(BaseModel):
         ("target", "Target"),
     )
     INDICATOR_SET_TYPE_CHOICES_UPDATED_ON = datetime.datetime(
-        2024, 5, 27, 0, 0, 0, 0, tzinfo=datetime.timezone.utc
+        2024, 5, 27, 0, 0, 0, 0, tzinfo=datetime.UTC
     )
 
     REPORT_TITLE_CHOICES = (
@@ -34,9 +34,7 @@ class GFCRIndicatorSet(BaseModel):
         ("Final target", "Final target"),
     )
     TITLE_CHOICES = REPORT_TITLE_CHOICES + TARGET_TITLE_CHOICES
-    TITLE_CHOICES_UPDATED_ON = datetime.datetime(
-        2026, 5, 21, 0, 0, 0, 0, tzinfo=datetime.timezone.utc
-    )
+    TITLE_CHOICES_UPDATED_ON = datetime.datetime(2026, 5, 21, 0, 0, 0, 0, tzinfo=datetime.UTC)
 
     title = models.CharField(max_length=100)
     report_date = models.DateField()
@@ -261,9 +259,7 @@ class GFCRFinanceSolution(BaseModel):
         ("financial_mechanism", "Financial mechanism solution"),
         ("programmatic_co_financing", "Programmatic co-financing"),
     )
-    TYPE_CHOICES_UPDATED_ON = datetime.datetime(
-        2026, 5, 21, 0, 0, 0, 0, tzinfo=datetime.timezone.utc
-    )
+    TYPE_CHOICES_UPDATED_ON = datetime.datetime(2026, 5, 21, 0, 0, 0, 0, tzinfo=datetime.UTC)
 
     GEOGRAPHICAL_COVERAGE_CHOICES = (
         ("regional", "Regional"),
@@ -271,7 +267,7 @@ class GFCRFinanceSolution(BaseModel):
         ("subnational", "Subnational"),
     )
     GEOGRAPHICAL_COVERAGE_CHOICES_UPDATED_ON = datetime.datetime(
-        2026, 5, 21, 0, 0, 0, 0, tzinfo=datetime.timezone.utc
+        2026, 5, 21, 0, 0, 0, 0, tzinfo=datetime.UTC
     )
 
     SECTOR_CHOICES = (
@@ -312,9 +308,7 @@ class GFCRFinanceSolution(BaseModel):
             "Sustainable Ocean Production - Sustainable Small-Scale Fisheries",
         ),
     )
-    SECTOR_CHOICES_UPDATED_ON = datetime.datetime(
-        2025, 2, 3, 0, 0, 0, 0, tzinfo=datetime.timezone.utc
-    )
+    SECTOR_CHOICES_UPDATED_ON = datetime.datetime(2025, 2, 3, 0, 0, 0, 0, tzinfo=datetime.UTC)
 
     SUSTAINABLE_FINANCE_MECHANISM_CHOICES = (
         ("biodiversity_offsets", "Biodiversity credits"),
@@ -334,7 +328,7 @@ class GFCRFinanceSolution(BaseModel):
         ("sustainable_livelihood_mech", "Sustainable livelihood mechanisms"),
     )
     SUSTAINABLE_FINANCE_MECHANISM_CHOICES_UPDATED_ON = datetime.datetime(
-        2026, 4, 17, 0, 0, 0, 0, tzinfo=datetime.timezone.utc
+        2026, 4, 17, 0, 0, 0, 0, tzinfo=datetime.UTC
     )
 
     GFCR_FUNDED = "gfcr_funded"
@@ -343,9 +337,7 @@ class GFCRFinanceSolution(BaseModel):
         (GFCR_FUNDED, "Yes: GFCR-funded"),
         (NON_GFCR_FUNDED, "Yes: Non-GFCR-funded"),
     )
-    INCUBATOR_CHOICES_UPDATED_ON = datetime.datetime(
-        2026, 5, 21, 0, 0, 0, 0, tzinfo=datetime.timezone.utc
-    )
+    INCUBATOR_CHOICES_UPDATED_ON = datetime.datetime(2026, 5, 21, 0, 0, 0, 0, tzinfo=datetime.UTC)
 
     indicator_set = models.ForeignKey(
         GFCRIndicatorSet, on_delete=models.CASCADE, related_name="finance_solutions"
@@ -396,7 +388,7 @@ class GFCRInvestmentSource(BaseModel):
         ("public", "Public"),
     )
     INVESTMENT_SOURCE_CHOICES_UPDATED_ON = datetime.datetime(
-        2024, 5, 27, 0, 0, 0, 0, tzinfo=datetime.timezone.utc
+        2024, 5, 27, 0, 0, 0, 0, tzinfo=datetime.UTC
     )
 
     INVESTMENT_TYPE_CHOICES = (
@@ -410,7 +402,7 @@ class GFCRInvestmentSource(BaseModel):
         ("technical_assistance", "Technical assistance / in-kind"),
     )
     INVESTMENT_TYPE_CHOICES_UPDATED_ON = datetime.datetime(
-        2026, 4, 17, 0, 0, 0, 0, tzinfo=datetime.timezone.utc
+        2026, 4, 17, 0, 0, 0, 0, tzinfo=datetime.UTC
     )
 
     finance_solution = models.ForeignKey(
@@ -454,7 +446,7 @@ class GFCRRevenue(BaseModel):
         ("sustainable_livelihood_mechanisms", "Other sustainable livelihood mechanisms"),
     )
     REVENUE_TYPE_CHOICES_UPDATED_ON = datetime.datetime(
-        2026, 4, 17, 0, 0, 0, 0, tzinfo=datetime.timezone.utc
+        2026, 4, 17, 0, 0, 0, 0, tzinfo=datetime.UTC
     )
 
     finance_solution = models.ForeignKey(

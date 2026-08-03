@@ -261,8 +261,7 @@ def get_viewset_csv_content(view_cls, project_pk, request):
     )
     cached_file = cached.get_cached_textfile(key)
     if cached_file:
-        for row in csv.reader(cached_file):
-            yield row
+        yield from csv.reader(cached_file)
 
         return
 

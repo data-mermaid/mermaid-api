@@ -90,7 +90,7 @@ class LockedAtomicTransaction(Atomic):
         self.model = model
 
     def __enter__(self):
-        super(LockedAtomicTransaction, self).__enter__()
+        super().__enter__()
 
         # Make sure not to lock, when sqlite is used, or you'll run into problems while running tests!!!
         if settings.DATABASES[self.using]["ENGINE"] != "django.db.backends.sqlite3":

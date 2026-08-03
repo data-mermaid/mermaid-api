@@ -22,7 +22,7 @@ from app import settings
 logger = logging.getLogger(__name__)
 
 
-class Auth0ClientManager(object):
+class Auth0ClientManager:
     _chars = string.ascii_letters + string.digits
     _secret_len = 48
 
@@ -64,7 +64,7 @@ class Auth0ClientManager(object):
         )
 
 
-class Auth0UserInfo(object):
+class Auth0UserInfo:
     user_url = "/api/v2/users/{id}"
 
     def __init__(self, domain, token):
@@ -78,7 +78,7 @@ class Auth0UserInfo(object):
     # https://datamermaid.auth0.com/userinfo
 
 
-class Auth0ManagementAPI(object):
+class Auth0ManagementAPI:
     def __init__(self, domain, client_id, client_secret):
         self.domain = domain
         self.client_id = client_id
