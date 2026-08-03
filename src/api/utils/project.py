@@ -405,7 +405,7 @@ def delete_collected_pqt_images(image_ids):
                 )
             except Exception:
                 logger.error(
-                    f"Failed to delete S3 file during demo project cleanup: {path}",
+                    f"Failed to delete S3 file during project deletion: {path}",
                     exc_info=True,
                 )
 
@@ -1103,7 +1103,13 @@ def delete_project(pk):
         with transaction.atomic():
             sid = transaction.savepoint()
             try:
+                # Collect PQT image IDs before the cascade-delete removes the
+                # ObsBenthicPhotoQuadrat rows that link back to them.
+                pqt_image_ids = collect_project_pqt_image_ids(instance)
                 delete_instance_and_related_objects(instance)
+                # Now that ObsBenthicPhotoQuadrat rows are gone (PROTECT lifted),
+                # delete the orphaned Image records and schedule S3 cleanup.
+                delete_collected_pqt_images(pqt_image_ids)
                 transaction.savepoint_commit(sid)
                 print("project deleted")
             except Exception as err:
