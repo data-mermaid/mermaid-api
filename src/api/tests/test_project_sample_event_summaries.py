@@ -89,6 +89,11 @@ def test_project_se_summary_authenticated(
             biomass = obs_belt_fish1_1_biomass + obs_belt_fish1_2_biomass + obs_belt_fish1_3_biomass
             assert pytest.approx(biomass, 0.1) == beltfish["biomass_kgha_avg"]
 
+            # project-level records reuse SummarySampleEventSerializer, so depth_avg/
+            # depth_sd should already be present without any extra wiring.
+            assert record["depth_avg"] is not None
+            assert record["depth_sd"] is not None
+
 
 def test_project_se_summary_authenticated_not_project(
     db_setup,
