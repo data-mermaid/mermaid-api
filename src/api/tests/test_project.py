@@ -434,6 +434,46 @@ def test_delete_demo_project_suppresses_notifications(project_profile1):
     mock_email.assert_not_called()
 
 
+def test_delete_project_cleans_up_pqt_images(
+    db,
+    project1,
+    benthic_photo_quadrat_transect_project,
+    obs_benthic_photo_quadrat1_1,
+):
+    """delete_project should not orphan Image records referenced by ObsBenthicPhotoQuadrat.image.
+
+    ObsBenthicPhotoQuadrat.image uses on_delete=PROTECT, and Image.collect_record_id is a
+    plain UUID (no FK), so nothing cascades Image deletion automatically when the project's
+    obs rows are removed. Regression test for the orphaned-image bug already fixed in
+    create_demo (see collect_project_pqt_image_ids / delete_collected_pqt_images).
+    """
+    pre_save.disconnect(pre_image_save, sender=Image)
+    post_save.disconnect(post_save_classification_image, sender=Image)
+
+    try:
+        test_image = Image.objects.create(
+            collect_record_id=uuid.uuid4(),
+            name="test-image.jpg",
+            original_image_name="original.jpg",
+            original_image_width=1920,
+            original_image_height=1080,
+        )
+        test_image.image.name = f"mermaid/{test_image.id}.jpg"
+        test_image.save()
+
+        obs_benthic_photo_quadrat1_1.image = test_image
+        obs_benthic_photo_quadrat1_1.save()
+        image_id = test_image.id
+
+        delete_project(str(project1.pk))
+    finally:
+        pre_save.connect(pre_image_save, sender=Image)
+        post_save.connect(post_save_classification_image, sender=Image)
+
+    assert not Project.objects.filter(pk=project1.pk).exists()
+    assert not Image.objects.filter(pk=image_id).exists()
+
+
 def test_project_serializer_member_and_admin_fields(
     api_client1,
     base_project,

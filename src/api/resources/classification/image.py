@@ -2,7 +2,7 @@ from django.conf import settings
 from django.db import transaction
 from django.db.models import Q
 from rest_framework import permissions, serializers, status
-from rest_framework.exceptions import MethodNotAllowed, ValidationError
+from rest_framework.exceptions import MethodNotAllowed, NotFound, ValidationError
 from rest_framework.response import Response
 
 from ...exceptions import check_uuid
@@ -186,6 +186,19 @@ class ImageViewSet(BaseProjectApiViewSet):
     serializer_class = ImageSerializer
     permission_classes = [PROJECT_DATA_PERMISSION | ImagePermission]
     filterset_class = ImageFilterSet
+
+    def perform_destroy(self, instance):
+        # Lock the row so this serializes against create_classification_status(),
+        # which also locks via select_for_update(). Without this, the async
+        # classification worker can insert a new ClassificationStatus between
+        # Django's delete-collector query and the final DELETE, causing an
+        # IntegrityError on the class_status FK.
+        with transaction.atomic():
+            try:
+                locked_instance = Image.objects.select_for_update().get(pk=instance.pk)
+            except Image.DoesNotExist:
+                raise NotFound()
+            locked_instance.delete()
 
     def limit_to_project(self, request, *args, **kwargs):
         qs = self.get_queryset()
