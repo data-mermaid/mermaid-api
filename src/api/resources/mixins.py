@@ -100,7 +100,7 @@ class OrFilterSetMixin(object):
             name = [name]
         q = Q()
         for n in name:
-            fieldname = "{}__{}".format(n, lookup_expr)
+            fieldname = f"{n}__{lookup_expr}"
             for v in set(value):
                 if v is not None and v != "":
                     predicate = {fieldname: str(v).strip()}

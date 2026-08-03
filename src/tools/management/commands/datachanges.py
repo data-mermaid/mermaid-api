@@ -57,4 +57,4 @@ class Command(BaseCommand):
                     print(s)
         else:
             for c in sorted(changes):
-                print("{}: {}".format(c, len(changes[c])))
+                print(f"{c}: {len(changes[c])}")

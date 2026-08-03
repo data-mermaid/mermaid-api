@@ -28,7 +28,7 @@ class ListFilter(django_filters.Filter):
         value = value or ""
         values = [v.strip() for v in value.split(",")]
         if values:
-            qry_args = {"{}__in".format(self.field_name): values}
+            qry_args = {f"{self.field_name}__in": values}
             qs = qs.filter(**qry_args)
         return qs
 
@@ -62,7 +62,7 @@ class SearchNonFieldFilter(django_filters.Filter):
 
         qry = Q()
         for field in self.SEARCH_FIELDS:
-            qry |= Q(**{"{}__iregex".format(field): value})
+            qry |= Q(**{f"{field}__iregex": value})
         return qs.filter(qry).distinct()
 
 
