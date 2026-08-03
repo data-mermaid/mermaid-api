@@ -38,7 +38,7 @@ from ..models import (
 )
 from ..models.classification import get_image_storage_config
 from .q import submit_image_job
-from .s3 import download_directory, upload_file
+from .s3 import list_objects, upload_file
 
 CLASSIFIER_CONFIG_S3_PATH = "classifier"
 CLASSIFIER_CONFIG_LOCAL_CACHE_DIR = settings.SPACER.get("EXTRACTORS_CACHE_DIR")
@@ -354,7 +354,9 @@ def _fetch_and_cache_classifier_config(classifier: Classifier):
 
     classifier_s3_dir = f"{CLASSIFIER_CONFIG_S3_PATH}/{cls_version}"
     classifier_local_dir = f"{CLASSIFIER_CONFIG_LOCAL_CACHE_DIR}/{cls_version}"
-    download_directory(settings.AWS_CONFIG_BUCKET, classifier_s3_dir, classifier_local_dir)
+    list_objects(
+        settings.AWS_CONFIG_BUCKET, prefix=classifier_s3_dir, download_to=classifier_local_dir
+    )
 
 
 def _get_classifier_and_weights(

@@ -225,9 +225,9 @@ def run_subprocess(command, std_input=None, to_file=None):
     if to_file is not None:
         with open(to_file, "w") as f:
             f.write("DATA: \n")
-            f.write(str(proc.stdout))
+            f.write(proc.stdout.decode("UTF-8"))
             f.write("ERR: \n")
-            f.write(str(proc.stderr))
+            f.write(proc.stderr.decode("UTF-8"))
 
 
 # source: https://stackoverflow.com/a/70310511/15624918
