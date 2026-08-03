@@ -1,6 +1,6 @@
 import hashlib
 from dataclasses import dataclass
-from typing import List, Literal, Union
+from typing import Literal
 
 from api.utils import get_value, set_value
 from .statuses import ERROR, IGNORE, OK, WARN
@@ -26,10 +26,10 @@ VALIDATION_TYPES = (
 @dataclass
 class Validation:
     validator: BaseValidator
-    paths: List[str]
+    paths: list[str]
     validation_level: Literal[RECORD_LEVEL, ROW_LEVEL, FIELD_LEVEL] = FIELD_LEVEL
     validation_type: Literal[LIST_VALIDATION_TYPE, VALUE_VALIDATION_TYPE] = VALUE_VALIDATION_TYPE
-    result: Union[ValidatorResult, List[ValidatorResult], None] = None
+    result: ValidatorResult | list[ValidatorResult] | None = None
     requires_instance: bool = False
     delay_validation: bool = False  # Only run if there are no errors from other validations.
 
@@ -44,7 +44,7 @@ class Validation:
         md5_val = hashlib.md5(key.encode("utf-8"))
         return str(md5_val.hexdigest())
 
-    def _assign_validation_id(self, result: Union[ValidatorResult, List[ValidatorResult]]):
+    def _assign_validation_id(self, result: ValidatorResult | list[ValidatorResult]):
         if isinstance(result, list):
             for r in result:
                 r.validation_id = self._get_validation_id()
@@ -88,7 +88,7 @@ class ValidationRunner:
     def _check_is_ignored(
         self,
         new_validator_result: dict,
-        existing_validator_results: Union[dict, List[dict]],
+        existing_validator_results: dict | list[dict],
     ):
         if not existing_validator_results:
             return False
