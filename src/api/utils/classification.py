@@ -355,7 +355,7 @@ def _fetch_and_cache_classifier_config(classifier: Classifier):
     classifier_s3_dir = f"{CLASSIFIER_CONFIG_S3_PATH}/{cls_version}"
     classifier_local_dir = f"{CLASSIFIER_CONFIG_LOCAL_CACHE_DIR}/{cls_version}"
     list_objects(
-        settings.AWS_CONFIG_BUCKET, prefix=classifier_s3_dir, download_to=classifier_local_dir
+        settings.AWS_CONFIG_BUCKET, prefix=f"{classifier_s3_dir}/", download_to=classifier_local_dir
     )
 
 

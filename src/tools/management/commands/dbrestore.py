@@ -6,6 +6,8 @@ from django.core.management.base import BaseCommand, CommandError
 
 from api.utils import run_subprocess, s3
 
+BACKUP_EXTENSION = "dump"
+
 
 class Command(BaseCommand):
     help = "Recreate db and restore data from most recent dump"
@@ -53,9 +55,15 @@ class Command(BaseCommand):
                 download_file_name = None
                 tmpdir = os.path.join(os.path.sep, self.local_file_location)
 
+                expected_prefix = f"{self.restore}_mermaid_backup_"
+                expected_suffix = f".{BACKUP_EXTENSION}"
                 for f in os.listdir(tmpdir):
                     localfile = os.path.join(tmpdir, f)
-                    if os.path.isfile(localfile) and self.restore in localfile:
+                    if (
+                        os.path.isfile(localfile)
+                        and f.startswith(expected_prefix)
+                        and f.endswith(expected_suffix)
+                    ):
                         if download_file_name is None or os.path.getmtime(
                             localfile
                         ) > os.path.getmtime(download_file_name):
@@ -67,45 +75,51 @@ class Command(BaseCommand):
 
             else:
                 self.stdout.write("Retrieving latest backup")
-                latest_obj = s3.get_latest_object(
-                    settings.AWS_BACKUP_BUCKET, prefix=f"{self.restore}/"
-                )
+                backup_objects = [
+                    obj
+                    for obj in s3.list_objects(
+                        settings.AWS_BACKUP_BUCKET, prefix=f"{self.restore}/"
+                    )
+                    if not obj["Key"].endswith("/") and obj["Key"].endswith(f".{BACKUP_EXTENSION}")
+                ]
 
-                if not latest_obj:
+                if not backup_objects:
                     raise ValueError(
                         f"{settings.AWS_BACKUP_BUCKET} does not exist or is not listable"
                     )
 
+                latest_obj = max(backup_objects, key=lambda o: o["LastModified"])
+
                 self.stdout.write("Latest Key Name: %s" % latest_obj["Key"])
 
-                download_file_name = ""
-                if latest_obj["Key"][-1] != "/":
-                    download_file_name = os.path.join(
-                        os.path.sep,
-                        self.local_file_location,
-                        "{0}_{1}".format(
-                            latest_obj["LastModified"].strftime("%Y%m%d%H%M%S"),
-                            latest_obj["Key"].replace("/", "_"),
-                        ),
+                download_file_name = os.path.join(
+                    os.path.sep,
+                    self.local_file_location,
+                    "{0}_{1}".format(
+                        latest_obj["LastModified"].strftime("%Y%m%d%H%M%S"),
+                        latest_obj["Key"].replace("/", "_"),
+                    ),
+                )
+
+                # If the file doesn't exist locally, then download
+                if not os.path.isfile(download_file_name):  # Check if the file exists
+                    self.stdout.write(
+                        "Downloading: {0} to: {1} ".format(latest_obj["Key"], download_file_name)
                     )
 
-                    # If the file doesn't exist locally, then download
-                    if not os.path.isfile(download_file_name):  # Check if the file exists
-                        self.stdout.write(
-                            "Downloading: {0} to: {1} ".format(
-                                latest_obj["Key"], download_file_name
-                            )
-                        )
+                    s3.download_file(
+                        settings.AWS_BACKUP_BUCKET,
+                        latest_obj["Key"],
+                        download_file_name,
+                    )
 
-                        s3.download_file(
-                            settings.AWS_BACKUP_BUCKET,
-                            latest_obj["Key"],
-                            download_file_name,
-                        )
-
-            self._init_db()
-            if not os.path.isfile(download_file_name):
+            if (
+                not download_file_name
+                or not os.path.isfile(download_file_name)
+                or not download_file_name.endswith(f".{BACKUP_EXTENSION}")
+            ):
                 raise ValueError("No database dump file to restore")
+            self._init_db()
             self._psql_restore_db(download_file_name)
             self.stdout.write(self.style.SUCCESS("Restore Complete"))
         except Exception as e:

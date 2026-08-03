@@ -103,13 +103,18 @@ def list_objects(
     kwargs = {"Bucket": bucket}
     if prefix:
         kwargs["Prefix"] = prefix
+    download_root = os.path.abspath(download_to) if download_to else None
     objects = []
     for page in paginator.paginate(**kwargs):
         for obj in page.get("Contents", []):
             objects.append(obj)
             if download_to:
                 s3_key = obj["Key"]
-                local_path = os.path.join(download_to, os.path.relpath(s3_key, prefix or ""))
+                local_path = os.path.abspath(
+                    os.path.join(download_root, os.path.relpath(s3_key, prefix or ""))
+                )
+                if os.path.commonpath([download_root, local_path]) != download_root:
+                    continue
                 os.makedirs(os.path.dirname(local_path), exist_ok=True)
                 if os.path.isdir(local_path):
                     continue
