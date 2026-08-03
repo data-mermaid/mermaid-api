@@ -5,7 +5,7 @@ from typing import Literal
 from api.submission.validations.statuses import ERROR, IGNORE, OK, STALE, WARN
 from api.utils import get_value
 
-STATUSES: tuple[str] = (ERROR, IGNORE, OK, WARN, STALE)
+STATUSES: tuple[str, ...] = (ERROR, IGNORE, OK, WARN, STALE)
 
 
 @dataclass

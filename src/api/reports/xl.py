@@ -1,4 +1,5 @@
 import os
+from collections.abc import Iterable
 from typing import Any
 
 from django.conf import settings
@@ -53,7 +54,7 @@ def get_worksheet(wb: Workbook, name: str | None = None, create: bool = False) -
 def write_data_to_sheet(
     workbook: Workbook | str | None,
     sheet_name: str,
-    data: list[list[Any]],
+    data: Iterable[Iterable[Any]],
     row: int = 1,
     col: int = 1,
 ) -> tuple[int, int]:

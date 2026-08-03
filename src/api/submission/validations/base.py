@@ -88,7 +88,7 @@ class ValidationRunner:
     def _check_is_ignored(
         self,
         new_validator_result: dict,
-        existing_validator_results: dict | list[dict],
+        existing_validator_results: dict | list[dict] | None,
     ):
         if not existing_validator_results:
             return False

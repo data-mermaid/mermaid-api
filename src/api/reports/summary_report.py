@@ -223,7 +223,7 @@ def _transpose(data: list):
 def _filter_columns(
     headers: list[str],
     cols: list[list],
-    display_header_lookup: dict[str, None],
+    display_header_lookup: dict[str, str],
     additional_header_lookup: set[str],
 ) -> tuple[list[str], list[list]]:
     new_headers = []
