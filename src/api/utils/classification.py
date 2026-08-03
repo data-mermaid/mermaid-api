@@ -73,7 +73,7 @@ def check_if_valid_image(instance):
             if settings.MAX_IMAGE_PIXELS < w * h:
                 raise ValueError(f"Maximum number of pixels is {settings.MAX_IMAGE_PIXELS}.")
         return
-    except (OSError, AttributeError, TypeError, SyntaxError) as _:
+    except (OSError, AttributeError, TypeError, SyntaxError):
         raise ValueError("Invalid image.")
 
 
