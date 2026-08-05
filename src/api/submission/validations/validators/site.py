@@ -1,6 +1,5 @@
 from django.contrib.gis.geos import Polygon
 from django.contrib.gis.measure import Distance
-from django.contrib.postgres.search import TrigramSimilarity
 from django.db.models import Q
 from rest_framework.exceptions import ParseError
 
@@ -14,7 +13,6 @@ class UniqueSiteValidator(BaseValidator):
     SITE_NOT_FOUND = "site_not_found"
     NOT_UNIQUE = "not_unique_site"
 
-    name_match_percent = 0.5
     site_buffer = 100  # m
 
     search_bbox_size = (0.5, 0.5)
@@ -48,16 +46,11 @@ class UniqueSiteValidator(BaseValidator):
                 )
             )
 
-        # Fuzzy name match
-        qry = qry.annotate(similarity=TrigramSimilarity("sample_event__site__name", site.name))
-        qry = qry.filter(similarity__gte=self.name_match_percent)
-
-        return [r.sample_event.site for r in qry.order_by("-similarity")]
+        return [r.sample_event.site for r in qry]
 
     @validator_result
     def __call__(self, collect_record, **kwargs):
-        # 1. Location within buffer
-        # 2. Fuzzy match site name
+        # Check for duplicate sites based on location within buffer
 
         site_id = self.get_value(collect_record, self.site_path) or ""
         try:
