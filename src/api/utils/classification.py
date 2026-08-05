@@ -6,7 +6,7 @@ from io import BytesIO
 from operator import itemgetter
 from pathlib import Path
 from tempfile import NamedTemporaryFile, TemporaryDirectory
-from typing import Any, Dict, Optional, Tuple
+from typing import Any
 
 import pandas as pd
 import pyarrow as pa
@@ -85,7 +85,7 @@ def create_image_name(image: Image) -> str:
     return f"{name}{image_ext}"
 
 
-def create_image_checksum(image: ImageFieldFile, image_buf: Optional[BytesIO] = None) -> str:
+def create_image_checksum(image: ImageFieldFile, image_buf: BytesIO | None = None) -> str:
     if image_buf is not None:
         image_buf.seek(0)
         file_hash = hashlib.sha256()
@@ -106,7 +106,7 @@ def create_image_checksum(image: ImageFieldFile, image_buf: Optional[BytesIO] = 
     return file_hash.hexdigest()
 
 
-def create_thumbnail(image_instance: Image, image_buf: Optional[BytesIO] = None) -> ContentFile:
+def create_thumbnail(image_instance: Image, image_buf: BytesIO | None = None) -> ContentFile:
     size = (500, 500)
 
     if image_buf is not None:
@@ -175,8 +175,8 @@ def _normalize_exif_value(value):
 
 
 def extract_datetime_stamp(
-    exif_ifd: Dict[int, Any], gps_ifd: Dict[int, Any]
-) -> Optional[datetime.datetime]:
+    exif_ifd: dict[int, Any], gps_ifd: dict[int, Any]
+) -> datetime.datetime | None:
     # GPS date+time is already UTC — use it if present
     date_stamp = gps_ifd.get(_GPS_DATESTAMP)  # "YYYY:MM:DD"
     time_stamp = gps_ifd.get(_GPS_TIMESTAMP)  # (H, M, S) as IFDRationals
@@ -208,7 +208,7 @@ def extract_datetime_stamp(
         return None
 
 
-def extract_location(gps_ifd: Dict[int, Any]) -> Optional[GEOSPoint]:
+def extract_location(gps_ifd: dict[int, Any]) -> GEOSPoint | None:
     latitude_ref = gps_ifd.get(_GPS_LATITUDE_REF)  # "N" or "S"
     latitude_dms = gps_ifd.get(_GPS_LATITUDE)  # tuple of 3 IFDRationals
     longitude_ref = gps_ifd.get(_GPS_LONGITUDE_REF)  # "E" or "W"
@@ -322,7 +322,7 @@ def create_classification_status(image, status, message=None):
         print(f"Writing classification status Image {image.pk}, status: {status}: {err}")
 
 
-def generate_points(image: Image, num_points: int, margin: Tuple[int, int] = (0, 0)):
+def generate_points(image: Image, num_points: int, margin: tuple[int, int] = (0, 0)):
     assert len(margin) == 2
 
     if image.original_image_height and image.original_image_width:
@@ -360,8 +360,8 @@ def _fetch_and_cache_classifier_config(classifier: Classifier):
 
 
 def _get_classifier_and_weights(
-    classifier: Optional[Classifier] = None
-) -> Tuple[DataLocation, DataLocation]:
+    classifier: Classifier | None = None
+) -> tuple[DataLocation, DataLocation]:
     # TODO: Handle if classifier configs don't exist for classifier instance.
     if not classifier:
         classifier = Classifier.latest()
