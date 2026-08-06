@@ -1,4 +1,4 @@
-from typing import Any, Dict, Optional
+from typing import Any
 
 from django.db.models import NOT_PROVIDED, ForeignObject  # type: ignore
 from django.db.models.sql.datastructures import BaseTable  # type: ignore
@@ -12,13 +12,13 @@ class SQLTableArg:
 
 
 class SQLTable(BaseTable):
-    sql_args: Dict[str, "SQLTableParams"] = dict()
+    sql_args: dict[str, "SQLTableParams"] = dict()
 
     def __init__(
         self,
         table_name: str,
-        alias: Optional[str],
-        sql_table_params: Dict[str, Any],
+        alias: str | None,
+        sql_table_params: dict[str, Any],
         sql: str,
     ):
         super().__init__(table_name, alias)
@@ -35,7 +35,7 @@ class SQLTable(BaseTable):
 
 
 class SQLTableParams:
-    def __init__(self, level: int, join_field: ForeignObject, params: "Dict[str, Any]"):
+    def __init__(self, level: int, join_field: ForeignObject, params: "dict[str, Any]"):
         self.level = level  # type: int
         self.join_field = join_field  # type: ForeignObject
-        self.params = params  # type: Dict[str, Any]
+        self.params = params  # type: dict[str, Any]
