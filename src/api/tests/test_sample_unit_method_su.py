@@ -1,22 +1,13 @@
-import csv
-from io import StringIO
-
 import pytest
 from django.urls import reverse
+
+from api.tests.utils import get_csv_rows as _get_rows
 
 
 def _call(client, token, url):
     response = client.get(url, HTTP_AUTHORIZATION=f"Bearer {token}")
     data = response.json()
     return data["count"], data["results"], response
-
-
-def _get_rows(client, token, url):
-    response = client.get(url, HTTP_AUTHORIZATION=f"Bearer {token}")
-    f = StringIO(b"".join(response.streaming_content).decode("utf-8"))
-    reader = csv.DictReader(f, delimiter=",")
-    fieldnames = reader.fieldnames
-    return fieldnames, list(reader), response
 
 
 def test_beltfish_su_view(
