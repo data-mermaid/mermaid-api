@@ -262,7 +262,6 @@ WEBCONTACT_EMAIL = f"MERMAID Web Contact <{os.environ.get('WEBCONTACT_EMAIL')}>"
 API_NULLQUERY = "null"
 TAGGIT_CASE_INSENSITIVE = True
 GEO_PRECISION = 6  # to nearest 10 cm
-CORAL_ATLAS_APP_ID = os.environ.get("CORAL_ATLAS_APP_ID")
 # https://github.com/llybin/drf-recaptcha
 DRF_RECAPTCHA_SECRET_KEY = os.environ.get("DRF_RECAPTCHA_SECRET_KEY")
 DRF_RECAPTCHA_TESTING = os.environ.get("DRF_RECAPTCHA_TESTING") or False

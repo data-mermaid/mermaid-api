@@ -1,3 +1,6 @@
+import csv
+from io import StringIO
+
 import pytest
 from django.urls import reverse
 
@@ -6,6 +9,14 @@ def _call(client, token, url):
     response = client.get(url, HTTP_AUTHORIZATION=f"Bearer {token}")
     data = response.json()
     return data["count"], data["results"], response
+
+
+def _get_rows(client, token, url):
+    response = client.get(url, HTTP_AUTHORIZATION=f"Bearer {token}")
+    f = StringIO(b"".join(response.streaming_content).decode("utf-8"))
+    reader = csv.DictReader(f, delimiter=",")
+    fieldnames = reader.fieldnames
+    return fieldnames, list(reader), response
 
 
 def test_beltfish_su_view(
@@ -287,3 +298,34 @@ def test_bleachingqc_su_view(
 
     if n != count:
         assert False, f"Wrong number of sample units, {n} should be {count}"
+
+
+def test_beltfish_su_field_report(
+    client,
+    db_setup,
+    project1,
+    token1,
+    belt_fish_project,
+    all_choices,
+    site2,
+    management2,
+    profile2,
+    obs_belt_fish1_1_biomass,
+    obs_belt_fish1_2_biomass,
+    obs_belt_fish1_3_biomass,
+    obs_belt_fish2_1_biomass,
+    obs_belt_fish2_2_biomass,
+    obs_belt_fish2_3_biomass,
+    obs_belt_fish2_4_biomass,
+    fishbelt_transect1,
+    fishbelt_transect2,
+    update_summary_cache,
+):
+    url = reverse("beltfishmethod-sampleunit-csv", kwargs=dict(project_pk=project1.pk))
+    fieldnames, rows, response = _get_rows(client, token1, f"{url}?field_report=true")
+
+    assert response.has_header("Content-Disposition")
+    assert len(rows) == 2
+    assert "Country" in fieldnames
+    assert "site_id" not in fieldnames
+    assert len(rows[0].keys()) == 48
