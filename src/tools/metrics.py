@@ -110,19 +110,20 @@ def get_project_lookup(log_events):
         for log_event in log_events
         if hasattr(log_event, "meta") is not False and log_event.meta.get("project_id") is not None
     }
-    return {
-        str(p.id): {
+    projects = {}
+    for p in Project.objects.prefetch_related("profiles", "tags", "sites").filter(
+        id__in=project_lookup.keys()
+    ):
+        tags = list(p.tags.all())
+        projects[str(p.id)] = {
             "project_name": p.name,
             "project_status": p.get_status_display(),
-            "project_tags": ",".join(t.name for t in p.tags.all()),
-            "project_tag_ids": ",".join(str(t.id) for t in p.tags.all()),
+            "project_tags": ",".join(t.name for t in tags),
+            "project_tag_ids": ",".join(str(t.id) for t in tags),
             "countries": ",".join(set([s.country.name for s in p.sites.order_by("country__name")])),
             "profiles": {str(pp.profile.id): pp.get_role_display() for pp in p.profiles.all()},
         }
-        for p in Project.objects.prefetch_related("profiles", "tags", "sites").filter(
-            id__in=project_lookup.keys()
-        )
-    }
+    return projects
 
 
 @meta
