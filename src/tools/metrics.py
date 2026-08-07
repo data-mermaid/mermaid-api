@@ -34,7 +34,7 @@ SUBMIT_EVENT_TYPE = "submit"
 OTHER_EVENT_TYPE = "other"
 EVENT_TYPES_FILTER = (SUMMARY_EVENT_TYPE, PROJECT_EVENT_TYPE, SUBMIT_EVENT_TYPE)
 PROFILE_DEFAULT = {"first_name": "", "last_name": "", "email": ""}
-PROJECT_DEFAULT = {"project_name": "", "project_tags": "", "profiles": {}}
+PROJECT_DEFAULT = {"project_name": "", "project_tags": "", "project_tag_ids": "", "profiles": {}}
 
 
 def meta(method):
@@ -115,6 +115,7 @@ def get_project_lookup(log_events):
             "project_name": p.name,
             "project_status": p.get_status_display(),
             "project_tags": ",".join(t.name for t in p.tags.all()),
+            "project_tag_ids": ",".join(str(t.id) for t in p.tags.all()),
             "countries": ",".join(set([s.country.name for s in p.sites.order_by("country__name")])),
             "profiles": {str(pp.profile.id): pp.get_role_display() for pp in p.profiles.all()},
         }
