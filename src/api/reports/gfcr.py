@@ -1,7 +1,6 @@
 import logging
 from pathlib import Path
 from tempfile import NamedTemporaryFile
-from typing import List
 
 from ..mocks import MockRequest
 from ..models import GFCRFinanceSolution, GFCRIndicatorSet
@@ -28,7 +27,7 @@ def _get_indicator_set_field_data(
     indicator_set,
     field_label,
     field_name,
-    additional_common_fields: List[str] = None,
+    additional_common_fields: list[str] | None = None,
     notes_field: str = None,
 ):
     if not additional_common_fields:
