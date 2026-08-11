@@ -63,6 +63,8 @@ class SummarySampleEventCSVSerializer(ReportSerializer):
         ReportField("reef_exposure", "Exposure"),
         ReportField("reef_type", "Reef type"),
         ReportField("reef_zone", "Reef zone"),
+        ReportField("depth_avg", "Depth average (m)"),
+        ReportField("depth_sd", "Depth standard deviation (m)"),
         ReportField("sample_date", "Year", to_year, "sample_date_year"),
         ReportField("sample_date", "Month", to_month, "sample_date_month"),
         ReportField("sample_date", "Day", to_day, "sample_date_day"),

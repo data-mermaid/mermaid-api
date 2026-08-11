@@ -9,10 +9,11 @@ from .mixins import (
     CopyRecordsMixin,
     CreateOrUpdateSerializerMixin,
     NotifyDeletedSiteMRMixin,
+    SiteDuplicateCheckMixin,
 )
 
 
-class PSiteSerializer(CreateOrUpdateSerializerMixin, BaseAPISerializer):
+class PSiteSerializer(SiteDuplicateCheckMixin, CreateOrUpdateSerializerMixin, BaseAPISerializer):
     location = PointFieldValidated()
 
     class Meta:

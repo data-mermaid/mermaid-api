@@ -95,14 +95,8 @@ def apply_changes(request, serializer, record, force=False):
                 return 202, "Project has been flagged for deletion", None
 
             with transaction.atomic():
-                if isinstance(instance, ProjectProfile) and instance.role == ProjectProfile.ADMIN:
-                    if (
-                        not ProjectProfile.objects.select_for_update()
-                        .filter(project=instance.project, role=ProjectProfile.ADMIN)
-                        .exclude(pk=instance.pk)
-                        .exists()
-                    ):
-                        return 400, "Last admin cannot be removed", None
+                if isinstance(instance, ProjectProfile) and instance.is_last_admin(for_update=True):
+                    return 400, "Last admin cannot be removed", None
 
                 if hasattr(instance, "updated_by_id"):
                     try:
@@ -163,12 +157,8 @@ def apply_changes(request, serializer, record, force=False):
         if (
             instance is not None
             and isinstance(instance, ProjectProfile)
-            and instance.role == ProjectProfile.ADMIN
             and s.validated_data.get("role", instance.role) != ProjectProfile.ADMIN
-            and not ProjectProfile.objects.select_for_update()
-            .filter(project=instance.project, role=ProjectProfile.ADMIN)
-            .exclude(pk=instance.pk)
-            .exists()
+            and instance.is_last_admin(for_update=True)
         ):
             return 400, "Last admin cannot be removed", None
 

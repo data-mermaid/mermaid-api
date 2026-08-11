@@ -419,6 +419,30 @@ class ProjectProfile(BaseModel):
     def is_admin(self):
         return self.role >= self.ADMIN
 
+    @staticmethod
+    def would_leave_project_without_admin(project_id, excluded_pks, for_update=False):
+        """Whether removing every row in `excluded_pks` (deleting them, or
+        changing their role away from ADMIN) would leave `project_id` with
+        no admin. Pass for_update=True (inside a transaction.atomic() block)
+        to lock the *entire* admin row set, including the rows being
+        removed - locking only the others lets two transactions acting on
+        disjoint subsets of the last admins both pass the check."""
+        qs = ProjectProfile.objects.filter(project_id=project_id, role=ProjectProfile.ADMIN)
+        if for_update:
+            qs = qs.select_for_update()
+        admin_pks = set(qs.values_list("pk", flat=True))
+        return not (admin_pks - set(excluded_pks))
+
+    def is_last_admin(self, for_update=False):
+        """Whether this profile is the project's sole remaining ADMIN, i.e.
+        whether removing it (deleting the row, or changing its role away
+        from ADMIN) would leave the project without an admin."""
+        if self.role != self.ADMIN:
+            return False
+        return ProjectProfile.would_leave_project_without_admin(
+            self.project_id, {self.pk}, for_update=for_update
+        )
+
     @property
     def profile_name(self):
         return self.profile.full_name
