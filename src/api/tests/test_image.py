@@ -6,6 +6,7 @@ from django.test import override_settings
 from django.urls import reverse
 
 from api.models import Annotation, Classifier, Image, Point
+from api.resources.classification.image import ImageViewSet
 
 
 @pytest.fixture
@@ -267,6 +268,30 @@ def test_upload_image_exceeding_size_limit(
     )
     assert response.status_code == 400
     assert "size limit" in response.json()["error"]
+
+
+def test_destroy_returns_404_when_image_deleted_before_locked_refetch(
+    db_setup,
+    api_client1,
+    project1,
+    image,
+    monkeypatch,
+):
+    # Simulate another request deleting the image between get_object()
+    # (which found it fine) and perform_destroy()'s locked re-fetch.
+    original_get_object = ImageViewSet.get_object
+
+    def fake_get_object(self):
+        instance = original_get_object(self)
+        Image.objects.filter(pk=instance.pk).delete()
+        return instance
+
+    monkeypatch.setattr(ImageViewSet, "get_object", fake_get_object)
+
+    url = reverse("image-detail", kwargs={"project_pk": str(project1.pk), "pk": str(image.pk)})
+    response = api_client1.delete(url, format="json")
+
+    assert response.status_code == 404
 
 
 def test_classification_status_is_none_when_no_statuses(
