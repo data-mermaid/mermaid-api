@@ -20,44 +20,6 @@ All views will return data in one of three formats:
 .. note::
     Multiple-value comma-separated filters are marked with an asterix (*) in the resources below.
 
-Covariates
-----------
-
-All aggregate views include a ``covariates`` field with a growing list of metrics retrieved from non-MERMAID sources for the referenced MERMAID site. The idea is to speed up analysis by including commonly regressed drivers with primary ecological data. To begin with, two covariates from our friends at the `Allen Coral Atlas <https://allencoralatlas.org/>`_ are included; a sample looks like this::
-
-   "covariates": [
-     {
-       "id": "75963cf9-d72a-47f9-972f-f6879c3fba17",
-       "name": "aca_geomorphic",
-       "value": [
-         {
-           "area": 1950.2176,
-           "name": "Inner Reef Flat"
-         }
-       ],
-       "display": "Alan Coral Atlas Geomorphic",
-       "datestamp": "2021-02-01",
-       "requested_datestamp": "2021-02-01"
-     },
-     {
-       "id": "55c2f2d9-7168-49ee-a05a-0f65c9e777b4",
-       "name": "aca_benthic",
-       "value": [
-         {
-           "area": 1815.5039000000002,
-           "name": "Sand"
-         },
-         {
-           "area": 134.71373,
-           "name": "Rubble"
-         }
-       ],
-       "display": "Alan Coral Atlas Benthic",
-       "datestamp": "2021-02-01",
-       "requested_datestamp": "2021-02-01"
-     }
-   ],
-
 .. _data_sharing:
 
 Data sharing policies

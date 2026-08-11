@@ -15,7 +15,6 @@ from ..models import (
     AuditRecord,
     CollectRecord,
     Country,
-    Covariate,
     Current,
     Management,
     ManagementCompliance,
@@ -482,11 +481,6 @@ class TagAdmin(BaseAdmin):
                     p.tags.add(replacement_obj)
 
         return super(TagAdmin, self).delete_view(request, object_id, extra_context)
-
-
-@admin.register(Covariate)
-class CovariateAdmin(BaseAdmin):
-    pass
 
 
 @admin.register(AuditRecord)

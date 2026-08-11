@@ -136,22 +136,6 @@ def to_percent_cover(value, field, row, serializer_instance):
     )
 
 
-def to_covariate(value, field, row, serializer_instance):
-    if not value:
-        return ""
-
-    for covariate in value:
-        if covariate["name"] != field.alias:
-            continue
-        values = covariate["value"]
-        if not isinstance(values, list):
-            return values
-        sorted(values, key=lambda x: (x["area"]), reverse=True)
-        return values[0]["name"] if values else ""
-
-    return ""
-
-
 def to_yesno(value, field, row, serializer_instance):
     return "Yes" if value else "No"
 

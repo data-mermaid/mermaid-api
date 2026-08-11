@@ -1,24 +1,13 @@
-import csv
-from io import StringIO
-
 import pytest
 from django.urls import reverse
+
+from api.tests.utils import get_csv_rows as _get_rows
 
 
 def _call(client, token, url):
     response = client.get(url, HTTP_AUTHORIZATION=f"Bearer {token}")
     data = response.json()
     return data["count"], data["results"], response
-
-
-def _get_rows(client, token, url):
-    response = client.get(url, HTTP_AUTHORIZATION=f"Bearer {token}")
-    print(type(response))
-    print(response)
-    f = StringIO(b"".join(response.streaming_content).decode("utf-8"))
-    reader = csv.DictReader(f, delimiter=",")
-    fieldnames = reader.fieldnames
-    return fieldnames, list(reader), response
 
 
 def test_beltfish_csv_view(
@@ -66,7 +55,7 @@ def test_beltfish_field_report(
     assert "test_project_1-beltfish-obs-" in response.headers.get("content-disposition")
     assert len(rows) == 7
     assert "Country" in fieldnames
-    assert len(rows[3].keys()) == 56
+    assert len(rows[3].keys()) == 55
     assert rows[3]["Site"] == site2.name
     assert float(rows[3]["Latitude"]) == site2.location.y
     assert float(rows[3]["Longitude"]) == site2.location.x
@@ -157,7 +146,7 @@ def test_benthicpit_field_report(
     assert "test_project_1-benthicpit-obs-" in response.headers.get("content-disposition")
     assert len(rows) == 15
     assert "Country" in fieldnames
-    assert len(rows[11].keys()) == 48
+    assert len(rows[11].keys()) == 47
     assert rows[11]["Site"] == site2.name
     assert float(rows[11]["Latitude"]) == site2.location.y
     assert float(rows[11]["Longitude"]) == site2.location.x
@@ -220,7 +209,7 @@ def test_benthiclit_field_report(
     assert "test_project_1-benthiclit-obs-" in response.headers.get("content-disposition")
     assert len(rows) == 10
     assert "Country" in fieldnames
-    assert len(rows[6].keys()) == 49
+    assert len(rows[6].keys()) == 48
     assert rows[6]["Site"] == site2.name
     assert float(rows[6]["Latitude"]) == site2.location.y
     assert float(rows[6]["Longitude"]) == site2.location.x
@@ -270,7 +259,7 @@ def test_habitatcomplexity_field_report(
 
     assert len(rows) == 6
     assert "Country" in fieldnames
-    assert len(rows[3].keys()) == 43
+    assert len(rows[3].keys()) == 42
     assert rows[3]["Site"] == site2.name
     assert float(rows[3]["Latitude"]) == site2.location.y
     assert float(rows[3]["Longitude"]) == site2.location.x
@@ -324,7 +313,7 @@ def test_bleaching_colonies_bleached_field_report(
     assert "Country" in fieldnames
 
     ba_ordered_rownum = 4
-    assert len(rows[ba_ordered_rownum].keys()) == 52
+    assert len(rows[ba_ordered_rownum].keys()) == 51
     assert rows[ba_ordered_rownum]["Site"] == site1.name
     assert float(rows[ba_ordered_rownum]["Latitude"]) == site1.location.y
     assert float(rows[ba_ordered_rownum]["Longitude"]) == site1.location.x
@@ -376,7 +365,7 @@ def test_bleaching_quadrat_benthic_percent_field_report(
 
     assert len(rows) == 5
     assert "Country" in fieldnames
-    assert len(rows[3].keys()) == 42
+    assert len(rows[3].keys()) == 41
     assert rows[3]["Site"] == site1.name
     assert float(rows[3]["Latitude"]) == site1.location.y
     assert float(rows[3]["Longitude"]) == site1.location.x
@@ -384,3 +373,103 @@ def test_bleaching_quadrat_benthic_percent_field_report(
     assert pytest.approx(float(rows[3]["Soft coral (% cover)"]), 1) == pytest.approx(
         obs_quadrat_benthic_percent1_4.percent_soft, 1
     )
+
+
+def test_beltinvert_csv_view(
+    client,
+    db_setup,
+    project1,
+    token1,
+    belt_invert1_with_obs,
+    invert_genus_1,
+    all_choices,
+    site1,
+    profile1,
+    management1,
+    update_summary_cache,
+):
+    url = reverse("beltinvertmethod-obs-csv", kwargs=dict(project_pk=project1.pk))
+    fieldnames, rows, response = _get_rows(client, token1, url)
+
+    assert response.has_header("Content-Disposition")
+    assert len(rows) == 1
+    assert "country_name" in fieldnames
+    assert "site_id" in fieldnames
+    assert rows[0]["site_name"] == site1.name
+    assert float(rows[0]["latitude"]) == site1.location.y
+    assert float(rows[0]["longitude"]) == site1.location.x
+    assert rows[0]["observers"] == profile1.full_name
+    assert rows[0]["management_id"] == str(management1.id)
+
+
+def test_beltinvert_field_report(
+    client,
+    db_setup,
+    project1,
+    token1,
+    belt_invert1_with_obs,
+    invert_genus_1,
+    all_choices,
+    site1,
+    profile1,
+    update_summary_cache,
+):
+    url = reverse("beltinvertmethod-obs-csv", kwargs=dict(project_pk=project1.pk))
+    fieldnames, rows, response = _get_rows(client, token1, f"{url}?field_report=true")
+
+    assert response.has_header("Content-Disposition")
+    assert len(rows) == 1
+    assert "Country" in fieldnames
+    assert "site_id" not in fieldnames
+    assert rows[0]["Site"] == site1.name
+    assert float(rows[0]["Latitude"]) == site1.location.y
+    assert float(rows[0]["Longitude"]) == site1.location.x
+    assert rows[0]["Observers"] == profile1.full_name
+
+
+def test_benthicpqt_csv_view(
+    client,
+    db_setup,
+    project1,
+    token1,
+    benthic_photo_quadrat_transect_project,
+    all_choices,
+    site1,
+    profile1,
+    update_summary_cache,
+):
+    url = reverse("benthicpqtmethod-obs-csv", kwargs=dict(project_pk=project1.pk))
+    fieldnames, rows, response = _get_rows(client, token1, url)
+
+    assert response.has_header("Content-Disposition")
+    assert len(rows) == 5
+    assert "country_name" in fieldnames
+    assert "site_id" in fieldnames
+    assert rows[0]["site_name"] == site1.name
+    assert float(rows[0]["latitude"]) == site1.location.y
+    assert float(rows[0]["longitude"]) == site1.location.x
+    assert rows[0]["observers"] == profile1.full_name
+
+
+def test_benthicpqt_field_report(
+    client,
+    db_setup,
+    project1,
+    token1,
+    benthic_photo_quadrat_transect_project,
+    all_choices,
+    site1,
+    profile1,
+    update_summary_cache,
+):
+    url = reverse("benthicpqtmethod-obs-csv", kwargs=dict(project_pk=project1.pk))
+    fieldnames, rows, response = _get_rows(client, token1, f"{url}?field_report=true")
+
+    assert response.has_header("Content-Disposition")
+    assert len(rows) == 5
+    assert "Country" in fieldnames
+    assert "site_id" not in fieldnames
+    assert rows[0]["Site"] == site1.name
+    assert float(rows[0]["Latitude"]) == site1.location.y
+    assert float(rows[0]["Longitude"]) == site1.location.x
+    assert rows[0]["Observers"] == profile1.full_name

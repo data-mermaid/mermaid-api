@@ -808,46 +808,6 @@ class ArchivedRecord(models.Model):
     record = models.JSONField(null=True, blank=True)
 
 
-class Covariate(BaseModel, JSONMixin):
-    SUPPORTED_COVARIATES = (
-        (
-            "aca_benthic",
-            "Benthic_Allen Coral Atlas",
-        ),
-        (
-            "aca_geomorphic",
-            "Geomorphic_Allen Coral Atlas",
-        ),
-        ("beyer_score", "50 Reefs score_Beyer"),
-        ("beyer_scorecn", "50 Reefs connectivity_Beyer"),
-        ("beyer_scorecy", "50 Reefs cyclones_Beyer"),
-        ("beyer_scorepfc", "50 Reefs thermal future_Beyer"),
-        ("beyer_scoreth", "50 Reefs thermal history_Beyer"),
-        ("beyer_scoretr", "50 Reefs thermal recent_Beyer"),
-        ("andrello_grav_nc", "Market gravity_Andrello"),
-        ("andrello_sediment", "Sediment_Andrello"),
-        ("andrello_nutrient", "Nutrient_Andrello"),
-        ("andrello_pop_count", "Human population_Andrello"),
-        ("andrello_num_ports", "Number of ports_Andrello"),
-        ("andrello_reef_value", "Tourism value_Andrello"),
-        ("andrello_cumul_score", "Cumulative local pressure_Andrello"),
-    )
-
-    site = models.ForeignKey("Site", related_name="covariates", on_delete=models.CASCADE)
-    name = models.CharField(max_length=100, choices=SUPPORTED_COVARIATES)
-    datestamp = models.DateField()
-    requested_datestamp = models.DateField()
-    value = models.JSONField(null=True, blank=True)
-
-    class Meta:
-        constraints = [
-            models.UniqueConstraint(fields=["site", "name"], name="unique_sitecovariate_site_name")
-        ]
-
-    def __str__(self):
-        return f"{self.site.name} - {self.name}"
-
-
 class AuditRecord(JSONMixin):
     SUBMIT_RECORD_EVENT_TYPE = 1
     EDIT_RECORD_EVENT_TYPE = 2
