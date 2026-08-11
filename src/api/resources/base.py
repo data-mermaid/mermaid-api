@@ -330,12 +330,12 @@ class SampleEventExtendedSerializer(BaseAPISerializer):
             source=f"{self._sample_event}.management.notes"
         )
 
-        super(SampleEventExtendedSerializer, self).__init__(*args, **kwargs)
+        super().__init__(*args, **kwargs)
 
 
 class ExtendedSerializer(serializers.ModelSerializer):
     def __init__(self, instance=None, data=empty, exclude=[], *args, **kwargs):
-        super(ExtendedSerializer, self).__init__(*args, **kwargs)
+        super().__init__(*args, **kwargs)
 
         for exc in exclude:
             if exc in self.fields:
@@ -347,7 +347,7 @@ class ListFilter(Filter):
         if value is None:
             return qs
         value_list = [v.strip() for v in value.split(",")]
-        return super(ListFilter, self).filter(qs, Lookup(value_list, "in"))
+        return super().filter(qs, Lookup(value_list, "in"))
 
 
 # Return objects that actually are null when user asks for them with 'null'
@@ -357,7 +357,7 @@ class NullableUUIDFilter(CharFilter):
         if value != settings.API_NULLQUERY:
             if isinstance(value, uuid.UUID):
                 return value.hex
-            return super(NullableUUIDFilter, self).filter(qs, value)
+            return super().filter(qs, value)
 
         qs = self.get_method(qs)(**{"%s__isnull" % self.field_name: True})
         return qs.distinct() if self.distinct else qs
@@ -581,7 +581,7 @@ class BaseApiViewSet(MethodAuthenticationMixin, viewsets.ModelViewSet):
         in list and detail views.  `fields` takes a comma-separated list of
         fields.
         """
-        serializer_class = super(BaseApiViewSet, self).get_serializer_class()
+        serializer_class = super().get_serializer_class()
         fields = self.request.query_params.get("fields")
         if self.request.method == "GET" and fields:
             return self.get_serializer_class_for_fields(serializer_class, fields)
@@ -601,7 +601,7 @@ class BaseApiViewSet(MethodAuthenticationMixin, viewsets.ModelViewSet):
 
     def get_object(self):
         _ = check_uuid(self.kwargs.get(self.lookup_field))
-        return super(BaseApiViewSet, self).get_object()
+        return super().get_object()
 
 
 class BaseAttributeApiViewSet(BaseApiViewSet):
@@ -659,32 +659,32 @@ class BaseProjectApiViewSet(BaseApiViewSet):
 
     def list(self, request, *args, **kwargs):
         self.limit_to_project(request, *args, **kwargs)
-        return super(BaseProjectApiViewSet, self).list(request, *args, **kwargs)
+        return super().list(request, *args, **kwargs)
 
     def retrieve(self, request, *args, **kwargs):
         self.limit_to_project(request, *args, **kwargs)
-        return super(BaseProjectApiViewSet, self).retrieve(request, *args, **kwargs)
+        return super().retrieve(request, *args, **kwargs)
 
     def create(self, request, *args, **kwargs):
         self.limit_to_project(request, *args, **kwargs)
-        return super(BaseProjectApiViewSet, self).create(request, *args, **kwargs)
+        return super().create(request, *args, **kwargs)
 
     def update(self, request, *args, **kwargs):
         self.limit_to_project(request, *args, **kwargs)
-        return super(BaseProjectApiViewSet, self).update(request, *args, **kwargs)
+        return super().update(request, *args, **kwargs)
 
     def partial_update(self, request, *args, **kwargs):
         self.limit_to_project(request, *args, **kwargs)
-        return super(BaseProjectApiViewSet, self).partial_update(request, *args, **kwargs)
+        return super().partial_update(request, *args, **kwargs)
 
     def destroy(self, request, *args, **kwargs):
         self.limit_to_project(request, *args, **kwargs)
-        return super(BaseProjectApiViewSet, self).destroy(request, *args, **kwargs)
+        return super().destroy(request, *args, **kwargs)
 
     @action(detail=False, methods=["POST"])
     def missing(self, request, *args, **kwargs):
         self.limit_to_project(request, *args, **kwargs)
-        return super(BaseProjectApiViewSet, self).missing(request, *args, **kwargs)
+        return super().missing(request, *args, **kwargs)
 
 
 class BaseChoiceApiViewSet(MethodAuthenticationMixin, viewsets.ViewSet):

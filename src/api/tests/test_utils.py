@@ -118,7 +118,7 @@ def test_extract_datetime_stamp_gps_priority():
     exif_ifd = {36867: "2024:04:06 23:30:00", 36880: "+13:00"}
 
     result = extract_datetime_stamp(exif_ifd, gps_ifd)
-    assert result == datetime.datetime(2024, 4, 6, 10, 30, 0, tzinfo=datetime.timezone.utc)
+    assert result == datetime.datetime(2024, 4, 6, 10, 30, 0, tzinfo=datetime.UTC)
 
 
 def test_extract_datetime_stamp_offset_fallback():
@@ -127,7 +127,7 @@ def test_extract_datetime_stamp_offset_fallback():
     gps_ifd = {}
 
     result = extract_datetime_stamp(exif_ifd, gps_ifd)
-    expected = datetime.datetime(2017, 9, 5, 21, 17, 33, tzinfo=datetime.timezone.utc)
+    expected = datetime.datetime(2017, 9, 5, 21, 17, 33, tzinfo=datetime.UTC)
     assert result == expected
 
 
@@ -147,7 +147,7 @@ def test_extract_datetime_stamp_offset_time_original():
     # must still produce a correct UTC timestamp.
     exif_ifd = {36867: "2017:09:06 10:17:33", 36881: "+13:00"}  # OffsetTimeOriginal only
     result = extract_datetime_stamp(exif_ifd, {})
-    assert result == datetime.datetime(2017, 9, 5, 21, 17, 33, tzinfo=datetime.timezone.utc)
+    assert result == datetime.datetime(2017, 9, 5, 21, 17, 33, tzinfo=datetime.UTC)
 
 
 def test_extract_datetime_stamp_malformed_gps_falls_through():
@@ -156,7 +156,7 @@ def test_extract_datetime_stamp_malformed_gps_falls_through():
     exif_ifd = {36867: "2017:09:06 10:17:33", 36880: "+00:00"}
 
     result = extract_datetime_stamp(exif_ifd, gps_ifd)
-    assert result == datetime.datetime(2017, 9, 6, 10, 17, 33, tzinfo=datetime.timezone.utc)
+    assert result == datetime.datetime(2017, 9, 6, 10, 17, 33, tzinfo=datetime.UTC)
 
 
 def test_extract_location():

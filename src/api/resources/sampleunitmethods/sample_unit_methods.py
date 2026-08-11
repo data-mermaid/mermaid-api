@@ -478,7 +478,7 @@ class SampleUnitMethodView(BaseProjectApiViewSet):
         return self.queryset
 
     def get_serializer_context(self):
-        context = super(SampleUnitMethodView, self).get_serializer_context()
+        context = super().get_serializer_context()
         transect_method_ids = self._project_transect_method_ids
 
         sample_event_id_case = Case(

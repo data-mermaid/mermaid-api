@@ -8,8 +8,7 @@ class BaseBrowsableAPIRenderer(BrowsableAPIRenderer):
     charset = "utf-8"
 
     def get_context(self, data, accepted_media_type, renderer_context):
-        context = super(BaseBrowsableAPIRenderer, self).get_context(
-            data, accepted_media_type, renderer_context
-        )
+        context = super().get_context(data, accepted_media_type, renderer_context)
         context["nav_name"] = f"{settings.PROJECT_NAME} [{settings.ENVIRONMENT}]"
+
         return context

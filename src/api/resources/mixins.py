@@ -31,7 +31,7 @@ from ..utils.project import get_safe_project_name
 from ..utils.sample_unit_methods import edit_transect_method
 
 
-class ProtectedResourceMixin(object):
+class ProtectedResourceMixin:
     def destroy(self, request, *args, **kwargs):
         instance = self.get_object()
         try:
@@ -62,7 +62,7 @@ class NotifyDeletedSiteMRMixin(ProtectedResourceMixin):
         return response
 
 
-class CreateOrUpdateSerializerMixin(object):
+class CreateOrUpdateSerializerMixin:
     def create(self, validated_data):
         try:
             with transaction.atomic():
@@ -177,7 +177,7 @@ class ManagementDuplicateCheckMixin(_DuplicateCheckMixin):
 
 # Use this to override DRF DEFAULT_AUTHENTICATION_CLASSES (in settings) from ViewSet for specific methods
 # Avoids 401s for unprotected endpoints -- but 403s (permissions classes) unaffected
-class MethodAuthenticationMixin(object):
+class MethodAuthenticationMixin:
     # method_authentication_classes = {
     #     "OPTIONS": None,
     #     "GET": None,
@@ -200,7 +200,7 @@ class MethodAuthenticationMixin(object):
         return request
 
 
-class OrFilterSetMixin(object):
+class OrFilterSetMixin:
     def str_or_lookup(self, queryset, name, value, key=None, lookup_expr="iexact"):
         if not isinstance(name, (list, set, tuple)):
             name = [name]
@@ -229,7 +229,7 @@ class OrFilterSetMixin(object):
         return self.str_or_lookup(queryset, name, value, "name", "contains")
 
 
-class SampleUnitMethodEditMixin(object):
+class SampleUnitMethodEditMixin:
     def edit_sample_unit(self, request, pk):
         collect_record_owner = Project.objects.get_or_none(id=request.data.get("owner"))
         if collect_record_owner is None:
@@ -257,7 +257,7 @@ class SampleUnitMethodEditMixin(object):
             )
 
 
-class SampleUnitMethodSummaryReport(object):
+class SampleUnitMethodSummaryReport:
     @action(detail=False, methods=["GET"])
     def xlsx(self, request, project_pk):
         from ..utils.reports import create_sample_unit_method_summary_report
@@ -349,7 +349,7 @@ class CopyRecordsMixin:
         return Response(new_records)
 
 
-class DynamicFieldsMixin(object):
+class DynamicFieldsMixin:
     """
     A serializer mixin that takes an additional `fields` argument that controls
     which fields should be displayed.
@@ -386,7 +386,7 @@ class DynamicFieldsMixin(object):
         separated (?fields=id,name,url,email).
 
         """
-        fields = super(DynamicFieldsMixin, self).fields
+        fields = super().fields
 
         if not hasattr(self, "_context"):
             # We are being called before a request cycle

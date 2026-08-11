@@ -586,7 +586,7 @@ class FishSpecies(FishAttribute):
         ("wing diameter", "wing diameter"),
     )
     LENGTH_TYPES_CHOICES_UPDATED_ON = _datetime.datetime(
-        2020, 1, 21, 0, 0, 0, 0, tzinfo=_datetime.timezone.utc
+        2020, 1, 21, 0, 0, 0, 0, tzinfo=_datetime.UTC
     )
 
     name = models.CharField(max_length=100)

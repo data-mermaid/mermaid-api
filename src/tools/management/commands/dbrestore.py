@@ -15,7 +15,7 @@ class Command(BaseCommand):
 
     def __init__(self):
         self.requires_system_checks = []
-        super(Command, self).__init__()
+        super().__init__()
         self.env = os.environ.get("ENV", "none").lower()
         self.restore = self.env
         self.local_file_location = os.path.join(os.path.sep, "tmp", "mermaid")

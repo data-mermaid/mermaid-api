@@ -475,7 +475,7 @@ class TagAdmin(BaseAdmin):
                     p.tags.remove(obj)
                     p.tags.add(replacement_obj)
 
-        return super(TagAdmin, self).delete_view(request, object_id, extra_context)
+        return super().delete_view(request, object_id, extra_context)
 
 
 @admin.register(Covariate)
