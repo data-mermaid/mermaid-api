@@ -14,11 +14,14 @@ from .management import get_rules
 from .mixins import (
     CopyRecordsMixin,
     CreateOrUpdateSerializerMixin,
+    ManagementDuplicateCheckMixin,
     NotifyDeletedSiteMRMixin,
 )
 
 
-class PManagementSerializer(CreateOrUpdateSerializerMixin, BaseAPISerializer):
+class PManagementSerializer(
+    ManagementDuplicateCheckMixin, CreateOrUpdateSerializerMixin, BaseAPISerializer
+):
     size = DecimalField(
         max_digits=12,
         decimal_places=3,

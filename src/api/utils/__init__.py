@@ -215,19 +215,19 @@ def run_subprocess(command, std_input=None, to_file=None):
         proc = subprocess.run(command, input=std_input, check=True, capture_output=True)
 
     except subprocess.CalledProcessError as e:
-        print(e.stderr.decode("UTF-8"))
+        print(e.stderr.decode("UTF-8", errors="replace"))
         raise e
 
     # print things like NOTICEs and WARNINGs
     if proc.stderr:
-        print(proc.stderr.decode("UTF-8"))
+        print(proc.stderr.decode("UTF-8", errors="replace"))
 
     if to_file is not None:
-        with open(to_file, "w") as f:
+        with open(to_file, "w", encoding="UTF-8") as f:
             f.write("DATA: \n")
-            f.write(str(proc.stdout))
+            f.write(proc.stdout.decode("UTF-8", errors="replace"))
             f.write("ERR: \n")
-            f.write(str(proc.stderr))
+            f.write(proc.stderr.decode("UTF-8", errors="replace"))
 
 
 # source: https://stackoverflow.com/a/70310511/15624918

@@ -1,20 +1,20 @@
 import re
 from dataclasses import dataclass
-from typing import Literal, Optional, Tuple, Union
+from typing import Literal
 
 from api.submission.validations.statuses import ERROR, IGNORE, OK, STALE, WARN
 from api.utils import get_value
 
-STATUSES: Tuple[str] = (ERROR, IGNORE, OK, WARN, STALE)
+STATUSES: tuple[str, ...] = (ERROR, IGNORE, OK, WARN, STALE)
 
 
 @dataclass
 class ValidatorResult:
     name: str
-    status: Union[None, Literal[OK, WARN, ERROR, IGNORE, STALE]] = None
-    code: Optional[str] = None
-    context: Optional[dict] = None
-    validation_id: Optional[str] = None
+    status: None | Literal[OK, WARN, ERROR, IGNORE, STALE] = None
+    code: str | None = None
+    context: dict | None = None
+    validation_id: str | None = None
 
     def to_dict(self):
         return {

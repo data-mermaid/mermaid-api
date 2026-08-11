@@ -43,6 +43,10 @@ class SiteExtendedSerializer(ExtendedSerializer):
 
 
 class SiteSerializer(BaseAPISerializer):
+    # No SiteDuplicateCheckMixin here: this serializer's only write path is
+    # create_project's bulk copy into a brand-new project, which never has
+    # existing submitted data for the check's precondition to match against
+    # -- it would just be dead weight on every call.
     country_name = serializers.SerializerMethodField()
     project_name = serializers.SerializerMethodField()
     reef_type_name = serializers.SerializerMethodField()

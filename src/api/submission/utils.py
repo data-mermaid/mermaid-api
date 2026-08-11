@@ -1,8 +1,10 @@
 import json
 import logging
+import time
 
 from django.core.exceptions import ValidationError as DJValidationError
 from django.db import transaction
+from django.db.utils import OperationalError
 from django.utils import timezone
 from django.utils.translation import gettext_lazy
 from rest_framework.exceptions import ValidationError
@@ -49,7 +51,15 @@ SUCCESS_STATUS = 200
 VALIDATION_ERROR_STATUS = 400
 ERROR_STATUS = 500
 
+# See write_collect_record() for why deadlocks get retried.
+DEADLOCK_MAX_RETRIES = 3
+DEADLOCK_RETRY_DELAY = 0.25  # seconds; multiplied by attempt number
+
 logger = logging.getLogger(__name__)
+
+
+def _is_deadlock_error(err):
+    return isinstance(err, OperationalError) and "deadlock detected" in str(err).lower()
 
 
 def get_writer(collect_record, context):
@@ -100,7 +110,7 @@ def format_exception_errors(err):
     return {identifier: [msg]}
 
 
-def write_collect_record(collect_record, request, dry_run=False):
+def _write_collect_record_once(collect_record, request, dry_run=False):
     status = None
     result = None
     context = {"request": request}
@@ -115,8 +125,13 @@ def write_collect_record(collect_record, request, dry_run=False):
             status = VALIDATION_ERROR_STATUS
         except Exception as err:
             logger.exception("write_collect_record: {}".format(getattr(collect_record, "id")))
-            result = format_exception_errors(err)
             status = ERROR_STATUS
+            # A deadlock here can't be resolved by swallowing it into a normal
+            # ERROR_STATUS result - the transaction needs to be retried from
+            # scratch. Let it propagate to write_collect_record's retry loop.
+            if _is_deadlock_error(err):
+                raise
+            result = format_exception_errors(err)
         finally:
             if dry_run is True or status != SUCCESS_STATUS:
                 transaction.savepoint_rollback(sid)
@@ -136,6 +151,44 @@ def write_collect_record(collect_record, request, dry_run=False):
 
                 add_project_to_queue(collect_record.project_id)
         return status, result
+
+
+def write_collect_record(collect_record, request, dry_run=False):
+    """
+    Concurrent submissions to the same project can deadlock while writing
+    revision records (see api/models/revisions.py) - either while writer.write()
+    saves observations/sample units, or while the collect record itself is
+    deleted on submit. Postgres aborts the transaction when it detects a
+    deadlock, so it can't be recovered from inside that transaction; it has
+    to be retried from scratch with a fresh one, which is what this wraps
+    _write_collect_record_once() in a loop to do.
+    """
+    for attempt in range(DEADLOCK_MAX_RETRIES + 1):
+        try:
+            return _write_collect_record_once(collect_record, request, dry_run=dry_run)
+        except OperationalError as err:
+            if not _is_deadlock_error(err):
+                raise
+
+            if attempt == DEADLOCK_MAX_RETRIES:
+                logger.exception(
+                    "write_collect_record: deadlock retries exhausted for {}".format(
+                        getattr(collect_record, "id")
+                    )
+                )
+                return ERROR_STATUS, format_exception_errors(err)
+
+            logger.warning(
+                "write_collect_record: deadlock detected for %s, retrying (attempt %s/%s)",
+                getattr(collect_record, "id"),
+                attempt + 1,
+                DEADLOCK_MAX_RETRIES,
+            )
+            time.sleep(DEADLOCK_RETRY_DELAY * (attempt + 1))
+            refetched = CollectRecord.objects.get_or_none(id=collect_record.id)
+            if refetched is None:
+                return ERROR_STATUS, gettext_lazy("Not found")
+            collect_record = refetched
 
 
 def validate(validator_cls, model_cls, qry_params=None):
