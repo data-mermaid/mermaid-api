@@ -210,7 +210,7 @@ def get_token_algorithm(token):
 
 def get_jwks():
     jwks = {}
-    url = "https://{}/.well-known/jwks.json".format(settings.AUTH0_DOMAIN)
+    url = f"https://{settings.AUTH0_DOMAIN}/.well-known/jwks.json"
     resp = urlopen(url)
     if resp.getcode() != 200:
         return None
@@ -236,7 +236,7 @@ def decode_rsa(token):
             rsa_key,
             algorithms=["RS256"],
             audience=settings.SPA_ADMIN_CLIENT_ID,
-            issuer="https://{}/".format(settings.AUTH0_DOMAIN),
+            issuer=f"https://{settings.AUTH0_DOMAIN}/",
             # access_token='',
             options={"verify_at_hash": False},
         )
@@ -260,7 +260,7 @@ def decode_hs(token):
             algorithms=["HS256"],
         )
     except jwt.JWTError as e:
-        logger.debug("Decode token failed: {}".format(str(e)))
+        logger.debug(f"Decode token failed: {str(e)}")
         raise exceptions.AuthenticationFailed(e)
 
 
@@ -271,7 +271,7 @@ def decode(token):
     elif alg == "HS256":
         return decode_hs(token)
 
-    msg = "{} algorithm not supported".format(alg)
+    msg = f"{alg} algorithm not supported"
     raise exceptions.ValidationError(msg, code=400)
 
 

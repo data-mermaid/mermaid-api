@@ -51,17 +51,17 @@ from .mixins import MethodAuthenticationMixin, OrFilterSetMixin
 
 class ModelNameReadOnlyField(serializers.Field):
     def to_representation(self, obj):
-        return "{}".format(obj.name)
+        return f"{obj.name}"
 
 
 class ModelValReadOnlyField(serializers.Field):
     def to_representation(self, obj):
-        return "{}".format(obj.val)
+        return f"{obj.val}"
 
 
 class TagField(serializers.Field):
     def to_representation(self, obj):
-        return "{}".format(obj.name)
+        return f"{obj.name}"
 
     def to_internal_value(self, data):
         if not isinstance(data, str):
@@ -267,69 +267,67 @@ class SampleEventExtendedSerializer(BaseAPISerializer):
             raise Exception("SampleEventExtendedSerializer must be given a _sample_event string")
 
         self.fields["project_name"] = serializers.ReadOnlyField(
-            source="{}.site.project.name".format(self._sample_event)
+            source=f"{self._sample_event}.site.project.name"
         )
         self.fields["country_name"] = serializers.ReadOnlyField(
-            source="{}.site.country.name".format(self._sample_event)
+            source=f"{self._sample_event}.site.country.name"
         )
         self.fields["site_name"] = serializers.ReadOnlyField(
-            source="{}.site.name".format(self._sample_event)
+            source=f"{self._sample_event}.site.name"
         )
         self.fields["latitude"] = serializers.SerializerMethodField()
         self.fields["longitude"] = serializers.SerializerMethodField()
         self.fields["exposure_name"] = serializers.ReadOnlyField(
-            source="{}.site.exposure.name".format(self._sample_event)
+            source=f"{self._sample_event}.site.exposure.name"
         )
         self.fields["reef_slope_name"] = serializers.ReadOnlyField(
-            source="{}.reef_slope.name".format(self._sample_event)
+            source=f"{self._sample_event}.reef_slope.name"
         )
         self.fields["reef_type_name"] = serializers.ReadOnlyField(
-            source="{}.site.reef_type.name".format(self._sample_event)
+            source=f"{self._sample_event}.site.reef_type.name"
         )
         self.fields["reef_zone_name"] = serializers.ReadOnlyField(
-            source="{}.site.reef_zone.name".format(self._sample_event)
+            source=f"{self._sample_event}.site.reef_zone.name"
         )
         self.fields["sample_date"] = serializers.ReadOnlyField(
-            source="{}.sample_date".format(self._sample_event)
+            source=f"{self._sample_event}.sample_date"
         )
         self.fields["sample_time"] = serializers.ReadOnlyField(
-            source="{}.sample_time".format(self._sample_event)
+            source=f"{self._sample_event}.sample_time"
         )
         self.fields["tide_name"] = serializers.ReadOnlyField(
-            source="{}.tide.name".format(self._sample_event)
+            source=f"{self._sample_event}.tide.name"
         )
         self.fields["visibility_name"] = serializers.ReadOnlyField(
-            source="{}.visibility.name".format(self._sample_event)
+            source=f"{self._sample_event}.visibility.name"
         )
         self.fields["current_name"] = serializers.ReadOnlyField(
-            source="{}.current.name".format(self._sample_event)
+            source=f"{self._sample_event}.current.name"
         )
-        self.fields["depth"] = serializers.ReadOnlyField(
-            source="{}.depth".format(self._sample_event)
-        )
+        self.fields["depth"] = serializers.ReadOnlyField(source=f"{self._sample_event}.depth")
         self.fields["management_name"] = serializers.ReadOnlyField(
-            source="{}.management.name".format(self._sample_event)
+            source=f"{self._sample_event}.management.name"
         )
         self.fields["management_name_secondary"] = serializers.ReadOnlyField(
-            source="{}.management.name_secondary".format(self._sample_event)
+            source=f"{self._sample_event}.management.name_secondary"
         )
         self.fields["management_est_year"] = serializers.ReadOnlyField(
-            source="{}.management.est_year".format(self._sample_event)
+            source=f"{self._sample_event}.management.est_year"
         )
         self.fields["management_size"] = serializers.ReadOnlyField(
-            source="{}.management.size".format(self._sample_event)
+            source=f"{self._sample_event}.management.size"
         )
         self.fields["management_compliance"] = serializers.ReadOnlyField(
-            source="{}.management.compliance.name".format(self._sample_event)
+            source=f"{self._sample_event}.management.compliance.name"
         )
         self.fields["management_parties"] = serializers.SerializerMethodField()
         self.fields["management_rules"] = serializers.SerializerMethodField()
         self.fields["observers"] = serializers.SerializerMethodField()
         self.fields["site_notes"] = serializers.ReadOnlyField(
-            source="{}.site.notes".format(self._sample_event)
+            source=f"{self._sample_event}.site.notes"
         )
         self.fields["management_notes"] = serializers.ReadOnlyField(
-            source="{}.management.notes".format(self._sample_event)
+            source=f"{self._sample_event}.management.notes"
         )
 
         super(SampleEventExtendedSerializer, self).__init__(*args, **kwargs)
@@ -713,7 +711,7 @@ class BaseChoiceApiViewSet(MethodAuthenticationMixin, viewsets.ViewSet):
         try:
             return Response(choices[0])
         except IndexError:
-            raise NotFound("{} choice not found.".format(pk))
+            raise NotFound(f"{pk} choice not found.")
 
     def create(self, request):
         raise MethodNotAllowed("POST")

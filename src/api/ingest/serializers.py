@@ -74,7 +74,7 @@ class CollectRecordCSVListSerializer(ListSerializer):
         if self._looks_like_month_day_swap(month, day):
             self._possible_date_swap_row_ids.add(row["id"])
 
-        return "{}-{}-{}".format(year, month, day)
+        return f"{year}-{month}-{day}"
 
     def _looks_like_month_day_swap(self, month, day):
         # A month value >12 with a day value that would itself be a valid
@@ -359,7 +359,7 @@ class CollectRecordCSVSerializer(Serializer):
         val = val or []
         for email in val:
             if email.lower() not in project_profiles:
-                raise ValidationError("{} doesn't exist".format(email))
+                raise ValidationError(f"{email} doesn't exist")
         return val
 
     _valid_project_choice_ids = None
@@ -376,7 +376,7 @@ class CollectRecordCSVSerializer(Serializer):
             valid_ids = set((self.project_choices.get(choices_key) or {}).values())
             self._valid_project_choice_ids[choices_key] = valid_ids
         if val not in valid_ids:
-            raise ValidationError('{} "{}" does not exist in this project'.format(label, val))
+            raise ValidationError(f'{label} "{val}" does not exist in this project')
         return val
 
     def validate_data__sample_event__site(self, val):
