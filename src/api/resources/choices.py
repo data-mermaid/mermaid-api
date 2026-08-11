@@ -259,7 +259,7 @@ class ChoiceViewSet(BaseChoiceApiViewSet):
             timestamp = None
 
         if timestamp:
-            timestamp = timestamp.replace(tzinfo=datetime.timezone.utc)
+            timestamp = timestamp.replace(tzinfo=datetime.UTC)
 
         choices = self.get_choices()
         for key, choice_set in choices.items():

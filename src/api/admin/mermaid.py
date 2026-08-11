@@ -90,11 +90,7 @@ class ProjectAdmin(BaseAdmin):
     def admin_list(self, obj):
         pps = self._get_admins()
         return ", ".join(
-            [
-                "{} <{}>".format(p.profile.full_name, p.profile.email)
-                for p in pps
-                if p.project == obj
-            ]
+            [f"{p.profile.full_name} <{p.profile.email}>" for p in pps if p.project == obj]
         )
 
     def _get_sites(self):
@@ -113,7 +109,7 @@ class ProjectAdmin(BaseAdmin):
         return ", ".join([c.name for c in countries])
 
     def tag_list(self, obj):
-        return ", ".join("{}".format(t.name) for t in obj.tags.all())
+        return ", ".join(f"{t.name}" for t in obj.tags.all())
 
     tag_list.short_description = _("organizations")
 
@@ -329,7 +325,7 @@ class ManagementAdmin(BaseAdmin):
         if crs.count() > 0:
             for cr in crs:
                 admin_url = reverse(
-                    "admin:{}_collectrecord_change".format(SampleEvent._meta.app_label),
+                    f"admin:{SampleEvent._meta.app_label}_collectrecord_change",
                     args=(cr.pk,),
                 )
                 crstr = format_html('<a href="{}">{}</a>', admin_url, cr)
@@ -340,9 +336,7 @@ class ManagementAdmin(BaseAdmin):
             atleast_one_se = True
             for se in ses:
                 admin_url = reverse(
-                    "admin:{}_{}_change".format(
-                        SampleEvent._meta.app_label, SampleEvent._meta.model_name
-                    ),
+                    f"admin:{SampleEvent._meta.app_label}_{SampleEvent._meta.model_name}_change",
                     args=(se.pk,),
                 )
                 sestr = format_html('<a href="{}">{}</a>', admin_url, se)
@@ -458,10 +452,10 @@ class TagAdmin(BaseAdmin):
         ps = Project.objects.filter(tags=obj)
         for p in ps:
             admin_url = reverse(
-                "admin:{}_{}_change".format(Project._meta.app_label, Project._meta.model_name),
+                f"admin:{Project._meta.app_label}_{Project._meta.model_name}_change",
                 args=(p.pk,),
             )
-            app_url = "{}/projects/{}/project-info".format(settings.DEFAULT_DOMAIN_COLLECT, p.pk)
+            app_url = f"{settings.DEFAULT_DOMAIN_COLLECT}/projects/{p.pk}/project-info"
             pstr = format_html(
                 '<a href="{}">{}</a> [<a href="{}" target="_blank">{}</a>]',
                 admin_url,
@@ -481,7 +475,7 @@ class TagAdmin(BaseAdmin):
                     p.tags.remove(obj)
                     p.tags.add(replacement_obj)
 
-        return super(TagAdmin, self).delete_view(request, object_id, extra_context)
+        return super().delete_view(request, object_id, extra_context)
 
 
 @admin.register(Covariate)

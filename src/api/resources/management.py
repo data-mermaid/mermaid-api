@@ -141,7 +141,7 @@ class ManagementFilterSet(BaseAPIFilterSet):
             "access_restriction",
         )
         project_id = value
-        group_by = ",".join(['"{}"'.format(uf) for uf in unique_fields])
+        group_by = ",".join(['"{}"'.format(uf) for uf in unique_fields])  # noqa: UP032
 
         sql = """
             "management".id::text IN (
@@ -174,7 +174,7 @@ class ManagementFilterSet(BaseAPIFilterSet):
                         NOT(%s = ANY(agg_managements.project_ids))
                 ) AS management_ids
             )
-        """.format(group_by)
+        """.format(group_by)  # noqa: UP032
 
         return queryset.alias(
             _is_unique_management=RawSQL(sql, [project_id], output_field=BooleanField())

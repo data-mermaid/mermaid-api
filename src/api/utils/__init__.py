@@ -131,7 +131,7 @@ def get_sample_unit_number(instance):
     if self_number == "":
         self_number = self_label
     elif self_label != "":
-        self_number = "{} {}".format(self_number, self_label)
+        self_number = f"{self_number} {self_label}"
 
     return self_number
 

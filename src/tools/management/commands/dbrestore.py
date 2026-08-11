@@ -15,7 +15,7 @@ class Command(BaseCommand):
 
     def __init__(self):
         self.requires_system_checks = []
-        super(Command, self).__init__()
+        super().__init__()
         self.env = os.environ.get("ENV", "none").lower()
         self.restore = self.env
         self.local_file_location = os.path.join(os.path.sep, "tmp", "mermaid")
@@ -70,7 +70,7 @@ class Command(BaseCommand):
                             download_file_name = localfile
 
                 if download_file_name is None:
-                    raise ValueError("No local files for {} found".format(self.env))
+                    raise ValueError(f"No local files for {self.env} found")
                 self.stdout.write(download_file_name)
 
             else:
@@ -95,17 +95,13 @@ class Command(BaseCommand):
                 download_file_name = os.path.join(
                     os.path.sep,
                     self.local_file_location,
-                    "{0}_{1}".format(
-                        latest_obj["LastModified"].strftime("%Y%m%d%H%M%S"),
-                        latest_obj["Key"].replace("/", "_"),
-                    ),
+                    f"{latest_obj['LastModified'].strftime('%Y%m%d%H%M%S')}"
+                    f"_{latest_obj['Key'].replace('/', '_')}",
                 )
 
                 # If the file doesn't exist locally, then download
                 if not os.path.isfile(download_file_name):  # Check if the file exists
-                    self.stdout.write(
-                        "Downloading: {0} to: {1} ".format(latest_obj["Key"], download_file_name)
-                    )
+                    self.stdout.write(f"Downloading: {latest_obj['Key']} to: {download_file_name} ")
 
                     s3.download_file(
                         settings.AWS_BACKUP_BUCKET,
@@ -145,7 +141,7 @@ class Command(BaseCommand):
         cmd = "psql -a -v ON_ERROR_STOP=1 -h {db_host} -d postgres -U {db_user}".format(**params)
         for q in init_db_commands:
             query = "-c '%s'" % q
-            psql_command = "%s %s" % (cmd, query.format(**params))
+            psql_command = f"{cmd} {query.format(**params)}"
             self.stdout.write(psql_command)
             command = shlex.split(psql_command)
             run_subprocess(command)

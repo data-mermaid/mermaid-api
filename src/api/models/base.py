@@ -58,7 +58,7 @@ class Profile(models.Model):
         db_table = "profile"
 
     def __str__(self):
-        return "{} [{}]".format(self.full_name, self.pk)
+        return f"{self.full_name} [{self.pk}]"
 
     @property
     def full_name(self):  # noqa
@@ -213,4 +213,4 @@ class Application(BaseModel):
         # is ever relaxed, per-profile uniqueness must be restored explicitly.
 
     def __str__(self):
-        return "{} - {}".format(self.profile, self.client_id)
+        return f"{self.profile} - {self.client_id}"
