@@ -211,7 +211,11 @@ def _format_errors(errors):
     if errors is None:
         return None
 
-    return {k: v[0] for k, v in errors.items()}
+    # Field errors are normally a list (DRF's {field: [messages]} convention),
+    # but a value can also be a nested dict -- e.g. the duplicate-check
+    # mixins' {"duplicate": {"code": ..., "matches": [...]}} -- which isn't
+    # subscriptable by [0].
+    return {k: (v[0] if isinstance(v, list) else v) for k, v in errors.items()}
 
 
 def _get_serialized_record(viewset, profile_id, record_id):
