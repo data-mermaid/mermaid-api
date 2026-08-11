@@ -39,7 +39,7 @@ class MockRequest:
         self.GET = {}
         self.query_params = {}
         if token:
-            self.META = {"HTTP_AUTHORIZATION": "Bearer {}".format(token)}
+            self.META = {"HTTP_AUTHORIZATION": f"Bearer {token}"}
         else:
             self.META = {}
 

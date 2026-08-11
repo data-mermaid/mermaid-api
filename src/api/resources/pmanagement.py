@@ -40,7 +40,7 @@ def to_governance(field, row, serializer_instance):
     parties = ""
     project_pk = row.get("project_id")
     management_id = row.get("id")
-    lookup = serializer_instance.serializer_cache.get("management_parties-{}".format(project_pk))
+    lookup = serializer_instance.serializer_cache.get(f"management_parties-{project_pk}")
     if lookup:
         parties = lookup.get(str(management_id))
     else:
@@ -54,7 +54,7 @@ def to_governance(field, row, serializer_instance):
 def to_management_rules(field, row, serializer_instance):
     project_pk = row.get("project_id")
     management_id = row.get("id")
-    lookup = serializer_instance.serializer_cache.get("management_rules-{}".format(project_pk))
+    lookup = serializer_instance.serializer_cache.get(f"management_rules-{project_pk}")
     if lookup:
         return lookup.get(str(management_id))
 

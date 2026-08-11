@@ -322,7 +322,7 @@ class FishGroupingRelationship(models.Model):
     )
 
     def __str__(self):
-        return "%s > %s" % (self.grouping, self.attribute)
+        return f"{self.grouping} > {self.attribute}"
 
 
 class FishFamily(FishAttribute):

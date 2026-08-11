@@ -77,7 +77,7 @@ class Auth0Users(Auth0ManagementAPI):
             page += 1
 
     def get_user_by_email(self, email):
-        query = 'email.raw:"{}"'.format(email)
+        query = f'email.raw:"{email}"'
         users = []
         for user_set in self.get_user_sets(query=query):
             users.extend(list(user_set))

@@ -528,7 +528,7 @@ class SampleEvent(BaseModel, JSONMixin):
         ordering = ("site", "sample_date")
 
     def __str__(self):
-        return "%s %s" % (self.site.__str__(), self.sample_date)
+        return f"{self.site.__str__()} {self.sample_date}"
 
 
 class SampleUnit(BaseModel):
@@ -582,7 +582,7 @@ class Transect(SampleUnit):
     def __str__(self):
         su_number = get_sample_unit_number(self)
         if su_number != "":
-            su_number = " {}".format(su_number)
+            su_number = f" {su_number}"
         return _("%s%s") % (self.sample_event.__str__(), su_number)
 
 
@@ -601,7 +601,7 @@ class BaseQuadrat(SampleUnit):
     def __str__(self):
         su_number = get_sample_unit_number(self)
         if su_number != "":
-            su_number = " {}".format(su_number)
+            su_number = f" {su_number}"
         return _("%s%s") % (self.sample_event.__str__(), su_number)
 
 
