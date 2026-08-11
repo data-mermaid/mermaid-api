@@ -55,6 +55,10 @@ class ManagementExtendedSerializer(ExtendedSerializer):
 
 
 class ManagementSerializer(BaseAPISerializer):
+    # No ManagementDuplicateCheckMixin here: this serializer's only write
+    # path is create_project's bulk copy into a brand-new project, which
+    # never has existing submitted data for the check's precondition to
+    # match against -- it would just be dead weight on every call.
     rules = serializers.SerializerMethodField(source="get_rules")
     project_name = serializers.SerializerMethodField()
     size = serializers.DecimalField(
