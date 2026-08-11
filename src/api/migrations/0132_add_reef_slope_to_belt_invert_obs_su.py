@@ -5,7 +5,7 @@ from django.db import migrations, models
 
 class Migration(migrations.Migration):
     dependencies = [
-        ("api", "0130_alter_belttransectwidthcondition_options"),
+        ("api", "0131_summarysampleeventmodel_depth_avg_and_more"),
     ]
 
     operations = [
