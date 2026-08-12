@@ -12,7 +12,7 @@ class Command(BaseCommand):
     help = """SimpleQ worker"""
 
     def __init__(self):
-        super(Command, self).__init__()
+        super().__init__()
 
     def add_arguments(self, parser):
         parser.add_argument("-n", dest="queue_name", default=False, help="Queue name")

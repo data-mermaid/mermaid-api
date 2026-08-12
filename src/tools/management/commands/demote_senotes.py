@@ -10,7 +10,7 @@ class Command(BaseCommand):
     """
 
     def __init__(self):
-        super(Command, self).__init__()
+        super().__init__()
         self.dryrun = False
         self.id = False
 
