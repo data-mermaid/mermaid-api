@@ -1,4 +1,5 @@
 import os
+import re
 import shlex
 
 from django.conf import settings
@@ -6,7 +7,9 @@ from django.core.management.base import BaseCommand, CommandError
 
 from api.utils import run_subprocess, s3
 
-BACKUP_EXTENSION = "dump"
+DUMP_EXT = ".dump"
+LEGACY_DUMP_EXT = ".sql"
+RESTORABLE_EXTENSIONS = (DUMP_EXT, LEGACY_DUMP_EXT)
 
 
 class Command(BaseCommand):
@@ -55,14 +58,16 @@ class Command(BaseCommand):
                 download_file_name = None
                 tmpdir = os.path.join(os.path.sep, self.local_file_location)
 
-                expected_prefix = f"{self.restore}_mermaid_backup_"
-                expected_suffix = f".{BACKUP_EXTENSION}"
+                # Match "{env}_mermaid_backup_*" as written by dbbackup, optionally with the
+                # timestamp prefix an S3 download adds. Anchoring on the env keeps a dump from
+                # another environment (eg prod) from being restored over this one.
+                pattern = re.compile(rf"^(\d+_)?{re.escape(self.restore)}_mermaid_backup_.+$")
                 for f in os.listdir(tmpdir):
                     localfile = os.path.join(tmpdir, f)
                     if (
                         os.path.isfile(localfile)
-                        and f.startswith(expected_prefix)
-                        and f.endswith(expected_suffix)
+                        and pattern.match(f)
+                        and any(f.endswith(ext) for ext in RESTORABLE_EXTENSIONS)
                     ):
                         if download_file_name is None or os.path.getmtime(
                             localfile
@@ -70,22 +75,22 @@ class Command(BaseCommand):
                             download_file_name = localfile
 
                 if download_file_name is None:
-                    raise ValueError("No local files for {} found".format(self.env))
+                    raise ValueError(f"No local {self.restore} backup files found in {tmpdir}")
                 self.stdout.write(download_file_name)
 
             else:
                 self.stdout.write("Retrieving latest backup")
+                prefix = f"{self.restore}/"
                 backup_objects = [
                     obj
-                    for obj in s3.list_objects(
-                        settings.AWS_BACKUP_BUCKET, prefix=f"{self.restore}/"
-                    )
-                    if not obj["Key"].endswith("/") and obj["Key"].endswith(f".{BACKUP_EXTENSION}")
+                    for obj in s3.list_objects(settings.AWS_BACKUP_BUCKET, prefix=prefix)
+                    if not obj["Key"].endswith("/") and obj["Key"].endswith(RESTORABLE_EXTENSIONS)
                 ]
 
                 if not backup_objects:
                     raise ValueError(
-                        f"{settings.AWS_BACKUP_BUCKET} does not exist or is not listable"
+                        f"No backups found at s3://{settings.AWS_BACKUP_BUCKET}/{prefix} "
+                        f"(expected keys ending in {' or '.join(RESTORABLE_EXTENSIONS)})"
                     )
 
                 latest_obj = max(backup_objects, key=lambda o: o["LastModified"])
@@ -116,7 +121,7 @@ class Command(BaseCommand):
             if (
                 not download_file_name
                 or not os.path.isfile(download_file_name)
-                or not download_file_name.endswith(f".{BACKUP_EXTENSION}")
+                or not download_file_name.endswith(RESTORABLE_EXTENSIONS)
             ):
                 raise ValueError("No database dump file to restore")
             self._init_db()
@@ -163,6 +168,7 @@ class Command(BaseCommand):
         cmd_str = "pg_restore -O -x -F c --jobs=4 -U {db_user} -h {db_host} -d {db_name} {sql_loc}".format(
             **params
         )
+
         self.stdout.write("$> %s" % cmd_str)
 
         command = shlex.split(cmd_str)
