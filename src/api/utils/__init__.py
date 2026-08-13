@@ -9,11 +9,12 @@ from zipfile import ZIP_DEFLATED, ZipFile
 
 from django.conf import settings
 from django.contrib.admin.utils import NestedObjects
-from django.core.exceptions import ObjectDoesNotExist
+from django.core.exceptions import ObjectDoesNotExist, SuspiciousFileOperation
 from django.db import IntegrityError, router
 from django.db.models.deletion import ProtectedError
 from django.db.models.fields.related import OneToOneRel
 from django.utils import timezone
+from django.utils.text import get_valid_filename
 from django.utils.translation import gettext_lazy as _
 from rest_framework.exceptions import ValidationError
 
@@ -24,6 +25,17 @@ class Testing:
 
     def __exit__(self, *args, **kwargs):
         settings.TESTING = False
+
+
+def safe_get_valid_filename(name, default="untitled"):
+    """Like django.utils.text.get_valid_filename, but falls back to `default`
+    instead of raising SuspiciousFileOperation when the name can't be turned
+    into a safe filename (e.g. names that are empty or made up entirely of
+    characters that get stripped down to '', '.' or '..')."""
+    try:
+        return get_valid_filename(name)
+    except SuspiciousFileOperation:
+        return default
 
 
 def is_match(string, match_patterns):
