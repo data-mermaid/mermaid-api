@@ -1,10 +1,10 @@
 from django.db.models.query import QuerySet
 from django.http import HttpResponseBadRequest, StreamingHttpResponse
 from django.utils import timezone
-from django.utils.text import get_valid_filename
 
 from api.models import Project
 from api.reports import RawCSVReport
+from api.utils import safe_get_valid_filename
 
 
 def _get_related_records(qs, report_model_cls, relationship):
@@ -76,7 +76,7 @@ def get_csv_response(
 
     fields = [f.display for f in serializer_class.get_fields()]
 
-    project_name = get_valid_filename(project.name)[:100]
+    project_name = safe_get_valid_filename(project.name, default=str(project.pk))[:100]
     time_stamp = timezone.now().strftime("%Y%m%d")
 
     file_name = f"{project_name}-{time_stamp}.csv"
