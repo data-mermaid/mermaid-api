@@ -1,21 +1,20 @@
 import re
 from dataclasses import dataclass
-from typing import Literal, Optional, Tuple, Union
-
-from dotty_dict import dotty
+from typing import Literal
 
 from api.submission.validations.statuses import ERROR, IGNORE, OK, STALE, WARN
+from api.utils import get_value
 
-STATUSES: Tuple[str] = (ERROR, IGNORE, OK, WARN, STALE)
+STATUSES: tuple[str, ...] = (ERROR, IGNORE, OK, WARN, STALE)
 
 
 @dataclass
 class ValidatorResult:
     name: str
-    status: Union[None, Literal[OK, WARN, ERROR, IGNORE, STALE]] = None
-    code: Optional[str] = None
-    context: Optional[dict] = None
-    validation_id: Optional[str] = None
+    status: None | Literal[OK, WARN, ERROR, IGNORE, STALE] = None
+    code: str | None = None
+    context: dict | None = None
+    validation_id: str | None = None
 
     def to_dict(self):
         return {
@@ -118,26 +117,18 @@ class BaseValidator:
         return OK, None, context
 
     def get_value(self, record, key):
-        data = dotty(record)
-        try:
-            return data[key]
-        except KeyError:
-            return None
+        return get_value(record, key, delimiter=".")
 
     def get_numeric_value(self, record, key):
-        data = dotty(record)
-        try:
-            value = data[key]
-            if value in (None, ""):
-                return 0
-            if isinstance(value, str):
-                # Coerce only if value is a string
-                try:
-                    if "." in value:
-                        return float(value)
-                    return int(value)
-                except ValueError:
-                    return 0
-            return value
-        except KeyError:
+        value = get_value(record, key, delimiter=".")
+        if value in (None, ""):
             return 0
+        if isinstance(value, str):
+            # Coerce only if value is a string
+            try:
+                if "." in value:
+                    return float(value)
+                return int(value)
+            except ValueError:
+                return 0
+        return value

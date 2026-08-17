@@ -11,7 +11,7 @@ from django.db.models import ProtectedError, Q
 from django.http import FileResponse
 from django.template.defaultfilters import pluralize
 from django.utils.functional import cached_property
-from rest_framework import exceptions, status
+from rest_framework import exceptions, serializers, status
 from rest_framework.decorators import action
 from rest_framework.response import Response
 
@@ -21,11 +21,17 @@ from ..notifications import notify_cr_owners_site_mr_deleted
 from ..permissions import ProjectDataAdminPermission
 from ..signals.classification import post_edit
 from ..utils import create_iso_date_string, get_protected_related_objects, truthy
+from ..utils.duplicates import (
+    NOT_UNIQUE_SITE_CODE,
+    SIMILAR_NAME_CODE,
+    find_duplicate_managements,
+    find_duplicate_sites,
+)
 from ..utils.project import get_safe_project_name
 from ..utils.sample_unit_methods import edit_transect_method
 
 
-class ProtectedResourceMixin(object):
+class ProtectedResourceMixin:
     def destroy(self, request, *args, **kwargs):
         instance = self.get_object()
         try:
@@ -56,10 +62,11 @@ class NotifyDeletedSiteMRMixin(ProtectedResourceMixin):
         return response
 
 
-class CreateOrUpdateSerializerMixin(object):
+class CreateOrUpdateSerializerMixin:
     def create(self, validated_data):
         try:
-            return super().create(validated_data)
+            with transaction.atomic():
+                return super().create(validated_data)
         except IntegrityError as err:
             if "violates unique constraint" in str(err).lower():
                 ModelClass = self.Meta.model
@@ -68,9 +75,109 @@ class CreateOrUpdateSerializerMixin(object):
             raise
 
 
+class _DuplicateCheckMixin:
+    """
+    Shared machinery for SiteDuplicateCheckMixin/ManagementDuplicateCheckMixin
+    below: reject creation of a row that duplicates an existing, data-bearing
+    row in the same project, with an "ignore_duplicate_warning": true escape
+    hatch in the request body.
+
+    ignore_duplicate_warning has to be injected via get_fields() rather than
+    declared as a normal class-level serializer field: DRF's metaclass only
+    collects declared fields from bases that are themselves already-processed
+    Serializer subclasses, and this is a plain mixin, so a class-level Field
+    here would silently never reach validated_data.
+
+    The check itself runs in validate() rather than create(): it needs to
+    raise before .save() so every caller's existing is_valid()-based error
+    handling (create_project's per-item error accumulation, sync push's
+    apply_changes) catches it correctly instead of it escaping as an
+    uncaught exception mid-save.
+    """
+
+    def get_fields(self):
+        fields = super().get_fields()
+        fields["ignore_duplicate_warning"] = serializers.BooleanField(
+            write_only=True, required=False, default=False
+        )
+        return fields
+
+    def _should_check_duplicates(self, attrs):
+        ignore_duplicate_warning = attrs.pop("ignore_duplicate_warning", False)
+        return self.instance is None and not ignore_duplicate_warning
+
+    def _reject_if_duplicate(self, duplicates, message, code, field="name"):
+        if duplicates:
+            # code/matches are nested under "duplicate" (rather than sibling
+            # keys next to `field`) so DRF's error-detail normalization -- which
+            # wraps any non-list/dict value in a list -- doesn't turn code into
+            # a single-item list; nesting them in a dict value sidesteps that.
+            raise exceptions.ValidationError(
+                {
+                    field: [message],
+                    "duplicate": {"code": code, "matches": [str(d.id) for d in duplicates[:3]]},
+                }
+            )
+
+
+class SiteDuplicateCheckMixin(_DuplicateCheckMixin):
+    """
+    Rejects Site creation when a similarly-named, nearby Site with submitted
+    data already exists in the same project -- see find_duplicate_sites. Pass
+    "ignore_duplicate_warning": true in the request body to skip the check
+    and create anyway.
+    """
+
+    def validate(self, attrs):
+        attrs = super().validate(attrs)
+
+        if self._should_check_duplicates(attrs):
+            duplicates = find_duplicate_sites(
+                project_id=attrs["project"].pk,
+                name=attrs.get("name"),
+                location=attrs.get("location"),
+                exclude_id=attrs.get("id"),
+            )
+            self._reject_if_duplicate(
+                duplicates,
+                "A site with a similar name and submitted data already exists nearby. "
+                "Pass ignore_duplicate_warning=true to create anyway.",
+                NOT_UNIQUE_SITE_CODE,
+            )
+
+        return attrs
+
+
+class ManagementDuplicateCheckMixin(_DuplicateCheckMixin):
+    """
+    Rejects Management creation when a name-matching Management with
+    submitted data already exists in the same project -- see
+    find_duplicate_managements. Pass "ignore_duplicate_warning": true in the
+    request body to skip the check and create anyway.
+    """
+
+    def validate(self, attrs):
+        attrs = super().validate(attrs)
+
+        if self._should_check_duplicates(attrs):
+            duplicates = find_duplicate_managements(
+                project_id=attrs["project"].pk,
+                name=attrs.get("name"),
+                exclude_id=attrs.get("id"),
+            )
+            self._reject_if_duplicate(
+                duplicates,
+                "A management regime with a matching name and submitted data already "
+                "exists. Pass ignore_duplicate_warning=true to create anyway.",
+                SIMILAR_NAME_CODE,
+            )
+
+        return attrs
+
+
 # Use this to override DRF DEFAULT_AUTHENTICATION_CLASSES (in settings) from ViewSet for specific methods
 # Avoids 401s for unprotected endpoints -- but 403s (permissions classes) unaffected
-class MethodAuthenticationMixin(object):
+class MethodAuthenticationMixin:
     # method_authentication_classes = {
     #     "OPTIONS": None,
     #     "GET": None,
@@ -93,13 +200,13 @@ class MethodAuthenticationMixin(object):
         return request
 
 
-class OrFilterSetMixin(object):
+class OrFilterSetMixin:
     def str_or_lookup(self, queryset, name, value, key=None, lookup_expr="iexact"):
         if not isinstance(name, (list, set, tuple)):
             name = [name]
         q = Q()
         for n in name:
-            fieldname = "{}__{}".format(n, lookup_expr)
+            fieldname = f"{n}__{lookup_expr}"
             for v in set(value):
                 if v is not None and v != "":
                     predicate = {fieldname: str(v).strip()}
@@ -122,7 +229,7 @@ class OrFilterSetMixin(object):
         return self.str_or_lookup(queryset, name, value, "name", "contains")
 
 
-class SampleUnitMethodEditMixin(object):
+class SampleUnitMethodEditMixin:
     def edit_sample_unit(self, request, pk):
         collect_record_owner = Project.objects.get_or_none(id=request.data.get("owner"))
         if collect_record_owner is None:
@@ -150,7 +257,7 @@ class SampleUnitMethodEditMixin(object):
             )
 
 
-class SampleUnitMethodSummaryReport(object):
+class SampleUnitMethodSummaryReport:
     @action(detail=False, methods=["GET"])
     def xlsx(self, request, project_pk):
         from ..utils.reports import create_sample_unit_method_summary_report
@@ -242,7 +349,7 @@ class CopyRecordsMixin:
         return Response(new_records)
 
 
-class DynamicFieldsMixin(object):
+class DynamicFieldsMixin:
     """
     A serializer mixin that takes an additional `fields` argument that controls
     which fields should be displayed.
@@ -279,7 +386,7 @@ class DynamicFieldsMixin(object):
         separated (?fields=id,name,url,email).
 
         """
-        fields = super(DynamicFieldsMixin, self).fields
+        fields = super().fields
 
         if not hasattr(self, "_context"):
             # We are being called before a request cycle

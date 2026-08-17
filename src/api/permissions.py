@@ -1,6 +1,11 @@
+import uuid
+from collections.abc import Callable
+from typing import Any
+
 from django.core.exceptions import ObjectDoesNotExist
 from rest_framework import permissions
-from rest_framework.exceptions import NotFound
+from rest_framework.exceptions import NotFound, ParseError
+from rest_framework.request import Request
 
 from .exceptions import check_uuid
 from .models import CollectRecord, Project, ProjectProfile
@@ -23,11 +28,96 @@ class UnauthenticatedReadOnlyPermission(permissions.BasePermission):
         return request.method in permissions.SAFE_METHODS
 
 
-def get_project(pk):
+PROJECT_CACHE_ATTR = "_project_cache"
+PROJECT_PROFILE_CACHE_ATTR = "_project_profile_cache"
+# Request-scoped memoization cache attrs used by get_project/get_project_profile.
+# Shared by sync/utils.create_view_request (to propagate the caches onto
+# derived ViewRequests) and sync/views._invalidate_project_caches (to clear
+# them after a write) - import from here rather than re-declaring the names.
+REQUEST_CACHE_ATTRS = (PROJECT_CACHE_ATTR, PROJECT_PROFILE_CACHE_ATTR)
+
+
+def cached_lookup(
+    request: Request | None, cache_attr: str, key: Any, loader: Callable[[], Any]
+) -> Any:
+    """Fetch `key` via `loader()`, memoizing on a dict stored as `cache_attr`
+    on `request`. The dict is created lazily on `request` itself on first use
+    (and shared with any derived request objects that copy the attribute
+    reference, see sync/utils.create_view_request), so repeated permission
+    checks against the same request object avoid re-running `loader` for the
+    same key."""
+    if request is None:
+        return loader()
+
+    cache = getattr(request, cache_attr, None)
+    if cache is None:
+        cache = {}
+        setattr(request, cache_attr, cache)
+    elif key in cache:
+        return cache[key]
+
+    value = loader()
+    cache[key] = value
+    return value
+
+
+def get_project(pk, request=None):
+    pk = check_uuid(pk)
+    cache_key = uuid.UUID(str(pk))
+
+    def _load():
+        try:
+            return Project.objects.get(pk=pk)
+        except Project.DoesNotExist:
+            raise NotFound("Not found: project %s" % pk)
+
+    return cached_lookup(request, PROJECT_CACHE_ATTR, cache_key, _load)
+
+
+def get_project_profile(project, profile, request=None):
+    """Like ProjectProfile.objects.get_or_none(project=project, profile=profile),
+    but memoized per-request (see cached_lookup) since permission classes
+    commonly look up the same (project, profile) pair multiple times per
+    request."""
+    if project is None or profile is None:
+        return None
+
+    return cached_lookup(
+        request,
+        PROJECT_PROFILE_CACHE_ATTR,
+        (project.pk, profile.pk),
+        lambda: ProjectProfile.objects.get_or_none(project=project, profile=profile),
+    )
+
+
+def invalidate_project(request, pk):
+    """Drop the cached Project for `pk` (see get_project) so a later lookup
+    re-fetches it instead of reusing a pre-write instance - e.g. after a
+    sync push writes a project's own fields."""
+    cache = getattr(request, PROJECT_CACHE_ATTR, None)
+    if cache is None:
+        return
     try:
-        return Project.objects.get(pk=check_uuid(pk))
-    except Project.DoesNotExist:
-        raise NotFound("Not found: project %s" % pk)
+        cache_key = uuid.UUID(str(check_uuid(pk)))
+    except ParseError:
+        return
+    cache.pop(cache_key, None)
+
+
+def invalidate_project_profile(request, project_pk, profile):
+    """Drop the cached ProjectProfile for (project_pk, profile) (see
+    get_project_profile) so a later lookup re-fetches it - e.g. after a sync
+    push writes a profile's own role. `profile` must be a real model
+    instance: get_project_profile is only ever looked up by
+    request.user.profile, never a record's own "profile" field."""
+    cache = getattr(request, PROJECT_PROFILE_CACHE_ATTR, None)
+    if cache is None or profile is None:
+        return
+    try:
+        project_uuid = uuid.UUID(str(project_pk))
+    except ValueError:
+        return
+    cache.pop((project_uuid, profile.pk), None)
 
 
 def data_policy_permission(request, view, project_policy):
@@ -35,7 +125,7 @@ def data_policy_permission(request, view, project_policy):
         return False
 
     pk = get_project_pk(request, view)
-    project = get_project(pk)
+    project = get_project(pk, request=request)
 
     policy = getattr(project, view.project_policy, None)
     if policy and policy >= project_policy:
@@ -68,8 +158,8 @@ class ProjectDataPermission(permissions.BasePermission):
             return False
         pk = get_project_pk(request, view)
 
-        project = get_project(pk)
-        pp = ProjectProfile.objects.get_or_none(project=project, profile=user.profile)
+        project = get_project(pk, request=request)
+        pp = get_project_profile(project, user.profile, request=request)
         if pp is None:
             return False
         return True
@@ -90,8 +180,8 @@ class ProjectDataCollectorPermission(permissions.BasePermission):
             return False
         pk = get_project_pk(request, view)
 
-        project = get_project(pk)
-        pp = ProjectProfile.objects.get_or_none(project=project, profile=user.profile)
+        project = get_project(pk, request=request)
+        pp = get_project_profile(project, user.profile, request=request)
         if pp is None:
             return False
         if project.is_open:
@@ -107,8 +197,8 @@ class ProjectDataAdminPermission(permissions.BasePermission):
             return False
         pk = get_project_pk(request, view)
 
-        project = get_project(pk)
-        pp = ProjectProfile.objects.get_or_none(project=project, profile=user.profile)
+        project = get_project(pk, request=request)
+        pp = get_project_profile(project, user.profile, request=request)
         if pp is None:
             return False
         return pp.is_admin

@@ -144,9 +144,7 @@ class InferenceStack(Stack):
                 "failures invisible to the Errors metric) — 5 or more in a 5-minute "
                 "window, e.g. a bad model artifact or unresolvable classifier_version"
             ),
-            metric=processing_error_metric.metric(
-                statistic="Sum", period=Duration.minutes(5)
-            ),
+            metric=processing_error_metric.metric(statistic="Sum", period=Duration.minutes(5)),
             threshold=5,
             evaluation_periods=1,
             comparison_operator=cw.ComparisonOperator.GREATER_THAN_OR_EQUAL_TO_THRESHOLD,

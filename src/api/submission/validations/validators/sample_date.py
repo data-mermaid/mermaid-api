@@ -49,7 +49,7 @@ class SampleDateValidator(BaseValidator):
 
         date_str = date_str or ""
         time_str = time_str or "00:00"
-        sample_date = parse_datetime("{} {}".format(date_str, time_str))
+        sample_date = parse_datetime(f"{date_str} {time_str}")
         if sample_date is None:
             return False
         sample_date = sample_date.replace(tzinfo=tzinfo)

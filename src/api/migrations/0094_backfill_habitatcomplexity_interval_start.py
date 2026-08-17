@@ -17,9 +17,8 @@ def backfill_interval_start(apps, schema_editor):
 
 
 class Migration(migrations.Migration):
-
     dependencies = [
-        ('api', '0093_auto_20251020_2113'),
+        ("api", "0093_auto_20251020_2113"),
     ]
 
     operations = [

@@ -47,6 +47,16 @@ class SummarySampleEventBaseModel(models.Model):
     management_rules = models.JSONField(null=True, blank=True)
     management_notes = models.TextField(blank=True, null=True)
     observers = models.JSONField(null=True, blank=True)
+    depth_avg = models.DecimalField(
+        max_digits=4, decimal_places=2, null=True, blank=True, verbose_name="depth mean (m)"
+    )
+    depth_sd = models.DecimalField(
+        max_digits=4,
+        decimal_places=2,
+        null=True,
+        blank=True,
+        verbose_name="depth standard deviation (m)",
+    )
     protocols = models.JSONField(null=True, blank=True)  # most keys changed inside here
     data_policy_beltfish = models.CharField(max_length=50)
     data_policy_benthiclit = models.CharField(max_length=50)
@@ -102,31 +112,35 @@ class SummarySampleEventSQLModel(SummarySampleEventBaseModel):
             GROUP BY
                 mps.management_id
         ),
+        su_common AS (
+            SELECT sample_event_id, observers, depth FROM beltfish_su
+            UNION ALL
+            SELECT sample_event_id, observers, depth FROM benthiclit_su
+            UNION ALL
+            SELECT sample_event_id, observers, depth FROM benthicpit_su
+            UNION ALL
+            SELECT sample_event_id, observers, depth FROM benthicpqt_su
+            UNION ALL
+            SELECT sample_event_id, observers, depth FROM bleachingqc_su
+            UNION ALL
+            SELECT sample_event_id, observers, depth FROM habitatcomplexity_su
+            UNION ALL
+            SELECT sample_event_id, observers, depth FROM beltinvert_su
+        ),
         se_observers AS (
             SELECT sample_event_id,
             jsonb_agg(DISTINCT observer ORDER BY observer) AS observers
             FROM (
                 SELECT sample_event_id, jsonb_array_elements(observers) AS observer
-                FROM beltfish_su
-                UNION ALL
-                SELECT sample_event_id, jsonb_array_elements(observers) AS observer
-                FROM benthiclit_su
-                UNION ALL
-                SELECT sample_event_id, jsonb_array_elements(observers) AS observer
-                FROM benthicpit_su
-                UNION ALL
-                SELECT sample_event_id, jsonb_array_elements(observers) AS observer
-                FROM benthicpqt_su
-                UNION ALL
-                SELECT sample_event_id, jsonb_array_elements(observers) AS observer
-                FROM bleachingqc_su
-                UNION ALL
-                SELECT sample_event_id, jsonb_array_elements(observers) AS observer
-                FROM habitatcomplexity_su
-                UNION ALL
-                SELECT sample_event_id, jsonb_array_elements(observers) AS observer
-                FROM beltinvert_su
+                FROM su_common
             ) AS su_observers
+            GROUP BY sample_event_id
+        ),
+        se_depth AS (
+            SELECT sample_event_id,
+            ROUND(AVG(depth), 2) AS depth_avg,
+            ROUND(STDDEV(depth), 2) AS depth_sd
+            FROM su_common
             GROUP BY sample_event_id
         )
 
@@ -230,6 +244,8 @@ class SummarySampleEventSQLModel(SummarySampleEventBaseModel):
             ELSE ''
         END) AS data_policy_macroinvertebrate,
         se_observers.observers,
+        se_depth.depth_avg,
+        se_depth.depth_sd,
 
         jsonb_strip_nulls(jsonb_build_object(
             'beltfish', NULLIF(jsonb_strip_nulls(jsonb_build_object(
@@ -362,6 +378,7 @@ class SummarySampleEventSQLModel(SummarySampleEventBaseModel):
         ) pa ON (project.id = pa.project_id)
         
         INNER JOIN se_observers ON (sample_event.id = se_observers.sample_event_id)
+        INNER JOIN se_depth ON (sample_event.id = se_depth.sample_event_id)
 
         LEFT JOIN (
             SELECT project.id,

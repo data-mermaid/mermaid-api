@@ -1,15 +1,17 @@
-from typing import List
-
-from aws_cdk import CustomResource, Duration, Stack
-from aws_cdk import aws_guardduty as guardduty
-from aws_cdk import aws_iam as iam
-from aws_cdk import aws_lambda as lambda_
-from aws_cdk import custom_resources as cr
+from aws_cdk import (
+    CustomResource,
+    Duration,
+    Stack,
+    aws_guardduty as guardduty,
+    aws_iam as iam,
+    aws_lambda as lambda_,
+    custom_resources as cr,
+)
 from constructs import Construct
 
 
 class GuardDutyStack(Stack):
-    def __init__(self, scope: Construct, construct_id: str, s3_buckets: List[str], **kwargs):
+    def __init__(self, scope: Construct, construct_id: str, s3_buckets: list[str], **kwargs):
         super().__init__(scope, construct_id, **kwargs)
 
         # Create Lambda to create the service-linked role
@@ -18,7 +20,8 @@ class GuardDutyStack(Stack):
             "CreateGuardDutySLR",
             runtime=lambda_.Runtime.PYTHON_3_13,
             handler="index.handler",
-            code=lambda_.InlineCode("""
+            code=lambda_.InlineCode(
+                """
 import boto3
 from botocore.exceptions import ClientError
 
@@ -67,7 +70,8 @@ def handler(event, context):
                 ]
             )
     return {'Status': 'SUCCESS'}
-            """),
+            """
+            ),
             timeout=Duration.seconds(300),
             initial_policy=[
                 iam.PolicyStatement(actions=["iam:CreateServiceLinkedRole"], resources=["*"]),

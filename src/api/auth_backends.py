@@ -32,7 +32,7 @@ class JWTAuthentication(BaseAuthentication):
         header in a `401 Unauthenticated` response, or `None` if the
         authentication scheme should return `403 Permission Denied` responses.
         """
-        return '{0} realm="{1}"'.format("Bearer", self.www_authenticate_realm)
+        return f'Bearer realm="{self.www_authenticate_realm}"'
 
     def authenticate(self, request):
         """
@@ -41,7 +41,7 @@ class JWTAuthentication(BaseAuthentication):
         """
         jwt_token = get_jwt_token(request)
         if jwt_token is None or is_hs_token(jwt_token) is False:
-            logger.debug("Invalid Token: {}".format(jwt_token))
+            logger.debug(f"Invalid Token: {jwt_token}")
             return None
 
         try:

@@ -103,10 +103,6 @@ class Command(BaseCommand):
         if project_id:
             fs_qs = fs_qs.filter(indicator_set__project_id=project_id)
 
-        scanned_projects = {iset.project.name for iset in is_qs} | {
-            fs.indicator_set.project.name for fs in fs_qs
-        }
-
         per_project = defaultdict(
             lambda: {"indicator_sets": [], "finance_solutions": [], "investment_sources": []}
         )
@@ -135,7 +131,7 @@ class Command(BaseCommand):
             scope = "all projects"
 
         total = sum(counts.values())
-        n_projects = len(scanned_projects)
+        n_projects = len(per_project)
 
         lines = [
             f"# GFCR Data Audit — {today_str}",

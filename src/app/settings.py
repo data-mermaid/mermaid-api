@@ -103,6 +103,9 @@ DEV_EMAILS = [email.strip() for email in _dev_emails.split(",")]
 
 _allowed_hosts = os.environ.get("ALLOWED_HOSTS") or ""
 ALLOWED_HOSTS = [host.strip() for host in _allowed_hosts.split(",")]
+# In-container health probes hit http://localhost:8081/health/ (Host: localhost).
+# Allow it so it doesn't raise DisallowedHost on every probe.
+ALLOWED_HOSTS += ["localhost", "127.0.0.1"]
 
 # Look for Fargate IP, for health checks.
 METADATA_URI = os.getenv("ECS_CONTAINER_METADATA_URI", None)
@@ -234,7 +237,7 @@ STATIC_ROOT = os.path.join(BASE_DIR, "static")
 # *****************
 
 AUTH0_DOMAIN = os.environ.get("AUTH0_DOMAIN")
-AUTH0_USER_INFO_ENDPOINT = "https://{domain}/userinfo".format(domain=AUTH0_DOMAIN)
+AUTH0_USER_INFO_ENDPOINT = f"https://{AUTH0_DOMAIN}/userinfo"
 AUTH0_MANAGEMENT_API_AUDIENCE = os.environ.get("AUTH0_MANAGEMENT_API_AUDIENCE")
 MERMAID_API_AUDIENCE = os.environ.get("MERMAID_API_AUDIENCE")
 MERMAID_API_SIGNING_SECRET = os.environ.get("MERMAID_API_SIGNING_SECRET")
@@ -253,7 +256,7 @@ EMAIL_PORT = os.environ.get("EMAIL_PORT")
 EMAIL_HOST_USER = os.environ.get("EMAIL_HOST_USER")
 EMAIL_HOST_PASSWORD = os.environ.get("EMAIL_HOST_PASSWORD")
 EMAIL_USE_TLS = True
-DEFAULT_FROM_EMAIL = "MERMAID System <{}>".format(EMAIL_HOST_USER)
+DEFAULT_FROM_EMAIL = f"MERMAID System <{EMAIL_HOST_USER}>"
 WEBCONTACT_EMAIL = f"MERMAID Web Contact <{os.environ.get('WEBCONTACT_EMAIL')}>"
 
 API_NULLQUERY = "null"
@@ -320,6 +323,12 @@ def _sentry_before_send(event, hint):
 
 
 if ENVIRONMENT in ("dev", "prod"):
+    from sentry_sdk.integrations.logging import ignore_logger
+
+    # DisallowedHost is unactionable noise (health probes + bots with bogus Host
+    # headers) and was the top error by volume, blowing the Sentry error quota.
+    ignore_logger("django.security.DisallowedHost")
+
     sentry_sdk.init(
         dsn=os.environ.get("SENTRY_DSN"),
         environment=ENVIRONMENT,
