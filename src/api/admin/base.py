@@ -30,10 +30,10 @@ def lookup_field_from_choices(field_obj, value):
 
 def export_model_as_csv(modeladmin, request, queryset, field_list):
     response = HttpResponse(content_type="text/csv")
-    response["Content-Disposition"] = "attachment; filename=%s-%s-export_%s.csv" % (
-        __package__.lower(),
-        queryset.model.__name__.lower(),
-        datetime.datetime.now().strftime("%Y-%m-%d_%H-%M-%S"),
+    timestamp = datetime.datetime.now().strftime("%Y-%m-%d_%H-%M-%S")
+    response["Content-Disposition"] = (
+        f"attachment; filename={__package__.lower()}-{queryset.model.__name__.lower()}"
+        f"-export_{timestamp}.csv"
     )
 
     writer = csv.writer(response)

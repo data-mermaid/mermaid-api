@@ -675,14 +675,14 @@ class ProjectViewSet(BaseApiViewSet):
                 results = replace_sampleunit_objs(find_objs, replace_obj, field, profile)
                 transaction.savepoint_commit(sid)
             except obj_cls.DoesNotExist:
-                msg = "Replace {} {} does not exist".format(field, qp_replace_obj_id)
+                msg = f"Replace {field} {qp_replace_obj_id} does not exist"
                 logger.error(msg)
                 transaction.savepoint_rollback(sid)
                 raise exceptions.ValidationError(msg, code=400)
             except Exception as err:
                 logger.error(err)
                 transaction.savepoint_rollback(sid)
-                return Response("Unknown error while replacing {}s".format(field), status=500)
+                return Response(f"Unknown error while replacing {field}s", status=500)
 
         return Response(results)
 
@@ -699,7 +699,7 @@ class ProjectViewSet(BaseApiViewSet):
             return ProjectProfile.objects.get(project_id=project_id, profile_id=profile_id).profile
         except ProjectProfile.DoesNotExist:
             msg = f"[{profile_id}] Profile does not exist in project"
-            logger.error("Profile {} does not exist in project {}".format(profile_id, project_id))
+            logger.error(f"Profile {profile_id} does not exist in project {project_id}")
             raise exceptions.ValidationError(msg, code=400)
 
     @action(detail=True, methods=["put"])
