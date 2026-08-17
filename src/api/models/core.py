@@ -85,9 +85,7 @@ class Project(BaseModel, JSONMixin):
         (PUBLIC, _("public")),
     )
 
-    DATA_POLICY_CHOICES_UPDATED_ON = datetime.datetime(
-        2019, 2, 2, 0, 0, 0, 0, tzinfo=datetime.timezone.utc
-    )
+    DATA_POLICY_CHOICES_UPDATED_ON = datetime.datetime(2019, 2, 2, 0, 0, 0, 0, tzinfo=datetime.UTC)
 
     DATA_POLICY_CHOICES = (
         {
@@ -150,7 +148,7 @@ class Project(BaseModel, JSONMixin):
 
     @classmethod
     def from_db(cls, db, field_names, values):
-        instance = super(Project, cls).from_db(db, field_names, values)
+        instance = super().from_db(db, field_names, values)
         instance._loaded_values = dict(zip(field_names, values))
         return instance
 
@@ -173,7 +171,7 @@ class Project(BaseModel, JSONMixin):
         if self.name is not None:
             self.name = self.name.strip()
         self._new_values = model_to_dict(self, fields=notify_fields)
-        super(Project, self).save(*args, **kwargs)
+        super().save(*args, **kwargs)
 
         if hasattr(self, "_loaded_values"):
             self._loaded_values["status"] = self.status
@@ -405,7 +403,7 @@ class ProjectProfile(BaseModel):
         (COLLECTOR, _("collector")),
         (READONLY, _("read-only")),
     )
-    ROLES_UPDATED_ON = datetime.datetime(2019, 2, 2, 0, 0, 0, 0, tzinfo=datetime.timezone.utc)
+    ROLES_UPDATED_ON = datetime.datetime(2019, 2, 2, 0, 0, 0, 0, tzinfo=datetime.UTC)
 
     project = models.ForeignKey(Project, related_name="profiles", on_delete=models.CASCADE)
     profile = models.ForeignKey(Profile, related_name="projects", on_delete=models.CASCADE)
@@ -419,13 +417,37 @@ class ProjectProfile(BaseModel):
     def is_admin(self):
         return self.role >= self.ADMIN
 
+    @staticmethod
+    def would_leave_project_without_admin(project_id, excluded_pks, for_update=False):
+        """Whether removing every row in `excluded_pks` (deleting them, or
+        changing their role away from ADMIN) would leave `project_id` with
+        no admin. Pass for_update=True (inside a transaction.atomic() block)
+        to lock the *entire* admin row set, including the rows being
+        removed - locking only the others lets two transactions acting on
+        disjoint subsets of the last admins both pass the check."""
+        qs = ProjectProfile.objects.filter(project_id=project_id, role=ProjectProfile.ADMIN)
+        if for_update:
+            qs = qs.select_for_update()
+        admin_pks = set(qs.values_list("pk", flat=True))
+        return not (admin_pks - set(excluded_pks))
+
+    def is_last_admin(self, for_update=False):
+        """Whether this profile is the project's sole remaining ADMIN, i.e.
+        whether removing it (deleting the row, or changing its role away
+        from ADMIN) would leave the project without an admin."""
+        if self.role != self.ADMIN:
+            return False
+        return ProjectProfile.would_leave_project_without_admin(
+            self.project_id, {self.pk}, for_update=for_update
+        )
+
     @property
     def profile_name(self):
         return self.profile.full_name
 
     @classmethod
     def from_db(cls, db, field_names, values):
-        instance = super(ProjectProfile, cls).from_db(db, field_names, values)
+        instance = super().from_db(db, field_names, values)
         instance._loaded_values = dict(zip(field_names, values))
         return instance
 
@@ -438,7 +460,7 @@ class ProjectProfile(BaseModel):
         if hasattr(self, "_loaded_values"):
             self._old_values = {k: v for k, v in self._loaded_values.items() if k in notify_fields}
         self._new_values = model_to_dict(self, fields=notify_fields)
-        super(ProjectProfile, self).save(*args, **kwargs)
+        super().save(*args, **kwargs)
 
     class Meta:
         db_table = "project_profile"
@@ -506,7 +528,7 @@ class SampleEvent(BaseModel, JSONMixin):
         ordering = ("site", "sample_date")
 
     def __str__(self):
-        return "%s %s" % (self.site.__str__(), self.sample_date)
+        return f"{self.site.__str__()} {self.sample_date}"
 
 
 class SampleUnit(BaseModel):
@@ -560,7 +582,7 @@ class Transect(SampleUnit):
     def __str__(self):
         su_number = get_sample_unit_number(self)
         if su_number != "":
-            su_number = " {}".format(su_number)
+            su_number = f" {su_number}"
         return _("%s%s") % (self.sample_event.__str__(), su_number)
 
 
@@ -579,7 +601,7 @@ class BaseQuadrat(SampleUnit):
     def __str__(self):
         su_number = get_sample_unit_number(self)
         if su_number != "":
-            su_number = " {}".format(su_number)
+            su_number = f" {su_number}"
         return _("%s%s") % (self.sample_event.__str__(), su_number)
 
 
@@ -697,9 +719,7 @@ class CollectRecord(BaseModel):
         (SUBMITTING_STAGE, _("Submitting")),
         (SUBMITTED_STAGE, _("Submitted")),
     )
-    STAGE_CHOICES_UPDATED_ON = datetime.datetime(
-        2019, 2, 2, 0, 0, 0, 0, tzinfo=datetime.timezone.utc
-    )
+    STAGE_CHOICES_UPDATED_ON = datetime.datetime(2019, 2, 2, 0, 0, 0, 0, tzinfo=datetime.UTC)
 
     project = models.ForeignKey(Project, related_name="collect_records", on_delete=models.CASCADE)
     profile = models.ForeignKey(Profile, on_delete=models.CASCADE, related_name="collect_records")
@@ -772,7 +792,7 @@ class CollectRecord(BaseModel):
 
         self.ensure_obs_ids()
 
-        super(CollectRecord, self).save(*args, **kwargs)
+        super().save(*args, **kwargs)
 
 
 class ArchivedRecord(models.Model):

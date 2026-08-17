@@ -101,7 +101,7 @@ def format_serializer_errors(validationerror):
 
 
 def format_exception_errors(err):
-    identifier = "{}".format(str(type(err).__name__))
+    identifier = f"{str(type(err).__name__)}"
     msg = ""
     if hasattr(err, "message"):
         msg = err.message
