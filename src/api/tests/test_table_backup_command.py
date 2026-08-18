@@ -1,10 +1,13 @@
 import gzip
 import json
 import os
+from contextlib import contextmanager
 from datetime import timedelta
-from unittest.mock import patch
+from io import StringIO
+from unittest.mock import MagicMock, patch
 
 import pytest
+from django.conf import settings
 from django.core.management import call_command
 from django.core.management.base import CommandError
 from django.db import connection
@@ -34,15 +37,26 @@ def aged_records():
     return old, recent
 
 
-@pytest.fixture
-def s3_mock():
-    """Stand-in for the bucket: uploads add to a set of keys, and existence checks read it, so
-    both the pre-upload collision check and the post-upload verification see the same state.
-    Yields the upload mock and the key set, which a test can seed with pre-existing objects."""
-    keys = set()
+@contextmanager
+def _s3_patches(on_upload=None):
+    """Stand-in for the bucket: uploads record the key and the size of the file that was sent, and
+    both the pre-upload collision check and the post-upload verification read that state back, so
+    a run sees the bucket as it left it. on_upload runs after the object is recorded, for tests
+    that need something to happen while the upload is in flight.
+
+    Yields the upload mock and the {key: size} dict, which a test can seed with pre-existing
+    objects or edit to stand in for an object that is not the one that was uploaded."""
+    objects = {}
 
     def upload_file(bucket, local_file_path, blob_name, **kwargs):
-        keys.add(blob_name)
+        objects[blob_name] = os.path.getsize(local_file_path)
+        if on_upload is not None:
+            on_upload(bucket, local_file_path, blob_name, **kwargs)
+
+    def head_object(bucket, blob_name, **kwargs):
+        if blob_name not in objects:
+            return None
+        return {"ContentLength": objects[blob_name]}
 
     with (
         patch(
@@ -50,10 +64,29 @@ def s3_mock():
         ) as upload,
         patch(
             "tools.management.commands.table_backup.s3.file_exists",
-            side_effect=lambda bucket, blob_name, **kwargs: blob_name in keys,
+            side_effect=lambda bucket, blob_name, **kwargs: blob_name in objects,
         ),
+        patch("tools.management.commands.table_backup.s3.head_object", side_effect=head_object),
     ):
-        yield upload, keys
+        yield upload, objects
+
+
+@pytest.fixture
+def s3_mock():
+    with _s3_patches() as patches:
+        yield patches
+
+
+@contextmanager
+def _terminal(answer):
+    """Stand in for a user at a terminal answering the --delete confirmation prompt."""
+    stdin = MagicMock()
+    stdin.isatty.return_value = True
+    with (
+        patch("tools.management.commands.table_backup.sys.stdin", stdin),
+        patch("builtins.input", return_value=answer) as prompt,
+    ):
+        yield prompt
 
 
 def _files(tmp_path):
@@ -107,7 +140,7 @@ def test_existing_s3_key_gets_incremented_suffix(aged_records, s3_mock, tmp_path
 
     call_command("table_backup", TABLE, "--output-dir", str(tmp_path), "--keep-local")
     first_key = upload.call_args.args[2]
-    assert keys == {first_key}
+    assert set(keys) == {first_key}
 
     # The suffix goes on the stem, so the .ndjson.gz extensions stay at the end of the name
     call_command("table_backup", TABLE, "--output-dir", str(tmp_path), "--keep-local")
@@ -126,7 +159,7 @@ def test_existing_s3_key_gets_incremented_suffix(aged_records, s3_mock, tmp_path
 
 def test_suffix_only_applied_when_key_is_taken(aged_records, s3_mock, tmp_path):
     upload, keys = s3_mock
-    keys.add("records/some_other_table/unrelated.ndjson.gz")
+    keys["records/some_other_table/unrelated.ndjson.gz"] = 0
 
     call_command("table_backup", TABLE, "--output-dir", str(tmp_path), "--keep-local")
 
@@ -161,11 +194,132 @@ def test_no_compress_writes_plain_ndjson(aged_records, s3_mock, tmp_path):
 def test_delete_removes_only_backed_up_records(aged_records, s3_mock, tmp_path):
     old, recent = aged_records
 
-    call_command("table_backup", TABLE, "--output-dir", str(tmp_path), "--delete", "--keep-local")
+    call_command(
+        "table_backup",
+        TABLE,
+        "--output-dir",
+        str(tmp_path),
+        "--delete",
+        "--noinput",
+        "--keep-local",
+    )
 
     assert ArchivedRecord.objects.filter(pk__in=[r.pk for r in old]).count() == 0
     assert ArchivedRecord.objects.filter(pk=recent[0].pk).exists()
     assert len(_read_ndjson(_files(tmp_path)[0])) == 2
+
+
+def test_delete_skips_records_updated_out_of_range_during_backup(aged_records, tmp_path):
+    """A record whose datetime field moves out of the backed up range between the read and the
+    delete no longer matches the filter, so it is left in place."""
+    old, _ = aged_records
+    bumped, still_old = old
+
+    def upload_file(bucket, local_file_path, blob_name, **kwargs):
+        # Stands in for a concurrent update landing while the backup is being uploaded.
+        ArchivedRecord.objects.filter(pk=bumped.pk).update(created_on=timezone.now())
+
+    out = StringIO()
+    with _s3_patches(on_upload=upload_file):
+        call_command(
+            "table_backup",
+            TABLE,
+            "--output-dir",
+            str(tmp_path),
+            "--delete",
+            "--noinput",
+            "--keep-local",
+            stdout=out,
+        )
+
+    assert ArchivedRecord.objects.filter(pk=bumped.pk).exists()
+    assert not ArchivedRecord.objects.filter(pk=still_old.pk).exists()
+    assert "1 backed up record(s) no longer match the filter" in out.getvalue()
+    # The record that was left behind is still in the backup file.
+    assert len(_read_ndjson(_files(tmp_path)[0])) == 2
+
+
+def test_delete_batches_are_committed_independently(aged_records, s3_mock, tmp_path):
+    """Each batch commits on its own, so a failure part way through keeps the batches that
+    already succeeded instead of rolling the whole delete back."""
+    old, _ = aged_records
+    first, second = old  # backed up oldest first, so each is its own batch
+
+    real_cursor = connection.cursor
+    deletes = []
+
+    class FailingCursor:
+        """Delegates to a real cursor but blows up on the second DELETE."""
+
+        def __init__(self, inner):
+            self._inner = inner
+
+        def __getattr__(self, name):
+            return getattr(self._inner, name)
+
+        def execute(self, sql, params=None):
+            if sql.lstrip().startswith("DELETE"):
+                deletes.append(sql)
+                if len(deletes) == 2:
+                    raise RuntimeError("connection lost")
+            return self._inner.execute(sql, params)
+
+    @contextmanager
+    def failing_cursor():
+        with real_cursor() as cursor:
+            yield FailingCursor(cursor)
+
+    out = StringIO()
+    with (
+        patch("tools.management.commands.table_backup.DELETE_BATCH_SIZE", 1),
+        patch.object(connection, "cursor", failing_cursor),
+        pytest.raises(RuntimeError, match="connection lost"),
+    ):
+        call_command(
+            "table_backup",
+            TABLE,
+            "--output-dir",
+            str(tmp_path),
+            "--delete",
+            "--noinput",
+            stdout=out,
+        )
+
+    assert not ArchivedRecord.objects.filter(pk=first.pk).exists()
+    assert ArchivedRecord.objects.filter(pk=second.pk).exists()
+    assert "Delete failed after 1 of 2 record(s)" in out.getvalue()
+
+
+def test_delete_spans_multiple_batches(aged_records, s3_mock, tmp_path):
+    """With more eligible records than fit in a batch, every batch is deleted -- including a
+    final partial one -- and the reported count is the sum across them."""
+    old, recent = aged_records
+    now = timezone.now()
+    # 5 old records against a batch size of 2 gives batches of 2, 2 and 1, so a dropped tail or
+    # an off-by-one in the slicing leaves records behind.
+    old = old + [
+        _make_archived_record(now - timedelta(days=900 - i), model=f"old_extra_{i}")
+        for i in range(3)
+    ]
+
+    out = StringIO()
+    with patch("tools.management.commands.table_backup.DELETE_BATCH_SIZE", 2):
+        call_command(
+            "table_backup",
+            TABLE,
+            "--output-dir",
+            str(tmp_path),
+            "--delete",
+            "--noinput",
+            "--keep-local",
+            stdout=out,
+        )
+
+    assert ArchivedRecord.objects.filter(pk__in=[r.pk for r in old]).count() == 0
+    assert ArchivedRecord.objects.filter(pk=recent[0].pk).exists()
+    assert f"Deleted {len(old)} record(s)" in out.getvalue()
+    assert "no longer match the filter" not in out.getvalue()
+    assert len(_read_ndjson(_files(tmp_path)[0])) == len(old)
 
 
 def test_local_file_removed_after_upload_by_default(aged_records, s3_mock, tmp_path):
@@ -174,15 +328,117 @@ def test_local_file_removed_after_upload_by_default(aged_records, s3_mock, tmp_p
 
 
 def test_unverified_upload_aborts_delete(aged_records, tmp_path):
+    """No object at the key it was just uploaded to: the records stay put."""
     old, _ = aged_records
     with (
         patch("tools.management.commands.table_backup.s3.upload_file"),
         patch("tools.management.commands.table_backup.s3.file_exists", return_value=False),
+        patch("tools.management.commands.table_backup.s3.head_object", return_value=None),
         pytest.raises(CommandError, match="could not be verified"),
+    ):
+        call_command("table_backup", TABLE, "--output-dir", str(tmp_path), "--delete", "--noinput")
+
+    assert ArchivedRecord.objects.filter(pk__in=[r.pk for r in old]).count() == 2
+
+
+def test_upload_of_a_different_size_aborts_delete(aged_records, tmp_path):
+    """An object at the key is not enough -- a concurrent run can put a different object there,
+    and a transfer can produce a short one. A size that does not match the local backup file
+    means the object is not the backup that was just written, so nothing is deleted."""
+    old, _ = aged_records
+
+    def truncate_uploaded_object(bucket, local_file_path, blob_name, **kwargs):
+        objects[blob_name] = objects[blob_name] - 1
+
+    with _s3_patches(on_upload=truncate_uploaded_object) as (_, objects):
+        with pytest.raises(CommandError, match="is not the file that was just uploaded"):
+            call_command(
+                "table_backup", TABLE, "--output-dir", str(tmp_path), "--delete", "--noinput"
+            )
+
+    assert ArchivedRecord.objects.filter(pk__in=[r.pk for r in old]).count() == 2
+
+
+def test_dry_run_reports_without_backing_up_or_deleting(aged_records, s3_mock, tmp_path):
+    old, _ = aged_records
+    upload, keys = s3_mock
+
+    out = StringIO()
+    call_command(
+        "table_backup", TABLE, "--output-dir", str(tmp_path), "--delete", "--dry-run", stdout=out
+    )
+
+    output = out.getvalue()
+    assert "would back up 2 record(s)" in output
+    assert f"would then delete those 2 record(s) from {TABLE}" in output
+    assert f"s3://{settings.AWS_BACKUP_BUCKET}/records/{TABLE}/{TABLE}_" in output
+    assert not tmp_path.exists() or _files(tmp_path) == []
+    assert upload.call_count == 0
+    assert keys == {}
+    assert ArchivedRecord.objects.filter(pk__in=[r.pk for r in old]).count() == 2
+
+
+def test_dry_run_reports_the_local_path_with_no_upload(aged_records, s3_mock, tmp_path):
+    out = StringIO()
+    call_command(
+        "table_backup", TABLE, "--output-dir", str(tmp_path), "--no-upload", "--dry-run", stdout=out
+    )
+
+    assert f"would back up 2 record(s) to {tmp_path}{os.path.sep}{TABLE}_" in out.getvalue()
+    assert not tmp_path.exists() or _files(tmp_path) == []
+
+
+def test_delete_asks_for_confirmation(aged_records, s3_mock, tmp_path):
+    old, _ = aged_records
+
+    out = StringIO()
+    with _terminal("yes") as prompt:
+        call_command("table_backup", TABLE, "--output-dir", str(tmp_path), "--delete", stdout=out)
+
+    assert prompt.call_count == 1
+    assert f"permanently remove 2 record(s) from {TABLE}" in out.getvalue()
+    assert ArchivedRecord.objects.filter(pk__in=[r.pk for r in old]).count() == 0
+
+
+def test_declining_the_confirmation_backs_up_nothing(aged_records, s3_mock, tmp_path):
+    """The prompt comes before the backup is written, so a cancelled run leaves no partial work."""
+    old, _ = aged_records
+    upload, _ = s3_mock
+
+    with _terminal("no"), pytest.raises(CommandError, match="Cancelled"):
+        call_command("table_backup", TABLE, "--output-dir", str(tmp_path), "--delete")
+
+    assert ArchivedRecord.objects.filter(pk__in=[r.pk for r in old]).count() == 2
+    assert upload.call_count == 0
+    assert not tmp_path.exists() or _files(tmp_path) == []
+
+
+def test_delete_without_a_terminal_requires_noinput(aged_records, s3_mock, tmp_path):
+    """A scheduled run has no one to answer the prompt, so it has to confirm up front rather than
+    have the answer assumed for it."""
+    old, _ = aged_records
+    upload, _ = s3_mock
+    stdin = MagicMock()
+    stdin.isatty.return_value = False
+
+    with (
+        patch("tools.management.commands.table_backup.sys.stdin", stdin),
+        pytest.raises(CommandError, match="no terminal to prompt on"),
     ):
         call_command("table_backup", TABLE, "--output-dir", str(tmp_path), "--delete")
 
     assert ArchivedRecord.objects.filter(pk__in=[r.pk for r in old]).count() == 2
+    assert upload.call_count == 0
+
+
+def test_noinput_does_not_prompt(aged_records, s3_mock, tmp_path):
+    old, _ = aged_records
+
+    with _terminal("no") as prompt:
+        call_command("table_backup", TABLE, "--output-dir", str(tmp_path), "--delete", "--noinput")
+
+    assert prompt.call_count == 0
+    assert ArchivedRecord.objects.filter(pk__in=[r.pk for r in old]).count() == 0
 
 
 def test_explicit_date_range(aged_records, s3_mock, tmp_path):
@@ -245,6 +501,39 @@ def test_delete_with_no_upload_is_rejected(tmp_path):
         )
 
 
+@pytest.fixture
+def pkless_table():
+    """A table with rows but no primary key. Rolled back with the test transaction."""
+    name = "table_backup_pkless"
+    with connection.cursor() as cursor:
+        cursor.execute(f"CREATE TABLE {name} (model text, created_on timestamptz)")
+        cursor.execute(
+            f"INSERT INTO {name} (model, created_on) VALUES ('a', now() - interval '1000 days')"
+        )
+    yield name
+    with connection.cursor() as cursor:
+        cursor.execute(f"DROP TABLE {name}")
+
+
+def test_delete_on_table_without_primary_key_fails_before_any_work(pkless_table, tmp_path):
+    """The primary key is checked up front, so no table scan, output directory or S3 lookup
+    happens on a table --delete can never work on."""
+    with (
+        patch("tools.management.commands.table_backup.s3.file_exists") as file_exists,
+        pytest.raises(CommandError, match="has no primary key"),
+    ):
+        call_command(
+            "table_backup",
+            pkless_table,
+            "--output-dir",
+            str(tmp_path / "unmade"),
+            "--delete",
+        )
+
+    assert file_exists.call_count == 0
+    assert not (tmp_path / "unmade").exists()
+
+
 def test_no_upload_keeps_local_file(aged_records, tmp_path):
     with patch("tools.management.commands.table_backup.s3.upload_file") as upload:
         call_command("table_backup", TABLE, "--output-dir", str(tmp_path), "--no-upload")
@@ -266,6 +555,33 @@ def test_no_upload_existing_local_file_gets_incremented_suffix(aged_records, tmp
         first.replace(".ndjson.gz", "_1.ndjson.gz"),
         first.replace(".ndjson.gz", "_2.ndjson.gz"),
     }
+
+
+def test_partial_write_is_cleaned_up_and_leaves_the_name_free(aged_records, tmp_path):
+    """A failed run must not leave a truncated file behind: it would read as a valid backup, and
+    the retry would be pushed onto a suffixed name instead of the one it asked for."""
+
+    def fail_after_partial_write(file_path, compress):
+        with open(file_path, "w", encoding="utf-8") as f:
+            f.write('{"partial": true}\n')
+        raise OSError("No space left on device")
+
+    with patch("tools.management.commands.table_backup.s3.upload_file"):
+        with patch(
+            "tools.management.commands.table_backup.Command._open_backup_file",
+            side_effect=fail_after_partial_write,
+        ):
+            with pytest.raises(OSError, match="No space left on device"):
+                call_command("table_backup", TABLE, "--output-dir", str(tmp_path), "--no-upload")
+
+        assert _files(tmp_path) == []
+
+        call_command("table_backup", TABLE, "--output-dir", str(tmp_path), "--no-upload")
+
+    files = _files(tmp_path)
+    assert len(files) == 1
+    assert "_1." not in os.path.basename(files[0])
+    assert len(_read_ndjson(files[0])) == 2
 
 
 def test_unknown_table_is_rejected(tmp_path):

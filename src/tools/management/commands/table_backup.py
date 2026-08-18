@@ -1,6 +1,8 @@
+import contextlib
 import gzip
 import os
 import re
+import sys
 
 import dateutil.parser
 from dateutil.relativedelta import relativedelta
@@ -56,6 +58,16 @@ class Command(BaseCommand):
         # Back up and then delete rows older than a specific date, filtered on a different field
         manage.py table_backup api_archivedrecord --datetime-field=updated_on \\
             --end-date=2024-01-01 --delete
+
+    --delete reads and deletes in two steps rather than one transaction, so it is meant for
+    records that are no longer being changed. A record whose datetime field is updated out of the
+    backed up range in between is left alone, but a record whose other columns change in that
+    window is still deleted, and the backup holds the version read at the start.
+
+    The delete only runs once the uploaded object has been confirmed to be the same size as the
+    local backup file, and it asks for confirmation first unless --noinput is given (which any
+    scheduled or otherwise non-interactive run needs). Use --dry-run to report what a run would
+    back up and delete without touching the table, the filesystem or S3.
     """
 
     def __init__(self, *args, **kwargs):
@@ -121,6 +133,25 @@ class Command(BaseCommand):
             ),
         )
         parser.add_argument(
+            "--dry-run",
+            action="store_true",
+            dest="dry_run",
+            default=False,
+            help=(
+                "Report the records that would be backed up (and deleted, with --delete) and "
+                "exit without writing, uploading or deleting anything"
+            ),
+        )
+        parser.add_argument(
+            "--noinput",
+            "--no-input",
+            action="store_false",
+            dest="interactive",
+            default=True,
+            help="Do not prompt for confirmation before deleting; required for --delete when "
+            "there is no terminal to prompt on",
+        )
+        parser.add_argument(
             "--keep-local",
             action="store_true",
             dest="keep_local",
@@ -142,6 +173,10 @@ class Command(BaseCommand):
 
         self._validate_table(table)
         self._validate_datetime_field(table, datetime_field)
+        # --delete needs a single-column primary key. Resolving it here rather than at delete
+        # time means a table without one fails before the table is scanned and S3 is probed.
+        if delete:
+            self._get_pk_column(table)
 
         end_date = options["end_date"] or timezone.now() - relativedelta(years=DEFAULT_AGE_YEARS)
         start_date = options["start_date"]
@@ -169,6 +204,17 @@ class Command(BaseCommand):
         stem = self._build_stem(table, start_date or min_value, end_date)
         extension = self._build_extension(compress)
 
+        if options["dry_run"]:
+            self._report_dry_run(
+                table, record_count, stem, extension, options["output_dir"], no_upload, delete
+            )
+            return
+
+        # Asked before anything is written or uploaded, so cancelling leaves no partial work and
+        # a mistyped --end-date is caught while the range is still on screen.
+        if delete and options["interactive"]:
+            self._confirm_delete(table, datetime_field, record_count, min_value, max_value)
+
         os.makedirs(options["output_dir"], exist_ok=True)
 
         # Resolved before the file is written so the local file and the S3 object share a name.
@@ -195,22 +241,86 @@ class Command(BaseCommand):
             self.stdout.write(f"Uploading to s3://{settings.AWS_BACKUP_BUCKET}/{key}")
             content_type = GZIP_CONTENT_TYPE if compress else CONTENT_TYPE
             s3.upload_file(settings.AWS_BACKUP_BUCKET, file_path, key, content_type=content_type)
-            # Confirm the object landed before anything is deleted on the strength of it.
-            if not s3.file_exists(settings.AWS_BACKUP_BUCKET, key):
-                raise CommandError(
-                    f"Upload of {key} could not be verified; no records have been deleted"
-                )
+            self._verify_upload(key, file_path)
             uploaded = True
             self.stdout.write("Upload complete")
 
         if delete:
-            deleted = self._delete_records(table, pks)
+            deleted = self._delete_records(table, pks, where_sql, where_params)
             self.stdout.write(f"Deleted {deleted} record(s) from {table}")
+            skipped = len(pks) - deleted
+            if skipped > 0:
+                self.stdout.write(
+                    self.style.WARNING(
+                        f"{skipped} backed up record(s) no longer match the filter and were left "
+                        f"in {table}; they are still in the backup file"
+                    )
+                )
 
         if uploaded and not options["keep_local"]:
             os.remove(file_path)
 
         self.stdout.write(self.style.SUCCESS(f"{table} backup complete"))
+
+    def _report_dry_run(self, table, record_count, stem, extension, output_dir, no_upload, delete):
+        """Report what a real run would do. No file is written and nothing in S3 is touched, so
+        the destination is the unsuffixed name -- a run that finds it taken picks a '_N' variant
+        of it instead."""
+        destination = os.path.join(output_dir, f"{stem}{extension}")
+        if not no_upload:
+            destination = (
+                f"s3://{settings.AWS_BACKUP_BUCKET}/{self._s3_key(table, f'{stem}{extension}')}"
+            )
+        self.stdout.write(f"Dry run: would back up {record_count} record(s) to {destination}")
+        if delete:
+            self.stdout.write(
+                f"Dry run: would then delete those {record_count} record(s) from {table}"
+            )
+        self.stdout.write("Dry run: nothing was written, uploaded or deleted")
+
+    def _confirm_delete(self, table, datetime_field, record_count, min_value, max_value):
+        """Ask before a run that permanently removes records. Deleted records cannot be recovered
+        from the application side, so a run that cannot prompt has to say so with --noinput
+        rather than have the answer assumed for it."""
+        if not sys.stdin or not sys.stdin.isatty():
+            raise CommandError(
+                "--delete needs confirmation, but there is no terminal to prompt on. Re-run with "
+                "--noinput to confirm up front, or with --dry-run to see what would be deleted."
+            )
+
+        self.stdout.write(
+            self.style.WARNING(
+                f"--delete will permanently remove {record_count} record(s) from {table} with "
+                f"{datetime_field} from {min_value} to {max_value} once they have been backed up "
+                "and the upload has been verified. This cannot be undone."
+            )
+        )
+        if input("Type 'yes' to continue, or anything else to cancel: ") != "yes":
+            raise CommandError("Cancelled; nothing has been backed up or deleted")
+
+    def _verify_upload(self, key, file_path):
+        """Confirm the uploaded object is the backup that was just written before anything is
+        deleted on the strength of it.
+
+        The object existing at the key is not enough on its own: a concurrent run could have put
+        a different object there, or the transfer could have produced a short one. Comparing
+        sizes catches both. upload_file sends the file as-is (no ContentEncoding is set, so S3
+        does not transform the body), which makes the local size the size to expect.
+        """
+        head = s3.head_object(settings.AWS_BACKUP_BUCKET, key)
+        if head is None:
+            raise CommandError(
+                f"Upload of {key} could not be verified; no records have been deleted"
+            )
+
+        local_size = os.path.getsize(file_path)
+        uploaded_size = head.get("ContentLength")
+        if uploaded_size != local_size:
+            raise CommandError(
+                f"Uploaded object {key} is {uploaded_size} byte(s) but the backup file written "
+                f"locally is {local_size} byte(s), so it is not the file that was just uploaded; "
+                "no records have been deleted"
+            )
 
     def _make_aware(self, value):
         if value is None or timezone.is_aware(value):
@@ -366,7 +476,8 @@ class Command(BaseCommand):
     ):
         """Stream matching records to file_path, one JSON object per line, gzipped when compress
         is set. Returns the list of primary keys written when collect_pks is set (for a later
-        delete), otherwise an empty list.
+        delete), otherwise an empty list. A failure part way through removes the partial file
+        before re-raising.
 
         Postgres does the JSON encoding via to_jsonb, so every column type the database can
         output -- including PostGIS geometry and jsonb -- is serialized without needing a
@@ -386,33 +497,65 @@ class Command(BaseCommand):
         )
 
         pks = []
-        # A server-side cursor keeps memory flat regardless of how many records match.
-        with connection.chunked_cursor() as cursor:
-            cursor.execute(sql, where_params)
-            with self._open_backup_file(file_path, compress) as f:
-                for row in cursor:
-                    if pk_column:
-                        pks.append(row[0])
-                        f.write(row[1])
-                    else:
-                        f.write(row[0])
-                    f.write("\n")
+        try:
+            # A server-side cursor keeps memory flat regardless of how many records match.
+            with connection.chunked_cursor() as cursor:
+                cursor.execute(sql, where_params)
+                with self._open_backup_file(file_path, compress) as f:
+                    for row in cursor:
+                        if pk_column:
+                            pks.append(row[0])
+                            f.write(row[1])
+                        else:
+                            f.write(row[0])
+                        f.write("\n")
+        except BaseException:
+            # A half-written file is not a backup. Left behind it would take up room in an output
+            # directory that is often shared or short-lived, read as a valid backup to anyone
+            # looking at the directory later, and push the next attempt onto a '_N' suffixed name.
+            with contextlib.suppress(OSError):
+                os.remove(file_path)
+            raise
         return pks
 
-    def _delete_records(self, table, pks):
-        """Delete exactly the records that were backed up, by primary key, so records added
-        between the backup and the delete are never caught up in it."""
+    def _delete_records(self, table, pks, where_sql, where_params):
+        """Delete the records that were backed up, by primary key, so records added between the
+        backup and the delete are never caught up in it.
+
+        The datetime filter is re-applied to the delete as well: minutes can pass between reading
+        a record and deleting it (the upload and its verification happen in between), and in that
+        window a record's datetime field can be updated to a value outside the range that was
+        backed up. Such a record no longer matches the filter, so it is left in place rather than
+        deleted on the strength of a backup of its earlier state.
+
+        Each batch is committed on its own. Holding every batch open in one transaction would
+        keep row locks for the whole delete and hold back the vacuum horizon for other tables,
+        which is what batching is meant to avoid. The cost is that a failure part way through
+        leaves some of the backed up records deleted and the rest in place; the run is safe to
+        repeat, since deleting an already deleted primary key does nothing.
+        """
         quoted_table = quote_identifier(table)
         pk_column = quote_identifier(self._get_pk_column(table))
         deleted = 0
-        with transaction.atomic():
+        try:
             with connection.cursor() as cursor:
                 for offset in range(0, len(pks), DELETE_BATCH_SIZE):
                     batch = pks[offset : offset + DELETE_BATCH_SIZE]
                     placeholders = ", ".join(["%s"] * len(batch))
-                    cursor.execute(
-                        f"DELETE FROM {quoted_table} WHERE {pk_column} IN ({placeholders})",
-                        batch,
-                    )
-                    deleted += cursor.rowcount
+                    with transaction.atomic():
+                        cursor.execute(
+                            f"DELETE FROM {quoted_table} t "
+                            f"WHERE t.{pk_column} IN ({placeholders}) AND {where_sql}",
+                            batch + list(where_params),
+                        )
+                        deleted += cursor.rowcount
+        except Exception:
+            self.stdout.write(
+                self.style.WARNING(
+                    f"Delete failed after {deleted} of {len(pks)} record(s) were deleted from "
+                    f"{table}; the backup file covers all of them, and re-running the delete for "
+                    "the remainder is safe"
+                )
+            )
+            raise
         return deleted
