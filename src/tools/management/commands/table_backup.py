@@ -46,8 +46,8 @@ class Command(BaseCommand):
     Each line of the output file is one table record as a JSON object. Records are selected by a
     datetime field (default: created_on) and, by default, only records at least a year old are
     included. The file is gzipped as it is written unless --no-compress is given. If the
-    destination S3 key is already taken, the filename gets an incrementing '_N' suffix so an
-    existing backup is never overwritten.
+    destination name is already taken -- the S3 key, or the local file when --no-upload is given --
+    the filename gets an incrementing '_N' suffix so an existing backup is never overwritten.
 
     Examples:
         # Back up api_archivedrecord rows created more than a year ago
@@ -169,15 +169,16 @@ class Command(BaseCommand):
         stem = self._build_stem(table, start_date or min_value, end_date)
         extension = self._build_extension(compress)
 
+        os.makedirs(options["output_dir"], exist_ok=True)
+
         # Resolved before the file is written so the local file and the S3 object share a name.
         key = None
         if no_upload:
-            filename = f"{stem}{extension}"
+            filename = self._unique_filename(options["output_dir"], stem, extension)
         else:
             key = self._unique_key(table, stem, extension)
             filename = os.path.basename(key)
 
-        os.makedirs(options["output_dir"], exist_ok=True)
         file_path = os.path.join(options["output_dir"], filename)
 
         pks = self._write_backup(
@@ -328,6 +329,27 @@ class Command(BaseCommand):
 
         raise CommandError(
             f"{key} already exists, as do the first {MAX_FILENAME_SUFFIX} suffixed variants of it"
+        )
+
+    def _unique_filename(self, output_dir, stem, extension):
+        """Return a filename for stem + extension that is not already taken in output_dir.
+
+        Writing the file would truncate an earlier backup covering the same date range, so a taken
+        name gets an incrementing '_N' suffix, the same way S3 keys are made unique.
+        """
+        filename = f"{stem}{extension}"
+        if not os.path.exists(os.path.join(output_dir, filename)):
+            return filename
+
+        for n in range(1, MAX_FILENAME_SUFFIX + 1):
+            candidate = f"{stem}_{n}{extension}"
+            if not os.path.exists(os.path.join(output_dir, candidate)):
+                self.stdout.write(f"{filename} already exists; backing up to {candidate} instead")
+                return candidate
+
+        raise CommandError(
+            f"{filename} already exists, as do the first {MAX_FILENAME_SUFFIX} suffixed variants "
+            "of it"
         )
 
     def _open_backup_file(self, file_path, compress):

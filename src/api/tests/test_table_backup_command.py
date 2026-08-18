@@ -252,6 +252,22 @@ def test_no_upload_keeps_local_file(aged_records, tmp_path):
     assert upload.call_count == 0
 
 
+def test_no_upload_existing_local_file_gets_incremented_suffix(aged_records, tmp_path):
+    with patch("tools.management.commands.table_backup.s3.upload_file"):
+        call_command("table_backup", TABLE, "--output-dir", str(tmp_path), "--no-upload")
+        first = os.path.basename(_files(tmp_path)[0])
+
+        call_command("table_backup", TABLE, "--output-dir", str(tmp_path), "--no-upload")
+        call_command("table_backup", TABLE, "--output-dir", str(tmp_path), "--no-upload")
+
+    names = {os.path.basename(f) for f in _files(tmp_path)}
+    assert names == {
+        first,
+        first.replace(".ndjson.gz", "_1.ndjson.gz"),
+        first.replace(".ndjson.gz", "_2.ndjson.gz"),
+    }
+
+
 def test_unknown_table_is_rejected(tmp_path):
     with pytest.raises(CommandError, match="does not exist"):
         call_command("table_backup", "no_such_table_here", "--output-dir", str(tmp_path))
