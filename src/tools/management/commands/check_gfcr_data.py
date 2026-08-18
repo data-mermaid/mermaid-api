@@ -46,7 +46,10 @@ def _md_table(headers, rows):
 
 
 class Command(BaseCommand):
-    help = "Audit GFCR data for Phase 4 readiness. Restores prod DB locally before running."
+    help = (
+        "Audit GFCR data for Phase 4 readiness. Restores prod DB locally before running,"
+        " unless --no-restore is passed."
+    )
 
     def add_arguments(self, parser):
         def _uuid(value):
@@ -59,17 +62,30 @@ class Command(BaseCommand):
             "--project-id", type=_uuid, help="Scope output to a single project UUID"
         )
         parser.add_argument("--output", type=str, help="Override default output file path")
+        parser.add_argument(
+            "--no-restore",
+            action="store_true",
+            help=(
+                "Skip the prod DB restore + migrate step and audit whatever is currently in"
+                " the local DB. For re-checking progress against a DB already restored by a"
+                " prior run (e.g. after running simulate_gfcr_phase3) without paying for"
+                " another S3 pull and losing that state."
+            ),
+        )
 
     def handle(self, *args, **options):
-        self.stdout.write("Restoring production database...")
-        call_command("dbrestore", "prod")
+        if options.get("no_restore"):
+            self.stdout.write("Skipping restore — auditing current local DB as-is.")
+        else:
+            self.stdout.write("Restoring production database...")
+            call_command("dbrestore", "prod")
 
-        # dbrestore drops and recreates the DB, which kills any open connection.
-        # Close all Django connections so the next operation gets a fresh one.
-        connections.close_all()
+            # dbrestore drops and recreates the DB, which kills any open connection.
+            # Close all Django connections so the next operation gets a fresh one.
+            connections.close_all()
 
-        self.stdout.write("Applying migrations...")
-        call_command("migrate")
+            self.stdout.write("Applying migrations...")
+            call_command("migrate")
 
         with connection.cursor() as cursor:
             cols = {
