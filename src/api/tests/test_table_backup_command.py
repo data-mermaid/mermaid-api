@@ -206,17 +206,29 @@ def test_explicit_date_range(aged_records, s3_mock, tmp_path):
     assert os.path.basename(path) == expected
 
 
-def test_alternate_datetime_field(aged_records, s3_mock, tmp_path):
-    """created_on is the default, but any date/datetime column can drive the filter."""
+def test_alternate_datetime_field(s3_mock, tmp_path, site1, site2):
+    """created_on is the default, but any date/datetime column can drive the filter. Each site is
+    aged on one column only, so filtering on updated_on selects a different row than the default."""
+    table = site1._meta.db_table
+    old = timezone.now() - timedelta(days=1000)
+    with connection.cursor() as cursor:
+        cursor.execute(f'UPDATE "{table}" SET created_on = %s WHERE id = %s', [old, site1.pk])
+        cursor.execute(f'UPDATE "{table}" SET updated_on = %s WHERE id = %s', [old, site2.pk])
+
+    default_dir = tmp_path / "default"
+    call_command("table_backup", table, "--output-dir", str(default_dir), "--keep-local")
+    assert [r["id"] for r in _read_ndjson(_files(default_dir)[0])] == [str(site1.pk)]
+
+    updated_dir = tmp_path / "updated"
     call_command(
         "table_backup",
-        TABLE,
-        "--datetime-field=created_on",
+        table,
+        "--datetime-field=updated_on",
         "--output-dir",
-        str(tmp_path),
+        str(updated_dir),
         "--keep-local",
     )
-    assert len(_read_ndjson(_files(tmp_path)[0])) == 2
+    assert [r["id"] for r in _read_ndjson(_files(updated_dir)[0])] == [str(site2.pk)]
 
 
 def test_no_matching_records_writes_nothing(s3_mock, tmp_path):
