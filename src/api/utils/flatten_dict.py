@@ -2,8 +2,6 @@
 import os.path
 from collections.abc import Mapping
 
-import six
-
 
 def tuple_reducer(k1, k2):
     if k1 is None:
@@ -23,7 +21,7 @@ def dot_reducer(k1, k2):
     if k1 is None:
         return k2
     else:
-        return "{}.{}".format(k1, k2)
+        return f"{k1}.{k2}"
 
 
 REDUCER_DICT = {
@@ -57,13 +55,13 @@ def flatten(d, reducer="dot", inverse=False):
     flat_dict = {}
 
     def _flatten(d, parent=None):
-        for key, val in six.viewitems(d):
+        for key, val in d.items():
             flat_key = reducer(parent, key)
             if isinstance(val, Mapping):
                 _flatten(val, flat_key)
             elif inverse:
                 if val in flat_dict:
-                    raise ValueError("duplicated key '{}'".format(val))
+                    raise ValueError(f"duplicated key '{val}'")
                 flat_dict[val] = flat_key
             else:
                 flat_dict[flat_key] = val

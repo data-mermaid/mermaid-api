@@ -1,8 +1,7 @@
 from decimal import Decimal
 
 from django.db import transaction
-from django_filters import RangeFilter
-from rest_condition import Or
+from django_filters import BaseInFilter, RangeFilter
 from rest_framework import serializers, status
 from rest_framework.response import Response
 
@@ -16,7 +15,6 @@ from ...models import (
     BeltInvertSUSQLModel,
     ObsBeltInvert,
 )
-from ...permissions import ProjectDataReadOnlyPermission, ProjectPublicSummaryPermission
 from ...reports.fields import ReportField
 from ...reports.formatters import (
     to_day,
@@ -44,6 +42,7 @@ from ..mixins import SampleUnitMethodEditMixin, SampleUnitMethodSummaryReport
 from ..observer import ObserverSerializer
 from ..sample_event import SampleEventSerializer
 from . import (
+    BaseProjectMethodSEView,
     BaseProjectMethodView,
     clean_sample_event_models,
     save_model,
@@ -210,6 +209,7 @@ class BeltInvertMethodObsSerializer(BaseSUViewAPISerializer):
                 "depth",
                 "relative_depth",
                 "transect_len_surveyed",
+                "reef_slope",
                 "transect_width_name",
                 "width_m",
                 "observers",
@@ -248,6 +248,7 @@ class ObsBeltInvertCSVSerializer(ReportSerializer):
         ReportField("latitude", "Latitude"),
         ReportField("longitude", "Longitude"),
         ReportField("reef_exposure", "Exposure"),
+        ReportField("reef_slope", "Reef slope"),
         ReportField("reef_type", "Reef type"),
         ReportField("reef_zone", "Reef zone"),
         ReportField("sample_date", "Year", to_year, "sample_date_year"),
@@ -314,6 +315,7 @@ class BeltInvertMethodSUSerializer(BaseSUViewAPISUSerializer):
                 "label",
                 "transect_number",
                 "transect_len_surveyed",
+                "reef_slope",
                 "transect_width_name",
                 "depth",
                 "size_bin",
@@ -343,6 +345,7 @@ class BeltInvertMethodSUCSVSerializer(ReportSerializer):
         ReportField("latitude", "Latitude"),
         ReportField("longitude", "Longitude"),
         ReportField("reef_exposure", "Exposure"),
+        ReportField("reef_slope", "Reef slope"),
         ReportField("reef_type", "Reef type"),
         ReportField("reef_zone", "Reef zone"),
         ReportField("sample_date", "Year", to_year, "sample_date_year"),
@@ -478,6 +481,7 @@ class BeltInvertMethodSECSVSerializer(ReportSerializer):
 
 class BeltInvertMethodObsFilterSet(BaseSUObsFilterSet):
     transect_len_surveyed = RangeFilter()
+    reef_slope = BaseInFilter(method="char_lookup")
     transect_number = RangeFilter()
     count = RangeFilter()
     size = RangeFilter()
@@ -486,6 +490,7 @@ class BeltInvertMethodObsFilterSet(BaseSUObsFilterSet):
         model = BeltInvertObsModel
         fields = [
             "transect_len_surveyed",
+            "reef_slope",
             "transect_number",
             "count",
             "size",
@@ -499,6 +504,7 @@ class BeltInvertMethodObsSQLFilterSet(BeltInvertMethodObsFilterSet):
 
 class BeltInvertMethodSUFilterSet(BaseSUObsFilterSet):
     transect_len_surveyed = RangeFilter()
+    reef_slope = BaseInFilter(method="char_lookup")
     transect_number = RangeFilter()
     density_indha = RangeFilter()
     total_abundance = RangeFilter()
@@ -507,6 +513,7 @@ class BeltInvertMethodSUFilterSet(BaseSUObsFilterSet):
         model = BeltInvertSUModel
         fields = [
             "transect_len_surveyed",
+            "reef_slope",
             "transect_number",
             "density_indha",
             "total_abundance",
@@ -570,10 +577,9 @@ class BeltInvertProjectMethodSUView(BaseProjectMethodView):
     ordering_fields = ordering
 
 
-class BeltInvertProjectMethodSEView(BaseProjectMethodView):
+class BeltInvertProjectMethodSEView(BaseProjectMethodSEView):
     drf_label = "beltinvert-se"
     project_policy = "data_policy_macroinvertebrate"
-    permission_classes = [Or(ProjectDataReadOnlyPermission, ProjectPublicSummaryPermission)]
     model = BeltInvertSEModel
     serializer_class = BeltInvertMethodSESerializer
     serializer_class_geojson = BeltInvertMethodSEGeoSerializer

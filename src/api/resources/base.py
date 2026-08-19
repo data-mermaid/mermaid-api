@@ -17,7 +17,6 @@ from django_filters import (
 )
 from django_filters.fields import Lookup
 from django_filters.rest_framework import DjangoFilterBackend
-from rest_condition import Or
 from rest_framework import exceptions, serializers, viewsets
 from rest_framework.decorators import action
 from rest_framework.exceptions import MethodNotAllowed, NotFound, ValidationError
@@ -52,17 +51,17 @@ from .mixins import MethodAuthenticationMixin, OrFilterSetMixin
 
 class ModelNameReadOnlyField(serializers.Field):
     def to_representation(self, obj):
-        return "{}".format(obj.name)
+        return f"{obj.name}"
 
 
 class ModelValReadOnlyField(serializers.Field):
     def to_representation(self, obj):
-        return "{}".format(obj.val)
+        return f"{obj.val}"
 
 
 class TagField(serializers.Field):
     def to_representation(self, obj):
-        return "{}".format(obj.name)
+        return f"{obj.name}"
 
     def to_internal_value(self, data):
         if not isinstance(data, str):
@@ -268,77 +267,75 @@ class SampleEventExtendedSerializer(BaseAPISerializer):
             raise Exception("SampleEventExtendedSerializer must be given a _sample_event string")
 
         self.fields["project_name"] = serializers.ReadOnlyField(
-            source="{}.site.project.name".format(self._sample_event)
+            source=f"{self._sample_event}.site.project.name"
         )
         self.fields["country_name"] = serializers.ReadOnlyField(
-            source="{}.site.country.name".format(self._sample_event)
+            source=f"{self._sample_event}.site.country.name"
         )
         self.fields["site_name"] = serializers.ReadOnlyField(
-            source="{}.site.name".format(self._sample_event)
+            source=f"{self._sample_event}.site.name"
         )
         self.fields["latitude"] = serializers.SerializerMethodField()
         self.fields["longitude"] = serializers.SerializerMethodField()
         self.fields["exposure_name"] = serializers.ReadOnlyField(
-            source="{}.site.exposure.name".format(self._sample_event)
+            source=f"{self._sample_event}.site.exposure.name"
         )
         self.fields["reef_slope_name"] = serializers.ReadOnlyField(
-            source="{}.reef_slope.name".format(self._sample_event)
+            source=f"{self._sample_event}.reef_slope.name"
         )
         self.fields["reef_type_name"] = serializers.ReadOnlyField(
-            source="{}.site.reef_type.name".format(self._sample_event)
+            source=f"{self._sample_event}.site.reef_type.name"
         )
         self.fields["reef_zone_name"] = serializers.ReadOnlyField(
-            source="{}.site.reef_zone.name".format(self._sample_event)
+            source=f"{self._sample_event}.site.reef_zone.name"
         )
         self.fields["sample_date"] = serializers.ReadOnlyField(
-            source="{}.sample_date".format(self._sample_event)
+            source=f"{self._sample_event}.sample_date"
         )
         self.fields["sample_time"] = serializers.ReadOnlyField(
-            source="{}.sample_time".format(self._sample_event)
+            source=f"{self._sample_event}.sample_time"
         )
         self.fields["tide_name"] = serializers.ReadOnlyField(
-            source="{}.tide.name".format(self._sample_event)
+            source=f"{self._sample_event}.tide.name"
         )
         self.fields["visibility_name"] = serializers.ReadOnlyField(
-            source="{}.visibility.name".format(self._sample_event)
+            source=f"{self._sample_event}.visibility.name"
         )
         self.fields["current_name"] = serializers.ReadOnlyField(
-            source="{}.current.name".format(self._sample_event)
+            source=f"{self._sample_event}.current.name"
         )
-        self.fields["depth"] = serializers.ReadOnlyField(
-            source="{}.depth".format(self._sample_event)
-        )
+        self.fields["depth"] = serializers.ReadOnlyField(source=f"{self._sample_event}.depth")
         self.fields["management_name"] = serializers.ReadOnlyField(
-            source="{}.management.name".format(self._sample_event)
+            source=f"{self._sample_event}.management.name"
         )
         self.fields["management_name_secondary"] = serializers.ReadOnlyField(
-            source="{}.management.name_secondary".format(self._sample_event)
+            source=f"{self._sample_event}.management.name_secondary"
         )
         self.fields["management_est_year"] = serializers.ReadOnlyField(
-            source="{}.management.est_year".format(self._sample_event)
+            source=f"{self._sample_event}.management.est_year"
         )
         self.fields["management_size"] = serializers.ReadOnlyField(
-            source="{}.management.size".format(self._sample_event)
+            source=f"{self._sample_event}.management.size"
         )
         self.fields["management_compliance"] = serializers.ReadOnlyField(
-            source="{}.management.compliance.name".format(self._sample_event)
+            source=f"{self._sample_event}.management.compliance.name"
         )
         self.fields["management_parties"] = serializers.SerializerMethodField()
         self.fields["management_rules"] = serializers.SerializerMethodField()
         self.fields["observers"] = serializers.SerializerMethodField()
         self.fields["site_notes"] = serializers.ReadOnlyField(
-            source="{}.site.notes".format(self._sample_event)
+            source=f"{self._sample_event}.site.notes"
         )
         self.fields["management_notes"] = serializers.ReadOnlyField(
-            source="{}.management.notes".format(self._sample_event)
+            source=f"{self._sample_event}.management.notes"
         )
 
-        super(SampleEventExtendedSerializer, self).__init__(*args, **kwargs)
+        super().__init__(*args, **kwargs)
 
 
 class ExtendedSerializer(serializers.ModelSerializer):
     def __init__(self, instance=None, data=empty, exclude=[], *args, **kwargs):
-        super(ExtendedSerializer, self).__init__(*args, **kwargs)
+        super().__init__(*args, **kwargs)
 
         for exc in exclude:
             if exc in self.fields:
@@ -350,7 +347,7 @@ class ListFilter(Filter):
         if value is None:
             return qs
         value_list = [v.strip() for v in value.split(",")]
-        return super(ListFilter, self).filter(qs, Lookup(value_list, "in"))
+        return super().filter(qs, Lookup(value_list, "in"))
 
 
 # Return objects that actually are null when user asks for them with 'null'
@@ -360,7 +357,7 @@ class NullableUUIDFilter(CharFilter):
         if value != settings.API_NULLQUERY:
             if isinstance(value, uuid.UUID):
                 return value.hex
-            return super(NullableUUIDFilter, self).filter(qs, value)
+            return super().filter(qs, value)
 
         qs = self.get_method(qs)(**{"%s__isnull" % self.field_name: True})
         return qs.distinct() if self.distinct else qs
@@ -584,7 +581,7 @@ class BaseApiViewSet(MethodAuthenticationMixin, viewsets.ModelViewSet):
         in list and detail views.  `fields` takes a comma-separated list of
         fields.
         """
-        serializer_class = super(BaseApiViewSet, self).get_serializer_class()
+        serializer_class = super().get_serializer_class()
         fields = self.request.query_params.get("fields")
         if self.request.method == "GET" and fields:
             return self.get_serializer_class_for_fields(serializer_class, fields)
@@ -604,13 +601,11 @@ class BaseApiViewSet(MethodAuthenticationMixin, viewsets.ModelViewSet):
 
     def get_object(self):
         _ = check_uuid(self.kwargs.get(self.lookup_field))
-        return super(BaseApiViewSet, self).get_object()
+        return super().get_object()
 
 
 class BaseAttributeApiViewSet(BaseApiViewSet):
-    permission_classes = [
-        Or(UnauthenticatedReadOnlyPermission, AttributeAuthenticatedUserPermission)
-    ]
+    permission_classes = [UnauthenticatedReadOnlyPermission | AttributeAuthenticatedUserPermission]
 
     method_authentication_classes = {"GET": []}
 
@@ -636,16 +631,15 @@ class BaseAttributeApiViewSet(BaseApiViewSet):
         serializer.save(status=APPROVAL_STATUSES[-1][0])
 
 
+PROJECT_DATA_PERMISSION = (
+    ProjectDataReadOnlyPermission | ProjectDataCollectorPermission | ProjectDataAdminPermission
+)
+
+
 class BaseProjectApiViewSet(BaseApiViewSet):
     project_lookup = None
 
-    permission_classes = [
-        Or(
-            ProjectDataReadOnlyPermission,
-            ProjectDataCollectorPermission,
-            ProjectDataAdminPermission,
-        )
-    ]
+    permission_classes = [PROJECT_DATA_PERMISSION]
 
     def perform_update(self, serializer):
         requested_project = uuid.UUID(check_uuid(self.request.data.get("project")))
@@ -665,32 +659,32 @@ class BaseProjectApiViewSet(BaseApiViewSet):
 
     def list(self, request, *args, **kwargs):
         self.limit_to_project(request, *args, **kwargs)
-        return super(BaseProjectApiViewSet, self).list(request, *args, **kwargs)
+        return super().list(request, *args, **kwargs)
 
     def retrieve(self, request, *args, **kwargs):
         self.limit_to_project(request, *args, **kwargs)
-        return super(BaseProjectApiViewSet, self).retrieve(request, *args, **kwargs)
+        return super().retrieve(request, *args, **kwargs)
 
     def create(self, request, *args, **kwargs):
         self.limit_to_project(request, *args, **kwargs)
-        return super(BaseProjectApiViewSet, self).create(request, *args, **kwargs)
+        return super().create(request, *args, **kwargs)
 
     def update(self, request, *args, **kwargs):
         self.limit_to_project(request, *args, **kwargs)
-        return super(BaseProjectApiViewSet, self).update(request, *args, **kwargs)
+        return super().update(request, *args, **kwargs)
 
     def partial_update(self, request, *args, **kwargs):
         self.limit_to_project(request, *args, **kwargs)
-        return super(BaseProjectApiViewSet, self).partial_update(request, *args, **kwargs)
+        return super().partial_update(request, *args, **kwargs)
 
     def destroy(self, request, *args, **kwargs):
         self.limit_to_project(request, *args, **kwargs)
-        return super(BaseProjectApiViewSet, self).destroy(request, *args, **kwargs)
+        return super().destroy(request, *args, **kwargs)
 
     @action(detail=False, methods=["POST"])
     def missing(self, request, *args, **kwargs):
         self.limit_to_project(request, *args, **kwargs)
-        return super(BaseProjectApiViewSet, self).missing(request, *args, **kwargs)
+        return super().missing(request, *args, **kwargs)
 
 
 class BaseChoiceApiViewSet(MethodAuthenticationMixin, viewsets.ViewSet):
@@ -717,7 +711,7 @@ class BaseChoiceApiViewSet(MethodAuthenticationMixin, viewsets.ViewSet):
         try:
             return Response(choices[0])
         except IndexError:
-            raise NotFound("{} choice not found.".format(pk))
+            raise NotFound(f"{pk} choice not found.")
 
     def create(self, request):
         raise MethodNotAllowed("POST")
@@ -733,7 +727,7 @@ class BaseChoiceApiViewSet(MethodAuthenticationMixin, viewsets.ViewSet):
 
 
 class ArrayAggExt(ArrayAgg):
-    template = "ARRAY_REMOVE(%(function)s(%(distinct)s%(expressions)s %(ordering)s), NULL)"
+    template = "ARRAY_REMOVE(%(function)s(%(distinct)s%(expressions)s %(order_by)s), NULL)"
 
 
 class M2MSerializerMixin:

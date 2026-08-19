@@ -74,6 +74,19 @@ def test_create_collect_record(db_setup, api_client2, project1, profile2):
     assert CollectRecord.objects.filter(id=response_data["id"]).exists()
 
 
+def test_missing_collect_records(db_setup, api_client1, collect_record4, project1):
+    # Confirms the _pk_ RawSQL annotation used in the "missing" query
+    # compiles/executes cleanly (guards against Django mangling the alias).
+    missing_id = str(uuid.uuid4())
+    url = reverse("collectrecords-missing", args=[str(project1.pk)])
+
+    response = api_client1.post(url, {"id": [str(collect_record4.pk), missing_id]}, format="json")
+    response_data = response.json()
+
+    assert response.status_code == 200
+    assert response_data["missing_ids"] == [missing_id]
+
+
 def test_ingest_schemas_json(api_client1, project1):
     sample_units = [p for p in PROTOCOL_MAP if p not in INGEST_PROTOCOLS_NOT_YET_IMPLEMENTED]
     serializers = {i.protocol: i for i in ingest_serializers}

@@ -9,11 +9,12 @@ from zipfile import ZIP_DEFLATED, ZipFile
 
 from django.conf import settings
 from django.contrib.admin.utils import NestedObjects
-from django.core.exceptions import ObjectDoesNotExist
+from django.core.exceptions import ObjectDoesNotExist, SuspiciousFileOperation
 from django.db import IntegrityError, router
 from django.db.models.deletion import ProtectedError
 from django.db.models.fields.related import OneToOneRel
 from django.utils import timezone
+from django.utils.text import get_valid_filename
 from django.utils.translation import gettext_lazy as _
 from rest_framework.exceptions import ValidationError
 
@@ -24,6 +25,17 @@ class Testing:
 
     def __exit__(self, *args, **kwargs):
         settings.TESTING = False
+
+
+def safe_get_valid_filename(name, default="untitled"):
+    """Like django.utils.text.get_valid_filename, but falls back to `default`
+    instead of raising SuspiciousFileOperation when the name can't be turned
+    into a safe filename (e.g. names that are empty or made up entirely of
+    characters that get stripped down to '', '.' or '..')."""
+    try:
+        return get_valid_filename(name)
+    except SuspiciousFileOperation:
+        return default
 
 
 def is_match(string, match_patterns):
@@ -131,7 +143,7 @@ def get_sample_unit_number(instance):
     if self_number == "":
         self_number = self_label
     elif self_label != "":
-        self_number = "{} {}".format(self_number, self_label)
+        self_number = f"{self_number} {self_label}"
 
     return self_number
 
@@ -151,7 +163,17 @@ def get_value(dictionary, keys, delimiter="__"):
         keys = keys.split(delimiter)
     if not keys or dictionary is None:
         return dictionary
-    return get_value(dictionary.get(keys[0]), keys[1:])
+    key = keys[0]
+    if isinstance(dictionary, list):
+        if not (isinstance(key, str) and key.isdigit()):
+            return None
+        index = int(key)
+        if index >= len(dictionary):
+            return None
+        return get_value(dictionary[index], keys[1:])
+    if not isinstance(dictionary, dict):
+        return None
+    return get_value(dictionary.get(key), keys[1:])
 
 
 def set_value(dic, keys, value, delimiter="__"):
@@ -205,19 +227,19 @@ def run_subprocess(command, std_input=None, to_file=None):
         proc = subprocess.run(command, input=std_input, check=True, capture_output=True)
 
     except subprocess.CalledProcessError as e:
-        print(e.stderr.decode("UTF-8"))
+        print(e.stderr.decode("UTF-8", errors="replace"))
         raise e
 
     # print things like NOTICEs and WARNINGs
     if proc.stderr:
-        print(proc.stderr.decode("UTF-8"))
+        print(proc.stderr.decode("UTF-8", errors="replace"))
 
     if to_file is not None:
-        with open(to_file, "w") as f:
+        with open(to_file, "w", encoding="UTF-8") as f:
             f.write("DATA: \n")
-            f.write(str(proc.stdout))
+            f.write(proc.stdout.decode("UTF-8", errors="replace"))
             f.write("ERR: \n")
-            f.write(str(proc.stderr))
+            f.write(proc.stderr.decode("UTF-8", errors="replace"))
 
 
 # source: https://stackoverflow.com/a/70310511/15624918

@@ -6,7 +6,6 @@ from django.db import IntegrityError, transaction
 from django.db.models import JSONField
 from django.db.models.expressions import RawSQL
 from psycopg.errors import UniqueViolation
-from rest_condition import Or
 from rest_framework import exceptions, permissions, serializers, status
 from rest_framework.decorators import action
 from rest_framework.response import Response
@@ -42,6 +41,7 @@ from ..permissions import (
     UnauthenticatedReadOnlyPermission,
     get_project,
     get_project_pk,
+    get_project_profile,
 )
 from ..reports.fields import ReportField, ReportMethodField
 from ..reports.formatters import to_data_policy, to_str, to_yesno
@@ -191,6 +191,10 @@ class ProjectSerializer(BaseProjectSerializer):
 
 
 class ProjectCSVSerializer(ReportSerializer, BaseProjectSerializer):
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self._cached_profiles = {}
+
     fields = [
         ReportField("name", "Project Name"),
         ReportMethodField("get_num_sites", "Number of Sites"),
@@ -209,6 +213,7 @@ class ProjectCSVSerializer(ReportSerializer, BaseProjectSerializer):
         ),
         ReportField("includes_gfcr", "Includes GFCR", to_yesno),
         ReportField("notes", "Notes"),
+        ReportMethodField("get_suggested_citation", "Suggested Citation"),
         ReportMethodField("get_project_admins_csv", "Project Admins"),
         ReportMethodField("get_contact_link", "Contact link"),
         ReportField("id", "Project Id", to_str),
@@ -264,8 +269,8 @@ class ProjectAuthenticatedUserPermission(permissions.BasePermission):
             action = view.action_map["put"]
             if action in ("find_and_replace_sites", "find_and_replace_managements"):
                 pk = get_project_pk(request, view)
-                project = get_project(pk)
-                pp = ProjectProfile.objects.get_or_none(project=project, profile=user.profile)
+                project = get_project(pk, request=request)
+                pp = get_project_profile(project, user.profile, request=request)
                 if pp is None:
                     return False
                 return pp.role > ProjectProfile.READONLY
@@ -375,11 +380,9 @@ def annotate_num_sample_units(qs):
 class ProjectViewSet(BaseApiViewSet):
     serializer_class = ProjectSerializer
     permission_classes = [
-        Or(
-            UnauthenticatedReadOnlyPermission,
-            ProjectAuthenticatedUserPermission,
-            ProjectDataAdminPermission,
-        )
+        UnauthenticatedReadOnlyPermission
+        | ProjectAuthenticatedUserPermission
+        | ProjectDataAdminPermission
     ]
     method_authentication_classes = {"GET": [AnonymousJWTAuthentication]}
     filterset_class = ProjectFilterSet
@@ -672,14 +675,14 @@ class ProjectViewSet(BaseApiViewSet):
                 results = replace_sampleunit_objs(find_objs, replace_obj, field, profile)
                 transaction.savepoint_commit(sid)
             except obj_cls.DoesNotExist:
-                msg = "Replace {} {} does not exist".format(field, qp_replace_obj_id)
+                msg = f"Replace {field} {qp_replace_obj_id} does not exist"
                 logger.error(msg)
                 transaction.savepoint_rollback(sid)
                 raise exceptions.ValidationError(msg, code=400)
             except Exception as err:
                 logger.error(err)
                 transaction.savepoint_rollback(sid)
-                return Response("Unknown error while replacing {}s".format(field), status=500)
+                return Response(f"Unknown error while replacing {field}s", status=500)
 
         return Response(results)
 
@@ -696,7 +699,7 @@ class ProjectViewSet(BaseApiViewSet):
             return ProjectProfile.objects.get(project_id=project_id, profile_id=profile_id).profile
         except ProjectProfile.DoesNotExist:
             msg = f"[{profile_id}] Profile does not exist in project"
-            logger.error("Profile {} does not exist in project {}".format(profile_id, project_id))
+            logger.error(f"Profile {profile_id} does not exist in project {project_id}")
             raise exceptions.ValidationError(msg, code=400)
 
     @action(detail=True, methods=["put"])

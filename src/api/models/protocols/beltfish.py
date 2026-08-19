@@ -9,12 +9,34 @@ from django.db.models import Avg, F, Max, Q
 from django.utils.translation import gettext as _
 
 from ...utils import create_timestamp, expired_timestamp
-from ..base import BaseAttributeModel, BaseChoiceModel, BaseModel, JSONMixin
+from ..base import (
+    BaseAttributeModel,
+    BaseChoiceModel,
+    BaseModel,
+    ChoicesManager,
+    JSONMixin,
+)
 from ..core import FISHBELT_PROTOCOL, Observer, Region, Transect, TransectMethod
+
+
+class BeltTransectWidthManager(ChoicesManager):
+    def choices(self, order_by, *args, **kwargs):
+        # BeltTransectWidthCondition.Meta.ordering (val) matches what .choice
+        # needs, so prefetching here lets `self.conditions.all()` hit the
+        # prefetch cache instead of re-querying per BeltTransectWidth row.
+        # Scoped to choices() (not get_queryset()) so other callers - e.g.
+        # BeltTransectWidth.objects.get(id=...) in the biomass validator,
+        # which only needs get_condition()'s own differently-ordered query -
+        # aren't charged for a conditions prefetch they never use.
+        return [
+            c.choice for c in self.get_queryset().order_by(order_by).prefetch_related("conditions")
+        ]
 
 
 class BeltTransectWidth(BaseChoiceModel):
     name = models.CharField(unique=True, max_length=100, null=True, blank=True)
+
+    objects = BeltTransectWidthManager()
 
     def __str__(self):
         return _("%s") % (self.name or "")
@@ -25,7 +47,7 @@ class BeltTransectWidth(BaseChoiceModel):
             "id": self.pk,
             "name": self.__str__(),
             "updated_on": self.updated_on,
-            "conditions": [cnd.choice for cnd in self.conditions.all().order_by("val")],
+            "conditions": [cnd.choice for cnd in self.conditions.all()],
         }
 
         return ret
@@ -89,6 +111,7 @@ class BeltTransectWidthCondition(BaseChoiceModel):
     val = models.PositiveSmallIntegerField()
 
     class Meta:
+        ordering = ("val",)
         constraints = [
             models.UniqueConstraint(
                 fields=["belttransectwidth", "operator", "size"],
@@ -299,7 +322,7 @@ class FishGroupingRelationship(models.Model):
     )
 
     def __str__(self):
-        return "%s > %s" % (self.grouping, self.attribute)
+        return f"{self.grouping} > {self.attribute}"
 
 
 class FishFamily(FishAttribute):
@@ -563,7 +586,7 @@ class FishSpecies(FishAttribute):
         ("wing diameter", "wing diameter"),
     )
     LENGTH_TYPES_CHOICES_UPDATED_ON = _datetime.datetime(
-        2020, 1, 21, 0, 0, 0, 0, tzinfo=_datetime.timezone.utc
+        2020, 1, 21, 0, 0, 0, 0, tzinfo=_datetime.UTC
     )
 
     name = models.CharField(max_length=100)

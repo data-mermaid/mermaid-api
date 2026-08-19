@@ -1,6 +1,8 @@
 from django.conf import settings
 from django.contrib import admin, messages
 from django.contrib.admin.utils import unquote
+from django.core.exceptions import PermissionDenied
+from django.db import transaction
 from django.db.models import Q
 from django.template.response import TemplateResponse
 from django.urls import path, reverse
@@ -30,14 +32,13 @@ from ..models import (
     Region,
     RelativeDepth,
     SampleEvent,
-    SampleUnit,
     Site,
     Tag,
     Tide,
     Visibility,
 )
-from ..utils import get_subclasses
 from ..utils.notification import add_notification
+from ..utils.project import delete_project
 from .base import BaseAdmin, CachedFKInline
 
 
@@ -89,11 +90,7 @@ class ProjectAdmin(BaseAdmin):
     def admin_list(self, obj):
         pps = self._get_admins()
         return ", ".join(
-            [
-                "{} <{}>".format(p.profile.full_name, p.profile.email)
-                for p in pps
-                if p.project == obj
-            ]
+            [f"{p.profile.full_name} <{p.profile.email}>" for p in pps if p.project == obj]
         )
 
     def _get_sites(self):
@@ -112,20 +109,55 @@ class ProjectAdmin(BaseAdmin):
         return ", ".join([c.name for c in countries])
 
     def tag_list(self, obj):
-        return ", ".join("{}".format(t.name) for t in obj.tags.all())
+        return ", ".join(f"{t.name}" for t in obj.tags.all())
 
     tag_list.short_description = _("organizations")
 
     def get_queryset(self, request):
         return super().get_queryset(request).select_related("created_by", "updated_by")
 
-    def delete_view(self, request, object_id, extra_context=None):
-        if request.method == "POST":
-            ses = SampleEvent.objects.filter(site__project=object_id)
-            for se in ses:
-                for suclass in get_subclasses(SampleUnit):
-                    suclass.objects.filter(sample_event=se).delete()
-        return super(ProjectAdmin, self).delete_view(request, object_id, extra_context)
+    def get_deleted_objects(self, objs, request):
+        # Django's default collector treats any PROTECTed relation reachable
+        # from a Project (e.g. SampleEvent.site) as fully blocking, so real
+        # survey data would never reach delete_model()/delete_queryset() -
+        # even though delete_project() below already resolves those
+        # relations itself, atomically. Run the collector via super() so
+        # perms_needed/model_count reflect cascaded models (Site, Management,
+        # ProjectProfile, ...) instead of just Project, then drop its nested
+        # tree and protected list: for a real project the tree can run to
+        # hundreds/thousands of formatted rows (e.g. one per Site/Covariate),
+        # and the protected list is exactly what we're bypassing.
+        #
+        # Caveat: PROTECTed models (SampleEvent.site/.management) still stop
+        # the collector's own recursion, so anything cascading *below*
+        # SampleEvent (observations, transects, ...) is invisible to both
+        # model_count and perms_needed here - same as vanilla Django admin.
+        # delete_project() still deletes it; this page just can't preview or
+        # permission-check that part. That's fine in practice because
+        # has_delete_permission below already restricts this whole action to
+        # superusers.
+        _to_delete, model_count, perms_needed, _protected = super().get_deleted_objects(
+            objs, request
+        )
+        to_delete = [str(obj) for obj in objs]
+        return to_delete, model_count, perms_needed, []
+
+    def has_delete_permission(self, request, obj=None):
+        # Project deletion cascades to all of a project's survey data.
+        # delete_project() resolves PROTECTed relations itself rather than
+        # relying on Django's collector to block them (see get_deleted_objects
+        # above), so this is the only gate left - restrict it to superusers.
+        return request.user.is_superuser
+
+    def delete_model(self, request, obj):
+        # Route through the app's own deletion path (transaction + savepoint, handles
+        # PROTECTed relations like images) instead of Django's raw cascade .delete(),
+        # so a partial failure rolls back instead of leaving an orphaned project.
+        delete_project(obj.pk)
+
+    def delete_queryset(self, request, queryset):
+        for obj in queryset:
+            delete_project(obj.pk)
 
     def get_formsets_with_inlines(self, request, obj=None):
         countries = Country.objects.none()
@@ -162,6 +194,42 @@ class ProjectProfileAdmin(BaseAdmin):
         "profile__id",
     ]
     list_filter = ("role",)
+
+    def has_delete_permission(self, request, obj=None):
+        # Mirrors sync push.py's admin-demotion guard. Unlocked - just decides
+        # whether to show the delete UI; delete_model/delete_queryset re-check
+        # atomically with locking right before the actual delete.
+        if not super().has_delete_permission(request, obj):
+            return False
+        if obj is not None and obj.is_last_admin():
+            return False
+        return True
+
+    def delete_model(self, request, obj):
+        with transaction.atomic():
+            if obj.is_last_admin(for_update=True):
+                raise PermissionDenied("You are the last admin of this project!")
+            super().delete_model(request, obj)
+
+    def delete_queryset(self, request, queryset):
+        # Check the whole selected batch per project at once, not row-by-row -
+        # none of the batch is deleted yet while checking, so e.g. selecting
+        # both of a project's two remaining admins would pass a per-row check.
+        # Track every selected pk regardless of its role here: that read is
+        # unlocked, so a row that looks like a non-admin now could still be
+        # concurrently promoted to ADMIN before the locked check below runs -
+        # would_leave_project_without_admin is what determines actual admin
+        # status safely, under lock.
+        with transaction.atomic():
+            selected_pks_by_project = {}
+            for obj in queryset:
+                selected_pks_by_project.setdefault(obj.project_id, set()).add(obj.pk)
+            for project_id, excluded_pks in selected_pks_by_project.items():
+                if ProjectProfile.would_leave_project_without_admin(
+                    project_id, excluded_pks, for_update=True
+                ):
+                    raise PermissionDenied("You are the last admin of this project!")
+            super().delete_queryset(request, queryset)
 
 
 @admin.register(Region)
@@ -257,7 +325,7 @@ class ManagementAdmin(BaseAdmin):
         if crs.count() > 0:
             for cr in crs:
                 admin_url = reverse(
-                    "admin:{}_collectrecord_change".format(SampleEvent._meta.app_label),
+                    f"admin:{SampleEvent._meta.app_label}_collectrecord_change",
                     args=(cr.pk,),
                 )
                 crstr = format_html('<a href="{}">{}</a>', admin_url, cr)
@@ -268,9 +336,7 @@ class ManagementAdmin(BaseAdmin):
             atleast_one_se = True
             for se in ses:
                 admin_url = reverse(
-                    "admin:{}_{}_change".format(
-                        SampleEvent._meta.app_label, SampleEvent._meta.model_name
-                    ),
+                    f"admin:{SampleEvent._meta.app_label}_{SampleEvent._meta.model_name}_change",
                     args=(se.pk,),
                 )
                 sestr = format_html('<a href="{}">{}</a>', admin_url, se)
@@ -386,10 +452,10 @@ class TagAdmin(BaseAdmin):
         ps = Project.objects.filter(tags=obj)
         for p in ps:
             admin_url = reverse(
-                "admin:{}_{}_change".format(Project._meta.app_label, Project._meta.model_name),
+                f"admin:{Project._meta.app_label}_{Project._meta.model_name}_change",
                 args=(p.pk,),
             )
-            app_url = "{}/projects/{}/project-info".format(settings.DEFAULT_DOMAIN_COLLECT, p.pk)
+            app_url = f"{settings.DEFAULT_DOMAIN_COLLECT}/projects/{p.pk}/project-info"
             pstr = format_html(
                 '<a href="{}">{}</a> [<a href="{}" target="_blank">{}</a>]',
                 admin_url,
@@ -409,7 +475,7 @@ class TagAdmin(BaseAdmin):
                     p.tags.remove(obj)
                     p.tags.add(replacement_obj)
 
-        return super(TagAdmin, self).delete_view(request, object_id, extra_context)
+        return super().delete_view(request, object_id, extra_context)
 
 
 @admin.register(Covariate)

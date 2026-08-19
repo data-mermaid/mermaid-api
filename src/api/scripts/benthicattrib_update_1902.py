@@ -1,7 +1,7 @@
 from api.models import BenthicAttribute
 
 
-class BenthicAttributeUpdateGenerator(object):
+class BenthicAttributeUpdateGenerator:
     def __init__(self):
         self.macroalgae = BenthicAttribute.objects.get(name="Fleshy macroalgae")
         self.coralline_algae = BenthicAttribute.objects.get(name="Coralline algae")
@@ -21,7 +21,7 @@ class BenthicAttributeUpdateGenerator(object):
         new_grandparent = new_grandparent or grandparent
         children = BenthicAttribute.objects.filter(parent=grandparent)
         for child in children:
-            print("{} child: {}".format(grandparent.name, child))
+            print(f"{grandparent.name} child: {child}")
             for grandchild in BenthicAttribute.objects.filter(parent=child):
                 print(grandchild)
                 grandchild.parent = new_grandparent

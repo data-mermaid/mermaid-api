@@ -144,9 +144,9 @@ class Command(BaseCommand):
             sys.exit(1)
 
         if dry_run:
-            msg = "[DRYRUN] {} records would have been created.".format(len(records))
+            msg = f"[DRYRUN] {len(records)} records would have been created."
         else:
-            msg = "{} records created.".format(len(records))
+            msg = f"{len(records)} records created."
 
         if verbosity > 1:
             self.stdout.write(self.style.SUCCESS(msg))
