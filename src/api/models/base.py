@@ -214,3 +214,26 @@ class Application(BaseModel):
 
     def __str__(self):
         return f"{self.profile} - {self.client_id}"
+
+
+class APIKey(BaseModel):
+    profile = models.ForeignKey("Profile", related_name="api_keys", on_delete=models.CASCADE)
+    name = models.CharField(max_length=100)
+    key_id = models.CharField(max_length=12, unique=True, db_index=True)
+    # hex SHA-256 of the secret; the secret itself is never stored
+    secret_hash = models.CharField(max_length=64)
+    projects = models.ManyToManyField("Project", related_name="api_keys")
+    is_active = models.BooleanField(default=True)
+    expires_at = models.DateTimeField(null=True, blank=True)
+    last_used_at = models.DateTimeField(null=True, blank=True)
+    last_used_ip = models.GenericIPAddressField(null=True, blank=True)
+    revoked_at = models.DateTimeField(null=True, blank=True)
+    revoked_reason = models.CharField(max_length=255, blank=True)
+
+    class Meta:
+        db_table = "api_key"
+        ordering = ("name",)
+
+    def __str__(self):
+        # never include secret_hash
+        return f"{self.name} [{self.key_id}]"
