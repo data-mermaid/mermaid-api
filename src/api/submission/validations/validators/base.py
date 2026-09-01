@@ -95,6 +95,7 @@ def validate_list(func):
 
 class BaseValidator:
     result = None
+    RUN_CACHE_KEY = "_validation_run_cache"
 
     def __init__(self, **kwargs):
         self.context = kwargs or {}
@@ -115,6 +116,16 @@ class BaseValidator:
     @validator_result
     def skip(self, context=None):
         return OK, None, context
+
+    def get_run_cache(self, record, namespace):
+        """Namespaced scratch space shared by every validator in one validation run.
+
+        ValidationRunner hands the same collect record dict to each validator in a
+        run, so the dict doubles as a cache that goes away when the run ends. Only
+        available to validators that receive the serialized record, not the ones
+        declaring requires_instance.
+        """
+        return record.setdefault(self.RUN_CACHE_KEY, {}).setdefault(namespace, {})
 
     def get_value(self, record, key):
         return get_value(record, key, delimiter=".")
