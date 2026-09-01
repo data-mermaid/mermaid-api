@@ -4,6 +4,7 @@ from rest_framework import permissions, serializers
 from rest_framework.exceptions import MethodNotAllowed
 
 from ..models import Image, ObsBenthicPhotoQuadrat, ProjectProfile
+from ..permissions import api_key_in_scope, get_request_api_key
 from .base import BaseAPIFilterSet, BaseApiViewSet
 from .classification.image import ImageSerializer
 
@@ -36,6 +37,8 @@ class AllImagesPermission(permissions.BasePermission):
 
         project = getattr(obj, "project", None)
         if not project:
+            return False
+        if not api_key_in_scope(request, project.pk):
             return False
         return ProjectProfile.objects.filter(profile=profile, project=project).exists()
 
@@ -82,7 +85,13 @@ class AllImagesViewSet(BaseApiViewSet):
         if profile is None:
             return qs.none()
 
-        user_project_ids = ProjectProfile.objects.filter(profile=profile).values("project_id")
+        user_project_ids = ProjectProfile.objects.filter(profile=profile)
+        # This endpoint spans projects, so the key's scope has to be applied to
+        # the membership list itself - get_project_profile never runs here.
+        api_key = get_request_api_key(self.request)
+        if api_key is not None:
+            user_project_ids = user_project_ids.filter(project__api_keys=api_key)
+        user_project_ids = user_project_ids.values("project_id")
 
         return qs.filter(
             Q(

@@ -21,6 +21,7 @@ from ..models import (
     ProjectProfile,
     Site,
 )
+from ..permissions import get_request_api_key
 from ..resources.project import ProjectCSVSerializer, annotate_num_sample_units
 from ..resources.sampleunitmethods.beltfishmethod import (
     BeltFishProjectMethodObsView,
@@ -458,6 +459,11 @@ def get_project_protocol_viewable_level(request, protocol, project_ids):
 
     projects = Project.objects.filter(pk__in=project_ids)
     project_profiles = ProjectProfile.objects.filter(profile=profile, project__in=projects)
+    # A key only gets member-level visibility on the projects it is scoped to;
+    # everywhere else it falls back to the project's data policy.
+    api_key = get_request_api_key(request)
+    if api_key is not None:
+        project_profiles = project_profiles.filter(project__api_keys=api_key)
     project_lookup = [pp.project_id for pp in project_profiles]
 
     for project in projects:

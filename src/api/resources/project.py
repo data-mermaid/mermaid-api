@@ -42,6 +42,7 @@ from ..permissions import (
     get_project,
     get_project_pk,
     get_project_profile,
+    get_request_api_key,
 )
 from ..reports.fields import ReportField, ReportMethodField
 from ..reports.formatters import to_data_policy, to_str, to_yesno
@@ -434,6 +435,13 @@ class ProjectViewSet(BaseApiViewSet):
         qs = annotate_num_sample_units(qs)
         user = self.request.user
         show_all = "showall" in self.request.query_params
+
+        # An API key sees only the projects it is scoped to, showall included -
+        # the list is the one place a caller can discover projects, so leaving
+        # it unfiltered would hand a stolen key the whole account.
+        api_key = get_request_api_key(self.request)
+        if api_key is not None:
+            return qs.filter(api_keys=api_key)
 
         if show_all is True:
             return qs.all()
