@@ -3,12 +3,15 @@ import logging
 from django.conf import settings
 from django.contrib.auth import get_user_model
 from django.contrib.auth.models import AnonymousUser
+from django.core.cache import cache
 from django.utils import timezone
+from django.utils.encoding import smart_str
 from rest_framework import exceptions
-from rest_framework.authentication import BaseAuthentication
+from rest_framework.authentication import BaseAuthentication, get_authorization_header
 
-from api.models.base import Application, AuthUser, Profile
+from api.models.base import APIKey, Application, AuthUser, Profile
 from api.utils import get_or_create_safeish
+from api.utils.apikeys import get_environment_label, parse_api_key, secret_matches
 from api.utils.auth0utils import decode, get_jwt_token, get_user_info, is_hs_token
 
 logger = logging.getLogger(__name__)
@@ -175,6 +178,114 @@ class JWTAuthentication(BaseAuthentication):
         return app
 
 
+def has_api_key_scheme(request):
+    """True when the caller presented an `Authorization: ApiKey ...` header."""
+
+    auth = get_authorization_header(request).split()
+    if not auth:
+        return False
+    return smart_str(auth[0]).lower() == APIKeyAuthentication.keyword.lower()
+
+
+class APIKeyAuthentication(BaseAuthentication):
+    """
+    Authentication for machine clients using a MERMAID-issued API key.
+
+    The key is read from `Authorization: ApiKey mmd_<env>_<key_id>_<secret>`
+    and never from the query string, which would put a long-lived credential
+    into nginx, ALB and Sentry logs.
+
+    A key that is present but bad always fails closed with a 401. Returning
+    `None` would let a misconfigured client fall through to the anonymous
+    backend and silently read public data instead of seeing the error.
+    """
+
+    keyword = "ApiKey"
+    www_authenticate_realm = "api"
+    # per-key throttle on the last_used_at write, in seconds
+    last_used_throttle = 60
+
+    def authenticate_header(self, request):
+        return f'{self.keyword} realm="{self.www_authenticate_realm}"'
+
+    def authenticate(self, request):
+        auth = get_authorization_header(request).split()
+        if not auth or smart_str(auth[0]).lower() != self.keyword.lower():
+            # not our scheme; let the next backend try
+            return None
+
+        if len(auth) != 2:
+            raise self._fail(request, "malformed_header", None)
+
+        raw = smart_str(auth[1])
+        try:
+            env, key_id, secret = parse_api_key(raw)
+        except ValueError:
+            raise self._fail(request, "malformed_key", None)
+
+        # ImproperlyConfigured here is a deployment error, not a client error;
+        # let it surface as a 500. api.checks catches it at startup.
+        if env != get_environment_label():
+            raise self._fail(
+                request,
+                "wrong_environment",
+                key_id,
+                detail="key issued for a different environment",
+            )
+
+        try:
+            api_key = APIKey.objects.select_related("profile").get(key_id=key_id)
+        except APIKey.DoesNotExist:
+            raise self._fail(request, "unknown_key_id", key_id)
+
+        if not secret_matches(secret, api_key.secret_hash):
+            raise self._fail(request, "bad_secret", key_id)
+
+        if not api_key.is_active:
+            raise self._fail(request, "inactive", key_id)
+        if api_key.revoked_at is not None:
+            raise self._fail(request, "revoked", key_id)
+        if api_key.expires_at is not None and api_key.expires_at < timezone.now():
+            raise self._fail(request, "expired", key_id)
+
+        self._touch(api_key, _get_client_ip(request))
+
+        # dummy Django user, as in JWTAuthentication
+        user = get_user_model()(username=f"apikey|{api_key.key_id}", password="apikey")
+        user.profile = api_key.profile
+        return (user, api_key)
+
+    def _fail(self, request, reason, key_id, detail=None):
+        """Log the rejection and return the exception for the caller to raise."""
+
+        logger.warning(
+            "[apikey.failed_auth] reason=%s key_id=%s ip=%s path=%s",
+            reason,
+            key_id or "malformed",
+            _get_client_ip(request),
+            request.path,
+        )
+        # One opaque message: which check failed is not the caller's business,
+        # and saying so would narrow a guessing attack.
+        return exceptions.AuthenticationFailed(detail or "Invalid API key")
+
+    def _touch(self, api_key, ip):
+        """Record usage, at most once per key per throttle window.
+
+        A busy client would otherwise write to the row on every request.
+        """
+
+        cache_key = f"apikey:last_used:{api_key.key_id}"
+        if cache.get(cache_key):
+            return
+        cache.set(cache_key, True, self.last_used_throttle)
+        now = timezone.now()
+        # update() to avoid touching updated_on/updated_by on every call
+        APIKey.objects.filter(pk=api_key.pk).update(last_used_at=now, last_used_ip=ip)
+        api_key.last_used_at = now
+        api_key.last_used_ip = ip
+
+
 class AnonymousJWTAuthentication(JWTAuthentication):
     """
     If token has been provided, JWT Authentication is used
@@ -182,6 +293,11 @@ class AnonymousJWTAuthentication(JWTAuthentication):
     """
 
     def authenticate(self, request, *args, **kwargs):
+        # An API key on a public endpoint must be validated, not ignored:
+        # a bad key has to 401 rather than quietly return public data.
+        if has_api_key_scheme(request):
+            return APIKeyAuthentication().authenticate(request)
+
         jwt_token = None
         try:
             jwt_token = get_jwt_token(request)
