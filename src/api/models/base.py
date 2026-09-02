@@ -223,17 +223,24 @@ class Application(BaseModel):
 
 
 class APIKey(BaseModel):
-    # revoked_reason values set by MERMAID itself; a human revoking through
-    # admin or the API may write anything.
-    MEMBERSHIP_REMOVED = "membership_removed"
-    PROJECT_DELETED = "project_deleted"
+    """A long-lived credential that acts as its profile.
+
+    The key carries no permissions of its own. Every request it authenticates
+    runs as `profile`, with whatever `ProjectProfile.role` that profile holds
+    on the project being touched, so a key reaches exactly the data its owner
+    reaches and no more - and loses access the moment a membership goes away,
+    with no scope list to keep in step.
+
+    The trade is blast radius: a leaked key is the whole of its profile's
+    access. That is why issuing one is a superuser action, why `expires_at`
+    defaults to a year rather than to never, and why revocation is one call.
+    """
 
     profile = models.ForeignKey("Profile", related_name="api_keys", on_delete=models.CASCADE)
     name = models.CharField(max_length=100)
     key_id = models.CharField(max_length=12, unique=True, db_index=True)
     # hex SHA-256 of the secret; the secret itself is never stored
     secret_hash = models.CharField(max_length=64)
-    projects = models.ManyToManyField("Project", related_name="api_keys")
     is_active = models.BooleanField(default=True)
     expires_at = models.DateTimeField(null=True, blank=True)
     last_used_at = models.DateTimeField(null=True, blank=True)
@@ -278,13 +285,12 @@ class APIKey(BaseModel):
         if save:
             self.save(update_fields=["revoked_at", "revoked_reason", "is_active", "updated_on"])
         # C8: the counterpart of [apikey.created]. Together they answer "which
-        # credentials existed, on what, and for how long" from the logs alone.
+        # credentials existed, for whom, and for how long" from the logs alone.
         audit_logger.info(
-            "[apikey.revoked] key_id=%s profile=%s actor=%s projects=%s reason=%s",
+            "[apikey.revoked] key_id=%s profile=%s actor=%s reason=%s",
             self.key_id,
             self.profile_id,
             actor,
-            ",".join(str(pk) for pk in self.projects.values_list("pk", flat=True)) or "none",
             reason or "unspecified",
         )
         return True

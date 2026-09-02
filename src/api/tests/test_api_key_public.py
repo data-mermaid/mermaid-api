@@ -14,7 +14,7 @@ from django.urls import reverse
 from django.utils import timezone
 from rest_framework.test import APIClient
 
-from api.models import APIKey, Project, ProjectProfile
+from api.models import APIKey, Project
 from api.utils.apikeys import generate_api_key
 
 
@@ -26,7 +26,7 @@ def clear_cache():
 
 
 @pytest.fixture
-def key_pair(profile1, project1):
+def key_pair(profile1):
     key_id, secret_hash, raw = generate_api_key()
     key = APIKey.objects.create(
         profile=profile1,
@@ -35,7 +35,6 @@ def key_pair(profile1, project1):
         secret_hash=secret_hash,
         expires_at=timezone.now() + timedelta(days=365),
     )
-    key.projects.add(project1)
     return key, raw
 
 
@@ -116,22 +115,19 @@ def test_private_project_stays_private_for_a_bad_key(db_setup, api_client_public
     assert _client("mmd_local_aaaaaaaaaaaa_nope").get(url, format="json").status_code == 401
 
 
-def test_key_scoped_elsewhere_still_sees_public_summary_data(
-    db_setup, profile1, project1, project2, project_profile1
-):
-    """Scope narrows what a key reaches as a member, not what anyone may read.
-    A key scoped to project2 keeps the public view of project1."""
+def test_key_sees_public_summary_data_for_a_project_it_is_not_in(db_setup, profile1, project1):
+    """Membership decides member-level access; it does not take away what any
+    caller may read. profile1 is not a member of project1, so its key reads
+    project1 at the public level like anyone else."""
 
-    ProjectProfile.objects.create(project=project2, profile=profile1, role=ProjectProfile.ADMIN)
     key_id, secret_hash, raw = generate_api_key()
-    key = APIKey.objects.create(
+    APIKey.objects.create(
         profile=profile1,
-        name="other scope bot",
+        name="non-member bot",
         key_id=key_id,
         secret_hash=secret_hash,
         expires_at=timezone.now() + timedelta(days=365),
     )
-    key.projects.add(project2)
 
     url = reverse("benthicpitmethod-sampleevent-list", args=[str(project1.pk)])
     assert project1.data_policy_benthicpit == Project.PUBLIC_SUMMARY

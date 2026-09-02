@@ -43,7 +43,7 @@ def frozen_window():
 
 
 @pytest.fixture
-def key_pair(profile1, project1):
+def key_pair(profile1):
     key_id, secret_hash, raw = generate_api_key()
     key = APIKey.objects.create(
         profile=profile1,
@@ -52,7 +52,6 @@ def key_pair(profile1, project1):
         secret_hash=secret_hash,
         expires_at=timezone.now() + timedelta(days=365),
     )
-    key.projects.add(project1)
     return key, raw
 
 

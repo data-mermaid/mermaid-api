@@ -43,7 +43,7 @@ def _messages(request):
     return [str(message) for message in request._messages._queued_messages]
 
 
-def _make_key(profile, projects, **kwargs):
+def _make_key(profile, **kwargs):
     key_id, secret_hash, raw = generate_api_key()
     key = APIKey.objects.create(
         profile=profile,
@@ -53,7 +53,6 @@ def _make_key(profile, projects, **kwargs):
         expires_at=kwargs.pop("expires_at", timezone.now() + timedelta(days=30)),
         **kwargs,
     )
-    key.projects.set(projects)
     return key, raw
 
 
@@ -61,9 +60,7 @@ def _make_key(profile, projects, **kwargs):
 
 
 def test_blank_expiry_gets_the_default_lifetime(profile1, project1):
-    form = APIKeyAdminForm(
-        data={"profile": str(profile1.pk), "name": "bot", "projects": [str(project1.pk)]}
-    )
+    form = APIKeyAdminForm(data={"profile": str(profile1.pk), "name": "bot"})
 
     assert form.is_valid(), form.errors
     expected = timezone.now() + timedelta(days=DEFAULT_LIFETIME_DAYS)
@@ -75,7 +72,6 @@ def test_never_expires_is_an_explicit_choice(profile1, project1):
         data={
             "profile": str(profile1.pk),
             "name": "bot",
-            "projects": [str(project1.pk)],
             "never_expires": "on",
         }
     )
@@ -89,7 +85,6 @@ def test_expiry_date_and_never_expires_together_is_rejected(profile1, project1):
         data={
             "profile": str(profile1.pk),
             "name": "bot",
-            "projects": [str(project1.pk)],
             "expires_at": "2030-01-01 00:00",
             "never_expires": "on",
         }
@@ -98,15 +93,19 @@ def test_expiry_date_and_never_expires_together_is_rejected(profile1, project1):
     assert form.is_valid() is False
 
 
-def test_a_key_needs_at_least_one_project(profile1):
+def test_the_form_offers_no_scope_field(profile1):
+    """A key is its profile's access, so there is nothing to narrow here. The
+    fields a superuser sets are who it acts as, what it is called, and when it
+    stops working."""
+
     form = APIKeyAdminForm(data={"profile": str(profile1.pk), "name": "bot"})
 
-    assert form.is_valid() is False
-    assert "projects" in form.errors
+    assert "projects" not in form.fields
+    assert form.is_valid(), form.errors
 
 
 def test_never_expires_is_prechecked_for_a_key_with_no_expiry(profile1, project1):
-    key, _ = _make_key(profile1, [project1], expires_at=None)
+    key, _ = _make_key(profile1, expires_at=None)
 
     form = APIKeyAdminForm(instance=key)
 
@@ -118,20 +117,15 @@ def test_never_expires_is_prechecked_for_a_key_with_no_expiry(profile1, project1
 
 def test_save_model_generates_the_key_and_shows_the_secret_once(key_admin, profile1, project1):
     request = _request()
-    form = APIKeyAdminForm(
-        data={"profile": str(profile1.pk), "name": "ingest bot", "projects": [str(project1.pk)]}
-    )
+    form = APIKeyAdminForm(data={"profile": str(profile1.pk), "name": "ingest bot"})
     assert form.is_valid(), form.errors
 
-    # The same order the admin add view uses.
     key = form.save(commit=False)
     key_admin.save_model(request, key, form, change=False)
-    key_admin.save_related(request, form, [], change=False)
 
     saved = APIKey.objects.get(pk=form.instance.pk)
     assert len(saved.key_id) == 12
     assert len(saved.secret_hash) == 64
-    assert list(saved.projects.all()) == [project1]
 
     banners = _messages(request)
     assert len(banners) == 1
@@ -142,24 +136,21 @@ def test_save_model_generates_the_key_and_shows_the_secret_once(key_admin, profi
     assert secret not in banners[0].replace(raw, "")
     assert saved.secret_hash not in banners[0]
 
-    # ...and only once: a second response has nothing left to show.
-    key_admin.save_related(request, form, [], change=False)
+    # ...and only on creation: saving the row again has nothing left to show.
+    key_admin.save_model(request, saved, form, change=True)
     assert len(_messages(request)) == 1
 
 
 def test_creation_leaves_an_audit_line(key_admin, profile1, project1, api_key_audit_logs):
-    """C8: a minted credential is logged with who asked for it and what it
-    reaches, and never with the secret or the hash."""
+    """C8: a minted credential is logged with who asked for it and who it acts
+    as, and never with the secret or the hash."""
 
     request = _request()
-    form = APIKeyAdminForm(
-        data={"profile": str(profile1.pk), "name": "audited bot", "projects": [str(project1.pk)]}
-    )
+    form = APIKeyAdminForm(data={"profile": str(profile1.pk), "name": "audited bot"})
     assert form.is_valid(), form.errors
 
     key = form.save(commit=False)
     key_admin.save_model(request, key, form, change=False)
-    key_admin.save_related(request, form, [], change=False)
 
     saved = APIKey.objects.get(pk=form.instance.pk)
     lines = api_key_audit_lines(api_key_audit_logs, "created")
@@ -167,7 +158,6 @@ def test_creation_leaves_an_audit_line(key_admin, profile1, project1, api_key_au
     assert f"key_id={saved.key_id}" in lines[0]
     assert f"profile={profile1.pk}" in lines[0]
     assert "actor=root" in lines[0]
-    assert f"projects={project1.pk}" in lines[0]
     assert "replaces=none" in lines[0]
     assert saved.secret_hash not in lines[0]
 
@@ -178,7 +168,7 @@ def test_creation_leaves_an_audit_line(key_admin, profile1, project1, api_key_au
 def test_replacement_creation_names_the_key_it_replaces(
     key_admin, profile1, project1, api_key_audit_logs
 ):
-    original, _ = _make_key(profile1, [project1], name="nightly job")
+    original, _ = _make_key(profile1, name="nightly job")
 
     key_admin.generate_replacement_keys(_request(), APIKey.objects.filter(pk=original.pk))
 
@@ -190,7 +180,7 @@ def test_replacement_creation_names_the_key_it_replaces(
 
 
 def test_editing_a_key_does_not_reissue_the_secret(key_admin, profile1, project1):
-    key, _ = _make_key(profile1, [project1])
+    key, _ = _make_key(profile1)
     original_key_id = key.key_id
     original_hash = key.secret_hash
     request = _request()
@@ -213,7 +203,7 @@ def test_only_a_superuser_can_add_a_key(key_admin):
 
 
 def test_profile_is_locked_once_a_key_exists(key_admin, profile1, project1):
-    key, _ = _make_key(profile1, [project1])
+    key, _ = _make_key(profile1)
     request = _request()
 
     assert "profile" not in key_admin.get_readonly_fields(request)
@@ -224,7 +214,7 @@ def test_profile_is_locked_once_a_key_exists(key_admin, profile1, project1):
 
 
 def test_revoke_action_revokes_the_selection(key_admin, profile1, project1):
-    key, _ = _make_key(profile1, [project1])
+    key, _ = _make_key(profile1)
     request = _request()
 
     key_admin.revoke_keys(request, APIKey.objects.filter(pk=key.pk))
@@ -235,10 +225,8 @@ def test_revoke_action_revokes_the_selection(key_admin, profile1, project1):
     assert "root" in key.revoked_reason
 
 
-def test_generate_replacement_keeps_the_scope_and_leaves_the_original(
-    key_admin, profile1, project1
-):
-    key, _ = _make_key(profile1, [project1], name="nightly job")
+def test_generate_replacement_keeps_the_profile_and_leaves_the_original(key_admin, profile1):
+    key, _ = _make_key(profile1, name="nightly job")
     request = _request()
 
     key_admin.generate_replacement_keys(request, APIKey.objects.filter(pk=key.pk))
@@ -246,7 +234,6 @@ def test_generate_replacement_keeps_the_scope_and_leaves_the_original(
     replacement = APIKey.objects.exclude(pk=key.pk).get()
     assert replacement.profile == profile1
     assert replacement.name == "nightly job"
-    assert list(replacement.projects.all()) == [project1]
     assert replacement.key_id != key.key_id
     assert replacement.secret_hash != key.secret_hash
     assert replacement.expires_at is not None
@@ -259,7 +246,7 @@ def test_generate_replacement_keeps_the_scope_and_leaves_the_original(
 
 
 def test_replacing_a_no_expiry_key_stays_no_expiry(key_admin, profile1, project1):
-    key, _ = _make_key(profile1, [project1], expires_at=None)
+    key, _ = _make_key(profile1, expires_at=None)
 
     key_admin.generate_replacement_keys(_request(), APIKey.objects.filter(pk=key.pk))
 
@@ -267,7 +254,7 @@ def test_replacing_a_no_expiry_key_stays_no_expiry(key_admin, profile1, project1
 
 
 def test_staff_without_superuser_cannot_generate_keys(key_admin, profile1, project1):
-    key, _ = _make_key(profile1, [project1])
+    key, _ = _make_key(profile1)
     staff = _request(user=User(username="staff", is_superuser=False, is_staff=True))
 
     assert "generate_replacement_keys" not in key_admin.get_actions(staff)
@@ -281,7 +268,7 @@ def test_staff_without_superuser_cannot_generate_keys(key_admin, profile1, proje
 
 
 def test_admin_never_exposes_the_hash(key_admin, profile1, project1):
-    key, _ = _make_key(profile1, [project1])
+    key, _ = _make_key(profile1)
     request = _request(method="get")
 
     assert "secret_hash" not in key_admin.list_display
@@ -300,8 +287,8 @@ def test_admin_offers_no_all_fields_export(key_admin):
 
 
 def test_no_expiry_keys_are_one_click_away(key_admin, profile1, project1):
-    forever, _ = _make_key(profile1, [project1], expires_at=None)
-    expiring, _ = _make_key(profile1, [project1])
+    forever, _ = _make_key(profile1, expires_at=None)
+    expiring, _ = _make_key(profile1)
     expiry_filter = key_admin.list_filter[0]
     queryset = APIKey.objects.all()
 
@@ -318,7 +305,7 @@ def test_no_expiry_keys_are_one_click_away(key_admin, profile1, project1):
 
 
 def test_me_response_has_no_api_keys(api_client1, profile1, project1):
-    _make_key(profile1, [project1])
+    _make_key(profile1)
 
     response = api_client1.get("/v1/me/", format="json")
 
@@ -327,7 +314,7 @@ def test_me_response_has_no_api_keys(api_client1, profile1, project1):
 
 
 def test_project_profiles_response_has_no_api_keys(api_client1, profile1, project1):
-    _make_key(profile1, [project1])
+    _make_key(profile1)
 
     response = api_client1.get(f"/v1/projects/{project1.pk}/project_profiles/", format="json")
 
@@ -338,7 +325,7 @@ def test_project_profiles_response_has_no_api_keys(api_client1, profile1, projec
 
 
 def test_profiles_response_has_no_api_keys(api_client1, profile1, project1):
-    _make_key(profile1, [project1])
+    _make_key(profile1)
 
     response = api_client1.get("/v1/profiles/", format="json")
 
@@ -352,7 +339,7 @@ def test_sync_pull_project_profiles_has_no_api_keys(db_setup, api_client1, profi
     viewsets; `api_keys` is a new reverse relation on Profile, so a pull is
     where a depth-based or `__all__` serializer would leak it."""
 
-    _make_key(profile1, [project1])
+    _make_key(profile1)
     data = {
         "project_profiles": {"last_revision": None, "project": str(project1.pk)},
         "projects": {"last_revision": None, "project": str(project1.pk)},

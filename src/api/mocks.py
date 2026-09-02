@@ -17,8 +17,9 @@ class MockRequest:
         method="GET",
         auth=None,
     ):
-        # api.permissions reads request.auth to scope an API key request to its
-        # projects; a report handed to the queue has to keep that scope.
+        # Mirrors DRF: resources/base.get_request_profile reads request.auth to
+        # tell an API key caller from a JWT one, and would otherwise try to
+        # decode an "ApiKey ..." header as a JWT.
         self.auth = auth
         if profile:
             # A profile an API key was issued against need never have logged in

@@ -23,7 +23,7 @@ def clear_cache():
 
 
 @pytest.fixture
-def key_pair(profile1, project1):
+def key_pair(profile1):
     """An active, unexpired key and the raw token for it."""
 
     key_id, secret_hash, raw = generate_api_key()
@@ -34,7 +34,6 @@ def key_pair(profile1, project1):
         secret_hash=secret_hash,
         expires_at=timezone.now() + timedelta(days=365),
     )
-    key.projects.add(project1)
     return key, raw
 
 

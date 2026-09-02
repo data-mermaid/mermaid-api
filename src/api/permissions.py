@@ -30,17 +30,11 @@ class UnauthenticatedReadOnlyPermission(permissions.BasePermission):
 
 PROJECT_CACHE_ATTR = "_project_cache"
 PROJECT_PROFILE_CACHE_ATTR = "_project_profile_cache"
-API_KEY_SCOPE_CACHE_ATTR = "_api_key_scope_cache"
-# Request-scoped memoization cache attrs used by get_project/get_project_profile
-# and api_key_in_scope. Shared by sync/utils.create_view_request (to propagate
-# the caches onto derived ViewRequests) and sync/views._invalidate_project_caches
-# (to clear them after a write) - import from here rather than re-declaring the
-# names.
-REQUEST_CACHE_ATTRS = (
-    PROJECT_CACHE_ATTR,
-    PROJECT_PROFILE_CACHE_ATTR,
-    API_KEY_SCOPE_CACHE_ATTR,
-)
+# Request-scoped memoization cache attrs used by get_project/get_project_profile.
+# Shared by sync/utils.create_view_request (to propagate the caches onto
+# derived ViewRequests) and sync/views._invalidate_project_caches (to clear
+# them after a write) - import from here rather than re-declaring the names.
+REQUEST_CACHE_ATTRS = (PROJECT_CACHE_ATTR, PROJECT_PROFILE_CACHE_ATTR)
 
 
 def cached_lookup(
@@ -86,36 +80,17 @@ def get_request_api_key(request):
     `request.auth` is the JWT string for an Auth0 caller and None for an
     anonymous one, so the isinstance check is what separates a key-authenticated
     request from every other kind.
+
+    A key grants exactly its profile's access, so nothing in the permission
+    classes needs this to decide yes or no. It is here for the callers that
+    care *how* a request was authenticated rather than as whom: attributing a
+    write (resources/base.get_request_profile) and refusing to let a key mint
+    another key.
     """
     if request is None:
         return None
     api_key = getattr(request, "auth", None)
     return api_key if isinstance(api_key, APIKey) else None
-
-
-def api_key_in_scope(request, project_pk):
-    """True unless `request` is authenticated by an API key that is not scoped
-    to `project_pk`.
-
-    A key carries its profile's role, so without this a stolen key would reach
-    every project the profile belongs to. Requests that are not authenticated
-    by a key are always in scope.
-    """
-    api_key = get_request_api_key(request)
-    if api_key is None or project_pk is None:
-        return True
-
-    try:
-        cache_key = uuid.UUID(str(project_pk))
-    except (ValueError, AttributeError, TypeError):
-        return False
-
-    return cached_lookup(
-        request,
-        API_KEY_SCOPE_CACHE_ATTR,
-        cache_key,
-        lambda: api_key.projects.filter(pk=cache_key).exists(),
-    )
 
 
 def get_project_profile(project, profile, request=None):
@@ -124,12 +99,6 @@ def get_project_profile(project, profile, request=None):
     commonly look up the same (project, profile) pair multiple times per
     request."""
     if project is None or profile is None:
-        return None
-
-    # An out-of-scope API key is not a member of this project, whatever the
-    # profile's own membership says. Returning None here covers every
-    # permission class without touching any of them.
-    if not api_key_in_scope(request, project.pk):
         return None
 
     return cached_lookup(

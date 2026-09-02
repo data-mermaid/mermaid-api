@@ -50,7 +50,6 @@ class Migration(migrations.Migration):
                         to="api.profile",
                     ),
                 ),
-                ("projects", models.ManyToManyField(related_name="api_keys", to="api.project")),
                 (
                     "updated_by",
                     models.ForeignKey(

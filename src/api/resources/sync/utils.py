@@ -22,9 +22,9 @@ def create_view_request(request, method=None, data=None):
         vw_request.data[k] = v
 
     vw_request.META = request.META
-    # api.permissions.api_key_in_scope reads request.auth to scope a
-    # key-authenticated call to its projects; without this the derived request
-    # would look unauthenticated by a key and every project would be in scope.
+    # resources/base.get_request_profile reads request.auth to tell an API key
+    # request from a JWT one; without this a key-authenticated push would take
+    # the JWT branch and try to decode an "ApiKey ..." header.
     vw_request.auth = getattr(request, "auth", None)
     vw_request.authenticators = request.authenticators
     vw_request.successful_authenticator = request.successful_authenticator

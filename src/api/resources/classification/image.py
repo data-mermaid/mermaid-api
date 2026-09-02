@@ -17,7 +17,7 @@ from ...models import (
     ProjectProfile,
 )
 from ...models.classification import get_image_bucket
-from ...permissions import api_key_in_scope, cached_lookup
+from ...permissions import cached_lookup
 from ...utils import truthy
 from ...utils.classification import classify_image_job, create_classification_status
 from ..base import (
@@ -44,12 +44,6 @@ class ImagePermission(permissions.BasePermission):
         image_id = view.kwargs.get("pk")
 
         if request.method == "PUT":
-            return False
-
-        # This permission grants access from profile membership and collect
-        # record ownership directly, so it has to repeat the API key scope
-        # check that api.permissions.get_project_profile does for the rest.
-        if not api_key_in_scope(request, project_id):
             return False
 
         def _load():

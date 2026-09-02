@@ -142,7 +142,7 @@ class APIKeyAdminForm(forms.ModelForm):
         model = APIKey
         # secret_hash is absent on purpose: nothing a human does here needs it,
         # and a field that is never rendered cannot be copied out of a screenshot.
-        fields = ("profile", "name", "projects", "expires_at", "never_expires", "is_active")
+        fields = ("profile", "name", "expires_at", "never_expires", "is_active")
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
@@ -186,7 +186,7 @@ class APIKeyAdmin(admin.ModelAdmin):
         "profile__first_name",
         "profile__last_name",
     )
-    autocomplete_fields = ("profile", "projects")
+    autocomplete_fields = ("profile",)
     exclude = ("secret_hash",)
     readonly_fields = (
         "key_id",
@@ -208,9 +208,9 @@ class APIKeyAdmin(admin.ModelAdmin):
     def get_readonly_fields(self, request, obj=None):
         readonly_fields = list(super().get_readonly_fields(request, obj))
         if obj is not None:
-            # The key inherits its profile's role on every scoped project, so
-            # repointing an existing key at another profile silently changes
-            # what a deployed credential can do. Issue a new key instead.
+            # The key is its profile's access, so repointing an existing key at
+            # another profile silently changes what a deployed credential can
+            # do. Issue a new key instead.
             readonly_fields.append("profile")
         return readonly_fields
 
@@ -243,7 +243,7 @@ class APIKeyAdmin(admin.ModelAdmin):
 
     @admin.action(description="Generate replacement key for selected API keys")
     def generate_replacement_keys(self, request, queryset):
-        """Issue a fresh key with the same profile and scope as each selection.
+        """Issue a fresh key for the same profile as each selection.
 
         The original is left alone: this hands over a new secret without
         breaking a running client, and whoever redeploys revokes the old key
@@ -254,13 +254,11 @@ class APIKeyAdmin(admin.ModelAdmin):
             self.message_user(request, "Only a superuser can issue API keys.", messages.ERROR)
             return
 
-        for key in queryset.select_related("profile").prefetch_related("projects"):
-            projects = list(key.projects.all())
+        for key in queryset.select_related("profile"):
             replacement, raw = self._issue_key(
                 request,
                 profile=key.profile,
                 name=key.name,
-                projects=projects,
                 # A no-expiry key is replaced by a no-expiry key; anything else
                 # starts a fresh default lifetime.
                 expires_at=None if key.expires_at is None else default_expires_at(),
@@ -268,7 +266,7 @@ class APIKeyAdmin(admin.ModelAdmin):
             )
             self._show_raw_key(request, replacement, raw)
 
-    def _issue_key(self, request, profile, name, projects, expires_at, replaces=None):
+    def _issue_key(self, request, profile, name, expires_at, replaces=None):
         key_id, secret_hash, raw = generate_api_key()
         key = APIKey.objects.create(
             profile=profile,
@@ -277,7 +275,6 @@ class APIKeyAdmin(admin.ModelAdmin):
             secret_hash=secret_hash,
             expires_at=expires_at,
         )
-        key.projects.set(projects)
         self._log_created(request, key, replaces=replaces)
         return key, raw
 
@@ -285,11 +282,10 @@ class APIKeyAdmin(admin.ModelAdmin):
         # A minted credential is worth an audit line of its own (C8). The raw
         # key and the hash are never part of it.
         audit_logger.info(
-            "[apikey.created] key_id=%s profile=%s actor=%s projects=%s expires_at=%s replaces=%s",
+            "[apikey.created] key_id=%s profile=%s actor=%s expires_at=%s replaces=%s",
             key.key_id,
             key.profile_id,
             request.user.get_username(),
-            ",".join(str(project.pk) for project in key.projects.all()) or "none",
             key.expires_at.isoformat() if key.expires_at else "never",
             replaces.key_id if replaces else "none",
         )
@@ -312,26 +308,16 @@ class APIKeyAdmin(admin.ModelAdmin):
         )
 
     def save_model(self, request, obj, form, change):
-        if not change:
-            # The raw key exists only for this request. It is stashed on the
-            # request rather than on self because one ModelAdmin instance
-            # serves every request in the process.
-            obj.key_id, obj.secret_hash, raw = generate_api_key()
-            request._new_api_key_raw = raw
-        super().save_model(request, obj, form, change)
-
-    def save_related(self, request, form, formsets, change):
-        super().save_related(request, form, formsets, change)
-        raw = getattr(request, "_new_api_key_raw", None)
-        if raw is None:
+        if change:
+            super().save_model(request, obj, form, change)
             return
 
-        # Scope is only on the row once the m2m has been saved, so the audit
-        # line and the banner both wait until here.
-        del request._new_api_key_raw
-        key = form.instance
-        self._log_created(request, key)
-        self._show_raw_key(request, key, raw)
+        # The raw key exists only for this request, and this is the one place
+        # it is ever readable.
+        obj.key_id, obj.secret_hash, raw = generate_api_key()
+        super().save_model(request, obj, form, change)
+        self._log_created(request, obj)
+        self._show_raw_key(request, obj, raw)
 
 
 @admin.register(AuthUser)

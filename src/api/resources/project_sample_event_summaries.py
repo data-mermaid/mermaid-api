@@ -7,7 +7,7 @@ from rest_framework_gis.filters import GeoFilterSet
 from ..auth_backends import AnonymousJWTAuthentication
 from ..models import Project, ProjectProfile
 from ..models.summary_sample_events import ProjectSummarySampleEventView
-from ..permissions import UnauthenticatedReadOnlyPermission, get_request_api_key
+from ..permissions import UnauthenticatedReadOnlyPermission
 from ..utils.project import citation_retrieved_text
 from .base import ExtendedSerializer, StandardResultPagination
 from .mixins import OrFilterSetMixin
@@ -95,13 +95,9 @@ class ProjectSummarySampleEventViewSet(ReadOnlyModelViewSet):
         qs = qs.filter(project_id__in=Subquery(non_test_projects))
 
         if profile:
-            project_profiles = ProjectProfile.objects.filter(profile=profile)
-            # Restricted summaries are member-only data, so an API key sees them
-            # for its scoped projects and nothing else.
-            api_key = get_request_api_key(self.request)
-            if api_key is not None:
-                project_profiles = project_profiles.filter(project__api_keys=api_key)
-            proj_ids = project_profiles.values("project_id").distinct()
+            proj_ids = (
+                ProjectProfile.objects.filter(profile=profile).values("project_id").distinct()
+            )
             return qs.filter(
                 ~Q(project_id__in=Subquery(proj_ids)) & Q(access="unrestricted")
                 | Q(access="restricted") & Q(project_id__in=Subquery(proj_ids))
