@@ -22,8 +22,7 @@ def classifier():
     return Classifier.objects.create(
         name="Test",
         version="v1",
-        patch_size=128,
-        num_points=2,
+        config={"patch_size": 128},
     )
 
 
@@ -35,7 +34,7 @@ def image_collect_record(project1, profile1):
         data={
             "image_classification": True,
             "protocol": BENTHICPQT_PROTOCOL,
-            "quadrat_transect": {"num_quadrats": 1},
+            "quadrat_transect": {"num_quadrats": 1, "num_points_per_quadrat": 2},
         },
     )
 

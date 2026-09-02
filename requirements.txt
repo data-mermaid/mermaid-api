@@ -21,6 +21,7 @@ pandas==3.0.3
 Pillow==12.3.0
 psycopg==3.3.4
 pyarrow==25.0.0
+pydantic>=2.7,<3
 pyexcelerate==0.13.0
 PyYAML==6.0.3
 pyspacer==0.12.0

@@ -1,3 +1,4 @@
+import json
 import os
 
 import boto3
@@ -24,6 +25,16 @@ def get_object(bucket, key, aws_access_key_id=None, aws_secret_access_key=None):
         aws_access_key_id=aws_access_key_id, aws_secret_access_key=aws_secret_access_key
     )
     return client.get_object(Bucket=bucket, Key=key)
+
+
+def read_json_object(bucket, key, aws_access_key_id=None, aws_secret_access_key=None):
+    response = get_object(
+        bucket,
+        key,
+        aws_access_key_id=aws_access_key_id,
+        aws_secret_access_key=aws_secret_access_key,
+    )
+    return json.loads(response["Body"].read())
 
 
 def delete_file(bucket, blob_name, aws_access_key_id=None, aws_secret_access_key=None, client=None):
