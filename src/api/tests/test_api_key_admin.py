@@ -18,7 +18,12 @@ from api.admin.base import (
     export_model_all_as_csv,
 )
 from api.models import APIKey
+from api.resources.me import MeSerializer
+from api.resources.profile import ProfileSerializer
+from api.resources.project import ProjectCSVSerializer, ProjectSerializer
+from api.resources.project_profile import ProjectProfileSerializer
 from api.utils.apikeys import DEFAULT_LIFETIME_DAYS, generate_api_key, parse_api_key
+from .fixtures.apikeys import api_key_audit_lines
 
 
 @pytest.fixture
@@ -140,6 +145,48 @@ def test_save_model_generates_the_key_and_shows_the_secret_once(key_admin, profi
     # ...and only once: a second response has nothing left to show.
     key_admin.save_related(request, form, [], change=False)
     assert len(_messages(request)) == 1
+
+
+def test_creation_leaves_an_audit_line(key_admin, profile1, project1, api_key_audit_logs):
+    """C8: a minted credential is logged with who asked for it and what it
+    reaches, and never with the secret or the hash."""
+
+    request = _request()
+    form = APIKeyAdminForm(
+        data={"profile": str(profile1.pk), "name": "audited bot", "projects": [str(project1.pk)]}
+    )
+    assert form.is_valid(), form.errors
+
+    key = form.save(commit=False)
+    key_admin.save_model(request, key, form, change=False)
+    key_admin.save_related(request, form, [], change=False)
+
+    saved = APIKey.objects.get(pk=form.instance.pk)
+    lines = api_key_audit_lines(api_key_audit_logs, "created")
+    assert len(lines) == 1
+    assert f"key_id={saved.key_id}" in lines[0]
+    assert f"profile={profile1.pk}" in lines[0]
+    assert "actor=root" in lines[0]
+    assert f"projects={project1.pk}" in lines[0]
+    assert "replaces=none" in lines[0]
+    assert saved.secret_hash not in lines[0]
+
+    raw = _messages(request)[0].split("<code>")[1].split("</code>")[0]
+    assert parse_api_key(raw)[2] not in lines[0]
+
+
+def test_replacement_creation_names_the_key_it_replaces(
+    key_admin, profile1, project1, api_key_audit_logs
+):
+    original, _ = _make_key(profile1, [project1], name="nightly job")
+
+    key_admin.generate_replacement_keys(_request(), APIKey.objects.filter(pk=original.pk))
+
+    replacement = APIKey.objects.exclude(pk=original.pk).get()
+    lines = api_key_audit_lines(api_key_audit_logs, "created")
+    assert len(lines) == 1
+    assert f"key_id={replacement.key_id}" in lines[0]
+    assert f"replaces={original.key_id}" in lines[0]
 
 
 def test_editing_a_key_does_not_reissue_the_secret(key_admin, profile1, project1):
@@ -298,3 +345,45 @@ def test_profiles_response_has_no_api_keys(api_client1, profile1, project1):
     assert response.status_code == 200
     for record in response.json()["results"]:
         assert "api_keys" not in record
+
+
+def test_sync_pull_project_profiles_has_no_api_keys(db_setup, api_client1, profile1, project1):
+    """The sync registry serializes ProjectProfile and Project through the same
+    viewsets; `api_keys` is a new reverse relation on Profile, so a pull is
+    where a depth-based or `__all__` serializer would leak it."""
+
+    _make_key(profile1, [project1])
+    data = {
+        "project_profiles": {"last_revision": None, "project": str(project1.pk)},
+        "projects": {"last_revision": None, "project": str(project1.pk)},
+    }
+
+    response = api_client1.post("/v1/pull/", data, format="json")
+
+    assert response.status_code == 200
+    body = response.json()
+    for source_type in ("project_profiles", "projects"):
+        updates = body[source_type]["updates"]
+        assert updates
+        for record in updates:
+            assert "api_keys" not in record
+            assert "secret_hash" not in record
+    assert "secret_hash" not in response.content.decode()
+    assert "api_keys" not in response.content.decode()
+
+
+def test_profile_and_project_serializers_declare_no_key_fields():
+    """A guard for the next serializer someone writes over Profile or Project:
+    `api_keys` is a new reverse relation and `secret_hash` must never be a
+    field name anywhere the API renders."""
+
+    for serializer_class in (
+        MeSerializer,
+        ProfileSerializer,
+        ProjectSerializer,
+        ProjectCSVSerializer,
+        ProjectProfileSerializer,
+    ):
+        fields = set(serializer_class().fields)
+        assert "api_keys" not in fields, serializer_class.__name__
+        assert "secret_hash" not in fields, serializer_class.__name__

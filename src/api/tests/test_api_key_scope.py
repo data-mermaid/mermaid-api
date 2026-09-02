@@ -120,6 +120,63 @@ def test_collector_profile_key_can_write_on_a_scoped_project(
     assert _client(raw).post(url, data, format="json").status_code == 201
 
 
+def _site_payload(project, country, reef_type, reef_zone, exposure):
+    return {
+        "id": str(uuid.uuid4()),
+        "name": "Bot site",
+        "project": str(project.pk),
+        "country": str(country.pk),
+        "reef_type": str(reef_type.pk),
+        "reef_zone": str(reef_zone.pk),
+        "exposure": str(exposure.pk),
+        "location": {"type": "Point", "coordinates": [1.5, 1.5]},
+    }
+
+
+def test_readonly_profile_key_cannot_write_on_a_scoped_project(
+    db_setup, project1, profile3, country1, reef_type1, reef_zone1, reef_exposure1
+):
+    """Scope decides which projects a key reaches; the profile's role decides
+    what it may do there. A READONLY member's key reads and nothing more."""
+
+    ProjectProfile.objects.create(project=project1, profile=profile3, role=ProjectProfile.READONLY)
+    _, raw = _make_key(profile3, [project1], name="readonly bot")
+    client = _client(raw)
+    url = reverse("psite-list", kwargs=dict(project_pk=project1.pk))
+
+    assert client.get(url, format="json").status_code == 200
+
+    payload = _site_payload(project1, country1, reef_type1, reef_zone1, reef_exposure1)
+    assert client.post(url, payload, format="json").status_code == 403
+
+
+def test_locked_project_key_cannot_write(
+    db_setup,
+    project1,
+    profile2,
+    project_profile2,
+    country1,
+    reef_type1,
+    reef_zone1,
+    reef_exposure1,
+):
+    """A LOCKED project downgrades COLLECTORs to read-only, and a key inherits
+    that: the same POST that a COLLECTOR's key makes on an open project is now
+    a 403."""
+
+    _, raw = _make_key(profile2, [project1])
+    url = reverse("psite-list", kwargs=dict(project_pk=project1.pk))
+    payload = _site_payload(project1, country1, reef_type1, reef_zone1, reef_exposure1)
+
+    assert _client(raw).post(url, payload, format="json").status_code == 201
+
+    project1.status = Project.LOCKED
+    project1.save()
+
+    payload = _site_payload(project1, country1, reef_type1, reef_zone1, reef_exposure1)
+    assert _client(raw).post(url, payload, format="json").status_code == 403
+
+
 def test_admin_profile_key_can_do_admin_actions_on_a_scoped_project(
     db_setup, base_project, project1, profile1, project_profile1
 ):

@@ -2,7 +2,6 @@
 justified it ends, and the daily task keeps the admin list honest about which
 keys are still live."""
 
-import logging
 from datetime import timedelta
 from io import StringIO
 
@@ -16,7 +15,8 @@ from rest_framework.test import APIRequestFactory
 
 from api.auth_backends import APIKeyAuthentication
 from api.models import APIKey, Project, ProjectProfile
-from api.utils.apikeys import AUDIT_LOGGER_NAME, generate_api_key
+from api.utils.apikeys import generate_api_key
+from .fixtures.apikeys import api_key_audit_lines
 
 
 @pytest.fixture(autouse=True)
@@ -24,23 +24,6 @@ def clear_cache():
     cache.clear()
     yield
     cache.clear()
-
-
-@pytest.fixture
-def audit_logs(caplog):
-    """Capture the API key audit trail.
-
-    settings.LOGGING gives `api.apikeys` its own handler and propagate=False,
-    so its records never reach the root logger caplog listens on. Attaching
-    caplog's handler to that logger is what makes them visible here.
-    """
-
-    audit_logger = logging.getLogger(AUDIT_LOGGER_NAME)
-    audit_logger.addHandler(caplog.handler)
-    try:
-        yield caplog
-    finally:
-        audit_logger.removeHandler(caplog.handler)
 
 
 def _make_key(profile, projects, name="lifecycle bot", **kwargs):
@@ -84,14 +67,14 @@ def test_revoke_is_idempotent(profile1, project1):
     assert key.revoked_reason == "first"
 
 
-def test_revoke_logs_the_audit_line(profile1, project1, audit_logs):
+def test_revoke_logs_the_audit_line(profile1, project1, api_key_audit_logs):
     """C8: creation and revocation both leave a line naming the key, the
     profile, who did it and what it reached."""
 
     key, _ = _make_key(profile1, [project1])
     key.revoke("manual", actor="someone@example.com")
 
-    logged = [r.getMessage() for r in audit_logs.records if "[apikey.revoked]" in r.getMessage()]
+    logged = api_key_audit_lines(api_key_audit_logs, "revoked")
     assert len(logged) == 1
     assert f"key_id={key.key_id}" in logged[0]
     assert f"profile={profile1.pk}" in logged[0]
@@ -100,11 +83,11 @@ def test_revoke_logs_the_audit_line(profile1, project1, audit_logs):
     assert "reason=manual" in logged[0]
 
 
-def test_revoke_from_a_signal_names_the_system_as_actor(profile1, project1, audit_logs):
+def test_revoke_from_a_signal_names_the_system_as_actor(profile1, project1, api_key_audit_logs):
     key, _ = _make_key(profile1, [project1])
     key.revoke(APIKey.MEMBERSHIP_REMOVED)
 
-    logged = [r.getMessage() for r in audit_logs.records if "[apikey.revoked]" in r.getMessage()]
+    logged = api_key_audit_lines(api_key_audit_logs, "revoked")
     assert "actor=system" in logged[0]
 
 
@@ -180,6 +163,51 @@ def test_revoked_key_no_longer_authenticates(project_profile1, profile1, project
         APIKeyAuthentication().authenticate(request)
 
 
+def test_membership_removal_through_the_api_revokes_the_key(
+    db_setup, api_client1, project1, project_profile1, profile2, project_profile2
+):
+    """The signal only fires where the delete goes through the ORM collector.
+    ProjectProfileViewSet.perform_destroy calls instance.delete(), so an admin
+    removing a member from the project page revokes that member's keys."""
+
+    key, _ = _make_key(profile2, [project1], name="removed member bot")
+    url = f"/v1/projects/{project1.pk}/project_profiles/{project_profile2.pk}/"
+
+    assert api_client1.delete(url, format="json").status_code == 204
+
+    key.refresh_from_db()
+    assert key.projects.count() == 0
+    assert key.is_active is False
+    assert key.revoked_reason == APIKey.MEMBERSHIP_REMOVED
+
+
+def test_membership_removal_through_sync_push_revokes_the_key(
+    db_setup, api_client1, project1, project_profile1, profile2, project_profile2
+):
+    """Sync push is the other delete path, and it deletes per instance too."""
+
+    key, _ = _make_key(profile2, [project1], name="pushed removal bot")
+    data = {
+        "project_profiles": [
+            {
+                "id": str(project_profile2.pk),
+                "project": str(project1.pk),
+                "profile": str(profile2.pk),
+                "_deleted": True,
+                "_last_revision_num": 1,
+            }
+        ]
+    }
+
+    response = api_client1.post("/v1/push/", data, format="json")
+    assert response.status_code == 200
+    assert response.json()["project_profiles"][0]["status_code"] == 204
+
+    key.refresh_from_db()
+    assert key.is_active is False
+    assert key.revoked_reason == APIKey.MEMBERSHIP_REMOVED
+
+
 def test_project_deletion_revokes_scoped_key(project_profile1, profile1, project1):
     key, _ = _make_key(profile1, [project1])
 
@@ -240,7 +268,7 @@ def test_daily_task_dry_run_writes_nothing(profile1, project1):
     assert "would deactivate 1 expired key(s)" in output
 
 
-def test_daily_task_reports_stale_no_expiry_keys(profile1, project1, audit_logs):
+def test_daily_task_reports_stale_no_expiry_keys(profile1, project1, api_key_audit_logs):
     stale, _ = _make_key(profile1, [project1], name="stale", expires_at=None)
     APIKey.objects.filter(pk=stale.pk).update(last_used_at=timezone.now() - timedelta(days=200))
 
@@ -250,7 +278,7 @@ def test_daily_task_reports_stale_no_expiry_keys(profile1, project1, audit_logs)
     output = _run_maintenance()
 
     assert "1 no-expiry key(s) unused for 180 days" in output
-    stale_logs = [r.getMessage() for r in audit_logs.records if "[apikey.stale]" in r.getMessage()]
+    stale_logs = api_key_audit_lines(api_key_audit_logs, "stale")
     assert len(stale_logs) == 1
     assert stale.key_id in stale_logs[0]
     assert recent.key_id not in stale_logs[0]
