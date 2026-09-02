@@ -1,9 +1,13 @@
+import logging
 import uuid
 
 from django.contrib.gis.db.models.fields import MultiPolygonField, PolygonField
 from django.core.exceptions import ObjectDoesNotExist
 from django.db import models
+from django.utils import timezone
 from django.utils.translation import gettext_lazy as _
+
+logger = logging.getLogger(__name__)
 
 PROPOSED = 10
 SUPERUSER_APPROVED = 90
@@ -217,6 +221,11 @@ class Application(BaseModel):
 
 
 class APIKey(BaseModel):
+    # revoked_reason values set by MERMAID itself; a human revoking through
+    # admin or the API may write anything.
+    MEMBERSHIP_REMOVED = "membership_removed"
+    PROJECT_DELETED = "project_deleted"
+
     profile = models.ForeignKey("Profile", related_name="api_keys", on_delete=models.CASCADE)
     name = models.CharField(max_length=100)
     key_id = models.CharField(max_length=12, unique=True, db_index=True)
@@ -237,3 +246,35 @@ class APIKey(BaseModel):
     def __str__(self):
         # never include secret_hash
         return f"{self.name} [{self.key_id}]"
+
+    @property
+    def is_expired(self):
+        return self.expires_at is not None and self.expires_at < timezone.now()
+
+    @property
+    def is_usable(self):
+        return self.is_active and self.revoked_at is None and not self.is_expired
+
+    def revoke(self, reason="", save=True):
+        """Retire the key without deleting the row, so the audit trail stays.
+
+        Revocation is one-way and idempotent: re-revoking an already revoked
+        key keeps the original timestamp and reason, which is what a reviewer
+        asking "when did this stop working" needs.
+        """
+
+        if self.revoked_at is not None:
+            return False
+
+        self.revoked_at = timezone.now()
+        self.revoked_reason = reason or ""
+        self.is_active = False
+        if save:
+            self.save(update_fields=["revoked_at", "revoked_reason", "is_active", "updated_on"])
+        logger.info(
+            "[apikey.revoked] key_id=%s profile=%s reason=%s",
+            self.key_id,
+            self.profile_id,
+            reason or "unspecified",
+        )
+        return True
