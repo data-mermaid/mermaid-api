@@ -16,9 +16,11 @@ import hmac
 import re
 import secrets
 import string
+from datetime import timedelta
 
 from django.conf import settings
 from django.core.exceptions import ImproperlyConfigured
+from django.utils import timezone
 
 PREFIX = "mmd"
 KEY_ID_LENGTH = 12
@@ -32,6 +34,18 @@ KEY_ID_RE = re.compile(rf"^[A-Za-z0-9]{{{KEY_ID_LENGTH}}}$")
 # is free text (settings.ENVIRONMENT = os.environ.get("ENV") or "local"): a typo
 # would mint keys under a label that stops verifying once the typo is fixed.
 ENVIRONMENTS = ("local", "dev", "prod")
+
+# A key with no expiry is a credential nobody has to think about again, so it
+# is an explicit choice at creation. Everything that omits an expiry gets this
+# lifetime instead.
+DEFAULT_LIFETIME_DAYS = 365
+
+
+def default_expires_at(now=None):
+    """Expiry for a key whose creator did not choose one."""
+
+    now = now or timezone.now()
+    return now + timedelta(days=DEFAULT_LIFETIME_DAYS)
 
 
 def get_environment_label(environment=None):
