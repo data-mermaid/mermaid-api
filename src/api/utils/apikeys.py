@@ -13,6 +13,7 @@ impossible. See the "Hash, do not encrypt" decision in the API key plan.
 
 import hashlib
 import hmac
+import logging
 import re
 import secrets
 import string
@@ -21,6 +22,13 @@ from datetime import timedelta
 from django.conf import settings
 from django.core.exceptions import ImproperlyConfigured
 from django.utils import timezone
+
+# Issuing and retiring a credential is an audit trail, not debug chatter, so it
+# is logged at INFO through a logger of its own. settings.LOGGING keeps the
+# `api` logger and its console handler at WARNING in production, which would
+# otherwise drop every one of these lines (C8).
+AUDIT_LOGGER_NAME = "api.apikeys"
+audit_logger = logging.getLogger(AUDIT_LOGGER_NAME)
 
 PREFIX = "mmd"
 KEY_ID_LENGTH = 12

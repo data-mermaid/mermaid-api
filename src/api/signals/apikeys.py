@@ -6,14 +6,11 @@ it, and a key left with no projects at all is a credential with no purpose -
 so it is revoked rather than left dangling.
 """
 
-import logging
-
 from django.db.models.signals import post_delete, post_save, pre_delete
 from django.dispatch import receiver
 
 from ..models import APIKey, Profile, Project, ProjectProfile
-
-logger = logging.getLogger(__name__)
+from ..utils.apikeys import audit_logger
 
 PROFILE_DEACTIVATED = "profile_deactivated"
 
@@ -37,7 +34,7 @@ def drop_project_from_api_keys(sender, instance, **kwargs):
     keys = APIKey.objects.filter(profile_id=profile_id, projects=project_id)
     for key in keys:
         key.projects.remove(project_id)
-        logger.info(
+        audit_logger.info(
             "[apikey.unscoped] key_id=%s profile=%s project=%s",
             key.key_id,
             profile_id,
@@ -59,7 +56,7 @@ def drop_deleted_project_from_api_keys(sender, instance, **kwargs):
 
     for key in APIKey.objects.filter(projects=instance.pk):
         key.projects.remove(instance.pk)
-        logger.info(
+        audit_logger.info(
             "[apikey.unscoped] key_id=%s profile=%s project=%s",
             key.key_id,
             key.profile_id,

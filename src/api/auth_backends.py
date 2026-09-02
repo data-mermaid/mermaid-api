@@ -13,6 +13,7 @@ from api.models.base import APIKey, Application, AuthUser, Profile
 from api.utils import get_or_create_safeish
 from api.utils.apikeys import get_environment_label, parse_api_key, secret_matches
 from api.utils.auth0utils import decode, get_jwt_token, get_user_info, is_hs_token
+from api.utils.ratelimit import FailureRateLimiter
 
 logger = logging.getLogger(__name__)
 
@@ -204,6 +205,10 @@ class APIKeyAuthentication(BaseAuthentication):
     www_authenticate_realm = "api"
     # per-key throttle on the last_used_at write, in seconds
     last_used_throttle = 60
+    # Failures per minute, counted per IP and per key_id, before the rest of
+    # that minute is answered with 429 (C8). Only failures count, so a client
+    # presenting a good key is never throttled by this.
+    failure_limiter = FailureRateLimiter("apikey", limit=10, window=60)
 
     def authenticate_header(self, request):
         return f'{self.keyword} realm="{self.www_authenticate_realm}"'
@@ -214,14 +219,23 @@ class APIKeyAuthentication(BaseAuthentication):
             # not our scheme; let the next backend try
             return None
 
+        ip = _get_client_ip(request)
+        # Before any work: a caller already over the limit does not get another
+        # database lookup and hash out of us this minute.
+        self._check_rate_limit(request, "ip", ip)
+
         if len(auth) != 2:
-            raise self._fail(request, "malformed_header", None)
+            raise self._fail(request, "malformed_header", None, ip=ip)
 
         raw = smart_str(auth[1])
         try:
             env, key_id, secret = parse_api_key(raw)
         except ValueError:
-            raise self._fail(request, "malformed_key", None)
+            raise self._fail(request, "malformed_key", None, ip=ip)
+
+        # Counted separately from the IP: one bad key rotating through hosts is
+        # the same incident, and one bad host should not lock out a good key.
+        self._check_rate_limit(request, "key_id", key_id)
 
         # ImproperlyConfigured here is a deployment error, not a client error;
         # let it surface as a 500. api.checks catches it at startup.
@@ -231,40 +245,61 @@ class APIKeyAuthentication(BaseAuthentication):
                 "wrong_environment",
                 key_id,
                 detail="key issued for a different environment",
+                ip=ip,
             )
 
         try:
             api_key = APIKey.objects.select_related("profile").get(key_id=key_id)
         except APIKey.DoesNotExist:
-            raise self._fail(request, "unknown_key_id", key_id)
+            raise self._fail(request, "unknown_key_id", key_id, ip=ip)
 
         if not secret_matches(secret, api_key.secret_hash):
-            raise self._fail(request, "bad_secret", key_id)
+            raise self._fail(request, "bad_secret", key_id, ip=ip)
 
         if not api_key.is_active:
-            raise self._fail(request, "inactive", key_id)
+            raise self._fail(request, "inactive", key_id, ip=ip)
         if api_key.revoked_at is not None:
-            raise self._fail(request, "revoked", key_id)
+            raise self._fail(request, "revoked", key_id, ip=ip)
         if api_key.expires_at is not None and api_key.expires_at < timezone.now():
-            raise self._fail(request, "expired", key_id)
+            raise self._fail(request, "expired", key_id, ip=ip)
 
-        self._touch(api_key, _get_client_ip(request))
+        self._touch(api_key, ip)
 
         # dummy Django user, as in JWTAuthentication
         user = get_user_model()(username=f"apikey|{api_key.key_id}", password="apikey")
         user.profile = api_key.profile
         return (user, api_key)
 
-    def _fail(self, request, reason, key_id, detail=None):
-        """Log the rejection and return the exception for the caller to raise."""
+    def _check_rate_limit(self, request, scope, identifier):
+        """Raise 429 while `identifier` is over its failure limit for the minute."""
 
+        wait = self.failure_limiter.retry_after(scope, identifier)
+        if wait is None:
+            return
+
+        logger.warning(
+            "[apikey.rate_limited] scope=%s id=%s path=%s retry_after=%s",
+            scope,
+            identifier,
+            request.path,
+            wait,
+        )
+        raise exceptions.Throttled(wait=wait)
+
+    def _fail(self, request, reason, key_id, detail=None, ip=None):
+        """Log and count the rejection, and return the exception to raise."""
+
+        ip = ip if ip is not None else _get_client_ip(request)
         logger.warning(
             "[apikey.failed_auth] reason=%s key_id=%s ip=%s path=%s",
             reason,
             key_id or "malformed",
-            _get_client_ip(request),
+            ip,
             request.path,
         )
+        self.failure_limiter.record_failure("ip", ip)
+        if key_id:
+            self.failure_limiter.record_failure("key_id", key_id)
         # One opaque message: which check failed is not the caller's business,
         # and saying so would narrow a guessing attack.
         return exceptions.AuthenticationFailed(detail or "Invalid API key")

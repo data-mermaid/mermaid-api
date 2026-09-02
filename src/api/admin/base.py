@@ -12,7 +12,12 @@ from django.http import HttpResponse
 from django.urls import reverse
 from django.utils.html import format_html
 
-from api.utils.apikeys import DEFAULT_LIFETIME_DAYS, default_expires_at, generate_api_key
+from api.utils.apikeys import (
+    DEFAULT_LIFETIME_DAYS,
+    audit_logger,
+    default_expires_at,
+    generate_api_key,
+)
 from api.utils.sample_unit_methods import get_project
 from tools.models import MERMAIDFeature, UserMERMAIDFeature
 from ..models import APIKey, Application, AuthUser, CollectRecord, Observer, Profile
@@ -227,8 +232,9 @@ class APIKeyAdmin(admin.ModelAdmin):
 
     @admin.action(description="Revoke selected API keys")
     def revoke_keys(self, request, queryset):
-        reason = f"admin_revoked:{request.user.get_username()}"[:255]
-        revoked = sum(1 for key in queryset if key.revoke(reason))
+        actor = request.user.get_username()
+        reason = f"admin_revoked:{actor}"[:255]
+        revoked = sum(1 for key in queryset if key.revoke(reason, actor=actor))
         already = queryset.count() - revoked
         message = f"Revoked {revoked} API key(s)."
         if already:
@@ -278,7 +284,7 @@ class APIKeyAdmin(admin.ModelAdmin):
     def _log_created(self, request, key, replaces=None):
         # A minted credential is worth an audit line of its own (C8). The raw
         # key and the hash are never part of it.
-        logger.info(
+        audit_logger.info(
             "[apikey.created] key_id=%s profile=%s actor=%s projects=%s expires_at=%s replaces=%s",
             key.key_id,
             key.profile_id,

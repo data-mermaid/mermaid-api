@@ -7,6 +7,8 @@ from django.db import models
 from django.utils import timezone
 from django.utils.translation import gettext_lazy as _
 
+from ..utils.apikeys import audit_logger
+
 logger = logging.getLogger(__name__)
 
 PROPOSED = 10
@@ -255,12 +257,16 @@ class APIKey(BaseModel):
     def is_usable(self):
         return self.is_active and self.revoked_at is None and not self.is_expired
 
-    def revoke(self, reason="", save=True):
+    def revoke(self, reason="", save=True, actor="system"):
         """Retire the key without deleting the row, so the audit trail stays.
 
         Revocation is one-way and idempotent: re-revoking an already revoked
         key keeps the original timestamp and reason, which is what a reviewer
         asking "when did this stop working" needs.
+
+        `actor` is who took the key away, for the audit line only. It defaults
+        to "system" because most revocations come from a signal or the daily
+        maintenance command rather than from a person.
         """
 
         if self.revoked_at is not None:
@@ -271,10 +277,14 @@ class APIKey(BaseModel):
         self.is_active = False
         if save:
             self.save(update_fields=["revoked_at", "revoked_reason", "is_active", "updated_on"])
-        logger.info(
-            "[apikey.revoked] key_id=%s profile=%s reason=%s",
+        # C8: the counterpart of [apikey.created]. Together they answer "which
+        # credentials existed, on what, and for how long" from the logs alone.
+        audit_logger.info(
+            "[apikey.revoked] key_id=%s profile=%s actor=%s projects=%s reason=%s",
             self.key_id,
             self.profile_id,
+            actor,
+            ",".join(str(pk) for pk in self.projects.values_list("pk", flat=True)) or "none",
             reason or "unspecified",
         )
         return True

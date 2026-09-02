@@ -10,7 +10,6 @@ Two jobs, neither of which the auth backend can do on its own:
   quiet key may just be a quarterly job.
 """
 
-import logging
 from datetime import timedelta
 
 from django.core.management.base import BaseCommand
@@ -18,8 +17,7 @@ from django.db.models import Q
 from django.utils import timezone
 
 from api.models import APIKey
-
-logger = logging.getLogger(__name__)
+from api.utils.apikeys import audit_logger
 
 STALE_DAYS = 180
 
@@ -58,7 +56,7 @@ class Command(BaseCommand):
             count += 1
             # Expired is not revoked: revoked_at stays null so a reviewer can
             # still tell a key that ran out from one somebody took away.
-            logger.info(
+            audit_logger.info(
                 "[apikey.expired] key_id=%s profile=%s expires_at=%s",
                 key.key_id,
                 key.profile_id,
@@ -91,7 +89,7 @@ class Command(BaseCommand):
         count = 0
         for key in stale:
             count += 1
-            logger.info(
+            audit_logger.info(
                 "[apikey.stale] key_id=%s profile=%s last_used_at=%s",
                 key.key_id,
                 key.profile_id,
