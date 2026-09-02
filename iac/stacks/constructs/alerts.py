@@ -30,7 +30,7 @@ class MonitoringAlerts(Construct):
         id: str,
         *,
         env_id: str,
-        load_balancer: elb.IApplicationLoadBalancer,
+        target_group: elb.IApplicationTargetGroup,
         api_service: ecs.Ec2Service,
         database: rds.DatabaseInstance,
         general_dlq: sqs.IQueue,
@@ -64,7 +64,9 @@ class MonitoringAlerts(Construct):
                 "Alb5xxAlarm",
                 alarm_name=f"mermaid-{env_id}-alb-5xx-errors",
                 alarm_description="ALB Target 5xx errors exceeded 10 in a 5-minute window",
-                metric=load_balancer.metrics.http_code_target(
+                # Per-env target group, not the shared ALB (whose 5xx count
+                # aggregates both envs).
+                metric=target_group.metrics.http_code_target(
                     code=elb.HttpCodeTarget.TARGET_5XX_COUNT,
                     statistic="Sum",
                     period=Duration.minutes(5),
@@ -76,22 +78,29 @@ class MonitoringAlerts(Construct):
             )
         )
 
-        alarms.append(
-            cw.Alarm(
-                self,
-                "AlbLatencyAlarm",
-                alarm_name=f"mermaid-{env_id}-alb-p95-latency",
-                alarm_description=f"ALB p95 response latency exceeded {p95_latency_threshold} seconds",
-                metric=load_balancer.metrics.target_response_time(
-                    statistic="p95",
-                    period=Duration.minutes(5),
-                ),
-                threshold=p95_latency_threshold,
-                evaluation_periods=2,
-                comparison_operator=cw.ComparisonOperator.GREATER_THAN_THRESHOLD,
-                treat_missing_data=cw.TreatMissingData.NOT_BREACHING,
+        # dev is too low-traffic for a stable p95 — a single slow request dominates
+        # the window and flaps the alarm — so only prod owns the latency alarm (same
+        # rationale as the shared-RDS alarms). Measured on this env's target group
+        # (not the shared ALB, whose target_response_time aggregates both envs).
+        if env_id == "prod":
+            alarms.append(
+                cw.Alarm(
+                    self,
+                    "AlbLatencyAlarm",
+                    alarm_name=f"mermaid-{env_id}-alb-p95-latency",
+                    alarm_description=(
+                        f"ALB p95 response latency exceeded {p95_latency_threshold} seconds"
+                    ),
+                    metric=target_group.metrics.target_response_time(
+                        statistic="p95",
+                        period=Duration.minutes(5),
+                    ),
+                    threshold=p95_latency_threshold,
+                    evaluation_periods=2,
+                    comparison_operator=cw.ComparisonOperator.GREATER_THAN_THRESHOLD,
+                    treat_missing_data=cw.TreatMissingData.NOT_BREACHING,
+                )
             )
-        )
 
         # ── RDS ──────────────────────────────────────────────────────
         # The RDS instance is shared across envs (lives in the common stack), so

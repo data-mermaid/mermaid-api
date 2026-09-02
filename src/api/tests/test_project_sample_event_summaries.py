@@ -75,19 +75,29 @@ def test_project_se_summary_authenticated(
 
     assert len(records) == 2
 
-    for record in results[0]["records"]:
-        if record["sample_event_id"] == str(sample_event1.pk):
-            assert "beltfish" in record["protocols"]
-            assert "benthicpit" in record["protocols"]
+    sample_event1_record = next(
+        (r for r in records if r["sample_event_id"] == str(sample_event1.pk)), None
+    )
+    assert sample_event1_record is not None
 
-            beltfish = record["protocols"]["beltfish"]
-            benthicpit = record["protocols"]["benthicpit"]
+    assert "beltfish" in sample_event1_record["protocols"]
+    assert "benthicpit" in sample_event1_record["protocols"]
 
-            assert beltfish["sample_unit_count"] == 1
-            assert benthicpit["sample_unit_count"] == 2
+    beltfish = sample_event1_record["protocols"]["beltfish"]
+    benthicpit = sample_event1_record["protocols"]["benthicpit"]
 
-            biomass = obs_belt_fish1_1_biomass + obs_belt_fish1_2_biomass + obs_belt_fish1_3_biomass
-            assert pytest.approx(biomass, 0.1) == beltfish["biomass_kgha_avg"]
+    assert beltfish["sample_unit_count"] == 1
+    assert benthicpit["sample_unit_count"] == 2
+
+    biomass = obs_belt_fish1_1_biomass + obs_belt_fish1_2_biomass + obs_belt_fish1_3_biomass
+    assert pytest.approx(biomass, 0.1) == beltfish["biomass_kgha_avg"]
+
+    # project-level records reuse SummarySampleEventSerializer, so depth_avg/depth_sd
+    # should already be present without any extra wiring. sample_event1's sample units
+    # are fishbelt_transect1 (depth=8), benthic_transect1 (depth=5), and
+    # benthic_transect1_2 (depth=8) -- avg=7.0, sample stddev=sqrt(6/2)~=1.73.
+    assert pytest.approx(7.0, 0.01) == float(sample_event1_record["depth_avg"])
+    assert pytest.approx(1.73, 0.01) == float(sample_event1_record["depth_sd"])
 
 
 def test_project_se_summary_authenticated_not_project(

@@ -10,7 +10,11 @@ from api.models import (
 )
 from api.resources.collect_record import CollectRecordSerializer
 from api.submission.validations import OK, WARN
-from api.submission.validations.validators import ImageCountValidator
+from api.submission.validations.validators import (
+    ImageCountValidator,
+    ListAnnotationConfirmedValidator,
+    ListAnnotationUnclassifiedValidator,
+)
 
 
 @pytest.fixture
@@ -133,3 +137,35 @@ def test_image_count_validator(image_collect_record_serialized, annotations, ima
     result = validator(image_collect_record_serialized)
     assert result.status == OK
     assert result.code is None
+
+
+def test_get_rows(image_collect_record_serialized, annotations):
+    validator = ListAnnotationConfirmedValidator()
+    rows = validator.get_rows(image_collect_record_serialized)
+
+    # 2 confirmed annotations on image1, 1 confirmed and 1 unconfirmed on image2.
+    assert len(rows) == 4
+    assert [r for r in rows if r["is_unclassified"]] == []
+    assert sum(r["confirmed"] for r in rows) == 3
+    assert sum(r["unconfirmed"] for r in rows) == 1
+
+
+def test_get_rows_cached_per_validation_run(
+    image_collect_record_serialized, annotations, django_assert_num_queries
+):
+    rows = ListAnnotationConfirmedValidator().get_rows(image_collect_record_serialized)
+
+    # Another validator in the same run reuses the rows built by the first.
+    with django_assert_num_queries(0):
+        assert (
+            ListAnnotationUnclassifiedValidator().get_rows(image_collect_record_serialized) is rows
+        )
+
+
+def test_get_rows_not_cached_across_validation_runs(image_collect_record, annotations):
+    validator = ListAnnotationConfirmedValidator()
+    rows = validator.get_rows(CollectRecordSerializer(instance=image_collect_record).data)
+    refreshed_rows = validator.get_rows(CollectRecordSerializer(instance=image_collect_record).data)
+
+    assert refreshed_rows is not rows
+    assert refreshed_rows == rows

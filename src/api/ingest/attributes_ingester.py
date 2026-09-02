@@ -19,7 +19,7 @@ from api.models import (
 from api.utils import castutils
 
 
-class BaseAttributeIngester(object):
+class BaseAttributeIngester:
     approval_status = APPROVAL_STATUSES[0][0]
 
     def __init__(self, file_obj):

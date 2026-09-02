@@ -16,7 +16,7 @@ from api.models import (
 @pytest.fixture
 def create_indicator_set_payload():
     return {
-        "title": "Dustin's IS",
+        "title": "Baseline",
         "report_date": "2024-02-10",
         "report_year": 2024,
         "indicator_set_type": "report",
@@ -25,6 +25,7 @@ def create_indicator_set_payload():
         "finance_solutions": [
             {
                 "name": "My FS",
+                "fs_type": "business",
                 "sector": "ce_waste_management",
                 "revenues": [{"revenue_type": "debt_conversion"}],
                 "investment_sources": [
@@ -40,7 +41,7 @@ def create_indicator_set_payload():
 def indicator_set(project1):
     return GFCRIndicatorSet.objects.create(
         project=project1,
-        title="Dustin's IS",
+        title="Baseline",
         report_date="2024-02-10",
         indicator_set_type="report",
         f4_start_date=date(1970, 1, 1),
@@ -53,6 +54,7 @@ def finance_solution(indicator_set):
     return GFCRFinanceSolution.objects.create(
         indicator_set=indicator_set,
         name="My FS",
+        fs_type="business",
         sector="ce_waste_management",
     )
 
@@ -183,13 +185,13 @@ def test_update_indicator_set(
         "indicatorset-detail", kwargs={"project_pk": project1.pk, "pk": indicator_set.id}
     )
     update_payload = response_data
-    update_payload["title"] = "Updated Indicator Set"
+    update_payload["title"] = "Mid-year report"
     update_request = api_client1.put(update_url, data=update_payload, format="json")
     assert update_request.status_code == 200
     updated_response_data = update_request.json()
 
     # Verify the updated indicator set
-    assert updated_response_data["title"] == "Updated Indicator Set"
+    assert updated_response_data["title"] == "Mid-year report"
     assert updated_response_data["id"] == str(indicator_set.id)
 
 
@@ -258,7 +260,7 @@ def test_notes_in_report_export(
     # Create indicator set with all notes fields populated
     indicator_set = GFCRIndicatorSet.objects.create(
         project=project1,
-        title="Test Indicator Set",
+        title="Baseline",
         report_date="2024-02-10",
         indicator_set_type="report",
         f1_notes="F1 test notes",
@@ -276,6 +278,7 @@ def test_notes_in_report_export(
     finance_solution = GFCRFinanceSolution.objects.create(
         indicator_set=indicator_set,
         name="Test Finance Solution",
+        fs_type="business",
         sector="ce_waste_management",
         notes="Finance solution notes",
     )
@@ -409,7 +412,7 @@ def test_finance_solution_new_fields_in_serializer(
     assert fs_data["number_of_solutions_supported_by"] == 0
 
 
-def test_finance_solution_validate_passes_when_type_none(
+def test_finance_solution_requires_fs_type(
     db_setup,
     api_client1,
     project1,
@@ -431,18 +434,14 @@ def test_finance_solution_validate_passes_when_type_none(
             {
                 "name": "FS no type",
                 "sector": "ce_waste_management",
-                "geographical_coverage": "national",
-                "used_an_incubator": "gfcr_funded",
-                "gender_smart": True,
-                "sustainable_finance_mechanisms": ["blue_bonds"],
-                "number_of_solutions_supported_by": 5,
-                # fs_type intentionally omitted — validation must be skipped
+                # fs_type omitted — must be rejected in Phase 4
             }
         ],
     }
     url = reverse("indicatorset-detail", kwargs={"project_pk": project1.pk, "pk": indicator_set.id})
     response = api_client1.put(url, data=payload, format="json")
-    assert response.status_code == 200
+    assert response.status_code == 400
+    assert "fs_type" in str(response.json())
 
 
 def _fs_put_payload(indicator_set, project, fs_fields):
@@ -479,25 +478,6 @@ _FS_BASE = {
         ({"fs_type": "business", "sector": ""}, "sector"),
         # geographical_coverage is required for CTF — no value to coerce to
         ({"fs_type": "ctf", "geographical_coverage": ""}, "geographical_coverage"),
-        # number_of_solutions_supported_by must be > 0 for TAF — no value to coerce to
-        (
-            {"fs_type": "taf", "number_of_solutions_supported_by": 0},
-            "number_of_solutions_supported_by",
-        ),
-        # same constraint applies to CTF (geographical_coverage supplied to avoid that error)
-        (
-            {
-                "fs_type": "ctf",
-                "geographical_coverage": "national",
-                "number_of_solutions_supported_by": 0,
-            },
-            "number_of_solutions_supported_by",
-        ),
-        # same constraint applies to Financial facility
-        (
-            {"fs_type": "financial_facility", "number_of_solutions_supported_by": 0},
-            "number_of_solutions_supported_by",
-        ),
     ],
 )
 def test_finance_solution_validate_errors(
@@ -565,6 +545,26 @@ def test_finance_solution_validate_errors(
             "number_of_solutions_supported_by",
             0,
         ),
+        # 0 is a valid, saveable value for TAF/CTF/Financial facility — not coerced away
+        (
+            {"fs_type": "taf", "number_of_solutions_supported_by": 0},
+            "number_of_solutions_supported_by",
+            0,
+        ),
+        (
+            {
+                "fs_type": "ctf",
+                "geographical_coverage": "national",
+                "number_of_solutions_supported_by": 0,
+            },
+            "number_of_solutions_supported_by",
+            0,
+        ),
+        (
+            {"fs_type": "financial_facility", "number_of_solutions_supported_by": 0},
+            "number_of_solutions_supported_by",
+            0,
+        ),
         # sustainable_finance_mechanisms cleared for non-Financial mechanism types
         (
             {"fs_type": "business", "sustainable_finance_mechanisms": ["blue_bonds"]},
@@ -594,6 +594,29 @@ def test_finance_solution_validate_coercion(
         response.status_code == 200
     ), f"Expected 200, got {response.status_code}: {response.json()}"
     assert response.json()["finance_solutions"][0][coerced_field] == expected_value
+
+
+@pytest.mark.parametrize("fs_type", ["taf", "ctf", "financial_facility"])
+@pytest.mark.parametrize("bad_value", [None, ""])
+def test_finance_solution_number_of_solutions_rejects_null_and_blank(
+    db_setup, api_client1, project1, project_profile1, indicator_set, fs_type, bad_value
+):
+    # 0 is valid (see test_finance_solution_validate_coercion), but null/"" are still
+    # rejected by DRF's default IntegerField behavior on a non-nullable model field.
+    project1.includes_gfcr = True
+    project1.save()
+    fs = {
+        **_FS_BASE,
+        "fs_type": fs_type,
+        "geographical_coverage": "national",
+        "number_of_solutions_supported_by": bad_value,
+    }
+    url = reverse("indicatorset-detail", kwargs={"project_pk": project1.pk, "pk": indicator_set.id})
+    response = api_client1.put(
+        url, data=_fs_put_payload(indicator_set, project1, fs), format="json"
+    )
+    assert response.status_code == 400
+    assert "number_of_solutions_supported_by" in str(response.json())
 
 
 def test_finance_solution_normalizes_empty_strings_for_hidden_fields(
@@ -627,6 +650,28 @@ def test_finance_solution_normalizes_empty_strings_for_hidden_fields(
     assert fs_data["used_an_incubator"] is None
 
 
+def test_finance_solution_rejects_revenues_on_programmatic_co_financing(
+    db_setup,
+    api_client1,
+    project1,
+    project_profile1,
+    indicator_set,
+):
+    project1.includes_gfcr = True
+    project1.save()
+    fs = {
+        **_FS_BASE,
+        "fs_type": "programmatic_co_financing",
+        "revenues": [{"revenue_type": "debt_conversion"}],
+    }
+    url = reverse("indicatorset-detail", kwargs={"project_pk": project1.pk, "pk": indicator_set.id})
+    response = api_client1.put(
+        url, data=_fs_put_payload(indicator_set, project1, fs), format="json"
+    )
+    assert response.status_code == 400
+    assert GFCRRevenue.objects.count() == 0
+
+
 def test_choices_new_gfcr_keys(db_setup, api_client1):
     url = reverse("choice-list")
     response = api_client1.get(url, format="json")
@@ -650,6 +695,187 @@ def test_choices_new_gfcr_keys(db_setup, api_client1):
     assert "Phase 1 target" in title_ids
 
 
+@pytest.mark.parametrize(
+    "fs_fields,expected_error_key",
+    [
+        # Deprecated sector value rejected for business type
+        (
+            {"fs_type": "business", "sector": "fm_biodiversity_credits"},
+            "sector",
+        ),
+        # Deprecated SFM value rejected for financial_mechanism type
+        (
+            {
+                "fs_type": "financial_mechanism",
+                "sustainable_finance_mechanisms": ["conservation_trust_funds"],
+            },
+            "sustainable_finance_mechanisms",
+        ),
+    ],
+)
+def test_finance_solution_rejects_deprecated_choices(
+    db_setup,
+    api_client1,
+    project1,
+    project_profile1,
+    indicator_set,
+    fs_fields,
+    expected_error_key,
+):
+    project1.includes_gfcr = True
+    project1.save()
+    fs = {**_FS_BASE, **fs_fields}
+    url = reverse("indicatorset-detail", kwargs={"project_pk": project1.pk, "pk": indicator_set.id})
+    response = api_client1.put(
+        url, data=_fs_put_payload(indicator_set, project1, fs), format="json"
+    )
+    assert response.status_code == 400
+    assert expected_error_key in str(response.json())
+
+
+def test_investment_source_rejects_deprecated_investment_type(
+    db_setup,
+    api_client1,
+    project1,
+    project_profile1,
+    indicator_set,
+):
+    project1.includes_gfcr = True
+    project1.save()
+    payload = _fs_put_payload(
+        indicator_set,
+        project1,
+        {
+            **_FS_BASE,
+            "investment_sources": [
+                {
+                    "investment_source": "public",
+                    "investment_type": "public_budget",
+                }
+            ],
+        },
+    )
+    url = reverse("indicatorset-detail", kwargs={"project_pk": project1.pk, "pk": indicator_set.id})
+    response = api_client1.put(url, data=payload, format="json")
+    assert response.status_code == 400
+    assert "investment_type" in str(response.json())
+
+
+@pytest.mark.parametrize(
+    "title,indicator_set_type",
+    [
+        # Target title used for a report
+        ("Phase 1 target", "report"),
+        # Report title used for a target
+        ("Baseline", "target"),
+        # Completely invalid title for either type
+        ("My custom title", "report"),
+    ],
+)
+def test_indicator_set_rejects_invalid_title_for_type(
+    db_setup,
+    api_client1,
+    project1,
+    project_profile1,
+    indicator_set,
+    title,
+    indicator_set_type,
+):
+    project1.includes_gfcr = True
+    project1.save()
+    payload = {
+        "id": str(indicator_set.id),
+        "title": title,
+        "report_date": str(indicator_set.report_date),
+        "indicator_set_type": indicator_set_type,
+        "f4_start_date": str(indicator_set.f4_start_date),
+        "f4_end_date": str(indicator_set.f4_end_date),
+        "project": str(project1.pk),
+        "finance_solutions": [],
+    }
+    url = reverse("indicatorset-detail", kwargs={"project_pk": project1.pk, "pk": indicator_set.id})
+    response = api_client1.put(url, data=payload, format="json")
+    assert response.status_code == 400
+    assert "title" in str(response.json())
+
+
+def test_indicator_set_serializer_validates_title_on_partial_update(db_setup, indicator_set):
+    # Regression: a partial update omitting a field must fall back to the instance's
+    # existing value for that field, not skip the title/type check entirely. The API
+    # doesn't currently issue partial=True saves itself (IndicatorSetViewSet always
+    # writes the full record), but the serializer must still be correct in isolation
+    # since it's the actual boundary that enforces this invariant.
+    from api.resources.gfcr import GFCRIndicatorSetSerializer
+
+    assert indicator_set.indicator_set_type == "report"
+    assert indicator_set.title == "Baseline"
+
+    # indicator_set_type omitted — must fall back to the instance's "report" type,
+    # which makes this target-only title invalid.
+    serializer = GFCRIndicatorSetSerializer(
+        instance=indicator_set, data={"title": "Phase 1 target"}, partial=True
+    )
+    assert serializer.is_valid() is False
+    assert "title" in serializer.errors
+
+    # title omitted — must fall back to the instance's existing valid "Baseline" title
+    # rather than treating a missing title as invalid.
+    serializer = GFCRIndicatorSetSerializer(
+        instance=indicator_set, data={"indicator_set_type": "report"}, partial=True
+    )
+    assert serializer.is_valid() is True
+
+
+def test_choices_removes_deprecated_values(db_setup, api_client1):
+    url = reverse("choice-list")
+    response = api_client1.get(url, format="json")
+    assert response.status_code == 200
+    choices_by_name = {item["name"]: item["data"] for item in response.json()}
+
+    sector_ids = {c["id"] for c in choices_by_name["sectors"]}
+    for deprecated in (
+        "fm_biodiversity_credits",
+        "fm_blue_carbon_credits",
+        "fm_conservation_trust_fund",
+        "fm_insurance_mechanisms",
+        "fm_mpa_user_fee",
+        "fm_resilience_credits",
+        "fm_other",
+    ):
+        assert deprecated not in sector_ids, f"Deprecated sector {deprecated!r} still in choices"
+
+    sfm_ids = {c["id"] for c in choices_by_name["sustainablefinancemechanisms"]}
+    for deprecated in (
+        "conservation_trust_funds",
+        "incubator_tecnical_assistance",
+        "revolving_finance_facility",
+    ):
+        assert deprecated not in sfm_ids, f"Deprecated SFM {deprecated!r} still in choices"
+
+    inv_type_ids = {c["id"] for c in choices_by_name["investmenttypes"]}
+    assert "public_budget" not in inv_type_ids, "Deprecated 'public_budget' still in choices"
+
+
+def test_used_an_incubator_null_accepted(
+    db_setup,
+    api_client1,
+    project1,
+    project_profile1,
+    indicator_set,
+):
+    project1.includes_gfcr = True
+    project1.save()
+    fs = {**_FS_BASE, "fs_type": "business", "used_an_incubator": None}
+    url = reverse("indicatorset-detail", kwargs={"project_pk": project1.pk, "pk": indicator_set.id})
+    response = api_client1.put(
+        url, data=_fs_put_payload(indicator_set, project1, fs), format="json"
+    )
+    assert (
+        response.status_code == 200
+    ), f"Expected 200, got {response.status_code}: {response.json()}"
+    assert response.json()["finance_solutions"][0]["used_an_incubator"] is None
+
+
 def test_report_new_columns_and_sheet_name(db_setup, project1):
     from openpyxl import load_workbook
 
@@ -660,7 +886,7 @@ def test_report_new_columns_and_sheet_name(db_setup, project1):
 
     indicator_set = GFCRIndicatorSet.objects.create(
         project=project1,
-        title="Test IS",
+        title="Baseline",
         report_date="2024-02-10",
         indicator_set_type="report",
         f4_start_date=date(1970, 1, 1),

@@ -59,7 +59,7 @@ class ObsColoniesBleached(BaseModel, JSONMixin):
     def __str__(self):
         gf = ""
         if self.growth_form is not None:
-            gf = " {}".format(self.growth_form)
+            gf = f" {self.growth_form}"
         return _("%s%s") % (self.attribute.__str__(), gf)
 
 

@@ -8,7 +8,7 @@ from rest_framework.exceptions import (
 from rest_framework.response import Response
 
 from api import utils
-from api.models import Project
+from api.permissions import get_project, invalidate_project, invalidate_project_profile
 from api.resources import (
     benthic_attribute,
     choices,
@@ -140,7 +140,7 @@ def _get_source(source_type):
     return project_sources.get(source_type) or non_project_sources.get(source_type)
 
 
-def _get_project(data, source_type):
+def _get_project(request, data, source_type):
     projid = None
     projname = "NO PROJECT"
     if "project" in data[source_type]:
@@ -151,9 +151,12 @@ def _get_project(data, source_type):
     if projid:
         try:
             if utils.is_uuid(projid) is True:
-                proj = Project.objects.get(pk=projid)
+                # get_project memoizes per-request (see permissions.cached_lookup)
+                # so repeated source types/records referencing the same project
+                # don't each re-query it.
+                proj = get_project(projid, request=request)
                 projname = proj.name
-        except Project.DoesNotExist:
+        except NotFound:
             pass
 
     return {"project_id": projid, "project_name": projname}
@@ -208,7 +211,11 @@ def _format_errors(errors):
     if errors is None:
         return None
 
-    return {k: v[0] for k, v in errors.items()}
+    # Field errors are normally a list (DRF's {field: [messages]} convention),
+    # but a value can also be a nested dict -- e.g. the duplicate-check
+    # mixins' {"duplicate": {"code": ..., "matches": [...]}} -- which isn't
+    # subscriptable by [0].
+    return {k: (v[0] if isinstance(v, list) else v) for k, v in errors.items()}
 
 
 def _get_serialized_record(viewset, profile_id, record_id):
@@ -226,6 +233,25 @@ def _get_serialized_record(viewset, profile_id, record_id):
         return data["deletes"][0]
 
     return None
+
+
+def _invalidate_project_caches(request, source_type, record):
+    """Clear just the cache entry `record` touched (see
+    permissions.invalidate_project/invalidate_project_profile), not the whole
+    per-request cache. A push batch can write a project's status or a
+    profile's role and rely on that for permission checks on later records
+    in the same batch - without this, those checks would reuse stale data."""
+    if source_type == PROJECTS_SOURCE_TYPE:
+        project_id = record.get("id")
+        if project_id is not None:
+            invalidate_project(request, project_id)
+    elif source_type == PROJECT_PROFILES_SOURCE_TYPE:
+        project_id = record.get("project")
+        # get_project_profile is only ever looked up by request.user.profile,
+        # never a record's own "profile" field - the only one that can be stale.
+        profile = getattr(request.user, "profile", None)
+        if project_id is not None and profile is not None:
+            invalidate_project_profile(request, project_id, profile)
 
 
 def _update_source_record(source_type, serializer, record, request, force=False):
@@ -253,8 +279,12 @@ def _update_source_record(source_type, serializer, record, request, force=False)
     try:
         profile_id = _get_profile_id(request)
         status_code, msg, errors = apply_changes(vw_request, serializer, record, force=force)
+        if source_type in (PROJECTS_SOURCE_TYPE, PROJECT_PROFILES_SOURCE_TYPE):
+            _invalidate_project_caches(request, source_type, record)
         if status_code == 400:
             data = _format_errors(errors)
+        elif status_code == 404:
+            data = errors
         elif status_code == 409:
             data = _get_serialized_record(viewset, profile_id, record_id)
         elif status_code == 418:  # other custom error output
@@ -310,9 +340,14 @@ def _get_source_records(source_type, source_data, request):
 
 def check_permissions(request, data, source_types, method=False):
     permission_checks = {}
+    # _get_project/create_view_request lazily set up per-request project and
+    # project-profile caches on `request` (see permissions.cached_lookup and
+    # sync.utils.create_view_request) so that repeated source types - and, for
+    # push, repeated records - referencing the same project only hit the
+    # database once for it.
     for source_type in source_types:
         src = _get_source(source_type)
-        proj = _get_project(data, source_type)
+        proj = _get_project(request, data, source_type)
         try:
             params = _get_required_parameters(request, data[source_type], src["required_filters"])
         except ValueError:

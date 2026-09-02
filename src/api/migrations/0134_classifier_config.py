@@ -27,7 +27,7 @@ def config_to_patch_size(apps, schema_editor):
 
 class Migration(migrations.Migration):
     dependencies = [
-        ("api", "0129_merge_20260701_1228"),
+        ("api", "0133_merge_20260817_1945"),
     ]
 
     operations = [

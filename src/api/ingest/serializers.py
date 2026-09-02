@@ -13,6 +13,9 @@ from ..models import CollectRecord
 
 __all__ = ["CollectRecordCSVListSerializer", "CollectRecordCSVSerializer"]
 
+SAMPLE_DATE_FIELD = "data__sample_event__sample_date"
+MONTH_DAY_SWAP_HINT = "Are you sure month and day numbers are in the right columns?"
+
 
 class CollectRecordCSVListSerializer(ListSerializer):
     obs_field_identifier = "data__obs_"
@@ -22,6 +25,8 @@ class CollectRecordCSVListSerializer(ListSerializer):
     def __init__(self, *args, **kwargs):
         # Track original record order
         self._row_index = None
+        # Row ids where month/day values look swapped (month > 12, day <= 12)
+        self._possible_date_swap_row_ids = set()
         super().__init__(*args, **kwargs)
 
     def split_list_fields(self, field_name, data, choices=None):
@@ -62,11 +67,24 @@ class CollectRecordCSVListSerializer(ListSerializer):
         if "data__sample_event__sample_date__day" not in row:
             return None
 
-        return "{}-{}-{}".format(
-            row["data__sample_event__sample_date__year"],
-            row["data__sample_event__sample_date__month"],
-            row["data__sample_event__sample_date__day"],
-        )
+        year = row["data__sample_event__sample_date__year"]
+        month = row["data__sample_event__sample_date__month"]
+        day = row["data__sample_event__sample_date__day"]
+
+        if self._looks_like_month_day_swap(month, day):
+            self._possible_date_swap_row_ids.add(row["id"])
+
+        return f"{year}-{month}-{day}"
+
+    def _looks_like_month_day_swap(self, month, day):
+        # A month value >12 with a day value that would itself be a valid
+        # month is a strong signal the two columns were entered swapped.
+        try:
+            month_int = int(month)
+            day_int = int(day)
+        except (TypeError, ValueError):
+            return False
+        return month_int > 12 and 1 <= day_int <= 12
 
     def remove_extra_data(self, row):
         field_names = set(self.child.fields.keys())
@@ -250,6 +268,8 @@ class CollectRecordCSVListSerializer(ListSerializer):
             if bool(error) is True:
                 fmt_error = format_error(error)
                 fmt_error["$row_number"] = self._row_index[rec["id"]]
+                if rec["id"] in self._possible_date_swap_row_ids and SAMPLE_DATE_FIELD in fmt_error:
+                    fmt_error[SAMPLE_DATE_FIELD]["description"].append(MONTH_DAY_SWAP_HINT)
                 fmt_errors.append(fmt_error)
 
         return sorted(fmt_errors, key=itemgetter("$row_number"))
@@ -312,7 +332,7 @@ class CollectRecordCSVSerializer(Serializer):
     def many_init(cls, *args, **kwargs):
         if "data" in kwargs and isinstance(kwargs["data"], (dict, OrderedDict)):
             kwargs["data"] = [kwargs["data"]]
-        return super(CollectRecordCSVSerializer, cls).many_init(*args, **kwargs)
+        return super().many_init(*args, **kwargs)
 
     def get_initial(self):
         if not isinstance(self.original_data, Mapping):
@@ -339,7 +359,7 @@ class CollectRecordCSVSerializer(Serializer):
         val = val or []
         for email in val:
             if email.lower() not in project_profiles:
-                raise ValidationError("{} doesn't exist".format(email))
+                raise ValidationError(f"{email} doesn't exist")
         return val
 
     _valid_project_choice_ids = None
@@ -356,7 +376,7 @@ class CollectRecordCSVSerializer(Serializer):
             valid_ids = set((self.project_choices.get(choices_key) or {}).values())
             self._valid_project_choice_ids[choices_key] = valid_ids
         if val not in valid_ids:
-            raise ValidationError('{} "{}" does not exist in this project'.format(label, val))
+            raise ValidationError(f'{label} "{val}" does not exist in this project')
         return val
 
     def validate_data__sample_event__site(self, val):

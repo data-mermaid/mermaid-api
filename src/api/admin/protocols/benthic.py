@@ -142,9 +142,7 @@ class BenthicAttributeAdmin(AttributeAdmin):
                 sus = get_sus_with_attrib(p.get("model_su"), sqry, d.pk)
                 if crs.count() > 0 or sus.count() > 0:
                     admin_url = reverse(
-                        "admin:{}_benthicattribute_change".format(
-                            self.model_attrib._meta.app_label
-                        ),
+                        f"admin:{self.model_attrib._meta.app_label}_benthicattribute_change",
                         args=(d.pk,),
                     )
                     sstr = format_html('<a href="{}">{}</a>', admin_url, d)

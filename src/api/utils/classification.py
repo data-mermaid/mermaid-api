@@ -6,7 +6,7 @@ from io import BytesIO
 from operator import itemgetter
 from pathlib import Path
 from tempfile import NamedTemporaryFile, TemporaryDirectory
-from typing import Any, Dict, Optional, Tuple
+from typing import Any
 
 import pandas as pd
 import pyarrow as pa
@@ -38,7 +38,7 @@ from ..models import (
 )
 from ..models.classification import get_image_storage_config
 from .q import submit_image_job
-from .s3 import download_directory, upload_file
+from .s3 import list_objects, upload_file
 
 CLASSIFIER_CONFIG_S3_PATH = "classifier"
 CLASSIFIER_CONFIG_LOCAL_CACHE_DIR = settings.SPACER.get("EXTRACTORS_CACHE_DIR")
@@ -73,7 +73,7 @@ def check_if_valid_image(instance):
             if settings.MAX_IMAGE_PIXELS < w * h:
                 raise ValueError(f"Maximum number of pixels is {settings.MAX_IMAGE_PIXELS}.")
         return
-    except (AttributeError, TypeError, IOError, SyntaxError) as _:
+    except (OSError, AttributeError, TypeError, SyntaxError):
         raise ValueError("Invalid image.")
 
 
@@ -85,7 +85,7 @@ def create_image_name(image: Image) -> str:
     return f"{name}{image_ext}"
 
 
-def create_image_checksum(image: ImageFieldFile, image_buf: Optional[BytesIO] = None) -> str:
+def create_image_checksum(image: ImageFieldFile, image_buf: BytesIO | None = None) -> str:
     if image_buf is not None:
         image_buf.seek(0)
         file_hash = hashlib.sha256()
@@ -106,7 +106,7 @@ def create_image_checksum(image: ImageFieldFile, image_buf: Optional[BytesIO] = 
     return file_hash.hexdigest()
 
 
-def create_thumbnail(image_instance: Image, image_buf: Optional[BytesIO] = None) -> ContentFile:
+def create_thumbnail(image_instance: Image, image_buf: BytesIO | None = None) -> ContentFile:
     size = (500, 500)
 
     if image_buf is not None:
@@ -126,16 +126,11 @@ def create_thumbnail(image_instance: Image, image_buf: Optional[BytesIO] = None)
     thumb_io = BytesIO()
     try:
         img.save(thumb_io, img.format)
-    except IOError as io_err:
+    except OSError as io_err:
         print(f"Cannot create thumbnail for [{image_instance.pk}]: {io_err}")
         raise
 
     return ContentFile(thumb_io.getvalue(), name=thumb_name)
-
-
-def convert_to_utc(timestamp_str: str) -> datetime:
-    local_time = datetime.fromisoformat(timestamp_str)
-    return local_time.astimezone(datetime.timezone.utc)
 
 
 # GPS sub-IFD tag IDs (PIL.ExifTags.GPSTAGS)
@@ -175,8 +170,8 @@ def _normalize_exif_value(value):
 
 
 def extract_datetime_stamp(
-    exif_ifd: Dict[int, Any], gps_ifd: Dict[int, Any]
-) -> Optional[datetime.datetime]:
+    exif_ifd: dict[int, Any], gps_ifd: dict[int, Any]
+) -> datetime.datetime | None:
     # GPS date+time is already UTC — use it if present
     date_stamp = gps_ifd.get(_GPS_DATESTAMP)  # "YYYY:MM:DD"
     time_stamp = gps_ifd.get(_GPS_TIMESTAMP)  # (H, M, S) as IFDRationals
@@ -185,7 +180,7 @@ def extract_datetime_stamp(
         try:
             y, mo, d = map(int, date_stamp.split(":"))
             h, mi, s = int(time_stamp[0]), int(time_stamp[1]), int(time_stamp[2])
-            return datetime.datetime(y, mo, d, h, mi, s, tzinfo=datetime.timezone.utc)
+            return datetime.datetime(y, mo, d, h, mi, s, tzinfo=datetime.UTC)
         except (ValueError, TypeError):
             pass
 
@@ -203,12 +198,12 @@ def extract_datetime_stamp(
         sign = -1 if offset_str.startswith("-") else 1
         h, m = map(int, offset_str[1:].split(":"))
         offset = datetime.timedelta(hours=sign * h, minutes=sign * m)
-        return dt.replace(tzinfo=datetime.timezone(offset)).astimezone(datetime.timezone.utc)
+        return dt.replace(tzinfo=datetime.timezone(offset)).astimezone(datetime.UTC)
     except (ValueError, AttributeError):
         return None
 
 
-def extract_location(gps_ifd: Dict[int, Any]) -> Optional[GEOSPoint]:
+def extract_location(gps_ifd: dict[int, Any]) -> GEOSPoint | None:
     latitude_ref = gps_ifd.get(_GPS_LATITUDE_REF)  # "N" or "S"
     latitude_dms = gps_ifd.get(_GPS_LATITUDE)  # tuple of 3 IFDRationals
     longitude_ref = gps_ifd.get(_GPS_LONGITUDE_REF)  # "E" or "W"
@@ -322,7 +317,7 @@ def create_classification_status(image, status, message=None):
         print(f"Writing classification status Image {image.pk}, status: {status}: {err}")
 
 
-def generate_points(image: Image, num_points: int, margin: Tuple[int, int] = (0, 0)):
+def generate_points(image: Image, num_points: int, margin: tuple[int, int] = (0, 0)):
     assert len(margin) == 2
 
     if image.original_image_height and image.original_image_width:
@@ -354,12 +349,14 @@ def _fetch_and_cache_classifier_config(classifier: Classifier):
 
     classifier_s3_dir = f"{CLASSIFIER_CONFIG_S3_PATH}/{cls_version}"
     classifier_local_dir = f"{CLASSIFIER_CONFIG_LOCAL_CACHE_DIR}/{cls_version}"
-    download_directory(settings.AWS_CONFIG_BUCKET, classifier_s3_dir, classifier_local_dir)
+    list_objects(
+        settings.AWS_CONFIG_BUCKET, prefix=f"{classifier_s3_dir}/", download_to=classifier_local_dir
+    )
 
 
 def _get_classifier_and_weights(
-    classifier: Optional[Classifier] = None
-) -> Tuple[DataLocation, DataLocation]:
+    classifier: Classifier | None = None
+) -> tuple[DataLocation, DataLocation]:
     # TODO: Handle if classifier configs don't exist for classifier instance.
     if not classifier:
         classifier = Classifier.latest()

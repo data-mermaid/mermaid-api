@@ -237,7 +237,7 @@ STATIC_ROOT = os.path.join(BASE_DIR, "static")
 # *****************
 
 AUTH0_DOMAIN = os.environ.get("AUTH0_DOMAIN")
-AUTH0_USER_INFO_ENDPOINT = "https://{domain}/userinfo".format(domain=AUTH0_DOMAIN)
+AUTH0_USER_INFO_ENDPOINT = f"https://{AUTH0_DOMAIN}/userinfo"
 AUTH0_MANAGEMENT_API_AUDIENCE = os.environ.get("AUTH0_MANAGEMENT_API_AUDIENCE")
 MERMAID_API_AUDIENCE = os.environ.get("MERMAID_API_AUDIENCE")
 MERMAID_API_SIGNING_SECRET = os.environ.get("MERMAID_API_SIGNING_SECRET")
@@ -256,7 +256,7 @@ EMAIL_PORT = os.environ.get("EMAIL_PORT")
 EMAIL_HOST_USER = os.environ.get("EMAIL_HOST_USER")
 EMAIL_HOST_PASSWORD = os.environ.get("EMAIL_HOST_PASSWORD")
 EMAIL_USE_TLS = True
-DEFAULT_FROM_EMAIL = "MERMAID System <{}>".format(EMAIL_HOST_USER)
+DEFAULT_FROM_EMAIL = f"MERMAID System <{EMAIL_HOST_USER}>"
 WEBCONTACT_EMAIL = f"MERMAID Web Contact <{os.environ.get('WEBCONTACT_EMAIL')}>"
 
 API_NULLQUERY = "null"

@@ -1,12 +1,13 @@
 import json
 import logging
-import random
+import secrets
 import string
 from urllib.request import urlopen
 
-from auth0.v3.authentication import GetToken
-from auth0.v3.exceptions import Auth0Error
-from auth0.v3.management import Auth0
+from auth0.authentication import GetToken
+from auth0.authentication.exceptions import Auth0Error
+from auth0.management import ManagementClient
+from auth0.management.core.api_error import ApiError
 from django.utils.encoding import smart_str
 from django.utils.translation import gettext as _
 from jose import jws, jwt
@@ -21,14 +22,14 @@ from app import settings
 logger = logging.getLogger(__name__)
 
 
-class Auth0ClientManager(object):
+class Auth0ClientManager:
     _chars = string.ascii_letters + string.digits
     _secret_len = 48
 
     def __init__(self, domain, token):
         self.domain = domain
         self.token = token
-        self.auth0 = Auth0(domain, token)
+        self.auth0 = ManagementClient(domain=domain, token=token)
 
     def delete_client(self, client_id):
         self.auth0.clients.delete(client_id)
@@ -37,44 +38,39 @@ class Auth0ClientManager(object):
         return self.auth0.clients.get(client_id)
 
     def list_clients(self):
-        return self.auth0.clients.all()
+        return self.auth0.clients.list()
 
     def change_secret(self, client_id):
-        c = [random.choice(self._chars) for x in range(self._secret_len)]
+        c = [secrets.choice(self._chars) for x in range(self._secret_len)]
         secret = "".join(c)
-        body = {"client_secret": secret}
-        return self.auth0.clients.update(client_id, body)
+        return self.auth0.clients.update(client_id, client_secret=secret)
 
-    def create_non_interactive_client(self, name, description=None, callbacks=[]):
-        params = {
-            "name": name,
-            "app_type": "non_interactive",
-            "description": description or "",
-            "token_endpoint_auth_method": "client_secret_basic",
-            "callbacks": callbacks,
-        }
-        resp = self.auth0.clients.create(params)
-
-        return resp
+    def create_non_interactive_client(self, name, description=None, callbacks=None):
+        if callbacks is None:
+            callbacks = []
+        return self.auth0.clients.create(
+            name=name,
+            app_type="non_interactive",
+            description=description or "",
+            token_endpoint_auth_method="client_secret_basic",
+            callbacks=callbacks,
+        )
 
     def create_client_grant(self, client_id, audience, scopes):
-        params = {
-            "client_id": client_id,
-            "audience": audience,
-            "scope": scopes,
-        }
-        resp = self.auth0.client_grants.create(params)
-
-        return resp
+        return self.auth0.client_grants.create(
+            client_id=client_id,
+            audience=audience,
+            scope=scopes,
+        )
 
 
-class Auth0UserInfo(object):
+class Auth0UserInfo:
     user_url = "/api/v2/users/{id}"
 
     def __init__(self, domain, token):
         self.domain = domain
         self.token = token
-        self.auth0 = Auth0(domain, token)
+        self.auth0 = ManagementClient(domain=domain, token=token)
 
     def get_userinfo(self, user_id):
         return self.auth0.users.get(user_id)
@@ -82,7 +78,7 @@ class Auth0UserInfo(object):
     # https://datamermaid.auth0.com/userinfo
 
 
-class Auth0ManagementAPI(object):
+class Auth0ManagementAPI:
     def __init__(self, domain, client_id, client_secret):
         self.domain = domain
         self.client_id = client_id
@@ -90,9 +86,9 @@ class Auth0ManagementAPI(object):
 
     def get_token(self):
         audience = settings.AUTH0_MANAGEMENT_API_AUDIENCE
-        get_token = GetToken(self.domain)
+        get_token = GetToken(self.domain, self.client_id, self.client_secret)
         try:
-            token = get_token.client_credentials(self.client_id, self.client_secret, audience)
+            token = get_token.client_credentials(audience)
             mgmt_api_token = token["access_token"]
             return mgmt_api_token
         except Auth0Error as e:
@@ -171,7 +167,7 @@ def get_user_info(user_id):
     auth_user = Auth0UserInfo(domain, token)
     try:
         ui = auth_user.get_userinfo(user_id)
-    except Auth0Error as e:
+    except ApiError as e:
         if e.status_code == 429:
             logger.warning("[auth0.rate_limit] User info API rate limit hit for %s: %s", user_id, e)
         else:
@@ -190,13 +186,20 @@ def get_user_info(user_id):
         )
         raise Auth0ServiceUnavailable() from e
 
-    um = ui.get("user_metadata") or {}
+    um = ui.user_metadata or {}
+    email = um.get("email") or ui.email
+    if not email:
+        # Auth0 returned no email for this user (e.g. phone/SMS-only identity).
+        # Fail fast here rather than letting a None email reach
+        # get_or_create_safeish(Profile, email=None), which would recurse
+        # forever on the NOT NULL constraint of Profile.email.
+        raise KeyError("email")
 
     return dict(
-        first_name=um.get("first_name") or ui.get("given_name") or "",
-        last_name=um.get("last_name") or ui.get("family_name") or "",
-        email=um.get("email") or ui["email"],
-        picture=ui.get("picture"),
+        first_name=um.get("first_name") or ui.given_name or "",
+        last_name=um.get("last_name") or ui.family_name or "",
+        email=email,
+        picture=ui.picture,
     )
 
 
@@ -207,7 +210,7 @@ def get_token_algorithm(token):
 
 def get_jwks():
     jwks = {}
-    url = "https://{}/.well-known/jwks.json".format(settings.AUTH0_DOMAIN)
+    url = f"https://{settings.AUTH0_DOMAIN}/.well-known/jwks.json"
     resp = urlopen(url)
     if resp.getcode() != 200:
         return None
@@ -233,7 +236,7 @@ def decode_rsa(token):
             rsa_key,
             algorithms=["RS256"],
             audience=settings.SPA_ADMIN_CLIENT_ID,
-            issuer="https://{}/".format(settings.AUTH0_DOMAIN),
+            issuer=f"https://{settings.AUTH0_DOMAIN}/",
             # access_token='',
             options={"verify_at_hash": False},
         )
@@ -257,7 +260,7 @@ def decode_hs(token):
             algorithms=["HS256"],
         )
     except jwt.JWTError as e:
-        logger.debug("Decode token failed: {}".format(str(e)))
+        logger.debug(f"Decode token failed: {str(e)}")
         raise exceptions.AuthenticationFailed(e)
 
 
@@ -268,7 +271,7 @@ def decode(token):
     elif alg == "HS256":
         return decode_hs(token)
 
-    msg = "{} algorithm not supported".format(alg)
+    msg = f"{alg} algorithm not supported"
     raise exceptions.ValidationError(msg, code=400)
 
 

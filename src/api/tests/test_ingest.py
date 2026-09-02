@@ -24,6 +24,13 @@ def fishbelt_file(db):
 
 
 @pytest.fixture
+def fishbelt_month_day_swap_file(db):
+    file = open(os.path.join(csv_data_dir, "fishbelt_month_day_swap.csv"))
+    yield file
+    file.close()
+
+
+@pytest.fixture
 def benthicpit_file(db):
     return open(os.path.join(csv_data_dir, "benthicpit.csv"))
 
@@ -157,6 +164,53 @@ def test_fishbelt_ingest_missing_site_and_management(
     error_fields = {field for error in errors for field in error}
     assert "data__sample_event__site" in error_fields
     assert "data__sample_event__management" in error_fields
+
+
+def test_fishbelt_ingest_month_day_swap_hint(
+    db_setup,
+    fishbelt_month_day_swap_file,
+    project1,
+    profile1,
+    base_project,
+    all_test_fish_attributes,
+    belt_transect_width_5m,
+    fish_size_bin_1,
+    tide2,
+    current2,
+    site1,
+    management1,
+    fish_species3,
+    fish_species4,
+    reef_slope1,
+    relative_depth1,
+    visibility1,
+):
+    # Month=14, Day=5: month is out of range but the day value would itself
+    # be a valid month, so this should surface the month/day swap hint
+    # alongside the standard date format error.
+    new_records, ingest_output = utils.ingest(
+        protocol=FISHBELT_PROTOCOL,
+        datafile=fishbelt_month_day_swap_file,
+        project_id=project1.pk,
+        profile_id=profile1.pk,
+        request=None,
+        dry_run=False,
+        clear_existing=False,
+        bulk_validation=False,
+        bulk_submission=False,
+        validation_suppressants=None,
+        serializer_class=None,
+    )
+
+    assert new_records is None
+    assert "errors" in ingest_output
+
+    errors = ingest_output["errors"]
+    assert len(errors) == 1
+    date_error = errors[0]["data__sample_event__sample_date"]
+    assert (
+        "Are you sure month and day numbers are in the right columns?" in date_error["description"]
+    )
 
 
 def test_benthicpit_ingest(

@@ -189,6 +189,10 @@ def _create_annotations_file_job(image_id):
     try:
         image = Image.objects.get(id=image_id)
         image.create_annotations_file()
+    except Image.DoesNotExist:
+        # Expected when the image's project (e.g. a demo project) was deleted/recreated
+        # before this async job ran. Not an error worth reporting to Sentry.
+        logger.info(f"Skipping annotations file for image {image_id}: image no longer exists")
     except Exception:
         logger.error(f"Failed to create annotations file for image {image_id}", exc_info=True)
 
@@ -401,7 +405,7 @@ def delete_collected_pqt_images(image_ids):
                 )
             except Exception:
                 logger.error(
-                    f"Failed to delete S3 file during demo project cleanup: {path}",
+                    f"Failed to delete S3 file during project deletion: {path}",
                     exc_info=True,
                 )
 
@@ -1099,7 +1103,13 @@ def delete_project(pk):
         with transaction.atomic():
             sid = transaction.savepoint()
             try:
+                # Collect PQT image IDs before the cascade-delete removes the
+                # ObsBenthicPhotoQuadrat rows that link back to them.
+                pqt_image_ids = collect_project_pqt_image_ids(instance)
                 delete_instance_and_related_objects(instance)
+                # Now that ObsBenthicPhotoQuadrat rows are gone (PROTECT lifted),
+                # delete the orphaned Image records and schedule S3 cleanup.
+                delete_collected_pqt_images(pqt_image_ids)
                 transaction.savepoint_commit(sid)
                 print("project deleted")
             except Exception as err:

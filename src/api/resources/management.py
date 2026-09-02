@@ -1,6 +1,8 @@
 from decimal import Decimal
 
 import django_filters
+from django.db.models import BooleanField
+from django.db.models.expressions import RawSQL
 from rest_framework import serializers
 
 from ..exceptions import check_uuid
@@ -53,6 +55,10 @@ class ManagementExtendedSerializer(ExtendedSerializer):
 
 
 class ManagementSerializer(BaseAPISerializer):
+    # No ManagementDuplicateCheckMixin here: this serializer's only write
+    # path is create_project's bulk copy into a brand-new project, which
+    # never has existing submitted data for the check's precondition to
+    # match against -- it would just be dead weight on every call.
     rules = serializers.SerializerMethodField(source="get_rules")
     project_name = serializers.SerializerMethodField()
     size = serializers.DecimalField(
@@ -135,7 +141,7 @@ class ManagementFilterSet(BaseAPIFilterSet):
             "access_restriction",
         )
         project_id = value
-        group_by = ",".join(['"{}"'.format(uf) for uf in unique_fields])
+        group_by = ",".join(['"{}"'.format(uf) for uf in unique_fields])  # noqa: UP032
 
         sql = """
             "management".id::text IN (
@@ -165,12 +171,14 @@ class ManagementFilterSet(BaseAPIFilterSet):
                         GROUP BY {}
                     ) AS agg_managements
                     WHERE
-                        NOT('{}' = ANY(agg_managements.project_ids))
+                        NOT(%s = ANY(agg_managements.project_ids))
                 ) AS management_ids
             )
-        """.format(group_by, project_id)
+        """.format(group_by)  # noqa: UP032
 
-        return queryset.extra(where=[sql])
+        return queryset.alias(
+            _is_unique_management=RawSQL(sql, [project_id], output_field=BooleanField())
+        ).filter(_is_unique_management=True)
 
     def filter_not_projects(self, queryset, name, value):
         value_list = [check_uuid(v.strip()) for v in value.split(",")]
