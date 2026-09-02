@@ -34,7 +34,7 @@ def image_collect_record(project1, profile1):
         data={
             "image_classification": True,
             "protocol": BENTHICPQT_PROTOCOL,
-            "quadrat_transect": {"num_quadrats": 1},
+            "quadrat_transect": {"num_quadrats": 1, "num_points_per_quadrat": 2},
         },
     )
 
