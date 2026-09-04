@@ -8,7 +8,7 @@ from rest_framework.exceptions import NotFound, ParseError
 from rest_framework.request import Request
 
 from .exceptions import check_uuid
-from .models import CollectRecord, Project, ProjectProfile
+from .models import APIKey, CollectRecord, Project, ProjectProfile
 from .models.base import PROPOSED
 
 
@@ -72,6 +72,44 @@ def get_project(pk, request=None):
             raise NotFound("Not found: project %s" % pk)
 
     return cached_lookup(request, PROJECT_CACHE_ATTR, cache_key, _load)
+
+
+def get_request_api_key(request):
+    """The APIKey that authenticated `request`, or None for any other caller.
+
+    `request.auth` is the JWT string for an Auth0 caller and None for an
+    anonymous one, so the isinstance check is what separates a key-authenticated
+    request from every other kind.
+
+    A key grants exactly its profile's access, so nothing in the permission
+    classes needs this to decide yes or no. It is here for the callers that
+    care *how* a request was authenticated rather than as whom: attributing a
+    write (resources/base.get_request_profile) and refusing to let a key mint
+    another key.
+    """
+    if request is None:
+        return None
+    api_key = getattr(request, "auth", None)
+    return api_key if isinstance(api_key, APIKey) else None
+
+
+class APIKeyOwnerPermission(permissions.BasePermission):
+    """A signed-in person manages their own API keys; a key never does.
+
+    Authentication alone is not enough here. A request authenticated by an API
+    key runs as the key's profile and would otherwise be able to list, rename
+    and mint that profile's keys, which turns one leaked credential into an
+    unlimited supply of them. Key management is for the person, over the same
+    Auth0 login the rest of the app uses.
+    """
+
+    message = "API keys cannot be managed with an API key."
+
+    def has_permission(self, request, view):
+        user = request.user
+        if not user.is_authenticated:
+            return False
+        return get_request_api_key(request) is None
 
 
 def get_project_profile(project, profile, request=None):

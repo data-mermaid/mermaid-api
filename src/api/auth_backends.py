@@ -3,13 +3,22 @@ import logging
 from django.conf import settings
 from django.contrib.auth import get_user_model
 from django.contrib.auth.models import AnonymousUser
+from django.core.cache import cache
 from django.utils import timezone
+from django.utils.encoding import smart_str
 from rest_framework import exceptions
-from rest_framework.authentication import BaseAuthentication
+from rest_framework.authentication import BaseAuthentication, get_authorization_header
 
-from api.models.base import Application, AuthUser, Profile
+from api.models.base import APIKey, Application, AuthUser, Profile
 from api.utils import get_or_create_safeish
+from api.utils.apikeys import (
+    get_environment_label,
+    looks_like_api_key,
+    parse_api_key,
+    secret_matches,
+)
 from api.utils.auth0utils import decode, get_jwt_token, get_user_info, is_hs_token
+from api.utils.ratelimit import FailureRateLimiter
 
 logger = logging.getLogger(__name__)
 
@@ -39,6 +48,11 @@ class JWTAuthentication(BaseAuthentication):
         Returns a two-tuple of `User` and token if a valid signature has been
         supplied using JWT-based authentication.  Otherwise returns `None`.
         """
+        # An API key shares the Bearer scheme; it belongs to
+        # APIKeyAuthentication, which DRF tries next.
+        if has_api_key_scheme(request):
+            return None
+
         jwt_token = get_jwt_token(request)
         if jwt_token is None or is_hs_token(jwt_token) is False:
             logger.debug(f"Invalid Token: {jwt_token}")
@@ -175,6 +189,160 @@ class JWTAuthentication(BaseAuthentication):
         return app
 
 
+def get_api_key_credential(request):
+    """The raw API key from `Authorization: Bearer mmd_...`, or None.
+
+    Auth0 access tokens use the same scheme, so the key prefix is what decides
+    which backend owns the request.
+    """
+
+    auth = get_authorization_header(request).split()
+    if len(auth) != 2:
+        return None
+    if smart_str(auth[0]).lower() != APIKeyAuthentication.keyword.lower():
+        return None
+
+    raw = smart_str(auth[1])
+    return raw if looks_like_api_key(raw) else None
+
+
+def has_api_key_scheme(request):
+    """True when the caller presented a MERMAID API key as a bearer token."""
+
+    return get_api_key_credential(request) is not None
+
+
+class APIKeyAuthentication(BaseAuthentication):
+    """
+    Authentication for machine clients using a MERMAID-issued API key.
+
+    The key is read from `Authorization: Bearer mmd_<env>_<key_id>_<secret>`
+    and never from the query string, which would put a long-lived credential
+    into nginx, ALB and Sentry logs. The scheme is shared with Auth0 access
+    tokens, so a bearer credential is ours only when it carries the `mmd_`
+    prefix; anything else is left to `JWTAuthentication`.
+
+    A key that is present but bad always fails closed with a 401. Returning
+    `None` would let a misconfigured client fall through to the anonymous
+    backend and silently read public data instead of seeing the error.
+    """
+
+    keyword = "Bearer"
+    www_authenticate_realm = "api"
+    # per-key throttle on the last_used_at write, in seconds
+    last_used_throttle = 60
+    # Failures per minute, counted per IP and per key_id, before the rest of
+    # that minute is answered with 429 (C8). Only failures count, so a client
+    # presenting a good key is never throttled by this.
+    failure_limiter = FailureRateLimiter("apikey", limit=10, window=60)
+
+    def authenticate_header(self, request):
+        return f'{self.keyword} realm="{self.www_authenticate_realm}"'
+
+    def authenticate(self, request):
+        raw = get_api_key_credential(request)
+        if raw is None:
+            # not our credential; let the next backend try
+            return None
+
+        ip = _get_client_ip(request)
+        # Before any work: a caller already over the limit does not get another
+        # database lookup and hash out of us this minute.
+        self._check_rate_limit(request, "ip", ip)
+
+        try:
+            env, key_id, secret = parse_api_key(raw)
+        except ValueError:
+            raise self._fail(request, "malformed_key", None, ip=ip)
+
+        # Counted separately from the IP: one bad key rotating through hosts is
+        # the same incident, and one bad host should not lock out a good key.
+        self._check_rate_limit(request, "key_id", key_id)
+
+        # ImproperlyConfigured here is a deployment error, not a client error;
+        # let it surface as a 500. api.checks catches it at startup.
+        if env != get_environment_label():
+            raise self._fail(
+                request,
+                "wrong_environment",
+                key_id,
+                detail="key issued for a different environment",
+                ip=ip,
+            )
+
+        try:
+            api_key = APIKey.objects.select_related("profile").get(key_id=key_id)
+        except APIKey.DoesNotExist:
+            raise self._fail(request, "unknown_key_id", key_id, ip=ip)
+
+        if not secret_matches(secret, api_key.secret_hash):
+            raise self._fail(request, "bad_secret", key_id, ip=ip)
+
+        if not api_key.is_active:
+            raise self._fail(request, "inactive", key_id, ip=ip)
+        if api_key.revoked_at is not None:
+            raise self._fail(request, "revoked", key_id, ip=ip)
+        if api_key.expires_at is not None and api_key.expires_at < timezone.now():
+            raise self._fail(request, "expired", key_id, ip=ip)
+
+        self._touch(api_key, ip)
+
+        # dummy Django user, as in JWTAuthentication
+        user = get_user_model()(username=f"apikey|{api_key.key_id}", password="apikey")
+        user.profile = api_key.profile
+        return (user, api_key)
+
+    def _check_rate_limit(self, request, scope, identifier):
+        """Raise 429 while `identifier` is over its failure limit for the minute."""
+
+        wait = self.failure_limiter.retry_after(scope, identifier)
+        if wait is None:
+            return
+
+        logger.warning(
+            "[apikey.rate_limited] scope=%s id=%s path=%s retry_after=%s",
+            scope,
+            identifier,
+            request.path,
+            wait,
+        )
+        raise exceptions.Throttled(wait=wait)
+
+    def _fail(self, request, reason, key_id, detail=None, ip=None):
+        """Log and count the rejection, and return the exception to raise."""
+
+        ip = ip if ip is not None else _get_client_ip(request)
+        logger.warning(
+            "[apikey.failed_auth] reason=%s key_id=%s ip=%s path=%s",
+            reason,
+            key_id or "malformed",
+            ip,
+            request.path,
+        )
+        self.failure_limiter.record_failure("ip", ip)
+        if key_id:
+            self.failure_limiter.record_failure("key_id", key_id)
+        # One opaque message: which check failed is not the caller's business,
+        # and saying so would narrow a guessing attack.
+        return exceptions.AuthenticationFailed(detail or "Invalid API key")
+
+    def _touch(self, api_key, ip):
+        """Record usage, at most once per key per throttle window.
+
+        A busy client would otherwise write to the row on every request.
+        """
+
+        cache_key = f"apikey:last_used:{api_key.key_id}"
+        if cache.get(cache_key):
+            return
+        cache.set(cache_key, True, self.last_used_throttle)
+        now = timezone.now()
+        # update() to avoid touching updated_on/updated_by on every call
+        APIKey.objects.filter(pk=api_key.pk).update(last_used_at=now, last_used_ip=ip)
+        api_key.last_used_at = now
+        api_key.last_used_ip = ip
+
+
 class AnonymousJWTAuthentication(JWTAuthentication):
     """
     If token has been provided, JWT Authentication is used
@@ -182,6 +350,11 @@ class AnonymousJWTAuthentication(JWTAuthentication):
     """
 
     def authenticate(self, request, *args, **kwargs):
+        # An API key on a public endpoint must be validated, not ignored:
+        # a bad key has to 401 rather than quietly return public data.
+        if has_api_key_scheme(request):
+            return APIKeyAuthentication().authenticate(request)
+
         jwt_token = None
         try:
             jwt_token = get_jwt_token(request)

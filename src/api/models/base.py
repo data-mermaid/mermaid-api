@@ -1,9 +1,15 @@
+import logging
 import uuid
 
 from django.contrib.gis.db.models.fields import MultiPolygonField, PolygonField
 from django.core.exceptions import ObjectDoesNotExist
 from django.db import models
+from django.utils import timezone
 from django.utils.translation import gettext_lazy as _
+
+from ..utils.apikeys import audit_logger, generate_api_key, log_key_created
+
+logger = logging.getLogger(__name__)
 
 PROPOSED = 10
 SUPERUSER_APPROVED = 90
@@ -214,3 +220,99 @@ class Application(BaseModel):
 
     def __str__(self):
         return f"{self.profile} - {self.client_id}"
+
+
+class APIKey(BaseModel):
+    """A long-lived credential that acts as its profile.
+
+    The key carries no permissions of its own. Every request it authenticates
+    runs as `profile`, with whatever `ProjectProfile.role` that profile holds
+    on the project being touched, so a key reaches exactly the data its owner
+    reaches and no more - and loses access the moment a membership goes away,
+    with no scope list to keep in step.
+
+    The trade is blast radius: a leaked key is the whole of its profile's
+    access. That is why issuing one is a superuser action, why `expires_at`
+    defaults to a year rather than to never, and why revocation is one call.
+    """
+
+    profile = models.ForeignKey("Profile", related_name="api_keys", on_delete=models.CASCADE)
+    name = models.CharField(max_length=100)
+    key_id = models.CharField(max_length=12, unique=True, db_index=True)
+    # hex SHA-256 of the secret; the secret itself is never stored
+    secret_hash = models.CharField(max_length=64)
+    is_active = models.BooleanField(default=True)
+    expires_at = models.DateTimeField(null=True, blank=True)
+    last_used_at = models.DateTimeField(null=True, blank=True)
+    last_used_ip = models.GenericIPAddressField(null=True, blank=True)
+    revoked_at = models.DateTimeField(null=True, blank=True)
+    revoked_reason = models.CharField(max_length=255, blank=True)
+
+    class Meta:
+        db_table = "api_key"
+        ordering = ("name",)
+
+    def __str__(self):
+        # never include secret_hash
+        return f"{self.name} [{self.key_id}]"
+
+    @classmethod
+    def issue(cls, profile, name, expires_at, actor, replaces=None, created_by=None):
+        """Mint a key for `profile` and return ``(key, raw_key)``.
+
+        This is the only place a raw key ever exists, and it exists only in the
+        return value: the row keeps the hash, the caller shows the raw key once
+        and forgets it. `actor` is who asked for the key, for the audit line.
+        """
+
+        key_id, secret_hash, raw = generate_api_key()
+        key = cls.objects.create(
+            profile=profile,
+            name=name,
+            key_id=key_id,
+            secret_hash=secret_hash,
+            expires_at=expires_at,
+            created_by=created_by,
+            updated_by=created_by,
+        )
+        log_key_created(key, actor, replaces=replaces)
+        return key, raw
+
+    @property
+    def is_expired(self):
+        return self.expires_at is not None and self.expires_at < timezone.now()
+
+    @property
+    def is_usable(self):
+        return self.is_active and self.revoked_at is None and not self.is_expired
+
+    def revoke(self, reason="", save=True, actor="system"):
+        """Retire the key without deleting the row, so the audit trail stays.
+
+        Revocation is one-way and idempotent: re-revoking an already revoked
+        key keeps the original timestamp and reason, which is what a reviewer
+        asking "when did this stop working" needs.
+
+        `actor` is who took the key away, for the audit line only. It defaults
+        to "system" because most revocations come from a signal or the daily
+        maintenance command rather than from a person.
+        """
+
+        if self.revoked_at is not None:
+            return False
+
+        self.revoked_at = timezone.now()
+        self.revoked_reason = reason or ""
+        self.is_active = False
+        if save:
+            self.save(update_fields=["revoked_at", "revoked_reason", "is_active", "updated_on"])
+        # C8: the counterpart of [apikey.created]. Together they answer "which
+        # credentials existed, for whom, and for how long" from the logs alone.
+        audit_logger.info(
+            "[apikey.revoked] key_id=%s profile=%s actor=%s reason=%s",
+            self.key_id,
+            self.profile_id,
+            actor,
+            reason or "unspecified",
+        )
+        return True

@@ -174,6 +174,7 @@ DEFAULT_AUTO_FIELD = "django.db.models.BigAutoField"
 REST_FRAMEWORK = {
     "DEFAULT_AUTHENTICATION_CLASSES": (
         "api.auth_backends.JWTAuthentication",
+        "api.auth_backends.APIKeyAuthentication",
         "rest_framework.authentication.SessionAuthentication",
     ),
     "DEFAULT_PERMISSION_CLASSES": ("rest_framework.permissions.IsAuthenticatedOrReadOnly",),
@@ -385,6 +386,13 @@ LOGGING = {
             "filters": ["require_debug_false"],
             "class": "django.utils.log.AdminEmailHandler",
         },
+        # Fixed at INFO, unlike "console": the API key audit trail has to reach
+        # CloudWatch in production, where DEBUG_LEVEL is WARNING.
+        "console_info": {
+            "level": "INFO",
+            "class": "logging.StreamHandler",
+            "stream": sys.stdout,
+        },
     },
     "formatters": {
         "file": {
@@ -400,6 +408,14 @@ LOGGING = {
         "api": {
             "handlers": ["console"],
             "level": "WARNING",
+            "propagate": False,
+        },
+        # API key issuance, revocation and expiry: an audit trail, kept at INFO
+        # in every environment. Failed authentications are WARNING and go
+        # through the "api" logger above.
+        "api.apikeys": {
+            "handlers": ["console_info"],
+            "level": "INFO",
             "propagate": False,
         },
         "django.security.DisallowedHost": {

@@ -17,6 +17,7 @@ from ..models import (
 )
 from ..utils import get_subclasses
 from ..utils.sample_units import delete_orphaned_sample_event, delete_orphaned_sample_unit
+from .apikeys import *  # noqa: F403
 from .attributes import *  # noqa: F403
 from .classification import *  # noqa: F403
 from .notifications import *  # noqa: F403

@@ -43,6 +43,7 @@ from ..permissions import (
     ProjectDataCollectorPermission,
     ProjectDataReadOnlyPermission,
     UnauthenticatedReadOnlyPermission,
+    get_request_api_key,
 )
 from ..utils.auth0utils import get_jwt_token, get_unverified_profile
 from ..utils.project import citation_retrieved_text
@@ -96,13 +97,26 @@ class StandardResultPagination(PageNumberPagination):
     max_page_size = 5000
 
 
+def get_request_profile(request):
+    """The profile a write is attributed to.
+
+    An API key request carries no JWT, so the profile comes from the user the
+    key resolved to; the key rides in the same `Bearer` header, and passing it
+    to the JWT decoder would raise instead.
+    """
+    if get_request_api_key(request) is not None:
+        return getattr(request.user, "profile", None)
+
+    token = get_jwt_token(request)
+    return get_unverified_profile(token)
+
+
 class CurrentProfileDefault:
     requires_context = True
 
     def __call__(self, serializer_field):
         try:
-            token = get_jwt_token(serializer_field.context["request"])
-            return get_unverified_profile(token)
+            return get_request_profile(serializer_field.context["request"])
         except exceptions.AuthenticationFailed:
             return None
 
@@ -156,8 +170,7 @@ class BaseAPISerializer(serializers.ModelSerializer):
         if request is None:
             return
 
-        token = get_jwt_token(request)
-        kwargs["updated_by"] = get_unverified_profile(token)
+        kwargs["updated_by"] = get_request_profile(request)
         return super().save(**kwargs)
 
 
@@ -588,8 +601,7 @@ class BaseApiViewSet(MethodAuthenticationMixin, viewsets.ModelViewSet):
         return serializer_class
 
     def _set_updated_by(self, request):
-        token = get_jwt_token(request)
-        return get_unverified_profile(token)
+        return get_request_profile(request)
 
     def perform_create(self, serializer):
         updated_by = self._set_updated_by(self.request)
