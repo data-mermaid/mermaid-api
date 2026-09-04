@@ -11,7 +11,12 @@ from rest_framework.authentication import BaseAuthentication, get_authorization_
 
 from api.models.base import APIKey, Application, AuthUser, Profile
 from api.utils import get_or_create_safeish
-from api.utils.apikeys import get_environment_label, parse_api_key, secret_matches
+from api.utils.apikeys import (
+    get_environment_label,
+    looks_like_api_key,
+    parse_api_key,
+    secret_matches,
+)
 from api.utils.auth0utils import decode, get_jwt_token, get_user_info, is_hs_token
 from api.utils.ratelimit import FailureRateLimiter
 
@@ -43,6 +48,11 @@ class JWTAuthentication(BaseAuthentication):
         Returns a two-tuple of `User` and token if a valid signature has been
         supplied using JWT-based authentication.  Otherwise returns `None`.
         """
+        # An API key shares the Bearer scheme; it belongs to
+        # APIKeyAuthentication, which DRF tries next.
+        if has_api_key_scheme(request):
+            return None
+
         jwt_token = get_jwt_token(request)
         if jwt_token is None or is_hs_token(jwt_token) is False:
             logger.debug(f"Invalid Token: {jwt_token}")
@@ -179,29 +189,45 @@ class JWTAuthentication(BaseAuthentication):
         return app
 
 
-def has_api_key_scheme(request):
-    """True when the caller presented an `Authorization: ApiKey ...` header."""
+def get_api_key_credential(request):
+    """The raw API key from `Authorization: Bearer mmd_...`, or None.
+
+    Auth0 access tokens use the same scheme, so the key prefix is what decides
+    which backend owns the request.
+    """
 
     auth = get_authorization_header(request).split()
-    if not auth:
-        return False
-    return smart_str(auth[0]).lower() == APIKeyAuthentication.keyword.lower()
+    if len(auth) != 2:
+        return None
+    if smart_str(auth[0]).lower() != APIKeyAuthentication.keyword.lower():
+        return None
+
+    raw = smart_str(auth[1])
+    return raw if looks_like_api_key(raw) else None
+
+
+def has_api_key_scheme(request):
+    """True when the caller presented a MERMAID API key as a bearer token."""
+
+    return get_api_key_credential(request) is not None
 
 
 class APIKeyAuthentication(BaseAuthentication):
     """
     Authentication for machine clients using a MERMAID-issued API key.
 
-    The key is read from `Authorization: ApiKey mmd_<env>_<key_id>_<secret>`
+    The key is read from `Authorization: Bearer mmd_<env>_<key_id>_<secret>`
     and never from the query string, which would put a long-lived credential
-    into nginx, ALB and Sentry logs.
+    into nginx, ALB and Sentry logs. The scheme is shared with Auth0 access
+    tokens, so a bearer credential is ours only when it carries the `mmd_`
+    prefix; anything else is left to `JWTAuthentication`.
 
     A key that is present but bad always fails closed with a 401. Returning
     `None` would let a misconfigured client fall through to the anonymous
     backend and silently read public data instead of seeing the error.
     """
 
-    keyword = "ApiKey"
+    keyword = "Bearer"
     www_authenticate_realm = "api"
     # per-key throttle on the last_used_at write, in seconds
     last_used_throttle = 60
@@ -214,9 +240,9 @@ class APIKeyAuthentication(BaseAuthentication):
         return f'{self.keyword} realm="{self.www_authenticate_realm}"'
 
     def authenticate(self, request):
-        auth = get_authorization_header(request).split()
-        if not auth or smart_str(auth[0]).lower() != self.keyword.lower():
-            # not our scheme; let the next backend try
+        raw = get_api_key_credential(request)
+        if raw is None:
+            # not our credential; let the next backend try
             return None
 
         ip = _get_client_ip(request)
@@ -224,10 +250,6 @@ class APIKeyAuthentication(BaseAuthentication):
         # database lookup and hash out of us this minute.
         self._check_rate_limit(request, "ip", ip)
 
-        if len(auth) != 2:
-            raise self._fail(request, "malformed_header", None, ip=ip)
-
-        raw = smart_str(auth[1])
         try:
             env, key_id, secret = parse_api_key(raw)
         except ValueError:

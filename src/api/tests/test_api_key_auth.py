@@ -8,7 +8,11 @@ from rest_framework import exceptions
 from rest_framework.request import Request
 from rest_framework.test import APIRequestFactory
 
-from api.auth_backends import AnonymousJWTAuthentication, APIKeyAuthentication
+from api.auth_backends import (
+    AnonymousJWTAuthentication,
+    APIKeyAuthentication,
+    JWTAuthentication,
+)
 from api.models import APIKey
 from api.utils.apikeys import generate_api_key
 
@@ -39,7 +43,7 @@ def key_pair(profile1):
 
 def _request(raw=None, header=None, path="/v1/projects/", **extra):
     if header is None and raw is not None:
-        header = f"ApiKey {raw}"
+        header = f"Bearer {raw}"
     if header is not None:
         extra["HTTP_AUTHORIZATION"] = header
     # DRF Request, as the backends see it at runtime
@@ -59,12 +63,27 @@ def test_valid_key_authenticates(key_pair, profile1):
     assert auth.pk == key.pk
 
 
-def test_other_scheme_falls_through(key_pair):
-    """A Bearer token is not ours; the next backend has to get a chance."""
+@pytest.mark.parametrize(
+    "header",
+    [
+        pytest.param("", id="no_header"),
+        pytest.param("Basic dXNlcjpwYXNz", id="other_scheme"),
+        pytest.param("Bearer eyJhbGciOiJIUzI1NiJ9.e30.sig", id="jwt"),
+        pytest.param("Bearer not-a-key", id="unprefixed"),
+        pytest.param("ApiKey mmd_local_aaaaaaaaaaaa_secret", id="old_apikey_scheme"),
+    ],
+)
+def test_credential_that_is_not_ours_falls_through(header):
+    """Only a `Bearer mmd_...` credential is ours; the rest go to the next backend."""
+
+    assert _authenticate(header=header) is None
+
+
+def test_jwt_backend_leaves_api_keys_alone(key_pair):
+    """Both share `Bearer`, and JWTAuthentication runs first, so it has to pass."""
 
     _, raw = key_pair
-    assert _authenticate(header=f"Bearer {raw}") is None
-    assert _authenticate(header="") is None
+    assert JWTAuthentication().authenticate(_request(raw)) is None
 
 
 @pytest.mark.parametrize(
@@ -72,9 +91,8 @@ def test_other_scheme_falls_through(key_pair):
     [
         pytest.param(lambda raw: raw + "x", id="wrong_secret"),
         pytest.param(lambda raw: "mmd_local_aaaaaaaaaaaa_nope", id="unknown_key_id"),
-        pytest.param(lambda raw: "not-a-key", id="malformed"),
         pytest.param(lambda raw: "mmd_local_short_secret", id="bad_key_id_length"),
-        pytest.param(lambda raw: raw.replace("mmd_", "xxx_", 1), id="bad_prefix"),
+        pytest.param(lambda raw: "mmd_nonsense", id="prefix_only"),
         pytest.param(lambda raw: raw.replace("_local_", "_prod_", 1), id="wrong_environment"),
     ],
 )
@@ -84,12 +102,26 @@ def test_bad_key_is_401(key_pair, mangle):
         _authenticate(mangle(raw))
 
 
-def test_header_with_spaces_is_401(key_pair):
+@pytest.mark.parametrize(
+    "header",
+    [
+        pytest.param("Bearer {raw} extra", id="trailing_junk"),
+        pytest.param("Bearer", id="no_credential"),
+    ],
+)
+def test_malformed_header_is_not_a_key(key_pair, header):
+    """Not parseable as a bearer credential, so not ours to claim.
+
+    JWTAuthentication runs first and rejects these outright, which is what
+    turns them into a 401.
+    """
+
     _, raw = key_pair
+    header = header.format(raw=raw)
+
+    assert _authenticate(header=header) is None
     with pytest.raises(exceptions.AuthenticationFailed):
-        _authenticate(header=f"ApiKey {raw} extra")
-    with pytest.raises(exceptions.AuthenticationFailed):
-        _authenticate(header="ApiKey")
+        JWTAuthentication().authenticate(_request(header=header))
 
 
 @pytest.mark.parametrize(

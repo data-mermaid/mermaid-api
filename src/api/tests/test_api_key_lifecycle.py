@@ -112,7 +112,7 @@ def test_is_expired_and_is_usable(profile1, project1):
 
 def test_revoked_key_no_longer_authenticates(profile1, project1, project_profile1):
     key, raw = _make_key(profile1)
-    request = Request(APIRequestFactory().get("/v1/projects/", HTTP_AUTHORIZATION=f"ApiKey {raw}"))
+    request = Request(APIRequestFactory().get("/v1/projects/", HTTP_AUTHORIZATION=f"Bearer {raw}"))
 
     assert APIKeyAuthentication().authenticate(request) is not None
 

@@ -9,6 +9,7 @@ from api.utils.apikeys import (
     generate_api_key,
     get_environment_label,
     hash_secret,
+    looks_like_api_key,
     parse_api_key,
     secret_matches,
 )
@@ -109,3 +110,23 @@ def test_startup_check_flags_an_unknown_environment(settings):
 
     assert [error.id for error in errors] == ["api.E001"]
     assert "produciton" in errors[0].msg
+
+
+@pytest.mark.parametrize(
+    "raw,expected",
+    [
+        ("mmd_prod_abc123def456_secret", True),
+        # claimed on the prefix alone, so a bad key 401s instead of being
+        # handed to the JWT decoder
+        ("mmd_", True),
+        ("mmd_garbage", True),
+        ("eyJhbGciOiJIUzI1NiJ9.e30.sig", False),
+        ("mmd", False),
+        ("Mmd_prod_abc123def456_secret", False),
+        ("", False),
+        (None, False),
+        (b"mmd_prod_abc123def456_secret", False),
+    ],
+)
+def test_looks_like_api_key(raw, expected):
+    assert looks_like_api_key(raw) is expected

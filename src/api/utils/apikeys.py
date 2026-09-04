@@ -4,6 +4,9 @@ A key is presented to the API as::
 
     mmd_<env>_<key_id>_<secret>
 
+It travels in ``Authorization: Bearer <key>``, the same scheme as an Auth0
+access token; the ``mmd_`` prefix is what tells the two apart.
+
 ``key_id`` identifies the ``APIKey`` row and is safe to log. ``secret`` is 256
 bits of CSPRNG output; only its SHA-256 digest is stored. A plain, unsalted
 digest is used deliberately: the secret has enough entropy that a slow password
@@ -86,6 +89,18 @@ def generate_api_key(env=None):
     secret = secrets.token_urlsafe(SECRET_BYTES)
     raw = f"{PREFIX}_{env}_{key_id}_{secret}"
     return key_id, hash_secret(secret), raw
+
+
+def looks_like_api_key(raw):
+    """True when a bearer credential is a MERMAID API key rather than a JWT.
+
+    The prefix is the whole discriminator between the two credentials that
+    share the `Bearer` scheme. It only claims the token for the API key
+    backend; whether the rest of it is well formed is `parse_api_key`'s job,
+    and a token claimed here fails closed rather than falling through to JWT.
+    """
+
+    return isinstance(raw, str) and raw.startswith(f"{PREFIX}_")
 
 
 def parse_api_key(raw):

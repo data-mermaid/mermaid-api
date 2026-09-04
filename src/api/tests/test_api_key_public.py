@@ -41,7 +41,7 @@ def key_pair(profile1):
 def _client(raw=None):
     client = APIClient()
     if raw is not None:
-        client.credentials(HTTP_AUTHORIZATION=f"ApiKey {raw}")
+        client.credentials(HTTP_AUTHORIZATION=f"Bearer {raw}")
     return client
 
 

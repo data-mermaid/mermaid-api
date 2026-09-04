@@ -18,8 +18,8 @@ class MockRequest:
         auth=None,
     ):
         # Mirrors DRF: resources/base.get_request_profile reads request.auth to
-        # tell an API key caller from a JWT one, and would otherwise try to
-        # decode an "ApiKey ..." header as a JWT.
+        # tell an API key caller from a JWT one. Both arrive as "Bearer ...",
+        # so the header alone cannot make that call.
         self.auth = auth
         if profile:
             # A profile an API key was issued against need never have logged in

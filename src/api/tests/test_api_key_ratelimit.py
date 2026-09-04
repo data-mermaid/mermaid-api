@@ -57,7 +57,7 @@ def key_pair(profile1):
 
 def _authenticate(raw, ip="10.0.0.1"):
     request = Request(factory.get("/v1/projects/", REMOTE_ADDR=ip))
-    request.META["HTTP_AUTHORIZATION"] = f"ApiKey {raw}"
+    request.META["HTTP_AUTHORIZATION"] = f"Bearer {raw}"
     return APIKeyAuthentication().authenticate(request)
 
 
@@ -161,8 +161,10 @@ def test_key_id_is_throttled_across_ips(key_pair):
 
 
 def test_malformed_keys_count_against_the_ip(key_pair):
+    """A key too mangled to name a key_id can only be counted against the IP."""
+
     _, raw = key_pair
-    _fail_n("not-a-key", LIMIT)
+    _fail_n("mmd_not-a-key", LIMIT)
 
     with pytest.raises(exceptions.Throttled):
         _authenticate(raw)
@@ -195,7 +197,7 @@ def test_throttled_request_returns_429(db, key_pair):
 
     _, raw = key_pair
     client = APIClient()
-    client.credentials(HTTP_AUTHORIZATION=f"ApiKey {raw}x")
+    client.credentials(HTTP_AUTHORIZATION=f"Bearer {raw}x")
     url = reverse("project-list")
 
     for _ in range(LIMIT):

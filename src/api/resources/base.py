@@ -101,8 +101,8 @@ def get_request_profile(request):
     """The profile a write is attributed to.
 
     An API key request carries no JWT, so the profile comes from the user the
-    key resolved to; passing the `ApiKey ...` header to the JWT decoder would
-    raise instead.
+    key resolved to; the key rides in the same `Bearer` header, and passing it
+    to the JWT decoder would raise instead.
     """
     if get_request_api_key(request) is not None:
         return getattr(request.user, "profile", None)

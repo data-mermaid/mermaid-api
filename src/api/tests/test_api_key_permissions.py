@@ -44,7 +44,7 @@ def _make_key(profile, name="bot"):
 
 def _client(raw):
     client = APIClient()
-    client.credentials(HTTP_AUTHORIZATION=f"ApiKey {raw}")
+    client.credentials(HTTP_AUTHORIZATION=f"Bearer {raw}")
     return client
 
 
