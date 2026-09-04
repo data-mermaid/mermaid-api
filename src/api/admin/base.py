@@ -14,9 +14,9 @@ from django.utils.html import format_html
 
 from api.utils.apikeys import (
     DEFAULT_LIFETIME_DAYS,
-    audit_logger,
     default_expires_at,
     generate_api_key,
+    log_key_created,
 )
 from api.utils.sample_unit_methods import get_project
 from tools.models import MERMAIDFeature, UserMERMAIDFeature
@@ -267,27 +267,12 @@ class APIKeyAdmin(admin.ModelAdmin):
             self._show_raw_key(request, replacement, raw)
 
     def _issue_key(self, request, profile, name, expires_at, replaces=None):
-        key_id, secret_hash, raw = generate_api_key()
-        key = APIKey.objects.create(
+        return APIKey.issue(
             profile=profile,
             name=name,
-            key_id=key_id,
-            secret_hash=secret_hash,
             expires_at=expires_at,
-        )
-        self._log_created(request, key, replaces=replaces)
-        return key, raw
-
-    def _log_created(self, request, key, replaces=None):
-        # A minted credential is worth an audit line of its own (C8). The raw
-        # key and the hash are never part of it.
-        audit_logger.info(
-            "[apikey.created] key_id=%s profile=%s actor=%s expires_at=%s replaces=%s",
-            key.key_id,
-            key.profile_id,
-            request.user.get_username(),
-            key.expires_at.isoformat() if key.expires_at else "never",
-            replaces.key_id if replaces else "none",
+            actor=request.user.get_username(),
+            replaces=replaces,
         )
 
     def _show_raw_key(self, request, key, raw):
@@ -316,7 +301,7 @@ class APIKeyAdmin(admin.ModelAdmin):
         # it is ever readable.
         obj.key_id, obj.secret_hash, raw = generate_api_key()
         super().save_model(request, obj, form, change)
-        self._log_created(request, obj)
+        log_key_created(obj, request.user.get_username())
         self._show_raw_key(request, obj, raw)
 
 

@@ -91,6 +91,24 @@ def generate_api_key(env=None):
     return key_id, hash_secret(secret), raw
 
 
+def log_key_created(key, actor, replaces=None):
+    """Audit line for a minted credential (C8).
+
+    The counterpart of `APIKey.revoke`'s line. Together they answer "which
+    credentials existed, for whom, and for how long" from the logs alone. The
+    raw key and the hash are never part of it.
+    """
+
+    audit_logger.info(
+        "[apikey.created] key_id=%s profile=%s actor=%s expires_at=%s replaces=%s",
+        key.key_id,
+        key.profile_id,
+        actor,
+        key.expires_at.isoformat() if key.expires_at else "never",
+        replaces.key_id if replaces else "none",
+    )
+
+
 def looks_like_api_key(raw):
     """True when a bearer credential is a MERMAID API key rather than a JWT.
 

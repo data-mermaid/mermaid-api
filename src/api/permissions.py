@@ -93,6 +93,25 @@ def get_request_api_key(request):
     return api_key if isinstance(api_key, APIKey) else None
 
 
+class APIKeyOwnerPermission(permissions.BasePermission):
+    """A signed-in person manages their own API keys; a key never does.
+
+    Authentication alone is not enough here. A request authenticated by an API
+    key runs as the key's profile and would otherwise be able to list, rename
+    and mint that profile's keys, which turns one leaked credential into an
+    unlimited supply of them. Key management is for the person, over the same
+    Auth0 login the rest of the app uses.
+    """
+
+    message = "API keys cannot be managed with an API key."
+
+    def has_permission(self, request, view):
+        user = request.user
+        if not user.is_authenticated:
+            return False
+        return get_request_api_key(request) is None
+
+
 def get_project_profile(project, profile, request=None):
     """Like ProjectProfile.objects.get_or_none(project=project, profile=profile),
     but memoized per-request (see cached_lookup) since permission classes

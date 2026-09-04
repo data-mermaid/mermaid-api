@@ -7,7 +7,7 @@ from django.db import models
 from django.utils import timezone
 from django.utils.translation import gettext_lazy as _
 
-from ..utils.apikeys import audit_logger
+from ..utils.apikeys import audit_logger, generate_api_key, log_key_created
 
 logger = logging.getLogger(__name__)
 
@@ -255,6 +255,28 @@ class APIKey(BaseModel):
     def __str__(self):
         # never include secret_hash
         return f"{self.name} [{self.key_id}]"
+
+    @classmethod
+    def issue(cls, profile, name, expires_at, actor, replaces=None, created_by=None):
+        """Mint a key for `profile` and return ``(key, raw_key)``.
+
+        This is the only place a raw key ever exists, and it exists only in the
+        return value: the row keeps the hash, the caller shows the raw key once
+        and forgets it. `actor` is who asked for the key, for the audit line.
+        """
+
+        key_id, secret_hash, raw = generate_api_key()
+        key = cls.objects.create(
+            profile=profile,
+            name=name,
+            key_id=key_id,
+            secret_hash=secret_hash,
+            expires_at=expires_at,
+            created_by=created_by,
+            updated_by=created_by,
+        )
+        log_key_created(key, actor, replaces=replaces)
+        return key, raw
 
     @property
     def is_expired(self):
