@@ -1,3 +1,5 @@
+import django_filters
+from django.conf import settings
 from rest_framework import serializers
 from rest_framework.decorators import action
 from rest_framework.exceptions import NotFound
@@ -23,6 +25,12 @@ class BenthicAttributeGrowthFormSerializer(BaseAPISerializer):
 
 class ClassifierSerializer(BaseAPISerializer):
     benthic_attribute_growth_forms = BenthicAttributeGrowthFormSerializer(many=True)
+    is_default = serializers.SerializerMethodField()
+
+    def get_is_default(self, obj):
+        return bool(settings.INFERENCE_CLASSIFIER_VERSION) and (
+            obj.version == settings.INFERENCE_CLASSIFIER_VERSION
+        )
 
     class Meta:
         model = Classifier
@@ -34,18 +42,28 @@ class ClassifierSerializer(BaseAPISerializer):
             "config",
             "description",
             "benthic_attribute_growth_forms",
+            "is_default",
             "created_on",
             "updated_on",
         ]
+
+
+class ClassifierFilterSet(django_filters.FilterSet):
+    class Meta:
+        model = Classifier
+        fields = ["version"]
 
 
 class ClassifierViewSet(BaseApiViewSet):
     serializer_class = ClassifierSerializer
     permission_classes = (UnauthenticatedReadOnlyPermission,)
     method_authentication_classes = {"GET": []}
+    filterset_class = ClassifierFilterSet
 
     def get_queryset(self):
-        return Classifier.objects.prefetch_related("benthic_attribute_growth_forms").all()
+        return Classifier.objects.prefetch_related("benthic_attribute_growth_forms").order_by(
+            "-created_on"
+        )
 
     @action(detail=False, methods=SAFE_METHODS)
     def latest(self, request, *args, **kwargs):

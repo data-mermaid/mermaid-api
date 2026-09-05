@@ -15,6 +15,7 @@ from aws_cdk import (
     aws_ecs as ecs,
     aws_ecs_patterns as ecs_patterns,
     aws_elasticloadbalancingv2 as elb,
+    aws_iam as iam,
     aws_logs as logs,
     aws_rds as rds,
     aws_route53 as r53,
@@ -175,6 +176,20 @@ class ApiStack(Stack):
         # Envir Vars
         sqs_queue_name = f"mermaid-{config.env_id}-general"
         image_sqs_queue_name = f"mermaid-{config.env_id}-image-processing"
+
+        # Inference Lambda (pyspacer compute lane). Built from config.env_id rather than
+        # imported from InferenceStack to avoid a cross-stack ApiStack<->InferenceStack dependency.
+        inference_settings = getattr(config, "inference", None)
+        inference_function_name = f"{config.env_id}-mermaid-inference-pyspacer"
+        inference_function_arn = (
+            f"arn:aws:lambda:{self.region}:{self.account}:function:{inference_function_name}"
+        )
+        # Whether THIS env's API worker routes classification to the Lambda lane.
+        # The InferenceStack still deploys the function image regardless of this flag;
+        # it only flips the API between the Lambda lane and the legacy in-process path.
+        # Flip use_lambda=True for an env (+ deploy) to cut it over.
+        use_inference_lambda = bool(inference_settings and inference_settings.use_lambda)
+
         environment = {
             "ENV": config.env_id,
             "ENVIRONMENT": config.env_id,
@@ -212,6 +227,10 @@ class ApiStack(Stack):
             "OTEL_EXPORTER_OTLP_ENDPOINT": "http://localhost:4317",
             "OTEL_PROPAGATORS": "xray",
             "OTEL_PYTHON_ID_GENERATOR": "xray",
+            "INFERENCE_LAMBDA_PYSPACER": inference_function_name if use_inference_lambda else "",
+            "INFERENCE_CLASSIFIER_VERSION": (
+                inference_settings.classifier_version if use_inference_lambda else ""
+            ),
         }
 
         # build image asset to be shared with API and Backup Task
@@ -431,6 +450,16 @@ class ApiStack(Stack):
         # allow API to send messages to the queue
         worker.queue.grant_send_messages(service.task_definition.task_role)
         image_worker.queue.grant_send_messages(service.task_definition.task_role)
+
+        # Allow the worker task roles to invoke the inference Lambda (pyspacer compute lane),
+        # only for an env actually using the Lambda lane (least privilege; flip use_lambda to grant).
+        if use_inference_lambda:
+            invoke_inference_stmt = iam.PolicyStatement(
+                actions=["lambda:InvokeFunction"],
+                resources=[inference_function_arn],
+            )
+            worker.task_definition.task_role.add_to_principal_policy(invoke_inference_stmt)
+            image_worker.task_definition.task_role.add_to_principal_policy(invoke_inference_stmt)
 
         # allow API to read/write to the public bucket
         public_bucket.grant_read_write(service.task_definition.task_role)

@@ -25,6 +25,7 @@ def test_serializer_exposes_exact_field_set():
         "config",
         "description",
         "benthic_attribute_growth_forms",
+        "is_default",
         "created_on",
         "updated_on",
     }
