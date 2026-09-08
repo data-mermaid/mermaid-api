@@ -1,4 +1,7 @@
+from datetime import timedelta
+
 import pytest
+from django.utils import timezone
 
 from api.models import APIKey
 
@@ -60,3 +63,53 @@ def test_api_key_id_is_unique(api_key1, profile1):
 def test_api_key_deleted_with_profile(api_key1, profile1):
     profile1.delete()
     assert APIKey.objects.filter(pk=api_key1.pk).exists() is False
+
+
+def test_usable_for_matches_is_usable(api_key1, profile1, profile2):
+    """The queryset the caps count with has to agree with the per-row property."""
+
+    now = timezone.now()
+    live = APIKey.objects.create(
+        profile=profile1,
+        name="live",
+        key_id="live00000001",
+        secret_hash="1" * 64,
+        expires_at=now + timedelta(days=1),
+    )
+    expired = APIKey.objects.create(
+        profile=profile1,
+        name="expired",
+        key_id="expd00000001",
+        secret_hash="2" * 64,
+        expires_at=now - timedelta(days=1),
+    )
+    inactive = APIKey.objects.create(
+        profile=profile1,
+        name="inactive",
+        key_id="inac00000001",
+        secret_hash="3" * 64,
+        is_active=False,
+    )
+    revoked = APIKey.objects.create(
+        profile=profile1,
+        name="revoked",
+        key_id="revk00000001",
+        secret_hash="4" * 64,
+    )
+    revoked.revoke("test")
+    other = APIKey.objects.create(
+        profile=profile2,
+        name="other",
+        key_id="othr00000001",
+        secret_hash="5" * 64,
+    )
+
+    usable = set(APIKey.usable_for(profile1))
+    # api_key1 has no expiry, so it is usable too
+    assert usable == {api_key1, live}
+    for key in (expired, inactive, revoked, other):
+        assert key not in usable
+    for key in (api_key1, live):
+        assert key.is_usable is True
+    for key in (expired, inactive, revoked):
+        assert key.is_usable is False

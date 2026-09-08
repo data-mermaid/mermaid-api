@@ -1,3 +1,4 @@
+import ipaddress
 import logging
 
 from django.conf import settings
@@ -23,9 +24,36 @@ from api.utils.ratelimit import FailureRateLimiter
 logger = logging.getLogger(__name__)
 
 
+# Longest address we could legitimately see is an IPv4-mapped IPv6 one.
+MAX_CLIENT_IP_LEN = 45
+
+
 def _get_client_ip(request):
+    """Best-effort client IP, for logging and rate-limit keys.
+
+    X-Forwarded-For is whatever the caller sent, so the value is sanitised
+    before it goes anywhere: control characters would let it forge log lines,
+    and an unbounded string would become an unbounded cache key.
+    """
+
     xff = request.META.get("HTTP_X_FORWARDED_FOR", "")
-    return xff.split(",")[0].strip() if xff else request.META.get("REMOTE_ADDR", "unknown")
+    ip = xff.split(",")[0].strip() if xff else request.META.get("REMOTE_ADDR", "")
+    ip = "".join(c for c in ip if c.isprintable() and not c.isspace())
+    return ip[:MAX_CLIENT_IP_LEN]
+
+
+def _client_ip_for_db(ip):
+    """The IP as an `inet` value, or None when it is not an address.
+
+    X-Forwarded-For is caller-controlled, so the raw value belongs in a log
+    line and never in a typed column: a non-address there is a DataError
+    raised from inside authenticate(), which DRF turns into a 500.
+    """
+
+    try:
+        return str(ipaddress.ip_address(ip))
+    except ValueError:
+        return None
 
 
 class JWTAuthentication(BaseAuthentication):
@@ -337,10 +365,11 @@ class APIKeyAuthentication(BaseAuthentication):
             return
         cache.set(cache_key, True, self.last_used_throttle)
         now = timezone.now()
+        db_ip = _client_ip_for_db(ip)
         # update() to avoid touching updated_on/updated_by on every call
-        APIKey.objects.filter(pk=api_key.pk).update(last_used_at=now, last_used_ip=ip)
+        APIKey.objects.filter(pk=api_key.pk).update(last_used_at=now, last_used_ip=db_ip)
         api_key.last_used_at = now
-        api_key.last_used_ip = ip
+        api_key.last_used_ip = db_ip
 
 
 class AnonymousJWTAuthentication(JWTAuthentication):

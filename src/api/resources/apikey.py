@@ -11,8 +11,17 @@ The raw key appears exactly once, in the `key` field of the create response.
 It is not stored, so it cannot be shown again; losing it means minting a new
 key. Keys are revoked rather than deleted so the audit trail survives, which
 is also why the resource has no DELETE.
+
+Because nothing here is ever deleted and each key is its owner's full access,
+minting is bounded twice: `settings.API_KEY_MAX_LIFETIME_DAYS` caps how far
+out an expiry may be set, and `settings.API_KEY_MAX_PER_PROFILE` caps how many
+usable keys one profile may hold at once. Revoked and expired keys do not count
+against the second, so retiring a key always makes room for a new one.
 """
 
+from datetime import timedelta
+
+from django.conf import settings
 from django.utils import timezone
 from django_filters import BooleanFilter
 from rest_framework import serializers, status
@@ -86,6 +95,9 @@ class APIKeyCreateSerializer(serializers.Serializer):
     Expiry mirrors the admin form: leave `expires_at` out and the key lives
     for the default lifetime; a key that never expires has to be asked for
     with `never_expires`, so that no-expiry is never the silent default.
+
+    `expires_at` is also capped at `settings.API_KEY_MAX_LIFETIME_DAYS`, or an
+    expiry a century out would be a permanent key that never had to say so.
     """
 
     name = serializers.CharField(max_length=APIKey._meta.get_field("name").max_length)
@@ -93,8 +105,18 @@ class APIKeyCreateSerializer(serializers.Serializer):
     never_expires = serializers.BooleanField(required=False, default=False)
 
     def validate_expires_at(self, value):
-        if value is not None and value <= timezone.now():
+        if value is None:
+            return value
+
+        now = timezone.now()
+        if value <= now:
             raise serializers.ValidationError("expires_at must be in the future.")
+
+        max_days = settings.API_KEY_MAX_LIFETIME_DAYS
+        if value > now + timedelta(days=max_days):
+            raise serializers.ValidationError(
+                f"expires_at cannot be more than {max_days} days from now."
+            )
         return value
 
     def validate(self, attrs):
@@ -148,6 +170,20 @@ class APIKeyViewSet(BaseApiViewSet):
         serializer.is_valid(raise_exception=True)
 
         profile = request.user.profile
+        max_keys = settings.API_KEY_MAX_PER_PROFILE
+        # Every key is the whole of this profile's access, and there is no
+        # DELETE, so without a ceiling a loop could leave an unbounded pile of
+        # live credentials behind. Revoked and expired keys do not count.
+        if APIKey.usable_for(profile).count() >= max_keys:
+            raise serializers.ValidationError(
+                {
+                    "non_field_errors": [
+                        f"You already have {max_keys} usable API keys. "
+                        "Revoke one before creating another."
+                    ]
+                }
+            )
+
         key, raw = APIKey.issue(
             profile=profile,
             name=serializer.validated_data["name"],

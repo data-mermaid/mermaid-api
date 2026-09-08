@@ -5,13 +5,16 @@ Two jobs, neither of which the auth backend can do on its own:
 - Deactivate keys whose `expires_at` has passed. The backend already rejects
   them, but the row still says `is_active=True`, so the admin list lies about
   which credentials are live.
-- Report keys with no expiry that nobody has used for a long time. These are
-  the credentials that get forgotten. Nothing is revoked automatically; a
-  quiet key may just be a quarterly job.
+- Report long-lived keys that nobody has used for a long time. These are the
+  credentials that get forgotten. "Long-lived" is no expiry at all, or an
+  expiry further out than `settings.API_KEY_MAX_LIFETIME_DAYS`, which is a
+  permanent key wearing a date. Nothing is revoked automatically; a quiet key
+  may just be a quarterly job.
 """
 
 from datetime import timedelta
 
+from django.conf import settings
 from django.core.management.base import BaseCommand
 from django.db.models import Q
 from django.utils import timezone
@@ -24,8 +27,8 @@ STALE_DAYS = 180
 
 class Command(BaseCommand):
     help = (
-        "Deactivate expired API keys and report never-expiring keys that have "
-        "gone unused. Use --dry-run to report without writing."
+        "Deactivate expired API keys and report long-lived keys that have gone "
+        "unused. Use --dry-run to report without writing."
     )
 
     def add_arguments(self, parser):
@@ -38,7 +41,7 @@ class Command(BaseCommand):
             "--stale-days",
             type=int,
             default=STALE_DAYS,
-            help=f"Days of disuse before a no-expiry key is reported (default {STALE_DAYS}).",
+            help=f"Days of disuse before a long-lived key is reported (default {STALE_DAYS}).",
         )
 
     def handle(self, *args, **options):
@@ -76,8 +79,13 @@ class Command(BaseCommand):
 
     def _report_stale(self, now, stale_days):
         cutoff = now - timedelta(days=stale_days)
+        # An expiry past the ceiling the API will issue is a no-expiry key that
+        # went in through another door (the admin, a fixture, an older row), so
+        # it belongs in the same report rather than outside it.
+        horizon = now + timedelta(days=settings.API_KEY_MAX_LIFETIME_DAYS)
         stale = (
-            APIKey.objects.filter(is_active=True, expires_at__isnull=True, revoked_at__isnull=True)
+            APIKey.objects.filter(is_active=True, revoked_at__isnull=True)
+            .filter(Q(expires_at__isnull=True) | Q(expires_at__gt=horizon))
             .filter(
                 # Never used and issued long ago counts as stale too, otherwise
                 # a key that was never wired up would never be reported.
@@ -89,17 +97,20 @@ class Command(BaseCommand):
         count = 0
         for key in stale:
             count += 1
+            expires = key.expires_at.isoformat() if key.expires_at else "never"
+            last_used = key.last_used_at.isoformat() if key.last_used_at else "never"
             audit_logger.info(
-                "[apikey.stale] key_id=%s profile=%s last_used_at=%s",
+                "[apikey.stale] key_id=%s profile=%s last_used_at=%s expires_at=%s",
                 key.key_id,
                 key.profile_id,
-                key.last_used_at.isoformat() if key.last_used_at else "never",
+                last_used,
+                expires,
             )
             self.stdout.write(
                 f"  stale: key_id={key.key_id} profile_id={key.profile_id} "
-                f"last_used={key.last_used_at.isoformat() if key.last_used_at else 'never'}"
+                f"last_used={last_used} expires={expires}"
             )
 
         self.stdout.write(
-            f"api_key_maintenance: {count} no-expiry key(s) unused for {stale_days} days"
+            f"api_key_maintenance: {count} long-lived key(s) unused for {stale_days} days"
         )

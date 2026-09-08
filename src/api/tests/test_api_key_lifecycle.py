@@ -10,6 +10,7 @@ from datetime import timedelta
 from io import StringIO
 
 import pytest
+from django.conf import settings
 from django.core.cache import cache
 from django.core.management import call_command
 from django.utils import timezone
@@ -163,7 +164,7 @@ def test_daily_task_reports_stale_no_expiry_keys(profile1, project1, api_key_aud
 
     output = _run_maintenance()
 
-    assert "1 no-expiry key(s) unused for 180 days" in output
+    assert "1 long-lived key(s) unused for 180 days" in output
     stale_logs = api_key_audit_lines(api_key_audit_logs, "stale")
     assert len(stale_logs) == 1
     assert stale.key_id in stale_logs[0]
@@ -176,7 +177,7 @@ def test_daily_task_reports_never_used_old_key_as_stale(profile1, project1):
 
     output = _run_maintenance()
 
-    assert "1 no-expiry key(s) unused for 180 days" in output
+    assert "1 long-lived key(s) unused for 180 days" in output
 
 
 def test_daily_task_stale_report_ignores_keys_with_an_expiry(profile1, project1):
@@ -189,4 +190,22 @@ def test_daily_task_stale_report_ignores_keys_with_an_expiry(profile1, project1)
 
     output = _run_maintenance()
 
-    assert "0 no-expiry key(s) unused for 180 days" in output
+    assert "0 long-lived key(s) unused for 180 days" in output
+
+
+def test_daily_task_reports_far_future_expiry_as_stale(profile1, project1):
+    # An expiry past the ceiling the API will issue is a permanent key wearing
+    # a date, so it is the same forgotten-credential risk as no expiry at all.
+    far_future, _ = _make_key(
+        profile1,
+        name="effectively permanent",
+        expires_at=timezone.now() + timedelta(days=settings.API_KEY_MAX_LIFETIME_DAYS + 1),
+    )
+    APIKey.objects.filter(pk=far_future.pk).update(
+        last_used_at=timezone.now() - timedelta(days=200)
+    )
+
+    output = _run_maintenance()
+
+    assert "1 long-lived key(s) unused for 180 days" in output
+    assert far_future.key_id in output

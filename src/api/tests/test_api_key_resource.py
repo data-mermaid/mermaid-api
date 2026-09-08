@@ -8,6 +8,7 @@ never manage keys, and the secret is shown once at creation and never again.
 from datetime import timedelta
 
 import pytest
+from django.conf import settings
 from django.core.cache import cache
 from django.urls import reverse
 from django.utils import timezone
@@ -156,6 +157,42 @@ def test_filters(db_setup, api_client1, profile1, list_url):
     assert [r["id"] for r in response.json()["results"]] == [str(revoked.pk)]
 
 
+def test_sensitive_fields_are_never_returned(db_setup, api_client1, own_key, list_url):
+    """`?fields=` must not be a way around the serializer's field list.
+
+    The serializer leaves `secret_hash` out, but `?fields=` rebuilds the
+    serializer from the requested names, so a sensitive column could be asked
+    for by name. Asking for one is a 400, and the digest appears in no
+    response body whatever combination is requested.
+    """
+
+    key, _ = own_key
+    detail_url = _detail_url(key)
+
+    for url in (list_url, detail_url):
+        for fields in ("secret_hash", "id,secret_hash", " secret_hash , name "):
+            response = api_client1.get(url, {"fields": fields})
+            assert response.status_code == 400, f"{url} {fields!r}"
+            assert "fields" in response.json()
+            assert key.secret_hash not in response.content.decode()
+
+    # an allowed subset still works, and still carries no digest
+    response = api_client1.get(detail_url, {"fields": "id,name,key_id"})
+    assert response.status_code == 200
+    data = response.json()
+    assert set(data) == {"id", "name", "key_id"}
+    assert key.secret_hash not in response.content.decode()
+
+
+def test_unknown_requested_fields_are_rejected(db_setup, api_client1, own_key):
+    """A name the serializer does not know is a 400, not a silent empty object."""
+
+    key, _ = own_key
+    response = api_client1.get(_detail_url(key), {"fields": "id,not_a_field"})
+    assert response.status_code == 400
+    assert "not_a_field" in response.json()["fields"]
+
+
 # --- create -------------------------------------------------------------------
 
 
@@ -228,6 +265,56 @@ def test_create_never_expires_is_explicit(db_setup, api_client1, list_url):
     assert APIKey.objects.get(pk=response.json()["id"]).expires_at is not None
 
 
+def test_create_allows_expiry_up_to_the_ceiling(db_setup, api_client1, list_url):
+    max_days = settings.API_KEY_MAX_LIFETIME_DAYS
+    expires_at = (timezone.now() + timedelta(days=max_days - 1)).replace(microsecond=0)
+    response = api_client1.post(
+        list_url, {"name": "bot", "expires_at": expires_at.isoformat()}, format="json"
+    )
+    assert response.status_code == 201
+    assert APIKey.objects.get(pk=response.json()["id"]).expires_at == expires_at
+
+
+def test_create_stops_at_the_per_profile_limit(db_setup, api_client1, profile1, list_url):
+    """A loop cannot leave an unbounded pile of live credentials behind."""
+
+    for i in range(settings.API_KEY_MAX_PER_PROFILE):
+        _make_key(profile1, name=f"bot{i}")
+
+    response = api_client1.post(list_url, {"name": "one too many"}, format="json")
+    assert response.status_code == 400
+    assert "non_field_errors" in response.json()
+    assert APIKey.objects.filter(profile=profile1).count() == settings.API_KEY_MAX_PER_PROFILE
+
+
+def test_per_profile_limit_counts_only_usable_keys(db_setup, api_client1, profile1, list_url):
+    """Revoked and expired keys stay for the audit trail, not against the cap."""
+
+    for i in range(settings.API_KEY_MAX_PER_PROFILE - 1):
+        _make_key(profile1, name=f"bot{i}")
+
+    revoked, _ = _make_key(profile1, name="revoked")
+    revoked.revoke("test")
+    expired, _ = _make_key(profile1, name="expired")
+    APIKey.objects.filter(pk=expired.pk).update(expires_at=timezone.now() - timedelta(days=1))
+
+    response = api_client1.post(list_url, {"name": "still room"}, format="json")
+    assert response.status_code == 201
+
+    # and now the profile is at the cap
+    assert api_client1.post(list_url, {"name": "no room"}, format="json").status_code == 400
+
+
+def test_per_profile_limit_is_not_shared_between_profiles(
+    db_setup, api_client1, profile1, profile2, list_url
+):
+    for i in range(settings.API_KEY_MAX_PER_PROFILE):
+        _make_key(profile2, name=f"other{i}")
+
+    response = api_client1.post(list_url, {"name": "bot"}, format="json")
+    assert response.status_code == 201
+
+
 @pytest.mark.parametrize(
     "payload, field",
     [
@@ -247,6 +334,14 @@ def test_create_never_expires_is_explicit(db_setup, api_client1, list_url):
             },
             "expires_at",
             id="both_expiry_options",
+        ),
+        pytest.param(
+            {
+                "name": "bot",
+                "expires_at": "9999-12-31T00:00:00Z",
+            },
+            "expires_at",
+            id="expiry_past_the_ceiling",
         ),
     ],
 )

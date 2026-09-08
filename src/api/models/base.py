@@ -235,7 +235,9 @@ class APIKey(BaseModel):
     access. Anyone signed in can mint a key for themselves, so the limits are
     on the key rather than on who asks for one: `expires_at` defaults to a year
     rather than to never, revocation is one call, and a key can never mint
-    another key.
+    another key. The self-service endpoint adds two ceilings of its own,
+    `settings.API_KEY_MAX_LIFETIME_DAYS` and `settings.API_KEY_MAX_PER_PROFILE`,
+    so one person cannot accumulate permanent credentials without limit.
     """
 
     profile = models.ForeignKey("Profile", related_name="api_keys", on_delete=models.CASCADE)
@@ -279,6 +281,20 @@ class APIKey(BaseModel):
         )
         log_key_created(key, actor, replaces=replaces)
         return key, raw
+
+    @classmethod
+    def usable_for(cls, profile, now=None):
+        """The keys of `profile` that work right now, as a queryset.
+
+        The database-side counterpart of `is_usable`, for the callers that
+        have to count or sweep rather than ask about one row: the self-service
+        endpoint uses it to hold a profile to `API_KEY_MAX_PER_PROFILE`.
+        """
+
+        now = now or timezone.now()
+        return cls.objects.filter(profile=profile, is_active=True, revoked_at__isnull=True).filter(
+            models.Q(expires_at__isnull=True) | models.Q(expires_at__gt=now)
+        )
 
     @property
     def is_expired(self):

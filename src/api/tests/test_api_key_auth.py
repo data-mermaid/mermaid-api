@@ -195,6 +195,38 @@ def test_last_used_is_throttled(key_pair):
     assert key.last_used_ip == "10.0.0.2"
 
 
+def test_last_used_ip_uses_forwarded_for(key_pair):
+    key, raw = key_pair
+    _authenticate(raw, HTTP_X_FORWARDED_FOR="203.0.113.5, 10.0.0.1", REMOTE_ADDR="10.0.0.1")
+
+    key.refresh_from_db()
+    assert key.last_used_ip == "203.0.113.5"
+
+
+@pytest.mark.parametrize("xff", ["notanip", "203.0.113.5; DROP TABLE", "", "  "])
+def test_non_address_forwarded_for_is_not_persisted(key_pair, xff):
+    """X-Forwarded-For is caller-controlled: a non-address must not reach `inet`."""
+
+    key, raw = key_pair
+    user, _ = _authenticate(raw, HTTP_X_FORWARDED_FOR=xff, REMOTE_ADDR="notanip")
+
+    assert user is not None
+    key.refresh_from_db()
+    assert key.last_used_at is not None
+    assert key.last_used_ip is None
+
+
+def test_missing_ip_is_not_persisted(key_pair):
+    key, raw = key_pair
+    request = _request(raw=raw)
+    request._request.META.pop("REMOTE_ADDR", None)
+
+    assert APIKeyAuthentication().authenticate(request) is not None
+    key.refresh_from_db()
+    assert key.last_used_at is not None
+    assert key.last_used_ip is None
+
+
 def test_last_used_write_does_not_touch_updated_on(key_pair):
     key, raw = key_pair
     updated_on = key.updated_on

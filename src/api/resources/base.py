@@ -49,6 +49,8 @@ from ..utils.auth0utils import get_jwt_token, get_unverified_profile
 from ..utils.project import citation_retrieved_text
 from .mixins import MethodAuthenticationMixin, OrFilterSetMixin
 
+SENSITIVE_FIELDS = {"secret_hash"}
+
 
 class ModelNameReadOnlyField(serializers.Field):
     def to_representation(self, obj):
@@ -563,9 +565,17 @@ class BaseApiViewSet(MethodAuthenticationMixin, viewsets.ModelViewSet):
     permission_classes = [DefaultPermission]
 
     def get_serializer_class_for_fields(self, serializer_class, fields):
-        fields = fields.strip().split(",")
-        fields.sort()
-        fields = tuple(fields)
+        field_set = {f.strip() for f in fields.split(",") if f.strip()}
+
+        # `fields` rebuilds the serializer from names the client picked, so it
+        # would otherwise reach columns the serializer deliberately omits.
+        sensitive = field_set & SENSITIVE_FIELDS
+        if sensitive:
+            raise ValidationError(
+                {"fields": f"Invalid field names: {', '.join(sorted(sensitive))}"}
+            )
+
+        fields = tuple(sorted(field_set))
         if fields in self._serializer_class_for_fields:
             return self._serializer_class_for_fields[fields]
 

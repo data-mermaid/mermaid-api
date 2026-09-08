@@ -243,6 +243,18 @@ AUTH0_MANAGEMENT_API_AUDIENCE = os.environ.get("AUTH0_MANAGEMENT_API_AUDIENCE")
 MERMAID_API_AUDIENCE = os.environ.get("MERMAID_API_AUDIENCE")
 MERMAID_API_SIGNING_SECRET = os.environ.get("MERMAID_API_SIGNING_SECRET")
 
+# ***************
+# ** API keys  **
+# ***************
+
+# A key acts as its owner's whole profile, so the self-service endpoint limits
+# what one person can hand out: how far out an expiry may be set, and how many
+# usable keys they may hold at once. Both are settings rather than constants so
+# a team running several integrations can be raised without a deploy. Neither
+# applies to the Django admin, where staff issue keys deliberately.
+API_KEY_MAX_LIFETIME_DAYS = 365 * 2
+API_KEY_MAX_PER_PROFILE = 20
+
 # *********
 # ** API **
 # *********
@@ -392,6 +404,7 @@ LOGGING = {
             "level": "INFO",
             "class": "logging.StreamHandler",
             "stream": sys.stdout,
+            "formatter": "file",
         },
     },
     "formatters": {
