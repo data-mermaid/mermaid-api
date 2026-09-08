@@ -1,4 +1,4 @@
-"""C4: keys die when the relationship that justified them dies.
+"""C4: keys stop working when the relationship that justified them ends.
 
 An API key acts as its profile, so most of this takes care of itself: losing a
 project membership loses the key's access to that project on the next request,

@@ -232,8 +232,10 @@ class APIKey(BaseModel):
     with no scope list to keep in step.
 
     The trade is blast radius: a leaked key is the whole of its profile's
-    access. That is why issuing one is a superuser action, why `expires_at`
-    defaults to a year rather than to never, and why revocation is one call.
+    access. Anyone signed in can mint a key for themselves, so the limits are
+    on the key rather than on who asks for one: `expires_at` defaults to a year
+    rather than to never, revocation is one call, and a key can never mint
+    another key.
     """
 
     profile = models.ForeignKey("Profile", related_name="api_keys", on_delete=models.CASCADE)

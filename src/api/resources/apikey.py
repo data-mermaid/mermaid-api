@@ -1,10 +1,11 @@
 """Self-service management of a person's own API keys.
 
-The Django admin issues keys for anyone and is a superuser tool. This resource
-is the everyday path: a signed-in person lists, names, mints and revokes keys
-that act as their own profile, and nobody else's. Scoping is by ownership, the
-way `/notifications/` is: the queryset is filtered to `request.user.profile`,
-so another person's key is a 404 rather than a 403.
+This is the everyday path, and it needs no special role: any signed-in person
+lists, names, mints and revokes keys that act as their own profile, and nobody
+else's. The Django admin does the same job for staff who have to issue a key
+for somebody else's profile. Scoping here is by ownership, the way
+`/notifications/` is: the queryset is filtered to `request.user.profile`, so
+another person's key is a 404 rather than a 403.
 
 The raw key appears exactly once, in the `key` field of the create response.
 It is not stored, so it cannot be shown again; losing it means minting a new

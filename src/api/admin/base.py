@@ -167,7 +167,7 @@ class APIKeyAdminForm(forms.ModelForm):
 
 @admin.register(APIKey)
 class APIKeyAdmin(admin.ModelAdmin):
-    """Phase 1 issues API keys here, so this page is the whole management UI.
+    """Issue a key for somebody else's profile; /apikeys/ is the self-service path.
 
     A plain ModelAdmin, not BaseAdmin: BaseAdmin attaches
     export_model_all_as_csv, which walks every concrete field and would write
@@ -214,21 +214,18 @@ class APIKeyAdmin(admin.ModelAdmin):
             readonly_fields.append("profile")
         return readonly_fields
 
-    def has_add_permission(self, request):
-        # Minting a credential for any profile is a superuser action (C5).
-        return request.user.is_superuser and super().has_add_permission(request)
+    # Who may issue a key is the ordinary `api.add_apikey` model permission, the
+    # same question the rest of the admin asks, so there is no has_add_permission
+    # override here. Issuing is not a superuser-only action: /apikeys/ lets any
+    # signed-in person mint keys for themselves, and this page is the same act
+    # for someone else's profile, gated by the permission rather than by a flag.
 
     def has_delete_permission(self, request, obj=None):
-        # Revoking retires a key and keeps the row, which is what answers
-        # "what did this credential do, and when did it stop working". Delete
-        # throws that away, so it stays with the superuser.
+        # Deletion is the one narrower privilege, and it is not about issuing.
+        # Revoking retires a key and keeps the row, which is what answers "what
+        # did this credential do, and when did it stop working". Delete throws
+        # that away, so it stays with the superuser.
         return request.user.is_superuser and super().has_delete_permission(request, obj)
-
-    def get_actions(self, request):
-        actions = super().get_actions(request)
-        if not request.user.is_superuser:
-            actions.pop("generate_replacement_keys", None)
-        return actions
 
     @admin.action(description="Revoke selected API keys")
     def revoke_keys(self, request, queryset):
@@ -241,18 +238,17 @@ class APIKeyAdmin(admin.ModelAdmin):
             message = f"{message} {already} was already revoked and is unchanged."
         self.message_user(request, message, messages.SUCCESS)
 
-    @admin.action(description="Generate replacement key for selected API keys")
+    @admin.action(description="Generate replacement key for selected API keys", permissions=["add"])
     def generate_replacement_keys(self, request, queryset):
         """Issue a fresh key for the same profile as each selection.
 
         The original is left alone: this hands over a new secret without
         breaking a running client, and whoever redeploys revokes the old key
         afterwards. Timed rotation with an automatic tail is C5.
-        """
 
-        if not request.user.is_superuser:
-            self.message_user(request, "Only a superuser can issue API keys.", messages.ERROR)
-            return
+        Issuing a replacement is issuing a key, so it is allowed to whoever the
+        add permission allows; the action is hidden without it.
+        """
 
         for key in queryset.select_related("profile"):
             replacement, raw = self._issue_key(

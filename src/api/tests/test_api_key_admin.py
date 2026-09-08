@@ -1,12 +1,13 @@
-"""C6: the admin page is the only way to issue a key in phase 1, so it has to
+"""C6: the admin page issues a key for somebody else's profile, so it has to
 mint one correctly, show the secret exactly once, and never put the hash
-anywhere a human or a CSV can reach it."""
+anywhere a human or a CSV can reach it. Who may issue is the ordinary
+`api.add_apikey` permission, not the superuser flag."""
 
 from datetime import timedelta
 
 import pytest
 from django.contrib.admin.sites import AdminSite
-from django.contrib.auth.models import User
+from django.contrib.auth.models import Permission, User
 from django.contrib.messages.storage.fallback import FallbackStorage
 from django.test import RequestFactory
 from django.utils import timezone
@@ -37,6 +38,21 @@ def _request(user=None, method="post"):
     request.session = {}
     request._messages = FallbackStorage(request)
     return request
+
+
+def _staff(username, add_apikey=False):
+    """A saved, non-superuser staff account, optionally holding `api.add_apikey`.
+
+    Saved rather than in-memory because a permission check reads the account's
+    permission rows, which an unsaved user has no id to be joined to.
+    """
+
+    user = User.objects.create_user(username=username, is_staff=True)
+    if add_apikey:
+        user.user_permissions.add(
+            Permission.objects.get(content_type__app_label="api", codename="add_apikey")
+        )
+    return user
 
 
 def _messages(request):
@@ -95,7 +111,7 @@ def test_expiry_date_and_never_expires_together_is_rejected(profile1, project1):
 
 def test_the_form_offers_no_scope_field(profile1):
     """A key is its profile's access, so there is nothing to narrow here. The
-    fields a superuser sets are who it acts as, what it is called, and when it
+    fields the form sets are who it acts as, what it is called, and when it
     stops working."""
 
     form = APIKeyAdminForm(data={"profile": str(profile1.pk), "name": "bot"})
@@ -194,12 +210,17 @@ def test_editing_a_key_does_not_reissue_the_secret(key_admin, profile1, project1
     assert _messages(request) == []
 
 
-def test_only_a_superuser_can_add_a_key(key_admin):
+def test_adding_a_key_takes_the_add_permission_not_the_superuser_flag(key_admin, db):
+    """Issuing is not a superuser action. Staff who hold `api.add_apikey` can
+    issue, and staff who do not, cannot; the flag itself decides nothing."""
+
     superuser = _request()
-    staff = _request(user=User(username="staff", is_superuser=False, is_staff=True))
+    permitted = _request(user=_staff("keyissuer", add_apikey=True))
+    unpermitted = _request(user=_staff("keyreader"))
 
     assert key_admin.has_add_permission(superuser) is True
-    assert key_admin.has_add_permission(staff) is False
+    assert key_admin.has_add_permission(permitted) is True
+    assert key_admin.has_add_permission(unpermitted) is False
 
 
 def test_profile_is_locked_once_a_key_exists(key_admin, profile1, project1):
@@ -253,15 +274,20 @@ def test_replacing_a_no_expiry_key_stays_no_expiry(key_admin, profile1, project1
     assert APIKey.objects.exclude(pk=key.pk).get().expires_at is None
 
 
-def test_staff_without_superuser_cannot_generate_keys(key_admin, profile1, project1):
+def test_the_replacement_action_follows_the_add_permission(key_admin, profile1, project1):
+    """A replacement is a new key, so the action is offered to whoever may add
+    one and withheld from whoever may not. Revoking stays open to all staff."""
+
     key, _ = _make_key(profile1)
-    staff = _request(user=User(username="staff", is_superuser=False, is_staff=True))
+    permitted = _request(user=_staff("keyissuer", add_apikey=True))
+    unpermitted = _request(user=_staff("keyreader"))
 
-    assert "generate_replacement_keys" not in key_admin.get_actions(staff)
-    assert "revoke_keys" in key_admin.get_actions(staff)
+    assert "generate_replacement_keys" in key_admin.get_actions(permitted)
+    assert "generate_replacement_keys" not in key_admin.get_actions(unpermitted)
+    assert "revoke_keys" in key_admin.get_actions(unpermitted)
 
-    key_admin.generate_replacement_keys(staff, APIKey.objects.filter(pk=key.pk))
-    assert APIKey.objects.count() == 1
+    key_admin.generate_replacement_keys(permitted, APIKey.objects.filter(pk=key.pk))
+    assert APIKey.objects.count() == 2
 
 
 # the hash never reaches a human, a page, or a CSV
