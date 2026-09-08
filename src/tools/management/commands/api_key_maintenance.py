@@ -96,7 +96,7 @@ class Command(BaseCommand):
                 key.last_used_at.isoformat() if key.last_used_at else "never",
             )
             self.stdout.write(
-                f"  stale: {key} profile={key.profile.email} "
+                f"  stale: key_id={key.key_id} profile_id={key.profile_id} "
                 f"last_used={key.last_used_at.isoformat() if key.last_used_at else 'never'}"
             )
 

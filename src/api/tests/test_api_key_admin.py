@@ -12,12 +12,7 @@ from django.contrib.messages.storage.fallback import FallbackStorage
 from django.test import RequestFactory
 from django.utils import timezone
 
-from api.admin.base import (
-    APIKeyAdmin,
-    APIKeyAdminForm,
-    BaseAdmin,
-    export_model_all_as_csv,
-)
+from api.admin.base import APIKeyAdmin, APIKeyAdminForm, BaseAdmin
 from api.models import APIKey
 from api.resources.me import MeSerializer
 from api.resources.profile import ProfileSerializer
@@ -309,7 +304,7 @@ def test_admin_offers_no_all_fields_export(key_admin):
     # BaseAdmin's all-fields export walks every concrete field, secret_hash
     # included, so this page must not inherit it.
     assert isinstance(key_admin, BaseAdmin) is False
-    assert export_model_all_as_csv not in key_admin.get_actions(_request()).values()
+    assert "export_model_all_as_csv" not in key_admin.get_actions(_request())
 
 
 def test_no_expiry_keys_are_one_click_away(key_admin, profile1, project1):

@@ -308,7 +308,7 @@ class APIKey(BaseModel):
         self.is_active = False
         if save:
             self.save(update_fields=["revoked_at", "revoked_reason", "is_active", "updated_on"])
-        # C8: the counterpart of [apikey.created]. Together they answer "which
+        # the counterpart of [apikey.created]. Together they answer "which
         # credentials existed, for whom, and for how long" from the logs alone.
         audit_logger.info(
             "[apikey.revoked] key_id=%s profile=%s actor=%s reason=%s",

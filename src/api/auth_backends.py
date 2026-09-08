@@ -232,7 +232,7 @@ class APIKeyAuthentication(BaseAuthentication):
     # per-key throttle on the last_used_at write, in seconds
     last_used_throttle = 60
     # Failures per minute, counted per IP and per key_id, before the rest of
-    # that minute is answered with 429 (C8). Only failures count, so a client
+    # that minute is answered with 429. Only failures count, so a client
     # presenting a good key is never throttled by this.
     failure_limiter = FailureRateLimiter("apikey", limit=10, window=60)
 

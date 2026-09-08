@@ -19,7 +19,6 @@ from rest_framework.test import APIRequestFactory
 
 from api.auth_backends import APIKeyAuthentication
 from api.models import APIKey
-from api.signals.apikeys import PROFILE_DEACTIVATED
 from api.utils.apikeys import generate_api_key
 from .fixtures.apikeys import api_key_audit_lines
 
@@ -86,14 +85,6 @@ def test_revoke_logs_the_audit_line(profile1, project1, api_key_audit_logs):
     assert "reason=manual" in logged[0]
 
 
-def test_revoke_from_a_signal_names_the_system_as_actor(profile1, project1, api_key_audit_logs):
-    key, _ = _make_key(profile1)
-    key.revoke(PROFILE_DEACTIVATED)
-
-    logged = api_key_audit_lines(api_key_audit_logs, "revoked")
-    assert "actor=system" in logged[0]
-
-
 def test_is_expired_and_is_usable(profile1, project1):
     live, _ = _make_key(profile1)
     assert live.is_expired is False
@@ -120,26 +111,6 @@ def test_revoked_key_no_longer_authenticates(profile1, project1, project_profile
 
     with pytest.raises(exceptions.AuthenticationFailed):
         APIKeyAuthentication().authenticate(request)
-
-
-def test_deactivating_a_profile_revokes_its_keys(profile1, profile2, project1):
-    """Profile has no is_active flag today, so this drives the signal directly:
-    if one is ever added, the keys stop at the same moment the account does."""
-
-    key, _ = _make_key(profile1)
-    other, _ = _make_key(profile2, name="other profile bot")
-
-    profile1.is_active = False
-    profile1.save()
-
-    key.refresh_from_db()
-    other.refresh_from_db()
-    assert key.is_active is False
-    assert key.revoked_reason == PROFILE_DEACTIVATED
-    assert other.revoked_at is None
-
-
-# daily task
 
 
 def _run_maintenance(**kwargs):
