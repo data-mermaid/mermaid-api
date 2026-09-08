@@ -1,3 +1,4 @@
+import hmac
 from datetime import timedelta
 from unittest.mock import patch
 
@@ -165,11 +166,23 @@ def test_key_in_query_string_is_ignored(key_pair):
     )
 
 
-def test_secret_comparison_is_constant_time(key_pair):
+def test_secret_comparison_uses_hmac_compare_digest(key_pair):
+    """Both branches go through the constant-time compare, not `==`.
+
+    The real comparison is left in place, so the match still authenticates and
+    the mismatch still 401s; only the call is observed.
+    """
+
     _, raw = key_pair
-    with patch("api.utils.apikeys.hmac.compare_digest", return_value=True) as mock_compare:
-        _authenticate(raw)
-    mock_compare.assert_called_once()
+
+    with patch("api.utils.apikeys.hmac.compare_digest", wraps=hmac.compare_digest) as compare:
+        user, _ = _authenticate(raw)
+        assert user is not None
+        assert compare.call_count == 1
+
+        with pytest.raises(exceptions.AuthenticationFailed):
+            _authenticate(raw + "x")
+        assert compare.call_count == 2
 
 
 def test_last_used_is_throttled(key_pair):
