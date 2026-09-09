@@ -355,7 +355,7 @@ class ProfileAdmin(BaseAdmin):
 
     @admin.display(description="Email", ordering="email")
     def linked_email(self, obj):
-        return format_html(f'<a href="mailto:{obj.email}">{obj.email}</a>')
+        return format_html('<a href="mailto:{}">{}</a>', obj.email, obj.email)
 
     @admin.display(description="Project membership count", ordering="projects__count")
     def project_count(self, obj):

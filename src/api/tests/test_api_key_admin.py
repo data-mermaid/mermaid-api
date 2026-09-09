@@ -17,9 +17,10 @@ from api.admin.base import (
     APIKeyAdmin,
     APIKeyAdminForm,
     BaseAdmin,
+    ProfileAdmin,
     export_model_display_as_csv,
 )
-from api.models import APIKey
+from api.models import APIKey, Profile
 from api.resources.me import MeSerializer
 from api.resources.profile import ProfileSerializer
 from api.resources.project import ProjectCSVSerializer, ProjectSerializer
@@ -501,3 +502,18 @@ def test_profile_and_project_serializers_declare_no_key_fields():
         fields = set(serializer_class().fields)
         assert "api_keys" not in fields, serializer_class.__name__
         assert "secret_hash" not in fields, serializer_class.__name__
+
+
+def test_profile_email_is_escaped_in_the_admin_email_link(profile1):
+    """The profile changelist and every `profile` autocomplete result render
+    `linked_email`, and Profile.email arrives from Auth0 user_info without
+    going through full_clean, so markup in the stored value must be escaped
+    rather than handed to the browser as HTML."""
+
+    profile1.email = '"><script>alert(1)</script>@example.com'
+    profile_admin = ProfileAdmin(Profile, AdminSite())
+
+    rendered = profile_admin.linked_email(profile1)
+
+    assert "<script>" not in rendered
+    assert "&lt;script&gt;" in rendered
