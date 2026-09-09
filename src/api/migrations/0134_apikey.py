@@ -24,7 +24,7 @@ class Migration(migrations.Migration):
                 ("created_on", models.DateTimeField(auto_now_add=True)),
                 ("updated_on", models.DateTimeField(auto_now=True)),
                 ("name", models.CharField(max_length=100)),
-                ("key_id", models.CharField(db_index=True, max_length=12, unique=True)),
+                ("key_id", models.CharField(max_length=12, unique=True)),
                 ("secret_hash", models.CharField(max_length=64)),
                 ("is_active", models.BooleanField(default=True)),
                 ("expires_at", models.DateTimeField(blank=True, null=True)),

@@ -242,7 +242,7 @@ class APIKey(BaseModel):
 
     profile = models.ForeignKey("Profile", related_name="api_keys", on_delete=models.CASCADE)
     name = models.CharField(max_length=100)
-    key_id = models.CharField(max_length=12, unique=True, db_index=True)
+    key_id = models.CharField(max_length=12, unique=True)
     # hex SHA-256 of the secret; the secret itself is never stored
     secret_hash = models.CharField(max_length=64)
     is_active = models.BooleanField(default=True)
