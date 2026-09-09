@@ -7,7 +7,11 @@ from django.contrib.gis.db import models
 from django.core.exceptions import ValidationError
 from django.core.files.storage import FileSystemStorage
 from django.db import transaction
-from pydantic import BaseModel as PydanticBaseModel, ConfigDict
+from pydantic import (
+    BaseModel as PydanticBaseModel,
+    ConfigDict,
+    ValidationError as PydanticValidationError,
+)
 from storages.backends.s3 import S3Storage
 
 from ..utils import s3
@@ -179,6 +183,16 @@ class Classifier(BaseModel):
     @property
     def patch_size(self):
         return self.config.get("patch_size")
+
+    def clean(self):
+        super().clean()
+        config_schema = CONFIG_SCHEMAS.get(self.classifier_type)
+        if config_schema is None:
+            return
+        try:
+            config_schema(**(self.config or {}))
+        except PydanticValidationError as e:
+            raise ValidationError({"config": str(e)}) from e
 
     @classmethod
     def latest(cls):
