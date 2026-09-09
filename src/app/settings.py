@@ -146,6 +146,11 @@ if ENVIRONMENT not in ("dev", "prod"):
 
 # SSL settings
 SECURE_PROXY_SSL_HEADER = ("HTTP_X_FORWARDED_PROTO", "https")
+# The session and CSRF cookies are credentials, so keep them off plain HTTP
+# wherever the site is served over TLS. Local runs are http://localhost, where
+# a Secure cookie would never be sent at all, so this stays off there.
+SESSION_COOKIE_SECURE = ENVIRONMENT in ("dev", "prod")
+CSRF_COOKIE_SECURE = ENVIRONMENT in ("dev", "prod")
 
 ROOT_URLCONF = "app.urls"
 

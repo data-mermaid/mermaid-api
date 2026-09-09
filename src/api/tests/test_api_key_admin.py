@@ -9,6 +9,7 @@ import pytest
 from django.contrib.admin.sites import AdminSite
 from django.contrib.auth.models import Permission, User
 from django.contrib.messages.storage.fallback import FallbackStorage
+from django.template.response import TemplateResponse
 from django.test import RequestFactory
 from django.utils import timezone
 
@@ -52,6 +53,17 @@ def _staff(username, add_apikey=False):
 
 def _messages(request):
     return [str(message) for message in request._messages._queued_messages]
+
+
+def _issued(response):
+    """The (key, raw) pairs the response body carries.
+
+    The secret is only ever in a response body, so this is where a test reads
+    it from; `_messages` is what asserts it is *not* in the cookie-backed
+    message queue.
+    """
+
+    return [(item["key"], item["raw"]) for item in response.context_data["issued"]]
 
 
 def _make_key(profile, **kwargs):
@@ -133,23 +145,25 @@ def test_save_model_generates_the_key_and_shows_the_secret_once(key_admin, profi
 
     key = form.save(commit=False)
     key_admin.save_model(request, key, form, change=False)
+    response = key_admin.response_add(request, key)
 
     saved = APIKey.objects.get(pk=form.instance.pk)
     assert len(saved.key_id) == 12
     assert len(saved.secret_hash) == 64
 
-    banners = _messages(request)
-    assert len(banners) == 1
-    raw = banners[0].split("<code>")[1].split("</code>")[0]
+    issued = _issued(response)
+    assert len(issued) == 1
+    shown_key, raw = issued[0]
+    assert shown_key.pk == saved.pk
     _env, key_id, secret = parse_api_key(raw)
     assert key_id == saved.key_id
-    # The banner is the only place the secret exists; nothing stored it.
-    assert secret not in banners[0].replace(raw, "")
-    assert saved.secret_hash not in banners[0]
+    assert saved.secret_hash not in raw
 
-    # ...and only on creation: saving the row again has nothing left to show.
+    # ...and only on creation: saving the row again has nothing left to show,
+    # so the add response falls back to the ordinary redirect.
+    delattr(request, "_issued_api_key")
     key_admin.save_model(request, saved, form, change=True)
-    assert len(_messages(request)) == 1
+    assert hasattr(request, "_issued_api_key") is False
 
 
 def test_creation_leaves_an_audit_line(key_admin, profile1, project1, api_key_audit_logs):
@@ -172,7 +186,7 @@ def test_creation_leaves_an_audit_line(key_admin, profile1, project1, api_key_au
     assert "replaces=none" in lines[0]
     assert saved.secret_hash not in lines[0]
 
-    raw = _messages(request)[0].split("<code>")[1].split("</code>")[0]
+    raw = _issued(key_admin.response_add(request, saved))[0][1]
     assert parse_api_key(raw)[2] not in lines[0]
 
 
@@ -188,6 +202,68 @@ def test_replacement_creation_names_the_key_it_replaces(
     assert len(lines) == 1
     assert f"key_id={replacement.key_id}" in lines[0]
     assert f"replaces={original.key_id}" in lines[0]
+
+
+def test_the_secret_never_reaches_the_message_store(key_admin, profile1, project1):
+    """The raw key goes in the response body and nowhere else.
+
+    The messages framework is not a delivery channel for it: MESSAGE_STORAGE
+    defaults to FallbackStorage, which writes the message into a client-side
+    cookie that is Secure only when SESSION_COOKIE_SECURE is on, and falls back
+    to the session past 4096 bytes. Either way the secret would be persisted by
+    the browser and replayed on the next admin request.
+    """
+
+    request = _request()
+    form = APIKeyAdminForm(data={"profile": str(profile1.pk), "name": "ingest bot"})
+    assert form.is_valid(), form.errors
+
+    key_admin.save_model(request, form.save(commit=False), form, change=False)
+    raw = _issued(key_admin.response_add(request, form.instance))[0][1]
+
+    assert _messages(request) == []
+    assert raw not in str(request.session)
+
+
+def test_the_replacement_action_keeps_the_secrets_out_of_the_message_store(
+    key_admin, profile1, project1
+):
+    """One page for the selection, not one banner per row: a banner per row is
+    a secret per cookie, and enough rows silently spill to the session."""
+
+    first, _ = _make_key(profile1, name="nightly job")
+    second, _ = _make_key(profile1, name="hourly job")
+    request = _request()
+
+    response = key_admin.generate_replacement_keys(
+        request, APIKey.objects.filter(pk__in=[first.pk, second.pk])
+    )
+
+    issued = _issued(response)
+    assert len(issued) == 2
+    assert _messages(request) == []
+    for _key, raw in issued:
+        assert raw not in str(request.session)
+
+
+def test_the_add_response_renders_the_key_instead_of_redirecting(key_admin, profile1, project1):
+    """A redirect is what would force the secret into cookie-backed storage to
+    survive it, so the add view ends on a page that carries the key itself."""
+
+    request = _request()
+    form = APIKeyAdminForm(data={"profile": str(profile1.pk), "name": "ingest bot"})
+    assert form.is_valid(), form.errors
+
+    key_admin.save_model(request, form.save(commit=False), form, change=False)
+    response = key_admin.response_add(request, form.instance)
+
+    assert isinstance(response, TemplateResponse)
+    assert response.status_code == 200
+    raw = _issued(response)[0][1]
+
+    body = response.render().content.decode()
+    assert raw in body
+    assert form.instance.secret_hash not in body
 
 
 def test_editing_a_key_does_not_reissue_the_secret(key_admin, profile1, project1):
@@ -245,7 +321,7 @@ def test_generate_replacement_keeps_the_profile_and_leaves_the_original(key_admi
     key, _ = _make_key(profile1, name="nightly job")
     request = _request()
 
-    key_admin.generate_replacement_keys(request, APIKey.objects.filter(pk=key.pk))
+    response = key_admin.generate_replacement_keys(request, APIKey.objects.filter(pk=key.pk))
 
     replacement = APIKey.objects.exclude(pk=key.pk).get()
     assert replacement.profile == profile1
@@ -257,7 +333,7 @@ def test_generate_replacement_keeps_the_profile_and_leaves_the_original(key_admi
     key.refresh_from_db()
     assert key.is_usable is True
 
-    raw = _messages(request)[0].split("<code>")[1].split("</code>")[0]
+    raw = _issued(response)[0][1]
     assert parse_api_key(raw)[1] == replacement.key_id
 
 

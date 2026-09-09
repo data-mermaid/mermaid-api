@@ -9,6 +9,7 @@ from django.contrib.gis.admin import GISModelAdmin
 from django.db import transaction
 from django.db.models import Count
 from django.http import HttpResponse
+from django.template.response import TemplateResponse
 from django.urls import reverse
 from django.utils.html import format_html
 
@@ -250,6 +251,7 @@ class APIKeyAdmin(admin.ModelAdmin):
         add permission allows; the action is hidden without it.
         """
 
+        issued = []
         for key in queryset.select_related("profile"):
             replacement, raw = self._issue_key(
                 request,
@@ -260,7 +262,12 @@ class APIKeyAdmin(admin.ModelAdmin):
                 expires_at=None if key.expires_at is None else default_expires_at(),
                 replaces=key,
             )
-            self._show_raw_key(request, replacement, raw)
+            issued.append({"key": replacement, "raw": raw, "replaces": key})
+
+        if not issued:
+            return None
+        # One page for the whole selection, rather than one banner per row.
+        return self._raw_key_response(request, issued)
 
     def _issue_key(self, request, profile, name, expires_at, replaces=None):
         return APIKey.issue(
@@ -271,21 +278,27 @@ class APIKeyAdmin(admin.ModelAdmin):
             replaces=replaces,
         )
 
-    def _show_raw_key(self, request, key, raw):
-        # The only time the secret is ever readable. It reaches the browser
-        # through the messages framework (cookie, falling back to the session)
-        # for exactly one response, which is the same exposure as rendering it
-        # in the page, and nothing stores it.
-        self.message_user(
+    def _raw_key_response(self, request, issued):
+        """Render the secrets into this one response body and nowhere else.
+
+        Not through the messages framework: MESSAGE_STORAGE defaults to
+        FallbackStorage, which serialises the message into a client-side cookie
+        marked httponly but Secure only when SESSION_COOKIE_SECURE is on, and
+        spills to the session backend past 4096 bytes. Either way the secret
+        would be written to the browser's cookie store and replayed on the next
+        admin request instead of being read once and forgotten. A response body
+        does neither, and it is what the self-service endpoint in
+        `resources/apikey.py` already does.
+        """
+
+        return TemplateResponse(
             request,
-            format_html(
-                "API key <strong>{}</strong> issued for {}. Copy it now: it is not "
-                "stored and cannot be shown again.<br><code>{}</code>",
-                key.name,
-                key.profile,
-                raw,
-            ),
-            messages.SUCCESS,
+            "admin/api/apikey/raw_key.html",
+            {
+                **self.admin_site.each_context(request),
+                "opts": self.model._meta,
+                "issued": issued,
+            },
         )
 
     def save_model(self, request, obj, form, change):
@@ -294,11 +307,28 @@ class APIKeyAdmin(admin.ModelAdmin):
             return
 
         # The raw key exists only for this request, and this is the one place
-        # it is ever readable.
+        # it is ever readable. save_model cannot return a response, so it is
+        # carried on the request object (per-request, unlike `self`, which the
+        # admin site keeps for the process) for response_add to render.
         obj.key_id, obj.secret_hash, raw = generate_api_key()
         super().save_model(request, obj, form, change)
         log_key_created(obj, request.user.get_username())
-        self._show_raw_key(request, obj, raw)
+        request._issued_api_key = raw
+
+    def response_add(self, request, obj, post_url_continue=None):
+        """Show the secret instead of redirecting to the changelist.
+
+        The redirect is what forces a new key's secret into cookie-backed
+        storage to survive it, so the add view ends on the key itself. The
+        "save and continue"/"save and add another" buttons give up their
+        redirect here: there is one chance to read the secret, and the row is a
+        click away on the page.
+        """
+
+        raw = getattr(request, "_issued_api_key", None)
+        if raw is None:
+            return super().response_add(request, obj, post_url_continue)
+        return self._raw_key_response(request, [{"key": obj, "raw": raw, "replaces": None}])
 
 
 @admin.register(AuthUser)
