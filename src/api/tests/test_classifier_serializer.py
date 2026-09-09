@@ -26,5 +26,7 @@ def test_serializer_exposes_exact_field_set():
         "description",
         "benthic_attribute_growth_forms",
         "created_on",
+        "created_by",
         "updated_on",
+        "updated_by",
     }

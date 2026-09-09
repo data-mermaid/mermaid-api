@@ -35,7 +35,9 @@ class ClassifierSerializer(BaseAPISerializer):
             "description",
             "benthic_attribute_growth_forms",
             "created_on",
+            "created_by",
             "updated_on",
+            "updated_by",
         ]
 
 
