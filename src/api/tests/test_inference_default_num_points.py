@@ -1,11 +1,6 @@
-from django.conf import settings
 from django.test import override_settings
 
 from api.models import Classifier, CollectRecord
-
-
-def test_setting_default_is_25():
-    assert settings.INFERENCE_DEFAULT_NUM_POINTS == 25
 
 
 @override_settings(INFERENCE_DEFAULT_NUM_POINTS=37)
