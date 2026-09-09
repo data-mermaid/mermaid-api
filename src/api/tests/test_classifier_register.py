@@ -4,7 +4,11 @@ import pytest
 from botocore.exceptions import ClientError
 
 from api.models import BenthicAttributeGrowthForm, Classifier
-from api.models.classification import TASK_TO_CLASSIFIER_TYPE, ClassifierRegistrationError
+from api.models.classification import (
+    TASK_TO_CLASSIFIER_TYPE,
+    ClassifierRegistrationError,
+    parse_bagf_label,
+)
 
 
 def _manifest(classes, config=None, task="pyspacer_mlp_classifier", schema_version=1):
@@ -32,6 +36,29 @@ def stub_manifest(monkeypatch):
         holder["manifest"] = manifest
 
     return set_manifest
+
+
+def test_parse_bagf_label_without_growth_form():
+    assert parse_bagf_label("11111111-1111-1111-1111-111111111111") == (
+        "11111111-1111-1111-1111-111111111111",
+        None,
+    )
+
+
+def test_parse_bagf_label_with_trailing_separator_and_no_growth_form():
+    assert parse_bagf_label("11111111-1111-1111-1111-111111111111::") == (
+        "11111111-1111-1111-1111-111111111111",
+        None,
+    )
+
+
+def test_parse_bagf_label_with_growth_form():
+    assert parse_bagf_label(
+        "11111111-1111-1111-1111-111111111111::22222222-2222-2222-2222-222222222222"
+    ) == (
+        "11111111-1111-1111-1111-111111111111",
+        "22222222-2222-2222-2222-222222222222",
+    )
 
 
 def test_register_populates_config_and_labels(

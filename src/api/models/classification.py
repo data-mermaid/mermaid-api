@@ -25,6 +25,15 @@ class ClassifierRegistrationError(Exception):
     """Raised when a model.json manifest cannot be ingested by Classifier.register()."""
 
 
+def parse_bagf_label(label):
+    """Split a `ba_uuid::gf_uuid` classifier label into its (ba_id, gf_id) parts.
+
+    A missing growth form (`"ba"` or `"ba::"`) yields `gf_id=None`.
+    """
+    ba_id, _, gf_id = label.partition("::")
+    return ba_id, gf_id or None
+
+
 SUPPORTED_MANIFEST_SCHEMA_VERSION = 1
 
 # Maps a model.json `task` discriminator to a Classifier.classifier_type.
@@ -44,6 +53,14 @@ class PyspacerConfig(PydanticBaseModel):
 CONFIG_SCHEMAS = {
     "pyspacer": PyspacerConfig,
 }
+
+
+def _resolve_label_part(model, pk, label, kind):
+    """Look up `model` by `pk`, raising ClassifierRegistrationError naming `label` on failure."""
+    try:
+        return model.objects.get(pk=pk)
+    except (model.DoesNotExist, ValueError, ValidationError) as e:
+        raise ClassifierRegistrationError(f"Unknown {kind} {pk!r} in class {label!r}") from e
 
 
 def select_image_storage():
@@ -214,21 +231,11 @@ class Classifier(BaseModel):
         with transaction.atomic():
             resolved = []
             for label in classes:
-                ba_uuid, _, gf_uuid = label.partition("::")
-                try:
-                    ba = BenthicAttribute.objects.get(pk=ba_uuid)
-                except (BenthicAttribute.DoesNotExist, ValueError, ValidationError) as e:
-                    raise ClassifierRegistrationError(
-                        f"Unknown benthic attribute {ba_uuid!r} in class {label!r}"
-                    ) from e
+                ba_uuid, gf_uuid = parse_bagf_label(label)
+                ba = _resolve_label_part(BenthicAttribute, ba_uuid, label, "benthic attribute")
                 gf = None
                 if gf_uuid:
-                    try:
-                        gf = GrowthForm.objects.get(pk=gf_uuid)
-                    except (GrowthForm.DoesNotExist, ValueError, ValidationError) as e:
-                        raise ClassifierRegistrationError(
-                            f"Unknown growth form {gf_uuid!r} in class {label!r}"
-                        ) from e
+                    gf = _resolve_label_part(GrowthForm, gf_uuid, label, "growth form")
                 bagf, _ = BenthicAttributeGrowthForm.objects.get_or_create(
                     benthic_attribute=ba, growth_form=gf
                 )
