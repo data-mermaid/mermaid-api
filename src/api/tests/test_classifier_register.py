@@ -1,7 +1,10 @@
+import json
+
 import pytest
+from botocore.exceptions import ClientError
 
 from api.models import BenthicAttributeGrowthForm, Classifier
-from api.models.classification import ClassifierRegistrationError
+from api.models.classification import TASK_TO_CLASSIFIER_TYPE, ClassifierRegistrationError
 
 
 def _manifest(classes, config=None, task="pyspacer_mlp_classifier", schema_version=1):
@@ -117,6 +120,58 @@ def test_register_rejects_unknown_growth_form(stub_manifest, benthic_attribute_1
 
 def test_register_rejects_unsupported_schema_version(stub_manifest, benthic_attribute_1):
     stub_manifest(_manifest(classes=[f"{benthic_attribute_1.pk}::"], schema_version=999))
+    with pytest.raises(ClassifierRegistrationError):
+        Classifier.register("v9")
+    assert not Classifier.objects.filter(version="v9").exists()
+
+
+def test_register_wraps_s3_client_error(monkeypatch):
+    def fake_read_json_object(bucket, key, *args, **kwargs):
+        raise ClientError(
+            {"Error": {"Code": "NoSuchKey", "Message": "The specified key does not exist."}},
+            "GetObject",
+        )
+
+    monkeypatch.setattr("api.utils.s3.read_json_object", fake_read_json_object)
+
+    with pytest.raises(ClassifierRegistrationError):
+        Classifier.register("v9")
+    assert not Classifier.objects.filter(version="v9").exists()
+
+
+def test_register_wraps_malformed_json(monkeypatch):
+    def fake_read_json_object(bucket, key, *args, **kwargs):
+        raise json.JSONDecodeError("Expecting value", "", 0)
+
+    monkeypatch.setattr("api.utils.s3.read_json_object", fake_read_json_object)
+
+    with pytest.raises(ClassifierRegistrationError):
+        Classifier.register("v9")
+    assert not Classifier.objects.filter(version="v9").exists()
+
+
+def test_register_rejects_empty_classes_and_preserves_existing_labels(
+    stub_manifest, benthic_attribute_1, benthic_attribute_2
+):
+    stub_manifest(_manifest(classes=[f"{benthic_attribute_1.pk}::", f"{benthic_attribute_2.pk}::"]))
+    classifier = Classifier.register("v9")
+    assert classifier.benthic_attribute_growth_forms.count() == 2
+
+    stub_manifest(_manifest(classes=[]))
+    with pytest.raises(ClassifierRegistrationError):
+        Classifier.register("v9")
+
+    classifier.refresh_from_db()
+    assert classifier.benthic_attribute_growth_forms.count() == 2
+
+
+def test_register_rejects_task_with_no_config_schema(
+    stub_manifest, benthic_attribute_1, monkeypatch
+):
+    # "segmentation" is a real Classifier.classifier_type with no CONFIG_SCHEMAS entry yet.
+    monkeypatch.setitem(TASK_TO_CLASSIFIER_TYPE, "segmentation_task", "segmentation")
+    stub_manifest(_manifest(classes=[f"{benthic_attribute_1.pk}::"], task="segmentation_task"))
+
     with pytest.raises(ClassifierRegistrationError):
         Classifier.register("v9")
     assert not Classifier.objects.filter(version="v9").exists()

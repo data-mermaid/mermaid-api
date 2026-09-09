@@ -176,7 +176,12 @@ class Classifier(BaseModel):
         on any malformed/mismatched manifest, applying nothing.
         """
         key = f"classifier/{version}/model.json"
-        manifest = s3.read_json_object(settings.AWS_CONFIG_BUCKET, key)
+        try:
+            manifest = s3.read_json_object(settings.AWS_CONFIG_BUCKET, key)
+        except Exception as e:
+            raise ClassifierRegistrationError(
+                f"Could not read model.json for {version}: {e}"
+            ) from e
 
         schema_version = manifest.get("schema_version")
         if schema_version != SUPPORTED_MANIFEST_SCHEMA_VERSION:
@@ -189,7 +194,11 @@ class Classifier(BaseModel):
         if classifier_type is None:
             raise ClassifierRegistrationError(f"Unknown task {task!r} in model.json for {version}")
 
-        config_schema = CONFIG_SCHEMAS[classifier_type]
+        config_schema = CONFIG_SCHEMAS.get(classifier_type)
+        if config_schema is None:
+            raise ClassifierRegistrationError(
+                f"No config schema for classifier_type {classifier_type!r} in model.json for {version}"
+            )
         try:
             validated_config = config_schema(**(manifest.get("config") or {}))
         except Exception as e:
@@ -198,9 +207,13 @@ class Classifier(BaseModel):
             ) from e
         config = validated_config.model_dump()
 
+        classes = manifest.get("classes") or []
+        if not classes:
+            raise ClassifierRegistrationError(f"model.json for {version} has no classes")
+
         with transaction.atomic():
             resolved = []
-            for label in manifest.get("classes", []):
+            for label in classes:
                 ba_uuid, _, gf_uuid = label.partition("::")
                 try:
                     ba = BenthicAttribute.objects.get(pk=ba_uuid)
