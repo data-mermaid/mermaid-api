@@ -192,6 +192,32 @@ def test_register_rejects_empty_classes_and_preserves_existing_labels(
     assert classifier.benthic_attribute_growth_forms.count() == 2
 
 
+def test_register_rejects_manifest_key_dropped_by_config_schema(stub_manifest, benthic_attribute_1):
+    stub_manifest(
+        _manifest(
+            classes=[f"{benthic_attribute_1.pk}::"],
+            config={"patch_size": 224, "num_points": 50},
+        )
+    )
+    with pytest.raises(ClassifierRegistrationError):
+        Classifier.register("v9")
+    assert not Classifier.objects.filter(version="v9").exists()
+
+
+def test_register_rejects_non_object_manifest(stub_manifest):
+    stub_manifest(["not", "an", "object"])
+    with pytest.raises(ClassifierRegistrationError):
+        Classifier.register("v9")
+    assert not Classifier.objects.filter(version="v9").exists()
+
+
+def test_register_rejects_non_string_label(stub_manifest):
+    stub_manifest(_manifest(classes=[None]))
+    with pytest.raises(ClassifierRegistrationError):
+        Classifier.register("v9")
+    assert not Classifier.objects.filter(version="v9").exists()
+
+
 def test_register_rejects_task_with_no_config_schema(
     stub_manifest, benthic_attribute_1, monkeypatch
 ):

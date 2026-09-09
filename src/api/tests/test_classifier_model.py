@@ -26,3 +26,10 @@ def test_full_clean_accepts_valid_config():
 def test_full_clean_skips_validation_for_type_with_no_schema():
     c = Classifier(name="c5", version="v5", classifier_type="segmentation", config={})
     c.full_clean()
+
+
+def test_full_clean_rejects_non_object_config():
+    c = Classifier(name="c6", version="v6", classifier_type="pyspacer", config=224)
+    with pytest.raises(ValidationError) as exc_info:
+        c.full_clean()
+    assert "config" in exc_info.value.message_dict

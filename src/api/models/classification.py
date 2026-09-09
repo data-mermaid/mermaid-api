@@ -189,8 +189,11 @@ class Classifier(BaseModel):
         config_schema = CONFIG_SCHEMAS.get(self.classifier_type)
         if config_schema is None:
             return
+        config = self.config or {}
+        if not isinstance(config, dict):
+            raise ValidationError({"config": "config must be a JSON object."})
         try:
-            config_schema(**(self.config or {}))
+            config_schema(**config)
         except PydanticValidationError as e:
             raise ValidationError({"config": str(e)}) from e
 
@@ -213,6 +216,9 @@ class Classifier(BaseModel):
             raise ClassifierRegistrationError(
                 f"Could not read model.json for {version}: {e}"
             ) from e
+
+        if not isinstance(manifest, dict):
+            raise ClassifierRegistrationError(f"model.json for {version} is not a JSON object")
 
         schema_version = manifest.get("schema_version")
         if schema_version != SUPPORTED_MANIFEST_SCHEMA_VERSION:
@@ -245,6 +251,10 @@ class Classifier(BaseModel):
         with transaction.atomic():
             resolved = []
             for label in classes:
+                if not isinstance(label, str):
+                    raise ClassifierRegistrationError(
+                        f"Non-string class {label!r} in model.json for {version}"
+                    )
                 ba_uuid, gf_uuid = parse_bagf_label(label)
                 ba = _resolve_label_part(BenthicAttribute, ba_uuid, label, "benthic attribute")
                 gf = None
