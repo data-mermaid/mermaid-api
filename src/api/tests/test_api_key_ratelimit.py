@@ -236,3 +236,28 @@ def test_throttled_request_returns_429(db, key_pair):
     response = client.get(url)
     assert response.status_code == 429
     assert response.has_header("Retry-After")
+
+
+def test_probing_key_ids_creates_no_key_id_cache_rows(key_pair):
+    """The key_id scope is read before the lookup but only written after the
+    secret verifies, so fabricated key ids cannot inflate the cache.
+
+    The pre-lookup `retry_after` is a `cache.get`; nothing about an unknown or
+    unproven key_id reaches `record_failure`. A prober minting distinct key ids
+    fills one row per address, not one row per id it invents.
+    """
+
+    _, raw = key_pair
+    limiter = APIKeyAuthentication.failure_limiter
+    window_start = limiter._window_start(1_800_000_000.0)
+    probed = [f"aaaaaaaaaa{i:02d}" for i in range(LIMIT)]
+
+    for i, key_id in enumerate(probed):
+        _fail_n(f"mmd_local_{key_id}_nope", 1, ip=f"10.4.0.{i}")
+
+    for key_id in probed:
+        assert cache.get(limiter._cache_key("key_id", key_id, window_start)) is None
+
+    # Each address carries its own single failure, so the counting still works.
+    for i in range(LIMIT):
+        assert cache.get(limiter._cache_key("ip", f"10.4.0.{i}", window_start)) == 1
