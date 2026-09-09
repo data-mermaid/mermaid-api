@@ -22,13 +22,14 @@ against the second, so retiring a key always makes room for a new one.
 from datetime import timedelta
 
 from django.conf import settings
+from django.db import transaction
 from django.utils import timezone
 from django_filters import BooleanFilter
 from rest_framework import serializers, status
 from rest_framework.decorators import action
 from rest_framework.response import Response
 
-from ..models import APIKey
+from ..models import APIKey, Profile
 from ..permissions import APIKeyOwnerPermission
 from ..utils.apikeys import default_expires_at
 from .base import BaseAPIFilterSet, BaseAPISerializer, BaseApiViewSet
@@ -169,28 +170,33 @@ class APIKeyViewSet(BaseApiViewSet):
         serializer = self.get_serializer(data=request.data)
         serializer.is_valid(raise_exception=True)
 
-        profile = request.user.profile
         max_keys = settings.API_KEY_MAX_PER_PROFILE
-        # Every key is the whole of this profile's access, and there is no
-        # DELETE, so without a ceiling a loop could leave an unbounded pile of
-        # live credentials behind. Revoked and expired keys do not count.
-        if APIKey.usable_for(profile).count() >= max_keys:
-            raise serializers.ValidationError(
-                {
-                    "non_field_errors": [
-                        f"You already have {max_keys} usable API keys. "
-                        "Revoke one before creating another."
-                    ]
-                }
-            )
+        with transaction.atomic():
+            # Counting and minting have to be one step: two concurrent POSTs
+            # would otherwise both see max_keys - 1 usable keys and both mint,
+            # leaving the profile over the ceiling. Locking the profile row
+            # serializes minting per profile without touching anyone else's.
+            profile = Profile.objects.select_for_update().get(pk=request.user.profile.pk)
+            # Every key is the whole of this profile's access, and there is no
+            # DELETE, so without a ceiling a loop could leave an unbounded pile
+            # of live credentials behind. Revoked and expired keys do not count.
+            if APIKey.usable_for(profile).count() >= max_keys:
+                raise serializers.ValidationError(
+                    {
+                        "non_field_errors": [
+                            f"You already have {max_keys} usable API keys. "
+                            "Revoke one before creating another."
+                        ]
+                    }
+                )
 
-        key, raw = APIKey.issue(
-            profile=profile,
-            name=serializer.validated_data["name"],
-            expires_at=serializer.validated_data["expires_at"],
-            actor=request.user.get_username(),
-            created_by=profile,
-        )
+            key, raw = APIKey.issue(
+                profile=profile,
+                name=serializer.validated_data["name"],
+                expires_at=serializer.validated_data["expires_at"],
+                actor=request.user.get_username(),
+                created_by=profile,
+            )
 
         # The one and only time the secret is readable.
         data = APIKeySerializer(key, context=self.get_serializer_context()).data
