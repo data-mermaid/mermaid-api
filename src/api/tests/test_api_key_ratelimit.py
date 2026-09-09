@@ -148,16 +148,46 @@ def test_other_ips_are_unaffected(key_pair, profile1):
 
 
 def test_key_id_is_throttled_across_ips(key_pair):
-    """One bad key rotating through hosts is one incident, so the key id is
-    counted separately from the address that presented it."""
+    """A stale credential retried from a fleet of hosts is one incident, so the
+    key id is counted separately from the address that presented it."""
 
-    _, raw = key_pair
+    key, raw = key_pair
+    key.revoked_at = timezone.now()
+    key.save()
+
     for i in range(LIMIT):
-        _fail_n(raw + "x", 1, ip=f"10.1.0.{i}")
+        _fail_n(raw, 1, ip=f"10.1.0.{i}")
 
     # A fresh address, so only the key_id counter can be over the limit.
     with pytest.raises(exceptions.Throttled):
         _authenticate(raw, ip="10.1.1.1")
+
+
+def test_wrong_secret_does_not_lock_out_the_key_id(key_pair, profile1):
+    """A key_id is not a secret, so knowing one must not let a third party
+    throttle its holder. Wrong-secret attempts count against the attacker's
+    address only."""
+
+    _, raw = key_pair
+    for i in range(LIMIT * 2):
+        _fail_n(raw + "x", 1, ip=f"10.2.0.{i}")
+
+    # The real holder, from their own address, is unaffected.
+    user, auth = _authenticate(raw, ip="10.2.9.9")
+    assert user.profile == profile1
+    assert isinstance(auth, APIKey)
+
+
+def test_unknown_key_id_does_not_count_against_the_key_id_scope(key_pair, profile1):
+    """Nor does naming a key_id that does not exist: an attacker probing key
+    ids can only ever fill their own address's counter."""
+
+    _, raw = key_pair
+    for i in range(LIMIT * 2):
+        _fail_n("mmd_local_aaaaaaaaaaaa_nope", 1, ip=f"10.3.0.{i}")
+
+    user, _auth = _authenticate(raw, ip="10.3.9.9")
+    assert user.profile == profile1
 
 
 def test_malformed_keys_count_against_the_ip(key_pair):

@@ -261,7 +261,9 @@ class APIKeyAuthentication(BaseAuthentication):
     last_used_throttle = 60
     # Failures per minute, counted per IP and per key_id, before the rest of
     # that minute is answered with 429. Only failures count, so a client
-    # presenting a good key is never throttled by this.
+    # presenting a good key is never throttled by this. The two scopes count
+    # different things: every rejection counts against the address, but only a
+    # rejection of a correct secret counts against the key_id.
     failure_limiter = FailureRateLimiter("apikey", limit=10, window=60)
 
     def authenticate_header(self, request):
@@ -283,8 +285,12 @@ class APIKeyAuthentication(BaseAuthentication):
         except ValueError:
             raise self._fail(request, "malformed_key", None, ip=ip)
 
-        # Counted separately from the IP: one bad key rotating through hosts is
-        # the same incident, and one bad host should not lock out a good key.
+        # Counted separately from the IP: a stale credential retried from a
+        # fleet of hosts is one incident, and no single host's failures should
+        # lock out a good key. Only a failure that proved knowledge of the
+        # secret reaches this counter (see `_fail`), so a third party who has
+        # learned a key_id (it is not a secret: it appears in logs, the admin
+        # and the API) cannot use it to throttle the key's legitimate holder.
         self._check_rate_limit(request, "key_id", key_id)
 
         # ImproperlyConfigured here is a deployment error, not a client error;
@@ -306,12 +312,15 @@ class APIKeyAuthentication(BaseAuthentication):
         if not secret_matches(secret, api_key.secret_hash):
             raise self._fail(request, "bad_secret", key_id, ip=ip)
 
+        # Past this point the secret was correct, so the failure is a real
+        # signal about this key rather than about whoever presented it, and it
+        # is safe to count against the key_id.
         if not api_key.is_active:
-            raise self._fail(request, "inactive", key_id, ip=ip)
+            raise self._fail(request, "inactive", key_id, ip=ip, count_key_id=True)
         if api_key.revoked_at is not None:
-            raise self._fail(request, "revoked", key_id, ip=ip)
+            raise self._fail(request, "revoked", key_id, ip=ip, count_key_id=True)
         if api_key.expires_at is not None and api_key.expires_at < timezone.now():
-            raise self._fail(request, "expired", key_id, ip=ip)
+            raise self._fail(request, "expired", key_id, ip=ip, count_key_id=True)
 
         self._touch(api_key, ip)
 
@@ -336,8 +345,17 @@ class APIKeyAuthentication(BaseAuthentication):
         )
         raise exceptions.Throttled(wait=wait)
 
-    def _fail(self, request, reason, key_id, detail=None, ip=None):
-        """Log and count the rejection, and return the exception to raise."""
+    def _fail(self, request, reason, key_id, detail=None, ip=None, count_key_id=False):
+        """Log and count the rejection, and return the exception to raise.
+
+        Every rejection counts against the address that sent it. It counts
+        against the key_id only when the caller proved they hold the secret
+        (`count_key_id`), which is the stale-deployed-credential signal the
+        key_id scope exists for. A key_id is not a secret: it is logged, and it
+        is visible in the admin, the CSV export and the API. Counting
+        wrong-secret attempts against it would let anyone who learned a key_id
+        keep its owner throttled for the cost of ten requests a minute.
+        """
 
         ip = ip if ip is not None else _get_client_ip(request)
         logger.warning(
@@ -348,7 +366,7 @@ class APIKeyAuthentication(BaseAuthentication):
             request.path,
         )
         self.failure_limiter.record_failure("ip", ip)
-        if key_id:
+        if count_key_id and key_id:
             self.failure_limiter.record_failure("key_id", key_id)
         # One opaque message: which check failed is not the caller's business,
         # and saying so would narrow a guessing attack.
