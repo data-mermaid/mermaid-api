@@ -13,7 +13,12 @@ from django.template.response import TemplateResponse
 from django.test import RequestFactory
 from django.utils import timezone
 
-from api.admin.base import APIKeyAdmin, APIKeyAdminForm, BaseAdmin
+from api.admin.base import (
+    APIKeyAdmin,
+    APIKeyAdminForm,
+    BaseAdmin,
+    export_model_display_as_csv,
+)
 from api.models import APIKey
 from api.resources.me import MeSerializer
 from api.resources.profile import ProfileSerializer
@@ -381,6 +386,31 @@ def test_admin_offers_no_all_fields_export(key_admin):
     # included, so this page must not inherit it.
     assert isinstance(key_admin, BaseAdmin) is False
     assert "export_model_all_as_csv" not in key_admin.get_actions(_request())
+
+
+def test_the_csv_export_writes_no_hash(key_admin, profile1, project1):
+    """The written bytes, not the configuration that produces them.
+
+    `test_admin_never_exposes_the_hash` asserts secret_hash is in neither
+    exportable_fields nor list_display, which is a statement about intent;
+    this runs the action that a person actually clicks and reads the file it
+    hands back, so a change to how export_model_as_csv resolves a field name
+    into a value cannot reintroduce the hash without failing here.
+    """
+
+    key, _ = _make_key(profile1, name="exported bot")
+
+    response = export_model_display_as_csv(
+        key_admin, _request(method="get"), APIKey.objects.filter(pk=key.pk)
+    )
+
+    content = response.content.decode()
+    # The export ran and carries the row, so the absence below is the export
+    # withholding the hash rather than an empty file.
+    assert "exported bot" in content
+    assert key.key_id in content
+    assert "secret_hash" not in content
+    assert key.secret_hash not in content
 
 
 def test_no_expiry_keys_are_one_click_away(key_admin, profile1, project1):
