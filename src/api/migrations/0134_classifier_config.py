@@ -21,7 +21,12 @@ def patch_size_to_config(apps, schema_editor):
 def config_to_patch_size(apps, schema_editor):
     Classifier = apps.get_model("api", "Classifier")
     for classifier in Classifier.objects.all():
-        classifier.patch_size = (classifier.config or {}).get("patch_size") or 0
+        config = classifier.config or {}
+        if "patch_size" not in config:
+            raise RuntimeError(
+                f"Cannot reverse Classifier.config to patch_size; missing patch_size for version: {classifier.version}"
+            )
+        classifier.patch_size = config["patch_size"]
         classifier.save(update_fields=["patch_size"])
 
 
@@ -44,6 +49,11 @@ class Migration(migrations.Migration):
             model_name="classifier",
             name="config",
             field=models.JSONField(blank=True, default=dict),
+        ),
+        migrations.AlterField(
+            model_name="classifier",
+            name="patch_size",
+            field=models.IntegerField(help_text="Number of pixels", null=True),
         ),
         migrations.RunPython(patch_size_to_config, config_to_patch_size),
         migrations.RemoveField(model_name="classifier", name="patch_size"),
