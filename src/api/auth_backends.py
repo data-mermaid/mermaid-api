@@ -150,7 +150,9 @@ class JWTAuthentication(BaseAuthentication):
                             },
                         )
                     except Exception as err:  # Don't ever fail because subscription didn't work
-                        logger.error(
+                        # Mailchimp merge-field validation failures (e.g. missing LNAME) are
+                        # expected for some signups and shouldn't page/pollute Sentry as errors.
+                        logger.warning(
                             "Unable to create mailchimp member {} {} <{}>: {}".format(
                                 profile.first_name, profile.last_name, profile.email, str(err)
                             )
