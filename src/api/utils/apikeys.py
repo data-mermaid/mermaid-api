@@ -41,6 +41,12 @@ SECRET_BYTES = 32
 KEY_ID_ALPHABET = string.ascii_letters + string.digits
 KEY_ID_RE = re.compile(rf"^[A-Za-z0-9]{{{KEY_ID_LENGTH}}}$")
 
+# How many times `APIKey.issue` will redraw a key_id that the unique constraint
+# rejects. 12 characters over a 62-character alphabet is ~3.2e21 ids, so a
+# clash is not something to expect; the retries are here so that an RNG defect
+# costs another insert rather than an opaque 500 for the person minting the key.
+KEY_ID_ISSUE_ATTEMPTS = 3
+
 # settings.ENVIRONMENT goes into the key verbatim. It is validated because ENV
 # is free text (settings.ENVIRONMENT = os.environ.get("ENV") or "local"): a typo
 # would mint keys under a label that stops verifying once the typo is fixed.
