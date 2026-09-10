@@ -16,7 +16,9 @@ PROD_SETTINGS = ProjectSettings(
     api=DjangoSettings(
         # API
         container_cpu=1500,
-        container_memory=3000,
+        # 3000 MiB spiked to the cap daily (heavy obs/report serialization),
+        # OOM-killing gunicorn workers. Headroom above the ~3078 MiB peak.
+        container_memory=4096,
         container_count=1,
         # SQS
         sqs_cpu=2048,
