@@ -73,17 +73,30 @@ def download_file(
     client.download_file(bucket, blob_name, local_file_path)
 
 
-def file_exists(bucket, blob_name, aws_access_key_id=None, aws_secret_access_key=None):
+def head_object(bucket, blob_name, aws_access_key_id=None, aws_secret_access_key=None):
+    """Return the object's metadata (ContentLength, ETag, ContentType, ...), or None if there is
+    no object at blob_name."""
     client = get_client(
         aws_access_key_id=aws_access_key_id, aws_secret_access_key=aws_secret_access_key
     )
     try:
-        client.head_object(Bucket=bucket, Key=blob_name)
-        return True
+        return client.head_object(Bucket=bucket, Key=blob_name)
     except botocore.exceptions.ClientError as e:
         if e.response["Error"]["Code"] == "404":
-            return False
+            return None
         raise
+
+
+def file_exists(bucket, blob_name, aws_access_key_id=None, aws_secret_access_key=None):
+    return (
+        head_object(
+            bucket,
+            blob_name,
+            aws_access_key_id=aws_access_key_id,
+            aws_secret_access_key=aws_secret_access_key,
+        )
+        is not None
+    )
 
 
 def list_objects(
