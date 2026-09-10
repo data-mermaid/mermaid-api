@@ -39,27 +39,45 @@ def get_rules(obj):
     return ",".join(rules)
 
 
-class ManagementExtendedSerializer(ExtendedSerializer):
+class ManagementRulesMixin:
+    """Shared `rules` field for the plain (/managements/), project-nested
+    (/projects/<id>/managements/), and extended (nested-in-sample-event)
+    Management serializers, so the three stay in sync instead of drifting
+    independently.
+
+    Injected via get_fields() rather than declared as a normal class-level
+    field: DRF's SerializerMetaclass only collects declared fields from
+    bases that have themselves already been processed by that metaclass,
+    and this is a plain mixin, so a class-level Field here would silently
+    never make it into `_declared_fields` (see the identical note on
+    _DuplicateCheckMixin in mixins.py).
+    """
+
+    def get_fields(self):
+        fields = super().get_fields()
+        fields["rules"] = serializers.SerializerMethodField(source="get_rules")
+        return fields
+
+    def get_rules(self, obj):
+        return get_rules(obj)
+
+
+class ManagementExtendedSerializer(ManagementRulesMixin, ExtendedSerializer):
     project = ModelNameReadOnlyField()
     compliance = ModelNameReadOnlyField()
     parties = serializers.ListField(source="parties.all", child=ModelNameReadOnlyField())
-    rules = serializers.SerializerMethodField(source="get_rules")
 
     class Meta:
         geo_field = "boundary"
         model = Management
         exclude = []
 
-    def get_rules(self, obj):
-        return get_rules(obj)
 
-
-class ManagementSerializer(BaseAPISerializer):
+class ManagementSerializer(ManagementRulesMixin, BaseAPISerializer):
     # No ManagementDuplicateCheckMixin here: this serializer's only write
     # path is create_project's bulk copy into a brand-new project, which
     # never has existing submitted data for the check's precondition to
     # match against -- it would just be dead weight on every call.
-    rules = serializers.SerializerMethodField(source="get_rules")
     project_name = serializers.SerializerMethodField()
     size = serializers.DecimalField(
         max_digits=12,
@@ -75,9 +93,6 @@ class ManagementSerializer(BaseAPISerializer):
         model = Management
         exclude = []
         additional_fields = ["rules", "project_name"]
-
-    def get_rules(self, obj):
-        return get_rules(obj)
 
     def get_project_name(self, obj):
         return obj.project.name
