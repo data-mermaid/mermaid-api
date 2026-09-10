@@ -15,7 +15,7 @@ def test_serializer_exposes_type_and_config_not_num_points():
 
 
 def test_serializer_exposes_exact_field_set():
-    c = Classifier.objects.create(name="c2", version="v2")
+    c = Classifier.objects.create(name="c2", version="v2", config={"patch_size": 224})
     data = ClassifierSerializer(instance=c).data
     assert set(data.keys()) == {
         "id",

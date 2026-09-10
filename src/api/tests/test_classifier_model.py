@@ -6,9 +6,21 @@ from api.models import Classifier
 
 
 def test_version_is_unique():
-    Classifier.objects.create(name="a", version="dup")
+    Classifier.objects.create(name="a", version="dup", config={"patch_size": 224})
     with pytest.raises(IntegrityError):
-        Classifier.objects.create(name="b", version="dup")
+        Classifier.objects.create(name="b", version="dup", config={"patch_size": 224})
+
+
+def test_saving_pyspacer_classifier_without_patch_size_is_rejected():
+    with pytest.raises(IntegrityError):
+        Classifier.objects.create(name="c7", version="v7", classifier_type="pyspacer", config={})
+
+
+def test_saving_non_pyspacer_classifier_without_patch_size_is_allowed():
+    classifier = Classifier.objects.create(
+        name="c8", version="v8", classifier_type="segmentation", config={}
+    )
+    assert classifier.pk is not None
 
 
 def test_full_clean_rejects_config_missing_required_key():

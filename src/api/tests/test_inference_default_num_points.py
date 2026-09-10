@@ -5,9 +5,8 @@ from api.models import Classifier, CollectRecord
 
 @override_settings(INFERENCE_DEFAULT_NUM_POINTS=37)
 def test_assign_classifier_signal_seeds_num_points_from_setting(project1, profile1):
-    # The Classifier model no longer has a num_points column (dropped in Task 3);
-    # nothing on the classifier can supply num_points_per_quadrat, so this proves
-    # the seeded value comes from the setting.
+    # The Classifier model exposes no num_points, so nothing on the classifier can
+    # supply num_points_per_quadrat and the seeded value can only come from the setting.
     Classifier.objects.create(name="c", version="v-seed", config={"patch_size": 128})
 
     cr = CollectRecord.objects.create(

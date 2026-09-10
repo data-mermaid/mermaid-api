@@ -179,6 +179,15 @@ class Classifier(BaseModel):
 
     class Meta:
         db_table = "class_classifier"
+        constraints = [
+            # patch_size lives in config, so the database enforces its presence here;
+            # PyspacerConfig enforces its type.
+            models.CheckConstraint(
+                condition=~models.Q(classifier_type="pyspacer")
+                | models.Q(config__has_key="patch_size"),
+                name="classifier_pyspacer_config_has_patch_size",
+            )
+        ]
 
     @property
     def patch_size(self):
@@ -245,6 +254,10 @@ class Classifier(BaseModel):
         config = validated_config.model_dump()
 
         classes = manifest.get("classes") or []
+        # A JSON object iterates as its keys, which are strings, so the per-label string
+        # check below cannot tell one from a list of labels.
+        if not isinstance(classes, list):
+            raise ClassifierRegistrationError(f"classes in model.json for {version} is not a list")
         if not classes:
             raise ClassifierRegistrationError(f"model.json for {version} has no classes")
 

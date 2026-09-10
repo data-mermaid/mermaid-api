@@ -218,6 +218,15 @@ def test_register_rejects_non_string_label(stub_manifest):
     assert not Classifier.objects.filter(version="v9").exists()
 
 
+def test_register_rejects_classes_object(stub_manifest, benthic_attribute_1):
+    # A JSON object iterates as its keys, so a mapping whose keys are valid labels
+    # satisfies every per-element check and would register a label set.
+    stub_manifest(_manifest(classes={f"{benthic_attribute_1.pk}::": 0.5}))
+    with pytest.raises(ClassifierRegistrationError):
+        Classifier.register("v9")
+    assert not Classifier.objects.filter(version="v9").exists()
+
+
 def test_register_rejects_task_with_no_config_schema(
     stub_manifest, benthic_attribute_1, monkeypatch
 ):
