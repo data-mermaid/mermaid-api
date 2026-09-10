@@ -113,6 +113,15 @@ class DuplicateImageValidator(BaseValidator):
 
 class BaseAnnotationValidator(BaseValidator):
     def get_rows(self, collect_record, **kwargs):
+        # The confirmed, unclassified and region validators all need the same rows,
+        # so build them once per validation run.
+        cache = self.get_run_cache(collect_record, "annotation_rows")
+        if "rows" not in cache:
+            cache["rows"] = self._build_rows(collect_record)
+
+        return cache["rows"]
+
+    def _build_rows(self, collect_record):
         cr_id = collect_record.get("id")
 
         num_points_per_quadrat = (collect_record["data"].get("quadrat_transect") or {}).get(
@@ -122,7 +131,9 @@ class BaseAnnotationValidator(BaseValidator):
             num_points_per_quadrat = Classifier.latest().num_points
 
         annos = (
-            Annotation.objects.select_related("point", "point__image")
+            Annotation.objects.select_related(
+                "point", "point__image", "benthic_attribute", "growth_form"
+            )
             .filter(point__image__collect_record_id=cr_id)
             .order_by(
                 "point__image__created_on",
