@@ -146,6 +146,11 @@ if ENVIRONMENT not in ("dev", "prod"):
 
 # SSL settings
 SECURE_PROXY_SSL_HEADER = ("HTTP_X_FORWARDED_PROTO", "https")
+# The session and CSRF cookies are credentials, so keep them off plain HTTP
+# wherever the site is served over TLS. Local runs are http://localhost, where
+# a Secure cookie would never be sent at all, so this stays off there.
+SESSION_COOKIE_SECURE = ENVIRONMENT in ("dev", "prod")
+CSRF_COOKIE_SECURE = ENVIRONMENT in ("dev", "prod")
 
 ROOT_URLCONF = "app.urls"
 
@@ -174,6 +179,7 @@ DEFAULT_AUTO_FIELD = "django.db.models.BigAutoField"
 REST_FRAMEWORK = {
     "DEFAULT_AUTHENTICATION_CLASSES": (
         "api.auth_backends.JWTAuthentication",
+        "api.auth_backends.APIKeyAuthentication",
         "rest_framework.authentication.SessionAuthentication",
     ),
     "DEFAULT_PERMISSION_CLASSES": ("rest_framework.permissions.IsAuthenticatedOrReadOnly",),
@@ -241,6 +247,18 @@ AUTH0_USER_INFO_ENDPOINT = f"https://{AUTH0_DOMAIN}/userinfo"
 AUTH0_MANAGEMENT_API_AUDIENCE = os.environ.get("AUTH0_MANAGEMENT_API_AUDIENCE")
 MERMAID_API_AUDIENCE = os.environ.get("MERMAID_API_AUDIENCE")
 MERMAID_API_SIGNING_SECRET = os.environ.get("MERMAID_API_SIGNING_SECRET")
+
+# ***************
+# ** API keys  **
+# ***************
+
+# A key acts as its owner's whole profile, so the self-service endpoint limits
+# what one person can hand out: how far out an expiry may be set, and how many
+# usable keys they may hold at once. Both are settings rather than constants so
+# a team running several integrations can be raised without a deploy. Neither
+# applies to the Django admin, where staff issue keys deliberately.
+API_KEY_MAX_LIFETIME_DAYS = 365 * 2
+API_KEY_MAX_PER_PROFILE = 20
 
 # *********
 # ** API **
@@ -385,6 +403,14 @@ LOGGING = {
             "filters": ["require_debug_false"],
             "class": "django.utils.log.AdminEmailHandler",
         },
+        # Fixed at INFO, unlike "console": the API key audit trail has to reach
+        # CloudWatch in production, where DEBUG_LEVEL is WARNING.
+        "console_info": {
+            "level": "INFO",
+            "class": "logging.StreamHandler",
+            "stream": sys.stdout,
+            "formatter": "file",
+        },
     },
     "formatters": {
         "file": {
@@ -400,6 +426,14 @@ LOGGING = {
         "api": {
             "handlers": ["console"],
             "level": "WARNING",
+            "propagate": False,
+        },
+        # API key issuance, revocation and expiry: an audit trail, kept at INFO
+        # in every environment. Failed authentications are WARNING and go
+        # through the "api" logger above.
+        "api.apikeys": {
+            "handlers": ["console_info"],
+            "level": "INFO",
             "propagate": False,
         },
         "django.security.DisallowedHost": {

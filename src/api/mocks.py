@@ -15,9 +15,17 @@ class MockRequest:
         data=None,
         profile=None,
         method="GET",
+        auth=None,
     ):
+        # Mirrors DRF: resources/base.get_request_profile reads request.auth to
+        # tell an API key caller from a JWT one. Both arrive as "Bearer ...",
+        # so the header alone cannot make that call.
+        self.auth = auth
         if profile:
-            username = profile.authusers.first().user_id
+            # A profile an API key was issued against need never have logged in
+            # through Auth0, so it can have no AuthUser to name the user after.
+            auth_user = profile.authusers.first()
+            username = auth_user.user_id if auth_user else f"profile|{profile.pk}"
             user = get_user_model()(username=username, password="auth0")
             user.profile = profile
             self.user = user
@@ -31,7 +39,8 @@ class MockRequest:
         if not token and self.user:
             try:
                 auth_user = self.user.profile.authusers.first()
-                token = create_token(auth_user.user_id)
+                if auth_user is not None:
+                    token = create_token(auth_user.user_id)
             except ObjectDoesNotExist:
                 pass
 
@@ -62,6 +71,7 @@ class MockRequest:
         data["POST"] = request.POST.dict()
         data["data"] = request.data
         data["query_params"] = request.query_params.dict()
+        data["auth"] = getattr(request, "auth", None)
 
         if isinstance(request, MockRequest):
             return request

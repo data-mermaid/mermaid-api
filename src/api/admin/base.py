@@ -1,19 +1,30 @@
 import csv
 import datetime
+import logging
 
+from django import forms
 from django.conf import settings
 from django.contrib import admin, messages
 from django.contrib.gis.admin import GISModelAdmin
 from django.db import transaction
 from django.db.models import Count
 from django.http import HttpResponse
+from django.template.response import TemplateResponse
 from django.urls import reverse
 from django.utils.html import format_html
 
+from api.utils.apikeys import (
+    DEFAULT_LIFETIME_DAYS,
+    default_expires_at,
+    generate_api_key,
+    log_key_created,
+)
 from api.utils.sample_unit_methods import get_project
 from tools.models import MERMAIDFeature, UserMERMAIDFeature
-from ..models import Application, AuthUser, CollectRecord, Observer, Profile
+from ..models import APIKey, Application, AuthUser, CollectRecord, Observer, Profile
 from ..models.classification import Annotation
+
+logger = logging.getLogger(__name__)
 
 
 def lookup_field_from_choices(field_obj, value):
@@ -95,6 +106,231 @@ class ApplicationAdmin(BaseAdmin):
     pass
 
 
+class APIKeyExpiryFilter(admin.SimpleListFilter):
+    """Answers the question this list exists to answer: which keys never expire.
+
+    A no-expiry key is a legitimate choice, but it is also the one that gets
+    forgotten, so it is one click away rather than a column to scan.
+    """
+
+    title = "expiry"
+    parameter_name = "expiry"
+
+    def lookups(self, request, model_admin):
+        return (("never", "Never expires"), ("set", "Has an expiry date"))
+
+    def queryset(self, request, queryset):
+        value = self.value()
+        if value == "never":
+            return queryset.filter(expires_at__isnull=True)
+        if value == "set":
+            return queryset.filter(expires_at__isnull=False)
+        return queryset
+
+
+class APIKeyAdminForm(forms.ModelForm):
+    never_expires = forms.BooleanField(
+        required=False,
+        label="Never expires",
+        help_text=(
+            "Leave this unchecked and the expiry blank to get the default of "
+            f"{DEFAULT_LIFETIME_DAYS} days from now. Ticking it issues a credential "
+            "that stays valid until somebody revokes it."
+        ),
+    )
+
+    class Meta:
+        model = APIKey
+        # secret_hash is absent on purpose: nothing a human does here needs it,
+        # and a field that is never rendered cannot be copied out of a screenshot.
+        fields = ("profile", "name", "expires_at", "never_expires", "is_active")
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        if self.instance.pk is not None and self.instance.expires_at is None:
+            self.fields["never_expires"].initial = True
+
+    def clean(self):
+        cleaned_data = super().clean()
+        expires_at = cleaned_data.get("expires_at")
+        never_expires = cleaned_data.get("never_expires")
+
+        if never_expires and expires_at is not None:
+            raise forms.ValidationError("Set an expiry date or tick 'never expires', not both.")
+        if not never_expires and expires_at is None:
+            # No expiry is never the silent default. cleaned_data is what
+            # construct_instance() writes onto the instance, so setting it
+            # here is what lands on the row.
+            cleaned_data["expires_at"] = default_expires_at()
+
+        return cleaned_data
+
+
+@admin.register(APIKey)
+class APIKeyAdmin(admin.ModelAdmin):
+    """Issue a key for somebody else's profile; /apikeys/ is the self-service path.
+
+    A plain ModelAdmin, not BaseAdmin: BaseAdmin attaches
+    export_model_all_as_csv, which walks every concrete field and would write
+    secret_hash to a CSV. Only the display export is offered, and nothing in
+    list_display is a secret.
+    """
+
+    form = APIKeyAdminForm
+    list_display = ("name", "key_id", "profile", "is_active", "expires_at", "last_used_at")
+    list_display_links = ("name", "key_id")
+    list_filter = (APIKeyExpiryFilter, "is_active", ("revoked_at", admin.EmptyFieldListFilter))
+    search_fields = (
+        "name",
+        "key_id",
+        "profile__email",
+        "profile__first_name",
+        "profile__last_name",
+    )
+    autocomplete_fields = ("profile",)
+    exclude = ("secret_hash",)
+    readonly_fields = (
+        "key_id",
+        "last_used_at",
+        "last_used_ip",
+        "revoked_at",
+        "revoked_reason",
+        "created_by",
+        "created_on",
+        "updated_by",
+        "updated_on",
+    )
+    exportable_fields = list_display
+    actions = ("revoke_keys", "generate_replacement_keys", export_model_display_as_csv)
+
+    def get_queryset(self, request):
+        return super().get_queryset(request).select_related("profile")
+
+    def get_readonly_fields(self, request, obj=None):
+        readonly_fields = list(super().get_readonly_fields(request, obj))
+        if obj is not None:
+            # The key is its profile's access, so repointing an existing key at
+            # another profile silently changes what a deployed credential can
+            # do. Issue a new key instead.
+            readonly_fields.append("profile")
+        return readonly_fields
+
+    # Who may issue a key is the ordinary `api.add_apikey` model permission, the
+    # same question the rest of the admin asks, so there is no has_add_permission
+    # override here. Issuing is not a superuser-only action: /apikeys/ lets any
+    # signed-in person mint keys for themselves, and this page is the same act
+    # for someone else's profile, gated by the permission rather than by a flag.
+
+    def has_delete_permission(self, request, obj=None):
+        # Deletion is the one narrower privilege, and it is not about issuing.
+        # Revoking retires a key and keeps the row, which is what answers "what
+        # did this credential do, and when did it stop working". Delete throws
+        # that away, so it stays with the superuser.
+        return request.user.is_superuser and super().has_delete_permission(request, obj)
+
+    @admin.action(description="Revoke selected API keys")
+    def revoke_keys(self, request, queryset):
+        actor = request.user.get_username()
+        reason = f"admin_revoked:{actor}"[:255]
+        revoked = sum(1 for key in queryset if key.revoke(reason, actor=actor))
+        already = queryset.count() - revoked
+        message = f"Revoked {revoked} API key(s)."
+        if already:
+            message = f"{message} {already} was already revoked and is unchanged."
+        self.message_user(request, message, messages.SUCCESS)
+
+    @admin.action(description="Generate replacement key for selected API keys", permissions=["add"])
+    def generate_replacement_keys(self, request, queryset):
+        """Issue a fresh key for the same profile as each selection.
+
+        The original is left alone: this hands over a new secret without
+        breaking a running client, and whoever redeploys revokes the old key
+        afterwards. Timed rotation with an automatic tail is C5.
+
+        Issuing a replacement is issuing a key, so it is allowed to whoever the
+        add permission allows; the action is hidden without it.
+        """
+
+        issued = []
+        for key in queryset.select_related("profile"):
+            replacement, raw = self._issue_key(
+                request,
+                profile=key.profile,
+                name=key.name,
+                # A no-expiry key is replaced by a no-expiry key; anything else
+                # starts a fresh default lifetime.
+                expires_at=None if key.expires_at is None else default_expires_at(),
+                replaces=key,
+            )
+            issued.append({"key": replacement, "raw": raw, "replaces": key})
+
+        if not issued:
+            return None
+        # One page for the whole selection, rather than one banner per row.
+        return self._raw_key_response(request, issued)
+
+    def _issue_key(self, request, profile, name, expires_at, replaces=None):
+        return APIKey.issue(
+            profile=profile,
+            name=name,
+            expires_at=expires_at,
+            actor=request.user.get_username(),
+            replaces=replaces,
+        )
+
+    def _raw_key_response(self, request, issued):
+        """Render the secrets into this one response body and nowhere else.
+
+        Not through the messages framework: MESSAGE_STORAGE defaults to
+        FallbackStorage, which serialises the message into a client-side cookie
+        marked httponly but Secure only when SESSION_COOKIE_SECURE is on, and
+        spills to the session backend past 4096 bytes. Either way the secret
+        would be written to the browser's cookie store and replayed on the next
+        admin request instead of being read once and forgotten. A response body
+        does neither, and it is what the self-service endpoint in
+        `resources/apikey.py` already does.
+        """
+
+        return TemplateResponse(
+            request,
+            "admin/api/apikey/raw_key.html",
+            {
+                **self.admin_site.each_context(request),
+                "opts": self.model._meta,
+                "issued": issued,
+            },
+        )
+
+    def save_model(self, request, obj, form, change):
+        if change:
+            super().save_model(request, obj, form, change)
+            return
+
+        # The raw key exists only for this request, and this is the one place
+        # it is ever readable. save_model cannot return a response, so it is
+        # carried on the request object (per-request, unlike `self`, which the
+        # admin site keeps for the process) for response_add to render.
+        obj.key_id, obj.secret_hash, raw = generate_api_key()
+        super().save_model(request, obj, form, change)
+        log_key_created(obj, request.user.get_username())
+        request._issued_api_key = raw
+
+    def response_add(self, request, obj, post_url_continue=None):
+        """Show the secret instead of redirecting to the changelist.
+
+        The redirect is what forces a new key's secret into cookie-backed
+        storage to survive it, so the add view ends on the key itself. The
+        "save and continue"/"save and add another" buttons give up their
+        redirect here: there is one chance to read the secret, and the row is a
+        click away on the page.
+        """
+
+        raw = getattr(request, "_issued_api_key", None)
+        if raw is None:
+            return super().response_add(request, obj, post_url_continue)
+        return self._raw_key_response(request, [{"key": obj, "raw": raw, "replaces": None}])
+
+
 @admin.register(AuthUser)
 class AuthUserAdmin(BaseAdmin):
     search_fields = [
@@ -119,7 +355,7 @@ class ProfileAdmin(BaseAdmin):
 
     @admin.display(description="Email", ordering="email")
     def linked_email(self, obj):
-        return format_html(f'<a href="mailto:{obj.email}">{obj.email}</a>')
+        return format_html('<a href="mailto:{}">{}</a>', obj.email, obj.email)
 
     @admin.display(description="Project membership count", ordering="projects__count")
     def project_count(self, obj):
