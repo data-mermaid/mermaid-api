@@ -49,8 +49,9 @@ class BenthicAttributeGrowthFormAdmin(BaseAdmin):
 
 @admin.register(Classifier)
 class ClassifierAdmin(BaseAdmin):
-    list_display = ["version", "name", "patch_size", "num_points"]
+    list_display = ["version", "name", "classifier_type", "patch_size"]
     readonly_fields = ["created_by", "updated_by"]
+    list_filter = ["classifier_type"]
 
 
 class LabelMappingResource(resources.ModelResource):

@@ -36,11 +36,14 @@ from ..models import (
     Region,
     Site,
 )
-from ..models.classification import get_image_storage_config
+from ..models.classification import (
+    CLASSIFIER_CONFIG_S3_PATH,
+    get_image_storage_config,
+    parse_bagf_label,
+)
 from .q import submit_image_job
 from .s3 import list_objects, upload_file
 
-CLASSIFIER_CONFIG_S3_PATH = "classifier"
 CLASSIFIER_CONFIG_LOCAL_CACHE_DIR = settings.SPACER.get("EXTRACTORS_CACHE_DIR")
 assert CLASSIFIER_CONFIG_LOCAL_CACHE_DIR is not None
 CLASSIFIER_FILE_NAME = "classifier.pkl"
@@ -408,7 +411,7 @@ def _write_classification_results(image, score_sets, label_ids, classifer_record
         _points.append(point)
         top_predictions = sorted(zip(_label_ids, scores), key=itemgetter(1), reverse=True)
         for label, score in top_predictions[0:3]:
-            ba_id, gf_id = (label.split("::", 1) + [None])[:2]
+            ba_id, gf_id = parse_bagf_label(label)
             if score >= settings.CLASSIFIED_THRESHOLD and ba_id is not None:
                 _annotations.append(
                     Annotation(

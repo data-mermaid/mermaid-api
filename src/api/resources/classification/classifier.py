@@ -26,7 +26,19 @@ class ClassifierSerializer(BaseAPISerializer):
 
     class Meta:
         model = Classifier
-        exclude = []
+        fields = [
+            "id",
+            "name",
+            "version",
+            "classifier_type",
+            "config",
+            "description",
+            "benthic_attribute_growth_forms",
+            "created_on",
+            "created_by",
+            "updated_on",
+            "updated_by",
+        ]
 
 
 class ClassifierViewSet(BaseApiViewSet):
