@@ -1,7 +1,7 @@
 import os
 
 import nag_suppressions
-from aws_cdk import App, Aspects, Environment
+from aws_cdk import App, Aspects, Environment, aws_s3 as s3
 from cdk_nag import AwsSolutionsChecks
 from settings.dev import DEV_SETTINGS
 from settings.prod import PROD_SETTINGS
@@ -100,7 +100,7 @@ dev_inference_stack = InferenceStack(
     config=DEV_SETTINGS,
     inference_repo=common_stack.inference_repo,
     config_bucket=common_stack.config_bucket,
-    image_bucket=common_stack.image_processing_bucket,
+    image_buckets=[(common_stack.image_processing_bucket, DEV_SETTINGS.api.ic_s3_path)],
     alerts_topic=dev_api_stack.alerts_topic,
 )
 
@@ -147,7 +147,18 @@ prod_inference_stack = InferenceStack(
     config=PROD_SETTINGS,
     inference_repo=common_stack.inference_repo,
     config_bucket=common_stack.config_bucket,
-    image_bucket=common_stack.image_processing_bucket,
+    # Prod reads TEST-project images from the in-account image-processing bucket and
+    # every other project's from coral-reef-training, which lives outside this account.
+    image_buckets=[
+        (
+            # from_bucket_name needs a Stack scope and adds no resource to it.
+            s3.Bucket.from_bucket_name(
+                prod_api_stack, "ProdInferenceImageBucket", PROD_SETTINGS.api.ic_bucket_name
+            ),
+            PROD_SETTINGS.api.ic_s3_path,
+        ),
+        (common_stack.image_processing_bucket, PROD_SETTINGS.api.ic_s3_path_test),
+    ],
     alerts_topic=prod_api_stack.alerts_topic,
 )
 
