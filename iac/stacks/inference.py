@@ -39,7 +39,7 @@ class InferenceStack(Stack):
         config: ProjectSettings,
         inference_repo: ecr.IRepository,
         config_bucket: s3.IBucket,
-        image_bucket: s3.IBucket,
+        image_buckets: list[tuple[s3.IBucket, str]],
         alerts_topic: sns.ITopic,
         **kwargs,
     ) -> None:
@@ -78,9 +78,16 @@ class InferenceStack(Stack):
             },
         )
 
-        # Same-account reads (dev). No assume-role, no long-lived keys.
+        # Read-only on classifier/*: the legacy lane unpickles classifier.pkl through
+        # pyspacer's ClassifierUnpickler, which delegates to stock pickle.Unpickler with
+        # no allowlist, so write access here is code execution as this role on a cold start.
         config_bucket.grant_read(self.function, "classifier/*")
-        image_bucket.grant_read(self.function)
+
+        # (bucket, key prefix) per env: the function reads patch images under the prefix
+        # and writes each image's .featurevector back beside it.
+        for bucket, prefix in image_buckets:
+            bucket.grant_read(self.function, f"{prefix}*")
+            bucket.grant_put(self.function, f"{prefix}*")
 
         # ── Alarms ──────────────────────────────────────────────────
         # Published to the shared per-env alerts topic (ApiStack/MonitoringAlerts);
