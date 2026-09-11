@@ -45,3 +45,12 @@ def test_full_clean_rejects_non_object_config():
     with pytest.raises(ValidationError) as exc_info:
         c.full_clean()
     assert "config" in exc_info.value.message_dict
+
+
+def test_full_clean_rejects_string_patch_size():
+    c = Classifier(
+        name="c9", version="v9", classifier_type="pyspacer", config={"patch_size": "224"}
+    )
+    with pytest.raises(ValidationError) as exc_info:
+        c.full_clean()
+    assert "config" in exc_info.value.message_dict

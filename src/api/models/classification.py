@@ -52,7 +52,7 @@ TASK_TO_CLASSIFIER_TYPE = {
 class PyspacerConfig(PydanticBaseModel):
     """Validates the `config` object in a pyspacer model.json manifest."""
 
-    model_config = ConfigDict(extra="forbid")
+    model_config = ConfigDict(extra="forbid", strict=True)
     patch_size: int
 
 

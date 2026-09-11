@@ -41,6 +41,7 @@ def stub_manifest(monkeypatch):
     def set_manifest(manifest):
         holder["manifest"] = manifest
 
+    set_manifest.calls = calls
     return set_manifest
 
 
@@ -122,9 +123,7 @@ def test_register_rejects_invalid_config(stub_manifest, benthic_attribute_1):
 
 
 def test_register_rejects_string_patch_size(stub_manifest, benthic_attribute_1):
-    stub_manifest(
-        _manifest(classes=[f"{benthic_attribute_1.pk}::"], config={"patch_size": "224"})
-    )
+    stub_manifest(_manifest(classes=[f"{benthic_attribute_1.pk}::"], config={"patch_size": "224"}))
     with pytest.raises(ClassifierRegistrationError):
         Classifier.register("v9")
     assert not Classifier.objects.filter(version="v9").exists()
@@ -252,3 +251,11 @@ def test_register_rejects_task_with_no_config_schema(
     with pytest.raises(ClassifierRegistrationError):
         Classifier.register("v9")
     assert not Classifier.objects.filter(version="v9").exists()
+
+
+def test_register_reads_manifest_from_versioned_s3_key(stub_manifest, benthic_attribute_1):
+    stub_manifest(_manifest(classes=[f"{benthic_attribute_1.pk}::"]))
+
+    Classifier.register("v9")
+
+    assert stub_manifest.calls == [(settings.AWS_CONFIG_BUCKET, "classifier/v9/model.json")]
