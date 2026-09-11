@@ -411,6 +411,7 @@ LOGGING = {
             "level": "ERROR",
             "propagate": False,
         },
+        "api.utils.inference": {"handlers": ["console"], "level": "INFO", "propagate": False},
     },
 }
 
@@ -459,6 +460,13 @@ AWS_QUERYSTRING_AUTH = False
 AUTOCONFIRM_THRESHOLD = 1.0
 CLASSIFIED_THRESHOLD = 0.5
 INFERENCE_DEFAULT_NUM_POINTS = 25
+# Rendered into the container environment by the CDK app; there is no per-environment
+# default because each environment's inference image and Lambda name differ.
+INFERENCE_LAMBDA_PYSPACER = os.environ.get("INFERENCE_LAMBDA_PYSPACER") or ""
+INFERENCE_CLASSIFIER_VERSION = os.environ.get("INFERENCE_CLASSIFIER_VERSION") or ""
+# Covers the inference Lambda's 600s timeout plus the S3 image read, a cold start,
+# the feature-vector write and the DB writes. Nothing sets this per-environment.
+INFERENCE_JOB_VISIBILITY_TIMEOUT = 900
 SPACER = {
     "AWS_ACCESS_KEY_ID": IMAGE_BUCKET_AWS_ACCESS_KEY_ID,
     "AWS_SECRET_ACCESS_KEY": IMAGE_BUCKET_AWS_SECRET_ACCESS_KEY,
