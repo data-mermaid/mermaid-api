@@ -2,6 +2,7 @@ import json
 
 import pytest
 from botocore.exceptions import ClientError
+from django.conf import settings
 
 from api.models import BenthicAttributeGrowthForm, Classifier
 from api.models.classification import (
@@ -24,10 +25,15 @@ def _manifest(classes, config=None, task="pyspacer_mlp_classifier", schema_versi
 
 @pytest.fixture
 def stub_manifest(monkeypatch):
-    """Patch the S3 JSON read; return a setter the test calls with a manifest dict."""
+    """Patch the S3 JSON read; return a setter the test calls with a manifest dict.
+
+    The setter's `.calls` attribute records each (bucket, key) the read was called with.
+    """
     holder = {}
+    calls = []
 
     def fake_read_json_object(bucket, key, *args, **kwargs):
+        calls.append((bucket, key))
         return holder["manifest"]
 
     monkeypatch.setattr("api.utils.s3.read_json_object", fake_read_json_object)
@@ -110,6 +116,15 @@ def test_register_rejects_unknown_task(stub_manifest, benthic_attribute_1):
 
 def test_register_rejects_invalid_config(stub_manifest, benthic_attribute_1):
     stub_manifest(_manifest(classes=[f"{benthic_attribute_1.pk}::"], config={"wrong": 1}))
+    with pytest.raises(ClassifierRegistrationError):
+        Classifier.register("v9")
+    assert not Classifier.objects.filter(version="v9").exists()
+
+
+def test_register_rejects_string_patch_size(stub_manifest, benthic_attribute_1):
+    stub_manifest(
+        _manifest(classes=[f"{benthic_attribute_1.pk}::"], config={"patch_size": "224"})
+    )
     with pytest.raises(ClassifierRegistrationError):
         Classifier.register("v9")
     assert not Classifier.objects.filter(version="v9").exists()

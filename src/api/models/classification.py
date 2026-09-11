@@ -40,6 +40,9 @@ def parse_bagf_label(label):
 
 SUPPORTED_MANIFEST_SCHEMA_VERSION = 1
 
+# S3 prefix under which a classifier version's artifacts (model.json, weights, etc.) live.
+CLASSIFIER_CONFIG_S3_PATH = "classifier"
+
 # Maps a model.json `task` discriminator to a Classifier.classifier_type.
 TASK_TO_CLASSIFIER_TYPE = {
     "pyspacer_mlp_classifier": "pyspacer",
@@ -218,7 +221,7 @@ class Classifier(BaseModel):
         `ba_uuid::gf_uuid` class into the BA+GF M2M. Raises ClassifierRegistrationError
         on any malformed/mismatched manifest, applying nothing.
         """
-        key = f"classifier/{version}/model.json"
+        key = f"{CLASSIFIER_CONFIG_S3_PATH}/{version}/model.json"
         try:
             manifest = s3.read_json_object(settings.AWS_CONFIG_BUCKET, key)
         except Exception as e:

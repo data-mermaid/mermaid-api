@@ -36,11 +36,14 @@ from ..models import (
     Region,
     Site,
 )
-from ..models.classification import get_image_storage_config, parse_bagf_label
+from ..models.classification import (
+    CLASSIFIER_CONFIG_S3_PATH,
+    get_image_storage_config,
+    parse_bagf_label,
+)
 from .q import submit_image_job
 from .s3 import list_objects, upload_file
 
-CLASSIFIER_CONFIG_S3_PATH = "classifier"
 CLASSIFIER_CONFIG_LOCAL_CACHE_DIR = settings.SPACER.get("EXTRACTORS_CACHE_DIR")
 assert CLASSIFIER_CONFIG_LOCAL_CACHE_DIR is not None
 CLASSIFIER_FILE_NAME = "classifier.pkl"
