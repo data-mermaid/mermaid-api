@@ -1,11 +1,11 @@
 import datetime
 import hashlib
+import logging
 import math
 import os
 from io import BytesIO
-from operator import itemgetter
 from pathlib import Path
-from tempfile import NamedTemporaryFile, TemporaryDirectory
+from tempfile import NamedTemporaryFile
 from typing import Any
 
 import pandas as pd
@@ -20,14 +20,10 @@ from django.db.models.fields.files import ImageFieldFile
 from django.utils import timezone
 from PIL import Image as PILImage
 from PIL.ExifTags import GPSTAGS, TAGS
-from spacer.extractors import EfficientNetExtractor
-from spacer.messages import ClassifyFeaturesMsg, DataLocation, ExtractFeaturesMsg
-from spacer.tasks import classify_features, extract_features
 
 from ..models import (
     Annotation,
     ClassificationStatus,
-    Classifier,
     Image,
     ObsBenthicPhotoQuadrat,
     Point,
@@ -36,18 +32,13 @@ from ..models import (
     Region,
     Site,
 )
-from ..models.classification import (
-    CLASSIFIER_CONFIG_S3_PATH,
-    get_image_storage_config,
-    parse_bagf_label,
-)
+from ..models.classification import parse_bagf_label
+from .inference import _resolve_active_classifier, classify_via_lambda
 from .q import submit_image_job
-from .s3 import list_objects, upload_file
+from .s3 import upload_file
 
-CLASSIFIER_CONFIG_LOCAL_CACHE_DIR = settings.SPACER.get("EXTRACTORS_CACHE_DIR")
-assert CLASSIFIER_CONFIG_LOCAL_CACHE_DIR is not None
-CLASSIFIER_FILE_NAME = "classifier.pkl"
-WEIGHTS_FILE_NAME = "efficientnet_weights.pt"
+logger = logging.getLogger(__name__)
+
 ANNOTATIONS_PARQUET_FILE_NAME = "mermaid_confirmed_annotations.parquet"
 
 
@@ -347,58 +338,23 @@ def generate_points(image: Image, num_points: int, margin: tuple[int, int] = (0,
     return coords
 
 
-def _fetch_and_cache_classifier_config(classifier: Classifier):
-    cls_version = classifier.version
-
-    classifier_s3_dir = f"{CLASSIFIER_CONFIG_S3_PATH}/{cls_version}"
-    classifier_local_dir = f"{CLASSIFIER_CONFIG_LOCAL_CACHE_DIR}/{cls_version}"
-    list_objects(
-        settings.AWS_CONFIG_BUCKET, prefix=f"{classifier_s3_dir}/", download_to=classifier_local_dir
-    )
-
-
-def _get_classifier_and_weights(
-    classifier: Classifier | None = None
-) -> tuple[DataLocation, DataLocation]:
-    # TODO: Handle if classifier configs don't exist for classifier instance.
-    if not classifier:
-        classifier = Classifier.latest()
-
-    cls_version = classifier.version
-    classifier_dir = f"{CLASSIFIER_CONFIG_LOCAL_CACHE_DIR}/{cls_version}"
-    classifier_path = f"{classifier_dir}/{CLASSIFIER_FILE_NAME}"
-    weights_path = f"{classifier_dir}/{WEIGHTS_FILE_NAME}"
-
-    if not Path(classifier_path).exists() or not Path(weights_path).exists():
-        _fetch_and_cache_classifier_config(classifier)
-
-    return (
-        DataLocation("filesystem", classifier_path),
-        DataLocation("filesystem", weights_path),
-        classifier,
-    )
-
-
-def _get_image_location(image: Image):
-    if settings.ENVIRONMENT == "local":
-        return DataLocation("filesystem", image.image.path)
-    else:
-        config = get_image_storage_config(image.image_bucket)
-        return DataLocation(
-            storage_type="s3",
-            key=f"{config['s3_path']}{image.image.name}",
-            bucket_name=config["bucket"],
-        )
-
-
 @transaction.atomic
-def _write_classification_results(image, score_sets, label_ids, classifer_record, profile=None):
+def _write_classification_results(image, point_predictions, classifier_record, profile=None):
+    # Lock the image row, as create_classification_status does: a concurrent delete
+    # otherwise breaks the Point foreign key part way through bulk_create.
+    if not Image.objects.filter(id=image.pk).select_for_update().exists():
+        logger.info(f"Image {image.pk} was deleted, skipping classification results")
+        return
+
+    # SQS redelivers, and (image, row, column) carries no unique constraint, so a
+    # second delivery of the same job would otherwise double every point.
+    Point.objects.filter(image=image).delete()
+
     _annotations = []
     _points = []
     created_on = timezone.now()
 
-    for row, col, scores in score_sets:
-        _label_ids = label_ids[:]
+    for row, col, scores in point_predictions:
         point = Point(
             row=row,
             column=col,
@@ -409,14 +365,13 @@ def _write_classification_results(image, score_sets, label_ids, classifer_record
             updated_by=profile,
         )
         _points.append(point)
-        top_predictions = sorted(zip(_label_ids, scores), key=itemgetter(1), reverse=True)
-        for label, score in top_predictions[0:3]:
+        for label, score in scores[0:3]:
             ba_id, gf_id = parse_bagf_label(label)
-            if score >= settings.CLASSIFIED_THRESHOLD and ba_id is not None:
+            if score >= settings.CLASSIFIED_THRESHOLD and ba_id:
                 _annotations.append(
                     Annotation(
                         point=point,
-                        classifier=classifer_record,
+                        classifier=classifier_record,
                         benthic_attribute_id=ba_id,
                         growth_form_id=gf_id,
                         score=score * 100,
@@ -433,7 +388,7 @@ def _write_classification_results(image, score_sets, label_ids, classifer_record
     Annotation.objects.bulk_create(_annotations)
 
 
-def _classify_image(image_record_id, profile_id=None):
+def _classify_image(image_record_id, profile_id=None, num_points=None):
     profile = Profile.objects.get_or_none(id=profile_id) if profile_id else None
 
     image = Image.objects.get_or_none(id=image_record_id)
@@ -443,56 +398,33 @@ def _classify_image(image_record_id, profile_id=None):
     create_classification_status(image, ClassificationStatus.RUNNING)
 
     try:
-        tmp_dir = TemporaryDirectory()
-        tmp_feat_vector_file_path = Path(tmp_dir.name, f"{image.id}.featurevector")
-        feature_location = DataLocation("filesystem", tmp_feat_vector_file_path)
+        classifier_record = _resolve_active_classifier()
+        points = generate_points(image, num_points or settings.INFERENCE_DEFAULT_NUM_POINTS)
+        result = classify_via_lambda(image, points)
+        _write_classification_results(image, result.point_predictions, classifier_record, profile)
 
-        data_location = _get_image_location(image)
-        classifier, weights, classifer_record = _get_classifier_and_weights()
-        points = generate_points(image, 25)
-
-        extract_features_msg = ExtractFeaturesMsg(
-            job_token=image_record_id,
-            extractor=EfficientNetExtractor(
-                data_locations=dict(
-                    weights=weights,
-                ),
-            ),
-            rowcols=points,
-            image_loc=data_location,
-            feature_loc=feature_location,
-        )
-        classify_features_msg = ClassifyFeaturesMsg(
-            job_token=extract_features_msg.job_token,
-            feature_loc=extract_features_msg.feature_loc,
-            classifier_loc=classifier,
-        )
-        _ = extract_features(extract_features_msg)
-        response_message = classify_features(classify_features_msg)
-        label_ids = response_message.classes
-        score_sets = response_message.scores
-        _write_classification_results(image, score_sets, label_ids, classifer_record, profile)
-
-        with open(tmp_feat_vector_file_path, "rb") as tmp_feat_vector_file:
-            image.feature_vector_file.save(
-                f"{image.id}_featurevector", tmp_feat_vector_file, save=True
-            )
+        if result.feature_vector_name:
+            # A queryset update records exactly the key the Lambda wrote: no re-upload,
+            # no get_available_name suffix, and no post_save re-checksum from S3.
+            Image.objects.filter(pk=image.pk).update(feature_vector_file=result.feature_vector_name)
+            image.feature_vector_file.name = result.feature_vector_name
 
         create_classification_status(image, ClassificationStatus.COMPLETED)
     except Exception as err:
-        print(err)
+        logger.exception(f"Classifying image {image_record_id} failed")
         create_classification_status(image, ClassificationStatus.FAILED, str(err))
-    finally:
-        if Path(tmp_feat_vector_file_path).exists():
-            os.unlink(tmp_feat_vector_file_path)
 
 
-def classify_image_job(image_record_id, profile_id=None):
-    return submit_image_job(0, True, _classify_image, image_record_id=image_record_id)
-
-
-def classify_image(image_record_id, profile_id=None):
-    _classify_image(image_record_id)
+def classify_image_job(image_record_id, profile_id=None, num_points=None):
+    return submit_image_job(
+        0,
+        True,
+        _classify_image,
+        image_record_id=image_record_id,
+        profile_id=profile_id,
+        num_points=num_points,
+        visibility_timeout=settings.INFERENCE_JOB_VISIBILITY_TIMEOUT,
+    )
 
 
 def chunked_queryset_dataframe(qs, chunk_size=10000):
