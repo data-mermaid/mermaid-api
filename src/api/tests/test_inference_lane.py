@@ -3,7 +3,14 @@ from unittest.mock import MagicMock
 import pytest
 from django.core.files.uploadedfile import SimpleUploadedFile
 from django.test import override_settings
-from mermaid_inference_contract import parse_traceparent
+from mermaid_inference_contract import (
+    PointResult,
+    PointScore,
+    PyspacerResponse,
+    S3Location,
+    __version__ as CONTRACT_VERSION,
+    parse_traceparent,
+)
 from opentelemetry import trace as otel_trace
 from opentelemetry.trace import NonRecordingSpan, SpanContext, TraceFlags
 
@@ -16,6 +23,12 @@ from api.utils.inference import (
     classify_via_lambda,
     feature_vector_location,
     response_to_point_predictions,
+)
+
+# The deployed handler always emits every PyspacerResponse field; this default mirrors
+# that, so a test only overrides the one field its scenario is actually about.
+_DEFAULT_FEATURE_VECTOR_OUTPUT = S3Location(
+    bucket="prod-bucket", key="mermaid/default_featurevector"
 )
 
 
@@ -35,26 +48,29 @@ def image(valid_benthic_pq_transect_collect_record):
     )
 
 
-def _ok_payload(version="v2", feature_vector_output=None):
-    payload = {
-        "classifier_type": "pyspacer",
-        "classifier_version": version,
-        "valid_rowcol": True,
-        "traceparent": None,
-        "point_results": [
-            {
-                "row": 1,
-                "col": 2,
-                "scores": [
-                    {"label": "ba1::", "score": 0.9},
-                    {"label": "ba2::", "score": 0.1},
+def _ok_payload(
+    version="v2",
+    feature_vector_output=_DEFAULT_FEATURE_VECTOR_OUTPUT,
+    contract_version=CONTRACT_VERSION,
+):
+    return PyspacerResponse(
+        classifier_type="pyspacer",
+        classifier_version=version,
+        valid_rowcol=True,
+        point_results=[
+            PointResult(
+                row=1,
+                col=2,
+                scores=[
+                    PointScore(label="ba1::", score=0.9),
+                    PointScore(label="ba2::", score=0.1),
                 ],
-            },
+            ),
         ],
-    }
-    if feature_vector_output is not None:
-        payload["feature_vector_output"] = feature_vector_output
-    return payload
+        feature_vector_output=feature_vector_output,
+        traceparent=None,
+        contract_version=contract_version,
+    ).model_dump(mode="json")
 
 
 # --- build_pyspacer_request ---
@@ -105,13 +121,17 @@ def test_build_pyspacer_request_feature_vector_output():
 
 
 @override_settings(INFERENCE_CLASSIFIER_VERSION="v2")
+@override_settings(**STORAGE_SETTINGS)
 def test_classify_via_lambda_maps_response(monkeypatch, image):
     captured_payloads = []
-    _, requested_location = inference.feature_vector_location(image)
+    # Hand-written, not computed via feature_vector_location(image): the image fixture
+    # has no image_bucket set, so get_image_storage_config resolves the default (prod)
+    # bucket/prefix from STORAGE_SETTINGS above.
+    requested_location = S3Location(bucket="prod-bucket", key=f"mermaid/{image.id}_featurevector")
 
     def fake_invoke(payload):
         captured_payloads.append(payload)
-        return _ok_payload("v2", feature_vector_output=requested_location.model_dump(mode="json"))
+        return _ok_payload("v2", feature_vector_output=requested_location)
 
     monkeypatch.setattr(inference, "invoke_pyspacer", fake_invoke)
     result = classify_via_lambda(image, [(1, 2)])
@@ -128,7 +148,7 @@ def test_classify_via_lambda_maps_response(monkeypatch, image):
 def test_classify_via_lambda_returns_no_feature_vector_name_when_response_echoes_none(
     monkeypatch, image
 ):
-    payload = _ok_payload("v2")  # no feature_vector_output key -> None
+    payload = _ok_payload("v2", feature_vector_output=None)  # no feature vector written
     monkeypatch.setattr(inference, "invoke_pyspacer", lambda p: payload)
 
     result = classify_via_lambda(image, [(1, 2)])
@@ -177,7 +197,7 @@ def test_classify_via_lambda_contract_version_match_ok(monkeypatch, image):
 
 @override_settings(INFERENCE_CLASSIFIER_VERSION="v2")
 def test_classify_via_lambda_missing_contract_version_tolerated(monkeypatch, image):
-    payload = _ok_payload("v2")  # no contract_version key -> None (older Lambda)
+    payload = _ok_payload("v2", contract_version=None)  # older Lambda: no contract_version
     monkeypatch.setattr(inference, "invoke_pyspacer", lambda p: payload)
     result = classify_via_lambda(image, [(1, 2)])  # must NOT raise
     assert result.point_predictions == [(1, 2, [("ba1::", 0.9), ("ba2::", 0.1)])]
@@ -241,18 +261,22 @@ def test_classify_via_lambda_logs_traceparent_at_invoke(monkeypatch, image, capl
 
 
 def test_response_to_point_predictions_ranks_descending():
-    response = MagicMock()
-    response.point_results = [
-        MagicMock(
-            row=1,
-            col=2,
-            scores=[
-                MagicMock(label="low", score=0.1),
-                MagicMock(label="high", score=0.9),
-                MagicMock(label="mid", score=0.5),
-            ],
-        )
-    ]
+    response = PyspacerResponse(
+        classifier_type="pyspacer",
+        classifier_version="v2",
+        valid_rowcol=True,
+        point_results=[
+            PointResult(
+                row=1,
+                col=2,
+                scores=[
+                    PointScore(label="low", score=0.1),
+                    PointScore(label="high", score=0.9),
+                    PointScore(label="mid", score=0.5),
+                ],
+            )
+        ],
+    )
 
     predictions = response_to_point_predictions(response)
 

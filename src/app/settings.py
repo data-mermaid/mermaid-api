@@ -460,13 +460,15 @@ AWS_QUERYSTRING_AUTH = False
 AUTOCONFIRM_THRESHOLD = 1.0
 CLASSIFIED_THRESHOLD = 0.5
 INFERENCE_DEFAULT_NUM_POINTS = 25
-# Rendered into the container environment by the CDK app; there is no per-environment
-# default because each environment's inference image and Lambda name differ.
+# Identify which Lambda function to invoke and which classifier version it serves;
+# both arrive from the environment because they differ per deployment target.
 INFERENCE_LAMBDA_PYSPACER = os.environ.get("INFERENCE_LAMBDA_PYSPACER") or ""
 INFERENCE_CLASSIFIER_VERSION = os.environ.get("INFERENCE_CLASSIFIER_VERSION") or ""
-# Covers the inference Lambda's 600s timeout plus the S3 image read, a cold start,
-# the feature-vector write and the DB writes. Nothing sets this per-environment.
-INFERENCE_JOB_VISIBILITY_TIMEOUT = 900
+# Must outlast invoke_pyspacer's worst-case wall time (a retry launches a fresh,
+# non-idempotent Lambda execution), not a single attempt: get_lambda_client's
+# "max_attempts" is a retry count, so 1 retry there is 2 total invokes * (660s
+# read_timeout + 10s connect_timeout) + botocore's ~20s backoff cap.
+INFERENCE_JOB_VISIBILITY_TIMEOUT = 1500
 SPACER = {
     "AWS_ACCESS_KEY_ID": IMAGE_BUCKET_AWS_ACCESS_KEY_ID,
     "AWS_SECRET_ACCESS_KEY": IMAGE_BUCKET_AWS_SECRET_ACCESS_KEY,

@@ -413,6 +413,10 @@ def _classify_image(image_record_id, profile_id=None, num_points=None):
     except Exception as err:
         logger.exception(f"Classifying image {image_record_id} failed")
         create_classification_status(image, ClassificationStatus.FAILED, str(err))
+        # Re-raise only a retryable failure so SQS redelivers it; the status/results
+        # writes above are idempotent, so re-running this job is safe.
+        if getattr(err, "retryable", False):
+            raise
 
 
 def classify_image_job(image_record_id, profile_id=None, num_points=None):

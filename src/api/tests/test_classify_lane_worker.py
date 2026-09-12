@@ -52,9 +52,7 @@ def _statuses(image):
 
 
 @override_settings(**PINNED, **THRESHOLDS)
-def test_classifies_an_image_and_completes(
-    monkeypatch, image, classifier_v2, benthic_attribute_1
-):
+def test_classifies_an_image_and_completes(monkeypatch, image, classifier_v2, benthic_attribute_1):
     _stub_lambda(monkeypatch, [(11, 22, [(f"{benthic_attribute_1.pk}::", 0.9)])])
 
     _classify_image(image.pk)

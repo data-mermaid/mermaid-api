@@ -5,7 +5,13 @@ from typing import NamedTuple
 
 from boto3.session import Session
 from botocore.config import Config
-from botocore.exceptions import BotoCoreError, ClientError
+from botocore.exceptions import (
+    BotoCoreError,
+    ClientError,
+    ConnectTimeoutError,
+    EndpointConnectionError,
+    ReadTimeoutError,
+)
 from django.conf import settings
 from mermaid_inference_contract import (
     PyspacerRequest,
@@ -28,9 +34,23 @@ _LAMBDA_READ_TIMEOUT = 660
 
 _lambda_client = None
 
+# Lambda's own throttling error code; botocore surfaces it as a ClientError, not one
+# of the transient BotoCoreError subclasses below.
+_RETRYABLE_CLIENT_ERROR_CODES = frozenset({"TooManyRequestsException"})
+_RETRYABLE_BOTOCORE_EXCEPTIONS = (ReadTimeoutError, ConnectTimeoutError, EndpointConnectionError)
+
 
 class InferenceError(Exception):
-    """Raised when the inference Lambda invocation fails or returns an error envelope."""
+    """Raised when the inference Lambda invocation fails or returns an error envelope.
+
+    `retryable` marks failures where a fresh invoke might succeed — a Lambda throttle,
+    a client-side timeout, or an envelope that opts in explicitly — so the caller can
+    let SQS redeliver the job instead of failing the image permanently.
+    """
+
+    def __init__(self, message, *, retryable=False):
+        super().__init__(message)
+        self.retryable = retryable
 
 
 class LambdaClassificationResult(NamedTuple):
@@ -38,13 +58,13 @@ class LambdaClassificationResult(NamedTuple):
     feature_vector_name: str | None
 
 
-def get_lambda_client(aws_access_key_id=None, aws_secret_access_key=None):
+def get_lambda_client():
     """Return a boto3 Lambda client, built once per process and reused after."""
     global _lambda_client
     if _lambda_client is None:
         session = Session(
-            aws_access_key_id=aws_access_key_id or settings.AWS_ACCESS_KEY_ID,
-            aws_secret_access_key=aws_secret_access_key or settings.AWS_SECRET_ACCESS_KEY,
+            aws_access_key_id=settings.AWS_ACCESS_KEY_ID,
+            aws_secret_access_key=settings.AWS_SECRET_ACCESS_KEY,
             region_name=settings.AWS_REGION,
         )
         _lambda_client = session.client(
@@ -52,7 +72,10 @@ def get_lambda_client(aws_access_key_id=None, aws_secret_access_key=None):
             config=Config(
                 connect_timeout=10,
                 read_timeout=_LAMBDA_READ_TIMEOUT,
-                retries={"max_attempts": 5, "mode": "standard"},
+                # "max_attempts" counts retries, not total attempts: botocore enforces
+                # max_attempts + 1 total tries. 1 retry here means 2 total invokes, each
+                # a fresh, non-idempotent Lambda execution — see INFERENCE_JOB_VISIBILITY_TIMEOUT.
+                retries={"max_attempts": 1, "mode": "standard"},
             ),
         )
     return _lambda_client
@@ -74,8 +97,16 @@ def invoke_pyspacer(payload: dict) -> dict:
             Payload=json.dumps(payload).encode("utf-8"),
         )
     except (BotoCoreError, ClientError) as err:
-        code = getattr(err, "response", {}).get("Error", {}).get("Code", type(err).__name__)
-        raise InferenceError(f"invoke_pyspacer: Lambda invoke failed ({code})") from err
+        # A ClientError's .response is always a dict; a BotoCoreError subclass such as
+        # ReadTimeoutError sets it to None, so "or {}" covers both.
+        error_response = getattr(err, "response", None) or {}
+        code = error_response.get("Error", {}).get("Code", type(err).__name__)
+        retryable = code in _RETRYABLE_CLIENT_ERROR_CODES or isinstance(
+            err, _RETRYABLE_BOTOCORE_EXCEPTIONS
+        )
+        raise InferenceError(
+            f"invoke_pyspacer: Lambda invoke failed ({code})", retryable=retryable
+        ) from err
 
     raw = response["Payload"].read()
     if response.get("FunctionError"):
@@ -87,11 +118,11 @@ def invoke_pyspacer(payload: dict) -> dict:
 def feature_vector_location(image) -> tuple[str, S3Location]:
     """Name/location pair for an image's feature vector.
 
-    `name` matches the Django FileField name the in-process pyspacer path saves
-    (relative to the bucket's S3Storage `location` prefix). `S3Location.key` carries
-    that same prefix explicitly, since the contract has no notion of a storage-level
-    location — getting this pair out of sync means the Lambda writes bytes at a key
-    the FileField does not point at.
+    `name` must match the Django FileField name exactly, so a queryset update can
+    record the Lambda-written key directly (relative to the bucket's S3Storage
+    `location` prefix). `S3Location.key` carries that same prefix explicitly, since
+    the contract has no notion of a storage-level location — getting this pair out
+    of sync means the Lambda writes bytes at a key the FileField does not point at.
     """
     name = f"{image.id}_featurevector"
     config = get_image_storage_config(image.image_bucket)
@@ -148,7 +179,7 @@ def response_to_point_predictions(response):
 def _resolve_active_classifier() -> Classifier:
     """The Classifier row for the version baked into the deployed inference image.
 
-    No latest()-style fallback: that orders by created_on and could return a
+    Looks up the row by an exact version match: any other selection could return a
     different row than the one that actually scored the points, mis-attributing
     Annotation.classifier.
     """
@@ -185,7 +216,10 @@ def classify_via_lambda(image, points) -> LambdaClassificationResult:
                 "pyspacer inference error envelope",
                 extra={"traceparent": traceparent, "error_code": payload.get("error_code")},
             )
-            raise InferenceError(payload.get("message") or "inference error")
+            raise InferenceError(
+                payload.get("message") or "inference error",
+                retryable=bool(payload.get("retryable")),
+            )
 
         response = parse_classify_response(payload)
 
