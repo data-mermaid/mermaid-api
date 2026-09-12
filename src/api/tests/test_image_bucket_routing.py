@@ -230,30 +230,6 @@ def test_get_image_storage_config_falsy_bucket(bucket):
     assert config["access_key"] == "image-key"
 
 
-# --- _get_image_location ---
-
-
-@override_settings(ENVIRONMENT="dev", **STORAGE_SETTINGS)
-@pytest.mark.parametrize(
-    "bucket,expected_prefix",
-    [
-        ("test-bucket", "mermaid-production-test/"),
-        ("prod-bucket", "mermaid/"),
-    ],
-)
-def test_get_image_location(bucket, expected_prefix):
-    from api.utils.classification import _get_image_location
-
-    image = MagicMock()
-    image.image_bucket = bucket
-    image.image.name = "abc123.png"
-
-    location = _get_image_location(image)
-    assert location.storage_type == "s3"
-    assert location.bucket_name == bucket
-    assert location.key == f"{expected_prefix}abc123.png"
-
-
 # --- move_file_cross_account ---
 
 

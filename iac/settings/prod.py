@@ -34,6 +34,7 @@ PROD_SETTINGS = ProjectSettings(
         mermaid_api_audience="https://api.datamermaid.org",
         public_bucket="public.datamermaid.org",
         sqs_message_visibility=60,
+        image_sqs_message_visibility=1500,
         # Image classification
         ic_bucket_name="coral-reef-training",
         ic_bucket_name_test="mermaid-image-processing",
@@ -44,5 +45,5 @@ PROD_SETTINGS = ProjectSettings(
         slack_workspace_id=os.getenv("SLACK_WORKSPACE_ID", ""),
         slack_channel_id=os.getenv("SLACK_CHANNEL_ID", ""),
     ),
-    inference=InferenceSettings(image_tag="v2-1"),
+    inference=InferenceSettings(image_tag="v1-1", classifier_version="v1"),
 )

@@ -411,6 +411,7 @@ LOGGING = {
             "level": "ERROR",
             "propagate": False,
         },
+        "api.utils.inference": {"handlers": ["console"], "level": "INFO", "propagate": False},
     },
 }
 
@@ -458,12 +459,15 @@ MAX_IMAGE_FILE_SIZE = 30 * 1024 * 1024  # 30 MB
 AWS_QUERYSTRING_AUTH = False
 AUTOCONFIRM_THRESHOLD = 1.0
 CLASSIFIED_THRESHOLD = 0.5
-SPACER = {
-    "AWS_ACCESS_KEY_ID": IMAGE_BUCKET_AWS_ACCESS_KEY_ID,
-    "AWS_SECRET_ACCESS_KEY": IMAGE_BUCKET_AWS_SECRET_ACCESS_KEY,
-    "AWS_REGION": AWS_REGION,
-    "EXTRACTORS_CACHE_DIR": "/tmp/classifier",
-}
+INFERENCE_DEFAULT_NUM_POINTS = 25
+# Identify which Lambda function to invoke and which classifier version it serves;
+# both arrive from the environment because they differ per deployment target.
+INFERENCE_LAMBDA_PYSPACER = os.environ.get("INFERENCE_LAMBDA_PYSPACER") or ""
+INFERENCE_CLASSIFIER_VERSION = os.environ.get("INFERENCE_CLASSIFIER_VERSION") or ""
+# Must outlast invoke_pyspacer's worst case (get_lambda_client's 1 retry = 2
+# invokes * (660s read_timeout + 10s connect_timeout) + ~20s backoff cap) and
+# sets the floor for image_sqs_message_visibility (iac/settings/settings.py).
+INFERENCE_JOB_VISIBILITY_TIMEOUT = 1500
 
 # Reporting S3 credentials
 REPORT_S3_ACCESS_KEY_ID = os.environ.get("REPORT_S3_ACCESS_KEY_ID")

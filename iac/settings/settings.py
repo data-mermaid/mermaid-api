@@ -51,11 +51,18 @@ class DjangoSettings:
     env_secret_name: str
 
     # Common Attrs (defaults)
+    # Outlasts invoke_pyspacer's worst case: 2 attempts * (660s read + 10s connect
+    # timeout) + ~20s botocore backoff cap ~= 1360s. Matches INFERENCE_JOB_VISIBILITY_TIMEOUT
+    # (src/app/settings.py), the per-job extension; this covers the batch's other messages.
+    image_sqs_message_visibility: int = 1500
     maintenance_mode: str = "False"
     auth0_management_api_audience: str = "https://datamermaid.auth0.com/api/v2/"
     email_host: str = "smtp.gmail.com"
     email_port: str = "587"
     mc_user: str = "Mermaid"
+    # Mirrors IMAGE_S3_PATH in src/app/settings.py: the key prefix under
+    # ic_bucket_name that the API stores patch images beneath.
+    ic_s3_path: str = "mermaid/"
     ic_bucket_name_test: str = ""
     ic_s3_path_test: str = ""
     # AWS Chatbot Slack integration (leave empty to disable)
@@ -71,17 +78,40 @@ class InferenceSettings:
 
     image_tag is the model-build ECR tag `vN-K` (vN = model version, K = serving build).
     Bump K for a code/lib fix, vN for a retrain. Roll forward by editing this value
-    and redeploying (git-tracked).
+    and redeploying (git-tracked). classifier_version is the vN the image serves.
     """
 
     image_tag: str
+    classifier_version: str
     config_bucket: str = "mermaid-config"
-    image_bucket: str = "mermaid-image-processing"
     memory_mb: int = 10240
+    # The Lambda's own timeout. src/api/utils/inference.py's _LAMBDA_READ_TIMEOUT
+    # must exceed this (in seconds) or botocore's client-side timeout fires first.
     timeout_minutes: int = 10
     ephemeral_storage_gb: int = 2
     reserved_concurrency: int = 20
     num_threads: int = 6
+
+    def __post_init__(self) -> None:
+        # build-push.yml tags the image `${MODEL_VERSION}-${BUILD}` and bakes the same
+        # MODEL_VERSION in as CLASSIFIER_VERSION, so `vN-K` implies CLASSIFIER_VERSION=vN.
+        tag_version = self.image_tag.split("-", 1)[0]
+        if tag_version != self.classifier_version:
+            raise ValueError(
+                f"image_tag {self.image_tag!r} serves model version {tag_version!r}, "
+                f"but classifier_version is {self.classifier_version!r}"
+            )
+
+
+def pyspacer_function_name(env_id: str) -> str:
+    """The pyspacer inference Lambda's function name for this environment.
+
+    Shared by ApiStack (env var value, ARN string, invoke grant) and InferenceStack
+    (the function itself, its log group) so the two stacks cannot name it apart.
+    Takes only env_id, never a stack or construct, so importing this cannot
+    reintroduce the ApiStack<->InferenceStack cycle a cross-stack reference would.
+    """
+    return f"{env_id}-mermaid-inference-pyspacer"
 
 
 @dataclass

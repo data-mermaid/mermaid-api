@@ -82,29 +82,68 @@ It builds the `pyspacer-function` Lambda image (baking in
 `CLASSIFIER_VERSION=vN` and pinning the matching pyspacer/sklearn) and pushes it
 to the ECR repo `mermaid-inference-pyspacer` tagged **`vN-K`**.
 
-## Step 3 — Point the Lambda at the new image
+## Step 3 — Register the classifier version
+
+`_resolve_active_classifier()` (`src/api/utils/inference.py`) looks up the
+`Classifier` row for `INFERENCE_CLASSIFIER_VERSION` by exact match. Step 4
+below points the API at `vN`, but nothing in steps 1–2 creates that row — skip
+this step and every image uploaded after the deploy fails classification
+silently (`DoesNotExist` is not retryable, so the job is marked `FAILED` and
+the SQS message is deleted; no DLQ entry, no alarm).
+
+Register `vN` against **dev**, then **prod**, before editing
+`classifier_version` in either environment's settings:
+
+```bash
+python manage.py register_classifier vN
+```
+
+Then verify the row exists in each environment before moving on:
+
+```
+GET /v1/classification/classifiers/?version=vN
+```
+
+> **This only works for a version whose S3 prefix has a `model.json`.**
+> `Classifier.register()` reads `classifier/<version>/model.json`, and the
+> Beta version `v1` has none — it predates this manifest and uses the legacy
+> pickle layout instead, so `register_classifier v1` fails by design. `v1`'s
+> row exists only because it was created by hand. See
+> [mermaid-classifier#102](https://github.com/data-mermaid/mermaid-classifier/issues/102),
+> which tracks the gap.
+
+## Step 4 — Point the Lambda at the new image
 
 The Lambda's image tag is pinned in this repo's CDK config **per environment**
 (`InferenceSettings.image_tag`) — building the image in step 2 does **not** by
 itself update any running Lambda. Roll the tag out dev-first, then prod; each
-environment has its own settings file and its own stack
-(`dev-mermaid-inference` / `prod-mermaid-inference`).
+environment has its own settings file. `classifier_version` also feeds
+`INFERENCE_CLASSIFIER_VERSION` on the API service and both workers (`ApiStack`),
+so bumping it redeploys `dev-mermaid-api-django` / `prod-mermaid-api-django`
+(new task definition revisions) alongside `dev-mermaid-inference` /
+`prod-mermaid-inference` — expect both stacks in the same deploy.
 
 1. **Dev.** Edit [`iac/settings/dev.py`](../iac/settings/dev.py), set the
-   inference image tag to the `vN-K` from step 2, and merge to `dev` (via PR):
+   inference image tag to the `vN-K` from step 2 and `classifier_version` to
+   the matching `vN`, and merge to `dev` (via PR):
 
    ```python
-   inference=InferenceSettings(image_tag="v3-2"),
+   inference=InferenceSettings(image_tag="v3-2", classifier_version="v3"),
    ```
+
+   `image_tag` and `classifier_version` move together: `cdk synth` asserts
+   the model version encoded in `image_tag` (`vN` from `vN-K`) matches
+   `classifier_version`, since a CI-built image always pairs them this way.
 
    Merging to `dev` triggers **[Deploy CDK](https://github.com/data-mermaid/mermaid-api/actions/workflows/deploy-cdk.yml)**,
    which updates `dev-mermaid-inference`'s `PyspacerInferenceFunction` to serve
-   the new image. Validate on dev.
+   the new image, and rolls `dev-mermaid-api-django`'s API/worker tasks to the
+   matching `INFERENCE_CLASSIFIER_VERSION`. Validate on dev.
 
 2. **Prod.** Make the same edit in
    [`iac/settings/prod.py`](../iac/settings/prod.py), merge it to `dev`, then cut
    a release tag (e.g. `v1.2`). The tag triggers the **Deploy CDK** PROD job,
-   which updates `prod-mermaid-inference` the same way.
+   which updates `prod-mermaid-inference` and `prod-mermaid-api-django` the same way.
 
 Git history of `dev.py` / `prod.py` is the deploy log. Once the prod deploy
 completes, the production inference Lambda serves the new classifier version.

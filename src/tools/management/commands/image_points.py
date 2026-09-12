@@ -1,3 +1,4 @@
+from django.conf import settings
 from django.core.management.base import BaseCommand
 from PIL import Image as PILImage, ImageDraw
 
@@ -27,7 +28,7 @@ class Command(BaseCommand):
             self.stderr.write(f"Image with id {image} does not exist.")
             self.exit(1)
 
-        points = classification.generate_points(img_rec, 25)
+        points = classification.generate_points(img_rec, settings.INFERENCE_DEFAULT_NUM_POINTS)
 
         with img_rec.image.open("rb") as f:
             pil_image = PILImage.open(f).copy()
