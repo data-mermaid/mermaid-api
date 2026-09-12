@@ -169,9 +169,12 @@ def test_classify_via_lambda_raises_on_error_envelope(monkeypatch, image):
 @override_settings(INFERENCE_CLASSIFIER_VERSION="v2")
 def test_classify_via_lambda_drift_guard(monkeypatch, image):
     monkeypatch.setattr(inference, "invoke_pyspacer", lambda payload: _ok_payload("v3"))
-    with pytest.raises(InferenceError) as exc:
+    with pytest.raises(InferenceError) as excinfo:
         classify_via_lambda(image, [(1, 2)])
-    assert "drift" in str(exc.value).lower()
+    assert "drift" in str(excinfo.value).lower()
+    # Retryable: ApiStack and InferenceStack deploy independently; on a version bump
+    # SQS redelivers after the visibility timeout and the image classifies correctly.
+    assert excinfo.value.retryable is True
 
 
 @override_settings(INFERENCE_CLASSIFIER_VERSION="v2")
@@ -179,9 +182,12 @@ def test_classify_via_lambda_contract_version_mismatch_raises(monkeypatch, image
     payload = _ok_payload("v2")
     payload["contract_version"] = "9.9.9"  # != installed
     monkeypatch.setattr(inference, "invoke_pyspacer", lambda p: payload)
-    with pytest.raises(InferenceError) as exc:
+    with pytest.raises(InferenceError) as excinfo:
         classify_via_lambda(image, [(1, 2)])
-    assert "contract" in str(exc.value).lower()
+    assert "contract" in str(excinfo.value).lower()
+    # Non-retryable: contract skew is a configuration error that redelivery cannot fix;
+    # it should fail once and alarm instead of looping to the DLQ.
+    assert excinfo.value.retryable is False
 
 
 @override_settings(INFERENCE_CLASSIFIER_VERSION="v2")
