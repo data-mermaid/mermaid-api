@@ -469,12 +469,6 @@ INFERENCE_CLASSIFIER_VERSION = os.environ.get("INFERENCE_CLASSIFIER_VERSION") or
 # "max_attempts" is a retry count, so 1 retry there is 2 total invokes * (660s
 # read_timeout + 10s connect_timeout) + botocore's ~20s backoff cap.
 INFERENCE_JOB_VISIBILITY_TIMEOUT = 1500
-SPACER = {
-    "AWS_ACCESS_KEY_ID": IMAGE_BUCKET_AWS_ACCESS_KEY_ID,
-    "AWS_SECRET_ACCESS_KEY": IMAGE_BUCKET_AWS_SECRET_ACCESS_KEY,
-    "AWS_REGION": AWS_REGION,
-    "EXTRACTORS_CACHE_DIR": "/tmp/classifier",
-}
 
 # Reporting S3 credentials
 REPORT_S3_ACCESS_KEY_ID = os.environ.get("REPORT_S3_ACCESS_KEY_ID")
