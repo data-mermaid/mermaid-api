@@ -82,7 +82,37 @@ It builds the `pyspacer-function` Lambda image (baking in
 `CLASSIFIER_VERSION=vN` and pinning the matching pyspacer/sklearn) and pushes it
 to the ECR repo `mermaid-inference-pyspacer` tagged **`vN-K`**.
 
-## Step 3 — Point the Lambda at the new image
+## Step 3 — Register the classifier version
+
+`_resolve_active_classifier()` (`src/api/utils/inference.py`) looks up the
+`Classifier` row for `INFERENCE_CLASSIFIER_VERSION` by exact match. Step 4
+below points the API at `vN`, but nothing in steps 1–2 creates that row — skip
+this step and every image uploaded after the deploy fails classification
+silently (`DoesNotExist` is not retryable, so the job is marked `FAILED` and
+the SQS message is deleted; no DLQ entry, no alarm).
+
+Register `vN` against **dev**, then **prod**, before editing
+`classifier_version` in either environment's settings:
+
+```bash
+python manage.py register_classifier vN
+```
+
+Then verify the row exists in each environment before moving on:
+
+```
+GET /v1/classification/classifiers/?version=vN
+```
+
+> **This only works for a version whose S3 prefix has a `model.json`.**
+> `Classifier.register()` reads `classifier/<version>/model.json`, and the
+> Beta version `v1` has none — it predates this manifest and uses the legacy
+> pickle layout instead, so `register_classifier v1` fails by design. `v1`'s
+> row exists only because it was created by hand. See
+> [mermaid-classifier#102](https://github.com/data-mermaid/mermaid-classifier/issues/102),
+> which tracks the gap.
+
+## Step 4 — Point the Lambda at the new image
 
 The Lambda's image tag is pinned in this repo's CDK config **per environment**
 (`InferenceSettings.image_tag`) — building the image in step 2 does **not** by

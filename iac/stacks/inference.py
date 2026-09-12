@@ -13,7 +13,7 @@ from aws_cdk import (
     aws_sns as sns,
 )
 from constructs import Construct
-from settings.settings import ProjectSettings
+from settings.settings import ProjectSettings, pyspacer_function_name
 
 
 class InferenceStack(Stack):
@@ -52,7 +52,7 @@ class InferenceStack(Stack):
         log_group = logs.LogGroup(
             self,
             "PyspacerInferenceFunctionLogGroup",
-            log_group_name=f"/aws/lambda/{config.env_id}-mermaid-inference-pyspacer",
+            log_group_name=f"/aws/lambda/{pyspacer_function_name(config.env_id)}",
             retention=logs.RetentionDays.ONE_MONTH,
             removal_policy=RemovalPolicy.DESTROY,
         )
@@ -60,7 +60,7 @@ class InferenceStack(Stack):
         self.function = lambda_.DockerImageFunction(
             self,
             "PyspacerInferenceFunction",
-            function_name=f"{config.env_id}-mermaid-inference-pyspacer",
+            function_name=pyspacer_function_name(config.env_id),
             code=lambda_.DockerImageCode.from_ecr(
                 repository=inference_repo,
                 tag_or_digest=inf.image_tag,

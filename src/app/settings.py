@@ -464,10 +464,9 @@ INFERENCE_DEFAULT_NUM_POINTS = 25
 # both arrive from the environment because they differ per deployment target.
 INFERENCE_LAMBDA_PYSPACER = os.environ.get("INFERENCE_LAMBDA_PYSPACER") or ""
 INFERENCE_CLASSIFIER_VERSION = os.environ.get("INFERENCE_CLASSIFIER_VERSION") or ""
-# Must outlast invoke_pyspacer's worst-case wall time (a retry launches a fresh,
-# non-idempotent Lambda execution), not a single attempt: get_lambda_client's
-# "max_attempts" is a retry count, so 1 retry there is 2 total invokes * (660s
-# read_timeout + 10s connect_timeout) + botocore's ~20s backoff cap.
+# Must outlast invoke_pyspacer's worst case (get_lambda_client's 1 retry = 2
+# invokes * (660s read_timeout + 10s connect_timeout) + ~20s backoff cap) and
+# sets the floor for image_sqs_message_visibility (iac/settings/settings.py).
 INFERENCE_JOB_VISIBILITY_TIMEOUT = 1500
 
 # Reporting S3 credentials

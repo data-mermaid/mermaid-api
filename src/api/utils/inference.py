@@ -28,8 +28,9 @@ from ..models.classification import Classifier, get_image_storage_config
 
 logger = logging.getLogger(__name__)
 
-# The Lambda's own timeout is 600s; botocore's 60s read_timeout default would
-# abort a slower synchronous invoke client-side before the function itself does.
+# Must stay above the Lambda's own timeout (InferenceSettings.timeout_minutes,
+# iac/settings/settings.py, 600s) or botocore aborts a slower synchronous invoke
+# client-side before the function itself does.
 _LAMBDA_READ_TIMEOUT = 660
 
 _lambda_client = None
@@ -229,9 +230,13 @@ def classify_via_lambda(image, points) -> LambdaClassificationResult:
                 "pyspacer classifier version drift",
                 extra={"traceparent": traceparent},
             )
+            # Retryable: ApiStack and InferenceStack deploy independently, so a version
+            # bump has a redelivery window before both sides agree; a genuine permanent
+            # mismatch retries to the DLQ and alarms instead of failing silently.
             raise InferenceError(
                 f"Classifier version drift: Lambda served {response.classifier_version!r}, "
-                f"expected {expected!r}"
+                f"expected {expected!r}",
+                retryable=True,
             )
 
         installed = CONTRACT_VERSION

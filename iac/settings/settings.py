@@ -85,6 +85,8 @@ class InferenceSettings:
     classifier_version: str
     config_bucket: str = "mermaid-config"
     memory_mb: int = 10240
+    # The Lambda's own timeout. src/api/utils/inference.py's _LAMBDA_READ_TIMEOUT
+    # must exceed this (in seconds) or botocore's client-side timeout fires first.
     timeout_minutes: int = 10
     ephemeral_storage_gb: int = 2
     reserved_concurrency: int = 20
@@ -99,6 +101,17 @@ class InferenceSettings:
                 f"image_tag {self.image_tag!r} serves model version {tag_version!r}, "
                 f"but classifier_version is {self.classifier_version!r}"
             )
+
+
+def pyspacer_function_name(env_id: str) -> str:
+    """The pyspacer inference Lambda's function name for this environment.
+
+    Shared by ApiStack (env var value, ARN string, invoke grant) and InferenceStack
+    (the function itself, its log group) so the two stacks cannot name it apart.
+    Takes only env_id, never a stack or construct, so importing this cannot
+    reintroduce the ApiStack<->InferenceStack cycle a cross-stack reference would.
+    """
+    return f"{env_id}-mermaid-inference-pyspacer"
 
 
 @dataclass

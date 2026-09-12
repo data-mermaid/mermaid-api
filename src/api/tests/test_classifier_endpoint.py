@@ -19,9 +19,7 @@ def pinned_classifier():
     # Backdated so recency alone would point `Classifier.latest()` at
     # `newer_classifier` instead - the two rows must stay distinguishable
     # by pin, not by creation order.
-    classifier = Classifier.objects.create(
-        name="pinned", version="v1", config={"patch_size": 224}
-    )
+    classifier = Classifier.objects.create(name="pinned", version="v1", config={"patch_size": 224})
     Classifier.objects.filter(pk=classifier.pk).update(
         created_on=timezone.now() - timedelta(days=1)
     )
@@ -41,7 +39,9 @@ def test_is_default_reflects_pinned_version_not_latest(
     response = api_client.get(reverse("classifier-list"))
     assert response.status_code == 200
 
-    is_default_by_version = {row["version"]: row["is_default"] for row in response.json()["results"]}
+    is_default_by_version = {
+        row["version"]: row["is_default"] for row in response.json()["results"]
+    }
     assert is_default_by_version == {"v1": True, "v2": False}
 
 

@@ -25,7 +25,7 @@ from aws_cdk import (
     aws_sns as sns,
 )
 from constructs import Construct
-from settings.settings import ProjectSettings
+from settings.settings import ProjectSettings, pyspacer_function_name
 from stacks.constructs.adot import add_adot_sidecar
 from stacks.constructs.alerts import MonitoringAlerts
 from stacks.constructs.dashboard import MonitoringDashboard
@@ -176,11 +176,11 @@ class ApiStack(Stack):
         # Envir Vars
         sqs_queue_name = f"mermaid-{config.env_id}-general"
         image_sqs_queue_name = f"mermaid-{config.env_id}-image-processing"
-        # Built as a string, not imported from InferenceStack: InferenceStack already
-        # depends on ApiStack.alerts_topic, so a reverse reference would cycle the two
-        # stacks. The string form also lets the invoke grant land before InferenceStack
-        # updates the function.
-        inference_function_name = f"{config.env_id}-mermaid-inference-pyspacer"
+        # Computed via the shared pyspacer_function_name helper, not imported from
+        # InferenceStack: InferenceStack already depends on ApiStack.alerts_topic, so a
+        # reverse construct reference would cycle the two stacks. The string form also
+        # lets the invoke grant land before InferenceStack updates the function.
+        inference_function_name = pyspacer_function_name(config.env_id)
         inference_function_arn = (
             f"arn:aws:lambda:{self.region}:{self.account}:function:{inference_function_name}"
         )
