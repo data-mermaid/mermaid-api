@@ -24,6 +24,7 @@ class QueueWorker(Construct):
         queue_name: str,
         fifo: bool = False,
         email: str | None = None,
+        visibility_timeout_seconds: int | None = None,
         **kwargs,
     ) -> None:
         super().__init__(scope, id, **kwargs)
@@ -35,6 +36,7 @@ class QueueWorker(Construct):
             queue_name=queue_name,
             fifo=fifo,
             email=email,
+            visibility_timeout_seconds=visibility_timeout_seconds,
         )
 
         worker_service = ecs_patterns.QueueProcessingEc2Service(

@@ -32,6 +32,7 @@ DEV_SETTINGS = ProjectSettings(
         mermaid_api_audience="https://dev-api.datamermaid.org",
         public_bucket="dev-public.datamermaid.org",
         sqs_message_visibility=60,
+        image_sqs_message_visibility=1500,
         # Image classification
         ic_bucket_name="mermaid-image-processing",
         # Secrets

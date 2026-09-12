@@ -15,6 +15,7 @@ from aws_cdk import (
     aws_ecs as ecs,
     aws_ecs_patterns as ecs_patterns,
     aws_elasticloadbalancingv2 as elb,
+    aws_iam as iam,
     aws_logs as logs,
     aws_rds as rds,
     aws_route53 as r53,
@@ -175,6 +176,14 @@ class ApiStack(Stack):
         # Envir Vars
         sqs_queue_name = f"mermaid-{config.env_id}-general"
         image_sqs_queue_name = f"mermaid-{config.env_id}-image-processing"
+        # Built as a string, not imported from InferenceStack: InferenceStack already
+        # depends on ApiStack.alerts_topic, so a reverse reference would cycle the two
+        # stacks. The string form also lets the invoke grant land before InferenceStack
+        # updates the function.
+        inference_function_name = f"{config.env_id}-mermaid-inference-pyspacer"
+        inference_function_arn = (
+            f"arn:aws:lambda:{self.region}:{self.account}:function:{inference_function_name}"
+        )
         environment = {
             "ENV": config.env_id,
             "ENVIRONMENT": config.env_id,
@@ -203,6 +212,8 @@ class ApiStack(Stack):
             "USE_FIFO": use_fifo_queues,
             "SQS_QUEUE_NAME": sqs_queue_name,
             "IMAGE_SQS_QUEUE_NAME": image_sqs_queue_name,
+            "INFERENCE_LAMBDA_PYSPACER": inference_function_name,
+            "INFERENCE_CLASSIFIER_VERSION": config.inference.classifier_version,
             # OpenTelemetry / X-Ray
             # ecs-xray.yaml only configures a traces pipeline; disable metrics and
             # logs exporters to suppress UNIMPLEMENTED errors from the ADOT sidecar.
@@ -426,11 +437,23 @@ class ApiStack(Stack):
             queue_name=image_sqs_queue_name,
             email=sys_email,
             fifo=False,
+            visibility_timeout_seconds=config.api.image_sqs_message_visibility,
         )
 
         # allow API to send messages to the queue
         worker.queue.grant_send_messages(service.task_definition.task_role)
         image_worker.queue.grant_send_messages(service.task_definition.task_role)
+
+        # Only classify_image_job (run on IMAGE_QUEUE_NAME) invokes the inference
+        # Lambda: the API enqueues and the general worker only copies feature vectors,
+        # so the invoke grant goes to the image worker's task role alone — unlike prior
+        # grants above, which cover both workers.
+        image_worker.task_definition.task_role.add_to_principal_policy(
+            iam.PolicyStatement(
+                actions=["lambda:InvokeFunction"],
+                resources=[inference_function_arn],
+            )
+        )
 
         # allow API to read/write to the public bucket
         public_bucket.grant_read_write(service.task_definition.task_role)
