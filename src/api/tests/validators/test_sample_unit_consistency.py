@@ -286,3 +286,37 @@ def test_different_quadrat_size_different_value(
     assert result.code == DifferentQuadratSizeValidator.DIFFERENT_QUADRAT_SIZE
     assert result.context["quadrat_size"] == 2.0
     assert result.context["other_quadrat_size"] == 1.0
+
+
+# ==================== per-validation-run caching tests ====================
+
+
+def test_bpqt_consistency_validators_share_one_sibling_fetch(
+    benthic_photo_quadrat_transect1,
+    valid_benthic_pq_transect_collect_record,
+    django_assert_num_queries,
+):
+    """BPQT stacks three of these checks, all against the same quadrat_transect row."""
+    quadrat_transect = valid_benthic_pq_transect_collect_record.data["quadrat_transect"]
+    quadrat_transect["num_quadrats"] = 2
+    quadrat_transect["num_points_per_quadrat"] = 100
+    quadrat_transect["len_surveyed"] = 50
+    valid_benthic_pq_transect_collect_record.save()
+
+    validators = [
+        _get_num_quadrats_validator(),
+        _get_num_points_per_quadrat_validator(),
+        DifferentTransectLengthValidator(
+            protocol_path="data.protocol",
+            site_path="data.sample_event.site",
+            management_path="data.sample_event.management",
+            sample_date_path="data.sample_event.sample_date",
+            len_surveyed_path="data.quadrat_transect.len_surveyed",
+        ),
+    ]
+    record = CollectRecordSerializer(instance=valid_benthic_pq_transect_collect_record).data
+
+    # One sample event lookup and one sibling sample unit fetch, shared by all three.
+    with django_assert_num_queries(2):
+        for validator in validators:
+            assert validator(record).status == OK

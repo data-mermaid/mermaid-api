@@ -49,13 +49,36 @@ class SampleEventConsistencyValidator(BaseValidator):
         if sample_date is None:
             return None  # Let other validators handle invalid dates
 
-        sample_event = SampleEvent.objects.filter(
-            site_id=site_id,
-            management_id=management_id,
-            sample_date=sample_date,
-        ).first()
+        cache = self.get_run_cache(collect_record, "sample_events")
+        key = (str(site_id), str(management_id), sample_date)
+        if key not in cache:
+            cache[key] = SampleEvent.objects.filter(
+                site_id=site_id,
+                management_id=management_id,
+                sample_date=sample_date,
+            ).first()
 
-        return sample_event
+        return cache[key]
+
+    def _get_sibling_sample_units(
+        self, collect_record, sample_event, model, sample_event_path, select_related=()
+    ):
+        """Sample units of one protocol already recorded against a sample event.
+
+        A protocol can stack several of these checks against the same rows: BPQT
+        compares num_quadrats, num_points_per_quadrat and len_surveyed, all of which
+        live on the same quadrat_transect. Cache the rows for the validation run so
+        they are fetched once rather than once per validator.
+        """
+        cache = self.get_run_cache(collect_record, "sibling_sample_units")
+        key = (model, sample_event_path, str(sample_event.pk), select_related)
+        if key not in cache:
+            queryset = model.objects.filter(**{sample_event_path: sample_event})
+            if select_related:
+                queryset = queryset.select_related(*select_related)
+            cache[key] = list(queryset)
+
+        return cache[key]
 
 
 class DifferentNumQuadratsValidator(SampleEventConsistencyValidator):
@@ -77,11 +100,13 @@ class DifferentNumQuadratsValidator(SampleEventConsistencyValidator):
         if not sample_event or not num_quadrats:
             return OK
 
-        queryset = BenthicPhotoQuadratTransect.objects.filter(
-            quadrat_transect__sample_event=sample_event
-        ).select_related("quadrat_transect")
-
-        for pqt_su in queryset:
+        for pqt_su in self._get_sibling_sample_units(
+            collect_record,
+            sample_event,
+            BenthicPhotoQuadratTransect,
+            "quadrat_transect__sample_event",
+            ("quadrat_transect",),
+        ):
             other_num_quadrats = pqt_su.quadrat_transect.num_quadrats
             if other_num_quadrats != num_quadrats:
                 return (
@@ -124,11 +149,13 @@ class DifferentNumPointsPerQuadratValidator(SampleEventConsistencyValidator):
         if not sample_event or not num_points_per_quadrat:
             return OK
 
-        queryset = BenthicPhotoQuadratTransect.objects.filter(
-            quadrat_transect__sample_event=sample_event
-        ).select_related("quadrat_transect")
-
-        for pqt_su in queryset:
+        for pqt_su in self._get_sibling_sample_units(
+            collect_record,
+            sample_event,
+            BenthicPhotoQuadratTransect,
+            "quadrat_transect__sample_event",
+            ("quadrat_transect",),
+        ):
             other_num_points_per_quadrat = pqt_su.quadrat_transect.num_points_per_quadrat
             if other_num_points_per_quadrat != num_points_per_quadrat:
                 return (
@@ -162,10 +189,9 @@ class DifferentTransectWidthValidator(SampleEventConsistencyValidator):
         if not sample_event or not width_id:
             return OK
 
-        queryset = FishBeltTransect.objects.filter(sample_event=sample_event).select_related(
-            "width"
-        )
-        for fb_su in queryset:
+        for fb_su in self._get_sibling_sample_units(
+            collect_record, sample_event, FishBeltTransect, "sample_event"
+        ):
             other_width_id = valid_id(fb_su.width_id)
             if other_width_id:
                 other_width_id = str(other_width_id)
@@ -204,10 +230,9 @@ class DifferentInvertTransectWidthValidator(SampleEventConsistencyValidator):
             return OK
 
         width_id = str(width_id)
-        queryset = InvertBeltTransect.objects.filter(sample_event=sample_event).select_related(
-            "width"
-        )
-        for su in queryset:
+        for su in self._get_sibling_sample_units(
+            collect_record, sample_event, InvertBeltTransect, "sample_event"
+        ):
             other_width_id = valid_id(su.width_id)
             if other_width_id:
                 if str(other_width_id) != width_id:
@@ -269,12 +294,11 @@ class DifferentTransectLengthValidator(SampleEventConsistencyValidator):
             return OK
 
         model, sample_event_path = self.PROTOCOL_CONFIG[protocol]
-        queryset = model.objects.filter(**{sample_event_path: sample_event}).select_related(
-            sample_event_path
-        )
+        su_str = sample_event_path.split("__")[0]  # transect or quadrat_transect
 
-        for method in queryset:
-            su_str = sample_event_path.split("__")[0]  # transect or quadrat_transect
+        for method in self._get_sibling_sample_units(
+            collect_record, sample_event, model, sample_event_path, (su_str,)
+        ):
             su = getattr(method, su_str)
             other_len_surveyed = su.len_surveyed
 
@@ -311,11 +335,13 @@ class DifferentQuadratSizeValidator(SampleEventConsistencyValidator):
         if not sample_event or not quadrat_size:
             return OK
 
-        queryset = BleachingQuadratCollection.objects.filter(
-            quadrat__sample_event=sample_event
-        ).select_related("quadrat")
-
-        for bqc_su in queryset:
+        for bqc_su in self._get_sibling_sample_units(
+            collect_record,
+            sample_event,
+            BleachingQuadratCollection,
+            "quadrat__sample_event",
+            ("quadrat",),
+        ):
             other_quadrat_size = bqc_su.quadrat.quadrat_size
             if other_quadrat_size != quadrat_size:
                 return (
