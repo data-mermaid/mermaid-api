@@ -452,6 +452,12 @@ if ENVIRONMENT == "prod":
     IMAGE_BUCKET_AWS_SECRET_ACCESS_KEY = os.environ.get("IMAGE_BUCKET_AWS_SECRET_ACCESS_KEY")
 IMAGE_S3_PATH = "mermaid/"
 IMAGE_S3_PATH_TEST = os.environ.get("IMAGE_S3_PATH_TEST") or IMAGE_S3_PATH
+# In-account bucket/prefix the inference Lambda stages a feature vector under when it
+# cannot write IMAGE_PROCESSING_BUCKET directly; the image worker relocates each object
+# from here to its final key. Independent of IMAGE_PROCESSING_BUCKET_TEST, which only
+# coincides with it today.
+IMAGE_PROCESSING_BUCKET_STAGING = os.environ.get("IMAGE_PROCESSING_BUCKET_STAGING") or ""
+IMAGE_S3_PATH_STAGING = os.environ.get("IMAGE_S3_PATH_STAGING") or "inference-staging/"
 DATA_UPLOAD_MAX_MEMORY_SIZE = 30 * 1024 * 1024  # 30 MB
 FILE_UPLOAD_MAX_MEMORY_SIZE = 15 * 1024 * 1024  # 15 MB
 MAX_IMAGE_PIXELS = 8000 * 8000

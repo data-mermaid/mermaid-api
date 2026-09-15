@@ -6,6 +6,7 @@ from aws_cdk import (
     ArnComponents,
     ArnFormat,
     Duration,
+    RemovalPolicy,
     Stack,
     aws_applicationautoscaling as appscaling,
     aws_autoscaling as autoscale,
@@ -199,6 +200,12 @@ class ApiStack(Stack):
             "IMAGE_PROCESSING_BUCKET_TEST": config.api.ic_bucket_name_test
             or config.api.ic_bucket_name,
             "IMAGE_S3_PATH_TEST": config.api.ic_s3_path_test or "mermaid/",
+            # The in-account bucket the inference Lambda stages feature vectors under
+            # (iac/stacks/inference.py's staging_bucket) — named explicitly rather than
+            # derived from IMAGE_PROCESSING_BUCKET_TEST, which only coincides with it
+            # today and is free to point elsewhere later.
+            "IMAGE_PROCESSING_BUCKET_STAGING": image_processing_bucket.bucket_name,
+            "IMAGE_S3_PATH_STAGING": config.api.ic_s3_path_staging,
             "IMAGE_PROCESSING_BUCKET_DUMMY": image_processing_bucket.bucket_name,
             "EMAIL_HOST": config.api.email_host,
             "EMAIL_PORT": config.api.email_port,
@@ -421,6 +428,18 @@ class ApiStack(Stack):
             fifo=False,
         )
 
+        # Explicit, stably-named log group: without one, the QueueWorker's
+        # QueueProcessingEc2Service auto-creates a log group scoped to its own
+        # construct path (retained on rename), leaving nothing a metric filter
+        # can reliably target across redeploys.
+        image_worker_log_group = logs.LogGroup(
+            self,
+            "ImageWorkerLogGroup",
+            log_group_name=f"/mermaid/{config.env_id}/image-worker",
+            retention=logs.RetentionDays.ONE_MONTH,
+            removal_policy=RemovalPolicy.DESTROY,
+        )
+
         # Image Worker
         image_worker = QueueWorker(
             self,
@@ -438,6 +457,7 @@ class ApiStack(Stack):
             email=sys_email,
             fifo=False,
             visibility_timeout_seconds=config.api.image_sqs_message_visibility,
+            log_group=image_worker_log_group,
         )
 
         # allow API to send messages to the queue
@@ -460,6 +480,18 @@ class ApiStack(Stack):
 
         # Allow Image Worker to write to image bucket
         image_processing_bucket.grant_write(image_worker.task_definition.task_role)
+        # move_file_cross_account (relocate_feature_vector) only needs to read the
+        # staged object; grant_write above already covers the delete that follows.
+        # An explicit statement, not Bucket.grant_read: that helper also emits
+        # bucket-wide s3:GetBucket*/List*, unscoped by prefix.
+        image_worker.task_definition.task_role.add_to_principal_policy(
+            iam.PolicyStatement(
+                actions=["s3:GetObject"],
+                resources=[
+                    image_processing_bucket.arn_for_objects(f"{config.api.ic_s3_path_staging}*")
+                ],
+            )
+        )
         image_processing_bucket.grant_read_write(service.task_definition.task_role)
         # General worker needs read/write for image migration jobs between buckets
         image_processing_bucket.grant_read_write(worker.task_definition.task_role)
@@ -539,6 +571,7 @@ class ApiStack(Stack):
             general_dlq=worker.dead_letter_queue,
             image_dlq=image_worker.dead_letter_queue,
             api_log_group=api_log_group,
+            image_worker_log_group=image_worker_log_group,
             sagemaker_domain_name=sagemaker_domain_name,
             slack_workspace_id=config.api.slack_workspace_id or None,
             slack_channel_id=config.api.slack_channel_id or None,

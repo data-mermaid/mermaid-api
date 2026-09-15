@@ -36,6 +36,7 @@ class MonitoringAlerts(Construct):
         general_dlq: sqs.IQueue,
         image_dlq: sqs.IQueue,
         api_log_group: logs.ILogGroup,
+        image_worker_log_group: logs.ILogGroup,
         sagemaker_domain_name: str | None = None,
         slack_workspace_id: str | None = None,
         slack_channel_id: str | None = None,
@@ -394,6 +395,41 @@ class MonitoringAlerts(Construct):
                 threshold=10,
                 evaluation_periods=1,
                 comparison_operator=cw.ComparisonOperator.GREATER_THAN_THRESHOLD,
+                treat_missing_data=cw.TreatMissingData.NOT_BREACHING,
+            )
+        )
+
+        # ── Feature-vector relocation (app-side instrumentation) ─────
+        # Same "[classify.processing_error]" marker as stacks/inference.py's
+        # ProcessingErrorMetricFilter, watched here on the image worker's log group.
+
+        feature_vector_error_metric = logs.MetricFilter(
+            self,
+            "FeatureVectorRelocationErrorMetricFilter",
+            log_group=image_worker_log_group,
+            filter_pattern=logs.FilterPattern.literal('"[classify.processing_error]"'),
+            metric_namespace=f"MERMAID/{env_id}/ImageWorker",
+            metric_name="FeatureVectorRelocationErrors",
+            metric_value="1",
+            default_value=0,
+        )
+        alarms.append(
+            cw.Alarm(
+                self,
+                "FeatureVectorRelocationErrorsAlarm",
+                alarm_name=f"mermaid-{env_id}-feature-vector-relocation-errors",
+                alarm_description=(
+                    "Image worker failed to relocate a feature vector from staging "
+                    "to its final bucket — 5 or more in a 5-minute window, e.g. a "
+                    "permissions gap or a foreign-bucket credential failure"
+                ),
+                metric=feature_vector_error_metric.metric(
+                    statistic="Sum",
+                    period=Duration.minutes(5),
+                ),
+                threshold=5,
+                evaluation_periods=1,
+                comparison_operator=cw.ComparisonOperator.GREATER_THAN_OR_EQUAL_TO_THRESHOLD,
                 treat_missing_data=cw.TreatMissingData.NOT_BREACHING,
             )
         )

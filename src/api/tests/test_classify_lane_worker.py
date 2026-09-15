@@ -95,6 +95,52 @@ def test_leaves_the_feature_vector_unset_when_the_lambda_wrote_none(
     assert ClassificationStatus.COMPLETED in _statuses(image)
 
 
+@override_settings(**PINNED, **THRESHOLDS)
+def test_relocates_the_feature_vector_before_recording_it(
+    monkeypatch, image, classifier_v2, benthic_attribute_1
+):
+    """The row is only updated once relocate_feature_vector confirms the object
+    exists at its final key — never from the Lambda's response alone."""
+    _stub_lambda(
+        monkeypatch,
+        [(1, 2, [(f"{benthic_attribute_1.pk}::", 0.9)])],
+        feature_vector_name=f"{image.id}_featurevector",
+    )
+    seen = []
+
+    def fake_relocate(img, name):
+        seen.append(Image.objects.get(pk=img.pk).feature_vector_file.name)
+        return True
+
+    monkeypatch.setattr(classification, "relocate_feature_vector", fake_relocate)
+
+    _classify_image(image.pk)
+
+    assert seen == [""]  # column still unset when relocation runs
+    assert Image.objects.get(pk=image.pk).feature_vector_file.name == f"{image.id}_featurevector"
+
+
+@override_settings(**PINNED, **THRESHOLDS)
+def test_leaves_the_feature_vector_unset_when_relocation_fails(
+    monkeypatch, image, classifier_v2, benthic_attribute_1
+):
+    """A failed relocation must not point feature_vector_file at a key that was
+    never written to its final bucket, and must not fail the classification: point
+    predictions are the product, the feature vector is not."""
+    _stub_lambda(
+        monkeypatch,
+        [(1, 2, [(f"{benthic_attribute_1.pk}::", 0.9)])],
+        feature_vector_name=f"{image.id}_featurevector",
+    )
+    monkeypatch.setattr(classification, "relocate_feature_vector", lambda img, name: False)
+
+    _classify_image(image.pk)
+
+    assert not Image.objects.get(pk=image.pk).feature_vector_file
+    assert ClassificationStatus.COMPLETED in _statuses(image)
+    assert ClassificationStatus.FAILED not in _statuses(image)
+
+
 @override_settings(**PINNED)
 def test_inference_error_fails_the_job_with_its_message(monkeypatch, image, classifier_v2):
     def raise_inference_error(image, points):

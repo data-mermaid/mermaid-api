@@ -125,6 +125,8 @@ STORAGE_SETTINGS = {
     "AWS_SECRET_ACCESS_KEY": "default-secret",
     "IMAGE_S3_PATH": "mermaid/",
     "IMAGE_S3_PATH_TEST": "mermaid-production-test/",
+    "IMAGE_PROCESSING_BUCKET_STAGING": "staging-bucket",
+    "IMAGE_S3_PATH_STAGING": "inference-staging/",
 }
 
 

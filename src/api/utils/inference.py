@@ -25,6 +25,7 @@ from mermaid_inference_contract import (
 from opentelemetry import trace as otel_trace
 
 from ..models.classification import Classifier, get_image_storage_config
+from .s3 import move_file_cross_account
 
 logger = logging.getLogger(__name__)
 
@@ -117,7 +118,7 @@ def invoke_pyspacer(payload: dict) -> dict:
 
 
 def feature_vector_location(image) -> tuple[str, S3Location]:
-    """Name/location pair for an image's feature vector.
+    """Name/final-location pair for an image's feature vector.
 
     `name` must match the Django FileField name exactly, so a queryset update can
     record the Lambda-written key directly (relative to the bucket's S3Storage
@@ -130,8 +131,44 @@ def feature_vector_location(image) -> tuple[str, S3Location]:
     return name, S3Location(bucket=config["bucket"], key=f"{config['s3_path']}{name}")
 
 
+def _staging_feature_vector_output(name: str) -> S3Location:
+    """In-account staging location for a feature vector named `name`.
+
+    Used in place of the final location whenever that bucket needs credentials the
+    Lambda's execution role does not have; the image worker relocates the object
+    from here to its final key once classification succeeds.
+    """
+    return S3Location(
+        bucket=settings.IMAGE_PROCESSING_BUCKET_STAGING,
+        key=f"{settings.IMAGE_S3_PATH_STAGING}{name}",
+    )
+
+
+def _feature_vector_output(image, name: str) -> S3Location:
+    """Resolve where image's feature vector named `name` should be written: the
+    final bucket directly, or the in-account staging prefix when that bucket needs
+    contributing-org credentials the Lambda's execution role does not have.
+
+    The single source of the staging decision — build_pyspacer_request and
+    classify_via_lambda both call this, so neither can route a feature vector
+    differently from what the other expects.
+    """
+    config = get_image_storage_config(image.image_bucket)
+    if not config.get("access_key"):
+        return S3Location(bucket=config["bucket"], key=f"{config['s3_path']}{name}")
+    if not settings.IMAGE_PROCESSING_BUCKET_STAGING:
+        raise InferenceError(
+            "IMAGE_PROCESSING_BUCKET_STAGING is not set but the image bucket "
+            "requires staged writes"
+        )
+    return _staging_feature_vector_output(name)
+
+
 def build_pyspacer_request(image, points, traceparent, feature_vector_output=None) -> dict:
     config = get_image_storage_config(image.image_bucket)
+    if feature_vector_output is not None:
+        name = feature_vector_output.key.rsplit("/", 1)[-1]
+        feature_vector_output = _feature_vector_output(image, name)
     request = PyspacerRequest(
         classifier_type="pyspacer",
         image=S3Location(bucket=config["bucket"], key=f"{config['s3_path']}{image.image.name}"),
@@ -140,6 +177,42 @@ def build_pyspacer_request(image, points, traceparent, feature_vector_output=Non
         traceparent=traceparent,
     )
     return request.model_dump(mode="json")
+
+
+def relocate_feature_vector(image, name: str) -> bool:
+    """Move image's feature vector named `name` from staging to its final location,
+    if build_pyspacer_request had to stage it there in the first place.
+
+    Returns True when nothing needed relocating (the Lambda already wrote to the
+    final bucket directly) or the move succeeded. Returns False when a relocation
+    was required but failed; the failure is logged under the `[classify.processing_error]`
+    marker the CloudWatch metric filter watches for, and never raised — the point
+    predictions are the product of a classify job, not the feature vector, so a
+    failed move must not fail the caller.
+    """
+    try:
+        config = get_image_storage_config(image.image_bucket)
+        if not config.get("access_key"):
+            return True
+
+        staging = _staging_feature_vector_output(name)
+        move_file_cross_account(
+            source_bucket=staging.bucket,
+            source_key=staging.key,
+            source_access_key=None,
+            source_secret_key=None,
+            dest_bucket=config["bucket"],
+            dest_key=f"{config['s3_path']}{name}",
+            dest_access_key=config["access_key"],
+            dest_secret_key=config["secret_key"],
+        )
+    except Exception:
+        logger.error(
+            f"[classify.processing_error] failed to relocate feature vector for image {image.id}",
+            exc_info=True,
+        )
+        return False
+    return True
 
 
 def _current_traceparent() -> str:
@@ -205,11 +278,12 @@ def classify_via_lambda(image, points) -> LambdaClassificationResult:
     with tracer.start_as_current_span("pyspacer.classify_via_lambda"):
         traceparent = _current_traceparent()
         logger.info("pyspacer inference invoke", extra={"traceparent": traceparent})
-        name, feature_vector_output = feature_vector_location(image)
+        name, final_location = feature_vector_location(image)
+        # Same routing decision build_pyspacer_request makes below, so the comparison
+        # checks the response against whatever location was actually requested.
+        requested_output = _feature_vector_output(image, name)
         payload = invoke_pyspacer(
-            build_pyspacer_request(
-                image, points, traceparent, feature_vector_output=feature_vector_output
-            )
+            build_pyspacer_request(image, points, traceparent, feature_vector_output=final_location)
         )
 
         if "error_code" in payload:
@@ -251,7 +325,7 @@ def classify_via_lambda(image, points) -> LambdaClassificationResult:
             )
 
         feature_vector_name = None
-        if response.feature_vector_output == feature_vector_output:
+        if response.feature_vector_output == requested_output:
             feature_vector_name = name
         else:
             logger.warning(
