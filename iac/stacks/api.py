@@ -492,6 +492,15 @@ class ApiStack(Stack):
                 ],
             )
         )
+        # generate_points falls back to opening the stored image when dimensions are
+        # unset on the row (nullable, unbacked columns pre-2024-07-24); the image
+        # worker needs read on the app-managed prefix for that path to succeed.
+        image_worker.task_definition.task_role.add_to_principal_policy(
+            iam.PolicyStatement(
+                actions=["s3:GetObject"],
+                resources=[image_processing_bucket.arn_for_objects(f"{config.api.ic_s3_path}*")],
+            )
+        )
         image_processing_bucket.grant_read_write(service.task_definition.task_role)
         # General worker needs read/write for image migration jobs between buckets
         image_processing_bucket.grant_read_write(worker.task_definition.task_role)
@@ -507,17 +516,15 @@ class ApiStack(Stack):
         data_bucket.grant_read_write(service.task_definition.task_role)
         data_bucket.grant_read_write(summary_cache_service.task_definition.task_role)
         data_bucket.grant_delete(summary_cache_service.task_definition.task_role)
-        # Prod bucket needs to read from coral-reef-training bucket.
-        # There is some issue with assumed-role reading from public bucket,
-        # adding read permission to the task role seems to fix it.
+        # ic_bucket_name is image_processing_bucket in dev, and the foreign coral-reef-training
+        # bucket in prod, where the task role is not the credential: get_image_storage_config
+        # returns the IMAGE_BUCKET_AWS_* contributor pair for it (src/api/models/classification.py).
+        # Only daily_backup_task needs a grant against this name.
         coral_reef_training_bucket = s3.Bucket.from_bucket_name(
             self,
             "CoralReefBucket",
             bucket_name=config.api.ic_bucket_name,
         )
-        coral_reef_training_bucket.grant_read(service.task_definition.task_role)
-        coral_reef_training_bucket.grant_read(image_worker.task_definition.task_role)
-        coral_reef_training_bucket.grant_read_write(worker.task_definition.task_role)
         # Backup task needs read/write on the primary image bucket for delete_orphaned_images
         # and export_annotations_parquet (dev: mermaid-image-processing, prod: coral-reef-training).
         # Scoped to the app-managed prefix (IMAGE_S3_PATH = "mermaid/").
