@@ -1,4 +1,6 @@
 # mermaid-api/iac/stacks/inference.py
+from enum import Enum, auto
+
 from aws_cdk import (
     Duration,
     RemovalPolicy,
@@ -14,6 +16,19 @@ from aws_cdk import (
 )
 from constructs import Construct
 from settings.settings import ProjectSettings, pyspacer_function_name
+
+
+class BucketAccess(Enum):
+    """Per-(bucket, prefix) grant a caller asks for: READ_ONLY or READ_WRITE.
+
+    Callers state this explicitly rather than the stack inferring it from the
+    bucket, since some image buckets (e.g. an AWS Open Data bucket in another
+    account) accept an identity-side put grant but its bucket policy never
+    honors it.
+    """
+
+    READ_ONLY = auto()
+    READ_WRITE = auto()
 
 
 class InferenceStack(Stack):
@@ -39,7 +54,9 @@ class InferenceStack(Stack):
         config: ProjectSettings,
         inference_repo: ecr.IRepository,
         config_bucket: s3.IBucket,
-        image_buckets: list[tuple[s3.IBucket, str]],
+        image_buckets: list[tuple[s3.IBucket, str, BucketAccess]],
+        staging_bucket: s3.IBucket,
+        staging_prefix: str,
         alerts_topic: sns.ITopic,
         **kwargs,
     ) -> None:
@@ -83,11 +100,18 @@ class InferenceStack(Stack):
         # no allowlist, so write access here is code execution as this role on a cold start.
         config_bucket.grant_read(self.function, "classifier/*")
 
-        # (bucket, key prefix) per env: the function reads patch images under the prefix
-        # and writes each image's .featurevector back beside it.
-        for bucket, prefix in image_buckets:
+        # (bucket, key prefix, access) per env: read/write is stated per pair rather
+        # than inferred from which bucket it is, since a foreign bucket's put grant
+        # would silently do nothing (its bucket policy is not ours to change).
+        for bucket, prefix, access in image_buckets:
             bucket.grant_read(self.function, f"{prefix}*")
-            bucket.grant_put(self.function, f"{prefix}*")
+            if access is BucketAccess.READ_WRITE:
+                bucket.grant_put(self.function, f"{prefix}*")
+
+        # Staging prefix in the in-account image-processing bucket: put-only,
+        # reachable regardless of which image_buckets are foreign. A later step
+        # (the ECS image worker) moves each object to its final per-env home.
+        staging_bucket.grant_put(self.function, f"{staging_prefix}*")
 
         # ── Alarms ──────────────────────────────────────────────────
         # Published to the shared per-env alerts topic (ApiStack/MonitoringAlerts);

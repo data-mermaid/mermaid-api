@@ -10,7 +10,7 @@ from stacks.cloudtrail import CloudTrailStack
 from stacks.common import CommonStack
 from stacks.github_access import GithubAccessStack
 from stacks.guardduty import GuardDutyStack
-from stacks.inference import InferenceStack
+from stacks.inference import BucketAccess, InferenceStack
 from stacks.sagemaker import SagemakerStack
 from stacks.static_site import StaticSiteStack
 
@@ -43,6 +43,9 @@ common_stack = CommonStack(
     "mermaid-api-infra-common",
     env=cdk_env,
     tags=tags,
+    # Unoverridden in both dev.py and prod.py, so either settings module names
+    # the same literal — this bucket and prefix are shared across envs.
+    staging_prefix=DEV_SETTINGS.api.ic_s3_path_staging,
     enable_vpc_flow_logs=os.getenv("ENABLE_VPC_FLOW_LOGS", "true").lower() == "true",
 )
 
@@ -100,7 +103,15 @@ dev_inference_stack = InferenceStack(
     config=DEV_SETTINGS,
     inference_repo=common_stack.inference_repo,
     config_bucket=common_stack.config_bucket,
-    image_buckets=[(common_stack.image_processing_bucket, DEV_SETTINGS.api.ic_s3_path)],
+    image_buckets=[
+        (
+            common_stack.image_processing_bucket,
+            DEV_SETTINGS.api.ic_s3_path,
+            BucketAccess.READ_WRITE,
+        ),
+    ],
+    staging_bucket=common_stack.image_processing_bucket,
+    staging_prefix=DEV_SETTINGS.api.ic_s3_path_staging,
     alerts_topic=dev_api_stack.alerts_topic,
 )
 
@@ -147,8 +158,8 @@ prod_inference_stack = InferenceStack(
     config=PROD_SETTINGS,
     inference_repo=common_stack.inference_repo,
     config_bucket=common_stack.config_bucket,
-    # Prod reads TEST-project images from the in-account image-processing bucket and
-    # every other project's from coral-reef-training, which lives outside this account.
+    # coral-reef-training is a foreign AWS Open Data bucket: its policy is public-read
+    # but not ours to grant put on, so it stays read-only here.
     image_buckets=[
         (
             # from_bucket_name needs a Stack scope and adds no resource to it.
@@ -156,9 +167,16 @@ prod_inference_stack = InferenceStack(
                 prod_api_stack, "ProdInferenceImageBucket", PROD_SETTINGS.api.ic_bucket_name
             ),
             PROD_SETTINGS.api.ic_s3_path,
+            BucketAccess.READ_ONLY,
         ),
-        (common_stack.image_processing_bucket, PROD_SETTINGS.api.ic_s3_path_test),
+        (
+            common_stack.image_processing_bucket,
+            PROD_SETTINGS.api.ic_s3_path_test,
+            BucketAccess.READ_WRITE,
+        ),
     ],
+    staging_bucket=common_stack.image_processing_bucket,
+    staging_prefix=PROD_SETTINGS.api.ic_s3_path_staging,
     alerts_topic=prod_api_stack.alerts_topic,
 )
 
