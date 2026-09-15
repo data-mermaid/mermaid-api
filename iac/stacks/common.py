@@ -31,6 +31,8 @@ class CommonStack(Stack):
         self,
         scope: Construct,
         id: str,
+        *,
+        staging_prefix: str,
         enable_vpc_flow_logs: bool = True,
         **kwargs,
     ) -> None:
@@ -478,6 +480,15 @@ class CommonStack(Stack):
                     allowed_headers=["*"],
                     exposed_headers=[],
                     max_age=3000,
+                ),
+            ],
+            lifecycle_rules=[
+                # Scoped to the staging prefix alone: sweeps a feature-vector object
+                # orphaned if the ECS worker relocating it dies mid-move.
+                s3.LifecycleRule(
+                    id="InferenceStagingLifecycle",
+                    prefix=staging_prefix,
+                    expiration=Duration.days(1),
                 ),
             ],
         )
