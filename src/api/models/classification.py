@@ -2,6 +2,8 @@ import csv
 import uuid
 from io import StringIO
 
+import urllib3
+from botocore.exceptions import BotoCoreError, ClientError
 from django.conf import settings
 from django.contrib.gis.db import models
 from django.core.exceptions import ValidationError
@@ -194,16 +196,20 @@ class Classifier(BaseModel):
 
     @property
     def patch_size(self):
+        # config is only guaranteed to be a dict when the row was saved through
+        # full_clean(); admin list views read this property directly.
+        if not isinstance(self.config, dict):
+            return None
         return self.config.get("patch_size")
 
     def clean(self):
         super().clean()
+        if self.config is not None and not isinstance(self.config, dict):
+            raise ValidationError({"config": "config must be a JSON object."})
+        config = self.config or {}
         config_schema = CONFIG_SCHEMAS.get(self.classifier_type)
         if config_schema is None:
             return
-        config = self.config or {}
-        if not isinstance(config, dict):
-            raise ValidationError({"config": "config must be a JSON object."})
         try:
             config_schema(**config)
         except PydanticValidationError as e:
@@ -224,7 +230,7 @@ class Classifier(BaseModel):
         key = f"{CLASSIFIER_CONFIG_S3_PATH}/{version}/model.json"
         try:
             manifest = s3.read_json_object(settings.AWS_CONFIG_BUCKET, key)
-        except Exception as e:
+        except (ClientError, BotoCoreError, ValueError, urllib3.exceptions.HTTPError) as e:
             raise ClassifierRegistrationError(
                 f"Could not read model.json for {version}: {e}"
             ) from e
@@ -250,7 +256,7 @@ class Classifier(BaseModel):
             )
         try:
             validated_config = config_schema(**(manifest.get("config") or {}))
-        except Exception as e:
+        except (PydanticValidationError, TypeError) as e:
             raise ClassifierRegistrationError(
                 f"Invalid config in model.json for {version}: {e}"
             ) from e

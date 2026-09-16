@@ -286,12 +286,11 @@ class ImageViewSet(BaseProjectApiViewSet):
 
         if trigger_classification:
             create_classification_status(image_record, status=ClassificationStatus.PENDING)
-            # Every image is classified at the deployment-wide point count; the request
-            # carries no per-image override.
+            # num_points is left unset here; classify_image_job falls back to the
+            # deployment-wide point count in effect when the job runs.
             classify_image_job(
                 image_record.pk,
                 profile_id=profile.pk,
-                num_points=settings.INFERENCE_DEFAULT_NUM_POINTS,
             )
 
         data = ImageSerializer(instance=image_record, context={"request": request}).data

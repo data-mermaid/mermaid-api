@@ -191,6 +191,13 @@ def test_register_wraps_malformed_json(monkeypatch):
     assert not Classifier.objects.filter(version="v9").exists()
 
 
+def test_patch_size_is_none_for_non_object_config():
+    assert (
+        Classifier(name="c11", version="v11", classifier_type="segmentation", config=224).patch_size
+        is None
+    )
+
+
 def test_register_rejects_empty_classes_and_preserves_existing_labels(
     stub_manifest, benthic_attribute_1, benthic_attribute_2
 ):

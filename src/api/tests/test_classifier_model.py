@@ -54,3 +54,11 @@ def test_full_clean_rejects_string_patch_size():
     with pytest.raises(ValidationError) as exc_info:
         c.full_clean()
     assert "config" in exc_info.value.message_dict
+
+
+@pytest.mark.parametrize("config", [224, []])
+def test_full_clean_rejects_non_object_config_for_type_with_no_schema(config):
+    c = Classifier(name="c10", version="v10", classifier_type="segmentation", config=config)
+    with pytest.raises(ValidationError) as exc_info:
+        c.full_clean()
+    assert "config" in exc_info.value.message_dict
