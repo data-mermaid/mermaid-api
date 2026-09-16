@@ -52,8 +52,8 @@ class DjangoSettings:
 
     # Common Attrs (defaults)
     # Outlasts invoke_pyspacer's worst case: 2 attempts * (660s read + 10s connect
-    # timeout) + ~20s botocore backoff cap ~= 1360s. Matches INFERENCE_JOB_VISIBILITY_TIMEOUT
-    # (src/app/settings.py), the per-job extension; this covers the batch's other messages.
+    # timeout) + one backoff sleep of at most 1s ~= 1341s. Passed to the container
+    # as INFERENCE_JOB_VISIBILITY_TIMEOUT (src/app/settings.py), the per-job extension.
     image_sqs_message_visibility: int = 1500
     maintenance_mode: str = "False"
     auth0_management_api_audience: str = "https://datamermaid.auth0.com/api/v2/"

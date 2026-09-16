@@ -470,10 +470,11 @@ INFERENCE_DEFAULT_NUM_POINTS = 25
 # both arrive from the environment because they differ per deployment target.
 INFERENCE_LAMBDA_PYSPACER = os.environ.get("INFERENCE_LAMBDA_PYSPACER") or ""
 INFERENCE_CLASSIFIER_VERSION = os.environ.get("INFERENCE_CLASSIFIER_VERSION") or ""
-# Must outlast invoke_pyspacer's worst case (get_lambda_client's 1 retry = 2
-# invokes * (660s read_timeout + 10s connect_timeout) + ~20s backoff cap) and
-# sets the floor for image_sqs_message_visibility (iac/settings/settings.py).
-INFERENCE_JOB_VISIBILITY_TIMEOUT = 1500
+# Must outlast invoke_pyspacer's worst case (2 lambda invokes at 670s each,
+# plus a backoff sleep) ~= 1341s. image_sqs_message_visibility
+# (iac/settings/settings.py) is supplied via the container environment so
+# the two cannot drift; 1500 here is the default outside a CDK-managed deploy.
+INFERENCE_JOB_VISIBILITY_TIMEOUT = int(os.environ.get("INFERENCE_JOB_VISIBILITY_TIMEOUT") or "1500")
 
 # Reporting S3 credentials
 REPORT_S3_ACCESS_KEY_ID = os.environ.get("REPORT_S3_ACCESS_KEY_ID")

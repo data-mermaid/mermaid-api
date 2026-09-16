@@ -220,6 +220,9 @@ class ApiStack(Stack):
             "IMAGE_SQS_QUEUE_NAME": image_sqs_queue_name,
             "INFERENCE_LAMBDA_PYSPACER": inference_function_name,
             "INFERENCE_CLASSIFIER_VERSION": config.inference.classifier_version,
+            # Drives the same constant Django falls back to (INFERENCE_JOB_VISIBILITY_TIMEOUT
+            # in src/app/settings.py), so the two can't drift out of sync.
+            "INFERENCE_JOB_VISIBILITY_TIMEOUT": str(config.api.image_sqs_message_visibility),
             # OpenTelemetry / X-Ray
             # ecs-xray.yaml only configures a traces pipeline; disable metrics and
             # logs exporters to suppress UNIMPLEMENTED errors from the ADOT sidecar.
