@@ -5,7 +5,7 @@ from aws_cdk import (
     aws_s3 as s3,
 )
 from constructs import Construct
-from settings.settings import ProjectSettings
+from settings.settings import IMAGE_WORKER_MAX_TASKS, ProjectSettings
 from stacks.constructs.adot import add_adot_sidecar
 from stacks.constructs.queue import JobQueue
 
@@ -57,7 +57,7 @@ class QueueWorker(Construct):
             ],
             min_healthy_percent=0,
             min_scaling_capacity=1,
-            max_scaling_capacity=3,
+            max_scaling_capacity=IMAGE_WORKER_MAX_TASKS,
             # this defines how the service shall autoscale based on the
             # SQS queue's ApproximateNumberOfMessagesVisible metric
             scaling_steps=[

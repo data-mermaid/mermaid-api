@@ -15,7 +15,7 @@ from aws_cdk import (
     aws_sns as sns,
 )
 from constructs import Construct
-from settings.settings import ProjectSettings
+from settings.settings import ProjectSettings, alerts_topic_name
 
 
 class BucketAccess(Enum):
@@ -44,6 +44,8 @@ class InferenceStack(Stack):
     Alarms publish to the shared per-env alerts topic owned by ApiStack's
     MonitoringAlerts construct; that construct's single Chatbot config delivers
     everything on the topic to Slack, so this stack creates no delivery infra.
+    The topic is resolved from its deterministic name (alerts_topic_name), not
+    from an ApiStack construct — see the alarms section below.
     """
 
     def __init__(
@@ -57,7 +59,6 @@ class InferenceStack(Stack):
         image_buckets: list[tuple[s3.IBucket, str, BucketAccess]],
         staging_bucket: s3.IBucket,
         staging_prefix: str,
-        alerts_topic: sns.ITopic,
         **kwargs,
     ) -> None:
         super().__init__(scope, id, **kwargs)
@@ -114,8 +115,14 @@ class InferenceStack(Stack):
         staging_bucket.grant_put(self.function, f"{staging_prefix}*")
 
         # ── Alarms ──────────────────────────────────────────────────
-        # Published to the shared per-env alerts topic (ApiStack/MonitoringAlerts);
-        # its single Chatbot config delivers to Slack. No topic/Chatbot created here.
+        # Imported by ARN from the name both stacks compute. ApiStack's topic construct
+        # would make CDK deploy ApiStack first, and the API must not expect a classifier
+        # version before this stack's Lambda serves it. No topic/Chatbot created here.
+        alerts_topic = sns.Topic.from_topic_arn(
+            self,
+            "AlertsTopic",
+            f"arn:aws:sns:{self.region}:{self.account}:{alerts_topic_name(config.env_id)}",
+        )
         sns_action = cw_actions.SnsAction(alerts_topic)
 
         for construct_id, metric, alarm_name, description in (

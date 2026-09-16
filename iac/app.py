@@ -91,10 +91,10 @@ dev_sagemaker_stack = SagemakerStack(
     cluster=common_stack.cluster,
 )
 
-# The pyspacer inference compute lane (mermaid-classifier #53). A container
-# Lambda whose image (config.inference.image_tag) is published to the
-# mermaid-inference-pyspacer ECR repo by the mermaid-inference build-push CI
-# before this stack deploys. Alarms publish to ApiStack's shared alerts topic.
+# The pyspacer inference compute lane (mermaid-classifier #53). A container Lambda
+# whose image (config.inference.image_tag) is published to the mermaid-inference-pyspacer
+# ECR repo by the mermaid-inference build-push CI before this stack deploys. Alarms
+# publish to ApiStack's alerts topic, by ARN so this stack can deploy ahead of it.
 dev_inference_stack = InferenceStack(
     app,
     "dev-mermaid-inference",
@@ -112,8 +112,12 @@ dev_inference_stack = InferenceStack(
     ],
     staging_bucket=common_stack.image_processing_bucket,
     staging_prefix=DEV_SETTINGS.api.ic_s3_path_staging,
-    alerts_topic=dev_api_stack.alerts_topic,
 )
+
+# The Lambda must already serve config.inference.classifier_version before the API
+# starts expecting it: classify_via_lambda's drift guard raises on every
+# classification while the two disagree, draining redeliveries into the DLQ.
+dev_api_stack.add_dependency(dev_inference_stack)
 
 prod_static_site_stack = StaticSiteStack(
     app,
@@ -149,7 +153,6 @@ prod_api_stack = ApiStack(
 )
 
 # The pyspacer inference compute lane for prod.
-# Alarms publish to prod ApiStack's shared alerts topic.
 prod_inference_stack = InferenceStack(
     app,
     "prod-mermaid-inference",
@@ -177,8 +180,9 @@ prod_inference_stack = InferenceStack(
     ],
     staging_bucket=common_stack.image_processing_bucket,
     staging_prefix=PROD_SETTINGS.api.ic_s3_path_staging,
-    alerts_topic=prod_api_stack.alerts_topic,
 )
+
+prod_api_stack.add_dependency(prod_inference_stack)
 
 cloudtrail_stack = CloudTrailStack(
     app,

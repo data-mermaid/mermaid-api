@@ -506,7 +506,7 @@ class ApiStack(Stack):
         )
 
         # ── CloudWatch Alarms + Slack (AWS Chatbot) ──────────────────
-        monitoring_alerts = MonitoringAlerts(
+        MonitoringAlerts(
             self,
             "Alerts",
             env_id=config.env_id,
@@ -527,6 +527,3 @@ class ApiStack(Stack):
             # avoid both envs paging on the same instance event.
             monitor_shared_rds=config.env_id == "prod",
         )
-        # Exposed so sibling stacks (e.g. InferenceStack) can publish alarms to
-        # the same per-env topic this stack's Chatbot config already delivers.
-        self.alerts_topic = monitoring_alerts.topic

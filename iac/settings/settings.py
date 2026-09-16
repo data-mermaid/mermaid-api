@@ -72,6 +72,13 @@ class DjangoSettings:
     slack_channel_id: str = ""
 
 
+# The image worker is the pyspacer Lambda's only caller. Shared by worker.py
+# (ECS max_scaling_capacity) and InferenceSettings.reserved_concurrency below,
+# so raising the task ceiling can't silently leave the Lambda's concurrency
+# limit behind.
+IMAGE_WORKER_MAX_TASKS = 3
+
+
 @dataclass
 class InferenceSettings:
     """Settings for the pyspacer inference Lambda (compute lane).
@@ -87,7 +94,11 @@ class InferenceSettings:
     memory_mb: int = 10240
     timeout_minutes: int = 10
     ephemeral_storage_gb: int = 2
-    reserved_concurrency: int = 20
+    # A rolling deployment runs the image-worker ECS service at up to 200% of
+    # its task count with old tasks still draining, so the concurrent-invoke
+    # ceiling is double IMAGE_WORKER_MAX_TASKS, not the steady-state count.
+    # Reserved concurrency is subtracted from the account's unreserved pool.
+    reserved_concurrency: int = 2 * IMAGE_WORKER_MAX_TASKS
     num_threads: int = 6
 
     def __post_init__(self) -> None:
@@ -99,6 +110,19 @@ class InferenceSettings:
                 f"image_tag {self.image_tag!r} serves model version {tag_version!r}, "
                 f"but classifier_version is {self.classifier_version!r}"
             )
+
+
+def alerts_topic_name(env_id: str) -> str:
+    """The shared per-env CloudWatch alerts SNS topic's name.
+
+    Shared by ApiStack's MonitoringAlerts construct (which owns the topic and the
+    Chatbot config that delivers it to Slack) and InferenceStack (which resolves it
+    by ARN to publish alarm actions) so the two stacks cannot name it apart.
+    Takes only env_id, never a stack or construct: a construct reference here would
+    order ApiStack ahead of InferenceStack, which must deploy first so the Lambda
+    serves the classifier version the API expects.
+    """
+    return f"mermaid-{env_id}-alerts"
 
 
 @dataclass
