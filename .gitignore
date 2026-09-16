@@ -116,3 +116,14 @@ generate_token.py
 .claude/
 
 plan/
+
+# Beads / Dolt files (added by bd init)
+.dolt/
+*.db
+.beads-credential-key
+.beads/proxieddb/
+.agents/skills/beads/*
+.beads/*
+.codex/*
+AGENTS.md
+CLAUDE_BEADS.md

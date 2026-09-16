@@ -258,3 +258,5 @@ API version is tracked via:
 ## Maintenance Mode
 
 Set `MAINTENANCE_MODE=True` to prevent DB writes and return 503 responses. Configurable to allow admin/staff/superuser access.
+
+Read CLAUDE_BEADS.md file if it exists for more context.
