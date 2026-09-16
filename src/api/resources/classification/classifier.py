@@ -1,4 +1,3 @@
-from django.conf import settings
 from rest_framework import serializers
 from rest_framework.decorators import action
 from rest_framework.exceptions import NotFound
@@ -6,6 +5,7 @@ from rest_framework.permissions import SAFE_METHODS
 from rest_framework.response import Response
 
 from ...models import BenthicAttributeGrowthForm, Classifier
+from ...models.classification import ClassifierNotConfiguredError
 from ...permissions import UnauthenticatedReadOnlyPermission
 from ..base import BaseAPIFilterSet, BaseAPISerializer, BaseApiViewSet
 
@@ -43,8 +43,20 @@ class ClassifierSerializer(BaseAPISerializer):
             "updated_by",
         ]
 
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self._active_pk_cache = {}
+
     def get_is_default(self, obj):
-        return obj.version == settings.INFERENCE_CLASSIFIER_VERSION
+        # One child serializer instance serves every row in a list request,
+        # so keying the lookup here bounds it to one query per request
+        # regardless of row count.
+        if "pk" not in self._active_pk_cache:
+            try:
+                self._active_pk_cache["pk"] = Classifier.active().pk
+            except ClassifierNotConfiguredError:
+                self._active_pk_cache["pk"] = None
+        return self._active_pk_cache["pk"] is not None and obj.pk == self._active_pk_cache["pk"]
 
 
 class ClassifierFilterSet(BaseAPIFilterSet):

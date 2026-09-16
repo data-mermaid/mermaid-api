@@ -24,6 +24,7 @@ from PIL.ExifTags import GPSTAGS, TAGS
 from ..models import (
     Annotation,
     ClassificationStatus,
+    Classifier,
     Image,
     ObsBenthicPhotoQuadrat,
     Point,
@@ -33,11 +34,7 @@ from ..models import (
     Site,
 )
 from ..models.classification import parse_bagf_label
-from .inference import (
-    _resolve_active_classifier,
-    classify_via_lambda,
-    relocate_feature_vector,
-)
+from .inference import classify_via_lambda, relocate_feature_vector
 from .q import submit_image_job
 from .s3 import upload_file
 
@@ -412,7 +409,7 @@ def _classify_image(image_record_id, profile_id=None, num_points=None):
     create_classification_status(image, ClassificationStatus.RUNNING)
 
     try:
-        classifier_record = _resolve_active_classifier()
+        classifier_record = Classifier.active()
         points = generate_points(image, num_points or settings.INFERENCE_DEFAULT_NUM_POINTS)
         result = classify_via_lambda(image, points)
         _write_classification_results(image, result.point_predictions, classifier_record, profile)

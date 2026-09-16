@@ -26,7 +26,7 @@ from mermaid_inference_contract import (
 from opentelemetry import trace as otel_trace
 from pydantic import ValidationError
 
-from ..models.classification import Classifier, get_image_storage_config
+from ..models.classification import get_image_storage_config
 from .s3 import move_file_cross_account
 
 logger = logging.getLogger(__name__)
@@ -337,22 +337,6 @@ def response_to_point_predictions(response):
         )
         for pr in response.point_results
     ]
-
-
-def _resolve_active_classifier() -> Classifier:
-    """The Classifier row for the version baked into the deployed inference image.
-
-    Looks up the row by an exact version match: any other selection could return a
-    different row than the one that actually scored the points, mis-attributing
-    Annotation.classifier.
-    """
-    version = settings.INFERENCE_CLASSIFIER_VERSION
-    if not version:
-        raise InferenceError("INFERENCE_CLASSIFIER_VERSION is not set")
-    try:
-        return Classifier.objects.get(version=version)
-    except Classifier.DoesNotExist as err:
-        raise InferenceError(f"No Classifier registered for version {version!r}") from err
 
 
 def classify_via_lambda(image, points) -> LambdaClassificationResult:

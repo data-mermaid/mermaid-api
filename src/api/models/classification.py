@@ -31,6 +31,12 @@ class ClassifierRegistrationError(Exception):
     """Raised when a model.json manifest cannot be ingested by Classifier.register()."""
 
 
+class ClassifierNotConfiguredError(Exception):
+    """Raised when Classifier.active() cannot resolve the version pinned by
+    INFERENCE_CLASSIFIER_VERSION: the setting is empty, or no row matches it.
+    """
+
+
 def parse_bagf_label(label):
     """Split a `ba_uuid::gf_uuid` classifier label into its (ba_id, gf_id) parts.
 
@@ -218,6 +224,24 @@ class Classifier(BaseModel):
     @classmethod
     def latest(cls):
         return cls.objects.order_by("-created_on").first()
+
+    @classmethod
+    def active(cls):
+        """The Classifier row for the version baked into the deployed inference image.
+
+        Looks up by an exact version match: any other selection could return a
+        different row than the one that actually scored the points, mis-attributing
+        Annotation.classifier.
+        """
+        version = settings.INFERENCE_CLASSIFIER_VERSION
+        if not version:
+            raise ClassifierNotConfiguredError("INFERENCE_CLASSIFIER_VERSION is not set")
+        try:
+            return cls.objects.get(version=version)
+        except cls.DoesNotExist as err:
+            raise ClassifierNotConfiguredError(
+                f"No Classifier registered for version {version!r}"
+            ) from err
 
     @classmethod
     def register(cls, version, *, name=None, description=None):

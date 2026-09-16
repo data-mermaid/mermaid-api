@@ -84,7 +84,7 @@ to the ECR repo `mermaid-inference-pyspacer` tagged **`vN-K`**.
 
 ## Step 3 — Register the classifier version
 
-`_resolve_active_classifier()` (`src/api/utils/inference.py`) looks up the
+`Classifier.active()` (`src/api/models/classification.py`) looks up the
 `Classifier` row for `INFERENCE_CLASSIFIER_VERSION` by exact match. Step 4
 below points the API at `vN`, but nothing in steps 1–2 creates that row — skip
 this step and every image uploaded after the deploy fails classification
