@@ -178,9 +178,8 @@ class ApiStack(Stack):
         sqs_queue_name = f"mermaid-{config.env_id}-general"
         image_sqs_queue_name = f"mermaid-{config.env_id}-image-processing"
         # Computed via the shared pyspacer_function_name helper, not imported from
-        # InferenceStack: InferenceStack already depends on ApiStack.alerts_topic, so a
-        # reverse construct reference would cycle the two stacks. The string form also
-        # lets the invoke grant land before InferenceStack updates the function.
+        # InferenceStack: this stack deploys after InferenceStack (app.py), and a
+        # construct reference across that edge is what the string form avoids.
         inference_function_name = pyspacer_function_name(config.env_id)
         inference_function_arn = (
             f"arn:aws:lambda:{self.region}:{self.account}:function:{inference_function_name}"
@@ -568,7 +567,7 @@ class ApiStack(Stack):
         )
 
         # ── CloudWatch Alarms + Slack (AWS Chatbot) ──────────────────
-        monitoring_alerts = MonitoringAlerts(
+        MonitoringAlerts(
             self,
             "Alerts",
             env_id=config.env_id,
@@ -590,6 +589,3 @@ class ApiStack(Stack):
             # avoid both envs paging on the same instance event.
             monitor_shared_rds=config.env_id == "prod",
         )
-        # Exposed so sibling stacks (e.g. InferenceStack) can publish alarms to
-        # the same per-env topic this stack's Chatbot config already delivers.
-        self.alerts_topic = monitoring_alerts.topic

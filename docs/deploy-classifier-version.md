@@ -123,6 +123,13 @@ so bumping it redeploys `dev-mermaid-api-django` / `prod-mermaid-api-django`
 (new task definition revisions) alongside `dev-mermaid-inference` /
 `prod-mermaid-inference` — expect both stacks in the same deploy.
 
+> InferenceStack deploys before ApiStack, so a bump serves the new `vN` from
+> the Lambda before the API/worker tasks roll to match. Classifications
+> handled by a task still on `INFERENCE_CLASSIFIER_VERSION=vN-1` during that
+> window fail the classifier-version drift check — nothing is lost, the
+> message redelivers automatically about 25 minutes later. Drain or pause the
+> image queue first if that delay matters for a given release.
+
 1. **Dev.** Edit [`iac/settings/dev.py`](../iac/settings/dev.py), set the
    inference image tag to the `vN-K` from step 2 and `classifier_version` to
    the matching `vN`, and merge to `dev` (via PR):
