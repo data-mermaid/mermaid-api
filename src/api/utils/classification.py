@@ -15,7 +15,7 @@ from django.conf import settings
 from django.contrib.gis.geos import Point as GEOSPoint
 from django.core.files.base import ContentFile, File
 from django.db import IntegrityError, transaction
-from django.db.models import Exists, OuterRef
+from django.db.models import Exists, OuterRef, Q
 from django.db.models.fields.files import ImageFieldFile
 from django.utils import timezone
 from PIL import Image as PILImage
@@ -347,7 +347,17 @@ def _write_classification_results(image, point_predictions, classifier_record, p
     # Lock the image row, as create_classification_status does: a concurrent delete
     # otherwise breaks the Point foreign key part way through bulk_create.
     if not Image.objects.filter(id=image.pk).select_for_update().exists():
-        logger.info(f"Image {image.pk} was deleted, skipping classification results")
+        logger.warning(f"Image {image.pk} was deleted, skipping classification results")
+        return
+
+    # A confirmed annotation, or an unconfirmed but human-authored one, marks a
+    # human's work on this point — never destroy either under a redelivered job.
+    if (
+        Point.objects.filter(image=image)
+        .filter(Q(annotations__is_confirmed=True) | Q(annotations__is_machine_created=False))
+        .exists()
+    ):
+        logger.info("Image %s has reviewed points; skipping re-classification", image.pk)
         return
 
     # SQS redelivers, and (image, row, column) carries no unique constraint, so a
@@ -419,11 +429,21 @@ def _classify_image(image_record_id, profile_id=None, num_points=None):
 
         create_classification_status(image, ClassificationStatus.COMPLETED)
     except Exception as err:
-        logger.exception(f"Classifying image {image_record_id} failed")
+        # [classify.processing_error] is the literal the CloudWatch metric filter in
+        # iac/stacks/constructs/alerts.py matches on the image worker's log group; a
+        # retryable failure already has the SQS DLQ alarm behind it, so only a
+        # permanent one — with no other signal — is marked here.
+        retryable = getattr(err, "retryable", False)
+        if retryable:
+            logger.warning(f"classifying image {image_record_id} failed, retrying: {err}")
+        else:
+            logger.exception(
+                f"[classify.processing_error] classifying image {image_record_id} failed"
+            )
         create_classification_status(image, ClassificationStatus.FAILED, str(err))
         # Re-raise only a retryable failure so SQS redelivers it; the status/results
         # writes above are idempotent, so re-running this job is safe.
-        if getattr(err, "retryable", False):
+        if retryable:
             raise
 
 

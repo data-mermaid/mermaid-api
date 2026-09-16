@@ -214,6 +214,63 @@ def test_classify_via_lambda_raises_on_error_envelope(monkeypatch, image):
 
 
 @override_settings(INFERENCE_CLASSIFIER_VERSION="v2")
+def test_classify_via_lambda_error_envelope_carries_code_and_correct_retryable_flag(
+    monkeypatch, image
+):
+    """A JSON *string* "false" (as opposed to a JSON boolean) previously read as
+    retryable=True via bool("false"); parsing through ErrorEnvelope coerces it
+    correctly, and the envelope's error_code rides on the raised exception rather
+    than only being logged and dropped."""
+    envelope = {
+        "error_code": "processing_error",
+        "message": "kaboom",
+        "retryable": "false",
+    }
+    monkeypatch.setattr(inference, "invoke_pyspacer", lambda payload: envelope)
+
+    with pytest.raises(InferenceError) as exc:
+        classify_via_lambda(image, [(1, 2)])
+
+    assert exc.value.retryable is False
+    assert exc.value.error_code == "processing_error"
+
+
+@override_settings(INFERENCE_CLASSIFIER_VERSION="v2")
+def test_classify_via_lambda_rejects_envelope_with_misspelled_field(monkeypatch, image):
+    """A misspelled "retriable" key previously fell through payload.get("retryable")
+    to None -> False, silently becoming a non-retryable permanent failure with no
+    sign anything was wrong; ErrorEnvelope's extra="forbid" must surface it instead."""
+    envelope = {
+        "error_code": "processing_error",
+        "message": "kaboom",
+        "retriable": True,
+    }
+    monkeypatch.setattr(inference, "invoke_pyspacer", lambda payload: envelope)
+
+    with pytest.raises(InferenceError) as exc:
+        classify_via_lambda(image, [(1, 2)])
+
+    assert "malformed" in str(exc.value).lower()
+    assert len(str(exc.value)) < 200
+
+
+@override_settings(INFERENCE_CLASSIFIER_VERSION="v2")
+def test_classify_via_lambda_wraps_malformed_response_as_inference_error(monkeypatch, image):
+    """parse_classify_response raises pydantic ValidationError directly; unwrapped,
+    _classify_image writes that raw error (thousands of characters for a many-point
+    response) into a user-visible status field instead of a bounded message."""
+    payload = _ok_payload("v2")
+    del payload["point_results"]  # missing required field triggers ValidationError
+    monkeypatch.setattr(inference, "invoke_pyspacer", lambda p: payload)
+
+    with pytest.raises(InferenceError) as exc:
+        classify_via_lambda(image, [(1, 2)])
+
+    assert len(str(exc.value)) < 200
+    assert exc.value.retryable is False
+
+
+@override_settings(INFERENCE_CLASSIFIER_VERSION="v2")
 def test_classify_via_lambda_drift_guard(monkeypatch, image):
     monkeypatch.setattr(inference, "invoke_pyspacer", lambda payload: _ok_payload("v3"))
     with pytest.raises(InferenceError) as excinfo:

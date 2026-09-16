@@ -156,6 +156,53 @@ def test_inference_error_fails_the_job_with_its_message(monkeypatch, image, clas
     assert Point.objects.filter(image=image).count() == 0
 
 
+@override_settings(**PINNED)
+def test_fatal_classification_failure_logs_the_processing_error_marker(
+    monkeypatch, image, classifier_v2, caplog
+):
+    """The CloudWatch metric filter in iac/stacks/constructs/alerts.py alarms on this
+    literal marker on the image worker's log group; a fatal failure that never logs
+    it is invisible to that alarm."""
+
+    def raise_inference_error(image, points):
+        raise InferenceError("Lambda said no")
+
+    monkeypatch.setattr(classification, "classify_via_lambda", raise_inference_error)
+
+    # "api" is configured with propagate=False (see app/settings.py LOGGING), so
+    # caplog's root-attached handler never observes records from api.utils.classification
+    # unless attached directly to that logger.
+    classification.logger.addHandler(caplog.handler)
+    try:
+        _classify_image(image.pk)
+    finally:
+        classification.logger.removeHandler(caplog.handler)
+
+    assert "[classify.processing_error]" in caplog.text
+
+
+@override_settings(**PINNED)
+def test_retryable_classification_failure_omits_the_processing_error_marker(
+    monkeypatch, image, classifier_v2, caplog
+):
+    """A retryable failure already has the SQS DLQ alarm behind it; marking it here
+    too would fire the permanent-failure alarm on a throttle or cold-start blip."""
+
+    def raise_retryable_inference_error(image, points):
+        raise InferenceError("Lambda throttled", retryable=True)
+
+    monkeypatch.setattr(classification, "classify_via_lambda", raise_retryable_inference_error)
+
+    classification.logger.addHandler(caplog.handler)
+    try:
+        with pytest.raises(InferenceError):
+            _classify_image(image.pk)
+    finally:
+        classification.logger.removeHandler(caplog.handler)
+
+    assert "[classify.processing_error]" not in caplog.text
+
+
 @override_settings(**PINNED, **THRESHOLDS)
 def test_attributes_points_and_annotations_to_the_profile(
     monkeypatch, image, classifier_v2, benthic_attribute_1, profile1
@@ -214,6 +261,29 @@ def test_reclassifying_replaces_rather_than_duplicates_points(
     assert (points[0].row, points[0].column) == (11, 22)
     assert not Point.objects.filter(pk=stale_point.pk).exists()
     assert Annotation.objects.filter(point__image=image).count() == 1
+
+
+@override_settings(**PINNED, **THRESHOLDS)
+def test_reclassifying_skips_an_image_with_reviewed_points(
+    monkeypatch, image, classifier_v2, benthic_attribute_1, benthic_attribute_3
+):
+    reviewed_point = Point.objects.create(image=image, row=99, column=99)
+    reviewed_annotation = Annotation.objects.create(
+        point=reviewed_point,
+        benthic_attribute=benthic_attribute_3,
+        classifier=classifier_v2,
+        score=50,
+        is_machine_created=True,
+        is_confirmed=True,
+    )
+    _stub_lambda(monkeypatch, [(11, 22, [(f"{benthic_attribute_1.pk}::", 0.9)])])
+
+    _classify_image(image.pk)
+
+    assert Point.objects.filter(pk=reviewed_point.pk).exists()
+    assert Annotation.objects.filter(pk=reviewed_annotation.pk).exists()
+    assert Point.objects.filter(image=image).count() == 1
+    assert ClassificationStatus.COMPLETED in _statuses(image)
 
 
 @override_settings(INFERENCE_CLASSIFIER_VERSION="v-missing", **THRESHOLDS)

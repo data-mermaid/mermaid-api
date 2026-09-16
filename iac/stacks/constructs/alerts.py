@@ -420,12 +420,12 @@ class MonitoringAlerts(Construct):
         alarms.append(
             cw.Alarm(
                 self,
-                "FeatureVectorRelocationErrorsAlarm",
-                alarm_name=f"mermaid-{env_id}-feature-vector-relocation-errors",
+                "ClassifyProcessingErrorsAlarm",
+                alarm_name=f"mermaid-{env_id}-classify-processing-errors",
                 alarm_description=(
-                    "Image worker failed to relocate a feature vector from staging "
-                    "to its final bucket — 5 or more in a 5-minute window, e.g. a "
-                    "permissions gap or a foreign-bucket credential failure"
+                    "A classify job failed permanently, or a feature vector could not "
+                    "be relocated from staging to its final bucket — 5 or more in a "
+                    "5-minute window on the image worker's log group"
                 ),
                 metric=feature_vector_error_metric.metric(
                     statistic="Sum",

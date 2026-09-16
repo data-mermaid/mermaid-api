@@ -47,7 +47,12 @@ class Worker:
             for queue in self.queues:
                 for job in queue.jobs:
                     if job.visibility_timeout:
-                        queue.extend_job_visibility(job, job.visibility_timeout)
+                        try:
+                            queue.extend_job_visibility(job, job.visibility_timeout)
+                        except Exception as e:
+                            logger.exception(
+                                f"[classify.processing_error] failed to extend visibility for job {job}, continuing without it: {e}"
+                            )
                     job.run()
                     if not job.exception:
                         queue.remove_job(job)
