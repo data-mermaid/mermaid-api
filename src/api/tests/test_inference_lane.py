@@ -21,7 +21,8 @@ from api.utils.inference import (
     InferenceError,
     build_pyspacer_request,
     classify_via_lambda,
-    feature_vector_location,
+    feature_vector_name,
+    feature_vector_write_target,
     relocate_feature_vector,
     response_to_point_predictions,
 )
@@ -47,6 +48,16 @@ def image(valid_benthic_pq_transect_collect_record):
         image=image_file,
         name="Test image",
     )
+
+
+@pytest.fixture(autouse=True)
+def _default_image_bucket_needs_no_credentials():
+    """classify_via_lambda always resolves image's storage config to route its feature
+    vector, even for a test that has nothing to do with routing; default that
+    resolution to the no-credential (direct-write) case so a test overrides it only
+    when routing is what it is actually about."""
+    with override_settings(IMAGE_BUCKET_AWS_ACCESS_KEY_ID=None):
+        yield
 
 
 def _ok_payload(
@@ -111,7 +122,8 @@ def test_build_pyspacer_request_routes_feature_vector_to_staging_when_bucket_nee
     image.image.name = "abc123.png"
     traceparent = "00-0af7651916cd43dd8448eb211c80319c-b7ad6b7169203331-01"
 
-    _, feature_vector_output = feature_vector_location(image)
+    name = feature_vector_name(image)
+    feature_vector_output = feature_vector_write_target(image, name)
     req = build_pyspacer_request(
         image, [(1, 2)], traceparent, feature_vector_output=feature_vector_output
     )
@@ -126,7 +138,7 @@ def test_build_pyspacer_request_routes_feature_vector_to_staging_when_bucket_nee
     "extra_settings,image_bucket,expected",
     [
         (
-            {"IMAGE_BUCKET_AWS_ACCESS_KEY_ID": ""},
+            {"IMAGE_BUCKET_AWS_ACCESS_KEY_ID": None},
             "prod-bucket",
             {"bucket": "prod-bucket", "key": "mermaid/abc123_featurevector"},
         ),
@@ -134,7 +146,7 @@ def test_build_pyspacer_request_routes_feature_vector_to_staging_when_bucket_nee
             # Prod's actual test-project lane: get_image_storage_config's
             # is_test_bucket branch reads AWS_ACCESS_KEY_ID directly, which the
             # deployed task leaves unset — not IMAGE_BUCKET_AWS_ACCESS_KEY_ID.
-            {"AWS_ACCESS_KEY_ID": "", "AWS_SECRET_ACCESS_KEY": ""},
+            {"AWS_ACCESS_KEY_ID": None, "AWS_SECRET_ACCESS_KEY": ""},
             "test-bucket",
             {"bucket": "test-bucket", "key": "mermaid-production-test/abc123_featurevector"},
         ),
@@ -153,12 +165,29 @@ def test_build_pyspacer_request_writes_feature_vector_directly_when_bucket_needs
         image.image.name = "abc123.png"
         traceparent = "00-0af7651916cd43dd8448eb211c80319c-b7ad6b7169203331-01"
 
-        _, feature_vector_output = feature_vector_location(image)
+        name = feature_vector_name(image)
+        feature_vector_output = feature_vector_write_target(image, name)
         req = build_pyspacer_request(
             image, [(1, 2)], traceparent, feature_vector_output=feature_vector_output
         )
 
         assert req["feature_vector_output"] == expected
+
+
+# --- lambda_can_write_directly ---
+
+
+@override_settings(**{**STORAGE_SETTINGS, "IMAGE_BUCKET_AWS_ACCESS_KEY_ID": ""})
+def test_lambda_can_write_directly_treats_blank_access_key_as_requiring_staging():
+    """A blank IMAGE_BUCKET_AWS_ACCESS_KEY_ID (a Secrets Manager field that is
+    configured but left empty) is not the same as an unset one: the Lambda's
+    execution role still lacks permission to write coral-reef-training directly, so a
+    blank credential must route to staging exactly like a real one would, rather than
+    falling through to a write the Lambda's read-only grant would silently swallow."""
+    image = MagicMock()
+    image.image_bucket = "prod-bucket"
+
+    assert inference.lambda_can_write_directly(image) is False
 
 
 # --- classify_via_lambda ---
@@ -370,7 +399,7 @@ def test_classify_via_lambda_logs_traceparent_at_invoke(monkeypatch, image, capl
 # --- relocate_feature_vector ---
 
 
-@override_settings(**{**STORAGE_SETTINGS, "IMAGE_BUCKET_AWS_ACCESS_KEY_ID": ""})
+@override_settings(**{**STORAGE_SETTINGS, "IMAGE_BUCKET_AWS_ACCESS_KEY_ID": None})
 def test_relocate_feature_vector_noop_when_bucket_needs_no_credentials(monkeypatch):
     """Nothing was staged (build_pyspacer_request wrote straight to the final bucket),
     so relocate_feature_vector must not touch S3 at all."""

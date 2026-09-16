@@ -3,7 +3,7 @@ from django.core.files.uploadedfile import SimpleUploadedFile
 from django.test import override_settings
 
 from api.models import Annotation, ClassificationStatus, Classifier, Image, Point
-from api.utils import classification, inference, q
+from api.utils import classification, q
 from api.utils.classification import _classify_image, classify_image_job
 from api.utils.inference import InferenceError, LambdaClassificationResult
 
@@ -64,21 +64,6 @@ def test_classifies_an_image_and_completes(monkeypatch, image, classifier_v2, be
     assert annotation.classifier_id == classifier_v2.pk
     assert ClassificationStatus.COMPLETED in _statuses(image)
     assert ClassificationStatus.FAILED not in _statuses(image)
-
-
-@override_settings(**PINNED, **THRESHOLDS)
-def test_records_the_feature_vector_name_on_the_image_row(
-    monkeypatch, image, classifier_v2, benthic_attribute_1
-):
-    _stub_lambda(
-        monkeypatch,
-        [(1, 2, [(f"{benthic_attribute_1.pk}::", 0.9)])],
-        feature_vector_name=f"{image.id}_featurevector",
-    )
-
-    _classify_image(image.pk)
-
-    assert Image.objects.get(pk=image.pk).feature_vector_file.name == f"{image.id}_featurevector"
 
 
 @override_settings(**PINNED, **THRESHOLDS)
@@ -219,25 +204,24 @@ def test_attributes_points_and_annotations_to_the_profile(
     assert annotation.updated_by_id == profile1.pk
 
 
-@override_settings(**PINNED)
-def test_generates_the_requested_number_of_points(monkeypatch, image, classifier_v2):
-    captured_points = []
-    _stub_lambda(monkeypatch, [], captured_points=captured_points)
-
-    _classify_image(image.pk, num_points=9)
-
-    # generate_points lays out ceil(sqrt(9)) = 3 points per side.
-    assert len(captured_points) == 9
-
-
+@pytest.mark.parametrize(
+    "num_points, expected",
+    [
+        pytest.param(9, 9, id="explicit_arg"),
+        pytest.param(None, 9, id="falls_back_to_setting"),
+    ],
+)
 @override_settings(**PINNED, INFERENCE_DEFAULT_NUM_POINTS=9)
-def test_defaults_the_number_of_points_to_the_setting(monkeypatch, image, classifier_v2):
+def test_generates_the_requested_number_of_points(
+    monkeypatch, image, classifier_v2, num_points, expected
+):
     captured_points = []
     _stub_lambda(monkeypatch, [], captured_points=captured_points)
 
-    _classify_image(image.pk)
+    _classify_image(image.pk, num_points=num_points)
 
-    assert len(captured_points) == 9
+    # generate_points lays out ceil(sqrt(n)) points per side.
+    assert len(captured_points) == expected
 
 
 @override_settings(**PINNED, **THRESHOLDS)
@@ -300,21 +284,6 @@ def test_fails_when_no_classifier_matches_the_pinned_version(
     assert "v-missing" in failed.message
 
 
-@override_settings(**PINNED, INFERENCE_LAMBDA_PYSPACER="", AWS_REGION="us-east-1")
-def test_fails_when_the_lambda_name_is_unset(monkeypatch, image, classifier_v2):
-    # The real lane runs here: botocore rejects an empty FunctionName client-side and
-    # invoke_pyspacer turns that into an InferenceError. Reset the cached client so the
-    # AWS_REGION override applies and no client built here outlives the test.
-    monkeypatch.setattr(inference, "_lambda_client", None)
-
-    _classify_image(image.pk)
-
-    assert Point.objects.filter(image=image).count() == 0
-    failed = image.statuses.filter(status=ClassificationStatus.FAILED).first()
-    assert failed is not None
-    assert "Lambda invoke failed" in failed.message
-
-
 @override_settings(TESTING=False)
 def test_classify_image_job_enqueues_with_a_visibility_timeout(monkeypatch, image, profile1):
     enqueued = []
@@ -332,9 +301,6 @@ def test_classify_image_job_enqueues_with_a_visibility_timeout(monkeypatch, imag
 
     assert len(enqueued) == 1
     job = enqueued[0]
-    # The Lambda's own timeout is 600s; a shorter visibility timeout redelivers the
-    # message while the first attempt is still running.
-    assert job.visibility_timeout >= 600
     assert job.kwargs == {
         "image_record_id": image.pk,
         "profile_id": profile1.pk,

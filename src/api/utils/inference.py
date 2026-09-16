@@ -172,21 +172,34 @@ def invoke_pyspacer(payload: dict) -> dict:
         ) from err
 
 
-def feature_vector_location(image) -> tuple[str, S3Location]:
-    """Name/final-location pair for an image's feature vector.
+def _storage_key(config, name: str) -> str:
+    """Storage key for `name` under a storage config's location prefix.
 
-    `name` must match the Django FileField name exactly, so a queryset update can
-    record the Lambda-written key directly (relative to the bucket's S3Storage
-    `location` prefix). `S3Location.key` carries that same prefix explicitly, since
-    the contract has no notion of a storage-level location — getting this pair out
-    of sync means the Lambda writes bytes at a key the FileField does not point at.
+    Every configured `s3_path` (IMAGE_S3_PATH, IMAGE_S3_PATH_TEST) ends in "/"; an
+    unvalidated environment override without one silently doubles the prefix into the
+    joined key instead of raising.
     """
-    name = f"{image.id}_featurevector"
+    return f"{config['s3_path']}{name}"
+
+
+def feature_vector_name(image) -> str:
+    """Name for image's feature vector.
+
+    Must match the Django FileField name exactly, so a queryset update can record the
+    Lambda-written key directly (relative to the bucket's S3Storage `location` prefix).
+    """
+    return f"{image.id}_featurevector"
+
+
+def feature_vector_final_location(image, name: str) -> S3Location:
+    """Where image's feature vector named `name` lives once it is no longer staged:
+    image's own storage bucket, at the prefix get_image_storage_config resolves for it.
+    """
     config = get_image_storage_config(image.image_bucket)
-    return name, S3Location(bucket=config["bucket"], key=f"{config['s3_path']}{name}")
+    return S3Location(bucket=config["bucket"], key=_storage_key(config, name))
 
 
-def _staging_feature_vector_output(name: str) -> S3Location:
+def feature_vector_staging_location(name: str) -> S3Location:
     """In-account staging location for a feature vector named `name`.
 
     Used in place of the final location whenever that bucket needs credentials the
@@ -199,34 +212,55 @@ def _staging_feature_vector_output(name: str) -> S3Location:
     )
 
 
-def _feature_vector_output(image, name: str) -> S3Location:
-    """Resolve where image's feature vector named `name` should be written: the
-    final bucket directly, or the in-account staging prefix when that bucket needs
-    contributing-org credentials the Lambda's execution role does not have.
+def lambda_can_write_directly(image) -> bool:
+    """True when the Lambda's execution role can write image's feature vector straight
+    to its own storage bucket, with no staging hop.
 
-    The single source of the staging decision — build_pyspacer_request and
-    classify_via_lambda both call this, so neither can route a feature vector
-    differently from what the other expects.
+    The single source of the staging decision — feature_vector_write_target and
+    relocate_feature_vector both call this, so neither can route or relocate a
+    feature vector differently from what the other expects.
+
+    get_image_storage_config's `access_key` is None when no contributing-org
+    credentials are configured for the bucket (the Lambda's own role covers it) and ""
+    when a credential is configured but left blank — a misconfiguration that must
+    route to staging like any other credentialed bucket, not be read as "no
+    credentials needed".
     """
     config = get_image_storage_config(image.image_bucket)
-    if not config.get("access_key"):
-        return S3Location(bucket=config["bucket"], key=f"{config['s3_path']}{name}")
+    access_key = config.get("access_key")
+    if access_key == "":
+        logger.warning(
+            f"image bucket {config['bucket']!r} has a blank access key configured; "
+            "treating it as requiring staged writes"
+        )
+        return False
+    return not access_key
+
+
+def feature_vector_write_target(image, name: str) -> S3Location:
+    """Resolve where image's feature vector named `name` should actually be written:
+    the final bucket directly, or the in-account staging prefix when that bucket needs
+    contributing-org credentials the Lambda's execution role does not have.
+
+    classify_via_lambda calls this once and passes the result both into
+    build_pyspacer_request and into its own comparison against the Lambda's response,
+    so the request and the check it is judged against can never disagree.
+    """
+    if lambda_can_write_directly(image):
+        return feature_vector_final_location(image, name)
     if not settings.IMAGE_PROCESSING_BUCKET_STAGING:
         raise InferenceError(
             "IMAGE_PROCESSING_BUCKET_STAGING is not set but the image bucket "
             "requires staged writes"
         )
-    return _staging_feature_vector_output(name)
+    return feature_vector_staging_location(name)
 
 
 def build_pyspacer_request(image, points, traceparent, feature_vector_output=None) -> dict:
     config = get_image_storage_config(image.image_bucket)
-    if feature_vector_output is not None:
-        name = feature_vector_output.key.rsplit("/", 1)[-1]
-        feature_vector_output = _feature_vector_output(image, name)
     request = PyspacerRequest(
         classifier_type="pyspacer",
-        image=S3Location(bucket=config["bucket"], key=f"{config['s3_path']}{image.image.name}"),
+        image=S3Location(bucket=config["bucket"], key=_storage_key(config, image.image.name)),
         points=[(int(row), int(col)) for row, col in points],
         feature_vector_output=feature_vector_output,
         traceparent=traceparent,
@@ -236,7 +270,7 @@ def build_pyspacer_request(image, points, traceparent, feature_vector_output=Non
 
 def relocate_feature_vector(image, name: str) -> bool:
     """Move image's feature vector named `name` from staging to its final location,
-    if build_pyspacer_request had to stage it there in the first place.
+    if it had to be staged there in the first place.
 
     Returns True when nothing needed relocating (the Lambda already wrote to the
     final bucket directly) or the move succeeded. Returns False when a relocation
@@ -246,18 +280,18 @@ def relocate_feature_vector(image, name: str) -> bool:
     failed move must not fail the caller.
     """
     try:
-        config = get_image_storage_config(image.image_bucket)
-        if not config.get("access_key"):
+        if lambda_can_write_directly(image):
             return True
 
-        staging = _staging_feature_vector_output(name)
+        config = get_image_storage_config(image.image_bucket)
+        staging = feature_vector_staging_location(name)
         move_file_cross_account(
             source_bucket=staging.bucket,
             source_key=staging.key,
             source_access_key=None,
             source_secret_key=None,
             dest_bucket=config["bucket"],
-            dest_key=f"{config['s3_path']}{name}",
+            dest_key=_storage_key(config, name),
             dest_access_key=config["access_key"],
             dest_secret_key=config["secret_key"],
         )
@@ -334,12 +368,12 @@ def classify_via_lambda(image, points) -> LambdaClassificationResult:
     with tracer.start_as_current_span("pyspacer.classify_via_lambda"):
         traceparent = _current_traceparent()
         logger.info("pyspacer inference invoke", extra={"traceparent": traceparent})
-        name, final_location = feature_vector_location(image)
-        # Same routing decision build_pyspacer_request makes below, so the comparison
-        # checks the response against whatever location was actually requested.
-        requested_output = _feature_vector_output(image, name)
+        name = feature_vector_name(image)
+        requested_output = feature_vector_write_target(image, name)
         payload = invoke_pyspacer(
-            build_pyspacer_request(image, points, traceparent, feature_vector_output=final_location)
+            build_pyspacer_request(
+                image, points, traceparent, feature_vector_output=requested_output
+            )
         )
 
         if "error_code" in payload:
@@ -404,9 +438,9 @@ def classify_via_lambda(image, points) -> LambdaClassificationResult:
                 f"API has {installed!r} — pin mermaid-inference-contract to the deployed image's tag"
             )
 
-        feature_vector_name = None
+        matched_name = None
         if response.feature_vector_output == requested_output:
-            feature_vector_name = name
+            matched_name = name
         else:
             logger.warning(
                 f"pyspacer did not write the requested feature vector for image {image.id}"
@@ -414,5 +448,5 @@ def classify_via_lambda(image, points) -> LambdaClassificationResult:
 
         return LambdaClassificationResult(
             point_predictions=response_to_point_predictions(response),
-            feature_vector_name=feature_vector_name,
+            feature_vector_name=matched_name,
         )
