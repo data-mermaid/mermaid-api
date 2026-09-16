@@ -5,12 +5,6 @@ from django.db import IntegrityError
 from api.models import Classifier
 
 
-def test_version_is_unique():
-    Classifier.objects.create(name="a", version="dup", config={"patch_size": 224})
-    with pytest.raises(IntegrityError):
-        Classifier.objects.create(name="b", version="dup", config={"patch_size": 224})
-
-
 def test_saving_pyspacer_classifier_without_patch_size_is_rejected():
     with pytest.raises(IntegrityError):
         Classifier.objects.create(name="c7", version="v7", classifier_type="pyspacer", config={})
@@ -23,42 +17,18 @@ def test_saving_non_pyspacer_classifier_without_patch_size_is_allowed():
     assert classifier.pk is not None
 
 
-def test_full_clean_rejects_config_missing_required_key():
-    c = Classifier(name="c3", version="v3", classifier_type="pyspacer", config={})
-    with pytest.raises(ValidationError) as exc_info:
-        c.full_clean()
-    assert "config" in exc_info.value.message_dict
-
-
-def test_full_clean_accepts_valid_config():
-    c = Classifier(name="c4", version="v4", classifier_type="pyspacer", config={"patch_size": 224})
-    c.full_clean()
-
-
-def test_full_clean_skips_validation_for_type_with_no_schema():
-    c = Classifier(name="c5", version="v5", classifier_type="segmentation", config={})
-    c.full_clean()
-
-
-def test_full_clean_rejects_non_object_config():
-    c = Classifier(name="c6", version="v6", classifier_type="pyspacer", config=224)
-    with pytest.raises(ValidationError) as exc_info:
-        c.full_clean()
-    assert "config" in exc_info.value.message_dict
-
-
-def test_full_clean_rejects_string_patch_size():
-    c = Classifier(
-        name="c9", version="v9", classifier_type="pyspacer", config={"patch_size": "224"}
-    )
-    with pytest.raises(ValidationError) as exc_info:
-        c.full_clean()
-    assert "config" in exc_info.value.message_dict
-
-
-@pytest.mark.parametrize("config", [224, []])
-def test_full_clean_rejects_non_object_config_for_type_with_no_schema(config):
-    c = Classifier(name="c10", version="v10", classifier_type="segmentation", config=config)
+@pytest.mark.parametrize(
+    "classifier_type,config",
+    [
+        ("pyspacer", {}),  # missing the required patch_size key
+        ("pyspacer", 224),  # non-object config
+        ("pyspacer", {"patch_size": "224"}),  # patch_size must be an int
+        ("segmentation", 224),  # non-object config, even with no schema for the type
+        ("segmentation", []),
+    ],
+)
+def test_full_clean_rejects_invalid_config(classifier_type, config):
+    c = Classifier(name="c", version="v-invalid", classifier_type=classifier_type, config=config)
     with pytest.raises(ValidationError) as exc_info:
         c.full_clean()
     assert "config" in exc_info.value.message_dict

@@ -208,12 +208,9 @@ def test_invoke_pyspacer_retries_up_to_the_configured_ceiling_and_no_further(mon
     client = inference.get_lambda_client()
     # botocore's Config(retries={"max_attempts": N}) means N retries after the
     # initial request; total_max_attempts is the real total the client enforces.
-    expected_attempts = client.meta.config.retries["total_max_attempts"]
     # Hand-derived from the 1500s visibility timeout budget (see
     # INFERENCE_JOB_VISIBILITY_TIMEOUT): 1 retry configured, so 2 total invokes.
-    # Pinning this literal, rather than only comparing against itself below,
-    # is what catches the ceiling silently drifting back up.
-    assert expected_attempts == 2
+    assert client.meta.config.retries["total_max_attempts"] == 2
 
     calls = []
 
@@ -226,4 +223,4 @@ def test_invoke_pyspacer_retries_up_to_the_configured_ceiling_and_no_further(mon
     with pytest.raises(InferenceError):
         invoke_pyspacer({"classifier_type": "pyspacer"})
 
-    assert len(calls) == expected_attempts
+    assert len(calls) == 2

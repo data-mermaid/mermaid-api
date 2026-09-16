@@ -12,6 +12,7 @@ from api.models.classification import (
     get_image_bucket_for_status,
     get_image_storage_config,
 )
+from api.tests.fixtures.settings_overrides import STORAGE_SETTINGS
 
 # ---------------------------------------------------------------------------
 # In-memory storage that segregates files by bucket name.
@@ -115,18 +116,6 @@ class BucketMemoryStorage(Storage):
 BUCKET_SETTINGS = {
     "IMAGE_PROCESSING_BUCKET": "prod-bucket",
     "IMAGE_PROCESSING_BUCKET_TEST": "test-bucket",
-}
-
-STORAGE_SETTINGS = {
-    **BUCKET_SETTINGS,
-    "IMAGE_BUCKET_AWS_ACCESS_KEY_ID": "image-key",
-    "IMAGE_BUCKET_AWS_SECRET_ACCESS_KEY": "image-secret",
-    "AWS_ACCESS_KEY_ID": "default-key",
-    "AWS_SECRET_ACCESS_KEY": "default-secret",
-    "IMAGE_S3_PATH": "mermaid/",
-    "IMAGE_S3_PATH_TEST": "mermaid-production-test/",
-    "IMAGE_PROCESSING_BUCKET_STAGING": "staging-bucket",
-    "IMAGE_S3_PATH_STAGING": "inference-staging/",
 }
 
 

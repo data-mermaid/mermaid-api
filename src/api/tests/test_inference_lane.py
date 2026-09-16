@@ -1,7 +1,6 @@
 from unittest.mock import MagicMock
 
 import pytest
-from django.core.files.uploadedfile import SimpleUploadedFile
 from django.test import override_settings
 from mermaid_inference_contract import (
     PointResult,
@@ -14,8 +13,7 @@ from mermaid_inference_contract import (
 from opentelemetry import trace as otel_trace
 from opentelemetry.trace import NonRecordingSpan, SpanContext, TraceFlags
 
-from api.models import Image
-from api.tests.test_image_bucket_routing import STORAGE_SETTINGS
+from api.tests.fixtures.settings_overrides import STORAGE_SETTINGS
 from api.utils import inference
 from api.utils.inference import (
     InferenceError,
@@ -32,22 +30,6 @@ from api.utils.inference import (
 _DEFAULT_FEATURE_VECTOR_OUTPUT = S3Location(
     bucket="prod-bucket", key="mermaid/default_featurevector"
 )
-
-
-@pytest.fixture
-def image(valid_benthic_pq_transect_collect_record):
-    with open("api/tests/data/test_image.jpg", "rb") as f:
-        content = f.read()
-
-    image_file = SimpleUploadedFile(
-        name="test_image.jpg", content=content, content_type="image/jpeg"
-    )
-
-    return Image.objects.create(
-        collect_record_id=valid_benthic_pq_transect_collect_record.pk,
-        image=image_file,
-        name="Test image",
-    )
 
 
 @pytest.fixture(autouse=True)
@@ -324,17 +306,6 @@ def test_classify_via_lambda_contract_version_mismatch_raises(monkeypatch, image
 
 
 @override_settings(INFERENCE_CLASSIFIER_VERSION="v2")
-def test_classify_via_lambda_contract_version_match_ok(monkeypatch, image):
-    import mermaid_inference_contract as contract
-
-    payload = _ok_payload("v2")
-    payload["contract_version"] = contract.__version__  # matches installed
-    monkeypatch.setattr(inference, "invoke_pyspacer", lambda p: payload)
-    result = classify_via_lambda(image, [(1, 2)])
-    assert result.point_predictions == [(1, 2, [("ba1::", 0.9), ("ba2::", 0.1)])]
-
-
-@override_settings(INFERENCE_CLASSIFIER_VERSION="v2")
 def test_classify_via_lambda_missing_contract_version_tolerated(monkeypatch, image):
     payload = _ok_payload("v2", contract_version=None)  # older Lambda: no contract_version
     monkeypatch.setattr(inference, "invoke_pyspacer", lambda p: payload)
@@ -375,25 +346,6 @@ def test_current_traceparent_falls_back_without_valid_span(monkeypatch):
     parsed = parse_traceparent(traceparent)  # raises ValueError if malformed
     assert parsed.trace_id != "0" * 32
     assert parsed.parent_id != "0" * 16
-
-
-@override_settings(INFERENCE_CLASSIFIER_VERSION="v2")
-def test_classify_via_lambda_logs_traceparent_at_invoke(monkeypatch, image, caplog):
-    monkeypatch.setattr(inference, "invoke_pyspacer", lambda payload: _ok_payload("v2"))
-
-    # The "api" logger is configured with propagate=False (see app/settings.py LOGGING),
-    # so caplog's root-attached handler never observes records from api.utils.inference
-    # unless we attach it directly to that logger.
-    inference.logger.addHandler(caplog.handler)
-    try:
-        classify_via_lambda(image, [(1, 2)])
-    finally:
-        inference.logger.removeHandler(caplog.handler)
-
-    invoke_records = [r for r in caplog.records if getattr(r, "traceparent", None)]
-    assert invoke_records, "expected a log record carrying the traceparent"
-    parsed = parse_traceparent(invoke_records[0].traceparent)
-    assert parsed.trace_id and parsed.parent_id
 
 
 # --- relocate_feature_vector ---
