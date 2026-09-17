@@ -34,7 +34,7 @@ from ..models import (
     Site,
 )
 from ..models.classification import parse_bagf_label
-from .inference import classify_via_lambda, relocate_feature_vector
+from .inference import classify_via_lambda
 from .q import submit_image_job
 from .s3 import upload_file
 
@@ -414,13 +414,9 @@ def _classify_image(image_record_id, profile_id=None, num_points=None):
         result = classify_via_lambda(image, points)
         _write_classification_results(image, result.point_predictions, classifier_record, profile)
 
-        if result.feature_vector_name and relocate_feature_vector(
-            image, result.feature_vector_name
-        ):
+        if result.feature_vector_name:
             # A queryset update records exactly the key the Lambda wrote: no re-upload,
             # no get_available_name suffix, and no post_save re-checksum from S3.
-            # relocate_feature_vector runs first, so a crash between the two never
-            # leaves this column pointing at a staging key.
             Image.objects.filter(pk=image.pk).update(feature_vector_file=result.feature_vector_name)
             image.feature_vector_file.name = result.feature_vector_name
 

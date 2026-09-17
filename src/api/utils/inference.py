@@ -27,7 +27,6 @@ from opentelemetry import trace as otel_trace
 from pydantic import ValidationError
 
 from ..models.classification import get_image_storage_config
-from .s3 import move_file_cross_account
 
 logger = logging.getLogger(__name__)
 
@@ -192,68 +191,11 @@ def feature_vector_name(image) -> str:
 
 
 def feature_vector_final_location(image, name: str) -> S3Location:
-    """Where image's feature vector named `name` lives once it is no longer staged:
-    image's own storage bucket, at the prefix get_image_storage_config resolves for it.
+    """Return the S3 location for image's feature vector named `name`: image's own
+    storage bucket, at the prefix get_image_storage_config resolves for it.
     """
     config = get_image_storage_config(image.image_bucket)
     return S3Location(bucket=config["bucket"], key=_storage_key(config, name))
-
-
-def feature_vector_staging_location(name: str) -> S3Location:
-    """In-account staging location for a feature vector named `name`.
-
-    Used in place of the final location whenever that bucket needs credentials the
-    Lambda's execution role does not have; the image worker relocates the object
-    from here to its final key once classification succeeds.
-    """
-    return S3Location(
-        bucket=settings.IMAGE_PROCESSING_BUCKET_STAGING,
-        key=f"{settings.IMAGE_S3_PATH_STAGING}{name}",
-    )
-
-
-def lambda_can_write_directly(image) -> bool:
-    """True when the Lambda's execution role can write image's feature vector straight
-    to its own storage bucket, with no staging hop.
-
-    The single source of the staging decision — feature_vector_write_target and
-    relocate_feature_vector both call this, so neither can route or relocate a
-    feature vector differently from what the other expects.
-
-    get_image_storage_config's `access_key` is None when no contributing-org
-    credentials are configured for the bucket (the Lambda's own role covers it) and ""
-    when a credential is configured but left blank — a misconfiguration that must
-    route to staging like any other credentialed bucket, not be read as "no
-    credentials needed".
-    """
-    config = get_image_storage_config(image.image_bucket)
-    access_key = config.get("access_key")
-    if access_key == "":
-        logger.warning(
-            f"image bucket {config['bucket']!r} has a blank access key configured; "
-            "treating it as requiring staged writes"
-        )
-        return False
-    return not access_key
-
-
-def feature_vector_write_target(image, name: str) -> S3Location:
-    """Resolve where image's feature vector named `name` should actually be written:
-    the final bucket directly, or the in-account staging prefix when that bucket needs
-    contributing-org credentials the Lambda's execution role does not have.
-
-    classify_via_lambda calls this once and passes the result both into
-    build_pyspacer_request and into its own comparison against the Lambda's response,
-    so the request and the check it is judged against can never disagree.
-    """
-    if lambda_can_write_directly(image):
-        return feature_vector_final_location(image, name)
-    if not settings.IMAGE_PROCESSING_BUCKET_STAGING:
-        raise InferenceError(
-            "IMAGE_PROCESSING_BUCKET_STAGING is not set but the image bucket "
-            "requires staged writes"
-        )
-    return feature_vector_staging_location(name)
 
 
 def build_pyspacer_request(image, points, traceparent, feature_vector_output=None) -> dict:
@@ -266,42 +208,6 @@ def build_pyspacer_request(image, points, traceparent, feature_vector_output=Non
         traceparent=traceparent,
     )
     return request.model_dump(mode="json")
-
-
-def relocate_feature_vector(image, name: str) -> bool:
-    """Move image's feature vector named `name` from staging to its final location,
-    if it had to be staged there in the first place.
-
-    Returns True when nothing needed relocating (the Lambda already wrote to the
-    final bucket directly) or the move succeeded. Returns False when a relocation
-    was required but failed; the failure is logged under the `[classify.processing_error]`
-    marker the CloudWatch metric filter watches for, and never raised — the point
-    predictions are the product of a classify job, not the feature vector, so a
-    failed move must not fail the caller.
-    """
-    try:
-        if lambda_can_write_directly(image):
-            return True
-
-        config = get_image_storage_config(image.image_bucket)
-        staging = feature_vector_staging_location(name)
-        move_file_cross_account(
-            source_bucket=staging.bucket,
-            source_key=staging.key,
-            source_access_key=None,
-            source_secret_key=None,
-            dest_bucket=config["bucket"],
-            dest_key=_storage_key(config, name),
-            dest_access_key=config["access_key"],
-            dest_secret_key=config["secret_key"],
-        )
-    except Exception:
-        logger.error(
-            f"[classify.processing_error] failed to relocate feature vector for image {image.id}",
-            exc_info=True,
-        )
-        return False
-    return True
 
 
 def _current_traceparent() -> str:
@@ -353,7 +259,7 @@ def classify_via_lambda(image, points) -> LambdaClassificationResult:
         traceparent = _current_traceparent()
         logger.info("pyspacer inference invoke", extra={"traceparent": traceparent})
         name = feature_vector_name(image)
-        requested_output = feature_vector_write_target(image, name)
+        requested_output = feature_vector_final_location(image, name)
         payload = invoke_pyspacer(
             build_pyspacer_request(
                 image, points, traceparent, feature_vector_output=requested_output

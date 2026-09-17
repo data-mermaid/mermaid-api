@@ -19,9 +19,8 @@ from api.utils.inference import (
     InferenceError,
     build_pyspacer_request,
     classify_via_lambda,
+    feature_vector_final_location,
     feature_vector_name,
-    feature_vector_write_target,
-    relocate_feature_vector,
     response_to_point_predictions,
 )
 
@@ -30,16 +29,6 @@ from api.utils.inference import (
 _DEFAULT_FEATURE_VECTOR_OUTPUT = S3Location(
     bucket="prod-bucket", key="mermaid/default_featurevector"
 )
-
-
-@pytest.fixture(autouse=True)
-def _default_image_bucket_needs_no_credentials():
-    """classify_via_lambda always resolves image's storage config to route its feature
-    vector, even for a test that has nothing to do with routing; default that
-    resolution to the no-credential (direct-write) case so a test overrides it only
-    when routing is what it is actually about."""
-    with override_settings(IMAGE_BUCKET_AWS_ACCESS_KEY_ID=None):
-        yield
 
 
 def _ok_payload(
@@ -93,83 +82,34 @@ def test_build_pyspacer_request_image_key(bucket, expected_key):
 
 
 @override_settings(**STORAGE_SETTINGS)
-def test_build_pyspacer_request_routes_feature_vector_to_staging_when_bucket_needs_credentials():
-    """A set IMAGE_BUCKET_AWS_ACCESS_KEY_ID (get_image_storage_config's access_key,
-    e.g. prod's coral-reef-training lane) means the Lambda's execution role cannot
-    write there directly, so the request targets the in-account staging prefix.
-    """
-    image = MagicMock()
-    image.id = "abc123"
-    image.image_bucket = "prod-bucket"
-    image.image.name = "abc123.png"
-    traceparent = "00-0af7651916cd43dd8448eb211c80319c-b7ad6b7169203331-01"
-
-    name = feature_vector_name(image)
-    feature_vector_output = feature_vector_write_target(image, name)
-    req = build_pyspacer_request(
-        image, [(1, 2)], traceparent, feature_vector_output=feature_vector_output
-    )
-
-    assert req["feature_vector_output"] == {
-        "bucket": "staging-bucket",
-        "key": "inference-staging/abc123_featurevector",
-    }
-
-
 @pytest.mark.parametrize(
-    "extra_settings,image_bucket,expected",
+    "image_bucket,expected",
     [
+        ("prod-bucket", {"bucket": "prod-bucket", "key": "mermaid/abc123_featurevector"}),
         (
-            {"IMAGE_BUCKET_AWS_ACCESS_KEY_ID": None},
-            "prod-bucket",
-            {"bucket": "prod-bucket", "key": "mermaid/abc123_featurevector"},
-        ),
-        (
-            # Prod's actual test-project lane: get_image_storage_config's
-            # is_test_bucket branch reads AWS_ACCESS_KEY_ID directly, which the
-            # deployed task leaves unset — not IMAGE_BUCKET_AWS_ACCESS_KEY_ID.
-            {"AWS_ACCESS_KEY_ID": None, "AWS_SECRET_ACCESS_KEY": ""},
             "test-bucket",
             {"bucket": "test-bucket", "key": "mermaid-production-test/abc123_featurevector"},
         ),
     ],
 )
-def test_build_pyspacer_request_writes_feature_vector_directly_when_bucket_needs_no_credentials(
-    extra_settings, image_bucket, expected
-):
-    """Neither lane the Lambda's own execution role can reach directly needs staging:
-    dev (no IMAGE_BUCKET_AWS_ACCESS_KEY_ID) and prod's test-project bucket (no
-    AWS_ACCESS_KEY_ID) both write straight to the final bucket."""
-    with override_settings(**{**STORAGE_SETTINGS, **extra_settings}):
-        image = MagicMock()
-        image.id = "abc123"
-        image.image_bucket = image_bucket
-        image.image.name = "abc123.png"
-        traceparent = "00-0af7651916cd43dd8448eb211c80319c-b7ad6b7169203331-01"
-
-        name = feature_vector_name(image)
-        feature_vector_output = feature_vector_write_target(image, name)
-        req = build_pyspacer_request(
-            image, [(1, 2)], traceparent, feature_vector_output=feature_vector_output
-        )
-
-        assert req["feature_vector_output"] == expected
-
-
-# --- lambda_can_write_directly ---
-
-
-@override_settings(**{**STORAGE_SETTINGS, "IMAGE_BUCKET_AWS_ACCESS_KEY_ID": ""})
-def test_lambda_can_write_directly_treats_blank_access_key_as_requiring_staging():
-    """A blank IMAGE_BUCKET_AWS_ACCESS_KEY_ID (a Secrets Manager field that is
-    configured but left empty) is not the same as an unset one: the Lambda's
-    execution role still lacks permission to write coral-reef-training directly, so a
-    blank credential must route to staging exactly like a real one would, rather than
-    falling through to a write the Lambda's read-only grant would silently swallow."""
+def test_build_pyspacer_request_writes_feature_vector_to_the_image_bucket(image_bucket, expected):
+    """feature_vector_output in the request is image's own storage bucket and prefix:
+    build_pyspacer_request echoes back whatever feature_vector_final_location resolves,
+    whether that is the prod bucket or the test-project bucket.
+    """
     image = MagicMock()
-    image.image_bucket = "prod-bucket"
+    image.id = "abc123"
+    image.image_bucket = image_bucket
+    image.image.name = "abc123.png"
+    traceparent = "00-0af7651916cd43dd8448eb211c80319c-b7ad6b7169203331-01"
 
-    assert inference.lambda_can_write_directly(image) is False
+    name = feature_vector_name(image)
+    feature_vector_output = feature_vector_final_location(image, name)
+    req = build_pyspacer_request(
+        image, [(1, 2)], traceparent, feature_vector_output=feature_vector_output
+    )
+
+    assert req["feature_vector_output"] == expected
 
 
 # --- classify_via_lambda ---
@@ -179,13 +119,10 @@ def test_lambda_can_write_directly_treats_blank_access_key_as_requiring_staging(
 @override_settings(**STORAGE_SETTINGS)
 def test_classify_via_lambda_maps_response(monkeypatch, image):
     captured_payloads = []
-    # Hand-written, not computed via feature_vector_location(image): the image fixture
-    # has no image_bucket set, so get_image_storage_config resolves the default (prod)
-    # bucket/prefix from STORAGE_SETTINGS above — whose IMAGE_BUCKET_AWS_ACCESS_KEY_ID
-    # makes that bucket a credentialed one, so the actual request targets staging.
-    requested_location = S3Location(
-        bucket="staging-bucket", key=f"inference-staging/{image.id}_featurevector"
-    )
+    # Hand-written, not computed via feature_vector_final_location(image): the image
+    # fixture has no image_bucket set, so get_image_storage_config resolves the
+    # default (prod) bucket/prefix from STORAGE_SETTINGS above.
+    requested_location = S3Location(bucket="prod-bucket", key=f"mermaid/{image.id}_featurevector")
 
     def fake_invoke(payload):
         captured_payloads.append(payload)
@@ -346,73 +283,6 @@ def test_current_traceparent_falls_back_without_valid_span(monkeypatch):
     parsed = parse_traceparent(traceparent)  # raises ValueError if malformed
     assert parsed.trace_id != "0" * 32
     assert parsed.parent_id != "0" * 16
-
-
-# --- relocate_feature_vector ---
-
-
-@override_settings(**{**STORAGE_SETTINGS, "IMAGE_BUCKET_AWS_ACCESS_KEY_ID": None})
-def test_relocate_feature_vector_noop_when_bucket_needs_no_credentials(monkeypatch):
-    """Nothing was staged (build_pyspacer_request wrote straight to the final bucket),
-    so relocate_feature_vector must not touch S3 at all."""
-    image = MagicMock()
-    image.id = "abc123"
-    image.image_bucket = "prod-bucket"
-
-    def fail_if_called(**kwargs):
-        raise AssertionError("move_file_cross_account should not be called")
-
-    monkeypatch.setattr(inference, "move_file_cross_account", fail_if_called)
-
-    assert relocate_feature_vector(image, "abc123_featurevector") is True
-
-
-@override_settings(**STORAGE_SETTINGS)
-def test_relocate_feature_vector_moves_staging_object_to_final_bucket(monkeypatch):
-    image = MagicMock()
-    image.id = "abc123"
-    image.image_bucket = "prod-bucket"
-
-    calls = []
-    monkeypatch.setattr(inference, "move_file_cross_account", lambda **kwargs: calls.append(kwargs))
-
-    assert relocate_feature_vector(image, "abc123_featurevector") is True
-    assert calls == [
-        {
-            "source_bucket": "staging-bucket",
-            "source_key": "inference-staging/abc123_featurevector",
-            "source_access_key": None,
-            "source_secret_key": None,
-            "dest_bucket": "prod-bucket",
-            "dest_key": "mermaid/abc123_featurevector",
-            "dest_access_key": "image-key",
-            "dest_secret_key": "image-secret",
-        }
-    ]
-
-
-@override_settings(**STORAGE_SETTINGS)
-def test_relocate_feature_vector_logs_processing_error_marker_on_failure(monkeypatch, caplog):
-    """A failed move must not raise (the caller must not fail classification over it),
-    and must log the exact marker the CloudWatch processing-error metric filter matches.
-    """
-    image = MagicMock()
-    image.id = "abc123"
-    image.image_bucket = "prod-bucket"
-
-    def raise_error(**kwargs):
-        raise RuntimeError("boom")
-
-    monkeypatch.setattr(inference, "move_file_cross_account", raise_error)
-
-    inference.logger.addHandler(caplog.handler)
-    try:
-        result = relocate_feature_vector(image, "abc123_featurevector")
-    finally:
-        inference.logger.removeHandler(caplog.handler)
-
-    assert result is False
-    assert "[classify.processing_error]" in caplog.text
 
 
 # --- response_to_point_predictions ---
