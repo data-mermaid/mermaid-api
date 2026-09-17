@@ -719,8 +719,8 @@ def suppress_inference(stack: Stack, image_resource_wildcards: list[str]) -> Non
     """Suppress the inference Lambda's IAM findings.
 
     image_resource_wildcards are the per-env `Resource::<bucket>/<prefix>*` strings the
-    image-bucket and staging grants produce; each env passes its own so a wildcard on
-    any other resource stays unsuppressed and fails the synth gate.
+    image-bucket grants produce; each env passes its own so a wildcard on any other
+    resource stays unsuppressed and fails the synth gate.
     """
     # --- Lambda execution role: AWSLambdaBasicExecutionRole managed policy ---
     _suppress_by_path(
@@ -775,10 +775,11 @@ def suppress_inference(stack: Stack, image_resource_wildcards: list[str]) -> Non
             ),
             NagPackSuppression(
                 id="AwsSolutions-IAM5",
-                reason=f"{ACCEPTED}: the object wildcard on each image-bucket or staging "
-                "grant is CDK-generated and confined to that pair's own key prefix; each "
-                "pair's read/write intent is stated explicitly by the caller (BucketAccess "
-                "in stacks/inference.py), not inferred from which bucket it is.",
+                reason=f"{ACCEPTED}: the object wildcard on each image-bucket grant is "
+                "CDK-generated and confined to that bucket's own key prefix; every image "
+                "bucket is read-write, including the foreign coral-reef-training bucket, "
+                "whose bucket policy grants this function's exact name a matching put "
+                "statement.",
                 applies_to=image_resource_wildcards,
             ),
         ],
@@ -1008,13 +1009,12 @@ def apply_all(
         suppress_guardduty(guardduty_stack)
 
     # Each env's image-bucket grants resolve to different resource ARNs: dev reads and
-    # writes the in-account image-processing bucket, prod also reads (read-only)
-    # coral-reef-training. Both envs additionally put to the in-account staging prefix.
+    # writes the in-account image-processing bucket, prod reads and writes both
+    # coral-reef-training and the in-account image-processing bucket's test prefix.
     suppress_inference(
         dev_inference_stack,
         image_resource_wildcards=[
             "Resource::<MermaidImageProcessingBackupBucket138A6358.Arn>/mermaid/*",
-            "Resource::<MermaidImageProcessingBackupBucket138A6358.Arn>/inference-staging/*",
         ],
     )
     suppress_inference(
@@ -1022,6 +1022,5 @@ def apply_all(
         image_resource_wildcards=[
             "Resource::arn:<AWS::Partition>:s3:::coral-reef-training/mermaid/*",
             "Resource::<MermaidImageProcessingBackupBucket138A6358.Arn>/mermaid-production-test/*",
-            "Resource::<MermaidImageProcessingBackupBucket138A6358.Arn>/inference-staging/*",
         ],
     )

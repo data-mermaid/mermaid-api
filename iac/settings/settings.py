@@ -61,10 +61,6 @@ class DjangoSettings:
     ic_s3_path: str = "mermaid/"
     ic_bucket_name_test: str = ""
     ic_s3_path_test: str = ""
-    # Key prefix in the in-account image-processing bucket that the inference
-    # Lambda's execution role can always reach, even in envs whose ic_bucket_name
-    # is a foreign bucket the role has no write grant on.
-    ic_s3_path_staging: str = "inference-staging/"
     # AWS Chatbot Slack integration (leave empty to disable)
     # workspace ID: AWS Console → Chatbot → Configured clients → Slack
     # channel ID: right-click channel in Slack → View channel details → bottom of About tab
