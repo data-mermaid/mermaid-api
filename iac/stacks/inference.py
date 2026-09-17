@@ -1,6 +1,4 @@
 # mermaid-api/iac/stacks/inference.py
-from enum import Enum, auto
-
 from aws_cdk import (
     Duration,
     RemovalPolicy,
@@ -16,19 +14,6 @@ from aws_cdk import (
 )
 from constructs import Construct
 from settings.settings import ProjectSettings, alerts_topic_name, pyspacer_function_name
-
-
-class BucketAccess(Enum):
-    """Per-(bucket, prefix) grant a caller asks for: READ_ONLY or READ_WRITE.
-
-    Callers state this explicitly rather than the stack inferring it from the
-    bucket, since some image buckets (e.g. an AWS Open Data bucket in another
-    account) accept an identity-side put grant but its bucket policy never
-    honors it.
-    """
-
-    READ_ONLY = auto()
-    READ_WRITE = auto()
 
 
 class InferenceStack(Stack):
@@ -56,9 +41,7 @@ class InferenceStack(Stack):
         config: ProjectSettings,
         inference_repo: ecr.IRepository,
         config_bucket: s3.IBucket,
-        image_buckets: list[tuple[s3.IBucket, str, BucketAccess]],
-        staging_bucket: s3.IBucket,
-        staging_prefix: str,
+        image_buckets: list[tuple[s3.IBucket, str]],
         **kwargs,
     ) -> None:
         super().__init__(scope, id, **kwargs)
@@ -101,18 +84,13 @@ class InferenceStack(Stack):
         # no allowlist, so write access here is code execution as this role on a cold start.
         config_bucket.grant_read(self.function, "classifier/*")
 
-        # (bucket, key prefix, access) per env: read/write is stated per pair rather
-        # than inferred from which bucket it is, since a foreign bucket's put grant
-        # would silently do nothing (its bucket policy is not ours to change).
-        for bucket, prefix, access in image_buckets:
+        # (bucket, key prefix) per env: the function reads source images and writes
+        # extracted feature vectors back under the same prefix, in every image
+        # bucket including the foreign coral-reef-training bucket, whose policy
+        # grants this function's exact name a matching put statement.
+        for bucket, prefix in image_buckets:
             bucket.grant_read(self.function, f"{prefix}*")
-            if access is BucketAccess.READ_WRITE:
-                bucket.grant_put(self.function, f"{prefix}*")
-
-        # Staging prefix in the in-account image-processing bucket: put-only,
-        # reachable regardless of which image_buckets are foreign. A later step
-        # (the ECS image worker) moves each object to its final per-env home.
-        staging_bucket.grant_put(self.function, f"{staging_prefix}*")
+            bucket.grant_put(self.function, f"{prefix}*")
 
         # ── Alarms ──────────────────────────────────────────────────
         # Imported by ARN from the name both stacks compute. ApiStack's topic construct
@@ -190,3 +168,37 @@ class InferenceStack(Stack):
         )
         processing_errors_alarm.add_alarm_action(sns_action)
         processing_errors_alarm.add_ok_action(sns_action)
+
+        # Feature-store write failures: classification succeeds but the vector can't be
+        # persisted, so it returns success with feature_vector_output: null and nothing
+        # retries — the vector is lost. The marker is emitted by pyspacer_function.classify
+        # in data-mermaid/mermaid-inference; the two must stay in sync.
+        feature_store_error_metric = logs.MetricFilter(
+            self,
+            "FeatureStoreErrorMetricFilter",
+            log_group=log_group,
+            filter_pattern=logs.FilterPattern.literal('"[classify.feature_store_error]"'),
+            metric_namespace=f"MERMAID/{config.env_id}/Inference",
+            metric_name="FeatureStoreErrors",
+            metric_value="1",
+            default_value=0,
+        )
+        feature_store_errors_alarm = cw.Alarm(
+            self,
+            "FeatureStoreErrorsAlarm",
+            alarm_name=f"mermaid-{config.env_id}-inference-feature-store-errors",
+            alarm_description=(
+                "Inference Lambda classified successfully but could not persist the "
+                "feature vector (invisible to the Errors metric and to "
+                "ProcessingErrors; the vector is lost permanently) — 5 or more in a "
+                "5-minute window, e.g. an AccessDenied on the feature-vector bucket "
+                "or a bucket-policy regression"
+            ),
+            metric=feature_store_error_metric.metric(statistic="Sum", period=Duration.minutes(5)),
+            threshold=5,
+            evaluation_periods=1,
+            comparison_operator=cw.ComparisonOperator.GREATER_THAN_OR_EQUAL_TO_THRESHOLD,
+            treat_missing_data=cw.TreatMissingData.NOT_BREACHING,
+        )
+        feature_store_errors_alarm.add_alarm_action(sns_action)
+        feature_store_errors_alarm.add_ok_action(sns_action)

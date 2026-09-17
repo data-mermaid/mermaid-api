@@ -65,10 +65,6 @@ class DjangoSettings:
     ic_s3_path: str = "mermaid/"
     ic_bucket_name_test: str = ""
     ic_s3_path_test: str = ""
-    # Key prefix in the in-account image-processing bucket that the inference
-    # Lambda's execution role can always reach, even in envs whose ic_bucket_name
-    # is a foreign bucket the role has no write grant on.
-    ic_s3_path_staging: str = "inference-staging/"
     # AWS Chatbot Slack integration (leave empty to disable)
     # workspace ID: AWS Console → Chatbot → Configured clients → Slack
     # channel ID: right-click channel in Slack → View channel details → bottom of About tab
@@ -125,6 +121,11 @@ def pyspacer_function_name(env_id: str) -> str:
     (the function itself, its log group) so the two stacks cannot name it apart.
     Takes only env_id, never a stack or construct, so importing this cannot
     reintroduce the ApiStack<->InferenceStack cycle a cross-stack reference would.
+
+    A bucket policy on coral-reef-training (account 557690602013) grants
+    s3:PutObject to this exact name via an ArnEquals condition on
+    lambda:SourceFunctionArn, so renaming the function silently revokes prod's
+    feature-vector write access with no deploy-time error to surface it.
     """
     return f"{env_id}-mermaid-inference-pyspacer"
 
