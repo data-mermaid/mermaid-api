@@ -199,12 +199,6 @@ class ApiStack(Stack):
             "IMAGE_PROCESSING_BUCKET_TEST": config.api.ic_bucket_name_test
             or config.api.ic_bucket_name,
             "IMAGE_S3_PATH_TEST": config.api.ic_s3_path_test or "mermaid/",
-            # The in-account bucket the inference Lambda stages feature vectors under
-            # (iac/stacks/inference.py's staging_bucket) — named explicitly rather than
-            # derived from IMAGE_PROCESSING_BUCKET_TEST, which only coincides with it
-            # today and is free to point elsewhere later.
-            "IMAGE_PROCESSING_BUCKET_STAGING": image_processing_bucket.bucket_name,
-            "IMAGE_S3_PATH_STAGING": config.api.ic_s3_path_staging,
             "IMAGE_PROCESSING_BUCKET_DUMMY": image_processing_bucket.bucket_name,
             "EMAIL_HOST": config.api.email_host,
             "EMAIL_PORT": config.api.email_port,
@@ -482,18 +476,6 @@ class ApiStack(Stack):
 
         # Allow Image Worker to write to image bucket
         image_processing_bucket.grant_write(image_worker.task_definition.task_role)
-        # move_file_cross_account (relocate_feature_vector) only needs to read the
-        # staged object; grant_write above already covers the delete that follows.
-        # An explicit statement, not Bucket.grant_read: that helper also emits
-        # bucket-wide s3:GetBucket*/List*, unscoped by prefix.
-        image_worker.task_definition.task_role.add_to_principal_policy(
-            iam.PolicyStatement(
-                actions=["s3:GetObject"],
-                resources=[
-                    image_processing_bucket.arn_for_objects(f"{config.api.ic_s3_path_staging}*")
-                ],
-            )
-        )
         # generate_points falls back to opening the stored image when dimensions are
         # unset on the row (nullable, unbacked columns pre-2024-07-24); the image
         # worker needs read on the app-managed prefix for that path to succeed.

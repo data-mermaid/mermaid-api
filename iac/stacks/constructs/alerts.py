@@ -403,17 +403,17 @@ class MonitoringAlerts(Construct):
             )
         )
 
-        # ── Feature-vector relocation (app-side instrumentation) ─────
+        # ── Classify processing errors (app-side instrumentation) ────
         # Same "[classify.processing_error]" marker as stacks/inference.py's
         # ProcessingErrorMetricFilter, watched here on the image worker's log group.
 
-        feature_vector_error_metric = logs.MetricFilter(
+        classify_processing_error_metric = logs.MetricFilter(
             self,
-            "FeatureVectorRelocationErrorMetricFilter",
+            "ClassifyProcessingErrorMetricFilter",
             log_group=image_worker_log_group,
             filter_pattern=logs.FilterPattern.literal('"[classify.processing_error]"'),
             metric_namespace=f"MERMAID/{env_id}/ImageWorker",
-            metric_name="FeatureVectorRelocationErrors",
+            metric_name="ClassifyProcessingErrors",
             metric_value="1",
             default_value=0,
         )
@@ -423,11 +423,11 @@ class MonitoringAlerts(Construct):
                 "ClassifyProcessingErrorsAlarm",
                 alarm_name=f"mermaid-{env_id}-classify-processing-errors",
                 alarm_description=(
-                    "A classify job failed permanently, or a feature vector could not "
-                    "be relocated from staging to its final bucket — 5 or more in a "
-                    "5-minute window on the image worker's log group"
+                    "A classify job failed permanently, or its SQS visibility could not "
+                    "be extended mid-job — 5 or more in a 5-minute window on the image "
+                    "worker's log group"
                 ),
-                metric=feature_vector_error_metric.metric(
+                metric=classify_processing_error_metric.metric(
                     statistic="Sum",
                     period=Duration.minutes(5),
                 ),
