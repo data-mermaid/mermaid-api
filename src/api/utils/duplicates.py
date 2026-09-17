@@ -80,7 +80,7 @@ def find_duplicate_sites(project_id, name, location, exclude_id):
       within the wider NAME_MATCH_BUFFER_M (covers offline-GPS-drift cases
       where a reused name lands outside SITE_BUFFER_M).
     """
-    if not name or location is None:
+    if location is None:
         return []
 
     qry = Site.objects.filter(project_id=project_id).filter(
@@ -88,25 +88,22 @@ def find_duplicate_sites(project_id, name, location, exclude_id):
     )
     if exclude_id is not None:
         qry = qry.exclude(id=exclude_id)
-    qry = (
-        qry.annotate(
-            similarity=TrigramSimilarity("name", name),
-            distance=DistanceFunc("location", location),
+
+    match_q = Q(location__distance_lt=(location, Distance(m=SITE_BUFFER_M)))
+    qry = qry.annotate(distance=DistanceFunc("location", location))
+    if name:
+        qry = qry.annotate(similarity=TrigramSimilarity("name", name))
+        match_q |= Q(
+            similarity__gte=SITE_NAME_MATCH_PERCENT,
+            location__distance_lt=(location, Distance(m=NAME_MATCH_BUFFER_M)),
         )
-        .filter(
-            Q(location__distance_lt=(location, Distance(m=SITE_BUFFER_M)))
-            | Q(
-                similarity__gte=SITE_NAME_MATCH_PERCENT,
-                location__distance_lt=(location, Distance(m=NAME_MATCH_BUFFER_M)),
-            )
-        )
-        # Ascending distance, not similarity: a within-SITE_BUFFER_M match always
-        # has a smaller distance than a name-arm-only match (which is, by
-        # definition, further than SITE_BUFFER_M away), so this guarantees a true
-        # location-based duplicate is never pushed out of a truncated top-N by
-        # unrelated sites that merely share a similar name.
-        .order_by("distance")
-    )
+
+    # Ascending distance, not similarity: a within-SITE_BUFFER_M match always
+    # has a smaller distance than a name-arm-only match (which is, by
+    # definition, further than SITE_BUFFER_M away), so this guarantees a true
+    # location-based duplicate is never pushed out of a truncated top-N by
+    # unrelated sites that merely share a similar name.
+    qry = qry.filter(match_q).order_by("distance")
 
     return list(qry.distinct())
 
