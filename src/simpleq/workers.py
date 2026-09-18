@@ -50,9 +50,13 @@ class Worker:
                         try:
                             queue.extend_job_visibility(job, job.visibility_timeout)
                         except Exception as e:
+                            # A failed extension usually means the receipt handle is
+                            # already dead; skip so the message redelivers instead of
+                            # risking a second, costly inference call mid-run.
                             logger.exception(
-                                f"[classify.processing_error] failed to extend visibility for job {job}, continuing without it: {e}"
+                                f"[classify.processing_error] failed to extend visibility for job {job}, skipping it this cycle: {e}"
                             )
+                            continue
                     job.run()
                     if not job.exception:
                         queue.remove_job(job)

@@ -41,18 +41,16 @@ class _FailingVisibilityQueue:
         self.removed.append(job)
 
 
-def test_extend_visibility_failure_does_not_stop_the_batch(db_setup, caplog):
-    jobs = [
-        _FakeJob("first", visibility_timeout=30),
-        _FakeJob("second", visibility_timeout=30),
-        _FakeJob("third", visibility_timeout=30, fails=True),
-    ]
-    queue = _FailingVisibilityQueue(jobs)
+def test_failed_visibility_extension_skips_the_job_but_not_the_batch(db_setup, caplog):
+    needs_extension = _FakeJob("needs_extension", visibility_timeout=30)
+    no_timeout = _FakeJob("no_timeout", visibility_timeout=None)
+    queue = _FailingVisibilityQueue([needs_extension, no_timeout])
     worker = Worker([queue])
 
     worker.work(burst=True)
 
-    assert [job.ran for job in jobs] == [True, True, True]
-    assert queue.removed == jobs[:2]
-    assert jobs[2] not in queue.removed
+    assert needs_extension.ran is False
+    assert needs_extension not in queue.removed
+    assert no_timeout.ran is True
+    assert no_timeout in queue.removed
     assert "[classify.processing_error]" in caplog.text
