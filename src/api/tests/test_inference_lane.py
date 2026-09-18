@@ -153,6 +153,26 @@ def test_classify_via_lambda_returns_no_feature_vector_name_when_response_echoes
 
 
 @override_settings(INFERENCE_CLASSIFIER_VERSION="v2")
+@override_settings(**STORAGE_SETTINGS)
+def test_classify_via_lambda_drops_feature_vector_name_when_response_echoes_a_different_location(
+    monkeypatch, image
+):
+    """The echo comparison in classify_via_lambda is the only confirmation that a
+    feature vector exists at the key about to be recorded. A Lambda that reports a
+    location other than the one requested must leave feature_vector_name unset rather
+    than record a key nothing wrote there.
+    """
+    mismatched_location = S3Location(bucket="prod-bucket", key="mermaid/somewhere_else")
+    payload = _ok_payload("v2", feature_vector_output=mismatched_location)
+    monkeypatch.setattr(inference, "invoke_pyspacer", lambda p: payload)
+
+    result = classify_via_lambda(image, [(1, 2)])
+
+    assert result.feature_vector_name is None
+    assert result.point_predictions == [(1, 2, [("ba1::", 0.9), ("ba2::", 0.1)])]
+
+
+@override_settings(INFERENCE_CLASSIFIER_VERSION="v2")
 def test_classify_via_lambda_raises_on_error_envelope(monkeypatch, image):
     envelope = {"error_code": "processing_error", "message": "kaboom", "retryable": False}
     monkeypatch.setattr(inference, "invoke_pyspacer", lambda payload: envelope)
