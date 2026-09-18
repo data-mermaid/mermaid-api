@@ -1,5 +1,6 @@
 import json
 import logging
+from collections import Counter
 from operator import itemgetter
 from typing import NamedTuple
 
@@ -249,10 +250,11 @@ def classify_via_lambda(image, points) -> LambdaClassificationResult:
     """Invoke the pyspacer Lambda for an image and return normalized point predictions.
 
     Raises InferenceError on an ErrorEnvelope payload, a malformed envelope or
-    response, a classifier-version drift mismatch, or a contract-version mismatch. A
-    feature vector the Lambda did not write where requested does not fail the job:
-    points and annotations are the product, and nothing in src/ reads feature-vector
-    bytes back.
+    response, a classifier-version drift mismatch, a contract-version mismatch, a
+    response with valid_rowcol False, or a response whose points do not match the
+    requested coordinates. A feature vector the Lambda did not write where requested
+    does not fail the job: points and annotations are the product, and nothing in
+    src/ reads feature-vector bytes back.
     """
     tracer = otel_trace.get_tracer("api.inference")
     with tracer.start_as_current_span("pyspacer.classify_via_lambda"):
@@ -260,11 +262,10 @@ def classify_via_lambda(image, points) -> LambdaClassificationResult:
         logger.info("pyspacer inference invoke", extra={"traceparent": traceparent})
         name = feature_vector_name(image)
         requested_output = feature_vector_final_location(image, name)
-        payload = invoke_pyspacer(
-            build_pyspacer_request(
-                image, points, traceparent, feature_vector_output=requested_output
-            )
+        request = build_pyspacer_request(
+            image, points, traceparent, feature_vector_output=requested_output
         )
+        payload = invoke_pyspacer(request)
 
         if "error_code" in payload:
             try:
@@ -316,7 +317,7 @@ def classify_via_lambda(image, points) -> LambdaClassificationResult:
             )
 
         installed = CONTRACT_VERSION
-        if response.contract_version and response.contract_version != installed:
+        if response.contract_version != installed:
             logger.error(
                 f"pyspacer contract version mismatch for image {image.id}: "
                 f"Lambda reported {response.contract_version!r}, API has {installed!r} "
@@ -326,6 +327,30 @@ def classify_via_lambda(image, points) -> LambdaClassificationResult:
             raise InferenceError(
                 f"Contract version mismatch: Lambda reported {response.contract_version!r}, "
                 f"API has {installed!r} — pin mermaid-inference-contract to the deployed image's tag"
+            )
+
+        if not response.valid_rowcol:
+            logger.error(
+                f"pyspacer reported invalid row/col for image {image.id} "
+                f"traceparent={traceparent}",
+                extra={"traceparent": traceparent},
+            )
+            raise InferenceError("pyspacer inference: response marked row/col invalid")
+
+        requested_coords = Counter((row, col) for row, col in request["points"])
+        returned_coords = Counter((pr.row, pr.col) for pr in response.point_results)
+        if requested_coords != returned_coords:
+            missing = sorted((requested_coords - returned_coords).elements())[:5]
+            unexpected = sorted((returned_coords - requested_coords).elements())[:5]
+            logger.error(
+                f"pyspacer point set mismatch for image {image.id}: requested "
+                f"{len(request['points'])} points, got {len(response.point_results)}; "
+                f"missing={missing} unexpected={unexpected} traceparent={traceparent}",
+                extra={"traceparent": traceparent},
+            )
+            raise InferenceError(
+                f"pyspacer inference: requested {len(request['points'])} points, "
+                f"got {len(response.point_results)}"
             )
 
         matched_name = None

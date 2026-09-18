@@ -35,20 +35,23 @@ def _ok_payload(
     version="v2",
     feature_vector_output=_DEFAULT_FEATURE_VECTOR_OUTPUT,
     contract_version=CONTRACT_VERSION,
+    valid_rowcol=True,
+    points=((1, 2),),
 ):
     return PyspacerResponse(
         classifier_type="pyspacer",
         classifier_version=version,
-        valid_rowcol=True,
+        valid_rowcol=valid_rowcol,
         point_results=[
             PointResult(
-                row=1,
-                col=2,
+                row=row,
+                col=col,
                 scores=[
                     PointScore(label="ba1::", score=0.9),
                     PointScore(label="ba2::", score=0.1),
                 ],
-            ),
+            )
+            for row, col in points
         ],
         feature_vector_output=feature_vector_output,
         traceparent=None,
@@ -263,11 +266,51 @@ def test_classify_via_lambda_contract_version_mismatch_raises(monkeypatch, image
 
 
 @override_settings(INFERENCE_CLASSIFIER_VERSION="v2")
-def test_classify_via_lambda_missing_contract_version_tolerated(monkeypatch, image):
+def test_classify_via_lambda_missing_contract_version_raises(monkeypatch, image):
     payload = _ok_payload("v2", contract_version=None)  # older Lambda: no contract_version
     monkeypatch.setattr(inference, "invoke_pyspacer", lambda p: payload)
-    result = classify_via_lambda(image, [(1, 2)])  # must NOT raise
-    assert result.point_predictions == [(1, 2, [("ba1::", 0.9), ("ba2::", 0.1)])]
+
+    with pytest.raises(InferenceError) as excinfo:
+        classify_via_lambda(image, [(1, 2)])
+
+    assert excinfo.value.retryable is False
+    assert "contract" in str(excinfo.value).lower()
+
+
+@override_settings(INFERENCE_CLASSIFIER_VERSION="v2")
+def test_classify_via_lambda_rejects_invalid_rowcol(monkeypatch, image):
+    payload = _ok_payload("v2", valid_rowcol=False)
+    monkeypatch.setattr(inference, "invoke_pyspacer", lambda p: payload)
+
+    with pytest.raises(InferenceError) as excinfo:
+        classify_via_lambda(image, [(1, 2)])
+
+    assert excinfo.value.retryable is False
+    assert "row/col" in str(excinfo.value)
+
+
+@override_settings(INFERENCE_CLASSIFIER_VERSION="v2")
+@pytest.mark.parametrize(
+    "requested_points,response_points",
+    [
+        pytest.param([(1, 2), (3, 4)], [(1, 2)], id="fewer_points_than_requested"),
+        pytest.param([(1, 2)], [(9, 9)], id="shifted_points"),
+    ],
+)
+def test_classify_via_lambda_rejects_point_set_mismatch(
+    monkeypatch, image, requested_points, response_points
+):
+    """Without this guard, _write_classification_results deletes every existing Point
+    for the image and writes only the returned subset, leaving fewer points than
+    num_points on an image reported COMPLETED."""
+    payload = _ok_payload("v2", points=response_points)
+    monkeypatch.setattr(inference, "invoke_pyspacer", lambda p: payload)
+
+    with pytest.raises(InferenceError) as excinfo:
+        classify_via_lambda(image, requested_points)
+
+    assert excinfo.value.retryable is False
+    assert "points" in str(excinfo.value)
 
 
 def test_current_traceparent_uses_valid_span_context(monkeypatch):
