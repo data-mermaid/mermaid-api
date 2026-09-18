@@ -82,8 +82,8 @@ class HabitatComplexityObsSQLModel(BaseSUSQLModel):
 
     sample_time = models.TimeField()
     transect_number = models.PositiveSmallIntegerField()
-    transect_len_surveyed = models.PositiveSmallIntegerField(
-        verbose_name=_("transect length surveyed (m)")
+    transect_len_surveyed = models.DecimalField(
+        max_digits=4, decimal_places=1, verbose_name=_("transect length surveyed (m)")
     )
     reef_slope = models.CharField(max_length=50)
     interval_size = models.DecimalField(
@@ -183,8 +183,8 @@ class HabitatComplexitySUSQLModel(BaseSUSQLModel):
     sample_unit_notes = models.TextField(blank=True)
 
     transect_number = models.PositiveSmallIntegerField()
-    transect_len_surveyed = models.PositiveSmallIntegerField(
-        verbose_name=_("transect length surveyed (m)")
+    transect_len_surveyed = models.DecimalField(
+        max_digits=4, decimal_places=1, verbose_name=_("transect length surveyed (m)")
     )
     reef_slope = models.CharField(max_length=50)
     interval_size = models.DecimalField(

@@ -171,8 +171,8 @@ class BenthicPhotoQuadratTransectObsSQLModel(BaseSUSQLModel):
     sample_unit_notes = models.TextField(blank=True)
 
     transect_number = models.PositiveSmallIntegerField()
-    transect_len_surveyed = models.PositiveSmallIntegerField(
-        verbose_name=_("transect length surveyed (m)")
+    transect_len_surveyed = models.DecimalField(
+        max_digits=4, decimal_places=1, verbose_name=_("transect length surveyed (m)")
     )
     quadrat_size = models.DecimalField(decimal_places=2, max_digits=6)
     num_quadrats = models.PositiveSmallIntegerField()
@@ -334,8 +334,8 @@ class BenthicPhotoQuadratTransectSUSQLModel(BaseSUSQLModel):
     sample_unit_notes = models.TextField(blank=True)
 
     transect_number = models.PositiveSmallIntegerField()
-    transect_len_surveyed = models.PositiveSmallIntegerField(
-        verbose_name=_("transect length surveyed (m)")
+    transect_len_surveyed = models.DecimalField(
+        max_digits=4, decimal_places=1, verbose_name=_("transect length surveyed (m)")
     )
     num_points_nonother = models.PositiveSmallIntegerField(
         verbose_name="number of non-'Other' points for all observations in all quadrats for the transect"

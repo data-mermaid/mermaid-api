@@ -121,8 +121,8 @@ class BeltFishObsSQLModel(BaseSUSQLModel):
     sample_unit_notes = models.TextField(blank=True)
 
     transect_number = models.PositiveSmallIntegerField()
-    transect_len_surveyed = models.PositiveSmallIntegerField(
-        verbose_name=_("transect length surveyed (m)")
+    transect_len_surveyed = models.DecimalField(
+        max_digits=4, decimal_places=1, verbose_name=_("transect length surveyed (m)")
     )
     transect_width_name = models.CharField(max_length=100, null=True, blank=True)
     assigned_transect_width_m = models.PositiveSmallIntegerField(null=True, blank=True)
@@ -341,8 +341,8 @@ class BeltFishSUSQLModel(BaseSUSQLModel):
 
     total_abundance = models.PositiveIntegerField()
     transect_number = models.PositiveSmallIntegerField()
-    transect_len_surveyed = models.PositiveSmallIntegerField(
-        verbose_name=_("transect length surveyed (m)")
+    transect_len_surveyed = models.DecimalField(
+        max_digits=4, decimal_places=1, verbose_name=_("transect length surveyed (m)")
     )
     transect_width_name = models.CharField(max_length=100, null=True, blank=True)
     reef_slope = models.CharField(max_length=50)

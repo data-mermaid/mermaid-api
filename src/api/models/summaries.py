@@ -179,8 +179,8 @@ class BeltInvertSEModel(BaseSummaryModel):
 class BeltFishObsModel(BaseObsModel):
     sample_unit_id = models.UUIDField()
     transect_number = models.PositiveSmallIntegerField()
-    transect_len_surveyed = models.PositiveSmallIntegerField(
-        verbose_name=_("transect length surveyed (m)")
+    transect_len_surveyed = models.DecimalField(
+        max_digits=4, decimal_places=1, verbose_name=_("transect length surveyed (m)")
     )
     transect_width_name = models.CharField(max_length=100, null=True, blank=True)
     assigned_transect_width_m = models.PositiveSmallIntegerField(null=True, blank=True)
@@ -225,8 +225,8 @@ class BeltFishSUModel(BaseSUModel):
     sample_unit_ids = models.JSONField()
     total_abundance = models.PositiveIntegerField()
     transect_number = models.PositiveSmallIntegerField()
-    transect_len_surveyed = models.PositiveSmallIntegerField(
-        verbose_name=_("transect length surveyed (m)")
+    transect_len_surveyed = models.DecimalField(
+        max_digits=4, decimal_places=1, verbose_name=_("transect length surveyed (m)")
     )
     transect_width_name = models.CharField(max_length=100, null=True, blank=True)
     reef_slope = models.CharField(max_length=50, null=True, blank=True)
@@ -292,8 +292,8 @@ class BeltFishSEModel(BaseSummaryModel):
 class BenthicPITObsModel(BaseObsModel):
     sample_unit_id = models.UUIDField()
     transect_number = models.PositiveSmallIntegerField()
-    transect_len_surveyed = models.PositiveSmallIntegerField(
-        verbose_name=_("transect length surveyed (m)")
+    transect_len_surveyed = models.DecimalField(
+        max_digits=4, decimal_places=1, verbose_name=_("transect length surveyed (m)")
     )
     reef_slope = models.CharField(max_length=50, null=True, blank=True)
     interval_size = models.DecimalField(
@@ -321,8 +321,8 @@ class BenthicPITObsModel(BaseObsModel):
 class BenthicPITSUModel(BaseSUModel):
     sample_unit_ids = models.JSONField()
     transect_number = models.PositiveSmallIntegerField()
-    transect_len_surveyed = models.PositiveSmallIntegerField(
-        verbose_name=_("transect length surveyed (m)")
+    transect_len_surveyed = models.DecimalField(
+        max_digits=4, decimal_places=1, verbose_name=_("transect length surveyed (m)")
     )
     reef_slope = models.CharField(max_length=50, null=True, blank=True)
     interval_size = models.DecimalField(
@@ -373,8 +373,8 @@ class BenthicLITObsModel(BaseObsModel):
     sample_unit_id = models.UUIDField()
     transect_number = models.PositiveSmallIntegerField()
     relative_depth = models.CharField(max_length=50, null=True, blank=True)
-    transect_len_surveyed = models.PositiveSmallIntegerField(
-        verbose_name=_("transect length surveyed (m)")
+    transect_len_surveyed = models.DecimalField(
+        max_digits=4, decimal_places=1, verbose_name=_("transect length surveyed (m)")
     )
     reef_slope = models.CharField(max_length=50, null=True, blank=True)
     length = models.PositiveSmallIntegerField()
@@ -394,8 +394,8 @@ class BenthicLITObsModel(BaseObsModel):
 class BenthicLITSUModel(BaseSUModel):
     sample_unit_ids = models.JSONField()
     transect_number = models.PositiveSmallIntegerField()
-    transect_len_surveyed = models.PositiveSmallIntegerField(
-        verbose_name=_("transect length surveyed (m)")
+    transect_len_surveyed = models.DecimalField(
+        max_digits=4, decimal_places=1, verbose_name=_("transect length surveyed (m)")
     )
     total_length = models.PositiveIntegerField()
     reef_slope = models.CharField(max_length=50, null=True, blank=True)
@@ -438,8 +438,8 @@ class BenthicPhotoQuadratTransectObsModel(BaseObsModel):
     sample_unit_id = models.UUIDField()
     transect_number = models.PositiveSmallIntegerField()
     relative_depth = models.CharField(max_length=50, null=True, blank=True)
-    transect_len_surveyed = models.PositiveSmallIntegerField(
-        verbose_name=_("transect length surveyed (m)")
+    transect_len_surveyed = models.DecimalField(
+        max_digits=4, decimal_places=1, verbose_name=_("transect length surveyed (m)")
     )
     quadrat_size = models.DecimalField(decimal_places=2, max_digits=6)
     num_quadrats = models.PositiveSmallIntegerField()
@@ -462,8 +462,8 @@ class BenthicPhotoQuadratTransectObsModel(BaseObsModel):
 class BenthicPhotoQuadratTransectSUModel(BaseSUModel):
     sample_unit_ids = models.JSONField()
     transect_number = models.PositiveSmallIntegerField()
-    transect_len_surveyed = models.PositiveSmallIntegerField(
-        verbose_name=_("transect length surveyed (m)")
+    transect_len_surveyed = models.DecimalField(
+        max_digits=4, decimal_places=1, verbose_name=_("transect length surveyed (m)")
     )
     num_points_nonother = models.PositiveSmallIntegerField(
         verbose_name="number of non-'Other' points for all observations in all quadrats for the transect"
@@ -652,8 +652,8 @@ class HabitatComplexityObsModel(BaseObsModel):
     sample_unit_id = models.UUIDField()
     sample_time = models.TimeField(null=True, blank=True)
     transect_number = models.PositiveSmallIntegerField()
-    transect_len_surveyed = models.PositiveSmallIntegerField(
-        verbose_name=_("transect length surveyed (m)")
+    transect_len_surveyed = models.DecimalField(
+        max_digits=4, decimal_places=1, verbose_name=_("transect length surveyed (m)")
     )
     reef_slope = models.CharField(max_length=50, null=True, blank=True)
     interval_size = models.DecimalField(
@@ -679,8 +679,8 @@ class HabitatComplexityObsModel(BaseObsModel):
 class HabitatComplexitySUModel(BaseSUModel):
     sample_unit_ids = models.JSONField()
     transect_number = models.PositiveSmallIntegerField()
-    transect_len_surveyed = models.PositiveSmallIntegerField(
-        verbose_name=_("transect length surveyed (m)")
+    transect_len_surveyed = models.DecimalField(
+        max_digits=4, decimal_places=1, verbose_name=_("transect length surveyed (m)")
     )
     reef_slope = models.CharField(max_length=50, null=True, blank=True)
     interval_size = models.DecimalField(
