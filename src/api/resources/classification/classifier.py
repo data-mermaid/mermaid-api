@@ -5,8 +5,9 @@ from rest_framework.permissions import SAFE_METHODS
 from rest_framework.response import Response
 
 from ...models import BenthicAttributeGrowthForm, Classifier
+from ...models.classification import ClassifierNotConfiguredError
 from ...permissions import UnauthenticatedReadOnlyPermission
-from ..base import BaseAPISerializer, BaseApiViewSet
+from ..base import BaseAPIFilterSet, BaseAPISerializer, BaseApiViewSet
 
 
 class BenthicAttributeGrowthFormSerializer(BaseAPISerializer):
@@ -23,6 +24,7 @@ class BenthicAttributeGrowthFormSerializer(BaseAPISerializer):
 
 class ClassifierSerializer(BaseAPISerializer):
     benthic_attribute_growth_forms = BenthicAttributeGrowthFormSerializer(many=True)
+    is_default = serializers.SerializerMethodField()
 
     class Meta:
         model = Classifier
@@ -34,20 +36,45 @@ class ClassifierSerializer(BaseAPISerializer):
             "config",
             "description",
             "benthic_attribute_growth_forms",
+            "is_default",
             "created_on",
             "created_by",
             "updated_on",
             "updated_by",
         ]
 
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self._active_pk_cache = {}
+
+    def get_is_default(self, obj):
+        # One child serializer instance serves every row in a list request,
+        # so keying the lookup here bounds it to one query per request
+        # regardless of row count.
+        if "pk" not in self._active_pk_cache:
+            try:
+                self._active_pk_cache["pk"] = Classifier.active().pk
+            except ClassifierNotConfiguredError:
+                self._active_pk_cache["pk"] = None
+        return self._active_pk_cache["pk"] is not None and obj.pk == self._active_pk_cache["pk"]
+
+
+class ClassifierFilterSet(BaseAPIFilterSet):
+    class Meta:
+        model = Classifier
+        fields = ["version"]
+
 
 class ClassifierViewSet(BaseApiViewSet):
     serializer_class = ClassifierSerializer
     permission_classes = (UnauthenticatedReadOnlyPermission,)
     method_authentication_classes = {"GET": []}
+    filterset_class = ClassifierFilterSet
 
     def get_queryset(self):
-        return Classifier.objects.prefetch_related("benthic_attribute_growth_forms").all()
+        return Classifier.objects.prefetch_related("benthic_attribute_growth_forms").order_by(
+            "-created_on"
+        )
 
     @action(detail=False, methods=SAFE_METHODS)
     def latest(self, request, *args, **kwargs):

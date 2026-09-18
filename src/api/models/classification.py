@@ -2,6 +2,8 @@ import csv
 import uuid
 from io import StringIO
 
+import urllib3
+from botocore.exceptions import BotoCoreError, ClientError
 from django.conf import settings
 from django.contrib.gis.db import models
 from django.core.exceptions import ValidationError
@@ -27,6 +29,12 @@ from .protocols.benthic import (
 
 class ClassifierRegistrationError(Exception):
     """Raised when a model.json manifest cannot be ingested by Classifier.register()."""
+
+
+class ClassifierNotConfiguredError(Exception):
+    """Raised when Classifier.active() cannot resolve the version pinned by
+    INFERENCE_CLASSIFIER_VERSION: the setting is empty, or no row matches it.
+    """
 
 
 def parse_bagf_label(label):
@@ -194,16 +202,20 @@ class Classifier(BaseModel):
 
     @property
     def patch_size(self):
+        # config is only guaranteed to be a dict when the row was saved through
+        # full_clean(); admin list views read this property directly.
+        if not isinstance(self.config, dict):
+            return None
         return self.config.get("patch_size")
 
     def clean(self):
         super().clean()
+        if self.config is not None and not isinstance(self.config, dict):
+            raise ValidationError({"config": "config must be a JSON object."})
+        config = self.config or {}
         config_schema = CONFIG_SCHEMAS.get(self.classifier_type)
         if config_schema is None:
             return
-        config = self.config or {}
-        if not isinstance(config, dict):
-            raise ValidationError({"config": "config must be a JSON object."})
         try:
             config_schema(**config)
         except PydanticValidationError as e:
@@ -212,6 +224,24 @@ class Classifier(BaseModel):
     @classmethod
     def latest(cls):
         return cls.objects.order_by("-created_on").first()
+
+    @classmethod
+    def active(cls):
+        """The Classifier row for the version baked into the deployed inference image.
+
+        Looks up by an exact version match: any other selection could return a
+        different row than the one that actually scored the points, mis-attributing
+        Annotation.classifier.
+        """
+        version = settings.INFERENCE_CLASSIFIER_VERSION
+        if not version:
+            raise ClassifierNotConfiguredError("INFERENCE_CLASSIFIER_VERSION is not set")
+        try:
+            return cls.objects.get(version=version)
+        except cls.DoesNotExist as err:
+            raise ClassifierNotConfiguredError(
+                f"No Classifier registered for version {version!r}"
+            ) from err
 
     @classmethod
     def register(cls, version, *, name=None, description=None):
@@ -224,7 +254,7 @@ class Classifier(BaseModel):
         key = f"{CLASSIFIER_CONFIG_S3_PATH}/{version}/model.json"
         try:
             manifest = s3.read_json_object(settings.AWS_CONFIG_BUCKET, key)
-        except Exception as e:
+        except (ClientError, BotoCoreError, ValueError, urllib3.exceptions.HTTPError) as e:
             raise ClassifierRegistrationError(
                 f"Could not read model.json for {version}: {e}"
             ) from e
@@ -250,7 +280,7 @@ class Classifier(BaseModel):
             )
         try:
             validated_config = config_schema(**(manifest.get("config") or {}))
-        except Exception as e:
+        except (PydanticValidationError, TypeError) as e:
             raise ClassifierRegistrationError(
                 f"Invalid config in model.json for {version}: {e}"
             ) from e

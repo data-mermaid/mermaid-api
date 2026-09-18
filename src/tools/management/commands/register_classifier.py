@@ -1,7 +1,8 @@
-from django.core.management.base import BaseCommand
+from django.core.management.base import BaseCommand, CommandError
 from django.db import transaction
 
 from api.models import Classifier
+from api.models.classification import ClassifierRegistrationError
 
 
 class Command(BaseCommand):
@@ -38,9 +39,8 @@ class Command(BaseCommand):
                     )
                     transaction.set_rollback(True)
                     return
-        except Exception as e:
-            self.stderr.write(self.style.ERROR(f"Failed to register {version}: {e}"))
-            raise
+        except ClassifierRegistrationError as e:
+            raise CommandError(f"Failed to register {version}: {e}") from e
 
         self.stdout.write(
             self.style.SUCCESS(

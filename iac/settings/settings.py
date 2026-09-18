@@ -51,6 +51,10 @@ class DjangoSettings:
     env_secret_name: str
 
     # Common Attrs (defaults)
+    # Outlasts invoke_pyspacer's worst case: 2 attempts * (660s read + 10s connect
+    # timeout) + one backoff sleep of at most 1s ~= 1341s. Passed to the container
+    # as INFERENCE_JOB_VISIBILITY_TIMEOUT (src/app/settings.py), the per-job extension.
+    image_sqs_message_visibility: int = 1500
     maintenance_mode: str = "False"
     auth0_management_api_audience: str = "https://datamermaid.auth0.com/api/v2/"
     email_host: str = "smtp.gmail.com"
@@ -88,6 +92,8 @@ class InferenceSettings:
     classifier_version: str
     config_bucket: str = "mermaid-config"
     memory_mb: int = 10240
+    # The Lambda's own timeout. src/api/utils/inference.py's _LAMBDA_READ_TIMEOUT
+    # must exceed this (in seconds) or botocore's client-side timeout fires first.
     timeout_minutes: int = 10
     ephemeral_storage_gb: int = 2
     # A rolling deployment runs the image-worker ECS service at up to 200% of
@@ -106,6 +112,22 @@ class InferenceSettings:
                 f"image_tag {self.image_tag!r} serves model version {tag_version!r}, "
                 f"but classifier_version is {self.classifier_version!r}"
             )
+
+
+def pyspacer_function_name(env_id: str) -> str:
+    """The pyspacer inference Lambda's function name for this environment.
+
+    Shared by ApiStack (env var value, ARN string, invoke grant) and InferenceStack
+    (the function itself, its log group) so the two stacks cannot name it apart.
+    Takes only env_id, never a stack or construct, so importing this cannot
+    reintroduce the ApiStack<->InferenceStack cycle a cross-stack reference would.
+
+    A bucket policy on coral-reef-training (account 557690602013) grants
+    s3:PutObject to this exact name via an ArnEquals condition on
+    lambda:SourceFunctionArn, so renaming the function silently revokes prod's
+    feature-vector write access with no deploy-time error to surface it.
+    """
+    return f"{env_id}-mermaid-inference-pyspacer"
 
 
 def alerts_topic_name(env_id: str) -> str:

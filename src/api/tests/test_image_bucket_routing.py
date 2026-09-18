@@ -12,6 +12,7 @@ from api.models.classification import (
     get_image_bucket_for_status,
     get_image_storage_config,
 )
+from api.tests.fixtures.settings_overrides import STORAGE_SETTINGS
 
 # ---------------------------------------------------------------------------
 # In-memory storage that segregates files by bucket name.
@@ -117,16 +118,6 @@ BUCKET_SETTINGS = {
     "IMAGE_PROCESSING_BUCKET_TEST": "test-bucket",
 }
 
-STORAGE_SETTINGS = {
-    **BUCKET_SETTINGS,
-    "IMAGE_BUCKET_AWS_ACCESS_KEY_ID": "image-key",
-    "IMAGE_BUCKET_AWS_SECRET_ACCESS_KEY": "image-secret",
-    "AWS_ACCESS_KEY_ID": "default-key",
-    "AWS_SECRET_ACCESS_KEY": "default-secret",
-    "IMAGE_S3_PATH": "mermaid/",
-    "IMAGE_S3_PATH_TEST": "mermaid-production-test/",
-}
-
 
 @pytest.fixture(autouse=True)
 def no_s3():
@@ -228,30 +219,6 @@ def test_get_image_storage_config_falsy_bucket(bucket):
     config = get_image_storage_config(bucket)
     assert config["bucket"] == "prod-bucket"
     assert config["access_key"] == "image-key"
-
-
-# --- _get_image_location ---
-
-
-@override_settings(ENVIRONMENT="dev", **STORAGE_SETTINGS)
-@pytest.mark.parametrize(
-    "bucket,expected_prefix",
-    [
-        ("test-bucket", "mermaid-production-test/"),
-        ("prod-bucket", "mermaid/"),
-    ],
-)
-def test_get_image_location(bucket, expected_prefix):
-    from api.utils.classification import _get_image_location
-
-    image = MagicMock()
-    image.image_bucket = bucket
-    image.image.name = "abc123.png"
-
-    location = _get_image_location(image)
-    assert location.storage_type == "s3"
-    assert location.bucket_name == bucket
-    assert location.key == f"{expected_prefix}abc123.png"
 
 
 # --- move_file_cross_account ---

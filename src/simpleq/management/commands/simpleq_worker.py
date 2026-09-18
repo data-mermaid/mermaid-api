@@ -1,9 +1,10 @@
 from datetime import datetime
 
 from django.conf import settings
-from django.core.management.base import BaseCommand
+from django.core.management.base import BaseCommand, CommandError
 from django.utils.autoreload import run_with_reloader
 
+from api.checks import check_inference_settings
 from simpleq.queues import Queue
 from simpleq.workers import Worker
 
@@ -21,6 +22,7 @@ class Command(BaseCommand):
         queue_name = options.get("queue_name") or getattr(settings, "QUEUE_NAME")
         if not queue_name:
             raise ValueError("Invalid queue_name")
+
         start_time = datetime.now()
         self.stdout.write(f"Worker start processing from {queue_name} queue, UTC time {start_time}")
         self.queue = Queue(queue_name)
@@ -35,4 +37,12 @@ class Command(BaseCommand):
         )
 
     def handle(self, *args, **options):
+        queue_name = options.get("queue_name") or getattr(settings, "QUEUE_NAME")
+        # Only the image-processing queue's worker invokes the inference Lambda;
+        # a misconfigured deploy fails here, on the run_from_argv path that can
+        # exit the process, instead of hanging inside the reloader's daemon thread.
+        if queue_name == settings.IMAGE_QUEUE_NAME:
+            errors = check_inference_settings()
+            if errors:
+                raise CommandError("\n".join(str(error) for error in errors))
         run_with_reloader(self.run_worker, *args, **options)
