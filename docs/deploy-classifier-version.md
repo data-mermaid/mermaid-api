@@ -126,9 +126,14 @@ so bumping it redeploys `dev-mermaid-api-django` / `prod-mermaid-api-django`
 > InferenceStack deploys before ApiStack, so a bump serves the new `vN` from
 > the Lambda before the API/worker tasks roll to match. Classifications
 > handled by a task still on `INFERENCE_CLASSIFIER_VERSION=vN-1` during that
-> window fail the classifier-version drift check — nothing is lost, the
-> message redelivers automatically about 25 minutes later. Drain or pause the
-> image queue first if that delay matters for a given release.
+> window fail the classifier-version drift check, and the message redelivers
+> automatically about 25 minutes later. That redelivery is not unlimited: the
+> image queue's redrive policy allows 4 receives, so a message keeps cycling
+> for about 75 minutes — four deliveries — and lands in the dead-letter queue
+> at least 100 minutes after the first, where it waits for seven days and
+> nothing brings it back automatically. Drain or pause the image queue first
+> if that delay matters for a given release, or plan to redrive the DLQ once
+> the rollout finishes.
 
 1. **Dev.** Edit [`iac/settings/dev.py`](../iac/settings/dev.py), set the
    inference image tag to the `vN-K` from step 2 and `classifier_version` to
