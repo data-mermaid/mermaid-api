@@ -1,4 +1,5 @@
 from .base import SUPERUSER_APPROVED  # noqa: F401
+from .base import APIKey  # noqa: F401
 from .base import Application  # noqa: F401
 from .base import AreaMixin  # noqa: F401
 from .base import AuthUser  # noqa: F401

@@ -1,0 +1,80 @@
+{% extends "admin/base_site.html" %}
+{% load i18n admin_urls %}
+
+{% comment %}
+  The one and only place a raw key is readable. It is rendered into this
+  response body and nowhere else: not the messages framework, not the session,
+  not a cookie. Nothing here is stored, so leaving the page loses the secret.
+{% endcomment %}
+
+{% block title %}Copy your API key | {{ site_title|default:_('Django site admin') }}{% endblock %}
+
+{% block bodyclass %}{{ block.super }} app-{{ opts.app_label }} model-{{ opts.model_name }}{% endblock %}
+
+{% block breadcrumbs %}
+  <div class="breadcrumbs">
+    <a href="{% url 'admin:index' %}">{% trans 'Home' %}</a>
+    &rsaquo; <a href="{% url 'admin:app_list' app_label=opts.app_label %}">{{ opts.app_config.verbose_name }}</a>
+    &rsaquo; <a href="{% url opts|admin_urlname:'changelist' %}">{{ opts.verbose_name_plural|capfirst|escape }}</a>
+    &rsaquo; Copy your API key
+  </div>
+{% endblock %}
+
+{% block content_title %}<h1>{% if issued|length > 1 %}Copy these API keys{% else %}Copy your API key{% endif %}</h1>{% endblock %}
+
+{% block content %}
+  <p class="errornote">
+    {% if issued|length > 1 %}
+      These secrets are shown once, on this page only. They are not stored and cannot be
+      shown again. Copy them somewhere safe before you navigate away.
+    {% else %}
+      This secret is shown once, on this page only. It is not stored and cannot be shown
+      again. Copy it somewhere safe before you navigate away.
+    {% endif %}
+  </p>
+
+  {% for item in issued %}
+    <fieldset class="module aligned">
+      <h2>{{ item.key.name }}</h2>
+      <div class="form-row">
+        <div>
+          <label>Acts as:</label>
+          <div class="readonly">{{ item.key.profile }}</div>
+        </div>
+      </div>
+      <div class="form-row">
+        <div>
+          <label>Key ID:</label>
+          <div class="readonly">{{ item.key.key_id }}</div>
+        </div>
+      </div>
+      <div class="form-row">
+        <div>
+          <label>Expires:</label>
+          <div class="readonly">{{ item.key.expires_at|default:"never" }}</div>
+        </div>
+      </div>
+      <div class="form-row">
+        <div>
+          <label>API key:</label>
+          <div class="readonly"><code style="word-break: break-all;">{{ item.raw }}</code></div>
+        </div>
+      </div>
+      {% if item.replaces %}
+        <div class="form-row">
+          <div>
+            <label>Replaces:</label>
+            <div class="readonly">
+              {{ item.replaces.key_id }} &mdash; still valid. Revoke it once whatever uses it
+              has been redeployed with the key above.
+            </div>
+          </div>
+        </div>
+      {% endif %}
+    </fieldset>
+  {% endfor %}
+
+  <div class="submit-row">
+    <a href="{% url opts|admin_urlname:'changelist' %}" class="default">Done</a>
+  </div>
+{% endblock %}
