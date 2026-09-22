@@ -418,7 +418,6 @@ def _classify_image(image_record_id, profile_id=None, num_points=None):
             # A queryset update records exactly the key the Lambda wrote: no re-upload,
             # no get_available_name suffix, and no post_save re-checksum from S3.
             Image.objects.filter(pk=image.pk).update(feature_vector_file=result.feature_vector_name)
-            image.feature_vector_file.name = result.feature_vector_name
 
         create_classification_status(image, ClassificationStatus.COMPLETED)
     except Exception as err:
