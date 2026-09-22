@@ -125,8 +125,9 @@ re-applies one.
 
 The Lambda's image tag is pinned in this repo's CDK config **per environment**
 (`InferenceSettings.image_tag`) — building the image in step 2 does **not** by
-itself update any running Lambda. Roll the tag out dev-first, then prod; each
-environment has its own settings file. `classifier_version` also feeds
+itself update any running Lambda. Edit both environments' settings files in
+one PR, then let the normal release flow roll it out: dev first, prod after
+validating on dev. `classifier_version` also feeds
 `INFERENCE_CLASSIFIER_VERSION` on the API service and both workers (`ApiStack`),
 so bumping it redeploys `dev-mermaid-api-django` / `prod-mermaid-api-django`
 (new task definition revisions) alongside `dev-mermaid-inference` /
@@ -144,9 +145,10 @@ so bumping it redeploys `dev-mermaid-api-django` / `prod-mermaid-api-django`
 > if that delay matters for a given release, or plan to redrive the DLQ once
 > the rollout finishes.
 
-1. **Dev.** Edit [`iac/settings/dev.py`](../iac/settings/dev.py), set the
-   inference image tag to the `vN-K` from step 2 and `classifier_version` to
-   the matching `vN`, and merge to `dev` (via PR):
+1. **Edit both settings files.** In one PR, make the same edit to
+   [`iac/settings/dev.py`](../iac/settings/dev.py) and
+   [`iac/settings/prod.py`](../iac/settings/prod.py): set the inference image
+   tag to the `vN-K` from step 2 and `classifier_version` to the matching `vN`:
 
    ```python
    inference=InferenceSettings(image_tag="v3-2", classifier_version="v3"),
@@ -156,15 +158,16 @@ so bumping it redeploys `dev-mermaid-api-django` / `prod-mermaid-api-django`
    the model version encoded in `image_tag` (`vN` from `vN-K`) matches
    `classifier_version`, since a CI-built image always pairs them this way.
 
-   Merging to `dev` triggers **[Deploy CDK](https://github.com/data-mermaid/mermaid-api/actions/workflows/deploy-cdk.yml)**,
+2. **Deploy and test on dev.** Merge the PR to `dev`. This triggers
+   **[Deploy CDK](https://github.com/data-mermaid/mermaid-api/actions/workflows/deploy-cdk.yml)**,
    which updates `dev-mermaid-inference`'s `PyspacerInferenceFunction` to serve
    the new image, and rolls `dev-mermaid-api-django`'s API/worker tasks to the
-   matching `INFERENCE_CLASSIFIER_VERSION`. Validate on dev.
+   matching `INFERENCE_CLASSIFIER_VERSION`. Validate on dev before going on.
+   The `prod.py` edit has no effect yet: dev pushes deploy only the dev stacks.
 
-2. **Prod.** Make the same edit in
-   [`iac/settings/prod.py`](../iac/settings/prod.py), merge it to `dev`, then cut
-   a release tag (e.g. `v1.2`). The tag triggers the **Deploy CDK** PROD job,
-   which updates `prod-mermaid-inference` and `prod-mermaid-api-django` the same way.
+3. **Deploy to prod.** Merge `dev` to `master` and cut a release tag
+   (e.g. `v1.2`). The tag push triggers the **Deploy CDK** prod job, which
+   updates `prod-mermaid-inference` and `prod-mermaid-api-django` the same way.
 
 Git history of `dev.py` / `prod.py` is the deploy log. Once the prod deploy
 completes, the production inference Lambda serves the new classifier version.
