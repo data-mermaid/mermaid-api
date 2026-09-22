@@ -37,9 +37,16 @@ class _RaisingPayload:
 
 class _FakeClient:
     def __init__(
-        self, *, payload=None, function_error=None, raise_error=None, payload_read_error=None
+        self,
+        *,
+        payload=None,
+        raw_payload=None,
+        function_error=None,
+        raise_error=None,
+        payload_read_error=None,
     ):
         self._payload = payload if payload is not None else {}
+        self._raw_payload = raw_payload
         self._function_error = function_error
         self._raise_error = raise_error
         self._payload_read_error = payload_read_error
@@ -51,7 +58,10 @@ class _FakeClient:
             raise self._raise_error
         if self._payload_read_error is not None:
             return {"Payload": _RaisingPayload(self._payload_read_error)}
-        resp = {"Payload": io.BytesIO(json.dumps(self._payload).encode("utf-8"))}
+        raw = self._raw_payload
+        if raw is None:
+            raw = json.dumps(self._payload).encode("utf-8")
+        resp = {"Payload": io.BytesIO(raw)}
         if self._function_error:
             resp["FunctionError"] = self._function_error
         return resp
@@ -76,6 +86,22 @@ def test_invoke_raises_on_function_error(monkeypatch):
 
     with pytest.raises(InferenceError):
         invoke_pyspacer({"classifier_type": "pyspacer"})
+
+
+@override_settings(INFERENCE_LAMBDA_PYSPACER="dev-mermaid-inference-pyspacer")
+@pytest.mark.parametrize("raw_payload", [b'{"point_results": [', b"\xff\xfe\x00garbage"])
+def test_invoke_wraps_non_json_success_payload_as_inference_error(monkeypatch, raw_payload):
+    """A success response whose body does not parse must surface as a non-retryable
+    InferenceError with a readable message, not a bare JSONDecodeError."""
+    fake = _FakeClient(raw_payload=raw_payload)
+    monkeypatch.setattr(inference, "get_lambda_client", lambda *a, **k: fake)
+
+    with pytest.raises(InferenceError) as exc:
+        invoke_pyspacer({"classifier_type": "pyspacer"})
+
+    assert "non-JSON payload" in str(exc.value)
+    assert exc.value.retryable is False
+    assert isinstance(exc.value.__cause__, ValueError)
 
 
 @override_settings(INFERENCE_LAMBDA_PYSPACER="dev-mermaid-inference-pyspacer")

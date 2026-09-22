@@ -162,7 +162,15 @@ def invoke_pyspacer(payload: dict) -> dict:
                 f"Lambda FunctionError ({function_error}): {detail}",
                 retryable=_function_error_is_retryable(function_error, detail),
             )
-        return json.loads(raw)
+        try:
+            return json.loads(raw)
+        except ValueError as err:
+            # JSONDecodeError and UnicodeDecodeError are both ValueErrors. The Lambda
+            # runtime JSON-serializes every handler return, so a payload that fails
+            # to parse is a broken function or transport, not a transient fault.
+            raise InferenceError(
+                f"invoke_pyspacer: Lambda returned a non-JSON payload ({err})"
+            ) from err
     except (BotoCoreError, ClientError) as err:
         # A ClientError's .response is always a dict; a BotoCoreError subclass such as
         # ReadTimeoutError sets it to None, so "or {}" covers both. This also catches
