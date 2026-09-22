@@ -1,3 +1,4 @@
+from django.utils.functional import cached_property
 from rest_framework import serializers
 from rest_framework.decorators import action
 from rest_framework.exceptions import NotFound
@@ -43,20 +44,18 @@ class ClassifierSerializer(BaseAPISerializer):
             "updated_by",
         ]
 
-    def __init__(self, *args, **kwargs):
-        super().__init__(*args, **kwargs)
-        self._active_pk_cache = {}
+    @cached_property
+    def _active_pk(self):
+        # One child serializer instance serves every row in a list request,
+        # so caching here bounds the lookup to one query per request
+        # regardless of row count.
+        try:
+            return Classifier.active().pk
+        except ClassifierNotConfiguredError:
+            return None
 
     def get_is_default(self, obj):
-        # One child serializer instance serves every row in a list request,
-        # so keying the lookup here bounds it to one query per request
-        # regardless of row count.
-        if "pk" not in self._active_pk_cache:
-            try:
-                self._active_pk_cache["pk"] = Classifier.active().pk
-            except ClassifierNotConfiguredError:
-                self._active_pk_cache["pk"] = None
-        return self._active_pk_cache["pk"] is not None and obj.pk == self._active_pk_cache["pk"]
+        return obj.pk == self._active_pk
 
 
 class ClassifierFilterSet(BaseAPIFilterSet):
