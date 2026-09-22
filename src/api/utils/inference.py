@@ -1,6 +1,7 @@
 import json
 import logging
 from collections import Counter
+from functools import cache
 from operator import itemgetter
 from typing import NamedTuple
 
@@ -35,8 +36,6 @@ logger = logging.getLogger(__name__)
 # iac/settings/settings.py, 600s) or botocore aborts a slower synchronous invoke
 # client-side before the function itself does.
 _LAMBDA_READ_TIMEOUT = 660
-
-_lambda_client = None
 
 # Lambda's own throttling and transient-infrastructure error codes for a synchronous
 # invoke; botocore surfaces these as a ClientError, not one of the transient
@@ -118,27 +117,25 @@ class LambdaClassificationResult(NamedTuple):
     feature_vector_name: str | None
 
 
+@cache
 def get_lambda_client():
     """Return a boto3 Lambda client, built once per process and reused after."""
-    global _lambda_client
-    if _lambda_client is None:
-        session = Session(
-            aws_access_key_id=settings.AWS_ACCESS_KEY_ID,
-            aws_secret_access_key=settings.AWS_SECRET_ACCESS_KEY,
-            region_name=settings.AWS_REGION,
-        )
-        _lambda_client = session.client(
-            "lambda",
-            config=Config(
-                connect_timeout=10,
-                read_timeout=_LAMBDA_READ_TIMEOUT,
-                # "max_attempts" counts retries, not total attempts: botocore enforces
-                # max_attempts + 1 total tries. 1 retry here means 2 total invokes, each
-                # a fresh, non-idempotent Lambda execution — see INFERENCE_JOB_VISIBILITY_TIMEOUT.
-                retries={"max_attempts": 1, "mode": "standard"},
-            ),
-        )
-    return _lambda_client
+    session = Session(
+        aws_access_key_id=settings.AWS_ACCESS_KEY_ID,
+        aws_secret_access_key=settings.AWS_SECRET_ACCESS_KEY,
+        region_name=settings.AWS_REGION,
+    )
+    return session.client(
+        "lambda",
+        config=Config(
+            connect_timeout=10,
+            read_timeout=_LAMBDA_READ_TIMEOUT,
+            # "max_attempts" counts retries, not total attempts: botocore enforces
+            # max_attempts + 1 total tries. 1 retry here means 2 total invokes, each
+            # a fresh, non-idempotent Lambda execution — see INFERENCE_JOB_VISIBILITY_TIMEOUT.
+            retries={"max_attempts": 1, "mode": "standard"},
+        ),
+    )
 
 
 def invoke_pyspacer(payload: dict) -> dict:
@@ -331,8 +328,7 @@ def classify_via_lambda(image, points) -> LambdaClassificationResult:
 
         if not response.valid_rowcol:
             logger.error(
-                f"pyspacer reported invalid row/col for image {image.id} "
-                f"traceparent={traceparent}",
+                f"pyspacer reported invalid row/col for image {image.id} traceparent={traceparent}",
                 extra={"traceparent": traceparent},
             )
             raise InferenceError("pyspacer inference: response marked row/col invalid")

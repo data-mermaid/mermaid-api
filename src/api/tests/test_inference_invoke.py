@@ -15,6 +15,14 @@ from api.utils import inference
 from api.utils.inference import InferenceError, invoke_pyspacer
 
 
+@pytest.fixture
+def fresh_lambda_client():
+    """Clear the cached client on both sides so a test builds its own and leaves none behind."""
+    inference.get_lambda_client.cache_clear()
+    yield
+    inference.get_lambda_client.cache_clear()
+
+
 class _RaisingPayload:
     """Stand-in for response["Payload"] whose .read() itself raises, e.g. the
     StreamingBody timeout/streaming errors botocore can surface after invoke()
@@ -167,7 +175,7 @@ def test_invoke_classifies_function_error_retryability(
 
 
 @override_settings(INFERENCE_LAMBDA_PYSPACER="dev-mermaid-inference-pyspacer")
-def test_lambda_client_read_timeout_outlives_function_timeout(monkeypatch):
+def test_lambda_client_read_timeout_outlives_function_timeout(monkeypatch, fresh_lambda_client):
     captured = {}
 
     class _FakeSession:
@@ -179,9 +187,6 @@ def test_lambda_client_read_timeout_outlives_function_timeout(monkeypatch):
             captured["config"] = config
             return object()
 
-    # A cleared cache guarantees this call reaches Session regardless of what
-    # earlier tests left cached.
-    monkeypatch.setattr(inference, "_lambda_client", None)
     monkeypatch.setattr(inference, "Session", _FakeSession)
 
     inference.get_lambda_client()
@@ -199,12 +204,13 @@ def test_lambda_client_read_timeout_outlives_function_timeout(monkeypatch):
     AWS_SECRET_ACCESS_KEY="testing",
     AWS_REGION="us-east-1",
 )
-def test_invoke_pyspacer_retries_up_to_the_configured_ceiling_and_no_further(monkeypatch):
+def test_invoke_pyspacer_retries_up_to_the_configured_ceiling_and_no_further(
+    monkeypatch, fresh_lambda_client
+):
     """A real boto3 Lambda client, with only its HTTP transport faked, retries a
     read-timeout up to its configured attempt ceiling and then stops."""
     # Rebuild the client under the credentials set above so request signing succeeds
     # and the call reaches the faked transport instead of failing before it.
-    monkeypatch.setattr(inference, "_lambda_client", None)
     client = inference.get_lambda_client()
     # botocore's Config(retries={"max_attempts": N}) means N retries after the
     # initial request; total_max_attempts is the real total the client enforces.
