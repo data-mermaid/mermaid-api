@@ -2,9 +2,15 @@ from datetime import datetime
 
 from django.conf import settings
 from django.core.management.base import BaseCommand, CommandError
+from django.db import connection
 from django.utils.autoreload import run_with_reloader
 
-from api.checks import check_inference_settings
+from api.checks import (
+    ENFORCED_ENVIRONMENTS,
+    check_inference_settings,
+    ensure_pinned_classifier_registered,
+)
+from api.models.classification import ClassifierRegistrationError
 from simpleq.queues import Queue
 from simpleq.workers import Worker
 
@@ -45,4 +51,14 @@ class Command(BaseCommand):
             errors = check_inference_settings()
             if errors:
                 raise CommandError("\n".join(str(error) for error in errors))
+            # A crash-looping image worker trips the ECS circuit breaker, so a pinned
+            # version that cannot be registered fails the deploy instead of every job.
+            if settings.ENVIRONMENT in ENFORCED_ENVIRONMENTS:
+                try:
+                    ensure_pinned_classifier_registered()
+                except ClassifierRegistrationError as e:
+                    raise CommandError(str(e)) from e
+                # run_with_reloader keeps this process alive as the reloader's
+                # parent; an open connection here would idle for the task's lifetime.
+                connection.close()
         run_with_reloader(self.run_worker, *args, **options)

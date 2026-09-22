@@ -16,7 +16,7 @@ def api_client():
 
 @pytest.fixture
 def pinned_classifier():
-    # Backdated so recency alone would point `Classifier.latest()` at
+    # Backdated so recency alone (newest `created_on`) would point at
     # `newer_classifier` instead - the two rows must stay distinguishable
     # by pin, not by creation order.
     classifier = Classifier.objects.create(name="pinned", version="v1", config={"patch_size": 224})
@@ -53,3 +53,18 @@ def test_version_query_param_returns_only_matching_row(
 
     results = response.json()["results"]
     assert [row["version"] for row in results] == ["v2"]
+
+
+@override_settings(INFERENCE_CLASSIFIER_VERSION="v1")
+def test_latest_action_returns_the_pinned_version_not_the_newest(
+    api_client, pinned_classifier, newer_classifier
+):
+    response = api_client.get(reverse("classifier-latest"))
+    assert response.status_code == 200
+    assert response.json()["version"] == "v1"
+
+
+@override_settings(INFERENCE_CLASSIFIER_VERSION="")
+def test_latest_action_is_not_found_when_no_version_is_pinned(api_client, newer_classifier):
+    response = api_client.get(reverse("classifier-latest"))
+    assert response.status_code == 404

@@ -222,10 +222,6 @@ class Classifier(BaseModel):
             raise ValidationError({"config": str(e)}) from e
 
     @classmethod
-    def latest(cls):
-        return cls.objects.order_by("-created_on").first()
-
-    @classmethod
     def active(cls):
         """The Classifier row for the version baked into the deployed inference image.
 

@@ -78,9 +78,10 @@ class ClassifierViewSet(BaseApiViewSet):
 
     @action(detail=False, methods=SAFE_METHODS)
     def latest(self, request, *args, **kwargs):
-        classifier = self.get_queryset().order_by("-created_on").first()
-        if not classifier:
-            raise NotFound("No classifiers found")
+        try:
+            classifier = Classifier.active()
+        except ClassifierNotConfiguredError as err:
+            raise NotFound("No active classifier configured") from err
 
         serializer = ClassifierSerializer(instance=classifier)
         return Response(serializer.data)

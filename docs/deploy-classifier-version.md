@@ -82,33 +82,42 @@ It builds the `pyspacer-function` Lambda image (baking in
 `CLASSIFIER_VERSION=vN` and pinning the matching pyspacer/sklearn) and pushes it
 to the ECR repo `mermaid-inference-pyspacer` tagged **`vN-K`**.
 
-## Step 3 — Register the classifier version
+## Step 3 — Validate the manifest (recommended)
 
 `Classifier.active()` (`src/api/models/classification.py`) looks up the
-`Classifier` row for `INFERENCE_CLASSIFIER_VERSION` by exact match. Step 4
-below points the API at `vN`, but nothing in steps 1–2 creates that row — skip
-this step and every image uploaded after the deploy fails classification
-silently (`DoesNotExist` is not retryable, so the job is marked `FAILED` and
-the SQS message is deleted; no DLQ entry, no alarm).
+`Classifier` row for `INFERENCE_CLASSIFIER_VERSION` by exact match. You do not
+create that row by hand: when an image worker starts in dev or prod, it
+registers the pinned version from `classifier/<version>/model.json` if no row
+exists yet. An existing row is left untouched.
 
-Register `vN` against **dev**, then **prod**, before editing
-`classifier_version` in either environment's settings:
+If registration fails (the manifest is missing or malformed, or a label does
+not resolve to a benthic attribute or growth form), the image worker exits
+before taking jobs. The ECS circuit breaker then rolls back the image worker,
+and the `*-mermaid-api-django` deploy fails. `*-mermaid-inference` has already
+deployed by then, so the Lambda serves `vN` while the API stays on `vN-1`.
+Every classification then fails the drift check until the manifest is fixed
+and redeployed, or the pin is reverted.
+
+To catch this before the deploy, dry-run the registration in each environment
+before editing `classifier_version`:
 
 ```bash
-python manage.py register_classifier vN
+python manage.py register_classifier vN --dry-run
 ```
 
-Then verify the row exists in each environment before moving on:
-
-```
-GET /v1/classification/classifiers/?version=vN
-```
+Running it without `--dry-run` registers the row ahead of the deploy, which is
+also safe: `Classifier.active()` ignores rows the pin does not point at, and
+the worker then finds the row and skips S3. Run it without `--dry-run` again
+to re-apply a corrected `model.json` to an existing row. The worker never
+re-applies one.
 
 > **This only works for a version whose S3 prefix has a `model.json`.**
 > `Classifier.register()` reads `classifier/<version>/model.json`, and the
 > Beta version `v1` has none — it predates this manifest and uses the legacy
 > pickle layout instead, so `register_classifier v1` fails by design. `v1`'s
-> row exists only because it was created by hand. See
+> row exists only because it was created by hand, so the worker's startup
+> check passes on it without reading S3. On a database without that row,
+> pinning `v1` fails the deploy; restore the row from a backup. See
 > [mermaid-classifier#102](https://github.com/data-mermaid/mermaid-classifier/issues/102),
 > which tracks the gap.
 
