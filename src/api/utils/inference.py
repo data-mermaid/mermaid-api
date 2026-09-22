@@ -105,6 +105,14 @@ def _wrap_validation_error(context: str, err: ValidationError) -> InferenceError
     )
 
 
+def _contract_mismatch_error(served) -> InferenceError:
+    return InferenceError(
+        f"Contract version mismatch: Lambda reported {served!r}, "
+        f"API has {CONTRACT_VERSION!r} — pin mermaid-inference-contract "
+        "to the deployed image's tag"
+    )
+
+
 class LambdaClassificationResult(NamedTuple):
     point_predictions: list
     feature_vector_name: str | None
@@ -277,11 +285,7 @@ def classify_via_lambda(image, points) -> LambdaClassificationResult:
                 # so check it before reporting the vaguer "malformed" fallback.
                 served = payload.get("contract_version")
                 if served and served != CONTRACT_VERSION:
-                    raise InferenceError(
-                        f"Contract version mismatch: Lambda reported {served!r}, "
-                        f"API has {CONTRACT_VERSION!r} — pin mermaid-inference-contract "
-                        "to the deployed image's tag"
-                    ) from err
+                    raise _contract_mismatch_error(served) from err
                 raise _wrap_validation_error("malformed error envelope", err) from err
             logger.error(
                 f"pyspacer inference error envelope for image {image.id}: "
@@ -316,18 +320,14 @@ def classify_via_lambda(image, points) -> LambdaClassificationResult:
                 retryable=True,
             )
 
-        installed = CONTRACT_VERSION
-        if response.contract_version != installed:
+        if response.contract_version != CONTRACT_VERSION:
             logger.error(
                 f"pyspacer contract version mismatch for image {image.id}: "
-                f"Lambda reported {response.contract_version!r}, API has {installed!r} "
+                f"Lambda reported {response.contract_version!r}, API has {CONTRACT_VERSION!r} "
                 f"traceparent={traceparent}",
                 extra={"traceparent": traceparent},
             )
-            raise InferenceError(
-                f"Contract version mismatch: Lambda reported {response.contract_version!r}, "
-                f"API has {installed!r} — pin mermaid-inference-contract to the deployed image's tag"
-            )
+            raise _contract_mismatch_error(response.contract_version)
 
         if not response.valid_rowcol:
             logger.error(
