@@ -135,22 +135,6 @@ def test_retryable_classification_failure_omits_the_processing_error_marker(
     assert "[classify.processing_error]" not in caplog.text
 
 
-@override_settings(**PINNED, **THRESHOLDS)
-def test_attributes_points_and_annotations_to_the_profile(
-    monkeypatch, image, classifier_v2, benthic_attribute_1, profile1
-):
-    _stub_lambda(monkeypatch, [(1, 2, [(f"{benthic_attribute_1.pk}::", 0.9)])])
-
-    _classify_image(image.pk, profile_id=profile1.pk)
-
-    point = Point.objects.get(image=image)
-    assert point.created_by_id == profile1.pk
-    assert point.updated_by_id == profile1.pk
-    annotation = Annotation.objects.get(point=point)
-    assert annotation.created_by_id == profile1.pk
-    assert annotation.updated_by_id == profile1.pk
-
-
 @pytest.mark.parametrize(
     "num_points, expected",
     [
@@ -232,7 +216,7 @@ def test_fails_when_no_classifier_matches_the_pinned_version(
 
 
 @override_settings(TESTING=False)
-def test_classify_image_job_enqueues_with_a_visibility_timeout(monkeypatch, image, profile1):
+def test_classify_image_job_enqueues_with_a_visibility_timeout(monkeypatch, image):
     enqueued = []
 
     class RecordingQueue:
@@ -244,12 +228,11 @@ def test_classify_image_job_enqueues_with_a_visibility_timeout(monkeypatch, imag
 
     monkeypatch.setattr(q, "Queue", RecordingQueue)
 
-    classify_image_job(image.pk, profile_id=profile1.pk, num_points=9)
+    classify_image_job(image.pk, num_points=9)
 
     assert len(enqueued) == 1
     job = enqueued[0]
     assert job.kwargs == {
         "image_record_id": image.pk,
-        "profile_id": profile1.pk,
         "num_points": 9,
     }

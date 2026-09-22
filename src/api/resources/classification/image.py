@@ -288,10 +288,7 @@ class ImageViewSet(BaseProjectApiViewSet):
             create_classification_status(image_record, status=ClassificationStatus.PENDING)
             # num_points is left unset here; classify_image_job falls back to the
             # deployment-wide point count in effect when the job runs.
-            classify_image_job(
-                image_record.pk,
-                profile_id=profile.pk,
-            )
+            classify_image_job(image_record.pk)
 
         data = ImageSerializer(instance=image_record, context={"request": request}).data
         return Response(data=data, status=status.HTTP_201_CREATED)

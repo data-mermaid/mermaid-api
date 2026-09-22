@@ -28,7 +28,6 @@ from ..models import (
     Image,
     ObsBenthicPhotoQuadrat,
     Point,
-    Profile,
     Project,
     Region,
     Site,
@@ -340,7 +339,7 @@ def generate_points(image: Image, num_points: int, margin: tuple[int, int] = (0,
 
 
 @transaction.atomic
-def _write_classification_results(image, point_predictions, classifier_record, profile=None):
+def _write_classification_results(image, point_predictions, classifier_record):
     # Lock the image row, as create_classification_status does: a concurrent delete
     # otherwise breaks the Point foreign key part way through bulk_create.
     if not Image.objects.filter(id=image.pk).select_for_update().exists():
@@ -372,8 +371,6 @@ def _write_classification_results(image, point_predictions, classifier_record, p
             image=image,
             created_on=created_on,
             updated_on=created_on,
-            created_by=profile,
-            updated_by=profile,
         )
         _points.append(point)
         for label, score in scores[0:3]:
@@ -389,8 +386,6 @@ def _write_classification_results(image, point_predictions, classifier_record, p
                         is_confirmed=score >= settings.AUTOCONFIRM_THRESHOLD,
                         created_on=created_on,
                         updated_on=created_on,
-                        created_by=profile,
-                        updated_by=profile,
                         is_machine_created=True,
                     )
                 )
@@ -399,9 +394,7 @@ def _write_classification_results(image, point_predictions, classifier_record, p
     Annotation.objects.bulk_create(_annotations)
 
 
-def _classify_image(image_record_id, profile_id=None, num_points=None):
-    profile = Profile.objects.get_or_none(id=profile_id) if profile_id else None
-
+def _classify_image(image_record_id, num_points=None):
     image = Image.objects.get_or_none(id=image_record_id)
     if not image:
         return
@@ -412,7 +405,7 @@ def _classify_image(image_record_id, profile_id=None, num_points=None):
         classifier_record = Classifier.active()
         points = generate_points(image, num_points or settings.INFERENCE_DEFAULT_NUM_POINTS)
         result = classify_via_lambda(image, points)
-        _write_classification_results(image, result.point_predictions, classifier_record, profile)
+        _write_classification_results(image, result.point_predictions, classifier_record)
 
         if result.feature_vector_name:
             # A queryset update records exactly the key the Lambda wrote: no re-upload,
@@ -439,13 +432,12 @@ def _classify_image(image_record_id, profile_id=None, num_points=None):
             raise
 
 
-def classify_image_job(image_record_id, profile_id=None, num_points=None):
+def classify_image_job(image_record_id, num_points=None):
     return submit_image_job(
         0,
         True,
         _classify_image,
         image_record_id=image_record_id,
-        profile_id=profile_id,
         num_points=num_points,
         visibility_timeout=settings.INFERENCE_JOB_VISIBILITY_TIMEOUT,
     )
