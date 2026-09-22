@@ -1,37 +1,13 @@
 import pytest
-from django.core.files.uploadedfile import SimpleUploadedFile
 from django.test import override_settings
 
-from api.models import Annotation, ClassificationStatus, Classifier, Image, Point
+from api.models import Annotation, ClassificationStatus, Image, Point
 from api.utils import classification, q
 from api.utils.classification import _classify_image, classify_image_job
 from api.utils.inference import InferenceError, LambdaClassificationResult
 
 PINNED = {"INFERENCE_CLASSIFIER_VERSION": "v2"}
 THRESHOLDS = {"CLASSIFIED_THRESHOLD": 0.5, "AUTOCONFIRM_THRESHOLD": 1.0}
-
-
-@pytest.fixture
-def image(valid_benthic_pq_transect_collect_record):
-    with open("api/tests/data/test_image.jpg", "rb") as f:
-        content = f.read()
-
-    image_file = SimpleUploadedFile(
-        name="test_image.jpg", content=content, content_type="image/jpeg"
-    )
-
-    return Image.objects.create(
-        collect_record_id=valid_benthic_pq_transect_collect_record.pk,
-        image=image_file,
-        name="Test image",
-    )
-
-
-@pytest.fixture
-def classifier_v2():
-    return Classifier.objects.create(
-        name="Test classifier", version="v2", config={"patch_size": 144}
-    )
 
 
 def _stub_lambda(monkeypatch, predictions, feature_vector_name=None, captured_points=None):
