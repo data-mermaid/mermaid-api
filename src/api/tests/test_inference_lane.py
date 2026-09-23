@@ -143,6 +143,7 @@ def test_classify_via_lambda_maps_response(monkeypatch, image):
 
 
 @override_settings(INFERENCE_CLASSIFIER_VERSION="v2")
+@override_settings(**STORAGE_SETTINGS)
 def test_classify_via_lambda_returns_no_feature_vector_name_when_response_echoes_none(
     monkeypatch, image
 ):
@@ -176,6 +177,7 @@ def test_classify_via_lambda_drops_feature_vector_name_when_response_echoes_a_di
 
 
 @override_settings(INFERENCE_CLASSIFIER_VERSION="v2")
+@override_settings(**STORAGE_SETTINGS)
 def test_classify_via_lambda_raises_on_error_envelope(monkeypatch, image):
     envelope = {"error_code": "processing_error", "message": "kaboom", "retryable": False}
     monkeypatch.setattr(inference, "invoke_pyspacer", lambda payload: envelope)
@@ -185,6 +187,7 @@ def test_classify_via_lambda_raises_on_error_envelope(monkeypatch, image):
 
 
 @override_settings(INFERENCE_CLASSIFIER_VERSION="v2")
+@override_settings(**STORAGE_SETTINGS)
 def test_classify_via_lambda_error_envelope_carries_code_and_correct_retryable_flag(
     monkeypatch, image
 ):
@@ -207,6 +210,7 @@ def test_classify_via_lambda_error_envelope_carries_code_and_correct_retryable_f
 
 
 @override_settings(INFERENCE_CLASSIFIER_VERSION="v2")
+@override_settings(**STORAGE_SETTINGS)
 def test_classify_via_lambda_rejects_envelope_with_misspelled_field(monkeypatch, image):
     """A misspelled "retriable" key previously fell through payload.get("retryable")
     to None -> False, silently becoming a non-retryable permanent failure with no
@@ -226,6 +230,7 @@ def test_classify_via_lambda_rejects_envelope_with_misspelled_field(monkeypatch,
 
 
 @override_settings(INFERENCE_CLASSIFIER_VERSION="v2")
+@override_settings(**STORAGE_SETTINGS)
 def test_classify_via_lambda_wraps_malformed_response_as_inference_error(monkeypatch, image):
     """parse_classify_response raises pydantic ValidationError directly; unwrapped,
     _classify_image writes that raw error (thousands of characters for a many-point
@@ -242,6 +247,7 @@ def test_classify_via_lambda_wraps_malformed_response_as_inference_error(monkeyp
 
 
 @override_settings(INFERENCE_CLASSIFIER_VERSION="v2")
+@override_settings(**STORAGE_SETTINGS)
 def test_classify_via_lambda_drift_guard(monkeypatch, image):
     monkeypatch.setattr(inference, "invoke_pyspacer", lambda payload: _ok_payload("v3"))
     with pytest.raises(InferenceError) as excinfo:
@@ -253,6 +259,7 @@ def test_classify_via_lambda_drift_guard(monkeypatch, image):
 
 
 @override_settings(INFERENCE_CLASSIFIER_VERSION="v2")
+@override_settings(**STORAGE_SETTINGS)
 def test_classify_via_lambda_contract_version_mismatch_raises(monkeypatch, image):
     payload = _ok_payload("v2")
     payload["contract_version"] = "9.9.9"  # != installed
@@ -266,6 +273,7 @@ def test_classify_via_lambda_contract_version_mismatch_raises(monkeypatch, image
 
 
 @override_settings(INFERENCE_CLASSIFIER_VERSION="v2")
+@override_settings(**STORAGE_SETTINGS)
 def test_classify_via_lambda_missing_contract_version_raises(monkeypatch, image):
     payload = _ok_payload("v2", contract_version=None)  # older Lambda: no contract_version
     monkeypatch.setattr(inference, "invoke_pyspacer", lambda p: payload)
@@ -278,6 +286,7 @@ def test_classify_via_lambda_missing_contract_version_raises(monkeypatch, image)
 
 
 @override_settings(INFERENCE_CLASSIFIER_VERSION="v2")
+@override_settings(**STORAGE_SETTINGS)
 def test_classify_via_lambda_rejects_invalid_rowcol(monkeypatch, image):
     payload = _ok_payload("v2", valid_rowcol=False)
     monkeypatch.setattr(inference, "invoke_pyspacer", lambda p: payload)
@@ -290,6 +299,7 @@ def test_classify_via_lambda_rejects_invalid_rowcol(monkeypatch, image):
 
 
 @override_settings(INFERENCE_CLASSIFIER_VERSION="v2")
+@override_settings(**STORAGE_SETTINGS)
 @pytest.mark.parametrize(
     "requested_points,response_points",
     [
