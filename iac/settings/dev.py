@@ -16,8 +16,7 @@ DEV_SETTINGS = ProjectSettings(
     api=DjangoSettings(
         # API
         container_cpu=1024,
-        container_memory=2560,
-
+        container_memory=3072,
         container_count=1,
         # SQS
         sqs_cpu=1024,
