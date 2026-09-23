@@ -11,7 +11,9 @@ from api.resources.classification.image import ImageViewSet
 
 @pytest.fixture
 def classifier():
-    return Classifier.objects.create(name="Test classifier", version="v0", patch_size=144)
+    return Classifier.objects.create(
+        name="Test classifier", version="v0", config={"patch_size": 144}
+    )
 
 
 @pytest.fixture
@@ -91,6 +93,7 @@ def test_create_user_defined_annotation(
     assert request.status_code == 200
 
     data = request.json()
+    assert data["patch_size"] == 144
 
     bad_data = copy.deepcopy(data)
     bad_data["points"][0]["annotations"].append(

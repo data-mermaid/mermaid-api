@@ -12,6 +12,7 @@ from aws_cdk import (
     aws_sqs as sqs,
 )
 from constructs import Construct
+from settings.settings import alerts_topic_name
 
 
 class MonitoringAlerts(Construct):
@@ -46,11 +47,14 @@ class MonitoringAlerts(Construct):
     ) -> None:
         super().__init__(scope, id, **kwargs)
 
+        # Named from the shared helper: InferenceStack resolves this same topic by
+        # ARN rather than by construct reference, and only the helper keeps the two
+        # spellings in step.
         self.topic = sns.Topic(
             self,
             "AlertsTopic",
-            display_name=f"mermaid-{env_id}-alerts",
-            topic_name=f"mermaid-{env_id}-alerts",
+            display_name=alerts_topic_name(env_id),
+            topic_name=alerts_topic_name(env_id),
         )
         sns_action = cw_actions.SnsAction(self.topic)
 

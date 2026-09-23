@@ -91,11 +91,16 @@ environment has its own settings file and its own stack
 (`dev-mermaid-inference` / `prod-mermaid-inference`).
 
 1. **Dev.** Edit [`iac/settings/dev.py`](../iac/settings/dev.py), set the
-   inference image tag to the `vN-K` from step 2, and merge to `dev` (via PR):
+   inference image tag to the `vN-K` from step 2 and `classifier_version` to
+   the matching `vN`, and merge to `dev` (via PR):
 
    ```python
-   inference=InferenceSettings(image_tag="v3-2"),
+   inference=InferenceSettings(image_tag="v3-2", classifier_version="v3"),
    ```
+
+   `image_tag` and `classifier_version` move together: `cdk synth` asserts
+   the model version encoded in `image_tag` (`vN` from `vN-K`) matches
+   `classifier_version`, since a CI-built image always pairs them this way.
 
    Merging to `dev` triggers **[Deploy CDK](https://github.com/data-mermaid/mermaid-api/actions/workflows/deploy-cdk.yml)**,
    which updates `dev-mermaid-inference`'s `PyspacerInferenceFunction` to serve

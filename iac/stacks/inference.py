@@ -13,7 +13,7 @@ from aws_cdk import (
     aws_sns as sns,
 )
 from constructs import Construct
-from settings.settings import ProjectSettings
+from settings.settings import ProjectSettings, alerts_topic_name
 
 
 class InferenceStack(Stack):
@@ -29,6 +29,8 @@ class InferenceStack(Stack):
     Alarms publish to the shared per-env alerts topic owned by ApiStack's
     MonitoringAlerts construct; that construct's single Chatbot config delivers
     everything on the topic to Slack, so this stack creates no delivery infra.
+    The topic is resolved from its deterministic name (alerts_topic_name), not
+    from an ApiStack construct — see the alarms section below.
     """
 
     def __init__(
@@ -39,8 +41,7 @@ class InferenceStack(Stack):
         config: ProjectSettings,
         inference_repo: ecr.IRepository,
         config_bucket: s3.IBucket,
-        image_bucket: s3.IBucket,
-        alerts_topic: sns.ITopic,
+        image_buckets: list[tuple[s3.IBucket, str]],
         **kwargs,
     ) -> None:
         super().__init__(scope, id, **kwargs)
@@ -60,6 +61,10 @@ class InferenceStack(Stack):
         self.function = lambda_.DockerImageFunction(
             self,
             "PyspacerInferenceFunction",
+            # A bucket policy in account 557690602013 (coral-reef-training) grants
+            # s3:PutObject to this exact function name via an ArnEquals condition
+            # on lambda:SourceFunctionArn. Renaming the function silently revokes
+            # prod's feature-vector write access — no deploy-time error surfaces it.
             function_name=f"{config.env_id}-mermaid-inference-pyspacer",
             code=lambda_.DockerImageCode.from_ecr(
                 repository=inference_repo,
@@ -78,13 +83,28 @@ class InferenceStack(Stack):
             },
         )
 
-        # Same-account reads (dev). No assume-role, no long-lived keys.
+        # Read-only on classifier/*: the legacy lane unpickles classifier.pkl through
+        # pyspacer's ClassifierUnpickler, which delegates to stock pickle.Unpickler with
+        # no allowlist, so write access here is code execution as this role on a cold start.
         config_bucket.grant_read(self.function, "classifier/*")
-        image_bucket.grant_read(self.function)
+
+        # (bucket, key prefix) per env: the function reads source images and writes
+        # extracted feature vectors back under the same prefix, in every image
+        # bucket including the foreign coral-reef-training bucket, whose policy
+        # grants this function's exact name a matching put statement.
+        for bucket, prefix in image_buckets:
+            bucket.grant_read(self.function, f"{prefix}*")
+            bucket.grant_put(self.function, f"{prefix}*")
 
         # ── Alarms ──────────────────────────────────────────────────
-        # Published to the shared per-env alerts topic (ApiStack/MonitoringAlerts);
-        # its single Chatbot config delivers to Slack. No topic/Chatbot created here.
+        # Imported by ARN from the name both stacks compute. ApiStack's topic construct
+        # would make CDK deploy ApiStack first, and the API must not expect a classifier
+        # version before this stack's Lambda serves it. No topic/Chatbot created here.
+        alerts_topic = sns.Topic.from_topic_arn(
+            self,
+            "AlertsTopic",
+            f"arn:aws:sns:{self.region}:{self.account}:{alerts_topic_name(config.env_id)}",
+        )
         sns_action = cw_actions.SnsAction(alerts_topic)
 
         for construct_id, metric, alarm_name, description in (
@@ -152,3 +172,37 @@ class InferenceStack(Stack):
         )
         processing_errors_alarm.add_alarm_action(sns_action)
         processing_errors_alarm.add_ok_action(sns_action)
+
+        # Feature-store write failures: classification succeeds but the vector can't be
+        # persisted, so it returns success with feature_vector_output: null and nothing
+        # retries — the vector is lost. The marker is emitted by pyspacer_function.classify
+        # in data-mermaid/mermaid-inference; the two must stay in sync.
+        feature_store_error_metric = logs.MetricFilter(
+            self,
+            "FeatureStoreErrorMetricFilter",
+            log_group=log_group,
+            filter_pattern=logs.FilterPattern.literal('"[classify.feature_store_error]"'),
+            metric_namespace=f"MERMAID/{config.env_id}/Inference",
+            metric_name="FeatureStoreErrors",
+            metric_value="1",
+            default_value=0,
+        )
+        feature_store_errors_alarm = cw.Alarm(
+            self,
+            "FeatureStoreErrorsAlarm",
+            alarm_name=f"mermaid-{config.env_id}-inference-feature-store-errors",
+            alarm_description=(
+                "Inference Lambda classified successfully but could not persist the "
+                "feature vector (invisible to the Errors metric and to "
+                "ProcessingErrors; the vector is lost permanently) — 5 or more in a "
+                "5-minute window, e.g. an AccessDenied on the feature-vector bucket "
+                "or a bucket-policy regression"
+            ),
+            metric=feature_store_error_metric.metric(statistic="Sum", period=Duration.minutes(5)),
+            threshold=5,
+            evaluation_periods=1,
+            comparison_operator=cw.ComparisonOperator.GREATER_THAN_OR_EQUAL_TO_THRESHOLD,
+            treat_missing_data=cw.TreatMissingData.NOT_BREACHING,
+        )
+        feature_store_errors_alarm.add_alarm_action(sns_action)
+        feature_store_errors_alarm.add_ok_action(sns_action)

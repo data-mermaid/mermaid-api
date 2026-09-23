@@ -1,14 +1,9 @@
 from collections import defaultdict
 
+from django.conf import settings
 from django.db.models import Prefetch, Q
 
-from ....models import (
-    Annotation,
-    Classifier,
-    CollectRecord,
-    Image,
-    ObsBenthicPhotoQuadrat,
-)
+from ....models import Annotation, CollectRecord, Image, ObsBenthicPhotoQuadrat
 from .base import ERROR, OK, WARN, BaseValidator, validate_list, validator_result
 from .region import BaseRegionValidator
 
@@ -128,7 +123,7 @@ class BaseAnnotationValidator(BaseValidator):
             "num_points_per_quadrat"
         )
         if not num_points_per_quadrat:
-            num_points_per_quadrat = Classifier.latest().num_points
+            num_points_per_quadrat = settings.INFERENCE_DEFAULT_NUM_POINTS
 
         annos = (
             Annotation.objects.select_related(
