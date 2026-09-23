@@ -35,6 +35,27 @@ Profile information for current user.
 
 - ``change_password/`` (``POST``)
 
+/apikeys/
+^^^^^^^^^
+
+API keys belonging to the current user. See `Authentication <authentication.html#api-keys>`_ for how a key is used.
+
+| `Authentication`: required; a request authenticated with an API key is refused
+| `Permissions`: Only the owner of a key may see or change it. Keys belonging to other users are not visible.
+| `Methods`: ``GET``, ``POST``, ``PATCH``
+| `Filters`: ``name``, ``is_active``, ``revoked``, ``search`` (name or key id)
+| `Additional routes`:
+
+- ``<id>/revoke/`` (``POST``): retire a key. The key stops working on the next request and stays in the list with ``status`` ``revoked``. Revoking an already revoked key changes nothing. Keys cannot be deleted.
+
+``POST`` creates a key and accepts:
+
+- ``name`` (required)
+- ``expires_at`` (optional; defaults to one year from now)
+- ``never_expires`` (optional; ``true`` issues a key with no expiry, and cannot be combined with ``expires_at``)
+
+The response includes ``key``, the credential to send as ``Authorization: Bearer <key>``. It is returned only in this response and is never stored, so it cannot be retrieved later. Every key has a ``status`` of ``active``, ``expired``, ``revoked`` or ``inactive``. Only ``name`` can be changed with ``PATCH``.
+
 /profiles/
 ^^^^^^^^^^
 
