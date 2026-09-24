@@ -1,6 +1,11 @@
 """
 Single definition of what counts as a "duplicate" Site/Management within a
-project. Consumed directly by both the create-time hard-reject
+project. For Sites, a candidate matches if it is within SITE_BUFFER_M of the
+new site's location OR has a similar name within NAME_MATCH_BUFFER_M -- an
+OR, not an AND, so same-location/different-name and similar-name/GPS-drift
+cases are both caught independently.
+
+Consumed directly by both the create-time hard-reject
 (`SiteDuplicateCheckMixin`/`ManagementDuplicateCheckMixin` in
 api/resources/mixins.py) and the collect-record-time warning
 (`UniqueSiteValidator`/`UniqueManagementValidator` in
@@ -15,6 +20,7 @@ rather than a hardcoded table list, so a new protocol's sample unit model
 every consumer instead of needing to be remembered in more than one place.
 """
 
+from django.contrib.gis.db.models.functions import Distance as DistanceFunc
 from django.contrib.gis.measure import Distance
 from django.contrib.postgres.search import TrigramSimilarity
 from django.db.models import Q
@@ -24,6 +30,7 @@ from . import get_subclasses
 
 SITE_NAME_MATCH_PERCENT = 0.5
 SITE_BUFFER_M = 100
+NAME_MATCH_BUFFER_M = 500
 
 # Shared with UniqueSiteValidator.NOT_UNIQUE / UniqueManagementValidator.SIMILAR_NAME
 # (api/submission/validations/validators/). Defined here, not there: importing those
@@ -66,11 +73,14 @@ def submitted_sample_unit_sql():
 
 def find_duplicate_sites(project_id, name, location, exclude_id):
     """
-    Other Sites in `project_id` with a submitted sample unit, within
-    SITE_BUFFER_M of `location`, with trigram name similarity to `name` of
-    at least SITE_NAME_MATCH_PERCENT.
+    Other Sites in `project_id` with a submitted sample unit, matching
+    either independently:
+    - within SITE_BUFFER_M of `location` (regardless of name), or
+    - trigram name similarity to `name` of at least SITE_NAME_MATCH_PERCENT,
+      within the wider NAME_MATCH_BUFFER_M (covers offline-GPS-drift cases
+      where a reused name lands outside SITE_BUFFER_M).
     """
-    if not name or location is None:
+    if location is None:
         return []
 
     qry = Site.objects.filter(project_id=project_id).filter(
@@ -78,12 +88,22 @@ def find_duplicate_sites(project_id, name, location, exclude_id):
     )
     if exclude_id is not None:
         qry = qry.exclude(id=exclude_id)
-    qry = (
-        qry.filter(location__distance_lt=(location, Distance(m=SITE_BUFFER_M)))
-        .annotate(similarity=TrigramSimilarity("name", name))
-        .filter(similarity__gte=SITE_NAME_MATCH_PERCENT)
-        .order_by("-similarity")
-    )
+
+    match_q = Q(location__distance_lt=(location, Distance(m=SITE_BUFFER_M)))
+    qry = qry.annotate(distance=DistanceFunc("location", location))
+    if name:
+        qry = qry.annotate(similarity=TrigramSimilarity("name", name))
+        match_q |= Q(
+            similarity__gte=SITE_NAME_MATCH_PERCENT,
+            location__distance_lt=(location, Distance(m=NAME_MATCH_BUFFER_M)),
+        )
+
+    # Ascending distance, not similarity: a within-SITE_BUFFER_M match always
+    # has a smaller distance than a name-arm-only match (which is, by
+    # definition, further than SITE_BUFFER_M away), so this guarantees a true
+    # location-based duplicate is never pushed out of a truncated top-N by
+    # unrelated sites that merely share a similar name.
+    qry = qry.filter(match_q).order_by("distance")
 
     return list(qry.distinct())
 
