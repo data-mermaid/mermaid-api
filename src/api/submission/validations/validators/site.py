@@ -16,8 +16,8 @@ class UniqueSiteValidator(BaseValidator):
 
     @validator_result
     def __call__(self, collect_record, **kwargs):
-        # 1. Location within buffer
-        # 2. Fuzzy match site name
+        # Duplicate if within SITE_BUFFER_M of an existing site, OR name-similar
+        # within the wider NAME_MATCH_BUFFER_M -- see find_duplicate_sites.
 
         site_id = self.get_value(collect_record, self.site_path) or ""
         try:

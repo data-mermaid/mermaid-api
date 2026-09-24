@@ -79,7 +79,7 @@ def test_psite_update_does_not_run_duplicate_check(api_client1, project1, site1)
     assert resp.status_code == 200
 
 
-def test_psite_create_allows_dissimilar_name_nearby(
+def test_psite_create_rejects_dissimilar_name_same_location(
     api_client1,
     project1,
     site1,
@@ -89,6 +89,9 @@ def test_psite_create_allows_dissimilar_name_nearby(
     reef_zone1,
     reef_exposure1,
 ):
+    # Original #1567 repro: same coordinates as site1 (~11m away, well within
+    # SITE_BUFFER_M), completely different name -- flagged via the location
+    # arm alone, independent of name similarity.
     url = reverse("psite-list", kwargs=dict(project_pk=project1.pk))
     payload = _site_payload(
         project1,
@@ -99,6 +102,52 @@ def test_psite_create_allows_dissimilar_name_nearby(
         "Completely different station",
         1.0001,
         1.0001,
+    )
+    resp = api_client1.post(url, payload, format="json")
+
+    assert resp.status_code == 400
+    assert resp.json()["duplicate"]["code"] == "not_unique_site"
+
+
+def test_psite_create_rejects_similar_name_gps_drift(
+    api_client1,
+    project1,
+    site1,
+    benthic_transect1,
+    country1,
+    reef_type1,
+    reef_zone1,
+    reef_exposure1,
+):
+    # ~390m from site1 ("Site 1"): outside SITE_BUFFER_M (100m) but inside
+    # NAME_MATCH_BUFFER_M (500m) -- the GPS-drift case, flagged via the name
+    # arm alone.
+    url = reverse("psite-list", kwargs=dict(project_pk=project1.pk))
+    payload = _site_payload(
+        project1, country1, reef_type1, reef_zone1, reef_exposure1, "Site 1 ", 1.0035, 1.0
+    )
+    resp = api_client1.post(url, payload, format="json")
+
+    assert resp.status_code == 400
+    assert resp.json()["duplicate"]["code"] == "not_unique_site"
+
+
+def test_psite_create_allows_similar_name_beyond_name_match_buffer(
+    api_client1,
+    project1,
+    site1,
+    benthic_transect1,
+    country1,
+    reef_type1,
+    reef_zone1,
+    reef_exposure1,
+):
+    # ~670m from site1: beyond NAME_MATCH_BUFFER_M (500m), so a similar name
+    # alone is not enough to flag it -- avoids false positives on projects
+    # that legitimately reuse similar names for distinct sites.
+    url = reverse("psite-list", kwargs=dict(project_pk=project1.pk))
+    payload = _site_payload(
+        project1, country1, reef_type1, reef_zone1, reef_exposure1, "Site 1 ", 1.006, 1.0
     )
     resp = api_client1.post(url, payload, format="json")
 
