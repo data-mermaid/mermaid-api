@@ -33,6 +33,7 @@ services:
     build:
         context: .
         dockerfile: Dockerfile
+        target: dev
     image: wcs/mermaid-api:latest
     volumes:
       - $PWD/src:/var/projects/webapp

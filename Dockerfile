@@ -1,4 +1,52 @@
-FROM python:3.13-slim-bookworm
+# Base image versions. DEBIAN_CODENAME also selects the PGDG apt repo, so it
+# must match the base image's Debian release.
+ARG PYTHON_VERSION=3.13
+ARG DEBIAN_CODENAME=bookworm
+
+# ============================================================
+# Stage 1: Builder — install build deps and compile pip pkgs
+# ============================================================
+FROM python:${PYTHON_VERSION}-slim-${DEBIAN_CODENAME} AS builder
+
+ENV DEBIAN_FRONTEND=noninteractive
+
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    git \
+    build-essential \
+    libpq-dev \
+    python3-dev \
+ && rm -rf /var/lib/apt/lists/*
+
+ARG APP_USER=webapp
+ARG APP_UID=1000
+RUN groupadd ${APP_USER} && useradd -m --no-log-init --uid ${APP_UID} -g ${APP_USER} ${APP_USER}
+
+WORKDIR /var/projects/${APP_USER}
+COPY requirements.txt .
+RUN su -l ${APP_USER} -c "\
+    pip install --upgrade pip \
+ && pip install --no-cache-dir --no-compile -r /var/projects/${APP_USER}/requirements.txt"
+
+# Strip unnecessary files from installed packages to shrink the layer
+RUN find /home/${APP_USER}/.local -type d -name '__pycache__' -exec rm -rf {} + \
+ && find /home/${APP_USER}/.local -type d -name 'tests' \
+        ! -path '*/django/contrib/admin/tests' \
+        ! -path '*/pandas/tests*'       `# pandas imports from its own tests module` \
+        ! -path '*/pandas/_testing*'     `# pandas._testing used by internal imports` \
+        ! -path '*/psycopg/tests*'       `# psycopg may reference tests at import time` \
+        ! -path '*/pyarrow/tests*'       `# pyarrow imports from tests in some code paths` \
+        -exec rm -rf {} + \
+ && find /home/${APP_USER}/.local -name '*.pyc' -delete \
+ && find /home/${APP_USER}/.local -name '*.pyo' -delete
+
+# Smoke-test: verify top-level dependencies import successfully after cleanup
+RUN su -l ${APP_USER} -c "python -c 'import django; import pandas; import psycopg; import pyarrow'"
+
+# ============================================================
+# Stage 2: Runtime — lean production image
+# ============================================================
+FROM python:${PYTHON_VERSION}-slim-${DEBIAN_CODENAME} AS runtime
+ARG DEBIAN_CODENAME
 LABEL maintainer="<sysadmin@datamermaid.org>"
 
 ENV DEBIAN_FRONTEND=noninteractive
@@ -10,41 +58,37 @@ ENV PATH="/home/webapp/.local/bin:${PATH}"
 ENV PYTHONUNBUFFERED=1
 ENV DJANGO_SETTINGS_MODULE=app.settings
 
-# Install OS dependencies
+# Install runtime-only OS deps (no build-essential, libpq-dev, python3-dev)
 RUN apt-get update && apt-get install -y --no-install-recommends \
-    wget gnupg lsb-release ca-certificates \
- && echo "deb http://apt.postgresql.org/pub/repos/apt $(lsb_release -cs)-pgdg main" > /etc/apt/sources.list.d/pgdg.list \
- && wget --quiet -O - https://www.postgresql.org/media/keys/ACCC4CF8.asc | apt-key add - \
+    wget gnupg ca-certificates \
+ && wget --quiet -O /usr/share/keyrings/pgdg.asc https://www.postgresql.org/media/keys/ACCC4CF8.asc \
+ && gpg --homedir "$(mktemp -d)" --dry-run --import --import-options show-only --with-colons /usr/share/keyrings/pgdg.asc \
+      | awk -F: '/^fpr:/ {print $10}' \
+      | grep -qx 'B97B0AFCAA1A47F044F244A07FCC7D46ACCC4CF8' \
+ && echo "deb [signed-by=/usr/share/keyrings/pgdg.asc] https://apt.postgresql.org/pub/repos/apt ${DEBIAN_CODENAME}-pgdg main" > /etc/apt/sources.list.d/pgdg.list \
  && apt-get update \
- && apt-get install -y --no-install-recommends  \
-    git \
-    gnupg \
-    build-essential \
-    libpq-dev \
-    python3-dev \
+ && apt-get install -y --no-install-recommends \
     postgresql-client-16 \
     gdal-bin \
     python3-gdal \
- && apt-get purge -y --auto-remove gnupg lsb-release \
+ && apt-get purge -y --auto-remove gnupg \
  && rm -rf /var/lib/apt/lists/*
 
 # gunicorn will listen on this port
 EXPOSE 8081
 
 ARG APP_USER=webapp
+ARG APP_UID=1000
 ARG APP_DIR=/var/projects/${APP_USER}
-RUN groupadd ${APP_USER} && useradd -m --no-log-init -g ${APP_USER} ${APP_USER}
+RUN groupadd ${APP_USER} && useradd -m --no-log-init --uid ${APP_UID} -g ${APP_USER} ${APP_USER}
 
-# Copy your application code to the container (make sure you create a .dockerignore file if any large files or directories should be excluded)
+# Copy only the installed Python packages from the builder stage
+COPY --from=builder --chown=${APP_USER}:${APP_USER} /home/${APP_USER}/.local /home/${APP_USER}/.local
+
 WORKDIR ${APP_DIR}
 
-ADD requirements.txt .
-RUN su ${APP_USER} -c "pip install --upgrade pip && pip install --no-cache-dir -r requirements.txt"
-RUN rm ${APP_DIR}/requirements.txt
-
-ADD ./src .
-ADD ./iac/settings ./iac/settings
-RUN chown -R ${APP_USER}:${APP_USER} ${APP_DIR}
+COPY --chown=${APP_USER}:${APP_USER} ./src .
+COPY --chown=${APP_USER}:${APP_USER} ./iac/settings ./iac/settings
 
 # Run everything from here forward as non-root
 USER ${APP_USER}:${APP_USER}
@@ -65,3 +109,15 @@ HEALTHCHECK --interval=30s --timeout=5s --start-period=90s --retries=3 \
   CMD wget --quiet --tries=1 --timeout=3 --spider http://localhost:8081/health/ || exit 1
 
 CMD ["/var/projects/webapp/docker-entry.sh"]
+
+# ============================================================
+# Stage 3: Dev — adds test/dev dependencies on top of runtime
+# ============================================================
+FROM runtime AS dev
+
+ARG APP_USER=webapp
+USER root
+COPY requirements-dev.txt /tmp/requirements-dev.txt
+RUN su -l ${APP_USER} -c "pip install --no-cache-dir -r /tmp/requirements-dev.txt" \
+ && rm /tmp/requirements-dev.txt
+USER ${APP_USER}:${APP_USER}
