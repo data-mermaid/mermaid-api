@@ -6,6 +6,7 @@ from aws_cdk import (
     ArnComponents,
     ArnFormat,
     Duration,
+    RemovalPolicy,
     Stack,
     aws_applicationautoscaling as appscaling,
     aws_autoscaling as autoscale,
@@ -15,6 +16,7 @@ from aws_cdk import (
     aws_ecs as ecs,
     aws_ecs_patterns as ecs_patterns,
     aws_elasticloadbalancingv2 as elb,
+    aws_iam as iam,
     aws_logs as logs,
     aws_rds as rds,
     aws_route53 as r53,
@@ -24,7 +26,7 @@ from aws_cdk import (
     aws_sns as sns,
 )
 from constructs import Construct
-from settings.settings import ProjectSettings
+from settings.settings import ProjectSettings, pyspacer_function_name
 from stacks.constructs.adot import add_adot_sidecar
 from stacks.constructs.alerts import MonitoringAlerts
 from stacks.constructs.dashboard import MonitoringDashboard
@@ -175,6 +177,13 @@ class ApiStack(Stack):
         # Envir Vars
         sqs_queue_name = f"mermaid-{config.env_id}-general"
         image_sqs_queue_name = f"mermaid-{config.env_id}-image-processing"
+        # Computed via the shared pyspacer_function_name helper, not imported from
+        # InferenceStack: this stack deploys after InferenceStack (app.py), and a
+        # construct reference across that edge is what the string form avoids.
+        inference_function_name = pyspacer_function_name(config.env_id)
+        inference_function_arn = (
+            f"arn:aws:lambda:{self.region}:{self.account}:function:{inference_function_name}"
+        )
         environment = {
             "ENV": config.env_id,
             "ENVIRONMENT": config.env_id,
@@ -203,6 +212,11 @@ class ApiStack(Stack):
             "USE_FIFO": use_fifo_queues,
             "SQS_QUEUE_NAME": sqs_queue_name,
             "IMAGE_SQS_QUEUE_NAME": image_sqs_queue_name,
+            "INFERENCE_LAMBDA_PYSPACER": inference_function_name,
+            "INFERENCE_CLASSIFIER_VERSION": config.inference.classifier_version,
+            # Drives the same constant Django falls back to (INFERENCE_JOB_VISIBILITY_TIMEOUT
+            # in src/app/settings.py), so the two can't drift out of sync.
+            "INFERENCE_JOB_VISIBILITY_TIMEOUT": str(config.api.image_sqs_message_visibility),
             # OpenTelemetry / X-Ray
             # ecs-xray.yaml only configures a traces pipeline; disable metrics and
             # logs exporters to suppress UNIMPLEMENTED errors from the ADOT sidecar.
@@ -410,6 +424,18 @@ class ApiStack(Stack):
             fifo=False,
         )
 
+        # Explicit, stably-named log group: without one, the QueueWorker's
+        # QueueProcessingEc2Service auto-creates a log group scoped to its own
+        # construct path (retained on rename), leaving nothing a metric filter
+        # can reliably target across redeploys.
+        image_worker_log_group = logs.LogGroup(
+            self,
+            "ImageWorkerLogGroup",
+            log_group_name=f"/mermaid/{config.env_id}/image-worker",
+            retention=logs.RetentionDays.ONE_MONTH,
+            removal_policy=RemovalPolicy.DESTROY,
+        )
+
         # Image Worker
         image_worker = QueueWorker(
             self,
@@ -426,17 +452,39 @@ class ApiStack(Stack):
             queue_name=image_sqs_queue_name,
             email=sys_email,
             fifo=False,
+            visibility_timeout_seconds=config.api.image_sqs_message_visibility,
+            log_group=image_worker_log_group,
         )
 
         # allow API to send messages to the queue
         worker.queue.grant_send_messages(service.task_definition.task_role)
         image_worker.queue.grant_send_messages(service.task_definition.task_role)
 
+        # Only classify_image_job (run on IMAGE_QUEUE_NAME) invokes the inference
+        # Lambda: the API enqueues and the general worker only copies feature vectors,
+        # so the invoke grant goes to the image worker's task role alone — unlike prior
+        # grants above, which cover both workers.
+        image_worker.task_definition.task_role.add_to_principal_policy(
+            iam.PolicyStatement(
+                actions=["lambda:InvokeFunction"],
+                resources=[inference_function_arn],
+            )
+        )
+
         # allow API to read/write to the public bucket
         public_bucket.grant_read_write(service.task_definition.task_role)
 
         # Allow Image Worker to write to image bucket
         image_processing_bucket.grant_write(image_worker.task_definition.task_role)
+        # generate_points falls back to opening the stored image when dimensions are
+        # unset on the row (nullable, unbacked columns pre-2024-07-24); the image
+        # worker needs read on the app-managed prefix for that path to succeed.
+        image_worker.task_definition.task_role.add_to_principal_policy(
+            iam.PolicyStatement(
+                actions=["s3:GetObject"],
+                resources=[image_processing_bucket.arn_for_objects(f"{config.api.ic_s3_path}*")],
+            )
+        )
         image_processing_bucket.grant_read_write(service.task_definition.task_role)
         # General worker needs read/write for image migration jobs between buckets
         image_processing_bucket.grant_read_write(worker.task_definition.task_role)
@@ -452,17 +500,15 @@ class ApiStack(Stack):
         data_bucket.grant_read_write(service.task_definition.task_role)
         data_bucket.grant_read_write(summary_cache_service.task_definition.task_role)
         data_bucket.grant_delete(summary_cache_service.task_definition.task_role)
-        # Prod bucket needs to read from coral-reef-training bucket.
-        # There is some issue with assumed-role reading from public bucket,
-        # adding read permission to the task role seems to fix it.
+        # ic_bucket_name is image_processing_bucket in dev, and the foreign coral-reef-training
+        # bucket in prod, where the task role is not the credential: get_image_storage_config
+        # returns the IMAGE_BUCKET_AWS_* contributor pair for it (src/api/models/classification.py).
+        # Only daily_backup_task needs a grant against this name.
         coral_reef_training_bucket = s3.Bucket.from_bucket_name(
             self,
             "CoralReefBucket",
             bucket_name=config.api.ic_bucket_name,
         )
-        coral_reef_training_bucket.grant_read(service.task_definition.task_role)
-        coral_reef_training_bucket.grant_read(image_worker.task_definition.task_role)
-        coral_reef_training_bucket.grant_read_write(worker.task_definition.task_role)
         # Backup task needs read/write on the primary image bucket for delete_orphaned_images
         # and export_annotations_parquet (dev: mermaid-image-processing, prod: coral-reef-training).
         # Scoped to the app-managed prefix (IMAGE_S3_PATH = "mermaid/").
@@ -506,7 +552,7 @@ class ApiStack(Stack):
         )
 
         # ── CloudWatch Alarms + Slack (AWS Chatbot) ──────────────────
-        monitoring_alerts = MonitoringAlerts(
+        MonitoringAlerts(
             self,
             "Alerts",
             env_id=config.env_id,
@@ -516,6 +562,7 @@ class ApiStack(Stack):
             general_dlq=worker.dead_letter_queue,
             image_dlq=image_worker.dead_letter_queue,
             api_log_group=api_log_group,
+            image_worker_log_group=image_worker_log_group,
             sagemaker_domain_name=sagemaker_domain_name,
             slack_workspace_id=config.api.slack_workspace_id or None,
             slack_channel_id=config.api.slack_channel_id or None,
@@ -527,6 +574,3 @@ class ApiStack(Stack):
             # avoid both envs paging on the same instance event.
             monitor_shared_rds=config.env_id == "prod",
         )
-        # Exposed so sibling stacks (e.g. InferenceStack) can publish alarms to
-        # the same per-env topic this stack's Chatbot config already delivers.
-        self.alerts_topic = monitoring_alerts.topic

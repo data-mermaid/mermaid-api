@@ -15,15 +15,16 @@ drf-nested-routers==0.95.0
 drf-recaptcha==4.0.3
 gunicorn==26.0.0
 mailchimp3==3.0.21
+mermaid-inference-contract @ git+https://github.com/data-mermaid/mermaid-inference.git@v0.5.0#subdirectory=packages/mermaid-inference-contract
 natsort==8.4.0
 openpyxl==3.1.5
 pandas==3.0.3
 Pillow==12.3.0
 psycopg==3.3.4
 pyarrow==25.0.0
+pydantic>=2.7,<3
 pyexcelerate==0.13.0
 PyYAML==6.0.3
-pyspacer==0.12.0
 pytest-cov==7.1.0
 pytest-django==4.12.0
 pytest==9.1.1
