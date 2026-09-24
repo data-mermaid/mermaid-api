@@ -12,6 +12,7 @@ from aws_cdk import (
     aws_sqs as sqs,
 )
 from constructs import Construct
+from settings.settings import alerts_topic_name
 
 
 class MonitoringAlerts(Construct):
@@ -36,6 +37,7 @@ class MonitoringAlerts(Construct):
         general_dlq: sqs.IQueue,
         image_dlq: sqs.IQueue,
         api_log_group: logs.ILogGroup,
+        image_worker_log_group: logs.ILogGroup,
         sagemaker_domain_name: str | None = None,
         slack_workspace_id: str | None = None,
         slack_channel_id: str | None = None,
@@ -46,11 +48,14 @@ class MonitoringAlerts(Construct):
     ) -> None:
         super().__init__(scope, id, **kwargs)
 
+        # Named from the shared helper: InferenceStack resolves this same topic by
+        # ARN rather than by construct reference, and only the helper keeps the two
+        # spellings in step.
         self.topic = sns.Topic(
             self,
             "AlertsTopic",
-            display_name=f"mermaid-{env_id}-alerts",
-            topic_name=f"mermaid-{env_id}-alerts",
+            display_name=alerts_topic_name(env_id),
+            topic_name=alerts_topic_name(env_id),
         )
         sns_action = cw_actions.SnsAction(self.topic)
 
@@ -394,6 +399,41 @@ class MonitoringAlerts(Construct):
                 threshold=10,
                 evaluation_periods=1,
                 comparison_operator=cw.ComparisonOperator.GREATER_THAN_THRESHOLD,
+                treat_missing_data=cw.TreatMissingData.NOT_BREACHING,
+            )
+        )
+
+        # ── Classify processing errors (app-side instrumentation) ────
+        # Same "[classify.processing_error]" marker as stacks/inference.py's
+        # ProcessingErrorMetricFilter, watched here on the image worker's log group.
+
+        classify_processing_error_metric = logs.MetricFilter(
+            self,
+            "ClassifyProcessingErrorMetricFilter",
+            log_group=image_worker_log_group,
+            filter_pattern=logs.FilterPattern.literal('"[classify.processing_error]"'),
+            metric_namespace=f"MERMAID/{env_id}/ImageWorker",
+            metric_name="ClassifyProcessingErrors",
+            metric_value="1",
+            default_value=0,
+        )
+        alarms.append(
+            cw.Alarm(
+                self,
+                "ClassifyProcessingErrorsAlarm",
+                alarm_name=f"mermaid-{env_id}-classify-processing-errors",
+                alarm_description=(
+                    "A classify job failed permanently, or its SQS visibility could not "
+                    "be extended mid-job — 5 or more in a 5-minute window on the image "
+                    "worker's log group"
+                ),
+                metric=classify_processing_error_metric.metric(
+                    statistic="Sum",
+                    period=Duration.minutes(5),
+                ),
+                threshold=5,
+                evaluation_periods=1,
+                comparison_operator=cw.ComparisonOperator.GREATER_THAN_OR_EQUAL_TO_THRESHOLD,
                 treat_missing_data=cw.TreatMissingData.NOT_BREACHING,
             )
         )

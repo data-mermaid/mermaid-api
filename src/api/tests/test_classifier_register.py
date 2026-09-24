@@ -1,5 +1,3 @@
-import json
-
 import pytest
 from botocore.exceptions import ClientError
 from django.conf import settings
@@ -23,49 +21,28 @@ def _manifest(classes, config=None, task="pyspacer_mlp_classifier", schema_versi
     }
 
 
-@pytest.fixture
-def stub_manifest(monkeypatch):
-    """Patch the S3 JSON read; return a setter the test calls with a manifest dict.
-
-    The setter's `.calls` attribute records each (bucket, key) the read was called with.
-    """
-    holder = {}
-    calls = []
-
-    def fake_read_json_object(bucket, key, *args, **kwargs):
-        calls.append((bucket, key))
-        return holder["manifest"]
-
-    monkeypatch.setattr("api.utils.s3.read_json_object", fake_read_json_object)
-
-    def set_manifest(manifest):
-        holder["manifest"] = manifest
-
-    set_manifest.calls = calls
-    return set_manifest
-
-
-def test_parse_bagf_label_without_growth_form():
-    assert parse_bagf_label("11111111-1111-1111-1111-111111111111") == (
-        "11111111-1111-1111-1111-111111111111",
-        None,
-    )
-
-
-def test_parse_bagf_label_with_trailing_separator_and_no_growth_form():
-    assert parse_bagf_label("11111111-1111-1111-1111-111111111111::") == (
-        "11111111-1111-1111-1111-111111111111",
-        None,
-    )
-
-
-def test_parse_bagf_label_with_growth_form():
-    assert parse_bagf_label(
-        "11111111-1111-1111-1111-111111111111::22222222-2222-2222-2222-222222222222"
-    ) == (
-        "11111111-1111-1111-1111-111111111111",
-        "22222222-2222-2222-2222-222222222222",
-    )
+@pytest.mark.parametrize(
+    "label,expected",
+    [
+        (
+            "11111111-1111-1111-1111-111111111111",
+            ("11111111-1111-1111-1111-111111111111", None),
+        ),
+        (
+            "11111111-1111-1111-1111-111111111111::",
+            ("11111111-1111-1111-1111-111111111111", None),
+        ),
+        (
+            "11111111-1111-1111-1111-111111111111::22222222-2222-2222-2222-222222222222",
+            (
+                "11111111-1111-1111-1111-111111111111",
+                "22222222-2222-2222-2222-222222222222",
+            ),
+        ),
+    ],
+)
+def test_parse_bagf_label(label, expected):
+    assert parse_bagf_label(label) == expected
 
 
 def test_register_populates_config_and_labels(
@@ -108,22 +85,36 @@ def test_register_is_idempotent_upsert(stub_manifest, benthic_attribute_1, benth
     assert second.benthic_attribute_growth_forms.count() == 2
 
 
-def test_register_rejects_unknown_task(stub_manifest, benthic_attribute_1):
-    stub_manifest(_manifest(classes=[f"{benthic_attribute_1.pk}::"], task="nope"))
-    with pytest.raises(ClassifierRegistrationError):
-        Classifier.register("v9")
-    assert not Classifier.objects.filter(version="v9").exists()
+_UNKNOWN_UUID = "00000000-0000-0000-0000-000000000000"
 
 
-def test_register_rejects_invalid_config(stub_manifest, benthic_attribute_1):
-    stub_manifest(_manifest(classes=[f"{benthic_attribute_1.pk}::"], config={"wrong": 1}))
-    with pytest.raises(ClassifierRegistrationError):
-        Classifier.register("v9")
-    assert not Classifier.objects.filter(version="v9").exists()
-
-
-def test_register_rejects_string_patch_size(stub_manifest, benthic_attribute_1):
-    stub_manifest(_manifest(classes=[f"{benthic_attribute_1.pk}::"], config={"patch_size": "224"}))
+@pytest.mark.parametrize(
+    "build_manifest",
+    [
+        lambda ba: _manifest(classes=[f"{ba}::"], task="nope"),
+        lambda ba: _manifest(classes=[f"{ba}::"], config={"wrong": 1}),
+        lambda ba: _manifest(classes=[f"{ba}::"], config={"patch_size": "224"}),
+        lambda ba: _manifest(classes=[f"{ba}::{_UNKNOWN_UUID}"]),
+        lambda ba: _manifest(classes=[f"{ba}::"], schema_version=999),
+        lambda ba: _manifest(classes=[f"{ba}::"], config={"patch_size": 224, "num_points": 50}),
+        lambda ba: _manifest(classes=[None]),
+        # A JSON object iterates as its keys, so a mapping whose keys are valid labels
+        # satisfies every per-element check and would register a label set.
+        lambda ba: _manifest(classes={f"{ba}::": 0.5}),
+    ],
+    ids=[
+        "unknown_task",
+        "invalid_config",
+        "string_patch_size",
+        "unknown_growth_form",
+        "unsupported_schema_version",
+        "manifest_key_dropped_by_config_schema",
+        "non_string_label",
+        "classes_object",
+    ],
+)
+def test_register_rejects_malformed_manifest(stub_manifest, benthic_attribute_1, build_manifest):
+    stub_manifest(build_manifest(benthic_attribute_1.pk))
     with pytest.raises(ClassifierRegistrationError):
         Classifier.register("v9")
     assert not Classifier.objects.filter(version="v9").exists()
@@ -151,21 +142,6 @@ def test_register_rejects_unknown_benthic_attribute_atomically(stub_manifest, be
     ).exists()
 
 
-def test_register_rejects_unknown_growth_form(stub_manifest, benthic_attribute_1):
-    bad = "00000000-0000-0000-0000-000000000000"
-    stub_manifest(_manifest(classes=[f"{benthic_attribute_1.pk}::{bad}"]))
-    with pytest.raises(ClassifierRegistrationError):
-        Classifier.register("v9")
-    assert not Classifier.objects.filter(version="v9").exists()
-
-
-def test_register_rejects_unsupported_schema_version(stub_manifest, benthic_attribute_1):
-    stub_manifest(_manifest(classes=[f"{benthic_attribute_1.pk}::"], schema_version=999))
-    with pytest.raises(ClassifierRegistrationError):
-        Classifier.register("v9")
-    assert not Classifier.objects.filter(version="v9").exists()
-
-
 def test_register_wraps_s3_client_error(monkeypatch):
     def fake_read_json_object(bucket, key, *args, **kwargs):
         raise ClientError(
@@ -180,15 +156,11 @@ def test_register_wraps_s3_client_error(monkeypatch):
     assert not Classifier.objects.filter(version="v9").exists()
 
 
-def test_register_wraps_malformed_json(monkeypatch):
-    def fake_read_json_object(bucket, key, *args, **kwargs):
-        raise json.JSONDecodeError("Expecting value", "", 0)
-
-    monkeypatch.setattr("api.utils.s3.read_json_object", fake_read_json_object)
-
-    with pytest.raises(ClassifierRegistrationError):
-        Classifier.register("v9")
-    assert not Classifier.objects.filter(version="v9").exists()
+def test_patch_size_is_none_for_non_object_config():
+    assert (
+        Classifier(name="c11", version="v11", classifier_type="segmentation", config=224).patch_size
+        is None
+    )
 
 
 def test_register_rejects_empty_classes_and_preserves_existing_labels(
@@ -206,36 +178,8 @@ def test_register_rejects_empty_classes_and_preserves_existing_labels(
     assert classifier.benthic_attribute_growth_forms.count() == 2
 
 
-def test_register_rejects_manifest_key_dropped_by_config_schema(stub_manifest, benthic_attribute_1):
-    stub_manifest(
-        _manifest(
-            classes=[f"{benthic_attribute_1.pk}::"],
-            config={"patch_size": 224, "num_points": 50},
-        )
-    )
-    with pytest.raises(ClassifierRegistrationError):
-        Classifier.register("v9")
-    assert not Classifier.objects.filter(version="v9").exists()
-
-
 def test_register_rejects_non_object_manifest(stub_manifest):
     stub_manifest(["not", "an", "object"])
-    with pytest.raises(ClassifierRegistrationError):
-        Classifier.register("v9")
-    assert not Classifier.objects.filter(version="v9").exists()
-
-
-def test_register_rejects_non_string_label(stub_manifest):
-    stub_manifest(_manifest(classes=[None]))
-    with pytest.raises(ClassifierRegistrationError):
-        Classifier.register("v9")
-    assert not Classifier.objects.filter(version="v9").exists()
-
-
-def test_register_rejects_classes_object(stub_manifest, benthic_attribute_1):
-    # A JSON object iterates as its keys, so a mapping whose keys are valid labels
-    # satisfies every per-element check and would register a label set.
-    stub_manifest(_manifest(classes={f"{benthic_attribute_1.pk}::": 0.5}))
     with pytest.raises(ClassifierRegistrationError):
         Classifier.register("v9")
     assert not Classifier.objects.filter(version="v9").exists()
