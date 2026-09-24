@@ -1,7 +1,12 @@
+# Base image versions. DEBIAN_CODENAME also selects the PGDG apt repo, so it
+# must match the base image's Debian release.
+ARG PYTHON_VERSION=3.13
+ARG DEBIAN_CODENAME=bookworm
+
 # ============================================================
 # Stage 1: Builder — install build deps and compile pip pkgs
 # ============================================================
-FROM python:3.13-slim-bookworm AS builder
+FROM python:${PYTHON_VERSION}-slim-${DEBIAN_CODENAME} AS builder
 
 ENV DEBIAN_FRONTEND=noninteractive
 
@@ -40,7 +45,8 @@ RUN su -l ${APP_USER} -c "python -c 'import django; import pandas; import psycop
 # ============================================================
 # Stage 2: Runtime — lean production image
 # ============================================================
-FROM python:3.13-slim-bookworm AS runtime
+FROM python:${PYTHON_VERSION}-slim-${DEBIAN_CODENAME} AS runtime
+ARG DEBIAN_CODENAME
 LABEL maintainer="<sysadmin@datamermaid.org>"
 
 ENV DEBIAN_FRONTEND=noninteractive
@@ -59,7 +65,7 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
  && gpg --homedir "$(mktemp -d)" --dry-run --import --import-options show-only --with-colons /usr/share/keyrings/pgdg.asc \
       | awk -F: '/^fpr:/ {print $10}' \
       | grep -qx 'B97B0AFCAA1A47F044F244A07FCC7D46ACCC4CF8' \
- && echo "deb [signed-by=/usr/share/keyrings/pgdg.asc] https://apt.postgresql.org/pub/repos/apt bookworm-pgdg main" > /etc/apt/sources.list.d/pgdg.list \
+ && echo "deb [signed-by=/usr/share/keyrings/pgdg.asc] https://apt.postgresql.org/pub/repos/apt ${DEBIAN_CODENAME}-pgdg main" > /etc/apt/sources.list.d/pgdg.list \
  && apt-get update \
  && apt-get install -y --no-install-recommends \
     postgresql-client-16 \
