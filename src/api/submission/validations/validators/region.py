@@ -1,7 +1,7 @@
 from rest_framework.exceptions import ParseError
 
 from ....exceptions import check_uuid
-from ....models import Region, Site
+from ....models import FishAttribute, Region, Site
 from ..utils import valid_id
 from .base import OK, WARN, BaseValidator, validator_result
 
@@ -30,12 +30,29 @@ class BaseRegionValidator(BaseValidator):
         return NotImplementedError()
 
     def _get_attribute_region_lookup(self, attribute_ids):
-        return {
-            str(attr.pk): [str(r) for r in attr.regions]
-            if isinstance(attr.regions, list)
-            else [str(r.id) for r in attr.regions.all()]
-            for attr in self.attribute_model_class.objects.filter(id__in=attribute_ids)
-        }
+        qs = self.attribute_model_class.objects.filter(id__in=attribute_ids)
+        if self.attribute_model_class is FishAttribute:
+            # FishAttribute.regions resolves through multi-table-inheritance
+            # subclasses (see FishAttribute._get_taxon); without this, each
+            # instance triggers a separate query per subclass table.
+            # FishGrouping/FishSpecies.regions are direct M2M fields (unlike
+            # FishFamily/FishGenus, whose .regions is a class-level-cached
+            # list, not a per-instance query), so also prefetch those to avoid
+            # a further per-instance query when .regions.all() is called below.
+            qs = qs.select_related(
+                "fishgrouping", "fishfamily", "fishgenus", "fishspecies"
+            ).prefetch_related("fishgrouping__regions", "fishspecies__regions")
+
+        result = {}
+        for attr in qs:
+            regions = attr.regions
+            if isinstance(regions, list):
+                result[str(attr.pk)] = [str(r) for r in regions]
+            elif regions is not None:
+                result[str(attr.pk)] = [str(r.id) for r in regions.all()]
+            else:
+                result[str(attr.pk)] = []
+        return result
 
     @validator_result
     def check_region(self, observation_id, site_region, attribute_id, attribute_regions, obs):

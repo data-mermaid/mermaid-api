@@ -1,0 +1,57 @@
+name: secure-actions
+
+# Lints and security-scans this repo's GitHub Actions YAML.
+# Reuses sparkgeo/github-actions composites (public), pinned to a commit SHA.
+
+on:
+  push:
+    branches: [master, dev]
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  # Lint workflow and composite-action YAML with actionlint (via reviewdog).
+  actionlint:
+    name: Actionlint
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      checks: write
+    steps:
+      - name: Harden the runner (Audit all outbound calls)
+        uses: step-security/harden-runner@9af89fc71515a100421586dfdb3dc9c984fbf411  # v2.19.4
+        with:
+          egress-policy: audit
+
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd  # v6.0.2
+        with:
+          persist-credentials: false
+
+      - uses: sparkgeo/github-actions/.github/actions/github-actionlint@349a429e52e0ee3c79345ac70f5e9e38b97cffaf
+
+  # Static security analysis of workflow/action YAML with zizmor.
+  # Uploads SARIF findings to the Security tab.
+  zizmor:
+    name: Zizmor
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      security-events: write
+    steps:
+      - name: Harden the runner (Audit all outbound calls)
+        uses: step-security/harden-runner@9af89fc71515a100421586dfdb3dc9c984fbf411  # v2.19.4
+        with:
+          egress-policy: audit
+
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd  # v6.0.2
+        with:
+          persist-credentials: false
+
+      - uses: sparkgeo/github-actions/.github/actions/zizmor@349a429e52e0ee3c79345ac70f5e9e38b97cffaf

@@ -3,7 +3,7 @@ import uuid
 from django.contrib.gis.db import models
 from django.utils.translation import gettext_lazy as _
 
-from .mermaid import Project
+from .core import Project
 
 
 class SummaryCacheQueue(models.Model):
@@ -14,10 +14,12 @@ class SummaryCacheQueue(models.Model):
 
     class Meta:
         db_table = "summary_cache_queue"
-        unique_together = (
-            "project_id",
-            "processing",
-        )
+        constraints = [
+            models.UniqueConstraint(
+                fields=["project_id", "processing"],
+                name="unique_summarycachequeue_project_processing",
+            )
+        ]
 
 
 class BaseSummaryModel(models.Model):
@@ -99,6 +101,79 @@ class BaseSUModel(BaseSummaryModel):
 
     class Meta:
         abstract = True
+
+
+class BeltInvertObsModel(BaseObsModel):
+    sample_unit_id = models.UUIDField()
+    transect_number = models.PositiveSmallIntegerField()
+    transect_len_surveyed = models.DecimalField(max_digits=4, decimal_places=1)
+    reef_slope = models.CharField(max_length=50, null=True, blank=True)
+    transect_width_name = models.CharField(max_length=100, null=True, blank=True)
+    width_m = models.DecimalField(max_digits=4, decimal_places=1, null=True, blank=True)
+    size_bin = models.CharField(max_length=100, null=True, blank=True)
+    invert_attribute_id = models.UUIDField(null=True, blank=True)
+    invert_taxon = models.CharField(max_length=200, null=True, blank=True)
+    invert_group_of_interest = models.CharField(max_length=200, null=True, blank=True)
+    invert_class = models.CharField(max_length=200, null=True, blank=True)
+    invert_order = models.CharField(max_length=200, null=True, blank=True)
+    invert_family = models.CharField(max_length=200, null=True, blank=True)
+    invert_genus = models.CharField(max_length=200, null=True, blank=True)
+    invert_species = models.CharField(max_length=200, null=True, blank=True)
+    count = models.PositiveIntegerField(null=True, blank=True)
+    size = models.DecimalField(max_digits=5, decimal_places=1, null=True, blank=True)
+    density_indha = models.DecimalField(max_digits=11, decimal_places=2, null=True, blank=True)
+    observation_notes = models.TextField(null=True, blank=True)
+    data_policy_macroinvertebrate = models.CharField(max_length=50)
+    pseudosu_id = models.UUIDField()
+
+    class Meta:
+        db_table = "summary_belt_invert_obs"
+
+
+class BeltInvertSUModel(BaseSUModel):
+    sample_unit_ids = models.JSONField()
+    total_abundance = models.PositiveIntegerField()
+    transect_number = models.PositiveSmallIntegerField()
+    transect_len_surveyed = models.DecimalField(max_digits=4, decimal_places=1)
+    reef_slope = models.CharField(max_length=50, null=True, blank=True)
+    transect_width_name = models.CharField(max_length=100, null=True, blank=True)
+    size_bin = models.CharField(max_length=100, null=True, blank=True)
+    density_indha = models.DecimalField(max_digits=11, decimal_places=2, null=True, blank=True)
+    density_indha_group_interest = models.JSONField(null=True, blank=True)
+    density_indha_group_interest_zeroes = models.JSONField(null=True, blank=True)
+    data_policy_macroinvertebrate = models.CharField(max_length=50)
+    pseudosu_id = models.UUIDField()
+
+    class Meta:
+        db_table = "summary_belt_invert_su"
+
+
+class BeltInvertSEModel(BaseSummaryModel):
+    sample_unit_count = models.PositiveSmallIntegerField()
+    depth_avg = models.DecimalField(
+        max_digits=4, decimal_places=2, verbose_name=_("depth mean (m)")
+    )
+    depth_sd = models.DecimalField(
+        max_digits=4,
+        decimal_places=2,
+        verbose_name=_("depth standard deviation (m)"),
+        blank=True,
+        null=True,
+    )
+    observers = models.JSONField(null=True, blank=True)
+    current_name = models.CharField(max_length=100, null=True, blank=True)
+    tide_name = models.CharField(max_length=100, null=True, blank=True)
+    visibility_name = models.CharField(max_length=100, null=True, blank=True)
+    count_total_avg = models.DecimalField(max_digits=11, decimal_places=1, null=True, blank=True)
+    count_total_sd = models.DecimalField(max_digits=11, decimal_places=1, null=True, blank=True)
+    density_indha_avg = models.DecimalField(max_digits=11, decimal_places=2, null=True, blank=True)
+    density_indha_sd = models.DecimalField(max_digits=11, decimal_places=2, null=True, blank=True)
+    density_indha_group_interest_avg = models.JSONField(null=True, blank=True)
+    density_indha_group_interest_sd = models.JSONField(null=True, blank=True)
+    data_policy_macroinvertebrate = models.CharField(max_length=50)
+
+    class Meta:
+        db_table = "summary_belt_invert_se"
 
 
 class BeltFishObsModel(BaseObsModel):

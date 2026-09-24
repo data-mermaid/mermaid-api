@@ -1,6 +1,85 @@
 from django.urls import reverse
 
-from api.models import AuditRecord, BeltFish, CollectRecord, Revision
+from api.models import (
+    AuditRecord,
+    BeltFish,
+    BeltInvert,
+    CollectRecord,
+    ProjectProfile,
+    Revision,
+)
+
+
+def test_sampleunitmethods_list_includes_macroinvertebrate(
+    client,
+    db_setup,
+    project1,
+    token1,
+    belt_invert1,
+):
+    url = reverse("sampleunitmethod-list", kwargs={"project_pk": str(project1.pk)})
+    response = client.get(
+        f"{url}?protocol=macroinvertebrate",
+        HTTP_AUTHORIZATION=f"Bearer {token1}",
+    )
+    data = response.json()
+
+    assert response.status_code == 200
+    assert data["count"] == 1
+
+    result = data["results"][0]
+    assert result["protocol"] == "macroinvertebrate"
+    assert result["sample_date"] is not None
+    assert result["site_name"] is not None
+    assert result["size"]["width"] is not None
+    assert result["size"]["len_surveyed"] is not None
+
+
+def test_update_belt_invert_transect_method(db_setup, api_client1, project1, belt_invert1_with_obs):
+    belt_invert_id = str(belt_invert1_with_obs.pk)
+    url_kwargs = {"project_pk": str(project1.pk), "pk": belt_invert_id}
+    detail_url = reverse("beltinverttransectmethod-detail", kwargs=url_kwargs)
+
+    get_response = api_client1.get(detail_url)
+    assert get_response.status_code == 200
+    data = get_response.json()
+
+    put_response = api_client1.put(detail_url, data, format="json")
+    assert put_response.status_code == 200
+    put_data = put_response.json()
+    assert put_data["id"] == belt_invert_id
+
+    assert (
+        put_data["beltinvert_transect"]["len_surveyed"]
+        == data["beltinvert_transect"]["len_surveyed"]
+    )
+    assert put_data["beltinvert_transect"]["depth"] == data["beltinvert_transect"]["depth"]
+
+    assert len(put_data["obs_belt_inverts"]) == 1
+    put_obs = put_data["obs_belt_inverts"][0]
+    original_obs = data["obs_belt_inverts"][0]
+    assert put_obs["invert_attribute"] == original_obs["invert_attribute"]
+    assert put_obs["count"] == original_obs["count"]
+    assert put_obs["size"] == original_obs["size"]
+
+
+def test_update_belt_invert_transect_method_cross_project_id_rejected(
+    db_setup, api_client2, project2, profile2, project1, belt_invert1
+):
+    # profile2 is an admin of project2, but belt_invert1 belongs to project1
+    ProjectProfile.objects.create(project=project2, profile=profile2, role=ProjectProfile.ADMIN)
+
+    belt_invert_id = str(belt_invert1.pk)
+    url_kwargs = {"project_pk": str(project2.pk), "pk": belt_invert_id}
+    detail_url = reverse("beltinverttransectmethod-detail", kwargs=url_kwargs)
+
+    response = api_client2.put(detail_url, {"id": belt_invert_id}, format="json")
+
+    assert response.status_code == 404
+    # belt_invert1 is untouched and still belongs to project1
+    assert BeltInvert.objects.get(id=belt_invert_id).transect.sample_event.site.project_id == (
+        project1.pk
+    )
 
 
 def _get_latest_proj_revision():

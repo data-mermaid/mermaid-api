@@ -52,6 +52,9 @@ def test_summary_sample_event(
     obs_belt_fish1_3_biomass,
     obs_benthic_pit1_benthic_category_avgs,
     obs_benthic_pit1_3,
+    fishbelt_transect1,
+    benthic_transect1,
+    benthic_transect1_2,
     update_summary_cache,
 ):
     url = reverse("summarysampleevent-list")
@@ -77,6 +80,18 @@ def test_summary_sample_event(
         benthicpit["percent_cover_benthic_category_avg"][origin]
         == obs_benthic_pit1_benthic_category_avgs[origin]
     )
+
+    # depth_avg/depth_sd are top-level fields aggregated across sample units from
+    # every protocol sharing this sample_event_id.
+    depths = [
+        float(fishbelt_transect1.depth),
+        float(benthic_transect1.depth),
+        float(benthic_transect1_2.depth),
+    ]
+    expected_avg = sum(depths) / len(depths)
+    expected_sd = (sum((d - expected_avg) ** 2 for d in depths) / (len(depths) - 1)) ** 0.5
+    assert pytest.approx(expected_avg, 0.01) == float(response_data["results"][0]["depth_avg"])
+    assert pytest.approx(expected_sd, 0.01) == float(response_data["results"][0]["depth_sd"])
 
 
 def test_summary_sample_event_fields_param_invalid(api_client_public):

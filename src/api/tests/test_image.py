@@ -2,30 +2,11 @@ import copy
 
 import pytest
 from django.core.files.uploadedfile import SimpleUploadedFile
+from django.test import override_settings
 from django.urls import reverse
 
-from api.models import Annotation, Classifier, Image, Point
-
-
-@pytest.fixture
-def classifier():
-    return Classifier.objects.create(name="Test classifier", version="v0", patch_size=144)
-
-
-@pytest.fixture
-def image(valid_benthic_pq_transect_collect_record):
-    with open("api/tests/data/test_image.jpg", "rb") as f:
-        content = f.read()
-
-    image_file = SimpleUploadedFile(
-        name="test_image.jpg", content=content, content_type="image/jpeg"
-    )
-
-    return Image.objects.create(
-        collect_record_id=valid_benthic_pq_transect_collect_record.pk,
-        image=image_file,
-        name="Test image",
-    )
+from api.models import Annotation, Image, Point
+from api.resources.classification.image import ImageViewSet
 
 
 @pytest.fixture
@@ -89,6 +70,7 @@ def test_create_user_defined_annotation(
     assert request.status_code == 200
 
     data = request.json()
+    assert data["patch_size"] == 144
 
     bad_data = copy.deepcopy(data)
     bad_data["points"][0]["annotations"].append(
@@ -243,3 +225,62 @@ def test_edit_machine_annotation(
             assert anno["is_confirmed"] is True
         elif anno_id_2 == anno["id"]:
             assert anno["is_confirmed"] is False
+
+
+@override_settings(MAX_IMAGE_FILE_SIZE=10)
+def test_upload_image_exceeding_size_limit(
+    db_setup,
+    api_client1,
+    project1,
+    valid_benthic_pq_transect_collect_record,
+):
+    url = reverse("image-list", kwargs={"project_pk": str(project1.pk)})
+    oversized_file = SimpleUploadedFile(
+        name="big.jpg", content=b"x" * 11, content_type="image/jpeg"
+    )
+    response = api_client1.post(
+        url,
+        {
+            "image": oversized_file,
+            "collect_record_id": str(valid_benthic_pq_transect_collect_record.pk),
+        },
+        format="multipart",
+    )
+    assert response.status_code == 400
+    assert "size limit" in response.json()["error"]
+
+
+def test_destroy_returns_404_when_image_deleted_before_locked_refetch(
+    db_setup,
+    api_client1,
+    project1,
+    image,
+    monkeypatch,
+):
+    # Simulate another request deleting the image between get_object()
+    # (which found it fine) and perform_destroy()'s locked re-fetch.
+    original_get_object = ImageViewSet.get_object
+
+    def fake_get_object(self):
+        instance = original_get_object(self)
+        Image.objects.filter(pk=instance.pk).delete()
+        return instance
+
+    monkeypatch.setattr(ImageViewSet, "get_object", fake_get_object)
+
+    url = reverse("image-detail", kwargs={"project_pk": str(project1.pk), "pk": str(image.pk)})
+    response = api_client1.delete(url, format="json")
+
+    assert response.status_code == 404
+
+
+def test_classification_status_is_none_when_no_statuses(
+    db_setup,
+    api_client1,
+    project1,
+    image,
+):
+    url = reverse("image-detail", kwargs={"project_pk": str(project1.pk), "pk": str(image.pk)})
+    response = api_client1.get(url, format="json")
+    assert response.status_code == 200
+    assert response.json()["classification_status"] is None

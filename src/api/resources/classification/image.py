@@ -1,8 +1,8 @@
+from django.conf import settings
 from django.db import transaction
 from django.db.models import Q
-from rest_condition import Or
 from rest_framework import permissions, serializers, status
-from rest_framework.exceptions import MethodNotAllowed, ValidationError
+from rest_framework.exceptions import MethodNotAllowed, NotFound, ValidationError
 from rest_framework.response import Response
 
 from ...exceptions import check_uuid
@@ -17,13 +17,21 @@ from ...models import (
     ProjectProfile,
 )
 from ...models.classification import get_image_bucket
+from ...permissions import cached_lookup
 from ...utils import truthy
 from ...utils.classification import classify_image_job, create_classification_status
-from ..base import BaseAPIFilterSet, BaseAPISerializer, BaseProjectApiViewSet
+from ..base import (
+    PROJECT_DATA_PERMISSION,
+    BaseAPIFilterSet,
+    BaseAPISerializer,
+    BaseProjectApiViewSet,
+)
 from ..mixins import DynamicFieldsMixin
 from .annotation import SaveAnnotationSerializer
 from .classification_status import ClassificationStatusSerializer
 from .point import PointSerializer
+
+IMAGE_PERMISSION_CACHE_ATTR = "_image_permission_cache"
 
 
 class ImagePermission(permissions.BasePermission):
@@ -37,18 +45,36 @@ class ImagePermission(permissions.BasePermission):
 
         if request.method == "PUT":
             return False
-        elif request.method in ("PATCH", "DELETE"):
-            if image_id is None:
-                return False
-            cr_ids = CollectRecord.objects.filter(
-                profile=profile, project_id=project_id
-            ).values_list("id", flat=True)
-            return Image.objects.filter(id=image_id, collect_record_id__in=cr_ids).exists()
-        elif request.method == "POST":
-            collect_record_id = request.data.get("collect_record_id")
-            return CollectRecord.objects.filter(id=collect_record_id, profile=profile).exists()
-        else:
-            return ProjectProfile.objects.filter(profile=profile, project_id=project_id).exists()
+
+        def _load():
+            if request.method in ("PATCH", "DELETE"):
+                if image_id is None:
+                    return False
+                cr_ids = CollectRecord.objects.filter(
+                    profile=profile, project_id=project_id
+                ).values_list("id", flat=True)
+                return Image.objects.filter(id=image_id, collect_record_id__in=cr_ids).exists()
+            elif request.method == "POST":
+                collect_record_id = request.data.get("collect_record_id")
+                return CollectRecord.objects.filter(id=collect_record_id, profile=profile).exists()
+            else:
+                return ProjectProfile.objects.filter(
+                    profile=profile, project_id=project_id
+                ).exists()
+
+        # PATCH/DELETE/GET (has_permission) is re-checked by DRF's OR.has_object_permission
+        # (see BaseProjectApiViewSet.permission_classes) on every detail-level request, so
+        # memoize per-request the same way api.permissions.cached_lookup does for
+        # get_project/get_project_profile - otherwise a non-project-member's image access
+        # (the whole reason this permission exists) re-runs these queries a second time.
+        cache_key = (
+            request.method,
+            project_id,
+            image_id,
+            request.data.get("collect_record_id") if request.method == "POST" else None,
+            str(profile.pk),
+        )
+        return cached_lookup(request, IMAGE_PERMISSION_CACHE_ATTR, cache_key, _load)
 
 
 class ImageSerializer(DynamicFieldsMixin, BaseAPISerializer):
@@ -64,38 +90,46 @@ class ImageSerializer(DynamicFieldsMixin, BaseAPISerializer):
         additional_fields = ["classification_status"]
         exclude = []
 
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self._counts_cache = {}
+
     def get_classification_status(self, obj):
-        latest_status = obj.statuses.order_by("-created_on").first()
-        if latest_status:
-            return ClassificationStatusSerializer(latest_status).data
+        statuses = obj.statuses.all()
+        latest = max(statuses, key=lambda s: s.created_on, default=None)
+        if latest:
+            return ClassificationStatusSerializer(latest).data
         return None
 
     def get_patch_size(self, obj):
-        annotation = Annotation.objects.filter(point__image=obj, classifier__isnull=False).first()
-        if annotation and annotation.classifier:
-            return annotation.classifier.patch_size
-        else:
-            return None
+        # All machine annotations on an image share one classifier, so the
+        # first one found is authoritative.
+        for point in obj.points.all():
+            for annotation in point.annotations.all():
+                if annotation.classifier_id is not None:
+                    return annotation.classifier.patch_size
+        return None
 
     def _summarize_counts(self, obj):
+        if obj.pk in self._counts_cache:
+            return self._counts_cache[obj.pk]
+
         count_confirmed = 0
         count_unconfirmed = 0
         count_unclassified = 0
-        points = obj.points.all().prefetch_related("annotations")
-        for point in points:
-            if point.annotations.exists():
-                if any(annotation.is_confirmed for annotation in point.annotations.all()):
+        for point in obj.points.all():
+            annotations = list(point.annotations.all())
+            if annotations:
+                if any(annotation.is_confirmed for annotation in annotations):
                     count_confirmed += 1
                 else:
                     count_unconfirmed += 1
             else:
                 count_unclassified += 1
 
-        return (
-            count_confirmed,
-            count_unconfirmed,
-            count_unclassified,
-        )
+        result = (count_confirmed, count_unconfirmed, count_unclassified)
+        self._counts_cache[obj.pk] = result
+        return result
 
     def get_num_confirmed(self, obj):
         count_confirmed, _, _ = self._summarize_counts(obj)
@@ -139,12 +173,32 @@ class ImageFilterSet(BaseAPIFilterSet):
 
 class ImageViewSet(BaseProjectApiViewSet):
     queryset = (
-        Image.objects.prefetch_related("points", "points__annotations").all().order_by("created_on")
+        Image.objects.prefetch_related(
+            "points",
+            "points__annotations",
+            "points__annotations__classifier",
+            "statuses",
+        )
+        .all()
+        .order_by("created_on")
     )
 
     serializer_class = ImageSerializer
-    permission_classes = [Or(BaseProjectApiViewSet.permission_classes[0], ImagePermission)]
+    permission_classes = [PROJECT_DATA_PERMISSION | ImagePermission]
     filterset_class = ImageFilterSet
+
+    def perform_destroy(self, instance):
+        # Lock the row so this serializes against create_classification_status(),
+        # which also locks via select_for_update(). Without this, the async
+        # classification worker can insert a new ClassificationStatus between
+        # Django's delete-collector query and the final DELETE, causing an
+        # IntegrityError on the class_status FK.
+        with transaction.atomic():
+            try:
+                locked_instance = Image.objects.select_for_update().get(pk=instance.pk)
+            except Image.DoesNotExist:
+                raise NotFound()
+            locked_instance.delete()
 
     def limit_to_project(self, request, *args, **kwargs):
         qs = self.get_queryset()
@@ -182,6 +236,13 @@ class ImageViewSet(BaseProjectApiViewSet):
         image_file = request.data.get("image")
         collect_record_id = request.data.get("collect_record_id")
         trigger_classification = truthy(request.data.get("classify", True))
+
+        if image_file and image_file.size > settings.MAX_IMAGE_FILE_SIZE:
+            mb = settings.MAX_IMAGE_FILE_SIZE // (1024 * 1024)
+            return Response(
+                {"error": f"Image exceeds the {mb} MB size limit."},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
 
         collect_record = CollectRecord.objects.get_or_none(pk=collect_record_id)
         if collect_record is None:
@@ -225,6 +286,8 @@ class ImageViewSet(BaseProjectApiViewSet):
 
         if trigger_classification:
             create_classification_status(image_record, status=ClassificationStatus.PENDING)
+            # num_points is left unset here; classify_image_job falls back to the
+            # deployment-wide point count in effect when the job runs.
             classify_image_job(image_record.pk)
 
         data = ImageSerializer(instance=image_record, context={"request": request}).data

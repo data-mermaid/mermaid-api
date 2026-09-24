@@ -6,7 +6,7 @@ class Command(BaseCommand):
     help = "Refresh materialized view used by the MERMAID API"
 
     def __init__(self):
-        super(Command, self).__init__()
+        super().__init__()
         self.refresh_sql = "REFRESH MATERIALIZED VIEW CONCURRENTLY {}"
         self.viewname = ""
 

@@ -13,7 +13,7 @@ def admin_list(proj):
     pps = ProjectProfile.objects.filter(project=proj, role=ProjectProfile.ADMIN).select_related(
         "profile"
     )
-    return ", ".join(["{} <{}>".format(p.profile.full_name, p.profile.email) for p in pps])
+    return ", ".join([f"{p.profile.full_name} <{p.profile.email}>" for p in pps])
 
 
 class Command(BaseCommand):
@@ -24,7 +24,7 @@ class Command(BaseCommand):
     """
 
     def __init__(self):
-        super(Command, self).__init__()
+        super().__init__()
         self.exclude_test = False
         self.outpath = ""
         self.header = [

@@ -94,7 +94,7 @@ class Command(BaseCommand):
     """
 
     def __init__(self):
-        super(Command, self).__init__()
+        super().__init__()
 
     def add_arguments(self, parser):
         parser.add_argument("project_id", type=str, help="Project ID")

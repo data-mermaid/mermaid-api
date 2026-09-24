@@ -1,8 +1,9 @@
 import csv
+import gzip
+import itertools
+import logging
 from collections import defaultdict
-from typing import Dict, List, Set, Tuple
 
-import pandas as pd
 from django.db.models import QuerySet
 
 from ..exceptions import UnknownProtocolError
@@ -14,6 +15,7 @@ from ..models import (
     BLEACHINGQC_PROTOCOL,
     FISHBELT_PROTOCOL,
     HABITATCOMPLEXITY_PROTOCOL,
+    MACROINVERTEBRATE_PROTOCOL,
     Covariate,
     Project,
     ProjectProfile,
@@ -24,6 +26,11 @@ from ..resources.sampleunitmethods.beltfishmethod import (
     BeltFishProjectMethodObsView,
     BeltFishProjectMethodSEView,
     BeltFishProjectMethodSUView,
+)
+from ..resources.sampleunitmethods.beltinvertmethod import (
+    BeltInvertProjectMethodObsView,
+    BeltInvertProjectMethodSEView,
+    BeltInvertProjectMethodSUView,
 )
 from ..resources.sampleunitmethods.benthiclitmethod import (
     BenthicLITProjectMethodObsView,
@@ -54,6 +61,8 @@ from ..resources.sampleunitmethods.habitatcomplexitymethod import (
 from ..utils import cached
 from ..utils.timer import timing
 from . import xl
+
+logger = logging.getLogger(__name__)
 
 ACA_BENTHIC_KEY, ACA_BENTHIC_FIELD = Covariate.SUPPORTED_COVARIATES[0]
 ACA_GEOMORPHIC_KEY, ACA_GEOMORPHIC_FIELD = Covariate.SUPPORTED_COVARIATES[1]
@@ -117,6 +126,14 @@ PROTOCOL_VIEW_MAPPING = {
         ],
         "sheet_names": ["Habitat Complexity SE", "Habitat Complexity SU", "Habitat Complexity Obs"],
     },
+    MACROINVERTEBRATE_PROTOCOL: {
+        "views": [
+            BeltInvertProjectMethodSEView,
+            BeltInvertProjectMethodSUView,
+            BeltInvertProjectMethodObsView,
+        ],
+        "sheet_names": ["Macroinvertebrate SE", "Macroinvertebrate SU", "Macroinvertebrate Obs"],
+    },
 }
 
 
@@ -125,7 +142,7 @@ def _sort_covariate_value(values):
 
 
 def _update_covariate_lookup(
-    covar_lookup: Dict[str, list], site_id: str, covariates: QuerySet[Covariate]
+    covar_lookup: dict[str, list], site_id: str, covariates: QuerySet[Covariate]
 ) -> None:
     covar_lookup[site_id] = ["", ""]
     for covariate in covariates:
@@ -142,7 +159,7 @@ def _update_covariate_lookup(
             covar_lookup[site_id][1] = values[0].get("name") if values else ""
 
 
-def _covariate_aca_lookup(site_ids: List[str]) -> Dict[str, List[str]]:
+def _covariate_aca_lookup(site_ids: list[str]) -> dict[str, list[str]]:
     sites = Site.objects.filter(id__in=site_ids)
     covar_lookup = {}
 
@@ -154,7 +171,7 @@ def _covariate_aca_lookup(site_ids: List[str]) -> Dict[str, List[str]]:
     return covar_lookup
 
 
-def _get_site_aca_covariate_columns(site_ids: List[str]) -> Tuple[list, list]:
+def _get_site_aca_covariate_columns(site_ids: list[str]) -> tuple[list, list]:
     """Allen Coral Atlas covariates
 
     Args:
@@ -204,11 +221,11 @@ def _transpose(data: list):
 
 
 def _filter_columns(
-    headers: List[str],
-    cols: List[list],
-    display_header_lookup: Dict[str, None],
-    additional_header_lookup: Set[str],
-) -> Tuple[List[str], List[list]]:
+    headers: list[str],
+    cols: list[list],
+    display_header_lookup: dict[str, str],
+    additional_header_lookup: set[str],
+) -> tuple[list[str], list[list]]:
     new_headers = []
     new_cols = []
 
@@ -243,8 +260,7 @@ def get_viewset_csv_content(view_cls, project_pk, request):
     )
     cached_file = cached.get_cached_textfile(key)
     if cached_file:
-        for row in csv.reader(cached_file):
-            yield row
+        yield from csv.reader(cached_file)
 
         return
 
@@ -258,10 +274,17 @@ def get_viewset_csv_content(view_cls, project_pk, request):
     resp = vw.csv(request)
 
     if resp.status_code != 200:
-        print(resp.content)
+        logger.error(
+            "Failed to get CSV content for project %s: %s",
+            project_pk,
+            b"".join(resp.streaming_content),
+        )
         raise ValueError(f"Failed to get content for project {project_pk}")
 
-    content = list(csv.reader([str(row, "UTF-8").strip() for row in resp.streaming_content]))
+    raw_bytes = b"".join(resp.streaming_content)
+    if resp.get("Content-Encoding") == "gzip":
+        raw_bytes = gzip.decompress(raw_bytes)
+    content = list(csv.reader(raw_bytes.decode("utf-8").splitlines()))
     if not isinstance(content, list) or len(content) < 2 or "site_id" not in content[0]:
         if isinstance(content, list):
             yield from content
@@ -352,12 +375,6 @@ def _get_project_metadata(project_ids, viewable_levels):
     return [header] + data
 
 
-def _df_to_rows(df):
-    yield list(df.columns)
-    for _, row in df.iterrows():
-        yield row.tolist()
-
-
 @timing
 def create_protocol_report(request, project_ids, protocol):
     """
@@ -396,33 +413,38 @@ def create_protocol_report(request, project_ids, protocol):
     xl.write_data_to_sheet(wb, "Metadata", project_metadata, 1, 1)
     xl.auto_size_columns(wb["Metadata"])
 
-    # Protocol data - collect all data first, then concatenate and write
-    sheet_data = {sheet_name: [] for sheet_name in sheet_names}
+    # Protocol data - stream each project directly to workbook
+    sheet_rows = {sheet_name: 1 for sheet_name in sheet_names}
+    headers_written = set()
 
-    # Collect data for each project and view
     for project_id in project_ids:
         project_id = str(project_id)
         config = report_config[project_id]
-        views = config["views"]
-        project_sheet_names = config["sheet_names"]
-        for view, sheet_name in zip(views, project_sheet_names):
-            data = get_viewset_csv_content(view, project_id, request)
-            rows = list(data)
-            if rows:
-                df = (
-                    pd.DataFrame(rows[1:], columns=rows[0])
-                    if len(rows) > 1
-                    else pd.DataFrame(columns=rows[0])
-                )
-                sheet_data[sheet_name].append(df)
-
-    # Concatenate data for each sheet and write to workbook
-    for sheet_name in sheet_names:
-        if sheet_data[sheet_name]:
-            combined_df = pd.concat(sheet_data[sheet_name], ignore_index=True)
-            xl.write_data_to_sheet(
-                workbook=wb, sheet_name=sheet_name, data=_df_to_rows(combined_df), row=1, col=1
+        for view, sheet_name in zip(config["views"], config["sheet_names"]):
+            rows_iter = iter(get_viewset_csv_content(view, project_id, request))
+            first_row = next(rows_iter, None)
+            if first_row is None:
+                continue
+            if sheet_name not in headers_written:
+                headers_written.add(sheet_name)
+                rows_to_write = itertools.chain([first_row], rows_iter)
+            else:
+                # first_row is the header; skip it and check for data
+                data_first = next(rows_iter, None)
+                if data_first is None:
+                    continue
+                rows_to_write = itertools.chain([data_first], rows_iter)
+            last_row, _ = xl.write_data_to_sheet(
+                workbook=wb,
+                sheet_name=sheet_name,
+                data=rows_to_write,
+                row=sheet_rows[sheet_name],
+                col=1,
             )
+            sheet_rows[sheet_name] = last_row + 1
+
+    for sheet_name in sheet_names:
+        if sheet_name in wb.sheetnames:
             xl.auto_size_columns(wb[sheet_name])
 
     return wb

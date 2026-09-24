@@ -1,6 +1,8 @@
 from decimal import Decimal
 
 import django_filters
+from django.db.models import BooleanField
+from django.db.models.expressions import RawSQL
 from rest_framework import serializers
 
 from ..exceptions import check_uuid
@@ -37,23 +39,45 @@ def get_rules(obj):
     return ",".join(rules)
 
 
-class ManagementExtendedSerializer(ExtendedSerializer):
+class ManagementRulesMixin:
+    """Shared `rules` field for the plain (/managements/), project-nested
+    (/projects/<id>/managements/), and extended (nested-in-sample-event)
+    Management serializers, so the three stay in sync instead of drifting
+    independently.
+
+    Injected via get_fields() rather than declared as a normal class-level
+    field: DRF's SerializerMetaclass only collects declared fields from
+    bases that have themselves already been processed by that metaclass,
+    and this is a plain mixin, so a class-level Field here would silently
+    never make it into `_declared_fields` (see the identical note on
+    _DuplicateCheckMixin in mixins.py).
+    """
+
+    def get_fields(self):
+        fields = super().get_fields()
+        fields["rules"] = serializers.SerializerMethodField(source="get_rules")
+        return fields
+
+    def get_rules(self, obj):
+        return get_rules(obj)
+
+
+class ManagementExtendedSerializer(ManagementRulesMixin, ExtendedSerializer):
     project = ModelNameReadOnlyField()
     compliance = ModelNameReadOnlyField()
     parties = serializers.ListField(source="parties.all", child=ModelNameReadOnlyField())
-    rules = serializers.SerializerMethodField(source="get_rules")
 
     class Meta:
         geo_field = "boundary"
         model = Management
         exclude = []
 
-    def get_rules(self, obj):
-        return get_rules(obj)
 
-
-class ManagementSerializer(BaseAPISerializer):
-    rules = serializers.SerializerMethodField(source="get_rules")
+class ManagementSerializer(ManagementRulesMixin, BaseAPISerializer):
+    # No ManagementDuplicateCheckMixin here: this serializer's only write
+    # path is create_project's bulk copy into a brand-new project, which
+    # never has existing submitted data for the check's precondition to
+    # match against -- it would just be dead weight on every call.
     project_name = serializers.SerializerMethodField()
     size = serializers.DecimalField(
         max_digits=12,
@@ -69,9 +93,6 @@ class ManagementSerializer(BaseAPISerializer):
         model = Management
         exclude = []
         additional_fields = ["rules", "project_name"]
-
-    def get_rules(self, obj):
-        return get_rules(obj)
 
     def get_project_name(self, obj):
         return obj.project.name
@@ -135,7 +156,7 @@ class ManagementFilterSet(BaseAPIFilterSet):
             "access_restriction",
         )
         project_id = value
-        group_by = ",".join(['"{}"'.format(uf) for uf in unique_fields])
+        group_by = ",".join(['"{}"'.format(uf) for uf in unique_fields])  # noqa: UP032
 
         sql = """
             "management".id::text IN (
@@ -165,12 +186,14 @@ class ManagementFilterSet(BaseAPIFilterSet):
                         GROUP BY {}
                     ) AS agg_managements
                     WHERE
-                        NOT('{}' = ANY(agg_managements.project_ids))
+                        NOT(%s = ANY(agg_managements.project_ids))
                 ) AS management_ids
             )
-        """.format(group_by, project_id)
+        """.format(group_by)  # noqa: UP032
 
-        return queryset.extra(where=[sql])
+        return queryset.alias(
+            _is_unique_management=RawSQL(sql, [project_id], output_field=BooleanField())
+        ).filter(_is_unique_management=True)
 
     def filter_not_projects(self, queryset, name, value):
         value_list = [check_uuid(v.strip()) for v in value.split(",")]

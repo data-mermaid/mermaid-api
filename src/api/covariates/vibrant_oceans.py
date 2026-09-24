@@ -1,6 +1,5 @@
 import datetime
 from concurrent.futures import ThreadPoolExecutor
-from typing import List, Tuple
 
 from django.db import connection
 from django.utils import timezone
@@ -109,7 +108,7 @@ class VibrantOceansThreatsCovariate(BaseCovariate):
             "covariates": output,
         }
 
-    def fetch(self, points: List[Tuple[float, float]]) -> List[dict]:
+    def fetch(self, points: list[tuple[float, float]]) -> list[dict]:
         futures = []
         results = []
         request_datetime = timezone.now()

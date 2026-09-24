@@ -5,8 +5,8 @@ import uuid
 
 from django.db import connection
 from django.db.models import Q
+from django.db.models.expressions import RawSQL
 from django_filters import rest_framework as filters
-from rest_condition import And
 from rest_framework import status as drf_status
 from rest_framework.decorators import action
 from rest_framework.exceptions import ParseError
@@ -31,7 +31,7 @@ from .base import BaseAPIFilterSet, BaseAPISerializer, BaseProjectApiViewSet
 from .mixins import CreateOrUpdateSerializerMixin
 
 logger = logging.getLogger(__name__)
-cr_permissions = [And(ProjectDataPermission, CollectRecordOwner)]
+cr_permissions = [ProjectDataPermission & CollectRecordOwner]
 
 
 def get_unicode_error(uploaded_file, byte_position, chunk_size=8192):
@@ -185,7 +185,7 @@ class CollectRecordViewSet(BaseProjectApiViewSet):
         table_name = qs.model._meta.db_table
         pk_name = qs.model._meta.pk.get_attname_column()[1]
 
-        qs = qs.extra(select={"_pk_": '"{}"."{}"'.format(table_name, pk_name)})
+        qs = qs.annotate(_pk_=RawSQL('"{}"."{}"'.format(table_name, pk_name), []))  # noqa: UP032
 
         sql, params = qs.query.get_compiler(using=qs.db).as_sql()
 

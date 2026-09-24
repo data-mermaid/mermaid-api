@@ -4,30 +4,37 @@ from django.db import migrations, models
 
 
 class Migration(migrations.Migration):
-
     dependencies = [
-        ('api', '0092_auto_20250919_2138'),
+        ("api", "0092_auto_20250919_2138"),
     ]
 
     operations = [
         migrations.AddField(
-            model_name='habitatcomplexity',
-            name='interval_start',
-            field=models.DecimalField(decimal_places=2, default=0.5, max_digits=4, verbose_name='interval start (m)'),
+            model_name="habitatcomplexity",
+            name="interval_start",
+            field=models.DecimalField(
+                decimal_places=2, default=0.5, max_digits=4, verbose_name="interval start (m)"
+            ),
         ),
         migrations.AddField(
-            model_name='habitatcomplexityobsmodel',
-            name='interval_start',
-            field=models.DecimalField(decimal_places=2, default=0.5, max_digits=4, verbose_name='interval start (m)'),
+            model_name="habitatcomplexityobsmodel",
+            name="interval_start",
+            field=models.DecimalField(
+                decimal_places=2, default=0.5, max_digits=4, verbose_name="interval start (m)"
+            ),
         ),
         migrations.AddField(
-            model_name='habitatcomplexitysumodel',
-            name='interval_size',
-            field=models.DecimalField(decimal_places=2, default=0.5, max_digits=4, verbose_name='interval size (m)'),
+            model_name="habitatcomplexitysumodel",
+            name="interval_size",
+            field=models.DecimalField(
+                decimal_places=2, default=0.5, max_digits=4, verbose_name="interval size (m)"
+            ),
         ),
         migrations.AddField(
-            model_name='habitatcomplexitysumodel',
-            name='interval_start',
-            field=models.DecimalField(decimal_places=2, default=0.5, max_digits=4, verbose_name='interval start (m)'),
+            model_name="habitatcomplexitysumodel",
+            name="interval_start",
+            field=models.DecimalField(
+                decimal_places=2, default=0.5, max_digits=4, verbose_name="interval start (m)"
+            ),
         ),
     ]

@@ -1,7 +1,6 @@
 import logging
 from pathlib import Path
 from tempfile import NamedTemporaryFile
-from typing import List
 
 from ..mocks import MockRequest
 from ..models import GFCRFinanceSolution, GFCRIndicatorSet
@@ -28,7 +27,7 @@ def _get_indicator_set_field_data(
     indicator_set,
     field_label,
     field_name,
-    additional_common_fields: List[str] = None,
+    additional_common_fields: list[str] | None = None,
     notes_field: str = None,
 ):
     if not additional_common_fields:
@@ -167,13 +166,17 @@ def f7_data(indicator_sets):
 
 def common_finance_solutions_columns(finance_solution):
     return [
+        finance_solution.get_fs_type_display(),
         finance_solution.name,
         ",".join(finance_solution.get_sustainable_finance_mechanisms_display()),
         finance_solution.get_sector_display(),
+        finance_solution.get_geographical_coverage_display(),
+        finance_solution.taf_name,
+        finance_solution.number_of_solutions_supported_by,
     ]
 
 
-def businesses_finance_solutions_data(indicator_sets):
+def finance_solutions_data(indicator_sets):
     for indicator_set in indicator_sets:
         com_cols = common_columns(indicator_set)
         for fs in indicator_set.finance_solutions.all():
@@ -235,7 +238,7 @@ def report_data(indicator_sets):
     sheet_data["F5"] = f5_data(indicator_sets)
     sheet_data["F6"] = f6_data(indicator_sets)
     sheet_data["F7"] = f7_data(indicator_sets)
-    sheet_data["BusinessesFinanceSolutions"] = businesses_finance_solutions_data(indicator_sets)
+    sheet_data["FacilitiesSolutions"] = finance_solutions_data(indicator_sets)
     sheet_data["Investments"] = investments_data(indicator_sets)
     sheet_data["Revenues"] = revenue_data(indicator_sets)
 

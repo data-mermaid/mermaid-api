@@ -1,28 +1,25 @@
 import datetime
 import hashlib
+import logging
 import math
 import os
 from io import BytesIO
-from operator import itemgetter
 from pathlib import Path
-from tempfile import NamedTemporaryFile, TemporaryDirectory
-from typing import Any, Dict, Optional, Tuple
+from tempfile import NamedTemporaryFile
+from typing import Any
 
 import pandas as pd
 import pyarrow as pa
 import pyarrow.parquet as pq
 from django.conf import settings
 from django.contrib.gis.geos import Point as GEOSPoint
-from django.core.files.base import ContentFile
+from django.core.files.base import ContentFile, File
 from django.db import IntegrityError, transaction
-from django.db.models import Exists, OuterRef
+from django.db.models import Exists, OuterRef, Q
 from django.db.models.fields.files import ImageFieldFile
 from django.utils import timezone
 from PIL import Image as PILImage
 from PIL.ExifTags import GPSTAGS, TAGS
-from spacer.extractors import EfficientNetExtractor
-from spacer.messages import ClassifyFeaturesMsg, DataLocation, ExtractFeaturesMsg
-from spacer.tasks import classify_features, extract_features
 
 from ..models import (
     Annotation,
@@ -31,20 +28,17 @@ from ..models import (
     Image,
     ObsBenthicPhotoQuadrat,
     Point,
-    Profile,
     Project,
     Region,
     Site,
 )
-from ..models.classification import get_image_storage_config
+from ..models.classification import parse_bagf_label
+from .inference import classify_via_lambda
 from .q import submit_image_job
-from .s3 import download_directory, upload_file
+from .s3 import upload_file
 
-CLASSIFIER_CONFIG_S3_PATH = "classifier"
-CLASSIFIER_CONFIG_LOCAL_CACHE_DIR = settings.SPACER.get("EXTRACTORS_CACHE_DIR")
-assert CLASSIFIER_CONFIG_LOCAL_CACHE_DIR is not None
-CLASSIFIER_FILE_NAME = "classifier.pkl"
-WEIGHTS_FILE_NAME = "efficientnet_weights.pt"
+logger = logging.getLogger(__name__)
+
 ANNOTATIONS_PARQUET_FILE_NAME = "mermaid_confirmed_annotations.parquet"
 
 
@@ -73,7 +67,7 @@ def check_if_valid_image(instance):
             if settings.MAX_IMAGE_PIXELS < w * h:
                 raise ValueError(f"Maximum number of pixels is {settings.MAX_IMAGE_PIXELS}.")
         return
-    except (AttributeError, TypeError, IOError, SyntaxError) as _:
+    except (OSError, AttributeError, TypeError, SyntaxError):
         raise ValueError("Invalid image.")
 
 
@@ -85,7 +79,14 @@ def create_image_name(image: Image) -> str:
     return f"{name}{image_ext}"
 
 
-def create_image_checksum(image: ImageFieldFile) -> str:
+def create_image_checksum(image: ImageFieldFile, image_buf: BytesIO | None = None) -> str:
+    if image_buf is not None:
+        image_buf.seek(0)
+        file_hash = hashlib.sha256()
+        while chunk := image_buf.read(8192):
+            file_hash.update(chunk)
+        return file_hash.hexdigest()
+
     if not image.closed:
         image.close()
     image.open("rb")
@@ -99,12 +100,17 @@ def create_image_checksum(image: ImageFieldFile) -> str:
     return file_hash.hexdigest()
 
 
-def create_thumbnail(image_instance: Image) -> ContentFile:
+def create_thumbnail(image_instance: Image, image_buf: BytesIO | None = None) -> ContentFile:
     size = (500, 500)
 
-    with image_instance.image.open("rb") as f:
-        img = PILImage.open(f)
+    if image_buf is not None:
+        image_buf.seek(0)
+        img = PILImage.open(image_buf)
         img.load()
+    else:
+        with image_instance.image.open("rb") as f:
+            img = PILImage.open(f)
+            img.load()
 
     img.thumbnail(size, PILImage.Resampling.LANCZOS)
 
@@ -114,16 +120,11 @@ def create_thumbnail(image_instance: Image) -> ContentFile:
     thumb_io = BytesIO()
     try:
         img.save(thumb_io, img.format)
-    except IOError as io_err:
+    except OSError as io_err:
         print(f"Cannot create thumbnail for [{image_instance.pk}]: {io_err}")
         raise
 
     return ContentFile(thumb_io.getvalue(), name=thumb_name)
-
-
-def convert_to_utc(timestamp_str: str) -> datetime:
-    local_time = datetime.fromisoformat(timestamp_str)
-    return local_time.astimezone(datetime.timezone.utc)
 
 
 # GPS sub-IFD tag IDs (PIL.ExifTags.GPSTAGS)
@@ -151,6 +152,8 @@ def _normalize_exif_value(value):
     if isinstance(value, (int, float)):
         return value  # must come before hasattr(numerator) — Python int has .numerator
     if hasattr(value, "numerator"):  # PIL.TiffImagePlugin.IFDRational
+        if hasattr(value, "denominator") and value.denominator == 0:
+            return None
         return float(value)
     if isinstance(value, tuple):
         normalized = tuple(_normalize_exif_value(v) for v in value)
@@ -161,8 +164,8 @@ def _normalize_exif_value(value):
 
 
 def extract_datetime_stamp(
-    exif_ifd: Dict[int, Any], gps_ifd: Dict[int, Any]
-) -> Optional[datetime.datetime]:
+    exif_ifd: dict[int, Any], gps_ifd: dict[int, Any]
+) -> datetime.datetime | None:
     # GPS date+time is already UTC — use it if present
     date_stamp = gps_ifd.get(_GPS_DATESTAMP)  # "YYYY:MM:DD"
     time_stamp = gps_ifd.get(_GPS_TIMESTAMP)  # (H, M, S) as IFDRationals
@@ -171,7 +174,7 @@ def extract_datetime_stamp(
         try:
             y, mo, d = map(int, date_stamp.split(":"))
             h, mi, s = int(time_stamp[0]), int(time_stamp[1]), int(time_stamp[2])
-            return datetime.datetime(y, mo, d, h, mi, s, tzinfo=datetime.timezone.utc)
+            return datetime.datetime(y, mo, d, h, mi, s, tzinfo=datetime.UTC)
         except (ValueError, TypeError):
             pass
 
@@ -189,12 +192,12 @@ def extract_datetime_stamp(
         sign = -1 if offset_str.startswith("-") else 1
         h, m = map(int, offset_str[1:].split(":"))
         offset = datetime.timedelta(hours=sign * h, minutes=sign * m)
-        return dt.replace(tzinfo=datetime.timezone(offset)).astimezone(datetime.timezone.utc)
+        return dt.replace(tzinfo=datetime.timezone(offset)).astimezone(datetime.UTC)
     except (ValueError, AttributeError):
         return None
 
 
-def extract_location(gps_ifd: Dict[int, Any]) -> Optional[GEOSPoint]:
+def extract_location(gps_ifd: dict[int, Any]) -> GEOSPoint | None:
     latitude_ref = gps_ifd.get(_GPS_LATITUDE_REF)  # "N" or "S"
     latitude_dms = gps_ifd.get(_GPS_LATITUDE)  # tuple of 3 IFDRationals
     longitude_ref = gps_ifd.get(_GPS_LONGITUDE_REF)  # "E" or "W"
@@ -242,7 +245,12 @@ def save_normalized_imagefile(instance: Image):
         img_content = BytesIO()
         image_file.save(img_content, format=image_format)
 
-        instance.image = ContentFile(img_content.getvalue(), name=instance.image.name)
+        # Wrap the BytesIO directly (no copy) and stash it for post_save so
+        # thumbnail creation and checksum can read from the buffer already in
+        # memory instead of fetching the file back from S3.
+        img_content.seek(0)
+        instance.image = File(img_content, name=instance.image.name)
+        instance._normalized_image_buf = img_content
 
 
 def store_exif(instance: Image) -> None:
@@ -303,7 +311,7 @@ def create_classification_status(image, status, message=None):
         print(f"Writing classification status Image {image.pk}, status: {status}: {err}")
 
 
-def generate_points(image: Image, num_points: int, margin: Tuple[int, int] = (0, 0)):
+def generate_points(image: Image, num_points: int, margin: tuple[int, int] = (0, 0)):
     assert len(margin) == 2
 
     if image.original_image_height and image.original_image_width:
@@ -330,82 +338,54 @@ def generate_points(image: Image, num_points: int, margin: Tuple[int, int] = (0,
     return coords
 
 
-def _fetch_and_cache_classifier_config(classifier: Classifier):
-    cls_version = classifier.version
-
-    classifier_s3_dir = f"{CLASSIFIER_CONFIG_S3_PATH}/{cls_version}"
-    classifier_local_dir = f"{CLASSIFIER_CONFIG_LOCAL_CACHE_DIR}/{cls_version}"
-    download_directory(settings.AWS_CONFIG_BUCKET, classifier_s3_dir, classifier_local_dir)
-
-
-def _get_classifier_and_weights(
-    classifier: Optional[Classifier] = None
-) -> Tuple[DataLocation, DataLocation]:
-    # TODO: Handle if classifier configs don't exist for classifier instance.
-    if not classifier:
-        classifier = Classifier.latest()
-
-    cls_version = classifier.version
-    classifier_dir = f"{CLASSIFIER_CONFIG_LOCAL_CACHE_DIR}/{cls_version}"
-    classifier_path = f"{classifier_dir}/{CLASSIFIER_FILE_NAME}"
-    weights_path = f"{classifier_dir}/{WEIGHTS_FILE_NAME}"
-
-    if not Path(classifier_path).exists() or not Path(weights_path).exists():
-        _fetch_and_cache_classifier_config(classifier)
-
-    return (
-        DataLocation("filesystem", classifier_path),
-        DataLocation("filesystem", weights_path),
-        classifier,
-    )
-
-
-def _get_image_location(image: Image):
-    if settings.ENVIRONMENT == "local":
-        return DataLocation("filesystem", image.image.path)
-    else:
-        config = get_image_storage_config(image.image_bucket)
-        return DataLocation(
-            storage_type="s3",
-            key=f"{config['s3_path']}{image.image.name}",
-            bucket_name=config["bucket"],
-        )
-
-
 @transaction.atomic
-def _write_classification_results(image, score_sets, label_ids, classifer_record, profile=None):
+def _write_classification_results(image, point_predictions, classifier_record):
+    # Lock the image row, as create_classification_status does: a concurrent delete
+    # otherwise breaks the Point foreign key part way through bulk_create.
+    if not Image.objects.filter(id=image.pk).select_for_update().exists():
+        logger.warning(f"Image {image.pk} was deleted, skipping classification results")
+        return
+
+    # A confirmed annotation, or an unconfirmed but human-authored one, marks a
+    # human's work on this point — never destroy either under a redelivered job.
+    if (
+        Point.objects.filter(image=image)
+        .filter(Q(annotations__is_confirmed=True) | Q(annotations__is_machine_created=False))
+        .exists()
+    ):
+        logger.info("Image %s has reviewed points; skipping re-classification", image.pk)
+        return
+
+    # SQS redelivers, and (image, row, column) carries no unique constraint, so a
+    # second delivery of the same job would otherwise double every point.
+    Point.objects.filter(image=image).delete()
+
     _annotations = []
     _points = []
     created_on = timezone.now()
 
-    for row, col, scores in score_sets:
-        _label_ids = label_ids[:]
+    for row, col, scores in point_predictions:
         point = Point(
             row=row,
             column=col,
             image=image,
             created_on=created_on,
             updated_on=created_on,
-            created_by=profile,
-            updated_by=profile,
         )
         _points.append(point)
-        top_predictions = sorted(zip(_label_ids, scores), key=itemgetter(1), reverse=True)
-        for label, score in top_predictions[0:3]:
-            ba_id, gf_id = (label.split("::", 1) + [None])[:2]
-            if score >= settings.CLASSIFIED_THRESHOLD and ba_id is not None:
+        for label, score in scores[0:3]:
+            ba_id, gf_id = parse_bagf_label(label)
+            if score >= settings.CLASSIFIED_THRESHOLD and ba_id:
                 _annotations.append(
                     Annotation(
                         point=point,
-                        classifier=classifer_record,
+                        classifier=classifier_record,
                         benthic_attribute_id=ba_id,
                         growth_form_id=gf_id,
                         score=score * 100,
                         is_confirmed=score >= settings.AUTOCONFIRM_THRESHOLD,
                         created_on=created_on,
                         updated_on=created_on,
-                        created_by=profile,
-                        updated_by=profile,
                         is_machine_created=True,
                     )
                 )
@@ -414,9 +394,7 @@ def _write_classification_results(image, score_sets, label_ids, classifer_record
     Annotation.objects.bulk_create(_annotations)
 
 
-def _classify_image(image_record_id, profile_id=None):
-    profile = Profile.objects.get_or_none(id=profile_id) if profile_id else None
-
+def _classify_image(image_record_id, num_points=None):
     image = Image.objects.get_or_none(id=image_record_id)
     if not image:
         return
@@ -424,56 +402,45 @@ def _classify_image(image_record_id, profile_id=None):
     create_classification_status(image, ClassificationStatus.RUNNING)
 
     try:
-        tmp_dir = TemporaryDirectory()
-        tmp_feat_vector_file_path = Path(tmp_dir.name, f"{image.id}.featurevector")
-        feature_location = DataLocation("filesystem", tmp_feat_vector_file_path)
+        classifier_record = Classifier.active()
+        points = generate_points(image, num_points or settings.INFERENCE_DEFAULT_NUM_POINTS)
+        result = classify_via_lambda(image, points)
+        _write_classification_results(image, result.point_predictions, classifier_record)
 
-        data_location = _get_image_location(image)
-        classifier, weights, classifer_record = _get_classifier_and_weights()
-        points = generate_points(image, 25)
-
-        extract_features_msg = ExtractFeaturesMsg(
-            job_token=image_record_id,
-            extractor=EfficientNetExtractor(
-                data_locations=dict(
-                    weights=weights,
-                ),
-            ),
-            rowcols=points,
-            image_loc=data_location,
-            feature_loc=feature_location,
-        )
-        classify_features_msg = ClassifyFeaturesMsg(
-            job_token=extract_features_msg.job_token,
-            feature_loc=extract_features_msg.feature_loc,
-            classifier_loc=classifier,
-        )
-        _ = extract_features(extract_features_msg)
-        response_message = classify_features(classify_features_msg)
-        label_ids = response_message.classes
-        score_sets = response_message.scores
-        _write_classification_results(image, score_sets, label_ids, classifer_record, profile)
-
-        with open(tmp_feat_vector_file_path, "rb") as tmp_feat_vector_file:
-            image.feature_vector_file.save(
-                f"{image.id}_featurevector", tmp_feat_vector_file, save=True
-            )
+        if result.feature_vector_name:
+            # A queryset update records exactly the key the Lambda wrote: no re-upload,
+            # no get_available_name suffix, and no post_save re-checksum from S3.
+            Image.objects.filter(pk=image.pk).update(feature_vector_file=result.feature_vector_name)
 
         create_classification_status(image, ClassificationStatus.COMPLETED)
     except Exception as err:
-        print(err)
+        # [classify.processing_error] is the literal the CloudWatch metric filter in
+        # iac/stacks/constructs/alerts.py matches on the image worker's log group; a
+        # retryable failure already has the SQS DLQ alarm behind it, so only a
+        # permanent one — with no other signal — is marked here.
+        retryable = getattr(err, "retryable", False)
+        if retryable:
+            logger.warning(f"classifying image {image_record_id} failed, retrying: {err}")
+        else:
+            logger.exception(
+                f"[classify.processing_error] classifying image {image_record_id} failed"
+            )
         create_classification_status(image, ClassificationStatus.FAILED, str(err))
-    finally:
-        if Path(tmp_feat_vector_file_path).exists():
-            os.unlink(tmp_feat_vector_file_path)
+        # Re-raise only a retryable failure so SQS redelivers it; the status/results
+        # writes above are idempotent, so re-running this job is safe.
+        if retryable:
+            raise
 
 
-def classify_image_job(image_record_id, profile_id=None):
-    return submit_image_job(0, True, _classify_image, image_record_id=image_record_id)
-
-
-def classify_image(image_record_id, profile_id=None):
-    _classify_image(image_record_id)
+def classify_image_job(image_record_id, num_points=None):
+    return submit_image_job(
+        0,
+        True,
+        _classify_image,
+        image_record_id=image_record_id,
+        num_points=num_points,
+        visibility_timeout=settings.INFERENCE_JOB_VISIBILITY_TIMEOUT,
+    )
 
 
 def chunked_queryset_dataframe(qs, chunk_size=10000):

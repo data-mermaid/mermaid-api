@@ -1,5 +1,4 @@
 from django_filters import BaseInFilter, RangeFilter
-from rest_condition import Or
 from rest_framework.exceptions import NotFound
 from rest_framework.serializers import SerializerMethodField
 
@@ -14,7 +13,6 @@ from ...models import (
     Image,
     ObsBenthicPhotoQuadrat,
 )
-from ...permissions import ProjectDataReadOnlyPermission, ProjectPublicSummaryPermission
 from ...reports.fields import ReportField
 from ...reports.formatters import (
     to_day,
@@ -43,7 +41,7 @@ from ..mixins import SampleUnitMethodEditMixin, SampleUnitMethodSummaryReport
 from ..observer import ObserverSerializer
 from ..quadrat_transect import QuadratTransectSerializer
 from ..sample_event import SampleEventSerializer
-from . import BaseProjectMethodView
+from . import BaseProjectMethodSEView, BaseProjectMethodView
 
 
 class BenthicPhotoQuadratTransectSerializer(BaseAPISerializer):
@@ -519,10 +517,9 @@ class BenthicPQTProjectMethodSUView(BaseProjectMethodView):
     ordering_fields = ordering
 
 
-class BenthicPQTProjectMethodSEView(BaseProjectMethodView):
+class BenthicPQTProjectMethodSEView(BaseProjectMethodSEView):
     drf_label = "benthicpqt-se"
     project_policy = "data_policy_benthicpqt"
-    permission_classes = [Or(ProjectDataReadOnlyPermission, ProjectPublicSummaryPermission)]
     model = BenthicPhotoQuadratTransectSEModel
     serializer_class = BenthicPQTMethodSESerializer
     serializer_class_geojson = BenthicPQTMethodSEGeoSerializer

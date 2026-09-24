@@ -183,11 +183,11 @@ class MeViewSet(viewsets.ModelViewSet):
         auth_users_client = Auth0Users()
         for user_id in auth_user_ids:
             user_info = auth_users_client.get_user(user_id)
-            for identity in user_info.get("identities") or []:
-                provider = identity.get("connection")
+            for identity in user_info.identities or []:
+                provider = identity.connection
                 if provider != Auth0DatabaseAuthenticationAPI.CONNECTION:
                     continue
-                return user_info.get("email")
+                return user_info.email
         return None
 
     @action(detail=False, methods=["post"])

@@ -3,8 +3,11 @@
     {{title}} Report
 
     Your {{title}} report is ready for download. Please click the link below to download the report.
-    
+
     {{file_url|safe}}
 
     Link will be valid for 7 days.
+{% if data_may_be_stale %}
+    Note: Summary data was still being updated when this report was generated. Some records may not reflect the most recent submissions.
+{% endif %}
 {% endblock %}

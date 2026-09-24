@@ -4,7 +4,7 @@ from collections import OrderedDict
 from ..utils import is_match
 
 
-class ReportSerializer(object):
+class ReportSerializer:
     fields = None
     non_field_columns = None
     include_additional_fields = False

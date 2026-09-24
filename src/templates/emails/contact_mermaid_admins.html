@@ -3,7 +3,7 @@
 {% block body %}
     <p>
         <a href="mailto:{{ from_email }}">{{ name }} <{{ from_email }}></a>
-        sent this email via MERMAID to you as a MERMAID superuser:<br />
+        sent this email via MERMAID{% if source %} from {{ source }}{% endif %}:<br />
     </p>
     <p>
         {{ message }}

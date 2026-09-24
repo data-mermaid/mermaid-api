@@ -1,4 +1,4 @@
-from ....models.mermaid import FishAttribute, FishSize
+from ....models import FishAttribute, FishSize
 from .base import ERROR, OK, WARN, BaseValidator, validator_result
 
 
@@ -41,8 +41,10 @@ class FishSizeValidator(BaseValidator):
                     for fish_size_bin in fish_size_bins:
                         max_ok = fish_size_bin.max_val is None or fish_size <= fish_size_bin.max_val
                         if fish_size_bin.min_val <= fish_size and max_ok:
-                            # Use the minimum value of the bin for comparison
-                            comparison_size = fish_size_bin.min_val
+                            # For bounded bins, use min_val as a conservative lower bound.
+                            # For open-ended bins (no max_val), keep the actual entered size.
+                            if fish_size_bin.max_val is not None:
+                                comparison_size = fish_size_bin.min_val
                             break
 
                 max_length = max_fish_length_lookup.get(fish_attribute_id)
@@ -66,7 +68,7 @@ class FishSizeValidator(BaseValidator):
             str(fa.pk): fa.get_max_length()
             for fa in FishAttribute.objects.filter(
                 id__in=[fai for fai in fish_attribute_ids if fai]
-            )
+            ).select_related("fishgrouping", "fishfamily", "fishgenus", "fishspecies")
         }
 
         # Pre-fetch FishSize records for the size bin if available

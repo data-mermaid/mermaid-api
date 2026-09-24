@@ -1,13 +1,16 @@
 import os
 
-from aws_cdk import App, Aspects, Environment
-from cdk_nag import AwsSolutionsChecks
 import nag_suppressions
+from aws_cdk import App, Aspects, Environment, aws_s3 as s3
+from cdk_nag import AwsSolutionsChecks
 from settings.dev import DEV_SETTINGS
 from settings.prod import PROD_SETTINGS
 from stacks.api import ApiStack
+from stacks.cloudtrail import CloudTrailStack
 from stacks.common import CommonStack
 from stacks.github_access import GithubAccessStack
+from stacks.guardduty import GuardDutyStack
+from stacks.inference import InferenceStack
 from stacks.sagemaker import SagemakerStack
 from stacks.static_site import StaticSiteStack
 
@@ -68,8 +71,12 @@ dev_api_stack = ApiStack(
     api_zone=common_stack.api_zone,
     public_bucket=dev_static_site_stack.site_bucket,
     image_processing_bucket=common_stack.image_processing_bucket,
+    auto_scaling_group=common_stack.auto_scaling_group,
+    distribution=dev_static_site_stack.distribution,
+    sagemaker_domain_name=f"{DEV_SETTINGS.env_id}-SG-Project",
     use_fifo_queues="False",
     report_s3_creds=common_stack.report_s3_creds,
+    cost_alerts_topic=common_stack.cost_alerts_topic,
 )
 
 dev_sagemaker_stack = SagemakerStack(
@@ -80,6 +87,31 @@ dev_sagemaker_stack = SagemakerStack(
     config=DEV_SETTINGS,
     cluster=common_stack.cluster,
 )
+
+# The pyspacer inference compute lane (mermaid-classifier #53). A container Lambda
+# whose image (config.inference.image_tag) is published to the mermaid-inference-pyspacer
+# ECR repo by the mermaid-inference build-push CI before this stack deploys. Alarms
+# publish to ApiStack's alerts topic, by ARN so this stack can deploy ahead of it.
+dev_inference_stack = InferenceStack(
+    app,
+    "dev-mermaid-inference",
+    env=cdk_env,
+    tags=tags,
+    config=DEV_SETTINGS,
+    inference_repo=common_stack.inference_repo,
+    config_bucket=common_stack.config_bucket,
+    image_buckets=[
+        (
+            common_stack.image_processing_bucket,
+            DEV_SETTINGS.api.ic_s3_path,
+        ),
+    ],
+)
+
+# The Lambda must already serve config.inference.classifier_version before the API
+# starts expecting it: classify_via_lambda's drift guard raises on every
+# classification while the two disagree, draining redeliveries into the DLQ.
+dev_api_stack.add_dependency(dev_inference_stack)
 
 prod_static_site_stack = StaticSiteStack(
     app,
@@ -106,8 +138,83 @@ prod_api_stack = ApiStack(
     api_zone=common_stack.api_zone,
     public_bucket=prod_static_site_stack.site_bucket,
     image_processing_bucket=common_stack.image_processing_bucket,
+    auto_scaling_group=common_stack.auto_scaling_group,
+    distribution=prod_static_site_stack.distribution,
+    sagemaker_domain_name=f"{PROD_SETTINGS.env_id}-SG-Project",
     use_fifo_queues="False",
     report_s3_creds=common_stack.report_s3_creds,
+    cost_alerts_topic=common_stack.cost_alerts_topic,
+)
+
+# The pyspacer inference compute lane for prod.
+prod_inference_stack = InferenceStack(
+    app,
+    "prod-mermaid-inference",
+    env=cdk_env,
+    tags=tags,
+    config=PROD_SETTINGS,
+    inference_repo=common_stack.inference_repo,
+    config_bucket=common_stack.config_bucket,
+    # coral-reef-training is a foreign AWS Open Data bucket: a statement in its bucket
+    # policy grants s3:PutObject on mermaid/* to this stack's Lambda by function ARN,
+    # so both read and write reach it like any other image bucket.
+    image_buckets=[
+        (
+            # from_bucket_name needs a Stack scope and adds no resource to it.
+            s3.Bucket.from_bucket_name(
+                prod_api_stack, "ProdInferenceImageBucket", PROD_SETTINGS.api.ic_bucket_name
+            ),
+            PROD_SETTINGS.api.ic_s3_path,
+        ),
+        (
+            common_stack.image_processing_bucket,
+            PROD_SETTINGS.api.ic_s3_path_test,
+        ),
+    ],
+)
+
+prod_api_stack.add_dependency(prod_inference_stack)
+
+cloudtrail_stack = CloudTrailStack(
+    app,
+    "mermaid-cloudtrail",
+    env=cdk_env,
+    tags={"Env": "Common"},
+)
+
+guardduty_stack = GuardDutyStack(
+    app,
+    f"mermaid-guardduty-{cdk_env.region}",
+    env=cdk_env,
+    tags={"Env": "Common"},
+    s3_buckets=[
+        "2310-coralnet-public-sources",
+        "amazon-sagemaker-554812291621-us-east-1-b5cebdff17fb",
+        "assets.datamermaid.org",
+        "collect-turndown.datamermaid.org",
+        "config-bucket-554812291621",
+        "dashboard2.datamermaid.org",
+        "dev-dashboard2.datamermaid.org",
+        "dev-datamermaid-sm-data",
+        "dev-datamermaid-sm-sources",
+        "dev-explore.datamermaid.org",
+        "dev-mermaid-cloudtrail-cloudtrailbucket98b0bfe1-qwlw3gr5rvvm",
+        "dev-public.datamermaid.org",
+        "dev.app2.datamermaid.org",
+        "dev.dashboard3.datamermaid.org",
+        "explore.datamermaid.org",
+        "mermaid-api-v2-backups",
+        "mermaid-config",
+        "mermaid-data",
+        "mermaid-image-processing",
+        "mermaid-user-metrics",
+        "prod.app2.datamermaid.org",
+        "public.datamermaid.org",
+        "pyspacer-test",
+        "sagemaker-studio-554812291621-moo6nyhibza",
+        "sagemaker-us-east-1-554812291621",
+        "vpcflowlogs.admin.datamermaid.org",
+    ],
 )
 
 nag_suppressions.apply_all(
@@ -118,6 +225,10 @@ nag_suppressions.apply_all(
     dev_api_stack=dev_api_stack,
     prod_api_stack=prod_api_stack,
     dev_sagemaker_stack=dev_sagemaker_stack,
+    cloudtrail_stack=cloudtrail_stack,
+    guardduty_stack=guardduty_stack,
+    dev_inference_stack=dev_inference_stack,
+    prod_inference_stack=prod_inference_stack,
 )
 
 app.synth()

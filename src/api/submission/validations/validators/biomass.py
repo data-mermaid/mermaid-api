@@ -53,7 +53,9 @@ class BiomassValidator(BaseValidator):
         ]
         return {
             str(fa.id): fa.get_biomass_constants()
-            for fa in FishAttribute.objects.filter(id__in=fishattribute_ids)
+            for fa in FishAttribute.objects.filter(id__in=fishattribute_ids).select_related(
+                "fishgrouping", "fishfamily", "fishgenus", "fishspecies"
+            )
         }
 
     def _calc_biomass(self, observation, width, len_surveyed, fish_attr_lookup):

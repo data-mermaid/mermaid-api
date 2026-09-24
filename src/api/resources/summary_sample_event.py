@@ -63,6 +63,8 @@ class SummarySampleEventCSVSerializer(ReportSerializer):
         ReportField("reef_exposure", "Exposure"),
         ReportField("reef_type", "Reef type"),
         ReportField("reef_zone", "Reef zone"),
+        ReportField("depth_avg", "Depth average (m)"),
+        ReportField("depth_sd", "Depth standard deviation (m)"),
         ReportField("sample_date", "Year", to_year, "sample_date_year"),
         ReportField("sample_date", "Month", to_month, "sample_date_month"),
         ReportField("sample_date", "Day", to_day, "sample_date_day"),
@@ -297,6 +299,55 @@ class SummarySampleEventCSVSerializer(ReportSerializer):
             protocol="colonies_bleached",
             key="percent_cover_life_histories_sd",
         ),
+        ReportField(
+            "protocols",
+            "Macroinvertebrate transect count",
+            to_protocol_value,
+            protocol="macroinvertebrate",
+            key="sample_unit_count",
+        ),
+        ReportField(
+            "protocols",
+            "Macroinvertebrate total count average",
+            to_protocol_value,
+            protocol="macroinvertebrate",
+            key="count_total_avg",
+        ),
+        ReportField(
+            "protocols",
+            "Macroinvertebrate total count standard deviation",
+            to_protocol_value,
+            protocol="macroinvertebrate",
+            key="count_total_sd",
+        ),
+        ReportField(
+            "protocols",
+            "Macroinvertebrate density (ind/ha) average",
+            to_protocol_value,
+            protocol="macroinvertebrate",
+            key="density_indha_avg",
+        ),
+        ReportField(
+            "protocols",
+            "Macroinvertebrate density (ind/ha) standard deviation",
+            to_protocol_value,
+            protocol="macroinvertebrate",
+            key="density_indha_sd",
+        ),
+        ReportField(
+            "protocols",
+            "Macroinvertebrate density (ind/ha) average by group of interest",
+            to_protocol_value,
+            protocol="macroinvertebrate",
+            key="density_indha_group_interest_avg",
+        ),
+        ReportField(
+            "protocols",
+            "Macroinvertebrate density (ind/ha) standard deviation by group of interest",
+            to_protocol_value,
+            protocol="macroinvertebrate",
+            key="density_indha_group_interest_sd",
+        ),
         ReportField("contact_link", "Contact link"),
         ReportField("tags", "Organizations", to_names),
         ReportField("project_admins", "Project administrators", to_names),
@@ -311,6 +362,10 @@ class SummarySampleEventCSVSerializer(ReportSerializer):
         ReportField(
             "data_policy_benthicpqt",
             "Photo Quadrat Transect data sharing policy",
+        ),
+        ReportField(
+            "data_policy_macroinvertebrate",
+            "Macroinvertebrate data sharing policy",
         ),
         ReportField("project_notes", "Project notes"),
         ReportField("project_includes_gfcr", "Project includes GFCR", to_yesno),
@@ -346,6 +401,7 @@ class SummarySampleEventFilterSet(AggregatedViewFilterSet):
             "data_policy_habitatcomplexity",
             "data_policy_bleachingqc",
             "data_policy_benthicpqt",
+            "data_policy_macroinvertebrate",
         ]
 
         filter_overrides = {

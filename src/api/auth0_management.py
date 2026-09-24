@@ -1,12 +1,13 @@
 import os
 import time
 
-from auth0.v3.authentication import Database, GetToken
-from auth0.v3.management import Auth0
+from auth0.authentication import Database, GetToken
+from auth0.management import ManagementClient
+from auth0.management.errors import TooManyRequestsError
 from django.conf import settings
 
 
-class BaseAPI(object):
+class BaseAPI:
     def __init__(self, domain=None, client_id=None, client_secret=None, audience=None):
         self.domain = domain or settings.AUTH0_DOMAIN
         self.client_id = client_id or os.environ.get("MERMAID_MANAGEMENT_API_CLIENT_ID")
@@ -16,8 +17,8 @@ class BaseAPI(object):
         self._token = None
 
     def get_token(self):
-        get_token = GetToken(self.domain)
-        token = get_token.client_credentials(self.client_id, self.client_secret, self.audience)
+        get_token = GetToken(self.domain, self.client_id, self.client_secret)
+        token = get_token.client_credentials(self.audience)
         mgmt_api_token = token["access_token"]
         return mgmt_api_token
 
@@ -27,10 +28,10 @@ class Auth0DatabaseAuthenticationAPI(BaseAPI):
 
     @property
     def client(self):
-        return Database(self.domain)
+        return Database(self.domain, self.client_id)
 
     def change_password(self, email):
-        return self.client.change_password(self.client_id, email, self.CONNECTION)
+        return self.client.change_password(email, self.CONNECTION)
 
 
 class Auth0ManagementAPI(BaseAPI):
@@ -41,7 +42,7 @@ class Auth0ManagementAPI(BaseAPI):
 
         # Check token is valid
         self._token = self.get_token()
-        self._client = Auth0(self.domain, self._token)
+        self._client = ManagementClient(domain=self.domain, token=self._token)
         return self._client
 
 
@@ -61,25 +62,22 @@ class Auth0Users(Auth0ManagementAPI):
 
     def get_user_sets(self, query=None):
         client = self.client
-        page = -1
+        page = 0
         while True:
-            page += 1
-            resp = client.users.list(page=page, per_page=100, q=query, search_engine="v2")
-            start = resp.get("start")
-            length = resp.get("length")
-            total = resp.get("total")
-            if resp.get("status_code") == 429:
+            try:
+                resp = client.users.list(page=page, per_page=100, q=query, search_engine="v2")
+            except TooManyRequestsError:
                 # Rate limit exceeded
-                page -= 1
                 time.sleep(1)
                 continue
 
-            yield resp.get("users") or []
-            if start + length >= total:
+            yield resp.items or []
+            if not resp.has_next:
                 break
+            page += 1
 
     def get_user_by_email(self, email):
-        query = 'email.raw:"{}"'.format(email)
+        query = f'email.raw:"{email}"'
         users = []
         for user_set in self.get_user_sets(query=query):
             users.extend(list(user_set))
@@ -96,4 +94,4 @@ class Auth0Users(Auth0ManagementAPI):
 
         data = {key: val for key, val in user.items() if key in self.UPDATABLE_ATTRIBUTES}
 
-        return self.client.users.update(user_id, data)
+        return self.client.users.update(user_id, **data)

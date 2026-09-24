@@ -3,7 +3,6 @@ import uuid
 from datetime import datetime
 
 from django.db import transaction
-from rest_condition import Or
 from rest_framework import serializers, status
 from rest_framework.exceptions import ValidationError
 from rest_framework.response import Response
@@ -131,11 +130,87 @@ class GFCRFinanceSolutionSerializer(BaseAPISerializer):
         model = GFCRFinanceSolution
         exclude = []
 
+    def to_internal_value(self, data):
+        # "" breaks BooleanField validation, and "" isn't a valid used_an_incubator
+        # choice, before validate() can run.
+        data = data.copy()
+        for field_name in ("local_enterprise", "gender_smart"):
+            if data.get(field_name) == "":
+                data[field_name] = False
+        if data.get("used_an_incubator") == "":
+            data["used_an_incubator"] = None
+        return super().to_internal_value(data)
+
+    def validate(self, data):
+        type_val = data.get("fs_type")
+        errors = {}
+
+        # Sector: only Business — coerce clear for all other types; error if missing for Business.
+        if type_val != "business":
+            data["sector"] = ""
+        elif not data.get("sector", ""):
+            errors["sector"] = "sector required for Business solution"
+
+        # Geographical coverage: only CTF — coerce clear; error if missing for CTF.
+        if type_val != "ctf":
+            data["geographical_coverage"] = ""
+        elif not data.get("geographical_coverage", ""):
+            errors["geographical_coverage"] = "geographical_coverage required for CTF"
+
+        # used_an_incubator + taf_name: only Business and Financial mechanism.
+        # field is still nullable (null→"" deferred to Phase 4); both None and "" mean not set.
+        if type_val not in ("business", "financial_mechanism"):
+            data["used_an_incubator"] = None
+            data["taf_name"] = ""
+        elif not (data.get("used_an_incubator") or ""):
+            # taf_name requires used_an_incubator — coerce clear if not set.
+            data["taf_name"] = ""
+
+        # local_enterprise: only Financial facility, Business, Financial mechanism.
+        if type_val not in ("financial_facility", "business", "financial_mechanism"):
+            data["local_enterprise"] = False
+
+        # gender_smart: only Business and Financial mechanism.
+        if type_val not in ("business", "financial_mechanism"):
+            data["gender_smart"] = False
+
+        # number_of_solutions_supported_by: TAF, CTF, and Financial facility only.
+        if type_val not in ("taf", "ctf", "financial_facility"):
+            data["number_of_solutions_supported_by"] = 0
+
+        # sustainable_finance_mechanisms: only Financial mechanism.
+        if type_val != "financial_mechanism":
+            data["sustainable_finance_mechanisms"] = []
+        else:
+            valid_sfm = {c[0] for c in GFCRFinanceSolution.SUSTAINABLE_FINANCE_MECHANISM_CHOICES}
+            sfm = data.get("sustainable_finance_mechanisms") or []
+            invalid = [v for v in sfm if v not in valid_sfm]
+            if invalid:
+                errors["sustainable_finance_mechanisms"] = f"Invalid or removed choices: {invalid}"
+
+        if errors:
+            raise ValidationError(errors)
+
+        return data
+
 
 class GFCRIndicatorSetSerializer(BaseAPISerializer):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
         self._cached_profiles = {}
+
+    def validate(self, data):
+        instance_title = self.instance.title if self.instance else ""
+        instance_type = self.instance.indicator_set_type if self.instance else ""
+        title = data.get("title", instance_title)
+        indicator_set_type = data.get("indicator_set_type", instance_type)
+        report_titles = {c[0] for c in GFCRIndicatorSet.REPORT_TITLE_CHOICES}
+        target_titles = {c[0] for c in GFCRIndicatorSet.TARGET_TITLE_CHOICES}
+        if indicator_set_type == "report" and title not in report_titles:
+            raise ValidationError({"title": "title must be a valid report title"})
+        if indicator_set_type == "target" and title not in target_titles:
+            raise ValidationError({"title": "title must be a valid target title"})
+        return data
 
     finance_solutions = GFCRFinanceSolutionSerializer(many=True, default=list, read_only=True)
     f4_1_calc = serializers.ReadOnlyField()
@@ -184,7 +259,7 @@ class GFCRIndicatorSetSerializer(BaseAPISerializer):
 class IndicatorSetViewSet(BaseProjectApiViewSet):
     serializer_class = GFCRIndicatorSetSerializer
     project_lookup = "project"
-    permission_classes = [Or(ProjectDataAdminPermission, AuthenticatedReadOnlyPermission)]
+    permission_classes = [ProjectDataAdminPermission | AuthenticatedReadOnlyPermission]
 
     def get_queryset(self):
         project_id = self.kwargs.get("project_pk")
@@ -311,6 +386,14 @@ class IndicatorSetViewSet(BaseProjectApiViewSet):
 
                 self._save_data(
                     revenue_record, GFCRRevenueSerializer, request, instance=rev_instance
+                )
+
+            if (
+                fin_sol_record.fs_type == "programmatic_co_financing"
+                and fin_sol_record.revenues.exists()
+            ):
+                raise ValidationError(
+                    "Programmatic co-financing finance solutions cannot have revenues."
                 )
 
         output_serializer = self.get_serializer(instance=indicator_set)

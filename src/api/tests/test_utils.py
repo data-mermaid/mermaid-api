@@ -4,13 +4,13 @@ import pathlib
 import struct
 import zlib
 from fractions import Fraction
-from unittest.mock import MagicMock
+from unittest.mock import MagicMock, patch
 
 import pytest
 from PIL import Image as PILImage
 
 from api.models import BenthicTransect, QuadratCollection, QuadratTransect, SampleUnit
-from api.utils import get_subclasses
+from api.utils import get_subclasses, s3
 from api.utils.classification import (
     _normalize_exif_value,
     extract_datetime_stamp,
@@ -118,7 +118,7 @@ def test_extract_datetime_stamp_gps_priority():
     exif_ifd = {36867: "2024:04:06 23:30:00", 36880: "+13:00"}
 
     result = extract_datetime_stamp(exif_ifd, gps_ifd)
-    assert result == datetime.datetime(2024, 4, 6, 10, 30, 0, tzinfo=datetime.timezone.utc)
+    assert result == datetime.datetime(2024, 4, 6, 10, 30, 0, tzinfo=datetime.UTC)
 
 
 def test_extract_datetime_stamp_offset_fallback():
@@ -127,7 +127,7 @@ def test_extract_datetime_stamp_offset_fallback():
     gps_ifd = {}
 
     result = extract_datetime_stamp(exif_ifd, gps_ifd)
-    expected = datetime.datetime(2017, 9, 5, 21, 17, 33, tzinfo=datetime.timezone.utc)
+    expected = datetime.datetime(2017, 9, 5, 21, 17, 33, tzinfo=datetime.UTC)
     assert result == expected
 
 
@@ -147,7 +147,7 @@ def test_extract_datetime_stamp_offset_time_original():
     # must still produce a correct UTC timestamp.
     exif_ifd = {36867: "2017:09:06 10:17:33", 36881: "+13:00"}  # OffsetTimeOriginal only
     result = extract_datetime_stamp(exif_ifd, {})
-    assert result == datetime.datetime(2017, 9, 5, 21, 17, 33, tzinfo=datetime.timezone.utc)
+    assert result == datetime.datetime(2017, 9, 5, 21, 17, 33, tzinfo=datetime.UTC)
 
 
 def test_extract_datetime_stamp_malformed_gps_falls_through():
@@ -156,7 +156,7 @@ def test_extract_datetime_stamp_malformed_gps_falls_through():
     exif_ifd = {36867: "2017:09:06 10:17:33", 36880: "+00:00"}
 
     result = extract_datetime_stamp(exif_ifd, gps_ifd)
-    assert result == datetime.datetime(2017, 9, 6, 10, 17, 33, tzinfo=datetime.timezone.utc)
+    assert result == datetime.datetime(2017, 9, 6, 10, 17, 33, tzinfo=datetime.UTC)
 
 
 def test_extract_location():
@@ -226,3 +226,62 @@ def test_normalize_exif_value(value, expected):
     assert result == expected
     if expected is not None:
         assert type(result) is type(expected)  # 42 must stay int, not become 42.0
+
+
+def _fake_s3_client(keys):
+    """boto3 client stub that pages through keys and, like the real client, creates the
+    destination file on download."""
+    client = MagicMock()
+    paginator = MagicMock()
+    paginator.paginate.return_value = [{"Contents": [{"Key": key} for key in keys]}]
+    client.get_paginator.return_value = paginator
+
+    def _download_file(bucket, key, local_path):
+        with open(local_path, "wb"):
+            pass
+
+    client.download_file.side_effect = _download_file
+    return client
+
+
+def _downloaded_keys(client):
+    return [call.args[1] for call in client.download_file.call_args_list]
+
+
+def test_list_objects_download_skips_directory_markers(tmp_path):
+    # A "folder" created via the S3 console has a zero-byte marker object keyed exactly like
+    # the prefix, and it always sorts first. Downloading it writes a *file* at the download
+    # root, after which every real key dies in os.makedirs (exist_ok only tolerates an
+    # existing directory) with "[Errno 17] File exists".
+    keys = [
+        "classifier/v1/",
+        "classifier/v1/classifier.pkl",
+        "classifier/v1/efficientnet_weights.pt",
+    ]
+    client = _fake_s3_client(keys)
+    download_to = tmp_path / "classifier" / "v1"
+
+    with patch("api.utils.s3.get_client", return_value=client):
+        objects = s3.list_objects(
+            "mermaid-config", prefix="classifier/v1/", download_to=str(download_to)
+        )
+
+    assert [obj["Key"] for obj in objects] == keys  # markers are still returned to callers
+    assert download_to.is_dir()  # marker became the directory, not a file
+    assert (download_to / "classifier.pkl").is_file()
+    assert (download_to / "efficientnet_weights.pt").is_file()
+    assert _downloaded_keys(client) == keys[1:]  # marker itself never downloaded
+
+
+def test_list_objects_download_skips_keys_outside_download_root(tmp_path):
+    # The traversal guard must keep working; the marker skip is layered on top of it.
+    keys = ["backups/dev/../../../etc/passwd", "backups/dev/good.dump"]
+    client = _fake_s3_client(keys)
+    download_to = tmp_path / "backups" / "dev"
+
+    with patch("api.utils.s3.get_client", return_value=client):
+        s3.list_objects("mermaid-backup", prefix="backups/dev/", download_to=str(download_to))
+
+    assert _downloaded_keys(client) == ["backups/dev/good.dump"]
+    assert (download_to / "good.dump").is_file()
+    assert not (tmp_path / "etc").exists()

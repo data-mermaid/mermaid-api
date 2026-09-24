@@ -20,6 +20,7 @@ from ..models import (
     BLEACHINGQC_PROTOCOL,
     PROTOCOL_MAP,
     BeltFish,
+    BeltInvert,
     BenthicLIT,
     BenthicPhotoQuadratTransect,
     BenthicPIT,
@@ -28,8 +29,10 @@ from ..models import (
     CollectRecord,
     FishBeltTransect,
     HabitatComplexity,
+    InvertBeltTransect,
     Management,
     ObsBeltFish,
+    ObsBeltInvert,
     ObsBenthicLIT,
     ObsBenthicPhotoQuadrat,
     ObsBenthicPIT,
@@ -186,6 +189,10 @@ def _create_annotations_file_job(image_id):
     try:
         image = Image.objects.get(id=image_id)
         image.create_annotations_file()
+    except Image.DoesNotExist:
+        # Expected when the image's project (e.g. a demo project) was deleted/recreated
+        # before this async job ran. Not an error worth reporting to Sentry.
+        logger.info(f"Skipping annotations file for image {image_id}: image no longer exists")
     except Exception:
         logger.error(f"Failed to create annotations file for image {image_id}", exc_info=True)
 
@@ -398,7 +405,7 @@ def delete_collected_pqt_images(image_ids):
                 )
             except Exception:
                 logger.error(
-                    f"Failed to delete S3 file during demo project cleanup: {path}",
+                    f"Failed to delete S3 file during project deletion: {path}",
                     exc_info=True,
                 )
 
@@ -773,6 +780,7 @@ def _copy_submitted_data(site_id_map, management_id_map, s3_tracker, dest_bucket
 
     _copy_benthic_transects(sample_event_id_map)
     _copy_fish_belt_transects(sample_event_id_map)
+    _copy_invert_belt_transects(sample_event_id_map)
     _copy_quadrat_collections(sample_event_id_map)
     _copy_quadrat_transects(sample_event_id_map, s3_tracker, dest_bucket=dest_bucket)
 
@@ -819,6 +827,25 @@ def _copy_fish_belt_transects(sample_event_id_map):
 
         for bf in BeltFish.objects.filter(transect_id=old_fbt_id):
             _copy_transect_method(bf, fbt.id, ObsBeltFish, "beltfish")
+
+
+def _copy_invert_belt_transects(sample_event_id_map):
+    """Copy InvertBeltTransect hierarchy (BeltInvert)."""
+    old_se_ids = [uuid.UUID(k) for k in sample_event_id_map.keys()]
+
+    for ibt in InvertBeltTransect.objects.filter(sample_event_id__in=old_se_ids):
+        old_ibt_id = ibt.id
+        old_ibt_created_by = ibt.created_by
+        old_ibt_updated_by = ibt.updated_by
+        ibt.id = None
+        ibt.sample_event_id = uuid.UUID(sample_event_id_map[str(ibt.sample_event_id)])
+        ibt.collect_record_id = None
+        ibt.created_by = old_ibt_created_by
+        ibt.updated_by = old_ibt_updated_by
+        ibt.save()
+
+        for bi in BeltInvert.objects.filter(transect_id=old_ibt_id):
+            _copy_transect_method(bi, ibt.id, ObsBeltInvert, "beltinvert")
 
 
 def _copy_quadrat_collections(sample_event_id_map):
@@ -1076,7 +1103,13 @@ def delete_project(pk):
         with transaction.atomic():
             sid = transaction.savepoint()
             try:
+                # Collect PQT image IDs before the cascade-delete removes the
+                # ObsBenthicPhotoQuadrat rows that link back to them.
+                pqt_image_ids = collect_project_pqt_image_ids(instance)
                 delete_instance_and_related_objects(instance)
+                # Now that ObsBenthicPhotoQuadrat rows are gone (PROTECT lifted),
+                # delete the orphaned Image records and schedule S3 cleanup.
+                delete_collected_pqt_images(pqt_image_ids)
                 transaction.savepoint_commit(sid)
                 print("project deleted")
             except Exception as err:

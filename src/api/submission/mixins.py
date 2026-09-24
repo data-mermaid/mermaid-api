@@ -3,7 +3,7 @@ from rest_framework.decorators import action
 from rest_framework.response import Response
 
 
-class ValidateMixin(object):
+class ValidateMixin:
     validator_class = None
     validator_identifier = "_root_"
 

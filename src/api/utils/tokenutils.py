@@ -6,9 +6,7 @@ from jose import jwt
 
 
 def timestamp():
-    return (
-        timezone.now() - datetime.datetime(1970, 1, 1, tzinfo=datetime.timezone.utc)
-    ).total_seconds()
+    return (timezone.now() - datetime.datetime(1970, 1, 1, tzinfo=datetime.UTC)).total_seconds()
 
 
 def create_token(auth_user_id):

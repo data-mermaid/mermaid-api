@@ -5,8 +5,7 @@ from django.conf import settings
 from django.contrib.gis.geos import Point
 from jose import jwt
 
-from api.models.base import AuthUser, Profile
-from api.models.mermaid import (
+from api.models import (
     BeltTransectWidth,
     BeltTransectWidthCondition,
     BenthicAttribute,
@@ -31,6 +30,7 @@ from api.models.mermaid import (
     Tide,
     Visibility,
 )
+from api.models.base import AuthUser, Profile
 
 
 class MockRequest:
@@ -39,12 +39,12 @@ class MockRequest:
         self.GET = {}
         self.query_params = {}
         if token:
-            self.META = {"HTTP_AUTHORIZATION": "Bearer {}".format(token)}
+            self.META = {"HTTP_AUTHORIZATION": f"Bearer {token}"}
         else:
             self.META = {}
 
 
-class TestDataMixin(object):
+class TestDataMixin:
     def timestamp(self):
         return (dt.datetime.now(dt.UTC) - dt.datetime(1970, 1, 1, tzinfo=dt.UTC)).total_seconds()
 

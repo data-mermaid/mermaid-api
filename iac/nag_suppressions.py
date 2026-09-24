@@ -33,6 +33,23 @@ def _suppress_by_path(
     )
 
 
+def _path_exists(stack: Stack, path: str) -> bool:
+    """True if a construct exists at `path` (slash-separated) relative to the stack.
+
+    Used to gate suppressions for *optional* resources — e.g. the Slack Chatbot
+    config, which is only created when both Slack workspace and channel IDs are
+    set. Without this guard, cdk-nag raises "suppression path did not match any
+    resource" and synth fails whenever Slack is unconfigured.
+    """
+    node = stack
+    for segment in path.split("/"):
+        child = node.node.try_find_child(segment)
+        if child is None:
+            return False
+        node = child
+    return True
+
+
 # ---------------------------------------------------------------------------
 # GithubAccessStack
 # ---------------------------------------------------------------------------
@@ -50,6 +67,55 @@ def suppress_github_access(stack: Stack) -> None:
                 applies_to=[
                     "Policy::arn:<AWS::Partition>:iam::aws:policy/AdministratorAccess",
                 ],
+            ),
+        ],
+    )
+    _suppress_by_path(
+        stack,
+        "ClassifierReleaseMlflowPolicy/Resource",
+        [
+            NagPackSuppression(
+                id="AwsSolutions-IAM5",
+                reason=f"{ACCEPTED}: sagemaker-mlflow exposes no resource-level "
+                "ARNs; the release role is scoped liberally to the project's "
+                "SageMaker-Studio MLflow apps by design.",
+                applies_to=["Action::sagemaker-mlflow:*", "Resource::*"],
+            ),
+        ],
+    )
+    _suppress_by_path(
+        stack,
+        "MermaidClassifierReleaseRole/DefaultPolicy/Resource",
+        [
+            NagPackSuppression(
+                id="AwsSolutions-IAM5",
+                reason=f"{ACCEPTED}: release-role S3 access is prefix-scoped to "
+                "dev-datamermaid-sm-data/mlflow/* (read) and "
+                "mermaid-config/classifier/* (read+write); the object-level and "
+                "ListBucket wildcards are the minimal set the CDK grants emit.",
+                applies_to=[
+                    "Action::s3:GetObject*",
+                    "Action::s3:GetBucket*",
+                    "Action::s3:List*",
+                    "Action::s3:PutObject*",
+                    "Action::s3:DeleteObject*",
+                    "Action::s3:Abort*",
+                    "Resource::arn:aws:s3:::dev-datamermaid-sm-data/mlflow/*",
+                    "Resource::arn:aws:s3:::mermaid-config/classifier/*",
+                ],
+            ),
+        ],
+    )
+
+    _suppress_by_path(
+        stack,
+        "InferenceImagePushPolicy/Resource",
+        [
+            NagPackSuppression(
+                id="AwsSolutions-IAM5",
+                reason=f"{ACCEPTED}: ecr:GetAuthorizationToken does not support "
+                "resource-level permissions — Resource::* is required by the ECR API.",
+                applies_to=["Resource::*"],
             ),
         ],
     )
@@ -250,19 +316,6 @@ def suppress_common(stack: Stack) -> None:
         ],
     )
 
-    # --- VPC Endpoint SG (validation failure - intrinsic ref) ---
-    _suppress_by_path(
-        stack,
-        "VPCEndpointSagemaker/Resource",
-        [
-            NagPackSuppression(
-                id="CdkNagValidationFailure",
-                reason=f"{ACCEPTED}: AwsSolutions-EC23 cannot validate CIDR "
-                "from intrinsic Fn::GetAtt on VPC CidrBlock.",
-            ),
-        ],
-    )
-
     # --- VPC Flow Logs ---
     _suppress_by_path(
         stack,
@@ -347,6 +400,22 @@ def suppress_common(stack: Stack) -> None:
                 id="AwsSolutions-IAM5",
                 reason=f"{ACCEPTED}: Wildcard on object key (/*) is required for "
                 "the report user to read/write objects in the data bucket.",
+            ),
+        ],
+    )
+
+    # --- Cost Anomaly Detection SNS topic ---
+    _suppress_by_path(
+        stack,
+        "CostAlertsTopic/Resource",
+        [
+            NagPackSuppression(
+                id="AwsSolutions-SNS2",
+                reason=f"{TODO}: Encrypt the cost alerts SNS topic with a KMS CMK.",
+            ),
+            NagPackSuppression(
+                id="AwsSolutions-SNS3",
+                reason=f"{TODO}: Add aws:SecureTransport condition to the cost alerts SNS topic policy.",
             ),
         ],
     )
@@ -437,13 +506,25 @@ def suppress_api(stack: Stack) -> None:
         "ImageProcess/Worker/QueueProcessingTaskDef",
     ]
 
+    _xray_iam4 = NagPackSuppression(
+        id="AwsSolutions-IAM4",
+        reason=f"{ACCEPTED}: AWSXRayDaemonWriteAccess is the least-privilege AWS managed "
+        "policy for X-Ray tracing; no customer-managed equivalent exists.",
+        applies_to=[
+            "Policy::arn:<AWS::Partition>:iam::aws:policy/AWSXRayDaemonWriteAccess",
+        ],
+    )
+
     for td in task_def_ids:
-        # Task role default policy (IAM5 wildcards from CDK grants)
+        # Task role: IAM4 for X-Ray managed policy, IAM5 wildcards from CDK grants
+        _suppress_by_path(stack, f"{td}/TaskRole/Resource", [_xray_iam4])
         _suppress_by_path(stack, f"{td}/TaskRole/DefaultPolicy/Resource", [_API_IAM5_SUPPRESSION])
         # Task definition resource (ECS2 - env vars)
         _suppress_by_path(stack, f"{td}/Resource", [_API_ECS2_SUPPRESSION])
         # Execution role default policy (IAM5 - ECR/Secrets wildcard)
-        _suppress_by_path(stack, f"{td}/ExecutionRole/DefaultPolicy/Resource", [_API_EXEC_ROLE_IAM5])
+        _suppress_by_path(
+            stack, f"{td}/ExecutionRole/DefaultPolicy/Resource", [_API_EXEC_ROLE_IAM5]
+        )
 
     # Scheduled backup events role
     _suppress_by_path(
@@ -478,6 +559,54 @@ def suppress_api(stack: Stack) -> None:
                 NagPackSuppression(
                     id="AwsSolutions-SNS3",
                     reason=f"{TODO}: Add aws:SecureTransport condition to the SNS topic policy.",
+                ),
+            ],
+        )
+
+    # --- MonitoringAlerts SNS topic ---
+    _suppress_by_path(
+        stack,
+        "Alerts/AlertsTopic/Resource",
+        [
+            NagPackSuppression(
+                id="AwsSolutions-SNS2",
+                reason=f"{TODO}: Encrypt the alerts SNS topic with a KMS CMK.",
+            ),
+            NagPackSuppression(
+                id="AwsSolutions-SNS3",
+                reason=f"{TODO}: Add aws:SecureTransport condition to the alerts SNS topic policy.",
+            ),
+        ],
+    )
+
+    # --- Chatbot Slack channel role ---
+    # The Slack Chatbot config (and its role/policy) is only created when both
+    # Slack workspace and channel IDs are configured, so gate these suppressions
+    # on the resource actually existing.
+    if _path_exists(stack, "Alerts/SlackChannelConfigurationRole/Resource"):
+        _suppress_by_path(
+            stack,
+            "Alerts/SlackChannelConfigurationRole/Resource",
+            [
+                NagPackSuppression(
+                    id="AwsSolutions-IAM4",
+                    reason=f"{ACCEPTED}: AmazonQDeveloperAccess is an AWS managed policy with no "
+                    "customer-managed equivalent for Amazon Q Developer in Slack.",
+                    applies_to=[
+                        "Policy::arn:<AWS::Partition>:iam::aws:policy/AmazonQDeveloperAccess",
+                    ],
+                ),
+            ],
+        )
+        _suppress_by_path(
+            stack,
+            "Alerts/SlackObservabilityPolicy/Resource",
+            [
+                NagPackSuppression(
+                    id="AwsSolutions-IAM5",
+                    reason=f"{ACCEPTED}: Observability read actions (cloudwatch:Get*, ecs:List*, etc.) "
+                    "operate on account-wide resources by design — CloudWatch metrics and ECS services "
+                    "cannot be scoped to a single ARN without breaking Describe/List semantics.",
                 ),
             ],
         )
@@ -522,6 +651,7 @@ def suppress_sagemaker(stack: Stack, prefix: str) -> None:
         "MlflowRolePolicy/Resource",
         "SagemakerStartSessionPolicy/Resource",
         "GlueSessionPolicy/Resource",
+        "SagemakerPassSelfPolicy/Resource",
     ]:
         _suppress_by_path(
             stack,
@@ -531,6 +661,34 @@ def suppress_sagemaker(stack: Stack, prefix: str) -> None:
                     id="AwsSolutions-IAM5",
                     reason=f"{ACCEPTED}: SageMaker, MLflow, and Glue wildcards are "
                     "required for interactive notebook sessions.",
+                ),
+            ],
+        )
+
+    # --- Shared Mermaid SageMaker launcher role's inline policies ---
+    # ECR / SageMaker / Logs / S3 wildcards are scoped to specific repos
+    # (mermaid-*-jobs), Training+Processing jobs in this account, the
+    # /aws/sagemaker/* CloudWatch log groups, and the runs/* prefix of
+    # the SageMaker data bucket. Required by the launcher scripts to
+    # pull the job image, submit Training/Processing jobs, tail logs,
+    # and read/write run data.
+    for policy_path in [
+        "MermaidSagemakerLauncherEcrPolicy/Resource",
+        "MermaidSagemakerLauncherSagemakerPolicy/Resource",
+        "MermaidSagemakerLauncherLogsPolicy/Resource",
+        "MermaidSagemakerLauncherPassRolePolicy/Resource",
+        f"{prefix}MermaidSagemakerLauncherRole/DefaultPolicy/Resource",
+    ]:
+        _suppress_by_path(
+            stack,
+            policy_path,
+            [
+                NagPackSuppression(
+                    id="AwsSolutions-IAM5",
+                    reason=f"{ACCEPTED}: Wildcards are scoped to mermaid-*-jobs "
+                    "ECR repos, SageMaker Training+Processing jobs in this account, "
+                    "/aws/sagemaker/* CloudWatch log groups, and the runs/* prefix "
+                    "of the SageMaker data bucket.",
                 ),
             ],
         )
@@ -553,6 +711,270 @@ def suppress_sagemaker(stack: Stack, prefix: str) -> None:
 
 
 # ---------------------------------------------------------------------------
+# InferenceStack
+# ---------------------------------------------------------------------------
+
+
+def suppress_inference(stack: Stack, image_resource_wildcards: list[str]) -> None:
+    """Suppress the inference Lambda's IAM findings.
+
+    image_resource_wildcards are the per-env `Resource::<bucket>/<prefix>*` strings the
+    image-bucket grants produce; each env passes its own so a wildcard on any other
+    resource stays unsuppressed and fails the synth gate.
+    """
+    # --- Lambda execution role: AWSLambdaBasicExecutionRole managed policy ---
+    _suppress_by_path(
+        stack,
+        "PyspacerInferenceFunction/ServiceRole/Resource",
+        [
+            NagPackSuppression(
+                id="AwsSolutions-IAM4",
+                reason=f"{ACCEPTED}: AWSLambdaBasicExecutionRole is the standard "
+                "managed policy for Lambda logging; no customer-managed equivalent exists.",
+                applies_to=[
+                    "Policy::arn:<AWS::Partition>:iam::aws:policy/service-role/AWSLambdaBasicExecutionRole",
+                ],
+            ),
+        ],
+    )
+
+    # --- Lambda execution role default policy: CDK-generated S3 grant wildcards ---
+    _suppress_by_path(
+        stack,
+        "PyspacerInferenceFunction/ServiceRole/DefaultPolicy/Resource",
+        [
+            NagPackSuppression(
+                id="AwsSolutions-IAM5",
+                reason=f"{ACCEPTED}: xray:PutTraceSegments / xray:PutTelemetryRecords do not "
+                "support resource-level permissions, so Resource::* is required by the X-Ray API "
+                "(added by Lambda tracing=ACTIVE).",
+                applies_to=["Resource::*"],
+            ),
+            NagPackSuppression(
+                id="AwsSolutions-IAM5",
+                reason=f"{ACCEPTED}: s3 action wildcards on the function's bucket grants "
+                "(GetObject*/GetBucket*/List* from grant_read, Abort* from grant_put) "
+                "are CDK-generated; grant_put enumerates its PutObject actions and "
+                "grants no DeleteObject*.",
+                applies_to=[
+                    "Action::s3:GetObject*",
+                    "Action::s3:GetBucket*",
+                    "Action::s3:List*",
+                    "Action::s3:Abort*",
+                ],
+            ),
+            NagPackSuppression(
+                id="AwsSolutions-IAM5",
+                reason=f"{ACCEPTED}: classifier/* key prefix on the config bucket "
+                "is intentional — the Lambda reads versioned classifier model files "
+                "from this prefix at runtime. Read-only: the prefix holds pickles the "
+                "legacy lane unpickles, so write access would be code execution.",
+                applies_to=[
+                    "Resource::<MermaidApiConfigBucketB28062CD.Arn>/classifier/*",
+                ],
+            ),
+            NagPackSuppression(
+                id="AwsSolutions-IAM5",
+                reason=f"{ACCEPTED}: the object wildcard on each image-bucket grant is "
+                "CDK-generated and confined to that bucket's own key prefix; every image "
+                "bucket is read-write, including the foreign coral-reef-training bucket, "
+                "whose bucket policy grants this function's exact name a matching put "
+                "statement.",
+                applies_to=image_resource_wildcards,
+            ),
+        ],
+    )
+
+
+# ---------------------------------------------------------------------------
+# CloudTrailStack
+# ---------------------------------------------------------------------------
+
+
+def suppress_cloudtrail(stack: Stack) -> None:
+    _suppress_by_path(
+        stack,
+        "CloudTrailBucket/Resource",
+        [
+            NagPackSuppression(
+                id="AwsSolutions-S1",
+                reason=f"{TODO}: Enable server access logging on the CloudTrail S3 bucket.",
+            ),
+        ],
+    )
+
+
+# ---------------------------------------------------------------------------
+# GuardDutyStack
+# ---------------------------------------------------------------------------
+
+
+def suppress_guardduty(stack: Stack) -> None:
+    # --- CreateGuardDutySLR Lambda ---
+    _suppress_by_path(
+        stack,
+        "CreateGuardDutySLR/ServiceRole/Resource",
+        [
+            NagPackSuppression(
+                id="AwsSolutions-IAM4",
+                reason=f"{ACCEPTED}: AWSLambdaBasicExecutionRole is the standard managed policy "
+                "for Lambda CloudWatch logging; no customer-managed equivalent exists.",
+                applies_to=[
+                    "Policy::arn:<AWS::Partition>:iam::aws:policy/service-role/AWSLambdaBasicExecutionRole",
+                ],
+            ),
+        ],
+    )
+    _suppress_by_path(
+        stack,
+        "CreateGuardDutySLR/ServiceRole/DefaultPolicy/Resource",
+        [
+            NagPackSuppression(
+                id="AwsSolutions-IAM5",
+                reason=f"{ACCEPTED}: iam:CreateServiceLinkedRole and guardduty:UpdateDetector "
+                "do not support resource-level scoping; Resource::* is required.",
+                applies_to=["Resource::*"],
+            ),
+        ],
+    )
+    _suppress_by_path(
+        stack,
+        "CreateGuardDutySLR/Resource",
+        [
+            NagPackSuppression(
+                id="AwsSolutions-L1",
+                reason=f"{ACCEPTED}: Runtime is PYTHON_3_13 (latest); cdk-nag may lag behind "
+                "the actual latest runtime release.",
+            ),
+        ],
+    )
+
+    # --- CDK custom resource provider framework Lambda ---
+    _suppress_by_path(
+        stack,
+        "GuardDutySLRProvider/framework-onEvent/ServiceRole/Resource",
+        [
+            NagPackSuppression(
+                id="AwsSolutions-IAM4",
+                reason=f"{ACCEPTED}: AWSLambdaBasicExecutionRole on CDK-generated provider "
+                "framework Lambda; no customer-managed equivalent.",
+                applies_to=[
+                    "Policy::arn:<AWS::Partition>:iam::aws:policy/service-role/AWSLambdaBasicExecutionRole",
+                ],
+            ),
+        ],
+    )
+    _suppress_by_path(
+        stack,
+        "GuardDutySLRProvider/framework-onEvent/ServiceRole/DefaultPolicy/Resource",
+        [
+            NagPackSuppression(
+                id="AwsSolutions-IAM5",
+                reason=f"{ACCEPTED}: CDK-generated provider framework policy; wildcard on "
+                "the onEvent Lambda ARN is required for invoking the custom resource handler.",
+            ),
+        ],
+    )
+    _suppress_by_path(
+        stack,
+        "GuardDutySLRProvider/framework-onEvent/Resource",
+        [
+            NagPackSuppression(
+                id="AwsSolutions-L1",
+                reason=f"{ACCEPTED}: CDK custom resource provider framework Lambda; "
+                "runtime is managed by CDK and updated on CDK version upgrades.",
+            ),
+        ],
+    )
+
+    # --- GuardDuty service role ---
+    _suppress_by_path(
+        stack,
+        "GuardDutyServiceRole/Resource",
+        [
+            NagPackSuppression(
+                id="AwsSolutions-IAM4",
+                reason=f"{ACCEPTED}: AmazonGuardDutyFullAccess_v2 is the AWS-managed policy "
+                "required for GuardDuty malware protection plan operations; no scoped equivalent exists.",
+                applies_to=[
+                    "Policy::arn:<AWS::Partition>:iam::aws:policy/AmazonGuardDutyFullAccess_v2",
+                ],
+            ),
+        ],
+    )
+    _suppress_by_path(
+        stack,
+        "GuardDutyServiceRole/DefaultPolicy/Resource",
+        [
+            NagPackSuppression(
+                id="AwsSolutions-IAM5",
+                reason=f"{ACCEPTED}: EventBridge rule ARNs cannot be pre-determined at deploy time; "
+                "Resource::* is required for GuardDuty to manage its own event rules. "
+                "S3 object wildcards (bucket/*) are scoped to the specific protected buckets.",
+            ),
+        ],
+    )
+
+    # --- EC2 instance role (SSM + CloudWatch agent) ---
+    _suppress_by_path(
+        stack,
+        "EC2SSMRole/Resource",
+        [
+            NagPackSuppression(
+                id="AwsSolutions-IAM4",
+                reason=f"{ACCEPTED}: AmazonSSMManagedInstanceCore and CloudWatchAgentServerPolicy "
+                "are standard managed policies for EC2 SSM and CloudWatch agent; "
+                "no customer-managed equivalents exist.",
+                applies_to=[
+                    "Policy::arn:<AWS::Partition>:iam::aws:policy/AmazonSSMManagedInstanceCore",
+                    "Policy::arn:<AWS::Partition>:iam::aws:policy/CloudWatchAgentServerPolicy",
+                ],
+            ),
+        ],
+    )
+    _suppress_by_path(
+        stack,
+        "EC2SSMRole/DefaultPolicy/Resource",
+        [
+            NagPackSuppression(
+                id="AwsSolutions-IAM5",
+                reason=f"{ACCEPTED}: guardduty:CreateDetector and UpdateDetector do not "
+                "support resource-level scoping; Resource::* is required.",
+                applies_to=["Resource::*"],
+            ),
+        ],
+    )
+
+    # --- ECS execution role ---
+    _suppress_by_path(
+        stack,
+        "ECSExecRole/Resource",
+        [
+            NagPackSuppression(
+                id="AwsSolutions-IAM4",
+                reason=f"{ACCEPTED}: AmazonECSTaskExecutionRolePolicy is the standard managed "
+                "policy for ECS task execution; no customer-managed equivalent exists.",
+                applies_to=[
+                    "Policy::arn:<AWS::Partition>:iam::aws:policy/service-role/AmazonECSTaskExecutionRolePolicy",
+                ],
+            ),
+        ],
+    )
+    _suppress_by_path(
+        stack,
+        "ECSExecRole/DefaultPolicy/Resource",
+        [
+            NagPackSuppression(
+                id="AwsSolutions-IAM5",
+                reason=f"{ACCEPTED}: guardduty:CreateDetector and UpdateDetector do not "
+                "support resource-level scoping; Resource::* is required.",
+                applies_to=["Resource::*"],
+            ),
+        ],
+    )
+
+
+# ---------------------------------------------------------------------------
 # Main entry point — call from app.py after all stacks are created.
 # ---------------------------------------------------------------------------
 
@@ -565,6 +987,10 @@ def apply_all(
     dev_api_stack: Stack,
     prod_api_stack: Stack,
     dev_sagemaker_stack: Stack,
+    dev_inference_stack: Stack,
+    prod_inference_stack: Stack,
+    cloudtrail_stack: Stack | None = None,
+    guardduty_stack: Stack | None = None,
 ) -> None:
     suppress_github_access(gh_access_stack)
     suppress_common(common_stack)
@@ -576,3 +1002,25 @@ def apply_all(
         suppress_api(api_stack)
 
     suppress_sagemaker(dev_sagemaker_stack, prefix="dev")
+
+    if cloudtrail_stack:
+        suppress_cloudtrail(cloudtrail_stack)
+    if guardduty_stack:
+        suppress_guardduty(guardduty_stack)
+
+    # Each env's image-bucket grants resolve to different resource ARNs: dev reads and
+    # writes the in-account image-processing bucket, prod reads and writes both
+    # coral-reef-training and the in-account image-processing bucket's test prefix.
+    suppress_inference(
+        dev_inference_stack,
+        image_resource_wildcards=[
+            "Resource::<MermaidImageProcessingBackupBucket138A6358.Arn>/mermaid/*",
+        ],
+    )
+    suppress_inference(
+        prod_inference_stack,
+        image_resource_wildcards=[
+            "Resource::arn:<AWS::Partition>:s3:::coral-reef-training/mermaid/*",
+            "Resource::<MermaidImageProcessingBackupBucket138A6358.Arn>/mermaid-production-test/*",
+        ],
+    )

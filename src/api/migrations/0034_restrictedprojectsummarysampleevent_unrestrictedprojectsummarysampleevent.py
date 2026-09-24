@@ -4,32 +4,31 @@ from django.db import migrations, models
 
 
 class Migration(migrations.Migration):
-
     dependencies = [
-        ('api', '0033_alter_fishattributeview_table'),
+        ("api", "0033_alter_fishattributeview_table"),
     ]
 
     operations = [
         migrations.CreateModel(
-            name='RestrictedProjectSummarySampleEvent',
+            name="RestrictedProjectSummarySampleEvent",
             fields=[
-                ('project_id', models.UUIDField(primary_key=True, serialize=False)),
-                ('records', models.JSONField()),
-                ('created_on', models.DateTimeField(auto_now_add=True)),
+                ("project_id", models.UUIDField(primary_key=True, serialize=False)),
+                ("records", models.JSONField()),
+                ("created_on", models.DateTimeField(auto_now_add=True)),
             ],
             options={
-                'db_table': 'restricted_project_summary_se',
+                "db_table": "restricted_project_summary_se",
             },
         ),
         migrations.CreateModel(
-            name='UnrestrictedProjectSummarySampleEvent',
+            name="UnrestrictedProjectSummarySampleEvent",
             fields=[
-                ('project_id', models.UUIDField(primary_key=True, serialize=False)),
-                ('records', models.JSONField()),
-                ('created_on', models.DateTimeField(auto_now_add=True)),
+                ("project_id", models.UUIDField(primary_key=True, serialize=False)),
+                ("records", models.JSONField()),
+                ("created_on", models.DateTimeField(auto_now_add=True)),
             ],
             options={
-                'db_table': 'unrestricted_project_summary_se',
+                "db_table": "unrestricted_project_summary_se",
             },
         ),
     ]

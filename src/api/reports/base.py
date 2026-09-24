@@ -1,4 +1,4 @@
-class BaseReport(object):
+class BaseReport:
     def __init__(self, *args, **kwargs):
         pass
 

@@ -6,8 +6,10 @@ from aws_cdk import (
     Stack,
     aws_athena as athena,
     aws_autoscaling as autoscale,
+    aws_ce as ce,
     aws_certificatemanager as acm,
     aws_ec2 as ec2,
+    aws_ecr as ecr,
     aws_ecs as ecs,
     aws_elasticloadbalancingv2 as elb,
     aws_glue as glue,
@@ -18,6 +20,8 @@ from aws_cdk import (
     aws_route53 as r53,
     aws_s3 as s3,
     aws_secretsmanager as sm,
+    aws_sns as sns,
+    aws_wafv2 as wafv2,
 )
 from constructs import Construct
 
@@ -27,7 +31,7 @@ class CommonStack(Stack):
         self,
         scope: Construct,
         id: str,
-        enable_vpc_flow_logs: bool = False,
+        enable_vpc_flow_logs: bool = True,
         **kwargs,
     ) -> None:
         super().__init__(scope, id, **kwargs)
@@ -405,6 +409,35 @@ class CommonStack(Stack):
             block_public_access=s3.BlockPublicAccess.BLOCK_ALL,
         )
 
+        # Shared (dev/prod) ECR repo for the pyspacer inference Lambda image.
+        # Images are tagged with the model-build tag vN-K (vN = model version,
+        # K = serving build) that InferenceSettings.image_tag pins. Tag
+        # immutability guarantees a tag can't be silently repointed, so the
+        # Lambda's stored digest is an authoritative record of what is deployed.
+        # Built/pushed by the mermaid-inference build-push CI.
+        self.inference_repo = ecr.Repository(
+            self,
+            "MermaidInferencePyspacerRepo",
+            repository_name="mermaid-inference-pyspacer",
+            image_tag_mutability=ecr.TagMutability.IMMUTABLE,
+            image_scan_on_push=True,
+            removal_policy=RemovalPolicy.RETAIN,
+            lifecycle_rules=[
+                # Expire only UNTAGGED images (orphaned manifests) after 14 days.
+                # Release images are immutably tagged (:vN-K) and a deployed
+                # Lambda pins a tag's digest; a count-based "keep last N" rule on
+                # tagged images could delete a digest still referenced by a
+                # dev/prod deployment and break the function on cold start. So we
+                # never count-prune tagged releases — they are kept indefinitely.
+                ecr.LifecycleRule(
+                    description="Expire untagged images after 14 days",
+                    tag_status=ecr.TagStatus.UNTAGGED,
+                    max_image_age=Duration.days(14),
+                    rule_priority=1,
+                ),
+            ],
+        )
+
         self.data_bucket = s3.Bucket(
             self,
             id="MermaidApiDataBucket",
@@ -520,6 +553,8 @@ class CommonStack(Stack):
             # NOTE: not setting the desired capacity so ECS can manage it.
         )
 
+        self.auto_scaling_group = auto_scaling_group_lt
+
         capacity_provider_lt = ecs.AsgCapacityProvider(
             self,
             "AsgCapacityProviderLt",
@@ -567,6 +602,127 @@ class CommonStack(Stack):
             certificate_arn=f"arn:aws:acm:us-east-1:{self.account}:certificate/783d7a91-1ebd-4387-9518-e28521086db6",
         )
 
+        # WAFv2 WebACL — all rules start in COUNT mode for safe rollout
+        self.web_acl = wafv2.CfnWebACL(
+            self,
+            "ApiWebAcl",
+            name=f"{self.stack_name}-waf",
+            default_action=wafv2.CfnWebACL.DefaultActionProperty(allow={}),
+            scope="REGIONAL",
+            visibility_config=wafv2.CfnWebACL.VisibilityConfigProperty(
+                cloud_watch_metrics_enabled=True,
+                metric_name="MermaidApiWafMetric",
+                sampled_requests_enabled=True,
+            ),
+            rules=[
+                wafv2.CfnWebACL.RuleProperty(
+                    name="AWSManagedRulesCommonRuleSet",
+                    priority=1,
+                    override_action=wafv2.CfnWebACL.OverrideActionProperty(count={}),
+                    statement=wafv2.CfnWebACL.StatementProperty(
+                        managed_rule_group_statement=wafv2.CfnWebACL.ManagedRuleGroupStatementProperty(
+                            vendor_name="AWS",
+                            name="AWSManagedRulesCommonRuleSet",
+                        ),
+                    ),
+                    visibility_config=wafv2.CfnWebACL.VisibilityConfigProperty(
+                        cloud_watch_metrics_enabled=True,
+                        metric_name="MermaidApiCommonRules",
+                        sampled_requests_enabled=True,
+                    ),
+                ),
+                wafv2.CfnWebACL.RuleProperty(
+                    name="AWSManagedRulesSQLiRuleSet",
+                    priority=2,
+                    override_action=wafv2.CfnWebACL.OverrideActionProperty(count={}),
+                    statement=wafv2.CfnWebACL.StatementProperty(
+                        managed_rule_group_statement=wafv2.CfnWebACL.ManagedRuleGroupStatementProperty(
+                            vendor_name="AWS",
+                            name="AWSManagedRulesSQLiRuleSet",
+                        ),
+                    ),
+                    visibility_config=wafv2.CfnWebACL.VisibilityConfigProperty(
+                        cloud_watch_metrics_enabled=True,
+                        metric_name="MermaidApiSQLiRules",
+                        sampled_requests_enabled=True,
+                    ),
+                ),
+                wafv2.CfnWebACL.RuleProperty(
+                    name="AWSManagedRulesKnownBadInputsRuleSet",
+                    priority=3,
+                    override_action=wafv2.CfnWebACL.OverrideActionProperty(count={}),
+                    statement=wafv2.CfnWebACL.StatementProperty(
+                        managed_rule_group_statement=wafv2.CfnWebACL.ManagedRuleGroupStatementProperty(
+                            vendor_name="AWS",
+                            name="AWSManagedRulesKnownBadInputsRuleSet",
+                        ),
+                    ),
+                    visibility_config=wafv2.CfnWebACL.VisibilityConfigProperty(
+                        cloud_watch_metrics_enabled=True,
+                        metric_name="MermaidApiKnownBadInputs",
+                        sampled_requests_enabled=True,
+                    ),
+                ),
+                wafv2.CfnWebACL.RuleProperty(
+                    name="RateLimitPerIP",
+                    priority=4,
+                    action=wafv2.CfnWebACL.RuleActionProperty(count={}),
+                    statement=wafv2.CfnWebACL.StatementProperty(
+                        rate_based_statement=wafv2.CfnWebACL.RateBasedStatementProperty(
+                            limit=2000,
+                            aggregate_key_type="IP",
+                        ),
+                    ),
+                    visibility_config=wafv2.CfnWebACL.VisibilityConfigProperty(
+                        cloud_watch_metrics_enabled=True,
+                        metric_name="MermaidApiRateLimit",
+                        sampled_requests_enabled=True,
+                    ),
+                ),
+            ],
+        )
+
+        # Associate WAF WebACL with the ALB
+        wafv2.CfnWebACLAssociation(
+            self,
+            "ApiWebAclAssociation",
+            resource_arn=self.load_balancer.load_balancer_arn,
+            web_acl_arn=self.web_acl.attr_arn,
+        )
+
+        # WAF logging — log group name must start with aws-waf-logs-
+        waf_log_group = logs.LogGroup(
+            self,
+            "WafLogGroup",
+            log_group_name="aws-waf-logs-mermaid-api",
+            retention=logs.RetentionDays.THREE_MONTHS,
+            removal_policy=RemovalPolicy.RETAIN,
+        )
+        # WAF requires an explicit resource policy to write to CloudWatch Logs
+        logs.ResourcePolicy(
+            self,
+            "WafLogGroupPolicy",
+            policy_statements=[
+                iam.PolicyStatement(
+                    actions=["logs:CreateLogStream", "logs:PutLogEvents"],
+                    principals=[iam.ServicePrincipal("delivery.logs.amazonaws.com")],
+                    resources=[f"{waf_log_group.log_group_arn}:*"],
+                    conditions={
+                        "StringEquals": {"aws:SourceAccount": self.account},
+                        "ArnLike": {
+                            "aws:SourceArn": f"arn:aws:logs:{self.region}:{self.account}:*"
+                        },
+                    },
+                )
+            ],
+        )
+        wafv2.CfnLoggingConfiguration(
+            self,
+            "WafLoggingConfig",
+            log_destination_configs=[waf_log_group.log_group_arn],
+            resource_arn=self.web_acl.attr_arn,
+        )
+
         self.load_balancer.add_listener(
             id="MermaidApiListener",
             protocol=elb.ApplicationProtocol.HTTPS,
@@ -576,39 +732,6 @@ class CommonStack(Stack):
         self.load_balancer.add_redirect()
 
         create_cdk_bot_user(self, self.account)
-
-        self.security_group = ec2.SecurityGroup(
-            self,
-            "VPCEndpointSagemaker",
-            vpc=self.vpc,
-            allow_all_outbound=True,
-            description="Security group for SageMaker VPC endpoints",
-        )
-
-        for service_name in [
-            "SAGEMAKER_API",
-            "SAGEMAKER_NOTEBOOK",
-            "SAGEMAKER_RUNTIME",
-            "SAGEMAKER_STUDIO",
-            "SAGEMAKER_EXPERIMENTS",
-        ]:
-            self.vpc.add_interface_endpoint(
-                f"{service_name}VpcEndpoint",
-                service=getattr(
-                    ec2.InterfaceVpcEndpointAwsService,
-                    service_name,
-                ),
-                lookup_supported_azs=True,
-                subnets=ec2.SubnetSelection(
-                    subnet_type=ec2.SubnetType.PRIVATE_WITH_EGRESS,
-                    one_per_az=True,
-                ),
-                security_groups=[self.security_group],
-                dns_record_ip_type=ec2.VpcEndpointDnsRecordIpType.IPV4,
-                ip_address_type=ec2.VpcEndpointIpAddressType.IPV4,
-                private_dns_enabled=True,
-                open=True,
-            )
 
         self.report_s3_user = iam.User(
             self,
@@ -651,6 +774,55 @@ class CommonStack(Stack):
                 ),
                 generate_string_key="password",
             ),
+        )
+
+        # ── AWS Cost Anomaly Detection ────────────────────────────────
+        # Account-wide monitor covering all AWS services. Deployed in
+        # CommonStack so it is created once (not per-env) and can be
+        # validated in dev before prod rollout.
+        # Alerts when any service spend deviates by more than $100 from
+        # expected. Notifications route to self.cost_alerts_topic; each
+        # env's Chatbot subscribes to this topic to forward alerts to Slack.
+
+        self.cost_alerts_topic = sns.Topic(
+            self,
+            "CostAlertsTopic",
+            display_name="mermaid-cost-anomaly-alerts",
+            topic_name="mermaid-cost-anomaly-alerts",
+        )
+        # Cost Anomaly Detection publishes via the costalerts service principal.
+        self.cost_alerts_topic.add_to_resource_policy(
+            iam.PolicyStatement(
+                sid="AllowCostAnomalyDetectionPublish",
+                effect=iam.Effect.ALLOW,
+                principals=[iam.ServicePrincipal("costalerts.amazonaws.com")],
+                actions=["sns:Publish"],
+                resources=[self.cost_alerts_topic.topic_arn],
+            )
+        )
+
+        cost_monitor = ce.CfnAnomalyMonitor(
+            self,
+            "CostAnomalyMonitor",
+            monitor_name="mermaid-cost-anomaly-monitor",
+            monitor_type="DIMENSIONAL",
+            monitor_dimension="SERVICE",
+        )
+
+        ce.CfnAnomalySubscription(
+            self,
+            "CostAnomalySubscription",
+            subscription_name="mermaid-cost-anomaly-alerts",
+            monitor_arn_list=[cost_monitor.attr_monitor_arn],
+            subscribers=[
+                ce.CfnAnomalySubscription.SubscriberProperty(
+                    address=self.cost_alerts_topic.topic_arn,
+                    type="SNS",
+                )
+            ],
+            threshold_expression='{"Dimensions":{"Key":"ANOMALY_TOTAL_IMPACT_ABSOLUTE","MatchOptions":["GREATER_THAN_OR_EQUAL"],"Values":["100"]}}',
+            # SNS subscribers require IMMEDIATE; DAILY/WEEKLY are EMAIL-only.
+            frequency="IMMEDIATE",
         )
 
 

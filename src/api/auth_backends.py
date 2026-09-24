@@ -14,6 +14,11 @@ from api.utils.auth0utils import decode, get_jwt_token, get_user_info, is_hs_tok
 logger = logging.getLogger(__name__)
 
 
+def _get_client_ip(request):
+    xff = request.META.get("HTTP_X_FORWARDED_FOR", "")
+    return xff.split(",")[0].strip() if xff else request.META.get("REMOTE_ADDR", "unknown")
+
+
 class JWTAuthentication(BaseAuthentication):
     """
     Token based authentication using the JSON Web Token standard.
@@ -27,7 +32,7 @@ class JWTAuthentication(BaseAuthentication):
         header in a `401 Unauthenticated` response, or `None` if the
         authentication scheme should return `403 Permission Denied` responses.
         """
-        return '{0} realm="{1}"'.format("Bearer", self.www_authenticate_realm)
+        return f'Bearer realm="{self.www_authenticate_realm}"'
 
     def authenticate(self, request):
         """
@@ -36,11 +41,20 @@ class JWTAuthentication(BaseAuthentication):
         """
         jwt_token = get_jwt_token(request)
         if jwt_token is None or is_hs_token(jwt_token) is False:
-            logger.debug("Invalid Token: {}".format(jwt_token))
+            logger.debug(f"Invalid Token: {jwt_token}")
             return None
 
-        payload = decode(jwt_token)
-        profile = self._authenticate_profile(payload)
+        try:
+            payload = decode(jwt_token)
+            profile = self._authenticate_profile(payload)
+        except (exceptions.AuthenticationFailed, exceptions.ValidationError) as exc:
+            logger.warning(
+                "[auth0.failed_auth] reason=%s ip=%s path=%s",
+                str(exc),
+                _get_client_ip(request),
+                request.path,
+            )
+            raise
 
         # use a dummy Django user. (it doesn't stop you from scaling
         # to any number of instances as well).
@@ -82,9 +96,22 @@ class JWTAuthentication(BaseAuthentication):
             profile = auth_user.profile
 
             if (now_datetime - profile.updated_on).total_seconds() > SECS_PER_DAY:
-                user_info = get_user_info(user_id)
-                profile.picture_url = user_info["picture"]
-                profile.save()
+                # ponytail: cosmetic picture refresh — a transient Auth0 hiccup must
+                # not 503 an already-authenticated user. Keep the cached profile.
+                try:
+                    user_info = get_user_info(user_id)
+                    profile.picture_url = user_info["picture"]
+                    profile.save()
+                except exceptions.APIException:
+                    # Bump updated_on so we don't re-enter (and re-fail) the refresh
+                    # on every subsequent request while Auth0 is unavailable. Retry
+                    # naturally on the next >24h window.
+                    profile.save(update_fields=["updated_on"])
+                    logger.warning(
+                        "[auth0.refresh_skipped] picture refresh failed for %s; "
+                        "serving cached profile",
+                        user_id,
+                    )
         except AuthUser.DoesNotExist:
             user_info = get_user_info(user_id)
             profile, is_new = get_or_create_safeish(Profile, email=user_info["email"])
@@ -101,6 +128,8 @@ class JWTAuthentication(BaseAuthentication):
                 ):
                     from mailchimp3 import MailChimp
                     from mailchimp3.helpers import get_subscriber_hash
+                    from mailchimp3.mailchimpclient import MailChimpError
+                    from requests.exceptions import RequestException
 
                     # https://developer.mailchimp.com/documentation/mailchimp/guides/manage-subscribers-with-the
                     # -mailchimp-api/
@@ -118,9 +147,28 @@ class JWTAuthentication(BaseAuthentication):
                             get_subscriber_hash(profile.email),
                             {
                                 "email_address": profile.email,
-                                "status_if_new": "pending",
+                                "status_if_new": "subscribed",
                                 "merge_fields": merge_fields,
                             },
+                        )
+                    except MailChimpError as err:
+                        # Merge-field validation failures (e.g. missing LNAME) are expected
+                        # for some signups and shouldn't page/pollute Sentry as errors.
+                        # Credential, rate-limit, and other API errors still log at error level.
+                        error_data = err.args[0] if err.args else {}
+                        status_code = getattr(error_data.get("response"), "status_code", None)
+                        is_validation_error = status_code == 400 and bool(error_data.get("errors"))
+                        log_fn = logger.warning if is_validation_error else logger.error
+                        log_fn(
+                            "Unable to create mailchimp member {} {} <{}>: {}".format(
+                                profile.first_name, profile.last_name, profile.email, str(err)
+                            )
+                        )
+                    except RequestException as err:
+                        logger.error(
+                            "Unable to create mailchimp member {} {} <{}>: {}".format(
+                                profile.first_name, profile.last_name, profile.email, str(err)
+                            )
                         )
                     except Exception as err:  # Don't ever fail because subscription didn't work
                         logger.error(

@@ -1,6 +1,5 @@
 from django.db import transaction
 from django_filters import BaseInFilter, RangeFilter
-from rest_condition import Or
 from rest_framework import status
 from rest_framework.response import Response
 from rest_framework.validators import UniqueTogetherValidator
@@ -18,7 +17,6 @@ from ...models import (
     ObsColoniesBleached,
     ObsQuadratBenthicPercent,
 )
-from ...permissions import ProjectDataReadOnlyPermission, ProjectPublicSummaryPermission
 from ...reports.fields import ReportField
 from ...reports.formatters import (
     to_day,
@@ -47,6 +45,7 @@ from ..observer import ObserverSerializer
 from ..quadrat_collection import QuadratCollectionSerializer
 from ..sample_event import SampleEventSerializer
 from . import (
+    BaseProjectMethodSEView,
     BaseProjectMethodView,
     clean_sample_event_models,
     save_model,
@@ -846,10 +845,9 @@ class BleachingQCProjectMethodSUView(BaseProjectMethodView):
     ordering_fields = ordering
 
 
-class BleachingQCProjectMethodSEView(BaseProjectMethodView):
+class BleachingQCProjectMethodSEView(BaseProjectMethodSEView):
     drf_label = "bleachingqc-se"
     project_policy = "data_policy_bleachingqc"
-    permission_classes = [Or(ProjectDataReadOnlyPermission, ProjectPublicSummaryPermission)]
     model = BleachingQCSEModel
     serializer_class = BleachingQCMethodSESerializer
     serializer_class_geojson = BleachingQCMethodSEGeoSerializer

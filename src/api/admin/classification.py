@@ -7,6 +7,7 @@ from import_export.widgets import ForeignKeyWidget
 from nested_admin import NestedTabularInline
 
 from ..admin import BaseAdmin
+from ..models import BenthicAttribute, GrowthForm
 from ..models.classification import (
     BenthicAttributeGrowthForm,
     ClassificationStatus,
@@ -15,7 +16,6 @@ from ..models.classification import (
     LabelMapping,
     Point,
 )
-from ..models.mermaid import BenthicAttribute, GrowthForm
 
 
 class PointInline(NestedTabularInline):
@@ -49,8 +49,9 @@ class BenthicAttributeGrowthFormAdmin(BaseAdmin):
 
 @admin.register(Classifier)
 class ClassifierAdmin(BaseAdmin):
-    list_display = ["version", "name", "patch_size", "num_points"]
+    list_display = ["version", "name", "classifier_type", "patch_size"]
     readonly_fields = ["created_by", "updated_by"]
+    list_filter = ["classifier_type"]
 
 
 class LabelMappingResource(resources.ModelResource):

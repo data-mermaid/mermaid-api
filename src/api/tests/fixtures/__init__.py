@@ -6,10 +6,12 @@ from .benthic_pit import *  # noqa: F403
 from .benthic_transects import *  # noqa: F403
 from .bleaching import *  # noqa: F403
 from .choices import *  # noqa: F403
+from .classification import *  # noqa: F403
 from .collect_records import *  # noqa: F403
 from .covariates import *  # noqa: F403
 from .fish_attributes import *  # noqa: F403
 from .habitat_complexity import *  # noqa: F403
+from .macroinvertebrate import *  # noqa: F403
 from .mock_http_server import mock_covariate_server  # noqa: F401
 from .notifications import *  # noqa: F403
 from .projects import *  # noqa: F403

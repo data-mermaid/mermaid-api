@@ -37,7 +37,7 @@ def _run(command, std_input=None, to_file=None):
 
 
 def view_pickle(view_name):
-    sql_file = os.path.join(sql_dir, "{}.sql".format(view_name))
+    sql_file = os.path.join(sql_dir, f"{view_name}.sql")
 
     dump_params = db_params.copy()
     dump_params["view"] = view_name
@@ -60,9 +60,9 @@ def view_pickle(view_name):
 
 
 def view_unpickle(view_name):
-    sql_file = os.path.join(sql_dir, "{}.sql".format(view_name))
+    sql_file = os.path.join(sql_dir, f"{view_name}.sql")
     if not os.path.isfile(sql_file):
-        print("Cannot unpickle: {} does not exist".format(sql_file))
+        print(f"Cannot unpickle: {sql_file} does not exist")
         return
 
     params = db_params.copy()
@@ -72,7 +72,7 @@ def view_unpickle(view_name):
     command = shlex.split(cmd_str)
     _run(command)
 
-    _run(shlex.split("rm {}".format(sql_file)))
+    _run(shlex.split(f"rm {sql_file}"))
 
 
 class LockedAtomicTransaction(Atomic):
@@ -90,7 +90,7 @@ class LockedAtomicTransaction(Atomic):
         self.model = model
 
     def __enter__(self):
-        super(LockedAtomicTransaction, self).__enter__()
+        super().__enter__()
 
         # Make sure not to lock, when sqlite is used, or you'll run into problems while running tests!!!
         if settings.DATABASES[self.using]["ENGINE"] != "django.db.backends.sqlite3":

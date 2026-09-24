@@ -63,6 +63,7 @@ class ProjectSummarySampleEventFilterSet(OrFilterSetMixin, GeoFilterSet):
             "data_policy_habitatcomplexity",
             "data_policy_bleachingqc",
             "data_policy_benthicpqt",
+            "data_policy_macroinvertebrate",
         ]
 
         filter_overrides = {

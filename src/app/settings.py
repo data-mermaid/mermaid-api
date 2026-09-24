@@ -103,16 +103,38 @@ DEV_EMAILS = [email.strip() for email in _dev_emails.split(",")]
 
 _allowed_hosts = os.environ.get("ALLOWED_HOSTS") or ""
 ALLOWED_HOSTS = [host.strip() for host in _allowed_hosts.split(",")]
+# In-container health probes hit http://localhost:8081/health/ (Host: localhost).
+# Allow it so it doesn't raise DisallowedHost on every probe.
+ALLOWED_HOSTS += ["localhost", "127.0.0.1"]
 
 # Look for Fargate IP, for health checks.
 METADATA_URI = os.getenv("ECS_CONTAINER_METADATA_URI", None)
 IN_ECS = METADATA_URI is not None
 
+ECS_TASK_ARN = ""
+ECS_CONTAINER_ID = ""
 if IN_ECS:
-    container_metadata = requests.get(METADATA_URI).json()
-    # allow container IPs for ALB health checks
-    ALLOWED_HOSTS.append(container_metadata["Networks"][0]["IPv4Addresses"][0])
-    ALLOWED_HOSTS.append(".datamermaid.org")
+    import logging as _logging
+
+    _ecs_logger = _logging.getLogger(__name__)
+    try:
+        _container_resp = requests.get(METADATA_URI, timeout=2)
+        _container_resp.raise_for_status()
+        container_metadata = _container_resp.json()
+        # allow container IPs for ALB health checks
+        _ip = container_metadata["Networks"][0]["IPv4Addresses"][0]
+        ALLOWED_HOSTS.append(_ip)
+        ALLOWED_HOSTS.append(".datamermaid.org")
+        ECS_CONTAINER_ID = container_metadata.get("DockerId", "")[:12]
+    except (requests.RequestException, KeyError, IndexError, ValueError) as e:
+        _ecs_logger.warning("ECS container metadata fetch failed: %s", e)
+
+    try:
+        _task_resp = requests.get(f"{METADATA_URI}/task", timeout=2)
+        _task_resp.raise_for_status()
+        ECS_TASK_ARN = _task_resp.json().get("TaskARN", "")
+    except (requests.RequestException, KeyError, ValueError) as e:
+        _ecs_logger.warning("ECS task metadata fetch failed: %s", e)
 
 if ENVIRONMENT not in ("dev", "prod"):
     DEBUG_LEVEL = "DEBUG"
@@ -215,7 +237,7 @@ STATIC_ROOT = os.path.join(BASE_DIR, "static")
 # *****************
 
 AUTH0_DOMAIN = os.environ.get("AUTH0_DOMAIN")
-AUTH0_USER_INFO_ENDPOINT = "https://{domain}/userinfo".format(domain=AUTH0_DOMAIN)
+AUTH0_USER_INFO_ENDPOINT = f"https://{AUTH0_DOMAIN}/userinfo"
 AUTH0_MANAGEMENT_API_AUDIENCE = os.environ.get("AUTH0_MANAGEMENT_API_AUDIENCE")
 MERMAID_API_AUDIENCE = os.environ.get("MERMAID_API_AUDIENCE")
 MERMAID_API_SIGNING_SECRET = os.environ.get("MERMAID_API_SIGNING_SECRET")
@@ -234,7 +256,7 @@ EMAIL_PORT = os.environ.get("EMAIL_PORT")
 EMAIL_HOST_USER = os.environ.get("EMAIL_HOST_USER")
 EMAIL_HOST_PASSWORD = os.environ.get("EMAIL_HOST_PASSWORD")
 EMAIL_USE_TLS = True
-DEFAULT_FROM_EMAIL = "MERMAID System <{}>".format(EMAIL_HOST_USER)
+DEFAULT_FROM_EMAIL = f"MERMAID System <{EMAIL_HOST_USER}>"
 WEBCONTACT_EMAIL = f"MERMAID Web Contact <{os.environ.get('WEBCONTACT_EMAIL')}>"
 
 API_NULLQUERY = "null"
@@ -281,12 +303,47 @@ MC_API_KEY = os.environ.get("MC_API_KEY")
 MC_USER = os.environ.get("MC_USER")
 MC_LIST_ID = os.environ.get("MC_LIST_ID")
 
-if ENVIRONMENT == "prod":
+
+def _sentry_traces_sampler(sampling_context):
+    path = sampling_context.get("wsgi_environ", {}).get("PATH_INFO", "")
+    if path in ("/health/", "/v1/health/"):
+        return 0
+    return 0.3 if ENVIRONMENT == "prod" else 0.1
+
+
+def _sentry_before_send(event, hint):
+    import logging as _logging
+
+    level = event.get("level", "error")
+    transaction = event.get("transaction") or event.get("culprit") or "unknown"
+    _logging.getLogger(__name__).warning(
+        "[sentry.error_captured] level=%s transaction=%s", level, transaction
+    )
+    return event
+
+
+if ENVIRONMENT in ("dev", "prod"):
+    from sentry_sdk.integrations.logging import ignore_logger
+
+    # DisallowedHost is unactionable noise (health probes + bots with bogus Host
+    # headers) and was the top error by volume, blowing the Sentry error quota.
+    ignore_logger("django.security.DisallowedHost")
+
     sentry_sdk.init(
         dsn=os.environ.get("SENTRY_DSN"),
-        traces_sample_rate=1.0,
         environment=ENVIRONMENT,
+        release=API_VERSION,
+        traces_sampler=_sentry_traces_sampler,
+        before_send=_sentry_before_send,
+        # Profile 10% of sampled transactions (prod: ~3% of requests, dev: ~1%)
+        profiles_sample_rate=0.1,
+        # Attach a stack trace to logger.error() calls that have no exception
+        attach_stacktrace=True,
     )
+    # Static ECS context — set once on the global scope for every event
+    if ECS_TASK_ARN:
+        sentry_sdk.set_tag("ecs.task_arn", ECS_TASK_ARN)
+        sentry_sdk.set_tag("ecs.container_id", ECS_CONTAINER_ID)
 
 
 # ************************
@@ -354,6 +411,7 @@ LOGGING = {
             "level": "ERROR",
             "propagate": False,
         },
+        "api.utils.inference": {"handlers": ["console"], "level": "INFO", "propagate": False},
     },
 }
 
@@ -379,7 +437,10 @@ QUEUE_NAME = os.environ.get("SQS_QUEUE_NAME", "mermaid-local")  # required
 IMAGE_QUEUE_NAME = os.environ.get("IMAGE_SQS_QUEUE_NAME", "mermaid-local")  # required
 USE_FIFO = os.environ.get("USE_FIFO", "True")
 # Override default boto3 url for SQS
-ENDPOINT_URL = None if ENVIRONMENT in ("dev", "prod") else "http://sqs:9324"
+ENDPOINT_URL = os.environ.get(
+    "SQS_ENDPOINT_URL",
+    None if ENVIRONMENT in ("dev", "prod") else "http://sqs:9324",
+)
 
 
 # IMAGE CLASSIFICATION SETTINGS
@@ -394,15 +455,20 @@ IMAGE_S3_PATH_TEST = os.environ.get("IMAGE_S3_PATH_TEST") or IMAGE_S3_PATH
 DATA_UPLOAD_MAX_MEMORY_SIZE = 30 * 1024 * 1024  # 30 MB
 FILE_UPLOAD_MAX_MEMORY_SIZE = 15 * 1024 * 1024  # 15 MB
 MAX_IMAGE_PIXELS = 8000 * 8000
+MAX_IMAGE_FILE_SIZE = 30 * 1024 * 1024  # 30 MB
 AWS_QUERYSTRING_AUTH = False
 AUTOCONFIRM_THRESHOLD = 1.0
 CLASSIFIED_THRESHOLD = 0.5
-SPACER = {
-    "AWS_ACCESS_KEY_ID": IMAGE_BUCKET_AWS_ACCESS_KEY_ID,
-    "AWS_SECRET_ACCESS_KEY": IMAGE_BUCKET_AWS_SECRET_ACCESS_KEY,
-    "AWS_REGION": AWS_REGION,
-    "EXTRACTORS_CACHE_DIR": "/tmp/classifier",
-}
+INFERENCE_DEFAULT_NUM_POINTS = 25
+# Identify which Lambda function to invoke and which classifier version it serves;
+# both arrive from the environment because they differ per deployment target.
+INFERENCE_LAMBDA_PYSPACER = os.environ.get("INFERENCE_LAMBDA_PYSPACER") or ""
+INFERENCE_CLASSIFIER_VERSION = os.environ.get("INFERENCE_CLASSIFIER_VERSION") or ""
+# Must outlast invoke_pyspacer's worst case (2 lambda invokes at 670s each,
+# plus a backoff sleep) ~= 1341s. image_sqs_message_visibility
+# (iac/settings/settings.py) is supplied via the container environment so
+# the two cannot drift; 1500 here is the default outside a CDK-managed deploy.
+INFERENCE_JOB_VISIBILITY_TIMEOUT = int(os.environ.get("INFERENCE_JOB_VISIBILITY_TIMEOUT") or "1500")
 
 # Reporting S3 credentials
 REPORT_S3_ACCESS_KEY_ID = os.environ.get("REPORT_S3_ACCESS_KEY_ID")

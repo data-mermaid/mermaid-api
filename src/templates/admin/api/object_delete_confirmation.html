@@ -43,7 +43,7 @@
         <li>{{ obj }}</li>
       {% endfor %}
     </ul>
-  {% elif collect_records or objects_that_use %}
+  {% elif collect_records or objects_that_use or annotation_count %}
     <p>{% blocktrans with escaped_object=object %}Are you sure you want to delete the {{ object_name }} "
       {{ escaped_object }}"? All of the following related items will be deleted:{% endblocktrans %}</p>
     {% include "admin/includes/object_delete_summary.html" %}
@@ -51,16 +51,22 @@
     <ul>{{ deleted_objects|unordered_list }}</ul>
     <form method="post">{% csrf_token %}
       <p>&nbsp;</p>
+      {% if collect_records or objects_that_use %}
       <p>{% blocktrans with escaped_object=object %}In addition, all of the following collect records and
         {{ objects_that_use_label }}
         will be reassigned the attribute you select. Before doing this, please communicate
         with the users who are using this {{ object_name }}.{% endblocktrans %}</p>
+      {% else %}
+      <p>{% blocktrans with escaped_object=object %}In addition, all annotations using this {{ object_name }}
+        will be reassigned the attribute you select. Before doing this, please communicate
+        with the users who are using this {{ object_name }}.{% endblocktrans %}</p>
+      {% endif %}
       Replace with <select name="replacement_obj" title="replacement_obj">
         <option value="">--------</option>
         {% for obj in other_objs %}
         <option value="{{ obj.pk }}">{{ obj.name }}</option>
         {% endfor %}
-      </select> in the collect records and {{ objects_that_use_label }} below.
+      </select>{% if collect_records or objects_that_use %} in the collect records and {{ objects_that_use_label }} below{% endif %}.
     {% if collect_records %}
       <h2>{% trans "Collect records using this" %} {{ object_name }}</h2>
       <ul>
@@ -76,6 +82,10 @@
           <li>{{ uo }}</li>
         {% endfor %}
       </ul>
+    {% endif %}
+    {% if annotation_count %}
+      <h2>{% trans "Annotations using this" %} {{ object_name }}</h2>
+      <p>{{ annotation_count }} annotation{{ annotation_count|pluralize }} will be reassigned to the selected replacement.</p>
     {% endif %}
       <div>
         <input type="hidden" name="post" value="yes"/>

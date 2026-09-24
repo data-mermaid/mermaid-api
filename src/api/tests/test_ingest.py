@@ -11,6 +11,7 @@ from api.models import (
     BLEACHINGQC_PROTOCOL,
     FISHBELT_PROTOCOL,
     HABITATCOMPLEXITY_PROTOCOL,
+    MACROINVERTEBRATE_PROTOCOL,
 )
 
 BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
@@ -20,6 +21,13 @@ csv_data_dir = os.path.join(BASE_DIR, "tests/ingest_data/")
 @pytest.fixture
 def fishbelt_file(db):
     return open(os.path.join(csv_data_dir, "fishbelt.csv"))
+
+
+@pytest.fixture
+def fishbelt_month_day_swap_file(db):
+    file = open(os.path.join(csv_data_dir, "fishbelt_month_day_swap.csv"))
+    yield file
+    file.close()
 
 
 @pytest.fixture
@@ -67,7 +75,7 @@ def test_fishbelt_ingest(
     relative_depth1,
     visibility1,
 ):
-    new_records, output = utils.ingest(
+    new_records, _ = utils.ingest(
         protocol=FISHBELT_PROTOCOL,
         datafile=fishbelt_file,
         project_id=project1.pk,
@@ -113,6 +121,98 @@ def test_fishbelt_ingest(
     assert new_records[1].data["obs_belt_fishes"][2]["fish_attribute"] == str(fish_species4.id)
 
 
+def test_fishbelt_ingest_missing_site_and_management(
+    db_setup,
+    fishbelt_file,
+    project1,
+    profile1,
+    project_profile1,
+    all_test_fish_attributes,
+    belt_transect_width_5m,
+    fish_size_bin_1,
+    tide2,
+    current2,
+    fish_species3,
+    fish_species4,
+    reef_slope1,
+    relative_depth1,
+    visibility1,
+):
+    # Note: unlike test_fishbelt_ingest, this test deliberately avoids the
+    # base_project fixture (which creates site1/site2/management1/management2),
+    # so the site/management names referenced in fishbelt_file don't exist in
+    # project1. project_profile1 is still needed so the observer email check passes.
+    new_records, ingest_output = utils.ingest(
+        protocol=FISHBELT_PROTOCOL,
+        datafile=fishbelt_file,
+        project_id=project1.pk,
+        profile_id=profile1.pk,
+        request=None,
+        dry_run=False,
+        clear_existing=False,
+        bulk_validation=False,
+        bulk_submission=False,
+        validation_suppressants=None,
+        serializer_class=None,
+    )
+
+    assert new_records is None
+    assert "errors" in ingest_output
+
+    errors = ingest_output["errors"]
+    assert len(errors) > 0
+    error_fields = {field for error in errors for field in error}
+    assert "data__sample_event__site" in error_fields
+    assert "data__sample_event__management" in error_fields
+
+
+def test_fishbelt_ingest_month_day_swap_hint(
+    db_setup,
+    fishbelt_month_day_swap_file,
+    project1,
+    profile1,
+    base_project,
+    all_test_fish_attributes,
+    belt_transect_width_5m,
+    fish_size_bin_1,
+    tide2,
+    current2,
+    site1,
+    management1,
+    fish_species3,
+    fish_species4,
+    reef_slope1,
+    relative_depth1,
+    visibility1,
+):
+    # Month=14, Day=5: month is out of range but the day value would itself
+    # be a valid month, so this should surface the month/day swap hint
+    # alongside the standard date format error.
+    new_records, ingest_output = utils.ingest(
+        protocol=FISHBELT_PROTOCOL,
+        datafile=fishbelt_month_day_swap_file,
+        project_id=project1.pk,
+        profile_id=profile1.pk,
+        request=None,
+        dry_run=False,
+        clear_existing=False,
+        bulk_validation=False,
+        bulk_submission=False,
+        validation_suppressants=None,
+        serializer_class=None,
+    )
+
+    assert new_records is None
+    assert "errors" in ingest_output
+
+    errors = ingest_output["errors"]
+    assert len(errors) == 1
+    date_error = errors[0]["data__sample_event__sample_date"]
+    assert (
+        "Are you sure month and day numbers are in the right columns?" in date_error["description"]
+    )
+
+
 def test_benthicpit_ingest(
     db_setup,
     benthicpit_file,
@@ -128,7 +228,7 @@ def test_benthicpit_ingest(
     site1,
     management1,
 ):
-    new_records, output = utils.ingest(
+    new_records, _ = utils.ingest(
         protocol=BENTHICPIT_PROTOCOL,
         datafile=benthicpit_file,
         project_id=project1.pk,
@@ -183,7 +283,7 @@ def test_bleaching_ingest(
     site1,
     management1,
 ):
-    new_records, output = utils.ingest(
+    new_records, _ = utils.ingest(
         protocol=BLEACHINGQC_PROTOCOL,
         datafile=bleaching_file,
         project_id=project1.pk,
@@ -262,7 +362,7 @@ def test_benthiclit_ingest(
     growth_form3,
     growth_form4,
 ):
-    new_records, output = utils.ingest(
+    new_records, _ = utils.ingest(
         protocol=BENTHICLIT_PROTOCOL,
         datafile=benthiclit_file,
         project_id=project1.pk,
@@ -330,7 +430,7 @@ def test_habitatcomplexity_ingest(
     habitat_complexity_score2,
     habitat_complexity_score3,
 ):
-    new_records, output = utils.ingest(
+    new_records, _ = utils.ingest(
         protocol=HABITATCOMPLEXITY_PROTOCOL,
         datafile=habitatcomplexity_file,
         project_id=project1.pk,
@@ -427,3 +527,72 @@ def test_benthicpqt_ingest(
     new_records[1].data["quadrat_transect"]["reef_slope"] = str(reef_slope1.id)
     new_records[1].data["quadrat_transect"]["relative_depth"] = str(relative_depth2.id)
     new_records[1].data["quadrat_transect"]["num_quadrats"] = 2
+
+
+@pytest.fixture
+def macroinvertebrate_file(db):
+    f = open(os.path.join(csv_data_dir, "macroinvertebrate.csv"))
+    yield f
+    f.close()
+
+
+def test_macroinvertebrate_ingest(
+    db_setup,
+    macroinvertebrate_file,
+    project1,
+    profile1,
+    base_project,
+    invert_species_1,
+    invert_belt_transect_width_1m,
+    invert_size_bin_1,
+    current1,
+    tide1,
+    reef_slope1,
+    relative_depth1,
+    visibility1,
+    site1,
+    site2,
+    management1,
+):
+    new_records, _ = utils.ingest(
+        protocol=MACROINVERTEBRATE_PROTOCOL,
+        datafile=macroinvertebrate_file,
+        project_id=project1.pk,
+        profile_id=profile1.pk,
+        request=None,
+        dry_run=False,
+        clear_existing=False,
+        bulk_validation=False,
+        bulk_submission=False,
+        validation_suppressants=None,
+        serializer_class=None,
+    )
+
+    assert new_records is not None and len(new_records) == 2
+
+    new_record = new_records[0]
+    sample_event = new_record.data.get("sample_event")
+    beltinvert_transect = new_record.data.get("beltinvert_transect")
+    observations = new_record.data["obs_belt_inverts"]
+
+    assert new_record.project == project1
+    assert new_record.profile == profile1
+
+    assert beltinvert_transect.get("depth") == 5
+    assert beltinvert_transect.get("width") == str(invert_belt_transect_width_1m.id)
+    assert beltinvert_transect.get("size_bin") == str(invert_size_bin_1.id)
+    assert beltinvert_transect.get("current") == str(current1.id)
+    assert beltinvert_transect.get("tide") == str(tide1.id)
+    assert beltinvert_transect.get("reef_slope") == str(reef_slope1.id)
+    assert beltinvert_transect.get("visibility") == str(visibility1.id)
+    assert beltinvert_transect.get("relative_depth") == str(relative_depth1.id)
+    assert beltinvert_transect.get("notes") == "SU notes"
+    assert str(beltinvert_transect.get("sample_time")) == "09:00:00"
+
+    assert sample_event.get("site") == str(site1.id)
+    assert sample_event.get("management") == str(management1.id)
+    assert str(sample_event.get("sample_date")) == "2021-04-10"
+
+    assert len(observations) == 6
+    assert observations[0].get("invert_attribute") == str(invert_species_1.id)
+    assert observations[0].get("count") == 3

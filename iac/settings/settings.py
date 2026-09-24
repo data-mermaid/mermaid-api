@@ -51,13 +51,96 @@ class DjangoSettings:
     env_secret_name: str
 
     # Common Attrs (defaults)
+    # Outlasts invoke_pyspacer's worst case: 2 attempts * (660s read + 10s connect
+    # timeout) + one backoff sleep of at most 1s ~= 1341s. Passed to the container
+    # as INFERENCE_JOB_VISIBILITY_TIMEOUT (src/app/settings.py), the per-job extension.
+    image_sqs_message_visibility: int = 1500
     maintenance_mode: str = "False"
     auth0_management_api_audience: str = "https://datamermaid.auth0.com/api/v2/"
     email_host: str = "smtp.gmail.com"
     email_port: str = "587"
     mc_user: str = "Mermaid"
+    # Mirrors IMAGE_S3_PATH in src/app/settings.py: the key prefix under
+    # ic_bucket_name that the API stores patch images beneath.
+    ic_s3_path: str = "mermaid/"
     ic_bucket_name_test: str = ""
     ic_s3_path_test: str = ""
+    # AWS Chatbot Slack integration (leave empty to disable)
+    # workspace ID: AWS Console → Chatbot → Configured clients → Slack
+    # channel ID: right-click channel in Slack → View channel details → bottom of About tab
+    slack_workspace_id: str = ""
+    slack_channel_id: str = ""
+
+
+# The image worker is the pyspacer Lambda's only caller. Shared by worker.py
+# (ECS max_scaling_capacity) and InferenceSettings.reserved_concurrency below,
+# so raising the task ceiling can't silently leave the Lambda's concurrency
+# limit behind.
+IMAGE_WORKER_MAX_TASKS = 3
+
+
+@dataclass
+class InferenceSettings:
+    """Settings for the pyspacer inference Lambda (compute lane).
+
+    image_tag is the model-build ECR tag `vN-K` (vN = model version, K = serving build).
+    Bump K for a code/lib fix, vN for a retrain. Roll forward by editing this value
+    and redeploying (git-tracked). classifier_version is the vN the image serves.
+    """
+
+    image_tag: str
+    classifier_version: str
+    config_bucket: str = "mermaid-config"
+    memory_mb: int = 10240
+    # The Lambda's own timeout. src/api/utils/inference.py's _LAMBDA_READ_TIMEOUT
+    # must exceed this (in seconds) or botocore's client-side timeout fires first.
+    timeout_minutes: int = 10
+    ephemeral_storage_gb: int = 2
+    # A rolling deployment runs the image-worker ECS service at up to 200% of
+    # its task count with old tasks still draining, so the concurrent-invoke
+    # ceiling is double IMAGE_WORKER_MAX_TASKS, not the steady-state count.
+    # Reserved concurrency is subtracted from the account's unreserved pool.
+    reserved_concurrency: int = 2 * IMAGE_WORKER_MAX_TASKS
+    num_threads: int = 6
+
+    def __post_init__(self) -> None:
+        # build-push.yml tags the image `${MODEL_VERSION}-${BUILD}` and bakes the same
+        # MODEL_VERSION in as CLASSIFIER_VERSION, so `vN-K` implies CLASSIFIER_VERSION=vN.
+        tag_version = self.image_tag.split("-", 1)[0]
+        if tag_version != self.classifier_version:
+            raise ValueError(
+                f"image_tag {self.image_tag!r} serves model version {tag_version!r}, "
+                f"but classifier_version is {self.classifier_version!r}"
+            )
+
+
+def pyspacer_function_name(env_id: str) -> str:
+    """The pyspacer inference Lambda's function name for this environment.
+
+    Shared by ApiStack (env var value, ARN string, invoke grant) and InferenceStack
+    (the function itself, its log group) so the two stacks cannot name it apart.
+    Takes only env_id, never a stack or construct, so importing this cannot
+    reintroduce the ApiStack<->InferenceStack cycle a cross-stack reference would.
+
+    A bucket policy on coral-reef-training (account 557690602013) grants
+    s3:PutObject to this exact name via an ArnEquals condition on
+    lambda:SourceFunctionArn, so renaming the function silently revokes prod's
+    feature-vector write access with no deploy-time error to surface it.
+    """
+    return f"{env_id}-mermaid-inference-pyspacer"
+
+
+def alerts_topic_name(env_id: str) -> str:
+    """The shared per-env CloudWatch alerts SNS topic's name.
+
+    Shared by ApiStack's MonitoringAlerts construct (which owns the topic and the
+    Chatbot config that delivers it to Slack) and InferenceStack (which resolves it
+    by ARN to publish alarm actions) so the two stacks cannot name it apart.
+    Takes only env_id, never a stack or construct: a construct reference here would
+    order ApiStack ahead of InferenceStack, which must deploy first so the Lambda
+    serves the classifier version the API expects.
+    """
+    return f"mermaid-{env_id}-alerts"
 
 
 @dataclass
@@ -68,3 +151,4 @@ class ProjectSettings:
     env_id: str
     database: DatabaseSettings
     api: DjangoSettings
+    inference: "InferenceSettings | None" = None

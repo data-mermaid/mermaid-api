@@ -69,12 +69,12 @@ for c in get_subclasses(BaseModel):
     pre_save.connect(
         set_created_by,
         sender=c,
-        dispatch_uid="{}_set_created_by".format(c._meta.object_name),
+        dispatch_uid=f"{c._meta.object_name}_set_created_by",
     )
     post_delete.connect(
         backup_model_record,
         sender=c,
-        dispatch_uid="{}_delete_archive".format(c._meta.object_name),
+        dispatch_uid=f"{c._meta.object_name}_delete_archive",
     )
 
 

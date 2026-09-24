@@ -1,4 +1,4 @@
-from django.urls import re_path
+from django.urls import path
 from rest_framework_nested import routers
 
 from .resources.benthic_attribute import BenthicAttributeViewSet
@@ -20,6 +20,8 @@ from .resources.gfcr import IndicatorSetViewSet
 from .resources.health import health
 from .resources.images import AllImagesViewSet
 from .resources.ingest_schema import ingest_schema_csv
+from .resources.invert_attribute import InvertAttributeViewSet, InvertSpeciesViewSet
+from .resources.invert_belt_transect import InvertBeltTransectViewSet
 from .resources.management import ManagementViewSet
 from .resources.me import MeViewSet
 from .resources.notification import NotificationViewSet
@@ -39,6 +41,12 @@ from .resources.sampleunitmethods.beltfishmethod import (
     BeltFishProjectMethodObsView,
     BeltFishProjectMethodSEView,
     BeltFishProjectMethodSUView,
+)
+from .resources.sampleunitmethods.beltinvertmethod import (
+    BeltInvertMethodView,
+    BeltInvertProjectMethodObsView,
+    BeltInvertProjectMethodSEView,
+    BeltInvertProjectMethodSUView,
 )
 from .resources.sampleunitmethods.benthiclitmethod import (
     BenthicLITMethodView,
@@ -95,6 +103,8 @@ router.register(r"notifications", NotificationViewSet, "notification")
 
 # observation attributes
 router.register(r"benthicattributes", BenthicAttributeViewSet, "benthicattribute")
+router.register(r"invertattributes", InvertAttributeViewSet, "invertattribute")
+router.register(r"invertspecies", InvertSpeciesViewSet, "invertspecies")
 router.register(r"fishfamilies", FishFamilyViewSet, "fishfamily")
 router.register(r"fishgenera", FishGenusViewSet, "fishgenus")
 router.register(r"fishspecies", FishSpeciesViewSet, "fishspecies")
@@ -129,6 +139,7 @@ project_router.register(r"sampleevents", SampleEventViewSet, "sampleevent")
 # sample units
 project_router.register(r"benthictransects", BenthicTransectViewSet, "benthictransect")
 project_router.register(r"fishbelttransects", FishBeltTransectViewSet, "fishbelttransect")
+project_router.register(r"invertbelttransects", InvertBeltTransectViewSet, "invertbelttransect")
 project_router.register(r"quadratcollections", QuadratCollectionViewSet, "quadratcollection")
 
 # multi model sample unit method views
@@ -231,6 +242,22 @@ project_router.register(
     "benthicpqtmethod-sampleevent",
 )
 
+project_router.register(
+    r"beltinverts/obstransectbeltinverts",
+    BeltInvertProjectMethodObsView,
+    "beltinvertmethod-obs",
+)
+project_router.register(
+    r"beltinverts/sampleunits",
+    BeltInvertProjectMethodSUView,
+    "beltinvertmethod-sampleunit",
+)
+project_router.register(
+    r"beltinverts/sampleevents",
+    BeltInvertProjectMethodSEView,
+    "beltinvertmethod-sampleevent",
+)
+
 # Classification
 project_router.register(r"classification/images", ImageViewSet, "image")
 project_router.register(r"classification/statuses", ClassificationStatusViewSet, "status")
@@ -240,6 +267,9 @@ router.register(r"classification/labelmappings", LabelMappingViewSet, "labelmapp
 # multi model sample unit method reports
 
 project_router.register(r"beltfishtransectmethods", BeltFishMethodView, "beltfishtransectmethod")
+project_router.register(
+    r"beltinverttransectmethods", BeltInvertMethodView, "beltinverttransectmethod"
+)
 project_router.register(
     r"benthiclittransectmethods", BenthicLITMethodView, "benthiclittransectmethod"
 )
@@ -270,16 +300,16 @@ api_urls = (
     router.urls
     + project_router.urls
     + [
-        re_path(r"^contactmermaid/$", contact_mermaid, name="contactmermaid"),
-        re_path(r"^contactprojectadmins/$", contact_project_admins, name="contactprojectadmins"),
-        re_path(
-            r"^ingest_schema_csv/(?P<sample_unit>\w+)/$",
+        path("contactmermaid/", contact_mermaid, name="contactmermaid"),
+        path("contactprojectadmins/", contact_project_admins, name="contactprojectadmins"),
+        path(
+            "ingest_schema_csv/<str:sample_unit>/",
             ingest_schema_csv,
             name="ingest-schemas-csv",
         ),
-        re_path(r"^health/$", health),
-        re_path(r"^pull/$", vw_pull),
-        re_path(r"^push/$", vw_push),
-        re_path("^reports/$", MultiProjectReportView.as_view(), name="reports"),
+        path("health/", health),
+        path("pull/", vw_pull),
+        path("push/", vw_push),
+        path("reports/", MultiProjectReportView.as_view(), name="reports"),
     ]
 )

@@ -4,11 +4,9 @@ from django.db import migrations
 
 
 class Migration(migrations.Migration):
-
     dependencies = [
-        ('api', '0095_alter_belttransectwidthcondition_unique_together_and_more'),
-        ('api', '0097_auto_20251104_0007'),
+        ("api", "0095_alter_belttransectwidthcondition_unique_together_and_more"),
+        ("api", "0097_auto_20251104_0007"),
     ]
 
-    operations = [
-    ]
+    operations = []

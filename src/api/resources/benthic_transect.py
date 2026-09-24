@@ -31,6 +31,7 @@ class BenthicTransectFilterSet(SampleUnitFilterSet):
 
 
 class BenthicTransectViewSet(BaseProjectApiViewSet):
+    http_method_names = ["get", "post", "head", "delete"]
     serializer_class = BenthicTransectSerializer
     queryset = BenthicTransect.objects.all()
     filterset_class = BenthicTransectFilterSet

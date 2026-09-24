@@ -1,6 +1,6 @@
 import datetime
+import time
 from concurrent.futures import ThreadPoolExecutor
-from typing import List, Tuple
 
 import requests
 from django.conf import settings
@@ -18,7 +18,7 @@ class CoralAtlasCovariate(BaseCovariate):
     def _sqkm_to_sqm(self, area: float) -> float:
         return area * 1000000
 
-    def _parse_classes(self, classes: List[dict]) -> List[dict]:
+    def _parse_classes(self, classes: list[dict]) -> list[dict]:
         classes = classes or []
         _classes = []
         for _class in classes:
@@ -32,10 +32,19 @@ class CoralAtlasCovariate(BaseCovariate):
         headers = {
             "User-Agent": "Mozilla/5.0 (X11; Ubuntu; Linux x86_64; rv:91.0) Gecko/20100101 Firefox/91.0"
         }
-        resp = requests.get(url, headers=headers)
-        status_code = resp.status_code
-        if status_code != 200:
-            raise CovariateRequestError(resp.text)
+        last_error = None
+        for attempt in range(3):
+            try:
+                resp = requests.get(url, headers=headers, timeout=(3.05, 10))
+                if resp.status_code == 200:
+                    break
+                last_error = resp.text
+            except requests.RequestException as e:
+                last_error = str(e)
+            if attempt < 2:
+                time.sleep(2**attempt)
+        else:
+            raise CovariateRequestError(last_error)
 
         data = (resp.json() or {}).get("data")
         stats = (data or {}).get("stats")
@@ -61,7 +70,7 @@ class CoralAtlasCovariate(BaseCovariate):
             covariates=output,
         )
 
-    def fetch(self, points: List[Tuple[float, float]]) -> List[dict]:
+    def fetch(self, points: list[tuple[float, float]]) -> list[dict]:
         futures = []
         response = []
         request_datetime = timezone.now()

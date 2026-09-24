@@ -1,8 +1,9 @@
 import uuid
 
 from api.mocks import MockRequest
-from api.models import CollectRecord
+from api.models import CollectRecord, ProjectProfile
 from api.resources.collect_record import CollectRecordSerializer
+from api.resources.project_profile import ProjectProfileSerializer
 from api.resources.sync.push import apply_changes
 
 
@@ -28,3 +29,91 @@ def test_apply_changes(db_setup, serialized_tracked_collect_record, profile1, pr
     }
     assert apply_changes(request, CollectRecordSerializer, new_collect_record)
     assert CollectRecord.objects.filter(id=new_collect_record["id"]).exists() is True
+
+
+def test_apply_changes_duplicate_create_race(db_setup, profile1, project1):
+    # A client can push the same brand-new record twice before it has
+    # recorded a _last_revision_num locally (e.g. two closely-timed pushes
+    # for a new benthic PQT sample unit with image classification): the
+    # second push arrives as another create (no _last_revision_num) for an
+    # id that now already exists, racing CollectRecord's unique constraint.
+    # CreateOrUpdateSerializerMixin.create should recover by falling back to
+    # an update rather than leaving the surrounding transaction broken.
+    request = MockRequest(profile=profile1)
+    record = {
+        "id": str(uuid.uuid4()),
+        "profile": str(profile1.pk),
+        "project": str(project1.pk),
+        "data": dict(),
+    }
+
+    status_code, _, _ = apply_changes(request, CollectRecordSerializer, dict(record))
+    assert status_code == 201
+
+    # Second push carries different data; status_code alone can't distinguish
+    # a plain create from the update-fallback (both return 201), so assert on
+    # the persisted data to confirm the fallback actually updated in place.
+    record_v2 = dict(record)
+    record_v2["data"] = {"marker": "second"}
+    status_code, _, _ = apply_changes(request, CollectRecordSerializer, record_v2)
+    assert status_code == 201
+    assert CollectRecord.objects.filter(id=record["id"]).count() == 1
+    assert CollectRecord.objects.get(id=record["id"]).data["marker"] == "second"
+
+
+def test_sync_push_blocks_deleting_last_admin(
+    db_setup, project_profile1, project_profile2, profile1
+):
+    # project_profile1 is the only ADMIN; project_profile2 is COLLECTOR
+    request = MockRequest(profile=profile1)
+    record = {"id": str(project_profile1.pk), "_deleted": True, "_last_revision_num": 1}
+
+    status_code, msg, _ = apply_changes(request, ProjectProfileSerializer, record)
+
+    assert status_code == 400
+    assert "Last admin" in msg
+    assert ProjectProfile.objects.filter(pk=project_profile1.pk).exists()
+
+
+def test_sync_push_blocks_downgrading_last_admin_role(
+    db_setup, project_profile1, project_profile2, profile1
+):
+    # project_profile1 is the only ADMIN; attempt to change role to COLLECTOR via PUT
+    request = MockRequest(profile=profile1)
+    record = {
+        "id": str(project_profile1.pk),
+        "_last_revision_num": 1,
+        "project": str(project_profile1.project_id),
+        "profile": str(project_profile1.profile_id),
+        "role": ProjectProfile.COLLECTOR,
+    }
+
+    status_code, msg, _ = apply_changes(request, ProjectProfileSerializer, record, force=True)
+
+    assert status_code == 400
+    assert "Last admin" in msg
+    project_profile1.refresh_from_db()
+    assert project_profile1.role == ProjectProfile.ADMIN
+
+
+def test_sync_push_allows_downgrading_admin_when_another_admin_exists(
+    db_setup, project_profile1, project_profile2, profile1, project1
+):
+    # Promote project_profile2 to ADMIN first, then downgrade project_profile1
+    project_profile2.role = ProjectProfile.ADMIN
+    project_profile2.save()
+
+    request = MockRequest(profile=profile1)
+    record = {
+        "id": str(project_profile1.pk),
+        "_last_revision_num": 1,
+        "project": str(project_profile1.project_id),
+        "profile": str(project_profile1.profile_id),
+        "role": ProjectProfile.COLLECTOR,
+    }
+
+    status_code, _, _ = apply_changes(request, ProjectProfileSerializer, record, force=True)
+
+    assert status_code == 200
+    project_profile1.refresh_from_db()
+    assert project_profile1.role == ProjectProfile.COLLECTOR

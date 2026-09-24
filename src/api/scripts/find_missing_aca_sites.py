@@ -1,6 +1,6 @@
 import csv
 
-from api.models.mermaid import Site
+from api.models import Site
 
 
 def run():

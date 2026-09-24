@@ -6,7 +6,6 @@ from django.db import IntegrityError, transaction
 from django.db.models import JSONField
 from django.db.models.expressions import RawSQL
 from psycopg.errors import UniqueViolation
-from rest_condition import Or
 from rest_framework import exceptions, permissions, serializers, status
 from rest_framework.decorators import action
 from rest_framework.response import Response
@@ -15,13 +14,16 @@ from ..auth_backends import AnonymousJWTAuthentication
 from ..exceptions import check_uuid
 from ..models import (
     BeltFish,
+    BeltInvert,
     BenthicLIT,
     BenthicPhotoQuadratTransect,
     BenthicPIT,
     BenthicTransect,
     BleachingQuadratCollection,
+    CollectRecord,
     FishBeltTransect,
     HabitatComplexity,
+    InvertBeltTransect,
     Management,
     Profile,
     Project,
@@ -39,6 +41,7 @@ from ..permissions import (
     UnauthenticatedReadOnlyPermission,
     get_project,
     get_project_pk,
+    get_project_profile,
 )
 from ..reports.fields import ReportField, ReportMethodField
 from ..reports.formatters import to_data_policy, to_str, to_yesno
@@ -121,19 +124,29 @@ class BaseProjectSerializer(DynamicFieldsMixin, BaseAPISerializer):
         return sorted(list(set([s.country.name for s in sites if s.country is not None])))
 
     def get_num_sites(self, obj):
-        sites = obj.sites.all()
-        return sites.count()
+        # len() over the prefetched set; .count() would issue a fresh query per project
+        return len(obj.sites.all())
 
     def get_members(self, obj):
         profiles = self._get_profiles(obj)
         return [pp.profile_id for pp in profiles]
 
     def get_project_admins(self, obj):
-        admin_profiles = obj.profiles.filter(role=ProjectProfile.ADMIN).select_related("profile")
-        return [{"id": str(pp.profile.id), "name": pp.profile.full_name} for pp in admin_profiles]
+        # iterate the prefetched profiles; .filter() would bypass the prefetch cache
+        return [
+            {"id": str(pp.profile.id), "name": pp.profile.full_name}
+            for pp in obj.profiles.all()
+            if pp.role == ProjectProfile.ADMIN
+        ]
 
     def get_num_active_sample_units(self, obj):
-        return obj.collect_records.count()
+        # Use the DB-level annotation from the list/retrieve queryset (no N+1).
+        # Falls back to a count() when the serializer is given a non-annotated
+        # instance (e.g. copy_project / create_project responses).
+        count = getattr(obj, "collect_records_count", None)
+        if count is None:
+            count = obj.collect_records.count()
+        return count
 
     def get_num_sample_units(self, obj):
         num_sample_units = getattr(obj, "num_sample_units", None)
@@ -178,6 +191,10 @@ class ProjectSerializer(BaseProjectSerializer):
 
 
 class ProjectCSVSerializer(ReportSerializer, BaseProjectSerializer):
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self._cached_profiles = {}
+
     fields = [
         ReportField("name", "Project Name"),
         ReportMethodField("get_num_sites", "Number of Sites"),
@@ -191,8 +208,12 @@ class ProjectCSVSerializer(ReportSerializer, BaseProjectSerializer):
         ),
         ReportField("data_policy_bleachingqc", "Bleaching QC Data Policy", to_data_policy),
         ReportField("data_policy_benthicpqt", "Benthic PQT Data Policy", to_data_policy),
+        ReportField(
+            "data_policy_macroinvertebrate", "Macroinvertebrate Data Policy", to_data_policy
+        ),
         ReportField("includes_gfcr", "Includes GFCR", to_yesno),
         ReportField("notes", "Notes"),
+        ReportMethodField("get_suggested_citation", "Suggested Citation"),
         ReportMethodField("get_project_admins_csv", "Project Admins"),
         ReportMethodField("get_contact_link", "Contact link"),
         ReportField("id", "Project Id", to_str),
@@ -248,8 +269,8 @@ class ProjectAuthenticatedUserPermission(permissions.BasePermission):
             action = view.action_map["put"]
             if action in ("find_and_replace_sites", "find_and_replace_managements"):
                 pk = get_project_pk(request, view)
-                project = get_project(pk)
-                pp = ProjectProfile.objects.get_or_none(project=project, profile=user.profile)
+                project = get_project(pk, request=request)
+                pp = get_project_profile(project, user.profile, request=request)
                 if pp is None:
                     return False
                 return pp.role > ProjectProfile.READONLY
@@ -271,6 +292,8 @@ def annotate_num_sample_units(qs):
     quadrat_transect_table = QuadratTransect._meta.db_table
     beltfish_table = BeltFish._meta.db_table
     fishbelt_transect_table = FishBeltTransect._meta.db_table
+    beltinvert_table = BeltInvert._meta.db_table
+    invert_belt_transect_table = InvertBeltTransect._meta.db_table
 
     return qs.annotate(
         num_sample_units=RawSQL(
@@ -334,6 +357,16 @@ def annotate_num_sample_units(qs):
                     JOIN {sample_event_table} se ON bt.sample_event_id = se.id
                     JOIN {site_table} ON se.site_id = {site_table}.id
                     WHERE {site_table}.project_id = {project_table}.id
+
+                    UNION ALL
+
+                    -- BeltInvert
+                    SELECT COUNT(*) as su_count
+                    FROM {beltinvert_table} t
+                    JOIN {invert_belt_transect_table} bt ON t.transect_id = bt.id
+                    JOIN {sample_event_table} se ON bt.sample_event_id = se.id
+                    JOIN {site_table} ON se.site_id = {site_table}.id
+                    WHERE {site_table}.project_id = {project_table}.id
                 )
                 SELECT COALESCE(SUM(su_count), 0)
                 FROM sample_unit_counts
@@ -347,11 +380,9 @@ def annotate_num_sample_units(qs):
 class ProjectViewSet(BaseApiViewSet):
     serializer_class = ProjectSerializer
     permission_classes = [
-        Or(
-            UnauthenticatedReadOnlyPermission,
-            ProjectAuthenticatedUserPermission,
-            ProjectDataAdminPermission,
-        )
+        UnauthenticatedReadOnlyPermission
+        | ProjectAuthenticatedUserPermission
+        | ProjectDataAdminPermission
     ]
     method_authentication_classes = {"GET": [AnonymousJWTAuthentication]}
     filterset_class = ProjectFilterSet
@@ -360,6 +391,7 @@ class ProjectViewSet(BaseApiViewSet):
     def get_queryset(self):
         site_table = Site._meta.db_table
         project_table = Project._meta.db_table
+        collect_record_table = CollectRecord._meta.db_table
 
         qs = (
             Project.objects.select_related(
@@ -368,6 +400,7 @@ class ProjectViewSet(BaseApiViewSet):
             )
             .prefetch_related(
                 "profiles",
+                "profiles__profile",
                 "sites",
                 "sites__country",
             )
@@ -379,6 +412,18 @@ class ProjectViewSet(BaseApiViewSet):
                         SELECT ST_Extent({site_table}.location)::text
                         FROM {site_table}
                         WHERE {site_table}.project_id = {project_table}.id
+                    )
+                    """,
+                    [],
+                ),
+                # count collect records at the DB to avoid an N+1 count() per project
+                # (correlated subquery, like extent — no GROUP BY on the main query)
+                collect_records_count=RawSQL(
+                    f"""
+                    (
+                        SELECT COUNT(*)
+                        FROM {collect_record_table}
+                        WHERE {collect_record_table}.project_id = {project_table}.id
                     )
                     """,
                     [],
@@ -630,14 +675,14 @@ class ProjectViewSet(BaseApiViewSet):
                 results = replace_sampleunit_objs(find_objs, replace_obj, field, profile)
                 transaction.savepoint_commit(sid)
             except obj_cls.DoesNotExist:
-                msg = "Replace {} {} does not exist".format(field, qp_replace_obj_id)
+                msg = f"Replace {field} {qp_replace_obj_id} does not exist"
                 logger.error(msg)
                 transaction.savepoint_rollback(sid)
                 raise exceptions.ValidationError(msg, code=400)
             except Exception as err:
                 logger.error(err)
                 transaction.savepoint_rollback(sid)
-                return Response("Unknown error while replacing {}s".format(field), status=500)
+                return Response(f"Unknown error while replacing {field}s", status=500)
 
         return Response(results)
 
@@ -654,7 +699,7 @@ class ProjectViewSet(BaseApiViewSet):
             return ProjectProfile.objects.get(project_id=project_id, profile_id=profile_id).profile
         except ProjectProfile.DoesNotExist:
             msg = f"[{profile_id}] Profile does not exist in project"
-            logger.error("Profile {} does not exist in project {}".format(profile_id, project_id))
+            logger.error(f"Profile {profile_id} does not exist in project {project_id}")
             raise exceptions.ValidationError(msg, code=400)
 
     @action(detail=True, methods=["put"])

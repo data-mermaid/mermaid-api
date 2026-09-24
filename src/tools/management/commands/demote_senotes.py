@@ -1,6 +1,6 @@
 from django.core.management.base import BaseCommand
 
-from api.models.mermaid import SampleEvent
+from api.models import SampleEvent
 from api.utils.notes import senotes2sunotes
 
 
@@ -10,7 +10,7 @@ class Command(BaseCommand):
     """
 
     def __init__(self):
-        super(Command, self).__init__()
+        super().__init__()
         self.dryrun = False
         self.id = False
 

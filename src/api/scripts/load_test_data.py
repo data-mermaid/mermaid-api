@@ -1,5 +1,4 @@
-from api.models.base import AuthUser, Profile
-from api.models.mermaid import (
+from api.models import (
     Country,
     Management,
     ManagementParty,
@@ -10,9 +9,10 @@ from api.models.mermaid import (
     ReefZone,
     Site,
 )
+from api.models.base import AuthUser, Profile
 
 
-class TestDataGenerator(object):
+class TestDataGenerator:
     def create(self):
         self._create_projects()
         self._create_profiles()

@@ -1,6 +1,13 @@
 """Settings for development environments"""
 
-from settings.settings import DatabaseSettings, DjangoSettings, ProjectSettings
+import os
+
+from settings.settings import (
+    DatabaseSettings,
+    DjangoSettings,
+    InferenceSettings,
+    ProjectSettings,
+)
 
 DEV_ENV_ID = "dev"
 DEV_SETTINGS = ProjectSettings(
@@ -9,7 +16,7 @@ DEV_SETTINGS = ProjectSettings(
     api=DjangoSettings(
         # API
         container_cpu=1024,
-        container_memory=2048,
+        container_memory=3072,
         container_count=1,
         # SQS
         sqs_cpu=1024,
@@ -25,9 +32,14 @@ DEV_SETTINGS = ProjectSettings(
         mermaid_api_audience="https://dev-api.datamermaid.org",
         public_bucket="dev-public.datamermaid.org",
         sqs_message_visibility=60,
+        image_sqs_message_visibility=1500,
         # Image classification
         ic_bucket_name="mermaid-image-processing",
         # Secrets
         env_secret_name="dev/mermaid-api-MzD7rS",
+        # Slack alerts via AWS Chatbot — fill in after connecting workspace in console
+        slack_workspace_id=os.getenv("SLACK_WORKSPACE_ID", ""),
+        slack_channel_id=os.getenv("SLACK_CHANNEL_ID", ""),
     ),
+    inference=InferenceSettings(image_tag="v1-2", classifier_version="v1"),
 )

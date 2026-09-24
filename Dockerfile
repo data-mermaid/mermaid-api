@@ -18,14 +18,8 @@ RUN groupadd ${APP_USER} && useradd -m --no-log-init --uid ${APP_UID} -g ${APP_U
 
 WORKDIR /var/projects/${APP_USER}
 COPY requirements.txt .
-# Pre-install CPU-only PyTorch before requirements.txt so pyspacer
-# (which depends on torch) picks up the lighter wheel (~280 MB vs ~2 GB).
-# ECS tasks run on t3a instances with no GPU.
-# Versions pinned to match pyspacer==0.12.0 constraints (torch>=2.6,<2.7).
 RUN su -l ${APP_USER} -c "\
     pip install --upgrade pip \
- && pip install --no-cache-dir --no-compile \
-        torch==2.6.0 torchvision==0.21.0 --index-url https://download.pytorch.org/whl/cpu \
  && pip install --no-cache-dir --no-compile -r /var/projects/${APP_USER}/requirements.txt"
 
 # Strip unnecessary files from installed packages to shrink the layer
@@ -41,7 +35,7 @@ RUN find /home/${APP_USER}/.local -type d -name '__pycache__' -exec rm -rf {} + 
  && find /home/${APP_USER}/.local -name '*.pyo' -delete
 
 # Smoke-test: verify top-level dependencies import successfully after cleanup
-RUN su -l ${APP_USER} -c "python -c 'import django; import torch; import torchvision; import pandas; import psycopg; import pyarrow; import spacer'"
+RUN su -l ${APP_USER} -c "python -c 'import django; import pandas; import psycopg; import pyarrow'"
 
 # ============================================================
 # Stage 2: Runtime — lean production image
@@ -62,7 +56,7 @@ ENV DJANGO_SETTINGS_MODULE=app.settings
 RUN apt-get update && apt-get install -y --no-install-recommends \
     wget gnupg ca-certificates \
  && wget --quiet -O /usr/share/keyrings/pgdg.asc https://www.postgresql.org/media/keys/ACCC4CF8.asc \
- && gpg --dry-run --import --import-options show-only --with-colons /usr/share/keyrings/pgdg.asc \
+ && gpg --homedir "$(mktemp -d)" --dry-run --import --import-options show-only --with-colons /usr/share/keyrings/pgdg.asc \
       | awk -F: '/^fpr:/ {print $10}' \
       | grep -qx 'B97B0AFCAA1A47F044F244A07FCC7D46ACCC4CF8' \
  && echo "deb [signed-by=/usr/share/keyrings/pgdg.asc] https://apt.postgresql.org/pub/repos/apt bookworm-pgdg main" > /etc/apt/sources.list.d/pgdg.list \
@@ -71,7 +65,7 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     postgresql-client-16 \
     gdal-bin \
     python3-gdal \
- && apt-get purge -y --auto-remove wget gnupg \
+ && apt-get purge -y --auto-remove gnupg \
  && rm -rf /var/lib/apt/lists/*
 
 # gunicorn will listen on this port
@@ -95,6 +89,18 @@ USER ${APP_USER}:${APP_USER}
 
 # Call collectstatic (customize the following line with the minimal environment variables needed for manage.py to run):
 RUN SECRET_KEY='abc' python manage.py collectstatic --noinput
+
+# Container health check for the API web server. Probes the DB-independent
+# liveness path served by HealthEndpointMiddleware (returns before auth/DB), via
+# the already-installed wget. start-period covers migrations + gunicorn boot.
+#
+# Used by local Docker / `docker compose`. ECS uses the task definition's own
+# healthCheck and ignores this image-level one; the scheduled tasks
+# (ScheduledBackupTask, SummaryCacheTask) override CMD with a management command
+# and run to completion, so their health signal is the container exit code, not
+# an HTTP probe (see ticket evaluation).
+HEALTHCHECK --interval=30s --timeout=5s --start-period=90s --retries=3 \
+  CMD wget --quiet --tries=1 --timeout=3 --spider http://localhost:8081/health/ || exit 1
 
 CMD ["/var/projects/webapp/docker-entry.sh"]
 

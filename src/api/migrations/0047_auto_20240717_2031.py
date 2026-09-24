@@ -4,20 +4,19 @@ from django.db import migrations, models
 
 
 class Migration(migrations.Migration):
-
     dependencies = [
-        ('api', '0046_alter_label_growth_form'),
+        ("api", "0046_alter_label_growth_form"),
     ]
 
     operations = [
         migrations.AlterField(
-            model_name='annotation',
-            name='score',
+            model_name="annotation",
+            name="score",
             field=models.PositiveSmallIntegerField(blank=True, default=0, null=True),
         ),
         migrations.AlterField(
-            model_name='image',
-            name='collect_record_id',
+            model_name="image",
+            name="collect_record_id",
             field=models.UUIDField(db_index=True),
         ),
     ]

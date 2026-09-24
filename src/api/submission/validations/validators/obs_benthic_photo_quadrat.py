@@ -2,7 +2,7 @@ from collections import defaultdict
 
 from django.core.validators import MaxValueValidator
 
-from ....models.mermaid import QuadratTransect
+from ....models import QuadratTransect
 from ....utils import cast_float, cast_int
 from ..statuses import ERROR, OK, WARN
 from .base import BaseValidator, validator_result
