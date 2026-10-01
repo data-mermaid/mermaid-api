@@ -49,7 +49,7 @@ class InvertOrderInline(admin.TabularInline):
     model = InvertOrder
     fk_name = "invert_class"
     extra = 0
-    fields = ("name",)
+    fields = ("name", "status")
     show_change_link = True
 
 
@@ -64,7 +64,7 @@ class InvertFamilyInline(admin.TabularInline):
     model = InvertFamily
     fk_name = "order"
     extra = 0
-    fields = ("name",)
+    fields = ("name", "status")
     show_change_link = True
 
 
@@ -79,7 +79,7 @@ class InvertGenusInline(admin.TabularInline):
     model = InvertGenus
     fk_name = "family"
     extra = 0
-    fields = ("name",)
+    fields = ("name", "group_of_interest", "status")
     show_change_link = True
 
 
@@ -94,7 +94,7 @@ class InvertSpeciesInline(admin.TabularInline):
     model = InvertSpecies
     fk_name = "genus"
     extra = 0
-    fields = ("name", "max_length")
+    fields = ("name", "max_length", "max_length_type", "status")
     show_change_link = True
 
 
