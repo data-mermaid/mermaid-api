@@ -322,6 +322,14 @@ class ApiStack(Stack):
             cpu=config.api.container_cpu,
             memory_limit_mib=config.api.container_memory,
             port_mappings=[ecs.PortMapping(container_port=8081)],
+            # Run an init (tini) as PID 1 instead of the gunicorn master. Orphaned
+            # processes (health-check wget, ECS Exec/SSM children, subprocesses of
+            # an OOM-killed worker) are reparented to PID 1. gunicorn halts the
+            # whole server if any reaped child exits with code 3 or 4, even if it
+            # is not one of its workers ("Reason: App failed to load.").
+            linux_parameters=ecs.LinuxParameters(
+                self, "ApiLinuxParameters", init_process_enabled=True
+            ),
             environment={**environment, "OTEL_SERVICE_NAME": f"mermaid-api-{config.env_id}"},
             secrets=self.api_secrets,
             logging=ecs.LogDrivers.aws_logs(
