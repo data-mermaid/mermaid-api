@@ -82,6 +82,15 @@ class InvertGenusInline(admin.TabularInline):
     fields = ("name", "group_of_interest", "status")
     show_change_link = True
 
+    def formfield_for_foreignkey(self, db_field, request, **kwargs):
+        # Build GoI choices once per formset instead of one query per genus row.
+        field = super().formfield_for_foreignkey(db_field, request, **kwargs)
+        if db_field.name == "group_of_interest":
+            field.choices = [("", field.empty_label)] + [
+                (goi.pk, goi.name) for goi in InvertGroupOfInterest.objects.only("id", "name")
+            ]
+        return field
+
 
 @admin.register(InvertFamily)
 class InvertFamilyAdmin(BaseAdmin):
