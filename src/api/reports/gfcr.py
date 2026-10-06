@@ -10,6 +10,7 @@ from ..utils.project import citation_retrieved_text, get_profiles, suggested_cit
 from ..utils.q import submit_job
 from ..utils.timer import timing
 from . import xl
+from .formatters import MULTI_VALUE_SEPARATOR
 
 logger = logging.getLogger(__name__)
 
@@ -168,7 +169,7 @@ def common_finance_solutions_columns(finance_solution):
     return [
         finance_solution.get_fs_type_display(),
         finance_solution.name,
-        ",".join(finance_solution.get_sustainable_finance_mechanisms_display()),
+        MULTI_VALUE_SEPARATOR.join(finance_solution.get_sustainable_finance_mechanisms_display()),
         finance_solution.get_sector_display(),
         finance_solution.get_geographical_coverage_display(),
         finance_solution.taf_name,
