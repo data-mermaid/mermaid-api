@@ -100,13 +100,18 @@ RUN SECRET_KEY='abc' python manage.py collectstatic --noinput
 # liveness path served by HealthEndpointMiddleware (returns before auth/DB), via
 # the already-installed wget. start-period covers migrations + gunicorn boot.
 #
-# Used by local Docker / `docker compose`. ECS uses the task definition's own
-# healthCheck and ignores this image-level one; the scheduled tasks
-# (ScheduledBackupTask, SummaryCacheTask) override CMD with a management command
-# and run to completion, so their health signal is the container exit code, not
-# an HTTP probe (see ticket evaluation).
+# On ECS (EC2 launch type) Docker still runs this check inside the container,
+# but ECS does not act on the result (no task-definition healthCheck is set).
+# The scheduled tasks (ScheduledBackupTask, SummaryCacheTask) override CMD with a
+# management command and run to completion, so their health signal is the
+# container exit code, not an HTTP probe.
+#
+# Exec form (no shell): wget is the health-check process itself. With the shell
+# form, Docker's timeout killed only the `sh`, and the orphaned wget was
+# reparented to PID 1. When gunicorn was PID 1, wget's exit code 4 (network
+# failure) made gunicorn halt with "App failed to load."
 HEALTHCHECK --interval=30s --timeout=5s --start-period=90s --retries=3 \
-  CMD wget --quiet --tries=1 --timeout=3 --spider http://localhost:8081/health/ || exit 1
+  CMD ["wget", "--quiet", "--tries=1", "--timeout=3", "--spider", "http://localhost:8081/health/"]
 
 CMD ["/var/projects/webapp/docker-entry.sh"]
 

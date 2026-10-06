@@ -302,6 +302,7 @@ bleaching_quadrat_collection_validations = [
     ),
     Validation(
         validator=DifferentQuadratSizeValidator(
+            protocol_path="data.protocol",
             site_path="data.sample_event.site",
             management_path="data.sample_event.management",
             sample_date_path="data.sample_event.sample_date",

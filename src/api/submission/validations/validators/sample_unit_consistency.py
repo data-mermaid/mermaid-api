@@ -8,6 +8,7 @@ from ....models import (
     BENTHICLIT_PROTOCOL,
     BENTHICPIT_PROTOCOL,
     BENTHICPQT_PROTOCOL,
+    BLEACHINGQC_PROTOCOL,
     FISHBELT_PROTOCOL,
     HABITATCOMPLEXITY_PROTOCOL,
     MACROINVERTEBRATE_PROTOCOL,
@@ -318,36 +319,59 @@ class DifferentTransectLengthValidator(SampleEventConsistencyValidator):
 
 class DifferentQuadratSizeValidator(SampleEventConsistencyValidator):
     """
-    Validates that the quadrat size in a bleaching quadrat collection sample unit matches that of
-    other bleaching quadrat collection sample units in the same sample event.
+    Validates that the quadrat size in a quadrat-based sample unit matches that of other sample
+    units of the same protocol in the same sample event.
     """
 
     DIFFERENT_QUADRAT_SIZE = "different_quadrat_size_se"
 
-    def __init__(self, site_path, management_path, sample_date_path, quadrat_size_path, **kwargs):
+    # Map of protocol to (model, sample_event_path) tuples
+    PROTOCOL_CONFIG = {
+        BENTHICPQT_PROTOCOL: (BenthicPhotoQuadratTransect, "quadrat_transect__sample_event"),
+        BLEACHINGQC_PROTOCOL: (BleachingQuadratCollection, "quadrat__sample_event"),
+    }
+
+    def __init__(
+        self,
+        protocol_path,
+        site_path,
+        management_path,
+        sample_date_path,
+        quadrat_size_path,
+        **kwargs,
+    ):
         super().__init__(site_path, management_path, sample_date_path, **kwargs)
+        self.protocol_path = protocol_path
         self.quadrat_size_path = quadrat_size_path
 
     @validator_result
     def __call__(self, collect_record, **kwargs):
         sample_event = self._get_sample_event(collect_record)
+        protocol = self.get_value(collect_record, self.protocol_path)
         quadrat_size = self.get_numeric_value(collect_record, self.quadrat_size_path)
-        if not sample_event or not quadrat_size:
+
+        if (
+            not sample_event
+            or not protocol
+            or not quadrat_size
+            or protocol not in self.PROTOCOL_CONFIG
+        ):
             return OK
 
-        for bqc_su in self._get_sibling_sample_units(
-            collect_record,
-            sample_event,
-            BleachingQuadratCollection,
-            "quadrat__sample_event",
-            ("quadrat",),
+        model, sample_event_path = self.PROTOCOL_CONFIG[protocol]
+        su_str = sample_event_path.split("__")[0]  # quadrat_transect or quadrat
+
+        for method in self._get_sibling_sample_units(
+            collect_record, sample_event, model, sample_event_path, (su_str,)
         ):
-            other_quadrat_size = bqc_su.quadrat.quadrat_size
-            if other_quadrat_size != quadrat_size:
+            other_quadrat_size = getattr(method, su_str).quadrat_size
+            # quadrat_size is a DecimalField; compare as floats so e.g. Decimal("1.10") == 1.1
+            if other_quadrat_size is not None and float(other_quadrat_size) != float(quadrat_size):
                 return (
                     WARN,
                     self.DIFFERENT_QUADRAT_SIZE,
                     {
+                        "protocol": protocol,
                         "quadrat_size": float(quadrat_size),
                         "other_quadrat_size": float(other_quadrat_size),
                     },
