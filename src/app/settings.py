@@ -459,6 +459,9 @@ if ENVIRONMENT == "prod":
 IMAGE_S3_PATH = "mermaid/"
 IMAGE_S3_PATH_TEST = os.environ.get("IMAGE_S3_PATH_TEST") or IMAGE_S3_PATH
 DATA_UPLOAD_MAX_MEMORY_SIZE = 30 * 1024 * 1024  # 30 MB
+# Django's default ("same-origin") sends no Referer to tile.openstreetmap.org, which
+# OSM's tile usage policy now rejects (403), breaking admin map widgets.
+SECURE_REFERRER_POLICY = "strict-origin-when-cross-origin"
 FILE_UPLOAD_MAX_MEMORY_SIZE = 15 * 1024 * 1024  # 15 MB
 MAX_IMAGE_PIXELS = 8000 * 8000
 MAX_IMAGE_FILE_SIZE = 30 * 1024 * 1024  # 30 MB
