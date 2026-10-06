@@ -82,29 +82,92 @@ It builds the `pyspacer-function` Lambda image (baking in
 `CLASSIFIER_VERSION=vN` and pinning the matching pyspacer/sklearn) and pushes it
 to the ECR repo `mermaid-inference-pyspacer` tagged **`vN-K`**.
 
-## Step 3 — Point the Lambda at the new image
+## Step 3 — Validate the manifest (recommended)
+
+`Classifier.active()` (`src/api/models/classification.py`) looks up the
+`Classifier` row for `INFERENCE_CLASSIFIER_VERSION` by exact match. You do not
+create that row by hand: when an image worker starts in dev or prod, it
+registers the pinned version from `classifier/<version>/model.json` if no row
+exists yet. An existing row is left untouched.
+
+If registration fails (the manifest is missing or malformed, or a label does
+not resolve to a benthic attribute or growth form), the image worker exits
+before taking jobs. The ECS circuit breaker then rolls back the image worker,
+and the `*-mermaid-api-django` deploy fails. `*-mermaid-inference` has already
+deployed by then, so the Lambda serves `vN` while the API stays on `vN-1`.
+Every classification then fails the drift check until the manifest is fixed
+and redeployed, or the pin is reverted.
+
+To catch this before the deploy, dry-run the registration in each environment
+before editing `classifier_version`:
+
+```bash
+python manage.py register_classifier vN --dry-run
+```
+
+Running it without `--dry-run` registers the row ahead of the deploy, which is
+also safe: `Classifier.active()` ignores rows the pin does not point at, and
+the worker then finds the row and skips S3. Run it without `--dry-run` again
+to re-apply a corrected `model.json` to an existing row. The worker never
+re-applies one.
+
+> **This only works for a version whose S3 prefix has a `model.json`.**
+> `Classifier.register()` reads `classifier/<version>/model.json`, and the
+> Beta version `v1` has none — it predates this manifest and uses the legacy
+> pickle layout instead, so `register_classifier v1` fails by design. `v1`'s
+> row exists only because it was created by hand, so the worker's startup
+> check passes on it without reading S3. On a database without that row,
+> pinning `v1` fails the deploy; restore the row from a backup. See
+> [mermaid-classifier#102](https://github.com/data-mermaid/mermaid-classifier/issues/102),
+> which tracks the gap.
+
+## Step 4 — Point the Lambda at the new image
 
 The Lambda's image tag is pinned in this repo's CDK config **per environment**
 (`InferenceSettings.image_tag`) — building the image in step 2 does **not** by
-itself update any running Lambda. Roll the tag out dev-first, then prod; each
-environment has its own settings file and its own stack
-(`dev-mermaid-inference` / `prod-mermaid-inference`).
+itself update any running Lambda. Edit both environments' settings files in
+one PR, then let the normal release flow roll it out: dev first, prod after
+validating on dev. `classifier_version` also feeds
+`INFERENCE_CLASSIFIER_VERSION` on the API service and both workers (`ApiStack`),
+so bumping it redeploys `dev-mermaid-api-django` / `prod-mermaid-api-django`
+(new task definition revisions) alongside `dev-mermaid-inference` /
+`prod-mermaid-inference` — expect both stacks in the same deploy.
 
-1. **Dev.** Edit [`iac/settings/dev.py`](../iac/settings/dev.py), set the
-   inference image tag to the `vN-K` from step 2, and merge to `dev` (via PR):
+> InferenceStack deploys before ApiStack, so a bump serves the new `vN` from
+> the Lambda before the API/worker tasks roll to match. Classifications
+> handled by a task still on `INFERENCE_CLASSIFIER_VERSION=vN-1` during that
+> window fail the classifier-version drift check, and the message redelivers
+> automatically about 25 minutes later. That redelivery is not unlimited: the
+> image queue's redrive policy allows 4 receives, so a message keeps cycling
+> for about 75 minutes — four deliveries — and lands in the dead-letter queue
+> at least 100 minutes after the first, where it waits for seven days and
+> nothing brings it back automatically. Drain or pause the image queue first
+> if that delay matters for a given release, or plan to redrive the DLQ once
+> the rollout finishes.
+
+1. **Edit both settings files.** In one PR, make the same edit to
+   [`iac/settings/dev.py`](../iac/settings/dev.py) and
+   [`iac/settings/prod.py`](../iac/settings/prod.py): set the inference image
+   tag to the `vN-K` from step 2 and `classifier_version` to the matching `vN`:
 
    ```python
-   inference=InferenceSettings(image_tag="v3-2"),
+   inference=InferenceSettings(image_tag="v3-2", classifier_version="v3"),
    ```
 
-   Merging to `dev` triggers **[Deploy CDK](https://github.com/data-mermaid/mermaid-api/actions/workflows/deploy-cdk.yml)**,
-   which updates `dev-mermaid-inference`'s `PyspacerInferenceFunction` to serve
-   the new image. Validate on dev.
+   `image_tag` and `classifier_version` move together: `cdk synth` asserts
+   the model version encoded in `image_tag` (`vN` from `vN-K`) matches
+   `classifier_version`, since a CI-built image always pairs them this way.
 
-2. **Prod.** Make the same edit in
-   [`iac/settings/prod.py`](../iac/settings/prod.py), merge it to `dev`, then cut
-   a release tag (e.g. `v1.2`). The tag triggers the **Deploy CDK** PROD job,
-   which updates `prod-mermaid-inference` the same way.
+2. **Deploy and test on dev.** Merge the PR to `dev`. This triggers
+   **[Deploy CDK](https://github.com/data-mermaid/mermaid-api/actions/workflows/deploy-cdk.yml)**,
+   which updates `dev-mermaid-inference`'s `PyspacerInferenceFunction` to serve
+   the new image, and rolls `dev-mermaid-api-django`'s API/worker tasks to the
+   matching `INFERENCE_CLASSIFIER_VERSION`. Validate on dev before going on.
+   The `prod.py` edit has no effect yet: dev pushes deploy only the dev stacks.
+
+3. **Deploy to prod.** Merge `dev` to `master` and cut a release tag
+   (e.g. `v1.2`). The tag push triggers the **Deploy CDK** prod job, which
+   updates `prod-mermaid-inference` and `prod-mermaid-api-django` the same way.
 
 Git history of `dev.py` / `prod.py` is the deploy log. Once the prod deploy
 completes, the production inference Lambda serves the new classifier version.

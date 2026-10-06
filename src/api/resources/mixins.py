@@ -122,7 +122,7 @@ class _DuplicateCheckMixin:
 
 class SiteDuplicateCheckMixin(_DuplicateCheckMixin):
     """
-    Rejects Site creation when a similarly-named, nearby Site with submitted
+    Rejects Site creation when a nearby or similarly-named Site with submitted
     data already exists in the same project -- see find_duplicate_sites. Pass
     "ignore_duplicate_warning": true in the request body to skip the check
     and create anyway.
@@ -140,8 +140,8 @@ class SiteDuplicateCheckMixin(_DuplicateCheckMixin):
             )
             self._reject_if_duplicate(
                 duplicates,
-                "A site with a similar name and submitted data already exists nearby. "
-                "Pass ignore_duplicate_warning=true to create anyway.",
+                "A site with a similar name or nearby location and submitted data already "
+                "exists. Pass ignore_duplicate_warning=true to create anyway.",
                 NOT_UNIQUE_SITE_CODE,
             )
 
