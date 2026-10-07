@@ -1,7 +1,6 @@
 import datetime
 import time
 from concurrent.futures import ThreadPoolExecutor
-from typing import List, Tuple
 
 import requests
 from django.conf import settings
@@ -19,7 +18,7 @@ class CoralAtlasCovariate(BaseCovariate):
     def _sqkm_to_sqm(self, area: float) -> float:
         return area * 1000000
 
-    def _parse_classes(self, classes: List[dict]) -> List[dict]:
+    def _parse_classes(self, classes: list[dict]) -> list[dict]:
         classes = classes or []
         _classes = []
         for _class in classes:
@@ -71,7 +70,7 @@ class CoralAtlasCovariate(BaseCovariate):
             covariates=output,
         )
 
-    def fetch(self, points: List[Tuple[float, float]]) -> List[dict]:
+    def fetch(self, points: list[tuple[float, float]]) -> list[dict]:
         futures = []
         response = []
         request_datetime = timezone.now()

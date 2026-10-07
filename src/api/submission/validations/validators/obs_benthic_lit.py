@@ -11,6 +11,7 @@ class BenthicLITObservationTotalLengthValidator(BaseValidator):
 
     TOTAL_LENGTH_TOOLARGE = "obs_total_length_toolarge"
     TOTAL_LENGTH_TOOSMALL = "obs_total_length_toosmall"
+    LEN_SURVEYED_NOT_POSITIVE = "len_surveyed_not_positive"
 
     def __init__(self, len_surveyed_path, obs_benthiclits_path, **kwargs):
         self.len_surveyed_path = len_surveyed_path
@@ -33,7 +34,7 @@ class BenthicLITObservationTotalLengthValidator(BaseValidator):
         context = {"total_obs_length": obs_len, "len_surveyed": len_surveyed}
 
         if len_surveyed_cm <= 0:
-            return ERROR, "len_surveyed_not_positive"
+            return ERROR, self.LEN_SURVEYED_NOT_POSITIVE
         if obs_len > len_surveyed_cm * (1 + tolerance):
             return WARN, self.TOTAL_LENGTH_TOOLARGE, context
         if obs_len < len_surveyed_cm * (1 - tolerance):

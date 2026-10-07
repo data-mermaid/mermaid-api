@@ -1,5 +1,3 @@
-from typing import List
-
 from aws_cdk import (
     CustomResource,
     Duration,
@@ -13,7 +11,7 @@ from constructs import Construct
 
 
 class GuardDutyStack(Stack):
-    def __init__(self, scope: Construct, construct_id: str, s3_buckets: List[str], **kwargs):
+    def __init__(self, scope: Construct, construct_id: str, s3_buckets: list[str], **kwargs):
         super().__init__(scope, construct_id, **kwargs)
 
         # Create Lambda to create the service-linked role

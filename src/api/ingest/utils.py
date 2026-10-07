@@ -75,7 +75,7 @@ def _create_context(profile_id, request=None):
     if request is None:
         profile = Profile.objects.get_or_none(id=profile_id)
         if profile is None:
-            raise ValueError("[{}] Profile does not exist.".format(profile_id))
+            raise ValueError(f"[{profile_id}] Profile does not exist.")
 
         try:
             auth_user = profile.authusers.all()[0]
@@ -118,7 +118,7 @@ def clear_collect_records(project, profile, protocol):
             project_id='{project}' AND 
             profile_id='{profile}' AND 
             data->>'protocol' = '{protocol}';
-        """.format(
+        """.format(  # noqa: UP032
         table_name=CollectRecord.objects.model._meta.db_table,
         project=project,
         profile=profile,

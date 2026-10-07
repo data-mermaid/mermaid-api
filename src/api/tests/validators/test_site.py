@@ -60,3 +60,36 @@ def test_not_unique(valid_collect_record, duplicate_site, belt_fish2, sample_eve
     result = validator(record)
     assert result.status == WARN
     assert result.context["matches"][0] == str(duplicate_site.pk)
+
+
+def test_not_unique_same_location_dissimilar_name(
+    valid_collect_record,
+    project1,
+    country1,
+    reef_type1,
+    reef_exposure1,
+    reef_zone1,
+    belt_fish2,
+    sample_event2,
+):
+    # Original #1567 repro at the submit-time validator: a site at the same
+    # coordinates as the collect record's site, but with a dissimilar name,
+    # must still warn -- flagged via the location arm alone.
+    same_location_site = Site.objects.create(
+        project=project1,
+        name="Totally different name",
+        location=Point(1, 1, srid=4326),
+        country=country1,
+        reef_type=reef_type1,
+        exposure=reef_exposure1,
+        reef_zone=reef_zone1,
+    )
+    sample_event2.site = same_location_site
+    sample_event2.save()
+
+    validator = _get_validator()
+    record = CollectRecordSerializer(instance=valid_collect_record).data
+    result = validator(record)
+
+    assert result.status == WARN
+    assert result.context["matches"][0] == str(same_location_site.pk)

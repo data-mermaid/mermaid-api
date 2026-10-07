@@ -3,7 +3,6 @@ import gzip
 import itertools
 import logging
 from collections import defaultdict
-from typing import Dict, List, Set, Tuple
 
 from django.db.models import QuerySet
 
@@ -143,7 +142,7 @@ def _sort_covariate_value(values):
 
 
 def _update_covariate_lookup(
-    covar_lookup: Dict[str, list], site_id: str, covariates: QuerySet[Covariate]
+    covar_lookup: dict[str, list], site_id: str, covariates: QuerySet[Covariate]
 ) -> None:
     covar_lookup[site_id] = ["", ""]
     for covariate in covariates:
@@ -160,7 +159,7 @@ def _update_covariate_lookup(
             covar_lookup[site_id][1] = values[0].get("name") if values else ""
 
 
-def _covariate_aca_lookup(site_ids: List[str]) -> Dict[str, List[str]]:
+def _covariate_aca_lookup(site_ids: list[str]) -> dict[str, list[str]]:
     sites = Site.objects.filter(id__in=site_ids)
     covar_lookup = {}
 
@@ -172,7 +171,7 @@ def _covariate_aca_lookup(site_ids: List[str]) -> Dict[str, List[str]]:
     return covar_lookup
 
 
-def _get_site_aca_covariate_columns(site_ids: List[str]) -> Tuple[list, list]:
+def _get_site_aca_covariate_columns(site_ids: list[str]) -> tuple[list, list]:
     """Allen Coral Atlas covariates
 
     Args:
@@ -222,11 +221,11 @@ def _transpose(data: list):
 
 
 def _filter_columns(
-    headers: List[str],
-    cols: List[list],
-    display_header_lookup: Dict[str, None],
-    additional_header_lookup: Set[str],
-) -> Tuple[List[str], List[list]]:
+    headers: list[str],
+    cols: list[list],
+    display_header_lookup: dict[str, str],
+    additional_header_lookup: set[str],
+) -> tuple[list[str], list[list]]:
     new_headers = []
     new_cols = []
 
@@ -261,8 +260,7 @@ def get_viewset_csv_content(view_cls, project_pk, request):
     )
     cached_file = cached.get_cached_textfile(key)
     if cached_file:
-        for row in csv.reader(cached_file):
-            yield row
+        yield from csv.reader(cached_file)
 
         return
 

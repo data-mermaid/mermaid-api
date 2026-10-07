@@ -1,5 +1,6 @@
 import os
-from typing import Any, List, Optional, Tuple, Union
+from collections.abc import Iterable
+from typing import Any
 
 from django.conf import settings
 from openpyxl import Workbook, load_workbook
@@ -20,7 +21,7 @@ def _get_xlsx_template(template: str):
     raise ValueError(f"Template [{template}] not found.")
 
 
-def get_workbook(workbook: Union[Workbook, str, None] = None) -> Workbook:
+def get_workbook(workbook: Workbook | str | None = None) -> Workbook:
     if isinstance(workbook, str):
         tpl = _get_xlsx_template(workbook)
         wb = load_workbook(tpl)
@@ -34,7 +35,7 @@ def get_workbook(workbook: Union[Workbook, str, None] = None) -> Workbook:
     return wb
 
 
-def get_worksheet(wb: Workbook, name: Optional[str] = None, create: bool = False) -> Worksheet:
+def get_worksheet(wb: Workbook, name: str | None = None, create: bool = False) -> Worksheet:
     if name:
         name = name.lower()
         for ws in wb.worksheets:
@@ -51,12 +52,12 @@ def get_worksheet(wb: Workbook, name: Optional[str] = None, create: bool = False
 
 
 def write_data_to_sheet(
-    workbook: Union[Workbook, str, None],
+    workbook: Workbook | str | None,
     sheet_name: str,
-    data: List[List[Any]],
+    data: Iterable[Iterable[Any]],
     row: int = 1,
     col: int = 1,
-) -> Tuple[int, int]:
+) -> tuple[int, int]:
     wb = get_workbook(workbook)
     ws = get_worksheet(wb, sheet_name, create=True)
 

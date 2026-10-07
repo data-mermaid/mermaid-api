@@ -38,6 +38,7 @@ class BeltInvertObsSQLModel(BaseSUSQLModel):
             se.data_policy_macroinvertebrate,
             su.number AS transect_number,
             su.len_surveyed AS transect_len_surveyed,
+            rs.name AS reef_slope,
             w.name AS transect_width_name,
             w.val AS width_m,
             sb.val AS size_bin,
@@ -80,6 +81,7 @@ class BeltInvertObsSQLModel(BaseSUSQLModel):
             LEFT JOIN api_tide t ON su.tide_id = t.id
             LEFT JOIN api_visibility v ON su.visibility_id = v.id
             LEFT JOIN api_relativedepth r ON su.relative_depth_id = r.id
+            LEFT JOIN api_reefslope rs ON su.reef_slope_id = rs.id
         """
 
     sql_args = dict(
@@ -99,6 +101,7 @@ class BeltInvertObsSQLModel(BaseSUSQLModel):
     sample_unit_notes = models.TextField(blank=True)
     transect_number = models.PositiveSmallIntegerField()
     transect_len_surveyed = models.DecimalField(max_digits=4, decimal_places=1)
+    reef_slope = models.CharField(max_length=50)
     transect_width_name = models.CharField(max_length=100, null=True, blank=True)
     width_m = models.DecimalField(max_digits=4, decimal_places=1, null=True, blank=True)
     size_bin = models.CharField(max_length=100, null=True, blank=True)
@@ -254,6 +257,7 @@ class BeltInvertSUSQLModel(BaseSUSQLModel):
         beltinvert_su.pseudosu_id,
         {_su_fields},
         beltinvert_su.{_agg_su_fields},
+        reef_slope,
         transect_width_name,
         size_bin,
         total_abundance,
@@ -271,6 +275,8 @@ class BeltInvertSUSQLModel(BaseSUSQLModel):
             ) AS density_indha,
             {_su_fields_qualified},
             {_su_aggfields_sql},
+            string_agg(DISTINCT reef_slope::text, ', '::text
+                ORDER BY (reef_slope::text)) AS reef_slope,
             string_agg(DISTINCT transect_width_name::text, ', '::text
                 ORDER BY (transect_width_name::text)) AS transect_width_name,
             string_agg(DISTINCT size_bin::text, ', '::text
@@ -303,6 +309,7 @@ class BeltInvertSUSQLModel(BaseSUSQLModel):
     total_abundance = models.PositiveIntegerField()
     transect_number = models.PositiveSmallIntegerField()
     transect_len_surveyed = models.DecimalField(max_digits=4, decimal_places=1)
+    reef_slope = models.CharField(max_length=50)
     transect_width_name = models.CharField(max_length=100, null=True, blank=True)
     size_bin = models.CharField(max_length=100, null=True, blank=True)
     density_indha = models.DecimalField(max_digits=11, decimal_places=2, null=True, blank=True)

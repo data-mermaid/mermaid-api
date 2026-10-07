@@ -48,7 +48,7 @@ class Command(ProgressBarBaseCommand):
         tempfile = NamedTemporaryFile(mode="w", delete=False)
         coral_atlas = CoralAtlasCovariate(radius=radius)
 
-        with open(datafile, "r") as csvfile, tempfile:
+        with open(datafile) as csvfile, tempfile:
             reader = csv.DictReader(csvfile)
             fieldnames = reader.fieldnames
             rows = list(reader)

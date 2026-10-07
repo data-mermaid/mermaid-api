@@ -1,9 +1,11 @@
 import logging
 
+from django.conf import settings
 from django.db.models.signals import post_delete, post_save, pre_save
 from django.dispatch import receiver
 
 from ..models import Classifier, CollectRecord, Image
+from ..models.classification import ClassifierNotConfiguredError
 from ..utils import classification as cls_utils
 from .submission import post_edit, post_submit
 
@@ -99,10 +101,15 @@ def assign_classifier(sender, instance, **kwargs):
     if classifier_id:
         return
 
-    classifier = Classifier.latest()
-    if "classifier_id" not in instance.data and classifier:
+    try:
+        classifier = Classifier.active()
+    except ClassifierNotConfiguredError:
+        return
+    if "classifier_id" not in instance.data:
         instance.data["classifier_id"] = str(classifier.id)
-        instance.data["quadrat_transect"]["num_points_per_quadrat"] = classifier.num_points
+        instance.data["quadrat_transect"][
+            "num_points_per_quadrat"
+        ] = settings.INFERENCE_DEFAULT_NUM_POINTS
 
 
 @receiver(post_submit, sender=CollectRecord)

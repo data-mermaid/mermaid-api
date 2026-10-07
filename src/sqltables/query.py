@@ -1,4 +1,4 @@
-from typing import Any, Dict, Type
+from typing import Any
 
 from django.db.models import NOT_PROVIDED, Manager, Model, QuerySet  # type: ignore
 from django.db.models.constants import LOOKUP_SEP  # type: ignore
@@ -36,7 +36,7 @@ class SQLTableQuery(Query):
                 alias = self.join(BaseTable(self.get_meta().db_table, None))
         return alias
 
-    def sql_table(self, **sql_table_params: Dict[str, Any]):
+    def sql_table(self, **sql_table_params: dict[str, Any]):
         """
         Take user's passed params and store them in `self.sql_table_params`
         to be prepared for joining.
@@ -67,7 +67,7 @@ class SQLTableQuery(Query):
         # TODO: merge with existing?
         self.sql_table_params = _sql_table_params
 
-    def _sql_table_params_to_groups(self, sql_table_params: Dict[str, Any]) -> Dict[str, Any]:
+    def _sql_table_params_to_groups(self, sql_table_params: dict[str, Any]) -> dict[str, Any]:
         """
         Transfer user specified lookups into groups
         to have all parameters for each table function prepared for joining.
@@ -81,7 +81,7 @@ class SQLTableQuery(Query):
             'root': {'id: 5}
         }
         """
-        param_groups: Dict[str, Any] = {}
+        param_groups: dict[str, Any] = {}
         for lookup, val in sql_table_params.items():
             parts = lookup.split(LOOKUP_SEP)
             prefix = LOOKUP_SEP.join(parts[:-1])
@@ -92,8 +92,8 @@ class SQLTableQuery(Query):
         return param_groups
 
     def _reorder_sql_table_params(  # noqa: C901
-        self, model: Type[Model], sql_table_params: Dict[str, Any]
-    ) -> Dict[str, Any]:
+        self, model: type[Model], sql_table_params: dict[str, Any]
+    ) -> dict[str, Any]:
         """
         Make sure that parameters will be passed into function in correct order.
         Also check required and set defaults.
@@ -119,7 +119,7 @@ class SQLTableQuerySet(QuerySet):
         super().__init__(model, query, using, hints)
         self.query = query or SQLTableQuery(self.model)
 
-    def sql_table(self, **sql_table_params: Dict[str, Any]) -> "SQLTableQuerySet":
+    def sql_table(self, **sql_table_params: dict[str, Any]) -> "SQLTableQuerySet":
         self.query.model_sql = self.query.model_sql.replace(
             "<<__sql_table_args__>>",
             " AND ".join(

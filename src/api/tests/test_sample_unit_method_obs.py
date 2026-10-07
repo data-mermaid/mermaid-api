@@ -48,6 +48,32 @@ def test_beltfish_csv_view(
     assert rows[3]["management_id"] == str(management2.id)
 
 
+def test_beltfish_csv_view_project_name_all_punctuation(
+    client,
+    db_setup,
+    project1,
+    token1,
+    belt_fish_project,
+    all_choices,
+    site2,
+    management2,
+    profile2,
+    update_summary_cache,
+):
+    # Regression test: a project name that reduces to "." after Django's
+    # get_valid_filename() strips unsafe characters used to raise
+    # SuspiciousFileOperation and 500 the csv/sampleevents endpoints.
+    project1.name = "."
+    project1.save()
+
+    for url_name in ("beltfishmethod-obs-csv", "beltfishmethod-sampleevent-csv"):
+        url = reverse(url_name, kwargs=dict(project_pk=project1.pk))
+        response = client.get(url, HTTP_AUTHORIZATION=f"Bearer {token1}")
+        assert response.status_code == 200
+        assert response.has_header("Content-Disposition")
+        assert f"{project1.pk}-beltfish-" in response.headers.get("content-disposition")
+
+
 def test_beltfish_field_report(
     client,
     db_setup,
@@ -384,3 +410,56 @@ def test_bleaching_quadrat_benthic_percent_field_report(
     assert pytest.approx(float(rows[3]["Soft coral (% cover)"]), 1) == pytest.approx(
         obs_quadrat_benthic_percent1_4.percent_soft, 1
     )
+
+
+def test_beltinvert_obs_view_reef_slope(
+    client,
+    db_setup,
+    project1,
+    token1,
+    all_choices,
+    belt_invert1_with_obs,
+    update_summary_cache,
+):
+    url = reverse("beltinvertmethod-obs-list", kwargs=dict(project_pk=project1.pk))
+    count, data, _ = _call(client, token1, url)
+
+    assert count == 1
+    assert data[0]["reef_slope"] == "flat"
+
+
+def test_beltinvert_obs_csv_view_reef_slope(
+    client,
+    db_setup,
+    project1,
+    token1,
+    all_choices,
+    belt_invert1_with_obs,
+    update_summary_cache,
+):
+    url = reverse("beltinvertmethod-obs-csv", kwargs=dict(project_pk=project1.pk))
+    fieldnames, rows, response = _get_rows(client, token1, url)
+
+    assert "reef_slope" in fieldnames
+    assert rows[0]["reef_slope"] == "flat"
+
+    fieldnames, rows, response = _get_rows(client, token1, f"{url}?field_report=true")
+
+    assert "Reef slope" in fieldnames
+    assert rows[0]["Reef slope"] == "flat"
+
+
+def test_beltinvert_su_view_reef_slope(
+    client,
+    db_setup,
+    project1,
+    token1,
+    all_choices,
+    belt_invert1_with_obs,
+    update_summary_cache,
+):
+    url = reverse("beltinvertmethod-sampleunit-list", kwargs=dict(project_pk=project1.pk))
+    count, data, _ = _call(client, token1, url)
+
+    assert count == 1
+    assert data[0]["reef_slope"] == "flat"

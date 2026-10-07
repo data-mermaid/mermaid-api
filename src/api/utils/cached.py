@@ -3,7 +3,6 @@ import hashlib
 import logging
 from pathlib import Path
 from tempfile import NamedTemporaryFile
-from typing import Optional
 
 from django.conf import settings
 from django.http import StreamingHttpResponse
@@ -153,7 +152,7 @@ def streaming_response(
     content_type=None,
     content_encoding=None,
     content_disposition="inline",
-) -> Optional[StreamingHttpResponse]:
+) -> StreamingHttpResponse | None:
     if has_filtering_params(request) or not exists(key):
         return None
 
