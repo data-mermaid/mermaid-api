@@ -1,4 +1,5 @@
 import csv
+import logging
 import uuid
 from io import StringIO
 
@@ -10,6 +11,7 @@ from django.core.exceptions import ValidationError
 from django.core.files.base import ContentFile
 from django.core.files.storage import FileSystemStorage
 from django.db import transaction
+from django.utils import timezone
 from pydantic import (
     BaseModel as PydanticBaseModel,
     ConfigDict,
@@ -26,6 +28,8 @@ from .protocols.benthic import (
     GrowthForm,
     ObsBenthicPhotoQuadrat,
 )
+
+logger = logging.getLogger(__name__)
 
 
 class ClassifierRegistrationError(Exception):
@@ -81,8 +85,7 @@ def _resolve_label_part(model, pk, label, kind):
 
 def select_image_storage():
     if settings.ENVIRONMENT not in ("dev", "prod"):
-        # Overwrite same-named files, as S3Storage does by default
-        return FileSystemStorage(allow_overwrite=True)
+        return FileSystemStorage()
     return S3Storage(
         bucket_name=settings.IMAGE_PROCESSING_BUCKET,
         access_key=settings.IMAGE_BUCKET_AWS_ACCESS_KEY_ID,
@@ -373,7 +376,7 @@ class Image(BaseModel):
     def get_storage(self):
         """Return a storage backend configured for this image's bucket."""
         if settings.ENVIRONMENT not in ("dev", "prod"):
-            return FileSystemStorage(allow_overwrite=True)
+            return FileSystemStorage()
         config = get_image_storage_config(self.image_bucket)
         return S3Storage(
             bucket_name=config["bucket"],
@@ -426,7 +429,7 @@ class Image(BaseModel):
 
     # Saving with update_fields lets post_save_classification_image skip re-reading the
     # original image from S3 to checksum it, since the image itself hasn't changed.
-    ANNOTATIONS_FILE_UPDATE_FIELDS = ["annotations_file", "updated_on"]
+    ANNOTATIONS_FILE_UPDATE_FIELDS = ("annotations_file", "updated_on")
 
     def create_annotations_file(self):
         csv_columns = [
@@ -451,7 +454,6 @@ class Image(BaseModel):
             self.clear_annotations_file()
             return
 
-        storage = self.annotations_file.storage
         tmp = StringIO()
         try:
             csvwriter = csv.writer(tmp)
@@ -477,16 +479,38 @@ class Image(BaseModel):
             tmp.close()
             tmp = None
 
-        old_name = self.annotations_file.name
+        storage, old_name = self.annotations_file.storage, self.annotations_file.name
         name = f"{self.id}_annotations.csv"
         self.annotations_file = name
         self.save(update_fields=self.ANNOTATIONS_FILE_UPDATE_FIELDS)
         # Upload only once the row change commits, so a rollback leaves the stored CSV
-        # untouched. robust=True logs a failed upload rather than raising it into the
-        # caller (e.g. a submit that has already committed).
-        transaction.on_commit(lambda: storage.save(name, ContentFile(content)), robust=True)
+        # untouched. A failed upload is handled there rather than raised into the caller
+        # (e.g. a submit that has already committed).
+        transaction.on_commit(
+            lambda: self._upload_annotations_file(storage, name, content), robust=True
+        )
         if old_name and old_name != name:
             transaction.on_commit(lambda: storage.delete(old_name), robust=True)
+
+    def _upload_annotations_file(self, storage, name, content):
+        try:
+            # Keep the fixed name: S3Storage overwrites by default, but storages that don't
+            # would save under a new name.
+            if not getattr(storage, "file_overwrite", False):
+                storage.delete(name)
+            storage.save(name, ContentFile(content))
+        except Exception:
+            logger.exception(f"Failed to upload annotations file {name} for image {self.id}")
+            try:
+                file_exists = storage.exists(name)
+            except Exception:
+                file_exists = False
+            # Don't leave the row pointing at a file that was never written. An earlier
+            # version that's still in storage is kept, stale, until the next regeneration.
+            if not file_exists:
+                Image.objects.filter(id=self.id, annotations_file=name).update(
+                    annotations_file="", updated_on=timezone.now()
+                )
 
     def clear_annotations_file(self):
         if not self.annotations_file:
