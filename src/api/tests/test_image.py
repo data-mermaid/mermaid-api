@@ -2,7 +2,9 @@ import copy
 from unittest.mock import patch
 
 import pytest
+from django.core.files.base import ContentFile
 from django.core.files.uploadedfile import SimpleUploadedFile
+from django.db import transaction
 from django.test import override_settings
 from django.urls import reverse
 
@@ -287,37 +289,94 @@ def test_classification_status_is_none_when_no_statuses(
     assert response.json()["classification_status"] is None
 
 
-def test_create_annotations_file_does_not_reread_image(db_setup, image, annotations):
+def test_create_annotations_file_does_not_reread_image(
+    db_setup, image, annotations, django_capture_on_commit_callbacks
+):
     # Load fresh from the DB so there's no cached _normalized_image_buf, as on submit.
     img = Image.objects.get(pk=image.pk)
-    with patch("api.signals.classification.cls_utils.create_image_checksum") as checksum:
+    with (
+        patch("api.signals.classification.cls_utils.create_image_checksum") as checksum,
+        django_capture_on_commit_callbacks(execute=True),
+    ):
         img.create_annotations_file()
 
     checksum.assert_not_called()
     img.refresh_from_db()
-    assert img.annotations_file.name.endswith(f"{img.id}_annotations.csv")
+    assert img.annotations_file.name == f"{img.id}_annotations.csv"
     with img.annotations_file.open("r") as f:
         lines = f.read().splitlines()
     # Header plus the one confirmed annotation
     assert len(lines) == 2
 
 
-def test_create_annotations_file_removes_previous_file(
+def test_create_annotations_file_overwrites_in_place(
     db_setup, image, annotations, django_capture_on_commit_callbacks
 ):
     img = Image.objects.get(pk=image.pk)
-    img.create_annotations_file()
-    first_name = img.annotations_file.name
+    with django_capture_on_commit_callbacks(execute=True):
+        img.create_annotations_file()
     storage = img.annotations_file.storage
 
-    # FileSystemStorage doesn't overwrite, so the second write lands under a new name.
+    Annotation.objects.filter(point__image=img).update(is_confirmed=True)
     with django_capture_on_commit_callbacks(execute=True):
         img.create_annotations_file()
 
     img.refresh_from_db()
-    assert img.annotations_file.name != first_name
-    assert storage.exists(img.annotations_file.name)
-    assert not storage.exists(first_name)
+    assert img.annotations_file.name == f"{img.id}_annotations.csv"
+    with storage.open(img.annotations_file.name, "r") as f:
+        assert len(f.read().splitlines()) == 4
+
+
+def test_create_annotations_file_removes_differently_named_file(
+    db_setup, image, annotations, django_capture_on_commit_callbacks
+):
+    img = Image.objects.get(pk=image.pk)
+    storage = img.annotations_file.storage
+    legacy_name = storage.save(f"{img.id}_annotations_legacy.csv", ContentFile("old"))
+    Image.objects.filter(pk=img.pk).update(annotations_file=legacy_name)
+    img = Image.objects.get(pk=image.pk)
+
+    with django_capture_on_commit_callbacks(execute=True):
+        img.create_annotations_file()
+
+    assert storage.exists(f"{img.id}_annotations.csv")
+    assert not storage.exists(legacy_name)
+
+
+def test_create_annotations_file_rollback_keeps_original_file(
+    db_setup, image, annotations, django_capture_on_commit_callbacks
+):
+    img = Image.objects.get(pk=image.pk)
+    with django_capture_on_commit_callbacks(execute=True):
+        img.create_annotations_file()
+    original_name = img.annotations_file.name
+    storage = img.annotations_file.storage
+    with storage.open(original_name, "r") as f:
+        original_content = f.read()
+
+    with django_capture_on_commit_callbacks(execute=True):
+        with pytest.raises(RuntimeError), transaction.atomic():
+            Annotation.objects.filter(point__image=img).update(is_confirmed=True)
+            img.create_annotations_file()
+            raise RuntimeError("roll back")
+
+    img.refresh_from_db()
+    assert img.annotations_file.name == original_name
+    with storage.open(original_name, "r") as f:
+        assert f.read() == original_content
+
+
+def test_create_annotations_file_upload_failure_does_not_raise(
+    db_setup, image, annotations, django_capture_on_commit_callbacks
+):
+    img = Image.objects.get(pk=image.pk)
+    with (
+        patch.object(img.annotations_file.storage, "save", side_effect=RuntimeError("S3 down")),
+        django_capture_on_commit_callbacks(execute=True),
+    ):
+        # robust on_commit callbacks are logged, not raised, when executed on commit
+        with transaction.atomic():
+            img.create_annotations_file()
 
 
 def test_create_annotations_file_regenerates_missing_thumbnail(db_setup, image, annotations):
@@ -334,7 +393,8 @@ def test_create_annotations_file_clears_file_without_confirmed_annotations(
     db_setup, image, annotations, django_capture_on_commit_callbacks
 ):
     img = Image.objects.get(pk=image.pk)
-    img.create_annotations_file()
+    with django_capture_on_commit_callbacks(execute=True):
+        img.create_annotations_file()
     old_name = img.annotations_file.name
     storage = img.annotations_file.storage
 

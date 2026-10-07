@@ -7,6 +7,7 @@ from botocore.exceptions import BotoCoreError, ClientError
 from django.conf import settings
 from django.contrib.gis.db import models
 from django.core.exceptions import ValidationError
+from django.core.files.base import ContentFile
 from django.core.files.storage import FileSystemStorage
 from django.db import transaction
 from pydantic import (
@@ -80,7 +81,8 @@ def _resolve_label_part(model, pk, label, kind):
 
 def select_image_storage():
     if settings.ENVIRONMENT not in ("dev", "prod"):
-        return FileSystemStorage()
+        # Overwrite same-named files, as S3Storage does by default
+        return FileSystemStorage(allow_overwrite=True)
     return S3Storage(
         bucket_name=settings.IMAGE_PROCESSING_BUCKET,
         access_key=settings.IMAGE_BUCKET_AWS_ACCESS_KEY_ID,
@@ -371,7 +373,7 @@ class Image(BaseModel):
     def get_storage(self):
         """Return a storage backend configured for this image's bucket."""
         if settings.ENVIRONMENT not in ("dev", "prod"):
-            return FileSystemStorage()
+            return FileSystemStorage(allow_overwrite=True)
         config = get_image_storage_config(self.image_bucket)
         return S3Storage(
             bucket_name=config["bucket"],
@@ -449,6 +451,7 @@ class Image(BaseModel):
             self.clear_annotations_file()
             return
 
+        storage = self.annotations_file.storage
         tmp = StringIO()
         try:
             csvwriter = csv.writer(tmp)
@@ -469,17 +472,21 @@ class Image(BaseModel):
                         anno.updated_on,
                     ]
                 )
-            tmp.seek(0)
-            old_storage, old_name = self.annotations_file.storage, self.annotations_file.name
-            self.annotations_file.save(f"{self.id}_annotations.csv", tmp, save=False)
-            self.save(update_fields=self.ANNOTATIONS_FILE_UPDATE_FIELDS)
-            # S3 overwrites the same key, but storages that don't overwrite pick a new name,
-            # which would orphan the previous file.
-            if old_name and old_name != self.annotations_file.name:
-                transaction.on_commit(lambda: old_storage.delete(old_name))
+            content = tmp.getvalue()
         finally:
             tmp.close()
             tmp = None
+
+        old_name = self.annotations_file.name
+        name = f"{self.id}_annotations.csv"
+        self.annotations_file = name
+        self.save(update_fields=self.ANNOTATIONS_FILE_UPDATE_FIELDS)
+        # Upload only once the row change commits, so a rollback leaves the stored CSV
+        # untouched. robust=True logs a failed upload rather than raising it into the
+        # caller (e.g. a submit that has already committed).
+        transaction.on_commit(lambda: storage.save(name, ContentFile(content)), robust=True)
+        if old_name and old_name != name:
+            transaction.on_commit(lambda: storage.delete(old_name), robust=True)
 
     def clear_annotations_file(self):
         if not self.annotations_file:
@@ -490,7 +497,7 @@ class Image(BaseModel):
         self.save(update_fields=self.ANNOTATIONS_FILE_UPDATE_FIELDS)
         # Delete from storage only once the row change commits, so a rollback can't leave
         # the row pointing at a file that no longer exists.
-        transaction.on_commit(lambda: storage.delete(name))
+        transaction.on_commit(lambda: storage.delete(name), robust=True)
 
 
 class Point(BaseModel):
