@@ -422,6 +422,10 @@ class Image(BaseModel):
 
         return None
 
+    # Saving with update_fields lets post_save_classification_image skip re-reading the
+    # original image from S3 to checksum it, since the image itself hasn't changed.
+    ANNOTATIONS_FILE_UPDATE_FIELDS = ["annotations_file", "updated_on"]
+
     def create_annotations_file(self):
         csv_columns = [
             "id",
@@ -435,16 +439,14 @@ class Image(BaseModel):
             "growth_form_name",
             "updated_on",
         ]
-        annos = (
-            Annotation.objects.select_related("point", "point__image")
+        annos = list(
+            Annotation.objects.select_related("point", "benthic_attribute", "growth_form")
             .filter(is_confirmed=True, point__image__id=self.id)
             .order_by("point__row", "point__column")
         )
 
-        if not annos.exists():
-            self.annotations_file.delete()
-            self.annotations_file = None
-            self.save()
+        if not annos:
+            self.clear_annotations_file()
             return
 
         tmp = StringIO()
@@ -468,10 +470,27 @@ class Image(BaseModel):
                     ]
                 )
             tmp.seek(0)
-            self.annotations_file.save(f"{self.id}_annotations.csv", tmp, save=True)
+            old_storage, old_name = self.annotations_file.storage, self.annotations_file.name
+            self.annotations_file.save(f"{self.id}_annotations.csv", tmp, save=False)
+            self.save(update_fields=self.ANNOTATIONS_FILE_UPDATE_FIELDS)
+            # S3 overwrites the same key, but storages that don't overwrite pick a new name,
+            # which would orphan the previous file.
+            if old_name and old_name != self.annotations_file.name:
+                transaction.on_commit(lambda: old_storage.delete(old_name))
         finally:
             tmp.close()
             tmp = None
+
+    def clear_annotations_file(self):
+        if not self.annotations_file:
+            return
+
+        storage, name = self.annotations_file.storage, self.annotations_file.name
+        self.annotations_file = None
+        self.save(update_fields=self.ANNOTATIONS_FILE_UPDATE_FIELDS)
+        # Delete from storage only once the row change commits, so a rollback can't leave
+        # the row pointing at a file that no longer exists.
+        transaction.on_commit(lambda: storage.delete(name))
 
 
 class Point(BaseModel):
