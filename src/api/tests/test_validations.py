@@ -1,3 +1,5 @@
+import pytest
+
 from api.resources.collect_record import CollectRecordSerializer
 from api.submission.validations import (
     ERROR,
@@ -443,3 +445,46 @@ def test_family_observation_passes_validation(
         request=profile1_request,
     )
     assert overall_status == OK
+
+
+def test_management_warnings_similar_name_first(
+    management1, valid_benthic_lit_collect_record, benthic_lit_project, profile1_request
+):
+    # The webapp only offers the duplicate-MR merge when similar_name is the
+    # management field's first warning, so it must precede not_unique_management.
+    management1.pk = None
+    management1.name = management1.name.replace(" ", "-")
+    management1.save()
+    valid_benthic_lit_collect_record.data["sample_event"]["management"] = str(management1.pk)
+    valid_benthic_lit_collect_record.save()
+
+    runner = ValidationRunner(serializer=CollectRecordSerializer)
+    runner.validate(
+        valid_benthic_lit_collect_record,
+        benthic_lit.benthic_lit_validations,
+        request=profile1_request,
+    )
+    mr_results = runner.to_dict()["results"]["data"]["sample_event"]["management"]
+    warning_codes = [r["code"] for r in mr_results if r["status"] == WARN]
+    assert warning_codes == ["similar_name", "not_unique_management"]
+
+
+@pytest.mark.parametrize(
+    "validations",
+    [
+        belt_fish.belt_fish_validations,
+        belt_invert.belt_invert_validations,
+        benthic_lit.benthic_lit_validations,
+        benthic_photo_quadrat_transect.bpqt_base_validations,
+        benthic_pit.benthic_pit_validations,
+        bleaching_quadrat_collection.bleaching_quadrat_collection_validations,
+        habitat_complexity.habcomp_validations,
+    ],
+)
+def test_management_validators_similar_name_first(validations):
+    mr_validator_names = [
+        v.validator.name for v in validations if v.paths == ["data.sample_event.management"]
+    ]
+    assert mr_validator_names.index("similar_management_name_validator") < (
+        mr_validator_names.index("unique_management_validator")
+    )

@@ -32,7 +32,7 @@ SITE_NAME_MATCH_PERCENT = 0.5
 SITE_BUFFER_M = 100
 NAME_MATCH_BUFFER_M = 500
 
-# Shared with UniqueSiteValidator.NOT_UNIQUE / UniqueManagementValidator.SIMILAR_NAME
+# Shared with UniqueSiteValidator.NOT_UNIQUE / SimilarManagementNameValidator.SIMILAR_NAME
 # (api/submission/validations/validators/). Defined here, not there: importing those
 # validator modules from api/resources/mixins.py would pull in the whole
 # submission.validations package, which circles back to api.signals during app startup.
@@ -114,7 +114,8 @@ def find_duplicate_managements(project_id, name, exclude_id):
     submitted sample unit, whose name normalizes (strip spaces/underscores/
     hyphens, lowercase) to the same value as `name`. Management's other
     duplicate signal, "same site used by a different MR", stays
-    validator-only -- see UniqueManagementValidator._duplicate_by_site.
+    validator-only -- see UniqueManagementValidator._duplicate_by_site. Used
+    by SimilarManagementNameValidator.
     """
     if not name:
         return []
