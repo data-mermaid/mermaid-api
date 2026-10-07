@@ -1,4 +1,6 @@
 import csv
+import logging
+import os
 import uuid
 from io import StringIO
 
@@ -7,8 +9,10 @@ from botocore.exceptions import BotoCoreError, ClientError
 from django.conf import settings
 from django.contrib.gis.db import models
 from django.core.exceptions import ValidationError
+from django.core.files.base import ContentFile
 from django.core.files.storage import FileSystemStorage
 from django.db import transaction
+from django.utils import timezone
 from pydantic import (
     BaseModel as PydanticBaseModel,
     ConfigDict,
@@ -25,6 +29,8 @@ from .protocols.benthic import (
     GrowthForm,
     ObsBenthicPhotoQuadrat,
 )
+
+logger = logging.getLogger(__name__)
 
 
 class ClassifierRegistrationError(Exception):
@@ -422,6 +428,10 @@ class Image(BaseModel):
 
         return None
 
+    # Saving with update_fields lets post_save_classification_image skip re-reading the
+    # original image from S3 to checksum it, since the image itself hasn't changed.
+    ANNOTATIONS_FILE_UPDATE_FIELDS = ("annotations_file", "updated_on")
+
     def create_annotations_file(self):
         csv_columns = [
             "id",
@@ -435,16 +445,14 @@ class Image(BaseModel):
             "growth_form_name",
             "updated_on",
         ]
-        annos = (
-            Annotation.objects.select_related("point", "point__image")
+        annos = list(
+            Annotation.objects.select_related("point", "benthic_attribute", "growth_form")
             .filter(is_confirmed=True, point__image__id=self.id)
             .order_by("point__row", "point__column")
         )
 
-        if not annos.exists():
-            self.annotations_file.delete()
-            self.annotations_file = None
-            self.save()
+        if not annos:
+            self.clear_annotations_file()
             return
 
         tmp = StringIO()
@@ -467,11 +475,66 @@ class Image(BaseModel):
                         anno.updated_on,
                     ]
                 )
-            tmp.seek(0)
-            self.annotations_file.save(f"{self.id}_annotations.csv", tmp, save=True)
+            content = tmp.getvalue()
         finally:
             tmp.close()
             tmp = None
+
+        storage, old_name = self.annotations_file.storage, self.annotations_file.name
+        name = f"{self.id}_annotations.csv"
+        self.annotations_file = name
+        self.save(update_fields=self.ANNOTATIONS_FILE_UPDATE_FIELDS)
+        # Upload only once the row change commits, so a rollback leaves the stored CSV
+        # untouched. A failed upload is handled there rather than raised into the caller
+        # (e.g. a submit that has already committed).
+        transaction.on_commit(
+            lambda: self._upload_annotations_file(storage, name, content, old_name),
+            robust=True,
+        )
+
+    def _upload_annotations_file(self, storage, name, content, old_name):
+        content_file = ContentFile(content.encode("utf-8"))
+        try:
+            if getattr(storage, "file_overwrite", False):
+                storage.save(name, content_file)
+            else:
+                # Storages that don't overwrite (local FileSystemStorage) would save under a
+                # new name, so write alongside and swap in, keeping the original until then.
+                tmp_name = storage.save(f"{name}.tmp", content_file)
+                try:
+                    os.replace(storage.path(tmp_name), storage.path(name))
+                except Exception:
+                    storage.delete(tmp_name)
+                    raise
+        except Exception:
+            logger.exception(f"Failed to upload annotations file {name} for image {self.id}")
+            try:
+                file_exists = storage.exists(name)
+            except Exception:
+                file_exists = False
+            # Don't leave the row pointing at a file that was never written: fall back to
+            # the previous file, if it had a different name. An earlier version under the
+            # same name is kept, stale, until the next regeneration.
+            if not file_exists:
+                fallback = old_name if old_name and old_name != name else ""
+                Image.objects.filter(id=self.id, annotations_file=name).update(
+                    annotations_file=fallback, updated_on=timezone.now()
+                )
+            return
+
+        if old_name and old_name != name:
+            storage.delete(old_name)
+
+    def clear_annotations_file(self):
+        if not self.annotations_file:
+            return
+
+        storage, name = self.annotations_file.storage, self.annotations_file.name
+        self.annotations_file = None
+        self.save(update_fields=self.ANNOTATIONS_FILE_UPDATE_FIELDS)
+        # Delete from storage only once the row change commits, so a rollback can't leave
+        # the row pointing at a file that no longer exists.
+        transaction.on_commit(lambda: storage.delete(name), robust=True)
 
 
 class Point(BaseModel):
