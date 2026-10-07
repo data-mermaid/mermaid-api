@@ -1,5 +1,6 @@
 import csv
 import logging
+import os
 import uuid
 from io import StringIO
 
@@ -487,30 +488,42 @@ class Image(BaseModel):
         # untouched. A failed upload is handled there rather than raised into the caller
         # (e.g. a submit that has already committed).
         transaction.on_commit(
-            lambda: self._upload_annotations_file(storage, name, content), robust=True
+            lambda: self._upload_annotations_file(storage, name, content, old_name),
+            robust=True,
         )
-        if old_name and old_name != name:
-            transaction.on_commit(lambda: storage.delete(old_name), robust=True)
 
-    def _upload_annotations_file(self, storage, name, content):
+    def _upload_annotations_file(self, storage, name, content, old_name):
+        content_file = ContentFile(content.encode("utf-8"))
         try:
-            # Keep the fixed name: S3Storage overwrites by default, but storages that don't
-            # would save under a new name.
-            if not getattr(storage, "file_overwrite", False):
-                storage.delete(name)
-            storage.save(name, ContentFile(content))
+            if getattr(storage, "file_overwrite", False):
+                storage.save(name, content_file)
+            else:
+                # Storages that don't overwrite (local FileSystemStorage) would save under a
+                # new name, so write alongside and swap in, keeping the original until then.
+                tmp_name = storage.save(f"{name}.tmp", content_file)
+                try:
+                    os.replace(storage.path(tmp_name), storage.path(name))
+                except Exception:
+                    storage.delete(tmp_name)
+                    raise
         except Exception:
             logger.exception(f"Failed to upload annotations file {name} for image {self.id}")
             try:
                 file_exists = storage.exists(name)
             except Exception:
                 file_exists = False
-            # Don't leave the row pointing at a file that was never written. An earlier
-            # version that's still in storage is kept, stale, until the next regeneration.
+            # Don't leave the row pointing at a file that was never written: fall back to
+            # the previous file, if it had a different name. An earlier version under the
+            # same name is kept, stale, until the next regeneration.
             if not file_exists:
+                fallback = old_name if old_name and old_name != name else ""
                 Image.objects.filter(id=self.id, annotations_file=name).update(
-                    annotations_file="", updated_on=timezone.now()
+                    annotations_file=fallback, updated_on=timezone.now()
                 )
+            return
+
+        if old_name and old_name != name:
+            storage.delete(old_name)
 
     def clear_annotations_file(self):
         if not self.annotations_file:

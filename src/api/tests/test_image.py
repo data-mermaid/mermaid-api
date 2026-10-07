@@ -383,25 +383,48 @@ def test_create_annotations_file_failed_first_upload_clears_reference(
     assert not Image.objects.get(pk=img.pk).annotations_file
 
 
+@pytest.mark.parametrize("file_overwrite", [True, False], ids=["s3-like", "local"])
 def test_create_annotations_file_failed_upload_keeps_existing_file(
-    db_setup, image, annotations, django_capture_on_commit_callbacks
+    db_setup, image, annotations, django_capture_on_commit_callbacks, file_overwrite
 ):
     img = Image.objects.get(pk=image.pk)
     with django_capture_on_commit_callbacks(execute=True):
         img.create_annotations_file()
     name = img.annotations_file.name
     storage = img.annotations_file.storage
+    with storage.open(name, "r") as f:
+        original_content = f.read()
 
-    # Overwrite in place like S3Storage, so the earlier file survives a failed upload
+    Annotation.objects.filter(point__image=img).update(is_confirmed=True)
     with (
-        patch.object(storage, "file_overwrite", True, create=True),
+        patch.object(storage, "file_overwrite", file_overwrite, create=True),
         patch.object(storage, "save", side_effect=RuntimeError("S3 down")),
         django_capture_on_commit_callbacks(execute=True),
     ):
         img.create_annotations_file()
 
     assert Image.objects.get(pk=img.pk).annotations_file.name == name
-    assert storage.exists(name)
+    with storage.open(name, "r") as f:
+        assert f.read() == original_content
+
+
+def test_create_annotations_file_failed_upload_keeps_differently_named_file(
+    db_setup, image, annotations, django_capture_on_commit_callbacks
+):
+    img = Image.objects.get(pk=image.pk)
+    storage = img.annotations_file.storage
+    legacy_name = storage.save(f"{img.id}_annotations_legacy.csv", ContentFile("old"))
+    Image.objects.filter(pk=img.pk).update(annotations_file=legacy_name)
+    img = Image.objects.get(pk=image.pk)
+
+    with (
+        patch.object(storage, "save", side_effect=RuntimeError("S3 down")),
+        django_capture_on_commit_callbacks(execute=True),
+    ):
+        img.create_annotations_file()
+
+    assert storage.exists(legacy_name)
+    assert Image.objects.get(pk=img.pk).annotations_file.name == legacy_name
 
 
 def test_create_annotations_file_regenerates_missing_thumbnail(db_setup, image, annotations):
