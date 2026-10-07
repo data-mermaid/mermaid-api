@@ -7,7 +7,7 @@ from auth0.management.errors import TooManyRequestsError
 from django.conf import settings
 
 
-class BaseAPI(object):
+class BaseAPI:
     def __init__(self, domain=None, client_id=None, client_secret=None, audience=None):
         self.domain = domain or settings.AUTH0_DOMAIN
         self.client_id = client_id or os.environ.get("MERMAID_MANAGEMENT_API_CLIENT_ID")
@@ -77,7 +77,7 @@ class Auth0Users(Auth0ManagementAPI):
             page += 1
 
     def get_user_by_email(self, email):
-        query = 'email.raw:"{}"'.format(email)
+        query = f'email.raw:"{email}"'
         users = []
         for user_set in self.get_user_sets(query=query):
             users.extend(list(user_set))

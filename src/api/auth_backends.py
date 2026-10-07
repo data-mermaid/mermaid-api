@@ -32,7 +32,7 @@ class JWTAuthentication(BaseAuthentication):
         header in a `401 Unauthenticated` response, or `None` if the
         authentication scheme should return `403 Permission Denied` responses.
         """
-        return '{0} realm="{1}"'.format("Bearer", self.www_authenticate_realm)
+        return f'Bearer realm="{self.www_authenticate_realm}"'
 
     def authenticate(self, request):
         """
@@ -41,7 +41,7 @@ class JWTAuthentication(BaseAuthentication):
         """
         jwt_token = get_jwt_token(request)
         if jwt_token is None or is_hs_token(jwt_token) is False:
-            logger.debug("Invalid Token: {}".format(jwt_token))
+            logger.debug(f"Invalid Token: {jwt_token}")
             return None
 
         try:
@@ -128,6 +128,8 @@ class JWTAuthentication(BaseAuthentication):
                 ):
                     from mailchimp3 import MailChimp
                     from mailchimp3.helpers import get_subscriber_hash
+                    from mailchimp3.mailchimpclient import MailChimpError
+                    from requests.exceptions import RequestException
 
                     # https://developer.mailchimp.com/documentation/mailchimp/guides/manage-subscribers-with-the
                     # -mailchimp-api/
@@ -148,6 +150,25 @@ class JWTAuthentication(BaseAuthentication):
                                 "status_if_new": "subscribed",
                                 "merge_fields": merge_fields,
                             },
+                        )
+                    except MailChimpError as err:
+                        # Merge-field validation failures (e.g. missing LNAME) are expected
+                        # for some signups and shouldn't page/pollute Sentry as errors.
+                        # Credential, rate-limit, and other API errors still log at error level.
+                        error_data = err.args[0] if err.args else {}
+                        status_code = getattr(error_data.get("response"), "status_code", None)
+                        is_validation_error = status_code == 400 and bool(error_data.get("errors"))
+                        log_fn = logger.warning if is_validation_error else logger.error
+                        log_fn(
+                            "Unable to create mailchimp member {} {} <{}>: {}".format(
+                                profile.first_name, profile.last_name, profile.email, str(err)
+                            )
+                        )
+                    except RequestException as err:
+                        logger.error(
+                            "Unable to create mailchimp member {} {} <{}>: {}".format(
+                                profile.first_name, profile.last_name, profile.email, str(err)
+                            )
                         )
                     except Exception as err:  # Don't ever fail because subscription didn't work
                         logger.error(

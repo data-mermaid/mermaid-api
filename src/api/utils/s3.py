@@ -1,3 +1,4 @@
+import json
 import os
 
 import boto3
@@ -24,6 +25,16 @@ def get_object(bucket, key, aws_access_key_id=None, aws_secret_access_key=None):
         aws_access_key_id=aws_access_key_id, aws_secret_access_key=aws_secret_access_key
     )
     return client.get_object(Bucket=bucket, Key=key)
+
+
+def read_json_object(bucket, key, aws_access_key_id=None, aws_secret_access_key=None):
+    response = get_object(
+        bucket,
+        key,
+        aws_access_key_id=aws_access_key_id,
+        aws_secret_access_key=aws_secret_access_key,
+    )
+    return json.loads(response["Body"].read())
 
 
 def delete_file(bucket, blob_name, aws_access_key_id=None, aws_secret_access_key=None, client=None):
@@ -114,6 +125,11 @@ def list_objects(
                     os.path.join(download_root, os.path.relpath(s3_key, prefix or ""))
                 )
                 if os.path.commonpath([download_root, local_path]) != download_root:
+                    continue
+                if s3_key.endswith("/"):
+                    # Zero-byte S3 directory marker: create the directory rather than
+                    # downloading the marker over the top of it as a file.
+                    os.makedirs(local_path, exist_ok=True)
                     continue
                 os.makedirs(os.path.dirname(local_path), exist_ok=True)
                 if os.path.isdir(local_path):

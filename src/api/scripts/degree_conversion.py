@@ -30,7 +30,7 @@ output_file = "latlong_exif_image_metadata_wdd.csv"
 
 
 def run():
-    with open(input_file, mode="r") as infile, open(output_file, mode="w", newline="") as outfile:
+    with open(input_file) as infile, open(output_file, mode="w", newline="") as outfile:
         reader = csv.reader(infile)
         writer = csv.writer(outfile)
 

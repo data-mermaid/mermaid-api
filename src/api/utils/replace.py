@@ -9,7 +9,7 @@ def replace_sampleunit_objs(find_objs, replace_obj, field, profile):
     replace_counts = {
         "num_sample_events_updated": 0,
         "num_collect_records_updated": 0,
-        "num_{}s_removed".format(field): 0,
+        f"num_{field}s_removed": 0,
     }
 
     if not find_objs:
@@ -17,19 +17,19 @@ def replace_sampleunit_objs(find_objs, replace_obj, field, profile):
 
     updated_on = timezone.now()
 
-    sample_events = SampleEvent.objects.filter(**{"{}__in".format(field): find_objs})
+    sample_events = SampleEvent.objects.filter(**{f"{field}__in": find_objs})
     replace_counts["num_sample_events_updated"] = sample_events.count()
     sample_events.update(
         **{
             "updated_on": updated_on,
             "updated_by": profile,
-            "{}_id".format(field): replace_obj.id,
+            f"{field}_id": replace_obj.id,
         }
     )
 
     qry_filter = Q()
     for obj in find_objs:
-        qry_filter |= Q(**{"data__sample_event__{}".format(field): obj.id})
+        qry_filter |= Q(**{f"data__sample_event__{field}": obj.id})
 
     collect_records = CollectRecord.objects.filter(qry_filter)
     replace_counts["num_collect_records_updated"] = collect_records.count()
@@ -43,7 +43,7 @@ def replace_sampleunit_objs(find_objs, replace_obj, field, profile):
     for obj in find_objs:
         if obj.notes:
             notes.append(obj.notes)
-        replace_counts["num_{}s_removed".format(field)] += 1
+        replace_counts[f"num_{field}s_removed"] += 1
         obj.delete()
 
     replace_obj.notes = "\n\n".join(notes)

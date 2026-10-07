@@ -112,7 +112,7 @@ class SiteFilterSet(BaseAPIFilterSet):
         )
         project_id = value
 
-        group_by = ",".join(['"{}"'.format(uf) for uf in unique_fields])
+        group_by = ",".join(['"{}"'.format(uf) for uf in unique_fields])  # noqa: UP032
 
         sql = """
             "site".id::text IN (
@@ -131,7 +131,7 @@ class SiteFilterSet(BaseAPIFilterSet):
                         NOT(%s = ANY(agg_sites.project_ids))
                 ) AS site_ids
             )
-        """.format(group_by)
+        """.format(group_by)  # noqa: UP032
 
         return queryset.alias(
             _is_unique_site=RawSQL(sql, [project_id], output_field=BooleanField())

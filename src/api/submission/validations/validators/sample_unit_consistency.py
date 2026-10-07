@@ -8,6 +8,7 @@ from ....models import (
     BENTHICLIT_PROTOCOL,
     BENTHICPIT_PROTOCOL,
     BENTHICPQT_PROTOCOL,
+    BLEACHINGQC_PROTOCOL,
     FISHBELT_PROTOCOL,
     HABITATCOMPLEXITY_PROTOCOL,
     MACROINVERTEBRATE_PROTOCOL,
@@ -49,13 +50,36 @@ class SampleEventConsistencyValidator(BaseValidator):
         if sample_date is None:
             return None  # Let other validators handle invalid dates
 
-        sample_event = SampleEvent.objects.filter(
-            site_id=site_id,
-            management_id=management_id,
-            sample_date=sample_date,
-        ).first()
+        cache = self.get_run_cache(collect_record, "sample_events")
+        key = (str(site_id), str(management_id), sample_date)
+        if key not in cache:
+            cache[key] = SampleEvent.objects.filter(
+                site_id=site_id,
+                management_id=management_id,
+                sample_date=sample_date,
+            ).first()
 
-        return sample_event
+        return cache[key]
+
+    def _get_sibling_sample_units(
+        self, collect_record, sample_event, model, sample_event_path, select_related=()
+    ):
+        """Sample units of one protocol already recorded against a sample event.
+
+        A protocol can stack several of these checks against the same rows: BPQT
+        compares num_quadrats, num_points_per_quadrat and len_surveyed, all of which
+        live on the same quadrat_transect. Cache the rows for the validation run so
+        they are fetched once rather than once per validator.
+        """
+        cache = self.get_run_cache(collect_record, "sibling_sample_units")
+        key = (model, sample_event_path, str(sample_event.pk), select_related)
+        if key not in cache:
+            queryset = model.objects.filter(**{sample_event_path: sample_event})
+            if select_related:
+                queryset = queryset.select_related(*select_related)
+            cache[key] = list(queryset)
+
+        return cache[key]
 
 
 class DifferentNumQuadratsValidator(SampleEventConsistencyValidator):
@@ -77,11 +101,13 @@ class DifferentNumQuadratsValidator(SampleEventConsistencyValidator):
         if not sample_event or not num_quadrats:
             return OK
 
-        queryset = BenthicPhotoQuadratTransect.objects.filter(
-            quadrat_transect__sample_event=sample_event
-        ).select_related("quadrat_transect")
-
-        for pqt_su in queryset:
+        for pqt_su in self._get_sibling_sample_units(
+            collect_record,
+            sample_event,
+            BenthicPhotoQuadratTransect,
+            "quadrat_transect__sample_event",
+            ("quadrat_transect",),
+        ):
             other_num_quadrats = pqt_su.quadrat_transect.num_quadrats
             if other_num_quadrats != num_quadrats:
                 return (
@@ -124,11 +150,13 @@ class DifferentNumPointsPerQuadratValidator(SampleEventConsistencyValidator):
         if not sample_event or not num_points_per_quadrat:
             return OK
 
-        queryset = BenthicPhotoQuadratTransect.objects.filter(
-            quadrat_transect__sample_event=sample_event
-        ).select_related("quadrat_transect")
-
-        for pqt_su in queryset:
+        for pqt_su in self._get_sibling_sample_units(
+            collect_record,
+            sample_event,
+            BenthicPhotoQuadratTransect,
+            "quadrat_transect__sample_event",
+            ("quadrat_transect",),
+        ):
             other_num_points_per_quadrat = pqt_su.quadrat_transect.num_points_per_quadrat
             if other_num_points_per_quadrat != num_points_per_quadrat:
                 return (
@@ -162,10 +190,9 @@ class DifferentTransectWidthValidator(SampleEventConsistencyValidator):
         if not sample_event or not width_id:
             return OK
 
-        queryset = FishBeltTransect.objects.filter(sample_event=sample_event).select_related(
-            "width"
-        )
-        for fb_su in queryset:
+        for fb_su in self._get_sibling_sample_units(
+            collect_record, sample_event, FishBeltTransect, "sample_event"
+        ):
             other_width_id = valid_id(fb_su.width_id)
             if other_width_id:
                 other_width_id = str(other_width_id)
@@ -204,10 +231,9 @@ class DifferentInvertTransectWidthValidator(SampleEventConsistencyValidator):
             return OK
 
         width_id = str(width_id)
-        queryset = InvertBeltTransect.objects.filter(sample_event=sample_event).select_related(
-            "width"
-        )
-        for su in queryset:
+        for su in self._get_sibling_sample_units(
+            collect_record, sample_event, InvertBeltTransect, "sample_event"
+        ):
             other_width_id = valid_id(su.width_id)
             if other_width_id:
                 if str(other_width_id) != width_id:
@@ -269,12 +295,11 @@ class DifferentTransectLengthValidator(SampleEventConsistencyValidator):
             return OK
 
         model, sample_event_path = self.PROTOCOL_CONFIG[protocol]
-        queryset = model.objects.filter(**{sample_event_path: sample_event}).select_related(
-            sample_event_path
-        )
+        su_str = sample_event_path.split("__")[0]  # transect or quadrat_transect
 
-        for method in queryset:
-            su_str = sample_event_path.split("__")[0]  # transect or quadrat_transect
+        for method in self._get_sibling_sample_units(
+            collect_record, sample_event, model, sample_event_path, (su_str,)
+        ):
             su = getattr(method, su_str)
             other_len_surveyed = su.len_surveyed
 
@@ -294,34 +319,59 @@ class DifferentTransectLengthValidator(SampleEventConsistencyValidator):
 
 class DifferentQuadratSizeValidator(SampleEventConsistencyValidator):
     """
-    Validates that the quadrat size in a bleaching quadrat collection sample unit matches that of
-    other bleaching quadrat collection sample units in the same sample event.
+    Validates that the quadrat size in a quadrat-based sample unit matches that of other sample
+    units of the same protocol in the same sample event.
     """
 
     DIFFERENT_QUADRAT_SIZE = "different_quadrat_size_se"
 
-    def __init__(self, site_path, management_path, sample_date_path, quadrat_size_path, **kwargs):
+    # Map of protocol to (model, sample_event_path) tuples
+    PROTOCOL_CONFIG = {
+        BENTHICPQT_PROTOCOL: (BenthicPhotoQuadratTransect, "quadrat_transect__sample_event"),
+        BLEACHINGQC_PROTOCOL: (BleachingQuadratCollection, "quadrat__sample_event"),
+    }
+
+    def __init__(
+        self,
+        protocol_path,
+        site_path,
+        management_path,
+        sample_date_path,
+        quadrat_size_path,
+        **kwargs,
+    ):
         super().__init__(site_path, management_path, sample_date_path, **kwargs)
+        self.protocol_path = protocol_path
         self.quadrat_size_path = quadrat_size_path
 
     @validator_result
     def __call__(self, collect_record, **kwargs):
         sample_event = self._get_sample_event(collect_record)
+        protocol = self.get_value(collect_record, self.protocol_path)
         quadrat_size = self.get_numeric_value(collect_record, self.quadrat_size_path)
-        if not sample_event or not quadrat_size:
+
+        if (
+            not sample_event
+            or not protocol
+            or not quadrat_size
+            or protocol not in self.PROTOCOL_CONFIG
+        ):
             return OK
 
-        queryset = BleachingQuadratCollection.objects.filter(
-            quadrat__sample_event=sample_event
-        ).select_related("quadrat")
+        model, sample_event_path = self.PROTOCOL_CONFIG[protocol]
+        su_str = sample_event_path.split("__")[0]  # quadrat_transect or quadrat
 
-        for bqc_su in queryset:
-            other_quadrat_size = bqc_su.quadrat.quadrat_size
-            if other_quadrat_size != quadrat_size:
+        for method in self._get_sibling_sample_units(
+            collect_record, sample_event, model, sample_event_path, (su_str,)
+        ):
+            other_quadrat_size = getattr(method, su_str).quadrat_size
+            # quadrat_size is a DecimalField; compare as floats so e.g. Decimal("1.10") == 1.1
+            if other_quadrat_size is not None and float(other_quadrat_size) != float(quadrat_size):
                 return (
                     WARN,
                     self.DIFFERENT_QUADRAT_SIZE,
                     {
+                        "protocol": protocol,
                         "quadrat_size": float(quadrat_size),
                         "other_quadrat_size": float(other_quadrat_size),
                     },

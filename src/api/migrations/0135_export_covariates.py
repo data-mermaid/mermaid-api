@@ -49,7 +49,7 @@ def export_covariates(apps, schema_editor):
         tmp.flush()
 
         if exported_count != total_count:
-            # Halt here so 0132 can't run and drop the table with an
+            # Halt here so 0136 can't run and drop the table with an
             # incomplete backup.
             raise RuntimeError(
                 f"Covariate export row count mismatch: exported {exported_count} "
@@ -72,7 +72,7 @@ class Migration(migrations.Migration):
     atomic = False
 
     dependencies = [
-        ("api", "0130_alter_belttransectwidthcondition_options"),
+        ("api", "0134_classifier_config"),
     ]
 
     operations = [

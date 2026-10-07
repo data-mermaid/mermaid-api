@@ -1,7 +1,6 @@
 import uuid
 
 from django.http import HttpResponseBadRequest
-from django.utils.text import get_valid_filename
 from django.utils.translation import gettext_lazy as _
 from rest_framework.decorators import action
 from rest_framework_gis.pagination import GeoJsonPagination
@@ -16,7 +15,7 @@ from ...permissions import (
 )
 from ...reports import csv_report
 from ...resources.base import BaseApiViewSet, BaseProjectApiViewSet
-from ...utils import cached, truthy
+from ...utils import cached, safe_get_valid_filename, truthy
 from ...utils.sample_units import consolidate_sample_events, has_duplicate_sample_events
 
 
@@ -176,7 +175,7 @@ class BaseProjectMethodView(AggregatedViewMixin, BaseProjectApiViewSet):
         except ObjectDoesNotExist:
             return HttpResponseBadRequest("Project doesn't exist")
 
-        project_name = get_valid_filename(project.name)[:100]
+        project_name = safe_get_valid_filename(project.name, default=str(project.pk))[:100]
         file_name_prefix = f"{project_name}-{self.drf_label}"
 
         self.limit_to_project(request, *args, **kwargs)

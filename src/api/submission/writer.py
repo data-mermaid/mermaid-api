@@ -78,7 +78,7 @@ from .parser import (
 )
 
 
-class BaseWriter(object):
+class BaseWriter:
     def __init__(self, collect_record, context):
         self.collect_record = collect_record
         self.context = context

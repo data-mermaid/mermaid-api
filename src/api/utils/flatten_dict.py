@@ -21,7 +21,7 @@ def dot_reducer(k1, k2):
     if k1 is None:
         return k2
     else:
-        return "{}.{}".format(k1, k2)
+        return f"{k1}.{k2}"
 
 
 REDUCER_DICT = {
@@ -61,7 +61,7 @@ def flatten(d, reducer="dot", inverse=False):
                 _flatten(val, flat_key)
             elif inverse:
                 if val in flat_dict:
-                    raise ValueError("duplicated key '{}'".format(val))
+                    raise ValueError(f"duplicated key '{val}'")
                 flat_dict[val] = flat_key
             else:
                 flat_dict[flat_key] = val

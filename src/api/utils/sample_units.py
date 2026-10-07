@@ -134,7 +134,7 @@ def consolidate_sample_events(*args, dryrun=False, **kwargs):
             se_pk = se.pk
             orphaned = delete_orphaned_sample_event(se)
             if orphaned:
-                print("Deleted orphaned SE {}".format(se_pk))
+                print(f"Deleted orphaned SE {se_pk}")
                 continue
 
             dups = SampleEvent.objects.filter(
@@ -145,7 +145,7 @@ def consolidate_sample_events(*args, dryrun=False, **kwargs):
 
             if dups.count() == 0:
                 continue
-            print("Removing dups for {}".format(se_pk))
+            print(f"Removing dups for {se_pk}")
 
             for d in dups:
                 try:
@@ -155,16 +155,16 @@ def consolidate_sample_events(*args, dryrun=False, **kwargs):
                         sus = suclass.objects.filter(sample_event=d.pk)
                         notes = d.notes or ""
                         if notes.strip():
-                            se.notes += "\n\n{}".format(notes)
+                            se.notes += f"\n\n{notes}"
                             se.save()
                         sus.update(sample_event=se)  # no signals fired
                         print(f"Changed {suclass.__name__} SE from {d.pk} to {se_pk}")
 
-                    print("Deleting SE {}".format(d.pk))
+                    print(f"Deleting SE {d.pk}")
                     d.delete()
 
                 except SampleEvent.DoesNotExist:
-                    print("{} already deleted".format(se_pk))
+                    print(f"{se_pk} already deleted")
 
         if dryrun:
             transaction.savepoint_rollback(sid)

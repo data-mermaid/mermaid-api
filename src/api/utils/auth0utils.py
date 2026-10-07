@@ -22,7 +22,7 @@ from app import settings
 logger = logging.getLogger(__name__)
 
 
-class Auth0ClientManager(object):
+class Auth0ClientManager:
     _chars = string.ascii_letters + string.digits
     _secret_len = 48
 
@@ -64,7 +64,7 @@ class Auth0ClientManager(object):
         )
 
 
-class Auth0UserInfo(object):
+class Auth0UserInfo:
     user_url = "/api/v2/users/{id}"
 
     def __init__(self, domain, token):
@@ -78,7 +78,7 @@ class Auth0UserInfo(object):
     # https://datamermaid.auth0.com/userinfo
 
 
-class Auth0ManagementAPI(object):
+class Auth0ManagementAPI:
     def __init__(self, domain, client_id, client_secret):
         self.domain = domain
         self.client_id = client_id
@@ -210,7 +210,7 @@ def get_token_algorithm(token):
 
 def get_jwks():
     jwks = {}
-    url = "https://{}/.well-known/jwks.json".format(settings.AUTH0_DOMAIN)
+    url = f"https://{settings.AUTH0_DOMAIN}/.well-known/jwks.json"
     resp = urlopen(url)
     if resp.getcode() != 200:
         return None
@@ -236,7 +236,7 @@ def decode_rsa(token):
             rsa_key,
             algorithms=["RS256"],
             audience=settings.SPA_ADMIN_CLIENT_ID,
-            issuer="https://{}/".format(settings.AUTH0_DOMAIN),
+            issuer=f"https://{settings.AUTH0_DOMAIN}/",
             # access_token='',
             options={"verify_at_hash": False},
         )
@@ -260,7 +260,7 @@ def decode_hs(token):
             algorithms=["HS256"],
         )
     except jwt.JWTError as e:
-        logger.debug("Decode token failed: {}".format(str(e)))
+        logger.debug(f"Decode token failed: {str(e)}")
         raise exceptions.AuthenticationFailed(e)
 
 
@@ -271,7 +271,7 @@ def decode(token):
     elif alg == "HS256":
         return decode_hs(token)
 
-    msg = "{} algorithm not supported".format(alg)
+    msg = f"{alg} algorithm not supported"
     raise exceptions.ValidationError(msg, code=400)
 
 

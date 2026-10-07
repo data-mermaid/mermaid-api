@@ -39,12 +39,12 @@ class MockRequest:
         self.GET = {}
         self.query_params = {}
         if token:
-            self.META = {"HTTP_AUTHORIZATION": "Bearer {}".format(token)}
+            self.META = {"HTTP_AUTHORIZATION": f"Bearer {token}"}
         else:
             self.META = {}
 
 
-class TestDataMixin(object):
+class TestDataMixin:
     def timestamp(self):
         return (dt.datetime.now(dt.UTC) - dt.datetime(1970, 1, 1, tzinfo=dt.UTC)).total_seconds()
 

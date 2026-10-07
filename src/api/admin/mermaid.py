@@ -3,10 +3,10 @@ from django.contrib import admin, messages
 from django.contrib.admin.utils import unquote
 from django.core.exceptions import PermissionDenied
 from django.db import transaction
-from django.db.models import Q
+from django.db.models import Prefetch, Q
 from django.template.response import TemplateResponse
 from django.urls import path, reverse
-from django.utils.html import format_html
+from django.utils.html import format_html, format_html_join
 from django.utils.translation import gettext_lazy as _
 
 from ..models import (
@@ -38,20 +38,13 @@ from ..models import (
 )
 from ..utils.notification import add_notification
 from ..utils.project import delete_project
-from .base import BaseAdmin, CachedFKInline
-
-
-class SiteInline(CachedFKInline):
-    model = Site
-    extra = 0
-    readonly_fields = ["created_by", "updated_by"]
-    cache_fields = ["country", "reef_type", "reef_zone", "exposure", "predecessor"]
+from .base import BaseAdmin
 
 
 @admin.register(Project)
 class ProjectAdmin(BaseAdmin):
     list_display = ("name", "status", "admin_list", "country_list", "tag_list")
-    readonly_fields = ["created_by", "updated_by"]
+    readonly_fields = ["created_by", "updated_by", "site_list"]
     exportable_fields = (
         "name",
         "status",
@@ -67,7 +60,6 @@ class ProjectAdmin(BaseAdmin):
         "data_policy_macroinvertebrate",
         "notes",
     )
-    inlines = [SiteInline]
     search_fields = [
         "name",
         "pk",
@@ -77,47 +69,83 @@ class ProjectAdmin(BaseAdmin):
         "profiles__profile__last_name",
     ]
     list_filter = ("status", "tags")
-    _admins = None
-    _sites = None
-
-    def _get_admins(self):
-        if self._admins:
-            return self._admins
-        self._admins = ProjectProfile.objects.filter(role=ProjectProfile.ADMIN).select_related()
-        return self._admins
 
     def admin_list(self, obj):
-        pps = self._get_admins()
-        return ", ".join(
-            [
-                "{} <{}>".format(p.profile.full_name, p.profile.email)
-                for p in pps
-                if p.project == obj
-            ]
-        )
-
-    def _get_sites(self):
-        if self._sites:
-            return self._sites
-        self._sites = Site.objects.select_related()
-        return self._sites
+        return ", ".join(f"{p.profile.full_name} <{p.profile.email}>" for p in obj.admin_profiles)
 
     def country_list(self, obj):
-        all_sites = self._get_sites()
-        sites = [s for s in all_sites if s.project == obj]
         countries = []
-        for s in sites:
+        for s in obj.admin_sites:
             if s.country not in countries:
                 countries.append(s.country)
         return ", ".join([c.name for c in countries])
 
     def tag_list(self, obj):
-        return ", ".join("{}".format(t.name) for t in obj.tags.all())
+        return ", ".join(f"{t.name}" for t in obj.tags.all())
 
     tag_list.short_description = _("organizations")
 
+    @admin.display(description=_("sites"))
+    def site_list(self, obj):
+        # Read-only table rather than an editable Site inline: rendering every site as
+        # a form (FK selects + map widget) made this page huge and pushed project saves
+        # past DATA_UPLOAD_MAX_NUMBER_FIELDS. Sites are edited via their own admin page.
+        sites = obj.sites.select_related(
+            "country", "reef_type", "reef_zone", "exposure", "predecessor"
+        ).order_by("name")
+        rows = format_html_join(
+            "",
+            '<tr><td><a href="{}">{}</a></td><td>{}</td><td>{}</td><td>{}</td><td>{}</td><td>{}</td></tr>',
+            (
+                (
+                    reverse("admin:api_site_change", args=[s.pk]),
+                    s.name,
+                    s.country.name,
+                    s.reef_type.name,
+                    s.reef_zone.name,
+                    s.exposure.name,
+                    s.predecessor.name if s.predecessor else "",
+                )
+                for s in sites
+            ),
+        )
+        if not rows:
+            return "-"
+        return format_html(
+            "<table><thead><tr><th>{}</th><th>{}</th><th>{}</th><th>{}</th><th>{}</th>"
+            "<th>{}</th></tr></thead><tbody>{}</tbody></table>",
+            _("name"),
+            _("country"),
+            _("reef type"),
+            _("reef zone"),
+            _("exposure"),
+            _("predecessor"),
+            rows,
+        )
+
     def get_queryset(self, request):
-        return super().get_queryset(request).select_related("created_by", "updated_by")
+        return (
+            super()
+            .get_queryset(request)
+            .select_related("created_by", "updated_by")
+            .prefetch_related(
+                Prefetch(
+                    "profiles",
+                    queryset=ProjectProfile.objects.filter(
+                        role=ProjectProfile.ADMIN
+                    ).select_related("profile"),
+                    to_attr="admin_profiles",
+                ),
+                Prefetch(
+                    "sites",
+                    queryset=Site.objects.select_related("country").only(
+                        "id", "project_id", "country__id", "country__name"
+                    ),
+                    to_attr="admin_sites",
+                ),
+                "tags",
+            )
+        )
 
     def get_deleted_objects(self, objs, request):
         # Django's default collector treats any PROTECTed relation reachable
@@ -128,7 +156,7 @@ class ProjectAdmin(BaseAdmin):
         # perms_needed/model_count reflect cascaded models (Site, Management,
         # ProjectProfile, ...) instead of just Project, then drop its nested
         # tree and protected list: for a real project the tree can run to
-        # hundreds/thousands of formatted rows (e.g. one per Site/Covariate),
+        # hundreds/thousands of formatted rows (e.g. one per Site),
         # and the protected list is exactly what we're bypassing.
         #
         # Caveat: PROTECTed models (SampleEvent.site/.management) still stop
@@ -161,27 +189,6 @@ class ProjectAdmin(BaseAdmin):
     def delete_queryset(self, request, queryset):
         for obj in queryset:
             delete_project(obj.pk)
-
-    def get_formsets_with_inlines(self, request, obj=None):
-        countries = Country.objects.none()
-        reef_types = ReefType.objects.none()
-        reef_zones = ReefZone.objects.none()
-        exposures = ReefExposure.objects.none()
-        sites = Site.objects.none()
-        if obj is not None:
-            countries = Country.objects.all()
-            reef_types = ReefType.objects.all()
-            reef_zones = ReefZone.objects.all()
-            exposures = ReefExposure.objects.all()
-            sites = Site.objects.all()
-
-        for inline in self.get_inline_instances(request, obj):
-            inline.cached_countrys = [(c.pk, c.name) for c in countries]
-            inline.cached_reef_types = [(rt.pk, rt.name) for rt in reef_types]
-            inline.cached_reef_zones = [(rz.pk, rz.name) for rz in reef_zones]
-            inline.cached_exposures = [(e.pk, e.name) for e in exposures]
-            inline.cached_predecessors = [(s.pk, s.name) for s in sites]
-            yield inline.get_formset(request, obj), inline
 
 
 @admin.register(ProjectProfile)
@@ -246,6 +253,10 @@ class SiteAdmin(BaseAdmin):
     list_display_links = ("name",)
     search_fields = ["country__name", "name"]
     list_filter = ("reef_type", "reef_zone", "exposure")
+    list_select_related = ("country", "reef_type", "reef_zone", "exposure")
+    raw_id_fields = ("predecessor",)
+    autocomplete_fields = ("project",)
+    readonly_fields = ("created_by", "updated_by")
 
 
 @admin.register(Country)
@@ -328,7 +339,7 @@ class ManagementAdmin(BaseAdmin):
         if crs.count() > 0:
             for cr in crs:
                 admin_url = reverse(
-                    "admin:{}_collectrecord_change".format(SampleEvent._meta.app_label),
+                    f"admin:{SampleEvent._meta.app_label}_collectrecord_change",
                     args=(cr.pk,),
                 )
                 crstr = format_html('<a href="{}">{}</a>', admin_url, cr)
@@ -339,9 +350,7 @@ class ManagementAdmin(BaseAdmin):
             atleast_one_se = True
             for se in ses:
                 admin_url = reverse(
-                    "admin:{}_{}_change".format(
-                        SampleEvent._meta.app_label, SampleEvent._meta.model_name
-                    ),
+                    f"admin:{SampleEvent._meta.app_label}_{SampleEvent._meta.model_name}_change",
                     args=(se.pk,),
                 )
                 sestr = format_html('<a href="{}">{}</a>', admin_url, se)
@@ -457,10 +466,10 @@ class TagAdmin(BaseAdmin):
         ps = Project.objects.filter(tags=obj)
         for p in ps:
             admin_url = reverse(
-                "admin:{}_{}_change".format(Project._meta.app_label, Project._meta.model_name),
+                f"admin:{Project._meta.app_label}_{Project._meta.model_name}_change",
                 args=(p.pk,),
             )
-            app_url = "{}/projects/{}/project-info".format(settings.DEFAULT_DOMAIN_COLLECT, p.pk)
+            app_url = f"{settings.DEFAULT_DOMAIN_COLLECT}/projects/{p.pk}/project-info"
             pstr = format_html(
                 '<a href="{}">{}</a> [<a href="{}" target="_blank">{}</a>]',
                 admin_url,
@@ -480,7 +489,7 @@ class TagAdmin(BaseAdmin):
                     p.tags.remove(obj)
                     p.tags.add(replacement_obj)
 
-        return super(TagAdmin, self).delete_view(request, object_id, extra_context)
+        return super().delete_view(request, object_id, extra_context)
 
 
 @admin.register(AuditRecord)

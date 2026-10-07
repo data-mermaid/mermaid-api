@@ -185,7 +185,7 @@ class CollectRecordViewSet(BaseProjectApiViewSet):
         table_name = qs.model._meta.db_table
         pk_name = qs.model._meta.pk.get_attname_column()[1]
 
-        qs = qs.annotate(_pk_=RawSQL('"{}"."{}"'.format(table_name, pk_name), []))
+        qs = qs.annotate(_pk_=RawSQL('"{}"."{}"'.format(table_name, pk_name), []))  # noqa: UP032
 
         sql, params = qs.query.get_compiler(using=qs.db).as_sql()
 

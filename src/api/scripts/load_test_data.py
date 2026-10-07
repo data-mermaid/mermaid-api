@@ -12,7 +12,7 @@ from api.models import (
 from api.models.base import AuthUser, Profile
 
 
-class TestDataGenerator(object):
+class TestDataGenerator:
     def create(self):
         self._create_projects()
         self._create_profiles()

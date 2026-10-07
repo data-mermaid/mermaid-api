@@ -1,7 +1,7 @@
 import os
 
 import nag_suppressions
-from aws_cdk import App, Aspects, Environment
+from aws_cdk import App, Aspects, Environment, aws_s3 as s3
 from cdk_nag import AwsSolutionsChecks
 from settings.dev import DEV_SETTINGS
 from settings.prod import PROD_SETTINGS
@@ -88,10 +88,10 @@ dev_sagemaker_stack = SagemakerStack(
     cluster=common_stack.cluster,
 )
 
-# The pyspacer inference compute lane (mermaid-classifier #53). A container
-# Lambda whose image (config.inference.image_tag) is published to the
-# mermaid-inference-pyspacer ECR repo by the mermaid-inference build-push CI
-# before this stack deploys. Alarms publish to ApiStack's shared alerts topic.
+# The pyspacer inference compute lane (mermaid-classifier #53). A container Lambda
+# whose image (config.inference.image_tag) is published to the mermaid-inference-pyspacer
+# ECR repo by the mermaid-inference build-push CI before this stack deploys. Alarms
+# publish to ApiStack's alerts topic, by ARN so this stack can deploy ahead of it.
 dev_inference_stack = InferenceStack(
     app,
     "dev-mermaid-inference",
@@ -100,9 +100,18 @@ dev_inference_stack = InferenceStack(
     config=DEV_SETTINGS,
     inference_repo=common_stack.inference_repo,
     config_bucket=common_stack.config_bucket,
-    image_bucket=common_stack.image_processing_bucket,
-    alerts_topic=dev_api_stack.alerts_topic,
+    image_buckets=[
+        (
+            common_stack.image_processing_bucket,
+            DEV_SETTINGS.api.ic_s3_path,
+        ),
+    ],
 )
+
+# The Lambda must already serve config.inference.classifier_version before the API
+# starts expecting it: classify_via_lambda's drift guard raises on every
+# classification while the two disagree, draining redeliveries into the DLQ.
+dev_api_stack.add_dependency(dev_inference_stack)
 
 prod_static_site_stack = StaticSiteStack(
     app,
@@ -138,7 +147,6 @@ prod_api_stack = ApiStack(
 )
 
 # The pyspacer inference compute lane for prod.
-# Alarms publish to prod ApiStack's shared alerts topic.
 prod_inference_stack = InferenceStack(
     app,
     "prod-mermaid-inference",
@@ -147,9 +155,25 @@ prod_inference_stack = InferenceStack(
     config=PROD_SETTINGS,
     inference_repo=common_stack.inference_repo,
     config_bucket=common_stack.config_bucket,
-    image_bucket=common_stack.image_processing_bucket,
-    alerts_topic=prod_api_stack.alerts_topic,
+    # coral-reef-training is a foreign AWS Open Data bucket: a statement in its bucket
+    # policy grants s3:PutObject on mermaid/* to this stack's Lambda by function ARN,
+    # so both read and write reach it like any other image bucket.
+    image_buckets=[
+        (
+            # from_bucket_name needs a Stack scope and adds no resource to it.
+            s3.Bucket.from_bucket_name(
+                prod_api_stack, "ProdInferenceImageBucket", PROD_SETTINGS.api.ic_bucket_name
+            ),
+            PROD_SETTINGS.api.ic_s3_path,
+        ),
+        (
+            common_stack.image_processing_bucket,
+            PROD_SETTINGS.api.ic_s3_path_test,
+        ),
+    ],
 )
+
+prod_api_stack.add_dependency(prod_inference_stack)
 
 cloudtrail_stack = CloudTrailStack(
     app,

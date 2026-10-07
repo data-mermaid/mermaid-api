@@ -5,29 +5,8 @@ from django.core.files.uploadedfile import SimpleUploadedFile
 from django.test import override_settings
 from django.urls import reverse
 
-from api.models import Annotation, Classifier, Image, Point
+from api.models import Annotation, Image, Point
 from api.resources.classification.image import ImageViewSet
-
-
-@pytest.fixture
-def classifier():
-    return Classifier.objects.create(name="Test classifier", version="v0", patch_size=144)
-
-
-@pytest.fixture
-def image(valid_benthic_pq_transect_collect_record):
-    with open("api/tests/data/test_image.jpg", "rb") as f:
-        content = f.read()
-
-    image_file = SimpleUploadedFile(
-        name="test_image.jpg", content=content, content_type="image/jpeg"
-    )
-
-    return Image.objects.create(
-        collect_record_id=valid_benthic_pq_transect_collect_record.pk,
-        image=image_file,
-        name="Test image",
-    )
 
 
 @pytest.fixture
@@ -91,6 +70,7 @@ def test_create_user_defined_annotation(
     assert request.status_code == 200
 
     data = request.json()
+    assert data["patch_size"] == 144
 
     bad_data = copy.deepcopy(data)
     bad_data["points"][0]["annotations"].append(

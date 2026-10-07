@@ -237,7 +237,7 @@ STATIC_ROOT = os.path.join(BASE_DIR, "static")
 # *****************
 
 AUTH0_DOMAIN = os.environ.get("AUTH0_DOMAIN")
-AUTH0_USER_INFO_ENDPOINT = "https://{domain}/userinfo".format(domain=AUTH0_DOMAIN)
+AUTH0_USER_INFO_ENDPOINT = f"https://{AUTH0_DOMAIN}/userinfo"
 AUTH0_MANAGEMENT_API_AUDIENCE = os.environ.get("AUTH0_MANAGEMENT_API_AUDIENCE")
 MERMAID_API_AUDIENCE = os.environ.get("MERMAID_API_AUDIENCE")
 MERMAID_API_SIGNING_SECRET = os.environ.get("MERMAID_API_SIGNING_SECRET")
@@ -256,7 +256,7 @@ EMAIL_PORT = os.environ.get("EMAIL_PORT")
 EMAIL_HOST_USER = os.environ.get("EMAIL_HOST_USER")
 EMAIL_HOST_PASSWORD = os.environ.get("EMAIL_HOST_PASSWORD")
 EMAIL_USE_TLS = True
-DEFAULT_FROM_EMAIL = "MERMAID System <{}>".format(EMAIL_HOST_USER)
+DEFAULT_FROM_EMAIL = f"MERMAID System <{EMAIL_HOST_USER}>"
 WEBCONTACT_EMAIL = f"MERMAID Web Contact <{os.environ.get('WEBCONTACT_EMAIL')}>"
 
 API_NULLQUERY = "null"
@@ -410,6 +410,7 @@ LOGGING = {
             "level": "ERROR",
             "propagate": False,
         },
+        "api.utils.inference": {"handlers": ["console"], "level": "INFO", "propagate": False},
     },
 }
 
@@ -451,18 +452,25 @@ if ENVIRONMENT == "prod":
 IMAGE_S3_PATH = "mermaid/"
 IMAGE_S3_PATH_TEST = os.environ.get("IMAGE_S3_PATH_TEST") or IMAGE_S3_PATH
 DATA_UPLOAD_MAX_MEMORY_SIZE = 30 * 1024 * 1024  # 30 MB
+# Django's default ("same-origin") sends no Referer to tile.openstreetmap.org, which
+# OSM's tile usage policy now rejects (403), breaking admin map widgets.
+SECURE_REFERRER_POLICY = "strict-origin-when-cross-origin"
 FILE_UPLOAD_MAX_MEMORY_SIZE = 15 * 1024 * 1024  # 15 MB
 MAX_IMAGE_PIXELS = 8000 * 8000
 MAX_IMAGE_FILE_SIZE = 30 * 1024 * 1024  # 30 MB
 AWS_QUERYSTRING_AUTH = False
 AUTOCONFIRM_THRESHOLD = 1.0
 CLASSIFIED_THRESHOLD = 0.5
-SPACER = {
-    "AWS_ACCESS_KEY_ID": IMAGE_BUCKET_AWS_ACCESS_KEY_ID,
-    "AWS_SECRET_ACCESS_KEY": IMAGE_BUCKET_AWS_SECRET_ACCESS_KEY,
-    "AWS_REGION": AWS_REGION,
-    "EXTRACTORS_CACHE_DIR": "/tmp/classifier",
-}
+INFERENCE_DEFAULT_NUM_POINTS = 25
+# Identify which Lambda function to invoke and which classifier version it serves;
+# both arrive from the environment because they differ per deployment target.
+INFERENCE_LAMBDA_PYSPACER = os.environ.get("INFERENCE_LAMBDA_PYSPACER") or ""
+INFERENCE_CLASSIFIER_VERSION = os.environ.get("INFERENCE_CLASSIFIER_VERSION") or ""
+# Must outlast invoke_pyspacer's worst case (2 lambda invokes at 670s each,
+# plus a backoff sleep) ~= 1341s. image_sqs_message_visibility
+# (iac/settings/settings.py) is supplied via the container environment so
+# the two cannot drift; 1500 here is the default outside a CDK-managed deploy.
+INFERENCE_JOB_VISIBILITY_TIMEOUT = int(os.environ.get("INFERENCE_JOB_VISIBILITY_TIMEOUT") or "1500")
 
 # Reporting S3 credentials
 REPORT_S3_ACCESS_KEY_ID = os.environ.get("REPORT_S3_ACCESS_KEY_ID")
