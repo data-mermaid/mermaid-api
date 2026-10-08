@@ -2,6 +2,7 @@ import re
 import uuid
 
 from api.models import AuthUser, Project
+from api.reports.formatters import MULTI_VALUE_SEPARATOR
 
 SUMMARY_URL_SUFFIXES = (
     "/beltfishes/obstransectbeltfishes/",
@@ -114,8 +115,10 @@ def get_project_lookup(log_events):
         str(p.id): {
             "project_name": p.name,
             "project_status": p.get_status_display(),
-            "project_tags": ",".join(t.name for t in p.tags.all()),
-            "countries": ",".join(set([s.country.name for s in p.sites.order_by("country__name")])),
+            "project_tags": MULTI_VALUE_SEPARATOR.join(t.name for t in p.tags.all()),
+            "countries": MULTI_VALUE_SEPARATOR.join(
+                sorted(set(s.country.name for s in p.sites.all()))
+            ),
             "profiles": {str(pp.profile.id): pp.get_role_display() for pp in p.profiles.all()},
         }
         for p in Project.objects.prefetch_related("profiles", "tags", "sites").filter(
