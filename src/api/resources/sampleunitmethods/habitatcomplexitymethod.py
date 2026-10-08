@@ -267,7 +267,6 @@ class ObsHabitatComplexityCSVSerializer(ReportSerializer):
         ReportField("project_includes_gfcr", "Project includes GFCR", to_yesno),
         ReportField("suggested_citation", "Suggested citation"),
         ReportField("data_policy_habitatcomplexity", "Habitat complexity data policy"),
-        ReportField("site_id"),
     ]
 
     additional_fields = [
@@ -279,6 +278,7 @@ class ObsHabitatComplexityCSVSerializer(ReportSerializer):
         ReportField("sample_unit_id"),
         ReportField("interval_size"),
         ReportField("interval_start"),
+        ReportField("site_id"),
     ]
 
 
@@ -352,7 +352,6 @@ class HabitatComplexityMethodSUCSVSerializer(ReportSerializer):
         ReportField("project_includes_gfcr", "Project includes GFCR", to_yesno),
         ReportField("suggested_citation", "Suggested citation"),
         ReportField("data_policy_habitatcomplexity", "Habitat complexity data policy"),
-        ReportField("site_id"),
     ]
 
     additional_fields = [
@@ -361,6 +360,7 @@ class HabitatComplexityMethodSUCSVSerializer(ReportSerializer):
         ReportField("management_id"),
         ReportField("sample_event_id"),
         ReportField("sample_unit_ids"),
+        ReportField("site_id"),
     ]
 
 
@@ -425,7 +425,6 @@ class HabitatComplexityMethodSECSVSerializer(ReportSerializer):
         ReportField("project_includes_gfcr", "Project includes GFCR", to_yesno),
         ReportField("suggested_citation", "Suggested citation"),
         ReportField("data_policy_habitatcomplexity", "Habitat complexity data policy"),
-        ReportField("site_id"),
     ]
 
     additional_fields = [
@@ -434,6 +433,7 @@ class HabitatComplexityMethodSECSVSerializer(ReportSerializer):
         ReportField("country_id"),
         ReportField("management_id"),
         ReportField("sample_event_id"),
+        ReportField("site_id"),
     ]
 
 

@@ -30,12 +30,16 @@ def test_get_project_metadata_suggested_citation(project1, benthic_lit1):
     assert data[idx] == expected
 
 
-# No site_id column — these tests exercise only the early-return / pass-through path.
-# The covariate-enrichment and column-filtering branches require a view_cls with
-# serializer_class_csv (fields + additional_fields) and are not covered here.
 _CSV_ROWS = [
     ["protocol", "name", "value"],
     ["beltfish", "Site One", "42"],
+]
+
+# Includes a site_id column — get_viewset_csv_content no longer inspects headers at
+# all, so this must stream through unchanged just like _CSV_ROWS above.
+_CSV_ROWS_WITH_SITE_ID = [
+    ["protocol", "name", "value", "site_id"],
+    ["beltfish", "Site One", "42", "11111111-1111-1111-1111-111111111111"],
 ]
 
 
@@ -109,3 +113,15 @@ def test_get_viewset_csv_content_cached_file():
         result = list(get_viewset_csv_content(view_cls, "test-pk", None))
 
     assert result == _CSV_ROWS
+
+
+def test_get_viewset_csv_content_site_id_column_passes_through_unchanged():
+    """A response with a site_id column streams through unchanged — there is no
+    covariate enrichment or column-filtering branch to divert it anymore."""
+    csv_bytes = _rows_to_bytes(_CSV_ROWS_WITH_SITE_ID)
+    view_cls = _make_view_cls(StreamingHttpResponse(iter([csv_bytes])))
+
+    with patch("api.reports.summary_report.cached.get_cached_textfile", return_value=None):
+        result = list(get_viewset_csv_content(view_cls, "test-pk", None))
+
+    assert result == _CSV_ROWS_WITH_SITE_ID
