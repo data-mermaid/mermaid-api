@@ -1,6 +1,8 @@
 from api.models import Project
 
 DATA_POLICIES = dict(Project.DATA_POLICIES)
+# Separator for multi-value fields in tabular exports; values (e.g. tag names) may contain commas
+MULTI_VALUE_SEPARATOR = "; "
 
 
 def handle_none(default_val=None):
@@ -53,18 +55,18 @@ def to_day(value, field, row, serializer_instance):
 
 @handle_none()
 def to_join_list(value, field, row, serializer_instance):
-    return ", ".join(value)
+    return MULTI_VALUE_SEPARATOR.join(value)
 
 
 @handle_none()
 def to_governance(value, field, row, serializer_instance):
-    return ", ".join(value)
+    return MULTI_VALUE_SEPARATOR.join(value)
 
 
 @handle_none()
 def to_names(value, field, row, serializer_instance):
     vals = [v["name"] for v in value]
-    return ", ".join(vals)
+    return MULTI_VALUE_SEPARATOR.join(vals)
 
 
 @handle_none()
