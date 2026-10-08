@@ -1,4 +1,7 @@
+import importlib
+
 import pytest
+from django.apps import apps
 
 from api.resources.collect_record import CollectRecordSerializer
 from api.submission.validations import (
@@ -488,3 +491,56 @@ def test_management_validators_similar_name_first(validations):
     assert mr_validator_names.index("similar_management_name_validator") < (
         mr_validator_names.index("unique_management_validator")
     )
+
+
+def test_similar_name_ignore_migrated_to_new_validator(
+    management1, valid_benthic_lit_collect_record, benthic_lit_project, profile1_request
+):
+    migration = importlib.import_module("api.migrations.0135_move_similar_name_ignores")
+    mr_validations = {
+        v.validator.name: v
+        for v in benthic_lit.benthic_lit_validations
+        if v.paths == ["data.sample_event.management"]
+    }
+    old_id = mr_validations[migration.OLD_NAME]._get_validation_id()
+    new_id = mr_validations[migration.NEW_NAME]._get_validation_id()
+    assert old_id == migration._validation_id(migration.OLD_NAME)
+    assert new_id == migration._validation_id(migration.NEW_NAME)
+
+    # Same site and similar name, with similar_name ignored before the validator split
+    management1.pk = None
+    management1.name = management1.name.replace(" ", "-")
+    management1.save()
+    record = valid_benthic_lit_collect_record
+    record.data["sample_event"]["management"] = str(management1.pk)
+    record.validations = {
+        "version": ValidationRunner.VERSION,
+        "status": OK,
+        "results": {
+            "data": {
+                "sample_event": {
+                    "management": [
+                        {
+                            "name": migration.OLD_NAME,
+                            "status": IGNORE,
+                            "code": "similar_name",
+                            "context": None,
+                            "validation_id": old_id,
+                            "fields": ["data.sample_event.management"],
+                        }
+                    ]
+                }
+            }
+        },
+    }
+    record.save()
+
+    migration.move_similar_name_ignores(apps, None)
+    record.refresh_from_db()
+
+    runner = ValidationRunner(serializer=CollectRecordSerializer)
+    runner.validate(record, benthic_lit.benthic_lit_validations, request=profile1_request)
+    mr_results = runner.to_dict()["results"]["data"]["sample_event"]["management"]
+    statuses = {r["code"]: r["status"] for r in mr_results if r["code"]}
+    assert statuses["similar_name"] == IGNORE
+    assert statuses["not_unique_management"] == WARN
