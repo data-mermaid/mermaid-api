@@ -2,6 +2,8 @@ import logging
 from datetime import datetime
 from time import sleep
 
+from django.db import close_old_connections
+
 logger = logging.getLogger(__name__)
 
 
@@ -47,8 +49,23 @@ class Worker:
             for queue in self.queues:
                 for job in queue.jobs:
                     if job.visibility_timeout:
-                        queue.extend_job_visibility(job, job.visibility_timeout)
-                    job.run()
+                        try:
+                            queue.extend_job_visibility(job, job.visibility_timeout)
+                        except Exception as e:
+                            # A failed extension usually means the receipt handle is
+                            # already dead; skip so the message redelivers instead of
+                            # risking a second, costly inference call mid-run.
+                            logger.exception(
+                                f"[classify.processing_error] failed to extend visibility for job {job}, skipping it this cycle: {e}"
+                            )
+                            continue
+                    # A worker has no request cycle, so Django never recycles its
+                    # connection; without this, one dropped by RDS fails every later job.
+                    close_old_connections()
+                    try:
+                        job.run()
+                    finally:
+                        close_old_connections()
                     if not job.exception:
                         queue.remove_job(job)
             finish_time = datetime.now()

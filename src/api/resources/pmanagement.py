@@ -10,7 +10,7 @@ from .base import (
     BaseProjectApiViewSet,
     NullableUUIDFilter,
 )
-from .management import get_rules
+from .management import ManagementRulesMixin, get_rules
 from .mixins import (
     CopyRecordsMixin,
     CreateOrUpdateSerializerMixin,
@@ -20,7 +20,10 @@ from .mixins import (
 
 
 class PManagementSerializer(
-    ManagementDuplicateCheckMixin, CreateOrUpdateSerializerMixin, BaseAPISerializer
+    ManagementRulesMixin,
+    ManagementDuplicateCheckMixin,
+    CreateOrUpdateSerializerMixin,
+    BaseAPISerializer,
 ):
     size = DecimalField(
         max_digits=12,

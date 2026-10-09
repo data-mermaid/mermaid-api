@@ -9,14 +9,17 @@ from zipfile import ZIP_DEFLATED, ZipFile
 
 from django.conf import settings
 from django.contrib.admin.utils import NestedObjects
-from django.core.exceptions import ObjectDoesNotExist, SuspiciousFileOperation
+from django.core.exceptions import (
+    ObjectDoesNotExist,
+    SuspiciousFileOperation,
+    ValidationError,
+)
 from django.db import IntegrityError, router
 from django.db.models.deletion import ProtectedError
 from django.db.models.fields.related import OneToOneRel
 from django.utils import timezone
 from django.utils.text import get_valid_filename
 from django.utils.translation import gettext_lazy as _
-from rest_framework.exceptions import ValidationError
 
 
 class Testing:

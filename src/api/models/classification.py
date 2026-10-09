@@ -1,12 +1,26 @@
 import csv
+import logging
+import os
 import uuid
 from io import StringIO
 
+import urllib3
+from botocore.exceptions import BotoCoreError, ClientError
 from django.conf import settings
 from django.contrib.gis.db import models
+from django.core.exceptions import ValidationError
+from django.core.files.base import ContentFile
 from django.core.files.storage import FileSystemStorage
+from django.db import transaction
+from django.utils import timezone
+from pydantic import (
+    BaseModel as PydanticBaseModel,
+    ConfigDict,
+    ValidationError as PydanticValidationError,
+)
 from storages.backends.s3 import S3Storage
 
+from ..utils import s3
 from .base import BaseModel
 from .core import CollectRecord, Project, Site
 from .protocols.benthic import (
@@ -15,6 +29,59 @@ from .protocols.benthic import (
     GrowthForm,
     ObsBenthicPhotoQuadrat,
 )
+
+logger = logging.getLogger(__name__)
+
+
+class ClassifierRegistrationError(Exception):
+    """Raised when a model.json manifest cannot be ingested by Classifier.register()."""
+
+
+class ClassifierNotConfiguredError(Exception):
+    """Raised when Classifier.active() cannot resolve the version pinned by
+    INFERENCE_CLASSIFIER_VERSION: the setting is empty, or no row matches it.
+    """
+
+
+def parse_bagf_label(label):
+    """Split a `ba_uuid::gf_uuid` classifier label into its (ba_id, gf_id) parts.
+
+    A missing growth form (`"ba"` or `"ba::"`) yields `gf_id=None`.
+    """
+    ba_id, _, gf_id = label.partition("::")
+    return ba_id, gf_id or None
+
+
+SUPPORTED_MANIFEST_SCHEMA_VERSION = 1
+
+# S3 prefix under which a classifier version's artifacts (model.json, weights, etc.) live.
+CLASSIFIER_CONFIG_S3_PATH = "classifier"
+
+# Maps a model.json `task` discriminator to a Classifier.classifier_type.
+TASK_TO_CLASSIFIER_TYPE = {
+    "pyspacer_mlp_classifier": "pyspacer",
+}
+
+
+class PyspacerConfig(PydanticBaseModel):
+    """Validates the `config` object in a pyspacer model.json manifest."""
+
+    model_config = ConfigDict(extra="forbid", strict=True)
+    patch_size: int
+
+
+# Per-classifier-type pydantic schema used by Classifier.register() to validate `config`.
+CONFIG_SCHEMAS = {
+    "pyspacer": PyspacerConfig,
+}
+
+
+def _resolve_label_part(model, pk, label, kind):
+    """Look up `model` by `pk`, raising ClassifierRegistrationError naming `label` on failure."""
+    try:
+        return model.objects.get(pk=pk)
+    except (model.DoesNotExist, ValueError, ValidationError) as e:
+        raise ClassifierRegistrationError(f"Unknown {kind} {pk!r} in class {label!r}") from e
 
 
 def select_image_storage():
@@ -109,12 +176,19 @@ class LabelMapping(BaseModel):
 
 
 class Classifier(BaseModel):
+    CLASSIFIER_TYPES = (
+        ("pyspacer", "pyspacer"),
+        ("segmentation", "segmentation"),
+    )
+
     name = models.CharField(max_length=50)
     version = models.CharField(
-        max_length=11, help_text="Classifier version (pattern: v[Version Number])"
+        max_length=11,
+        unique=True,
+        help_text="Classifier version (pattern: v[Version Number])",
     )
-    patch_size = models.IntegerField(help_text="Number of pixels")
-    num_points = models.IntegerField(default=25)
+    classifier_type = models.CharField(max_length=20, choices=CLASSIFIER_TYPES, default="pyspacer")
+    config = models.JSONField(default=dict, blank=True)
     description = models.TextField(max_length=1000, blank=True)
     benthic_attribute_growth_forms = models.ManyToManyField(
         BenthicAttributeGrowthForm, related_name="classifiers"
@@ -122,10 +196,144 @@ class Classifier(BaseModel):
 
     class Meta:
         db_table = "class_classifier"
+        constraints = [
+            # patch_size lives in config, so the database enforces its presence here;
+            # PyspacerConfig enforces its type.
+            models.CheckConstraint(
+                condition=~models.Q(classifier_type="pyspacer")
+                | models.Q(config__has_key="patch_size"),
+                name="classifier_pyspacer_config_has_patch_size",
+            )
+        ]
+
+    @property
+    def patch_size(self):
+        # config is only guaranteed to be a dict when the row was saved through
+        # full_clean(); admin list views read this property directly.
+        if not isinstance(self.config, dict):
+            return None
+        return self.config.get("patch_size")
+
+    def clean(self):
+        super().clean()
+        if self.config is not None and not isinstance(self.config, dict):
+            raise ValidationError({"config": "config must be a JSON object."})
+        config = self.config or {}
+        config_schema = CONFIG_SCHEMAS.get(self.classifier_type)
+        if config_schema is None:
+            return
+        try:
+            config_schema(**config)
+        except PydanticValidationError as e:
+            raise ValidationError({"config": str(e)}) from e
 
     @classmethod
-    def latest(cls):
-        return cls.objects.order_by("-created_on").first()
+    def active(cls):
+        """The Classifier row for the version baked into the deployed inference image.
+
+        Looks up by an exact version match: any other selection could return a
+        different row than the one that actually scored the points, mis-attributing
+        Annotation.classifier.
+        """
+        version = settings.INFERENCE_CLASSIFIER_VERSION
+        if not version:
+            raise ClassifierNotConfiguredError("INFERENCE_CLASSIFIER_VERSION is not set")
+        try:
+            return cls.objects.get(version=version)
+        except cls.DoesNotExist as err:
+            raise ClassifierNotConfiguredError(
+                f"No Classifier registered for version {version!r}"
+            ) from err
+
+    @classmethod
+    def register(cls, version, *, name=None, description=None):
+        """Ingest s3://<config-bucket>/classifier/<version>/model.json into this row.
+
+        Validates config via the per-type pydantic schema and resolves each
+        `ba_uuid::gf_uuid` class into the BA+GF M2M. Raises ClassifierRegistrationError
+        on any malformed/mismatched manifest, applying nothing.
+        """
+        key = f"{CLASSIFIER_CONFIG_S3_PATH}/{version}/model.json"
+        try:
+            manifest = s3.read_json_object(settings.AWS_CONFIG_BUCKET, key)
+        except (ClientError, BotoCoreError, ValueError, urllib3.exceptions.HTTPError) as e:
+            raise ClassifierRegistrationError(
+                f"Could not read model.json for {version}: {e}"
+            ) from e
+
+        if not isinstance(manifest, dict):
+            raise ClassifierRegistrationError(f"model.json for {version} is not a JSON object")
+
+        schema_version = manifest.get("schema_version")
+        if schema_version != SUPPORTED_MANIFEST_SCHEMA_VERSION:
+            raise ClassifierRegistrationError(
+                f"Unsupported model.json schema_version {schema_version!r} for {version}"
+            )
+
+        task = manifest.get("task")
+        classifier_type = TASK_TO_CLASSIFIER_TYPE.get(task)
+        if classifier_type is None:
+            raise ClassifierRegistrationError(f"Unknown task {task!r} in model.json for {version}")
+
+        config_schema = CONFIG_SCHEMAS.get(classifier_type)
+        if config_schema is None:
+            raise ClassifierRegistrationError(
+                f"No config schema for classifier_type {classifier_type!r} in model.json for {version}"
+            )
+        try:
+            validated_config = config_schema(**(manifest.get("config") or {}))
+        except (PydanticValidationError, TypeError) as e:
+            raise ClassifierRegistrationError(
+                f"Invalid config in model.json for {version}: {e}"
+            ) from e
+        config = validated_config.model_dump()
+
+        classes = manifest.get("classes") or []
+        # A JSON object iterates as its keys, which are strings, so the per-label string
+        # check below cannot tell one from a list of labels.
+        if not isinstance(classes, list):
+            raise ClassifierRegistrationError(f"classes in model.json for {version} is not a list")
+        if not classes:
+            raise ClassifierRegistrationError(f"model.json for {version} has no classes")
+
+        with transaction.atomic():
+            resolved = []
+            for label in classes:
+                if not isinstance(label, str):
+                    raise ClassifierRegistrationError(
+                        f"Non-string class {label!r} in model.json for {version}"
+                    )
+                ba_uuid, gf_uuid = parse_bagf_label(label)
+                ba = _resolve_label_part(BenthicAttribute, ba_uuid, label, "benthic attribute")
+                gf = None
+                if gf_uuid:
+                    gf = _resolve_label_part(GrowthForm, gf_uuid, label, "growth form")
+                bagf, _ = BenthicAttributeGrowthForm.objects.get_or_create(
+                    benthic_attribute=ba, growth_form=gf
+                )
+                resolved.append(bagf)
+
+            classifier, created = cls.objects.get_or_create(
+                version=version,
+                defaults={
+                    "name": name or version,
+                    "classifier_type": classifier_type,
+                    "config": config,
+                    "description": description or "",
+                },
+            )
+            if not created:
+                classifier.classifier_type = classifier_type
+                classifier.config = config
+                if name is not None:
+                    classifier.name = name
+                if description is not None:
+                    classifier.description = description
+                classifier.save()
+
+            classifier.benthic_attribute_growth_forms.set(resolved)
+
+        return classifier
 
     def __str__(self):
         return self.version
@@ -220,6 +428,10 @@ class Image(BaseModel):
 
         return None
 
+    # Saving with update_fields lets post_save_classification_image skip re-reading the
+    # original image from S3 to checksum it, since the image itself hasn't changed.
+    ANNOTATIONS_FILE_UPDATE_FIELDS = ("annotations_file", "updated_on")
+
     def create_annotations_file(self):
         csv_columns = [
             "id",
@@ -233,16 +445,14 @@ class Image(BaseModel):
             "growth_form_name",
             "updated_on",
         ]
-        annos = (
-            Annotation.objects.select_related("point", "point__image")
+        annos = list(
+            Annotation.objects.select_related("point", "benthic_attribute", "growth_form")
             .filter(is_confirmed=True, point__image__id=self.id)
             .order_by("point__row", "point__column")
         )
 
-        if not annos.exists():
-            self.annotations_file.delete()
-            self.annotations_file = None
-            self.save()
+        if not annos:
+            self.clear_annotations_file()
             return
 
         tmp = StringIO()
@@ -265,11 +475,66 @@ class Image(BaseModel):
                         anno.updated_on,
                     ]
                 )
-            tmp.seek(0)
-            self.annotations_file.save(f"{self.id}_annotations.csv", tmp, save=True)
+            content = tmp.getvalue()
         finally:
             tmp.close()
             tmp = None
+
+        storage, old_name = self.annotations_file.storage, self.annotations_file.name
+        name = f"{self.id}_annotations.csv"
+        self.annotations_file = name
+        self.save(update_fields=self.ANNOTATIONS_FILE_UPDATE_FIELDS)
+        # Upload only once the row change commits, so a rollback leaves the stored CSV
+        # untouched. A failed upload is handled there rather than raised into the caller
+        # (e.g. a submit that has already committed).
+        transaction.on_commit(
+            lambda: self._upload_annotations_file(storage, name, content, old_name),
+            robust=True,
+        )
+
+    def _upload_annotations_file(self, storage, name, content, old_name):
+        content_file = ContentFile(content.encode("utf-8"))
+        try:
+            if getattr(storage, "file_overwrite", False):
+                storage.save(name, content_file)
+            else:
+                # Storages that don't overwrite (local FileSystemStorage) would save under a
+                # new name, so write alongside and swap in, keeping the original until then.
+                tmp_name = storage.save(f"{name}.tmp", content_file)
+                try:
+                    os.replace(storage.path(tmp_name), storage.path(name))
+                except Exception:
+                    storage.delete(tmp_name)
+                    raise
+        except Exception:
+            logger.exception(f"Failed to upload annotations file {name} for image {self.id}")
+            try:
+                file_exists = storage.exists(name)
+            except Exception:
+                file_exists = False
+            # Don't leave the row pointing at a file that was never written: fall back to
+            # the previous file, if it had a different name. An earlier version under the
+            # same name is kept, stale, until the next regeneration.
+            if not file_exists:
+                fallback = old_name if old_name and old_name != name else ""
+                Image.objects.filter(id=self.id, annotations_file=name).update(
+                    annotations_file=fallback, updated_on=timezone.now()
+                )
+            return
+
+        if old_name and old_name != name:
+            storage.delete(old_name)
+
+    def clear_annotations_file(self):
+        if not self.annotations_file:
+            return
+
+        storage, name = self.annotations_file.storage, self.annotations_file.name
+        self.annotations_file = None
+        self.save(update_fields=self.ANNOTATIONS_FILE_UPDATE_FIELDS)
+        # Delete from storage only once the row change commits, so a rollback can't leave
+        # the row pointing at a file that no longer exists.
+        transaction.on_commit(lambda: storage.delete(name), robust=True)
 
 
 class Point(BaseModel):
