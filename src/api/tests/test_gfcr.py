@@ -309,10 +309,10 @@ def test_notes_in_report_export(
     # Load the workbook and verify notes are present
     wb = load_workbook(report_path)
 
-    # Check F1 sheet - should have notes in column 8
+    # Check F1 sheet - should have notes in column 7
     f1_sheet = wb["F1"]
     f1_row = list(f1_sheet.iter_rows(min_row=2, max_row=2, values_only=True))[0]
-    assert f1_row[7] == "F1 test notes", f"F1 notes not found. Row: {f1_row}"
+    assert f1_row[6] == "F1 test notes", f"F1 notes not found. Row: {f1_row}"
 
     # Check F2 sheet - should have notes in column 7
     f2_sheet = wb["F2"]
@@ -363,22 +363,22 @@ def test_notes_in_report_export(
             assert row[6] == "F7 test notes", f"F7 notes not found in row: {row}"
             break
 
-    # Check FacilitiesSolutions sheet - notes are now at column 16 (index 15)
+    # Check FacilitiesSolutions sheet - notes are at column 16 (index 15)
     bfs_sheet = wb["FacilitiesSolutions"]
     bfs_row = next(bfs_sheet.iter_rows(min_row=2, max_row=2, values_only=True))
     assert (
         bfs_row[15] == "Finance solution notes"
     ), f"Finance solution notes not found. Row: {bfs_row}"
 
-    # Check Investments sheet - notes are now at column 15 (index 14)
+    # Check Investments sheet - notes are at column 10 (index 9)
     inv_sheet = wb["Investments"]
     inv_row = next(inv_sheet.iter_rows(min_row=2, max_row=2, values_only=True))
-    assert inv_row[14] == "Investment notes", f"Investment notes not found. Row: {inv_row}"
+    assert inv_row[9] == "Investment notes", f"Investment notes not found. Row: {inv_row}"
 
-    # Check Revenues sheet - notes are now at column 15 (index 14)
+    # Check Revenues sheet - notes are at column 10 (index 9)
     rev_sheet = wb["Revenues"]
     rev_row = next(rev_sheet.iter_rows(min_row=2, max_row=2, values_only=True))
-    assert rev_row[14] == "Revenue notes", f"Revenue notes not found. Row: {rev_row}"
+    assert rev_row[9] == "Revenue notes", f"Revenue notes not found. Row: {rev_row}"
 
     # Clean up
     os.remove(report_path)
@@ -910,8 +910,8 @@ def test_report_new_columns_and_sheet_name(db_setup, project1):
 
     fs_sheet = wb["FacilitiesSolutions"]
     row = next(fs_sheet.iter_rows(min_row=2, max_row=2, values_only=True))
-    # type is at index 4, geographical_coverage at index 8
+    # type is at index 4, geographical_coverage at index 7
     assert row[4] == "Conservation trust fund (CTF)", f"Expected CTF display, got: {row}"
-    assert row[8] == "National", f"Expected 'National', got: {row}"
+    assert row[7] == "National", f"Expected 'National', got: {row}"
 
     os.remove(report_path)

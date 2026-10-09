@@ -311,14 +311,14 @@ class GFCRFinanceSolution(BaseModel):
         ("economic_instruments", "Economic instruments (fines, penalties, taxes, subsidies, etc.)"),
         ("financial_guarantees", "Financial guarantees"),
         ("insurance_products", "Insurance products"),
-        ("microfinance", "Microfinance / village savings and loans"),
+        ("microfinance", "Microfinance/village savings and loans"),
         ("mpa_entry_fees", "MPA entry fees"),
         ("pay_for_success", "Pay for success"),
         ("resilience_credits", "Resilience credits"),
         ("sustainable_livelihood_mech", "Sustainable livelihood mechanisms"),
     )
     SUSTAINABLE_FINANCE_MECHANISM_CHOICES_UPDATED_ON = datetime.datetime(
-        2026, 6, 19, 0, 0, 0, 0, tzinfo=datetime.UTC
+        2026, 10, 9, 0, 0, 0, 0, tzinfo=datetime.UTC
     )
 
     GFCR_FUNDED = "gfcr_funded"
@@ -388,10 +388,10 @@ class GFCRInvestmentSource(BaseModel):
         ("equity", "Equity"),
         ("financial_guarantee", "Financial guarantee"),
         ("grant", "Grant"),
-        ("technical_assistance", "Technical assistance / in-kind"),
+        ("technical_assistance", "Technical assistance/in-kind"),
     )
     INVESTMENT_TYPE_CHOICES_UPDATED_ON = datetime.datetime(
-        2026, 6, 19, 0, 0, 0, 0, tzinfo=datetime.UTC
+        2026, 10, 9, 0, 0, 0, 0, tzinfo=datetime.UTC
     )
 
     finance_solution = models.ForeignKey(
@@ -418,7 +418,7 @@ class GFCRRevenue(BaseModel):
         ("blue_bonds", "Blue bonds"),
         (
             "carbon_credits_environmental_services",
-            "Blue carbon credits / environmental services",
+            "Blue carbon credits/environmental services",
         ),
         ("conservation_trust_funds", "Conservation trust funds"),
         ("debt_conversion", "Debt conversion"),
@@ -428,14 +428,14 @@ class GFCRRevenue(BaseModel):
         ("insurance_products", "Insurance products"),
         (
             "interest_investment_returns",
-            "Interest / investment returns (e.g., public, private equity)",
+            "Interest/investment returns (e.g., public, private equity)",
         ),
         ("marine_resources_sales", "Natural resource sales (e.g., fisheries or aquaculture)"),
         ("misc_revenue_streams", "Misc. revenue streams"),
         ("sustainable_livelihood_mechanisms", "Other sustainable livelihood mechanisms"),
     )
     REVENUE_TYPE_CHOICES_UPDATED_ON = datetime.datetime(
-        2026, 4, 17, 0, 0, 0, 0, tzinfo=datetime.UTC
+        2026, 10, 9, 0, 0, 0, 0, tzinfo=datetime.UTC
     )
 
     finance_solution = models.ForeignKey(
