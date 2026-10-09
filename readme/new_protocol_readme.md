@@ -87,6 +87,7 @@ If the protocol introduces its own attribute/taxonomy hierarchy (Django MTI from
 - Create a sample unit methods validations file. Examples:
   - src/api/submission/validations2/belt_fish.py
   - src/api/submission/validations2/benthic_photo_quadrat_transect.py
+  - Include both `SimilarManagementNameValidator` and `UniqueManagementValidator` on `data.sample_event.management`, in that order: the webapp only offers the duplicate-MR merge when `similar_name` is the field's first warning. Add the list to `test_management_validators_similar_name_first`.
 
 ## API Endpoints
 

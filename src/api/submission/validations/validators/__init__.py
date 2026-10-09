@@ -39,7 +39,11 @@ from .invert_obs import (
     InvertSizeValidator,
 )
 from .len_surveyed import LenSurveyedValidator
-from .management import ManagementRuleValidator, UniqueManagementValidator
+from .management import (
+    ManagementRuleValidator,
+    SimilarManagementNameValidator,
+    UniqueManagementValidator,
+)
 from .obs_benthic_lit import BenthicLITObservationTotalLengthValidator
 from .obs_benthic_photo_quadrat import (
     PointsPerQuadratValidator,
