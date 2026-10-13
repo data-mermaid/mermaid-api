@@ -85,7 +85,7 @@ def _resolve_label_part(model, pk, label, kind):
 
 
 def select_image_storage():
-    if settings.ENVIRONMENT not in ("dev", "prod"):
+    if not settings.USE_S3_IMAGE_STORAGE:
         return FileSystemStorage()
     return S3Storage(
         bucket_name=settings.IMAGE_PROCESSING_BUCKET,
@@ -376,7 +376,7 @@ class Image(BaseModel):
 
     def get_storage(self):
         """Return a storage backend configured for this image's bucket."""
-        if settings.ENVIRONMENT not in ("dev", "prod"):
+        if not settings.USE_S3_IMAGE_STORAGE:
             return FileSystemStorage()
         config = get_image_storage_config(self.image_bucket)
         return S3Storage(

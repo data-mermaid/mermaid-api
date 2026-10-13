@@ -284,6 +284,10 @@ IMAGE_PROCESSING_BUCKET = os.environ.get("IMAGE_PROCESSING_BUCKET")
 IMAGE_PROCESSING_BUCKET_TEST = (
     os.environ.get("IMAGE_PROCESSING_BUCKET_TEST") or IMAGE_PROCESSING_BUCKET
 )
+# Store classification images in S3 even outside dev/prod (local end-to-end inference testing)
+USE_S3_IMAGE_STORAGE = ENVIRONMENT in ("dev", "prod") or (
+    os.environ.get("USE_S3_IMAGE_STORAGE", "").lower() == "true"
+)
 
 # ************
 # ** CLIENT **
