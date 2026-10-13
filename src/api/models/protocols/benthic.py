@@ -165,9 +165,18 @@ class BenthicAttributeGrowthFormLifeHistory(BaseModel):
         )
 
 
+class BleachingStatus(BaseModel):
+    name = models.CharField(max_length=100)
+    val = models.PositiveSmallIntegerField()
+    
+    def __str__(self):
+        return _("%s %s") % (self.val, self.name)
+
+
 class BenthicLIT(TransectMethod):
     protocol = BENTHICLIT_PROTOCOL
     project_lookup = "transect__sample_event__site__project"
+    include_bleaching = models.BooleanField(default=False)
 
     transect = models.OneToOneField(
         BenthicTransect,
@@ -194,6 +203,9 @@ class ObsBenthicLIT(BaseModel, JSONMixin):
     attribute = models.ForeignKey(BenthicAttribute, on_delete=models.PROTECT)
     growth_form = models.ForeignKey(GrowthForm, on_delete=models.SET_NULL, null=True, blank=True)
     length = models.PositiveSmallIntegerField(verbose_name=_("length (cm)"))
+    bleaching_status = models.ForeignKey(
+        BleachingStatus, on_delete=models.PROTECT, null=True, blank=True
+    )
     notes = models.TextField(blank=True)
 
     class Meta:
@@ -208,6 +220,7 @@ class ObsBenthicLIT(BaseModel, JSONMixin):
 class BenthicPIT(TransectMethod):
     protocol = BENTHICPIT_PROTOCOL
     project_lookup = "transect__sample_event__site__project"
+    include_bleaching = models.BooleanField(default=False)
 
     transect = models.OneToOneField(
         BenthicTransect,
@@ -246,6 +259,9 @@ class ObsBenthicPIT(BaseModel, JSONMixin):
     attribute = models.ForeignKey(BenthicAttribute, on_delete=models.PROTECT)
     growth_form = models.ForeignKey(GrowthForm, on_delete=models.SET_NULL, null=True, blank=True)
     interval = models.DecimalField(max_digits=7, decimal_places=2)
+    bleaching_status = models.ForeignKey(
+        BleachingStatus, on_delete=models.PROTECT, null=True, blank=True
+    )
     notes = models.TextField(blank=True)
 
     class Meta:
