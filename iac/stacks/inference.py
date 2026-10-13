@@ -13,7 +13,7 @@ from aws_cdk import (
     aws_sns as sns,
 )
 from constructs import Construct
-from settings.settings import ProjectSettings, alerts_topic_name
+from settings.settings import ProjectSettings, alerts_topic_name, pyspacer_function_name
 
 
 class InferenceStack(Stack):
@@ -53,7 +53,7 @@ class InferenceStack(Stack):
         log_group = logs.LogGroup(
             self,
             "PyspacerInferenceFunctionLogGroup",
-            log_group_name=f"/aws/lambda/{config.env_id}-mermaid-inference-pyspacer",
+            log_group_name=f"/aws/lambda/{pyspacer_function_name(config.env_id)}",
             retention=logs.RetentionDays.ONE_MONTH,
             removal_policy=RemovalPolicy.DESTROY,
         )
@@ -61,11 +61,7 @@ class InferenceStack(Stack):
         self.function = lambda_.DockerImageFunction(
             self,
             "PyspacerInferenceFunction",
-            # A bucket policy in account 557690602013 (coral-reef-training) grants
-            # s3:PutObject to this exact function name via an ArnEquals condition
-            # on lambda:SourceFunctionArn. Renaming the function silently revokes
-            # prod's feature-vector write access — no deploy-time error surfaces it.
-            function_name=f"{config.env_id}-mermaid-inference-pyspacer",
+            function_name=pyspacer_function_name(config.env_id),
             code=lambda_.DockerImageCode.from_ecr(
                 repository=inference_repo,
                 tag_or_digest=inf.image_tag,

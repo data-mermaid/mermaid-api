@@ -19,9 +19,16 @@ class JobQueue(Construct):
         queue_name: str,
         fifo: bool = False,
         email: str | None = None,
+        visibility_timeout_seconds: int | None = None,
         **kwargs,
     ) -> None:
         super().__init__(scope, id, **kwargs)
+
+        visibility_timeout = Duration.seconds(
+            visibility_timeout_seconds
+            if visibility_timeout_seconds is not None
+            else config.api.sqs_message_visibility
+        )
 
         # DLQ
         dead_letter_queue = sqs.Queue(
@@ -29,7 +36,7 @@ class JobQueue(Construct):
             "DLQ",
             fifo=True if fifo else None,  # Known cloudformation issue, set to None for none-fifo
             queue_name=f"{queue_name}-dql.fifo" if fifo else f"{queue_name}-dql",
-            visibility_timeout=Duration.seconds(config.api.sqs_message_visibility),
+            visibility_timeout=visibility_timeout,
             retention_period=Duration.days(7),
         )
 
@@ -42,7 +49,7 @@ class JobQueue(Construct):
             fifo=True if fifo else None,  # Known cloudformation issue, set to None for none-fifo
             queue_name=f"{queue_name}.fifo" if fifo else f"{queue_name}",
             content_based_deduplication=None,
-            visibility_timeout=Duration.seconds(config.api.sqs_message_visibility),
+            visibility_timeout=visibility_timeout,
             dead_letter_queue=sqs.DeadLetterQueue(max_receive_count=4, queue=dead_letter_queue),
         )
 

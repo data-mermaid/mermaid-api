@@ -13,6 +13,7 @@ from .validators import (
     DepthValidator,
     DifferentNumPointsPerQuadratValidator,
     DifferentNumQuadratsValidator,
+    DifferentQuadratSizeValidator,
     DifferentTransectLengthValidator,
     DrySubmitValidator,
     DuplicateImageValidator,
@@ -34,6 +35,7 @@ from .validators import (
     SampleDateValidator,
     SampleTimeValidator,
     SimilarDateSampleUnitsValidator,
+    SimilarManagementNameValidator,
     UniqueManagementValidator,
     UniqueQuadratTransectValidator,
     UniqueSiteValidator,
@@ -173,6 +175,16 @@ bpqt_base_validations = [
         validation_level=FIELD_LEVEL,
         validation_type=VALUE_VALIDATION_TYPE,
     ),
+    # Before UniqueManagementValidator: the webapp offers the duplicate-MR merge
+    # only when similar_name is the field's first warning.
+    Validation(
+        validator=SimilarManagementNameValidator(
+            management_path="data.sample_event.management",
+        ),
+        paths=["data.sample_event.management"],
+        validation_level=FIELD_LEVEL,
+        validation_type=VALUE_VALIDATION_TYPE,
+    ),
     Validation(
         validator=UniqueManagementValidator(
             management_path="data.sample_event.management",
@@ -265,6 +277,18 @@ bpqt_base_validations = [
             len_surveyed_path="data.quadrat_transect.len_surveyed",
         ),
         paths=["data.quadrat_transect.len_surveyed"],
+        validation_level=RECORD_LEVEL,
+        validation_type=VALUE_VALIDATION_TYPE,
+    ),
+    Validation(
+        validator=DifferentQuadratSizeValidator(
+            protocol_path="data.protocol",
+            site_path="data.sample_event.site",
+            management_path="data.sample_event.management",
+            sample_date_path="data.sample_event.sample_date",
+            quadrat_size_path="data.quadrat_transect.quadrat_size",
+        ),
+        paths=["data.quadrat_transect.quadrat_size"],
         validation_level=RECORD_LEVEL,
         validation_type=VALUE_VALIDATION_TYPE,
     ),

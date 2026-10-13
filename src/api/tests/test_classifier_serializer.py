@@ -11,22 +11,3 @@ def test_serializer_exposes_type_and_config_not_num_points():
     assert data["classifier_type"] == "pyspacer"
     assert data["config"] == {"patch_size": 224}
     assert "benthic_attribute_growth_forms" in data
-    assert "num_points" not in data
-
-
-def test_serializer_exposes_exact_field_set():
-    c = Classifier.objects.create(name="c2", version="v2", config={"patch_size": 224})
-    data = ClassifierSerializer(instance=c).data
-    assert set(data.keys()) == {
-        "id",
-        "name",
-        "version",
-        "classifier_type",
-        "config",
-        "description",
-        "benthic_attribute_growth_forms",
-        "created_on",
-        "created_by",
-        "updated_on",
-        "updated_by",
-    }

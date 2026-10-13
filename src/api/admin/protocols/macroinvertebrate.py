@@ -49,7 +49,7 @@ class InvertOrderInline(admin.TabularInline):
     model = InvertOrder
     fk_name = "invert_class"
     extra = 0
-    fields = ("name",)
+    fields = ("name", "status")
     show_change_link = True
 
 
@@ -64,7 +64,7 @@ class InvertFamilyInline(admin.TabularInline):
     model = InvertFamily
     fk_name = "order"
     extra = 0
-    fields = ("name",)
+    fields = ("name", "status")
     show_change_link = True
 
 
@@ -79,8 +79,17 @@ class InvertGenusInline(admin.TabularInline):
     model = InvertGenus
     fk_name = "family"
     extra = 0
-    fields = ("name",)
+    fields = ("name", "group_of_interest", "status")
     show_change_link = True
+
+    def formfield_for_foreignkey(self, db_field, request, **kwargs):
+        # Build GoI choices once per formset instead of one query per genus row.
+        field = super().formfield_for_foreignkey(db_field, request, **kwargs)
+        if db_field.name == "group_of_interest":
+            field.choices = [("", field.empty_label)] + [
+                (goi.pk, goi.name) for goi in InvertGroupOfInterest.objects.only("id", "name")
+            ]
+        return field
 
 
 @admin.register(InvertFamily)
@@ -94,7 +103,7 @@ class InvertSpeciesInline(admin.TabularInline):
     model = InvertSpecies
     fk_name = "genus"
     extra = 0
-    fields = ("name", "max_length")
+    fields = ("name", "max_length", "max_length_type", "status")
     show_change_link = True
 
 

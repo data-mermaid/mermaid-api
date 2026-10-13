@@ -1,8 +1,29 @@
 .git
 .gitignore
+.env
+.secrets.env
 
-src/api/tests/__pycache__/*
 *.pyc
+**/__pycache__
 
 **/cdk.out
 .direnv
+
+# Not needed in image
+docs/
+examples/
+readme/
+*.md
+LICENSE
+mermaid_api.insomnia_collection.json
+
+# Local-only data and tool output that must never be baked into the image.
+# src/media holds local user uploads (MEDIA_ROOT in local dev).
+src/media/
+**/.pytest_cache
+**/.coverage
+**/htmlcov
+**/coverage.xml
+**/.env
+**/.env.*
+**/.secrets.env*

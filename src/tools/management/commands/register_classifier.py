@@ -1,11 +1,16 @@
-from django.core.management.base import BaseCommand
+from django.core.management.base import BaseCommand, CommandError
 from django.db import transaction
 
 from api.models import Classifier
+from api.models.classification import ClassifierRegistrationError
 
 
 class Command(BaseCommand):
-    help = "Ingest a version's model.json from S3 into its Classifier row (config + BA+GF labels)."
+    help = (
+        "Ingest a version's model.json from S3 into its Classifier row (config + BA+GF labels). "
+        "The image worker registers a missing pinned version at startup; use this to "
+        "validate a manifest (--dry-run) or re-apply a corrected one to an existing row."
+    )
 
     def add_arguments(self, parser):
         parser.add_argument("version", help="Classifier version, e.g. v3")
@@ -38,9 +43,8 @@ class Command(BaseCommand):
                     )
                     transaction.set_rollback(True)
                     return
-        except Exception as e:
-            self.stderr.write(self.style.ERROR(f"Failed to register {version}: {e}"))
-            raise
+        except ClassifierRegistrationError as e:
+            raise CommandError(f"Failed to register {version}: {e}") from e
 
         self.stdout.write(
             self.style.SUCCESS(

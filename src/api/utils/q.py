@@ -39,8 +39,16 @@ def submit_job(delay, loggable, callable, *args, visibility_timeout=None, **kwar
     )
 
 
-def submit_image_job(delay, loggable, callable, *args, **kwargs):
-    return _submit_job(settings.IMAGE_QUEUE_NAME, delay, loggable, callable, *args, **kwargs)
+def submit_image_job(delay, loggable, callable, *args, visibility_timeout=None, **kwargs):
+    return _submit_job(
+        settings.IMAGE_QUEUE_NAME,
+        delay,
+        loggable,
+        callable,
+        *args,
+        visibility_timeout=visibility_timeout,
+        **kwargs,
+    )
 
 
 def generate_job_id(delay, callable, *args, **kwargs):

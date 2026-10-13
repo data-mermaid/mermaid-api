@@ -33,6 +33,7 @@ services:
     build:
         context: .
         dockerfile: Dockerfile
+        target: dev
     image: wcs/mermaid-api:latest
     volumes:
       - $PWD/src:/var/projects/webapp
@@ -43,10 +44,12 @@ services:
     # started manually (make runserver/:8080 or runserverplus/:8081), so the
     # image HEALTHCHECK (probes :8081) would read unhealthy during normal dev.
     # This disables it for local compose only — it still applies to a plain
-    # `docker run` of the image. ECS ignores the image HEALTHCHECK entirely and
-    # uses the task definition's healthCheck instead.
+    # `docker run` of the image and on ECS (EC2), where Docker runs it but ECS
+    # does not act on the result.
     healthcheck:
       disable: true
+    # Init as PID 1 reaps orphaned processes (matches ECS initProcessEnabled).
+    init: true
     command: tail -f /dev/null
     env_file:
       - .env

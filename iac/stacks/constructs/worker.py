@@ -2,6 +2,7 @@ from aws_cdk import (
     aws_applicationautoscaling as appscaling,
     aws_ecs as ecs,
     aws_ecs_patterns as ecs_patterns,
+    aws_logs as logs,
     aws_s3 as s3,
 )
 from constructs import Construct
@@ -24,6 +25,8 @@ class QueueWorker(Construct):
         queue_name: str,
         fifo: bool = False,
         email: str | None = None,
+        visibility_timeout_seconds: int | None = None,
+        log_group: logs.ILogGroup | None = None,
         **kwargs,
     ) -> None:
         super().__init__(scope, id, **kwargs)
@@ -35,6 +38,7 @@ class QueueWorker(Construct):
             queue_name=queue_name,
             fifo=fifo,
             email=email,
+            visibility_timeout_seconds=visibility_timeout_seconds,
         )
 
         worker_service = ecs_patterns.QueueProcessingEc2Service(
@@ -47,6 +51,14 @@ class QueueWorker(Construct):
             memory_limit_mib=config.api.sqs_memory,
             secrets=api_secrets,
             environment=environment,
+            # An explicit log group gives callers (e.g. a metric filter on this
+            # worker's output) a stable reference; omitted, the pattern construct
+            # auto-creates one that is retained (not deleted) on any rename.
+            log_driver=(
+                ecs.LogDrivers.aws_logs(stream_prefix=id, log_group=log_group)
+                if log_group
+                else None
+            ),
             command=[
                 "opentelemetry-instrument",
                 "python",

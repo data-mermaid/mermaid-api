@@ -32,7 +32,7 @@ This should be handled through the CI/CD configuration.
 
 ## Deploying a new Classifier Model
 
-[Detailed Instructions](docs/deploy-classifier-version.md)
+[Detailed Instructions](../docs/deploy-classifier-version.md)
 
 ## cdk-nag
 

@@ -463,3 +463,50 @@ def test_beltinvert_su_view_reef_slope(
 
     assert count == 1
     assert data[0]["reef_slope"] == "flat"
+
+
+def test_csv_multi_value_separator(
+    client,
+    db_setup,
+    project1,
+    token1,
+    belt_fish_project,
+    all_choices,
+    management2,
+    managment_party1,
+    managment_party2,
+):
+    # Multi-value fields are joined with "; " because individual values (e.g. tag names)
+    # may themselves contain commas.
+    from api.models import Project
+    from api.reports.formatters import MULTI_VALUE_SEPARATOR
+    from api.resources.project import ProjectCSVSerializer, annotate_num_sample_units
+    from api.utils.summary_cache import update_summary_cache
+
+    comma_tag = "Marine Science Institute, University of the Philippines"
+    project1.tags.set([comma_tag, "Silliman University"])
+    management2.parties.set([managment_party1, managment_party2])
+    management2.gear_restriction = True
+    management2.size_limits = True
+    management2.save()
+    update_summary_cache(project1.pk, skip_test_project=False, skip_cached_files=True)
+
+    expected_tags = {comma_tag, "Silliman University"}
+    expected_parties = {managment_party1.name, managment_party2.name}
+    expected_rules = {"gear restriction", "size limits"}
+
+    url = reverse("beltfishmethod-sampleevent-csv", kwargs=dict(project_pk=project1.pk))
+    _, rows, _ = _get_rows(client, token1, url)
+    row = next(r for r in rows if r["management_id"] == str(management2.id))
+    assert set(row["tags"].split(MULTI_VALUE_SEPARATOR)) == expected_tags
+    assert set(row["management_parties"].split(MULTI_VALUE_SEPARATOR)) == expected_parties
+    assert set(row["management_rules"].split(MULTI_VALUE_SEPARATOR)) == expected_rules
+
+    _, rows, _ = _get_rows(client, token1, f"{url}?field_report=true")
+    row = next(r for r in rows if r["Management name"] == management2.name)
+    assert set(row["Project organizations"].split(MULTI_VALUE_SEPARATOR)) == expected_tags
+    assert set(row["Governance"].split(MULTI_VALUE_SEPARATOR)) == expected_parties
+
+    projects = annotate_num_sample_units(Project.objects.filter(pk=project1.pk))
+    project_row = list(ProjectCSVSerializer(projects, show_display_fields=True).data)[0]
+    assert set(project_row["Organizations"].split(MULTI_VALUE_SEPARATOR)) == expected_tags
