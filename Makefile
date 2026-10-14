@@ -124,7 +124,7 @@ test:
 # Assume local profile name in ~/.aws/config is `mermaid`
 
 cloudshell:
-	$(eval taskid=$(shell aws ecs list-tasks --region us-east-1 --profile mermaid --cluster $(MERMAID_CLUSTER) --service-name $(MERMAID_SERVICE) --output text | awk -F'/' '{print $$3}'))
+	$(eval taskid=$(shell aws ecs list-tasks --region us-east-1 --profile mermaid --cluster $(MERMAID_CLUSTER) --service-name $(MERMAID_SERVICE) --output text | awk -F'/' '{print $$3}' | head -1))
 	echo $(taskid)
 	aws ecs execute-command  \
 		--profile mermaid \
@@ -136,8 +136,8 @@ cloudshell:
 		--interactive
 
 cloudtunnel:
-	$(eval taskid=$(shell aws ecs list-tasks --profile mermaid --cluster $(MERMAID_CLUSTER) --service-name $(MERMAID_SERVICE) --output text | awk -F'/' '{print $$3}'))
-	$(eval runtimeid=$(shell aws ecs describe-tasks --profile mermaid --cluster $(MERMAID_CLUSTER) --tasks $(taskid) | grep -oP '"runtimeId": "\K.+"' | head -c-2))
+	$(eval taskid=$(shell aws ecs list-tasks --profile mermaid --cluster $(MERMAID_CLUSTER) --service-name $(MERMAID_SERVICE) --output text | awk -F'/' '{print $$3}' | head -1))
+	$(eval runtimeid=$(shell aws ecs describe-tasks --profile mermaid --cluster $(MERMAID_CLUSTER) --tasks $(taskid) --query 'tasks[0].containers[0].runtimeId' --output text))
 	$(eval localport=5444)
 	aws ssm start-session \
 		--profile mermaid \
