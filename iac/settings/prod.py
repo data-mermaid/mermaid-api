@@ -20,10 +20,14 @@ PROD_SETTINGS = ProjectSettings(
         # OOM-killing gunicorn workers. Headroom above the ~3078 MiB peak.
         container_memory=4096,
         # Was 1. A single task means 8 gthread slots (2 workers x 4 threads) total
-        # for all of prod, and a blocking request type (e.g. collectrecords/submit's
-        # synchronous per-image S3 PUT loop in create_image_annotations_files) can
-        # exhaust them and queue every other request behind it. 2 doubles slots to
-        # 16 and removes the single-target-is-the-whole-service failure mode.
+        # for all of prod, and a handful of long-running requests can exhaust them
+        # and queue everyone else behind it. Confirmed via X-Ray on the 2026-10-13
+        # 17:01-17:13 UTC p95 spike (21s): 24 traces >5s in that window, all either
+        # /v1/pull/ (webapp offline-sync, up to 278s) or ?limit=5000 list GETs from
+        # a client UA'd "access-mermaid-replica/2.0" (up to 172s), disproportionately
+        # on BenthicPQT endpoints. 2 doubles slots to 16 and removes the
+        # single-target-is-the-whole-service failure mode; it doesn't fix either
+        # underlying slow path.
         container_count=2,
         # SQS
         sqs_cpu=2048,
