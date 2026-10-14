@@ -293,12 +293,12 @@ class ImageViewSet(BaseProjectApiViewSet):
         data = ImageSerializer(instance=image_record, context={"request": request}).data
         return Response(data=data, status=status.HTTP_201_CREATED)
 
-    def _get_validated_annotations(self, point_data, pk):
+    def _get_validated_annotations(self, point_data, points_by_id):
         if "annotations" not in point_data:
             raise ValidationError("'annotations' is required.")
 
         point_id = point_data.get("id")
-        point = Point.objects.get_or_none(id=point_data.get("id"), image=pk)
+        point = points_by_id.get(str(point_id))
         if point is None:
             raise ValidationError(f"Point ({point_id}) is missing")
 
@@ -314,6 +314,28 @@ class ImageViewSet(BaseProjectApiViewSet):
             id__in=user_annotation_ids
         ).delete()
 
+    def _update_machine_annotation(self, instance, annotation_data):
+        # Only is_confirmed is editable on machine annotations, so skip the
+        # serializer (and its FK lookups) and only write when it changed.
+        is_confirmed = serializers.BooleanField().run_validation(
+            annotation_data.get("is_confirmed") or False
+        )
+        if instance.is_confirmed != is_confirmed:
+            instance.is_confirmed = is_confirmed
+            instance.save(update_fields=["is_confirmed", "updated_on"])
+
+    def _is_user_annotation_unchanged(self, instance, annotation_data):
+        is_confirmed = serializers.BooleanField().run_validation(
+            annotation_data.get("is_confirmed") or False
+        )
+        growth_form = annotation_data.get("growth_form")
+        return (
+            str(instance.benthic_attribute_id) == str(annotation_data.get("benthic_attribute"))
+            and (str(growth_form) if growth_form else None)
+            == (str(instance.growth_form_id) if instance.growth_form_id else None)
+            and instance.is_confirmed == is_confirmed
+        )
+
     def partial_update(self, request, pk, *args, **kwargs):
         data = request.data
         qs = self.limit_to_project(request, pk, *args, **kwargs)
@@ -328,16 +350,38 @@ class ImageViewSet(BaseProjectApiViewSet):
             serializer = PatchImageSerializer(data=data, instance=image_record, context=context)
             serializer.is_valid(raise_exception=True)
 
+            point_ids = [pnt.get("id") for pnt in points if pnt.get("id")]
+            points_by_id = {
+                str(pid): pnt
+                for pid, pnt in Point.objects.filter(image_id=pk, id__in=point_ids)
+                .in_bulk()
+                .items()
+            }
+            annotations_by_id = {
+                str(anno.id): anno for anno in Annotation.objects.filter(point_id__in=point_ids)
+            }
+
             for point_data in points:
-                point, annotations = self._get_validated_annotations(point_data, pk)
+                point, annotations = self._get_validated_annotations(point_data, points_by_id)
                 self._delete_existing_user_annotations(point, annotations)
                 # Only allow one confirmed annotation per point
                 pnt_serializer = PointSerializer(instance=point, data=point_data, context=context)
                 pnt_serializer.is_valid(raise_exception=True)
 
                 for annotation_data in annotations:
-                    anno_id = annotation_data.get("id")
-                    anno_instance = Annotation.objects.get_or_none(id=anno_id, point=point)
+                    anno_instance = annotations_by_id.get(str(annotation_data.get("id")))
+                    if anno_instance is not None and anno_instance.point_id != point.id:
+                        anno_instance = None
+
+                    if anno_instance is not None and anno_instance.is_machine_created:
+                        self._update_machine_annotation(anno_instance, annotation_data)
+                        continue
+
+                    if anno_instance is not None and self._is_user_annotation_unchanged(
+                        anno_instance, annotation_data
+                    ):
+                        continue
+
                     anno_serializer = SaveAnnotationSerializer(
                         instance=anno_instance, data=annotation_data, context=context
                     )
