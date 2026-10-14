@@ -304,14 +304,20 @@ class ImageViewSet(BaseProjectApiViewSet):
 
         return point, point_data.get("annotations")
 
-    def _delete_existing_user_annotations(self, point, annotations):
-        user_annotation_ids = [
-            anno.get("id")
-            for anno in annotations
-            if not anno.get("is_machine_created") and anno.get("id")
-        ]
-        Annotation.objects.filter(point=point, is_machine_created=False).exclude(
-            id__in=user_annotation_ids
+    def _delete_stale_user_annotations(self, points, point_ids, annotations_by_id):
+        # Keep a submitted user annotation only if it belongs to the point it was
+        # submitted under; other user annotations on the submitted points are deleted.
+        keep_ids = []
+        for point_data in points:
+            for anno in point_data.get("annotations") or []:
+                if anno.get("is_machine_created"):
+                    continue
+                instance = annotations_by_id.get(str(anno.get("id")))
+                if instance is not None and str(instance.point_id) == str(point_data.get("id")):
+                    keep_ids.append(instance.id)
+
+        Annotation.objects.filter(point_id__in=point_ids, is_machine_created=False).exclude(
+            id__in=keep_ids
         ).delete()
 
     def _update_machine_annotation(self, instance, annotation_data):
@@ -360,10 +366,10 @@ class ImageViewSet(BaseProjectApiViewSet):
             annotations_by_id = {
                 str(anno.id): anno for anno in Annotation.objects.filter(point_id__in=point_ids)
             }
+            self._delete_stale_user_annotations(points, point_ids, annotations_by_id)
 
             for point_data in points:
                 point, annotations = self._get_validated_annotations(point_data, points_by_id)
-                self._delete_existing_user_annotations(point, annotations)
                 # Only allow one confirmed annotation per point
                 pnt_serializer = PointSerializer(instance=point, data=point_data, context=context)
                 pnt_serializer.is_valid(raise_exception=True)
