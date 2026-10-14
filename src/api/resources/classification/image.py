@@ -339,7 +339,7 @@ class ImageViewSet(BaseProjectApiViewSet):
     def partial_update(self, request, pk, *args, **kwargs):
         data = request.data
         qs = self.limit_to_project(request, pk, *args, **kwargs)
-        image_record = qs.get(id=pk)
+        image_record = qs.prefetch_related(None).get(id=pk)
 
         if "points" not in data:
             raise ValidationError("'points' is required.")
