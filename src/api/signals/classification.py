@@ -1,6 +1,7 @@
 import logging
 
 from django.conf import settings
+from django.db import transaction
 from django.db.models.signals import post_delete, post_save, pre_save
 from django.dispatch import receiver
 
@@ -120,8 +121,14 @@ def create_image_annotations_files(sender, instance, **kwargs):
     if not instance.data or not instance.data.get("image_classification"):
         return
 
-    for img in Image.objects.filter(collect_record_id=instance.id):
-        img.create_annotations_file()
+    image_ids = list(
+        Image.objects.filter(collect_record_id=instance.id).values_list("id", flat=True)
+    )
+    if not image_ids:
+        return
+
+    # Defer the CSV build + S3 upload off the request thread, one job for the batch.
+    transaction.on_commit(lambda: cls_utils.create_annotations_files_job(image_ids), robust=True)
 
 
 @receiver(post_edit, sender=CollectRecord)

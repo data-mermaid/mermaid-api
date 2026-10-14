@@ -141,6 +141,42 @@ class MonitoringAlerts(Construct):
                 )
             )
 
+            # On latency, not BurstBalance: gp3 (see common.py) doesn't publish that
+            # metric, so a BurstBalance alarm would go dark on deploy. 50ms is well
+            # above the ~5-15ms baseline measured before the 2026-10-13 incident,
+            # which sustained 100-200ms once gp2 credits ran out.
+            alarms.append(
+                cw.Alarm(
+                    self,
+                    "RdsReadLatencyAlarm",
+                    alarm_name=f"mermaid-{env_id}-rds-read-latency",
+                    alarm_description="RDS read latency exceeded 50ms for 10 minutes",
+                    metric=database.metric(
+                        "ReadLatency", statistic="Average", period=Duration.minutes(5)
+                    ),
+                    threshold=0.05,
+                    evaluation_periods=2,
+                    comparison_operator=cw.ComparisonOperator.GREATER_THAN_THRESHOLD,
+                    treat_missing_data=cw.TreatMissingData.NOT_BREACHING,
+                )
+            )
+
+            alarms.append(
+                cw.Alarm(
+                    self,
+                    "RdsWriteLatencyAlarm",
+                    alarm_name=f"mermaid-{env_id}-rds-write-latency",
+                    alarm_description="RDS write latency exceeded 50ms for 10 minutes",
+                    metric=database.metric(
+                        "WriteLatency", statistic="Average", period=Duration.minutes(5)
+                    ),
+                    threshold=0.05,
+                    evaluation_periods=2,
+                    comparison_operator=cw.ComparisonOperator.GREATER_THAN_THRESHOLD,
+                    treat_missing_data=cw.TreatMissingData.NOT_BREACHING,
+                )
+            )
+
         # ── ECS API ──────────────────────────────────────────────────
 
         alarms.append(
