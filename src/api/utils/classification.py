@@ -34,7 +34,7 @@ from ..models import (
 )
 from ..models.classification import parse_bagf_label
 from .inference import classify_via_lambda
-from .q import submit_image_job
+from .q import submit_image_job, submit_job
 from .s3 import upload_file
 
 logger = logging.getLogger(__name__)
@@ -440,6 +440,44 @@ def classify_image_job(image_record_id, num_points=None):
         image_record_id=image_record_id,
         num_points=num_points,
         visibility_timeout=settings.INFERENCE_JOB_VISIBILITY_TIMEOUT,
+    )
+
+
+def _create_annotations_files(image_ids):
+    """Build/upload the confirmed-annotations CSV for each image; one failure skips, not aborts."""
+    images_by_id = Image.objects.in_bulk(image_ids)
+    for image_id in image_ids:
+        image = images_by_id.get(image_id)
+        if image is None:
+            logger.info(f"Skipping annotations file for image {image_id}: image no longer exists")
+            continue
+        try:
+            image.create_annotations_file()
+        except Exception:
+            logger.exception(f"Failed to create annotations file for image {image_id}")
+
+
+# SQS's ChangeMessageVisibility hard ceiling - above this, extending a job's
+# visibility fails outright and it's never run (see simpleq.workers.Worker.work).
+_SQS_MAX_VISIBILITY_TIMEOUT = 43200
+
+
+def create_annotations_files_job(image_ids):
+    # Scales with batch size so a slow/retried S3 op per image can't outrun the SQS
+    # visibility window before the whole batch finishes (floor matches the queue default).
+    visibility_timeout = min(
+        max(
+            settings.SQS_MESSAGE_VISIBILITY,
+            len(image_ids) * settings.ANNOTATIONS_FILE_JOB_SECONDS_PER_IMAGE,
+        ),
+        _SQS_MAX_VISIBILITY_TIMEOUT,
+    )
+    return submit_job(
+        0,
+        True,
+        _create_annotations_files,
+        image_ids=image_ids,
+        visibility_timeout=visibility_timeout,
     )
 
 

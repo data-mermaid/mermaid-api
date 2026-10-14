@@ -11,7 +11,14 @@ from django.urls import reverse
 
 from api.models import Annotation, CollectRecord, Image, Point
 from api.resources.classification.image import ImageViewSet
-from api.signals.classification import delete_image_annotations_files
+from api.signals.classification import (
+    create_image_annotations_files,
+    delete_image_annotations_files,
+)
+from api.utils.classification import (
+    _create_annotations_files,
+    create_annotations_files_job,
+)
 
 
 @pytest.fixture
@@ -480,3 +487,158 @@ def test_edit_clears_annotations_file_after_commit(
     for callback in callbacks:
         callback()
     assert not storage.exists(name)
+
+
+def test_create_image_annotations_files_queues_one_job_for_all_images(
+    db_setup,
+    image,
+    point,
+    annotations,
+    benthic_attribute_1,
+    classifier,
+    django_capture_on_commit_callbacks,
+):
+    with open("api/tests/data/test_image.jpg", "rb") as f:
+        content = f.read()
+
+    image2 = Image.objects.create(
+        collect_record_id=image.collect_record_id,
+        image=SimpleUploadedFile(
+            name="test_image2.jpg", content=content, content_type="image/jpeg"
+        ),
+        name="Test image 2",
+    )
+    point2 = Point.objects.create(image=image2, row=0, column=0)
+    Annotation.objects.create(
+        classifier=classifier,
+        point=point2,
+        benthic_attribute=benthic_attribute_1,
+        growth_form=None,
+        score=90,
+        is_confirmed=True,
+        is_machine_created=True,
+    )
+
+    record = SimpleNamespace(id=image.collect_record_id, data={"image_classification": True})
+    with (
+        patch("api.signals.classification.cls_utils.create_annotations_files_job") as queue_job,
+        django_capture_on_commit_callbacks(execute=True),
+    ):
+        create_image_annotations_files(sender=CollectRecord, instance=record)
+
+    # A single job call carries every image in the record, not one call per image.
+    queue_job.assert_called_once()
+    assert set(queue_job.call_args[0][0]) == {image.id, image2.id}
+
+
+def test_create_image_annotations_files_uploads_all_images(
+    db_setup,
+    image,
+    point,
+    annotations,
+    benthic_attribute_1,
+    classifier,
+    django_capture_on_commit_callbacks,
+):
+    with open("api/tests/data/test_image.jpg", "rb") as f:
+        content = f.read()
+
+    image2 = Image.objects.create(
+        collect_record_id=image.collect_record_id,
+        image=SimpleUploadedFile(
+            name="test_image2.jpg", content=content, content_type="image/jpeg"
+        ),
+        name="Test image 2",
+    )
+    point2 = Point.objects.create(image=image2, row=0, column=0)
+    Annotation.objects.create(
+        classifier=classifier,
+        point=point2,
+        benthic_attribute=benthic_attribute_1,
+        growth_form=None,
+        score=90,
+        is_confirmed=True,
+        is_machine_created=True,
+    )
+
+    record = SimpleNamespace(id=image.collect_record_id, data={"image_classification": True})
+    with django_capture_on_commit_callbacks(execute=True):
+        create_image_annotations_files(sender=CollectRecord, instance=record)
+
+    for img in (image, image2):
+        img.refresh_from_db()
+        assert img.annotations_file.name == f"{img.id}_annotations.csv"
+        with img.annotations_file.open("r") as f:
+            # Header plus the one confirmed annotation for that image.
+            assert len(f.read().splitlines()) == 2
+
+
+def test_create_annotations_files_skips_failures_and_continues(
+    db_setup, image, benthic_attribute_1, classifier, django_capture_on_commit_callbacks
+):
+    missing_image_id = image.id
+    Image.objects.filter(pk=image.pk).delete()
+
+    with open("api/tests/data/test_image.jpg", "rb") as f:
+        content = f.read()
+
+    raising_image = Image.objects.create(
+        collect_record_id=image.collect_record_id,
+        image=SimpleUploadedFile(name="raises.jpg", content=content, content_type="image/jpeg"),
+        name="Raises",
+    )
+    ok_image = Image.objects.create(
+        collect_record_id=image.collect_record_id,
+        image=SimpleUploadedFile(name="ok.jpg", content=content, content_type="image/jpeg"),
+        name="OK",
+    )
+    ok_point = Point.objects.create(image=ok_image, row=0, column=0)
+    Annotation.objects.create(
+        classifier=classifier,
+        point=ok_point,
+        benthic_attribute=benthic_attribute_1,
+        growth_form=None,
+        score=90,
+        is_confirmed=True,
+        is_machine_created=True,
+    )
+
+    original_create_annotations_file = Image.create_annotations_file
+
+    def fake_create_annotations_file(self):
+        if self.pk == raising_image.pk:
+            raise RuntimeError("boom")
+        return original_create_annotations_file(self)
+
+    with (
+        patch.object(Image, "create_annotations_file", fake_create_annotations_file),
+        django_capture_on_commit_callbacks(execute=True),
+    ):
+        _create_annotations_files([missing_image_id, raising_image.id, ok_image.id])
+
+    ok_image.refresh_from_db()
+    assert ok_image.annotations_file.name == f"{ok_image.id}_annotations.csv"
+
+
+@override_settings(SQS_MESSAGE_VISIBILITY=60, ANNOTATIONS_FILE_JOB_SECONDS_PER_IMAGE=90)
+def test_create_annotations_files_job_visibility_timeout_scales_with_batch_size():
+    with patch("api.utils.classification.submit_job") as mock_submit_job:
+        create_annotations_files_job(["a", "b", "c"])
+
+    assert mock_submit_job.call_args.kwargs["visibility_timeout"] == 270
+
+
+@override_settings(SQS_MESSAGE_VISIBILITY=60, ANNOTATIONS_FILE_JOB_SECONDS_PER_IMAGE=10)
+def test_create_annotations_files_job_visibility_timeout_floors_at_queue_default():
+    with patch("api.utils.classification.submit_job") as mock_submit_job:
+        create_annotations_files_job(["a"])
+
+    assert mock_submit_job.call_args.kwargs["visibility_timeout"] == 60
+
+
+@override_settings(SQS_MESSAGE_VISIBILITY=60, ANNOTATIONS_FILE_JOB_SECONDS_PER_IMAGE=90)
+def test_create_annotations_files_job_visibility_timeout_caps_below_sqs_hard_limit():
+    with patch("api.utils.classification.submit_job") as mock_submit_job:
+        create_annotations_files_job([str(i) for i in range(1000)])
+
+    assert mock_submit_job.call_args.kwargs["visibility_timeout"] == 43200

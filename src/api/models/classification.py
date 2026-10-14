@@ -5,6 +5,7 @@ import uuid
 from io import StringIO
 
 import urllib3
+from botocore.config import Config
 from botocore.exceptions import BotoCoreError, ClientError
 from django.conf import settings
 from django.contrib.gis.db import models
@@ -52,6 +53,15 @@ def parse_bagf_label(label):
     return ba_id, gf_id or None
 
 
+def _image_s3_client_config():
+    """Bounds the image S3 client's connect/read timeouts (see IMAGE_S3_* settings)."""
+    return Config(
+        connect_timeout=settings.IMAGE_S3_CONNECT_TIMEOUT,
+        read_timeout=settings.IMAGE_S3_READ_TIMEOUT,
+        retries={"max_attempts": settings.IMAGE_S3_MAX_ATTEMPTS, "mode": "standard"},
+    )
+
+
 SUPPORTED_MANIFEST_SCHEMA_VERSION = 1
 
 # S3 prefix under which a classifier version's artifacts (model.json, weights, etc.) live.
@@ -92,6 +102,7 @@ def select_image_storage():
         access_key=settings.IMAGE_BUCKET_AWS_ACCESS_KEY_ID,
         secret_key=settings.IMAGE_BUCKET_AWS_SECRET_ACCESS_KEY,
         location=settings.IMAGE_S3_PATH,
+        client_config=_image_s3_client_config(),
     )
 
 
@@ -384,6 +395,7 @@ class Image(BaseModel):
             access_key=config["access_key"],
             secret_key=config["secret_key"],
             location=config["s3_path"],
+            client_config=_image_s3_client_config(),
         )
 
     def _apply_storage(self):

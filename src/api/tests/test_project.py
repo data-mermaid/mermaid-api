@@ -35,6 +35,9 @@ def _apply_mock_settings(mock_obj, project):
     mock_obj.IMAGE_S3_PATH = "mermaid/"
     mock_obj.IMAGE_S3_PATH_TEST = "mermaid/"
     mock_obj.ENVIRONMENT = "local"
+    mock_obj.IMAGE_S3_CONNECT_TIMEOUT = 5
+    mock_obj.IMAGE_S3_READ_TIMEOUT = 15
+    mock_obj.IMAGE_S3_MAX_ATTEMPTS = 1
 
 
 @contextmanager
