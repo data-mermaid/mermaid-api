@@ -282,6 +282,11 @@ def _update_source_record(source_type, serializer, record, request, force=False)
     if record_id is None:
         return _error(400, ValidationError(), data={"id": "This field may not be null."})
 
+    try:
+        check_uuid(record_id)
+    except ParseError as err:
+        return _error(400, err)
+
     if src["read_only"] is True:
         return _error(405, ReadOnlyError(f"{source_type} is read-only"))
 
@@ -303,10 +308,6 @@ def _update_source_record(source_type, serializer, record, request, force=False)
             data = _get_serialized_record(viewset, profile_id, record_id)
 
         return {"status_code": status_code, "message": msg, "data": data}
-    except ParseError as err:
-        # get_record()'s check_uuid() (called via _get_serialized_record() above)
-        # raises this for a malformed id -- a client input error, not a server error.
-        return _error(400, err)
     except Exception as err:
         print(err)
         return _error(500, err)
