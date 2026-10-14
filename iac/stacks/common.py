@@ -395,10 +395,22 @@ class CommonStack(Stack):
             engine=postgres_engine,
             parameter_group=db_parameter_group,
             allow_major_version_upgrade=True,
+            # t3/BURSTABLE3 has its OWN instance-level I/O credit system
+            # (EBSIOBalance%/EBSByteBalance%), separate from the volume-level IOPS
+            # credits fixed by storage_type=GP3 below. If prod latency spikes again
+            # after that fix, check these two metrics before assuming it's unrelated
+            # -- they're not covered by the ReadLatency/WriteLatency alarms in
+            # alerts.py, which only catch the symptom, not this specific cause.
             instance_type=ec2.InstanceType.of(
                 ec2.InstanceClass.BURSTABLE3,
                 ec2.InstanceSize.MEDIUM,
             ),
+            # gp2's burst IOPS credits ran out during the 2026-10-13 incident
+            # (BurstBalance 80%->0% over ~66min, then 15-20x latency for ~80min).
+            # gp3 gives a flat 3,000 IOPS/125 MiB/s baseline with no credit model, at
+            # the same $/GB price as gp2 here -- fixes the volume-level cliff, not
+            # the separate instance-level one noted above.
+            storage_type=rds.StorageType.GP3,
             vpc_subnets=ec2.SubnetSelection(subnet_type=ec2.SubnetType.PRIVATE_ISOLATED),
             backup_retention=Duration.days(7),
             deletion_protection=True,
