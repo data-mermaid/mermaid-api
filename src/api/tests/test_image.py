@@ -561,6 +561,10 @@ def test_create_image_annotations_files_uploads_all_images(
         is_machine_created=True,
     )
 
+    # Simulate real post-submit state: submit deletes the CollectRecord before this
+    # job runs (see _write_collect_record_once).
+    CollectRecord.objects.filter(pk=image.collect_record_id).delete()
+
     record = SimpleNamespace(id=image.collect_record_id, data={"image_classification": True})
     with django_capture_on_commit_callbacks(execute=True):
         create_image_annotations_files(sender=CollectRecord, instance=record)
@@ -573,22 +577,36 @@ def test_create_image_annotations_files_uploads_all_images(
             assert len(f.read().splitlines()) == 2
 
 
+def test_create_annotations_files_skips_images_whose_collect_record_is_live(
+    db_setup, image, point, annotations
+):
+    """Submit -> edit race: an edit recreated the CollectRecord (same id) before this
+    job ran, so the image was edited back out of submitted state - don't rebuild its CSV.
+    """
+    _create_annotations_files([image.id])
+
+    image.refresh_from_db()
+    assert not image.annotations_file
+
+
 def test_create_annotations_files_skips_failures_and_continues(
     db_setup, image, benthic_attribute_1, classifier, django_capture_on_commit_callbacks
 ):
     missing_image_id = image.id
+    collect_record_id = image.collect_record_id
     Image.objects.filter(pk=image.pk).delete()
+    CollectRecord.objects.filter(pk=collect_record_id).delete()
 
     with open("api/tests/data/test_image.jpg", "rb") as f:
         content = f.read()
 
     raising_image = Image.objects.create(
-        collect_record_id=image.collect_record_id,
+        collect_record_id=collect_record_id,
         image=SimpleUploadedFile(name="raises.jpg", content=content, content_type="image/jpeg"),
         name="Raises",
     )
     ok_image = Image.objects.create(
-        collect_record_id=image.collect_record_id,
+        collect_record_id=collect_record_id,
         image=SimpleUploadedFile(name="ok.jpg", content=content, content_type="image/jpeg"),
         name="OK",
     )
@@ -610,9 +628,12 @@ def test_create_annotations_files_skips_failures_and_continues(
             raise RuntimeError("boom")
         return original_create_annotations_file(self)
 
+    # Processing continues past the missing/failing images, but the batch still
+    # raises afterward so SQS redelivers rather than silently dropping the failure.
     with (
         patch.object(Image, "create_annotations_file", fake_create_annotations_file),
         django_capture_on_commit_callbacks(execute=True),
+        pytest.raises(RuntimeError, match=str(raising_image.id)),
     ):
         _create_annotations_files([missing_image_id, raising_image.id, ok_image.id])
 
@@ -637,8 +658,14 @@ def test_create_annotations_files_job_visibility_timeout_floors_at_queue_default
 
 
 @override_settings(SQS_MESSAGE_VISIBILITY=60, ANNOTATIONS_FILE_JOB_SECONDS_PER_IMAGE=90)
-def test_create_annotations_files_job_visibility_timeout_caps_below_sqs_hard_limit():
+def test_create_annotations_files_job_splits_large_batches_below_the_visibility_ceiling():
+    image_ids = [str(i) for i in range(1000)]
     with patch("api.utils.classification.submit_job") as mock_submit_job:
-        create_annotations_files_job([str(i) for i in range(1000)])
+        create_annotations_files_job(image_ids)
 
-    assert mock_submit_job.call_args.kwargs["visibility_timeout"] == 43200
+    assert mock_submit_job.call_count > 1
+    seen_ids = []
+    for call in mock_submit_job.call_args_list:
+        assert call.kwargs["visibility_timeout"] <= 1800
+        seen_ids.extend(call.kwargs["image_ids"])
+    assert seen_ids == image_ids

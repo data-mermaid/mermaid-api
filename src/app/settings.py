@@ -469,7 +469,7 @@ IMAGE_S3_PATH_TEST = os.environ.get("IMAGE_S3_PATH_TEST") or IMAGE_S3_PATH
 # initial try) - see the matching retries config on get_lambda_client in utils/inference.py.
 IMAGE_S3_CONNECT_TIMEOUT = int(os.environ.get("IMAGE_S3_CONNECT_TIMEOUT") or "5")
 IMAGE_S3_READ_TIMEOUT = int(os.environ.get("IMAGE_S3_READ_TIMEOUT") or "15")
-IMAGE_S3_MAX_ATTEMPTS = int(os.environ.get("IMAGE_S3_MAX_ATTEMPTS") or "1")
+IMAGE_S3_MAX_ATTEMPTS = int(os.environ.get("IMAGE_S3_MAX_ATTEMPTS") or "2")
 
 # Per-image SQS visibility budget for create_annotations_files_job's batch.
 ANNOTATIONS_FILE_JOB_SECONDS_PER_IMAGE = int(
