@@ -24,7 +24,7 @@ from api.resources import (
     psite,
 )
 from api.resources.invert_attribute import InvertSpeciesViewSet
-from ...exceptions import ReadOnlyError
+from ...exceptions import ReadOnlyError, check_uuid
 from .pull import get_record, get_serialized_records, serialize_revisions
 from .push import apply_changes, get_request_method
 from .utils import create_view_request
@@ -168,13 +168,21 @@ def _get_profile_id(request):
 
 
 def _get_required_parameters(request, data, required_filters):
-    params = {"revision_num": data.get("last_revision")}
+    last_revision = data.get("last_revision")
+    if last_revision is not None:
+        try:
+            last_revision = int(last_revision)
+        except (TypeError, ValueError):
+            raise ValueError("last_revision must be an integer")
+    params = {"revision_num": last_revision}
 
     if "project" in required_filters:
         project = data.get("project")
         if project is None:
             raise ValueError("Project is missing")
-        params["project"] = project
+        # pull.py builds raw SQL from this value (revision.project_id = '{..}'::uuid);
+        # validate here, at the boundary, rather than trust client input into that string.
+        params["project"] = check_uuid(project)
 
     if "profile" in required_filters:
         profile_id = _get_profile_id(request)

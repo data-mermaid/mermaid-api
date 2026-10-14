@@ -19,15 +19,11 @@ PROD_SETTINGS = ProjectSettings(
         # 3000 MiB spiked to the cap daily (heavy obs/report serialization),
         # OOM-killing gunicorn workers. Headroom above the ~3078 MiB peak.
         container_memory=4096,
-        # Was 1. A single task means 8 gthread slots (2 workers x 4 threads) total
-        # for all of prod, and a handful of long-running requests can exhaust them
-        # and queue everyone else behind it. Confirmed via X-Ray on the 2026-10-13
-        # 17:01-17:13 UTC p95 spike (21s): 24 traces >5s in that window, all either
-        # /v1/pull/ (webapp offline-sync, up to 278s) or ?limit=5000 list GETs from
-        # a client UA'd "access-mermaid-replica/2.0" (up to 172s), disproportionately
-        # on BenthicPQT endpoints. 2 doubles slots to 16 and removes the
-        # single-target-is-the-whole-service failure mode; it doesn't fix either
-        # underlying slow path.
+        # Was 1. The 2026-10-13 p95 incident that prompted this turned out to be RDS
+        # gp2 IOPS exhaustion (see storage_type=GP3 in common.py), not API thread
+        # exhaustion -- p50 stayed flat throughout, so this isn't a latency fix.
+        # Kept anyway as HA insurance: 1 task means any replacement is a full outage
+        # until it's healthy. ~$55/mo (no room in the existing fleet for a 2nd task).
         container_count=2,
         # SQS
         sqs_cpu=2048,
