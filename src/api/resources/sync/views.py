@@ -2,6 +2,7 @@ from rest_framework.decorators import api_view
 from rest_framework.exceptions import (
     NotAuthenticated,
     NotFound,
+    ParseError,
     PermissionDenied,
     ValidationError,
 )
@@ -302,6 +303,10 @@ def _update_source_record(source_type, serializer, record, request, force=False)
             data = _get_serialized_record(viewset, profile_id, record_id)
 
         return {"status_code": status_code, "message": msg, "data": data}
+    except ParseError as err:
+        # get_record()'s check_uuid() (called via _get_serialized_record() above)
+        # raises this for a malformed id -- a client input error, not a server error.
+        return _error(400, err)
     except Exception as err:
         print(err)
         return _error(500, err)
