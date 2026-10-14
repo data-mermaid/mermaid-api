@@ -462,6 +462,19 @@ if ENVIRONMENT == "prod":
     IMAGE_BUCKET_AWS_SECRET_ACCESS_KEY = os.environ.get("IMAGE_BUCKET_AWS_SECRET_ACCESS_KEY")
 IMAGE_S3_PATH = "mermaid/"
 IMAGE_S3_PATH_TEST = os.environ.get("IMAGE_S3_PATH_TEST") or IMAGE_S3_PATH
+
+# Bounds the image/thumbnail/annotations-file S3 client's connect/read timeouts, so a
+# transient S3 slowdown fails fast instead of blocking a request thread on botocore's
+# ~60s defaults. MAX_ATTEMPTS is retries, not total attempts (botocore adds 1 for the
+# initial try) - see the matching retries config on get_lambda_client in utils/inference.py.
+IMAGE_S3_CONNECT_TIMEOUT = int(os.environ.get("IMAGE_S3_CONNECT_TIMEOUT") or "5")
+IMAGE_S3_READ_TIMEOUT = int(os.environ.get("IMAGE_S3_READ_TIMEOUT") or "15")
+IMAGE_S3_MAX_ATTEMPTS = int(os.environ.get("IMAGE_S3_MAX_ATTEMPTS") or "2")
+
+# Per-image SQS visibility budget for create_annotations_files_job's batch.
+ANNOTATIONS_FILE_JOB_SECONDS_PER_IMAGE = int(
+    os.environ.get("ANNOTATIONS_FILE_JOB_SECONDS_PER_IMAGE") or "90"
+)
 DATA_UPLOAD_MAX_MEMORY_SIZE = 30 * 1024 * 1024  # 30 MB
 # Django's default ("same-origin") sends no Referer to tile.openstreetmap.org, which
 # OSM's tile usage policy now rejects (403), breaking admin map widgets.

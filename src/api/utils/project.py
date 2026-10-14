@@ -58,9 +58,9 @@ from ..models.classification import (
     get_image_storage_config,
 )
 from . import delete_instance_and_related_objects, get_value, is_uuid, s3 as s3_utils
+from .classification import create_annotations_files_job
 from .email import mermaid_email
 from .notification import suppress_all_notifications
-from .q import submit_job
 
 logger = logging.getLogger(__name__)
 
@@ -183,18 +183,6 @@ class S3CopyTracker:
                 logger.info(f"Cleaned up S3 file: {path}")
             except Exception as e:
                 logger.error(f"Failed to cleanup S3 file {path}: {e}")
-
-
-def _create_annotations_file_job(image_id):
-    try:
-        image = Image.objects.get(id=image_id)
-        image.create_annotations_file()
-    except Image.DoesNotExist:
-        # Expected when the image's project (e.g. a demo project) was deleted/recreated
-        # before this async job ran. Not an error worth reporting to Sentry.
-        logger.info(f"Skipping annotations file for image {image_id}: image no longer exists")
-    except Exception:
-        logger.error(f"Failed to create annotations file for image {image_id}", exc_info=True)
 
 
 def _copy_image_s3(source_image, new_image_id, s3_tracker, dest_bucket=None):
@@ -325,7 +313,7 @@ def _copy_image_db(
     _t_points_annotations = time.monotonic()
 
     image_id = new_image.id
-    transaction.on_commit(lambda: submit_job(0, True, _create_annotations_file_job, image_id))
+    transaction.on_commit(lambda: create_annotations_files_job([image_id]))
 
     # Copy the latest ClassificationStatus so the webapp knows the image has been processed
     latest_status = source_image.statuses.order_by("-created_on").first()
