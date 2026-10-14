@@ -19,7 +19,12 @@ PROD_SETTINGS = ProjectSettings(
         # 3000 MiB spiked to the cap daily (heavy obs/report serialization),
         # OOM-killing gunicorn workers. Headroom above the ~3078 MiB peak.
         container_memory=4096,
-        container_count=1,
+        # Was 1. A single task means 8 gthread slots (2 workers x 4 threads) total
+        # for all of prod, and a blocking request type (e.g. collectrecords/submit's
+        # synchronous per-image S3 PUT loop in create_image_annotations_files) can
+        # exhaust them and queue every other request behind it. 2 doubles slots to
+        # 16 and removes the single-target-is-the-whole-service failure mode.
+        container_count=2,
         # SQS
         sqs_cpu=2048,
         sqs_memory=4096,
