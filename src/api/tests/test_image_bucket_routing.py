@@ -264,6 +264,7 @@ def test_move_file_cross_account(no_s3):
 
 PROD_LIKE_SETTINGS = {
     "ENVIRONMENT": "prod",
+    "USE_S3_IMAGE_STORAGE": True,
     "IMAGE_PROCESSING_BUCKET": "prod-bucket",
     "IMAGE_PROCESSING_BUCKET_TEST": "test-bucket",
     "IMAGE_S3_PATH": "mermaid/",
