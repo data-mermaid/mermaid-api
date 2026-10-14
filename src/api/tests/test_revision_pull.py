@@ -1,13 +1,63 @@
 import uuid
 
+import pytest
+from rest_framework.exceptions import ParseError
+
 from api.mocks import MockRequest
 from api.models import CollectRecord, Project, ProjectProfile, Revision
 from api.resources.collect_record import CollectRecordSerializer, CollectRecordViewSet
 from api.resources.project import ProjectViewSet
-from api.resources.sync.pull import get_records, serialize_revisions
+from api.resources.sync.pull import _get_records, get_records, serialize_revisions
+from api.resources.sync.views import _get_required_parameters
 
 
-def test_get_records(db_setup, project1, project2, project3, profile1, project_profile1):
+def test_get_required_parameters_rejects_non_integer_revision_num():
+    # get_records() interpolates revision_num into raw SQL (revision.revision_num > {..}),
+    # so this is a SQL injection guard, not just input validation.
+    request = MockRequest(profile=None)
+    with pytest.raises(ValueError):
+        _get_required_parameters(
+            request, {"last_revision": "0 OR 1=1", "project": str(uuid.uuid4())}, ("project",)
+        )
+
+
+def test_get_required_parameters_rejects_non_uuid_project():
+    # Same raw-SQL concern as above, for revision.project_id = '{..}'::uuid.
+    request = MockRequest(profile=None)
+    with pytest.raises(ParseError):
+        _get_required_parameters(
+            request, {"last_revision": "5", "project": "x' OR '1'='1"}, ("project",)
+        )
+
+
+def test_get_records_project_profile_prefilter_in_isolation(
+    db_setup, project1, project2, profile1, profile2
+):
+    # Isolates the queryset-level pre-filter added to _get_records() (pull.py) from the
+    # pre-existing revision.project_id/profile_id filters that get_records() normally also
+    # applies -- those alone would already exclude the "other" records below, which is why
+    # test_get_records() (further down) doesn't actually prove this filter does anything.
+    # Here, filters carries no project/profile condition at all, so if the pre-filter were a
+    # no-op (e.g. CollectRecord.project_lookup got renamed), these "other" records would leak.
+    request = MockRequest(profile=profile1)
+    viewset = CollectRecordViewSet(request=request)
+
+    mine = CollectRecord.objects.create(project=project1, profile=profile1, data=dict())
+    CollectRecord.objects.create(project=project1, profile=profile2, data=dict())
+    CollectRecord.objects.create(project=project2, profile=profile1, data=dict())
+
+    updates, deletes, removes = _get_records(
+        viewset,
+        profile1.pk,
+        filters=["revision.table_name = 'api_collectrecord'"],
+        rp_project=project1.pk,
+        rp_profile=profile1.pk,
+    )
+
+    assert {u.id for u in updates} == {mine.id}
+
+
+def test_get_records(db_setup, project1, project2, project3, profile1, profile2, project_profile1):
     request = MockRequest(profile=profile1)
     collect_record_viewset = CollectRecordViewSet(request=request)
     project_viewset = ProjectViewSet(request=request)
@@ -20,6 +70,15 @@ def test_get_records(db_setup, project1, project2, project3, profile1, project_p
 
     # Create new revision
     CollectRecord.objects.create(project=project1, profile=profile1, data=dict())
+
+    # Other project/profile combos: must not leak into a project1+profile1 pull.
+    # _get_records() pre-filters the queryset by project_lookup/profile_id before
+    # the revision join now (src/api/resources/sync/pull.py) -- this would also
+    # have been excluded by the join alone, so this guards against a regression in
+    # that new, separate filter rather than the join's pre-existing scoping.
+    CollectRecord.objects.create(project=project1, profile=profile2, data=dict())
+    CollectRecord.objects.create(project=project2, profile=profile1, data=dict())
+
     for rev in Revision.objects.all():
         print(
             f"[{rev.revision_num}] {rev.table_name} {rev.record_id} {rev.deleted} {rev.related_to_profile_id}"
