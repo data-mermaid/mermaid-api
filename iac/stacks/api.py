@@ -355,10 +355,18 @@ class ApiStack(Stack):
             # otherwise fires mermaid-{env}-ecs-no-running-tasks on every deploy.
             # Needs room for one extra API task during a deploy (cluster has it).
             min_healthy_percent=100,
-            # 150, not 200: with container_count=2, 200% would let ECS start both
-            # replacement tasks at once, and docker-entry.sh runs `migrate` on every
-            # boot — two tasks migrating concurrently is a race. 150% caps a deploy
-            # at one extra task, so replacements roll one at a time.
+            # This stack is shared between dev (container_count=1) and prod
+            # (container_count=2). At desired_count=1, 150% floors to 1 — ECS
+            # couldn't start a replacement before stopping the old one, reintroducing
+            # the 0-running-tasks window min_healthy_percent=100 exists to avoid. So
+            # 150% only applies once there's a second task to make it meaningful;
+            # single-task envs keep 200%, which is what min_healthy_percent=100's
+            # comment above was written against.
+            #
+            # At container_count>=2, 200% would let ECS start all replacement tasks
+            # at once, and docker-entry.sh runs `migrate` on every boot — concurrent
+            # migrates are a race. 150% caps a deploy at one extra task, so
+            # replacements roll one at a time.
             # Residual risk: this only paces *rolling* replacements. If both tasks
             # ever start cold together (scale-up from 0, or an AZ outage taking out
             # both instances at once — container_cpu=1500 x2 exceeds one t3a.large's
@@ -367,7 +375,7 @@ class ApiStack(Stack):
             # unlocked in both. Fast-follow if this matters: wrap migrate in a
             # Postgres advisory lock, same pattern as CLASSIFIER_REGISTRATION_LOCK
             # in src/api/checks.py.
-            max_healthy_percent=150,
+            max_healthy_percent=150 if config.api.container_count >= 2 else 200,
             capacity_provider_strategies=cluster.default_capacity_provider_strategy,
             circuit_breaker=ecs.DeploymentCircuitBreaker(enable=True, rollback=True),
         )
