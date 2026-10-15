@@ -39,7 +39,7 @@ from ..base import (
     BaseViewAPISUGeoSerializer,
 )
 from ..benthic_transect import BenthicTransectSerializer
-from ..mixins import SampleUnitMethodEditMixin, SampleUnitMethodSummaryReport
+from ..mixins import SampleUnitMethodEditMixin
 from ..observer import ObserverSerializer
 from ..sample_event import SampleEventSerializer
 from . import (
@@ -97,9 +97,7 @@ class BenthicPITMethodSerializer(BenthicPITSerializer):
         exclude = []
 
 
-class BenthicPITMethodView(
-    SampleUnitMethodSummaryReport, SampleUnitMethodEditMixin, BaseProjectApiViewSet
-):
+class BenthicPITMethodView(SampleUnitMethodEditMixin, BaseProjectApiViewSet):
     queryset = (
         BenthicPIT.objects.select_related("transect", "transect__sample_event")
         .all()
