@@ -19,15 +19,25 @@ def common_columns(indicator_set):
     return [
         indicator_set.project.name,
         indicator_set.title,
-        indicator_set.report_date,
         indicator_set.get_indicator_set_type_display(),
+        indicator_set.report_date,
     ]
+
+
+def _get_citation(project, citation_cache):
+    if project.id not in citation_cache:
+        profiles = get_profiles(project)
+        citation_cache[
+            project.id
+        ] = f"{suggested_citation(project, profiles)} {citation_retrieved_text(project.name)}"
+    return citation_cache[project.id]
 
 
 def _get_indicator_set_field_data(
     indicator_set,
     field_label,
     field_name,
+    citation,
     additional_common_fields: list[str] | None = None,
     notes_field: str = None,
 ):
@@ -46,42 +56,40 @@ def _get_indicator_set_field_data(
     if notes_field:
         row_data = row_data + [getattr(indicator_set, notes_field)]
 
-    return row_data
+    return row_data + [citation]
 
 
 def _get_indicator_sheet_data(
-    indicator_sets, fields, additional_common_fields=None, notes_field=None
+    indicator_sets, fields, citation_cache, additional_common_fields=None, notes_field=None
 ):
     for indicator_set in indicator_sets:
+        citation = _get_citation(indicator_set.project, citation_cache)
         for field_label, field_name in fields:
             if hasattr(indicator_set, field_name):
                 yield _get_indicator_set_field_data(
                     indicator_set,
                     field_label,
                     field_name,
+                    citation,
                     additional_common_fields=additional_common_fields,
                     notes_field=notes_field,
                 )
 
 
-def f1_data(indicator_sets):
+def f1_data(indicator_sets, citation_cache):
     for indicator_set in indicator_sets:
         if hasattr(indicator_set, "f1_1"):
-            project = indicator_set.project
-            profiles = get_profiles(project)
-            citation = (
-                f"{suggested_citation(project, profiles)} {citation_retrieved_text(project.name)}"
-            )
+            citation = _get_citation(indicator_set.project, citation_cache)
 
             yield common_columns(indicator_set) + [
                 indicator_set._meta.get_field("f1_1").verbose_name,
                 indicator_set.f1_1,
-                citation,
                 indicator_set.f1_notes,
+                citation,
             ]
 
 
-def f2_data(indicator_sets):
+def f2_data(indicator_sets, citation_cache):
     fields = (
         ("F2.1a", "f2_1a"),
         ("F2.1b", "f2_1b"),
@@ -92,10 +100,10 @@ def f2_data(indicator_sets):
         ("F2.4", "f2_4"),
         ("F2.5:", "f2_5"),
     )
-    return _get_indicator_sheet_data(indicator_sets, fields, notes_field="f2_notes")
+    return _get_indicator_sheet_data(indicator_sets, fields, citation_cache, notes_field="f2_notes")
 
 
-def f3_data(indicator_sets):
+def f3_data(indicator_sets, citation_cache):
     fields = (
         ("F3.1", "f3_1"),
         ("F3.2", "f3_2"),
@@ -107,10 +115,10 @@ def f3_data(indicator_sets):
         ("F3.5d", "f3_5d"),
         ("F3.6", "f3_6"),
     )
-    return _get_indicator_sheet_data(indicator_sets, fields, notes_field="f3_notes")
+    return _get_indicator_sheet_data(indicator_sets, fields, citation_cache, notes_field="f3_notes")
 
 
-def f4_data(indicator_sets):
+def f4_data(indicator_sets, citation_cache):
     fields = (
         ("F4.1", "f4_1"),
         ("F4.2", "f4_2"),
@@ -119,12 +127,13 @@ def f4_data(indicator_sets):
     return _get_indicator_sheet_data(
         indicator_sets,
         fields,
+        citation_cache,
         additional_common_fields=["f4_start_date", "f4_end_date"],
         notes_field="f4_notes",
     )
 
 
-def f5_data(indicator_sets):
+def f5_data(indicator_sets, citation_cache):
     fields = (
         ("F5.1", "f5_1"),
         ("F5.2", "f5_2"),
@@ -136,20 +145,20 @@ def f5_data(indicator_sets):
         ("F5.5", "f5_5"),
         ("F5.6", "f5_6"),
     )
-    return _get_indicator_sheet_data(indicator_sets, fields, notes_field="f5_notes")
+    return _get_indicator_sheet_data(indicator_sets, fields, citation_cache, notes_field="f5_notes")
 
 
-def f6_data(indicator_sets):
+def f6_data(indicator_sets, citation_cache):
     fields = (
         ("F6.1a", "f6_1a"),
         ("F6.1b", "f6_1b"),
         ("F6.1c", "f6_1c"),
         ("F6.1d", "f6_1d"),
     )
-    return _get_indicator_sheet_data(indicator_sets, fields, notes_field="f6_notes")
+    return _get_indicator_sheet_data(indicator_sets, fields, citation_cache, notes_field="f6_notes")
 
 
-def f7_data(indicator_sets):
+def f7_data(indicator_sets, citation_cache):
     fields = (
         ("F7.1a", "f7_1a"),
         ("F7.1b", "f7_1b"),
@@ -162,86 +171,93 @@ def f7_data(indicator_sets):
         ("F7.3", "f7_3"),
         ("F7.4", "f7_4"),
     )
-    return _get_indicator_sheet_data(indicator_sets, fields, notes_field="f7_notes")
+    return _get_indicator_sheet_data(indicator_sets, fields, citation_cache, notes_field="f7_notes")
 
 
-def common_finance_solutions_columns(finance_solution):
+def facility_identifier_columns(finance_solution):
     return [
         finance_solution.get_fs_type_display(),
         finance_solution.name,
-        MULTI_VALUE_SEPARATOR.join(finance_solution.get_sustainable_finance_mechanisms_display()),
-        finance_solution.get_sector_display(),
-        finance_solution.get_geographical_coverage_display(),
-        finance_solution.taf_name,
-        finance_solution.number_of_solutions_supported_by,
     ]
 
 
-def finance_solutions_data(indicator_sets):
+def finance_solutions_data(indicator_sets, citation_cache):
     for indicator_set in indicator_sets:
         com_cols = common_columns(indicator_set)
+        citation = _get_citation(indicator_set.project, citation_cache)
         for fs in indicator_set.finance_solutions.all():
             yield (
                 com_cols
-                + common_finance_solutions_columns(fs)
+                + facility_identifier_columns(fs)
                 + [
+                    fs.get_sector_display(),
+                    fs.get_geographical_coverage_display(),
                     castutils.to_yesno(fs.used_an_incubator),
                     castutils.to_yesno(fs.used_an_incubator == GFCRFinanceSolution.GFCR_FUNDED),
+                    fs.taf_name,
+                    fs.number_of_solutions_supported_by,
                     castutils.to_yesno(fs.local_enterprise),
                     castutils.to_yesno(fs.gender_smart),
+                    MULTI_VALUE_SEPARATOR.join(fs.get_sustainable_finance_mechanisms_display()),
                     fs.notes,
+                    citation,
                 ]
             )
 
 
-def investments_data(indicator_sets):
+def investments_data(indicator_sets, citation_cache):
     for indicator_set in indicator_sets:
         com_cols = common_columns(indicator_set)
+        citation = _get_citation(indicator_set.project, citation_cache)
         for fs in indicator_set.finance_solutions.all():
-            com_fs_cols = common_finance_solutions_columns(fs)
+            fs_id_cols = facility_identifier_columns(fs)
             for investment in fs.investment_sources.all():
                 yield (
                     com_cols
-                    + com_fs_cols
+                    + fs_id_cols
                     + [
                         investment.get_investment_source_display(),
                         investment.get_investment_type_display(),
                         investment.investment_amount,
                         investment.notes,
+                        citation,
                     ]
                 )
 
 
-def revenue_data(indicator_sets):
+def revenue_data(indicator_sets, citation_cache):
     for indicator_set in indicator_sets:
         com_cols = common_columns(indicator_set)
+        citation = _get_citation(indicator_set.project, citation_cache)
         for fs in indicator_set.finance_solutions.all():
-            com_fs_cols = common_finance_solutions_columns(fs)
+            fs_id_cols = facility_identifier_columns(fs)
             for rev in fs.revenues.all():
                 yield (
                     com_cols
-                    + com_fs_cols
+                    + fs_id_cols
                     + [
                         rev.get_revenue_type_display(),
                         castutils.to_yesno(rev.sustainable_revenue_stream),
                         rev.revenue_amount,
                         rev.notes,
+                        citation,
                     ]
                 )
 
 
 def report_data(indicator_sets):
+    citation_cache = {}
     sheet_data = {}
-    sheet_data["F1"] = f1_data(indicator_sets)
-    sheet_data["F2"] = f2_data(indicator_sets)
-    sheet_data["F3"] = f3_data(indicator_sets)
-    sheet_data["F4"] = f4_data(indicator_sets)
-    sheet_data["F5"] = f5_data(indicator_sets)
-    sheet_data["F6"] = f6_data(indicator_sets)
-    sheet_data["F7"] = f7_data(indicator_sets)
-    sheet_data["FacilitiesSolutions"] = finance_solutions_data(indicator_sets)
-    sheet_data["Investments"] = investments_data(indicator_sets)
-    sheet_data["Revenues"] = revenue_data(indicator_sets)
+    sheet_data["F1"] = f1_data(indicator_sets, citation_cache)
+    sheet_data["F2"] = f2_data(indicator_sets, citation_cache)
+    sheet_data["F3"] = f3_data(indicator_sets, citation_cache)
+    sheet_data["F4"] = f4_data(indicator_sets, citation_cache)
+    sheet_data["F5"] = f5_data(indicator_sets, citation_cache)
+    sheet_data["F6"] = f6_data(indicator_sets, citation_cache)
+    sheet_data["F7"] = f7_data(indicator_sets, citation_cache)
+    sheet_data["FacilitiesSolutions"] = finance_solutions_data(indicator_sets, citation_cache)
+    sheet_data["Investments"] = investments_data(indicator_sets, citation_cache)
+    sheet_data["Revenues"] = revenue_data(indicator_sets, citation_cache)
 
     return sheet_data
 
