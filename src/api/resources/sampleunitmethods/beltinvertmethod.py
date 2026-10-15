@@ -38,7 +38,7 @@ from ..base import (
     BaseViewAPISUGeoSerializer,
 )
 from ..invert_belt_transect import InvertBeltTransectSerializer
-from ..mixins import SampleUnitMethodEditMixin, SampleUnitMethodSummaryReport
+from ..mixins import SampleUnitMethodEditMixin
 from ..observer import ObserverSerializer
 from ..sample_event import SampleEventSerializer
 from . import (
@@ -91,9 +91,7 @@ class BeltInvertMethodSerializer(BeltInvertSerializer):
         exclude = []
 
 
-class BeltInvertMethodView(
-    SampleUnitMethodSummaryReport, SampleUnitMethodEditMixin, BaseProjectApiViewSet
-):
+class BeltInvertMethodView(SampleUnitMethodEditMixin, BaseProjectApiViewSet):
     project_policy = "data_policy_macroinvertebrate"
     queryset = (
         BeltInvert.objects.select_related("transect", "transect__sample_event")
