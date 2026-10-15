@@ -2198,11 +2198,6 @@ collection:
                 description: ""
                 id: pair_6fa27e1765ae4eb487816090751d63d1
                 disabled: true
-              - id: pair_14d6b9e5516c4df9bf0c74c5c9184313
-                name: covars
-                value: "true"
-                description: ""
-                disabled: false
             authentication:
               audience: "{{ auth0_audience  }}"
               authorizationUrl: "{{ auth0_authurl  }}"
@@ -4813,11 +4808,6 @@ collection:
                     value: 2018-06-28
                     description: ""
                     disabled: true
-                  - id: pair_80fb6c6d99ce403793ad4de5c7eb4cb5
-                    name: covars
-                    value: "true"
-                    description: ""
-                    disabled: true
                   - id: pair_69d23ac110bb4767b4896f9a7bdc8ddd
                     name: field_report
                     value: "true"
@@ -5661,11 +5651,6 @@ collection:
                   - id: pair_ad8e33805409418391989cd67376508a
                     name: sample_date_before
                     value: 2018-06-28
-                    description: ""
-                    disabled: true
-                  - id: pair_80fb6c6d99ce403793ad4de5c7eb4cb5
-                    name: covars
-                    value: "true"
                     description: ""
                     disabled: true
                   - id: pair_69d23ac110bb4767b4896f9a7bdc8ddd
