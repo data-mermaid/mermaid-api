@@ -141,6 +141,30 @@ def test_unusable_key_is_401(key_pair, update):
         _authenticate(raw)
 
 
+@pytest.mark.parametrize(
+    "retire, reason",
+    [
+        pytest.param(lambda key: key.revoke("test"), "revoked", id="revoked"),
+        pytest.param(
+            lambda key: APIKey.objects.filter(pk=key.pk).update(is_active=False),
+            "inactive",
+            id="inactive",
+        ),
+    ],
+)
+def test_unusable_key_logs_its_reason(key_pair, caplog, retire, reason):
+    """revoke() also clears is_active, so a revoked key must still log as revoked."""
+
+    key, raw = key_pair
+    retire(key)
+
+    with pytest.raises(exceptions.AuthenticationFailed):
+        _authenticate(raw)
+
+    logged = "\n".join(r.getMessage() for r in caplog.records)
+    assert f"reason={reason}" in logged
+
+
 def test_key_without_expiry_still_authenticates(key_pair, profile1):
     """expires_at=None means never; the one-year default must not be implied."""
 

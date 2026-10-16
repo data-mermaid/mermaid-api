@@ -4,7 +4,7 @@ from typing import Any
 
 from django.core.exceptions import ObjectDoesNotExist
 from rest_framework import permissions
-from rest_framework.exceptions import NotFound, ParseError
+from rest_framework.exceptions import NotFound, ParseError, PermissionDenied
 from rest_framework.request import Request
 
 from .exceptions import check_uuid
@@ -109,6 +109,11 @@ class APIKeyOwnerPermission(permissions.BasePermission):
         user = request.user
         if not user.is_authenticated:
             return False
+        # A session login to /admin/ authenticates a stock auth User with no
+        # profile, and a key always belongs to a profile, so there is nothing
+        # such a user could own.
+        if getattr(user, "profile", None) is None:
+            raise PermissionDenied("API keys belong to a MERMAID profile.")
         return get_request_api_key(request) is None
 
 

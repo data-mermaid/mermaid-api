@@ -9,6 +9,7 @@ from datetime import timedelta
 
 import pytest
 from django.conf import settings
+from django.contrib.auth import get_user_model
 from django.core.cache import cache
 from django.urls import reverse
 from django.utils import timezone
@@ -81,6 +82,21 @@ def test_api_key_cannot_manage_keys(db_setup, own_key, list_url):
 
     assert client.get(list_url).status_code == 403
     assert client.post(list_url, {"name": "another"}, format="json").status_code == 403
+    assert client.patch(_detail_url(key), {"name": "renamed"}, format="json").status_code == 403
+    assert client.post(_revoke_url(key)).status_code == 403
+    assert APIKey.objects.filter(profile=key.profile).count() == 1
+
+
+def test_session_user_without_profile_is_forbidden(db_setup, own_key, list_url):
+    """A staff login to /admin/ reaches the browsable API with no profile."""
+
+    key, _ = own_key
+    user = get_user_model().objects.create_user(username="staff", password="pw", is_staff=True)
+    client = APIClient()
+    client.force_login(user)
+
+    assert client.get(list_url).status_code == 403
+    assert client.post(list_url, {"name": "x"}, format="json").status_code == 403
     assert client.patch(_detail_url(key), {"name": "renamed"}, format="json").status_code == 403
     assert client.post(_revoke_url(key)).status_code == 403
     assert APIKey.objects.filter(profile=key.profile).count() == 1

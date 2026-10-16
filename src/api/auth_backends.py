@@ -335,11 +335,13 @@ class APIKeyAuthentication(BaseAuthentication):
 
         # Past this point the secret was correct, so the failure is a real
         # signal about this key rather than about whoever presented it, and it
-        # is safe to count against the key_id.
-        if not api_key.is_active:
-            raise self._fail(request, "inactive", key_id, ip=ip, count_key_id=True)
+        # is safe to count against the key_id. Revocation is checked before
+        # is_active because revoke() clears is_active too; the other order
+        # would log every revoked key as "inactive".
         if api_key.revoked_at is not None:
             raise self._fail(request, "revoked", key_id, ip=ip, count_key_id=True)
+        if not api_key.is_active:
+            raise self._fail(request, "inactive", key_id, ip=ip, count_key_id=True)
         if api_key.expires_at is not None and api_key.expires_at < timezone.now():
             raise self._fail(request, "expired", key_id, ip=ip, count_key_id=True)
 
