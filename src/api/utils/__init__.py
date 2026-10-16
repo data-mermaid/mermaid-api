@@ -24,10 +24,11 @@ from django.utils.translation import gettext_lazy as _
 
 class Testing:
     def __enter__(self):
+        self._previous = settings.TESTING
         settings.TESTING = True
 
     def __exit__(self, *args, **kwargs):
-        settings.TESTING = False
+        settings.TESTING = self._previous
 
 
 def safe_get_valid_filename(name, default="untitled"):

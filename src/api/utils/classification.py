@@ -25,6 +25,7 @@ from ..models import (
     Annotation,
     ClassificationStatus,
     Classifier,
+    CollectRecord,
     Image,
     ObsBenthicPhotoQuadrat,
     Point,
@@ -34,7 +35,7 @@ from ..models import (
 )
 from ..models.classification import parse_bagf_label
 from .inference import classify_via_lambda
-from .q import submit_image_job
+from .q import submit_image_job, submit_job
 from .s3 import upload_file
 
 logger = logging.getLogger(__name__)
@@ -441,6 +442,73 @@ def classify_image_job(image_record_id, num_points=None):
         num_points=num_points,
         visibility_timeout=settings.INFERENCE_JOB_VISIBILITY_TIMEOUT,
     )
+
+
+def _create_annotations_files(image_ids):
+    """Build/upload the confirmed-annotations CSV for each image.
+
+    Submit deletes its CollectRecord before this job runs; an edit shortly after submit
+    recreates one with the same id (see transect_method_to_collect_record). Any image
+    whose collect_record_id is live was therefore edited back out of submitted state
+    since this job was queued, and post_edit already cleared/will clear its file - skip
+    it rather than resurrect a stale CSV for an unsubmitted record.
+
+    Raises if any image failed, so SQS redelivers the whole batch (safe: create_annotations_file
+    overwrites the same key, and an unaffected image just gets harmlessly rebuilt again).
+    """
+    images_by_id = Image.objects.in_bulk(image_ids)
+    live_collect_record_ids = set(
+        CollectRecord.objects.filter(
+            id__in={image.collect_record_id for image in images_by_id.values()}
+        ).values_list("id", flat=True)
+    )
+
+    failed_image_ids = []
+    for image_id in image_ids:
+        image = images_by_id.get(image_id)
+        if image is None:
+            logger.info(f"Skipping annotations file for image {image_id}: image no longer exists")
+            continue
+        if image.collect_record_id in live_collect_record_ids:
+            logger.info(
+                f"Skipping annotations file for image {image_id}: "
+                "collect record was edited back out of submitted state"
+            )
+            continue
+        try:
+            image.create_annotations_file()
+        except Exception:
+            logger.exception(f"Failed to create annotations file for image {image_id}")
+            failed_image_ids.append(image_id)
+
+    if failed_image_ids:
+        raise RuntimeError(f"Failed to create annotations files for images: {failed_image_ids}")
+
+
+# Per-job visibility ceiling, well under SQS's 43200s (12h) hard limit: a batch
+# needing more than this splits into multiple jobs instead of one that would tie
+# up a worker slot for the maximum possible window.
+_MAX_BATCH_VISIBILITY_TIMEOUT = 1800
+
+
+def create_annotations_files_job(image_ids):
+    per_image = settings.ANNOTATIONS_FILE_JOB_SECONDS_PER_IMAGE
+    max_batch_size = max(1, _MAX_BATCH_VISIBILITY_TIMEOUT // per_image)
+
+    job_ids = []
+    for start in range(0, len(image_ids), max_batch_size):
+        batch = image_ids[start : start + max_batch_size]
+        visibility_timeout = max(settings.SQS_MESSAGE_VISIBILITY, len(batch) * per_image)
+        job_ids.append(
+            submit_job(
+                0,
+                True,
+                _create_annotations_files,
+                image_ids=batch,
+                visibility_timeout=visibility_timeout,
+            )
+        )
+    return job_ids
 
 
 def chunked_queryset_dataframe(qs, chunk_size=10000):

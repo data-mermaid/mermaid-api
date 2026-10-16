@@ -87,6 +87,26 @@ def test_missing_collect_records(db_setup, api_client1, collect_record4, project
     assert response_data["missing_ids"] == [missing_id]
 
 
+def test_submit_collect_record_invalid_protocol(db_setup, api_client1, collect_record4, project1):
+    collect_record4.data["protocol"] = "not_a_real_protocol"
+    collect_record4.save()
+
+    url = reverse("collectrecords-submit", args=[str(project1.pk)])
+    response = api_client1.post(url, {"ids": [str(collect_record4.pk)]}, format="json")
+
+    assert response.status_code == 400
+
+
+def test_validate_collect_record_invalid_protocol(db_setup, api_client1, collect_record4, project1):
+    collect_record4.data["protocol"] = "not_a_real_protocol"
+    collect_record4.save()
+
+    url = reverse("collectrecords-validate", args=[str(project1.pk)])
+    response = api_client1.post(url, {"ids": [str(collect_record4.pk)]}, format="json")
+
+    assert response.status_code == 400
+
+
 def test_ingest_schemas_json(api_client1, project1):
     sample_units = [p for p in PROTOCOL_MAP if p not in INGEST_PROTOCOLS_NOT_YET_IMPLEMENTED]
     serializers = {i.protocol: i for i in ingest_serializers}
