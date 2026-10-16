@@ -29,6 +29,11 @@ class Command(BaseCommand):
         except Exception as e:
             self.stderr.write(f"Auto test projects error: {str(e)}")
 
+        try:
+            call_command("api_key_maintenance")
+        except Exception as e:
+            self.stderr.write(f"API key maintenance error: {str(e)}")
+
         # Run last; if many images, this could cause a sigkill for the container
         # (but remaining images will get picked up the following day)
         try:

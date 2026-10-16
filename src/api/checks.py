@@ -1,18 +1,29 @@
-"""Validates the Lambda classify path's settings and pinned Classifier row outside
-Django's check registry.
-
-`src/docker-entry.sh` runs `migrate` before `gunicorn`, and `migrate` runs every
-registered check regardless of tags; registering this one would couple an
-API-wide startup failure to a misconfiguration that only affects classification.
-The image worker calls check_inference_settings() and
-ensure_pinned_classifier_registered() directly instead.
-"""
-
 from django.conf import settings
-from django.core.checks import Error
+from django.core.checks import Error, register
+from django.core.exceptions import ImproperlyConfigured
 from django.db import connection, transaction
 
 from api.models import Classifier
+from api.utils.apikeys import get_environment_label
+
+
+@register()
+def check_api_key_environment(app_configs, **kwargs):
+    """API keys embed an environment label, so ENVIRONMENT must be one we map."""
+
+    try:
+        get_environment_label()
+    except ImproperlyConfigured as err:
+        return [Error(str(err), id="api.E001")]
+    return []
+
+
+# `src/docker-entry.sh` runs `migrate` before `gunicorn`, and `migrate` runs every
+# registered check regardless of tags; registering the checks below would couple
+# an API-wide startup failure to a misconfiguration that only affects
+# classification. The image worker calls check_inference_settings() and
+# ensure_pinned_classifier_registered() directly instead, so they are deliberately
+# left out of Django's check registry.
 
 # `local` and test runs leave these settings unset by design; only a deployed
 # environment is expected to have them configured.
@@ -33,7 +44,7 @@ def check_inference_settings(app_configs=None, **kwargs):
             Error(
                 "INFERENCE_LAMBDA_PYSPACER is not set.",
                 hint="Set INFERENCE_LAMBDA_PYSPACER to the pyspacer Lambda's function name.",
-                id="api.E001",
+                id="api.E002",
             )
         )
     if not settings.INFERENCE_CLASSIFIER_VERSION:
@@ -41,7 +52,7 @@ def check_inference_settings(app_configs=None, **kwargs):
             Error(
                 "INFERENCE_CLASSIFIER_VERSION is not set.",
                 hint="Set INFERENCE_CLASSIFIER_VERSION to the active classifier version.",
-                id="api.E002",
+                id="api.E003",
             )
         )
     return errors
