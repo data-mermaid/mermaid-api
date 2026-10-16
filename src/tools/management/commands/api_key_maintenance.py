@@ -61,7 +61,7 @@ class Command(BaseCommand):
             # still tell a key that ran out from one somebody took away.
             audit_logger.info(
                 "[apikey.expired] key_id=%s profile=%s expires_at=%s",
-                key.key_id,
+                key.pk,
                 key.profile_id,
                 key.expires_at.isoformat(),
             )
@@ -101,13 +101,13 @@ class Command(BaseCommand):
             last_used = key.last_used_at.isoformat() if key.last_used_at else "never"
             audit_logger.info(
                 "[apikey.stale] key_id=%s profile=%s last_used_at=%s expires_at=%s",
-                key.key_id,
+                key.pk,
                 key.profile_id,
                 last_used,
                 expires,
             )
             self.stdout.write(
-                f"  stale: key_id={key.key_id} profile_id={key.profile_id} "
+                f"  stale: key_id={key.pk} profile_id={key.profile_id} "
                 f"last_used={last_used} expires={expires}"
             )
 

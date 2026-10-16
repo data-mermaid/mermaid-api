@@ -148,7 +148,7 @@ class APIKeyAdminForm(forms.ModelForm):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
         if self.instance.pk is not None and self.instance.expires_at is None:
-            self.fields["never_expires"].initial = True
+            self.fields["never_expires"].initial = False
 
     def clean(self):
         cleaned_data = super().clean()
@@ -177,12 +177,12 @@ class APIKeyAdmin(admin.ModelAdmin):
     """
 
     form = APIKeyAdminForm
-    list_display = ("name", "key_id", "profile", "is_active", "expires_at", "last_used_at")
-    list_display_links = ("name", "key_id")
+    list_display = ("name", "id", "profile", "is_active", "expires_at", "last_used_at")
+    list_display_links = ("name", "id")
     list_filter = (APIKeyExpiryFilter, "is_active", ("revoked_at", admin.EmptyFieldListFilter))
     search_fields = (
         "name",
-        "key_id",
+        "id",
         "profile__email",
         "profile__first_name",
         "profile__last_name",
@@ -190,7 +190,7 @@ class APIKeyAdmin(admin.ModelAdmin):
     autocomplete_fields = ("profile",)
     exclude = ("secret_hash",)
     readonly_fields = (
-        "key_id",
+        "id",
         "last_used_at",
         "last_used_ip",
         "revoked_at",
@@ -310,7 +310,7 @@ class APIKeyAdmin(admin.ModelAdmin):
         # it is ever readable. save_model cannot return a response, so it is
         # carried on the request object (per-request, unlike `self`, which the
         # admin site keeps for the process) for response_add to render.
-        obj.key_id, obj.secret_hash, raw = generate_api_key()
+        obj.id, obj.secret_hash, raw = generate_api_key()
         super().save_model(request, obj, form, change)
         log_key_created(obj, request.user.get_username())
         request._issued_api_key = raw

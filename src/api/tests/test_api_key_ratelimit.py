@@ -6,6 +6,7 @@ spending a database lookup and a hash on every retry, and to make the attempt
 visible instead of drowning the log.
 """
 
+import uuid
 from datetime import timedelta
 from unittest.mock import patch
 
@@ -48,7 +49,7 @@ def key_pair(profile1):
     key = APIKey.objects.create(
         profile=profile1,
         name="reporting bot",
-        key_id=key_id,
+        id=key_id,
         secret_hash=secret_hash,
         expires_at=timezone.now() + timedelta(days=365),
     )
@@ -140,7 +141,7 @@ def test_other_ips_are_unaffected(key_pair, profile1):
     the limit; the good key still works from anywhere else."""
 
     _, raw = key_pair
-    _fail_n("mmd_local_aaaaaaaaaaaa_nope", LIMIT, ip="10.0.0.1")
+    _fail_n("mmd_local_aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa_nope", LIMIT, ip="10.0.0.1")
 
     user, auth = _authenticate(raw, ip="10.0.0.2")
     assert user.profile == profile1
@@ -184,7 +185,7 @@ def test_unknown_key_id_does_not_count_against_the_key_id_scope(key_pair, profil
 
     _, raw = key_pair
     for i in range(LIMIT * 2):
-        _fail_n("mmd_local_aaaaaaaaaaaa_nope", 1, ip=f"10.3.0.{i}")
+        _fail_n("mmd_local_aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa_nope", 1, ip=f"10.3.0.{i}")
 
     user, _auth = _authenticate(raw, ip="10.3.9.9")
     assert user.profile == profile1
@@ -250,7 +251,7 @@ def test_probing_key_ids_creates_no_key_id_cache_rows(key_pair):
     _, raw = key_pair
     limiter = APIKeyAuthentication.failure_limiter
     window_start = limiter._window_start(1_800_000_000.0)
-    probed = [f"aaaaaaaaaa{i:02d}" for i in range(LIMIT)]
+    probed = [str(uuid.uuid4()) for _ in range(LIMIT)]
 
     for i, key_id in enumerate(probed):
         _fail_n(f"mmd_local_{key_id}_nope", 1, ip=f"10.4.0.{i}")

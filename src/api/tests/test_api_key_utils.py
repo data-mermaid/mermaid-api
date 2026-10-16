@@ -2,6 +2,7 @@ import hashlib
 import os
 import subprocess
 import sys
+import uuid
 from pathlib import Path
 
 import pytest
@@ -9,7 +10,6 @@ from django.core.exceptions import ImproperlyConfigured
 
 from api.checks import check_api_key_environment
 from api.utils.apikeys import (
-    KEY_ID_LENGTH,
     generate_api_key,
     get_environment_label,
     hash_secret,
@@ -24,8 +24,8 @@ def test_generate_round_trips_through_parse():
     env, parsed_id, secret = parse_api_key(raw)
 
     assert env == "prod"
-    assert parsed_id == key_id
-    assert len(key_id) == KEY_ID_LENGTH
+    assert parsed_id == str(key_id)
+    assert isinstance(key_id, uuid.UUID)
     assert secret_matches(secret, secret_hash)
 
 
@@ -34,8 +34,8 @@ def test_generated_key_id_has_no_underscore():
 
     for _ in range(50):
         key_id, _hash, raw = generate_api_key("prod")
-        assert "_" not in key_id
-        assert parse_api_key(raw)[1] == key_id
+        assert "_" not in str(key_id)
+        assert parse_api_key(raw)[1] == str(key_id)
 
 
 def test_secret_is_not_recoverable_from_the_stored_value():
@@ -64,10 +64,10 @@ def test_secret_matches_rejects_wrong_secret():
 def test_secret_with_underscores_survives_parsing():
     """token_urlsafe emits "_", so the split has to stop after the key id."""
 
-    raw = "mmd_prod_abc123def456_aa_bb_cc"
+    raw = "mmd_prod_0b6f0f8e-4a52-4f0c-9d43-2f8f2d6c1a11_aa_bb_cc"
     env, key_id, secret = parse_api_key(raw)
 
-    assert (env, key_id, secret) == ("prod", "abc123def456", "aa_bb_cc")
+    assert (env, key_id, secret) == ("prod", "0b6f0f8e-4a52-4f0c-9d43-2f8f2d6c1a11", "aa_bb_cc")
     assert hash_secret(secret) == hashlib.sha256(b"aa_bb_cc").hexdigest()
 
 
@@ -76,13 +76,17 @@ def test_secret_with_underscores_survives_parsing():
     [
         "",
         None,
-        "mmd_prod_abc123def456",
+        "mmd_prod_0b6f0f8e-4a52-4f0c-9d43-2f8f2d6c1a11",
         "mmd_prod__secret",
-        "xxx_prod_abc123def456_secret",
-        "mmd__abc123def456_secret",
+        "xxx_prod_0b6f0f8e-4a52-4f0c-9d43-2f8f2d6c1a11_secret",
+        "mmd__0b6f0f8e-4a52-4f0c-9d43-2f8f2d6c1a11_secret",
         "mmd_prod_short_secret",
-        "mmd_prod_waytoolongkeyid_secret",
-        b"mmd_prod_abc123def456_secret",
+        "mmd_prod_0b6f0f8e-4a52-4f0c-9d43-2f8f2d6c1a110_secret",
+        # the hex form and upper case are valid UUIDs but not the canonical
+        # form the pk is issued in
+        "mmd_prod_0b6f0f8e4a524f0c9d432f8f2d6c1a11_secret",
+        "mmd_prod_0B6F0F8E-4A52-4F0C-9D43-2F8F2D6C1A11_secret",
+        b"mmd_prod_0b6f0f8e-4a52-4f0c-9d43-2f8f2d6c1a11_secret",
     ],
 )
 def test_parse_rejects_bad_shapes(raw):

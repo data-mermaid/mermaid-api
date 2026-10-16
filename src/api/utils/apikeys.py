@@ -7,8 +7,8 @@ A key is presented to the API as::
 It travels in ``Authorization: Bearer <key>``, the same scheme as an Auth0
 access token; the ``mmd_`` prefix is what tells the two apart.
 
-``key_id`` identifies the ``APIKey`` row and is safe to log. ``secret`` is 256
-bits of CSPRNG output; only its SHA-256 digest is stored. A plain, unsalted
+``key_id`` is the ``APIKey`` row's primary key (a UUID) and is safe to log.
+``secret`` is 256 bits of CSPRNG output; only its SHA-256 digest is stored. A plain, unsalted
 digest is used deliberately: the secret has enough entropy that a slow password
 hash would add latency to every request without making guessing any less
 impossible. See the "Hash, do not encrypt" decision in the API key plan.
@@ -19,7 +19,7 @@ import hmac
 import logging
 import re
 import secrets
-import string
+import uuid
 from datetime import timedelta
 
 from django.conf import settings
@@ -34,18 +34,11 @@ AUDIT_LOGGER_NAME = "api.apikeys"
 audit_logger = logging.getLogger(AUDIT_LOGGER_NAME)
 
 PREFIX = "mmd"
-KEY_ID_LENGTH = 12
 SECRET_BYTES = 32
-# key_id must not contain "_": the token is split on underscores, and the secret
+# key_id is the canonical (hyphenated, lowercase) form of the row's UUID. It
+# must not contain "_": the token is split on underscores, and the secret
 # (url-safe base64) may contain them, so only the id has to stay unambiguous.
-KEY_ID_ALPHABET = string.ascii_letters + string.digits
-KEY_ID_RE = re.compile(rf"^[A-Za-z0-9]{{{KEY_ID_LENGTH}}}$")
-
-# How many times `APIKey.issue` will redraw a key_id that the unique constraint
-# rejects. 12 characters over a 62-character alphabet is ~3.2e21 ids, so a
-# clash is not something to expect; the retries are here so that an RNG defect
-# costs another insert rather than an opaque 500 for the person minting the key.
-KEY_ID_ISSUE_ATTEMPTS = 3
+KEY_ID_RE = re.compile(r"^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$")
 
 # settings.ENVIRONMENT goes into the key verbatim. It is validated because ENV
 # is free text (settings.ENVIRONMENT = os.environ.get("ENV") or "local"): a typo
@@ -88,10 +81,13 @@ def secret_matches(secret, secret_hash):
 
 
 def generate_api_key(env=None):
-    """Return ``(key_id, secret_hash, raw_key)``. The raw key is never stored."""
+    """Return ``(key_id, secret_hash, raw_key)``. The raw key is never stored.
+
+    `key_id` is a fresh UUID, to be saved as the new ``APIKey``'s primary key.
+    """
 
     env = env if env is not None else get_environment_label()
-    key_id = "".join(secrets.choice(KEY_ID_ALPHABET) for _ in range(KEY_ID_LENGTH))
+    key_id = uuid.uuid4()
     secret = secrets.token_urlsafe(SECRET_BYTES)
     raw = f"{PREFIX}_{env}_{key_id}_{secret}"
     return key_id, hash_secret(secret), raw
@@ -107,11 +103,11 @@ def log_key_created(key, actor, replaces=None):
 
     audit_logger.info(
         "[apikey.created] key_id=%s profile=%s actor=%s expires_at=%s replaces=%s",
-        key.key_id,
+        key.pk,
         key.profile_id,
         actor,
         key.expires_at.isoformat() if key.expires_at else "never",
-        replaces.key_id if replaces else "none",
+        replaces.pk if replaces else "none",
     )
 
 

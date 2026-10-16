@@ -46,6 +46,11 @@ class APIKeySerializer(BaseAPISerializer):
     when it is minted, so `expires_at` cannot be pushed out afterwards.
     """
 
+    # BaseAPISerializer declares `id` writable (sync clients pick their own
+    # ids), which read_only_fields cannot override. Here the id is the key_id
+    # inside the raw key, so a PATCH that changed it would save a copy of the
+    # key under a new pk instead of renaming it.
+    id = serializers.UUIDField(read_only=True)
     status = serializers.SerializerMethodField()
 
     class Meta:
@@ -53,7 +58,6 @@ class APIKeySerializer(BaseAPISerializer):
         fields = [
             "id",
             "name",
-            "key_id",
             "status",
             "is_active",
             "expires_at",
@@ -67,7 +71,6 @@ class APIKeySerializer(BaseAPISerializer):
         ]
         read_only_fields = [
             "id",
-            "key_id",
             "is_active",
             "expires_at",
             "last_used_at",
@@ -149,7 +152,7 @@ class APIKeyViewSet(BaseApiViewSet):
     model = APIKey
     filterset_class = APIKeyFilterSet
     permission_classes = [APIKeyOwnerPermission]
-    search_fields = ["name", "key_id"]
+    search_fields = ["name"]
 
     # No PUT: a whole-object replace has nothing to replace but the name, and
     # no DELETE: keys are revoked, not erased, so the audit trail stays.

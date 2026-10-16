@@ -77,7 +77,7 @@ def _make_key(profile, **kwargs):
     key = APIKey.objects.create(
         profile=profile,
         name=kwargs.pop("name", "admin bot"),
-        key_id=key_id,
+        id=key_id,
         secret_hash=secret_hash,
         expires_at=kwargs.pop("expires_at", timezone.now() + timedelta(days=30)),
         **kwargs,
@@ -154,7 +154,6 @@ def test_save_model_generates_the_key_and_shows_the_secret_once(key_admin, profi
     response = key_admin.response_add(request, key)
 
     saved = APIKey.objects.get(pk=form.instance.pk)
-    assert len(saved.key_id) == 12
     assert len(saved.secret_hash) == 64
 
     issued = _issued(response)
@@ -162,7 +161,7 @@ def test_save_model_generates_the_key_and_shows_the_secret_once(key_admin, profi
     shown_key, raw = issued[0]
     assert shown_key.pk == saved.pk
     _env, key_id, secret = parse_api_key(raw)
-    assert key_id == saved.key_id
+    assert key_id == str(saved.pk)
     assert saved.secret_hash not in raw
 
     # ...and only on creation: saving the row again has nothing left to show,
@@ -186,7 +185,7 @@ def test_creation_leaves_an_audit_line(key_admin, profile1, project1, api_key_au
     saved = APIKey.objects.get(pk=form.instance.pk)
     lines = api_key_audit_lines(api_key_audit_logs, "created")
     assert len(lines) == 1
-    assert f"key_id={saved.key_id}" in lines[0]
+    assert f"key_id={saved.pk}" in lines[0]
     assert f"profile={profile1.pk}" in lines[0]
     assert "actor=root" in lines[0]
     assert "replaces=none" in lines[0]
@@ -206,8 +205,8 @@ def test_replacement_creation_names_the_key_it_replaces(
     replacement = APIKey.objects.exclude(pk=original.pk).get()
     lines = api_key_audit_lines(api_key_audit_logs, "created")
     assert len(lines) == 1
-    assert f"key_id={replacement.key_id}" in lines[0]
-    assert f"replaces={original.key_id}" in lines[0]
+    assert f"key_id={replacement.pk}" in lines[0]
+    assert f"replaces={original.pk}" in lines[0]
 
 
 def test_the_secret_never_reaches_the_message_store(key_admin, profile1, project1):
@@ -274,7 +273,7 @@ def test_the_add_response_renders_the_key_instead_of_redirecting(key_admin, prof
 
 def test_editing_a_key_does_not_reissue_the_secret(key_admin, profile1, project1):
     key, _ = _make_key(profile1)
-    original_key_id = key.key_id
+    original_pk = key.pk
     original_hash = key.secret_hash
     request = _request()
 
@@ -282,7 +281,7 @@ def test_editing_a_key_does_not_reissue_the_secret(key_admin, profile1, project1
     key_admin.save_model(request, key, form=None, change=True)
 
     key.refresh_from_db()
-    assert key.key_id == original_key_id
+    assert key.pk == original_pk
     assert key.secret_hash == original_hash
     assert _messages(request) == []
 
@@ -332,7 +331,7 @@ def test_generate_replacement_keeps_the_profile_and_leaves_the_original(key_admi
     replacement = APIKey.objects.exclude(pk=key.pk).get()
     assert replacement.profile == profile1
     assert replacement.name == "nightly job"
-    assert replacement.key_id != key.key_id
+    assert replacement.pk != key.pk
     assert replacement.secret_hash != key.secret_hash
     assert replacement.expires_at is not None
 
@@ -340,7 +339,7 @@ def test_generate_replacement_keeps_the_profile_and_leaves_the_original(key_admi
     assert key.is_usable is True
 
     raw = _issued(response)[0][1]
-    assert parse_api_key(raw)[1] == replacement.key_id
+    assert parse_api_key(raw)[1] == str(replacement.pk)
 
 
 def test_replacing_a_no_expiry_key_stays_no_expiry(key_admin, profile1, project1):
@@ -409,7 +408,7 @@ def test_the_csv_export_writes_no_hash(key_admin, profile1, project1):
     # The export ran and carries the row, so the absence below is the export
     # withholding the hash rather than an empty file.
     assert "exported bot" in content
-    assert key.key_id in content
+    assert str(key.pk) in content
     assert "secret_hash" not in content
     assert key.secret_hash not in content
 

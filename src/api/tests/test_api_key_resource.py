@@ -31,7 +31,7 @@ def _make_key(profile, name="bot", **kwargs):
     key_id, secret_hash, raw = generate_api_key()
     kwargs.setdefault("expires_at", timezone.now() + timedelta(days=30))
     key = APIKey.objects.create(
-        profile=profile, name=name, key_id=key_id, secret_hash=secret_hash, **kwargs
+        profile=profile, name=name, id=key_id, secret_hash=secret_hash, **kwargs
     )
     return key, raw
 
@@ -104,7 +104,6 @@ def test_list_only_own_keys(db_setup, api_client1, own_key, other_key, list_url)
     assert data["count"] == 1
     result = data["results"][0]
     assert result["id"] == str(own_key[0].pk)
-    assert result["key_id"] == own_key[0].key_id
     assert result["status"] == "active"
     assert "secret_hash" not in result
     assert "key" not in result
@@ -177,10 +176,10 @@ def test_sensitive_fields_are_never_returned(db_setup, api_client1, own_key, lis
             assert key.secret_hash not in response.content.decode()
 
     # an allowed subset still works, and still carries no digest
-    response = api_client1.get(detail_url, {"fields": "id,name,key_id"})
+    response = api_client1.get(detail_url, {"fields": "id,name,status"})
     assert response.status_code == 200
     data = response.json()
-    assert set(data) == {"id", "name", "key_id"}
+    assert set(data) == {"id", "name", "status"}
     assert key.secret_hash not in response.content.decode()
 
 
@@ -207,13 +206,12 @@ def test_create_returns_working_key_once(
     assert key.profile == profile1
     assert key.created_by == profile1
     assert key.name == "reporting bot"
-    assert data["key_id"] == key.key_id
     assert data["status"] == "active"
     assert "secret_hash" not in data
 
     raw = data["key"]
     assert raw.startswith("mmd_")
-    assert key.key_id in raw
+    assert str(key.pk) in raw
     # the raw key is not stored anywhere
     assert key.secret_hash not in raw
     assert raw not in str(APIKey.objects.filter(pk=key.pk).values().first())
@@ -226,7 +224,7 @@ def test_create_returns_working_key_once(
     assert key_response.status_code == 200
 
     (line,) = api_key_audit_lines(api_key_audit_logs, "created")
-    assert f"key_id={key.key_id}" in line
+    assert f"key_id={key.pk}" in line
     assert f"profile={profile1.pk}" in line
     assert f"actor={profile1.authusers.first().user_id}" in line
     assert "mmd_" not in line
@@ -355,14 +353,14 @@ def test_create_validation(db_setup, api_client1, profile1, list_url, payload, f
 def test_create_ignores_ownership_and_secret_fields(
     db_setup, api_client1, profile1, profile2, list_url
 ):
-    """The body cannot pick another owner, a key_id or a hash."""
+    """The body cannot pick another owner, an id or a hash."""
 
     response = api_client1.post(
         list_url,
         {
             "name": "bot",
             "profile": str(profile2.pk),
-            "key_id": "AAAAAAAAAAAA",
+            "id": "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa",
             "secret_hash": "0" * 64,
             "is_active": False,
             "revoked_at": None,
@@ -372,7 +370,7 @@ def test_create_ignores_ownership_and_secret_fields(
     assert response.status_code == 201
     key = APIKey.objects.get(pk=response.json()["id"])
     assert key.profile == profile1
-    assert key.key_id != "AAAAAAAAAAAA"
+    assert str(key.pk) != "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa"
     assert key.secret_hash != "0" * 64
     assert key.is_active is True
 
@@ -389,7 +387,7 @@ def test_patch_renames_only(db_setup, api_client1, profile1, own_key):
             "name": "renamed",
             "expires_at": (timezone.now() + timedelta(days=3650)).isoformat(),
             "is_active": False,
-            "key_id": "BBBBBBBBBBBB",
+            "id": "bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb",
         },
         format="json",
     )
@@ -399,7 +397,8 @@ def test_patch_renames_only(db_setup, api_client1, profile1, own_key):
     assert key.name == "renamed"
     assert key.expires_at == original_expiry
     assert key.is_active is True
-    assert key.key_id != "BBBBBBBBBBBB"
+    assert str(key.pk) != "bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb"
+    assert not APIKey.objects.filter(pk="bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb").exists()
     assert key.updated_by == profile1
 
 
@@ -429,7 +428,7 @@ def test_revoke(db_setup, api_client1, profile1, project1, own_key, api_key_audi
     assert _key_client(raw).get(project_url).status_code == 401
 
     (line,) = api_key_audit_lines(api_key_audit_logs, "revoked")
-    assert f"key_id={key.key_id}" in line
+    assert f"key_id={key.pk}" in line
     assert f"actor={actor}" in line
 
 

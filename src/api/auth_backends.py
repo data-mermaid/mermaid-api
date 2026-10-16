@@ -326,7 +326,7 @@ class APIKeyAuthentication(BaseAuthentication):
             )
 
         try:
-            api_key = APIKey.objects.select_related("profile").get(key_id=key_id)
+            api_key = APIKey.objects.select_related("profile").get(pk=key_id)
         except APIKey.DoesNotExist:
             raise self._fail(request, "unknown_key_id", key_id, ip=ip)
 
@@ -346,7 +346,7 @@ class APIKeyAuthentication(BaseAuthentication):
         self._touch(api_key, ip)
 
         # dummy Django user, as in JWTAuthentication
-        user = get_user_model()(username=f"apikey|{api_key.key_id}", password="apikey")
+        user = get_user_model()(username=f"apikey|{api_key.pk}", password="apikey")
         user.profile = api_key.profile
         return (user, api_key)
 
@@ -399,7 +399,7 @@ class APIKeyAuthentication(BaseAuthentication):
         A busy client would otherwise write to the row on every request.
         """
 
-        cache_key = f"apikey:last_used:{api_key.key_id}"
+        cache_key = f"apikey:last_used:{api_key.pk}"
         if cache.get(cache_key):
             return
         cache.set(cache_key, True, self.last_used_throttle)

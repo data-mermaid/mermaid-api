@@ -30,7 +30,7 @@ The key is sent in the same header as a token, and never in the URL:
 
     curl --request GET \
         --url https://api.datamermaid.org/v1/projects/ \
-        --header 'Authorization: Bearer mmd_prod_xxxxxxxxxxxx_...'
+        --header 'Authorization: Bearer mmd_prod_xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx_...'
 
 A key cannot be used to list, create or revoke API keys; that always requires a signed-in user. This means a leaked key cannot be used to issue itself a replacement or extend its own life.
 

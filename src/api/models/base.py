@@ -3,16 +3,11 @@ import uuid
 
 from django.contrib.gis.db.models.fields import MultiPolygonField, PolygonField
 from django.core.exceptions import ObjectDoesNotExist
-from django.db import IntegrityError, models, transaction
+from django.db import models
 from django.utils import timezone
 from django.utils.translation import gettext_lazy as _
 
-from ..utils.apikeys import (
-    KEY_ID_ISSUE_ATTEMPTS,
-    audit_logger,
-    generate_api_key,
-    log_key_created,
-)
+from ..utils.apikeys import audit_logger, generate_api_key, log_key_created
 
 logger = logging.getLogger(__name__)
 
@@ -247,7 +242,6 @@ class APIKey(BaseModel):
 
     profile = models.ForeignKey("Profile", related_name="api_keys", on_delete=models.CASCADE)
     name = models.CharField(max_length=100)
-    key_id = models.CharField(max_length=12, unique=True)
     # hex SHA-256 of the secret; the secret itself is never stored
     secret_hash = models.CharField(max_length=64)
     is_active = models.BooleanField(default=True)
@@ -263,7 +257,7 @@ class APIKey(BaseModel):
 
     def __str__(self):
         # never include secret_hash
-        return f"{self.name} [{self.key_id}]"
+        return f"{self.name} [{self.pk}]"
 
     @classmethod
     def issue(cls, profile, name, expires_at, actor, replaces=None, created_by=None):
@@ -273,43 +267,23 @@ class APIKey(BaseModel):
         return value: the row keeps the hash, the caller shows the raw key once
         and forgets it. `actor` is who asked for the key, for the audit line.
 
-        A `key_id` collision is astronomically unlikely (12 characters over a
-        62-character alphabet), so the retry below is defense in depth against
-        an RNG defect rather than an expected event: it means a collision
-        costs a second insert instead of surfacing as an opaque 500 to whoever
-        is minting the key. Each attempt gets its own savepoint, since an
-        IntegrityError would otherwise leave an enclosing transaction unusable.
+        The key's id doubles as the `key_id` in the raw key, so the id is
+        drawn here, alongside the secret, rather than left to the field
+        default.
         """
 
-        for attempt in range(1, KEY_ID_ISSUE_ATTEMPTS + 1):
-            key_id, secret_hash, raw = generate_api_key()
-            try:
-                with transaction.atomic():
-                    key = cls.objects.create(
-                        profile=profile,
-                        name=name,
-                        key_id=key_id,
-                        secret_hash=secret_hash,
-                        expires_at=expires_at,
-                        created_by=created_by,
-                        updated_by=created_by,
-                    )
-            except IntegrityError:
-                # Only a key_id clash is worth another draw; a bad profile or
-                # any other constraint would fail the same way every time.
-                is_collision = cls.objects.filter(key_id=key_id).exists()
-                if not is_collision or attempt == KEY_ID_ISSUE_ATTEMPTS:
-                    raise
-                audit_logger.warning(
-                    "[apikey.key_id_collision] key_id=%s profile=%s attempt=%s",
-                    key_id,
-                    profile.pk,
-                    attempt,
-                )
-                continue
-
-            log_key_created(key, actor, replaces=replaces)
-            return key, raw
+        key_id, secret_hash, raw = generate_api_key()
+        key = cls.objects.create(
+            id=key_id,
+            profile=profile,
+            name=name,
+            secret_hash=secret_hash,
+            expires_at=expires_at,
+            created_by=created_by,
+            updated_by=created_by,
+        )
+        log_key_created(key, actor, replaces=replaces)
+        return key, raw
 
     @classmethod
     def usable_for(cls, profile, now=None):
@@ -357,7 +331,7 @@ class APIKey(BaseModel):
         # credentials existed, for whom, and for how long" from the logs alone.
         audit_logger.info(
             "[apikey.revoked] key_id=%s profile=%s actor=%s reason=%s",
-            self.key_id,
+            self.pk,
             self.profile_id,
             actor,
             reason or "unspecified",

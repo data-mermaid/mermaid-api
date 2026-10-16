@@ -36,7 +36,7 @@ def _make_key(profile, name="lifecycle bot", **kwargs):
     key = APIKey.objects.create(
         profile=profile,
         name=name,
-        key_id=key_id,
+        id=key_id,
         secret_hash=secret_hash,
         expires_at=kwargs.pop("expires_at", timezone.now() + timedelta(days=365)),
         **kwargs,
@@ -80,7 +80,7 @@ def test_revoke_logs_the_audit_line(profile1, project1, api_key_audit_logs):
 
     logged = api_key_audit_lines(api_key_audit_logs, "revoked")
     assert len(logged) == 1
-    assert f"key_id={key.key_id}" in logged[0]
+    assert f"key_id={key.pk}" in logged[0]
     assert f"profile={profile1.pk}" in logged[0]
     assert "actor=someone@example.com" in logged[0]
     assert "reason=manual" in logged[0]
@@ -167,8 +167,8 @@ def test_daily_task_reports_stale_no_expiry_keys(profile1, project1, api_key_aud
     assert "1 long-lived key(s) unused for 180 days" in output
     stale_logs = api_key_audit_lines(api_key_audit_logs, "stale")
     assert len(stale_logs) == 1
-    assert stale.key_id in stale_logs[0]
-    assert recent.key_id not in stale_logs[0]
+    assert str(stale.pk) in stale_logs[0]
+    assert str(recent.pk) not in stale_logs[0]
 
 
 def test_daily_task_reports_never_used_old_key_as_stale(profile1, project1):
@@ -208,4 +208,4 @@ def test_daily_task_reports_far_future_expiry_as_stale(profile1, project1):
     output = _run_maintenance()
 
     assert "1 long-lived key(s) unused for 180 days" in output
-    assert far_future.key_id in output
+    assert str(far_future.pk) in output

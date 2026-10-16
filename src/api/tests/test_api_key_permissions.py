@@ -35,7 +35,7 @@ def _make_key(profile, name="bot"):
     key = APIKey.objects.create(
         profile=profile,
         name=name,
-        key_id=key_id,
+        id=key_id,
         secret_hash=secret_hash,
         expires_at=default_expires_at(),
     )

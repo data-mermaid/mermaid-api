@@ -43,7 +43,7 @@ API keys belonging to the current user. See `Authentication <authentication.html
 | `Authentication`: required; a request authenticated with an API key is refused
 | `Permissions`: Only the owner of a key may see or change it. Keys belonging to other users are not visible.
 | `Methods`: ``GET``, ``POST``, ``PATCH``
-| `Filters`: ``name``, ``is_active``, ``revoked``, ``search`` (name or key id)
+| `Filters`: ``name``, ``is_active``, ``revoked``, ``search`` (name)
 | `Additional routes`:
 
 - ``<id>/revoke/`` (``POST``): retire a key. The key stops working on the next request and stays in the list with ``status`` ``revoked``. Revoking an already revoked key changes nothing. Keys cannot be deleted.
