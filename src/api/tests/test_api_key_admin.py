@@ -133,12 +133,12 @@ def test_the_form_offers_no_scope_field(profile1):
     assert form.is_valid(), form.errors
 
 
-def test_never_expires_is_prechecked_for_a_key_with_no_expiry(profile1, project1):
+def test_never_expires_is_not_prechecked_for_a_key_with_no_expiry(profile1, project1):
     key, _ = _make_key(profile1, expires_at=None)
 
     form = APIKeyAdminForm(instance=key)
 
-    assert form.fields["never_expires"].initial is True
+    assert form.fields["never_expires"].initial is False
 
 
 # creation through the add form

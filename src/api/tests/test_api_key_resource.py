@@ -6,6 +6,7 @@ never manage keys, and the secret is shown once at creation and never again.
 """
 
 from datetime import timedelta
+from types import SimpleNamespace
 
 import pytest
 from django.conf import settings
@@ -13,9 +14,11 @@ from django.contrib.auth import get_user_model
 from django.core.cache import cache
 from django.urls import reverse
 from django.utils import timezone
+from rest_framework.exceptions import PermissionDenied
 from rest_framework.test import APIClient
 
 from api.models import APIKey
+from api.permissions import APIKeyOwnerPermission
 from api.resources.apikey import OWNER_REVOKED
 from api.utils.apikeys import DEFAULT_LIFETIME_DAYS, generate_api_key
 from .fixtures.apikeys import api_key_audit_lines
@@ -87,19 +90,33 @@ def test_api_key_cannot_manage_keys(db_setup, own_key, list_url):
     assert APIKey.objects.filter(profile=key.profile).count() == 1
 
 
-def test_session_user_without_profile_is_forbidden(db_setup, own_key, list_url):
-    """A staff login to /admin/ reaches the browsable API with no profile."""
+def test_session_user_without_profile_is_rejected(db_setup, own_key, list_url):
+    """A staff login to /admin/ carries a session but no bearer token.
+
+    JWTAuthentication runs first and fails a request with no credentials, so
+    the session never authenticates and every call is a 401.
+    """
 
     key, _ = own_key
     user = get_user_model().objects.create_user(username="staff", password="pw", is_staff=True)
     client = APIClient()
     client.force_login(user)
 
-    assert client.get(list_url).status_code == 403
-    assert client.post(list_url, {"name": "x"}, format="json").status_code == 403
-    assert client.patch(_detail_url(key), {"name": "renamed"}, format="json").status_code == 403
-    assert client.post(_revoke_url(key)).status_code == 403
+    assert client.get(list_url).status_code == 401
+    assert client.post(list_url, {"name": "x"}, format="json").status_code == 401
+    assert client.patch(_detail_url(key), {"name": "renamed"}, format="json").status_code == 401
+    assert client.post(_revoke_url(key)).status_code == 401
     assert APIKey.objects.filter(profile=key.profile).count() == 1
+
+
+def test_owner_permission_denies_an_authenticated_user_without_profile(db):
+    """Should a profile-less user ever authenticate, the permission still refuses."""
+
+    user = get_user_model().objects.create_user(username="staff", password="pw", is_staff=True)
+    request = SimpleNamespace(user=user)
+
+    with pytest.raises(PermissionDenied):
+        APIKeyOwnerPermission().has_permission(request, view=None)
 
 
 def test_disallowed_methods(db_setup, api_client1, own_key, list_url):
