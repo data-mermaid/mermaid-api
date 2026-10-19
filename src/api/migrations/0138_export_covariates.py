@@ -73,7 +73,7 @@ class Migration(migrations.Migration):
     atomic = False
 
     dependencies = [
-        ("api", "0136_merge_20261013_1755"),
+        ("api", "0137_apikey"),
     ]
 
     operations = [
