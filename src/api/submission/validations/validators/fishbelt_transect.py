@@ -76,7 +76,10 @@ class UniqueFishbeltTransectValidator(BaseValidator):
                 return (
                     ERROR,
                     self.DUPLICATE_FISHBELT_TRANSECT,
-                    {"duplicate_transect_method": str(transect_method.pk)},
+                    {
+                        "duplicate_transect_method": str(transect_method.pk),
+                        "protocol": protocol,
+                    },
                 )
         return OK
 

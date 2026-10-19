@@ -31,7 +31,6 @@ from api.models import (
 from api.resources.project_profile import ProjectProfileSerializer
 from api.submission.utils import submit_collect_records, validate_collect_records
 from api.submission.validations import ERROR, WARN
-from api.utils import tokenutils
 
 
 class InvalidSchema(Exception):
@@ -77,12 +76,10 @@ def _create_context(profile_id, request=None):
         if profile is None:
             raise ValueError(f"[{profile_id}] Profile does not exist.")
 
-        try:
-            auth_user = profile.authusers.all()[0]
-        except IndexError:
-            raise ValueError("AuthUser does not exist.")
-        token = tokenutils.create_token(auth_user.user_id)
-        request = mocks.MockRequest(token=token)
+        # MockRequest mints a token when the profile has an AuthUser and goes
+        # without one otherwise: a profile an API key was issued against need
+        # never have logged in through Auth0.
+        request = mocks.MockRequest(profile=profile)
 
     return {"request": request}
 
