@@ -12,6 +12,7 @@ from api.models import (
     FISHBELT_PROTOCOL,
     HABITATCOMPLEXITY_PROTOCOL,
     MACROINVERTEBRATE_PROTOCOL,
+    Profile,
 )
 
 BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
@@ -596,3 +597,21 @@ def test_macroinvertebrate_ingest(
     assert len(observations) == 6
     assert observations[0].get("invert_attribute") == str(invert_species_1.id)
     assert observations[0].get("count") == 3
+
+
+def test_create_context_profile_without_authuser(db):
+    # A profile an API key was issued against need never have logged in
+    # through Auth0, so ingest must not require an AuthUser for it.
+    profile = Profile.objects.create(email="nologin@mermaidcollect.org")
+
+    request = utils._create_context(profile.pk)["request"]
+
+    assert request.user.profile == profile
+    assert request.META == {}
+
+
+def test_create_context_profile_with_authuser(profile1):
+    request = utils._create_context(profile1.pk)["request"]
+
+    assert request.user.profile == profile1
+    assert request.META["HTTP_AUTHORIZATION"].startswith("Bearer ")

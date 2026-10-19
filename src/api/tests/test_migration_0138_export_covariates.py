@@ -10,7 +10,7 @@ from django.db import connection
 from django.db.migrations.loader import MigrationLoader
 from django.test import override_settings
 
-_migration_module = importlib.import_module("api.migrations.0135_export_covariates")
+_migration_module = importlib.import_module("api.migrations.0138_export_covariates")
 export_covariates = _migration_module.export_covariates
 
 
@@ -20,7 +20,7 @@ def historical_apps():
     # keeps working once the live Covariate model is deleted.
     with override_settings(MIGRATION_MODULES={}):
         loader = MigrationLoader(connection, ignore_no_migrations=True)
-        return loader.project_state(("api", "0135_export_covariates")).apps
+        return loader.project_state(("api", "0138_export_covariates")).apps
 
 
 @pytest.fixture
