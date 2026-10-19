@@ -1,12 +1,24 @@
 import copy
+from types import SimpleNamespace
+from unittest.mock import patch
 
 import pytest
+from django.core.files.base import ContentFile
 from django.core.files.uploadedfile import SimpleUploadedFile
+from django.db import transaction
 from django.test import override_settings
 from django.urls import reverse
 
-from api.models import Annotation, Image, Point
+from api.models import Annotation, CollectRecord, Image, Point
 from api.resources.classification.image import ImageViewSet
+from api.signals.classification import (
+    create_image_annotations_files,
+    delete_image_annotations_files,
+)
+from api.utils.classification import (
+    _create_annotations_files,
+    create_annotations_files_job,
+)
 
 
 @pytest.fixture
@@ -284,3 +296,376 @@ def test_classification_status_is_none_when_no_statuses(
     response = api_client1.get(url, format="json")
     assert response.status_code == 200
     assert response.json()["classification_status"] is None
+
+
+def test_create_annotations_file_does_not_reread_image(
+    db_setup, image, annotations, django_capture_on_commit_callbacks
+):
+    # Load fresh from the DB so there's no cached _normalized_image_buf, as on submit.
+    img = Image.objects.get(pk=image.pk)
+    with (
+        patch("api.signals.classification.cls_utils.create_image_checksum") as checksum,
+        django_capture_on_commit_callbacks(execute=True),
+    ):
+        img.create_annotations_file()
+
+    checksum.assert_not_called()
+    img.refresh_from_db()
+    assert img.annotations_file.name == f"{img.id}_annotations.csv"
+    with img.annotations_file.open("r") as f:
+        lines = f.read().splitlines()
+    # Header plus the one confirmed annotation
+    assert len(lines) == 2
+
+
+def test_create_annotations_file_overwrites_in_place(
+    db_setup, image, annotations, django_capture_on_commit_callbacks
+):
+    img = Image.objects.get(pk=image.pk)
+    with django_capture_on_commit_callbacks(execute=True):
+        img.create_annotations_file()
+    storage = img.annotations_file.storage
+
+    Annotation.objects.filter(point__image=img).update(is_confirmed=True)
+    with django_capture_on_commit_callbacks(execute=True):
+        img.create_annotations_file()
+
+    img.refresh_from_db()
+    assert img.annotations_file.name == f"{img.id}_annotations.csv"
+    with storage.open(img.annotations_file.name, "r") as f:
+        assert len(f.read().splitlines()) == 4
+
+
+def test_create_annotations_file_removes_differently_named_file(
+    db_setup, image, annotations, django_capture_on_commit_callbacks
+):
+    img = Image.objects.get(pk=image.pk)
+    storage = img.annotations_file.storage
+    legacy_name = storage.save(f"{img.id}_annotations_legacy.csv", ContentFile("old"))
+    Image.objects.filter(pk=img.pk).update(annotations_file=legacy_name)
+    img = Image.objects.get(pk=image.pk)
+
+    with django_capture_on_commit_callbacks(execute=True):
+        img.create_annotations_file()
+
+    assert storage.exists(f"{img.id}_annotations.csv")
+    assert not storage.exists(legacy_name)
+
+
+def test_create_annotations_file_rollback_keeps_original_file(
+    db_setup, image, annotations, django_capture_on_commit_callbacks
+):
+    img = Image.objects.get(pk=image.pk)
+    with django_capture_on_commit_callbacks(execute=True):
+        img.create_annotations_file()
+    original_name = img.annotations_file.name
+    storage = img.annotations_file.storage
+    with storage.open(original_name, "r") as f:
+        original_content = f.read()
+
+    with django_capture_on_commit_callbacks(execute=True):
+        with pytest.raises(RuntimeError), transaction.atomic():
+            Annotation.objects.filter(point__image=img).update(is_confirmed=True)
+            img.create_annotations_file()
+            raise RuntimeError("roll back")
+
+    img.refresh_from_db()
+    assert img.annotations_file.name == original_name
+    with storage.open(original_name, "r") as f:
+        assert f.read() == original_content
+
+
+def test_create_annotations_file_failed_first_upload_clears_reference(
+    db_setup, image, annotations, django_capture_on_commit_callbacks
+):
+    img = Image.objects.get(pk=image.pk)
+    with (
+        patch.object(img.annotations_file.storage, "save", side_effect=RuntimeError("S3 down")),
+        django_capture_on_commit_callbacks(execute=True),
+    ):
+        # The failure is handled in the on_commit callback, not raised into the caller
+        with transaction.atomic():
+            img.create_annotations_file()
+
+    assert not Image.objects.get(pk=img.pk).annotations_file
+
+
+@pytest.mark.parametrize("file_overwrite", [True, False], ids=["s3-like", "local"])
+def test_create_annotations_file_failed_upload_keeps_existing_file(
+    db_setup, image, annotations, django_capture_on_commit_callbacks, file_overwrite
+):
+    img = Image.objects.get(pk=image.pk)
+    with django_capture_on_commit_callbacks(execute=True):
+        img.create_annotations_file()
+    name = img.annotations_file.name
+    storage = img.annotations_file.storage
+    with storage.open(name, "r") as f:
+        original_content = f.read()
+
+    Annotation.objects.filter(point__image=img).update(is_confirmed=True)
+    with (
+        patch.object(storage, "file_overwrite", file_overwrite, create=True),
+        patch.object(storage, "save", side_effect=RuntimeError("S3 down")),
+        django_capture_on_commit_callbacks(execute=True),
+    ):
+        img.create_annotations_file()
+
+    assert Image.objects.get(pk=img.pk).annotations_file.name == name
+    with storage.open(name, "r") as f:
+        assert f.read() == original_content
+
+
+def test_create_annotations_file_failed_upload_keeps_differently_named_file(
+    db_setup, image, annotations, django_capture_on_commit_callbacks
+):
+    img = Image.objects.get(pk=image.pk)
+    storage = img.annotations_file.storage
+    legacy_name = storage.save(f"{img.id}_annotations_legacy.csv", ContentFile("old"))
+    Image.objects.filter(pk=img.pk).update(annotations_file=legacy_name)
+    img = Image.objects.get(pk=image.pk)
+
+    with (
+        patch.object(storage, "save", side_effect=RuntimeError("S3 down")),
+        django_capture_on_commit_callbacks(execute=True),
+    ):
+        img.create_annotations_file()
+
+    assert storage.exists(legacy_name)
+    assert Image.objects.get(pk=img.pk).annotations_file.name == legacy_name
+
+
+def test_create_annotations_file_regenerates_missing_thumbnail(db_setup, image, annotations):
+    Image.objects.filter(pk=image.pk).update(thumbnail=None)
+    img = Image.objects.get(pk=image.pk)
+
+    img.create_annotations_file()
+
+    img.refresh_from_db()
+    assert img.thumbnail
+
+
+def test_create_annotations_file_clears_file_without_confirmed_annotations(
+    db_setup, image, annotations, django_capture_on_commit_callbacks
+):
+    img = Image.objects.get(pk=image.pk)
+    with django_capture_on_commit_callbacks(execute=True):
+        img.create_annotations_file()
+    old_name = img.annotations_file.name
+    storage = img.annotations_file.storage
+
+    Annotation.objects.filter(point__image=img).update(is_confirmed=False)
+    with (
+        patch("api.signals.classification.cls_utils.create_image_checksum") as checksum,
+        django_capture_on_commit_callbacks() as callbacks,
+    ):
+        img.create_annotations_file()
+
+    checksum.assert_not_called()
+    assert not Image.objects.get(pk=img.pk).annotations_file
+    # The stored file is only removed once the row change commits.
+    assert storage.exists(old_name)
+    for callback in callbacks:
+        callback()
+    assert not storage.exists(old_name)
+
+
+def test_edit_clears_annotations_file_after_commit(
+    db_setup, image, annotations, django_capture_on_commit_callbacks
+):
+    img = Image.objects.get(pk=image.pk)
+    with django_capture_on_commit_callbacks(execute=True):
+        img.create_annotations_file()
+    name = img.annotations_file.name
+    storage = img.annotations_file.storage
+
+    record = SimpleNamespace(id=img.collect_record_id, data={"image_classification": True})
+    with django_capture_on_commit_callbacks() as callbacks:
+        delete_image_annotations_files(sender=CollectRecord, instance=record)
+
+    assert not Image.objects.get(pk=img.pk).annotations_file
+    assert storage.exists(name)
+    for callback in callbacks:
+        callback()
+    assert not storage.exists(name)
+
+
+def test_create_image_annotations_files_queues_one_job_for_all_images(
+    db_setup,
+    image,
+    point,
+    annotations,
+    benthic_attribute_1,
+    classifier,
+    django_capture_on_commit_callbacks,
+):
+    with open("api/tests/data/test_image.jpg", "rb") as f:
+        content = f.read()
+
+    image2 = Image.objects.create(
+        collect_record_id=image.collect_record_id,
+        image=SimpleUploadedFile(
+            name="test_image2.jpg", content=content, content_type="image/jpeg"
+        ),
+        name="Test image 2",
+    )
+    point2 = Point.objects.create(image=image2, row=0, column=0)
+    Annotation.objects.create(
+        classifier=classifier,
+        point=point2,
+        benthic_attribute=benthic_attribute_1,
+        growth_form=None,
+        score=90,
+        is_confirmed=True,
+        is_machine_created=True,
+    )
+
+    record = SimpleNamespace(id=image.collect_record_id, data={"image_classification": True})
+    with (
+        patch("api.signals.classification.cls_utils.create_annotations_files_job") as queue_job,
+        django_capture_on_commit_callbacks(execute=True),
+    ):
+        create_image_annotations_files(sender=CollectRecord, instance=record)
+
+    # A single job call carries every image in the record, not one call per image.
+    queue_job.assert_called_once()
+    assert set(queue_job.call_args[0][0]) == {image.id, image2.id}
+
+
+def test_create_image_annotations_files_uploads_all_images(
+    db_setup,
+    image,
+    point,
+    annotations,
+    benthic_attribute_1,
+    classifier,
+    django_capture_on_commit_callbacks,
+):
+    with open("api/tests/data/test_image.jpg", "rb") as f:
+        content = f.read()
+
+    image2 = Image.objects.create(
+        collect_record_id=image.collect_record_id,
+        image=SimpleUploadedFile(
+            name="test_image2.jpg", content=content, content_type="image/jpeg"
+        ),
+        name="Test image 2",
+    )
+    point2 = Point.objects.create(image=image2, row=0, column=0)
+    Annotation.objects.create(
+        classifier=classifier,
+        point=point2,
+        benthic_attribute=benthic_attribute_1,
+        growth_form=None,
+        score=90,
+        is_confirmed=True,
+        is_machine_created=True,
+    )
+
+    # Simulate real post-submit state: submit deletes the CollectRecord before this
+    # job runs (see _write_collect_record_once).
+    CollectRecord.objects.filter(pk=image.collect_record_id).delete()
+
+    record = SimpleNamespace(id=image.collect_record_id, data={"image_classification": True})
+    with django_capture_on_commit_callbacks(execute=True):
+        create_image_annotations_files(sender=CollectRecord, instance=record)
+
+    for img in (image, image2):
+        img.refresh_from_db()
+        assert img.annotations_file.name == f"{img.id}_annotations.csv"
+        with img.annotations_file.open("r") as f:
+            # Header plus the one confirmed annotation for that image.
+            assert len(f.read().splitlines()) == 2
+
+
+def test_create_annotations_files_skips_images_whose_collect_record_is_live(
+    db_setup, image, point, annotations
+):
+    """Submit -> edit race: an edit recreated the CollectRecord (same id) before this
+    job ran, so the image was edited back out of submitted state - don't rebuild its CSV.
+    """
+    _create_annotations_files([image.id])
+
+    image.refresh_from_db()
+    assert not image.annotations_file
+
+
+def test_create_annotations_files_skips_failures_and_continues(
+    db_setup, image, benthic_attribute_1, classifier, django_capture_on_commit_callbacks
+):
+    missing_image_id = image.id
+    collect_record_id = image.collect_record_id
+    Image.objects.filter(pk=image.pk).delete()
+    CollectRecord.objects.filter(pk=collect_record_id).delete()
+
+    with open("api/tests/data/test_image.jpg", "rb") as f:
+        content = f.read()
+
+    raising_image = Image.objects.create(
+        collect_record_id=collect_record_id,
+        image=SimpleUploadedFile(name="raises.jpg", content=content, content_type="image/jpeg"),
+        name="Raises",
+    )
+    ok_image = Image.objects.create(
+        collect_record_id=collect_record_id,
+        image=SimpleUploadedFile(name="ok.jpg", content=content, content_type="image/jpeg"),
+        name="OK",
+    )
+    ok_point = Point.objects.create(image=ok_image, row=0, column=0)
+    Annotation.objects.create(
+        classifier=classifier,
+        point=ok_point,
+        benthic_attribute=benthic_attribute_1,
+        growth_form=None,
+        score=90,
+        is_confirmed=True,
+        is_machine_created=True,
+    )
+
+    original_create_annotations_file = Image.create_annotations_file
+
+    def fake_create_annotations_file(self):
+        if self.pk == raising_image.pk:
+            raise RuntimeError("boom")
+        return original_create_annotations_file(self)
+
+    # Processing continues past the missing/failing images, but the batch still
+    # raises afterward so SQS redelivers rather than silently dropping the failure.
+    with (
+        patch.object(Image, "create_annotations_file", fake_create_annotations_file),
+        django_capture_on_commit_callbacks(execute=True),
+        pytest.raises(RuntimeError, match=str(raising_image.id)),
+    ):
+        _create_annotations_files([missing_image_id, raising_image.id, ok_image.id])
+
+    ok_image.refresh_from_db()
+    assert ok_image.annotations_file.name == f"{ok_image.id}_annotations.csv"
+
+
+@override_settings(SQS_MESSAGE_VISIBILITY=60, ANNOTATIONS_FILE_JOB_SECONDS_PER_IMAGE=90)
+def test_create_annotations_files_job_visibility_timeout_scales_with_batch_size():
+    with patch("api.utils.classification.submit_job") as mock_submit_job:
+        create_annotations_files_job(["a", "b", "c"])
+
+    assert mock_submit_job.call_args.kwargs["visibility_timeout"] == 270
+
+
+@override_settings(SQS_MESSAGE_VISIBILITY=60, ANNOTATIONS_FILE_JOB_SECONDS_PER_IMAGE=10)
+def test_create_annotations_files_job_visibility_timeout_floors_at_queue_default():
+    with patch("api.utils.classification.submit_job") as mock_submit_job:
+        create_annotations_files_job(["a"])
+
+    assert mock_submit_job.call_args.kwargs["visibility_timeout"] == 60
+
+
+@override_settings(SQS_MESSAGE_VISIBILITY=60, ANNOTATIONS_FILE_JOB_SECONDS_PER_IMAGE=90)
+def test_create_annotations_files_job_splits_large_batches_below_the_visibility_ceiling():
+    image_ids = [str(i) for i in range(1000)]
+    with patch("api.utils.classification.submit_job") as mock_submit_job:
+        create_annotations_files_job(image_ids)
+
+    assert mock_submit_job.call_count > 1
+    seen_ids = []
+    for call in mock_submit_job.call_args_list:
+        assert call.kwargs["visibility_timeout"] <= 1800
+        seen_ids.extend(call.kwargs["image_ids"])
+    assert seen_ids == image_ids

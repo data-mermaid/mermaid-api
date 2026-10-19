@@ -11,6 +11,7 @@ from api.models.classification import (
     get_image_bucket,
     get_image_bucket_for_status,
     get_image_storage_config,
+    select_image_storage,
 )
 from api.tests.fixtures.settings_overrides import STORAGE_SETTINGS
 
@@ -257,6 +258,40 @@ def test_move_file_cross_account(no_s3):
     source_client.delete_object.assert_called_once_with(Bucket="src-bucket", Key="mermaid/img.png")
 
 
+# --- image S3 client timeout/retry bounds ---
+
+S3_CLIENT_TIMEOUT_SETTINGS = {
+    "USE_S3_IMAGE_STORAGE": True,
+    "IMAGE_S3_CONNECT_TIMEOUT": 7,
+    "IMAGE_S3_READ_TIMEOUT": 21,
+    "IMAGE_S3_MAX_ATTEMPTS": 3,
+}
+
+
+@override_settings(**STORAGE_SETTINGS, **S3_CLIENT_TIMEOUT_SETTINGS)
+def test_select_image_storage_bounds_s3_client_timeouts():
+    client_config = select_image_storage().client_config
+    assert client_config.connect_timeout == 7
+    assert client_config.read_timeout == 21
+    assert client_config.retries["max_attempts"] == 3
+
+
+@override_settings(**STORAGE_SETTINGS, **S3_CLIENT_TIMEOUT_SETTINGS)
+def test_image_get_storage_bounds_s3_client_timeouts():
+    client_config = Image(image_bucket="prod-bucket").get_storage().client_config
+    assert client_config.connect_timeout == 7
+    assert client_config.read_timeout == 21
+    assert client_config.retries["max_attempts"] == 3
+
+
+@override_settings(USE_S3_IMAGE_STORAGE=False)
+def test_select_image_storage_local_storage_ignores_s3_timeouts():
+    # FileSystemStorage path (local dev) never constructs an S3 client/Config at all.
+    from django.core.files.storage import FileSystemStorage
+
+    assert isinstance(select_image_storage(), FileSystemStorage)
+
+
 # ---------------------------------------------------------------------------
 # Regression test: post_save re-applies correct storage after FieldFile.save
 # resets instance.image to a plain string (losing the custom storage).
@@ -264,6 +299,7 @@ def test_move_file_cross_account(no_s3):
 
 PROD_LIKE_SETTINGS = {
     "ENVIRONMENT": "prod",
+    "USE_S3_IMAGE_STORAGE": True,
     "IMAGE_PROCESSING_BUCKET": "prod-bucket",
     "IMAGE_PROCESSING_BUCKET_TEST": "test-bucket",
     "IMAGE_S3_PATH": "mermaid/",

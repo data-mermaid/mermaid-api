@@ -49,6 +49,7 @@ class UserMetrics(models.Model):
     )
     role = models.CharField(max_length=10, null=True, blank=True)
     project_tags = models.TextField()
+    project_tag_ids = models.TextField(default="", blank=True)
     countries = models.TextField()
     project_name = models.CharField(max_length=255)
     first_name = models.CharField(max_length=50, null=True, blank=True)

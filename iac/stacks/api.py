@@ -228,12 +228,15 @@ class ApiStack(Stack):
             "OTEL_PYTHON_ID_GENERATOR": "xray",
         }
 
-        # build image asset to be shared with API and Backup Task
+        # Shared image asset used by ALL ECS task definitions:
+        # API, ScheduledBackupTask, SummaryCacheTask, QueueWorker General,
+        # and QueueWorker ImageProcess. Changing `target` affects every service.
         image_asset = ecr_assets.DockerImageAsset(
             self,
             "ApiImage",
             directory="../",
             file="Dockerfile",
+            target="runtime",
         )
 
         # --- Scheduled Backup Task ---
@@ -352,7 +355,14 @@ class ApiStack(Stack):
             # otherwise fires mermaid-{env}-ecs-no-running-tasks on every deploy.
             # Needs room for one extra API task during a deploy (cluster has it).
             min_healthy_percent=100,
-            max_healthy_percent=200,
+            # Shared between dev (count=1) and prod (count=2). At count=1, 150%
+            # floors to 1 and reintroduces the 0-running-tasks window above, so only
+            # envs with a 2nd task get 150% (caps a deploy at one extra task, so
+            # concurrent `migrate` runs -- docker-entry.sh runs it on every boot --
+            # can't race). Residual risk: both tasks starting cold together (scale
+            # from 0, AZ outage) still race migrate; fast-follow would be a Postgres
+            # advisory lock around it, like CLASSIFIER_REGISTRATION_LOCK in checks.py.
+            max_healthy_percent=150 if config.api.container_count >= 2 else 200,
             capacity_provider_strategies=cluster.default_capacity_provider_strategy,
             circuit_breaker=ecs.DeploymentCircuitBreaker(enable=True, rollback=True),
         )

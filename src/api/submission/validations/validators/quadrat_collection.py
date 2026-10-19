@@ -73,6 +73,13 @@ class UniqueQuadratCollectionValidator(BaseValidator):
             transect_methods = get_related_transect_methods(result)
             for transect_method in transect_methods:
                 if transect_method.protocol == protocol:
-                    return ERROR, self.DUPLICATE_QUADRAT_COLLECTION
+                    return (
+                        ERROR,
+                        self.DUPLICATE_QUADRAT_COLLECTION,
+                        {
+                            "duplicate_transect_method": str(transect_method.pk),
+                            "protocol": protocol,
+                        },
+                    )
 
         return OK
