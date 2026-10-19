@@ -120,5 +120,71 @@ jobs:
             prod-mermaid-api-django \
             prod-mermaid-static-site
 
+  # mermaidr's aggregate-correctness tests (recalculate SU/SE values from the API's
+  # observations and compare them with the API's own SU/SE output) against the dev API
+  # just deployed. cdk deploy waits for the ECS service to stabilise, so the new code
+  # is serving by now. Those tests are skip_on_ci()'d in mermaidr's own CI;
+  # CI=false / NOT_CRAN=true below un-skips them.
+  aggregate-tests:
+    needs: [deploy]
+    if: github.ref == 'refs/heads/dev'
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+    permissions:
+      contents: read
+    # MERMAIDR_M2M_CLIENT_ID / MERMAIDR_M2M_CLIENT_SECRET live in the dev environment:
+    # an Auth0 machine-to-machine app whose MERMAID profile is a read-only member of
+    # the mermaidr test projects.
+    environment: dev
+    steps:
+      - name: Harden the runner (Audit all outbound calls)
+        uses: step-security/harden-runner@9af89fc71515a100421586dfdb3dc9c984fbf411  # v2.19.4
+        with:
+          egress-policy: audit
 
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd  # v6.0.2
+        with:
+          repository: data-mermaid/mermaidr
+          ref: master
+          path: mermaidr
+          persist-credentials: false
 
+      - uses: r-lib/actions/setup-r@d3c5be51b12e724e68f33216ca3c148b66d5f0b6  # v2.12.1
+        with:
+          use-public-rspm: true
+
+      - uses: r-lib/actions/setup-r-dependencies@d3c5be51b12e724e68f33216ca3c148b66d5f0b6  # v2.12.1
+        with:
+          working-directory: mermaidr
+
+      - name: Get dev API token (Auth0 client credentials)
+        shell: bash
+        env:
+          AUTH0_CLIENT_ID: ${{ secrets.MERMAIDR_M2M_CLIENT_ID }}
+          AUTH0_CLIENT_SECRET: ${{ secrets.MERMAIDR_M2M_CLIENT_SECRET }}
+        run: |
+          payload=$(jq -n --arg id "$AUTH0_CLIENT_ID" --arg secret "$AUTH0_CLIENT_SECRET" \
+            '{grant_type: "client_credentials", client_id: $id, client_secret: $secret, audience: "https://dev-api.datamermaid.org"}')
+          token=$(curl -sS --fail https://datamermaid.auth0.com/oauth/token \
+            -H "content-type: application/json" -d "$payload" | jq -r '.access_token // empty')
+          if [ -z "$token" ]; then
+            echo "::error::No access token returned by Auth0"
+            exit 1
+          fi
+          echo "::add-mask::$token"
+          echo "MERMAID_TOKEN=$token" >> "$GITHUB_ENV"
+
+      - name: Run mermaidr aggregate tests against dev
+        working-directory: mermaidr
+        shell: bash
+        env:
+          MERMAID_API_URL: https://dev-api.datamermaid.org
+          CI: "false" # un-skips skip_on_ci()
+          NOT_CRAN: "true" # un-skips skip_on_cran()
+        run: |
+          run_tests() {
+            Rscript -e 'testthat::test_local(filter = "mermaid_get_project_data|mermaid_get_summary_sampleevents", stop_on_failure = TRUE)'
+          }
+          # Retry once: SU/SE endpoints read the async summary cache, which can briefly
+          # lag the observations right after a deploy or an edit to a test project.
+          run_tests || { echo "::warning::Aggregate tests failed; retrying in 10 minutes"; sleep 600; run_tests; }
