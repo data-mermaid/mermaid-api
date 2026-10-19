@@ -71,7 +71,9 @@ def test_valid_key_authenticates(key_pair, profile1):
         pytest.param("Basic dXNlcjpwYXNz", id="other_scheme"),
         pytest.param("Bearer eyJhbGciOiJIUzI1NiJ9.e30.sig", id="jwt"),
         pytest.param("Bearer not-a-key", id="unprefixed"),
-        pytest.param("ApiKey mmd_local_aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa_secret", id="old_apikey_scheme"),
+        pytest.param(
+            "ApiKey mmd_local_aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa_secret", id="old_apikey_scheme"
+        ),
     ],
 )
 def test_credential_that_is_not_ours_falls_through(header):
@@ -91,7 +93,9 @@ def test_jwt_backend_leaves_api_keys_alone(key_pair):
     "mangle",
     [
         pytest.param(lambda raw: raw + "x", id="wrong_secret"),
-        pytest.param(lambda raw: "mmd_local_aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa_nope", id="unknown_key_id"),
+        pytest.param(
+            lambda raw: "mmd_local_aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa_nope", id="unknown_key_id"
+        ),
         pytest.param(lambda raw: "mmd_local_short_secret", id="bad_key_id_length"),
         pytest.param(lambda raw: "mmd_nonsense", id="prefix_only"),
         pytest.param(lambda raw: raw.replace("_local_", "_prod_", 1), id="wrong_environment"),

@@ -112,7 +112,12 @@ def test_private_project_stays_private_for_a_bad_key(db_setup, api_client_public
     url = reverse("benthicpitmethod-sampleevent-list", args=[str(project3.pk)])
 
     assert api_client_public.get(url, format="json").status_code == 403
-    assert _client("mmd_local_aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa_nope").get(url, format="json").status_code == 401
+    assert (
+        _client("mmd_local_aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa_nope")
+        .get(url, format="json")
+        .status_code
+        == 401
+    )
 
 
 def test_key_sees_public_summary_data_for_a_project_it_is_not_in(db_setup, profile1, project1):
