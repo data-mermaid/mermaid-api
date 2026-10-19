@@ -37,6 +37,7 @@ from ..models import (
     Tide,
     Visibility,
 )
+from ..reports.formatters import MULTI_VALUE_SEPARATOR
 from ..utils.notification import add_notification
 from ..utils.project import delete_project
 from .base import BaseAdmin
@@ -72,17 +73,19 @@ class ProjectAdmin(BaseAdmin):
     list_filter = ("status", "tags")
 
     def admin_list(self, obj):
-        return ", ".join(f"{p.profile.full_name} <{p.profile.email}>" for p in obj.admin_profiles)
+        return MULTI_VALUE_SEPARATOR.join(
+            f"{p.profile.full_name} <{p.profile.email}>" for p in obj.admin_profiles
+        )
 
     def country_list(self, obj):
         countries = []
         for s in obj.admin_sites:
             if s.country not in countries:
                 countries.append(s.country)
-        return ", ".join([c.name for c in countries])
+        return MULTI_VALUE_SEPARATOR.join([c.name for c in countries])
 
     def tag_list(self, obj):
-        return ", ".join(f"{t.name}" for t in obj.tags.all())
+        return MULTI_VALUE_SEPARATOR.join(f"{t.name}" for t in obj.tags.all())
 
     tag_list.short_description = _("organizations")
 

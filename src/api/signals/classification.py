@@ -1,6 +1,7 @@
 import logging
 
 from django.conf import settings
+from django.db import transaction
 from django.db.models.signals import post_delete, post_save, pre_save
 from django.dispatch import receiver
 
@@ -54,7 +55,7 @@ def delete_images_on_model_delete(sender, instance, **kwargs):
 
 
 @receiver(post_save, sender=Image)
-def post_save_classification_image(sender, instance, created, **kwargs):
+def post_save_classification_image(sender, instance, created, update_fields=None, **kwargs):
     # After FileField.pre_save saves the file, it calls setattr(instance, field.attname, name_str)
     # which resets the FieldFile to a plain string, losing the custom storage set by _apply_storage.
     # Re-applying here ensures the correct bucket storage is used when reading back the image.
@@ -69,6 +70,9 @@ def post_save_classification_image(sender, instance, created, **kwargs):
 
     if not instance.thumbnail:
         needs_new_thumbnail = True
+    elif update_fields is not None and "image" not in update_fields:
+        # Metadata-only save: the image can't have changed, so skip reading it back from S3.
+        needs_new_thumbnail = False
     else:
         img_checksum = cls_utils.create_image_checksum(instance.image, image_buf=buf)
         original_img_record = Image.objects.get(pk=instance.pk)
@@ -117,8 +121,14 @@ def create_image_annotations_files(sender, instance, **kwargs):
     if not instance.data or not instance.data.get("image_classification"):
         return
 
-    for img in Image.objects.filter(collect_record_id=instance.id):
-        img.create_annotations_file()
+    image_ids = list(
+        Image.objects.filter(collect_record_id=instance.id).values_list("id", flat=True)
+    )
+    if not image_ids:
+        return
+
+    # Defer the CSV build + S3 upload off the request thread, one job for the batch.
+    transaction.on_commit(lambda: cls_utils.create_annotations_files_job(image_ids), robust=True)
 
 
 @receiver(post_edit, sender=CollectRecord)
@@ -127,6 +137,4 @@ def delete_image_annotations_files(sender, instance, **kwargs):
         return
 
     for img in Image.objects.filter(collect_record_id=instance.id):
-        if img.annotations_file:
-            img.annotations_file.delete(save=False)
-            Image.objects.filter(id=img.id).update(annotations_file="")
+        img.clear_annotations_file()

@@ -44,7 +44,7 @@ from ..permissions import (
     get_project_profile,
 )
 from ..reports.fields import ReportField, ReportMethodField
-from ..reports.formatters import to_data_policy, to_str, to_yesno
+from ..reports.formatters import MULTI_VALUE_SEPARATOR, to_data_policy, to_str, to_yesno
 from ..reports.report_serializer import ReportSerializer
 from ..utils import delete_instance_and_related_objects, get_extent, truthy
 from ..utils.notification import suppress_all_notifications
@@ -222,12 +222,12 @@ class ProjectCSVSerializer(ReportSerializer, BaseProjectSerializer):
     def get_tags(self, obj):
         tags = obj.tags.all().values_list("name", flat=True)
         if tags:
-            return f'{", ".join(tags)}'
+            return MULTI_VALUE_SEPARATOR.join(tags)
         return ""
 
     def get_project_admins_csv(self, obj):
         admins = super().get_project_admins(obj)
-        return ", ".join([admin["name"] for admin in admins])
+        return MULTI_VALUE_SEPARATOR.join([admin["name"] for admin in admins])
 
     def get_contact_link(self, obj):
         return f"{settings.DEFAULT_DOMAIN_MARKETING}/contact-project?project_id={obj.id}"
