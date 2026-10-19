@@ -706,6 +706,50 @@ class CommonStack(Stack):
                         sampled_requests_enabled=True,
                     ),
                 ),
+                # A tighter per-IP ceiling for requests that present a MERMAID
+                # API key (`Authorization: Bearer mmd_...`). WAF counts by the
+                # connection's source IP, so unlike the app's failure limiter it
+                # cannot be dodged with a forged X-Forwarded-For. It sees every
+                # request, not just failed ones, so the limit sits well above
+                # what a legitimate script needs. Auth0 tokens share the Bearer
+                # scheme but never start with mmd_, so they are not counted.
+                wafv2.CfnWebACL.RuleProperty(
+                    name="RateLimitApiKeyPerIP",
+                    priority=5,
+                    action=wafv2.CfnWebACL.RuleActionProperty(count={}),
+                    statement=wafv2.CfnWebACL.StatementProperty(
+                        rate_based_statement=wafv2.CfnWebACL.RateBasedStatementProperty(
+                            limit=300,
+                            aggregate_key_type="IP",
+                            scope_down_statement=wafv2.CfnWebACL.StatementProperty(
+                                byte_match_statement=wafv2.CfnWebACL.ByteMatchStatementProperty(
+                                    field_to_match=wafv2.CfnWebACL.FieldToMatchProperty(
+                                        single_header={"Name": "authorization"},
+                                    ),
+                                    # Django splits the header on any whitespace and
+                                    # compares the scheme case-insensitively, so the
+                                    # match is normalised the same way; otherwise
+                                    # "BEARER\tmmd_..." would slip past the rule.
+                                    positional_constraint="CONTAINS",
+                                    search_string="bearer mmd_",
+                                    text_transformations=[
+                                        wafv2.CfnWebACL.TextTransformationProperty(
+                                            priority=0, type="COMPRESS_WHITE_SPACE"
+                                        ),
+                                        wafv2.CfnWebACL.TextTransformationProperty(
+                                            priority=1, type="LOWERCASE"
+                                        ),
+                                    ],
+                                ),
+                            ),
+                        ),
+                    ),
+                    visibility_config=wafv2.CfnWebACL.VisibilityConfigProperty(
+                        cloud_watch_metrics_enabled=True,
+                        metric_name="MermaidApiKeyRateLimit",
+                        sampled_requests_enabled=True,
+                    ),
+                ),
             ],
         )
 
