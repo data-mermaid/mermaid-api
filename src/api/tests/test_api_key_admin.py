@@ -6,6 +6,7 @@ anywhere a human or a CSV can reach it. Who may issue is the ordinary
 from datetime import timedelta
 
 import pytest
+from django import forms
 from django.contrib.admin.sites import AdminSite
 from django.contrib.auth.models import Permission, User
 from django.contrib.messages.storage.fallback import FallbackStorage
@@ -133,12 +134,64 @@ def test_the_form_offers_no_scope_field(profile1):
     assert form.is_valid(), form.errors
 
 
-def test_never_expires_is_not_prechecked_for_a_key_with_no_expiry(profile1, project1):
+def _submitted_as_rendered(form, **changes):
+    """The POST body a browser sends for `form` when only `changes` are edited.
+
+    An unticked checkbox is left out of the body entirely, the same as a
+    browser does, so a box that renders unticked submits as False.
+    """
+
+    data = {}
+    for name, field in form.fields.items():
+        value = form[name].value()
+        if isinstance(field, forms.BooleanField):
+            if value:
+                data[name] = "on"
+        elif value is not None:
+            data[name] = str(value)
+    data.update(changes)
+    return data
+
+
+def test_never_expires_is_not_prechecked_on_the_add_form():
+    form = APIKeyAdminForm()
+
+    assert not form["never_expires"].value()
+
+
+def test_never_expires_is_prechecked_for_an_existing_key_with_no_expiry(profile1, project1):
     key, _ = _make_key(profile1, expires_at=None)
 
     form = APIKeyAdminForm(instance=key)
 
-    assert form.fields["never_expires"].initial is False
+    assert form["never_expires"].value() is True
+
+
+def test_editing_a_never_expiring_key_keeps_it_never_expiring(profile1, project1):
+    key, _ = _make_key(profile1, expires_at=None)
+    data = _submitted_as_rendered(APIKeyAdminForm(instance=key), name="renamed bot")
+
+    form = APIKeyAdminForm(data=data, instance=key)
+    assert form.is_valid(), form.errors
+    form.save()
+
+    key.refresh_from_db()
+    assert key.name == "renamed bot"
+    assert key.expires_at is None
+
+
+def test_unticking_never_expires_on_an_existing_key_sets_the_default_lifetime(profile1, project1):
+    key, _ = _make_key(profile1, expires_at=None)
+    data = _submitted_as_rendered(APIKeyAdminForm(instance=key))
+    data.pop("never_expires")
+
+    form = APIKeyAdminForm(data=data, instance=key)
+    assert form.is_valid(), form.errors
+    form.save()
+
+    key.refresh_from_db()
+    expected = timezone.now() + timedelta(days=DEFAULT_LIFETIME_DAYS)
+    assert abs((key.expires_at - expected).total_seconds()) < 60
 
 
 # creation through the add form

@@ -147,8 +147,12 @@ class APIKeyAdminForm(forms.ModelForm):
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
-        if self.instance.pk is not None and self.instance.expires_at is None:
-            self.fields["never_expires"].initial = False
+        # pk is no guide here: the UUID default fills it in before the first
+        # save, so the add form looks like an existing key. An existing key
+        # with no expiry has to render ticked, or saving any unrelated edit
+        # would quietly give it the default lifetime.
+        if not self.instance._state.adding and self.instance.expires_at is None:
+            self.fields["never_expires"].initial = True
 
     def clean(self):
         cleaned_data = super().clean()
