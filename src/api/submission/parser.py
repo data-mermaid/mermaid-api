@@ -173,6 +173,7 @@ def get_obsbenthiclit_data(collect_record, benthic_lit_id=None):
                 attribute=observation.get("attribute"),
                 growth_form=observation.get("growth_form"),
                 length=observation.get("length"),
+                bleaching_status=observation.get("bleaching_status") or None,
                 notes=observation.get("notes", ""),
             )
         )
@@ -191,6 +192,7 @@ def get_obsbenthicpit_data(collect_record, benthic_pit_id=None):
                 attribute=observation.get("attribute"),
                 growth_form=observation.get("growth_form"),
                 interval=_cast_decimal_to_str(observation.get("interval")),
+                bleaching_status=observation.get("bleaching_status") or None,
                 notes=observation.get("notes", ""),
             )
         )
