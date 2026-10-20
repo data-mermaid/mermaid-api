@@ -5980,132 +5980,6 @@ collection:
                     send: true
                     store: true
                   rebuildPath: true
-              - url: "{{ api_url  }}/projects/{{ project  }}/beltfishtransectmethods/xlsx/"
-                name: Belt Fish Transect Methods XLSX Summary
-                meta:
-                  id: req_ff7b6fd9e29d47a2a1a19f284b43a4b7
-                  created: 1670974999359
-                  modified: 1764772967889
-                  isPrivate: false
-                  description: ""
-                  sortKey: -1583935517657.5
-                method: GET
-                authentication:
-                  audience: "{{ auth0_audience  }}"
-                  authorizationUrl: "{{ auth0_authurl  }}"
-                  clientId: "{{ auth0_clientid  }}"
-                  grantType: implicit
-                  redirectUrl: "{{ auth0_redirecturl  }}"
-                  type: oauth2
-                settings:
-                  renderRequestBody: true
-                  encodeUrl: true
-                  followRedirects: global
-                  cookies:
-                    send: true
-                    store: true
-                  rebuildPath: true
-              - url: "{{api_url}}/projects/{{project}}/benthicpittransectmethods/xlsx"
-                name: Benthic PIT Transect Methods XLSX Summary
-                meta:
-                  id: req_e4d1991d946f4acca3ea68179c2ad0d4
-                  created: 1670975012721
-                  modified: 1686751277249
-                  isPrivate: false
-                  description: ""
-                  sortKey: -1583935517595
-                method: GET
-                authentication:
-                  audience: "{{ auth0_audience  }}"
-                  authorizationUrl: "{{ auth0_authurl  }}"
-                  clientId: "{{ auth0_clientid  }}"
-                  grantType: implicit
-                  redirectUrl: "{{ auth0_redirecturl  }}"
-                  type: oauth2
-                settings:
-                  renderRequestBody: true
-                  encodeUrl: true
-                  followRedirects: global
-                  cookies:
-                    send: true
-                    store: true
-                  rebuildPath: true
-              - url: "{{api_url}}/projects/{{project}}/benthiclittransectmethods/xlsx"
-                name: Benthic LIT Transect Methods XLSX Summary
-                meta:
-                  id: req_96eeaf163e904d07951c954c0a93689b
-                  created: 1670975023872
-                  modified: 1686751758227
-                  isPrivate: false
-                  description: ""
-                  sortKey: -1583935517545
-                method: GET
-                authentication:
-                  audience: "{{ auth0_audience  }}"
-                  authorizationUrl: "{{ auth0_authurl  }}"
-                  clientId: "{{ auth0_clientid  }}"
-                  grantType: implicit
-                  redirectUrl: "{{ auth0_redirecturl  }}"
-                  type: oauth2
-                settings:
-                  renderRequestBody: true
-                  encodeUrl: true
-                  followRedirects: global
-                  cookies:
-                    send: true
-                    store: true
-                  rebuildPath: true
-              - url: "{{api_url}}/projects/{{project}}/habitatcomplexitytransectmethods/xlsx"
-                name: Habitat Complexity Transect Methods XLSX Summary
-                meta:
-                  id: req_f094e11c881e4ecfbdd853a32c18ebd5
-                  created: 1670975040250
-                  modified: 1686751791104
-                  isPrivate: false
-                  description: ""
-                  sortKey: -1583935517507.5
-                method: GET
-                authentication:
-                  audience: "{{ auth0_audience  }}"
-                  authorizationUrl: "{{ auth0_authurl  }}"
-                  clientId: "{{ auth0_clientid  }}"
-                  grantType: implicit
-                  redirectUrl: "{{ auth0_redirecturl  }}"
-                  type: oauth2
-                settings:
-                  renderRequestBody: true
-                  encodeUrl: true
-                  followRedirects: global
-                  cookies:
-                    send: true
-                    store: true
-                  rebuildPath: true
-              - url: "{{api_url}}/projects/{{project}}/bleachingquadratcollectionmethods/xlsx"
-                name: Bleaching Quadrat Collection Method XLSX Summary
-                meta:
-                  id: req_21aa3adcac5d466d9189c4734877fb37
-                  created: 1670975049130
-                  modified: 1686751801833
-                  isPrivate: false
-                  description: ""
-                  sortKey: -1583935081752
-                method: GET
-                authentication:
-                  audience: "{{ auth0_audience  }}"
-                  authorizationUrl: "{{ auth0_authurl  }}"
-                  clientId: "{{ auth0_clientid  }}"
-                  grantType: implicit
-                  redirectUrl: "{{ auth0_redirecturl  }}"
-                  responseType: token
-                  type: oauth2
-                settings:
-                  renderRequestBody: true
-                  encodeUrl: true
-                  followRedirects: global
-                  cookies:
-                    send: true
-                    store: true
-                  rebuildPath: true
               - url: "{{api_url}}/projects/{{project}}/benthicphotoquadrattransectmethods/"
                 name: Benthic Photo Quadrat Transect Method
                 meta:
@@ -6115,32 +5989,6 @@ collection:
                   isPrivate: false
                   description: ""
                   sortKey: -1583934863880.5
-                method: GET
-                authentication:
-                  audience: "{{ auth0_audience  }}"
-                  authorizationUrl: "{{ auth0_authurl  }}"
-                  clientId: "{{ auth0_clientid  }}"
-                  grantType: implicit
-                  redirectUrl: "{{ auth0_redirecturl  }}"
-                  responseType: token
-                  type: oauth2
-                settings:
-                  renderRequestBody: true
-                  encodeUrl: true
-                  followRedirects: global
-                  cookies:
-                    send: true
-                    store: true
-                  rebuildPath: true
-              - url: "{{api_url}}/projects/{{project}}/benthicphotoquadrattransectmethods/xlsx/"
-                name: Benthic Photo Quadrat Transect Method XLSX Summary
-                meta:
-                  id: req_4c5a3176e95b4c2fbd80cc52798c00ce
-                  created: 1670975146967
-                  modified: 1686751811431
-                  isPrivate: false
-                  description: ""
-                  sortKey: -1583934754944.75
                 method: GET
                 authentication:
                   audience: "{{ auth0_audience  }}"
@@ -6174,31 +6022,6 @@ collection:
                     value: "10"
                     description: ""
                     disabled: true
-                authentication:
-                  audience: "{{ auth0_audience  }}"
-                  authorizationUrl: "{{ auth0_authurl  }}"
-                  clientId: "{{ auth0_clientid  }}"
-                  grantType: implicit
-                  redirectUrl: "{{ auth0_redirecturl  }}"
-                  type: oauth2
-                settings:
-                  renderRequestBody: true
-                  encodeUrl: true
-                  followRedirects: global
-                  cookies:
-                    send: true
-                    store: true
-                  rebuildPath: true
-              - url: "{{ api_url  }}/projects/{{ project  }}/beltinverttransectmethods/xlsx/"
-                name: Belt Invert Transect Methods XLSX Summary
-                meta:
-                  id: req_e5f6a7b8c9d0401234567890abcdef01
-                  created: 1780000000005
-                  modified: 1780000000005
-                  isPrivate: false
-                  description: ""
-                  sortKey: -1583934650000
-                method: GET
                 authentication:
                   audience: "{{ auth0_audience  }}"
                   authorizationUrl: "{{ auth0_authurl  }}"
