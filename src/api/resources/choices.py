@@ -10,6 +10,7 @@ from rest_framework.response import Response
 from ..models import (
     BeltTransectWidth,
     BenthicLifeHistory,
+    BleachingStatus,
     CollectRecord,
     Country,
     Current,
@@ -58,6 +59,7 @@ class ChoiceViewSet(BaseChoiceApiViewSet):
             ]
         )
         benthiclifehistories = dict(data=BenthicLifeHistory.objects.choices(order_by="name"))
+        bleachingstatuses = dict(data=BleachingStatus.objects.choices(order_by="val"))
         growthforms = dict(data=GrowthForm.objects.choices(order_by="name"))
         countries = dict(data=Country.objects.choices(order_by="name"))
         currents = dict(data=Current.objects.choices(order_by="val"))
@@ -84,6 +86,7 @@ class ChoiceViewSet(BaseChoiceApiViewSet):
             "invertsizebins": invertsizebins,
             "invertgroupsofinterest": invertgroupsofinterest,
             "benthiclifehistories": benthiclifehistories,
+            "bleachingstatuses": bleachingstatuses,
             "growthforms": growthforms,
             "countries": countries,
             "currents": currents,
