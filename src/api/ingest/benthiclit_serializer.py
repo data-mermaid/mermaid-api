@@ -4,6 +4,7 @@ from ..fields import LazyChoiceField, NullCoercedTimeField
 from ..models import BENTHICLIT_PROTOCOL
 from .choices import (
     benthic_attributes_choices,
+    bleaching_status_choices,
     current_choices,
     growth_form_choices,
     reef_slopes_choices,
@@ -11,7 +12,7 @@ from .choices import (
     tide_choices,
     visibility_choices,
 )
-from .serializers import CollectRecordCSVSerializer
+from .serializers import CollectRecordCSVSerializer, IncludeBleachingCSVListSerializer
 
 __all__ = ["BenthicLITCSVSerializer"]
 
@@ -23,6 +24,9 @@ class BenthicLITCSVSerializer(CollectRecordCSVSerializer):
     additional_group_fields = CollectRecordCSVSerializer.additional_group_fields.copy()
     additional_group_fields.append("data__benthic_transect__label")
     composite_fields = {"data__sample_event__sample_date": ["year", "month", "day"]}
+
+    class Meta:
+        list_serializer_class = IncludeBleachingCSVListSerializer
 
     data__sample_event__site = serializers.CharField(
         label="Site",
@@ -135,6 +139,14 @@ class BenthicLITCSVSerializer(CollectRecordCSVSerializer):
     data__obs_benthic_lits__length = serializers.IntegerField(
         label="Observation length",
         help_text="Length of a benthic attribute (/growth form) observed, in cm (e.g. 14).",
+    )
+    data__obs_benthic_lits__bleaching_status = LazyChoiceField(
+        choices=bleaching_status_choices,
+        required=False,
+        allow_null=True,
+        allow_blank=True,
+        label="Bleaching status",
+        help_text="Bleaching status of the observed benthic attribute (if bleaching was recorded). Sample units with any bleaching status are marked as including bleaching. See relevant tab on ingestion template for choices.",
     )
 
     def validate(self, data):
