@@ -43,6 +43,7 @@ from ..permissions import (
     ProjectDataCollectorPermission,
     ProjectDataReadOnlyPermission,
     UnauthenticatedReadOnlyPermission,
+    cached_lookup,
     get_request_api_key,
 )
 from ..utils.auth0utils import get_jwt_token, get_unverified_profile
@@ -99,18 +100,27 @@ class StandardResultPagination(PageNumberPagination):
     max_page_size = 5000
 
 
+REQUEST_PROFILE_CACHE_ATTR = "_request_profile_cache"
+
+
 def get_request_profile(request):
     """The profile a write is attributed to.
 
     An API key request carries no JWT, so the profile comes from the user the
     key resolved to; the key rides in the same `Bearer` header, and passing it
     to the JWT decoder would raise instead.
-    """
-    if get_request_api_key(request) is not None:
-        return getattr(request.user, "profile", None)
 
-    token = get_jwt_token(request)
-    return get_unverified_profile(token)
+    Memoized per-request, since a single write endpoint can call save() many times.
+    """
+
+    def _load():
+        if get_request_api_key(request) is not None:
+            return getattr(request.user, "profile", None)
+
+        token = get_jwt_token(request)
+        return get_unverified_profile(token)
+
+    return cached_lookup(request, REQUEST_PROFILE_CACHE_ATTR, "profile", _load)
 
 
 class CurrentProfileDefault:
