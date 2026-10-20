@@ -1,6 +1,7 @@
 from django.urls import path
 from rest_framework_nested import routers
 
+from .resources.apikey import APIKeyViewSet
 from .resources.benthic_attribute import BenthicAttributeViewSet
 from .resources.benthic_transect import BenthicTransectViewSet
 from .resources.choices import ChoiceViewSet
@@ -89,6 +90,7 @@ router = routers.DefaultRouter()
 
 router.register(r"me", MeViewSet, "me")
 router.register(r"profiles", ProfileViewSet, "profile")
+router.register(r"apikeys", APIKeyViewSet, "apikey")
 
 
 # APP-WIDE - MERMAID
