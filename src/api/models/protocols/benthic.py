@@ -170,7 +170,7 @@ class BleachingStatus(BaseChoiceModel):
     val = models.PositiveSmallIntegerField()
 
     def __str__(self):
-        return _("%s %s") % (self.val, self.name)
+        return _("%s") % self.name
 
     class Meta:
         db_table = "bleaching_status"
