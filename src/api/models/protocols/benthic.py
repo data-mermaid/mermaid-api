@@ -165,12 +165,17 @@ class BenthicAttributeGrowthFormLifeHistory(BaseModel):
         )
 
 
-class BleachingStatus(BaseModel):
-    name = models.CharField(max_length=100)
+class BleachingStatus(BaseChoiceModel):
+    name = models.CharField(max_length=100, unique=True)
     val = models.PositiveSmallIntegerField()
-    
+
     def __str__(self):
         return _("%s %s") % (self.val, self.name)
+
+    class Meta:
+        db_table = "bleaching_status"
+        ordering = ["val"]
+        verbose_name_plural = "bleaching statuses"
 
 
 class BenthicLIT(TransectMethod):
