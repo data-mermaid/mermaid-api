@@ -228,6 +228,8 @@ def test_benthicpit_ingest(
     growth_form1,
     site1,
     management1,
+    bleaching_status_normal,
+    bleaching_status_pale,
 ):
     new_records, _ = utils.ingest(
         protocol=BENTHICPIT_PROTOCOL,
@@ -265,6 +267,16 @@ def test_benthicpit_ingest(
     assert len(observations) == 3
     assert observations[0].get("attribute") == str(benthic_attribute_2a1.id)
     assert observations[0].get("growth_form") == str(growth_form1.id)
+
+    assert new_record.data.get("include_bleaching") is True
+    assert observations[0].get("bleaching_status") == str(bleaching_status_pale.id)
+    assert observations[1].get("bleaching_status") == str(bleaching_status_normal.id)
+    assert observations[2].get("bleaching_status") is None
+
+    assert new_records[0].data.get("include_bleaching") is False
+    assert all(
+        obs.get("bleaching_status") is None for obs in new_records[0].data["obs_benthic_pits"]
+    )
 
 
 def test_bleaching_ingest(
@@ -362,6 +374,8 @@ def test_benthiclit_ingest(
     benthic_attribute_2b,
     growth_form3,
     growth_form4,
+    bleaching_status_normal,
+    bleaching_status_fully_bleached,
 ):
     new_records, _ = utils.ingest(
         protocol=BENTHICLIT_PROTOCOL,
@@ -404,6 +418,16 @@ def test_benthiclit_ingest(
     assert observations[0].get("attribute") == str(benthic_attribute_3.id)
     assert observations[0].get("growth_form") is None
     assert observations[0].get("length") == 322
+
+    assert new_record.data.get("include_bleaching") is True
+    assert observations[0].get("bleaching_status") is None
+    assert observations[2].get("bleaching_status") == str(bleaching_status_fully_bleached.id)
+    assert observations[3].get("bleaching_status") == str(bleaching_status_normal.id)
+
+    assert new_records[0].data.get("include_bleaching") is False
+    assert all(
+        obs.get("bleaching_status") is None for obs in new_records[0].data["obs_benthic_lits"]
+    )
 
 
 def test_habitatcomplexity_ingest(
