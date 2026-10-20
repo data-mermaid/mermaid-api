@@ -103,3 +103,26 @@ def test_export_covariates_skips_local(db_setup, historical_apps, covariates, tm
 
 def test_export_covariates_skips_empty_table(db_setup, historical_apps, covariate_model, tmp_path):
     assert _run_export(historical_apps, "prod", tmp_path) == []
+
+
+def test_export_covariates_raises_on_row_count_mismatch(
+    db_setup, historical_apps, covariate_model, covariates, tmp_path
+):
+    with (
+        mock.patch.object(covariate_model.objects, "count", return_value=len(covariates) + 1),
+        mock.patch.object(_migration_module.s3, "upload_file") as mock_upload,
+        mock.patch.object(_migration_module.settings, "ENVIRONMENT", "dev"),
+    ):
+        with pytest.raises(RuntimeError, match="row count mismatch"):
+            export_covariates(historical_apps, None)
+
+    mock_upload.assert_not_called()
+
+
+def test_export_covariates_propagates_upload_error(db_setup, historical_apps, covariates, tmp_path):
+    with (
+        mock.patch.object(_migration_module.s3, "upload_file", side_effect=RuntimeError("boom")),
+        mock.patch.object(_migration_module.settings, "ENVIRONMENT", "dev"),
+    ):
+        with pytest.raises(RuntimeError, match="boom"):
+            export_covariates(historical_apps, None)
