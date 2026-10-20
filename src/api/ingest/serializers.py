@@ -275,6 +275,22 @@ class CollectRecordCSVListSerializer(ListSerializer):
         return sorted(fmt_errors, key=itemgetter("$row_number"))
 
 
+class IncludeBleachingCSVListSerializer(CollectRecordCSVListSerializer):
+    """Sets data.include_bleaching on each grouped record from its observations'
+    bleaching statuses, since a per-row CSV column can't be set consistently per sample unit.
+    """
+
+    def group_records(self, records):
+        grouped_records = super().group_records(records)
+        obs_field = self.child.observations_fields[0]
+        for rec in grouped_records:
+            observations = utils.get_value(rec, obs_field) or []
+            rec["data"]["include_bleaching"] = any(
+                obs.get("bleaching_status") for obs in observations
+            )
+        return grouped_records
+
+
 class CollectRecordCSVSerializer(Serializer):
     protocol = None
     sample_unit = None
