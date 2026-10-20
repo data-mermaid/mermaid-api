@@ -1,6 +1,7 @@
 from django.conf import settings
 from django.db import transaction
 from django.db.models import Q
+from django.utils import timezone
 from rest_framework import permissions, serializers, status
 from rest_framework.exceptions import MethodNotAllowed, NotFound, ValidationError
 from rest_framework.response import Response
@@ -293,31 +294,71 @@ class ImageViewSet(BaseProjectApiViewSet):
         data = ImageSerializer(instance=image_record, context={"request": request}).data
         return Response(data=data, status=status.HTTP_201_CREATED)
 
-    def _get_validated_annotations(self, point_data, pk):
-        if "annotations" not in point_data:
+    def _get_validated_annotations(self, point_data, points_by_id):
+        if not isinstance(point_data.get("annotations"), list):
             raise ValidationError("'annotations' is required.")
 
         point_id = point_data.get("id")
-        point = Point.objects.get_or_none(id=point_data.get("id"), image=pk)
+        point = points_by_id.get(str(point_id))
         if point is None:
             raise ValidationError(f"Point ({point_id}) is missing")
 
         return point, point_data.get("annotations")
 
-    def _delete_existing_user_annotations(self, point, annotations):
-        user_annotation_ids = [
-            anno.get("id")
-            for anno in annotations
-            if not anno.get("is_machine_created") and anno.get("id")
-        ]
-        Annotation.objects.filter(point=point, is_machine_created=False).exclude(
-            id__in=user_annotation_ids
+    def _check_only_one_confirmed_annotation(self, annotations):
+        confirmed_count = sum(1 for anno in annotations if anno.get("is_confirmed"))
+        if confirmed_count > 1:
+            raise ValidationError("Only one annotation can be confirmed.")
+
+    def _delete_stale_user_annotations(self, points, point_ids, annotations_by_id):
+        # Keep a submitted user annotation only if it belongs to the point it was
+        # submitted under; other user annotations on the submitted points are deleted.
+        keep_ids = []
+        for point_data in points:
+            for anno in point_data.get("annotations") or []:
+                if anno.get("is_machine_created"):
+                    continue
+                instance = annotations_by_id.get(str(anno.get("id")))
+                if instance is not None and str(instance.point_id) == str(point_data.get("id")):
+                    keep_ids.append(instance.id)
+
+        Annotation.objects.filter(point_id__in=point_ids, is_machine_created=False).exclude(
+            id__in=keep_ids
         ).delete()
+
+    def _machine_annotation_confirmed_change(self, instance, annotation_data):
+        is_confirmed = serializers.BooleanField().run_validation(
+            annotation_data.get("is_confirmed") or False
+        )
+        return is_confirmed if instance.is_confirmed != is_confirmed else None
+
+    def _save_machine_annotation_confirmations(self, to_confirm_ids, to_unconfirm_ids):
+        now = timezone.now()  # .update() skips auto_now
+        if to_unconfirm_ids:
+            Annotation.objects.filter(id__in=to_unconfirm_ids).update(
+                is_confirmed=False, updated_on=now
+            )
+        if to_confirm_ids:
+            Annotation.objects.filter(id__in=to_confirm_ids).update(
+                is_confirmed=True, updated_on=now
+            )
+
+    def _is_user_annotation_unchanged(self, instance, annotation_data):
+        is_confirmed = serializers.BooleanField().run_validation(
+            annotation_data.get("is_confirmed") or False
+        )
+        growth_form = annotation_data.get("growth_form")
+        return (
+            str(instance.benthic_attribute_id) == str(annotation_data.get("benthic_attribute"))
+            and (str(growth_form) if growth_form else None)
+            == (str(instance.growth_form_id) if instance.growth_form_id else None)
+            and instance.is_confirmed == is_confirmed
+        )
 
     def partial_update(self, request, pk, *args, **kwargs):
         data = request.data
         qs = self.limit_to_project(request, pk, *args, **kwargs)
-        image_record = qs.get(id=pk)
+        image_record = qs.prefetch_related(None).get(id=pk)
 
         if "points" not in data:
             raise ValidationError("'points' is required.")
@@ -328,21 +369,52 @@ class ImageViewSet(BaseProjectApiViewSet):
             serializer = PatchImageSerializer(data=data, instance=image_record, context=context)
             serializer.is_valid(raise_exception=True)
 
+            point_ids = [pnt.get("id") for pnt in points if pnt.get("id")]
+            points_by_id = {
+                str(pid): pnt
+                for pid, pnt in Point.objects.filter(image_id=pk, id__in=point_ids)
+                .in_bulk()
+                .items()
+            }
+            annotations_by_id = {
+                str(anno.id): anno for anno in Annotation.objects.filter(point_id__in=point_ids)
+            }
+            self._delete_stale_user_annotations(points, point_ids, annotations_by_id)
+
+            to_confirm_ids = []
+            to_unconfirm_ids = []
+
             for point_data in points:
-                point, annotations = self._get_validated_annotations(point_data, pk)
-                self._delete_existing_user_annotations(point, annotations)
-                # Only allow one confirmed annotation per point
-                pnt_serializer = PointSerializer(instance=point, data=point_data, context=context)
-                pnt_serializer.is_valid(raise_exception=True)
+                point, annotations = self._get_validated_annotations(point_data, points_by_id)
+                self._check_only_one_confirmed_annotation(annotations)
 
                 for annotation_data in annotations:
-                    anno_id = annotation_data.get("id")
-                    anno_instance = Annotation.objects.get_or_none(id=anno_id, point=point)
+                    anno_instance = annotations_by_id.get(str(annotation_data.get("id")))
+                    if anno_instance is not None and anno_instance.point_id != point.id:
+                        anno_instance = None
+
+                    if anno_instance is not None and anno_instance.is_machine_created:
+                        new_confirmed = self._machine_annotation_confirmed_change(
+                            anno_instance, annotation_data
+                        )
+                        if new_confirmed is not None:
+                            (to_confirm_ids if new_confirmed else to_unconfirm_ids).append(
+                                anno_instance.id
+                            )
+                        continue
+
+                    if anno_instance is not None and self._is_user_annotation_unchanged(
+                        anno_instance, annotation_data
+                    ):
+                        continue
+
                     anno_serializer = SaveAnnotationSerializer(
                         instance=anno_instance, data=annotation_data, context=context
                     )
                     anno_serializer.is_valid(raise_exception=True)
                     anno_serializer.save(point=point)
+
+            self._save_machine_annotation_confirmations(to_confirm_ids, to_unconfirm_ids)
 
         updated_image_record = qs.get(id=pk)
         return Response(ImageSerializer(instance=updated_image_record).data)

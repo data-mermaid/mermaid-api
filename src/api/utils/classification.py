@@ -25,6 +25,7 @@ from ..models import (
     Annotation,
     ClassificationStatus,
     Classifier,
+    CollectRecord,
     Image,
     ObsBenthicPhotoQuadrat,
     Point,
@@ -34,7 +35,7 @@ from ..models import (
 )
 from ..models.classification import parse_bagf_label
 from .inference import classify_via_lambda
-from .q import submit_image_job
+from .q import submit_image_job, submit_job
 from .s3 import upload_file
 
 logger = logging.getLogger(__name__)
@@ -297,18 +298,25 @@ def store_exif(instance: Image) -> None:
 
 
 def create_classification_status(image, status, message=None):
+    """Return False if the image row no longer exists, True otherwise.
+
+    True does not guarantee the row was written: any other write error is logged and
+    swallowed so a transient DB fault never stops classification.
+    """
     try:
         with transaction.atomic():
             # Lock and verify image exists
             if not Image.objects.filter(id=image.pk).select_for_update().exists():
-                print(f"Image {image.pk} was deleted, skipping status update")
-                return
+                logger.warning(f"Image {image.pk} was deleted, skipping status update")
+                return False
             ClassificationStatus.objects.create(image=image, status=status, message=message)
     except IntegrityError:
         # Image was deleted after check but before create
-        print(f"Image {image.pk} was deleted during status update")
+        logger.warning(f"Image {image.pk} was deleted during status update")
+        return False
     except Exception as err:
-        print(f"Writing classification status Image {image.pk}, status: {status}: {err}")
+        logger.warning(f"Writing classification status Image {image.pk}, status: {status}: {err}")
+    return True
 
 
 def generate_points(image: Image, num_points: int, margin: tuple[int, int] = (0, 0)):
@@ -399,7 +407,10 @@ def _classify_image(image_record_id, num_points=None):
     if not image:
         return
 
-    create_classification_status(image, ClassificationStatus.RUNNING)
+    # A user can delete the image (and its S3 file) while the job sits in the queue;
+    # invoking the Lambda then only produces a spurious processing_error.
+    if not create_classification_status(image, ClassificationStatus.RUNNING):
+        return
 
     try:
         classifier_record = Classifier.active()
@@ -414,6 +425,12 @@ def _classify_image(image_record_id, num_points=None):
 
         create_classification_status(image, ClassificationStatus.COMPLETED)
     except Exception as err:
+        # The locked write waits out an in-flight delete, whose post_delete signal
+        # removes the S3 file before the row delete commits. Deleted mid-run, the
+        # failure is expected and retrying cannot help.
+        if not create_classification_status(image, ClassificationStatus.FAILED, str(err)):
+            logger.warning(f"image {image_record_id} was deleted during classification: {err}")
+            return
         # [classify.processing_error] is the literal the CloudWatch metric filter in
         # iac/stacks/constructs/alerts.py matches on the image worker's log group; a
         # retryable failure already has the SQS DLQ alarm behind it, so only a
@@ -425,7 +442,6 @@ def _classify_image(image_record_id, num_points=None):
             logger.exception(
                 f"[classify.processing_error] classifying image {image_record_id} failed"
             )
-        create_classification_status(image, ClassificationStatus.FAILED, str(err))
         # Re-raise only a retryable failure so SQS redelivers it; the status/results
         # writes above are idempotent, so re-running this job is safe.
         if retryable:
@@ -441,6 +457,73 @@ def classify_image_job(image_record_id, num_points=None):
         num_points=num_points,
         visibility_timeout=settings.INFERENCE_JOB_VISIBILITY_TIMEOUT,
     )
+
+
+def _create_annotations_files(image_ids):
+    """Build/upload the confirmed-annotations CSV for each image.
+
+    Submit deletes its CollectRecord before this job runs; an edit shortly after submit
+    recreates one with the same id (see transect_method_to_collect_record). Any image
+    whose collect_record_id is live was therefore edited back out of submitted state
+    since this job was queued, and post_edit already cleared/will clear its file - skip
+    it rather than resurrect a stale CSV for an unsubmitted record.
+
+    Raises if any image failed, so SQS redelivers the whole batch (safe: create_annotations_file
+    overwrites the same key, and an unaffected image just gets harmlessly rebuilt again).
+    """
+    images_by_id = Image.objects.in_bulk(image_ids)
+    live_collect_record_ids = set(
+        CollectRecord.objects.filter(
+            id__in={image.collect_record_id for image in images_by_id.values()}
+        ).values_list("id", flat=True)
+    )
+
+    failed_image_ids = []
+    for image_id in image_ids:
+        image = images_by_id.get(image_id)
+        if image is None:
+            logger.info(f"Skipping annotations file for image {image_id}: image no longer exists")
+            continue
+        if image.collect_record_id in live_collect_record_ids:
+            logger.info(
+                f"Skipping annotations file for image {image_id}: "
+                "collect record was edited back out of submitted state"
+            )
+            continue
+        try:
+            image.create_annotations_file()
+        except Exception:
+            logger.exception(f"Failed to create annotations file for image {image_id}")
+            failed_image_ids.append(image_id)
+
+    if failed_image_ids:
+        raise RuntimeError(f"Failed to create annotations files for images: {failed_image_ids}")
+
+
+# Per-job visibility ceiling, well under SQS's 43200s (12h) hard limit: a batch
+# needing more than this splits into multiple jobs instead of one that would tie
+# up a worker slot for the maximum possible window.
+_MAX_BATCH_VISIBILITY_TIMEOUT = 1800
+
+
+def create_annotations_files_job(image_ids):
+    per_image = settings.ANNOTATIONS_FILE_JOB_SECONDS_PER_IMAGE
+    max_batch_size = max(1, _MAX_BATCH_VISIBILITY_TIMEOUT // per_image)
+
+    job_ids = []
+    for start in range(0, len(image_ids), max_batch_size):
+        batch = image_ids[start : start + max_batch_size]
+        visibility_timeout = max(settings.SQS_MESSAGE_VISIBILITY, len(batch) * per_image)
+        job_ids.append(
+            submit_job(
+                0,
+                True,
+                _create_annotations_files,
+                image_ids=batch,
+                visibility_timeout=visibility_timeout,
+            )
+        )
+    return job_ids
 
 
 def chunked_queryset_dataframe(qs, chunk_size=10000):

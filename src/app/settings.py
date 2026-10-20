@@ -146,6 +146,11 @@ if ENVIRONMENT not in ("dev", "prod"):
 
 # SSL settings
 SECURE_PROXY_SSL_HEADER = ("HTTP_X_FORWARDED_PROTO", "https")
+# The session and CSRF cookies are credentials, so keep them off plain HTTP
+# wherever the site is served over TLS. Local runs are http://localhost, where
+# a Secure cookie would never be sent at all, so this stays off there.
+SESSION_COOKIE_SECURE = ENVIRONMENT in ("dev", "prod")
+CSRF_COOKIE_SECURE = ENVIRONMENT in ("dev", "prod")
 
 ROOT_URLCONF = "app.urls"
 
@@ -174,6 +179,7 @@ DEFAULT_AUTO_FIELD = "django.db.models.BigAutoField"
 REST_FRAMEWORK = {
     "DEFAULT_AUTHENTICATION_CLASSES": (
         "api.auth_backends.JWTAuthentication",
+        "api.auth_backends.APIKeyAuthentication",
         "rest_framework.authentication.SessionAuthentication",
     ),
     "DEFAULT_PERMISSION_CLASSES": ("rest_framework.permissions.IsAuthenticatedOrReadOnly",),
@@ -248,6 +254,18 @@ AUTH0_MANAGEMENT_API_AUDIENCE = os.environ.get("AUTH0_MANAGEMENT_API_AUDIENCE")
 MERMAID_API_AUDIENCE = os.environ.get("MERMAID_API_AUDIENCE")
 MERMAID_API_SIGNING_SECRET = os.environ.get("MERMAID_API_SIGNING_SECRET")
 
+# ***************
+# ** API keys  **
+# ***************
+
+# A key acts as its owner's whole profile, so the self-service endpoint limits
+# what one person can hand out: how far out an expiry may be set, and how many
+# usable keys they may hold at once. Both are settings rather than constants so
+# a team running several integrations can be raised without a deploy. Neither
+# applies to the Django admin, where staff issue keys deliberately.
+API_KEY_MAX_LIFETIME_DAYS = 365 * 2
+API_KEY_MAX_PER_PROFILE = 20
+
 # *********
 # ** API **
 # *********
@@ -283,6 +301,10 @@ PUBLIC_BUCKET = os.environ.get("AWS_PUBLIC_BUCKET")
 IMAGE_PROCESSING_BUCKET = os.environ.get("IMAGE_PROCESSING_BUCKET")
 IMAGE_PROCESSING_BUCKET_TEST = (
     os.environ.get("IMAGE_PROCESSING_BUCKET_TEST") or IMAGE_PROCESSING_BUCKET
+)
+# Store classification images in S3 even outside dev/prod (local end-to-end inference testing)
+USE_S3_IMAGE_STORAGE = ENVIRONMENT in ("dev", "prod") or (
+    os.environ.get("USE_S3_IMAGE_STORAGE", "").lower() == "true"
 )
 
 # ************
@@ -391,6 +413,14 @@ LOGGING = {
             "filters": ["require_debug_false"],
             "class": "django.utils.log.AdminEmailHandler",
         },
+        # Fixed at INFO, unlike "console": the API key audit trail has to reach
+        # CloudWatch in production, where DEBUG_LEVEL is WARNING.
+        "console_info": {
+            "level": "INFO",
+            "class": "logging.StreamHandler",
+            "stream": sys.stdout,
+            "formatter": "file",
+        },
     },
     "formatters": {
         "file": {
@@ -406,6 +436,14 @@ LOGGING = {
         "api": {
             "handlers": ["console"],
             "level": "WARNING",
+            "propagate": False,
+        },
+        # API key issuance, revocation and expiry: an audit trail, kept at INFO
+        # in every environment. Failed authentications are WARNING and go
+        # through the "api" logger above.
+        "api.apikeys": {
+            "handlers": ["console_info"],
+            "level": "INFO",
             "propagate": False,
         },
         "django.security.DisallowedHost": {
@@ -458,6 +496,19 @@ if ENVIRONMENT == "prod":
     IMAGE_BUCKET_AWS_SECRET_ACCESS_KEY = os.environ.get("IMAGE_BUCKET_AWS_SECRET_ACCESS_KEY")
 IMAGE_S3_PATH = "mermaid/"
 IMAGE_S3_PATH_TEST = os.environ.get("IMAGE_S3_PATH_TEST") or IMAGE_S3_PATH
+
+# Bounds the image/thumbnail/annotations-file S3 client's connect/read timeouts, so a
+# transient S3 slowdown fails fast instead of blocking a request thread on botocore's
+# ~60s defaults. MAX_ATTEMPTS is retries, not total attempts (botocore adds 1 for the
+# initial try) - see the matching retries config on get_lambda_client in utils/inference.py.
+IMAGE_S3_CONNECT_TIMEOUT = int(os.environ.get("IMAGE_S3_CONNECT_TIMEOUT") or "5")
+IMAGE_S3_READ_TIMEOUT = int(os.environ.get("IMAGE_S3_READ_TIMEOUT") or "15")
+IMAGE_S3_MAX_ATTEMPTS = int(os.environ.get("IMAGE_S3_MAX_ATTEMPTS") or "2")
+
+# Per-image SQS visibility budget for create_annotations_files_job's batch.
+ANNOTATIONS_FILE_JOB_SECONDS_PER_IMAGE = int(
+    os.environ.get("ANNOTATIONS_FILE_JOB_SECONDS_PER_IMAGE") or "90"
+)
 DATA_UPLOAD_MAX_MEMORY_SIZE = 30 * 1024 * 1024  # 30 MB
 # Django's default ("same-origin") sends no Referer to tile.openstreetmap.org, which
 # OSM's tile usage policy now rejects (403), breaking admin map widgets.

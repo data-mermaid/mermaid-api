@@ -5,6 +5,7 @@ from django.conf import settings
 from django.db import connection
 
 from api.models import revisions
+from api.models.classification import get_s3_image_storage
 from api.models.summary_sample_events import ProjectSummarySampleEventView
 from api.models.view_models import model_view_migrations
 from .fixtures import *  # noqa: F403
@@ -38,6 +39,14 @@ def _disable_s3_cache(request):
             yield
     else:
         yield
+
+
+@pytest.fixture(autouse=True)
+def _clear_image_storage_cache():
+    """Image storages are cached per bucket; don't leak one built under another test's settings."""
+    get_s3_image_storage.cache_clear()
+    yield
+    get_s3_image_storage.cache_clear()
 
 
 @pytest.fixture

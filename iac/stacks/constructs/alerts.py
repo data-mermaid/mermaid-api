@@ -141,6 +141,42 @@ class MonitoringAlerts(Construct):
                 )
             )
 
+            # On latency, not BurstBalance: gp3 (see common.py) doesn't publish that
+            # metric, so a BurstBalance alarm would go dark on deploy. 50ms is well
+            # above the ~5-15ms baseline measured before the 2026-10-13 incident,
+            # which sustained 100-200ms once gp2 credits ran out.
+            alarms.append(
+                cw.Alarm(
+                    self,
+                    "RdsReadLatencyAlarm",
+                    alarm_name=f"mermaid-{env_id}-rds-read-latency",
+                    alarm_description="RDS read latency exceeded 50ms for 10 minutes",
+                    metric=database.metric(
+                        "ReadLatency", statistic="Average", period=Duration.minutes(5)
+                    ),
+                    threshold=0.05,
+                    evaluation_periods=2,
+                    comparison_operator=cw.ComparisonOperator.GREATER_THAN_THRESHOLD,
+                    treat_missing_data=cw.TreatMissingData.NOT_BREACHING,
+                )
+            )
+
+            alarms.append(
+                cw.Alarm(
+                    self,
+                    "RdsWriteLatencyAlarm",
+                    alarm_name=f"mermaid-{env_id}-rds-write-latency",
+                    alarm_description="RDS write latency exceeded 50ms for 10 minutes",
+                    metric=database.metric(
+                        "WriteLatency", statistic="Average", period=Duration.minutes(5)
+                    ),
+                    threshold=0.05,
+                    evaluation_periods=2,
+                    comparison_operator=cw.ComparisonOperator.GREATER_THAN_THRESHOLD,
+                    treat_missing_data=cw.TreatMissingData.NOT_BREACHING,
+                )
+            )
+
         # ── ECS API ──────────────────────────────────────────────────
 
         alarms.append(
@@ -358,6 +394,76 @@ class MonitoringAlerts(Construct):
                     "too many user info lookups; consider caching tokens"
                 ),
                 metric=rate_limit_metric.metric(
+                    statistic="Sum",
+                    period=Duration.minutes(5),
+                ),
+                threshold=1,
+                evaluation_periods=1,
+                comparison_operator=cw.ComparisonOperator.GREATER_THAN_OR_EQUAL_TO_THRESHOLD,
+                treat_missing_data=cw.TreatMissingData.NOT_BREACHING,
+            )
+        )
+
+        # ── API keys (app-side instrumentation) ──────────────────────
+        # Sibling of the Auth0 alarms rather than a shared one: an API key is a
+        # long-lived machine credential, so a burst of rejections points at a
+        # different incident (a leaked or revoked key still in a deployed
+        # client) and wants its own line in Slack. Markers come from
+        # APIKeyAuthentication in auth_backends.py.
+
+        apikey_failed_auth_metric = logs.MetricFilter(
+            self,
+            "ApiKeyFailedAuthMetricFilter",
+            log_group=api_log_group,
+            filter_pattern=logs.FilterPattern.literal('"[apikey.failed_auth]"'),
+            metric_namespace=f"MERMAID/{env_id}/APIKey",
+            metric_name="FailedAuthentications",
+            metric_value="1",
+            default_value=0,
+        )
+        alarms.append(
+            cw.Alarm(
+                self,
+                "ApiKeyFailedAuthAlarm",
+                alarm_name=f"mermaid-{env_id}-apikey-failed-auth",
+                alarm_description=(
+                    "API key authentication failures exceeded 20 in 5 minutes — "
+                    "a revoked or leaked key is still deployed, or a key is being guessed"
+                ),
+                metric=apikey_failed_auth_metric.metric(
+                    statistic="Sum",
+                    period=Duration.minutes(5),
+                ),
+                threshold=20,
+                evaluation_periods=1,
+                comparison_operator=cw.ComparisonOperator.GREATER_THAN_THRESHOLD,
+                treat_missing_data=cw.TreatMissingData.NOT_BREACHING,
+            )
+        )
+
+        # A throttled caller stops emitting failed_auth for the rest of its
+        # minute, so the failure alarm alone understates a sustained attempt.
+        # Hitting the limit at all is worth knowing about.
+        apikey_rate_limit_metric = logs.MetricFilter(
+            self,
+            "ApiKeyRateLimitMetricFilter",
+            log_group=api_log_group,
+            filter_pattern=logs.FilterPattern.literal('"[apikey.rate_limited]"'),
+            metric_namespace=f"MERMAID/{env_id}/APIKey",
+            metric_name="RateLimited",
+            metric_value="1",
+            default_value=0,
+        )
+        alarms.append(
+            cw.Alarm(
+                self,
+                "ApiKeyRateLimitAlarm",
+                alarm_name=f"mermaid-{env_id}-apikey-rate-limited",
+                alarm_description=(
+                    "API key failure rate limit hit — one IP or key id passed "
+                    "10 rejected requests in a minute and is being answered with 429"
+                ),
+                metric=apikey_rate_limit_metric.metric(
                     statistic="Sum",
                     period=Duration.minutes(5),
                 ),

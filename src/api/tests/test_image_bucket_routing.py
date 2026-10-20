@@ -5,12 +5,14 @@ import pytest
 from django.core.files.storage import Storage
 from django.core.files.uploadedfile import SimpleUploadedFile
 from django.test import override_settings
+from storages.backends.s3 import S3Storage
 
 from api.models import Image, Project
 from api.models.classification import (
     get_image_bucket,
     get_image_bucket_for_status,
     get_image_storage_config,
+    select_image_storage,
 )
 from api.tests.fixtures.settings_overrides import STORAGE_SETTINGS
 
@@ -257,6 +259,60 @@ def test_move_file_cross_account(no_s3):
     source_client.delete_object.assert_called_once_with(Bucket="src-bucket", Key="mermaid/img.png")
 
 
+# --- image S3 client timeout/retry bounds ---
+
+S3_CLIENT_TIMEOUT_SETTINGS = {
+    "USE_S3_IMAGE_STORAGE": True,
+    "IMAGE_S3_CONNECT_TIMEOUT": 7,
+    "IMAGE_S3_READ_TIMEOUT": 21,
+    "IMAGE_S3_MAX_ATTEMPTS": 3,
+}
+
+
+@override_settings(**STORAGE_SETTINGS, **S3_CLIENT_TIMEOUT_SETTINGS)
+def test_select_image_storage_bounds_s3_client_timeouts():
+    client_config = select_image_storage().client_config
+    assert client_config.connect_timeout == 7
+    assert client_config.read_timeout == 21
+    assert client_config.retries["max_attempts"] == 3
+
+
+@override_settings(**STORAGE_SETTINGS, **S3_CLIENT_TIMEOUT_SETTINGS)
+def test_image_get_storage_bounds_s3_client_timeouts():
+    client_config = Image(image_bucket="prod-bucket").get_storage().client_config
+    assert client_config.connect_timeout == 7
+    assert client_config.read_timeout == 21
+    assert client_config.retries["max_attempts"] == 3
+
+
+# --- per-bucket storage reuse ---
+
+
+@override_settings(**STORAGE_SETTINGS, USE_S3_IMAGE_STORAGE=True)
+def test_image_storage_built_once_per_bucket():
+    """Image list serialization paid ~250ms per image when each Image built its own storage."""
+    with patch("api.models.classification.S3Storage", wraps=S3Storage) as storage_cls:
+        images = [Image(image_bucket=bucket) for bucket in ["prod-bucket", "test-bucket"] * 5]
+
+    assert storage_cls.call_count == 2
+    prod_storage = images[0].image.storage
+    test_storage = images[1].image.storage
+    assert prod_storage.bucket_name == "prod-bucket"
+    assert test_storage.bucket_name == "test-bucket"
+    for image in images:
+        expected = prod_storage if image.image_bucket == "prod-bucket" else test_storage
+        for field_name in ("image", "thumbnail", "annotations_file", "feature_vector_file"):
+            assert getattr(image, field_name).storage is expected
+
+
+@override_settings(USE_S3_IMAGE_STORAGE=False)
+def test_select_image_storage_local_storage_ignores_s3_timeouts():
+    # FileSystemStorage path (local dev) never constructs an S3 client/Config at all.
+    from django.core.files.storage import FileSystemStorage
+
+    assert isinstance(select_image_storage(), FileSystemStorage)
+
+
 # ---------------------------------------------------------------------------
 # Regression test: post_save re-applies correct storage after FieldFile.save
 # resets instance.image to a plain string (losing the custom storage).
@@ -264,6 +320,7 @@ def test_move_file_cross_account(no_s3):
 
 PROD_LIKE_SETTINGS = {
     "ENVIRONMENT": "prod",
+    "USE_S3_IMAGE_STORAGE": True,
     "IMAGE_PROCESSING_BUCKET": "prod-bucket",
     "IMAGE_PROCESSING_BUCKET_TEST": "test-bucket",
     "IMAGE_S3_PATH": "mermaid/",

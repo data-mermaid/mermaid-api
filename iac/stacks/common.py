@@ -395,10 +395,22 @@ class CommonStack(Stack):
             engine=postgres_engine,
             parameter_group=db_parameter_group,
             allow_major_version_upgrade=True,
+            # t3/BURSTABLE3 has its OWN instance-level I/O credit system
+            # (EBSIOBalance%/EBSByteBalance%), separate from the volume-level IOPS
+            # credits fixed by storage_type=GP3 below. If prod latency spikes again
+            # after that fix, check these two metrics before assuming it's unrelated
+            # -- they're not covered by the ReadLatency/WriteLatency alarms in
+            # alerts.py, which only catch the symptom, not this specific cause.
             instance_type=ec2.InstanceType.of(
                 ec2.InstanceClass.BURSTABLE3,
                 ec2.InstanceSize.MEDIUM,
             ),
+            # gp2's burst IOPS credits ran out during the 2026-10-13 incident
+            # (BurstBalance 80%->0% over ~66min, then 15-20x latency for ~80min).
+            # gp3 gives a flat 3,000 IOPS/125 MiB/s baseline with no credit model, at
+            # the same $/GB price as gp2 here -- fixes the volume-level cliff, not
+            # the separate instance-level one noted above.
+            storage_type=rds.StorageType.GP3,
             vpc_subnets=ec2.SubnetSelection(subnet_type=ec2.SubnetType.PRIVATE_ISOLATED),
             backup_retention=Duration.days(7),
             deletion_protection=True,
@@ -691,6 +703,50 @@ class CommonStack(Stack):
                     visibility_config=wafv2.CfnWebACL.VisibilityConfigProperty(
                         cloud_watch_metrics_enabled=True,
                         metric_name="MermaidApiRateLimit",
+                        sampled_requests_enabled=True,
+                    ),
+                ),
+                # A tighter per-IP ceiling for requests that present a MERMAID
+                # API key (`Authorization: Bearer mmd_...`). WAF counts by the
+                # connection's source IP, so unlike the app's failure limiter it
+                # cannot be dodged with a forged X-Forwarded-For. It sees every
+                # request, not just failed ones, so the limit sits well above
+                # what a legitimate script needs. Auth0 tokens share the Bearer
+                # scheme but never start with mmd_, so they are not counted.
+                wafv2.CfnWebACL.RuleProperty(
+                    name="RateLimitApiKeyPerIP",
+                    priority=5,
+                    action=wafv2.CfnWebACL.RuleActionProperty(count={}),
+                    statement=wafv2.CfnWebACL.StatementProperty(
+                        rate_based_statement=wafv2.CfnWebACL.RateBasedStatementProperty(
+                            limit=300,
+                            aggregate_key_type="IP",
+                            scope_down_statement=wafv2.CfnWebACL.StatementProperty(
+                                byte_match_statement=wafv2.CfnWebACL.ByteMatchStatementProperty(
+                                    field_to_match=wafv2.CfnWebACL.FieldToMatchProperty(
+                                        single_header={"Name": "authorization"},
+                                    ),
+                                    # Django splits the header on any whitespace and
+                                    # compares the scheme case-insensitively, so the
+                                    # match is normalised the same way; otherwise
+                                    # "BEARER\tmmd_..." would slip past the rule.
+                                    positional_constraint="CONTAINS",
+                                    search_string="bearer mmd_",
+                                    text_transformations=[
+                                        wafv2.CfnWebACL.TextTransformationProperty(
+                                            priority=0, type="COMPRESS_WHITE_SPACE"
+                                        ),
+                                        wafv2.CfnWebACL.TextTransformationProperty(
+                                            priority=1, type="LOWERCASE"
+                                        ),
+                                    ],
+                                ),
+                            ),
+                        ),
+                    ),
+                    visibility_config=wafv2.CfnWebACL.VisibilityConfigProperty(
+                        cloud_watch_metrics_enabled=True,
+                        metric_name="MermaidApiKeyRateLimit",
                         sampled_requests_enabled=True,
                     ),
                 ),
