@@ -1,4 +1,5 @@
 import csv
+import functools
 import logging
 import os
 import uuid
@@ -102,6 +103,22 @@ def select_image_storage():
         access_key=settings.IMAGE_BUCKET_AWS_ACCESS_KEY_ID,
         secret_key=settings.IMAGE_BUCKET_AWS_SECRET_ACCESS_KEY,
         location=settings.IMAGE_S3_PATH,
+        client_config=_image_s3_client_config(),
+    )
+
+
+@functools.lru_cache(maxsize=None)
+def get_s3_image_storage(bucket):
+    """Shared per bucket: each S3Storage builds its own boto3 client (~200ms) on first use.
+
+    Shared across threads like Django's default storage; boto3 connections are thread-local.
+    """
+    config = get_image_storage_config(bucket)
+    return S3Storage(
+        bucket_name=config["bucket"],
+        access_key=config["access_key"],
+        secret_key=config["secret_key"],
+        location=config["s3_path"],
         client_config=_image_s3_client_config(),
     )
 
@@ -389,14 +406,7 @@ class Image(BaseModel):
         """Return a storage backend configured for this image's bucket."""
         if not settings.USE_S3_IMAGE_STORAGE:
             return FileSystemStorage()
-        config = get_image_storage_config(self.image_bucket)
-        return S3Storage(
-            bucket_name=config["bucket"],
-            access_key=config["access_key"],
-            secret_key=config["secret_key"],
-            location=config["s3_path"],
-            client_config=_image_s3_client_config(),
-        )
+        return get_s3_image_storage(self.image_bucket)
 
     def _apply_storage(self):
         """Set the correct storage backend on all file fields for this instance."""

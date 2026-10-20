@@ -298,18 +298,25 @@ def store_exif(instance: Image) -> None:
 
 
 def create_classification_status(image, status, message=None):
+    """Return False if the image row no longer exists, True otherwise.
+
+    True does not guarantee the row was written: any other write error is logged and
+    swallowed so a transient DB fault never stops classification.
+    """
     try:
         with transaction.atomic():
             # Lock and verify image exists
             if not Image.objects.filter(id=image.pk).select_for_update().exists():
-                print(f"Image {image.pk} was deleted, skipping status update")
-                return
+                logger.warning(f"Image {image.pk} was deleted, skipping status update")
+                return False
             ClassificationStatus.objects.create(image=image, status=status, message=message)
     except IntegrityError:
         # Image was deleted after check but before create
-        print(f"Image {image.pk} was deleted during status update")
+        logger.warning(f"Image {image.pk} was deleted during status update")
+        return False
     except Exception as err:
-        print(f"Writing classification status Image {image.pk}, status: {status}: {err}")
+        logger.warning(f"Writing classification status Image {image.pk}, status: {status}: {err}")
+    return True
 
 
 def generate_points(image: Image, num_points: int, margin: tuple[int, int] = (0, 0)):
@@ -400,7 +407,10 @@ def _classify_image(image_record_id, num_points=None):
     if not image:
         return
 
-    create_classification_status(image, ClassificationStatus.RUNNING)
+    # A user can delete the image (and its S3 file) while the job sits in the queue;
+    # invoking the Lambda then only produces a spurious processing_error.
+    if not create_classification_status(image, ClassificationStatus.RUNNING):
+        return
 
     try:
         classifier_record = Classifier.active()
@@ -415,6 +425,12 @@ def _classify_image(image_record_id, num_points=None):
 
         create_classification_status(image, ClassificationStatus.COMPLETED)
     except Exception as err:
+        # The locked write waits out an in-flight delete, whose post_delete signal
+        # removes the S3 file before the row delete commits. Deleted mid-run, the
+        # failure is expected and retrying cannot help.
+        if not create_classification_status(image, ClassificationStatus.FAILED, str(err)):
+            logger.warning(f"image {image_record_id} was deleted during classification: {err}")
+            return
         # [classify.processing_error] is the literal the CloudWatch metric filter in
         # iac/stacks/constructs/alerts.py matches on the image worker's log group; a
         # retryable failure already has the SQS DLQ alarm behind it, so only a
@@ -426,7 +442,6 @@ def _classify_image(image_record_id, num_points=None):
             logger.exception(
                 f"[classify.processing_error] classifying image {image_record_id} failed"
             )
-        create_classification_status(image, ClassificationStatus.FAILED, str(err))
         # Re-raise only a retryable failure so SQS redelivers it; the status/results
         # writes above are idempotent, so re-running this job is safe.
         if retryable:
