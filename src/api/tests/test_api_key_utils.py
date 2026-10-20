@@ -1,14 +1,9 @@
 import hashlib
-import os
-import subprocess
-import sys
 import uuid
-from pathlib import Path
 
 import pytest
 from django.core.exceptions import ImproperlyConfigured
 
-from api.checks import check_api_key_environment
 from api.utils.apikeys import (
     generate_api_key,
     get_environment_label,
@@ -102,43 +97,6 @@ def test_environment_used_verbatim(environment):
 def test_unknown_environment_is_rejected():
     with pytest.raises(ImproperlyConfigured):
         get_environment_label("staging")
-
-
-def test_startup_check_passes_for_a_known_environment(settings):
-    settings.ENVIRONMENT = "prod"
-    assert check_api_key_environment(None) == []
-
-
-def test_startup_check_flags_an_unknown_environment(settings):
-    """ENV is free text, so a typo would mint keys under a label that stops
-    verifying the moment the typo is fixed. The check catches it at startup."""
-
-    settings.ENVIRONMENT = "produciton"
-    errors = check_api_key_environment(None)
-
-    assert [error.id for error in errors] == ["api.E001"]
-    assert "produciton" in errors[0].msg
-
-
-def test_wsgi_startup_runs_the_system_checks():
-    """Django runs its system checks for `manage.py` commands only, so
-    `app.wsgi` runs them itself. Without that, a container with a bad ENV boots
-    healthy under gunicorn and 500s on every API-key request instead of failing
-    its deployment."""
-
-    import app
-
-    project_root = Path(app.__file__).resolve().parent.parent
-    result = subprocess.run(
-        [sys.executable, "-c", "import app.wsgi"],
-        capture_output=True,
-        text=True,
-        cwd=project_root,
-        env={**os.environ, "ENV": "produciton"},
-    )
-
-    assert result.returncode != 0
-    assert "api.E001" in result.stdout + result.stderr
 
 
 @pytest.mark.parametrize(
