@@ -32,6 +32,10 @@ def covariate_model(historical_apps):
             editor.create_model(Covariate)
     yield Covariate
     if created:
+        # Flush deferred FK checks from inserted rows; Postgres won't DROP a
+        # table with pending trigger events. Scoped to this table so an
+        # unrelated violation elsewhere can't mask this test's own failure.
+        connection.check_constraints(table_names=[Covariate._meta.db_table])
         with connection.schema_editor() as editor:
             editor.delete_model(Covariate)
 

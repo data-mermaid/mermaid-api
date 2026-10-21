@@ -46,7 +46,7 @@ def export_covariates(apps, schema_editor):
         tmp.flush()
 
         # Count rows from the written file rather than the loop, so a truncated
-        # file is caught. Halt here so 0136 can't drop the table with an
+        # file is caught. Halt here so 0139 can't drop the table with an
         # incomplete backup.
         tmp.seek(0)
         exported_count = sum(1 for _ in csv.reader(tmp)) - 1
