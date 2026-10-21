@@ -1,6 +1,7 @@
 from django.conf import settings
 from django.db import transaction
 from django.db.models import Q
+from django.utils import timezone
 from rest_framework import permissions, serializers, status
 from rest_framework.exceptions import MethodNotAllowed, NotFound, ValidationError
 from rest_framework.response import Response
@@ -294,7 +295,7 @@ class ImageViewSet(BaseProjectApiViewSet):
         return Response(data=data, status=status.HTTP_201_CREATED)
 
     def _get_validated_annotations(self, point_data, points_by_id):
-        if "annotations" not in point_data:
+        if not isinstance(point_data.get("annotations"), list):
             raise ValidationError("'annotations' is required.")
 
         point_id = point_data.get("id")
@@ -303,6 +304,11 @@ class ImageViewSet(BaseProjectApiViewSet):
             raise ValidationError(f"Point ({point_id}) is missing")
 
         return point, point_data.get("annotations")
+
+    def _check_only_one_confirmed_annotation(self, annotations):
+        confirmed_count = sum(1 for anno in annotations if anno.get("is_confirmed"))
+        if confirmed_count > 1:
+            raise ValidationError("Only one annotation can be confirmed.")
 
     def _delete_stale_user_annotations(self, points, point_ids, annotations_by_id):
         # Keep a submitted user annotation only if it belongs to the point it was
@@ -320,15 +326,22 @@ class ImageViewSet(BaseProjectApiViewSet):
             id__in=keep_ids
         ).delete()
 
-    def _update_machine_annotation(self, instance, annotation_data):
-        # Only is_confirmed is editable on machine annotations, so skip the
-        # serializer (and its FK lookups) and only write when it changed.
+    def _machine_annotation_confirmed_change(self, instance, annotation_data):
         is_confirmed = serializers.BooleanField().run_validation(
             annotation_data.get("is_confirmed") or False
         )
-        if instance.is_confirmed != is_confirmed:
-            instance.is_confirmed = is_confirmed
-            instance.save(update_fields=["is_confirmed", "updated_on"])
+        return is_confirmed if instance.is_confirmed != is_confirmed else None
+
+    def _save_machine_annotation_confirmations(self, to_confirm_ids, to_unconfirm_ids):
+        now = timezone.now()  # .update() skips auto_now
+        if to_unconfirm_ids:
+            Annotation.objects.filter(id__in=to_unconfirm_ids).update(
+                is_confirmed=False, updated_on=now
+            )
+        if to_confirm_ids:
+            Annotation.objects.filter(id__in=to_confirm_ids).update(
+                is_confirmed=True, updated_on=now
+            )
 
     def _is_user_annotation_unchanged(self, instance, annotation_data):
         is_confirmed = serializers.BooleanField().run_validation(
@@ -368,11 +381,12 @@ class ImageViewSet(BaseProjectApiViewSet):
             }
             self._delete_stale_user_annotations(points, point_ids, annotations_by_id)
 
+            to_confirm_ids = []
+            to_unconfirm_ids = []
+
             for point_data in points:
                 point, annotations = self._get_validated_annotations(point_data, points_by_id)
-                # Only allow one confirmed annotation per point
-                pnt_serializer = PointSerializer(instance=point, data=point_data, context=context)
-                pnt_serializer.is_valid(raise_exception=True)
+                self._check_only_one_confirmed_annotation(annotations)
 
                 for annotation_data in annotations:
                     anno_instance = annotations_by_id.get(str(annotation_data.get("id")))
@@ -380,7 +394,13 @@ class ImageViewSet(BaseProjectApiViewSet):
                         anno_instance = None
 
                     if anno_instance is not None and anno_instance.is_machine_created:
-                        self._update_machine_annotation(anno_instance, annotation_data)
+                        new_confirmed = self._machine_annotation_confirmed_change(
+                            anno_instance, annotation_data
+                        )
+                        if new_confirmed is not None:
+                            (to_confirm_ids if new_confirmed else to_unconfirm_ids).append(
+                                anno_instance.id
+                            )
                         continue
 
                     if anno_instance is not None and self._is_user_annotation_unchanged(
@@ -393,6 +413,8 @@ class ImageViewSet(BaseProjectApiViewSet):
                     )
                     anno_serializer.is_valid(raise_exception=True)
                     anno_serializer.save(point=point)
+
+            self._save_machine_annotation_confirmations(to_confirm_ids, to_unconfirm_ids)
 
         updated_image_record = qs.get(id=pk)
         return Response(ImageSerializer(instance=updated_image_record).data)
