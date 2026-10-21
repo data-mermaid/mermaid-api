@@ -286,7 +286,7 @@ class IncludeBleachingCSVListSerializer(CollectRecordCSVListSerializer):
         for rec in grouped_records:
             observations = utils.get_value(rec, obs_field) or []
             rec["data"]["include_bleaching"] = any(
-                obs.get("bleaching_status") for obs in observations
+                obs.get("bleaching_status") not in (None, "") for obs in observations
             )
         return grouped_records
 

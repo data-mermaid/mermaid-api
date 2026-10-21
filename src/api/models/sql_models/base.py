@@ -3,9 +3,14 @@ import uuid
 from django.contrib.gis.db import models
 from django.utils.translation import gettext_lazy as _
 
-from api.models import Project
+from api.models import BLEACHING_STATUS_CHOICES, Project
 
 project_where = """project.id = '%(project_id)s'::uuid"""
+
+# Inline bleaching status lookup with (val, name) columns, built from BLEACHING_STATUS_CHOICES
+bleaching_status_sql = "(VALUES {}) AS bs(val, name)".format(
+    ", ".join(f"({val}, '{name}')" for val, name in BLEACHING_STATUS_CHOICES)
+)
 
 sample_event_sql_template = """
     WITH tags AS MATERIALIZED (

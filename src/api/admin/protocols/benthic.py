@@ -14,7 +14,6 @@ from ...models import (
     BenthicPIT,
     BenthicTransect,
     BleachingQuadratCollection,
-    BleachingStatus,
     GrowthForm,
     HabitatComplexity,
     HabitatComplexityScore,
@@ -41,11 +40,6 @@ from ..base import (
 @admin.register(GrowthForm)
 class GrowthFormAdmin(BaseAdmin):
     list_display = ("name",)
-
-
-@admin.register(BleachingStatus)
-class BleachingStatusAdmin(BaseAdmin):
-    list_display = ("val", "name")
 
 
 @admin.register(HabitatComplexityScore)
@@ -239,7 +233,7 @@ class BenthicAttributeAdmin(AttributeAdmin):
 
 class ObsBenthicLITInline(ObservationInline):
     model = ObsBenthicLIT
-    cache_fields = ["attribute", "growth_form", "bleaching_status"]
+    cache_fields = ["attribute", "growth_form"]
 
 
 @admin.register(BenthicLIT)
@@ -263,26 +257,18 @@ class BenthicLITAdmin(TransectMethodAdmin):
     def get_formsets_with_inlines(self, request, obj=None):
         attributes = BenthicAttribute.objects.none()
         growth_forms = GrowthForm.objects.none()
-        bleaching_statuses = BleachingStatus.objects.none()
         if obj is not None:
             attributes = BenthicAttribute.objects.only("pk", "name").order_by("name")
             growth_forms = GrowthForm.objects.all()
-            bleaching_statuses = BleachingStatus.objects.order_by("val")
-
-        # Blank option so a null bleaching_status isn't saved as the first status
-        bleaching_status_choices = [("", "---------")] + [
-            (bs.pk, bs.name) for bs in bleaching_statuses
-        ]
         for inline in self.get_inline_instances(request, obj):
             inline.cached_attributes = [(a.pk, a.name) for a in attributes]
             inline.cached_growth_forms = [(gf.pk, gf.name) for gf in growth_forms]
-            inline.cached_bleaching_statuss = bleaching_status_choices
             yield inline.get_formset(request, obj), inline
 
 
 class ObsBenthicPITInline(ObservationInline):
     model = ObsBenthicPIT
-    cache_fields = ["attribute", "growth_form", "bleaching_status"]
+    cache_fields = ["attribute", "growth_form"]
 
 
 @admin.register(BenthicPIT)
@@ -306,20 +292,12 @@ class BenthicPITAdmin(TransectMethodAdmin):
     def get_formsets_with_inlines(self, request, obj=None):
         attributes = BenthicAttribute.objects.none()
         growth_forms = GrowthForm.objects.none()
-        bleaching_statuses = BleachingStatus.objects.none()
         if obj is not None:
             attributes = BenthicAttribute.objects.only("pk", "name").order_by("name")
             growth_forms = GrowthForm.objects.all()
-            bleaching_statuses = BleachingStatus.objects.order_by("val")
-
-        # Blank option so a null bleaching_status isn't saved as the first status
-        bleaching_status_choices = [("", "---------")] + [
-            (bs.pk, bs.name) for bs in bleaching_statuses
-        ]
         for inline in self.get_inline_instances(request, obj):
             inline.cached_attributes = [(a.pk, a.name) for a in attributes]
             inline.cached_growth_forms = [(gf.pk, gf.name) for gf in growth_forms]
-            inline.cached_bleaching_statuss = bleaching_status_choices
             yield inline.get_formset(request, obj), inline
 
 
