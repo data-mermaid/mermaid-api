@@ -49,6 +49,9 @@ class BenthicLITObsSQLModel(BaseSUSQLModel):
                 b.name AS benthic_attribute,
                 gf.id AS growth_form_id,
                 gf.name AS growth_form,
+                tt.include_bleaching,
+                bs.name AS bleaching_status,
+                bs.val AS bleaching_status_val,
                 o.notes AS observation_notes
             FROM
                 obs_benthiclit o
@@ -101,6 +104,7 @@ class BenthicLITObsSQLModel(BaseSUSQLModel):
                 JOIN benthic_attribute cat ON category.root = cat.id
                 JOIN benthic_attribute b ON o.attribute_id = b.id
                 LEFT JOIN growth_form gf ON o.growth_form_id = gf.id
+                LEFT JOIN bleaching_status bs ON o.bleaching_status_id = bs.id
                 LEFT JOIN api_current c ON su.current_id = c.id
                 LEFT JOIN api_tide t ON su.tide_id = t.id
                 LEFT JOIN api_visibility v ON su.visibility_id = v.id
@@ -192,6 +196,8 @@ class BenthicLITObsSQLModel(BaseSUSQLModel):
     benthic_category = models.CharField(max_length=100)
     benthic_attribute = models.CharField(max_length=100)
     growth_form = models.CharField(max_length=100)
+    include_bleaching = models.BooleanField(default=False)
+    bleaching_status = models.CharField(max_length=100, null=True, blank=True)
     life_histories = models.JSONField(null=True, blank=True)
     observation_notes = models.TextField(blank=True)
     data_policy_benthiclit = models.CharField(max_length=50)
@@ -289,7 +295,65 @@ class BenthicLITSUSQLModel(BaseSUSQLModel):
             ) su_length
             ON lh.pseudosu_id = su_length.pseudosu_id
             GROUP BY lh.pseudosu_id
-        ) 
+        ),
+        bleaching_obs AS (
+            SELECT pseudosu_id,
+            benthic_category AS coral_type,
+            bleaching_status_val,
+            length AS weight
+            FROM benthiclit_obs
+            WHERE include_bleaching IS TRUE
+            AND benthic_category IN ('Hard coral', 'Soft coral')
+            AND bleaching_status_val IS NOT NULL
+            UNION ALL
+            SELECT pseudosu_id,
+            'Total coral' AS coral_type,
+            bleaching_status_val,
+            length AS weight
+            FROM benthiclit_obs
+            WHERE include_bleaching IS TRUE
+            AND benthic_category IN ('Hard coral', 'Soft coral')
+            AND bleaching_status_val IS NOT NULL
+        ),
+        bleaching_totals AS (
+            SELECT pseudosu_id,
+            coral_type,
+            SUM(weight) AS total_weight,
+            COALESCE(SUM(weight) FILTER (WHERE bleaching_status_val > 0), 0) AS bleached_weight
+            FROM bleaching_obs
+            GROUP BY pseudosu_id, coral_type
+        ),
+        bleaching_status_weights AS (
+            SELECT pseudosu_id,
+            coral_type,
+            bleaching_status_val,
+            SUM(weight) AS status_weight
+            FROM bleaching_obs
+            GROUP BY pseudosu_id, coral_type, bleaching_status_val
+        ),
+        bleaching_percents AS (
+            SELECT coral_percents.pseudosu_id,
+            jsonb_object_agg(coral_percents.coral_type, coral_percents.percents) AS percent_bleached
+            FROM (
+                SELECT bt.pseudosu_id,
+                bt.coral_type,
+                jsonb_build_object('Bleached', ROUND(100.0 * bt.bleached_weight / bt.total_weight, 2))
+                || jsonb_object_agg(
+                    bs.name,
+                    ROUND(100.0 * COALESCE(bsw.status_weight, 0) / bt.total_weight, 2)
+                ) AS percents
+                FROM bleaching_totals bt
+                CROSS JOIN bleaching_status bs
+                LEFT JOIN bleaching_status_weights bsw ON (
+                    bt.pseudosu_id = bsw.pseudosu_id AND
+                    bt.coral_type = bsw.coral_type AND
+                    bs.val = bsw.bleaching_status_val
+                )
+                WHERE bs.val > 0
+                GROUP BY bt.pseudosu_id, bt.coral_type, bt.bleached_weight, bt.total_weight
+            ) coral_percents
+            GROUP BY coral_percents.pseudosu_id
+        )
 
         SELECT NULL AS id,
             benthiclit_su.pseudosu_id,
@@ -298,15 +362,19 @@ class BenthicLITSUSQLModel(BaseSUSQLModel):
             benthiclit_su.total_length,
             reef_slope,
             percent_cover_benthic_category,
-            percent_cover_life_histories
+            percent_cover_life_histories,
+            benthiclit_su.include_bleaching,
+            bleaching_percents.percent_bleached->'Hard coral' AS percent_bleached_hard_coral,
+            bleaching_percents.percent_bleached->'Soft coral' AS percent_bleached_soft_coral,
+            bleaching_percents.percent_bleached->'Total coral' AS percent_bleached_total_coral
         FROM (
             SELECT pseudosu_id,
                 jsonb_agg(DISTINCT sample_unit_id) AS sample_unit_ids,
                 SUM(benthiclit_obs.length) AS total_length,
                 {_su_fields_qualified},
                 {_su_aggfields_sql},
-                string_agg(DISTINCT reef_slope::text, ', '::text ORDER BY (reef_slope::text)) AS reef_slope
-                
+                string_agg(DISTINCT reef_slope::text, ', '::text ORDER BY (reef_slope::text)) AS reef_slope,
+                bool_or(include_bleaching) AS include_bleaching
             FROM benthiclit_obs
             GROUP BY pseudosu_id,
                 {_su_fields_qualified}
@@ -317,6 +385,8 @@ class BenthicLITSUSQLModel(BaseSUSQLModel):
         ON (benthiclit_su.pseudosu_id = life_histories_agg.pseudosu_id)
         INNER JOIN benthiclit_observers
         ON (benthiclit_su.pseudosu_id = benthiclit_observers.pseudosu_id)
+        LEFT JOIN bleaching_percents
+        ON (benthiclit_su.pseudosu_id = bleaching_percents.pseudosu_id)
     """
 
     sql_args = dict(
@@ -343,6 +413,10 @@ class BenthicLITSUSQLModel(BaseSUSQLModel):
     reef_slope = models.CharField(max_length=50)
     percent_cover_benthic_category = models.JSONField(null=True, blank=True)
     percent_cover_life_histories = models.JSONField(null=True, blank=True)
+    include_bleaching = models.BooleanField(default=False)
+    percent_bleached_hard_coral = models.JSONField(null=True, blank=True)
+    percent_bleached_soft_coral = models.JSONField(null=True, blank=True)
+    percent_bleached_total_coral = models.JSONField(null=True, blank=True)
     data_policy_benthiclit = models.CharField(max_length=50)
     pseudosu_id = models.UUIDField()
 
@@ -366,8 +440,37 @@ class BenthicLITSESQLModel(BaseSQLModel):
                 FROM benthiclit_su
             ) AS su_observers
             GROUP BY sample_event_id
+        ),
+        bleaching_su AS (
+            SELECT sample_event_id, 'Hard coral' AS coral_type, bdata.key, bdata.value
+            FROM benthiclit_su, jsonb_each_text(percent_bleached_hard_coral) AS bdata
+            UNION ALL
+            SELECT sample_event_id, 'Soft coral' AS coral_type, bdata.key, bdata.value
+            FROM benthiclit_su, jsonb_each_text(percent_bleached_soft_coral) AS bdata
+            UNION ALL
+            SELECT sample_event_id, 'Total coral' AS coral_type, bdata.key, bdata.value
+            FROM benthiclit_su, jsonb_each_text(percent_bleached_total_coral) AS bdata
+        ),
+        se_bleaching AS (
+            SELECT sample_event_id,
+            jsonb_object_agg(key, ROUND(percent_avg :: numeric, 2)) FILTER (WHERE coral_type = 'Hard coral') AS percent_bleached_hard_coral_avg,
+            jsonb_object_agg(key, ROUND(percent_sd :: numeric, 2)) FILTER (WHERE coral_type = 'Hard coral') AS percent_bleached_hard_coral_sd,
+            jsonb_object_agg(key, ROUND(percent_avg :: numeric, 2)) FILTER (WHERE coral_type = 'Soft coral') AS percent_bleached_soft_coral_avg,
+            jsonb_object_agg(key, ROUND(percent_sd :: numeric, 2)) FILTER (WHERE coral_type = 'Soft coral') AS percent_bleached_soft_coral_sd,
+            jsonb_object_agg(key, ROUND(percent_avg :: numeric, 2)) FILTER (WHERE coral_type = 'Total coral') AS percent_bleached_total_coral_avg,
+            jsonb_object_agg(key, ROUND(percent_sd :: numeric, 2)) FILTER (WHERE coral_type = 'Total coral') AS percent_bleached_total_coral_sd
+            FROM (
+                SELECT sample_event_id,
+                coral_type,
+                key,
+                AVG(value :: float) AS percent_avg,
+                STDDEV(value :: float) AS percent_sd
+                FROM bleaching_su
+                GROUP BY sample_event_id, coral_type, key
+            ) AS bleaching_su_stats
+            GROUP BY sample_event_id
         )
-        
+
         SELECT
             benthiclit_su.sample_event_id AS id,
             { _se_fields },
@@ -378,7 +481,14 @@ class BenthicLITSESQLModel(BaseSQLModel):
             percent_cover_benthic_category_avg,
             percent_cover_benthic_category_sd,
             percent_cover_life_histories_avg,
-            percent_cover_life_histories_sd
+            percent_cover_life_histories_sd,
+            COUNT(benthiclit_su.pseudosu_id) FILTER (WHERE benthiclit_su.include_bleaching) AS bleaching_sample_unit_count,
+            se_bleaching.percent_bleached_hard_coral_avg,
+            se_bleaching.percent_bleached_hard_coral_sd,
+            se_bleaching.percent_bleached_soft_coral_avg,
+            se_bleaching.percent_bleached_soft_coral_sd,
+            se_bleaching.percent_bleached_total_coral_avg,
+            se_bleaching.percent_bleached_total_coral_sd
         FROM
             benthiclit_su
             INNER JOIN (
@@ -420,6 +530,7 @@ class BenthicLITSESQLModel(BaseSQLModel):
             ) AS benthiclit_se_lhs
             ON benthiclit_su.sample_event_id = benthiclit_se_lhs.sample_event_id
             INNER JOIN se_observers ON (benthiclit_su.sample_event_id = se_observers.sample_event_id)
+            LEFT JOIN se_bleaching ON (benthiclit_su.sample_event_id = se_bleaching.sample_event_id)
 
             GROUP BY
             { ", ".join(
@@ -430,6 +541,12 @@ class BenthicLITSESQLModel(BaseSQLModel):
             percent_cover_benthic_category_sd,
             percent_cover_life_histories_avg,
             percent_cover_life_histories_sd,
+            se_bleaching.percent_bleached_hard_coral_avg,
+            se_bleaching.percent_bleached_hard_coral_sd,
+            se_bleaching.percent_bleached_soft_coral_avg,
+            se_bleaching.percent_bleached_soft_coral_sd,
+            se_bleaching.percent_bleached_total_coral_avg,
+            se_bleaching.percent_bleached_total_coral_sd,
             se_observers.observers
             """
     sql_args = dict(
@@ -457,6 +574,13 @@ class BenthicLITSESQLModel(BaseSQLModel):
     percent_cover_benthic_category_sd = models.JSONField(null=True, blank=True)
     percent_cover_life_histories_avg = models.JSONField(null=True, blank=True)
     percent_cover_life_histories_sd = models.JSONField(null=True, blank=True)
+    bleaching_sample_unit_count = models.PositiveSmallIntegerField(default=0)
+    percent_bleached_hard_coral_avg = models.JSONField(null=True, blank=True)
+    percent_bleached_hard_coral_sd = models.JSONField(null=True, blank=True)
+    percent_bleached_soft_coral_avg = models.JSONField(null=True, blank=True)
+    percent_bleached_soft_coral_sd = models.JSONField(null=True, blank=True)
+    percent_bleached_total_coral_avg = models.JSONField(null=True, blank=True)
+    percent_bleached_total_coral_sd = models.JSONField(null=True, blank=True)
     data_policy_benthiclit = models.CharField(max_length=50)
 
     class Meta:
