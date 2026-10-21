@@ -1,7 +1,7 @@
 from ..models import (
+    BLEACHING_STATUS_CHOICES,
     BeltTransectWidth,
     BenthicAttribute,
-    BleachingStatus,
     Current,
     FishSizeBin,
     GrowthForm,
@@ -35,7 +35,7 @@ def benthic_attributes_choices():
 
 
 def bleaching_status_choices():
-    return build_choices(BleachingStatus.objects.choices(order_by="val"))
+    return [(str(val), name) for val, name in BLEACHING_STATUS_CHOICES]
 
 
 def current_choices():
