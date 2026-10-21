@@ -21,6 +21,11 @@ def _cast_decimal_to_str(val):
     return None if val is None else str(val)
 
 
+def _blank_to_none(val):
+    # Unlike `or None`, keeps 0, which is a valid choice value
+    return None if val in (None, "") else val
+
+
 def _extract_sample_event(collect_record):
     data = collect_record.data or dict()
     return data.get("sample_event") or dict()
@@ -173,7 +178,7 @@ def get_obsbenthiclit_data(collect_record, benthic_lit_id=None):
                 attribute=observation.get("attribute"),
                 growth_form=observation.get("growth_form"),
                 length=observation.get("length"),
-                bleaching_status=observation.get("bleaching_status") or None,
+                bleaching_status=_blank_to_none(observation.get("bleaching_status")),
                 notes=observation.get("notes", ""),
             )
         )
@@ -192,7 +197,7 @@ def get_obsbenthicpit_data(collect_record, benthic_pit_id=None):
                 attribute=observation.get("attribute"),
                 growth_form=observation.get("growth_form"),
                 interval=_cast_decimal_to_str(observation.get("interval")),
-                bleaching_status=observation.get("bleaching_status") or None,
+                bleaching_status=_blank_to_none(observation.get("bleaching_status")),
                 notes=observation.get("notes", ""),
             )
         )

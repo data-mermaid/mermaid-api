@@ -1,3 +1,5 @@
+import datetime
+
 from django.contrib.gis.db import models
 from django.utils.translation import gettext as _
 
@@ -165,17 +167,21 @@ class BenthicAttributeGrowthFormLifeHistory(BaseModel):
         )
 
 
-class BleachingStatus(BaseChoiceModel):
-    name = models.CharField(max_length=100, unique=True)
-    val = models.PositiveSmallIntegerField()
-
-    def __str__(self):
-        return _("%s") % self.name
-
-    class Meta:
-        db_table = "bleaching_status"
-        ordering = ["val"]
-        verbose_name_plural = "bleaching statuses"
+BLEACHING_STATUS_NORMAL = 0
+BLEACHING_STATUS_PALE = 1
+BLEACHING_STATUS_PARTIALLY_BLEACHED = 2
+BLEACHING_STATUS_FULLY_BLEACHED = 3
+BLEACHING_STATUS_RECENT_MORTALITY = 4
+BLEACHING_STATUS_CHOICES = (
+    (BLEACHING_STATUS_NORMAL, "normal"),
+    (BLEACHING_STATUS_PALE, "pale"),
+    (BLEACHING_STATUS_PARTIALLY_BLEACHED, "partially bleached"),
+    (BLEACHING_STATUS_FULLY_BLEACHED, "fully bleached"),
+    (BLEACHING_STATUS_RECENT_MORTALITY, "recent bleaching mortality"),
+)
+BLEACHING_STATUS_CHOICES_UPDATED_ON = datetime.datetime(
+    2026, 10, 21, 0, 0, 0, 0, tzinfo=datetime.UTC
+)
 
 
 class BenthicLIT(TransectMethod):
@@ -207,6 +213,9 @@ class ObsBenthicLIT(BaseModel, JSONMixin):
     attribute = models.ForeignKey(BenthicAttribute, on_delete=models.PROTECT)
     growth_form = models.ForeignKey(GrowthForm, on_delete=models.SET_NULL, null=True, blank=True)
     length = models.PositiveSmallIntegerField(verbose_name=_("length (cm)"))
+    bleaching_status = models.PositiveSmallIntegerField(
+        choices=BLEACHING_STATUS_CHOICES, null=True, blank=True
+    )
     notes = models.TextField(blank=True)
 
     class Meta:
@@ -259,6 +268,9 @@ class ObsBenthicPIT(BaseModel, JSONMixin):
     attribute = models.ForeignKey(BenthicAttribute, on_delete=models.PROTECT)
     growth_form = models.ForeignKey(GrowthForm, on_delete=models.SET_NULL, null=True, blank=True)
     interval = models.DecimalField(max_digits=7, decimal_places=2)
+    bleaching_status = models.PositiveSmallIntegerField(
+        choices=BLEACHING_STATUS_CHOICES, null=True, blank=True
+    )
     notes = models.TextField(blank=True)
 
     class Meta:

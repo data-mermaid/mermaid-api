@@ -2,7 +2,13 @@ from django.contrib.gis.db import models
 from django.utils.translation import gettext_lazy as _
 
 from sqltables import SQLTableArg, SQLTableManager
-from .base import BaseSQLModel, BaseSUSQLModel, project_where, sample_event_sql_template
+from .base import (
+    BaseSQLModel,
+    BaseSUSQLModel,
+    bleaching_status_sql,
+    project_where,
+    sample_event_sql_template,
+)
 
 
 class BenthicPITObsSQLModel(BaseSUSQLModel):
@@ -86,7 +92,7 @@ class BenthicPITObsSQLModel(BaseSUSQLModel):
                 JOIN benthic_attribute cat ON category.root = cat.id
                 JOIN benthic_attribute b ON o.attribute_id = b.id
                 LEFT JOIN growth_form gf ON o.growth_form_id = gf.id
-                LEFT JOIN bleaching_status bs ON o.bleaching_status_id = bs.id
+                LEFT JOIN {bleaching_status_sql} ON o.bleaching_status = bs.val
                 LEFT JOIN api_current c ON su.current_id = c.id
                 LEFT JOIN api_tide t ON su.tide_id = t.id
                 LEFT JOIN api_visibility v ON su.visibility_id = v.id
@@ -332,7 +338,7 @@ class BenthicPITSUSQLModel(BaseSUSQLModel):
                     ROUND(100.0 * COALESCE(bsw.status_weight, 0) / bt.total_weight, 2)
                 ) AS percents
                 FROM bleaching_totals bt
-                CROSS JOIN bleaching_status bs
+                CROSS JOIN {bleaching_status_sql}
                 LEFT JOIN bleaching_status_weights bsw ON (
                     bt.pseudosu_id = bsw.pseudosu_id AND
                     bt.coral_type = bsw.coral_type AND

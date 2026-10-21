@@ -5,7 +5,6 @@ from api.models import (
     BenthicAttribute,
     BenthicAttributeGrowthFormLifeHistory,
     BenthicLifeHistory,
-    BleachingStatus,
     GrowthForm,
 )
 
@@ -125,21 +124,6 @@ def growth_form3(db):
 @pytest.fixture
 def growth_form4(db):
     return GrowthForm.objects.create(name="branching")
-
-
-@pytest.fixture
-def bleaching_status_normal(db):
-    return BleachingStatus.objects.create(val=0, name="normal")
-
-
-@pytest.fixture
-def bleaching_status_pale(db):
-    return BleachingStatus.objects.create(val=1, name="pale")
-
-
-@pytest.fixture
-def bleaching_status_fully_bleached(db):
-    return BleachingStatus.objects.create(val=3, name="fully bleached")
 
 
 @pytest.fixture
