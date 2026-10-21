@@ -1,6 +1,8 @@
 import pytest
 from django.urls import reverse
 
+from api.tests.utils import get_csv_rows as _get_rows
+
 
 def _call(client, token, url):
     response = client.get(url, HTTP_AUTHORIZATION=f"Bearer {token}")
@@ -244,3 +246,28 @@ def test_bleachingqc_se_view(
 
     if n != count:
         assert False, f"Wrong number of sample events, {n} should be {count}"
+
+
+def test_benthicpit_se_field_report(
+    client,
+    db_setup,
+    project1,
+    token1,
+    benthic_pit_project,
+    sample_event1,
+    sample_event2,
+    all_choices,
+    site2,
+    ba_gf_lh1,
+    management2,
+    profile2,
+    update_summary_cache,
+):
+    url = reverse("benthicpitmethod-sampleevent-csv", kwargs=dict(project_pk=project1.pk))
+    fieldnames, rows, response = _get_rows(client, token1, f"{url}?field_report=true")
+
+    assert response.has_header("Content-Disposition")
+    assert len(rows) == 2
+    assert "Country" in fieldnames
+    assert "site_id" not in fieldnames
+    assert len(rows[0].keys()) == 48
