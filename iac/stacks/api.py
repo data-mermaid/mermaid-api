@@ -5,6 +5,7 @@ from aws_cdk import (
     Arn,
     ArnComponents,
     ArnFormat,
+    CfnOutput,
     Duration,
     RemovalPolicy,
     Stack,
@@ -16,6 +17,7 @@ from aws_cdk import (
     aws_ecs as ecs,
     aws_ecs_patterns as ecs_patterns,
     aws_elasticloadbalancingv2 as elb,
+    aws_events as events,
     aws_iam as iam,
     aws_logs as logs,
     aws_rds as rds,
@@ -237,7 +239,21 @@ class ApiStack(Stack):
             directory="../",
             file="Dockerfile",
             target="runtime",
+            build_args={
+                "BUILD_GIT_SHA": os.environ.get("BUILD_GIT_SHA", "unknown"),
+                "BUILD_REPOSITORY": "data-mermaid/mermaid-api",
+            },
         )
+        deployment_logs = logs.LogGroup(
+            self,
+            "DeploymentProvenance",
+            log_group_name=f"/mermaid/{config.env_id}/deployments",
+            retention=logs.RetentionDays.ONE_YEAR,
+            removal_policy=RemovalPolicy.RETAIN,
+        )
+        CfnOutput(self, "ApiImageUri", value=image_asset.image_uri)
+        CfnOutput(self, "BuildGitSha", value=os.environ.get("BUILD_GIT_SHA", "unknown"))
+        CfnOutput(self, "DeploymentLogGroup", value=deployment_logs.log_group_name)
 
         # --- Scheduled Backup Task ---
 
@@ -341,6 +357,7 @@ class ApiStack(Stack):
             ),
         )
         add_adot_sidecar(task_definition, "Api")
+        CfnOutput(self, "ApiTaskDefinitionArn", value=task_definition.task_definition_arn)
 
         service = ecs.Ec2Service(
             self,
@@ -365,6 +382,63 @@ class ApiStack(Stack):
             max_healthy_percent=150 if config.api.container_count >= 2 else 200,
             capacity_provider_strategies=cluster.default_capacity_provider_strategy,
             circuit_breaker=ecs.DeploymentCircuitBreaker(enable=True, rollback=True),
+        )
+
+        # Retain this service's task lifecycle and image digests after ECS stops
+        # returning old tasks. Dev and prod share a cluster, so filter by service.
+        history_rule = events.CfnRule(
+            self,
+            "TaskDeploymentHistory",
+            event_pattern={
+                "source": ["aws.ecs"],
+                "detail-type": ["ECS Task State Change"],
+                "detail": {
+                    "clusterArn": [cluster.cluster_arn],
+                    "group": [f"service:{service.service_name}"],
+                },
+            },
+            targets=[
+                events.CfnRule.TargetProperty(
+                    id="DeploymentLogs",
+                    arn=self.format_arn(
+                        service="logs",
+                        resource="log-group",
+                        resource_name=deployment_logs.log_group_name,
+                        arn_format=ArnFormat.COLON_RESOURCE_NAME,
+                    ),
+                )
+            ],
+        )
+        # Native resource policy avoids a custom resource with account-wide IAM
+        # permissions. Event delivery is restricted to this rule and log group.
+        logs.CfnResourcePolicy(
+            self,
+            "DeploymentHistoryLogPolicy",
+            policy_name=f"mermaid-{config.env_id}-deployment-history",
+            policy_document=self.to_json_string(
+                {
+                    "Version": "2012-10-17",
+                    "Statement": [
+                        {
+                            "Effect": "Allow",
+                            "Principal": {
+                                "Service": ["events.amazonaws.com", "delivery.logs.amazonaws.com"]
+                            },
+                            "Action": ["logs:CreateLogStream", "logs:PutLogEvents"],
+                            "Resource": self.format_arn(
+                                service="logs",
+                                resource="log-group",
+                                resource_name=f"{deployment_logs.log_group_name}:*",
+                                arn_format=ArnFormat.COLON_RESOURCE_NAME,
+                            ),
+                            "Condition": {
+                                "ArnEquals": {"aws:SourceArn": history_rule.attr_arn},
+                                "StringEquals": {"aws:SourceAccount": self.account},
+                            },
+                        }
+                    ],
+                }
+            ),
         )
 
         # Grant Secret read to API container & backup task

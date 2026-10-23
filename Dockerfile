@@ -42,7 +42,11 @@ ARG DEBIAN_CODENAME
 ARG APP_USER
 ARG APP_UID
 ARG APP_DIR=/var/projects/${APP_USER}
+ARG BUILD_GIT_SHA=unknown
+ARG BUILD_REPOSITORY=data-mermaid/mermaid-api
 LABEL maintainer="<sysadmin@datamermaid.org>"
+LABEL org.opencontainers.image.revision="${BUILD_GIT_SHA}"
+LABEL org.opencontainers.image.source="https://github.com/${BUILD_REPOSITORY}"
 
 ENV DEBIAN_FRONTEND=noninteractive
 ENV LANG=C.UTF-8
