@@ -102,6 +102,7 @@ scratch/
 /src/static/
 ci_cd/VERSION.txt
 src/VERSION.txt
+iac/cdk-outputs.json
 src/growthform/
 
 *.env
