@@ -333,7 +333,11 @@ class ApiStack(Stack):
             linux_parameters=ecs.LinuxParameters(
                 self, "ApiLinuxParameters", init_process_enabled=True
             ),
-            environment={**environment, "OTEL_SERVICE_NAME": f"mermaid-api-{config.env_id}"},
+            environment={
+                **environment,
+                "OTEL_SERVICE_NAME": f"mermaid-api-{config.env_id}",
+                "MERMAID_WORKER_TELEMETRY": "1",
+            },
             secrets=self.api_secrets,
             logging=ecs.LogDrivers.aws_logs(
                 stream_prefix=config.env_id,
