@@ -287,7 +287,6 @@ class ObsBenthicLITCSVSerializer(ReportSerializer):
         ReportField("project_includes_gfcr", "Project includes GFCR", to_yesno),
         ReportField("suggested_citation", "Suggested citation"),
         ReportField("data_policy_benthiclit", "Benthic LIT data policy"),
-        ReportField("site_id"),
     ]
 
     additional_fields = [
@@ -297,6 +296,7 @@ class ObsBenthicLITCSVSerializer(ReportSerializer):
         ReportField("management_id"),
         ReportField("sample_event_id"),
         ReportField("sample_unit_id"),
+        ReportField("site_id"),
     ]
 
 
@@ -378,7 +378,6 @@ class BenthicLITMethodSUCSVSerializer(ReportSerializer):
         ReportField("project_includes_gfcr", "Project includes GFCR", to_yesno),
         ReportField("suggested_citation", "Suggested citation"),
         ReportField("data_policy_benthiclit", "Benthic LIT data policy"),
-        ReportField("site_id"),
     ]
 
     additional_fields = [
@@ -387,6 +386,7 @@ class BenthicLITMethodSUCSVSerializer(ReportSerializer):
         ReportField("management_id"),
         ReportField("sample_event_id"),
         ReportField("sample_unit_ids"),
+        ReportField("site_id"),
     ]
 
 
@@ -483,7 +483,6 @@ class BenthicLITMethodSECSVSerializer(ReportSerializer):
         ReportField("project_includes_gfcr", "Project includes GFCR", to_yesno),
         ReportField("suggested_citation", "Suggested citation"),
         ReportField("data_policy_benthiclit", "Benthic LIT data policy"),
-        ReportField("site_id"),
     ]
 
     additional_fields = [
@@ -492,6 +491,7 @@ class BenthicLITMethodSECSVSerializer(ReportSerializer):
         ReportField("country_id"),
         ReportField("management_id"),
         ReportField("sample_event_id"),
+        ReportField("site_id"),
     ]
 
 

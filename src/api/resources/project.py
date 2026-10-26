@@ -544,11 +544,6 @@ class ProjectViewSet(BaseApiViewSet):
                     # Collect PQT image IDs before the cascade-delete removes the
                     # ObsBenthicPhotoQuadrat rows that link back to them.
                     pqt_image_ids = collect_project_pqt_image_ids(existing_demo)
-                    # Lock all sites to prevent a background covariate-update job from
-                    # inserting new covariate rows between our cascade-deletion of
-                    # covariates and deletion of the sites themselves, which would
-                    # violate the api_covariate.site_id FK constraint.
-                    list(Site.objects.select_for_update().filter(project=existing_demo))
                     delete_instance_and_related_objects(existing_demo)
                     # Now that ObsBenthicPhotoQuadrat rows are gone (PROTECT lifted),
                     # delete the orphaned Image records and schedule S3 cleanup.
