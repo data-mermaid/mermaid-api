@@ -13,9 +13,6 @@ on:
       - 'w[0-9]+.[0-9]+'        # eg: w1.1
       - 'w[0-9]+.[0-9]+.[0-9]+' # eg: w1.1.1
 
-concurrency:
-  group: api-deployment-${{ github.ref }}
-
 permissions:
   contents: read  # This is required for actions/checkout
 
@@ -31,6 +28,10 @@ jobs:
 
   deploy:
     needs: [call-test]
+    # Job-level, not workflow-level, so the post-deploy aggregate-tests job doesn't hold
+    # the deploy lock and make later pushes queue behind it.
+    concurrency:
+      group: api-deployment-${{ github.ref }}
     runs-on: ubuntu-latest
     permissions:
       id-token: write  # required for requesting the OIDC JWT (AWS role assume)
@@ -132,20 +133,24 @@ jobs:
     timeout-minutes: 60
     permissions:
       contents: read
-    # MERMAIDR_M2M_CLIENT_ID / MERMAIDR_M2M_CLIENT_SECRET live in the dev environment:
-    # an Auth0 machine-to-machine app whose MERMAID profile is a read-only member of
-    # the mermaidr test projects.
-    environment: dev
+    # MERMAIDR_M2M_CLIENT_ID / MERMAIDR_M2M_CLIENT_SECRET live in a dedicated dev-tests
+    # environment (not dev, so these runs aren't recorded as dev deployments): an Auth0
+    # machine-to-machine app whose MERMAID profile is a read-only member of the mermaidr
+    # test projects.
+    environment: dev-tests
     steps:
       - name: Harden the runner (Audit all outbound calls)
         uses: step-security/harden-runner@9af89fc71515a100421586dfdb3dc9c984fbf411  # v2.19.4
         with:
           egress-policy: audit
 
+      # Pinned: this code runs with a dev-API token. Bump the SHA deliberately after
+      # reviewing mermaidr changes. Currently the head of data-mermaid/mermaidr#166
+      # (MERMAID_TOKEN / MERMAID_API_URL support); move to its merge commit once merged.
       - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd  # v6.0.2
         with:
           repository: data-mermaid/mermaidr
-          ref: master
+          ref: 27e769c9f372cd7c269e55f632780c88030cba7d
           path: mermaidr
           persist-credentials: false
 
@@ -153,38 +158,47 @@ jobs:
         with:
           use-public-rspm: true
 
+      # The test files only use mermaidr's Imports; skip its Suggests (tidyverse, etc.).
       - uses: r-lib/actions/setup-r-dependencies@d3c5be51b12e724e68f33216ca3c148b66d5f0b6  # v2.12.1
         with:
           working-directory: mermaidr
+          dependencies: '"hard"'
+          extra-packages: any::testthat
 
-      - name: Get dev API token (Auth0 client credentials)
+      # The token is fetched and used in this one step, so no later step (including
+      # third-party post-job steps) can read it.
+      - name: Run mermaidr aggregate tests against dev
+        working-directory: mermaidr
         shell: bash
         env:
           AUTH0_CLIENT_ID: ${{ secrets.MERMAIDR_M2M_CLIENT_ID }}
           AUTH0_CLIENT_SECRET: ${{ secrets.MERMAIDR_M2M_CLIENT_SECRET }}
+          MERMAID_API_URL: https://dev-api.datamermaid.org
+          CI: "false" # un-skips skip_on_ci()
+          NOT_CRAN: "true" # un-skips skip_on_cran()
         run: |
           payload=$(jq -n --arg id "$AUTH0_CLIENT_ID" --arg secret "$AUTH0_CLIENT_SECRET" \
             '{grant_type: "client_credentials", client_id: $id, client_secret: $secret, audience: "https://dev-api.datamermaid.org"}')
-          token=$(curl -sS --fail https://datamermaid.auth0.com/oauth/token \
-            -H "content-type: application/json" -d "$payload" | jq -r '.access_token // empty')
+          if ! response=$(curl -sS --fail-with-body https://datamermaid.auth0.com/oauth/token \
+            -H "content-type: application/json" -d "$payload"); then
+            echo "::error::Auth0 token request failed: $(jq -r '.error_description // .error // .' <<< "$response")"
+            exit 1
+          fi
+          token=$(jq -r '.access_token // empty' <<< "$response")
           if [ -z "$token" ]; then
             echo "::error::No access token returned by Auth0"
             exit 1
           fi
           echo "::add-mask::$token"
-          echo "MERMAID_TOKEN=$token" >> "$GITHUB_ENV"
 
-      - name: Run mermaidr aggregate tests against dev
-        working-directory: mermaidr
-        shell: bash
-        env:
-          MERMAID_API_URL: https://dev-api.datamermaid.org
-          CI: "false" # un-skips skip_on_ci()
-          NOT_CRAN: "true" # un-skips skip_on_cran()
-        run: |
-          run_tests() {
-            Rscript -e 'testthat::test_local(filter = "mermaid_get_project_data|mermaid_get_summary_sampleevents", stop_on_failure = TRUE)'
-          }
-          # Retry once: SU/SE endpoints read the async summary cache, which can briefly
-          # lag the observations right after a deploy or an edit to a test project.
-          run_tests || { echo "::warning::Aggregate tests failed; retrying in 10 minutes"; sleep 600; run_tests; }
+          # No automatic retry: a failure is either a regression or a setup problem, and
+          # both should surface. If a test project was edited mid-run (SU/SE read the
+          # async summary cache), re-run the job.
+          # Fails if any test fails, or if none passed (e.g. every test skipped).
+          MERMAID_TOKEN="$token" Rscript -e '
+            res <- as.data.frame(testthat::test_local(
+              filter = "mermaid_get_project_data|mermaid_get_summary_sampleevents",
+              stop_on_failure = TRUE
+            ))
+            if (sum(res[["passed"]]) == 0) stop("No aggregate test passed: all skipped or none ran")
+          '
