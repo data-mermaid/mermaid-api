@@ -524,7 +524,7 @@ class BenthicPITMethodObsFilterSet(BaseSUObsFilterSet):
     benthic_category = BaseInFilter(method="char_lookup")
     benthic_attribute = BaseInFilter(method="char_lookup")
     growth_form = BaseInFilter(method="char_lookup")
-    bleaching_status = BaseInFilter(method="char_lookup")
+    bleaching_status = BaseInFilter(method="bleaching_status_lookup")
     interval_size = RangeFilter()
     interval = RangeFilter()
 
