@@ -150,7 +150,7 @@ jobs:
       - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd  # v6.0.2
         with:
           repository: data-mermaid/mermaidr
-          ref: 27e769c9f372cd7c269e55f632780c88030cba7d
+          ref: 9a6342e1f60aaf534169ee133ea80959e5df6afd
           path: mermaidr
           persist-credentials: false
 
