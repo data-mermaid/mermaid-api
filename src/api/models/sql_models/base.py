@@ -3,7 +3,13 @@ import uuid
 from django.contrib.gis.db import models
 from django.utils.translation import gettext_lazy as _
 
-from api.models import BLEACHING_STATUS_CHOICES, Project
+from api.models import (
+    BLEACHING_CATEGORIES,
+    BLEACHING_CATEGORY_HARD_CORAL,
+    BLEACHING_CATEGORY_SOFT_CORAL,
+    BLEACHING_STATUS_CHOICES,
+    Project,
+)
 
 project_where = """project.id = '%(project_id)s'::uuid"""
 
@@ -11,6 +17,121 @@ project_where = """project.id = '%(project_id)s'::uuid"""
 bleaching_status_sql = "(VALUES {}) AS bs(val, name)".format(
     ", ".join(f"({val}, '{name}')" for val, name in BLEACHING_STATUS_CHOICES)
 )
+bleaching_categories_sql = ", ".join(f"'{name}'" for name in BLEACHING_CATEGORIES)
+
+# SU columns pulled from the `bleaching_percents` CTE built by bleaching_su_sql
+bleaching_su_columns_sql = f"""
+    bleaching_percents.percent_bleached->'{BLEACHING_CATEGORY_HARD_CORAL}' AS percent_bleached_hard_coral,
+    bleaching_percents.percent_bleached->'{BLEACHING_CATEGORY_SOFT_CORAL}' AS percent_bleached_soft_coral,
+    bleaching_percents.percent_bleached->'Total coral' AS percent_bleached_total_coral
+"""
+
+
+def bleaching_su_sql(obs_table, weight):
+    """
+    SU-level bleaching CTEs ending in `bleaching_percents` (pseudosu_id, percent_bleached jsonb keyed by
+    coral type). `obs_table` must have pseudosu_id, benthic_category, include_bleaching and
+    bleaching_status_val columns; `weight` is the SQL expression each observation contributes.
+    """
+    return f"""
+    bleaching_obs AS (
+        SELECT pseudosu_id,
+        benthic_category AS coral_type,
+        bleaching_status_val,
+        {weight} AS weight
+        FROM {obs_table}
+        WHERE include_bleaching IS TRUE
+        AND benthic_category IN ({bleaching_categories_sql})
+        AND bleaching_status_val IS NOT NULL
+        UNION ALL
+        SELECT pseudosu_id,
+        'Total coral' AS coral_type,
+        bleaching_status_val,
+        {weight} AS weight
+        FROM {obs_table}
+        WHERE include_bleaching IS TRUE
+        AND benthic_category IN ({bleaching_categories_sql})
+        AND bleaching_status_val IS NOT NULL
+    ),
+    bleaching_totals AS (
+        SELECT pseudosu_id,
+        coral_type,
+        SUM(weight) AS total_weight,
+        COALESCE(SUM(weight) FILTER (WHERE bleaching_status_val > 0), 0) AS bleached_weight
+        FROM bleaching_obs
+        GROUP BY pseudosu_id, coral_type
+    ),
+    bleaching_status_weights AS (
+        SELECT pseudosu_id,
+        coral_type,
+        bleaching_status_val,
+        SUM(weight) AS status_weight
+        FROM bleaching_obs
+        GROUP BY pseudosu_id, coral_type, bleaching_status_val
+    ),
+    bleaching_percents AS (
+        SELECT coral_percents.pseudosu_id,
+        jsonb_object_agg(coral_percents.coral_type, coral_percents.percents) AS percent_bleached
+        FROM (
+            SELECT bt.pseudosu_id,
+            bt.coral_type,
+            jsonb_build_object('Bleached', ROUND(100.0 * bt.bleached_weight / NULLIF(bt.total_weight, 0), 2))
+            || jsonb_object_agg(
+                bs.name,
+                ROUND(100.0 * COALESCE(bsw.status_weight, 0) / NULLIF(bt.total_weight, 0), 2)
+            ) AS percents
+            FROM bleaching_totals bt
+            CROSS JOIN {bleaching_status_sql}
+            LEFT JOIN bleaching_status_weights bsw ON (
+                bt.pseudosu_id = bsw.pseudosu_id AND
+                bt.coral_type = bsw.coral_type AND
+                bs.val = bsw.bleaching_status_val
+            )
+            WHERE bs.val > 0
+            GROUP BY bt.pseudosu_id, bt.coral_type, bt.bleached_weight, bt.total_weight
+        ) coral_percents
+        GROUP BY coral_percents.pseudosu_id
+    )
+    """
+
+
+def bleaching_se_sql(su_table):
+    """
+    SE-level bleaching CTEs ending in `se_bleaching` (sample_event_id, avg/sd jsonb per coral type),
+    aggregated from the percent_bleached_* columns of `su_table`.
+    """
+    return f"""
+    bleaching_su AS (
+        SELECT sample_event_id, '{BLEACHING_CATEGORY_HARD_CORAL}' AS coral_type, bdata.key, bdata.value
+        FROM {su_table}, jsonb_each_text(percent_bleached_hard_coral) AS bdata
+        UNION ALL
+        SELECT sample_event_id, '{BLEACHING_CATEGORY_SOFT_CORAL}' AS coral_type, bdata.key, bdata.value
+        FROM {su_table}, jsonb_each_text(percent_bleached_soft_coral) AS bdata
+        UNION ALL
+        SELECT sample_event_id, 'Total coral' AS coral_type, bdata.key, bdata.value
+        FROM {su_table}, jsonb_each_text(percent_bleached_total_coral) AS bdata
+    ),
+    se_bleaching AS (
+        SELECT sample_event_id,
+        jsonb_object_agg(key, ROUND(percent_avg :: numeric, 2)) FILTER (WHERE coral_type = '{BLEACHING_CATEGORY_HARD_CORAL}') AS percent_bleached_hard_coral_avg,
+        jsonb_object_agg(key, ROUND(percent_sd :: numeric, 2)) FILTER (WHERE coral_type = '{BLEACHING_CATEGORY_HARD_CORAL}') AS percent_bleached_hard_coral_sd,
+        jsonb_object_agg(key, ROUND(percent_avg :: numeric, 2)) FILTER (WHERE coral_type = '{BLEACHING_CATEGORY_SOFT_CORAL}') AS percent_bleached_soft_coral_avg,
+        jsonb_object_agg(key, ROUND(percent_sd :: numeric, 2)) FILTER (WHERE coral_type = '{BLEACHING_CATEGORY_SOFT_CORAL}') AS percent_bleached_soft_coral_sd,
+        jsonb_object_agg(key, ROUND(percent_avg :: numeric, 2)) FILTER (WHERE coral_type = 'Total coral') AS percent_bleached_total_coral_avg,
+        jsonb_object_agg(key, ROUND(percent_sd :: numeric, 2)) FILTER (WHERE coral_type = 'Total coral') AS percent_bleached_total_coral_sd
+        FROM (
+            SELECT sample_event_id,
+            coral_type,
+            key,
+            AVG(value :: float) AS percent_avg,
+            STDDEV(value :: float) AS percent_sd
+            FROM bleaching_su
+            GROUP BY sample_event_id, coral_type, key
+        ) AS bleaching_su_stats
+        GROUP BY sample_event_id
+    )
+    """
+
 
 sample_event_sql_template = """
     WITH tags AS MATERIALIZED (
