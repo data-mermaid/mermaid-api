@@ -116,8 +116,11 @@ jobs:
         run: |
           report=cdk.out/validation-report.json
           rm -f "${report}"
-          cdk synth --quiet 2>&1 | tee /tmp/cdk-nag.log || true
+          # Capture synth's status straight from PIPESTATUS (`|| true` would reset it under pipefail).
+          set +e
+          cdk synth --quiet 2>&1 | tee /tmp/cdk-nag.log
           synth_exit=${PIPESTATUS[0]}
+          set -e
           if [ ! -f "${report}" ]; then
             echo "::error::${report} not found: cdk synth failed before cdk-nag ran"
             echo "has_errors=true" >> "$GITHUB_OUTPUT"
