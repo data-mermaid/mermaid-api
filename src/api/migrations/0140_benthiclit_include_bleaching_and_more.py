@@ -5,7 +5,7 @@ from django.db import migrations, models
 
 class Migration(migrations.Migration):
     dependencies = [
-        ("api", "0137_apikey"),
+        ("api", "0139_delete_covariate"),
     ]
 
     operations = [
