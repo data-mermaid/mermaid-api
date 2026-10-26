@@ -107,35 +107,57 @@ jobs:
           PYTHONPATH: ${{ github.workspace }}
           SLACK_CHANNEL_ID: ${{ secrets.SLACK_CHANNEL_ID }}
           SLACK_WORKSPACE_ID: ${{ secrets.SLACK_WORKSPACE_ID }}
+        # cdk-nag v3 runs as a CDK policy validation plugin: every unacknowledged finding
+        # (error or warning) fails `cdk synth` and is listed in cdk.out/validation-report.json.
+        # A missing report means synth failed before validation ran, so that fails too.
+        # Only plugins that concluded "failure" count: CDK's built-in CloudFormation Validate
+        # plugin can add advisory warnings under a "success" conclusion.
+        working-directory: iac
         run: |
-          set -o pipefail
-          cd iac && cdk synth --quiet 2>&1 | tee /tmp/cdk-nag.log
-          if grep -q '^\[Error' /tmp/cdk-nag.log; then
+          report=cdk.out/validation-report.json
+          rm -f "${report}"
+          cdk synth --quiet 2>&1 | tee /tmp/cdk-nag.log || true
+          synth_exit=${PIPESTATUS[0]}
+          if [ ! -f "${report}" ]; then
+            echo "::error::${report} not found: cdk synth failed before cdk-nag ran"
+            echo "has_errors=true" >> "$GITHUB_OUTPUT"
+          elif [ "${synth_exit}" != "0" ] || [ "$(jq '[.pluginReports[] | select(.conclusion == "failure") | .violations[]] | length' "${report}")" != "0" ]; then
             echo "has_errors=true" >> "$GITHUB_OUTPUT"
           else
             echo "has_errors=false" >> "$GITHUB_OUTPUT"
           fi
 
       - name: Post CDK Nag results to PR
-        if: always() && steps.cdk-nag.outcome == 'success'
+        if: always() && steps.cdk-nag.conclusion != 'skipped'
         uses: actions/github-script@f28e40c7f34bde8b3046d885e986cb6290c5673b  # v7
         with:
           script: |
             const fs = require('fs');
-            const log = fs.readFileSync('/tmp/cdk-nag.log', 'utf8');
-            const errors = log.split('\n').filter(l => l.startsWith('[Error'));
-            const warnings = log.split('\n').filter(l => l.startsWith('[Warning'));
+            const reportPath = 'iac/cdk.out/validation-report.json';
+            const list = (violations) => violations
+              .map(v => `- \`${v.ruleName}\`\n` + v.violatingConstructs.map(c => `  - \`${c.constructPath}\``).join('\n'))
+              .join('\n');
             let body = '## cdk-nag report\n\n';
-            if (errors.length === 0) {
-              body += ':white_check_mark: **No unsuppressed errors.**\n';
+            if (!fs.existsSync(reportPath)) {
+              body += ':x: **`cdk synth` failed before cdk-nag ran.** See the job log.\n';
             } else {
-              body += `:x: **${errors.length} unsuppressed error(s):**\n\n`;
-              body += '```\n' + errors.join('\n') + '\n```\n';
+              const report = JSON.parse(fs.readFileSync(reportPath, 'utf8'));
+              const violations = report.pluginReports
+                .filter(p => p.conclusion === 'failure')
+                .flatMap(p => p.violations);
+              const errors = violations.filter(v => v.severity === 'error');
+              const warnings = violations.filter(v => v.severity !== 'error');
+              if (violations.length === 0) {
+                body += ':white_check_mark: **No unacknowledged findings.**\n';
+              }
+              if (errors.length > 0) {
+                body += `:x: **${errors.length} unacknowledged error(s):**\n\n${list(errors)}\n`;
+              }
+              if (warnings.length > 0) {
+                body += `\n:warning: **${warnings.length} unacknowledged warning(s)** (these also fail the job):\n\n${list(warnings)}\n`;
+              }
             }
-            if (warnings.length > 0) {
-              body += `\n:warning: ${warnings.length} warning(s)\n`;
-            }
-            body += '\n---\n*See `iac/nag_suppressions.py` to add suppressions for accepted risks.*';
+            body += '\n---\n*See `iac/nag_suppressions.py` to acknowledge accepted risks.*';
             const { data: comments } = await github.rest.issues.listComments({
               owner: context.repo.owner,
               repo: context.repo.repo,

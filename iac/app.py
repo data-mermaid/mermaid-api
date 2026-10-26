@@ -1,7 +1,7 @@
 import os
 
 import nag_suppressions
-from aws_cdk import App, Aspects, Environment, aws_s3 as s3
+from aws_cdk import App, Environment, Validations, aws_s3 as s3
 from cdk_nag import AwsSolutionsChecks
 from settings.dev import DEV_SETTINGS
 from settings.prod import PROD_SETTINGS
@@ -22,7 +22,7 @@ tags = {
 
 
 app = App()
-Aspects.of(app).add(AwsSolutionsChecks(verbose=True))
+Validations.of(app).add_plugins(AwsSolutionsChecks(app, verbose=True))
 
 cdk_env = Environment(
     account=os.getenv("CDK_DEFAULT_ACCOUNT", None),
