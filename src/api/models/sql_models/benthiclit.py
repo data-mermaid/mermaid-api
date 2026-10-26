@@ -5,7 +5,10 @@ from sqltables import SQLTableArg, SQLTableManager
 from .base import (
     BaseSQLModel,
     BaseSUSQLModel,
+    bleaching_se_sql,
     bleaching_status_sql,
+    bleaching_su_columns_sql,
+    bleaching_su_sql,
     project_where,
     sample_event_sql_template,
 )
@@ -302,64 +305,7 @@ class BenthicLITSUSQLModel(BaseSUSQLModel):
             ON lh.pseudosu_id = su_length.pseudosu_id
             GROUP BY lh.pseudosu_id
         ),
-        bleaching_obs AS (
-            SELECT pseudosu_id,
-            benthic_category AS coral_type,
-            bleaching_status_val,
-            length AS weight
-            FROM benthiclit_obs
-            WHERE include_bleaching IS TRUE
-            AND benthic_category IN ('Hard coral', 'Soft coral')
-            AND bleaching_status_val IS NOT NULL
-            UNION ALL
-            SELECT pseudosu_id,
-            'Total coral' AS coral_type,
-            bleaching_status_val,
-            length AS weight
-            FROM benthiclit_obs
-            WHERE include_bleaching IS TRUE
-            AND benthic_category IN ('Hard coral', 'Soft coral')
-            AND bleaching_status_val IS NOT NULL
-        ),
-        bleaching_totals AS (
-            SELECT pseudosu_id,
-            coral_type,
-            SUM(weight) AS total_weight,
-            COALESCE(SUM(weight) FILTER (WHERE bleaching_status_val > 0), 0) AS bleached_weight
-            FROM bleaching_obs
-            GROUP BY pseudosu_id, coral_type
-        ),
-        bleaching_status_weights AS (
-            SELECT pseudosu_id,
-            coral_type,
-            bleaching_status_val,
-            SUM(weight) AS status_weight
-            FROM bleaching_obs
-            GROUP BY pseudosu_id, coral_type, bleaching_status_val
-        ),
-        bleaching_percents AS (
-            SELECT coral_percents.pseudosu_id,
-            jsonb_object_agg(coral_percents.coral_type, coral_percents.percents) AS percent_bleached
-            FROM (
-                SELECT bt.pseudosu_id,
-                bt.coral_type,
-                jsonb_build_object('Bleached', ROUND(100.0 * bt.bleached_weight / NULLIF(bt.total_weight, 0), 2))
-                || jsonb_object_agg(
-                    bs.name,
-                    ROUND(100.0 * COALESCE(bsw.status_weight, 0) / NULLIF(bt.total_weight, 0), 2)
-                ) AS percents
-                FROM bleaching_totals bt
-                CROSS JOIN {bleaching_status_sql}
-                LEFT JOIN bleaching_status_weights bsw ON (
-                    bt.pseudosu_id = bsw.pseudosu_id AND
-                    bt.coral_type = bsw.coral_type AND
-                    bs.val = bsw.bleaching_status_val
-                )
-                WHERE bs.val > 0
-                GROUP BY bt.pseudosu_id, bt.coral_type, bt.bleached_weight, bt.total_weight
-            ) coral_percents
-            GROUP BY coral_percents.pseudosu_id
-        )
+        {bleaching_su_sql('benthiclit_obs', 'length')}
 
         SELECT NULL AS id,
             benthiclit_su.pseudosu_id,
@@ -370,9 +316,7 @@ class BenthicLITSUSQLModel(BaseSUSQLModel):
             percent_cover_benthic_category,
             percent_cover_life_histories,
             benthiclit_su.include_bleaching,
-            bleaching_percents.percent_bleached->'Hard coral' AS percent_bleached_hard_coral,
-            bleaching_percents.percent_bleached->'Soft coral' AS percent_bleached_soft_coral,
-            bleaching_percents.percent_bleached->'Total coral' AS percent_bleached_total_coral
+            {bleaching_su_columns_sql}
         FROM (
             SELECT pseudosu_id,
                 jsonb_agg(DISTINCT sample_unit_id) AS sample_unit_ids,
@@ -447,35 +391,7 @@ class BenthicLITSESQLModel(BaseSQLModel):
             ) AS su_observers
             GROUP BY sample_event_id
         ),
-        bleaching_su AS (
-            SELECT sample_event_id, 'Hard coral' AS coral_type, bdata.key, bdata.value
-            FROM benthiclit_su, jsonb_each_text(percent_bleached_hard_coral) AS bdata
-            UNION ALL
-            SELECT sample_event_id, 'Soft coral' AS coral_type, bdata.key, bdata.value
-            FROM benthiclit_su, jsonb_each_text(percent_bleached_soft_coral) AS bdata
-            UNION ALL
-            SELECT sample_event_id, 'Total coral' AS coral_type, bdata.key, bdata.value
-            FROM benthiclit_su, jsonb_each_text(percent_bleached_total_coral) AS bdata
-        ),
-        se_bleaching AS (
-            SELECT sample_event_id,
-            jsonb_object_agg(key, ROUND(percent_avg :: numeric, 2)) FILTER (WHERE coral_type = 'Hard coral') AS percent_bleached_hard_coral_avg,
-            jsonb_object_agg(key, ROUND(percent_sd :: numeric, 2)) FILTER (WHERE coral_type = 'Hard coral') AS percent_bleached_hard_coral_sd,
-            jsonb_object_agg(key, ROUND(percent_avg :: numeric, 2)) FILTER (WHERE coral_type = 'Soft coral') AS percent_bleached_soft_coral_avg,
-            jsonb_object_agg(key, ROUND(percent_sd :: numeric, 2)) FILTER (WHERE coral_type = 'Soft coral') AS percent_bleached_soft_coral_sd,
-            jsonb_object_agg(key, ROUND(percent_avg :: numeric, 2)) FILTER (WHERE coral_type = 'Total coral') AS percent_bleached_total_coral_avg,
-            jsonb_object_agg(key, ROUND(percent_sd :: numeric, 2)) FILTER (WHERE coral_type = 'Total coral') AS percent_bleached_total_coral_sd
-            FROM (
-                SELECT sample_event_id,
-                coral_type,
-                key,
-                AVG(value :: float) AS percent_avg,
-                STDDEV(value :: float) AS percent_sd
-                FROM bleaching_su
-                GROUP BY sample_event_id, coral_type, key
-            ) AS bleaching_su_stats
-            GROUP BY sample_event_id
-        )
+        {bleaching_se_sql('benthiclit_su')}
 
         SELECT
             benthiclit_su.sample_event_id AS id,
@@ -488,7 +404,10 @@ class BenthicLITSESQLModel(BaseSQLModel):
             percent_cover_benthic_category_sd,
             percent_cover_life_histories_avg,
             percent_cover_life_histories_sd,
-            COUNT(benthiclit_su.pseudosu_id) FILTER (WHERE benthiclit_su.include_bleaching) AS bleaching_sample_unit_count,
+            COUNT(benthiclit_su.pseudosu_id) FILTER (
+                WHERE benthiclit_su.include_bleaching
+                AND benthiclit_su.percent_bleached_total_coral IS NOT NULL
+            ) AS bleaching_sample_unit_count,
             se_bleaching.percent_bleached_hard_coral_avg,
             se_bleaching.percent_bleached_hard_coral_sd,
             se_bleaching.percent_bleached_soft_coral_avg,

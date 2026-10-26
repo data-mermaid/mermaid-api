@@ -1,10 +1,9 @@
 from django.db import connection
 
-from ....models import BLEACHING_STATUS_CHOICES
+from ....models import BLEACHING_CATEGORIES, BLEACHING_STATUS_CHOICES
 from ..utils import valid_id
 from .base import ERROR, OK, WARN, BaseValidator, validator_result
 
-BLEACHING_CATEGORIES = ("Hard coral", "Soft coral")
 # Collect sends ints, ingest sends the choice key as a string
 BLEACHING_STATUS_VALUES = {str(val) for val, _ in BLEACHING_STATUS_CHOICES}
 
@@ -66,7 +65,6 @@ class BaseBleachingStatusValidator(BaseValidator):
 class IncludeBleachingValidator(BaseValidator):
     """
     A missing include_bleaching key defaults to false (API, import, integrations).
-    Collect sends the key as null until the diver answers, which must not submit.
     """
 
     REQUIRED = "include_bleaching_required"
@@ -131,8 +129,8 @@ class BleachingStatusValidator(BaseBleachingStatusValidator):
 class BleachingStatusMissingValidator(BaseBleachingStatusValidator):
     """
     When the sample unit includes bleaching, hard and soft coral observations
-    without a status are stored as no bleaching recorded. Warn once per sample
-    unit so the diver confirms it.
+    without a status are stored as NULL (not assessed) and are left out of
+    percent bleached. Warn once per sample unit so the diver confirms it.
     """
 
     MISSING_BLEACHING_STATUS = "missing_bleaching_status"
