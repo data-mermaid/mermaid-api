@@ -343,10 +343,10 @@ class BenthicLITSUSQLModel(BaseSUSQLModel):
             FROM (
                 SELECT bt.pseudosu_id,
                 bt.coral_type,
-                jsonb_build_object('Bleached', ROUND(100.0 * bt.bleached_weight / bt.total_weight, 2))
+                jsonb_build_object('Bleached', ROUND(100.0 * bt.bleached_weight / NULLIF(bt.total_weight, 0), 2))
                 || jsonb_object_agg(
                     bs.name,
-                    ROUND(100.0 * COALESCE(bsw.status_weight, 0) / bt.total_weight, 2)
+                    ROUND(100.0 * COALESCE(bsw.status_weight, 0) / NULLIF(bt.total_weight, 0), 2)
                 ) AS percents
                 FROM bleaching_totals bt
                 CROSS JOIN {bleaching_status_sql}
