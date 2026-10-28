@@ -4,7 +4,7 @@ from typing import Literal
 
 from api.utils import get_value, set_value
 from .statuses import ERROR, IGNORE, OK, WARN
-from .validators import BaseValidator, ValidatorResult
+from .validators import BaseValidator, DrySubmitValidator, ValidatorResult
 
 RECORD_KEY = "$record"
 RECORD_LEVEL = "record"
@@ -170,7 +170,7 @@ class ValidationRunner:
             validation.run(collect_record_dict, request=request)
         return self.set_validator_result(validation, existing_validations)
 
-    def validate(self, collect_record, validations, request):
+    def validate(self, collect_record, validations, request, skip_dry_submit=False):
         delayed_validations = []
         statuses = []
         collect_record_dict = self.serializer(instance=collect_record).data
@@ -178,6 +178,9 @@ class ValidationRunner:
             get_value(collect_record_dict, "validations.results", delimiter=".") or {}
         )
         for validation in validations:
+            if skip_dry_submit and isinstance(validation.validator, DrySubmitValidator):
+                continue
+
             if validation.delay_validation:
                 delayed_validations.append(validation)
                 continue

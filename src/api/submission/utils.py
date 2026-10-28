@@ -221,25 +221,46 @@ def validate(validator_cls, model_cls, qry_params=None):
         )
 
 
-def _validate_collect_record(record, record_serializer, request):
+def _validate_collect_record(record, record_serializer, request, skip_dry_submit=False):
     protocol = record.data.get("protocol")
     if protocol not in PROTOCOL_MAP:
         raise ValueError(gettext_lazy(f"{protocol} not supported"))
 
     runner = ValidationRunner(serializer=record_serializer)
     if protocol == BENTHICLIT_PROTOCOL:
-        runner.validate(record, benthic_lit.benthic_lit_validations, request=request)
+        runner.validate(
+            record,
+            benthic_lit.benthic_lit_validations,
+            request=request,
+            skip_dry_submit=skip_dry_submit,
+        )
     elif protocol == BENTHICPIT_PROTOCOL:
-        runner.validate(record, benthic_pit.benthic_pit_validations, request=request)
+        runner.validate(
+            record,
+            benthic_pit.benthic_pit_validations,
+            request=request,
+            skip_dry_submit=skip_dry_submit,
+        )
     elif protocol == FISHBELT_PROTOCOL:
-        runner.validate(record, belt_fish.belt_fish_validations, request=request)
+        runner.validate(
+            record,
+            belt_fish.belt_fish_validations,
+            request=request,
+            skip_dry_submit=skip_dry_submit,
+        )
     elif protocol == HABITATCOMPLEXITY_PROTOCOL:
-        runner.validate(record, habitat_complexity.habcomp_validations, request=request)
+        runner.validate(
+            record,
+            habitat_complexity.habcomp_validations,
+            request=request,
+            skip_dry_submit=skip_dry_submit,
+        )
     elif protocol == BLEACHINGQC_PROTOCOL:
         runner.validate(
             record,
             bleaching_quadrat_collection.bleaching_quadrat_collection_validations,
             request=request,
+            skip_dry_submit=skip_dry_submit,
         )
     elif protocol == BENTHICPQT_PROTOCOL:
         is_image_classification = record.data.get("image_classification") or False
@@ -252,9 +273,15 @@ def _validate_collect_record(record, record_serializer, request):
             record,
             validations,
             request=request,
+            skip_dry_submit=skip_dry_submit,
         )
     elif protocol == MACROINVERTEBRATE_PROTOCOL:
-        runner.validate(record, belt_invert.belt_invert_validations, request=request)
+        runner.validate(
+            record,
+            belt_invert.belt_invert_validations,
+            request=request,
+            skip_dry_submit=skip_dry_submit,
+        )
     return runner.to_dict()
 
 
@@ -280,9 +307,13 @@ def check_validation_status(results):
     return status
 
 
-def validate_collect_record(profile, record, serializer_class, validation_suppressants=None):
+def validate_collect_record(
+    profile, record, serializer_class, validation_suppressants=None, skip_dry_submit=False
+):
     request = MockRequest(profile=profile)
-    validation_output = _validate_collect_record(record, serializer_class, request)
+    validation_output = _validate_collect_record(
+        record, serializer_class, request, skip_dry_submit=skip_dry_submit
+    )
     if validation_suppressants:
         print("validation_suppressants not supported")
 
@@ -334,8 +365,14 @@ def submit_collect_records(profile, record_ids, serializer_class, validation_sup
             output[record_id] = dict(status=ERROR, message=gettext_lazy("Not found"))
             continue
 
+        # The real write below runs the same writer in a savepoint and rolls
+        # back on failure, so a dry submit here would only duplicate it.
         validation_output = validate_collect_record(
-            profile, collect_record, serializer_class, validation_suppressants
+            profile,
+            collect_record,
+            serializer_class,
+            validation_suppressants,
+            skip_dry_submit=True,
         )
         status = validation_output["status"]
 
