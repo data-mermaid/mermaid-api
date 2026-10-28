@@ -94,9 +94,13 @@ class BenthicPhotoQuadratTransectMethodSerializer(BenthicPhotoQuadratTransectSer
 class BenthicPhotoQuadratTransectMethodView(
     SampleUnitMethodSummaryReport, SampleUnitMethodEditMixin, BaseProjectApiViewSet
 ):
-    queryset = BenthicPhotoQuadratTransect.objects.select_related(
-        "quadrat_transect", "quadrat_transect__sample_event"
-    ).order_by("updated_on", "id")
+    queryset = (
+        BenthicPhotoQuadratTransect.objects.prefetch_related(
+            "obsbenthicphotoquadrat_set", "observers", "observers__profile"
+        )
+        .select_related("quadrat_transect", "quadrat_transect__sample_event")
+        .order_by("updated_on", "id")
+    )
     serializer_class = BenthicPhotoQuadratTransectMethodSerializer
     http_method_names = ["get", "put", "head", "delete"]
 
