@@ -3,6 +3,7 @@ from rest_framework import serializers
 from ..fields import LazyChoiceField, NullCoercedTimeField
 from ..models import BENTHICPIT_PROTOCOL
 from .choices import (
+    INCLUDE_BLEACHING_CHOICES,
     benthic_attributes_choices,
     bleaching_status_choices,
     current_choices,
@@ -130,6 +131,14 @@ class BenthicPITCSVSerializer(CollectRecordCSVSerializer):
         label="Sample unit notes",
         help_text="Notes recorded by observer for transect",
     )
+    data__include_bleaching = serializers.ChoiceField(
+        choices=INCLUDE_BLEACHING_CHOICES,
+        required=False,
+        allow_null=True,
+        allow_blank=True,
+        label="Include bleaching",
+        help_text="Whether bleaching status was recorded for hard and soft coral observations in this sample unit (Yes or No). Use the same value on every row of the sample unit.",
+    )
     data__observers = serializers.ListField(
         child=serializers.CharField(),
         allow_empty=False,
@@ -161,7 +170,7 @@ class BenthicPITCSVSerializer(CollectRecordCSVSerializer):
         allow_null=True,
         allow_blank=True,
         label="Bleaching status",
-        help_text="Bleaching status of the observed benthic attribute (if bleaching was recorded). Sample units with any bleaching status are marked as including bleaching. See relevant tab on ingestion template for choices.",
+        help_text="Bleaching status of the observed hard or soft coral. Only allowed when Include bleaching is Yes. Leave blank if not assessed. See relevant tab on ingestion template for choices.",
     )
 
     def clean(self, data):
