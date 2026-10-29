@@ -1,7 +1,11 @@
+import logging
 import uuid
 
-from django.db.models import Count, F
+from django.core.exceptions import ValidationError as DjangoValidationError
+from django.db import IntegrityError, transaction
+from django.db.models import Count, F, UniqueConstraint
 from django.utils.translation import gettext_lazy as _
+from rest_framework import exceptions, serializers
 from rest_framework.exceptions import ValidationError
 
 from api.models import (
@@ -16,11 +20,13 @@ from api.models import (
     FishBeltTransect,
     HabitatComplexity,
     InvertBeltTransect,
+    ObsBenthicPhotoQuadrat,
     Observer,
     QuadratCollection,
     QuadratTransect,
     SampleEvent,
 )
+from api.resources.base import get_request_profile
 from api.resources.benthic_transect import BenthicTransectSerializer
 from api.resources.fish_belt_transect import FishBeltTransectSerializer
 from api.resources.invert_belt_transect import InvertBeltTransectSerializer
@@ -77,6 +83,39 @@ from .parser import (
     get_sample_event_data,
 )
 
+logger = logging.getLogger(__name__)
+
+
+class PreloadedPrimaryKeyField(serializers.Field):
+    """
+    Stands in for a PrimaryKeyRelatedField. It checks the ID against a set
+    loaded once per write, in place of one query per value, and returns the
+    ID in place of the related instance.
+    """
+
+    def __init__(self, related_model, valid_ids, **kwargs):
+        self.related_model = related_model
+        self.valid_ids = valid_ids
+        super().__init__(**kwargs)
+
+    def run_validation(self, data=serializers.empty):
+        # Same as RelatedField: treat an empty string as no value.
+        if data == "":
+            data = None
+        return super().run_validation(data)
+
+    def to_internal_value(self, data):
+        try:
+            if isinstance(data, bool):
+                raise TypeError
+            pk = self.related_model._meta.pk.to_python(data)
+        except (TypeError, ValueError, DjangoValidationError):
+            self.fail("incorrect_type", data_type=type(data).__name__)
+
+        if pk not in self.valid_ids:
+            self.fail("does_not_exist", pk_value=data)
+        return pk
+
 
 class BaseWriter:
     def __init__(self, collect_record, context):
@@ -104,6 +143,108 @@ class BaseWriter:
                 combine_into(additional_data, data)
                 serializer = self.validate_data(serializer_cls, data)
             return serializer.save()
+
+    def _preload_related_ids(self, serializer_cls, records_data):
+        """
+        For each writable PrimaryKeyRelatedField of `serializer_cls`, load the
+        IDs in `records_data` that exist, with one query per field.
+        """
+        preloaded = {}
+        fields = serializer_cls(context=self.context).fields
+        for name, field in fields.items():
+            if not isinstance(field, serializers.PrimaryKeyRelatedField) or field.read_only:
+                continue
+
+            queryset = field.get_queryset()
+            pk_field = queryset.model._meta.pk
+            ids = set()
+            for record_data in records_data:
+                value = record_data.get(name)
+                if value in (None, "") or isinstance(value, bool):
+                    continue
+                try:
+                    ids.add(pk_field.to_python(value))
+                except (TypeError, ValueError, DjangoValidationError):
+                    # The field reports the bad value during validation.
+                    continue
+
+            valid_ids = set()
+            if ids:
+                valid_ids = set(queryset.filter(pk__in=ids).values_list("pk", flat=True))
+            preloaded[name] = (field, valid_ids)
+
+        return preloaded
+
+    def bulk_create_records(self, model, serializer_cls, records_data):
+        """
+        Validate each record with `serializer_cls` and insert all of them with
+        one bulk_create.
+
+        Related IDs are checked against sets loaded once. The serializer's
+        unique-together validators are skipped: they run one query per record,
+        and the database constraints still apply.
+
+        bulk_create does not send save signals. This sets created_by and
+        updated_by in place of the `set_created_by` pre_save signal. The
+        `update_project_updated_on` post_save signal is not needed: the sample
+        unit method and observers saved in the same write already touch the
+        project.
+        """
+        preloaded = self._preload_related_ids(serializer_cls, records_data)
+        profile = self._get_profile()
+
+        instances = []
+        for record_data in records_data:
+            record_data["id"] = record_data.get("id") or uuid.uuid4()
+            serializer = serializer_cls(data=record_data, context=self.context)
+            for name, (field, valid_ids) in preloaded.items():
+                serializer.fields[name] = PreloadedPrimaryKeyField(
+                    related_model=field.get_queryset().model,
+                    valid_ids=valid_ids,
+                    source=model._meta.get_field(field.source).attname,
+                    required=field.required,
+                    allow_null=field.allow_null,
+                    error_messages=field.error_messages,
+                )
+            serializer.validators = []
+            if serializer.is_valid() is False:
+                raise ValidationError(serializer.errors)
+
+            instances.append(
+                model(**serializer.validated_data, created_by=profile, updated_by=profile)
+            )
+
+        try:
+            with transaction.atomic():
+                return model.objects.bulk_create(instances)
+        except IntegrityError as err:
+            logger.warning("bulk_create_records: %s", err)
+            raise ValidationError(
+                {"non_field_errors": [self._integrity_error_message(model, err)]}
+            ) from err
+
+    def _get_profile(self):
+        # Same as CurrentProfileDefault.
+        request = self.context.get("request")
+        if request is None:
+            return None
+        try:
+            return get_request_profile(request)
+        except exceptions.AuthenticationFailed:
+            return None
+
+    def _integrity_error_message(self, model, err):
+        """
+        A user-facing message for `err`. The raw database message contains
+        constraint names and values, so it is not returned to the client.
+        """
+        constraint_name = getattr(getattr(err.__cause__, "diag", None), "constraint_name", None)
+        for constraint in model._meta.constraints:
+            if isinstance(constraint, UniqueConstraint) and constraint.name == constraint_name:
+                # Same message as the skipped UniqueTogetherValidator.
+                field_names = ", ".join(constraint.fields)
+                return str(_("The fields {} must make a unique set.").format(field_names))
+        return str(_("The records could not be saved because they conflict with existing data."))
 
     def write(self):
         raise NotImplementedError()
@@ -484,7 +625,6 @@ class BenthicPhotoQuadratTransectProtocolWriter(ProtocolWriter):
         return observations_data
 
     def create_obs_benthic_photo_quadrat(self, benthic_photo_quadrat_transect_id):
-        observations = []
         image_classification = self.collect_record.data.get("image_classification")
 
         if image_classification:
@@ -503,17 +643,9 @@ class BenthicPhotoQuadratTransectProtocolWriter(ProtocolWriter):
                 }
             )
 
-        for observation_data in observations_data:
-            observation_data["id"] = observation_data.get("id") or uuid.uuid4()
-            serializer = ObsBenthicPhotoQuadratSerializer(
-                data=observation_data, context=self.context
-            )
-            if serializer.is_valid() is False:
-                raise ValidationError(serializer.errors)
-
-            observations.append(serializer.save())
-
-        return observations
+        return self.bulk_create_records(
+            ObsBenthicPhotoQuadrat, ObsBenthicPhotoQuadratSerializer, observations_data
+        )
 
     def write(self):
         sample_unit_method_id = self.get_sample_unit_method_id()

@@ -81,6 +81,7 @@ class ValidationRunner:
     VERSION = "2"
     results = None
     status = OK
+    existing_validations = None
 
     def __init__(self, serializer):
         self.serializer = serializer
@@ -177,6 +178,7 @@ class ValidationRunner:
         existing_validations = (
             get_value(collect_record_dict, "validations.results", delimiter=".") or {}
         )
+        self.existing_validations = existing_validations
         for validation in validations:
             if validation.delay_validation:
                 delayed_validations.append(validation)
@@ -202,6 +204,16 @@ class ValidationRunner:
             )
             self.status = self._get_overall_status_level(statuses)
 
+        return self.status
+
+    def add_result(self, validation, collect_record, request, **kwargs):
+        """
+        Run one more validation after validate() and merge its result into
+        the results and overall status.
+        """
+        validation.run(collect_record, request=request, **kwargs)
+        status = self.set_validator_result(validation, self.existing_validations or {})
+        self.status = self._get_overall_status_level([self.status, status])
         return self.status
 
     def to_dict(self):
