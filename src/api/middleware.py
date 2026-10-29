@@ -66,7 +66,7 @@ class MetricsMiddleware:
 
     def _obfuscate(self, value):
         for key in value.keys():
-            if key.lower() in ["password", "password1", "password2", "token"]:
+            if key.lower() in ["password", "password1", "password2", "token", "access_token"]:
                 for i in range(len(value[key])):
                     value[key][i] = "********"
 
