@@ -191,6 +191,7 @@ def suppress_common(stack: Stack) -> None:
     )
 
     # --- CDK LogRetention Lambda (sets the RDS log export's retention) ---
+    # The id hash is CDK's (checked on aws-cdk-lib 2.237.1); re-check on CDK upgrades.
     _suppress_by_path(
         stack,
         "LogRetentionaae0aa3c5b4d4f87b02d85b201efdd8a/ServiceRole/Resource",
@@ -343,8 +344,8 @@ def suppress_common(stack: Stack) -> None:
         [
             NagPackSuppression(
                 id="AwsSolutions-S1",
-                reason=f"{ACCEPTED}: This bucket only receives ALB log delivery and "
-                "Athena results; server access logs of a log bucket add little.",
+                reason=f"{ACCEPTED}: This bucket only receives ALB log delivery; "
+                "server access logs of a log bucket add little.",
             ),
         ],
     )
@@ -415,6 +416,12 @@ def suppress_common(stack: Stack) -> None:
                 reason=f"{ACCEPTED}: S3 object-level actions on Athena results bucket require "
                 "the /* wildcard to read/write/delete individual query result objects.",
                 applies_to=["Resource::<AthenaResultsBucket879938FA.Arn>/*"],
+            ),
+            NagPackSuppression(
+                id="AwsSolutions-IAM5",
+                reason=f"{ACCEPTED}: Athena reads ALB access log objects under the "
+                "access/ prefix of the ALB logs bucket; S3 object reads need the wildcard.",
+                applies_to=["Resource::<AlbLogsBucket9F12F2B8.Arn>/access/*"],
             ),
         ],
     )

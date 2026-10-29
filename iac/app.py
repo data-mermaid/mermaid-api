@@ -4,6 +4,7 @@ import jsii
 import nag_suppressions
 from aws_cdk import (
     App,
+    AspectPriority,
     Aspects,
     Environment,
     IAspect,
@@ -36,6 +37,7 @@ class LogGroupHygiene:
 
     CDK-created log groups (e.g. the ECS aws_logs driver's) default to RETAIN with
     no retention, so every construct rename left an orphaned group behind.
+    Imported groups (e.g. /mermaid/{env}/api) have no CfnLogGroup and are not touched.
     """
 
     def visit(self, node):
@@ -202,7 +204,8 @@ prod_api_stack.add_dependency(prod_inference_stack)
 # Only the API stacks: WAF, CloudTrail and VPC flow log groups (common and
 # cloudtrail stacks) are RETAINed on purpose.
 for api_stack in (dev_api_stack, prod_api_stack):
-    Aspects.of(api_stack).add(LogGroupHygiene())
+    # MUTATING: runs before read-only aspects such as cdk-nag, so they see the result.
+    Aspects.of(api_stack).add(LogGroupHygiene(), priority=AspectPriority.MUTATING)
 
 cloudtrail_stack = CloudTrailStack(
     app,
