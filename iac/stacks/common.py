@@ -144,18 +144,23 @@ class CommonStack(Stack):
                         "logs:PutLogEvents",
                         "logs:DescribeLogStreams",
                     ],
-                    # log_group_arn is the stream form (`...:log-group:<name>:*`).
-                    # DescribeLogStreams is authorized against the log-group ARN
-                    # from 2027-04-26, so grant that form too.
+                    # log_group_arn is already the stream form (`...:log-group:<name>:*`).
+                    resources=[vpc_flow_logs_group.log_group_arn],
+                )
+            )
+            # From 2027-04-26 CloudWatch Logs authorizes DescribeLogStreams against the
+            # log-group ARN, not the stream form above. This also covers the
+            # stream-form-only grant CDK's FlowLog adds to this role.
+            vpc_flow_logs_role.add_to_policy(
+                iam.PolicyStatement(
+                    actions=["logs:DescribeLogStreams"],
                     resources=[
                         self.format_arn(
                             service="logs",
                             resource="log-group",
                             resource_name=vpc_flow_logs_group.log_group_name,
                             arn_format=ArnFormat.COLON_RESOURCE_NAME,
-                        ),
-                        vpc_flow_logs_group.log_group_arn,
-                        f"{vpc_flow_logs_group.log_group_arn}:*",
+                        )
                     ],
                 )
             )
