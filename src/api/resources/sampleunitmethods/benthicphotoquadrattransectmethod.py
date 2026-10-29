@@ -1,6 +1,8 @@
+from collections import defaultdict
+
 from django_filters import BaseInFilter, RangeFilter
 from rest_framework.exceptions import NotFound
-from rest_framework.serializers import SerializerMethodField
+from rest_framework.serializers import ListSerializer, SerializerMethodField
 
 from ...models import (
     BenthicPhotoQuadratTransect,
@@ -69,6 +71,21 @@ class PQTImageSerializer(ImageSerializer):
         fields = ["id", "image", "thumbnail", "original_image_name"]
 
 
+class BenthicPhotoQuadratTransectMethodListSerializer(ListSerializer):
+    def to_representation(self, data):
+        # Load the images of all image classification records with one query,
+        # in place of one query per record in get_images().
+        records = list(data.all() if hasattr(data, "all") else data)
+        images_by_collect_record = defaultdict(list)
+        if "images" in self.child.fields:
+            collect_record_ids = {r.collect_record_id for r in records if r.image_classification}
+            if collect_record_ids:
+                for image in Image.objects.filter(collect_record_id__in=collect_record_ids):
+                    images_by_collect_record[image.collect_record_id].append(image)
+        self.child.images_by_collect_record = images_by_collect_record
+        return super().to_representation(records)
+
+
 class BenthicPhotoQuadratTransectMethodSerializer(BenthicPhotoQuadratTransectSerializer):
     sample_event = SampleEventSerializer(source="quadrat_transect.sample_event")
     quadrat_transect = QuadratTransectSerializer()
@@ -77,10 +94,14 @@ class BenthicPhotoQuadratTransectMethodSerializer(BenthicPhotoQuadratTransectSer
         many=True, source="obsbenthicphotoquadrat_set"
     )
     images = SerializerMethodField()
+    images_by_collect_record = None
 
     def get_images(self, obj):
         if obj.image_classification is True:
-            images = Image.objects.filter(collect_record_id=obj.collect_record_id)
+            if self.images_by_collect_record is not None:
+                images = self.images_by_collect_record.get(obj.collect_record_id)
+            else:
+                images = Image.objects.filter(collect_record_id=obj.collect_record_id)
             if images:
                 return PQTImageSerializer(images, many=True).data
 
@@ -89,6 +110,7 @@ class BenthicPhotoQuadratTransectMethodSerializer(BenthicPhotoQuadratTransectSer
     class Meta:
         model = BenthicPhotoQuadratTransect
         exclude = []
+        list_serializer_class = BenthicPhotoQuadratTransectMethodListSerializer
 
 
 class BenthicPhotoQuadratTransectMethodView(
@@ -99,6 +121,23 @@ class BenthicPhotoQuadratTransectMethodView(
     ).order_by("updated_on", "id")
     serializer_class = BenthicPhotoQuadratTransectMethodSerializer
     http_method_names = ["get", "put", "head", "delete"]
+
+    def get_queryset(self):
+        qs = super().get_queryset()
+        # Only the actions that serialize records use the related rows, and
+        # only for the fields that are serialized (see `?fields=`).
+        if getattr(self, "action", None) not in ("list", "retrieve"):
+            return qs
+
+        selected_fields = getattr(self.get_serializer_class().Meta, "fields", None)
+        prefetches = []
+        if selected_fields is None or "obs_benthic_photo_quadrats" in selected_fields:
+            prefetches.append("obsbenthicphotoquadrat_set")
+        if selected_fields is None or "observers" in selected_fields:
+            prefetches.extend(["observers", "observers__profile"])
+        if prefetches:
+            qs = qs.prefetch_related(*prefetches)
+        return qs
 
     def edit_sample_unit(self, request, pk):
         bpqt_record = self.get_queryset().get_or_none(pk=pk)
