@@ -64,7 +64,8 @@ class BaseBleachingStatusValidator(BaseValidator):
 
 class IncludeBleachingValidator(BaseValidator):
     """
-    A missing include_bleaching key defaults to false (API, import, integrations).
+    A missing include_bleaching key defaults to false (API, integrations). CSV import always
+    sets the key, so a blank Include bleaching value is an error.
     """
 
     REQUIRED = "include_bleaching_required"
