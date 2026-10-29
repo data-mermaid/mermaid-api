@@ -146,8 +146,7 @@ def get_jwt_token(request):
     elif len(auth) > 2:
         msg = _("Invalid Authorization header. Credentials string should not contain spaces.")
         raise exceptions.AuthenticationFailed(msg)
-    else:
-        token = request.query_params.get("access_token")
+    # No ?access_token= fallback: a token in the URL lands in ALB, nginx and Sentry logs.
 
     if token is None:
         msg = _("Invalid Authorization header. No credentials provided.")

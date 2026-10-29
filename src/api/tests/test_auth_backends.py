@@ -1,9 +1,13 @@
 from datetime import timedelta
 from unittest.mock import patch
 
+import pytest
 from django.utils import timezone
+from rest_framework import exceptions
+from rest_framework.request import Request
+from rest_framework.test import APIRequestFactory
 
-from api.auth_backends import JWTAuthentication
+from api.auth_backends import AnonymousJWTAuthentication, JWTAuthentication
 from api.exceptions import Auth0ServiceUnavailable
 from api.models.base import Profile
 
@@ -28,3 +32,29 @@ def test_validate_profile_stale_refresh_survives_auth0_outage(profile1):
     assert profile1.picture_url == "https://old.example/pic.png"
     # updated_on bumped so the next request backs off instead of re-failing
     assert (timezone.now() - profile1.updated_on).total_seconds() < 60
+
+
+def _request(path="/v1/projects/", **extra):
+    # DRF Request, as the backends see it at runtime
+    return Request(APIRequestFactory().get(path, **extra))
+
+
+def test_jwt_in_query_string_is_rejected(token1, profile1):
+    """A token in the URL would land in ALB, nginx and Sentry logs."""
+    with pytest.raises(exceptions.AuthenticationFailed):
+        JWTAuthentication().authenticate(_request(f"/v1/projects/?access_token={token1}"))
+
+
+def test_jwt_in_query_string_is_anonymous_on_public_endpoints(token1, profile1):
+    user, auth = AnonymousJWTAuthentication().authenticate(
+        _request(f"/v1/projects/?access_token={token1}")
+    )
+
+    assert user.is_anonymous
+    assert auth is None
+
+
+def test_jwt_in_authorization_header_authenticates(token1, profile1):
+    user, _ = JWTAuthentication().authenticate(_request(HTTP_AUTHORIZATION=f"Bearer {token1}"))
+
+    assert user.profile == profile1
