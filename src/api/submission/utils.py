@@ -27,6 +27,7 @@ from ..signals import post_submit
 from ..utils.sample_unit_methods import create_audit_record
 from ..utils.summary_cache import add_project_to_queue
 from .validations import (
+    Validation,
     ValidationRunner,
     belt_fish,
     belt_invert,
@@ -36,7 +37,9 @@ from .validations import (
     bleaching_quadrat_collection,
     habitat_complexity,
 )
+from .validations.base import RECORD_KEY, RECORD_LEVEL, VALUE_VALIDATION_TYPE
 from .validations.statuses import ERROR, IGNORE, OK, WARN
+from .validations.validators import DrySubmitValidator, ValidatorResult
 from .writer import (
     BeltInvertProtocolWriter,
     BenthicLITProtocolWriter,
@@ -342,6 +345,54 @@ def validate_collect_record(
     return dict(status=status, record=serialized_collect_record)
 
 
+def _set_write_error_validation(profile, collect_record, write_result):
+    """
+    submit_collect_records() skips the dry submit validation and relies on the
+    real write instead, so a failed write must be recorded the same way the
+    dry submit validator would have recorded it.
+    """
+    validator = DrySubmitValidator()
+    validation = Validation(
+        validator=validator,
+        paths=["__all__"],
+        validation_level=RECORD_LEVEL,
+        validation_type=VALUE_VALIDATION_TYPE,
+    )
+    validation.result = ValidatorResult(
+        name=validator.name,
+        status=ERROR,
+        code=validator.UNSUCCESSFUL_SUBMIT,
+        context={"dry_submit_results": write_result},
+        validation_id=validation._get_validation_id(),
+    )
+
+    qry = CollectRecord.objects.filter(id=collect_record.pk)
+    record = qry.first()
+    if record is None:
+        return
+
+    validations = record.validations or {}
+    results = validations.get("results") or {}
+    record_results = [
+        r
+        for r in results.get(RECORD_KEY) or []
+        if r.get("validation_id") != validation.result.validation_id
+    ]
+    record_results.append(validation.to_validation_result())
+    results[RECORD_KEY] = record_results
+
+    validation_timestamp = timezone.now()
+    validations["results"] = results
+    validations["status"] = ERROR
+    validations["last_validated"] = str(validation_timestamp)
+    qry.update(
+        stage=CollectRecord.SAVED_STAGE,
+        validations=validations,
+        updated_on=validation_timestamp,
+        updated_by=profile,
+    )
+
+
 def validate_collect_records(profile, record_ids, serializer_class, validation_suppressants=None):
     output = {}
     for record_id in record_ids:
@@ -384,6 +435,9 @@ def submit_collect_records(profile, record_ids, serializer_class, validation_sup
         # try parsing and saving the collect record into its
         # components.
         status, result = write_collect_record(collect_record, request)
+        if status in (VALIDATION_ERROR_STATUS, ERROR_STATUS):
+            _set_write_error_validation(profile, collect_record, result)
+
         if status == VALIDATION_ERROR_STATUS:
             output[record_id] = dict(status=ERROR, message=result)
             continue
