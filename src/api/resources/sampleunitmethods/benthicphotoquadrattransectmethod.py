@@ -76,11 +76,12 @@ class BenthicPhotoQuadratTransectMethodListSerializer(ListSerializer):
         # Load the images of all image classification records with one query,
         # in place of one query per record in get_images().
         records = list(data.all() if hasattr(data, "all") else data)
-        collect_record_ids = {r.collect_record_id for r in records if r.image_classification}
         images_by_collect_record = defaultdict(list)
-        if collect_record_ids:
-            for image in Image.objects.filter(collect_record_id__in=collect_record_ids):
-                images_by_collect_record[image.collect_record_id].append(image)
+        if "images" in self.child.fields:
+            collect_record_ids = {r.collect_record_id for r in records if r.image_classification}
+            if collect_record_ids:
+                for image in Image.objects.filter(collect_record_id__in=collect_record_ids):
+                    images_by_collect_record[image.collect_record_id].append(image)
         self.child.images_by_collect_record = images_by_collect_record
         return super().to_representation(records)
 
@@ -123,11 +124,19 @@ class BenthicPhotoQuadratTransectMethodView(
 
     def get_queryset(self):
         qs = super().get_queryset()
-        # Only the actions that serialize records use the related rows.
-        if getattr(self, "action", None) in ("list", "retrieve"):
-            qs = qs.prefetch_related(
-                "obsbenthicphotoquadrat_set", "observers", "observers__profile"
-            )
+        # Only the actions that serialize records use the related rows, and
+        # only for the fields that are serialized (see `?fields=`).
+        if getattr(self, "action", None) not in ("list", "retrieve"):
+            return qs
+
+        selected_fields = getattr(self.get_serializer_class().Meta, "fields", None)
+        prefetches = []
+        if selected_fields is None or "obs_benthic_photo_quadrats" in selected_fields:
+            prefetches.append("obsbenthicphotoquadrat_set")
+        if selected_fields is None or "observers" in selected_fields:
+            prefetches.extend(["observers", "observers__profile"])
+        if prefetches:
+            qs = qs.prefetch_related(*prefetches)
         return qs
 
     def edit_sample_unit(self, request, pk):
