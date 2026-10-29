@@ -2,6 +2,9 @@ import pytest
 from django.urls import reverse
 from rest_framework import status
 
+from api.models import BLEACHING_STATUS_NORMAL, BLEACHING_STATUS_PALE, Project
+from api.utils.summary_cache import update_summary_cache as update_cache
+
 
 @pytest.fixture
 def obs_benthic_pit1_benthic_category_avgs(
@@ -117,3 +120,37 @@ def test_summary_sample_event_fields_param_valid(api_client_public):
     )
     assert response.status_code == status.HTTP_200_OK
     assert "results" in response.json()
+
+
+def test_summary_sample_event_benthicpit_bleaching(
+    db_setup,
+    api_client1,
+    benthic_pit_project,
+    benthic_pit1,
+    obs_benthic_pit1_2,
+    obs_benthic_pit1_3,
+    obs_benthic_pit1_4,
+):
+    benthic_pit1.include_bleaching = True
+    benthic_pit1.save()
+    # Hard coral obs: one pale, one normal, one not assessed (excluded from the denominator)
+    obs_benthic_pit1_2.bleaching_status = BLEACHING_STATUS_PALE
+    obs_benthic_pit1_2.save()
+    obs_benthic_pit1_3.bleaching_status = BLEACHING_STATUS_NORMAL
+    obs_benthic_pit1_3.save()
+    for project in Project.objects.all():
+        update_cache(project.pk, skip_test_project=False, skip_cached_files=True)
+
+    url = reverse("summarysampleevent-list")
+    response_data = api_client1.get(url, None, format="json").json()
+    benthicpit = next(
+        r["protocols"]["benthicpit"]
+        for r in response_data["results"]
+        if "benthicpit" in r["protocols"]
+    )
+
+    assert benthicpit["bleaching_sample_unit_count"] == 1
+    assert benthicpit["percent_bleached_hard_coral_avg"]["Bleached"] == 50.0
+    assert benthicpit["percent_bleached_hard_coral_avg"]["pale"] == 50.0
+    assert benthicpit["percent_bleached_total_coral_avg"]["Bleached"] == 50.0
+    assert "percent_bleached_soft_coral_avg" not in benthicpit
