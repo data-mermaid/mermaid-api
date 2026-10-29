@@ -367,6 +367,27 @@ class ApiStack(Stack):
             circuit_breaker=ecs.DeploymentCircuitBreaker(enable=True, rollback=True),
         )
 
+        # ECS Exec: CDK grants logs:DescribeLogStreams on the exec log group's
+        # stream-form ARN (`...:log-group:<name>:*`) only. From 2027-04-26 CloudWatch
+        # Logs authorizes it against the log-group ARN, so grant that form too.
+        exec_log_group = (
+            cluster.execute_command_configuration.log_configuration.cloud_watch_log_group
+        )
+        for exec_task_def in (task_definition, summary_cache_task_def):
+            exec_task_def.add_to_task_role_policy(
+                iam.PolicyStatement(
+                    actions=["logs:DescribeLogStreams"],
+                    resources=[
+                        self.format_arn(
+                            service="logs",
+                            resource="log-group",
+                            resource_name=exec_log_group.log_group_name,
+                            arn_format=ArnFormat.COLON_RESOURCE_NAME,
+                        )
+                    ],
+                )
+            )
+
         # Grant Secret read to API container & backup task
         for _, container_secret in self.api_secrets.items():
             container_secret.grant_read(service.task_definition.execution_role)

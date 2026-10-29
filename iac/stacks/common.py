@@ -1,6 +1,7 @@
 import json
 
 from aws_cdk import (
+    ArnFormat,
     Duration,
     RemovalPolicy,
     Stack,
@@ -143,7 +144,16 @@ class CommonStack(Stack):
                         "logs:PutLogEvents",
                         "logs:DescribeLogStreams",
                     ],
+                    # log_group_arn is the stream form (`...:log-group:<name>:*`).
+                    # DescribeLogStreams is authorized against the log-group ARN
+                    # from 2027-04-26, so grant that form too.
                     resources=[
+                        self.format_arn(
+                            service="logs",
+                            resource="log-group",
+                            resource_name=vpc_flow_logs_group.log_group_name,
+                            arn_format=ArnFormat.COLON_RESOURCE_NAME,
+                        ),
                         vpc_flow_logs_group.log_group_arn,
                         f"{vpc_flow_logs_group.log_group_arn}:*",
                     ],
