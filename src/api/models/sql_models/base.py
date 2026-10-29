@@ -95,13 +95,14 @@ def bleaching_su_sql(obs_table, weight):
     """
 
 
-def bleaching_se_sql(su_table):
+def bleaching_se_sql(su_table, cte_name="se_bleaching"):
     """
-    SE-level bleaching CTEs ending in `se_bleaching` (sample_event_id, avg/sd jsonb per coral type),
-    aggregated from the percent_bleached_* columns of `su_table`.
+    SE-level bleaching CTEs ending in `cte_name` (sample_event_id, avg/sd jsonb per coral type),
+    aggregated from the percent_bleached_* columns of `su_table`. Pass a distinct `cte_name` to use
+    this more than once in the same query.
     """
     return f"""
-    bleaching_su AS (
+    {cte_name}_su AS (
         SELECT sample_event_id, '{BLEACHING_CATEGORY_HARD_CORAL}' AS coral_type, bdata.key, bdata.value
         FROM {su_table}, jsonb_each_text(percent_bleached_hard_coral) AS bdata
         UNION ALL
@@ -111,7 +112,7 @@ def bleaching_se_sql(su_table):
         SELECT sample_event_id, 'Total coral' AS coral_type, bdata.key, bdata.value
         FROM {su_table}, jsonb_each_text(percent_bleached_total_coral) AS bdata
     ),
-    se_bleaching AS (
+    {cte_name} AS (
         SELECT sample_event_id,
         jsonb_object_agg(key, ROUND(percent_avg :: numeric, 2)) FILTER (WHERE coral_type = '{BLEACHING_CATEGORY_HARD_CORAL}') AS percent_bleached_hard_coral_avg,
         jsonb_object_agg(key, ROUND(percent_sd :: numeric, 2)) FILTER (WHERE coral_type = '{BLEACHING_CATEGORY_HARD_CORAL}') AS percent_bleached_hard_coral_sd,
@@ -125,9 +126,9 @@ def bleaching_se_sql(su_table):
             key,
             AVG(value :: float) AS percent_avg,
             STDDEV(value :: float) AS percent_sd
-            FROM bleaching_su
+            FROM {cte_name}_su
             GROUP BY sample_event_id, coral_type, key
-        ) AS bleaching_su_stats
+        ) AS {cte_name}_su_stats
         GROUP BY sample_event_id
     )
     """
