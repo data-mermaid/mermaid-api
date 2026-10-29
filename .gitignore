@@ -116,3 +116,10 @@ generate_token.py
 .claude/
 
 plan/
+
+Pipfile
+Pipfile.lock
+
+**node_modules/
+**package.json
+**package-lock.json
