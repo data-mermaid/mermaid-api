@@ -1,10 +1,11 @@
+import logging
 import uuid
 
 from django.core.exceptions import ValidationError as DjangoValidationError
 from django.db import IntegrityError, transaction
-from django.db.models import Count, F
+from django.db.models import Count, F, UniqueConstraint
 from django.utils.translation import gettext_lazy as _
-from rest_framework import serializers
+from rest_framework import exceptions, serializers
 from rest_framework.exceptions import ValidationError
 
 from api.models import (
@@ -34,7 +35,6 @@ from api.resources.quadrat_collection import QuadratCollectionSerializer
 from api.resources.quadrat_transect import QuadratTransectSerializer
 from api.resources.sample_event import SampleEventSerializer
 from api.utils import combine_into
-from api.utils.related import get_related_project
 from ..resources.sampleunitmethods import clean_sample_event_models
 from ..resources.sampleunitmethods.beltfishmethod import (
     BeltFishSerializer,
@@ -83,6 +83,8 @@ from .parser import (
     get_sample_event_data,
 )
 
+logger = logging.getLogger(__name__)
+
 
 class PreloadedPrimaryKeyField(serializers.Field):
     """
@@ -95,6 +97,12 @@ class PreloadedPrimaryKeyField(serializers.Field):
         self.related_model = related_model
         self.valid_ids = valid_ids
         super().__init__(**kwargs)
+
+    def run_validation(self, data=serializers.empty):
+        # Same as RelatedField: treat an empty string as no value.
+        if data == "":
+            data = None
+        return super().run_validation(data)
 
     def to_internal_value(self, data):
         try:
@@ -176,15 +184,14 @@ class BaseWriter:
         unique-together validators are skipped: they run one query per record,
         and the database constraints still apply.
 
-        bulk_create does not send save signals, so this does their work:
-        it sets created_by (`set_created_by` pre_save signal). The caller must
-        touch the project once after the write (`update_project_updated_on`
-        post_save signal); see `touch_project`.
+        bulk_create does not send save signals. This sets created_by and
+        updated_by in place of the `set_created_by` pre_save signal. The
+        `update_project_updated_on` post_save signal is not needed: the sample
+        unit method and observers saved in the same write already touch the
+        project.
         """
         preloaded = self._preload_related_ids(serializer_cls, records_data)
-
-        request = self.context.get("request")
-        profile = get_request_profile(request) if request is not None else None
+        profile = self._get_profile()
 
         instances = []
         for record_data in records_data:
@@ -211,12 +218,33 @@ class BaseWriter:
             with transaction.atomic():
                 return model.objects.bulk_create(instances)
         except IntegrityError as err:
-            raise ValidationError({"non_field_errors": [str(err)]}) from err
+            logger.warning("bulk_create_records: %s", err)
+            raise ValidationError(
+                {"non_field_errors": [self._integrity_error_message(model, err)]}
+            ) from err
 
-    def touch_project(self, instance):
-        project = get_related_project(instance)
-        if project is not None:
-            project.save()
+    def _get_profile(self):
+        # Same as CurrentProfileDefault.
+        request = self.context.get("request")
+        if request is None:
+            return None
+        try:
+            return get_request_profile(request)
+        except exceptions.AuthenticationFailed:
+            return None
+
+    def _integrity_error_message(self, model, err):
+        """
+        A user-facing message for `err`. The raw database message contains
+        constraint names and values, so it is not returned to the client.
+        """
+        constraint_name = getattr(getattr(err.__cause__, "diag", None), "constraint_name", None)
+        for constraint in model._meta.constraints:
+            if isinstance(constraint, UniqueConstraint) and constraint.name == constraint_name:
+                # Same message as the skipped UniqueTogetherValidator.
+                field_names = ", ".join(constraint.fields)
+                return str(_("The fields {} must make a unique set.").format(field_names))
+        return str(_("The records could not be saved because they conflict with existing data."))
 
     def write(self):
         raise NotImplementedError()
@@ -628,7 +656,6 @@ class BenthicPhotoQuadratTransectProtocolWriter(ProtocolWriter):
         )
         _ = self.create_observers(benthic_photo_quadrat_transect.id)
         _ = self.create_obs_benthic_photo_quadrat(benthic_photo_quadrat_transect.id)
-        self.touch_project(benthic_photo_quadrat_transect)
 
 
 class BeltInvertProtocolWriter(ProtocolWriter):

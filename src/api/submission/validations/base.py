@@ -4,7 +4,7 @@ from typing import Literal
 
 from api.utils import get_value, set_value
 from .statuses import ERROR, IGNORE, OK, WARN
-from .validators import BaseValidator, DrySubmitValidator, ValidatorResult
+from .validators import BaseValidator, ValidatorResult
 
 RECORD_KEY = "$record"
 RECORD_LEVEL = "record"
@@ -81,6 +81,7 @@ class ValidationRunner:
     VERSION = "2"
     results = None
     status = OK
+    existing_validations = None
 
     def __init__(self, serializer):
         self.serializer = serializer
@@ -170,17 +171,15 @@ class ValidationRunner:
             validation.run(collect_record_dict, request=request)
         return self.set_validator_result(validation, existing_validations)
 
-    def validate(self, collect_record, validations, request, skip_dry_submit=False):
+    def validate(self, collect_record, validations, request):
         delayed_validations = []
         statuses = []
         collect_record_dict = self.serializer(instance=collect_record).data
         existing_validations = (
             get_value(collect_record_dict, "validations.results", delimiter=".") or {}
         )
+        self.existing_validations = existing_validations
         for validation in validations:
-            if skip_dry_submit and isinstance(validation.validator, DrySubmitValidator):
-                continue
-
             if validation.delay_validation:
                 delayed_validations.append(validation)
                 continue
@@ -205,6 +204,16 @@ class ValidationRunner:
             )
             self.status = self._get_overall_status_level(statuses)
 
+        return self.status
+
+    def add_result(self, validation, collect_record, request, **kwargs):
+        """
+        Run one more validation after validate() and merge its result into
+        the results and overall status.
+        """
+        validation.run(collect_record, request=request, **kwargs)
+        status = self.set_validator_result(validation, self.existing_validations or {})
+        self.status = self._get_overall_status_level([self.status, status])
         return self.status
 
     def to_dict(self):

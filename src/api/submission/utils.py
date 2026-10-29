@@ -1,3 +1,4 @@
+import dataclasses
 import json
 import logging
 import time
@@ -27,7 +28,6 @@ from ..signals import post_submit
 from ..utils.sample_unit_methods import create_audit_record
 from ..utils.summary_cache import add_project_to_queue
 from .validations import (
-    Validation,
     ValidationRunner,
     belt_fish,
     belt_invert,
@@ -37,9 +37,8 @@ from .validations import (
     bleaching_quadrat_collection,
     habitat_complexity,
 )
-from .validations.base import RECORD_KEY, RECORD_LEVEL, VALUE_VALIDATION_TYPE
 from .validations.statuses import ERROR, IGNORE, OK, WARN
-from .validations.validators import DrySubmitValidator, ValidatorResult
+from .validations.validators import DrySubmitValidator
 from .writer import (
     BeltInvertProtocolWriter,
     BenthicLITProtocolWriter,
@@ -109,7 +108,7 @@ def format_exception_errors(err):
     if hasattr(err, "message"):
         msg = err.message
     elif err.args:
-        msg = ["; ".join(err.args)]
+        msg = ["; ".join(str(arg) for arg in err.args)]
     return {identifier: [msg]}
 
 
@@ -224,68 +223,53 @@ def validate(validator_cls, model_cls, qry_params=None):
         )
 
 
-def _validate_collect_record(record, record_serializer, request, skip_dry_submit=False):
+PROTOCOL_VALIDATIONS = {
+    BENTHICLIT_PROTOCOL: benthic_lit.benthic_lit_validations,
+    BENTHICPIT_PROTOCOL: benthic_pit.benthic_pit_validations,
+    FISHBELT_PROTOCOL: belt_fish.belt_fish_validations,
+    HABITATCOMPLEXITY_PROTOCOL: habitat_complexity.habcomp_validations,
+    BLEACHINGQC_PROTOCOL: bleaching_quadrat_collection.bleaching_quadrat_collection_validations,
+    MACROINVERTEBRATE_PROTOCOL: belt_invert.belt_invert_validations,
+}
+
+
+def _get_protocol_validations(record):
     protocol = record.data.get("protocol")
     if protocol not in PROTOCOL_MAP:
         raise ValueError(gettext_lazy(f"{protocol} not supported"))
 
-    runner = ValidationRunner(serializer=record_serializer)
-    if protocol == BENTHICLIT_PROTOCOL:
-        runner.validate(
-            record,
-            benthic_lit.benthic_lit_validations,
-            request=request,
-            skip_dry_submit=skip_dry_submit,
-        )
-    elif protocol == BENTHICPIT_PROTOCOL:
-        runner.validate(
-            record,
-            benthic_pit.benthic_pit_validations,
-            request=request,
-            skip_dry_submit=skip_dry_submit,
-        )
-    elif protocol == FISHBELT_PROTOCOL:
-        runner.validate(
-            record,
-            belt_fish.belt_fish_validations,
-            request=request,
-            skip_dry_submit=skip_dry_submit,
-        )
-    elif protocol == HABITATCOMPLEXITY_PROTOCOL:
-        runner.validate(
-            record,
-            habitat_complexity.habcomp_validations,
-            request=request,
-            skip_dry_submit=skip_dry_submit,
-        )
-    elif protocol == BLEACHINGQC_PROTOCOL:
-        runner.validate(
-            record,
-            bleaching_quadrat_collection.bleaching_quadrat_collection_validations,
-            request=request,
-            skip_dry_submit=skip_dry_submit,
-        )
-    elif protocol == BENTHICPQT_PROTOCOL:
-        is_image_classification = record.data.get("image_classification") or False
-        if is_image_classification:
-            validations = benthic_photo_quadrat_transect.bpqt_classification_validations
-        else:
-            validations = benthic_photo_quadrat_transect.bpqt_non_classification_validations
+    if protocol == BENTHICPQT_PROTOCOL:
+        if record.data.get("image_classification"):
+            return benthic_photo_quadrat_transect.bpqt_classification_validations
+        return benthic_photo_quadrat_transect.bpqt_non_classification_validations
 
-        runner.validate(
-            record,
-            validations,
-            request=request,
-            skip_dry_submit=skip_dry_submit,
-        )
-    elif protocol == MACROINVERTEBRATE_PROTOCOL:
-        runner.validate(
-            record,
-            belt_invert.belt_invert_validations,
-            request=request,
-            skip_dry_submit=skip_dry_submit,
-        )
-    return runner.to_dict()
+    return PROTOCOL_VALIDATIONS[protocol]
+
+
+def _is_dry_submit(validation):
+    return isinstance(validation.validator, DrySubmitValidator)
+
+
+def _run_validations(record, record_serializer, request, skip_dry_submit=False):
+    validations = _get_protocol_validations(record)
+    if skip_dry_submit:
+        validations = [v for v in validations if not _is_dry_submit(v)]
+
+    runner = ValidationRunner(serializer=record_serializer)
+    runner.validate(record, validations, request=request)
+    return runner
+
+
+def _set_write_error_validation(runner, collect_record, request, write_result):
+    """
+    submit_collect_records() skips the dry submit validation and relies on the
+    real write instead, so a failed write is recorded as a failed dry submit.
+    """
+    for validation in _get_protocol_validations(collect_record):
+        if _is_dry_submit(validation):
+            runner.add_result(
+                dataclasses.replace(validation), collect_record, request, write_result=write_result
+            )
 
 
 def _apply_validation_suppressants(results, validation_suppressants):
@@ -310,16 +294,7 @@ def check_validation_status(results):
     return status
 
 
-def validate_collect_record(
-    profile, record, serializer_class, validation_suppressants=None, skip_dry_submit=False
-):
-    request = MockRequest(profile=profile)
-    validation_output = _validate_collect_record(
-        record, serializer_class, request, skip_dry_submit=skip_dry_submit
-    )
-    if validation_suppressants:
-        print("validation_suppressants not supported")
-
+def _save_validation_output(profile, record, serializer_class, validation_output):
     stage = CollectRecord.SAVED_STAGE
     status = validation_output["status"]
     if status == OK:
@@ -345,52 +320,13 @@ def validate_collect_record(
     return dict(status=status, record=serialized_collect_record)
 
 
-def _set_write_error_validation(profile, collect_record, write_result):
-    """
-    submit_collect_records() skips the dry submit validation and relies on the
-    real write instead, so a failed write must be recorded the same way the
-    dry submit validator would have recorded it.
-    """
-    validator = DrySubmitValidator()
-    validation = Validation(
-        validator=validator,
-        paths=["__all__"],
-        validation_level=RECORD_LEVEL,
-        validation_type=VALUE_VALIDATION_TYPE,
-    )
-    validation.result = ValidatorResult(
-        name=validator.name,
-        status=ERROR,
-        code=validator.UNSUCCESSFUL_SUBMIT,
-        context={"dry_submit_results": write_result},
-        validation_id=validation._get_validation_id(),
-    )
+def validate_collect_record(profile, record, serializer_class, validation_suppressants=None):
+    request = MockRequest(profile=profile)
+    validation_output = _run_validations(record, serializer_class, request).to_dict()
+    if validation_suppressants:
+        print("validation_suppressants not supported")
 
-    qry = CollectRecord.objects.filter(id=collect_record.pk)
-    record = qry.first()
-    if record is None:
-        return
-
-    validations = record.validations or {}
-    results = validations.get("results") or {}
-    record_results = [
-        r
-        for r in results.get(RECORD_KEY) or []
-        if r.get("validation_id") != validation.result.validation_id
-    ]
-    record_results.append(validation.to_validation_result())
-    results[RECORD_KEY] = record_results
-
-    validation_timestamp = timezone.now()
-    validations["results"] = results
-    validations["status"] = ERROR
-    validations["last_validated"] = str(validation_timestamp)
-    qry.update(
-        stage=CollectRecord.SAVED_STAGE,
-        validations=validations,
-        updated_on=validation_timestamp,
-        updated_by=profile,
-    )
+    return _save_validation_output(profile, record, serializer_class, validation_output)
 
 
 def validate_collect_records(profile, record_ids, serializer_class, validation_suppressants=None):
@@ -416,14 +352,14 @@ def submit_collect_records(profile, record_ids, serializer_class, validation_sup
             output[record_id] = dict(status=ERROR, message=gettext_lazy("Not found"))
             continue
 
+        if validation_suppressants:
+            print("validation_suppressants not supported")
+
         # The real write below runs the same writer in a savepoint and rolls
         # back on failure, so a dry submit here would only duplicate it.
-        validation_output = validate_collect_record(
-            profile,
-            collect_record,
-            serializer_class,
-            validation_suppressants,
-            skip_dry_submit=True,
+        runner = _run_validations(collect_record, serializer_class, request, skip_dry_submit=True)
+        validation_output = _save_validation_output(
+            profile, collect_record, serializer_class, runner.to_dict()
         )
         status = validation_output["status"]
 
@@ -434,17 +370,28 @@ def submit_collect_records(profile, record_ids, serializer_class, validation_sup
         # If validate comes out all good (status == OK) then
         # try parsing and saving the collect record into its
         # components.
-        status, result = write_collect_record(collect_record, request)
-        if status in (VALIDATION_ERROR_STATUS, ERROR_STATUS):
-            _set_write_error_validation(profile, collect_record, result)
+        try:
+            status, result = write_collect_record(collect_record, request)
+        except Exception as err:
+            # Anything write_collect_record doesn't handle itself, e.g. a
+            # statement timeout. The record must not be left VALIDATED.
+            logger.exception(f"submit_collect_records: {record_id}")
+            status, result = ERROR_STATUS, format_exception_errors(err)
+
+        if status == SUCCESS_STATUS:
+            output[record_id] = dict(status=OK, message=gettext_lazy("Success"))
+            continue
+
+        _set_write_error_validation(runner, collect_record, request, (status, result))
+        validation_output = _save_validation_output(
+            profile, collect_record, serializer_class, runner.to_dict()
+        )
 
         if status == VALIDATION_ERROR_STATUS:
-            output[record_id] = dict(status=ERROR, message=result)
-            continue
-        elif status == ERROR_STATUS:
+            message = result
+        else:
             logger.error(json.dumps(dict(id=record_id, data=collect_record.data)), result)
-            output[record_id] = dict(status=ERROR, message=gettext_lazy("System failure"))
-            continue
-        output[record_id] = dict(status=OK, message=gettext_lazy("Success"))
+            message = gettext_lazy("System failure")
+        output[record_id] = dict(status=ERROR, message=message, record=validation_output["record"])
 
     return output
