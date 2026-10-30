@@ -5,6 +5,7 @@ import pytest
 from django.core.files.storage import Storage
 from django.core.files.uploadedfile import SimpleUploadedFile
 from django.test import override_settings
+from storages.backends.s3 import S3Storage
 
 from api.models import Image, Project
 from api.models.classification import (
@@ -282,6 +283,26 @@ def test_image_get_storage_bounds_s3_client_timeouts():
     assert client_config.connect_timeout == 7
     assert client_config.read_timeout == 21
     assert client_config.retries["max_attempts"] == 3
+
+
+# --- per-bucket storage reuse ---
+
+
+@override_settings(**STORAGE_SETTINGS, USE_S3_IMAGE_STORAGE=True)
+def test_image_storage_built_once_per_bucket():
+    """Image list serialization paid ~250ms per image when each Image built its own storage."""
+    with patch("api.models.classification.S3Storage", wraps=S3Storage) as storage_cls:
+        images = [Image(image_bucket=bucket) for bucket in ["prod-bucket", "test-bucket"] * 5]
+
+    assert storage_cls.call_count == 2
+    prod_storage = images[0].image.storage
+    test_storage = images[1].image.storage
+    assert prod_storage.bucket_name == "prod-bucket"
+    assert test_storage.bucket_name == "test-bucket"
+    for image in images:
+        expected = prod_storage if image.image_bucket == "prod-bucket" else test_storage
+        for field_name in ("image", "thumbnail", "annotations_file", "feature_vector_file"):
+            assert getattr(image, field_name).storage is expected
 
 
 @override_settings(USE_S3_IMAGE_STORAGE=False)
