@@ -38,6 +38,33 @@ def camel_case(string: str) -> str:
     return "".join([s[0].lower(), s[1:]])
 
 
+def grant_exec_log_group_describe(cluster: ecs.ICluster, task_def: ecs.TaskDefinition) -> None:
+    """Call for every service with enable_execute_command=True.
+
+    CDK's ECS Exec grant gives logs:DescribeLogStreams on the exec log group's
+    stream-form ARN (`...:log-group:<name>:*`) only. From 2027-04-26 CloudWatch Logs
+    authorizes it against the log-group ARN, so grant that form too.
+    """
+    exec_config = cluster.execute_command_configuration
+    log_config = exec_config.log_configuration if exec_config else None
+    log_group = log_config.cloud_watch_log_group if log_config else None
+    if log_group is None:  # exec logging off or not to CloudWatch: nothing to grant
+        return
+    task_def.add_to_task_role_policy(
+        iam.PolicyStatement(
+            actions=["logs:DescribeLogStreams"],
+            resources=[
+                Stack.of(task_def).format_arn(
+                    service="logs",
+                    resource="log-group",
+                    resource_name=log_group.log_group_name,
+                    arn_format=ArnFormat.COLON_RESOURCE_NAME,
+                )
+            ],
+        )
+    )
+
+
 class ApiStack(Stack):
     def __init__(
         self,
@@ -308,6 +335,7 @@ class ApiStack(Stack):
             capacity_provider_strategies=cluster.default_capacity_provider_strategy,
             circuit_breaker=ecs.DeploymentCircuitBreaker(enable=True, rollback=True),
         )
+        grant_exec_log_group_describe(cluster, summary_cache_task_def)
 
         # --- API Service ---
 
@@ -366,6 +394,7 @@ class ApiStack(Stack):
             capacity_provider_strategies=cluster.default_capacity_provider_strategy,
             circuit_breaker=ecs.DeploymentCircuitBreaker(enable=True, rollback=True),
         )
+        grant_exec_log_group_describe(cluster, task_definition)
 
         # Grant Secret read to API container & backup task
         for _, container_secret in self.api_secrets.items():
