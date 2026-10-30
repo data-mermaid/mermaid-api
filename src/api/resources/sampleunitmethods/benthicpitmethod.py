@@ -17,6 +17,7 @@ from ...models import (
 )
 from ...reports.fields import ReportField
 from ...reports.formatters import (
+    to_bleaching_percents,
     to_day,
     to_governance,
     to_join_list,
@@ -390,9 +391,15 @@ class BenthicPITMethodSUCSVSerializer(ReportSerializer):
         ReportField("percent_cover_benthic_category", "Percent cover by benthic category"),
         ReportField("percent_cover_life_histories", "Percent cover by life history"),
         ReportField("include_bleaching", "Include bleaching", to_yesno),
-        ReportField("percent_bleached_hard_coral", "Percent bleached hard coral"),
-        ReportField("percent_bleached_soft_coral", "Percent bleached soft coral"),
-        ReportField("percent_bleached_total_coral", "Percent bleached total coral"),
+        ReportField(
+            "percent_bleached_hard_coral", "Percent bleached hard coral", to_bleaching_percents
+        ),
+        ReportField(
+            "percent_bleached_soft_coral", "Percent bleached soft coral", to_bleaching_percents
+        ),
+        ReportField(
+            "percent_bleached_total_coral", "Percent bleached total coral", to_bleaching_percents
+        ),
         ReportField("site_notes", "Site notes"),
         ReportField("management_notes", "Management notes"),
         ReportField("sample_unit_notes", "Sample unit notes"),
@@ -430,11 +437,8 @@ class BenthicPITMethodSESerializer(BaseSUViewAPISerializer):
                 "percent_cover_life_histories_sd",
                 "bleaching_sample_unit_count",
                 "percent_bleached_hard_coral_avg",
-                "percent_bleached_hard_coral_sd",
                 "percent_bleached_soft_coral_avg",
-                "percent_bleached_soft_coral_sd",
                 "percent_bleached_total_coral_avg",
-                "percent_bleached_total_coral_sd",
             ]
         )
 
@@ -487,17 +491,20 @@ class BenthicPITMethodSECSVSerializer(ReportSerializer):
             "percent_cover_life_histories_sd", "Percent cover by life history standard deviation"
         ),
         ReportField("bleaching_sample_unit_count", "Bleaching sample unit count"),
-        ReportField("percent_bleached_hard_coral_avg", "Percent bleached hard coral average"),
         ReportField(
-            "percent_bleached_hard_coral_sd", "Percent bleached hard coral standard deviation"
+            "percent_bleached_hard_coral_avg",
+            "Percent bleached hard coral average",
+            to_bleaching_percents,
         ),
-        ReportField("percent_bleached_soft_coral_avg", "Percent bleached soft coral average"),
         ReportField(
-            "percent_bleached_soft_coral_sd", "Percent bleached soft coral standard deviation"
+            "percent_bleached_soft_coral_avg",
+            "Percent bleached soft coral average",
+            to_bleaching_percents,
         ),
-        ReportField("percent_bleached_total_coral_avg", "Percent bleached total coral average"),
         ReportField(
-            "percent_bleached_total_coral_sd", "Percent bleached total coral standard deviation"
+            "percent_bleached_total_coral_avg",
+            "Percent bleached total coral average",
+            to_bleaching_percents,
         ),
         ReportField("site_notes", "Site notes"),
         ReportField("management_notes", "Management notes"),
