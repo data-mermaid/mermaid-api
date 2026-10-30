@@ -404,16 +404,10 @@ class BenthicLITSESQLModel(BaseSQLModel):
             percent_cover_benthic_category_sd,
             percent_cover_life_histories_avg,
             percent_cover_life_histories_sd,
-            COUNT(benthiclit_su.pseudosu_id) FILTER (
-                WHERE benthiclit_su.include_bleaching
-                AND benthiclit_su.percent_bleached_total_coral IS NOT NULL
-            ) AS bleaching_sample_unit_count,
+            COUNT(benthiclit_su.pseudosu_id) FILTER (WHERE benthiclit_su.include_bleaching) AS bleaching_sample_unit_count,
             se_bleaching.percent_bleached_hard_coral_avg,
-            se_bleaching.percent_bleached_hard_coral_sd,
             se_bleaching.percent_bleached_soft_coral_avg,
-            se_bleaching.percent_bleached_soft_coral_sd,
-            se_bleaching.percent_bleached_total_coral_avg,
-            se_bleaching.percent_bleached_total_coral_sd
+            se_bleaching.percent_bleached_total_coral_avg
         FROM
             benthiclit_su
             INNER JOIN (
@@ -467,11 +461,8 @@ class BenthicLITSESQLModel(BaseSQLModel):
             percent_cover_life_histories_avg,
             percent_cover_life_histories_sd,
             se_bleaching.percent_bleached_hard_coral_avg,
-            se_bleaching.percent_bleached_hard_coral_sd,
             se_bleaching.percent_bleached_soft_coral_avg,
-            se_bleaching.percent_bleached_soft_coral_sd,
             se_bleaching.percent_bleached_total_coral_avg,
-            se_bleaching.percent_bleached_total_coral_sd,
             se_observers.observers
             """
     sql_args = dict(
@@ -501,11 +492,8 @@ class BenthicLITSESQLModel(BaseSQLModel):
     percent_cover_life_histories_sd = models.JSONField(null=True, blank=True)
     bleaching_sample_unit_count = models.PositiveSmallIntegerField(default=0)
     percent_bleached_hard_coral_avg = models.JSONField(null=True, blank=True)
-    percent_bleached_hard_coral_sd = models.JSONField(null=True, blank=True)
     percent_bleached_soft_coral_avg = models.JSONField(null=True, blank=True)
-    percent_bleached_soft_coral_sd = models.JSONField(null=True, blank=True)
     percent_bleached_total_coral_avg = models.JSONField(null=True, blank=True)
-    percent_bleached_total_coral_sd = models.JSONField(null=True, blank=True)
     data_policy_benthiclit = models.CharField(max_length=50)
 
     class Meta:

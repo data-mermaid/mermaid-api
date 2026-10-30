@@ -36,27 +36,12 @@ class Migration(migrations.Migration):
         ),
         migrations.AddField(
             model_name="benthiclitsemodel",
-            name="percent_bleached_hard_coral_sd",
-            field=models.JSONField(blank=True, null=True),
-        ),
-        migrations.AddField(
-            model_name="benthiclitsemodel",
             name="percent_bleached_soft_coral_avg",
             field=models.JSONField(blank=True, null=True),
         ),
         migrations.AddField(
             model_name="benthiclitsemodel",
-            name="percent_bleached_soft_coral_sd",
-            field=models.JSONField(blank=True, null=True),
-        ),
-        migrations.AddField(
-            model_name="benthiclitsemodel",
             name="percent_bleached_total_coral_avg",
-            field=models.JSONField(blank=True, null=True),
-        ),
-        migrations.AddField(
-            model_name="benthiclitsemodel",
-            name="percent_bleached_total_coral_sd",
             field=models.JSONField(blank=True, null=True),
         ),
         migrations.AddField(
@@ -106,27 +91,12 @@ class Migration(migrations.Migration):
         ),
         migrations.AddField(
             model_name="benthicpitsemodel",
-            name="percent_bleached_hard_coral_sd",
-            field=models.JSONField(blank=True, null=True),
-        ),
-        migrations.AddField(
-            model_name="benthicpitsemodel",
             name="percent_bleached_soft_coral_avg",
             field=models.JSONField(blank=True, null=True),
         ),
         migrations.AddField(
             model_name="benthicpitsemodel",
-            name="percent_bleached_soft_coral_sd",
-            field=models.JSONField(blank=True, null=True),
-        ),
-        migrations.AddField(
-            model_name="benthicpitsemodel",
             name="percent_bleached_total_coral_avg",
-            field=models.JSONField(blank=True, null=True),
-        ),
-        migrations.AddField(
-            model_name="benthicpitsemodel",
-            name="percent_bleached_total_coral_sd",
             field=models.JSONField(blank=True, null=True),
         ),
         migrations.AddField(

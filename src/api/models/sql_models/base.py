@@ -4,6 +4,7 @@ from django.contrib.gis.db import models
 from django.utils.translation import gettext_lazy as _
 
 from api.models import (
+    BLEACHING_BLEACHED_KEY,
     BLEACHING_CATEGORIES,
     BLEACHING_CATEGORY_HARD_CORAL,
     BLEACHING_CATEGORY_SOFT_CORAL,
@@ -75,7 +76,7 @@ def bleaching_su_sql(obs_table, weight):
         FROM (
             SELECT bt.pseudosu_id,
             bt.coral_type,
-            jsonb_build_object('Bleached', ROUND(100.0 * bt.bleached_weight / NULLIF(bt.total_weight, 0), 2))
+            jsonb_build_object('{BLEACHING_BLEACHED_KEY}', ROUND(100.0 * bt.bleached_weight / NULLIF(bt.total_weight, 0), 2))
             || jsonb_object_agg(
                 bs.name,
                 ROUND(100.0 * COALESCE(bsw.status_weight, 0) / NULLIF(bt.total_weight, 0), 2)
@@ -87,7 +88,6 @@ def bleaching_su_sql(obs_table, weight):
                 bt.coral_type = bsw.coral_type AND
                 bs.val = bsw.bleaching_status_val
             )
-            WHERE bs.val > 0
             GROUP BY bt.pseudosu_id, bt.coral_type, bt.bleached_weight, bt.total_weight
         ) coral_percents
         GROUP BY coral_percents.pseudosu_id
@@ -97,11 +97,18 @@ def bleaching_su_sql(obs_table, weight):
 
 def bleaching_se_sql(su_table, cte_name="se_bleaching"):
     """
-    SE-level bleaching CTEs ending in `cte_name` (sample_event_id, avg/sd jsonb per coral type),
-    aggregated from the percent_bleached_* columns of `su_table`. Pass a distinct `cte_name` to use
-    this more than once in the same query.
+    SE-level bleaching CTEs ending in `cte_name` (sample_event_id, avg jsonb per coral type),
+    aggregated from the percent_bleached_* columns of `su_table`. Each avg is over every SU with
+    include_bleaching, so an SU without that coral type (or without any statuses) counts as 0.
+    Pass a distinct `cte_name` to use this more than once in the same query.
     """
     return f"""
+    {cte_name}_su_count AS (
+        SELECT sample_event_id, COUNT(*) AS bleaching_su_count
+        FROM {su_table}
+        WHERE include_bleaching
+        GROUP BY sample_event_id
+    ),
     {cte_name}_su AS (
         SELECT sample_event_id, '{BLEACHING_CATEGORY_HARD_CORAL}' AS coral_type, bdata.key, bdata.value
         FROM {su_table}, jsonb_each_text(percent_bleached_hard_coral) AS bdata
@@ -115,19 +122,16 @@ def bleaching_se_sql(su_table, cte_name="se_bleaching"):
     {cte_name} AS (
         SELECT sample_event_id,
         jsonb_object_agg(key, ROUND(percent_avg :: numeric, 2)) FILTER (WHERE coral_type = '{BLEACHING_CATEGORY_HARD_CORAL}') AS percent_bleached_hard_coral_avg,
-        jsonb_object_agg(key, ROUND(percent_sd :: numeric, 2)) FILTER (WHERE coral_type = '{BLEACHING_CATEGORY_HARD_CORAL}') AS percent_bleached_hard_coral_sd,
         jsonb_object_agg(key, ROUND(percent_avg :: numeric, 2)) FILTER (WHERE coral_type = '{BLEACHING_CATEGORY_SOFT_CORAL}') AS percent_bleached_soft_coral_avg,
-        jsonb_object_agg(key, ROUND(percent_sd :: numeric, 2)) FILTER (WHERE coral_type = '{BLEACHING_CATEGORY_SOFT_CORAL}') AS percent_bleached_soft_coral_sd,
-        jsonb_object_agg(key, ROUND(percent_avg :: numeric, 2)) FILTER (WHERE coral_type = 'Total coral') AS percent_bleached_total_coral_avg,
-        jsonb_object_agg(key, ROUND(percent_sd :: numeric, 2)) FILTER (WHERE coral_type = 'Total coral') AS percent_bleached_total_coral_sd
+        jsonb_object_agg(key, ROUND(percent_avg :: numeric, 2)) FILTER (WHERE coral_type = 'Total coral') AS percent_bleached_total_coral_avg
         FROM (
-            SELECT sample_event_id,
+            SELECT {cte_name}_su.sample_event_id,
             coral_type,
             key,
-            AVG(value :: float) AS percent_avg,
-            STDDEV(value :: float) AS percent_sd
+            SUM(value :: float) / MAX(bleaching_su_count) AS percent_avg
             FROM {cte_name}_su
-            GROUP BY sample_event_id, coral_type, key
+            INNER JOIN {cte_name}_su_count USING (sample_event_id)
+            GROUP BY {cte_name}_su.sample_event_id, coral_type, key
         ) AS {cte_name}_su_stats
         GROUP BY sample_event_id
     )

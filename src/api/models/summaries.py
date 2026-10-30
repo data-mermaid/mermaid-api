@@ -371,11 +371,8 @@ class BenthicPITSEModel(BaseSummaryModel):
     percent_cover_life_histories_sd = models.JSONField(null=True, blank=True)
     bleaching_sample_unit_count = models.PositiveSmallIntegerField(default=0)
     percent_bleached_hard_coral_avg = models.JSONField(null=True, blank=True)
-    percent_bleached_hard_coral_sd = models.JSONField(null=True, blank=True)
     percent_bleached_soft_coral_avg = models.JSONField(null=True, blank=True)
-    percent_bleached_soft_coral_sd = models.JSONField(null=True, blank=True)
     percent_bleached_total_coral_avg = models.JSONField(null=True, blank=True)
-    percent_bleached_total_coral_sd = models.JSONField(null=True, blank=True)
     data_policy_benthicpit = models.CharField(max_length=50)
 
     class Meta:
@@ -449,11 +446,8 @@ class BenthicLITSEModel(BaseSummaryModel):
     percent_cover_life_histories_sd = models.JSONField(null=True, blank=True)
     bleaching_sample_unit_count = models.PositiveSmallIntegerField(default=0)
     percent_bleached_hard_coral_avg = models.JSONField(null=True, blank=True)
-    percent_bleached_hard_coral_sd = models.JSONField(null=True, blank=True)
     percent_bleached_soft_coral_avg = models.JSONField(null=True, blank=True)
-    percent_bleached_soft_coral_sd = models.JSONField(null=True, blank=True)
     percent_bleached_total_coral_avg = models.JSONField(null=True, blank=True)
-    percent_bleached_total_coral_sd = models.JSONField(null=True, blank=True)
     data_policy_benthiclit = models.CharField(max_length=50)
 
     class Meta:
