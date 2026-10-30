@@ -39,7 +39,7 @@ from ..base import (
     BaseViewAPISUGeoSerializer,
 )
 from ..fish_belt_transect import FishBeltTransectSerializer
-from ..mixins import SampleUnitMethodEditMixin, SampleUnitMethodSummaryReport
+from ..mixins import SampleUnitMethodEditMixin
 from ..observer import ObserverSerializer
 from ..sample_event import SampleEventSerializer
 from . import (
@@ -85,9 +85,7 @@ class BeltFishMethodSerializer(BeltFishSerializer):
         exclude = []
 
 
-class BeltFishMethodView(
-    SampleUnitMethodSummaryReport, SampleUnitMethodEditMixin, BaseProjectApiViewSet
-):
+class BeltFishMethodView(SampleUnitMethodEditMixin, BaseProjectApiViewSet):
     project_policy = "data_policy_beltfish"
     queryset = (
         BeltFish.objects.select_related("transect", "transect__sample_event")

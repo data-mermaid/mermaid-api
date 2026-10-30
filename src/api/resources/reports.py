@@ -101,6 +101,7 @@ class MultiProjectReportView(APIView):
         else:
             if not output_path:
                 raise ValidationError("Error creating report")
+            zip_file_path = None
             try:
                 zip_file_path = zip_file(output_path, output_path.stem)
                 z_file = open(zip_file_path, "rb")
@@ -111,4 +112,5 @@ class MultiProjectReportView(APIView):
                 return response
             finally:
                 output_path.unlink()
-                zip_file_path.unlink()
+                if zip_file_path:
+                    zip_file_path.unlink()

@@ -14,7 +14,6 @@ from django.db import transaction
 from django.db.models import Q
 from django.db.models.fields.related import OneToOneField
 from django.utils import timezone
-from django.utils.text import slugify
 
 from ..models import (
     BLEACHINGQC_PROTOCOL,
@@ -1035,14 +1034,6 @@ def email_members_of_new_project(project, owner_profile):
             to=[project_profile.profile.email],
             context=context,
         )
-
-
-def get_safe_project_name(project_id):
-    try:
-        project = Project.objects.get(id=project_id)
-        return slugify(project.name, allow_unicode=True).replace("-", "_")
-    except Project.DoesNotExist as e:
-        raise ValueError(f"Project with id '{project_id}' does not exist") from e
 
 
 def get_profiles(project):
