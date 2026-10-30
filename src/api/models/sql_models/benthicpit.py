@@ -2,7 +2,16 @@ from django.contrib.gis.db import models
 from django.utils.translation import gettext_lazy as _
 
 from sqltables import SQLTableArg, SQLTableManager
-from .base import BaseSQLModel, BaseSUSQLModel, project_where, sample_event_sql_template
+from .base import (
+    BaseSQLModel,
+    BaseSUSQLModel,
+    bleaching_se_sql,
+    bleaching_status_sql,
+    bleaching_su_columns_sql,
+    bleaching_su_sql,
+    project_where,
+    sample_event_sql_template,
+)
 
 
 class BenthicPITObsSQLModel(BaseSUSQLModel):
@@ -41,6 +50,9 @@ class BenthicPITObsSQLModel(BaseSUSQLModel):
                 b.name AS benthic_attribute,
                 gf.id AS growth_form_id,
                 gf.name AS growth_form,
+                tt.include_bleaching,
+                bs.name AS bleaching_status,
+                bs.val AS bleaching_status_val,
                 o.notes AS observation_notes
             FROM obs_benthicpit o
                 JOIN transectmethod_benthicpit tt ON o.benthicpit_id = tt.transectmethod_ptr_id
@@ -83,6 +95,7 @@ class BenthicPITObsSQLModel(BaseSUSQLModel):
                 JOIN benthic_attribute cat ON category.root = cat.id
                 JOIN benthic_attribute b ON o.attribute_id = b.id
                 LEFT JOIN growth_form gf ON o.growth_form_id = gf.id
+                LEFT JOIN {bleaching_status_sql} ON o.bleaching_status = bs.val
                 LEFT JOIN api_current c ON su.current_id = c.id
                 LEFT JOIN api_tide t ON su.tide_id = t.id
                 LEFT JOIN api_visibility v ON su.visibility_id = v.id
@@ -173,6 +186,8 @@ class BenthicPITObsSQLModel(BaseSUSQLModel):
     benthic_category = models.CharField(max_length=100)
     benthic_attribute = models.CharField(max_length=100)
     growth_form = models.CharField(max_length=100)
+    include_bleaching = models.BooleanField(default=False)
+    bleaching_status = models.CharField(max_length=100, null=True, blank=True)
     life_histories = models.JSONField(null=True, blank=True)
     observation_notes = models.TextField(blank=True)
     data_policy_benthicpit = models.CharField(max_length=50)
@@ -278,7 +293,8 @@ class BenthicPITSUSQLModel(BaseSUSQLModel):
             ) obs_count
             ON lh.pseudosu_id = obs_count.pseudosu_id
             GROUP BY lh.pseudosu_id
-        ) 
+        ),
+        {bleaching_su_sql('benthicpit_obs', '1')}
 
         SELECT NULL AS id,
         benthicpit_su.pseudosu_id,
@@ -286,13 +302,16 @@ class BenthicPITSUSQLModel(BaseSUSQLModel):
         benthicpit_su.{_agg_su_fields},
         reef_slope,
         percent_cover_benthic_category,
-        percent_cover_life_histories
+        percent_cover_life_histories,
+        benthicpit_su.include_bleaching,
+        {bleaching_su_columns_sql}
         FROM (
             SELECT pseudosu_id,
             jsonb_agg(DISTINCT sample_unit_id) AS sample_unit_ids,
             {_su_fields_qualified},
             {_su_aggfields_sql},
-            string_agg(DISTINCT reef_slope::text, ', '::text ORDER BY (reef_slope::text)) AS reef_slope
+            string_agg(DISTINCT reef_slope::text, ', '::text ORDER BY (reef_slope::text)) AS reef_slope,
+            bool_or(include_bleaching) AS include_bleaching
             FROM benthicpit_obs
             GROUP BY pseudosu_id,
             {_su_fields_qualified}
@@ -304,6 +323,8 @@ class BenthicPITSUSQLModel(BaseSUSQLModel):
         ON (benthicpit_su.pseudosu_id = life_histories_agg.pseudosu_id)
         INNER JOIN benthicpit_observers
         ON (benthicpit_su.pseudosu_id = benthicpit_observers.pseudosu_id)
+        LEFT JOIN bleaching_percents
+        ON (benthicpit_su.pseudosu_id = bleaching_percents.pseudosu_id)
     """
 
     sql_args = dict(
@@ -338,6 +359,10 @@ class BenthicPITSUSQLModel(BaseSUSQLModel):
     )
     percent_cover_benthic_category = models.JSONField(null=True, blank=True)
     percent_cover_life_histories = models.JSONField(null=True, blank=True)
+    include_bleaching = models.BooleanField(default=False)
+    percent_bleached_hard_coral = models.JSONField(null=True, blank=True)
+    percent_bleached_soft_coral = models.JSONField(null=True, blank=True)
+    percent_bleached_total_coral = models.JSONField(null=True, blank=True)
     data_policy_benthicpit = models.CharField(max_length=50)
     pseudosu_id = models.UUIDField()
 
@@ -362,7 +387,8 @@ class BenthicPITSESQLModel(BaseSQLModel):
                 FROM benthicpit_su
             ) AS su_observers
             GROUP BY sample_event_id
-        )
+        ),
+        {bleaching_se_sql('benthicpit_su')}
         SELECT benthicpit_su.sample_event_id AS id,
         {_se_fields},
         data_policy_benthicpit,
@@ -372,7 +398,11 @@ class BenthicPITSESQLModel(BaseSQLModel):
         percent_cover_benthic_category_avg,
         percent_cover_benthic_category_sd,
         percent_cover_life_histories_avg,
-        percent_cover_life_histories_sd
+        percent_cover_life_histories_sd,
+        COUNT(benthicpit_su.pseudosu_id) FILTER (WHERE benthicpit_su.include_bleaching) AS bleaching_sample_unit_count,
+        se_bleaching.percent_bleached_hard_coral_avg,
+        se_bleaching.percent_bleached_soft_coral_avg,
+        se_bleaching.percent_bleached_total_coral_avg
 
         FROM benthicpit_su
 
@@ -409,6 +439,7 @@ class BenthicPITSESQLModel(BaseSQLModel):
         ) AS benthicpit_se_lhs
         ON benthicpit_su.sample_event_id = benthicpit_se_lhs.sample_event_id
         INNER JOIN se_observers ON (benthicpit_su.sample_event_id = se_observers.sample_event_id)
+        LEFT JOIN se_bleaching ON (benthicpit_su.sample_event_id = se_bleaching.sample_event_id)
 
         GROUP BY
         {_se_fields},
@@ -417,6 +448,9 @@ class BenthicPITSESQLModel(BaseSQLModel):
         percent_cover_benthic_category_sd,
         percent_cover_life_histories_avg,
         percent_cover_life_histories_sd,
+        se_bleaching.percent_bleached_hard_coral_avg,
+        se_bleaching.percent_bleached_soft_coral_avg,
+        se_bleaching.percent_bleached_total_coral_avg,
         se_observers.observers
     """
 
@@ -445,6 +479,10 @@ class BenthicPITSESQLModel(BaseSQLModel):
     percent_cover_benthic_category_sd = models.JSONField(null=True, blank=True)
     percent_cover_life_histories_avg = models.JSONField(null=True, blank=True)
     percent_cover_life_histories_sd = models.JSONField(null=True, blank=True)
+    bleaching_sample_unit_count = models.PositiveSmallIntegerField(default=0)
+    percent_bleached_hard_coral_avg = models.JSONField(null=True, blank=True)
+    percent_bleached_soft_coral_avg = models.JSONField(null=True, blank=True)
+    percent_bleached_total_coral_avg = models.JSONField(null=True, blank=True)
     data_policy_benthicpit = models.CharField(max_length=50)
 
     class Meta:

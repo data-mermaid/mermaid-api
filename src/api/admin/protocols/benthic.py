@@ -260,7 +260,6 @@ class BenthicLITAdmin(TransectMethodAdmin):
         if obj is not None:
             attributes = BenthicAttribute.objects.only("pk", "name").order_by("name")
             growth_forms = GrowthForm.objects.all()
-
         for inline in self.get_inline_instances(request, obj):
             inline.cached_attributes = [(a.pk, a.name) for a in attributes]
             inline.cached_growth_forms = [(gf.pk, gf.name) for gf in growth_forms]
@@ -296,7 +295,6 @@ class BenthicPITAdmin(TransectMethodAdmin):
         if obj is not None:
             attributes = BenthicAttribute.objects.only("pk", "name").order_by("name")
             growth_forms = GrowthForm.objects.all()
-
         for inline in self.get_inline_instances(request, obj):
             inline.cached_attributes = [(a.pk, a.name) for a in attributes]
             inline.cached_growth_forms = [(gf.pk, gf.name) for gf in growth_forms]

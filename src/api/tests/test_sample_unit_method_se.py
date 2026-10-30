@@ -270,4 +270,4 @@ def test_benthicpit_se_field_report(
     assert len(rows) == 2
     assert "Country" in fieldnames
     assert "site_id" not in fieldnames
-    assert len(rows[0].keys()) == 48
+    assert len(rows[0].keys()) == 52

@@ -1,5 +1,5 @@
 import uuid
-from collections import OrderedDict
+from collections import OrderedDict, defaultdict
 from collections.abc import Mapping, Sequence
 from operator import itemgetter
 
@@ -273,6 +273,39 @@ class CollectRecordCSVListSerializer(ListSerializer):
                 fmt_errors.append(fmt_error)
 
         return sorted(fmt_errors, key=itemgetter("$row_number"))
+
+
+class IncludeBleachingCSVListSerializer(CollectRecordCSVListSerializer):
+    """Include bleaching is a sample unit value repeated on every CSV row, so every row of a
+    sample unit must have the same value. A blank value is kept as None so that validation
+    reports it as missing.
+    """
+
+    include_bleaching_field = "data__include_bleaching"
+    MIXED_INCLUDE_BLEACHING = "All rows of a sample unit must have the same Include bleaching value"
+
+    def to_internal_value(self, data):
+        rows = super().to_internal_value(data)
+        group_fields = sorted(self.get_group_by_fields())
+        su_keys = []
+        su_values = defaultdict(set)
+        for row in rows:
+            if row.get(self.include_bleaching_field) == "":
+                row[self.include_bleaching_field] = None
+            su_key = tuple(str(row.get(field)) for field in group_fields)
+            su_keys.append(su_key)
+            su_values[su_key].add(row.get(self.include_bleaching_field))
+
+        errors = [
+            {self.include_bleaching_field: [self.MIXED_INCLUDE_BLEACHING]}
+            if len(su_values[su_key]) > 1
+            else {}
+            for su_key in su_keys
+        ]
+        if any(errors):
+            raise ValidationError(errors)
+
+        return rows
 
 
 class CollectRecordCSVSerializer(Serializer):
