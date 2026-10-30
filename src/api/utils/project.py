@@ -86,6 +86,32 @@ def _generate_new_image_path(old_path, new_image_id):
         return UUID_PATTERN.sub(str(new_image_id), old_path, count=1)
 
 
+def _delete_image_files(items, context):
+    """Delete (storage_config, path) items with one client and batched requests per bucket."""
+    keys_by_target = defaultdict(list)
+    for config, path in items:
+        target = (config["bucket"], config["access_key"], config["secret_key"])
+        keys_by_target[target].append(f"{config['s3_path']}{path}")
+
+    for (bucket, access_key, secret_key), keys in keys_by_target.items():
+        try:
+            errors = s3_utils.delete_files(
+                bucket, keys, aws_access_key_id=access_key, aws_secret_access_key=secret_key
+            )
+        except Exception:
+            logger.error(
+                f"Failed to delete {len(keys)} S3 files from {bucket} during {context}",
+                exc_info=True,
+            )
+            continue
+        for error in errors:
+            logger.error(
+                f"Failed to delete S3 file {error.get('Key')} during {context}: "
+                f"{error.get('Message')}"
+            )
+        logger.info(f"Deleted {len(keys) - len(errors)} of {len(keys)} S3 files from {bucket}")
+
+
 class S3CopyTracker:
     """
     Prevents orphaned S3 files when a database transaction fails after
@@ -100,9 +126,8 @@ class S3CopyTracker:
 
     def _get_client(self, access_key, secret_key):
         # Normalize None to actual defaults so identical credentials share one client
-        actual_key = access_key or settings.AWS_ACCESS_KEY_ID
-        actual_secret = secret_key or settings.AWS_SECRET_ACCESS_KEY
-        cache_key = (actual_key, actual_secret)
+        cache_key = s3_utils.resolve_credentials(access_key, secret_key)
+        actual_key, actual_secret = cache_key
         with self._lock:
             if cache_key not in self._clients:
                 self._clients[cache_key] = s3_utils.get_client(actual_key, actual_secret)
@@ -133,11 +158,8 @@ class S3CopyTracker:
         # Use server-side copy when credentials match (same account); otherwise
         # fall back to get+put via move_file_cross_account (cross-account, e.g.
         # when migrating images between project statuses).
-        same_credentials = source_config.get("access_key") == dest_config.get(
-            "access_key"
-        ) and source_config.get("secret_key") == dest_config.get("secret_key")
         try:
-            if same_credentials:
+            if s3_utils.same_credentials(source_config, dest_config):
                 client = self._get_client(
                     dest_config.get("access_key"), dest_config.get("secret_key")
                 )
@@ -159,6 +181,12 @@ class S3CopyTracker:
                     dest_access_key=dest_config["access_key"],
                     dest_secret_key=dest_config["secret_key"],
                     delete_source=False,
+                    source_client=self._get_client(
+                        source_config["access_key"], source_config["secret_key"]
+                    ),
+                    dest_client=self._get_client(
+                        dest_config["access_key"], dest_config["secret_key"]
+                    ),
                 )
         except botocore.exceptions.ClientError as e:
             if e.response["Error"]["Code"] == "NoSuchKey":
@@ -171,18 +199,7 @@ class S3CopyTracker:
         return new_path
 
     def cleanup(self):
-        for dest_config, path in self.copied_files:
-            try:
-                full_key = f"{dest_config['s3_path']}{path}"
-                s3_utils.delete_file(
-                    bucket=dest_config["bucket"],
-                    blob_name=full_key,
-                    aws_access_key_id=dest_config["access_key"],
-                    aws_secret_access_key=dest_config["secret_key"],
-                )
-                logger.info(f"Cleaned up S3 file: {path}")
-            except Exception as e:
-                logger.error(f"Failed to cleanup S3 file {path}: {e}")
+        _delete_image_files(self.copied_files, "cleanup of copied files")
 
 
 def _copy_image_s3(source_image, new_image_id, s3_tracker, dest_bucket=None):
@@ -381,23 +398,7 @@ def delete_collected_pqt_images(image_ids):
     )
     Image.objects.filter(id__in=image_ids).delete()
 
-    def _cleanup_s3():
-        for config, path in cleanup_items:
-            try:
-                full_key = f"{config['s3_path']}{path}"
-                s3_utils.delete_file(
-                    bucket=config["bucket"],
-                    blob_name=full_key,
-                    aws_access_key_id=config["access_key"],
-                    aws_secret_access_key=config["secret_key"],
-                )
-            except Exception:
-                logger.error(
-                    f"Failed to delete S3 file during project deletion: {path}",
-                    exc_info=True,
-                )
-
-    transaction.on_commit(_cleanup_s3)
+    transaction.on_commit(lambda: _delete_image_files(cleanup_items, "project deletion"))
 
 
 def _get_sample_unit_method_label(sample_unit_method, sample_unit_name):
