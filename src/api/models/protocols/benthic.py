@@ -184,6 +184,10 @@ BLEACHING_STATUS_CHOICES = (
     (BLEACHING_STATUS_FULLY_BLEACHED, "fully bleached"),
     (BLEACHING_STATUS_RECENT_MORTALITY, "recent bleaching mortality"),
 )
+# Key in percent_bleached_* objects for the sum of all statuses other than normal
+BLEACHING_BLEACHED_KEY = "bleached"
+# Tabular order of percent_bleached_* keys: total bleached first, then statuses by val
+BLEACHING_PERCENT_KEYS = (BLEACHING_BLEACHED_KEY, *(name for _, name in BLEACHING_STATUS_CHOICES))
 BLEACHING_STATUS_CHOICES_UPDATED_ON = datetime.datetime(
     2026, 10, 21, 0, 0, 0, 0, tzinfo=datetime.UTC
 )

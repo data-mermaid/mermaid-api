@@ -277,16 +277,10 @@ class SummarySampleEventSQLModel(SummarySampleEventBaseModel):
                 'bleaching_sample_unit_count', bl.bleaching_sample_unit_count,
                 'percent_bleached_hard_coral_avg', (CASE WHEN project.data_policy_benthiclit < 50 AND NOT %(has_access)s THEN NULL ELSE
                 benthiclit_bleaching.percent_bleached_hard_coral_avg END),
-                'percent_bleached_hard_coral_sd', (CASE WHEN project.data_policy_benthiclit < 50 AND NOT %(has_access)s THEN NULL ELSE
-                benthiclit_bleaching.percent_bleached_hard_coral_sd END),
                 'percent_bleached_soft_coral_avg', (CASE WHEN project.data_policy_benthiclit < 50 AND NOT %(has_access)s THEN NULL ELSE
                 benthiclit_bleaching.percent_bleached_soft_coral_avg END),
-                'percent_bleached_soft_coral_sd', (CASE WHEN project.data_policy_benthiclit < 50 AND NOT %(has_access)s THEN NULL ELSE
-                benthiclit_bleaching.percent_bleached_soft_coral_sd END),
                 'percent_bleached_total_coral_avg', (CASE WHEN project.data_policy_benthiclit < 50 AND NOT %(has_access)s THEN NULL ELSE
-                benthiclit_bleaching.percent_bleached_total_coral_avg END),
-                'percent_bleached_total_coral_sd', (CASE WHEN project.data_policy_benthiclit < 50 AND NOT %(has_access)s THEN NULL ELSE
-                benthiclit_bleaching.percent_bleached_total_coral_sd END)
+                benthiclit_bleaching.percent_bleached_total_coral_avg END)
             )), '{{}}'),
             'benthicpit', NULLIF(jsonb_strip_nulls(jsonb_build_object(
                 'sample_unit_count', bp.sample_unit_count,
@@ -301,16 +295,10 @@ class SummarySampleEventSQLModel(SummarySampleEventBaseModel):
                 'bleaching_sample_unit_count', bp.bleaching_sample_unit_count,
                 'percent_bleached_hard_coral_avg', (CASE WHEN project.data_policy_benthicpit < 50 AND NOT %(has_access)s THEN NULL ELSE
                 benthicpit_bleaching.percent_bleached_hard_coral_avg END),
-                'percent_bleached_hard_coral_sd', (CASE WHEN project.data_policy_benthicpit < 50 AND NOT %(has_access)s THEN NULL ELSE
-                benthicpit_bleaching.percent_bleached_hard_coral_sd END),
                 'percent_bleached_soft_coral_avg', (CASE WHEN project.data_policy_benthicpit < 50 AND NOT %(has_access)s THEN NULL ELSE
                 benthicpit_bleaching.percent_bleached_soft_coral_avg END),
-                'percent_bleached_soft_coral_sd', (CASE WHEN project.data_policy_benthicpit < 50 AND NOT %(has_access)s THEN NULL ELSE
-                benthicpit_bleaching.percent_bleached_soft_coral_sd END),
                 'percent_bleached_total_coral_avg', (CASE WHEN project.data_policy_benthicpit < 50 AND NOT %(has_access)s THEN NULL ELSE
-                benthicpit_bleaching.percent_bleached_total_coral_avg END),
-                'percent_bleached_total_coral_sd', (CASE WHEN project.data_policy_benthicpit < 50 AND NOT %(has_access)s THEN NULL ELSE
-                benthicpit_bleaching.percent_bleached_total_coral_sd END)
+                benthicpit_bleaching.percent_bleached_total_coral_avg END)
             )), '{{}}'),
             'benthicpqt', NULLIF(jsonb_strip_nulls(jsonb_build_object(
                 'sample_unit_count', pqt.sample_unit_count,
@@ -486,10 +474,7 @@ class SummarySampleEventSQLModel(SummarySampleEventBaseModel):
         LEFT JOIN (
             SELECT benthiclit_su.sample_event_id,
             COUNT(pseudosu_id) AS sample_unit_count,
-            COUNT(pseudosu_id) FILTER (
-                WHERE include_bleaching
-                AND percent_bleached_total_coral IS NOT NULL
-            ) AS bleaching_sample_unit_count,
+            COUNT(pseudosu_id) FILTER (WHERE include_bleaching) AS bleaching_sample_unit_count,
             percent_cover_benthic_category_avg,
             percent_cover_benthic_category_sd,
             percent_cover_life_histories_avg,
@@ -540,10 +525,7 @@ class SummarySampleEventSQLModel(SummarySampleEventBaseModel):
         LEFT JOIN (
             SELECT benthicpit_su.sample_event_id,
             COUNT(pseudosu_id) AS sample_unit_count,
-            COUNT(pseudosu_id) FILTER (
-                WHERE include_bleaching
-                AND percent_bleached_total_coral IS NOT NULL
-            ) AS bleaching_sample_unit_count,
+            COUNT(pseudosu_id) FILTER (WHERE include_bleaching) AS bleaching_sample_unit_count,
             percent_cover_benthic_category_avg,
             percent_cover_benthic_category_sd,
             percent_cover_life_histories_avg,
