@@ -36,14 +36,14 @@ This should be handled through the CI/CD configuration.
 
 ## cdk-nag
 
-[cdk-nag](https://github.com/cdklabs/cdk-nag) runs `AwsSolutionsChecks` during every `cdk synth`. It validates all stacks against the [AWS Solutions](https://github.com/cdklabs/cdk-nag/blob/main/RULES.md#awssolutions) rule pack and **fails synthesis if there are unsuppressed errors**.
+[cdk-nag](https://github.com/cdklabs/cdk-nag) runs `AwsSolutionsChecks` during every `cdk synth`. It validates all stacks against the [AWS Solutions](https://github.com/cdklabs/cdk-nag/blob/main/RULES.md#awssolutions) rule pack and **fails synthesis if there are unacknowledged findings** (errors or warnings).
 
 ### How it works
 
-1. `app.py` attaches the `AwsSolutionsChecks` aspect to the CDK app.
-2. During `cdk synth`, cdk-nag inspects every resource and reports errors/warnings.
-3. `nag_suppressions.py` contains **resource-scoped** suppressions for findings that have been triaged — each one targets a specific construct path so new resources are never silently covered.
-4. The PR workflow (`pr.yml`) runs `cdk synth`, posts the results as a PR comment, and fails the check if any unsuppressed errors exist.
+1. `app.py` registers `AwsSolutionsChecks` as a CDK policy validation plugin (`Validations.of(app).add_plugins(...)`, cdk-nag v3).
+2. During `cdk synth`, cdk-nag inspects every resource. Any unacknowledged finding makes `cdk synth` exit non-zero and is listed in `cdk.out/validation-report.json`.
+3. `nag_suppressions.py` contains **resource-scoped** acknowledgments for findings that have been triaged — each one targets a specific construct path so new resources are never silently covered.
+4. The PR workflow (`pr.yml`) runs `cdk synth`, posts the findings from `validation-report.json` as a PR comment, and fails the check if there are any.
 
 ### Adding a suppression
 
@@ -51,16 +51,22 @@ When cdk-nag flags a new resource:
 
 1. Decide whether the finding should be **fixed** (change infra code) or **suppressed** (accepted risk / future TODO).
 2. If suppressing, add an entry in `nag_suppressions.py` using `_suppress_by_path()` with the construct path from the error message.
+   - Granular rules (e.g. `AwsSolutions-IAM5`) report one finding per wildcard. List each in `applies_to`, copied exactly from the report's `AwsSolutions-IAM5[...]` rule name. A plain `AwsSolutions-IAM5` without `applies_to` no longer covers them (v3 matches exact strings, no regex).
+   - Findings on resources owned by another stack name its export (e.g. `mermaid-api-infra-common:ExportsOutputFnGetAtt...`), not `<LogicalId.Arn>`.
 3. Tag the reason with `ACCEPTED` (intentional) or `TODO` (to be addressed later).
-4. Run `cdk synth` locally to confirm the error is resolved.
+4. Run `cdk synth` locally to confirm the finding is gone.
 
 ### Running locally
 
 ```bash
-cd iac && cdk synth --quiet 2>&1 | grep '^\[Error'
+cd iac
+rm -f cdk.out/validation-report.json  # so a synth that fails early can't leave a stale report
+cdk synth --quiet; synth_exit=$?
+jq '[.pluginReports[] | select(.conclusion == "failure") | .violations[].ruleName]' cdk.out/validation-report.json
+(exit "$synth_exit")
 ```
 
-No output means all findings are suppressed.
+The block exits with `cdk synth`'s status: non-zero if any finding is unacknowledged or synth failed (then `jq` reports a missing file). `jq` lists the unacknowledged rule IDs; `[]` means none. CDK's built-in "CloudFormation Validate" plugin may also report advisory warnings under a `success` conclusion; those don't fail the check.
 
 ## Gotcha's
 
