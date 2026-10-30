@@ -288,7 +288,6 @@ class ObsBeltInvertCSVSerializer(ReportSerializer):
         ReportField("project_includes_gfcr", "Project includes GFCR", to_yesno),
         ReportField("suggested_citation", "Suggested citation"),
         ReportField("data_policy_macroinvertebrate", "Macroinvertebrate data policy"),
-        ReportField("site_id"),
     ]
 
     additional_fields = [
@@ -299,6 +298,7 @@ class ObsBeltInvertCSVSerializer(ReportSerializer):
         ReportField("sample_event_id"),
         ReportField("sample_unit_id"),
         ReportField("invert_attribute_id"),
+        ReportField("site_id"),
     ]
 
 
@@ -378,7 +378,6 @@ class BeltInvertMethodSUCSVSerializer(ReportSerializer):
         ReportField("project_includes_gfcr", "Project includes GFCR", to_yesno),
         ReportField("suggested_citation", "Suggested citation"),
         ReportField("data_policy_macroinvertebrate", "Macroinvertebrate data policy"),
-        ReportField("site_id"),
     ]
 
     additional_fields = [
@@ -387,6 +386,7 @@ class BeltInvertMethodSUCSVSerializer(ReportSerializer):
         ReportField("management_id"),
         ReportField("sample_event_id"),
         ReportField("sample_unit_ids"),
+        ReportField("site_id"),
     ]
 
 
@@ -465,7 +465,6 @@ class BeltInvertMethodSECSVSerializer(ReportSerializer):
         ReportField("project_includes_gfcr", "Project includes GFCR", to_yesno),
         ReportField("suggested_citation", "Suggested citation"),
         ReportField("data_policy_macroinvertebrate", "Macroinvertebrate data policy"),
-        ReportField("site_id"),
     ]
 
     additional_fields = [
@@ -474,6 +473,7 @@ class BeltInvertMethodSECSVSerializer(ReportSerializer):
         ReportField("country_id"),
         ReportField("management_id"),
         ReportField("sample_event_id"),
+        ReportField("site_id"),
     ]
 
 

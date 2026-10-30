@@ -18,6 +18,7 @@ from api.models import (
     ProjectProfile,
     QuadratTransect,
     SampleEvent,
+    Site,
 )
 from api.models.classification import Annotation, Image, Point
 from api.signals.classification import post_save_classification_image, pre_image_save
@@ -415,6 +416,43 @@ def test_create_demo_suppresses_notifications_on_replacement(api_client1, projec
     assert response.status_code == 200
     assert Notification.objects.count() == count_before
     mock_email.assert_not_called()
+
+
+def test_create_demo_replacement_deletes_old_project_and_sites(
+    api_client1, project_profile1, site1
+):
+    """Replacing an existing demo should delete the old demo project and its Sites,
+    and return a different, newly-created demo project."""
+    url = reverse("project-create-demo")
+
+    with (
+        mock_demo_project(project_profile1.project),
+        patch("api.resources.project.settings") as mock_settings,
+    ):
+        _apply_mock_settings(mock_settings, project_profile1.project)
+        first_response = api_client1.post(url)
+
+    assert first_response.status_code == 200
+    first_demo_id = first_response.json()["id"]
+    first_demo_site_ids = list(
+        Site.objects.filter(project_id=first_demo_id).values_list("id", flat=True)
+    )
+    assert first_demo_site_ids, "expected the copied demo project to have at least one site"
+
+    with (
+        mock_demo_project(project_profile1.project),
+        patch("api.resources.project.settings") as mock_settings,
+    ):
+        _apply_mock_settings(mock_settings, project_profile1.project)
+        second_response = api_client1.post(url)
+
+    assert second_response.status_code == 200
+    second_demo_id = second_response.json()["id"]
+    assert second_demo_id != first_demo_id
+
+    assert not Project.objects.filter(pk=first_demo_id).exists()
+    assert not Site.objects.filter(id__in=first_demo_site_ids).exists()
+    assert Project.objects.filter(pk=second_demo_id, is_demo=True).exists()
 
 
 def test_delete_demo_project_suppresses_notifications(project_profile1):

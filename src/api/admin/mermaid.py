@@ -15,7 +15,6 @@ from ..models import (
     AuditRecord,
     CollectRecord,
     Country,
-    Covariate,
     Current,
     Management,
     ManagementCompliance,
@@ -160,7 +159,7 @@ class ProjectAdmin(BaseAdmin):
         # perms_needed/model_count reflect cascaded models (Site, Management,
         # ProjectProfile, ...) instead of just Project, then drop its nested
         # tree and protected list: for a real project the tree can run to
-        # hundreds/thousands of formatted rows (e.g. one per Site/Covariate),
+        # hundreds/thousands of formatted rows (e.g. one per Site),
         # and the protected list is exactly what we're bypassing.
         #
         # Caveat: PROTECTed models (SampleEvent.site/.management) still stop
@@ -494,11 +493,6 @@ class TagAdmin(BaseAdmin):
                     p.tags.add(replacement_obj)
 
         return super().delete_view(request, object_id, extra_context)
-
-
-@admin.register(Covariate)
-class CovariateAdmin(BaseAdmin):
-    pass
 
 
 @admin.register(AuditRecord)

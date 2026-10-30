@@ -285,7 +285,6 @@ class ObsBeltFishCSVSerializer(ReportSerializer):
         ReportField("project_includes_gfcr", "Project includes GFCR", to_yesno),
         ReportField("suggested_citation", "Suggested citation"),
         ReportField("data_policy_beltfish", "Fish belt data policy"),
-        ReportField("site_id"),
     ]
 
     additional_fields = [
@@ -295,6 +294,7 @@ class ObsBeltFishCSVSerializer(ReportSerializer):
         ReportField("management_id"),
         ReportField("sample_event_id"),
         ReportField("sample_unit_id"),
+        ReportField("site_id"),
     ]
 
 
@@ -378,7 +378,6 @@ class BeltFishMethodSUCSVSerializer(ReportSerializer):
         ReportField("project_includes_gfcr", "Project includes GFCR", to_yesno),
         ReportField("suggested_citation", "Suggested citation"),
         ReportField("data_policy_beltfish", "Fish belt data policy"),
-        ReportField("site_id"),
     ]
 
     additional_fields = [
@@ -387,6 +386,7 @@ class BeltFishMethodSUCSVSerializer(ReportSerializer):
         ReportField("management_id"),
         ReportField("sample_event_id"),
         ReportField("sample_unit_ids"),
+        ReportField("site_id"),
     ]
 
 
@@ -461,7 +461,6 @@ class BeltFishMethodSECSVSerializer(ReportSerializer):
         ReportField("project_includes_gfcr", "Project includes GFCR", to_yesno),
         ReportField("suggested_citation", "Suggested citation"),
         ReportField("data_policy_beltfish", "Fish belt data policy"),
-        ReportField("site_id"),
     ]
 
     additional_fields = [
@@ -470,6 +469,7 @@ class BeltFishMethodSECSVSerializer(ReportSerializer):
         ReportField("country_id"),
         ReportField("management_id"),
         ReportField("sample_event_id"),
+        ReportField("site_id"),
     ]
 
 
