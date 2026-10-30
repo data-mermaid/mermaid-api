@@ -15,7 +15,7 @@ examples/
 readme/
 *.md
 LICENSE
-mermaid_api.insomnia_collection.json
+mermaid_api.insomnia_collection.yaml
 
 # Local-only data and tool output that must never be baked into the image.
 # src/media holds local user uploads (MEDIA_ROOT in local dev).
