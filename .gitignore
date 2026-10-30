@@ -116,3 +116,11 @@ generate_token.py
 .claude/
 
 plan/
+
+Pipfile
+Pipfile.lock
+
+# Local CDK CLI install (npm i aws-cdk in iac/)
+iac/node_modules/
+iac/package.json
+iac/package-lock.json
