@@ -1,4 +1,6 @@
 from django.db import transaction
+from django.db.models import Count, OuterRef, Subquery
+from django.db.models.functions import Coalesce
 from rest_framework import permissions, serializers
 from rest_framework.exceptions import ValidationError
 
@@ -27,7 +29,13 @@ class ProjectProfileSerializer(BaseAPISerializer):
         exclude = []
 
     def get_num_active_sample_units(self, obj):
-        return CollectRecord.objects.filter(profile=obj.profile, project=obj.project).count()
+        # Annotated by ProjectProfileViewSet; count() for other instances.
+        count = getattr(obj, "collect_records_count", None)
+        if count is None:
+            count = CollectRecord.objects.filter(
+                profile_id=obj.profile_id, project_id=obj.project_id
+            ).count()
+        return count
 
 
 class ProjectProfileFilterSet(BaseAPIFilterSet):
@@ -58,7 +66,24 @@ class ProjectProfileCollectorPermission(permissions.BasePermission):
 
 class ProjectProfileViewSet(BaseProjectApiViewSet):
     serializer_class = ProjectProfileSerializer
-    queryset = ProjectProfile.objects.all()
+    queryset = (
+        ProjectProfile.objects.select_related("profile")
+        .prefetch_related("profile__authusers")
+        .annotate(
+            collect_records_count=Coalesce(
+                Subquery(
+                    CollectRecord.objects.filter(
+                        profile_id=OuterRef("profile_id"), project_id=OuterRef("project_id")
+                    )
+                    .order_by()
+                    .values("profile_id")
+                    .annotate(count=Count("id"))
+                    .values("count")
+                ),
+                0,
+            )
+        )
+    )
     permission_classes = [
         ProjectDataReadOnlyPermission
         | ProjectProfileCollectorPermission
