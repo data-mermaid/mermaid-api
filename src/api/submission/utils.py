@@ -27,7 +27,7 @@ from ..models import (
     Image,
 )
 from ..signals import post_submit
-from ..utils.related import defer_project_updated_on
+from ..utils.related import defer_project_save, defer_project_updated_on
 from ..utils.sample_unit_methods import create_audit_record
 from ..utils.summary_cache import add_project_to_queue
 from .validations import (
@@ -172,6 +172,8 @@ def _write_collect_record_once(collect_record, request, dry_run=False):
             # One project save per write in place of one per saved record. It
             # also keeps the project row lock short.
             with defer_project_updated_on():
+                # bulk_create_records skips post_save, so queue the project here.
+                defer_project_save(collect_record.project)
                 writer.write()
             status = SUCCESS_STATUS
         except (ValidationError, DJValidationError) as ve:

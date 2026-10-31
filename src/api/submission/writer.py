@@ -193,9 +193,9 @@ class BaseWriter:
         and the database constraints still apply.
 
         bulk_create does not send save signals. This sets created_by and
-        updated_by in place of the `set_created_by` pre_save signal. The
-        `update_project_updated_on` post_save signal is not needed: the sample
-        unit method and observers saved by the same write touch the project.
+        updated_by in place of the `set_created_by` pre_save signal. In place
+        of the `update_project_updated_on` post_save signal, the shared write
+        path queues the project save (submission/utils.py).
         """
         preloaded = self._preload_related_ids(serializer_cls, records_data)
         profile = self._get_profile()
@@ -254,7 +254,9 @@ class BaseWriter:
                     if isinstance(validator, UniqueTogetherValidator) and set(
                         validator.fields
                     ) == set(constraint.fields):
-                        return str(validator.message)
+                        return str(validator.message).replace(
+                            "{field_names}", ", ".join(validator.fields)
+                        )
                 field_names = ", ".join(constraint.fields)
                 return str(_("The fields {} must make a unique set.").format(field_names))
         return str(_("The records could not be saved because they conflict with existing data."))
