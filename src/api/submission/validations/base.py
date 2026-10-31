@@ -2,9 +2,13 @@ import hashlib
 from dataclasses import dataclass
 from typing import Literal
 
+from opentelemetry import trace as otel_trace
+
 from api.utils import get_value, set_value
 from .statuses import ERROR, IGNORE, OK, WARN
 from .validators import BaseValidator, ValidatorResult
+
+tracer = otel_trace.get_tracer("api.submission.validations")
 
 RECORD_KEY = "$record"
 RECORD_LEVEL = "record"
@@ -52,7 +56,8 @@ class Validation:
             result.validation_id = self._get_validation_id()
 
     def run(self, *args, **kwargs):
-        result = self.validator(*args, **kwargs)
+        with tracer.start_as_current_span(f"validation.{self.validator.name}"):
+            result = self.validator(*args, **kwargs)
         self._assign_validation_id(result)
         self.result = result
 

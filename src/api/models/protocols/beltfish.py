@@ -24,10 +24,8 @@ class BeltTransectWidthManager(ChoicesManager):
         # BeltTransectWidthCondition.Meta.ordering (val) matches what .choice
         # needs, so prefetching here lets `self.conditions.all()` hit the
         # prefetch cache instead of re-querying per BeltTransectWidth row.
-        # Scoped to choices() (not get_queryset()) so other callers - e.g.
-        # BeltTransectWidth.objects.get(id=...) in the biomass validator,
-        # which only needs get_condition()'s own differently-ordered query -
-        # aren't charged for a conditions prefetch they never use.
+        # Scoped to choices() (not get_queryset()) so other callers aren't
+        # charged for a conditions prefetch they never use.
         return [
             c.choice for c in self.get_queryset().order_by(order_by).prefetch_related("conditions")
         ]
@@ -69,7 +67,9 @@ class BeltTransectWidth(BaseChoiceModel):
         if isinstance(size, (int, float, Decimal)) is False or size < 0:
             return None
 
-        conditions = list(self.conditions.all().order_by("size"))
+        # Sorted in Python, nulls last like order_by("size"), so that prefetched
+        # conditions are used when present.
+        conditions = sorted(self.conditions.all(), key=lambda c: (c.size is None, c.size or 0))
         default_condition = self._get_default_condition(conditions)
         combos = self._get_conditions_combinations(conditions)
 
