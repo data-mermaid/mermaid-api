@@ -77,7 +77,8 @@ class BiomassValidator(BaseValidator):
         width_id = self.get_value(collect_record, self.width_path)
         try:
             _ = check_uuid(width_id)
-            width = BeltTransectWidth.objects.get(id=width_id)
+            # get_condition() runs once per observation; prefetch its conditions.
+            width = BeltTransectWidth.objects.prefetch_related("conditions").get(id=width_id)
         except (BeltTransectWidth.DoesNotExist, ParseError):
             width = None
 

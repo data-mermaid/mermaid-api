@@ -7,6 +7,7 @@ from django.db.models import Count, F, UniqueConstraint
 from django.utils.translation import gettext_lazy as _
 from rest_framework import exceptions, serializers
 from rest_framework.exceptions import ValidationError
+from rest_framework.validators import UniqueTogetherValidator
 
 from api.models import (
     Annotation,
@@ -20,8 +21,15 @@ from api.models import (
     FishBeltTransect,
     HabitatComplexity,
     InvertBeltTransect,
+    ObsBeltFish,
+    ObsBeltInvert,
+    ObsBenthicLIT,
     ObsBenthicPhotoQuadrat,
+    ObsBenthicPIT,
+    ObsColoniesBleached,
     Observer,
+    ObsHabitatComplexity,
+    ObsQuadratBenthicPercent,
     QuadratCollection,
     QuadratTransect,
     SampleEvent,
@@ -187,8 +195,7 @@ class BaseWriter:
         bulk_create does not send save signals. This sets created_by and
         updated_by in place of the `set_created_by` pre_save signal. The
         `update_project_updated_on` post_save signal is not needed: the sample
-        unit method and observers saved in the same write already touch the
-        project.
+        unit method and observers saved by the same write touch the project.
         """
         preloaded = self._preload_related_ids(serializer_cls, records_data)
         profile = self._get_profile()
@@ -220,7 +227,7 @@ class BaseWriter:
         except IntegrityError as err:
             logger.warning("bulk_create_records: %s", err)
             raise ValidationError(
-                {"non_field_errors": [self._integrity_error_message(model, err)]}
+                {"non_field_errors": [self._integrity_error_message(model, serializer_cls, err)]}
             ) from err
 
     def _get_profile(self):
@@ -233,7 +240,7 @@ class BaseWriter:
         except exceptions.AuthenticationFailed:
             return None
 
-    def _integrity_error_message(self, model, err):
+    def _integrity_error_message(self, model, serializer_cls, err):
         """
         A user-facing message for `err`. The raw database message contains
         constraint names and values, so it is not returned to the client.
@@ -241,7 +248,13 @@ class BaseWriter:
         constraint_name = getattr(getattr(err.__cause__, "diag", None), "constraint_name", None)
         for constraint in model._meta.constraints:
             if isinstance(constraint, UniqueConstraint) and constraint.name == constraint_name:
-                # Same message as the skipped UniqueTogetherValidator.
+                # Same message as the skipped UniqueTogetherValidator, whether
+                # declared on the serializer or generated from the model.
+                for validator in serializer_cls(context=self.context).validators:
+                    if isinstance(validator, UniqueTogetherValidator) and set(
+                        validator.fields
+                    ) == set(constraint.fields):
+                        return str(validator.message)
                 field_names = ", ".join(constraint.fields)
                 return str(_("The fields {} must make a unique set.").format(field_names))
         return str(_("The records could not be saved because they conflict with existing data."))
@@ -304,15 +317,8 @@ class FishbeltProtocolWriter(ProtocolWriter):
         )
 
     def create_obsbeltfish(self, belt_fish_id):
-        observation_beltfishes = []
         observations_data = get_obsbeltfish_data(self.collect_record, belt_fish_id)
-
-        for observation_data in observations_data:
-            observation_data["id"] = observation_data.get("id") or uuid.uuid4()
-            serializer = self.validate_data(ObsBeltFishSerializer, observation_data)
-            observation_beltfishes.append(serializer.save())
-
-        return observation_beltfishes
+        return self.bulk_create_records(ObsBeltFish, ObsBeltFishSerializer, observations_data)
 
     def write(self):
         sample_unit_method_id = self.get_sample_unit_method_id()
@@ -343,22 +349,13 @@ class BenthicPITProtocolWriter(BenthicProtocolWriter):
         )
 
     def create_obsbenthicpit(self, benthic_pit_id):
-        observation_benthicpits = []
         observations_data = get_obsbenthicpit_data(self.collect_record, benthic_pit_id)
         if not observations_data:
             raise ValidationError(
                 {"obs_benthic_pits": [_("Benthic PIT observations are required.")]}
             )
 
-        for observation_data in observations_data:
-            observation_data["id"] = observation_data.get("id") or uuid.uuid4()
-            serializer = ObsBenthicPITSerializer(data=observation_data, context=self.context)
-            if serializer.is_valid() is False:
-                raise ValidationError(serializer.errors)
-
-            observation_benthicpits.append(serializer.save())
-
-        return observation_benthicpits
+        return self.bulk_create_records(ObsBenthicPIT, ObsBenthicPITSerializer, observations_data)
 
     def write(self):
         sample_unit_method_id = self.get_sample_unit_method_id()
@@ -387,22 +384,13 @@ class BenthicLITProtocolWriter(BenthicProtocolWriter):
         )
 
     def create_obsbenthiclit(self, benthic_lit_id):
-        observation_benthiclits = []
         observations_data = get_obsbenthiclit_data(self.collect_record, benthic_lit_id)
         if not observations_data:
             raise ValidationError(
                 {"obs_benthic_lits": [_("Benthic LIT observations are required.")]}
             )
 
-        for observation_data in observations_data:
-            observation_data["id"] = observation_data.get("id") or uuid.uuid4()
-            serializer = ObsBenthicLITSerializer(data=observation_data, context=self.context)
-            if serializer.is_valid() is False:
-                raise ValidationError(serializer.errors)
-
-            observation_benthiclits.append(serializer.save())
-
-        return observation_benthiclits
+        return self.bulk_create_records(ObsBenthicLIT, ObsBenthicLITSerializer, observations_data)
 
     def write(self):
         sample_unit_method_id = self.get_sample_unit_method_id()
@@ -433,22 +421,15 @@ class HabitatComplexityProtocolWriter(BenthicProtocolWriter):
         )
 
     def create_obshabitatcomplexity(self, habitatcomplexity_id):
-        observation_habitatcomplexities = []
         observations_data = get_obshabitatcomplexity_data(self.collect_record, habitatcomplexity_id)
         if not observations_data:
             raise ValidationError(
                 {"obs_habitat_complexities": [_("Habitat complexity observations are required.")]}
             )
 
-        for observation_data in observations_data:
-            observation_data["id"] = observation_data.get("id") or uuid.uuid4()
-            serializer = ObsHabitatComplexitySerializer(data=observation_data, context=self.context)
-            if serializer.is_valid() is False:
-                raise ValidationError(serializer.errors)
-
-            observation_habitatcomplexities.append(serializer.save())
-
-        return observation_habitatcomplexities
+        return self.bulk_create_records(
+            ObsHabitatComplexity, ObsHabitatComplexitySerializer, observations_data
+        )
 
     def write(self):
         sample_unit_method_id = self.get_sample_unit_method_id()
@@ -490,27 +471,17 @@ class BleachingQuadratCollectionProtocolWriter(ProtocolWriter):
         )
 
     def create_obs_quadrat_benthic_percent(self, bleaching_quadrat_collection_id):
-        observation_benthic_percent_covered_data = []
         observations_data = get_obs_quadrat_benthic_percent_data(
             self.collect_record, bleaching_quadrat_collection_id
         )
         if not observations_data:
-            return observation_benthic_percent_covered_data
+            return []
 
-        for observation_data in observations_data:
-            observation_data["id"] = observation_data.get("id") or uuid.uuid4()
-            serializer = ObsQuadratBenthicPercentSerializer(
-                data=observation_data, context=self.context
-            )
-            if serializer.is_valid() is False:
-                raise ValidationError(serializer.errors)
-
-            observation_benthic_percent_covered_data.append(serializer.save())
-
-        return observation_benthic_percent_covered_data
+        return self.bulk_create_records(
+            ObsQuadratBenthicPercent, ObsQuadratBenthicPercentSerializer, observations_data
+        )
 
     def create_obs_colonies_bleached(self, bleaching_quadrat_collection_id):
-        observation_benthic_percent_covered_data = []
         observations_data = get_obs_colonies_bleached_data(
             self.collect_record, bleaching_quadrat_collection_id
         )
@@ -519,15 +490,9 @@ class BleachingQuadratCollectionProtocolWriter(ProtocolWriter):
                 {"obs_colonies_bleached": [_("Colonies bleached observations are required.")]}
             )
 
-        for observation_data in observations_data:
-            observation_data["id"] = observation_data.get("id") or uuid.uuid4()
-            serializer = ObsColoniesBleachedSerializer(data=observation_data, context=self.context)
-            if serializer.is_valid() is False:
-                raise ValidationError(serializer.errors)
-
-            observation_benthic_percent_covered_data.append(serializer.save())
-
-        return observation_benthic_percent_covered_data
+        return self.bulk_create_records(
+            ObsColoniesBleached, ObsColoniesBleachedSerializer, observations_data
+        )
 
     def write(self):
         sample_unit_method_id = self.get_sample_unit_method_id()
@@ -679,15 +644,8 @@ class BeltInvertProtocolWriter(ProtocolWriter):
         )
 
     def create_obsbeltinvert(self, belt_invert_id):
-        observation_beltinverts = []
         observations_data = get_obsbeltinvert_data(self.collect_record, belt_invert_id)
-
-        for observation_data in observations_data:
-            observation_data["id"] = observation_data.get("id") or uuid.uuid4()
-            serializer = self.validate_data(ObsBeltInvertSerializer, observation_data)
-            observation_beltinverts.append(serializer.save())
-
-        return observation_beltinverts
+        return self.bulk_create_records(ObsBeltInvert, ObsBeltInvertSerializer, observations_data)
 
     def write(self):
         sample_unit_method_id = self.get_sample_unit_method_id()
