@@ -18,7 +18,13 @@ from api.utils.apikeys import (
     parse_api_key,
     secret_matches,
 )
-from api.utils.auth0utils import decode, get_jwt_token, get_user_info, is_hs_token
+from api.utils.auth0utils import (
+    QueryStringTokenRejected,
+    decode,
+    get_jwt_token,
+    get_user_info,
+    is_hs_token,
+)
 from api.utils.ratelimit import FailureRateLimiter
 
 logger = logging.getLogger(__name__)
@@ -83,7 +89,7 @@ class JWTAuthentication(BaseAuthentication):
 
         jwt_token = get_jwt_token(request)
         if jwt_token is None or is_hs_token(jwt_token) is False:
-            logger.debug(f"Invalid Token: {jwt_token}")
+            logger.debug("Invalid Token")  # never log the token itself
             return None
 
         try:
@@ -428,6 +434,9 @@ class AnonymousJWTAuthentication(JWTAuthentication):
         jwt_token = None
         try:
             jwt_token = get_jwt_token(request)
+        except QueryStringTokenRejected:
+            # 401 rather than public data, so the client learns to stop putting it in URLs.
+            raise
         except exceptions.AuthenticationFailed:
             pass
 

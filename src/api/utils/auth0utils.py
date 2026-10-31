@@ -129,31 +129,32 @@ def is_hs_token(token):
         return False
 
 
+class QueryStringTokenRejected(exceptions.AuthenticationFailed):
+    """A token in the URL lands in ALB, nginx and Sentry logs, so it is refused, not ignored."""
+
+    default_detail = _(
+        "Tokens are not accepted in the access_token query parameter. "
+        "Send them in the Authorization header: Bearer <token>."
+    )
+
+
 def get_jwt_token(request):
-    token = None
     auth = get_authorization_header(request).split()
 
     if len(auth) == 2:
-        auth_header_prefix = "Bearer"
-
-        if not auth:
+        if smart_str(auth[0].lower()) != "bearer":
             return None
+        return auth[1]
 
-        if smart_str(auth[0].lower()) != auth_header_prefix.lower():
-            return None
-
-        token = auth[1]
-    elif len(auth) > 2:
+    if len(auth) > 2:
         msg = _("Invalid Authorization header. Credentials string should not contain spaces.")
         raise exceptions.AuthenticationFailed(msg)
-    else:
-        token = request.query_params.get("access_token")
 
-    if token is None:
-        msg = _("Invalid Authorization header. No credentials provided.")
-        raise exceptions.AuthenticationFailed(msg)
+    if "access_token" in request.query_params:
+        raise QueryStringTokenRejected()
 
-    return token
+    msg = _("Invalid Authorization header. No credentials provided.")
+    raise exceptions.AuthenticationFailed(msg)
 
 
 def get_user_info(user_id):
