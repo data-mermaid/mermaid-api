@@ -586,8 +586,6 @@ class BaseApiViewSet(MethodAuthenticationMixin, viewsets.ModelViewSet):
             )
 
         fields = tuple(sorted(field_set))
-        if fields in self._serializer_class_for_fields:
-            return self._serializer_class_for_fields[fields]
 
         # Validate that all requested field names are known to this serializer.
         valid_fields = set(serializer_class._declared_fields.keys())
@@ -598,6 +596,11 @@ class BaseApiViewSet(MethodAuthenticationMixin, viewsets.ModelViewSet):
         if invalid_fields:
             raise ValidationError({"fields": f"Invalid field names: {', '.join(invalid_fields)}"})
 
+        # The cache is shared by every viewset, so key it by serializer class too.
+        cache_key = (serializer_class, fields)
+        if cache_key in self._serializer_class_for_fields:
+            return self._serializer_class_for_fields[cache_key]
+
         # Doing this because a simple copy.copy() doesn't work here.
         # Set fields and explicitly clear exclude to avoid DRF's assertion that
         # both cannot be set simultaneously (exclude may be inherited from parent Meta).
@@ -605,7 +608,7 @@ class BaseApiViewSet(MethodAuthenticationMixin, viewsets.ModelViewSet):
         limited_fields_serializer = type(
             "LimitedFieldsSerializer", (serializer_class,), {"Meta": meta}
         )
-        self._serializer_class_for_fields[fields] = limited_fields_serializer
+        self._serializer_class_for_fields[cache_key] = limited_fields_serializer
         return limited_fields_serializer
 
     def get_serializer_class(self):

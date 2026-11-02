@@ -39,7 +39,7 @@ from ..resources.sync.views import (
     FISH_GROUPINGS_SOURCE_TYPE,
     FISH_SPECIES_SOURCE_TYPE,
 )
-from ..utils.related import get_related_project
+from ..utils.related import defer_project_save, get_related_project
 
 # ***************************************************************
 # NOTE: Database triggers exist to populate revisions
@@ -134,7 +134,7 @@ def deleted_collect_record_revisions(sender, instance, *args, **kwargs):
 @receiver(post_save, sender=TransectMethod)
 def update_project_updated_on(sender, instance, *args, **kwargs):
     project = get_related_project(instance)
-    if project is not None:
+    if project is not None and not defer_project_save(project):
         project.save()
 
 
