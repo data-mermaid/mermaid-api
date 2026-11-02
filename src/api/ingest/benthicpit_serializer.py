@@ -3,7 +3,9 @@ from rest_framework import serializers
 from ..fields import LazyChoiceField, NullCoercedTimeField
 from ..models import BENTHICPIT_PROTOCOL
 from .choices import (
+    INCLUDE_BLEACHING_CHOICES,
     benthic_attributes_choices,
+    bleaching_status_choices,
     current_choices,
     growth_form_choices,
     reef_slopes_choices,
@@ -11,7 +13,7 @@ from .choices import (
     tide_choices,
     visibility_choices,
 )
-from .serializers import CollectRecordCSVSerializer
+from .serializers import CollectRecordCSVSerializer, IncludeBleachingCSVListSerializer
 
 __all__ = ["BenthicPITCSVSerializer"]
 
@@ -24,6 +26,9 @@ class BenthicPITCSVSerializer(CollectRecordCSVSerializer):
     additional_group_fields = CollectRecordCSVSerializer.additional_group_fields.copy()
     additional_group_fields.append("data__benthic_transect__label")
     composite_fields = {"data__sample_event__sample_date": ["year", "month", "day"]}
+
+    class Meta:
+        list_serializer_class = IncludeBleachingCSVListSerializer
 
     data__sample_event__site = serializers.CharField(
         label="Site",
@@ -126,6 +131,14 @@ class BenthicPITCSVSerializer(CollectRecordCSVSerializer):
         label="Sample unit notes",
         help_text="Notes recorded by observer for transect",
     )
+    data__include_bleaching = serializers.ChoiceField(
+        choices=INCLUDE_BLEACHING_CHOICES,
+        required=False,
+        allow_null=True,
+        allow_blank=True,
+        label="Include bleaching",
+        help_text="Whether bleaching status was recorded for hard and soft coral observations in this sample unit (Yes or No). Use the same value on every row of the sample unit.",
+    )
     data__observers = serializers.ListField(
         child=serializers.CharField(),
         allow_empty=False,
@@ -150,6 +163,14 @@ class BenthicPITCSVSerializer(CollectRecordCSVSerializer):
         allow_blank=True,
         label="Growth form",
         help_text="Growth form of the observed benthic attribute (if applicable). See relevant tab on ingestion template for choices.",
+    )
+    data__obs_benthic_pits__bleaching_status = LazyChoiceField(
+        choices=bleaching_status_choices,
+        required=False,
+        allow_null=True,
+        allow_blank=True,
+        label="Bleaching status",
+        help_text="Bleaching status of the observed hard or soft coral. Only allowed when Include bleaching is Yes. Leave blank if not assessed. See relevant tab on ingestion template for choices.",
     )
 
     def clean(self, data):

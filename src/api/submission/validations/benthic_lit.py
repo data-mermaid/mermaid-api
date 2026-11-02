@@ -10,9 +10,12 @@ from .base import (
 from .validators import (
     AllAttributesSameCategoryValidator,
     BenthicLITObservationTotalLengthValidator,
+    BleachingStatusMissingValidator,
+    BleachingStatusValidator,
     DepthValidator,
     DifferentTransectLengthValidator,
     DrySubmitValidator,
+    IncludeBleachingValidator,
     LenSurveyedValidator,
     ListRequiredValidator,
     ManagementRuleValidator,
@@ -227,6 +230,30 @@ benthic_lit_validations = [
     ),
     Validation(
         validator=AllAttributesSameCategoryValidator(obs_benthic_path="data.obs_benthic_lits"),
+        paths=["data.obs_benthic_lits"],
+        validation_level=RECORD_LEVEL,
+        validation_type=VALUE_VALIDATION_TYPE,
+    ),
+    Validation(
+        validator=IncludeBleachingValidator(include_bleaching_path="data.include_bleaching"),
+        paths=["data.include_bleaching"],
+        validation_level=FIELD_LEVEL,
+        validation_type=VALUE_VALIDATION_TYPE,
+    ),
+    Validation(
+        validator=BleachingStatusValidator(
+            include_bleaching_path="data.include_bleaching",
+            observations_path="data.obs_benthic_lits",
+        ),
+        paths=["data.obs_benthic_lits"],
+        validation_level=ROW_LEVEL,
+        validation_type=LIST_VALIDATION_TYPE,
+    ),
+    Validation(
+        validator=BleachingStatusMissingValidator(
+            include_bleaching_path="data.include_bleaching",
+            observations_path="data.obs_benthic_lits",
+        ),
         paths=["data.obs_benthic_lits"],
         validation_level=RECORD_LEVEL,
         validation_type=VALUE_VALIDATION_TYPE,

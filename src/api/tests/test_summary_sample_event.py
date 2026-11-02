@@ -2,6 +2,9 @@ import pytest
 from django.urls import reverse
 from rest_framework import status
 
+from api.models import BLEACHING_STATUS_NORMAL, BLEACHING_STATUS_PALE, Project
+from api.utils.summary_cache import update_summary_cache as update_cache
+
 
 @pytest.fixture
 def obs_benthic_pit1_benthic_category_avgs(
@@ -117,3 +120,99 @@ def test_summary_sample_event_fields_param_valid(api_client_public):
     )
     assert response.status_code == status.HTTP_200_OK
     assert "results" in response.json()
+
+
+def test_summary_sample_event_benthicpit_bleaching(
+    db_setup,
+    api_client1,
+    benthic_pit_project,
+    benthic_pit1,
+    obs_benthic_pit1_2,
+    obs_benthic_pit1_3,
+    obs_benthic_pit1_4,
+):
+    benthic_pit1.include_bleaching = True
+    benthic_pit1.save()
+    # Hard coral obs: one pale, one normal, one not assessed (excluded from the denominator)
+    obs_benthic_pit1_2.bleaching_status = BLEACHING_STATUS_PALE
+    obs_benthic_pit1_2.save()
+    obs_benthic_pit1_3.bleaching_status = BLEACHING_STATUS_NORMAL
+    obs_benthic_pit1_3.save()
+    for project in Project.objects.all():
+        update_cache(project.pk, skip_test_project=False, skip_cached_files=True)
+
+    url = reverse("summarysampleevent-list")
+    response_data = api_client1.get(url, None, format="json").json()
+    benthicpit = next(
+        r["protocols"]["benthicpit"]
+        for r in response_data["results"]
+        if "benthicpit" in r["protocols"]
+    )
+
+    assert benthicpit["bleaching_sample_unit_count"] == 1
+    assert benthicpit["percent_bleached_hard_coral_avg"]["bleached"] == 50.0
+    assert benthicpit["percent_bleached_hard_coral_avg"]["pale"] == 50.0
+    assert benthicpit["percent_bleached_total_coral_avg"]["bleached"] == 50.0
+    assert "percent_bleached_soft_coral_avg" not in benthicpit
+
+
+def test_summary_sample_event_benthicpit_bleaching_no_statuses(
+    db_setup,
+    api_client1,
+    benthic_pit_project,
+    benthic_pit1,
+    obs_benthic_pit1_2,
+    obs_benthic_pit1_3,
+    obs_benthic_pit1_4,
+):
+    # Bleaching was assessed but every coral status left blank: the SU still counts
+    benthic_pit1.include_bleaching = True
+    benthic_pit1.save()
+    for project in Project.objects.all():
+        update_cache(project.pk, skip_test_project=False, skip_cached_files=True)
+
+    url = reverse("summarysampleevent-list")
+    response_data = api_client1.get(url, None, format="json").json()
+    benthicpit = next(
+        r["protocols"]["benthicpit"]
+        for r in response_data["results"]
+        if "benthicpit" in r["protocols"]
+    )
+
+    assert benthicpit["bleaching_sample_unit_count"] == 1
+    assert "percent_bleached_total_coral_avg" not in benthicpit
+
+
+def test_summary_sample_event_benthicpit_bleaching_avg_denominator(
+    db_setup,
+    api_client1,
+    benthic_pit_project,
+    benthic_pit1,
+    obs_benthic_pit1_2,
+    obs_benthic_pit1_3,
+    benthic_pit1_2,
+    obs_benthic_pit1_2_1,
+):
+    # Two SUs assessed for bleaching; only benthic_pit1 has coral, so benthic_pit1_2 counts as 0
+    for benthic_pit in (benthic_pit1, benthic_pit1_2):
+        benthic_pit.include_bleaching = True
+        benthic_pit.save()
+    obs_benthic_pit1_2.bleaching_status = BLEACHING_STATUS_PALE
+    obs_benthic_pit1_2.save()
+    obs_benthic_pit1_3.bleaching_status = BLEACHING_STATUS_NORMAL
+    obs_benthic_pit1_3.save()
+    for project in Project.objects.all():
+        update_cache(project.pk, skip_test_project=False, skip_cached_files=True)
+
+    url = reverse("summarysampleevent-list")
+    response_data = api_client1.get(url, None, format="json").json()
+    benthicpit = next(
+        r["protocols"]["benthicpit"]
+        for r in response_data["results"]
+        if "benthicpit" in r["protocols"]
+    )
+
+    assert benthicpit["bleaching_sample_unit_count"] == 2
+    assert benthicpit["percent_bleached_hard_coral_avg"]["bleached"] == 25.0
+    assert benthicpit["percent_bleached_hard_coral_avg"]["pale"] == 25.0
+    assert benthicpit["percent_bleached_hard_coral_avg"]["normal"] == 25.0
