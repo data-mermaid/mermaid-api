@@ -1,6 +1,7 @@
 import json
 
 from aws_cdk import (
+    ArnFormat,
     Duration,
     RemovalPolicy,
     Stack,
@@ -71,6 +72,20 @@ ALB_ACCESS_LOG_REGEX = (
     r'"([^"]*)" "([^"]*)" "([^"]*)" ([-.0-9]*) ([^ ]*) "([^"]*)" "([^"]*)" '
     r'"([^ ]*)" "([^\s]+?)" "([^\s]+)" "([^ ]*)" "([^ ]*)" ?([^ ]*)? ?( .*)?'
 )
+
+
+def bare_log_group_arn(scope: Construct, log_group: logs.ILogGroup) -> str:
+    """The log-group ARN without the `:*` that `ILogGroup.log_group_arn` ends in.
+
+    From 2027-04-26 CloudWatch Logs authorizes log-group actions such as
+    DescribeLogStreams against this form; stream actions keep the `:*` form.
+    """
+    return Stack.of(scope).format_arn(
+        service="logs",
+        resource="log-group",
+        resource_name=log_group.log_group_name,
+        arn_format=ArnFormat.COLON_RESOURCE_NAME,
+    )
 
 
 class CommonStack(Stack):
@@ -190,9 +205,13 @@ class CommonStack(Stack):
                         "logs:PutLogEvents",
                         "logs:DescribeLogStreams",
                     ],
+                    # log_group_arn is the stream form (`...:log-group:<name>:*`). From
+                    # 2027-04-26 DescribeLogStreams is authorized against the bare
+                    # log-group ARN, which also covers the stream-form-only grant
+                    # CDK's FlowLog adds to this role.
                     resources=[
                         vpc_flow_logs_group.log_group_arn,
-                        f"{vpc_flow_logs_group.log_group_arn}:*",
+                        bare_log_group_arn(self, vpc_flow_logs_group),
                     ],
                 )
             )
@@ -969,7 +988,8 @@ class CommonStack(Stack):
                 iam.PolicyStatement(
                     actions=["logs:CreateLogStream", "logs:PutLogEvents"],
                     principals=[iam.ServicePrincipal("delivery.logs.amazonaws.com")],
-                    resources=[f"{waf_log_group.log_group_arn}:*"],
+                    # log_group_arn already ends in `:*`, the stream form these actions need.
+                    resources=[waf_log_group.log_group_arn],
                     conditions={
                         "StringEquals": {"aws:SourceAccount": self.account},
                         "ArnLike": {
