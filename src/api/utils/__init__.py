@@ -2,6 +2,7 @@ import math
 import numbers
 import re
 import subprocess
+import unicodedata
 import uuid
 from gzip import GzipFile
 from pathlib import Path
@@ -40,6 +41,19 @@ def safe_get_valid_filename(name, default="untitled"):
         return get_valid_filename(name)
     except SuspiciousFileOperation:
         return default
+
+
+def normalize_email(email):
+    """Strip invisible format characters (e.g. U+2060 WORD JOINER, zero-width
+    spaces, BOM) and whitespace that sneak in via copy/paste, then apply NFKC
+    normalization (folds full-width '＠' etc. to ASCII). Stripping first keeps
+    the result idempotent. Case is preserved."""
+    if email is None:
+        return None
+    stripped = "".join(
+        ch for ch in str(email) if not ch.isspace() and unicodedata.category(ch) not in ("Cf", "Cc")
+    )
+    return unicodedata.normalize("NFKC", stripped)
 
 
 def is_match(string, match_patterns):

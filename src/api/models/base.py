@@ -7,6 +7,7 @@ from django.db import models
 from django.utils import timezone
 from django.utils.translation import gettext_lazy as _
 
+from ..utils import normalize_email
 from ..utils.apikeys import audit_logger, generate_api_key, log_key_created
 
 logger = logging.getLogger(__name__)
@@ -65,6 +66,24 @@ class Profile(models.Model):
 
     def __str__(self):
         return f"{self.full_name} [{self.pk}]"
+
+    @classmethod
+    def from_db(cls, db, field_names, values):
+        instance = super().from_db(db, field_names, values)
+        instance._loaded_email = instance.__dict__.get("email")
+        return instance
+
+    def save(self, *args, **kwargs):
+        # Normalize only when the email is new or being changed, so saving an
+        # untouched legacy row can't collide with a clean twin on the unique
+        # constraint (legacy rows are cleaned by `fix_profile_emails`).
+        update_fields = kwargs.get("update_fields")
+        writing_email = update_fields is None or "email" in update_fields
+        email = self.__dict__.get("email")
+        changed = self._state.adding or email != getattr(self, "_loaded_email", None)
+        if writing_email and email is not None and changed:
+            self.email = normalize_email(email)
+        super().save(*args, **kwargs)
 
     @property
     def full_name(self):  # noqa
