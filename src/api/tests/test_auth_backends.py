@@ -69,9 +69,10 @@ def test_malformed_header_with_query_token_is_rejected(token1, profile1):
         )
 
 
-@pytest.mark.parametrize("path", ["/v1/me/", "/v1/projects/"])
+@pytest.mark.parametrize("path", ["/v1/me/", "/v1/projects/", "/v1/projecttags/"])
 def test_query_string_token_gets_401_over_http(path, api_client_public, token1, profile1):
-    """/v1/me/ needs a login; /v1/projects/ GET is public (AnonymousJWTAuthentication)."""
+    """/v1/me/ needs a login; /v1/projects/ GET is public (AnonymousJWTAuthentication);
+    /v1/projecttags/ GET runs no authentication, so only the middleware catches it."""
     response = api_client_public.get(f"{path}?access_token={token1}")
 
     assert response.status_code == 401
