@@ -39,7 +39,7 @@ from ..base import (
     BaseViewAPISUGeoSerializer,
 )
 from ..classification.image import ImageSerializer
-from ..mixins import SampleUnitMethodEditMixin, SampleUnitMethodSummaryReport
+from ..mixins import SampleUnitMethodEditMixin
 from ..observer import ObserverSerializer
 from ..quadrat_transect import QuadratTransectSerializer
 from ..sample_event import SampleEventSerializer
@@ -113,9 +113,7 @@ class BenthicPhotoQuadratTransectMethodSerializer(BenthicPhotoQuadratTransectSer
         list_serializer_class = BenthicPhotoQuadratTransectMethodListSerializer
 
 
-class BenthicPhotoQuadratTransectMethodView(
-    SampleUnitMethodSummaryReport, SampleUnitMethodEditMixin, BaseProjectApiViewSet
-):
+class BenthicPhotoQuadratTransectMethodView(SampleUnitMethodEditMixin, BaseProjectApiViewSet):
     queryset = BenthicPhotoQuadratTransect.objects.select_related(
         "quadrat_transect", "quadrat_transect__sample_event"
     ).order_by("updated_on", "id")
