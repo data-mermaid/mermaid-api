@@ -1065,9 +1065,16 @@ def default_citation(project, profiles=None):
         if p.is_admin is True and p.profile.citation_name is not None
     ]
     year = ""
-    latest_se = SampleEvent.objects.filter(site__project=project).order_by("-sample_date").first()
-    if latest_se and latest_se.sample_date:
-        year = f"{latest_se.sample_date.year}. "
+    if hasattr(project, "latest_sample_date"):
+        # Annotated by ProjectViewSet, with the same ordering as below.
+        latest_sample_date = project.latest_sample_date
+    else:
+        latest_se = (
+            SampleEvent.objects.filter(site__project=project).order_by("-sample_date").first()
+        )
+        latest_sample_date = latest_se.sample_date if latest_se else None
+    if latest_sample_date:
+        year = f"{latest_sample_date.year}. "
     return f"{', '.join(admin_names)}. {year}{project.name}. MERMAID."
 
 
