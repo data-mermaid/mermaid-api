@@ -12,6 +12,7 @@ Each suppression documents the reason and whether the finding is:
 from dataclasses import dataclass
 
 from aws_cdk import Acknowledgment, CfnResource, Stack, Validations
+from stacks.guardduty import GuardDutyStack
 
 # ---------------------------------------------------------------------------
 # Helpers
@@ -951,7 +952,7 @@ def suppress_cloudtrail(stack: Stack) -> None:
 # ---------------------------------------------------------------------------
 
 
-def suppress_guardduty(stack: Stack) -> None:
+def suppress_guardduty(stack: GuardDutyStack) -> None:
     # --- CreateGuardDutySLR Lambda ---
     _suppress_by_path(
         stack,
@@ -1059,32 +1060,7 @@ def suppress_guardduty(stack: Stack) -> None:
                 applies_to=[
                     "Action::s3:GetObject*",
                     "Resource::*",
-                    "Resource::arn:aws:s3:::2310-coralnet-public-sources/*",
-                    "Resource::arn:aws:s3:::amazon-sagemaker-554812291621-us-east-1-b5cebdff17fb/*",
-                    "Resource::arn:aws:s3:::assets.datamermaid.org/*",
-                    "Resource::arn:aws:s3:::collect-turndown.datamermaid.org/*",
-                    "Resource::arn:aws:s3:::config-bucket-554812291621/*",
-                    "Resource::arn:aws:s3:::dashboard2.datamermaid.org/*",
-                    "Resource::arn:aws:s3:::dev-dashboard2.datamermaid.org/*",
-                    "Resource::arn:aws:s3:::dev-datamermaid-sm-data/*",
-                    "Resource::arn:aws:s3:::dev-datamermaid-sm-sources/*",
-                    "Resource::arn:aws:s3:::dev-explore.datamermaid.org/*",
-                    "Resource::arn:aws:s3:::dev-mermaid-cloudtrail-cloudtrailbucket98b0bfe1-qwlw3gr5rvvm/*",
-                    "Resource::arn:aws:s3:::dev-public.datamermaid.org/*",
-                    "Resource::arn:aws:s3:::dev.app2.datamermaid.org/*",
-                    "Resource::arn:aws:s3:::dev.dashboard3.datamermaid.org/*",
-                    "Resource::arn:aws:s3:::explore.datamermaid.org/*",
-                    "Resource::arn:aws:s3:::mermaid-api-v2-backups/*",
-                    "Resource::arn:aws:s3:::mermaid-config/*",
-                    "Resource::arn:aws:s3:::mermaid-data/*",
-                    "Resource::arn:aws:s3:::mermaid-image-processing/*",
-                    "Resource::arn:aws:s3:::mermaid-user-metrics/*",
-                    "Resource::arn:aws:s3:::prod.app2.datamermaid.org/*",
-                    "Resource::arn:aws:s3:::public.datamermaid.org/*",
-                    "Resource::arn:aws:s3:::pyspacer-test/*",
-                    "Resource::arn:aws:s3:::sagemaker-studio-554812291621-moo6nyhibza/*",
-                    "Resource::arn:aws:s3:::sagemaker-us-east-1-554812291621/*",
-                    "Resource::arn:aws:s3:::vpcflowlogs.admin.datamermaid.org/*",
+                    *(f"Resource::arn:aws:s3:::{b}/*" for b in stack.s3_buckets),
                 ],
             ),
         ],
@@ -1165,7 +1141,7 @@ def apply_all(
     dev_inference_stack: Stack,
     prod_inference_stack: Stack,
     cloudtrail_stack: Stack | None = None,
-    guardduty_stack: Stack | None = None,
+    guardduty_stack: GuardDutyStack | None = None,
 ) -> None:
     suppress_github_access(gh_access_stack)
     suppress_common(common_stack)

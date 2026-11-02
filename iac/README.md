@@ -12,6 +12,7 @@ Note: This is for running `cdk synth` and `cdk diff` commands. Do NOT run `cdk d
 
 - Node
 - Pip
+- jq (for the cdk-nag check under [Running locally](#running-locally))
 
 ### Installation
 
@@ -57,6 +58,8 @@ When cdk-nag flags a new resource:
 4. Run `cdk synth` locally to confirm the finding is gone.
 
 ### Running locally
+
+Set `CDK_DEFAULT_ACCOUNT` to the real account ID first: some acknowledgments match ARNs that contain it, so synth fails without it.
 
 ```bash
 cd iac
