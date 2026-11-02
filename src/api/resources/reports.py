@@ -111,5 +111,7 @@ class MultiProjectReportView(APIView):
 
                 return response
             finally:
-                output_path.unlink()
-                zip_file_path.unlink(missing_ok=True)
+                try:
+                    output_path.unlink()
+                finally:
+                    zip_file_path.unlink(missing_ok=True)
