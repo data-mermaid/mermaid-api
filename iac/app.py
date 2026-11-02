@@ -9,6 +9,7 @@ from aws_cdk import (
     Environment,
     IAspect,
     RemovalPolicy,
+    Validations,
     aws_logs as logs,
     aws_s3 as s3,
 )
@@ -48,7 +49,7 @@ class LogGroupHygiene:
 
 
 app = App()
-Aspects.of(app).add(AwsSolutionsChecks(verbose=True))
+Validations.of(app).add_plugins(AwsSolutionsChecks(app, verbose=True))
 
 cdk_env = Environment(
     account=os.getenv("CDK_DEFAULT_ACCOUNT", None),
