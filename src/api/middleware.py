@@ -1,11 +1,11 @@
 import time
 
 from django.conf import settings
-from django.http import HttpResponse
+from django.http import HttpResponse, JsonResponse
 from django.utils import timezone
 
 from tools.logger import DatabaseLogger
-from .utils.auth0utils import decode
+from .utils.auth0utils import QueryStringTokenRejected, decode
 
 
 class APIVersionMiddleware:
@@ -29,6 +29,31 @@ class HealthEndpointMiddleware:
     def __call__(self, request):
         if request.path_info == "/health/":
             return HttpResponse(f"OK ({settings.ENVIRONMENT})")
+
+        return self.get_response(request)
+
+
+class QueryStringTokenMiddleware:
+    """401 for `/v1/` requests with `?access_token=` and no Authorization header.
+
+    The auth backends reject it too, but views with no authentication classes
+    never reach them and would serve the request.
+    """
+
+    def __init__(self, get_response):
+        self.get_response = get_response
+
+    def __call__(self, request):
+        if (
+            request.path_info.startswith("/v1/")
+            and "access_token" in request.GET
+            and not request.META.get("HTTP_AUTHORIZATION")
+        ):
+            response = JsonResponse(
+                {"detail": str(QueryStringTokenRejected.default_detail)}, status=401
+            )
+            response["WWW-Authenticate"] = 'Bearer realm="api"'
+            return response
 
         return self.get_response(request)
 
@@ -66,7 +91,7 @@ class MetricsMiddleware:
 
     def _obfuscate(self, value):
         for key in value.keys():
-            if key.lower() in ["password", "password1", "password2", "token"]:
+            if key.lower() in ["password", "password1", "password2", "token", "access_token"]:
                 for i in range(len(value[key])):
                     value[key][i] = "********"
 

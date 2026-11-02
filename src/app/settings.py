@@ -73,6 +73,8 @@ INSTALLED_APPS = [
 MIDDLEWARE = [
     "api.middleware.HealthEndpointMiddleware",
     "corsheaders.middleware.CorsMiddleware",
+    # after Health (ALB probe) and CORS (so browsers can read the 401)
+    "api.middleware.QueryStringTokenMiddleware",
     "django.middleware.security.SecurityMiddleware",
     "django.middleware.gzip.GZipMiddleware",
     "whitenoise.middleware.WhiteNoiseMiddleware",
