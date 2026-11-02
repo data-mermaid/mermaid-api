@@ -73,11 +73,21 @@ class Profile(models.Model):
         instance._loaded_email = instance.__dict__.get("email")
         return instance
 
+    def refresh_from_db(self, using=None, fields=None, from_queryset=None):
+        # Also reached when a deferred `email` is first accessed.
+        if fields is not None:
+            fields = list(fields)
+        super().refresh_from_db(using=using, fields=fields, from_queryset=from_queryset)
+        if (fields is None or "email" in fields) and "email" in self.__dict__:
+            self._loaded_email = self.__dict__["email"]
+
     def save(self, *args, **kwargs):
         # Normalize only when the email is new or being changed, so saving an
         # untouched legacy row can't collide with a clean twin on the unique
         # constraint (legacy rows are cleaned by `fix_profile_emails`).
         update_fields = kwargs.get("update_fields")
+        if update_fields is not None:
+            update_fields = kwargs["update_fields"] = frozenset(update_fields)
         writing_email = update_fields is None or "email" in update_fields
         email = self.__dict__.get("email")
         changed = self._state.adding or email != getattr(self, "_loaded_email", None)

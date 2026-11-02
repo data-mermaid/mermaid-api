@@ -79,6 +79,47 @@ def test_profile_save_leaves_untouched_legacy_email(db):
     assert legacy.first_name == "Legacy"
 
 
+def _make_legacy_with_twin(email):
+    Profile.objects.create(email=email)
+    legacy = Profile.objects.create(email="placeholder@test.com")
+    Profile.objects.filter(pk=legacy.pk).update(email=f"{WJ}{email}")
+    return legacy.pk
+
+
+def test_profile_save_leaves_deferred_legacy_email(db):
+    pk = _make_legacy_with_twin("deferred@test.com")
+    legacy = Profile.objects.only("id", "first_name").get(pk=pk)
+    assert legacy.email == f"{WJ}deferred@test.com"  # deferred load via refresh_from_db
+    legacy.first_name = "Deferred"
+    legacy.save()
+    legacy.refresh_from_db()
+    assert legacy.email == f"{WJ}deferred@test.com"
+
+
+def test_profile_refresh_from_db_syncs_email_snapshot(db):
+    profile = Profile.objects.create(email="refresh@test.com")
+    # out-of-band change to a dirty email whose clean form is taken
+    Profile.objects.filter(pk=profile.pk).update(email=f"{WJ}refresh-twin@test.com")
+    Profile.objects.create(email="refresh-twin@test.com")
+
+    profile.refresh_from_db(fields=(f for f in ["email"]))
+    assert profile._loaded_email == f"{WJ}refresh-twin@test.com"
+    profile.first_name = "Refreshed"
+    profile.save()  # untouched legacy email: no normalization, no collision
+    profile.refresh_from_db()
+    assert profile.email == f"{WJ}refresh-twin@test.com"
+
+
+def test_profile_save_accepts_update_fields_generator(db):
+    profile = Profile.objects.create(email="gen@test.com")
+    profile.first_name = "Gen"
+    profile.email = f"{WJ}gen2@test.com"
+    profile.save(update_fields=(f for f in ["first_name", "email"]))
+    profile.refresh_from_db()
+    assert profile.first_name == "Gen"
+    assert profile.email == "gen2@test.com"
+
+
 def test_add_profile_strips_invisible_chars(client, base_project, project1, token1):
     url = reverse("project-add-profile", kwargs=dict(pk=project1.pk))
     response = client.post(
