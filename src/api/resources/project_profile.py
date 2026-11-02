@@ -94,12 +94,16 @@ class ProjectProfileViewSet(BaseProjectApiViewSet):
     def perform_update(self, serializer):
         instance = serializer.instance
         new_role = serializer.validated_data.get("role", instance.role)
+        old_ids = (instance.profile_id, instance.project_id)
         with transaction.atomic():
             if new_role != ProjectProfile.ADMIN and instance.is_last_admin(for_update=True):
                 raise ValidationError(
                     "You are the last admin of this project! Create another admin before you relinquish."
                 )
             serializer.save()
+        # Annotated count is stale if the member's profile/project changed.
+        if (instance.profile_id, instance.project_id) != old_ids:
+            instance.__dict__.pop("collect_records_count", None)
 
     def perform_destroy(self, instance):
         with transaction.atomic():
