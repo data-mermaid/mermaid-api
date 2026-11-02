@@ -17,6 +17,7 @@ from rest_framework.authentication import get_authorization_header
 
 from api.exceptions import Auth0ServiceUnavailable
 from api.models import Application, AuthUser
+from api.utils import normalize_email
 from app import settings
 
 logger = logging.getLogger(__name__)
@@ -188,7 +189,7 @@ def get_user_info(user_id):
         raise Auth0ServiceUnavailable() from e
 
     um = ui.user_metadata or {}
-    email = um.get("email") or ui.email
+    email = normalize_email(um.get("email")) or normalize_email(ui.email)
     if not email:
         # Auth0 returned no email for this user (e.g. phone/SMS-only identity).
         # Fail fast here rather than letting a None email reach
