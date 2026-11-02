@@ -188,7 +188,7 @@ def get_user_info(user_id):
         raise Auth0ServiceUnavailable() from e
 
     um = ui.user_metadata or {}
-    email = normalize_email(um.get("email") or ui.email)
+    email = normalize_email(um.get("email")) or normalize_email(ui.email)
     if not email:
         # Auth0 returned no email for this user (e.g. phone/SMS-only identity).
         # Fail fast here rather than letting a None email reach

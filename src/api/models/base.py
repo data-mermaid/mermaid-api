@@ -84,6 +84,8 @@ class Profile(models.Model):
         if writing_email and email is not None and changed:
             self.email = normalize_email(email)
         super().save(*args, **kwargs)
+        if writing_email:
+            self._loaded_email = self.__dict__.get("email")
 
     @property
     def full_name(self):  # noqa

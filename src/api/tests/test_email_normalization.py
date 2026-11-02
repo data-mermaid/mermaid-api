@@ -19,6 +19,8 @@ WJ = "⁠"
         ("user＠gmail.com", "user@gmail.com"),  # full-width @
         ("User@Example.org", "User@Example.org"),  # case preserved
         ("françois@blueventures.org", "françois@blueventures.org"),
+        ("e\u200d\u0301@x.com", "\u00e9@x.com"),  # recomposed after stripping ZWJ
+        ("\u00b4x@y.com", "\u0301x@y.com"),  # NFKC-introduced space is stripped
         (None, None),
     ],
 )
@@ -48,6 +50,17 @@ def test_profile_save_normalizes_changed_email(db):
     profile.save()
     profile.refresh_from_db()
     assert profile.email == "after@test.com"
+
+
+def test_profile_save_refreshes_email_snapshot(db):
+    profile = Profile.objects.create(email=f"{WJ}snap@test.com")
+    assert profile._loaded_email == "snap@test.com"
+    profile.email = f"{WJ}snap2@test.com"
+    profile.save()
+    assert profile._loaded_email == "snap2@test.com"
+    profile.first_name = "x"
+    profile.save(update_fields=["first_name"])
+    assert profile._loaded_email == "snap2@test.com"
 
 
 def test_profile_save_leaves_untouched_legacy_email(db):
@@ -119,4 +132,8 @@ def test_get_user_info_normalizes_email(mock_userinfo, _mock_mgmt):
     ui = mock_userinfo.return_value.get_userinfo.return_value
     ui.user_metadata = {}
     ui.email = f"{WJ}auth0@test.com"
+    assert get_user_info("auth0|abc")["email"] == "auth0@test.com"
+
+    # metadata email that is only invisible chars falls back to ui.email
+    ui.user_metadata = {"email": WJ}
     assert get_user_info("auth0|abc")["email"] == "auth0@test.com"
