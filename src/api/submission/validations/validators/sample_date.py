@@ -3,7 +3,7 @@ from datetime import datetime
 from dateutil import tz
 from django.utils import timezone
 from django.utils.dateparse import parse_datetime
-from timezonefinder import TimezoneFinder
+from timezonefinder import timezone_at
 
 from ....models import Site
 from ..statuses import ERROR, OK
@@ -43,8 +43,9 @@ class SampleDateValidator(BaseValidator):
         x = site.location.x
         y = site.location.y
 
-        tf = TimezoneFinder()
-        tz_str = tf.timezone_at(lng=x, lat=y) or "UTC"
+        # The global timezone_at shares one TimezoneFinder per process: building
+        # one loads its data files, which costs far more than the lookup.
+        tz_str = timezone_at(lng=x, lat=y) or "UTC"
         tzinfo = tz.gettz(tz_str)
 
         date_str = date_str or ""
