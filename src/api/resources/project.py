@@ -5,7 +5,7 @@ from django.conf import settings
 from django.core.exceptions import ValidationError as DjangoValidationError
 from django.core.validators import validate_email
 from django.db import IntegrityError, transaction
-from django.db.models import JSONField
+from django.db.models import JSONField, OuterRef, Prefetch, Subquery
 from django.db.models.expressions import RawSQL
 from psycopg.errors import UniqueViolation
 from rest_framework import exceptions, permissions, serializers, status
@@ -112,7 +112,11 @@ class BaseProjectSerializer(DynamicFieldsMixin, BaseAPISerializer):
     def _get_profiles(self, obj):
         project_id = str(obj.id)
         if project_id not in self._cached_profiles or self._cached_profiles[project_id] is None:
-            self._cached_profiles[project_id] = get_profiles(obj)
+            # Prefetched by ProjectViewSet, in get_profiles() order.
+            profiles = getattr(obj, "profiles_by_name", None)
+            if profiles is None:
+                profiles = get_profiles(obj)
+            self._cached_profiles[project_id] = profiles
         return self._cached_profiles[project_id]
 
     def get_citation_retrieved_text(self, obj):
@@ -410,8 +414,22 @@ class ProjectViewSet(BaseApiViewSet):
                 "profiles__profile",
                 "sites",
                 "sites__country",
+                "tags",
+                Prefetch(
+                    "profiles",
+                    queryset=ProjectProfile.objects.select_related("profile").order_by(
+                        "profile__last_name", "profile__first_name"
+                    ),
+                    to_attr="profiles_by_name",
+                ),
             )
             .annotate(
+                # read by default_citation()
+                latest_sample_date=Subquery(
+                    SampleEvent.objects.filter(site__project=OuterRef("pk"))
+                    .order_by("-sample_date")
+                    .values("sample_date")[:1]
+                ),
                 # need to cast to text to avoid box2d equality operator error
                 extent=RawSQL(
                     f"""
