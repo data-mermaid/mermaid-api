@@ -107,6 +107,10 @@ jobs:
         run: pip install -r requirements.txt -r requirements-dev.txt
 
       - name: Run tests
+        # No Django/database initialization is needed for worker/provenance tests.
+        run: pytest -q -c /dev/null -p no:django -p no:cacheprovider tests/observability
+
+      - name: Run application tests
         working-directory: src
         # Scope to api/tests to match `make test`. Coverage reports:
         #   term-missing → uncovered lines printed in this job's log (human-readable)
