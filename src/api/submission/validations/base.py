@@ -2,9 +2,13 @@ import hashlib
 from dataclasses import dataclass
 from typing import Literal
 
+from opentelemetry import trace as otel_trace
+
 from api.utils import get_value, set_value
 from .statuses import ERROR, IGNORE, OK, WARN
 from .validators import BaseValidator, ValidatorResult
+
+tracer = otel_trace.get_tracer("api.submission.validations")
 
 RECORD_KEY = "$record"
 RECORD_LEVEL = "record"
@@ -52,7 +56,8 @@ class Validation:
             result.validation_id = self._get_validation_id()
 
     def run(self, *args, **kwargs):
-        result = self.validator(*args, **kwargs)
+        with tracer.start_as_current_span(f"validation.{self.validator.name}"):
+            result = self.validator(*args, **kwargs)
         self._assign_validation_id(result)
         self.result = result
 
@@ -81,6 +86,7 @@ class ValidationRunner:
     VERSION = "2"
     results = None
     status = OK
+    existing_validations = None
 
     def __init__(self, serializer):
         self.serializer = serializer
@@ -177,6 +183,7 @@ class ValidationRunner:
         existing_validations = (
             get_value(collect_record_dict, "validations.results", delimiter=".") or {}
         )
+        self.existing_validations = existing_validations
         for validation in validations:
             if validation.delay_validation:
                 delayed_validations.append(validation)
@@ -202,6 +209,16 @@ class ValidationRunner:
             )
             self.status = self._get_overall_status_level(statuses)
 
+        return self.status
+
+    def add_result(self, validation, collect_record, request, **kwargs):
+        """
+        Run one more validation after validate() and merge its result into
+        the results and overall status.
+        """
+        validation.run(collect_record, request=request, **kwargs)
+        status = self.set_validator_result(validation, self.existing_validations or {})
+        self.status = self._get_overall_status_level([self.status, status])
         return self.status
 
     def to_dict(self):

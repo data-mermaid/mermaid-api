@@ -268,3 +268,54 @@ def test_create_delete_create_collect_record_pull(db_setup, project1, profile1):
     assert len(updates) == 1
     assert len(deletes) == 0
     assert len(removes) == 0
+
+
+class _RecordingSpan:
+    def __init__(self, name, spans):
+        self.name = name
+        self.attributes = {}
+        spans.append(self)
+
+    def __enter__(self):
+        return self
+
+    def __exit__(self, *args):
+        return False
+
+    def set_attributes(self, attributes):
+        self.attributes.update(attributes)
+
+
+def test_pull_span_per_source(db_setup, api_client1, project1, fish_species1, monkeypatch):
+    from api.resources.sync import views
+
+    spans = []
+    monkeypatch.setattr(
+        views.tracer, "start_as_current_span", lambda name: _RecordingSpan(name, spans)
+    )
+    response = api_client1.post(
+        "/v1/pull/",
+        {
+            "fish_species": {"last_revision": None},
+            "project_sites": {"last_revision": 0, "project": str(project1.pk)},
+            "choices": {"last_revision": None},
+        },
+        format="json",
+    )
+    assert response.status_code == 200
+
+    by_name = {span.name: span.attributes for span in spans}
+    fish = by_name["pull.fish_species"]
+    assert fish["mermaid_source"] == "fish_species"
+    assert fish["mermaid_row_count"] == len(response.json()["fish_species"]["updates"]) > 0
+    assert fish["mermaid_full_pull"] is True
+    assert set(fish["aws.xray.annotations"]) == {
+        "mermaid_source",
+        "mermaid_row_count",
+        "mermaid_full_pull",
+    }
+    assert by_name["pull.project_sites"]["mermaid_full_pull"] is False
+    assert by_name["pull.choices"] == {
+        "mermaid_source": "choices",
+        "aws.xray.annotations": ["mermaid_source"],
+    }
