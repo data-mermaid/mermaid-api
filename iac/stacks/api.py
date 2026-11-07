@@ -2,6 +2,7 @@ import os
 import re
 
 from aws_cdk import (
+    Annotations,
     Arn,
     ArnComponents,
     ArnFormat,
@@ -27,6 +28,7 @@ from aws_cdk import (
 )
 from constructs import Construct
 from settings.settings import ProjectSettings, pyspacer_function_name
+from stacks.common import bare_log_group_arn
 from stacks.constructs.adot import add_adot_sidecar
 from stacks.constructs.alerts import MonitoringAlerts
 from stacks.constructs.dashboard import MonitoringDashboard
@@ -36,6 +38,32 @@ from stacks.constructs.worker import QueueWorker
 def camel_case(string: str) -> str:
     s = re.sub(r"(_|-)+", " ", string).title().replace(" ", "")
     return "".join([s[0].lower(), s[1:]])
+
+
+def grant_exec_log_group_describe(service: ecs.BaseService) -> None:
+    """Grant logs:DescribeLogStreams on the exec log group's bare ARN to an exec-enabled service.
+
+    CDK's ECS Exec grant gives it on the stream-form ARN (`...:log-group:<name>:*`)
+    only. From 2027-04-26 CloudWatch Logs authorizes it against the log-group ARN.
+    """
+    exec_config = service.cluster.execute_command_configuration
+    log_config = exec_config.log_configuration if exec_config else None
+    log_group = log_config.cloud_watch_log_group if log_config else None
+    if log_group is None:
+        # Exec logging is off or not to CloudWatch, or the cluster is imported and
+        # its exec config can't be read: say so at synth rather than skip silently.
+        Annotations.of(service).add_warning_v2(
+            "mermaid:exec-log-group-grant",
+            "ECS Exec is enabled but no exec CloudWatch log group was found on the "
+            "cluster; logs:DescribeLogStreams on the log-group ARN was not granted.",
+        )
+        return
+    service.task_definition.add_to_task_role_policy(
+        iam.PolicyStatement(
+            actions=["logs:DescribeLogStreams"],
+            resources=[bare_log_group_arn(service, log_group)],
+        )
+    )
 
 
 class ApiStack(Stack):
@@ -592,3 +620,11 @@ class ApiStack(Stack):
             # avoid both envs paging on the same instance event.
             monitor_shared_rds=config.env_id == "prod",
         )
+
+        # Every exec-enabled service in this stack, including ones added later.
+        for construct in self.node.find_all():
+            if (
+                isinstance(construct, ecs.BaseService)
+                and construct.node.default_child.enable_execute_command
+            ):
+                grant_exec_log_group_describe(construct)

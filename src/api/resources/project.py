@@ -2,6 +2,8 @@ import logging
 
 import django_filters
 from django.conf import settings
+from django.core.exceptions import ValidationError as DjangoValidationError
+from django.core.validators import validate_email
 from django.db import IntegrityError, transaction
 from django.db.models import JSONField, OuterRef, Prefetch, Subquery
 from django.db.models.expressions import RawSQL
@@ -46,7 +48,12 @@ from ..permissions import (
 from ..reports.fields import ReportField, ReportMethodField
 from ..reports.formatters import MULTI_VALUE_SEPARATOR, to_data_policy, to_str, to_yesno
 from ..reports.report_serializer import ReportSerializer
-from ..utils import delete_instance_and_related_objects, get_extent, truthy
+from ..utils import (
+    delete_instance_and_related_objects,
+    get_extent,
+    normalize_email,
+    truthy,
+)
 from ..utils.notification import suppress_all_notifications
 from ..utils.project import (
     ImageCopyError,
@@ -765,9 +772,13 @@ class ProjectViewSet(BaseApiViewSet):
         permission_classes=[ProjectDataAdminPermission],
     )
     def add_profile(self, request, pk, *args, **kwargs):
-        email = request.data.get("email")
-        if email is None:
+        email = normalize_email(request.data.get("email"))
+        if not email:
             raise exceptions.ValidationError(detail={"email": "Email is required"})
+        try:
+            validate_email(email)
+        except DjangoValidationError:
+            raise exceptions.ValidationError(detail={"email": "Enter a valid email address"})
 
         email = email.lower()
 

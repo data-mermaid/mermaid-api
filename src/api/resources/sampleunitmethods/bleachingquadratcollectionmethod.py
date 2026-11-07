@@ -40,7 +40,7 @@ from ..base import (
     BaseViewAPIGeoSerializer,
     BaseViewAPISUGeoSerializer,
 )
-from ..mixins import SampleUnitMethodEditMixin, SampleUnitMethodSummaryReport
+from ..mixins import SampleUnitMethodEditMixin
 from ..observer import ObserverSerializer
 from ..quadrat_collection import QuadratCollectionSerializer
 from ..sample_event import SampleEventSerializer
@@ -105,9 +105,7 @@ class BleachingQuadratCollectionMethodSerializer(BleachingQuadratCollectionSeria
         exclude = []
 
 
-class BleachingQuadratCollectionMethodView(
-    SampleUnitMethodSummaryReport, SampleUnitMethodEditMixin, BaseProjectApiViewSet
-):
+class BleachingQuadratCollectionMethodView(SampleUnitMethodEditMixin, BaseProjectApiViewSet):
     queryset = BleachingQuadratCollection.objects.select_related(
         "quadrat", "quadrat__sample_event"
     ).all()
