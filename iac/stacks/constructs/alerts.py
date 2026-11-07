@@ -32,6 +32,7 @@ class MonitoringAlerts(Construct):
         *,
         env_id: str,
         target_group: elb.IApplicationTargetGroup,
+        upload_target_group: elb.IApplicationTargetGroup,
         api_service: ecs.Ec2Service,
         database: rds.DatabaseInstance,
         general_dlq: sqs.IQueue,
@@ -69,11 +70,19 @@ class MonitoringAlerts(Construct):
                 "Alb5xxAlarm",
                 alarm_name=f"mermaid-{env_id}-alb-5xx-errors",
                 alarm_description="ALB Target 5xx errors exceeded 10 in a 5-minute window",
-                # Per-env target group, not the shared ALB (whose 5xx count
-                # aggregates both envs).
-                metric=target_group.metrics.http_code_target(
-                    code=elb.HttpCodeTarget.TARGET_5XX_COUNT,
-                    statistic="Sum",
+                # Per-env target groups, not the shared ALB (whose 5xx count
+                # aggregates both envs). Summed so upload errors still alert.
+                metric=cw.MathExpression(
+                    expression="FILL(api, 0) + FILL(uploads, 0)",
+                    using_metrics={
+                        "api": target_group.metrics.http_code_target(
+                            code=elb.HttpCodeTarget.TARGET_5XX_COUNT, statistic="Sum"
+                        ),
+                        "uploads": upload_target_group.metrics.http_code_target(
+                            code=elb.HttpCodeTarget.TARGET_5XX_COUNT, statistic="Sum"
+                        ),
+                    },
+                    label="Target 5xx count",
                     period=Duration.minutes(5),
                 ),
                 threshold=10,

@@ -244,7 +244,9 @@ def save_normalized_imagefile(instance: Image):
         # Saving the orientated image back to the image record
         # strips out the EXIF data, which is intentional.
         img_content = BytesIO()
-        image_file.save(img_content, format=image_format)
+        # PNG's default zlib level 6 takes seconds on 4K frames; level 1 is still lossless.
+        save_kwargs = {"compress_level": 1} if image_format == "PNG" else {}
+        image_file.save(img_content, format=image_format, **save_kwargs)
 
         # Wrap the BytesIO directly (no copy) and stash it for post_save so
         # thumbnail creation and checksum can read from the buffer already in
