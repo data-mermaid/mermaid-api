@@ -399,6 +399,9 @@ LOGGING = {
         "require_debug_false": {
             "()": "django.utils.log.RequireDebugFalse",
         },
+        "ignore_gdal_json_parse_errors": {
+            "()": "api.log_filters.IgnoreGDALJSONParseErrors",
+        },
     },
     "handlers": {
         "null": {
@@ -450,6 +453,9 @@ LOGGING = {
         "django.security.DisallowedHost": {
             "handlers": ["null"],
             "propagate": False,
+        },
+        "django.contrib.gis": {
+            "filters": ["ignore_gdal_json_parse_errors"],
         },
         "api.exceptions.UpdateSummariesException": {
             "handlers": ["mail_admins_specific_exceptions"],
