@@ -164,6 +164,32 @@ def test_save_normalized_imagefile_preserves_colour_closely():
     assert mean_abs_error < 4
 
 
+def test_save_normalized_imagefile_composites_alpha_onto_white():
+    source = PILImage.new("RGBA", (64, 48), (255, 0, 0, 0))  # fully transparent red
+    for x in range(32, 64):
+        for y in range(48):
+            source.putpixel((x, y), (0, 0, 0, 128))  # half-transparent black
+
+    normalized, _ = _normalize(_encode(source, "PNG"))
+
+    for channel, expected in zip(normalized.getpixel((16, 24)), (255, 255, 255)):
+        assert abs(channel - expected) <= 2
+    for channel in normalized.getpixel((48, 24)):
+        assert abs(channel - 127) <= 3
+
+
+def test_save_normalized_imagefile_composites_palette_transparency():
+    source = PILImage.new("P", (64, 48), 0)
+    source.putpalette([0, 0, 0] * 256)
+    buf = io.BytesIO()
+    source.save(buf, format="PNG", transparency=0)
+
+    normalized, _ = _normalize(buf.getvalue())
+
+    for channel in normalized.getpixel((32, 24)):
+        assert abs(channel - 255) <= 2
+
+
 def _icc_profile(colour_space=b"RGB "):
     profile = bytearray(ImageCms.ImageCmsProfile(ImageCms.createProfile("sRGB")).tobytes())
     profile[16:20] = colour_space

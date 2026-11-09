@@ -225,6 +225,8 @@ NORMALIZED_IMAGE_EXT = "jpg"
 # colour resolution instead of Pillow's default 4:2:0, since colour matters for
 # coral classification (e.g. bleaching).
 NORMALIZED_JPEG_SAVE_KWARGS = {"quality": 95, "subsampling": 0}
+# JPEG has no alpha, so transparent and partially transparent pixels are blended onto this.
+NORMALIZED_IMAGE_BACKGROUND = (255, 255, 255, 255)
 
 
 def _is_rgb_icc_profile(icc_profile: bytes | None) -> bool:
@@ -259,6 +261,14 @@ def save_normalized_imagefile(instance: Image):
                 image_file = image_file.rotate(90, expand=True)
         except (AttributeError, KeyError, IndexError) as _:
             pass
+
+        # A plain convert("RGB") would drop alpha and expose the hidden colour under
+        # transparent pixels, so composite anything with transparency (alpha band,
+        # palette or colour-key tRNS) onto the background first.
+        if image_file.has_transparency_data:
+            rgba = image_file.convert("RGBA")
+            background = PILImage.new("RGBA", rgba.size, NORMALIZED_IMAGE_BACKGROUND)
+            image_file = PILImage.alpha_composite(background, rgba)
 
         # JPEG has no alpha channel or palette/16-bit modes, so flatten to RGB first.
         if image_file.mode != "RGB":
