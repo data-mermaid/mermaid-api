@@ -7,7 +7,7 @@ from fractions import Fraction
 from unittest.mock import MagicMock, patch
 
 import pytest
-from PIL import Image as PILImage, ImageChops, ImageStat, JpegImagePlugin
+from PIL import Image as PILImage, ImageChops, ImageCms, ImageStat, JpegImagePlugin
 
 from api.models import BenthicTransect, QuadratCollection, QuadratTransect, SampleUnit
 from api.utils import get_subclasses, s3
@@ -162,6 +162,34 @@ def test_save_normalized_imagefile_preserves_colour_closely():
     diff = ImageChops.difference(source, normalized.convert("RGB"))
     mean_abs_error = sum(ImageStat.Stat(diff).mean) / 3
     assert mean_abs_error < 4
+
+
+def _icc_profile(colour_space=b"RGB "):
+    profile = bytearray(ImageCms.ImageCmsProfile(ImageCms.createProfile("sRGB")).tobytes())
+    profile[16:20] = colour_space
+    return bytes(profile)
+
+
+@pytest.mark.parametrize("mode, fmt", [("RGB", "JPEG"), ("RGBA", "PNG"), ("P", "PNG")])
+def test_save_normalized_imagefile_keeps_rgb_icc_profile(mode, fmt):
+    profile = _icc_profile()
+    buf = io.BytesIO()
+    PILImage.new(mode, (64, 48)).save(buf, format=fmt, icc_profile=profile)
+
+    normalized, save_kwargs = _normalize(buf.getvalue())
+
+    assert save_kwargs["icc_profile"] == profile
+    assert normalized.info.get("icc_profile") == profile
+
+
+def test_save_normalized_imagefile_drops_non_rgb_icc_profile():
+    buf = io.BytesIO()
+    PILImage.new("CMYK", (64, 48)).save(buf, format="JPEG", icc_profile=_icc_profile(b"CMYK"))
+
+    normalized, save_kwargs = _normalize(buf.getvalue())
+
+    assert "icc_profile" not in save_kwargs
+    assert "icc_profile" not in normalized.info
 
 
 def test_save_normalized_imagefile_jpeg_still_applies_orientation():

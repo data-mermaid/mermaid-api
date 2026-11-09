@@ -227,10 +227,23 @@ NORMALIZED_IMAGE_EXT = "jpg"
 NORMALIZED_JPEG_SAVE_KWARGS = {"quality": 95, "subsampling": 0}
 
 
+def _is_rgb_icc_profile(icc_profile: bytes | None) -> bool:
+    # Bytes 16-20 of an ICC header are the data colour space signature.
+    return bool(icc_profile) and icc_profile[16:20] == b"RGB "
+
+
 def save_normalized_imagefile(instance: Image):
     file_obj = _get_file_for_reading(instance.image)
 
     with PILImage.open(file_obj) as image_file:
+        # Pillow drops the ICC profile on save unless it is passed explicitly. Keep it
+        # only when it describes RGB data, so it still matches the pixels after the RGB
+        # conversion below; a CMYK/grey profile would not, so those are saved without one.
+        save_kwargs = dict(NORMALIZED_JPEG_SAVE_KWARGS)
+        icc_profile = image_file.info.get("icc_profile")
+        if _is_rgb_icc_profile(icc_profile):
+            save_kwargs["icc_profile"] = icc_profile
+
         try:
             for orientation in TAGS.keys():
                 if TAGS[orientation] == "Orientation":
@@ -255,7 +268,7 @@ def save_normalized_imagefile(instance: Image):
         # Saving the orientated image back to the image record
         # strips out the EXIF data, which is intentional.
         img_content = BytesIO()
-        image_file.save(img_content, format="JPEG", **NORMALIZED_JPEG_SAVE_KWARGS)
+        image_file.save(img_content, format="JPEG", **save_kwargs)
 
         # Wrap the BytesIO directly (no copy) and stash it for post_save so
         # thumbnail creation and checksum can read from the buffer already in
