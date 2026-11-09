@@ -76,6 +76,8 @@ class TagField(serializers.Field):
 
 class PointFieldValidated(GeometryField):
     def to_internal_value(self, value):
+        if not isinstance(value, dict):
+            raise ValidationError("Invalid point: expected a GeoJSON object")
         coords = value.get("coordinates")
         if coords is None or len(coords) != 2:
             raise ValidationError("Invalid coordinates")
