@@ -190,6 +190,36 @@ def test_save_normalized_imagefile_composites_palette_transparency():
         assert abs(channel - 255) <= 2
 
 
+def _i16_png(values, **save_kwargs):
+    source = PILImage.new("I;16", (len(values) * 8, 8))
+    # paste(int) writes wrong values into I;16, so set each pixel explicitly.
+    for x in range(source.width):
+        for y in range(source.height):
+            source.putpixel((x, y), values[x // 8])
+    buf = io.BytesIO()
+    source.save(buf, format="PNG", **save_kwargs)
+    return buf.getvalue()
+
+
+def test_save_normalized_imagefile_scales_16bit_greyscale():
+    values = [0, 1000, 16384, 32768, 49152, 65535]
+
+    normalized, _ = _normalize(_i16_png(values))
+
+    for i, value in enumerate(values):
+        r, g, b = normalized.getpixel((i * 8 + 4, 4))
+        assert r == g == b or max(r, g, b) - min(r, g, b) <= 2
+        assert abs(r - value // 256) <= 3
+
+
+def test_save_normalized_imagefile_16bit_transparency_key_becomes_background():
+    # 1000 is the transparent key; 40000 is opaque mid-grey (~156).
+    normalized, _ = _normalize(_i16_png([1000, 40000], transparency=1000))
+
+    assert all(abs(c - 255) <= 2 for c in normalized.getpixel((4, 4)))
+    assert all(abs(c - 40000 // 256) <= 3 for c in normalized.getpixel((12, 4)))
+
+
 def _icc_profile(colour_space=b"RGB "):
     profile = bytearray(ImageCms.ImageCmsProfile(ImageCms.createProfile("sRGB")).tobytes())
     profile[16:20] = colour_space

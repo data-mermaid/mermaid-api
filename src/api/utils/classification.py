@@ -18,7 +18,7 @@ from django.db import IntegrityError, transaction
 from django.db.models import Exists, OuterRef, Q
 from django.db.models.fields.files import ImageFieldFile
 from django.utils import timezone
-from PIL import Image as PILImage
+from PIL import Image as PILImage, ImageMath
 from PIL.ExifTags import GPSTAGS, TAGS
 
 from ..models import (
@@ -229,6 +229,22 @@ NORMALIZED_JPEG_SAVE_KWARGS = {"quality": 95, "subsampling": 0}
 NORMALIZED_IMAGE_BACKGROUND = (255, 255, 255, 255)
 
 
+def _scale_16bit_to_8bit(image: PILImage.Image) -> PILImage.Image:
+    # Pillow's I;16 -> L/RGB conversion clips at 255 rather than scaling, which turns
+    # nearly every 16-bit value white; divide by 256 to map 0-65535 onto 0-255.
+    wide = image.convert("I")
+    scaled = wide.point(lambda v: v * (1 / 256)).convert("L")
+    scaled.info.pop("transparency", None)
+
+    # A tRNS colour key is a 16-bit value that no scaled pixel can match, so turn it
+    # into an alpha band from the unscaled data before it is lost.
+    key = image.info.get("transparency")
+    if isinstance(key, int):
+        mask = ImageMath.lambda_eval(lambda a: (a["w"] != key) * 255, w=wide).convert("L")
+        scaled.putalpha(mask)
+    return scaled
+
+
 def _is_rgb_icc_profile(icc_profile: bytes | None) -> bool:
     # Bytes 16-20 of an ICC header are the data colour space signature.
     return bool(icc_profile) and icc_profile[16:20] == b"RGB "
@@ -261,6 +277,9 @@ def save_normalized_imagefile(instance: Image):
                 image_file = image_file.rotate(90, expand=True)
         except (AttributeError, KeyError, IndexError) as _:
             pass
+
+        if image_file.mode.startswith("I;16"):
+            image_file = _scale_16bit_to_8bit(image_file)
 
         # A plain convert("RGB") would drop alpha and expose the hidden colour under
         # transparent pixels, so composite anything with transparency (alpha band,
