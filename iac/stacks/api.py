@@ -401,21 +401,34 @@ class ApiStack(Stack):
             container_secret.grant_read(daily_backup_task.task_definition.execution_role)
             container_secret.grant_read(summary_cache_service.task_definition.execution_role)
 
+        health_check = elb.HealthCheck(
+            path="/health/",
+            healthy_http_codes="200",
+            healthy_threshold_count=4,
+            unhealthy_threshold_count=4,
+            timeout=Duration.seconds(10),
+            interval=Duration.seconds(60),
+            port="8081",
+        )
         target_group = elb.ApplicationTargetGroup(
             self,
             id="TargetGroup",
             targets=[service],
             protocol=elb.ApplicationProtocol.HTTP,
             vpc=cluster.vpc,
-            health_check=elb.HealthCheck(
-                path="/health/",
-                healthy_http_codes="200",
-                healthy_threshold_count=4,
-                unhealthy_threshold_count=4,
-                timeout=Duration.seconds(10),
-                interval=Duration.seconds(60),
-                port="8081",
-            ),
+            health_check=health_check,
+        )
+
+        # Image uploads get their own target group (same service and tasks) so the
+        # p95 latency alarm on target_group measures server time, not how long a
+        # client's uplink takes to send a ~10 MB photo.
+        upload_target_group = elb.ApplicationTargetGroup(
+            self,
+            id="UploadTargetGroup",
+            targets=[service],
+            protocol=elb.ApplicationProtocol.HTTP,
+            vpc=cluster.vpc,
+            health_check=health_check,
         )
 
         # create CNAME for ALB
@@ -446,6 +459,21 @@ class ApiStack(Stack):
             priority=rule_priority,
             conditions=[elb.ListenerCondition.host_headers(host_headers)],
             target_groups=[target_group],
+        )
+
+        # Must evaluate before the host header rule; the listener is shared by dev
+        # and prod, so the priority must stay distinct per env.
+        _ = elb.ApplicationListenerRule(
+            self,
+            id="ImageUploadListenerRule",
+            listener=load_balancer.listeners[0],
+            priority=rule_priority - 10,
+            conditions=[
+                elb.ListenerCondition.host_headers(host_headers),
+                elb.ListenerCondition.http_request_methods(["POST"]),
+                elb.ListenerCondition.path_patterns(["/v1/projects/*/classification/images/"]),
+            ],
+            target_groups=[upload_target_group],
         )
 
         # Allow API service to read/write to backup bucket in case we want to manually
@@ -603,6 +631,7 @@ class ApiStack(Stack):
             "Alerts",
             env_id=config.env_id,
             target_group=target_group,
+            upload_target_group=upload_target_group,
             api_service=service,
             database=database,
             general_dlq=worker.dead_letter_queue,
