@@ -15,6 +15,7 @@ from api.utils.classification import (
     _normalize_exif_value,
     extract_datetime_stamp,
     extract_location,
+    save_normalized_imagefile,
     store_exif,
 )
 
@@ -110,6 +111,43 @@ def test_store_exif_png_with_exif_chunk():
     # Same fixture EXIF bytes as test_store_exif_jpeg: timestamp set, no GPS lat/lon.
     assert instance.photo_timestamp is not None
     assert instance.location is None
+
+
+def _normalize(file_bytes):
+    instance = _make_instance(file_bytes)
+    instance.image.name = "upload"
+    original_save = PILImage.Image.save
+    with patch.object(PILImage.Image, "save", autospec=True, side_effect=original_save) as save_spy:
+        save_normalized_imagefile(instance)
+    instance._normalized_image_buf.seek(0)
+    return PILImage.open(instance._normalized_image_buf), save_spy.call_args.kwargs
+
+
+def test_save_normalized_imagefile_png_is_lossless_at_fast_compression():
+    source = PILImage.new("RGBA", (64, 48))
+    source.putdata([(x % 256, (x * 7) % 256, (x * 13) % 256, 255) for x in range(64 * 48)])
+    buf = io.BytesIO()
+    source.save(buf, format="PNG")
+
+    normalized, save_kwargs = _normalize(buf.getvalue())
+
+    assert save_kwargs.get("compress_level") == 1
+    assert normalized.format == "PNG"
+    assert normalized.tobytes() == source.tobytes()
+
+
+def test_save_normalized_imagefile_jpeg_still_applies_orientation():
+    source = PILImage.new("RGB", (64, 48))
+    exif = source.getexif()
+    exif[274] = 6  # Orientation: rotate 90° CW to display
+    buf = io.BytesIO()
+    source.save(buf, format="JPEG", exif=exif)
+
+    normalized, save_kwargs = _normalize(buf.getvalue())
+
+    assert "compress_level" not in save_kwargs
+    assert normalized.format == "JPEG"
+    assert normalized.size == (48, 64)
 
 
 def test_extract_datetime_stamp_gps_priority():
