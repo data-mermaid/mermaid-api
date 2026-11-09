@@ -220,11 +220,17 @@ def extract_location(gps_ifd: dict[int, Any]) -> GEOSPoint | None:
     return GEOSPoint(longitude, latitude)
 
 
+NORMALIZED_IMAGE_EXT = "jpg"
+# quality=95 keeps re-encoding loss negligible; subsampling=0 (4:4:4) keeps full
+# colour resolution instead of Pillow's default 4:2:0, since colour matters for
+# coral classification (e.g. bleaching).
+NORMALIZED_JPEG_SAVE_KWARGS = {"quality": 95, "subsampling": 0}
+
+
 def save_normalized_imagefile(instance: Image):
     file_obj = _get_file_for_reading(instance.image)
 
     with PILImage.open(file_obj) as image_file:
-        image_format = image_file.format
         try:
             for orientation in TAGS.keys():
                 if TAGS[orientation] == "Orientation":
@@ -241,12 +247,15 @@ def save_normalized_imagefile(instance: Image):
         except (AttributeError, KeyError, IndexError) as _:
             pass
 
+        # JPEG has no alpha channel or palette/16-bit modes, so flatten to RGB first.
+        if image_file.mode != "RGB":
+            image_file = image_file.convert("RGB")
+
+        # Every upload is stored as JPEG regardless of the source format.
         # Saving the orientated image back to the image record
         # strips out the EXIF data, which is intentional.
         img_content = BytesIO()
-        # PNG's default zlib level 6 takes seconds on 4K frames; level 1 is still lossless.
-        save_kwargs = {"compress_level": 1} if image_format == "PNG" else {}
-        image_file.save(img_content, format=image_format, **save_kwargs)
+        image_file.save(img_content, format="JPEG", **NORMALIZED_JPEG_SAVE_KWARGS)
 
         # Wrap the BytesIO directly (no copy) and stash it for post_save so
         # thumbnail creation and checksum can read from the buffer already in

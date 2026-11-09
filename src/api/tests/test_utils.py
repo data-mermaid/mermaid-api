@@ -7,7 +7,7 @@ from fractions import Fraction
 from unittest.mock import MagicMock, patch
 
 import pytest
-from PIL import Image as PILImage
+from PIL import Image as PILImage, ImageChops, ImageStat, JpegImagePlugin
 
 from api.models import BenthicTransect, QuadratCollection, QuadratTransect, SampleUnit
 from api.utils import get_subclasses, s3
@@ -123,17 +123,45 @@ def _normalize(file_bytes):
     return PILImage.open(instance._normalized_image_buf), save_spy.call_args.kwargs
 
 
-def test_save_normalized_imagefile_png_is_lossless_at_fast_compression():
-    source = PILImage.new("RGBA", (64, 48))
-    source.putdata([(x % 256, (x * 7) % 256, (x * 13) % 256, 255) for x in range(64 * 48)])
+def _encode(image, fmt):
     buf = io.BytesIO()
-    source.save(buf, format="PNG")
+    image.save(buf, format=fmt)
+    return buf.getvalue()
 
-    normalized, save_kwargs = _normalize(buf.getvalue())
 
-    assert save_kwargs.get("compress_level") == 1
-    assert normalized.format == "PNG"
-    assert normalized.tobytes() == source.tobytes()
+@pytest.mark.parametrize(
+    "mode, fmt",
+    [
+        ("RGB", "JPEG"),
+        ("RGB", "PNG"),
+        ("RGBA", "PNG"),
+        ("P", "PNG"),
+        ("L", "PNG"),
+        ("I;16", "PNG"),
+        ("CMYK", "JPEG"),
+        ("RGB", "TIFF"),
+    ],
+)
+def test_save_normalized_imagefile_converts_to_full_chroma_jpeg(mode, fmt):
+    normalized, save_kwargs = _normalize(_encode(PILImage.new(mode, (64, 48)), fmt))
+
+    assert normalized.format == "JPEG"
+    assert normalized.mode == "RGB"
+    assert normalized.size == (64, 48)
+    assert save_kwargs == {"format": "JPEG", "quality": 95, "subsampling": 0}
+    # 0 == 4:4:4, i.e. no chroma subsampling
+    assert JpegImagePlugin.get_sampling(normalized) == 0
+
+
+def test_save_normalized_imagefile_preserves_colour_closely():
+    source = PILImage.new("RGB", (64, 48))
+    source.putdata([((x * 3) % 256, (x * 7) % 256, (x * 13) % 256) for x in range(64 * 48)])
+
+    normalized, _ = _normalize(_encode(source, "PNG"))
+
+    diff = ImageChops.difference(source, normalized.convert("RGB"))
+    mean_abs_error = sum(ImageStat.Stat(diff).mean) / 3
+    assert mean_abs_error < 4
 
 
 def test_save_normalized_imagefile_jpeg_still_applies_orientation():
@@ -143,11 +171,11 @@ def test_save_normalized_imagefile_jpeg_still_applies_orientation():
     buf = io.BytesIO()
     source.save(buf, format="JPEG", exif=exif)
 
-    normalized, save_kwargs = _normalize(buf.getvalue())
+    normalized, _ = _normalize(buf.getvalue())
 
-    assert "compress_level" not in save_kwargs
     assert normalized.format == "JPEG"
     assert normalized.size == (48, 64)
+    assert "exif" not in normalized.info
 
 
 def test_extract_datetime_stamp_gps_priority():
