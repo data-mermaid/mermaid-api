@@ -1,4 +1,5 @@
 import importlib
+import uuid
 
 import pytest
 from django.apps import apps
@@ -20,11 +21,13 @@ from api.submission.validations import (
 )
 
 
+def _get_result(validator_results, validator_name):
+    return next((r for r in validator_results if r["name"] == validator_name), None)
+
+
 def _get_result_status(validator_results, validator_name):
-    for result in validator_results:
-        if result["name"] == validator_name:
-            return result["status"]
-    return None
+    result = _get_result(validator_results, validator_name)
+    return result["status"] if result else None
 
 
 def _set_result_status(validator_results, validator_name, status):
@@ -107,6 +110,164 @@ def test_fishbelt_protocol_validation_warn(
         )
         == IGNORE
     )
+
+
+def _validate_fishbelt(collect_record, request):
+    runner = ValidationRunner(serializer=CollectRecordSerializer)
+    runner.validate(collect_record, belt_fish.belt_fish_validations, request=request)
+    collect_record.validations = runner.to_dict()
+    return runner
+
+
+@pytest.mark.parametrize(
+    "len_surveyed,expected_status,expected_code,expected_overall_status",
+    [
+        (105, IGNORE, "len_surveyed_out_of_range", WARN),
+        (50, OK, None, WARN),
+        (0, ERROR, "required", ERROR),
+        (1000, ERROR, "len_surveyed_out_of_range", ERROR),
+    ],
+)
+def test_ignored_warning_only_kept_for_same_warning(
+    invalid_collect_record_warn,
+    profile1_request,
+    belt_transect_width_condition2,
+    len_surveyed,
+    expected_status,
+    expected_code,
+    expected_overall_status,
+):
+    record = invalid_collect_record_warn
+    _validate_fishbelt(record, profile1_request)
+    len_surveyed_results = record.validations["results"]["data"]["fishbelt_transect"][
+        "len_surveyed"
+    ]
+    assert _get_result_status(len_surveyed_results, "len_surveyed_validator") == WARN
+    _set_result_status(len_surveyed_results, "len_surveyed_validator", IGNORE)
+
+    record.data["fishbelt_transect"]["len_surveyed"] = len_surveyed
+    runner = _validate_fishbelt(record, profile1_request)
+
+    result = _get_result(
+        runner.results["data"]["fishbelt_transect"]["len_surveyed"], "len_surveyed_validator"
+    )
+    assert result["status"] == expected_status
+    assert result["code"] == expected_code
+    assert runner.status == expected_overall_status
+
+
+def test_ignored_warning_not_kept_for_different_warning(
+    invalid_collect_record_warn, profile1_request, belt_transect_width_condition2
+):
+    record = invalid_collect_record_warn
+    _validate_fishbelt(record, profile1_request)
+    record_results = record.validations["results"]["$record"]
+    assert _get_result(record_results, "observation_count_validator")["code"] == (
+        "too_few_observations"
+    )
+    _set_result_status(record_results, "observation_count_validator", IGNORE)
+
+    record.data["obs_belt_fishes"] = record.data["obs_belt_fishes"][:1] * 201
+    runner = _validate_fishbelt(record, profile1_request)
+
+    result = _get_result(runner.results["$record"], "observation_count_validator")
+    assert result["status"] == WARN
+    assert result["code"] == "too_many_observations"
+
+
+def test_ignored_list_warning_not_kept_for_error(
+    invalid_collect_record_warn, profile1_request, belt_transect_width_condition2
+):
+    record = invalid_collect_record_warn
+    _validate_fishbelt(record, profile1_request)
+    obs_results = record.validations["results"]["data"]["obs_belt_fishes"]
+    assert _get_result_status(obs_results[2], "fish_size_validator") == WARN
+    _set_result_status(obs_results[2], "fish_size_validator", IGNORE)
+
+    record.data["obs_belt_fishes"][2]["size"] = 0
+    runner = _validate_fishbelt(record, profile1_request)
+
+    result = _get_result(runner.results["data"]["obs_belt_fishes"][2], "fish_size_validator")
+    assert result["status"] == ERROR
+    assert result["code"] == "invalid_fish_size"
+    assert runner.status == ERROR
+
+
+def _ignore_fish_size_warning(record, request, obs_index):
+    _validate_fishbelt(record, request)
+    obs_results = record.validations["results"]["data"]["obs_belt_fishes"]
+    assert _get_result_status(obs_results[obs_index], "fish_size_validator") == WARN
+    _set_result_status(obs_results[obs_index], "fish_size_validator", IGNORE)
+
+
+def _fish_size_statuses(runner):
+    return [
+        _get_result_status(row, "fish_size_validator")
+        for row in runner.results["data"]["obs_belt_fishes"]
+    ]
+
+
+def test_ignored_list_warning_follows_observation_when_row_deleted(
+    invalid_collect_record_warn, profile1_request, belt_transect_width_condition2
+):
+    record = invalid_collect_record_warn
+    _ignore_fish_size_warning(record, profile1_request, 2)
+
+    del record.data["obs_belt_fishes"][0]
+    runner = _validate_fishbelt(record, profile1_request)
+
+    assert _fish_size_statuses(runner) == [OK, IGNORE]
+
+
+def test_ignored_list_warning_follows_observation_when_rows_reordered(
+    invalid_collect_record_warn, profile1_request, belt_transect_width_condition2
+):
+    record = invalid_collect_record_warn
+    _ignore_fish_size_warning(record, profile1_request, 2)
+
+    record.data["obs_belt_fishes"].reverse()
+    runner = _validate_fishbelt(record, profile1_request)
+
+    assert _fish_size_statuses(runner) == [IGNORE, OK, OK]
+
+
+def test_ignored_list_warning_not_kept_for_other_observation_at_same_index(
+    invalid_collect_record_warn, profile1_request, belt_transect_width_condition2
+):
+    record = invalid_collect_record_warn
+    _ignore_fish_size_warning(record, profile1_request, 2)
+
+    observations = record.data["obs_belt_fishes"]
+    observations[2] = dict(observations[2], id=str(uuid.uuid4()))
+    runner = _validate_fishbelt(record, profile1_request)
+
+    assert _fish_size_statuses(runner) == [OK, OK, WARN]
+
+
+def test_ignored_list_warning_not_kept_for_row_without_id_at_same_index(
+    invalid_collect_record_warn, profile1_request, belt_transect_width_condition2
+):
+    record = invalid_collect_record_warn
+    _ignore_fish_size_warning(record, profile1_request, 2)
+
+    observations = record.data["obs_belt_fishes"]
+    observations[2] = {k: v for k, v in observations[2].items() if k != "id"}
+    runner = _validate_fishbelt(record, profile1_request)
+
+    assert _fish_size_statuses(runner) == [OK, OK, WARN]
+
+
+def test_ignored_list_warning_matched_by_position_without_observation_id(
+    invalid_collect_record_warn, profile1_request, belt_transect_width_condition2
+):
+    record = invalid_collect_record_warn
+    for obs in record.data["obs_belt_fishes"]:
+        obs.pop("id", None)
+    _ignore_fish_size_warning(record, profile1_request, 2)
+
+    runner = _validate_fishbelt(record, profile1_request)
+
+    assert _fish_size_statuses(runner) == [OK, OK, IGNORE]
 
 
 def test_fishbelt_protocol_validation_null_str_warn(
