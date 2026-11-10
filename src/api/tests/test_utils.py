@@ -12,7 +12,10 @@ from PIL import Image as PILImage, ImageChops, ImageCms, ImageStat, JpegImagePlu
 from api.models import BenthicTransect, QuadratCollection, QuadratTransect, SampleUnit
 from api.utils import get_subclasses, s3
 from api.utils.classification import (
+    MAX_JPEG_DIMENSION,
     _normalize_exif_value,
+    check_if_valid_image,
+    create_thumbnail,
     extract_datetime_stamp,
     extract_location,
     save_normalized_imagefile,
@@ -138,6 +141,8 @@ def _encode(image, fmt):
         ("L", "PNG"),
         ("I;16", "PNG"),
         ("RGB", "TIFF"),
+        ("RGB", "PPM"),
+        ("RGB", "BMP"),
     ],
 )
 def test_save_normalized_imagefile_lossless_source_converts_to_full_chroma_jpeg(mode, fmt):
@@ -187,6 +192,35 @@ def test_save_normalized_imagefile_composites_alpha_onto_white():
         assert abs(channel - expected) <= 2
     for channel in normalized.getpixel((48, 24)):
         assert abs(channel - 127) <= 3
+
+
+def test_save_normalized_imagefile_skips_compositing_fully_opaque_alpha():
+    source = PILImage.new("RGBA", (64, 48), (10, 120, 200, 255))
+
+    with patch.object(PILImage, "alpha_composite", wraps=PILImage.alpha_composite) as composite:
+        normalized, _ = _normalize(_encode(source, "PNG"))
+
+    composite.assert_not_called()
+    for channel, expected in zip(normalized.getpixel((32, 24)), (10, 120, 200)):
+        assert abs(channel - expected) <= 3
+
+
+def test_save_normalized_imagefile_orients_transparent_palette_image():
+    # Left half transparent, right half opaque black; Orientation 6 rotates 90° CW,
+    # which moves the transparent half to the top.
+    source = PILImage.new("P", (64, 48), 1)
+    source.putpalette([0, 0, 0] * 256)
+    source.paste(0, (0, 0, 32, 48))
+    exif = source.getexif()
+    exif[274] = 6
+    buf = io.BytesIO()
+    source.save(buf, format="PNG", transparency=0, exif=exif)
+
+    normalized, _ = _normalize(buf.getvalue())
+
+    assert normalized.size == (48, 64)
+    assert all(abs(c - 255) <= 2 for c in normalized.getpixel((24, 16)))
+    assert all(c <= 3 for c in normalized.getpixel((24, 48)))
 
 
 def test_save_normalized_imagefile_composites_palette_transparency():
@@ -251,6 +285,18 @@ def test_save_normalized_imagefile_keeps_rgb_icc_profile_from_lossless_source(mo
     assert normalized.info.get("icc_profile") == profile
 
 
+def test_save_normalized_imagefile_lossless_webp_keeps_full_chroma_and_icc_profile():
+    profile = _icc_profile()
+    buf = io.BytesIO()
+    PILImage.new("RGB", (64, 48)).save(buf, format="WEBP", lossless=True, icc_profile=profile)
+
+    normalized, save_kwargs = _normalize(buf.getvalue())
+
+    assert save_kwargs["subsampling"] == 0
+    assert JpegImagePlugin.get_sampling(normalized) == 0
+    assert normalized.info.get("icc_profile") == profile
+
+
 def test_save_normalized_imagefile_drops_icc_profile_from_jpeg_source():
     buf = io.BytesIO()
     PILImage.new("RGB", (64, 48)).save(buf, format="JPEG", icc_profile=_icc_profile())
@@ -269,6 +315,39 @@ def test_save_normalized_imagefile_drops_non_rgb_icc_profile():
 
     assert "icc_profile" not in save_kwargs
     assert "icc_profile" not in normalized.info
+
+
+@pytest.mark.parametrize("size", [(MAX_JPEG_DIMENSION + 1, 10), (10, MAX_JPEG_DIMENSION + 1)])
+def test_check_if_valid_image_rejects_side_too_long_for_jpeg(size):
+    instance = _make_instance(_encode(PILImage.new("L", size), "PNG"))
+
+    with pytest.raises(ValueError, match="Maximum width and height"):
+        check_if_valid_image(instance)
+
+
+def test_check_if_valid_image_accepts_max_jpeg_side():
+    instance = _make_instance(_encode(PILImage.new("L", (MAX_JPEG_DIMENSION, 10)), "PNG"))
+
+    check_if_valid_image(instance)
+
+
+def test_create_thumbnail_matches_normalized_image():
+    profile = _icc_profile()
+    buf = io.BytesIO()
+    PILImage.new("RGB", (1000, 800)).save(buf, format="PNG", icc_profile=profile)
+    instance = _make_instance(buf.getvalue())
+    instance.image.name = "upload"
+    save_normalized_imagefile(instance)
+    instance.name = "image.jpg"
+
+    thumb_file = create_thumbnail(instance, image_buf=instance._normalized_image_buf)
+    thumb = PILImage.open(io.BytesIO(thumb_file.read()))
+
+    assert thumb_file.name == "image_thumbnail.jpg"
+    assert thumb.format == "JPEG"
+    assert thumb.size == (500, 400)
+    assert JpegImagePlugin.get_sampling(thumb) == 0
+    assert thumb.info.get("icc_profile") == profile
 
 
 def test_save_normalized_imagefile_jpeg_still_applies_orientation():

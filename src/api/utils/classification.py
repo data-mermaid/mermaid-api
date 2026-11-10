@@ -18,7 +18,7 @@ from django.db import IntegrityError, transaction
 from django.db.models import Exists, OuterRef, Q
 from django.db.models.fields.files import ImageFieldFile
 from django.utils import timezone
-from PIL import Image as PILImage, ImageMath
+from PIL import ExifTags, Image as PILImage, ImageMath
 from PIL.ExifTags import GPSTAGS, TAGS
 
 from ..models import (
@@ -67,6 +67,9 @@ def check_if_valid_image(instance):
             w, h = img.size
             if settings.MAX_IMAGE_PIXELS < w * h:
                 raise ValueError(f"Maximum number of pixels is {settings.MAX_IMAGE_PIXELS}.")
+            # Every upload is stored as JPEG, which can't encode a side longer than this.
+            if max(w, h) > MAX_JPEG_DIMENSION:
+                raise ValueError(f"Maximum width and height is {MAX_JPEG_DIMENSION} pixels.")
         return
     except (OSError, AttributeError, TypeError, SyntaxError):
         raise ValueError("Invalid image.")
@@ -118,9 +121,18 @@ def create_thumbnail(image_instance: Image, image_buf: BytesIO | None = None) ->
     base, ext = os.path.splitext(image_instance.name)
     thumb_name = f"{base}_thumbnail{ext}"
 
+    save_kwargs = {}
+    if img.format == "JPEG":
+        # Match the stored image: keep full colour detail and its colour profile, which
+        # Pillow's JPEG encoder drops unless passed explicitly.
+        save_kwargs = dict(NORMALIZED_JPEG_SAVE_KWARGS, subsampling=0)
+        icc_profile = img.info.get("icc_profile")
+        if icc_profile:
+            save_kwargs["icc_profile"] = icc_profile
+
     thumb_io = BytesIO()
     try:
-        img.save(thumb_io, img.format)
+        img.save(thumb_io, img.format, **save_kwargs)
     except OSError as io_err:
         print(f"Cannot create thumbnail for [{image_instance.pk}]: {io_err}")
         raise
@@ -223,10 +235,13 @@ def extract_location(gps_ifd: dict[int, Any]) -> GEOSPoint | None:
 NORMALIZED_IMAGE_EXT = "jpg"
 # quality=75 is Pillow's default.
 NORMALIZED_JPEG_SAVE_KWARGS = {"quality": 75}
-# Source formats (as detected by Pillow) that have full colour detail to keep. These are
-# saved with subsampling=0 (4:4:4) instead of Pillow's default 4:2:0, since colour matters
-# for coral classification (e.g. bleaching), and their ICC profile is carried over.
-LOSSLESS_IMAGE_FORMATS = {"PNG", "TIFF", "BMP", "GIF"}
+# Largest width or height libjpeg can write (JPEG_MAX_DIMENSION; the format allows 65535).
+MAX_JPEG_DIMENSION = 65500
+# Source formats (as detected by Pillow) that are already JPEG-compressed. Every other
+# format may have full colour detail to keep, so it is saved with subsampling=0 (4:4:4)
+# instead of Pillow's default 4:2:0, since colour matters for coral classification
+# (e.g. bleaching), and its ICC profile is carried over.
+JPEG_IMAGE_FORMATS = {"JPEG", "MPO"}
 # JPEG has no alpha, so transparent and partially transparent pixels are blended onto this.
 NORMALIZED_IMAGE_BACKGROUND = (255, 255, 255, 255)
 
@@ -247,6 +262,27 @@ def _scale_16bit_to_8bit(image: PILImage.Image) -> PILImage.Image:
     return scaled
 
 
+def _has_transparent_pixels(image: PILImage.Image) -> bool:
+    # An alpha band is often fully opaque (e.g. RGBA exports of photos). Compositing
+    # those makes several full-size copies for no change, so check the band first.
+    if "A" in image.getbands():
+        return image.getchannel("A").getextrema()[0] < 255
+    # Palette or colour-key (tRNS) transparency.
+    return image.has_transparency_data
+
+
+# EXIF Orientation value -> counter-clockwise rotation that makes the image upright.
+_ORIENTATION_ROTATIONS = {3: 180, 6: 270, 8: 90}
+
+
+def _exif_rotation(image: PILImage.Image) -> int:
+    try:
+        orientation = image.getexif().get(ExifTags.Base.Orientation)
+    except (AttributeError, KeyError, IndexError, SyntaxError, ValueError):
+        return 0
+    return _ORIENTATION_ROTATIONS.get(orientation, 0)
+
+
 def _is_rgb_icc_profile(icc_profile: bytes | None) -> bool:
     # Bytes 16-20 of an ICC header are the data colour space signature.
     return bool(icc_profile) and icc_profile[16:20] == b"RGB "
@@ -257,7 +293,7 @@ def save_normalized_imagefile(instance: Image):
 
     with PILImage.open(file_obj) as image_file:
         save_kwargs = dict(NORMALIZED_JPEG_SAVE_KWARGS)
-        if image_file.format in LOSSLESS_IMAGE_FORMATS:
+        if image_file.format not in JPEG_IMAGE_FORMATS:
             save_kwargs["subsampling"] = 0
             # Pillow drops the ICC profile on save unless it is passed explicitly. Keep
             # it only when it describes RGB data, so it still matches the pixels after
@@ -266,21 +302,8 @@ def save_normalized_imagefile(instance: Image):
             if _is_rgb_icc_profile(icc_profile):
                 save_kwargs["icc_profile"] = icc_profile
 
-        try:
-            for orientation in TAGS.keys():
-                if TAGS[orientation] == "Orientation":
-                    break
-
-            exif = dict(image_file.getexif().items())
-
-            if exif[orientation] == 3:
-                image_file = image_file.rotate(180, expand=True)
-            elif exif[orientation] == 6:
-                image_file = image_file.rotate(270, expand=True)
-            elif exif[orientation] == 8:
-                image_file = image_file.rotate(90, expand=True)
-        except (AttributeError, KeyError, IndexError) as _:
-            pass
+        # Read before the conversions below, which don't keep EXIF.
+        rotation = _exif_rotation(image_file)
 
         if image_file.mode.startswith("I;16"):
             image_file = _scale_16bit_to_8bit(image_file)
@@ -288,7 +311,7 @@ def save_normalized_imagefile(instance: Image):
         # A plain convert("RGB") would drop alpha and expose the hidden colour under
         # transparent pixels, so composite anything with transparency (alpha band,
         # palette or colour-key tRNS) onto the background first.
-        if image_file.has_transparency_data:
+        if _has_transparent_pixels(image_file):
             rgba = image_file.convert("RGBA")
             background = PILImage.new("RGBA", rgba.size, NORMALIZED_IMAGE_BACKGROUND)
             image_file = PILImage.alpha_composite(background, rgba)
@@ -296,6 +319,10 @@ def save_normalized_imagefile(instance: Image):
         # JPEG has no alpha channel or palette/16-bit modes, so flatten to RGB first.
         if image_file.mode != "RGB":
             image_file = image_file.convert("RGB")
+
+        # Rotate after flattening to RGB, so transparency never has to survive a rotation.
+        if rotation:
+            image_file = image_file.rotate(rotation, expand=True)
 
         # Every upload is stored as JPEG regardless of the source format.
         # Saving the orientated image back to the image record
