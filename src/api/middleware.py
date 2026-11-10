@@ -1,4 +1,5 @@
 import time
+from urllib.parse import urlsplit
 
 from django.conf import settings
 from django.http import HttpResponse, JsonResponse
@@ -95,6 +96,20 @@ class MetricsMiddleware:
                 for i in range(len(value[key])):
                     value[key][i] = "********"
 
+    @staticmethod
+    def _origin(request):
+        # Browsers set Origin on writes and fetch CORS requests; Referer covers the rest.
+        # Keep only scheme://host so a Referer's path and query string (which may hold
+        # tokens or PII) are never logged.
+        value = request.headers.get("Origin") or request.headers.get("Referer") or ""
+        try:
+            parts = urlsplit(value)
+        except ValueError:
+            return ""
+        if not (parts.scheme and parts.netloc):
+            return ""
+        return f"{parts.scheme}://{parts.netloc}"[:256]
+
     def _ignore_url_path(self, url_path):
         return any(
             url_path.startswith(ignore_route) for ignore_route in settings.METRICS_IGNORE_ROUTES
@@ -144,6 +159,8 @@ class MetricsMiddleware:
                     "auth_type": auth_type,
                     "user_id": user_id or "",
                     "exception": str(exception) or "",
+                    "user_agent": request.headers.get("User-Agent", "")[:256],
+                    "origin": self._origin(request),
                 },
             )
 
