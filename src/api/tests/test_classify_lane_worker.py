@@ -1,21 +1,32 @@
 import pytest
 from django.test import override_settings
 
-from api.models import Annotation, ClassificationStatus, Image, Point
+from api.models import Annotation, ClassificationStatus, Classifier, Image, Point
 from api.utils import classification, q
 from api.utils.classification import _classify_image, classify_image_job
 from api.utils.inference import InferenceError, LambdaClassificationResult
 
-PINNED = {"INFERENCE_CLASSIFIER_VERSION": "v2"}
+PINNED = {
+    "INFERENCE_CLASSIFIER_VERSION": "v2",
+    "INFERENCE_PYSPACER_FUNCTIONS": {"v1": "fn-v1", "v2": "fn-v2"},
+}
 THRESHOLDS = {"CLASSIFIED_THRESHOLD": 0.5, "AUTOCONFIRM_THRESHOLD": 1.0}
 
 
-def _stub_lambda(monkeypatch, predictions, feature_vector_name=None, captured_points=None):
-    """Stand in for the inference Lambda, optionally recording the points it is sent."""
+def _stub_lambda(
+    monkeypatch,
+    predictions,
+    feature_vector_name=None,
+    captured_points=None,
+    captured_versions=None,
+):
+    """Stand in for the inference Lambda, optionally recording the points and version it is sent."""
 
-    def fake_classify_via_lambda(image, points):
+    def fake_classify_via_lambda(image, points, classifier_version):
         if captured_points is not None:
             captured_points.extend(points)
+        if captured_versions is not None:
+            captured_versions.append(classifier_version)
         return LambdaClassificationResult(
             point_predictions=predictions, feature_vector_name=feature_vector_name
         )
@@ -40,6 +51,61 @@ def test_classifies_an_image_and_completes(monkeypatch, image, classifier_v2, be
     assert annotation.classifier_id == classifier_v2.pk
     assert ClassificationStatus.COMPLETED in _statuses(image)
     assert ClassificationStatus.FAILED not in _statuses(image)
+
+
+@override_settings(**PINNED, **THRESHOLDS)
+def test_classifies_with_the_requested_version(
+    monkeypatch, image, classifier_v2, benthic_attribute_1
+):
+    classifier_v1 = Classifier.objects.create(name="v1", version="v1", config={"patch_size": 144})
+    requested = []
+    _stub_lambda(
+        monkeypatch,
+        [(11, 22, [(f"{benthic_attribute_1.pk}::", 0.9)])],
+        captured_versions=requested,
+    )
+
+    _classify_image(image.pk, classifier_version="v1")
+
+    assert requested == ["v1"]
+    assert Annotation.objects.get(point__image=image).classifier_id == classifier_v1.pk
+
+
+@override_settings(**PINNED, **THRESHOLDS)
+def test_without_a_requested_version_classifies_with_the_active_version(
+    monkeypatch, caplog, image, classifier_v2, benthic_attribute_1
+):
+    requested = []
+    _stub_lambda(
+        monkeypatch,
+        [(11, 22, [(f"{benthic_attribute_1.pk}::", 0.9)])],
+        captured_versions=requested,
+    )
+
+    with caplog.at_level("WARNING", logger="api.utils.classification"):
+        _classify_image(image.pk)
+
+    assert requested == ["v2"]
+    assert "no longer live" not in caplog.text
+
+
+@override_settings(**PINNED, **THRESHOLDS)
+def test_a_retired_requested_version_falls_back_to_the_active_version_with_a_warning(
+    monkeypatch, caplog, image, classifier_v2, benthic_attribute_1
+):
+    requested = []
+    _stub_lambda(
+        monkeypatch,
+        [(11, 22, [(f"{benthic_attribute_1.pk}::", 0.9)])],
+        captured_versions=requested,
+    )
+
+    with caplog.at_level("WARNING", logger="api.utils.classification"):
+        _classify_image(image.pk, classifier_version="v0")
+
+    assert requested == ["v2"]
+    assert Annotation.objects.get(point__image=image).classifier_id == classifier_v2.pk
+    assert "v0" in caplog.text
 
 
 @override_settings(**PINNED, **THRESHOLDS)
@@ -75,7 +141,7 @@ def test_records_the_feature_vector_name_the_lambda_wrote(
 
 @override_settings(**PINNED)
 def test_inference_error_fails_the_job_with_its_message(monkeypatch, image, classifier_v2):
-    def raise_inference_error(image, points):
+    def raise_inference_error(image, points, classifier_version):
         raise InferenceError("Lambda said no")
 
     monkeypatch.setattr(classification, "classify_via_lambda", raise_inference_error)
@@ -96,7 +162,7 @@ def test_fatal_classification_failure_logs_the_processing_error_marker(
     literal marker on the image worker's log group; a fatal failure that never logs
     it is invisible to that alarm."""
 
-    def raise_inference_error(image, points):
+    def raise_inference_error(image, points, classifier_version):
         raise InferenceError("Lambda said no")
 
     monkeypatch.setattr(classification, "classify_via_lambda", raise_inference_error)
@@ -120,7 +186,7 @@ def test_retryable_classification_failure_omits_the_processing_error_marker(
     """A retryable failure already has the SQS DLQ alarm behind it; marking it here
     too would fire the permanent-failure alarm on a throttle or cold-start blip."""
 
-    def raise_retryable_inference_error(image, points):
+    def raise_retryable_inference_error(image, points, classifier_version):
         raise InferenceError("Lambda throttled", retryable=True)
 
     monkeypatch.setattr(classification, "classify_via_lambda", raise_retryable_inference_error)
@@ -147,7 +213,7 @@ def test_skips_the_lambda_when_the_image_is_deleted_before_running(
         Image.objects.filter(pk=found.pk).delete()
         return found
 
-    def fail_if_called(image, points):
+    def fail_if_called(image, points, classifier_version):
         raise AssertionError("Lambda invoked for a deleted image")
 
     monkeypatch.setattr(Image.objects, "get_or_none", get_then_delete)
@@ -161,7 +227,7 @@ def test_skips_the_lambda_when_the_image_is_deleted_before_running(
 def test_deleted_mid_invoke_is_not_a_processing_error(
     monkeypatch, image, classifier_v2, caplog, retryable
 ):
-    def delete_then_fail(image, points):
+    def delete_then_fail(image, points, classifier_version):
         Image.objects.filter(pk=image.pk).delete()
         raise InferenceError("image not found", retryable=retryable)
 

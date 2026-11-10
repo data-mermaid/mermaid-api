@@ -81,15 +81,17 @@ IMAGE_WORKER_MAX_TASKS = 3
 
 @dataclass
 class InferenceSettings:
-    """Settings for the pyspacer inference Lambda (compute lane).
+    """Settings for the pyspacer inference Lambdas (compute lane), one per model version.
 
-    image_tag is the model-build ECR tag `vN-K` (vN = model version, K = serving build).
-    Bump K for a code/lib fix, vN for a retrain. Roll forward by editing this value
-    and redeploying (git-tracked). classifier_version is the vN the image serves.
+    images maps each live model version vN to its model-build ECR tag `vN-K`
+    (K = serving build). Bump K for a code/lib fix; add an entry for a retrain.
+    active_version is the version the API classifies with. Every other field
+    applies to each function. Roll forward by editing these and redeploying
+    (git-tracked).
     """
 
-    image_tag: str
-    classifier_version: str
+    images: dict[str, str]
+    active_version: str
     config_bucket: str = "mermaid-config"
     memory_mb: int = 10240
     # The Lambda's own timeout. src/api/utils/inference.py's _LAMBDA_READ_TIMEOUT
@@ -99,33 +101,55 @@ class InferenceSettings:
     # A rolling deployment runs the image-worker ECS service at up to 200% of
     # its task count with old tasks still draining, so the concurrent-invoke
     # ceiling is double IMAGE_WORKER_MAX_TASKS, not the steady-state count.
-    # Reserved concurrency is subtracted from the account's unreserved pool.
+    # Reserved per function, and subtracted from the account's unreserved pool.
     reserved_concurrency: int = 2 * IMAGE_WORKER_MAX_TASKS
     num_threads: int = 6
 
     def __post_init__(self) -> None:
+        if not self.images:
+            raise ValueError("images must list at least one model version")
         # build-push.yml tags the image `${MODEL_VERSION}-${BUILD}` and bakes the same
         # MODEL_VERSION in as CLASSIFIER_VERSION, so `vN-K` implies CLASSIFIER_VERSION=vN.
-        tag_version = self.image_tag.split("-", 1)[0]
-        if tag_version != self.classifier_version:
+        for version, image_tag in self.images.items():
+            tag_version = image_tag.split("-", 1)[0]
+            if tag_version != version:
+                raise ValueError(
+                    f"image_tag {image_tag!r} serves model version {tag_version!r}, "
+                    f"but is listed under {version!r}"
+                )
+        if self.active_version not in self.images:
             raise ValueError(
-                f"image_tag {self.image_tag!r} serves model version {tag_version!r}, "
-                f"but classifier_version is {self.classifier_version!r}"
+                f"active_version {self.active_version!r} is not in images "
+                f"({sorted(self.images)!r})"
             )
 
 
-def pyspacer_function_name(env_id: str) -> str:
-    """The pyspacer inference Lambda's function name for this environment.
+def pyspacer_function_name(env_id: str, version: str) -> str:
+    """The pyspacer inference Lambda's function name for one model version.
 
     Shared by ApiStack (env var value, ARN string, invoke grant) and InferenceStack
     (the function itself, its log group) so the two stacks cannot name it apart.
-    Takes only env_id, never a stack or construct, so importing this cannot
+    Takes only strings, never a stack or construct, so importing this cannot
     reintroduce the ApiStack<->InferenceStack cycle a cross-stack reference would.
 
     A bucket policy on coral-reef-training (account 557690602013) grants
-    s3:PutObject to this exact name via an ArnEquals condition on
-    lambda:SourceFunctionArn, so renaming the function silently revokes prod's
-    feature-vector write access with no deploy-time error to surface it.
+    s3:PutObject to prod's functions via an ArnLike condition on
+    lambda:SourceFunctionArn matching `prod-mermaid-inference-pyspacer*`. That
+    policy is owned outside this repo; a name outside the pattern silently loses
+    prod's feature-vector write access with no deploy-time error to surface it.
+    """
+    return f"{env_id}-mermaid-inference-pyspacer-{version}"
+
+
+# The image the legacy function served before per-version functions; removed with it next release.
+LEGACY_PYSPACER_IMAGE_TAG = "v1-2"
+
+
+def legacy_pyspacer_function_name(env_id: str) -> str:
+    """The unsuffixed pyspacer function name that predates per-version functions.
+
+    Exists for one release only, for workers mid-rollout and a rolled-back API,
+    and is removed in the next release.
     """
     return f"{env_id}-mermaid-inference-pyspacer"
 
@@ -137,8 +161,8 @@ def alerts_topic_name(env_id: str) -> str:
     Chatbot config that delivers it to Slack) and InferenceStack (which resolves it
     by ARN to publish alarm actions) so the two stacks cannot name it apart.
     Takes only env_id, never a stack or construct: a construct reference here would
-    order ApiStack ahead of InferenceStack, which must deploy first so the Lambda
-    serves the classifier version the API expects.
+    order ApiStack ahead of InferenceStack, which must deploy first so every function
+    the API points at already exists.
     """
     return f"mermaid-{env_id}-alerts"
 

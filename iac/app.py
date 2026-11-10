@@ -115,10 +115,11 @@ dev_sagemaker_stack = SagemakerStack(
     cluster=common_stack.cluster,
 )
 
-# The pyspacer inference compute lane (mermaid-classifier #53). A container Lambda
-# whose image (config.inference.image_tag) is published to the mermaid-inference-pyspacer
-# ECR repo by the mermaid-inference build-push CI before this stack deploys. Alarms
-# publish to ApiStack's alerts topic, by ARN so this stack can deploy ahead of it.
+# The pyspacer inference compute lane (mermaid-classifier #53). One container Lambda
+# per model version, whose images (config.inference.images) are published to the
+# mermaid-inference-pyspacer ECR repo by the mermaid-inference build-push CI before
+# this stack deploys. Alarms publish to ApiStack's alerts topic, by ARN so this stack
+# can deploy ahead of it.
 dev_inference_stack = InferenceStack(
     app,
     "dev-mermaid-inference",
@@ -135,9 +136,8 @@ dev_inference_stack = InferenceStack(
     ],
 )
 
-# The Lambda must already serve config.inference.classifier_version before the API
-# starts expecting it: classify_via_lambda's drift guard raises on every
-# classification while the two disagree, draining redeliveries into the DLQ.
+# Every function named in the API's INFERENCE_PYSPACER_FUNCTIONS must exist before
+# the API points at it, or classifications invoke a missing function.
 dev_api_stack.add_dependency(dev_inference_stack)
 
 prod_static_site_stack = StaticSiteStack(

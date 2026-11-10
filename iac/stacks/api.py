@@ -1,3 +1,4 @@
+import json
 import os
 import re
 
@@ -27,7 +28,11 @@ from aws_cdk import (
     aws_sns as sns,
 )
 from constructs import Construct
-from settings.settings import ProjectSettings, pyspacer_function_name
+from settings.settings import (
+    ProjectSettings,
+    legacy_pyspacer_function_name,
+    pyspacer_function_name,
+)
 from stacks.common import bare_log_group_arn
 from stacks.constructs.adot import add_adot_sidecar
 from stacks.constructs.alerts import MonitoringAlerts
@@ -205,13 +210,21 @@ class ApiStack(Stack):
         # Envir Vars
         sqs_queue_name = f"mermaid-{config.env_id}-general"
         image_sqs_queue_name = f"mermaid-{config.env_id}-image-processing"
-        # Computed via the shared pyspacer_function_name helper, not imported from
-        # InferenceStack: this stack deploys after InferenceStack (app.py), and a
-        # construct reference across that edge is what the string form avoids.
-        inference_function_name = pyspacer_function_name(config.env_id)
-        inference_function_arn = (
-            f"arn:aws:lambda:{self.region}:{self.account}:function:{inference_function_name}"
-        )
+        # Computed via the shared name helpers, not imported from InferenceStack:
+        # this stack deploys after InferenceStack (app.py), and a construct
+        # reference across that edge is what the string form avoids.
+        inference_function_names = {
+            version: pyspacer_function_name(config.env_id, version)
+            for version in sorted(config.inference.images)
+        }
+        # The legacy name stays invokable for one release (see InferenceStack).
+        inference_function_arns = [
+            f"arn:aws:lambda:{self.region}:{self.account}:function:{name}"
+            for name in [
+                *inference_function_names.values(),
+                legacy_pyspacer_function_name(config.env_id),
+            ]
+        ]
         environment = {
             "ENV": config.env_id,
             "ENVIRONMENT": config.env_id,
@@ -240,8 +253,8 @@ class ApiStack(Stack):
             "USE_FIFO": use_fifo_queues,
             "SQS_QUEUE_NAME": sqs_queue_name,
             "IMAGE_SQS_QUEUE_NAME": image_sqs_queue_name,
-            "INFERENCE_LAMBDA_PYSPACER": inference_function_name,
-            "INFERENCE_CLASSIFIER_VERSION": config.inference.classifier_version,
+            "INFERENCE_PYSPACER_FUNCTIONS": json.dumps(inference_function_names, sort_keys=True),
+            "INFERENCE_CLASSIFIER_VERSION": config.inference.active_version,
             # Drives the same constant Django falls back to (INFERENCE_JOB_VISIBILITY_TIMEOUT
             # in src/app/settings.py), so the two can't drift out of sync.
             "INFERENCE_JOB_VISIBILITY_TIMEOUT": str(config.api.image_sqs_message_visibility),
@@ -541,7 +554,7 @@ class ApiStack(Stack):
         image_worker.task_definition.task_role.add_to_principal_policy(
             iam.PolicyStatement(
                 actions=["lambda:InvokeFunction"],
-                resources=[inference_function_arn],
+                resources=inference_function_arns,
             )
         )
 

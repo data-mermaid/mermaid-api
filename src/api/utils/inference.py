@@ -138,8 +138,23 @@ def get_lambda_client():
     )
 
 
-def invoke_pyspacer(payload: dict) -> dict:
-    """Invoke the pyspacer inference Lambda synchronously and return its parsed payload.
+def pyspacer_function_for(version: str) -> str:
+    """Return the Lambda function name serving `version`.
+
+    Raises a non-retryable InferenceError when the version is not in
+    INFERENCE_PYSPACER_FUNCTIONS: redelivery cannot map it.
+    """
+    try:
+        return settings.INFERENCE_PYSPACER_FUNCTIONS[version]
+    except (KeyError, TypeError) as err:
+        raise InferenceError(
+            f"No pyspacer Lambda function is mapped for classifier version {version!r}",
+            retryable=False,
+        ) from err
+
+
+def invoke_pyspacer(payload: dict, function_name: str) -> dict:
+    """Invoke the named pyspacer inference Lambda synchronously and return its parsed payload.
 
     Raises InferenceError if the invoke call itself fails, the response payload cannot
     be read (a botocore/client error, e.g. throttling or a read timeout), or the
@@ -150,7 +165,7 @@ def invoke_pyspacer(payload: dict) -> dict:
     client = get_lambda_client()
     try:
         response = client.invoke(
-            FunctionName=settings.INFERENCE_LAMBDA_PYSPACER,
+            FunctionName=function_name,
             InvocationType="RequestResponse",
             Payload=json.dumps(payload).encode("utf-8"),
         )
@@ -259,11 +274,11 @@ def response_to_point_predictions(response):
     ]
 
 
-def classify_via_lambda(image, points) -> LambdaClassificationResult:
-    """Invoke the pyspacer Lambda for an image and return normalized point predictions.
+def classify_via_lambda(image, points, classifier_version) -> LambdaClassificationResult:
+    """Invoke the pyspacer Lambda for `classifier_version` and return normalized point predictions.
 
     Raises InferenceError on an ErrorEnvelope payload, a malformed envelope or
-    response, a classifier-version drift mismatch, a contract-version mismatch, a
+    response, an unmapped classifier version, a classifier-version drift mismatch, a contract-version mismatch, a
     response with valid_rowcol False, or a response whose points do not match the
     requested coordinates. A feature vector the Lambda did not write where requested
     does not fail the job: points and annotations are the product, and nothing in
@@ -271,6 +286,7 @@ def classify_via_lambda(image, points) -> LambdaClassificationResult:
     """
     tracer = otel_trace.get_tracer("api.inference")
     with tracer.start_as_current_span("pyspacer.classify_via_lambda"):
+        function_name = pyspacer_function_for(classifier_version)
         traceparent = _current_traceparent()
         logger.info("pyspacer inference invoke", extra={"traceparent": traceparent})
         name = feature_vector_name(image)
@@ -278,7 +294,7 @@ def classify_via_lambda(image, points) -> LambdaClassificationResult:
         request = build_pyspacer_request(
             image, points, traceparent, feature_vector_output=requested_output
         )
-        payload = invoke_pyspacer(request)
+        payload = invoke_pyspacer(request, function_name)
 
         if "error_code" in payload:
             try:
@@ -308,21 +324,19 @@ def classify_via_lambda(image, points) -> LambdaClassificationResult:
         except ValidationError as err:
             raise _wrap_validation_error("malformed response", err) from err
 
-        expected = settings.INFERENCE_CLASSIFIER_VERSION
-        if expected and response.classifier_version != expected:
+        if response.classifier_version != classifier_version:
             logger.error(
                 f"pyspacer classifier version drift for image {image.id}: "
-                f"served {response.classifier_version!r}, expected {expected!r} "
+                f"served {response.classifier_version!r}, expected {classifier_version!r} "
                 f"traceparent={traceparent}",
                 extra={"traceparent": traceparent},
             )
-            # Retryable: ApiStack and InferenceStack deploy independently, so a version
-            # bump has a redelivery window before both sides agree; a genuine permanent
-            # mismatch retries to the DLQ and alarms instead of failing silently.
+            # Non-retryable: each version has its own function, so a mismatch means the
+            # function was built from the wrong image and redelivery cannot fix it.
             raise InferenceError(
                 f"Classifier version drift: Lambda served {response.classifier_version!r}, "
-                f"expected {expected!r}",
-                retryable=True,
+                f"expected {classifier_version!r}",
+                retryable=False,
             )
 
         if response.contract_version != CONTRACT_VERSION:

@@ -404,7 +404,19 @@ def _write_classification_results(image, point_predictions, classifier_record):
     Annotation.objects.bulk_create(_annotations)
 
 
-def _classify_image(image_record_id, num_points=None):
+def _resolve_classifier_version(classifier_version):
+    """Return the version to classify with, falling back to the active one if retired."""
+    version = classifier_version or settings.INFERENCE_CLASSIFIER_VERSION
+    if version not in settings.INFERENCE_PYSPACER_FUNCTIONS:
+        logger.warning(
+            f"classifier version {version!r} is no longer live; "
+            f"using active version {settings.INFERENCE_CLASSIFIER_VERSION!r}"
+        )
+        return settings.INFERENCE_CLASSIFIER_VERSION
+    return version
+
+
+def _classify_image(image_record_id, num_points=None, classifier_version=None):
     image = Image.objects.get_or_none(id=image_record_id)
     if not image:
         return
@@ -415,9 +427,10 @@ def _classify_image(image_record_id, num_points=None):
         return
 
     try:
-        classifier_record = Classifier.active()
+        version = _resolve_classifier_version(classifier_version)
+        classifier_record = Classifier.for_version(version)
         points = generate_points(image, num_points or settings.INFERENCE_DEFAULT_NUM_POINTS)
-        result = classify_via_lambda(image, points)
+        result = classify_via_lambda(image, points, version)
         _write_classification_results(image, result.point_predictions, classifier_record)
 
         if result.feature_vector_name:

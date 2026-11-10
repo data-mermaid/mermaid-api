@@ -521,7 +521,7 @@ class CommonStack(Stack):
 
         # Shared (dev/prod) ECR repo for the pyspacer inference Lambda image.
         # Images are tagged with the model-build tag vN-K (vN = model version,
-        # K = serving build) that InferenceSettings.image_tag pins. Tag
+        # K = serving build) that InferenceSettings.images pins. Tag
         # immutability guarantees a tag can't be silently repointed, so the
         # Lambda's stored digest is an authoritative record of what is deployed.
         # Built/pushed by the mermaid-inference build-push CI.

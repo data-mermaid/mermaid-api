@@ -12,7 +12,7 @@ from botocore.exceptions import (
 from django.test import override_settings
 
 from api.utils import inference
-from api.utils.inference import InferenceError, invoke_pyspacer
+from api.utils.inference import InferenceError, invoke_pyspacer, pyspacer_function_for
 
 
 @pytest.fixture
@@ -67,28 +67,25 @@ class _FakeClient:
         return resp
 
 
-@override_settings(INFERENCE_LAMBDA_PYSPACER="dev-mermaid-inference-pyspacer")
 def test_invoke_returns_parsed_payload(monkeypatch):
     fake = _FakeClient(payload={"point_results": []})
     monkeypatch.setattr(inference, "get_lambda_client", lambda *a, **k: fake)
 
-    out = invoke_pyspacer({"classifier_type": "pyspacer"})
+    out = invoke_pyspacer({"classifier_type": "pyspacer"}, "fn-x")
 
     assert out == {"point_results": []}
-    assert fake.calls[0]["FunctionName"] == "dev-mermaid-inference-pyspacer"
+    assert fake.calls[0]["FunctionName"] == "fn-x"
     assert fake.calls[0]["InvocationType"] == "RequestResponse"
 
 
-@override_settings(INFERENCE_LAMBDA_PYSPACER="dev-mermaid-inference-pyspacer")
 def test_invoke_raises_on_function_error(monkeypatch):
     fake = _FakeClient(payload={"errorMessage": "boom"}, function_error="Unhandled")
     monkeypatch.setattr(inference, "get_lambda_client", lambda *a, **k: fake)
 
     with pytest.raises(InferenceError):
-        invoke_pyspacer({"classifier_type": "pyspacer"})
+        invoke_pyspacer({"classifier_type": "pyspacer"}, "fn-x")
 
 
-@override_settings(INFERENCE_LAMBDA_PYSPACER="dev-mermaid-inference-pyspacer")
 @pytest.mark.parametrize("raw_payload", [b'{"point_results": [', b"\xff\xfe\x00garbage"])
 def test_invoke_wraps_non_json_success_payload_as_inference_error(monkeypatch, raw_payload):
     """A success response whose body does not parse must surface as a non-retryable
@@ -97,14 +94,13 @@ def test_invoke_wraps_non_json_success_payload_as_inference_error(monkeypatch, r
     monkeypatch.setattr(inference, "get_lambda_client", lambda *a, **k: fake)
 
     with pytest.raises(InferenceError) as exc:
-        invoke_pyspacer({"classifier_type": "pyspacer"})
+        invoke_pyspacer({"classifier_type": "pyspacer"}, "fn-x")
 
     assert "non-JSON payload" in str(exc.value)
     assert exc.value.retryable is False
     assert isinstance(exc.value.__cause__, ValueError)
 
 
-@override_settings(INFERENCE_LAMBDA_PYSPACER="dev-mermaid-inference-pyspacer")
 def test_invoke_wraps_client_error_as_inference_error(monkeypatch):
     error = ClientError(
         {"Error": {"Code": "TooManyRequestsException", "Message": "throttled"}}, "Invoke"
@@ -113,13 +109,12 @@ def test_invoke_wraps_client_error_as_inference_error(monkeypatch):
     monkeypatch.setattr(inference, "get_lambda_client", lambda *a, **k: fake)
 
     with pytest.raises(InferenceError) as exc:
-        invoke_pyspacer({"classifier_type": "pyspacer"})
+        invoke_pyspacer({"classifier_type": "pyspacer"}, "fn-x")
 
     assert "invoke_pyspacer" in str(exc.value)
     assert "TooManyRequestsException" in str(exc.value)
 
 
-@override_settings(INFERENCE_LAMBDA_PYSPACER="dev-mermaid-inference-pyspacer")
 @pytest.mark.parametrize(
     "payload_read_error",
     [
@@ -142,12 +137,11 @@ def test_invoke_wraps_payload_read_timeout_as_retryable(monkeypatch, payload_rea
     monkeypatch.setattr(inference, "get_lambda_client", lambda *a, **k: fake)
 
     with pytest.raises(InferenceError) as exc:
-        invoke_pyspacer({"classifier_type": "pyspacer"})
+        invoke_pyspacer({"classifier_type": "pyspacer"}, "fn-x")
 
     assert exc.value.retryable is True
 
 
-@override_settings(INFERENCE_LAMBDA_PYSPACER="dev-mermaid-inference-pyspacer")
 @pytest.mark.parametrize(
     "code,expected_retryable",
     [
@@ -163,12 +157,11 @@ def test_invoke_classifies_client_error_retryability_by_code(monkeypatch, code, 
     monkeypatch.setattr(inference, "get_lambda_client", lambda *a, **k: fake)
 
     with pytest.raises(InferenceError) as exc:
-        invoke_pyspacer({"classifier_type": "pyspacer"})
+        invoke_pyspacer({"classifier_type": "pyspacer"}, "fn-x")
 
     assert exc.value.retryable is expected_retryable
 
 
-@override_settings(INFERENCE_LAMBDA_PYSPACER="dev-mermaid-inference-pyspacer")
 @pytest.mark.parametrize(
     "function_error,error_message,expected_retryable",
     [
@@ -195,12 +188,11 @@ def test_invoke_classifies_function_error_retryability(
     monkeypatch.setattr(inference, "get_lambda_client", lambda *a, **k: fake)
 
     with pytest.raises(InferenceError) as exc:
-        invoke_pyspacer({"classifier_type": "pyspacer"})
+        invoke_pyspacer({"classifier_type": "pyspacer"}, "fn-x")
 
     assert exc.value.retryable is expected_retryable
 
 
-@override_settings(INFERENCE_LAMBDA_PYSPACER="dev-mermaid-inference-pyspacer")
 def test_lambda_client_read_timeout_outlives_function_timeout(monkeypatch, fresh_lambda_client):
     captured = {}
 
@@ -225,7 +217,6 @@ def test_lambda_client_read_timeout_outlives_function_timeout(monkeypatch, fresh
 
 
 @override_settings(
-    INFERENCE_LAMBDA_PYSPACER="dev-mermaid-inference-pyspacer",
     AWS_ACCESS_KEY_ID="testing",
     AWS_SECRET_ACCESS_KEY="testing",
     AWS_REGION="us-east-1",
@@ -253,6 +244,20 @@ def test_invoke_pyspacer_retries_up_to_the_configured_ceiling_and_no_further(
     monkeypatch.setattr(client._endpoint.http_session, "send", fake_send)
 
     with pytest.raises(InferenceError):
-        invoke_pyspacer({"classifier_type": "pyspacer"})
+        invoke_pyspacer({"classifier_type": "pyspacer"}, "fn-x")
 
     assert len(calls) == 2
+
+
+@override_settings(INFERENCE_PYSPACER_FUNCTIONS={"v1": "fn-v1", "v2": "fn-v2"})
+def test_pyspacer_function_for_returns_the_mapped_name():
+    assert pyspacer_function_for("v1") == "fn-v1"
+
+
+@override_settings(INFERENCE_PYSPACER_FUNCTIONS={"v1": "fn-v1"})
+def test_pyspacer_function_for_rejects_an_unmapped_version_without_retry():
+    with pytest.raises(InferenceError) as exc:
+        pyspacer_function_for("v0")
+
+    assert exc.value.retryable is False
+    assert "v0" in str(exc.value)

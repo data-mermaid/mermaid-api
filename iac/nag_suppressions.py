@@ -13,6 +13,7 @@ from dataclasses import dataclass
 
 from aws_cdk import Acknowledgment, CfnResource, Stack, Validations
 from stacks.guardduty import GuardDutyStack
+from stacks.inference import InferenceStack
 
 # ---------------------------------------------------------------------------
 # Helpers
@@ -930,75 +931,85 @@ def suppress_sagemaker(stack: Stack, prefix: str) -> None:
 # ---------------------------------------------------------------------------
 
 
-def suppress_inference(stack: Stack, image_resource_wildcards: list[str]) -> None:
-    """Suppress the inference Lambda's IAM findings.
+def suppress_inference(stack: InferenceStack, image_resource_wildcards: list[str]) -> None:
+    """Suppress the inference Lambdas' IAM findings.
 
+    Covers the legacy unsuffixed function and each `Pyspacer-<version>` function.
     image_resource_wildcards are the per-env `Resource::<bucket>/<prefix>*` strings the
     image-bucket grants produce; each env passes its own so a wildcard on any other
     resource stays unsuppressed and fails the synth gate.
     """
-    # --- Lambda execution role: AWSLambdaBasicExecutionRole managed policy ---
-    _suppress_by_path(
-        stack,
-        "PyspacerInferenceFunction/ServiceRole/Resource",
-        [
-            NagPackSuppression(
-                id="AwsSolutions-IAM4",
-                reason=f"{ACCEPTED}: AWSLambdaBasicExecutionRole is the standard "
-                "managed policy for Lambda logging; no customer-managed equivalent exists.",
-                applies_to=[
-                    "Policy::arn:<AWS::Partition>:iam::aws:policy/service-role/AWSLambdaBasicExecutionRole",
-                ],
-            ),
-        ],
-    )
+    function_paths = [
+        # Release-1 only: remove next release with the legacy function.
+        "PyspacerInferenceFunction",
+        *(
+            f"Pyspacer-{version}/PyspacerInferenceFunction"
+            for version in sorted(stack.version_functions)
+        ),
+    ]
+    for function_path in function_paths:
+        # --- Lambda execution role: AWSLambdaBasicExecutionRole managed policy ---
+        _suppress_by_path(
+            stack,
+            f"{function_path}/ServiceRole/Resource",
+            [
+                NagPackSuppression(
+                    id="AwsSolutions-IAM4",
+                    reason=f"{ACCEPTED}: AWSLambdaBasicExecutionRole is the standard "
+                    "managed policy for Lambda logging; no customer-managed equivalent exists.",
+                    applies_to=[
+                        "Policy::arn:<AWS::Partition>:iam::aws:policy/service-role/AWSLambdaBasicExecutionRole",
+                    ],
+                ),
+            ],
+        )
 
-    # --- Lambda execution role default policy: CDK-generated S3 grant wildcards ---
-    _suppress_by_path(
-        stack,
-        "PyspacerInferenceFunction/ServiceRole/DefaultPolicy/Resource",
-        [
-            NagPackSuppression(
-                id="AwsSolutions-IAM5",
-                reason=f"{ACCEPTED}: xray:PutTraceSegments / xray:PutTelemetryRecords do not "
-                "support resource-level permissions, so Resource::* is required by the X-Ray API "
-                "(added by Lambda tracing=ACTIVE).",
-                applies_to=["Resource::*"],
-            ),
-            NagPackSuppression(
-                id="AwsSolutions-IAM5",
-                reason=f"{ACCEPTED}: s3 action wildcards on the function's bucket grants "
-                "(GetObject*/GetBucket*/List* from grant_read, Abort* from grant_put) "
-                "are CDK-generated; grant_put enumerates its PutObject actions and "
-                "grants no DeleteObject*.",
-                applies_to=[
-                    "Action::s3:GetObject*",
-                    "Action::s3:GetBucket*",
-                    "Action::s3:List*",
-                    "Action::s3:Abort*",
-                ],
-            ),
-            NagPackSuppression(
-                id="AwsSolutions-IAM5",
-                reason=f"{ACCEPTED}: classifier/* key prefix on the config bucket "
-                "is intentional — the Lambda reads versioned classifier model files "
-                "from this prefix at runtime. Read-only: the prefix holds pickles the "
-                "legacy lane unpickles, so write access would be code execution.",
-                applies_to=[
-                    f"Resource::{_CONFIG_BUCKET_EXPORT}/classifier/*",
-                ],
-            ),
-            NagPackSuppression(
-                id="AwsSolutions-IAM5",
-                reason=f"{ACCEPTED}: the object wildcard on each image-bucket grant is "
-                "CDK-generated and confined to that bucket's own key prefix; every image "
-                "bucket is read-write, including the foreign coral-reef-training bucket, "
-                "whose bucket policy grants this function's exact name a matching put "
-                "statement.",
-                applies_to=image_resource_wildcards,
-            ),
-        ],
-    )
+        # --- Lambda execution role default policy: CDK-generated S3 grant wildcards ---
+        _suppress_by_path(
+            stack,
+            f"{function_path}/ServiceRole/DefaultPolicy/Resource",
+            [
+                NagPackSuppression(
+                    id="AwsSolutions-IAM5",
+                    reason=f"{ACCEPTED}: xray:PutTraceSegments / xray:PutTelemetryRecords do not "
+                    "support resource-level permissions, so Resource::* is required by the X-Ray API "
+                    "(added by Lambda tracing=ACTIVE).",
+                    applies_to=["Resource::*"],
+                ),
+                NagPackSuppression(
+                    id="AwsSolutions-IAM5",
+                    reason=f"{ACCEPTED}: s3 action wildcards on the function's bucket grants "
+                    "(GetObject*/GetBucket*/List* from grant_read, Abort* from grant_put) "
+                    "are CDK-generated; grant_put enumerates its PutObject actions and "
+                    "grants no DeleteObject*.",
+                    applies_to=[
+                        "Action::s3:GetObject*",
+                        "Action::s3:GetBucket*",
+                        "Action::s3:List*",
+                        "Action::s3:Abort*",
+                    ],
+                ),
+                NagPackSuppression(
+                    id="AwsSolutions-IAM5",
+                    reason=f"{ACCEPTED}: classifier/* key prefix on the config bucket "
+                    "is intentional — the Lambda reads versioned classifier model files "
+                    "from this prefix at runtime. Read-only: the prefix holds pickles the "
+                    "legacy lane unpickles, so write access would be code execution.",
+                    applies_to=[
+                        f"Resource::{_CONFIG_BUCKET_EXPORT}/classifier/*",
+                    ],
+                ),
+                NagPackSuppression(
+                    id="AwsSolutions-IAM5",
+                    reason=f"{ACCEPTED}: the object wildcard on each image-bucket grant is "
+                    "CDK-generated and confined to that bucket's own key prefix; every image "
+                    "bucket is read-write, including the foreign coral-reef-training bucket, "
+                    "whose bucket policy grants a matching put statement by an ArnLike "
+                    "prefix on prod-mermaid-inference-pyspacer*.",
+                    applies_to=image_resource_wildcards,
+                ),
+            ],
+        )
 
 
 # ---------------------------------------------------------------------------
@@ -1210,8 +1221,8 @@ def apply_all(
     dev_api_stack: Stack,
     prod_api_stack: Stack,
     dev_sagemaker_stack: Stack,
-    dev_inference_stack: Stack,
-    prod_inference_stack: Stack,
+    dev_inference_stack: InferenceStack,
+    prod_inference_stack: InferenceStack,
     cloudtrail_stack: Stack | None = None,
     guardduty_stack: GuardDutyStack | None = None,
 ) -> None:
