@@ -90,3 +90,24 @@ def test_metrics_missing_headers_are_empty_strings():
 
     assert event["user_agent"] == ""
     assert event["origin"] == ""
+
+
+def test_metrics_origin_drops_referer_credentials():
+    request = RequestFactory().get(
+        "/v1/projects/",
+        HTTP_REFERER="https://alice:hunter2@app.datamermaid.org:8443/projects",
+    )
+
+    event = _logged_metrics_event(request)
+
+    assert event["origin"] == "https://app.datamermaid.org:8443"
+    assert "alice" not in str(event)
+    assert "hunter2" not in str(event)
+
+
+def test_metrics_origin_keeps_ipv6_brackets():
+    event = _logged_metrics_event(
+        RequestFactory().get("/v1/projects/", HTTP_ORIGIN="http://[::1]:8080")
+    )
+
+    assert event["origin"] == "http://[::1]:8080"

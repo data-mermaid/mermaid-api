@@ -104,11 +104,17 @@ class MetricsMiddleware:
         value = request.headers.get("Origin") or request.headers.get("Referer") or ""
         try:
             parts = urlsplit(value)
+            host, port = parts.hostname, parts.port
         except ValueError:
             return ""
-        if not (parts.scheme and parts.netloc):
+        if not (parts.scheme and host):
             return ""
-        return f"{parts.scheme}://{parts.netloc}"[:256]
+        # Built from hostname/port rather than netloc so userinfo is never logged.
+        if ":" in host:
+            host = f"[{host}]"
+        if port is not None:
+            host = f"{host}:{port}"
+        return f"{parts.scheme}://{host}"[:256]
 
     def _ignore_url_path(self, url_path):
         return any(
