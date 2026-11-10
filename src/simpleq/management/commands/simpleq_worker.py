@@ -8,7 +8,7 @@ from django.utils.autoreload import run_with_reloader
 from api.checks import (
     ENFORCED_ENVIRONMENTS,
     check_inference_settings,
-    ensure_pinned_classifier_registered,
+    ensure_live_classifiers_registered,
 )
 from api.models.classification import ClassifierRegistrationError
 from simpleq.queues import Queue
@@ -55,7 +55,7 @@ class Command(BaseCommand):
             # version that cannot be registered fails the deploy instead of every job.
             if settings.ENVIRONMENT in ENFORCED_ENVIRONMENTS:
                 try:
-                    ensure_pinned_classifier_registered()
+                    ensure_live_classifiers_registered()
                 except ClassifierRegistrationError as e:
                     raise CommandError(str(e)) from e
                 # run_with_reloader keeps this process alive as the reloader's

@@ -40,8 +40,8 @@ class ClassifierRegistrationError(Exception):
 
 
 class ClassifierNotConfiguredError(Exception):
-    """Raised when Classifier.active() cannot resolve the version pinned by
-    INFERENCE_CLASSIFIER_VERSION: the setting is empty, or no row matches it.
+    """Raised when Classifier.active() or for_version() cannot resolve a version:
+    it is empty, or no row matches it.
     """
 
 
@@ -257,13 +257,17 @@ class Classifier(BaseModel):
 
     @classmethod
     def active(cls):
-        """The Classifier row for the version baked into the deployed inference image.
+        """The Classifier row for the active version (INFERENCE_CLASSIFIER_VERSION)."""
+        return cls.for_version(settings.INFERENCE_CLASSIFIER_VERSION)
+
+    @classmethod
+    def for_version(cls, version):
+        """The Classifier row for exactly `version`.
 
         Looks up by an exact version match: any other selection could return a
         different row than the one that actually scored the points, mis-attributing
         Annotation.classifier.
         """
-        version = settings.INFERENCE_CLASSIFIER_VERSION
         if not version:
             raise ClassifierNotConfiguredError("INFERENCE_CLASSIFIER_VERSION is not set")
         try:

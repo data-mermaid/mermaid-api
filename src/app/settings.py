@@ -1,3 +1,4 @@
+import json
 import os
 import sys
 
@@ -527,9 +528,26 @@ AWS_QUERYSTRING_AUTH = False
 AUTOCONFIRM_THRESHOLD = 1.0
 CLASSIFIED_THRESHOLD = 0.5
 INFERENCE_DEFAULT_NUM_POINTS = 25
-# Identify which Lambda function to invoke and which classifier version it serves;
-# both arrive from the environment because they differ per deployment target.
-INFERENCE_LAMBDA_PYSPACER = os.environ.get("INFERENCE_LAMBDA_PYSPACER") or ""
+
+
+def _parse_function_map(raw):
+    """Parse a JSON object of version -> function name.
+
+    Unset or empty gives {}; malformed JSON or a non-object gives None, which
+    check_inference_settings reports instead of failing the import.
+    """
+    if not raw:
+        return {}
+    try:
+        parsed = json.loads(raw)
+    except ValueError:
+        return None
+    return parsed if isinstance(parsed, dict) else None
+
+
+# Map of classifier version -> pyspacer Lambda function name, and the active
+# version; both arrive from the environment because they differ per deployment target.
+INFERENCE_PYSPACER_FUNCTIONS = _parse_function_map(os.environ.get("INFERENCE_PYSPACER_FUNCTIONS"))
 INFERENCE_CLASSIFIER_VERSION = os.environ.get("INFERENCE_CLASSIFIER_VERSION") or ""
 # Must outlast invoke_pyspacer's worst case (2 lambda invokes at 670s each,
 # plus a backoff sleep) ~= 1341s. image_sqs_message_visibility

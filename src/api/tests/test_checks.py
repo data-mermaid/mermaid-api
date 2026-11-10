@@ -4,6 +4,7 @@ import pytest
 from django.core.management import CommandError, call_command
 from django.test import override_settings
 
+from api.checks import check_inference_settings
 from api.models import Classifier
 
 
@@ -11,7 +12,7 @@ from api.models import Classifier
 def test_worker_command_enforces_inference_settings_only_in_dev(mock_run_with_reloader):
     with override_settings(
         ENVIRONMENT="dev",
-        INFERENCE_LAMBDA_PYSPACER="",
+        INFERENCE_PYSPACER_FUNCTIONS={},
         INFERENCE_CLASSIFIER_VERSION="",
         IMAGE_QUEUE_NAME="mermaid-local-image",
     ):
@@ -21,7 +22,7 @@ def test_worker_command_enforces_inference_settings_only_in_dev(mock_run_with_re
 
     with override_settings(
         ENVIRONMENT="local",
-        INFERENCE_LAMBDA_PYSPACER="",
+        INFERENCE_PYSPACER_FUNCTIONS={},
         INFERENCE_CLASSIFIER_VERSION="",
         IMAGE_QUEUE_NAME="mermaid-local-image",
     ):
@@ -29,9 +30,33 @@ def test_worker_command_enforces_inference_settings_only_in_dev(mock_run_with_re
     mock_run_with_reloader.assert_called_once()
 
 
+@pytest.mark.parametrize("functions", [{}, None])
+def test_e002_when_the_function_map_is_empty_or_invalid(functions):
+    with override_settings(
+        ENVIRONMENT="dev",
+        INFERENCE_PYSPACER_FUNCTIONS=functions,
+        INFERENCE_CLASSIFIER_VERSION="v1",
+    ):
+        errors = check_inference_settings()
+
+    assert [e.id for e in errors] == ["api.E002"]
+
+
+def test_e004_only_when_the_active_version_is_not_in_the_map():
+    functions = {"v1": "fn-v1"}
+    with override_settings(
+        ENVIRONMENT="dev", INFERENCE_PYSPACER_FUNCTIONS=functions, INFERENCE_CLASSIFIER_VERSION="v2"
+    ):
+        assert [e.id for e in check_inference_settings()] == ["api.E004"]
+    with override_settings(
+        ENVIRONMENT="dev", INFERENCE_PYSPACER_FUNCTIONS=functions, INFERENCE_CLASSIFIER_VERSION="v1"
+    ):
+        assert check_inference_settings() == []
+
+
 _DEV_IMAGE_WORKER = {
     "ENVIRONMENT": "dev",
-    "INFERENCE_LAMBDA_PYSPACER": "dev-mermaid-inference-pyspacer",
+    "INFERENCE_PYSPACER_FUNCTIONS": {"v9": "fn-v9"},
     "IMAGE_QUEUE_NAME": "mermaid-local-image",
 }
 
@@ -56,11 +81,36 @@ def test_worker_leaves_an_existing_pinned_row_untouched(mock_run_with_reloader, 
     # v1 predates model.json, so an existing row must never trigger an S3 read.
     Classifier.objects.create(name="v1", version="v1", config={"patch_size": 224})
 
-    with override_settings(INFERENCE_CLASSIFIER_VERSION="v1", **_DEV_IMAGE_WORKER):
+    with override_settings(
+        INFERENCE_CLASSIFIER_VERSION="v1",
+        **{**_DEV_IMAGE_WORKER, "INFERENCE_PYSPACER_FUNCTIONS": {"v1": "fn-v1"}},
+    ):
         call_command("simpleq_worker", queue_name="mermaid-local-image")
 
     assert stub_manifest.calls == []
     mock_run_with_reloader.assert_called_once()
+
+
+@patch("simpleq.management.commands.simpleq_worker.run_with_reloader")
+def test_worker_registers_only_the_missing_live_versions(
+    mock_run_with_reloader, stub_manifest, benthic_attribute_1
+):
+    existing = Classifier.objects.create(name="v1", version="v1", config={"patch_size": 224})
+    stub_manifest({**_MANIFEST, "classes": [f"{benthic_attribute_1.pk}::"]})
+
+    with override_settings(
+        INFERENCE_CLASSIFIER_VERSION="v1",
+        **{
+            **_DEV_IMAGE_WORKER,
+            "INFERENCE_PYSPACER_FUNCTIONS": {"v1": "fn-v1", "v9": "fn-v9"},
+        },
+    ):
+        call_command("simpleq_worker", queue_name="mermaid-local-image")
+
+    assert Classifier.objects.filter(version="v9").exists()
+    assert len(stub_manifest.calls) == 1
+    assert Classifier.objects.get(version="v1").pk == existing.pk
+    assert Classifier.objects.get(version="v1").config == {"patch_size": 224}
 
 
 @patch("simpleq.management.commands.simpleq_worker.run_with_reloader")

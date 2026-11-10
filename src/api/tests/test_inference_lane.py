@@ -24,6 +24,12 @@ from api.utils.inference import (
     response_to_point_predictions,
 )
 
+# Two live versions, v2 active: a version-routing bug shows up as v1 traffic reaching "fn-v2".
+LIVE_VERSIONS = {
+    "INFERENCE_CLASSIFIER_VERSION": "v2",
+    "INFERENCE_PYSPACER_FUNCTIONS": {"v1": "fn-v1", "v2": "fn-v2"},
+}
+
 # The deployed handler always emits every PyspacerResponse field; this default mirrors
 # that, so a test only overrides the one field its scenario is actually about.
 _DEFAULT_FEATURE_VECTOR_OUTPUT = S3Location(
@@ -118,7 +124,7 @@ def test_build_pyspacer_request_writes_feature_vector_to_the_image_bucket(image_
 # --- classify_via_lambda ---
 
 
-@override_settings(INFERENCE_CLASSIFIER_VERSION="v2")
+@override_settings(**LIVE_VERSIONS)
 @override_settings(**STORAGE_SETTINGS)
 def test_classify_via_lambda_maps_response(monkeypatch, image):
     captured_payloads = []
@@ -127,12 +133,12 @@ def test_classify_via_lambda_maps_response(monkeypatch, image):
     # default (prod) bucket/prefix from STORAGE_SETTINGS above.
     requested_location = S3Location(bucket="prod-bucket", key=f"mermaid/{image.id}_featurevector")
 
-    def fake_invoke(payload):
+    def fake_invoke(payload, function_name):
         captured_payloads.append(payload)
         return _ok_payload("v2", feature_vector_output=requested_location)
 
     monkeypatch.setattr(inference, "invoke_pyspacer", fake_invoke)
-    result = classify_via_lambda(image, [(1, 2)])
+    result = classify_via_lambda(image, [(1, 2)], "v2")
     assert result.point_predictions == [(1, 2, [("ba1::", 0.9), ("ba2::", 0.1)])]
     assert result.feature_vector_name == f"{image.id}_featurevector"
 
@@ -142,21 +148,21 @@ def test_classify_via_lambda_maps_response(monkeypatch, image):
     assert parsed.trace_id and parsed.parent_id
 
 
-@override_settings(INFERENCE_CLASSIFIER_VERSION="v2")
+@override_settings(**LIVE_VERSIONS)
 @override_settings(**STORAGE_SETTINGS)
 def test_classify_via_lambda_returns_no_feature_vector_name_when_response_echoes_none(
     monkeypatch, image
 ):
     payload = _ok_payload("v2", feature_vector_output=None)  # no feature vector written
-    monkeypatch.setattr(inference, "invoke_pyspacer", lambda p: payload)
+    monkeypatch.setattr(inference, "invoke_pyspacer", lambda p, fn: payload)
 
-    result = classify_via_lambda(image, [(1, 2)])
+    result = classify_via_lambda(image, [(1, 2)], "v2")
 
     assert result.feature_vector_name is None
     assert result.point_predictions == [(1, 2, [("ba1::", 0.9), ("ba2::", 0.1)])]
 
 
-@override_settings(INFERENCE_CLASSIFIER_VERSION="v2")
+@override_settings(**LIVE_VERSIONS)
 @override_settings(**STORAGE_SETTINGS)
 def test_classify_via_lambda_drops_feature_vector_name_when_response_echoes_a_different_location(
     monkeypatch, image
@@ -168,25 +174,25 @@ def test_classify_via_lambda_drops_feature_vector_name_when_response_echoes_a_di
     """
     mismatched_location = S3Location(bucket="prod-bucket", key="mermaid/somewhere_else")
     payload = _ok_payload("v2", feature_vector_output=mismatched_location)
-    monkeypatch.setattr(inference, "invoke_pyspacer", lambda p: payload)
+    monkeypatch.setattr(inference, "invoke_pyspacer", lambda p, fn: payload)
 
-    result = classify_via_lambda(image, [(1, 2)])
+    result = classify_via_lambda(image, [(1, 2)], "v2")
 
     assert result.feature_vector_name is None
     assert result.point_predictions == [(1, 2, [("ba1::", 0.9), ("ba2::", 0.1)])]
 
 
-@override_settings(INFERENCE_CLASSIFIER_VERSION="v2")
+@override_settings(**LIVE_VERSIONS)
 @override_settings(**STORAGE_SETTINGS)
 def test_classify_via_lambda_raises_on_error_envelope(monkeypatch, image):
     envelope = {"error_code": "processing_error", "message": "kaboom", "retryable": False}
-    monkeypatch.setattr(inference, "invoke_pyspacer", lambda payload: envelope)
+    monkeypatch.setattr(inference, "invoke_pyspacer", lambda payload, fn: envelope)
     with pytest.raises(InferenceError) as exc:
-        classify_via_lambda(image, [(1, 2)])
+        classify_via_lambda(image, [(1, 2)], "v2")
     assert "kaboom" in str(exc.value)
 
 
-@override_settings(INFERENCE_CLASSIFIER_VERSION="v2")
+@override_settings(**LIVE_VERSIONS)
 @override_settings(**STORAGE_SETTINGS)
 def test_classify_via_lambda_error_envelope_carries_code_and_correct_retryable_flag(
     monkeypatch, image
@@ -200,16 +206,16 @@ def test_classify_via_lambda_error_envelope_carries_code_and_correct_retryable_f
         "message": "kaboom",
         "retryable": "false",
     }
-    monkeypatch.setattr(inference, "invoke_pyspacer", lambda payload: envelope)
+    monkeypatch.setattr(inference, "invoke_pyspacer", lambda payload, fn: envelope)
 
     with pytest.raises(InferenceError) as exc:
-        classify_via_lambda(image, [(1, 2)])
+        classify_via_lambda(image, [(1, 2)], "v2")
 
     assert exc.value.retryable is False
     assert exc.value.error_code == "processing_error"
 
 
-@override_settings(INFERENCE_CLASSIFIER_VERSION="v2")
+@override_settings(**LIVE_VERSIONS)
 @override_settings(**STORAGE_SETTINGS)
 def test_classify_via_lambda_rejects_envelope_with_misspelled_field(monkeypatch, image):
     """A misspelled "retriable" key previously fell through payload.get("retryable")
@@ -220,16 +226,16 @@ def test_classify_via_lambda_rejects_envelope_with_misspelled_field(monkeypatch,
         "message": "kaboom",
         "retriable": True,
     }
-    monkeypatch.setattr(inference, "invoke_pyspacer", lambda payload: envelope)
+    monkeypatch.setattr(inference, "invoke_pyspacer", lambda payload, fn: envelope)
 
     with pytest.raises(InferenceError) as exc:
-        classify_via_lambda(image, [(1, 2)])
+        classify_via_lambda(image, [(1, 2)], "v2")
 
     assert "malformed" in str(exc.value).lower()
     assert len(str(exc.value)) < 200
 
 
-@override_settings(INFERENCE_CLASSIFIER_VERSION="v2")
+@override_settings(**LIVE_VERSIONS)
 @override_settings(**STORAGE_SETTINGS)
 def test_classify_via_lambda_wraps_malformed_response_as_inference_error(monkeypatch, image):
     """parse_classify_response raises pydantic ValidationError directly; unwrapped,
@@ -237,68 +243,84 @@ def test_classify_via_lambda_wraps_malformed_response_as_inference_error(monkeyp
     response) into a user-visible status field instead of a bounded message."""
     payload = _ok_payload("v2")
     del payload["point_results"]  # missing required field triggers ValidationError
-    monkeypatch.setattr(inference, "invoke_pyspacer", lambda p: payload)
+    monkeypatch.setattr(inference, "invoke_pyspacer", lambda p, fn: payload)
 
     with pytest.raises(InferenceError) as exc:
-        classify_via_lambda(image, [(1, 2)])
+        classify_via_lambda(image, [(1, 2)], "v2")
 
     assert len(str(exc.value)) < 200
     assert exc.value.retryable is False
 
 
-@override_settings(INFERENCE_CLASSIFIER_VERSION="v2")
+@override_settings(**LIVE_VERSIONS)
 @override_settings(**STORAGE_SETTINGS)
-def test_classify_via_lambda_drift_guard(monkeypatch, image):
-    monkeypatch.setattr(inference, "invoke_pyspacer", lambda payload: _ok_payload("v3"))
+def test_classify_via_lambda_drift_guard_is_not_retryable(monkeypatch, image):
+    monkeypatch.setattr(inference, "invoke_pyspacer", lambda payload, fn: _ok_payload("v2"))
     with pytest.raises(InferenceError) as excinfo:
-        classify_via_lambda(image, [(1, 2)])
+        classify_via_lambda(image, [(1, 2)], "v1")
     assert "drift" in str(excinfo.value).lower()
-    # Retryable: ApiStack and InferenceStack deploy independently; on a version bump
-    # SQS redelivers after the visibility timeout and the image classifies correctly.
-    assert excinfo.value.retryable is True
+    # Each version has its own function, so a mismatch means a wrongly built image.
+    assert excinfo.value.retryable is False
 
 
-@override_settings(INFERENCE_CLASSIFIER_VERSION="v2")
+@override_settings(**LIVE_VERSIONS)
+@override_settings(**STORAGE_SETTINGS)
+def test_classify_via_lambda_routes_and_checks_by_the_requested_version(monkeypatch, image):
+    invoked = []
+
+    def fake_invoke(payload, function_name):
+        invoked.append(function_name)
+        return _ok_payload("v1")
+
+    monkeypatch.setattr(inference, "invoke_pyspacer", fake_invoke)
+
+    result = classify_via_lambda(image, [(1, 2)], "v1")
+
+    assert invoked == ["fn-v1"]
+    assert result.point_predictions == [(1, 2, [("ba1::", 0.9), ("ba2::", 0.1)])]
+
+
+@override_settings(**LIVE_VERSIONS)
 @override_settings(**STORAGE_SETTINGS)
 def test_classify_via_lambda_contract_version_mismatch_raises(monkeypatch, image):
     payload = _ok_payload("v2")
     payload["contract_version"] = "9.9.9"  # != installed
-    monkeypatch.setattr(inference, "invoke_pyspacer", lambda p: payload)
+    monkeypatch.setattr(inference, "invoke_pyspacer", lambda p, fn: payload)
     with pytest.raises(InferenceError) as excinfo:
-        classify_via_lambda(image, [(1, 2)])
+        classify_via_lambda(image, [(1, 2)], "v2")
     assert "contract" in str(excinfo.value).lower()
     # Non-retryable: contract skew is a configuration error that redelivery cannot fix;
     # it should fail once and alarm instead of looping to the DLQ.
     assert excinfo.value.retryable is False
 
 
-@override_settings(INFERENCE_CLASSIFIER_VERSION="v2")
+@override_settings(**LIVE_VERSIONS)
 @override_settings(**STORAGE_SETTINGS)
 def test_classify_via_lambda_missing_contract_version_raises(monkeypatch, image):
     payload = _ok_payload("v2", contract_version=None)  # older Lambda: no contract_version
-    monkeypatch.setattr(inference, "invoke_pyspacer", lambda p: payload)
+    monkeypatch.setattr(inference, "invoke_pyspacer", lambda p, fn: payload)
 
     with pytest.raises(InferenceError) as excinfo:
-        classify_via_lambda(image, [(1, 2)])
+        classify_via_lambda(image, [(1, 2)], "v2")
 
     assert excinfo.value.retryable is False
     assert "contract" in str(excinfo.value).lower()
 
 
-@override_settings(INFERENCE_CLASSIFIER_VERSION="v2")
+@override_settings(**LIVE_VERSIONS)
 @override_settings(**STORAGE_SETTINGS)
 def test_classify_via_lambda_rejects_invalid_rowcol(monkeypatch, image):
     payload = _ok_payload("v2", valid_rowcol=False)
-    monkeypatch.setattr(inference, "invoke_pyspacer", lambda p: payload)
+    monkeypatch.setattr(inference, "invoke_pyspacer", lambda p, fn: payload)
 
     with pytest.raises(InferenceError) as excinfo:
-        classify_via_lambda(image, [(1, 2)])
+        classify_via_lambda(image, [(1, 2)], "v2")
 
     assert excinfo.value.retryable is False
     assert "row/col" in str(excinfo.value)
 
 
-@override_settings(INFERENCE_CLASSIFIER_VERSION="v2")
+@override_settings(**LIVE_VERSIONS)
 @override_settings(**STORAGE_SETTINGS)
 @pytest.mark.parametrize(
     "requested_points,response_points",
@@ -314,10 +336,10 @@ def test_classify_via_lambda_rejects_point_set_mismatch(
     for the image and writes only the returned subset, leaving fewer points than
     num_points on an image reported COMPLETED."""
     payload = _ok_payload("v2", points=response_points)
-    monkeypatch.setattr(inference, "invoke_pyspacer", lambda p: payload)
+    monkeypatch.setattr(inference, "invoke_pyspacer", lambda p, fn: payload)
 
     with pytest.raises(InferenceError) as excinfo:
-        classify_via_lambda(image, requested_points)
+        classify_via_lambda(image, requested_points, "v2")
 
     assert excinfo.value.retryable is False
     assert "points" in str(excinfo.value)

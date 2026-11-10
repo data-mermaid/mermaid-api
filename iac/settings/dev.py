@@ -41,5 +41,5 @@ DEV_SETTINGS = ProjectSettings(
         slack_workspace_id=os.getenv("SLACK_WORKSPACE_ID", ""),
         slack_channel_id=os.getenv("SLACK_CHANNEL_ID", ""),
     ),
-    inference=InferenceSettings(image_tag="v1-2", classifier_version="v1"),
+    inference=InferenceSettings(images={"v1": "v1-2"}, active_version="v1"),
 )
