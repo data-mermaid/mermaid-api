@@ -221,10 +221,12 @@ def extract_location(gps_ifd: dict[int, Any]) -> GEOSPoint | None:
 
 
 NORMALIZED_IMAGE_EXT = "jpg"
-# quality=95 keeps re-encoding loss negligible; subsampling=0 (4:4:4) keeps full
-# colour resolution instead of Pillow's default 4:2:0, since colour matters for
-# coral classification (e.g. bleaching).
-NORMALIZED_JPEG_SAVE_KWARGS = {"quality": 95, "subsampling": 0}
+# quality=75 is Pillow's default.
+NORMALIZED_JPEG_SAVE_KWARGS = {"quality": 75}
+# Source formats (as detected by Pillow) that have full colour detail to keep. These are
+# saved with subsampling=0 (4:4:4) instead of Pillow's default 4:2:0, since colour matters
+# for coral classification (e.g. bleaching), and their ICC profile is carried over.
+LOSSLESS_IMAGE_FORMATS = {"PNG", "TIFF", "BMP", "GIF"}
 # JPEG has no alpha, so transparent and partially transparent pixels are blended onto this.
 NORMALIZED_IMAGE_BACKGROUND = (255, 255, 255, 255)
 
@@ -254,13 +256,15 @@ def save_normalized_imagefile(instance: Image):
     file_obj = _get_file_for_reading(instance.image)
 
     with PILImage.open(file_obj) as image_file:
-        # Pillow drops the ICC profile on save unless it is passed explicitly. Keep it
-        # only when it describes RGB data, so it still matches the pixels after the RGB
-        # conversion below; a CMYK/grey profile would not, so those are saved without one.
         save_kwargs = dict(NORMALIZED_JPEG_SAVE_KWARGS)
-        icc_profile = image_file.info.get("icc_profile")
-        if _is_rgb_icc_profile(icc_profile):
-            save_kwargs["icc_profile"] = icc_profile
+        if image_file.format in LOSSLESS_IMAGE_FORMATS:
+            save_kwargs["subsampling"] = 0
+            # Pillow drops the ICC profile on save unless it is passed explicitly. Keep
+            # it only when it describes RGB data, so it still matches the pixels after
+            # the RGB conversion below; a CMYK/grey profile would not.
+            icc_profile = image_file.info.get("icc_profile")
+            if _is_rgb_icc_profile(icc_profile):
+                save_kwargs["icc_profile"] = icc_profile
 
         try:
             for orientation in TAGS.keys():

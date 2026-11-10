@@ -132,30 +132,41 @@ def _encode(image, fmt):
 @pytest.mark.parametrize(
     "mode, fmt",
     [
-        ("RGB", "JPEG"),
         ("RGB", "PNG"),
         ("RGBA", "PNG"),
         ("P", "PNG"),
         ("L", "PNG"),
         ("I;16", "PNG"),
-        ("CMYK", "JPEG"),
         ("RGB", "TIFF"),
     ],
 )
-def test_save_normalized_imagefile_converts_to_full_chroma_jpeg(mode, fmt):
+def test_save_normalized_imagefile_lossless_source_converts_to_full_chroma_jpeg(mode, fmt):
     normalized, save_kwargs = _normalize(_encode(PILImage.new(mode, (64, 48)), fmt))
 
     assert normalized.format == "JPEG"
     assert normalized.mode == "RGB"
     assert normalized.size == (64, 48)
-    assert save_kwargs == {"format": "JPEG", "quality": 95, "subsampling": 0}
+    assert save_kwargs == {"format": "JPEG", "quality": 75, "subsampling": 0}
     # 0 == 4:4:4, i.e. no chroma subsampling
     assert JpegImagePlugin.get_sampling(normalized) == 0
 
 
+@pytest.mark.parametrize("mode", ["RGB", "CMYK"])
+def test_save_normalized_imagefile_jpeg_source_uses_default_subsampling(mode):
+    normalized, save_kwargs = _normalize(_encode(PILImage.new(mode, (64, 48)), "JPEG"))
+
+    assert normalized.format == "JPEG"
+    assert normalized.mode == "RGB"
+    assert normalized.size == (64, 48)
+    assert save_kwargs == {"format": "JPEG", "quality": 75}
+    # 2 == 4:2:0, Pillow's default
+    assert JpegImagePlugin.get_sampling(normalized) == 2
+
+
 def test_save_normalized_imagefile_preserves_colour_closely():
     source = PILImage.new("RGB", (64, 48))
-    source.putdata([((x * 3) % 256, (x * 7) % 256, (x * 13) % 256) for x in range(64 * 48)])
+    # A smooth gradient, like real photo content; per-pixel noise is JPEG's worst case.
+    source.putdata([(x * 4, y * 5, (x + y) * 2) for y in range(48) for x in range(64)])
 
     normalized, _ = _normalize(_encode(source, "PNG"))
 
@@ -226,8 +237,10 @@ def _icc_profile(colour_space=b"RGB "):
     return bytes(profile)
 
 
-@pytest.mark.parametrize("mode, fmt", [("RGB", "JPEG"), ("RGBA", "PNG"), ("P", "PNG")])
-def test_save_normalized_imagefile_keeps_rgb_icc_profile(mode, fmt):
+@pytest.mark.parametrize(
+    "mode, fmt", [("RGB", "PNG"), ("RGBA", "PNG"), ("P", "PNG"), ("RGB", "TIFF")]
+)
+def test_save_normalized_imagefile_keeps_rgb_icc_profile_from_lossless_source(mode, fmt):
     profile = _icc_profile()
     buf = io.BytesIO()
     PILImage.new(mode, (64, 48)).save(buf, format=fmt, icc_profile=profile)
@@ -238,9 +251,19 @@ def test_save_normalized_imagefile_keeps_rgb_icc_profile(mode, fmt):
     assert normalized.info.get("icc_profile") == profile
 
 
+def test_save_normalized_imagefile_drops_icc_profile_from_jpeg_source():
+    buf = io.BytesIO()
+    PILImage.new("RGB", (64, 48)).save(buf, format="JPEG", icc_profile=_icc_profile())
+
+    normalized, save_kwargs = _normalize(buf.getvalue())
+
+    assert "icc_profile" not in save_kwargs
+    assert "icc_profile" not in normalized.info
+
+
 def test_save_normalized_imagefile_drops_non_rgb_icc_profile():
     buf = io.BytesIO()
-    PILImage.new("CMYK", (64, 48)).save(buf, format="JPEG", icc_profile=_icc_profile(b"CMYK"))
+    PILImage.new("CMYK", (64, 48)).save(buf, format="TIFF", icc_profile=_icc_profile(b"CMYK"))
 
     normalized, save_kwargs = _normalize(buf.getvalue())
 
