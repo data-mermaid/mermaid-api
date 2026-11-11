@@ -91,6 +91,31 @@ def test_get_viewset_csv_content_gzip_response():
     assert result == _CSV_ROWS
 
 
+def _split_chunks(data: bytes, size: int) -> list[bytes]:
+    return [data[i : i + size] for i in range(0, len(data), size)]
+
+
+@pytest.mark.parametrize("use_gzip", [False, True])
+def test_get_viewset_csv_content_streams_multiple_chunks(use_gzip):
+    """Rows are parsed from many small chunks (split mid-row, mid-multibyte char,
+    and mid-gzip-stream) without joining the full payload first."""
+    rows = [["protocol", "name", "value"]] + [
+        ["beltfish", f"Sité {i}\nline two", str(i)] for i in range(200)
+    ]
+    payload = _rows_to_bytes(rows)
+    if use_gzip:
+        payload = gzip.compress(payload)
+    response = StreamingHttpResponse(iter(_split_chunks(payload, 7)))
+    if use_gzip:
+        response["Content-Encoding"] = "gzip"
+    view_cls = _make_view_cls(response)
+
+    with patch("api.reports.summary_report.cached.get_cached_textfile", return_value=None):
+        result = list(get_viewset_csv_content(view_cls, "test-pk", None))
+
+    assert result == rows
+
+
 def test_get_viewset_csv_content_non_200_raises():
     response = StreamingHttpResponse(iter([b"error"]), status=500)
     view_cls = _make_view_cls(response)

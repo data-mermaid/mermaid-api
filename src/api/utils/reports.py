@@ -64,7 +64,9 @@ def create_sample_unit_method_summary_report_background(
         request=req,
         send_email=send_email,
         wait_for_cache=True,
-        visibility_timeout=180,
+        # Multi-project reports can run for several minutes; keep the message
+        # invisible long enough that it isn't redelivered while still running.
+        visibility_timeout=900,
     )
 
 
