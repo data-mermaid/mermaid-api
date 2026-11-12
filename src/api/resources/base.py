@@ -78,17 +78,21 @@ class PointFieldValidated(GeometryField):
     def to_internal_value(self, value):
         if not isinstance(value, dict):
             raise ValidationError("Invalid point: expected a GeoJSON object")
+        # Reject other types here: GDAL logs them as errors, which reach admin emails.
+        # Case-insensitive because GDAL accepts "point".
+        if str(value.get("type")).lower() != "point":
+            raise ValidationError('Invalid point: type must be "Point"')
         coords = value.get("coordinates")
-        if coords is None or len(coords) != 2:
+        if not isinstance(coords, (list, tuple)) or len(coords) != 2:
             raise ValidationError("Invalid coordinates")
-        x = value["coordinates"][0]
-        y = value["coordinates"][1]
+        x, y = coords
 
-        if not isinstance(x, float) and not isinstance(x, int):
+        # bool is a subclass of int, but GDAL rejects JSON true/false.
+        if isinstance(x, bool) or not isinstance(x, (int, float)):
             raise ValidationError(
                 f"Invalid 'x' coordinate. Type is not double or integer for '{x}'"
             )
-        if not isinstance(y, float) and not isinstance(y, int):
+        if isinstance(y, bool) or not isinstance(y, (int, float)):
             raise ValidationError(
                 f"Invalid 'y' coordinate. Type is not double or integer for '{y}'"
             )
