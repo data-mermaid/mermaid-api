@@ -1,5 +1,6 @@
 import csv
 import gzip
+import io
 import itertools
 import logging
 from collections import defaultdict
@@ -130,6 +131,28 @@ PROTOCOL_VIEW_MAPPING = {
 }
 
 
+class _ChunkIteratorIO(io.RawIOBase):
+    """Read-only file-like wrapper around an iterator of bytes chunks."""
+
+    def __init__(self, chunks):
+        self._chunks = iter(chunks)
+        self._buffer = b""
+
+    def readable(self):
+        return True
+
+    def readinto(self, b):
+        while not self._buffer:
+            try:
+                self._buffer = next(self._chunks)
+            except StopIteration:
+                return 0
+        n = min(len(b), len(self._buffer))
+        b[:n] = self._buffer[:n]
+        self._buffer = self._buffer[n:]
+        return n
+
+
 def get_viewset_csv_content(view_cls, project_pk, request):
     key = cached.make_viewset_cache_key(
         view_cls,
@@ -159,11 +182,13 @@ def get_viewset_csv_content(view_cls, project_pk, request):
         )
         raise ValueError(f"Failed to get content for project {project_pk}")
 
-    raw_bytes = b"".join(resp.streaming_content)
+    # Stream rows straight from the response chunks instead of materializing
+    # the full payload (bytes, decoded str, split lines and row list) in memory.
+    stream = io.BufferedReader(_ChunkIteratorIO(resp.streaming_content))
     if resp.get("Content-Encoding") == "gzip":
-        raw_bytes = gzip.decompress(raw_bytes)
-    content = list(csv.reader(raw_bytes.decode("utf-8").splitlines()))
-    yield from content
+        stream = gzip.GzipFile(fileobj=stream, mode="rb")
+    with io.TextIOWrapper(stream, encoding="utf-8", newline="") as text_stream:
+        yield from csv.reader(text_stream)
 
 
 def _find_project_id(headers, data_row):
