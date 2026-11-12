@@ -31,6 +31,7 @@ class GFCRFinanceSolutionInline(NestedStackedInline):
 class GFCRIndicatorSetAdmin(NestedModelAdmin):
     list_display = ("identifier", "report_date")
     readonly_fields = ["created_by", "updated_by"]
+    autocomplete_fields = ("project",)
 
     inlines = [GFCRFinanceSolutionInline]
     search_fields = ["project__name", "title", "pk", "project_id"]
