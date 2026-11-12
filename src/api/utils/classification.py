@@ -18,7 +18,7 @@ from django.db import IntegrityError, transaction
 from django.db.models import Exists, OuterRef, Q
 from django.db.models.fields.files import ImageFieldFile
 from django.utils import timezone
-from PIL import ExifTags, Image as PILImage, ImageMath
+from PIL import ExifTags, Image as PILImage, ImageMath, JpegImagePlugin
 from PIL.ExifTags import GPSTAGS, TAGS
 
 from ..models import (
@@ -116,19 +116,17 @@ def create_thumbnail(image_instance: Image, image_buf: BytesIO | None = None) ->
             img = PILImage.open(f)
             img.load()
 
+    save_kwargs = {}
+    if img.format == "JPEG":
+        # Use the stored image's settings: full colour detail and colour profile only
+        # when the stored image has them. Read the sampling before resizing.
+        full_chroma = JpegImagePlugin.get_sampling(img) == 0
+        save_kwargs = _jpeg_save_kwargs(full_chroma, img.info.get("icc_profile"))
+
     img.thumbnail(size, PILImage.Resampling.LANCZOS)
 
     base, ext = os.path.splitext(image_instance.name)
     thumb_name = f"{base}_thumbnail{ext}"
-
-    save_kwargs = {}
-    if img.format == "JPEG":
-        # Match the stored image: keep full colour detail and its colour profile, which
-        # Pillow's JPEG encoder drops unless passed explicitly.
-        save_kwargs = dict(NORMALIZED_JPEG_SAVE_KWARGS, subsampling=0)
-        icc_profile = img.info.get("icc_profile")
-        if icc_profile:
-            save_kwargs["icc_profile"] = icc_profile
 
     thumb_io = BytesIO()
     try:
@@ -246,15 +244,37 @@ JPEG_IMAGE_FORMATS = {"JPEG", "MPO"}
 NORMALIZED_IMAGE_BACKGROUND = (255, 255, 255, 255)
 
 
-def _scale_16bit_to_8bit(image: PILImage.Image) -> PILImage.Image:
-    # Pillow's I;16 -> L/RGB conversion clips at 255 rather than scaling, which turns
-    # nearly every 16-bit value white; divide by 256 to map 0-65535 onto 0-255.
-    wide = image.convert("I")
-    scaled = wide.point(lambda v: v * (1 / 256)).convert("L")
+def _full_scale_value(image: PILImage.Image) -> float:
+    # The sample value that maps to white. 16-bit data has a fixed range. 32-bit and
+    # float data do not, so use the smallest common range that holds the brightest
+    # pixel: 0-1 (float), 0-255, 0-65535, or else the brightest pixel itself.
+    if image.mode.startswith("I;16"):
+        return 65535
+    high = image.getextrema()[1]
+    if image.mode == "F" and high <= 1:
+        return 1
+    if high <= 255:
+        return 255
+    if high <= 65535:
+        return 65535
+    return high
+
+
+def _scale_to_8bit(image: PILImage.Image) -> PILImage.Image:
+    # Pillow's I;16/I/F -> L/RGB conversion clips at 255 rather than scaling, which
+    # turns nearly every value white (or black, for 0-1 float data), so scale the
+    # full range of the data onto 0-255 first. Values below 0 become black.
+    wide = image if image.mode in ("I", "F") else image.convert("I")
+    # The original mode, since converting to "I" loses that the data is 16-bit.
+    full_scale = _full_scale_value(image)
+    if full_scale == 255:
+        scaled = wide.convert("L")
+    else:
+        scaled = wide.point(lambda v: v * (255 / full_scale)).convert("L")
     scaled.info.pop("transparency", None)
 
-    # A tRNS colour key is a 16-bit value that no scaled pixel can match, so turn it
-    # into an alpha band from the unscaled data before it is lost.
+    # A tRNS colour key is a high-bit-depth value that no scaled pixel can match, so
+    # turn it into an alpha band from the unscaled data before it is lost.
     key = image.info.get("transparency")
     if isinstance(key, int):
         mask = ImageMath.lambda_eval(lambda a: (a["w"] != key) * 255, w=wide).convert("L")
@@ -288,25 +308,34 @@ def _is_rgb_icc_profile(icc_profile: bytes | None) -> bool:
     return bool(icc_profile) and icc_profile[16:20] == b"RGB "
 
 
+def _jpeg_save_kwargs(full_chroma: bool, icc_profile: bytes | None = None) -> dict:
+    # Save settings for every JPEG written: the stored image and its thumbnail.
+    save_kwargs = dict(NORMALIZED_JPEG_SAVE_KWARGS)
+    if full_chroma:
+        save_kwargs["subsampling"] = 0
+        # Pillow drops the ICC profile on save unless it is passed explicitly. Keep
+        # it only when it describes RGB data, so it still matches the pixels after
+        # the RGB conversion; a CMYK/grey profile would not.
+        if _is_rgb_icc_profile(icc_profile):
+            save_kwargs["icc_profile"] = icc_profile
+    return save_kwargs
+
+
 def save_normalized_imagefile(instance: Image):
     file_obj = _get_file_for_reading(instance.image)
 
     with PILImage.open(file_obj) as image_file:
-        save_kwargs = dict(NORMALIZED_JPEG_SAVE_KWARGS)
-        if image_file.format not in JPEG_IMAGE_FORMATS:
-            save_kwargs["subsampling"] = 0
-            # Pillow drops the ICC profile on save unless it is passed explicitly. Keep
-            # it only when it describes RGB data, so it still matches the pixels after
-            # the RGB conversion below; a CMYK/grey profile would not.
-            icc_profile = image_file.info.get("icc_profile")
-            if _is_rgb_icc_profile(icc_profile):
-                save_kwargs["icc_profile"] = icc_profile
+        save_kwargs = _jpeg_save_kwargs(
+            full_chroma=image_file.format not in JPEG_IMAGE_FORMATS,
+            icc_profile=image_file.info.get("icc_profile"),
+        )
 
         # Read before the conversions below, which don't keep EXIF.
         rotation = _exif_rotation(image_file)
 
-        if image_file.mode.startswith("I;16"):
-            image_file = _scale_16bit_to_8bit(image_file)
+        # More than 8 bits per sample: 16-bit, 32-bit integer or 32-bit float.
+        if image_file.mode.startswith("I;16") or image_file.mode in ("I", "F"):
+            image_file = _scale_to_8bit(image_file)
 
         # A plain convert("RGB") would drop alpha and expose the hidden colour under
         # transparent pixels, so composite anything with transparency (alpha band,

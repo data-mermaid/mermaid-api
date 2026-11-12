@@ -257,12 +257,59 @@ def test_save_normalized_imagefile_scales_16bit_greyscale():
         assert abs(r - value // 256) <= 3
 
 
+def test_save_normalized_imagefile_dim_16bit_keeps_16bit_range():
+    # 16-bit data has a fixed 0-65535 range, so values under 256 stay near black
+    # instead of being stretched as if the image were 8-bit.
+    normalized, _ = _normalize(_i16_png([0, 200]))
+
+    assert all(c <= 3 for c in normalized.getpixel((12, 4)))
+
+
 def test_save_normalized_imagefile_16bit_transparency_key_becomes_background():
     # 1000 is the transparent key; 40000 is opaque mid-grey (~156).
     normalized, _ = _normalize(_i16_png([1000, 40000], transparency=1000))
 
     assert all(abs(c - 255) <= 2 for c in normalized.getpixel((4, 4)))
     assert all(abs(c - 40000 // 256) <= 3 for c in normalized.getpixel((12, 4)))
+
+
+def _greyscale_tiff(mode, values):
+    source = PILImage.new(mode, (len(values) * 8, 8))
+    source.putdata([values[x // 8] for _ in range(8) for x in range(source.width)])
+    buf = io.BytesIO()
+    source.save(buf, format="TIFF")
+    return buf.getvalue()
+
+
+def _assert_grey_levels(normalized, expected):
+    for i, level in enumerate(expected):
+        r, g, b = normalized.getpixel((i * 8 + 4, 4))
+        assert max(r, g, b) - min(r, g, b) <= 2
+        assert abs(r - level) <= 3
+
+
+@pytest.mark.parametrize(
+    "mode, values, expected",
+    [
+        # 32-bit integer data above 16 bits: scaled by the brightest pixel.
+        ("I", [0, 1_000_000, 2_000_000, 4_000_000], [0, 64, 128, 255]),
+        # 32-bit integer data that holds 16-bit values.
+        ("I", [0, 16384, 32768, 65535], [0, 64, 128, 255]),
+        # 32-bit integer data that holds 8-bit values: unchanged.
+        ("I", [0, 64, 128, 255], [0, 64, 128, 255]),
+        # Negative values become black.
+        ("I", [-1000, 0, 65535], [0, 0, 255]),
+        # Float data in 0-1.
+        ("F", [0.0, 0.25, 0.5, 1.0], [0, 64, 128, 255]),
+        # Float data above 1.
+        ("F", [0.0, 1000.0, 2000.0, 4000.0], [0, 4, 8, 16]),
+    ],
+)
+def test_save_normalized_imagefile_scales_32bit_and_float_greyscale(mode, values, expected):
+    normalized, _ = _normalize(_greyscale_tiff(mode, values))
+
+    assert normalized.mode == "RGB"
+    _assert_grey_levels(normalized, expected)
 
 
 def _icc_profile(colour_space=b"RGB "):
@@ -348,6 +395,23 @@ def test_create_thumbnail_matches_normalized_image():
     assert thumb.size == (500, 400)
     assert JpegImagePlugin.get_sampling(thumb) == 0
     assert thumb.info.get("icc_profile") == profile
+
+
+def test_create_thumbnail_of_jpeg_upload_matches_normalized_image():
+    buf = io.BytesIO()
+    PILImage.new("RGB", (1000, 800)).save(buf, format="JPEG", icc_profile=_icc_profile())
+    instance = _make_instance(buf.getvalue())
+    instance.image.name = "upload"
+    save_normalized_imagefile(instance)
+    instance.name = "image.jpg"
+
+    thumb_file = create_thumbnail(instance, image_buf=instance._normalized_image_buf)
+    thumb = PILImage.open(io.BytesIO(thumb_file.read()))
+
+    assert thumb.size == (500, 400)
+    # 2 == 4:2:0, the same as the stored image
+    assert JpegImagePlugin.get_sampling(thumb) == 2
+    assert "icc_profile" not in thumb.info
 
 
 def test_save_normalized_imagefile_jpeg_still_applies_orientation():
