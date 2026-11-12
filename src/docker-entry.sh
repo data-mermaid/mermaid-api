@@ -10,7 +10,7 @@ exec opentelemetry-instrument gunicorn app.wsgi \
   --timeout 120 \
   --workers 2 \
   --threads 4 \
-  --worker-class gthread \
+  --worker-class app.gunicorn_worker.ObservableThreadWorker \
   --max-requests 2000 \
   --max-requests-jitter 200 \
   --access-logfile "-" \
