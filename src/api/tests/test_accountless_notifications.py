@@ -140,6 +140,19 @@ def test_resaving_promoted_instance_does_not_renotify(project_profile1, project_
     assert sent == []
 
 
+def test_partial_save_without_role_ignores_unsaved_role_change(project_profile1, project_profile2):
+    pp = ProjectProfile.objects.get(pk=project_profile2.pk)
+    pp.role = ProjectProfile.ADMIN
+    with capture_emails() as sent:
+        pp.save(update_fields=["updated_on"])
+    assert sent == []
+
+    # The unsaved promotion is still detected when role is actually written
+    with capture_emails() as sent:
+        pp.save()
+    assert _recipients(sent, ADMINS_CHANGE_TEMPLATE)
+
+
 def test_project_change_skips_accountless_admins(project1, project_profile1, accountless_admin):
     project = type(project1).objects.get(pk=project1.pk)
     project.name = "Renamed project"

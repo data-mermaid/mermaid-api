@@ -107,6 +107,9 @@ def notify_admins_new_admin(sender, instance, created, **kwargs):
         return
     if not hasattr(instance, "_old_values"):
         return
+    update_fields = kwargs.get("update_fields")
+    if update_fields is not None and "role" not in update_fields:
+        return
 
     old_role = instance._old_values.get("role")
     if old_role is None or old_role == instance.role:
