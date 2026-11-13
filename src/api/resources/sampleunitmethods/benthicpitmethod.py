@@ -17,6 +17,8 @@ from ...models import (
 )
 from ...reports.fields import ReportField
 from ...reports.formatters import (
+    to_bleaching_percents,
+    to_bleaching_se_percents,
     to_day,
     to_governance,
     to_join_list,
@@ -37,6 +39,7 @@ from ..base import (
     BaseSUViewAPISUSerializer,
     BaseViewAPIGeoSerializer,
     BaseViewAPISUGeoSerializer,
+    NumberInFilter,
 )
 from ..benthic_transect import BenthicTransectSerializer
 from ..mixins import SampleUnitMethodEditMixin
@@ -219,6 +222,9 @@ class BenthicPITMethodObsSerializer(BaseSUViewAPISerializer):
                 "benthic_category",
                 "benthic_attribute",
                 "growth_form",
+                "include_bleaching",
+                "bleaching_status",
+                "bleaching_status_name",
                 "life_histories",
                 "percent_cover_benthic_category",
             ]
@@ -268,6 +274,9 @@ class ObsBenthicPITCSVSerializer(ReportSerializer):
         ReportField("benthic_category", "Benthic category"),
         ReportField("benthic_attribute", "Benthic attribute"),
         ReportField("growth_form", "Growth form"),
+        ReportField("include_bleaching", "Include bleaching", to_yesno),
+        ReportField("bleaching_status", "Bleaching status value"),
+        ReportField("bleaching_status_name", "Bleaching status name"),
         ReportField(
             "life_histories",
             "Competitive",
@@ -318,7 +327,7 @@ class BenthicPITMethodSUSerializer(BaseSUViewAPISUSerializer):
     class Meta(BaseSUViewAPISUSerializer.Meta):
         model = BenthicPITSUModel
         exclude = BaseSUViewAPISUSerializer.Meta.exclude.copy()
-        exclude.append("location")
+        exclude.extend(["location", "bleaching_status_amounts"])
         header_order = BaseSUViewAPISUSerializer.Meta.header_order.copy()
         header_order.extend(
             [
@@ -331,6 +340,11 @@ class BenthicPITMethodSUSerializer(BaseSUViewAPISUSerializer):
                 "interval_start",
                 "percent_cover_benthic_category",
                 "percent_cover_life_histories",
+                "include_bleaching",
+                "bleaching_hard_coral_points",
+                "bleaching_soft_coral_points",
+                "percent_bleached_hard_coral",
+                "percent_bleached_soft_coral",
                 "data_policy_benthicpit",
             ]
         )
@@ -339,6 +353,8 @@ class BenthicPITMethodSUSerializer(BaseSUViewAPISUSerializer):
 class BenthicPITMethodSUGeoSerializer(BaseViewAPISUGeoSerializer):
     class Meta(BaseViewAPISUGeoSerializer.Meta):
         model = BenthicPITSUModel
+        exclude = BaseViewAPISUGeoSerializer.Meta.exclude.copy()
+        exclude.append("bleaching_status_amounts")
 
 
 class BenthicPITMethodSUCSVSerializer(ReportSerializer):
@@ -379,6 +395,15 @@ class BenthicPITMethodSUCSVSerializer(ReportSerializer):
         ReportField("interval_start", "Interval start"),
         ReportField("percent_cover_benthic_category", "Percent cover by benthic category"),
         ReportField("percent_cover_life_histories", "Percent cover by life history"),
+        ReportField("include_bleaching", "Include bleaching", to_yesno),
+        ReportField("bleaching_hard_coral_points", "Bleaching hard coral points"),
+        ReportField("bleaching_soft_coral_points", "Bleaching soft coral points"),
+        ReportField(
+            "percent_bleached_hard_coral", "Percent bleached hard coral", to_bleaching_percents
+        ),
+        ReportField(
+            "percent_bleached_soft_coral", "Percent bleached soft coral", to_bleaching_percents
+        ),
         ReportField("site_notes", "Site notes"),
         ReportField("management_notes", "Management notes"),
         ReportField("sample_unit_notes", "Sample unit notes"),
@@ -414,6 +439,13 @@ class BenthicPITMethodSESerializer(BaseSUViewAPISerializer):
                 "percent_cover_benthic_category_sd",
                 "percent_cover_life_histories_avg",
                 "percent_cover_life_histories_sd",
+                "bleaching_sample_unit_count",
+                "bleaching_hard_coral_sample_unit_count",
+                "bleaching_soft_coral_sample_unit_count",
+                "bleaching_hard_coral_points",
+                "bleaching_soft_coral_points",
+                "percent_bleached_hard_coral",
+                "percent_bleached_soft_coral",
             ]
         )
 
@@ -465,6 +497,25 @@ class BenthicPITMethodSECSVSerializer(ReportSerializer):
         ReportField(
             "percent_cover_life_histories_sd", "Percent cover by life history standard deviation"
         ),
+        ReportField("bleaching_sample_unit_count", "Bleaching sample unit count"),
+        ReportField(
+            "bleaching_hard_coral_sample_unit_count", "Bleaching hard coral sample unit count"
+        ),
+        ReportField(
+            "bleaching_soft_coral_sample_unit_count", "Bleaching soft coral sample unit count"
+        ),
+        ReportField("bleaching_hard_coral_points", "Bleaching hard coral points"),
+        ReportField("bleaching_soft_coral_points", "Bleaching soft coral points"),
+        ReportField(
+            "percent_bleached_hard_coral",
+            "Percent bleached hard coral",
+            to_bleaching_se_percents,
+        ),
+        ReportField(
+            "percent_bleached_soft_coral",
+            "Percent bleached soft coral",
+            to_bleaching_se_percents,
+        ),
         ReportField("site_notes", "Site notes"),
         ReportField("management_notes", "Management notes"),
         ReportField("project_notes", "Project notes"),
@@ -490,6 +541,7 @@ class BenthicPITMethodObsFilterSet(BaseSUObsFilterSet):
     benthic_category = BaseInFilter(method="char_lookup")
     benthic_attribute = BaseInFilter(method="char_lookup")
     growth_form = BaseInFilter(method="char_lookup")
+    bleaching_status = NumberInFilter()
     interval_size = RangeFilter()
     interval = RangeFilter()
 
@@ -504,6 +556,8 @@ class BenthicPITMethodObsFilterSet(BaseSUObsFilterSet):
             "benthic_category",
             "benthic_attribute",
             "growth_form",
+            "include_bleaching",
+            "bleaching_status",
         ]
 
 

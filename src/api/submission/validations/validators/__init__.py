@@ -7,6 +7,11 @@ from .benthic_transect import (
     UniqueBenthicTransectValidator,
 )
 from .biomass import BiomassValidator
+from .bleaching_status import (
+    BleachingStatusMissingValidator,
+    BleachingStatusValidator,
+    IncludeBleachingValidator,
+)
 from .classification_benthic_photo_quadrat import (
     AnnotationRegionValidator,
     DuplicateImageValidator,

@@ -77,6 +77,19 @@ If the protocol introduces its own attribute/taxonomy hierarchy (Django MTI from
 
 - Create protocol sql models for Observations, Sample Units and Sample Event summaries
 
+## Summary Sample Event
+
+The summary sample event endpoint (`summarysampleevents`) builds its own per-protocol SE aggregates from the SU summary tables. It does not read the protocol SE sql model, so you must update it separately. In `SummarySampleEventSQLModel.sql` (`src/api/models/summary_sample_events.py`):
+
+- Add a CTE that selects the protocol's SU summary table for the project (e.g. `beltinvert_su`)
+- Add the SU CTE to the `su_common` `UNION ALL` so observers and depth include the new protocol
+- Add a `data_policy_[protocol]` `CASE` column, and add the same field to `SummarySampleEventBaseModel` and `BaseProjectSummarySampleEvent`
+- Add a `LEFT JOIN` subquery that aggregates the SU table to SE level (`sample_unit_count` plus the `_avg`/`_sd` metrics)
+- Add a key for the protocol to the `protocols` `jsonb_build_object`. Wrap each metric in the `data_policy_[protocol] < 50 AND NOT %(has_access)s` check, the same as the other protocols
+- Add a test in `src/api/tests/test_summary_sample_event.py`
+
+When you add SE-level fields to an existing protocol (e.g. LIT/PIT bleaching), add them to the protocol's entry in `protocols` too.
+
 ## Validation and Submission
 
 - Create any new validators that are needed for the new protocol

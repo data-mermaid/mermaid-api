@@ -13,6 +13,7 @@ from django_filters import (
     DateTimeFromToRangeFilter,
     Filter,
     FilterSet,
+    NumberFilter,
     RangeFilter,
 )
 from django_filters.fields import Lookup
@@ -392,6 +393,10 @@ class NullableUUIDFilter(CharFilter):
 
         qs = self.get_method(qs)(**{"%s__isnull" % self.field_name: True})
         return qs.distinct() if self.distinct else qs
+
+
+class NumberInFilter(BaseInFilter, NumberFilter):
+    pass
 
 
 class BaseAPIFilterSet(FilterSet):
