@@ -135,6 +135,9 @@ def collect_record4_with_v2_validation(
     site1,
     relative_depth1,
 ):
+    # Saving a collect record assigns observation ids, and an ignore only
+    # carries over to the observation it was recorded against.
+    obs_id = "a1b2c3d4-0000-4000-8000-000000000001"
     data = {
         "protocol": FISHBELT_PROTOCOL,
         "sample_event": {
@@ -142,7 +145,9 @@ def collect_record4_with_v2_validation(
             "site": str(site1.pk),
             "sample_date": "2019-12-3",
         },
-        "obs_belt_fishes": [{"size": 51, "count": 3, "fish_attribute": str(fish_species2.pk)}],
+        "obs_belt_fishes": [
+            {"id": obs_id, "size": 51, "count": 3, "fish_attribute": str(fish_species2.pk)}
+        ],
         "observers": [
             {
                 "id": None,
@@ -328,7 +333,7 @@ def collect_record4_with_v2_validation(
                             "name": "fish_size_validator",
                             "status": "ignore",
                             "code": "max_fish_size",
-                            "context": {"max_length": 32.0},
+                            "context": {"observation_id": obs_id, "max_length": 32.0},
                             "validation_id": "2b289dc99c02e9ae1c764e8a71cca3cc",
                             "fields": ["data.obs_belt_fishes"],
                         },

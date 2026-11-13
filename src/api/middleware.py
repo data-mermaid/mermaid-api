@@ -1,11 +1,12 @@
 import time
+from urllib.parse import urlsplit
 
 from django.conf import settings
-from django.http import HttpResponse
+from django.http import HttpResponse, JsonResponse
 from django.utils import timezone
 
 from tools.logger import DatabaseLogger
-from .utils.auth0utils import decode
+from .utils.auth0utils import QueryStringTokenRejected, decode
 
 
 class APIVersionMiddleware:
@@ -29,6 +30,31 @@ class HealthEndpointMiddleware:
     def __call__(self, request):
         if request.path_info == "/health/":
             return HttpResponse(f"OK ({settings.ENVIRONMENT})")
+
+        return self.get_response(request)
+
+
+class QueryStringTokenMiddleware:
+    """401 for `/v1/` requests with `?access_token=` and no Authorization header.
+
+    The auth backends reject it too, but views with no authentication classes
+    never reach them and would serve the request.
+    """
+
+    def __init__(self, get_response):
+        self.get_response = get_response
+
+    def __call__(self, request):
+        if (
+            request.path_info.startswith("/v1/")
+            and "access_token" in request.GET
+            and not request.META.get("HTTP_AUTHORIZATION")
+        ):
+            response = JsonResponse(
+                {"detail": str(QueryStringTokenRejected.default_detail)}, status=401
+            )
+            response["WWW-Authenticate"] = 'Bearer realm="api"'
+            return response
 
         return self.get_response(request)
 
@@ -66,9 +92,29 @@ class MetricsMiddleware:
 
     def _obfuscate(self, value):
         for key in value.keys():
-            if key.lower() in ["password", "password1", "password2", "token"]:
+            if key.lower() in ["password", "password1", "password2", "token", "access_token"]:
                 for i in range(len(value[key])):
                     value[key][i] = "********"
+
+    @staticmethod
+    def _origin(request):
+        # Browsers set Origin on writes and fetch CORS requests; Referer covers the rest.
+        # Keep only scheme://host so a Referer's path and query string (which may hold
+        # tokens or PII) are never logged.
+        value = request.headers.get("Origin") or request.headers.get("Referer") or ""
+        try:
+            parts = urlsplit(value)
+            host, port = parts.hostname, parts.port
+        except ValueError:
+            return ""
+        if not (parts.scheme and host):
+            return ""
+        # Built from hostname/port rather than netloc so userinfo is never logged.
+        if ":" in host:
+            host = f"[{host}]"
+        if port is not None:
+            host = f"{host}:{port}"
+        return f"{parts.scheme}://{host}"[:256]
 
     def _ignore_url_path(self, url_path):
         return any(
@@ -119,6 +165,8 @@ class MetricsMiddleware:
                     "auth_type": auth_type,
                     "user_id": user_id or "",
                     "exception": str(exception) or "",
+                    "user_agent": request.headers.get("User-Agent", "")[:256],
+                    "origin": self._origin(request),
                 },
             )
 

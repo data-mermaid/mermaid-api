@@ -1,3 +1,4 @@
+from opentelemetry import trace as otel_trace
 from rest_framework.decorators import api_view
 from rest_framework.exceptions import (
     NotAuthenticated,
@@ -34,6 +35,8 @@ NO_FILTERS = ()
 PROJECT_FILTERS = ("project",)
 PROJECT_PROFILE_FILTERS = ("project", "profile")
 
+tracer = otel_trace.get_tracer("api.sync")
+
 COLLECT_RECORDS_SOURCE_TYPE = "collect_records"
 PROJECT_SITES_SOURCE_TYPE = "project_sites"
 PROJECT_MANAGEMENTS_SOURCE_TYPE = "project_managements"
@@ -47,16 +50,6 @@ FISH_SPECIES_SOURCE_TYPE = "fish_species"
 INVERT_ATTRIBUTES_SOURCE_TYPE = "invert_attributes"
 INVERT_SPECIES_SOURCE_TYPE = "invert_species"
 CHOICES_SOURCE_TYPE = "choices"
-
-CACHEABLE_SOURCE_TYPES = (
-    BENTHIC_ATTRIBUTES_SOURCE_TYPE,
-    FISH_FAMILIES_SOURCE_TYPE,
-    FISH_GENERA_SOURCE_TYPE,
-    FISH_GROUPINGS_SOURCE_TYPE,
-    FISH_SPECIES_SOURCE_TYPE,
-    INVERT_ATTRIBUTES_SOURCE_TYPE,
-    INVERT_SPECIES_SOURCE_TYPE,
-)
 
 project_sources = {
     COLLECT_RECORDS_SOURCE_TYPE: {
@@ -331,6 +324,18 @@ def _update_source_records(source_type, records, request, force=False):
 
 
 def _get_source_records(source_type, source_data, request):
+    # One span per source, so a slow pull shows which source it spent its time on.
+    with tracer.start_as_current_span(f"pull.{source_type}") as span:
+        records = _fetch_source_records(source_type, source_data, request)
+        attributes = {"mermaid_source": source_type}
+        if source_type != CHOICES_SOURCE_TYPE:
+            attributes["mermaid_row_count"] = len(records["updates"])
+            attributes["mermaid_full_pull"] = source_data.get("last_revision") is None
+        span.set_attributes({**attributes, "aws.xray.annotations": list(attributes)})
+        return records
+
+
+def _fetch_source_records(source_type, source_data, request):
     if source_type == CHOICES_SOURCE_TYPE:
         return _get_choices()
 

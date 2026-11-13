@@ -13,6 +13,8 @@ from constructs import Construct
 class GuardDutyStack(Stack):
     def __init__(self, scope: Construct, construct_id: str, s3_buckets: list[str], **kwargs):
         super().__init__(scope, construct_id, **kwargs)
+        # nag_suppressions builds the S3 object-wildcard acknowledgments from this list.
+        self.s3_buckets = s3_buckets
 
         # Create Lambda to create the service-linked role
         create_slr_lambda = lambda_.Function(

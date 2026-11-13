@@ -2,6 +2,7 @@ import os
 import re
 
 from aws_cdk import (
+    Annotations,
     Arn,
     ArnComponents,
     ArnFormat,
@@ -27,6 +28,7 @@ from aws_cdk import (
 )
 from constructs import Construct
 from settings.settings import ProjectSettings, pyspacer_function_name
+from stacks.common import bare_log_group_arn
 from stacks.constructs.adot import add_adot_sidecar
 from stacks.constructs.alerts import MonitoringAlerts
 from stacks.constructs.dashboard import MonitoringDashboard
@@ -36,6 +38,32 @@ from stacks.constructs.worker import QueueWorker
 def camel_case(string: str) -> str:
     s = re.sub(r"(_|-)+", " ", string).title().replace(" ", "")
     return "".join([s[0].lower(), s[1:]])
+
+
+def grant_exec_log_group_describe(service: ecs.BaseService) -> None:
+    """Grant logs:DescribeLogStreams on the exec log group's bare ARN to an exec-enabled service.
+
+    CDK's ECS Exec grant gives it on the stream-form ARN (`...:log-group:<name>:*`)
+    only. From 2027-04-26 CloudWatch Logs authorizes it against the log-group ARN.
+    """
+    exec_config = service.cluster.execute_command_configuration
+    log_config = exec_config.log_configuration if exec_config else None
+    log_group = log_config.cloud_watch_log_group if log_config else None
+    if log_group is None:
+        # Exec logging is off or not to CloudWatch, or the cluster is imported and
+        # its exec config can't be read: say so at synth rather than skip silently.
+        Annotations.of(service).add_warning_v2(
+            "mermaid:exec-log-group-grant",
+            "ECS Exec is enabled but no exec CloudWatch log group was found on the "
+            "cluster; logs:DescribeLogStreams on the log-group ARN was not granted.",
+        )
+        return
+    service.task_definition.add_to_task_role_policy(
+        iam.PolicyStatement(
+            actions=["logs:DescribeLogStreams"],
+            resources=[bare_log_group_arn(service, log_group)],
+        )
+    )
 
 
 class ApiStack(Stack):
@@ -373,21 +401,34 @@ class ApiStack(Stack):
             container_secret.grant_read(daily_backup_task.task_definition.execution_role)
             container_secret.grant_read(summary_cache_service.task_definition.execution_role)
 
+        health_check = elb.HealthCheck(
+            path="/health/",
+            healthy_http_codes="200",
+            healthy_threshold_count=4,
+            unhealthy_threshold_count=4,
+            timeout=Duration.seconds(10),
+            interval=Duration.seconds(60),
+            port="8081",
+        )
         target_group = elb.ApplicationTargetGroup(
             self,
             id="TargetGroup",
             targets=[service],
             protocol=elb.ApplicationProtocol.HTTP,
             vpc=cluster.vpc,
-            health_check=elb.HealthCheck(
-                path="/health/",
-                healthy_http_codes="200",
-                healthy_threshold_count=4,
-                unhealthy_threshold_count=4,
-                timeout=Duration.seconds(10),
-                interval=Duration.seconds(60),
-                port="8081",
-            ),
+            health_check=health_check,
+        )
+
+        # Image uploads get their own target group (same service and tasks) so the
+        # p95 latency alarm on target_group measures server time, not how long a
+        # client's uplink takes to send a ~10 MB photo.
+        upload_target_group = elb.ApplicationTargetGroup(
+            self,
+            id="UploadTargetGroup",
+            targets=[service],
+            protocol=elb.ApplicationProtocol.HTTP,
+            vpc=cluster.vpc,
+            health_check=health_check,
         )
 
         # create CNAME for ALB
@@ -418,6 +459,21 @@ class ApiStack(Stack):
             priority=rule_priority,
             conditions=[elb.ListenerCondition.host_headers(host_headers)],
             target_groups=[target_group],
+        )
+
+        # Must evaluate before the host header rule; the listener is shared by dev
+        # and prod, so the priority must stay distinct per env.
+        _ = elb.ApplicationListenerRule(
+            self,
+            id="ImageUploadListenerRule",
+            listener=load_balancer.listeners[0],
+            priority=rule_priority - 10,
+            conditions=[
+                elb.ListenerCondition.host_headers(host_headers),
+                elb.ListenerCondition.http_request_methods(["POST"]),
+                elb.ListenerCondition.path_patterns(["/v1/projects/*/classification/images/"]),
+            ],
+            target_groups=[upload_target_group],
         )
 
         # Allow API service to read/write to backup bucket in case we want to manually
@@ -575,6 +631,7 @@ class ApiStack(Stack):
             "Alerts",
             env_id=config.env_id,
             target_group=target_group,
+            upload_target_group=upload_target_group,
             api_service=service,
             database=database,
             general_dlq=worker.dead_letter_queue,
@@ -592,3 +649,11 @@ class ApiStack(Stack):
             # avoid both envs paging on the same instance event.
             monitor_shared_rds=config.env_id == "prod",
         )
+
+        # Every exec-enabled service in this stack, including ones added later.
+        for construct in self.node.find_all():
+            if (
+                isinstance(construct, ecs.BaseService)
+                and construct.node.default_child.enable_execute_command
+            ):
+                grant_exec_log_group_describe(construct)

@@ -17,6 +17,7 @@ from rest_framework.authentication import get_authorization_header
 
 from api.exceptions import Auth0ServiceUnavailable
 from api.models import Application, AuthUser
+from api.utils import normalize_email
 from app import settings
 
 logger = logging.getLogger(__name__)
@@ -129,31 +130,32 @@ def is_hs_token(token):
         return False
 
 
+class QueryStringTokenRejected(exceptions.AuthenticationFailed):
+    """A token in the URL lands in ALB, nginx and Sentry logs, so it is refused, not ignored."""
+
+    default_detail = _(
+        "Tokens are not accepted in the access_token query parameter. "
+        "Send them in the Authorization header: Bearer <token>."
+    )
+
+
 def get_jwt_token(request):
-    token = None
     auth = get_authorization_header(request).split()
 
     if len(auth) == 2:
-        auth_header_prefix = "Bearer"
-
-        if not auth:
+        if smart_str(auth[0].lower()) != "bearer":
             return None
+        return auth[1]
 
-        if smart_str(auth[0].lower()) != auth_header_prefix.lower():
-            return None
-
-        token = auth[1]
-    elif len(auth) > 2:
+    if len(auth) > 2:
         msg = _("Invalid Authorization header. Credentials string should not contain spaces.")
         raise exceptions.AuthenticationFailed(msg)
-    else:
-        token = request.query_params.get("access_token")
 
-    if token is None:
-        msg = _("Invalid Authorization header. No credentials provided.")
-        raise exceptions.AuthenticationFailed(msg)
+    if "access_token" in request.query_params:
+        raise QueryStringTokenRejected()
 
-    return token
+    msg = _("Invalid Authorization header. No credentials provided.")
+    raise exceptions.AuthenticationFailed(msg)
 
 
 def get_user_info(user_id):
@@ -187,7 +189,7 @@ def get_user_info(user_id):
         raise Auth0ServiceUnavailable() from e
 
     um = ui.user_metadata or {}
-    email = um.get("email") or ui.email
+    email = normalize_email(um.get("email")) or normalize_email(ui.email)
     if not email:
         # Auth0 returned no email for this user (e.g. phone/SMS-only identity).
         # Fail fast here rather than letting a None email reach
