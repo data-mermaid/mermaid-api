@@ -461,6 +461,10 @@ class ProjectProfile(BaseModel):
             self._old_values = {k: v for k, v in self._loaded_values.items() if k in notify_fields}
         self._new_values = model_to_dict(self, fields=notify_fields)
         super().save(*args, **kwargs)
+        # Re-baseline so a later save of this same instance diffs against what's now in the DB
+        self._loaded_values = {
+            f.attname: getattr(self, f.attname) for f in self._meta.concrete_fields
+        }
 
     class Meta:
         db_table = "project_profile"
