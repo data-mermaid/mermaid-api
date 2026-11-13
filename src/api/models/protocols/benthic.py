@@ -186,8 +186,10 @@ BLEACHING_STATUS_CHOICES = (
 )
 # Key in percent_bleached_* objects for the sum of all statuses other than normal
 BLEACHING_BLEACHED_KEY = "bleached"
-# Tabular order of percent_bleached_* keys: total bleached first, then statuses by val
-BLEACHING_PERCENT_KEYS = (BLEACHING_BLEACHED_KEY, *(name for _, name in BLEACHING_STATUS_CHOICES))
+# Tabular order of SE percent_bleached_* keys: statuses by val. SE objects have no `bleached` key.
+BLEACHING_SE_PERCENT_KEYS = tuple(name for _, name in BLEACHING_STATUS_CHOICES)
+# Tabular order of SU percent_bleached_* keys: total bleached first, then statuses by val
+BLEACHING_PERCENT_KEYS = (BLEACHING_BLEACHED_KEY, *BLEACHING_SE_PERCENT_KEYS)
 BLEACHING_STATUS_CHOICES_UPDATED_ON = datetime.datetime(
     2026, 10, 21, 0, 0, 0, 0, tzinfo=datetime.UTC
 )
