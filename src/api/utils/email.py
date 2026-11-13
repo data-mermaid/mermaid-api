@@ -8,13 +8,23 @@ from django.template.loader import render_to_string
 from django.utils import timezone
 from maintenance_mode.core import get_maintenance_mode
 
-from ..models import PROTOCOL_MAP, ProjectProfile
+from ..models import PROTOCOL_MAP, AuthUser, ProjectProfile
 from ..utils import create_iso_date_string
 from . import delete_file, s3
 from .notification import _suppress_notifications
 from .q import submit_job
 
 logger = logging.getLogger(__name__)
+
+
+def emails_with_accounts(profiles):
+    """Emails of `profiles` linked to a MERMAID account. Profiles without one may be
+    placeholders with bogus emails, so routine notifications should skip them."""
+    profile_ids = {p.pk for p in profiles}
+    linked = set(
+        AuthUser.objects.filter(profile_id__in=profile_ids).values_list("profile_id", flat=True)
+    )
+    return list(dict.fromkeys(p.email for p in profiles if p.pk in linked and p.email))
 
 
 def _get_mermaid_email_content(template, context):
@@ -126,7 +136,7 @@ def email_project_admins(**kwargs):
     project_admins = ProjectProfile.objects.filter(
         project_id=project, role=ProjectProfile.ADMIN
     ).select_related("profile")
-    project_admin_emails = [p.profile.email for p in project_admins]
+    project_admin_emails = emails_with_accounts([p.profile for p in project_admins])
 
     if project_admin_emails:
         mermaid_email(

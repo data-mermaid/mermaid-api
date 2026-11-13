@@ -58,7 +58,7 @@ from ..models.classification import (
 )
 from . import delete_instance_and_related_objects, get_value, is_uuid, s3 as s3_utils
 from .classification import create_annotations_files_job
-from .email import mermaid_email
+from .email import emails_with_accounts, mermaid_email
 from .notification import suppress_all_notifications
 
 logger = logging.getLogger(__name__)
@@ -1023,7 +1023,13 @@ def _copy_observers(old_tm_id, new_tm_id):
 
 
 def email_members_of_new_project(project, owner_profile):
-    for project_profile in project.profiles.filter(~Q(profile=owner_profile)):
+    project_profiles = list(
+        project.profiles.filter(~Q(profile=owner_profile)).select_related("profile")
+    )
+    linked_emails = set(emails_with_accounts([pp.profile for pp in project_profiles]))
+    for project_profile in project_profiles:
+        if project_profile.profile.email not in linked_emails:
+            continue
         context = {
             "owner": owner_profile,
             "project": project,

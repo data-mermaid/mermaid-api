@@ -461,6 +461,16 @@ class ProjectProfile(BaseModel):
             self._old_values = {k: v for k, v in self._loaded_values.items() if k in notify_fields}
         self._new_values = model_to_dict(self, fields=notify_fields)
         super().save(*args, **kwargs)
+        # Re-baseline so a later save of this same instance diffs against what's now in the DB
+        update_fields = kwargs.get("update_fields")
+        if update_fields is None:
+            saved = self._meta.concrete_fields
+        else:
+            saved = [self._meta.get_field(name) for name in update_fields]
+        self._loaded_values = {
+            **getattr(self, "_loaded_values", {}),
+            **{f.attname: getattr(self, f.attname) for f in saved},
+        }
 
     class Meta:
         db_table = "project_profile"

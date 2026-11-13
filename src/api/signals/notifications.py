@@ -1,5 +1,6 @@
 from django import urls
 from django.conf import settings
+from django.db.models import Q
 from django.db.models.signals import m2m_changed, post_delete, post_save
 from django.dispatch import receiver
 
@@ -7,10 +8,11 @@ from ..models import BaseAttributeModel, Project, ProjectProfile, Tag
 from ..notifications import (
     notify_admins_change,
     notify_admins_project_change,
+    notify_profile,
     notify_project_users,
 )
 from ..utils import get_subclasses
-from ..utils.email import mermaid_email
+from ..utils.email import emails_with_accounts, mermaid_email
 
 __all__ = (
     "notify_admins_project_instance_change",
@@ -99,12 +101,23 @@ def notify_admins_project_tags_change(sender, instance, action, reverse, model, 
 
 @receiver(post_save, sender=ProjectProfile)
 def notify_admins_new_admin(sender, instance, created, **kwargs):
-    if instance.role >= ProjectProfile.ADMIN:
+    if created:
+        if instance.role >= ProjectProfile.ADMIN:
+            notify_admins_change(instance, "add")
+        return
+    if not hasattr(instance, "_old_values"):
+        return
+    update_fields = kwargs.get("update_fields")
+    if update_fields is not None and "role" not in update_fields:
+        return
+
+    old_role = instance._old_values.get("role")
+    if old_role is None or old_role == instance.role:
+        return
+    if instance.role >= ProjectProfile.ADMIN > old_role:
         notify_admins_change(instance, "add")
-    elif not created and hasattr(instance, "_old_values"):
-        old_role = instance._old_values.get("role")
-        if old_role >= ProjectProfile.ADMIN:
-            notify_admins_change(instance, "remove")
+    elif old_role >= ProjectProfile.ADMIN > instance.role:
+        notify_admins_change(instance, "remove")
 
 
 @receiver(post_save, sender=ProjectProfile)
@@ -113,18 +126,35 @@ def notify_new_project_user(sender, instance, created, **kwargs):
         return
 
     subject = f"User added to {instance.project.name}"
+    admin_profile = instance.updated_by
     context = {
         "project_profile": instance,
-        "admin_profile": instance.updated_by,
+        "admin_profile": admin_profile,
         "added_removed": "added to",
+        "collect_project_url": settings.DEFAULT_DOMAIN_COLLECT,
     }
-    if instance.profile.num_account_connections == 0:
-        email_template = "emails/new_user_added_to_project.html"
-    else:
-        email_template = "emails/user_project_add_remove.html"
+    email_template = "emails/user_project_add_remove.html"
     notify_template = "notifications/user_project_add_remove.txt"
 
-    notify_project_users(instance.project, subject, email_template, notify_template, context)
+    # The added profile is always told once, even without an account (it may be a real person
+    # who hasn't signed up yet); other members are notified only if they have accounts.
+    if emails_with_accounts([instance.profile]):
+        new_user_template = email_template
+    else:
+        new_user_template = "emails/new_user_added_to_project.html"
+    reply_to = [admin_profile.email] if admin_profile and admin_profile.email else None
+    notify_profile(
+        instance.profile, subject, new_user_template, notify_template, context, reply_to=reply_to
+    )
+
+    notify_project_users(
+        instance.project,
+        subject,
+        email_template,
+        notify_template,
+        context,
+        user_filters=~Q(id=instance.id),
+    )
 
 
 @receiver(post_delete, sender=ProjectProfile)
