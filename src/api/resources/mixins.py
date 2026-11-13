@@ -12,7 +12,7 @@ from rest_framework.decorators import action
 from rest_framework.response import Response
 
 from ..exceptions import check_uuid
-from ..models import BLEACHING_STATUS_CHOICES, Project
+from ..models import Project
 from ..notifications import notify_cr_owners_site_mr_deleted
 from ..permissions import ProjectDataAdminPermission
 from ..signals.classification import post_edit
@@ -216,12 +216,6 @@ class OrFilterSetMixin:
 
     def char_lookup(self, queryset, name, value):
         return self.str_or_lookup(queryset, name, value, lookup_expr="icontains")
-
-    def bleaching_status_lookup(self, queryset, name, value):
-        # Cached observations store bleaching status names; accept choice IDs or names
-        names = dict((str(val), label) for val, label in BLEACHING_STATUS_CHOICES)
-        value = [names.get(str(v).strip(), v) for v in value]
-        return self.str_or_lookup(queryset, name, value)
 
     def json_id_lookup(self, queryset, name, value):
         return self.str_or_lookup(queryset, name, value, "id", "contains")

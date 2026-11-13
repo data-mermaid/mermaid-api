@@ -122,6 +122,19 @@ def test_summary_sample_event_fields_param_valid(api_client_public):
     assert "results" in response.json()
 
 
+def _summary_benthicpit(api_client):
+    for project in Project.objects.all():
+        update_cache(project.pk, skip_test_project=False, skip_cached_files=True)
+
+    url = reverse("summarysampleevent-list")
+    response_data = api_client.get(url, None, format="json").json()
+    return next(
+        r["protocols"]["benthicpit"]
+        for r in response_data["results"]
+        if "benthicpit" in r["protocols"]
+    )
+
+
 def test_summary_sample_event_benthicpit_bleaching(
     db_setup,
     api_client1,
@@ -138,22 +151,23 @@ def test_summary_sample_event_benthicpit_bleaching(
     obs_benthic_pit1_2.save()
     obs_benthic_pit1_3.bleaching_status = BLEACHING_STATUS_NORMAL
     obs_benthic_pit1_3.save()
-    for project in Project.objects.all():
-        update_cache(project.pk, skip_test_project=False, skip_cached_files=True)
 
-    url = reverse("summarysampleevent-list")
-    response_data = api_client1.get(url, None, format="json").json()
-    benthicpit = next(
-        r["protocols"]["benthicpit"]
-        for r in response_data["results"]
-        if "benthicpit" in r["protocols"]
-    )
+    benthicpit = _summary_benthicpit(api_client1)
 
     assert benthicpit["bleaching_sample_unit_count"] == 1
-    assert benthicpit["percent_bleached_hard_coral_avg"]["bleached"] == 50.0
-    assert benthicpit["percent_bleached_hard_coral_avg"]["pale"] == 50.0
-    assert benthicpit["percent_bleached_total_coral_avg"]["bleached"] == 50.0
-    assert "percent_bleached_soft_coral_avg" not in benthicpit
+    assert benthicpit["bleaching_hard_coral_sample_unit_count"] == 1
+    assert benthicpit["bleaching_soft_coral_sample_unit_count"] == 0
+    assert benthicpit["bleaching_hard_coral_points"] == 2
+    hard = benthicpit["percent_bleached_hard_coral"]
+    assert hard["pale"] == 50.0
+    assert hard["normal"] == 50.0
+    assert hard["fully bleached"] == 0.0
+    # SE objects have no combined `bleached` key, and total coral is not reported
+    assert "bleached" not in hard
+    assert "percent_bleached_total_coral" not in benthicpit
+    # No soft coral with a status: null (stripped), not 0
+    assert "bleaching_soft_coral_points" not in benthicpit
+    assert "percent_bleached_soft_coral" not in benthicpit
 
 
 def test_summary_sample_event_benthicpit_bleaching_no_statuses(
@@ -168,22 +182,16 @@ def test_summary_sample_event_benthicpit_bleaching_no_statuses(
     # Bleaching was assessed but every coral status left blank: the SU still counts
     benthic_pit1.include_bleaching = True
     benthic_pit1.save()
-    for project in Project.objects.all():
-        update_cache(project.pk, skip_test_project=False, skip_cached_files=True)
 
-    url = reverse("summarysampleevent-list")
-    response_data = api_client1.get(url, None, format="json").json()
-    benthicpit = next(
-        r["protocols"]["benthicpit"]
-        for r in response_data["results"]
-        if "benthicpit" in r["protocols"]
-    )
+    benthicpit = _summary_benthicpit(api_client1)
 
     assert benthicpit["bleaching_sample_unit_count"] == 1
-    assert "percent_bleached_total_coral_avg" not in benthicpit
+    assert benthicpit["bleaching_hard_coral_sample_unit_count"] == 0
+    assert "bleaching_hard_coral_points" not in benthicpit
+    assert "percent_bleached_hard_coral" not in benthicpit
 
 
-def test_summary_sample_event_benthicpit_bleaching_avg_denominator(
+def test_summary_sample_event_benthicpit_bleaching_pooled(
     db_setup,
     api_client1,
     benthic_pit_project,
@@ -191,28 +199,60 @@ def test_summary_sample_event_benthicpit_bleaching_avg_denominator(
     obs_benthic_pit1_2,
     obs_benthic_pit1_3,
     benthic_pit1_2,
-    obs_benthic_pit1_2_1,
+    obs_benthic_pit1_2_3,
+    obs_benthic_pit1_2_4,
 ):
-    # Two SUs assessed for bleaching; only benthic_pit1 has coral, so benthic_pit1_2 counts as 0
+    # SU1: 1 hard coral point with a status (pale) -> 100% pale.
+    # SU2: 2 hard coral points, both normal -> 100% normal.
+    # Pooled: 1 of 3 points pale. A mean of SU %s would give 50%.
     for benthic_pit in (benthic_pit1, benthic_pit1_2):
         benthic_pit.include_bleaching = True
         benthic_pit.save()
     obs_benthic_pit1_2.bleaching_status = BLEACHING_STATUS_PALE
     obs_benthic_pit1_2.save()
-    obs_benthic_pit1_3.bleaching_status = BLEACHING_STATUS_NORMAL
-    obs_benthic_pit1_3.save()
-    for project in Project.objects.all():
-        update_cache(project.pk, skip_test_project=False, skip_cached_files=True)
+    for obs in (obs_benthic_pit1_2_3, obs_benthic_pit1_2_4):
+        obs.bleaching_status = BLEACHING_STATUS_NORMAL
+        obs.save()
 
-    url = reverse("summarysampleevent-list")
-    response_data = api_client1.get(url, None, format="json").json()
-    benthicpit = next(
-        r["protocols"]["benthicpit"]
-        for r in response_data["results"]
-        if "benthicpit" in r["protocols"]
-    )
+    benthicpit = _summary_benthicpit(api_client1)
 
     assert benthicpit["bleaching_sample_unit_count"] == 2
-    assert benthicpit["percent_bleached_hard_coral_avg"]["bleached"] == 25.0
-    assert benthicpit["percent_bleached_hard_coral_avg"]["pale"] == 25.0
-    assert benthicpit["percent_bleached_hard_coral_avg"]["normal"] == 25.0
+    assert benthicpit["bleaching_hard_coral_sample_unit_count"] == 2
+    assert benthicpit["bleaching_hard_coral_points"] == 3
+    assert benthicpit["percent_bleached_hard_coral"]["pale"] == 33.33
+    assert benthicpit["percent_bleached_hard_coral"]["normal"] == 66.67
+    assert "percent_bleached_hard_coral_sd" not in benthicpit
+
+
+def test_summary_sample_event_benthicpit_bleaching_private(
+    db_setup,
+    api_client1,
+    project1,
+    benthic_pit_project,
+    benthic_pit1,
+    obs_benthic_pit1_2,
+    obs_benthic_pit1_3,
+):
+    # Private data policy: only sample_unit_count is shown, as with other protocols
+    project1.data_policy_benthicpit = Project.PRIVATE
+    project1.save()
+    benthic_pit1.include_bleaching = True
+    benthic_pit1.save()
+    obs_benthic_pit1_2.bleaching_status = BLEACHING_STATUS_PALE
+    obs_benthic_pit1_2.save()
+    obs_benthic_pit1_3.bleaching_status = BLEACHING_STATUS_NORMAL
+    obs_benthic_pit1_3.save()
+
+    benthicpit = _summary_benthicpit(api_client1)
+
+    assert benthicpit["sample_unit_count"] >= 1
+    for field in (
+        "bleaching_sample_unit_count",
+        "bleaching_hard_coral_sample_unit_count",
+        "bleaching_soft_coral_sample_unit_count",
+        "bleaching_hard_coral_points",
+        "bleaching_soft_coral_points",
+        "percent_bleached_hard_coral",
+        "percent_bleached_soft_coral",
+    ):
+        assert field not in benthicpit

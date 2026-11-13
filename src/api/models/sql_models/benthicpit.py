@@ -51,8 +51,8 @@ class BenthicPITObsSQLModel(BaseSUSQLModel):
                 gf.id AS growth_form_id,
                 gf.name AS growth_form,
                 tt.include_bleaching,
-                bs.name AS bleaching_status,
-                bs.val AS bleaching_status_val,
+                bs.val AS bleaching_status,
+                bs.name AS bleaching_status_name,
                 o.notes AS observation_notes
             FROM obs_benthicpit o
                 JOIN transectmethod_benthicpit tt ON o.benthicpit_id = tt.transectmethod_ptr_id
@@ -187,7 +187,8 @@ class BenthicPITObsSQLModel(BaseSUSQLModel):
     benthic_attribute = models.CharField(max_length=100)
     growth_form = models.CharField(max_length=100)
     include_bleaching = models.BooleanField(default=False)
-    bleaching_status = models.CharField(max_length=100, null=True, blank=True)
+    bleaching_status = models.PositiveSmallIntegerField(null=True, blank=True)
+    bleaching_status_name = models.CharField(max_length=100, null=True, blank=True)
     life_histories = models.JSONField(null=True, blank=True)
     observation_notes = models.TextField(blank=True)
     data_policy_benthicpit = models.CharField(max_length=50)
@@ -304,7 +305,7 @@ class BenthicPITSUSQLModel(BaseSUSQLModel):
         percent_cover_benthic_category,
         percent_cover_life_histories,
         benthicpit_su.include_bleaching,
-        {bleaching_su_columns_sql}
+        {bleaching_su_columns_sql('points')}
         FROM (
             SELECT pseudosu_id,
             jsonb_agg(DISTINCT sample_unit_id) AS sample_unit_ids,
@@ -360,9 +361,11 @@ class BenthicPITSUSQLModel(BaseSUSQLModel):
     percent_cover_benthic_category = models.JSONField(null=True, blank=True)
     percent_cover_life_histories = models.JSONField(null=True, blank=True)
     include_bleaching = models.BooleanField(default=False)
+    bleaching_hard_coral_points = models.PositiveIntegerField(null=True, blank=True)
+    bleaching_soft_coral_points = models.PositiveIntegerField(null=True, blank=True)
     percent_bleached_hard_coral = models.JSONField(null=True, blank=True)
     percent_bleached_soft_coral = models.JSONField(null=True, blank=True)
-    percent_bleached_total_coral = models.JSONField(null=True, blank=True)
+    bleaching_status_amounts = models.JSONField(null=True, blank=True)  # internal: exact SE pooling
     data_policy_benthicpit = models.CharField(max_length=50)
     pseudosu_id = models.UUIDField()
 
@@ -388,7 +391,7 @@ class BenthicPITSESQLModel(BaseSQLModel):
             ) AS su_observers
             GROUP BY sample_event_id
         ),
-        {bleaching_se_sql('benthicpit_su')}
+        {bleaching_se_sql('benthicpit_su', 'points')}
         SELECT benthicpit_su.sample_event_id AS id,
         {_se_fields},
         data_policy_benthicpit,
@@ -399,10 +402,13 @@ class BenthicPITSESQLModel(BaseSQLModel):
         percent_cover_benthic_category_sd,
         percent_cover_life_histories_avg,
         percent_cover_life_histories_sd,
-        COUNT(benthicpit_su.pseudosu_id) FILTER (WHERE benthicpit_su.include_bleaching) AS bleaching_sample_unit_count,
-        se_bleaching.percent_bleached_hard_coral_avg,
-        se_bleaching.percent_bleached_soft_coral_avg,
-        se_bleaching.percent_bleached_total_coral_avg
+        se_bleaching.bleaching_sample_unit_count,
+        se_bleaching.bleaching_hard_coral_sample_unit_count,
+        se_bleaching.bleaching_soft_coral_sample_unit_count,
+        se_bleaching.bleaching_hard_coral_points,
+        se_bleaching.bleaching_soft_coral_points,
+        se_bleaching.percent_bleached_hard_coral,
+        se_bleaching.percent_bleached_soft_coral
 
         FROM benthicpit_su
 
@@ -448,9 +454,13 @@ class BenthicPITSESQLModel(BaseSQLModel):
         percent_cover_benthic_category_sd,
         percent_cover_life_histories_avg,
         percent_cover_life_histories_sd,
-        se_bleaching.percent_bleached_hard_coral_avg,
-        se_bleaching.percent_bleached_soft_coral_avg,
-        se_bleaching.percent_bleached_total_coral_avg,
+        se_bleaching.bleaching_sample_unit_count,
+        se_bleaching.bleaching_hard_coral_sample_unit_count,
+        se_bleaching.bleaching_soft_coral_sample_unit_count,
+        se_bleaching.bleaching_hard_coral_points,
+        se_bleaching.bleaching_soft_coral_points,
+        se_bleaching.percent_bleached_hard_coral,
+        se_bleaching.percent_bleached_soft_coral,
         se_observers.observers
     """
 
@@ -480,9 +490,12 @@ class BenthicPITSESQLModel(BaseSQLModel):
     percent_cover_life_histories_avg = models.JSONField(null=True, blank=True)
     percent_cover_life_histories_sd = models.JSONField(null=True, blank=True)
     bleaching_sample_unit_count = models.PositiveSmallIntegerField(default=0)
-    percent_bleached_hard_coral_avg = models.JSONField(null=True, blank=True)
-    percent_bleached_soft_coral_avg = models.JSONField(null=True, blank=True)
-    percent_bleached_total_coral_avg = models.JSONField(null=True, blank=True)
+    bleaching_hard_coral_sample_unit_count = models.PositiveSmallIntegerField(default=0)
+    bleaching_soft_coral_sample_unit_count = models.PositiveSmallIntegerField(default=0)
+    bleaching_hard_coral_points = models.PositiveIntegerField(null=True, blank=True)
+    bleaching_soft_coral_points = models.PositiveIntegerField(null=True, blank=True)
+    percent_bleached_hard_coral = models.JSONField(null=True, blank=True)
+    percent_bleached_soft_coral = models.JSONField(null=True, blank=True)
     data_policy_benthicpit = models.CharField(max_length=50)
 
     class Meta:
