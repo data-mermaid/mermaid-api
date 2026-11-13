@@ -96,12 +96,15 @@ class ValidationRunner:
         new_validator_result: dict,
         existing_validator_results: dict | list[dict] | None,
     ):
-        if not existing_validator_results:
+        # An ignore only carries over to the same warning, so a check that now
+        # passes, errors, or warns about something else isn't hidden.
+        if not existing_validator_results or new_validator_result["status"] != WARN:
             return False
 
         return any(
             existing_vr["validation_id"] == new_validator_result["validation_id"]
             and existing_vr["status"] == IGNORE
+            and existing_vr.get("code") == new_validator_result.get("code")
             for existing_vr in existing_validator_results
         )
 
@@ -113,14 +116,44 @@ class ValidationRunner:
             set_value(self.results, key, results_list, delimiter=".")
         return results_list
 
+    @staticmethod
+    def _row_id(result):
+        context = result.get("context") or {}
+        return context.get("observation_id") or context.get("id")
+
+    def _index_by_row_id(self, existing_validation_result):
+        index = {}
+        for row in existing_validation_result or []:
+            for existing_vr in row:
+                row_id = self._row_id(existing_vr)
+                if row_id:
+                    index.setdefault(row_id, []).append(existing_vr)
+        return index
+
+    def _existing_row_results(self, res, n, existing_validation_result, existing_by_row_id):
+        # Match rows by id so ignores follow their observation when rows are
+        # deleted or reordered; fall back to position only between rows without one.
+        row_id = self._row_id(res)
+        if row_id:
+            return existing_by_row_id.get(row_id)
+        return [
+            existing_vr
+            for existing_vr in existing_validation_result[n]
+            if not self._row_id(existing_vr)
+        ]
+
     def _set_validator_list_result(self, results_list, result, existing_validation_result):
         statuses = []
+        existing_by_row_id = self._index_by_row_id(existing_validation_result)
         for n, res in enumerate(result):
             if len(results_list) == n:
                 results_list.append([])
 
             try:
-                is_ignored = self._check_is_ignored(res, existing_validation_result[n])
+                existing_row_results = self._existing_row_results(
+                    res, n, existing_validation_result, existing_by_row_id
+                )
+                is_ignored = self._check_is_ignored(res, existing_row_results)
                 res["status"] = IGNORE if is_ignored else res["status"]
             except (IndexError, TypeError):
                 is_ignored = False

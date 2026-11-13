@@ -831,11 +831,13 @@ class Notification(BaseModel):
     INFO = "info"
     WARNING = "warning"
     ERROR = "error"
+    RELEASE = "release"
 
     STATUSES = (
         (INFO, INFO),
         (WARNING, WARNING),
         (ERROR, ERROR),
+        (RELEASE, RELEASE),
     )
 
     title = models.CharField(max_length=200)

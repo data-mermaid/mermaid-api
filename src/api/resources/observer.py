@@ -39,7 +39,7 @@ class ObserverFilterSet(BaseAPIFilterSet):
 
 class ObserverViewSet(BaseProjectApiViewSet):
     serializer_class = ObserverSerializer
-    queryset = Observer.objects.all()
+    queryset = Observer.objects.select_related("profile")
     filterset_class = ObserverFilterSet
     search_fields = ["profile__first_name", "profile__last_name"]
 

@@ -7,14 +7,18 @@ from fractions import Fraction
 from unittest.mock import MagicMock, patch
 
 import pytest
-from PIL import Image as PILImage
+from PIL import Image as PILImage, ImageChops, ImageCms, ImageStat, JpegImagePlugin
 
 from api.models import BenthicTransect, QuadratCollection, QuadratTransect, SampleUnit
 from api.utils import get_subclasses, s3
 from api.utils.classification import (
+    MAX_JPEG_DIMENSION,
     _normalize_exif_value,
+    check_if_valid_image,
+    create_thumbnail,
     extract_datetime_stamp,
     extract_location,
+    save_normalized_imagefile,
     store_exif,
 )
 
@@ -110,6 +114,318 @@ def test_store_exif_png_with_exif_chunk():
     # Same fixture EXIF bytes as test_store_exif_jpeg: timestamp set, no GPS lat/lon.
     assert instance.photo_timestamp is not None
     assert instance.location is None
+
+
+def _normalize(file_bytes):
+    instance = _make_instance(file_bytes)
+    instance.image.name = "upload"
+    original_save = PILImage.Image.save
+    with patch.object(PILImage.Image, "save", autospec=True, side_effect=original_save) as save_spy:
+        save_normalized_imagefile(instance)
+    instance._normalized_image_buf.seek(0)
+    return PILImage.open(instance._normalized_image_buf), save_spy.call_args.kwargs
+
+
+def _encode(image, fmt):
+    buf = io.BytesIO()
+    image.save(buf, format=fmt)
+    return buf.getvalue()
+
+
+@pytest.mark.parametrize(
+    "mode, fmt",
+    [
+        ("RGB", "PNG"),
+        ("RGBA", "PNG"),
+        ("P", "PNG"),
+        ("L", "PNG"),
+        ("I;16", "PNG"),
+        ("RGB", "TIFF"),
+        ("RGB", "PPM"),
+        ("RGB", "BMP"),
+    ],
+)
+def test_save_normalized_imagefile_lossless_source_converts_to_full_chroma_jpeg(mode, fmt):
+    normalized, save_kwargs = _normalize(_encode(PILImage.new(mode, (64, 48)), fmt))
+
+    assert normalized.format == "JPEG"
+    assert normalized.mode == "RGB"
+    assert normalized.size == (64, 48)
+    assert save_kwargs == {"format": "JPEG", "quality": 75, "subsampling": 0}
+    # 0 == 4:4:4, i.e. no chroma subsampling
+    assert JpegImagePlugin.get_sampling(normalized) == 0
+
+
+@pytest.mark.parametrize("mode", ["RGB", "CMYK"])
+def test_save_normalized_imagefile_jpeg_source_uses_default_subsampling(mode):
+    normalized, save_kwargs = _normalize(_encode(PILImage.new(mode, (64, 48)), "JPEG"))
+
+    assert normalized.format == "JPEG"
+    assert normalized.mode == "RGB"
+    assert normalized.size == (64, 48)
+    assert save_kwargs == {"format": "JPEG", "quality": 75}
+    # 2 == 4:2:0, Pillow's default
+    assert JpegImagePlugin.get_sampling(normalized) == 2
+
+
+def test_save_normalized_imagefile_preserves_colour_closely():
+    source = PILImage.new("RGB", (64, 48))
+    # A smooth gradient, like real photo content; per-pixel noise is JPEG's worst case.
+    source.putdata([(x * 4, y * 5, (x + y) * 2) for y in range(48) for x in range(64)])
+
+    normalized, _ = _normalize(_encode(source, "PNG"))
+
+    diff = ImageChops.difference(source, normalized.convert("RGB"))
+    mean_abs_error = sum(ImageStat.Stat(diff).mean) / 3
+    assert mean_abs_error < 4
+
+
+def test_save_normalized_imagefile_composites_alpha_onto_white():
+    source = PILImage.new("RGBA", (64, 48), (255, 0, 0, 0))  # fully transparent red
+    for x in range(32, 64):
+        for y in range(48):
+            source.putpixel((x, y), (0, 0, 0, 128))  # half-transparent black
+
+    normalized, _ = _normalize(_encode(source, "PNG"))
+
+    for channel, expected in zip(normalized.getpixel((16, 24)), (255, 255, 255)):
+        assert abs(channel - expected) <= 2
+    for channel in normalized.getpixel((48, 24)):
+        assert abs(channel - 127) <= 3
+
+
+def test_save_normalized_imagefile_skips_compositing_fully_opaque_alpha():
+    source = PILImage.new("RGBA", (64, 48), (10, 120, 200, 255))
+
+    with patch.object(PILImage, "alpha_composite", wraps=PILImage.alpha_composite) as composite:
+        normalized, _ = _normalize(_encode(source, "PNG"))
+
+    composite.assert_not_called()
+    for channel, expected in zip(normalized.getpixel((32, 24)), (10, 120, 200)):
+        assert abs(channel - expected) <= 3
+
+
+def test_save_normalized_imagefile_orients_transparent_palette_image():
+    # Left half transparent, right half opaque black; Orientation 6 rotates 90° CW,
+    # which moves the transparent half to the top.
+    source = PILImage.new("P", (64, 48), 1)
+    source.putpalette([0, 0, 0] * 256)
+    source.paste(0, (0, 0, 32, 48))
+    exif = source.getexif()
+    exif[274] = 6
+    buf = io.BytesIO()
+    source.save(buf, format="PNG", transparency=0, exif=exif)
+
+    normalized, _ = _normalize(buf.getvalue())
+
+    assert normalized.size == (48, 64)
+    assert all(abs(c - 255) <= 2 for c in normalized.getpixel((24, 16)))
+    assert all(c <= 3 for c in normalized.getpixel((24, 48)))
+
+
+def test_save_normalized_imagefile_composites_palette_transparency():
+    source = PILImage.new("P", (64, 48), 0)
+    source.putpalette([0, 0, 0] * 256)
+    buf = io.BytesIO()
+    source.save(buf, format="PNG", transparency=0)
+
+    normalized, _ = _normalize(buf.getvalue())
+
+    for channel in normalized.getpixel((32, 24)):
+        assert abs(channel - 255) <= 2
+
+
+def _i16_png(values, **save_kwargs):
+    source = PILImage.new("I;16", (len(values) * 8, 8))
+    # paste(int) writes wrong values into I;16, so set each pixel explicitly.
+    for x in range(source.width):
+        for y in range(source.height):
+            source.putpixel((x, y), values[x // 8])
+    buf = io.BytesIO()
+    source.save(buf, format="PNG", **save_kwargs)
+    return buf.getvalue()
+
+
+def test_save_normalized_imagefile_scales_16bit_greyscale():
+    values = [0, 1000, 16384, 32768, 49152, 65535]
+
+    normalized, _ = _normalize(_i16_png(values))
+
+    for i, value in enumerate(values):
+        r, g, b = normalized.getpixel((i * 8 + 4, 4))
+        assert r == g == b or max(r, g, b) - min(r, g, b) <= 2
+        assert abs(r - value // 256) <= 3
+
+
+def test_save_normalized_imagefile_dim_16bit_keeps_16bit_range():
+    # 16-bit data has a fixed 0-65535 range, so values under 256 stay near black
+    # instead of being stretched as if the image were 8-bit.
+    normalized, _ = _normalize(_i16_png([0, 200]))
+
+    assert all(c <= 3 for c in normalized.getpixel((12, 4)))
+
+
+def test_save_normalized_imagefile_16bit_transparency_key_becomes_background():
+    # 1000 is the transparent key; 40000 is opaque mid-grey (~156).
+    normalized, _ = _normalize(_i16_png([1000, 40000], transparency=1000))
+
+    assert all(abs(c - 255) <= 2 for c in normalized.getpixel((4, 4)))
+    assert all(abs(c - 40000 // 256) <= 3 for c in normalized.getpixel((12, 4)))
+
+
+def _greyscale_tiff(mode, values):
+    source = PILImage.new(mode, (len(values) * 8, 8))
+    source.putdata([values[x // 8] for _ in range(8) for x in range(source.width)])
+    buf = io.BytesIO()
+    source.save(buf, format="TIFF")
+    return buf.getvalue()
+
+
+def _assert_grey_levels(normalized, expected):
+    for i, level in enumerate(expected):
+        r, g, b = normalized.getpixel((i * 8 + 4, 4))
+        assert max(r, g, b) - min(r, g, b) <= 2
+        assert abs(r - level) <= 3
+
+
+@pytest.mark.parametrize(
+    "mode, values, expected",
+    [
+        # 32-bit integer data above 16 bits: scaled by the brightest pixel.
+        ("I", [0, 1_000_000, 2_000_000, 4_000_000], [0, 64, 128, 255]),
+        # 32-bit integer data that holds 16-bit values.
+        ("I", [0, 16384, 32768, 65535], [0, 64, 128, 255]),
+        # 32-bit integer data that holds 8-bit values: unchanged.
+        ("I", [0, 64, 128, 255], [0, 64, 128, 255]),
+        # Negative values become black.
+        ("I", [-1000, 0, 65535], [0, 0, 255]),
+        # Float data in 0-1.
+        ("F", [0.0, 0.25, 0.5, 1.0], [0, 64, 128, 255]),
+        # Float data above 1.
+        ("F", [0.0, 1000.0, 2000.0, 4000.0], [0, 4, 8, 16]),
+    ],
+)
+def test_save_normalized_imagefile_scales_32bit_and_float_greyscale(mode, values, expected):
+    normalized, _ = _normalize(_greyscale_tiff(mode, values))
+
+    assert normalized.mode == "RGB"
+    _assert_grey_levels(normalized, expected)
+
+
+def _icc_profile(colour_space=b"RGB "):
+    profile = bytearray(ImageCms.ImageCmsProfile(ImageCms.createProfile("sRGB")).tobytes())
+    profile[16:20] = colour_space
+    return bytes(profile)
+
+
+@pytest.mark.parametrize(
+    "mode, fmt", [("RGB", "PNG"), ("RGBA", "PNG"), ("P", "PNG"), ("RGB", "TIFF")]
+)
+def test_save_normalized_imagefile_keeps_rgb_icc_profile_from_lossless_source(mode, fmt):
+    profile = _icc_profile()
+    buf = io.BytesIO()
+    PILImage.new(mode, (64, 48)).save(buf, format=fmt, icc_profile=profile)
+
+    normalized, save_kwargs = _normalize(buf.getvalue())
+
+    assert save_kwargs["icc_profile"] == profile
+    assert normalized.info.get("icc_profile") == profile
+
+
+def test_save_normalized_imagefile_lossless_webp_keeps_full_chroma_and_icc_profile():
+    profile = _icc_profile()
+    buf = io.BytesIO()
+    PILImage.new("RGB", (64, 48)).save(buf, format="WEBP", lossless=True, icc_profile=profile)
+
+    normalized, save_kwargs = _normalize(buf.getvalue())
+
+    assert save_kwargs["subsampling"] == 0
+    assert JpegImagePlugin.get_sampling(normalized) == 0
+    assert normalized.info.get("icc_profile") == profile
+
+
+def test_save_normalized_imagefile_drops_icc_profile_from_jpeg_source():
+    buf = io.BytesIO()
+    PILImage.new("RGB", (64, 48)).save(buf, format="JPEG", icc_profile=_icc_profile())
+
+    normalized, save_kwargs = _normalize(buf.getvalue())
+
+    assert "icc_profile" not in save_kwargs
+    assert "icc_profile" not in normalized.info
+
+
+def test_save_normalized_imagefile_drops_non_rgb_icc_profile():
+    buf = io.BytesIO()
+    PILImage.new("CMYK", (64, 48)).save(buf, format="TIFF", icc_profile=_icc_profile(b"CMYK"))
+
+    normalized, save_kwargs = _normalize(buf.getvalue())
+
+    assert "icc_profile" not in save_kwargs
+    assert "icc_profile" not in normalized.info
+
+
+@pytest.mark.parametrize("size", [(MAX_JPEG_DIMENSION + 1, 10), (10, MAX_JPEG_DIMENSION + 1)])
+def test_check_if_valid_image_rejects_side_too_long_for_jpeg(size):
+    instance = _make_instance(_encode(PILImage.new("L", size), "PNG"))
+
+    with pytest.raises(ValueError, match="Maximum width and height"):
+        check_if_valid_image(instance)
+
+
+def test_check_if_valid_image_accepts_max_jpeg_side():
+    instance = _make_instance(_encode(PILImage.new("L", (MAX_JPEG_DIMENSION, 10)), "PNG"))
+
+    check_if_valid_image(instance)
+
+
+def test_create_thumbnail_matches_normalized_image():
+    profile = _icc_profile()
+    buf = io.BytesIO()
+    PILImage.new("RGB", (1000, 800)).save(buf, format="PNG", icc_profile=profile)
+    instance = _make_instance(buf.getvalue())
+    instance.image.name = "upload"
+    save_normalized_imagefile(instance)
+    instance.name = "image.jpg"
+
+    thumb_file = create_thumbnail(instance, image_buf=instance._normalized_image_buf)
+    thumb = PILImage.open(io.BytesIO(thumb_file.read()))
+
+    assert thumb_file.name == "image_thumbnail.jpg"
+    assert thumb.format == "JPEG"
+    assert thumb.size == (500, 400)
+    assert JpegImagePlugin.get_sampling(thumb) == 0
+    assert thumb.info.get("icc_profile") == profile
+
+
+def test_create_thumbnail_of_jpeg_upload_matches_normalized_image():
+    buf = io.BytesIO()
+    PILImage.new("RGB", (1000, 800)).save(buf, format="JPEG", icc_profile=_icc_profile())
+    instance = _make_instance(buf.getvalue())
+    instance.image.name = "upload"
+    save_normalized_imagefile(instance)
+    instance.name = "image.jpg"
+
+    thumb_file = create_thumbnail(instance, image_buf=instance._normalized_image_buf)
+    thumb = PILImage.open(io.BytesIO(thumb_file.read()))
+
+    assert thumb.size == (500, 400)
+    # 2 == 4:2:0, the same as the stored image
+    assert JpegImagePlugin.get_sampling(thumb) == 2
+    assert "icc_profile" not in thumb.info
+
+
+def test_save_normalized_imagefile_jpeg_still_applies_orientation():
+    source = PILImage.new("RGB", (64, 48))
+    exif = source.getexif()
+    exif[274] = 6  # Orientation: rotate 90° CW to display
+    buf = io.BytesIO()
+    source.save(buf, format="JPEG", exif=exif)
+
+    normalized, _ = _normalize(buf.getvalue())
+
+    assert normalized.format == "JPEG"
+    assert normalized.size == (48, 64)
+    assert "exif" not in normalized.info
 
 
 def test_extract_datetime_stamp_gps_priority():
