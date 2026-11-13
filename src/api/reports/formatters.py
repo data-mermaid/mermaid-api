@@ -1,4 +1,4 @@
-from api.models import BLEACHING_PERCENT_KEYS, Project
+from api.models import BLEACHING_PERCENT_KEYS, BLEACHING_SE_PERCENT_KEYS, Project
 
 DATA_POLICIES = dict(Project.DATA_POLICIES)
 # Separator for multi-value fields in tabular exports; values (e.g. tag names) may contain commas
@@ -142,6 +142,12 @@ def to_percent_cover(value, field, row, serializer_instance):
 def to_bleaching_percents(value, field, row, serializer_instance):
     # jsonb doesn't keep key order; tabular columns follow BLEACHING_PERCENT_KEYS
     return {key: value.get(key) for key in BLEACHING_PERCENT_KEYS}
+
+
+@handle_none()
+def to_bleaching_se_percents(value, field, row, serializer_instance):
+    # SE objects have no `bleached` key; tabular columns follow BLEACHING_SE_PERCENT_KEYS
+    return {key: value.get(key) for key in BLEACHING_SE_PERCENT_KEYS}
 
 
 def to_yesno(value, field, row, serializer_instance):

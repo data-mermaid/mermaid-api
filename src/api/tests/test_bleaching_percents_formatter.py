@@ -1,5 +1,5 @@
 from api.reports.csv_report import _flatten_json_columns
-from api.reports.formatters import to_bleaching_percents
+from api.reports.formatters import to_bleaching_percents, to_bleaching_se_percents
 
 
 def test_to_bleaching_percents_orders_keys_by_status_val():
@@ -44,3 +44,18 @@ def test_bleaching_percents_csv_column_order():
         "percent_bleached_hard_coral_fully bleached",
         "percent_bleached_hard_coral_recent bleaching mortality",
     ]
+
+
+def test_to_bleaching_se_percents_has_no_bleached_key():
+    value = {"pale": 10.0, "normal": 90.0, "bleached": 10.0}
+
+    result = to_bleaching_se_percents(value, None, None, None)
+
+    assert list(result) == [
+        "normal",
+        "pale",
+        "partially bleached",
+        "fully bleached",
+        "recent bleaching mortality",
+    ]
+    assert result["partially bleached"] is None
