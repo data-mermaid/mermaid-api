@@ -42,6 +42,10 @@ class BaseRegionValidator(BaseValidator):
             qs = qs.select_related(
                 "fishgrouping", "fishfamily", "fishgenus", "fishspecies"
             ).prefetch_related("fishgrouping__regions", "fishspecies__regions")
+        else:
+            # BenthicAttribute.regions is a direct M2M field; prefetch it so
+            # .regions.all() below doesn't run one query per attribute.
+            qs = qs.prefetch_related("regions")
 
         result = {}
         for attr in qs:

@@ -1,6 +1,15 @@
 import pytest
+from django.db import connection
+from django.test.utils import CaptureQueriesContext
 
-from api.models import FishAttribute, FishFamily, FishGenus, FishSpecies
+from api.models import (
+    SUPERUSER_APPROVED,
+    BenthicAttribute,
+    FishAttribute,
+    FishFamily,
+    FishGenus,
+    FishSpecies,
+)
 from api.resources.collect_record import CollectRecordSerializer
 from api.submission.validations import OK
 from api.submission.validations.validators import RegionValidator
@@ -58,3 +67,46 @@ def test_region_validator_species_with_no_regions_does_not_crash(
 
     for result in results:
         assert result.status == OK
+
+
+def _get_benthic_validator():
+    return RegionValidator(
+        attribute_model_class=BenthicAttribute,
+        site_path="data.sample_event.site",
+        observations_path="data.obs_benthic_pits",
+        observation_attribute_path="attribute",
+    )
+
+
+def _count_benthic_region_queries(record, num_attributes, region):
+    attributes = []
+    for n in range(num_attributes):
+        ba = BenthicAttribute.objects.create(
+            status=SUPERUSER_APPROVED, name=f"Region Query Attribute {num_attributes}-{n}"
+        )
+        ba.regions.add(region)
+        attributes.append(ba)
+
+    record["data"]["obs_benthic_pits"] = [
+        {"attribute": str(ba.pk), "interval": (i + 1) * 5} for i, ba in enumerate(attributes)
+    ]
+
+    validator = _get_benthic_validator()
+    with CaptureQueriesContext(connection) as ctx:
+        results = validator(record)
+
+    assert len(results) == num_attributes
+    for result in results:
+        assert result.status == OK
+    return len(ctx.captured_queries)
+
+
+def test_region_validator_benthic_attribute_query_count_constant(
+    valid_benthic_pit_collect_record, region1
+):
+    record = CollectRecordSerializer(instance=valid_benthic_pit_collect_record).data
+
+    few = _count_benthic_region_queries(record, 2, region1)
+    many = _count_benthic_region_queries(record, 8, region1)
+
+    assert few == many
