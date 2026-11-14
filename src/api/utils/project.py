@@ -440,8 +440,8 @@ def _create_submitted_sample_unit_method_summary(model_cls, project):
         f"{sample_unit_name}__sample_event",
         f"{sample_unit_name}__sample_event__site",
         f"{sample_unit_name}__sample_event__management",
-        "updated_by",
-    ).prefetch_related("observers")
+        f"{sample_unit_name}__updated_by",
+    ).prefetch_related("observers__profile")
     queryset = queryset.filter(**qry_filter)
 
     for record in queryset:
