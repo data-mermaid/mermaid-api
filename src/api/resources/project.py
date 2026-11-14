@@ -143,10 +143,10 @@ class BaseProjectSerializer(DynamicFieldsMixin, BaseAPISerializer):
         return [pp.profile_id for pp in profiles]
 
     def get_project_admins(self, obj):
-        # iterate the prefetched profiles; .filter() would bypass the prefetch cache
+        # iterate the prefetched profiles (in name order); .filter() would bypass the cache
         return [
             {"id": str(pp.profile.id), "name": pp.profile.full_name}
-            for pp in obj.profiles.all()
+            for pp in self._get_profiles(obj)
             if pp.role == ProjectProfile.ADMIN
         ]
 
@@ -410,16 +410,24 @@ class ProjectViewSet(BaseApiViewSet):
                 "updated_by",
             )
             .prefetch_related(
-                "profiles",
-                "profiles__profile",
-                "sites",
-                "sites__country",
+                # get_countries and get_num_sites only need the country name and row count
+                Prefetch(
+                    "sites",
+                    queryset=Site.objects.only("id", "project_id", "country_id").select_related(
+                        "country"
+                    ),
+                ),
                 "tags",
+                # the only profiles prefetch: members, admins and citations all read it
                 Prefetch(
                     "profiles",
-                    queryset=ProjectProfile.objects.select_related("profile").order_by(
-                        "profile__last_name", "profile__first_name"
-                    ),
+                    queryset=ProjectProfile.objects.select_related("profile")
+                    .prefetch_related(
+                        # read by Profile.full_name via num_account_connections
+                        # for unnamed profiles
+                        "profile__authusers"
+                    )
+                    .order_by("profile__last_name", "profile__first_name"),
                     to_attr="profiles_by_name",
                 ),
             )

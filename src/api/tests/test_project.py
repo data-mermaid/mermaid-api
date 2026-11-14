@@ -2,10 +2,14 @@ import uuid
 from contextlib import contextmanager
 from unittest.mock import patch
 
+from django.contrib.gis.geos import Point as GEOSPoint
+from django.db import connection
 from django.db.models.signals import post_save, pre_save
+from django.test.utils import CaptureQueriesContext
 from django.urls import reverse
 
 from api.models import (
+    AuthUser,
     BeltFish,
     BenthicAttribute,
     BenthicLIT,
@@ -549,3 +553,143 @@ def test_project_serializer_member_and_admin_fields(
     # project_admins = ADMIN role only; the COLLECTOR (project_profile2) is excluded
     assert [a["id"] for a in data["project_admins"]] == [str(project_profile1.profile_id)]
     assert data["project_admins"][0]["name"] == project_profile1.profile.full_name
+
+
+def _add_projects_with_unnamed_admins(start, count):
+    for i in range(start, start + count):
+        email = f"unnamed{i}@mermaidcollect.org"
+        profile = Profile.objects.create(email=email)
+        AuthUser.objects.create(profile=profile, user_id=f"test|{email}")
+        project = Project.objects.create(name=f"Unnamed Admin Project {i}", status=Project.OPEN)
+        ProjectProfile.objects.create(project=project, profile=profile, role=ProjectProfile.ADMIN)
+
+
+def _get_project_list(api_client):
+    with CaptureQueriesContext(connection) as ctx:
+        response = api_client.get("/v1/projects/?showall&limit=1000", format="json")
+    assert response.status_code == 200
+    return response.json(), len(ctx.captured_queries)
+
+
+def test_project_list_query_count_independent_of_unnamed_admins(api_client1, project_profile1):
+    """Profile.full_name falls back to num_account_connections for profiles without a
+    first or last name; the project list must read it from the authusers prefetch
+    instead of running one COUNT per admin profile."""
+    _add_projects_with_unnamed_admins(0, 2)
+    data, num_queries_small = _get_project_list(api_client1)
+    names = {
+        a["name"] for p in data["results"] for a in p["project_admins"] if "unnamed" in a["name"]
+    }
+    assert names == {"unnamed0", "unnamed1"}
+
+    _add_projects_with_unnamed_admins(2, 5)
+    data, num_queries_large = _get_project_list(api_client1)
+    names = {
+        a["name"] for p in data["results"] for a in p["project_admins"] if "unnamed" in a["name"]
+    }
+    assert names == {f"unnamed{i}" for i in range(7)}
+
+    assert num_queries_large == num_queries_small
+
+
+def test_num_account_connections_uses_prefetch(profile1, django_assert_num_queries):
+    profile = Profile.objects.prefetch_related("authusers").get(pk=profile1.pk)
+    with django_assert_num_queries(0):
+        assert profile.num_account_connections == 1
+
+    pending = Profile.objects.prefetch_related("authusers").get(
+        pk=Profile.objects.create(email="pending@mermaidcollect.org").pk
+    )
+    with django_assert_num_queries(0):
+        assert pending.num_account_connections == 0
+        assert pending.full_name == "(pending user)"
+
+
+def _add_projects_with_sites_and_admins(start, count, countries, site_choices):
+    """Each project gets one site per country, a named admin, a nameless admin with an
+    account, a nameless pending admin (no account) and a collector. Returns the expected
+    project_admins, countries and num_sites output by project name."""
+    reef_type, reef_zone, exposure = site_choices
+    expected = {}
+    for i in range(start, start + count):
+        project = Project.objects.create(name=f"Showall Project {i}", status=Project.OPEN)
+        for n, country in enumerate(countries):
+            Site.objects.create(
+                project=project,
+                name=f"Showall Site {i}-{n}",
+                location=GEOSPoint(1 + n, 1 + n, srid=4326),
+                country=country,
+                reef_type=reef_type,
+                reef_zone=reef_zone,
+                exposure=exposure,
+            )
+
+        named = Profile.objects.create(
+            email=f"named{i}@mermaidcollect.org", first_name="Named", last_name=f"Admin{i}"
+        )
+        nameless = Profile.objects.create(email=f"nameless{i}@mermaidcollect.org")
+        AuthUser.objects.create(profile=nameless, user_id=f"test|nameless{i}")
+        pending = Profile.objects.create(email=f"pending{i}@mermaidcollect.org")
+        collector = Profile.objects.create(
+            email=f"collector{i}@mermaidcollect.org", first_name="Col", last_name=f"Lector{i}"
+        )
+        for profile in (named, nameless, pending):
+            ProjectProfile.objects.create(
+                project=project, profile=profile, role=ProjectProfile.ADMIN
+            )
+        ProjectProfile.objects.create(
+            project=project, profile=collector, role=ProjectProfile.COLLECTOR
+        )
+
+        expected[project.name] = {
+            "project_admins": sorted(
+                [
+                    {"id": str(named.id), "name": f"Named Admin{i}"},
+                    {"id": str(nameless.id), "name": f"nameless{i}"},
+                    {"id": str(pending.id), "name": "(pending user)"},
+                ],
+                key=lambda a: a["id"],
+            ),
+            "countries": sorted(c.name for c in countries),
+            "num_sites": len(countries),
+        }
+    return expected
+
+
+def _assert_showall_output(data, expected):
+    by_name = {p["name"]: p for p in data["results"]}
+    for name, exp in expected.items():
+        project = by_name[name]
+        assert sorted(project["project_admins"], key=lambda a: a["id"]) == exp["project_admins"]
+        assert project["countries"] == exp["countries"]
+        assert project["num_sites"] == exp["num_sites"]
+
+
+def test_project_showall_list_query_count_constant(
+    api_client1,
+    project_profile1,
+    country1,
+    country2,
+    reef_type1,
+    reef_zone1,
+    reef_exposure1,
+    django_assert_max_num_queries,
+):
+    url = "/v1/projects/?showall&limit=1000"
+    countries = [country1, country2]
+    site_choices = (reef_type1, reef_zone1, reef_exposure1)
+
+    expected = _add_projects_with_sites_and_admins(0, 2, countries, site_choices)
+    with CaptureQueriesContext(connection) as ctx:
+        response = api_client1.get(url, format="json")
+    assert response.status_code == 200
+    _assert_showall_output(response.json(), expected)
+    num_queries_small = len(ctx.captured_queries)
+
+    expected.update(_add_projects_with_sites_and_admins(2, 6, countries, site_choices))
+    with django_assert_max_num_queries(num_queries_small):
+        response = api_client1.get(url, format="json")
+    assert response.status_code == 200
+    data = response.json()
+    assert len([p for p in data["results"] if p["name"].startswith("Showall")]) == 8
+    _assert_showall_output(data, expected)
