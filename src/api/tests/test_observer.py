@@ -1,3 +1,6 @@
+import warnings
+
+from django.core.paginator import UnorderedObjectListWarning
 from django.db import connection
 from django.test.utils import CaptureQueriesContext
 from django.urls import reverse
@@ -35,3 +38,17 @@ def test_observer_list_query_count_independent_of_unnamed_observers(
     assert sorted(o["profile_name"] for o in response.json()["results"]) == [
         f"unnamedobserver{i}" for i in range(5)
     ]
+
+
+def test_observer_list_is_ordered(db_setup, api_client1, project1, belt_fish1):
+    for rank in (3, 1, 2):
+        profile = Profile.objects.create(email=f"rank{rank}@mermaidcollect.org")
+        Observer.objects.create(transectmethod=belt_fish1, profile=profile, rank=rank)
+    url = reverse("observer-list", kwargs={"project_pk": str(project1.pk)})
+
+    with warnings.catch_warnings():
+        warnings.simplefilter("error", UnorderedObjectListWarning)
+        response = api_client1.get(url)
+
+    assert response.status_code == 200
+    assert [o["rank"] for o in response.json()["results"]] == [1, 2, 3]

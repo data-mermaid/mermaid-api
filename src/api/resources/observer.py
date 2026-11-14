@@ -43,6 +43,7 @@ class ObserverViewSet(BaseProjectApiViewSet):
     queryset = Observer.objects.select_related("profile").prefetch_related("profile__authusers")
     filterset_class = ObserverFilterSet
     search_fields = ["profile__first_name", "profile__last_name"]
+    ordering = ["transectmethod", "rank"]
 
     def perform_update(self, serializer):
         serializer.save()
