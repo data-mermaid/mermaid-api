@@ -412,6 +412,8 @@ class ProjectViewSet(BaseApiViewSet):
             .prefetch_related(
                 "profiles",
                 "profiles__profile",
+                # read by get_project_admins via Profile.full_name for unnamed profiles
+                "profiles__profile__authusers",
                 "sites",
                 "sites__country",
                 "tags",
