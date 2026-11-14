@@ -9,14 +9,17 @@ from django.test.utils import CaptureQueriesContext
 from django.urls import reverse
 
 from api.models import (
+    BENTHICLIT_PROTOCOL,
     AuthUser,
     BeltFish,
     BenthicAttribute,
     BenthicLIT,
     BenthicPhotoQuadratTransect,
+    BenthicTransect,
     Notification,
     ObsBenthicLIT,
     ObsBenthicPhotoQuadrat,
+    Observer,
     Profile,
     Project,
     ProjectProfile,
@@ -26,7 +29,11 @@ from api.models import (
 )
 from api.models.classification import Annotation, Image, Point
 from api.signals.classification import post_save_classification_image, pre_image_save
-from api.utils.project import copy_project_and_resources, delete_project
+from api.utils.project import (
+    copy_project_and_resources,
+    create_submitted_summary,
+    delete_project,
+)
 
 
 def _apply_mock_settings(mock_obj, project):
@@ -146,6 +153,54 @@ def test_project_summary(
         str(profile1.pk)
         in site_collecting_summary[site1_id]["sample_unit_methods"]["fishbelt"]["profile_summary"]
     )
+
+
+def _add_benthic_lits(template_transect, numbers, su_editor, record_editor, observer_profiles):
+    for number in numbers:
+        transect = BenthicTransect.objects.get(pk=template_transect.pk)
+        transect.pk = None
+        transect.number = number
+        transect.updated_by = su_editor
+        transect.save()
+        method = BenthicLIT.objects.create(transect=transect, updated_by=record_editor)
+        for profile in observer_profiles:
+            Observer.objects.create(transectmethod=method, profile=profile)
+
+
+def test_submitted_summary_query_count_constant(project1, site1, benthic_transect1):
+    su_editor = Profile.objects.create(
+        email="sueditor@mermaidcollect.org", first_name="Sample", last_name="Editor"
+    )
+    record_editor = Profile.objects.create(
+        email="recordeditor@mermaidcollect.org", first_name="Record", last_name="Editor"
+    )
+    observers = [
+        Profile.objects.create(
+            email=f"observer{i}@mermaidcollect.org", first_name="Obs", last_name=f"Erver{i}"
+        )
+        for i in range(2)
+    ]
+    benthic_transect1.updated_by = su_editor
+    benthic_transect1.save()
+
+    def get_summary():
+        with CaptureQueriesContext(connection) as ctx:
+            _, summary = create_submitted_summary(project1)
+        sus = summary[str(site1.pk)]["sample_unit_methods"][BENTHICLIT_PROTOCOL]
+        for su in sus:
+            # the sample unit's editor, not the BenthicLIT record's
+            assert su["updated_by"] == "Sample Editor"
+            assert sorted(su["observers"]) == ["Obs Erver0", "Obs Erver1"]
+        return len(sus), len(ctx.captured_queries)
+
+    _add_benthic_lits(benthic_transect1, [2, 3], su_editor, record_editor, observers)
+    num_sus_small, num_queries_small = get_summary()
+    assert num_sus_small == 2
+
+    _add_benthic_lits(benthic_transect1, range(4, 10), su_editor, record_editor, observers)
+    num_sus_large, num_queries_large = get_summary()
+    assert num_sus_large == 8
+    assert num_queries_large == num_queries_small
 
 
 def test_copy_project_and_resources(
