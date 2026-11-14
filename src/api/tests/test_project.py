@@ -2,10 +2,13 @@ import uuid
 from contextlib import contextmanager
 from unittest.mock import patch
 
+from django.db import connection
 from django.db.models.signals import post_save, pre_save
+from django.test.utils import CaptureQueriesContext
 from django.urls import reverse
 
 from api.models import (
+    AuthUser,
     BeltFish,
     BenthicAttribute,
     BenthicLIT,
@@ -549,3 +552,53 @@ def test_project_serializer_member_and_admin_fields(
     # project_admins = ADMIN role only; the COLLECTOR (project_profile2) is excluded
     assert [a["id"] for a in data["project_admins"]] == [str(project_profile1.profile_id)]
     assert data["project_admins"][0]["name"] == project_profile1.profile.full_name
+
+
+def _add_projects_with_unnamed_admins(start, count):
+    for i in range(start, start + count):
+        email = f"unnamed{i}@mermaidcollect.org"
+        profile = Profile.objects.create(email=email)
+        AuthUser.objects.create(profile=profile, user_id=f"test|{email}")
+        project = Project.objects.create(name=f"Unnamed Admin Project {i}", status=Project.OPEN)
+        ProjectProfile.objects.create(project=project, profile=profile, role=ProjectProfile.ADMIN)
+
+
+def _get_project_list(api_client):
+    with CaptureQueriesContext(connection) as ctx:
+        response = api_client.get("/v1/projects/?showall&limit=1000", format="json")
+    assert response.status_code == 200
+    return response.json(), len(ctx.captured_queries)
+
+
+def test_project_list_query_count_independent_of_unnamed_admins(api_client1, project_profile1):
+    """Profile.full_name falls back to num_account_connections for profiles without a
+    first or last name; the project list must read it from the authusers prefetch
+    instead of running one COUNT per admin profile."""
+    _add_projects_with_unnamed_admins(0, 2)
+    data, num_queries_small = _get_project_list(api_client1)
+    names = {
+        a["name"] for p in data["results"] for a in p["project_admins"] if "unnamed" in a["name"]
+    }
+    assert names == {"unnamed0", "unnamed1"}
+
+    _add_projects_with_unnamed_admins(2, 5)
+    data, num_queries_large = _get_project_list(api_client1)
+    names = {
+        a["name"] for p in data["results"] for a in p["project_admins"] if "unnamed" in a["name"]
+    }
+    assert names == {f"unnamed{i}" for i in range(7)}
+
+    assert num_queries_large == num_queries_small
+
+
+def test_num_account_connections_uses_prefetch(profile1, django_assert_num_queries):
+    profile = Profile.objects.prefetch_related("authusers").get(pk=profile1.pk)
+    with django_assert_num_queries(0):
+        assert profile.num_account_connections == 1
+
+    pending = Profile.objects.prefetch_related("authusers").get(
+        pk=Profile.objects.create(email="pending@mermaidcollect.org").pk
+    )
+    with django_assert_num_queries(0):
+        assert pending.num_account_connections == 0
+        assert pending.full_name == "(pending user)"
