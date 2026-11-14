@@ -5,7 +5,7 @@ from django.db import connection
 from django.test.utils import CaptureQueriesContext
 from django.urls import reverse
 
-from api.models import AuthUser, Observer, Profile
+from api.models import AuthUser, Observer, Profile, ProjectProfile
 
 
 def _add_unnamed_observers(start, count, transectmethod):
@@ -52,3 +52,41 @@ def test_observer_list_is_ordered(db_setup, api_client1, project1, belt_fish1):
 
     assert response.status_code == 200
     assert [o["rank"] for o in response.json()["results"]] == [1, 2, 3]
+
+
+def test_observer_list_includes_every_protocol(
+    db_setup,
+    api_client1,
+    project1,
+    project2,
+    profile1,
+    belt_fish1,
+    benthic_photo_quadrat_transect1,
+    belt_invert1,
+):
+    # belt_invert1 already has an observer (profile1)
+    Observer.objects.create(transectmethod=belt_fish1, profile=profile1)
+    pqt_observer = Observer.objects.create(
+        transectmethod=benthic_photo_quadrat_transect1, profile=profile1
+    )
+    url = reverse("observer-list", kwargs={"project_pk": str(project1.pk)})
+
+    response = api_client1.get(url)
+    assert response.status_code == 200
+    assert {o["transectmethod"] for o in response.json()["results"]} == {
+        str(belt_fish1.pk),
+        str(benthic_photo_quadrat_transect1.pk),
+        str(belt_invert1.pk),
+    }
+
+    detail_url = reverse(
+        "observer-detail", kwargs={"project_pk": str(project1.pk), "pk": str(pqt_observer.pk)}
+    )
+    assert api_client1.get(detail_url).status_code == 200
+
+    # another project sees none of project1's observers
+    ProjectProfile.objects.create(project=project2, profile=profile1, role=ProjectProfile.ADMIN)
+    url = reverse("observer-list", kwargs={"project_pk": str(project2.pk)})
+    response = api_client1.get(url)
+    assert response.status_code == 200
+    assert response.json()["results"] == []

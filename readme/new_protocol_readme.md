@@ -9,6 +9,7 @@
 - Create taxonomy/attribute models if the protocol has its own species hierarchy, using Django multi-table inheritance (MTI) from `BaseAttributeModel`; create subclasses directly (not the parent) when seeding — Django MTI auto-creates the parent row
 - Create Sample unit model (subclass of `Transect`)
 - Create Sample unit method model (subclass of `TransectMethod`); set `protocol`, `project_lookup`, and `transect` fields
+  - Subclass `TransectMethod` directly, and set `project_lookup` to the path from the method to its project (e.g. `transect__sample_event__site__project`). The project observers endpoint (`ObserverViewSet.limit_to_project`) finds methods through `TransectMethod.__subclasses__()` and filters each with its `project_lookup`, so there is no protocol list to update there (the submitted summary, `create_submitted_summary`, also uses `__subclasses__()`)
 - Create Observations model (subclass of `BaseModel, JSONMixin`); set `project_lookup`
 - Add data policy field to `Project` model
 - Update `CollectRecord.obs_keys` dict with new protocol key and observation key list

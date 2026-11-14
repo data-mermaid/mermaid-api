@@ -1,8 +1,7 @@
-from django.db.models import Q
 from rest_framework import serializers
 
 from ..exceptions import check_uuid
-from ..models import Observer
+from ..models import Observer, TransectMethod
 from .base import (
     BaseAPIFilterSet,
     BaseAPISerializer,
@@ -50,13 +49,13 @@ class ObserverViewSet(BaseProjectApiViewSet):
 
     def limit_to_project(self, request, *args, **kwargs):
         prj_pk = check_uuid(kwargs["project_pk"])
+        # One subquery per protocol, so new TransectMethod subclasses are included
+        # automatically; much faster than OR-ing joins across every protocol table.
+        method_ids = [
+            method_cls.objects.filter(**{method_cls.project_lookup: prj_pk}).values("pk")
+            for method_cls in TransectMethod.__subclasses__()
+        ]
         self.queryset = self.get_queryset().filter(
-            Q(transectmethod__benthiclit__transect__sample_event__site__project=prj_pk)
-            | Q(transectmethod__benthicpit__transect__sample_event__site__project=prj_pk)
-            | Q(transectmethod__habitatcomplexity__transect__sample_event__site__project=prj_pk)
-            | Q(transectmethod__beltfish__transect__sample_event__site__project=prj_pk)
-            | Q(
-                transectmethod__bleachingquadratcollection__quadrat__sample_event__site__project=prj_pk
-            )
+            transectmethod_id__in=method_ids[0].union(*method_ids[1:], all=True)
         )
         return self.queryset
