@@ -9,12 +9,11 @@
 - Create taxonomy/attribute models if the protocol has its own species hierarchy, using Django multi-table inheritance (MTI) from `BaseAttributeModel`; create subclasses directly (not the parent) when seeding — Django MTI auto-creates the parent row
 - Create Sample unit model (subclass of `Transect`)
 - Create Sample unit method model (subclass of `TransectMethod`); set `protocol`, `project_lookup`, and `transect` fields
-  - Subclass `TransectMethod` directly, and set `project_lookup` to the path from the method to its project (e.g. `transect__sample_event__site__project`). The project observers endpoint (`ObserverViewSet.limit_to_project`) finds methods through `TransectMethod.__subclasses__()` and filters each with its `project_lookup`, so there is no protocol list to update there (the submitted summary, `create_submitted_summary`, also uses `__subclasses__()`)
+  - Subclass `TransectMethod` (directly or through an abstract base), and set `project_lookup` to the path from the method to its project (e.g. `transect__sample_event__site__project`). Code that covers every protocol iterates `get_subclasses(TransectMethod)` instead of listing them, so there is nothing to update for: `TransectMethod.protocol`/`subclass`/`sample_unit`/`project_method_ids()`, the project observers endpoint (`ObserverViewSet`), the submitted records list (`SampleUnitMethodView`), the project sample unit count (`annotate_num_sample_units`) and the submitted summary (`create_submitted_summary`). These find the sample unit via `TransectMethod.sample_unit_field()`: the method needs exactly one `OneToOneField` to a `SampleUnit` subclass. `SampleUnitMethodView` reads `sample_event`, `depth`, `number` and size fields from it, and silently returns null for any the sample unit lacks
 - Create Observations model (subclass of `BaseModel, JSONMixin`); set `project_lookup`
 - Add data policy field to `Project` model
 - Update `CollectRecord.obs_keys` dict with new protocol key and observation key list
 - Update `CollectRecord.sample_unit` with new `elif` branch for the new protocol
-- Update `TransectMethod.protocol` and `TransectMethod.subclass` properties with new `elif hasattr(self, ...)` branch
 
 ## Admin
 
@@ -35,10 +34,6 @@
 
 - Add `_copy_[protocol]_transects(sample_event_id_map)` function in `src/api/utils/project.py`, mirroring the `_copy_fish_belt_transects` pattern (copy transect, method, observations, observers)
 - Call the new function from `_copy_submitted_data`
-
-## Project Resources
-
-- Update `annotate_num_sample_units()` in `src/api/resources/project.py` with a new UNION ALL branch counting sample units for the new protocol (joining through method → transect → sample event → site → project)
 
 ## Attribute Taxonomy API (if protocol has its own MTI taxonomy)
 
@@ -116,14 +111,8 @@ If the protocol introduces its own attribute/taxonomy hierarchy (Django MTI from
 - Add new function to support new protocol in summary report [summary_report.py](src/api/reports/summary_report.py)
 - Create a sample unit method endpoint viewset, example:
   - BenthicPhotoQuadratTransectMethodView
-- Update `src/api/resources/sampleunitmethods/sample_unit_methods.py` to include the new protocol in `SampleUnitMethodView`:
-  - Add `MACROINVERTEBRATE_PROTOCOL` (or equivalent) to the import from `...models`
-  - Add `select_related` entries for the new method and its transect/quadrat to `queryset`
-  - Add a `When(newmethod__id__isnull=False, then=Value(NEW_PROTOCOL))` to each of the seven `Case` annotations: `protocol_condition`, `site_name_condition`, `management_name_condition`, `sample_unit_number_condition`, `depth_condition`, `sample_date_condition`, `size_condition`
-  - Add a `When(newmethod__id__isnull=False, then="newmethod__transect__sample_event_id")` branch to the `sample_event_id_case` `Case` annotation in `get_serializer_context()` (used to populate `context["sample_events"]`)
-  - Add the `Q(newmethod__transect__sample_event_id__in=sample_event_ids)` branch to the `Q` filter in `_matching_transect_method_ids()`
-  - Handle the new protocol in `SampleUnitMethodSerializer.get_size()` to return the appropriate size dict
-  - Add an integration test in `src/api/tests/test_sample_unit_method.py` that GETs `sampleunitmethods/?protocol=<new_protocol>` and asserts `count == 1` and `results[0]["protocol"] == "<new_protocol>"`
+- `SampleUnitMethodView` derives `size`/`size_display` from the sample unit's `width`, `len_surveyed` or `quadrat_size`; a sample unit sized any other way needs `_size_display()` and `get_size()` updated
+- Add an integration test in `src/api/tests/test_sample_unit_method.py` that GETs `sampleunitmethods/?protocol=<new_protocol>` and asserts `count == 1`, `results[0]["protocol"] == "<new_protocol>"`, and non-null `site_name`, `sample_date`, `depth` and `size` (see `test_sampleunitmethods_list_includes_macroinvertebrate`)
 - Update api/urls.py with new viewsets, example:
 
 ```

@@ -19,7 +19,14 @@ class ObserverExtendedSerializer(ExtendedSerializer):
 
 
 class ObserverSerializer(BaseAPISerializer):
-    profile_name = serializers.ReadOnlyField()
+    profile_name = serializers.SerializerMethodField()
+
+    def get_profile_name(self, o):
+        # profile_name can COUNT the profile's authusers (nameless profiles); once per profile
+        names = self.context.setdefault("_profile_names", {})
+        if o.profile_id not in names:
+            names[o.profile_id] = o.profile_name
+        return names[o.profile_id]
 
     class Meta:
         model = Observer
@@ -38,8 +45,7 @@ class ObserverFilterSet(BaseAPIFilterSet):
 
 class ObserverViewSet(BaseProjectApiViewSet):
     serializer_class = ObserverSerializer
-    # profile_name falls back to Profile.num_account_connections for nameless profiles
-    queryset = Observer.objects.select_related("profile").prefetch_related("profile__authusers")
+    queryset = Observer.objects.select_related("profile")
     filterset_class = ObserverFilterSet
     search_fields = ["profile__first_name", "profile__last_name"]
     ordering = ["transectmethod", "rank"]
@@ -49,13 +55,7 @@ class ObserverViewSet(BaseProjectApiViewSet):
 
     def limit_to_project(self, request, *args, **kwargs):
         prj_pk = check_uuid(kwargs["project_pk"])
-        # One subquery per protocol, so new TransectMethod subclasses are included
-        # automatically; much faster than OR-ing joins across every protocol table.
-        method_ids = [
-            method_cls.objects.filter(**{method_cls.project_lookup: prj_pk}).values("pk")
-            for method_cls in TransectMethod.__subclasses__()
-        ]
         self.queryset = self.get_queryset().filter(
-            transectmethod_id__in=method_ids[0].union(*method_ids[1:], all=True)
+            transectmethod_id__in=TransectMethod.project_method_ids(prj_pk)
         )
         return self.queryset
