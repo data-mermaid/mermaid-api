@@ -444,6 +444,14 @@ def _create_submitted_sample_unit_method_summary(model_cls, project):
     ).prefetch_related("observers__profile")
     queryset = queryset.filter(**qry_filter)
 
+    # full_name can COUNT the profile's authusers (nameless profiles); once per profile per protocol
+    names = {}
+
+    def profile_name(profile):
+        if profile.pk not in names:
+            names[profile.pk] = profile.full_name
+        return names[profile.pk]
+
     for record in queryset:
         sample_unit = getattr(record, sample_unit_name)
         sample_event = sample_unit.sample_event
@@ -453,8 +461,8 @@ def _create_submitted_sample_unit_method_summary(model_cls, project):
         label = _get_sample_unit_method_label(record, sample_unit_name)
         updated_by = DEFAULT_UPDATED_BY
         if sample_unit.updated_by:
-            updated_by = sample_unit.updated_by.full_name
-        observers = [o.profile_name for o in record.observers.all()]
+            updated_by = profile_name(sample_unit.updated_by)
+        observers = [profile_name(o.profile) for o in record.observers.all()]
 
         if site_id not in summary:
             summary[site_id] = {"site_name": "", "sample_unit_methods": {protocol: []}}

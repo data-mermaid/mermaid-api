@@ -338,14 +338,16 @@ def _submitted_summary(project):
 
 
 def test_submitted_summary_query_count_independent_of_row_count(
-    db_setup, project1, site1, profile1, profile2, profile3, fishbelt_transect1
+    db_setup, project1, site1, profile1, fishbelt_transect1
 ):
-    # Named profiles only: a nameless profile's full_name runs an authusers COUNT.
     record_editor = Profile.objects.create(
         email="record-editor@mermaidcollect.org", first_name="Record", last_name="Editor"
     )
+    # A nameless profile's full_name runs an authusers COUNT; it must run once per profile.
+    nameless = Profile.objects.create(email="nameless@mermaidcollect.org")
+    AuthUser.objects.create(profile=nameless, user_id="test|nameless@mermaidcollect.org")
     add_rows = lambda start, count: _add_summary_belt_fishes(  # noqa: E731
-        start, count, fishbelt_transect1, [profile1, profile2], profile3, record_editor
+        start, count, fishbelt_transect1, [profile1, nameless], nameless, record_editor
     )
 
     add_rows(0, 2)
@@ -362,5 +364,5 @@ def test_submitted_summary_query_count_independent_of_row_count(
     assert protocols == ["fishbelt"]
     for record in records_3x:
         # The sample unit's editor, not the method record's.
-        assert record["updated_by"] == profile3.full_name
-        assert sorted(record["observers"]) == sorted([profile1.full_name, profile2.full_name])
+        assert record["updated_by"] == "nameless"
+        assert sorted(record["observers"]) == sorted([profile1.full_name, "nameless"])
