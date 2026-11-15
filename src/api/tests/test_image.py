@@ -5,8 +5,9 @@ from unittest.mock import patch
 import pytest
 from django.core.files.base import ContentFile
 from django.core.files.uploadedfile import SimpleUploadedFile
-from django.db import transaction
+from django.db import connection, transaction
 from django.test import override_settings
+from django.test.utils import CaptureQueriesContext
 from django.urls import reverse
 
 from api.models import Annotation, CollectRecord, Image, Point
@@ -237,6 +238,119 @@ def test_edit_machine_annotation(
             assert anno["is_confirmed"] is True
         elif anno_id_2 == anno["id"]:
             assert anno["is_confirmed"] is False
+
+
+def _patch_changed_user_annotations(
+    api_client, url, image, num_changed, benthic_attribute, new_benthic_attribute
+):
+    # Each changed point edits its existing user annotation and adds a new one, so
+    # both the bulk update and bulk create paths run for every size.
+    num_points = 10
+    Point.objects.filter(image=image).delete()
+    points = Point.objects.bulk_create(
+        [Point(image=image, row=i, column=i) for i in range(num_points)]
+    )
+    existing = Annotation.objects.bulk_create(
+        [Annotation(point=pnt, benthic_attribute=benthic_attribute, score=100) for pnt in points]
+    )
+
+    payload_points = []
+    for i, (pnt, anno) in enumerate(zip(points, existing)):
+        anno_data = {
+            "id": str(anno.pk),
+            "benthic_attribute": str(benthic_attribute.pk),
+            "growth_form": None,
+            "is_confirmed": False,
+        }
+        annotations = [anno_data]
+        if i < num_changed:
+            anno_data["benthic_attribute"] = str(new_benthic_attribute.pk)
+            anno_data["is_confirmed"] = True
+            annotations.append(
+                {
+                    "benthic_attribute": str(new_benthic_attribute.pk),
+                    "growth_form": None,
+                    "is_confirmed": False,
+                }
+            )
+        payload_points.append({"id": str(pnt.pk), "annotations": annotations})
+
+    with CaptureQueriesContext(connection) as ctx:
+        response = api_client.patch(url, {"points": payload_points}, format="json")
+    assert response.status_code == 200, response.content
+
+    changed = Annotation.objects.filter(point__image=image, benthic_attribute=new_benthic_attribute)
+    assert changed.filter(id__in=[a.id for a in existing], is_confirmed=True).count() == num_changed
+    assert changed.exclude(id__in=[a.id for a in existing]).count() == num_changed
+    assert not changed.exclude(score=100).exists()
+    return len(ctx.captured_queries)
+
+
+def test_patch_user_annotations_query_count_is_constant(
+    db_setup,
+    api_client1,
+    project1,
+    image,
+    benthic_attribute_1,
+    benthic_attribute_4,
+):
+    url = reverse("image-detail", kwargs={"project_pk": str(project1.pk), "pk": str(image.pk)})
+
+    one = _patch_changed_user_annotations(
+        api_client1, url, image, 1, benthic_attribute_1, benthic_attribute_4
+    )
+    ten = _patch_changed_user_annotations(
+        api_client1, url, image, 10, benthic_attribute_1, benthic_attribute_4
+    )
+    assert one == ten
+
+
+def test_patch_user_annotation_unknown_benthic_attribute(
+    db_setup, api_client1, project1, image, point
+):
+    url = reverse("image-detail", kwargs={"project_pk": str(project1.pk), "pk": str(image.pk)})
+    missing_id = "00000000-0000-0000-0000-000000000000"
+    payload = {
+        "points": [
+            {
+                "id": str(point.pk),
+                "annotations": [{"benthic_attribute": missing_id, "is_confirmed": True}],
+            }
+        ]
+    }
+    response = api_client1.patch(url, payload, format="json")
+    assert response.status_code == 400
+    assert "benthic_attribute" in response.json()
+    assert not Annotation.objects.filter(point=point).exists()
+
+    payload["points"][0]["annotations"][0]["benthic_attribute"] = "not-a-uuid"
+    response = api_client1.patch(url, payload, format="json")
+    assert response.status_code == 400
+    assert "benthic_attribute" in response.json()
+
+
+def test_patch_cannot_create_machine_annotation(
+    db_setup, api_client1, project1, image, point, benthic_attribute_4
+):
+    url = reverse("image-detail", kwargs={"project_pk": str(project1.pk), "pk": str(image.pk)})
+    payload = {
+        "points": [
+            {
+                "id": str(point.pk),
+                "annotations": [
+                    {
+                        "benthic_attribute": str(benthic_attribute_4.pk),
+                        "is_confirmed": False,
+                        "is_machine_created": True,
+                    }
+                ],
+            }
+        ]
+    }
+    response = api_client1.patch(url, payload, format="json")
+    assert response.status_code == 400
+    assert "Machine generated annotations can not be created." in response.json()
+    assert not Annotation.objects.filter(point=point).exists()
 
 
 @override_settings(MAX_IMAGE_FILE_SIZE=10)
