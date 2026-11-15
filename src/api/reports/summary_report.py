@@ -1,5 +1,6 @@
 import csv
 import gzip
+import io
 import itertools
 import logging
 from collections import defaultdict
@@ -159,11 +160,13 @@ def get_viewset_csv_content(view_cls, project_pk, request):
         )
         raise ValueError(f"Failed to get content for project {project_pk}")
 
-    raw_bytes = b"".join(resp.streaming_content)
+    # Stream rows from a lazy text wrapper instead of materialising decoded str and a
+    # list of rows alongside the bytes; keeps one copy of each project's CSV in memory.
+    byte_stream = io.BytesIO(b"".join(resp.streaming_content))
     if resp.get("Content-Encoding") == "gzip":
-        raw_bytes = gzip.decompress(raw_bytes)
-    content = list(csv.reader(raw_bytes.decode("utf-8").splitlines()))
-    yield from content
+        byte_stream = gzip.GzipFile(fileobj=byte_stream, mode="rb")
+    with io.TextIOWrapper(byte_stream, encoding="utf-8", newline="") as text_stream:
+        yield from csv.reader(text_stream)
 
 
 def _find_project_id(headers, data_row):
