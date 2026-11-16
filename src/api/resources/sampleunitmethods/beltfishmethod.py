@@ -39,7 +39,7 @@ from ..base import (
     BaseViewAPISUGeoSerializer,
 )
 from ..fish_belt_transect import FishBeltTransectSerializer
-from ..mixins import SampleUnitMethodEditMixin, SampleUnitMethodSummaryReport
+from ..mixins import SampleUnitMethodEditMixin
 from ..observer import ObserverSerializer
 from ..sample_event import SampleEventSerializer
 from . import (
@@ -85,9 +85,7 @@ class BeltFishMethodSerializer(BeltFishSerializer):
         exclude = []
 
 
-class BeltFishMethodView(
-    SampleUnitMethodSummaryReport, SampleUnitMethodEditMixin, BaseProjectApiViewSet
-):
+class BeltFishMethodView(SampleUnitMethodEditMixin, BaseProjectApiViewSet):
     project_policy = "data_policy_beltfish"
     queryset = (
         BeltFish.objects.select_related("transect", "transect__sample_event")
@@ -96,6 +94,23 @@ class BeltFishMethodView(
     )
     serializer_class = BeltFishMethodSerializer
     http_method_names = ["get", "put", "head", "delete"]
+
+    def get_queryset(self):
+        qs = super().get_queryset()
+        # Only the actions that serialize records use the related rows, and
+        # only for the fields that are serialized (see `?fields=`).
+        if getattr(self, "action", None) not in ("list", "retrieve"):
+            return qs
+
+        selected_fields = getattr(self.get_serializer_class().Meta, "fields", None)
+        prefetches = []
+        if selected_fields is None or "obs_belt_fishes" in selected_fields:
+            prefetches.append("beltfish_observations")
+        if selected_fields is None or "observers" in selected_fields:
+            prefetches.extend(["observers", "observers__profile"])
+        if prefetches:
+            qs = qs.prefetch_related(*prefetches)
+        return qs
 
     @transaction.atomic
     def update(self, request, project_pk, pk=None):

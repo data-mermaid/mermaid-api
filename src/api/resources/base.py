@@ -76,17 +76,23 @@ class TagField(serializers.Field):
 
 class PointFieldValidated(GeometryField):
     def to_internal_value(self, value):
+        if not isinstance(value, dict):
+            raise ValidationError("Invalid point: expected a GeoJSON object")
+        # Reject other types here: GDAL logs them as errors, which reach admin emails.
+        # Case-insensitive because GDAL accepts "point".
+        if str(value.get("type")).lower() != "point":
+            raise ValidationError('Invalid point: type must be "Point"')
         coords = value.get("coordinates")
-        if coords is None or len(coords) != 2:
+        if not isinstance(coords, (list, tuple)) or len(coords) != 2:
             raise ValidationError("Invalid coordinates")
-        x = value["coordinates"][0]
-        y = value["coordinates"][1]
+        x, y = coords
 
-        if not isinstance(x, float) and not isinstance(x, int):
+        # bool is a subclass of int, but GDAL rejects JSON true/false.
+        if isinstance(x, bool) or not isinstance(x, (int, float)):
             raise ValidationError(
                 f"Invalid 'x' coordinate. Type is not double or integer for '{x}'"
             )
-        if not isinstance(y, float) and not isinstance(y, int):
+        if isinstance(y, bool) or not isinstance(y, (int, float)):
             raise ValidationError(
                 f"Invalid 'y' coordinate. Type is not double or integer for '{y}'"
             )
@@ -586,8 +592,6 @@ class BaseApiViewSet(MethodAuthenticationMixin, viewsets.ModelViewSet):
             )
 
         fields = tuple(sorted(field_set))
-        if fields in self._serializer_class_for_fields:
-            return self._serializer_class_for_fields[fields]
 
         # Validate that all requested field names are known to this serializer.
         valid_fields = set(serializer_class._declared_fields.keys())
@@ -598,6 +602,11 @@ class BaseApiViewSet(MethodAuthenticationMixin, viewsets.ModelViewSet):
         if invalid_fields:
             raise ValidationError({"fields": f"Invalid field names: {', '.join(invalid_fields)}"})
 
+        # The cache is shared by every viewset, so key it by serializer class too.
+        cache_key = (serializer_class, fields)
+        if cache_key in self._serializer_class_for_fields:
+            return self._serializer_class_for_fields[cache_key]
+
         # Doing this because a simple copy.copy() doesn't work here.
         # Set fields and explicitly clear exclude to avoid DRF's assertion that
         # both cannot be set simultaneously (exclude may be inherited from parent Meta).
@@ -605,7 +614,7 @@ class BaseApiViewSet(MethodAuthenticationMixin, viewsets.ModelViewSet):
         limited_fields_serializer = type(
             "LimitedFieldsSerializer", (serializer_class,), {"Meta": meta}
         )
-        self._serializer_class_for_fields[fields] = limited_fields_serializer
+        self._serializer_class_for_fields[cache_key] = limited_fields_serializer
         return limited_fields_serializer
 
     def get_serializer_class(self):

@@ -19,6 +19,31 @@ def _get_subquery(queryset, pk_field_name):
     return sql
 
 
+def _select_related_lookups(queryset):
+    """`select_related` paths of `queryset`, flattened to `__`-joined lookups.
+
+    `.raw()` keeps a queryset's `prefetch_related` lookups but drops its
+    `select_related`, so serializers that read related objects query once per row.
+    """
+    select_related = queryset.query.select_related
+    if not isinstance(select_related, dict):
+        # True (all non-null FKs) or False: nothing explicit to prefetch.
+        return []
+
+    lookups = []
+
+    def walk(tree, prefix):
+        for name, children in tree.items():
+            path = f"{prefix}{name}"
+            if children:
+                walk(children, f"{path}__")
+            else:
+                lookups.append(path)
+
+    walk(select_related, "")
+    return lookups
+
+
 def _get_records(
     viewset,
     profile_id,
@@ -39,7 +64,8 @@ def _get_records(
         queryset = queryset.filter(profile_id=rp_profile)
 
     pk_field_name = model_class._meta.pk.column
-    sub_query = _get_subquery(queryset, pk_field_name)
+    # The joins would be discarded by .raw(); the related rows are prefetched instead.
+    sub_query = _get_subquery(queryset.select_related(None), pk_field_name)
     table_name = model_class._meta.db_table
 
     # UPDATES
@@ -71,7 +97,7 @@ def _get_records(
             revision.updated_on DESC, revision.revision_num  DESC
     """
 
-    updates = queryset.raw(updates_sql)
+    updates = queryset.raw(updates_sql).prefetch_related(*_select_related_lookups(queryset))
 
     # DELETES
     delete_filters = [

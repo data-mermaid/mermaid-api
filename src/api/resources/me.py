@@ -8,7 +8,7 @@ from rest_framework.response import Response
 from api.auth0_management import Auth0DatabaseAuthenticationAPI, Auth0Users
 from tools.models import MERMAIDFeature, UserMERMAIDFeature
 from ..models import Profile, ProjectProfile
-from ..utils import get_extent
+from ..utils import get_extent, normalize_email
 from .base import BaseAPISerializer
 
 
@@ -38,6 +38,14 @@ class MeSerializer(BaseAPISerializer):
             "explore_state",
         ]
         read_only_fields = ["id", "created_on", "updated_on", "full_name"]
+
+    def to_internal_value(self, data):
+        # Normalize before EmailField validation so pasted invisible characters
+        # never reach the DB or Auth0 user_metadata.
+        if "email" in data:
+            data = data.copy()
+            data["email"] = normalize_email(data["email"])
+        return super().to_internal_value(data)
 
     def get_queryset(self, o):
         if not hasattr(self, "_projects_cache"):

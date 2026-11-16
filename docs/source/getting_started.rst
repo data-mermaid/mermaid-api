@@ -2,7 +2,7 @@ Using the API
 =============
 
 | Automatic swagger API documentation is not yet available (:doc:`volunteers welcome! <contributing>`). Instead, an API client file is provided for easy experimentation:
-| `Insomnia collection <../../../mermaid_api.insomnia_collection.json>`_
+| `Insomnia collection <../../../mermaid_api.insomnia_collection.yaml>`_
 
 | The API client `Insomnia <https://insomnia.rest/>`_ is required to use this file. You can also export to other clients such as `Postman <https://www.postman.com/>`_, but Insomnia is recommended for its ability to store things like authentication parameters as variables.
 | `Details on how to import (and re-export to) other formats <https://support.insomnia.rest/article/172-importing-and-exporting-data>`_

@@ -259,6 +259,210 @@ def test_move_file_cross_account(no_s3):
     source_client.delete_object.assert_called_once_with(Bucket="src-bucket", Key="mermaid/img.png")
 
 
+# --- delete_files ---
+
+
+def test_delete_files_batches_keys_and_returns_errors(no_s3):
+    from api.utils.s3 import DELETE_OBJECTS_MAX_KEYS, delete_files
+
+    client = no_s3.return_value
+    client.delete_objects.side_effect = [
+        {"Errors": [{"Key": "k0", "Message": "Access Denied"}]},
+        {},
+    ]
+    keys = [f"k{i}" for i in range(DELETE_OBJECTS_MAX_KEYS + 1)]
+
+    errors = delete_files("bucket", keys)
+
+    no_s3.assert_called_once()
+    assert client.delete_objects.call_count == 2
+    first, second = client.delete_objects.call_args_list
+    assert len(first.kwargs["Delete"]["Objects"]) == DELETE_OBJECTS_MAX_KEYS
+    assert second.kwargs["Delete"]["Objects"] == [{"Key": keys[-1]}]
+    assert errors == [{"Key": "k0", "Message": "Access Denied"}]
+
+
+def test_delete_files_failed_batch_does_not_stop_later_batches(no_s3):
+    import botocore.exceptions
+
+    from api.utils.s3 import DELETE_OBJECTS_MAX_KEYS, delete_files
+
+    client = no_s3.return_value
+    throttled = botocore.exceptions.ClientError(
+        {"Error": {"Code": "SlowDown", "Message": "Slow down"}}, "DeleteObjects"
+    )
+    client.delete_objects.side_effect = [
+        {"Errors": [{"Key": "k0", "Message": "Access Denied"}]},
+        throttled,
+        {},
+    ]
+    keys = [f"k{i}" for i in range(2 * DELETE_OBJECTS_MAX_KEYS + 1)]
+
+    errors = delete_files("bucket", keys)
+
+    assert client.delete_objects.call_count == 3
+    failed_keys = [e["Key"] for e in errors]
+    assert failed_keys == ["k0"] + keys[DELETE_OBJECTS_MAX_KEYS : 2 * DELETE_OBJECTS_MAX_KEYS]
+
+
+@override_settings(AWS_ACCESS_KEY_ID="default-key", AWS_SECRET_ACCESS_KEY="default-secret")
+def test_same_credentials_resolves_defaults():
+    from api.utils.s3 import same_credentials
+
+    explicit = {"access_key": "default-key", "secret_key": "default-secret"}
+    implicit = {"access_key": None, "secret_key": None}
+    other = {"access_key": "image-key", "secret_key": "image-secret"}
+
+    assert same_credentials(explicit, implicit)
+    assert not same_credentials(explicit, other)
+
+
+def test_delete_files_no_keys_makes_no_client(no_s3):
+    from api.utils.s3 import delete_files
+
+    assert delete_files("bucket", []) == []
+    no_s3.assert_not_called()
+
+
+# --- migrate_project_images ---
+
+
+def _migration_image(name):
+    image = MagicMock()
+    image.image_bucket = "old-bucket"
+    image.image.name = f"{name}.png"
+    image.thumbnail.name = f"{name}_thumbnail.png"
+    image.annotations_file = None
+    image.feature_vector_file = None
+    return image
+
+
+def _storage_configs(source, dest):
+    return lambda bucket: {"old-bucket": source, "new-bucket": dest}[bucket]
+
+
+def test_migrate_project_images_cross_account_reuses_clients(no_s3):
+    from api.utils import image_migration
+
+    source = {"bucket": "old-bucket", "access_key": "a", "secret_key": "s", "s3_path": "old/"}
+    dest = {"bucket": "new-bucket", "access_key": "b", "secret_key": "t", "s3_path": "new/"}
+    source_client, dest_client = MagicMock(), MagicMock()
+    no_s3.side_effect = [source_client, dest_client]
+    source_client.get_object.return_value = {"Body": MagicMock(read=lambda: b"x")}
+    source_client.delete_objects.return_value = {}
+    images = [_migration_image("one"), _migration_image("two")]
+
+    with (
+        patch.object(image_migration, "get_image_storage_config", _storage_configs(source, dest)),
+        patch.object(image_migration, "_get_project_images") as get_images,
+    ):
+        get_images.return_value.iterator.return_value = images
+        count = image_migration.migrate_project_images("p", "old-bucket", "new-bucket")
+
+    assert count == 2
+    assert no_s3.call_count == 2
+    assert dest_client.put_object.call_count == 4
+    source_client.copy_object.assert_not_called()
+    # One batched delete per image, after its DB update
+    assert source_client.delete_objects.call_count == 2
+    source_client.delete_object.assert_not_called()
+    assert source_client.delete_objects.call_args_list[0].kwargs["Delete"]["Objects"] == [
+        {"Key": "old/one.png"},
+        {"Key": "old/one_thumbnail.png"},
+    ]
+
+
+def test_migrate_project_images_same_credentials_copies_server_side(no_s3):
+    from api.utils import image_migration
+
+    source = {"bucket": "old-bucket", "access_key": "a", "secret_key": "s", "s3_path": "old/"}
+    dest = {"bucket": "new-bucket", "access_key": "a", "secret_key": "s", "s3_path": "new/"}
+    client = no_s3.return_value
+    client.delete_objects.return_value = {}
+
+    with (
+        patch.object(image_migration, "get_image_storage_config", _storage_configs(source, dest)),
+        patch.object(image_migration, "_get_project_images") as get_images,
+    ):
+        get_images.return_value.iterator.return_value = [_migration_image("one")]
+        image_migration.migrate_project_images("p", "old-bucket", "new-bucket")
+
+    no_s3.assert_called_once()
+    client.get_object.assert_not_called()
+    client.put_object.assert_not_called()
+    client.copy_object.assert_any_call(
+        Bucket="new-bucket",
+        CopySource={"Bucket": "old-bucket", "Key": "old/one.png"},
+        Key="new/one.png",
+    )
+    assert client.copy_object.call_count == 2
+
+
+def test_migrate_project_images_source_delete_failure_still_counts(no_s3, caplog):
+    from api.utils import image_migration
+
+    source = {"bucket": "old-bucket", "access_key": "a", "secret_key": "s", "s3_path": "old/"}
+    dest = {"bucket": "new-bucket", "access_key": "a", "secret_key": "s", "s3_path": "new/"}
+    client = no_s3.return_value
+    client.delete_objects.return_value = {
+        "Errors": [{"Key": "old/one.png", "Message": "Access Denied"}]
+    }
+    image = _migration_image("one")
+
+    with (
+        patch.object(image_migration, "get_image_storage_config", _storage_configs(source, dest)),
+        patch.object(image_migration, "_get_project_images") as get_images,
+    ):
+        get_images.return_value.iterator.return_value = [image]
+        count = image_migration.migrate_project_images("p", "old-bucket", "new-bucket")
+
+    # The DB already points at the new bucket, so the image is migrated; the
+    # leftover source file is reported as an error.
+    assert count == 1
+    assert image.image_bucket == "new-bucket"
+    assert "1 migrated images left source files in old-bucket" in caplog.text
+
+
+# --- S3CopyTracker ---
+
+
+def test_copy_tracker_cross_account_reuses_cached_clients(no_s3):
+    from api.utils.project import S3CopyTracker
+
+    source = {"bucket": "src", "access_key": "a", "secret_key": "s", "s3_path": "p/"}
+    dest = {"bucket": "dst", "access_key": "b", "secret_key": "t", "s3_path": "t/"}
+    no_s3.return_value.get_object.return_value = {"Body": MagicMock(read=lambda: b"x")}
+    tracker = S3CopyTracker()
+    image_id = "11111111-1111-1111-1111-111111111111"
+
+    for path in ("22222222-2222-2222-2222-222222222222.png", "thumb.png"):
+        tracker.copy_file(path, image_id, source_config=source, dest_config=dest)
+
+    # One client per credential set, not two per file
+    assert no_s3.call_count == 2
+
+
+# --- _delete_image_files ---
+
+
+def test_delete_image_files_groups_by_bucket(no_s3):
+    from api.utils.project import _delete_image_files
+
+    prod = {"bucket": "prod-bucket", "access_key": "a", "secret_key": "s", "s3_path": "p/"}
+    test = {"bucket": "test-bucket", "access_key": "b", "secret_key": "t", "s3_path": "t/"}
+    client = no_s3.return_value
+    client.delete_objects.return_value = {}
+
+    _delete_image_files([(prod, "1.png"), (test, "2.png"), (prod, "3.png")], "test")
+
+    assert no_s3.call_count == 2
+    deleted = {
+        call.kwargs["Bucket"]: [o["Key"] for o in call.kwargs["Delete"]["Objects"]]
+        for call in client.delete_objects.call_args_list
+    }
+    assert deleted == {"prod-bucket": ["p/1.png", "p/3.png"], "test-bucket": ["t/2.png"]}
+
+
 # --- image S3 client timeout/retry bounds ---
 
 S3_CLIENT_TIMEOUT_SETTINGS = {
