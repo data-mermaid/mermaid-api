@@ -11,10 +11,10 @@ services:
 
   api_db:
     container_name: api_db
-    image: postgis/postgis:16-3.5-alpine
+    image: postgis/postgis:18-3.6-alpine
     platform: linux/amd64
     volumes:
-      - pg_data:/var/lib/postgresql/data
+      - pg_data:/var/lib/postgresql
     environment:
       POSTGRES_PASSWORD: postgres
       POSTGRES_USER: postgres

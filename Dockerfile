@@ -67,7 +67,7 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
  && echo "deb [signed-by=/usr/share/keyrings/pgdg.asc] https://apt.postgresql.org/pub/repos/apt ${DEBIAN_CODENAME}-pgdg main" > /etc/apt/sources.list.d/pgdg.list \
  && apt-get update \
  && apt-get install -y --no-install-recommends \
-    postgresql-client-16 \
+    postgresql-client-18 \
     libgdal39 \
  && apt-get purge -y --auto-remove gnupg \
  && rm -rf /var/lib/apt/lists/*
