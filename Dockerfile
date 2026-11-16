@@ -94,7 +94,9 @@ USER ${APP_USER}:${APP_USER}
 # Smoke test in the runtime stage, against runtime libraries only: psycopg loads
 # libpq, and collectstatic sets up Django with every installed app. (`manage.py
 # check` cannot run here: importing the URL conf queries the database.)
-RUN python -c "import psycopg, pandas, pyarrow" \
+# The assert stops a rebuild from silently falling back to pure-Python psycopg,
+# which decodes every row in Python.
+RUN python -c "import psycopg, pandas, pyarrow; assert psycopg.pq.__impl__ == 'c', psycopg.pq.__impl__" \
  && SECRET_KEY='abc' python manage.py collectstatic --noinput
 
 # Container health check for the API web server. Probes the DB-independent
