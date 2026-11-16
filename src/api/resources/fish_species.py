@@ -105,7 +105,7 @@ class FishSpeciesViewSet(BaseAttributeApiViewSet):
     queryset = (
         FishSpecies.objects.select_related()
         .annotate(
-            regions_=ArrayAggExt("regions"),
+            regions_=ArrayAggExt("regions", order_by="regions"),
             display_name=Concat(F("genus__name"), Value(" "), F("name")),
         )
         .order_by("genus", "name")

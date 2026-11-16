@@ -25,7 +25,7 @@ def pre_image_save(sender, instance, **kwargs):
                 logger.exception("Error storing EXIF data")
 
             instance.original_image_name = instance.image.name
-            image_name = f"{instance.id}.png"
+            image_name = f"{instance.id}.{cls_utils.NORMALIZED_IMAGE_EXT}"
             instance.name = image_name
             instance.image.name = image_name
 

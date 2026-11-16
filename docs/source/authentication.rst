@@ -52,21 +52,18 @@ For an interactive application where a person signs in through a browser, use a 
     - Audience: ``https://api.datamermaid.org``
 
 For it to work we will also need the domain(s) your app will redirect to after login. Contact the MERMAID team at https://datamermaid.org/contact-us/ to request adding those domains.
+
 .. _`OAuth2 Implicit grant type`: https://oauth.net/2/grant-types/implicit/
 
-When making requests to the API the token can be included in:
-
-- the request header
+When making requests to the API, send the token in the ``Authorization`` request header:
 
 ::
 
     curl --request GET \
-        --url https://api.datamermaid.org/projects/ \
+        --url https://api.datamermaid.org/v1/projects/ \
         --header 'Authorization: Bearer <VALID TOKEN HERE>'
 
-
-- the url query string
-
-::
-
-    https://api.datamermaid.org/projects/?access_token=<VALID TOKEN HERE>
+Tokens in the URL query string (``?access_token=``) are not accepted, because URLs
+are recorded in server, load balancer and error-tracking logs. A request that sends
+``access_token`` in the query string without an ``Authorization`` header gets a
+``401``, on public endpoints too.
