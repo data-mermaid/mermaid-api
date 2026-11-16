@@ -68,7 +68,9 @@ make shellplus       # Django shell with models auto-imported
 ```bash
 # Run all tests
 make test
-# Runs: pytest -v --no-migrations --rich api/tests
+# Runs: pytest -n 8 --no-migrations --durations=25 api/tests  (parallel via pytest-xdist)
+make test PYTEST_WORKERS=0 PYTEST_ARGS="-v"   # serial, verbose
+make testfast        # same, but --reuse-db (rerun `make test` after model changes)
 
 # Run a single test
 docker exec -it api_service pytest --no-migrations api/tests/path/to/test_file.py::TestClass::test_method

@@ -1,5 +1,5 @@
 from pathlib import Path
-from tempfile import NamedTemporaryFile
+from tempfile import NamedTemporaryFile, mkdtemp
 
 from django.conf import settings
 
@@ -92,25 +92,23 @@ def create_sample_unit_method_summary_report(
         if SummaryCacheQueue.objects.filter(project_id__in=project_ids).exists():
             data_may_be_stale = True
 
-    with NamedTemporaryFile(delete=False) as f:
-        temppath = Path(f.name)
-        output_path = temppath.rename(
-            f"{temppath.parent}/{create_iso_date_string()}_{protocol}.xlsx"
-        )
-        wb = create_protocol_report(request, project_ids, protocol)
-        try:
-            wb.save(output_path)
-        except Exception as e:
-            print(f"Error saving workbook: {e}")
-            return None
+    # Unique directory per report: the file name is the same for every report of
+    # this protocol created on a given day, and callers use it for the download name.
+    output_path = Path(mkdtemp()) / f"{create_iso_date_string()}_{protocol}.xlsx"
+    wb = create_protocol_report(request, project_ids, protocol)
+    try:
+        wb.save(output_path)
+    except Exception as e:
+        print(f"Error saving workbook: {e}")
+        return None
 
-        if send_email:
-            email_report(
-                request.user.profile.email,
-                output_path,
-                protocol,
-                data_may_be_stale=data_may_be_stale,
-            )
-            delete_file(output_path)
-        else:
-            return output_path
+    if send_email:
+        email_report(
+            request.user.profile.email,
+            output_path,
+            protocol,
+            data_may_be_stale=data_may_be_stale,
+        )
+        delete_file(output_path)
+    else:
+        return output_path

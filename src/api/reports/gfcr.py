@@ -1,6 +1,6 @@
 import logging
 from pathlib import Path
-from tempfile import NamedTemporaryFile
+from tempfile import mkdtemp
 
 from ..mocks import MockRequest
 from ..models import GFCRFinanceSolution, GFCRIndicatorSet
@@ -277,20 +277,20 @@ def create_report(project_ids, request=None, send_email=None):
         xl.write_data_to_sheet(wb, sheet_name, data, 2, 1)
         xl.auto_size_columns(wb[sheet_name])
 
-    with NamedTemporaryFile(delete=False) as f:
-        try:
-            temppath = Path(f.name)
-            output_path = temppath.rename(f"{temppath.parent}/{create_iso_date_string()}_gfcr.xlsx")
-            wb.save(output_path)
-        except Exception:
-            logger.exception("Error saving workbook")
-            return None
+    # Unique directory per report: the file name is the same for every report
+    # created on a given day, and callers use it for the download/zip name.
+    try:
+        output_path = Path(mkdtemp()) / f"{create_iso_date_string()}_gfcr.xlsx"
+        wb.save(output_path)
+    except Exception:
+        logger.exception("Error saving workbook")
+        return None
 
-        if send_email:
-            email_report(request.user.profile.email, output_path, "GFCR")
-            delete_file(output_path)
-        else:
-            return output_path
+    if send_email:
+        email_report(request.user.profile.email, output_path, "GFCR")
+        delete_file(output_path)
+    else:
+        return output_path
 
 
 def create_report_background(project_ids, request=None, send_email=None):

@@ -115,8 +115,17 @@ shellroot:
 shellplusroot:
 	docker compose exec --user=root $(API_SERVICE) python manage.py shell_plus
 
+# Parallel by default (pytest-xdist). More workers than this gives little gain
+# against a single Postgres. Override, e.g.: make test PYTEST_WORKERS=0 PYTEST_ARGS="-v"
+PYTEST_WORKERS ?= 16
+PYTEST_ARGS ?=
+
 test:
-	docker compose exec $(API_SERVICE) pytest -v --no-migrations api/tests
+	docker compose exec $(API_SERVICE) pytest -n $(PYTEST_WORKERS) --no-migrations --durations=25 $(PYTEST_ARGS) api/tests
+
+# Faster local reruns: keeps the test DB between runs. Use `make test` after model changes.
+testfast:
+	docker compose exec $(API_SERVICE) pytest -n $(PYTEST_WORKERS) --no-migrations --reuse-db $(PYTEST_ARGS) api/tests
 
 # -----------------
 # Fargate Maintenance (docker exec)
