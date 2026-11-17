@@ -280,10 +280,10 @@ class SummarySampleEventSQLModel(SummarySampleEventBaseModel):
                 benthiclit_bleaching.bleaching_hard_coral_sample_unit_count END),
                 'bleaching_soft_coral_sample_unit_count', (CASE WHEN project.data_policy_benthiclit < 50 AND NOT %(has_access)s THEN NULL ELSE
                 benthiclit_bleaching.bleaching_soft_coral_sample_unit_count END),
-                'bleaching_hard_coral_length', (CASE WHEN project.data_policy_benthiclit < 50 AND NOT %(has_access)s THEN NULL ELSE
-                benthiclit_bleaching.bleaching_hard_coral_length END),
-                'bleaching_soft_coral_length', (CASE WHEN project.data_policy_benthiclit < 50 AND NOT %(has_access)s THEN NULL ELSE
-                benthiclit_bleaching.bleaching_soft_coral_length END),
+                'bleaching_hard_coral', (CASE WHEN project.data_policy_benthiclit < 50 AND NOT %(has_access)s THEN NULL ELSE
+                benthiclit_bleaching.bleaching_hard_coral END),
+                'bleaching_soft_coral', (CASE WHEN project.data_policy_benthiclit < 50 AND NOT %(has_access)s THEN NULL ELSE
+                benthiclit_bleaching.bleaching_soft_coral END),
                 'percent_bleached_hard_coral', (CASE WHEN project.data_policy_benthiclit < 50 AND NOT %(has_access)s THEN NULL ELSE
                 benthiclit_bleaching.percent_bleached_hard_coral END),
                 'percent_bleached_soft_coral', (CASE WHEN project.data_policy_benthiclit < 50 AND NOT %(has_access)s THEN NULL ELSE
@@ -305,10 +305,10 @@ class SummarySampleEventSQLModel(SummarySampleEventBaseModel):
                 benthicpit_bleaching.bleaching_hard_coral_sample_unit_count END),
                 'bleaching_soft_coral_sample_unit_count', (CASE WHEN project.data_policy_benthicpit < 50 AND NOT %(has_access)s THEN NULL ELSE
                 benthicpit_bleaching.bleaching_soft_coral_sample_unit_count END),
-                'bleaching_hard_coral_points', (CASE WHEN project.data_policy_benthicpit < 50 AND NOT %(has_access)s THEN NULL ELSE
-                benthicpit_bleaching.bleaching_hard_coral_points END),
-                'bleaching_soft_coral_points', (CASE WHEN project.data_policy_benthicpit < 50 AND NOT %(has_access)s THEN NULL ELSE
-                benthicpit_bleaching.bleaching_soft_coral_points END),
+                'bleaching_hard_coral', (CASE WHEN project.data_policy_benthicpit < 50 AND NOT %(has_access)s THEN NULL ELSE
+                benthicpit_bleaching.bleaching_hard_coral END),
+                'bleaching_soft_coral', (CASE WHEN project.data_policy_benthicpit < 50 AND NOT %(has_access)s THEN NULL ELSE
+                benthicpit_bleaching.bleaching_soft_coral END),
                 'percent_bleached_hard_coral', (CASE WHEN project.data_policy_benthicpit < 50 AND NOT %(has_access)s THEN NULL ELSE
                 benthicpit_bleaching.percent_bleached_hard_coral END),
                 'percent_bleached_soft_coral', (CASE WHEN project.data_policy_benthicpit < 50 AND NOT %(has_access)s THEN NULL ELSE
