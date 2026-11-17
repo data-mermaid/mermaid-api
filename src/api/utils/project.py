@@ -12,7 +12,6 @@ import botocore.exceptions
 from django.conf import settings
 from django.db import transaction
 from django.db.models import Q
-from django.db.models.fields.related import OneToOneField
 from django.utils import timezone
 
 from ..models import (
@@ -44,7 +43,6 @@ from ..models import (
     QuadratCollection,
     QuadratTransect,
     SampleEvent,
-    SampleUnit,
     Site,
     TransectMethod,
 )
@@ -56,7 +54,13 @@ from ..models.classification import (
     get_image_bucket,
     get_image_storage_config,
 )
-from . import delete_instance_and_related_objects, get_value, is_uuid, s3 as s3_utils
+from . import (
+    delete_instance_and_related_objects,
+    get_subclasses,
+    get_value,
+    is_uuid,
+    s3 as s3_utils,
+)
 from .classification import create_annotations_files_job
 from .email import mermaid_email
 from .notification import suppress_all_notifications
@@ -414,22 +418,11 @@ def _get_sample_unit_method_label(sample_unit_method, sample_unit_name):
     return " ".join(number_label)
 
 
-def get_sample_unit_field(model):
-    return next(
-        (
-            field.name
-            for field in model._meta.get_fields()
-            if isinstance(field, OneToOneField) and issubclass(field.related_model, SampleUnit)
-        ),
-        None,
-    )
-
-
 def _create_submitted_sample_unit_method_summary(model_cls, project):
     DEFAULT_UPDATED_BY = "N/A"
     summary = defaultdict(dict)
     protocol = model_cls.protocol
-    sample_unit_name = get_sample_unit_field(model_cls)
+    sample_unit_name = model_cls.sample_unit_field()
 
     if sample_unit_name is None:
         return summary
@@ -487,7 +480,7 @@ def _create_submitted_sample_unit_method_summary(model_cls, project):
 def create_submitted_summary(project):
     summary = {}
     protocols = []
-    sample_unit_methods = TransectMethod.__subclasses__()
+    sample_unit_methods = get_subclasses(TransectMethod)
     for sample_unit_method in sample_unit_methods:
         sample_unit_method_summary = _create_submitted_sample_unit_method_summary(
             sample_unit_method, project
