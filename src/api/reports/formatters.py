@@ -1,4 +1,10 @@
-from api.models import BLEACHING_PERCENT_KEYS, BLEACHING_SE_PERCENT_KEYS, Project
+from api.models import (
+    BLEACHING_PERCENT_KEYS,
+    BLEACHING_SE_PERCENT_KEYS,
+    Project,
+    bleaching_amount_keys,
+    bleaching_se_amount_keys,
+)
 
 DATA_POLICIES = dict(Project.DATA_POLICIES)
 # Separator for multi-value fields in tabular exports; values (e.g. tag names) may contain commas
@@ -156,3 +162,24 @@ def to_yesno(value, field, row, serializer_instance):
 
 def to_data_policy(value, field, row, serializer_instance):
     return DATA_POLICIES.get(value, "Unknown")
+
+
+@handle_none()
+def to_bleaching_points(value, field, row, serializer_instance):
+    # jsonb doesn't keep key order; tabular columns follow status order
+    return {key: value.get(key) for key in bleaching_amount_keys("points")}
+
+
+@handle_none()
+def to_bleaching_length(value, field, row, serializer_instance):
+    return {key: value.get(key) for key in bleaching_amount_keys("length")}
+
+
+@handle_none()
+def to_bleaching_se_points(value, field, row, serializer_instance):
+    return {key: value.get(key) for key in bleaching_se_amount_keys("points")}
+
+
+@handle_none()
+def to_bleaching_se_length(value, field, row, serializer_instance):
+    return {key: value.get(key) for key in bleaching_se_amount_keys("length")}

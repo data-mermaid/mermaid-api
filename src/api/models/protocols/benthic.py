@@ -190,6 +190,28 @@ BLEACHING_BLEACHED_KEY = "bleached"
 BLEACHING_SE_PERCENT_KEYS = tuple(name for _, name in BLEACHING_STATUS_CHOICES)
 # Tabular order of SU percent_bleached_* keys: total bleached first, then statuses by val
 BLEACHING_PERCENT_KEYS = (BLEACHING_BLEACHED_KEY, *BLEACHING_SE_PERCENT_KEYS)
+
+
+def bleaching_amount_keys(amount):
+    """
+    Keys of the bleaching_{hard,soft}_coral summary objects, in status order: the status name with
+    underscores plus the amount unit, "points" (PIT) or "length" (LIT, cm). E.g. "fully_bleached_points".
+    """
+    return tuple(f"{name.replace(' ', '_')}_{amount}" for _, name in BLEACHING_STATUS_CHOICES)
+
+
+# Suffix of the sample event keys counting the sample units each status was recorded in
+BLEACHING_SAMPLE_UNIT_COUNT_SUFFIX = "sample_unit_count"
+
+
+def bleaching_se_amount_keys(amount):
+    """
+    Keys of the sample event bleaching_{hard,soft}_coral objects: the amount keys, then per status
+    the number of sample units it was recorded in. E.g. "fully_bleached_sample_unit_count".
+    """
+    return bleaching_amount_keys(amount) + bleaching_amount_keys(BLEACHING_SAMPLE_UNIT_COUNT_SUFFIX)
+
+
 BLEACHING_STATUS_CHOICES_UPDATED_ON = datetime.datetime(
     2026, 10, 21, 0, 0, 0, 0, tzinfo=datetime.UTC
 )
@@ -198,6 +220,7 @@ BLEACHING_STATUS_CHOICES_UPDATED_ON = datetime.datetime(
 class BenthicLIT(TransectMethod):
     protocol = BENTHICLIT_PROTOCOL
     project_lookup = "transect__sample_event__site__project"
+    include_bleaching = models.BooleanField(default=False)
 
     transect = models.OneToOneField(
         BenthicTransect,
@@ -241,6 +264,7 @@ class ObsBenthicLIT(BaseModel, JSONMixin):
 class BenthicPIT(TransectMethod):
     protocol = BENTHICPIT_PROTOCOL
     project_lookup = "transect__sample_event__site__project"
+    include_bleaching = models.BooleanField(default=False)
 
     transect = models.OneToOneField(
         BenthicTransect,

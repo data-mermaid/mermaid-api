@@ -7,6 +7,8 @@ from api.models import (
     BLEACHING_STATUS_PALE,
     BenthicPITSUModel,
     Project,
+    bleaching_amount_keys,
+    bleaching_se_amount_keys,
 )
 from api.utils.summary_cache import update_summary_cache as update_cache
 
@@ -65,13 +67,20 @@ def test_benthicpit_su_bleaching(
     su1 = next(r for r in records if str(benthic_pit1.transect_id) in r["sample_unit_ids"])
     su2 = next(r for r in records if str(benthic_pit1_2.transect_id) in r["sample_unit_ids"])
 
-    assert su1["bleaching_hard_coral_points"] == 1
+    hard1 = su1["bleaching_hard_coral"]
+    assert set(hard1) == set(bleaching_amount_keys("points"))
+    assert hard1["pale_points"] == 1
+    assert hard1["normal_points"] == 0
+    assert hard1["recent_bleaching_mortality_points"] == 0
     assert su1["percent_bleached_hard_coral"]["pale"] == 100.0
     assert su1["percent_bleached_hard_coral"]["bleached"] == 100.0
-    assert su1["bleaching_soft_coral_points"] is None
+    assert su1["bleaching_soft_coral"] is None
+    assert "bleaching_hard_coral_points" not in su1
     assert su1["percent_bleached_soft_coral"] is None
     assert "percent_bleached_total_coral" not in su1
-    assert su2["bleaching_hard_coral_points"] == 2
+    assert su2["bleaching_hard_coral"]["normal_points"] == 2
+    assert su2["bleaching_hard_coral"]["pale_points"] == 0
+    assert "pale_sample_unit_count" not in su2["bleaching_hard_coral"]
     assert su2["percent_bleached_hard_coral"]["normal"] == 100.0
     # Raw per-status amounts are stored for SE pooling but not exposed
     assert "bleaching_status_amounts" not in su1
@@ -105,8 +114,16 @@ def test_benthicpit_se_bleaching_pooled(db_setup, api_client1, pit_bleaching):
     assert se["bleaching_sample_unit_count"] == 2
     assert se["bleaching_hard_coral_sample_unit_count"] == 2
     assert se["bleaching_soft_coral_sample_unit_count"] == 0
-    assert se["bleaching_hard_coral_points"] == 3
-    assert se["bleaching_soft_coral_points"] is None
+    hard_points = se["bleaching_hard_coral"]
+    assert set(hard_points) == set(bleaching_se_amount_keys("points"))
+    assert hard_points["pale_points"] == 1
+    assert hard_points["normal_points"] == 2
+    assert hard_points["fully_bleached_points"] == 0
+    # Sample units each status was recorded in: pale in SU1 only, normal in SU2 only
+    assert hard_points["pale_sample_unit_count"] == 1
+    assert hard_points["normal_sample_unit_count"] == 1
+    assert hard_points["fully_bleached_sample_unit_count"] == 0
+    assert se["bleaching_soft_coral"] is None
     hard = se["percent_bleached_hard_coral"]
     assert hard["pale"] == 33.33
     assert hard["normal"] == 66.67

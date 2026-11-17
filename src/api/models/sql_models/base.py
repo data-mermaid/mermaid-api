@@ -8,6 +8,7 @@ from api.models import (
     BLEACHING_CATEGORIES,
     BLEACHING_CATEGORY_HARD_CORAL,
     BLEACHING_CATEGORY_SOFT_CORAL,
+    BLEACHING_SAMPLE_UNIT_COUNT_SUFFIX,
     BLEACHING_STATUS_CHOICES,
     Project,
 )
@@ -21,27 +22,31 @@ bleaching_status_sql = "(VALUES {}) AS bs(val, name)".format(
 bleaching_categories_sql = ", ".join(f"'{name}'" for name in BLEACHING_CATEGORIES)
 
 
-def bleaching_su_columns_sql(amount):
-    """
-    SU columns pulled from the `bleaching_percents` CTE built by bleaching_su_sql. `amount` names the
-    coral amount columns: "points" (PIT) or "length" (LIT, cm).
-    """
+def bleaching_amount_key_sql(name_sql, amount):
+    """SQL for a bleaching_{hard,soft}_coral key from a status name; mirrors bleaching_amount_keys."""
+    return f"replace({name_sql}, ' ', '_') || '_{amount}'"
+
+
+def bleaching_su_columns_sql():
+    """SU columns pulled from the `bleaching_percents` CTE built by bleaching_su_sql."""
     return f"""
-    (bleaching_percents.coral_amount->>'{BLEACHING_CATEGORY_HARD_CORAL}')::integer AS bleaching_hard_coral_{amount},
-    (bleaching_percents.coral_amount->>'{BLEACHING_CATEGORY_SOFT_CORAL}')::integer AS bleaching_soft_coral_{amount},
+    bleaching_percents.coral_amounts->'{BLEACHING_CATEGORY_HARD_CORAL}' AS bleaching_hard_coral,
+    bleaching_percents.coral_amounts->'{BLEACHING_CATEGORY_SOFT_CORAL}' AS bleaching_soft_coral,
     bleaching_percents.percent_bleached->'{BLEACHING_CATEGORY_HARD_CORAL}' AS percent_bleached_hard_coral,
     bleaching_percents.percent_bleached->'{BLEACHING_CATEGORY_SOFT_CORAL}' AS percent_bleached_soft_coral,
     bleaching_percents.status_amounts AS bleaching_status_amounts
     """
 
 
-def bleaching_su_sql(obs_table, weight):
+def bleaching_su_sql(obs_table, weight, amount):
     """
     SU-level bleaching CTEs ending in `bleaching_percents` (pseudosu_id, plus percent_bleached,
-    coral_amount and status_amounts jsonb, all keyed by coral type). status_amounts holds the
-    unrounded coral amount per status, so SE percents can be pooled exactly (see bleaching_se_sql).
+    coral_amounts and status_amounts jsonb, all keyed by coral type). coral_amounts is the public
+    coral amount per status, keyed like bleaching_amount_keys(amount); status_amounts holds the
+    same amounts keyed by status name, which SE percents are pooled from (see bleaching_se_sql).
     `obs_table` must have pseudosu_id, benthic_category, include_bleaching and bleaching_status
-    columns; `weight` is the SQL expression each observation contributes. Only observations with a status count. A coral type with no such observations has
+    columns; `weight` is the SQL expression each observation contributes and `amount` its unit:
+    "points" (PIT) or "length" (LIT, cm). Only observations with a status count. A coral type with no such observations has
     no key, so its SU columns are null.
     """
     return f"""
@@ -74,12 +79,14 @@ def bleaching_su_sql(obs_table, weight):
     bleaching_percents AS (
         SELECT coral_percents.pseudosu_id,
         jsonb_object_agg(coral_percents.coral_type, coral_percents.percents) AS percent_bleached,
-        jsonb_object_agg(coral_percents.coral_type, coral_percents.total_weight) AS coral_amount,
+        jsonb_object_agg(coral_percents.coral_type, coral_percents.coral_amounts) AS coral_amounts,
         jsonb_object_agg(coral_percents.coral_type, coral_percents.status_amounts) AS status_amounts
         FROM (
             SELECT bt.pseudosu_id,
             bt.coral_type,
-            bt.total_weight,
+            jsonb_object_agg(
+                {bleaching_amount_key_sql("bs.name", amount)}, COALESCE(bsw.status_weight, 0)
+            ) AS coral_amounts,
             jsonb_build_object('{BLEACHING_BLEACHED_KEY}', ROUND(100.0 * bt.bleached_weight / NULLIF(bt.total_weight, 0), 2))
             || jsonb_object_agg(
                 bs.name,
@@ -106,24 +113,28 @@ def bleaching_se_sql(su_table, amount, cte_name="se_bleaching"):
     (see bleaching_su_columns_sql; `amount` is "points" or "length"). Output columns per sample_event_id:
     - bleaching_sample_unit_count: SUs with include_bleaching
     - bleaching_{hard,soft}_coral_sample_unit_count: SUs that contributed coral of that type
-    - bleaching_{hard,soft}_coral_{amount}: summed coral amount with a status
+    - bleaching_{hard,soft}_coral: per status, the summed coral amount and the number of SUs the
+      status was recorded in, keyed like bleaching_se_amount_keys(amount)
     - percent_bleached_{hard,soft}_coral: pooled share of each status, i.e. the summed coral amount
-      per status over the summed coral amount, from the SUs' unrounded `bleaching_status_amounts`.
+      per status over the summed coral amount, from the SUs' `bleaching_status_amounts`.
       No `bleached` key.
-    Percents are null when no SU has coral of that type with a status.
+    Amounts and percents are null when no SU has coral of that type with a status.
     Pass a distinct `cte_name` to use this more than once in the same query.
     """
     coral_types = (
         ("hard", BLEACHING_CATEGORY_HARD_CORAL),
         ("soft", BLEACHING_CATEGORY_SOFT_CORAL),
     )
-    percent_aggs = ",\n        ".join(
-        f"""jsonb_object_agg(key, ROUND(percent_pooled :: numeric, 2)) FILTER (WHERE coral_type = '{category}') AS percent_bleached_{key}_coral"""
+    amount_key = bleaching_amount_key_sql("key", amount)
+    su_count_key = bleaching_amount_key_sql("key", BLEACHING_SAMPLE_UNIT_COUNT_SUFFIX)
+    status_aggs = ",\n        ".join(
+        f"""jsonb_object_agg({amount_key}, amount_pooled) FILTER (WHERE coral_type = '{category}')
+        || jsonb_object_agg({su_count_key}, su_count) FILTER (WHERE coral_type = '{category}') AS bleaching_{key}_coral,
+        jsonb_object_agg(key, ROUND(percent_pooled :: numeric, 2)) FILTER (WHERE coral_type = '{category}') AS percent_bleached_{key}_coral"""
         for key, category in coral_types
     )
     count_aggs = ",\n        ".join(
-        f"""COUNT(bleaching_{key}_coral_{amount}) AS bleaching_{key}_coral_sample_unit_count,
-        SUM(bleaching_{key}_coral_{amount}) AS bleaching_{key}_coral_{amount}"""
+        f"COUNT(bleaching_{key}_coral) AS bleaching_{key}_coral_sample_unit_count"
         for key, _ in coral_types
     )
     return f"""
@@ -138,11 +149,13 @@ def bleaching_se_sql(su_table, amount, cte_name="se_bleaching"):
     ),
     {cte_name}_percents AS (
         SELECT sample_event_id,
-        {percent_aggs}
+        {status_aggs}
         FROM (
             SELECT sample_event_id,
             coral_type,
             key,
+            SUM(amount) AS amount_pooled,
+            COUNT(*) FILTER (WHERE amount > 0) AS su_count,
             100.0 * SUM(amount) / NULLIF(
                 SUM(SUM(amount)) OVER (PARTITION BY sample_event_id, coral_type), 0
             ) AS percent_pooled
@@ -153,6 +166,8 @@ def bleaching_se_sql(su_table, amount, cte_name="se_bleaching"):
     ),
     {cte_name} AS (
         SELECT {cte_name}_counts.*,
+        bleaching_hard_coral,
+        bleaching_soft_coral,
         percent_bleached_hard_coral,
         percent_bleached_soft_coral
         FROM (

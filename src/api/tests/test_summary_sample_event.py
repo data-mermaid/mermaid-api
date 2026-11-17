@@ -157,7 +157,10 @@ def test_summary_sample_event_benthicpit_bleaching(
     assert benthicpit["bleaching_sample_unit_count"] == 1
     assert benthicpit["bleaching_hard_coral_sample_unit_count"] == 1
     assert benthicpit["bleaching_soft_coral_sample_unit_count"] == 0
-    assert benthicpit["bleaching_hard_coral_points"] == 2
+    hard_points = benthicpit["bleaching_hard_coral"]
+    assert hard_points["pale_points"] == 1
+    assert hard_points["normal_points"] == 1
+    assert hard_points["fully_bleached_points"] == 0
     hard = benthicpit["percent_bleached_hard_coral"]
     assert hard["pale"] == 50.0
     assert hard["normal"] == 50.0
@@ -166,7 +169,7 @@ def test_summary_sample_event_benthicpit_bleaching(
     assert "bleached" not in hard
     assert "percent_bleached_total_coral" not in benthicpit
     # No soft coral with a status: null (stripped), not 0
-    assert "bleaching_soft_coral_points" not in benthicpit
+    assert "bleaching_soft_coral" not in benthicpit
     assert "percent_bleached_soft_coral" not in benthicpit
 
 
@@ -187,7 +190,7 @@ def test_summary_sample_event_benthicpit_bleaching_no_statuses(
 
     assert benthicpit["bleaching_sample_unit_count"] == 1
     assert benthicpit["bleaching_hard_coral_sample_unit_count"] == 0
-    assert "bleaching_hard_coral_points" not in benthicpit
+    assert "bleaching_hard_coral" not in benthicpit
     assert "percent_bleached_hard_coral" not in benthicpit
 
 
@@ -218,7 +221,11 @@ def test_summary_sample_event_benthicpit_bleaching_pooled(
 
     assert benthicpit["bleaching_sample_unit_count"] == 2
     assert benthicpit["bleaching_hard_coral_sample_unit_count"] == 2
-    assert benthicpit["bleaching_hard_coral_points"] == 3
+    assert benthicpit["bleaching_hard_coral"]["pale_points"] == 1
+    assert benthicpit["bleaching_hard_coral"]["normal_points"] == 2
+    assert benthicpit["bleaching_hard_coral"]["pale_sample_unit_count"] == 1
+    assert benthicpit["bleaching_hard_coral"]["normal_sample_unit_count"] == 1
+    assert benthicpit["bleaching_hard_coral"]["fully_bleached_sample_unit_count"] == 0
     assert benthicpit["percent_bleached_hard_coral"]["pale"] == 33.33
     assert benthicpit["percent_bleached_hard_coral"]["normal"] == 66.67
     assert "percent_bleached_hard_coral_sd" not in benthicpit
@@ -250,8 +257,8 @@ def test_summary_sample_event_benthicpit_bleaching_private(
         "bleaching_sample_unit_count",
         "bleaching_hard_coral_sample_unit_count",
         "bleaching_soft_coral_sample_unit_count",
-        "bleaching_hard_coral_points",
-        "bleaching_soft_coral_points",
+        "bleaching_hard_coral",
+        "bleaching_soft_coral",
         "percent_bleached_hard_coral",
         "percent_bleached_soft_coral",
     ):
