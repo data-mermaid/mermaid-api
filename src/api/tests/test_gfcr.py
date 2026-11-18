@@ -1,4 +1,4 @@
-import os
+import shutil
 from datetime import date
 
 import pytest
@@ -381,7 +381,7 @@ def test_notes_in_report_export(
     assert rev_row[9] == "Revenue notes", f"Revenue notes not found. Row: {rev_row}"
 
     # Clean up
-    os.remove(report_path)
+    shutil.rmtree(report_path.parent)
 
 
 def test_finance_solution_new_fields_in_serializer(
@@ -914,4 +914,4 @@ def test_report_new_columns_and_sheet_name(db_setup, project1):
     assert row[4] == "Conservation trust fund (CTF)", f"Expected CTF display, got: {row}"
     assert row[7] == "National", f"Expected 'National', got: {row}"
 
-    os.remove(report_path)
+    shutil.rmtree(report_path.parent)

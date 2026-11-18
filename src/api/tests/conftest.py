@@ -27,6 +27,8 @@ def django_db_setup(django_db_setup, django_db_blocker):
             cursor.execute("SET jit TO off;")
             cursor.execute(model_view_migrations.forward_sql())
             cursor.execute(revisions.forward_sql)
+            # Plain CREATE VIEW: drop first so this also works with --reuse-db.
+            cursor.execute(ProjectSummarySampleEventView.reverse_sql)
             cursor.execute(ProjectSummarySampleEventView.forward_sql)
 
 
