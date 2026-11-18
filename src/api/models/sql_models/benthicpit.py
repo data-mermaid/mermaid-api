@@ -8,6 +8,7 @@ from .base import (
     bleaching_se_sql,
     bleaching_status_sql,
     bleaching_su_columns_sql,
+    bleaching_su_join_sql,
     bleaching_su_sql,
     project_where,
     sample_event_sql_template,
@@ -210,10 +211,14 @@ class BenthicPITSUSQLModel(BaseSUSQLModel):
         "data_policy_benthicpit",
     ]
 
-    _su_fields = ", ".join(su_fields)
+    # Qualified: bleaching_percents also has the interval columns (see _bleaching_su_key)
+    _su_fields = ", ".join([f"benthicpit_su.{f}" for f in su_fields])
     _su_fields_qualified = ", ".join([f"benthicpit_obs.{f}" for f in su_fields])
     _agg_su_fields = ", ".join(BaseSUSQLModel.agg_su_fields)
     _su_aggfields_sql = BaseSUSQLModel.su_aggfields_sql
+    # Bleaching key: pseudosu_id fixes every other su_field (SE fields, depth, transect number and
+    # length, project data policy), but one pseudo-SU can split into several SU rows by interval.
+    _bleaching_su_key = ("pseudosu_id", "interval_size", "interval_start")
 
     sql = f"""
         WITH benthicpit_obs AS (
@@ -295,7 +300,7 @@ class BenthicPITSUSQLModel(BaseSUSQLModel):
             ON lh.pseudosu_id = obs_count.pseudosu_id
             GROUP BY lh.pseudosu_id
         ),
-        {bleaching_su_sql('benthicpit_obs', '1', 'points')}
+        {bleaching_su_sql('benthicpit_obs', '1', 'points', _bleaching_su_key)}
 
         SELECT NULL AS id,
         benthicpit_su.pseudosu_id,
@@ -325,7 +330,7 @@ class BenthicPITSUSQLModel(BaseSUSQLModel):
         INNER JOIN benthicpit_observers
         ON (benthicpit_su.pseudosu_id = benthicpit_observers.pseudosu_id)
         LEFT JOIN bleaching_percents
-        ON (benthicpit_su.pseudosu_id = bleaching_percents.pseudosu_id)
+        ON ({bleaching_su_join_sql('benthicpit_su', _bleaching_su_key)})
     """
 
     sql_args = dict(
