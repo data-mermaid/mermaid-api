@@ -68,8 +68,9 @@ make shellplus       # Django shell with models auto-imported
 ```bash
 # Run all tests
 make test
-# Runs: pytest -n $(PYTEST_WORKERS) --no-migrations --durations=25 api/tests  (parallel via pytest-xdist; worker count set in Makefile)
-make test PYTEST_WORKERS=0 PYTEST_ARGS="-v"   # serial, verbose
+# Runs: pytest -n $(PYTEST_WORKERS) --no-migrations --durations=25 api/tests  (pytest-xdist; PYTEST_WORKERS env var, default 0 = serial)
+export PYTEST_WORKERS=16                      # parallel for every run in this shell
+make test PYTEST_WORKERS=16 PYTEST_ARGS="-v"  # parallel, verbose
 make testfast        # same, but --reuse-db
 make testfast PYTEST_ARGS="--create-db"       # after model changes, rebuild the reused DBs
 # If pytest rejects `-n`, the image predates pytest-xdist: run `make build`.

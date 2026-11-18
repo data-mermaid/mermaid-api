@@ -115,10 +115,10 @@ shellroot:
 shellplusroot:
 	docker compose exec --user=root $(API_SERVICE) python manage.py shell_plus
 
-# Parallel by default (pytest-xdist). More workers than this gives little gain
-# against a single Postgres. Override, e.g.: make test PYTEST_WORKERS=0 PYTEST_ARGS="-v"
+# pytest-xdist worker count. Set it in your shell (export PYTEST_WORKERS=16) or per
+# run (make test PYTEST_WORKERS=16). 0 turns xdist off entirely.
 # pytest-xdist is installed at image build time: if pytest rejects `-n`, run `make build`.
-PYTEST_WORKERS ?= 16
+PYTEST_WORKERS ?= 0
 PYTEST_ARGS ?=
 
 test:
