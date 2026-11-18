@@ -1,3 +1,5 @@
+import pytest
+
 from api.resources.collect_record import CollectRecordSerializer
 from api.submission.validations import ERROR, OK, WARN
 from api.submission.validations.validators import (
@@ -155,11 +157,48 @@ def test_list_positive_integer_validator_invalid(valid_bleaching_qc_collect_reco
     record["data"]["obs_quadrat_benthic_percent"][0]["quadrat_number"] = None
 
     results = validator(record)
-    results[0].status = ERROR
-    results[0].code = PositiveIntegerValidator.NOT_POSITIVE_INTEGER
+    assert results[0].status == ERROR
+    assert results[0].code == PositiveIntegerValidator.NOT_POSITIVE_INTEGER
 
     record["data"]["obs_quadrat_benthic_percent"][0]["quadrat_number"] = -1
 
     results = validator(record)
-    results[0].status = ERROR
-    results[0].code = PositiveIntegerValidator.NOT_POSITIVE_INTEGER
+    assert results[0].status == ERROR
+    assert results[0].code == PositiveIntegerValidator.NOT_POSITIVE_INTEGER
+
+
+@pytest.mark.parametrize(
+    "value,allow_zero,expected_status",
+    [
+        (-1, False, ERROR),
+        (0, False, ERROR),
+        (1, False, OK),
+        (None, False, ERROR),
+        ("1", False, ERROR),
+        (-1, True, ERROR),
+        (0, True, OK),
+        (1, True, OK),
+    ],
+)
+def test_positive_integer_validator(value, allow_zero, expected_status):
+    validator = PositiveIntegerValidator(key_path="data.transect.number", allow_zero=allow_zero)
+    result = validator({"data": {"transect": {"number": value}}})
+
+    assert result.status == expected_status
+    if expected_status == ERROR:
+        assert result.code == PositiveIntegerValidator.NOT_POSITIVE_INTEGER
+
+
+def test_list_positive_integer_validator_allow_zero(valid_bleaching_qc_collect_record):
+    record = CollectRecordSerializer(instance=valid_bleaching_qc_collect_record).data
+    record["data"]["obs_quadrat_benthic_percent"][0]["quadrat_number"] = 0
+
+    strict = ListPositiveIntegerValidator(
+        list_path="data.obs_quadrat_benthic_percent", key_path="quadrat_number"
+    )
+    assert strict(record)[0].status == ERROR
+
+    lenient = ListPositiveIntegerValidator(
+        list_path="data.obs_quadrat_benthic_percent", key_path="quadrat_number", allow_zero=True
+    )
+    assert lenient(record)[0].status == OK

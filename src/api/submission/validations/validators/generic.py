@@ -100,24 +100,27 @@ class DuplicateValidator(BaseValidator):
 class PositiveIntegerValidator(BaseValidator):
     NOT_POSITIVE_INTEGER = "not_positive_integer"
 
-    def __init__(self, key_path, **kwargs):
+    def __init__(self, key_path, allow_zero=False, **kwargs):
         self.key_path = key_path
+        self.allow_zero = allow_zero
         super().__init__(**kwargs)
 
     @validator_result
     def __call__(self, collect_record, **kwargs):
         val = self.get_value(collect_record, self.key_path)
+        min_val = 0 if self.allow_zero else 1
 
-        if isinstance(val, int) is False or val < 0:
+        if isinstance(val, int) is False or val < min_val:
             return ERROR, self.NOT_POSITIVE_INTEGER
 
         return OK
 
 
 class ListPositiveIntegerValidator(BaseValidator):
-    def __init__(self, list_path, key_path, **kwargs):
+    def __init__(self, list_path, key_path, allow_zero=False, **kwargs):
         self.list_path = list_path
         self.key_path = key_path
+        self.allow_zero = allow_zero
         self.unique_identifier_label = kwargs.get("unique_identifier_label")
         self.unique_identifier_key = kwargs.get("unique_identifier_key")
 
@@ -126,5 +129,5 @@ class ListPositiveIntegerValidator(BaseValidator):
     @validate_list
     def __call__(self, collect_record, **kwargs):
         records = self.get_value(collect_record, self.list_path)
-        validator = PositiveIntegerValidator(self.key_path)
+        validator = PositiveIntegerValidator(self.key_path, allow_zero=self.allow_zero)
         return validator, records
