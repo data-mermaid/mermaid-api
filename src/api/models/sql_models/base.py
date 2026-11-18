@@ -38,20 +38,29 @@ def bleaching_su_columns_sql():
     """
 
 
-def bleaching_su_sql(obs_table, weight, amount):
+def bleaching_su_sql(obs_table, weight, amount, su_key=("pseudosu_id",)):
     """
-    SU-level bleaching CTEs ending in `bleaching_percents` (pseudosu_id, plus percent_bleached,
+    SU-level bleaching CTEs ending in `bleaching_percents` (the `su_key` columns, plus percent_bleached,
     coral_amounts and status_amounts jsonb, all keyed by coral type). coral_amounts is the public
     coral amount per status, keyed like bleaching_amount_keys(amount); status_amounts holds the
     same amounts keyed by status name, which SE percents are pooled from (see bleaching_se_sql).
-    `obs_table` must have pseudosu_id, benthic_category, include_bleaching and bleaching_status
+    `obs_table` must have the `su_key` columns, benthic_category, include_bleaching and bleaching_status
     columns; `weight` is the SQL expression each observation contributes and `amount` its unit:
     "points" (PIT) or "length" (LIT, cm). Only observations with a status count. A coral type with no such observations has
     no key, so its SU columns are null.
+    `su_key` is the obs columns that identify one SU row; it must match the SU query's grouping, and
+    `bleaching_percents` has these columns so the SU query can join on all of them
+    (see bleaching_su_join_sql).
     """
+    key = ", ".join(su_key)
+    bt_key = ", ".join(f"bt.{f}" for f in su_key)
+    cp_key = ", ".join(f"coral_percents.{f}" for f in su_key)
+    bt_bsw_join = " AND\n                ".join(
+        f"bt.{f} IS NOT DISTINCT FROM bsw.{f}" for f in su_key
+    )
     return f"""
     bleaching_obs AS (
-        SELECT pseudosu_id,
+        SELECT {key},
         benthic_category AS coral_type,
         bleaching_status,
         {weight} AS weight
@@ -61,28 +70,28 @@ def bleaching_su_sql(obs_table, weight, amount):
         AND bleaching_status IS NOT NULL
     ),
     bleaching_totals AS (
-        SELECT pseudosu_id,
+        SELECT {key},
         coral_type,
         SUM(weight) AS total_weight,
         COALESCE(SUM(weight) FILTER (WHERE bleaching_status > 0), 0) AS bleached_weight
         FROM bleaching_obs
-        GROUP BY pseudosu_id, coral_type
+        GROUP BY {key}, coral_type
     ),
     bleaching_status_weights AS (
-        SELECT pseudosu_id,
+        SELECT {key},
         coral_type,
         bleaching_status,
         SUM(weight) AS status_weight
         FROM bleaching_obs
-        GROUP BY pseudosu_id, coral_type, bleaching_status
+        GROUP BY {key}, coral_type, bleaching_status
     ),
     bleaching_percents AS (
-        SELECT coral_percents.pseudosu_id,
+        SELECT {cp_key},
         jsonb_object_agg(coral_percents.coral_type, coral_percents.percents) AS percent_bleached,
         jsonb_object_agg(coral_percents.coral_type, coral_percents.coral_amounts) AS coral_amounts,
         jsonb_object_agg(coral_percents.coral_type, coral_percents.status_amounts) AS status_amounts
         FROM (
-            SELECT bt.pseudosu_id,
+            SELECT {bt_key},
             bt.coral_type,
             jsonb_object_agg(
                 {bleaching_amount_key_sql("bs.name", amount)}, COALESCE(bsw.status_weight, 0)
@@ -96,15 +105,22 @@ def bleaching_su_sql(obs_table, weight, amount):
             FROM bleaching_totals bt
             CROSS JOIN {bleaching_status_sql}
             LEFT JOIN bleaching_status_weights bsw ON (
-                bt.pseudosu_id = bsw.pseudosu_id AND
+                {bt_bsw_join} AND
                 bt.coral_type = bsw.coral_type AND
                 bs.val = bsw.bleaching_status
             )
-            GROUP BY bt.pseudosu_id, bt.coral_type, bt.bleached_weight, bt.total_weight
+            GROUP BY {bt_key}, bt.coral_type, bt.bleached_weight, bt.total_weight
         ) coral_percents
-        GROUP BY coral_percents.pseudosu_id
+        GROUP BY {cp_key}
     )
     """
+
+
+def bleaching_su_join_sql(su_alias, su_key=("pseudosu_id",)):
+    """ON condition joining `bleaching_percents` to an SU row on the same `su_key` passed to bleaching_su_sql."""
+    return " AND ".join(
+        f"{su_alias}.{f} IS NOT DISTINCT FROM bleaching_percents.{f}" for f in su_key
+    )
 
 
 def bleaching_se_sql(su_table, amount, cte_name="se_bleaching"):
