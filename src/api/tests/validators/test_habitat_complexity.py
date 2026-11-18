@@ -87,20 +87,15 @@ def _validate_habcomp(collect_record, request):
     return _result_codes(runner)
 
 
+@pytest.mark.parametrize("blank_interval", ["-", None])
 def test_habcomp_interval_size_zero_no_duplicates(
-    valid_habitat_complexity_collect_record,
-    habitat_complexity_score2,
-    habitat_complexity_score3,
-    profile1_request,
+    valid_habitat_complexity_collect_record, profile1_request, blank_interval
 ):
+    # With interval size 0 the webapp sets every interval to "-"
     record = valid_habitat_complexity_collect_record
     record.data["interval_size"] = 0
-    observations = record.data["obs_habitat_complexities"][:3]
-    for obs in observations:
-        obs["interval"] = 5
-    observations[1]["score"] = str(habitat_complexity_score2.id)
-    observations[2]["score"] = str(habitat_complexity_score3.id)
-    record.data["obs_habitat_complexities"] = observations
+    for obs in record.data["obs_habitat_complexities"]:
+        obs["interval"] = blank_interval
     record.save()
 
     codes = _validate_habcomp(record, profile1_request)
@@ -108,7 +103,7 @@ def test_habcomp_interval_size_zero_no_duplicates(
     assert DuplicateValidator.DUPLICATE_VALUES not in codes
 
 
-def test_habcomp_identical_rows_duplicate(
+def test_habcomp_repeated_interval_duplicate(
     valid_habitat_complexity_collect_record, profile1_request
 ):
     record = valid_habitat_complexity_collect_record
@@ -118,3 +113,27 @@ def test_habcomp_identical_rows_duplicate(
 
     codes = _validate_habcomp(record, profile1_request)
     assert DuplicateValidator.DUPLICATE_VALUES in codes
+
+
+def _habcomp_duplicate_validator():
+    return next(
+        v.validator
+        for v in habitat_complexity.habcomp_validations
+        if isinstance(v.validator, DuplicateValidator)
+    )
+
+
+def test_habcomp_extra_row_at_existing_interval_duplicate(
+    valid_habitat_complexity_collect_record, habitat_complexity_score2
+):
+    # Complete 5..30 grid plus a 7th row at interval 5 with a different score: only the
+    # duplicate check catches it (count tolerance is +/-1, sequence/alignment still pass).
+    record = CollectRecordSerializer(valid_habitat_complexity_collect_record).data
+    observations = record["data"]["obs_habitat_complexities"]
+    observations.append(dict(score=str(habitat_complexity_score2.id), interval=5))
+
+    result = _habcomp_duplicate_validator()(record)
+    assert result.status == ERROR
+    assert result.code == DuplicateValidator.DUPLICATE_VALUES
+    groups = [[d["index"] for d in group] for group in result.context["duplicates"]]
+    assert groups == [[0, len(observations) - 1]]

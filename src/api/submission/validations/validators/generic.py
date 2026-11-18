@@ -67,6 +67,9 @@ class AllEqualValidator(BaseValidator):
 
 class DuplicateValidator(BaseValidator):
     DUPLICATE_VALUES = "duplicate_values"
+    # Rows whose key values are all blank have nothing to compare; e.g. the webapp shows "-"
+    # for every interval when interval size is 0.
+    EMPTY_VALUES = ("", "-")
 
     def __init__(self, list_path, key_paths, **kwargs):
         self.list_path = list_path
@@ -85,7 +88,12 @@ class DuplicateValidator(BaseValidator):
         duplicate_tracker = defaultdict(list)
 
         for n, record in enumerate(records):
-            vals = [str(self.get_value(record, key_path) or "") for key_path in self.key_paths]
+            vals = [
+                "" if (v := self.get_value(record, key_path)) is None else str(v).strip()
+                for key_path in self.key_paths
+            ]
+            if all(v in self.EMPTY_VALUES for v in vals):
+                continue
             uid = record.get(self.unique_identifier_key)
 
             duplicate_tracker[":::".join(vals)].append({"id": uid, "index": n})

@@ -163,3 +163,36 @@ def test_list_positive_integer_validator_invalid(valid_bleaching_qc_collect_reco
     results = validator(record)
     results[0].status = ERROR
     results[0].code = PositiveIntegerValidator.NOT_POSITIVE_INTEGER
+
+
+def _duplicate_groups(observations, key_paths):
+    validator = DuplicateValidator(list_path="data.obs", key_paths=key_paths)
+    result = validator({"data": {"obs": observations}})
+    if result.status == OK:
+        return []
+    assert result.code == DuplicateValidator.DUPLICATE_VALUES
+    return [[d["index"] for d in group] for group in result.context["duplicates"]]
+
+
+def test_duplicate_validator_skips_blank_rows():
+    observations = [{"interval": v} for v in ["-", None, "", " - ", "-"]]
+    assert _duplicate_groups(observations, ["interval"]) == []
+
+
+def test_duplicate_validator_blank_rows_do_not_hide_real_duplicates():
+    observations = [{"interval": v} for v in ["-", 5, None, "5", "-"]]
+    assert _duplicate_groups(observations, ["interval"]) == [[1, 3]]
+
+
+def test_duplicate_validator_zero_is_a_value():
+    observations = [{"interval": v} for v in [0, 0, None]]
+    assert _duplicate_groups(observations, ["interval"]) == [[0, 1]]
+
+
+def test_duplicate_validator_partially_blank_rows_still_compared():
+    observations = [
+        {"attribute": "a", "growth_form": None},
+        {"attribute": "a", "growth_form": ""},
+        {"attribute": None, "growth_form": None},
+    ]
+    assert _duplicate_groups(observations, ["attribute", "growth_form"]) == [[0, 1]]

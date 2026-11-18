@@ -89,18 +89,15 @@ def _validate_benthicpit(collect_record, request):
     return _result_codes(runner)
 
 
+@pytest.mark.parametrize("blank_interval", ["-", None])
 def test_benthicpit_interval_size_zero_no_duplicates(
-    valid_benthic_pit_collect_record, benthic_attribute_4, growth_form1, profile1_request
+    valid_benthic_pit_collect_record, profile1_request, blank_interval
 ):
+    # With interval size 0 the webapp sets every interval to "-"
     record = valid_benthic_pit_collect_record
     record.data["interval_size"] = 0
-    # Same interval on every row (as the webapp generates with size 0); rows differ otherwise
-    observations = record.data["obs_benthic_pits"][:3]
-    for obs in observations:
-        obs["interval"] = 5
-    observations[1]["attribute"] = str(benthic_attribute_4.id)
-    observations[2]["growth_form"] = str(growth_form1.id)
-    record.data["obs_benthic_pits"] = observations
+    for obs in record.data["obs_benthic_pits"]:
+        obs["interval"] = blank_interval
     record.save()
 
     codes = _validate_benthicpit(record, profile1_request)
@@ -108,15 +105,35 @@ def test_benthicpit_interval_size_zero_no_duplicates(
     assert DuplicateValidator.DUPLICATE_VALUES not in codes
 
 
-def test_benthicpit_identical_rows_duplicate(
-    valid_benthic_pit_collect_record, growth_form1, profile1_request
-):
+def test_benthicpit_repeated_interval_duplicate(valid_benthic_pit_collect_record, profile1_request):
     record = valid_benthic_pit_collect_record
     observations = record.data["obs_benthic_pits"]
     observations[1]["interval"] = observations[0]["interval"]
-    observations[0]["growth_form"] = str(growth_form1.id)
-    observations[1]["growth_form"] = str(growth_form1.id)
     record.save()
 
     codes = _validate_benthicpit(record, profile1_request)
     assert DuplicateValidator.DUPLICATE_VALUES in codes
+
+
+def _pit_duplicate_validator():
+    return next(
+        v.validator
+        for v in benthic_pit.benthic_pit_validations
+        if isinstance(v.validator, DuplicateValidator)
+    )
+
+
+def test_benthicpit_extra_row_at_existing_interval_duplicate(
+    valid_benthic_pit_collect_record, benthic_attribute_4
+):
+    # Complete 5..30 grid plus a 7th row at interval 5 with a different attribute: only the
+    # duplicate check catches it (count tolerance is +/-1, sequence/alignment still pass).
+    record = CollectRecordSerializer(valid_benthic_pit_collect_record).data
+    observations = record["data"]["obs_benthic_pits"]
+    observations.append(dict(attribute=str(benthic_attribute_4.id), interval=5))
+
+    result = _pit_duplicate_validator()(record)
+    assert result.status == ERROR
+    assert result.code == DuplicateValidator.DUPLICATE_VALUES
+    groups = [[d["index"] for d in group] for group in result.context["duplicates"]]
+    assert groups == [[0, len(observations) - 1]]

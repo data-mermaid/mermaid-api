@@ -289,7 +289,7 @@ benthic_pit_validations = [
     Validation(
         validator=DuplicateValidator(
             list_path="data.obs_benthic_pits",
-            key_paths=["interval", "attribute", "growth_form"],
+            key_paths=["interval"],
         ),
         paths=["data.obs_benthic_pits"],
         validation_level=RECORD_LEVEL,
