@@ -287,7 +287,7 @@ habcomp_validations = [
     Validation(
         validator=DuplicateValidator(
             list_path="data.obs_habitat_complexities",
-            key_paths=["interval"],
+            key_paths=["interval", "score"],
         ),
         paths=["data.obs_habitat_complexities"],
         validation_level=RECORD_LEVEL,
