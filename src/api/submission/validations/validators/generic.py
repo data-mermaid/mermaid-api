@@ -110,7 +110,8 @@ class PositiveIntegerValidator(BaseValidator):
         val = self.get_value(collect_record, self.key_path)
         min_val = 0 if self.allow_zero else 1
 
-        if isinstance(val, int) is False or val < min_val:
+        # bool is an int subclass; True/False are not valid numbers here
+        if isinstance(val, bool) or not isinstance(val, int) or val < min_val:
             return ERROR, self.NOT_POSITIVE_INTEGER
 
         return OK

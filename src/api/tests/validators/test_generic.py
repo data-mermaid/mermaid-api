@@ -175,9 +175,13 @@ def test_list_positive_integer_validator_invalid(valid_bleaching_qc_collect_reco
         (1, False, OK),
         (None, False, ERROR),
         ("1", False, ERROR),
+        (True, False, ERROR),
+        (False, False, ERROR),
         (-1, True, ERROR),
         (0, True, OK),
         (1, True, OK),
+        (True, True, ERROR),
+        (False, True, ERROR),
     ],
 )
 def test_positive_integer_validator(value, allow_zero, expected_status):

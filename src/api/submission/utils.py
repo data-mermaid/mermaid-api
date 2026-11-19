@@ -1,4 +1,3 @@
-import dataclasses
 import json
 import logging
 import time
@@ -321,9 +320,7 @@ def _set_write_error_validation(runner, collect_record, request, write_result):
     """
     for validation in _get_protocol_validations(collect_record):
         if _is_dry_submit(validation):
-            runner.add_result(
-                dataclasses.replace(validation), collect_record, request, write_result=write_result
-            )
+            runner.add_result(validation, collect_record, request, write_result=write_result)
 
 
 def _apply_validation_suppressants(results, validation_suppressants):

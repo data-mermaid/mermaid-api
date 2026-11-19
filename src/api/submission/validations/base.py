@@ -1,5 +1,5 @@
 import hashlib
-from dataclasses import dataclass
+from dataclasses import dataclass, replace
 from typing import Literal
 
 from opentelemetry import trace as otel_trace
@@ -203,6 +203,9 @@ class ValidationRunner:
     def _validate(
         self, validation, collect_record, collect_record_dict, request, existing_validations
     ):
+        # Validation lists are module-level and shared across request threads; run() stores
+        # its result on the instance, so work on a per-run copy.
+        validation = replace(validation, result=None)
         if validation.requires_instance is True:
             validation.run(collect_record, request=request)
         else:
@@ -249,6 +252,7 @@ class ValidationRunner:
         Run one more validation after validate() and merge its result into
         the results and overall status.
         """
+        validation = replace(validation, result=None)
         validation.run(collect_record, request=request, **kwargs)
         status = self.set_validator_result(validation, self.existing_validations or {})
         self.status = self._get_overall_status_level([self.status, status])
