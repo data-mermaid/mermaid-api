@@ -14,6 +14,25 @@ from api.models import (
 
 
 @pytest.fixture
+def gfcr_report():
+    """Call create_report and always remove the report folders afterwards."""
+    from api.reports.gfcr import create_report
+
+    report_dirs = []
+
+    def _create(*args, **kwargs):
+        report_path = create_report(*args, **kwargs)
+        if report_path is not None:
+            report_dirs.append(report_path.parent)
+        return report_path
+
+    yield _create
+
+    for report_dir in report_dirs:
+        shutil.rmtree(report_dir, ignore_errors=True)
+
+
+@pytest.fixture
 def create_indicator_set_payload():
     return {
         "title": "Baseline",
@@ -248,11 +267,10 @@ def test_reporting_range(
 def test_notes_in_report_export(
     db_setup,
     project1,
+    gfcr_report,
 ):
     """Test that all notes fields are included in the GFCR report export."""
     from openpyxl import load_workbook
-
-    from api.reports.gfcr import create_report
 
     project1.includes_gfcr = True
     project1.save()
@@ -303,7 +321,7 @@ def test_notes_in_report_export(
     )
 
     # Generate report
-    report_path = create_report([project1.id])
+    report_path = gfcr_report([project1.id])
     assert report_path is not None
 
     # Load the workbook and verify notes are present
@@ -379,9 +397,6 @@ def test_notes_in_report_export(
     rev_sheet = wb["Revenues"]
     rev_row = next(rev_sheet.iter_rows(min_row=2, max_row=2, values_only=True))
     assert rev_row[9] == "Revenue notes", f"Revenue notes not found. Row: {rev_row}"
-
-    # Clean up
-    shutil.rmtree(report_path.parent)
 
 
 def test_finance_solution_new_fields_in_serializer(
@@ -876,10 +891,8 @@ def test_used_an_incubator_null_accepted(
     assert response.json()["finance_solutions"][0]["used_an_incubator"] is None
 
 
-def test_report_new_columns_and_sheet_name(db_setup, project1):
+def test_report_new_columns_and_sheet_name(db_setup, project1, gfcr_report):
     from openpyxl import load_workbook
-
-    from api.reports.gfcr import create_report
 
     project1.includes_gfcr = True
     project1.save()
@@ -901,7 +914,7 @@ def test_report_new_columns_and_sheet_name(db_setup, project1):
         number_of_solutions_supported_by=0,
     )
 
-    report_path = create_report([project1.id])
+    report_path = gfcr_report([project1.id])
     assert report_path is not None
 
     wb = load_workbook(report_path)
@@ -913,5 +926,3 @@ def test_report_new_columns_and_sheet_name(db_setup, project1):
     # type is at index 4, geographical_coverage at index 7
     assert row[4] == "Conservation trust fund (CTF)", f"Expected CTF display, got: {row}"
     assert row[7] == "National", f"Expected 'National', got: {row}"
-
-    shutil.rmtree(report_path.parent)

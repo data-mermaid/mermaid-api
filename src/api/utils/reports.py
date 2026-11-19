@@ -35,8 +35,6 @@ def update_attributes_report(local_output_dir=None):
         attributes_report.write_attribute_reference(tmp.name)
         tmp.flush()
         if local_output_dir is not None:
-            import shutil
-
             out = Path(local_output_dir)
             shutil.copy(tmp.name, out / canonical_filename)
             shutil.copy(tmp.name, out / dated_filename)
