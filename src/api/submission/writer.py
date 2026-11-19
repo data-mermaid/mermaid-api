@@ -342,6 +342,7 @@ class BenthicPITProtocolWriter(BenthicProtocolWriter):
             "transect": benthic_transect_id,
             "interval_size": self.collect_record.data.get("interval_size"),
             "interval_start": self.collect_record.data.get("interval_start"),
+            "include_bleaching": self.collect_record.data.get("include_bleaching") or False,
         }
         return self.get_or_create(
             BenthicPIT,
@@ -377,6 +378,7 @@ class BenthicLITProtocolWriter(BenthicProtocolWriter):
         benthic_lit_data = {
             "transect": benthic_transect_id,
             "id": sample_unit_method_id,
+            "include_bleaching": self.collect_record.data.get("include_bleaching") or False,
         }
         return self.get_or_create(
             BenthicLIT,
