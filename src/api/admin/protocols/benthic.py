@@ -26,6 +26,7 @@ from ...models import (
 )
 from ..base import (
     AttributeAdmin,
+    AuditFieldsAutocompleteMixin,
     BaseAdmin,
     CachedFKInline,
     ObservationInline,
@@ -34,6 +35,7 @@ from ..base import (
     TransectMethodAdmin,
     get_crs_with_attrib,
     get_sus_with_attrib,
+    is_autocomplete_request,
 )
 
 
@@ -57,7 +59,7 @@ class BenthicLifeHistoryAdmin(BaseAdmin):
     list_display = ("name",)
 
 
-class BenthicAttributeInline(admin.StackedInline):
+class BenthicAttributeInline(AuditFieldsAutocompleteMixin, admin.StackedInline):
     model = BenthicAttribute
     extra = 0
     autocomplete_fields = ("parent",)
@@ -157,15 +159,14 @@ class BenthicAttributeAdmin(AttributeAdmin):
     exportable_fields = ("name", "parent", "life_history_list", "region_list", "notes")
     inlines = [BenthicAttributeGrowthFormLifeHistoryInline, BenthicAttributeInline]
     search_fields = ["name"]
+    autocomplete_fields = ("parent",)
     list_filter = ("status",)
 
     def get_queryset(self, request):
-        return (
-            super()
-            .get_queryset(request)
-            .select_related("parent")
-            .prefetch_related("regions", "life_histories")
-        )
+        qs = super().get_queryset(request).select_related("parent")
+        if is_autocomplete_request(request):
+            return qs
+        return qs.prefetch_related("regions", "life_histories")
 
     def get_formsets_with_inlines(self, request, obj=None):
         regions = []
