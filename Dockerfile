@@ -9,13 +9,32 @@ ARG APP_USER=webapp
 ARG APP_UID=1000
 
 # ============================================================
-# Stage 1: Builder — install build deps and compile pip pkgs
+# Stage 0: Base — Python plus the PGDG apt repo
 # ============================================================
-FROM python:${PYTHON_VERSION}-slim-${DEBIAN_CODENAME} AS builder
-ARG APP_USER
-ARG APP_UID
+# Both later stages take libpq from PGDG, so psycopg's C module is compiled
+# against the same libpq it runs on. Built against an older one, it leaves out
+# the newer libpq functions.
+FROM python:${PYTHON_VERSION}-slim-${DEBIAN_CODENAME} AS base
+ARG DEBIAN_CODENAME
 
 ENV DEBIAN_FRONTEND=noninteractive
+
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    wget gnupg ca-certificates \
+ && wget --quiet -O /usr/share/keyrings/pgdg.asc https://www.postgresql.org/media/keys/ACCC4CF8.asc \
+ && gpg --homedir "$(mktemp -d)" --dry-run --import --import-options show-only --with-colons /usr/share/keyrings/pgdg.asc \
+      | awk -F: '/^fpr:/ {print $10}' \
+      | grep -qx 'B97B0AFCAA1A47F044F244A07FCC7D46ACCC4CF8' \
+ && echo "deb [signed-by=/usr/share/keyrings/pgdg.asc] https://apt.postgresql.org/pub/repos/apt ${DEBIAN_CODENAME}-pgdg main" > /etc/apt/sources.list.d/pgdg.list \
+ && apt-get purge -y --auto-remove gnupg \
+ && rm -rf /var/lib/apt/lists/*
+
+# ============================================================
+# Stage 1: Builder — install build deps and compile pip pkgs
+# ============================================================
+FROM base AS builder
+ARG APP_USER
+ARG APP_UID
 
 RUN apt-get update && apt-get install -y --no-install-recommends \
     git \
@@ -37,14 +56,12 @@ RUN su -l ${APP_USER} -c "pip install --no-cache-dir -r /var/projects/${APP_USER
 # ============================================================
 # Stage 2: Runtime — lean production image
 # ============================================================
-FROM python:${PYTHON_VERSION}-slim-${DEBIAN_CODENAME} AS runtime
-ARG DEBIAN_CODENAME
+FROM base AS runtime
 ARG APP_USER
 ARG APP_UID
 ARG APP_DIR=/var/projects/${APP_USER}
 LABEL maintainer="<sysadmin@datamermaid.org>"
 
-ENV DEBIAN_FRONTEND=noninteractive
 ENV LANG=C.UTF-8
 ENV LANGUAGE=C.UTF-8
 ENV LC_ALL=C.UTF-8
@@ -52,6 +69,9 @@ ENV PYTHONPATH="${APP_DIR}"
 ENV PATH="/home/${APP_USER}/.local/bin:${PATH}"
 ENV PYTHONUNBUFFERED=1
 ENV DJANGO_SETTINGS_MODULE=app.settings
+# psycopg raises ImportError instead of falling back to its pure-Python
+# implementation, which decodes every row in Python.
+ENV PSYCOPG_IMPL=c
 
 # Install runtime-only OS deps (no build-essential, libpq-dev, python3-dev).
 # Django GIS only loads the GDAL shared library. gdal-bin is not used (the app
@@ -59,17 +79,8 @@ ENV DJANGO_SETTINGS_MODULE=app.settings
 # python3-numpy. libgdal39 is the GDAL 3.13 library from PGDG; the build fails
 # loudly if a GDAL upgrade renames it.
 RUN apt-get update && apt-get install -y --no-install-recommends \
-    wget gnupg ca-certificates \
- && wget --quiet -O /usr/share/keyrings/pgdg.asc https://www.postgresql.org/media/keys/ACCC4CF8.asc \
- && gpg --homedir "$(mktemp -d)" --dry-run --import --import-options show-only --with-colons /usr/share/keyrings/pgdg.asc \
-      | awk -F: '/^fpr:/ {print $10}' \
-      | grep -qx 'B97B0AFCAA1A47F044F244A07FCC7D46ACCC4CF8' \
- && echo "deb [signed-by=/usr/share/keyrings/pgdg.asc] https://apt.postgresql.org/pub/repos/apt ${DEBIAN_CODENAME}-pgdg main" > /etc/apt/sources.list.d/pgdg.list \
- && apt-get update \
- && apt-get install -y --no-install-recommends \
     postgresql-client-18 \
     libgdal39 \
- && apt-get purge -y --auto-remove gnupg \
  && rm -rf /var/lib/apt/lists/*
 
 # gunicorn will listen on this port
@@ -94,7 +105,8 @@ USER ${APP_USER}:${APP_USER}
 # Smoke test in the runtime stage, against runtime libraries only: psycopg loads
 # libpq, and collectstatic sets up Django with every installed app. (`manage.py
 # check` cannot run here: importing the URL conf queries the database.)
-RUN python -c "import psycopg, pandas, pyarrow" \
+# The assert catches a builder layer cached with a newer libpq than the runtime's.
+RUN python -c "import psycopg, pandas, pyarrow; assert psycopg.pq.__build_version__ <= psycopg.pq.version(), (psycopg.pq.__build_version__, psycopg.pq.version())" \
  && SECRET_KEY='abc' python manage.py collectstatic --noinput
 
 # Container health check for the API web server. Probes the DB-independent
