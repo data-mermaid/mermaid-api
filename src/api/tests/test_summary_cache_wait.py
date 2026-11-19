@@ -5,8 +5,15 @@ import pytest
 from django.test import override_settings
 
 from api.models import SummaryCacheQueue
-from api.utils.reports import create_sample_unit_method_summary_report
-from api.utils.summary_cache import SUMMARY_CACHE_POLL_INTERVAL, wait_for_summary_cache
+from api.utils.reports import (
+    create_sample_unit_method_summary_report,
+    create_sample_unit_method_summary_report_background,
+)
+from api.utils.summary_cache import (
+    SUMMARY_CACHE_MAX_WAIT,
+    SUMMARY_CACHE_POLL_INTERVAL,
+    wait_for_summary_cache,
+)
 
 # wait_for_summary_cache short-circuits to False under settings.TESTING (the suite default).
 
@@ -102,3 +109,16 @@ def test_report_passes_stale_flag_to_email(project1, stale):
             wait_for_cache=True,
         )
     assert mock_email.call_args.kwargs.get("data_may_be_stale") is stale
+
+
+def test_summary_report_background_visibility_timeout_covers_job_runtime():
+    """The SQS visibility timeout must outlast the cache wait plus report generation,
+    otherwise the message is redelivered while the job is still running."""
+    with (
+        patch("api.utils.reports.MockRequest"),
+        patch("api.utils.reports.submit_job") as mock_submit,
+    ):
+        create_sample_unit_method_summary_report_background([uuid.uuid4()], "beltfish")
+
+    mock_submit.assert_called_once()
+    assert mock_submit.call_args.kwargs["visibility_timeout"] >= SUMMARY_CACHE_MAX_WAIT + 600
