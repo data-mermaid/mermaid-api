@@ -15,26 +15,15 @@ from rest_framework.response import Response
 from ..auth_backends import AnonymousJWTAuthentication
 from ..exceptions import check_uuid
 from ..models import (
-    BeltFish,
-    BeltInvert,
-    BenthicLIT,
-    BenthicPhotoQuadratTransect,
-    BenthicPIT,
-    BenthicTransect,
-    BleachingQuadratCollection,
     CollectRecord,
-    FishBeltTransect,
-    HabitatComplexity,
-    InvertBeltTransect,
     Management,
     Profile,
     Project,
     ProjectProfile,
-    QuadratCollection,
-    QuadratTransect,
     SampleEvent,
     Site,
     Tag,
+    TransectMethod,
 )
 from ..notifications import notify_crs_transferred
 from ..permissions import (
@@ -51,6 +40,7 @@ from ..reports.report_serializer import ReportSerializer
 from ..utils import (
     delete_instance_and_related_objects,
     get_extent,
+    get_subclasses,
     normalize_email,
     truthy,
 )
@@ -143,10 +133,10 @@ class BaseProjectSerializer(DynamicFieldsMixin, BaseAPISerializer):
         return [pp.profile_id for pp in profiles]
 
     def get_project_admins(self, obj):
-        # iterate the prefetched profiles; .filter() would bypass the prefetch cache
+        # iterate the prefetched profiles (in name order); .filter() would bypass the cache
         return [
             {"id": str(pp.profile.id), "name": pp.profile.full_name}
-            for pp in obj.profiles.all()
+            for pp in self._get_profiles(obj)
             if pp.role == ProjectProfile.ADMIN
         ]
 
@@ -293,91 +283,25 @@ def annotate_num_sample_units(qs):
     project_table = Project._meta.db_table
     site_table = Site._meta.db_table
     sample_event_table = SampleEvent._meta.db_table
-    benthic_transect_table = BenthicTransect._meta.db_table
-    benthiclit_table = BenthicLIT._meta.db_table
-    benthicpit_table = BenthicPIT._meta.db_table
-    habitatcomplexity_table = HabitatComplexity._meta.db_table
-    bleachingqc_table = BleachingQuadratCollection._meta.db_table
-    quadrat_collection_table = QuadratCollection._meta.db_table
-    benthicpqt_table = BenthicPhotoQuadratTransect._meta.db_table
-    quadrat_transect_table = QuadratTransect._meta.db_table
-    beltfish_table = BeltFish._meta.db_table
-    fishbelt_transect_table = FishBeltTransect._meta.db_table
-    beltinvert_table = BeltInvert._meta.db_table
-    invert_belt_transect_table = InvertBeltTransect._meta.db_table
+    counts = []
+    for method_cls in get_subclasses(TransectMethod):
+        su_field = method_cls._meta.get_field(method_cls.sample_unit_field())
+        counts.append(
+            f"""
+                    SELECT COUNT(*) as su_count
+                    FROM {method_cls._meta.db_table} t
+                    JOIN {su_field.related_model._meta.db_table} su ON t.{su_field.column} = su.id
+                    JOIN {sample_event_table} se ON su.sample_event_id = se.id
+                    JOIN {site_table} ON se.site_id = {site_table}.id
+                    WHERE {site_table}.project_id = {project_table}.id"""
+        )
+    sample_unit_counts = "\n\n                    UNION ALL\n".join(counts)
 
     return qs.annotate(
         num_sample_units=RawSQL(
             f"""
             (
-                WITH sample_unit_counts AS (
-                    -- BenthicLIT
-                    SELECT COUNT(*) as su_count
-                    FROM {benthiclit_table} t
-                    JOIN {benthic_transect_table} bt ON t.transect_id = bt.id
-                    JOIN {sample_event_table} se ON bt.sample_event_id = se.id
-                    JOIN {site_table} ON se.site_id = {site_table}.id
-                    WHERE {site_table}.project_id = {project_table}.id
-
-                    UNION ALL
-
-                    -- BenthicPIT
-                    SELECT COUNT(*) as su_count
-                    FROM {benthicpit_table} t
-                    JOIN {benthic_transect_table} bt ON t.transect_id = bt.id
-                    JOIN {sample_event_table} se ON bt.sample_event_id = se.id
-                    JOIN {site_table} ON se.site_id = {site_table}.id
-                    WHERE {site_table}.project_id = {project_table}.id
-
-                    UNION ALL
-
-                    -- HabitatComplexity
-                    SELECT COUNT(*) as su_count
-                    FROM {habitatcomplexity_table} t
-                    JOIN {benthic_transect_table} bt ON t.transect_id = bt.id
-                    JOIN {sample_event_table} se ON bt.sample_event_id = se.id
-                    JOIN {site_table} ON se.site_id = {site_table}.id
-                    WHERE {site_table}.project_id = {project_table}.id
-
-                    UNION ALL
-
-                    -- BleachingQuadratCollection
-                    SELECT COUNT(*) as su_count
-                    FROM {bleachingqc_table} t
-                    JOIN {quadrat_collection_table} qc ON t.quadrat_id = qc.id
-                    JOIN {sample_event_table} se ON qc.sample_event_id = se.id
-                    JOIN {site_table} ON se.site_id = {site_table}.id
-                    WHERE {site_table}.project_id = {project_table}.id
-
-                    UNION ALL
-
-                    -- BenthicPhotoQuadratTransect
-                    SELECT COUNT(*) as su_count
-                    FROM {benthicpqt_table} t
-                    JOIN {quadrat_transect_table} qt ON t.quadrat_transect_id = qt.id
-                    JOIN {sample_event_table} se ON qt.sample_event_id = se.id
-                    JOIN {site_table} ON se.site_id = {site_table}.id
-                    WHERE {site_table}.project_id = {project_table}.id
-
-                    UNION ALL
-
-                    -- BeltFish
-                    SELECT COUNT(*) as su_count
-                    FROM {beltfish_table} t
-                    JOIN {fishbelt_transect_table} bt ON t.transect_id = bt.id
-                    JOIN {sample_event_table} se ON bt.sample_event_id = se.id
-                    JOIN {site_table} ON se.site_id = {site_table}.id
-                    WHERE {site_table}.project_id = {project_table}.id
-
-                    UNION ALL
-
-                    -- BeltInvert
-                    SELECT COUNT(*) as su_count
-                    FROM {beltinvert_table} t
-                    JOIN {invert_belt_transect_table} bt ON t.transect_id = bt.id
-                    JOIN {sample_event_table} se ON bt.sample_event_id = se.id
-                    JOIN {site_table} ON se.site_id = {site_table}.id
-                    WHERE {site_table}.project_id = {project_table}.id
+                WITH sample_unit_counts AS ({sample_unit_counts}
                 )
                 SELECT COALESCE(SUM(su_count), 0)
                 FROM sample_unit_counts
@@ -410,11 +334,15 @@ class ProjectViewSet(BaseApiViewSet):
                 "updated_by",
             )
             .prefetch_related(
-                "profiles",
-                "profiles__profile",
-                "sites",
-                "sites__country",
+                # get_countries and get_num_sites only need the country name and row count
+                Prefetch(
+                    "sites",
+                    queryset=Site.objects.only("id", "project_id", "country_id").select_related(
+                        "country"
+                    ),
+                ),
                 "tags",
+                # the only profiles prefetch: members, admins and citations all read it
                 Prefetch(
                     "profiles",
                     queryset=ProjectProfile.objects.select_related("profile").order_by(
