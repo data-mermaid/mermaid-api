@@ -12,7 +12,6 @@ import botocore.exceptions
 from django.conf import settings
 from django.db import transaction
 from django.db.models import Q
-from django.db.models.fields.related import OneToOneField
 from django.utils import timezone
 
 from ..models import (
@@ -44,7 +43,6 @@ from ..models import (
     QuadratCollection,
     QuadratTransect,
     SampleEvent,
-    SampleUnit,
     Site,
     TransectMethod,
 )
@@ -56,7 +54,13 @@ from ..models.classification import (
     get_image_bucket,
     get_image_storage_config,
 )
-from . import delete_instance_and_related_objects, get_value, is_uuid, s3 as s3_utils
+from . import (
+    delete_instance_and_related_objects,
+    get_subclasses,
+    get_value,
+    is_uuid,
+    s3 as s3_utils,
+)
 from .classification import create_annotations_files_job
 from .email import emails_with_accounts, mermaid_email
 from .notification import suppress_all_notifications
@@ -414,22 +418,11 @@ def _get_sample_unit_method_label(sample_unit_method, sample_unit_name):
     return " ".join(number_label)
 
 
-def get_sample_unit_field(model):
-    return next(
-        (
-            field.name
-            for field in model._meta.get_fields()
-            if isinstance(field, OneToOneField) and issubclass(field.related_model, SampleUnit)
-        ),
-        None,
-    )
-
-
 def _create_submitted_sample_unit_method_summary(model_cls, project):
     DEFAULT_UPDATED_BY = "N/A"
     summary = defaultdict(dict)
     protocol = model_cls.protocol
-    sample_unit_name = get_sample_unit_field(model_cls)
+    sample_unit_name = model_cls.sample_unit_field()
 
     if sample_unit_name is None:
         return summary
@@ -440,9 +433,17 @@ def _create_submitted_sample_unit_method_summary(model_cls, project):
         f"{sample_unit_name}__sample_event",
         f"{sample_unit_name}__sample_event__site",
         f"{sample_unit_name}__sample_event__management",
-        "updated_by",
-    ).prefetch_related("observers")
+        f"{sample_unit_name}__updated_by",
+    ).prefetch_related("observers__profile")
     queryset = queryset.filter(**qry_filter)
+
+    # full_name can COUNT the profile's authusers (nameless profiles); once per profile per protocol
+    names = {}
+
+    def profile_name(profile):
+        if profile.pk not in names:
+            names[profile.pk] = profile.full_name
+        return names[profile.pk]
 
     for record in queryset:
         sample_unit = getattr(record, sample_unit_name)
@@ -453,8 +454,8 @@ def _create_submitted_sample_unit_method_summary(model_cls, project):
         label = _get_sample_unit_method_label(record, sample_unit_name)
         updated_by = DEFAULT_UPDATED_BY
         if sample_unit.updated_by:
-            updated_by = sample_unit.updated_by.full_name
-        observers = [o.profile_name for o in record.observers.all()]
+            updated_by = profile_name(sample_unit.updated_by)
+        observers = [profile_name(o.profile) for o in record.observers.all()]
 
         if site_id not in summary:
             summary[site_id] = {"site_name": "", "sample_unit_methods": {protocol: []}}
@@ -487,7 +488,7 @@ def _create_submitted_sample_unit_method_summary(model_cls, project):
 def create_submitted_summary(project):
     summary = {}
     protocols = []
-    sample_unit_methods = TransectMethod.__subclasses__()
+    sample_unit_methods = get_subclasses(TransectMethod)
     for sample_unit_method in sample_unit_methods:
         sample_unit_method_summary = _create_submitted_sample_unit_method_summary(
             sample_unit_method, project

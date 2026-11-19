@@ -12,7 +12,7 @@ from rest_framework.utils.encoders import JSONEncoder
 from taggit.managers import TaggableManager
 from taggit.models import GenericUUIDTaggedItemBase, TagBase
 
-from ..utils import get_sample_unit_number
+from ..utils import get_sample_unit_number, get_subclasses
 from ..utils.related import get_related_project
 from .base import (
     APPROVAL_STATUSES,
@@ -622,60 +622,53 @@ class TransectMethod(BaseModel):
     class Meta:
         db_table = "transectmethod"
 
-    @property
-    def protocol(self):
-        if hasattr(self, "benthiclit"):
-            return self.benthiclit.protocol
-        elif hasattr(self, "benthicpit"):
-            return self.benthicpit.protocol
-        elif hasattr(self, "beltfish"):
-            return self.beltfish.protocol
-        elif hasattr(self, "habitatcomplexity"):
-            return self.habitatcomplexity.protocol
-        elif hasattr(self, "bleachingquadratcollection"):
-            return self.bleachingquadratcollection.protocol
-        elif hasattr(self, "benthicphotoquadrattransect"):
-            return self.benthicphotoquadrattransect.protocol
-        elif hasattr(self, "beltinvert"):
-            return self.beltinvert.protocol
-        return None
+    @classmethod
+    def project_method_ids(cls, project_id):
+        """Subquery of the project's method ids, one branch per subclass so new protocols
+        are included automatically; much faster than OR-ing joins across every protocol table.
+        """
+        ids = [
+            method_cls.objects.filter(**{method_cls.project_lookup: project_id}).values_list(
+                "pk", flat=True
+            )
+            for method_cls in get_subclasses(cls)
+        ]
+        return ids[0].union(*ids[1:], all=True)
 
     @property
     def subclass(self):
-        if hasattr(self, "benthiclit"):
-            return getattr(self, "benthiclit")
-        elif hasattr(self, "benthicpit"):
-            return getattr(self, "benthicpit")
-        elif hasattr(self, "beltfish"):
-            return getattr(self, "beltfish")
-        elif hasattr(self, "habitatcomplexity"):
-            return getattr(self, "habitatcomplexity")
-        elif hasattr(self, "bleachingquadratcollection"):
-            return getattr(self, "bleachingquadratcollection")
-        elif hasattr(self, "benthicphotoquadrattransect"):
-            return getattr(self, "benthicphotoquadrattransect")
-        elif hasattr(self, "beltinvert"):
-            return getattr(self, "beltinvert")
+        for method_cls in get_subclasses(TransectMethod):
+            name = method_cls._meta.model_name
+            if hasattr(self, name):
+                return getattr(self, name)
         return None
 
     @property
+    def protocol(self):
+        subclass = self.subclass
+        return subclass.protocol if subclass is not None else None
+
+    @classmethod
+    def sample_unit_field(cls):
+        """Name of a subclass's OneToOneField to its sample unit."""
+        return next(
+            (
+                f.name
+                for f in cls._meta.get_fields()
+                if isinstance(f, models.OneToOneField) and issubclass(f.related_model, SampleUnit)
+            ),
+            None,
+        )
+
+    @property
     def sample_unit(self):
-        sample_unit_method_subclass = self.subclass
-        if sample_unit_method_subclass is None:
+        subclass = self.subclass
+        if subclass is None:
             return None
-
-        related_objects = [
-            f
-            for f in sample_unit_method_subclass._meta.get_fields()
-            if isinstance(f, models.OneToOneField)
-        ]
-
-        one2one_fields = [ro for ro in related_objects if ro.name.endswith("_ptr") is False]
-        if len(one2one_fields) == 1:
-            sample_unit_field = one2one_fields[0]
-            return getattr(sample_unit_method_subclass, sample_unit_field.name)
-
-        raise NameError("Sample unit field can't be found")
+        field = subclass.sample_unit_field()
+        if field is None:
+            raise NameError("Sample unit field can't be found")
+        return getattr(subclass, field)
 
     def __str__(self):
         return str(_("transect method"))
