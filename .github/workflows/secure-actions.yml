@@ -23,7 +23,6 @@ jobs:
     runs-on: ubuntu-latest
     permissions:
       contents: read
-      checks: write
     steps:
       - name: Harden the runner (Audit all outbound calls)
         uses: step-security/harden-runner@9af89fc71515a100421586dfdb3dc9c984fbf411  # v2.19.4
@@ -34,7 +33,8 @@ jobs:
         with:
           persist-credentials: false
 
-      - uses: sparkgeo/github-actions/.github/actions/github-actionlint@349a429e52e0ee3c79345ac70f5e9e38b97cffaf
+      # TODO: pin to the sparkgeo/github-actions#274 merge commit on main before merging.
+      - uses: sparkgeo/github-actions/.github/actions/github-actionlint@634e48f57eac99391652f5ecc5a9996666536b51
 
   # Static security analysis of workflow/action YAML with zizmor.
   # Uploads SARIF findings to the Security tab.
