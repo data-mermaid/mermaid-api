@@ -97,13 +97,27 @@ export_model_all_as_csv.short_description = (
 )
 
 
-class BaseAdmin(GISModelAdmin):
+def is_autocomplete_request(request):
+    # The autocomplete endpoint reuses the target admin's get_queryset; skip
+    # changelist-only annotations/prefetches there.
+    match = getattr(request, "resolver_match", None)
+    return match is not None and match.url_name == "autocomplete"
+
+
+class AuditFieldsAutocompleteMixin:
+    # Profile has thousands of rows; a plain <select> renders all of them.
+    def get_autocomplete_fields(self, request):
+        fields = tuple(super().get_autocomplete_fields(request))
+        return fields + tuple(f for f in ("created_by", "updated_by") if f not in fields)
+
+
+class BaseAdmin(AuditFieldsAutocompleteMixin, GISModelAdmin):
     actions = (export_model_display_as_csv, export_model_all_as_csv)
 
 
 @admin.register(Application)
 class ApplicationAdmin(BaseAdmin):
-    pass
+    autocomplete_fields = ("profile",)
 
 
 class APIKeyExpiryFilter(admin.SimpleListFilter):
@@ -337,6 +351,7 @@ class APIKeyAdmin(admin.ModelAdmin):
 
 @admin.register(AuthUser)
 class AuthUserAdmin(BaseAdmin):
+    autocomplete_fields = ("profile",)
     search_fields = [
         "user_id",
         "profile__first_name",
@@ -356,6 +371,7 @@ class ProfileAdmin(BaseAdmin):
         "has_explore_state",
     )
     search_fields = ["first_name", "last_name", "email"]
+    ordering = ("last_name", "first_name", "id")
 
     @admin.display(description="Email", ordering="email")
     def linked_email(self, obj):
@@ -375,6 +391,8 @@ class ProfileAdmin(BaseAdmin):
 
     def get_queryset(self, request):
         qs = super().get_queryset(request)
+        if is_autocomplete_request(request):
+            return qs
         qs = qs.annotate(Count("projects"))
         return qs
 
@@ -382,11 +400,7 @@ class ProfileAdmin(BaseAdmin):
 class UserMERMAIDFeatureInline(admin.TabularInline):
     model = UserMERMAIDFeature
     extra = 0
-
-    def formfield_for_foreignkey(self, db_field, request, **kwargs):
-        if db_field.name == "profile":
-            kwargs["queryset"] = Profile.objects.order_by("last_name", "first_name")
-        return super().formfield_for_foreignkey(db_field, request, **kwargs)
+    autocomplete_fields = ("profile",)
 
 
 @admin.register(MERMAIDFeature)
@@ -577,7 +591,7 @@ class SampleUnitAdmin(BaseAdmin):
         )
 
 
-class CachedFKInline(admin.StackedInline):
+class CachedFKInline(AuditFieldsAutocompleteMixin, admin.StackedInline):
     cache_fields = []
 
     def get_queryset(self, request):
@@ -596,6 +610,7 @@ class CachedFKInline(admin.StackedInline):
 class ObserverInline(CachedFKInline):
     model = Observer
     extra = 0
+    autocomplete_fields = ("profile",)
     readonly_fields = ["created_by", "updated_by"]
 
     def get_queryset(self, request):
