@@ -62,7 +62,7 @@ from . import (
     s3 as s3_utils,
 )
 from .classification import create_annotations_files_job
-from .email import mermaid_email
+from .email import emails_with_accounts, mermaid_email
 from .notification import suppress_all_notifications
 
 logger = logging.getLogger(__name__)
@@ -433,9 +433,17 @@ def _create_submitted_sample_unit_method_summary(model_cls, project):
         f"{sample_unit_name}__sample_event",
         f"{sample_unit_name}__sample_event__site",
         f"{sample_unit_name}__sample_event__management",
-        "updated_by",
-    ).prefetch_related("observers")
+        f"{sample_unit_name}__updated_by",
+    ).prefetch_related("observers__profile")
     queryset = queryset.filter(**qry_filter)
+
+    # full_name can COUNT the profile's authusers (nameless profiles); once per profile per protocol
+    names = {}
+
+    def profile_name(profile):
+        if profile.pk not in names:
+            names[profile.pk] = profile.full_name
+        return names[profile.pk]
 
     for record in queryset:
         sample_unit = getattr(record, sample_unit_name)
@@ -446,8 +454,8 @@ def _create_submitted_sample_unit_method_summary(model_cls, project):
         label = _get_sample_unit_method_label(record, sample_unit_name)
         updated_by = DEFAULT_UPDATED_BY
         if sample_unit.updated_by:
-            updated_by = sample_unit.updated_by.full_name
-        observers = [o.profile_name for o in record.observers.all()]
+            updated_by = profile_name(sample_unit.updated_by)
+        observers = [profile_name(o.profile) for o in record.observers.all()]
 
         if site_id not in summary:
             summary[site_id] = {"site_name": "", "sample_unit_methods": {protocol: []}}
@@ -1016,7 +1024,13 @@ def _copy_observers(old_tm_id, new_tm_id):
 
 
 def email_members_of_new_project(project, owner_profile):
-    for project_profile in project.profiles.filter(~Q(profile=owner_profile)):
+    project_profiles = list(
+        project.profiles.filter(~Q(profile=owner_profile)).select_related("profile")
+    )
+    linked_emails = set(emails_with_accounts([pp.profile for pp in project_profiles]))
+    for project_profile in project_profiles:
+        if project_profile.profile.email not in linked_emails:
+            continue
         context = {
             "owner": owner_profile,
             "project": project,

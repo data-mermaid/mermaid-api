@@ -1,5 +1,6 @@
+import shutil
 from pathlib import Path
-from tempfile import NamedTemporaryFile
+from tempfile import NamedTemporaryFile, mkdtemp
 
 from django.conf import settings
 
@@ -7,7 +8,7 @@ from ..mocks import MockRequest
 from ..models import SummaryCacheQueue
 from ..reports import attributes_report
 from ..reports.summary_report import create_protocol_report
-from . import create_iso_date_string, delete_file, s3
+from . import create_iso_date_string, s3
 from .email import email_report
 from .q import submit_job
 from .summary_cache import wait_for_summary_cache
@@ -34,8 +35,6 @@ def update_attributes_report(local_output_dir=None):
         attributes_report.write_attribute_reference(tmp.name)
         tmp.flush()
         if local_output_dir is not None:
-            import shutil
-
             out = Path(local_output_dir)
             shutil.copy(tmp.name, out / canonical_filename)
             shutil.copy(tmp.name, out / dated_filename)
@@ -92,25 +91,29 @@ def create_sample_unit_method_summary_report(
         if SummaryCacheQueue.objects.filter(project_id__in=project_ids).exists():
             data_may_be_stale = True
 
-    with NamedTemporaryFile(delete=False) as f:
-        temppath = Path(f.name)
-        output_path = temppath.rename(
-            f"{temppath.parent}/{create_iso_date_string()}_{protocol}.xlsx"
-        )
-        wb = create_protocol_report(request, project_ids, protocol)
-        try:
-            wb.save(output_path)
-        except Exception as e:
-            print(f"Error saving workbook: {e}")
-            return None
+    wb = create_protocol_report(request, project_ids, protocol)
 
-        if send_email:
-            email_report(
-                request.user.profile.email,
-                output_path,
-                protocol,
-                data_may_be_stale=data_may_be_stale,
-            )
-            delete_file(output_path)
-        else:
-            return output_path
+    # Unique directory per report: the file name is the same for every report of
+    # this protocol created on a given day, and callers use it for the download name.
+    output_dir = Path(mkdtemp())
+    output_path = output_dir / f"{create_iso_date_string()}_{protocol}.xlsx"
+    try:
+        wb.save(output_path)
+    except Exception as e:
+        print(f"Error saving workbook: {e}")
+        shutil.rmtree(output_dir, ignore_errors=True)
+        return None
+
+    if not send_email:
+        # The caller owns output_path.parent and must remove it when done.
+        return output_path
+
+    try:
+        email_report(
+            request.user.profile.email,
+            output_path,
+            protocol,
+            data_may_be_stale=data_may_be_stale,
+        )
+    finally:
+        shutil.rmtree(output_dir, ignore_errors=True)
