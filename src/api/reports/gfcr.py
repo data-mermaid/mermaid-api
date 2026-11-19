@@ -245,6 +245,21 @@ def revenue_data(indicator_sets, citation_cache):
                 )
 
 
+def get_indicator_sets(project_ids):
+    # Evaluated once: every sheet generator iterates indicator_sets and walks
+    # finance_solutions / investment_sources / revenues via .all(), which reads
+    # from the prefetch cache instead of querying per row. Don't use filter() or
+    # order_by() on those relations in the generators; that bypasses the cache.
+    return list(
+        GFCRIndicatorSet.objects.filter(project_id__in=project_ids)
+        .select_related("project")
+        .prefetch_related(
+            "finance_solutions__investment_sources",
+            "finance_solutions__revenues",
+        )
+    )
+
+
 def report_data(indicator_sets):
     citation_cache = {}
     sheet_data = {}
@@ -270,7 +285,7 @@ def create_report(project_ids, request=None, send_email=None):
     if isinstance(project_ids, list) is False:
         project_ids = [project_ids]
 
-    indicator_sets = GFCRIndicatorSet.objects.filter(project_id__in=project_ids)
+    indicator_sets = get_indicator_sets(project_ids)
     sheet_data = report_data(indicator_sets)
 
     for sheet_name, data in sheet_data.items():
