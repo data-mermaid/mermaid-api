@@ -705,3 +705,97 @@ def test_similar_name_ignore_migrated_to_new_validator(
     statuses = {r["code"]: r["status"] for r in mr_results if r["code"]}
     assert statuses["similar_name"] == IGNORE
     assert statuses["not_unique_management"] == WARN
+
+
+@pytest.mark.parametrize(
+    "fixture_name,validations,transect_key",
+    [
+        (
+            "valid_benthic_pit_collect_record",
+            benthic_pit.benthic_pit_validations,
+            "benthic_transect",
+        ),
+        (
+            "valid_benthic_lit_collect_record",
+            benthic_lit.benthic_lit_validations,
+            "benthic_transect",
+        ),
+        (
+            "valid_habitat_complexity_collect_record",
+            habitat_complexity.habcomp_validations,
+            "benthic_transect",
+        ),
+        (
+            "valid_benthic_pq_transect_collect_record",
+            benthic_photo_quadrat_transect.bpqt_non_classification_validations,
+            "quadrat_transect",
+        ),
+    ],
+)
+@pytest.mark.parametrize(
+    "number,expected_status,expected_code",
+    [(-1, ERROR, "not_positive_integer"), (0, ERROR, "not_positive_integer"), (1, OK, None)],
+)
+def test_transect_number_positive_integer(
+    request,
+    profile1_request,
+    fixture_name,
+    validations,
+    transect_key,
+    number,
+    expected_status,
+    expected_code,
+):
+    collect_record = request.getfixturevalue(fixture_name)
+    collect_record.data[transect_key]["number"] = number
+
+    runner = ValidationRunner(serializer=CollectRecordSerializer)
+    runner.validate(collect_record, validations, request=profile1_request)
+
+    number_results = runner.to_dict()["results"]["data"][transect_key]["number"]
+    result = _get_result(number_results, "positive_integer_validator")
+    assert result["status"] == expected_status
+    assert result["code"] == expected_code
+
+
+@pytest.mark.parametrize("field", ["num_quadrats", "num_points_per_quadrat"])
+@pytest.mark.parametrize(
+    "value,expected_status,expected_code",
+    [(0, ERROR, "not_positive_integer"), (1, OK, None)],
+)
+def test_pqt_counts_require_one_or_more(
+    valid_benthic_pq_transect_collect_record,
+    profile1_request,
+    field,
+    value,
+    expected_status,
+    expected_code,
+):
+    # Matches CSV ingest (min_value=1) for both counts
+    collect_record = valid_benthic_pq_transect_collect_record
+    collect_record.data["quadrat_transect"][field] = value
+
+    runner = ValidationRunner(serializer=CollectRecordSerializer)
+    runner.validate(
+        collect_record,
+        benthic_photo_quadrat_transect.bpqt_non_classification_validations,
+        request=profile1_request,
+    )
+
+    field_results = runner.to_dict()["results"]["data"]["quadrat_transect"][field]
+    result = _get_result(field_results, "positive_integer_validator")
+    assert result["status"] == expected_status
+    assert result["code"] == expected_code
+
+
+def test_runner_does_not_store_results_on_shared_validations(
+    valid_benthic_pit_collect_record, profile1_request
+):
+    # Protocol validation lists are module-level and shared across request threads; a result
+    # left on a shared entry can be read by another request's runner.
+    validations = benthic_pit.benthic_pit_validations
+    runner = ValidationRunner(serializer=CollectRecordSerializer)
+    runner.validate(valid_benthic_pit_collect_record, validations, request=profile1_request)
+
+    assert runner.to_dict()["results"]
+    assert all(v.result is None for v in validations)

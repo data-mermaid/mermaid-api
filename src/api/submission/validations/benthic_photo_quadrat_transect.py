@@ -75,6 +75,12 @@ bpqt_base_validations = [
         validation_type=VALUE_VALIDATION_TYPE,
     ),
     Validation(
+        validator=PositiveIntegerValidator(key_path="data.quadrat_transect.number"),
+        paths=["data.quadrat_transect.number"],
+        validation_level=FIELD_LEVEL,
+        validation_type=VALUE_VALIDATION_TYPE,
+    ),
+    Validation(
         validator=RequiredValidator(
             path="data.quadrat_transect.quadrat_size",
         ),
@@ -91,7 +97,9 @@ bpqt_base_validations = [
         validation_type=VALUE_VALIDATION_TYPE,
     ),
     Validation(
-        validator=PositiveIntegerValidator(key_path="data.quadrat_transect.quadrat_number_start"),
+        validator=PositiveIntegerValidator(
+            key_path="data.quadrat_transect.quadrat_number_start", allow_zero=True
+        ),
         paths=["data.quadrat_transect.quadrat_number_start"],
         validation_level=FIELD_LEVEL,
         validation_type=VALUE_VALIDATION_TYPE,
