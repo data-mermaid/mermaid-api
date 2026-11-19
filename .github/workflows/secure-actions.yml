@@ -33,8 +33,7 @@ jobs:
         with:
           persist-credentials: false
 
-      # TODO: pin to the sparkgeo/github-actions#274 merge commit on main before merging.
-      - uses: sparkgeo/github-actions/.github/actions/github-actionlint@634e48f57eac99391652f5ecc5a9996666536b51
+      - uses: sparkgeo/github-actions/.github/actions/github-actionlint@a5647a7330aed6f5706430181cb7a96833b0d1ed
 
   # Static security analysis of workflow/action YAML with zizmor.
   # Uploads SARIF findings to the Security tab.
@@ -54,4 +53,4 @@ jobs:
         with:
           persist-credentials: false
 
-      - uses: sparkgeo/github-actions/.github/actions/zizmor@349a429e52e0ee3c79345ac70f5e9e38b97cffaf
+      - uses: sparkgeo/github-actions/.github/actions/zizmor@a5647a7330aed6f5706430181cb7a96833b0d1ed
