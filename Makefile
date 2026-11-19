@@ -115,8 +115,17 @@ shellroot:
 shellplusroot:
 	docker compose exec --user=root $(API_SERVICE) python manage.py shell_plus
 
+# pytest-xdist worker count. Set it in your shell (export PYTEST_WORKERS=16) or per
+# run (make test PYTEST_WORKERS=16). 0 turns xdist off entirely.
+# pytest-xdist is installed at image build time: if pytest rejects `-n`, run `make build`.
+PYTEST_WORKERS ?= 0
+PYTEST_ARGS ?=
+
 test:
-	docker compose exec $(API_SERVICE) pytest -v --no-migrations api/tests
+	docker compose exec $(API_SERVICE) pytest -n $(PYTEST_WORKERS) --no-migrations --durations=25 $(PYTEST_ARGS) api/tests
+
+testfast:
+	docker compose exec $(API_SERVICE) pytest -n $(PYTEST_WORKERS) --no-migrations --reuse-db $(PYTEST_ARGS) api/tests
 
 # -----------------
 # Fargate Maintenance (docker exec)
