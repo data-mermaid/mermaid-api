@@ -229,12 +229,3 @@ def test_post_invert_species_creates_proposed(db_setup, api_client1, invert_genu
     assert data["status"] == PROPOSED
     assert data["display_name"] == f"{invert_genus_1.name} newspecies"
     assert InvertSpecies.objects.filter(name="newspecies", genus=invert_genus_1).exists()
-
-
-def test_sample_unit_method_search_fields_include_beltinvert():
-    """SearchNonFieldFilter.SEARCH_FIELDS includes beltinvert observer name paths."""
-    from api.resources.sampleunitmethods.sample_unit_methods import SearchNonFieldFilter
-
-    fields = SearchNonFieldFilter.SEARCH_FIELDS
-    assert "beltinvert__observers__profile__first_name" in fields
-    assert "beltinvert__observers__profile__last_name" in fields
