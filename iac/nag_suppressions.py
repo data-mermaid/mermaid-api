@@ -825,6 +825,7 @@ def suppress_sagemaker(stack: Stack, prefix: str) -> None:
                     "Action::s3:GetObject*",
                     "Action::s3:List*",
                     "Resource::<devDataBucket68DD117A.Arn>/*",
+                    "Resource::<devSegDatasetsBucket75066FB0.Arn>/*",
                     "Resource::<devSourcesBucket702F0A74.Arn>/*",
                     "Resource::arn:aws:s3:::2310-coralnet-public-sources/*",
                     "Resource::arn:aws:s3:::2605-coralnet-public-sources/*",
@@ -912,6 +913,7 @@ def suppress_sagemaker(stack: Stack, prefix: str) -> None:
     for bucket_path in [
         f"{prefix}SourcesBucket/Resource",
         f"{prefix}DataBucket/Resource",
+        f"{prefix}SegDatasetsBucket/Resource",
     ]:
         _suppress_by_path(
             stack,
