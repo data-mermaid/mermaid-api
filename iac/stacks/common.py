@@ -441,7 +441,8 @@ class CommonStack(Stack):
         )
 
         postgres_engine = rds.DatabaseInstanceEngine.postgres(
-            version=rds.PostgresEngineVersion.VER_16_9
+            # 18.7 is the first 18 release with the 2026-11-12 security fixes.
+            version=rds.PostgresEngineVersion.of("18.7", "18")
         )
 
         # Reject any non-SSL connection to the database.
