@@ -89,7 +89,7 @@ class PManagementFilterSet(BaseAPIFilterSet):
 class PManagementViewSet(NotifyDeletedSiteMRMixin, CopyRecordsMixin, BaseProjectApiViewSet):
     model_display_name = "Management Regime"
     serializer_class = PManagementSerializer
-    queryset = Management.objects.all()
+    queryset = Management.objects.prefetch_related("parties")
     project_lookup = "project"
     filterset_class = PManagementFilterSet
     search_fields = [
