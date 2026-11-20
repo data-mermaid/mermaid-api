@@ -61,6 +61,7 @@ jobs:
       - name: Install CDK
         run: |
           iac/install_cdk.sh
+          pip install boto3==1.43.51
 
       - name: Configure AWS credentials
         uses: aws-actions/configure-aws-credentials@61815dcd50bd041e203e49132bacad1fd04d2708  # v5.1.1
@@ -80,6 +81,7 @@ jobs:
           PYTHONPATH: ${{ github.workspace }}
           CDK_DEFAULT_ACCOUNT: ${{ secrets.CDK_DEFAULT_ACCOUNT }}
           CDK_DEFAULT_REGION: us-east-1
+          BUILD_GIT_SHA: ${{ github.sha }}
           SLACK_CHANNEL_ID: ${{ secrets.SLACK_CHANNEL_ID }}
           SLACK_WORKSPACE_ID: ${{ secrets.SLACK_WORKSPACE_ID }}
         run: |
@@ -87,6 +89,7 @@ jobs:
           echo "$short_sha" > src/VERSION.txt && \
           cat src/VERSION.txt && \
           cd iac && cdk deploy \
+            --outputs-file cdk-outputs.json \
             --require-approval never \
             GithubAccess \
             mermaid-api-infra-common \
@@ -96,6 +99,7 @@ jobs:
             dev-mermaid-api-django \
             dev-mermaid-static-site \
             dev-mermaid-sagemaker
+          python record_build_provenance.py cdk-outputs.json dev-mermaid-api-django
       - name: CDK Deploy PROD
         if: startsWith(github.ref, 'refs/tags')
         env:
@@ -104,6 +108,7 @@ jobs:
           PYTHONPATH: ${{ github.workspace }}
           CDK_DEFAULT_ACCOUNT: ${{ secrets.CDK_DEFAULT_ACCOUNT }}
           CDK_DEFAULT_REGION: us-east-1
+          BUILD_GIT_SHA: ${{ github.sha }}
           SLACK_CHANNEL_ID: ${{ secrets.SLACK_CHANNEL_ID }}
           SLACK_WORKSPACE_ID: ${{ secrets.SLACK_WORKSPACE_ID }}
           REF_NAME: ${{ github.ref_name }}
@@ -111,6 +116,7 @@ jobs:
           echo "$REF_NAME" > src/VERSION.txt && \
           cat src/VERSION.txt && \
           cd iac && cdk deploy \
+            --outputs-file cdk-outputs.json \
             --require-approval never \
             GithubAccess \
             mermaid-api-infra-common \
@@ -119,6 +125,7 @@ jobs:
             prod-mermaid-inference \
             prod-mermaid-api-django \
             prod-mermaid-static-site
+          python record_build_provenance.py cdk-outputs.json prod-mermaid-api-django
 
 
 
