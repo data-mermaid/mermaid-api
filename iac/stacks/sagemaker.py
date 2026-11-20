@@ -561,8 +561,7 @@ class SagemakerStack(cdk.Stack):
 
     def create_seg_datasets_bucket(self) -> s3.Bucket:
         """
-        Immutable bucket for versioned segmentation datasets (workspace spec
-        "segmentation versioned datasets design" §4.1).
+        Immutable bucket for versioned segmentation datasets.
 
         The denies cover object-level API calls for every principal, admins
         included: PutObject without If-None-Match under images/, datasets/ and
