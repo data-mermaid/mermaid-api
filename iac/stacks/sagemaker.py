@@ -568,9 +568,10 @@ class SagemakerStack(cdk.Stack):
         included: PutObject without If-None-Match under images/, datasets/ and
         taxonomy/, and DeleteObject/DeleteObjectVersion. Bucket configuration
         (the policy itself, lifecycle) is protected by IAM and the CDK
-        pipeline, not by these denies. A plain CopyObject into a protected
-        prefix is impossible (403/501), so publishers must use multipart copy
-        with If-None-Match on CompleteMultipartUpload.
+        pipeline, not by these denies. CopyObject into a protected prefix
+        must also send If-None-Match: * (403 without it, 412 if the key
+        exists); a multipart upload or copy sends it on
+        CompleteMultipartUpload.
         """
         bucket = s3.Bucket(
             self,
