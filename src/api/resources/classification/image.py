@@ -1,3 +1,5 @@
+import uuid
+
 from django.conf import settings
 from django.db import transaction
 from django.db.models import Q
@@ -10,8 +12,10 @@ from ...exceptions import check_uuid
 from ...models import (
     BENTHICPQT_PROTOCOL,
     Annotation,
+    BenthicAttribute,
     ClassificationStatus,
     CollectRecord,
+    GrowthForm,
     Image,
     ObsBenthicPhotoQuadrat,
     Point,
@@ -28,7 +32,6 @@ from ..base import (
     BaseProjectApiViewSet,
 )
 from ..mixins import DynamicFieldsMixin
-from .annotation import SaveAnnotationSerializer
 from .classification_status import ClassificationStatusSerializer
 from .point import PointSerializer
 
@@ -355,6 +358,111 @@ class ImageViewSet(BaseProjectApiViewSet):
             and instance.is_confirmed == is_confirmed
         )
 
+    def _validate_boolean(self, field_name, value):
+        try:
+            return serializers.BooleanField().run_validation(value or False)
+        except ValidationError as err:
+            raise ValidationError({field_name: err.detail})
+
+    def _parse_pk(self, field_name, value):
+        try:
+            return uuid.UUID(str(value))
+        except (TypeError, ValueError, AttributeError):
+            raise ValidationError({field_name: [f"Incorrect type. Expected pk value: {value}."]})
+
+    def _load_by_ids(self, model, field_name, ids):
+        if not ids:
+            return {}
+        records = model.objects.filter(id__in=ids).in_bulk()
+        missing = ids - records.keys()
+        if missing:
+            missing_id = sorted(str(m) for m in missing)[0]
+            raise ValidationError(
+                {field_name: [f'Invalid pk "{missing_id}" - object does not exist.']}
+            )
+        return records
+
+    def _save_user_annotations(self, pending_annotations, profile):
+        # pending_annotations: [(point, existing_instance_or_None, annotation_data)]
+        if not pending_annotations:
+            return
+
+        parsed = []
+        benthic_attribute_ids = set()
+        growth_form_ids = set()
+        for point, instance, annotation_data in pending_annotations:
+            benthic_attribute = annotation_data.get("benthic_attribute")
+            if benthic_attribute in (None, ""):
+                raise ValidationError({"benthic_attribute": ["This field is required."]})
+            benthic_attribute_id = self._parse_pk("benthic_attribute", benthic_attribute)
+            benthic_attribute_ids.add(benthic_attribute_id)
+
+            growth_form = annotation_data.get("growth_form")
+            growth_form_id = None
+            if growth_form not in (None, ""):
+                growth_form_id = self._parse_pk("growth_form", growth_form)
+                growth_form_ids.add(growth_form_id)
+
+            is_confirmed = self._validate_boolean(
+                "is_confirmed", annotation_data.get("is_confirmed")
+            )
+            if instance is None and self._validate_boolean(
+                "is_machine_created", annotation_data.get("is_machine_created")
+            ):
+                raise ValidationError("Machine generated annotations can not be created.")
+
+            parsed.append((point, instance, benthic_attribute_id, growth_form_id, is_confirmed))
+
+        benthic_attributes = self._load_by_ids(
+            BenthicAttribute, "benthic_attribute", benthic_attribute_ids
+        )
+        growth_forms = self._load_by_ids(GrowthForm, "growth_form", growth_form_ids)
+
+        now = timezone.now()  # bulk_update skips auto_now
+        to_create = []
+        to_update = []
+        for point, instance, benthic_attribute_id, growth_form_id, is_confirmed in parsed:
+            benthic_attribute = benthic_attributes[benthic_attribute_id]
+            growth_form = growth_forms[growth_form_id] if growth_form_id else None
+            if instance is None:
+                to_create.append(
+                    Annotation(
+                        point=point,
+                        benthic_attribute=benthic_attribute,
+                        growth_form=growth_form,
+                        is_confirmed=is_confirmed,
+                        score=100,
+                        classifier=None,
+                        created_by=profile,
+                        updated_by=profile,
+                    )
+                )
+            else:
+                instance.benthic_attribute = benthic_attribute
+                instance.growth_form = growth_form
+                instance.is_confirmed = is_confirmed
+                instance.score = 100
+                instance.classifier = None
+                instance.updated_by = profile
+                instance.updated_on = now
+                to_update.append(instance)
+
+        if to_create:
+            Annotation.objects.bulk_create(to_create)
+        if to_update:
+            Annotation.objects.bulk_update(
+                to_update,
+                [
+                    "benthic_attribute",
+                    "growth_form",
+                    "is_confirmed",
+                    "score",
+                    "classifier",
+                    "updated_by",
+                    "updated_on",
+                ],
+            )
+
     def partial_update(self, request, pk, *args, **kwargs):
         data = request.data
         qs = self.limit_to_project(request, pk, *args, **kwargs)
@@ -383,6 +491,7 @@ class ImageViewSet(BaseProjectApiViewSet):
 
             to_confirm_ids = []
             to_unconfirm_ids = []
+            pending_user_annotations = []
 
             for point_data in points:
                 point, annotations = self._get_validated_annotations(point_data, points_by_id)
@@ -408,12 +517,9 @@ class ImageViewSet(BaseProjectApiViewSet):
                     ):
                         continue
 
-                    anno_serializer = SaveAnnotationSerializer(
-                        instance=anno_instance, data=annotation_data, context=context
-                    )
-                    anno_serializer.is_valid(raise_exception=True)
-                    anno_serializer.save(point=point)
+                    pending_user_annotations.append((point, anno_instance, annotation_data))
 
+            self._save_user_annotations(pending_user_annotations, request.user.profile)
             self._save_machine_annotation_confirmations(to_confirm_ids, to_unconfirm_ids)
 
         updated_image_record = qs.get(id=pk)
