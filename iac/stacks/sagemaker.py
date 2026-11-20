@@ -61,17 +61,17 @@ class SagemakerStack(cdk.Stack):
 
         self.sm_data_bucket.grant_read_write(self.sm_execution_role)
 
-        # Create immutable S3 bucket for versioned segmentation datasets
-        self.seg_datasets_bucket = self.create_seg_datasets_bucket()
+        # Create immutable S3 bucket for versioned image classification datasets
+        self.ic_datasets_bucket = self.create_ic_datasets_bucket()
 
-        self.seg_datasets_bucket.grant_read(self.sm_execution_role)
+        self.ic_datasets_bucket.grant_read(self.sm_execution_role)
 
         CfnOutput(
             self,
-            f"{self.prefix}SegDatasetsBucketName",
-            value=self.seg_datasets_bucket.bucket_name,
-            description="Segmentation Datasets Bucket Name",
-            export_name=f"{self.prefix}-SegDatasetsBucketName",
+            f"{self.prefix}ICDatasetsBucketName",
+            value=self.ic_datasets_bucket.bucket_name,
+            description="Image Classification Datasets Bucket Name",
+            export_name=f"{self.prefix}-ICDatasetsBucketName",
         )
 
         self.mermaid_image_processing_bucket = s3.Bucket.from_bucket_arn(
@@ -559,9 +559,10 @@ class SagemakerStack(cdk.Stack):
             bucket_name=f"{self.prefix}-datamermaid-sm-data",
         )
 
-    def create_seg_datasets_bucket(self) -> s3.Bucket:
+    def create_ic_datasets_bucket(self) -> s3.Bucket:
         """
-        Immutable bucket for versioned segmentation datasets.
+        Immutable bucket for versioned image classification datasets (segmentation
+        and point classifier).
 
         The denies cover object-level API calls for every principal, admins
         included: PutObject without If-None-Match under images/, datasets/ and
@@ -573,8 +574,8 @@ class SagemakerStack(cdk.Stack):
         """
         bucket = s3.Bucket(
             self,
-            id=f"{self.prefix}SegDatasetsBucket",
-            bucket_name="mermaid-seg-datasets",
+            id=f"{self.prefix}ICDatasetsBucket",
+            bucket_name="mermaid-ic-datasets",
             versioned=True,
             removal_policy=cdk.RemovalPolicy.RETAIN,
             block_public_access=s3.BlockPublicAccess.BLOCK_ALL,
