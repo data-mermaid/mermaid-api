@@ -61,6 +61,19 @@ class SagemakerStack(cdk.Stack):
 
         self.sm_data_bucket.grant_read_write(self.sm_execution_role)
 
+        # Create immutable S3 bucket for versioned image classification datasets
+        self.ic_datasets_bucket = self.create_ic_datasets_bucket()
+
+        self.ic_datasets_bucket.grant_read(self.sm_execution_role)
+
+        CfnOutput(
+            self,
+            f"{self.prefix}ICDatasetsBucketName",
+            value=self.ic_datasets_bucket.bucket_name,
+            description="Image Classification Datasets Bucket Name",
+            export_name=f"{self.prefix}-ICDatasetsBucketName",
+        )
+
         self.mermaid_image_processing_bucket = s3.Bucket.from_bucket_arn(
             self,
             f"{self.prefix}ImageProcessingBucket",
@@ -545,6 +558,69 @@ class SagemakerStack(cdk.Stack):
             id=f"{self.prefix}DataBucket",
             bucket_name=f"{self.prefix}-datamermaid-sm-data",
         )
+
+    def create_ic_datasets_bucket(self) -> s3.Bucket:
+        """
+        Immutable bucket for versioned image classification datasets (segmentation
+        and point classifier).
+
+        The denies cover object-level API calls for every principal, admins
+        included: PutObject without If-None-Match under images/, datasets/ and
+        taxonomy/, and DeleteObject/DeleteObjectVersion. Bucket configuration
+        (the policy itself, lifecycle) is protected by IAM and the CDK
+        pipeline, not by these denies. CopyObject into a protected prefix
+        must also send If-None-Match: * (403 without it, 412 if the key
+        exists); a multipart upload or copy sends it on
+        CompleteMultipartUpload.
+        """
+        bucket = s3.Bucket(
+            self,
+            id=f"{self.prefix}ICDatasetsBucket",
+            bucket_name="mermaid-ic-datasets",
+            versioned=True,
+            removal_policy=cdk.RemovalPolicy.RETAIN,
+            block_public_access=s3.BlockPublicAccess.BLOCK_ALL,
+            enforce_ssl=True,
+            encryption=s3.BucketEncryption.S3_MANAGED,
+            # A crashed publish leaves billed, unlisted parts; the rule never
+            # deletes an object or version.
+            lifecycle_rules=[
+                s3.LifecycleRule(abort_incomplete_multipart_upload_after=cdk.Duration.days(7))
+            ],
+        )
+
+        # The ObjectCreationOperation term exempts the multipart parts, which
+        # carry no conditional header.
+        bucket.add_to_resource_policy(
+            iam.PolicyStatement(
+                sid="DenyUnconditionalPut",
+                effect=iam.Effect.DENY,
+                principals=[iam.AnyPrincipal()],
+                actions=["s3:PutObject"],
+                resources=[
+                    bucket.arn_for_objects("images/*"),
+                    bucket.arn_for_objects("datasets/*"),
+                    bucket.arn_for_objects("taxonomy/*"),
+                ],
+                conditions={
+                    "Null": {"s3:if-none-match": "true"},
+                    "Bool": {"s3:ObjectCreationOperation": "true"},
+                },
+            )
+        )
+        bucket.add_to_resource_policy(
+            iam.PolicyStatement(
+                sid="DenyObjectDelete",
+                effect=iam.Effect.DENY,
+                principals=[iam.AnyPrincipal()],
+                actions=["s3:DeleteObject", "s3:DeleteObjectVersion"],
+                resources=[bucket.arn_for_objects("*")],
+            )
+        )
+        # The denies must outlive the stack.
+        assert bucket.policy is not None
+        bucket.policy.apply_removal_policy(cdk.RemovalPolicy.RETAIN)
+        return bucket
 
     def _create_bucket(self, id: str, bucket_name: str) -> s3.Bucket:
         return s3.Bucket(
