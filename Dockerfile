@@ -79,7 +79,7 @@ ENV PSYCOPG_IMPL=c
 # python3-numpy. libgdal39 is the GDAL 3.13 library from PGDG; the build fails
 # loudly if a GDAL upgrade renames it.
 RUN apt-get update && apt-get install -y --no-install-recommends \
-    postgresql-client-16 \
+    postgresql-client-18 \
     libgdal39 \
  && rm -rf /var/lib/apt/lists/*
 
