@@ -1,4 +1,6 @@
 import codecs
+import hashlib
+import hmac
 import logging
 import uuid
 from pickle import dumps, loads
@@ -8,6 +10,16 @@ from django.utils import timezone
 
 logger = logging.getLogger(__name__)
 USE_FIFO = getattr(settings, "USE_FIFO") == "True"
+
+
+def _sign_body(body):
+    """HMAC-SHA256 of a job's (base64 pickle) body, keyed by the Django SECRET_KEY.
+
+    The job body is a pickle, and from_message unpickles it, which executes
+    arbitrary code. Only our own code, which holds SECRET_KEY, can produce a valid
+    signature, so a forged SQS message cannot reach the unpickle step."""
+    key = settings.SECRET_KEY.encode()
+    return hmac.new(key, body.encode(), hashlib.sha256).hexdigest()
 
 
 class Job:
@@ -53,20 +65,24 @@ class Job:
 
     @property
     def message(self):
+        body = codecs.encode(
+            dumps(
+                {
+                    "loggable": self.loggable,
+                    "callable": self.callable,
+                    "args": self.args,
+                    "kwargs": self.kwargs,
+                    "visibility_timeout": self.visibility_timeout,
+                }
+            ),
+            "base64",
+        ).decode()
         msg = dict(
-            MessageAttributes={"id": {"StringValue": self.id, "DataType": "String"}},
-            MessageBody=codecs.encode(
-                dumps(
-                    {
-                        "loggable": self.loggable,
-                        "callable": self.callable,
-                        "args": self.args,
-                        "kwargs": self.kwargs,
-                        "visibility_timeout": self.visibility_timeout,
-                    }
-                ),
-                "base64",
-            ).decode(),
+            MessageAttributes={
+                "id": {"StringValue": self.id, "DataType": "String"},
+                "sig": {"StringValue": _sign_body(body), "DataType": "String"},
+            },
+            MessageBody=body,
         )
         if USE_FIFO:
             msg["MessageDeduplicationId"] = self.composite_id
@@ -81,9 +97,17 @@ class Job:
 
         :param obj message: The boto Message object to use.
         """
+        message_attributes = message.message_attributes or dict()
+
+        # The body is a pickle; verify its HMAC before unpickling so a forged or
+        # tampered SQS message cannot execute code (card 2252).
+        signature = (message_attributes.get("sig") or dict()).get("StringValue")
+        expected = _sign_body(message.body)
+        if not signature or not hmac.compare_digest(signature, expected):
+            raise ValueError("Job signature missing or invalid; refusing to deserialize")
+
         data = loads(codecs.decode(message.body.encode(), "base64"))
 
-        message_attributes = message.message_attributes or dict()
         group = (message.attributes or dict()).get("MessageGroupId")
         job_id = (message_attributes.get("id") or dict()).get("StringValue")
         loggable = data.get("loggable") or False
