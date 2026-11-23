@@ -24,6 +24,9 @@ from ..permissions import (
     CollectRecordOwner,
     ProjectDataAdminPermission,
     ProjectDataPermission,
+    get_project,
+    get_project_pk,
+    get_project_profile,
 )
 from ..submission.utils import submit_collect_records, validate_collect_records
 from ..utils import truthy
@@ -31,7 +34,28 @@ from .base import BaseAPIFilterSet, BaseAPISerializer, BaseProjectApiViewSet
 from .mixins import CreateOrUpdateSerializerMixin
 
 logger = logging.getLogger(__name__)
-cr_permissions = [ProjectDataPermission & CollectRecordOwner]
+
+
+class CollectRecordWritePermission(ProjectDataPermission):
+    """Members may read their collect records; only a COLLECTOR/ADMIN may write, and
+    only while the project is open. This blocks READONLY members from creating,
+    updating or submitting, and blocks every write on a LOCKED project - which the
+    old ProjectDataPermission (membership only) allowed (card 2241). Ownership of a
+    specific record is enforced separately by CollectRecordOwner.
+    """
+
+    def has_permission(self, request, view):
+        if not super().has_permission(request, view):
+            return False
+        if request.method in SAFE_METHODS:
+            return True
+        pk = get_project_pk(request, view)
+        project = get_project(pk, request=request)
+        pp = get_project_profile(project, request.user.profile, request=request)
+        return bool(project is not None and project.is_open and pp is not None and pp.is_collector)
+
+
+cr_permissions = [CollectRecordWritePermission & CollectRecordOwner]
 
 
 def get_unicode_error(uploaded_file, byte_position, chunk_size=8192):
