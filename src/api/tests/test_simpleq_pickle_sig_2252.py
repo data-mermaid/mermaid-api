@@ -54,3 +54,18 @@ def test_tampered_body_is_rejected():
     message["MessageBody"] = forged["MessageBody"]
     with pytest.raises(ValueError):
         Job.from_message(_received(message))
+
+
+def test_rejected_message_does_not_stop_the_batch():
+    from simpleq.queues import Queue
+
+    bad = _received(Job(None, "mermaid", False, sample_callable).message)
+    del bad.message_attributes["sig"]
+    good = _received(Job(None, "mermaid", False, sample_callable, 1).message)
+
+    queue = Queue("test-2252", sqs_resource=SimpleNamespace())
+    queue._queue = SimpleNamespace(receive_messages=lambda **kwargs: [bad, good])
+
+    jobs = list(queue.jobs)
+    assert len(jobs) == 1
+    assert jobs[0].args == (1,)
