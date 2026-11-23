@@ -15,7 +15,7 @@ from ..models import (
     Project,
     RestrictedProjectSummarySampleEvent,
 )
-from ..permissions import AuthenticatedReadOnlyPermission, ProjectDataAdminPermission
+from ..permissions import ProjectDataAdminPermission, ProjectDataReadOnlyPermission
 from ..utils.project import (
     citation_retrieved_text,
     default_citation,
@@ -259,7 +259,11 @@ class GFCRIndicatorSetSerializer(BaseAPISerializer):
 class IndicatorSetViewSet(BaseProjectApiViewSet):
     serializer_class = GFCRIndicatorSetSerializer
     project_lookup = "project"
-    permission_classes = [ProjectDataAdminPermission | AuthenticatedReadOnlyPermission]
+    # Read is members-only. GFCR has no data_policy_* field, so there is no public
+    # GFCR tier: AuthenticatedReadOnlyPermission let any logged-in user read any
+    # project's GFCR financial data (BOLA). ProjectDataReadOnlyPermission requires
+    # project membership.
+    permission_classes = [ProjectDataReadOnlyPermission | ProjectDataAdminPermission]
 
     def get_queryset(self):
         project_id = self.kwargs.get("project_pk")
