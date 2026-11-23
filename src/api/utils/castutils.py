@@ -17,12 +17,27 @@ def to_number(string, max_digits=None, precision=None):
         return None
 
 
+# Leading characters a spreadsheet treats as the start of a formula.
+_FORMULA_PREFIXES = ("=", "+", "-", "@", "\t", "\r")
+
+
+def neutralize_formula(value):
+    """Stop CSV/Excel formula injection (CWE-1236). If a string cell starts with a
+    character a spreadsheet reads as a formula, prefix a single quote so the value is
+    shown literally. Non-strings pass through unchanged."""
+    if isinstance(value, str) and value and value[0] in _FORMULA_PREFIXES:
+        return "'" + value
+    return value
+
+
 def cast_str_value(s):
     if not isinstance(s, str):
         return s
 
     val = to_number(s)
-    return val if val is not None else s
+    # A numeric string (incl. a legitimate leading "-") becomes a number and needs no
+    # neutralizing; only free text that stays a string could carry a formula.
+    return val if val is not None else neutralize_formula(s)
 
 
 def to_yesno(value: bool):
