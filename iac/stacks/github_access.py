@@ -23,15 +23,57 @@ class GithubAccessStack(Stack):
                         "token.actions.githubusercontent.com:aud": "sts.amazonaws.com"
                     },
                     "StringLike": {
-                        "token.actions.githubusercontent.com:sub": "repo:data-mermaid/mermaid-*"
+                        # Phase 1 (card 2261): scope the admin role to this repo only. The
+                        # previous "mermaid-*" let any data-mermaid repo's workflow assume
+                        # it. Still allows any ref/PR of mermaid-api so pr.yml (which today
+                        # assumes this role) keeps working.
+                        #
+                        # Phase 2 (follow-up, AFTER the read-only role below is deployed):
+                        # pin this to ":environment:dev"/":environment:prod" and point
+                        # pr.yml at github-pr-readonly-role, so PRs can no longer assume the
+                        # admin role. Doing both now would break PR CI, because the
+                        # read-only role does not exist until this stack is deployed.
+                        "token.actions.githubusercontent.com:sub": "repo:data-mermaid/mermaid-api:*"
                     },
                 },
             ),
             max_session_duration=Duration.hours(3),
         )
 
+        # NOTE (card 2261): this role runs `cdk deploy` for every stack, so it needs
+        # broad permissions; AdministratorAccess is kept for now. Scoping the permissions
+        # safely means migrating to CDK bootstrap deploy (`cdk deploy --role-arn
+        # <cfn-exec-role>`) so this role only needs sts:AssumeRole on the cdk-* roles - a
+        # separate change that must be validated against a real deploy. The trust narrowing
+        # above already removes the cross-repo assumption vector.
         self.github_access_role.add_managed_policy(
             iam.ManagedPolicy.from_aws_managed_policy_name("AdministratorAccess")
+        )
+
+        # Read-only role for PR CI (pr.yml `cdk synth`/`cdk diff`), created now so a
+        # phase-2 change can point pr.yml at it and pin the admin role away from PRs. Only
+        # ReadOnlyAccess; trusted for the pull_request context.
+        self.github_pr_read_role = iam.Role(
+            self,
+            "GithubPrReadRole",
+            role_name="github-pr-readonly-role",
+            assumed_by=iam.WebIdentityPrincipal(
+                identity_provider=externalOidcProvider.open_id_connect_provider_arn,
+                conditions={
+                    "StringEquals": {
+                        "token.actions.githubusercontent.com:aud": "sts.amazonaws.com"
+                    },
+                    "StringLike": {
+                        "token.actions.githubusercontent.com:sub": (
+                            "repo:data-mermaid/mermaid-api:pull_request"
+                        )
+                    },
+                },
+            ),
+            max_session_duration=Duration.hours(1),
+        )
+        self.github_pr_read_role.add_managed_policy(
+            iam.ManagedPolicy.from_aws_managed_policy_name("ReadOnlyAccess")
         )
 
         self.inference_image_push_role = self._create_inference_image_push_role(
