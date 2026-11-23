@@ -23,7 +23,10 @@ class SaveAnnotationSerializer(BaseAPISerializer):
     class Meta:
         model = Annotation
         fields = "__all__"
-        read_only_field = ["is_machine_created"]
+        # L3 (card 2260): was "read_only_field" (singular), which DRF ignores, so with
+        # fields="__all__" the trust field is_machine_created was nominally writable.
+        # Correct the attribute name so it is actually read-only.
+        read_only_fields = ["is_machine_created"]
 
     def create(self, validated_data):
         if not validated_data.get("is_machine_created"):

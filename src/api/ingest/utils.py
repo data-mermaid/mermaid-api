@@ -109,20 +109,21 @@ def _schema_check(csv_headers, instance):
 
 
 def clear_collect_records(project, profile, protocol):
+    # L2 (card 2260): bind project/profile/protocol as parameters. Only the table
+    # name - from model meta, never user input - is interpolated. The previous
+    # string interpolation was safe only because the sole caller validated these
+    # values; parameterizing removes the latent SQL-injection footgun.
     sql = """
         DELETE FROM {table_name}
-        WHERE 
-            project_id='{project}' AND 
-            profile_id='{profile}' AND 
-            data->>'protocol' = '{protocol}';
+        WHERE
+            project_id = %s AND
+            profile_id = %s AND
+            data->>'protocol' = %s;
         """.format(  # noqa: UP032
         table_name=CollectRecord.objects.model._meta.db_table,
-        project=project,
-        profile=profile,
-        protocol=protocol,
     )
     with connection.cursor() as cursor:
-        cursor.execute(sql)
+        cursor.execute(sql, [str(project), str(profile), protocol])
         return cursor.rowcount
 
 
