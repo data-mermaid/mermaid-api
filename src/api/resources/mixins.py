@@ -253,6 +253,9 @@ class SampleUnitMethodEditMixin:
 
 
 class CopyRecordsMixin:
+    # Atomic so the savepoint rollbacks below take effect: without it each save()
+    # autocommits, and a later rejected id leaves partial clones behind.
+    @transaction.atomic
     @action(
         detail=False,
         methods=["post"],

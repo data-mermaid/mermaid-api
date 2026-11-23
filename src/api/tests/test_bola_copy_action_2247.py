@@ -37,3 +37,24 @@ def test_copy_within_own_project_allowed(db_setup, api_client1, project1, projec
     response = api_client1.post(url, {"original_ids": [str(site1.pk)]}, format="json")
     assert response.status_code == 200
     assert Site.objects.filter(project=project1).count() == before + 1
+
+
+# transaction=True: the default per-test transaction would make the savepoints work
+# even without @transaction.atomic on copy, hiding the bug.
+@pytest.mark.django_db(transaction=True)
+def test_rejected_copy_leaves_no_partial_clones(
+    db_setup, api_client1, project1, project3, project4, project_profile1, project_profile4, site1
+):
+    # profile1 belongs to project1 (site1) and project4, not project3. The first id
+    # copies fine; the second is rejected. The whole batch must roll back.
+    foreign_site = Site.objects.get(pk=site1.pk)
+    foreign_site.pk = None
+    foreign_site.project = project3
+    foreign_site.save()
+
+    url = reverse("psite-copy", args=[str(project4.pk)])
+    response = api_client1.post(
+        url, {"original_ids": [str(site1.pk), str(foreign_site.pk)]}, format="json"
+    )
+    assert response.status_code == 403
+    assert Site.objects.filter(project=project4).count() == 0
