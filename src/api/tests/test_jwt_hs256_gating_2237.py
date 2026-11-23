@@ -4,7 +4,7 @@ Regression tests for Trello card 2237.
 decode() picks the verification algorithm from the token's own header. An HS256 token
 is verified with the symmetric MERMAID_API_SIGNING_SECRET, which is only meant for
 local/CI test tokens. On a deployed environment that lets a leaked secret forge any
-identity. HS256 is now accepted only where ALLOW_HS256_TOKENS is true (non dev/prod).
+identity. HS256 is now accepted only where ALLOW_HS256_TOKENS is true (ENV=local).
 """
 
 import pytest
