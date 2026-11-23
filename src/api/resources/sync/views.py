@@ -267,9 +267,14 @@ def _update_source_record(source_type, serializer, record, request, force=False)
     # Pass the record's real method so method-specific guards fire (e.g. a COLLECTOR
     # may not DELETE project-level records). Before, the check ran with method=False
     # and those guards never triggered (card 2257, M2).
-    permission_checks = check_permissions(
-        vw_request, {source_type: record}, [source_type], method=get_request_method(record)
-    )
+    # A malformed collect-record id makes CollectRecordOwner raise ParseError. Turn it
+    # into this record's 400 so the rest of the batch still runs.
+    try:
+        permission_checks = check_permissions(
+            vw_request, {source_type: record}, [source_type], method=get_request_method(record)
+        )
+    except ParseError as err:
+        return _error(400, err)
 
     code = permission_checks[source_type]["code"]
     data = permission_checks[source_type]["data"]

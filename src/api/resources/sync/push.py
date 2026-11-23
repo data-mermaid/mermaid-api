@@ -1,3 +1,4 @@
+import uuid
 from collections import defaultdict
 
 from django.core.exceptions import ObjectDoesNotExist
@@ -13,21 +14,33 @@ from ...utils.q import submit_job
 from .utils import create_view_request
 
 
+def _normalize_uuid(value):
+    """Canonical string form so "ABC..." and "abc..." compare equal."""
+    if value is None:
+        return None
+    try:
+        return str(uuid.UUID(str(value)))
+    except ValueError:
+        return str(value)
+
+
 def _authorized_project_id(record, model_class, record_id):
-    """The project the push was authorized against (its claimed `project`, or the
-    record id itself for a Project). Used to confirm the record being written
-    actually belongs to that project (sync BOLA, card 2257)."""
-    if model_class == Project:
-        return str(record_id) if record_id is not None else None
+    """The project the push was authorized against. Used to confirm the record being
+    written actually belongs to that project (sync BOLA, card 2257).
+
+    The permission check authorizes the body `project` whenever it is present, also
+    for a Project record, so use it first. Fall back to the record id only for a
+    Project record without a body `project`."""
     proj = record.get("project")
-    return str(proj) if proj is not None else None
+    if proj is None and model_class == Project:
+        proj = record_id
+    return _normalize_uuid(proj)
 
 
 def _instance_project_id(instance):
     if isinstance(instance, Project):
-        return str(instance.pk)
-    pid = getattr(instance, "project_id", None)
-    return str(pid) if pid is not None else None
+        return _normalize_uuid(instance.pk)
+    return _normalize_uuid(getattr(instance, "project_id", None))
 
 
 def _wrong_project(instance, record, model_class, record_id):
