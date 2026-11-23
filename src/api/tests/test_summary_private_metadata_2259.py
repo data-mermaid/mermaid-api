@@ -13,7 +13,7 @@ from django.contrib.gis.geos import Point
 from django.urls import reverse
 
 from api.models import Project, ProjectProfile, SummarySampleEventModel
-from api.utils.project import DATA_POLICY_FIELDS
+from api.resources.summary_sample_event import DATA_POLICY_FIELDS
 
 COMMON = dict(
     site_name="S",
