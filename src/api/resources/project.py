@@ -323,6 +323,18 @@ class ProjectViewSet(BaseApiViewSet):
     filterset_class = ProjectFilterSet
     search_fields = ["$name", "$sites__country__name"]
 
+    def perform_update(self, serializer):
+        # A LOCKED project is frozen - no writes, even for admins (CLAUDE.md). The
+        # admin permission path never checked is_open, so an admin could PATCH
+        # status back to OPEN (unlock) or edit a locked project (card 2258). Block
+        # every API write while locked; unlocking is a staff/admin-console action.
+        instance = serializer.instance
+        if instance is not None and instance.status == Project.LOCKED:
+            raise exceptions.PermissionDenied(
+                "This project is locked; unlock it from the admin console before editing."
+            )
+        super().perform_update(serializer)
+
     def get_queryset(self):
         site_table = Site._meta.db_table
         project_table = Project._meta.db_table
