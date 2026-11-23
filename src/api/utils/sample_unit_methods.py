@@ -73,8 +73,12 @@ def create_audit_record(profile, event_type, record):
 
 
 @transaction.atomic
-def edit_transect_method(serializer_class, collect_record_owner, request, pk, protocol):
-    instance = serializer_class.Meta.model.objects.get(id=pk)
+def edit_transect_method(serializer_class, collect_record_owner, request, pk, protocol, project_pk):
+    model = serializer_class.Meta.model
+    # Scope the lookup to the URL project. Without this an admin of any one project
+    # could edit (and so delete) another project's submitted method by its id
+    # alone (BOLA, card 2246). A cross-project id raises DoesNotExist -> 404.
+    instance = model.objects.get(id=pk, **{model.project_lookup: project_pk})
     collect_record = transect_method_to_collect_record(
         serializer_class, instance, collect_record_owner, protocol
     )
