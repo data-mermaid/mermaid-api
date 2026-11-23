@@ -508,6 +508,10 @@ class CommonStack(Stack):
             removal_policy=RemovalPolicy.RETAIN,
             public_read_access=False,
             block_public_access=s3.BlockPublicAccess.BLOCK_ALL,
+            # Encrypt at rest + reject non-TLS requests (card 2263); matches the
+            # flow-logs/athena/alb-logs buckets.
+            encryption=s3.BucketEncryption.S3_MANAGED,
+            enforce_ssl=True,
         )
 
         self.config_bucket = s3.Bucket(
@@ -517,6 +521,8 @@ class CommonStack(Stack):
             removal_policy=RemovalPolicy.RETAIN,
             public_read_access=False,
             block_public_access=s3.BlockPublicAccess.BLOCK_ALL,
+            encryption=s3.BucketEncryption.S3_MANAGED,
+            enforce_ssl=True,
         )
 
         # Shared (dev/prod) ECR repo for the pyspacer inference Lambda image.
@@ -555,6 +561,8 @@ class CommonStack(Stack):
             removal_policy=RemovalPolicy.RETAIN,
             public_read_access=False,
             block_public_access=s3.BlockPublicAccess.BLOCK_ALL,
+            encryption=s3.BucketEncryption.S3_MANAGED,
+            enforce_ssl=True,
             lifecycle_rules=[
                 # Rules for cleaning up report files after 14 days.
                 s3.LifecycleRule(
@@ -578,6 +586,8 @@ class CommonStack(Stack):
             removal_policy=RemovalPolicy.RETAIN,
             public_read_access=False,
             block_public_access=s3.BlockPublicAccess.BLOCK_ALL,
+            encryption=s3.BucketEncryption.S3_MANAGED,
+            enforce_ssl=True,
             cors=[
                 s3.CorsRule(
                     allowed_methods=[
